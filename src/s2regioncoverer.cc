@@ -29,6 +29,7 @@ using __gnu_cxx::hash_set;
 #include <vector>
 
 #include <glog/logging.h>
+
 #include "s1angle.h"
 #include "s2.h"
 #include "s2cap.h"

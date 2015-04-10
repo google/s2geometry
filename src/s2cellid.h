@@ -27,8 +27,9 @@ using __gnu_cxx::hash_map;
 #include <string>
 #include <vector>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "base/port.h"  // for HASH_NAMESPACE_DECLARATION_START
 #include "base/type_traits.h"
 #include "util/bits/bits.h"

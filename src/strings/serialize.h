@@ -29,9 +29,10 @@ using __gnu_cxx::hash_map;
 #include <utility>
 #include <vector>
 
+#include <glog/logging.h>
+
 #include "base/int128.h"
 #include "base/integral_types.h"
-#include <glog/logging.h>
 #include "base/type_traits.h"
 #include "strings/stringpiece.h"
 #include "util/endian/endian.h"

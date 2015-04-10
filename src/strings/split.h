@@ -40,8 +40,9 @@ using __gnu_cxx::hash_set;
 #include <utility>
 #include <vector>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "strings/charset.h"
 #include "strings/split_internal.h"
 #include "strings/stringpiece.h"

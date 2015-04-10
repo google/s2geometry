@@ -20,6 +20,7 @@
 #include <utility>
 
 #include <glog/logging.h>
+
 #include "r1interval.h"
 #include "r2rect.h"
 #include "s2cellid.h"

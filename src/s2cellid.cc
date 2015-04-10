@@ -23,9 +23,10 @@
 #include <iosfwd>
 #include <vector>
 
+#include <glog/logging.h>
+
 #include "base/casts.h"
 #include "base/integral_types.h"
-#include <glog/logging.h>
 #include "base/stringprintf.h"
 #include "strings/numbers.h"
 #include "r1interval.h"

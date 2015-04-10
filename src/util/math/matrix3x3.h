@@ -34,6 +34,7 @@
 #include <iosfwd>
 
 #include <glog/logging.h>
+
 #include "base/type_traits.h"
 #include "util/math/mathutil.h"
 #include "util/math/vector2.h"

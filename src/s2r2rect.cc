@@ -19,6 +19,7 @@
 #include <iosfwd>
 
 #include <glog/logging.h>
+
 #include "r1interval.h"
 #include "s2.h"
 #include "s2cap.h"

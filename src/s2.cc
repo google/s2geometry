@@ -17,8 +17,10 @@
 #include "s2.h"
 
 #include <float.h>
+
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
 #include "util/bits/bits.h"
 #include "s1angle.h"
 #include "util/math/exactfloat/exactfloat.h"

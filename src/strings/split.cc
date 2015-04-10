@@ -23,8 +23,9 @@
 #include <iterator>
 #include <limits>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "base/macros.h"
 #include "base/strtoint.h"
 #include "strings/ascii_ctype.h"

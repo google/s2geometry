@@ -22,6 +22,7 @@
 #include <iosfwd>
 
 #include <glog/logging.h>
+
 #include "s1angle.h"
 #include "s2.h"
 #include "s2region.h"

@@ -17,6 +17,7 @@
 #include "s2latlng.h"
 
 #include <glog/logging.h>
+
 #include "base/macros.h"
 #include "base/stringprintf.h"
 #include "strings/split.h"

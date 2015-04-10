@@ -26,10 +26,11 @@ using __gnu_cxx::hash_map;
 #include <utility>
 #include <vector>
 
-#include "base/atomicops.h"
-#include "base/casts.h"
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
+#include "base/atomicops.h"
+#include "base/casts.h"
 #include "util/coding/coder.h"
 #include "s1angle.h"
 #include "s1interval.h"

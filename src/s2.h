@@ -27,6 +27,7 @@ using __gnu_cxx::hash_map;  // To have template struct hash<T> defined
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
 #include "base/macros.h"
 #include "base/port.h"
 #include "r2.h"

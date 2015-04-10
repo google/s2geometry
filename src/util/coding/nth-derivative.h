@@ -56,8 +56,9 @@
 #ifndef UTIL_CODING_NTH_DERIVATIVE_H_
 #define UTIL_CODING_NTH_DERIVATIVE_H_
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "base/type_traits.h"
 
 class NthDerivativeCoder {

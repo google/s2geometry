@@ -17,6 +17,7 @@
 #include "s2pointregion.h"
 
 #include <glog/logging.h>
+
 #include "util/coding/coder.h"
 #include "s2cap.h"
 #include "s2cell.h"

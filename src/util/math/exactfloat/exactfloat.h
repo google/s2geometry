@@ -114,10 +114,11 @@
 #include <string>
 #include <algorithm>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
-#include "base/port.h"
 #include <openssl/bn.h>
+
+#include "base/integral_types.h"
+#include "base/port.h"
 
 class ExactFloat {
  public:

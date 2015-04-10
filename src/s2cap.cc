@@ -18,8 +18,9 @@
 
 #include <iosfwd>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "r1interval.h"
 #include "s1interval.h"
 #include "s2.h"

@@ -18,9 +18,10 @@
 //
 // A collection of useful (static) bit-twiddling functions.
 
+#include <glog/logging.h>
+
 #include "base/casts.h"
 #include "base/integral_types.h"
-#include <glog/logging.h>
 #include "base/macros.h"
 #include "base/port.h"
 

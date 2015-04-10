@@ -18,9 +18,10 @@
 #include <utility>
 #include <vector>
 
+#include <glog/logging.h>
+
 #include "base/casts.h"
 #include "base/integral_types.h"
-#include <glog/logging.h>
 #include "base/macros.h"
 #include "util/bits/bit-interleave.h"
 #include "util/coding/coder.h"

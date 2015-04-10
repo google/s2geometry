@@ -21,8 +21,9 @@
 #include <algorithm>
 #include <vector>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "base/stringprintf.h"
 #include "gtest/gtest.h"
 #include "s1angle.h"

@@ -23,6 +23,7 @@
 #include <string>
 
 #include <glog/logging.h>
+
 #include "strings/memutil.h"
 #include "util/gtl/stl_util.h"
 #include "util/hash/hash.h"

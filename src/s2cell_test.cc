@@ -25,6 +25,7 @@
 #include <vector>
 
 #include <glog/logging.h>
+
 #include "base/macros.h"
 #include "base/stringprintf.h"
 #include "gtest/gtest.h"

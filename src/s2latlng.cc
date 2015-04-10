@@ -20,6 +20,7 @@
 #include <ostream>
 
 #include <glog/logging.h>
+
 #include "base/stringprintf.h"
 
 using std::max;

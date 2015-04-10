@@ -21,6 +21,7 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
 #include "gtest/gtest.h"
 #include "util/coding/coder.h"
 #include "s1angle.h"

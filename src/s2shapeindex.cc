@@ -19,8 +19,9 @@
 #include <math.h>
 #include <algorithm>
 
-#include "base/atomicops.h"
 #include <gflags/gflags.h>
+
+#include "base/atomicops.h"
 #include "base/spinlock.h"
 #include "r1interval.h"
 #include "r2.h"

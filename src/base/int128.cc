@@ -21,8 +21,9 @@
 #include <iostream>  // NOLINT(readability/streams)
 #include <sstream>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 
 const uint128_pod kuint128max = {
     static_cast<uint64>(GG_LONGLONG(0xFFFFFFFFFFFFFFFF)),

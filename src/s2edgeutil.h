@@ -20,6 +20,7 @@
 #include <math.h>
 
 #include <glog/logging.h>
+
 #include "base/macros.h"
 #include "r2.h"
 #include "r2rect.h"

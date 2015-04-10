@@ -16,6 +16,7 @@
 #include "strings/join.h"
 
 #include <glog/logging.h>
+
 #include "base/scoped_ptr.h"
 #include "strings/ascii_ctype.h"
 #include "strings/escaping.h"

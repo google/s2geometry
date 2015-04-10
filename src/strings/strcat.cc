@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include <glog/logging.h>
+
 #include "strings/ascii_ctype.h"
 #include "util/gtl/stl_util.h"
 

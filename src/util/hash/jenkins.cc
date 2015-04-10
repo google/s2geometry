@@ -15,8 +15,8 @@
 
 #include "util/hash/jenkins.h"
 
-
 #include <glog/logging.h>
+
 #include "util/hash/jenkins_lookup2.h"
 // These functions can be updated using farmhash later.
 // The current version is copied from mobile/util/hash/hash.cc.

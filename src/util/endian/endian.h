@@ -25,10 +25,11 @@
 
 #include <assert.h>
 
+#include <glog/logging.h>
+
 #include "base/casts.h"
 #include "base/int128.h"
 #include "base/integral_types.h"
-#include <glog/logging.h>
 #include "base/port.h"
 
 // Use compiler byte-swapping intrinsics if they are available.  32-bit

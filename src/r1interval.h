@@ -23,6 +23,7 @@
 #include <iostream>
 
 #include <glog/logging.h>
+
 #include "base/type_traits.h"
 #include "util/math/vector2.h"  // IWYU pragma: export
 

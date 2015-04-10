@@ -19,7 +19,9 @@
 #include <stdarg.h> // For va_list and related operations
 #include <stdio.h> // MSVC requires this for _vsnprintf
 #include <vector>
+
 #include <glog/logging.h>
+
 #include "base/macros.h"
 
 #ifdef _MSC_VER

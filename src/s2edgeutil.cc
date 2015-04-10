@@ -21,6 +21,7 @@
 #include <algorithm>
 
 #include <glog/logging.h>
+
 #include "r1interval.h"
 #include "s1chordangle.h"
 #include "util/math/vector3.h"

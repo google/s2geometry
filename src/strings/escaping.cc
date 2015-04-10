@@ -23,13 +23,14 @@
 #include <string>
 #include <vector>
 
+#include <utf.h>  // for runetochar
+
 #include "base/integral_types.h"
 #include "base/macros.h"
 #include "base/port.h"
 #include "base/scoped_ptr.h"
 #include "strings/join.h"
 #include "strings/stringpiece.h"
-#include <utf.h>  // for runetochar
 #include "util/endian/endian.h"
 #include "util/gtl/charmap.h"
 #include "util/gtl/stl_util.h"

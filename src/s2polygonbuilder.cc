@@ -31,6 +31,7 @@ using __gnu_cxx::hash_set;
 #include <vector>
 
 #include <glog/logging.h>
+
 #include "base/macros.h"
 #include "base/scoped_ptr.h"
 #include "s2.h"

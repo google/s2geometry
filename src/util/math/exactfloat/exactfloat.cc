@@ -23,11 +23,12 @@
 #include <cmath>
 #include <limits>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
-#include "base/macros.h"
 #include <openssl/bn.h>
 #include <openssl/crypto.h>  // for OPENSSL_free
+
+#include "base/integral_types.h"
+#include "base/macros.h"
 
 using std::max;
 using std::min;

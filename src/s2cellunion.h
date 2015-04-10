@@ -19,8 +19,9 @@
 
 #include <vector>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "base/macros.h"
 #include "s2.h"
 #include "s2cellid.h"

@@ -28,9 +28,10 @@ using __gnu_cxx::hash_set;
 #include <iterator>
 #include <vector>
 
+#include <glog/logging.h>
+
 #include "base/casts.h"
 #include "base/integral_types.h"
-#include <glog/logging.h>
 #include "gtest/gtest.h"
 #include "s2cell.h"
 #include "s2cellid.h"

@@ -23,10 +23,11 @@
 #include <memory>
 #include <new>
 
-#include "dynamic_annotations/dynamic_annotations.h"
 #include <glog/logging.h>
+
 #include "base/macros.h"
 #include "base/port.h"
+#include "dynamic_annotations/dynamic_annotations.h"
 #include "util/gtl/manual_constructor.h"
 
 // A FixedArray<T> represents a non-resizable array of T where the

@@ -26,8 +26,9 @@
 #include <vector>
 
 #include <gflags/gflags.h>
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "base/scoped_ptr.h"
 #include "base/stringprintf.h"
 #include "strings/serialize.h"

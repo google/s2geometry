@@ -19,8 +19,9 @@
 #include <algorithm>
 #include <vector>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "s1angle.h"
 #include "s2.h"
 #include "s2cap.h"

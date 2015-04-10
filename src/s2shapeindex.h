@@ -36,9 +36,10 @@
 #include <utility>
 #include <vector>
 
+#include <glog/logging.h>
+
 #include "base/atomicops.h"
 #include "base/integral_types.h"
-#include <glog/logging.h>
 #include "base/macros.h"
 #include "base/mutex.h"
 #include "base/scoped_ptr.h"

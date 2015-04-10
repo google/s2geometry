@@ -22,6 +22,7 @@
 #include <iostream>
 
 #include <glog/logging.h>
+
 #include "r1interval.h"
 #include "s1angle.h"
 #include "s1interval.h"

@@ -25,9 +25,10 @@
 #include <utility>
 #include <vector>
 
-#include "base/casts.h"
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
+#include "base/casts.h"
 #include "base/scoped_ptr.h"
 #include "gtest/gtest.h"
 #include "util/coding/coder.h"

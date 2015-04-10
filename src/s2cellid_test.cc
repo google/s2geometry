@@ -28,6 +28,7 @@ using __gnu_cxx::hash_map;
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
 #include "base/macros.h"
 #include "gtest/gtest.h"
 #include "s2.h"

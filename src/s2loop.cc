@@ -23,10 +23,11 @@
 #include <utility>
 #include <vector>
 
-#include "base/atomicops.h"
 #include <gflags/gflags.h>
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/atomicops.h"
+#include "base/integral_types.h"
 #include "base/stringprintf.h"
 #include "util/coding/coder.h"
 #include "r1interval.h"

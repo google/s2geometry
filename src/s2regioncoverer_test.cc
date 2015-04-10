@@ -27,8 +27,9 @@ using __gnu_cxx::hash_map;
 #include <vector>
 
 #include <gflags/gflags.h>
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "base/stringprintf.h"
 #include "base/strtoint.h"
 #include "strings/split.h"

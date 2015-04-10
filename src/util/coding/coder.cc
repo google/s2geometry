@@ -20,8 +20,9 @@
 #include <assert.h>
 #include <algorithm>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 
 // An initialization value used when we are allowed to
 unsigned char Encoder::kEmptyBuffer = 0;

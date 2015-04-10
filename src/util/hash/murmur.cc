@@ -16,8 +16,9 @@
 
 #include "util/hash/murmur.h"
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "util/endian/endian.h"
 
 namespace util_hash {

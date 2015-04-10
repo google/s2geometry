@@ -25,6 +25,7 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
 #include "util/coding/coder.h"
 #include "s1angle.h"
 #include "s1interval.h"

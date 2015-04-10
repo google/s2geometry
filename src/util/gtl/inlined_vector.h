@@ -40,6 +40,7 @@
 #include <memory>
 
 #include <glog/logging.h>
+
 #include "base/macros.h"
 #include "base/port.h"
 #include "base/type_traits.h"

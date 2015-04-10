@@ -22,8 +22,9 @@
 #include <string.h>
 
 // Avoid adding expensive includes here.
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "base/macros.h"
 #include "base/port.h"
 #include "base/type_traits.h"

@@ -21,6 +21,7 @@
 #include <iostream>
 
 #include <glog/logging.h>
+
 #include "util/coding/coder.h"
 #include "s2cap.h"
 #include "s2cell.h"

@@ -22,8 +22,9 @@
 #include <string.h>
 #include <string>
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "gtest/gtest.h"
 #include "util/hash/fingerprint96.h"
 #include "util/hash/fingerprinting.h"

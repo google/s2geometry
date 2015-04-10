@@ -20,6 +20,7 @@
 #include <algorithm>
 
 #include <glog/logging.h>
+
 #include "base/scoped_ptr.h"
 #include "gtest/gtest.h"
 #include "s1angle.h"

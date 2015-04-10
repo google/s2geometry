@@ -17,8 +17,9 @@
 #include "s1angle.h"
 
 #include <gflags/gflags.h>
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "gtest/gtest.h"
 #include "s2latlng.h"
 #include "s2testing.h"

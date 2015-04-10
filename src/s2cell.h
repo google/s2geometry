@@ -17,8 +17,9 @@
 #ifndef UTIL_GEOMETRY_S2CELL_H_
 #define UTIL_GEOMETRY_S2CELL_H_
 
-#include "base/integral_types.h"
 #include <glog/logging.h>
+
+#include "base/integral_types.h"
 #include "r2rect.h"
 #include "s1chordangle.h"
 #include "s2.h"
