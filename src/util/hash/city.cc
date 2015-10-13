@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // This file provides CityHash64() and related functions.
 //
@@ -30,7 +31,7 @@
 
 
 #include "util/hash/farmhash.h"
-#include "util/hash/hash.h"  // for HashSeed()
+#include "util/hash/builtin_type_hash.h"  // for HashSeed()
 
 namespace util_hash {
 
@@ -48,19 +49,24 @@ uint64 CityHash64WithSeeds(const char *s, size_t len,
 }
 
 uint128 CityHash128(const char *s, size_t len) {
-  return farmhashcc::CityHash128WithSeed(s, len, uint128(9, 999));
+  // This function will never change, so HashSeed() is not used.
+  return CityHash128WithSeed(s, len, uint128(6, 555));
 }
 
 uint128 CityHash128WithSeed(const char *s, size_t len, uint128 seed) {
-  return farmhashcc::CityHash128WithSeed(s, len, seed);
+  // This function will never change, so HashSeed() is not used.
+  return ToGoogleU128(
+      farmhashcc::CityHash128WithSeed(s, len, ToFarmHashU128(seed)));
 }
 
 uint32 CityHash32(const char *s, size_t len) {
-  return farmhash::Hash32(s, len) ^ HashSeed();
+  return static_cast<uint32>(farmhash::Hash32(s, len) ^ HashSeed());
 }
 
 uint32 CityHash32WithSeed(const char *s, size_t len, uint32 seed) {
-  return farmhash::Hash32WithSeed(s, len, seed - HashSeed());
+  return static_cast<uint32>(farmhash::Hash32WithSeed(
+      s, len, static_cast<uint32>(seed - HashSeed())));
 }
 
 }  // namespace util_hash
+

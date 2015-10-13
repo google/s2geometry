@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2.h"
@@ -19,19 +20,15 @@
 #include <stddef.h>
 #include <algorithm>
 #include <functional>
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
-#include <ext/hash_set>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_set;
 #include <iterator>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "base/casts.h"
 #include "base/integral_types.h"
 #include <glog/logging.h>
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "s2cell.h"
 #include "s2cellid.h"
 #include "s2edgeutil.h"
@@ -41,6 +38,8 @@ using __gnu_cxx::hash_set;
 
 using std::max;
 using std::min;
+using std::unordered_map;
+using std::unordered_set;
 using std::vector;
 
 inline static int SwapAxes(int ij) {
@@ -275,8 +274,7 @@ TEST(S2, AreaMethods) {
   S2Point pr = S2Point(0.257, -0.5723, 0.112).Normalize();
   S2Point pq = S2Point(-0.747, 0.401, 0.2235).Normalize();
   EXPECT_EQ(S2::Area(pr, pr, pr), 0);
-  // TODO: The following test is not exact in optimized mode because the
-  // compiler chooses to mix 64-bit and 80-bit intermediate results.
+  // The following test is not exact due to rounding error.
   EXPECT_NEAR(S2::Area(pr, pq, pr), 0, 1e-15);
   EXPECT_EQ(S2::Area(p000, p045, p090), 0);
 
@@ -915,9 +913,9 @@ TEST(S2, Rotate) {
 
 TEST(S2, S2PointHashSpreads) {
   int kTestPoints = 1 << 16;
-  hash_set<size_t> set;
-  hash_set<S2Point, HashS2Point> points;
-  HashS2Point hasher;
+  unordered_set<size_t> set;
+  unordered_set<S2Point, S2PointHash> points;
+  S2PointHash hasher;
   S2Point base = S2Point(1, 1, 1);
   for (int i = 0; i < kTestPoints; ++i) {
     // All points in a tiny cap to test avalanche property of hash
@@ -937,7 +935,7 @@ TEST(S2, S2PointHashCollapsesZero) {
   double zero = 0;
   double minus_zero = -zero;
   EXPECT_NE(bit_cast<uint64>(zero), bit_cast<uint64>(minus_zero));
-  hash_map<S2Point, int, HashS2Point> map;
+  unordered_map<S2Point, int, S2PointHash> map;
   S2Point zero_pt(zero, zero, zero);
   S2Point minus_zero_pt(minus_zero, minus_zero, minus_zero);
 
@@ -955,7 +953,7 @@ TEST(S2, S2PointHashCollapsesLowOrderBit) {
   S2Point p2(FlipDoubleLowOrderBit(p1.x()),
              FlipDoubleLowOrderBit(p1.y()),
              FlipDoubleLowOrderBit(p1.z()));
-  EXPECT_EQ(HashS2Point()(p1), HashS2Point()(p2));
+  EXPECT_EQ(S2PointHash()(p1), S2PointHash()(p2));
 }
 
 // Given a point P, return the minimum level at which an edge of some S2Cell

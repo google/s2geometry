@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 //
 // This holds the encoding/decoding routines that used to live in netutil
@@ -184,7 +185,6 @@ class Decoder {
   const unsigned char* buf_;
   const unsigned char* limit_;
 };
-DECLARE_POD(Decoder);  // so then we might as well be a POD
 
 /***** Implementation details.  Clients should ignore them. *****/
 

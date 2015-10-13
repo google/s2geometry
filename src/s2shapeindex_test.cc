@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2shapeindex.h"
 
 #include <pthread.h>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include <gflags/gflags.h>
 #include "base/mutex.h"
-#include "base/scoped_ptr.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "r2.h"
 #include "r2rect.h"
 #include "s1angle.h"
@@ -36,7 +37,10 @@
 #include "s2polygon.h"
 #include "s2shapeutil.h"
 #include "s2testing.h"
+#include "s2textformat.h"
 
+using s2shapeutil::S2EdgeVectorShape;
+using std::unique_ptr;
 using std::vector;
 
 
@@ -163,9 +167,7 @@ void TestIteratorMethods(S2ShapeIndex const& index) {
   for (it.Reset(); !it.Done(); it.Next()) {
     S2CellId cellid = it.id();
     S2CellUnion skipped;
-    if (cellid.range_min() > min_cellid) {  // XXX Interface?
-      skipped.InitFromRange(min_cellid, cellid.range_min().prev());
-    }
+    skipped.InitFromBeginEnd(min_cellid, cellid.range_min());
     S2ShapeIndex::Iterator it2(index);
     for (int i = 0; i < skipped.num_cells(); ++i) {
       EXPECT_FALSE(it2.Locate(skipped.cell_id(i).ToPoint()));
@@ -219,7 +221,7 @@ TEST_F(S2ShapeIndexTest, NoEdges) {
 }
 
 TEST_F(S2ShapeIndexTest, OneEdge) {
-  index_.Insert(new S2EdgeVectorShape(S2Point(1, 0, 0), S2Point(0, 1, 0)));
+  index_.Add(new S2EdgeVectorShape(S2Point(1, 0, 0), S2Point(0, 1, 0)));
   QuadraticValidate();
   TestIteratorMethods(index_);
 }
@@ -234,7 +236,7 @@ TEST_F(S2ShapeIndexTest, LoopsSpanningThreeFaces) {
   vector<S2Loop*> loops;
   polygon.Release(&loops);
   for (int i = 0; i < loops.size(); ++i) {
-    index_.Insert(new S2Loop::Shape(loops[i]));
+    index_.Add(new S2Loop::Shape(loops[i]));
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
@@ -247,11 +249,11 @@ TEST_F(S2ShapeIndexTest, ManyIdenticalEdges) {
   S2Point a = S2Point(0.99, 0.99, 1).Normalize();
   S2Point b = S2Point(-0.99, -0.99, 1).Normalize();
   for (int i = 0; i < kNumEdges; ++i) {
-    index_.Insert(new S2EdgeVectorShape(a, b));
+    index_.Add(new S2EdgeVectorShape(a, b));
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
-  // Since all edges span the the diagonal of a face, no subdivision should
+  // Since all edges span the diagonal of a face, no subdivision should
   // have occurred (with the default index options).
   for (S2ShapeIndex::Iterator it(index_); !it.Done(); it.Next()) {
     EXPECT_EQ(0, it.id().level());
@@ -259,7 +261,7 @@ TEST_F(S2ShapeIndexTest, ManyIdenticalEdges) {
 }
 
 TEST_F(S2ShapeIndexTest, ManyTinyEdges) {
-  // This test inserts many edges into a single leaf cell, to check that
+  // This test adds many edges to a single leaf cell, to check that
   // subdivision stops when no further subdivision is possible.
   int const kNumEdges = 100;  // Validation is quadratic
   // Construct two points in the same leaf cell.
@@ -269,7 +271,7 @@ TEST_F(S2ShapeIndexTest, ManyTinyEdges) {
   for (int i = 0; i < kNumEdges; ++i) {
     shape->Add(a, b);
   }
-  index_.Insert(shape);
+  index_.Add(shape);
   QuadraticValidate();
   // Check that there is exactly one index cell and that it is a leaf cell.
   S2ShapeIndex::Iterator it(index_);
@@ -283,7 +285,7 @@ TEST_F(S2ShapeIndexTest, ManyTinyEdges) {
 // Add the loops to the given index.
 void AddLoops(vector<S2Loop*> const& loops, S2ShapeIndex* index) {
   for (int i = 0; i < loops.size(); ++i) {
-    index->Insert(new S2Loop::Shape(loops[i]));
+    index->Add(new S2Loop::Shape(loops[i]));
   }
 }
 
@@ -316,7 +318,7 @@ void TestHasCrossingPermutations(vector<S2Loop*>* loops, int i,
       for (int k = 0; k < orig_loop->num_vertices(); ++k) {
         vertices.push_back(orig_loop->vertex(j + k));
       }
-      scoped_ptr<S2Loop> new_loop(new S2Loop(vertices));
+      unique_ptr<S2Loop> new_loop(new S2Loop(vertices));
       (*loops)[i] = new_loop.get();
       TestHasCrossingPermutations(loops, i+1, has_crossing);
     }
@@ -330,7 +332,7 @@ void TestHasCrossingPermutations(vector<S2Loop*>* loops, int i,
 // permutations of the loop vertices.
 void TestHasCrossing(const string& polygon_str, bool has_crossing) {
   FLAGS_s2debug = false;  // Allow invalid polygons (restored by gUnit)
-  scoped_ptr<S2Polygon> polygon(S2Testing::MakePolygon(polygon_str));
+  unique_ptr<S2Polygon> polygon(s2textformat::MakePolygon(polygon_str));
   vector<S2Loop*> loops;
   polygon->Release(&loops);
   TestHasCrossingPermutations(&loops, 0, has_crossing);
@@ -376,26 +378,25 @@ class LazyUpdatesTest : public ::testing::Test {
 };
 
 void LazyUpdatesTest::ReaderThread() {
+  lock_.Lock();
   for (int last_update = 0; ; last_update = num_updates_) {
-    lock_.Lock();
     while (num_updates_ == last_update) {
       update_ready_.Wait(&lock_);
     }
-    // We intentionally release the lock so that many threads have a chance
-    // to access the S2ShapeIndex in parallel.
-    bool should_exit = (num_updates_ < 0);
-    lock_.Unlock();
-    if (should_exit) break;
+    if (num_updates_ < 0) break;
 
     // The index is built on demand the first time we attempt to use it.
+    // We intentionally release the lock so that many threads have a chance
+    // to access the S2ShapeIndex in parallel.
+    lock_.Unlock();
     for (S2ShapeIndex::Iterator it(index_); !it.Done(); it.Next())
-      ;
+      continue;
     lock_.Lock();
     if (--num_readers_left_ == 0) {
       all_readers_done_.Signal();
     }
-    lock_.Unlock();
   }
+  lock_.Unlock();
 }
 
 static void* StartReader(void* arg) {
@@ -424,9 +425,9 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
     // Since there are no readers, it is safe to modify the index.
     index_.Reset();
     int num_vertices = 4 * S2Testing::rnd.Skewed(10);  // Up to 4K vertices
-    scoped_ptr<S2Loop> loop(S2Testing::MakeRegularLoop(
+    unique_ptr<S2Loop> loop(S2Testing::MakeRegularLoop(
         S2Testing::RandomPoint(), S2Testing::KmToAngle(5), num_vertices));
-    index_.Insert(new S2Loop::Shape(loop.get()));
+    index_.Add(new S2Loop::Shape(loop.get()));
     num_readers_left_ = kNumReaders;
     ++num_updates_;
     update_ready_.SignalAll();

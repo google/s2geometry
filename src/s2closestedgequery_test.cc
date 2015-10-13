@@ -12,15 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2closestedgequery.h"
 
-#include "gtest/gtest.h"
+#include <memory>
+
+#include <gtest/gtest.h>
 #include "s1angle.h"
 #include "s2cap.h"
 #include "s2loop.h"
 #include "s2testing.h"
+
+using std::unique_ptr;
 
 class S2ClosestEdgeQueryTest : public ::testing::Test {
  protected:
@@ -49,9 +54,9 @@ TEST_F(S2ClosestEdgeQueryTest, RegularLoop) {
   static S1Angle const kRadius = S2Testing::KmToAngle(10);
   for (int i_loop = 0; i_loop < kLoopIters; ++i_loop) {
     S2Point center = S2Testing::RandomPoint();
-    scoped_ptr<S2Loop> loop(S2Testing::MakeRegularLoop(center, kRadius,
+    unique_ptr<S2Loop> loop(S2Testing::MakeRegularLoop(center, kRadius,
                                                        kNumVertices));
-    index_.Insert(new S2Loop::Shape(loop.get()));
+    index_.Add(new S2Loop::Shape(loop.get()));
     // Choose query points from a region whose area is approximately 4 times
     // larger than the loop, i.e. such that about 1/4 of the query points will
     // be inside the loop.
@@ -78,3 +83,4 @@ TEST_F(S2ClosestEdgeQueryTest, NoEdges) {
   EXPECT_EQ(-1, query.shape_id());
   EXPECT_EQ(-1, query.edge_id());
 }
+

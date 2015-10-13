@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 //   far-far-superior implementation courtesy of amc@google.com (Adam Costello)
 //
@@ -88,7 +89,6 @@ class NthDerivativeCoder {
   int m_;  // the derivative order in which to code the next value(ramps to n_)
   int32 memory_[N_MAX];  // value memory. [0] is oldest
 };
-DECLARE_POD(NthDerivativeCoder);
 
 // Implementation below.  Callers Ignore.
 //

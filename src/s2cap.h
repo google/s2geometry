@@ -12,20 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2CAP_H_
-#define UTIL_GEOMETRY_S2CAP_H_
+#ifndef S2_GEOMETRY_S2CAP_H_
+#define S2_GEOMETRY_S2CAP_H_
 
 #include <math.h>
 #include <algorithm>
 #include <iosfwd>
 
 #include <glog/logging.h>
+#include "fpcontractoff.h"
 #include "s1angle.h"
 #include "s2.h"
 #include "s2region.h"
-#include "util/math/vector3.h"  // TODO(ericv): Remove
 
 class Decoder;
 class Encoder;
@@ -249,4 +250,4 @@ inline S2Cap S2Cap::FromCenterArea(S2Point const& center, double area) {
   return S2Cap(center, area / (2 * M_PI));
 }
 
-#endif  // UTIL_GEOMETRY_S2CAP_H_
+#endif  // S2_GEOMETRY_S2CAP_H_

@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_R2_H_
-#define UTIL_GEOMETRY_R2_H_
+#ifndef S2_GEOMETRY_R2_H_
+#define S2_GEOMETRY_R2_H_
 
+#include "fpcontractoff.h"
 #include "util/math/vector2.h"  // IWYU pragma: export
 
 typedef Vector2_d R2Point;
 
-#endif  // UTIL_GEOMETRY_R2_H_
+#endif  // S2_GEOMETRY_R2_H_

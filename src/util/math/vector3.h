@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // All Rights Reserved.
 //
 //
@@ -69,7 +70,7 @@ class Vector3 {
   // FloatType is the type returned by Norm() and Angle().  These methods are
   // special because they return floating-point values even when VType is an
   // integer.
-  typedef typename base::if_<base::is_integral<VType>::value,
+  typedef typename std::conditional<std::is_integral<VType>::value,
                              double, VType>::type FloatType;
   typedef Vector3<VType> Self;
   typedef VType BaseType;
@@ -84,8 +85,6 @@ class Vector3 {
   // Create a new 3D vector using the two first coordinates of a 2D vectors
   // and an additional z argument.
   Vector3(const Vector2<VType> &vb, VType z);
-  // Create a new copy of the vector vb
-  Vector3(const Vector3 &vb);
   // Keep only the three first coordinates of the 4D vector vb
   explicit Vector3(const Vector4<VType> &vb);
   // Convert from another vector type
@@ -108,7 +107,6 @@ class Vector3 {
   static int Size() { return SIZE; }
   // Modify the coordinates of the current vector
   void Set(const VType x, const VType y, const VType z);
-  Self& operator=(const Self& vb);
   // Add two vectors, component by component
   Self& operator+=(const Self &vb);
   // Subtract two vectors, component by component
@@ -220,13 +218,6 @@ Vector3<VType>::Vector3(const Vector2<VType> &vb, VType z) {
 }
 
 template <typename VType>
-Vector3<VType>::Vector3(const Self &vb) {
-  c_[0] = vb.c_[0];
-  c_[1] = vb.c_[1];
-  c_[2] = vb.c_[2];
-}
-
-template <typename VType>
 Vector3<VType>::Vector3(const Vector4<VType> &vb) {
   c_[0] = vb.x();
   c_[1] = vb.y();
@@ -288,14 +279,6 @@ void Vector3<VType>::Set(const VType x, const VType y, const VType z) {
   c_[0] = x;
   c_[1] = y;
   c_[2] = z;
-}
-
-template <typename VType>
-Vector3<VType>& Vector3<VType>::operator=(const Self& vb) {
-  c_[0] = vb.c_[0];
-  c_[1] = vb.c_[1];
-  c_[2] = vb.c_[2];
-  return (*this);
 }
 
 template <typename VType>
@@ -438,7 +421,7 @@ typename Vector3<VType>::FloatType Vector3<VType>::Norm(void) const {
 
 template <typename VType>
 Vector3<VType> Vector3<VType>::Normalize() const {
-  COMPILE_ASSERT(!base::is_integral<VType>::value, must_be_floating_point);
+  COMPILE_ASSERT(!std::is_integral<VType>::value, must_be_floating_point);
   VType n = Norm();
   if (n != VType(0.0)) {
     n = VType(1.0) / n;
@@ -501,7 +484,7 @@ Vector3<VType> Vector3<VType>::Fabs() const {
 template <typename VType>
 Vector3<VType> Vector3<VType>::Abs() const {
   COMPILE_ASSERT(
-      !base::is_integral<VType>::value || static_cast<VType>(-1) == -1,
+      !std::is_integral<VType>::value || static_cast<VType>(-1) == -1,
       type_must_be_signed);
   using std::abs;
   return Self(abs(c_[0]), abs(c_[1]), abs(c_[2]));
@@ -595,7 +578,6 @@ typedef Vector3<double> Vector3_d;
 // TODO(user): Vector3<T> does not actually satisfy the definition of a POD
 // type even when T is a POD. Pretending that Vector3<T> is a POD probably
 // won't cause any immediate problems, but eventually this should be fixed.
-PROPAGATE_POD_FROM_TEMPLATE_ARGUMENT(Vector3);
 
 
 #endif  // UTIL_MATH_VECTOR3_H__

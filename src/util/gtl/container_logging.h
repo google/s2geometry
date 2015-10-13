@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // All Rights Reserved.
 //
 // Utilities for container logging.
@@ -94,10 +95,21 @@ struct LogShort : public internal::LogShortBase {
   int64 MaxElements() const { return kint64max; }
 };
 
+// LogShortUpToN(max_elements) formats the same as LogShort but prints no more
+// than the max_elements elements.
+class LogShortUpToN : public internal::LogShortBase {
+ public:
+  explicit LogShortUpToN(int64 max_elements) : max_elements_(max_elements) {}
+  int64 MaxElements() const { return max_elements_; }
+
+ private:
+  int64 max_elements_;
+};
+
 // LogShortUpTo100 formats the same as LogShort but prints no more
 // than 100 elements.
-struct LogShortUpTo100 : public internal::LogShortBase {
-  int64 MaxElements() const { return 100; }
+struct LogShortUpTo100 : public LogShortUpToN {
+  LogShortUpTo100() : LogShortUpToN(100) {}
 };
 
 // LogMultiline uses [] braces and separates items with
@@ -110,10 +122,22 @@ struct LogMultiline : public internal::LogMultilineBase {
   int64 MaxElements() const { return kint64max; }
 };
 
+// LogMultilineUpToN(max_elements) formats the same as LogMultiline but
+// prints no more than max_elements elements.
+class LogMultilineUpToN : public internal::LogMultilineBase {
+ public:
+  explicit LogMultilineUpToN(int64 max_elements)
+      : max_elements_(max_elements) {}
+  int64 MaxElements() const { return max_elements_; }
+
+ private:
+  int64 max_elements_;
+};
+
 // LogMultilineUpTo100 formats the same as LogMultiline but
 // prints no more than 100 elements.
-struct LogMultilineUpTo100 : public internal::LogMultilineBase {
-  int64 MaxElements() const { return 100; }
+struct LogMultilineUpTo100 : public LogMultilineUpToN {
+  LogMultilineUpTo100() : LogMultilineUpToN(100) {}
 };
 
 // The legacy behavior of LogSequence() does not use braces and

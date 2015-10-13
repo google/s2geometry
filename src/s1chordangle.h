@@ -12,15 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S1CHORDANGLE_H_
-#define UTIL_GEOMETRY_S1CHORDANGLE_H_
+#ifndef S2_GEOMETRY_S1CHORDANGLE_H_
+#define S2_GEOMETRY_S1CHORDANGLE_H_
+
+#include <math.h>
 
 #include <limits>
-#include <math.h>
-#include <iosfwd>   // to forward declare ostream
+#include <iosfwd>   // No longer needed
 #include <ostream>
+
+#include "fpcontractoff.h"
 #include "s1angle.h"
 #include "s2.h"
 
@@ -87,7 +91,7 @@ class S1ChordAngle {
   // Convert the chord angle to an S1Angle.  Infinity() is converted to
   // S1Angle::Infinity(), and Negative() is converted to a negative S1Angle.
   // This operation is relatively expensive.
-  S1Angle ToAngle();
+  S1Angle ToAngle() const;
 
   // All operators and functions are declared here so that we can put them all
   // in one place.  (The compound assignment operators must be put here.)
@@ -125,6 +129,7 @@ class S1ChordAngle {
   // Return true if the internal representation is valid.  Negative() and
   // Infinity() are both considered valid.
   bool is_valid() const;
+
 
  private:
   // S1ChordAngles are represented by the squared chord length, which can
@@ -216,4 +221,4 @@ inline S1ChordAngle& S1ChordAngle::operator-=(S1ChordAngle a) {
 // Outputs the chord angle as the equivalent S1Angle.
 std::ostream& operator<<(std::ostream& os, S1ChordAngle a);
 
-#endif  // UTIL_GEOMETRY_S1CHORDANGLE_H_
+#endif  // S2_GEOMETRY_S1CHORDANGLE_H_

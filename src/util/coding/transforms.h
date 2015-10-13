@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 //
 // Data transforms that can help code more efficiently.
@@ -38,37 +39,24 @@
 //        >> encode >>
 //        << decode <<
 
-#if defined(_MSC_VER)
-// These functions cause MSVC++ (versions 7 through 12, at least) to warn about
-// applying unary minus to an unsigned value.  In these functions, this is not a
-// problem, but the warning is generally useful, so we're disabling it locally
-// rather than globally.
-#pragma warning(push)
-#pragma warning(disable: 4146)  // unary minus applied to unsigned type
-#endif
-
 static inline uint32 ZigZagEncode(int32 n) {
   // We need the cast to avoid an arithmetic shift.
   uint32 sign = (static_cast<uint32>(n)) >> 31;
-  return (n << 1) ^ -sign;
+  return (static_cast<uint32>(n) << 1) ^ (0u - sign);
 }
 
 static inline int32 ZigZagDecode(uint32 n) {
-  return (n >> 1) ^ -(n & 1);
+  return (n >> 1) ^ (0u - (n & 1));
 }
 
 static inline uint64 ZigZagEncode64(int64 n) {
   // We need the cast to avoid an arithmetic shift.
   uint64 sign = (static_cast<uint64>(n)) >> 63;
-  return (n << 1) ^ -sign;
+  return (static_cast<uint64>(n) << 1) ^ (0u - sign);
 }
 
 static inline int64 ZigZagDecode64(uint64 n) {
-  return (n >> 1) ^ -(n & 1);
+  return (n >> 1) ^ (0u - (n & 1));
 }
-
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
 
 #endif  // UTIL_CODING_TRANSFORMS_H__

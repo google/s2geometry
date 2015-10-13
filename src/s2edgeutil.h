@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2EDGEUTIL_H__
-#define UTIL_GEOMETRY_S2EDGEUTIL_H__
+#ifndef S2_GEOMETRY_S2EDGEUTIL_H__
+#define S2_GEOMETRY_S2EDGEUTIL_H__
 
 #include <math.h>
 
 #include <glog/logging.h>
 #include "base/macros.h"
+#include "fpcontractoff.h"
 #include "r2.h"
 #include "r2rect.h"
 #include "s1angle.h"
@@ -33,6 +35,7 @@
 
 class S1ChordAngle;
 class S2LatLngRect;
+class ExactFloat;
 
 // This class contains various utility functions related to edges.  It
 // collects together common code that is needed to implement polygonal
@@ -256,22 +259,34 @@ class S2EdgeUtil {
   //  (1) GI(b,a,c,d) == GI(a,b,d,c) == GI(a,b,c,d)
   //  (2) GI(c,d,a,b) == GI(a,b,c,d)
   //
-  // The returned intersection point X is guaranteed to be close to the edges
-  // AB and CD, but if the edges intersect at a very small angle then X may
-  // not be close to the true mathematical intersection point P.  See the
-  // description of "kIntersectionTolerance" below for details.
+  // The returned intersection point X is guaranteed to be very close to the
+  // true intersection point of AB and CD, even if the edges intersect at a
+  // very small angle.  See "kIntersectionError" below for details.
   static S2Point GetIntersection(S2Point const& a, S2Point const& b,
                                  S2Point const& c, S2Point const& d);
 
-  // This distance is an upper bound on the distance from the intersection
-  // point returned by GetIntersection() to either of the two edges that were
-  // intersected.  In particular, if "x" is the intersection point, then
-  // GetDistance(x, a, b) and GetDistance(x, c, d) will both be smaller than
-  // this value.  The intersection tolerance is also large enough such if it
-  // is passed as the "vertex_merge_radius" of an S2PolygonBuilder, then the
-  // intersection point will be spliced into the edges AB and/or CD if they
-  // are also supplied to the S2PolygonBuilder.
-  static S1Angle const kIntersectionTolerance;
+  // kIntersectionError is an upper bound on the distance from the intersection
+  // point returned by GetIntersection() to the true intersection point.
+  static S1Angle const kIntersectionError;
+
+  // When using S2PolygonBuilder with computed intersection points, the
+  // vertex_merge_radius() should be at least this large in order to avoid
+  // incorrect output.
+  static S1Angle const kIntersectionMergeRadius;  // 2 * kIntersectionError
+
+  // This value is related to a previous implementation of GetIntersection()
+  // that made weaker accuracy guarantees.  Existing code should be updated
+  // to use either kIntersectionError or kIntersectionMergeRadius, depending
+  // on how the value is being used:
+  //
+  //  - If you need a bound on how far the intersection point is from its true
+  //    location, use kIntersectionError.
+  //
+  //  - If you need a bound on how far apart two intersection points can be
+  //    that are supposed to coincide, use kIntersectionMergeRadius.  (This
+  //    is the value that should be used with S2PolygonBuilder.)
+  //
+  static S1Angle const kIntersectionTolerance;  // DEPRECATED
 
   // Given a point X and an edge AB, return the distance ratio AX / (AX + BX).
   // If X happens to be on the line segment AB, this is the fraction "t" such
@@ -486,8 +501,32 @@ class S2EdgeUtil {
   inline static double InterpolateDouble(double x, double a, double b,
                                          double a1, double b1);
 
+  // Convert a point from the ExactFloat representation to the closest
+  // double-precision value.  The result is normalized to be unit length.
+  static S2Point S2PointFromExact(Vector3<ExactFloat> const& x);
+
  private:
-  DISALLOW_IMPLICIT_CONSTRUCTORS(S2EdgeUtil);  // Contains only static methods.
+  friend class S2EdgeUtilTesting;
+
+  // This is an *internal only* method declared here for testing purposes.
+  static S2Point GetIntersectionExact(S2Point const& a0, S2Point const& a1,
+                                      S2Point const& b0, S2Point const& b1);
+
+  // The maximum error in the method above.
+  static S1Angle const kIntersectionExactError;
+
+  enum IntersectionMethod {
+    SIMPLE,
+    SIMPLE_LD,
+    STABLE,
+    STABLE_LD,
+    EXACT,
+    NUM_INTERSECTION_METHODS
+  };
+  static IntersectionMethod last_intersection_method_;
+  static char const* GetIntersectionMethodName(IntersectionMethod method);
+
+  DISALLOW_IMPLICIT_CONSTRUCTORS(S2EdgeUtil);  // Contains only static members.
 };
 
 
@@ -496,11 +535,15 @@ class S2EdgeUtil {
 
 inline S2EdgeUtil::EdgeCrosser::EdgeCrosser(S2Point const* a, S2Point const* b)
     : a_(a), b_(b), a_cross_b_(a_->CrossProd(*b_)), have_tangents_(false) {
+  DCHECK(S2::IsUnitLength(*a));
+  DCHECK(S2::IsUnitLength(*b));
 }
 
 inline S2EdgeUtil::EdgeCrosser::EdgeCrosser(
     S2Point const* a, S2Point const* b, S2Point const* c)
     : a_(a), b_(b), a_cross_b_(a_->CrossProd(*b_)), have_tangents_(false) {
+  DCHECK(S2::IsUnitLength(*a));
+  DCHECK(S2::IsUnitLength(*b));
   RestartAt(c);
 }
 
@@ -512,11 +555,13 @@ inline void S2EdgeUtil::EdgeCrosser::Init(S2Point const* a, S2Point const* b) {
 }
 
 inline void S2EdgeUtil::EdgeCrosser::RestartAt(S2Point const* c) {
+  DCHECK(S2::IsUnitLength(*c));
   c_ = c;
   acb_ = -S2::TriageCCW(*a_, *b_, *c_, a_cross_b_);
 }
 
 inline int S2EdgeUtil::EdgeCrosser::RobustCrossing(S2Point const* d) {
+  DCHECK(S2::IsUnitLength(*d));
   // For there to be an edge crossing, the triangles ACB, CBD, BDA, DAC must
   // all be oriented the same way (CW or CCW).  We keep the orientation of ACB
   // as part of our state.  When each new point D arrives, we compute the
@@ -571,4 +616,4 @@ inline double S2EdgeUtil::InterpolateDouble(double x, double a, double b,
   }
 }
 
-#endif  // UTIL_GEOMETRY_S2EDGEUTIL_H__
+#endif  // S2_GEOMETRY_S2EDGEUTIL_H__

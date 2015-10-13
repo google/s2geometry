@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2closestedgequery.h"
@@ -21,6 +22,10 @@
 #include "s2cell.h"
 #include "s2cellid.h"
 #include "s2edgeutil.h"
+
+S2ClosestEdgeQuery::~S2ClosestEdgeQuery() {
+  // Prevent inline destructor bloat by providing a definition.
+}
 
 void S2ClosestEdgeQuery::Init(S2ShapeIndex const& index) {
   // This constant was tuned using the benchmarks.
@@ -39,23 +44,41 @@ void S2ClosestEdgeQuery::UseBruteForce(bool use_brute_force) {
 
   // Find the range of S2Cells spanned by the index and choose a level such
   // that the entire index can be covered with just a few cells.  These are the
-  // "top level" cells.  There are at most 4 top level cells unless the index
-  // spans more than one face, in which case up to 6 cells may be needed.
+  // "top-level" cells.  There are two cases:
+  //
+  //  - If the index spans more than one face, then there is one top-level cell
+  // per spanned face, just big enough to cover the index cells on that face.
+  //
+  //  - If the index spans only one face, then we find the smallest cell "C"
+  // that covers the index cells on that face (just like the case above).
+  // Then for each of the 4 children of "C", if the child contains any index
+  // cells then we create a top-level cell that is big enough to just fit
+  // those index cells (i.e., shrinking the child as much as possible to fit
+  // its contents).  This essentially replicates what would happen if we
+  // started with "C" as the top-level cell, since "C" would immediately be
+  // split, except that we take the time to prune the children further since
+  // this will save work on every subsequent query.
   top_cells_.clear();
   iter_.Init(*index_);
-  if (iter_.Done()) return;
+  if (iter_.Done()) return;  // Empty index.
+
   S2ShapeIndex::Iterator next = iter_, last = iter_;
   last.Finish();
   last.Prev();
   if (next.id() != last.id()) {
+    // The index has at least two cells.  Choose a level such that the entire
+    // index can be spanned with at most 6 cells (if the index spans multiple
+    // faces) or 4 cells (it the index spans a single face).
     int level = next.id().GetCommonAncestorLevel(last.id()) + 1;
-    // For each top-level cell, we find the range of index cells within it and
-    // shrink the top-level cell if necessary so that it just covers them.
-    // "next" is always the next index cell that has not been covered yet.
+
+    // Visit each potential top-level cell except the last (handled below).
     S2CellId last_id = last.id().parent(level);
     for (S2CellId id = next.id().parent(level); id != last_id; id = id.next()) {
+      // Skip any top-level cells that don't contain any index cells.
       if (id.range_max() < next.id()) continue;
-      // Compute the range of index cells within the top-level cell "id".
+
+      // Find the range of index cells contained by this top-level cell and
+      // then shrink the cell if necessary so that it just covers them.
       S2ShapeIndex::Iterator cell_first = next;
       next.Seek(id.range_max().next());
       S2ShapeIndex::Iterator cell_last = next;
@@ -120,7 +143,7 @@ void S2ClosestEdgeQuery::FindClosestEdge(S2Point const& target,
   if (use_brute_force_) {
     return FindClosestEdgeBruteForce(target);
   }
-  queue_.clear();
+  queue_.mutable_rep()->clear();
   for (int i = 0; i < top_cells_.size(); ++i) {
     EnqueueCell(top_cells_[i].first, top_cells_[i].second);
   }
@@ -231,7 +254,7 @@ void S2ClosestEdgeQuery::EnqueueCell(S2CellId id,
   // Otherwise compute the minimum distance to any point in the cell and add
   // it to the priority queue.
   S2Cell cell(id);
-  S1ChordAngle distance(cell.GetDistance(target_));  // XXX FIX  XXX
+  S1ChordAngle distance(cell.GetDistance(target_));
   if (distance >= goal_distance_) return;
   queue_.push(QueueEntry(distance, id, index_cell));
 }

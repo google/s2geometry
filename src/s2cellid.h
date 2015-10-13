@@ -12,30 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2CELLID_H_
-#define UTIL_GEOMETRY_S2CELLID_H_
+#ifndef S2_GEOMETRY_S2CELLID_H_
+#define S2_GEOMETRY_S2CELLID_H_
 
 #include <stddef.h>
 #include <functional>
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
-#include <iosfwd>
+#include <iosfwd>     // No longer needed
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "base/integral_types.h"
 #include <glog/logging.h>
 #include "base/port.h"  // for HASH_NAMESPACE_DECLARATION_START
-#include "base/type_traits.h"
 #include "util/bits/bits.h"
+#include "fpcontractoff.h"
 #include "r2.h"
 #include "r2rect.h"
 #include "s2.h"
-#include "util/hash/hash.h"
 
 class S2LatLng;
 
@@ -81,15 +79,15 @@ class S2CellId {
   static int const kPosBits = 2 * kMaxLevel + 1;
   static int const kMaxSize = 1 << kMaxLevel;
 
-  inline explicit S2CellId(uint64 id) : id_(id) {}
+  explicit S2CellId(uint64 id) : id_(id) {}
 
   // The default constructor returns an invalid cell id.
-  inline S2CellId() : id_(0) {}
-  inline static S2CellId None() { return S2CellId(); }
+  S2CellId() : id_(0) {}
+  static S2CellId None() { return S2CellId(); }
 
   // Returns an invalid cell id guaranteed to be larger than any
   // valid cell id.  Useful for creating indexes.
-  inline static S2CellId Sentinel() { return S2CellId(~uint64(0)); }
+  static S2CellId Sentinel() { return S2CellId(~uint64(0)); }
 
   // Return the cell corresponding to a given S2 cube face.
   static S2CellId FromFace(int face);
@@ -119,10 +117,10 @@ class S2CellId {
   R2Point GetCenterST() const;
 
   // Return the edge length of this cell in (s,t)-space.
-  inline double GetSizeST() const;
+  double GetSizeST() const;
 
   // Return the edge length in (s,t)-space of cells at the given level.
-  inline static double GetSizeST(int level);
+  static double GetSizeST(int level);
 
   // Return the bounds of this cell in (s,t)-space.
   R2Rect GetBoundST() const;
@@ -140,50 +138,50 @@ class S2CellId {
   // that although (si,ti) coordinates span the range [0,2**31] in general,
   // the cell center coordinates are always in the range [1,2**31-1] and
   // therefore can be represented using a signed 32-bit integer.
-  inline int GetCenterSiTi(int* psi, int* pti) const;
+  int GetCenterSiTi(int* psi, int* pti) const;
 
   // Return the S2LatLng corresponding to the center of the given cell.
   S2LatLng ToLatLng() const;
 
   // The 64-bit unique identifier for this cell.
-  inline uint64 id() const { return id_; }
+  uint64 id() const { return id_; }
 
   // Return true if id() represents a valid cell.
-  inline bool is_valid() const;
+  bool is_valid() const;
 
   // Which cube face this cell belongs to, in the range 0..5.
-  inline int face() const;
+  int face() const;
 
   // The position of the cell center along the Hilbert curve over this face,
   // in the range 0..(2**kPosBits-1).
-  inline uint64 pos() const;
+  uint64 pos() const;
 
   // Return the subdivision level of the cell (range 0..kMaxLevel).
   int level() const;
 
   // Return the edge length of this cell in (i,j)-space.
-  inline int GetSizeIJ() const;
+  int GetSizeIJ() const;
 
   // Like the above, but return the size of cells at the given level.
-  inline static int GetSizeIJ(int level);
+  static int GetSizeIJ(int level);
 
   // Return true if this is a leaf cell (more efficient than checking
   // whether level() == kMaxLevel).
-  inline bool is_leaf() const;
+  bool is_leaf() const;
 
   // Return true if this is a top-level face cell (more efficient than
   // checking whether level() == 0).
-  inline bool is_face() const;
+  bool is_face() const;
 
   // Return the child position (0..3) of this cell within its parent.
   // REQUIRES: level() >= 1.
-  inline int child_position() const;
+  int child_position() const;
 
   // Return the child position (0..3) of this cell's ancestor at the given
   // level within its parent.  For example, child_position(1) returns the
   // position of this cell's level-1 ancestor within its top-level face cell.
   // REQUIRES: 1 <= level <= this->level().
-  inline int child_position(int level) const;
+  int child_position(int level) const;
 
   // Methods that return the range of cell ids that are contained
   // within this cell (including itself).  The range is *inclusive*
@@ -199,23 +197,23 @@ class S2CellId {
   // this method would need to return (range_max().id() + 1) which is not
   // always a valid cell id.  This also means that iterators would need to be
   // tested using "<" rather that the usual "!=".
-  inline S2CellId range_min() const;
-  inline S2CellId range_max() const;
+  S2CellId range_min() const;
+  S2CellId range_max() const;
 
   // Return true if the given cell is contained within this one.
-  inline bool contains(S2CellId other) const;
+  bool contains(S2CellId other) const;
 
   // Return true if the given cell intersects this one.
-  inline bool intersects(S2CellId other) const;
+  bool intersects(S2CellId other) const;
 
   // Return the cell at the previous level or at the given level (which must
   // be less than or equal to the current level).
-  inline S2CellId parent() const;
-  inline S2CellId parent(int level) const;
+  S2CellId parent() const;
+  S2CellId parent(int level) const;
 
   // Return the immediate child of this cell at the given traversal order
   // position (in the range 0 to 3).  This cell must not be a leaf cell.
-  inline S2CellId child(int position) const;
+  S2CellId child(int position) const;
 
   // Iterator-style methods for traversing the immediate children of a cell or
   // all of the children at a given level (greater than or equal to the current
@@ -229,16 +227,16 @@ class S2CellId {
   // The convention for advancing the iterator is "c = c.next()" rather
   // than "++c" to avoid possible confusion with incrementing the
   // underlying 64-bit cell id.
-  inline S2CellId child_begin() const;
-  inline S2CellId child_begin(int level) const;
-  inline S2CellId child_end() const;
-  inline S2CellId child_end(int level) const;
+  S2CellId child_begin() const;
+  S2CellId child_begin(int level) const;
+  S2CellId child_end() const;
+  S2CellId child_end(int level) const;
 
   // Return the next/previous cell at the same level along the Hilbert curve.
   // Works correctly when advancing from one face to the next, but
   // does *not* wrap around from the last face to the first or vice versa.
-  inline S2CellId next() const;
-  inline S2CellId prev() const;
+  S2CellId next() const;
+  S2CellId prev() const;
 
   // This method advances or retreats the indicated number of steps along the
   // Hilbert curve at the current level, and returns the new position.  The
@@ -249,8 +247,8 @@ class S2CellId {
   // to the first and vice versa.  They should *not* be used for iteration in
   // conjunction with child_begin(), child_end(), Begin(), or End().  The
   // input must be a valid cell id.
-  inline S2CellId next_wrap() const;
-  inline S2CellId prev_wrap() const;
+  S2CellId next_wrap() const;
+  S2CellId prev_wrap() const;
 
   // This method advances or retreats the indicated number of steps along the
   // Hilbert curve at the current level, and returns the new position.  The
@@ -283,8 +281,8 @@ class S2CellId {
   // curve at a given level (across all 6 faces of the cube).  Note that the
   // end value is exclusive (just like standard STL iterators), and is not a
   // valid cell id.
-  inline static S2CellId Begin(int level);
-  inline static S2CellId End(int level);
+  static S2CellId Begin(int level);
+  static S2CellId End(int level);
 
   // Methods to encode and decode cell ids to compact text strings suitable
   // for display or indexing.  Cells at lower levels (i.e. larger cells) are
@@ -348,13 +346,14 @@ class S2CellId {
   uint64 lsb() const { return id_ & -id_; }
 
   // Return the lowest-numbered bit that is on for cells at the given level.
-  inline static uint64 lsb_for_level(int level) {
+  static uint64 lsb_for_level(int level) {
     return uint64(1) << (2 * (kMaxLevel - level));
   }
 
   // Return the bound in (u,v)-space for the cell at the given level containing
   // the leaf cell with the given (i,j)-coordinates.
   static R2Rect IJLevelToBoundUV(int ij[2], int level);
+
 
  private:
   // This is the offset required to wrap around from the beginning of the
@@ -369,10 +368,11 @@ class S2CellId {
 
   // Inline helper function that calls FromFaceIJ if "same_face" is true,
   // or FromFaceIJWrap if "same_face" is false.
-  inline static S2CellId FromFaceIJSame(int face, int i, int j, bool same_face);
+  static S2CellId FromFaceIJSame(int face, int i, int j, bool same_face);
 
   uint64 id_;
-} PACKED;  // Necessary so that structures containing S2CellId's can be PACKED.
+} ATTRIBUTE_PACKED;  // Necessary so that structures containing S2CellId's can
+                     // be ATTRIBUTE_PACKED.
 
 inline bool operator==(S2CellId x, S2CellId y) {
   return x.id() == y.id();
@@ -448,9 +448,7 @@ inline uint64 S2CellId::pos() const {
 }
 
 inline int S2CellId::level() const {
-  // The "fast path" for leaf cells actually improves the benchmark results
-  // for all cell levels (as of gcc 4.4.3); the reasons are unclear.
-  if (is_leaf()) return kMaxLevel;
+  // A special case for leaf cells is not worthwhile.
   return kMaxLevel - (Bits::FindLSBSetNonZero64(id_) >> 1);
 }
 
@@ -596,8 +594,9 @@ inline S2CellId S2CellId::End(int level) {
 
 std::ostream& operator<<(std::ostream& os, S2CellId id);
 
-// HASH_NAMESPACE::hash specialization for S2CellId. See
-// and the std::hash specialization below.
+// Hash specialization for STL hash_* containers.  (For std::unordered_*
+// containers the hasher must be given explicitly; see S2CellIdHash below
+// and go/enabling-unordered.)
 #ifndef SWIG
 HASH_NAMESPACE_DECLARATION_START
 
@@ -610,11 +609,12 @@ template<> struct hash<S2CellId> {
 HASH_NAMESPACE_DECLARATION_END
 #endif  // SWIG
 
-// Hasher for S2CellId. The values it produces may change from time to time
-struct S2CellIdHasher {
+// Hasher for S2CellId.
+// Example use: std::unordered_map<S2CellId, int, S2CellIdHash>.
+struct S2CellIdHash {
   size_t operator()(S2CellId id) const {
-    return util_hash::Hash(id.id());
+    return std::hash<uint64>()(id.id());
   }
 };
 
-#endif  // UTIL_GEOMETRY_S2CELLID_H_
+#endif  // S2_GEOMETRY_S2CELLID_H_

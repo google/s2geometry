@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2EDGEQUERY_H_
-#define UTIL_GEOMETRY_S2EDGEQUERY_H_
+#ifndef S2_GEOMETRY_S2EDGEQUERY_H_
+#define S2_GEOMETRY_S2EDGEQUERY_H_
 
 #include <vector>
 
 #include "base/macros.h"
 #include <map>
+#include "fpcontractoff.h"
 #include "r2.h"
 #include "r2rect.h"
 #include "s2.h"
@@ -68,8 +70,8 @@ class S2EdgeQuery {
   // Internal methods are documented with their definitions.
   void GetCells(S2Point const& a, S2Point const& b);
   void GetCells(S2PaddedCell const& pcell, R2Rect const& bound);
-  inline void ClipVAxis(R2Rect const& edge_bound, double center, int i,
-                        S2PaddedCell const& pcell);
+  void ClipVAxis(R2Rect const& edge_bound, double center, int i,
+                 S2PaddedCell const& pcell);
   void SplitUBound(R2Rect const& edge_bound, double u,
                    R2Rect child_bounds[2]) const;
   void SplitVBound(R2Rect const& edge_bound, double v,
@@ -106,4 +108,4 @@ inline void S2EdgeQuery::Init(S2ShapeIndex const& index) {
   iter_.Init(index);
 }
 
-#endif  // UTIL_GEOMETRY_S2EDGEQUERY_H_
+#endif  // S2_GEOMETRY_S2EDGEQUERY_H_

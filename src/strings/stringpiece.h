@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Maintainer: mec@google.com (Michael Chastain)
 //
 // A StringPiece points to part or all of a string, Cord, double-quoted string
@@ -130,9 +131,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
+#include <unordered_map>
 #include <iosfwd>
 #include <limits>
 #include <string>
@@ -311,12 +310,12 @@ class StringPiece {
   void AppendToString(string* target) const;
 
   bool starts_with(StringPiece x) const {
-    return (length_ >= x.length_) && (memcmp(ptr_, x.ptr_, x.length_) == 0);
+    return length_ >= x.length_ && strings::memeq(ptr_, x.ptr_, x.length_);
   }
 
   bool ends_with(StringPiece x) const {
-    return ((length_ >= x.length_) &&
-            (memcmp(ptr_ + (length_-x.length_), x.ptr_, x.length_) == 0));
+    return length_ >= x.length_ &&
+           strings::memeq(ptr_ + (length_ - x.length_), x.ptr_, x.length_);
   }
 
   // Checks whether StringPiece starts with x and if so advances the beginning
@@ -423,18 +422,15 @@ template <class X> struct GoodFastHash;
 //  cannot safely store a StringPiece into an STL container
 // ------------------------------------------------------------------
 
-namespace base {
-// Specializations of base:: traits enable the use of StringPiece in
-// compact_array, etc. Note that StringPiece is not being declared as POD.
-template <> struct has_trivial_copy<StringPiece> : base::true_type {};
-template <> struct has_trivial_assign<StringPiece> : base::true_type {};
-template <> struct has_trivial_destructor<StringPiece> : base::true_type {};
-}  // namespace base
 
 // SWIG doesn't know how to parse this stuff properly. Omit it.
 #ifndef SWIG
 HASH_NAMESPACE_DECLARATION_START
+#ifdef _MSC_VER
+template<> struct hash_compare<StringPiece, std::less<StringPiece>> {
+#else  // _MSC_VER
 template<> struct hash<StringPiece> {
+#endif  // _MSC_VER
   size_t operator()(StringPiece s) const;
   // Less than operator, for MSVC.
   bool operator()(const StringPiece& s1, const StringPiece& s2) const {
@@ -446,7 +442,7 @@ template<> struct hash<StringPiece> {
 HASH_NAMESPACE_DECLARATION_END
 
 // An implementation of GoodFastHash for StringPiece.  See
-// GoodFastHash values.
+// util/hash/hash.h for caveats on the use of GoodFastHash values.
 template<> struct GoodFastHash<StringPiece> {
   size_t operator()(StringPiece s) const {
     return HashStringThoroughly(s.data(), s.size());

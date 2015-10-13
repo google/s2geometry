@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_R1INTERVAL_H_
-#define UTIL_GEOMETRY_R1INTERVAL_H_
+#ifndef S2_GEOMETRY_R1INTERVAL_H_
+#define S2_GEOMETRY_R1INTERVAL_H_
 
 #include <math.h>
 #include <algorithm>
@@ -23,7 +24,7 @@
 #include <iostream>
 
 #include <glog/logging.h>
-#include "base/type_traits.h"
+#include "fpcontractoff.h"
 #include "util/math/vector2.h"  // IWYU pragma: export
 
 // An R1Interval represents a closed, bounded interval on the real line.
@@ -147,8 +148,8 @@ class R1Interval {
   // Expand the interval so that it contains the given point "p".
   void AddPoint(double p) {
     if (is_empty()) { set_lo(p); set_hi(p); }
-    else if (p < lo()) { set_lo(p); }
-    else if (p > hi()) { set_hi(p); }
+    else if (p < lo()) { set_lo(p); }  // NOLINT
+    else if (p > hi()) { set_hi(p); }  // NOLINT
   }
 
   // Expand the interval so that it contains the given interval "y".
@@ -218,4 +219,4 @@ inline std::ostream& operator<<(std::ostream& os, R1Interval const& x) {
   return os << "[" << x.lo() << ", " << x.hi() << "]";
 }
 
-#endif  // UTIL_GEOMETRY_R1INTERVAL_H_
+#endif  // S2_GEOMETRY_R1INTERVAL_H_

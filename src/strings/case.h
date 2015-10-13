@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: jyrki@google.com (Jyrki Alakuijala)
 // Refactored from contributions of various authors in strings/strutil.h
 //
@@ -25,7 +26,9 @@
 #define STRINGS_CASE_H_
 
 #include <string.h>
-#include <strings.h>
+#ifndef _MSC_VER
+#include <strings.h>  // for strcasecmp, but msvc does not have this header
+#endif
 #include <functional>
 #include <string>
 

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // Hash functions for C++ builtin types. These are all of the fundamental
 // integral and floating point types in the language as well as pointers. This

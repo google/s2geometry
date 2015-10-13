@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+
 #ifndef UTIL_GTL_FIXEDARRAY_H_
 #define UTIL_GTL_FIXEDARRAY_H_
 
@@ -23,7 +24,7 @@
 #include <memory>
 #include <new>
 
-#include "dynamic_annotations/dynamic_annotations.h"
+#include "third_party/dynamic_annotations/dynamic_annotations.h"
 #include <glog/logging.h>
 #include "base/macros.h"
 #include "base/port.h"
@@ -172,7 +173,7 @@ class FixedArray {
     static pointer AsValue(type *p) { return Impl::AsValue(p); }
 
     // TODO(user): fix the type aliasing violation
-    // this assertion hints at (b/9317756).
+    // this assertion hints at.
     static_assert(sizeof(type) == sizeof(value_type),
                   "Holder must be same size as value_type");
   };
@@ -192,7 +193,7 @@ class FixedArray {
   //   b. Never use 0 length arrays (not ISO C++)
   //
   class InlineSpace {
-    typedef GOOGLE_NAMESPACE::ManualConstructor<Holder> Buffer;
+    typedef base::ManualConstructor<Holder> Buffer;
     static const size_type kDefaultBytes = 256;
 
     template <ssize_t N, typename Ignored>

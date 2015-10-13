@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 //
 // S2Error is a simple class consisting of an error code and a human-readable
 // error message.
 
-#ifndef UTIL_GEOMETRY_S2ERROR_H_
-#define UTIL_GEOMETRY_S2ERROR_H_
+#ifndef S2_GEOMETRY_S2ERROR_H_
+#define S2_GEOMETRY_S2ERROR_H_
+
+#include <stdarg.h>
 
 #include <ostream>
-#include <stdarg.h>
 #include <string>
+
 #include "base/port.h"
 
 class S2Error {
@@ -42,6 +45,16 @@ class S2Error {
     POLYGON_LOOPS_CROSS = 201,       // Two polygon loops cross.
     POLYGON_EMPTY_LOOP = 202,        // Polygon has an empty loop.
     POLYGON_EXCESS_FULL_LOOP = 203,  // Non-full polygon has a full loop.
+
+    // InitOriented() was called and detected inconsistent loop orientations.
+    POLYGON_INCONSISTENT_LOOP_ORIENTATIONS = 204,
+
+    // Loop depths don't correspond to any valid nesting hierarchy.
+    POLYGON_INVALID_LOOP_DEPTH = 205,
+
+    // Actual polygon nesting does not correspond to the nesting hierarchy
+    // encoded by the loop depths.
+    POLYGON_INVALID_LOOP_NESTING = 206,
   };
   S2Error() : code_(NO_ERROR), text_() {}
 
@@ -63,4 +76,4 @@ inline std::ostream& operator<<(std::ostream& os, S2Error const& error) {
   return os << error.text();
 }
 
-#endif  // UTIL_GEOMETRY_S2ERROR_H_
+#endif  // S2_GEOMETRY_S2ERROR_H_

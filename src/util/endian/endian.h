@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // Utility functions that depend on bytesex. We define htonll and ntohll,
 // as well as "Google" versions of all the standards: ghtonl, ghtons, and
@@ -563,7 +564,7 @@ namespace endian_internal {
 // apparent size of this function, it compiles into efficient code.
 template<typename EndianClass, typename T>
 inline T LoadInteger(const char* p) {
-  static_assert(sizeof(T) <= 8 && base::is_integral<T>::value,
+  static_assert(sizeof(T) <= 8 && std::is_integral<T>::value,
                 "T needs to be an integral type with size <= 8.");
   switch (sizeof(T)) {
     case 1: return *reinterpret_cast<const T*>(p);
@@ -581,7 +582,7 @@ inline T LoadInteger(const char* p) {
 // apparent size of this function, it compiles into efficient code.
 template<typename EndianClass, typename T>
 inline void StoreInteger(T value, char* p) {
-  static_assert(sizeof(T) <= 8 && base::is_integral<T>::value,
+  static_assert(sizeof(T) <= 8 && std::is_integral<T>::value,
                 "T needs to be an integral type with size <= 8.");
   switch (sizeof(T)) {
     case 1: *reinterpret_cast<T*>(p) = value; break;

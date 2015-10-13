@@ -12,26 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef UTIL_GEOMETRY_OPENSOURCE_BASE_MUTEX_H_
-#define UTIL_GEOMETRY_OPENSOURCE_BASE_MUTEX_H_
+
+#ifndef BASE_MUTEX_H_
+#define BASE_MUTEX_H_
 
 #include <condition_variable>
 #include <mutex>
 
 class Mutex {
  public:
-  inline Mutex() : lock_(mutex_, std::defer_lock) {}
+  Mutex() = default;
   ~Mutex() = default;
   Mutex(Mutex const&) = delete;
   Mutex& operator=(Mutex const&) = delete;
 
-  inline void Lock() { lock_.lock(); }
-  inline void Unlock() { lock_.unlock(); }
+  inline void Lock() { mutex_.lock(); }
+  inline void Unlock() { mutex_.unlock(); }
 
  private:
   std::mutex mutex_;
-  // Use unique_lock because we need to interact with condition_variables.
-  std::unique_lock<std::mutex> lock_;
 
   friend class CondVar;
 };
@@ -43,7 +42,11 @@ class CondVar {
   CondVar(CondVar const&) = delete;
   CondVar& operator=(CondVar const&) = delete;
 
-  inline void Wait(Mutex* mu) { cond_var_.wait(mu->lock_); };
+  inline void Wait(Mutex* mu) {
+    std::unique_lock<std::mutex> lock(mu->mutex_, std::adopt_lock);
+    cond_var_.wait(lock);
+    lock.release();
+  }
   inline void Signal() { cond_var_.notify_one(); }
   inline void SignalAll() { cond_var_.notify_all(); }
 
@@ -51,4 +54,4 @@ class CondVar {
   std::condition_variable cond_var_;
 };
 
-#endif  // UTIL_GEOMETRY_OPENSOURCE_BASE_MUTEX_H_
+#endif  // BASE_MUTEX_H_

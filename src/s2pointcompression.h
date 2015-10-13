@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // Given a sequence of S2Points assumed to be the center of level-k cells,
 // compresses it into a stream using the following method:
@@ -42,9 +43,10 @@
 // an average of 3.8 bytes for each additional vertex, when computed on
 // Google's geographic repository.
 
-#ifndef UTIL_GEOMETRY_S2POINTCOMPRESSION_H_
-#define UTIL_GEOMETRY_S2POINTCOMPRESSION_H_
+#ifndef S2_GEOMETRY_S2POINTCOMPRESSION_H_
+#define S2_GEOMETRY_S2POINTCOMPRESSION_H_
 
+#include "fpcontractoff.h"
 #include "s2.h"
 
 class Decoder;
@@ -77,4 +79,4 @@ bool S2DecodePointsCompressed(Decoder* decoder,
                               int level,
                               S2Point* points);
 
-#endif  // UTIL_GEOMETRY_S2POINTCOMPRESSION_H_
+#endif  // S2_GEOMETRY_S2POINTCOMPRESSION_H_

@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+
 // This file provides hash functions for Vector3<T>, assuming T is a POD.
 //
 // WARNING: hashing floats and doubles is a tricky business due to multiple
@@ -73,20 +74,21 @@ inline uint64 CollapseZeroes(uint64 bits) {
 // A hash for vectors of floats or doubles.  We call CollapseZero() on each
 // element of v because of +0 vs -0 etc.  See above.
 template <class Vec> size_t FloatHash(const Vec& v) {
-  const bool kIsFloat = base::is_same<const Vec&, const Vector3_f&>::value;
-  const bool kIsDouble = base::is_same<const Vec&, const Vector3_d&>::value;
+  const bool kIsFloat = std::is_same<const Vec&, const Vector3_f&>::value;
+  const bool kIsDouble = std::is_same<const Vec&, const Vector3_d&>::value;
   CHECK(kIsFloat || kIsDouble);
   if (kIsFloat) {
     const char* data = reinterpret_cast<const char*>(v.Data());
     uint128 u(CollapseZeroes(UNALIGNED_LOAD64(data)),
               CollapseZeroes(UNALIGNED_LOAD64(data + 4)) + MIX64);
-    return hash<uint128>()(u);
+    return HASH_NAMESPACE::hash<uint128>()(u);
   } else {
     const char* data = reinterpret_cast<const char*>(v.Data());
     uint128 u(CollapseZero(UNALIGNED_LOAD64(data)),
               CollapseZero(UNALIGNED_LOAD64(data + 8)) + MIX64);
-    u = uint128(hash<uint128>()(u), CollapseZero(UNALIGNED_LOAD64(data + 16)));
-    return hash<uint128>()(u);
+    u = uint128(HASH_NAMESPACE::hash<uint128>()(u),
+                CollapseZero(UNALIGNED_LOAD64(data + 16)));
+    return HASH_NAMESPACE::hash<uint128>()(u);
   }
 }
 
@@ -97,8 +99,8 @@ template <class T> struct GoodFastHash;
 // This hash function may change from time to time.
 template <class VType> struct GoodFastHash<Vector3<VType> > {
   size_t operator()(const Vector3<VType>& v) const {
-    COMPILE_ASSERT(base::is_pod<VType>::value, POD_expected);
-    if (base::is_floating_point<VType>::value)
+    COMPILE_ASSERT(std::is_pod<VType>::value, POD_expected);
+    if (std::is_floating_point<VType>::value)
       return vector3_hash_internal::FloatHash(v);
     else
       return HashStringThoroughly(reinterpret_cast<const char*>(v.Data()),

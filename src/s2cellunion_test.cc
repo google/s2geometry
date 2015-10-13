@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2cellunion.h"
@@ -24,7 +25,7 @@
 #include "base/integral_types.h"
 #include <glog/logging.h>
 #include "base/stringprintf.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "s1angle.h"
 #include "s2cap.h"
 #include "s2cell.h"
@@ -260,7 +261,6 @@ TEST(S2CellUnion, Normalize) {
       EXPECT_EQ(contains, cellunion.Contains(test[j]));
       EXPECT_EQ(intersects, cellunion.Intersects(test[j]));
     }
-
   }
   printf("avg in %.2f, avg out %.2f\n", in_sum / kIters, out_sum / kIters);
 }
@@ -505,3 +505,4 @@ TEST(S2CellUnion, LeafCellsCovered) {
       (2ULL << 56) + (1ULL << 58) + (1ULL << 60);
   EXPECT_EQ(expected, cell_union.LeafCellsCovered());
 }
+

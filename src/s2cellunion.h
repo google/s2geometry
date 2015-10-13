@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2CELLUNION_H_
-#define UTIL_GEOMETRY_S2CELLUNION_H_
+#ifndef S2_GEOMETRY_S2CELLUNION_H_
+#define S2_GEOMETRY_S2CELLUNION_H_
 
 #include <vector>
 
 #include "base/integral_types.h"
 #include <glog/logging.h>
 #include "base/macros.h"
+#include "fpcontractoff.h"
 #include "s2.h"
 #include "s2cellid.h"
 #include "s2region.h"
@@ -80,8 +82,8 @@ class S2CellUnion : public S2Region {
   // possible, and sorting all the cell ids in increasing order.  Returns true
   // if the number of cells was reduced.
   //
-  // This method *must* be called before doing any calculations on the cell
-  // union, such as Intersects() or Contains().
+  // If InitRaw() was used then this method *must* be called before doing any
+  // calculations on the cell union, such as Intersects() or Contains().
   bool Normalize();
 
   // Replaces "output" with an expanded version of the cell union where any
@@ -222,6 +224,32 @@ class S2CellUnion : public S2Region {
   // This is a fast operation (logarithmic in the size of the cell union).
   bool Contains(S2Point const& p) const;
 
+  ////////////////////////////////////////////////////////////////////////
+  // Static methods intended for high-performance clients that prefer to
+  // manage their own storage.
+
+  // Like Normalize(), but works directly with a vector of S2CellIds.
+  // Equivalent to the following:
+  //    S2CellUnion cell_union;
+  //    cell_union.Init(*cell_ids);
+  //    cell_union.Detach(cell_ids);
+  static bool Normalize(std::vector<S2CellId>* cell_ids);
+
+  // Like GetIntersection(), but works directly with vectors of S2CellIds,
+  // Equivalent to the following:
+  //    S2CellUnion x_union, y_union, result_union;
+  //    x_union.Init(x);
+  //    y_union.Init(y);
+  //    result_union.GetIntersection(&x_union, &y_union);
+  //    result_union.Detach(out);
+  // except that this method has slightly more relaxed normalization
+  // requirements: the input vectors may contain groups of 4 child cells that
+  // all have the same parent.  (In a normalized S2CellUnion, such groups are
+  // always replaced by the parent cell.)
+  static void GetIntersection(std::vector<S2CellId> const& x,
+                              std::vector<S2CellId> const& y,
+                              std::vector<S2CellId>* out);
+
  private:
   std::vector<S2CellId> cell_ids_;
 
@@ -231,4 +259,7 @@ class S2CellUnion : public S2Region {
 // Return true if two cell unions are identical.
 bool operator==(S2CellUnion const& x, S2CellUnion const& y);
 
-#endif  // UTIL_GEOMETRY_S2CELLUNION_H_
+// Return true if two cell unions are different.
+bool operator!=(S2CellUnion const& x, S2CellUnion const& y);
+
+#endif  // S2_GEOMETRY_S2CELLUNION_H_

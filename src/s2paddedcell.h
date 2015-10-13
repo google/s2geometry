@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2PADDEDCELL_H_
-#define UTIL_GEOMETRY_S2PADDEDCELL_H_
+#ifndef S2_GEOMETRY_S2PADDEDCELL_H_
+#define S2_GEOMETRY_S2PADDEDCELL_H_
 
+#include "fpcontractoff.h"
 #include "r2rect.h"
 #include "s2.h"
 #include "s2cellid.h"
@@ -104,4 +106,4 @@ inline void S2PaddedCell::GetChildIJ(int pos, int* i, int* j) const {
   *j = ij & 1;
 }
 
-#endif  // UTIL_GEOMETRY_S2PADDEDCELL_H_
+#endif  // S2_GEOMETRY_S2PADDEDCELL_H_

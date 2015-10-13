@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2REGIONUNION_H__
-#define UTIL_GEOMETRY_S2REGIONUNION_H__
+#ifndef S2_GEOMETRY_S2REGIONUNION_H__
+#define S2_GEOMETRY_S2REGIONUNION_H__
 
 #include <vector>
 
 #include <glog/logging.h>
 #include "base/macros.h"
+#include "fpcontractoff.h"
 #include "s2.h"
 #include "s2region.h"
 
@@ -39,7 +41,7 @@ class S2RegionUnion : public S2Region {
 
   // Create a region representing the union of the given regions.
   // Takes ownership of all regions and clears the given vector.
-  S2RegionUnion(std::vector<S2Region*>* regions);
+  explicit S2RegionUnion(std::vector<S2Region*>* regions);
 
   virtual ~S2RegionUnion();
 
@@ -57,7 +59,7 @@ class S2RegionUnion : public S2Region {
 
   // Accessor methods.
   int num_regions() const { return regions_.size(); }
-  inline S2Region const* region(int i) const { return regions_[i]; }
+  S2Region const* region(int i) const { return regions_[i]; }
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -77,11 +79,11 @@ class S2RegionUnion : public S2Region {
  private:
   // Internal constructor used only by Clone() that makes a deep copy of
   // its argument.
-  S2RegionUnion(S2RegionUnion const* src);
+  explicit S2RegionUnion(S2RegionUnion const* src);
 
   std::vector<S2Region*> regions_;
 
   DISALLOW_COPY_AND_ASSIGN(S2RegionUnion);
 };
 
-#endif  // UTIL_GEOMETRY_S2REGIONUNION_H__
+#endif  // S2_GEOMETRY_S2REGIONUNION_H__

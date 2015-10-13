@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2cellid.h"
@@ -19,23 +20,22 @@
 #include <math.h>
 #include <stdio.h>
 #include <algorithm>
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
 #include <iosfwd>
 #include <iostream>
+#include <unordered_map>
 #include <vector>
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "base/macros.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "s2.h"
 #include "s2latlng.h"
 #include "s2testing.h"
 
 
 using std::min;
+using std::unordered_map;
 using std::vector;
 
 DEFINE_int32(iters, 20000000,
@@ -53,22 +53,22 @@ static S2CellId GetCellId(double lat_degrees, double lng_degrees) {
 
 TEST(S2CellId, DefaultConstructor) {
   S2CellId id;
-  EXPECT_EQ(id.id(), 0);
+  EXPECT_EQ(0, id.id());
   EXPECT_FALSE(id.is_valid());
 }
 
-TEST(S2CellId, S2CellIdHasher) {
-  EXPECT_EQ(S2CellIdHasher()(GetCellId(0, 90)),
-            S2CellIdHasher()(GetCellId(0, 90)));
+TEST(S2CellId, S2CellIdHash) {
+  EXPECT_EQ(S2CellIdHash()(GetCellId(0, 90)),
+            S2CellIdHash()(GetCellId(0, 90)));
 }
 
 TEST(S2CellId, FaceDefinitions) {
-  EXPECT_EQ(GetCellId(0, 0).face(), 0);
-  EXPECT_EQ(GetCellId(0, 90).face(), 1);
-  EXPECT_EQ(GetCellId(90, 0).face(), 2);
-  EXPECT_EQ(GetCellId(0, 180).face(), 3);
-  EXPECT_EQ(GetCellId(0, -90).face(), 4);
-  EXPECT_EQ(GetCellId(-90, 0).face(), 5);
+  EXPECT_EQ(0, GetCellId(0, 0).face());
+  EXPECT_EQ(1, GetCellId(0, 90).face());
+  EXPECT_EQ(2, GetCellId(90, 0).face());
+  EXPECT_EQ(3, GetCellId(0, 180).face());
+  EXPECT_EQ(4, GetCellId(0, -90).face());
+  EXPECT_EQ(5, GetCellId(-90, 0).face());
 }
 
 TEST(S2CellId, FromFace) {
@@ -81,26 +81,26 @@ TEST(S2CellId, ParentChildRelationships) {
   S2CellId id = S2CellId::FromFacePosLevel(3, 0x12345678,
                                            S2CellId::kMaxLevel - 4);
   EXPECT_TRUE(id.is_valid());
-  EXPECT_EQ(id.face(), 3);
-  EXPECT_EQ(id.pos(), 0x12345700);
-  EXPECT_EQ(id.level(), S2CellId::kMaxLevel - 4);
+  EXPECT_EQ(3, id.face());
+  EXPECT_EQ(0x12345700, id.pos());
+  EXPECT_EQ(S2CellId::kMaxLevel - 4, id.level());
   EXPECT_FALSE(id.is_leaf());
 
-  EXPECT_EQ(id.child_begin(id.level() + 2).pos(), 0x12345610);
-  EXPECT_EQ(id.child_begin().pos(), 0x12345640);
-  EXPECT_EQ(id.parent().pos(), 0x12345400);
-  EXPECT_EQ(id.parent(id.level() - 2).pos(), 0x12345000);
+  EXPECT_EQ(0x12345610, id.child_begin(id.level() + 2).pos());
+  EXPECT_EQ(0x12345640, id.child_begin().pos());
+  EXPECT_EQ(0x12345400, id.parent().pos());
+  EXPECT_EQ(0x12345000, id.parent(id.level() - 2).pos());
 
   // Check ordering of children relative to parents.
   EXPECT_LT(id.child_begin(), id);
   EXPECT_GT(id.child_end(), id);
-  EXPECT_EQ(id.child_begin().next().next().next().next(), id.child_end());
-  EXPECT_EQ(id.child_begin(S2CellId::kMaxLevel), id.range_min());
-  EXPECT_EQ(id.child_end(S2CellId::kMaxLevel), id.range_max().next());
+  EXPECT_EQ(id.child_end(), id.child_begin().next().next().next().next());
+  EXPECT_EQ(id.range_min(), id.child_begin(S2CellId::kMaxLevel));
+  EXPECT_EQ(id.range_max().next(), id.child_end(S2CellId::kMaxLevel));
 
   // Check that cells are represented by the position of their center
   // along the Hilbert curve.
-  EXPECT_EQ(id.range_min().id() + id.range_max().id(), 2 * id.id());
+  EXPECT_EQ(2 * id.id(), id.range_min().id() + id.range_max().id());
 }
 
 TEST(S2CellId, CenterSiTi) {
@@ -143,55 +143,55 @@ TEST(S2CellId, CenterSiTi) {
 
 TEST(S2CellId, Wrapping) {
   // Check wrapping from beginning of Hilbert curve to end and vice versa.
-  EXPECT_EQ(S2CellId::Begin(0).prev_wrap(), S2CellId::End(0).prev());
+  EXPECT_EQ(S2CellId::End(0).prev(), S2CellId::Begin(0).prev_wrap());
 
-  EXPECT_EQ(S2CellId::Begin(S2CellId::kMaxLevel).prev_wrap(),
-            S2CellId::FromFacePosLevel(
+  EXPECT_EQ(S2CellId::FromFacePosLevel(
                 5, ~static_cast<uint64>(0) >> S2CellId::kFaceBits,
-                S2CellId::kMaxLevel));
-  EXPECT_EQ(S2CellId::Begin(S2CellId::kMaxLevel).advance_wrap(-1),
-            S2CellId::FromFacePosLevel(
+                S2CellId::kMaxLevel),
+            S2CellId::Begin(S2CellId::kMaxLevel).prev_wrap());
+  EXPECT_EQ(S2CellId::FromFacePosLevel(
                 5, ~static_cast<uint64>(0) >> S2CellId::kFaceBits,
-                S2CellId::kMaxLevel));
+                S2CellId::kMaxLevel),
+            S2CellId::Begin(S2CellId::kMaxLevel).advance_wrap(-1));
 
-  EXPECT_EQ(S2CellId::End(4).prev().next_wrap(), S2CellId::Begin(4));
-  EXPECT_EQ(S2CellId::End(4).advance(-1).advance_wrap(1), S2CellId::Begin(4));
+  EXPECT_EQ(S2CellId::Begin(4), S2CellId::End(4).prev().next_wrap());
+  EXPECT_EQ(S2CellId::Begin(4), S2CellId::End(4).advance(-1).advance_wrap(1));
 
-  EXPECT_EQ(S2CellId::End(S2CellId::kMaxLevel).prev().next_wrap(),
-            S2CellId::FromFacePosLevel(0, 0, S2CellId::kMaxLevel));
-  EXPECT_EQ(S2CellId::End(S2CellId::kMaxLevel).advance(-1).advance_wrap(1),
-            S2CellId::FromFacePosLevel(0, 0, S2CellId::kMaxLevel));
+  EXPECT_EQ(S2CellId::FromFacePosLevel(0, 0, S2CellId::kMaxLevel),
+            S2CellId::End(S2CellId::kMaxLevel).prev().next_wrap());
+  EXPECT_EQ(S2CellId::FromFacePosLevel(0, 0, S2CellId::kMaxLevel),
+            S2CellId::End(S2CellId::kMaxLevel).advance(-1).advance_wrap(1));
 }
 
 TEST(S2CellId, Advance) {
   S2CellId id = S2CellId::FromFacePosLevel(3, 0x12345678,
                                            S2CellId::kMaxLevel - 4);
   // Check basic properties of advance().
-  EXPECT_EQ(S2CellId::Begin(0).advance(7), S2CellId::End(0));
-  EXPECT_EQ(S2CellId::Begin(0).advance(12), S2CellId::End(0));
-  EXPECT_EQ(S2CellId::End(0).advance(-7), S2CellId::Begin(0));
-  EXPECT_EQ(S2CellId::End(0).advance(-12000000), S2CellId::Begin(0));
+  EXPECT_EQ(S2CellId::End(0), S2CellId::Begin(0).advance(7));
+  EXPECT_EQ(S2CellId::End(0), S2CellId::Begin(0).advance(12));
+  EXPECT_EQ(S2CellId::Begin(0), S2CellId::End(0).advance(-7));
+  EXPECT_EQ(S2CellId::Begin(0), S2CellId::End(0).advance(-12000000));
   int num_level_5_cells = 6 << (2 * 5);
-  EXPECT_EQ(S2CellId::Begin(5).advance(500),
-            S2CellId::End(5).advance(500 - num_level_5_cells));
-  EXPECT_EQ(id.child_begin(S2CellId::kMaxLevel).advance(256),
-            id.next().child_begin(S2CellId::kMaxLevel));
-  EXPECT_EQ(S2CellId::FromFacePosLevel(1, 0, S2CellId::kMaxLevel)
-            .advance(static_cast<int64>(4) << (2 * S2CellId::kMaxLevel)),
-            S2CellId::FromFacePosLevel(5, 0, S2CellId::kMaxLevel));
+  EXPECT_EQ(S2CellId::End(5).advance(500 - num_level_5_cells),
+            S2CellId::Begin(5).advance(500));
+  EXPECT_EQ(id.next().child_begin(S2CellId::kMaxLevel),
+            id.child_begin(S2CellId::kMaxLevel).advance(256));
+  EXPECT_EQ(S2CellId::FromFacePosLevel(5, 0, S2CellId::kMaxLevel),
+            S2CellId::FromFacePosLevel(1, 0, S2CellId::kMaxLevel)
+            .advance(static_cast<int64>(4) << (2 * S2CellId::kMaxLevel)));
 
   // Check basic properties of advance_wrap().
-  EXPECT_EQ(S2CellId::Begin(0).advance_wrap(7), S2CellId::FromFace(1));
-  EXPECT_EQ(S2CellId::Begin(0).advance_wrap(12), S2CellId::Begin(0));
-  EXPECT_EQ(S2CellId::FromFace(5).advance_wrap(-7), S2CellId::FromFace(4));
-  EXPECT_EQ(S2CellId::Begin(0).advance_wrap(-12000000), S2CellId::Begin(0));
+  EXPECT_EQ(S2CellId::FromFace(1), S2CellId::Begin(0).advance_wrap(7));
+  EXPECT_EQ(S2CellId::Begin(0), S2CellId::Begin(0).advance_wrap(12));
+  EXPECT_EQ(S2CellId::FromFace(4), S2CellId::FromFace(5).advance_wrap(-7));
+  EXPECT_EQ(S2CellId::Begin(0), S2CellId::Begin(0).advance_wrap(-12000000));
   EXPECT_EQ(S2CellId::Begin(5).advance_wrap(6644),
             S2CellId::Begin(5).advance_wrap(-11788));
-  EXPECT_EQ(id.child_begin(S2CellId::kMaxLevel).advance_wrap(256),
-            id.next().child_begin(S2CellId::kMaxLevel));
-  EXPECT_EQ(S2CellId::FromFacePosLevel(5, 0, S2CellId::kMaxLevel)
-            .advance_wrap(static_cast<int64>(2) << (2 * S2CellId::kMaxLevel)),
-            S2CellId::FromFacePosLevel(1, 0, S2CellId::kMaxLevel));
+  EXPECT_EQ(id.next().child_begin(S2CellId::kMaxLevel),
+            id.child_begin(S2CellId::kMaxLevel).advance_wrap(256));
+  EXPECT_EQ(S2CellId::FromFacePosLevel(1, 0, S2CellId::kMaxLevel),
+            S2CellId::FromFacePosLevel(5, 0, S2CellId::kMaxLevel)
+            .advance_wrap(static_cast<int64>(2) << (2 * S2CellId::kMaxLevel)));
 }
 
 TEST(S2CellId, MaximumTile) {
@@ -262,9 +262,9 @@ TEST(S2CellId, Inverses) {
   for (int i = 0; i < 200000; ++i) {
     S2CellId id = S2Testing::GetRandomCellId(S2CellId::kMaxLevel);
     EXPECT_TRUE(id.is_leaf());
-    EXPECT_EQ(id.level(), S2CellId::kMaxLevel);
+    EXPECT_EQ(S2CellId::kMaxLevel, id.level());
     S2LatLng center = id.ToLatLng();
-    EXPECT_EQ(S2CellId::FromLatLng(center).id(), id.id());
+    EXPECT_EQ(id.id(), S2CellId::FromLatLng(center).id());
   }
 }
 
@@ -274,58 +274,72 @@ TEST(S2CellId, Tokens) {
     S2CellId id = S2Testing::GetRandomCellId();
     string token = id.ToToken();
     EXPECT_LE(token.size(), 16);
-    EXPECT_EQ(S2CellId::FromToken(token), id);
-    EXPECT_EQ(S2CellId::FromToken(token.data(), token.size()), id);
+    EXPECT_EQ(id, S2CellId::FromToken(token));
+    EXPECT_EQ(id, S2CellId::FromToken(token.data(), token.size()));
   }
-  // Check that invalid cell ids can be encoded.
+  // Check that invalid cell ids can be encoded, and round-trip is
+  // the identity operation.
   string token = S2CellId::None().ToToken();
-  EXPECT_EQ(S2CellId::FromToken(token), S2CellId::None());
-  EXPECT_EQ(S2CellId::FromToken(token.data(), token.size()), S2CellId::None());
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromToken(token));
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromToken(token.data(), token.size()));
+
+  // Sentinel is invalid.
+  token = S2CellId::Sentinel().ToToken();
+  EXPECT_EQ(S2CellId::FromToken(token), S2CellId::Sentinel());
+  EXPECT_EQ(S2CellId::FromToken(token.data(), token.size()),
+            S2CellId::Sentinel());
+
+  // Check an invalid face.
+  token = S2CellId::FromFace(7).ToToken();
+  EXPECT_EQ(S2CellId::FromToken(token), S2CellId::FromFace(7));
+  EXPECT_EQ(S2CellId::FromToken(token.data(), token.size()),
+            S2CellId::FromFace(7));
 
   // Check that supplying tokens with non-alphanumeric characters
   // returns S2CellId::None().
-  EXPECT_EQ(S2CellId::FromToken("876b e99"), S2CellId::None());
-  EXPECT_EQ(S2CellId::FromToken("876bee99\n"), S2CellId::None());
-  EXPECT_EQ(S2CellId::FromToken("876[ee99"), S2CellId::None());
-  EXPECT_EQ(S2CellId::FromToken(" 876bee99"), S2CellId::None());
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromToken("876b e99"));
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromToken("876bee99\n"));
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromToken("876[ee99"));
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromToken(" 876bee99"));
 }
 
 
 static const int kMaxExpandLevel = 3;
 
-static void ExpandCell(S2CellId parent, vector<S2CellId>* cells,
-                       hash_map<S2CellId, S2CellId>* parent_map) {
+static void ExpandCell(
+    S2CellId parent, vector<S2CellId>* cells,
+    unordered_map<S2CellId, S2CellId, S2CellIdHash>* parent_map) {
   cells->push_back(parent);
   if (parent.level() == kMaxExpandLevel) return;
   int i, j, orientation;
   int face = parent.ToFaceIJOrientation(&i, &j, &orientation);
-  EXPECT_EQ(face, parent.face());
+  EXPECT_EQ(parent.face(), face);
 
   S2CellId child = parent.child_begin();
   for (int pos = 0; child != parent.child_end(); child = child.next(), ++pos) {
     (*parent_map)[child] = parent;
     // Do some basic checks on the children.
-    EXPECT_EQ(parent.child(pos), child);
+    EXPECT_EQ(child, parent.child(pos));
     EXPECT_EQ(pos, child.child_position());
     // Test child_position(level) on all the child's ancestors.
     for (S2CellId ancestor = child; ancestor.level() >= 1;
          ancestor = (*parent_map)[ancestor]) {
-      EXPECT_EQ(ancestor.child_position(),
-                child.child_position(ancestor.level()));
+      EXPECT_EQ(child.child_position(ancestor.level()),
+                ancestor.child_position());
     }
     EXPECT_EQ(pos, child.child_position(child.level()));
-    EXPECT_EQ(child.level(), parent.level() + 1);
+    EXPECT_EQ(parent.level() + 1, child.level());
     EXPECT_FALSE(child.is_leaf());
     int child_orientation;
-    EXPECT_EQ(child.ToFaceIJOrientation(&i, &j, &child_orientation), face);
-    EXPECT_EQ(child_orientation, orientation ^ S2::kPosToOrientation[pos]);
+    EXPECT_EQ(face, child.ToFaceIJOrientation(&i, &j, &child_orientation));
+    EXPECT_EQ(orientation ^ S2::kPosToOrientation[pos], child_orientation);
     ExpandCell(child, cells, parent_map);
   }
 }
 
 TEST(S2CellId, Containment) {
   // Test contains() and intersects().
-  hash_map<S2CellId, S2CellId> parent_map;
+  unordered_map<S2CellId, S2CellId, S2CellIdHash> parent_map;
   vector<S2CellId> cells;
   for (int face = 0; face < 6; ++face) {
     ExpandCell(S2CellId::FromFace(face), &cells, &parent_map);
@@ -339,9 +353,10 @@ TEST(S2CellId, Containment) {
           break;
         }
       }
-      EXPECT_EQ(cells[i].contains(cells[j]), contained);
-      EXPECT_EQ(cells[j] >= cells[i].range_min() &&
-                cells[j] <= cells[i].range_max(), contained);
+      EXPECT_EQ(contained, cells[i].contains(cells[j]));
+      EXPECT_EQ(contained,
+                cells[j] >= cells[i].range_min() &&
+                cells[j] <= cells[i].range_max());
       EXPECT_EQ(cells[i].intersects(cells[j]),
                 cells[i].contains(cells[j]) || cells[j].contains(cells[i]));
     }
@@ -360,8 +375,8 @@ TEST(S2CellId, Continuity) {
   S2CellId id = S2CellId::Begin(kMaxWalkLevel);
   for (; id != end; id = id.next()) {
     EXPECT_LE(id.ToPointRaw().Angle(id.next_wrap().ToPointRaw()), max_dist);
-    EXPECT_EQ(id.advance_wrap(1), id.next_wrap());
-    EXPECT_EQ(id.next_wrap().advance_wrap(-1), id);
+    EXPECT_EQ(id.next_wrap(), id.advance_wrap(1));
+    EXPECT_EQ(id, id.next_wrap().advance_wrap(-1));
 
     // Check that the ToPointRaw() returns the center of each cell
     // in (s,t) coordinates.
@@ -419,7 +434,7 @@ TEST(S2CellId, Neighbors) {
   S2CellId::FromFace(1).GetEdgeNeighbors(face_nbrs);
   for (int i = 0; i < 4; ++i) {
     EXPECT_TRUE(face_nbrs[i].is_face());
-    EXPECT_EQ(face_nbrs[i].face(), out_faces[i]);
+    EXPECT_EQ(out_faces[i], face_nbrs[i].face());
   }
 
   // Check the edge neighbors of the corner cells at all levels.  This case is
@@ -443,9 +458,10 @@ TEST(S2CellId, Neighbors) {
   S2CellId::FromPoint(S2Point(0, 0, 1)).AppendVertexNeighbors(5, &nbrs);
   std::sort(nbrs.begin(), nbrs.end());
   for (int i = 0; i < 4; ++i) {
-    EXPECT_EQ(nbrs[i], S2CellId::FromFaceIJ(
+    EXPECT_EQ(S2CellId::FromFaceIJ(
                  2, (1 << 29) - (i < 2), (1 << 29) - (i == 0 || i == 3))
-             .parent(5));
+              .parent(5),
+              nbrs[i]);
   }
   nbrs.clear();
 
@@ -453,10 +469,10 @@ TEST(S2CellId, Neighbors) {
   S2CellId id = S2CellId::FromFacePosLevel(0, 0, S2CellId::kMaxLevel);
   id.AppendVertexNeighbors(0, &nbrs);
   std::sort(nbrs.begin(), nbrs.end());
-  EXPECT_EQ(nbrs.size(), 3);
-  EXPECT_EQ(nbrs[0], S2CellId::FromFace(0));
-  EXPECT_EQ(nbrs[1], S2CellId::FromFace(4));
-  EXPECT_EQ(nbrs[2], S2CellId::FromFace(5));
+  ASSERT_EQ(3, nbrs.size());
+  EXPECT_EQ(S2CellId::FromFace(0), nbrs[0]);
+  EXPECT_EQ(S2CellId::FromFace(4), nbrs[1]);
+  EXPECT_EQ(S2CellId::FromFace(5), nbrs[2]);
 
   // Check that AppendAllNeighbors produces results that are consistent
   // with AppendVertexNeighbors for a bunch of random cells.
@@ -560,3 +576,4 @@ TEST(S2CellId, FromPointBenchmark) {
   printf("\tFromPoint:  %8.3f usecs\n", 1e6 * test_time / FLAGS_iters);
   EXPECT_NE(isum, 0);  // Don't let the loop get optimized away.
 }
+

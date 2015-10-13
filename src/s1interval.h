@@ -12,17 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S1INTERVAL_H_
-#define UTIL_GEOMETRY_S1INTERVAL_H_
+#ifndef S2_GEOMETRY_S1INTERVAL_H_
+#define S2_GEOMETRY_S1INTERVAL_H_
 
 #include <math.h>
 #include <iosfwd>
 #include <iostream>
 
 #include <glog/logging.h>
-#include "base/type_traits.h"
+#include "fpcontractoff.h"
 #include "util/math/vector2.h"  // IWYU pragma: export
 
 // An S1Interval represents a closed interval on a unit circle (also known
@@ -49,7 +50,7 @@ class S1Interval {
   // Constructor.  Both endpoints must be in the range -Pi to Pi inclusive.
   // The value -Pi is converted internally to Pi except for the Full()
   // and Empty() intervals.
-  inline S1Interval(double lo, double hi);
+  S1Interval(double lo, double hi);
 
   // The default constructor creates an empty interval.
   //
@@ -58,13 +59,13 @@ class S1Interval {
   // constructor above:
   //
   //   lng_bounds_ = S1Interval(lng_lo, lng_hi);
-  inline S1Interval();
+  S1Interval();
 
   // Returns the empty interval.
-  static inline S1Interval Empty();
+  static S1Interval Empty();
 
   // Returns the full interval.
-  static inline S1Interval Full();
+  static S1Interval Full();
 
   // Convenience method to construct an interval containing a single point.
   static S1Interval FromPoint(double p);
@@ -89,7 +90,7 @@ class S1Interval {
 
   // An interval is valid if neither bound exceeds Pi in absolute value,
   // and the value -Pi appears only in the Empty() and Full() intervals.
-  inline bool is_valid() const;
+  bool is_valid() const;
 
   // Return true if the interval contains all points on the unit circle.
   bool is_full() const { return hi() - lo() == 2 * M_PI; }
@@ -177,7 +178,7 @@ class S1Interval {
   S1Interval Intersection(S1Interval const& y) const;
 
   // Return true if two intervals contains the same set of points.
-  inline bool operator==(S1Interval const& y) const;
+  bool operator==(S1Interval const& y) const;
 
   // Return true if this interval can be transformed into the given interval by
   // moving each endpoint by at most "max_error" (and without the endpoints
@@ -207,7 +208,7 @@ class S1Interval {
 
   // Internal constructor that assumes that both arguments are in the
   // correct range, i.e. normalization from -Pi to Pi is already done.
-  inline S1Interval(double lo, double hi, ArgsChecked dummy);
+  S1Interval(double lo, double hi, ArgsChecked dummy);
 
   // Return true if the interval (which is closed) contains the point 'p'.
   // Skips the normalization of 'p' from -Pi to Pi.
@@ -262,4 +263,4 @@ inline std::ostream& operator<<(std::ostream& os, S1Interval const& x) {
   return os << "[" << x.lo() << ", " << x.hi() << "]";
 }
 
-#endif  // UTIL_GEOMETRY_S1INTERVAL_H_
+#endif  // S2_GEOMETRY_S1INTERVAL_H_

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // All Rights Reserved.
 //
 //
@@ -69,7 +70,7 @@ class Vector2 {
   // FloatType is the type returned by Norm() and Angle().  These methods are
   // special because they return floating-point values even when VType is an
   // integer.
-  typedef typename base::if_<base::is_integral<VType>::value,
+  typedef typename std::conditional<std::is_integral<VType>::value,
                              double, VType>::type FloatType;
   typedef Vector2<VType> Self;
   typedef VType BaseType;
@@ -81,8 +82,6 @@ class Vector2 {
   Vector2();
   // Create a new vector (x,y)
   Vector2(const VType x, const VType y);
-  // Create a new copy of the vector vb
-  Vector2(const Self &vb);  // NOLINT(runtime/explicit)
   // Keep only the two first coordinates of the vector vb
   explicit Vector2(const Vector3<VType> &vb);
   // Keep only the two first coordinates of the vector vb
@@ -94,7 +93,6 @@ class Vector2 {
   static int Size() { return SIZE; }
   // Modify the coordinates of the current vector
   void Set(const VType x, const VType y);
-  const Self& operator=(const Self &vb);
   // Add two vectors, component by component
   Self& operator+=(const Self &vb);
   // Subtract two vectors, component by component
@@ -213,11 +211,6 @@ Vector2<VType>::Vector2(const VType x, const VType y) {
   c_[1] = y;
 }
 template <typename VType>
-Vector2<VType>::Vector2(const Self &vb) {
-  c_[0] = vb.c_[0];
-  c_[1] = vb.c_[1];
-}
-template <typename VType>
 Vector2<VType>::Vector2(const Vector3<VType> &vb) {
   c_[0] = vb.x();
   c_[1] = vb.y();
@@ -238,13 +231,6 @@ template <typename VType>
 void Vector2<VType>::Set(const VType x, const VType y) {
   c_[0] = x;
   c_[1] = y;
-}
-
-template <typename VType>
-const Vector2<VType>& Vector2<VType>::operator=(const Self &vb) {
-  c_[0] = vb.c_[0];
-  c_[1] = vb.c_[1];
-  return (*this);
 }
 
 template <typename VType>
@@ -381,7 +367,7 @@ typename Vector2<VType>::FloatType Vector2<VType>::Angle(const Self &v) const {
 
 template <typename VType>
 Vector2<VType> Vector2<VType>::Normalize() const {
-  COMPILE_ASSERT(!base::is_integral<VType>::value, must_be_floating_point);
+  COMPILE_ASSERT(!std::is_integral<VType>::value, must_be_floating_point);
   VType n = Norm();
   if (n != VType(0)) {
     n = VType(1.0) / n;
@@ -444,7 +430,7 @@ Vector2<VType> Vector2<VType>::Fabs() const {
 
 template <typename VType>
 Vector2<VType> Vector2<VType>::Abs() const {
-  COMPILE_ASSERT(base::is_integral<VType>::value, use_Fabs_for_float_types);
+  COMPILE_ASSERT(std::is_integral<VType>::value, use_Fabs_for_float_types);
   COMPILE_ASSERT(static_cast<VType>(-1) == -1, type_must_be_signed);
   COMPILE_ASSERT(sizeof(c_[0]) <= sizeof(int), Abs_truncates_to_int);
   return Self(abs(c_[0]), abs(c_[1]));
@@ -530,7 +516,6 @@ typedef Vector2<double> Vector2_d;
 // TODO(user): Vector2<T> does not actually satisfy the definition of a POD
 // type even when T is a POD. Pretending that Vector2<T> is a POD probably
 // won't cause any immediate problems, but eventually this should be fixed.
-PROPAGATE_POD_FROM_TEMPLATE_ARGUMENT(Vector2);
 
 
 #endif  // UTIL_MATH_VECTOR2_H__

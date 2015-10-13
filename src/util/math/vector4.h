@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // All Rights Reserved.
 //
 //
@@ -68,7 +69,7 @@ class Vector4 {
  public:
   // FloatType is the type returned by Norm().  This method is special because
   // it returns floating-point values even when VType is an integer.
-  typedef typename base::if_<base::is_integral<VType>::value,
+  typedef typename std::conditional<std::is_integral<VType>::value,
                              double, VType>::type FloatType;
   typedef Vector4<VType> Self;
   typedef VType BaseType;
@@ -80,8 +81,6 @@ class Vector4 {
   Vector4();
   // Create a new vector (x,y,z,w)
   Vector4(const VType x, const VType y, const VType z, const VType w);
-  // Create a new copy of the vector vb
-  Vector4(const Vector4 &vb);
   // Create a new 4D vector from 2D vector and two scalars
   // (vb.x,vb.y,z,w)
   Vector4(const Vector2<VType> &vb, const VType z, const VType w);
@@ -110,7 +109,6 @@ class Vector4 {
   static int Size() { return SIZE; }
   // Modify the coordinates of the current vector
   void Set(const VType x, const VType y, const VType z, const VType w);
-  Self& operator=(const Self& vb);
   // add two vectors, component by component
   Self& operator+=(const Self& vb);
   // subtract two vectors, component by component
@@ -209,14 +207,6 @@ Vector4<VType>::Vector4(const VType x, const VType y, const VType z,
 }
 
 template <typename VType>
-Vector4<VType>::Vector4(const Self &vb) {
-  c_[0] = vb.c_[0];
-  c_[1] = vb.c_[1];
-  c_[2] = vb.c_[2];
-  c_[3] = vb.c_[3];
-}
-
-template <typename VType>
 Vector4<VType>::Vector4(const Vector2<VType> &vb, const VType z,
                         const VType w) {
   c_[0] = vb.x();
@@ -307,15 +297,6 @@ void Vector4<VType>::Set(const VType x, const VType y, const VType z,
   c_[1] = y;
   c_[2] = z;
   c_[3] = w;
-}
-
-template <typename VType>
-Vector4<VType>& Vector4<VType>::operator=(const Self& vb) {
-  c_[0] = vb.c_[0];
-  c_[1] = vb.c_[1];
-  c_[2] = vb.c_[2];
-  c_[3] = vb.c_[3];
-  return (*this);
 }
 
 template <typename VType>
@@ -467,10 +448,10 @@ typename Vector4<VType>::FloatType Vector4<VType>::Norm(void) const {
 
 template <typename VType>
 Vector4<VType> Vector4<VType>::Normalize() const {
-  COMPILE_ASSERT(!base::is_integral<VType>::value, must_be_floating_point);
+  COMPILE_ASSERT(!std::is_integral<VType>::value, must_be_floating_point);
   VType n = Norm();
-  if (n != 0) {
-    n = 1.0 / n;
+  if (n != VType(0.0)) {
+    n = VType(1.0) / n;
   }
   return Self(*this) *= n;
 }
@@ -487,7 +468,7 @@ Vector4<VType> Vector4<VType>::Fabs() const {
 
 template <typename VType>
 Vector4<VType> Vector4<VType>::Abs() const {
-  COMPILE_ASSERT(base::is_integral<VType>::value, use_Fabs_for_float_types);
+  COMPILE_ASSERT(std::is_integral<VType>::value, use_Fabs_for_float_types);
   COMPILE_ASSERT(static_cast<VType>(-1) == -1, type_must_be_signed);
   COMPILE_ASSERT(sizeof(c_[0]) <= sizeof(int), Abs_truncates_to_int);
   return Self(abs(c_[0]), abs(c_[1]), abs(c_[2]), abs(c_[3]));
@@ -587,7 +568,6 @@ typedef Vector4<double> Vector4_d;
 // TODO(user): Vector4<T> does not actually satisfy the definition of a POD
 // type even when T is a POD. Pretending that Vector4<T> is a POD probably
 // won't cause any immediate problems, but eventually this should be fixed.
-PROPAGATE_POD_FROM_TEMPLATE_ARGUMENT(Vector4);
 
 
 #endif  // UTIL_MATH_VECTOR4_H__

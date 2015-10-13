@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -63,7 +64,7 @@
 
 #include "base/port.h"
 
-_START_GOOGLE_NAMESPACE_
+namespace base {
 
 namespace util {
 namespace gtl {
@@ -278,6 +279,6 @@ class ManualConstructor {
 #undef UTIL_GTL_ALIGNED_CHAR_ARRAY
 #undef UTIL_GTL_ALIGN_OF
 
-_END_GOOGLE_NAMESPACE_
+}
 
 #endif  // UTIL_GTL_MANUAL_CONSTRUCTOR_H_

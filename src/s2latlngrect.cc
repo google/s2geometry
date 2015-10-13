@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2latlngrect.h"
@@ -314,8 +315,11 @@ bool S2LatLngRect::Decode(Decoder* decoder) {
   double lng_hi = decoder->getdouble();
   lng_ = S1Interval(lng_lo, lng_hi);
 
-  DLOG_IF(ERROR, !is_valid())
-      << "Invalid result in S2LatLngRect::Decode: " << *this;
+  if (!is_valid()) {
+    DLOG_IF(ERROR, FLAGS_s2debug)
+        << "Invalid result in S2LatLngRect::Decode: " << *this;
+    return false;
+  }
 
   return true;
 }

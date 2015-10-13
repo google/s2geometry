@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //         jyrki@google.com (Jyrki Alakuijala)
 
 #include "util/hash/murmur.h"
@@ -62,8 +63,8 @@ void MurmurCat::Append(const char *buf, size_t len) {
       return;
     }
     // Not enough data to murmur, accumulate more.
-    last_val_ |= LoadBytes(buf, len) << (offset_ * 8);
-    offset_ += len;
+    last_val_ |= LoadBytes(buf, static_cast<int>(len)) << (offset_ * 8);
+    offset_ += static_cast<int>(len);
     return;  // We don't have enough to hash yet.
   }
   if (offset_ != 0) {
@@ -78,7 +79,7 @@ void MurmurCat::Append(const char *buf, size_t len) {
     buf += num_bytes;
     len -= num_bytes;
   }
-  const int len_aligned = len & ~0x7;
+  const size_t len_aligned = len & ~0x7;
   const char * const end = buf + len_aligned;
   for (const char *p = buf; p != end; p += 8) {
     const uint64 data = ShiftMix(LittleEndian::Load64(p) * mul) * mul;
@@ -113,7 +114,7 @@ uint64 MurmurHash64WithSeed(const char *buf,
   static const uint64 mul = 0xc6a4a7935bd1e995ULL;
   // Let's remove the bytes not divisible by the sizeof(uint64).
   // This allows the inner loop to process the data as 64 bit integers.
-  const int len_aligned = len & ~0x7;
+  const size_t len_aligned = len & ~0x7;
   const char * const end = buf + len_aligned;
   uint64 hash = seed ^ (len * mul);
   for (const char *p = buf; p != end; p += 8) {

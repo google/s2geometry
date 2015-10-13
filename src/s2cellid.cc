@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2cellid.h"
@@ -147,7 +148,7 @@ S2CellId S2CellId::advance_wrap(int64 steps) const {
       if (steps > max_steps) steps -= step_wrap;
     }
   }
-  return S2CellId(id_ + (steps << step_shift));
+  return S2CellId(id_ + (static_cast<uint64>(steps) << step_shift));
 }
 
 S2CellId S2CellId::maximum_tile(S2CellId const limit) const {
@@ -184,25 +185,30 @@ int S2CellId::GetCommonAncestorLevel(S2CellId other) const {
   return max(60 - Bits::FindMSBSetNonZero64(bits), -1) >> 1;
 }
 
+// Print the num_digits low order hex digits.
+static string HexFormatString(uint64 val, size_t num_digits) {
+  string result(num_digits, ' ');
+  for (; num_digits--; val >>= 4)
+    result[num_digits] = "0123456789abcdef"[val & 0xF];
+  return result;
+}
+
 string S2CellId::ToToken() const {
-  // Simple implementation: convert the id to hex and strip trailing zeros.
+  // Simple implementation: print the id in hex without trailing zeros.
   // Using hex has the advantage that the tokens are case-insensitive, all
   // characters are alphanumeric, no characters require any special escaping
-  // in Mustang queries, and it's easy to compare cell tokens against the
-  // feature ids of the corresponding features.
+  // in queries for most indexing systems, and it's easy to compare cell
+  // tokens against the feature ids of the corresponding features.
   //
   // Using base 64 would produce slightly shorter tokens, but for typical cell
   // sizes used during indexing (up to level 15 or so) the average savings
   // would be less than 2 bytes per cell which doesn't seem worth it.
 
-  char digits[17];
-  FastHex64ToBuffer(id_, digits);
-  for (int len = 16; len > 0; --len) {
-    if (digits[len-1] != '0') {
-      return string(digits, len);
-    }
-  }
-  return "X";  // Invalid hex string.
+  // "0" with trailing 0s stripped is the empty string, which is not a
+  // reasonable token.  Encode as "X".
+  if (id_ == 0) return "X";
+  size_t const num_zero_digits = Bits::FindLSBSetNonZero64(id_) / 4;
+  return HexFormatString(id_ >> (4 * num_zero_digits), 16 - num_zero_digits);
 }
 
 S2CellId S2CellId::FromToken(const char* token, size_t length) {
@@ -524,7 +530,9 @@ string S2CellId::ToString() const {
   }
   string out = StringPrintf("%d/", face());
   for (int current_level = 1; current_level <= level(); ++current_level) {
-    out += SimpleItoa(child_position(current_level));
+    // Avoid dependencies of SimpleItoA, and slowness of StringAppendF &
+    // std::to_string.
+    out += "0123"[child_position(current_level)];
   }
   return out;
 }

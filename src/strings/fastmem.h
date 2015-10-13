@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // Fast memory copying and comparison routines.
 //   strings::fastmemcmp_inlined() replaces memcmp()
@@ -47,8 +48,9 @@ namespace strings {
 // The performance is similar to the performance of memcmp(), but faster for
 // moderately-sized inputs, or inputs that share a common prefix and differ
 // somewhere in their last 8 bytes. Further optimizations can be added later
-// if it makes sense to do so.  Please keep this in sync with
-// google_internal::gg_memeq() in //third_party/stl/gcc3/string.
+// if it makes sense to do so.  Alternatively, if the compiler & runtime improve
+// to eliminate the need for this, we can remove it.  Please keep this in sync
+// with google_internal::gg_memeq() in //third_party/stl/gcc3/string.
 inline bool memeq(const char* a, const char* b, size_t n) {
   size_t n_rounded_down = n & ~static_cast<size_t>(7);
   if (PREDICT_FALSE(n_rounded_down == 0)) {  // n <= 7
@@ -66,9 +68,10 @@ inline bool memeq(const char* a, const char* b, size_t n) {
     // In 2013 or later, this should be fast on long strings.
     return memcmp(a, b, n) == 0;
   }
-  // Now force n to be a multiple of 16.  At worst, this causes a re-compare
-  // of 8 bytes at the start of a and b. That's minor, and is outweighed by the
-  // simplification of the code that follows, because it can assume n % 16 is 0.
+  // Now force n to be a multiple of 16.  Arguably, a "switch" would be smart
+  // here, but there's a difficult-to-evaluate code size vs. speed issue.  The
+  // current approach often re-compares some bytes (worst case is if n initially
+  // was 16, 32, 48, or 64), but is fairly short.
   size_t e = n & 8;
   a += e;
   b += e;
@@ -87,7 +90,7 @@ inline bool memeq(const char* a, const char* b, size_t n) {
   return true;
 }
 
-inline int fastmemcmp_inlined(const void *va, const void *vb, size_t n) {
+inline int fastmemcmp_inlined(const void* va, const void* vb, size_t n) {
   const unsigned char* pa = static_cast<const unsigned char*>(va);
   const unsigned char* pb = static_cast<const unsigned char*>(vb);
   switch (n) {
@@ -136,7 +139,7 @@ inline int fastmemcmp_inlined(const void *va, const void *vb, size_t n) {
 // This implementation inlines the optimal realization for sizes 1 to 16.
 // To avoid code bloat don't use it in case of not performance-critical spots,
 // nor when you don't expect very frequent values of size <= 16.
-inline void memcpy_inlined(char *dst, const char *src, size_t size) {
+inline void memcpy_inlined(char* dst, const char* src, size_t size) {
   // Compiler inlines code with minimal amount of data movement when third
   // parameter of memcpy is a constant.
   switch (size) {

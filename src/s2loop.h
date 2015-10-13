@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2LOOP_H__
-#define UTIL_GEOMETRY_S2LOOP_H__
+#ifndef S2_GEOMETRY_S2LOOP_H__
+#define S2_GEOMETRY_S2LOOP_H__
 
 #include <math.h>
 #include <stddef.h>
@@ -26,6 +27,7 @@
 #include "base/integral_types.h"
 #include <glog/logging.h>
 #include "base/macros.h"
+#include "fpcontractoff.h"
 #include "s1angle.h"
 #include "s2.h"
 #include "s2edgeutil.h"
@@ -105,11 +107,11 @@ class S2Loop : public S2Region {
   //
   // The loop may be safely encoded lossily (e.g. by snapping it to an S2Cell
   // center) as long as its position does not move by 90 degrees or more.
-  inline static std::vector<S2Point> kEmpty();
+  static std::vector<S2Point> kEmpty();
 
   // A special vertex chain of length 1 that creates a full loop (i.e., a loop
   // with no edges that contains all points).  See kEmpty() for details.
-  inline static std::vector<S2Point> kFull();
+  static std::vector<S2Point> kFull();
 
   // Construct a loop corresponding to the given cell.
   //
@@ -166,13 +168,13 @@ class S2Loop : public S2Region {
   }
 
   // Return true if this is the special "empty" loop that contains no points.
-  inline bool is_empty() const;
+  bool is_empty() const;
 
   // Return true if this is the special "full" loop that contains all points.
-  inline bool is_full() const;
+  bool is_full() const;
 
   // Return true if this loop is either "empty" or "full".
-  inline bool is_empty_or_full() const;
+  bool is_empty_or_full() const;
 
   // The depth of a loop is defined as its nesting level within its containing
   // polygon.  "Outer shell" loops have depth 0, holes within those loops have
@@ -263,16 +265,20 @@ class S2Loop : public S2Region {
   // contained by the given other loop.
   bool Intersects(S2Loop const* b) const;
 
+  // Return true if two loops have the same vertices in the same linear order
+  // (i.e., cyclic rotations are not allowed).
+  bool Equals(S2Loop const* b) const;
+
   // Return true if two loops have the same boundary.  This is true if and
-  // only if the loops have the same vertices in the same cyclic order.  The
-  // empty and full loops are considered to have different boundaries.
-  // (For testing purposes.)
+  // only if the loops have the same vertices in the same cyclic order (i.e.,
+  // the vertices may be cyclically rotated).  The empty and full loops are
+  // considered to have different boundaries.
   bool BoundaryEquals(S2Loop const* b) const;
 
   // Return true if two loops have the same boundary except for vertex
   // perturbations.  More precisely, the vertices in the two loops must be in
   // the same cyclic order, and corresponding vertex pairs must be separated
-  // by no more than "max_error".  (For testing purposes.)
+  // by no more than "max_error".
   bool BoundaryApproxEquals(S2Loop const* b, double max_error = 1e-15) const;
 
   // Return true if the two loop boundaries are within "max_error" of each
@@ -282,7 +288,7 @@ class S2Loop : public S2Region {
   // distance(a(t), b(t)) <= max_error for all t.  You can think of this as
   // testing whether it is possible to drive two cars all the way around the
   // two loops such that no car ever goes backward and the cars are always
-  // within "max_error" of each other.  (For testing purposes.)
+  // within "max_error" of each other.
   bool BoundaryNear(S2Loop const* b, double max_error = 1e-15) const;
 
   // This method computes the oriented surface integral of some quantity f(x)
@@ -434,10 +440,10 @@ class S2Loop : public S2Region {
   bool contains_origin() const { return origin_inside_; }
 
   // The single vertex in the "empty loop" vertex chain.
-  inline static S2Point kEmptyVertex();
+  static S2Point kEmptyVertex();
 
   // The single vertex in the "full loop" vertex chain.
-  inline static S2Point kFullVertex();
+  static S2Point kFullVertex();
 
   void InitOriginAndBound();
   void InitBound();
@@ -706,4 +712,4 @@ T S2Loop::GetSurfaceIntegral(T f_tri(S2Point const&, S2Point const&,
   return sum;
 }
 
-#endif  // UTIL_GEOMETRY_S2LOOP_H__
+#endif  // S2_GEOMETRY_S2LOOP_H__

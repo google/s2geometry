@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 //
 //
@@ -27,6 +28,18 @@
 #include <stdlib.h>         // for free()
 
 #if defined(__APPLE__)
+// traditionally defined __APPLE__ themselves via other build systems, since mac
+// TODO(user): Remove this when all toolchains make the proper defines.
+#include <TargetConditionals.h>
+#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+#ifndef OS_IOS
+#define OS_IOS 1
+#endif
+#define SUPPRESS_MOBILE_IOS_BASE_PORT_H
+#endif  // defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+#endif  // defined(__APPLE__)
+
+#if defined(__APPLE__) || defined(OS_IOS)
 #include <unistd.h>         // for getpagesize() on mac
 #elif defined(OS_CYGWIN) || defined(__ANDROID__)
 #include <malloc.h>         // for memalign()
@@ -36,16 +49,16 @@
 
 #include "base/integral_types.h"
 
-// We support gcc 4.4 and later.
+// We support gcc 4.6 and later.
 #if defined(__GNUC__) && !defined(__clang__)
-#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 4)
-#error "This package requires gcc 4.4 or higher"
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6)
+#error "This package requires gcc 4.6 or higher"
 #endif
 #endif
 
-// We support MSVC++ 10.0 and later.
-#if defined(_MSC_VER) && _MSC_VER < 1600
-#error "This package requires _MSC_VER of 1600 or higher"
+// We support MSVC++ 12.0 and later.
+#if defined(_MSC_VER) && _MSC_VER < 1800
+#error "This package requires _MSC_VER of 1800 or higher"
 #endif
 
 // We support Apple Xcode clang 4.2.1 (version 421.11.65) and later.
@@ -68,10 +81,13 @@
 /* We use SIGPWR since that seems unlikely to be used for other reasons. */
 #define GOOGLE_OBSCURE_SIGNAL  SIGPWR
 
-#if defined OS_LINUX || defined OS_CYGWIN
-
+#if defined OS_LINUX || defined OS_CYGWIN || defined OS_ANDROID || \
+    defined(__ANDROID__)
 // _BIG_ENDIAN
 #include <endian.h>
+#endif
+
+#if defined OS_LINUX || defined OS_CYGWIN
 
 // GLIBC-related macros.
 #include <features.h>
@@ -117,7 +133,7 @@ typedef unsigned long ulong;
 // _BIG_ENDIAN
 #include <machine/endian.h>
 
-#elif defined __APPLE__
+#elif defined(__APPLE__) || defined(OS_IOS)
 
 // BIG_ENDIAN
 #include <machine/endian.h>  // NOLINT(build/include)
@@ -137,7 +153,7 @@ typedef unsigned long ulong;
 #define bswap_32(x) _byteswap_ulong(x)
 #define bswap_64(x) _byteswap_uint64(x)
 
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(OS_IOS)
 // Mac OS X / Darwin features
 #include <libkern/OSByteOrder.h>
 #define bswap_16(x) OSSwapInt16(x)
@@ -237,9 +253,9 @@ typedef int uid_t;
 
 #endif
 
-// Mac OS X / Darwin features
+// Mac OS X / Darwin and iOS features
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(OS_IOS)
 
 // For mmap, Linux defines both MAP_ANONYMOUS and MAP_ANON and says MAP_ANON is
 // deprecated. In Darwin, MAP_ANON is all there is.
@@ -321,7 +337,9 @@ inline size_t strnlen(const char *s, size_t maxlen) {
   return maxlen;
 }
 
+#if !defined(OS_IOS)
 namespace std {}  // Avoid error if we didn't see std.
+#endif
 
 // Doesn't exist on OSX.
 #define MSG_NOSIGNAL 0
@@ -375,7 +393,8 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 
 // GCC-specific features
 
-#if (defined(__GNUC__) || defined(__APPLE__)) && !defined(SWIG)
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
 
 //
 // Tell the compiler to do printf format string checking if the
@@ -390,11 +409,6 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
     __attribute__((__format__ (__printf__, string_index, first_to_check)))
 #define SCANF_ATTRIBUTE(string_index, first_to_check) \
     __attribute__((__format__ (__scanf__, string_index, first_to_check)))
-
-//
-// Prevent the compiler from padding a structure to natural alignment
-//
-#define PACKED __attribute__ ((packed))
 
 // Cache line alignment
 #if defined(__i386__) || defined(__x86_64__)
@@ -510,6 +524,14 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 #define ATTRIBUTE_NO_SANITIZE_MEMORY
 #endif
 
+// Tell ThreadSanitizer to not instrument a given function.
+// If you are adding this attribute, please cc dynamic-tools@ on the cl.
+#ifdef THREAD_SANITIZER
+#define ATTRIBUTE_NO_SANITIZE_THREAD __attribute__((no_sanitize_thread))
+#else
+#define ATTRIBUTE_NO_SANITIZE_THREAD
+#endif
+
 #ifndef HAVE_ATTRIBUTE_SECTION  // may have been pre-set to 0, e.g. for Darwin
 #define HAVE_ATTRIBUTE_SECTION 1
 #endif
@@ -585,6 +607,16 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 #define MUST_USE_RESULT
 #endif
 
+//
+// Prevent the compiler from padding a structure to natural alignment
+//
+#if __GNUC__ && !defined(SWIG)
+#define ATTRIBUTE_PACKED __attribute__((__packed__))
+#else
+#define ATTRIBUTE_PACKED
+#endif
+
+
 #if defined(__GNUC__) || defined(__llvm__)
 // Defined behavior on some of the uarchs:
 // PREFETCH_HINT_T0:
@@ -603,6 +635,11 @@ enum PrefetchHint {
 // prefetch is a no-op for this target. Feel free to add more sections above.
 #endif
 
+// The default behavior of prefetch is to speculatively load for read only. This
+// is safe for all currently supported platforms. However, prefetch for store
+// may have problems depending on the target platform (x86, PPC, arm). Check
+// with the platforms team (platforms-servers@) before introducing any changes
+// to this function to identify potential impact on current and future servers.
 extern inline void prefetch(const void *x, int hint) {
 #if defined(__llvm__)
   // In the gcc version of prefetch(), hint is only a constant _after_ inlining
@@ -703,7 +740,6 @@ extern inline void prefetch(const void *x) {
 
 #define PRINTF_ATTRIBUTE(string_index, first_to_check)
 #define SCANF_ATTRIBUTE(string_index, first_to_check)
-#define PACKED
 #define CACHELINE_SIZE 64
 #define CACHELINE_ALIGNED
 #define ATTRIBUTE_UNUSED
@@ -719,6 +755,7 @@ extern inline void prefetch(const void *x) {
 #define ATTRIBUTE_NO_SANITIZE_ADDRESS
 #define ATTRIBUTE_NO_SANITIZE_MEMORY
 #define HAVE_ATTRIBUTE_SECTION 0
+#define ATTRIBUTE_PACKED
 #define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
 #define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
 #define MUST_USE_RESULT
@@ -733,10 +770,12 @@ extern inline void prefetch(const void*) {}
 
 #endif  // GCC
 
-#if ((defined(__GNUC__) || defined(__APPLE__)) && !defined(SWIG)) || \
+#if ((defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) ||  \
+      defined(__NVCC__)) && !defined(SWIG)) ||                            \
     ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__))
 
-#if !defined(__cplusplus) && !defined(__APPLE__) && !defined(OS_CYGWIN)
+#if !defined(__cplusplus) && !defined(__APPLE__) && !defined(OS_IOS) && \
+    !defined(OS_CYGWIN)
 // stdlib.h only declares this in C++, not in C, so we declare it here.
 // Also make sure to avoid declaring it on platforms which don't support it.
 extern int posix_memalign(void **memptr, size_t alignment, size_t size);
@@ -776,7 +815,8 @@ inline void aligned_free(void *aligned_memory) {
 }
 
 #endif
-// #if ((defined(__GNUC__) || defined(__APPLE__)) && !defined(SWIG)) ||
+// #if ((defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) ||
+// defined(__NVCC__)) && !defined(SWIG)) ||
 // ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__))
 
 //
@@ -1095,9 +1135,9 @@ typedef short int16_t;
 struct PortableHashBase { };
 #endif
 
-#if defined(OS_WINDOWS) || defined(__APPLE__)
+#if defined(OS_WINDOWS) || defined(__APPLE__) || defined(OS_IOS)
 // gethostbyname() *is* thread-safe for Windows native threads. It is also
-// safe on Mac OS X, where it uses thread-local storage, even though the
+// safe on Mac OS X and iOS, where it uses thread-local storage, even though the
 // manpages claim otherwise. For details, see
 // http://lists.apple.com/archives/Darwin-dev/2006/May/msg00008.html
 #else
@@ -1123,7 +1163,7 @@ struct PortableHashBase { };
 #if defined(__GNUC__) && defined(GOOGLE_GLIBCXX_VERSION)
 // Crosstool v17 or later.
 #define HASH_NAMESPACE __gnu_cxx
-#elif defined(__GNUC__) && defined(STLPORT)
+#elif defined(__GNUC__) && (defined(STLPORT) || defined(USE_STD_HASH))
 // A version of gcc with stlport.
 #define HASH_NAMESPACE std
 #define HASH_NAMESPACE_IS_STD_NAMESPACE_INTERNAL
@@ -1153,7 +1193,8 @@ struct PortableHashBase { };
 #endif
 
 // Our STL-like classes use __STD.
-#if defined(__GNUC__) || defined(__APPLE__) || defined(_MSC_VER)
+#if defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) || \
+    defined(_MSC_VER)
 #define __STD std
 #endif
 
@@ -1168,6 +1209,13 @@ struct PortableHashBase { };
 // Portable handling of unaligned loads, stores, and copies.
 // On some platforms, like ARM, the copy functions can be more efficient
 // then a load and a store.
+//
+// It is possible to implement all of these these using constant-length memcpy
+// calls, which is portable and will usually be inlined into simple loads and
+// stores if the architecture supports it. However, such inlining usually
+// happens in a pass that's quite late in compilation, which means the resulting
+// loads and stores cannot participate in many other optimizations, leading to
+// overall worse code.
 
 #if defined(ADDRESS_SANITIZER) || defined(THREAD_SANITIZER) ||\
     defined(MEMORY_SANITIZER)
@@ -1259,12 +1307,43 @@ inline void UNALIGNED_STORE64(void *p, uint64 v) {
 // so in time, maybe we can move on to that.
 //
 // This is a mess, but there's not much we can do about it.
+//
+// To further complicate matters, only LDR instructions (single reads) are
+// allowed to be unaligned, not LDRD (two reads) or LDM (many reads). Unless we
+// explicitly tell the compiler that these accesses can be unaligned, it can and
+// will combine accesses. On armcc, the way to signal this is done by accessing
+// through the type (uint32 __packed *), but GCC has no such attribute
+// (it ignores __attribute__((packed)) on individual variables). However,
+// we can tell it that a _struct_ is unaligned, which has the same effect,
+// so we do that.
 
-#define UNALIGNED_LOAD16(_p) (*reinterpret_cast<const uint16 *>(_p))
-#define UNALIGNED_LOAD32(_p) (*reinterpret_cast<const uint32 *>(_p))
+namespace base {
+namespace internal {
 
-#define UNALIGNED_STORE16(_p, _val) (*reinterpret_cast<uint16 *>(_p) = (_val))
-#define UNALIGNED_STORE32(_p, _val) (*reinterpret_cast<uint32 *>(_p) = (_val))
+struct Unaligned16Struct {
+  uint16 value;
+  uint8 dummy;  // To make the size non-power-of-two.
+} ATTRIBUTE_PACKED;
+
+struct Unaligned32Struct {
+  uint32 value;
+  uint8 dummy;  // To make the size non-power-of-two.
+} ATTRIBUTE_PACKED;
+
+}  // namespace internal
+}  // namespace base
+
+#define UNALIGNED_LOAD16(_p) \
+    ((reinterpret_cast<const ::base::internal::Unaligned16Struct *>(_p))->value)
+#define UNALIGNED_LOAD32(_p) \
+    ((reinterpret_cast<const ::base::internal::Unaligned32Struct *>(_p))->value)
+
+#define UNALIGNED_STORE16(_p, _val) \
+    ((reinterpret_cast< ::base::internal::Unaligned16Struct *>(_p))->value = \
+         (_val))
+#define UNALIGNED_STORE32(_p, _val) \
+    ((reinterpret_cast< ::base::internal::Unaligned32Struct *>(_p))->value = \
+         (_val))
 
 // TODO(user): NEON supports unaligned 64-bit loads and stores.
 // See if that would be more efficient on platforms supporting it,
@@ -1357,7 +1436,7 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 #endif  // defined(__cpluscplus)
 
 // printf macros for size_t, in the style of inttypes.h
-#ifdef _LP64
+#if defined(_LP64) || defined(OS_IOS)
 #define __PRIS_PREFIX "z"
 #else
 #define __PRIS_PREFIX
@@ -1401,8 +1480,10 @@ std::ostream& operator << (std::ostream& out, const pthread_t& thread_id);
 // in gcc before 4.7 (Crosstool 16) and clang before 3.1, but is
 // defined according to the language version in effect thereafter.  I
 // believe MSVC will also define __cplusplus according to the language
-// version, but haven't checked that.
-#if defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L
+// version, but haven't checked that. Stlport is used by many Android projects
+// and does not have full C++11 STL support.
+#if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L) && \
+    !defined(STLPORT)
 // Define this to 1 if the code is compiled in C++11 mode; leave it
 // undefined otherwise.  Do NOT define it to 0 -- that causes
 // '#ifdef LANG_CXX11' to behave differently from '#if LANG_CXX11'.
@@ -1502,4 +1583,3 @@ using std::string;
 #endif  // SWIG, __cplusplus
 
 #endif  // BASE_PORT_H_
-

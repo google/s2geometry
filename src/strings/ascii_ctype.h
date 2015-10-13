@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // Character classification functions similar to standard <ctype.h>.
 // Some C++ implementations provide locale-sensitive implementations
@@ -42,18 +43,37 @@
 // already tightly coupled to these functions.  Names would just make it
 // harder to read and debug.
 
-#define kApb kAsciiPropertyBits
 extern const unsigned char kAsciiPropertyBits[256];
 
 // Public functions.
 
-static inline bool ascii_isalpha(unsigned char c) { return kApb[c] & 0x01; }
-static inline bool ascii_isalnum(unsigned char c) { return kApb[c] & 0x04; }
-static inline bool ascii_isspace(unsigned char c) { return kApb[c] & 0x08; }
-static inline bool ascii_ispunct(unsigned char c) { return kApb[c] & 0x10; }
-static inline bool ascii_isblank(unsigned char c) { return kApb[c] & 0x20; }
-static inline bool ascii_iscntrl(unsigned char c) { return kApb[c] & 0x40; }
-static inline bool ascii_isxdigit(unsigned char c) { return kApb[c] & 0x80; }
+static inline bool ascii_isalpha(unsigned char c) {
+  return (kAsciiPropertyBits[c] & 0x01) != 0;
+}
+
+static inline bool ascii_isalnum(unsigned char c) {
+  return (kAsciiPropertyBits[c] & 0x04) != 0;
+}
+
+static inline bool ascii_isspace(unsigned char c) {
+  return (kAsciiPropertyBits[c] & 0x08) != 0;
+}
+
+static inline bool ascii_ispunct(unsigned char c) {
+  return (kAsciiPropertyBits[c] & 0x10) != 0;
+}
+
+static inline bool ascii_isblank(unsigned char c) {
+  return (kAsciiPropertyBits[c] & 0x20) != 0;
+}
+
+static inline bool ascii_iscntrl(unsigned char c) {
+  return (kAsciiPropertyBits[c] & 0x40) != 0;
+}
+
+static inline bool ascii_isxdigit(unsigned char c) {
+  return (kAsciiPropertyBits[c] & 0x80) != 0;
+}
 
 static inline bool ascii_isdigit(unsigned char c) {
   return c >= '0' && c <= '9';
@@ -78,7 +98,6 @@ static inline bool ascii_islower(unsigned char c) {
 static inline bool ascii_isascii(unsigned char c) {
   return c < 128;
 }
-#undef kApb
 
 extern const char kAsciiToLower[256];
 static inline char ascii_tolower(unsigned char c) { return kAsciiToLower[c]; }

@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2POLYGONBUILDER_H__
-#define UTIL_GEOMETRY_S2POLYGONBUILDER_H__
+#ifndef S2_GEOMETRY_S2POLYGONBUILDER_H__
+#define S2_GEOMETRY_S2POLYGONBUILDER_H__
 
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
+#include <unordered_map>
+#include <memory>
 #include <set>
 #include <utility>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/scoped_ptr.h"
+#include "fpcontractoff.h"
 #include "s1angle.h"
 #include "s2.h"
 #include "util/math/matrix3x3.h"
@@ -321,7 +321,6 @@ class S2PolygonBuilder {
   void Dump() const;
 
  private:
-
   // Return true if the given edge exists.
   bool HasEdge(S2Point const& v0, S2Point const& v1);
 
@@ -343,7 +342,7 @@ class S2PolygonBuilder {
   // containing all of the vertices that do not need to be moved.
   class PointIndex;
 
-  typedef hash_map<S2Point, S2Point, HashS2Point> MergeMap;
+  typedef std::unordered_map<S2Point, S2Point, S2PointHash> MergeMap;
   void BuildMergeMap(PointIndex* index, MergeMap* merge_map);
 
   // Moves a set of vertices from old to new positions.
@@ -356,15 +355,15 @@ class S2PolygonBuilder {
   S2PolygonBuilderOptions options_;
 
   // This is only used for debugging purposes.
-  scoped_ptr<Matrix3x3_d> debug_matrix_;
+  std::unique_ptr<Matrix3x3_d> debug_matrix_;
 
   // The current set of edges, grouped by origin.  The set of destination
   // vertices is a multiset so that the same edge can be present more than
   // once.  We could have also used a multiset<pair<S2Point, S2Point> >,
   // but this representation is a bit more convenient.
   typedef std::multiset<S2Point> VertexSet;
-  typedef hash_map<S2Point, VertexSet, HashS2Point> EdgeSet;
-  scoped_ptr<EdgeSet> edges_;
+  typedef std::unordered_map<S2Point, VertexSet, S2PointHash> EdgeSet;
+  EdgeSet edges_;
 
   // Unique collection of the starting (first) vertex of all edges,
   // in the order they are added to edges_.
@@ -390,4 +389,4 @@ inline S2PolygonBuilderOptions S2PolygonBuilderOptions::UNDIRECTED_UNION() {
   return options;
 }
 
-#endif  // UTIL_GEOMETRY_S2POLYGONBUILDER_H__
+#endif  // S2_GEOMETRY_S2POLYGONBUILDER_H__

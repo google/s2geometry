@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2cell.h"
@@ -125,6 +126,10 @@ double S2Cell::ApproxArea() const {
 }
 
 double S2Cell::ExactArea() const {
+  // There is a straightforward mathematical formula for the exact surface
+  // area (based on 4 calls to asin), but as the cell size gets small this
+  // formula has too much cancellation error.  So instead we compute the area
+  // as the sum of two triangles (which is very accurate at all cell levels).
   S2Point v0 = GetVertex(0);
   S2Point v1 = GetVertex(1);
   S2Point v2 = GetVertex(2);
@@ -304,8 +309,8 @@ bool S2Cell::VEdgeIsClosest(S2Point const& p, int u_end) const {
 inline static S1ChordAngle EdgeDistance(double dirIJ, double uv) {
   DCHECK_GE(dirIJ, 0);
   // Let P by the target point and let R be the closest point on the given
-  // edge AB.  The desired distance XR can be expressed as PR^2 = PQ^2 + QR^2
-  // where Q be the point P projected onto the plane through the great circle
+  // edge AB.  The desired distance PR can be expressed as PR^2 = PQ^2 + QR^2
+  // where Q is the point P projected onto the plane through the great circle
   // through AB.  We can compute the distance PQ^2 perpendicular to the plane
   // from "dirIJ" (the dot product of the target point P with the edge
   // normal) and the squared length the edge normal (1 + uv**2).
@@ -313,7 +318,7 @@ inline static S1ChordAngle EdgeDistance(double dirIJ, double uv) {
 
   // We can compute the distance QR as (1 - OQ) where O is the sphere origin,
   // and we can compute OQ^2 = 1 - PQ^2 using the Pythagorean theorem.
-  // (This calculation loses accuracy as the angle approaches Pi/2.)
+  // (This calculation loses accuracy as angle POQ approaches Pi/2.)
   double qr = 1 - sqrt(1 - pq2);
   return S1ChordAngle::FromLength2(pq2 + qr * qr);
 }
@@ -321,6 +326,7 @@ inline static S1ChordAngle EdgeDistance(double dirIJ, double uv) {
 S1ChordAngle S2Cell::GetDistance(S2Point const& target_xyz) const {
   // All calculations are done in the (u,v,w) coordinates of this cell's face.
   S2Point target = S2::FaceXYZtoUVW(face_, target_xyz);
+
   // Compute dot products with all four upward or rightward-facing edge
   // normals.  "dirIJ" is the dot product for the edge corresponding to axis
   // I, endpoint J.  For example, dir01 is the right edge of the S2Cell

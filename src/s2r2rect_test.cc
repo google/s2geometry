@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 //
 // Most of the S2R2Rect methods have trivial implementations in terms of the
@@ -21,7 +22,7 @@
 
 #include "base/integral_types.h"
 #include "base/stringprintf.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "r1interval.h"
 #include "s2.h"
 #include "s2cap.h"

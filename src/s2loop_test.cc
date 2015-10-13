@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2loop.h"
@@ -28,8 +29,7 @@
 #include "base/casts.h"
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include "base/scoped_ptr.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "util/coding/coder.h"
 #include "r1interval.h"
 #include "s1angle.h"
@@ -41,6 +41,7 @@
 #include "s2latlng.h"
 #include "s2pointcompression.h"
 #include "s2testing.h"
+#include "s2textformat.h"
 #include "util/gtl/fixedarray.h"
 #include "util/math/matrix3x3.h"
 #include "util/math/vector3.h"
@@ -49,6 +50,7 @@ using std::map;
 using std::max;
 using std::min;
 using std::set;
+using std::unique_ptr;
 using std::vector;
 
 
@@ -90,7 +92,7 @@ class S2LoopTestBase : public testing::Test {
 
  private:
   S2Loop const* AddLoop(string const& str) {
-    return AddLoop(S2Testing::MakeLoop(str));
+    return AddLoop(s2textformat::MakeLoop(str));
   }
 
   S2Loop const* AddLoop(S2Loop const* loop) {
@@ -208,13 +210,13 @@ class S2LoopTestBase : public testing::Test {
     // Like loop_a, but the vertices are at leaf cell centers.
     vector<S2Point> snapped_loop_a_vertices;
     snapped_loop_a_vertices.push_back(
-        S2CellId::FromPoint(S2Testing::MakePoint("0:178")).ToPoint());
+        S2CellId::FromPoint(s2textformat::MakePoint("0:178")).ToPoint());
     snapped_loop_a_vertices.push_back(
-        S2CellId::FromPoint(S2Testing::MakePoint("-1:180")).ToPoint());
+        S2CellId::FromPoint(s2textformat::MakePoint("-1:180")).ToPoint());
     snapped_loop_a_vertices.push_back(
-        S2CellId::FromPoint(S2Testing::MakePoint("0:-179")).ToPoint());
+        S2CellId::FromPoint(s2textformat::MakePoint("0:-179")).ToPoint());
     snapped_loop_a_vertices.push_back(
-        S2CellId::FromPoint(S2Testing::MakePoint("1:-180")).ToPoint());
+        S2CellId::FromPoint(s2textformat::MakePoint("1:-180")).ToPoint());
     snapped_loop_a = new S2Loop(snapped_loop_a_vertices);
     AddLoop(snapped_loop_a);
   }
@@ -256,7 +258,7 @@ TEST_F(S2LoopTestBase, GetRectBound) {
                    S2LatLng::FromDegrees(-80, 180)), kRectError));
 
   // Create a loop that contains the complement of the "arctic_80" loop.
-  scoped_ptr<S2Loop> arctic_80_inv(arctic_80->Clone());
+  unique_ptr<S2Loop> arctic_80_inv(arctic_80->Clone());
   arctic_80_inv->Invert();
   // The highest latitude of each edge is attained at its midpoint.
   S2Point mid = 0.5 * (arctic_80_inv->vertex(0) + arctic_80_inv->vertex(1));
@@ -268,7 +270,7 @@ TEST_F(S2LoopTestBase, GetRectBound) {
       R1Interval(-M_PI_2, 0), kRectError.lat().radians()));
 }
 
-static void Rotate(scoped_ptr<S2Loop>* ptr) {
+static void Rotate(unique_ptr<S2Loop>* ptr) {
   S2Loop* loop = ptr->get();
   vector<S2Point> vertices;
   for (int i = 1; i <= loop->num_vertices(); ++i) {
@@ -289,7 +291,7 @@ TEST_F(S2LoopTestBase, AreaConsistentWithTurningAngle) {
     // TODO(ericv): The error bound below is much larger than it should be.
     // Need to improve the error minimization analysis in S2::Area().
     EXPECT_LE(fabs(area - gauss_area), 1e-9)
-        << "Failed loop: " << S2Testing::ToString(loop)
+        << "Failed loop: " << s2textformat::ToString(loop)
         << "\nArea = " << area << ", Gauss Area = " << gauss_area;
   }
 }
@@ -321,7 +323,7 @@ TEST_F(S2LoopTestBase, GetAreaConsistentWithRobustCCW) {
     // TODO(ericv): The error bound below is much larger than it should be.
     // Need to improve the error minimization analysis in S2::Area().
     EXPECT_NEAR(ccw ? 0 : 4 * M_PI, loop.GetArea(), 1e-8)
-        << "Failed loop " << i << ": " << S2Testing::ToString(&loop);
+        << "Failed loop " << i << ": " << s2textformat::ToString(&loop);
     EXPECT_EQ(!ccw, loop.Contains(S2Point(0, 0, 1)));
   }
 }
@@ -385,7 +387,7 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
 // rotated, and that the sign is inverted when the vertices are reversed.
 static void CheckTurningAngleInvariants(S2Loop const* loop) {
   double expected = loop->GetTurningAngle();
-  scoped_ptr<S2Loop> loop_copy(down_cast<S2Loop*>(loop->Clone()));
+  unique_ptr<S2Loop> loop_copy(down_cast<S2Loop*>(loop->Clone()));
   for (int i = 0; i < loop->num_vertices(); ++i) {
     loop_copy->Invert();
     EXPECT_EQ(-expected, loop_copy->GetTurningAngle());
@@ -449,9 +451,9 @@ TEST_F(S2LoopTestBase, GetTurningAngle) {
 // Checks that if a loop is normalized, it doesn't contain a
 // point outside of it, and vice versa.
 static void CheckNormalizeAndContains(S2Loop const* loop) {
-  S2Point p = S2Testing::MakePoint("40:40");
+  S2Point p = s2textformat::MakePoint("40:40");
 
-  scoped_ptr<S2Loop> flip(loop->Clone());
+  unique_ptr<S2Loop> flip(loop->Clone());
   flip->Invert();
   EXPECT_TRUE(loop->IsNormalized() ^ loop->Contains(p));
   EXPECT_TRUE(flip->IsNormalized() ^ flip->Contains(p));
@@ -476,10 +478,10 @@ TEST_F(S2LoopTestBase, Contains) {
   EXPECT_TRUE(candy_cane->Contains(S2LatLng::FromDegrees(5, 71).ToPoint()));
 
   // Create copies of these loops so that we can change the vertex order.
-  scoped_ptr<S2Loop> north_copy(north_hemi->Clone());
-  scoped_ptr<S2Loop> south_copy(south_hemi->Clone());
-  scoped_ptr<S2Loop> west_copy(west_hemi->Clone());
-  scoped_ptr<S2Loop> east_copy(east_hemi->Clone());
+  unique_ptr<S2Loop> north_copy(north_hemi->Clone());
+  unique_ptr<S2Loop> south_copy(south_hemi->Clone());
+  unique_ptr<S2Loop> west_copy(west_hemi->Clone());
+  unique_ptr<S2Loop> east_copy(east_hemi->Clone());
   for (int i = 0; i < 4; ++i) {
     EXPECT_TRUE(north_copy->Contains(S2Point(0, 0, 1)));
     EXPECT_FALSE(north_copy->Contains(S2Point(0, 0, -1)));
@@ -614,7 +616,7 @@ static void TestOneDisjointPair(S2Loop const* a, S2Loop const* b) {
 static void TestOneCoveringPair(S2Loop const* a, S2Loop const* b) {
   EXPECT_EQ(a->is_full(), a->Contains(b));
   EXPECT_EQ(b->is_full(), b->Contains(a));
-  scoped_ptr<S2Loop> a1(a->Clone());
+  unique_ptr<S2Loop> a1(a->Clone());
   a1->Invert();
   bool complementary = a1->BoundaryEquals(b);
   EXPECT_EQ(!complementary, a->Intersects(b));
@@ -633,8 +635,8 @@ static void TestOneOverlappingPair(S2Loop const* a, S2Loop const* b) {
 // Given a pair of loops where A contains B, test various identities
 // involving A, B, and their complements.
 static void TestNestedPair(S2Loop const* a, S2Loop const* b) {
-  scoped_ptr<S2Loop> a1(a->Clone());
-  scoped_ptr<S2Loop> b1(b->Clone());
+  unique_ptr<S2Loop> a1(a->Clone());
+  unique_ptr<S2Loop> b1(b->Clone());
   a1->Invert();
   b1->Invert();
   TestOneNestedPair(a, b);
@@ -646,7 +648,7 @@ static void TestNestedPair(S2Loop const* a, S2Loop const* b) {
 // Given a pair of disjoint loops A and B, test various identities
 // involving A, B, and their complements.
 static void TestDisjointPair(S2Loop const* a, S2Loop const* b) {
-  scoped_ptr<S2Loop> a1(a->Clone());
+  unique_ptr<S2Loop> a1(a->Clone());
   a1->Invert();
   TestNestedPair(a1.get(), b);
 }
@@ -654,7 +656,7 @@ static void TestDisjointPair(S2Loop const* a, S2Loop const* b) {
 // Given loops A and B whose union covers the sphere, test various identities
 // involving A, B, and their complements.
 static void TestCoveringPair(S2Loop const* a, S2Loop const* b) {
-  scoped_ptr<S2Loop> b1(b->Clone());
+  unique_ptr<S2Loop> b1(b->Clone());
   b1->Invert();
   TestNestedPair(a, b1.get());
 }
@@ -662,8 +664,8 @@ static void TestCoveringPair(S2Loop const* a, S2Loop const* b) {
 // Given loops A and B such that both A and its complement intersect both B
 // and its complement, test various identities involving these four loops.
 static void TestOverlappingPair(S2Loop const* a, S2Loop const* b) {
-  scoped_ptr<S2Loop> a1(a->Clone());
-  scoped_ptr<S2Loop> b1(b->Clone());
+  unique_ptr<S2Loop> a1(a->Clone());
+  unique_ptr<S2Loop> b1(b->Clone());
   a1->Invert();
   b1->Invert();
   TestOneOverlappingPair(a, b);
@@ -888,8 +890,8 @@ TEST(S2Loop, LoopRelations2) {
     S2CellId b_end = b_begin.advance(rnd.Skewed(6) + 1);
     if (!a_end.is_valid() || !b_end.is_valid()) continue;
 
-    scoped_ptr<S2Loop> a(MakeCellLoop(a_begin, a_end));
-    scoped_ptr<S2Loop> b(MakeCellLoop(b_begin, b_end));
+    unique_ptr<S2Loop> a(MakeCellLoop(a_begin, a_end));
+    unique_ptr<S2Loop> b(MakeCellLoop(b_begin, b_end));
     if (a.get() && b.get()) {
       bool contained = (a_begin <= b_begin && b_end <= a_end);
       bool intersects = (a_begin < b_end && b_begin < a_end);
@@ -989,8 +991,8 @@ void DebugDumpCrossings(S2Loop const* loop) {
 
 static void TestNear(char const* a_str, char const* b_str,
                      double max_error, bool expected) {
-  scoped_ptr<S2Loop> a(S2Testing::MakeLoop(a_str));
-  scoped_ptr<S2Loop> b(S2Testing::MakeLoop(b_str));
+  unique_ptr<S2Loop> a(s2textformat::MakeLoop(a_str));
+  unique_ptr<S2Loop> b(s2textformat::MakeLoop(b_str));
   EXPECT_EQ(a->BoundaryNear(b.get(), max_error), expected);
   EXPECT_EQ(b->BoundaryNear(a.get(), max_error), expected);
 }
@@ -1039,12 +1041,13 @@ static void TestEncodeDecode(S2Loop* loop) {
   loop->Encode(&encoder);
   Decoder decoder(encoder.base(), encoder.length());
   S2Loop loop2;
+  loop2.set_s2debug_override(loop->s2debug_override());
   ASSERT_TRUE(loop2.Decode(&decoder));
   CheckIdentical(loop, &loop2);
 }
 
 TEST(S2Loop, EncodeDecode) {
-  scoped_ptr<S2Loop> l(S2Testing::MakeLoop("30:20, 40:20, 39:43, 33:35"));
+  unique_ptr<S2Loop> l(s2textformat::MakeLoop("30:20, 40:20, 39:43, 33:35"));
   l->set_depth(3);
   TestEncodeDecode(l.get());
 
@@ -1052,6 +1055,9 @@ TEST(S2Loop, EncodeDecode) {
   TestEncodeDecode(&empty);
   S2Loop full(S2Loop::kFull());
   TestEncodeDecode(&full);
+
+  S2Loop uninitialized;
+  TestEncodeDecode(&uninitialized);
 }
 
 static void TestEmptyFullSnapped(S2Loop* loop, int level) {
@@ -1094,7 +1100,7 @@ TEST(S2Loop, EmptyFullLossyConversions) {
 }
 
 TEST(S2Loop, EncodeDecodeWithinScope) {
-  scoped_ptr<S2Loop> l(S2Testing::MakeLoop("30:20, 40:20, 39:43, 33:35"));
+  unique_ptr<S2Loop> l(s2textformat::MakeLoop("30:20, 40:20, 39:43, 33:35"));
   l->set_depth(3);
   Encoder encoder;
   l->Encode(&encoder);
@@ -1124,7 +1130,7 @@ TEST(S2Loop, EncodeDecodeWithinScope) {
 
   // Initialize loop2 using Decode with a decoder on different data.
   // Check that the original memory is not deallocated or overwritten.
-  scoped_ptr<S2Loop> l2(S2Testing::MakeLoop("30:40, 40:75, 39:43, 80:35"));
+  unique_ptr<S2Loop> l2(s2textformat::MakeLoop("30:40, 40:75, 39:43, 80:35"));
   l2->set_depth(2);
   Encoder encoder2;
   l2->Encode(&encoder2);
@@ -1153,7 +1159,7 @@ TEST_F(S2LoopTestBase, FourVertexCompressedLoopRequires36Bytes) {
 }
 
 TEST_F(S2LoopTestBase, CompressedEncodedLoopDecodesApproxEqual) {
-  scoped_ptr<S2Loop> loop(snapped_loop_a->Clone());
+  unique_ptr<S2Loop> loop(snapped_loop_a->Clone());
   loop->set_depth(3);
 
   Encoder encoder;
@@ -1185,10 +1191,10 @@ TEST(S2Loop, S2CellConstructorAndContains) {
   EXPECT_FALSE(loop_copy.GetRectBound().Contains(cell.GetRectBound()));
 }
 
-// Construct a loop using S2Testing::MakeLoop(str) and check that it produces
+// Construct a loop using s2textformat::MakeLoop(str) and check that it produces
 // a validation error that includes "snippet".
 static void CheckLoopIsInvalid(const string& str, const string& snippet) {
-  scoped_ptr<S2Loop> loop(S2Testing::MakeLoop(str));
+  unique_ptr<S2Loop> loop(s2textformat::MakeLoop(str));
   S2Error error;
   EXPECT_TRUE(loop->FindValidationError(&error));
   EXPECT_NE(string::npos, error.text().find(snippet));
@@ -1261,7 +1267,7 @@ TEST_F(S2LoopTestBase, DistanceMethods) {
   // latitude are curved on the sphere, it is not straightforward to project
   // points onto any edge except along the equator.  (The equator is the only
   // line of latitude that is also a geodesic.)
-  scoped_ptr<S2Loop> square(S2Testing::MakeLoop("-1:-1, -1:1, 1:1, 1:-1"));
+  unique_ptr<S2Loop> square(s2textformat::MakeLoop("-1:-1, -1:1, 1:1, 1:-1"));
   EXPECT_TRUE(square->IsNormalized());
 
   // A vertex.
@@ -1284,7 +1290,7 @@ TEST_F(S2LoopTestBase, DistanceMethods) {
 TEST_F(S2LoopTestBase, MakeRegularLoop) {
   S2Point center = S2LatLng::FromDegrees(80, 135).ToPoint();
   S1Angle radius = S1Angle::Degrees(20);
-  scoped_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(center, radius, 4));
+  unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(center, radius, 4));
 
   ASSERT_EQ(4, loop.get()->num_vertices());
   S2Point p0 = loop.get()->vertex(0);
@@ -1322,3 +1328,4 @@ TEST_F(S2LoopTestBase, MakeRegularLoop) {
   EXPECT_DOUBLE_EQ(75.524190079054392, S2LatLng(p3).lat().degrees());
   EXPECT_DOUBLE_EQ(26.392175948257943, S2LatLng(p3).lng().degrees());
 }
+

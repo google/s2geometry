@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "r1interval.h"
 
 #include <float.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 static void TestIntervalOps(R1Interval const& x, R1Interval const& y,
                             const char* expected) {
@@ -133,10 +134,10 @@ TEST(R1Interval, TestBasic) {
   EXPECT_TRUE(unit.Expanded(-0.51).Expanded(0.51).is_empty());
 
   // Union(), Intersection()
-  EXPECT_EQ(R1Interval(99, 100), R1Interval(99,100).Union(empty));
-  EXPECT_EQ(R1Interval(99, 100), empty.Union(R1Interval(99,100)));
-  EXPECT_TRUE(R1Interval(5,3).Union(R1Interval(0,-2)).is_empty());
-  EXPECT_TRUE(R1Interval(0,-2).Union(R1Interval(5,3)).is_empty());
+  EXPECT_EQ(R1Interval(99, 100), R1Interval(99, 100).Union(empty));
+  EXPECT_EQ(R1Interval(99, 100), empty.Union(R1Interval(99, 100)));
+  EXPECT_TRUE(R1Interval(5, 3).Union(R1Interval(0, -2)).is_empty());
+  EXPECT_TRUE(R1Interval(0, -2).Union(R1Interval(5, 3)).is_empty());
   EXPECT_EQ(unit, unit.Union(unit));
   EXPECT_EQ(R1Interval(-1, 1), unit.Union(negunit));
   EXPECT_EQ(R1Interval(-1, 1), negunit.Union(unit));

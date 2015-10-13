@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_R2RECT_H_
-#define UTIL_GEOMETRY_R2RECT_H_
+#ifndef S2_GEOMETRY_R2RECT_H_
+#define S2_GEOMETRY_R2RECT_H_
 
 #include <iosfwd>
 
 #include <glog/logging.h>
+#include "fpcontractoff.h"
 #include "r1interval.h"
 #include "r2.h"
 
@@ -31,18 +33,18 @@
 class R2Rect {
  public:
   // Construct a rectangle from the given lower-left and upper-right points.
-  inline R2Rect(R2Point const& lo, R2Point const& hi);
+  R2Rect(R2Point const& lo, R2Point const& hi);
 
   // Construct a rectangle from the given intervals in x and y.  The two
   // intervals must either be both empty or both non-empty.
-  inline R2Rect(R1Interval const& x, R1Interval const& y);
+  R2Rect(R1Interval const& x, R1Interval const& y);
 
   // The default constructor creates an empty R2Rect.
-  inline R2Rect();
+  R2Rect();
 
   // The canonical empty rectangle.  Use is_empty() to test for empty
   // rectangles, since they have more than one representation.
-  inline static R2Rect Empty();
+  static R2Rect Empty();
 
   // Construct a rectangle from a center point and size in each dimension.
   // Both components of size should be non-negative, i.e. this method cannot
@@ -71,10 +73,10 @@ class R2Rect {
 
   // Return true if the rectangle is valid, which essentially just means
   // that if the bound for either axis is empty then both must be.
-  inline bool is_valid() const;
+  bool is_valid() const;
 
   // Return true if the rectangle is empty, i.e. it contains no points at all.
-  inline bool is_empty() const;
+  bool is_empty() const;
 
   // Return the k-th vertex of the rectangle (k = 0,1,2,3) in CCW order.
   // Vertex 0 is in the lower-left corner.
@@ -147,7 +149,7 @@ class R2Rect {
   R2Rect Intersection(R2Rect const& other) const;
 
   // Return true if two rectangles contains the same set of points.
-  inline bool operator==(R2Rect const& other) const;
+  bool operator==(R2Rect const& other) const;
 
   // Return true if the x- and y-intervals of the two rectangles are the same
   // up to the given tolerance (see r1interval.h for details).
@@ -228,4 +230,4 @@ inline bool R2Rect::operator==(R2Rect const& other) const {
 
 std::ostream& operator<<(std::ostream& os, R2Rect const& r);
 
-#endif  // UTIL_GEOMETRY_R2RECT_H_
+#endif  // S2_GEOMETRY_R2RECT_H_

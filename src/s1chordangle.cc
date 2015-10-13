@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
+
+#include "s1chordangle.h"
 
 #include <math.h>
 #include "s1angle.h"
-#include "s1chordangle.h"
 
 using std::max;
 using std::min;
@@ -42,7 +44,7 @@ S1ChordAngle::S1ChordAngle(S1Angle angle) {
   DCHECK(is_valid());
 }
 
-S1Angle S1ChordAngle::ToAngle() {
+S1Angle S1ChordAngle::ToAngle() const {
   if (is_negative()) return S1Angle::Radians(-1);
   if (is_infinity()) return S1Angle::Infinity();
   return S1Angle::Radians(2 * asin(0.5 * sqrt(length2_)));

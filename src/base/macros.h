@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // Various Google-specific macros.
 //
@@ -106,8 +107,8 @@
 // semantically, one should either use disallow both or neither. Try to
 // avoid these in new code.
 //
-// When building with C++11 toolchains, just use the language support
-// for explicitly deleted methods.
+// When building with C++11 toolchains, users should consider using the language
+// support for explicitly deleted methods instead of this macro.
 #if LANG_CXX11
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&) = delete;      \

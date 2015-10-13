@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 //
 
@@ -28,7 +29,11 @@
 #include "util/hash/hash.h"
 
 HASH_NAMESPACE_DECLARATION_START
+#ifdef _MSC_VER
+size_t hash_compare<StringPiece>::operator()(StringPiece s) const {
+#else
 size_t hash<StringPiece>::operator()(StringPiece s) const {
+#endif  // _MSC_VER
   return HashTo32(s.data(), s.size());
 }
 HASH_NAMESPACE_DECLARATION_END
@@ -100,8 +105,7 @@ stringpiece_ssize_type StringPiece::find(StringPiece s, size_type pos) const {
     if (length_ == 0 && pos == 0 && s.length_ == 0) return 0;
     return npos;
   }
-  const char *result = memmatch(ptr_ + pos, length_ - pos,
-                                s.ptr_, s.length_);
+  const char* result = memmatch(ptr_ + pos, length_ - pos, s.ptr_, s.length_);
   return result ? result - ptr_ : npos;
 }
 
@@ -109,8 +113,8 @@ stringpiece_ssize_type StringPiece::find(char c, size_type pos) const {
   if (length_ <= 0 || pos >= static_cast<size_type>(length_)) {
     return npos;
   }
-  const char* result = static_cast<const char*>(
-      memchr(ptr_ + pos, c, length_ - pos));
+  const char* result =
+      static_cast<const char*>(memchr(ptr_ + pos, c, length_ - pos));
   return result != NULL ? result - ptr_ : npos;
 }
 
@@ -129,7 +133,7 @@ stringpiece_ssize_type StringPiece::rfind(char c, size_type pos) const {
   // Note: memrchr() is not available on Windows.
   if (length_ <= 0) return npos;
   for (stringpiece_ssize_type i =
-      std::min(pos, static_cast<size_type>(length_ - 1));
+           std::min(pos, static_cast<size_type>(length_ - 1));
        i >= 0; --i) {
     if (ptr_[i] == c) {
       return i;

@@ -12,19 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // What follows is the concatenation of farmhash.h and farmhash.cc from
 // FarmHash 1.1; all modifications are listed:
 //  .  NAMESPACE_FOR_HASH_FUNCTIONS defaults to farmhash (instead of util)
-//  .  uint128 from //base is used (instead of uint128_t)
-//  .  Removed #include "farmhash.h"; added #include "base/int128.h".
+//  .  Moved farmhash::Fingerprint* from here to farmhash_fingerprint.{h,cc}
+//  .  Removed #include "farmhash.h".
 //  .  Added #include "base/port.h"; #define FARMHASH_LITTLE_ENDIAN or
 //     FARMHASH_BIG_ENDIAN.
 //  .  Removed "using namespace std"
-//  .  Added #include "util/hash128to64.h"; removed Hash128to64().
+//  .  Removed Hash128to64(); made its two uses explicitly use the
+//     same constants as before so that farmhash::Fingerprint() is unchanging.
 //  .  Modified Check macros to use std::hex instead of just hex, and
 //     reformatted them.
 //  .  Replaced pair with std::pair and make_pair with std::make_pair
 //     (because using namespace std was removed).
+//  .  Marked functions defined here "inline" as is normal for functions
+//     defined in header files.  This prevents ODR violations.
+//     (Functions to mark were found by
+//       egrep -nH -e '^uint.*[y ]Hash|^size_t Hash|^uint.* Fing' farmhash.h.)
+//  .  Do not warn about possible data loss on conversion from 'size_t' to
+//     'uint32_t' when building with MSVC
+//  .  Do not define LIKELY with __builtin_expect with MSVC.
 //
 // This is used by other files in //util/hash, but please do not use it
 // for anything else.  Please ask hashing@ if you want to break this rule.
@@ -32,9 +41,7 @@
 #ifndef UTIL_HASH_FARMHASH_H_
 #define UTIL_HASH_FARMHASH_H_
 
-#include "base/int128.h"
 #include "base/port.h"
-#include "util/hash/hash128to64.h"
 
 #ifdef IS_LITTLE_ENDIAN
 #define FARMHASH_LITTLE_ENDIAN
@@ -96,93 +103,75 @@
 
 namespace NAMESPACE_FOR_HASH_FUNCTIONS {
 
+#if defined(FARMHASH_UINT128_T_DEFINED)
+inline uint64_t Uint128Low64(const uint128_t x) {
+  return static_cast<uint64_t>(x);
+}
+inline uint64_t Uint128High64(const uint128_t x) {
+  return static_cast<uint64_t>(x >> 64);
+}
+inline uint128_t Uint128(uint64_t lo, uint64_t hi) {
+  return lo + (((uint128_t)hi) << 64);
+}
+#else
+typedef std::pair<uint64_t, uint64_t> uint128_t;
+inline uint64_t Uint128Low64(const uint128_t x) { return x.first; }
+inline uint64_t Uint128High64(const uint128_t x) { return x.second; }
+inline uint128_t Uint128(uint64_t lo, uint64_t hi) { return uint128_t(lo, hi); }
+inline uint128 ToGoogleU128(uint128_t x) { return uint128(x.second, x.first); }
+inline uint128_t ToFarmHashU128(uint128 x) {
+  return uint128_t(::Uint128Low64(x), ::Uint128High64(x));
+}
+#endif
+
+
 // BASIC STRING HASHING
 
 // Hash function for a byte array.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-size_t Hash(const char* s, size_t len);
+inline size_t Hash(const char* s, size_t len);
 
 // Hash function for a byte array.  Most useful in 32-bit binaries.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint32_t Hash32(const char* s, size_t len);
+inline uint32_t Hash32(const char* s, size_t len);
 
 // Hash function for a byte array.  For convenience, a 32-bit seed is also
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint32_t Hash32WithSeed(const char* s, size_t len, uint32_t seed);
+inline uint32_t Hash32WithSeed(const char* s, size_t len, uint32_t seed);
 
 // Hash 128 input bits down to 64 bits of output.
 // Hash function for a byte array.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint64_t Hash64(const char* s, size_t len);
+inline uint64_t Hash64(const char* s, size_t len);
 
 // Hash function for a byte array.  For convenience, a 64-bit seed is also
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint64_t Hash64WithSeed(const char* s, size_t len, uint64_t seed);
+inline uint64_t Hash64WithSeed(const char* s, size_t len, uint64_t seed);
 
 // Hash function for a byte array.  For convenience, two seeds are also
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint64_t Hash64WithSeeds(const char* s, size_t len,
+inline uint64_t Hash64WithSeeds(const char* s, size_t len,
                        uint64_t seed0, uint64_t seed1);
 
 // Hash function for a byte array.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint128 Hash128(const char* s, size_t len);
+inline uint128_t Hash128(const char* s, size_t len);
 
 // Hash function for a byte array.  For convenience, a 128-bit seed is also
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint128 Hash128WithSeed(const char* s, size_t len, uint128 seed);
-
-// BASIC NON-STRING HASHING
-
-// FINGERPRINTING (i.e., good, portable, forever-fixed hash functions)
-
-// Fingerprint function for a byte array.  Most useful in 32-bit binaries.
-uint32_t Fingerprint32(const char* s, size_t len);
-
-// Fingerprint function for a byte array.
-uint64_t Fingerprint64(const char* s, size_t len);
-
-// Fingerprint function for a byte array.
-uint128 Fingerprint128(const char* s, size_t len);
-
-// This is intended to be a good fingerprinting primitive.
-// See below for more overloads.
-inline uint64_t Fingerprint(uint128 x) {
-  // Murmur-inspired hashing.
-  const uint64_t kMul = 0x9ddfea08eb382d69ULL;
-  uint64_t a = (Uint128Low64(x) ^ Uint128High64(x)) * kMul;
-  a ^= (a >> 47);
-  uint64_t b = (Uint128High64(x) ^ a) * kMul;
-  b ^= (b >> 44);
-  b *= kMul;
-  b ^= (b >> 41);
-  b *= kMul;
-  return b;
-}
-
-// This is intended to be a good fingerprinting primitive.
-inline uint64_t Fingerprint(uint64_t x) {
-  // Murmur-inspired hashing.
-  const uint64_t kMul = 0x9ddfea08eb382d69ULL;
-  uint64_t b = x * kMul;
-  b ^= (b >> 44);
-  b *= kMul;
-  b ^= (b >> 41);
-  b *= kMul;
-  return b;
-}
+inline uint128_t Hash128WithSeed(const char* s, size_t len, uint128_t seed);
 
 #ifndef FARMHASH_NO_CXX_STRING
 
@@ -253,7 +242,7 @@ inline uint64_t Hash64WithSeeds(const Str& s, uint64_t seed0, uint64_t seed1) {
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
 template <typename Str>
-inline uint128 Hash128(const Str& s) {
+inline uint128_t Hash128(const Str& s) {
   assert(sizeof(s[0]) == 1);
   return Hash128(s.data(), s.length());
 }
@@ -263,33 +252,9 @@ inline uint128 Hash128(const Str& s) {
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
 template <typename Str>
-inline uint128 Hash128WithSeed(const Str& s, uint128 seed) {
+inline uint128_t Hash128WithSeed(const Str& s, uint128_t seed) {
   assert(sizeof(s[0]) == 1);
   return Hash128(s.data(), s.length(), seed);
-}
-
-// FINGERPRINTING (i.e., good, portable, forever-fixed hash functions)
-
-// Fingerprint function for a byte array.  Most useful in 32-bit binaries.
-template <typename Str>
-inline uint32_t Fingerprint32(const Str& s) {
-  assert(sizeof(s[0]) == 1);
-  return Fingerprint32(s.data(), s.length());
-}
-
-// Fingerprint 128 input bits down to 64 bits of output.
-// Fingerprint function for a byte array.
-template <typename Str>
-inline uint64_t Fingerprint64(const Str& s) {
-  assert(sizeof(s[0]) == 1);
-  return Fingerprint64(s.data(), s.length());
-}
-
-// Fingerprint function for a byte array.
-template <typename Str>
-inline uint128 Fingerprint128(const Str& s) {
-  assert(sizeof(s[0]) == 1);
-  return Fingerprint128(s.data(), s.length());
 }
 
 #endif
@@ -370,7 +335,7 @@ inline uint128 Fingerprint128(const Str& s) {
 // FARMHASH PORTABILITY LAYER: LIKELY and UNLIKELY
 
 #if !defined(LIKELY)
-#if defined(FARMHASH_NO_BUILTIN_EXPECT) || (defined(FARMHASH_OPTIONAL_BUILTIN_EXPECT) && !defined(HAVE_BUILTIN_EXPECT))
+#if defined(FARMHASH_NO_BUILTIN_EXPECT) || (defined(FARMHASH_OPTIONAL_BUILTIN_EXPECT) && !defined(HAVE_BUILTIN_EXPECT)) || defined(_MSC_VER)
 #define LIKELY(x) (x)
 #else
 #define LIKELY(x) (__builtin_expect(!!(x), 1))
@@ -643,6 +608,11 @@ STATIC_INLINE __m128i Fetch128(const char* s) {
 #undef PERMUTE3
 #define PERMUTE3(a, b, c) do { std::swap(a, b); std::swap(a, c); } while (0)
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:4267)
+#endif  // defined(_MSC_VER)
+
 namespace NAMESPACE_FOR_HASH_FUNCTIONS {
 
 // Some primes between 2^63 and 2^64 for various uses.
@@ -686,13 +656,13 @@ template <typename T> STATIC_INLINE T DebugTweak(T x) {
   return x;
 }
 
-template <> uint128 DebugTweak(uint128 x) {
+template <> uint128_t DebugTweak(uint128_t x) {
   if (debug_mode) {
     uint64_t y = DebugTweak(Uint128Low64(x));
     uint64_t z = DebugTweak(Uint128High64(x));
     y += z;
     z += y;
-    x = uint128(y, z * k1);
+    x = uint128_t(y, z * k1);
   }
   return x;
 }
@@ -714,11 +684,8 @@ STATIC_INLINE uint64_t ShiftMix(uint64_t val) {
   return val ^ (val >> 47);
 }
 
-STATIC_INLINE uint64_t HashLen16(uint64_t u, uint64_t v) {
-  return Hash128to64(uint128(u, v));
-}
-
-STATIC_INLINE uint64_t HashLen16(uint64_t u, uint64_t v, uint64_t mul) {
+STATIC_INLINE uint64_t
+HashLen16(uint64_t u, uint64_t v, uint64_t mul = 0x9ddfea08eb382d69ULL) {
   // Murmur-inspired hashing.
   uint64_t a = (u ^ v) * mul;
   a ^= (a >> 47);
@@ -806,7 +773,7 @@ STATIC_INLINE uint64_t HashLen33to64(const char *s, size_t len) {
                    e + Rotate(f + a, 18) + g, mul);
 }
 
-uint64_t Hash64(const char *s, size_t len) {
+inline uint64_t Hash64(const char *s, size_t len) {
   const uint64_t seed = 81;
   if (len <= 32) {
     if (len <= 16) {
@@ -861,13 +828,13 @@ uint64_t Hash64(const char *s, size_t len) {
                    mul);
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1);
+inline uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1);
 
-uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
+inline uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
   return Hash64WithSeeds(s, len, k2, seed);
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
+inline uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
   return HashLen16(Hash64(s, len) - seed0, seed1);
 }
 }  // namespace farmhashna
@@ -885,7 +852,7 @@ STATIC_INLINE uint64_t H(uint64_t x, uint64_t y, uint64_t mul, int r) {
   return Rotate(b, r) * mul;
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len,
+inline uint64_t Hash64WithSeeds(const char *s, size_t len,
                          uint64_t seed0, uint64_t seed1) {
   if (len <= 64) {
     return farmhashna::Hash64WithSeeds(s, len, seed0, seed1);
@@ -976,12 +943,12 @@ uint64_t Hash64WithSeeds(const char *s, size_t len,
            31);
 }
 
-uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
+inline uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
   return len <= 64 ? farmhashna::Hash64WithSeed(s, len, seed) :
       Hash64WithSeeds(s, len, 0, seed);
 }
 
-uint64_t Hash64(const char *s, size_t len) {
+inline uint64_t Hash64(const char *s, size_t len) {
   return len <= 64 ? farmhashna::Hash64(s, len) :
       Hash64WithSeeds(s, len, 81, 0);
 }
@@ -1025,7 +992,7 @@ STATIC_INLINE uint64_t HashLen65to96(const char *s, size_t len) {
   return (h2 * 9 + (h0 >> 17) + (h1 >> 21)) * mul1;
 }
 
-uint64_t Hash64(const char *s, size_t len) {
+inline uint64_t Hash64(const char *s, size_t len) {
   if (len <= 32) {
     if (len <= 16) {
       return farmhashna::HashLen0to16(s, len);
@@ -1043,28 +1010,28 @@ uint64_t Hash64(const char *s, size_t len) {
   }
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
+inline uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
   return farmhashuo::Hash64WithSeeds(s, len, seed0, seed1);
 }
 
-uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
+inline uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
   return farmhashuo::Hash64WithSeed(s, len, seed);
 }
 }  // namespace farmhashxo
 namespace farmhashte {
 #if !can_use_sse41 || !x86_64
 
-uint64_t Hash64(const char *s, size_t len) {
+inline uint64_t Hash64(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return s == NULL ? 0 : len;
 }
 
-uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
+inline uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return seed + Hash64(s, len);
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len,
+inline uint64_t Hash64WithSeeds(const char *s, size_t len,
                          uint64_t seed0, uint64_t seed1) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return seed0 + seed1 + Hash64(s, len);
@@ -1266,17 +1233,17 @@ STATIC_INLINE uint64_t Hash64Long(const char* s, size_t n,
   return farmhashxo::Hash64(reinterpret_cast<const char*>(t), sizeof(t));
 }
 
-uint64_t Hash64(const char *s, size_t len) {
+inline uint64_t Hash64(const char *s, size_t len) {
   // Empirically, farmhashxo seems faster until length 512.
   return len >= 512 ? Hash64Long(s, len, k2, k1) : farmhashxo::Hash64(s, len);
 }
 
-uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
+inline uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
   return len >= 512 ? Hash64Long(s, len, k1, seed) :
       farmhashxo::Hash64WithSeed(s, len, seed);
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
+inline uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
   return len >= 512 ? Hash64Long(s, len, seed0, seed1) :
       farmhashxo::Hash64WithSeeds(s, len, seed0, seed1);
 }
@@ -1286,23 +1253,23 @@ uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t see
 namespace farmhashnt {
 #if !can_use_sse41 || !x86_64
 
-uint32_t Hash32(const char *s, size_t len) {
+inline uint32_t Hash32(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return s == NULL ? 0 : len;
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return seed + Hash32(s, len);
 }
 
 #else
 
-uint32_t Hash32(const char *s, size_t len) {
+inline uint32_t Hash32(const char *s, size_t len) {
   return static_cast<uint32_t>(farmhashte::Hash64(s, len));
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   return static_cast<uint32_t>(farmhashte::Hash64WithSeed(s, len, seed));
 }
 
@@ -1354,7 +1321,7 @@ STATIC_INLINE uint32_t Hash32Len5to12(const char *s, size_t len, uint32_t seed =
   return fmix(seed ^ Mur(c, Mur(b, Mur(a, d))));
 }
 
-uint32_t Hash32(const char *s, size_t len) {
+inline uint32_t Hash32(const char *s, size_t len) {
   if (len <= 24) {
     return len <= 12 ?
         (len <= 4 ? Hash32Len0to4(s, len) : Hash32Len5to12(s, len)) :
@@ -1412,7 +1379,7 @@ uint32_t Hash32(const char *s, size_t len) {
   return h;
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   if (len <= 24) {
     if (len >= 13) return Hash32Len13to24(s, len, seed * c1);
     else if (len >= 5) return Hash32Len5to12(s, len, seed);
@@ -1425,12 +1392,12 @@ uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
 namespace farmhashsu {
 #if !can_use_sse42 || !can_use_aesni
 
-uint32_t Hash32(const char *s, size_t len) {
+inline uint32_t Hash32(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return s == NULL ? 0 : len;
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return seed + Hash32(s, len);
 }
@@ -1462,7 +1429,7 @@ STATIC_INLINE __m128i Shuffle0321(__m128i x) {
   return _mm_shuffle_epi32(x, (0 << 6) + (3 << 4) + (2 << 2) + (1 << 0));
 }
 
-uint32_t Hash32(const char *s, size_t len) {
+inline uint32_t Hash32(const char *s, size_t len) {
   const uint32_t seed = 81;
   if (len <= 24) {
     return len <= 12 ?
@@ -1630,7 +1597,7 @@ uint32_t Hash32(const char *s, size_t len) {
 #undef Mulc2
 #undef Mulc1
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   if (len <= 24) {
     if (len >= 13) return farmhashmk::Hash32Len13to24(s, len, seed * c1);
     else if (len >= 5) return farmhashmk::Hash32Len5to12(s, len, seed);
@@ -1645,12 +1612,12 @@ uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
 namespace farmhashsa {
 #if !can_use_sse42
 
-uint32_t Hash32(const char *s, size_t len) {
+inline uint32_t Hash32(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return s == NULL ? 0 : len;
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return seed + Hash32(s, len);
 }
@@ -1682,7 +1649,7 @@ STATIC_INLINE __m128i Shuffle0321(__m128i x) {
   return _mm_shuffle_epi32(x, (0 << 6) + (3 << 4) + (2 << 2) + (1 << 0));
 }
 
-uint32_t Hash32(const char *s, size_t len) {
+inline uint32_t Hash32(const char *s, size_t len) {
   const uint32_t seed = 81;
   if (len <= 24) {
     return len <= 12 ?
@@ -1840,7 +1807,7 @@ uint32_t Hash32(const char *s, size_t len) {
 #undef Mulc2
 #undef Mulc1
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   if (len <= 24) {
     if (len >= 13) return farmhashmk::Hash32Len13to24(s, len, seed * c1);
     else if (len >= 5) return farmhashmk::Hash32Len5to12(s, len, seed);
@@ -1897,7 +1864,7 @@ STATIC_INLINE uint32_t Hash32Len5to12(const char *s, size_t len) {
   return fmix(Mur(c, Mur(b, Mur(a, d))));
 }
 
-uint32_t Hash32(const char *s, size_t len) {
+inline uint32_t Hash32(const char *s, size_t len) {
   if (len <= 24) {
     return len <= 12 ?
         (len <= 4 ? Hash32Len0to4(s, len) : Hash32Len5to12(s, len)) :
@@ -1966,7 +1933,7 @@ uint32_t Hash32(const char *s, size_t len) {
   return h;
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   if (len <= 24) {
     if (len >= 13) return farmhashmk::Hash32Len13to24(s, len, seed * c1);
     else if (len >= 5) return farmhashmk::Hash32Len5to12(s, len, seed);
@@ -1989,11 +1956,8 @@ STATIC_INLINE uint64_t ShiftMix(uint64_t val) {
   return val ^ (val >> 47);
 }
 
-STATIC_INLINE uint64_t HashLen16(uint64_t u, uint64_t v) {
-  return Hash128to64(uint128(u, v));
-}
-
-STATIC_INLINE uint64_t HashLen16(uint64_t u, uint64_t v, uint64_t mul) {
+STATIC_INLINE uint64_t
+HashLen16(uint64_t u, uint64_t v, uint64_t mul = 0x9ddfea08eb382d69ULL) {
   // Murmur-inspired hashing.
   uint64_t a = (u ^ v) * mul;
   a ^= (a >> 47);
@@ -2056,7 +2020,7 @@ STATIC_INLINE std::pair<uint64_t, uint64_t> WeakHashLen32WithSeeds(
 
 // A subroutine for CityHash128().  Returns a decent 128-bit hash for strings
 // of any length representable in signed long.  Based on City and Murmur.
-STATIC_INLINE uint128 CityMurmur(const char *s, size_t len, uint128 seed) {
+STATIC_INLINE uint128_t CityMurmur(const char *s, size_t len, uint128_t seed) {
   uint64_t a = Uint128Low64(seed);
   uint64_t b = Uint128High64(seed);
   uint64_t c = 0;
@@ -2083,10 +2047,10 @@ STATIC_INLINE uint128 CityMurmur(const char *s, size_t len, uint128 seed) {
   }
   a = HashLen16(a, c);
   b = HashLen16(d, b);
-  return uint128(a ^ b, HashLen16(b, a));
+  return uint128_t(a ^ b, HashLen16(b, a));
 }
 
-uint128 CityHash128WithSeed(const char *s, size_t len, uint128 seed) {
+inline uint128_t CityHash128WithSeed(const char *s, size_t len, uint128_t seed) {
   if (len < 128) {
     return CityMurmur(s, len, seed);
   }
@@ -2145,18 +2109,18 @@ uint128 CityHash128WithSeed(const char *s, size_t len, uint128 seed) {
   // different 56-byte-to-8-byte hashes to get a 16-byte final result.
   x = HashLen16(x, v.first);
   y = HashLen16(y + z, w.first);
-  return uint128(HashLen16(x + v.second, w.second) + y,
+  return uint128_t(HashLen16(x + v.second, w.second) + y,
                    HashLen16(x + w.second, y + v.second));
 }
 
-STATIC_INLINE uint128 CityHash128(const char *s, size_t len) {
+STATIC_INLINE uint128_t CityHash128(const char *s, size_t len) {
   return len >= 16 ?
       CityHash128WithSeed(s + 16, len - 16,
-                          uint128(Fetch(s), Fetch(s + 8) + k0)) :
-      CityHash128WithSeed(s, len, uint128(k0, k1));
+                          uint128_t(Fetch(s), Fetch(s + 8) + k0)) :
+      CityHash128WithSeed(s, len, uint128_t(k0, k1));
 }
 
-uint128 Fingerprint128(const char* s, size_t len) {
+inline uint128_t Fingerprint128(const char* s, size_t len) {
   return CityHash128(s, len);
 }
 }  // namespace farmhashcc
@@ -2167,7 +2131,7 @@ namespace NAMESPACE_FOR_HASH_FUNCTIONS {
 // Hash function for a byte array.  See also Hash(), below.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint32_t Hash32(const char* s, size_t len) {
+inline uint32_t Hash32(const char* s, size_t len) {
   return DebugTweak(
       (can_use_sse41 & x86_64) ? farmhashnt::Hash32(s, len) :
       (can_use_sse42 & can_use_aesni) ? farmhashsu::Hash32(s, len) :
@@ -2179,7 +2143,7 @@ uint32_t Hash32(const char* s, size_t len) {
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint32_t Hash32WithSeed(const char* s, size_t len, uint32_t seed) {
+inline uint32_t Hash32WithSeed(const char* s, size_t len, uint32_t seed) {
   return DebugTweak(
       (can_use_sse41 & x86_64) ? farmhashnt::Hash32WithSeed(s, len, seed) :
       (can_use_sse42 & can_use_aesni) ? farmhashsu::Hash32WithSeed(s, len, seed) :
@@ -2191,7 +2155,7 @@ uint32_t Hash32WithSeed(const char* s, size_t len, uint32_t seed) {
 // hashed into the result.  See also Hash(), below.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint64_t Hash64(const char* s, size_t len) {
+inline uint64_t Hash64(const char* s, size_t len) {
   return DebugTweak(
       (can_use_sse42 & x86_64) ?
       farmhashte::Hash64(s, len) :
@@ -2201,7 +2165,7 @@ uint64_t Hash64(const char* s, size_t len) {
 // Hash function for a byte array.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-size_t Hash(const char* s, size_t len) {
+inline size_t Hash(const char* s, size_t len) {
   return sizeof(size_t) == 8 ? Hash64(s, len) : Hash32(s, len);
 }
 
@@ -2209,7 +2173,7 @@ size_t Hash(const char* s, size_t len) {
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint64_t Hash64WithSeed(const char* s, size_t len, uint64_t seed) {
+inline uint64_t Hash64WithSeed(const char* s, size_t len, uint64_t seed) {
   return DebugTweak(farmhashna::Hash64WithSeed(s, len, seed));
 }
 
@@ -2217,14 +2181,14 @@ uint64_t Hash64WithSeed(const char* s, size_t len, uint64_t seed) {
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint64_t Hash64WithSeeds(const char* s, size_t len, uint64_t seed0, uint64_t seed1) {
+inline uint64_t Hash64WithSeeds(const char* s, size_t len, uint64_t seed0, uint64_t seed1) {
   return DebugTweak(farmhashna::Hash64WithSeeds(s, len, seed0, seed1));
 }
 
 // Hash function for a byte array.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint128 Hash128(const char* s, size_t len) {
+inline uint128_t Hash128(const char* s, size_t len) {
   return DebugTweak(farmhashcc::Fingerprint128(s, len));
 }
 
@@ -2232,33 +2196,18 @@ uint128 Hash128(const char* s, size_t len) {
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint128 Hash128WithSeed(const char* s, size_t len, uint128 seed) {
+inline uint128_t Hash128WithSeed(const char* s, size_t len, uint128_t seed) {
   return DebugTweak(farmhashcc::CityHash128WithSeed(s, len, seed));
-}
-
-// BASIC NON-STRING HASHING
-
-// FINGERPRINTING (i.e., good, portable, forever-fixed hash functions)
-
-// Fingerprint function for a byte array.  Most useful in 32-bit binaries.
-uint32_t Fingerprint32(const char* s, size_t len) {
-  return farmhashmk::Hash32(s, len);
-}
-
-// Fingerprint function for a byte array.
-uint64_t Fingerprint64(const char* s, size_t len) {
-  return farmhashna::Hash64(s, len);
-}
-
-// Fingerprint function for a byte array.
-uint128 Fingerprint128(const char* s, size_t len) {
-  return farmhashcc::Fingerprint128(s, len);
 }
 
 // Older and still available but perhaps not as fast as the above:
 //   farmhashns::Hash32{,WithSeed}()
 
 }  // namespace NAMESPACE_FOR_HASH_FUNCTIONS
+
+#if defined(_MSC_VER)
+#pragma warning( pop )
+#endif  // defined(_MSC_VER)
 
 #if FARMHASHSELFTEST
 
@@ -2277,7 +2226,7 @@ static const uint64_t kSeed0 = 1234567;
 static const uint64_t kSeed1 = k0;
 static const int kDataSize = 1 << 20;
 static const int kTestSize = 300;
-#define kSeed128 uint128(kSeed0, kSeed1)
+#define kSeed128 uint128_t(kSeed0, kSeed1)
 
 static char data[kDataSize];
 
@@ -2311,8 +2260,8 @@ template <typename T> inline bool IsNonZero(T x) {
   return x != 0;
 }
 
-template <> inline bool IsNonZero<uint128>(uint128 x) {
-  return x != uint128(0, 0);
+template <> inline bool IsNonZero<uint128_t>(uint128_t x) {
+  return x != uint128_t(0, 0);
 }
 
 #endif  // FARMHASH_SELF_TEST_GUARD
@@ -3818,11 +3767,11 @@ bool Test(int offset, int len = 0) {
 
   // After the following line is where the uses of "Check" and such will go.
   static int index = 0;
-if (offset == -1) { int alive = 0; IsAlive(farmhashcc::Hash32WithSeed(data, len++, SEED)); IsAlive(farmhashcc::Hash32(data, len++)); { uint128 u = farmhashcc::Fingerprint128(data, len++); uint64_t h = Uint128Low64(u); IsAlive(h >> 32); IsAlive((h << 32) >> 32); h = Uint128High64(u); IsAlive(h >> 32); IsAlive((h << 32) >> 32); } len -= 3; return alive > 0; }
+if (offset == -1) { int alive = 0; IsAlive(farmhashcc::Hash32WithSeed(data, len++, SEED)); IsAlive(farmhashcc::Hash32(data, len++)); { uint128_t u = farmhashcc::Fingerprint128(data, len++); uint64_t h = Uint128Low64(u); IsAlive(h >> 32); IsAlive((h << 32) >> 32); h = Uint128High64(u); IsAlive(h >> 32); IsAlive((h << 32) >> 32); } len -= 3; return alive > 0; }
 Check(farmhashcc::Hash32WithSeed(data + offset, len, SEED));
 Check(farmhashcc::Hash32(data + offset, len));
-{ uint128 u = farmhashcc::Fingerprint128(data + offset, len); uint64_t h = Uint128Low64(u); Check(h >> 32); Check((h << 32) >> 32); h = Uint128High64(u); Check(h >> 32); Check((h << 32) >> 32); }
-{ uint128 u = farmhashcc::CityHash128WithSeed(data + offset, len, uint128(SEED0, SEED1)); uint64_t h = Uint128Low64(u); Check(h >> 32); Check((h << 32) >> 32); h = Uint128High64(u); Check(h >> 32); Check((h << 32) >> 32); }
+{ uint128_t u = farmhashcc::Fingerprint128(data + offset, len); uint64_t h = Uint128Low64(u); Check(h >> 32); Check((h << 32) >> 32); h = Uint128High64(u); Check(h >> 32); Check((h << 32) >> 32); }
+{ uint128_t u = farmhashcc::CityHash128WithSeed(data + offset, len, uint128_t(SEED0, SEED1)); uint64_t h = Uint128Low64(u); Check(h >> 32); Check((h << 32) >> 32); h = Uint128High64(u); Check(h >> 32); Check((h << 32) >> 32); }
 
   return true;
 #undef Check
@@ -3856,8 +3805,8 @@ int RunTest() {
 void Dump(int offset, int len) {
 cout << farmhashcc::Hash32WithSeed(data + offset, len, SEED) << "u," << endl;
 cout << farmhashcc::Hash32(data + offset, len) << "u," << endl;
-{ uint128 u = farmhashcc::Fingerprint128(data + offset, len); uint64_t h = Uint128Low64(u); cout << (h >> 32) << "u, " << ((h << 32) >> 32) << "u, "; h = Uint128High64(u); cout << (h >> 32) << "u, " << ((h << 32) >> 32) << "u," << endl; }
-{ uint128 u = farmhashcc::CityHash128WithSeed(data + offset, len, uint128(SEED0, SEED1)); uint64_t h = Uint128Low64(u); cout << (h >> 32) << "u, " << ((h << 32) >> 32) << "u, "; h = Uint128High64(u); cout << (h >> 32) << "u, " << ((h << 32) >> 32) << "u," << endl; }
+{ uint128_t u = farmhashcc::Fingerprint128(data + offset, len); uint64_t h = Uint128Low64(u); cout << (h >> 32) << "u, " << ((h << 32) >> 32) << "u, "; h = Uint128High64(u); cout << (h >> 32) << "u, " << ((h << 32) >> 32) << "u," << endl; }
+{ uint128_t u = farmhashcc::CityHash128WithSeed(data + offset, len, uint128_t(SEED0, SEED1)); uint64_t h = Uint128Low64(u); cout << (h >> 32) << "u, " << ((h << 32) >> 32) << "u, "; h = Uint128High64(u); cout << (h >> 32) << "u, " << ((h << 32) >> 32) << "u," << endl; }
 }
 
 #endif
@@ -3902,7 +3851,7 @@ static const uint64_t kSeed0 = 1234567;
 static const uint64_t kSeed1 = k0;
 static const int kDataSize = 1 << 20;
 static const int kTestSize = 300;
-#define kSeed128 uint128(kSeed0, kSeed1)
+#define kSeed128 uint128_t(kSeed0, kSeed1)
 
 static char data[kDataSize];
 
@@ -3936,8 +3885,8 @@ template <typename T> inline bool IsNonZero(T x) {
   return x != 0;
 }
 
-template <> inline bool IsNonZero<uint128>(uint128 x) {
-  return x != uint128(0, 0);
+template <> inline bool IsNonZero<uint128_t>(uint128_t x) {
+  return x != uint128_t(0, 0);
 }
 
 #endif  // FARMHASH_SELF_TEST_GUARD
@@ -4799,7 +4748,7 @@ static const uint64_t kSeed0 = 1234567;
 static const uint64_t kSeed1 = k0;
 static const int kDataSize = 1 << 20;
 static const int kTestSize = 300;
-#define kSeed128 uint128(kSeed0, kSeed1)
+#define kSeed128 uint128_t(kSeed0, kSeed1)
 
 static char data[kDataSize];
 
@@ -4833,8 +4782,8 @@ template <typename T> inline bool IsNonZero(T x) {
   return x != 0;
 }
 
-template <> inline bool IsNonZero<uint128>(uint128 x) {
-  return x != uint128(0, 0);
+template <> inline bool IsNonZero<uint128_t>(uint128_t x) {
+  return x != uint128_t(0, 0);
 }
 
 #endif  // FARMHASH_SELF_TEST_GUARD
@@ -6060,7 +6009,7 @@ static const uint64_t kSeed0 = 1234567;
 static const uint64_t kSeed1 = k0;
 static const int kDataSize = 1 << 20;
 static const int kTestSize = 300;
-#define kSeed128 uint128(kSeed0, kSeed1)
+#define kSeed128 uint128_t(kSeed0, kSeed1)
 
 static char data[kDataSize];
 
@@ -6094,8 +6043,8 @@ template <typename T> inline bool IsNonZero(T x) {
   return x != 0;
 }
 
-template <> inline bool IsNonZero<uint128>(uint128 x) {
-  return x != uint128(0, 0);
+template <> inline bool IsNonZero<uint128_t>(uint128_t x) {
+  return x != uint128_t(0, 0);
 }
 
 #endif  // FARMHASH_SELF_TEST_GUARD
@@ -6957,7 +6906,7 @@ static const uint64_t kSeed0 = 1234567;
 static const uint64_t kSeed1 = k0;
 static const int kDataSize = 1 << 20;
 static const int kTestSize = 300;
-#define kSeed128 uint128(kSeed0, kSeed1)
+#define kSeed128 uint128_t(kSeed0, kSeed1)
 
 static char data[kDataSize];
 
@@ -6991,8 +6940,8 @@ template <typename T> inline bool IsNonZero(T x) {
   return x != 0;
 }
 
-template <> inline bool IsNonZero<uint128>(uint128 x) {
-  return x != uint128(0, 0);
+template <> inline bool IsNonZero<uint128_t>(uint128_t x) {
+  return x != uint128_t(0, 0);
 }
 
 #endif  // FARMHASH_SELF_TEST_GUARD
@@ -7854,7 +7803,7 @@ static const uint64_t kSeed0 = 1234567;
 static const uint64_t kSeed1 = k0;
 static const int kDataSize = 1 << 20;
 static const int kTestSize = 300;
-#define kSeed128 uint128(kSeed0, kSeed1)
+#define kSeed128 uint128_t(kSeed0, kSeed1)
 
 static char data[kDataSize];
 
@@ -7888,8 +7837,8 @@ template <typename T> inline bool IsNonZero(T x) {
   return x != 0;
 }
 
-template <> inline bool IsNonZero<uint128>(uint128 x) {
-  return x != uint128(0, 0);
+template <> inline bool IsNonZero<uint128_t>(uint128_t x) {
+  return x != uint128_t(0, 0);
 }
 
 #endif  // FARMHASH_SELF_TEST_GUARD
@@ -8751,7 +8700,7 @@ static const uint64_t kSeed0 = 1234567;
 static const uint64_t kSeed1 = k0;
 static const int kDataSize = 1 << 20;
 static const int kTestSize = 300;
-#define kSeed128 uint128(kSeed0, kSeed1)
+#define kSeed128 uint128_t(kSeed0, kSeed1)
 
 static char data[kDataSize];
 
@@ -8785,8 +8734,8 @@ template <typename T> inline bool IsNonZero(T x) {
   return x != 0;
 }
 
-template <> inline bool IsNonZero<uint128>(uint128 x) {
-  return x != uint128(0, 0);
+template <> inline bool IsNonZero<uint128_t>(uint128_t x) {
+  return x != uint128_t(0, 0);
 }
 
 #endif  // FARMHASH_SELF_TEST_GUARD
@@ -10012,7 +9961,7 @@ static const uint64_t kSeed0 = 1234567;
 static const uint64_t kSeed1 = k0;
 static const int kDataSize = 1 << 20;
 static const int kTestSize = 300;
-#define kSeed128 uint128(kSeed0, kSeed1)
+#define kSeed128 uint128_t(kSeed0, kSeed1)
 
 static char data[kDataSize];
 
@@ -10046,8 +9995,8 @@ template <typename T> inline bool IsNonZero(T x) {
   return x != 0;
 }
 
-template <> inline bool IsNonZero<uint128>(uint128 x) {
-  return x != uint128(0, 0);
+template <> inline bool IsNonZero<uint128_t>(uint128_t x) {
+  return x != uint128_t(0, 0);
 }
 
 #endif  // FARMHASH_SELF_TEST_GUARD
@@ -10909,7 +10858,7 @@ static const uint64_t kSeed0 = 1234567;
 static const uint64_t kSeed1 = k0;
 static const int kDataSize = 1 << 20;
 static const int kTestSize = 300;
-#define kSeed128 uint128(kSeed0, kSeed1)
+#define kSeed128 uint128_t(kSeed0, kSeed1)
 
 static char data[kDataSize];
 
@@ -10943,8 +10892,8 @@ template <typename T> inline bool IsNonZero(T x) {
   return x != 0;
 }
 
-template <> inline bool IsNonZero<uint128>(uint128 x) {
-  return x != uint128(0, 0);
+template <> inline bool IsNonZero<uint128_t>(uint128_t x) {
+  return x != uint128_t(0, 0);
 }
 
 #endif  // FARMHASH_SELF_TEST_GUARD
@@ -12157,4 +12106,5 @@ int main(int argc, char** argv) {
 #endif
 
 #endif  // FARMHASHSELFTEST
+
 #endif  // UTIL_HASH_FARMHASH_H_

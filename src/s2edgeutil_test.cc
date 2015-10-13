@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2edgeutil.h"
@@ -19,24 +20,29 @@
 #include <float.h>
 #include <math.h>
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include <glog/logging.h>
-#include "base/scoped_ptr.h"
 #include "base/stringprintf.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "r1interval.h"
 #include "r2rect.h"
 #include "s1chordangle.h"
 #include "s2polyline.h"
 #include "s2testing.h"
+#include "s2textformat.h"
+#include "util/math/exactfloat/exactfloat.h"
 #include "util/math/vector3.h"
 
 using std::max;
+using std::swap;
+using std::unique_ptr;
 using std::vector;
 
-namespace {
+extern void PrintIntersectionStats();
+extern int exact_calls;
 
 const int kDegen = -2;
 void CompareResult(int actual, int expected) {
@@ -167,10 +173,10 @@ S2LatLng const kRectError = S2EdgeUtil::RectBounder::MaxErrorForTests();
 TEST(RectBounder, MaxLatitudeSimple) {
   // Check cases where the min/max latitude is attained at a vertex.
   static double const kCubeLat = asin(1 / sqrt(3));  // 35.26 degrees
-  EXPECT_TRUE(GetEdgeBound(1,1,1, 1,-1,-1).ApproxEquals(
+  EXPECT_TRUE(GetEdgeBound(1,1,1, 1,-1,-1).ApproxEquals(  // NOLINT
       S2LatLngRect(R1Interval(-kCubeLat, kCubeLat),
                    S1Interval(-M_PI_4, M_PI_4)), kRectError));
-  EXPECT_TRUE(GetEdgeBound(1,-1,1, 1,1,-1).ApproxEquals(
+  EXPECT_TRUE(GetEdgeBound(1,-1,1, 1,1,-1).ApproxEquals(  // NOLINT
       S2LatLngRect(R1Interval(-kCubeLat, kCubeLat),
                    S1Interval(-M_PI_4, M_PI_4)), kRectError));
 
@@ -183,17 +189,17 @@ TEST(RectBounder, MaxLatitudeSimple) {
                    GetEdgeBound(1,1,1, 1,-1,1).lat().hi());
   // Max latitude, CCW edge
   EXPECT_DOUBLE_EQ(M_PI_4 + 0.5 * kRectError.lat().radians(),
-                   GetEdgeBound(1,-1,1, 1,1,1).lat().hi());
+                   GetEdgeBound(1,-1,1, 1,1,1).lat().hi());  // NOLINT
   // Min latitude, CW edge
   EXPECT_DOUBLE_EQ(-M_PI_4 - 0.5 * kRectError.lat().radians(),
-                   GetEdgeBound(1,-1,-1, -1,-1,-1).lat().lo());
+                   GetEdgeBound(1,-1,-1, -1,-1,-1).lat().lo());  // NOLINT
   // Min latitude, CCW edge
   EXPECT_DOUBLE_EQ(-M_PI_4 - 0.5 * kRectError.lat().radians(),
-                   GetEdgeBound(-1,1,-1, -1,-1,-1).lat().lo());
+                   GetEdgeBound(-1,1,-1, -1,-1,-1).lat().lo());  // NOLINT
 
   // Check cases where the edge passes through one of the poles.
-  EXPECT_EQ(M_PI_2, GetEdgeBound(.3,.4,1, -.3,-.4,1).lat().hi());
-  EXPECT_EQ(-M_PI_2, GetEdgeBound(.3,.4,-1, -.3,-.4,-1).lat().lo());
+  EXPECT_EQ(M_PI_2, GetEdgeBound(.3,.4,1, -.3,-.4,1).lat().hi());  // NOLINT
+  EXPECT_EQ(-M_PI_2, GetEdgeBound(.3,.4,-1, -.3,-.4,-1).lat().lo());  // NOLINT
 }
 
 TEST(RectBounder, MaxLatitudeRandom) {
@@ -632,8 +638,8 @@ TEST(S2EdgeUtil, InterpolateCanExtrapolate) {
   const S2Point j(0, 1, 0);
   // Initial vectors at 90 degrees.
   CheckInterpolate(0, i, j, S2Point(1, 0, 0));
-  CheckInterpolate(1, i, j ,S2Point(0, 1, 0));
-  CheckInterpolate(1.5, i, j ,S2Point(-1, 1, 0));
+  CheckInterpolate(1, i, j, S2Point(0, 1, 0));
+  CheckInterpolate(1.5, i, j, S2Point(-1, 1, 0));
   CheckInterpolate(2, i, j, S2Point(-1, 0, 0));
   CheckInterpolate(3, i, j, S2Point(0, -1, 0));
   CheckInterpolate(4, i, j, S2Point(1, 0, 0));
@@ -641,7 +647,7 @@ TEST(S2EdgeUtil, InterpolateCanExtrapolate) {
   // Negative values of t.
   CheckInterpolate(-1, i, j, S2Point(0, -1, 0));
   CheckInterpolate(-2, i, j, S2Point(-1, 0, 0));
-  CheckInterpolate(-3, i, j ,S2Point(0, 1, 0));
+  CheckInterpolate(-3, i, j, S2Point(0, 1, 0));
   CheckInterpolate(-4, i, j, S2Point(1, 0, 0));
 
   // Initial vectors at 45 degrees.
@@ -656,7 +662,6 @@ TEST(S2EdgeUtil, InterpolateCanExtrapolate) {
   S2Point p(S2EdgeUtil::Interpolate(0.001, i, j));
   // We should get back where we started.
   CheckInterpolate(1000, i, p, j);
-
 }
 
 
@@ -673,64 +678,208 @@ TEST(S2EdgeUtil, RepeatedInterpolation) {
   }
 }
 
-TEST(S2EdgeUtil, IntersectionTolerance) {
-  // We repeatedly construct two edges that cross near a random point "p",
-  // and measure the distance from the actual intersection point "x" to the
-  // the expected intersection point "p" and also to the edges that cross
-  // near "p".
-  //
-  // Note that GetIntersection() does not guarantee that "x" and "p" will be
-  // close together (since the intersection point is numerically unstable
-  // when the edges cross at a very small angle), but it does guarantee that
-  // "x" will be close to both of the edges that cross.
+class S2EdgeUtilTesting {
+ public:
+  static S2Point GetIntersection(S2Point const& a, S2Point const& b,
+                                 S2Point const& c, S2Point const& d) {
+    S2Point result = S2EdgeUtil::GetIntersection(a, b, c, d);
+    ++tally_[S2EdgeUtil::last_intersection_method_];
+    return result;
+  }
+
+  static void PrintIntersectionStats() {
+    int total = 0;
+    int totals[kNumMethods];
+    for (int i = kNumMethods; --i >= 0; ) {
+      total += tally_[i];
+      totals[i] = total;
+    }
+    printf("%10s %16s %16s  %6s\n",
+           "Method", "Successes", "Attempts", "Rate");
+    for (int i = 0; i < kNumMethods; ++i) {
+      if (tally_[i] == 0) continue;
+      printf("%10s %9d %5.1f%% %9d %5.1f%%  %5.1f%%\n",
+             S2EdgeUtil::GetIntersectionMethodName(
+                 static_cast<S2EdgeUtil::IntersectionMethod>(i)),
+             tally_[i], 100.0 * tally_[i] / total,
+             totals[i], 100.0 * totals[i] / total,
+             100.0 * tally_[i] / totals[i]);
+    }
+    for (int i = 0; i < kNumMethods; ++i) tally_[i] = 0;
+  }
+
+  // This returns the true intersection point of two line segments (a0,a1) and
+  // (b0,b1), with a relative error of at most DBL_EPSILON in each coordinate
+  // (i.e., one ulp, or twice the double precision rounding error).
+  static S2Point GetIntersectionExact(S2Point const& a0, S2Point const& a1,
+                                      S2Point const& b0, S2Point const& b1) {
+    S2Point x = S2EdgeUtil::GetIntersectionExact(a0, a1, b0, b1);
+    if (x.DotProd((a0 + a1) + (b0 + b1)) < 0) x = -x;
+    return x;
+  }
+
+ private:
+  static int const kNumMethods = S2EdgeUtil::NUM_INTERSECTION_METHODS;
+  static int tally_[kNumMethods];
+};
+int S2EdgeUtilTesting::tally_[kNumMethods];
+
+// The approximate maximum error in GetDistance() for small distances.
+S1Angle kGetDistanceAbsError = S1Angle::Radians(3 * DBL_EPSILON);
+
+TEST(S2EdgeUtil, IntersectionError) {
+  // We repeatedly construct two edges that cross near a random point "p", and
+  // measure the distance from the actual intersection point "x" to the
+  // exact intersection point and also to the edges.
 
   S1Angle max_point_dist, max_edge_dist;
   S2Testing::Random* rnd = &S2Testing::rnd;
-  for (int i = 0; i < 1000; ++i) {
+  for (int iter = 0; iter < 5000; ++iter) {
     // We construct two edges AB and CD that intersect near "p".  The angle
     // between AB and CD (expressed as a slope) is chosen randomly between
-    // 1e-15 and 1.0 such that its logarithm is uniformly distributed.  This
-    // implies that small values are much more likely to be chosen.
+    // 1e-15 and 1e15 such that its logarithm is uniformly distributed.
+    // Similarly, two edge lengths approximately between 1e-15 and 1 are
+    // chosen.  The edge endpoints are chosen such that they are often very
+    // close to the other edge (i.e., barely crossing).  Taken together this
+    // ensures that we test both long and very short edges that intersect at
+    // both large and very small angles.
     //
-    // Once the slope is chosen, the four points ABCD must be offset from P
-    // by at least (1e-15 / slope) so that the points are guaranteed to have
-    // the correct circular ordering around P.  This is the distance from P
-    // at which the two edges are separated by about 1e-15, which is
-    // approximately the minimum distance at which we can expect computed
-    // points on the two lines to be distinct and have the correct ordering.
-    //
-    // The actual offset distance from P is chosen randomly in the range
-    // [1e-15 / slope, 1.0], again uniformly distributing the logarithm.
-    // This ensures that we test both long and very short segments that
-    // intersect at both large and very small angles.
-
+    // Sometimes the edges we generate will not actually cross, in which case
+    // we simply try again.
     Vector3_d p, d1, d2;
     S2Testing::GetRandomFrame(&p, &d1, &d2);
-    double slope = pow(1e-15, rnd->RandDouble());
-    d2 = d1 + slope * d2;
-    S2Point a = (p + pow(1e-15 / slope, rnd->RandDouble()) * d1).Normalize();
-    S2Point b = (p - pow(1e-15 / slope, rnd->RandDouble()) * d1).Normalize();
-    S2Point c = (p + pow(1e-15 / slope, rnd->RandDouble()) * d2).Normalize();
-    S2Point d = (p - pow(1e-15 / slope, rnd->RandDouble()) * d2).Normalize();
-    S2Point x = S2EdgeUtil::GetIntersection(a, b, c, d);
-    S1Angle dist_ab = S2EdgeUtil::GetDistance(x, a, b);
-    S1Angle dist_cd = S2EdgeUtil::GetDistance(x, c, d);
-    EXPECT_LE(dist_ab, S2EdgeUtil::kIntersectionTolerance);
-    EXPECT_LE(dist_cd, S2EdgeUtil::kIntersectionTolerance);
+    double slope = 1e-15 * pow(1e30, rnd->RandDouble());
+    d2 = (d1 + slope * d2).Normalize();
+    S2Point a, b, c, d;
+    do {
+      double ab_len = pow(1e-15, rnd->RandDouble());
+      double cd_len = pow(1e-15, rnd->RandDouble());
+      double a_fraction = pow(1e-5, rnd->RandDouble());
+      if (rnd->OneIn(2)) a_fraction = 1 - a_fraction;
+      double c_fraction = pow(1e-5, rnd->RandDouble());
+      if (rnd->OneIn(2)) c_fraction = 1 - c_fraction;
+      a = (p - a_fraction * ab_len * d1).Normalize();
+      b = (p + (1 - a_fraction) * ab_len * d1).Normalize();
+      c = (p - c_fraction * cd_len * d2).Normalize();
+      d = (p + (1 - c_fraction) * cd_len * d2).Normalize();
+    } while (S2EdgeUtil::RobustCrossing(a, b, c, d) <= 0);
+
+    // Each constructed edge should be at most 1.5 * DBL_EPSILON away from the
+    // original point P.
+    EXPECT_LE(S2EdgeUtil::GetDistance(p, a, b),
+              S1Angle::Radians(1.5 * DBL_EPSILON) + kGetDistanceAbsError);
+    EXPECT_LE(S2EdgeUtil::GetDistance(p, c, d),
+              S1Angle::Radians(1.5 * DBL_EPSILON) + kGetDistanceAbsError);
+
+    // Verify that the expected intersection point is close to both edges and
+    // also close to the original point P.  (It might not be very close to P
+    // if the angle between the edges is very small.)
+    S2Point expected = S2EdgeUtilTesting::GetIntersectionExact(a, b, c, d);
+    EXPECT_LE(S2EdgeUtil::GetDistance(expected, a, b),
+              S1Angle::Radians(3 * DBL_EPSILON) + kGetDistanceAbsError);
+    EXPECT_LE(S2EdgeUtil::GetDistance(expected, c, d),
+              S1Angle::Radians(3 * DBL_EPSILON) + kGetDistanceAbsError);
+    EXPECT_LE(S1Angle(expected, p),
+              S1Angle::Radians(3 * DBL_EPSILON / slope) +
+              S2EdgeUtil::kIntersectionError);
+
+    // Now we actually test the GetIntersection() method.
+    S2Point actual = S2EdgeUtilTesting::GetIntersection(a, b, c, d);
+    S1Angle dist_ab = S2EdgeUtil::GetDistance(actual, a, b);
+    S1Angle dist_cd = S2EdgeUtil::GetDistance(actual, c, d);
+    EXPECT_LE(dist_ab, S2EdgeUtil::kIntersectionError + kGetDistanceAbsError);
+    EXPECT_LE(dist_cd, S2EdgeUtil::kIntersectionError + kGetDistanceAbsError);
     max_edge_dist = max(max_edge_dist, max(dist_ab, dist_cd));
-    max_point_dist = max(max_point_dist, S1Angle(p, x));
+    S1Angle point_dist(expected, actual);
+    EXPECT_LE(point_dist, S2EdgeUtil::kIntersectionError);
+    max_point_dist = max(max_point_dist, point_dist);
   }
+  S2EdgeUtilTesting::PrintIntersectionStats();
   LOG(INFO) << "Max distance to either edge being intersected: "
             << max_edge_dist.radians();
   LOG(INFO) << "Maximum distance to expected intersection point: "
             << max_point_dist.radians();
 }
 
+// Chooses a point in the XY plane that is separated from X by at least 1e-15
+// (to avoid choosing too many duplicate points) and by at most Pi/2 - 1e-3
+// (to avoid nearly-diametric edges, since the test below is not sophisticated
+// enough to test such edges).
+static S2Point ChooseSemicirclePoint(S2Point const& x, S2Point const& y) {
+  S2Testing::Random* rnd = &S2Testing::rnd;
+  double sign = (2 * rnd->Uniform(2)) - 1;
+  return (x + sign * 1e3 * pow(1e-18, rnd->RandDouble()) * y).Normalize();
+}
+
+TEST(S2EdgeUtil, GrazingIntersections) {
+  // This test choose 5 points along a great circle (i.e., as collinear as
+  // possible), and uses them to construct an edge AB and a triangle CDE such
+  // that CD and CE both cross AB.  It then checks that the intersection
+  // points returned by GetIntersection() have the correct relative ordering
+  // along AB (to within kIntersectionError).
+  for (int iter = 0; iter < 1000; ++iter) {
+    Vector3_d x, y, z;
+    S2Testing::GetRandomFrame(&x, &y, &z);
+    S2Point a, b, c, d, e, ab;
+    do {
+      a = ChooseSemicirclePoint(x, y);
+      b = ChooseSemicirclePoint(x, y);
+      c = ChooseSemicirclePoint(x, y);
+      d = ChooseSemicirclePoint(x, y);
+      e = ChooseSemicirclePoint(x, y);
+      ab = (a - b).CrossProd(a + b);
+    } while (ab.Norm() < 50 * DBL_EPSILON ||
+             S2EdgeUtil::RobustCrossing(a, b, c, d) <= 0 ||
+             S2EdgeUtil::RobustCrossing(a, b, c, e) <= 0);
+    S2Point xcd = S2EdgeUtilTesting::GetIntersection(a, b, c, d);
+    S2Point xce = S2EdgeUtilTesting::GetIntersection(a, b, c, e);
+    // Essentially this says that if CDE and CAB have the same orientation,
+    // then CD and CE should intersect along AB in that order.
+    ab = ab.Normalize();
+    if (S1Angle(xcd, xce) > 2 * S2EdgeUtil::kIntersectionError) {
+      EXPECT_EQ(S2::RobustCCW(c, d, e) == S2::RobustCCW(c, a, b),
+                S2::RobustCCW(ab, xcd, xce) > 0);
+    }
+  }
+  S2EdgeUtilTesting::PrintIntersectionStats();
+}
+
+TEST(S2EdgeUtil, GetIntersectionInvariants) {
+  // Test that the result of GetIntersection does not change when the edges
+  // are swapped and/or reversed.  The number of iterations is high because it
+  // is difficult to generate test cases that show that CompareEdges() is
+  // necessary and correct, for example.
+  const int kIters = google::DEBUG_MODE ? 5000 : 50000;
+  for (int iter = 0; iter < kIters; ++iter) {
+    S2Point a, b, c, d;
+    do {
+      // GetIntersectionStable() sorts the two edges by length, so construct
+      // edges (a,b) and (c,d) that cross and have exactly the same length.
+      // This can be done by swapping the "x" and "y" coordinates.
+      // [Swapping other coordinate pairs doesn't work because it changes the
+      // order of addition in Norm2() == (x**2 + y**2) + z**2.]
+      a = c = S2Testing::RandomPoint();
+      b = d = S2Testing::RandomPoint();
+      swap(c[0], c[1]);
+      swap(d[0], d[1]);
+    } while (S2EdgeUtil::RobustCrossing(a, b, c, d) <= 0);
+    EXPECT_EQ((a - b).Norm2(), (c - d).Norm2());
+
+    // Now verify that GetIntersection returns exactly the same result when
+    // the edges are swapped and/or reversed.
+    S2Point result = S2EdgeUtil::GetIntersection(a, b, c, d);
+    if (S2Testing::rnd.OneIn(2)) { swap(a, b); }
+    if (S2Testing::rnd.OneIn(2)) { swap(c, d); }
+    if (S2Testing::rnd.OneIn(2)) { swap(a, c); swap(b, d); }
+    EXPECT_EQ(result, S2EdgeUtil::GetIntersection(a, b, c, d));
+  }
+}
+
 bool IsEdgeBNearEdgeA(string const& a_str, const string& b_str,
                       double max_error_degrees) {
-  scoped_ptr<S2Polyline> a(S2Testing::MakePolyline(a_str));
+  unique_ptr<S2Polyline> a(s2textformat::MakePolyline(a_str));
   EXPECT_EQ(2, a->num_vertices());
-  scoped_ptr<S2Polyline> b(S2Testing::MakePolyline(b_str));
+  unique_ptr<S2Polyline> b(s2textformat::MakePolyline(b_str));
   EXPECT_EQ(2, b->num_vertices());
   return S2EdgeUtil::IsEdgeBNearEdgeA(a->vertex(0), a->vertex(1),
                                       b->vertex(0), b->vertex(1),
@@ -1160,6 +1309,3 @@ TEST(S2EdgeUtil, EdgeClipping) {
   TestEdgeClipping(R2Rect::Empty());
 }
 
-
-
-}  // namespace

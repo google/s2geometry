@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Vestige of base/stl_decl.h
 
 #ifndef _STL_DECL_MSVC_H

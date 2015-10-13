@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+
 #include "util/hash/jenkins.h"
 
 
@@ -72,7 +73,9 @@ uint32 Hash32StringWithSeed(const char *s, size_t len, uint32 seed) {
   return c;
 }
 
-uint64 Hash64StringWithSeed(const char *s, size_t len, uint64 seed) {
+uint64 Hash64StringWithSeedReferenceImplementation(const char *s,
+                                                   size_t len,
+                                                   uint64 seed) {
   uint64 n = seed;
   size_t prime1 = 0, prime2 = 8;  // Indices into kPrimes64
   union {
@@ -90,3 +93,21 @@ uint64 Hash64StringWithSeed(const char *s, size_t len, uint64 seed) {
   }
   return n;
 }
+
+uint64 Hash64StringWithSeed(const char *s, size_t len, uint64 seed) {
+  uint64 a, b;
+  b = 0x2c2ca38cd0cc731bULL;
+  uint64 c = seed;
+  while (len > 24) {
+    a = Hash64StringWithSeedReferenceImplementation(s, 24, c);
+    mix(a, b, c);
+    s += 24;
+    len -= 24;
+  }
+  if (len > 0) {
+    a = Hash64StringWithSeedReferenceImplementation(s, len, c);
+    mix(a, b, c);
+  }
+  return c;
+}
+

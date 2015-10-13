@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s1angle.h"
@@ -19,7 +20,7 @@
 #include <gflags/gflags.h>
 #include "base/integral_types.h"
 #include <glog/logging.h>
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "s2latlng.h"
 #include "s2testing.h"
 

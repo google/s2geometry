@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2regioncoverer.h"
@@ -19,11 +20,9 @@
 #include <math.h>
 #include <stdio.h>
 #include <algorithm>
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
 #include <queue>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <gflags/gflags.h>
@@ -32,7 +31,7 @@ using __gnu_cxx::hash_map;
 #include "base/stringprintf.h"
 #include "base/strtoint.h"
 #include "strings/split.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "s1angle.h"
 #include "s2cap.h"
 #include "s2cell.h"
@@ -45,6 +44,7 @@ using __gnu_cxx::hash_map;
 using std::max;
 using std::min;
 using std::priority_queue;
+using std::unordered_map;
 using std::vector;
 
 DEFINE_string(max_cells, "4,8",
@@ -74,7 +74,7 @@ static void CheckCovering(S2RegionCoverer const& coverer,
                           vector<S2CellId> const& covering,
                           bool interior) {
   // Keep track of how many cells have the same coverer.min_level() ancestor.
-  hash_map<S2CellId, int> min_level_cells;
+  unordered_map<S2CellId, int, S2CellIdHash> min_level_cells;
   for (int i = 0; i < covering.size(); ++i) {
     int level = covering[i].level();
     EXPECT_GE(level, coverer.min_level());
@@ -85,7 +85,8 @@ static void CheckCovering(S2RegionCoverer const& coverer,
   if (covering.size() > coverer.max_cells()) {
     // If the covering has more than the requested number of cells, then check
     // that the cell count cannot be reduced by using the parent of some cell.
-    for (hash_map<S2CellId, int>::const_iterator i = min_level_cells.begin();
+    for (unordered_map<S2CellId, int, S2CellIdHash>::const_iterator i =
+             min_level_cells.begin();
          i != min_level_cells.end(); ++i) {
       EXPECT_EQ(i->second, 1);
     }
@@ -185,22 +186,22 @@ static void TestAccuracy(int max_cells) {
   double max_ratio[kNumMethods] = {0};
   vector<double> ratios[kNumMethods];
   int cell_total[kNumMethods] = {0};
-  int area_winner_tally[3] = {0};
-  int cell_winner_tally[3] = {0};
+  int area_winner_tally[kNumMethods] = {0};
+  int cell_winner_tally[kNumMethods] = {0};
+  static int const kMaxWorstCaps = 10;
+  priority_queue<WorstCap> worst_caps[kNumMethods];
+
   for (int method = 0; method < kNumMethods; ++method) {
     min_ratio[method] = 1e20;
   }
-
-  priority_queue<WorstCap> worst_caps;
-  static int const kMaxWorstCaps = 10;
-
   for (int i = 0; i < FLAGS_iters; ++i) {
     // Choose the log of the cap area to be uniformly distributed over
     // the allowable range.  Don't try to approximate regions that are so
     // small they can't use the given maximum number of cells efficiently.
     double const min_cap_area = S2Cell::AverageArea(S2CellId::kMaxLevel)
                                 * max_cells * max_cells;
-    S2Cap cap = S2Testing::GetRandomCap(min_cap_area, 4 * M_PI);
+    // Coverings for huge caps are not interesting, so limit the max area too.
+    S2Cap cap = S2Testing::GetRandomCap(min_cap_area, 0.1 * M_PI);
     double cap_area = cap.GetArea();
 
     double min_area = 1e30;
@@ -228,11 +229,11 @@ static void TestAccuracy(int max_cells) {
       min_ratio[method] = min(ratio, min_ratio[method]);
       max_ratio[method] = max(ratio, max_ratio[method]);
       ratios[method].push_back(ratio);
-      if (worst_caps.size() < kMaxWorstCaps) {
-        worst_caps.push(WorstCap(ratio, cap, cells[method]));
-      } else if (ratio > worst_caps.top().ratio) {
-        worst_caps.pop();
-        worst_caps.push(WorstCap(ratio, cap, cells[method]));
+      if (worst_caps[method].size() < kMaxWorstCaps) {
+        worst_caps[method].push(WorstCap(ratio, cap, cells[method]));
+      } else if (ratio > worst_caps[method].top().ratio) {
+        worst_caps[method].pop();
+        worst_caps[method].push(WorstCap(ratio, cap, cells[method]));
       }
     }
     for (int method = 0; method < kNumMethods; ++method) {
@@ -256,9 +257,9 @@ static void TestAccuracy(int max_cells) {
       printf("  Area winner probability: %.4f\n",
              area_winner_tally[method] / static_cast<double>(FLAGS_iters));
     }
-    printf("  Caps with worst approximation ratios:\n");
-    for (; !worst_caps.empty(); worst_caps.pop()) {
-      WorstCap const& w = worst_caps.top();
+    printf("  Caps with the worst approximation ratios:\n");
+    for (; !worst_caps[method].empty(); worst_caps[method].pop()) {
+      WorstCap const& w = worst_caps[method].top();
       S2LatLng ll(w.cap.center());
       printf("    Ratio %.4f, Cells %d, "
              "Center (%.8f, %.8f), Km %.6f\n",
@@ -271,7 +272,7 @@ static void TestAccuracy(int max_cells) {
 
 TEST(S2RegionCoverer, Accuracy) {
   vector<string> max_cells =
-      strings::Split(FLAGS_max_cells, ",", strings::SkipEmpty());
+      strings::Split(FLAGS_max_cells, ',', strings::SkipEmpty());
   for (int i = 0; i < max_cells.size(); ++i) {
     TestAccuracy(atoi32(max_cells[i].c_str()));
   }
@@ -286,7 +287,8 @@ TEST(S2RegionCoverer, InteriorCovering) {
   // the best interior covering should contain 3 children of the initial cell,
   // that were not effected by removal of a grandchild.
   const int level = 12;
-  S2CellId small_cell = S2CellId::FromPoint(S2Testing::RandomPoint()).parent(level + 2);
+  S2CellId small_cell =
+      S2CellId::FromPoint(S2Testing::RandomPoint()).parent(level + 2);
   S2CellId large_cell = small_cell.parent(level);
   vector<S2CellId> small_cell_vector(1, small_cell);
   vector<S2CellId> large_cell_vector(1, large_cell);
