@@ -12,24 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2_H_
-#define UTIL_GEOMETRY_S2_H_
+#ifndef S2_GEOMETRY_S2_H_
+#define S2_GEOMETRY_S2_H_
 
 #include <math.h>
 #include <stddef.h>
 #include <algorithm>
 #include <functional>
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;  // To have template struct hash<T> defined
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
 #include "base/macros.h"
 #include "base/port.h"
+#include "fpcontractoff.h"
 #include "r2.h"
 #include "util/math/mathutil.h"  // IWYU pragma: export
 #include "util/math/matrix3x3.h"
@@ -68,7 +67,7 @@ enum S2debugOverride {
 // arithmetic expressions (e.g. (1-x)*p1 + x*p2).
 typedef Vector3_d S2Point;
 
-typedef hash<S2Point> HashS2Point;
+typedef GoodFastHash<S2Point> S2PointHash;
 
 // The S2 class is simply a namespace for constants and static utility
 // functions related to spherical geometry, such as area calculations and edge
@@ -91,8 +90,6 @@ typedef hash<S2Point> HashS2Point;
 //
 // This file also contains documentation of the various coordinate systems
 // and conventions used.
-//
-// This class is not thread-safe for loops and objects that use loops.
 //
 class S2 {
  public:
@@ -217,7 +214,7 @@ class S2 {
   // points are the same.  It uses a combination of multiple-precision
   // arithmetic and symbolic perturbations to ensure that its results are
   // always self-consistent (cf. Simulation of Simplicity, Edelsbrunner and
-  // Muecke).  The basic idea is to assign an infinitesmal symbolic
+  // Muecke).  The basic idea is to assign an infinitesimal symbolic
   // perturbation to every possible S2Point such that no three S2Points are
   // collinear and no four S2Points are coplanar.  These perturbations are so
   // small that they do not affect the sign of any determinant that was
@@ -866,7 +863,8 @@ inline double S2::SiTitoST(unsigned int si) {
 }
 
 inline unsigned int S2::STtoSiTi(double s) {
-  return MathUtil::FastIntRound(s * kMaxSiTi);
+  // kMaxSiTi == 2^31, so the result doesn't fit in an int32 when s == 1.
+  return static_cast<unsigned int>(MathUtil::FastInt64Round(s * kMaxSiTi));
 }
 
 inline S2Point S2::FaceUVtoXYZ(int face, double u, double v) {
@@ -1012,4 +1010,4 @@ int S2::Metric<dim>::GetClosestLevel(double value) const {
 
 #undef S2_CONSTEXPR
 
-#endif  // UTIL_GEOMETRY_S2_H_
+#endif  // S2_GEOMETRY_S2_H_

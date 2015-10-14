@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 //
 // Most of the R2Rect methods have trivial implementations in terms of the
@@ -19,7 +20,7 @@
 
 #include "r2rect.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "r2.h"
 
 static void TestIntervalOps(R2Rect const& x, R2Rect const& y,

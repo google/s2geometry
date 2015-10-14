@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2cellunion.h"
@@ -28,21 +29,11 @@
 #include "s2cell.h"
 #include "s2cellid.h"
 #include "s2latlngrect.h"
+#include "util/gtl/algorithm.h"
 
 using std::max;
 using std::min;
 using std::vector;
-
-// Returns true if the vector of cell_ids is sorted.  Used only in
-// DCHECKs.
-extern bool IsSorted(vector<S2CellId> const& cell_ids) {
-  for (int i = 0; i + 1 < cell_ids.size(); ++i) {
-    if (cell_ids[i + 1] < cell_ids[i]) {
-      return false;
-    }
-  }
-  return true;
-}
 
 void S2CellUnion::Init(vector<S2CellId> const& cell_ids) {
   InitRaw(cell_ids);
@@ -94,33 +85,33 @@ S2CellUnion* S2CellUnion::Clone() const {
 }
 
 bool S2CellUnion::Normalize() {
-  // Optimize the representation by looking for cases where all subcells
-  // of a parent cell are present.
+  return Normalize(&cell_ids_);
+}
 
-  vector<S2CellId> output;
-  output.reserve(cell_ids_.size());
-  std::sort(cell_ids_.begin(), cell_ids_.end());
+/*static*/ bool S2CellUnion::Normalize(vector<S2CellId>* ids) {
+  // Optimize the representation by discarding cells contained by other cells,
+  // and looking for cases where all subcells of a parent cell are present.
 
-  for (int i = 0; i < num_cells(); ++i) {
-    S2CellId id = cell_id(i);
+  std::sort(ids->begin(), ids->end());
+  int out = 0;
+  for (int i = 0; i < ids->size(); ++i) {
+    S2CellId id = (*ids)[i];
 
     // Check whether this cell is contained by the previous cell.
-    if (!output.empty() && output.back().contains(id)) continue;
+    if (out > 0 && (*ids)[out-1].contains(id)) continue;
 
     // Discard any previous cells contained by this cell.
-    while (!output.empty() && id.contains(output.back())) {
-      output.pop_back();
-    }
+    while (out > 0 && id.contains((*ids)[out-1])) --out;
 
     // Check whether the last 3 elements of "output" plus "id" can be
     // collapsed into a single parent cell.
-    while (output.size() >= 3) {
+    while (out >= 3) {
       // A necessary (but not sufficient) condition is that the XOR of the
       // four cells must be zero.  This is also very fast to test.
-      if ((output.end()[-3].id() ^ output.end()[-2].id() ^ output.back().id())
-          != id.id())
+      if (((*ids)[out-3].id() ^ (*ids)[out-2].id() ^ (*ids)[out-1].id()) !=
+          id.id()) {
         break;
-
+      }
       // Now we do a slightly more expensive but exact test.  First, compute a
       // mask that blocks out the two bits that encode the child position of
       // "id" with respect to its parent, then check that the other three
@@ -128,20 +119,20 @@ bool S2CellUnion::Normalize() {
       uint64 mask = id.lsb() << 1;
       mask = ~(mask + (mask << 1));
       uint64 id_masked = (id.id() & mask);
-      if ((output.end()[-3].id() & mask) != id_masked ||
-          (output.end()[-2].id() & mask) != id_masked ||
-          (output.end()[-1].id() & mask) != id_masked ||
+      if (((*ids)[out-3].id() & mask) != id_masked ||
+          ((*ids)[out-2].id() & mask) != id_masked ||
+          ((*ids)[out-1].id() & mask) != id_masked ||
           id.is_face())
         break;
 
       // Replace four children by their parent cell.
-      output.erase(output.end() - 3, output.end());
       id = id.parent();
+      out -= 3;
     }
-    output.push_back(id);
+    (*ids)[out++] = id;
   }
-  if (output.size() < num_cells()) {
-    InitRawSwap(&output);
+  if (out < ids->size()) {
+    ids->resize(out);
     return true;
   }
   return false;
@@ -238,8 +229,8 @@ bool S2CellUnion::Intersects(S2CellId id) const {
 }
 
 bool S2CellUnion::Contains(S2CellUnion const* y) const {
-  // TODO: A divide-and-conquer or alternating-skip-search approach may be
-  // sigificantly faster in both the average and worst case.
+  // TODO(ericv): A divide-and-conquer or alternating-skip-search
+  // approach may be sigificantly faster in both the average and worst case.
 
   for (int i = 0; i < y->num_cells(); ++i) {
     if (!Contains(y->cell_id(i))) return false;
@@ -248,8 +239,8 @@ bool S2CellUnion::Contains(S2CellUnion const* y) const {
 }
 
 bool S2CellUnion::Intersects(S2CellUnion const* y) const {
-  // TODO: A divide-and-conquer or alternating-skip-search approach may be
-  // sigificantly faster in both the average and worst case.
+  // TODO(ericv): A divide-and-conquer or alternating-skip-search
+  // approach may be sigificantly faster in both the average and worst case.
 
   for (int i = 0; i < y->num_cells(); ++i) {
     if (Intersects(y->cell_id(i))) return true;
@@ -281,49 +272,58 @@ void S2CellUnion::GetIntersection(S2CellUnion const* x, S2CellId id) {
 }
 
 void S2CellUnion::GetIntersection(S2CellUnion const* x, S2CellUnion const* y) {
-  DCHECK_NE(this, x);
-  DCHECK_NE(this, y);
+  GetIntersection(x->cell_ids_, y->cell_ids_, &cell_ids_);
+  // Since both inputs are normalized, there should not be any cells that
+  // can be merged.
+  DCHECK(!Normalize());
+}
+
+/*static*/ void S2CellUnion::GetIntersection(vector<S2CellId> const& x,
+                                             vector<S2CellId> const& y,
+                                             vector<S2CellId>* out) {
+  DCHECK_NE(out, &x);
+  DCHECK_NE(out, &y);
+  DCHECK(util::gtl::is_sorted(x.begin(), x.end()));
+  DCHECK(util::gtl::is_sorted(y.begin(), y.end()));
 
   // This is a fairly efficient calculation that uses binary search to skip
   // over sections of both input vectors.  It takes constant time if all the
   // cells of "x" come before or after all the cells of "y" in S2CellId order.
 
-  cell_ids_.clear();
-  vector<S2CellId>::const_iterator i = x->cell_ids_.begin();
-  vector<S2CellId>::const_iterator j = y->cell_ids_.begin();
-  while (i != x->cell_ids_.end() && j != y->cell_ids_.end()) {
+  out->clear();
+  vector<S2CellId>::const_iterator i = x.begin();
+  vector<S2CellId>::const_iterator j = y.begin();
+  while (i != x.end() && j != y.end()) {
     S2CellId imin = i->range_min();
     S2CellId jmin = j->range_min();
     if (imin > jmin) {
       // Either j->contains(*i) or the two cells are disjoint.
       if (*i <= j->range_max()) {
-        cell_ids_.push_back(*i++);
+        out->push_back(*i++);
       } else {
         // Advance "j" to the first cell possibly contained by *i.
-        j = std::lower_bound(j + 1, y->cell_ids_.end(), imin);
+        j = std::lower_bound(j + 1, y.end(), imin);
         // The previous cell *(j-1) may now contain *i.
         if (*i <= (j - 1)->range_max()) --j;
       }
     } else if (jmin > imin) {
       // Identical to the code above with "i" and "j" reversed.
       if (*j <= i->range_max()) {
-        cell_ids_.push_back(*j++);
+        out->push_back(*j++);
       } else {
-        i = std::lower_bound(i + 1, x->cell_ids_.end(), jmin);
+        i = std::lower_bound(i + 1, x.end(), jmin);
         if (*j <= (i - 1)->range_max()) --i;
       }
     } else {
       // "i" and "j" have the same range_min(), so one contains the other.
       if (*i < *j)
-        cell_ids_.push_back(*i++);
+        out->push_back(*i++);
       else
-        cell_ids_.push_back(*j++);
+        out->push_back(*j++);
     }
   }
-  // The output is generated in sorted order, and there should not be any
-  // cells that can be merged (provided that both inputs were normalized).
-  DCHECK(IsSorted(cell_ids_));
-  DCHECK(!Normalize());
+  // The output is generated in sorted order.
+  DCHECK(util::gtl::is_sorted(out->begin(), out->end()));
 }
 
 static void GetDifferenceInternal(S2CellId cell,
@@ -347,8 +347,8 @@ static void GetDifferenceInternal(S2CellId cell,
 void S2CellUnion::GetDifference(S2CellUnion const* x, S2CellUnion const* y) {
   DCHECK_NE(this, x);
   DCHECK_NE(this, y);
-  // TODO: this is approximately O(N*log(N)), but could probably use similar
-  // techniques as GetIntersection() to be more efficient.
+  // TODO(ericv): this is approximately O(N*log(N)), but could probably
+  // use similar techniques as GetIntersection() to be more efficient.
 
   cell_ids_.clear();
   for (int i = 0; i < x->num_cells(); ++i) {
@@ -356,7 +356,7 @@ void S2CellUnion::GetDifference(S2CellUnion const* x, S2CellUnion const* y) {
   }
   // The output is generated in sorted order, and there should not be any
   // cells that can be merged (provided that both inputs were normalized).
-  DCHECK(IsSorted(cell_ids_));
+  DCHECK(util::gtl::is_sorted(cell_ids_.begin(), cell_ids_.end()));
   DCHECK(!Normalize());
 }
 
@@ -409,7 +409,7 @@ void S2CellUnion::InitFromBeginEnd(S2CellId begin, S2CellId end) {
     cell_ids_.push_back(id);
   }
   // The output is already normalized.
-  DCHECK(IsSorted(cell_ids_));
+  DCHECK(util::gtl::is_sorted(cell_ids_.begin(), cell_ids_.end()));
   DCHECK(!Normalize());
 }
 
@@ -445,6 +445,10 @@ double S2CellUnion::ExactArea() const {
 
 bool operator==(S2CellUnion const& x, S2CellUnion const& y) {
   return x.cell_ids() == y.cell_ids();
+}
+
+bool operator!=(S2CellUnion const& x, S2CellUnion const& y) {
+  return x.cell_ids() != y.cell_ids();
 }
 
 bool S2CellUnion::Contains(S2Cell const& cell) const {

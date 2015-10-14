@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s1interval.h"
 
 #include <float.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 class S1IntervalTestBase : public testing::Test {
  public:
@@ -446,7 +447,7 @@ TEST_F(S1IntervalTestBase, GetDirectedHausdorffDistance) {
   EXPECT_EQ(0.0, quad12.GetDirectedHausdorffDistance(quad123));
   S1Interval in(3.0, -3.0);  // an interval whose complement center is 0.
   EXPECT_FLOAT_EQ(3.0,
-                  S1Interval(-0.1,0.2).GetDirectedHausdorffDistance(in));
+                  S1Interval(-0.1, 0.2).GetDirectedHausdorffDistance(in));
   EXPECT_FLOAT_EQ(3.0 - 0.1,
                   S1Interval(0.1, 0.2).GetDirectedHausdorffDistance(in));
   EXPECT_FLOAT_EQ(3.0 - 0.1,

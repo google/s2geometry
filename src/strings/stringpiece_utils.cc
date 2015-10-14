@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+
 #include "strings/stringpiece_utils.h"
 
 #include <algorithm>
@@ -61,8 +62,7 @@ stringpiece_ssize_type RemoveUntil(StringPiece* text, char sentinel) {
   }
 
   // skip the sentinel as well if we found one
-  if (count < text->size())
-    count++;
+  if (count < text->size()) count++;
 
   text->remove_prefix(count);
   return count;
@@ -94,8 +94,8 @@ bool ConsumeLeadingDigits(StringPiece* s, uint64* val) {
 }
 
 bool EqualIgnoreCase(StringPiece piece1, StringPiece piece2) {
-  return (piece1.size() == piece2.size()
-      && 0 == memcasecmp(piece1.data(), piece2.data(), piece1.size()));
+  return (piece1.size() == piece2.size() &&
+          0 == memcasecmp(piece1.data(), piece2.data(), piece1.size()));
   // memcasecmp uses ascii_tolower().
 }
 
@@ -173,8 +173,7 @@ int64 ParseInt64Prefix(StringPiece str, size_t* len, int radix) {
 size_t StringPieceCaseHash::operator()(StringPiece sp) const {
   // based on __stl_string_hash in http://www.sgi.com/tech/stl/string
   size_t hash_val = 0;
-  for (StringPiece::const_iterator it = sp.begin();
-       it != sp.end(); ++it) {
+  for (StringPiece::const_iterator it = sp.begin(); it != sp.end(); ++it) {
     hash_val = 5 * hash_val + ascii_tolower(*it);
   }
   return hash_val;

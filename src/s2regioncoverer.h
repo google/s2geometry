@@ -12,17 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2REGIONCOVERER_H_
-#define UTIL_GEOMETRY_S2REGIONCOVERER_H_
+#ifndef S2_GEOMETRY_S2REGIONCOVERER_H_
+#define S2_GEOMETRY_S2REGIONCOVERER_H_
 
 #include <queue>
 #include <utility>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/scoped_ptr.h"
+#include "fpcontractoff.h"
 #include "s2.h"
 #include "s2cell.h"
 #include "s2cellid.h"
@@ -50,6 +51,10 @@ class S2Region;
 // allowed, both because this would not always yield a better approximation,
 // and because max_cells() is a limit on how much work is done exploring the
 // possible covering as well as a limit on the final output size.
+//
+// Because it is an approximation algorithm, one should not rely on the
+// stability of the output.  In particular, the output of the covering algorithm
+// may change across different versions of the library.
 //
 // One can also generate interior coverings, which are sets of cells which
 // are entirely contained within a region.  Interior coverings can be
@@ -86,6 +91,11 @@ class S2RegionCoverer {
   void set_max_level(int max_level);
   int min_level() const { return min_level_; }
   int max_level() const { return max_level_; }
+
+  // Convenience function that sets both the maximum and minimum cell levels.
+  // Note that since min_level() takes priority over max_cells(), an arbitrary
+  // number of cells may be returned even if max_cells() is small.
+  void set_fixed_level(int level);
 
   // If specified, then only cells where (level - min_level) is a multiple of
   // "level_mod" will be used (default 1).  This effectively allows the
@@ -139,8 +149,25 @@ class S2RegionCoverer {
   void GetCellUnion(S2Region const& region, S2CellUnion* covering);
   void GetInteriorCellUnion(S2Region const& region, S2CellUnion* interior);
 
+  // Like GetCovering(), except that this method is much faster and the
+  // coverings are not as tight.  All of the usual parameters are respected
+  // (max_cells, min_level, max_level, and level_mod), except that the
+  // implementation makes no attempt to take advantage of large values of
+  // max_cells().  (A small number of cells will always be returned.)
+  //
+  // This function is useful as a starting point for algorithms that
+  // recursively subdivide cells.
+  void GetFastCovering(S2Cap const& cap, std::vector<S2CellId>* covering);
+
   // Given a connected region and a starting point, return a set of cells at
   // the given level that cover the region.
+  //
+  // Note that this method is *not* faster than the regular GetCovering()
+  // method for most region types, such as S2Cap or S2Polygon, and in fact it
+  // can be much slower when the output consists of a large number of cells.
+  // Currently it can be faster at generating coverings of long narrow regions
+  // such as polylines, but this may change in the future, in which case this
+  // method will most likely be removed.
   static void GetSimpleCovering(S2Region const& region, S2Point const& start,
                                 int level, std::vector<S2CellId>* output);
 
@@ -158,7 +185,7 @@ class S2RegionCoverer {
   Candidate* NewCandidate(S2Cell const& cell);
 
   // Return the log base 2 of the maximum number of children of a candidate.
-  inline int max_children_shift() const { return 2 * level_mod_; }
+  int max_children_shift() const { return 2 * level_mod_; }
 
   // Free the memory associated with a candidate.
   static void DeleteCandidate(Candidate* candidate, bool delete_children);
@@ -179,6 +206,30 @@ class S2RegionCoverer {
   // Generates a covering and stores it in result_.
   void GetCoveringInternal(S2Region const& region);
 
+  // If level > min_level(), then reduce "level" if necessary so that it also
+  // satisfies level_mod().  Levels smaller than min_level() are not affected
+  // (since cells at these levels are eventually expanded).
+  int AdjustLevel(int level) const;
+
+  // Ensure that all cells with level > min_level() also satisfy level_mod(),
+  // by replacing them with an ancestor if necessary.  Cell levels smaller
+  // than min_level() are not modified (see AdjustLevel).  The output is
+  // then normalized to ensure that no redundant cells are present.
+  void AdjustCellLevels(std::vector<S2CellId>* cells) const;
+
+  // Compute a covering of the given cap.  In general the covering consists of
+  // at most 4 cells (except for very large caps, which may need up to 6
+  // cells).  The output is not sorted.
+  //
+  // "max_cells_hint" can be used to request a more accurate covering (but is
+  // currently ignored).
+  static void GetRawFastCovering(S2Cap const& cap, int max_cells_hint,
+                                 std::vector<S2CellId>* covering);
+
+  // Normalize "covering" so that it conforms to the current covering
+  // parameters (max_cells, min_level, max_level, and level_mod).
+  void NormalizeCovering(std::vector<S2CellId>* covering);
+
   // Given a region and a starting cell, return the set of all the
   // edge-connected cells at the same level that intersect "region".
   // The output cells are returned in arbitrary order.
@@ -197,17 +248,24 @@ class S2RegionCoverer {
 
   // A temporary variable used by GetCovering() that holds the cell ids that
   // have been added to the covering so far.
-  scoped_ptr<std::vector<S2CellId> > result_;
+  std::vector<S2CellId> result_;
 
   // We keep the candidates in a priority queue.  We specify a vector to hold
   // the queue entries since for some reason priority_queue<> uses a deque by
-  // default.
-  struct CompareQueueEntries;
+  // default.  We define our own own comparison function on QueueEntries in
+  // order to make the results deterministic.  (Using the default
+  // less<QueueEntry>, entries of equal priority would be sorted according to
+  // the memory address of the candidate.)
 
   typedef std::pair<int, Candidate*> QueueEntry;
+  struct CompareQueueEntries {
+    bool operator()(QueueEntry const& x, QueueEntry const& y) const {
+      return x.first < y.first;
+    }
+  };
   typedef std::priority_queue<QueueEntry, std::vector<QueueEntry>,
                               CompareQueueEntries> CandidateQueue;
-  scoped_ptr<CandidateQueue> pq_;
+  CandidateQueue pq_;
 
   // True if we're computing an interior covering.
   bool interior_covering_;
@@ -218,4 +276,4 @@ class S2RegionCoverer {
   DISALLOW_COPY_AND_ASSIGN(S2RegionCoverer);
 };
 
-#endif  // UTIL_GEOMETRY_S2REGIONCOVERER_H_
+#endif  // S2_GEOMETRY_S2REGIONCOVERER_H_

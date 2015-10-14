@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef UTIL_GEOMETRY_OPENSOURCE_BASE_ATOMICOPS_H_
-#define UTIL_GEOMETRY_OPENSOURCE_BASE_ATOMICOPS_H_
+
+#ifndef BASE_ATOMICOPS_H_
+#define BASE_ATOMICOPS_H_
 
 
 #include <atomic>
@@ -46,4 +47,4 @@ inline void Release_Store(Atomic32* atomic, int32_t value) {
 }  // namespace subtle
 }  // namespace base
 
-#endif  // UTIL_GEOMETRY_OPENSOURCE_BASE_ATOMICOPS_H_
+#endif  // BASE_ATOMICOPS_H_

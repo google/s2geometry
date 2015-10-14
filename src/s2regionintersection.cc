@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+
 #include "s2regionintersection.h"
 
 #include "s2cap.h"
@@ -59,8 +60,8 @@ S2RegionIntersection* S2RegionIntersection::Clone() const {
 }
 
 S2Cap S2RegionIntersection::GetCapBound() const {
-  // TODO: This could be optimized to return a tighter bound, but doesn't
-  // seem worth it unless profiling shows otherwise.
+  // TODO(ericv): This could be optimized to return a tighter bound, but
+  // doesn't seem worth it unless profiling shows otherwise.
   return GetRectBound().GetCapBound();
 }
 

@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2POLYLINE_H__
-#define UTIL_GEOMETRY_S2POLYLINE_H__
+#ifndef S2_GEOMETRY_S2POLYLINE_H__
+#define S2_GEOMETRY_S2POLYLINE_H__
 
 #include <vector>
 
 #include <glog/logging.h>
 
 #include "base/macros.h"
+#include "fpcontractoff.h"
 #include "s2.h"
 #include "s2latlngrect.h"
 #include "s2region.h"
@@ -43,8 +45,8 @@ class S2Polyline : public S2Region {
   S2Polyline();
 
   // Convenience constructors that call Init() with the given vertices.
-  S2Polyline(std::vector<S2Point> const& vertices);
-  S2Polyline(std::vector<S2LatLng> const& vertices);
+  explicit S2Polyline(std::vector<S2Point> const& vertices);
+  explicit S2Polyline(std::vector<S2LatLng> const& vertices);
 
   // Convenience constructors to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
@@ -235,7 +237,7 @@ class S2Polyline : public S2Region {
  private:
   // Internal constructor used only by Clone() that makes a deep copy of
   // its argument.
-  S2Polyline(S2Polyline const* src);
+  explicit S2Polyline(S2Polyline const* src);
 
   // Return true if the given vertices form a valid polyline.
   static bool IsValid(S2Point const* vertices, int num_vertices);
@@ -253,4 +255,4 @@ class S2Polyline : public S2Region {
   DISALLOW_COPY_AND_ASSIGN(S2Polyline);
 };
 
-#endif  // UTIL_GEOMETRY_S2POLYLINE_H__
+#endif  // S2_GEOMETRY_S2POLYLINE_H__

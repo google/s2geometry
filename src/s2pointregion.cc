@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2pointregion.h"
@@ -60,8 +61,8 @@ bool S2PointRegion::Decode(Decoder* decoder) {
   if (decoder->avail() < sizeof(unsigned char) + 3 * sizeof(double))
     return false;
   unsigned char version = decoder->get8();
-  if (version > kCurrentLosslessEncodingVersionNumber) return false; 
-  
+  if (version > kCurrentLosslessEncodingVersionNumber) return false;
+
   for (int i = 0; i < 3; ++i) {
     point_[i] = decoder->getdouble();
   }

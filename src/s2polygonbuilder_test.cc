@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2polygonbuilder.h"
@@ -19,6 +20,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <algorithm>
+#include <memory>
 #include <string>
 
 #include <gflags/gflags.h>
@@ -26,9 +28,8 @@
 
 #include "base/macros.h"
 #include "base/port.h"
-#include "base/scoped_ptr.h"
 #include "base/stringprintf.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "s2.h"
 #include "s2cap.h"
 #include "s2edgeutil.h"
@@ -37,11 +38,13 @@
 #include "s2polygon.h"
 #include "s2polyline.h"
 #include "s2testing.h"
+#include "s2textformat.h"
 #include "util/math/matrix3x3.h"
 
 using std::max;
 using std::min;
 using std::pair;
+using std::unique_ptr;
 using std::vector;
 
 namespace {
@@ -242,7 +245,7 @@ void GetVertices(char const* str, Matrix3x3_d const& m,
                  vector<S2Point>* vertices) {
   // Parse the vertices and transform them into the given frame.
 
-  scoped_ptr<S2Polyline> line(S2Testing::MakePolyline(str));
+  unique_ptr<S2Polyline> line(s2textformat::MakePolyline(str));
   for (int i = 0; i < line->num_vertices(); ++i) {
     vertices->push_back((m * line->vertex(i)).Normalize());
   }
@@ -345,7 +348,6 @@ bool UnexpectedUnusedEdgeCount(int num_actual, int num_expected,
 
 void DumpUnusedEdges(vector<pair<S2Point, S2Point> > const& unused_edges,
                      Matrix3x3_d const& m, int num_expected) {
-
   // Print the unused edges, transformed back into their original
   // latitude-longitude space in degrees.
 
@@ -543,7 +545,6 @@ bool TestBuilder(TestCase const* test) {
                          max_splits, max_error, "Expected") |
         UnexpectedUnusedEdgeCount(unused_edges.size(), test->num_unused_edges,
                                   max_splits)) {
-
       // We found a problem.  Print out the relevant parameters.
       DumpUnusedEdges(unused_edges, m, test->num_unused_edges);
       fprintf(stderr, "During iteration %d:\n  undirected: %d\n  xor: %d\n"
@@ -574,10 +575,8 @@ TEST(S2PolygonBuilder, AssembleLoops) {
 }
 
 TEST(S2PolygonBuilder, BuilderProducesValidPolygons) {
-  // Polygon is from
-  // http://oyster-explorer/q?q=0x3921163aa35a0aed:0xe7714a1275a29ec4
-  scoped_ptr<S2Polygon> polygon(
-      S2Testing::MakePolygon(
+  unique_ptr<S2Polygon> polygon(
+      s2textformat::MakePolygon(
           "32.2983095:72.3416582, 32.2986281:72.3423059, "
           "32.2985238:72.3423743, 32.2987176:72.3427807, "
           "32.2988174:72.3427056, 32.2991269:72.3433480, "
@@ -595,28 +594,12 @@ TEST(S2PolygonBuilder, BuilderProducesValidPolygons) {
   S2Polygon robust_polygon;
   S2PolygonBuilder polygon_builder(options);
   polygon_builder.AddPolygon(polygon.get());
-  // The bug triggers a DCHECK failure, so look for that in dbg mode, but
-  // an invalid polygon in opt mode.
-  EXPECT_DEBUG_DEATH(
-      ASSERT_TRUE(polygon_builder.AssemblePolygon(&robust_polygon, NULL));
-
-      // This should be EXPECT_TRUE, but there is a bug.
-      // The polygon produced contains two identical loops, and is:
-      // 32.298455799999999:72.341453000000001,
-      // 32.298523800000005:72.342374300000003,
-      // 32.298717600000003:72.342780700000006,
-      // 32.299049799999999:72.343007299999996;
-      // 32.298455799999999:72.341453000000001,
-      // 32.298523800000005:72.342374300000003,
-      // 32.298717600000003:72.342780700000006,
-      // 32.299049799999999:72.343007299999996
-      EXPECT_FALSE(robust_polygon.IsValid())
-          << "S2PolygonBuilder created invalid polygon\n"
-          << S2Testing::ToString(&robust_polygon)
-          << "\nfrom valid original polygon\n"
-          << S2Testing::ToString(polygon.get()),
-      "Check failed: parent == NULL \\|\\| "
-      "!new_loop->ContainsNested\\(parent\\)");
+  ASSERT_TRUE(polygon_builder.AssemblePolygon(&robust_polygon, NULL));
+  EXPECT_TRUE(robust_polygon.IsValid())
+      << "S2PolygonBuilder created invalid polygon\n"
+      << s2textformat::ToString(&robust_polygon)
+      << "\nfrom valid original polygon\n"
+      << s2textformat::ToString(polygon.get());
 }
 
 TEST(S2PolygonBuilderOptions, SnapLevel) {

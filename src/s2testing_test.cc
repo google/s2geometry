@@ -12,22 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2testing.h"
 
 #include <math.h>
 #include <algorithm>
+#include <memory>
 
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 
-#include "base/scoped_ptr.h"
-#include "gtest/gtest.h"
 #include "s1angle.h"
 #include "s2loop.h"
 
 using std::max;
 using std::min;
+using std::unique_ptr;
 
 namespace {
 
@@ -53,7 +55,7 @@ void TestFractal(int min_level, int max_level, double dimension) {
   fractal.set_max_level(max_level);
   fractal.set_fractal_dimension(dimension);
   Matrix3x3_d frame = S2Testing::GetRandomFrame();
-  scoped_ptr<S2Loop> loop(fractal.MakeLoop(frame,
+  unique_ptr<S2Loop> loop(fractal.MakeLoop(frame,
                                            S1Angle::Radians(nominal_radius)));
   ASSERT_TRUE(loop->IsValid());
 

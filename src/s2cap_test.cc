@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2cap.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "r1interval.h"
 #include "s1interval.h"
 #include "s2.h"

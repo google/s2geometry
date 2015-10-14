@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2polyline.h"
@@ -463,7 +464,7 @@ int FindEndVertex(S2Polyline const& polyline,
   // included in the line segment, so back up by one vertex.
   return index - 1;
 }
-}
+}  // namespace
 
 void S2Polyline::SubsampleVertices(S1Angle tolerance,
                                    vector<int>* indices) const {
@@ -514,22 +515,18 @@ struct SearchState {
   int j;
   bool i_in_progress;
 };
-}  // namespace
 
-namespace std {
-template<>
-struct less<SearchState> {
-  // This operator is needed for storing SearchStates in a set.  The ordering
-  // chosen has no special meaning.
-  inline bool operator()(SearchState const& lhs, SearchState const& rhs) const {
-    if (lhs.i < rhs.i) return true;
-    if (lhs.i > rhs.i) return false;
-    if (lhs.j < rhs.j) return true;
-    if (lhs.j > rhs.j) return false;
-    return !lhs.i_in_progress && rhs.i_in_progress;
+// This operator is needed for storing SearchStates in a set.  The ordering
+// chosen has no special meaning.
+struct SearchStateKeyCompare {
+  bool operator() (SearchState const& a, SearchState const& b) const {
+    if (a.i != b.i) return a.i < b.i;
+    if (a.j != b.j) return a.j < b.j;
+    return a.i_in_progress < b.i_in_progress;
   }
 };
-}  // namespace std
+
+}  // namespace
 
 bool S2Polyline::NearlyCoversPolyline(S2Polyline const& covered,
                                       S1Angle max_error) const {
@@ -577,7 +574,7 @@ bool S2Polyline::NearlyCoversPolyline(S2Polyline const& covered,
   //
   // TODO(user): Benchmark this, and see if the set is worth it.
   vector<SearchState> pending;
-  set<SearchState> done;
+  set<SearchState, SearchStateKeyCompare> done;
 
   // Find all possible starting states.
   for (int i = 0, next_i = NextDistinctVertex(*this, 0);

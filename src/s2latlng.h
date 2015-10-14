@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2LATLNG_H__
-#define UTIL_GEOMETRY_S2LATLNG_H__
+#ifndef S2_GEOMETRY_S2LATLNG_H__
+#define S2_GEOMETRY_S2LATLNG_H__
 
 #include <math.h>
 #include <iosfwd>
@@ -23,7 +24,7 @@
 #include <string>
 
 #include "base/integral_types.h"
-#include "base/type_traits.h"
+#include "fpcontractoff.h"
 #include "r2.h"
 #include "s1angle.h"
 #include "s2.h"
@@ -42,35 +43,35 @@ class S2LatLng {
   // Constructor.  The latitude and longitude are allowed to be outside
   // the is_valid() range.  However, note that most methods that accept
   // S2LatLngs expect them to be normalized (see Normalized() below).
-  inline S2LatLng(S1Angle lat, S1Angle lng);
+  S2LatLng(S1Angle lat, S1Angle lng);
 
   // The default constructor sets the latitude and longitude to zero.  This is
   // mainly useful when declaring arrays, STL containers, etc.
-  inline S2LatLng();
+  S2LatLng();
 
   // Convert a direction vector (not necessarily unit length) to an S2LatLng.
   explicit S2LatLng(S2Point const& p);
 
   // Returns an S2LatLng for which is_valid() will return false.
-  inline static S2LatLng Invalid();
+  static S2LatLng Invalid();
 
   // Convenience functions -- shorter than calling S1Angle::Radians(), etc.
-  inline static S2LatLng FromRadians(double lat_radians, double lng_radians);
-  inline static S2LatLng FromDegrees(double lat_degrees, double lng_degrees);
-  inline static S2LatLng FromE5(int32 lat_e5, int32 lng_e5);
-  inline static S2LatLng FromE6(int32 lat_e6, int32 lng_e6);
-  inline static S2LatLng FromE7(int32 lat_e7, int32 lng_e7);
+  static S2LatLng FromRadians(double lat_radians, double lng_radians);
+  static S2LatLng FromDegrees(double lat_degrees, double lng_degrees);
+  static S2LatLng FromE5(int32 lat_e5, int32 lng_e5);
+  static S2LatLng FromE6(int32 lat_e6, int32 lng_e6);
+  static S2LatLng FromE7(int32 lat_e7, int32 lng_e7);
 
   // Convenience functions -- to use when args have been fixed32s in protos.
   //
   // The arguments are static_cast into int32, so very large unsigned values
   // are treated as negative numbers.
-  inline static S2LatLng FromUnsignedE6(uint32 lat_e6, uint32 lng_e6);
-  inline static S2LatLng FromUnsignedE7(uint32 lat_e7, uint32 lng_e7);
+  static S2LatLng FromUnsignedE6(uint32 lat_e6, uint32 lng_e6);
+  static S2LatLng FromUnsignedE7(uint32 lat_e7, uint32 lng_e7);
 
   // Methods to compute the latitude and longitude of a point separately.
-  inline static S1Angle Latitude(S2Point const& p);
-  inline static S1Angle Longitude(S2Point const& p);
+  static S1Angle Latitude(S2Point const& p);
+  static S1Angle Longitude(S2Point const& p);
 
   // Accessor methods.
   S1Angle lat() const { return S1Angle::Radians(coords_[0]); }
@@ -79,7 +80,7 @@ class S2LatLng {
 
   // Return true if the latitude is between -90 and 90 degrees inclusive
   // and the longitude is between -180 and 180 degrees inclusive.
-  inline bool is_valid() const;
+  bool is_valid() const;
 
   // Clamps the latitude to the range [-90, 90] degrees, and adds or subtracts
   // a multiple of 360 degrees to the longitude if necessary to reduce it to
@@ -100,10 +101,10 @@ class S2LatLng {
 
   // Simple arithmetic operations for manipulating latitude-longitude pairs.
   // The results are not normalized (see Normalized()).
-  friend inline S2LatLng operator+(S2LatLng const& a, S2LatLng const& b);
-  friend inline S2LatLng operator-(S2LatLng const& a, S2LatLng const& b);
-  friend inline S2LatLng operator*(double m, S2LatLng const& a);
-  friend inline S2LatLng operator*(S2LatLng const& a, double m);
+  friend S2LatLng operator+(S2LatLng const& a, S2LatLng const& b);
+  friend S2LatLng operator-(S2LatLng const& a, S2LatLng const& b);
+  friend S2LatLng operator*(double m, S2LatLng const& a);
+  friend S2LatLng operator*(S2LatLng const& a, double m);
 
   bool operator==(S2LatLng const& o) const { return coords_ == o.coords_; }
   bool operator!=(S2LatLng const& o) const { return coords_ != o.coords_; }
@@ -123,10 +124,10 @@ class S2LatLng {
 
  private:
   // Internal constructor.
-  inline S2LatLng(R2Point const& coords) : coords_(coords) {}
+  explicit S2LatLng(R2Point const& coords) : coords_(coords) {}
 
   // This is internal to avoid ambiguity about which units are expected.
-  inline S2LatLng(double lat_radians, double lng_radians)
+  S2LatLng(double lat_radians, double lng_radians)
     : coords_(lat_radians, lng_radians) {}
 
   R2Point coords_;
@@ -203,4 +204,4 @@ inline S2LatLng operator*(S2LatLng const& a, double m) {
 
 std::ostream& operator<<(std::ostream& os, S2LatLng const& ll);
 
-#endif  // UTIL_GEOMETRY_S2LATLNG_H__
+#endif  // S2_GEOMETRY_S2LATLNG_H__

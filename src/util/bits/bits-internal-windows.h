@@ -13,8 +13,17 @@
 // limitations under the License.
 //
 
+
 #ifndef UTIL_BITS_BITS_INTERNAL_WINDOWS_H__
 #define UTIL_BITS_BITS_INTERNAL_WINDOWS_H__
+
+inline int Bits::FindLSBSetNonZero(uint32 n) {
+  return Bits::FindLSBSetNonZero_Portable(n);
+}
+
+inline int Bits::FindLSBSetNonZero64(uint64 n) {
+  return Bits::FindLSBSetNonZero64_Portable(n);
+}
 
 inline int Bits::Log2FloorNonZero(uint32 n) {
 #ifdef _M_IX86

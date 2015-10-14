@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef UTIL_GEOMETRY_OPENSOURCE_BASE_SPINLOCK_H_
-#define UTIL_GEOMETRY_OPENSOURCE_BASE_SPINLOCK_H_
+
+#ifndef BASE_SPINLOCK_H_
+#define BASE_SPINLOCK_H_
 
 #include <atomic>
 
@@ -40,4 +41,4 @@ class SpinLock {
   std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
 };
 
-#endif  // UTIL_GEOMETRY_OPENSOURCE_BASE_SPINLOCK_H_
+#endif  // BASE_SPINLOCK_H_

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2testing.h"
@@ -22,6 +23,7 @@
 #include <sys/resource.h>   // for rusage, RUSAGE_SELF
 #include <sys/time.h>
 #include <algorithm>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -29,7 +31,6 @@
 #include <glog/logging.h>
 
 #include "base/integral_types.h"
-#include "base/scoped_ptr.h"
 #include "base/stringprintf.h"
 #include "strings/serialize.h"
 #include "strings/split.h"
@@ -45,10 +46,13 @@
 #include "s2polygon.h"
 #include "s2polyline.h"
 #include "s2region.h"
+#include "s2textformat.h"
+#include "util/gtl/stl_util.h"
 #include "util/math/matrix3x3.h"
 
 using std::max;
 using std::pair;
+using std::unique_ptr;
 using std::vector;
 
 DEFINE_int32(s2_random_seed, 1, "Initial random seed for S2Testing::rnd");
@@ -68,8 +72,20 @@ void S2Testing::Random::Reset(int seed) {
 inline uint64 GetBits(int num_bits) {
   DCHECK_GE(num_bits, 0);
   DCHECK_LE(num_bits, 64);
+
+  // This code uses random(), which returns an integer in the range
+  // from 0 to (2^31)-1 inclusive (i.e. all of the lower 31 bits are
+  // in play, and the 32nd bit and higher are 0) regardless of whether
+  // its return type (long) is larger than 32 bits.  See
+  //
+  // www.gnu.org/software/libc/manual/html_node/BSD-Random.html#BSD-Random
+  //
+  // Note that at some point the manual page in linux claimed that the range
+  // is 0 to RAND_MAX as defined in stdlib.h.  RAND_MAX however is part only
+  // of the ISO rand() interface.  At least as of glibc-2.21, rand() is
+  // simply an alias for random().  On other systems, rand() may differ,
+  // but random() should always adhere to the behavior specified in BSD.
   static int const RAND_BITS = 31;
-  COMPILE_ASSERT(RAND_MAX == (1U << RAND_BITS) - 1, non_standard_random);
 
   uint64 result = 0;
   for (int bits = 0; bits < num_bits; bits += RAND_BITS) {
@@ -115,84 +131,6 @@ int32 S2Testing::Random::Skewed(int max_log) {
 
 S2Testing::Random S2Testing::rnd;
 
-static double ParseDouble(const string& str) {
-  char* end_ptr = NULL;
-  double value = strtod(str.c_str(), &end_ptr);
-  CHECK(end_ptr && *end_ptr == 0) << ": str == \"" << str << "\"";
-  return value;
-}
-
-void S2Testing::ParseLatLngs(string const& str, vector<S2LatLng>* latlngs) {
-  vector<pair<string, string> > p;
-  CHECK(DictionaryParse(str, &p)) << ": str == \"" << str << "\"";
-  latlngs->clear();
-  for (int i = 0; i < p.size(); ++i) {
-    latlngs->push_back(S2LatLng::FromDegrees(ParseDouble(p[i].first),
-                                             ParseDouble(p[i].second)));
-  }
-}
-
-void S2Testing::ParsePoints(string const& str, vector<S2Point>* vertices) {
-  vector<S2LatLng> latlngs;
-  S2Testing::ParseLatLngs(str, &latlngs);
-  vertices->clear();
-  for (int i = 0; i < latlngs.size(); ++i) {
-    vertices->push_back(latlngs[i].ToPoint());
-  }
-}
-
-S2Point S2Testing::MakePoint(string const& str) {
-  vector<S2Point> vertices;
-  ParsePoints(str, &vertices);
-  CHECK_EQ(vertices.size(), 1);
-  return vertices[0];
-}
-
-S2LatLngRect S2Testing::MakeLatLngRect(string const& str) {
-  vector<S2LatLng> latlngs;
-  ParseLatLngs(str, &latlngs);
-  CHECK_GT(latlngs.size(), 0);
-  S2LatLngRect rect = S2LatLngRect::FromPoint(latlngs[0]);
-  for (int i = 1; i < latlngs.size(); ++i) {
-    rect.AddPoint(latlngs[i]);
-  }
-  return rect;
-}
-
-S2Loop* S2Testing::MakeLoop(string const& str) {
-  if (str == "empty") return new S2Loop(S2Loop::kEmpty());
-  if (str == "full") return new S2Loop(S2Loop::kFull());
-  vector<S2Point> vertices;
-  ParsePoints(str, &vertices);
-  return new S2Loop(vertices);
-}
-
-S2Polyline* S2Testing::MakePolyline(string const& str) {
-  vector<S2Point> vertices;
-  ParsePoints(str, &vertices);
-  return new S2Polyline(vertices);
-}
-
-static S2Polygon* InternalMakePolygon(string const& str,
-                                      bool normalize_loops) {
-  vector<string> loop_strs = strings::Split(str, ";", strings::SkipEmpty());
-  vector<S2Loop*> loops;
-  for (int i = 0; i < loop_strs.size(); ++i) {
-    S2Loop* loop = S2Testing::MakeLoop(loop_strs[i]);
-    if (normalize_loops) loop->Normalize();
-    loops.push_back(loop);
-  }
-  return new S2Polygon(&loops);  // Takes ownership.
-}
-
-S2Polygon* S2Testing::MakePolygon(string const& str) {
-  return InternalMakePolygon(str, true);
-}
-
-S2Polygon* S2Testing::MakeVerbatimPolygon(string const& str) {
-  return InternalMakePolygon(str, false);
-}
-
 void S2Testing::AppendLoopVertices(S2Loop const& loop,
                                    vector<S2Point>* vertices) {
   int n = loop.num_vertices();
@@ -204,7 +142,7 @@ void S2Testing::AppendLoopVertices(S2Loop const& loop,
 vector<S2Point> S2Testing::MakeRegularPoints(S2Point const& center,
                                              S1Angle radius,
                                              int num_vertices) {
-  scoped_ptr<S2Loop> loop(MakeRegularLoop(center, radius, num_vertices));
+  unique_ptr<S2Loop> loop(MakeRegularLoop(center, radius, num_vertices));
   vector<S2Point> points;
   for (int i = 0; i < loop.get()->num_vertices(); i++) {
     points.push_back(loop.get()->vertex(i));
@@ -236,69 +174,6 @@ S2Loop* S2Testing::MakeRegularLoop(Matrix3x3_d const& frame,
   return new S2Loop(vertices);
 }
 
-static void AppendVertex(S2Point const& p, string* out) {
-  S2LatLng ll(p);
-  StringAppendF(out, "%.17g:%.17g", ll.lat().degrees(), ll.lng().degrees());
-}
-
-static void AppendVertices(S2Point const* v, int n, string* out) {
-  for (int i = 0; i < n; ++i) {
-    if (i > 0) *out += ", ";
-    AppendVertex(v[i], out);
-  }
-}
-
-string S2Testing::ToString(S2Point const& point) {
-  string out;
-  AppendVertex(point, &out);
-  return out;
-}
-
-string S2Testing::ToString(S2LatLngRect const& rect) {
-  string out;
-  AppendVertex(rect.lo().ToPoint(), &out);
-  out += ", ";
-  AppendVertex(rect.hi().ToPoint(), &out);
-  return out;
-}
-
-string S2Testing::ToString(S2Loop const* loop) {
-  string out;
-  AppendVertices(&loop->vertex(0), loop->num_vertices(), &out);
-  return out;
-}
-
-string S2Testing::ToString(S2Polyline const* polyline) {
-  string out;
-  AppendVertices(&polyline->vertex(0), polyline->num_vertices(), &out);
-  return out;
-}
-
-string S2Testing::ToString(S2Polygon const* polygon) {
-  string out;
-  for (int i = 0; i < polygon->num_loops(); ++i) {
-    if (i > 0) out += ";\n";
-    S2Loop const* loop = polygon->loop(i);
-    AppendVertices(&loop->vertex(0), loop->num_vertices(), &out);
-  }
-  return out;
-}
-
-string S2Testing::ToString(vector<S2Point> const& points) {
-  string out;
-  AppendVertices(&points[0], points.size(), &out);
-  return out;
-}
-
-string S2Testing::ToString(vector<S2LatLng> const& latlngs) {
-  string out;
-  for (int i = 0; i < latlngs.size(); ++i) {
-    if (i > 0) out += ", ";
-    AppendVertex(latlngs[i].ToPoint(), &out);
-  }
-  return out;
-}
-
 S1Angle S2Testing::KmToAngle(double km) {
   return S1Angle::Radians(km / kEarthRadiusKm);
 }
@@ -309,17 +184,17 @@ S1Angle S2Testing::MetersToAngle(double meters) {
 
 void DumpLoop(S2Loop const* loop) {
   // Only for calling from a debugger.
-  std::cout << S2Testing::ToString(loop) << "\n";
+  std::cout << s2textformat::ToString(loop) << "\n";
 }
 
 void DumpPolyline(S2Polyline const* polyline) {
   // Only for calling from a debugger.
-  std::cout << S2Testing::ToString(polyline) << "\n";
+  std::cout << s2textformat::ToString(polyline) << "\n";
 }
 
 void DumpPolygon(S2Polygon const* polygon) {
   // Only for calling from a debugger.
-  std::cout << S2Testing::ToString(polygon) << "\n";
+  std::cout << s2textformat::ToString(polygon) << "\n";
 }
 
 S2Point S2Testing::RandomPoint() {
@@ -459,10 +334,8 @@ double S2Testing::GetCpuTime() {
 }
 
 void S2Testing::DeleteLoops(vector<S2Loop*>* loops) {
-  for (int i = 0; i < loops->size(); ++i) {
-    delete (*loops)[i];
-  }
-  loops->clear();
+  // TODO(user): Update all callers and delete this function.
+  STLDeleteElements(loops);
 }
 
 
@@ -487,7 +360,7 @@ void S2Testing::Fractal::set_min_level(int min_level_arg) {
 
 void S2Testing::Fractal::ComputeMinLevel() {
   if (min_level_arg_ >= 0 && min_level_arg_ <= max_level_) {
-    min_level_= min_level_arg_;
+    min_level_ = min_level_arg_;
   } else {
     min_level_ = max_level_;
   }

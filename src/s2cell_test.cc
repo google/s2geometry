@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2cell.h"
@@ -28,7 +29,7 @@
 
 #include "base/macros.h"
 #include "base/stringprintf.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "r2.h"
 #include "r2rect.h"
 #include "s1angle.h"

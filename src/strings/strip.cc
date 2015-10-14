@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: jyrki@google.com (Jyrki Alakuijala)
 // based on contributions of various authors in strings/strutil_unittest.cc
 //
@@ -29,31 +30,25 @@
 #include "strings/stringpiece.h"
 
 string StripPrefixString(StringPiece str, StringPiece prefix) {
-  if (str.starts_with(prefix))
-    str.remove_prefix(prefix.length());
+  if (str.starts_with(prefix)) str.remove_prefix(prefix.length());
   return str.as_string();
 }
 
-bool TryStripPrefixString(StringPiece str, StringPiece prefix,
-                                 string* result) {
+bool TryStripPrefixString(StringPiece str, StringPiece prefix, string* result) {
   const bool has_prefix = str.starts_with(prefix);
-  if (has_prefix)
-    str.remove_prefix(prefix.length());
+  if (has_prefix) str.remove_prefix(prefix.length());
   str.as_string().swap(*result);
   return has_prefix;
 }
 
 string StripSuffixString(StringPiece str, StringPiece suffix) {
-  if (str.ends_with(suffix))
-    str.remove_suffix(suffix.length());
+  if (str.ends_with(suffix)) str.remove_suffix(suffix.length());
   return str.as_string();
 }
 
-bool TryStripSuffixString(StringPiece str, StringPiece suffix,
-                                 string* result) {
+bool TryStripSuffixString(StringPiece str, StringPiece suffix, string* result) {
   const bool has_suffix = str.ends_with(suffix);
-  if (has_suffix)
-    str.remove_suffix(suffix.length());
+  if (has_suffix) str.remove_suffix(suffix.length());
   str.as_string().swap(*result);
   return has_suffix;
 }
@@ -93,7 +88,7 @@ void StripString(string* s, StringPiece remove, char replacewith) {
 // ----------------------------------------------------------------------
 void StripWhitespace(const char** str, int* len) {
   // strip off trailing whitespace
-  while ((*len) > 0 && ascii_isspace((*str)[(*len)-1])) {
+  while ((*len) > 0 && ascii_isspace((*str)[(*len) - 1])) {
     (*len)--;
   }
 
@@ -116,10 +111,10 @@ bool StripTrailingNewline(string* s) {
 }
 
 void StripWhitespace(string* str) {
-  int str_length = str->length();
+  size_t str_length = str->length();
 
   // Strip off leading whitespace.
-  int first = 0;
+  size_t first = 0;
   while (first < str_length && ascii_isspace(str->at(first))) {
     ++first;
   }
@@ -134,11 +129,12 @@ void StripWhitespace(string* str) {
   }
 
   // Strip off trailing whitespace.
-  int last = str_length - 1;
-  while (last >= 0 && ascii_isspace(str->at(last))) {
+  // Here, the string is not empty and the first character is not whitespace.
+  size_t last = str_length - 1;
+  while (ascii_isspace(str->at(last))) {
     --last;
   }
-  if (last != (str_length - 1) && last >= 0) {
+  if (last != (str_length - 1)) {
     str->erase(last + 1, string::npos);
   }
 }
@@ -154,8 +150,7 @@ void StripBrackets(char left, char right, string* s) {
   string::iterator opencurly = std::find(s->begin(), s->end(), left);
   while (opencurly != s->end()) {
     string::iterator closecurly = std::find(opencurly, s->end(), right);
-    if (closecurly == s->end())
-      return;
+    if (closecurly == s->end()) return;
     opencurly = s->erase(opencurly, closecurly + 1);
     opencurly = std::find(opencurly, s->end(), left);
   }
@@ -182,7 +177,6 @@ string OutputWithMarkupTagsStripped(const string& s) {
   return result;
 }
 
-
 int TrimStringLeft(string* s, StringPiece remove) {
   int i = 0;
   while (i < s->size() && memchr(remove.data(), (*s)[i], remove.size())) {
@@ -194,7 +188,7 @@ int TrimStringLeft(string* s, StringPiece remove) {
 
 int TrimStringRight(string* s, StringPiece remove) {
   int i = s->size(), trimmed = 0;
-  while (i > 0 && memchr(remove.data(), (*s)[i-1], remove.size())) {
+  while (i > 0 && memchr(remove.data(), (*s)[i - 1], remove.size())) {
     --i;
   }
   if (i < s->size()) {
@@ -208,7 +202,8 @@ int TrimStringRight(string* s, StringPiece remove) {
 // Various removal routines
 // ----------------------------------------------------------------------
 int strrm(char* str, char c) {
-  char *src, *dest;
+  char* src;
+  char* dest;
   for (src = dest = str; *src != '\0'; ++src)
     if (*src != c) *(dest++) = *src;
   *dest = '\0';
@@ -216,14 +211,16 @@ int strrm(char* str, char c) {
 }
 
 int memrm(char* str, int strlen, char c) {
-  char *src, *dest;
+  char* src;
+  char* dest;
   for (src = dest = str; strlen-- > 0; ++src)
     if (*src != c) *(dest++) = *src;
   return dest - str;
 }
 
 int strrmm(char* str, const char* chars) {
-  char *src, *dest;
+  char* src;
+  char* dest;
   for (src = dest = str; *src != '\0'; ++src) {
     bool skip = false;
     for (const char* c = chars; *c != '\0'; c++) {
@@ -241,15 +238,13 @@ int strrmm(char* str, const char* chars) {
 int strrmm(string* str, const string& chars) {
   size_t str_len = str->length();
   size_t in_index = str->find_first_of(chars);
-  if (in_index == string::npos)
-    return str_len;
+  if (in_index == string::npos) return str_len;
 
   size_t out_index = in_index++;
 
   while (in_index < str_len) {
     char c = (*str)[in_index++];
-    if (chars.find(c) == string::npos)
-      (*str)[out_index++] = c;
+    if (chars.find(c) == string::npos) (*str)[out_index++] = c;
   }
 
   str->resize(out_index);
@@ -264,8 +259,7 @@ int strrmm(string* str, const string& chars) {
 //    Return the number of characters removed
 // ----------------------------------------------------------------------
 int StripDupCharacters(string* s, char dup_char, int start_pos) {
-  if (start_pos < 0)
-    start_pos = 0;
+  if (start_pos < 0) start_pos = 0;
 
   // remove dups by compaction in-place
   int input_pos = start_pos;   // current reader position
@@ -297,12 +291,11 @@ void RemoveExtraWhitespace(string* s) {
   assert(s != NULL);
   // Empty strings clearly have no whitespace, and this code assumes that
   // string length is greater than 0
-  if (s->empty())
-    return;
+  if (s->empty()) return;
 
-  int input_pos = 0;   // current reader position
-  int output_pos = 0;  // current writer position
-  const int input_end = s->size();
+  size_t input_pos = 0;   // current reader position
+  size_t output_pos = 0;  // current writer position
+  const size_t input_end = s->size();
   // Strip off leading space
   while (input_pos < input_end && ascii_isspace((*s)[input_pos])) input_pos++;
 
@@ -363,7 +356,7 @@ void StripTrailingWhitespace(string* const s) {
 void TrimRunsInString(string* s, StringPiece remove) {
   string::iterator dest = s->begin();
   string::iterator src_end = s->end();
-  for (string::iterator src = s->begin(); src != src_end; ) {
+  for (string::iterator src = s->begin(); src != src_end;) {
     if (remove.find(*src) == StringPiece::npos) {
       *(dest++) = *(src++);
     } else {

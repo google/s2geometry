@@ -12,28 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2polygonbuilder.h"
 
 #include <math.h>
 #include <algorithm>
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
-#include <ext/hash_set>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_set;
+#include <unordered_map>
+#include <unordered_set>
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <set>
 #include <vector>
 
 #include <glog/logging.h>
 
 #include "base/macros.h"
-#include "base/scoped_ptr.h"
 #include "s2.h"
 #include "s2cellid.h"
 #include "s2edgeutil.h"
@@ -44,6 +41,7 @@ using __gnu_cxx::hash_set;
 
 using std::min;
 using std::pair;
+using std::unique_ptr;
 using std::vector;
 
 void S2PolygonBuilderOptions::set_undirected_edges(bool undirected_edges) {
@@ -105,15 +103,15 @@ int S2PolygonBuilderOptions::GetSnapLevel() const {
 }
 
 S2PolygonBuilder::S2PolygonBuilder(S2PolygonBuilderOptions const& options)
-    : options_(options), edges_(new EdgeSet) {
+    : options_(options) {
 }
 
 S2PolygonBuilder::~S2PolygonBuilder() {
 }
 
 bool S2PolygonBuilder::HasEdge(S2Point const& v0, S2Point const& v1) {
-  EdgeSet::const_iterator candidates = edges_->find(v0);
-  return (candidates != edges_->end() &&
+  EdgeSet::const_iterator candidates = edges_.find(v0);
+  return (candidates != edges_.end() &&
           candidates->second.find(v1) != candidates->second.end());
 }
 
@@ -126,11 +124,11 @@ bool S2PolygonBuilder::AddEdge(S2Point const& v0, S2Point const& v1) {
     EraseEdge(v1, v0);
     return false;
   }
-  if (edges_->find(v0) == edges_->end()) starting_vertices_.push_back(v0);
-  (*edges_)[v0].insert(v1);
+  if (edges_.find(v0) == edges_.end()) starting_vertices_.push_back(v0);
+  edges_[v0].insert(v1);
   if (options_.undirected_edges()) {
-    if (edges_->find(v1) == edges_->end()) starting_vertices_.push_back(v1);
-    (*edges_)[v1].insert(v0);
+    if (edges_.find(v1) == edges_.end()) starting_vertices_.push_back(v1);
+    edges_[v1].insert(v0);
   }
   return true;
 }
@@ -139,10 +137,18 @@ void S2PolygonBuilder::AddLoop(S2Loop const* loop) {
   // Ignore loops that do not have a boundary.
   if (loop->is_empty_or_full()) return;
 
-  int sign = loop->sign();
-  for (int i = loop->num_vertices(); i > 0; --i) {
-    // Vertex indices need to be in the range [0, 2*num_vertices()-1].
-    AddEdge(loop->vertex(i), loop->vertex(i + sign));
+  const int n = loop->num_vertices();
+  if (loop->sign() > 0) {
+    for (int i = 0; i < n; ++i) {
+      AddEdge(loop->vertex(i), loop->vertex(i + 1));
+    }
+  } else {
+    // In order to preserve the cyclic order of the loop vertices, we need to
+    // add the last edge first.  This is because AssembleLoops() tries to
+    // assemble loops starting from vertices in the order they were added.
+    for (int i = 2 * n - 1; i >= n; --i) {
+      AddEdge(loop->vertex(i), loop->vertex(i - 1));
+    }
   }
 }
 
@@ -156,16 +162,16 @@ void S2PolygonBuilder::EraseEdge(S2Point const& v0, S2Point const& v1) {
   // Note that there may be more than one copy of an edge if we are not XORing
   // them, so a VertexSet is a multiset.
 
-  VertexSet* vset = &(*edges_)[v0];
+  VertexSet* vset = &edges_[v0];
   DCHECK(vset->find(v1) != vset->end());
   vset->erase(vset->find(v1));
-  if (vset->empty()) edges_->erase(v0);
+  if (vset->empty()) edges_.erase(v0);
 
   if (options_.undirected_edges()) {
-    vset = &(*edges_)[v1];
+    vset = &edges_[v1];
     DCHECK(vset->find(v0) != vset->end());
     vset->erase(vset->find(v0));
-    if (vset->empty()) edges_->erase(v1);
+    if (vset->empty()) edges_.erase(v1);
   }
 }
 
@@ -185,8 +191,8 @@ void S2PolygonBuilder::DumpVertex(S2Point const& v) const {
 void S2PolygonBuilder::DumpEdges(S2Point const& v0) const {
   DumpVertex(v0);
   std::cout << ":\n";
-  EdgeSet::const_iterator candidates = edges_->find(v0);
-  if (candidates != edges_->end()) {
+  EdgeSet::const_iterator candidates = edges_.find(v0);
+  if (candidates != edges_.end()) {
     VertexSet const& vset = candidates->second;
     for (VertexSet::const_iterator i = vset.begin(); i != vset.end(); ++i) {
       std::cout << "    ";
@@ -197,7 +203,7 @@ void S2PolygonBuilder::DumpEdges(S2Point const& v0) const {
 }
 
 void S2PolygonBuilder::Dump() const {
-  for (EdgeSet::const_iterator i = edges_->begin(); i != edges_->end(); ++i) {
+  for (EdgeSet::const_iterator i = edges_.begin(); i != edges_.end(); ++i) {
     DumpEdges(i->first);
   }
 }
@@ -224,7 +230,7 @@ S2Loop* S2PolygonBuilder::AssembleLoop(S2Point const& v0, S2Point const& v1,
 
   vector<S2Point> path;          // The path so far.
   // Maps a vertex to its index in "path".
-  hash_map<S2Point, int, HashS2Point> index;
+  std::unordered_map<S2Point, int, S2PointHash> index;
 
   path.push_back(v0);
   path.push_back(v1);
@@ -235,8 +241,8 @@ S2Loop* S2PolygonBuilder::AssembleLoop(S2Point const& v0, S2Point const& v1,
     S2Point const& v1 = path.end()[-1];
     S2Point v2;
     bool v2_found = false;
-    EdgeSet::const_iterator candidates = edges_->find(v1);
-    if (candidates != edges_->end()) {
+    EdgeSet::const_iterator candidates = edges_.find(v1);
+    if (candidates != edges_.end()) {
       VertexSet const& vset = candidates->second;
       for (VertexSet::const_iterator i = vset.begin(); i != vset.end(); ++i) {
         // We prefer the leftmost outgoing edge, ignoring any reverse edges.
@@ -255,14 +261,12 @@ S2Loop* S2PolygonBuilder::AssembleLoop(S2Point const& v0, S2Point const& v1,
       // This is the first time we've visited this vertex.
       path.push_back(v2);
     } else {
-      // We've completed a loop. In a simple case last edge is the same as the
-      // first one (since we did not add the very first vertex to the index we
-      // would not know that the loop is completed till the second vertex is
-      // examined). In this case we just remove the last edge to preserve the
-      // original vertex order. In a more complicated case the edge that closed
-      // the loop is different and we should remove initial vertices that are
-      // not part of the loop.
-      if (index[v2] == 1 && path[0]  == path[path.size() - 1]) {
+      // We've completed a loop.  Usually the loop ends at the edge we started
+      // with, in which case we remove the last vertex in order to ensure that
+      // the loop starts with the given vertex "v0" whenever possible.  More
+      // rarely, the path may have a prefix of vertices that are not part of
+      // the loop, in which case those vertices need to be removed.
+      if (index[v2] == 1 && path.front() == path.back()) {
         path.pop_back();
       } else {
         path.erase(path.begin(), path.begin() + index[v2]);
@@ -285,7 +289,7 @@ S2Loop* S2PolygonBuilder::AssembleLoop(S2Point const& v0, S2Point const& v1,
       }
 
       if (options_.undirected_edges() && !loop->IsNormalized()) {
-        scoped_ptr<S2Loop> deleter(loop);  // XXX for debugging
+        unique_ptr<S2Loop> deleter(loop);  // XXX for debugging
         return AssembleLoop(path[1], path[0], unused_edges);
       }
       return loop;
@@ -431,8 +435,8 @@ void S2PolygonBuilder::BuildMergeMap(PointIndex* index, MergeMap* merge_map) {
 
   // First, we build the set of all the distinct vertices in the input.
   // We need to include the source and destination of every edge.
-  hash_set<S2Point, HashS2Point> vertices;
-  for (EdgeSet::const_iterator i = edges_->begin(); i != edges_->end(); ++i) {
+  std::unordered_set<S2Point, S2PointHash> vertices;
+  for (EdgeSet::const_iterator i = edges_.begin(); i != edges_.end(); ++i) {
     vertices.insert(i->first);
     VertexSet const& vset = i->second;
     for (VertexSet::const_iterator j = vset.begin(); j != vset.end(); ++j)
@@ -440,7 +444,7 @@ void S2PolygonBuilder::BuildMergeMap(PointIndex* index, MergeMap* merge_map) {
   }
 
   // Build a spatial index containing all the distinct vertices.
-  for (hash_set<S2Point, HashS2Point>::const_iterator i = vertices.begin();
+  for (std::unordered_set<S2Point, S2PointHash>::const_iterator i = vertices.begin();
        i != vertices.end(); ++i) {
     index->Insert(*i);
   }
@@ -448,7 +452,7 @@ void S2PolygonBuilder::BuildMergeMap(PointIndex* index, MergeMap* merge_map) {
   // Next, we loop through all the vertices and attempt to grow a maximial
   // mergeable group starting from each vertex.
   vector<S2Point> frontier, mergeable;
-  for (hash_set<S2Point, HashS2Point>::const_iterator vstart = vertices.begin();
+  for (std::unordered_set<S2Point, S2PointHash>::const_iterator vstart = vertices.begin();
        vstart != vertices.end(); ++vstart) {
     // Skip any vertices that have already been merged with another vertex.
     if (merge_map->find(*vstart) != merge_map->end()) continue;
@@ -479,7 +483,7 @@ void S2PolygonBuilder::MoveVertices(MergeMap const& merge_map) {
   // We need to copy the set of edges affected by the move, since
   // edges_ could be reallocated when we start modifying it.
   vector<pair<S2Point, S2Point> > edges;
-  for (EdgeSet::const_iterator i = edges_->begin(); i != edges_->end(); ++i) {
+  for (EdgeSet::const_iterator i = edges_.begin(); i != edges_.end(); ++i) {
     S2Point const& v0 = i->first;
     VertexSet const& vset = i->second;
     for (VertexSet::const_iterator j = vset.begin(); j != vset.end(); ++j) {
@@ -513,7 +517,7 @@ void S2PolygonBuilder::SpliceEdges(PointIndex const& index) {
   // We keep a stack of unprocessed edges.  Initially all edges are
   // pushed onto the stack.
   vector<pair<S2Point, S2Point> > edges;
-  for (EdgeSet::const_iterator i = edges_->begin(); i != edges_->end(); ++i) {
+  for (EdgeSet::const_iterator i = edges_.begin(); i != edges_.end(); ++i) {
     S2Point const& v0 = i->first;
     VertexSet const& vset = i->second;
     for (VertexSet::const_iterator j = vset.begin(); j != vset.end(); ++j) {
@@ -562,7 +566,7 @@ S2Loop* SnapLoopToLevel(S2Loop const& loop, int level) {
   }
   return new S2Loop(snapped_vertices);
 }
-}
+}  // namespace
 
 bool S2PolygonBuilder::AssembleLoops(vector<S2Loop*>* loops,
                                      EdgeList* unused_edges) {
@@ -584,15 +588,20 @@ bool S2PolygonBuilder::AssembleLoops(vector<S2Loop*>* loops,
 
   // We repeatedly choose an edge and attempt to assemble a loop
   // starting from that edge.  (This is always possible unless the
-  // input includes extra edges that are not part of any loop.)  To
-  // maintain a consistent scanning order over edges_ between
-  // different machine architectures (e.g. 'clovertown' vs. 'opteron'),
-  // we follow the order they were added to the builder.
+  // input includes extra edges that are not part of any loop.)
+  //
+  // In order to maintain a consistent scanning order over edges_ between
+  // different machine architectures, we visit each vertex in the order they
+  // were added to the builder, and then try all outgoing edges from that
+  // vertex.  This also helps to preserve the cyclic order of the vertices
+  // within each loop in the case where the input was already a polygon (e.g.,
+  // when doing snapping).  This strategy works well except in the case where
+  // more than one loop shares a common vertex.
   unused_edges->clear();
   for (int i = 0; i < starting_vertices_.size(); ) {
     S2Point const& v0 = starting_vertices_[i];
-    EdgeSet::const_iterator candidates = edges_->find(v0);
-    if (candidates == edges_->end()) {
+    EdgeSet::const_iterator candidates = edges_.find(v0);
+    if (candidates == edges_.end()) {
       ++i;
       continue;
     }

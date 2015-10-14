@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2R2RECT_H_
-#define UTIL_GEOMETRY_S2R2RECT_H_
+#ifndef S2_GEOMETRY_S2R2RECT_H_
+#define S2_GEOMETRY_S2R2RECT_H_
 
 #include <iosfwd>
 
 #include <glog/logging.h>
 
+#include "fpcontractoff.h"
 #include "r1interval.h"
 #include "r2.h"
 #include "r2rect.h"
@@ -50,8 +52,8 @@ class S2LatLngRect;
 // The S2R2Rect class is also a convenient way to find the (s,t)-region
 // covered by a given S2CellId (see the FromCell and FromCellId methods).
 //
-// TODO: If the geometry library is extended to have better support for planar
-// geometry, then this class should no longer be necessary.
+// TODO(ericv): If the geometry library is extended to have better support
+// for planar geometry, then this class should no longer be necessary.
 //
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator, however it is
@@ -59,7 +61,7 @@ class S2LatLngRect;
 class S2R2Rect : public S2Region {
  public:
   // Construct a rectangle from an R2Rect.
-  S2R2Rect(R2Rect const& rect);
+  explicit S2R2Rect(R2Rect const& rect);
 
   // Construct a rectangle from the given lower-left and upper-right points.
   S2R2Rect(R2Point const& lo, R2Point const& hi);
@@ -293,4 +295,4 @@ inline bool S2R2Rect::ApproxEquals(S2R2Rect const& other,
   return rect_.ApproxEquals(other.rect_, max_error);
 }
 
-#endif  // UTIL_GEOMETRY_S2R2RECT_H_
+#endif  // S2_GEOMETRY_S2R2RECT_H_

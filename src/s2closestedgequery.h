@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2CLOSESTEDGEQUERY_H_
-#define UTIL_GEOMETRY_S2CLOSESTEDGEQUERY_H_
+#ifndef S2_GEOMETRY_S2CLOSESTEDGEQUERY_H_
+#define S2_GEOMETRY_S2CLOSESTEDGEQUERY_H_
 
 #include <algorithm>
+#include "priority_queue_sequence.h"
 #include "s1angle.h"
 #include "s1chordangle.h"
+#include "fpcontractoff.h"
 #include "s2.h"
 #include "s2cellid.h"
 #include "s2shapeindex.h"
@@ -34,6 +37,7 @@ class S2ClosestEdgeQuery {
 
   // Default constructor; requires Init() to be called.
   S2ClosestEdgeQuery() {}
+  ~S2ClosestEdgeQuery();
 
   // REQUIRES: "index" is not modified after this method is called.
   void Init(S2ShapeIndex const& index);
@@ -153,20 +157,9 @@ class S2ClosestEdgeQuery {
   // A temporary declared here to avoid initializing iterators multiple times.
   S2ShapeIndex::Iterator iter_;
 
-  // We define our own priority queue because the standard STL one does not
-  // support clearing all the remaining queue entries.
-  class CellQueue : public util::gtl::InlinedVector<QueueEntry, 16> {
-   public:
-    QueueEntry const& top() const { return front(); }
-    void pop() {
-      std::pop_heap(begin(), end());
-      pop_back();
-    }
-    void push(QueueEntry const& entry) {
-      push_back(entry);
-      std::push_heap(begin(), end());
-    }
-  };
+  // We use a priority queue that exposes the underlying vector because the
+  // standard STL one does not support clearing the remaining queue entries.
+  typedef priority_queue_sequence<QueueEntry> CellQueue;
   CellQueue queue_;
 };
 
@@ -186,4 +179,4 @@ inline S2Point S2ClosestEdgeQuery::Project(S2Point const& target) {
   return ApproxProject(target, S1Angle::Zero());
 }
 
-#endif  // UTIL_GEOMETRY_S2CLOSESTEDGEQUERY_H_
+#endif  // S2_GEOMETRY_S2CLOSESTEDGEQUERY_H_

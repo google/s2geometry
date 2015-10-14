@@ -12,22 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2edgeutil.h"
 
+#include <cmath>
 #include <float.h>
-#include <math.h>
 #include <algorithm>
+#include <limits>
 
 #include <glog/logging.h>
 
 #include "r1interval.h"
 #include "s1chordangle.h"
+#include "util/math/exactfloat/exactfloat.h"
 #include "util/math/vector3.h"
 
+// Avoid "using std::abs" to avoid possible programmer confusion with the
+// integer-only C function.
 using std::max;
 using std::min;
+using std::numeric_limits;
+using std::swap;
 
 // Error constant definitions.  See the header file for details.
 double const S2EdgeUtil::kFaceClipErrorRadians = 3 * DBL_EPSILON;
@@ -36,6 +43,42 @@ double const S2EdgeUtil::kFaceClipErrorUVCoord = 9 * M_SQRT1_2 * DBL_EPSILON;
 double const S2EdgeUtil::kIntersectsRectErrorUVDist = 3 * M_SQRT2 * DBL_EPSILON;
 double const S2EdgeUtil::kEdgeClipErrorUVCoord = 2.25 * DBL_EPSILON;
 double const S2EdgeUtil::kEdgeClipErrorUVDist = 2.25 * DBL_EPSILON;
+
+// kIntersectionError can be set somewhat arbitrarily, because the algorithm
+// uses more precision if necessary in order to achieve the specified error.
+// The only strict requirement is that kIntersectionError >= DBL_EPSILON
+// radians.  However, using a larger error tolerance makes the algorithm more
+// efficient because it reduces the number of cases where exact arithmetic is
+// needed.
+S1Angle const S2EdgeUtil::kIntersectionError = S1Angle::Radians(4*DBL_EPSILON);
+
+// This value can be supplied as the vertex_merge_radius() to S2PolygonBuilder
+// to ensure that intersection points that are supposed to be coincident are
+// merged back together into a single vertex.  This is required in order for
+// various polygon operations (union, intersection, etc) to work correctly.
+// It is twice the intersection error because two coincident intersection
+// points might have errors in opposite directions.
+S1Angle const S2EdgeUtil::kIntersectionMergeRadius = 2 * kIntersectionError;
+
+// DEPRECATED.  This value is related to an obsolete intersection algorithm
+// that made weaker accuracy guarantees.
+S1Angle const S2EdgeUtil::kIntersectionTolerance = S1Angle::Radians(1.5e-15);
+
+S1Angle const S2EdgeUtil::kIntersectionExactError =
+    S1Angle::Radians(DBL_EPSILON);
+
+S2EdgeUtil::IntersectionMethod S2EdgeUtil::last_intersection_method_;
+
+char const* S2EdgeUtil::GetIntersectionMethodName(IntersectionMethod method) {
+  switch (method) {
+    case SIMPLE:    return "Simple";
+    case SIMPLE_LD: return "Simple_ld";
+    case STABLE:    return "Stable";
+    case STABLE_LD: return "Stable_ld";
+    case EXACT:     return "Exact";
+    default:        return "Unknown";
+  }
+}
 
 bool S2EdgeUtil::SimpleCrossing(S2Point const& a, S2Point const& b,
                                 S2Point const& c, S2Point const& d) {
@@ -90,73 +133,371 @@ bool S2EdgeUtil::EdgeOrVertexCrossing(S2Point const& a, S2Point const& b,
   return VertexCrossing(a, b, c, d);
 }
 
-static void ReplaceIfCloser(S2Point const& x, S2Point const& y,
-                            double *dmin2, S2Point* vmin) {
-  // If the squared distance from x to y is less than dmin2, then replace
-  // vmin by y and update dmin2 accordingly.
+typedef Vector3<long double> Vector3_ld;
+typedef Vector3<ExactFloat> Vector3_xf;
 
-  double d2 = (x - y).Norm2();
-  if (d2 < *dmin2 || (d2 == *dmin2 && y < *vmin)) {
-    *dmin2 = d2;
-    *vmin = y;
+// Computes the cross product of "x" and "y", normalizes it to be unit length,
+// and stores the result in "result".  Also returns the length of the cross
+// product before normalization, which is useful for estimating the amount of
+// error in the result.  For numerical stability, "x" and "y" should both be
+// approximately unit length.
+template <class T>
+static T RobustNormalWithLength(Vector3<T> const& x, Vector3<T> const& y,
+                                Vector3<T>* result) {
+  // This computes 2 * (x.CrossProd(y)), but has much better numerical
+  // stability when "x" and "y" are unit length.
+  Vector3<T> tmp = (x - y).CrossProd(x + y);
+  T length = tmp.Norm();
+  if (length != 0) {
+    *result = (1 / length) * tmp;
   }
+  return 0.5 * length;  // Since tmp == 2 * (x.CrossProd(y))
+}
+
+// If the intersection point of the edges (a0,a1) and (b0,b1) can be computed
+// to within an error of at most S2EdgeUtil::kIntersectionError by this
+// function, then set "result" to the intersection point and return true.
+//
+// The intersection point is not guaranteed to have the correct sign
+// (i.e., it may be either "result" or "-result").
+template <class T>
+static bool GetIntersectionSimple(Vector3<T> const& a0, Vector3<T> const& a1,
+                                  Vector3<T> const& b0, Vector3<T> const& b1,
+                                  Vector3<T>* result) {
+  // The code below computes the intersection point as
+  //
+  //    (a0.CrossProd(a1)).CrossProd(b0.CrossProd(b1))
+  //
+  // except that it has better numerical stability and also computes a
+  // guaranteed error bound.
+  //
+  // Each cross product is computed as (X-Y).CrossProd(X+Y) using unit-length
+  // input vectors, which eliminates most of the cancellation error.  However
+  // the error in the direction of the cross product can still become large if
+  // the two points are extremely close together.  We can show that as long as
+  // the length of the cross product is at least (8*sqrt(3)+12) * DBL_EPSILON
+  // (about 6e-15), then the directional error is at most 2.5 *
+  // numeric_limits<T>::epsilon() (about 3e-19 when T == "long double").
+  // (DBL_EPSILON appears in the first formula because the inputs are assumed
+  // to be normalized in double precision rather than in the given type T.)
+  //
+  // The third cross product is different because its inputs already have some
+  // error.  Letting "result_len" be the length of the cross product, it can
+  // be shown that the error is at most
+  //
+  //   (1 + sqrt(3) + 6 / result_len) * numeric_limits<T>::epsilon()
+  //
+  // We want this error to be at most kIntersectionError, which is true as
+  // long as "result_len" is at least kMinResultLen defined below.
+
+  static const T kMinNormalLength = (8 * sqrt(3) + 12) * DBL_EPSILON;
+  static const T kMinResultLen =
+      6 / (S2EdgeUtil::kIntersectionError.radians() /
+           numeric_limits<T>::epsilon() - (1 + sqrt(3)));
+
+  // On some platforms "long double" is the same as "double", and on these
+  // platforms this method always returns false (e.g. ARM, Win32).  Rather
+  // than testing this directly, instead we look at kMinResultLen since this
+  // is a direct measure of whether "long double" has sufficient accuracy to
+  // be useful.  If kMinResultLen > 0.5, it means that this method will fail
+  // even for edges that meet at an angle of 30 degrees.  (On Intel platforms
+  // kMinResultLen corresponds to an intersection angle of about 0.04
+  // degrees.)
+  DCHECK_LE(kMinResultLen, 0.5);
+
+  Vector3<T> a_norm, b_norm;
+  if (RobustNormalWithLength(a0, a1, &a_norm) >= kMinNormalLength &&
+      RobustNormalWithLength(b0, b1, &b_norm) >= kMinNormalLength &&
+      RobustNormalWithLength(a_norm, b_norm, result) >= kMinResultLen) {
+    return true;
+  }
+  return false;
+}
+
+static bool GetIntersectionSimpleLD(S2Point const& a0, S2Point const& a1,
+                                    S2Point const& b0, S2Point const& b1,
+                                    S2Point* result) {
+  Vector3_ld result_ld;
+  if (GetIntersectionSimple(Vector3_ld::Cast(a0), Vector3_ld::Cast(a1),
+                            Vector3_ld::Cast(b0), Vector3_ld::Cast(b1),
+                            &result_ld)) {
+    *result = S2Point::Cast(result_ld);
+    return true;
+  }
+  return false;
+}
+
+// Given a point X and a vector "a_norm" (not necessarily unit length),
+// compute x.DotProd(a_norm) and return a bound on the error in the result.
+// The remaining parameters allow this dot product to be computed more
+// accurately and efficiently.  They include the length of "a_norm"
+// ("a_norm_len") and the edge endpoints "a0" and "a1".
+template <class T>
+static T GetProjection(Vector3<T> const& x,
+                       Vector3<T> const& a_norm, T a_norm_len,
+                       Vector3<T> const& a0, Vector3<T> const& a1,
+                       T* error) {
+  // The error in the dot product is proportional to the lengths of the input
+  // vectors, so rather than using "x" itself (a unit-length vector) we use
+  // the vectors from "x" to the closer of the two edge endpoints.  This
+  // typically reduces the error by a huge factor.
+  Vector3<T> x0 = x - a0;
+  Vector3<T> x1 = x - a1;
+  T x0_dist2 = x0.Norm2();
+  T x1_dist2 = x1.Norm2();
+
+  // If both distances are the same, we need to be careful to choose one
+  // endpoint deterministically so that the result does not change if the
+  // order of the endpoints is reversed.
+  T dist, result;
+  if (x0_dist2 < x1_dist2 || (x0_dist2 == x1_dist2 && x0 < x1)) {
+    dist = sqrt(x0_dist2);
+    result = x0.DotProd(a_norm);
+  } else {
+    dist = sqrt(x1_dist2);
+    result = x1.DotProd(a_norm);
+  }
+  // This calculation bounds the error from all sources: the computation of
+  // the normal, the subtraction of one endpoint, and the dot product itself.
+  // (DBL_EPSILON appears because the input points are assumed to be
+  // normalized in double precision rather than in the given type T.)
+  *error = ((3.5 * a_norm_len + 8 * sqrt(3) * DBL_EPSILON) * dist
+            + 0.75 * std::abs(result)) * numeric_limits<T>::epsilon();
+  return result;
+}
+
+// Helper function for GetIntersectionStable().  It expects that the edges
+// (a0,a1) and (b0,b1) have been sorted so that the first edge is longer.
+template <class T>
+static bool GetIntersectionStableSorted(
+    Vector3<T> const& a0, Vector3<T> const& a1,
+    Vector3<T> const& b0, Vector3<T> const& b1, Vector3<T>* result) {
+  DCHECK_GE((a1 - a0).Norm2(), (b1 - b0).Norm2());
+
+  // Compute the normal of the plane through (a0, a1) in a stable way.
+  Vector3<T> a_norm = (a0 - a1).CrossProd(a0 + a1);
+  T a_norm_len = a_norm.Norm();
+  T b_len = (b1 - b0).Norm();
+
+  // Compute the projection (i.e., signed distance) of b0 and b1 onto the
+  // plane through (a0, a1).  Distances are scaled by the length of a_norm.
+  T b0_error, b1_error;
+  T b0_dist = GetProjection(b0, a_norm, a_norm_len, a0, a1, &b0_error);
+  T b1_dist = GetProjection(b1, a_norm, a_norm_len, a0, a1, &b1_error);
+
+  // The total distance from b0 to b1 measured perpendicularly to (a0,a1) is
+  // |b0_dist - b1_dist|.  Note that b0_dist and b1_dist generally have
+  // opposite signs because b0 and b1 are on opposite sides of (a0, a1).  The
+  // code below finds the intersection point by interpolating along the edge
+  // (b0, b1) to a fractional distance of b0_dist / (b0_dist - b1_dist).
+  //
+  // It can be shown that the maximum error in the interpolation fraction is
+  //
+  //     (b0_dist * b1_error - b1_dist * b0_error) /
+  //        (dist_sum * (dist_sum - error_sum))
+  //
+  // We save ourselves some work by scaling the result and the error bound by
+  // "dist_sum", since the result is normalized to be unit length anyway.
+  T dist_sum = std::abs(b0_dist - b1_dist);
+  T error_sum = b0_error + b1_error;
+  if (dist_sum <= error_sum) {
+    return false;  // Error is unbounded in this case.
+  }
+  Vector3<T> x = b0_dist * b1 - b1_dist * b0;
+  T error = b_len * std::abs(b0_dist * b1_error - b1_dist * b0_error) /
+      (dist_sum - error_sum) + dist_sum * numeric_limits<T>::epsilon();
+
+  // Finally we normalize the result, compute the corresponding error, and
+  // check whether the total error is acceptable.
+  T x_len = x.Norm();
+  T const kMaxError = S2EdgeUtil::kIntersectionError.radians();
+  if (error > (kMaxError - 0.5 * numeric_limits<T>::epsilon()) * x_len) {
+    return false;
+  }
+  *result = (1 / x_len) * x;
+  return true;
+}
+
+// Returns whether (a0,a1) is less than (b0,b1) with respect to a total
+// ordering on edges that is invariant under edge reversals.
+template <class T>
+static bool CompareEdges(Vector3<T> const& a0, Vector3<T> const& a1,
+                         Vector3<T> const& b0, Vector3<T> const& b1) {
+  Vector3<T> const *pa0 = &a0, *pa1 = &a1;
+  Vector3<T> const *pb0 = &b0, *pb1 = &b1;
+  if (*pa0 >= *pa1) swap(pa0, pa1);
+  if (*pb0 >= *pb1) swap(pb0, pb1);
+  return *pa0 < *pb0 || (*pa0 == *pb0 && *pb0 < *pb1);
+}
+
+// If the intersection point of the edges (a0,a1) and (b0,b1) can be computed
+// to within an error of at most S2EdgeUtil::kIntersectionError by this
+// function, then set "result" to the intersection point and return true.
+//
+// The intersection point is not guaranteed to have the correct sign
+// (i.e., it may be either "result" or "-result").
+template <class T>
+static bool GetIntersectionStable(Vector3<T> const& a0, Vector3<T> const& a1,
+                                  Vector3<T> const& b0, Vector3<T> const& b1,
+                                  Vector3<T>* result) {
+  // Sort the two edges so that (a0,a1) is longer, breaking ties in a
+  // deterministic way that does not depend on the ordering of the endpoints.
+  // This is desirable for two reasons:
+  //  - So that the result doesn't change when edges are swapped or reversed.
+  //  - It reduces error, since the first edge is used to compute the edge
+  //    normal (where a longer edge means less error), and the second edge
+  //    is used for interpolation (where a shorter edge means less error).
+  T a_len2 = (a1 - a0).Norm2();
+  T b_len2 = (b1 - b0).Norm2();
+  if (a_len2 < b_len2 || (a_len2 == b_len2 && CompareEdges(a0, a1, b0, b1))) {
+    return GetIntersectionStableSorted(b0, b1, a0, a1, result);
+  } else {
+    return GetIntersectionStableSorted(a0, a1, b0, b1, result);
+  }
+}
+
+static bool GetIntersectionStableLD(S2Point const& a0, S2Point const& a1,
+                                    S2Point const& b0, S2Point const& b1,
+                                    S2Point* result) {
+  Vector3_ld result_ld;
+  if (GetIntersectionStable(Vector3_ld::Cast(a0), Vector3_ld::Cast(a1),
+                            Vector3_ld::Cast(b0), Vector3_ld::Cast(b1),
+                            &result_ld)) {
+    *result = S2Point::Cast(result_ld);
+    return true;
+  }
+  return false;
+}
+
+S2Point S2EdgeUtil::S2PointFromExact(Vector3_xf const& x) {
+  // TODO(ericv): In theory, this function may return S2Point(0, 0, 0) even
+  // though "x" is non-zero.  This happens when all components of "x" have
+  // absolute value less than about 1e-154, since in that case x.Norm2() is
+  // zero in double precision.  This could be fixed by scaling "x" by an
+  // appropriate power of 2 before the conversion.
+  return S2Point(x[0].ToDouble(), x[1].ToDouble(), x[2].ToDouble()).Normalize();
+}
+
+// Compute the intersection point of (a0, a1) and (b0, b1) using exact
+// arithmetic.  Note that the result is not exact because it is rounded to
+// double precision.  Also, the intersection point is not guaranteed to have
+// the correct sign (i.e., the return value may need to be negated).
+S2Point S2EdgeUtil::GetIntersectionExact(S2Point const& a0, S2Point const& a1,
+                                         S2Point const& b0, S2Point const& b1) {
+  // Since we are using exact arithmetic, we don't need to worry about
+  // numerical stability.
+  Vector3_xf a0_xf = Vector3_xf::Cast(a0);
+  Vector3_xf a1_xf = Vector3_xf::Cast(a1);
+  Vector3_xf b0_xf = Vector3_xf::Cast(b0);
+  Vector3_xf b1_xf = Vector3_xf::Cast(b1);
+  Vector3_xf a_norm_xf = a0_xf.CrossProd(a1_xf);
+  Vector3_xf b_norm_xf = b0_xf.CrossProd(b1_xf);
+  Vector3_xf x_xf = a_norm_xf.CrossProd(b_norm_xf);
+
+  // The final Normalize() call is done in double precision, which creates a
+  // directional error of up to DBL_EPSILON.  (ToDouble() and Normalize()
+  // each contribute up to 0.5 * DBL_EPSILON of directional error.)
+  S2Point x = S2EdgeUtil::S2PointFromExact(x_xf);
+
+  if (x == S2Point(0, 0, 0)) {
+    // The two edges are exactly collinear, but we still consider them to be
+    // "crossing" because of simulation of simplicity.  Out of the four
+    // endpoints, exactly two lie in the interior of the other edge.  Of
+    // those two we return the one that is lexicographically smallest.
+    x = S2Point(10, 10, 10);  // Greater than any valid S2Point
+    S2Point a_norm = S2EdgeUtil::S2PointFromExact(a_norm_xf);
+    S2Point b_norm = S2EdgeUtil::S2PointFromExact(b_norm_xf);
+    if (S2::OrderedCCW(b0, a0, b1, b_norm) && a0 < x) x = a0;
+    if (S2::OrderedCCW(b0, a1, b1, b_norm) && a1 < x) x = a1;
+    if (S2::OrderedCCW(a0, b0, a1, a_norm) && b0 < x) x = b0;
+    if (S2::OrderedCCW(a0, b1, a1, a_norm) && b1 < x) x = b1;
+  }
+  DCHECK(S2::IsUnitLength(x));
+  return x;
+}
+
+// Given three points "a", "x", "b", returns true if these three points occur
+// in the given order along the edge (a,b) to within the given tolerance.
+// More precisely, either "x" must be within "tolerance" of "a" or "b", or
+// when "x" is projected onto the great circle through "a" and "b" it must lie
+// along the edge (a,b) (i.e., the shortest path from "a" to "b").
+static bool ApproximatelyOrdered(S2Point const& a, S2Point const& x,
+                                 S2Point const& b, double tolerance) {
+  if ((x - a).Norm2() <= tolerance * tolerance) return true;
+  if ((x - b).Norm2() <= tolerance * tolerance) return true;
+  return S2::OrderedCCW(a, x, b, S2::RobustCrossProd(a, b).Normalize());
 }
 
 S2Point S2EdgeUtil::GetIntersection(S2Point const& a0, S2Point const& a1,
                                     S2Point const& b0, S2Point const& b1) {
   DCHECK_GT(RobustCrossing(a0, a1, b0, b1), 0);
 
-  // We use RobustCrossProd() to get accurate results even when two endpoints
-  // are close together, or when the two line segments are nearly parallel.
+  // It is difficult to compute the intersection point of two edges accurately
+  // when the angle between the edges is very small.  Previously we handled
+  // this by only guaranteeing that the returned intersection point is within
+  // kIntersectionError of each edge.  However, this means that when the edges
+  // cross at a very small angle, the computed result may be very far from the
+  // true intersection point.
+  //
+  // Instead this function now guarantees that the result is always within
+  // kIntersectionError of the true intersection.  This requires using more
+  // sophisticated techniques and in some cases extended precision.
+  //
+  // Three different techniques are implemented, but only two are used:
+  //
+  //  - GetIntersectionSimple() computes the intersection point using
+  //    numerically stable cross products in "long double" precision.
+  //
+  //  - GetIntersectionStable() computes the intersection point using
+  //    projection and interpolation, taking care to minimize cancellation
+  //    error.  This method exists in "double" and "long double" versions.
+  //
+  //  - GetIntersectionExact() computes the intersection point using exact
+  //    arithmetic and converts the final result back to an S2Point.
+  //
+  // We don't actually use the first method (GetIntersectionSimple) because it
+  // turns out that GetIntersectionStable() is twice as fast and also much
+  // more accurate (even in double precision).  The "long double" version
+  // (only available on Intel platforms) uses 80-bit precision and is about
+  // twice as slow.  The exact arithmetic version is about 100x slower.
+  //
+  // So our strategy is to first call GetIntersectionStable() in double
+  // precision; if that doesn't work and this platform supports "long double",
+  // then we try again in "long double"; if that doesn't work then we fall
+  // back to exact arithmetic.
 
-  Vector3_d a_norm = S2::RobustCrossProd(a0, a1).Normalize();
-  Vector3_d b_norm = S2::RobustCrossProd(b0, b1).Normalize();
-  S2Point x = S2::RobustCrossProd(a_norm, b_norm).Normalize();
+  static bool const kUseSimpleMethod = false;
+  static bool const kHasLongDouble = (numeric_limits<long double>::epsilon() <
+                                      numeric_limits<double>::epsilon());
+  S2Point result;
+  if (kUseSimpleMethod && GetIntersectionSimple(a0, a1, b0, b1, &result)) {
+    last_intersection_method_ = SIMPLE;
+  } else if (kUseSimpleMethod && kHasLongDouble &&
+             GetIntersectionSimpleLD(a0, a1, b0, b1, &result)) {
+    last_intersection_method_ = SIMPLE_LD;
+  } else if (GetIntersectionStable(a0, a1, b0, b1, &result)) {
+    last_intersection_method_ = STABLE;
+  } else if (kHasLongDouble &&
+             GetIntersectionStableLD(a0, a1, b0, b1, &result)) {
+    last_intersection_method_ = STABLE_LD;
+  } else {
+    result = GetIntersectionExact(a0, a1, b0, b1);
+    last_intersection_method_ = EXACT;
+  }
 
   // Make sure the intersection point is on the correct side of the sphere.
   // Since all vertices are unit length, and edges are less than 180 degrees,
   // (a0 + a1) and (b0 + b1) both have positive dot product with the
   // intersection point.  We use the sum of all vertices to make sure that the
-  // result is unchanged when the edges are reversed or exchanged.
+  // result is unchanged when the edges are swapped or reversed.
+  if (result.DotProd((a0 + a1) + (b0 + b1)) < 0) result = -result;
 
-  if (x.DotProd((a0 + a1) + (b0 + b1)) < 0) x = -x;
+  // Make sure that the intersection point lies on both edges.
+  DCHECK(ApproximatelyOrdered(a0, result, a1, kIntersectionError.radians()));
+  DCHECK(ApproximatelyOrdered(b0, result, b1, kIntersectionError.radians()));
 
-  // The calculation above is sufficient to ensure that "x" is within
-  // kIntersectionTolerance of the great circles through (a0,a1) and (b0,b1).
-  // However, if these two great circles are very close to parallel, it is
-  // possible that "x" does not lie between the endpoints of the given line
-  // segments.  In other words, "x" might be on the great circle through
-  // (a0,a1) but outside the range covered by (a0,a1).  In this case we do
-  // additional clipping to ensure that it does.
-
-  if (S2::OrderedCCW(a0, x, a1, a_norm) && S2::OrderedCCW(b0, x, b1, b_norm))
-    return x;
-
-  // Find the acceptable endpoint closest to x and return it.  An endpoint is
-  // acceptable if it lies between the endpoints of the other line segment.
-  double dmin2 = 10;
-  S2Point vmin = x;
-  if (S2::OrderedCCW(b0, a0, b1, b_norm)) ReplaceIfCloser(x, a0, &dmin2, &vmin);
-  if (S2::OrderedCCW(b0, a1, b1, b_norm)) ReplaceIfCloser(x, a1, &dmin2, &vmin);
-  if (S2::OrderedCCW(a0, b0, a1, a_norm)) ReplaceIfCloser(x, b0, &dmin2, &vmin);
-  if (S2::OrderedCCW(a0, b1, a1, a_norm)) ReplaceIfCloser(x, b1, &dmin2, &vmin);
-
-  DCHECK(S2::OrderedCCW(a0, vmin, a1, a_norm));
-  DCHECK(S2::OrderedCCW(b0, vmin, b1, b_norm));
-  return vmin;
+  return result;
 }
-
-// IEEE floating-point operations have a maximum error of 0.5 ULPS (units in
-// the last place).  For double-precision numbers, this works out to 2**-53
-// (about 1.11e-16) times the magnitude of the result.  It is possible to
-// analyze the calculation done by GetIntersection() and work out the
-// worst-case rounding error.  I have done a rough version of this, and my
-// estimate is that the worst case distance from the intersection point X to
-// the great circle through (a0, a1) is about 12 ULPS, or about 1.3e-15.
-// This needs to be increased by a factor of (1/0.866) to account for the
-// edge_splice_fraction() in S2PolygonBuilder.  Note that the maximum error
-// measured by the unittest in 1,000,000 trials is less than 3e-16.
-S1Angle const S2EdgeUtil::kIntersectionTolerance = S1Angle::Radians(1.5e-15);
 
 double S2EdgeUtil::GetDistanceFraction(S2Point const& x,
                                        S2Point const& a0, S2Point const& a1) {

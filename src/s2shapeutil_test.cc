@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2shapeutil.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "s2testing.h"
 
 namespace {
+
+using s2shapeutil::S2EdgeVectorShape;
 
 TEST(S2EdgeVectorShape, EdgeAccess) {
   S2EdgeVectorShape shape;

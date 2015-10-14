@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2regionunion.h"
@@ -64,8 +65,8 @@ S2RegionUnion* S2RegionUnion::Clone() const {
 }
 
 S2Cap S2RegionUnion::GetCapBound() const {
-  // TODO: This could be optimized to return a tighter bound, but doesn't
-  // seem worth it unless profiling shows otherwise.
+  // TODO(ericv): This could be optimized to return a tighter bound,
+  // but doesn't seem worth it unless profiling shows otherwise.
   return GetRectBound().GetCapBound();
 }
 

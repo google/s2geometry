@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //         jyrki@google.com (Jyrki Alakuijala)
 //
 // MurmurHash is a fast multiplication and shifting based algorithm,

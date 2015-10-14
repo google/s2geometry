@@ -12,11 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 #ifndef UTIL_BITS_BITS_H_
 #define UTIL_BITS_BITS_H_
 
 //
-// A collection of useful (static) bit-twiddling functions.
+// Various bit-twiddling functions, all of which are static members of the Bits
+// class (making it effectively a namespace). Operands are unsigned integers.
+// Munging bits in _signed_ integers is fraught with peril! For example,
+// -5 << n has undefined behavior (for some values of n).
+//
+// Bits provide the following:
+//
+//   * Count(Ones.*|LeadingZeros.*)? . In a similar vein, there's also the
+//     Find[LM]SBSetNonZero.* family of functions. You can think of them as
+//     (trailing|leading) zero bit count + 1. Also in a similar vein,
+//     (Capped)?Difference, which count the number of one bits in foo ^ bar.
+//
+//   * ReverseBits${power_of_two}
+//
+//   * Log2(Floor|Ceiling)(NonZero)?.* - The NonZero variants have undefined
+//     behavior if argument is 0.
+//
+//   * Bytes(ContainByte(LessThan)?|AllInRange) - These scan a sequence of bytes
+//     looking for one with(out)? some property.
+//
+//   * (Get|Set|Copy)Bits
+//
+// The only other thing is BitPattern, which is a trait class template (not in
+// Bits) containing a few bit patterns (which vary based on value of template
+// parameter).
 
 #include <glog/logging.h>
 
@@ -27,8 +52,10 @@
 
 class Bits {
  public:
-  // Forward declaration Helper class for UnsignedType.
-  template<int n>
+  // A traits class template for unsigned integer type sizes. Primary
+  // information contained herein is corresponding (unsigned) integer type.
+  // E.g. UnsignedTypeBySize<32>::Type is uint32. Used by UnsignedType.
+  template<int size /* in bytes */>
   struct UnsignedTypeBySize;
 
   // Auxilliary struct for figuring out an unsigned type for a given type.
@@ -133,10 +160,6 @@ class Bits {
 #endif
   }
 
-  // Portable implementations.
-  static int CountLeadingZeros32_Portable(uint32 n);
-  static int CountLeadingZeros64_Portable(uint64 n);
-
   // Reverse the bits in the given integer.
   static uint8 ReverseBits8(uint8 n);
   static uint32 ReverseBits32(uint32 n);
@@ -177,14 +200,6 @@ class Bits {
   static int FindLSBSetNonZero64(uint64 n);
   static int FindMSBSetNonZero(uint32 n) { return Log2FloorNonZero(n); }
   static int FindMSBSetNonZero64(uint64 n) { return Log2FloorNonZero64(n); }
-
-  // Portable implementations
-  static int Log2Floor_Portable(uint32 n);
-  static int Log2FloorNonZero_Portable(uint32 n);
-  static int FindLSBSetNonZero_Portable(uint32 n);
-  static int Log2Floor64_Portable(uint64 n);
-  static int Log2FloorNonZero64_Portable(uint64 n);
-  static int FindLSBSetNonZero64_Portable(uint64 n);
 
   // Viewing bytes as a stream of unsigned bytes, does that stream
   // contain any byte equal to c?
@@ -266,8 +281,30 @@ class Bits {
   static inline int PopcountWithBuiltin(UnsignedT n);
 #endif
 
+  // Portable implementations.
+  static int Log2Floor_Portable(uint32 n);
+  static int Log2Floor64_Portable(uint64 n);
+  static int Log2FloorNonZero_Portable(uint32 n);
+  static int Log2FloorNonZero64_Portable(uint64 n);
+  static int CountLeadingZeros32_Portable(uint32 n);
+  static int CountLeadingZeros64_Portable(uint64 n);
+  static int FindLSBSetNonZero_Portable(uint32 n);
+  static int FindLSBSetNonZero64_Portable(uint64 n);
+
   static const char num_bits[];
   DISALLOW_COPY_AND_ASSIGN(Bits);
+
+  // Allow tests to call _Portable variants directly.
+  // Originally, I wanted to depend on //testing/production_stub/public
+  // so that I would be able to
+  // #include "testing/production_stub/public/gunit_prod.h", which provides
+  // the previously mentioned header file says to instead
+  // #include "testing/base/gunit_prod.h". I cannot find a library that a)
+  // provides the alternative header file b) is visisble. Thus, I have thrown
+  // my hands up in frustration, and gone with raw friend instead of using the
+  // usual FRIEND_TEST macro. Hate the game, not the player.
+  friend class Bits_Port32_Test;
+  friend class Bits_Port64_Test;
 };
 
 // A utility class for some handy bit patterns.  The names l and h

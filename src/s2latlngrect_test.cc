@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 //
 // Most of the S2LatLngRect methods have trivial implementations that
@@ -22,7 +23,7 @@
 
 #include <algorithm>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "util/coding/coder.h"
 #include "s2cap.h"
 #include "s2cell.h"

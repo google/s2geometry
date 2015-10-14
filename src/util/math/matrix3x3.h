@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // A simple class to handle 3x3 matrices
 // The aim of this class is to be able to manipulate 3x3 matrices
@@ -75,21 +76,6 @@ class Matrix3x3 {
     m_[2][2] = m22;
   }
 
-  // Copy constructor
-  Matrix3x3(const Matrix3x3 &mb) {
-    m_[0][0] = mb.m_[0][0];
-    m_[0][1] = mb.m_[0][1];
-    m_[0][2] = mb.m_[0][2];
-
-    m_[1][0] = mb.m_[1][0];
-    m_[1][1] = mb.m_[1][1];
-    m_[1][2] = mb.m_[1][2];
-
-    m_[2][0] = mb.m_[2][0];
-    m_[2][1] = mb.m_[2][1];
-    m_[2][2] = mb.m_[2][2];
-  }
-
   // Casting constructor
   template <class VType2>
   static Self Cast(const Matrix3x3<VType2> &mb) {
@@ -120,22 +106,6 @@ class Matrix3x3 {
     m_[2][0] = m20;
     m_[2][1] = m21;
     m_[2][2] = m22;
-    return (*this);
-  }
-
-  // Copy
-  inline Self& operator=(const Self &mb) {
-    m_[0][0] = mb.m_[0][0];
-    m_[0][1] = mb.m_[0][1];
-    m_[0][2] = mb.m_[0][2];
-
-    m_[1][0] = mb.m_[1][0];
-    m_[1][1] = mb.m_[1][1];
-    m_[1][2] = mb.m_[1][2];
-
-    m_[2][0] = mb.m_[2][0];
-    m_[2][1] = mb.m_[2][1];
-    m_[2][2] = mb.m_[2][2];
     return (*this);
   }
 
@@ -589,7 +559,6 @@ typedef Matrix3x3<double> Matrix3x3_d;
 // TODO(user): Matrix3x3<T> does not actually satisfy the definition of a
 // POD type even when T is a POD. Pretending that Matrix3x3<T> is a POD
 // probably won't cause immediate problems, but eventually this should be fixed.
-PROPAGATE_POD_FROM_TEMPLATE_ARGUMENT(Matrix3x3);
 
 
 #endif  // UTIL_MATH_MATRIX3X3_H__

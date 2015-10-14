@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // Utility functions for operating on StringPieces
 // Collected here for convenience
@@ -147,6 +148,15 @@ stringpiece_ssize_type FindIgnoreCase(StringPiece haystack, StringPiece needle);
 inline bool ConsumeCasePrefix(StringPiece* s, StringPiece expected) {
   if (StartsWithIgnoreCase(*s, expected)) {
     s->remove_prefix(expected.size());
+    return true;
+  }
+  return false;
+}
+
+// Like ConsumeSuffix, but case insensitive.
+inline bool ConsumeCaseSuffix(StringPiece* s, StringPiece expected) {
+  if (EndsWithIgnoreCase(*s, expected)) {
+    s->remove_suffix(expected.size());
     return true;
   }
   return false;

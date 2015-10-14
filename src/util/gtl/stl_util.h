@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // #status: RECOMMENDED
 // #category: Utility functions.
@@ -80,6 +81,26 @@ inline void STLSortAndRemoveDuplicates(T* v, const LessFunc& less_func) {
 template<typename T>
 inline void STLSortAndRemoveDuplicates(T* v) {
   std::sort(v->begin(), v->end());
+  v->erase(std::unique(v->begin(), v->end()), v->end());
+}
+
+// Stable sorts and removes duplicates from a sequence container, retaining
+// the first equivalent element for each equivalence set.
+// The 'less_func' is used to compose an equivalence comparator for the sorting
+// and uniqueness tests.
+template <typename T, typename LessFunc>
+inline void STLStableSortAndRemoveDuplicates(T* v, const LessFunc& less_func) {
+  std::stable_sort(v->begin(), v->end(), less_func);
+  v->erase(std::unique(v->begin(), v->end(),
+                       util::gtl::internal::Equiv<LessFunc>(less_func)),
+           v->end());
+}
+// Stable sorts and removes duplicates from a sequence container, retaining
+// the first equivalent element for each equivalence set, using < comparison and
+// == equivalence testing.
+template <typename T>
+inline void STLStableSortAndRemoveDuplicates(T* v) {
+  std::stable_sort(v->begin(), v->end());
   v->erase(std::unique(v->begin(), v->end()), v->end());
 }
 
@@ -455,7 +476,7 @@ class TemplatedElementDeleter : public BaseDeleter {
 };
 
 // ElementDeleter is an RAII (go/raii) object that deletes the elements in the
-// given container when it goes out of scope. This is similar to scoped_ptr<>
+// given container when it goes out of scope. This is similar to std::unique_ptr<>
 // except that a container's elements will be deleted rather than the container
 // itself.
 //
@@ -584,17 +605,17 @@ namespace stl_util_internal {
 
 // Poor-man's std::is_function.
 // Doesn't handle default parameters or variadics.
-template <typename T> struct IsFunc : base::false_type {};
+template <typename T> struct IsFunc : std::false_type {};
 template <typename R>
-struct IsFunc<R()> : base::true_type {};
+struct IsFunc<R()> : std::true_type {};
 template <typename R, typename T1>
-struct IsFunc<R(T1)> : base::true_type {};
+struct IsFunc<R(T1)> : std::true_type {};
 template <typename R, typename T1, typename T2>
-struct IsFunc<R(T1, T2)> : base::true_type {};
+struct IsFunc<R(T1, T2)> : std::true_type {};
 template <typename R, typename T1, typename T2, typename T3>
-struct IsFunc<R(T1, T2, T3)> : base::true_type {};
+struct IsFunc<R(T1, T2, T3)> : std::true_type {};
 template <typename R, typename T1, typename T2, typename T3, typename T4>
-struct IsFunc<R(T1, T2, T3, T4)> : base::true_type {};
+struct IsFunc<R(T1, T2, T3, T4)> : std::true_type {};
 
 // Like std::less, but allows heterogeneous arguments.
 struct TransparentLess {
@@ -650,7 +671,7 @@ void STLSetDifference(const In1& a, const In2& b, Out* out, Compare compare) {
 // overload resolution if 'out' is a function pointer, gracefully forcing
 // the 3-argument overload that treats the third argument as a comparator.
 template<typename In1, typename In2, typename Out>
-typename base::enable_if<!util::gtl::stl_util_internal::IsFunc<Out>::value,
+typename std::enable_if<!util::gtl::stl_util_internal::IsFunc<Out>::value,
                          void>::type
 STLSetDifference(const In1& a, const In2& b, Out* out) {
   STLSetDifference(a, b, out, util::gtl::stl_util_internal::TransparentLess());
@@ -712,7 +733,7 @@ void STLSetUnion(const In1& a, const In2& b, Out* out, Compare compare) {
 // overload resolution if 'out' is a function pointer, gracefully forcing
 // the 3-argument overload that treats the third argument as a comparator.
 template<typename In1, typename In2, typename Out>
-typename base::enable_if<!util::gtl::stl_util_internal::IsFunc<Out>::value,
+typename std::enable_if<!util::gtl::stl_util_internal::IsFunc<Out>::value,
                          void>::type
 STLSetUnion(const In1& a, const In2& b, Out *out) {
   return STLSetUnion(a, b, out,
@@ -771,7 +792,7 @@ void STLSetSymmetricDifference(const In1& a, const In2& b, Out* out,
 // overload resolution if 'out' is a function pointer, gracefully forcing
 // the 3-argument overload that treats the third argument as a comparator.
 template<typename In1, typename In2, typename Out>
-typename base::enable_if<!util::gtl::stl_util_internal::IsFunc<Out>::value,
+typename std::enable_if<!util::gtl::stl_util_internal::IsFunc<Out>::value,
                          void>::type
 STLSetSymmetricDifference(const In1& a, const In2& b, Out* out) {
   return STLSetSymmetricDifference(
@@ -830,7 +851,7 @@ void STLSetIntersection(const In1& a, const In2& b, Out* out, Compare compare) {
 // overload resolution if 'out' is a function pointer, gracefully forcing
 // the 3-argument overload that treats the third argument as a comparator.
 template<typename In1, typename In2, typename Out>
-typename base::enable_if<!util::gtl::stl_util_internal::IsFunc<Out>::value,
+typename std::enable_if<!util::gtl::stl_util_internal::IsFunc<Out>::value,
                          void>::type
 STLSetIntersection(const In1& a, const In2& b, Out* out) {
   return STLSetIntersection(

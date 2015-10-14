@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2CELL_H_
-#define UTIL_GEOMETRY_S2CELL_H_
+#ifndef S2_GEOMETRY_S2CELL_H_
+#define S2_GEOMETRY_S2CELL_H_
 
 #include <glog/logging.h>
 
 #include "base/integral_types.h"
+#include "fpcontractoff.h"
 #include "r2rect.h"
 #include "s1chordangle.h"
 #include "s2.h"
@@ -69,11 +71,11 @@ class S2Cell : public S2Region {
   explicit S2Cell(S2Point const& p) { Init(S2CellId::FromPoint(p)); }
   explicit S2Cell(S2LatLng const& ll) { Init(S2CellId::FromLatLng(ll)); }
 
-  inline S2CellId id() const { return id_; }
-  inline int face() const { return face_; }
-  inline int level() const { return level_; }
-  inline int orientation() const { return orientation_; }
-  inline bool is_leaf() const { return level_ == S2CellId::kMaxLevel; }
+  S2CellId id() const { return id_; }
+  int face() const { return face_; }
+  int level() const { return level_; }
+  int orientation() const { return orientation_; }
+  bool is_leaf() const { return level_ == S2CellId::kMaxLevel; }
 
   // These are equivalent to the S2CellId methods, but have a more efficient
   // implementation since the level has been precomputed.
@@ -162,8 +164,8 @@ class S2Cell : public S2Region {
 
   // Return the latitude or longitude of the cell vertex given by (i,j),
   // where "i" and "j" are either 0 or 1.
-  inline double GetLatitude(int i, int j) const;
-  inline double GetLongitude(int i, int j) const;
+  double GetLatitude(int i, int j) const;
+  double GetLongitude(int i, int j) const;
 
   double VertexChordDist2(S2Point const& target, int i, int j) const;
   bool UEdgeIsClosest(S2Point const& target, int v_end) const;
@@ -185,4 +187,4 @@ inline double S2Cell::GetSizeST() const {
   return S2CellId::GetSizeST(level());
 }
 
-#endif  // UTIL_GEOMETRY_S2CELL_H_
+#endif  // S2_GEOMETRY_S2CELL_H_

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 //
 // Author: Jeffrey Rennie
@@ -69,19 +70,6 @@ template<> struct hash<unsigned int> {
     return static_cast<size_t>(n);
   }
 };
-
-// Avoid collision with definition in util/hash/hash.h.
-// Please include that file if you need this specialization.
-// TODO(koda): Remove this after making its users include hash.h.
-#if !defined(HAVE_DEFINED_HASH_FOR_POINTERS) && !defined(LIBCXX)
-#define HAVE_DEFINED_HASH_FOR_POINTERS
-template<typename T> struct hash<T*> {
-  size_t operator()(T *x) const {
-    size_t k = reinterpret_cast<size_t>(x);
-    return k + (k >> 6);
-  }
-};
-#endif
 
 // If the 3rd template parameter of the GNU interface (KeyEqual) is
 // omitted, then we know that it's using the == operator, so we can

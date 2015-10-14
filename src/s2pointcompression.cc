@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+
 #include "s2pointcompression.h"
 
 #include <utility>
@@ -61,9 +62,7 @@ struct FaceRun {
 
   bool Decode(Decoder* decoder) {
     uint64 face_and_count;
-    if (!decoder->get_varint64(&face_and_count)) {
-      return false;
-    }
+    if (!decoder->get_varint64(&face_and_count)) return false;
 
     face = face_and_count % S2CellId::kNumFaces;
     count = face_and_count / S2CellId::kNumFaces;
@@ -138,9 +137,7 @@ void Faces::Encode(Encoder* encoder) const {
 bool Faces::Decode(int num_vertices, Decoder* decoder) {
   for (int num_faces_parsed = 0; num_faces_parsed < num_vertices; ) {
     FaceRun face_run;
-    if (!face_run.Decode(decoder)) {
-      return false;
-    }
+    if (!face_run.Decode(decoder)) return false;
     faces_.push_back(face_run);
 
     num_faces_parsed += face_run.count;

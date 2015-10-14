@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2loop.h"
@@ -59,6 +60,13 @@ DEFINE_bool(
     "never queried, for example when loops are passed directly to S2Polygon, "
     "or when geometry is being converted from one format to another.");
 
+// The maximum number of vertices we'll allow when decoding a loop.
+// The default value of 50 million is about 30x bigger than the number of
+DEFINE_int32(
+    s2polygon_decode_max_num_vertices, 50000000,
+    "The upper limit on the number of loops that are allowed by the "
+    "S2Polygon::Decode method.");
+
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
 // Boolean properties for compressed loops.
@@ -75,6 +83,7 @@ S2Loop::S2Loop()
     vertices_(NULL),
     owns_vertices_(false),
     s2debug_override_(ALLOW_S2DEBUG),
+    origin_inside_(false),
     shape_(this) {
   // Some fields are initialized by Init().  The loop is not valid until then.
 }
@@ -266,7 +275,7 @@ void S2Loop::InitBound() {
 }
 
 void S2Loop::InitIndex() {
-  index_.Insert(&shape_);
+  index_.Add(&shape_);
   if (!FLAGS_s2loop_lazy_indexing) {
     index_.ForceApplyUpdates();  // Force index construction now.
   }
@@ -409,7 +418,7 @@ double S2Loop::GetArea() const {
   // loop vertices).  The big advantage of this method is that as long as we
   // use S2::RobustCCW() to compute the turning angle at each vertex, then
   // degeneracies are always handled correctly.  In other words, if a
-  // degenerate loop is CCW according the the symbolic perturbations used by
+  // degenerate loop is CCW according to the symbolic perturbations used by
   // S2::RobustCCW(), then its turning angle will be approximately 2*Pi.
   //
   // The disadvantage of the Gauss-Bonnet method is that its absolute error is
@@ -754,9 +763,14 @@ bool S2Loop::DecodeWithinScope(Decoder* const decoder) {
 
 bool S2Loop::DecodeInternal(Decoder* const decoder,
                             bool within_scope) {
-  // Perform all checks before modifying vertex state.
+  // Perform all checks before modifying vertex state. Empty loops are
+  // explicitly allowed here: a newly created loop has zero vertices
+  // and such loops encode and decode properly.
   if (decoder->avail() < sizeof(uint32)) return false;
-  int const num_vertices = decoder->get32();
+  uint32 const num_vertices = decoder->get32();
+  if (num_vertices > FLAGS_s2polygon_decode_max_num_vertices) {
+    return false;
+  }
   if (decoder->avail() < (num_vertices * sizeof(*vertices_) +
                           sizeof(uint8) + sizeof(uint32))) {
     return false;
@@ -788,7 +802,15 @@ bool S2Loop::DecodeInternal(Decoder* const decoder,
   depth_ = decoder->get32();
   if (!bound_.Decode(decoder)) return false;
   subregion_bound_ = S2EdgeUtil::RectBounder::ExpandForSubregions(bound_);
-  InitIndex();
+
+  // An initialized loop will have some non-zero count of vertices. A default
+  // (uninitialized) has zero vertices. This code supports encoding and
+  // decoding of uninitialized loops, but we only want to call InitIndex for
+  // initialized loops. Otherwise we defer InitIndex until the call to Init().
+  if (num_vertices > 0) {
+    InitIndex();
+  }
+
   return true;
 }
 
@@ -1389,6 +1411,14 @@ bool S2Loop::ContainsNested(S2Loop const* b) const {
                                    b->vertex(0), b->vertex(2));
 }
 
+bool S2Loop::Equals(S2Loop const* b) const {
+  if (num_vertices() != b->num_vertices()) return false;
+  for (int i = 0; i < num_vertices(); ++i) {
+    if (vertex(i) != b->vertex(i)) return false;
+  }
+  return true;
+}
+
 bool S2Loop::BoundaryEquals(S2Loop const* b) const {
   if (num_vertices() != b->num_vertices()) return false;
 
@@ -1499,9 +1529,6 @@ void S2Loop::GetXYZFaceSiTiVertices(S2XYZFaceSiTi* vertices) const {
 
 void S2Loop::EncodeCompressed(Encoder* encoder, S2XYZFaceSiTi const* vertices,
                               int snap_level) const {
-  // All methods require valid polygons.
-  if (FLAGS_s2debug) CHECK(IsValid());
-
   // Ensure enough for the data we write before S2EncodePointsCompressed.
   // S2EncodePointsCompressed ensures its space.
   encoder->Ensure(Encoder::kVarintMax32);
@@ -1527,6 +1554,10 @@ bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
   // Decode to a temporary variable to avoid reinterpret_cast.
   uint32 unsigned_num_vertices;
   if (!decoder->get_varint32(&unsigned_num_vertices)) {
+    return false;
+  }
+  if (unsigned_num_vertices == 0 ||
+      unsigned_num_vertices > FLAGS_s2polygon_decode_max_num_vertices) {
     return false;
   }
   ResetMutableFields();
@@ -1602,3 +1633,4 @@ S2Loop* S2Loop::MakeRegularLoop(S2Point const& center,
   }
   return new S2Loop(vertices);
 }
+

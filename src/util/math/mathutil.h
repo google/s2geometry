@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // This class is intended to contain a collection of useful (static)
 // mathematical functions, properly coded (by consulting numerical
@@ -243,7 +244,7 @@ class MathUtil {
   // This implementation is correct, meaning there is never any precision loss,
   // and there is never an overflow. However, if the type is signed, having
   // numerator == MathLimits<IntegralType>::kMin and denominator == -1 is not a
-  // valid input, because kMin has a greater absolute value that kMax.
+  // valid input, because kMin has a greater absolute value than kMax.
   //
   // Input validity is DCHECKed. When not in debug mode, invalid inputs raise
   // SIGFPE.
@@ -771,7 +772,7 @@ class MathUtil {
   // for finite values of x and y.
   //
   // standard_error is the corresponding MathLimits<T>::kStdError constant.
-  // It is equivalent to 5 bits of mantissa error. See
+  // It is equivalent to 5 bits of mantissa error. See util/math/mathlimits.cc.
   //
   // Caveat:
   // AlmostEquals() is not appropriate for checking long sequences of

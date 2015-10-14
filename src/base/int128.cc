@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // All Rights Reserved.
 //
 
@@ -87,22 +88,20 @@ void uint128::DivModImpl(uint128 dividend, uint128 divisor,
   }
 
   uint128 denominator = divisor;
-  uint128 position = 1;
   uint128 quotient = 0;
 
   // Left aligns the MSB of the denominator and the dividend.
-  int shift = Fls128(dividend) - Fls128(denominator);
+  const int shift = Fls128(dividend) - Fls128(denominator);
   denominator <<= shift;
-  position <<= shift;
 
   // Uses shift-subtract algorithm to divide dividend by denominator. The
   // remainder will be left in dividend.
-  while (position > 0) {
+  for (int i = 0; i <= shift; ++i) {
+    quotient <<= 1;
     if (dividend >= denominator) {
       dividend -= denominator;
-      quotient |= position;
+      quotient |= 1;
     }
-    position >>= 1;
     denominator >>= 1;
   }
 

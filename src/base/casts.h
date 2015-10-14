@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // Various Google-specific casting templates.
 //
@@ -103,8 +104,8 @@ inline To down_cast(From* f) {                   // so we only accept pointers
 // compiler will just bind From to const T.
 template<typename To, typename From>
 inline To down_cast(From& f) {
-  COMPILE_ASSERT(base::is_reference<To>::value, target_type_not_a_reference);
-  typedef typename base::remove_reference<To>::type* ToAsPointer;
+  COMPILE_ASSERT(std::is_reference<To>::value, target_type_not_a_reference);
+  typedef typename std::remove_reference<To>::type* ToAsPointer;
   if (false) {
     // Compile-time check that To inherits from From. See above for details.
     ::implicit_cast<From*, ToAsPointer>(NULL);

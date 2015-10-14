@@ -12,22 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // DO NOT use the CharSet(const char*) constructor in new codes as it will be
 // obsolete sometime in Q1 of 2013. Use the explicit CharSet(StringPiece)
 // constructor instead.
-//
-// The plan of migrating away from CharSet(const char*) is the following.
-//
-// 1. Check in the replacement constructor -- done at CL/38145114.
-//    arguments -- 16 identified so far.
-// 3. Replace callers of identified functions passing in a const char* like
-//      foo("a const char*")
-//    by
-//      foo(CharSet("a const char*"))
-//    and send such CLs for review by respective code OWNERs.
-// 4. Run TAP global presubmit to catch missing call sites and fix them.
-// 5. Remove the CharSet(const char*) constructor from this header file.
 
 #ifndef STRINGS_CHARSET_H_
 #define STRINGS_CHARSET_H_
@@ -55,8 +44,6 @@ namespace strings {
 // This class is thread-compatible.
 //
 // This class has an implicit constructor.
-// Style guide exception granted:
-// http://goto/style-guide-exception-20978288
 
 class CharSet {
  public:

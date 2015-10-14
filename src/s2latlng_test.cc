@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2latlng.h"
+
+#include <cstdio>
 
 #include <glog/logging.h>
 
 #include "base/macros.h"
 #include "base/stringprintf.h"
-#include "strings/split.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "s2testing.h"
 
 TEST(S2LatLng, TestBasic) {
@@ -125,11 +127,8 @@ TEST(S2LatLng, TestToString) {
     string output;
     p.ToStringInDegrees(&output);
 
-    const char *ptr = output.c_str();
     double lat, lng;
-    EXPECT_TRUE(SplitOneDoubleToken(&ptr, ",", &lat));
-    ASSERT_TRUE(ptr != NULL);
-    EXPECT_TRUE(SplitOneDoubleToken(&ptr, ",", &lng));
+    ASSERT_EQ(2, std::sscanf(output.c_str(), "%lf,%lf", &lat, &lng));
     EXPECT_NEAR(values[i].expected_lat, lat, 1e-8);
     EXPECT_NEAR(values[i].expected_lng, lng, 1e-8);
   }
@@ -141,4 +140,5 @@ TEST(S2LatLng, TestToStringReturnsString) {
   S2LatLng::FromDegrees(0, 1).ToStringInDegrees(&s);
   EXPECT_EQ(S2LatLng::FromDegrees(0, 1).ToStringInDegrees(), s);
 }
+
 

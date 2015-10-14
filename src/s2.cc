@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2.h"
@@ -46,15 +47,15 @@ unsigned int const S2::kMaxSiTi;
 // |x| denotes either absolute value or the L2-norm as appropriate, and
 // e = 0.5*DBL_EPSILON.  Similarly,
 //
-//  fl(B.C) = B.C + d where |d| <= (|B.C| + 2*|B|*|C|) * e .
+//  fl(B.C) = B.C + d where |d| <= (1.5*|B.C| + 1.5*|B|*|C|) * e .
 //
 // Applying these bounds to the unit-length vectors A,B,C and neglecting
 // relative error (which does not affect the sign of the result), we get
 //
-//  fl((AxB).C) = (AxB).C + d where |d| <= (3 + 2/sqrt(3)) * e
+//  fl((AxB).C) = (AxB).C + d where |d| <= (2.5 + 2/sqrt(3)) * e
 //
-// which is about 4.1548 * e, or 2.0774 * DBL_EPSILON.
-double const S2::kMaxDetError = 2.0774 * DBL_EPSILON;
+// which is about 3.6548 * e, or 1.8274 * DBL_EPSILON.
+double const S2::kMaxDetError = 1.8274 * DBL_EPSILON;
 
 int const S2::kFaceUVWFaces[6][3][2] = {
   { { 4, 1 }, { 5, 2 }, { 3, 0 } },
@@ -351,7 +352,7 @@ int S2::ExactCCW(S2Point const& a, S2Point const& b, S2Point const& c) {
     // sign of the determinant.
     det_sign = SymbolicallyPerturbedCCW(xa, xb, xc, xb_cross_xc);
   }
-  DCHECK(det_sign != 0);
+  DCHECK_NE(0, det_sign);
   return perm_sign * det_sign;
 }
 
@@ -443,36 +444,36 @@ static int SymbolicallyPerturbedCCW(
   // some of the signs are different because the opposite cross product is
   // used (e.g., B x C rather than C x B).
 
-  int det_sign = b_cross_c[2].sgn();           // da[2]
+  int det_sign = b_cross_c[2].sgn();            // da[2]
   if (det_sign != 0) return det_sign;
-  det_sign = b_cross_c[1].sgn();               // da[1]
+  det_sign = b_cross_c[1].sgn();                // da[1]
   if (det_sign != 0) return det_sign;
-  det_sign = b_cross_c[0].sgn();               // da[0]
+  det_sign = b_cross_c[0].sgn();                // da[0]
   if (det_sign != 0) return det_sign;
 
-  det_sign = (c[0]*a[1] - c[1]*a[0]).sgn();    // db[2]
+  det_sign = (c[0]*a[1] - c[1]*a[0]).sgn();     // db[2]
   if (det_sign != 0) return det_sign;
-  det_sign = c[0].sgn();                       // db[2] * da[1]
+  det_sign = c[0].sgn();                        // db[2] * da[1]
   if (det_sign != 0) return det_sign;
-  det_sign = -(c[1].sgn());                    // db[2] * da[0]
+  det_sign = -(c[1].sgn());                     // db[2] * da[0]
   if (det_sign != 0) return det_sign;
-  det_sign = (c[2]*a[0] - c[0]*a[2]).sgn();    // db[1]
+  det_sign = (c[2]*a[0] - c[0]*a[2]).sgn();     // db[1]
   if (det_sign != 0) return det_sign;
-  det_sign = c[2].sgn();                       // db[1] * da[0]
+  det_sign = c[2].sgn();                        // db[1] * da[0]
   if (det_sign != 0) return det_sign;
   // The following test is listed in the paper, but it is redundant because
   // the previous tests guarantee that C == (0, 0, 0).
-  DCHECK_EQ(0, (c[1]*a[2] - c[2]*a[1]).sgn()); // db[0]
+  DCHECK_EQ(0, (c[1]*a[2] - c[2]*a[1]).sgn());  // db[0]
 
-  det_sign = (a[0]*b[1] - a[1]*b[0]).sgn();    // dc[2]
+  det_sign = (a[0]*b[1] - a[1]*b[0]).sgn();     // dc[2]
   if (det_sign != 0) return det_sign;
-  det_sign = -(b[0].sgn());                    // dc[2] * da[1]
+  det_sign = -(b[0].sgn());                     // dc[2] * da[1]
   if (det_sign != 0) return det_sign;
-  det_sign = b[1].sgn();                       // dc[2] * da[0]
+  det_sign = b[1].sgn();                        // dc[2] * da[0]
   if (det_sign != 0) return det_sign;
-  det_sign = a[0].sgn();                       // dc[2] * db[1]
+  det_sign = a[0].sgn();                        // dc[2] * db[1]
   if (det_sign != 0) return det_sign;
-  return 1;                                    // dc[2] * db[1] * da[0]
+  return 1;                                     // dc[2] * db[1] * da[0]
 }
 
 double S2::Angle(S2Point const& a, S2Point const& b, S2Point const& c) {

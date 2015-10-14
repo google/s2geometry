@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2POINTREGION_H__
-#define UTIL_GEOMETRY_S2POINTREGION_H__
+#ifndef S2_GEOMETRY_S2POINTREGION_H__
+#define S2_GEOMETRY_S2POINTREGION_H__
 
 #include <glog/logging.h>
 
 #include "base/macros.h"
+#include "fpcontractoff.h"
 #include "s2.h"
 #include "s2region.h"
 
@@ -34,7 +36,7 @@ class S2LatLngRect;
 class S2PointRegion : public S2Region {
  public:
   // Create a region containing the given point, which must be unit length.
-  inline explicit S2PointRegion(S2Point const& point);
+  explicit S2PointRegion(S2Point const& point);
 
   ~S2PointRegion();
 
@@ -52,7 +54,7 @@ class S2PointRegion : public S2Region {
     return Contains(p);
   }
   bool Contains(S2Point const& p) const { return (point_ == p); }
-  virtual void Encode(Encoder* const encoder) const; 
+  virtual void Encode(Encoder* const encoder) const;
   // Ensures the decoded point has unit length.
   virtual bool Decode(Decoder* const decoder);
 
@@ -62,8 +64,8 @@ class S2PointRegion : public S2Region {
   DISALLOW_COPY_AND_ASSIGN(S2PointRegion);
 };
 
-S2PointRegion::S2PointRegion(S2Point const& point) : point_(point) {
+inline S2PointRegion::S2PointRegion(S2Point const& point) : point_(point) {
   DCHECK(S2::IsUnitLength(point));
 }
 
-#endif  // UTIL_GEOMETRY_S2POINTREGION_H__
+#endif  // S2_GEOMETRY_S2POINTREGION_H__

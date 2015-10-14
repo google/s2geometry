@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 // This file provides a few functions for hashing strings.  On x86-64
 // hardware as of early 2010, CityHash64() is much faster than

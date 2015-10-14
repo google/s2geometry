@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+
 #include "s2pointcompression.h"
 
 #include <stddef.h>
@@ -21,13 +22,14 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "util/coding/coder.h"
 #include "s1angle.h"
 #include "s2.h"
 #include "s2cellid.h"
 #include "s2testing.h"
+#include "s2textformat.h"
 #include "util/gtl/fixedarray.h"
 
 using std::vector;
@@ -155,9 +157,9 @@ class S2PointCompressionTest : public ::testing::Test {
     Decode(loop.size(), level, &points[0]);
 
     EXPECT_TRUE(PointsEqual(&loop[0], loop.size(), &points[0], points.size()))
-        << "Decoded points\n" << S2Testing::ToString(points)
+        << "Decoded points\n" << s2textformat::ToString(points)
         << "\ndo not match original points\n"
-        << S2Testing::ToString(loop);
+        << s2textformat::ToString(loop);
   }
 
   Encoder encoder_;

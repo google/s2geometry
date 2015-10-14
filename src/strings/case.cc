@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: jyrki@google.com (Jyrki Alakuijala)
 // Refactored from contributions of various authors in strings/strutil.cc
 //
@@ -37,17 +38,14 @@ CapsType GetCapitalization(const char* s) {
   if (!*s) return firstcapstype;
   const CapsType capstype = (ascii_islower(*s)) ? CAPS_LOWER : CAPS_UPPER;
 
-  if (firstcapstype == CAPS_LOWER &&
-      capstype == CAPS_UPPER)
-    return CAPS_MIXED;
+  if (firstcapstype == CAPS_LOWER && capstype == CAPS_UPPER) return CAPS_MIXED;
 
   for (; *s; ++s)
     if ((ascii_isupper(*s) && capstype != CAPS_UPPER) ||
         (ascii_islower(*s) && capstype != CAPS_LOWER))
       return CAPS_MIXED;
 
-  if (firstcapstype == CAPS_UPPER && capstype == CAPS_LOWER)
-    return CAPS_FIRST;
+  if (firstcapstype == CAPS_UPPER && capstype == CAPS_LOWER) return CAPS_FIRST;
   return capstype;
 }
 
@@ -77,15 +75,14 @@ void LowerString(string* s) {
 }
 
 void LowerStringToBuf(const char* s, char* buf, int n) {
-  for (int i = 0; i < n-1; i++) {
+  for (int i = 0; i < n - 1; i++) {
     char c = s[i];
     buf[i] = ascii_tolower(c);
     if (c == '\0') {
       return;
     }
   }
-  if (n > 0)
-    buf[n-1] = '\0';
+  if (n > 0) buf[n - 1] = '\0';
 }
 
 void UpperString(char* s) {
@@ -101,18 +98,17 @@ void UpperString(string* s) {
 }
 
 void UpperStringToBuf(const char* s, char* buf, int n) {
-  for (int i = 0; i < n-1; i++) {
+  for (int i = 0; i < n - 1; i++) {
     char c = s[i];
     buf[i] = ascii_toupper(c);
     if (c == '\0') {
       return;
     }
   }
-  if (n > 0)
-    buf[n-1] = '\0';
+  if (n > 0) buf[n - 1] = '\0';
 }
 
-void TitlecaseString(string *s, StringPiece delimiters) {
+void TitlecaseString(string* s, StringPiece delimiters) {
   bool upper = true;
   for (string::iterator ss = s->begin(); ss != s->end(); ++ss) {
     if (upper) {

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 //
 //
 // These routines provide mem versions of standard C string routines,
@@ -67,51 +68,51 @@
 
 #include "base/port.h"   // disable some warnings on Windows
 
-inline char *memcat(char *dest, size_t destlen,
-                    const char *src, size_t srclen) {
+inline char* memcat(char* dest, size_t destlen,
+                    const char* src, size_t srclen) {
   return reinterpret_cast<char*>(memcpy(dest + destlen, src, srclen));
 }
 
-int memcasecmp(const char *s1, const char *s2, size_t len);
-char *memdup(const char *s, size_t slen);
-char *memrchr(const char *s, int c, size_t slen);
-size_t memspn(const char *s, size_t slen, const char *accept);
-size_t memcspn(const char *s, size_t slen, const char *reject);
-char *mempbrk(const char *s, size_t slen, const char *accept);
+int memcasecmp(const char* s1, const char* s2, size_t len);
+char* memdup(const char* s, size_t slen);
+char* memrchr(const char* s, int c, size_t slen);
+size_t memspn(const char* s, size_t slen, const char* accept);
+size_t memcspn(const char* s, size_t slen, const char* reject);
+char* mempbrk(const char* s, size_t slen, const char* accept);
 
 // This is for internal use only.  Don't call this directly
-template<bool case_sensitive>
-const char * int_memmatch(const char * phaystack, size_t haylen,
-                          const char * pneedle, size_t neelen);
+template <bool case_sensitive>
+const char* int_memmatch(const char* phaystack, size_t haylen,
+                         const char* pneedle, size_t neelen);
 
 // These are the guys you can call directly
-inline const char * memstr(const char *phaystack, size_t haylen,
-                           const char *pneedle) {
+inline const char* memstr(const char* phaystack, size_t haylen,
+                          const char* pneedle) {
   return int_memmatch<true>(phaystack, haylen, pneedle, strlen(pneedle));
 }
 
-inline const char * memcasestr(const char *phaystack, size_t haylen,
-                               const char *pneedle) {
+inline const char* memcasestr(const char* phaystack, size_t haylen,
+                              const char* pneedle) {
   return int_memmatch<false>(phaystack, haylen, pneedle, strlen(pneedle));
 }
 
-inline const char * memmem(const char *phaystack, size_t haylen,
-                           const char *pneedle, size_t needlelen) {
+inline const char* memmem(const char* phaystack, size_t haylen,
+                          const char* pneedle, size_t needlelen) {
   return int_memmatch<true>(phaystack, haylen, pneedle, needlelen);
 }
 
-inline const char * memcasemem(const char *phaystack, size_t haylen,
-                               const char *pneedle, size_t needlelen) {
+inline const char* memcasemem(const char* phaystack, size_t haylen,
+                              const char* pneedle, size_t needlelen) {
   return int_memmatch<false>(phaystack, haylen, pneedle, needlelen);
 }
 
 // This is significantly faster for case-sensitive matches with very
 // few possible matches.  See unit test for benchmarks.
-const char *memmatch(const char *phaystack, size_t haylen,
-                     const char *pneedle, size_t neelen);
+const char* memmatch(const char* phaystack, size_t haylen,
+                     const char* pneedle, size_t neelen);
 
 // The ""'s catch people who don't pass in a literal for "str"
-#define strliterallen(str) (sizeof("" str "")-1)
+#define strliterallen(str) (sizeof("" str "") - 1)
 
 // Must use a string literal for prefix.
 #define memprefix(str, len, prefix)                         \

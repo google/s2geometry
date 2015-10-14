@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2TESTING_H__
-#define UTIL_GEOMETRY_S2TESTING_H__
+#ifndef S2_GEOMETRY_S2TESTING_H__
+#define S2_GEOMETRY_S2TESTING_H__
 
 #include <string>
 #include <vector>
@@ -24,6 +25,7 @@
 
 #include "base/integral_types.h"
 #include "base/macros.h"
+#include "fpcontractoff.h"
 #include "r2.h"
 #include "s1angle.h"
 #include "s2.h"
@@ -50,46 +52,6 @@ DECLARE_int32(s2_random_seed);
 // unit tests.
 class S2Testing {
  public:
-  // Given a latitude-longitude coordinate in degrees,
-  // return a newly allocated point.  Example of the input format:
-  //     "-20:150"
-  static S2Point MakePoint(string const& str);
-
-  // Given a string of one or more latitude-longitude coordinates in degrees,
-  // return the minimal bounding S2LatLngRect that contains the coordinates.
-  // Example of the input format:
-  //     "-20:150"                     // one point
-  //     "-20:150, -20:151, -19:150"   // three points
-  static S2LatLngRect MakeLatLngRect(string const& str);
-
-  // Given a string of latitude-longitude coordinates in degrees,
-  // return a newly allocated loop.  Example of the input format:
-  //     "-20:150, 10:-120, 0.123:-170.652"
-  // The strings "empty" or "full" create an empty or full loop respectively.
-  static S2Loop* MakeLoop(string const& str);
-
-  // Similar to MakeLoop(), but returns an S2Polyline rather than an S2Loop.
-  static S2Polyline* MakePolyline(string const& str);
-
-  // Given a sequence of loops separated by semicolons, return a newly
-  // allocated polygon.  Loops are automatically normalized by inverting them
-  // if necessary so that they enclose at most half of the unit sphere.
-  // (Historically this was once a requirement of polygon loops.  It also
-  // hides the problem that if the user thinks of the coordinates as X:Y
-  // rather than LAT:LNG, it yields a loop with the opposite orientation.)
-  //
-  // Examples of the input format:
-  //     "10:20, 90:0, 20:30"                                  // one loop
-  //     "10:20, 90:0, 20:30; 5.5:6.5, -90:-180, -15.2:20.3"   // two loops
-  //     ""       // the empty polygon (consisting of no loops)
-  //     "full"   // the full polygon (consisting of one full loop)
-  //     "empty"  // **INVALID** (a polygon consisting of one empty loop)
-  static S2Polygon* MakePolygon(string const& str);
-
-  // Like MakePolygon(), except that it does not normalize loops (i.e., it
-  // gives you exactly what you asked for).
-  static S2Polygon* MakeVerbatimPolygon(string const& str);
-
   // Returns a vector of points shaped as a regular polygon with
   // num_vertices vertices, all on a circle of the specified angular
   // radius around the center.  The radius is the actual distance from
@@ -199,24 +161,6 @@ class S2Testing {
 
     DISALLOW_COPY_AND_ASSIGN(Fractal);
   };
-
-  // Parse a string in the same format as MakeLatLngRect, and return the
-  // corresponding vector of S2LatLng points.
-  static void ParseLatLngs(string const& str, std::vector<S2LatLng>* latlngs);
-
-  // Parse a string in the same format as MakeLatLngRect, and return the
-  // corresponding vector of S2Point values.
-  static void ParsePoints(string const& str, std::vector<S2Point>* vertices);
-
-  // Convert a point, lat-lng rect, loop, polyline, or polygon to the string
-  // format above.
-  static string ToString(S2Point const& point);
-  static string ToString(S2LatLngRect const& rect);
-  static string ToString(S2Loop const* loop);
-  static string ToString(S2Polyline const* polyline);
-  static string ToString(S2Polygon const* polygon);
-  static string ToString(std::vector<S2Point> const& points);
-  static string ToString(std::vector<S2LatLng> const& points);
 
   // Convert a distance on the Earth's surface to an angle.
   static S1Angle KmToAngle(double km);
@@ -335,4 +279,4 @@ class S2Testing::Random {
   DISALLOW_COPY_AND_ASSIGN(Random);
 };
 
-#endif  // UTIL_GEOMETRY_S2TESTING_H__
+#endif  // S2_GEOMETRY_S2TESTING_H__

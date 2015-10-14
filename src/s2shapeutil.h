@@ -12,21 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 //
 // Useful functions and classes related to S2ShapeIndex.
 
-#ifndef UTIL_GEOMETRY_S2SHAPEUTIL_H_
-#define UTIL_GEOMETRY_S2SHAPEUTIL_H_
+#ifndef S2_GEOMETRY_S2SHAPEUTIL_H_
+#define S2_GEOMETRY_S2SHAPEUTIL_H_
 
 #include <utility>  // pair<>
 #include <vector>
 
+#include "fpcontractoff.h"
 #include "s2.h"
 #include "s2shapeindex.h"
 
 class S2Loop;
 class S2Error;
+
+namespace s2shapeutil {
 
 // S2EdgeVectorShape is an S2Shape representing a set of unrelated edges.
 // It is mainly used for testing, but it can also be useful if you have, say,
@@ -40,8 +44,6 @@ class S2Error;
 // Note that when an S2EdgeVectorShape is inserted into an S2ShapeIndex, the
 // index takes ownership.  The object will be deleted automatically when the
 // index no longer needs it (see Release().)
-//
-// TODO(ericv): Move this into the s2shapeutil namespace.
 class S2EdgeVectorShape : public S2Shape {
  public:
   S2EdgeVectorShape() {}
@@ -65,7 +67,6 @@ class S2EdgeVectorShape : public S2Shape {
   std::vector<std::pair<S2Point, S2Point> > edges_;
 };
 
-namespace s2shapeutil {
 
 // Given an S2ShapeIndex containing a single loop, return true if the loop has
 // a self-intersection (including duplicate vertices) and set "error" to a
@@ -85,4 +86,4 @@ bool FindAnyCrossing(S2ShapeIndex const& index,
 
 }  // namespace s2shapeutil
 
-#endif  // UTIL_GEOMETRY_S2SHAPEUTIL_H_
+#endif  // S2_GEOMETRY_S2SHAPEUTIL_H_

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // All Rights Reserved.
 //
 //
@@ -202,8 +203,8 @@ DECL_UNSIGNED_INT_LIMITS(unsigned long long int)
 // ========================================================================= //
 #ifdef WIN32  // Lacks built-in isnan() and isinf()
 #define DECL_FP_LIMIT_FUNCS \
-  static bool IsFinite(const Type x) { return _finite(x); } \
-  static bool IsNaN(const Type x) { return _isnan(x); } \
+  static bool IsFinite(const Type x) { return _finite(x) != 0; } \
+  static bool IsNaN(const Type x) { return _isnan(x) != 0; } \
   static bool IsInf(const Type x) { return (_fpclass(x) & (_FPCLASS_NINF | _FPCLASS_PINF)) != 0; } \
   static bool IsPosInf(const Type x) { return _fpclass(x) == _FPCLASS_PINF; } \
   static bool IsNegInf(const Type x) { return _fpclass(x) == _FPCLASS_NINF; }

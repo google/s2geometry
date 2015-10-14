@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2edgequery.h"
@@ -19,7 +20,7 @@
 #include <utility>  // pair<>
 #include <vector>
 #include "base/stringprintf.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "s1angle.h"
 #include "s2cap.h"
 #include "s2cell.h"
@@ -29,6 +30,7 @@
 #include "s2testing.h"
 #include "util/gtl/algorithm.h"
 
+using s2shapeutil::S2EdgeVectorShape;
 using std::pair;
 using std::vector;
 
@@ -90,7 +92,7 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
   S2ShapeIndexOptions options;
   options.set_max_edges_per_cell(1);
   S2ShapeIndex index(options);
-  index.Insert(shape);  // Takes ownership
+  index.Add(shape);  // Takes ownership
   // To check that candidates are being filtered reasonably, we count the
   // total number of candidates that the total number of edge pairs that
   // either intersect or are very close to intersecting.

@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S1ANGLE_H_
-#define UTIL_GEOMETRY_S1ANGLE_H_
+#ifndef S2_GEOMETRY_S1ANGLE_H_
+#define S2_GEOMETRY_S1ANGLE_H_
 
-#include <limits>
 #include <math.h>
-#include <iosfwd>   // to forward declare ostream
+#include <limits>
+#include <iosfwd>   // No longer needed
 #include <ostream>
 
 #include "base/integral_types.h"
-#include "base/type_traits.h"
+#include "fpcontractoff.h"
 #include "s2.h"
 #include "util/math/mathutil.h"
 
@@ -34,38 +35,34 @@ class S2LatLng;
 // or from radians, degrees, and the E5/E6/E7 representations (i.e. degrees
 // multiplied by 1e5/1e6/1e7 and rounded to the nearest integer).
 //
-// This class has built-in support for the E5, E6, and E7
-// representations.  An E5 is the measure of an angle in degrees,
-// multiplied by 10**5.
-//
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.
 class S1Angle {
  public:
   // These methods construct S1Angle objects from their measure in radians
   // or degrees.
-  inline static S1Angle Radians(double radians);
-  inline static S1Angle Degrees(double degrees);
-  inline static S1Angle E5(int32 e5);
-  inline static S1Angle E6(int32 e6);
-  inline static S1Angle E7(int32 e7);
+  static S1Angle Radians(double radians);
+  static S1Angle Degrees(double degrees);
+  static S1Angle E5(int32 e5);
+  static S1Angle E6(int32 e6);
+  static S1Angle E7(int32 e7);
 
   // Convenience functions -- to use when args have been fixed32s in protos.
   //
   // The arguments are static_cast into int32, so very large unsigned values
   // are treated as negative numbers.
-  inline static S1Angle UnsignedE6(uint32 e6);
-  inline static S1Angle UnsignedE7(uint32 e7);
+  static S1Angle UnsignedE6(uint32 e6);
+  static S1Angle UnsignedE7(uint32 e7);
 
   // The default constructor yields a zero angle.  This is useful for STL
   // containers and class methods with output arguments.
-  inline S1Angle() : radians_(0) {}
+  S1Angle() : radians_(0) {}
 
   // Return an angle larger than any finite angle.
-  inline static S1Angle Infinity();
+  static S1Angle Infinity();
 
   // A explicit shorthand for the default constructor.
-  inline static S1Angle Zero();
+  static S1Angle Zero();
 
   // Return the angle between two points, which is also equal to the distance
   // between these points on the unit sphere.  The points do not need to be
@@ -87,25 +84,25 @@ class S1Angle {
   S1Angle abs() const { return S1Angle(fabs(radians_)); }
 
   // Comparison operators.
-  friend inline bool operator==(S1Angle x, S1Angle y);
-  friend inline bool operator!=(S1Angle x, S1Angle y);
-  friend inline bool operator<(S1Angle x, S1Angle y);
-  friend inline bool operator>(S1Angle x, S1Angle y);
-  friend inline bool operator<=(S1Angle x, S1Angle y);
-  friend inline bool operator>=(S1Angle x, S1Angle y);
+  friend bool operator==(S1Angle x, S1Angle y);
+  friend bool operator!=(S1Angle x, S1Angle y);
+  friend bool operator<(S1Angle x, S1Angle y);
+  friend bool operator>(S1Angle x, S1Angle y);
+  friend bool operator<=(S1Angle x, S1Angle y);
+  friend bool operator>=(S1Angle x, S1Angle y);
 
   // Simple arithmetic operators for manipulating S1Angles.
-  friend inline S1Angle operator-(S1Angle a);
-  friend inline S1Angle operator+(S1Angle a, S1Angle b);
-  friend inline S1Angle operator-(S1Angle a, S1Angle b);
-  friend inline S1Angle operator*(double m, S1Angle a);
-  friend inline S1Angle operator*(S1Angle a, double m);
-  friend inline S1Angle operator/(S1Angle a, double m);
-  friend inline double operator/(S1Angle a, S1Angle b);
-  inline S1Angle& operator+=(S1Angle a);
-  inline S1Angle& operator-=(S1Angle a);
-  inline S1Angle& operator*=(double m);
-  inline S1Angle& operator/=(double m);
+  friend S1Angle operator-(S1Angle a);
+  friend S1Angle operator+(S1Angle a, S1Angle b);
+  friend S1Angle operator-(S1Angle a, S1Angle b);
+  friend S1Angle operator*(double m, S1Angle a);
+  friend S1Angle operator*(S1Angle a, double m);
+  friend S1Angle operator/(S1Angle a, double m);
+  friend double operator/(S1Angle a, S1Angle b);
+  S1Angle& operator+=(S1Angle a);
+  S1Angle& operator-=(S1Angle a);
+  S1Angle& operator*=(double m);
+  S1Angle& operator/=(double m);
 
   // Trigonmetric functions (not necessary but slightly more convenient).
   friend double sin(S1Angle a);
@@ -117,6 +114,7 @@ class S1Angle {
 
   // Normalize this angle to the range (-180, 180] degrees.
   void Normalize();
+
 
  private:
   explicit S1Angle(double radians) : radians_(radians) {}
@@ -253,4 +251,4 @@ inline S1Angle S1Angle::UnsignedE7(uint32 e7) {
 // decimal point, e.g. "17.3745904".
 std::ostream& operator<<(std::ostream& os, S1Angle a);
 
-#endif  // UTIL_GEOMETRY_S1ANGLE_H_
+#endif  // S2_GEOMETRY_S1ANGLE_H_

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2shapeindex.h"
@@ -138,7 +139,7 @@ S2ShapeIndexCell::find_clipped(int shape_id) const {
 // Allocate room for "n" additional clipped shapes in the cell, and return a
 // pointer to the first new clipped shape.  Expects that all new clipped
 // shapes will have a larger shape id than any current shape, and that shapes
-// will be inserted in increasing shape id order.
+// will be added in increasing shape id order.
 S2ClippedShape* S2ShapeIndexCell::add_shapes(int n) {
   int size = shapes_.size();
   shapes_.resize(size + n);
@@ -194,14 +195,14 @@ S2ShapeIndex::CellRelation S2ShapeIndex::Iterator::Locate(S2CellId target) {
 }
 
 S2ShapeIndex::S2ShapeIndex()
-    : pending_insertions_begin_(0),
+    : pending_additions_begin_(0),
       index_status_(FRESH),
       update_state_(NULL) {
 }
 
 S2ShapeIndex::S2ShapeIndex(S2ShapeIndexOptions const& options)
     : options_(options),
-      pending_insertions_begin_(0),
+      pending_additions_begin_(0),
       index_status_(FRESH),
       update_state_(NULL) {
 }
@@ -215,8 +216,8 @@ S2ShapeIndex::~S2ShapeIndex() {
   Reset();
 }
 
-void S2ShapeIndex::Insert(S2Shape const* shape) {
-  // Insertions are processed lazily by ApplyUpdates().
+void S2ShapeIndex::Add(S2Shape const* shape) {
+  // Additions are processed lazily by ApplyUpdates().
   shape->id_ = shapes_.size();
   shapes_.push_back(shape);
   base::subtle::NoBarrier_Store(&index_status_, STALE);
@@ -240,7 +241,7 @@ void S2ShapeIndex::Reset() {
   // Note that vector::clear() does not actually free storage.
   vector<S2Shape const*> empty_shapes;
   shapes_.swap(empty_shapes);
-  pending_insertions_begin_ = 0;
+  pending_additions_begin_ = 0;
   pending_removals_.reset();
   DCHECK(update_state_ == NULL);
   base::subtle::NoBarrier_Store(&index_status_, FRESH);
@@ -488,7 +489,7 @@ void S2ShapeIndex::ForceApplyUpdates() {
   }
 }
 
-// This method updates the index by applying all pending insertions and
+// This method updates the index by applying all pending additions and
 // removals.  It does *not* update index_status_ (see ApplyUpdatesThreadSafe).
 void S2ShapeIndex::ApplyUpdatesInternal() {
   CHECK(cell_map_.empty()) << "Incremental updates not supported yet";
@@ -496,7 +497,7 @@ void S2ShapeIndex::ApplyUpdatesInternal() {
   ReserveSpace(all_edges);
 
   InteriorTracker tracker;
-  for (int id = pending_insertions_begin_; id < shapes_.size(); ++id) {
+  for (int id = pending_additions_begin_; id < shapes_.size(); ++id) {
     AddShapeEdges(id, all_edges, &tracker);
   }
   // Whether to insert or remove a given shape is represented implicitly:
@@ -508,7 +509,7 @@ void S2ShapeIndex::ApplyUpdatesInternal() {
     vector<FaceEdge> empty;
     all_edges[face].swap(empty);
   }
-  pending_insertions_begin_ = shapes_.size();
+  pending_additions_begin_ = shapes_.size();
   // It is the caller's responsibility to update index_status_.
 }
 
@@ -522,7 +523,7 @@ void S2ShapeIndex::ReserveSpace(vector<FaceEdge> all_edges[6]) const {
   // to simply reserve space on every face for the maximum possible number of
   // edges.
   int num_edges = 0;
-  for (int id = pending_insertions_begin_; id < shapes_.size(); ++id) {
+  for (int id = pending_additions_begin_; id < shapes_.size(); ++id) {
     num_edges += shapes_[id]->num_edges();
   }
   int const kMaxCheapMemoryBytes = 10 << 20;  // 10MB
@@ -552,7 +553,7 @@ void S2ShapeIndex::ReserveSpace(vector<FaceEdge> all_edges[6]) const {
   int edge_id = sample_interval / 2;
   int const actual_sample_size = (num_edges + edge_id) / sample_interval;
   int face_count[6] = { 0, 0, 0, 0, 0, 0 };
-  for (int id = pending_insertions_begin_; id < shapes_.size(); ++id) {
+  for (int id = pending_additions_begin_; id < shapes_.size(); ++id) {
     S2Shape const* shape = shapes_[id];
     edge_id += shape->num_edges();
     while (edge_id >= sample_interval) {
@@ -676,8 +677,8 @@ class S2ShapeIndex::EdgeAllocator {
   DISALLOW_COPY_AND_ASSIGN(EdgeAllocator);
 };
 
-// Given a face and a vector of edges that intersect that face, insert or
-// remove all the edges from the index.  (An edge is inserted if shape(id) is
+// Given a face and a vector of edges that intersect that face, add or
+// remove all the edges from the index.  (An edge is added if shape(id) is
 // not NULL, and removed otherwise.)
 void S2ShapeIndex::UpdateFaceEdges(int face,
                                    vector<FaceEdge> const& face_edges,
@@ -715,7 +716,7 @@ void S2ShapeIndex::UpdateFaceEdges(int face,
 }
 
 // Given a cell and a set of ClippedEdges whose bounding boxes intersect that
-// cell, insert or remove all the edges from the index.  Temporary space for
+// cell, add or remove all the edges from the index.  Temporary space for
 // edges that need to be subdivided is allocated from the given EdgeAllocator.
 void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
                                vector<ClippedEdge const*> const& edges,
@@ -794,8 +795,8 @@ void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
 }
 
 // Given an edge and an interval "middle" along the v-axis, clip the edge
-// against the boundaries of "middle" and insert the edge into the
-// corresponding children.
+// against the boundaries of "middle" and add the edge to the corresponding
+// children.
 inline void S2ShapeIndex::ClipVAxis(ClippedEdge const* edge,
                                     R1Interval const& middle,
                                     vector<ClippedEdge const*> child_edges[2],
@@ -1003,3 +1004,4 @@ int S2ShapeIndex::CountShapes(vector<ClippedEdge const*> const& edges,
   count += (cshape_ids.end() - cnext);
   return count;
 }
+

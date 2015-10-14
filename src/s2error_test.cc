@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2error.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(S2Error, Basic) {
   S2Error error;

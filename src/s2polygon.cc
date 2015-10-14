@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2polygon.h"
@@ -19,10 +20,8 @@
 #include <math.h>
 #include <stddef.h>
 #include <algorithm>
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
 #include <set>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -66,6 +65,13 @@ DEFINE_bool(
     "significant amounts of memory and time when geometry is constructed but "
     "never queried, for example when converting from one format to another.");
 
+// The maximum number of loops we'll allow when decoding a polygon.
+// The default value of 10 million is 200x bigger than the number of
+DEFINE_int32(
+    s2polygon_decode_max_num_loops, 10000000,
+    "The upper limit on the number of loops that are allowed by the "
+    "S2Polygon::Decode method.");
+
 // When adding a new encoding, be aware that old binaries will not
 // be able to decode it.
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
@@ -74,6 +80,7 @@ static const unsigned char kCurrentCompressedEncodingVersionNumber = 4;
 S2Polygon::S2Polygon()
     : has_holes_(false),
       s2debug_override_(ALLOW_S2DEBUG),
+      error_inconsistent_loop_orientations_(false),
       num_vertices_(0),
       unindexed_contains_calls_(0) {
 }
@@ -104,12 +111,14 @@ S2debugOverride S2Polygon::s2debug_override() const {
 }
 
 void S2Polygon::Copy(S2Polygon const* src) {
-  DCHECK_EQ(0, num_loops());
+  ClearLoops();
   for (int i = 0; i < src->num_loops(); ++i) {
     loops_.push_back(src->loop(i)->Clone());
   }
   has_holes_ = src->has_holes_;
   s2debug_override_ = src->s2debug_override_;
+  // Don't copy error_inconsistent_loop_orientations_, since this is not a
+  // property of the polygon but only of the way the polygon was constructed.
   num_vertices_ = src->num_vertices();
   base::subtle::NoBarrier_Store(&unindexed_contains_calls_, 0);
   bound_ = src->bound_;
@@ -143,6 +152,7 @@ void S2Polygon::ClearLoops() {
   }
   loops_.clear();
   base::subtle::NoBarrier_Store(&unindexed_contains_calls_, 0);
+  error_inconsistent_loop_orientations_ = false;
 }
 
 S2Polygon::~S2Polygon() {
@@ -179,11 +189,49 @@ bool S2Polygon::FindValidationError(S2Error* error) const {
       return true;
     }
   }
-  // Finally, check for loop self-intersections and loop pairs that cross
+
+  // Check for loop self-intersections and loop pairs that cross
   // (including duplicate edges and vertices).
-  //
-  // TODO(ericv): Also verify the nesting hierarchy.
-  return s2shapeutil::FindAnyCrossing(index_, loops_, error);
+  if (s2shapeutil::FindAnyCrossing(index_, loops_, error)) return true;
+
+  // Check whether InitOriented detected inconsistent loop orientations.
+  if (error_inconsistent_loop_orientations_) {
+    error->Init(S2Error::POLYGON_INCONSISTENT_LOOP_ORIENTATIONS,
+                "Inconsistent loop orientations detected");
+    return true;
+  }
+
+  // Finally, verify the loop nesting hierarchy.
+  return FindLoopNestingError(error);
+}
+
+bool S2Polygon::FindLoopNestingError(S2Error* error) const {
+  // First check that the loop depths make sense.
+  for (int last_depth = -1, i = 0; i < num_loops(); ++i) {
+    int depth = loop(i)->depth();
+    if (depth < 0 || depth > last_depth + 1) {
+      error->Init(S2Error::POLYGON_INVALID_LOOP_DEPTH,
+                  "Loop %d: invalid loop depth (%d)", i, depth);
+      return true;
+    }
+    last_depth = depth;
+  }
+  // Then check that they correspond to the actual loop nesting.  This test
+  // is quadratic in the number of loops but the cost per iteration is small.
+  for (int i = 0; i < num_loops(); ++i) {
+    int last = GetLastDescendant(i);
+    for (int j = 0; j < num_loops(); ++j) {
+      if (i == j) continue;
+      bool expected = (j >= i+1) && (j <= last);
+      if (loop(i)->ContainsNested(loop(j)) != expected) {
+        error->Init(S2Error::POLYGON_INVALID_LOOP_NESTING,
+                    "Invalid nesting: loop %d should %scontain loop %d",
+                    i, expected ? "" : "not ", j);
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
@@ -195,11 +243,6 @@ void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
       InsertLoop(new_loop, child, loop_map);
       return;
     }
-  }
-  // No loop may contain the complement of another loop.  (Handling this case
-  // is significantly more complicated.)
-  if (FLAGS_s2debug && s2debug_override_ == ALLOW_S2DEBUG) {
-    CHECK(parent == NULL || !new_loop->ContainsNested(parent));
   }
 
   // Some of the children of the parent loop may now be children of
@@ -228,22 +271,10 @@ void S2Polygon::InitLoop(S2Loop* loop, int depth, LoopMap* loop_map) {
   }
 }
 
-bool S2Polygon::ContainsChild(S2Loop* a, S2Loop* b, LoopMap const& loop_map) {
-  // This function is just used to verify that the loop map was
-  // constructed correctly.
-
-  if (a == b) return true;
-  vector<S2Loop*> const& children = loop_map.find(a)->second;
-  for (int i = 0; i < children.size(); ++i) {
-    if (ContainsChild(children[i], b, loop_map)) return true;
-  }
-  return false;
-}
-
 void S2Polygon::InitIndex() {
   DCHECK_EQ(0, index_.num_shape_ids());
   for (int i = 0; i < num_loops(); ++i) {
-    index_.Insert(new S2Loop::Shape(loop(i)));
+    index_.Add(new S2Loop::Shape(loop(i)));
   }
   if (!FLAGS_s2polygon_lazy_indexing) {
     index_.ForceApplyUpdates();  // Force index construction now.
@@ -271,17 +302,6 @@ void S2Polygon::InitNested(vector<S2Loop*>* loops) {
   loops_.clear();
   InitLoop(NULL, -1, &loop_map);
 
-  if (FLAGS_s2debug && s2debug_override_ == ALLOW_S2DEBUG) {
-    // Check that the LoopMap is correct (this is fairly cheap).
-    for (int i = 0; i < num_loops(); ++i) {
-      for (int j = 0; j < num_loops(); ++j) {
-        if (i == j) continue;
-        CHECK_EQ(ContainsChild(loop(i), loop(j), loop_map),
-                 loop(i)->ContainsNested(loop(j)));
-      }
-    }
-  }
-
   // Compute has_holes_, num_vertices_, bound_, subregion_bound_.
   InitLoopProperties();
 }
@@ -291,6 +311,7 @@ void S2Polygon::InitOneLoop() {
   S2Loop* loop = loops_[0];
   loop->set_depth(0);
   has_holes_ = false;
+  error_inconsistent_loop_orientations_ = false;
   num_vertices_ = loop->num_vertices();
   bound_ = loop->GetRectBound();
   subregion_bound_ = S2EdgeUtil::RectBounder::ExpandForSubregions(bound_);
@@ -363,13 +384,16 @@ void S2Polygon::InitOriented(vector<S2Loop*>* loops) {
       Invert();
     }
   }
-  if (FLAGS_s2debug && s2debug_override_ == ALLOW_S2DEBUG) {
-    // Verify that the original loops had consistent shell/hole orientations.
-    // Each original loop L should have been inverted if and only if it now
-    // represents a hole.
-    for (int i = 0; i < loops_.size(); ++i) {
-      DCHECK_EQ(contained_origin.count(loop(i)) != loop(i)->contains_origin(),
-                loop(i)->is_hole());
+  // Verify that the original loops had consistent shell/hole orientations.
+  // Each original loop L should have been inverted if and only if it now
+  // represents a hole.
+  for (int i = 0; i < loops_.size(); ++i) {
+    if ((contained_origin.count(loop(i)) != loop(i)->contains_origin()) !=
+        loop(i)->is_hole()) {
+      // There is no point in saving the loop index, because the error is a
+      // property of the entire set of loops.  In general there is no way to
+      // determine which ones are incorrect.
+      error_inconsistent_loop_orientations_ = true;
     }
   }
 }
@@ -450,6 +474,18 @@ S1Angle S2Polygon::GetDistance(S2Point const& x) const {
 S1Angle S2Polygon::GetDistanceToBoundary(S2Point const& x) const {
   S2ClosestEdgeQuery query(index_);
   return query.GetDistance(x);
+}
+
+/*static*/ pair<double, double> S2Polygon::GetOverlapFractions(
+    S2Polygon const* a, S2Polygon const* b) {
+  S2Polygon intersection;
+  intersection.InitToIntersection(a, b);
+  double intersection_area = intersection.GetArea();
+  double a_area = a->GetArea();
+  double b_area = b->GetArea();
+  return std::make_pair(
+      intersection_area >= a_area ? 1 : intersection_area / a_area,
+      intersection_area >= b_area ? 1 : intersection_area / b_area);
 }
 
 S2Point S2Polygon::Project(S2Point const& x) const {
@@ -640,11 +676,16 @@ bool S2Polygon::Contains(S2Cell const& target) const {
   return Contains(it, target.GetCenter());
 }
 
-bool S2Polygon::ApproxContains(S2Polygon const* b,
-                               S1Angle vertex_merge_radius) const {
+bool S2Polygon::ApproxContains(S2Polygon const* b, S1Angle tolerance) const {
   S2Polygon difference;
-  difference.InitToDifferenceSloppy(b, this, vertex_merge_radius);
-  return difference.num_loops() == 0;
+  difference.InitToDifferenceSloppy(b, this, tolerance);
+  return difference.is_empty();
+}
+
+bool S2Polygon::ApproxDisjoint(S2Polygon const* b, S1Angle tolerance) const {
+  S2Polygon intersection;
+  intersection.InitToIntersectionSloppy(b, this, tolerance);
+  return intersection.is_empty();
 }
 
 bool S2Polygon::MayIntersect(S2Cell const& target) const {
@@ -775,7 +816,7 @@ void S2Polygon::Encode(Encoder* const encoder) const {
     loops_[i]->GetXYZFaceSiTiVertices(current_loop_vertices);
     current_loop_vertices += loops_[i]->num_vertices();
   }
-  // Computes an histogram of the cell levels at which the vertices are snapped.
+  // Computes a histogram of the cell levels at which the vertices are snapped.
   // (histogram[0] is the number of unsnapped vertices, histogram[i] the number
   // of vertices snapped at level i-1).
   int histogram[S2::kMaxCellLevel + 2];
@@ -831,7 +872,7 @@ bool S2Polygon::Decode(Decoder* const decoder) {
   unsigned char version = decoder->get8();
   switch (version) {
     case kCurrentLosslessEncodingVersionNumber:
-      return DecodeInternal(decoder, false);
+      return DecodeLossless(decoder, false);
     case kCurrentCompressedEncodingVersionNumber:
       return DecodeCompressed(decoder);
   }
@@ -843,19 +884,22 @@ bool S2Polygon::DecodeWithinScope(Decoder* const decoder) {
   unsigned char version = decoder->get8();
   switch (version) {
     case kCurrentLosslessEncodingVersionNumber:
-      return DecodeInternal(decoder, true);
+      return DecodeLossless(decoder, true);
     case kCurrentCompressedEncodingVersionNumber:
       return DecodeCompressed(decoder);
   }
   return false;
 }
 
-bool S2Polygon::DecodeInternal(Decoder* const decoder, bool within_scope) {
+bool S2Polygon::DecodeLossless(Decoder* const decoder, bool within_scope) {
   if (decoder->avail() < 2 * sizeof(uint8) + sizeof(uint32)) return false;
   ClearLoops();
   decoder->get8();  // Ignore irrelevant serialized owns_loops_ value.
   has_holes_ = decoder->get8();
-  int num_loops = decoder->get32();
+  // Polygons with no loops are explicitly allowed here: a newly created
+  // polygon has zero loops and such polygons encode and decode properly.
+  const uint32 num_loops = decoder->get32();
+  if (num_loops > FLAGS_s2polygon_decode_max_num_loops) return false;
   loops_.reserve(num_loops);
   num_vertices_ = 0;
   for (int i = 0; i < num_loops; ++i) {
@@ -1408,7 +1452,7 @@ void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
         should_keep);
     if (NULL == simpler) continue;
     simplified_loops.push_back(simpler);
-    index.Insert(new PointVectorLoopShape(simpler));
+    index.Add(new PointVectorLoopShape(simpler));
   }
   if (index.num_shape_ids() > 0) {
     BreakEdgesAndAddToBuilder(index, &builder);
@@ -1549,7 +1593,6 @@ void S2Polygon::SubtractFromPolylineSloppy(
   InternalClipPolyline(true, a, out, vertex_merge_radius);
 }
 
-
 S2Polygon* S2Polygon::DestructiveUnion(vector<S2Polygon*>* polygons) {
   return DestructiveUnionSloppy(polygons, S2EdgeUtil::kIntersectionTolerance);
 }
@@ -1653,6 +1696,18 @@ bool S2Polygon::IsNormalized() const {
   return true;
 }
 
+bool S2Polygon::Equals(S2Polygon const* b) const {
+  if (num_loops() != b->num_loops()) return false;
+  for (int i = 0; i < num_loops(); ++i) {
+    S2Loop const* a_loop = loop(i);
+    S2Loop const* b_loop = b->loop(i);
+    if ((b_loop->depth() != a_loop->depth()) || !b_loop->Equals(a_loop)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool S2Polygon::BoundaryEquals(S2Polygon const* b) const {
   if (num_loops() != b->num_loops()) return false;
 
@@ -1741,10 +1796,12 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   if (decoder->avail() < sizeof(uint8)) return false;
   ClearLoops();
   int snap_level = decoder->get8();
+  if (snap_level > S2CellId::kMaxLevel) return false;
+  // Polygons with no loops are explicitly allowed here: a newly created
+  // polygon has zero loops and such polygons encode and decode properly.
   uint32 num_loops;
-  if (!decoder->get_varint32(&num_loops)) {
-    return false;
-  }
+  if (!decoder->get_varint32(&num_loops)) return false;
+  if (num_loops > FLAGS_s2polygon_decode_max_num_loops) return false;
   loops_.reserve(num_loops);
   for (int i = 0; i < num_loops; ++i) {
     S2Loop* loop = new S2Loop;
@@ -1757,3 +1814,4 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   InitLoopProperties();
   return true;
 }
+

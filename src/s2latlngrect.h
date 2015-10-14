@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2LATLNGRECT_H_
-#define UTIL_GEOMETRY_S2LATLNGRECT_H_
+#ifndef S2_GEOMETRY_S2LATLNGRECT_H_
+#define S2_GEOMETRY_S2LATLNGRECT_H_
 
 #include <math.h>
 #include <iosfwd>
@@ -23,6 +24,7 @@
 
 #include <glog/logging.h>
 
+#include "fpcontractoff.h"
 #include "r1interval.h"
 #include "s1angle.h"
 #include "s1interval.h"
@@ -64,16 +66,16 @@ class S2LatLngRect : public S2Region {
   // line. Both points must be normalized, with lo.lat() <= hi.lat().
   // The rectangle contains all the points p such that 'lo' <= p <= 'hi',
   // where '<=' is defined in the obvious way.
-  inline S2LatLngRect(S2LatLng const& lo, S2LatLng const& hi);
+  S2LatLngRect(S2LatLng const& lo, S2LatLng const& hi);
 
   // Construct a rectangle from latitude and longitude intervals.  The two
   // intervals must either be both empty or both non-empty, and the latitude
   // interval must not extend outside [-90, +90] degrees.
   // Note that both intervals (and hence the rectangle) are closed.
-  inline S2LatLngRect(R1Interval const& lat, S1Interval const& lng);
+  S2LatLngRect(R1Interval const& lat, S1Interval const& lng);
 
   // The default constructor creates an empty S2LatLngRect.
-  inline S2LatLngRect();
+  S2LatLngRect();
 
   // Construct a rectangle of the given size centered around the given point.
   // "center" needs to be normalized, but "size" does not.  The latitude
@@ -112,9 +114,9 @@ class S2LatLngRect : public S2Region {
   // The canonical empty and full rectangles, as derived from the Empty
   // and Full R1 and S1 Intervals.
   // Empty: lat_lo=1, lat_hi=0, lng_lo=Pi, lng_hi=-Pi (radians)
-  static inline S2LatLngRect Empty();
+  static S2LatLngRect Empty();
   // Full: lat_lo=-Pi/2, lat_hi=Pi/2, lng_lo=-Pi, lng_hi=Pi (radians)
-  static inline S2LatLngRect Full();
+  static S2LatLngRect Full();
 
   // The full allowable range of latitudes and longitudes.
   static R1Interval FullLat() { return R1Interval(-M_PI_2, M_PI_2); }
@@ -124,16 +126,16 @@ class S2LatLngRect : public S2Region {
   // that the latitude bounds do not exceed Pi/2 in absolute value and
   // the longitude bounds do not exceed Pi in absolute value.  Also, if
   // either the latitude or longitude bound is empty then both must be.
-  inline bool is_valid() const;
+  bool is_valid() const;
 
   // Return true if the rectangle is empty, i.e. it contains no points at all.
-  inline bool is_empty() const;
+  bool is_empty() const;
 
   // Return true if the rectangle is full, i.e. it contains all points.
-  inline bool is_full() const;
+  bool is_full() const;
 
   // Return true if the rectangle is a point, i.e. lo() == hi()
-  inline bool is_point() const;
+  bool is_point() const;
 
   // Return true if lng_.lo() > lng_.hi(), i.e. the rectangle crosses
   // the 180 degree longitude line.
@@ -262,10 +264,10 @@ class S2LatLngRect : public S2Region {
   S1Angle GetHausdorffDistance(S2LatLngRect const& other) const;
 
   // Return true if two rectangles contains the same set of points.
-  inline bool operator==(S2LatLngRect const& other) const;
+  bool operator==(S2LatLngRect const& other) const;
 
   // Return the opposite of what operator == returns.
-  inline bool operator!=(S2LatLngRect const& other) const;
+  bool operator!=(S2LatLngRect const& other) const;
 
   // Return true if the latitude and longitude intervals of the two rectangles
   // are the same up to the given tolerance (see r1interval.h and s1interval.h
@@ -309,7 +311,7 @@ class S2LatLngRect : public S2Region {
   static bool IntersectsLatEdge(S2Point const& a, S2Point const& b,
                                 double lat, S1Interval const& lng);
 
-  private:
+ private:
   // Helper function. See .cc for description.
   static S1Angle GetDirectedHausdorffDistance(double lng_diff,
                                               R1Interval const& a_lat,
@@ -381,4 +383,4 @@ inline bool S2LatLngRect::operator!=(S2LatLngRect const& other) const {
 
 std::ostream& operator<<(std::ostream& os, S2LatLngRect const& r);
 
-#endif  // UTIL_GEOMETRY_S2LATLNGRECT_H_
+#endif  // S2_GEOMETRY_S2LATLNGRECT_H_

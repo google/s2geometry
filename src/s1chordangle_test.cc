@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 #include "s1chordangle.h"
 
-#include "gtest/gtest.h"
+#include <limits>
+
+#include <gtest/gtest.h>
 #include "s1angle.h"
 #include "s2testing.h"
+
+using std::numeric_limits;
 
 TEST(S1ChordAngle, DefaultConstructor) {
   // Check that the default constructor returns an angle of 0.

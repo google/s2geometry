@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2POLYGON_H_
-#define UTIL_GEOMETRY_S2POLYGON_H_
+#ifndef S2_GEOMETRY_S2POLYGON_H_
+#define S2_GEOMETRY_S2POLYGON_H_
 
 #include <stddef.h>
 #include <map>
@@ -23,6 +24,7 @@
 
 #include "base/integral_types.h"
 #include "base/macros.h"
+#include "fpcontractoff.h"
 #include "s2.h"
 #include "s2cellid.h"
 #include "s2latlngrect.h"
@@ -148,7 +150,7 @@ class S2Polygon : public S2Region {
   void InitOriented(std::vector<S2Loop*>* loops);
 
   // Historical synonym for InitNested.
-  inline void Init(std::vector<S2Loop*>* loops) { InitNested(loops); }
+  void Init(std::vector<S2Loop*>* loops) { InitNested(loops); }
 
   // Releases ownership of the loops of this polygon, appends them to "loops" if
   // non-NULL, and resets the polygon to be empty.  Note that the caller is
@@ -157,8 +159,8 @@ class S2Polygon : public S2Region {
   // loop pointers beforehand.
   void Release(std::vector<S2Loop*>* loops);
 
-  // Makes a deep copy of the given source polygon.  Requires that the
-  // destination polygon is empty.
+  // Makes a deep copy of the given source polygon.  The destination polygon
+  // will be cleared if necessary.
   void Copy(S2Polygon const* src);
 
   // Destroys the polygon and frees its loops.
@@ -255,6 +257,11 @@ class S2Polygon : public S2Region {
   // has no boundary).  "x" should be unit length.
   S1Angle GetDistanceToBoundary(S2Point const& x) const;
 
+  // Return the overlap fractions between two polygons, i.e. the ratios of the
+  // area of intersection to the area of each polygon.
+  static std::pair<double, double> GetOverlapFractions(S2Polygon const* a,
+                                                       S2Polygon const* b);
+
   // If the given point is contained by the polygon, return it.  Otherwise
   // return the closest point on the polygon boundary.  If the polygon is
   // empty, return the input argument.  Note that the result may or may not be
@@ -272,15 +279,24 @@ class S2Polygon : public S2Region {
 
   // Returns true if this polgyon (A) approximately contains the given other
   // polygon (B). This is true if it is possible to move the vertices of B
-  // no further than "vertex_merge_radius" such that A contains the modified B.
+  // no further than "tolerance" such that A contains the modified B.
   //
   // For example, the empty polygon will contain any polygon whose maximum
-  // width is no more than vertex_merge_radius.
-  bool ApproxContains(S2Polygon const* b, S1Angle vertex_merge_radius) const;
+  // width is no more than "tolerance".
+  bool ApproxContains(S2Polygon const* b, S1Angle tolerance) const;
 
   // Return true if this polygon intersects the given other polygon, i.e.
   // if there is a point that is contained by both polygons.
   bool Intersects(S2Polygon const* b) const;
+
+  // Returns true if this polgyon (A) and the given polygon (B) are
+  // approximately disjoint.  This is true if it is possible to ensure that A
+  // and B do not intersect by moving their vertices no further than
+  // "tolerance".
+  //
+  // For example, any polygon is approximately disjoint from a polygon whose
+  // maximum width is no more than "tolerance".
+  bool ApproxDisjoint(S2Polygon const* b, S1Angle tolerance) const;
 
   // Initialize this polygon to the intersection, union, or difference
   // (A - B) of the given two polygons.  The "vertex_merge_radius" determines
@@ -397,9 +413,17 @@ class S2Polygon : public S2Region {
   // polygons represent the same region.
   bool IsNormalized() const;
 
+  // Return true if two polygons have exactly the same loops.  The loops must
+  // appear in the same order, and corresponding loops must have the same
+  // linear vertex ordering (i.e., cyclic rotations are not allowed).
+  bool Equals(S2Polygon const* b) const;
+
   // Return true if two polygons have the same boundary.  More precisely, this
   // method requires that both polygons have loops with the same cyclic vertex
-  // order and the same nesting hierarchy.
+  // order and the same nesting hierarchy.  (This implies that vertices may be
+  // cyclically rotated between corresponding loops, and the loop ordering may
+  // be different between the two polygons as long as the nesting hierarchy is
+  // the same.)
   bool BoundaryEquals(S2Polygon const* b) const;
 
   // Return true if two polygons have the same boundary except for vertex
@@ -465,8 +489,11 @@ class S2Polygon : public S2Region {
   // Compute has_holes_, num_vertices_, bound_, subregion_bound_.
   void InitLoopProperties();
 
-  // Deletes the contents of the loops_ vector and clears it.
+  // Deletes the contents of the loops_ vector and resets the polygon state.
   void ClearLoops();
+
+  // Return true if there is an error in the loop nesting hierarchy.
+  bool FindLoopNestingError(S2Error* error) const;
 
   // A map from each loop to its immediate children with respect to nesting.
   // This map is built during initialization of multi-loop polygons to
@@ -474,7 +501,6 @@ class S2Polygon : public S2Region {
   typedef std::map<S2Loop*, std::vector<S2Loop*> > LoopMap;
 
   void InsertLoop(S2Loop* new_loop, S2Loop* parent, LoopMap* loop_map);
-  static bool ContainsChild(S2Loop* a, S2Loop* b, LoopMap const& loop_map);
   void InitLoop(S2Loop* loop, int depth, LoopMap* loop_map);
 
   // Add the polygon's loops to the S2ShapeIndex.  (The actual work of
@@ -507,10 +533,10 @@ class S2Polygon : public S2Region {
   // (40 + 43 * num_loops + 24 * num_vertices) bytes.
   void EncodeLossless(Encoder* encoder) const;
 
-  // Internal implementation of the Decode and DecodeWithinScope methods above.
-  // The within_scope parameter specifies whether to call DecodeWithinScope
-  // on the loops.
-  bool DecodeInternal(Decoder* const decoder, bool within_scope);
+  // Decode a polygon encoded with EncodeLossless().  Used by the Decode and
+  // DecodeWithinScope methods above.  The within_scope parameter specifies
+  // whether to call DecodeWithinScope on the loops.
+  bool DecodeLossless(Decoder* const decoder, bool within_scope);
 
   // Encode the polygon's vertices using about 4 bytes / vertex plus 24 bytes /
   // unsnapped vertex. All the loop vertices must be converted first to the
@@ -550,6 +576,14 @@ class S2Polygon : public S2Region {
   // --s2debug flag.
   uint8 s2debug_override_;  // Store enum in 1 byte rather than 4.
 
+  // True if InitOriented() was called and the given loops had inconsistent
+  // orientations (i.e., it is not possible to construct a polygon such that
+  // the interior is on the left-hand side of all loops).  We need to remember
+  // this error so that it can be returned later by FindValidationError(),
+  // since it is not possible to detect this error once the polygon has been
+  // initialized.  This field is not preserved by Encode/Decode.
+  uint8 error_inconsistent_loop_orientations_;
+
   // Cache for num_vertices().
   int num_vertices_;
 
@@ -576,4 +610,4 @@ class S2Polygon : public S2Region {
   DISALLOW_COPY_AND_ASSIGN(S2Polygon);
 };
 
-#endif  // UTIL_GEOMETRY_S2POLYGON_H_
+#endif  // S2_GEOMETRY_S2POLYGON_H_

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 //
 // S2ShapeIndex indexes a set of "shapes", where a shape is a collection of
@@ -20,7 +21,7 @@
 // interiors, the index makes it very fast to determine the shape(s) that
 // contain a given point or region.
 //
-// The index is dynamic; shapes can be inserted or removed (although each
+// The index is dynamic; shapes can be added or removed (although each
 // individual shape is immutable).  It is designed to handle up to millions of
 // shapes and edges.  All data structures are designed to be small, so the
 // index is compact; generally it is smaller than the underlying data being
@@ -29,10 +30,11 @@
 // All "const" methods are thread-safe provided that they do not overlap with
 // calls to non-const methods.  Non-const methods are not thread-safe.
 
-#ifndef UTIL_GEOMETRY_S2SHAPEINDEX_H_
-#define UTIL_GEOMETRY_S2SHAPEINDEX_H_
+#ifndef S2_GEOMETRY_S2SHAPEINDEX_H_
+#define S2_GEOMETRY_S2SHAPEINDEX_H_
 
 #include <stddef.h>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -42,12 +44,11 @@
 #include "base/integral_types.h"
 #include "base/macros.h"
 #include "base/mutex.h"
-#include "base/scoped_ptr.h"
 #include "base/spinlock.h"
+#include <map>
+#include "fpcontractoff.h"
 #include "s2.h"
 #include "s2cellid.h"
-
-#include <map>
 
 class R1Interval;
 class S2PaddedCell;
@@ -56,9 +57,9 @@ class S2ShapeIndex;
 // S2Shape is an abstract base class that defines a shape.  Typically it
 // wraps some other geometric object in order to provide access to its edges
 // without duplicating the edge data.  Shapes are immutable once they have
-// been indexed; to modify a shape it must be removed and then reinserted.
-// A shape can be removed from one S2ShapeIndex and then inserted into
-// another, but it can belong to only one index at a time.
+// been indexed; to modify a shape it must be removed and then added again.
+// A shape can be removed from one S2ShapeIndex and then added to another,
+// but it can belong to only one index at a time.
 class S2Shape {
  public:
   S2Shape() : id_(-1) {}
@@ -87,13 +88,13 @@ class S2Shape {
   virtual void Release() const = 0;
 
   // A unique id assigned to this shape by S2ShapeIndex.  Shape ids are
-  // assigned sequentially starting from 0 in the order shapes are inserted.
+  // assigned sequentially starting from 0 in the order shapes are added.
   int id() const { return id_; }
 
  private:
   friend class S2ShapeIndex;  // id_ assignment
 
-  // id_ is mutable so that "const" geometry can be inserted in the index.
+  // id_ is mutable so that "const" geometry can be added to the index.
   mutable int id_;
 
   DISALLOW_COPY_AND_ASSIGN(S2Shape);
@@ -221,7 +222,7 @@ class S2ShapeIndex {
   S2ShapeIndex();
 
   // Create an S2ShapeIndex with the given options.
-  S2ShapeIndex(S2ShapeIndexOptions const& options);
+  explicit S2ShapeIndex(S2ShapeIndexOptions const& options);
 
   ~S2ShapeIndex();
 
@@ -241,15 +242,16 @@ class S2ShapeIndex {
   // been removed from the index.
   S2Shape const* shape(int id) const { return shapes_[id]; }
 
-  // Insert the given shape in the index, and also assign a unique id to the
+  // Add the given shape to the index, and also assign a unique id to the
   // shape (shape->id()).  Shape ids are assigned sequentially starting from 0
-  // in the order shapes are inserted.  Invalidates all iterators and their
+  // in the order shapes are added.  Invalidates all iterators and their
   // associated data.  Does *not* take ownership of "shape".
   //
   // REQUIRES: "shape" is not currently in any other S2ShapeIndex.
   // REQUIRES: "shape" persists for the lifetime of the index or until
   //           Remove(shape) is called.
-  void Insert(S2Shape const* shape);
+  void Add(S2Shape const* shape);
+  void Insert(S2Shape const* shape);  // DEPRECATED
 
   // Remove the given shape from the index.  Does not free storage for the
   // shape itself, which is owned by the caller.  Invalidates all iterators
@@ -361,7 +363,7 @@ class S2ShapeIndex {
   };
 
 
-  // Calls to Insert() and Remove() are normally queued and processed on the
+  // Calls to Add() and Remove() are normally queued and processed on the
   // first subsequent query (in a thread-safe way).  This has many advantages,
   // the most important of which is that sometimes there *is* no subsequent
   // query, which lets us avoid building the index completely.
@@ -445,9 +447,9 @@ class S2ShapeIndex {
   // The options supplied for this index.
   S2ShapeIndexOptions options_;
 
-  // The id of the first shape that has been queued for insertion but not
+  // The id of the first shape that has been queued for addition but not
   // processed yet.
-  int pending_insertions_begin_;
+  int pending_additions_begin_;
 
   // The representation of an edge that has been queued for removal.
   struct PendingRemoval { int32 shape_id; S2Point a, b; };
@@ -456,9 +458,9 @@ class S2ShapeIndex {
   // processed yet.  Note that we need to copy the edge data since the caller
   // is free to destroy the shape once Remove() has been called.  This field
   // is present only when there are removals pending (to save memory).
-  scoped_ptr<std::vector<PendingRemoval> > pending_removals_;
+  std::unique_ptr<std::vector<PendingRemoval> > pending_removals_;
 
-  // Insertions and removals are queued and processed on the first subsequent
+  // Additions and removals are queued and processed on the first subsequent
   // query.  There are several reasons to do this:
   //
   //  - It is significantly more efficient to process updates in batches.
@@ -596,6 +598,10 @@ inline bool S2ShapeIndex::is_fresh() const {
   return base::subtle::NoBarrier_Load(&index_status_) == FRESH;
 }
 
+inline void S2ShapeIndex::Insert(S2Shape const* shape) {
+  Add(shape);
+}
+
 // Ensure that any pending updates have been applied.  This method must be
 // called before accessing the cell_map_ field, even if the index_status_
 // appears to be FRESH, because a memory barrier is required in order to
@@ -611,4 +617,4 @@ inline void S2ShapeIndex::MaybeApplyUpdates() const {
   }
 }
 
-#endif  // UTIL_GEOMETRY_S2SHAPEINDEX_H_
+#endif  // S2_GEOMETRY_S2SHAPEINDEX_H_

@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef UTIL_GEOMETRY_S2REGION_H_
-#define UTIL_GEOMETRY_S2REGION_H_
+#ifndef S2_GEOMETRY_S2REGION_H_
+#define S2_GEOMETRY_S2REGION_H_
 
+#include "fpcontractoff.h"
 #include "s2.h"
 
 class Decoder;
@@ -116,4 +118,4 @@ class S2Region {
   // subtypes may relax this restriction.
 };
 
-#endif  // UTIL_GEOMETRY_S2REGION_H_
+#endif  // S2_GEOMETRY_S2REGION_H_
