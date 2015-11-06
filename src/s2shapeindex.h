@@ -29,6 +29,21 @@
 //
 // All "const" methods are thread-safe provided that they do not overlap with
 // calls to non-const methods.  Non-const methods are not thread-safe.
+//
+// S2Polygon, S2Loop, and S2Polyline define S2Shape classes that allow these
+// objects to be indexed easily.  Additional S2Shape classes are defined in
+// s2shapeutil.  You can find useful query methods in S2EdgeQuery and
+// S2ClosestEdgeQuery.
+//
+// Example showing how to build an index of S2Polylines:
+//
+// void Test(vector<S2Polyline*> const& polylines) {
+//   S2ShapeIndex index;
+//   for (int i = 0; i < polylines.size(); ++i) {
+//     index.Add(new S2Polyline::Shape(polylines[i]));
+//   }
+//   // Now use an S2EdgeQuery or S2ClosestEdgeQuery here ...
+// }
 
 #ifndef S2_GEOMETRY_S2SHAPEINDEX_H_
 #define S2_GEOMETRY_S2SHAPEINDEX_H_
@@ -84,7 +99,9 @@ class S2Shape {
 
   // This method is called when an S2Shape is removed from the index or the
   // S2ShapeIndex is destroyed.  It provides an opportunity to delete the
-  // shape if it is no longer needed by the client.
+  // shape if it is no longer needed by the client.  (Shapes are not deleted
+  // by the S2ShapeIndex itself so that clients can declare S2Shapes as
+  // members of other objects, rather than allocating them separately.)
   virtual void Release() const = 0;
 
   // A unique id assigned to this shape by S2ShapeIndex.  Shape ids are
@@ -345,11 +362,12 @@ class S2ShapeIndex {
     // intersect the line segment between "target" and the cell center.
     bool Locate(S2Point const& target);
 
-    // Let T be the target S2CellId.  If T is contained by some index cell I,
-    // then position the iterator at I and return INDEXED.  Otherwise if T is
-    // subdivided into one or more index cells, then position the iterator at
-    // the first such cell I and return SUBDIVIDED.  Otherwise return DISJOINT
-    // and leave the iterator positioned arbitrarily.
+    // Let T be the target S2CellId.  If T is contained by some index cell I
+    // (including equality), then position the iterator at I and return
+    // INDEXED.  Otherwise if T contains one or more (smaller) index cells,
+    // then position the iterator at the first such cell I and return
+    // SUBDIVIDED.  Otherwise return DISJOINT and leave the iterator
+    // positioned arbitrarily.
     CellRelation Locate(S2CellId target);
 
     // Initialize an iterator for the given S2ShapeIndex without applying any
@@ -361,6 +379,10 @@ class S2ShapeIndex {
     CellMap const* cell_map_;
     CellMap::const_iterator iter_, end_;
   };
+
+  // Return the total number of edges in all indexed shapes.  This method
+  // takes time linear in the number of shapes.
+  int GetNumEdges() const;
 
 
   // Calls to Add() and Remove() are normally queued and processed on the

@@ -1394,9 +1394,9 @@ class PointVectorLoopShape : public S2Shape {
         vertices_(&*vertices->begin()) {
   }
   int num_edges() const { return num_vertices_; }
-  void GetEdge(int i, S2Point const** a, S2Point const** b) const {
-    *a = &vertices_[i];
-    *b = &vertices_[i+1 == num_vertices_ ? 0 : i+1];
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const {
+    *a = &vertices_[e];
+    *b = &vertices_[e+1 == num_vertices_ ? 0 : e+1];
   }
   bool has_interior() const { return false; }  // Not needed
   bool contains_origin() const { return false; }
@@ -1813,5 +1813,54 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   }
   InitLoopProperties();
   return true;
+}
+
+S2Polygon::Shape::Shape(S2Polygon const* p)
+    : polygon_(p), num_edges_(0), cumulative_edges_(NULL) {
+  if (p->is_full()) return;
+  int const kMaxLinearSearchLoops = 12;  // From benchmarks.
+  int num_loops = p->num_loops();
+  if (num_loops > kMaxLinearSearchLoops) {
+    cumulative_edges_ = new int[num_loops];
+  }
+  for (int i = 0; i < num_loops; ++i) {
+    if (cumulative_edges_) cumulative_edges_[i] = num_edges_;
+    num_edges_ += p->loop(i)->num_vertices();
+  }
+}
+
+S2Polygon::Shape::~Shape() {
+  delete[] cumulative_edges_;
+}
+
+void S2Polygon::Shape::GetEdge(int e, S2Point const** a, S2Point const** b)
+    const {
+  DCHECK_LT(e, num_edges());
+  S2Polygon const* p = polygon();
+  int i;
+  if (cumulative_edges_) {
+    // "upper_bound" finds the loop just beyond the one we want.
+    int* start = std::upper_bound(cumulative_edges_,
+                                  cumulative_edges_ + p->num_loops(), e) - 1;
+    i = start - cumulative_edges_;
+    e -= *start;
+  } else {
+    // When the number of loops is small, linear search is faster.  Most often
+    // there is exactly one loop and the code below executes zero times.
+    for (i = 0; e >= p->loop(i)->num_vertices(); ++i) {
+      e -= p->loop(i)->num_vertices();
+    }
+  }
+  *a = &p->loop(i)->vertex(e);
+  *b = &p->loop(i)->vertex(e+1);
+}
+
+bool S2Polygon::Shape::contains_origin() const {
+  S2Polygon const* p = polygon();
+  bool contains_origin = false;
+  for (int i = 0; i < p->num_loops(); ++i) {
+    contains_origin ^= p->loop(i)->contains_origin();
+  }
+  return contains_origin;
 }
 

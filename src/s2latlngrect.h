@@ -209,18 +209,28 @@ class S2LatLngRect : public S2Region {
   void AddPoint(S2Point const& p);
   void AddPoint(S2LatLng const& ll);
 
-  // Return a rectangle that contains all points whose latitude distance from
-  // this rectangle is at most margin.lat(), and whose longitude distance from
-  // this rectangle is at most margin.lng().  In particular, latitudes are
-  // clamped while longitudes are wrapped.  Any expansion of an empty rectangle
-  // remains empty.  Both components of "margin" must be non-negative.
+  // Return a rectangle that has been expanded by margin.lat() on each side in
+  // the latitude direction, and by margin.lng() on each side in the longitude
+  // direction.  If either margin is negative, then shrink the rectangle on
+  // the corresponding sides instead.  The resulting rectangle may be empty.
+  //
+  // As noted above, the latitude-longitude space has the topology of a
+  // cylinder.  Longitudes "wrap around" at +/-180 degrees, while latitudes
+  // are clamped to range [-90, 90].  This means that any expansion (positive
+  // or negative) of the full longitude range remains full (since the
+  // "rectangle" is actually a continuous band around the cylinder), while
+  // expansion of the full latitude range remains full only if the margin is
+  // positive.
+  //
+  // If either the latitude or longitude interval becomes empty after
+  // expansion by a negative margin, the result is empty.
   //
   // Note that if an expanded rectangle contains a pole, it may not contain
   // all possible lat/lng representations of that pole (see header above).
   // Use the PolarClosure() method if you do not want this behavior.
   //
   // If you are trying to grow a rectangle by a certain *distance* on the
-  // sphere (e.g. 5km), use the ConvolveWithCap() method instead.
+  // sphere (e.g. 5km), use the ExpandedByDistance() method instead.
   S2LatLngRect Expanded(S2LatLng const& margin) const;
 
   // If the rectangle does not include either pole, return it unmodified.
@@ -238,12 +248,44 @@ class S2LatLngRect : public S2Region {
   // spanning both of them is returned.
   S2LatLngRect Intersection(S2LatLngRect const& other) const;
 
-  // Return a rectangle that contains the convolution of this rectangle with a
-  // cap of the given angle.  This expands the rectangle by a fixed distance
-  // (as opposed to growing the rectangle in latitude-longitude space).  The
-  // returned rectangle includes all points whose minimum distance to the
-  // original rectangle is at most the given angle.
-  S2LatLngRect ConvolveWithCap(S1Angle angle) const;
+  // Expand this rectangle so that it contains all points within the given
+  // distance of the boundary, and return the smallest such rectangle.  If the
+  // distance is negative, then instead shrink this rectangle so that it
+  // excludes all points within the given absolute distance of the boundary,
+  // and return the largest such rectangle.
+  //
+  // Unlike Expanded(), this method treats the rectangle as a set of points on
+  // the sphere, and measures distances on the sphere.  For example, you can
+  // use this method to find a rectangle that contains all points within 5km
+  // of a given rectangle.  Because this method uses the topology of the
+  // sphere, note the following:
+  //
+  //  - The full and empty rectangles have no boundary on the sphere.  Any
+  //    expansion (positive or negative) of these rectangles leaves them
+  //    unchanged.
+  //
+  //  - Any rectangle that covers the full longitude range does not have an
+  //    east or west boundary, therefore no expansion (positive or negative)
+  //    will occur in that direction.
+  //
+  //  - Any rectangle that covers the full longitude range and also includes
+  //    a pole will not be expanded or contracted at that pole, because it
+  //    does not have a boundary there.
+  //
+  //  - If a rectangle is within the given distance of a pole, the result will
+  //    include the full longitude range (because all longitudes are present
+  //    at the poles).
+  //
+  // Expansion and contraction are defined such that they are inverses whenver
+  // possible, i.e.
+  //
+  //   rect.ExpandedByDistance(x).ExpandedByDistance(-x) == rect
+  //
+  // (approximately), so long as the first operation does not cause a
+  // rectangle boundary to disappear (i.e., the longitude range newly becomes
+  // full or empty, or the latitude range expands to include a pole).
+  S2LatLngRect ExpandedByDistance(S1Angle distance) const;
+
 
   // Returns the minimum distance (measured along the surface of the sphere) to
   // the given S2LatLngRect. Both S2LatLngRects must be non-empty.

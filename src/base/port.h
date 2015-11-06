@@ -233,24 +233,9 @@ const char PATH_SEPARATOR = '/';
 #define O_BINARY 0
 #endif
 
-// va_copy portability definitions
 #ifdef _MSC_VER
-// MSVC before version 12 doesn't have va_copy.
-// This is believed to work for 32-bit msvc.  This may not work at all for
-// other platforms.
-// If va_list uses the single-element-array trick, you will probably get
-// a compiler error here.
-//
-#if (_MSC_VER < 1800)
-#include <stdarg.h>
-inline void va_copy(va_list& a, va_list& b) {
-  a = b;
-}
-#endif  // _MSC_VER < 1800
-
-// Nor does it have uid_t
+// doesn't have uid_t
 typedef int uid_t;
-
 #endif
 
 // Mac OS X / Darwin and iOS features
@@ -336,10 +321,6 @@ inline size_t strnlen(const char *s, size_t maxlen) {
     return end - s;
   return maxlen;
 }
-
-#if !defined(OS_IOS)
-namespace std {}  // Avoid error if we didn't see std.
-#endif
 
 // Doesn't exist on OSX.
 #define MSG_NOSIGNAL 0
@@ -989,19 +970,7 @@ BASE_PORT_MSVC_DLL_MACRO
 // You say tomato, I say _tomato
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
-
 #define nextafter _nextafter
-
-// In MSVC >= 12, the redefinitions of hypot and hypotf will cause an
-// inconsistent DLL linkage problem because hypot and hypotf are also defined
-// in xtgmath.h, which is included later via <string>. The redefinitions are,
-// however not necessary any more as both functions are redirected to _hypot
-// and _hypotf in math.h.
-#if (_MSC_VER < 1800)
-#define hypot _hypot
-#define hypotf _hypotf
-#endif  // _MSC_VER < 1800
-
 #define strdup _strdup
 #define tempnam _tempnam
 #define chdir  _chdir
@@ -1028,17 +997,6 @@ inline void aligned_free(void *aligned_memory) {
 
 // See http://en.wikipedia.org/wiki/IEEE_754 for details of
 // floating point format.
-
-#if (_MSC_VER < 1800)  // MSVC after version 12 has these definitions.
-enum {
-  FP_NAN,  //  is "Not a Number"
-  FP_INFINITE,  //  is either plus or minus infinity.
-  FP_ZERO,
-  FP_SUBNORMAL,  // is too small to be represented in normalized format.
-  FP_NORMAL  // if nothing of the above is correct that it must be a
-  // normal floating-point number.
-};
-#endif  // _MSC_VER < 1800
 
 inline int fpclassify_double(double x) {
   const int float_point_class =_fpclass(x);

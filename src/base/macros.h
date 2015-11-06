@@ -107,8 +107,8 @@
 // semantically, one should either use disallow both or neither. Try to
 // avoid these in new code.
 //
-// When building with C++11 toolchains, users should consider using the language
-// support for explicitly deleted methods instead of this macro.
+// When building with C++11 toolchains, users should instead prefer the
+// language supported "= delete" syntax.
 #if LANG_CXX11
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&) = delete;      \
@@ -280,7 +280,11 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 // default, but the warnings will be reported by go/clang-tidy.
 #if defined(__clang__) && defined(LANG_CXX11) && defined(__has_warning)
 #if __has_feature(cxx_attributes)
+#if (__cplusplus >= 201402L)
 #define GOOGLE_DEPRECATED(message) [[deprecated(message)]]  // NOLINT
+#else
+#define GOOGLE_DEPRECATED(message) __attribute__((deprecated(message)))  // NOLINT
+#endif
 #endif
 #endif
 

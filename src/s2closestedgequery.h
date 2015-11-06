@@ -19,6 +19,7 @@
 #define S2_GEOMETRY_S2CLOSESTEDGEQUERY_H_
 
 #include <algorithm>
+#include <set>
 #include "priority_queue_sequence.h"
 #include "s1angle.h"
 #include "s1chordangle.h"
@@ -28,8 +29,37 @@
 #include "s2shapeindex.h"
 #include "util/gtl/inlined_vector.h"
 
-// S2ClosestEdgeQuery is a helper class for finding the minimum distance from
-// a given point to a set of edges (stored in an S2ShapeIndex).
+// S2ClosestEdgeQuery is a helper class for finding the closest edge(s) to a
+// given query point.  For example, given a set of polylines, the following
+// code efficiently finds the closest 5 edges to a given query point:
+//
+// void Test(vector<S2Polyline*> const& polylines, S2Point const& target) {
+//   S2ShapeIndex index;
+//   for (int i = 0; i < polylines.size(); ++i) {
+//     index.Add(new S2Polyline::Shape(polylines[i]));
+//   }
+//   S2ClosestEdgeQuery query(index);
+//   query.set_max_edges(5);
+//   query.FindClosestEdges(target);
+//   for (int i = 0; i < query.num_edges(); ++i) {
+//     // query.shape_id(i) and query.edge_id(i) identify the edge.
+//     // Convenience methods:
+//     //   query.distance(i) is the distance to the target point.
+//     //   query.GetEdge(i, &v0, &v1) retrieves the edge endpoints.
+//     //   query.GetClosestPointOnEdge(i) returns the point on the edge
+//     //     that is closest to the target point.
+//     int polyline_index = query.shape_id(i);
+//     int edge_index = query.edge_id(i);
+//     S1Angle distance = query.distance(i);
+//     S2Point closest_point = query.GetClosestPointOnEdge(i);
+//   }
+// }
+//
+// You can find either the k closest edges, or all edges within a given
+// radius, or both (i.e., the k closest edges up to a given maximum radius).
+// E.g. to find all the edges within 5 kilometers, call
+//
+//   query.set_max_distance(S2Earth::ToAngle(util::units::Kilometers(5)));
 class S2ClosestEdgeQuery {
  public:
   // Convenience constructor that calls Init().
@@ -39,55 +69,193 @@ class S2ClosestEdgeQuery {
   S2ClosestEdgeQuery() {}
   ~S2ClosestEdgeQuery();
 
-  // REQUIRES: "index" is not modified after this method is called.
+  // Initialize the query.
+  // REQUIRES: Reset() must be called if "index" is modified.
   void Init(S2ShapeIndex const& index);
 
-  // Return the minimum distance from the given point to any edge of the
-  // S2ShapeIndex.  If there are no edges, return S1Angle::Infinity().  The
-  // edge that determined the minimum distance can be obtained by calling
-  // shape_id() and edge_id() after calling this method.
+  // Reset the query state.  This method must be called whenever the
+  // underlying index is modified.
+  void Reset();
+
+  // Return a reference to the underlying S2ShapeIndex.
+  S2ShapeIndex const& index() const;
+
+  // Only find the "max_edges" closest edges.
+  // This value may be changed between calls to FindClosestEdges().
+  //
+  // Default value: numeric_limits<int>::max()
+  // REQUIRES: max_edges >= 1
+  int max_edges() const;
+  void set_max_edges(int max_edges);
+
+  // Only find edges whose distance to the target is less than "max_distance".
+  // This value may be changed between calls to FindClosestEdges().
+  //
+  // Default value: S1Angle::Infinity().
+  S1Angle max_distance() const;
+  void set_max_distance(S1Angle max_distance);
+
+  // Allow distance errors of up to "max_error" when determining which edge(s)
+  // are closest.  Note that this does not affect how distances are measured,
+  // it just gives the algorithm permission to not work so hard to find the
+  // exact closest edge (or set of edges) when many edges are nearly equally
+  // distant.  Specifically, if E1 is some edge in the "exact" result set,
+  // then the algorithm is allowed to substitute an edge E2 that is up to
+  // "max_error" further away than E1 (and that satisfies all the remaining
+  // search criteria, including max_distance).
+  //
+  // Default value: S1Angle::Zero().
+  S1Angle max_error() const;
+  void set_max_error(S1Angle max_error);
+
+  // Find the closest edges to "target" that satisfy the given max_distance()
+  // and/or max_edges() criteria.  If neither of these is set, then all edges
+  // are returned.  This method may be called multiple times.
   //
   // REQUIRES: "target" is unit length.
-  S1Angle GetDistance(S2Point const& target);
+  void FindClosestEdges(S2Point const& target);
 
-  // Return the closest point on any edge of the S2ShapeIndex to the given
-  // point.  If the index has no edges, return the input argument.  The edge
-  // that determined the minimum distance can be obtained by calling
-  // shape_id() and edge_id() after calling this method.
-  //
-  // REQUIRES: "target" is unit length.
-  S2Point Project(S2Point const& target);
-
-  // A faster approximate version of GetDistance().  The result is never
-  // smaller than the true distance, but it may be larger by up to
-  // "max_error".  shape_id() and edge_id() can be used to obtain the edge
-  // that determined the approximate minimum distance.
-  S1Angle ApproxGetDistance(S2Point const& target, S1Angle max_error);
-
-  // A faster approximate version of Project().  The result will alway be as
-  // close as possible to some edge of the index, but there may be some other
-  // edge that is closer by up to "max_error".  shape_id() and edge_id() can
-  // be used to obtain the edge on which the given point was projected.
-  S2Point ApproxProject(S2Point const& target, S1Angle max_error);
-
-  // Return the shape and edge id of the edge that determined the result of
-  // the most recent query (i.e., the closest edge to the target point).
-  // Return -1 if the shape index has no edges.
-  int shape_id() const { return shape_id_; }
-  int edge_id() const { return edge_id_; }
-
-  // Manually determine whether distances are computed using "brute force"
-  // (i.e., by examining every edge) rather than using the S2ShapeIndex.  This
-  // is useful for testing, benchmarking, and debugging.
-  //
-  // Changing this setting may cause Project() to return a different result
-  // (e.g., when two edges are nearly equidistant from the target).  Also note
-  // that the brute force algorithm ignores "max_error".
+  // Manually specify whether distances are computed using "brute force"
+  // (i.e., by examining every edge) rather than using the S2ShapeIndex.
+  // This is useful for testing, benchmarking, and debugging.
   //
   // REQUIRES: Init() has been called.
   void UseBruteForce(bool use_brute_force);
 
+  ////////////////////// Result Interface ////////////////////////
+  //
+  // The result of a query consists of a set of edges which may be obtained
+  // using the interface below.  Edges are sorted in order of increasing
+  // distance to the target point.
+
+  // The number of result edges.
+  int num_edges() const;
+
+  // The shape id of the given result edge.
+  int shape_id(int i) const;
+
+  // The edge id of the given result edge.
+  int edge_id(int i) const;
+
+  // The distance to the given result edge.
+  S1Angle distance(int i) const;
+
+  // Returns pointers to the vertices of the given result edge.  Example usage:
+  //   S2Point const *v0, *v1;
+  //   query.GetEdge(i, &v0, &v1);
+  void GetEdge(int i, S2Point const** v0, S2Point const** v1) const;
+
+  // Returns the point on given result edge that is closest to the target.
+  S2Point GetClosestPointOnEdge(int i) const;
+
+  //////////////////////// Convenience Methods ////////////////////////
+
+  // Finds the closest edge to the target.  Equivalent to:
+  //
+  //   query.set_max_edges(1);
+  //   query.FindClosestEdges();
+  //
+  // All other parameters are unchanged; e.g. max_distance() will still limit
+  // the search radius.
+  //
+  // REQUIRES: "target" is unit length.
+  void FindClosestEdge(S2Point const& target);
+
+  // Return the minimum distance from the given point to any edge of the
+  // S2ShapeIndex.  If there are no edges, return S1Angle::Infinity().
+  //
+  // SIDE EFFECTS: Calls set_max_edges(1); all other parameters are unchanged.
+  S1Angle GetDistance(S2Point const& target);
+
+  // Return the closest point on any edge of the S2ShapeIndex to the given
+  // point.  If the index has no edges, return the input argument.
+  //
+  // SIDE EFFECTS: Calls set_max_edges(1); all other parameters are unchanged.
+  S2Point Project(S2Point const& target);
+
  private:
+  class QueueEntry;
+  void FindClosestEdgesBruteForce();
+  void FindClosestEdgesOptimized();
+  void InitQueue();
+  void MaybeAddResult(S2Shape const* shape, int edge_id);
+  void ProcessEdges(QueueEntry const& entry);
+  void EnqueueCell(S2CellId id, S2ShapeIndexCell const* index_cell);
+  void EnqueueCurrentCell(S2CellId id);
+  void AddInitialRange(S2ShapeIndex::Iterator const& first,
+                       S2ShapeIndex::Iterator const& last);
+
+  //////////// Parameters /////////////
+
+  int max_edges_;
+  S1Angle max_distance_;
+  S1Angle max_error_arg_;
+  S2Point target_;
+
+  ////////// Fields that are constant after Init() is called /////////////
+
+  S2ShapeIndex const* index_;
+
+  // If the index has few edges, it is cheaper to use a brute force algorithm.
+  bool use_brute_force_;
+
+  // During Init() we precompute the top-level S2CellIds that will be added to
+  // the priority queue.  There can be at most 6 of these cells.  Essentially
+  // this is just a covering of the indexed edges, except that we also store
+  // pointers to the corresponding S2ShapeIndexCells to reduce the number of
+  // index seeks required.
+  //
+  // The covering needs to be stored in a std::vector so that we can use
+  // S2CellUnion::GetIntersection().
+  std::vector<S2CellId> index_covering_;
+  util::gtl::InlinedVector<S2ShapeIndexCell const*, 6> index_cells_;
+
+  ////////// Fields that are updated during a query /////////////
+
+  // The edges gathered so far are kept in a sorted container so that
+  // duplicate edges can easily be removed.
+  struct Result {
+    // Default constructor needed by standard containers.
+    Result() : distance(S1ChordAngle::Negative()), shape_id(-1), edge_id(-1) {}
+    Result(S1ChordAngle _distance, int _shape_id, int _edge_id)
+        : distance(_distance), shape_id(_shape_id), edge_id(_edge_id) {
+    }
+    bool operator<(Result const& other) const {
+      // Edges are sorted first by distance and then by unique id.
+      if (distance < other.distance) return true;
+      if (distance > other.distance) return false;
+      if (shape_id < other.shape_id) return true;
+      if (shape_id > other.shape_id) return false;
+      return edge_id < other.edge_id;
+    }
+
+    S1ChordAngle distance;
+    int shape_id, edge_id;
+  };
+  typedef std::set<Result> ResultSet;
+  ResultSet tmp_results_;
+
+  // For efficiency, when max_edges() == 1 we keep the current best result in
+  // this field rather than using "tmp_results_" above.
+  Result tmp_result_singleton_;
+
+  // Once all result edges have been found, they are copied into a vector.
+  util::gtl::InlinedVector<Result, 8> results_;
+
+  Result const& result(int i) const;  // Internal accessor method.
+
+  // The distance beyond which we can safely ignore further candidate edges.
+  // (Candidates that are exactly at the limit are ignored; this is more
+  // efficient for UpdateMinDistance() and should not affect clients since
+  // distance measurements have a small amount of error anyway.)
+  //
+  // Initially this is the same as the maximum distance specified by the user,
+  // but it can also be updated by the algorithm (see MaybeAddResult).
+  S1ChordAngle max_distance_limit_;
+
+  // Internally we convert max_error_arg_ to an S1ChordAngle for efficiency.
+  S1ChordAngle max_error_;
+
   // The algorithm maintains a priority queue of S2CellIds that contain at
   // least one S2ShapeIndexCell, sorted in increasing order of distance from
   // the target point.
@@ -115,52 +283,15 @@ class S2ClosestEdgeQuery {
       return distance > other.distance;
     }
   };
-
-  // Private methods are documented in the .cc file.
-  void FindClosestEdge(S2Point const& target, S1Angle max_error);
-  void FindClosestEdgeBruteForce(S2Point const& target);
-  void UpdateDistance(QueueEntry const& entry);
-  void EnqueueCell(S2CellId id, S2ShapeIndexCell const* index_cell);
-  void EnqueueCurrentCell(S2CellId id);
-  void AddInitialRange(S2ShapeIndex::Iterator const& first,
-                       S2ShapeIndex::Iterator const& last);
-
-  ////////// Fields that are constant after Init() is called /////////////
-
-  S2ShapeIndex const* index_;
-
-  // If the index has few edges, it is cheaper to use a brute force algorithm.
-  bool use_brute_force_;
-
-  // During Init() we precompute the top-level S2CellIds that will be added to
-  // the priority queue.  There can be at most 6 of these cells.
-  typedef std::pair<S2CellId, S2ShapeIndexCell const*> TopCell;
-  util::gtl::InlinedVector<TopCell, 6> top_cells_;
-
-  ////////// Fields that are constant during a query /////////////
-
-  S2Point target_;
-  S1ChordAngle max_error_;
-
-  ////////// Fields that are updated during a query /////////////
-
-  // These fields store the tentative result of the query.
-  S1ChordAngle min_distance_;
-  int shape_id_, edge_id_;
-
-  // We only update "min_distance_" if it would decrease by at least
-  // "max_error_", since computing the actual distance is fairly expensive.
-  // We do this by maintaining a value "goal_distance_" equal to
-  // (min_distance_ - max_error_) and comparing distance bounds against it.
-  S1ChordAngle goal_distance_;
-
-  // A temporary declared here to avoid initializing iterators multiple times.
-  S2ShapeIndex::Iterator iter_;
-
-  // We use a priority queue that exposes the underlying vector because the
-  // standard STL one does not support clearing the remaining queue entries.
-  typedef priority_queue_sequence<QueueEntry> CellQueue;
+  typedef std::priority_queue<
+      QueueEntry, util::gtl::InlinedVector<QueueEntry, 16> > CellQueue;
   CellQueue queue_;
+
+  // Temporaries, defined here to avoid multiple allocations / initializations.
+
+  S2ShapeIndex::Iterator iter_;
+  std::vector<S2CellId> max_distance_covering_;
+  std::vector<S2CellId> initial_cells_;
 };
 
 
@@ -171,12 +302,59 @@ inline S2ClosestEdgeQuery::S2ClosestEdgeQuery(S2ShapeIndex const& index) {
   Init(index);
 }
 
-inline S1Angle S2ClosestEdgeQuery::GetDistance(S2Point const& target) {
-  return ApproxGetDistance(target, S1Angle::Zero());
+inline S2ShapeIndex const& S2ClosestEdgeQuery::index() const {
+  return *index_;
 }
 
-inline S2Point S2ClosestEdgeQuery::Project(S2Point const& target) {
-  return ApproxProject(target, S1Angle::Zero());
+inline int S2ClosestEdgeQuery::max_edges() const {
+  return max_edges_;
+}
+
+inline void S2ClosestEdgeQuery::set_max_edges(int max_edges) {
+  DCHECK_GE(max_edges, 1);
+  max_edges_ = max_edges;
+}
+
+inline S1Angle S2ClosestEdgeQuery::max_distance() const {
+  return max_distance_;
+}
+
+inline void S2ClosestEdgeQuery::set_max_distance(S1Angle max_distance) {
+  max_distance_ = max_distance;
+}
+
+inline S1Angle S2ClosestEdgeQuery::max_error() const {
+  return max_error_arg_;
+}
+
+inline void S2ClosestEdgeQuery::set_max_error(S1Angle max_error) {
+  max_error_arg_ = max_error;
+}
+
+inline int S2ClosestEdgeQuery::num_edges() const {
+  return results_.size();
+}
+
+inline int S2ClosestEdgeQuery::shape_id(int i) const {
+  return results_[i].shape_id;
+}
+
+inline int S2ClosestEdgeQuery::edge_id(int i) const {
+  return results_[i].edge_id;
+}
+
+inline S1Angle S2ClosestEdgeQuery::distance(int i) const {
+  return results_[i].distance.ToAngle();
+}
+
+inline void S2ClosestEdgeQuery::GetEdge(int i, S2Point const** v0,
+                                        S2Point const** v1) const {
+  index_->shape(shape_id(i))->GetEdge(edge_id(i), v0, v1);
+}
+
+inline void S2ClosestEdgeQuery::FindClosestEdge(S2Point const& target) {
+  set_max_edges(1);
+  FindClosestEdges(target);
 }
 
 #endif  // S2_GEOMETRY_S2CLOSESTEDGEQUERY_H_

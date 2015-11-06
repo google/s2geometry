@@ -18,8 +18,8 @@
 #include "priority_queue_sequence.h"
 
 #include <algorithm>
-#include "s2testing.h"
 #include <gtest/gtest.h>
+#include "s2testing.h"
 
 using std::vector;
 

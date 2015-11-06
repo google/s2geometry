@@ -17,7 +17,8 @@
 
 #include "s2edgequery.h"
 
-#include <utility>  // pair<>
+#include <algorithm>
+#include <utility>
 #include <vector>
 #include "base/stringprintf.h"
 #include <gtest/gtest.h>
@@ -26,11 +27,16 @@
 #include "s2cell.h"
 #include "s2cellid.h"
 #include "s2edgeutil.h"
+#include "s2polyline.h"
 #include "s2shapeutil.h"
 #include "s2testing.h"
+#include "s2textformat.h"
 #include "util/gtl/algorithm.h"
+#include "util/gtl/stl_util.h"
 
 using s2shapeutil::S2EdgeVectorShape;
+using s2textformat::MakePoint;
+using s2textformat::MakePolyline;
 using std::pair;
 using std::vector;
 
@@ -119,11 +125,12 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
     EXPECT_LT(candidates.back(), shape->num_edges());
     num_candidates += candidates.size();
     string missing_candidates;
+    vector<int> expected_crossings;
     for (int i = 0; i < shape->num_edges(); ++i) {
       S2Point const *c, *d;
       shape->GetEdge(i, &c, &d);
-      if (*c == a || *c == b || *d == a || *d == b ||
-          S2EdgeUtil::RobustCrossing(a, b, *c, *d) > 0) {
+      if (S2EdgeUtil::RobustCrossing(a, b, *c, *d) >= 0) {
+        expected_crossings.push_back(i);
         ++num_nearby_pairs;
         if (!std::binary_search(candidates.begin(), candidates.end(), i)) {
           StringAppendF(&missing_candidates, " %d", i);
@@ -139,6 +146,17 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
       }
     }
     EXPECT_TRUE(missing_candidates.empty()) << missing_candidates;
+
+    // Test that GetCrossings() returns only the actual crossing edges.
+    vector<int> actual_crossings;
+    query.GetCrossings(a, b, shape, &actual_crossings);
+    EXPECT_EQ(expected_crossings, actual_crossings);
+
+    // Verify that the second version of GetCrossings returns the same result.
+    query.GetCrossings(a, b, &edge_map);
+    EXPECT_EQ(1, edge_map.size());
+    EXPECT_EQ(shape, edge_map.begin()->first);
+    EXPECT_EQ(expected_crossings, edge_map.begin()->second);
   }
   // There is nothing magical about this particular ratio; this check exists
   // to catch changes that dramatically increase the number of candidates.
@@ -221,6 +239,53 @@ TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
     }
     TestAllCrossings(edges);
   }
+}
+
+// This is the example from the header file, with a few extras.
+void TestPolylineCrossings(vector<S2Polyline*> const& polylines,
+                           S2Point const& a0, S2Point const &a1) {
+  S2ShapeIndex index;
+  for (int i = 0; i < polylines.size(); ++i) {
+    index.Add(new S2Polyline::Shape(polylines[i]));
+  }
+  S2EdgeQuery query(index);
+  S2EdgeQuery::EdgeMap edge_map;
+  if (!query.GetCrossings(a0, a1, &edge_map)) return;
+  for (S2EdgeQuery::EdgeMap::const_iterator it = edge_map.begin();
+       it != edge_map.end(); ++it) {
+    S2Shape const* shape = it->first;
+    S2Polyline* polyline = polylines[shape->id()];
+    vector<int> const& edges = it->second;
+    // Shapes with no crossings should be filtered out by this method.
+    EXPECT_FALSE(edges.empty());
+    for (int j = 0; j < edges.size(); ++j) {
+      S2Point const& b0 = polyline->vertex(edges[j]);
+      S2Point const& b1 = polyline->vertex(edges[j] + 1);
+      CHECK_GE(S2EdgeUtil::RobustCrossing(a0, a1, b0, b1), 0);
+    }
+  }
+  // Also test that no edges are missing.
+  for (int i = 0; i < polylines.size(); ++i) {
+    vector<int> const& edges = edge_map[index.shape(i)];
+    S2Polyline const* polyline = polylines[i];
+    for (int e = 0; e < polyline->num_vertices() - 1; ++e) {
+      if (S2EdgeUtil::RobustCrossing(a0, a1, polyline->vertex(e),
+                                     polyline->vertex(e+1)) >= 0) {
+        EXPECT_EQ(1, std::count(edges.begin(), edges.end(), e));
+      }
+    }
+  }
+}
+
+TEST(GetCrossings, PolylineCrossings) {
+  vector<S2Polyline*> polylines;
+  // Three zig-zag lines near the equator.
+  polylines.push_back(MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6"));
+  polylines.push_back(MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"));
+  polylines.push_back(MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"));
+  TestPolylineCrossings(polylines, MakePoint("1:0"), MakePoint("1:4"));
+  TestPolylineCrossings(polylines, MakePoint("5:5"), MakePoint("6:6"));
+  STLDeleteElements(&polylines);
 }
 
 }  // namespace

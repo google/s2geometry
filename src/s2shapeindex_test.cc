@@ -39,6 +39,7 @@
 #include "s2shapeutil.h"
 #include "s2testing.h"
 #include "s2textformat.h"
+#include "util/gtl/stl_util.h"
 
 using s2shapeutil::S2EdgeVectorShape;
 using std::unique_ptr;
@@ -241,7 +242,7 @@ TEST_F(S2ShapeIndexTest, LoopsSpanningThreeFaces) {
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
-  S2Testing::DeleteLoops(&loops);
+  STLDeleteElements(&loops);
 }
 
 
@@ -337,7 +338,7 @@ void TestHasCrossing(const string& polygon_str, bool has_crossing) {
   vector<S2Loop*> loops;
   polygon->Release(&loops);
   TestHasCrossingPermutations(&loops, 0, has_crossing);
-  S2Testing::DeleteLoops(&loops);
+  STLDeleteElements(&loops);
 }
 
 TEST_F(S2ShapeIndexTest, HasCrossing) {

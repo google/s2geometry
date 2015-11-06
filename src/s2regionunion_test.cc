@@ -75,7 +75,7 @@ TEST(S2RegionUnionTest, Basic) {
   S2RegionCoverer coverer;
   coverer.set_max_cells(1);
   vector<S2CellId> covering;
-  coverer.GetCovering(*two_points.get(), &covering);
+  coverer.GetCovering(*two_points, &covering);
   EXPECT_EQ(1, covering.size());
   EXPECT_EQ(face0.id(), covering[0]);
 }

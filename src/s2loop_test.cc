@@ -44,6 +44,7 @@
 #include "s2testing.h"
 #include "s2textformat.h"
 #include "util/gtl/fixedarray.h"
+#include "util/gtl/stl_util.h"
 #include "util/math/matrix3x3.h"
 #include "util/math/vector3.h"
 
@@ -223,7 +224,7 @@ class S2LoopTestBase : public testing::Test {
   }
 
   ~S2LoopTestBase() {
-    S2Testing::DeleteLoops(reinterpret_cast<vector<S2Loop*>*>(&all_loops));
+    STLDeleteElements(&all_loops);
   }
 
   // Wrapper function that encodes "loop" into "encoder" using the private
@@ -526,7 +527,7 @@ TEST_F(S2LoopTestBase, Contains) {
       }
       EXPECT_EQ(count, 1);
     }
-    S2Testing::DeleteLoops(&loops);
+    STLDeleteElements(&loops);
   }
 }
 
@@ -1293,11 +1294,11 @@ TEST_F(S2LoopTestBase, MakeRegularLoop) {
   S1Angle radius = S1Angle::Degrees(20);
   unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(center, radius, 4));
 
-  ASSERT_EQ(4, loop.get()->num_vertices());
-  S2Point p0 = loop.get()->vertex(0);
-  S2Point p1 = loop.get()->vertex(1);
-  S2Point p2 = loop.get()->vertex(2);
-  S2Point p3 = loop.get()->vertex(3);
+  ASSERT_EQ(4, loop->num_vertices());
+  S2Point p0 = loop->vertex(0);
+  S2Point p1 = loop->vertex(1);
+  S2Point p2 = loop->vertex(2);
+  S2Point p3 = loop->vertex(3);
   // Make sure that the radius is correct.
   EXPECT_DOUBLE_EQ(20.0, S2LatLng(center).GetDistance(S2LatLng(p0)).degrees());
   EXPECT_DOUBLE_EQ(20.0, S2LatLng(center).GetDistance(S2LatLng(p1)).degrees());

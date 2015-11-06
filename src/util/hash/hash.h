@@ -50,4 +50,6 @@ template<> struct hash<uint128> {
 
 HASH_NAMESPACE_DECLARATION_END
 
+template<class X> struct GoodFastHash;
+
 #endif  // UTIL_HASH_HASH_H_

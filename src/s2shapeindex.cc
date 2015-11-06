@@ -1005,3 +1005,13 @@ int S2ShapeIndex::CountShapes(vector<ClippedEdge const*> const& edges,
   return count;
 }
 
+int S2ShapeIndex::GetNumEdges() const {
+  MaybeApplyUpdates();
+  int num_edges = 0;
+  for (int id = 0; id < shapes_.size(); ++id) {
+    if (shapes_[id] == NULL) continue;
+    num_edges += shapes_[id]->num_edges();
+  }
+  return num_edges;
+}
+

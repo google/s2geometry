@@ -17,6 +17,7 @@
 //
 // Utilities for container logging.
 // TODO(user): Broaden the scope and rename to "stream_util.h"
+//
 
 #ifndef UTIL_GTL_CONTAINER_LOGGING_H_
 #define UTIL_GTL_CONTAINER_LOGGING_H_

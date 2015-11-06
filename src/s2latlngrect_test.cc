@@ -267,11 +267,53 @@ TEST(S2LatLngRect, Expanded) {
               ApproxEquals(RectFromDegrees(50, 120, 90, -160)));
   EXPECT_TRUE(S2LatLngRect::Empty().Expanded(S2LatLng::FromDegrees(20, 30)).
               is_empty());
-  EXPECT_TRUE(S2LatLngRect::Full().Expanded(S2LatLng::FromDegrees(20, 30)).
+  EXPECT_TRUE(S2LatLngRect::Full().Expanded(S2LatLng::FromDegrees(500, 500)).
               is_full());
   EXPECT_TRUE(RectFromDegrees(-90, 170, 10, 20).
               Expanded(S2LatLng::FromDegrees(30, 80)).
               ApproxEquals(RectFromDegrees(-90, -180, 40, 180)));
+
+  // Negative margins.
+  EXPECT_TRUE(RectFromDegrees(10, -50, 60, 70).
+              Expanded(S2LatLng::FromDegrees(-10, -10)).
+              ApproxEquals(RectFromDegrees(20, -40, 50, 60)));
+  EXPECT_TRUE(RectFromDegrees(-20, -180, 20, 180).
+              Expanded(S2LatLng::FromDegrees(-10, -10)).
+              ApproxEquals(RectFromDegrees(-10, -180, 10, 180)));
+  EXPECT_TRUE(RectFromDegrees(-20, -180, 20, 180).
+              Expanded(S2LatLng::FromDegrees(-30, -30)).is_empty());
+  EXPECT_TRUE(RectFromDegrees(-90, 10, 90, 11).
+              Expanded(S2LatLng::FromDegrees(-10, -10)).is_empty());
+  EXPECT_TRUE(RectFromDegrees(-90, 10, 90, 100).
+              Expanded(S2LatLng::FromDegrees(-10, -10)).
+              ApproxEquals(RectFromDegrees(-80, 20, 80, 90)));
+  EXPECT_TRUE(S2LatLngRect::Empty().Expanded(S2LatLng::FromDegrees(-50, -500)).
+              is_empty());
+  EXPECT_TRUE(S2LatLngRect::Full().Expanded(S2LatLng::FromDegrees(-50, -50)).
+              ApproxEquals(RectFromDegrees(-40, -180, 40, 180)));
+
+  // Mixed margins.
+  EXPECT_TRUE(RectFromDegrees(10, -50, 60, 70).
+              Expanded(S2LatLng::FromDegrees(-10, 30)).
+              ApproxEquals(RectFromDegrees(20, -80, 50, 100)));
+  EXPECT_TRUE(RectFromDegrees(-20, -180, 20, 180).
+              Expanded(S2LatLng::FromDegrees(10, -500)).
+              ApproxEquals(RectFromDegrees(-30, -180, 30, 180)));
+  EXPECT_TRUE(RectFromDegrees(-90, -180, 80, 180).
+              Expanded(S2LatLng::FromDegrees(-30, 500)).
+              ApproxEquals(RectFromDegrees(-60, -180, 50, 180)));
+  EXPECT_TRUE(RectFromDegrees(-80, -100, 80, 150).
+              Expanded(S2LatLng::FromDegrees(30, -50)).
+              ApproxEquals(RectFromDegrees(-90, -50, 90, 100)));
+  EXPECT_TRUE(RectFromDegrees(0, -180, 50, 180).
+              Expanded(S2LatLng::FromDegrees(-30, 500)).is_empty());
+  EXPECT_TRUE(RectFromDegrees(-80, 10, 70, 20).
+              Expanded(S2LatLng::FromDegrees(30, -200)).is_empty());
+  EXPECT_TRUE(S2LatLngRect::Empty().Expanded(S2LatLng::FromDegrees(100, -100)).
+              is_empty());
+  EXPECT_TRUE(S2LatLngRect::Full().Expanded(S2LatLng::FromDegrees(100, -100)).
+              is_full());
+
 }
 
 TEST(S2LatLngRect, PolarClosure) {
@@ -285,12 +327,12 @@ TEST(S2LatLngRect, PolarClosure) {
             RectFromDegrees(-90, -145, 90, -144).PolarClosure());
 }
 
-TEST(S2LatLngRect, ConvolveWithCap) {
+TEST(S2LatLngRect, ExpandedByDistance) {
   EXPECT_TRUE(RectFromDegrees(0, 170, 0, -170).
-              ConvolveWithCap(S1Angle::Degrees(15)).ApproxEquals(
+              ExpandedByDistance(S1Angle::Degrees(15)).ApproxEquals(
                   RectFromDegrees(-15, 155, 15, -155)));
   EXPECT_TRUE(RectFromDegrees(60, 150, 80, 10).
-              ConvolveWithCap(S1Angle::Degrees(15)).ApproxEquals(
+              ExpandedByDistance(S1Angle::Degrees(15)).ApproxEquals(
                   RectFromDegrees(45, -180, 90, 180)));
 }
 

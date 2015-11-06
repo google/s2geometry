@@ -25,6 +25,9 @@
 
 #include "fpcontractoff.h"
 #include "s2.h"
+#include "s2loop.h"
+#include "s2polygon.h"
+#include "s2polyline.h"
 #include "s2shapeindex.h"
 
 class S2Loop;
@@ -37,13 +40,17 @@ namespace s2shapeutil {
 // a collection of polylines and don't care about memory efficiency (since
 // this class would store most of the vertices twice).
 //
-// If the vertices are already stored somewhere else, you would be better off
-// writing your own subclass of S2Shape that points to the existing vertex
-// data rather than copying it.
+// Note that if you already have data stored in an S2Loop, S2Polyline, or
+// S2Polygon, then you would be better off using the "Shape" class defined
+// within those classes (e.g., S2Loop::Shape).  Similarly, if the vertex data
+// is stored in your own data structures, you can easily write your own
+// subclass of S2Shape that points to the existing vertex data rather than
+// copying it.
 //
-// Note that when an S2EdgeVectorShape is inserted into an S2ShapeIndex, the
-// index takes ownership.  The object will be deleted automatically when the
-// index no longer needs it (see Release().)
+// When an object of this class is inserted into an S2ShapeIndex, the index
+// takes ownership.  The object and edge data will be deleted automatically
+// when the index no longer needs it (see Release().)  You can subtype this
+// object to change this behavior.
 class S2EdgeVectorShape : public S2Shape {
  public:
   S2EdgeVectorShape() {}
@@ -56,9 +63,9 @@ class S2EdgeVectorShape : public S2Shape {
     edges_.push_back(std::make_pair(a, b));
   }
   int num_edges() const { return edges_.size(); }
-  void GetEdge(int i, S2Point const** a, S2Point const** b) const {
-    *a = &edges_[i].first;
-    *b = &edges_[i].second;
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const {
+    *a = &edges_[e].first;
+    *b = &edges_[e].second;
   }
   bool has_interior() const { return false; }
   bool contains_origin() const { return false; }
@@ -67,6 +74,49 @@ class S2EdgeVectorShape : public S2Shape {
   std::vector<std::pair<S2Point, S2Point> > edges_;
 };
 
+// Like S2Loop::Shape, except that the referenced S2Loop is automatically
+// deleted when this object is released by the S2ShapeIndex.  This is useful
+// when an S2Loop is constructed solely for the purpose of indexing it.
+class S2LoopOwningShape : public S2Loop::Shape {
+ public:
+  explicit S2LoopOwningShape(S2Loop const* loop)
+      : S2Loop::Shape(loop) {
+  }
+  virtual void Release() const {
+    delete loop();
+    delete this;
+  }
+};
+
+// Like S2Polygon::Shape, except that the referenced S2Polygon is
+// automatically deleted when this object is released by the S2ShapeIndex.
+// This is useful when an S2Polygon is constructed solely for the purpose of
+// indexing it.
+class S2PolygonOwningShape : public S2Polygon::Shape {
+ public:
+  explicit S2PolygonOwningShape(S2Polygon const* polygon)
+      : S2Polygon::Shape(polygon) {
+  }
+  virtual void Release() const {
+    delete polygon();
+    delete this;
+  }
+};
+
+// Like S2Polyline::Shape, except that the referenced S2Polyline is
+// automatically deleted when this object is released by the S2ShapeIndex.
+// This is useful when an S2Polyline is constructed solely for the purpose of
+// indexing it.
+class S2PolylineOwningShape : public S2Polyline::Shape {
+ public:
+  explicit S2PolylineOwningShape(S2Polyline const* polyline)
+      : S2Polyline::Shape(polyline) {
+  }
+  virtual void Release() const {
+    delete polyline();
+    delete this;
+  }
+};
 
 // Given an S2ShapeIndex containing a single loop, return true if the loop has
 // a self-intersection (including duplicate vertices) and set "error" to a
