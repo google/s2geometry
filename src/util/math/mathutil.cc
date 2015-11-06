@@ -206,35 +206,6 @@ unsigned int MathUtil::ExtendedGCD(unsigned int x, unsigned int y,
   return x;
 }
 
-
-void MathUtil::ShardsToRead(const std::vector<bool>& shards_to_write,
-                            std::vector<bool>* shards_to_read) {
-  const int N = shards_to_read->size();
-  const int M = shards_to_write.size();
-  CHECK(N > 0 || M == 0) << ": have shards to write but not to read";
-
-  // Input shard n of N can contribute to output shard m of M if there
-  // exists a record with sharding hash x s.t. n = x % N and m = x % M.
-  // Equivalently, there must exist s and t s.t. x = tN + n = sM + m,
-  // i.e., tN - sM = m - n.  Since G = gcd(N, M) evenly divides tN - sM,
-  // G must also evenly divide m - n.  Proof in the other direction is
-  // left as an exercise.
-  // Given output shard m, we should, therefore, read input shards n
-  // that satisfy (n - m) = kG, i.e., n = m + kG.  Let 0 <= n < N.
-  // Then, 0 <= m + kG < N and, finally, -m / G <= k < (N - m) / G.
-
-  const int G = GCD(N, M);
-  shards_to_read->assign(N, false);
-  for (int m = 0; m < M; m++) {
-    if (!shards_to_write[m]) continue;
-    const int k_min = -m / G;
-    const int k_max = k_min + N / G;
-    for (int k = k_min; k < k_max; k++) {
-      (*shards_to_read)[m + k * G] = true;
-    }
-  }
-}
-
 double MathUtil::Harmonic(int64 const n, double *const e) {
   CHECK_GT(n, 0);
 

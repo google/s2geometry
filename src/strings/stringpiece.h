@@ -412,8 +412,6 @@ inline bool operator<=(StringPiece x, StringPiece y) {
 inline bool operator>=(StringPiece x, StringPiece y) {
   return !(x < y);
 }
-class StringPiece;
-template <class X> struct GoodFastHash;
 
 // ------------------------------------------------------------------
 // Functions used to create STL containers that use StringPiece

@@ -38,6 +38,7 @@
 #include "s2polyline.h"
 #include "s2testing.h"
 #include "s2textformat.h"
+#include "util/gtl/stl_util.h"
 #include "util/math/matrix3x3.h"
 
 using std::max;
@@ -556,12 +557,12 @@ bool TestBuilder(TestCase const* test) {
               options.edge_splice_fraction(),
               S1Angle::Radians(min_edge).degrees(),
               S1Angle::Radians(max_error).degrees());
-      S2Testing::DeleteLoops(&loops);
-      S2Testing::DeleteLoops(&expected);
+      STLDeleteElements(&loops);
+      STLDeleteElements(&expected);
       return false;
     }
-    S2Testing::DeleteLoops(&loops);
-    S2Testing::DeleteLoops(&expected);
+    STLDeleteElements(&loops);
+    STLDeleteElements(&expected);
   }
   return true;
 }

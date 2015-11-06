@@ -184,15 +184,10 @@ void S2LatLngRect::AddPoint(S2LatLng const& ll) {
 }
 
 S2LatLngRect S2LatLngRect::Expanded(S2LatLng const& margin) const {
-  DLOG_IF(ERROR, margin.lat().radians() < 0)
-      << "Inappropriate margin in S2LatLngRect::Expanded: " << margin;
-
-  DLOG_IF(ERROR, margin.lng().radians() < 0)
-      << "Inappropriate margin in S2LatLngRect::Expanded: " << margin;
-
-  return S2LatLngRect(
-      lat_.Expanded(margin.lat().radians()).Intersection(FullLat()),
-      lng_.Expanded(margin.lng().radians()));
+  R1Interval lat = lat_.Expanded(margin.lat().radians());
+  S1Interval lng = lng_.Expanded(margin.lng().radians());
+  if (lat.is_empty() || lng.is_empty()) return Empty();
+  return S2LatLngRect(lat.Intersection(FullLat()), lng);
 }
 
 S2LatLngRect S2LatLngRect::PolarClosure() const {
@@ -217,13 +212,15 @@ S2LatLngRect S2LatLngRect::Intersection(S2LatLngRect const& other) const {
   return S2LatLngRect(lat, lng);
 }
 
-S2LatLngRect S2LatLngRect::ConvolveWithCap(S1Angle angle) const {
+S2LatLngRect S2LatLngRect::ExpandedByDistance(S1Angle distance) const {
+  // TODO(user): Implement negative distances.
+  DCHECK_GE(distance, S1Angle::Zero());
   // The most straightforward approach is to build a cap centered on each
   // vertex and take the union of all the bounding rectangles (including the
   // original rectangle; this is necessary for very large rectangles).
 
   // Optimization: convert the angle to a height exactly once.
-  double height = S2Cap::RadiusToHeight(angle);
+  double height = S2Cap::RadiusToHeight(distance);
   S2LatLngRect r = *this;
   for (int k = 0; k < 4; ++k) {
     S2Cap vertex_cap = S2Cap::FromCenterHeight(GetVertex(k).ToPoint(), height);

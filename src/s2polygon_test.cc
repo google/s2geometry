@@ -51,6 +51,7 @@
 #include "s2testing.h"
 #include "s2textformat.h"
 #include "util/gtl/fixedarray.h"
+#include "util/gtl/stl_util.h"
 #include "util/math/matrix3x3.h"
 
 using std::max;
@@ -975,7 +976,8 @@ static void SplitAndAssemble(S2Polygon const* polygon) {
     double diameter = 2 * polygon->GetCapBound().GetRadius().radians();
     int min_level = S2::kMaxWidth.GetMinLevel(diameter);
 
-    // TODO: Choose a level that will have up to 256 cells in the covering.
+    // TODO(ericv): Choose a level that will have up to 256 cells in the
+    // covering.
     int level = min_level + S2Testing::rnd.Uniform(4);
     coverer.set_min_level(min_level);
     coverer.set_max_level(level);
@@ -1984,5 +1986,57 @@ TEST_F(S2PolygonDecodeTest, FuzzEverything) {
     Test();
   }
 #endif
+}
+
+TEST_F(S2PolygonTestBase, FullPolygonShape) {
+  S2Polygon::Shape shape(full);
+  EXPECT_EQ(0, shape.num_edges());
+  EXPECT_TRUE(shape.has_interior());
+  EXPECT_TRUE(shape.contains_origin());
+}
+
+TEST_F(S2PolygonTestBase, EmptyPolygonShape) {
+  S2Polygon::Shape shape(empty);
+  EXPECT_EQ(0, shape.num_edges());
+  EXPECT_TRUE(shape.has_interior());
+  EXPECT_FALSE(shape.contains_origin());
+}
+
+void TestPolygonShape(S2Polygon const* polygon) {
+  DCHECK(!polygon->is_full());
+  // Allocate the shape so that we can Release() it below.
+  S2Polygon::Shape* shape = new S2Polygon::Shape(polygon);
+  EXPECT_EQ(polygon, shape->polygon());
+  EXPECT_EQ(polygon->num_vertices(), shape->num_edges());
+  for (int e = 0, i = 0; i < polygon->num_loops(); ++i) {
+    S2Loop const* loop_i = polygon->loop(i);
+    for (int j = 0; j < loop_i->num_vertices(); ++j, ++e) {
+      S2Point const *v0, *v1;
+      shape->GetEdge(e, &v0, &v1);
+      EXPECT_EQ(&loop_i->vertex(j), v0);
+      EXPECT_EQ(&loop_i->vertex(j+1), v1);
+    }
+  }
+  EXPECT_TRUE(shape->has_interior());
+  EXPECT_EQ(polygon->Contains(S2::Origin()), shape->contains_origin());
+  // In debug mode this tests that "shape" is deleted but "polygon" is not.
+  shape->Release();
+}
+
+TEST_F(S2PolygonTestBase, OneLoopPolygonShape) {
+  TestPolygonShape(near_0);
+}
+
+TEST_F(S2PolygonTestBase, SeveralLoopPolygonShape) {
+  TestPolygonShape(near_3210);
+}
+
+TEST_F(S2PolygonTestBase, ManyLoopPolygonShape) {
+  int const kNumLoops = 1000;
+  int const kNumVerticesPerLoop = 6;
+  S2Polygon polygon;
+  S2Testing::ConcentricLoopsPolygon(S2Point(1, 0, 0), kNumLoops,
+                                    kNumVerticesPerLoop, &polygon);
+  TestPolygonShape(&polygon);
 }
 

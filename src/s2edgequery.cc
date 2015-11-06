@@ -29,6 +29,53 @@
 
 using std::vector;
 
+bool S2EdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
+                               S2Shape const* shape, vector<int>* edges) {
+  if (!GetCandidates(a0, a1, shape, edges)) return false;
+  S2EdgeUtil::EdgeCrosser crosser(&a0, &a1);
+  S2Point const *b0, *b1 = NULL;
+  int out = 0, n = edges->size();
+  for (int in = 0; in < n; ++in) {
+    S2Point const* b1_prev = b1;
+    shape->GetEdge((*edges)[in], &b0, &b1);
+    if (b0 != b1_prev) crosser.RestartAt(b0);
+    int crossing = crosser.RobustCrossing(b1);
+    if (crossing >= 0) (*edges)[out++] = (*edges)[in];
+  }
+  if (out == 0) {
+    edges->clear();
+    return false;
+  }
+  if (out < n) edges->resize(out);
+  return true;
+}
+
+bool S2EdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
+                               EdgeMap* edge_map) {
+  if (!GetCandidates(a0, a1, edge_map)) return false;
+  S2EdgeUtil::EdgeCrosser crosser(&a0, &a1);
+  S2Point const *b0, *b1 = NULL;
+  for (EdgeMap::iterator it = edge_map->begin(); it != edge_map->end(); ) {
+    S2Shape const* shape = it->first;
+    vector<int>* edges = &it->second;
+    int out = 0, n = edges->size();
+    for (int in = 0; in < n; ++in) {
+      S2Point const* b1_prev = b1;
+      shape->GetEdge((*edges)[in], &b0, &b1);
+      if (b0 != b1_prev) crosser.RestartAt(b0);
+      int crossing = crosser.RobustCrossing(b1);
+      if (crossing >= 0) (*edges)[out++] = (*edges)[in];
+    }
+    if (out == 0) {
+      it = edge_map->erase(it);
+    } else {
+      if (out < n) edges->resize(out);
+      ++it;
+    }
+  }
+  return !edge_map->empty();
+}
+
 bool S2EdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
                                 S2Shape const* shape, vector<int>* edges) {
   // For small loops it is faster to use brute force.  The threshold below was
@@ -235,14 +282,6 @@ inline void S2EdgeQuery::ClipVAxis(R2Rect const& edge_bound, double center,
     GetCells(S2PaddedCell(pcell, i, 1), child_bounds[1]);
   }
 }
-
-// Given an edge and an interval "middle" along the v-axis, clip the edge
-// against the boundaries of "middle" and insert the edge into the
-// corresponding children.
-// Given an edge, clip the given endpoint (lo=0, hi=1) of the u-axis so that
-// it does not extend past the given value.
-// Given an edge and two bound endpoints that need to be updated, allocate and
-// return a new edge with the updated bound.
 
 // Split the current edge into two child edges at the given u-value "u" and
 // return the bound for each child.

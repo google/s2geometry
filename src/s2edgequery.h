@@ -34,12 +34,37 @@ class S2PaddedCell;
 class S2Shape;
 
 // S2EdgeQuery is used to find edges or shapes that are crossed by an edge.
-// If you need to query many edges, it is more efficient to declare a single
-// S2EdgeQuery object and reuse it so that temporary storage does not need to
-// be reallocated each time.
+// Here is an example showing how to index a set of polylines, and then find
+// the polylines that are crossed by a given edge AB:
+//
+// void Test(vector<S2Polyline*> const& polylines,
+//           S2Point const& a0, S2Point const &a1) {
+//   S2ShapeIndex index;
+//   for (int i = 0; i < polylines.size(); ++i) {
+//     index.Add(new S2Polyline::Shape(polylines[i]));
+//   }
+//   S2EdgeQuery query(index);
+//   S2EdgeQuery::EdgeMap edge_map;
+//   if (!query.GetCrossings(a, b, &edge_map)) return;
+//   for (auto const& it : edge_map) {
+//     S2Shape const* shape = it.first;
+//     S2Polyline* polyline = polylines[shape->id()];
+//     vector<int> const& edges = it.second;
+//     for (int edge : edges) {
+//       S2Point const& b0 = polyline->vertex(edge);
+//       S2Point const& b1 = polyline->vertex(edge) + 1);
+//       CHECK_GE(S2EdgeUtil::RobustCrossing(a0, a1, b0, b1), 0);
+//     }
+//   }
+// }
+//
+// Note that if you need to query many edges, it is more efficient to declare
+// a single S2EdgeQuery object and reuse it so that temporary storage does not
+// need to be reallocated each time.
 class S2EdgeQuery {
  public:
-  // An EdgeMap stores a sorted set of edge ids for each shape.
+  // An EdgeMap stores a sorted set of edge ids for each shape.  Its type
+  // may change, but can be treated as "map<S2Shape const*, vector<int> >".
   typedef std::map<S2Shape const*, std::vector<int> > EdgeMap;
 
   // Convenience constructor that calls Init().
@@ -51,6 +76,24 @@ class S2EdgeQuery {
   // REQUIRES: "index" is not modified after this method is called.
   void Init(S2ShapeIndex const& index);
 
+  // Given a query edge AB and a shape S, return all the edges of S that
+  // either cross AB or share a vertex with AB.  Returns false if no edges
+  // intersect AB.
+  bool GetCrossings(S2Point const& a, S2Point const& b,
+                    S2Shape const* shape, std::vector<int>* edges);
+
+  // Given a query edge AB, return all the edges that either cross AB or share
+  // a vertex with AB.  The edges are returned as a map from shapes to the
+  // edges of that shape that intersect AB.  Every returned shape has at least
+  // one crossing edge.  Returns false if no edges intersect AB.
+  bool GetCrossings(S2Point const& a, S2Point const& b, EdgeMap* edge_map);
+
+  /////////////////////////// Low-Level Methods ////////////////////////////
+  //
+  // Most clients will not need the following methods.  They can be slightly
+  // more efficient but are harder to use, since they require the client to do
+  // all the actual crossing tests.
+
   // Given a query edge AB and a shape S, return a superset of the edges of
   // S that intersect AB.  Returns false if "edges" is empty.
   bool GetCandidates(S2Point const& a, S2Point const& b,
@@ -59,6 +102,10 @@ class S2EdgeQuery {
   // Given a query edge AB, return a map from shapes to a superset of the
   // edges for that shape that intersect AB.  Returns false if no shapes
   // intersect AB.
+  //
+  // CAVEAT: This method may return shapes that have an empty set of candidate
+  // edges, i.e. (*edge_map)[shape].size() == 0.  However the return value is
+  // true only if at least one shape has a candidate edge.
   bool GetCandidates(S2Point const& a, S2Point const& b, EdgeMap* edge_map);
 
   // Given a query edge AB and a cell "root", return all S2ShapeIndex cells

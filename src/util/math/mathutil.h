@@ -330,22 +330,6 @@ class MathUtil {
   }
 
   // --------------------------------------------------------------------
-  // ShardsToRead
-  //   Resharding helper.  Suppose we have N input shards and M output
-  //   shards sharded by modulo of the same hash function.  If we want
-  //   to write a subset of the output shards, which input shards should
-  //   we read?
-  //
-  // Inputs:
-  //   shards_to_write gives the desired subset of the M output shards.
-  //   shards_to_read gives the number N of the input shards.
-  // Outputs:
-  //   shards_to_read gives the subset of the N input shards to read.
-  // --------------------------------------------------------------------
-  static void ShardsToRead(const std::vector<bool>& shards_to_write,
-                           std::vector<bool>* shards_to_read);
-
-  // --------------------------------------------------------------------
   // Round
   //   This function rounds a floating-point number to an integer. It
   //   works for positive or negative numbers.

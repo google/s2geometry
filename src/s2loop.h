@@ -397,10 +397,29 @@ class S2Loop : public S2Region {
   // REQUIRES: if b->is_full(), then reverse_b == false.
   bool ContainsNonCrossingBoundary(S2Loop const* b, bool reverse_b) const;
 
-  // Wrapper class that can be used to index a loop or set of loops
-  // (see S2ShapeIndex).  Once it is inserted into an S2ShapeIndex it is owned
-  // by that index.  (You can override Release() to change this behavior).
-  // Note that the loop itself is still owned by the caller.
+  // Wrapper class for indexing a loop (see S2ShapeIndex).  Once this
+  // object is inserted into an S2ShapeIndex it is owned by that index, and
+  // will be automatically deleted when no longer needed by the index.  Note
+  // that this class does *not* take ownership of the loop itself; you can
+  // change this by using s2shapeutil::S2LoopOwningShape instead, or by
+  // overriding Release().  You can also subtype this class to store extra
+  // information about the loop; for example, if want to store a pointer
+  // with the loop, you could write
+  //
+  //   class MyShape : public S2Loop::Shape {
+  //    public:
+  //     MyShape(S2Loop* loop, MyData* data)
+  //         : S2Loop::Shape(loop), data_(data) {
+  //     }
+  //     MyData* data() const { return data_; }
+  //    private:
+  //     MyData* data_;
+  //   };
+  //
+  // Then you can retrieve the pointer associated with an edge returned by the
+  // S2ShapeIndex like this:
+  //
+  // MyData* data = down_cast<MyShape const*>(index->shape(shape_id))->data();
 #ifndef SWIG
   class Shape : public S2Shape {
    public:
@@ -410,9 +429,9 @@ class S2Loop : public S2Region {
     int num_edges() const {
       return loop_->is_empty_or_full() ? 0 : loop_->num_vertices();
     }
-    void GetEdge(int i, S2Point const** a, S2Point const** b) const {
-      *a = &loop_->vertex(i);
-      *b = &loop_->vertex(i+1);
+    void GetEdge(int e, S2Point const** a, S2Point const** b) const {
+      *a = &loop_->vertex(e);
+      *b = &loop_->vertex(e+1);
     }
     bool has_interior() const { return true; }
     bool contains_origin() const { return loop_->contains_origin(); }

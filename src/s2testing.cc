@@ -46,7 +46,6 @@
 #include "s2polyline.h"
 #include "s2region.h"
 #include "s2textformat.h"
-#include "util/gtl/stl_util.h"
 #include "util/math/matrix3x3.h"
 
 using std::max;
@@ -143,8 +142,8 @@ vector<S2Point> S2Testing::MakeRegularPoints(S2Point const& center,
                                              int num_vertices) {
   unique_ptr<S2Loop> loop(MakeRegularLoop(center, radius, num_vertices));
   vector<S2Point> points;
-  for (int i = 0; i < loop.get()->num_vertices(); i++) {
-    points.push_back(loop.get()->vertex(i));
+  for (int i = 0; i < loop->num_vertices(); i++) {
+    points.push_back(loop->vertex(i));
   }
   return points;
 }
@@ -330,11 +329,6 @@ double S2Testing::GetCpuTime() {
   struct rusage ru;
   CHECK_EQ(getrusage(RUSAGE_SELF, &ru), 0);
   return ru.ru_utime.tv_sec + ru.ru_utime.tv_usec / 1e6;
-}
-
-void S2Testing::DeleteLoops(vector<S2Loop*>* loops) {
-  // TODO(user): Update all callers and delete this function.
-  STLDeleteElements(loops);
 }
 
 

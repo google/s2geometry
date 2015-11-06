@@ -731,7 +731,8 @@ inline int S2::TriageCCW(S2Point const& a, S2Point const& b,
   double det = a_cross_b.DotProd(c);
 
   // Double-check borderline cases in debug mode.
-  DCHECK(fabs(det) <= kMaxDetError ||
+  DCHECK(!FLAGS_s2debug ||
+         fabs(det) <= kMaxDetError ||
          fabs(det) >= 100 * kMaxDetError ||
          det * ExpensiveCCW(a, b, c) > 0);
 

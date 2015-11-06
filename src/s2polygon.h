@@ -477,6 +477,49 @@ class S2Polygon : public S2Region {
   // to a given level. Otherwise it falls back to Decode().
   virtual bool DecodeWithinScope(Decoder* const decoder);
 
+  // Wrapper class for indexing a polygon (see S2ShapeIndex).  Once this
+  // object is inserted into an S2ShapeIndex it is owned by that index, and
+  // will be automatically deleted when no longer needed by the index.  Note
+  // that this class does *not* take ownership of the polygon itself; you can
+  // change this by using s2shapeutil::S2PolygonOwningShape instead, or by
+  // overriding Release().  You can also subtype this class to store extra
+  // information about the polygon; for example, if want to store a pointer
+  // with the polygon, you could write
+  //
+  //   class MyShape : public S2Polygon::Shape {
+  //    public:
+  //     MyShape(S2Polygon* polygon, MyData* data)
+  //         : S2Polygon::Shape(polygon), data_(data) {
+  //     }
+  //     MyData* data() const { return data_; }
+  //    private:
+  //     MyData* data_;
+  //   };
+  //
+  // Then you can retrieve the pointer associated with an edge returned by the
+  // S2ShapeIndex like this:
+  //
+  // MyData* data = down_cast<MyShape const*>(index->shape(shape_id))->data();
+#ifndef SWIG
+  class Shape : public S2Shape {
+   public:
+    explicit Shape(S2Polygon const* polygon);  // Does not take ownership.
+    ~Shape();
+    S2Polygon const* polygon() const { return polygon_; }
+    int num_edges() const { return num_edges_; }
+    void GetEdge(int e, S2Point const** a, S2Point const** b) const;
+    bool has_interior() const { return true; }
+    bool contains_origin() const;
+    void Release() const { delete this; }
+   protected:
+    S2Polygon const* polygon_;
+    int num_edges_;
+    // An array where element "i" is the total number of edges in loops 0..i-1.
+    // This field is only used for polygons that have a large number of loops.
+    int* cumulative_edges_;
+  };
+#endif  // SWIG
+
  private:
   friend class S2Stats;
 

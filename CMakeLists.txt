@@ -103,7 +103,7 @@ install(FILES src/util/math/mathlimits.h
               src/util/math/vector3.h
               src/util/math/vector3_hash.h
               src/util/math/vector4.h
-        DESTINATION include/s2geometry/util/hash)
+        DESTINATION include/s2geometry/util/math)
 install(FILES src/util/units/length-units.h
               src/util/units/physical-units.h
         DESTINATION include/s2geometry/util/units)

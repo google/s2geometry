@@ -17,12 +17,20 @@
 
 #include "s2shapeutil.h"
 
+#include <vector>
 #include <gtest/gtest.h>
+#include "s2loop.h"
+#include "s2polygon.h"
+#include "s2polyline.h"
 #include "s2testing.h"
 
 namespace {
 
 using s2shapeutil::S2EdgeVectorShape;
+using s2shapeutil::S2LoopOwningShape;
+using s2shapeutil::S2PolygonOwningShape;
+using s2shapeutil::S2PolylineOwningShape;
+using std::vector;
 
 TEST(S2EdgeVectorShape, EdgeAccess) {
   S2EdgeVectorShape shape;
@@ -55,6 +63,29 @@ TEST(S2EdgeVectorShape, SingletonConstructor) {
 TEST(S2EdgeVectorShape, Ownership) {
   S2EdgeVectorShape* shape = new S2EdgeVectorShape;
   shape->Release();  // Verify there is no memory leak.
+}
+
+TEST(S2LoopOwningShape, Ownership) {
+  S2Loop* loop = new S2Loop(S2Loop::kEmpty());
+  S2LoopOwningShape* shape = new S2LoopOwningShape(loop);
+  // Debug mode builds will catch any memory leak below.
+  shape->Release();  // Deletes both "loop" and "shape".
+}
+
+TEST(S2PolygonOwningShape, Ownership) {
+  vector<S2Loop*> loops;
+  S2Polygon* polygon = new S2Polygon(&loops);
+  S2PolygonOwningShape* shape = new S2PolygonOwningShape(polygon);
+  // Debug mode builds will catch any memory leak below.
+  shape->Release();  // Deletes both "polygon" and "shape".
+}
+
+TEST(S2PolylineOwningShape, Ownership) {
+  vector<S2Point> vertices;
+  S2Polyline* polyline = new S2Polyline(vertices);
+  S2PolylineOwningShape* shape = new S2PolylineOwningShape(polyline);
+  // Debug mode builds will catch any memory leak below.
+  shape->Release();  // Deletes both "polyline" and "shape".
 }
 
 }  // namespace

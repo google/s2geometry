@@ -17,9 +17,9 @@
 
 #include "s2edgeutil.h"
 
-#include <cmath>
 #include <float.h>
 #include <algorithm>
+#include <cmath>
 #include <limits>
 
 #include <glog/logging.h>
@@ -572,12 +572,11 @@ inline bool AlwaysUpdateMinDistance(S2Point const& x,
   // We check this by computing the squared edge lengths of the planar
   // triangle ABX, and testing acuteness using the law of cosines:
   //
-  //                      max(XA^2, XB^2) < AB^2 + min(XA^2, XB^2)
-  // or equivalently:     XA^2 + XB^2 < AB^2 + 2 * min(XA^2, XB^2)
+  //             max(XA^2, XB^2) < AB^2 + min(XA^2, XB^2)
   //
   double xa2 = (x-a).Norm2(), xb2 = (x-b).Norm2(), ab2 = (a-b).Norm2();
   double dist2 = min(xa2, xb2);
-  if (xa2 + xb2 < ab2 + 2 * dist2) {
+  if (max(xa2, xb2) < ab2 + dist2) {
     // The minimum distance might be to a point on the edge interior.  Let R
     // be closest point to X that lies on the great circle through AB.  Rather
     // than computing the geodesic distance along the surface of the sphere,

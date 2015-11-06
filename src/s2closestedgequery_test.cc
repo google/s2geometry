@@ -18,69 +18,283 @@
 #include "s2closestedgequery.h"
 
 #include <memory>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include "s1angle.h"
 #include "s2cap.h"
 #include "s2loop.h"
+#include "s2shapeutil.h"
 #include "s2testing.h"
 
+using std::cout;
+using std::make_pair;
+using std::min;
+using std::ostream;
+using std::pair;
 using std::unique_ptr;
+using std::vector;
 
-class S2ClosestEdgeQueryTest : public ::testing::Test {
- protected:
-  S2ShapeIndex index_;
-  void TestDistance(S2Point const& target, S1Angle max_error) const;
+//////////////////////////////////////////////////////////////////////////
+// TODO(ericv): Move this code to s2testing.h after s2testing is no longer
+// used in production code and this restriction is enforced (testonly=1).
+
+#include <utility>
+#include <set>
+#include "util/gtl/algorithm.h"
+
+namespace {
+
+template <typename Id>
+struct CompareFirst {
+  inline bool operator()(std::pair<S1Angle, Id> const& x,
+                         std::pair<S1Angle, Id> const& y) {
+    return x.first < y.first;
+  }
 };
 
-void S2ClosestEdgeQueryTest::TestDistance(S2Point const& target,
-                                          S1Angle max_error) const {
-  S2ClosestEdgeQuery query(index_);
-  query.UseBruteForce(true);
-  S1Angle true_min_dist = query.GetDistance(target);
-  query.UseBruteForce(false);
-  S1Angle min_dist = query.ApproxGetDistance(target, max_error);
-  EXPECT_LE(min_dist, true_min_dist + max_error + S1Angle::Radians(1e-15));
-  S2Point closest = query.ApproxProject(target, max_error);
-  EXPECT_NEAR(min_dist.radians(), S1Angle(target, closest).radians(), 1e-15);
+// Check that result set "x" contains all the expected results from "y", and
+// does not include any duplicate results.
+template <typename Id>
+bool CheckResultSet(std::vector<std::pair<S1Angle, Id> > const& x,
+                    std::vector<std::pair<S1Angle, Id> > const& y,
+                    int max_size, S1Angle max_distance, S1Angle max_error,
+                    S1Angle max_pruning_error, string const& label) {
+  // Results should be sorted by distance.
+  CompareFirst<Id> cmp;
+  EXPECT_TRUE(util::gtl::is_sorted(x.begin(), x.end(), cmp));
+
+  // Make sure there are no duplicate values.
+  std::set<std::pair<S1Angle, Id> > x_set(x.begin(), x.end());
+  EXPECT_EQ(x_set.size(), x.size()) << "Result set contains duplicates";
+
+  // Result set X should contain all the items from U whose distance is less
+  // than "limit" computed below.
+  S1Angle limit = S1Angle::Zero();
+  if (x.size() < max_size) {
+    // Result set X was not limited by "max_size", so it should contain all
+    // the items up to "max_distance", except that a few items right near the
+    // distance limit may be missed because the distance measurements used for
+    // pruning S2Cells are not conservative.
+    limit = max_distance - max_pruning_error;
+  } else if (x.size() > 0) {
+    // Result set X contains only the closest "max_size" items, to within a
+    // tolerance of "max_error + max_pruning_error".
+    limit = x.back().first - max_error - max_pruning_error;
+  }
+  bool result = true;
+  for (int i = 0; i < y.size(); ++i) {
+    if (y[i].first < limit && std::count(x.begin(), x.end(), y[i]) != 1) {
+      result = false;
+      cout << label << " distance = " << y[i].first
+           << ", id = " << y[i].second << "\n";
+    }
+  }
+  return result;
 }
 
-TEST_F(S2ClosestEdgeQueryTest, RegularLoop) {
-  // The running time of this test is proportional to
-  //    kLoopIters * kQueryIters * kNumVertices.
-  static int const kLoopIters = 5;
-  static int const kQueryIters = 20;
-  static int const kNumVertices = 1000;
-  static S1Angle const kRadius = S2Testing::KmToAngle(10);
-  for (int i_loop = 0; i_loop < kLoopIters; ++i_loop) {
-    S2Point center = S2Testing::RandomPoint();
-    unique_ptr<S2Loop> loop(S2Testing::MakeRegularLoop(center, kRadius,
-                                                       kNumVertices));
-    index_.Add(new S2Loop::Shape(loop.get()));
-    // Choose query points from a region whose area is approximately 4 times
-    // larger than the loop, i.e. such that about 1/4 of the query points will
-    // be inside the loop.
-    S2Cap query_cap(center, 2 * kRadius);
-    for (int i_query = 0; i_query < kQueryIters; ++i_query) {
-      S2Point target = S2Testing::SamplePoint(query_cap);
-      // Choose a maximum error whose logarithm is uniformly distributed over
-      // a reasonable range, except that it is sometimes zero.
-      S1Angle max_error = kRadius * pow(1e-4, S2Testing::rnd.RandDouble());
-      if (S2Testing::rnd.OneIn(5)) max_error = S1Angle::Zero();
-      TestDistance(target, max_error);
-    }
-    index_.Reset();
+// Compare two sets of "closest" items, where "expected" is computed via brute
+// force (i.e., considering every possible candidate) and "actual" is computed
+// using a spatial data structure.  Here "max_size" is a bound on the maximum
+// number of items, "max_distance" is a limit on the distance to any item, and
+// "max_error" is the maximum error allowed when selecting which items are
+// closest (see S2ClosestEdgeQuery::max_error).
+template <typename Id>
+bool CheckDistanceResults(
+    std::vector<std::pair<S1Angle, Id> > const& expected,
+    std::vector<std::pair<S1Angle, Id> > const& actual,
+    int max_size, S1Angle max_distance, S1Angle max_error) {
+  static S1Angle const kMaxPruningError = S1Angle::Radians(1e-15);
+  return (CheckResultSet(actual, expected, max_size, max_distance,
+                         max_error, kMaxPruningError, "Missing") & /*not &&*/
+          CheckResultSet(expected, actual, max_size, max_distance,
+                         max_error, S1Angle::Zero(), "Extra"));
+}
+
+}  // namespace
+//////////////////////////////////////////////////////////////////////////
+
+TEST(S2ClosestEdgeQuery, NoEdges) {
+  S2ShapeIndex index;
+  S2ClosestEdgeQuery query(index);
+  query.FindClosestEdge(S2Point(1, 0, 0));
+  EXPECT_EQ(0, query.num_edges());
+  EXPECT_EQ(S1Angle::Infinity(), query.GetDistance(S2Point(1, 0, 0)));
+  EXPECT_EQ(S2Point(1, 0, 0), query.Project(S2Point(1, 0, 0)));
+}
+
+// An abstract class that adds edges to an S2ShapeIndex for benchmarking.
+class ShapeIndexFactory {
+ public:
+  virtual ~ShapeIndexFactory() {}
+
+  // Given an index that will be queried using random points from "query_cap",
+  // add approximately "num_edges" edges to "index".  (Typically the indexed
+  // edges will occupy some fraction of this cap.)
+  virtual void AddEdges(S2Cap const& query_cap, int num_edges,
+                        S2ShapeIndex* index) const = 0;
+};
+
+// Generate a regular loop that occupies approximately 25% of the query cap,
+// i.e. random query points have a 25% chance of being inside the loop.
+//
+// Regular loops are nearly the worst case for distance calculations, since
+// many edges are nearly equidistant from any query point that is not
+// immediately adjacent to the loop.
+class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
+ public:
+  virtual void AddEdges(S2Cap const& query_cap, int num_edges,
+                        S2ShapeIndex* index) const {
+    index->Add(new s2shapeutil::S2LoopOwningShape(
+        S2Testing::MakeRegularLoop(query_cap.center(),
+                                   0.5 * query_cap.GetRadius(),
+                                   num_edges)));
+  }
+};
+
+// Generate a fractal loop that occupies approximately 25% of the query cap,
+// i.e. random query points have a 25% chance of being inside the loop.
+class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
+ public:
+  virtual void AddEdges(S2Cap const& query_cap, int num_edges,
+                        S2ShapeIndex* index) const {
+    S2Testing::Fractal fractal;
+    fractal.SetLevelForApproxMaxEdges(num_edges);
+    index->Add(new s2shapeutil::S2LoopOwningShape(
+        fractal.MakeLoop(S2Testing::GetRandomFrameAt(query_cap.center()),
+                         0.5 * query_cap.GetRadius())));
+  }
+};
+
+// The approximate radius of S2Cap from which query edges are chosen.
+static S1Angle const kRadius = S2Testing::KmToAngle(100);
+
+// An approximate bound on the distance measurement error for "reasonable"
+// distances (say, less than Pi/2) due to using S1ChordAngle.
+static S1Angle kChordAngleError = S1Angle::Radians(1e-15);
+
+// A (shape_id, edge_id) pair, used to identify a result edge.
+struct EdgeId {
+  EdgeId(int _shape_id, int _edge_id)
+      : shape_id(_shape_id), edge_id(_edge_id) {
+  }
+  int shape_id, edge_id;
+};
+bool operator==(EdgeId const& x, EdgeId const& y) {
+  return x.shape_id == y.shape_id && x.edge_id == y.edge_id;
+}
+bool operator<(EdgeId const& x, EdgeId const& y) {
+  return (x.shape_id < y.shape_id ||
+          (x.shape_id == y.shape_id && x.edge_id < y.edge_id));
+}
+ostream& operator<<(ostream& out, EdgeId const& x) {
+  return out << '(' << x.shape_id << ", " << x.edge_id << ')';
+}
+
+typedef pair<S1Angle, EdgeId> Result;
+
+// Use "query" to find the closest edge(s) to the given target, then convert
+// the query results into two parallel vectors, one for distances and one for
+// (shape_id, edge_id) pairs.  Also verify that the results satisfy the search
+// criteria.
+static void GetClosestEdges(S2Point const& target, S2ClosestEdgeQuery *query,
+                            vector<Result>* results) {
+  query->FindClosestEdges(target);
+  EXPECT_LE(query->num_edges(), query->max_edges());
+  if (query->max_distance() == S1Angle::Infinity()) {
+    // We can predict exactly how many edges should be returned.
+    EXPECT_EQ(min(query->max_edges(), query->index().GetNumEdges()),
+              query->num_edges());
+  }
+  for (int i = 0; i < query->num_edges(); ++i) {
+    // Check that query->distance() is approximately equal to the
+    // edge-target distance.  They may be slightly different
+    // because query->distance() is computed using S1ChordAngle.  Note that
+    // the error gets considerably larger (1e-7) as the angle approaches Pi.
+    S2Point const *v0, *v1;
+    query->GetEdge(i, &v0, &v1);
+    EXPECT_NEAR(S2EdgeUtil::GetDistance(target, *v0, *v1).radians(),
+                query->distance(i).radians(), kChordAngleError.radians());
+
+    // Check that the edge satisfies the max_distance() condition.
+    EXPECT_LE(query->distance(i), query->max_distance());
+    results->push_back(make_pair(query->distance(i),
+                                 EdgeId(query->shape_id(i),
+                                        query->edge_id(i))));
+
+    // Find the closest point on the edge and check its distance as well.
+    EXPECT_NEAR(S1Angle(target, query->GetClosestPointOnEdge(i)).radians(),
+                query->distance(i).radians(), kChordAngleError.radians());
   }
 }
 
-TEST_F(S2ClosestEdgeQueryTest, NoEdges) {
+static void TestFindClosestEdges(S2Point const& target,
+                                 S2ClosestEdgeQuery *query) {
+  vector<Result> expected, actual;
+  query->UseBruteForce(true);
+  GetClosestEdges(target, query, &expected);
+  query->UseBruteForce(false);
+  GetClosestEdges(target, query, &actual);
+  EXPECT_TRUE(CheckDistanceResults(
+      expected, actual, query->max_edges(),
+      query->max_distance(), query->max_error()))
+      << "max_edges=" << query->max_edges()
+      << ", max_distance=" << query->max_distance()
+      << ", max_error=" << query->max_error();
+}
+
+// The running time of this test is proportional to
+//    num_indexes * num_edges * num_queries.
+static void TestWithIndexFactory(ShapeIndexFactory const& factory,
+                                 int num_indexes, int num_edges,
+                                 int num_queries) {
   S2ShapeIndex index;
-  S2ClosestEdgeQuery query(index);
-  EXPECT_EQ(S1Angle::Infinity(), query.GetDistance(S2Point(1, 0, 0)));
-  EXPECT_EQ(-1, query.shape_id());
-  EXPECT_EQ(-1, query.edge_id());
-  EXPECT_EQ(S2Point(1, 0, 0), query.Project(S2Point(1, 0, 0)));
-  EXPECT_EQ(-1, query.shape_id());
-  EXPECT_EQ(-1, query.edge_id());
+  for (int i_index = 0; i_index < num_indexes; ++i_index) {
+    S2Cap query_cap = S2Cap(S2Testing::RandomPoint(), kRadius);
+    index.Reset();
+    factory.AddEdges(query_cap, num_edges, &index);
+    for (int i_query = 0; i_query < num_queries; ++i_query) {
+      // Use a new query each time to avoid resetting default parameters.
+      S2ClosestEdgeQuery query(index);
+      S2Point target = S2Testing::SamplePoint(query_cap);
+      query.set_max_edges(1 + S2Testing::rnd.Uniform(100));
+      if (S2Testing::rnd.OneIn(2)) {
+        query.set_max_distance(S2Testing::rnd.RandDouble() * kRadius);
+      }
+      if (S2Testing::rnd.OneIn(2)) {
+        // Choose a maximum error whose logarithm is uniformly distributed over
+        // a reasonable range, except that it is sometimes zero.
+        query.set_max_error(S1Angle::Radians(
+            pow(1e-4, S2Testing::rnd.RandDouble()) * kRadius.radians()));
+      }
+      TestFindClosestEdges(target, &query);
+      if (query.num_edges() == 0) {
+        EXPECT_EQ(S1Angle::Infinity(), query.GetDistance(target));
+        EXPECT_EQ(target, query.Project(target));
+      } else {
+        S1Angle expected_min_distance = query.distance(0);
+        S1Angle actual_min_distance = query.GetDistance(target);
+        EXPECT_LE(actual_min_distance,
+                  expected_min_distance + query.max_error());
+        EXPECT_NEAR(actual_min_distance.radians(),
+                    S1Angle(target, query.Project(target)).radians(),
+                    kChordAngleError.radians());
+      }
+    }
+  }
+}
+
+static int const kNumIndexes = 5;
+static int const kNumEdges = 500;
+static int const kNumQueries = 1000;
+
+TEST(S2ClosestEdgeQuery, CircleEdges) {
+  TestWithIndexFactory(RegularLoopShapeIndexFactory(),
+                       kNumIndexes, kNumEdges, kNumQueries);
+}
+
+TEST(S2ClosestEdgeQuery, FractalEdges) {
+  TestWithIndexFactory(FractalLoopShapeIndexFactory(),
+                       kNumIndexes, kNumEdges, kNumQueries);
 }
 
