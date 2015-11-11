@@ -214,14 +214,49 @@ S2LatLngRect S2LatLngRect::Intersection(S2LatLngRect const& other) const {
 }
 
 S2LatLngRect S2LatLngRect::ExpandedByDistance(S1Angle distance) const {
-  // TODO(user): Implement negative distances.
-  DCHECK_GE(distance, S1Angle::Zero());
+  if (distance >= S1Angle::Zero()) {
+    return ConvolveWithCap(distance);
+  } else {
+    // Shrink the latitude interval unless the latitude interval contains a pole
+    // and the longitude interval is full, in which case the rectangle has no
+    // boundary at that pole.
+    R1Interval lat_result(
+        lat().lo() <= FullLat().lo() && lng().is_full() ?
+            FullLat().lo() : lat().lo() - distance.radians(),
+        lat().hi() >= FullLat().hi() && lng().is_full() ?
+            FullLat().hi() : lat().hi() + distance.radians());
+    if (lat_result.is_empty()) {
+      return S2LatLngRect::Empty();
+    }
+
+    // Maximum absolute value of a latitude in lat_result. At this latitude,
+    // the cap occupies the largest longitude interval.
+    double max_abs_lat = max(-lat_result.lo(), lat_result.hi());
+
+    // Compute the largest longitude interval that the cap occupies. We use the
+    // law of sines for spherical triangles. For the details, see the comment in
+    // S2Cap::GetRectBound().
+    //
+    // When sin_a >= sin_c, the cap covers all the latitude.
+    double sin_a = sin(-distance.radians());
+    double sin_c = cos(max_abs_lat);
+    double max_lng_margin = sin_a < sin_c ? asin(sin_a / sin_c) : M_PI_2;
+
+    S1Interval lng_result = lng().Expanded(-max_lng_margin);
+    if (lng_result.is_empty()) {
+      return S2LatLngRect::Empty();
+    }
+    return S2LatLngRect(lat_result, lng_result);
+  }
+}
+
+S2LatLngRect S2LatLngRect::ConvolveWithCap(S1Angle angle) const {
   // The most straightforward approach is to build a cap centered on each
   // vertex and take the union of all the bounding rectangles (including the
   // original rectangle; this is necessary for very large rectangles).
 
   // Optimization: convert the angle to a height exactly once.
-  double height = S2Cap::RadiusToHeight(distance);
+  double height = S2Cap::RadiusToHeight(angle);
   S2LatLngRect r = *this;
   for (int k = 0; k < 4; ++k) {
     S2Cap vertex_cap = S2Cap::FromCenterHeight(GetVertex(k).ToPoint(), height);

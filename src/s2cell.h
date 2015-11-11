@@ -134,9 +134,13 @@ class S2Cell : public S2Region {
   // Return the bounds of this cell in (u,v)-space.
   R2Rect GetBoundUV() const { return uv_; }
 
-  // Return the distance from the given point to the cell.  Returns zero if
+  // Return the distance from the cell to the given point.  Returns zero if
   // the point is inside the cell.
   S1ChordAngle GetDistance(S2Point const& target) const;
+
+  // Return the minimum distance from the cell to the given edge AB.  Returns
+  // zero if the edge intersects the cell interior.
+  S1ChordAngle GetDistanceToEdge(S2Point const& a, S2Point const& b) const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):

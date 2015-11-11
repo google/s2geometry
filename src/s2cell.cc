@@ -366,3 +366,45 @@ S1ChordAngle S2Cell::GetDistance(S2Point const& target_xyz) const {
                                 VertexChordDist2(target, 1, 1)));
   return S1ChordAngle::FromLength2(chord_dist2);
 }
+
+S1ChordAngle S2Cell::GetDistanceToEdge(S2Point const& a,
+                                       S2Point const& b) const {
+  // Possible optimizations:
+  //  - Currently the (cell vertex, edge endpoint) distances are computed
+  //    twice each, and the length of AB is computed 4 times.
+  //  - To fix this, refactor GetDistance(target) so that it skips calculating
+  //    the distance to each cell vertex.  Instead, compute the cell vertices
+  //    and distances in this function, and add a low-level UpdateMinDistance
+  //    that allows the XA, XB, and AB distances to be passed in.
+  //  - It might also be more efficient to do all calculations in UVW-space,
+  //    since this would involve transforming 2 points rather than 4.
+
+  // First, check the minimum distance to the edge endpoints A and B.
+  // (This also detects whether either endpoint is inside the cell.)
+  S1ChordAngle min_dist = min(GetDistance(a), GetDistance(b));
+  if (min_dist == S1ChordAngle::Zero()) return min_dist;
+
+  // Otherwise, check whether the edge crosses the cell boundary.
+  // Note that S2EdgeUtil::EdgeCrosser needs pointers to vertices.
+  S2Point v[4];
+  for (int i = 0; i < 4; ++i) {
+    v[i] = GetVertex(i);
+  }
+  S2EdgeUtil::EdgeCrosser crosser(&a, &b, &v[3]);
+  for (int i = 0; i < 4; ++i) {
+    if (crosser.RobustCrossing(&v[i]) >= 0) {
+      return S1ChordAngle::Zero();
+    }
+  }
+  // Finally, check whether the minimum distance occurs between a cell vertex
+  // and the interior of the edge AB.  (Some of this work is redundant, since
+  // it also checks the distance to the endpoints A and B again.)
+  //
+  // Note that we don't need to check the distance from the interior of AB to
+  // the interior of a cell edge, because the only way that this distance can
+  // be minimal is if the two edges cross (already checked above).
+  for (int i = 0; i < 4; ++i) {
+    S2EdgeUtil::UpdateMinDistance(v[i], a, b, &min_dist);
+  }
+  return min_dist;
+}

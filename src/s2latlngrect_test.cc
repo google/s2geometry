@@ -25,9 +25,11 @@
 
 #include <gtest/gtest.h>
 #include "util/coding/coder.h"
+#include "s1angle.h"
 #include "s2cap.h"
 #include "s2cell.h"
 #include "s2edgeutil.h"
+#include "s2latlng.h"
 #include "s2testing.h"
 
 using std::min;
@@ -327,13 +329,91 @@ TEST(S2LatLngRect, PolarClosure) {
             RectFromDegrees(-90, -145, 90, -144).PolarClosure());
 }
 
-TEST(S2LatLngRect, ExpandedByDistance) {
+TEST(ExpandedByDistance, PositiveDistance) {
   EXPECT_TRUE(RectFromDegrees(0, 170, 0, -170).
               ExpandedByDistance(S1Angle::Degrees(15)).ApproxEquals(
                   RectFromDegrees(-15, 155, 15, -155)));
   EXPECT_TRUE(RectFromDegrees(60, 150, 80, 10).
               ExpandedByDistance(S1Angle::Degrees(15)).ApproxEquals(
                   RectFromDegrees(45, -180, 90, 180)));
+}
+
+TEST(ExpandedByDistance, NegativeDistanceNorthEast) {
+  S2LatLngRect in_rect = RectFromDegrees(0.0, 0.0, 30.0, 90.0);
+  S1Angle distance = S1Angle::Degrees(5.0);
+
+  S2LatLngRect out_rect =
+      in_rect.ExpandedByDistance(distance).ExpandedByDistance(-distance);
+
+  EXPECT_TRUE(out_rect.ApproxEquals(in_rect)) << out_rect;
+}
+
+TEST(ExpandedByDistance, NegativeDistanceSouthWest) {
+  S2LatLngRect in_rect = RectFromDegrees(-30.0, -90.0, 0.0, 0.0);
+  S1Angle distance = S1Angle::Degrees(5.0);
+
+  S2LatLngRect out_rect =
+      in_rect.ExpandedByDistance(distance).ExpandedByDistance(-distance);
+
+  EXPECT_TRUE(out_rect.ApproxEquals(in_rect)) << out_rect;
+}
+
+TEST(ExpandedByDistance, NegativeDistanceLatWithNorthPole) {
+  S2LatLngRect rect = RectFromDegrees(0.0, -90.0, 90.0, 180.0)
+      .ExpandedByDistance(-S1Angle::Degrees(5.0));
+
+  EXPECT_TRUE(rect.ApproxEquals(RectFromDegrees(5.0, 0.0, 85.0, 90.0)))
+      << rect;
+}
+
+TEST(ExpandedByDistance, NegativeDistanceLatWithNorthPoleAndLngFull) {
+  S2LatLngRect rect = RectFromDegrees(0.0, -180.0, 90.0, 180.0)
+      .ExpandedByDistance(-S1Angle::Degrees(5.0));
+
+  EXPECT_TRUE(rect.ApproxEquals(RectFromDegrees(5.0, -180.0, 90.0, 180.0)))
+      << rect;
+}
+
+TEST(ExpandedByDistance, NegativeDistanceLatWithSouthPole) {
+  S2LatLngRect rect = RectFromDegrees(-90.0, -90.0, 0.0, 180.0)
+      .ExpandedByDistance(-S1Angle::Degrees(5.0));
+
+  EXPECT_TRUE(rect.ApproxEquals(RectFromDegrees(-85.0, 0.0, -5.0, 90.0)))
+      << rect;
+}
+
+TEST(ExpandedByDistance, NegativeDistanceLatWithSouthPoleAndLngFull) {
+  S2LatLngRect rect = RectFromDegrees(-90.0, -180.0, 0.0, 180.0)
+      .ExpandedByDistance(-S1Angle::Degrees(5.0));
+
+  EXPECT_TRUE(rect.ApproxEquals(RectFromDegrees(-90.0, -180.0, -5.0, 180.0)))
+      << rect;
+}
+
+TEST(ExpandedByDistance, NegativeDistanceLngFull) {
+  S2LatLngRect rect = RectFromDegrees(0.0, -180.0, 30.0, 180.0)
+      .ExpandedByDistance(-S1Angle::Degrees(5.0));
+
+  EXPECT_TRUE(rect.ApproxEquals(RectFromDegrees(5.0, -180.0, 25.0, 180.0)))
+      << rect;
+}
+
+TEST(ExpandedByDistance, NegativeDistanceLatResultEmpty) {
+  S2LatLngRect rect = RectFromDegrees(0.0, 0.0, 9.9, 90.0)
+      .ExpandedByDistance(-S1Angle::Degrees(5.0));
+
+  EXPECT_TRUE(rect.is_empty()) << rect;
+}
+
+TEST(ExpandedByDistance, NegativeDistanceLngResultEmpty) {
+  S2LatLngRect rect = RectFromDegrees(0.0, 0.0, 30.0, 11.0)
+      .ExpandedByDistance(-S1Angle::Degrees(5.0));
+
+  // The cap center is at latitude 30 - 5 = 25 degrees. The length of the
+  // latitude 25 degree line is 0.906 times the length of the equator. Thus the
+  // cap whose radius is 5 degrees covers the rectangle whose latitude interval
+  // is 11 degrees.
+  EXPECT_TRUE(rect.is_empty()) << rect;
 }
 
 TEST(S2LatLngRect, GetCapBound) {
