@@ -50,6 +50,8 @@ template<> struct hash<uint128> {
 
 HASH_NAMESPACE_DECLARATION_END
 
+// Various files define GoodFastHash specializations.  Declare it here
+// so they don't have to.
 template<class X> struct GoodFastHash;
 
 #endif  // UTIL_HASH_HASH_H_

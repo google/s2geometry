@@ -36,10 +36,12 @@
 #include "s1interval.h"
 #include "s2.h"
 #include "s2cap.h"
+#include "s2edgequery.h"
 #include "s2edgeutil.h"
 #include "s2latlng.h"
 #include "s2latlngrect.h"
 #include "s2loop.h"
+#include "s2shapeindex.h"
 #include "s2testing.h"
 
 using std::map;
@@ -464,8 +466,8 @@ TEST(S2Cell, RectBoundIsLargeEnough) {
   }
 }
 
-static S1ChordAngle GetDistanceBruteForce(S2Cell const& cell,
-                                          S2Point const& target) {
+static S1ChordAngle GetDistanceToPointBruteForce(S2Cell const& cell,
+                                                 S2Point const& target) {
   if (cell.Contains(target)) return S1ChordAngle::Zero();
   S1ChordAngle min_distance = S1ChordAngle::Infinity();
   for (int i = 0; i < 4; ++i) {
@@ -475,14 +477,72 @@ static S1ChordAngle GetDistanceBruteForce(S2Cell const& cell,
   return min_distance;
 }
 
-TEST(S2Cell, GetDistance) {
+TEST(S2Cell, GetDistanceToPoint) {
   S2Testing::rnd.Reset(FLAGS_s2_random_seed);
   for (int iter = 0; iter < 1000; ++iter) {
     SCOPED_TRACE(StringPrintf("Iteration %d", iter));
     S2Cell cell(S2Testing::GetRandomCellId());
     S2Point target = S2Testing::RandomPoint();
-    S1Angle expected = GetDistanceBruteForce(cell, target).ToAngle();
+    S1Angle expected = GetDistanceToPointBruteForce(cell, target).ToAngle();
     S1Angle actual = cell.GetDistance(target).ToAngle();
+    // The error has a peak near Pi/2 for edge distance, and another peak near
+    // Pi for vertex distance.
+    EXPECT_NEAR(expected.radians(), actual.radians(), 1e-12);
+    if (expected.radians() <= M_PI / 3) {
+      EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15);
+    }
+  }
+}
+
+static void ChooseEdgeNearCell(S2Cell const& cell, S2Point* a, S2Point* b) {
+  S2Cap cap = cell.GetCapBound();
+  if (S2Testing::rnd.OneIn(5)) {
+    // Choose a point anywhere on the sphere.
+    *a = S2Testing::RandomPoint();
+  } else {
+    // Choose a point inside or somewhere near the cell.
+    *a = S2Testing::SamplePoint(S2Cap(cap.center(), 1.5 * cap.GetRadius()));
+  }
+  // Now choose a maximum edge length ranging from very short to very long
+  // relative to the cell size, and choose the other endpoint.
+  double max_length = min(100 * pow(1e-4, S2Testing::rnd.RandDouble()) *
+                          cap.GetRadius().radians(), M_PI_2);
+  *b = S2Testing::SamplePoint(S2Cap(*a, S1Angle::Radians(max_length)));
+}
+
+static S1ChordAngle GetDistanceToEdgeBruteForce(
+    S2Cell const& cell, S2Point const& a, S2Point const& b) {
+  if (cell.Contains(a) || cell.Contains(b)) {
+    return S1ChordAngle::Zero();
+  }
+  S2Loop loop(cell);
+  S2ShapeIndex index;
+  index.Add(new S2Loop::Shape(&loop));
+  S2EdgeQuery query(index);
+  vector<int> edges;
+  if (query.GetCrossings(a, b, index.shape(0), &edges)) {
+    return S1ChordAngle::Zero();
+  }
+  S1ChordAngle min_dist = S1ChordAngle::Infinity();
+  for (int i = 0; i < 4; ++i) {
+    S2Point v0 = cell.GetVertex(i);
+    S2Point v1 = cell.GetVertex((i + 1) & 3);
+    S2EdgeUtil::UpdateMinDistance(a, v0, v1, &min_dist);
+    S2EdgeUtil::UpdateMinDistance(b, v0, v1, &min_dist);
+    S2EdgeUtil::UpdateMinDistance(v0, a, b, &min_dist);
+  }
+  return min_dist;
+}
+
+TEST(S2Cell, GetDistanceToEdge) {
+  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  for (int iter = 0; iter < 1000; ++iter) {
+    SCOPED_TRACE(StringPrintf("Iteration %d", iter));
+    S2Cell cell(S2Testing::GetRandomCellId());
+    S2Point a, b;
+    ChooseEdgeNearCell(cell, &a, &b);
+    S1Angle expected = GetDistanceToEdgeBruteForce(cell, a, b).ToAngle();
+    S1Angle actual = cell.GetDistanceToEdge(a, b).ToAngle();
     // The error has a peak near Pi/2 for edge distance, and another peak near
     // Pi for vertex distance.
     EXPECT_NEAR(expected.radians(), actual.radians(), 1e-12);
