@@ -98,6 +98,7 @@ class S2Loop : public S2Region {
   // connected to the first.  All points should be unit length.  Loops must
   // have at least 3 vertices (except for the "empty" and "full" loops, see
   // kEmpty and kFull).  This method may be called multiple times.
+  // TODO(user): Fix s2.swig and update to std::vector.
   void Init(std::vector<S2Point> const& vertices);
 
   // A special vertex chain of length 1 that creates an empty loop (i.e., a

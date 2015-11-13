@@ -100,8 +100,15 @@ class S2CellId {
   // the arguments represent.
   static S2CellId FromFacePosLevel(int face, uint64 pos, int level);
 
-  // Return the leaf cell containing the given point (a direction
-  // vector, not necessarily unit length).
+  // Return a leaf cell containing the given point "p".  Usually there is
+  // exactly one such cell, but for points along the edge of a cell, any
+  // adjacent cell may be (deterministically) chosen.  This is because
+  // S2CellIds are considered to be closed sets.  The returned cell will
+  // always contain the given point, i.e.
+  //
+  //   S2Cell(S2CellId::FromPoint(p)).Contains(p)
+  //
+  // is always true.  The point "p" does not need to be normalized.
   static S2CellId FromPoint(S2Point const& p);
 
   // Return the leaf cell containing the given normalized S2LatLng.

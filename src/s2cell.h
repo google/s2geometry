@@ -153,7 +153,16 @@ class S2Cell : public S2Region {
     return Contains(p);  // The same as Contains() below, just virtual.
   }
 
-  // The point 'p' does not need to be normalized.
+  // Return true if the cell contains the given point "p".  Note that unlike
+  // S2Loop/S2Polygon, S2Cells are considered to be closed sets.  This means
+  // that points along an S2Cell edge (or at a vertex) belong to the adjacent
+  // cell(s) as well.
+  //
+  // If instead you want every point to be contained by exactly one S2Cell,
+  // you will need to convert the S2Cells to S2Loops (which implement point
+  // containment this way).
+  //
+  // The point "p" does not need to be normalized.
   bool Contains(S2Point const& p) const;
 
   virtual void Encode(Encoder* const encoder) const {
