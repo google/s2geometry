@@ -1112,10 +1112,6 @@ struct PortableHashBase { };
 // macros are different from an external definition, you will get a build
 // error.
 //
-// Note that any platform that defines HASH_NAMESPACE to be "std" must also
-// define HASH_NAMESPACE_IS_STD_NAMESPACE_INTERNAL. That macro is an
-// implementation detail of this header; do not use it in your code.
-//
 // TODO(user): always get HASH_NAMESPACE from testing target macros.
 
 #if defined(__GNUC__) && defined(GOOGLE_GLIBCXX_VERSION)
@@ -1124,7 +1120,6 @@ struct PortableHashBase { };
 #elif defined(__GNUC__) && (defined(STLPORT) || defined(USE_STD_HASH))
 // A version of gcc with stlport.
 #define HASH_NAMESPACE std
-#define HASH_NAMESPACE_IS_STD_NAMESPACE_INTERNAL
 #elif defined(_MSC_VER)
 // MSVC.
 // http://msdn.microsoft.com/en-us/library/6x7w9f6z(v=vs.100).aspx
@@ -1447,24 +1442,6 @@ std::ostream& operator << (std::ostream& out, const pthread_t& thread_id);
 // '#ifdef LANG_CXX11' to behave differently from '#if LANG_CXX11'.
 #define LANG_CXX11 1
 #endif
-
-// CAN_SPECIALIZE_STD_HASH is a portability macro for specializing std::hash.
-// Portable code should use it to guard any std::hash specializations:
-//
-// #ifdef CAN_SPECIALIZE_STD_HASH
-// namespace std
-// template <> struct hash<Foo> {
-//   ...
-// };
-// }  // namespace std
-// #endif
-#if defined(LANG_CXX11) && !defined(HASH_NAMESPACE_IS_STD_NAMESPACE_INTERNAL)
-#define CAN_SPECIALIZE_STD_HASH
-#endif
-
-// Undefine this internal macro now that we no longer need it, to prevent
-// misuse by clients.
-#undef HASH_NAMESPACE_IS_STD_NAMESPACE_INTERNAL
 
 // On some platforms, a "function pointer" points to a function descriptor
 // rather than directly to the function itself.  Use FUNC_PTR_TO_CHAR_PTR(func)

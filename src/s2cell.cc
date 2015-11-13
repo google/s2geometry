@@ -273,7 +273,15 @@ bool S2Cell::Contains(S2Point const& p) const {
   // true for both adjacent cells.
   R2Point uv;
   if (!S2::FaceXYZtoUV(face_, p, &uv)) return false;
-  return uv_.Contains(uv);
+
+  // Expand the (u,v) bound to ensure that
+  //
+  //   S2Cell(S2CellId::FromPoint(p)).Contains(p)
+  //
+  // is always true.  To do this, we need to account for the error when
+  // converting from (u,v) coordinates to (s,t) coordinates.  At least in the
+  // case of S2_QUADRATIC_PROJECTION, the total error is at most DBL_EPSILON.
+  return uv_.Expanded(DBL_EPSILON).Contains(uv);
 }
 
 // Return the squared chord distance from point P to corner vertex (i,j).

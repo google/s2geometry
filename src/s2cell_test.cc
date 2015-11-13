@@ -467,6 +467,41 @@ TEST(S2Cell, RectBoundIsLargeEnough) {
   }
 }
 
+TEST(S2Cell, ConsistentWithS2CellIdFromPoint) {
+  // Construct many points that are nearly on an S2Cell edge, and verify that
+  // S2Cell(S2CellId::FromPoint(p)).Contains(p) is always true.
+
+  for (int iter = 0; iter < 1000; ++iter) {
+    S2Cell cell(S2Testing::GetRandomCellId());
+    int i1 = S2Testing::rnd.Uniform(4);
+    int i2 = (i1 + 1) & 3;
+    S2Point v1 = cell.GetVertex(i1);
+    S2Point v2 = S2Testing::SamplePoint(
+        S2Cap(cell.GetVertex(i2), S1Angle::Radians(1e-15)));
+    S2Point p = S2EdgeUtil::Interpolate(S2Testing::rnd.RandDouble(), v1, v2);
+    EXPECT_TRUE(S2Cell(S2CellId::FromPoint(p)).Contains(p));
+  }
+}
+
+TEST(S2CellId, AmbiguousContainsPoint) {
+  // This tests a case where S2CellId returns the "wrong" cell for a point
+  // that is very close to the cell edge. (ConsistentWithS2CellIdFromPoint
+  // generates more examples like this.)
+  //
+  // The S2Point below should have x = 0, but conversion from latlng to
+  // (x,y,z) gives x = 6.1e-17.  When xyz is converted to uv, this gives u =
+  // -6.1e-17.  However when converting to st, which is centered at 0.5 rather
+  // than 0, the low precision bits of u are lost and we wind up with s = 0.5.
+  // S2CellId::FromPoint then chooses an arbitrary neighboring cell.
+  //
+  // This tests that S2Cell::Contains() expands the cell bounds sufficiently
+  // so that the returned cell is still considered to contain "p".
+  S2Point p = S2LatLng::FromDegrees(-2, 90).ToPoint();
+  S2CellId cell_id = S2CellId::FromPoint(p).parent(1);
+  S2Cell cell(cell_id);
+  EXPECT_TRUE(cell.Contains(p));
+}
+
 static S1ChordAngle GetDistanceToPointBruteForce(S2Cell const& cell,
                                                  S2Point const& target) {
   if (cell.Contains(target)) return S1ChordAngle::Zero();
