@@ -23,6 +23,7 @@
 #include <limits>
 #include <iosfwd>   // No longer needed
 #include <ostream>
+#include <type_traits>
 
 #include "fpcontractoff.h"
 #include "s1angle.h"
@@ -130,6 +131,10 @@ class S1ChordAngle {
   // Infinity() are both considered valid.
   bool is_valid() const;
 
+  // When S1ChordAngle is used as a key in one of the btree container types
+  // (util/btree), indicate that linear rather than binary search should be
+  // used.  This is much faster when the comparison function is cheap.
+  typedef std::true_type goog_btree_prefer_linear_node_search;
 
  private:
   // S1ChordAngles are represented by the squared chord length, which can

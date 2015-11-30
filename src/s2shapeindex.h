@@ -21,6 +21,24 @@
 // interiors, the index makes it very fast to determine the shape(s) that
 // contain a given point or region.
 //
+// For example, to index a set of polygons and then determine which polygons
+// contain various query points:
+//
+// void Test(vector<S2Polygon*> const& polygons,
+//           vector<S2Point> const& points) {
+//   S2ShapeIndex index;
+//   for (auto polygon : polygons) {
+//     index.Add(new S2Polygon::Shape(polygon));
+//   }
+//   for (auto const& point: points) {
+//     vector<S2Shape const*> shapes;
+//     index.GetContainingShapes(point, &shapes);
+//     for (auto shape: shapes) {
+//       Output(point, down_cast<S2Polygon::Shape const*>(shape)->polygon());
+//     }
+//   }
+// }
+//
 // The index is dynamic; shapes can be added or removed (although each
 // individual shape is immutable).  It is designed to handle up to millions of
 // shapes and edges.  All data structures are designed to be small, so the
@@ -59,7 +77,7 @@
 #include "base/macros.h"
 #include "base/mutex.h"
 #include "base/spinlock.h"
-#include <map>
+#include "util/btree/btree_map.h"  // Like std::map, but faster and smaller.
 #include "fpcontractoff.h"
 #include "s2.h"
 #include "s2cellid.h"
@@ -106,6 +124,14 @@ class S2Shape {
   // A unique id assigned to this shape by S2ShapeIndex.  Shape ids are
   // assigned sequentially starting from 0 in the order shapes are added.
   int id() const { return id_; }
+
+  // TODO(ericv): Consider adding an integer type_tag() field that can be used
+  // by clients to discriminate among different types of indexed shapes.
+  // Currently, if more than one type of shape is being indexed and clients
+  // want to know the type of a particular shape, they either need to maintain
+  // their own mapping from "id" to shape type, or use run-time type
+  // information, or ensure that all of their S2Shapes descend from a base
+  // class possessing a method that allows them to be distinguished.
 
  private:
   friend class S2ShapeIndex;  // id_ assignment
@@ -230,7 +256,7 @@ class S2ShapeIndexOptions {
 // that no cell contains more than a small number of edges.
 class S2ShapeIndex {
  private:
-  typedef std::map<S2CellId, S2ShapeIndexCell*> CellMap;
+  typedef util::btree::btree_map<S2CellId, S2ShapeIndexCell*> CellMap;
 
  public:
   // Create an S2ShapeIndex that uses the default option settings.  Option
@@ -279,16 +305,13 @@ class S2ShapeIndex {
   // options specified via Init() are preserved.
   void Reset();
 
-#if 0
   // Return true if "shape" contains the given point P.
-  // REQUIRES: shape->has_interior() == true
-  bool Contains(S2Shape const* shape, S2Point const& p);
+  bool ShapeContains(S2Shape const* shape, S2Point const& p);
 
   // Return true if the given point P is contained by at least one shape,
   // and return a list of the containing shapes.
   bool GetContainingShapes(S2Point const& p,
                            std::vector<S2Shape const*>* shapes);
-#endif
 
   // The possible relationships between a "target" cell and the cells of the
   // S2ShapeIndex.  If the target is an index cell or is contained by an index
@@ -383,6 +406,9 @@ class S2ShapeIndex {
   // takes time linear in the number of shapes.
   int GetNumEdges() const;
 
+  // Return the number of bytes occupied by the index (including any unused
+  // space at the end of vectors, etc).
+  size_t BytesUsed() const;
 
   // Calls to Add() and Remove() are normally queued and processed on the
   // first subsequent query (in a thread-safe way).  This has many advantages,
@@ -479,7 +505,7 @@ class S2ShapeIndex {
   // processed yet.  Note that we need to copy the edge data since the caller
   // is free to destroy the shape once Remove() has been called.  This field
   // is present only when there are removals pending (to save memory).
-  std::unique_ptr<std::vector<PendingRemoval> > pending_removals_;
+  std::unique_ptr<std::vector<PendingRemoval>> pending_removals_;
 
   // Additions and removals are queued and processed on the first subsequent
   // query.  There are several reasons to do this:

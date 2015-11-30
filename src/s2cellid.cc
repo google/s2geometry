@@ -127,6 +127,11 @@ S2CellId S2CellId::advance(int64 steps) const {
   return S2CellId(id_ + (static_cast<uint64>(steps) << step_shift));
 }
 
+int64 S2CellId::distance_from_begin() const {
+  const int step_shift = 2 * (kMaxLevel - level()) + 1;
+  return id_ >> step_shift;
+}
+
 S2CellId S2CellId::advance_wrap(int64 steps) const {
   DCHECK(is_valid());
   if (steps == 0) return *this;

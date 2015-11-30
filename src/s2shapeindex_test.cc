@@ -29,6 +29,7 @@
 #include "r2rect.h"
 #include "s1angle.h"
 #include "s2.h"
+#include "s2cap.h"
 #include "s2cellid.h"
 #include "s2cellunion.h"
 #include "s2edgeutil.h"
@@ -150,8 +151,7 @@ void S2ShapeIndexTest::ValidateInterior(S2Shape const* shape, S2CellId id,
   for (int e = 0; e < shape->num_edges(); ++e) {
     S2Point const *c, *d;
     shape->GetEdge(e, &c, &d);
-    crosser.RestartAt(c);
-    contains_center ^= crosser.EdgeOrVertexCrossing(d);
+    contains_center ^= crosser.EdgeOrVertexCrossing(c, d);
   }
   EXPECT_EQ(contains_center, index_contains_center);
 }
@@ -442,6 +442,38 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
   lock_.Unlock();
   for (int i = 0; i < kNumReaders; ++i) {
     CHECK_EQ(0, pthread_join(readers[i], NULL));
+  }
+}
+
+TEST(S2ShapeIndex, GetContainingShapes) {
+  // Also tests Contains(S2Shape const*, S2Point).
+  int const kNumVerticesPerLoop = 10;
+  S1Angle const kMaxLoopRadius = S2Testing::KmToAngle(10);
+  S2Cap const center_cap(S2Testing::RandomPoint(), kMaxLoopRadius);
+  using LoopShape = s2shapeutil::S2LoopOwningShape;
+  S2ShapeIndex index;
+  for (int i = 0; i < 100; ++i) {
+    S2Loop* loop = S2Testing::MakeRegularLoop(
+        S2Testing::SamplePoint(center_cap),
+        S2Testing::rnd.RandDouble() * kMaxLoopRadius,
+        kNumVerticesPerLoop);
+    index.Add(new LoopShape(loop));
+  }
+  for (int i = 0; i < 100; ++i) {
+    S2Point p = S2Testing::SamplePoint(center_cap);
+    vector<S2Shape const*> expected, actual;
+    for (int j = 0; j < index.num_shape_ids(); ++j) {
+      S2Shape const* shape = index.shape(j);
+      S2Loop const* loop = static_cast<LoopShape const*>(shape)->loop();
+      if (loop->Contains(p)) {
+        EXPECT_TRUE(index.ShapeContains(shape, p));
+        expected.push_back(shape);
+      } else {
+        EXPECT_FALSE(index.ShapeContains(shape, p));
+      }
+    }
+    index.GetContainingShapes(p, &actual);
+    EXPECT_EQ(expected, actual);
   }
 }
 

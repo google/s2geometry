@@ -71,7 +71,7 @@ class S2EdgeVectorShape : public S2Shape {
   bool contains_origin() const { return false; }
   void Release() const { delete this; }
  private:
-  std::vector<std::pair<S2Point, S2Point> > edges_;
+  std::vector<std::pair<S2Point, S2Point>> edges_;
 };
 
 // Like S2Loop::Shape, except that the referenced S2Loop is automatically

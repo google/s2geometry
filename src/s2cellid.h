@@ -23,6 +23,7 @@
 #include <iosfwd>     // No longer needed
 #include <iostream>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -250,6 +251,10 @@ class S2CellId {
   // position is never advanced past End() or before Begin().
   S2CellId advance(int64 steps) const;
 
+  // Returns the number of steps that this cell is from Begin(level()). The
+  // return value is always non-negative.
+  int64 distance_from_begin() const;
+
   // Like next() and prev(), but these methods wrap around from the last face
   // to the first and vice versa.  They should *not* be used for iteration in
   // conjunction with child_begin(), child_end(), Begin(), or End().  The
@@ -361,6 +366,10 @@ class S2CellId {
   // the leaf cell with the given (i,j)-coordinates.
   static R2Rect IJLevelToBoundUV(int ij[2], int level);
 
+  // When S2CellId is used as a key in one of the btree container types
+  // (util/btree), indicate that linear rather than binary search should be
+  // used.  This is much faster when the comparison function is cheap.
+  typedef std::true_type goog_btree_prefer_linear_node_search;
 
  private:
   // This is the offset required to wrap around from the beginning of the

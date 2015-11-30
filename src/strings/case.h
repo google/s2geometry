@@ -75,7 +75,9 @@ enum CapsType {
   CAPS_NOALPHA,
 };
 
+// Deprecated method, please use the StringPiece variant.
 CapsType GetCapitalization(const char* s);
+CapsType GetCapitalization(StringPiece s);
 
 // Case-insensitive string comparison, uses C/POSIX locale.
 // Returns:

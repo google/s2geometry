@@ -476,7 +476,7 @@ class TemplatedElementDeleter : public BaseDeleter {
 };
 
 // ElementDeleter is an RAII (go/raii) object that deletes the elements in the
-// given container when it goes out of scope. This is similar to std::unique_ptr<>
+// given container when it goes out of scope. This is similar to scoped_ptr<>
 // except that a container's elements will be deleted rather than the container
 // itself.
 //

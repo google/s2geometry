@@ -27,6 +27,14 @@
 #include <string.h>         // for memcpy()
 #include <stdlib.h>         // for free()
 
+#if defined(OS_CYGWIN)
+#error "Cygwin is not supported."
+#endif
+
+#if defined(__CYGWIN__)
+#error "Cygwin is not supported."
+#endif
+
 #if defined(__APPLE__)
 // traditionally defined __APPLE__ themselves via other build systems, since mac
 // TODO(user): Remove this when all toolchains make the proper defines.

@@ -285,9 +285,6 @@ class S2LatLngRect : public S2Region {
   // full or empty, or the latitude range expands to include a pole).
   S2LatLngRect ExpandedByDistance(S1Angle distance) const;
 
-  GOOGLE_DEPRECATED("Use ExpandedByDistance()")
-  S2LatLngRect ConvolveWithCap(S1Angle radius) const;
-
   // Returns the minimum distance (measured along the surface of the sphere) to
   // the given S2LatLngRect. Both S2LatLngRects must be non-empty.
   S1Angle GetDistance(S2LatLngRect const& other) const;

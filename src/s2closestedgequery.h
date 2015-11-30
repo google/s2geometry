@@ -19,7 +19,9 @@
 #define S2_GEOMETRY_S2CLOSESTEDGEQUERY_H_
 
 #include <algorithm>
-#include <set>
+#include <type_traits>
+
+#include "util/btree/btree_set.h"  // Like std::set, but faster and smaller.
 #include "priority_queue_sequence.h"
 #include "s1angle.h"
 #include "s1chordangle.h"
@@ -228,11 +230,15 @@ class S2ClosestEdgeQuery {
       if (shape_id > other.shape_id) return false;
       return edge_id < other.edge_id;
     }
+    // Indicate that linear rather than binary search should be used within
+    // btree nodes.  This is faster even for the comparison function above
+    // since the result is determined by "distance" most of the time.
+    using goog_btree_prefer_linear_node_search = std::true_type;
 
     S1ChordAngle distance;
     int shape_id, edge_id;
   };
-  typedef std::set<Result> ResultSet;
+  typedef util::btree::btree_set<Result> ResultSet;
   ResultSet tmp_results_;
 
   // For efficiency, when max_edges() == 1 we keep the current best result in
@@ -284,7 +290,7 @@ class S2ClosestEdgeQuery {
     }
   };
   typedef std::priority_queue<
-      QueueEntry, util::gtl::InlinedVector<QueueEntry, 16> > CellQueue;
+      QueueEntry, util::gtl::InlinedVector<QueueEntry, 16>> CellQueue;
   CellQueue queue_;
 
   // Temporaries, defined here to avoid multiple allocations / initializations.

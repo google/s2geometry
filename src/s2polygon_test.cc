@@ -1795,7 +1795,7 @@ S2Polygon* MakeCellLoop(const S2Cell& cell, string const& str) {
   for (int i = 0; i < 4; ++i) {
     vertices.push_back(cell.GetVertex(i));
   }
-  vector<pair<string, string> > p;
+  vector<pair<string, string>> p;
   CHECK(DictionaryParse(str, &p)) << ": str == \"" << str << "\"";
   vector<S2Point> loop_vertices;
   for (int i = 0; i < p.size(); ++i) {
