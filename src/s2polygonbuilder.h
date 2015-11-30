@@ -269,7 +269,7 @@ class S2PolygonBuilder {
   void AddPolygon(S2Polygon const* polygon);
 
   // This type is used to return any edges that could not be assembled.
-  typedef std::vector<std::pair<S2Point, S2Point> > EdgeList;
+  typedef std::vector<std::pair<S2Point, S2Point>> EdgeList;
 
   // Assembles the given edges into as many non-crossing loops as possible.
   // When there is a choice about how to assemble the loops, then CCW loops
@@ -359,7 +359,7 @@ class S2PolygonBuilder {
 
   // The current set of edges, grouped by origin.  The set of destination
   // vertices is a multiset so that the same edge can be present more than
-  // once.  We could have also used a multiset<pair<S2Point, S2Point> >,
+  // once.  We could have also used a multiset<pair<S2Point, S2Point>>,
   // but this representation is a bit more convenient.
   typedef std::multiset<S2Point> VertexSet;
   typedef std::unordered_map<S2Point, VertexSet, S2PointHash> EdgeSet;

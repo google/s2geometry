@@ -38,7 +38,7 @@
 // cases where the maximum queue size is small.
 
 template <class T, class Sequence = util::gtl::InlinedVector<T, 16>,
-          class Compare = std::less<typename Sequence::value_type> >
+          class Compare = std::less<typename Sequence::value_type>>
 class priority_queue_sequence
     : public std::priority_queue<T, Sequence, Compare> {
  public:

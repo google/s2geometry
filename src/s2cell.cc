@@ -23,7 +23,6 @@
 
 #include <glog/logging.h>
 
-#include "base/macros.h"
 #include "r1interval.h"
 #include "r2.h"
 #include "s1chordangle.h"
@@ -43,8 +42,8 @@ using std::min;
 //
 // The expression below rounds up (43 + sizeof(void*)) to the nearest
 // multiple of sizeof(void*).
-COMPILE_ASSERT(sizeof(S2Cell) <= ((43+2*sizeof(void*)-1) & -sizeof(void*)),
-               S2Cell_is_getting_bloated);
+static_assert(sizeof(S2Cell) <= ((43+2*sizeof(void*)-1) & -sizeof(void*)),
+              "S2Cell is getting bloated");
 
 S2Point S2Cell::GetVertexRaw(int k) const {
   return S2::FaceUVtoXYZ(face_, uv_.GetVertex(k));

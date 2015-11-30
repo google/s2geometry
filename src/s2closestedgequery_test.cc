@@ -56,8 +56,8 @@ struct CompareFirst {
 // Check that result set "x" contains all the expected results from "y", and
 // does not include any duplicate results.
 template <typename Id>
-bool CheckResultSet(std::vector<std::pair<S1Angle, Id> > const& x,
-                    std::vector<std::pair<S1Angle, Id> > const& y,
+bool CheckResultSet(std::vector<std::pair<S1Angle, Id>> const& x,
+                    std::vector<std::pair<S1Angle, Id>> const& y,
                     int max_size, S1Angle max_distance, S1Angle max_error,
                     S1Angle max_pruning_error, string const& label) {
   // Results should be sorted by distance.
@@ -65,7 +65,7 @@ bool CheckResultSet(std::vector<std::pair<S1Angle, Id> > const& x,
   EXPECT_TRUE(util::gtl::is_sorted(x.begin(), x.end(), cmp));
 
   // Make sure there are no duplicate values.
-  std::set<std::pair<S1Angle, Id> > x_set(x.begin(), x.end());
+  std::set<std::pair<S1Angle, Id>> x_set(x.begin(), x.end());
   EXPECT_EQ(x_set.size(), x.size()) << "Result set contains duplicates";
 
   // Result set X should contain all the items from U whose distance is less
@@ -101,8 +101,8 @@ bool CheckResultSet(std::vector<std::pair<S1Angle, Id> > const& x,
 // closest (see S2ClosestEdgeQuery::max_error).
 template <typename Id>
 bool CheckDistanceResults(
-    std::vector<std::pair<S1Angle, Id> > const& expected,
-    std::vector<std::pair<S1Angle, Id> > const& actual,
+    std::vector<std::pair<S1Angle, Id>> const& expected,
+    std::vector<std::pair<S1Angle, Id>> const& actual,
     int max_size, S1Angle max_distance, S1Angle max_error) {
   static S1Angle const kMaxPruningError = S1Angle::Radians(1e-15);
   return (CheckResultSet(actual, expected, max_size, max_distance,

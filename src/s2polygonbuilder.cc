@@ -482,7 +482,7 @@ void S2PolygonBuilder::MoveVertices(MergeMap const& merge_map) {
 
   // We need to copy the set of edges affected by the move, since
   // edges_ could be reallocated when we start modifying it.
-  vector<pair<S2Point, S2Point> > edges;
+  vector<pair<S2Point, S2Point>> edges;
   for (EdgeSet::const_iterator i = edges_.begin(); i != edges_.end(); ++i) {
     S2Point const& v0 = i->first;
     VertexSet const& vset = i->second;
@@ -516,7 +516,7 @@ void S2PolygonBuilder::MoveVertices(MergeMap const& merge_map) {
 void S2PolygonBuilder::SpliceEdges(PointIndex const& index) {
   // We keep a stack of unprocessed edges.  Initially all edges are
   // pushed onto the stack.
-  vector<pair<S2Point, S2Point> > edges;
+  vector<pair<S2Point, S2Point>> edges;
   for (EdgeSet::const_iterator i = edges_.begin(); i != edges_.end(); ++i) {
     S2Point const& v0 = i->first;
     VertexSet const& vset = i->second;

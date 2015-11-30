@@ -922,7 +922,7 @@ bool S2Polygon::DecodeLossless(Decoder* const decoder, bool within_scope) {
 // Each intersection is a pair (t, P) where "t" is the interpolation parameter
 // along the edge (a fraction in the range [0,1]), and P is the actual
 // intersection point.
-typedef vector<pair<double, S2Point> > IntersectionSet;
+typedef vector<pair<double, S2Point>> IntersectionSet;
 
 // EdgeClipper find all the intersections of a given edge with the edges
 // contained in an S2ShapeIndex.  It is used to implement polygon operations
@@ -1018,12 +1018,10 @@ void EdgeClipper::ClipEdge(S2Point const& a0, S2Point const& a1,
     S2Shape const* b_shape = it->first;
     vector<int> const& b_candidates = it->second;
     int n = b_candidates.size();
-    S2Point const *b0, *b1 = NULL;
     for (int j = 0; j < n; ++j) {
-      S2Point const* b1_prev = b1;
+      S2Point const *b0, *b1;
       b_shape->GetEdge(b_candidates[j], &b0, &b1);
-      if (b0 != b1_prev) crosser.RestartAt(b0);
-      int crossing = crosser.RobustCrossing(b1);
+      int crossing = crosser.RobustCrossing(b0, b1);
       if (crossing < 0) continue;
       AddIntersection(a0, a1, *b0, *b1, b_shape, crossing);
     }

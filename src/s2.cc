@@ -99,8 +99,8 @@ double const S2::kFaceUVWAxes[6][3][3] = {
   }
 };
 
-COMPILE_ASSERT(S2::kSwapMask == 0x01 && S2::kInvertMask == 0x02,
-               masks_changed);
+static_assert(S2::kSwapMask == 0x01 && S2::kInvertMask == 0x02,
+              "masks changed");
 
 DEFINE_bool(s2debug, !!google::DEBUG_MODE,
             "Enable debugging checks in s2 code");

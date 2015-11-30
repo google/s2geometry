@@ -41,7 +41,7 @@ static double ParseDouble(const string& str) {
 }
 
 void ParseLatLngs(string const& str, vector<S2LatLng>* latlngs) {
-  vector<pair<string, string> > p;
+  vector<pair<string, string>> p;
   CHECK(DictionaryParse(str, &p)) << ": str == \"" << str << "\"";
   latlngs->clear();
   for (int i = 0; i < p.size(); ++i) {

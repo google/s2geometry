@@ -310,7 +310,7 @@ void S2EncodePointsCompressed(S2XYZFaceSiTi const* points,
                               int num_points,
                               int level,
                               Encoder* encoder) {
-  FixedArray<pair<int, int> > vertices_pi_qi(num_points);
+  FixedArray<pair<int, int>> vertices_pi_qi(num_points);
   vector<int> off_center;
   Faces faces;
   for (int i = 0; i < num_points; ++i) {

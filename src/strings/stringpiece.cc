@@ -170,7 +170,7 @@ stringpiece_ssize_type StringPiece::find_first_of(StringPiece s,
 
   bool lookup[UCHAR_MAX + 1] = { false };
   BuildLookupTable(s, lookup);
-  for (stringpiece_ssize_type i = pos; i < length_; ++i) {
+  for (size_type i = pos; i < length_; ++i) {
     if (lookup[static_cast<unsigned char>(ptr_[i])]) {
       return i;
     }
@@ -181,13 +181,12 @@ stringpiece_ssize_type StringPiece::find_first_of(StringPiece s,
 stringpiece_ssize_type StringPiece::find_first_not_of(StringPiece s,
                                                       size_type pos) const {
   if (length_ <= 0) return npos;
-  if (s.length_ <= 0) return 0;
   // Avoid the cost of BuildLookupTable() for a single-character search.
   if (s.length_ == 1) return find_first_not_of(s.ptr_[0], pos);
 
   bool lookup[UCHAR_MAX + 1] = { false };
   BuildLookupTable(s, lookup);
-  for (stringpiece_ssize_type i = pos; i < length_; ++i) {
+  for (size_type i = pos; i < length_; ++i) {
     if (!lookup[static_cast<unsigned char>(ptr_[i])]) {
       return i;
     }

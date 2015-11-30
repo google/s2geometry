@@ -195,6 +195,19 @@ TEST(S2CellId, Advance) {
             .advance_wrap(static_cast<int64>(2) << (2 * S2CellId::kMaxLevel)));
 }
 
+TEST(S2CellId, DistanceFromBegin) {
+  EXPECT_EQ(6, S2CellId::End(0).distance_from_begin());
+  EXPECT_EQ(6 * (1LL << (2 * S2CellId::kMaxLevel)),
+            S2CellId::End(S2CellId::kMaxLevel).distance_from_begin());
+
+  EXPECT_EQ(0, S2CellId::Begin(0).distance_from_begin());
+  EXPECT_EQ(0, S2CellId::Begin(S2CellId::kMaxLevel).distance_from_begin());
+
+  S2CellId id = S2CellId::FromFacePosLevel(3, 0x12345678,
+                                           S2CellId::kMaxLevel - 4);
+  EXPECT_EQ(id, S2CellId::Begin(id.level()).advance(id.distance_from_begin()));
+}
+
 TEST(S2CellId, MaximumTile) {
   // This method is tested more thoroughly in s2cellunion_test.cc.
   for (int iter = 0; iter < 1000; ++iter) {

@@ -1475,8 +1475,8 @@ static bool MatchBoundaries(S2Loop const* a, S2Loop const* b, int a_offset,
   // backtracking.  We also keep track of which states have already been
   // explored to avoid duplicating work.
 
-  vector<pair<int, int> > pending;
-  set<pair<int, int> > done;
+  vector<pair<int, int>> pending;
+  set<pair<int, int>> done;
   pending.push_back(std::make_pair(0, 0));
   while (!pending.empty()) {
     int i = pending.back().first;

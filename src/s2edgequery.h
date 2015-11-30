@@ -18,10 +18,11 @@
 #ifndef S2_GEOMETRY_S2EDGEQUERY_H_
 #define S2_GEOMETRY_S2EDGEQUERY_H_
 
+#include <type_traits>
 #include <vector>
 
 #include "base/macros.h"
-#include <map>
+#include "util/btree/btree_map.h"  // Like std::map, but faster and smaller.
 #include "fpcontractoff.h"
 #include "r2.h"
 #include "r2rect.h"
@@ -64,8 +65,14 @@ class S2Shape;
 class S2EdgeQuery {
  public:
   // An EdgeMap stores a sorted set of edge ids for each shape.  Its type
-  // may change, but can be treated as "map<S2Shape const*, vector<int> >".
-  typedef std::map<S2Shape const*, std::vector<int> > EdgeMap;
+  // may change, but can be treated as "map<S2Shape const*, vector<int>>".
+  // For simple comparisons (pointers in this case), it is much faster to use
+  // linear rather than binary search within btree nodes.
+  struct CompareBtreeLinearSearch : public std::less<S2Shape const*> {
+    using goog_btree_prefer_linear_node_search = std::true_type;
+  };
+  typedef util::btree::btree_map<S2Shape const*, std::vector<int>,
+                                 CompareBtreeLinearSearch> EdgeMap;
 
   // Convenience constructor that calls Init().
   explicit S2EdgeQuery(S2ShapeIndex const& index);

@@ -34,14 +34,13 @@ bool S2EdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
                                S2Shape const* shape, vector<int>* edges) {
   if (!GetCandidates(a0, a1, shape, edges)) return false;
   S2EdgeUtil::EdgeCrosser crosser(&a0, &a1);
-  S2Point const *b0, *b1 = NULL;
   int out = 0, n = edges->size();
   for (int in = 0; in < n; ++in) {
-    S2Point const* b1_prev = b1;
+    S2Point const *b0, *b1;
     shape->GetEdge((*edges)[in], &b0, &b1);
-    if (b0 != b1_prev) crosser.RestartAt(b0);
-    int crossing = crosser.RobustCrossing(b1);
-    if (crossing >= 0) (*edges)[out++] = (*edges)[in];
+    if (crosser.RobustCrossing(b0, b1) >= 0) {
+      (*edges)[out++] = (*edges)[in];
+    }
   }
   if (out == 0) {
     edges->clear();
@@ -55,17 +54,16 @@ bool S2EdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
                                EdgeMap* edge_map) {
   if (!GetCandidates(a0, a1, edge_map)) return false;
   S2EdgeUtil::EdgeCrosser crosser(&a0, &a1);
-  S2Point const *b0, *b1 = NULL;
   for (EdgeMap::iterator it = edge_map->begin(); it != edge_map->end(); ) {
     S2Shape const* shape = it->first;
     vector<int>* edges = &it->second;
     int out = 0, n = edges->size();
     for (int in = 0; in < n; ++in) {
-      S2Point const* b1_prev = b1;
+      S2Point const *b0, *b1;
       shape->GetEdge((*edges)[in], &b0, &b1);
-      if (b0 != b1_prev) crosser.RestartAt(b0);
-      int crossing = crosser.RobustCrossing(b1);
-      if (crossing >= 0) (*edges)[out++] = (*edges)[in];
+      if (crosser.RobustCrossing(b0, b1) >= 0) {
+        (*edges)[out++] = (*edges)[in];
+      }
     }
     if (out == 0) {
       it = edge_map->erase(it);

@@ -247,6 +247,85 @@ void S2ShapeIndex::Reset() {
   base::subtle::NoBarrier_Store(&index_status_, FRESH);
 }
 
+// Helper class for testing whether the point "p" is contained by one or more
+// shapes that intersect a given index cell.
+class PointContainmentTester {
+ public:
+  // "it" should be positioned at the cell to be tested.  "p" is the target.
+  PointContainmentTester(S2ShapeIndex::Iterator const& it, S2Point const& p)
+      : it_(it), point_(p), crosser_initialized_(false) {
+  }
+  // Return true if the given shape contains "p".  "a_clipped" should point to
+  // the S2ClippedShape for "a_shape" in the given index cell.
+  bool ContainedBy(S2Shape const* a_shape, S2ClippedShape const& a_clipped);
+ private:
+  S2ShapeIndex::Iterator const& it_;
+  S2Point const& point_;
+  bool crosser_initialized_;
+  S2Point center_;
+  S2EdgeUtil::EdgeCrosser crosser_;
+};
+
+bool PointContainmentTester::ContainedBy(S2Shape const* a_shape,
+                                         S2ClippedShape const& a_clipped) {
+  if (!a_shape->has_interior()) {
+    return false;
+  }
+  bool inside = a_clipped.contains_center();
+  int a_num_clipped = a_clipped.num_edges();
+  if (a_num_clipped == 0) {
+    return inside;
+  }
+  // We initialize the EdgeCrosser lazily.  This saves work when the cell
+  // does not intersect any edges (which happens with interior cells).
+  if (!crosser_initialized_) {
+    center_ = it_.center();
+    crosser_.Init(&center_, &point_);
+    crosser_initialized_ = true;
+  }
+  // Test containment by drawing a line segment from the cell center to the
+  // given point and counting edge crossings.
+  for (int i = 0; i < a_num_clipped; ++i) {
+    S2Point const *a0, *a1;
+    a_shape->GetEdge(a_clipped.edge(i), &a0, &a1);
+    inside ^= crosser_.EdgeOrVertexCrossing(a0, a1);
+  }
+  return inside;
+}
+
+bool S2ShapeIndex::ShapeContains(S2Shape const* a_shape, S2Point const& p) {
+  // Look up the S2ShapeIndex cell containing this point.
+  S2ShapeIndex::Iterator it(*this);
+  if (!it.Locate(p)) return false;
+
+  S2ClippedShape const* a_clipped = it.cell()->find_clipped(a_shape);
+  if (a_clipped == NULL) return false;
+
+  PointContainmentTester point_tester(it, p);
+  return point_tester.ContainedBy(a_shape, *a_clipped);
+}
+
+bool S2ShapeIndex::GetContainingShapes(S2Point const& p,
+                                       std::vector<S2Shape const*>* shapes) {
+  // Look up the S2ShapeIndex cell containing this point.
+  shapes->clear();
+  S2ShapeIndex::Iterator it(*this);
+  if (!it.Locate(p)) return false;
+
+  int num_shapes = it.cell()->num_shapes();
+  if (num_shapes == 0) return false;
+
+  PointContainmentTester point_tester(it, p);
+  for (int a = 0; a < num_shapes; ++a) {
+    S2ClippedShape const& a_clipped = it.cell()->clipped(a);
+    S2Shape const* a_shape = shape(a_clipped.shape_id());
+    if (point_tester.ContainedBy(a_shape, a_clipped)) {
+      shapes->push_back(a_shape);
+    }
+  }
+  return !shapes->empty();
+}
+
 // FaceEdge and ClippedEdge store temporary edge data while the index is being
 // updated.  FaceEdge represents an edge that has been projected onto a given
 // face, while ClippedEdge represents the portion of that edge that has been
@@ -354,7 +433,6 @@ class S2ShapeIndex::InteriorTracker {
 
   bool is_active_;
   S2Point a_, b_;
-  S2Point const* c_;
   S2CellId next_cellid_;
   S2EdgeUtil::EdgeCrosser crosser_;
   ShapeIdSet shape_ids_;
@@ -404,17 +482,14 @@ void S2ShapeIndex::InteriorTracker::DrawTo(S2Point const& b) {
   a_ = b_;
   b_ = b;
   crosser_.Init(&a_, &b_);
-  c_ = NULL;
 }
 
 inline void S2ShapeIndex::InteriorTracker::TestEdge(S2Shape const* shape,
                                                     S2Point const* c,
                                                     S2Point const* d) {
-  if (c != c_) { crosser_.RestartAt(c); }
-  if (crosser_.EdgeOrVertexCrossing(d)) {
+  if (crosser_.EdgeOrVertexCrossing(c, d)) {
     ToggleShape(shape->id());
   }
-  c_ = d;
 }
 
 // Apply any pending updates in a thread-safe way.

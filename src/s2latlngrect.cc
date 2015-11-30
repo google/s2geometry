@@ -215,7 +215,20 @@ S2LatLngRect S2LatLngRect::Intersection(S2LatLngRect const& other) const {
 
 S2LatLngRect S2LatLngRect::ExpandedByDistance(S1Angle distance) const {
   if (distance >= S1Angle::Zero()) {
-    return ConvolveWithCap(distance);
+    // The most straightforward approach is to build a cap centered on each
+    // vertex and take the union of all the bounding rectangles (including the
+    // original rectangle; this is necessary for very large rectangles).
+
+    // TODO(ericv): Update this code to use an algorithm similar to the one
+    // below.
+    double height = S2Cap::RadiusToHeight(distance);
+    S2LatLngRect r = *this;
+    for (int k = 0; k < 4; ++k) {
+      S2Cap vertex_cap =
+          S2Cap::FromCenterHeight(GetVertex(k).ToPoint(), height);
+      r = r.Union(vertex_cap.GetRectBound());
+    }
+    return r;
   } else {
     // Shrink the latitude interval unless the latitude interval contains a pole
     // and the longitude interval is full, in which case the rectangle has no
@@ -250,21 +263,6 @@ S2LatLngRect S2LatLngRect::ExpandedByDistance(S1Angle distance) const {
   }
 }
 
-S2LatLngRect S2LatLngRect::ConvolveWithCap(S1Angle angle) const {
-  // The most straightforward approach is to build a cap centered on each
-  // vertex and take the union of all the bounding rectangles (including the
-  // original rectangle; this is necessary for very large rectangles).
-
-  // Optimization: convert the angle to a height exactly once.
-  double height = S2Cap::RadiusToHeight(angle);
-  S2LatLngRect r = *this;
-  for (int k = 0; k < 4; ++k) {
-    S2Cap vertex_cap = S2Cap::FromCenterHeight(GetVertex(k).ToPoint(), height);
-    r = r.Union(vertex_cap.GetRectBound());
-  }
-  return r;
-}
-
 S2Cap S2LatLngRect::GetCapBound() const {
   // We consider two possible bounding caps, one whose axis passes
   // through the center of the lat-long rectangle and one whose axis
@@ -288,15 +286,13 @@ S2Cap S2LatLngRect::GetCapBound() const {
   // rectangles that are larger than 180 degrees, we punt and always return a
   // bounding cap centered at one of the two poles.
   double lng_span = lng_.hi() - lng_.lo();
-  if (remainder(lng_span, 2 * M_PI) >= 0) {
-    if (lng_span < 2 * M_PI) {
-      S2Cap mid_cap(GetCenter().ToPoint(), S1Angle::Radians(0));
-      for (int k = 0; k < 4; ++k) {
-        mid_cap.AddPoint(GetVertex(k).ToPoint());
-      }
-      if (mid_cap.height() < pole_cap.height())
-        return mid_cap;
+  if (remainder(lng_span, 2 * M_PI) >= 0 && lng_span < 2 * M_PI) {
+    S2Cap mid_cap(GetCenter().ToPoint(), S1Angle::Radians(0));
+    for (int k = 0; k < 4; ++k) {
+      mid_cap.AddPoint(GetVertex(k).ToPoint());
     }
+    if (mid_cap.height() < pole_cap.height())
+      return mid_cap;
   }
   return pole_cap;
 }

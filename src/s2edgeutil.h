@@ -43,54 +43,131 @@ class ExactFloat;
 // geometry such as polylines, loops, and general polygons.
 class S2EdgeUtil {
  public:
-  // This class allows a vertex chain v0, v1, v2, ... to be efficiently
-  // tested for intersection with a given fixed edge AB.
+  class CopyingEdgeCrosser;  // Forward declaration
+
+  // This class allows edges to be efficiently tested for intersection with a
+  // given fixed edge AB.  It is especially efficient when testing for
+  // intersection with an edge chain connecting vertices v0, v1, v2, ...
+  //
+  // Example usage:
+  //
+  //   void CountIntersections(S2Point const& a, S2Point const& b,
+  //                           vector<pair<S2Point, S2Point>> const& edges) {
+  //     int count = 0;
+  //     EdgeCrosser crosser(&a, &b);
+  //     for (auto const& edge : edges) {
+  //       if (crosser.RobustCrossing(&edge.first, &edge.second) >= 0) {
+  //         ++count;
+  //       }
+  //     }
+  //     return count;
+  //   }
+  //
+  // This class expects that the client already has all the necessary vertices
+  // stored in memory, so that this class can refer to them with pointers and
+  // does not need to make its own copies.  If this is not the case (e.g., you
+  // want to pass temporary objects as vertices), see CopyingEdgeCrosser.
   class EdgeCrosser {
    public:
-    // Convenience constructor that calls Init() with the given fixed edge AB.
-    // All parameters must point to storage that persists for the lifetime of
-    // the EdgeCrosser object (or until the next Init() call).
-    inline EdgeCrosser(S2Point const* a, S2Point const* b);
-
-    // AB is the given fixed edge, and C is the first vertex of the vertex
-    // chain.  Equivalent to using the constructor above and calling
-    // RestartAt(c).
-    inline EdgeCrosser(S2Point const* a, S2Point const* b, S2Point const* c);
-
     // Default constructor; must be followed by a call to Init().
-    inline EdgeCrosser() {}
+    EdgeCrosser() {}
 
-    // Initialize the EdgeCrosser with the given fixed edge AB.  To test this
-    // edge against an edge chain, call RestartAt() with the first vertex of
-    // the chain, followed by RobustCrossing() with each subsequent vertex of
-    // the chain.  All parameters must point to storage that persists for the
+    // Convenience constructor that calls Init() with the given fixed edge AB.
+    // The arguments "a" and "b" must point to values that persist for the
     // lifetime of the EdgeCrosser object (or until the next Init() call).
-    inline void Init(S2Point const* a, S2Point const* b);
+    EdgeCrosser(S2Point const* a, S2Point const* b);
 
-    // Call this method when your chain 'jumps' to a new place.  The given
-    // pointer must still be valid during the next call to one of the
-    // ...Crossing() methods.
-    inline void RestartAt(S2Point const* c);
+    // Initialize the EdgeCrosser with the given fixed edge AB.  The arguments
+    // "a" and "b" must point to values that persist for the lifetime of the
+    // EdgeCrosser object (or until the next Init() call).
+    void Init(S2Point const* a, S2Point const* b);
 
-    // This method is equivalent to calling the S2EdgeUtil::RobustCrossing()
-    // function (defined below) on the edges AB and CD.  It returns +1 if
-    // there is a crossing, -1 if there is no crossing, and 0 if two points
-    // from different edges are the same.  Returns 0 or -1 if either edge is
-    // degenerate.  As a side effect, it saves vertex D to be used as the next
-    // vertex C.  Therefore the given pointer must still be valid during the
-    // next call to this method.
-    inline int RobustCrossing(S2Point const* d);
+    // This function determines whether the edge AB intersects the edge CD.
+    // Returns +1 if AB crosses CD at a point that is interior to both edges.
+    // Returns  0 if any two vertices from different edges are the same.
+    // Returns -1 if there is no crossing.
+    // Returns -1 or 0 if either edge is degenerate (A == B or C == D).
+    //
+    // Properties of RobustCrossing:
+    //
+    //  (1) RobustCrossing(b,a,c,d) == RobustCrossing(a,b,c,d)
+    //  (2) RobustCrossing(c,d,a,b) == RobustCrossing(a,b,c,d)
+    //  (3) RobustCrossing(a,b,c,d) == 0 if a==c, a==d, b==c, b==d
+    //  (3) RobustCrossing(a,b,c,d) <= 0 if a==b or c==d
+    //
+    // This function implements an exact, consistent perturbation model such
+    // that no three points are ever considered to be collinear.  This means
+    // that even if you have 4 points A, B, C, D that lie exactly in a line
+    // (say, around the equator), C and D will be treated as being slightly to
+    // one side or the other of AB.  This is done in a way such that the
+    // results are always consistent (see S2::RobustCCW).
+    //
+    // Note that if you want to check an edge against a chain of other edges,
+    // it is slightly more efficient to use the single-argument version of
+    // RobustCrossing below.
+    //
+    // The arguments must point to values that persist until the next call.
+    int RobustCrossing(S2Point const* c, S2Point const* d);
 
-    // This method is equivalent to the S2EdgeUtil::EdgeOrVertexCrossing()
-    // method defined below.  It is similar to RobustCrossing, but handles
-    // cases where two vertices are identical in a way that makes it easy to
-    // implement point-in-polygon containment tests.
-    inline bool EdgeOrVertexCrossing(S2Point const* d);
+    // This method extends the concept of a "crossing" to the case where AB
+    // and CD have a vertex in common.  The two edges may or may not cross,
+    // according to the rules defined in VertexCrossing() below.  The rules
+    // are designed so that point containment tests can be implemented simply
+    // by counting edge crossings.  Similarly, determining whether one edge
+    // chain crosses another edge chain can be implemented by counting.
+    //
+    // Returns true if RobustCrossing(c, d) > 0, or AB and CD share a vertex
+    // and VertexCrossing(a, b, c, d) returns true.
+    //
+    // The arguments must point to values that persist until the next call.
+    bool EdgeOrVertexCrossing(S2Point const* c, S2Point const* d);
+
+    ///////////////////////// Edge Chain Methods ///////////////////////////
+    //
+    // You don't need to use these unless you're trying to squeeze out every
+    // last drop of performance.  Essentially all you are saving is a test
+    // whether the first vertex of the current edge is the same as the second
+    // vertex of the previous edge.  Example usage:
+    //
+    //   vector<S2Point> chain;
+    //   crosser.RestartAt(&chain[0]);
+    //   for (int i = 1; i < chain.size(); ++i) {
+    //     if (crosser.EdgeOrVertexCrossing(&chain[i])) { ++count; }
+    //   }
+
+    // Convenience constructor that uses AB as the fixed edge, and C as the
+    // first vertex of the vertex chain (equivalent to calling RestartAt(c)).
+    //
+    // The arguments must point to values that persist until the next call.
+    EdgeCrosser(S2Point const* a, S2Point const* b, S2Point const* c);
+
+    // Call this method when your chain 'jumps' to a new place.
+    // The argument must point to a value that persists until the next call.
+    void RestartAt(S2Point const* c);
+
+    // Like RobustCrossing above, but uses the last vertex passed to one of
+    // the crossing methods (or RestartAt) as the first vertex of the current
+    // edge.
+    //
+    // The argument must point to a value that persists until the next call.
+    int RobustCrossing(S2Point const* d);
+
+    // Like EdgeOrVertexCrossing above, but uses the last vertex passed to one
+    // of the crossing methods (or RestartAt) as the first vertex of the
+    // current edge.
+    //
+    // The argument must point to a value that persists until the next call.
+    bool EdgeOrVertexCrossing(S2Point const* d);
 
    private:
+    friend class CopyingEdgeCrosser;
+
     // These functions handle the "slow path" of RobustCrossing().
     int RobustCrossingInternal(S2Point const* d);
     int RobustCrossingInternal2(S2Point const* d);
+
+    // Used internally by CopyingEdgeCrosser.  Updates "c_" only.
+    void set_c(S2Point const* c) { c_ = c; }
 
     // The fields below are constant after the call to Init().
     S2Point const* a_;
@@ -113,6 +190,31 @@ class S2EdgeUtil {
     int bda_;                // The orientation of triangle BDA.
 
     DISALLOW_COPY_AND_ASSIGN(EdgeCrosser);
+  };
+
+  // CopyingEdgeCrosser is exactly like EdgeCrosser, except that it makes its
+  // own copy of all arguments so that they do not need to persist between
+  // calls.  This is less efficient, but makes it possible to use points that
+  // are generated on demand and cannot conveniently be stored by the client.
+  class CopyingEdgeCrosser {
+   public:
+    // These methods are all exactly like EdgeCrosser, except that the
+    // arguments can be temporaries.
+    CopyingEdgeCrosser() {}
+    CopyingEdgeCrosser(S2Point const& a, S2Point const& b);
+    void Init(S2Point const& a, S2Point const& b);
+    int RobustCrossing(S2Point const& c, S2Point const& d);
+    bool EdgeOrVertexCrossing(S2Point const& c, S2Point const& d);
+    CopyingEdgeCrosser(S2Point const& a, S2Point const& b, S2Point const& c);
+    void RestartAt(S2Point const& c);
+    int RobustCrossing(S2Point const& d);
+    bool EdgeOrVertexCrossing(S2Point const& d);
+
+   private:
+    S2Point a_, b_, c_;
+    EdgeCrosser crosser_;
+
+    DISALLOW_COPY_AND_ASSIGN(CopyingEdgeCrosser);
   };
 
   // This class computes a bounding rectangle that contains all edges defined
@@ -535,9 +637,30 @@ class S2EdgeUtil {
 
 
 inline S2EdgeUtil::EdgeCrosser::EdgeCrosser(S2Point const* a, S2Point const* b)
-    : a_(a), b_(b), a_cross_b_(a_->CrossProd(*b_)), have_tangents_(false) {
+    : a_(a), b_(b), a_cross_b_(a_->CrossProd(*b_)), have_tangents_(false),
+      c_(NULL) {
   DCHECK(S2::IsUnitLength(*a));
   DCHECK(S2::IsUnitLength(*b));
+}
+
+inline void S2EdgeUtil::EdgeCrosser::Init(S2Point const* a, S2Point const* b) {
+  a_ = a;
+  b_ = b;
+  a_cross_b_ = a->CrossProd(*b_);
+  have_tangents_ = false;
+  c_ = NULL;
+}
+
+inline int S2EdgeUtil::EdgeCrosser::RobustCrossing(S2Point const* c,
+                                                   S2Point const* d) {
+  if (c != c_) RestartAt(c);
+  return RobustCrossing(d);
+}
+
+inline bool S2EdgeUtil::EdgeCrosser::EdgeOrVertexCrossing(S2Point const* c,
+                                                          S2Point const* d) {
+  if (c != c_) RestartAt(c);
+  return EdgeOrVertexCrossing(d);
 }
 
 inline S2EdgeUtil::EdgeCrosser::EdgeCrosser(
@@ -546,13 +669,6 @@ inline S2EdgeUtil::EdgeCrosser::EdgeCrosser(
   DCHECK(S2::IsUnitLength(*a));
   DCHECK(S2::IsUnitLength(*b));
   RestartAt(c);
-}
-
-inline void S2EdgeUtil::EdgeCrosser::Init(S2Point const* a, S2Point const* b) {
-  a_ = a;
-  b_ = b;
-  a_cross_b_ = a->CrossProd(*b_);
-  have_tangents_ = false;
 }
 
 inline void S2EdgeUtil::EdgeCrosser::RestartAt(S2Point const* c) {
@@ -591,6 +707,56 @@ inline bool S2EdgeUtil::EdgeCrosser::EdgeOrVertexCrossing(S2Point const* d) {
   if (crossing < 0) return false;
   if (crossing > 0) return true;
   return VertexCrossing(*a_, *b_, *c, *d);
+}
+
+inline S2EdgeUtil::CopyingEdgeCrosser::CopyingEdgeCrosser(S2Point const& a,
+                                                          S2Point const& b)
+    : a_(a), b_(b), c_(S2Point()), crosser_(&a_, &b_) {
+}
+
+inline void S2EdgeUtil::CopyingEdgeCrosser::Init(S2Point const& a,
+                                                 S2Point const& b) {
+  a_ = a;
+  b_ = b;
+  c_ = S2Point();
+  crosser_.Init(&a_, &b_);
+}
+
+inline int S2EdgeUtil::CopyingEdgeCrosser::RobustCrossing(S2Point const& c,
+                                                          S2Point const& d) {
+  if (c != c_) RestartAt(c);
+  return RobustCrossing(d);
+}
+
+inline bool S2EdgeUtil::CopyingEdgeCrosser::EdgeOrVertexCrossing(
+    S2Point const& c, S2Point const& d) {
+  if (c != c_) RestartAt(c);
+  return EdgeOrVertexCrossing(d);
+}
+
+inline S2EdgeUtil::CopyingEdgeCrosser::CopyingEdgeCrosser(
+    S2Point const& a, S2Point const& b, S2Point const& c)
+    : a_(a), b_(b), c_(c), crosser_(&a_, &b_, &c) {
+}
+
+inline void S2EdgeUtil::CopyingEdgeCrosser::RestartAt(S2Point const& c) {
+  c_ = c;
+  crosser_.RestartAt(&c_);
+}
+
+inline int S2EdgeUtil::CopyingEdgeCrosser::RobustCrossing(S2Point const& d) {
+  int result = crosser_.RobustCrossing(&d);
+  c_ = d;
+  crosser_.set_c(&c_);
+  return result;
+}
+
+inline bool S2EdgeUtil::CopyingEdgeCrosser::EdgeOrVertexCrossing(
+    S2Point const& d) {
+  bool result = crosser_.EdgeOrVertexCrossing(&d);
+  c_ = d;
+  crosser_.set_c(&c_);
+  return result;
 }
 
 inline bool S2EdgeUtil::LongitudePruner::Intersects(S2Point const& v1) {

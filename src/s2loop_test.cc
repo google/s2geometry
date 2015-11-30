@@ -847,7 +847,7 @@ static S2Loop* MakeCellLoop(S2CellId begin, S2CellId end) {
   // in the range [begin, end).  We add the edges one by one, removing
   // any edges that are already present in the opposite direction.
 
-  map<S2Point, set<S2Point> > edges;
+  map<S2Point, set<S2Point>> edges;
   for (S2CellId id = begin; id != end; id = id.next()) {
     S2Cell cell(id);
     for (int k = 0; k < 4; ++k) {

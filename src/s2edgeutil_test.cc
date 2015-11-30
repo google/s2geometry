@@ -69,16 +69,41 @@ void TestCrossing(S2Point a, S2Point b, S2Point c, S2Point d,
   S2EdgeUtil::EdgeCrosser crosser(&a, &b, &c);
   CompareResult(crosser.RobustCrossing(&d), robust);
   CompareResult(crosser.RobustCrossing(&c), robust);
+  CompareResult(crosser.RobustCrossing(&d, &c), robust);
+  CompareResult(crosser.RobustCrossing(&c, &d), robust);
 
   EXPECT_EQ(edge_or_vertex, S2EdgeUtil::EdgeOrVertexCrossing(a, b, c, d));
+  crosser.RestartAt(&c);
   EXPECT_EQ(edge_or_vertex, crosser.EdgeOrVertexCrossing(&d));
   EXPECT_EQ(edge_or_vertex, crosser.EdgeOrVertexCrossing(&c));
+  EXPECT_EQ(edge_or_vertex, crosser.EdgeOrVertexCrossing(&d, &c));
+  EXPECT_EQ(edge_or_vertex, crosser.EdgeOrVertexCrossing(&c, &d));
 
   // Check that the crosser can be re-used.
   crosser.Init(&c, &d);
   crosser.RestartAt(&a);
   CompareResult(crosser.RobustCrossing(&b), robust);
   CompareResult(crosser.RobustCrossing(&a), robust);
+
+  // Now try all the same tests with CopyingEdgeCrosser.
+  S2EdgeUtil::CopyingEdgeCrosser crosser2(a, b, c);
+  CompareResult(crosser2.RobustCrossing(d), robust);
+  CompareResult(crosser2.RobustCrossing(c), robust);
+  CompareResult(crosser2.RobustCrossing(d, c), robust);
+  CompareResult(crosser2.RobustCrossing(c, d), robust);
+
+  EXPECT_EQ(edge_or_vertex, S2EdgeUtil::EdgeOrVertexCrossing(a, b, c, d));
+  crosser2.RestartAt(c);
+  EXPECT_EQ(edge_or_vertex, crosser2.EdgeOrVertexCrossing(d));
+  EXPECT_EQ(edge_or_vertex, crosser2.EdgeOrVertexCrossing(c));
+  EXPECT_EQ(edge_or_vertex, crosser2.EdgeOrVertexCrossing(d, c));
+  EXPECT_EQ(edge_or_vertex, crosser2.EdgeOrVertexCrossing(c, d));
+
+  // Check that the crosser can be re-used.
+  crosser2.Init(c, d);
+  crosser2.RestartAt(a);
+  CompareResult(crosser2.RobustCrossing(b), robust);
+  CompareResult(crosser2.RobustCrossing(a), robust);
 }
 
 void TestCrossings(S2Point a, S2Point b, S2Point c, S2Point d,

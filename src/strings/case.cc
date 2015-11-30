@@ -49,6 +49,30 @@ CapsType GetCapitalization(const char* s) {
   return capstype;
 }
 
+CapsType GetCapitalization(const StringPiece input) {
+  const char* s = input.data();
+  const char* const end = s + input.size();
+  // find the caps type of the first alpha char
+  for (; s != end && !(ascii_isupper(*s) || ascii_islower(*s)); ++s) {}
+  if (s == end) return CAPS_NOALPHA;
+  const CapsType firstcapstype = (ascii_islower(*s)) ? CAPS_LOWER : CAPS_UPPER;
+
+  // skip ahead to the next alpha char
+  for (++s; s != end && !(ascii_isupper(*s) || ascii_islower(*s)); ++s) {}
+  if (s == end) return firstcapstype;
+  const CapsType capstype = (ascii_islower(*s)) ? CAPS_LOWER : CAPS_UPPER;
+
+  if (firstcapstype == CAPS_LOWER && capstype == CAPS_UPPER) return CAPS_MIXED;
+
+  for (; s != end; ++s)
+    if ((ascii_isupper(*s) && capstype != CAPS_UPPER) ||
+        (ascii_islower(*s) && capstype != CAPS_LOWER))
+      return CAPS_MIXED;
+
+  if (firstcapstype == CAPS_UPPER && capstype == CAPS_LOWER) return CAPS_FIRST;
+  return capstype;
+}
+
 int CaseCompare(StringPiece s1, StringPiece s2) {
   if (s1.size() == s2.size()) {
     return memcasecmp(s1.data(), s2.data(), s1.size());

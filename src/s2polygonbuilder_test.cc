@@ -347,7 +347,7 @@ bool UnexpectedUnusedEdgeCount(int num_actual, int num_expected,
   }
 }
 
-void DumpUnusedEdges(vector<pair<S2Point, S2Point> > const& unused_edges,
+void DumpUnusedEdges(vector<pair<S2Point, S2Point>> const& unused_edges,
                      Matrix3x3_d const& m, int num_expected) {
   // Print the unused edges, transformed back into their original
   // latitude-longitude space in degrees.
