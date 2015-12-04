@@ -473,7 +473,7 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 //     void Method(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(2);
 //
 //     /* arg_a cannot be NULL, but arg_b can */
-//     static void StaticMethod(void* argc_a, void* arg_b) ATTRIBUTE_NONNULL(1);
+//     static void StaticMethod(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
 //   };
 //
 // If no arguments are provided, then all pointer arguments should be non-null.

@@ -235,12 +235,17 @@ bool S2Polygon::FindLoopNestingError(S2Error* error) const {
 
 void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
                            LoopMap* loop_map) {
-  vector<S2Loop*>* children = &(*loop_map)[parent];
-  for (int i = 0; i < children->size(); ++i) {
-    S2Loop* child = (*children)[i];
-    if (child->ContainsNested(new_loop)) {
-      InsertLoop(new_loop, child, loop_map);
-      return;
+  vector<S2Loop*>* children;
+  for (bool done = false; !done; ) {
+    children = &(*loop_map)[parent];
+    done = true;
+    for (int i = 0; i < children->size(); ++i) {
+      S2Loop* child  = (*children)[i];
+      if (child->ContainsNested(new_loop)) {
+        parent = child;
+        done = false;
+        break;
+      }
     }
   }
 
@@ -341,11 +346,11 @@ void S2Polygon::InitOriented(vector<S2Loop*>* loops) {
   // 4. If there is at least one loop, we find a loop L that is adjacent to
   //    S2::Origin() (where "adjacent" means that there exists a path
   //    connecting S2::Origin() to some vertex of L such that the path does
-  //    not cross anythat does not cross any loop).  There may be a single
-  //    such adjacent loop, or there may be several (in which case they should
-  //    all have the same contains_origin() value).  We choose L to be the
-  //    loop containing the origin whose depth is greatest, or loop(0) (a
-  //    top-level shell) if no such loop exists.
+  //    not cross any loop).  There may be a single such adjacent loop, or
+  //    there may be several (in which case they should all have the same
+  //    contains_origin() value).  We choose L to be the loop containing the
+  //    origin whose depth is greatest, or loop(0) (a top-level shell) if no
+  //    such loop exists.
   //
   // 5. If (L originally contained origin) != (polygon contains origin), we
   //    invert the polygon.  This is done by inverting a top-level shell whose
