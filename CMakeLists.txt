@@ -33,6 +33,7 @@ file(GLOB S2FilesGlob
      src/s2cellid.cc
      src/s2cellunion.cc
      src/s2closestedgequery.cc
+     src/s2convexhullquery.cc
      src/s2edgequery.cc
      src/s2edgeutil.cc
      src/s2error.cc

@@ -140,6 +140,12 @@ S2Point S2::Ortho(S2Point const& a) {
 #endif
 }
 
+Matrix3x3_d S2::GetFrame(S2Point const& z) {
+  Matrix3x3_d m;
+  GetFrame(z, &m);
+  return m;
+}
+
 void S2::GetFrame(S2Point const& z, Matrix3x3_d* m) {
   DCHECK(IsUnitLength(z));
   m->SetCol(2, z);

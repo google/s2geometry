@@ -114,6 +114,7 @@ class S2 {
   // coordinate frame of unit-length column vectors m = (x,y,z).  Note that
   // the vectors (x,y) are an orthonormal frame for the tangent space at "z",
   // while "z" itself is an orthonormal frame for the normal space at "z".
+  static Matrix3x3_d GetFrame(S2Point const& z);
   static void GetFrame(S2Point const& z, Matrix3x3_d* m);
 
   // Given an orthonormal basis "m" of column vectors and a point "p", return
