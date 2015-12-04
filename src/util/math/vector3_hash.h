@@ -110,7 +110,6 @@ template <class VType> struct GoodFastHash<Vector3<VType> > {
 };
 
 HASH_NAMESPACE_DECLARATION_START
-template <class T> struct hash;
 
 // This hash function may change from time to time.
 template <class VType> struct hash<Vector3<VType> > {

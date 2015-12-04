@@ -216,14 +216,14 @@ S2ShapeIndex::~S2ShapeIndex() {
   Reset();
 }
 
-void S2ShapeIndex::Add(S2Shape const* shape) {
+void S2ShapeIndex::Add(S2Shape* shape) {
   // Additions are processed lazily by ApplyUpdates().
   shape->id_ = shapes_.size();
   shapes_.push_back(shape);
   base::subtle::NoBarrier_Store(&index_status_, STALE);
 }
 
-void S2ShapeIndex::Remove(S2Shape const* shape) {
+void S2ShapeIndex::Remove(S2Shape* shape) {
   LOG(FATAL) << "Not implemented yet";
   base::subtle::NoBarrier_Store(&index_status_, STALE);
 }
@@ -234,12 +234,12 @@ void S2ShapeIndex::Reset() {
     delete it.cell();
   }
   for (int id = 0; id < shapes_.size(); ++id) {
-    S2Shape const* shape = shapes_[id];
+    S2Shape* shape = shapes_[id];
     if (shape) shape->Release();
   }
   cell_map_.clear();
   // Note that vector::clear() does not actually free storage.
-  vector<S2Shape const*> empty_shapes;
+  vector<S2Shape*> empty_shapes;
   shapes_.swap(empty_shapes);
   pending_additions_begin_ = 0;
   pending_removals_.reset();
@@ -306,7 +306,7 @@ bool S2ShapeIndex::ShapeContains(S2Shape const* a_shape, S2Point const& p) {
 }
 
 bool S2ShapeIndex::GetContainingShapes(S2Point const& p,
-                                       std::vector<S2Shape const*>* shapes) {
+                                       std::vector<S2Shape*>* shapes) {
   // Look up the S2ShapeIndex cell containing this point.
   shapes->clear();
   S2ShapeIndex::Iterator it(*this);
@@ -318,7 +318,7 @@ bool S2ShapeIndex::GetContainingShapes(S2Point const& p,
   PointContainmentTester point_tester(it, p);
   for (int a = 0; a < num_shapes; ++a) {
     S2ClippedShape const& a_clipped = it.cell()->clipped(a);
-    S2Shape const* a_shape = shape(a_clipped.shape_id());
+    S2Shape* a_shape = shape(a_clipped.shape_id());
     if (point_tester.ContainedBy(a_shape, a_clipped)) {
       shapes->push_back(a_shape);
     }
@@ -345,9 +345,9 @@ bool S2ShapeIndex::GetContainingShapes(S2Point const& p,
 //    ClippedEdge and this data is cached more successfully.
 
 struct S2ShapeIndex::FaceEdge {
-  int shape_id;       // The shape that this edge belongs to
-  int edge_id;        // Edge id within that shape
-  int max_level;      // Not desirable to subdivide this edge beyond this level
+  int32 shape_id;     // The shape that this edge belongs to
+  int32 edge_id;      // Edge id within that shape
+  int32 max_level;    // Not desirable to subdivide this edge beyond this level
   R2Point a, b;       // The edge endpoints, clipped to a given face
   S2Point const* va;  // The original S2Loop vertices
   S2Point const* vb;
@@ -380,18 +380,18 @@ struct S2ShapeIndex::ClippedEdge {
 // because either (a) these two points are actually the same, or (b) the
 // intervening cells in S2CellId order are all empty, and therefore there are
 // no edge crossings if we follow this path from one cell to the other.
-
 class S2ShapeIndex::InteriorTracker {
  public:
   // Initialize the InteriorTracker.  You must call AddShape() for each shape
   // that will be tracked before calling MoveTo() or DrawTo().
   InteriorTracker();
 
-  // Return true if AddShape() has been called at least once.
+  // Return true if any shapes are being tracked.
   bool is_active() const { return is_active_; }
 
   // Add a shape whose interior should be tracked.  This should be followed by
   // calling TestEdge() with every edge of the given shape.
+  // REQUIRES: shape->has_interior()
   void AddShape(S2Shape const* shape);
 
   // Move the focus to the given point.  This method should only be used when
@@ -406,6 +406,7 @@ class S2ShapeIndex::InteriorTracker {
 
   // Indicate that the given edge of the given shape may cross the line
   // segment between the old and new focus locations (see DrawTo).
+  // REQUIRES: shape->has_interior()
   inline void TestEdge(S2Shape const* shape,
                        S2Point const* c, S2Point const* d);
 
@@ -448,6 +449,7 @@ S2ShapeIndex::InteriorTracker::InteriorTracker()
 }
 
 void S2ShapeIndex::InteriorTracker::AddShape(S2Shape const* shape) {
+  DCHECK(shape->has_interior());
   is_active_ = true;
   if (shape->contains_origin()) {
     ToggleShape(shape->id());
@@ -487,6 +489,7 @@ void S2ShapeIndex::InteriorTracker::DrawTo(S2Point const& b) {
 inline void S2ShapeIndex::InteriorTracker::TestEdge(S2Shape const* shape,
                                                     S2Point const* c,
                                                     S2Point const* d) {
+  DCHECK(shape->has_interior());
   if (crosser_.EdgeOrVertexCrossing(c, d)) {
     ToggleShape(shape->id());
   }
@@ -994,10 +997,7 @@ bool S2ShapeIndex::MakeLeafCell(S2PaddedCell const& pcell,
       tracker->MoveTo(pcell.GetEntryVertex());
     }
     tracker->DrawTo(pcell.GetCenter());
-    for (int e = 0; e < edges.size(); ++e) {
-      FaceEdge const* orig = edges[e]->orig;
-      tracker->TestEdge(shape(orig->shape_id), orig->va, orig->vb);
-    }
+    TestAllEdges(edges, tracker);
   }
   // Allocate and fill a new index cell.  To get the total number of shapes we
   // need to merge the shapes associated with the intersecting edges together
@@ -1047,13 +1047,31 @@ bool S2ShapeIndex::MakeLeafCell(S2PaddedCell const& pcell,
   // Shift the InteriorTracker focus point to the exit vertex of this cell.
   if (tracker->is_active() && !edges.empty()) {
     tracker->DrawTo(pcell.GetExitVertex());
-    for (int e = 0; e < edges.size(); ++e) {
-      FaceEdge const* orig = edges[e]->orig;
-      tracker->TestEdge(shape(orig->shape_id), orig->va, orig->vb);
-    }
+    TestAllEdges(edges, tracker);
     tracker->DoneCellId(pcell.id());
   }
   return true;
+}
+
+// Call tracker->TestEdge() on all edges from shapes that have interiors.
+void S2ShapeIndex::TestAllEdges(vector<ClippedEdge const*> const& edges,
+                                InteriorTracker* tracker) {
+  // We cache the S2Shape pointer and has_interior() value between edges,
+  // since this speeds up index construction by about 1%.
+  int shape_id = -1;
+  S2Shape const* shape = NULL;
+  bool has_interior = false;
+  for (int e = 0; e < edges.size(); ++e) {
+    FaceEdge const* face_edge = edges[e]->orig;
+    if (shape_id != face_edge->shape_id) {
+      shape_id = face_edge->shape_id;
+      shape = shapes_[shape_id];
+      has_interior = shape->has_interior();
+    }
+    if (has_interior) {
+      tracker->TestEdge(shape, face_edge->va, face_edge->vb);
+    }
+  }
 }
 
 // Return the number of distinct shapes that are either associated with the

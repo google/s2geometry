@@ -31,7 +31,7 @@
 //     index.Add(new S2Polygon::Shape(polygon));
 //   }
 //   for (auto const& point: points) {
-//     vector<S2Shape const*> shapes;
+//     vector<S2Shape*> shapes;
 //     index.GetContainingShapes(point, &shapes);
 //     for (auto shape: shapes) {
 //       Output(point, down_cast<S2Polygon::Shape const*>(shape)->polygon());
@@ -93,6 +93,36 @@ class S2ShapeIndex;
 // been indexed; to modify a shape it must be removed and then added again.
 // A shape can be removed from one S2ShapeIndex and then added to another,
 // but it can belong to only one index at a time.
+//
+// There are various useful subtypes defined in s2shapeutil.h, and also in the
+// polygonal geometry classes such as S2Polygon and S2Polyline.
+//
+// Sometimes you will want to add your own data to shapes, so that when an
+// S2Shape is returned by a method (such as GetContainingShapes) then you can
+// map it back to your source data.  Here are two reasonable ways to do this:
+//
+//  - [Easy] Every shape has a unique id() assigned by S2ShapeIndex.  Ids are
+//    assigned sequentially starting from 0 in the order the shapes are added
+//    to the index.  You can use this id to look up arbitrary data stored in
+//    your own vector.
+//
+//  - [More general] Every shape has a user_data() virtual function that
+//    returns a pointer.  You can use this to return a pointer to your source
+//    data.  You can also use it to attach arbitrary additional data that can
+//    be accessed uniformly (without downcasting) even if you are using
+//    multiple S2Shape types.  For example, if you are using both polyline and
+//    polygon shapes, and want to attach data that can be accessed without
+//    knowing the shape type, you can do this:
+//
+//      class MyPolyline : public S2Polyline::Shape {
+//       public:
+//        virtual void* mutable_user_data() { return &my_data_; }
+//       private:
+//        MyData my_data_;
+//      };
+//      // ... and similarly for MyPolygon ...
+//      // Then you can access it using:
+//      MyData* my_data = static_cast<MyData*>(shape->mutable_user_data());
 class S2Shape {
  public:
   S2Shape() : id_(-1) {}
@@ -126,19 +156,19 @@ class S2Shape {
   // assigned sequentially starting from 0 in the order shapes are added.
   int id() const { return id_; }
 
-  // TODO(ericv): Consider adding an integer type_tag() field that can be used
-  // by clients to discriminate among different types of indexed shapes.
-  // Currently, if more than one type of shape is being indexed and clients
-  // want to know the type of a particular shape, they either need to maintain
-  // their own mapping from "id" to shape type, or use run-time type
-  // information, or ensure that all of their S2Shapes descend from a base
-  // class possessing a method that allows them to be distinguished.
+  // Virtual methods that return pointers of your choice.  These methods are
+  // intended to help with the problem of attaching additional data to S2Shape
+  // objects (see overview comments).  For example, you could return a pointer
+  // to a source object, or a pointer to a bundle of additional data allocated
+  // directly with the S2Shape.  Example usage:
+  //
+  //  MyData* data = static_cast<MyData*>(shape->user_data());
+  virtual void const* user_data() const { return NULL; }
+  virtual void* mutable_user_data() { return NULL; }
 
  private:
-  friend class S2ShapeIndex;  // id_ assignment
-
-  // id_ is mutable so that "const" geometry can be added to the index.
-  mutable int id_;
+  friend class S2ShapeIndex;
+  int id_;  // Assigned by S2ShapeIndex when the shape is added.
 
   DISALLOW_COPY_AND_ASSIGN(S2Shape);
 };
@@ -283,7 +313,7 @@ class S2ShapeIndex {
 
   // Return a pointer to the shape with the given id, or NULL if the shape has
   // been removed from the index.
-  S2Shape const* shape(int id) const { return shapes_[id]; }
+  S2Shape* shape(int id) const { return shapes_[id]; }
 
   // Add the given shape to the index, and also assign a unique id to the
   // shape (shape->id()).  Shape ids are assigned sequentially starting from 0
@@ -293,14 +323,14 @@ class S2ShapeIndex {
   // REQUIRES: "shape" is not currently in any other S2ShapeIndex.
   // REQUIRES: "shape" persists for the lifetime of the index or until
   //           Remove(shape) is called.
-  void Add(S2Shape const* shape);
-  void Insert(S2Shape const* shape);  // DEPRECATED
+  void Add(S2Shape* shape);
+  void Insert(S2Shape* shape);  // DEPRECATED
 
   // Remove the given shape from the index.  Does not free storage for the
   // shape itself, which is owned by the caller.  Invalidates all iterators
   // and their associated data.
   // TODO(ericv): Implement this method.
-  void Remove(S2Shape const* shape);
+  void Remove(S2Shape* shape);
 
   // Clear the contents of the index and reset it to its original state.  Any
   // options specified via Init() are preserved.
@@ -312,7 +342,7 @@ class S2ShapeIndex {
   // Return true if the given point P is contained by at least one shape,
   // and return a list of the containing shapes.
   bool GetContainingShapes(S2Point const& p,
-                           std::vector<S2Shape const*>* shapes);
+                           std::vector<S2Shape*>* shapes);
 
   // The possible relationships between a "target" cell and the cells of the
   // S2ShapeIndex.  If the target is an index cell or is contained by an index
@@ -444,7 +474,6 @@ class S2ShapeIndex {
 
   typedef std::vector<int> ShapeIdSet;
 
-
   // Internal methods are documented with their definitions.
   void MaybeApplyUpdates() const;
   void ApplyUpdatesThreadSafe();
@@ -462,6 +491,8 @@ class S2ShapeIndex {
                          ShapeIdSet const& cshape_ids);
   bool MakeLeafCell(S2PaddedCell const& pcell,
                     std::vector<ClippedEdge const*> const& edges,
+                    InteriorTracker* tracker);
+  void TestAllEdges(std::vector<ClippedEdge const*> const& edges,
                     InteriorTracker* tracker);
   inline static ClippedEdge const* UpdateBound(ClippedEdge const* edge,
                                                int u_end, double u,
@@ -483,7 +514,7 @@ class S2ShapeIndex {
 
   // The shapes in the index, accessed by their shape id.  Removed shapes are
   // replaced by NULL pointers.
-  std::vector<S2Shape const*> shapes_;
+  std::vector<S2Shape*> shapes_;
 
   // A map from S2CellId to the set of clipped shapes that intersect that
   // cell.  The cell ids cover a set of non-overlapping regions on the
@@ -646,7 +677,7 @@ inline bool S2ShapeIndex::is_fresh() const {
   return base::subtle::NoBarrier_Load(&index_status_) == FRESH;
 }
 
-inline void S2ShapeIndex::Insert(S2Shape const* shape) {
+inline void S2ShapeIndex::Insert(S2Shape* shape) {
   Add(shape);
 }
 

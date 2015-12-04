@@ -9,7 +9,7 @@ heavily weighted towards spherical geometry because currently it is
 mainly used for geographic data.  Other types of geometric primitives
 will be added as necessary.
 
-Please see [the documentation](doc/api.md) for more information and examples.
+Please see [the documentation](doc/intro.md) for more information and examples.
 
 Requirements for End Users
 --------------------------

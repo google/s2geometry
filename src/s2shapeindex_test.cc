@@ -31,6 +31,7 @@
 #include "s1angle.h"
 #include "s2.h"
 #include "s2cap.h"
+#include "s2cell.h"
 #include "s2cellid.h"
 #include "s2cellunion.h"
 #include "s2edgeutil.h"
@@ -462,9 +463,9 @@ TEST(S2ShapeIndex, GetContainingShapes) {
   }
   for (int i = 0; i < 100; ++i) {
     S2Point p = S2Testing::SamplePoint(center_cap);
-    vector<S2Shape const*> expected, actual;
+    vector<S2Shape*> expected, actual;
     for (int j = 0; j < index.num_shape_ids(); ++j) {
-      S2Shape const* shape = index.shape(j);
+      S2Shape* shape = index.shape(j);
       S2Loop const* loop = static_cast<LoopShape const*>(shape)->loop();
       if (loop->Contains(p)) {
         EXPECT_TRUE(index.ShapeContains(shape, p));
@@ -476,6 +477,50 @@ TEST(S2ShapeIndex, GetContainingShapes) {
     index.GetContainingShapes(p, &actual);
     EXPECT_EQ(expected, actual);
   }
+}
+
+TEST(S2ShapeIndex, MixedGeometry) {
+  // This test used to trigger a bug where the presence of a shape with an
+  // interior could cause shapes that don't have an interior to suddenly
+  // acquire one.  This would cause extra S2ShapeIndex cells to be created
+  // that are outside the bounds of the given geometry.
+  vector<S2Polyline*> polylines;
+  using s2textformat::MakePolyline;
+  polylines.push_back(MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6"));
+  polylines.push_back(MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"));
+  polylines.push_back(MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"));
+  S2ShapeIndex index;
+  for (int i = 0; i < polylines.size(); ++i) {
+    index.Add(new S2Polyline::Shape(polylines[i]));
+  }
+  S2Loop loop(S2Cell(S2CellId::Begin(S2CellId::kMaxLevel)));
+  index.Add(new S2Loop::Shape(&loop));
+  S2ShapeIndex::Iterator it(index);
+  // No geometry intersects face 1, so there should be no index cells there.
+  EXPECT_EQ(S2ShapeIndex::DISJOINT, it.Locate(S2CellId::FromFace(1)));
+  STLDeleteElements(&polylines);
+}
+
+TEST(S2Shape, user_data) {
+  struct MyData {
+    int x, y;
+    MyData(int _x, int _y) : x(_x), y(_y) {}
+  };
+  class MyEdgeVectorShape : public S2EdgeVectorShape {
+   public:
+    explicit MyEdgeVectorShape(MyData const& data)
+        : S2EdgeVectorShape(), data_(data) {
+    }
+    void const* user_data() const { return &data_; }
+    void* mutable_user_data() { return &data_; }
+   private:
+    MyData data_;
+  };
+  MyEdgeVectorShape shape(MyData(3, 5));
+  MyData* data = static_cast<MyData*>(shape.mutable_user_data());
+  DCHECK_EQ(3, data->x);
+  data->y = 10;
+  DCHECK_EQ(10, static_cast<MyData const*>(shape.user_data())->y);
 }
 
 

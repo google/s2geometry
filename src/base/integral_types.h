@@ -30,6 +30,8 @@
 // same in both files, and ideally be only defined in this file.
 #ifndef SWIG
 // Standard typedefs
+// Signed integer types with width of exactly 8, 16, 32, or 64 bits
+// respectively, for use when exact sizes are required.
 typedef signed char         schar;
 typedef signed char         int8;
 typedef short               int16;
@@ -46,6 +48,8 @@ typedef long long           int64;
 // use 'unsigned' to express "this value should always be positive";
 // use assertions for this.
 
+// Unsigned integer types with width of exactly 8, 16, 32, or 64 bits
+// respectively, for use when exact sizes are required.
 typedef unsigned char      uint8;
 typedef unsigned short     uint16;
 typedef unsigned int       uint32;
