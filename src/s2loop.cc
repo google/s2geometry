@@ -1619,6 +1619,8 @@ std::bitset<kNumProperties> S2Loop::GetCompressedEncodingProperties() const {
 S2Loop* S2Loop::MakeRegularLoop(S2Point const& center,
                                 S1Angle radius,
                                 int num_vertices) {
+  // TODO(ericv): Unlike the implementation in S2Testing, this version does
+  // not support radii of Pi/2 or larger.  Fix this.
   Matrix3x3_d m;
   S2::GetFrame(center, &m);
   vector<S2Point> vertices;
