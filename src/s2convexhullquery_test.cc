@@ -130,11 +130,9 @@ void TestNorthPoleLoop(S1Angle radius, int num_vertices) {
   // result will be the full loop or not.
   DCHECK_GE(std::abs(radius.radians() - M_PI_2), 1e-15);
 
-  // TODO(ericv): Use S2Loop::MakeRegularLoop once that method is fixed so
-  // that it supports radii of Pi/2 or larger.
   S2ConvexHullQuery query;
-  unique_ptr<S2Loop> loop(S2Testing::MakeRegularLoop(
-      S2::GetFrame(S2Point(0, 0, 1)), radius, num_vertices));
+  unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(S2Point(0, 0, 1),
+                                                  radius, num_vertices));
   query.AddLoop(*loop);
   unique_ptr<S2Loop> result(query.GetConvexHull());
   if (radius > S1Angle::Radians(M_PI_2)) {

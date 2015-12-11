@@ -482,6 +482,7 @@ class S2ShapeIndex {
                      InteriorTracker* tracker) const;
   void UpdateFaceEdges(int face, std::vector<FaceEdge> const& face_edges,
                        InteriorTracker* tracker);
+  void SkipCellRange(S2CellId begin, S2CellId end, InteriorTracker* tracker);
   void UpdateEdges(S2PaddedCell const& pcell,
                    std::vector<ClippedEdge const*> const& edges,
                    InteriorTracker* tracker, EdgeAllocator* alloc);

@@ -146,9 +146,8 @@ class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
   virtual void AddEdges(S2Cap const& query_cap, int num_edges,
                         S2ShapeIndex* index) const {
     index->Add(new s2shapeutil::S2LoopOwningShape(
-        S2Testing::MakeRegularLoop(query_cap.center(),
-                                   0.5 * query_cap.GetRadius(),
-                                   num_edges)));
+        S2Loop::MakeRegularLoop(query_cap.center(),
+                                0.5 * query_cap.GetRadius(), num_edges)));
   }
 };
 

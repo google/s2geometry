@@ -113,6 +113,12 @@ class S2Polygon : public S2Region {
   // corresponding to the given cell.
   explicit S2Polygon(S2Cell const& cell);
 
+  // Convenience constructor that calls Init(S2Loop*).  Note that this method
+  // automatically converts the special empty loop (see S2Loop) into an empty
+  // polygon, unlike the vector-of-loops constructor which does not allow
+  // empty loops at all.  Takes ownership of the loop.
+  explicit S2Polygon(S2Loop* loop);
+
   // Convenience constructor to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
   //
@@ -151,6 +157,12 @@ class S2Polygon : public S2Region {
 
   // Historical synonym for InitNested.
   void Init(std::vector<S2Loop*>* loops) { InitNested(loops); }
+
+  // Initialize a polygon from a single loop.  Note that this method
+  // automatically converts the special empty loop (see S2Loop) into an empty
+  // polygon, unlike the vector-of-loops Init() method which does not allow
+  // empty loops at all.  Takes ownership of the loop.
+  void Init(S2Loop* loop);
 
   // Releases ownership of the loops of this polygon, appends them to "loops" if
   // non-NULL, and resets the polygon to be empty.  Note that the caller is
@@ -522,9 +534,6 @@ class S2Polygon : public S2Region {
 
  private:
   friend class S2Stats;
-
-  // Internal constructor that does *not* take ownership of its argument.
-  explicit S2Polygon(S2Loop* loop);
 
   // Given that loops_ contains a single loop, initialize all other fields.
   void InitOneLoop();

@@ -94,11 +94,14 @@ S2Polygon::S2Polygon(vector<S2Loop*>* loops, S2debugOverride override)
   InitNested(loops);
 }
 
+S2Polygon::S2Polygon(S2Loop* loop)
+    : s2debug_override_(ALLOW_S2DEBUG) {
+  Init(loop);
+}
+
 S2Polygon::S2Polygon(S2Cell const& cell)
-    : loops_(1, new S2Loop(cell)),
-      s2debug_override_(ALLOW_S2DEBUG),
-      unindexed_contains_calls_(0) {
-  InitOneLoop();
+    : s2debug_override_(ALLOW_S2DEBUG) {
+  Init(new S2Loop(cell));
 }
 
 void S2Polygon::set_s2debug_override(S2debugOverride override) {
@@ -297,7 +300,6 @@ void S2Polygon::InitNested(vector<S2Loop*>* loops) {
     InitOneLoop();
     return;
   }
-
   LoopMap loop_map;
   for (int i = 0; i < num_loops(); ++i) {
     InsertLoop(loop(i), NULL, &loop_map);
@@ -310,6 +312,21 @@ void S2Polygon::InitNested(vector<S2Loop*>* loops) {
   InitLoopProperties();
 }
 
+void S2Polygon::Init(S2Loop* loop) {
+  // We don't allow empty loops in the other Init() methods because deleting
+  // them changes the number of loops, which is awkward to handle.
+  ClearLoops();
+  if (loop->is_empty()) {
+    delete loop;
+    InitLoopProperties();
+  } else {
+    loops_.push_back(loop);
+    InitOneLoop();
+  }
+}
+
+// This is an internal method that expects that loops_ has already been
+// initialized with a single non-empty loop.
 void S2Polygon::InitOneLoop() {
   DCHECK_EQ(1, num_loops());
   S2Loop* loop = loops_[0];

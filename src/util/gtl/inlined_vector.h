@@ -122,6 +122,38 @@ class InlinedVector {
     return *this;
   }
 
+  template <class InputIterator>
+  void assign(InputIterator first, InputIterator last,
+              typename std::enable_if<
+                  !std::is_integral<InputIterator>::value>::type* = NULL) {
+    AssignRange(first, last);
+  }
+
+#ifdef LANG_CXX11
+  void assign(std::initializer_list<value_type> init) {
+    AssignRange(init.begin(), init.end());
+  }
+#endif  // LANG_CXX11
+
+  void assign(size_t n, const value_type& elem) {
+    if (n <= size()) {  // Possibly shrink
+      std::fill_n(begin(), n, elem);
+      erase(begin() + n, end());
+      return;
+    }
+    // Grow
+    reserve(n);
+    std::fill_n(begin(), size(), elem);
+    if (allocated()) {
+      UninitializedFillAllocated(allocated_space() + size(),
+                                 allocated_space() + n, elem);
+    } else {
+      UninitializedFillInlined(inlined_space() + size(),
+                               inlined_space() + n, elem);
+    }
+    set_size_internal(n);
+  }
+
   size_t size() const {
     return allocated() ? allocation().size() : tag().size();
   }
@@ -518,6 +550,16 @@ class InlinedVector {
 
   template <typename Iter>
   void AppendRange(Iter first, Iter last);
+
+  template <typename Iter>
+  void AssignRange(Iter first, Iter last, std::input_iterator_tag);
+
+  // Faster path for forward iterators.
+  template <typename Iter>
+  void AssignRange(Iter first, Iter last, std::forward_iterator_tag);
+
+  template <typename Iter>
+  void AssignRange(Iter first, Iter last);
 
   AllocatorAndTag allocator_and_tag_;
 
@@ -921,6 +963,47 @@ template <typename Iter>
 inline void InlinedVector<T, N, A>::AppendRange(Iter first, Iter last) {
   typedef typename std::iterator_traits<Iter>::iterator_category IterTag;
   AppendRange(first, last, IterTag());
+}
+
+template <typename T, int N, typename A>
+template <typename Iter>
+inline void InlinedVector<T, N, A>::AssignRange(
+    Iter first, Iter last, std::input_iterator_tag) {
+  // Optimized to avoid reallocation.
+  // Prefer reassignment to copy construction for elements.
+  iterator out = begin();
+  for ( ; first != last && out != end(); ++first, ++out)
+    *out = *first;
+  erase(out, end());
+  std::copy(first, last, std::back_inserter(*this));
+}
+
+template <typename T, int N, typename A>
+template <typename Iter>
+inline void InlinedVector<T, N, A>::AssignRange(
+    Iter first, Iter last, std::forward_iterator_tag) {
+  typedef typename std::iterator_traits<Iter>::difference_type Length;
+  Length length = std::distance(first, last);
+  // Prefer reassignment to copy construction for elements.
+  if (length <= size()) {
+    erase(std::copy(first, last, begin()), end());
+    return;
+  }
+  reserve(length);
+  iterator out = begin();
+  for (; out != end(); ++first, ++out) *out = *first;
+  if (allocated())
+    UninitializedCopyAllocated(first, last, out);
+  else
+    UninitializedCopyInlined(first, last, out);
+  set_size_internal(length);
+}
+
+template <typename T, int N, typename A>
+template <typename Iter>
+inline void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last) {
+  typedef typename std::iterator_traits<Iter>::iterator_category IterTag;
+  AssignRange(first, last, IterTag());
 }
 
 }  // namespace gtl

@@ -31,6 +31,7 @@
 //     defined in header files.  This prevents ODR violations.
 //     (Functions to mark were found by
 //       egrep -nH -e '^uint.*[y ]Hash|^size_t Hash|^uint.* Fing' farmhash.h.)
+//  .  Added #include "base/int128.h"; added ToGoogleU128() to convert "our"
 //  .  Do not warn about possible data loss on conversion from 'size_t' to
 //     'uint32_t' when building with MSVC
 //  .  Do not define LIKELY with __builtin_expect with MSVC.
@@ -42,6 +43,7 @@
 #define UTIL_HASH_FARMHASH_H_
 
 #include "base/port.h"
+#include "base/int128.h"
 
 #ifdef IS_LITTLE_ENDIAN
 #define FARMHASH_LITTLE_ENDIAN

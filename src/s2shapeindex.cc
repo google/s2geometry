@@ -27,6 +27,7 @@
 #include "r2.h"
 #include "r2rect.h"
 #include "s2cellid.h"
+#include "s2cellunion.h"
 #include "s2edgeutil.h"
 #include "s2paddedcell.h"
 
@@ -783,13 +784,44 @@ void S2ShapeIndex::UpdateFaceEdges(int face,
   }
   // Construct the initial face cell containing all the edges, and then update
   // all the edges in the index recursively.
-  S2PaddedCell pcell(S2CellId::FromFace(face), kCellPadding);
-  if (tracker->shape_ids().empty()) {
-    S2CellId cellid = pcell.ShrinkToFit(bound);
-    if (cellid != pcell.id()) pcell = S2PaddedCell(cellid, kCellPadding);
-  }
   EdgeAllocator alloc;
+  S2CellId face_id = S2CellId::FromFace(face);
+  S2PaddedCell pcell(face_id, kCellPadding);
+  if (num_edges > 0) {
+    S2CellId shrunk_id = pcell.ShrinkToFit(bound);
+    if (shrunk_id != pcell.id()) {
+      // All the edges are contained by some descendant of the face cell.  We
+      // can save a lot of work by starting directly with that cell, but if we
+      // are in the interior of at least one shape then we need to create
+      // index entries for the cells we are skipping over.
+      SkipCellRange(face_id.range_min(), shrunk_id.range_min(), tracker);
+      pcell = S2PaddedCell(shrunk_id, kCellPadding);
+      UpdateEdges(pcell, clipped_edges, tracker, &alloc);
+      SkipCellRange(shrunk_id.range_max().next(), face_id.range_max().next(),
+                    tracker);
+      return;
+    }
+  }
+  // Otherwise (no edges, or no shrinking is possible), subdivide normally.
   UpdateEdges(pcell, clipped_edges, tracker, &alloc);
+}
+
+// Skip over the cells in the given range, creating index cells if we are
+// currently in the interior of at least one shape.
+void S2ShapeIndex::SkipCellRange(S2CellId begin, S2CellId  end,
+                                 InteriorTracker* tracker) {
+  // If we aren't in the interior of a shape, then skipping over cells is easy.
+  if (tracker->shape_ids().empty()) return;
+
+  // Otherwise generate the list of cell ids that we need to visit, and create
+  // an index entry for each one.
+  S2CellUnion skipped;
+  skipped.InitFromBeginEnd(begin, end);
+  vector<ClippedEdge const*> clipped_edges;
+  for (int i = 0; i < skipped.num_cells(); ++i) {
+    MakeLeafCell(S2PaddedCell(skipped.cell_id(i), kCellPadding),
+                 clipped_edges, tracker);
+  }
 }
 
 // Given a cell and a set of ClippedEdges whose bounding boxes intersect that

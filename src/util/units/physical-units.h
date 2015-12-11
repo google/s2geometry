@@ -117,22 +117,7 @@ struct UnitConverter {
   // composed from two UnitConversion structs.
   // Cast one multiplicand to 64 bit to ensure that the integer expression
   // is computed in 64 bit. Otherwise Feet(Miles(x)) will overflow.
-  static inline Float Convert(Float value) {
-    // no conversion
-    if ((FromUnit::SCALE_NUMERATOR == ToUnit::SCALE_NUMERATOR) &&
-        (FromUnit::SCALE_DENOMINATOR == ToUnit::SCALE_DENOMINATOR) &&
-        (FromUnit::OFFSET_NUMERATOR == ToUnit::OFFSET_NUMERATOR) &&
-        (FromUnit::OFFSET_DENOMINATOR == ToUnit::OFFSET_DENOMINATOR)) {
-      return value;
-    }
-    // scaling no offset
-    if ((FromUnit::OFFSET_NUMERATOR == 0) && (ToUnit::OFFSET_NUMERATOR == 0)) {
-      return static_cast<Float>(value *
-        (static_cast<double>(static_cast<uint64>(ToUnit::SCALE_NUMERATOR) *
-                             FromUnit::SCALE_DENOMINATOR) /
-         static_cast<double>(static_cast<uint64>(ToUnit::SCALE_DENOMINATOR) *
-                             FromUnit::SCALE_NUMERATOR)));
-    }
+  constexpr static inline Float Convert(Float value) {
     // scaling and offset
     return static_cast<Float>(
       (static_cast<double>(value *
@@ -188,7 +173,7 @@ class PhysicalUnit {
   // constructs such as Unit unit = 10.0; use either Unit unit(10.0) or
   // Unit unit =  Unit(10.0) instead.
   PhysicalUnit(): value_(static_cast<Float>(0.0)) {}
-  explicit PhysicalUnit(Float value): value_(value) {}
+  constexpr explicit PhysicalUnit(Float value): value_(value) {}
 
   // Conversion from other units of the same Base type.
   //
@@ -197,9 +182,10 @@ class PhysicalUnit {
   // unintended implicit type conversions, but these incur very little
   // overhead (inlined multiply at -O2) and should be inconsequential in
   // most circumstances.  Casts between different base types (including
-  // different underlying value types) require explicit handling.
+  // different underlying value types) require explicit handling. The ClangTidy
+  // warnings regarding this are therefore suppressed with NOLINT below.
   template <class Unit2>
-  PhysicalUnit(PhysicalUnit<Float, Base, Unit2> other)
+  constexpr PhysicalUnit(PhysicalUnit<Float, Base, Unit2> other)  // NOLINT
       : value_(UnitConverter<Unit2, Unit, Float>::Convert(other.value())) {}
 
   // Copy operation from other units of the same Base type.
@@ -217,7 +203,7 @@ class PhysicalUnit {
   //   float x = Degrees(myclass.GetAngle()).value();  // ok too.
   //   Degrees degrees = myclass.GetAngle();           // using a temporary is
   //   float x = degrees.value();                      // also good.
-  Float value() const { return value_; }
+  constexpr Float value() const { return value_; }
 
   // Trivial arithematic operator wrapping.
   Type operator - () const {

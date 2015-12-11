@@ -1621,16 +1621,25 @@ S2Loop* S2Loop::MakeRegularLoop(S2Point const& center,
   // TODO(ericv): Unlike the implementation in S2Testing, this version does
   // not support radii of Pi/2 or larger.  Fix this.
   Matrix3x3_d m;
-  S2::GetFrame(center, &m);
-  vector<S2Point> vertices;
+  S2::GetFrame(center, &m);  // TODO(ericv): Return by value
+  return MakeRegularLoop(m, radius, num_vertices);
+}
+
+/* static */
+S2Loop* S2Loop::MakeRegularLoop(Matrix3x3_d const& frame,
+                                S1Angle radius, int num_vertices) {
+  // We construct the loop in the given frame coordinates, with the center at
+  // (0, 0, 1).  For a loop of radius "r", the loop vertices have the form
+  // (x, y, z) where x^2 + y^2 = sin(r) and z = cos(r).  The distance on the
+  // sphere (arc length) from each vertex to the center is acos(cos(r)) = r.
+  double z = cos(radius.radians());
+  double r = sin(radius.radians());
   double radian_step = 2 * M_PI / num_vertices;
-  // We create the vertices on the plane tangent to center, so the
-  // radius on that plane is larger.
-  double planar_radius = tan(radius.radians());
-  for (int vi = 0; vi < num_vertices; ++vi) {
-    double angle = vi * radian_step;
-    S2Point p(planar_radius * cos(angle), planar_radius * sin(angle), 1);
-    vertices.push_back(S2::FromFrame(m, p).Normalize());
+  vector<S2Point> vertices;
+  for (int i = 0; i < num_vertices; ++i) {
+    double angle = i * radian_step;
+    S2Point p(r * cos(angle), r * sin(angle), z);
+    vertices.push_back(S2::FromFrame(frame, p).Normalize());
   }
   return new S2Loop(vertices);
 }

@@ -320,11 +320,18 @@ class S2Loop : public S2Region {
   T GetSurfaceIntegral(T f_tri(S2Point const&, S2Point const&, S2Point const&))
       const;
 
-  // Returns a vector of points shaped as a regular polygon with
-  // num_vertices vertices, all on a circle of the specified angular
-  // radius around the center.  The radius is the actual distance from
-  // the center to the circle along the sphere.
+  // Constructs a regular polygon with the given number of vertices, all
+  // located on a circle of the specified radius around "center".  The radius
+  // is the actual distance from "center" to each vertex.
   static S2Loop* MakeRegularLoop(S2Point const& center,
+                                 S1Angle radius,
+                                 int num_vertices);
+
+  // Like the function above, but this version constructs a loop centered
+  // around the z-axis of the given coordinate frame, with the first vertex in
+  // the direction of the positive x-axis.  (This allows the loop to be
+  // rotated for testing purpsoes.)
+  static S2Loop* MakeRegularLoop(Matrix3x3_d const& frame,
                                  S1Angle radius,
                                  int num_vertices);
 
