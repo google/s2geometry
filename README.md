@@ -32,7 +32,7 @@ Build and Install
 -----------------
 
 ```
-cd $S2_DIR/geometry
+cd $S2_DIR
 mkdir build
 cd build
 cmake -DGTEST_ROOT=/usr/src/gtest ..  # Omit -DGTEST_ROOT to skip tests.
