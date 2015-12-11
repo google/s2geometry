@@ -27,17 +27,6 @@
 
 #include "strings/memutil.h"
 #include "util/gtl/stl_util.h"
-#include "util/hash/hash.h"
-
-HASH_NAMESPACE_DECLARATION_START
-#ifdef _MSC_VER
-size_t hash_compare<StringPiece>::operator()(StringPiece s) const {
-#else
-size_t hash<StringPiece>::operator()(StringPiece s) const {
-#endif  // _MSC_VER
-  return HashTo32(s.data(), s.size());
-}
-HASH_NAMESPACE_DECLARATION_END
 
 std::ostream& operator<<(std::ostream& o, StringPiece piece) {
   o.write(piece.data(), piece.size());

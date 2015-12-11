@@ -1112,11 +1112,8 @@ TEST(S2Polygon, UnionWithAmbgiuousCrossings) {
   };
   vector<S2Point> a_vertices(a_data, a_data + arraysize(a_data));
   vector<S2Point> b_vertices(b_data, b_data + arraysize(b_data));
-  vector<S2Loop*> loops;
-  loops.push_back(new S2Loop(a_vertices));
-  S2Polygon a(&loops);
-  loops.push_back(new S2Loop(b_vertices));
-  S2Polygon b(&loops);
+  S2Polygon a(new S2Loop(a_vertices));
+  S2Polygon b(new S2Loop(b_vertices));
   S2Polygon c;
   c.InitToUnion(&a, &b);
   EXPECT_FALSE(c.is_empty());
@@ -1179,6 +1176,15 @@ TEST(S2Polygon, MultipleInit) {
   EXPECT_EQ(2, polygon->num_loops());
   EXPECT_EQ(6, polygon->num_vertices());
   EXPECT_TRUE(bound1 != polygon->GetRectBound());
+}
+
+TEST(S2Polygon, InitSingleLoop) {
+  S2Polygon polygon(new S2Loop(S2Loop::kEmpty()));
+  EXPECT_TRUE(polygon.is_empty());
+  polygon.Init(new S2Loop(S2Loop::kFull()));
+  EXPECT_TRUE(polygon.is_full());
+  polygon.Init(s2textformat::MakeLoop("0:0, 0:10, 10:0"));
+  EXPECT_EQ(3, polygon.num_vertices());
 }
 
 TEST_F(S2PolygonTestBase, TestSimpleEncodeDecode) {
@@ -1806,9 +1812,7 @@ S2Polygon* MakeCellLoop(const S2Cell& cell, string const& str) {
         (vertices[2] * (1.0 - u) + vertices[3] * u) * v;
     loop_vertices.push_back(p.Normalize());
   }
-  vector<S2Loop*> loops;
-  loops.push_back(new S2Loop(loop_vertices));
-  return new S2Polygon(&loops);
+  return new S2Polygon(new S2Loop(loop_vertices));
 }
 
 TEST(InitToSimplifiedInCell, PointsOnCellBoundaryKept) {
@@ -1845,11 +1849,8 @@ TEST(InitToSimplifiedInCell, PointsInsideCellSimplified) {
 S2Polygon* MakeRegularPolygon(const string& center,
                               int num_points, double radius_in_degrees) {
   S1Angle radius = S1Angle::Degrees(radius_in_degrees);
-  S2Loop* l = S2Testing::MakeRegularLoop(s2textformat::MakePoint(center),
-                                         radius, num_points);
-  vector<S2Loop*> loops;
-  loops.push_back(l);
-  return new S2Polygon(&loops);
+  return new S2Polygon(S2Loop::MakeRegularLoop(
+      s2textformat::MakePoint(center), radius, num_points));
 }
 
 // Tests that a regular polygon with many points gets simplified
@@ -2039,5 +2040,15 @@ TEST_F(S2PolygonTestBase, ManyLoopPolygonShape) {
   S2Testing::ConcentricLoopsPolygon(S2Point(1, 0, 0), kNumLoops,
                                     kNumVerticesPerLoop, &polygon);
   TestPolygonShape(&polygon);
+}
+
+TEST(S2Polygon, PointInBigLoop) {
+  // This code used to demonstrate a bug in S2ShapeIndex.
+  S2LatLng center = S2LatLng::FromRadians(0.3, 2);
+  S1Angle radius = S1Angle::Degrees(80);
+  vector<S2Loop*> loops;
+  loops.push_back(S2Loop::MakeRegularLoop(center.ToPoint(), radius, 10));
+  S2Polygon poly(&loops);
+  EXPECT_TRUE(poly.MayIntersect(S2Cell(S2CellId::FromLatLng(center))));
 }
 

@@ -229,6 +229,19 @@ TEST_F(S2ShapeIndexTest, OneEdge) {
   TestIteratorMethods(index_);
 }
 
+TEST_F(S2ShapeIndexTest, ShrinkToFitOptimization) {
+  // This used to trigger a bug in the ShrinkToFit optimization.  The loop
+  // below contains almost all of face 0 except for a small region in the
+  // 0/00000 subcell.  That subcell is the only one that contains any edges.
+  // This caused the index to be built only in that subcell.  However, all the
+  // other cells on that face should also have index entries, in order to
+  // indicate that they are contained by the loop.
+  unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(
+      S2Point(1, 0.5, 0.5).Normalize(), S1Angle::Degrees(89), 100));
+  index_.Add(new S2Loop::Shape(loop.get()));
+  QuadraticValidate();
+}
+
 TEST_F(S2ShapeIndexTest, LoopsSpanningThreeFaces) {
   S2Polygon polygon;
   int const kNumEdges = 100;  // Validation is quadratic
@@ -428,7 +441,7 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
     // Since there are no readers, it is safe to modify the index.
     index_.Reset();
     int num_vertices = 4 * S2Testing::rnd.Skewed(10);  // Up to 4K vertices
-    unique_ptr<S2Loop> loop(S2Testing::MakeRegularLoop(
+    unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(
         S2Testing::RandomPoint(), S2Testing::KmToAngle(5), num_vertices));
     index_.Add(new S2Loop::Shape(loop.get()));
     num_readers_left_ = kNumReaders;
@@ -455,7 +468,7 @@ TEST(S2ShapeIndex, GetContainingShapes) {
   using LoopShape = s2shapeutil::S2LoopOwningShape;
   S2ShapeIndex index;
   for (int i = 0; i < 100; ++i) {
-    S2Loop* loop = S2Testing::MakeRegularLoop(
+    S2Loop* loop = S2Loop::MakeRegularLoop(
         S2Testing::SamplePoint(center_cap),
         S2Testing::rnd.RandDouble() * kMaxLoopRadius,
         kNumVerticesPerLoop);

@@ -141,36 +141,13 @@ void S2Testing::AppendLoopVertices(S2Loop const& loop,
 vector<S2Point> S2Testing::MakeRegularPoints(S2Point const& center,
                                              S1Angle radius,
                                              int num_vertices) {
-  unique_ptr<S2Loop> loop(MakeRegularLoop(center, radius, num_vertices));
+  unique_ptr<S2Loop> loop(
+      S2Loop::MakeRegularLoop(center, radius, num_vertices));
   vector<S2Point> points;
   for (int i = 0; i < loop->num_vertices(); i++) {
     points.push_back(loop->vertex(i));
   }
   return points;
-}
-
-S2Loop* S2Testing::MakeRegularLoop(S2Point const& center,
-                                   S1Angle radius,
-                                   int num_vertices) {
-  return S2Loop::MakeRegularLoop(center, radius, num_vertices);
-}
-
-S2Loop* S2Testing::MakeRegularLoop(Matrix3x3_d const& frame,
-                                   S1Angle radius, int num_vertices) {
-  // We construct the loop in the given frame coordinates, with the center at
-  // (0, 0, 1).  For a loop of radius "r", the loop vertices have the form
-  // (x, y, z) where x^2 + y^2 = sin(r) and z = cos(r).  The distance on the
-  // sphere (arc length) from each vertex to the center is acos(cos(r)) = r.
-  double z = cos(radius.radians());
-  double r = sin(radius.radians());
-  double radian_step = 2 * M_PI / num_vertices;
-  vector<S2Point> vertices;
-  for (int i = 0; i < num_vertices; ++i) {
-    double angle = i * radian_step;
-    S2Point p(r * cos(angle), r * sin(angle), z);
-    vertices.push_back(S2::FromFrame(frame, p).Normalize());
-  }
-  return new S2Loop(vertices);
 }
 
 S1Angle S2Testing::KmToAngle(double km) {
@@ -456,7 +433,7 @@ S2Loop* S2Testing::Fractal::MakeLoop(Matrix3x3_d const& frame,
     double theta = atan2(v[1], v[0]);
     double radius = nominal_radius.radians() * v.Norm();
 
-    // See the comments in MakeRegularLoop.
+    // See the comments in S2Loop::MakeRegularLoop.
     double z = cos(radius);
     double r = sin(radius);
     S2Point p(r * cos(theta), r * sin(theta), z);

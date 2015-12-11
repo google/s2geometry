@@ -429,7 +429,9 @@ template<> struct hash_compare<StringPiece, std::less<StringPiece>> {
 #else  // _MSC_VER
 template<> struct hash<StringPiece> {
 #endif  // _MSC_VER
-  size_t operator()(StringPiece s) const;
+  size_t operator()(StringPiece s) const {
+    return HashTo32(s.data(), s.size());
+  }
   // Less than operator, for MSVC.
   bool operator()(const StringPiece& s1, const StringPiece& s2) const {
     return s1 < s2;

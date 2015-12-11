@@ -56,21 +56,12 @@ class S2Testing {
   // num_vertices vertices, all on a circle of the specified angular
   // radius around the center.  The radius is the actual distance from
   // the center to the circle along the sphere.
+  //
+  // If you want to construct a regular polygon, try this:
+  //   S2Polygon polygon(S2Loop::MakeRegularLoop(center, radius, num_vertices));
   static std::vector<S2Point> MakeRegularPoints(S2Point const& center,
                                            S1Angle radius,
                                            int num_vertices);
-
-  // Construct an S2Loop (owned by the caller) from the vertices produced by
-  // MakeRegularPoints().
-  static S2Loop* MakeRegularLoop(S2Point const& center,
-                                 S1Angle radius,
-                                 int num_vertices);
-
-  // This version constructs a loop centered around the z-axis of the given
-  // coordinate frame, with the first vertex in the direction of the positive
-  // x-axis.  (This allows the loop to be rotated for testing purpsoes.)
-  static S2Loop* MakeRegularLoop(Matrix3x3_d const& frame,
-                                 S1Angle radius, int num_vertices);
 
   // Append the vertices of "loop" to "vertices".
   static void AppendLoopVertices(S2Loop const& loop,
