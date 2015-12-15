@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef STRINGS_NUMBERS_H_
-#define STRINGS_NUMBERS_H_
+#ifndef S2GEOMETRY_STRINGS_NUMBERS_H_
+#define S2GEOMETRY_STRINGS_NUMBERS_H_
 
 #include "base/integral_types.h"
 
@@ -34,4 +34,4 @@ int HexDigitsPrefix(const char* buf, int num_digits);
 // --------------------------------------------------------------------
 uint64 ParseLeadingHex64Value(const char* str, uint64 deflt);
 
-#endif  // STRINGS_NUMBERS_H_
+#endif  // S2GEOMETRY_STRINGS_NUMBERS_H_

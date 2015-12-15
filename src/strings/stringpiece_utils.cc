@@ -147,7 +147,7 @@ int32 ParseInt32Prefix(StringPiece str, size_t* len, int radix) {
   const char* const num_cstr = num_string.c_str();
   char* p;
   const int32 x = strto32(num_cstr, &p, radix);
-  if (len != NULL) {
+  if (len != nullptr) {
     *len = p - num_cstr;
   }
   return x;
@@ -158,7 +158,7 @@ int64 ParseInt64Prefix(StringPiece str, size_t* len, int radix) {
   const char* const num_cstr = num_string.c_str();
   char* p;
   const int64 x = strto64(num_cstr, &p, radix);
-  if (len != NULL) {
+  if (len != nullptr) {
     *len = p - num_cstr;
   }
   return x;

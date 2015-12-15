@@ -17,8 +17,8 @@
 //
 // Interleaving bits quickly by table lookup.
 
-#ifndef UTIL_BITS_BIT_INTERLEAVE_H_
-#define UTIL_BITS_BIT_INTERLEAVE_H_
+#ifndef S2GEOMETRY_UTIL_BITS_BIT_INTERLEAVE_H_
+#define S2GEOMETRY_UTIL_BITS_BIT_INTERLEAVE_H_
 
 #include "base/integral_types.h"
 
@@ -50,4 +50,4 @@ void DeinterleaveUint8(uint32 code, uint8 *val0, uint8* val1, uint8* val2);
 
 }  // namespace util_bits
 
-#endif  // UTIL_BITS_BIT_INTERLEAVE_H_
+#endif  // S2GEOMETRY_UTIL_BITS_BIT_INTERLEAVE_H_

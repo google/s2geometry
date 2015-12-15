@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2POLYGONBUILDER_H__
-#define S2_GEOMETRY_S2POLYGONBUILDER_H__
+#ifndef S2GEOMETRY_S2POLYGONBUILDER_H_
+#define S2GEOMETRY_S2POLYGONBUILDER_H_
 
 #include <unordered_map>
 #include <memory>
@@ -274,7 +274,7 @@ class S2PolygonBuilder {
   // Assembles the given edges into as many non-crossing loops as possible.
   // When there is a choice about how to assemble the loops, then CCW loops
   // are preferred.  Returns true if all edges were assembled.  If
-  // "unused_edges" is not NULL, it is initialized to the set of edges that
+  // "unused_edges" is not nullptr, it is initialized to the set of edges that
   // could not be assembled into loops.
   //
   // Note that if xor_edges() is false and duplicate edge pairs may be
@@ -329,7 +329,7 @@ class S2PolygonBuilder {
   void EraseLoop(S2Point const* v, int n);
 
   // Assembles and returns a single loop starting with the given edge.
-  // If a loop cannot be assembled starting from this edge, returns NULL
+  // If a loop cannot be assembled starting from this edge, returns nullptr
   // and updates "unused_edges".
   S2Loop* AssembleLoop(S2Point const& v0, S2Point const& v1,
                        EdgeList* unused_edges);
@@ -389,4 +389,4 @@ inline S2PolygonBuilderOptions S2PolygonBuilderOptions::UNDIRECTED_UNION() {
   return options;
 }
 
-#endif  // S2_GEOMETRY_S2POLYGONBUILDER_H__
+#endif  // S2GEOMETRY_S2POLYGONBUILDER_H_

@@ -49,7 +49,7 @@ S2RegionIntersection::S2RegionIntersection(S2RegionIntersection const* src)
 }
 
 void S2RegionIntersection::Release(vector<S2Region*>* regions) {
-  if (regions != NULL) {
+  if (regions != nullptr) {
     regions->insert(regions->end(), regions_.begin(), regions_.end());
   }
   regions_.clear();

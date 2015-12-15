@@ -106,8 +106,8 @@
 // mantissa) is returned by prec().  The precision is increased as necessary
 // so that the result of every operation can be represented exactly.
 
-#ifndef UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
-#define UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
+#ifndef S2GEOMETRY_UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
+#define S2GEOMETRY_UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
 
 #include <limits.h>
 #include <math.h>
@@ -169,7 +169,7 @@ class ExactFloat {
   // Construct an ExactFloat from an "int".  Note that in general, ints are
   // automatically converted to doubles and so would be handled by the
   // constructor above.  However, the particular argument (0) is ambiguous; the
-  // compiler doesn't know whether to treat it as a "double" or "NULL"
+  // compiler doesn't know whether to treat it as a "double" or "nullptr"
   // (invoking the const char* constructor below).
   //
   // We do not provide constructors for "unsigned", "long", "unsigned long",
@@ -614,4 +614,4 @@ inline ExactFloat ExactFloat::CopyWithSign(int sign) const {
   return r;
 }
 
-#endif  // UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
+#endif  // S2GEOMETRY_UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_

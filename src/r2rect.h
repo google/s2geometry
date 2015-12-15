@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_R2RECT_H_
-#define S2_GEOMETRY_R2RECT_H_
+#ifndef S2GEOMETRY_R2RECT_H_
+#define S2GEOMETRY_R2RECT_H_
 
 #include <iosfwd>
 
@@ -231,4 +231,4 @@ inline bool R2Rect::operator==(R2Rect const& other) const {
 
 std::ostream& operator<<(std::ostream& os, R2Rect const& r);
 
-#endif  // S2_GEOMETRY_R2RECT_H_
+#endif  // S2GEOMETRY_R2RECT_H_

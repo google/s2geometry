@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2CELLUNION_H_
-#define S2_GEOMETRY_S2CELLUNION_H_
+#ifndef S2GEOMETRY_S2CELLUNION_H_
+#define S2GEOMETRY_S2CELLUNION_H_
 
 #include <vector>
 
@@ -263,4 +263,4 @@ bool operator==(S2CellUnion const& x, S2CellUnion const& y);
 // Return true if two cell unions are different.
 bool operator!=(S2CellUnion const& x, S2CellUnion const& y);
 
-#endif  // S2_GEOMETRY_S2CELLUNION_H_
+#endif  // S2GEOMETRY_S2CELLUNION_H_

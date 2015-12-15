@@ -21,8 +21,8 @@
 // any changes here, make sure that you're not breaking any platforms.
 //
 
-#ifndef BASE_CASTS_H_
-#define BASE_CASTS_H_
+#ifndef S2GEOMETRY_BASE_CASTS_H_
+#define S2GEOMETRY_BASE_CASTS_H_
 
 #include <assert.h>         // for use with down_cast<>
 #include <string.h>         // for memcpy
@@ -86,11 +86,11 @@ inline To down_cast(From* f) {                   // so we only accept pointers
 
   // TODO(user): This should use COMPILE_ASSERT.
   if (false) {
-    ::implicit_cast<From*, To>(NULL);
+    ::implicit_cast<From*, To>(nullptr);
   }
 
   // uses RTTI in dbg and fastbuild. asserts are disabled in opt builds.
-  assert(f == NULL || dynamic_cast<To>(f) != NULL);
+  assert(f == nullptr || dynamic_cast<To>(f) != nullptr);
   return static_cast<To>(f);
 }
 
@@ -108,10 +108,10 @@ inline To down_cast(From& f) {
   typedef typename std::remove_reference<To>::type* ToAsPointer;
   if (false) {
     // Compile-time check that To inherits from From. See above for details.
-    ::implicit_cast<From*, ToAsPointer>(NULL);
+    ::implicit_cast<From*, ToAsPointer>(nullptr);
   }
 
-  assert(dynamic_cast<ToAsPointer>(&f) != NULL);  // RTTI: debug mode only
+  assert(dynamic_cast<ToAsPointer>(&f) != nullptr);  // RTTI: debug mode only
   return static_cast<To>(f);
 }
 
@@ -404,4 +404,4 @@ inline Enum tight_enum_cast(int e_val) {
   return static_cast<Enum>(e_val);
 }
 
-#endif  // BASE_CASTS_H_
+#endif  // S2GEOMETRY_BASE_CASTS_H_

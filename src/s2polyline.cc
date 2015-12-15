@@ -46,20 +46,20 @@ static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 S2Polyline::S2Polyline()
   : s2debug_override_(ALLOW_S2DEBUG),
     num_vertices_(0),
-    vertices_(NULL) {
+    vertices_(nullptr) {
 }
 
 S2Polyline::S2Polyline(vector<S2Point> const& vertices)
   : s2debug_override_(ALLOW_S2DEBUG),
     num_vertices_(0),
-    vertices_(NULL) {
+    vertices_(nullptr) {
   Init(vertices);
 }
 
 S2Polyline::S2Polyline(vector<S2LatLng> const& vertices)
   : s2debug_override_(ALLOW_S2DEBUG),
     num_vertices_(0),
-    vertices_(NULL) {
+    vertices_(nullptr) {
   Init(vertices);
 }
 
@@ -67,7 +67,7 @@ S2Polyline::S2Polyline(vector<S2Point> const& vertices,
                        S2debugOverride override)
   : s2debug_override_(override),
     num_vertices_(0),
-    vertices_(NULL) {
+    vertices_(nullptr) {
   Init(vertices);
 }
 
@@ -75,7 +75,7 @@ S2Polyline::S2Polyline(vector<S2LatLng> const& vertices,
                        S2debugOverride override)
   : s2debug_override_(override),
     num_vertices_(0),
-    vertices_(NULL) {
+    vertices_(nullptr) {
   Init(vertices);
 }
 

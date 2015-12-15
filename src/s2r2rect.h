@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2R2RECT_H_
-#define S2_GEOMETRY_S2R2RECT_H_
+#ifndef S2GEOMETRY_S2R2RECT_H_
+#define S2GEOMETRY_S2R2RECT_H_
 
 #include <iosfwd>
 
@@ -295,4 +295,4 @@ inline bool S2R2Rect::ApproxEquals(S2R2Rect const& other,
   return rect_.ApproxEquals(other.rect_, max_error);
 }
 
-#endif  // S2_GEOMETRY_S2R2RECT_H_
+#endif  // S2GEOMETRY_S2R2RECT_H_

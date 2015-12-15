@@ -96,7 +96,7 @@ class Encoder {
   void Ensure(size_t N);
 
   // Returns true if Ensure is allowed to be called on "this"
-  bool ensure_allowed() const { return underlying_buffer_ != NULL; }
+  bool ensure_allowed() const { return underlying_buffer_ != nullptr; }
 
   // Return ptr to start of encoded data.  This pointer remains valid
   // until reset or Ensure is called.
@@ -122,7 +122,7 @@ class Encoder {
 
   // If constructed with the zero-argument constructor, we're allowed
   // to use Ensure; otherwise we're not.  If Ensure is allowed,
-  // underlying_buffer_ is non-NULL; otherwise it is set to NULL.
+  // underlying_buffer_ is non-nullptr; otherwise it is set to nullptr.
   unsigned char* underlying_buffer_;
 
   static unsigned char kEmptyBuffer;
@@ -192,7 +192,7 @@ class Decoder {
 inline Encoder::Encoder(void* b, size_t maxn) {
   orig_ = buf_ = reinterpret_cast<unsigned char*>(b);
   limit_ = orig_ + maxn;
-  underlying_buffer_ = NULL;
+  underlying_buffer_ = nullptr;
 }
 
 inline void Encoder::reset(void* b, size_t maxn) {
@@ -202,7 +202,7 @@ inline void Encoder::reset(void* b, size_t maxn) {
   if (underlying_buffer_ != &kEmptyBuffer) {
     delete[] underlying_buffer_;
   }
-  underlying_buffer_ = NULL;
+  underlying_buffer_ = nullptr;
 }
 
 inline void Encoder::clear() {
@@ -234,7 +234,7 @@ inline void Encoder::putn(const void* src, size_t n) {
 inline void Encoder::putcn(const void* src, int c, size_t n) {
   unsigned char *old = buf_;
   buf_ = static_cast<unsigned char *>(memccpy(buf_, src, c, n));
-  if (buf_ == NULL)
+  if (buf_ == nullptr)
     buf_ = old + n;
 }
 
@@ -297,7 +297,7 @@ inline void Decoder::getn(void* dst, size_t n) {
 inline void Decoder::getcn(void* dst, int c, size_t n) {
   void *ptr;
   ptr = memccpy(dst, buf_, c, n);
-  if (ptr == NULL)
+  if (ptr == nullptr)
     buf_ = buf_ + n;
   else
     buf_ = buf_ + (reinterpret_cast<unsigned char *>(ptr) -

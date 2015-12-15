@@ -86,8 +86,8 @@ struct TestCase {
 TestCase test_cases[] = {
   // 0: No loops.
   { 0, 0, true, 0.0, 10.0, 90.0,
-    { { NULL, false } },
-    { NULL }, 0 },
+    { { nullptr, false } },
+    { nullptr }, 0 },
 
   // 1: One loop with some extra edges.
   { 0, 0, true, 0.0, 4.0, 15.0,
@@ -106,7 +106,7 @@ TestCase test_cases[] = {
       { "20:18, 18:16, 16:14, 14:12", false },
       { "20:14, 18:14, 16:14", false },
       { "5:15, 0:10", false } },
-    { NULL }, 21 },
+    { nullptr }, 21 },
 
   // 3: Three loops (two shells and one hole) that combine into one.
   { 0, 1, true, 0.0, 4.0, 90.0,  // XOR
@@ -199,7 +199,7 @@ TestCase test_cases[] = {
   { 0, 0, false, 0.0, 2.0, 45.0,
     { { "0:0, 0:12, 6:6", true },
       { "3:6, 3:18, 9:12", true } },
-    { NULL }, 6 },
+    { nullptr }, 6 },
 
   // 11: Four squares that combine to make a big square.  The nominal edges of
   // the square are at +/-8.5 degrees in latitude and longitude.  All vertices
@@ -595,7 +595,7 @@ TEST(S2PolygonBuilder, BuilderProducesValidPolygons) {
   S2Polygon robust_polygon;
   S2PolygonBuilder polygon_builder(options);
   polygon_builder.AddPolygon(polygon.get());
-  ASSERT_TRUE(polygon_builder.AssemblePolygon(&robust_polygon, NULL));
+  ASSERT_TRUE(polygon_builder.AssemblePolygon(&robust_polygon, nullptr));
   EXPECT_TRUE(robust_polygon.IsValid())
       << "S2PolygonBuilder created invalid polygon\n"
       << s2textformat::ToString(&robust_polygon)

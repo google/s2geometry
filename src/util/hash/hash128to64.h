@@ -14,8 +14,8 @@
 //
 
 
-#ifndef UTIL_HASH_HASH128TO64_H_
-#define UTIL_HASH_HASH128TO64_H_
+#ifndef S2GEOMETRY_UTIL_HASH_HASH128TO64_H_
+#define S2GEOMETRY_UTIL_HASH_HASH128TO64_H_
 
 
 #include "base/int128.h"
@@ -36,4 +36,4 @@ inline uint64 Hash128to64(const uint128& x) {
 }
 
 
-#endif  // UTIL_HASH_HASH128TO64_H_
+#endif  // S2GEOMETRY_UTIL_HASH_HASH128TO64_H_

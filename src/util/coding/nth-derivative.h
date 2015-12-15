@@ -54,8 +54,8 @@
 // A caveat on class usage.  Encode() and Decode() share state.  Using both
 // without a Reset() in-between probably doesn't make sense.
 
-#ifndef UTIL_CODING_NTH_DERIVATIVE_H_
-#define UTIL_CODING_NTH_DERIVATIVE_H_
+#ifndef S2GEOMETRY_UTIL_CODING_NTH_DERIVATIVE_H_
+#define S2GEOMETRY_UTIL_CODING_NTH_DERIVATIVE_H_
 
 #include <glog/logging.h>
 
@@ -133,4 +133,4 @@ inline void NthDerivativeCoder::Reset() {
   m_ = 0;
 }
 
-#endif  // UTIL_CODING_NTH_DERIVATIVE_H_
+#endif  // S2GEOMETRY_UTIL_CODING_NTH_DERIVATIVE_H_

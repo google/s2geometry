@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2POLYGON_H_
-#define S2_GEOMETRY_S2POLYGON_H_
+#ifndef S2GEOMETRY_S2POLYGON_H_
+#define S2GEOMETRY_S2POLYGON_H_
 
 #include <stddef.h>
 #include <map>
@@ -165,8 +165,8 @@ class S2Polygon : public S2Region {
   void Init(S2Loop* loop);
 
   // Releases ownership of the loops of this polygon, appends them to "loops" if
-  // non-NULL, and resets the polygon to be empty.  Note that the caller is
-  // responsible for deleting the loops whether they pass NULL or a valid
+  // non-nullptr, and resets the polygon to be empty.  Note that the caller is
+  // responsible for deleting the loops whether they pass nullptr or a valid
   // pointer as the loops parameter.  In the former case, they should copy the
   // loop pointers beforehand.
   void Release(std::vector<S2Loop*>* loops);
@@ -204,7 +204,7 @@ class S2Polygon : public S2Region {
   // Returns true if this is *not* a valid polygon and sets "error"
   // appropriately.  Otherwise returns false and leaves "error" unchanged.
   //
-  // REQUIRES: error != NULL
+  // REQUIRES: error != nullptr
   bool FindValidationError(S2Error* error) const;
 
   // Return true if this is the empty polygon (consisting of no loops).
@@ -662,4 +662,4 @@ class S2Polygon : public S2Region {
   DISALLOW_COPY_AND_ASSIGN(S2Polygon);
 };
 
-#endif  // S2_GEOMETRY_S2POLYGON_H_
+#endif  // S2GEOMETRY_S2POLYGON_H_

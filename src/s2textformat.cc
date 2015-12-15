@@ -34,7 +34,7 @@ using std::vector;
 namespace s2textformat {
 
 static double ParseDouble(const string& str) {
-  char* end_ptr = NULL;
+  char* end_ptr = nullptr;
   double value = strtod(str.c_str(), &end_ptr);
   CHECK(end_ptr && *end_ptr == 0) << ": str == \"" << str << "\"";
   return value;

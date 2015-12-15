@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2PADDEDCELL_H_
-#define S2_GEOMETRY_S2PADDEDCELL_H_
+#ifndef S2GEOMETRY_S2PADDEDCELL_H_
+#define S2GEOMETRY_S2PADDEDCELL_H_
 
 #include "fpcontractoff.h"
 #include "r2rect.h"
@@ -106,4 +106,4 @@ inline void S2PaddedCell::GetChildIJ(int pos, int* i, int* j) const {
   *j = ij & 1;
 }
 
-#endif  // S2_GEOMETRY_S2PADDEDCELL_H_
+#endif  // S2GEOMETRY_S2PADDEDCELL_H_

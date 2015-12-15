@@ -14,8 +14,8 @@
 //
 
 
-#ifndef UTIL_GTL_FIXEDARRAY_H_
-#define UTIL_GTL_FIXEDARRAY_H_
+#ifndef S2GEOMETRY_UTIL_GTL_FIXEDARRAY_H_
+#define S2GEOMETRY_UTIL_GTL_FIXEDARRAY_H_
 
 #include <stddef.h>
 #include <algorithm>
@@ -232,7 +232,7 @@ class FixedArray {
     template <typename Ignored>
     struct Impl<0, Ignored> {
       static const size_type kSize = 0;
-      Buffer* get() { return NULL; }
+      Buffer* get() { return nullptr; }
       void Annotate(size_t n, bool creating) const {}
     };
 
@@ -334,4 +334,4 @@ class FixedArray {
   DISALLOW_COPY_AND_ASSIGN(FixedArray);
 };
 
-#endif  // UTIL_GTL_FIXEDARRAY_H_
+#endif  // S2GEOMETRY_UTIL_GTL_FIXEDARRAY_H_

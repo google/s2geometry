@@ -29,9 +29,9 @@
 unsigned char Encoder::kEmptyBuffer = 0;
 
 Encoder::Encoder()
-  : orig_(NULL),
-    buf_(NULL),
-    limit_(NULL),
+  : orig_(nullptr),
+    buf_(nullptr),
+    limit_(nullptr),
     underlying_buffer_(&kEmptyBuffer) {
 }
 
@@ -87,7 +87,7 @@ bool Decoder::get_varint32(uint32* v) {
   const char* r = Varint::Parse32WithLimit(
                                    reinterpret_cast<const char*>(buf_),
                                    reinterpret_cast<const char*>(limit_), v);
-  if (r == NULL) { return false; }
+  if (r == nullptr) { return false; }
   buf_ = reinterpret_cast<const unsigned char*>(r);
   return true;
 }
@@ -98,7 +98,7 @@ bool Decoder::get_varint64(uint64* v) {
 
   if (buf_ + Varint::kMax64 <= limit_) {
     const char* r = Varint::Parse64(reinterpret_cast<const char*>(buf_), v);
-    if (r == NULL) {
+    if (r == nullptr) {
       return false;
     } else {
       buf_ = reinterpret_cast<const unsigned char*>(r);

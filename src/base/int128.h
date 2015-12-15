@@ -16,8 +16,8 @@
 // All Rights Reserved.
 //
 
-#ifndef BASE_INT128_H_
-#define BASE_INT128_H_
+#ifndef S2GEOMETRY_BASE_INT128_H_
+#define S2GEOMETRY_BASE_INT128_H_
 
 #include <iosfwd>
 #include "base/integral_types.h"
@@ -359,4 +359,4 @@ inline uint128& uint128::operator--() {
   return *this;
 }
 
-#endif  // BASE_INT128_H_
+#endif  // S2GEOMETRY_BASE_INT128_H_

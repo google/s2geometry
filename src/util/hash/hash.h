@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef UTIL_HASH_HASH_H_
-#define UTIL_HASH_HASH_H_
+#ifndef S2GEOMETRY_UTIL_HASH_HASH_H_
+#define S2GEOMETRY_UTIL_HASH_HASH_H_
 
 #include "base/int128.h"
 #include "base/integral_types.h"
@@ -54,4 +54,4 @@ HASH_NAMESPACE_DECLARATION_END
 // so they don't have to.
 template<class X> struct GoodFastHash;
 
-#endif  // UTIL_HASH_HASH_H_
+#endif  // S2GEOMETRY_UTIL_HASH_HASH_H_

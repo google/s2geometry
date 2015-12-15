@@ -18,8 +18,8 @@
 // S2Error is a simple class consisting of an error code and a human-readable
 // error message.
 
-#ifndef S2_GEOMETRY_S2ERROR_H_
-#define S2_GEOMETRY_S2ERROR_H_
+#ifndef S2GEOMETRY_S2ERROR_H_
+#define S2GEOMETRY_S2ERROR_H_
 
 #include <stdarg.h>
 
@@ -76,4 +76,4 @@ inline std::ostream& operator<<(std::ostream& os, S2Error const& error) {
   return os << error.text();
 }
 
-#endif  // S2_GEOMETRY_S2ERROR_H_
+#endif  // S2GEOMETRY_S2ERROR_H_

@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_PRIORITY_QUEUE_SEQUENCE_H_
-#define S2_GEOMETRY_PRIORITY_QUEUE_SEQUENCE_H_
+#ifndef S2GEOMETRY_PRIORITY_QUEUE_SEQUENCE_H_
+#define S2GEOMETRY_PRIORITY_QUEUE_SEQUENCE_H_
 
 #include <functional>
 #include <queue>
@@ -69,4 +69,4 @@ class priority_queue_sequence
   }
 };
 
-#endif  // S2_GEOMETRY_PRIORITY_QUEUE_SEQUENCE_H_
+#endif  // S2GEOMETRY_PRIORITY_QUEUE_SEQUENCE_H_

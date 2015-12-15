@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2CONVEXHULLQUERY_H_
-#define S2_GEOMETRY_S2CONVEXHULLQUERY_H_
+#ifndef S2GEOMETRY_S2CONVEXHULLQUERY_H_
+#define S2GEOMETRY_S2CONVEXHULLQUERY_H_
 
 #include <vector>
 
@@ -106,4 +106,4 @@ class S2ConvexHullQuery {
   DISALLOW_COPY_AND_ASSIGN(S2ConvexHullQuery);
 };
 
-#endif  // S2_GEOMETRY_S2CONVEXHULLQUERY_H_
+#endif  // S2GEOMETRY_S2CONVEXHULLQUERY_H_

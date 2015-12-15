@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S1ANGLE_H_
-#define S2_GEOMETRY_S1ANGLE_H_
+#ifndef S2GEOMETRY_S1ANGLE_H_
+#define S2GEOMETRY_S1ANGLE_H_
 
 #include <math.h>
 #include <limits>
@@ -256,4 +256,4 @@ inline S1Angle S1Angle::UnsignedE7(uint32 e7) {
 // decimal point, e.g. "17.3745904".
 std::ostream& operator<<(std::ostream& os, S1Angle a);
 
-#endif  // S2_GEOMETRY_S1ANGLE_H_
+#endif  // S2GEOMETRY_S1ANGLE_H_

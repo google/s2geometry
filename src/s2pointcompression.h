@@ -43,8 +43,8 @@
 // an average of 3.8 bytes for each additional vertex, when computed on
 // Google's geographic repository.
 
-#ifndef S2_GEOMETRY_S2POINTCOMPRESSION_H_
-#define S2_GEOMETRY_S2POINTCOMPRESSION_H_
+#ifndef S2GEOMETRY_S2POINTCOMPRESSION_H_
+#define S2GEOMETRY_S2POINTCOMPRESSION_H_
 
 #include "fpcontractoff.h"
 #include "s2.h"
@@ -79,4 +79,4 @@ bool S2DecodePointsCompressed(Decoder* decoder,
                               int level,
                               S2Point* points);
 
-#endif  // S2_GEOMETRY_S2POINTCOMPRESSION_H_
+#endif  // S2GEOMETRY_S2POINTCOMPRESSION_H_

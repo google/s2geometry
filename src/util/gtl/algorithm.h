@@ -19,8 +19,8 @@
 // original STL before it was proposed for standardization.
 //
 
-#ifndef UTIL_GTL_ALGORITHM_H_
-#define UTIL_GTL_ALGORITHM_H_
+#ifndef S2GEOMETRY_UTIL_GTL_ALGORITHM_H_
+#define S2GEOMETRY_UTIL_GTL_ALGORITHM_H_
 
 #include <stddef.h>
 #include <algorithm>
@@ -59,14 +59,14 @@ typename std::iterator_traits<InputIterator>::pointer
 find_or_null(InputIterator first, InputIterator last,
              const EqualityComparable& value) {
   const InputIterator it = std::find(first, last, value);
-  return it != last ? &*it : NULL;
+  return it != last ? &*it : nullptr;
 }
 
 template<typename InputIterator, typename Predicate>
 typename std::iterator_traits<InputIterator>::pointer
 find_if_or_null(InputIterator first, InputIterator last, Predicate pred) {
   const InputIterator it = std::find_if(first, last, pred);
-  return it != last ? &*it : NULL;
+  return it != last ? &*it : nullptr;
 }
 
 // OBSOLETE: Outside PG3, use std::copy_if.
@@ -470,4 +470,4 @@ using __gnu_cxx::is_heap;
 }  // namespace gtl
 }  // namespace util
 
-#endif  // UTIL_GTL_ALGORITHM_H_
+#endif  // S2GEOMETRY_UTIL_GTL_ALGORITHM_H_

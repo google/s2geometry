@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2CELLID_H_
-#define S2_GEOMETRY_S2CELLID_H_
+#ifndef S2GEOMETRY_S2CELLID_H_
+#define S2GEOMETRY_S2CELLID_H_
 
 #include <stddef.h>
 #include <functional>
@@ -348,7 +348,7 @@ class S2CellId {
   // Return the (face, i, j) coordinates for the leaf cell corresponding to
   // this cell id.  Since cells are represented by the Hilbert curve position
   // at the center of the cell, the returned (i,j) for non-leaf cells will be
-  // a leaf cell adjacent to the cell center.  If "orientation" is non-NULL,
+  // a leaf cell adjacent to the cell center.  If "orientation" is non-nullptr,
   // also return the Hilbert curve orientation for the current cell.
   int ToFaceIJOrientation(int* pi, int* pj, int* orientation) const;
 
@@ -443,7 +443,7 @@ inline int S2CellId::GetCenterSiTi(int* psi, int* pti) const {
   // In the code below, the expression ((i ^ (int(id_) >> 2)) & 1) is true
   // if we are in the second case described above.
   int i, j;
-  int face = ToFaceIJOrientation(&i, &j, NULL);
+  int face = ToFaceIJOrientation(&i, &j, nullptr);
   int delta = is_leaf() ? 1 : ((i ^ (static_cast<int>(id_) >> 2)) & 1) ? 2 : 0;
 
   // Note that (2 * {i,j} + delta) will never overflow a 32-bit integer.
@@ -634,4 +634,4 @@ struct S2CellIdHash {
   }
 };
 
-#endif  // S2_GEOMETRY_S2CELLID_H_
+#endif  // S2GEOMETRY_S2CELLID_H_

@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2REGIONUNION_H__
-#define S2_GEOMETRY_S2REGIONUNION_H__
+#ifndef S2GEOMETRY_S2REGIONUNION_H_
+#define S2GEOMETRY_S2REGIONUNION_H_
 
 #include <vector>
 
@@ -50,7 +50,7 @@ class S2RegionUnion : public S2Region {
   void Init(std::vector<S2Region*>* regions);
 
   // Release ownership of the regions of this union, and appends them to
-  // "regions" if non-NULL.  Resets the region to be empty.
+  // "regions" if non-nullptr.  Resets the region to be empty.
   void Release(std::vector<S2Region*>* regions);
 
   // Add the given region to the union.  This method can be called repeatedly
@@ -87,4 +87,4 @@ class S2RegionUnion : public S2Region {
   DISALLOW_COPY_AND_ASSIGN(S2RegionUnion);
 };
 
-#endif  // S2_GEOMETRY_S2REGIONUNION_H__
+#endif  // S2GEOMETRY_S2REGIONUNION_H_

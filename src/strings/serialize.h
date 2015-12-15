@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef STRINGS_SERIALIZE_H_
-#define STRINGS_SERIALIZE_H_
+#ifndef S2GEOMETRY_STRINGS_SERIALIZE_H_
+#define S2GEOMETRY_STRINGS_SERIALIZE_H_
 
 #include <string>
 #include <vector>
@@ -22,4 +22,4 @@
 bool DictionaryParse(std::string const& encoded_str,
                      std::vector<std::pair<std::string, std::string>>* items);
 
-#endif  // STRINGS_SERIALIZE_H_
+#endif  // S2GEOMETRY_STRINGS_SERIALIZE_H_

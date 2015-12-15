@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef BASE_TEMPLATE_UTIL_H_
-#define BASE_TEMPLATE_UTIL_H_
+#ifndef S2GEOMETRY_BASE_TEMPLATE_UTIL_H_
+#define S2GEOMETRY_BASE_TEMPLATE_UTIL_H_
 
 #include <type_traits>
 
@@ -36,4 +36,4 @@ struct identity_ {
 
 }  // namespace base
 
-#endif  // BASE_TEMPLATE_UTIL_H_
+#endif  // S2GEOMETRY_BASE_TEMPLATE_UTIL_H_

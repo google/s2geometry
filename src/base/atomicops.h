@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef BASE_ATOMICOPS_H_
-#define BASE_ATOMICOPS_H_
+#ifndef S2GEOMETRY_BASE_ATOMICOPS_H_
+#define S2GEOMETRY_BASE_ATOMICOPS_H_
 
 
 #include <atomic>
@@ -47,4 +47,4 @@ inline void Release_Store(Atomic32* atomic, int32_t value) {
 }  // namespace subtle
 }  // namespace base
 
-#endif  // BASE_ATOMICOPS_H_
+#endif  // S2GEOMETRY_BASE_ATOMICOPS_H_

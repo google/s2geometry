@@ -22,8 +22,8 @@
 // These functions are for ASCII only. If you need to process UTF8 strings,
 // take a look at files in i18n/utf8.
 
-#ifndef STRINGS_CASE_H_
-#define STRINGS_CASE_H_
+#ifndef S2GEOMETRY_STRINGS_CASE_H_
+#define S2GEOMETRY_STRINGS_CASE_H_
 
 #include <string.h>
 #ifndef _MSC_VER
@@ -53,7 +53,7 @@ struct strcaseeq : public std::binary_function<const char*, const char*, bool> {
   }
 };
 
-// For strcaselt, sorting would put NULL string last.
+// For strcaselt, sorting would put nullptr string last.
 struct strcaselt : public std::binary_function<const char*, const char*, bool> {
   bool operator()(const char* s1, const char* s2) const {
     return (s1 != s2) && (s2 == 0 || (s1 != 0 && strcasecmp(s1, s2) < 0));
@@ -182,4 +182,4 @@ inline string ToUpper(StringPiece s) {
 // ---------------------------------------------------------------------
 void TitlecaseString(string* s, StringPiece delimiters);
 
-#endif  // STRINGS_CASE_H_
+#endif  // S2GEOMETRY_STRINGS_CASE_H_

@@ -13,12 +13,12 @@
 // limitations under the License.
 //
 
-#ifndef BASE_TYPE_TRAITS_H_
-#define BASE_TYPE_TRAITS_H_
+#ifndef S2GEOMETRY_BASE_TYPE_TRAITS_H_
+#define S2GEOMETRY_BASE_TYPE_TRAITS_H_
 
 #include <type_traits>
 
 #define ENFORCE_POD(TypeName) \
     static_assert(std::is_pod<TypeName>::value, #TypeName " must be POD")
 
-#endif  // BASE_TYPE_TRAITS_H_
+#endif  // S2GEOMETRY_BASE_TYPE_TRAITS_H_

@@ -15,25 +15,27 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2CLOSESTEDGEQUERY_H_
-#define S2_GEOMETRY_S2CLOSESTEDGEQUERY_H_
+#ifndef S2GEOMETRY_S2CLOSESTEDGEQUERY_H_
+#define S2GEOMETRY_S2CLOSESTEDGEQUERY_H_
 
-#include <algorithm>
+#include <memory>
 #include <type_traits>
-
+#include <vector>
 #include "util/btree/btree_set.h"  // Like std::set, but faster and smaller.
+#include "fpcontractoff.h"
 #include "priority_queue_sequence.h"
 #include "s1angle.h"
 #include "s1chordangle.h"
-#include "fpcontractoff.h"
 #include "s2.h"
+#include "s2cell.h"
 #include "s2cellid.h"
+#include "s2edgeutil.h"
 #include "s2shapeindex.h"
 #include "util/gtl/inlined_vector.h"
 
 // S2ClosestEdgeQuery is a helper class for finding the closest edge(s) to a
-// given query point.  For example, given a set of polylines, the following
-// code efficiently finds the closest 5 edges to a given query point:
+// given query point or query edge.  For example, given a set of polylines,
+// the following code efficiently finds the closest 5 edges to a query point:
 //
 // void Test(vector<S2Polyline*> const& polylines, S2Point const& target) {
 //   S2ShapeIndex index;
@@ -62,6 +64,13 @@
 // E.g. to find all the edges within 5 kilometers, call
 //
 //   query.set_max_distance(S2Earth::ToAngle(util::units::Kilometers(5)));
+//
+// To find the closest points to a query edge rather than a point, use:
+//
+//   query.FindClosesEdgesToEdge(v0, v1);
+//
+// The implementation is designed to be fast for both small and large sets of
+// edges.
 class S2ClosestEdgeQuery {
  public:
   // Convenience constructor that calls Init().
@@ -116,6 +125,10 @@ class S2ClosestEdgeQuery {
   //
   // REQUIRES: "target" is unit length.
   void FindClosestEdges(S2Point const& target);
+
+  // Find the closest edges to the given edge AB.  Otherwise similar to
+  // FindClosestEdgess().
+  void FindClosestEdgesToEdge(S2Point const& a, S2Point const& b);
 
   // Manually specify whether distances are computed using "brute force"
   // (i.e., by examining every edge) rather than using the S2ShapeIndex.
@@ -177,6 +190,66 @@ class S2ClosestEdgeQuery {
 
  private:
   class QueueEntry;
+
+  void AddInitialRange(S2ShapeIndex::Iterator const& first,
+                       S2ShapeIndex::Iterator const& last);
+
+  // TODO(ericv): Should the Target classes be factored out somewhere so that
+  // they can be shared with the similar classes in S2ClosestPointQuery?
+  class Target {
+   public:
+    virtual ~Target() {}
+    virtual S2Point center() const = 0;
+    virtual S1Angle radius() const = 0;
+    virtual bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
+                                   S1ChordAngle* min_dist) const = 0;
+    virtual S1ChordAngle GetDistance(S2Cell const& cell) const = 0;
+    virtual S2Point GetClosestPointOnEdge(S2Point const& v0,
+                                          S2Point const& v1) const = 0;
+  };
+
+  class PointTarget : public Target {
+   public:
+    explicit PointTarget(S2Point const& point) : point_(point) {}
+    S2Point center() const { return point_; }
+    S1Angle radius() const { return S1Angle::Zero(); }
+    bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
+                           S1ChordAngle* min_dist) const {
+      return S2EdgeUtil::UpdateMinDistance(point_, v0, v1, min_dist);
+    }
+    S1ChordAngle GetDistance(S2Cell const& cell) const {
+      return cell.GetDistance(point_);
+    }
+    S2Point GetClosestPointOnEdge(S2Point const&v0, S2Point const& v1) const {
+      return S2EdgeUtil::GetClosestPoint(point_, v0, v1);
+    }
+   private:
+    S2Point point_;
+  };
+
+  class EdgeTarget : public Target {
+   public:
+    EdgeTarget(S2Point const& a, S2Point const& b) : a_(a), b_(b) {}
+    S2Point center() const { return (a_ + b_).Normalize(); }
+    S1Angle radius() const { return 0.5 * S1Angle(a_, b_); }
+    bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
+                           S1ChordAngle* min_dist) const {
+      return S2EdgeUtil::UpdateEdgePairMinDistance(a_, b_, v0, v1, min_dist);
+    }
+    S1ChordAngle GetDistance(S2Cell const& cell) const {
+      return cell.GetDistanceToEdge(a_, b_);
+    }
+    S2Point GetClosestPointOnEdge(S2Point const& v0, S2Point const& v1) const {
+      return S2EdgeUtil::GetEdgePairClosestPoints(a_, b_, v0, v1).second;
+    }
+   private:
+    S2Point a_, b_;
+  };
+
+  // Using templates rather than virtual functions speeds up the benchmarks
+  // by 15-25% when the brute force algorithm is used (< 150 points).
+
+  void FindClosestEdgesToTarget();
   void FindClosestEdgesBruteForce();
   void FindClosestEdgesOptimized();
   void InitQueue();
@@ -184,15 +257,13 @@ class S2ClosestEdgeQuery {
   void ProcessEdges(QueueEntry const& entry);
   void EnqueueCell(S2CellId id, S2ShapeIndexCell const* index_cell);
   void EnqueueCurrentCell(S2CellId id);
-  void AddInitialRange(S2ShapeIndex::Iterator const& first,
-                       S2ShapeIndex::Iterator const& last);
 
   //////////// Parameters /////////////
 
   int max_edges_;
   S1Angle max_distance_;
   S1Angle max_error_arg_;
-  S2Point target_;
+  std::unique_ptr<const Target> target_;
 
   ////////// Fields that are constant after Init() is called /////////////
 
@@ -275,7 +346,7 @@ class S2ClosestEdgeQuery {
 
     // If "id" belongs to the index, this field stores the corresponding
     // S2ShapeIndexCell.  Otherwise "id" is a proper ancestor of one or more
-    // S2ShapeIndexCells and this field stores NULL.  The purpose of this
+    // S2ShapeIndexCells and this field stores nullptr.  The purpose of this
     // field is to avoid an extra Seek() when the queue entry is processed.
     S2ShapeIndexCell const* index_cell;
 
@@ -363,4 +434,4 @@ inline void S2ClosestEdgeQuery::FindClosestEdge(S2Point const& target) {
   FindClosestEdges(target);
 }
 
-#endif  // S2_GEOMETRY_S2CLOSESTEDGEQUERY_H_
+#endif  // S2GEOMETRY_S2CLOSESTEDGEQUERY_H_

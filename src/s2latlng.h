@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2LATLNG_H__
-#define S2_GEOMETRY_S2LATLNG_H__
+#ifndef S2GEOMETRY_S2LATLNG_H_
+#define S2GEOMETRY_S2LATLNG_H_
 
 #include <math.h>
 #include <iosfwd>
@@ -204,4 +204,4 @@ inline S2LatLng operator*(S2LatLng const& a, double m) {
 
 std::ostream& operator<<(std::ostream& os, S2LatLng const& ll);
 
-#endif  // S2_GEOMETRY_S2LATLNG_H__
+#endif  // S2GEOMETRY_S2LATLNG_H_

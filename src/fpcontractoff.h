@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_FPCONTRACTOFF_H_
-#define S2_GEOMETRY_FPCONTRACTOFF_H_
+#ifndef S2GEOMETRY_FPCONTRACTOFF_H_
+#define S2GEOMETRY_FPCONTRACTOFF_H_
 
 // Turn off the fused multiply-add optimization ("fp-contract").  With
 // fp-contract on, any expression of the form "a * b + c" has two possible
@@ -56,4 +56,4 @@
 #pragma GCC optimize("fp-contract=off")
 #endif
 
-#endif  // S2_GEOMETRY_FPCONTRACTOFF_H_
+#endif  // S2GEOMETRY_FPCONTRACTOFF_H_

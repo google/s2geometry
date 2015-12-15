@@ -39,8 +39,8 @@
 // This is used by other files in //util/hash, but please do not use it
 // for anything else.  Please ask hashing@ if you want to break this rule.
 
-#ifndef UTIL_HASH_FARMHASH_H_
-#define UTIL_HASH_FARMHASH_H_
+#ifndef S2GEOMETRY_UTIL_HASH_FARMHASH_H_
+#define S2GEOMETRY_UTIL_HASH_FARMHASH_H_
 
 #include "base/port.h"
 #include "base/int128.h"
@@ -1025,7 +1025,7 @@ namespace farmhashte {
 
 inline uint64_t Hash64(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
-  return s == NULL ? 0 : len;
+  return s == nullptr ? 0 : len;
 }
 
 inline uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
@@ -1257,7 +1257,7 @@ namespace farmhashnt {
 
 inline uint32_t Hash32(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
-  return s == NULL ? 0 : len;
+  return s == nullptr ? 0 : len;
 }
 
 inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
@@ -1396,7 +1396,7 @@ namespace farmhashsu {
 
 inline uint32_t Hash32(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
-  return s == NULL ? 0 : len;
+  return s == nullptr ? 0 : len;
 }
 
 inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
@@ -1616,7 +1616,7 @@ namespace farmhashsa {
 
 inline uint32_t Hash32(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
-  return s == NULL ? 0 : len;
+  return s == nullptr ? 0 : len;
 }
 
 inline uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
@@ -12109,4 +12109,4 @@ int main(int argc, char** argv) {
 
 #endif  // FARMHASHSELFTEST
 
-#endif  // UTIL_HASH_FARMHASH_H_
+#endif  // S2GEOMETRY_UTIL_HASH_FARMHASH_H_
