@@ -135,7 +135,7 @@ S2Polygon* S2Polygon::Clone() const {
 }
 
 void S2Polygon::Release(vector<S2Loop*>* loops) {
-  if (loops != NULL) {
+  if (loops != nullptr) {
     loops->insert(loops->end(), loops_.begin(), loops_.end());
   }
   // Reset the polygon to be empty.
@@ -302,11 +302,11 @@ void S2Polygon::InitNested(vector<S2Loop*>* loops) {
   }
   LoopMap loop_map;
   for (int i = 0; i < num_loops(); ++i) {
-    InsertLoop(loop(i), NULL, &loop_map);
+    InsertLoop(loop(i), nullptr, &loop_map);
   }
   // Reorder the loops in depth-first traversal order.
   loops_.clear();
-  InitLoop(NULL, -1, &loop_map);
+  InitLoop(nullptr, -1, &loop_map);
 
   // Compute has_holes_, num_vertices_, bound_, subregion_bound_.
   InitLoopProperties();
@@ -827,7 +827,7 @@ bool S2Polygon::Contains(S2ShapeIndex::Iterator const& it,
 
 void S2Polygon::Encode(Encoder* const encoder) const {
   if (num_vertices_ == 0) {
-    EncodeCompressed(encoder, NULL, S2::kMaxCellLevel);
+    EncodeCompressed(encoder, nullptr, S2::kMaxCellLevel);
     return;
   }
   // Converts all the polygon vertices to S2XYZFaceSiTi format.
@@ -1169,7 +1169,7 @@ void S2Polygon::InitToIntersectionSloppy(S2Polygon const* a, S2Polygon const* b,
   S2PolygonBuilder builder(options);
   ClipBoundary(a, false, b, false, true, &builder);
   ClipBoundary(b, false, a, false, false, &builder);
-  if (!builder.AssemblePolygon(this, NULL)) {
+  if (!builder.AssemblePolygon(this, nullptr)) {
     LOG(DFATAL) << "Bad directed edges in InitToIntersection";
   }
   // If the result had a non-empty boundary then we are done.  Unfortunately,
@@ -1231,7 +1231,7 @@ void S2Polygon::InitToUnionSloppy(S2Polygon const* a, S2Polygon const* b,
   S2PolygonBuilder builder(options);
   ClipBoundary(a, false, b, true, true, &builder);
   ClipBoundary(b, false, a, true, false, &builder);
-  if (!builder.AssemblePolygon(this, NULL)) {
+  if (!builder.AssemblePolygon(this, nullptr)) {
     LOG(DFATAL) << "Bad directed edges";
   }
   if (num_loops() == 0) {
@@ -1266,7 +1266,7 @@ void S2Polygon::InitToDifferenceSloppy(S2Polygon const* a, S2Polygon const* b,
   S2PolygonBuilder builder(options);
   ClipBoundary(a, false, b, true, true, &builder);
   ClipBoundary(b, true, a, false, false, &builder);
-  if (!builder.AssemblePolygon(this, NULL)) {
+  if (!builder.AssemblePolygon(this, nullptr)) {
     LOG(DFATAL) << "Bad directed edges in InitToDifference";
   }
   if (num_loops() == 0) {
@@ -1334,7 +1334,7 @@ class CellBoundaryVertexFilter : public S2VertexFilter {
 // Takes a loop and simplifies it.  This may return a self-intersecting
 // polyline.  Always keeps the first vertex from the loop, as well as the
 // vertices for which should_keep returns true. This function does not take
-// ownership of should_keep, which can be NULL.
+// ownership of should_keep, which can be nullptr.
 vector<S2Point>* SimplifyLoopAsPolyline(S2Loop const* loop, S1Angle tolerance,
                                         const S2VertexFilter* should_keep) {
   vector<S2Point> points(loop->num_vertices() + 1);
@@ -1345,8 +1345,8 @@ vector<S2Point>* SimplifyLoopAsPolyline(S2Loop const* loop, S1Angle tolerance,
   S2Polyline line(points);
   vector<int> indices;
   line.SubsampleVertices(tolerance, &indices);
-  if (indices.size() <= 2) return NULL;
-  if (should_keep != NULL) {
+  if (indices.size() <= 2) return nullptr;
+  if (should_keep != nullptr) {
     vector<int> to_keep;
     // Remember the indices of the vertices that we must keep.
     for (int i = 0; i <= loop->num_vertices(); ++i) {
@@ -1434,7 +1434,7 @@ class PointVectorLoopShape : public S2Shape {
 //   2. Break any edge in pieces such that no piece intersects any
 //      other.
 //   3. Use the polygon builder to regenerate the full polygon.
-//   4. If should_keep is not NULL, the vertices for which it returns true are
+//   4. If should_keep is not nullptr, the vertices for which it returns true are
 //      kept in the simplified polygon.
 void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
                                          S1Angle tolerance,
@@ -1443,7 +1443,7 @@ void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
   S2PolygonBuilderOptions builder_options =
       S2PolygonBuilderOptions::UNDIRECTED_XOR();
   builder_options.set_validate(false);
-  if (should_keep != NULL) {
+  if (should_keep != nullptr) {
     // If there is a vertex filter, then we want to do as little vertex
     // merging as possible so that the vertices we want to keep don't move.
     // But on the other hand, when we break intersecting edges into pieces
@@ -1469,13 +1469,13 @@ void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
   for (int i = 0; i < a->num_loops(); ++i) {
     vector<S2Point>* simpler = SimplifyLoopAsPolyline(a->loop(i), tolerance,
         should_keep);
-    if (NULL == simpler) continue;
+    if (nullptr == simpler) continue;
     simplified_loops.push_back(simpler);
     index.Add(new PointVectorLoopShape(simpler));
   }
   if (index.num_shape_ids() > 0) {
     BreakEdgesAndAddToBuilder(index, &builder);
-    if (!builder.AssemblePolygon(this, NULL)) {
+    if (!builder.AssemblePolygon(this, nullptr)) {
       LOG(DFATAL) << "Bad edges in InitToSimplified.";
     }
     // If there are no loops, check whether the result should be the full
@@ -1492,7 +1492,7 @@ void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
 
 void S2Polygon::InitToSimplified(S2Polygon const* a, S1Angle tolerance,
                                  bool snap_to_cell_centers) {
-  InitToSimplifiedInternal(a, tolerance, snap_to_cell_centers, NULL);
+  InitToSimplifiedInternal(a, tolerance, snap_to_cell_centers, nullptr);
 }
 
 void S2Polygon::InitToSimplifiedInCell(S2Polygon const* a, S2Cell const& cell,
@@ -1516,7 +1516,7 @@ void S2Polygon::InitToSnapped(S2Polygon const* a, int snap_level) {
 
   S2PolygonBuilder polygon_builder(options);
   polygon_builder.AddPolygon(a);
-  if (!polygon_builder.AssemblePolygon(this, NULL)) {
+  if (!polygon_builder.AssemblePolygon(this, nullptr)) {
     LOG(DFATAL) << "AssemblePolygon failed in BuildSnappedPolygon";
   }
   // If there are no loops, check whether the result should be the full
@@ -1672,7 +1672,7 @@ void S2Polygon::InitToCellUnionBorder(S2CellUnion const& cells) {
     S2Loop cell_loop(S2Cell(cells.cell_id(i)));
     builder.AddLoop(&cell_loop);
   }
-  if (!builder.AssemblePolygon(this, NULL)) {
+  if (!builder.AssemblePolygon(this, nullptr)) {
     LOG(DFATAL) << "AssemblePolygon failed in InitToCellUnionBorder";
   }
   // If there are no loops, check whether the result should be the full
@@ -1694,7 +1694,7 @@ bool S2Polygon::IsNormalized() const {
   // children B, C, D, and the following pairs are connected: AB, BC, CD, DA.
   // Then the polygon is not normalized.
   set<S2Point> vertices;
-  S2Loop const* last_parent = NULL;
+  S2Loop const* last_parent = nullptr;
   for (int i = 0; i < num_loops(); ++i) {
     S2Loop const* child = loop(i);
     if (child->depth() == 0) continue;
@@ -1835,7 +1835,7 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
 }
 
 S2Polygon::Shape::Shape(S2Polygon const* p)
-    : polygon_(p), num_edges_(0), cumulative_edges_(NULL) {
+    : polygon_(p), num_edges_(0), cumulative_edges_(nullptr) {
   if (p->is_full()) return;
   int const kMaxLinearSearchLoops = 12;  // From benchmarks.
   int num_loops = p->num_loops();

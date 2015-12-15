@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2TESTING_H__
-#define S2_GEOMETRY_S2TESTING_H__
+#ifndef S2GEOMETRY_S2TESTING_H_
+#define S2GEOMETRY_S2TESTING_H_
 
 #include <string>
 #include <vector>
@@ -269,4 +269,4 @@ class S2Testing::Random {
   DISALLOW_COPY_AND_ASSIGN(Random);
 };
 
-#endif  // S2_GEOMETRY_S2TESTING_H__
+#endif  // S2GEOMETRY_S2TESTING_H_

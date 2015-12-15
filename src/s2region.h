@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2REGION_H_
-#define S2_GEOMETRY_S2REGION_H_
+#ifndef S2GEOMETRY_S2REGION_H_
+#define S2GEOMETRY_S2REGION_H_
 
 #include "fpcontractoff.h"
 #include "s2.h"
@@ -118,4 +118,4 @@ class S2Region {
   // subtypes may relax this restriction.
 };
 
-#endif  // S2_GEOMETRY_S2REGION_H_
+#endif  // S2GEOMETRY_S2REGION_H_

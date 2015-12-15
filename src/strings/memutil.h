@@ -60,8 +60,8 @@
 // --                      MEMCASEIS
 // strcount                MEMCOUNT       (strcount is from strutil.h)
 
-#ifndef STRINGS_MEMUTIL_H_
-#define STRINGS_MEMUTIL_H_
+#ifndef S2GEOMETRY_STRINGS_MEMUTIL_H_
+#define S2GEOMETRY_STRINGS_MEMUTIL_H_
 
 #include <stddef.h>
 #include <string.h>      // to get the POSIX mem*() routines
@@ -119,13 +119,13 @@ const char* memmatch(const char* phaystack, size_t haylen,
   ( (((len) >= strliterallen(prefix))                       \
      && memcmp(str, prefix, strliterallen(prefix)) == 0)    \
     ? str + strliterallen(prefix)                           \
-    : NULL )
+    : nullptr )
 
 #define memcaseprefix(str, len, prefix)                             \
   ( (((len) >= strliterallen(prefix))                               \
      && memcasecmp(str, prefix, strliterallen(prefix)) == 0)        \
     ? str + strliterallen(prefix)                                   \
-    : NULL )
+    : nullptr )
 
 // Must use a string literal for suffix.
 #define memsuffix(str, len, suffix)                         \
@@ -133,14 +133,14 @@ const char* memmatch(const char* phaystack, size_t haylen,
      && memcmp(str + (len) - strliterallen(suffix), suffix, \
                strliterallen(suffix)) == 0)                 \
     ? str + (len) - strliterallen(suffix)                   \
-    : NULL )
+    : nullptr )
 
 #define memcasesuffix(str, len, suffix)                             \
   ( (((len) >= strliterallen(suffix))                               \
      && memcasecmp(str + (len) - strliterallen(suffix), suffix,     \
                strliterallen(suffix)) == 0)                         \
     ? str + (len) - strliterallen(suffix)                           \
-    : NULL )
+    : nullptr )
 
 #define memis(str, len, literal)                               \
   ( (((len) == strliterallen(literal))                         \
@@ -150,4 +150,4 @@ const char* memmatch(const char* phaystack, size_t haylen,
   ( (((len) == strliterallen(literal))                         \
      && memcasecmp(str, literal, strliterallen(literal)) == 0) )
 
-#endif  // STRINGS_MEMUTIL_H_
+#endif  // S2GEOMETRY_STRINGS_MEMUTIL_H_

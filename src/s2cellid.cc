@@ -326,7 +326,7 @@ int S2CellId::ToFaceIJOrientation(int* pi, int* pj, int* orientation) const {
   *pi = i;
   *pj = j;
 
-  if (orientation != NULL) {
+  if (orientation != nullptr) {
     // The position of a non-leaf cell at level "n" consists of a prefix of
     // 2*n bits that identifies the cell, followed by a suffix of
     // 2*(kMaxLevel-n)+1 bits of the form 10*.  If n==kMaxLevel, the suffix is
@@ -386,7 +386,7 @@ R2Rect S2CellId::GetBoundST() const {
 
 R2Rect S2CellId::GetBoundUV() const {
   int ij[2];
-  ToFaceIJOrientation(&ij[0], &ij[1], NULL);
+  ToFaceIJOrientation(&ij[0], &ij[1], nullptr);
   return IJLevelToBoundUV(ij, level());
 }
 
@@ -433,7 +433,7 @@ void S2CellId::GetEdgeNeighbors(S2CellId neighbors[4]) const {
   int i, j;
   int level = this->level();
   int size = GetSizeIJ(level);
-  int face = ToFaceIJOrientation(&i, &j, NULL);
+  int face = ToFaceIJOrientation(&i, &j, nullptr);
 
   // Edges 0, 1, 2, 3 are in the down, right, up, left directions.
   neighbors[0] = FromFaceIJSame(face, i, j - size, j - size >= 0)
@@ -452,7 +452,7 @@ void S2CellId::AppendVertexNeighbors(int level,
   // determine which vertex this cell is closest to.
   DCHECK_LT(level, this->level());
   int i, j;
-  int face = ToFaceIJOrientation(&i, &j, NULL);
+  int face = ToFaceIJOrientation(&i, &j, nullptr);
 
   // Determine the i- and j-offsets to the closest neighboring cell in each
   // direction.  This involves looking at the next bit of "i" and "j" to
@@ -490,7 +490,7 @@ void S2CellId::AppendVertexNeighbors(int level,
 void S2CellId::AppendAllNeighbors(int nbr_level,
                                   vector<S2CellId>* output) const {
   int i, j;
-  int face = ToFaceIJOrientation(&i, &j, NULL);
+  int face = ToFaceIJOrientation(&i, &j, nullptr);
 
   // Find the coordinates of the lower left-hand leaf cell.  We need to
   // normalize (i,j) to a known position within the cell because nbr_level

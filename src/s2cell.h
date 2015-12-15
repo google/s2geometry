@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2CELL_H_
-#define S2_GEOMETRY_S2CELL_H_
+#ifndef S2GEOMETRY_S2CELL_H_
+#define S2GEOMETRY_S2CELL_H_
 
 #include "base/integral_types.h"
 #include <glog/logging.h>
@@ -199,4 +199,4 @@ inline double S2Cell::GetSizeST() const {
   return S2CellId::GetSizeST(level());
 }
 
-#endif  // S2_GEOMETRY_S2CELL_H_
+#endif  // S2GEOMETRY_S2CELL_H_

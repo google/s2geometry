@@ -54,8 +54,8 @@
 // The quality of the hash is much better than FP64 (Jenkins' hash),
 // with less collisions found even in practical applications.
 
-#ifndef UTIL_HASH_MURMUR_H_
-#define UTIL_HASH_MURMUR_H_
+#ifndef S2GEOMETRY_UTIL_HASH_MURMUR_H_
+#define S2GEOMETRY_UTIL_HASH_MURMUR_H_
 
 #include <stddef.h>
 #include <stdlib.h>  // for size_t.
@@ -105,4 +105,4 @@ class MurmurCat {
 
 }  // namespace util_hash
 
-#endif  // UTIL_HASH_MURMUR_H_
+#endif  // S2GEOMETRY_UTIL_HASH_MURMUR_H_

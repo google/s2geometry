@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef S2_GEOMETRY_S2TEXTFORMAT_H_
-#define S2_GEOMETRY_S2TEXTFORMAT_H_
+#ifndef S2GEOMETRY_S2TEXTFORMAT_H_
+#define S2GEOMETRY_S2TEXTFORMAT_H_
 
 // s2textformat contains a collection of functions for converting
 // geometry to and from a human-readable format.  It is mainly
@@ -96,4 +96,4 @@ string ToString(std::vector<S2LatLng> const& points);
 
 }  // namespace s2textformat
 
-#endif  // S2_GEOMETRY_S2TEXTFORMAT_H_
+#endif  // S2GEOMETRY_S2TEXTFORMAT_H_

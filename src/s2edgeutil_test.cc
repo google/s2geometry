@@ -900,6 +900,103 @@ TEST(S2EdgeUtil, GetIntersectionInvariants) {
   }
 }
 
+// Given two edges a0a1 and b0b1, check that the minimum distance between them
+// is "distance_radians", and that GetEdgePairClosestPoints() returns
+// "expected_a" and "expected_b" as the points that achieve this distance.
+// S2Point(0, 0, 0) may be passed for "expected_a" or "expected_b" to indicate
+// that both endpoints of the corresponding edge are equally distance, and
+// therefore either one might be returned.
+//
+// Parameters are passed by value so that this function can normalize them.
+void CheckEdgePairDistance(S2Point a0, S2Point a1, S2Point b0, S2Point b1,
+                           double distance_radians,
+                           S2Point expected_a, S2Point expected_b) {
+  a0 = a0.Normalize();
+  a1 = a1.Normalize();
+  b0 = b0.Normalize();
+  b1 = b1.Normalize();
+  expected_a = expected_a.Normalize();
+  expected_b = expected_b.Normalize();
+  auto const& closest = S2EdgeUtil::GetEdgePairClosestPoints(a0, a1, b0, b1);
+  S2Point const& actual_a = closest.first;
+  S2Point const& actual_b = closest.second;
+  if (expected_a == S2Point(0, 0, 0)) {
+    // This special value says that the result should be a0 or a1.
+    EXPECT_TRUE(actual_a == a0 || actual_a == a1);
+  } else {
+    EXPECT_TRUE(S2::ApproxEquals(expected_a, actual_a));
+  }
+  if (expected_b == S2Point(0, 0, 0)) {
+    // This special value says that the result should be b0 or b1.
+    EXPECT_TRUE(actual_b == b0 || actual_b == b1);
+  } else {
+    EXPECT_TRUE(S2::ApproxEquals(expected_b, actual_b));
+  }
+  S1ChordAngle min_distance = S1ChordAngle::Zero();
+  EXPECT_FALSE(S2EdgeUtil::UpdateEdgePairMinDistance(a0, a1, b0, b1,
+                                                     &min_distance));
+  min_distance = S1ChordAngle::Infinity();
+  EXPECT_TRUE(S2EdgeUtil::UpdateEdgePairMinDistance(a0, a1, b0, b1,
+                                                    &min_distance));
+  EXPECT_NEAR(distance_radians, min_distance.ToAngle().radians(), 1e-15);
+}
+
+TEST(S2EdgeUtil, EdgePairDistance) {
+  // One edge is degenerate.
+  CheckEdgePairDistance(S2Point(1, 0, 1), S2Point(1, 0, 1),
+                        S2Point(1, -1, 0), S2Point(1, 1, 0),
+                        M_PI_4, S2Point(1, 0, 1), S2Point(1, 0, 0));
+  CheckEdgePairDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
+                        S2Point(1, 0, 1), S2Point(1, 0, 1),
+                        M_PI_4, S2Point(1, 0, 0), S2Point(1, 0, 1));
+
+  // Both edges are degenerate.
+  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                        S2Point(0, 1, 0), S2Point(0, 1, 0),
+                        M_PI_2, S2Point(1, 0, 0), S2Point(0, 1, 0));
+
+  // Two identical edges.
+  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
+                        S2Point(1, 0, 0), S2Point(0, 1, 0),
+                        0, S2Point(0, 0, 0), S2Point(0, 0, 0));
+
+  // Both edges are degenerate and identical.
+  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                        S2Point(1, 0, 0), S2Point(1, 0, 0),
+                        0, S2Point(1, 0, 0), S2Point(1, 0, 0));
+
+  // Edges that share exactly one vertex (all 4 possibilities).
+  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
+                        S2Point(0, 1, 0), S2Point(0, 1, 1),
+                        0, S2Point(0, 1, 0), S2Point(0, 1, 0));
+  CheckEdgePairDistance(S2Point(0, 1, 0), S2Point(1, 0, 0),
+                        S2Point(0, 1, 0), S2Point(0, 1, 1),
+                        0, S2Point(0, 1, 0), S2Point(0, 1, 0));
+  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
+                        S2Point(0, 1, 1), S2Point(0, 1, 0),
+                        0, S2Point(0, 1, 0), S2Point(0, 1, 0));
+  CheckEdgePairDistance(S2Point(0, 1, 0), S2Point(1, 0, 0),
+                        S2Point(0, 1, 1), S2Point(0, 1, 0),
+                        0, S2Point(0, 1, 0), S2Point(0, 1, 0));
+
+  // Two edges whose interiors cross.
+  CheckEdgePairDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
+                        S2Point(1, 0, -1), S2Point(1, 0, 1),
+                        0, S2Point(1, 0, 0), S2Point(1, 0, 0));
+
+  // The closest distance occurs between two edge endpoints, but more than one
+  // endpoint pair is equally distant.
+  CheckEdgePairDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
+                        S2Point(-1, 0, 0), S2Point(-1, 0, 1),
+                        acos(-0.5), S2Point(0, 0, 0), S2Point(-1, 0, 1));
+  CheckEdgePairDistance(S2Point(-1, 0, 0), S2Point(-1, 0, 1),
+                        S2Point(1, -1, 0), S2Point(1, 1, 0),
+                        acos(-0.5), S2Point(-1, 0, 1), S2Point(0, 0, 0));
+  CheckEdgePairDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
+                        S2Point(-1, 0, -1), S2Point(-1, 0, 1),
+                        acos(-0.5), S2Point(0, 0, 0), S2Point(0, 0, 0));
+}
+
 bool IsEdgeBNearEdgeA(string const& a_str, const string& b_str,
                       double max_error_degrees) {
   unique_ptr<S2Polyline> a(s2textformat::MakePolyline(a_str));

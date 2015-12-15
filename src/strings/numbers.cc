@@ -26,7 +26,7 @@ int HexDigitsPrefix(const char* buf, int num_digits) {
 }
 
 uint64 ParseLeadingHex64Value(const char *str, uint64 deflt) {
-  char *error = NULL;
+  char *error = nullptr;
   const uint64 value = strtou64(str, &error, 16);
   return (error == str) ? deflt : value;
 }

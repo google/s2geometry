@@ -21,8 +21,8 @@
 // any changes here, make sure that you're not breaking any platforms.
 //
 
-#ifndef BASE_MACROS_H_
-#define BASE_MACROS_H_
+#ifndef S2GEOMETRY_BASE_MACROS_H_
+#define S2GEOMETRY_BASE_MACROS_H_
 
 #include <stddef.h>         // For size_t
 #include "base/port.h"
@@ -357,4 +357,4 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 # endif
 #endif
 
-#endif  // BASE_MACROS_H_
+#endif  // S2GEOMETRY_BASE_MACROS_H_

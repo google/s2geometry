@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2POINTREGION_H__
-#define S2_GEOMETRY_S2POINTREGION_H__
+#ifndef S2GEOMETRY_S2POINTREGION_H_
+#define S2GEOMETRY_S2POINTREGION_H_
 
 #include <glog/logging.h>
 #include "base/macros.h"
@@ -67,4 +67,4 @@ inline S2PointRegion::S2PointRegion(S2Point const& point) : point_(point) {
   DCHECK(S2::IsUnitLength(point));
 }
 
-#endif  // S2_GEOMETRY_S2POINTREGION_H__
+#endif  // S2GEOMETRY_S2POINTREGION_H_

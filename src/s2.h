@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2_H_
-#define S2_GEOMETRY_S2_H_
+#ifndef S2GEOMETRY_S2_H_
+#define S2GEOMETRY_S2_H_
 
 #include <math.h>
 #include <stddef.h>
@@ -1011,4 +1011,4 @@ int S2::Metric<dim>::GetClosestLevel(double value) const {
 
 #undef S2_CONSTEXPR
 
-#endif  // S2_GEOMETRY_S2_H_
+#endif  // S2GEOMETRY_S2_H_

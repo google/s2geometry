@@ -19,8 +19,8 @@
 // This class is useful for non-character purposes as well.
 //
 
-#ifndef UTIL_GTL_CHARMAP_H_
-#define UTIL_GTL_CHARMAP_H_
+#ifndef S2GEOMETRY_UTIL_GTL_CHARMAP_H_
+#define S2GEOMETRY_UTIL_GTL_CHARMAP_H_
 
 #include <string.h>
 
@@ -195,4 +195,4 @@ inline UTIL_GTL_CHARMAP_CONSTEXPR_ Charmap Punct() {
 }  // namespace gtl
 }  // namespace util
 #undef UTIL_GTL_CHARMAP_CONSTEXPR_
-#endif  // UTIL_GTL_CHARMAP_H_
+#endif  // S2GEOMETRY_UTIL_GTL_CHARMAP_H_

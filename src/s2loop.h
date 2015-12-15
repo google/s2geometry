@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2LOOP_H__
-#define S2_GEOMETRY_S2LOOP_H__
+#ifndef S2GEOMETRY_S2LOOP_H_
+#define S2GEOMETRY_S2LOOP_H_
 
 #include <math.h>
 #include <stddef.h>
@@ -153,7 +153,7 @@ class S2Loop : public S2Region {
   // Returns true if this is *not* a valid loop and sets "error"
   // appropriately.  Otherwise returns false and leaves "error" unchanged.
   //
-  // REQUIRES: error != NULL
+  // REQUIRES: error != nullptr
   bool FindValidationError(S2Error* error) const;
 
   int num_vertices() const { return num_vertices_; }
@@ -739,4 +739,4 @@ T S2Loop::GetSurfaceIntegral(T f_tri(S2Point const&, S2Point const&,
   return sum;
 }
 
-#endif  // S2_GEOMETRY_S2LOOP_H__
+#endif  // S2GEOMETRY_S2LOOP_H_

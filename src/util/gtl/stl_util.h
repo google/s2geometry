@@ -22,8 +22,8 @@
 // have a more Google-friendly API and are easier to use.
 //
 
-#ifndef UTIL_GTL_STL_UTIL_H_
-#define UTIL_GTL_STL_UTIL_H_
+#ifndef S2GEOMETRY_UTIL_GTL_STL_UTIL_H_
+#define S2GEOMETRY_UTIL_GTL_STL_UTIL_H_
 
 #include <stddef.h>
 #include <string.h>
@@ -269,7 +269,7 @@ inline void STLAppendToString(string* str, const char* ptr, size_t n) {
   memcpy(&*str->begin() + old_size, ptr, n);
 }
 
-// Returns the T* array for the given vector, or NULL if the vector was empty.
+// Returns the T* array for the given vector, or nullptr if the vector was empty.
 //
 // Note: If you know the array will never be empty, you can use &*v.begin()
 // directly, but that is may dump core if v is empty. This function is the most
@@ -282,7 +282,7 @@ inline T* vector_as_array(std::vector<T, Allocator>* v) {
 # if defined NDEBUG && !defined _GLIBCXX_DEBUG
   return &*v->begin();
 # else
-  return v->empty() ? NULL : &*v->begin();
+  return v->empty() ? nullptr : &*v->begin();
 # endif
 }
 // vector_as_array overload for const vector<>.
@@ -291,12 +291,12 @@ inline const T* vector_as_array(const std::vector<T, Allocator>* v) {
 # if defined NDEBUG && !defined _GLIBCXX_DEBUG
   return &*v->begin();
 # else
-  return v->empty() ? NULL : &*v->begin();
+  return v->empty() ? nullptr : &*v->begin();
 # endif
 }
 
 // Returns a mutable char* pointing to a string's internal buffer, which may not
-// be null-terminated. Returns NULL for an empty string. If not non-null,
+// be null-terminated. Returns nullptr for an empty string. If not non-null,
 // writing through this pointer will modify the string.
 //
 // string_as_array(&str)[i] is valid for 0 <= i < str.size() until the
@@ -311,7 +311,7 @@ inline const T* vector_as_array(const std::vector<T, Allocator>* v) {
 // implementations.
 inline char* string_as_array(string* str) {
   // DO NOT USE const_cast<char*>(str->data())! See the unittest for why.
-  return str->empty() ? NULL : &*str->begin();
+  return str->empty() ? nullptr : &*str->begin();
 }
 
 // Tests two hash maps/sets for equality. This exists because operator== in the
@@ -416,7 +416,7 @@ void STLDeleteContainerPairSecondPointers(ForwardIterator begin,
 // function is suitable for use with a vector, set, hash_set, or any other STL
 // container which defines sensible begin(), end(), and clear() methods.
 //
-// If container is NULL, this function is a no-op.
+// If container is nullptr, this function is a no-op.
 //
 // As an alternative to calling STLDeleteElements() directly, consider
 // ElementDeleter (defined below), which ensures that your container's elements
@@ -430,7 +430,7 @@ void STLDeleteElements(T* container) {
 
 // Given an STL container consisting of (key, value) pairs, STLDeleteValues
 // deletes all the "value" components and clears the container. Does nothing in
-// the case it's given a NULL pointer.
+// the case it's given a nullptr pointer.
 template<typename T>
 void STLDeleteValues(T* v) {
   if (!v) return;
@@ -580,7 +580,7 @@ class STLValueDeleter {
   STLContainer* container_ptr_;
 };
 
-// Sets the referenced pointer to NULL and returns its original value. This can
+// Sets the referenced pointer to nullptr and returns its original value. This can
 // be a convenient way to remove a pointer from a container to avoid the
 // eventual deletion by an ElementDeleter.
 //
@@ -589,13 +589,13 @@ class STLValueDeleter {
 //   vector<Foo*> v{new Foo, new Foo, new Foo};
 //   ElementDeleter d(&v);
 //   Foo* safe = release_ptr(&v[1]);
-//   // v[1] is now NULL and the Foo it previously pointed to is now
+//   // v[1] is now nullptr and the Foo it previously pointed to is now
 //   // stored in "safe"
 template<typename T> T* release_ptr(T** ptr) MUST_USE_RESULT;
 template<typename T> T* release_ptr(T** ptr) {
   assert(ptr);
   T* tmp = *ptr;
-  *ptr = NULL;
+  *ptr = nullptr;
   return tmp;
 }
 
@@ -971,7 +971,7 @@ class STLCountingAllocator : public Alloc {
   typedef typename Alloc::pointer pointer;
   typedef typename Alloc::size_type size_type;
 
-  STLCountingAllocator() : bytes_used_(NULL) { }
+  STLCountingAllocator() : bytes_used_(nullptr) { }
   explicit STLCountingAllocator(int64* b) : bytes_used_(b) {}
 
   // Constructor used for rebinding
@@ -982,14 +982,14 @@ class STLCountingAllocator : public Alloc {
   }
 
   pointer allocate(size_type n, std::allocator<void>::const_pointer hint = 0) {
-    assert(bytes_used_ != NULL);
+    assert(bytes_used_ != nullptr);
     *bytes_used_ += n * sizeof(T);
     return Alloc::allocate(n, hint);
   }
 
   void deallocate(pointer p, size_type n) {
     Alloc::deallocate(p, n);
-    assert(bytes_used_ != NULL);
+    assert(bytes_used_ != nullptr);
     *bytes_used_ -= n * sizeof(T);
   }
 
@@ -1010,7 +1010,7 @@ class STLCountingAllocator : public Alloc {
 template<typename A>
 class STLCountingAllocator<void, A> : public A {
  public:
-  STLCountingAllocator() : bytes_used_(NULL) {}
+  STLCountingAllocator() : bytes_used_(nullptr) {}
   explicit STLCountingAllocator(int64* b) : bytes_used_(b) {}
 
   // Constructor used for rebinding
@@ -1043,4 +1043,4 @@ bool operator!=(const STLCountingAllocator<T, A>& a,
   return !(a == b);
 }
 
-#endif  // UTIL_GTL_STL_UTIL_H_
+#endif  // S2GEOMETRY_UTIL_GTL_STL_UTIL_H_

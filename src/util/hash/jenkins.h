@@ -21,8 +21,8 @@
 // consistent hashing libraries. New code which does not explicitly desire this
 // behavior should use the generic hashing routines in hash.h.
 
-#ifndef UTIL_HASH_JENKINS_H_
-#define UTIL_HASH_JENKINS_H_
+#ifndef S2GEOMETRY_UTIL_HASH_JENKINS_H_
+#define S2GEOMETRY_UTIL_HASH_JENKINS_H_
 
 #include <stdlib.h>
 #include "base/integral_types.h"
@@ -52,4 +52,4 @@ const uint16 kIllegalHash16 = static_cast<uint16>(0xffffU);
 uint32 Hash32StringWithSeed(const char *s, size_t len, uint32 c);
 uint64 Hash64StringWithSeed(const char *s, size_t len, uint64 c);
 
-#endif  // UTIL_HASH_JENKINS_H_
+#endif  // S2GEOMETRY_UTIL_HASH_JENKINS_H_

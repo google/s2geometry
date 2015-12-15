@@ -400,7 +400,7 @@ int ExactFloat::GetDecimalDigits(int max_digits, string* digits) const {
   }
   // Now convert "bn" to a decimal string.
   char* all_digits = BN_bn2dec(bn);
-  DCHECK(all_digits != NULL);
+  DCHECK(all_digits != nullptr);
   BN_free(bn);
   // Check whether we have too many digits and round if necessary.
   int num_digits = strlen(all_digits);
@@ -414,7 +414,7 @@ int ExactFloat::GetDecimalDigits(int max_digits, string* digits) const {
     // up only if the lowest kept digit is odd.
     if (all_digits[max_digits] >= '5' &&
         ((all_digits[max_digits-1] & 1) == 1 ||
-         strpbrk(all_digits + max_digits + 1, "123456789") != NULL)) {
+         strpbrk(all_digits + max_digits + 1, "123456789") != nullptr)) {
       // This can increase the number of digits by 1, but in that case at
       // least one trailing zero will be stripped off below.
       IncrementDecimalDigits(digits);

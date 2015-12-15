@@ -18,8 +18,8 @@
 // Collected here for convenience
 //
 
-#ifndef STRINGS_STRINGPIECE_UTILS_H_
-#define STRINGS_STRINGPIECE_UTILS_H_
+#ifndef S2GEOMETRY_STRINGS_STRINGPIECE_UTILS_H_
+#define S2GEOMETRY_STRINGS_STRINGPIECE_UTILS_H_
 
 #include <ctype.h>
 #include <stddef.h>
@@ -100,7 +100,7 @@ inline bool ConsumeSuffix(StringPiece* s, StringPiece expected) {
 // Consume a leading component of "*s" whose first character
 // is in "first_char_set" and is followed by zero or more occurrences of
 // characters in "rest_char_set".  Returns true if we matched
-// the pattern, sets "*result" to the consumed data (if "result" is not NULL),
+// the pattern, sets "*result" to the consumed data (if "result" is not nullptr),
 // and removes the consumed characters from the front of "*s".  Otherwise,
 // returns false (and "*s" is unmodified).
 inline bool ConsumeComponent(const Charmap& first_char_set,
@@ -190,4 +190,4 @@ struct StringPieceCaseEqual {
   }
 };
 
-#endif  // STRINGS_STRINGPIECE_UTILS_H_
+#endif  // S2GEOMETRY_STRINGS_STRINGPIECE_UTILS_H_

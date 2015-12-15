@@ -30,8 +30,8 @@
 // TODO(user): change size_t to size_type where appropriate.
 //
 
-#ifndef UTIL_GTL_INLINED_VECTOR_H_
-#define UTIL_GTL_INLINED_VECTOR_H_
+#ifndef S2GEOMETRY_UTIL_GTL_INLINED_VECTOR_H_
+#define S2GEOMETRY_UTIL_GTL_INLINED_VECTOR_H_
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -91,7 +91,7 @@ class InlinedVector {
   InlinedVector(InputIterator range_start, InputIterator range_end,
                 const allocator_type& alloc = allocator_type(),
                 typename std::enable_if<
-                    !std::is_integral<InputIterator>::value>::type* = NULL)
+                    !std::is_integral<InputIterator>::value>::type* = nullptr)
       : allocator_and_tag_(alloc) {
     AppendRange(range_start, range_end);
   }
@@ -125,7 +125,7 @@ class InlinedVector {
   template <class InputIterator>
   void assign(InputIterator first, InputIterator last,
               typename std::enable_if<
-                  !std::is_integral<InputIterator>::value>::type* = NULL) {
+                  !std::is_integral<InputIterator>::value>::type* = nullptr) {
     AssignRange(first, last);
   }
 
@@ -1009,4 +1009,4 @@ inline void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last) {
 }  // namespace gtl
 }  // namespace util
 
-#endif  // UTIL_GTL_INLINED_VECTOR_H_
+#endif  // S2GEOMETRY_UTIL_GTL_INLINED_VECTOR_H_

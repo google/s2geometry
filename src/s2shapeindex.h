@@ -63,8 +63,8 @@
 //   // Now use an S2EdgeQuery or S2ClosestEdgeQuery here ...
 // }
 
-#ifndef S2_GEOMETRY_S2SHAPEINDEX_H_
-#define S2_GEOMETRY_S2SHAPEINDEX_H_
+#ifndef S2GEOMETRY_S2SHAPEINDEX_H_
+#define S2GEOMETRY_S2SHAPEINDEX_H_
 
 #include <stddef.h>
 #include <memory>
@@ -162,8 +162,8 @@ class S2Shape {
   // directly with the S2Shape.  Example usage:
   //
   //  MyData* data = static_cast<MyData*>(shape->user_data());
-  virtual void const* user_data() const { return NULL; }
-  virtual void* mutable_user_data() { return NULL; }
+  virtual void const* user_data() const { return nullptr; }
+  virtual void* mutable_user_data() { return nullptr; }
 
  private:
   friend class S2ShapeIndex;
@@ -243,7 +243,7 @@ class S2ShapeIndexCell {
   S2ClippedShape const& clipped(int i) const { return shapes_[i]; }
 
   // Return a pointer to the clipped shape corresponding to the given shape,
-  // or NULL if the shape does not intersect this cell.
+  // or nullptr if the shape does not intersect this cell.
   S2ClippedShape const* find_clipped(S2Shape const* shape) const;
   S2ClippedShape const* find_clipped(int shape_id) const;
 
@@ -310,7 +310,7 @@ class S2ShapeIndex {
   // removed.  (Shape ids are not reused.)
   int num_shape_ids() const { return shapes_.size(); }
 
-  // Return a pointer to the shape with the given id, or NULL if the shape has
+  // Return a pointer to the shape with the given id, or nullptr if the shape has
   // been removed from the index.
   S2Shape* shape(int id) const { return shapes_[id]; }
 
@@ -513,7 +513,7 @@ class S2ShapeIndex {
   static double const kCellPadding;
 
   // The shapes in the index, accessed by their shape id.  Removed shapes are
-  // replaced by NULL pointers.
+  // replaced by nullptr pointers.
   std::vector<S2Shape*> shapes_;
 
   // A map from S2CellId to the set of clipped shapes that intersect that
@@ -624,7 +624,7 @@ inline S2ClippedShape const* S2ShapeIndexCell::find_clipped(
   return find_clipped(shape->id());
 }
 
-inline S2ShapeIndex::Iterator::Iterator() : cell_map_(NULL) {
+inline S2ShapeIndex::Iterator::Iterator() : cell_map_(nullptr) {
 }
 inline S2ShapeIndex::Iterator::Iterator(S2ShapeIndex const& index) {
   Init(index);
@@ -696,4 +696,4 @@ inline void S2ShapeIndex::MaybeApplyUpdates() const {
   }
 }
 
-#endif  // S2_GEOMETRY_S2SHAPEINDEX_H_
+#endif  // S2GEOMETRY_S2SHAPEINDEX_H_

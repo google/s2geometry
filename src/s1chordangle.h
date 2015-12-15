@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S1CHORDANGLE_H_
-#define S2_GEOMETRY_S1CHORDANGLE_H_
+#ifndef S2GEOMETRY_S1CHORDANGLE_H_
+#define S2GEOMETRY_S1CHORDANGLE_H_
 
 #include <math.h>
 
@@ -226,4 +226,4 @@ inline S1ChordAngle& S1ChordAngle::operator-=(S1ChordAngle a) {
 // Outputs the chord angle as the equivalent S1Angle.
 std::ostream& operator<<(std::ostream& os, S1ChordAngle a);
 
-#endif  // S2_GEOMETRY_S1CHORDANGLE_H_
+#endif  // S2GEOMETRY_S1CHORDANGLE_H_

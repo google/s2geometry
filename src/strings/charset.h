@@ -18,8 +18,8 @@
 // obsolete sometime in Q1 of 2013. Use the explicit CharSet(StringPiece)
 // constructor instead.
 
-#ifndef STRINGS_CHARSET_H_
-#define STRINGS_CHARSET_H_
+#ifndef S2GEOMETRY_STRINGS_CHARSET_H_
+#define S2GEOMETRY_STRINGS_CHARSET_H_
 
 #include "base/integral_types.h"
 #include "strings/stringpiece.h"
@@ -85,4 +85,4 @@ class CharSet {
 
 }  // namespace strings
 
-#endif  // STRINGS_CHARSET_H_
+#endif  // S2GEOMETRY_STRINGS_CHARSET_H_

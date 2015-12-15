@@ -133,7 +133,7 @@ S2ShapeIndexCell::find_clipped(int shape_id) const {
   for (int i = 0; i < shapes_.size(); ++i) {
     if (shapes_[i].shape_id() == shape_id) return &shapes_[i];
   }
-  return NULL;
+  return nullptr;
 }
 
 // Allocate room for "n" additional clipped shapes in the cell, and return a
@@ -197,14 +197,14 @@ S2ShapeIndex::CellRelation S2ShapeIndex::Iterator::Locate(S2CellId target) {
 S2ShapeIndex::S2ShapeIndex()
     : pending_additions_begin_(0),
       index_status_(FRESH),
-      update_state_(NULL) {
+      update_state_(nullptr) {
 }
 
 S2ShapeIndex::S2ShapeIndex(S2ShapeIndexOptions const& options)
     : options_(options),
       pending_additions_begin_(0),
       index_status_(FRESH),
-      update_state_(NULL) {
+      update_state_(nullptr) {
 }
 
 void S2ShapeIndex::Init(S2ShapeIndexOptions const& options) {
@@ -243,7 +243,7 @@ void S2ShapeIndex::Reset() {
   shapes_.swap(empty_shapes);
   pending_additions_begin_ = 0;
   pending_removals_.reset();
-  DCHECK(update_state_ == NULL);
+  DCHECK(update_state_ == nullptr);
   base::subtle::NoBarrier_Store(&index_status_, FRESH);
 }
 
@@ -299,7 +299,7 @@ bool S2ShapeIndex::ShapeContains(S2Shape const* a_shape, S2Point const& p) {
   if (!it.Locate(p)) return false;
 
   S2ClippedShape const* a_clipped = it.cell()->find_clipped(a_shape);
-  if (a_clipped == NULL) return false;
+  if (a_clipped == nullptr) return false;
 
   PointContainmentTester point_tester(it, p);
   return point_tester.ContainedBy(a_shape, *a_clipped);
@@ -554,7 +554,7 @@ inline void S2ShapeIndex::UnlockAndSignal() {
   update_state_->wait_mutex.Unlock();
   if (num_waiting == 0) {
     delete update_state_;
-    update_state_ = NULL;
+    update_state_ = nullptr;
   }
 }
 
@@ -579,8 +579,8 @@ void S2ShapeIndex::ApplyUpdatesInternal() {
     AddShapeEdges(id, all_edges, &tracker);
   }
   // Whether to insert or remove a given shape is represented implicitly:
-  //  - if shape(id) is not NULL, its edges are inserted.
-  //  - if shape(id) is NULL, its edges are removed.
+  //  - if shape(id) is not nullptr, its edges are inserted.
+  //  - if shape(id) is nullptr, its edges are removed.
   for (int face = 0; face < 6; ++face) {
     UpdateFaceEdges(face, all_edges[face], &tracker);
     // Save memory by clearing vectors after we are done with them.
@@ -757,7 +757,7 @@ class S2ShapeIndex::EdgeAllocator {
 
 // Given a face and a vector of edges that intersect that face, add or
 // remove all the edges from the index.  (An edge is added if shape(id) is
-// not NULL, and removed otherwise.)
+// not nullptr, and removed otherwise.)
 void S2ShapeIndex::UpdateFaceEdges(int face,
                                    vector<FaceEdge> const& face_edges,
                                    InteriorTracker* tracker) {
@@ -1090,7 +1090,7 @@ void S2ShapeIndex::TestAllEdges(vector<ClippedEdge const*> const& edges,
   // We cache the S2Shape pointer and has_interior() value between edges,
   // since this speeds up index construction by about 1%.
   int shape_id = -1;
-  S2Shape const* shape = NULL;
+  S2Shape const* shape = nullptr;
   bool has_interior = false;
   for (int e = 0; e < edges.size(); ++e) {
     FaceEdge const* face_edge = edges[e]->orig;
@@ -1133,7 +1133,7 @@ int S2ShapeIndex::GetNumEdges() const {
   MaybeApplyUpdates();
   int num_edges = 0;
   for (int id = 0; id < shapes_.size(); ++id) {
-    if (shapes_[id] == NULL) continue;
+    if (shapes_[id] == nullptr) continue;
     num_edges += shapes_[id]->num_edges();
   }
   return num_edges;

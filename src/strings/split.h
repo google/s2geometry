@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef STRINGS_SPLIT_H_
-#define STRINGS_SPLIT_H_
+#ifndef S2GEOMETRY_STRINGS_SPLIT_H_
+#define S2GEOMETRY_STRINGS_SPLIT_H_
 
 #include <functional>
 #include <string>
@@ -33,4 +33,4 @@ struct SkipEmpty {
 
 }  // namespace strings
 
-#endif  // STRINGS_SPLIT_H_
+#endif  // S2GEOMETRY_STRINGS_SPLIT_H_

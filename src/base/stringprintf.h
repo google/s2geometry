@@ -21,8 +21,8 @@
 //      SStringPrintf(&result, "%d %s\n", 10, "hello");
 //      StringAppendF(&result, "%d %s\n", 20, "there");
 
-#ifndef BASE_STRINGPRINTF_H_
-#define BASE_STRINGPRINTF_H_
+#ifndef S2GEOMETRY_BASE_STRINGPRINTF_H_
+#define S2GEOMETRY_BASE_STRINGPRINTF_H_
 
 #include <stdarg.h>
 #include <string>
@@ -49,4 +49,4 @@ extern void StringAppendF(string* dst, const char* format, ...)
 // string.  All other routines are just convenience wrappers around it.
 extern void StringAppendV(string* dst, const char* format, va_list ap);
 
-#endif  // BASE_STRINGPRINTF_H_
+#endif  // S2GEOMETRY_BASE_STRINGPRINTF_H_

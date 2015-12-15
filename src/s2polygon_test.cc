@@ -385,9 +385,9 @@ static void CheckEqual(S2Polygon const* a, S2Polygon const* b,
   S2PolygonBuilder builder(S2PolygonBuilderOptions::DIRECTED_XOR());
   S2Polygon a2, b2;
   builder.AddPolygon(a);
-  ASSERT_TRUE(builder.AssemblePolygon(&a2, NULL));
+  ASSERT_TRUE(builder.AssemblePolygon(&a2, nullptr));
   builder.AddPolygon(b);
-  ASSERT_TRUE(builder.AssemblePolygon(&b2, NULL));
+  ASSERT_TRUE(builder.AssemblePolygon(&b2, nullptr));
   EXPECT_TRUE(a2.BoundaryApproxEquals(&b2, max_error));
 }
 
@@ -469,7 +469,7 @@ static void TestOneDisjointPair(S2Polygon const* a, S2Polygon const* b) {
   S2PolygonBuilder builder(S2PolygonBuilderOptions::DIRECTED_XOR());
   builder.AddPolygon(a);
   builder.AddPolygon(b);
-  ASSERT_TRUE(builder.AssemblePolygon(&ab, NULL));
+  ASSERT_TRUE(builder.AssemblePolygon(&ab, nullptr));
 
   c.InitToUnion(a, b);
   CheckEqual(&c, &ab);
@@ -922,7 +922,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
     ClearPolylineVector(&polylines);
 
     S2Polygon a_and_b;
-    ASSERT_TRUE(builder.AssemblePolygon(&a_and_b, NULL));
+    ASSERT_TRUE(builder.AssemblePolygon(&a_and_b, nullptr));
     CheckEqual(&a_and_b, expected_a_and_b.get(), kMaxError);
   }
 }
@@ -967,7 +967,7 @@ static void SplitAndAssemble(S2Polygon const* polygon) {
   S2PolygonBuilder builder(S2PolygonBuilderOptions::DIRECTED_XOR());
   S2Polygon expected;
   builder.AddPolygon(polygon);
-  ASSERT_TRUE(builder.AssemblePolygon(&expected, NULL));
+  ASSERT_TRUE(builder.AssemblePolygon(&expected, nullptr));
 
   for (int iter = 0; iter < 10; ++iter) {
     S2RegionCoverer coverer;
@@ -1377,7 +1377,7 @@ class IsValidTest : public testing::Test {
  public:
   IsValidTest() {
     init_oriented_ = false;
-    modify_polygon_hook_ = NULL;
+    modify_polygon_hook_ = nullptr;
     rnd_ = &S2Testing::rnd;
     rnd_->Reset(FLAGS_s2_random_seed);
   }
@@ -1696,8 +1696,8 @@ double MaximumDistanceInDegrees(S2Polygon const& poly_a,
 class S2PolygonSimplifierTest : public ::testing::Test {
  protected:
   S2PolygonSimplifierTest() {
-    simplified = NULL;
-    original = NULL;
+    simplified = nullptr;
+    original = nullptr;
   }
 
   ~S2PolygonSimplifierTest() {
@@ -1805,8 +1805,8 @@ S2Polygon* MakeCellLoop(const S2Cell& cell, string const& str) {
   CHECK(DictionaryParse(str, &p)) << ": str == \"" << str << "\"";
   vector<S2Point> loop_vertices;
   for (int i = 0; i < p.size(); ++i) {
-    double u = strtod(p[i].first.c_str(), NULL);
-    double v = strtod(p[i].second.c_str(), NULL);
+    double u = strtod(p[i].first.c_str(), nullptr);
+    double v = strtod(p[i].second.c_str(), nullptr);
     Vector3_d p = (vertices[0] * (1.0 - u) + vertices[1] * u) * (1.0 - v) +
         (vertices[2] * (1.0 - u) + vertices[3] * u) * v;
     loop_vertices.push_back(p.Normalize());

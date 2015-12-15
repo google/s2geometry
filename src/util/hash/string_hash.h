@@ -22,8 +22,8 @@
 // speed. Their values can and will change as their implementations change and
 // evolve.
 
-#ifndef UTIL_HASH_STRING_HASH_H_
-#define UTIL_HASH_STRING_HASH_H_
+#ifndef S2GEOMETRY_UTIL_HASH_STRING_HASH_H_
+#define S2GEOMETRY_UTIL_HASH_STRING_HASH_H_
 
 #include <limits.h>
 #include <stddef.h>
@@ -88,4 +88,4 @@ inline size_t HashStringThoroughlyWithSeeds(const char* s, size_t len,
   return hash_internal::Thoroughly<>::Hash(s, len, seed0, seed1);
 }
 
-#endif  // UTIL_HASH_STRING_HASH_H_
+#endif  // S2GEOMETRY_UTIL_HASH_STRING_HASH_H_

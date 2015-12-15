@@ -26,8 +26,8 @@
 // word from memory.  This relatively generic functionality probably
 // shouldn't live in this file.
 
-#ifndef UTIL_HASH_JENKINS_LOOKUP2_H_
-#define UTIL_HASH_JENKINS_LOOKUP2_H_
+#ifndef S2GEOMETRY_UTIL_HASH_JENKINS_LOOKUP2_H_
+#define S2GEOMETRY_UTIL_HASH_JENKINS_LOOKUP2_H_
 
 #include "base/integral_types.h"
 #include "base/port.h"
@@ -167,4 +167,4 @@ static inline uint32 Google1At(const char *ptr2) {
 // use more meaningful concepts.
 # define WORD_HASH
 
-#endif  // UTIL_HASH_JENKINS_LOOKUP2_H_
+#endif  // S2GEOMETRY_UTIL_HASH_JENKINS_LOOKUP2_H_

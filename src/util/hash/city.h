@@ -34,8 +34,8 @@
 // Note that the hash functions defined here are related to, but NOT the same
 // as the functions defined in the open source version in third_party/cityhash
 
-#ifndef UTIL_HASH_CITY_H_
-#define UTIL_HASH_CITY_H_
+#ifndef S2GEOMETRY_UTIL_HASH_CITY_H_
+#define S2GEOMETRY_UTIL_HASH_CITY_H_
 
 #include <stddef.h>  // for size_t.
 
@@ -77,4 +77,4 @@ uint32 CityHash32WithSeed(const char *s, size_t len, uint32 seed);
 
 }  // namespace util_hash
 
-#endif  // UTIL_HASH_CITY_H_
+#endif  // S2GEOMETRY_UTIL_HASH_CITY_H_

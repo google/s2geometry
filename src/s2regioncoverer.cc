@@ -48,7 +48,7 @@ S2RegionCoverer::S2RegionCoverer() :
   max_level_(S2CellId::kMaxLevel),
   level_mod_(1),
   max_cells_(kDefaultMaxCells),
-  region_(NULL) {
+  region_(nullptr) {
 }
 
 S2RegionCoverer::~S2RegionCoverer() {
@@ -83,7 +83,7 @@ void S2RegionCoverer::set_max_cells(int max_cells) {
 }
 
 S2RegionCoverer::Candidate* S2RegionCoverer::NewCandidate(S2Cell const& cell) {
-  if (!region_->MayIntersect(cell)) return NULL;
+  if (!region_->MayIntersect(cell)) return nullptr;
 
   bool is_terminal = false;
   if (cell.level() >= min_level_) {
@@ -91,7 +91,7 @@ S2RegionCoverer::Candidate* S2RegionCoverer::NewCandidate(S2Cell const& cell) {
       if (region_->Contains(cell)) {
         is_terminal = true;
       } else if (cell.level() + level_mod_ > max_level_) {
-        return NULL;
+        return nullptr;
       }
     } else {
       if (cell.level() + level_mod_ > max_level_ || region_->Contains(cell)) {
@@ -110,7 +110,7 @@ S2RegionCoverer::Candidate* S2RegionCoverer::NewCandidate(S2Cell const& cell) {
   candidate->num_children = 0;
   if (!is_terminal) {
     std::fill_n(&candidate->children[0], 1 << max_children_shift(),
-                implicit_cast<Candidate*>(NULL));
+                implicit_cast<Candidate*>(nullptr));
   }
   ++candidates_created_counter_;
   return candidate;
@@ -148,7 +148,7 @@ int S2RegionCoverer::ExpandChildren(Candidate* candidate,
 }
 
 void S2RegionCoverer::AddCandidate(Candidate* candidate) {
-  if (candidate == NULL) return;
+  if (candidate == nullptr) return;
 
   if (candidate->is_terminal) {
     result_.push_back(candidate->cell.id());
@@ -287,7 +287,7 @@ void S2RegionCoverer::GetCoveringInternal(S2Region const& region) {
     DeleteCandidate(pq_.top().second, true);
     pq_.pop();
   }
-  region_ = NULL;
+  region_ = nullptr;
 }
 
 void S2RegionCoverer::GetCovering(S2Region const& region,

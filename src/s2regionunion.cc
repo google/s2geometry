@@ -50,7 +50,7 @@ S2RegionUnion::S2RegionUnion(S2RegionUnion const* src)
 }
 
 void S2RegionUnion::Release(vector<S2Region*>* regions) {
-  if (regions != NULL) {
+  if (regions != nullptr) {
     regions->insert(regions->end(), regions_.begin(), regions_.end());
   }
   regions_.clear();

@@ -118,14 +118,14 @@ void S2ClosestEdgeQuery::AddInitialRange(S2ShapeIndex::Iterator const& first,
     int level = first.id().GetCommonAncestorLevel(last.id());
     DCHECK_GE(level, 0);
     index_covering_.push_back(first.id().parent(level));
-    index_cells_.push_back(NULL);
+    index_cells_.push_back(nullptr);
   }
 }
 
 S2Point S2ClosestEdgeQuery::GetClosestPointOnEdge(int i) const {
   S2Point const *v0, *v1;
   GetEdge(i, &v0, &v1);
-  return S2EdgeUtil::GetClosestPoint(target_, *v0, *v1);
+  return target_->GetClosestPointOnEdge(*v0, *v1);
 }
 
 S1Angle S2ClosestEdgeQuery::GetDistance(S2Point const& target) {
@@ -141,7 +141,17 @@ S2Point S2ClosestEdgeQuery::Project(S2Point const& target) {
 }
 
 void S2ClosestEdgeQuery::FindClosestEdges(S2Point const& target) {
-  target_ = target;
+  target_.reset(new PointTarget(target));
+  FindClosestEdgesToTarget();
+}
+
+void S2ClosestEdgeQuery::FindClosestEdgesToEdge(S2Point const& a,
+                                                S2Point const& b) {
+  target_.reset(new EdgeTarget(a, b));
+  FindClosestEdgesToTarget();
+}
+
+void S2ClosestEdgeQuery::FindClosestEdgesToTarget() {
   max_distance_limit_ = S1ChordAngle(max_distance_);
   max_error_ = S1ChordAngle(max_error_arg_);
   DCHECK(tmp_results_.empty());
@@ -168,7 +178,7 @@ void S2ClosestEdgeQuery::FindClosestEdges(S2Point const& target) {
 void S2ClosestEdgeQuery::FindClosestEdgesBruteForce() {
   for (int id = 0; id < index_->num_shape_ids(); ++id) {
     S2Shape const* shape = index_->shape(id);
-    if (shape == NULL) continue;
+    if (shape == nullptr) continue;
     int num_edges = shape->num_edges();
     for (int e = 0; e < num_edges; ++e) {
       MaybeAddResult(shape, e);
@@ -190,7 +200,7 @@ void S2ClosestEdgeQuery::FindClosestEdgesOptimized() {
       break;
     }
     // If this is already known to be an index cell, just process it.
-    if (entry.index_cell != NULL) {
+    if (entry.index_cell != nullptr) {
       ProcessEdges(entry);
       continue;
     }
@@ -226,12 +236,13 @@ void S2ClosestEdgeQuery::InitQueue() {
   DCHECK(queue_.empty());
 
   // Optimization: if the user is searching for just the closest edge, and the
-  // target point happens to be in an index cell, then we can easily limit the
-  // search region to a small disc.  Then we can find a covering for that disc
-  // and start with those cells rather than the entire index covering.  This
-  // does mean that the cell containing "target" will be processed twice, but
-  // in general this is still faster.
-  if (max_edges_ == 1 && iter_.Locate(target_)) {
+  // target happens to be intersect an index cell, then we try to limit the
+  // search region to a small disc by first processing the edges in that cell.
+  // This sets max_distance_limit_ based on the closest edge in that cell,
+  // which we can then use to limit the search area.  This does mean that the
+  // cell containing "target" will be processed twice, but in general this is
+  // still faster.
+  if (max_edges_ == 1 && iter_.Locate(target_->center())) {
     ProcessEdges(QueueEntry(S1ChordAngle::Zero(), iter_.id(), iter_.cell()));
   }
   if (max_distance_limit_ == S1ChordAngle::Infinity()) {
@@ -244,8 +255,9 @@ void S2ClosestEdgeQuery::InitQueue() {
     // precomputed index covering.
     S2RegionCoverer coverer;
     coverer.set_max_cells(4);
-    coverer.GetFastCovering(S2Cap(target_, max_distance_limit_.ToAngle()),
-                            &max_distance_covering_);
+    S2Cap search_cap(target_->center(),
+                     target_->radius() + max_distance_limit_.ToAngle());
+    coverer.GetFastCovering(search_cap, &max_distance_covering_);
     S2CellUnion::GetIntersection(index_covering_, max_distance_covering_,
                                  &initial_cells_);
 
@@ -275,7 +287,7 @@ void S2ClosestEdgeQuery::InitQueue() {
             continue;
         } else {
           // Enqueue the cell only if it contains at least one index cell.
-          if (r == S2ShapeIndex::SUBDIVIDED) EnqueueCell(id_i, NULL);
+          if (r == S2ShapeIndex::SUBDIVIDED) EnqueueCell(id_i, nullptr);
           ++i;
         }
       }
@@ -288,7 +300,7 @@ void S2ClosestEdgeQuery::MaybeAddResult(S2Shape const* shape, int edge_id) {
   shape->GetEdge(edge_id, &v0, &v1);
 
   S1ChordAngle distance = max_distance_limit_;
-  if (!S2EdgeUtil::UpdateMinDistance(target_, *v0, *v1, &distance)) return;
+  if (!target_->UpdateMinDistance(*v0, *v1, &distance)) return;
 
   if (max_edges_ == 1) {
     // Optimization for the common case where only the closest edge is wanted.
@@ -337,12 +349,12 @@ inline void S2ClosestEdgeQuery::EnqueueCurrentCell(S2CellId id) {
   if (iter_.id() == id) {
     EnqueueCell(id, iter_.cell());
   } else {
-    EnqueueCell(id, NULL);
+    EnqueueCell(id, nullptr);
   }
 }
 
 // Add the given cell id to the queue.  "index_cell" is the corresponding
-// S2ShapeIndexCell, or NULL if "id" is not an index cell.
+// S2ShapeIndexCell, or nullptr if "id" is not an index cell.
 void S2ClosestEdgeQuery::EnqueueCell(S2CellId id,
                                      S2ShapeIndexCell const* index_cell) {
   if (index_cell) {
@@ -361,7 +373,7 @@ void S2ClosestEdgeQuery::EnqueueCell(S2CellId id,
   // Otherwise compute the minimum distance to any point in the cell and add
   // it to the priority queue.
   S2Cell cell(id);
-  S1ChordAngle distance(cell.GetDistance(target_));
+  S1ChordAngle distance = target_->GetDistance(cell);
   if (distance >= max_distance_limit_) return;
   queue_.push(QueueEntry(distance, id, index_cell));
 }

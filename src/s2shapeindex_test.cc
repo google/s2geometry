@@ -96,7 +96,7 @@ void S2ShapeIndexTest::QuadraticValidate() {
     int short_edges = 0;  // number of edges counted toward subdivision
     for (int id = 0; id < index_.num_shape_ids(); ++id) {
       S2Shape const* shape = index_.shape(id);
-      S2ClippedShape const* clipped = NULL;
+      S2ClippedShape const* clipped = nullptr;
       if (!it.Done()) clipped = it.cell()->find_clipped(shape);
 
      // First check that contains_center() is set correctly.
@@ -416,7 +416,7 @@ void LazyUpdatesTest::ReaderThread() {
 
 static void* StartReader(void* arg) {
   static_cast<LazyUpdatesTest*>(arg)->ReaderThread();
-  return NULL;
+  return nullptr;
 }
 
 TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
@@ -429,7 +429,7 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
   int const kNumReaders = 8;
   pthread_t readers[kNumReaders];
   for (int i = 0; i < kNumReaders; ++i) {
-    CHECK_EQ(0, pthread_create(&readers[i], NULL, StartReader,
+    CHECK_EQ(0, pthread_create(&readers[i], nullptr, StartReader,
                                static_cast<void*>(this)));
   }
   lock_.Lock();
@@ -455,7 +455,7 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
   update_ready_.SignalAll();
   lock_.Unlock();
   for (int i = 0; i < kNumReaders; ++i) {
-    CHECK_EQ(0, pthread_join(readers[i], NULL));
+    CHECK_EQ(0, pthread_join(readers[i], nullptr));
   }
 }
 

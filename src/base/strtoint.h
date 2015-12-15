@@ -24,7 +24,7 @@
 //
 // Examples:
 //   errno = 0;
-//   i = strtol("3147483647", NULL, 10);
+//   i = strtol("3147483647", nullptr, 10);
 //   printf("%d, errno %d\n", i, errno);
 //   //   32-bit platform: 2147483647, errno 34
 //   //   64-bit platform: -1147483649, errno 0
@@ -41,8 +41,8 @@
 // to provide the right overflow and errno behavior.
 //
 
-#ifndef BASE_STRTOINT_H_
-#define BASE_STRTOINT_H_
+#ifndef S2GEOMETRY_BASE_STRTOINT_H_
+#define S2GEOMETRY_BASE_STRTOINT_H_
 
 #include <stdlib.h> // For strtol* functions.
 #include <string>
@@ -87,11 +87,11 @@ inline uint64 strtou64(const char *nptr, char **endptr, int base) {
 // Although it returns an int, atoi() is implemented in terms of strtol, and
 // so has differing overflow and underflow behavior.  atol is the same.
 inline int32 atoi32(const char *nptr) {
-  return strto32(nptr, NULL, 10);
+  return strto32(nptr, nullptr, 10);
 }
 
 inline int64 atoi64(const char *nptr) {
-  return strto64(nptr, NULL, 10);
+  return strto64(nptr, nullptr, 10);
 }
 
 // Convenience versions of the above that take a string argument.
@@ -103,4 +103,4 @@ inline int64 atoi64(const string &s) {
   return atoi64(s.c_str());
 }
 
-#endif  // BASE_STRTOINT_H_
+#endif  // S2GEOMETRY_BASE_STRTOINT_H_

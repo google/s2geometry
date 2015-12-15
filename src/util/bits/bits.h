@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef UTIL_BITS_BITS_H_
-#define UTIL_BITS_BITS_H_
+#ifndef S2GEOMETRY_UTIL_BITS_BITS_H_
+#define S2GEOMETRY_UTIL_BITS_BITS_H_
 
 //
 // Various bit-twiddling functions, all of which are static members of the Bits
@@ -529,4 +529,4 @@ int Bits::PopcountWithBuiltin(UnsignedT n) {
 }
 #endif  // __GNUC__
 
-#endif  // UTIL_BITS_BITS_H_
+#endif  // S2GEOMETRY_UTIL_BITS_BITS_H_

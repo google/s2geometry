@@ -17,8 +17,8 @@
 //
 // Useful functions and classes related to S2ShapeIndex.
 
-#ifndef S2_GEOMETRY_S2SHAPEUTIL_H_
-#define S2_GEOMETRY_S2SHAPEUTIL_H_
+#ifndef S2GEOMETRY_S2SHAPEUTIL_H_
+#define S2GEOMETRY_S2SHAPEUTIL_H_
 
 #include <utility>  // pair<>
 #include <vector>
@@ -136,4 +136,4 @@ bool FindAnyCrossing(S2ShapeIndex const& index,
 
 }  // namespace s2shapeutil
 
-#endif  // S2_GEOMETRY_S2SHAPEUTIL_H_
+#endif  // S2GEOMETRY_S2SHAPEUTIL_H_

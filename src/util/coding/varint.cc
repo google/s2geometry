@@ -78,7 +78,7 @@ const char* Varint::Parse64Fallback(const char* p, uint64* OUTPUT) {
   byte = *(ptr++); res3 = byte & 127;          if (byte < 128) goto done3;
   byte = *(ptr++); res3 |= (byte & 127) <<  7; if (byte < 128) goto done3;
 
-  return NULL;       // Value is too long to be a varint64
+  return nullptr;       // Value is too long to be a varint64
 
  done1:
   assert(res2 == 0);
@@ -101,8 +101,8 @@ const char* Varint::Parse32BackwardSlow(const char* ptr, const char* base,
   // Since this method is rarely called, for simplicity, we just skip backward
   // and then parse forward.
   const char* prev = Skip32BackwardSlow(ptr, base);
-  if (prev == NULL)
-    return NULL; // no value before 'ptr'
+  if (prev == nullptr)
+    return nullptr; // no value before 'ptr'
 
   Parse32(prev, OUTPUT);
   return prev;
@@ -113,8 +113,8 @@ const char* Varint::Parse64BackwardSlow(const char* ptr, const char* base,
   // Since this method is rarely called, for simplicity, we just skip backward
   // and then parse forward.
   const char* prev = Skip64BackwardSlow(ptr, base);
-  if (prev == NULL)
-    return NULL; // no value before 'ptr'
+  if (prev == nullptr)
+    return nullptr; // no value before 'ptr'
 
   Parse64(prev, OUTPUT);
   return prev;
@@ -129,27 +129,27 @@ const char* Varint::Parse64WithLimit(const char* p,
     const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
     const unsigned char* limit = reinterpret_cast<const unsigned char*>(l);
     uint64 b, result;
-    if (ptr >= limit) return NULL;
+    if (ptr >= limit) return nullptr;
     b = *(ptr++); result = b & 127;          if (b < 128) goto done;
-    if (ptr >= limit) return NULL;
+    if (ptr >= limit) return nullptr;
     b = *(ptr++); result |= (b & 127) <<  7; if (b < 128) goto done;
-    if (ptr >= limit) return NULL;
+    if (ptr >= limit) return nullptr;
     b = *(ptr++); result |= (b & 127) << 14; if (b < 128) goto done;
-    if (ptr >= limit) return NULL;
+    if (ptr >= limit) return nullptr;
     b = *(ptr++); result |= (b & 127) << 21; if (b < 128) goto done;
-    if (ptr >= limit) return NULL;
+    if (ptr >= limit) return nullptr;
     b = *(ptr++); result |= (b & 127) << 28; if (b < 128) goto done;
-    if (ptr >= limit) return NULL;
+    if (ptr >= limit) return nullptr;
     b = *(ptr++); result |= (b & 127) << 35; if (b < 128) goto done;
-    if (ptr >= limit) return NULL;
+    if (ptr >= limit) return nullptr;
     b = *(ptr++); result |= (b & 127) << 42; if (b < 128) goto done;
-    if (ptr >= limit) return NULL;
+    if (ptr >= limit) return nullptr;
     b = *(ptr++); result |= (b & 127) << 49; if (b < 128) goto done;
-    if (ptr >= limit) return NULL;
+    if (ptr >= limit) return nullptr;
     b = *(ptr++); result |= (b & 127) << 56; if (b < 128) goto done;
-    if (ptr >= limit) return NULL;
+    if (ptr >= limit) return nullptr;
     b = *(ptr++); result |= (b & 127) << 63; if (b < 2) goto done;
-    return NULL;       // Value is too long to be a varint64
+    return nullptr;       // Value is too long to be a varint64
    done:
     *OUTPUT = result;
     return reinterpret_cast<const char*>(ptr);
@@ -162,16 +162,16 @@ const char* Varint::Skip32BackwardSlow(const char* p, const char* b) {
   assert(ptr >= base);
 
   // If the initial pointer is at the base or if the previous byte is not
-  // the last byte of a varint, we return NULL since there is nothing to skip.
-  if (ptr == base) return NULL;
-  if (*(--ptr) > 127) return NULL;
+  // the last byte of a varint, we return nullptr since there is nothing to skip.
+  if (ptr == base) return nullptr;
+  if (*(--ptr) > 127) return nullptr;
 
   for (int i = 0; i < 5; i++) {
     if (ptr == base)    return reinterpret_cast<const char*>(ptr);
     if (*(--ptr) < 128) return reinterpret_cast<const char*>(ptr + 1);
   }
 
-  return NULL; // value is too long to be a varint32
+  return nullptr; // value is too long to be a varint32
 }
 
 const char* Varint::Skip64BackwardSlow(const char* p, const char* b) {
@@ -180,16 +180,16 @@ const char* Varint::Skip64BackwardSlow(const char* p, const char* b) {
   assert(ptr >= base);
 
   // If the initial pointer is at the base or if the previous byte is not
-  // the last byte of a varint, we return NULL since there is nothing to skip.
-  if (ptr == base) return NULL;
-  if (*(--ptr) > 127) return NULL;
+  // the last byte of a varint, we return nullptr since there is nothing to skip.
+  if (ptr == base) return nullptr;
+  if (*(--ptr) > 127) return nullptr;
 
   for (int i = 0; i < 10; i++) {
     if (ptr == base)    return reinterpret_cast<const char*>(ptr);
     if (*(--ptr) < 128) return reinterpret_cast<const char*>(ptr + 1);
   }
 
-  return NULL; // value is too long to be a varint64
+  return nullptr; // value is too long to be a varint64
 }
 
 void Varint::Append32Slow(string* s, uint32 value) {

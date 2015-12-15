@@ -26,8 +26,8 @@
 // //strings/stringpiece_utils.h for similar functions that operate on
 // StringPiece.
 
-#ifndef STRINGS_STRIP_H_
-#define STRINGS_STRIP_H_
+#ifndef S2GEOMETRY_STRINGS_STRIP_H_
+#define S2GEOMETRY_STRINGS_STRIP_H_
 
 #include <stddef.h>
 
@@ -126,7 +126,7 @@ inline void StripWhitespaceInCollection(Collection* collection) {
 // takes a string modifies the given input string.
 //
 // The versions that take C-strings return a pointer to the first non-whitespace
-// character if one is present or NULL otherwise. 'line' must be NUL-terminated.
+// character if one is present or nullptr otherwise. 'line' must be NUL-terminated.
 void StripLeadingWhitespace(string* str);
 inline const char* StripLeadingWhitespace(const char* line) {
   // skip leading whitespace
@@ -134,7 +134,7 @@ inline const char* StripLeadingWhitespace(const char* line) {
     ++line;
 
   if ('\0' == *line)  // end of line, no non-whitespace
-    return NULL;
+    return nullptr;
 
   return line;
 }
@@ -155,7 +155,7 @@ bool StripTrailingNewline(string* s);
 void RemoveExtraWhitespace(string* s);
 
 // Returns a pointer to the first non-whitespace character in 'str'. Never
-// returns NULL. 'str' must be NUL-terminated.
+// returns nullptr. 'str' must be NUL-terminated.
 inline const char* SkipLeadingWhitespace(const char* str) {
   while (ascii_isspace(*str))
     ++str;
@@ -224,4 +224,4 @@ int memrm(char* str, int strlen, char c);
 int strrmm(char* str, const char* chars);
 int strrmm(string* str, const string& chars);
 
-#endif  // STRINGS_STRIP_H_
+#endif  // S2GEOMETRY_STRINGS_STRIP_H_

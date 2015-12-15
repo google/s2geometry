@@ -21,8 +21,8 @@
 // any changes here, make sure that you're not breaking any platforms.
 //
 
-#ifndef BASE_INTEGRAL_TYPES_H_
-#define BASE_INTEGRAL_TYPES_H_
+#ifndef S2GEOMETRY_BASE_INTEGRAL_TYPES_H_
+#define S2GEOMETRY_BASE_INTEGRAL_TYPES_H_
 
 // These typedefs are also defined in base/swig/google.swig. In the
 // SWIG environment, we use those definitions and avoid duplicate
@@ -121,4 +121,4 @@ typedef uint64 Fprint;
 static const Fprint kIllegalFprint = 0;
 static const Fprint kMaxFprint = GG_ULONGLONG(0xFFFFFFFFFFFFFFFF);
 
-#endif  // BASE_INTEGRAL_TYPES_H_
+#endif  // S2GEOMETRY_BASE_INTEGRAL_TYPES_H_

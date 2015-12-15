@@ -15,12 +15,12 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_R2_H_
-#define S2_GEOMETRY_R2_H_
+#ifndef S2GEOMETRY_R2_H_
+#define S2GEOMETRY_R2_H_
 
 #include "fpcontractoff.h"
 #include "util/math/vector2.h"  // IWYU pragma: export
 
 typedef Vector2_d R2Point;
 
-#endif  // S2_GEOMETRY_R2_H_
+#endif  // S2GEOMETRY_R2_H_

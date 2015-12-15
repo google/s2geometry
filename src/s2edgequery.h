@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2EDGEQUERY_H_
-#define S2_GEOMETRY_S2EDGEQUERY_H_
+#ifndef S2GEOMETRY_S2EDGEQUERY_H_
+#define S2GEOMETRY_S2EDGEQUERY_H_
 
 #include <type_traits>
 #include <vector>
@@ -152,7 +152,7 @@ class S2EdgeQuery {
 
 
 inline S2EdgeQuery::S2EdgeQuery()
-    : index_(NULL) {
+    : index_(nullptr) {
 }
 inline S2EdgeQuery::S2EdgeQuery(S2ShapeIndex const& index) {
   Init(index);
@@ -162,4 +162,4 @@ inline void S2EdgeQuery::Init(S2ShapeIndex const& index) {
   iter_.Init(index);
 }
 
-#endif  // S2_GEOMETRY_S2EDGEQUERY_H_
+#endif  // S2GEOMETRY_S2EDGEQUERY_H_

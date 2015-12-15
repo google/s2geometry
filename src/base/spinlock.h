@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef BASE_SPINLOCK_H_
-#define BASE_SPINLOCK_H_
+#ifndef S2GEOMETRY_BASE_SPINLOCK_H_
+#define S2GEOMETRY_BASE_SPINLOCK_H_
 
 #include <atomic>
 
@@ -41,4 +41,4 @@ class SpinLock {
   std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
 };
 
-#endif  // BASE_SPINLOCK_H_
+#endif  // S2GEOMETRY_BASE_SPINLOCK_H_

@@ -95,7 +95,7 @@ bool S2EdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
   for (int i = 0; i < cells_.size(); ++i) {
     S2ShapeIndexCell const* cell = cells_[i];
     S2ClippedShape const* clipped = cell->find_clipped(shape_id);
-    if (clipped == NULL) continue;
+    if (clipped == nullptr) continue;
     edges->reserve(edges->size() + clipped->num_edges());
     for (int j = 0; j < clipped->num_edges(); ++j) {
       edges->push_back(clipped->edge(j));

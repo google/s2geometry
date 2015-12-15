@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2LATLNGRECT_H_
-#define S2_GEOMETRY_S2LATLNGRECT_H_
+#ifndef S2GEOMETRY_S2LATLNGRECT_H_
+#define S2GEOMETRY_S2LATLNGRECT_H_
 
 #include <math.h>
 #include <iosfwd>
@@ -423,4 +423,4 @@ inline bool S2LatLngRect::operator!=(S2LatLngRect const& other) const {
 
 std::ostream& operator<<(std::ostream& os, S2LatLngRect const& r);
 
-#endif  // S2_GEOMETRY_S2LATLNGRECT_H_
+#endif  // S2GEOMETRY_S2LATLNGRECT_H_

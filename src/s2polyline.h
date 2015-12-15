@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2POLYLINE_H__
-#define S2_GEOMETRY_S2POLYLINE_H__
+#ifndef S2GEOMETRY_S2POLYLINE_H_
+#define S2GEOMETRY_S2POLYLINE_H_
 
 #include <vector>
 
@@ -301,4 +301,4 @@ class S2Polyline : public S2Region {
   DISALLOW_COPY_AND_ASSIGN(S2Polyline);
 };
 
-#endif  // S2_GEOMETRY_S2POLYLINE_H__
+#endif  // S2GEOMETRY_S2POLYLINE_H_

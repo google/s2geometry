@@ -19,8 +19,8 @@
 // functions so that it doesn't take 2 lines of code just to do
 // a single conversion.
 
-#ifndef S2_GEOMETRY_S2EARTH_H_
-#define S2_GEOMETRY_S2EARTH_H_
+#ifndef S2GEOMETRY_S2EARTH_H_
+#define S2GEOMETRY_S2EARTH_H_
 
 #include <math.h>
 #include <algorithm>
@@ -222,4 +222,4 @@ inline double S2Earth::HighestAltitudeMeters() {
   return 8846;
 }
 
-#endif  // S2_GEOMETRY_S2EARTH_H_
+#endif  // S2GEOMETRY_S2EARTH_H_

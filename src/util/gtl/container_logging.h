@@ -19,8 +19,8 @@
 // TODO(user): Broaden the scope and rename to "stream_util.h"
 //
 
-#ifndef UTIL_GTL_CONTAINER_LOGGING_H_
-#define UTIL_GTL_CONTAINER_LOGGING_H_
+#ifndef S2GEOMETRY_UTIL_GTL_CONTAINER_LOGGING_H_
+#define S2GEOMETRY_UTIL_GTL_CONTAINER_LOGGING_H_
 
 #include <ostream>
 #include <type_traits>
@@ -282,4 +282,4 @@ detail::EnumLogger<E> LogEnum(E e) {
 }  // namespace gtl
 }  // namespace util
 
-#endif  // UTIL_GTL_CONTAINER_LOGGING_H_
+#endif  // S2GEOMETRY_UTIL_GTL_CONTAINER_LOGGING_H_

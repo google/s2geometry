@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef BASE_MUTEX_H_
-#define BASE_MUTEX_H_
+#ifndef S2GEOMETRY_BASE_MUTEX_H_
+#define S2GEOMETRY_BASE_MUTEX_H_
 
 #include <condition_variable>
 #include <mutex>
@@ -54,4 +54,4 @@ class CondVar {
   std::condition_variable cond_var_;
 };
 
-#endif  // BASE_MUTEX_H_
+#endif  // S2GEOMETRY_BASE_MUTEX_H_

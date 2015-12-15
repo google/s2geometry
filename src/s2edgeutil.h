@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2EDGEUTIL_H__
-#define S2_GEOMETRY_S2EDGEUTIL_H__
+#ifndef S2GEOMETRY_S2EDGEUTIL_H_
+#define S2GEOMETRY_S2EDGEUTIL_H_
 
 #include <math.h>
 
@@ -419,7 +419,7 @@ class S2EdgeUtil {
   // distances are being computed and compared.  It uses an S1ChordAngle
   // rather than an S1Angle (to avoid trigonometric operations).  If the
   // distance is smaller than "min_dist", it updates "min_dist" and returns
-  // true.  Otherwise it returns false.
+  // true.  Otherwise it returns false.  The case A == B is handled correctly.
   static bool UpdateMinDistance(S2Point const& x,
                                 S2Point const& a, S2Point const& b,
                                 S1ChordAngle* min_dist);
@@ -439,6 +439,24 @@ class S2EdgeUtil {
   static S2Point GetClosestPoint(S2Point const& x,
                                  S2Point const& a, S2Point const& b,
                                  Vector3_d const& a_cross_b);
+
+  /////////////////////////////////////////////////////////////////////
+  ///////////////     Methods for pairs of edges      /////////////////
+
+  // Like UpdateMinDistance(), but computes the minimum distance between the
+  // given pair of edges.  (If the two edges cross, the distance is zero.)
+  // The cases a0 == a1 and b0 == b1 are handled correctly.
+  static bool UpdateEdgePairMinDistance(S2Point const& a0, S2Point const& a1,
+                                        S2Point const& b0, S2Point const& b1,
+                                        S1ChordAngle* min_dist);
+
+  // Return the pair of points (a, b) that achieves the minimum distance
+  // between edges a0a1 and b0b1, where "a" is a point on a0a1 and "b" is a
+  // point on b0b1.  If the two edges intersect, "a" and "b" are both equal to
+  // the intersection point.  Handles a0 == a1 and b0 == b1 correctly.
+  static std::pair<S2Point, S2Point> GetEdgePairClosestPoints(
+      S2Point const& a0, S2Point const& a1,
+      S2Point const& b0, S2Point const& b1);
 
   // Return true if every point on edge B=b0b1 is no further than "tolerance"
   // from some point on edge A=a0a1.
@@ -637,7 +655,7 @@ class S2EdgeUtil {
 
 inline S2EdgeUtil::EdgeCrosser::EdgeCrosser(S2Point const* a, S2Point const* b)
     : a_(a), b_(b), a_cross_b_(a_->CrossProd(*b_)), have_tangents_(false),
-      c_(NULL) {
+      c_(nullptr) {
   DCHECK(S2::IsUnitLength(*a));
   DCHECK(S2::IsUnitLength(*b));
 }
@@ -647,7 +665,7 @@ inline void S2EdgeUtil::EdgeCrosser::Init(S2Point const* a, S2Point const* b) {
   b_ = b;
   a_cross_b_ = a->CrossProd(*b_);
   have_tangents_ = false;
-  c_ = NULL;
+  c_ = nullptr;
 }
 
 inline int S2EdgeUtil::EdgeCrosser::RobustCrossing(S2Point const* c,
@@ -782,4 +800,4 @@ inline double S2EdgeUtil::InterpolateDouble(double x, double a, double b,
   }
 }
 
-#endif  // S2_GEOMETRY_S2EDGEUTIL_H__
+#endif  // S2GEOMETRY_S2EDGEUTIL_H_

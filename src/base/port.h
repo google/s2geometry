@@ -20,8 +20,8 @@
 // random systems (and on SWIG).
 //
 
-#ifndef BASE_PORT_H_
-#define BASE_PORT_H_
+#ifndef S2GEOMETRY_BASE_PORT_H_
+#define S2GEOMETRY_BASE_PORT_H_
 
 #include <limits.h>         // So we can set the bounds of our types
 #include <string.h>         // for memcpy()
@@ -285,7 +285,7 @@ class AssignAttributeStartEnd {
       const mach_header* hdr = _dyld_get_image_header(i);
       uint32_t len;
       *pstart = getsectdatafromheader(hdr, "__DATA", name, &len);
-      if (*pstart) {   // NULL if not defined in this dynamic library
+      if (*pstart) {   // nullptr if not defined in this dynamic library
         *pstart += _dyld_get_image_vmaddr_slide(i);   // correct for reloc
         *pend = *pstart + len;
         return;
@@ -370,7 +370,7 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
       return const_cast<void*>(reinterpret_cast<const void*>(cursor));
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 #endif
@@ -465,14 +465,14 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 // For static class member functions, there is no implicit "this", and
 // the first explicit argument is arg 1.
 //
-//   /* arg_a cannot be NULL, but arg_b can */
+//   /* arg_a cannot be nullptr, but arg_b can */
 //   void Function(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
 //
 //   class C {
-//     /* arg_a cannot be NULL, but arg_b can */
+//     /* arg_a cannot be nullptr, but arg_b can */
 //     void Method(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(2);
 //
-//     /* arg_a cannot be NULL, but arg_b can */
+//     /* arg_a cannot be nullptr, but arg_b can */
 //     static void StaticMethod(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
 //   };
 //
@@ -781,11 +781,11 @@ inline void *aligned_malloc(size_t size, int minimum_alignment) {
   if (minimum_alignment <= getpagesize())
     return valloc(size);
   // give up
-  return NULL;
+  return nullptr;
 #elif defined(__ANDROID__) || defined(OS_ANDROID) || defined(OS_CYGWIN)
   return memalign(minimum_alignment, size);
 #else  // !__ANDROID__ && !OS_ANDROID && !__APPLE__ && !OS_CYGWIN
-  void *ptr = NULL;
+  void *ptr = nullptr;
   // posix_memalign requires that the requested alignment be at least
   // sizeof(void*). In this case, fall back on malloc which should return memory
   // aligned to at least the size of a pointer.
@@ -793,7 +793,7 @@ inline void *aligned_malloc(size_t size, int minimum_alignment) {
   if (minimum_alignment < required_alignment)
     return malloc(size);
   if (posix_memalign(&ptr, minimum_alignment, size) != 0)
-    return NULL;
+    return nullptr;
   else
     return ptr;
 #endif
@@ -1525,4 +1525,4 @@ using std::string;
 #endif  // HAS_GLOBAL_STRING
 #endif  // SWIG, __cplusplus
 
-#endif  // BASE_PORT_H_
+#endif  // S2GEOMETRY_BASE_PORT_H_

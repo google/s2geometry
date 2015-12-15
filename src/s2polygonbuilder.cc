@@ -284,7 +284,7 @@ S2Loop* S2PolygonBuilder::AssembleLoop(S2Point const& v0, S2Point const& v1,
         RejectLoop(&path[0], path.size(), unused_edges);
         EraseLoop(&path[0], path.size());
         delete loop;
-        return NULL;
+        return nullptr;
       }
 
       if (options_.undirected_edges() && !loop->IsNormalized()) {
@@ -294,7 +294,7 @@ S2Loop* S2PolygonBuilder::AssembleLoop(S2Point const& v0, S2Point const& v1,
       return loop;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 class S2PolygonBuilder::PointIndex {
@@ -583,7 +583,7 @@ bool S2PolygonBuilder::AssembleLoops(vector<S2Loop*>* loops,
   int const snap_level = options_.GetSnapLevel();
 
   EdgeList dummy_unused_edges;
-  if (unused_edges == NULL) unused_edges = &dummy_unused_edges;
+  if (unused_edges == nullptr) unused_edges = &dummy_unused_edges;
 
   // We repeatedly choose an edge and attempt to assemble a loop
   // starting from that edge.  (This is always possible unless the
@@ -618,7 +618,7 @@ bool S2PolygonBuilder::AssembleLoops(vector<S2Loop*>* loops,
     // address it in favor of the speed.
     S2Point const& v1 = *(candidates->second.begin());
     S2Loop* loop = AssembleLoop(v0, v1, unused_edges);
-    if (loop != NULL) {
+    if (loop != nullptr) {
       EraseLoop(&loop->vertex(0), loop->num_vertices());
 
       if (snap_level >= 0) {
@@ -654,7 +654,7 @@ bool S2PolygonBuilder::AssemblePolygon(S2Polygon* polygon,
   }
   if (options_.validate() && !polygon->IsValid()) {
     polygon->Release(&loops);
-    if (unused_edges != NULL) {
+    if (unused_edges != nullptr) {
       for (int i = 0; i < loops.size(); ++i) {
         RejectLoop(&loops[i]->vertex(0), loops[i]->num_vertices(),
                    unused_edges);

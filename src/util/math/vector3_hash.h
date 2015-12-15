@@ -21,8 +21,8 @@
 // bit patterns that mean "NaN."  The code here hashes +0 and -0 to the same
 // hash value, but still may not be ideal for all situations.
 
-#ifndef UTIL_MATH_VECTOR3_HASH_H_
-#define UTIL_MATH_VECTOR3_HASH_H_
+#ifndef S2GEOMETRY_UTIL_MATH_VECTOR3_HASH_H_
+#define S2GEOMETRY_UTIL_MATH_VECTOR3_HASH_H_
 
 // IWYU sees __gnu_cxx::size_t and reaches for a non-standard gcc header
 // IWYU pragma: no_include <ext/new_allocator.h>
@@ -109,6 +109,7 @@ template <class VType> struct GoodFastHash<Vector3<VType> > {
 };
 
 HASH_NAMESPACE_DECLARATION_START
+template <class T> struct hash;
 
 // This hash function may change from time to time.
 template <class VType> struct hash<Vector3<VType> > {
@@ -118,4 +119,4 @@ template <class VType> struct hash<Vector3<VType> > {
 };
 HASH_NAMESPACE_DECLARATION_END
 
-#endif  // UTIL_MATH_VECTOR3_HASH_H_
+#endif  // S2GEOMETRY_UTIL_MATH_VECTOR3_HASH_H_

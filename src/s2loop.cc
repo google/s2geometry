@@ -79,7 +79,7 @@ enum CompressedLoopProperty {
 S2Loop::S2Loop()
   : depth_(0),
     num_vertices_(0),
-    vertices_(NULL),
+    vertices_(nullptr),
     owns_vertices_(false),
     s2debug_override_(ALLOW_S2DEBUG),
     origin_inside_(false),
@@ -90,7 +90,7 @@ S2Loop::S2Loop()
 S2Loop::S2Loop(vector<S2Point> const& vertices)
   : depth_(0),
     num_vertices_(0),
-    vertices_(NULL),
+    vertices_(nullptr),
     owns_vertices_(false),
     s2debug_override_(ALLOW_S2DEBUG),
     shape_(this) {
@@ -100,7 +100,7 @@ S2Loop::S2Loop(vector<S2Point> const& vertices)
 S2Loop::S2Loop(vector<S2Point> const& vertices, S2debugOverride override)
   : depth_(0),
     num_vertices_(0),
-    vertices_(NULL),
+    vertices_(nullptr),
     owns_vertices_(false),
     s2debug_override_(override),
     shape_(this) {
@@ -907,7 +907,7 @@ class RangeIterator {
   void Refresh() {
     if (it_.Done()) {
       id_ = end_;
-      clipped_ = NULL;
+      clipped_ = nullptr;
     } else {
       id_ = it_.id();
       clipped_ = &it_.cell()->clipped(0);

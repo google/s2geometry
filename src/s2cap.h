@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S2CAP_H_
-#define S2_GEOMETRY_S2CAP_H_
+#ifndef S2GEOMETRY_S2CAP_H_
+#define S2GEOMETRY_S2CAP_H_
 
 #include <math.h>
 #include <algorithm>
@@ -250,4 +250,4 @@ inline S2Cap S2Cap::FromCenterArea(S2Point const& center, double area) {
   return S2Cap(center, area / (2 * M_PI));
 }
 
-#endif  // S2_GEOMETRY_S2CAP_H_
+#endif  // S2GEOMETRY_S2CAP_H_

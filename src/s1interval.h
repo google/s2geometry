@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_GEOMETRY_S1INTERVAL_H_
-#define S2_GEOMETRY_S1INTERVAL_H_
+#ifndef S2GEOMETRY_S1INTERVAL_H_
+#define S2GEOMETRY_S1INTERVAL_H_
 
 #include <math.h>
 #include <iosfwd>
@@ -263,4 +263,4 @@ inline std::ostream& operator<<(std::ostream& os, S1Interval const& x) {
   return os << "[" << x.lo() << ", " << x.hi() << "]";
 }
 
-#endif  // S2_GEOMETRY_S1INTERVAL_H_
+#endif  // S2GEOMETRY_S1INTERVAL_H_

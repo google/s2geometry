@@ -28,8 +28,8 @@
 //     Analysis: memcmp, fastmemcmp_inlined, fastmemcmp
 //     2012-01-30
 
-#ifndef STRINGS_FASTMEM_H_
-#define STRINGS_FASTMEM_H_
+#ifndef S2GEOMETRY_STRINGS_FASTMEM_H_
+#define S2GEOMETRY_STRINGS_FASTMEM_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -165,4 +165,4 @@ inline void memcpy_inlined(char* dst, const char* src, size_t size) {
 
 }  // namespace strings
 
-#endif  // STRINGS_FASTMEM_H_
+#endif  // S2GEOMETRY_STRINGS_FASTMEM_H_

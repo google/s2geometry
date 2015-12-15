@@ -55,8 +55,8 @@
 // For example usage, check out util/gtl/small_map.h.
 //
 
-#ifndef UTIL_GTL_MANUAL_CONSTRUCTOR_H_
-#define UTIL_GTL_MANUAL_CONSTRUCTOR_H_
+#ifndef S2GEOMETRY_UTIL_GTL_MANUAL_CONSTRUCTOR_H_
+#define S2GEOMETRY_UTIL_GTL_MANUAL_CONSTRUCTOR_H_
 
 #include <stddef.h>
 #include <new>
@@ -281,4 +281,4 @@ class ManualConstructor {
 
 }
 
-#endif  // UTIL_GTL_MANUAL_CONSTRUCTOR_H_
+#endif  // S2GEOMETRY_UTIL_GTL_MANUAL_CONSTRUCTOR_H_

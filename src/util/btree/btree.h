@@ -979,7 +979,7 @@ struct btree_iterator {
   typedef btree_iterator<Node, Reference, Pointer> self_type;
 
   btree_iterator()
-      : node(NULL),
+      : node(nullptr),
         position(-1) {
   }
   btree_iterator(Node *n, int p)
@@ -1363,7 +1363,7 @@ class btree : public Params::key_compare {
   // Dump the btree to the specified ostream. Requires that operator<< is
   // defined for Key and Value.
   void dump(std::ostream &os) const {
-    if (root() != NULL) {
+    if (root() != nullptr) {
       internal_dump(os, root(), 0);
     }
   }
@@ -1378,7 +1378,7 @@ class btree : public Params::key_compare {
     return root()->size();
   }
   size_type max_size() const { return std::numeric_limits<size_type>::max(); }
-  bool empty() const { return root() == NULL; }
+  bool empty() const { return root() == nullptr; }
 
   // The height of the btree. An empty tree will have height 0.
   size_type height() const {
@@ -1464,8 +1464,8 @@ class btree : public Params::key_compare {
   node_type** mutable_rightmost() { return root()->mutable_rightmost(); }
 
   // The leftmost node is stored as the parent of the root node.
-  node_type* leftmost() { return root() ? root()->parent() : NULL; }
-  const node_type* leftmost() const { return root() ? root()->parent() : NULL; }
+  node_type* leftmost() { return root() ? root()->parent() : nullptr; }
+  const node_type* leftmost() const { return root() ? root()->parent() : nullptr; }
 
   // The size of the tree is stored in the root node.
   size_type* mutable_size() { return root()->mutable_size(); }
@@ -1677,7 +1677,7 @@ inline void btree_node<P>::insert_value(int i, const value_type &x) {
       *mutable_child(j) = child(j - 1);
       child(j)->set_position(j);
     }
-    *mutable_child(i) = NULL;
+    *mutable_child(i) = nullptr;
   }
 }
 
@@ -1689,7 +1689,7 @@ inline void btree_node<P>::remove_value(int i) {
       *mutable_child(j) = child(j + 1);
       child(j)->set_position(j);
     }
-    *mutable_child(count()) = NULL;
+    *mutable_child(count()) = nullptr;
   }
 
   set_count(count() - 1);
@@ -1737,7 +1737,7 @@ void btree_node<P>::rebalance_right_to_left(btree_node *src, int to_move) {
     for (int i = 0; i <= src->count() - to_move; ++i) {
       DCHECK_LE(i + to_move, src->max_count());
       src->set_child(i, src->child(i + to_move));
-      *src->mutable_child(i + to_move) = NULL;
+      *src->mutable_child(i + to_move) = nullptr;
     }
   }
 
@@ -1778,11 +1778,11 @@ void btree_node<P>::rebalance_left_to_right(btree_node *dest, int to_move) {
     // Move the child pointers from the left to the right node.
     for (int i = dest->count(); i >= 0; --i) {
       dest->set_child(i + to_move, dest->child(i));
-      *dest->mutable_child(i) = NULL;
+      *dest->mutable_child(i) = nullptr;
     }
     for (int i = 1; i <= to_move; ++i) {
       dest->set_child(i - 1, child(count() - to_move + i));
-      *mutable_child(count() - to_move + i) = NULL;
+      *mutable_child(count() - to_move + i) = nullptr;
     }
   }
 
@@ -1825,9 +1825,9 @@ void btree_node<P>::split(btree_node *dest, int insert_position) {
 
   if (!leaf()) {
     for (int i = 0; i <= dest->count(); ++i) {
-      DCHECK(child(count() + i + 1) != NULL);
+      DCHECK(child(count() + i + 1) != nullptr);
       dest->set_child(i, child(count() + i + 1));
-      *mutable_child(count() + i + 1) = NULL;
+      *mutable_child(count() + i + 1) = nullptr;
     }
   }
 }
@@ -1852,7 +1852,7 @@ void btree_node<P>::merge(btree_node *src) {
     // Move the child pointers from the right to the left node.
     for (int i = 0; i <= src->count(); ++i) {
       set_child(1 + count() + i, src->child(i));
-      *src->mutable_child(i) = NULL;
+      *src->mutable_child(i) = nullptr;
     }
   }
 
@@ -1974,13 +1974,13 @@ void btree_iterator<N, R, P>::decrement_slow() {
 template <typename P>
 btree<P>::btree(const key_compare &comp, const allocator_type &alloc)
     : key_compare(comp),
-      root_(alloc, NULL) {
+      root_(alloc, nullptr) {
 }
 
 template <typename P>
 btree<P>::btree(const self_type &x)
     : key_compare(x.key_comp()),
-      root_(x.internal_allocator(), NULL) {
+      root_(x.internal_allocator(), nullptr) {
   assign(x);
 }
 
@@ -2201,10 +2201,10 @@ int btree<P>::erase_multi(const K &key) {
 
 template <typename P>
 void btree<P>::clear() {
-  if (root() != NULL) {
+  if (root() != nullptr) {
     internal_clear(root());
   }
-  *mutable_root() = NULL;
+  *mutable_root() = nullptr;
 }
 
 template <typename P>
@@ -2216,16 +2216,16 @@ void btree<P>::swap(self_type &x) {
 
 template <typename P>
 void btree<P>::verify() const {
-  if (root() != NULL) {
-    CHECK_EQ(size(), internal_verify(root(), NULL, NULL));
+  if (root() != nullptr) {
+    CHECK_EQ(size(), internal_verify(root(), nullptr, nullptr));
     CHECK_EQ(leftmost(), (++const_iterator(root(), -1)).node);
     CHECK_EQ(rightmost(), (--const_iterator(root(), root()->count())).node);
     CHECK(leftmost()->leaf());
     CHECK(rightmost()->leaf());
   } else {
     CHECK_EQ(size(), 0);
-    CHECK(leftmost() == NULL);
-    CHECK(rightmost() == NULL);
+    CHECK(leftmost() == nullptr);
+    CHECK(rightmost() == nullptr);
   }
 }
 
@@ -2412,7 +2412,7 @@ void btree<P>::try_shrink() {
   if (root()->leaf()) {
     DCHECK_EQ(size(), 0);
     delete_leaf_node(root());
-    *mutable_root() = NULL;
+    *mutable_root() = nullptr;
   } else {
     node_type *child = root()->child(0);
     if (child->leaf()) {
@@ -2436,7 +2436,7 @@ inline IterType btree<P>::internal_last(IterType iter) {
     iter.position = iter.node->position();
     iter.node = iter.node->parent();
     if (iter.node->leaf()) {
-      iter.node = NULL;
+      iter.node = nullptr;
     }
   }
   return iter;
@@ -2560,7 +2560,7 @@ IterType btree<P>::internal_find_unique(
       }
     }
   }
-  return IterType(NULL, 0);
+  return IterType(nullptr, 0);
 }
 
 template <typename P> template <typename K, typename IterType>
@@ -2576,7 +2576,7 @@ IterType btree<P>::internal_find_multi(
       }
     }
   }
-  return IterType(NULL, 0);
+  return IterType(nullptr, 0);
 }
 
 template <typename P>
@@ -2629,7 +2629,7 @@ int btree<P>::internal_verify(
   int count = node->count();
   if (!node->leaf()) {
     for (int i = 0; i <= node->count(); ++i) {
-      CHECK(node->child(i) != NULL);
+      CHECK(node->child(i) != nullptr);
       CHECK_EQ(node->child(i)->parent(), node);
       CHECK_EQ(node->child(i)->position(), i);
       count += internal_verify(

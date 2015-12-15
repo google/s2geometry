@@ -653,6 +653,52 @@ S2Point S2EdgeUtil::GetClosestPoint(S2Point const& x,
   return GetClosestPoint(x, a, b, S2::RobustCrossProd(a, b));
 }
 
+bool S2EdgeUtil::UpdateEdgePairMinDistance(
+    S2Point const& a0, S2Point const& a1,
+    S2Point const& b0, S2Point const& b1,
+    S1ChordAngle* min_dist) {
+  if (*min_dist == S1ChordAngle::Zero()) {
+    return false;
+  }
+  if (RobustCrossing(a0, a1, b0, b1) > 0) {
+    *min_dist = S1ChordAngle::Zero();
+    return true;
+  }
+  // Otherwise, the minimum distance is achieved at an endpoint of at least
+  // one of the two edges.  We use "|" rather than "||" below to ensure that
+  // all four possibilities are always checked.
+  //
+  // The calculation below computes each of the six vertex-vertex distances
+  // twice (this could be optimized).
+  return (UpdateMinDistance(a0, b0, b1, min_dist) |
+          UpdateMinDistance(a1, b0, b1, min_dist) |
+          UpdateMinDistance(b0, a0, a1, min_dist) |
+          UpdateMinDistance(b1, a0, a1, min_dist));
+}
+
+std::pair<S2Point, S2Point> S2EdgeUtil::GetEdgePairClosestPoints(
+      S2Point const& a0, S2Point const& a1,
+      S2Point const& b0, S2Point const& b1) {
+  if (RobustCrossing(a0, a1, b0, b1) > 0) {
+    S2Point x = GetIntersection(a0, a1, b0, b1);
+    return std::make_pair(x, x);
+  }
+  // We save some work by first determining which vertex/edge pair achieves
+  // the minimum distance, and then computing the closest point on that edge.
+  S1ChordAngle min_dist;
+  AlwaysUpdateMinDistance<true>(a0, b0, b1, &min_dist);
+  enum { A0, A1, B0, B1 } closest_vertex = A0;
+  if (UpdateMinDistance(a1, b0, b1, &min_dist)) { closest_vertex = A1; }
+  if (UpdateMinDistance(b0, a0, a1, &min_dist)) { closest_vertex = B0; }
+  if (UpdateMinDistance(b1, a0, a1, &min_dist)) { closest_vertex = B1; }
+  switch (closest_vertex) {
+    case A0: return std::make_pair(a0, GetClosestPoint(a0, b0, b1));
+    case A1: return std::make_pair(a1, GetClosestPoint(a1, b0, b1));
+    case B0: return std::make_pair(GetClosestPoint(b0, a0, a1), b0);
+    case B1: return std::make_pair(GetClosestPoint(b1, a0, a1), b1);
+  }
+}
+
 bool S2EdgeUtil::IsEdgeBNearEdgeA(S2Point const& a0, S2Point const& a1,
                                   S2Point const& b0, S2Point const& b1,
                                   S1Angle tolerance) {
