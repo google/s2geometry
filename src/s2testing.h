@@ -42,10 +42,13 @@ class S2Polygon;
 class S2Polyline;
 class S2Region;
 
-// The initial random seed for S2Testing::rnd.  You can optionally call
-// S2Testing::rnd.Reset(FLAGS_s2_random_seed) at the start of a test or
-// benchmark to ensure that its results do not depend on which other tests of
-// benchmarks have run previously.  This can help with debugging.
+// You can optionally call S2Testing::rnd.Reset(FLAGS_s2_random_seed) at the
+// start of a test or benchmark to ensure that its results do not depend on
+// which other tests of benchmarks have run previously.  This can help with
+// debugging.
+//
+// This flag currently does *not* affect the initial seed value for
+// S2Testing::rnd.  TODO(user): Fix this.
 DECLARE_int32(s2_random_seed);
 
 // This class defines various static functions that are useful for writing

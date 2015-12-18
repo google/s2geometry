@@ -67,7 +67,7 @@
 //
 // To find the closest points to a query edge rather than a point, use:
 //
-//   query.FindClosesEdgesToEdge(v0, v1);
+//   query.FindClosestEdgesToEdge(v0, v1);
 //
 // The implementation is designed to be fast for both small and large sets of
 // edges.

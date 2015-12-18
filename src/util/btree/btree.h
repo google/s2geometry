@@ -142,19 +142,6 @@
 #include <glog/logging.h>
 #include "base/macros.h"
 #include "base/template_util.h"
-#include "strings/stringpiece.h"
-
-// iwyu.py found std::swap in <vector>, but we include <algorithm>.
-// IWYU pragma: no_include <vector>
-//
-// iwyu.py doesn't think we need <ostream>, so wants <iosfwd>.
-// IWYU pragma: no_include <iosfwd>
-//
-// iwyu.py sure wants to bring in a lot of private STL headers.
-// IWYU pragma: no_include <bits/ostream.tcc>
-// IWYU pragma: no_include <bits/stl_iterator.h>
-// IWYU pragma: no_include <bits/stl_iterator_base_funcs.h>
-// IWYU pragma: no_include <bits/stl_iterator_base_types.h>
 
 namespace util {
 namespace btree {
@@ -217,8 +204,7 @@ struct btree_is_key_compare_to
 // A helper class to convert a boolean comparison into a three-way "compare-to"
 // comparison that returns a negative value to indicate less-than, zero to
 // indicate equality and a positive value to indicate greater-than. This helper
-// class is specialized for less<string>, greater<string>, less<StringPiece>,
-// greater<StringPiece>, less<Cord> and greater<Cord>. The
+// class is specialized for less<string> and greater<string>. The
 // btree_key_compare_to_adapter class is provided so that btree users
 // automatically get the more efficient compare-to code when using common
 // google string types with common comparison functors.
@@ -230,32 +216,6 @@ struct btree_key_compare_to_adapter : Compare {
       : Compare(c) {
   }
 };
-
-#ifdef HAS_GLOBAL_STRING
-template <>
-struct btree_key_compare_to_adapter<std::less<string> >
-    : public btree_key_compare_to_tag {
-  btree_key_compare_to_adapter() {}
-  btree_key_compare_to_adapter(const std::less<string>&) {}
-  btree_key_compare_to_adapter(
-      const btree_key_compare_to_adapter<std::less<string> >&) {}
-  int operator()(const string &a, const string &b) const {
-    return a.compare(b);
-  }
-};
-
-template <>
-struct btree_key_compare_to_adapter<std::greater<string> >
-    : public btree_key_compare_to_tag {
-  btree_key_compare_to_adapter() {}
-  btree_key_compare_to_adapter(const std::greater<string>&) {}
-  btree_key_compare_to_adapter(
-      const btree_key_compare_to_adapter<std::greater<string> >&) {}
-  int operator()(const string &a, const string &b) const {
-    return b.compare(a);
-  }
-};
-#endif
 
 template <>
 struct btree_key_compare_to_adapter<std::less<std::string> >
@@ -277,30 +237,6 @@ struct btree_key_compare_to_adapter<std::greater<std::string> >
   btree_key_compare_to_adapter(
       const btree_key_compare_to_adapter<std::greater<std::string> >&) {}
   int operator()(const std::string &a, const std::string &b) const {
-    return b.compare(a);
-  }
-};
-
-template <>
-struct btree_key_compare_to_adapter<std::less<StringPiece> >
-    : public btree_key_compare_to_tag {
-  btree_key_compare_to_adapter() {}
-  btree_key_compare_to_adapter(const std::less<StringPiece>&) {}
-  btree_key_compare_to_adapter(
-      const btree_key_compare_to_adapter<std::less<StringPiece> >&) {}
-  int operator()(const StringPiece &a, const StringPiece &b) const {
-    return a.compare(b);
-  }
-};
-
-template <>
-struct btree_key_compare_to_adapter<std::greater<StringPiece> >
-    : public btree_key_compare_to_tag {
-  btree_key_compare_to_adapter() {}
-  btree_key_compare_to_adapter(const std::greater<StringPiece>&) {}
-  btree_key_compare_to_adapter(
-      const btree_key_compare_to_adapter<std::greater<StringPiece> >&) {}
-  int operator()(const StringPiece &a, const StringPiece &b) const {
     return b.compare(a);
   }
 };

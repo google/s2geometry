@@ -57,13 +57,6 @@ class S1Angle {
   static S1Angle E6(int32 e6);
   static S1Angle E7(int32 e7);
 
-  // Convenience functions -- to use when args have been fixed32s in protos.
-  //
-  // The arguments are static_cast into int32, so very large unsigned values
-  // are treated as negative numbers.
-  static S1Angle UnsignedE6(uint32 e6);
-  static S1Angle UnsignedE7(uint32 e7);
-
   // The default constructor yields a zero angle.  This is useful for STL
   // containers and class methods with output arguments.
   S1Angle();
@@ -90,41 +83,20 @@ class S1Angle {
   int32 e6() const;
   int32 e7() const;
 
-  // Return the absolute value of an angle.
-  S1Angle abs() const;
-
-  // Comparison operators.
-  friend bool operator==(S1Angle x, S1Angle y);
-  friend bool operator!=(S1Angle x, S1Angle y);
-  friend bool operator<(S1Angle x, S1Angle y);
-  friend bool operator>(S1Angle x, S1Angle y);
-  friend bool operator<=(S1Angle x, S1Angle y);
-  friend bool operator>=(S1Angle x, S1Angle y);
-
-  // Simple arithmetic operators for manipulating S1Angles.
-  friend S1Angle operator-(S1Angle a);
-  friend S1Angle operator+(S1Angle a, S1Angle b);
-  friend S1Angle operator-(S1Angle a, S1Angle b);
-  friend S1Angle operator*(double m, S1Angle a);
-  friend S1Angle operator*(S1Angle a, double m);
-  friend S1Angle operator/(S1Angle a, double m);
-  friend double operator/(S1Angle a, S1Angle b);
-  S1Angle& operator+=(S1Angle a);
-  S1Angle& operator-=(S1Angle a);
-  S1Angle& operator*=(double m);
-  S1Angle& operator/=(double m);
-
-  // Trigonmetric functions (not necessary but slightly more convenient).
-  friend double sin(S1Angle a);
-  friend double cos(S1Angle a);
-  friend double tan(S1Angle a);
-
   // Return the angle normalized to the range (-180, 180] degrees.
   S1Angle Normalized() const;
 
   // Normalize this angle to the range (-180, 180] degrees.
   void Normalize();
 };
+```
+
+See `s1angle.h` for additional methods, including comparison and
+arithmetic operators. For example, if `x` and `y` are angles, then you can
+write
+
+```
+if (sin(0.5 * x) > (x + y) / (x - y)) { ... }
 ```
 
 ### S2Point
@@ -192,7 +164,7 @@ class S2LatLng {
   // Convert a direction vector (not necessarily unit length) to an S2LatLng.
   explicit S2LatLng(S2Point const& p);
 
-  // Returns an S2LatLng for which is_valid() will return false.
+  // Return an S2LatLng for which is_valid() will return false.
   static S2LatLng Invalid();
 
   // Convenience functions -- shorter than calling S1Angle::Radians(), etc.
@@ -201,17 +173,6 @@ class S2LatLng {
   static S2LatLng FromE5(int32 lat_e5, int32 lng_e5);
   static S2LatLng FromE6(int32 lat_e6, int32 lng_e6);
   static S2LatLng FromE7(int32 lat_e7, int32 lng_e7);
-
-  // Convenience functions -- to use when args have been fixed32s in protos.
-  //
-  // The arguments are static_cast into int32, so very large unsigned values
-  // are treated as negative numbers.
-  static S2LatLng FromUnsignedE6(uint32 lat_e6, uint32 lng_e6);
-  static S2LatLng FromUnsignedE7(uint32 lat_e7, uint32 lng_e7);
-
-  // Methods to compute the latitude and longitude of a point separately.
-  static S1Angle Latitude(S2Point const& p);
-  static S1Angle Longitude(S2Point const& p);
 
   // Accessor methods.
   S1Angle lat() const;
@@ -238,24 +199,11 @@ class S2LatLng {
   // but this implementation is slightly more efficient.  Both S2LatLngs
   // must be normalized.
   S1Angle GetDistance(S2LatLng const& o) const;
-
-  // Simple arithmetic operations for manipulating latitude-longitude pairs.
-  // The results are not normalized (see Normalized()).
-  friend S2LatLng operator+(S2LatLng const& a, S2LatLng const& b);
-  friend S2LatLng operator-(S2LatLng const& a, S2LatLng const& b);
-  friend S2LatLng operator*(double m, S2LatLng const& a);
-  friend S2LatLng operator*(S2LatLng const& a, double m);
-
-  bool operator==(S2LatLng const& o) const;
-  bool operator!=(S2LatLng const& o) const;
-  bool operator<(S2LatLng const& o) const;
-  bool operator>(S2LatLng const& o) const;
-  bool operator<=(S2LatLng const& o) const;
-  bool operator>=(S2LatLng const& o) const;
-
-  bool ApproxEquals(S2LatLng const& o, double max_error = 1e-15) const;
 };
 ```
+
+See `s2latlng.h` for additional methods, including comparison and
+arithmetic operators.
 
 ### S2Region
 
@@ -301,41 +249,15 @@ class S2Region {
   //
   // NOTE: If you will be calling this function on one specific subtype only,
   // or if performance is a consideration, please use the non-virtual
-  // method Contains(S2Point const& p) declared below!
+  // method Contains(S2Point const& p) defined for each subtype.
   virtual bool VirtualContainsPoint(S2Point const& p) const = 0;
 
   // Use encoder to generate a serialized representation of this region.
-  // Assumes that encoder can be enlarged using calls to Ensure(int).
-  //
-  // The representation chosen is left up to the sub-classes but it should
-  // satisfy the following constraints:
-  // - It should encode a version number.
-  // - It should be deserializable using the corresponding Decode method.
-  // - Performance, not space, should be the chief consideration. Encode() and
-  //   Decode() should be implemented such that the combination is equivalent
-  //   to calling Clone().
   virtual void Encode(Encoder* const encoder) const = 0;
 
   // Reconstruct a region from the serialized representation generated by
-  // Encode(). Note that since this method is virtual, it requires that a
-  // Region object of the appropriate concrete type has already been
-  // constructed. It is not possible to decode regions of unknown type.
-  //
-  // Whenever the Decode method is changed to deal with new serialized
-  // representations, it should be done so in a manner that allows for
-  // older versions to be decoded i.e. the version number in the serialized
-  // representation should be used to decide how to decode the data.
-  //
-  // Returns true on success.
+  // Encode().
   virtual bool Decode(Decoder* const decoder) = 0;
-
-  // Provide the same functionality as Decode, except that decoded regions are
-  // allowed to point directly into the Decoder's memory buffer rather than
-  // copying the data.  This method can be much faster for regions that have
-  // a lot of data (such as polygons), but the decoded region is only valid
-  // within the scope (lifetime) of the Decoder's memory buffer.
-  // Default implementation just calls Decode.
-  virtual bool DecodeWithinScope(Decoder* const decoder);
 };
 ```
 
@@ -344,6 +266,7 @@ In addition, all `S2Region` subtypes implement a
 `p` is contained by the region.  The point is generally required to be unit
 length, although some subtypes may relax this restriction.
 
+See `s2region.h` for the full interface.
 
 ### S2LatLngRect
 
@@ -413,10 +336,6 @@ class S2LatLngRect : public S2Region {
   static S2LatLngRect Empty();
   // Full: lat_lo=-Pi/2, lat_hi=Pi/2, lng_lo=-Pi, lng_hi=Pi (radians)
   static S2LatLngRect Full();
-
-  // The full allowable range of latitudes and longitudes.
-  static R1Interval FullLat();
-  static S1Interval FullLng();
 
   // Return true if the rectangle is valid, which essentially just means
   // that the latitude bounds do not exceed Pi/2 in absolute value and
@@ -591,48 +510,6 @@ class S2LatLngRect : public S2Region {
   // The latlng must be valid.
   S1Angle GetDistance(S2LatLng const& p) const;
 
-  // Returns the (directed or undirected) Hausdorff distance (measured along the
-  // surface of the sphere) to the given S2LatLngRect. The directed Hausdorff
-  // distance from rectangle A to rectangle B is given by
-  //     h(A, B) = max_{p in A} min_{q in B} d(p, q).
-  // The Hausdorff distance between rectangle A and rectangle B is given by
-  //     H(A, B) = max{h(A, B), h(B, A)}.
-  S1Angle GetDirectedHausdorffDistance(S2LatLngRect const& other) const;
-  S1Angle GetHausdorffDistance(S2LatLngRect const& other) const;
-
-  // Return true if two rectangles contains the same set of points.
-  bool operator==(S2LatLngRect const& other) const;
-
-  // Return the opposite of what operator == returns.
-  bool operator!=(S2LatLngRect const& other) const;
-
-  // Return true if the latitude and longitude intervals of the two rectangles
-  // are the same up to the given tolerance (see r1interval.h and s1interval.h
-  // for details).
-  bool ApproxEquals(S2LatLngRect const& other, double max_error = 1e-15) const;
-
-  // ApproxEquals() with separate tolerances for latitude and longitude.
-  bool ApproxEquals(S2LatLngRect const& other, S2LatLng const& max_error) const;
-
-  // Return true if the edge AB intersects the given edge of constant
-  // longitude.
-  static bool IntersectsLngEdge(S2Point const& a, S2Point const& b,
-                                R1Interval const& lat, double lng);
-
-  // Return true if the edge AB intersects the given edge of constant
-  // latitude.  Requires the vectors to have unit length.
-  static bool IntersectsLatEdge(S2Point const& a, S2Point const& b,
-                                double lat, S1Interval const& lng);
-
-  ////////////////////////////////////////////////////////////////////////
-  // S2Region interface (see s2region.h for details):
-
-  virtual S2LatLngRect* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool VirtualContainsPoint(S2Point const& p);
-
   // This test is cheap but is NOT exact.  Use Intersects() if you want a more
   // accurate and more expensive test.  Note that when this method is used by
   // an S2RegionCoverer, the accuracy isn't all that important since if a cell
@@ -643,10 +520,18 @@ class S2LatLngRect : public S2Region {
   // The point 'p' does not need to be normalized.
   bool Contains(S2Point const& p) const;
 
-  virtual void Encode(Encoder* const encoder) const;
-  virtual bool Decode(Decoder* const decoder);
+  ////////////////////////////////////////////////////////////////////////
+  // S2Region interface (see s2region.h for details):
+
+  virtual S2LatLngRect* Clone() const;
+  virtual S2Cap GetCapBound() const;
+  virtual S2LatLngRect GetRectBound() const;
+  virtual bool Contains(S2Cell const& cell) const;
+  virtual bool VirtualContainsPoint(S2Point const& p);
 };
 ```
+
+See `s2latlngrect.h` for additional methods.
 
 ### S2Cap
 
@@ -689,8 +574,6 @@ class S2Cap : public S2Region {
 
   // Return a full cap, i.e. a cap that contains all points.
   static S2Cap Full();
-
-  ~S2Cap();
 
   // Accessor methods.
   S2Point const& center() const;
@@ -774,8 +657,11 @@ class S2Cap : public S2Region {
   // of 180 degrees or more are mapped to a height of 2 (i.e., a full cap).
   static double RadiusToHeight(S1Angle radius);
 
-  // Return the smallest cap which encloses this cap and "other".
+  // Return the smallest cap that encloses this cap and "other".
   S2Cap Union(S2Cap const& other) const;
+
+  // The point "p" should be a unit-length vector.
+  bool Contains(S2Point const& p) const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -786,26 +672,10 @@ class S2Cap : public S2Region {
   virtual bool Contains(S2Cell const& cell) const;
   virtual bool MayIntersect(S2Cell const& cell) const;
   virtual bool VirtualContainsPoint(S2Point const& p);
-
-  // The point "p" should be a unit-length vector.
-  bool Contains(S2Point const& p) const;
-
-  // Encoding/decoding not implemented.
-  virtual void Encode(Encoder* const encoder) const;
-  virtual bool Decode(Decoder* const decoder);
-
-  ///////////////////////////////////////////////////////////////////////
-  // The following static methods are convenience functions for assertions
-  // and testing purposes only.
-
-  // Return true if two caps are identical.
-  bool operator==(S2Cap const& other) const;
-
-  // Return true if the cap center and height differ by at most "max_error"
-  // from the given cap "other".
-  bool ApproxEquals(S2Cap const& other, double max_error = 1e-14) const;
 };
 ```
+
+See `s2cap.h` for additional methods.
 
 ## Cell Hierarchy
 
@@ -1060,33 +930,6 @@ class S2CellId {
   S2Point ToPoint() const;
   S2Point ToPointRaw() const;
 
-  // Return the center of the cell in (s,t) coordinates (see s2.h).
-  R2Point GetCenterST() const;
-
-  // Return the edge length of this cell in (s,t)-space.
-  double GetSizeST() const;
-
-  // Return the edge length in (s,t)-space of cells at the given level.
-  static double GetSizeST(int level);
-
-  // Return the bounds of this cell in (s,t)-space.
-  R2Rect GetBoundST() const;
-
-  // Return the center of the cell in (u,v) coordinates (see s2.h).  Note that
-  // the center of the cell is defined as the point at which it is recursively
-  // subdivided into four children; in general, it is not at the midpoint of
-  // the (u,v) rectangle covered by the cell.
-  R2Point GetCenterUV() const;
-
-  // Return the bounds of this cell in (u,v)-space.
-  R2Rect GetBoundUV() const;
-
-  // Return the (face, si, ti) coordinates of the center of the cell.  Note
-  // that although (si,ti) coordinates span the range [0,2**31] in general,
-  // the cell center coordinates are always in the range [1,2**31-1] and
-  // therefore can be represented using a signed 32-bit integer.
-  int GetCenterSiTi(int* psi, int* pti) const;
-
   // Return the S2LatLng corresponding to the center of the given cell.
   S2LatLng ToLatLng() const;
 
@@ -1105,12 +948,6 @@ class S2CellId {
 
   // Return the subdivision level of the cell (range 0..kMaxLevel).
   int level() const;
-
-  // Return the edge length of this cell in (i,j)-space.
-  int GetSizeIJ() const;
-
-  // Like the above, but return the size of cells at the given level.
-  static int GetSizeIJ(int level);
 
   // Return true if this is a leaf cell (more efficient than checking
   // whether level() == kMaxLevel).
@@ -1190,33 +1027,6 @@ class S2CellId {
   // position is never advanced past End() or before Begin().
   S2CellId advance(int64 steps) const;
 
-  // Like next() and prev(), but these methods wrap around from the last face
-  // to the first and vice versa.  They should *not* be used for iteration in
-  // conjunction with child_begin(), child_end(), Begin(), or End().  The
-  // input must be a valid cell id.
-  S2CellId next_wrap() const;
-  S2CellId prev_wrap() const;
-
-  // This method advances or retreats the indicated number of steps along the
-  // Hilbert curve at the current level, and returns the new position.  The
-  // position wraps between the first and last faces as necessary.  The input
-  // must be a valid cell id.
-  S2CellId advance_wrap(int64 steps) const;
-
-  // Return the largest cell with the same range_min() and such that
-  // range_max() < limit.range_min().  Returns "limit" if no such cell exists.
-  // This method can be used to generate a small set of S2CellIds that covers
-  // a given range (a "tiling").  This example shows how to generate a tiling
-  // for a semi-open range of leaf cells [start, limit):
-  //
-  //   for (S2CellId id = start.maximum_tile(limit);
-  //        id != limit; id = id.next().maximum_tile(limit)) { ... }
-  //
-  // Note that in general the cells in the tiling will be of different sizes;
-  // they gradually get larger (near the middle of the range) and then
-  // gradually get smaller (as "limit" is approached).
-  S2CellId maximum_tile(S2CellId limit) const;
-
   // Return the level of the "lowest common ancestor" of this cell and
   // "other".  Note that because of the way that cell levels are numbered,
   // this is actually the *highest* level of any shared ancestor.  Return -1
@@ -1271,35 +1081,10 @@ class S2CellId {
   // Requires: nbr_level >= this->level().  Note that for cells adjacent to a
   // face vertex, the same neighbor may be appended more than once.
   void AppendAllNeighbors(int nbr_level, std::vector<S2CellId>* output) const;
-
-  /////////////////////////////////////////////////////////////////////
-  // Low-level methods.
-
-  // Return a leaf cell given its cube face (range 0..5) and
-  // i- and j-coordinates (see s2.h).
-  static S2CellId FromFaceIJ(int face, int i, int j);
-
-  // Return the (face, i, j) coordinates for the leaf cell corresponding to
-  // this cell id.  Since cells are represented by the Hilbert curve position
-  // at the center of the cell, the returned (i,j) for non-leaf cells will be
-  // a leaf cell adjacent to the cell center.  If "orientation" is non-NULL,
-  // also return the Hilbert curve orientation for the current cell.
-  int ToFaceIJOrientation(int* pi, int* pj, int* orientation) const;
-
-  // Return the lowest-numbered bit that is on for this cell id, which is
-  // equal to (uint64(1) << (2 * (kMaxLevel - level))).  So for example,
-  // a.lsb() <= b.lsb() if and only if a.level() >= b.level(), but the
-  // first test is more efficient.
-  uint64 lsb() const;
-
-  // Return the lowest-numbered bit that is on for cells at the given level.
-  static uint64 lsb_for_level(int level);
-
-  // Return the bound in (u,v)-space for the cell at the given level containing
-  // the leaf cell with the given (i,j)-coordinates.
-  static R2Rect IJLevelToBoundUV(int ij[2], int level);
 };
 ```
+
+See `s2cellid.h` for additional methods.
 
 ### `S2Cell` Class
 
@@ -1341,11 +1126,6 @@ class S2Cell : public S2Region {
   int level() const;
   int orientation() const;
   bool is_leaf() const;
-
-  // These are equivalent to the S2CellId methods, but have a more efficient
-  // implementation since the level has been precomputed.
-  int GetSizeIJ() const;
-  double GetSizeST() const;
 
   // Return the k-th vertex of the cell (k = 0,1,2,3).  Vertices are returned
   // in CCW order (lower left, lower right, upper right, upper left in the UV
@@ -1396,9 +1176,6 @@ class S2Cell : public S2Region {
   // cells (whose area is approximately 1e-18).
   double ExactArea() const;
 
-  // Return the bounds of this cell in (u,v)-space.
-  R2Rect GetBoundUV() const;
-
   // Return the distance from the cell to the given point.  Returns zero if
   // the point is inside the cell.
   S1ChordAngle GetDistance(S2Point const& target) const;
@@ -1406,18 +1183,6 @@ class S2Cell : public S2Region {
   // Return the minimum distance from the cell to the given edge AB.  Returns
   // zero if the edge intersects the cell interior.
   S1ChordAngle GetDistanceToEdge(S2Point const& a, S2Point const& b) const;
-
-  ////////////////////////////////////////////////////////////////////////
-  // S2Region interface (see s2region.h for details):
-
-  virtual S2Cell* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool MayIntersect(S2Cell const& cell) const;
-  virtual bool VirtualContainsPoint(S2Point const& p) const {
-    return Contains(p);  // The same as Contains() below, just virtual.
-  }
 
   // Return true if the cell contains the given point "p".  Note that unlike
   // S2Loop/S2Polygon, S2Cells are considered to be closed sets.  This means
@@ -1431,10 +1196,19 @@ class S2Cell : public S2Region {
   // The point "p" does not need to be normalized.
   bool Contains(S2Point const& p) const;
 
-  // Encoding/decoding not implemented;
-  virtual void Encode(Encoder* const encoder) const;
-  virtual bool Decode(Decoder* const decoder);
+  ////////////////////////////////////////////////////////////////////////
+  // S2Region interface (see s2region.h for details):
+
+  virtual S2Cap* Clone() const;
+  virtual S2Cap GetCapBound() const;
+  virtual S2LatLngRect GetRectBound() const;
+  virtual bool Contains(S2Cell const& cell) const;
+  virtual bool MayIntersect(S2Cell const& cell) const;
+  virtual bool VirtualContainsPoint(S2Point const& p);
+};
 ```
+
+See `s2cell.h` for additional methods.
 
 ### Cell Unions
 
@@ -1453,26 +1227,13 @@ class S2CellUnion : public S2Region {
   // until one of the Init() methods is called.
   S2CellUnion();
 
-  // Populates a cell union with the given S2CellIds or 64-bit cells ids, and
-  // then calls Normalize().  The InitSwap() version takes ownership of the
-  // vector data without copying and clears the given vector.  These methods
-  // may be called multiple times.
+  // Populates a cell union with the given S2CellIds, and then calls
+  // Normalize().  This method may be called multiple times.
   void Init(vector<S2CellId> const& cell_ids);
-  void Init(vector<uint64> const& cell_ids);
-  void InitSwap(std::vector<S2CellId>* cell_ids);
-
-  // Like Init(), but does not call Normalize().  The cell union *must* be
-  // normalized before doing any calculations with it, so it is the caller's
-  // responsibility to make sure that the input is normalized.  This method is
-  // useful when converting cell unions to another representation and back.
-  // These methods may be called multiple times.
-  void InitRaw(std::vector<S2CellId> const& cell_ids);
-  void InitRaw(std::vector<uint64> const& cell_ids);
-  void InitRawSwap(std::vector<S2CellId>* cell_ids);
 
   // Gives ownership of the vector data to the client without copying, and
   // clears the content of the cell union.  The original data in cell_ids
-  // is lost if there was any.  This is the opposite of InitRawSwap().
+  // is lost if there was any.
   void Detach(std::vector<S2CellId>* cell_ids);
 
   // Convenience methods for accessing the individual cell ids.
@@ -1486,9 +1247,6 @@ class S2CellUnion : public S2Region {
   // cells, replacing groups of 4 child cells by their parent cell whenever
   // possible, and sorting all the cell ids in increasing order.  Returns true
   // if the number of cells was reduced.
-  //
-  // If InitRaw() was used then this method *must* be called before doing any
-  // calculations on the cell union, such as Intersects() or Contains().
   bool Normalize();
 
   // Replaces "output" with an expanded version of the cell union where any
@@ -1566,22 +1324,6 @@ class S2CellUnion : public S2Region {
   // number of cells in the input.
   void Expand(S1Angle min_radius, int max_level_diff);
 
-  // Create a cell union that corresponds to a continuous range of cell ids.
-  // The output is a normalized collection of cell ids that covers the leaf
-  // cells between "min_id" and "max_id" inclusive.
-  // REQUIRES: min_id.is_leaf(), max_id.is_leaf(), min_id <= max_id.
-  void InitFromRange(S2CellId min_id, S2CellId max_id);
-
-  // Like InitFromRange(), except that the union covers the range of leaf
-  // cells from "begin" (inclusive) to "end" (exclusive), as with Python
-  // ranges or STL iterator ranges.  If (begin == end) the result is empty.
-  // REQUIRES: begin.is_leaf(), end.is_leaf(), begin <= end.
-  void InitFromBeginEnd(S2CellId begin, S2CellId end);
-
-  // The number of leaf cells covered by the union.
-  // This will be no more than 6*2^60 for the whole sphere.
-  uint64 LeafCellsCovered() const;
-
   // Approximate this cell union's area by summing the average area of
   // each contained cell's average area, using the AverageArea method
   // from the S2Cell class.
@@ -1602,54 +1344,19 @@ class S2CellUnion : public S2Region {
   // contained cell, using the Exact method from the S2Cell class.
   double ExactArea() const;
 
-  ////////////////////////////////////////////////////////////////////////
-  // S2Region interface (see s2region.h for details):
-
-  virtual S2CellUnion* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-
-  // This is a fast operation (logarithmic in the size of the cell union).
-  virtual bool Contains(S2Cell const& cell) const;
-
-  // This is a fast operation (logarithmic in the size of the cell union).
-  virtual bool MayIntersect(S2Cell const& cell) const;
-
-  virtual bool VirtualContainsPoint(S2Point const& p);
-
-  // Encoding/decoding not implemented.
-  virtual void Encode(Encoder* const encoder);
-  virtual bool Decode(Decoder* const decoder);
-
   // The point 'p' does not need to be normalized.
   // This is a fast operation (logarithmic in the size of the cell union).
   bool Contains(S2Point const& p) const;
 
   ////////////////////////////////////////////////////////////////////////
-  // Static methods intended for high-performance clients that prefer to
-  // manage their own storage.
+  // S2Region interface (see s2region.h for details):
 
-  // Like Normalize() above, but works directly with a vector of S2CellIds.
-  // Equivalent to the following:
-  //    S2CellUnion cell_union;
-  //    cell_union.Init(*cell_ids);
-  //    cell_union.Detach(cell_ids);
-  static bool Normalize(std::vector<S2CellId>* cell_ids);
-
-  // Like GetIntersection() above, but works directly with vectors of S2CellIds.
-  // Equivalent to the following:
-  //    S2CellUnion x_union, y_union, result_union;
-  //    x_union.Init(x);
-  //    y_union.Init(y);
-  //    result_union.GetIntersection(&x_union, &y_union);
-  //    result_union.Detach(out);
-  // except that this method has slightly more relaxed normalization
-  // requirements: the input vectors may contain groups of 4 child cells that
-  // all have the same parent.  (In a normalized S2CellUnion, such groups are
-  // always replaced by the parent cell.)
-  static void GetIntersection(std::vector<S2CellId> const& x,
-                              std::vector<S2CellId> const& y,
-                              std::vector<S2CellId>* out);
+  virtual S2Cap* Clone() const;
+  virtual S2Cap GetCapBound() const;
+  virtual S2LatLngRect GetRectBound() const;
+  virtual bool Contains(S2Cell const& cell) const;
+  virtual bool MayIntersect(S2Cell const& cell) const;
+  virtual bool VirtualContainsPoint(S2Point const& p);
 };
 ```
 
@@ -1758,38 +1465,6 @@ class S2RegionCoverer {
   void GetCovering(S2Region const& region, std::vector<S2CellId>* covering);
   void GetInteriorCovering(S2Region const& region,
                            std::vector<S2CellId>* interior);
-
-  // Return a normalized cell union that covers (GetCellUnion) or is contained
-  // within (GetInteriorCellUnion) the given region and satisfies the
-  // restrictions *EXCEPT* for min_level() and level_mod().  These criteria
-  // cannot be satisfied using a cell union because cell unions are
-  // automatically normalized by replacing four child cells with their parent
-  // whenever possible.  (Note that the list of cell ids passed to the cell
-  // union constructor does in fact satisfy all the given restrictions.)
-  void GetCellUnion(S2Region const& region, S2CellUnion* covering);
-  void GetInteriorCellUnion(S2Region const& region, S2CellUnion* interior);
-
-  // Like GetCovering(), except that this method is much faster and the
-  // coverings are not as tight.  All of the usual parameters are respected
-  // (max_cells, min_level, max_level, and level_mod), except that the
-  // implementation makes no attempt to take advantage of large values of
-  // max_cells().  (A small number of cells will always be returned.)
-  //
-  // This function is useful as a starting point for algorithms that
-  // recursively subdivide cells.
-  void GetFastCovering(S2Cap const& cap, std::vector<S2CellId>* covering);
-
-  // Given a connected region and a starting point, return a set of cells at
-  // the given level that cover the region.
-  //
-  // Note that this method is *not* faster than the regular GetCovering()
-  // method for most region types, such as S2Cap or S2Polygon, and in fact it
-  // can be much slower when the output consists of a large number of cells.
-  // Currently it can be faster at generating coverings of long narrow regions
-  // such as polylines, but this may change in the future, in which case this
-  // method will most likely be removed.
-  static void GetSimpleCovering(S2Region const& region, S2Point const& start,
-                                int level, std::vector<S2CellId>* output);
 };
 ```
 

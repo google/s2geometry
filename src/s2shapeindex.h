@@ -39,14 +39,16 @@
 //   }
 // }
 //
-// The index is dynamic; shapes can be added or removed (although each
-// individual shape is immutable).  It is designed to handle up to millions of
-// shapes and edges.  All data structures are designed to be small, so the
-// index is compact; generally it is smaller than the underlying data being
-// indexed.  The index is also fast to construct.
+// The index can be updated incrementally by adding or removing shapes
+// (although each individual shape is immutable).  It is designed to handle up
+// to hundreds of millions of edges.  All data structures are designed to be
+// small, so the index is compact; generally it is smaller than the underlying
+// data being indexed.  The index is also fast to construct.
 //
 // All "const" methods are thread-safe provided that they do not overlap with
-// calls to non-const methods.  Non-const methods are not thread-safe.
+// calls to non-const methods.  Non-const methods are not thread-safe.  This
+// means that if you update the index, you need to ensure that no other thread
+// is reading or updating the index (including through Iterator objects).
 //
 // S2Polygon, S2Loop, and S2Polyline define S2Shape classes that allow these
 // objects to be indexed easily.  Additional S2Shape classes are defined in
@@ -143,6 +145,9 @@ class S2Shape {
 
   // Returns true if this shape contains S2::Origin().  Should return false
   // for shapes that do not have an interior.
+  //
+  // TODO(ericv): Consider allowing shapes to also return their own choice of
+  // origin(), to make this method easier to implement for arbitrary shapes.
   virtual bool contains_origin() const = 0;
 
   // This method is called when an S2Shape is removed from the index or the
@@ -162,7 +167,7 @@ class S2Shape {
   // to a source object, or a pointer to a bundle of additional data allocated
   // directly with the S2Shape.  Example usage:
   //
-  //  MyData* data = static_cast<MyData*>(shape->user_data());
+  //  MyData const* data = static_cast<MyData const*>(shape->user_data());
   virtual void const* user_data() const { return nullptr; }
   virtual void* mutable_user_data() { return nullptr; }
 
@@ -219,8 +224,8 @@ class S2ClippedShape {
   // two edge ids are stored inline; this is an important optimization for
   // clients that use S2Shapes consisting of a single edge.
   int32 shape_id_;
-  uint32 num_edges_ : 31;
   uint32 contains_center_ : 1;  // shape contains the cell center
+  uint32 num_edges_ : 31;
 
   // If there are more than two edges, this field holds a pointer.
   // Otherwise it holds an array of edge ids.
@@ -318,7 +323,9 @@ class S2ShapeIndex {
   // Add the given shape to the index, and also assign a unique id to the
   // shape (shape->id()).  Shape ids are assigned sequentially starting from 0
   // in the order shapes are added.  Invalidates all iterators and their
-  // associated data.  Does *not* take ownership of "shape".
+  // associated data.  Does not take ownership of "shape", but note that
+  // shape->Release() will be called whenever the index is destroyed or its
+  // Reset() method is called.
   //
   // REQUIRES: "shape" is not currently in any other S2ShapeIndex.
   // REQUIRES: "shape" persists for the lifetime of the index or until
@@ -326,10 +333,9 @@ class S2ShapeIndex {
   void Add(S2Shape* shape);
   void Insert(S2Shape* shape);  // DEPRECATED
 
-  // Remove the given shape from the index.  Does not free storage for the
-  // shape itself, which is owned by the caller.  Invalidates all iterators
-  // and their associated data.
-  // TODO(ericv): Implement this method.
+  // Remove the given shape from the index and return ownership to the caller.
+  // Does not call the shape's destructor or Release() method.  Invalidates
+  // all iterators and their associated data.
   void Remove(S2Shape* shape);
 
   // Clear the contents of the index and reset it to its original state.  Any
@@ -337,12 +343,12 @@ class S2ShapeIndex {
   void Reset();
 
   // Return true if "shape" contains the given point P.
-  bool ShapeContains(S2Shape const* shape, S2Point const& p);
+  bool ShapeContains(S2Shape const* shape, S2Point const& p) const;
 
   // Return true if the given point P is contained by at least one shape,
   // and return a list of the containing shapes.
   bool GetContainingShapes(S2Point const& p,
-                           std::vector<S2Shape*>* shapes);
+                           std::vector<S2Shape*>* shapes) const;
 
   // The possible relationships between a "target" cell and the cells of the
   // S2ShapeIndex.  If the target is an index cell or is contained by an index
@@ -367,12 +373,17 @@ class S2ShapeIndex {
     explicit Iterator(S2ShapeIndex const& index);
 
     // Initialize an iterator for the given S2ShapeIndex.  If the index is
-    // non-empty, the iterator is positioned at the first cell.
+    // non-empty, the iterator is positioned at the first cell.  This method
+    // may also be called in order to restore an iterator to a valid state
+    // after the underlying index has been updated (although it is usually
+    // easier just to declare a new iterator whenever required, since iterator
+    // construction is cheap).
     void Init(S2ShapeIndex const& index);
 
     // Reset the iterator to its original state (positioned at the first cell
-    // in the index).  This method may be called after the index is modified
-    // to restore the iterator to a valid state.
+    // in the index).  Note that this method does *not* restore the iterator
+    // to a valid state after the underlying index has been updated; to do
+    // that you must call Init().
     void Reset();
 
     // The cell id for this cell.
@@ -429,7 +440,7 @@ class S2ShapeIndex {
     void InitStale(S2ShapeIndex const& index);
 
    private:
-    CellMap const* cell_map_;
+    S2ShapeIndex const* index_;
     CellMap::const_iterator iter_, end_;
   };
 
@@ -438,7 +449,9 @@ class S2ShapeIndex {
   int GetNumEdges() const;
 
   // Return the number of bytes occupied by the index (including any unused
-  // space at the end of vectors, etc).
+  // space at the end of vectors, etc).  This method applies any pending
+  // updates before measuring memory usage.  It has the same thread safety as
+  // the other "const" methods (see introduction).
   size_t BytesUsed() const;
 
   // Calls to Add() and Remove() are normally queued and processed on the
@@ -463,38 +476,61 @@ class S2ShapeIndex {
   bool is_fresh() const;
 
  private:
-  friend class S2ShapeIndexTest;   // kCellPadding
   friend class Iterator;           // cell_map_
+  friend class S2ShapeIndexTest;
   friend class S2Stats;
 
+  class BatchDescriptor;
   class ClippedEdge;
   class EdgeAllocator;
   class FaceEdge;
   class InteriorTracker;
+  class RemovedShape;
 
   typedef std::vector<int> ShapeIdSet;
 
   // Internal methods are documented with their definitions.
+  bool is_first_update() const;
+  bool is_shape_being_removed(int shape_id) const;
   void MaybeApplyUpdates() const;
   void ApplyUpdatesThreadSafe();
   void ApplyUpdatesInternal();
-  void ReserveSpace(std::vector<FaceEdge> all_edges[6]) const;
-  void AddShapeEdges(int id, std::vector<FaceEdge> all_edges[6],
-                     InteriorTracker* tracker) const;
+  void GetUpdateBatches(std::vector<BatchDescriptor>* batches) const;
+  static void GetBatchSizes(int num_items, int max_batches,
+                            double final_bytes_per_item,
+                            double high_water_bytes_per_item,
+                            double preferred_max_bytes_per_batch,
+                            std::vector<int>* batch_sizes);
+  void ReserveSpace(BatchDescriptor const& batch,
+                    std::vector<FaceEdge> all_edges[6]) const;
+  void AddShape(int id, std::vector<FaceEdge> all_edges[6],
+                InteriorTracker* tracker) const;
+  void RemoveShape(RemovedShape const& removed,
+                   std::vector<FaceEdge> all_edges[6],
+                   InteriorTracker* tracker) const;
+  void AddFaceEdge(FaceEdge* edge, std::vector<FaceEdge> all_edges[6]) const;
   void UpdateFaceEdges(int face, std::vector<FaceEdge> const& face_edges,
                        InteriorTracker* tracker);
-  void SkipCellRange(S2CellId begin, S2CellId end, InteriorTracker* tracker);
+  S2CellId ShrinkToFit(S2PaddedCell const& pcell, R2Rect const& bound) const;
+  void SkipCellRange(S2CellId begin, S2CellId end, InteriorTracker* tracker,
+                     EdgeAllocator* alloc, bool disjoint_from_index);
   void UpdateEdges(S2PaddedCell const& pcell,
-                   std::vector<ClippedEdge const*> const& edges,
-                   InteriorTracker* tracker, EdgeAllocator* alloc);
+                   std::vector<ClippedEdge const*>* edges,
+                   InteriorTracker* tracker, EdgeAllocator* alloc,
+                   bool disjoint_from_index);
+  void AbsorbIndexCell(S2PaddedCell const& pcell,
+                       Iterator const& iter,
+                       std::vector<ClippedEdge const*>* edges,
+                       InteriorTracker* tracker,
+                       EdgeAllocator* alloc);
   int GetEdgeMaxLevel(S2Point const& a, S2Point const& b) const;
   static int CountShapes(std::vector<ClippedEdge const*> const& edges,
                          ShapeIdSet const& cshape_ids);
-  bool MakeLeafCell(S2PaddedCell const& pcell,
-                    std::vector<ClippedEdge const*> const& edges,
-                    InteriorTracker* tracker);
-  void TestAllEdges(std::vector<ClippedEdge const*> const& edges,
-                    InteriorTracker* tracker);
+  bool MakeIndexCell(S2PaddedCell const& pcell,
+                     std::vector<ClippedEdge const*> const& edges,
+                     InteriorTracker* tracker);
+  static void TestAllEdges(std::vector<ClippedEdge const*> const& edges,
+                           InteriorTracker* tracker);
   inline static ClippedEdge const* UpdateBound(ClippedEdge const* edge,
                                                int u_end, double u,
                                                int v_end, double v,
@@ -532,13 +568,18 @@ class S2ShapeIndex {
   int pending_additions_begin_;
 
   // The representation of an edge that has been queued for removal.
-  struct PendingRemoval { int32 shape_id; S2Point a, b; };
+  struct RemovedShape {
+    int32 shape_id;
+    bool has_interior;
+    bool contains_origin;
+    std::vector<std::pair<S2Point, S2Point>> edges;
+  };
 
-  // The set of edges of all shapes that have been queued for removal but not
-  // processed yet.  Note that we need to copy the edge data since the caller
-  // is free to destroy the shape once Remove() has been called.  This field
-  // is present only when there are removals pending (to save memory).
-  std::unique_ptr<std::vector<PendingRemoval>> pending_removals_;
+  // The set of shapes that have been queued for removal but not processed
+  // yet.  Note that we need to copy the edge data since the caller is free to
+  // destroy the shape once Remove() has been called.  This field is present
+  // only when there are removed shapes to process (to save memory).
+  std::unique_ptr<std::vector<RemovedShape>> pending_removals_;
 
   // Additions and removals are queued and processed on the first subsequent
   // query.  There are several reasons to do this:
@@ -572,7 +613,8 @@ class S2ShapeIndex {
   // Reads and writes to this field are guarded by "lock_".
   Atomic32 index_status_;  // Stores an IndexStatus
 
-  // The following state is allocated only for the duration of the update.
+  // UpdateState holds temporary data related to thread synchronization.  It
+  // is only allocated while updates are being applied.
   struct UpdateState {
     // This mutex is used as a condition variable.  It is locked by the
     // updating thread for the entire duration of the update; other threads
@@ -625,7 +667,7 @@ inline S2ClippedShape const* S2ShapeIndexCell::find_clipped(
   return find_clipped(shape->id());
 }
 
-inline S2ShapeIndex::Iterator::Iterator() : cell_map_(nullptr) {
+inline S2ShapeIndex::Iterator::Iterator() : index_(nullptr) {
 }
 inline S2ShapeIndex::Iterator::Iterator(S2ShapeIndex const& index) {
   Init(index);
@@ -635,8 +677,9 @@ inline void S2ShapeIndex::Iterator::Init(S2ShapeIndex const& index) {
   InitStale(index);
 }
 inline void S2ShapeIndex::Iterator::InitStale(S2ShapeIndex const& index) {
-  cell_map_ = &index.cell_map_;
-  Reset();
+  index_ = &index;
+  iter_ = index_->cell_map_.begin();
+  end_ = index_->cell_map_.end();
 }
 inline S2CellId S2ShapeIndex::Iterator::id() const {
   DCHECK(!Done());
@@ -658,14 +701,16 @@ inline bool S2ShapeIndex::Iterator::Done() const {
   return iter_ == end_;
 }
 inline bool S2ShapeIndex::Iterator::AtBegin() const {
-  return iter_ == cell_map_->begin();
+  return iter_ == index_->cell_map_.begin();
 }
 inline void S2ShapeIndex::Iterator::Reset() {
-  iter_ = cell_map_->begin();
-  end_ = cell_map_->end();
+  // Make sure that the index has not been modified since Init() was called.
+  DCHECK(index_->is_fresh());
+  iter_ = index_->cell_map_.begin();
+  end_ = index_->cell_map_.end();
 }
 inline void S2ShapeIndex::Iterator::Seek(S2CellId target) {
-  iter_ = cell_map_->lower_bound(target);
+  iter_ = index_->cell_map_.lower_bound(target);
 }
 inline void S2ShapeIndex::Iterator::SeekForward(S2CellId target) {
   if (!Done() && id() < target) Seek(target);
@@ -680,6 +725,20 @@ inline bool S2ShapeIndex::is_fresh() const {
 
 inline void S2ShapeIndex::Insert(S2Shape* shape) {
   Add(shape);
+}
+
+// Return true if this is the first update to the index.
+inline bool S2ShapeIndex::is_first_update() const {
+  // Note that it is not sufficient to check whether cell_map_ is empty, since
+  // entries are added during the update process.
+  return pending_additions_begin_ == 0;
+}
+
+// Given that the given shape is being updated, return true if it is being
+// removed (as opposed to being added).
+inline bool S2ShapeIndex::is_shape_being_removed(int shape_id) const {
+  // All shape ids being removed are less than all shape ids being added.
+  return shape_id < pending_additions_begin_;
 }
 
 // Ensure that any pending updates have been applied.  This method must be

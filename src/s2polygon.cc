@@ -1835,17 +1835,24 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   return true;
 }
 
-S2Polygon::Shape::Shape(S2Polygon const* p)
-    : polygon_(p), num_edges_(0), cumulative_edges_(nullptr) {
-  if (p->is_full()) return;
-  int const kMaxLinearSearchLoops = 12;  // From benchmarks.
-  int num_loops = p->num_loops();
-  if (num_loops > kMaxLinearSearchLoops) {
-    cumulative_edges_ = new int[num_loops];
-  }
-  for (int i = 0; i < num_loops; ++i) {
-    if (cumulative_edges_) cumulative_edges_[i] = num_edges_;
-    num_edges_ += p->loop(i)->num_vertices();
+S2Polygon::Shape::Shape(S2Polygon const* polygon) {
+  Init(polygon);
+}
+
+void S2Polygon::Shape::Init(S2Polygon const* polygon) {
+  polygon_ = polygon;
+  cumulative_edges_ = nullptr;
+  num_edges_ = 0;
+  if (!polygon->is_full()) {
+    int const kMaxLinearSearchLoops = 12;  // From benchmarks.
+    int num_loops = polygon->num_loops();
+    if (num_loops > kMaxLinearSearchLoops) {
+      cumulative_edges_ = new int[num_loops];
+    }
+    for (int i = 0; i < num_loops; ++i) {
+      if (cumulative_edges_) cumulative_edges_[i] = num_edges_;
+      num_edges_ += polygon->loop(i)->num_vertices();
+    }
   }
 }
 

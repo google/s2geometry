@@ -109,15 +109,4 @@ template <class VType> struct GoodFastHash<Vector3<VType> > {
   }
 };
 
-HASH_NAMESPACE_DECLARATION_START
-template <class T> struct hash;
-
-// This hash function may change from time to time.
-template <class VType> struct hash<Vector3<VType> > {
-  size_t operator()(const Vector3<VType>& v) const {
-    return GoodFastHash<Vector3<VType> >()(v);
-  }
-};
-HASH_NAMESPACE_DECLARATION_END
-
 #endif  // S2GEOMETRY_UTIL_MATH_VECTOR3_HASH_H_
