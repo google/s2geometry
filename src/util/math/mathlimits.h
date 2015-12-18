@@ -27,15 +27,10 @@
 #ifndef UTIL_MATH_MATHLIMITS_H__
 #define UTIL_MATH_MATHLIMITS_H__
 
-// <math.h> lacks a lot of prototypes. However, this file needs <math.h> to
-// access old-fashioned isinf et al. Even worse more: this file must not
-// include <cmath> because that breaks the definition of isinf with gcc 4.9.
-//
-// TODO(user): after C++11 everywhere, use <cmath> and std::isinf in this file.
-#include <math.h>
 #include <string.h>
 
 #include <cfloat>
+#include <cmath>
 
 // ========================================================================= //
 
@@ -212,11 +207,11 @@ DECL_UNSIGNED_INT_LIMITS(unsigned long long int)
   static bool IsNegInf(Type x) { return _fpclass(x) == _FPCLASS_NINF; }
 #else
 #define DECL_FP_LIMIT_FUNCS \
-  static bool IsFinite(Type x) { return !isinf(x)  &&  !isnan(x); } \
-  static bool IsNaN(Type x) { return isnan(x); } \
-  static bool IsInf(Type x) { return isinf(x); } \
-  static bool IsPosInf(Type x) { return isinf(x)  &&  x > 0; } \
-  static bool IsNegInf(Type x) { return isinf(x)  &&  x < 0; }
+  static bool IsFinite(Type x) { return !std::isinf(x)  &&  !std::isnan(x); } \
+  static bool IsNaN(Type x) { return std::isnan(x); } \
+  static bool IsInf(Type x) { return std::isinf(x); } \
+  static bool IsPosInf(Type x) { return std::isinf(x)  &&  x > 0; } \
+  static bool IsNegInf(Type x) { return std::isinf(x)  &&  x < 0; }
 #endif
 
 // We can't put floating-point constant values in the header here because

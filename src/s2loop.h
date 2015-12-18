@@ -431,9 +431,16 @@ class S2Loop : public S2Region {
 #ifndef SWIG
   class Shape : public S2Shape {
    public:
-    explicit Shape(S2Loop const* loop) : loop_(loop) {}
+    Shape() {}  // Must call Init().
+    explicit Shape(S2Loop const* loop) { Init(loop); }
+
+    // Initialization method for default constructor.
+    // Does not take ownership of "loop".
+    void Init(S2Loop const* loop) { loop_ = loop; }
+
     S2Loop const* loop() const { return loop_; }
 
+    // S2Shape interface:
     int num_edges() const {
       return loop_->is_empty_or_full() ? 0 : loop_->num_vertices();
     }

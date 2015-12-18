@@ -261,9 +261,15 @@ class S2Polyline : public S2Region {
   class Shape : public S2Shape {
    public:
     // Does not take ownership of "polyline".
-    explicit Shape(S2Polyline const* polyline) : polyline_(polyline) {}
+    Shape() {}  // Must call Init().
+    explicit Shape(S2Polyline const* polyline) { Init(polyline); }
     S2Polyline const* polyline() const { return polyline_; }
 
+    // Initialization method for default constructor.
+    // Does not take ownership of "polyline".
+    void Init(S2Polyline const* polyline) { polyline_ = polyline; }
+
+    // S2Shape interface:
     int num_edges() const {
       return std::max(0, polyline_->num_vertices() - 1);
     }

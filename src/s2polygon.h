@@ -515,9 +515,17 @@ class S2Polygon : public S2Region {
 #ifndef SWIG
   class Shape : public S2Shape {
    public:
+    Shape() {}  // Must call Init().
     explicit Shape(S2Polygon const* polygon);  // Does not take ownership.
     ~Shape();
+
+    // Initialization method for default constructor.
+    // Does not take ownership of "polygon".
+    void Init(S2Polygon const* polygon);
+
     S2Polygon const* polygon() const { return polygon_; }
+
+    // S2Shape interface:
     int num_edges() const { return num_edges_; }
     void GetEdge(int e, S2Point const** a, S2Point const** b) const;
     bool has_interior() const { return true; }

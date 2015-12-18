@@ -53,12 +53,16 @@ using std::pair;
 using std::unique_ptr;
 using std::vector;
 
-DEFINE_int32(s2_random_seed, 1, "Initial random seed for S2Testing::rnd");
+DEFINE_int32(s2_random_seed, 1,
+             "Seed value that can be passed to S2Testing::rnd.Reset()");
 
 double const S2Testing::kEarthRadiusKm = 6371.01;
 
 S2Testing::Random::Random() {
-  Reset(FLAGS_s2_random_seed);
+  // Unfortunately we can't use FLAGS_s2_random_seed here, because the default
+  // S2Testing::Random instance is initialized before command-line flags have
+  // been parsed.
+  srandom(1);
 }
 
 void S2Testing::Random::Reset(int seed) {

@@ -43,16 +43,23 @@
 #include "util/gtl/stl_util.h"
 
 using s2shapeutil::S2EdgeVectorShape;
+using s2shapeutil::S2LoopOwningShape;
+using s2shapeutil::S2PolylineOwningShape;
+using s2textformat::MakePolyline;
 using std::unique_ptr;
 using std::vector;
 
 
 class S2ShapeIndexTest : public ::testing::Test {
  protected:
-  // This test harness owns an S2ShapeIndex for convenience.  All S2Shapes in
-  // the index are automatically deleted upon destruction.
+  // This test harness owns an S2ShapeIndex for convenience.
 
   S2ShapeIndex index_;
+
+  S2Shape* Remove(S2Shape* shape) {
+    index_.Remove(shape);
+    return shape;
+  }
 
   // Verify that that every cell of the index contains the correct edges, and
   // that no cells are missing from the index.  The running time of this
@@ -97,9 +104,9 @@ void S2ShapeIndexTest::QuadraticValidate() {
     for (int id = 0; id < index_.num_shape_ids(); ++id) {
       S2Shape const* shape = index_.shape(id);
       S2ClippedShape const* clipped = nullptr;
-      if (!it.Done()) clipped = it.cell()->find_clipped(shape);
+      if (!it.Done()) clipped = it.cell()->find_clipped(id);
 
-     // First check that contains_center() is set correctly.
+      // First check that contains_center() is set correctly.
       for (int j = 0; j < skipped.num_cells(); ++j) {
         ValidateInterior(shape, skipped.cell_id(j), false);
       }
@@ -107,7 +114,12 @@ void S2ShapeIndexTest::QuadraticValidate() {
         bool contains_center = clipped && clipped->contains_center();
         ValidateInterior(shape, it.id(), contains_center);
       }
-      // Then check that the appropriate edges are present.
+      // If this shape has been removed, it should not be present at all.
+      if (shape == nullptr) {
+        EXPECT_EQ(nullptr, clipped);
+        continue;
+      }
+      // Otherwise check that the appropriate edges are present.
       for (int e = 0; e < shape->num_edges(); ++e) {
         S2Point const *a, *b;
         shape->GetEdge(e, &a, &b);
@@ -145,16 +157,19 @@ void S2ShapeIndexTest::ValidateEdge(S2Point const& a, S2Point const& b,
 
 void S2ShapeIndexTest::ValidateInterior(S2Shape const* shape, S2CellId id,
                                         bool index_contains_center) {
-  if (!shape->has_interior()) return;
-  S2Point a = S2::Origin(), b = id.ToPoint();
-  S2EdgeUtil::EdgeCrosser crosser(&a, &b);
-  bool contains_center = shape->contains_origin();
-  for (int e = 0; e < shape->num_edges(); ++e) {
-    S2Point const *c, *d;
-    shape->GetEdge(e, &c, &d);
-    contains_center ^= crosser.EdgeOrVertexCrossing(c, d);
+  if (shape == nullptr || !shape->has_interior()) {
+    EXPECT_FALSE(index_contains_center);
+  } else {
+    S2Point a = S2::Origin(), b = id.ToPoint();
+    S2EdgeUtil::EdgeCrosser crosser(&a, &b);
+    bool contains_center = shape->contains_origin();
+    for (int e = 0; e < shape->num_edges(); ++e) {
+      S2Point const *c, *d;
+      shape->GetEdge(e, &c, &d);
+      contains_center ^= crosser.EdgeOrVertexCrossing(c, d);
+    }
+    EXPECT_EQ(contains_center, index_contains_center);
   }
-  EXPECT_EQ(contains_center, index_contains_center);
 }
 
 namespace {
@@ -294,6 +309,93 @@ TEST_F(S2ShapeIndexTest, ManyTinyEdges) {
   EXPECT_TRUE(it.id().is_leaf());
   it.Next();
   EXPECT_TRUE(it.Done());
+}
+
+TEST_F(S2ShapeIndexTest, SimpleUpdates) {
+  // Add 5 loops one at a time, then remove them one at a time,
+  // validating the index at each step.
+  S2Polygon polygon;
+  S2Testing::ConcentricLoopsPolygon(S2Point(1, 0, 0), 5, 20, &polygon);
+  for (int i = 0; i < polygon.num_loops(); ++i) {
+    index_.Add(new S2Loop::Shape(polygon.loop(i)));
+    QuadraticValidate();
+  }
+  for (int i = 0; i < polygon.num_loops(); ++i) {
+    S2Shape* shape = index_.shape(i);
+    Remove(shape)->Release();
+    QuadraticValidate();
+  }
+}
+
+TEST_F(S2ShapeIndexTest, RandomUpdates) {
+  // Allow the seed to be varied from the command line.
+  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+
+  // A few polylines.
+  index_.Add(new S2PolylineOwningShape(
+      MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6")));
+  index_.Add(new S2PolylineOwningShape(
+      MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6")));
+  index_.Add(new S2PolylineOwningShape(
+      MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6")));
+
+  // A loop that used to trigger an indexing bug.
+  index_.Add(new S2LoopOwningShape(
+      S2Loop::MakeRegularLoop(S2Point(1, 0.5, 0.5).Normalize(),
+                              S1Angle::Degrees(89), 20)));
+
+  // Five concentric loops.
+  S2Polygon polygon5;
+  S2Testing::ConcentricLoopsPolygon(S2Point(1, -1, -1).Normalize(),
+                                    5, 20, &polygon5);
+  for (int i = 0; i < polygon5.num_loops(); ++i) {
+    index_.Add(new S2Loop::Shape(polygon5.loop(i)));
+  }
+
+  // Two clockwise loops around S2Cell cube vertices.
+  index_.Add(new S2LoopOwningShape(S2Loop::MakeRegularLoop(
+      S2Point(-1, 1, 1).Normalize(), S1Angle::Radians(M_PI - 0.001), 10)));
+  index_.Add(new S2LoopOwningShape(S2Loop::MakeRegularLoop(
+      S2Point(-1, -1, -1).Normalize(), S1Angle::Radians(M_PI - 0.001), 10)));
+
+  // A shape with no edges and no interior.
+  index_.Add(new S2LoopOwningShape(new S2Loop(S2Loop::kEmpty())));
+
+  // A shape with no edges that covers the entire sphere.
+  index_.Add(new S2LoopOwningShape(new S2Loop(S2Loop::kFull())));
+
+  vector<S2Shape*> added, removed;
+  for (int id = 0; id < index_.num_shape_ids(); ++id) {
+    added.push_back(index_.shape(id));
+  }
+  QuadraticValidate();
+  for (int iter = 0; iter < 100; ++iter) {
+    VLOG(1) << "Iteration: " << iter;
+    // Choose some shapes to add and remove.
+    int num_updates = 1 + S2Testing::rnd.Skewed(5);
+    for (int n = 0; n < num_updates; ++n) {
+      if (S2Testing::rnd.OneIn(2) && !added.empty()) {
+        int i = S2Testing::rnd.Uniform(added.size());
+        VLOG(1) << "  Removed shape " << added[i]->id()
+                << " (" << added[i] << ")";
+        index_.Remove(added[i]);
+        removed.push_back(added[i]);
+        added.erase(added.begin() + i);
+      } else if (!removed.empty()) {
+        int i = S2Testing::rnd.Uniform(removed.size());
+        index_.Add(removed[i]);
+        VLOG(1) << "  Added shape " << removed[i]->id()
+                << " (" << removed[i] << ")";
+        added.push_back(removed[i]);
+        removed.erase(removed.begin() + i);
+      }
+    }
+    QuadraticValidate();
+  }
+  // Let the index free all the shapes.
+  for (int i = 0; i < removed.size(); ++i) {
+    index_.Add(removed[i]);
+  }
 }
 
 
@@ -497,7 +599,6 @@ TEST(S2ShapeIndex, MixedGeometry) {
   // acquire one.  This would cause extra S2ShapeIndex cells to be created
   // that are outside the bounds of the given geometry.
   vector<S2Polyline*> polylines;
-  using s2textformat::MakePolyline;
   polylines.push_back(MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6"));
   polylines.push_back(MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"));
   polylines.push_back(MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"));
