@@ -22,7 +22,7 @@
 #ifndef S2GEOMETRY_S2EARTH_H_
 #define S2GEOMETRY_S2EARTH_H_
 
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 
 #include "s1angle.h"

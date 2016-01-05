@@ -103,7 +103,8 @@ class S2ConvexHullQuery {
   S2LatLngRect bound_;
   std::vector<S2Point> points_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2ConvexHullQuery);
+  S2ConvexHullQuery(S2ConvexHullQuery const&) = delete;
+  void operator=(S2ConvexHullQuery const&) = delete;
 };
 
 #endif  // S2GEOMETRY_S2CONVEXHULLQUERY_H_

@@ -24,7 +24,7 @@
 #ifndef S2GEOMETRY_BASE_MACROS_H_
 #define S2GEOMETRY_BASE_MACROS_H_
 
-#include <stddef.h>         // For size_t
+#include <cstddef>         // For size_t
 #include "base/port.h"
 
 // The swigged version of an abstract class must be concrete if any methods

@@ -16,7 +16,7 @@
 
 #include "util/math/mathutil.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <vector>
 
 #include "base/integral_types.h"

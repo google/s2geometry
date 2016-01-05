@@ -58,7 +58,7 @@
 #ifndef S2GEOMETRY_UTIL_GTL_MANUAL_CONSTRUCTOR_H_
 #define S2GEOMETRY_UTIL_GTL_MANUAL_CONSTRUCTOR_H_
 
-#include <stddef.h>
+#include <cstddef>
 #include <new>
 #include <utility>
 

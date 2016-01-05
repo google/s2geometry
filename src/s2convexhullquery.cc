@@ -88,7 +88,7 @@ class OrderedCcwAround {
   explicit OrderedCcwAround(S2Point const& center) : center_(center) {}
   bool operator()(S2Point const& x, S2Point const& y) const {
     // If X and Y are equal, this will return false (as desired).
-    return S2::RobustCCW(center_, x, y) > 0;
+    return S2::Sign(center_, x, y) > 0;
   }
  private:
   S2Point center_;
@@ -131,7 +131,7 @@ S2Loop* S2ConvexHullQuery::GetConvexHull() {
   }
 
   // Verify that all points lie within a 180 degree span around the origin.
-  DCHECK_GE(S2::RobustCCW(origin, points_.front(), points_.back()), 0);
+  DCHECK_GE(S2::Sign(origin, points_.front(), points_.back()), 0);
 
   // Generate the lower and upper halves of the convex hull.  Each half
   // consists of the maximal subset of vertices such that the edge chain makes
@@ -158,7 +158,7 @@ void S2ConvexHullQuery::GetMonotoneChain(vector<S2Point>* output) {
     S2Point p = points_[i];
     // Remove any points that would cause the chain to make a clockwise turn.
     while (output->size() >= 2 &&
-           S2::RobustCCW(output->end()[-2], output->back(), p) <= 0) {
+           S2::Sign(output->end()[-2], output->back(), p) <= 0) {
       output->pop_back();
     }
     output->push_back(p);

@@ -17,8 +17,8 @@
 
 #include "s1angle.h"
 
-#include <math.h>
-#include <stdio.h>
+#include <cmath>
+#include <cstdio>
 #include <ostream>
 
 #include "s2latlng.h"

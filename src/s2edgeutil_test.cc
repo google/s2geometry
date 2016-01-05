@@ -17,8 +17,8 @@
 
 #include "s2edgeutil.h"
 
-#include <float.h>
-#include <math.h>
+#include <cfloat>
+#include <cmath>
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -46,7 +46,7 @@ extern int exact_calls;
 
 const int kDegen = -2;
 void CompareResult(int actual, int expected) {
-  // HACK ALERT: RobustCrossing() is allowed to return 0 or -1 if either edge
+  // HACK ALERT: CrossingSign() is allowed to return 0 or -1 if either edge
   // is degenerate.  We use the value kDegen to represent this possibility.
   if (expected == kDegen) {
     EXPECT_LE(actual, 0);
@@ -61,15 +61,15 @@ void TestCrossing(S2Point a, S2Point b, S2Point c, S2Point d,
   b = b.Normalize();
   c = c.Normalize();
   d = d.Normalize();
-  CompareResult(S2EdgeUtil::RobustCrossing(a, b, c, d), robust);
+  CompareResult(S2EdgeUtil::CrossingSign(a, b, c, d), robust);
   if (simple) {
     EXPECT_EQ(robust > 0, S2EdgeUtil::SimpleCrossing(a, b, c, d));
   }
   S2EdgeUtil::EdgeCrosser crosser(&a, &b, &c);
-  CompareResult(crosser.RobustCrossing(&d), robust);
-  CompareResult(crosser.RobustCrossing(&c), robust);
-  CompareResult(crosser.RobustCrossing(&d, &c), robust);
-  CompareResult(crosser.RobustCrossing(&c, &d), robust);
+  CompareResult(crosser.CrossingSign(&d), robust);
+  CompareResult(crosser.CrossingSign(&c), robust);
+  CompareResult(crosser.CrossingSign(&d, &c), robust);
+  CompareResult(crosser.CrossingSign(&c, &d), robust);
 
   EXPECT_EQ(edge_or_vertex, S2EdgeUtil::EdgeOrVertexCrossing(a, b, c, d));
   crosser.RestartAt(&c);
@@ -81,15 +81,15 @@ void TestCrossing(S2Point a, S2Point b, S2Point c, S2Point d,
   // Check that the crosser can be re-used.
   crosser.Init(&c, &d);
   crosser.RestartAt(&a);
-  CompareResult(crosser.RobustCrossing(&b), robust);
-  CompareResult(crosser.RobustCrossing(&a), robust);
+  CompareResult(crosser.CrossingSign(&b), robust);
+  CompareResult(crosser.CrossingSign(&a), robust);
 
   // Now try all the same tests with CopyingEdgeCrosser.
   S2EdgeUtil::CopyingEdgeCrosser crosser2(a, b, c);
-  CompareResult(crosser2.RobustCrossing(d), robust);
-  CompareResult(crosser2.RobustCrossing(c), robust);
-  CompareResult(crosser2.RobustCrossing(d, c), robust);
-  CompareResult(crosser2.RobustCrossing(c, d), robust);
+  CompareResult(crosser2.CrossingSign(d), robust);
+  CompareResult(crosser2.CrossingSign(c), robust);
+  CompareResult(crosser2.CrossingSign(d, c), robust);
+  CompareResult(crosser2.CrossingSign(c, d), robust);
 
   EXPECT_EQ(edge_or_vertex, S2EdgeUtil::EdgeOrVertexCrossing(a, b, c, d));
   crosser2.RestartAt(c);
@@ -101,8 +101,8 @@ void TestCrossing(S2Point a, S2Point b, S2Point c, S2Point d,
   // Check that the crosser can be re-used.
   crosser2.Init(c, d);
   crosser2.RestartAt(a);
-  CompareResult(crosser2.RobustCrossing(b), robust);
-  CompareResult(crosser2.RobustCrossing(a), robust);
+  CompareResult(crosser2.CrossingSign(b), robust);
+  CompareResult(crosser2.CrossingSign(a), robust);
 }
 
 void TestCrossings(S2Point a, S2Point b, S2Point c, S2Point d,
@@ -787,7 +787,7 @@ TEST(S2EdgeUtil, IntersectionError) {
       b = (p + (1 - a_fraction) * ab_len * d1).Normalize();
       c = (p - c_fraction * cd_len * d2).Normalize();
       d = (p + (1 - c_fraction) * cd_len * d2).Normalize();
-    } while (S2EdgeUtil::RobustCrossing(a, b, c, d) <= 0);
+    } while (S2EdgeUtil::CrossingSign(a, b, c, d) <= 0);
 
     // Each constructed edge should be at most 1.5 * DBL_EPSILON away from the
     // original point P.
@@ -854,16 +854,16 @@ TEST(S2EdgeUtil, GrazingIntersections) {
       e = ChooseSemicirclePoint(x, y);
       ab = (a - b).CrossProd(a + b);
     } while (ab.Norm() < 50 * DBL_EPSILON ||
-             S2EdgeUtil::RobustCrossing(a, b, c, d) <= 0 ||
-             S2EdgeUtil::RobustCrossing(a, b, c, e) <= 0);
+             S2EdgeUtil::CrossingSign(a, b, c, d) <= 0 ||
+             S2EdgeUtil::CrossingSign(a, b, c, e) <= 0);
     S2Point xcd = S2EdgeUtilTesting::GetIntersection(a, b, c, d);
     S2Point xce = S2EdgeUtilTesting::GetIntersection(a, b, c, e);
     // Essentially this says that if CDE and CAB have the same orientation,
     // then CD and CE should intersect along AB in that order.
     ab = ab.Normalize();
     if (S1Angle(xcd, xce) > 2 * S2EdgeUtil::kIntersectionError) {
-      EXPECT_EQ(S2::RobustCCW(c, d, e) == S2::RobustCCW(c, a, b),
-                S2::RobustCCW(ab, xcd, xce) > 0);
+      EXPECT_EQ(S2::Sign(c, d, e) == S2::Sign(c, a, b),
+                S2::Sign(ab, xcd, xce) > 0);
     }
   }
   S2EdgeUtilTesting::PrintIntersectionStats();
@@ -887,7 +887,7 @@ TEST(S2EdgeUtil, GetIntersectionInvariants) {
       b = d = S2Testing::RandomPoint();
       swap(c[0], c[1]);
       swap(d[0], d[1]);
-    } while (S2EdgeUtil::RobustCrossing(a, b, c, d) <= 0);
+    } while (S2EdgeUtil::CrossingSign(a, b, c, d) <= 0);
     EXPECT_EQ((a - b).Norm2(), (c - d).Norm2());
 
     // Now verify that GetIntersection returns exactly the same result when
@@ -1076,11 +1076,11 @@ TEST(S2EdgeUtil, CollinearEdgesThatDontTouch) {
     S2Point d = S2Testing::RandomPoint();
     S2Point b = S2EdgeUtil::Interpolate(0.05, a, d);
     S2Point c = S2EdgeUtil::Interpolate(0.95, a, d);
-    EXPECT_GT(0, S2EdgeUtil::RobustCrossing(a, b, c, d));
-    EXPECT_GT(0, S2EdgeUtil::RobustCrossing(a, b, c, d));
+    EXPECT_GT(0, S2EdgeUtil::CrossingSign(a, b, c, d));
+    EXPECT_GT(0, S2EdgeUtil::CrossingSign(a, b, c, d));
     S2EdgeUtil::EdgeCrosser crosser(&a, &b, &c);
-    EXPECT_GT(0, crosser.RobustCrossing(&d));
-    EXPECT_GT(0, crosser.RobustCrossing(&c));
+    EXPECT_GT(0, crosser.CrossingSign(&d));
+    EXPECT_GT(0, crosser.CrossingSign(&c));
   }
 }
 
@@ -1100,7 +1100,7 @@ TEST(S2EdgeUtil, CoincidentZeroLengthEdgesThatDontTouch) {
   // coincident on the sphere and the norms of A,B,C,D are monotonically
   // increasing.  Such edge pairs should never intersect.  (This is not
   // obvious, since it depends on the particular symbolic perturbations used
-  // by S2::RobustCCW().  It would be better to replace this with a test that
+  // by S2::Sign().  It would be better to replace this with a test that
   // says that the CCW results must be consistent with each other.)
   const int kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
@@ -1129,10 +1129,10 @@ TEST(S2EdgeUtil, CoincidentZeroLengthEdgesThatDontTouch) {
       continue;
     }
     // Verify that the expected edges do not cross.
-    EXPECT_GT(0, S2EdgeUtil::RobustCrossing(a, b, c, d));
+    EXPECT_GT(0, S2EdgeUtil::CrossingSign(a, b, c, d));
     S2EdgeUtil::EdgeCrosser crosser(&a, &b, &c);
-    EXPECT_GT(0, crosser.RobustCrossing(&d));
-    EXPECT_GT(0, crosser.RobustCrossing(&c));
+    EXPECT_GT(0, crosser.CrossingSign(&d));
+    EXPECT_GT(0, crosser.CrossingSign(&c));
   }
 }
 

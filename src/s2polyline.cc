@@ -17,7 +17,7 @@
 
 #include "s2polyline.h"
 
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <functional>
 #include <set>
@@ -44,42 +44,36 @@ static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
 S2Polyline::S2Polyline()
   : s2debug_override_(ALLOW_S2DEBUG),
-    num_vertices_(0),
-    vertices_(nullptr) {
+    num_vertices_(0) {
 }
 
 S2Polyline::S2Polyline(vector<S2Point> const& vertices)
   : s2debug_override_(ALLOW_S2DEBUG),
-    num_vertices_(0),
-    vertices_(nullptr) {
+    num_vertices_(0) {
   Init(vertices);
 }
 
 S2Polyline::S2Polyline(vector<S2LatLng> const& vertices)
   : s2debug_override_(ALLOW_S2DEBUG),
-    num_vertices_(0),
-    vertices_(nullptr) {
+    num_vertices_(0) {
   Init(vertices);
 }
 
 S2Polyline::S2Polyline(vector<S2Point> const& vertices,
                        S2debugOverride override)
   : s2debug_override_(override),
-    num_vertices_(0),
-    vertices_(nullptr) {
+    num_vertices_(0) {
   Init(vertices);
 }
 
 S2Polyline::S2Polyline(vector<S2LatLng> const& vertices,
                        S2debugOverride override)
   : s2debug_override_(override),
-    num_vertices_(0),
-    vertices_(nullptr) {
+    num_vertices_(0) {
   Init(vertices);
 }
 
 S2Polyline::~S2Polyline() {
-  delete[] vertices_;
 }
 
 void S2Polyline::set_s2debug_override(S2debugOverride override) {
@@ -95,16 +89,14 @@ void S2Polyline::Init(vector<S2Point> const& vertices) {
     CHECK(IsValid(vertices));
   }
 
-  delete[] vertices_;
   num_vertices_ = vertices.size();
-  vertices_ = new S2Point[num_vertices_];
+  vertices_.reset(new S2Point[num_vertices_]);
   std::copy(vertices.begin(), vertices.end(), &vertices_[0]);
 }
 
 void S2Polyline::Init(vector<S2LatLng> const& vertices) {
-  delete[] vertices_;
   num_vertices_ = vertices.size();
-  vertices_ = new S2Point[num_vertices_];
+  vertices_.reset(new S2Point[num_vertices_]);
   for (int i = 0; i < num_vertices_; ++i) {
     vertices_[i] = vertices[i].ToPoint();
   }
@@ -114,7 +106,7 @@ void S2Polyline::Init(vector<S2LatLng> const& vertices) {
 }
 
 bool S2Polyline::IsValid() const {
-  return IsValid(vertices_, num_vertices_);
+  return IsValid(&vertices_[0], num_vertices_);
 }
 
 bool S2Polyline::IsValid(vector<S2Point> const& v) {
@@ -289,7 +281,7 @@ bool S2Polyline::IsOnRight(S2Point const& point) const {
   if (next_vertex == num_vertices())
     --next_vertex;
 
-  return S2::RobustCCW(point, vertex(next_vertex), vertex(next_vertex-1)) > 0;
+  return S2::Sign(point, vertex(next_vertex), vertex(next_vertex - 1)) > 0;
 }
 
 bool S2Polyline::Intersects(S2Polyline const* line) const {
@@ -306,7 +298,7 @@ bool S2Polyline::Intersects(S2Polyline const* line) const {
     S2EdgeUtil::EdgeCrosser crosser(
         &vertex(i - 1), &vertex(i), &line->vertex(0));
     for (int j = 1; j < line->num_vertices(); ++j) {
-      if (crosser.RobustCrossing(&line->vertex(j)) >= 0) {
+      if (crosser.CrossingSign(&line->vertex(j)) >= 0) {
         return true;
       }
     }
@@ -315,7 +307,7 @@ bool S2Polyline::Intersects(S2Polyline const* line) const {
 }
 
 void S2Polyline::Reverse() {
-  std::reverse(vertices_, vertices_ + num_vertices_);
+  std::reverse(&vertices_[0], &vertices_[num_vertices_]);
 }
 
 S2LatLngRect S2Polyline::GetRectBound() const {
@@ -347,7 +339,7 @@ bool S2Polyline::MayIntersect(S2Cell const& cell) const {
     S2EdgeUtil::EdgeCrosser crosser(&cell_vertices[j], &cell_vertices[(j+1)&3],
                                     &vertex(0));
     for (int i = 1; i < num_vertices(); ++i) {
-      if (crosser.RobustCrossing(&vertex(i)) >= 0) {
+      if (crosser.CrossingSign(&vertex(i)) >= 0) {
         // There is a proper crossing, or two vertices were the same.
         return true;
       }
@@ -357,11 +349,11 @@ bool S2Polyline::MayIntersect(S2Cell const& cell) const {
 }
 
 void S2Polyline::Encode(Encoder* const encoder) const {
-  encoder->Ensure(num_vertices_ * sizeof(*vertices_) + 10);  // sufficient
+  encoder->Ensure(num_vertices_ * sizeof(vertices_[0]) + 10);  // sufficient
 
   encoder->put8(kCurrentLosslessEncodingVersionNumber);
   encoder->put32(num_vertices_);
-  encoder->putn(vertices_, sizeof(*vertices_) * num_vertices_);
+  encoder->putn(&vertices_[0], sizeof(vertices_[0]) * num_vertices_);
 
   DCHECK_GE(encoder->avail(), 0);
 }
@@ -372,10 +364,9 @@ bool S2Polyline::Decode(Decoder* const decoder) {
   if (version > kCurrentLosslessEncodingVersionNumber) return false;
 
   num_vertices_ = decoder->get32();
-  delete[] vertices_;
-  vertices_ = new S2Point[num_vertices_];
-  if (decoder->avail() < num_vertices_ * sizeof(*vertices_)) return false;
-  decoder->getn(vertices_, num_vertices_ * sizeof(*vertices_));
+  vertices_.reset(new S2Point[num_vertices_]);
+  if (decoder->avail() < num_vertices_ * sizeof(vertices_[0])) return false;
+  decoder->getn(&vertices_[0], num_vertices_ * sizeof(vertices_[0]));
 
   if (FLAGS_s2debug && s2debug_override_ == ALLOW_S2DEBUG) {
     CHECK(IsValid());

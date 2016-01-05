@@ -59,7 +59,7 @@
 
 #include "base/integral_types.h"
 #include <glog/logging.h>
-#include "base/type_traits.h"
+#include <type_traits>
 
 class NthDerivativeCoder {
  public:

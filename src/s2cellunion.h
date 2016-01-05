@@ -164,11 +164,10 @@ class S2CellUnion : public S2Region {
   // Create a cell union that corresponds to a continuous range of cell ids.
   // The output is a normalized collection of cell ids that covers the leaf
   // cells between "min_id" and "max_id" inclusive.
-  // TODO(ericv): Rename this method to InitFromMinMax().
   // REQUIRES: min_id.is_leaf(), max_id.is_leaf(), min_id <= max_id.
-  void InitFromRange(S2CellId min_id, S2CellId max_id);
+  void InitFromMinMax(S2CellId min_id, S2CellId max_id);
 
-  // Like InitFromRange(), except that the union covers the range of leaf
+  // Like InitFromMinMax(), except that the union covers the range of leaf
   // cells from "begin" (inclusive) to "end" (exclusive), as with Python
   // ranges or STL iterator ranges.  If (begin == end) the result is empty.
   // REQUIRES: begin.is_leaf(), end.is_leaf(), begin <= end.
@@ -253,7 +252,10 @@ class S2CellUnion : public S2Region {
  private:
   std::vector<S2CellId> cell_ids_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2CellUnion);
+#ifndef SWIG
+  S2CellUnion(S2CellUnion const&) = delete;
+  void operator=(S2CellUnion const&) = delete;
+#endif  // SWIG
 };
 
 // Return true if two cell unions are identical.

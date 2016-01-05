@@ -152,7 +152,8 @@ class S2Testing {
     // subdivision step, as a fraction of the original edge length.
     double offset_fraction_;
 
-    DISALLOW_COPY_AND_ASSIGN(Fractal);
+    Fractal(Fractal const&) = delete;
+    void operator=(Fractal const&) = delete;
   };
 
   // Convert a distance on the Earth's surface to an angle.
@@ -221,7 +222,10 @@ class S2Testing {
 
 
  private:
-  DISALLOW_IMPLICIT_CONSTRUCTORS(S2Testing);  // Contains static methods
+  // Contains static methods
+  S2Testing() = delete;
+  S2Testing(S2Testing const&) = delete;
+  void operator=(S2Testing const&) = delete;
 };
 
 // Functions in this class return random numbers that are as good as random()
@@ -269,7 +273,8 @@ class S2Testing::Random {
  private:
   // Currently this class is based on random(), therefore it makes no sense to
   // make a copy.
-  DISALLOW_COPY_AND_ASSIGN(Random);
+  Random(Random const&) = delete;
+  void operator=(Random const&) = delete;
 };
 
 #endif  // S2GEOMETRY_S2TESTING_H_

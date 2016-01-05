@@ -37,7 +37,7 @@
 #ifndef S2GEOMETRY_UTIL_HASH_CITY_H_
 #define S2GEOMETRY_UTIL_HASH_CITY_H_
 
-#include <stddef.h>  // for size_t.
+#include <cstddef>  // for size_t.
 
 #include "base/int128.h"
 #include "base/integral_types.h"

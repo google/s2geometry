@@ -17,7 +17,7 @@
 
 #include "s2paddedcell.h"
 
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 
 #include <gtest/gtest.h>

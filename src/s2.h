@@ -18,8 +18,8 @@
 #ifndef S2GEOMETRY_S2_H_
 #define S2GEOMETRY_S2_H_
 
-#include <math.h>
-#include <stddef.h>
+#include <cmath>
+#include <cstddef>
 #include <algorithm>
 #include <functional>
 
@@ -176,11 +176,11 @@ class S2 {
   // when the three points are coplanar, and to deal with the limitations of
   // floating-point arithmetic.
   //
-  // RobustCCW satisfies the following conditions:
+  // Sign satisfies the following conditions:
   //
-  //  (1) RobustCCW(a,b,c) == 0 if and only if a == b, b == c, or c == a
-  //  (2) RobustCCW(b,c,a) == RobustCCW(a,b,c) for all a,b,c
-  //  (3) RobustCCW(c,b,a) == -RobustCCW(a,b,c) for all a,b,c
+  //  (1) Sign(a,b,c) == 0 if and only if a == b, b == c, or c == a
+  //  (2) Sign(b,c,a) == Sign(a,b,c) for all a,b,c
+  //  (3) Sign(c,b,a) == -Sign(a,b,c) for all a,b,c
   //
   // In other words:
   //
@@ -189,27 +189,27 @@ class S2 {
   //  (3) Exchanging any two arguments inverts the result.
   //
   // On the other hand, note that it is not true in general that
-  // RobustCCW(-a,b,c) == -RobustCCW(a,b,c), or any similar identities
+  // Sign(-a,b,c) == -Sign(a,b,c), or any similar identities
   // involving antipodal points.
-  static int RobustCCW(S2Point const& a, S2Point const& b, S2Point const& c);
+  static int Sign(S2Point const& a, S2Point const& b, S2Point const& c);
 
-  // A more efficient version of RobustCCW that allows the precomputed
+  // A more efficient version of Sign that allows the precomputed
   // cross-product of A and B to be specified.  (Unlike the 3 argument
   // version this method is also inlined.)
-  inline static int RobustCCW(S2Point const& a, S2Point const& b,
-                              S2Point const& c, Vector3_d const& a_cross_b);
+  inline static int Sign(S2Point const& a, S2Point const& b, S2Point const& c,
+                         Vector3_d const& a_cross_b);
 
-  // This version of RobustCCW returns +1 if the points are definitely CCW,
+  // This version of Sign returns +1 if the points are definitely CCW,
   // -1 if they are definitely CW, and 0 if two points are identical or the
   // result is uncertain.  Uncertain certain cases can be resolved, if
-  // desired, by calling ExpensiveCCW.
+  // desired, by calling ExpensiveSign.
   //
   // The purpose of this method is to allow additional cheap tests to be done,
-  // where possible, in order to avoid calling ExpensiveCCW unnecessarily.
-  inline static int TriageCCW(S2Point const& a, S2Point const& b,
-                              S2Point const& c, Vector3_d const& a_cross_b);
+  // where possible, in order to avoid calling ExpensiveSign unnecessarily.
+  inline static int TriageSign(S2Point const& a, S2Point const& b,
+                               S2Point const& c, Vector3_d const& a_cross_b);
 
-  // This function is invoked by RobustCCW() if the sign of the determinant is
+  // This function is invoked by Sign() if the sign of the determinant is
   // uncertain.  It always returns a non-zero result unless two of the input
   // points are the same.  It uses a combination of multiple-precision
   // arithmetic and symbolic perturbations to ensure that its results are
@@ -220,10 +220,10 @@ class S2 {
   // small that they do not affect the sign of any determinant that was
   // non-zero before the perturbations.
   //
-  // Unlike RobustCCW(), this method does not require the input points to be
+  // Unlike Sign(), this method does not require the input points to be
   // normalized.
-  static int ExpensiveCCW(S2Point const& a, S2Point const& b,
-                          S2Point const& c);
+  static int ExpensiveSign(S2Point const& a, S2Point const& b,
+                           S2Point const& c);
 
   // Given 4 points on the unit sphere, return true if the edges OA, OB, and
   // OC are encountered in that order while sweeping CCW around the point O.
@@ -603,7 +603,8 @@ class S2 {
    private:
     double const deriv_;
 
-    DISALLOW_COPY_AND_ASSIGN(Metric);
+    Metric(Metric const&) = delete;
+    void operator=(Metric const&) = delete;
   };
   typedef Metric<1> LengthMetric;
   typedef Metric<2> AreaMetric;
@@ -685,9 +686,9 @@ class S2 {
 
  private:
   // Documented in the .cc file; exposed here for testing.
-  static int StableCCW(S2Point const& a, S2Point const& b, S2Point const& c);
-  static int ExactCCW(S2Point const& a, S2Point const& b, S2Point const& c);
-  friend class StableCCWTest;
+  static int StableSign(S2Point const& a, S2Point const& b, S2Point const& c);
+  static int ExactSign(S2Point const& a, S2Point const& b, S2Point const& c);
+  friend class StableSignTest;
 
   // The value below is the maximum error in computing the determinant
   // a.CrossProd(b).DotProd(c).
@@ -699,7 +700,10 @@ class S2 {
   // The precomputed neighbors of each face (see GetUVWFace).
   static int const kFaceUVWFaces[6][3][2];
 
-  DISALLOW_IMPLICIT_CONSTRUCTORS(S2);  // Contains only static methods.
+  // Contains only static methods.
+  S2() = delete;
+  S2(S2 const&) = delete;
+  void operator=(S2 const&) = delete;
 };
 
 
@@ -708,7 +712,7 @@ class S2 {
 
 // Uncomment the following line for testing purposes only.  It greatly
 // increases the number of degenerate cases that need to be handled using
-// ExpensiveCCW().
+// ExpensiveSign().
 // #define S2_TEST_DEGENERACIES
 
 inline S2Point S2::Origin() {
@@ -724,8 +728,8 @@ inline S2Point S2::Origin() {
 #endif
 }
 
-inline int S2::TriageCCW(S2Point const& a, S2Point const& b,
-                         S2Point const& c, Vector3_d const& a_cross_b) {
+inline int S2::TriageSign(S2Point const& a, S2Point const& b,
+                          S2Point const& c, Vector3_d const& a_cross_b) {
   DCHECK(IsUnitLength(a));
   DCHECK(IsUnitLength(b));
   DCHECK(IsUnitLength(c));
@@ -735,18 +739,18 @@ inline int S2::TriageCCW(S2Point const& a, S2Point const& b,
   DCHECK(!FLAGS_s2debug ||
          fabs(det) <= kMaxDetError ||
          fabs(det) >= 100 * kMaxDetError ||
-         det * ExpensiveCCW(a, b, c) > 0);
+         det * ExpensiveSign(a, b, c) > 0);
 
   if (det > kMaxDetError) return 1;
   if (det < -kMaxDetError) return -1;
   return 0;
 }
 
-inline int S2::RobustCCW(S2Point const& a, S2Point const& b,
-                         S2Point const& c, Vector3_d const& a_cross_b) {
-  int ccw = TriageCCW(a, b, c, a_cross_b);
-  if (ccw == 0) ccw = ExpensiveCCW(a, b, c);
-  return ccw;
+inline int S2::Sign(S2Point const& a, S2Point const& b, S2Point const& c,
+                    Vector3_d const& a_cross_b) {
+  int sign = TriageSign(a, b, c, a_cross_b);
+  if (sign == 0) sign = ExpensiveSign(a, b, c);
+  return sign;
 }
 
 // We have implemented three different projections from cell-space (s,t) to

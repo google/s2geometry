@@ -18,7 +18,7 @@
 // See strtoint.h for details on how to use this component.
 //
 
-#include <errno.h>
+#include <cerrno>
 #include "base/port.h"
 #include "base/strtoint.h"
 

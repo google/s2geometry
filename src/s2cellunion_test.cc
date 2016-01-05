@@ -17,8 +17,8 @@
 
 #include "s2cellunion.h"
 
-#include <math.h>
-#include <stdio.h>
+#include <cmath>
+#include <cstdio>
 #include <algorithm>
 #include <vector>
 
@@ -345,9 +345,9 @@ TEST(S2CellUnion, Expand) {
   }
 }
 
-static void TestInitFromRange(S2CellId min_id, S2CellId max_id) {
+static void TestInitFromMinMax(S2CellId min_id, S2CellId max_id) {
   S2CellUnion cell_union;
-  cell_union.InitFromRange(min_id, max_id);
+  cell_union.InitFromMinMax(min_id, max_id);
   vector<S2CellId> const& cell_ids = cell_union.cell_ids();
 
   EXPECT_GT(cell_ids.size(), 0);
@@ -359,16 +359,16 @@ static void TestInitFromRange(S2CellId min_id, S2CellId max_id) {
   EXPECT_FALSE(cell_union.Normalize());
 }
 
-TEST(S2CellUnion, InitFromRange) {
+TEST(S2CellUnion, InitFromMinMax) {
   // Check the very first leaf cell and face cell.
   S2CellId face1_id = S2CellId::FromFace(0);
-  TestInitFromRange(face1_id.range_min(), face1_id.range_min());
-  TestInitFromRange(face1_id.range_min(), face1_id.range_max());
+  TestInitFromMinMax(face1_id.range_min(), face1_id.range_min());
+  TestInitFromMinMax(face1_id.range_min(), face1_id.range_max());
 
   // Check the very last leaf cell and face cell.
   S2CellId face5_id = S2CellId::FromFace(5);
-  TestInitFromRange(face5_id.range_min(), face5_id.range_max());
-  TestInitFromRange(face5_id.range_max(), face5_id.range_max());
+  TestInitFromMinMax(face5_id.range_min(), face5_id.range_max());
+  TestInitFromMinMax(face5_id.range_max(), face5_id.range_max());
 
   // Check random ranges of leaf cells.
   for (int iter = 0; iter < 100; ++iter) {
@@ -376,12 +376,12 @@ TEST(S2CellUnion, InitFromRange) {
     S2CellId y = S2Testing::GetRandomCellId(S2CellId::kMaxLevel);
     using std::swap;
     if (x > y) swap(x, y);
-    TestInitFromRange(x, y);
+    TestInitFromMinMax(x, y);
   }
 }
 
 TEST(S2CellUnion, InitFromBeginEnd) {
-  // Since InitFromRange() is implemented in terms of InitFromBeginEnd(), we
+  // Since InitFromMinMax() is implemented in terms of InitFromBeginEnd(), we
   // focus on test cases that generate an empty range.
   vector<S2CellId> initial_ids(1, S2CellId::FromFace(3));
   S2CellUnion cell_union;

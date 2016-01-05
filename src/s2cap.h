@@ -18,7 +18,7 @@
 #ifndef S2GEOMETRY_S2CAP_H_
 #define S2GEOMETRY_S2CAP_H_
 
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <iosfwd>
 

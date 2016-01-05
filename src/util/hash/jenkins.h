@@ -24,7 +24,7 @@
 #ifndef S2GEOMETRY_UTIL_HASH_JENKINS_H_
 #define S2GEOMETRY_UTIL_HASH_JENKINS_H_
 
-#include <stdlib.h>
+#include <cstdlib>
 #include "base/integral_types.h"
 
 static const uint32 MIX32 = 0x12b9b0a1UL;           // pi; an arbitrary number

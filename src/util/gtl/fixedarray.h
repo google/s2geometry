@@ -17,7 +17,7 @@
 #ifndef S2GEOMETRY_UTIL_GTL_FIXEDARRAY_H_
 #define S2GEOMETRY_UTIL_GTL_FIXEDARRAY_H_
 
-#include <stddef.h>
+#include <cstddef>
 #include <algorithm>
 #include <iterator>
 #include <initializer_list>

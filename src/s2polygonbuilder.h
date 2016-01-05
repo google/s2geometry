@@ -369,7 +369,8 @@ class S2PolygonBuilder {
   // in the order they are added to edges_.
   std::vector<S2Point> starting_vertices_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2PolygonBuilder);
+  S2PolygonBuilder(S2PolygonBuilder const&) = delete;
+  void operator=(S2PolygonBuilder const&) = delete;
 };
 
 inline S2PolygonBuilderOptions S2PolygonBuilderOptions::DIRECTED_XOR() {

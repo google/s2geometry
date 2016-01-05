@@ -308,6 +308,9 @@ class S2ClosestPointQuery {
   std::vector<S2CellId> intersection_with_max_distance_;
 
   PointData const* tmp_point_data_[kMaxLeafPoints];
+
+  S2ClosestPointQuery(S2ClosestPointQuery const&) = delete;
+  void operator=(S2ClosestPointQuery const&) = delete;
 };
 
 

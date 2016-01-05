@@ -40,7 +40,7 @@
 #ifndef UTIL_MATH_VECTOR3_H__
 #define UTIL_MATH_VECTOR3_H__
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <algorithm>
 #include <cmath>
 #include <iosfwd>
@@ -50,7 +50,7 @@
 #include <glog/logging.h>
 #include "base/macros.h"
 #include "base/template_util.h"
-#include "base/type_traits.h"
+#include <type_traits>
 #include "util/math/mathutil.h"
 #include "util/math/vector2.h"
 #include "util/math/vector4.h"

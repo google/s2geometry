@@ -23,9 +23,9 @@
 #ifndef S2GEOMETRY_BASE_PORT_H_
 #define S2GEOMETRY_BASE_PORT_H_
 
-#include <limits.h>         // So we can set the bounds of our types
-#include <string.h>         // for memcpy()
-#include <stdlib.h>         // for free()
+#include <climits>         // So we can set the bounds of our types
+#include <cstring>         // for memcpy()
+#include <cstdlib>         // for free()
 
 #if defined(OS_CYGWIN)
 #error "Cygwin is not supported."
@@ -52,7 +52,7 @@
 #elif defined(OS_CYGWIN) || defined(__ANDROID__)
 #include <malloc.h>         // for memalign()
 #elif defined(_MSC_VER)
-#include <stdio.h>          // declare snprintf/vsnprintf before overriding
+#include <cstdio>          // declare snprintf/vsnprintf before overriding
 #endif
 
 #include "base/integral_types.h"
@@ -155,7 +155,7 @@ typedef unsigned long ulong;
 // The following guarantees declaration of the byte swap functions, and
 // defines __BYTE_ORDER for MSVC
 #ifdef _MSC_VER
-#include <stdlib.h>  // NOLINT(build/include)
+#include <cstdlib>  // NOLINT(build/include)
 #define __BYTE_ORDER __LITTLE_ENDIAN
 #define bswap_16(x) _byteswap_ushort(x)
 #define bswap_32(x) _byteswap_ulong(x)
@@ -920,12 +920,12 @@ struct AlignType { typedef char result[Size]; };
 #pragma warning(disable : 4305 )
 
 #include <winsock2.h>
-#include <assert.h>
+#include <cassert>
 #include <windows.h>
 #undef ERROR
 
-#include <float.h>  // for nextafter functionality on windows
-#include <math.h>  // for HUGE_VAL
+#include <cfloat>  // for nextafter functionality on windows
+#include <cmath>  // for HUGE_VAL
 
 #ifndef HUGE_VALF
 #define HUGE_VALF (static_cast<float>(HUGE_VAL))
@@ -1192,7 +1192,7 @@ struct PortableHashBase { };
 // callback solves the problem.
 
 // Make sure uint16_t/uint32_t/uint64_t are defined.
-#include <stdint.h>
+#include <cstdint>
 
 #ifdef __cplusplus
 extern "C" {

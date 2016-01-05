@@ -369,6 +369,9 @@ class S2ClosestEdgeQuery {
   S2ShapeIndex::Iterator iter_;
   std::vector<S2CellId> max_distance_covering_;
   std::vector<S2CellId> initial_cells_;
+
+  S2ClosestEdgeQuery(S2ClosestEdgeQuery const&) = delete;
+  void operator=(S2ClosestEdgeQuery const&) = delete;
 };
 
 

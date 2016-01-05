@@ -28,7 +28,7 @@
 #include "s2cell.h"
 #include "s2cellid.h"
 #include "s2latlngrect.h"
-#include "util/gtl/algorithm.h"
+#include <algorithm>
 
 using std::max;
 using std::min;
@@ -282,8 +282,8 @@ void S2CellUnion::GetIntersection(S2CellUnion const* x, S2CellUnion const* y) {
                                              vector<S2CellId>* out) {
   DCHECK_NE(out, &x);
   DCHECK_NE(out, &y);
-  DCHECK(util::gtl::is_sorted(x.begin(), x.end()));
-  DCHECK(util::gtl::is_sorted(y.begin(), y.end()));
+  DCHECK(std::is_sorted(x.begin(), x.end()));
+  DCHECK(std::is_sorted(y.begin(), y.end()));
 
   // This is a fairly efficient calculation that uses binary search to skip
   // over sections of both input vectors.  It takes constant time if all the
@@ -322,7 +322,7 @@ void S2CellUnion::GetIntersection(S2CellUnion const* x, S2CellUnion const* y) {
     }
   }
   // The output is generated in sorted order.
-  DCHECK(util::gtl::is_sorted(out->begin(), out->end()));
+  DCHECK(std::is_sorted(out->begin(), out->end()));
 }
 
 static void GetDifferenceInternal(S2CellId cell,
@@ -355,7 +355,7 @@ void S2CellUnion::GetDifference(S2CellUnion const* x, S2CellUnion const* y) {
   }
   // The output is generated in sorted order, and there should not be any
   // cells that can be merged (provided that both inputs were normalized).
-  DCHECK(util::gtl::is_sorted(cell_ids_.begin(), cell_ids_.end()));
+  DCHECK(std::is_sorted(cell_ids_.begin(), cell_ids_.end()));
   DCHECK(!Normalize());
 }
 
@@ -391,7 +391,7 @@ void S2CellUnion::Expand(S1Angle min_radius, int max_level_diff) {
   Expand(min(min_level + max_level_diff, radius_level));
 }
 
-void S2CellUnion::InitFromRange(S2CellId min_id, S2CellId max_id) {
+void S2CellUnion::InitFromMinMax(S2CellId min_id, S2CellId max_id) {
   DCHECK(max_id.is_valid());
   InitFromBeginEnd(min_id, max_id.next());
 }
@@ -408,7 +408,7 @@ void S2CellUnion::InitFromBeginEnd(S2CellId begin, S2CellId end) {
     cell_ids_.push_back(id);
   }
   // The output is already normalized.
-  DCHECK(util::gtl::is_sorted(cell_ids_.begin(), cell_ids_.end()));
+  DCHECK(std::is_sorted(cell_ids_.begin(), cell_ids_.end()));
   DCHECK(!Normalize());
 }
 

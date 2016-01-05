@@ -83,7 +83,8 @@ class S2RegionUnion : public S2Region {
 
   std::vector<S2Region*> regions_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2RegionUnion);
+  S2RegionUnion(S2RegionUnion const&) = delete;
+  void operator=(S2RegionUnion const&) = delete;
 };
 
 #endif  // S2GEOMETRY_S2REGIONUNION_H_

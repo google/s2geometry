@@ -17,7 +17,7 @@
 
 #include "s2.h"
 
-#include <stddef.h>
+#include <cstddef>
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -351,7 +351,7 @@ TEST(S2, TrueCentroid) {
   }
 }
 
-TEST(RobustCCW, CollinearPoints) {
+TEST(Sign, CollinearPoints) {
   // The following points happen to be *exactly collinear* along a line that it
   // approximate tangent to the surface of the unit sphere.  In fact, C is the
   // exact midpoint of the line segment AB.  All of these points are close
@@ -360,9 +360,9 @@ TEST(RobustCCW, CollinearPoints) {
   S2Point b(0.7257192746638208, 0.46058826573818168, 0.51106749441312738);
   S2Point c(0.72571927671709457, 0.46058826089853633, 0.51106749585908795);
   EXPECT_EQ(c - a, b - c);
-  EXPECT_NE(0, S2::RobustCCW(a, b, c));
-  EXPECT_EQ(S2::RobustCCW(a, b, c), S2::RobustCCW(b, c, a));
-  EXPECT_EQ(S2::RobustCCW(a, b, c), -S2::RobustCCW(c, b, a));
+  EXPECT_NE(0, S2::Sign(a, b, c));
+  EXPECT_EQ(S2::Sign(a, b, c), S2::Sign(b, c, a));
+  EXPECT_EQ(S2::Sign(a, b, c), -S2::Sign(c, b, a));
 
   // The points "x1" and "x2" are exactly proportional, i.e. they both lie
   // on a common line through the origin.  Both points are considered to be
@@ -373,9 +373,9 @@ TEST(RobustCCW, CollinearPoints) {
   S2Point x2(1, 1.4901161193847656e-08, 0);
   EXPECT_EQ(x1, x1.Normalize());
   EXPECT_EQ(x2, x2.Normalize());
-  EXPECT_NE(0, S2::RobustCCW(x1, x2, -x1));
-  EXPECT_EQ(S2::RobustCCW(x1, x2, -x1), S2::RobustCCW(x2, -x1, x1));
-  EXPECT_EQ(S2::RobustCCW(x1, x2, -x1), -S2::RobustCCW(-x1, x2, x1));
+  EXPECT_NE(0, S2::Sign(x1, x2, -x1));
+  EXPECT_EQ(S2::Sign(x1, x2, -x1), S2::Sign(x2, -x1, x1));
+  EXPECT_EQ(S2::Sign(x1, x2, -x1), -S2::Sign(-x1, x2, x1));
 
   // Here are two more points that are distinct, exactly proportional, and
   // that satisfy (x == x.Normalize()).
@@ -384,7 +384,7 @@ TEST(RobustCCW, CollinearPoints) {
   EXPECT_EQ(x3, x3.Normalize());
   EXPECT_EQ(x4, x4.Normalize());
   EXPECT_NE(x3, x4);
-  EXPECT_NE(0, S2::RobustCCW(x3, x4, -x3));
+  EXPECT_NE(0, S2::Sign(x3, x4, -x3));
 
   // The following two points demonstrate that Normalize() is not idempotent,
   // i.e. y0.Normalize() != y0.Normalize().Normalize().  Both points satisfy
@@ -394,33 +394,33 @@ TEST(RobustCCW, CollinearPoints) {
   S2Point y2 = y1.Normalize();
   EXPECT_NE(y1, y2);
   EXPECT_EQ(y2, y2.Normalize());
-  EXPECT_NE(0, S2::RobustCCW(y1, y2, -y1));
-  EXPECT_EQ(S2::RobustCCW(y1, y2, -y1), S2::RobustCCW(y2, -y1, y1));
-  EXPECT_EQ(S2::RobustCCW(y1, y2, -y1), -S2::RobustCCW(-y1, y2, y1));
+  EXPECT_NE(0, S2::Sign(y1, y2, -y1));
+  EXPECT_EQ(S2::Sign(y1, y2, -y1), S2::Sign(y2, -y1, y1));
+  EXPECT_EQ(S2::Sign(y1, y2, -y1), -S2::Sign(-y1, y2, y1));
 }
 
 // Given 3 points A, B, C that are exactly coplanar with the origin and where
 // A < B < C in lexicographic order, verify that ABC is counterclockwise (if
-// expected == 1) or clockwise (if expected == -1) using S2::ExpensiveCCW().
+// expected == 1) or clockwise (if expected == -1) using S2::ExpensiveSign().
 //
 // This method is intended specifically for checking the cases where
 // symbolic perturbations are needed to break ties.
-static void CheckSymbolicCCW(int expected, S2Point const& a,
-                             S2Point const& b, S2Point const& c) {
+static void CheckSymbolicSign(int expected, S2Point const& a,
+                              S2Point const& b, S2Point const& c) {
   CHECK_LT(a, b);
   CHECK_LT(b, c);
   CHECK_EQ(0, a.DotProd(b.CrossProd(c)));
 
   // Use ASSERT rather than EXPECT to suppress spurious error messages.
-  ASSERT_EQ(expected, S2::ExpensiveCCW(a, b, c));
-  ASSERT_EQ(expected, S2::ExpensiveCCW(b, c, a));
-  ASSERT_EQ(expected, S2::ExpensiveCCW(c, a, b));
-  ASSERT_EQ(-expected, S2::ExpensiveCCW(c, b, a));
-  ASSERT_EQ(-expected, S2::ExpensiveCCW(b, a, c));
-  ASSERT_EQ(-expected, S2::ExpensiveCCW(a, c, b));
+  ASSERT_EQ(expected, S2::ExpensiveSign(a, b, c));
+  ASSERT_EQ(expected, S2::ExpensiveSign(b, c, a));
+  ASSERT_EQ(expected, S2::ExpensiveSign(c, a, b));
+  ASSERT_EQ(-expected, S2::ExpensiveSign(c, b, a));
+  ASSERT_EQ(-expected, S2::ExpensiveSign(b, a, c));
+  ASSERT_EQ(-expected, S2::ExpensiveSign(a, c, b));
 }
 
-TEST(RobustCCW, SymbolicPerturbationCodeCoverage) {
+TEST(Sign, SymbolicPerturbationCodeCoverage) {
   // The purpose of this test is simply to get code coverage of
   // SymbolicallyPerturbedCCW().  Let M_1, M_2, ... be the sequence of
   // submatrices whose determinant sign is tested by that function.  Then the
@@ -435,45 +435,51 @@ TEST(RobustCCW, SymbolicPerturbationCodeCoverage) {
   // SymbolicallyPerturbedCCW() will cause this test to fail.
 
   // det(M_1) = b0*c1 - b1*c0
-  CheckSymbolicCCW(1, S2Point(-3, -1, 0), S2Point(-2, 1, 0), S2Point(1, -2, 0));
+  CheckSymbolicSign(1,
+                    S2Point(-3, -1, 0), S2Point(-2, 1, 0), S2Point(1, -2, 0));
 
   // det(M_2) = b2*c0 - b0*c2
-  CheckSymbolicCCW(1, S2Point(-6, 3, 3), S2Point(-4, 2, -1), S2Point(-2, 1, 4));
+  CheckSymbolicSign(1,
+                    S2Point(-6, 3, 3), S2Point(-4, 2, -1), S2Point(-2, 1, 4));
 
   // det(M_3) = b1*c2 - b2*c1
-  CheckSymbolicCCW(1, S2Point(0, -1, -1), S2Point(0, 1, -2), S2Point(0, 2, 1));
+  CheckSymbolicSign(1, S2Point(0, -1, -1), S2Point(0, 1, -2), S2Point(0, 2, 1));
   // From this point onward, B or C must be zero, or B is proportional to C.
 
   // det(M_4) = c0*a1 - c1*a0
-  CheckSymbolicCCW(1, S2Point(-1, 2, 7), S2Point(2, 1, -4), S2Point(4, 2, -8));
+  CheckSymbolicSign(1, S2Point(-1, 2, 7), S2Point(2, 1, -4), S2Point(4, 2, -8));
 
   // det(M_5) = c0
-  CheckSymbolicCCW(1, S2Point(-4, -2, 7), S2Point(2, 1, -4), S2Point(4, 2, -8));
+  CheckSymbolicSign(1,
+                    S2Point(-4, -2, 7), S2Point(2, 1, -4), S2Point(4, 2, -8));
 
   // det(M_6) = -c1
-  CheckSymbolicCCW(1, S2Point(0, -5, 7), S2Point(0, -4, 8), S2Point(0, -2, 4));
+  CheckSymbolicSign(1, S2Point(0, -5, 7), S2Point(0, -4, 8), S2Point(0, -2, 4));
 
   // det(M_7) = c2*a0 - c0*a2
-  CheckSymbolicCCW(1, S2Point(-5, -2, 7), S2Point(0, 0, -2), S2Point(0, 0, -1));
+  CheckSymbolicSign(1,
+                    S2Point(-5, -2, 7), S2Point(0, 0, -2), S2Point(0, 0, -1));
 
   // det(M_8) = c2
-  CheckSymbolicCCW(1, S2Point(0, -2, 7), S2Point(0, 0, 1), S2Point(0, 0, 2));
+  CheckSymbolicSign(1, S2Point(0, -2, 7), S2Point(0, 0, 1), S2Point(0, 0, 2));
   // From this point onward, C must be zero.
 
   // det(M_9) = a0*b1 - a1*b0
-  CheckSymbolicCCW(1, S2Point(-3, 1, 7), S2Point(-1, -4, 1), S2Point(0, 0, 0));
+  CheckSymbolicSign(1, S2Point(-3, 1, 7), S2Point(-1, -4, 1), S2Point(0, 0, 0));
 
   // det(M_10) = -b0
-  CheckSymbolicCCW(1, S2Point(-6, -4, 7), S2Point(-3, -2, 1), S2Point(0, 0, 0));
+  CheckSymbolicSign(1,
+                    S2Point(-6, -4, 7), S2Point(-3, -2, 1), S2Point(0, 0, 0));
 
   // det(M_11) = b1
-  CheckSymbolicCCW(-1, S2Point(0, -4, 7), S2Point(0, -2, 1), S2Point(0, 0, 0));
+  CheckSymbolicSign(-1, S2Point(0, -4, 7), S2Point(0, -2, 1), S2Point(0, 0, 0));
 
   // det(M_12) = a0
-  CheckSymbolicCCW(-1, S2Point(-1, -4, 5), S2Point(0, 0, -3), S2Point(0, 0, 0));
+  CheckSymbolicSign(-1,
+                    S2Point(-1, -4, 5), S2Point(0, 0, -3), S2Point(0, 0, 0));
 
   // det(M_13) = 1
-  CheckSymbolicCCW(1, S2Point(0, -4, 5), S2Point(0, 0, -5), S2Point(0, 0, 0));
+  CheckSymbolicSign(1, S2Point(0, -4, 5), S2Point(0, 0, -5), S2Point(0, 0, 0));
 }
 
 // This test repeatedly constructs some number of points that are on or nearly
@@ -485,7 +491,7 @@ TEST(RobustCCW, SymbolicPerturbationCodeCoverage) {
 //
 // It is easier to think about what this test is doing if you imagine that the
 // points are in general position rather than on a great circle.
-class RobustCCWTest : public testing::Test {
+class SignTest : public testing::Test {
  protected:
   // The following method is used to sort a collection of points in CCW order
   // around a given origin.  It returns true if A comes before B in the CCW
@@ -526,18 +532,18 @@ class RobustCCWTest : public testing::Test {
   static int CountCCW(vector<S2Point> const& sorted, S2Point const& origin,
                       int start) {
     int num_ccw = 0;
-    int last_ccw = 1;
+    int last_sign = 1;
     int const n = sorted.size();
     for (int j = 1; j < n; ++j) {
-      int ccw = S2::RobustCCW(origin, sorted[start], sorted[(start + j) % n]);
-      EXPECT_NE(0, ccw);
-      if (ccw > 0) ++num_ccw;
+      int sign = S2::Sign(origin, sorted[start], sorted[(start + j) % n]);
+      EXPECT_NE(0, sign);
+      if (sign > 0) ++num_ccw;
 
       // Since the points are sorted around the origin, we expect to see a
       // (possibly empty) sequence of CCW triangles followed by a (possibly
       // empty) sequence of CW triangles.
-      EXPECT_FALSE(ccw > 0 && last_ccw < 0);
-      last_ccw = ccw;
+      EXPECT_FALSE(sign > 0 && last_sign < 0);
+      last_sign = sign;
     }
     return num_ccw;
   }
@@ -584,7 +590,7 @@ class RobustCCWTest : public testing::Test {
   }
 
   // Add zero or more (but usually one) point that is likely to trigger
-  // RobustCCW() degeneracies among the given points.
+  // Sign() degeneracies among the given points.
   static void AddDegeneracy(vector<S2Point>* points) {
     S2Testing::Random* rnd = &S2Testing::rnd;
     S2Point a = (*points)[rnd->Uniform(points->size())];
@@ -676,7 +682,7 @@ class RobustCCWTest : public testing::Test {
   }
 };
 
-TEST_F(RobustCCWTest, StressTest) {
+TEST_F(SignTest, StressTest) {
   // The run time of this test is *cubic* in the parameter below.
   static int const kNumPointsPerCircle = 20;
 
@@ -702,9 +708,9 @@ TEST_F(RobustCCWTest, StressTest) {
   }
 }
 
-class StableCCWTest : public testing::Test {
+class StableSignTest : public testing::Test {
  protected:
-  // Estimate the probability that S2::StableCCW() will not be able to compute
+  // Estimate the probability that S2::StableSign() will not be able to compute
   // the determinant sign of a triangle A, B, C consisting of three points
   // that are as collinear as possible and spaced the given distance apart.
   double GetFailureRate(double km) {
@@ -716,22 +722,22 @@ class StableCCWTest : public testing::Test {
       S2Testing::GetRandomFrame(&a, &x, &y);
       S2Point b = (a - m * x).Normalize();
       S2Point c = (a + m * x).Normalize();
-      int sign = S2::StableCCW(a, b, c);
+      int sign = S2::StableSign(a, b, c);
       if (sign != 0) {
-        EXPECT_EQ(S2::ExactCCW(a, b, c), sign);
+        EXPECT_EQ(S2::ExactSign(a, b, c), sign);
       } else {
         ++failure_count;
       }
     }
     double rate = static_cast<double>(failure_count) / kIters;
-    LOG(INFO) << "StableCCW failure rate for " << km << " km = " << rate;
+    LOG(INFO) << "StableSign failure rate for " << km << " km = " << rate;
     return rate;
   }
 };
 
-TEST_F(StableCCWTest, FailureRate) {
-  // Verify that StableCCW() is able to handle most cases where the three
-  // points are as collinear as possible.  (For reference, TriageCCW() fails
+TEST_F(StableSignTest, FailureRate) {
+  // Verify that StableSign() is able to handle most cases where the three
+  // points are as collinear as possible.  (For reference, TriageSign() fails
   // virtually 100% of the time on this test.)
   //
   // Note that the failure rate *decreases* as the points get closer together,
@@ -762,7 +768,8 @@ class MetricBundle {
   Metric const& avg_;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(MetricBundle);
+  MetricBundle(MetricBundle const&) = delete;
+  void operator=(MetricBundle const&) = delete;
 };
 
 template<int dim>
@@ -958,7 +965,7 @@ TEST(S2, S2PointHashCollapsesLowOrderBit) {
 
 // Given a point P, return the minimum level at which an edge of some S2Cell
 // parent of P is nearly collinear with S2::Origin().  This is the minimum
-// level for which RobustCCW() may need to resort to expensive calculations in
+// level for which Sign() may need to resort to expensive calculations in
 // order to determine which side of an edge the origin lies on.
 static int GetMinExpensiveLevel(S2Point const& p) {
   S2CellId id = S2CellId::FromPoint(p);
@@ -967,7 +974,7 @@ static int GetMinExpensiveLevel(S2Point const& p) {
     for (int k = 0; k < 4; ++k) {
       S2Point a = cell.GetVertex(k);
       S2Point b = cell.GetVertex((k + 1) & 3);
-      if (S2::TriageCCW(a, b, S2::Origin(), a.CrossProd(b)) == 0) {
+      if (S2::TriageSign(a, b, S2::Origin(), a.CrossProd(b)) == 0) {
         return level;
       }
     }
@@ -976,7 +983,7 @@ static int GetMinExpensiveLevel(S2Point const& p) {
 }
 
 TEST(S2, OriginTest) {
-  // To minimize the number of expensive RobustCCW() calculations,
+  // To minimize the number of expensive Sign() calculations,
   // S2::Origin() should not be nearly collinear with any commonly used edges.
   // Two important categories of such edges are:
   //

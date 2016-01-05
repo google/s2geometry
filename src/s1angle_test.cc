@@ -176,17 +176,17 @@ TEST(S1Angle, TestPerformance) {
   // Time conversion from radians to E6.
   const double delta = (2 * M_PI) / (FLAGS_iters - 1);
   double angle = -M_PI;
-  long e6_sum = 0;
+  int64 e6_sum = 0;
   const double to_e6_start = S2Testing::GetCpuTime();
   for (int i = FLAGS_iters; i > 0; i -= kOpsPerLoop) {
-    long r0 = S1Angle::Radians(angle).e6(); angle += delta;
-    long r1 = S1Angle::Radians(angle).e6(); angle += delta;
-    long r2 = S1Angle::Radians(angle).e6(); angle += delta;
-    long r3 = S1Angle::Radians(angle).e6(); angle += delta;
-    long r4 = S1Angle::Radians(angle).e6(); angle += delta;
-    long r5 = S1Angle::Radians(angle).e6(); angle += delta;
-    long r6 = S1Angle::Radians(angle).e6(); angle += delta;
-    long r7 = S1Angle::Radians(angle).e6(); angle += delta;
+    int64 r0 = S1Angle::Radians(angle).e6(); angle += delta;
+    int64 r1 = S1Angle::Radians(angle).e6(); angle += delta;
+    int64 r2 = S1Angle::Radians(angle).e6(); angle += delta;
+    int64 r3 = S1Angle::Radians(angle).e6(); angle += delta;
+    int64 r4 = S1Angle::Radians(angle).e6(); angle += delta;
+    int64 r5 = S1Angle::Radians(angle).e6(); angle += delta;
+    int64 r6 = S1Angle::Radians(angle).e6(); angle += delta;
+    int64 r7 = S1Angle::Radians(angle).e6(); angle += delta;
     e6_sum += ((r0 + r1) + (r2 + r3)) + ((r4 + r5) + (r6 + r7));
   }
   const double to_e6_time = S2Testing::GetCpuTime() - to_e6_start;

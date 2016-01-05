@@ -18,9 +18,9 @@
 #include "s2regioncoverer.h"
 
 #include <pthread.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
 #include <algorithm>
 #include <functional>
 #include <queue>
@@ -33,7 +33,7 @@
 #include "s2cap.h"
 #include "s2cellunion.h"
 #include "s2region.h"
-#include "util/gtl/algorithm.h"
+#include <algorithm>
 
 using std::max;
 using std::min;
@@ -198,7 +198,7 @@ inline int S2RegionCoverer::AdjustLevel(int level) const {
 }
 
 void S2RegionCoverer::AdjustCellLevels(vector<S2CellId>* cells) const {
-  DCHECK(util::gtl::is_sorted(cells->begin(), cells->end()));
+  DCHECK(std::is_sorted(cells->begin(), cells->end()));
   if (level_mod() == 1) return;
 
   int out = 0;

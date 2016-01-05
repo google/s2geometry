@@ -18,7 +18,7 @@
 #ifndef S2GEOMETRY_S2POLYGON_H_
 #define S2GEOMETRY_S2POLYGON_H_
 
-#include <stddef.h>
+#include <cstddef>
 #include <map>
 #include <vector>
 
@@ -316,7 +316,7 @@ class S2Polygon : public S2Region {
   // vertex must be to an edge in order to be spliced into it (see
   // S2PolygonBuilder for details).  By default, the merge radius is just
   // large enough to compensate for errors that occur when computing
-  // intersection points between edges (S2EdgeUtil::kIntersectionTolerance).
+  // intersection points between edges (S2EdgeUtil::kIntersectionMergeRadius).
   //
   // If you are going to convert the resulting polygon to a lower-precision
   // format, it is necessary to increase the merge radius in order to get a
@@ -324,13 +324,13 @@ class S2Polygon : public S2Region {
   // example, if you are going to convert them to geostore::PolygonProto
   // format, then S1Angle::E7(1) is a good value for "vertex_merge_radius".
   void InitToIntersection(S2Polygon const* a, S2Polygon const* b);
-  void InitToIntersectionSloppy(S2Polygon const* a, S2Polygon const* b,
+  void InitToApproxIntersection(S2Polygon const* a, S2Polygon const* b,
                                 S1Angle vertex_merge_radius);
   void InitToUnion(S2Polygon const* a, S2Polygon const* b);
-  void InitToUnionSloppy(S2Polygon const* a, S2Polygon const* b,
+  void InitToApproxUnion(S2Polygon const* a, S2Polygon const* b,
                          S1Angle vertex_merge_radius);
   void InitToDifference(S2Polygon const* a, S2Polygon const* b);
-  void InitToDifferenceSloppy(S2Polygon const* a, S2Polygon const* b,
+  void InitToApproxDifference(S2Polygon const* a, S2Polygon const* b,
                               S1Angle vertex_merge_radius);
 
   // Initializes this polygon to a polygon that contains fewer vertices and is
@@ -382,8 +382,8 @@ class S2Polygon : public S2Region {
   // from beginning to end.  Note that the output may include polylines with
   // only one vertex, but there will not be any zero-vertex polylines.
   //
-  // This is equivalent to calling IntersectWithPolylineSloppy() with the
-  // "vertex_merge_radius" set to S2EdgeUtil::kIntersectionTolerance.
+  // This is equivalent to calling ApproxIntersectWithPolyline() with the
+  // "vertex_merge_radius" set to S2EdgeUtil::kIntersectionMergeRadius.
   void IntersectWithPolyline(S2Polyline const* in,
                              std::vector<S2Polyline*> *out) const;
 
@@ -392,7 +392,7 @@ class S2Polygon : public S2Region {
   // sequence obtained by concatenating the output polylines will be
   // farther than "vertex_merge_radius" apart.  Note that this can change
   // the number of output polylines and/or yield single-vertex polylines.
-  void IntersectWithPolylineSloppy(S2Polyline const* in,
+  void ApproxIntersectWithPolyline(S2Polyline const* in,
                                    std::vector<S2Polyline*> *out,
                                    S1Angle vertex_merge_radius) const;
 
@@ -403,14 +403,14 @@ class S2Polygon : public S2Region {
 
   // Same as IntersectWithPolylineSloppy, but subtracts this polygon
   // from the given polyline.
-  void SubtractFromPolylineSloppy(S2Polyline const* in,
+  void ApproxSubtractFromPolyline(S2Polyline const* in,
                                   std::vector<S2Polyline*> *out,
                                   S1Angle vertex_merge_radius) const;
 
   // Return a polygon which is the union of the given polygons.
   // Clears the vector and deletes the polygons!
   static S2Polygon* DestructiveUnion(std::vector<S2Polygon*>* polygons);
-  static S2Polygon* DestructiveUnionSloppy(std::vector<S2Polygon*>* polygons,
+  static S2Polygon* DestructiveApproxUnion(std::vector<S2Polygon*>* polygons,
                                            S1Angle vertex_merge_radius);
 
   // Initialize this polygon to the outline of the given cell union.
@@ -667,7 +667,10 @@ class S2Polygon : public S2Region {
   // Spatial index of all the polygon loops.
   S2ShapeIndex index_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2Polygon);
+#ifndef SWIG
+  S2Polygon(S2Polygon const&) = delete;
+  void operator=(S2Polygon const&) = delete;
+#endif
 };
 
 #endif  // S2GEOMETRY_S2POLYGON_H_

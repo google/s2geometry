@@ -18,8 +18,8 @@
 #ifndef S2GEOMETRY_S2LOOP_H_
 #define S2GEOMETRY_S2LOOP_H_
 
-#include <math.h>
-#include <stddef.h>
+#include <cmath>
+#include <cstddef>
 #include <bitset>
 #include <map>
 #include <vector>
@@ -43,7 +43,7 @@ class LoopRelation;
 class MergingIterator;
 class S2Cap;
 class S2Cell;
-class S2EdgeQuery;
+class S2CrossingEdgeQuery;
 class S2Error;
 class S2Loop;
 class S2XYZFaceSiTi;
@@ -192,7 +192,7 @@ class S2Loop : public S2Region {
   int sign() const { return is_hole() ? -1 : 1; }
 
   // Return true if the loop area is at most 2*Pi.  Degenerate loops are
-  // handled consistently with S2::RobustCCW(), i.e., if a loop can be
+  // handled consistently with S2::Sign(), i.e., if a loop can be
   // expressed as the union of degenerate or nearly-degenerate CCW triangles,
   // then it will always be considered normalized.
   bool IsNormalized() const;
@@ -227,7 +227,7 @@ class S2Loop : public S2Region {
   // Return the sum of the turning angles at each vertex.  The return value is
   // positive if the loop is counter-clockwise, negative if the loop is
   // clockwise, and zero if the loop is a great circle.  Degenerate and
-  // nearly-degenerate loops are handled consistently with S2::RobustCCW().
+  // nearly-degenerate loops are handled consistently with S2::Sign().
   // So for example, if a loop has zero area (i.e., it is a very small CCW
   // loop) then the turning angle will always be negative.
   //
@@ -621,7 +621,11 @@ class S2Loop : public S2Region {
   // Spatial index for this loop.
   S2ShapeIndex index_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2Loop);
+  // SWIG doesn't understand "= delete".
+#ifndef SWIG
+  S2Loop(S2Loop const&) = delete;
+  void operator=(S2Loop const&) = delete;
+#endif  // SWIG
 };
 
 

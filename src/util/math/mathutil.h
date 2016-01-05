@@ -22,7 +22,7 @@
 #define UTIL_MATH_MATHUTIL_H__
 
 // TODO(user): take this out -- watch out for isinf errors.
-#include <math.h>  // Needed for old-fashioned ::isinf calls.
+#include <cmath>  // Needed for old-fashioned ::isinf calls.
 
 #include <algorithm>
 #include <cmath>

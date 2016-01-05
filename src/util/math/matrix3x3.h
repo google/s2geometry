@@ -35,7 +35,7 @@
 #include <iosfwd>
 
 #include <glog/logging.h>
-#include "base/type_traits.h"
+#include <type_traits>
 #include "util/math/mathutil.h"
 #include "util/math/vector2.h"
 #include "util/math/vector3.h"

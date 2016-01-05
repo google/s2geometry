@@ -17,7 +17,7 @@
 
 #include "s2testing.h"
 
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <memory>
 

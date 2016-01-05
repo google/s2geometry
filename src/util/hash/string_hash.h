@@ -25,8 +25,8 @@
 #ifndef S2GEOMETRY_UTIL_HASH_STRING_HASH_H_
 #define S2GEOMETRY_UTIL_HASH_STRING_HASH_H_
 
-#include <limits.h>
-#include <stddef.h>
+#include <climits>
+#include <cstddef>
 
 #include "base/port.h"
 #include "base/integral_types.h"

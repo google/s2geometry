@@ -17,7 +17,7 @@
 
 #include "s2loop.h"
 
-#include <float.h>
+#include <cfloat>
 #include <algorithm>
 #include <bitset>
 #include <set>
@@ -37,7 +37,7 @@
 #include "s2cap.h"
 #include "s2cell.h"
 #include "s2closestedgequery.h"
-#include "s2edgequery.h"
+#include "s2crossingedgequery.h"
 #include "s2edgeutil.h"
 #include "s2error.h"
 #include "s2paddedcell.h"
@@ -150,7 +150,7 @@ bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
   DCHECK(subregion_bound_.Contains(bound_));
 
   // All vertices must be unit length.  (Unfortunately this check happens too
-  // late in debug mode, because S2Loop construction calls S2::RobustCCW which
+  // late in debug mode, because S2Loop construction calls S2::Sign which
   // expects vertices to be unit length.  But it is still a useful check in
   // optimized builds.)
   for (int i = 0; i < num_vertices(); ++i) {
@@ -391,7 +391,7 @@ double S2Loop::GetArea() const {
   // with S2Loop::Contains(S2Point) in that loops that contain many points
   // should have large areas, and loops that contain few points should have
   // small areas.  For example, if a degenerate triangle is considered CCW
-  // according to S2::RobustCCW(), then it will contain very few points and
+  // according to S2::Sign(), then it will contain very few points and
   // its area should be approximately zero.  On the other hand if it is
   // considered clockwise, then it will contain virtually all points and so
   // its area should be approximately 4*Pi.
@@ -415,10 +415,10 @@ double S2Loop::GetArea() const {
   // that the area enclosed by the loop equals 2*Pi minus the total geodesic
   // curvature of the loop (i.e., the sum of the "turning angles" at all the
   // loop vertices).  The big advantage of this method is that as long as we
-  // use S2::RobustCCW() to compute the turning angle at each vertex, then
+  // use S2::Sign() to compute the turning angle at each vertex, then
   // degeneracies are always handled correctly.  In other words, if a
   // degenerate loop is CCW according to the symbolic perturbations used by
-  // S2::RobustCCW(), then its turning angle will be approximately 2*Pi.
+  // S2::Sign(), then its turning angle will be approximately 2*Pi.
   //
   // The disadvantage of the Gauss-Bonnet method is that its absolute error is
   // about 2e-15 times the number of vertices (see GetTurningAngleMaxError).
@@ -986,7 +986,7 @@ class LoopCrosser {
   int aj_, bj_prev_;
 
   // Temporary data declared here to avoid repeated memory allocations.
-  S2EdgeQuery b_query_;
+  S2CrossingEdgeQuery b_query_;
   vector<S2ShapeIndexCell const*> b_cells_;
 };
 
@@ -1004,7 +1004,7 @@ inline bool LoopCrosser::EdgeCrossesCell(S2ClippedShape const& b_clipped) {
     int bj = b_clipped.edge(j);
     if (bj != bj_prev_ + 1) crosser_.RestartAt(&b_.vertex(bj));
     bj_prev_ = bj;
-    int crossing = crosser_.RobustCrossing(&b_.vertex(bj+1));
+    int crossing = crosser_.CrossingSign(&b_.vertex(bj + 1));
     if (crossing < 0) continue;
     if (crossing > 0) return true;
     // We only need to check each shared vertex once, so we only
@@ -1044,8 +1044,8 @@ bool LoopCrosser::CellCrossesAnySubcell(S2ClippedShape const& a_clipped,
   int a_num_clipped = a_clipped.num_edges();
   for (int i = 0; i < a_num_clipped; ++i) {
     int aj = a_clipped.edge(i);
-    // Use an S2EdgeQuery starting at "b_root" to find the index cells of B
-    // that might contain crossing edges.
+    // Use an S2CrossingEdgeQuery starting at "b_root" to find the index cells
+    // of B that might contain crossing edges.
     if (!b_query_.GetCells(a_.vertex(aj), a_.vertex(aj+1), b_root, &b_cells_)) {
       continue;
     }
@@ -1060,10 +1060,10 @@ bool LoopCrosser::CellCrossesAnySubcell(S2ClippedShape const& a_clipped,
 bool LoopCrosser::HasCrossing(RangeIterator* ai, RangeIterator* bi) {
   DCHECK(ai->id().contains(bi->id()));
   // If ai->id() intersects many edges of B, then it is faster to use
-  // S2EdgeQuery to narrow down the candidates.  But if it intersects only a
-  // few edges, it is faster to check all the crossings directly.  We handle
-  // this by advancing "bi" and keeping track of how many edges we would need
-  // to test.
+  // S2CrossingEdgeQuery to narrow down the candidates.  But if it intersects
+  // only a few edges, it is faster to check all the crossings directly.
+  // We handle this by advancing "bi" and keeping track of how many edges we
+  // would need to test.
 
   static int const kEdgeQueryMinEdges = 20;  // Tuned using benchmarks.
   int total_edges = 0;
@@ -1072,7 +1072,8 @@ bool LoopCrosser::HasCrossing(RangeIterator* ai, RangeIterator* bi) {
     if (bi->num_edges() > 0) {
       total_edges += bi->num_edges();
       if (total_edges >= kEdgeQueryMinEdges) {
-        // There are too many edges to test them directly, so use S2EdgeQuery.
+        // There are too many edges to test them directly, so use
+        // S2CrossingEdgeQuery.
         if (CellCrossesAnySubcell(ai->clipped(), ai->id())) return true;
         bi->SeekBeyond(*ai);
         return false;

@@ -26,14 +26,14 @@
 
 // IWYU sees __gnu_cxx::size_t and reaches for a non-standard gcc header
 // IWYU pragma: no_include <ext/new_allocator.h>
-#include <stddef.h>
+#include <cstddef>
 
 #include "base/int128.h"
 #include "base/integral_types.h"
 #include <glog/logging.h>
 #include "base/macros.h"
 #include "base/port.h"
-#include "base/type_traits.h"
+#include <type_traits>
 #include "util/hash/hash.h"
 #include "util/hash/string_hash.h"
 #include "util/math/vector3.h"

@@ -21,13 +21,15 @@
 #ifndef S2GEOMETRY_S2ERROR_H_
 #define S2GEOMETRY_S2ERROR_H_
 
-#include <stdarg.h>
+#include <cstdarg>
 
 #include <ostream>
 #include <string>
 
 #include "base/port.h"
 
+// This class is intended to be copied by value as desired.  It uses
+// the default copy constructor and assignment operator.
 class S2Error {
  public:
   enum Code {
