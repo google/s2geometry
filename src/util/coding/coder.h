@@ -20,7 +20,7 @@
 #ifndef UTIL_CODING_CODER_H__
 #define UTIL_CODING_CODER_H__
 
-#include <string.h>
+#include <cstring>
 
 // Avoid adding expensive includes here.
 #include <glog/logging.h>
@@ -28,7 +28,7 @@
 #include "base/integral_types.h"
 #include "base/macros.h"
 #include "base/port.h"
-#include "base/type_traits.h"
+#include <type_traits>
 #include "util/coding/varint.h"
 #include "util/endian/endian.h"
 

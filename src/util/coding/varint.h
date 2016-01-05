@@ -31,8 +31,8 @@
 #define S2GEOMETRY_UTIL_CODING_VARINT_H_
 
 // Avoid adding expensive includes here.
-#include <assert.h>
-#include <stddef.h>
+#include <cassert>
+#include <cstddef>
 #include <string>
 
 #include "base/integral_types.h"
@@ -183,7 +183,7 @@ inline const char* Varint::Parse32FallbackInline(const char* p,
   byte = *(ptr++); result |= (byte & 127) <<  7; if (byte < 128) goto done;
   byte = *(ptr++); result |= (byte & 127) << 14; if (byte < 128) goto done;
   byte = *(ptr++); result |= (byte & 127) << 21; if (byte < 128) goto done;
-  byte = *(ptr++); result |= (byte & 127) << 28; if (byte < 128) goto done;
+  byte = *(ptr++); result |= (byte & 127) << 28; if (byte < 16) goto done;
   return nullptr;       // Value is too long to be a varint32
  done:
   *OUTPUT = result;

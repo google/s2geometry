@@ -33,6 +33,9 @@ class S2LatLngRect;
 
 // An S2PointRegion is a region that contains a single point.  It is more
 // expensive than the raw S2Point type and is useful mainly for completeness.
+//
+// This class is intended to be copied by value as desired.  It uses
+// the default copy constructor and assignment operator.
 class S2PointRegion : public S2Region {
  public:
   // Create a region containing the given point, which must be unit length.
@@ -60,8 +63,6 @@ class S2PointRegion : public S2Region {
 
  private:
   S2Point point_;
-
-  DISALLOW_COPY_AND_ASSIGN(S2PointRegion);
 };
 
 inline S2PointRegion::S2PointRegion(S2Point const& point) : point_(point) {

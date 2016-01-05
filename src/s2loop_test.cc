@@ -17,7 +17,7 @@
 
 #include "s2loop.h"
 
-#include <stdio.h>
+#include <cstdio>
 #include <algorithm>
 #include <map>
 #include <memory>
@@ -143,7 +143,7 @@ class S2LoopTestBase : public testing::Test {
       // Loop around the south pole at 80 degrees.
       antarctic_80(AddLoop("-80:120, -80:0, -80:-120")),
 
-      // A completely degenerate triangle along the equator that RobustCCW()
+      // A completely degenerate triangle along the equator that Sign()
       // considers to be CCW.
       line_triangle(AddLoop("0:1, 0:2, 0:3")),
 
@@ -298,7 +298,7 @@ TEST_F(S2LoopTestBase, AreaConsistentWithTurningAngle) {
   }
 }
 
-TEST_F(S2LoopTestBase, GetAreaConsistentWithRobustCCW) {
+TEST_F(S2LoopTestBase, GetAreaConsistentWithSign) {
   // Test that GetArea() returns an area near 0 for degenerate loops that
   // contain almost no points, and an area near 4*Pi for degenerate loops that
   // contain almost all points.
@@ -389,7 +389,7 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
 // rotated, and that the sign is inverted when the vertices are reversed.
 static void CheckTurningAngleInvariants(S2Loop const* loop) {
   double expected = loop->GetTurningAngle();
-  unique_ptr<S2Loop> loop_copy(down_cast<S2Loop*>(loop->Clone()));
+  unique_ptr<S2Loop> loop_copy(loop->Clone());
   for (int i = 0; i < loop->num_vertices(); ++i) {
     loop_copy->Invert();
     EXPECT_EQ(-expected, loop_copy->GetTurningAngle());
@@ -531,8 +531,8 @@ TEST_F(S2LoopTestBase, Contains) {
   }
 }
 
-TEST(S2Loop, ContainsMatchesRobustCrossing) {
-  // This test demonstrates a former incompatibility between RobustCrossing()
+TEST(S2Loop, ContainsMatchesCrossingSign) {
+  // This test demonstrates a former incompatibility between CrossingSign()
   // and Contains(S2Point const&).  It constructs an S2Cell-based loop L and
   // an edge E from Origin to a0 that crosses exactly one edge of L.  Yet
   // previously, Contains() returned false for both endpoints of E.
@@ -580,14 +580,14 @@ TEST(S2Loop, ContainsMatchesRobustCrossing) {
   S2Point const a0 = grandchild_cell.GetVertex(0);
 
   // The edge from a0 to the origin crosses one boundary.
-  EXPECT_EQ(-1, S2EdgeUtil::RobustCrossing(a0, S2::Origin(),
-                                           loop.vertex(0), loop.vertex(1)));
-  EXPECT_EQ(1, S2EdgeUtil::RobustCrossing(a0, S2::Origin(),
-                                          loop.vertex(1), loop.vertex(2)));
-  EXPECT_EQ(-1, S2EdgeUtil::RobustCrossing(a0, S2::Origin(),
-                                           loop.vertex(2), loop.vertex(3)));
-  EXPECT_EQ(-1, S2EdgeUtil::RobustCrossing(a0, S2::Origin(),
-                                           loop.vertex(3), loop.vertex(4)));
+  EXPECT_EQ(-1, S2EdgeUtil::CrossingSign(a0, S2::Origin(),
+                                         loop.vertex(0), loop.vertex(1)));
+  EXPECT_EQ(1, S2EdgeUtil::CrossingSign(a0, S2::Origin(),
+                                        loop.vertex(1), loop.vertex(2)));
+  EXPECT_EQ(-1, S2EdgeUtil::CrossingSign(a0, S2::Origin(),
+                                         loop.vertex(2), loop.vertex(3)));
+  EXPECT_EQ(-1, S2EdgeUtil::CrossingSign(a0, S2::Origin(),
+                                         loop.vertex(3), loop.vertex(4)));
 
   // Contains should return false for the origin, and true for a0.
   EXPECT_FALSE(loop.Contains(S2::Origin()));
@@ -922,7 +922,7 @@ TEST(S2Loop, BoundsForLoopContainment) {
     S2Point v = b.CrossProd(S2Point(0, 0, 1)).Normalize();
     S2Point a = S2EdgeUtil::Interpolate(rnd->RandDouble(), -v, b);
     S2Point c = S2EdgeUtil::Interpolate(rnd->RandDouble(), b, v);
-    if (S2::RobustCCW(a, b, c) < 0) {
+    if (S2::Sign(a, b, c) < 0) {
       --iter; continue;
     }
     // Now construct another point D directly below B, and create two loops
@@ -955,9 +955,9 @@ void DebugDumpCrossings(S2Loop const* loop) {
     printf("Vertex %d: [%.17g, %.17g, %.17g], "
            "%d%dR=%d, %d%d%d=%d, R%d%d=%d, inside: %d\n",
            i, loop->vertex(i).x(), loop->vertex(i).y(), loop->vertex(i).z(),
-           i-1, i, S2::RobustCCW(b, o, a),
-           i+1, i, i-1, S2::RobustCCW(c, o, b),
-           i, i+1, S2::RobustCCW(a, o, c),
+           i - 1, i, S2::Sign(b, o, a),
+           i + 1, i, i - 1, S2::Sign(c, o, b),
+           i, i + 1, S2::Sign(a, o, c),
            S2::OrderedCCW(a, b, c, o));
   }
   for (int i = 0; i < loop->num_vertices() + 2; ++i) {
@@ -984,9 +984,9 @@ void DebugDumpCrossings(S2Loop const* loop) {
     S2Point c = S2::Origin();
     S2Point o = loop->vertex(1);
     printf("%d1R=%d, M1%d=%d, R1M=%d, crosses: %d\n",
-           i, S2::RobustCCW(b, o, a),
-           i, S2::RobustCCW(c, o, b),
-           S2::RobustCCW(a, o, c),
+           i, S2::Sign(b, o, a),
+           i, S2::Sign(c, o, b),
+           S2::Sign(a, o, c),
            S2EdgeUtil::EdgeOrVertexCrossing(c, o, b, a));
   }
 }
@@ -1221,7 +1221,7 @@ TEST(S2Loop, IsValidDetectsInvalidLoops) {
   CheckLoopIsInvalid("20:20, 21:21, 21:20.5, 21:20, 20:21", "crosses");
 
   // We can't test non-unit length vertices in debug mode, because loop
-  // construction will CHECK-fail in S2::RobustCCW.
+  // construction will CHECK-fail in S2::Sign.
   if (!google::DEBUG_MODE) {
     S2Point v4[] = { S2Point(2, 0, 0), S2Point(0, 1, 0), S2Point(0, 0, 1) };
     S2Loop l4(vector<S2Point>(v4, v4 + 3));

@@ -31,10 +31,10 @@
 #ifndef S2GEOMETRY_STRINGS_FASTMEM_H_
 #define S2GEOMETRY_STRINGS_FASTMEM_H_
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 
 #include "base/integral_types.h"
 #include "base/macros.h"

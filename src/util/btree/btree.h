@@ -124,8 +124,8 @@
 #ifndef UTIL_BTREE_BTREE_H__
 #define UTIL_BTREE_BTREE_H__
 
-#include <stddef.h>
-#include <string.h>
+#include <cstddef>
+#include <cstring>
 #include <sys/types.h>
 #include <algorithm>
 #include <functional>

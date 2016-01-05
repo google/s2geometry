@@ -17,8 +17,8 @@
 
 #include "s2cell.h"
 
-#include <float.h>
-#include <math.h>
+#include <cfloat>
+#include <cmath>
 #include <algorithm>
 
 #include <glog/logging.h>
@@ -399,7 +399,7 @@ S1ChordAngle S2Cell::GetDistanceToEdge(S2Point const& a,
   }
   S2EdgeUtil::EdgeCrosser crosser(&a, &b, &v[3]);
   for (int i = 0; i < 4; ++i) {
-    if (crosser.RobustCrossing(&v[i]) >= 0) {
+    if (crosser.CrossingSign(&v[i]) >= 0) {
       return S1ChordAngle::Zero();
     }
   }

@@ -273,7 +273,10 @@ class S2RegionCoverer {
   // Counter of number of candidates created, for performance evaluation.
   int candidates_created_counter_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2RegionCoverer);
+#ifndef SWIG
+  S2RegionCoverer(S2RegionCoverer const&) = delete;
+  void operator=(S2RegionCoverer const&) = delete;
+#endif  // SWIG
 };
 
 #endif  // S2GEOMETRY_S2REGIONCOVERER_H_

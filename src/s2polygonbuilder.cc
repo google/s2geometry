@@ -17,7 +17,7 @@
 
 #include "s2polygonbuilder.h"
 
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
@@ -418,7 +418,8 @@ class S2PolygonBuilder::PointIndex {
   }
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(PointIndex);
+  PointIndex(PointIndex const&) = delete;
+  void operator=(PointIndex const&) = delete;
 };
 
 void S2PolygonBuilder::BuildMergeMap(PointIndex* index, MergeMap* merge_map) {

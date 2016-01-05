@@ -24,7 +24,7 @@
 #ifndef S2GEOMETRY_UTIL_ENDIAN_ENDIAN_H_
 #define S2GEOMETRY_UTIL_ENDIAN_ENDIAN_H_
 
-#include <assert.h>
+#include <cassert>
 
 #include <glog/logging.h>
 

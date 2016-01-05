@@ -18,7 +18,7 @@
 #ifndef S2GEOMETRY_S2LATLNG_H_
 #define S2GEOMETRY_S2LATLNG_H_
 
-#include <math.h>
+#include <cmath>
 #include <iosfwd>
 #include <ostream>
 #include <string>

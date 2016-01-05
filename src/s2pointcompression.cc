@@ -116,7 +116,8 @@ class Faces {
   // Run-length encoded list of faces.
   vector<FaceRun> faces_;
 
-  DISALLOW_COPY_AND_ASSIGN(Faces);
+  Faces(Faces const&) = delete;
+  void operator=(Faces const&) = delete;
 };
 
 void Faces::AddFace(int face) {

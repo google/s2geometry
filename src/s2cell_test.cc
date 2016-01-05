@@ -17,9 +17,9 @@
 
 #include "s2cell.h"
 
-#include <float.h>
-#include <math.h>
-#include <stdio.h>
+#include <cfloat>
+#include <cmath>
+#include <cstdio>
 #include <algorithm>
 #include <map>
 #include <utility>
@@ -37,7 +37,7 @@
 #include "s1interval.h"
 #include "s2.h"
 #include "s2cap.h"
-#include "s2edgequery.h"
+#include "s2crossingedgequery.h"
 #include "s2edgeutil.h"
 #include "s2latlng.h"
 #include "s2latlngrect.h"
@@ -554,7 +554,7 @@ static S1ChordAngle GetDistanceToEdgeBruteForce(
   S2Loop loop(cell);
   S2ShapeIndex index;
   index.Add(new S2Loop::Shape(&loop));
-  S2EdgeQuery query(index);
+  S2CrossingEdgeQuery query(index);
   vector<int> edges;
   if (query.GetCrossings(a, b, index.shape(0), &edges)) {
     return S1ChordAngle::Zero();

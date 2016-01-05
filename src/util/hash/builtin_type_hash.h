@@ -21,8 +21,8 @@
 #ifndef S2GEOMETRY_UTIL_HASH_BUILTIN_TYPE_HASH_H_
 #define S2GEOMETRY_UTIL_HASH_BUILTIN_TYPE_HASH_H_
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 #include "base/casts.h"
 #include "base/integral_types.h"

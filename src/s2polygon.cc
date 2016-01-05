@@ -17,8 +17,8 @@
 
 #include "s2polygon.h"
 
-#include <math.h>
-#include <stddef.h>
+#include <cmath>
+#include <cstddef>
 #include <algorithm>
 #include <set>
 #include <unordered_map>
@@ -39,7 +39,7 @@
 #include "s2cellid.h"
 #include "s2cellunion.h"
 #include "s2closestedgequery.h"
-#include "s2edgequery.h"
+#include "s2crossingedgequery.h"
 #include "s2edgeutil.h"
 #include "s2error.h"
 #include "s2latlng.h"
@@ -700,13 +700,13 @@ bool S2Polygon::Contains(S2Cell const& target) const {
 
 bool S2Polygon::ApproxContains(S2Polygon const* b, S1Angle tolerance) const {
   S2Polygon difference;
-  difference.InitToDifferenceSloppy(b, this, tolerance);
+  difference.InitToApproxDifference(b, this, tolerance);
   return difference.is_empty();
 }
 
 bool S2Polygon::ApproxDisjoint(S2Polygon const* b, S1Angle tolerance) const {
   S2Polygon intersection;
-  intersection.InitToIntersectionSloppy(b, this, tolerance);
+  intersection.InitToApproxIntersection(b, this, tolerance);
   return intersection.is_empty();
 }
 
@@ -966,10 +966,10 @@ class EdgeClipper {
                 IntersectionSet* intersections);
 
  private:
-  // Given two edges A and B such that RobustCrossing(A, B) >= 0, determine if
+  // Given two edges A and B such that CrossingSign(A, B) >= 0, determine if
   // they intersect and add any intersection point to "intersections_".
   // "b_shape" is the S2Shape containing edge B, and "crossing" is the result
-  // of RobustCrossing(A, B).
+  // of CrossingSign(A, B).
   void AddIntersection(S2Point const& a0, S2Point const& a1,
                        S2Point const& b0, S2Point const& b1,
                        S2Shape const* b_shape, int crossing);
@@ -979,8 +979,8 @@ class EdgeClipper {
 
   // Temporary variables used while processing a query, declared here to
   // reduce memory allocation and argument-passing overhead.
-  S2EdgeQuery query_;
-  S2EdgeQuery::EdgeMap edge_map_;
+  S2CrossingEdgeQuery query_;
+  S2CrossingEdgeQuery::EdgeMap edge_map_;
   IntersectionSet* intersections_;
 };
 
@@ -1035,7 +1035,7 @@ void EdgeClipper::ClipEdge(S2Point const& a0, S2Point const& a1,
   // each loop.
   intersections_ = intersections;
   S2EdgeUtil::EdgeCrosser crosser(&a0, &a1);
-  for (S2EdgeQuery::EdgeMap::const_iterator it = edge_map_.begin();
+  for (S2CrossingEdgeQuery::EdgeMap::const_iterator it = edge_map_.begin();
        it != edge_map_.end(); ++it) {
     S2Shape const* b_shape = it->first;
     vector<int> const& b_candidates = it->second;
@@ -1043,7 +1043,7 @@ void EdgeClipper::ClipEdge(S2Point const& a0, S2Point const& a1,
     for (int j = 0; j < n; ++j) {
       S2Point const *b0, *b1;
       b_shape->GetEdge(b_candidates[j], &b0, &b1);
-      int crossing = crosser.RobustCrossing(b0, b1);
+      int crossing = crosser.CrossingSign(b0, b1);
       if (crossing < 0) continue;
       AddIntersection(a0, a1, *b0, *b1, b_shape, crossing);
     }
@@ -1154,10 +1154,10 @@ void S2Polygon::InitToComplement(S2Polygon const* a) {
 }
 
 void S2Polygon::InitToIntersection(S2Polygon const* a, S2Polygon const* b) {
-  InitToIntersectionSloppy(a, b, S2EdgeUtil::kIntersectionTolerance);
+  InitToApproxIntersection(a, b, S2EdgeUtil::kIntersectionMergeRadius);
 }
 
-void S2Polygon::InitToIntersectionSloppy(S2Polygon const* a, S2Polygon const* b,
+void S2Polygon::InitToApproxIntersection(S2Polygon const* a, S2Polygon const* b,
                                          S1Angle vertex_merge_radius) {
   if (!a->bound_.Intersects(b->bound_)) return;
 
@@ -1218,10 +1218,10 @@ void S2Polygon::InitToIntersectionSloppy(S2Polygon const* a, S2Polygon const* b,
 }
 
 void S2Polygon::InitToUnion(S2Polygon const* a, S2Polygon const* b) {
-  InitToUnionSloppy(a, b, S2EdgeUtil::kIntersectionTolerance);
+  InitToApproxUnion(a, b, S2EdgeUtil::kIntersectionMergeRadius);
 }
 
-void S2Polygon::InitToUnionSloppy(S2Polygon const* a, S2Polygon const* b,
+void S2Polygon::InitToApproxUnion(S2Polygon const* a, S2Polygon const* b,
                                   S1Angle vertex_merge_radius) {
   // We want the boundary of A clipped to the exterior of B,
   // plus the boundary of B clipped to the exterior of A,
@@ -1236,7 +1236,7 @@ void S2Polygon::InitToUnionSloppy(S2Polygon const* a, S2Polygon const* b,
     LOG(DFATAL) << "Bad directed edges";
   }
   if (num_loops() == 0) {
-    // See comments in InitToIntersectionSloppy().  In this case, the union
+    // See comments in InitToApproxIntersection().  In this case, the union
     // area satisfies:
     //
     //   max(A, B) <= Union(A, B) <= min(4*Pi, A + B)
@@ -1253,10 +1253,10 @@ void S2Polygon::InitToUnionSloppy(S2Polygon const* a, S2Polygon const* b,
 }
 
 void S2Polygon::InitToDifference(S2Polygon const* a, S2Polygon const* b) {
-  InitToDifferenceSloppy(a, b, S2EdgeUtil::kIntersectionTolerance);
+  InitToApproxDifference(a, b, S2EdgeUtil::kIntersectionMergeRadius);
 }
 
-void S2Polygon::InitToDifferenceSloppy(S2Polygon const* a, S2Polygon const* b,
+void S2Polygon::InitToApproxDifference(S2Polygon const* a, S2Polygon const* b,
                                        S1Angle vertex_merge_radius) {
   // We want the boundary of A clipped to the exterior of B,
   // plus the reversed boundary of B clipped to the interior of A,
@@ -1271,7 +1271,7 @@ void S2Polygon::InitToDifferenceSloppy(S2Polygon const* a, S2Polygon const* b,
     LOG(DFATAL) << "Bad directed edges in InitToDifference";
   }
   if (num_loops() == 0) {
-    // See comments in InitToIntersectionSloppy().  In this case, the
+    // See comments in InitToApproxIntersection().  In this case, the
     // difference area satisfies:
     //
     //   max(0, A - B) <= Difference(A, B) <= min(A, 4*Pi - B)
@@ -1299,7 +1299,8 @@ class S2VertexFilter {
   virtual bool ShouldKeepVertex(const S2Point& vertex) const = 0;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(S2VertexFilter);
+  S2VertexFilter(S2VertexFilter const&) = delete;
+  void operator=(S2VertexFilter const&) = delete;
 };
 
 // An S2VertexFilter subclass to keep the vertices that are close to the
@@ -1451,7 +1452,8 @@ void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
     // there is some error in the intersection point.  S2PolygonBuilder needs
     // to be able to move vertices by up to this amount in order to produce
     // valid output.
-    builder_options.set_vertex_merge_radius(S2EdgeUtil::kIntersectionTolerance);
+    builder_options.set_vertex_merge_radius(
+        S2EdgeUtil::kIntersectionMergeRadius);
   } else {
     // Ideally, we would want to set the vertex_merge_radius of the
     // builder roughly to tolerance (and in fact forego the edge
@@ -1480,7 +1482,7 @@ void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
       LOG(DFATAL) << "Bad edges in InitToSimplified.";
     }
     // If there are no loops, check whether the result should be the full
-    // polygon rather than the empty one.  (See InitToIntersectionSloppy.)
+    // polygon rather than the empty one.  (See InitToApproxIntersection.)
     if (num_loops() == 0) {
       if (a->bound_.Area() > 2 * M_PI && a->GetArea() > 2 * M_PI) Invert();
     }
@@ -1521,7 +1523,7 @@ void S2Polygon::InitToSnapped(S2Polygon const* a, int snap_level) {
     LOG(DFATAL) << "AssemblePolygon failed in BuildSnappedPolygon";
   }
   // If there are no loops, check whether the result should be the full
-  // polygon rather than the empty one.  (See InitToIntersectionSloppy.)
+  // polygon rather than the empty one.  (See InitToApproxIntersection.)
   if (num_loops() == 0) {
     if (a->bound_.Area() > 2 * M_PI && a->GetArea() > 2 * M_PI) Invert();
   }
@@ -1591,10 +1593,10 @@ void S2Polygon::InternalClipPolyline(bool invert,
 void S2Polygon::IntersectWithPolyline(
     S2Polyline const* a,
     vector<S2Polyline*> *out) const {
-  IntersectWithPolylineSloppy(a, out, S2EdgeUtil::kIntersectionTolerance);
+  ApproxIntersectWithPolyline(a, out, S2EdgeUtil::kIntersectionMergeRadius);
 }
 
-void S2Polygon::IntersectWithPolylineSloppy(
+void S2Polygon::ApproxIntersectWithPolyline(
     S2Polyline const* a,
     vector<S2Polyline*> *out,
     S1Angle vertex_merge_radius) const {
@@ -1603,10 +1605,10 @@ void S2Polygon::IntersectWithPolylineSloppy(
 
 void S2Polygon::SubtractFromPolyline(S2Polyline const* a,
                                      vector<S2Polyline*> *out) const {
-  SubtractFromPolylineSloppy(a, out, S2EdgeUtil::kIntersectionTolerance);
+  ApproxSubtractFromPolyline(a, out, S2EdgeUtil::kIntersectionMergeRadius);
 }
 
-void S2Polygon::SubtractFromPolylineSloppy(
+void S2Polygon::ApproxSubtractFromPolyline(
     S2Polyline const* a,
     vector<S2Polyline*> *out,
     S1Angle vertex_merge_radius) const {
@@ -1614,10 +1616,10 @@ void S2Polygon::SubtractFromPolylineSloppy(
 }
 
 S2Polygon* S2Polygon::DestructiveUnion(vector<S2Polygon*>* polygons) {
-  return DestructiveUnionSloppy(polygons, S2EdgeUtil::kIntersectionTolerance);
+  return DestructiveApproxUnion(polygons, S2EdgeUtil::kIntersectionMergeRadius);
 }
 
-S2Polygon* S2Polygon::DestructiveUnionSloppy(vector<S2Polygon*>* polygons,
+S2Polygon* S2Polygon::DestructiveApproxUnion(vector<S2Polygon*>* polygons,
                                              S1Angle vertex_merge_radius) {
   // Effectively create a priority queue of polygons in order of number of
   // vertices.  Repeatedly union the two smallest polygons and add the result
@@ -1642,7 +1644,7 @@ S2Polygon* S2Polygon::DestructiveUnionSloppy(vector<S2Polygon*>* polygons,
 
     // Union and add result back to queue.
     S2Polygon* union_polygon = new S2Polygon();
-    union_polygon->InitToUnionSloppy(a_polygon, b_polygon, vertex_merge_radius);
+    union_polygon->InitToApproxUnion(a_polygon, b_polygon, vertex_merge_radius);
     delete a_polygon;
     delete b_polygon;
     queue.insert(std::make_pair(a_size + b_size, union_polygon));

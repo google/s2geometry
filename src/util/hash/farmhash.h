@@ -1,4 +1,4 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -93,10 +93,10 @@
 // of a+b is easily derived from the hashes of a and b.  This property
 // doesn't hold for any hash functions in this file.
 
-#include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>   // for memcpy and memset
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>   // for memcpy and memset
 #include <utility>
 
 #ifndef NAMESPACE_FOR_HASH_FUNCTIONS
@@ -2217,7 +2217,7 @@ inline uint128_t Hash128WithSeed(const char* s, size_t len, uint128_t seed) {
 #define FARMHASH_SELF_TEST_GUARD
 #include <cstdio>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 using std::cout;
 using std::cerr;
@@ -3842,7 +3842,7 @@ int main(int argc, char** argv) {
 #define FARMHASH_SELF_TEST_GUARD
 #include <cstdio>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 using std::cout;
 using std::cerr;
@@ -4739,7 +4739,7 @@ int main(int argc, char** argv) {
 #define FARMHASH_SELF_TEST_GUARD
 #include <cstdio>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 using std::cout;
 using std::cerr;
@@ -6000,7 +6000,7 @@ int main(int argc, char** argv) {
 #define FARMHASH_SELF_TEST_GUARD
 #include <cstdio>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 using std::cout;
 using std::cerr;
@@ -6897,7 +6897,7 @@ int main(int argc, char** argv) {
 #define FARMHASH_SELF_TEST_GUARD
 #include <cstdio>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 using std::cout;
 using std::cerr;
@@ -7794,7 +7794,7 @@ int main(int argc, char** argv) {
 #define FARMHASH_SELF_TEST_GUARD
 #include <cstdio>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 using std::cout;
 using std::cerr;
@@ -8691,7 +8691,7 @@ int main(int argc, char** argv) {
 #define FARMHASH_SELF_TEST_GUARD
 #include <cstdio>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 using std::cout;
 using std::cerr;
@@ -9952,7 +9952,7 @@ int main(int argc, char** argv) {
 #define FARMHASH_SELF_TEST_GUARD
 #include <cstdio>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 using std::cout;
 using std::cerr;
@@ -10849,7 +10849,7 @@ int main(int argc, char** argv) {
 #define FARMHASH_SELF_TEST_GUARD
 #include <cstdio>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 
 using std::cout;
 using std::cerr;

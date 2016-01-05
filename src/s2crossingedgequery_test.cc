@@ -15,7 +15,7 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#include "s2edgequery.h"
+#include "s2crossingedgequery.h"
 
 #include <algorithm>
 #include <utility>
@@ -31,7 +31,7 @@
 #include "s2shapeutil.h"
 #include "s2testing.h"
 #include "s2textformat.h"
-#include "util/gtl/algorithm.h"
+#include <algorithm>
 #include "util/gtl/stl_util.h"
 
 using s2shapeutil::S2EdgeVectorShape;
@@ -44,8 +44,8 @@ namespace {
 
 typedef pair<S2Point, S2Point> TestEdge;
 
-S2Point PerturbAtDistance(S1Angle distance,
-                          S2Point const& a0, S2Point const& b0) {
+S2Point PerturbAtDistance(S1Angle distance, S2Point const& a0,
+                          S2Point const& b0) {
   S2Point x = S2EdgeUtil::InterpolateAtDistance(distance, a0, b0);
   if (S2Testing::rnd.OneIn(2)) {
     for (int i = 0; i < 3; ++i) {
@@ -76,8 +76,8 @@ void GetPerturbedSubEdges(S2Point a0, S2Point b0, int count,
 
 // Generate edges whose center is randomly chosen from the given S2Cap, and
 // whose length is randomly chosen up to "max_length".
-void GetCapEdges(S2Cap const& center_cap, S1Angle max_length,
-                 int count, vector<TestEdge>* edges) {
+void GetCapEdges(S2Cap const& center_cap, S1Angle max_length, int count,
+                 vector<TestEdge>* edges) {
   edges->clear();
   for (int i = 0; i < count; ++i) {
     S2Point center = S2Testing::SamplePoint(center_cap);
@@ -108,11 +108,11 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
     S2Point const& a = edges[i].first;
     S2Point const& b = edges[i].second;
     vector<int> candidates;
-    S2EdgeQuery query(index);
+    S2CrossingEdgeQuery query(index);
     query.GetCandidates(a, b, shape, &candidates);
 
     // Verify that the second version of GetCandidates returns the same result.
-    S2EdgeQuery::EdgeMap edge_map;
+    S2CrossingEdgeQuery::EdgeMap edge_map;
     query.GetCandidates(a, b, &edge_map);
     EXPECT_EQ(1, edge_map.size());
     EXPECT_EQ(shape, edge_map.begin()->first);
@@ -120,7 +120,7 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
     EXPECT_TRUE(!candidates.empty());
 
     // Now check the actual candidates.
-    EXPECT_TRUE(util::gtl::is_sorted(candidates.begin(), candidates.end()));
+    EXPECT_TRUE(std::is_sorted(candidates.begin(), candidates.end()));
     EXPECT_GE(candidates.front(), 0);
     EXPECT_LT(candidates.back(), shape->num_edges());
     num_candidates += candidates.size();
@@ -129,7 +129,7 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
     for (int i = 0; i < shape->num_edges(); ++i) {
       S2Point const *c, *d;
       shape->GetEdge(i, &c, &d);
-      if (S2EdgeUtil::RobustCrossing(a, b, *c, *d) >= 0) {
+      if (S2EdgeUtil::CrossingSign(a, b, *c, *d) >= 0) {
         expected_crossings.push_back(i);
         ++num_nearby_pairs;
         if (!std::binary_search(candidates.begin(), candidates.end(), i)) {
@@ -180,7 +180,7 @@ TEST(GetCrossingCandidates, PerturbedCubeEdges) {
     S2Point a0 = S2::FaceUVtoXYZ(face, scale * uv);
     S2Point b0 = a0 - 2 * S2::GetNorm(face);
     // TODO(ericv): This test is currently slow because *every* crossing test
-    // needs to invoke S2::ExpensiveCCW().
+    // needs to invoke S2::ExpensiveSign().
     GetPerturbedSubEdges(a0, b0, 30, &edges);
     TestAllCrossings(edges);
   }
@@ -243,15 +243,15 @@ TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
 
 // This is the example from the header file, with a few extras.
 void TestPolylineCrossings(vector<S2Polyline*> const& polylines,
-                           S2Point const& a0, S2Point const &a1) {
+                           S2Point const& a0, S2Point const& a1) {
   S2ShapeIndex index;
   for (int i = 0; i < polylines.size(); ++i) {
     index.Add(new S2Polyline::Shape(polylines[i]));
   }
-  S2EdgeQuery query(index);
-  S2EdgeQuery::EdgeMap edge_map;
+  S2CrossingEdgeQuery query(index);
+  S2CrossingEdgeQuery::EdgeMap edge_map;
   if (!query.GetCrossings(a0, a1, &edge_map)) return;
-  for (S2EdgeQuery::EdgeMap::const_iterator it = edge_map.begin();
+  for (S2CrossingEdgeQuery::EdgeMap::const_iterator it = edge_map.begin();
        it != edge_map.end(); ++it) {
     S2Shape const* shape = it->first;
     S2Polyline* polyline = polylines[shape->id()];
@@ -261,7 +261,7 @@ void TestPolylineCrossings(vector<S2Polyline*> const& polylines,
     for (int j = 0; j < edges.size(); ++j) {
       S2Point const& b0 = polyline->vertex(edges[j]);
       S2Point const& b1 = polyline->vertex(edges[j] + 1);
-      CHECK_GE(S2EdgeUtil::RobustCrossing(a0, a1, b0, b1), 0);
+      CHECK_GE(S2EdgeUtil::CrossingSign(a0, a1, b0, b1), 0);
     }
   }
   // Also test that no edges are missing.
@@ -269,8 +269,8 @@ void TestPolylineCrossings(vector<S2Polyline*> const& polylines,
     vector<int> const& edges = edge_map[index.shape(i)];
     S2Polyline const* polyline = polylines[i];
     for (int e = 0; e < polyline->num_vertices() - 1; ++e) {
-      if (S2EdgeUtil::RobustCrossing(a0, a1, polyline->vertex(e),
-                                     polyline->vertex(e+1)) >= 0) {
+      if (S2EdgeUtil::CrossingSign(a0, a1, polyline->vertex(e),
+                                   polyline->vertex(e + 1)) >= 0) {
         EXPECT_EQ(1, std::count(edges.begin(), edges.end(), e));
       }
     }

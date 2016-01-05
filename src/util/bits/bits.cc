@@ -18,7 +18,7 @@
 
 #include "util/bits/bits.h"
 
-#include <assert.h>
+#include <cassert>
 
 // this array gives the number of bits for any number from 0 to 255
 // (We could make these ints.  The tradeoff is size (eg does it overwhelm
@@ -87,7 +87,7 @@ int Bits::Log2Floor_Portable(uint32 n) {
 
 int Bits::Log2Ceiling(uint32 n) {
   int floor = Log2Floor(n);
-  if (n == (n &~ (n - 1)))              // zero or a power of two
+  if ((n & (n - 1)) == 0)              // zero or a power of two
     return floor;
   else
     return floor + 1;
@@ -95,7 +95,15 @@ int Bits::Log2Ceiling(uint32 n) {
 
 int Bits::Log2Ceiling64(uint64 n) {
   int floor = Log2Floor64(n);
-  if (n == (n &~ (n - 1)))              // zero or a power of two
+  if ((n & (n - 1)) == 0)              // zero or a power of two
+    return floor;
+  else
+    return floor + 1;
+}
+
+int Bits::Log2Ceiling128(uint128 n) {
+  int floor = Log2Floor128(n);
+  if ((n & (n - 1)) == 0)              // zero or a power of two
     return floor;
   else
     return floor + 1;

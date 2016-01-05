@@ -189,8 +189,10 @@ class S2PointIndex {
 
  private:
   friend class Iterator;
-
   Map map_;
+
+  S2PointIndex(S2PointIndex const&) = delete;
+  void operator=(S2PointIndex const&) = delete;
 };
 
 

@@ -17,9 +17,9 @@
 
 #include "s2testing.h"
 
-#include <math.h>
-#include <stddef.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstddef>
+#include <cstdlib>
 #include <sys/resource.h>   // for rusage, RUSAGE_SELF
 #include <sys/time.h>
 #include <algorithm>

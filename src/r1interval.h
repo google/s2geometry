@@ -18,7 +18,7 @@
 #ifndef S2GEOMETRY_R1INTERVAL_H_
 #define S2GEOMETRY_R1INTERVAL_H_
 
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <iosfwd>
 #include <iostream>

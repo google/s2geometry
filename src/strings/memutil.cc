@@ -18,7 +18,7 @@
 
 #include "strings/memutil.h"
 
-#include <stdlib.h>        // for malloc, nullptr
+#include <cstdlib>        // for malloc, nullptr
 
 #include "strings/ascii_ctype.h"  // for ascii_tolower
 

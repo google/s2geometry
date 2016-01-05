@@ -46,6 +46,7 @@
 #include <glog/logging.h>
 
 #include "base/casts.h"
+#include "base/int128.h"
 #include "base/integral_types.h"
 #include "base/macros.h"
 #include "base/port.h"
@@ -89,6 +90,12 @@ class Bits {
 #else
     return CountOnes(n >> 32) + CountOnes(n & 0xffffffff);
 #endif
+  }
+
+  // Count bits in uint128
+  static inline int CountOnes128(uint128 n) {
+    return Bits::CountOnes64(Uint128High64(n)) +
+           Bits::CountOnes64(Uint128Low64(n));
   }
 
   // Count bits using popcnt instruction (available on argo machines).
@@ -160,10 +167,17 @@ class Bits {
 #endif
   }
 
+  static inline int CountLeadingZeros128(uint128 n) {
+    if (uint64 hi = Uint128High64(n))
+      return Bits::CountLeadingZeros64(hi);
+    return Bits::CountLeadingZeros64(Uint128Low64(n)) + 64;
+  }
+
   // Reverse the bits in the given integer.
   static uint8 ReverseBits8(uint8 n);
   static uint32 ReverseBits32(uint32 n);
   static uint64 ReverseBits64(uint64 n);
+  static uint128 ReverseBits128(uint128 n);
 
   // Return the number of one bits in the byte sequence.
   static int Count(const void *m, int num_bytes);
@@ -182,15 +196,18 @@ class Bits {
   // Return floor(log2(n)) for positive integer n.  Returns -1 iff n == 0.
   static int Log2Floor(uint32 n);
   static int Log2Floor64(uint64 n);
+  static int Log2Floor128(uint128 n);
 
   // Potentially faster version of Log2Floor() that returns an
   // undefined value if n == 0
   static int Log2FloorNonZero(uint32 n);
   static int Log2FloorNonZero64(uint64 n);
+  static int Log2FloorNonZero128(uint128 n);
 
   // Return ceiling(log2(n)) for positive integer n.  Returns -1 iff n == 0.
   static int Log2Ceiling(uint32 n);
   static int Log2Ceiling64(uint64 n);
+  static int Log2Ceiling128(uint128 n);
 
   // Return the first set least / most significant bit, 0-indexed.  Returns an
   // undefined value if n == 0.  FindLSBSetNonZero() is similar to ffs() except
@@ -198,8 +215,12 @@ class Bits {
   // Log2FloorNonZero().
   static int FindLSBSetNonZero(uint32 n);
   static int FindLSBSetNonZero64(uint64 n);
+  static int FindLSBSetNonZero128(uint128 n);
   static int FindMSBSetNonZero(uint32 n) { return Log2FloorNonZero(n); }
   static int FindMSBSetNonZero64(uint64 n) { return Log2FloorNonZero64(n); }
+  static int FindMSBSetNonZero128(uint128 n) {
+    return Log2FloorNonZero128(n);
+  }
 
   // Viewing bytes as a stream of unsigned bytes, does that stream
   // contain any byte equal to c?
@@ -352,6 +373,24 @@ inline int Bits::FindLSBSetNonZero64(uint64 n) {
 #include "util/bits/bits-internal-unknown.h"
 #endif
 
+inline int Bits::Log2Floor128(uint128 n) {
+  if (uint64 hi = Uint128High64(n))
+    return 64 + Log2FloorNonZero64(hi);
+  return Log2Floor64(Uint128Low64(n));
+}
+
+inline int Bits::Log2FloorNonZero128(uint128 n) {
+  if (uint64 hi = Uint128High64(n))
+    return 64 + Log2FloorNonZero64(hi);
+  return Log2FloorNonZero64(Uint128Low64(n));
+}
+
+inline int Bits::FindLSBSetNonZero128(uint128 n) {
+  if (uint64 lo = Uint128Low64(n))
+    return Bits::FindLSBSetNonZero64(lo);
+  return 64 + Bits::FindLSBSetNonZero64(Uint128High64(n));
+}
+
 inline int Bits::CountOnesInByte(unsigned char n) {
   return num_bits[n];
 }
@@ -397,6 +436,11 @@ inline uint64 Bits::ReverseBits64(uint64 n) {
   return ReverseBits32( n >> 32 ) |
          (static_cast<uint64>(ReverseBits32(n &  0xffffffff)) << 32);
 #endif
+}
+
+inline uint128 Bits::ReverseBits128(uint128 n) {
+  return uint128(ReverseBits64(Uint128Low64(n)),
+                 ReverseBits64(Uint128High64(n)));
 }
 
 inline int Bits::Log2FloorNonZero_Portable(uint32 n) {

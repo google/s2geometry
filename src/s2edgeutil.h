@@ -18,7 +18,7 @@
 #ifndef S2GEOMETRY_S2EDGEUTIL_H_
 #define S2GEOMETRY_S2EDGEUTIL_H_
 
-#include <math.h>
+#include <cmath>
 
 #include <glog/logging.h>
 
@@ -56,7 +56,7 @@ class S2EdgeUtil {
   //     int count = 0;
   //     EdgeCrosser crosser(&a, &b);
   //     for (auto const& edge : edges) {
-  //       if (crosser.RobustCrossing(&edge.first, &edge.second) >= 0) {
+  //       if (crosser.CrossingSign(&edge.first, &edge.second) >= 0) {
   //         ++count;
   //       }
   //     }
@@ -88,26 +88,26 @@ class S2EdgeUtil {
     // Returns -1 if there is no crossing.
     // Returns -1 or 0 if either edge is degenerate (A == B or C == D).
     //
-    // Properties of RobustCrossing:
+    // Properties of CrossingSign:
     //
-    //  (1) RobustCrossing(b,a,c,d) == RobustCrossing(a,b,c,d)
-    //  (2) RobustCrossing(c,d,a,b) == RobustCrossing(a,b,c,d)
-    //  (3) RobustCrossing(a,b,c,d) == 0 if a==c, a==d, b==c, b==d
-    //  (3) RobustCrossing(a,b,c,d) <= 0 if a==b or c==d
+    //  (1) CrossingSign(b,a,c,d) == CrossingSign(a,b,c,d)
+    //  (2) CrossingSign(c,d,a,b) == CrossingSign(a,b,c,d)
+    //  (3) CrossingSign(a,b,c,d) == 0 if a==c, a==d, b==c, b==d
+    //  (3) CrossingSign(a,b,c,d) <= 0 if a==b or c==d
     //
     // This function implements an exact, consistent perturbation model such
     // that no three points are ever considered to be collinear.  This means
     // that even if you have 4 points A, B, C, D that lie exactly in a line
     // (say, around the equator), C and D will be treated as being slightly to
     // one side or the other of AB.  This is done in a way such that the
-    // results are always consistent (see S2::RobustCCW).
+    // results are always consistent (see S2::Sign).
     //
     // Note that if you want to check an edge against a chain of other edges,
     // it is slightly more efficient to use the single-argument version of
-    // RobustCrossing below.
+    // CrossingSign below.
     //
     // The arguments must point to values that persist until the next call.
-    int RobustCrossing(S2Point const* c, S2Point const* d);
+    int CrossingSign(S2Point const* c, S2Point const* d);
 
     // This method extends the concept of a "crossing" to the case where AB
     // and CD have a vertex in common.  The two edges may or may not cross,
@@ -116,7 +116,7 @@ class S2EdgeUtil {
     // by counting edge crossings.  Similarly, determining whether one edge
     // chain crosses another edge chain can be implemented by counting.
     //
-    // Returns true if RobustCrossing(c, d) > 0, or AB and CD share a vertex
+    // Returns true if CrossingSign(c, d) > 0, or AB and CD share a vertex
     // and VertexCrossing(a, b, c, d) returns true.
     //
     // The arguments must point to values that persist until the next call.
@@ -145,12 +145,12 @@ class S2EdgeUtil {
     // The argument must point to a value that persists until the next call.
     void RestartAt(S2Point const* c);
 
-    // Like RobustCrossing above, but uses the last vertex passed to one of
+    // Like CrossingSign above, but uses the last vertex passed to one of
     // the crossing methods (or RestartAt) as the first vertex of the current
     // edge.
     //
     // The argument must point to a value that persists until the next call.
-    int RobustCrossing(S2Point const* d);
+    int CrossingSign(S2Point const* d);
 
     // Like EdgeOrVertexCrossing above, but uses the last vertex passed to one
     // of the crossing methods (or RestartAt) as the first vertex of the
@@ -162,9 +162,9 @@ class S2EdgeUtil {
    private:
     friend class CopyingEdgeCrosser;
 
-    // These functions handle the "slow path" of RobustCrossing().
-    int RobustCrossingInternal(S2Point const* d);
-    int RobustCrossingInternal2(S2Point const* d);
+    // These functions handle the "slow path" of CrossingSign().
+    int CrossingSignInternal(S2Point const* d);
+    int CrossingSignInternal2(S2Point const* d);
 
     // Used internally by CopyingEdgeCrosser.  Updates "c_" only.
     void set_c(S2Point const* c) { c_ = c; }
@@ -174,7 +174,7 @@ class S2EdgeUtil {
     S2Point const* b_;
     Vector3_d a_cross_b_;
 
-    // To reduce the number of calls to S2::ExpensiveCCW(), we compute an
+    // To reduce the number of calls to S2::ExpensiveSign(), we compute an
     // outward-facing tangent at A and B if necessary.  If the plane
     // perpendicular to one of these tangents separates AB from CD (i.e., one
     // edge on each side) then there is no intersection.
@@ -186,10 +186,11 @@ class S2EdgeUtil {
     S2Point const* c_;       // Previous vertex in the vertex chain.
     int acb_;                // The orientation of triangle ACB.
 
-    // The field below is a temporary used by RobustCrossingInternal().
+    // The field below is a temporary used by CrossingSignInternal().
     int bda_;                // The orientation of triangle BDA.
 
-    DISALLOW_COPY_AND_ASSIGN(EdgeCrosser);
+    EdgeCrosser(EdgeCrosser const&) = delete;
+    void operator=(EdgeCrosser const&) = delete;
   };
 
   // CopyingEdgeCrosser is exactly like EdgeCrosser, except that it makes its
@@ -203,18 +204,19 @@ class S2EdgeUtil {
     CopyingEdgeCrosser() {}
     CopyingEdgeCrosser(S2Point const& a, S2Point const& b);
     void Init(S2Point const& a, S2Point const& b);
-    int RobustCrossing(S2Point const& c, S2Point const& d);
+    int CrossingSign(S2Point const& c, S2Point const& d);
     bool EdgeOrVertexCrossing(S2Point const& c, S2Point const& d);
     CopyingEdgeCrosser(S2Point const& a, S2Point const& b, S2Point const& c);
     void RestartAt(S2Point const& c);
-    int RobustCrossing(S2Point const& d);
+    int CrossingSign(S2Point const& d);
     bool EdgeOrVertexCrossing(S2Point const& d);
 
    private:
     S2Point a_, b_, c_;
     EdgeCrosser crosser_;
 
-    DISALLOW_COPY_AND_ASSIGN(CopyingEdgeCrosser);
+    CopyingEdgeCrosser(CopyingEdgeCrosser const&) = delete;
+    void operator=(CopyingEdgeCrosser const&) = delete;
   };
 
   // This class computes a bounding rectangle that contains all edges defined
@@ -272,7 +274,8 @@ class S2EdgeUtil {
     S2LatLng a_latlng_;     // The corresponding latitude-longitude.
     S2LatLngRect bound_;    // The current bounding rectangle.
 
-    DISALLOW_COPY_AND_ASSIGN(RectBounder);
+    RectBounder(RectBounder const&) = delete;
+    void operator=(RectBounder const&) = delete;
   };
 
   // The purpose of this class is to find edges that intersect a given
@@ -294,7 +297,8 @@ class S2EdgeUtil {
     S1Interval interval_;    // The interval to be tested against.
     double lng0_;            // The longitude of the next v0.
 
-    DISALLOW_COPY_AND_ASSIGN(LongitudePruner);
+    LongitudePruner(LongitudePruner const&) = delete;
+    void operator=(LongitudePruner const&) = delete;
   };
 
   // Return true if edge AB crosses CD at a point that is interior
@@ -307,23 +311,23 @@ class S2EdgeUtil {
 
   // Like SimpleCrossing, except that points that lie exactly on a line are
   // arbitrarily classified as being on one side or the other (according to
-  // the rules of S2::RobustCCW).  It returns +1 if there is a crossing, -1
+  // the rules of S2::Sign).  It returns +1 if there is a crossing, -1
   // if there is no crossing, and 0 if any two vertices from different edges
   // are the same.  Returns 0 or -1 if either edge is degenerate.
-  // Properties of RobustCrossing:
+  // Properties of CrossingSign:
   //
-  //  (1) RobustCrossing(b,a,c,d) == RobustCrossing(a,b,c,d)
-  //  (2) RobustCrossing(c,d,a,b) == RobustCrossing(a,b,c,d)
-  //  (3) RobustCrossing(a,b,c,d) == 0 if a==c, a==d, b==c, b==d
-  //  (3) RobustCrossing(a,b,c,d) <= 0 if a==b or c==d
+  //  (1) CrossingSign(b,a,c,d) == CrossingSign(a,b,c,d)
+  //  (2) CrossingSign(c,d,a,b) == CrossingSign(a,b,c,d)
+  //  (3) CrossingSign(a,b,c,d) == 0 if a==c, a==d, b==c, b==d
+  //  (3) CrossingSign(a,b,c,d) <= 0 if a==b or c==d
   //
   // Note that if you want to check an edge against a *chain* of other
   // edges, it is much more efficient to use an EdgeCrosser (above).
-  static int RobustCrossing(S2Point const& a, S2Point const& b,
-                            S2Point const& c, S2Point const& d);
+  static int CrossingSign(S2Point const& a, S2Point const& b, S2Point const& c,
+                          S2Point const& d);
 
   // Given two edges AB and CD where at least two vertices are identical
-  // (i.e. RobustCrossing(a,b,c,d) == 0), this function defines whether the
+  // (i.e. CrossingSign(a,b,c,d) == 0), this function defines whether the
   // two edges "cross" in a such a way that point-in-polygon containment tests
   // can be implemented by counting the number of edge crossings.  The basic
   // rule is that a "crossing" occurs if AB is encountered after CD during a
@@ -348,7 +352,7 @@ class S2EdgeUtil {
   static bool VertexCrossing(S2Point const& a, S2Point const& b,
                              S2Point const& c, S2Point const& d);
 
-  // A convenience function that calls RobustCrossing() to handle cases
+  // A convenience function that calls CrossingSign() to handle cases
   // where all four vertices are distinct, and VertexCrossing() to handle
   // cases where two or more vertices are the same.  This defines a crossing
   // function such that point-in-polygon containment tests can be implemented
@@ -356,7 +360,7 @@ class S2EdgeUtil {
   static bool EdgeOrVertexCrossing(S2Point const& a, S2Point const& b,
                                    S2Point const& c, S2Point const& d);
 
-  // Given two edges AB and CD such that RobustCrossing() is true, return
+  // Given two edges AB and CD such that CrossingSign() is true, return
   // their intersection point.  Useful properties of GetIntersection (GI):
   //
   //  (1) GI(b,a,c,d) == GI(a,b,d,c) == GI(a,b,c,d)
@@ -376,20 +380,6 @@ class S2EdgeUtil {
   // vertex_merge_radius() should be at least this large in order to avoid
   // incorrect output.
   static S1Angle const kIntersectionMergeRadius;  // 2 * kIntersectionError
-
-  // This value is related to a previous implementation of GetIntersection()
-  // that made weaker accuracy guarantees.  Existing code should be updated
-  // to use either kIntersectionError or kIntersectionMergeRadius, depending
-  // on how the value is being used:
-  //
-  //  - If you need a bound on how far the intersection point is from its true
-  //    location, use kIntersectionError.
-  //
-  //  - If you need a bound on how far apart two intersection points can be
-  //    that are supposed to coincide, use kIntersectionMergeRadius.  (This
-  //    is the value that should be used with S2PolygonBuilder.)
-  //
-  static S1Angle const kIntersectionTolerance;  // DEPRECATED
 
   // Given a point X and an edge AB, return the distance ratio AX / (AX + BX).
   // If X happens to be on the line segment AB, this is the fraction "t" such
@@ -518,7 +508,7 @@ class S2EdgeUtil {
   // This method guarantees that the returned segments form a continuous path
   // from A to B, and that all vertices are within kFaceClipErrorUVDist of the
   // line AB.  All vertices lie within the [-1,1]x[-1,1] cube face rectangles.
-  // The results are consistent with S2::RobustCCW(), i.e. the edge is
+  // The results are consistent with S2::Sign(), i.e. the edge is
   // well-defined even its endpoints are antipodal.  [TODO(ericv): Extend the
   // implementation of S2::RobustCrossProd so that this statement is true.]
   static void GetFaceSegments(S2Point const& a, S2Point const& b,
@@ -647,7 +637,10 @@ class S2EdgeUtil {
   static IntersectionMethod last_intersection_method_;
   static char const* GetIntersectionMethodName(IntersectionMethod method);
 
-  DISALLOW_IMPLICIT_CONSTRUCTORS(S2EdgeUtil);  // Contains only static members.
+  // Contains only static members.
+  S2EdgeUtil() = delete;
+  S2EdgeUtil(S2EdgeUtil const&) = delete;
+  void operator=(S2EdgeUtil const&) = delete;
 };
 
 
@@ -669,10 +662,10 @@ inline void S2EdgeUtil::EdgeCrosser::Init(S2Point const* a, S2Point const* b) {
   c_ = nullptr;
 }
 
-inline int S2EdgeUtil::EdgeCrosser::RobustCrossing(S2Point const* c,
-                                                   S2Point const* d) {
+inline int S2EdgeUtil::EdgeCrosser::CrossingSign(S2Point const* c,
+                                                 S2Point const* d) {
   if (c != c_) RestartAt(c);
-  return RobustCrossing(d);
+  return CrossingSign(d);
 }
 
 inline bool S2EdgeUtil::EdgeCrosser::EdgeOrVertexCrossing(S2Point const* c,
@@ -692,10 +685,10 @@ inline S2EdgeUtil::EdgeCrosser::EdgeCrosser(
 inline void S2EdgeUtil::EdgeCrosser::RestartAt(S2Point const* c) {
   DCHECK(S2::IsUnitLength(*c));
   c_ = c;
-  acb_ = -S2::TriageCCW(*a_, *b_, *c_, a_cross_b_);
+  acb_ = -S2::TriageSign(*a_, *b_, *c_, a_cross_b_);
 }
 
-inline int S2EdgeUtil::EdgeCrosser::RobustCrossing(S2Point const* d) {
+inline int S2EdgeUtil::EdgeCrosser::CrossingSign(S2Point const* d) {
   DCHECK(S2::IsUnitLength(*d));
   // For there to be an edge crossing, the triangles ACB, CBD, BDA, DAC must
   // all be oriented the same way (CW or CCW).  We keep the orientation of ACB
@@ -703,9 +696,9 @@ inline int S2EdgeUtil::EdgeCrosser::RobustCrossing(S2Point const* d) {
   // orientation of BDA and check whether it matches ACB.  This checks whether
   // the points C and D are on opposite sides of the great circle through AB.
 
-  // Recall that TriageCCW is invariant with respect to rotating its
+  // Recall that TriageSign is invariant with respect to rotating its
   // arguments, i.e. ABD has the same orientation as BDA.
-  int bda = S2::TriageCCW(*a_, *b_, *d, a_cross_b_);
+  int bda = S2::TriageSign(*a_, *b_, *d, a_cross_b_);
   if (acb_ == -bda && bda != 0) {
     // The most common case -- triangles have opposite orientations.  Save the
     // current vertex D as the next vertex C, and also save the orientation of
@@ -715,13 +708,13 @@ inline int S2EdgeUtil::EdgeCrosser::RobustCrossing(S2Point const* d) {
     return -1;
   }
   bda_ = bda;
-  return RobustCrossingInternal(d);
+  return CrossingSignInternal(d);
 }
 
 inline bool S2EdgeUtil::EdgeCrosser::EdgeOrVertexCrossing(S2Point const* d) {
-  // We need to copy c_ since it is clobbered by RobustCrossing().
+  // We need to copy c_ since it is clobbered by CrossingSign().
   S2Point const* c = c_;
-  int crossing = RobustCrossing(d);
+  int crossing = CrossingSign(d);
   if (crossing < 0) return false;
   if (crossing > 0) return true;
   return VertexCrossing(*a_, *b_, *c, *d);
@@ -740,10 +733,10 @@ inline void S2EdgeUtil::CopyingEdgeCrosser::Init(S2Point const& a,
   crosser_.Init(&a_, &b_);
 }
 
-inline int S2EdgeUtil::CopyingEdgeCrosser::RobustCrossing(S2Point const& c,
-                                                          S2Point const& d) {
+inline int S2EdgeUtil::CopyingEdgeCrosser::CrossingSign(S2Point const& c,
+                                                        S2Point const& d) {
   if (c != c_) RestartAt(c);
-  return RobustCrossing(d);
+  return CrossingSign(d);
 }
 
 inline bool S2EdgeUtil::CopyingEdgeCrosser::EdgeOrVertexCrossing(
@@ -762,8 +755,8 @@ inline void S2EdgeUtil::CopyingEdgeCrosser::RestartAt(S2Point const& c) {
   crosser_.RestartAt(&c_);
 }
 
-inline int S2EdgeUtil::CopyingEdgeCrosser::RobustCrossing(S2Point const& d) {
-  int result = crosser_.RobustCrossing(&d);
+inline int S2EdgeUtil::CopyingEdgeCrosser::CrossingSign(S2Point const& d) {
+  int result = crosser_.CrossingSign(&d);
   c_ = d;
   crosser_.set_c(&c_);
   return result;

@@ -18,8 +18,8 @@
 
 #include "s2polygon.h"
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -424,14 +424,14 @@ TEST(S2Polygon, TestApproxContainsAndDisjoint) {
       ++exact_contains;
     }
     EXPECT_TRUE(parent_polygon.ApproxContains(
-        &intersection, S2EdgeUtil::kIntersectionTolerance));
+        &intersection, S2EdgeUtil::kIntersectionMergeRadius));
 
     S2Polygon adjacent_polygon(S2Cell(id.child(1)));
     if (!adjacent_polygon.Intersects(&intersection)) {
       ++exact_disjoint;
     }
     EXPECT_TRUE(adjacent_polygon.ApproxDisjoint(
-        &intersection, S2EdgeUtil::kIntersectionTolerance));
+        &intersection, S2EdgeUtil::kIntersectionMergeRadius));
   }
   // Back-of-the-envelope calculations show that about 56% of the exact
   // containment tests should succeed, and about 75% of the exact disjoint
@@ -775,7 +775,7 @@ TestCase test_cases[] = {
     "",  // Empty intersection!
 
     // Original square with extra vertex, and triangle disappears (due to
-    // default vertex_merge_radius of S2EdgeUtil::kIntersectionTolerance).
+    // default vertex_merge_radius of S2EdgeUtil::kIntersectionMergeRadius).
     "10:44, 10:46, 12:46, 12:45, 12:44;",
 
     "10:44, 10:46, 12:46, 12:45, 12:44;"

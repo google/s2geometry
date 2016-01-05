@@ -18,7 +18,7 @@
 #ifndef S2GEOMETRY_S2CELLID_H_
 #define S2GEOMETRY_S2CELLID_H_
 
-#include <stddef.h>
+#include <cstddef>
 #include <functional>
 #include <iosfwd>     // No longer needed
 #include <iostream>

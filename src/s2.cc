@@ -17,7 +17,7 @@
 
 #include "s2.h"
 
-#include <float.h>
+#include <cfloat>
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
@@ -232,14 +232,14 @@ bool S2::SimpleCCW(S2Point const& a, S2Point const& b, S2Point const& c) {
   return c.CrossProd(a).DotProd(b) > 0;
 }
 
-int S2::RobustCCW(S2Point const& a, S2Point const& b, S2Point const& c) {
-  // We don't need RobustCrossProd() here because RobustCCW() does its own
-  // error estimation and calls ExpensiveCCW() if there is any uncertainty
+int S2::Sign(S2Point const& a, S2Point const& b, S2Point const& c) {
+  // We don't need RobustCrossProd() here because Sign() does its own
+  // error estimation and calls ExpensiveSign() if there is any uncertainty
   // about the result.
-  return RobustCCW(a, b, c, a.CrossProd(b));
+  return Sign(a, b, c, a.CrossProd(b));
 }
 
-// ExpensiveCCW() uses arbitrary-precision arithmetic and the "simulation of
+// ExpensiveSign() uses arbitrary-precision arithmetic and the "simulation of
 // simplicity" technique in order to be completely robust (i.e., to return
 // consistent results for all possible inputs).
 //
@@ -252,24 +252,24 @@ int S2::RobustCCW(S2Point const& a, S2Point const& b, S2Point const& c) {
 
 typedef Vector3<ExactFloat> Vector3_xf;
 
-int S2::ExpensiveCCW(S2Point const& a, S2Point const& b, S2Point const& c) {
+int S2::ExpensiveSign(S2Point const& a, S2Point const& b, S2Point const& c) {
   // Return zero if and only if two points are the same.  This ensures (1).
   if (a == b || b == c || c == a) return 0;
 
   // Next we try recomputing the determinant still using floating-point
   // arithmetic but in a more precise way.  This is more expensive than the
-  // simple calculation done by TriageCCW(), but it is still *much* cheaper
+  // simple calculation done by TriageSign(), but it is still *much* cheaper
   // than using arbitrary-precision arithmetic.  This optimization is able to
   // compute the correct determinant sign in virtually all cases except when
   // the three points are truly collinear (e.g., three points on the equator).
-  int det_sign = StableCCW(a, b, c);
+  int det_sign = StableSign(a, b, c);
   if (det_sign != 0) return det_sign;
 
   // Otherwise fall back to exact arithmetic and symbolic permutations.
-  return ExactCCW(a, b, c);
+  return ExactSign(a, b, c);
 }
 
-// Compute the determinant in a numerically stable way.  Unlike TriageCCW(),
+// Compute the determinant in a numerically stable way.  Unlike TriageSign(),
 // this method can usually compute the correct determinant sign even when all
 // three points are as collinear as possible.  For example if three points are
 // spaced 1km apart along a random line on the Earth's surface using the
@@ -282,7 +282,7 @@ int S2::ExpensiveCCW(S2Point const& a, S2Point const& b, S2Point const& c) {
 // in fact an earlier version of this code did exactly that), but antipodal
 // points are rare in practice so it seems better to simply fall back to
 // exact arithmetic in that case.
-int S2::StableCCW(S2Point const& a, S2Point const& b, S2Point const& c) {
+int S2::StableSign(S2Point const& a, S2Point const& b, S2Point const& c) {
   Vector3_d ab = b - a;
   Vector3_d bc = c - b;
   Vector3_d ca = a - c;
@@ -325,7 +325,7 @@ static int SymbolicallyPerturbedCCW(
 
 // Compute the determinant using exact arithmetic and/or symbolic
 // permutations.  Requires that the three points are distinct.
-int S2::ExactCCW(S2Point const& a, S2Point const& b, S2Point const& c) {
+int S2::ExactSign(S2Point const& a, S2Point const& b, S2Point const& c) {
   DCHECK(a != b && b != c && c != a);
 
   // Sort the three points in lexicographic order, keeping track of the sign
@@ -490,16 +490,16 @@ double S2::Angle(S2Point const& a, S2Point const& b, S2Point const& c) {
 
 double S2::TurnAngle(S2Point const& a, S2Point const& b, S2Point const& c) {
   // We use RobustCrossProd() to get good accuracy when two points are very
-  // close together, and RobustCCW() to ensure that the sign is correct for
+  // close together, and Sign() to ensure that the sign is correct for
   // turns that are close to 180 degrees.
   //
   // Unfortunately we can't save RobustCrossProd(a, b) and pass it as the
-  // optional 4th argument to RobustCCW(), because RobustCCW() requires
-  // a.CrossProd(b) exactly (the robust version differs in magnitude).
+  // optional 4th argument to Sign(), because Sign() requires a.CrossProd(b)
+  // exactly (the robust version differs in magnitude).
   double angle = RobustCrossProd(a, b).Angle(RobustCrossProd(b, c));
 
-  // Don't return RobustCCW() * angle because it is legal to have (a == c).
-  return (RobustCCW(a, b, c) > 0) ? angle : -angle;
+  // Don't return Sign() * angle because it is legal to have (a == c).
+  return (Sign(a, b, c) > 0) ? angle : -angle;
 }
 
 double S2::Area(S2Point const& a, S2Point const& b, S2Point const& c) {
@@ -572,7 +572,7 @@ double S2::GirardArea(S2Point const& a, S2Point const& b, S2Point const& c) {
 }
 
 double S2::SignedArea(S2Point const& a, S2Point const& b, S2Point const& c) {
-  return RobustCCW(a, b, c) * Area(a, b, c);
+  return Sign(a, b, c) * Area(a, b, c);
 }
 
 S2Point S2::PlanarCentroid(S2Point const& a, S2Point const& b,
@@ -624,12 +624,12 @@ bool S2::OrderedCCW(S2Point const& a, S2Point const& b, S2Point const& c,
                     S2Point const& o) {
   // The last inequality below is ">" rather than ">=" so that we return true
   // if A == B or B == C, and otherwise false if A == C.  Recall that
-  // RobustCCW(x,y,z) == -RobustCCW(z,y,x) for all x,y,z.
+  // Sign(x,y,z) == -Sign(z,y,x) for all x,y,z.
 
   int sum = 0;
-  if (RobustCCW(b, o, a) >= 0) ++sum;
-  if (RobustCCW(c, o, b) >= 0) ++sum;
-  if (RobustCCW(a, o, c) > 0) ++sum;
+  if (Sign(b, o, a) >= 0) ++sum;
+  if (Sign(c, o, b) >= 0) ++sum;
+  if (Sign(a, o, c) > 0) ++sum;
   return sum >= 2;
 }
 

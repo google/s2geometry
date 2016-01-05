@@ -17,7 +17,7 @@
 
 #include "s1interval.h"
 
-#include <float.h>
+#include <cfloat>
 #include <algorithm>
 
 #include <glog/logging.h>

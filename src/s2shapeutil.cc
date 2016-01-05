@@ -49,7 +49,7 @@ static bool FindSelfIntersection(S2ClippedShape const& a_clipped,
       if (aj != aj_prev + 1) crosser.RestartAt(&a_loop.vertex(aj));
       aj_prev = aj;
       // This test also catches duplicate vertices.
-      int crossing = crosser.RobustCrossing(&a_loop.vertex(aj+1));
+      int crossing = crosser.CrossingSign(&a_loop.vertex(aj + 1));
       if (crossing < 0) continue;
       if (crossing == 0) {
         error->Init(S2Error::DUPLICATE_VERTICES,
@@ -82,7 +82,7 @@ inline static bool FindSelfIntersection(vector<S2Loop*> const& loops,
   return false;
 }
 
-// Given two loop edges for which RobustCrossing returned a non-negative
+// Given two loop edges for which CrossingSign returned a non-negative
 // result "crossing", return true if there is a crossing and set "error" to a
 // human-readable error message.
 static bool GetCrossingError(S2Loop const& a_loop, int a_shape_id, int ai,
@@ -130,14 +130,14 @@ static bool FindLoopCrossing(vector<S2Loop*> const& loops,
                              S2ShapeIndexCell const& cell, S2Error* error) {
   // Possible optimization:
   // Sort the ClippedShapes by edge count to reduce the number of calls to
-  // S2::RobustCCW.  If n is the total number of shapes in the cell, n_i is
+  // S2::Sign.  If n is the total number of shapes in the cell, n_i is
   // the number of edges in shape i, and c_i is the number of continuous
   // chains formed by these edges, the total number of calls is
   //
   //   sum(n_i * (1 + c_j + n_j), i=0..n-2, j=i+1..n-1)
   //
   // So for example if n=2, shape 0 has one chain of 1 edge, and shape 1 has
-  // one chain of 8 edges, the number of calls to RobustCCW is 1*10=10 if the
+  // one chain of 8 edges, the number of calls to Sign is 1*10=10 if the
   // shapes are sorted by edge count, and 8*3=24 otherwise.
   //
   // typedef pair<int, S2ShapeIndex::ClippedShape const*> SortedShape;
@@ -159,7 +159,7 @@ static bool FindLoopCrossing(vector<S2Loop*> const& loops,
           int bj = b_clipped.edge(j);
           if (bj != bj_prev + 1) crosser.RestartAt(&b_loop.vertex(bj));
           bj_prev = bj;
-          int crossing = crosser.RobustCrossing(&b_loop.vertex(bj+1));
+          int crossing = crosser.CrossingSign(&b_loop.vertex(bj + 1));
           if (crossing < 0) continue;  // No crossing
           if (GetCrossingError(a_loop, a_clipped.shape_id(), ai,
                                b_loop, b_clipped.shape_id(), bj,

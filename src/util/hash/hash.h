@@ -1,4 +1,4 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,12 +21,6 @@
 #include "util/hash/hash128to64.h"
 #include "util/hash/jenkins.h"
 #include "util/hash/jenkins_lookup2.h"
-#include "util/hash/string_hash.h"
-
-inline uint32 HashTo32(const char *s, size_t slen) {
-  uint32 retval = Hash32StringWithSeed(s, slen, MIX32);
-  return retval == kIllegalHash32 ? static_cast<uint32>(retval-1) : retval;
-}
 
 HASH_NAMESPACE_DECLARATION_START
 

@@ -17,7 +17,7 @@
 
 #include "s2paddedcell.h"
 
-#include <float.h>
+#include <cfloat>
 #include <algorithm>
 
 #include "util/bits/bits.h"

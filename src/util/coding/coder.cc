@@ -18,7 +18,7 @@
 
 #include "util/coding/coder.h"
 
-#include <assert.h>
+#include <cassert>
 #include <algorithm>
 
 #include <glog/logging.h>

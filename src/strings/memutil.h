@@ -63,8 +63,8 @@
 #ifndef S2GEOMETRY_STRINGS_MEMUTIL_H_
 #define S2GEOMETRY_STRINGS_MEMUTIL_H_
 
-#include <stddef.h>
-#include <string.h>      // to get the POSIX mem*() routines
+#include <cstddef>
+#include <cstring>      // to get the POSIX mem*() routines
 
 #include "base/port.h"   // disable some warnings on Windows
 

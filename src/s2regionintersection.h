@@ -80,7 +80,8 @@ class S2RegionIntersection : public S2Region {
 
   std::vector<S2Region*> regions_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2RegionIntersection);
+  S2RegionIntersection(S2RegionIntersection const&) = delete;
+  void operator=(S2RegionIntersection const&) = delete;
 };
 
 #endif  // S2GEOMETRY_S2REGIONINTERSECTION_H_

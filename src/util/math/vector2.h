@@ -40,7 +40,7 @@
 #ifndef UTIL_MATH_VECTOR2_H__
 #define UTIL_MATH_VECTOR2_H__
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <algorithm>
 #include <cmath>
 #include <iosfwd>
@@ -51,7 +51,7 @@
 #include "base/integral_types.h"
 #include "base/macros.h"
 #include "base/template_util.h"
-#include "base/type_traits.h"
+#include <type_traits>
 #include "util/math/mathutil.h"
 #include "util/math/vector3.h"
 #include "util/math/vector4.h"

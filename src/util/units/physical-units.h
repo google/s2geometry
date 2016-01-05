@@ -284,10 +284,8 @@ class PhysicalUnit {
   Float value_;
   // Enforce Float to be a floating point type, since unit conversions will
   // generally fail with integers.
-  // This is COMPILE_ASSERT because static_assert breaks swig in
-  // maps/roadtraffic/speedextractor/quarantine.swig -- mec, 2013-12-27
-  COMPILE_ASSERT(std::is_floating_point<Float>::value,
-                 Only_use_floating_point_types);
+  static_assert(std::is_floating_point<Float>::value,
+                "Only_use_floating_point_types");
 };
 
 // Allow 2*u (in addition to u*2).

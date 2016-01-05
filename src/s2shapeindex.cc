@@ -17,7 +17,7 @@
 
 #include "s2shapeindex.h"
 
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 
 #include <gflags/gflags.h>
@@ -1066,7 +1066,8 @@ class S2ShapeIndex::EdgeAllocator {
   // absorb an existing index cell).
   vector<FaceEdge> face_edges_;
 
-  DISALLOW_COPY_AND_ASSIGN(EdgeAllocator);
+  EdgeAllocator(EdgeAllocator const&) = delete;
+  void operator=(EdgeAllocator const&) = delete;
 };
 
 // Given a face and a vector of edges that intersect that face, add or remove

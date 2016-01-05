@@ -17,9 +17,9 @@
 
 #include "s2cellid.h"
 
-#include <float.h>
+#include <cfloat>
 #include <pthread.h>
-#include <string.h>
+#include <cstring>
 #include <algorithm>
 #include <iosfwd>
 #include <vector>

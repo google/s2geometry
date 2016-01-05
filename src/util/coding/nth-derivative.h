@@ -57,10 +57,11 @@
 #ifndef S2GEOMETRY_UTIL_CODING_NTH_DERIVATIVE_H_
 #define S2GEOMETRY_UTIL_CODING_NTH_DERIVATIVE_H_
 
+#include <type_traits>
+
 #include <glog/logging.h>
 
 #include "base/integral_types.h"
-#include "base/type_traits.h"
 
 class NthDerivativeCoder {
  public:

@@ -109,8 +109,8 @@
 #ifndef S2GEOMETRY_UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
 #define S2GEOMETRY_UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
 
-#include <limits.h>
-#include <math.h>
+#include <climits>
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <algorithm>

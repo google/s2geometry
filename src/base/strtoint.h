@@ -44,7 +44,7 @@
 #ifndef S2GEOMETRY_BASE_STRTOINT_H_
 #define S2GEOMETRY_BASE_STRTOINT_H_
 
-#include <stdlib.h> // For strtol* functions.
+#include <cstdlib> // For strtol* functions.
 #include <string>
 #include "base/integral_types.h"
 #include "base/macros.h"

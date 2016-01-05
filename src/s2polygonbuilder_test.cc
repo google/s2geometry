@@ -17,8 +17,8 @@
 
 #include "s2polygonbuilder.h"
 
-#include <math.h>
-#include <stdio.h>
+#include <cmath>
+#include <cstdio>
 #include <algorithm>
 #include <memory>
 #include <string>

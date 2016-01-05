@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2GEOMETRY_S2EDGEQUERY_H_
-#define S2GEOMETRY_S2EDGEQUERY_H_
+#ifndef S2GEOMETRY_S2CROSSINGEDGEQUERY_H_
+#define S2GEOMETRY_S2CROSSINGEDGEQUERY_H_
 
 #include <type_traits>
 #include <vector>
@@ -34,9 +34,9 @@ class R2Rect;
 class S2PaddedCell;
 class S2Shape;
 
-// S2EdgeQuery is used to find edges or shapes that are crossed by an edge.
-// Here is an example showing how to index a set of polylines, and then find
-// the polylines that are crossed by a given edge AB:
+// S2CrossingEdgeQuery is used to find edges or shapes that are crossed by
+// an edge.  Here is an example showing how to index a set of polylines,
+// and then find the polylines that are crossed by a given edge AB:
 //
 // void Test(vector<S2Polyline*> const& polylines,
 //           S2Point const& a0, S2Point const &a1) {
@@ -44,8 +44,8 @@ class S2Shape;
 //   for (int i = 0; i < polylines.size(); ++i) {
 //     index.Add(new S2Polyline::Shape(polylines[i]));
 //   }
-//   S2EdgeQuery query(index);
-//   S2EdgeQuery::EdgeMap edge_map;
+//   S2CrossingEdgeQuery query(index);
+//   S2CrossingEdgeQuery::EdgeMap edge_map;
 //   if (!query.GetCrossings(a, b, &edge_map)) return;
 //   for (auto const& it : edge_map) {
 //     S2Shape const* shape = it.first;
@@ -60,9 +60,9 @@ class S2Shape;
 // }
 //
 // Note that if you need to query many edges, it is more efficient to declare
-// a single S2EdgeQuery object and reuse it so that temporary storage does not
-// need to be reallocated each time.
-class S2EdgeQuery {
+// a single S2CrossingEdgeQuery object and reuse it so that temporary storage
+// does not need to be reallocated each time.
+class S2CrossingEdgeQuery {
  public:
   // An EdgeMap stores a sorted set of edge ids for each shape.  Its type
   // may change, but can be treated as "map<S2Shape const*, vector<int>>".
@@ -72,13 +72,14 @@ class S2EdgeQuery {
     using goog_btree_prefer_linear_node_search = std::true_type;
   };
   typedef util::btree::btree_map<S2Shape const*, std::vector<int>,
-                                 CompareBtreeLinearSearch> EdgeMap;
+                                 CompareBtreeLinearSearch>
+      EdgeMap;
 
   // Convenience constructor that calls Init().
-  explicit S2EdgeQuery(S2ShapeIndex const& index);
+  explicit S2CrossingEdgeQuery(S2ShapeIndex const& index);
 
   // Default constructor; requires Init() to be called.
-  S2EdgeQuery();
+  S2CrossingEdgeQuery();
 
   // REQUIRES: "index" is not modified after this method is called.
   void Init(S2ShapeIndex const& index);
@@ -86,8 +87,8 @@ class S2EdgeQuery {
   // Given a query edge AB and a shape S, return all the edges of S that
   // either cross AB or share a vertex with AB.  Returns false if no edges
   // intersect AB.
-  bool GetCrossings(S2Point const& a, S2Point const& b,
-                    S2Shape const* shape, std::vector<int>* edges);
+  bool GetCrossings(S2Point const& a, S2Point const& b, S2Shape const* shape,
+                    std::vector<int>* edges);
 
   // Given a query edge AB, return all the edges that either cross AB or share
   // a vertex with AB.  The edges are returned as a map from shapes to the
@@ -103,8 +104,8 @@ class S2EdgeQuery {
 
   // Given a query edge AB and a shape S, return a superset of the edges of
   // S that intersect AB.  Returns false if "edges" is empty.
-  bool GetCandidates(S2Point const& a, S2Point const& b,
-                     S2Shape const* shape, std::vector<int>* edges);
+  bool GetCandidates(S2Point const& a, S2Point const& b, S2Shape const* shape,
+                     std::vector<int>* edges);
 
   // Given a query edge AB, return a map from shapes to a superset of the
   // edges for that shape that intersect AB.  Returns false if no shapes
@@ -141,25 +142,22 @@ class S2EdgeQuery {
   S2ShapeIndex::Iterator iter_;
 
   // This is a private field rather than a local variable to reduce memory
-  // allocation when a single S2EdgeQuery object is queried many times.
+  // allocation when a single S2CrossingEdgeQuery object is queried many times.
   util::gtl::InlinedVector<S2ShapeIndexCell const*, 8> cells_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2EdgeQuery);
+  S2CrossingEdgeQuery(S2CrossingEdgeQuery const&) = delete;
+  void operator=(S2CrossingEdgeQuery const&) = delete;
 };
-
 
 //////////////////   Implementation details follow   ////////////////////
 
-
-inline S2EdgeQuery::S2EdgeQuery()
-    : index_(nullptr) {
-}
-inline S2EdgeQuery::S2EdgeQuery(S2ShapeIndex const& index) {
+inline S2CrossingEdgeQuery::S2CrossingEdgeQuery() : index_(nullptr) {}
+inline S2CrossingEdgeQuery::S2CrossingEdgeQuery(S2ShapeIndex const& index) {
   Init(index);
 }
-inline void S2EdgeQuery::Init(S2ShapeIndex const& index) {
+inline void S2CrossingEdgeQuery::Init(S2ShapeIndex const& index) {
   index_ = &index;
   iter_.Init(index);
 }
 
-#endif  // S2GEOMETRY_S2EDGEQUERY_H_
+#endif  // S2GEOMETRY_S2CROSSINGEDGEQUERY_H_

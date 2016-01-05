@@ -18,7 +18,7 @@
 #ifndef S2GEOMETRY_S1ANGLE_H_
 #define S2GEOMETRY_S1ANGLE_H_
 
-#include <math.h>
+#include <cmath>
 #include <limits>
 #include <iosfwd>   // No longer needed
 #include <ostream>

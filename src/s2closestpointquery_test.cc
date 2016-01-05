@@ -37,7 +37,7 @@ using std::unique_ptr;
 
 #include <utility>
 #include <set>
-#include "util/gtl/algorithm.h"
+#include <algorithm>
 
 namespace {
 
@@ -58,7 +58,7 @@ bool CheckResultSet(std::vector<std::pair<S1Angle, Id>> const& x,
                     S1Angle max_pruning_error, string const& label) {
   // Results should be sorted by distance.
   CompareFirst<Id> cmp;
-  EXPECT_TRUE(util::gtl::is_sorted(x.begin(), x.end(), cmp));
+  EXPECT_TRUE(std::is_sorted(x.begin(), x.end(), cmp));
 
   // Make sure there are no duplicate values.
   std::set<std::pair<S1Angle, Id>> x_set(x.begin(), x.end());

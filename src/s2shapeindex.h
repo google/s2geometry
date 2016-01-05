@@ -52,7 +52,7 @@
 //
 // S2Polygon, S2Loop, and S2Polyline define S2Shape classes that allow these
 // objects to be indexed easily.  Additional S2Shape classes are defined in
-// s2shapeutil.  You can find useful query methods in S2EdgeQuery and
+// s2shapeutil.  You can find useful query methods in S2CrossingEdgeQuery and
 // S2ClosestEdgeQuery.
 //
 // Example showing how to build an index of S2Polylines:
@@ -62,13 +62,13 @@
 //   for (int i = 0; i < polylines.size(); ++i) {
 //     index.Add(new S2Polyline::Shape(polylines[i]));
 //   }
-//   // Now use an S2EdgeQuery or S2ClosestEdgeQuery here ...
+//   // Now use an S2CrossingEdgeQuery or S2ClosestEdgeQuery here ...
 // }
 
 #ifndef S2GEOMETRY_S2SHAPEINDEX_H_
 #define S2GEOMETRY_S2SHAPEINDEX_H_
 
-#include <stddef.h>
+#include <cstddef>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -175,7 +175,8 @@ class S2Shape {
   friend class S2ShapeIndex;
   int id_;  // Assigned by S2ShapeIndex when the shape is added.
 
-  DISALLOW_COPY_AND_ASSIGN(S2Shape);
+  S2Shape(S2Shape const&) = delete;
+  void operator=(S2Shape const&) = delete;
 };
 
 // S2ClippedShape represents the part of a shape that intersects an S2Cell.
@@ -208,7 +209,9 @@ class S2ClippedShape {
   bool ContainsEdge(int id) const;
 
  private:
-  // This class is copied by value.
+  // This class may be copied by value, but note that it does *not* own its
+  // underlying data.  (It is owned by the containing S2ShapeIndexCell.)
+
   friend class S2ShapeIndex;      // Init(), etc.
   friend class S2ShapeIndexCell;  // Destruct()
   friend class S2Stats;
@@ -265,7 +268,8 @@ class S2ShapeIndexCell {
   typedef std::vector<S2ClippedShape> S2ClippedShapeSet;
   S2ClippedShapeSet shapes_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2ShapeIndexCell);
+  S2ShapeIndexCell(S2ShapeIndexCell const&) = delete;
+  void operator=(S2ShapeIndexCell const&) = delete;
 };
 
 // Options that affect construction of the S2ShapeIndex.
@@ -331,8 +335,6 @@ class S2ShapeIndex {
   // REQUIRES: "shape" persists for the lifetime of the index or until
   //           Remove(shape) is called.
   void Add(S2Shape* shape);
-  void Insert(S2Shape* shape);  // DEPRECATED
-
   // Remove the given shape from the index and return ownership to the caller.
   // Does not call the shape's destructor or Release() method.  Invalidates
   // all iterators and their associated data.
@@ -639,7 +641,8 @@ class S2ShapeIndex {
   // Documented in the .cc file.
   void UnlockAndSignal();
 
-  DISALLOW_COPY_AND_ASSIGN(S2ShapeIndex);
+  S2ShapeIndex(S2ShapeIndex const&) = delete;
+  void operator=(S2ShapeIndex const&) = delete;
 };
 
 
@@ -721,10 +724,6 @@ inline void S2ShapeIndex::Iterator::Finish() {
 
 inline bool S2ShapeIndex::is_fresh() const {
   return base::subtle::NoBarrier_Load(&index_status_) == FRESH;
-}
-
-inline void S2ShapeIndex::Insert(S2Shape* shape) {
-  Add(shape);
 }
 
 // Return true if this is the first update to the index.

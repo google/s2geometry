@@ -17,7 +17,7 @@
 
 #include "s2polyline.h"
 
-#include <math.h>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <vector>

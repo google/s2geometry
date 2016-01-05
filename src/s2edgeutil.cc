@@ -17,7 +17,7 @@
 
 #include "s2edgeutil.h"
 
-#include <float.h>
+#include <cfloat>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -60,10 +60,6 @@ S1Angle const S2EdgeUtil::kIntersectionError = S1Angle::Radians(4*DBL_EPSILON);
 // points might have errors in opposite directions.
 S1Angle const S2EdgeUtil::kIntersectionMergeRadius = 2 * kIntersectionError;
 
-// DEPRECATED.  This value is related to an obsolete intersection algorithm
-// that made weaker accuracy guarantees.
-S1Angle const S2EdgeUtil::kIntersectionTolerance = S1Angle::Radians(1.5e-15);
-
 S1Angle const S2EdgeUtil::kIntersectionExactError =
     S1Angle::Radians(DBL_EPSILON);
 
@@ -100,10 +96,10 @@ bool S2EdgeUtil::SimpleCrossing(S2Point const& a, S2Point const& b,
   return (acb * cbd > 0) && (acb * dac > 0);
 }
 
-int S2EdgeUtil::RobustCrossing(S2Point const& a, S2Point const& b,
-                               S2Point const& c, S2Point const& d) {
+int S2EdgeUtil::CrossingSign(S2Point const& a, S2Point const& b,
+                             S2Point const& c, S2Point const& d) {
   S2EdgeUtil::EdgeCrosser crosser(&a, &b, &c);
-  return crosser.RobustCrossing(&d);
+  return crosser.CrossingSign(&d);
 }
 
 bool S2EdgeUtil::VertexCrossing(S2Point const& a, S2Point const& b,
@@ -127,7 +123,7 @@ bool S2EdgeUtil::VertexCrossing(S2Point const& a, S2Point const& b,
 
 bool S2EdgeUtil::EdgeOrVertexCrossing(S2Point const& a, S2Point const& b,
                                       S2Point const& c, S2Point const& d) {
-  int crossing = RobustCrossing(a, b, c, d);
+  int crossing = CrossingSign(a, b, c, d);
   if (crossing < 0) return false;
   if (crossing > 0) return true;
   return VertexCrossing(a, b, c, d);
@@ -430,7 +426,7 @@ static bool ApproximatelyOrdered(S2Point const& a, S2Point const& x,
 
 S2Point S2EdgeUtil::GetIntersection(S2Point const& a0, S2Point const& a1,
                                     S2Point const& b0, S2Point const& b1) {
-  DCHECK_GT(RobustCrossing(a0, a1, b0, b1), 0);
+  DCHECK_GT(CrossingSign(a0, a1, b0, b1), 0);
 
   // It is difficult to compute the intersection point of two edges accurately
   // when the angle between the edges is very small.  Previously we handled
@@ -661,7 +657,7 @@ bool S2EdgeUtil::UpdateEdgePairMinDistance(
   if (*min_dist == S1ChordAngle::Zero()) {
     return false;
   }
-  if (RobustCrossing(a0, a1, b0, b1) > 0) {
+  if (CrossingSign(a0, a1, b0, b1) > 0) {
     *min_dist = S1ChordAngle::Zero();
     return true;
   }
@@ -680,7 +676,7 @@ bool S2EdgeUtil::UpdateEdgePairMinDistance(
 std::pair<S2Point, S2Point> S2EdgeUtil::GetEdgePairClosestPoints(
       S2Point const& a0, S2Point const& a1,
       S2Point const& b0, S2Point const& b1) {
-  if (RobustCrossing(a0, a1, b0, b1) > 0) {
+  if (CrossingSign(a0, a1, b0, b1) > 0) {
     S2Point x = GetIntersection(a0, a1, b0, b1);
     return std::make_pair(x, x);
   }
@@ -721,8 +717,7 @@ bool S2EdgeUtil::IsEdgeBNearEdgeA(S2Point const& a0, S2Point const& a1,
   // oriented but otherwise might be near each other.  We check orientation and
   // invert rather than computing a_nearest_b0 x a_nearest_b1 because those two
   // points might be equal, and have an unhelpful cross product.
-  if (S2::RobustCCW(a_ortho, a_nearest_b0, a_nearest_b1) < 0)
-    a_ortho *= -1;
+  if (S2::Sign(a_ortho, a_nearest_b0, a_nearest_b1) < 0) a_ortho *= -1;
 
   // To check if all points on B are within tolerance of A, we first check to
   // see if the endpoints of B are near A.  If they are not, B is not near A.
@@ -779,10 +774,10 @@ bool S2EdgeUtil::IsEdgeBNearEdgeA(S2Point const& a0, S2Point const& a1,
   // A point p lies on B if you can proceed from b_ortho to b0 to p to b1 and
   // back to b_ortho without ever turning right.  We test this for furthest and
   // furthest_inv, and return true if neither point lies on B.
-  return !((S2::RobustCCW(b_ortho, b0, furthest) > 0 &&
-            S2::RobustCCW(furthest, b1, b_ortho) > 0) ||
-           (S2::RobustCCW(b_ortho, b0, furthest_inv) > 0 &&
-            S2::RobustCCW(furthest_inv, b1, b_ortho) > 0));
+  return !((S2::Sign(b_ortho, b0, furthest) > 0 &&
+            S2::Sign(furthest, b1, b_ortho) > 0) ||
+           (S2::Sign(b_ortho, b0, furthest_inv) > 0 &&
+            S2::Sign(furthest_inv, b1, b_ortho) > 0));
 }
 
 
@@ -840,18 +835,18 @@ S2EdgeUtil::WedgeRelation S2EdgeUtil::GetWedgeRelation(
       WEDGE_IS_DISJOINT : WEDGE_PROPERLY_OVERLAPS;
 }
 
-int S2EdgeUtil::EdgeCrosser::RobustCrossingInternal(S2Point const* d) {
+int S2EdgeUtil::EdgeCrosser::CrossingSignInternal(S2Point const* d) {
   // Compute the actual result, and then save the current vertex D as the next
   // vertex C, and save the orientation of the next triangle ACB (which is
   // opposite to the current triangle BDA).
-  int result = RobustCrossingInternal2(d);
+  int result = CrossingSignInternal2(d);
   c_ = d;
   acb_ = -bda_;
   return result;
 }
 
-inline int S2EdgeUtil::EdgeCrosser::RobustCrossingInternal2(S2Point const* d) {
-  // RobustCCW is very expensive, so we avoid calling it if at all possible.
+inline int S2EdgeUtil::EdgeCrosser::CrossingSignInternal2(S2Point const* d) {
+  // Sign is very expensive, so we avoid calling it if at all possible.
   // First eliminate the cases where two vertices are equal.
   if (*a_ == *c_ || *a_ == *d || *b_ == *c_ || *b_ == *d) return 0;
 
@@ -862,7 +857,7 @@ inline int S2EdgeUtil::EdgeCrosser::RobustCrossingInternal2(S2Point const* d) {
   // that AB and CD do not intersect by computing the two outward-facing
   // tangents at A and B (parallel to AB) and testing whether AB and CD are on
   // opposite sides of the plane perpendicular to one of these tangents.  This
-  // is moderately expensive but still much cheaper than S2::ExpensiveCCW().
+  // is moderately expensive but still much cheaper than S2::ExpensiveSign().
   if (!have_tangents_) {
     S2Point norm = S2::RobustCrossProd(*a_, *b_).Normalize();
     a_tangent_ = a_->CrossProd(norm);
@@ -882,14 +877,14 @@ inline int S2EdgeUtil::EdgeCrosser::RobustCrossingInternal2(S2Point const* d) {
   }
 
   // Otherwise it's time to break out the big guns.
-  if (acb_ == 0) acb_ = -S2::ExpensiveCCW(*a_, *b_, *c_);
-  if (bda_ == 0) bda_ = S2::ExpensiveCCW(*a_, *b_, *d);
+  if (acb_ == 0) acb_ = -S2::ExpensiveSign(*a_, *b_, *c_);
+  if (bda_ == 0) bda_ = S2::ExpensiveSign(*a_, *b_, *d);
   if (bda_ != acb_) return -1;
 
   Vector3_d c_cross_d = c_->CrossProd(*d);
-  int cbd = -S2::RobustCCW(*c_, *d, *b_, c_cross_d);
+  int cbd = -S2::Sign(*c_, *d, *b_, c_cross_d);
   if (cbd != acb_) return -1;
-  int dac = S2::RobustCCW(*c_, *d, *a_, c_cross_d);
+  int dac = S2::Sign(*c_, *d, *a_, c_cross_d);
   return (dac == acb_) ? 1 : -1;
 }
 

@@ -24,7 +24,7 @@
 #ifndef S2GEOMETRY_BASE_STRINGPRINTF_H_
 #define S2GEOMETRY_BASE_STRINGPRINTF_H_
 
-#include <stdarg.h>
+#include <cstdarg>
 #include <string>
 #include <vector>
 

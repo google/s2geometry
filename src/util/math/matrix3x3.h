@@ -33,10 +33,10 @@
 
 #include <cmath>
 #include <iosfwd>
+#include <type_traits>
 
 #include <glog/logging.h>
 
-#include "base/type_traits.h"
 #include "util/math/mathutil.h"
 #include "util/math/vector2.h"
 #include "util/math/vector3.h"

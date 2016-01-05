@@ -24,13 +24,13 @@
 #ifndef S2GEOMETRY_BASE_CASTS_H_
 #define S2GEOMETRY_BASE_CASTS_H_
 
-#include <assert.h>         // for use with down_cast<>
-#include <string.h>         // for memcpy
-#include <limits.h>         // for enumeration casts and tests
+#include <cassert>         // for use with down_cast<>
+#include <cstring>         // for memcpy
+#include <climits>         // for enumeration casts and tests
 
 #include "base/macros.h"
 #include "base/template_util.h"
-#include "base/type_traits.h"
+#include <type_traits>
 
 // Use implicit_cast as a safe version of static_cast or const_cast
 // for implicit conversions. For example:

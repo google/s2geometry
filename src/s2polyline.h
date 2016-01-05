@@ -18,6 +18,7 @@
 #ifndef S2GEOMETRY_S2POLYLINE_H_
 #define S2GEOMETRY_S2POLYLINE_H_
 
+#include <memory>
 #include <vector>
 
 #include <glog/logging.h>
@@ -303,9 +304,12 @@ class S2Polyline : public S2Region {
   // need any STL methods, and computing the number of vertices using size()
   // would be relatively expensive (due to division by sizeof(S2Point) == 24).
   int num_vertices_;
-  S2Point* vertices_;
+  std::unique_ptr<S2Point[]> vertices_;
 
-  DISALLOW_COPY_AND_ASSIGN(S2Polyline);
+#ifndef SWIG
+  S2Polyline(S2Polyline const&) = delete;
+  void operator=(S2Polyline const&) = delete;
+#endif  // SWIG
 };
 
 #endif  // S2GEOMETRY_S2POLYLINE_H_
