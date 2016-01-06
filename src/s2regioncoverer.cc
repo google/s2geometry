@@ -17,7 +17,6 @@
 
 #include "s2regioncoverer.h"
 
-#include <pthread.h>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>

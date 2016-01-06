@@ -27,11 +27,6 @@
 #include <hash_map>
 #include <functional>
 
-// TODO(tawei): this file is only needed for older version of MS Visual C
-// compiler.  Remove this file altogether when we transition to the latest
-// version of the compiler.
-#include "base/stl_decl_msvc.h"
-
 #if !defined(_MSC_VER) || !defined(STL_MSVC)
 #error port_hash.h should only be included when using microsoft compiler and STL.
 #endif

@@ -19,6 +19,7 @@
 //
 
 #include <cerrno>
+#include <climits>
 #include "base/port.h"
 #include "base/strtoint.h"
 

@@ -61,7 +61,11 @@ file(GLOB S2FilesGlob
      src/util/math/exactfloat/*.cc
      src/util/math/*.cc)
 
-add_library(s2geometry STATIC ${S2FilesGlob})
+add_library(s2geometry SHARED ${S2FilesGlob})
+target_link_libraries(
+    s2geometry
+    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT})
 
 file(GLOB S2Headers src/*.h)
 
@@ -78,9 +82,7 @@ install(FILES src/base/atomicops.h
               src/base/port.h
               src/base/port_hash.h
               src/base/spinlock.h
-              src/base/stl_decl_msvc.h
               src/base/template_util.h
-              src/base/type_traits.h
         DESTINATION include/s2geometry/base)
 install(FILES src/util/bits/bits.h
               src/util/bits/bits-internal-unknown.h
@@ -126,9 +128,7 @@ if (GTEST_ROOT)
     add_executable(${test} ${test_cc})
     target_link_libraries(
         ${test}
-        s2testing s2geometry gtest_main
-        ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
-       ${CMAKE_THREAD_LIBS_INIT})
+        s2testing s2geometry gtest_main)
     add_test(${test} ${test})
   endforeach()
 endif()
