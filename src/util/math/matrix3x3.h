@@ -78,20 +78,20 @@ class Matrix3x3 {
 
   // Casting constructor
   template <class VType2>
-  static Self Cast(const Matrix3x3<VType2> &mb) {
-    return Self(static_cast<VType>(mb(0, 0)),
-                static_cast<VType>(mb(0, 1)),
-                static_cast<VType>(mb(0, 2)),
-                static_cast<VType>(mb(1, 0)),
-                static_cast<VType>(mb(1, 1)),
-                static_cast<VType>(mb(1, 2)),
-                static_cast<VType>(mb(2, 0)),
-                static_cast<VType>(mb(2, 1)),
-                static_cast<VType>(mb(2, 2)));
+  static Matrix3x3 Cast(const Matrix3x3<VType2> &mb) {
+    return Matrix3x3(static_cast<VType>(mb(0, 0)),
+                     static_cast<VType>(mb(0, 1)),
+                     static_cast<VType>(mb(0, 2)),
+                     static_cast<VType>(mb(1, 0)),
+                     static_cast<VType>(mb(1, 1)),
+                     static_cast<VType>(mb(1, 2)),
+                     static_cast<VType>(mb(2, 0)),
+                     static_cast<VType>(mb(2, 1)),
+                     static_cast<VType>(mb(2, 2)));
   }
 
   // Change the value of all the coefficients of the matrix
-  inline Self &
+  inline Matrix3x3 &
     Set(const VType &m00, const VType &m01, const VType &m02,
         const VType &m10, const VType &m11, const VType &m12,
         const VType &m20, const VType &m21, const VType &m22) {
@@ -110,7 +110,7 @@ class Matrix3x3 {
   }
 
   // Compare
-  inline bool operator==(const Self &mb) const {
+  inline bool operator==(const Matrix3x3 &mb) const {
     return (m_[0][0] == mb.m_[0][0]) &&
            (m_[0][1] == mb.m_[0][1]) &&
            (m_[0][2] == mb.m_[0][2]) &&
@@ -123,7 +123,7 @@ class Matrix3x3 {
   }
 
   // Matrix addition
-  inline Self& operator+=(const Self &mb) {
+  inline Matrix3x3& operator+=(const Matrix3x3 &mb) {
     m_[0][0] += mb.m_[0][0];
     m_[0][1] += mb.m_[0][1];
     m_[0][2] += mb.m_[0][2];
@@ -139,7 +139,7 @@ class Matrix3x3 {
   }
 
   // Matrix subtration
-  inline Self& operator-=(const Self &mb) {
+  inline Matrix3x3& operator-=(const Matrix3x3 &mb) {
     m_[0][0] -= mb.m_[0][0];
     m_[0][1] -= mb.m_[0][1];
     m_[0][2] -= mb.m_[0][2];
@@ -155,7 +155,7 @@ class Matrix3x3 {
   }
 
   // Matrix multiplication by a scalar
-  inline Self& operator*=(const VType &k) {
+  inline Matrix3x3& operator*=(const VType &k) {
     m_[0][0] *= k;
     m_[0][1] *= k;
     m_[0][2] *= k;
@@ -171,34 +171,34 @@ class Matrix3x3 {
   }
 
   // Matrix addition
-  inline Self operator+(const Self &mb) const {
-    return Self(*this) += mb;
+  inline Matrix3x3 operator+(const Matrix3x3 &mb) const {
+    return Matrix3x3(*this) += mb;
   }
 
   // Matrix subtraction
-  inline Self operator-(const Self &mb) const {
-    return Self(*this) -= mb;
+  inline Matrix3x3 operator-(const Matrix3x3 &mb) const {
+    return Matrix3x3(*this) -= mb;
   }
 
   // Change the sign of all the coefficients in the matrix
-  friend inline Self operator-(const Self &vb) {
-    return Self(-vb.m_[0][0], -vb.m_[0][1], -vb.m_[0][2],
-                -vb.m_[1][0], -vb.m_[1][1], -vb.m_[1][2],
-                -vb.m_[2][0], -vb.m_[2][1], -vb.m_[2][2]);
+  friend inline Matrix3x3 operator-(const Matrix3x3 &vb) {
+    return Matrix3x3(-vb.m_[0][0], -vb.m_[0][1], -vb.m_[0][2],
+                     -vb.m_[1][0], -vb.m_[1][1], -vb.m_[1][2],
+                     -vb.m_[2][0], -vb.m_[2][1], -vb.m_[2][2]);
   }
 
   // Matrix multiplication by a scalar
-  inline Self operator*(const VType &k) const {
-    return Self(*this) *= k;
+  inline Matrix3x3 operator*(const VType &k) const {
+    return Matrix3x3(*this) *= k;
   }
 
-  friend inline Self operator*(const VType &k, const Self &mb) {
-    return Self(mb)*k;
+  friend inline Matrix3x3 operator*(const VType &k, const Matrix3x3 &mb) {
+    return Matrix3x3(mb)*k;
   }
 
   // Matrix multiplication
-  inline Self operator*(const Self &mb) const {
-    return Self(
+  inline Matrix3x3 operator*(const Matrix3x3 &mb) const {
+    return Matrix3x3(
       m_[0][0] * mb.m_[0][0] + m_[0][1] * mb.m_[1][0] + m_[0][2] * mb.m_[2][0],
       m_[0][0] * mb.m_[0][1] + m_[0][1] * mb.m_[1][1] + m_[0][2] * mb.m_[2][1],
       m_[0][0] * mb.m_[0][2] + m_[0][1] * mb.m_[1][2] + m_[0][2] * mb.m_[2][2],
@@ -273,16 +273,16 @@ class Matrix3x3 {
   }
 
   // Return the transposed matrix
-  inline Self Transpose(void) const {
-    return Self(m_[0][0], m_[1][0], m_[2][0],
-                m_[0][1], m_[1][1], m_[2][1],
-                m_[0][2], m_[1][2], m_[2][2]);
+  inline Matrix3x3 Transpose(void) const {
+    return Matrix3x3(m_[0][0], m_[1][0], m_[2][0],
+                     m_[0][1], m_[1][1], m_[2][1],
+                     m_[0][2], m_[1][2], m_[2][2]);
   }
 
   // Return the transposed of the matrix of the cofactors
   // (Useful for inversion for example)
-  inline Self ComatrixTransposed(void) const {
-    return Self(
+  inline Matrix3x3 ComatrixTransposed(void) const {
+    return Matrix3x3(
       m_[1][1] * m_[2][2] - m_[2][1] * m_[1][2],
       m_[2][1] * m_[0][2] - m_[0][1] * m_[2][2],
       m_[0][1] * m_[1][2] - m_[1][1] * m_[0][2],
@@ -296,7 +296,7 @@ class Matrix3x3 {
       m_[0][0] * m_[1][1] - m_[1][0] * m_[0][1]);
   }
   // Matrix inversion
-  inline Self Inverse(void) const {
+  inline Matrix3x3 Inverse(void) const {
     VType det = Det();
     CHECK_NE(det, 0) << " Can't inverse. Determinant = 0.";
     return (1/det) * ComatrixTransposed();
@@ -317,10 +317,10 @@ class Matrix3x3 {
   }
 
   // Create a matrix from 3 row vectors
-  static inline Self FromRows(const MVector &v1,
+  static inline Matrix3x3 FromRows(const MVector &v1,
                               const MVector &v2,
                               const MVector &v3) {
-    Self temp;
+    Matrix3x3 temp;
     temp.Set(v1[0], v1[1], v1[2],
              v2[0], v2[1], v2[2],
              v3[0], v3[1], v3[2]);
@@ -328,10 +328,10 @@ class Matrix3x3 {
   }
 
   // Create a matrix from 3 column vectors
-  static inline Self FromCols(const MVector &v1,
+  static inline Matrix3x3 FromCols(const MVector &v1,
                               const MVector &v2,
                               const MVector &v3) {
-    Self temp;
+    Matrix3x3 temp;
     temp.Set(v1[0], v2[0], v3[0],
              v1[1], v2[1], v3[1],
              v1[2], v2[2], v3[2]);
@@ -358,7 +358,7 @@ class Matrix3x3 {
 
   // Return a matrix M close to the original but verifying MtM = I
   // (useful to compensate for errors in a rotation matrix)
-  Self Orthogonalize() const {
+  Matrix3x3 Orthogonalize() const {
     MVector r1, r2, r3;
     r1 = Row(0).Normalize();
     r2 = (Row(2).CrossProd(r1)).Normalize();
@@ -367,8 +367,8 @@ class Matrix3x3 {
   }
 
   // Return the identity matrix
-  static inline Self Identity(void) {
-    Self temp;
+  static inline Matrix3x3 Identity(void) {
+    Matrix3x3 temp;
     temp.Set(1, 0, 0,
              0, 1, 0,
              0, 0, 1);
@@ -376,40 +376,40 @@ class Matrix3x3 {
   }
 
   // Return a matrix full of zeros
-  static inline Self Zero(void) {
-    return Self();
+  static inline Matrix3x3 Zero(void) {
+    return Matrix3x3();
   }
 
   // Return a diagonal matrix with the coefficients in v
-  static inline Self Diagonal(const MVector &v) {
-    return Self(v[0], VType(), VType(),
-                VType(), v[1], VType(),
-                VType(), VType(), v[2]);
+  static inline Matrix3x3 Diagonal(const MVector &v) {
+    return Matrix3x3(v[0], VType(), VType(),
+                     VType(), v[1], VType(),
+                     VType(), VType(), v[2]);
   }
 
   // Return the matrix vvT
-  static Self Sym3(const MVector &v) {
-    return Self(
+  static Matrix3x3 Sym3(const MVector &v) {
+    return Matrix3x3(
       v[0]*v[0], v[0]*v[1], v[0]*v[2],
       v[1]*v[0], v[1]*v[1], v[1]*v[2],
       v[2]*v[0], v[2]*v[1], v[2]*v[2]);
   }
   // Return a matrix M such that:
   // for each u,  M * u = v.CrossProd(u)
-  static Self AntiSym3(const MVector &v) {
-    return Self(VType(),    -v[2],     v[1],
-                v[2],     VType(),    -v[0],
-                -v[1],       v[0],   VType());
+  static Matrix3x3 AntiSym3(const MVector &v) {
+    return Matrix3x3(VType(),    -v[2],     v[1],
+                     v[2],     VType(),    -v[0],
+                     -v[1],       v[0],   VType());
   }
 
   // Returns matrix that rotates |rot| radians around axis rot.
-  static Self Rodrigues(const MVector &rot) {
-    Self R;
+  static Matrix3x3 Rodrigues(const MVector &rot) {
+    Matrix3x3 R;
     VType theta = rot.Norm();
     MVector w = rot.Normalize();
-    Self Wv = Self::AntiSym3(w);
-    Self I = Self::Identity();
-    Self A = Self::Sym3(w);
+    Matrix3x3 Wv = Matrix3x3::AntiSym3(w);
+    Matrix3x3 I = Matrix3x3::Identity();
+    Matrix3x3 A = Matrix3x3::Sym3(w);
     R = (1 - cos(theta)) * A + sin(theta) * Wv + cos(theta) * I;
     return R;
   }
@@ -466,7 +466,7 @@ class Matrix3x3 {
   // |  a10, a11,     |
   // |  a20, a21, a22 |
   void SymmetricEigenSolver(MVector *eig_val,
-                            Self *eig_vec) const {
+                            Matrix3x3 *eig_vec) const {
     // Compute characteristic polynomial coefficients
     double c2 = -(m_[0][0] + m_[1][1] + m_[2][2]);
     double c1 = -(m_[1][0] * m_[1][0] - m_[0][0] * m_[1][1]
@@ -531,7 +531,7 @@ class Matrix3x3 {
     return false;
   }
 
-  friend std::ostream &operator <<(std::ostream &out, const Self &mb) {
+  friend std::ostream &operator <<(std::ostream &out, const Matrix3x3 &mb) {
     int i, j;
     for (i = 0; i < 3; i++) {
       if (i ==0) {

@@ -90,50 +90,50 @@ class Vector3 {
   explicit Vector3(const Vector4<VType> &vb);
   // Convert from another vector type
   template <typename VType2>
-  static Self Cast(const Vector3<VType2> &vb);
+  static Vector3 Cast(const Vector3<VType2> &vb);
   // Compare two vectors, return true if all their components are equal
-  bool operator==(const Self& vb) const;
-  bool operator!=(const Self& vb) const;
+  bool operator==(const Vector3& vb) const;
+  bool operator!=(const Vector3& vb) const;
   // Compare two vectors, return true if all their components are within
   // a difference of margin.
-  bool aequal(const Self &vb, FloatType margin) const;
+  bool aequal(const Vector3 &vb, FloatType margin) const;
   // Compare two vectors, these comparisons are mostly for interaction
   // with STL.
-  bool operator<(const Self &vb) const;
-  bool operator>(const Self &vb) const;
-  bool operator<=(const Self &vb) const;
-  bool operator>=(const Self &vb) const;
+  bool operator<(const Vector3 &vb) const;
+  bool operator>(const Vector3 &vb) const;
+  bool operator<=(const Vector3 &vb) const;
+  bool operator>=(const Vector3 &vb) const;
 
   // Return the size of the vector
   static int Size() { return SIZE; }
   // Modify the coordinates of the current vector
   void Set(const VType x, const VType y, const VType z);
   // Add two vectors, component by component
-  Self& operator+=(const Self &vb);
+  Vector3& operator+=(const Vector3 &vb);
   // Subtract two vectors, component by component
-  Self& operator-=(const Self &vb);
+  Vector3& operator-=(const Vector3 &vb);
   // Multiply a vector by a scalar
-  Self& operator*=(const VType k);
+  Vector3& operator*=(const VType k);
   // Divide a vector by a scalar
-  Self& operator/=(const VType k);
+  Vector3& operator/=(const VType k);
   // Multiply two vectors component by component
-  Self MulComponents(const Self &vb) const;
+  Vector3 MulComponents(const Vector3 &vb) const;
   // Divide two vectors component by component
-  Self DivComponents(const Self &vb) const;
+  Vector3 DivComponents(const Vector3 &vb) const;
   // Add two vectors, component by component
-  Self operator+(const Self &vb) const;
+  Vector3 operator+(const Vector3 &vb) const;
   // Subtract two vectors, component by component
-  Self operator-(const Self &vb) const;
+  Vector3 operator-(const Vector3 &vb) const;
   // Dot product.  Be aware that if VType is an integer type, the high bits of
   // the result are silently discarded.
-  VType DotProd(const Self &vb) const;
+  VType DotProd(const Vector3 &vb) const;
   // Multiplication by a scalar
-  Self operator*(const VType k) const;
+  Vector3 operator*(const VType k) const;
   // Divide by a scalar
-  Self operator/(const VType k) const;
+  Vector3 operator/(const VType k) const;
   // Cross product.  Be aware that if VType is an integer type, the high bits
   // of the result are silently discarded.
-  Self CrossProd(const Self& vb) const;
+  Vector3 CrossProd(const Vector3& vb) const;
   // Access component #b for read/write operations
   VType& operator[](const int b);
   // Access component #b for read only operations
@@ -158,30 +158,30 @@ class Vector3 {
   FloatType Norm(void) const;
   // Return a normalized version of the vector if the norm of the
   // vector is not 0.  Not to be used with integer types.
-  Self Normalize() const;
+  Vector3 Normalize() const;
   // return a vector orthogonal to this one
-  Self Ortho() const;
+  Vector3 Ortho() const;
   // return the index of the largest component (fabs)
   int LargestAbsComponent() const;
   // return the index of the smallest, median ,largest component of the vector
   Vector3<int> ComponentOrder() const;
   // return the angle between two vectors in radians
-  FloatType Angle(const Self &va) const;
+  FloatType Angle(const Vector3 &va) const;
   // take the sqrt of each component and return a vector containing those values
-  Self Sqrt() const;
+  Vector3 Sqrt() const;
   // take the fabs of each component and return a vector containing those values
-  Self Fabs() const;
+  Vector3 Fabs() const;
   // Take the absolute value of each component and return a vector containing
   // those values.
-  Self Abs() const;
+  Vector3 Abs() const;
   // take the floor of each component and return a vector containing
   // those values
-  Self Floor() const;
+  Vector3 Floor() const;
   // take the ceil of each component and return a vector containing those values
-  Self Ceil() const;
+  Vector3 Ceil() const;
   // take the round of each component and return a vector containing those
   // values
-  Self FRound() const;
+  Vector3 FRound() const;
   // take the round of each component and return an integer vector containing
   // those values
   Vector3<int> IRound() const;
@@ -192,7 +192,7 @@ class Vector3 {
   bool IsNaN() const;
 
   // return an invalid floating point vector
-  static Self NaN();
+  static Vector3 NaN();
 };
 
 //
@@ -227,23 +227,23 @@ Vector3<VType>::Vector3(const Vector4<VType> &vb) {
 
 template <typename VType> template <typename VType2>
 Vector3<VType> Vector3<VType>::Cast(const Vector3<VType2> &vb) {
-  return Self(VType(vb[0]),
-              VType(vb[1]),
-              VType(vb[2]));
+  return Vector3(VType(vb[0]),
+                 VType(vb[1]),
+                 VType(vb[2]));
 }
 
 template <typename VType>
-bool Vector3<VType>::operator==(const Self& vb) const {
+bool Vector3<VType>::operator==(const Vector3& vb) const {
   return  (c_[0] == vb.c_[0]) && (c_[1] == vb.c_[1]) && (c_[2] == vb.c_[2]);
 }
 
 template <typename VType>
-bool Vector3<VType>::operator!=(const Self& vb) const {
+bool Vector3<VType>::operator!=(const Vector3& vb) const {
   return  (c_[0] != vb.c_[0]) || (c_[1] != vb.c_[1]) || (c_[2] != vb.c_[2]);
 }
 
 template <typename VType>
-bool Vector3<VType>::aequal(const Self &vb, FloatType margin) const {
+bool Vector3<VType>::aequal(const Vector3 &vb, FloatType margin) const {
   using std::abs;
   return (abs(c_[0] - vb.c_[0]) < margin)
       && (abs(c_[1] - vb.c_[1]) < margin)
@@ -251,7 +251,7 @@ bool Vector3<VType>::aequal(const Self &vb, FloatType margin) const {
 }
 
 template <typename VType>
-bool Vector3<VType>::operator<(const Self &vb) const {
+bool Vector3<VType>::operator<(const Vector3 &vb) const {
   if ( c_[0] < vb.c_[0] ) return true;
   if ( vb.c_[0] < c_[0] ) return false;
   if ( c_[1] < vb.c_[1] ) return true;
@@ -261,17 +261,17 @@ bool Vector3<VType>::operator<(const Self &vb) const {
 }
 
 template <typename VType>
-bool Vector3<VType>::operator>(const Self &vb) const {
+bool Vector3<VType>::operator>(const Vector3 &vb) const {
   return vb.operator<(*this);
 }
 
 template <typename VType>
-bool Vector3<VType>::operator<=(const Self &vb) const {
+bool Vector3<VType>::operator<=(const Vector3 &vb) const {
   return !operator>(vb);
 }
 
 template <typename VType>
-bool Vector3<VType>::operator>=(const Self &vb) const {
+bool Vector3<VType>::operator>=(const Vector3 &vb) const {
   return !operator<(vb);
 }
 
@@ -283,7 +283,7 @@ void Vector3<VType>::Set(const VType x, const VType y, const VType z) {
 }
 
 template <typename VType>
-Vector3<VType>& Vector3<VType>::operator+=(const Self &vb) {
+Vector3<VType>& Vector3<VType>::operator+=(const Vector3 &vb) {
   c_[0] += vb.c_[0];
   c_[1] += vb.c_[1];
   c_[2] += vb.c_[2];
@@ -291,7 +291,7 @@ Vector3<VType>& Vector3<VType>::operator+=(const Self &vb) {
 }
 
 template <typename VType>
-Vector3<VType>& Vector3<VType>::operator-=(const Self &vb) {
+Vector3<VType>& Vector3<VType>::operator-=(const Vector3 &vb) {
   c_[0] -= vb.c_[0];
   c_[1] -= vb.c_[1];
   c_[2] -= vb.c_[2];
@@ -315,45 +315,45 @@ Vector3<VType>& Vector3<VType>::operator/=(const VType k) {
 }
 
 template <typename VType>
-Vector3<VType> Vector3<VType>::MulComponents(const Self &vb) const {
-  return Self(c_[0] * vb.c_[0], c_[1] * vb.c_[1], c_[2] * vb.c_[2]);
+Vector3<VType> Vector3<VType>::MulComponents(const Vector3 &vb) const {
+  return Vector3(c_[0] * vb.c_[0], c_[1] * vb.c_[1], c_[2] * vb.c_[2]);
 }
 
 template <typename VType>
-Vector3<VType> Vector3<VType>::DivComponents(const Self &vb) const {
-  return Self(c_[0] / vb.c_[0], c_[1] / vb.c_[1], c_[2] / vb.c_[2]);
+Vector3<VType> Vector3<VType>::DivComponents(const Vector3 &vb) const {
+  return Vector3(c_[0] / vb.c_[0], c_[1] / vb.c_[1], c_[2] / vb.c_[2]);
 }
 
 template <typename VType>
-Vector3<VType> Vector3<VType>::operator+(const Self &vb) const {
-  return Self(*this) += vb;
+Vector3<VType> Vector3<VType>::operator+(const Vector3 &vb) const {
+  return Vector3(*this) += vb;
 }
 
 template <typename VType>
-Vector3<VType> Vector3<VType>::operator-(const Self &vb) const {
-  return Self(*this) -= vb;
+Vector3<VType> Vector3<VType>::operator-(const Vector3 &vb) const {
+  return Vector3(*this) -= vb;
 }
 
 template <typename VType>
-VType Vector3<VType>::DotProd(const Self &vb) const {
+VType Vector3<VType>::DotProd(const Vector3 &vb) const {
   return c_[0]*vb.c_[0] + c_[1]*vb.c_[1] + c_[2]*vb.c_[2];
 }
 
 template <typename VType>
 Vector3<VType> Vector3<VType>::operator*(const VType k) const {
-  return Self(*this) *= k;
+  return Vector3(*this) *= k;
 }
 
 template <typename VType>
 Vector3<VType> Vector3<VType>::operator/(const VType k) const {
-  return Self(*this) /= k;
+  return Vector3(*this) /= k;
 }
 
 template <typename VType>
-Vector3<VType> Vector3<VType>::CrossProd(const Self& vb) const {
-  return Self( c_[1] * vb.c_[2] - c_[2] * vb.c_[1],
-               c_[2] * vb.c_[0] - c_[0] * vb.c_[2],
-               c_[0] * vb.c_[1] - c_[1] * vb.c_[0]);
+Vector3<VType> Vector3<VType>::CrossProd(const Vector3& vb) const {
+  return Vector3( c_[1] * vb.c_[2] - c_[2] * vb.c_[1],
+                  c_[2] * vb.c_[0] - c_[0] * vb.c_[2],
+                  c_[0] * vb.c_[1] - c_[1] * vb.c_[0]);
 }
 
 template <typename VType>
@@ -427,21 +427,21 @@ Vector3<VType> Vector3<VType>::Normalize() const {
   if (n != VType(0.0)) {
     n = VType(1.0) / n;
   }
-  return Self(*this) *= n;
+  return Vector3(*this) *= n;
 }
 
 template <typename VType>
 Vector3<VType> Vector3<VType>::Ortho() const {
   int k = LargestAbsComponent() - 1;
   if (k < 0) k = 2;
-  Self temp;
+  Vector3 temp;
   temp[k] = VType(1);
   return (this->CrossProd(temp)).Normalize();
 }
 
 template <typename VType>
 int Vector3<VType>::LargestAbsComponent() const {
-  Self temp = Abs();
+  Vector3 temp = Abs();
   if (temp[0] > temp[1]) {
     if (temp[0] > temp[2]) {
       return 0;
@@ -468,13 +468,14 @@ Vector3<int> Vector3<VType>::ComponentOrder() const {
 }
 
 template <typename VType>
-typename Vector3<VType>::FloatType Vector3<VType>::Angle(const Self &va) const {
+typename Vector3<VType>::FloatType
+Vector3<VType>::Angle(const Vector3 &va) const {
   return atan2(this->CrossProd(va).Norm(), this->DotProd(va));
 }
 
 template <typename VType>
 Vector3<VType> Vector3<VType>::Sqrt() const {
-  return Self(sqrt(c_[0]), sqrt(c_[1]), sqrt(c_[2]));
+  return Vector3(sqrt(c_[0]), sqrt(c_[1]), sqrt(c_[2]));
 }
 
 template <typename VType>
@@ -488,22 +489,22 @@ Vector3<VType> Vector3<VType>::Abs() const {
       !std::is_integral<VType>::value || static_cast<VType>(-1) == -1,
       type_must_be_signed);
   using std::abs;
-  return Self(abs(c_[0]), abs(c_[1]), abs(c_[2]));
+  return Vector3(abs(c_[0]), abs(c_[1]), abs(c_[2]));
 }
 
 template <typename VType>
 Vector3<VType> Vector3<VType>::Floor() const {
-  return Self(floor(c_[0]), floor(c_[1]), floor(c_[2]));
+  return Vector3(floor(c_[0]), floor(c_[1]), floor(c_[2]));
 }
 
 template <typename VType>
 Vector3<VType> Vector3<VType>::Ceil() const {
-  return Self(ceil(c_[0]), ceil(c_[1]), ceil(c_[2]));
+  return Vector3(ceil(c_[0]), ceil(c_[1]), ceil(c_[2]));
 }
 
 template <typename VType>
 Vector3<VType> Vector3<VType>::FRound() const {
-  return Self(rint(c_[0]), rint(c_[1]), rint(c_[2]));
+  return Vector3(rint(c_[0]), rint(c_[1]), rint(c_[2]));
 }
 
 template <typename VType>
@@ -523,7 +524,7 @@ bool Vector3<VType>::IsNaN() const {
 
 template <typename VType>
 Vector3<VType> Vector3<VType>::NaN() {
-  return Self(MathUtil::NaN(), MathUtil::NaN(), MathUtil::NaN());
+  return Vector3(MathUtil::NaN(), MathUtil::NaN(), MathUtil::NaN());
 }
 
 template <typename VType>
