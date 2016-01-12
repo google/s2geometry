@@ -29,11 +29,11 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 
 #include "base/macros.h"
 #include "base/stringprintf.h"
 #include "strings/serialize.h"
-#include <gtest/gtest.h>
 #include "util/coding/coder.h"
 #include "r1interval.h"
 #include "s1angle.h"

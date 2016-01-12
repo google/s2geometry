@@ -27,9 +27,9 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 
 #include "base/macros.h"
-#include <gtest/gtest.h>
 #include "s2.h"
 #include "s2latlng.h"
 #include "s2testing.h"

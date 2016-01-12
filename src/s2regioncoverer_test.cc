@@ -27,12 +27,12 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 
 #include "base/integral_types.h"
 #include "base/stringprintf.h"
 #include "base/strtoint.h"
 #include "strings/split.h"
-#include <gtest/gtest.h>
 #include "s1angle.h"
 #include "s2cap.h"
 #include "s2cell.h"

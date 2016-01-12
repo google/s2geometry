@@ -17,8 +17,8 @@
 
 #include "s2paddedcell.h"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 
 #include <gtest/gtest.h>
 #include "r1interval.h"

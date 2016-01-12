@@ -17,10 +17,10 @@
 
 #include "s2regioncoverer.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
-#include <algorithm>
 #include <functional>
 #include <queue>
 #include <unordered_set>
@@ -33,7 +33,6 @@
 #include "s2cap.h"
 #include "s2cellunion.h"
 #include "s2region.h"
-#include <algorithm>
 
 using std::max;
 using std::min;

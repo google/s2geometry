@@ -17,9 +17,9 @@
 
 #include "s2polygon.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <algorithm>
 #include <set>
 #include <unordered_map>
 #include <utility>

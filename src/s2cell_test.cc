@@ -26,10 +26,10 @@
 #include <vector>
 
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 
 #include "base/macros.h"
 #include "base/stringprintf.h"
-#include <gtest/gtest.h>
 #include "r2.h"
 #include "r2rect.h"
 #include "s1angle.h"

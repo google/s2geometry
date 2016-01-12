@@ -17,8 +17,8 @@
 
 #include "s2testing.h"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <memory>
 
 #include <glog/logging.h>

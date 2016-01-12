@@ -33,18 +33,18 @@
 #ifndef S2GEOMETRY_UTIL_GTL_INLINED_VECTOR_H_
 #define S2GEOMETRY_UTIL_GTL_INLINED_VECTOR_H_
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
-#include <algorithm>
 #include <iterator>
 #include <memory>
+#include <type_traits>
 
 #include <glog/logging.h>
 
 #include "base/macros.h"
 #include "base/port.h"
-#include <type_traits>
 #include "util/gtl/manual_constructor.h"
 
 // Must come after "base/port.h"

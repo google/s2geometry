@@ -46,13 +46,13 @@
 #include <iosfwd>
 #include <iostream>  // NOLINT(readability/streams)
 #include <limits>
+#include <type_traits>
 
 #include <glog/logging.h>
 
 #include "base/integral_types.h"
 #include "base/macros.h"
 #include "base/template_util.h"
-#include <type_traits>
 #include "util/math/vector2.h"
 #include "util/math/vector3.h"
 

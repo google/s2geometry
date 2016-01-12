@@ -20,10 +20,10 @@
 #include <cstdio>
 
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 
 #include "base/macros.h"
 #include "base/stringprintf.h"
-#include <gtest/gtest.h>
 #include "s2testing.h"
 
 TEST(S2LatLng, TestBasic) {

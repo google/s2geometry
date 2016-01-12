@@ -37,14 +37,13 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "base/integral_types.h"
 #include "base/macros.h"
 #include "base/port.h"
 #include "base/template_util.h"
-#include <type_traits>
-#include <algorithm>
 
 #ifdef LANG_CXX11  // must follow base/port.h
 #include <forward_list>

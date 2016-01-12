@@ -25,11 +25,11 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 
 #include "base/macros.h"
 #include "base/port.h"
 #include "base/stringprintf.h"
-#include <gtest/gtest.h>
 #include "s2.h"
 #include "s2cap.h"
 #include "s2edgeutil.h"

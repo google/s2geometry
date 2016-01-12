@@ -27,10 +27,10 @@
 #include <cassert>         // for use with down_cast<>
 #include <cstring>         // for memcpy
 #include <climits>         // for enumeration casts and tests
+#include <type_traits>
 
 #include "base/macros.h"
 #include "base/template_util.h"
-#include <type_traits>
 
 // Use implicit_cast as a safe version of static_cast or const_cast
 // for implicit conversions. For example:

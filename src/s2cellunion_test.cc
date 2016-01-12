@@ -17,16 +17,16 @@
 
 #include "s2cellunion.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <algorithm>
 #include <vector>
 
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 
 #include "base/integral_types.h"
 #include "base/stringprintf.h"
-#include <gtest/gtest.h>
 #include "s1angle.h"
 #include "s2cap.h"
 #include "s2cell.h"

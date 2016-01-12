@@ -20,9 +20,10 @@
 
 #include "s2r2rect.h"
 
+#include <gtest/gtest.h>
+
 #include "base/integral_types.h"
 #include "base/stringprintf.h"
-#include <gtest/gtest.h>
 #include "r1interval.h"
 #include "s2.h"
 #include "s2cap.h"

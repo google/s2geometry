@@ -21,6 +21,7 @@
 #define UTIL_CODING_CODER_H__
 
 #include <cstring>
+#include <type_traits>
 
 // Avoid adding expensive includes here.
 #include <glog/logging.h>
@@ -28,7 +29,6 @@
 #include "base/integral_types.h"
 #include "base/macros.h"
 #include "base/port.h"
-#include <type_traits>
 #include "util/coding/varint.h"
 #include "util/endian/endian.h"
 

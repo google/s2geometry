@@ -29,7 +29,6 @@
 #include "s2cell.h"
 #include "s2cellid.h"
 #include "s2latlngrect.h"
-#include <algorithm>
 
 using std::max;
 using std::min;

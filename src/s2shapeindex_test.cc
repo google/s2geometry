@@ -23,9 +23,9 @@
 #include <vector>
 
 #include <gflags/gflags.h>
+#include <gtest/gtest.h>
 
 #include "base/mutex.h"
-#include <gtest/gtest.h>
 #include "r2.h"
 #include "r2rect.h"
 #include "s1angle.h"

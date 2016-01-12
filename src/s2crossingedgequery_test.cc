@@ -20,8 +20,8 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
-#include "base/stringprintf.h"
 #include <gtest/gtest.h>
+#include "base/stringprintf.h"
 #include "s1angle.h"
 #include "s2cap.h"
 #include "s2cell.h"
@@ -31,7 +31,6 @@
 #include "s2shapeutil.h"
 #include "s2testing.h"
 #include "s2textformat.h"
-#include <algorithm>
 #include "util/gtl/stl_util.h"
 
 using s2shapeutil::S2EdgeVectorShape;
