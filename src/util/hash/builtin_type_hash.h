@@ -26,7 +26,6 @@
 
 #include "base/casts.h"
 #include "base/integral_types.h"
-#include "base/macros.h"
 #include "util/hash/jenkins_lookup2.h"
 
 namespace util_hash {
@@ -89,7 +88,7 @@ inline uint64 Hash64FloatWithSeed(float num, uint64 seed) {
   if (num == 0) {
     num = 0;
   }
-  COMPILE_ASSERT(sizeof(float) == sizeof(uint32), float_has_wrong_size);
+  static_assert(sizeof(float) == sizeof(uint32), "float has wrong size");
 
   const uint64 kMul = 0xc6a4a7935bd1e995ULL;
 
@@ -105,7 +104,7 @@ inline uint64 Hash64DoubleWithSeed(double num, uint64 seed) {
   if (num == 0) {
     num = 0;
   }
-  COMPILE_ASSERT(sizeof(double) == sizeof(uint64), double_has_wrong_size);
+  static_assert(sizeof(double) == sizeof(uint64), "double has wrong size");
 
   const uint64 kMul = 0xc6a4a7935bd1e995ULL;
 

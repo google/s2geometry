@@ -1547,11 +1547,12 @@ void S2Polygon::InternalClipPolyline(bool invert,
   // all times to decide which segments to output.
 
   DCHECK(out->empty());
+  int n = a->num_vertices();
+  if (n == 0) return;
 
   EdgeClipper clipper(index_, true, ReverseNone);
   IntersectionSet intersections;
   vector<S2Point> vertices;
-  int n = a->num_vertices();
   bool inside = Contains(a->vertex(0)) ^ invert;
   for (int j = 0; j < n-1; j++) {
     S2Point const& a0 = a->vertex(j);
@@ -1892,3 +1893,11 @@ bool S2Polygon::Shape::contains_origin() const {
   return contains_origin;
 }
 
+size_t S2Polygon::BytesUsed() const {
+  size_t size = sizeof(*this);
+  for (int i = 0; i < num_loops(); ++i) {
+    size += loop(i)->BytesUsed();
+  }
+  size += index_.BytesUsed() - sizeof(index_);
+  return size;
+}

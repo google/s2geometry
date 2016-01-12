@@ -351,8 +351,8 @@ class MathUtil {
   // --------------------------------------------------------------------
   template <class IntOut, class FloatIn>
   static IntOut Round(FloatIn x) {
-    COMPILE_ASSERT(!MathLimits<FloatIn>::kIsInteger, FloatIn_is_integer);
-    COMPILE_ASSERT(MathLimits<IntOut>::kIsInteger, IntOut_is_not_integer);
+    static_assert(!MathLimits<FloatIn>::kIsInteger, "FloatIn is integer");
+    static_assert(MathLimits<IntOut>::kIsInteger, "IntOut is not integer");
 
     // We don't use sgn(x) below because there is no need to distinguish the
     // (x == 0) case.  Also note that there are specialized faster versions
@@ -382,9 +382,9 @@ class MathUtil {
   // the results are undefined.
   template <class IntOut, class FloatIn>
   static IntOut SafeCast(FloatIn x) {
-    COMPILE_ASSERT(!MathLimits<FloatIn>::kIsInteger, FloatIn_is_integer);
-    COMPILE_ASSERT(MathLimits<IntOut>::kIsInteger, IntOut_is_not_integer);
-    COMPILE_ASSERT(std::numeric_limits<IntOut>::radix == 2, IntOut_is_base_2);
+    static_assert(!MathLimits<FloatIn>::kIsInteger, "FloatIn is integer");
+    static_assert(MathLimits<IntOut>::kIsInteger, "IntOut is not integer");
+    static_assert(std::numeric_limits<IntOut>::radix == 2, "IntOut is base 2");
 
     // Special case NaN, for which the logic below doesn't work.
     if (MathLimits<FloatIn>::IsNaN(x)) {
@@ -437,8 +437,8 @@ class MathUtil {
   // --------------------------------------------------------------------
   template <class IntOut, class FloatIn>
   static IntOut SafeRound(FloatIn x) {
-    COMPILE_ASSERT(!MathLimits<FloatIn>::kIsInteger, FloatIn_is_integer);
-    COMPILE_ASSERT(MathLimits<IntOut>::kIsInteger, IntOut_is_not_integer);
+    static_assert(!MathLimits<FloatIn>::kIsInteger, "FloatIn is integer");
+    static_assert(MathLimits<IntOut>::kIsInteger, "IntOut is not integer");
 
     if (MathLimits<FloatIn>::IsNaN(x)) {
       return 0;
@@ -890,8 +890,8 @@ bool MathUtil::WithinFractionOrMargin(const T x, const T y,
 template<typename IntegralType, bool ceil>
 IntegralType MathUtil::CeilOrFloorOfRatio(IntegralType numerator,
                                           IntegralType denominator) {
-  COMPILE_ASSERT(MathLimits<IntegralType>::kIsInteger,
-                 CeilOfRatio_is_only_defined_for_integral_types);
+  static_assert(MathLimits<IntegralType>::kIsInteger,
+                "CeilOfRatio is only defined for integral types");
   DCHECK_NE(0, denominator) << "Division by zero is not supported.";
   DCHECK(!MathLimits<IntegralType>::kIsSigned ||
          numerator != MathLimits<IntegralType>::kMin ||

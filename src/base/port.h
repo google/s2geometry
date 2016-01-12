@@ -48,7 +48,10 @@
 #endif  // defined(__APPLE__)
 
 #if defined(__APPLE__) || defined(OS_IOS)
-#include <unistd.h>         // for getpagesize() on mac
+// This was added for getpagesize(), which is no longer used here.
+// Clients incorrectly depend on this include.
+// TODO(user): Update clients and remove this.
+#include <unistd.h>
 #elif defined(OS_CYGWIN) || defined(__ANDROID__)
 #include <malloc.h>         // for memalign()
 #elif defined(_MSC_VER)
@@ -432,7 +435,7 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 // Prevent the compiler from complaining about or optimizing away variables
 // that appear unused
 #undef ATTRIBUTE_UNUSED
-#define ATTRIBUTE_UNUSED __attribute__ ((unused))
+#define ATTRIBUTE_UNUSED __attribute__ ((__unused__))
 
 //
 // For functions we want to force inline or not inline.
@@ -771,20 +774,9 @@ extern int posix_memalign(void **memptr, size_t alignment, size_t size);
 #endif
 
 inline void *aligned_malloc(size_t size, int minimum_alignment) {
-#if defined(__APPLE__)
-  // mac lacks memalign(), posix_memalign(), however, according to
-  // http://stackoverflow.com/questions/196329/osx-lacks-memalign
-  // mac allocs are already 16-byte aligned.
-  if (minimum_alignment <= 16)
-    return malloc(size);
-  // next, try to return page-aligned memory. perhaps overkill
-  if (minimum_alignment <= getpagesize())
-    return valloc(size);
-  // give up
-  return nullptr;
-#elif defined(__ANDROID__) || defined(OS_ANDROID) || defined(OS_CYGWIN)
+#if defined(__ANDROID__) || defined(OS_ANDROID) || defined(OS_CYGWIN)
   return memalign(minimum_alignment, size);
-#else  // !__ANDROID__ && !OS_ANDROID && !__APPLE__ && !OS_CYGWIN
+#else  // !__ANDROID__ && !OS_ANDROID && !OS_CYGWIN
   void *ptr = nullptr;
   // posix_memalign requires that the requested alignment be at least
   // sizeof(void*). In this case, fall back on malloc which should return memory

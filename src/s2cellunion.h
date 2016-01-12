@@ -50,8 +50,6 @@ class S2CellUnion : public S2Region {
   // then calls Normalize().  The InitSwap() version takes ownership of the
   // vector data without copying and clears the given vector.  These methods
   // may be called multiple times.
-  // TODO(user): Update these to use std::vector. Doing so breaks
-  //   :pywraps2_test
   void Init(std::vector<S2CellId> const& cell_ids);
   void Init(std::vector<uint64> const& cell_ids);
   void InitSwap(std::vector<S2CellId>* cell_ids);

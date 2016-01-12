@@ -141,7 +141,6 @@
 #include "base/integral_types.h"
 #include <glog/logging.h>
 #include "base/macros.h"
-#include "base/template_util.h"
 
 namespace util {
 namespace btree {
@@ -885,7 +884,8 @@ class btree_node {
   root_fields fields_;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(btree_node);
+  btree_node(btree_node const&) = delete;
+  void operator=(btree_node const&) = delete;
 };
 
 template <typename Node, typename Reference, typename Pointer>
@@ -1561,28 +1561,13 @@ class btree : public Params::key_compare {
   empty_base_handle<internal_allocator_type, node_type*> root_;
 
  private:
-  // A never instantiated helper function that returns base::big_ if we have a
-  // key-compare-to functor or if R is bool and base::small_ otherwise.
-  template <typename R>
-  static typename std::conditional<
-   std::conditional<is_key_compare_to::value,
-             std::is_same<R, int>,
-             std::is_same<R, bool> >::type::value,
-   base::big_, base::small_>::type key_compare_checker(R);
-
-  // A never instantiated helper function that returns the key comparison
-  // functor.
-  static key_compare key_compare_helper();
-
-  // Verify that key_compare returns a bool. This is similar to the way
-  // is_convertible in base/type_traits.h works. Note that key_compare_checker
-  // is never actually invoked. The compiler will select which
-  // key_compare_checker() to instantiate and then figure out the size of the
-  // return type of key_compare_checker() at compile time which we then check
-  // against the sizeof of base::big_.
+  // Verify that key_compare returns an int or bool, as appropriate
+  // depending on the value of is_key_compare_to.
   static_assert(
-      sizeof(key_compare_checker(key_compare_helper()(key_type(), key_type()))) ==
-      sizeof(base::big_),
+      std::is_same<
+         typename std::result_of<key_compare(key_type, key_type)>::type,
+         typename std::conditional<is_key_compare_to::value,
+                                   int, bool>::type>::value,
       "key comparison function must return bool");
 
   // Note: We insist on kTargetValues, which is computed from

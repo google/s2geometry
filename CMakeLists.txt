@@ -16,7 +16,11 @@ add_definitions(-Wno-deprecated-declarations -std=c++11)
 # Use std::hash instead of __gnu_cxx::hash.
 add_definitions(-DUSE_STD_HASH)
 
-include_directories(${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS})
+# If OpenSSL is installed in a non-standard location, configure with
+# something like:
+# OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
+include_directories(
+    ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
 include_directories(src)
 
 # Explicitly list S2 files until we move test files to test dir.

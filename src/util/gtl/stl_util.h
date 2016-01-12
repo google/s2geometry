@@ -461,11 +461,11 @@ class BaseDeleter {
 template<typename STLContainer>
 class TemplatedElementDeleter : public BaseDeleter {
  public:
-  explicit TemplatedElementDeleter<STLContainer>(STLContainer* ptr)
+  explicit TemplatedElementDeleter(STLContainer* ptr)
       : container_ptr_(ptr) {
   }
 
-  virtual ~TemplatedElementDeleter<STLContainer>() {
+  virtual ~TemplatedElementDeleter() {
     STLDeleteElements(container_ptr_);
   }
 
@@ -512,11 +512,11 @@ class ElementDeleter {
 template<typename STLContainer>
 class TemplatedValueDeleter : public BaseDeleter {
  public:
-  explicit TemplatedValueDeleter<STLContainer>(STLContainer* ptr)
+  explicit TemplatedValueDeleter(STLContainer* ptr)
       : container_ptr_(ptr) {
   }
 
-  virtual ~TemplatedValueDeleter<STLContainer>() {
+  virtual ~TemplatedValueDeleter() {
     STLDeleteValues(container_ptr_);
   }
 
@@ -560,8 +560,8 @@ class ValueDeleter {
 template<typename STLContainer>
 class STLElementDeleter {
  public:
-  STLElementDeleter<STLContainer>(STLContainer* ptr) : container_ptr_(ptr) {}
-  ~STLElementDeleter<STLContainer>() { STLDeleteElements(container_ptr_); }
+  STLElementDeleter(STLContainer* ptr) : container_ptr_(ptr) {}
+  ~STLElementDeleter() { STLDeleteElements(container_ptr_); }
  private:
   STLContainer* container_ptr_;
 };
@@ -574,8 +574,8 @@ class STLElementDeleter {
 template<typename STLContainer>
 class STLValueDeleter {
  public:
-  STLValueDeleter<STLContainer>(STLContainer* ptr) : container_ptr_(ptr) {}
-  ~STLValueDeleter<STLContainer>() { STLDeleteValues(container_ptr_); }
+  STLValueDeleter(STLContainer* ptr) : container_ptr_(ptr) {}
+  ~STLValueDeleter() { STLDeleteValues(container_ptr_); }
  private:
   STLContainer* container_ptr_;
 };

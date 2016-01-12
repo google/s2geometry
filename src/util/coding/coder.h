@@ -126,7 +126,8 @@ class Encoder {
 
   static unsigned char kEmptyBuffer;
 
-  DISALLOW_COPY_AND_ASSIGN(Encoder);
+  Encoder(Encoder const&) = delete;
+  void operator=(Encoder const&) = delete;
 };
 
 /* Class for decoding data from a memory buffer */

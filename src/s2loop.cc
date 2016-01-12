@@ -1645,3 +1645,10 @@ S2Loop* S2Loop::MakeRegularLoop(Matrix3x3_d const& frame,
   return new S2Loop(vertices);
 }
 
+size_t S2Loop::BytesUsed() const {
+  size_t size = sizeof(*this);
+  size += num_vertices() * sizeof(S2Point);
+  // index_ itself is already included in sizeof(*this).
+  size += index_.BytesUsed() - sizeof(index_);
+  return size;
+}
