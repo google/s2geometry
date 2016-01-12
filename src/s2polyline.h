@@ -69,12 +69,10 @@ class S2Polyline : public S2Region {
   // Initialize a polyline that connects the given vertices. Empty polylines are
   // allowed.  Adjacent vertices should not be identical or antipodal.  All
   // vertices should be unit length.
-  // TODO(user): Fix s2.swig and update to std::vector.
   void Init(std::vector<S2Point> const& vertices);
 
   // Convenience initialization function that accepts latitude-longitude
   // coordinates rather than S2Points.
-  // TODO(user): Fix s2.swig and update to std::vector.
   void Init(std::vector<S2LatLng> const& vertices);
 
   ~S2Polyline();

@@ -20,14 +20,6 @@
 
 namespace base {
 
-// Types small_ and big_ are guaranteed such that sizeof(small_) <
-// sizeof(big_)
-typedef char small_;
-
-struct big_ {
-  char dummy[2];
-};
-
 // Identity metafunction.
 template <class T>
 struct identity_ {

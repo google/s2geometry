@@ -1673,3 +1673,24 @@ int S2ShapeIndex::GetNumEdges() const {
   return num_edges;
 }
 
+size_t S2ShapeIndex::BytesUsed() const {
+  MaybeApplyUpdates();
+  size_t size = sizeof(*this);
+  size += shapes_.capacity() * sizeof(shapes_[0]);
+  // cell_map_ itself is already included in sizeof(*this).
+  size += cell_map_.bytes_used() - sizeof(cell_map_);
+  size += cell_map_.size() * sizeof(S2ShapeIndexCell);
+  Iterator it;
+  for (it.InitStale(*this); !it.Done(); it.Next()) {
+    S2ShapeIndexCell const* cell = it.cell();
+    size += cell->shapes_.capacity() * sizeof(S2ClippedShape);
+    for (int s = 0; s < cell->num_shapes(); ++s) {
+      S2ClippedShape const& clipped = cell->clipped(s);
+      if (!clipped.is_inline()) {
+        size += clipped.num_edges() * sizeof(int32);
+      }
+    }
+  }
+  // There are no pending removals because all updates have been applied.
+  return size;
+}

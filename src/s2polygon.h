@@ -450,6 +450,8 @@ class S2Polygon : public S2Region {
   // loops, "a_loop->BoundaryNear(b_loop)" is true.
   bool BoundaryNear(S2Polygon const* b, double max_error = 1e-15) const;
 
+  // Return the total number of bytes used by the polygon.
+  size_t BytesUsed() const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):

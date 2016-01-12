@@ -313,7 +313,8 @@ class Bits {
   static int FindLSBSetNonZero64_Portable(uint64 n);
 
   static const char num_bits[];
-  DISALLOW_COPY_AND_ASSIGN(Bits);
+  Bits(Bits const&) = delete;
+  void operator=(Bits const&) = delete;
 
   // Allow tests to call _Portable variants directly.
   // Originally, I wanted to depend on //testing/production_stub/public

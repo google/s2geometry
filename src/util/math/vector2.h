@@ -45,6 +45,7 @@
 #include <cmath>
 #include <iosfwd>
 #include <iostream>  // NOLINT(readability/streams)
+#include <limits>
 
 #include <glog/logging.h>
 
@@ -52,7 +53,6 @@
 #include "base/macros.h"
 #include "base/template_util.h"
 #include <type_traits>
-#include "util/math/mathutil.h"
 #include "util/math/vector3.h"
 #include "util/math/vector4.h"
 
@@ -369,7 +369,7 @@ Vector2<VType>::Angle(const Vector2 &v) const {
 
 template <typename VType>
 Vector2<VType> Vector2<VType>::Normalize() const {
-  COMPILE_ASSERT(!std::is_integral<VType>::value, must_be_floating_point);
+  static_assert(!std::is_integral<VType>::value, "must be floating point");
   VType n = Norm();
   if (n != VType(0)) {
     n = VType(1.0) / n;
@@ -432,9 +432,9 @@ Vector2<VType> Vector2<VType>::Fabs() const {
 
 template <typename VType>
 Vector2<VType> Vector2<VType>::Abs() const {
-  COMPILE_ASSERT(std::is_integral<VType>::value, use_Fabs_for_float_types);
-  COMPILE_ASSERT(static_cast<VType>(-1) == -1, type_must_be_signed);
-  COMPILE_ASSERT(sizeof(c_[0]) <= sizeof(int), Abs_truncates_to_int);
+  static_assert(std::is_integral<VType>::value, "use Fabs for float_types");
+  static_assert(static_cast<VType>(-1) == -1, "type must be signed");
+  static_assert(sizeof(c_[0]) <= sizeof(int), "Abs truncates to int");
   return Vector2(abs(c_[0]), abs(c_[1]));
 }
 
@@ -470,7 +470,8 @@ bool Vector2<VType>::IsNaN() const {
 
 template <typename VType>
 Vector2<VType> Vector2<VType>::NaN() {
-  return Vector2(MathUtil::NaN(), MathUtil::NaN());
+  using Lim = std::numeric_limits<VType>;
+  return Vector2(Lim::quiet_NaN(), Lim::quiet_NaN());
 }
 
 template <typename ScalarType, typename VType2>

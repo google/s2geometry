@@ -55,8 +55,9 @@ uint128 CityHash128(const char *s, size_t len) {
 
 uint128 CityHash128WithSeed(const char *s, size_t len, uint128 seed) {
   // This function will never change, so HashSeed() is not used.
-  return ToGoogleU128(
-      farmhashcc::CityHash128WithSeed(s, len, ToFarmHashU128(seed)));
+  return farmhash::ToGoogleU128(
+      farmhash::farmhashcc::CityHash128WithSeed(
+          s, len, farmhash::ToFarmHashU128(seed)));
 }
 
 uint32 CityHash32(const char *s, size_t len) {

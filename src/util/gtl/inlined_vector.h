@@ -323,7 +323,7 @@ class InlinedVector {
   allocator_type get_allocator() const { return allocator(); }
 
  private:
-  COMPILE_ASSERT(N > 0, inlined_vector_with_nonpositive_size);
+  static_assert(N > 0, "inlined vector with nonpositive size");
 
   // TODO(user): Some Android NDK builds falsely claim C++11 support.
   // http://test/OCL:59047547:BASE:60708067:1391139009376:52f2bf25

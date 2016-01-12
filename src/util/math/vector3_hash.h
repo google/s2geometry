@@ -100,7 +100,7 @@ template <class T> struct GoodFastHash;
 // This hash function may change from time to time.
 template <class VType> struct GoodFastHash<Vector3<VType> > {
   size_t operator()(const Vector3<VType>& v) const {
-    COMPILE_ASSERT(std::is_pod<VType>::value, POD_expected);
+    static_assert(std::is_pod<VType>::value, "POD expected");
     if (std::is_floating_point<VType>::value)
       return vector3_hash_internal::FloatHash(v);
     else
