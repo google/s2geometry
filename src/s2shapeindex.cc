@@ -219,15 +219,13 @@ S2ShapeIndex::CellRelation S2ShapeIndex::Iterator::Locate(S2CellId target) {
 
 S2ShapeIndex::S2ShapeIndex()
     : pending_additions_begin_(0),
-      index_status_(FRESH),
-      update_state_(nullptr) {
+      index_status_(FRESH) {
 }
 
 S2ShapeIndex::S2ShapeIndex(S2ShapeIndexOptions const& options)
     : options_(options),
       pending_additions_begin_(0),
-      index_status_(FRESH),
-      update_state_(nullptr) {
+      index_status_(FRESH) {
 }
 
 void S2ShapeIndex::Init(S2ShapeIndexOptions const& options) {
@@ -620,7 +618,7 @@ void S2ShapeIndex::ApplyUpdatesThreadSafe() {
     // and this saves an extra lock and unlock step; (3) even in the rare case
     // where there is contention, the main side effect is that some other
     // thread will burn a few CPU cycles rather than sleeping.
-    update_state_ = new UpdateState;
+    update_state_.reset(new UpdateState);
     // lock_.Lock wait_mutex *before* calling Unlock() to ensure that all other
     // threads will block on it.
     update_state_->wait_mutex.Lock();
@@ -653,8 +651,7 @@ inline void S2ShapeIndex::UnlockAndSignal() {
   // waiting threads.
   update_state_->wait_mutex.Unlock();
   if (num_waiting == 0) {
-    delete update_state_;
-    update_state_ = nullptr;
+    update_state_.reset();
   }
 }
 

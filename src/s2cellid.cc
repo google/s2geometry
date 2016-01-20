@@ -29,7 +29,8 @@
 #include "base/casts.h"
 #include "base/integral_types.h"
 #include "base/stringprintf.h"
-#include "strings/numbers.h"
+#include "base/strtoint.h"
+#include "strings/ascii_ctype.h"
 #include "r1interval.h"
 #include "s2.h"
 #include "s2latlng.h"
@@ -221,11 +222,17 @@ S2CellId S2CellId::FromToken(const char* token, size_t length) {
   if (length > 16) return S2CellId::None();
   char digits[17] = "0000000000000000";
   memcpy(digits, token, length);
-  if (!HexDigitsPrefix(digits, length)) {
-    return S2CellId::None();
-  }
 
-  return S2CellId(ParseLeadingHex64Value(digits, 0));
+  // strtou64 ignores leading whitespace, so make sure the token starts
+  // with a hex digit rather than whitespace.
+  if (!ascii_isxdigit(digits[0])) return S2CellId::None();
+
+  // Make sure all of digits was consumed.  Since we consume exactly
+  // 16 digits, we do not need to worry about overflow.
+  char* end = nullptr;
+  const uint64 id = strtou64(digits, &end, 16 /*base*/);
+  if (end != &digits[16]) return S2CellId::None();
+  return S2CellId(id);
 }
 
 S2CellId S2CellId::FromToken(string const& token) {

@@ -51,7 +51,6 @@
 #include "s2shapeindex.h"
 #include "s2shapeutil.h"
 #include "util/gtl/fixedarray.h"
-#include "util/gtl/stl_util.h"
 
 using std::max;
 using std::min;
@@ -1358,7 +1357,9 @@ vector<S2Point>* SimplifyLoopAsPolyline(S2Loop const* loop, S1Angle tolerance,
     }
     if (!to_keep.empty()) {
       vector<int> new_indices;
-      STLSetUnion(indices, to_keep, &new_indices);
+      std::set_union(indices.begin(), indices.end(),
+                     to_keep.begin(), to_keep.end(),
+                     std::inserter(new_indices, new_indices.end()));
       swap(indices, new_indices);
     }
   }

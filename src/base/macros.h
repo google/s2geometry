@@ -25,10 +25,4 @@
 template <typename T, std::size_t N>
 constexpr std::size_t arraysize(const T (&)[N]) { return N; }
 
-#define ARRAYSIZE(a) (arraysize(a))
-
-#define DISALLOW_COPY_AND_ASSIGN(TypeName) \
-  TypeName(const TypeName&) = delete;      \
-  void operator=(const TypeName&) = delete
-
 #endif  // S2GEOMETRY_BASE_MACROS_H_

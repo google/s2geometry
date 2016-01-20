@@ -335,6 +335,7 @@ class S2ShapeIndex {
   // REQUIRES: "shape" persists for the lifetime of the index or until
   //           Remove(shape) is called.
   void Add(S2Shape* shape);
+
   // Remove the given shape from the index and return ownership to the caller.
   // Does not call the shape's destructor or Release() method.  Invalidates
   // all iterators and their associated data.
@@ -636,7 +637,7 @@ class S2ShapeIndex {
       DCHECK_EQ(0, num_waiting);
     }
   };
-  UpdateState* update_state_;
+  std::unique_ptr<UpdateState> update_state_;
 
   // Documented in the .cc file.
   void UnlockAndSignal();
@@ -662,7 +663,7 @@ inline int S2ClippedShape::edge(int i) const {
   return is_inline() ? inline_edges_[i] : edges_[i];
 }
 inline bool S2ClippedShape::is_inline() const {
-  return num_edges_ <= ARRAYSIZE(inline_edges_);
+  return num_edges_ <= arraysize(inline_edges_);
 }
 
 inline S2ClippedShape const* S2ShapeIndexCell::find_clipped(

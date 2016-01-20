@@ -64,7 +64,7 @@
 
 #include "base/port.h"
 
-namespace base {
+namespace google {
 
 namespace util {
 namespace gtl {

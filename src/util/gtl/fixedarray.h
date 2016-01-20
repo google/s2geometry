@@ -96,6 +96,9 @@ class FixedArray {
     CleanUpRep(&rep_);
   }
 
+  FixedArray(const FixedArray&) = delete;
+  void operator=(const FixedArray&) = delete;
+
   // Returns the length of the array.
   size_type size() const { return rep_.size(); }
 
@@ -194,7 +197,7 @@ class FixedArray {
   //   b. Never use 0 length arrays (not ISO C++)
   //
   class InlineSpace {
-    typedef base::ManualConstructor<Holder> Buffer;
+    typedef google::ManualConstructor<Holder> Buffer;
     static const size_type kDefaultBytes = 256;
 
     template <ssize_t N, typename Ignored>
@@ -330,8 +333,6 @@ class FixedArray {
   //
   Rep const rep_;
   InlineSpace inline_space_;
-
-  DISALLOW_COPY_AND_ASSIGN(FixedArray);
 };
 
 #endif  // S2GEOMETRY_UTIL_GTL_FIXEDARRAY_H_

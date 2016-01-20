@@ -647,8 +647,8 @@ bool S2PolygonBuilder::AssemblePolygon(S2Polygon* polygon,
     // If edges are undirected, then all loops are already normalized (i.e.,
     // contain at most half the sphere).  This implies that no loop contains
     // the complement of any other loop, and therefore we can call the normal
-    // Init() method.
-    polygon->Init(&loops);
+    // InitNested() method.
+    polygon->InitNested(&loops);
   } else {
     // If edges are directed, then shells and holes have opposite orientations
     // such that the polygon interior is always on their left-hand side.

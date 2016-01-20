@@ -121,7 +121,7 @@ TEST(S2LatLng, TestToString) {
     {91.3, 190.4, 90, -169.6},
     {-100, -710, -90, 10},
   };
-  for (int i = 0; i < ARRAYSIZE(values); ++i) {
+  for (int i = 0; i < arraysize(values); ++i) {
     SCOPED_TRACE(StringPrintf("Iteration %d", i));
     S2LatLng p = S2LatLng::FromDegrees(values[i].lat, values[i].lng);
     string output;
