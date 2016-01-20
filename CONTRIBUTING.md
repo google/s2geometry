@@ -56,3 +56,10 @@ of your first [pull request][].
 [forking]: https://help.github.com/articles/fork-a-repo
 [well-formed commit messages]: http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
 [pull request]: https://help.github.com/articles/creating-a-pull-request
+
+
+## Style ##
+
+Contributions should follow the [Google C++ Style Guide].
+
+[Google C++ Style Guide]: http://google.github.io/styleguide/cppguide.html

@@ -41,13 +41,6 @@ make test  # If GTEST_ROOT specified above.
 sudo make install
 ```
 
-Who Is Using S2?
-----------------
-
-* [Google Maps](https://www.google.com/maps)
-
-Send us a PR to add yourself here.
-
 Disclaimer
 ----------
 This is not an official Google product.

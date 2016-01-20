@@ -96,15 +96,9 @@ install(FILES src/util/gtl/inlined_vector.h
               src/util/gtl/manual_constructor.h
         DESTINATION include/s2geometry/util/gtl)
 install(FILES src/util/hash/builtin_type_hash.h
-              src/util/hash/city.h
-              src/util/hash/hash.h
-              src/util/hash/hash128to64.h
-              src/util/hash/jenkins.h
-              src/util/hash/jenkins_lookup2.h
-              src/util/hash/string_hash.h
+              src/util/hash/mix.h
         DESTINATION include/s2geometry/util/hash)
-install(FILES src/util/math/mathlimits.h
-              src/util/math/mathutil.h
+install(FILES src/util/math/mathutil.h
               src/util/math/matrix3x3.h
               src/util/math/vector2.h
               src/util/math/vector3.h

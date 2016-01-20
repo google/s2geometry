@@ -446,12 +446,11 @@ void STLDeleteValues(T* v) {
 class BaseDeleter {
  public:
   virtual ~BaseDeleter() {}
+  BaseDeleter(const BaseDeleter&) = delete;
+  void operator=(const BaseDeleter&) = delete;
 
  protected:
   BaseDeleter() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BaseDeleter);
 };
 
 // Given a pointer to an STL container, this class will delete all the element
@@ -469,10 +468,11 @@ class TemplatedElementDeleter : public BaseDeleter {
     STLDeleteElements(container_ptr_);
   }
 
+  TemplatedElementDeleter(const TemplatedElementDeleter&) = delete;
+  void operator=(const TemplatedElementDeleter&) = delete;
+
  private:
   STLContainer* container_ptr_;
-
-  DISALLOW_COPY_AND_ASSIGN(TemplatedElementDeleter);
 };
 
 // ElementDeleter is an RAII (go/raii) object that deletes the elements in the
@@ -499,10 +499,11 @@ class ElementDeleter {
     delete deleter_;
   }
 
+  ElementDeleter(const ElementDeleter&) = delete;
+  void operator=(const ElementDeleter&) = delete;
+
  private:
   BaseDeleter* deleter_;
-
-  DISALLOW_COPY_AND_ASSIGN(ElementDeleter);
 };
 
 // Given a pointer to an STL container this class will delete all the value
@@ -520,10 +521,11 @@ class TemplatedValueDeleter : public BaseDeleter {
     STLDeleteValues(container_ptr_);
   }
 
+  TemplatedValueDeleter(const TemplatedValueDeleter&) = delete;
+  void operator=(const TemplatedValueDeleter&) = delete;
+
  private:
   STLContainer* container_ptr_;
-
-  DISALLOW_COPY_AND_ASSIGN(TemplatedValueDeleter);
 };
 
 // ValueDeleter is an RAII (go/raii) object that deletes the 'second' member in
@@ -546,10 +548,11 @@ class ValueDeleter {
     delete deleter_;
   }
 
+  ValueDeleter(const ValueDeleter&) = delete;
+  void operator=(const ValueDeleter&) = delete;
+
  private:
   BaseDeleter* deleter_;
-
-  DISALLOW_COPY_AND_ASSIGN(ValueDeleter);
 };
 
 // RAII (go/raii) object that deletes elements in the given container when it

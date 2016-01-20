@@ -155,9 +155,6 @@ class S2Polygon : public S2Region {
   // inverted.)
   void InitOriented(std::vector<S2Loop*>* loops);
 
-  // Historical synonym for InitNested.
-  void Init(std::vector<S2Loop*>* loops) { InitNested(loops); }
-
   // Initialize a polygon from a single loop.  Note that this method
   // automatically converts the special empty loop (see S2Loop) into an empty
   // polygon, unlike the vector-of-loops Init() method which does not allow

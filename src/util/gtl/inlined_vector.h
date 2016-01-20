@@ -27,8 +27,6 @@
 // vector<bool>, consider using util::bitmap::InlinedBitVector<NBITS>
 // in util/bitmap/inlined_bitvector.h
 //
-// TODO(user): change size_t to size_type where appropriate.
-//
 
 #ifndef S2GEOMETRY_UTIL_GTL_INLINED_VECTOR_H_
 #define S2GEOMETRY_UTIL_GTL_INLINED_VECTOR_H_
@@ -71,16 +69,22 @@ class InlinedVector {
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  // Create an empty vector
-  InlinedVector();
-  explicit InlinedVector(const allocator_type& alloc);
+  InlinedVector() : allocator_and_tag_(allocator_type()) {}
+
+  explicit InlinedVector(const allocator_type& alloc)
+      : allocator_and_tag_(alloc) {}
 
   // Create a vector with n copies of value_type().
-  explicit InlinedVector(size_t n);
+  explicit InlinedVector(size_type n) : allocator_and_tag_(allocator_type()) {
+    InitAssign(n);
+  }
 
   // Create a vector with n copies of elem
-  InlinedVector(size_t n, const value_type& elem,
-                const allocator_type& alloc = allocator_type());
+  InlinedVector(size_type n, const value_type& elem,
+                const allocator_type& alloc = allocator_type())
+      : allocator_and_tag_(alloc) {
+    InitAssign(n, elem);
+  }
 
   // Create and initialize with the elements [range_start .. range_end).
   // The unused enable_if argument restricts this constructor so that it is
@@ -135,7 +139,7 @@ class InlinedVector {
   }
 #endif  // LANG_CXX11
 
-  void assign(size_t n, const value_type& elem) {
+  void assign(size_type n, const value_type& elem) {
     if (n <= size()) {  // Possibly shrink
       std::fill_n(begin(), n, elem);
       erase(begin() + n, end());
@@ -154,7 +158,7 @@ class InlinedVector {
     set_size_internal(n);
   }
 
-  size_t size() const {
+  size_type size() const {
     return allocated() ? allocation().size() : tag().size();
   }
 
@@ -162,7 +166,7 @@ class InlinedVector {
 
   // Return number of elements that can be stored in vector
   // without requiring a reallocation of underlying memory
-  size_t capacity() const {
+  size_type capacity() const {
     return allocated() ? allocation().capacity() : N;
   }
 
@@ -181,7 +185,7 @@ class InlinedVector {
 
   // Remove all elements
   void clear() {
-    size_t s = size();
+    size_type s = size();
     if (allocated()) {
       DestroyAllocated(allocated_space(), allocated_space() + s);
       allocation().Dealloc(allocator());
@@ -193,22 +197,22 @@ class InlinedVector {
 
   // Return the ith element
   // REQUIRES: 0 <= i < size()
-  const value_type& at(size_t i) const {
+  const value_type& at(size_type i) const {
     DCHECK_LT(i, size());
     return array()[i];
   }
-  const value_type& operator[](size_t i) const {
+  const value_type& operator[](size_type i) const {
     DCHECK_LT(i, size());
     return array()[i];
   }
 
   // Return a non-const reference to the ith element
   // REQUIRES: 0 <= i < size()
-  value_type& at(size_t i) {
+  value_type& at(size_type i) {
     DCHECK_LT(i, size());
     return mutable_array()[i];
   }
-  value_type& operator[](size_t i) {
+  value_type& operator[](size_type i) {
     DCHECK_LT(i, size());
     return mutable_array()[i];
   }
@@ -238,7 +242,7 @@ class InlinedVector {
   // Amortized complexity: O(1)
   // Worst-case complexity: O(size())
   void push_back(const value_type& t) {
-    size_t s = size();
+    size_type s = size();
     DCHECK_LE(s, capacity());
     if (s == capacity()) {
       return GrowAndPushBack(t);
@@ -256,7 +260,7 @@ class InlinedVector {
 
   void pop_back() {
     DCHECK(!empty());
-    size_t s = size();
+    size_type s = size();
     if (allocated()) {
       DestroyAllocated(allocated_space() + s - 1, allocated_space() + s);
     } else {
@@ -270,8 +274,8 @@ class InlinedVector {
   // If "n" is larger than the initial size, enough copies of "elem"
   // are appended to increase the size to "n". If "elem" is omitted,
   // new elements are value-initialized.
-  void resize(size_t n);
-  void resize(size_t n, const value_type& elem);
+  void resize(size_type n);
+  void resize(size_type n, const value_type& elem);
 
   iterator begin() { return mutable_array(); }
   const_iterator begin() const { return array(); }
@@ -308,7 +312,7 @@ class InlinedVector {
   // Enlarges the underlying representation so it can hold at least
   // "n" elements without reallocation.
   // Does not change size() or the actual contents of the vector.
-  void reserve(size_t n) {
+  void reserve(size_type n) {
     if (n > capacity()) {
       // Make room for new elements
       EnlargeBy(n - size());
@@ -368,13 +372,13 @@ class InlinedVector {
   class Tag {
    public:
     Tag() : size_(0) {}
-    size_t size() const { return size_; }
-    void set_size(size_t n) { size_ = n; }
+    size_type size() const { return size_; }
+    void set_size(size_type n) { size_ = n; }
     bool allocated() const { return size_ == kAllocated; }
     void set_allocated() { size_ = kAllocated; }
    private:
-    static const size_t kAllocated = -1;
-    size_t size_;
+    static const size_type kAllocated = -1;
+    size_type size_;
   };
 
   // Derives from allocator_type to use the empty base class optimization.
@@ -396,25 +400,24 @@ class InlinedVector {
   class Allocation {
    public:
     Allocation(allocator_type& a,  // NOLINT(runtime/references)
-               size_t capacity)
-      : size_(0),
-        capacity_(capacity),
-        buffer_(AllocatorTraits::allocate(a, capacity_)) {
-    }
+               size_type capacity)
+        : size_(0),
+          capacity_(capacity),
+          buffer_(AllocatorTraits::allocate(a, capacity_)) {}
 
     void Dealloc(allocator_type& a) {  // NOLINT(runtime/references)
       AllocatorTraits::deallocate(a, buffer(), capacity());
     }
 
-    size_t size() const { return size_; }
-    void set_size(size_t s) { size_ = s; }
-    size_t capacity() const { return capacity_; }
+    size_type size() const { return size_; }
+    void set_size(size_type s) { size_ = s; }
+    size_type capacity() const { return capacity_; }
     const value_type* buffer() const { return buffer_; }
     value_type* buffer() { return buffer_; }
 
    private:
-    size_t size_;
-    size_t capacity_;
+    size_type size_;
+    size_type capacity_;
     value_type* buffer_;
   };
 
@@ -455,7 +458,7 @@ class InlinedVector {
   bool allocated() const { return tag().allocated(); }
   void set_allocated() { return tag().set_allocated(); }
 
-  void set_size_internal(size_t n) {
+  void set_size_internal(size_type n) {
     if (allocated()) {
       allocation().set_size(n);
     } else {
@@ -465,7 +468,7 @@ class InlinedVector {
 
   // Enlarge the underlying representation so we can store size_ + delta elems.
   // The size is not changed, and any newly added memory is not initialized.
-  void EnlargeBy(size_t delta);
+  void EnlargeBy(size_type delta);
 
   void ResetAllocation(Allocation new_allocation) {
     if (allocated()) {
@@ -482,7 +485,7 @@ class InlinedVector {
 
   void GrowAndPushBack(const value_type& t) {
     DCHECK_EQ(size(), capacity());
-    const size_t s = size();
+    const size_type s = size();
 
     Allocation new_allocation(allocator(), 2 * capacity());
     new_allocation.set_size(s + 1);
@@ -493,8 +496,8 @@ class InlinedVector {
     ResetAllocation(new_allocation);
   }
 
-  void InitAssign(size_t n);
-  void InitAssign(size_t n, const value_type& t);
+  void InitAssign(size_type n);
+  void InitAssign(size_type n, const value_type& t);
 
   void ConstructInlined(pointer p) {
     new(p) value_type();
@@ -542,14 +545,19 @@ class InlinedVector {
   void DestroyAllocated(value_type* ptr, value_type* ptr_last);
 
   template <typename Iter>
-  void AppendRange(Iter first, Iter last, std::input_iterator_tag);
+  void AppendRange(Iter first, Iter last, std::input_iterator_tag) {
+    std::copy(first, last, std::back_inserter(*this));
+  }
 
   // Faster path for forward iterators.
   template <typename Iter>
   void AppendRange(Iter first, Iter last, std::forward_iterator_tag);
 
   template <typename Iter>
-  void AppendRange(Iter first, Iter last);
+  void AppendRange(Iter first, Iter last) {
+    typedef typename std::iterator_traits<Iter>::iterator_category IterTag;
+    AppendRange(first, last, IterTag());
+  }
 
   template <typename Iter>
   void AssignRange(Iter first, Iter last, std::input_iterator_tag);
@@ -559,7 +567,10 @@ class InlinedVector {
   void AssignRange(Iter first, Iter last, std::forward_iterator_tag);
 
   template <typename Iter>
-  void AssignRange(Iter first, Iter last);
+  void AssignRange(Iter first, Iter last) {
+    typedef typename std::iterator_traits<Iter>::iterator_category IterTag;
+    AssignRange(first, last, IterTag());
+  }
 
   AllocatorAndTag allocator_and_tag_;
 
@@ -568,58 +579,58 @@ class InlinedVector {
     // Use struct to perform indirection that solves a bizarre compilation
     // error on Visual Studio (all known versions).
     struct {
-      base::ManualConstructor<value_type>
+      google::ManualConstructor<value_type>
           inlined[N];
     } inlined_storage;
     struct {
-      base::ManualConstructor<Allocation>
+      google::ManualConstructor<Allocation>
           allocation;
     } allocation_storage;
   } rep_;
 };
 
 template <typename T, int N, typename A>
-const size_t InlinedVector<T, N, A>::Tag::kAllocated;
+const typename InlinedVector<T, N, A>::size_type
+    InlinedVector<T, N, A>::Tag::kAllocated;
 
 template <typename T, int N, typename A>
-inline void swap(InlinedVector<T, N, A>& a,
-                 InlinedVector<T, N, A>& b) {
+void swap(InlinedVector<T, N, A>& a, InlinedVector<T, N, A>& b) {
   a.swap(b);
 }
 
 template <typename T, int N, typename A>
-inline bool operator==(const InlinedVector<T, N, A>& a,
-                       const InlinedVector<T, N, A>& b) {
+bool operator==(const InlinedVector<T, N, A>& a,
+                const InlinedVector<T, N, A>& b) {
   return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin());
 }
 
 template <typename T, int N, typename A>
-inline bool operator!=(const InlinedVector<T, N, A>& a,
-                       const InlinedVector<T, N, A>& b) {
+bool operator!=(const InlinedVector<T, N, A>& a,
+                const InlinedVector<T, N, A>& b) {
   return !(a == b);
 }
 
 template <typename T, int N, typename A>
-inline bool operator<(const InlinedVector<T, N, A>& a,
-                      const InlinedVector<T, N, A>& b) {
+bool operator<(const InlinedVector<T, N, A>& a,
+               const InlinedVector<T, N, A>& b) {
   return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
 }
 
 template <typename T, int N, typename A>
-inline bool operator>(const InlinedVector<T, N, A>& a,
-                      const InlinedVector<T, N, A>& b) {
+bool operator>(const InlinedVector<T, N, A>& a,
+               const InlinedVector<T, N, A>& b) {
   return b < a;
 }
 
 template <typename T, int N, typename A>
-inline bool operator<=(const InlinedVector<T, N, A>& a,
-                       const InlinedVector<T, N, A>& b) {
+bool operator<=(const InlinedVector<T, N, A>& a,
+                const InlinedVector<T, N, A>& b) {
   return !(b < a);
 }
 
 template <typename T, int N, typename A>
-inline bool operator>=(const InlinedVector<T, N, A>& a,
-                       const InlinedVector<T, N, A>& b) {
+bool operator>=(const InlinedVector<T, N, A>& a,
+                const InlinedVector<T, N, A>& b) {
   return !(a < b);
 }
 
@@ -628,31 +639,7 @@ inline bool operator>=(const InlinedVector<T, N, A>& a,
 // Implementation
 
 template <typename T, int N, typename A>
-inline InlinedVector<T, N, A>::InlinedVector()
-    : allocator_and_tag_(allocator_type()) {
-}
-
-template <typename T, int N, typename A>
-inline InlinedVector<T, N, A>::InlinedVector(const allocator_type& alloc)
-    : allocator_and_tag_(alloc) {
-}
-
-template <typename T, int N, typename A>
-inline InlinedVector<T, N, A>::InlinedVector(size_t n)
-    : allocator_and_tag_(allocator_type()) {
-  InitAssign(n);
-}
-
-template <typename T, int N, typename A>
-inline InlinedVector<T, N, A>::InlinedVector(size_t n,
-                                             const value_type& elem,
-                                             const allocator_type& alloc)
-    : allocator_and_tag_(alloc) {
-  InitAssign(n, elem);
-}
-
-template <typename T, int N, typename A>
-inline InlinedVector<T, N, A>::InlinedVector(const InlinedVector& v)
+InlinedVector<T, N, A>::InlinedVector(const InlinedVector& v)
     : allocator_and_tag_(v.allocator()) {
   reserve(v.size());
   if (allocated()) {
@@ -664,8 +651,8 @@ inline InlinedVector<T, N, A>::InlinedVector(const InlinedVector& v)
 }
 
 template <typename T, int N, typename A>
-inline void InlinedVector<T, N, A>::InitAssign(size_t n, const value_type& t) {
-  if (n > static_cast<size_t>(N)) {
+void InlinedVector<T, N, A>::InitAssign(size_type n, const value_type& t) {
+  if (n > static_cast<size_type>(N)) {
     Allocation new_allocation(allocator(), n);
     init_allocation(new_allocation);
     set_allocated();
@@ -679,8 +666,8 @@ inline void InlinedVector<T, N, A>::InitAssign(size_t n, const value_type& t) {
 }
 
 template <typename T, int N, typename A>
-inline void InlinedVector<T, N, A>::InitAssign(size_t n) {
-  if (n > static_cast<size_t>(N)) {
+void InlinedVector<T, N, A>::InitAssign(size_type n) {
+  if (n > static_cast<size_type>(N)) {
     Allocation new_allocation(allocator(), n);
     init_allocation(new_allocation);
     set_allocated();
@@ -694,8 +681,8 @@ inline void InlinedVector<T, N, A>::InitAssign(size_t n) {
 }
 
 template <typename T, int N, typename A>
-inline void InlinedVector<T, N, A>::resize(size_t n) {
-  size_t s = size();
+void InlinedVector<T, N, A>::resize(size_type n) {
+  size_type s = size();
   if (n < s) {
     erase(begin() + n, end());
     return;
@@ -715,8 +702,8 @@ inline void InlinedVector<T, N, A>::resize(size_t n) {
 }
 
 template <typename T, int N, typename A>
-inline void InlinedVector<T, N, A>::resize(size_t n, const value_type& elem) {
-  size_t s = size();
+void InlinedVector<T, N, A>::resize(size_type n, const value_type& elem) {
+  size_type s = size();
   if (n < s) {
     erase(begin() + n, end());
     return;
@@ -746,8 +733,8 @@ InlinedVector<T, N, A>::insert(iterator pos, const value_type& v) {
     push_back(v);
     return end() - 1;
   }
-  size_t s = size();
-  size_t idx = std::distance(begin(), pos);
+  size_type s = size();
+  size_type idx = std::distance(begin(), pos);
   if (s == capacity()) {
     EnlargeBy(1);
   }
@@ -781,7 +768,7 @@ InlinedVector<T, N, A>::erase(iterator first, iterator last) {
   DCHECK_LE(first, last);
   DCHECK_LE(last, end());
 
-  size_t s = size();
+  size_type s = size();
   ptrdiff_t erase_gap = std::distance(first, last);
 
   if (allocated()) {
@@ -820,8 +807,8 @@ void InlinedVector<T, N, A>::swap(InlinedVector& other) {
       swap(a, b);
     }
 
-    const size_t a_size = a->size();
-    const size_t b_size = b->size();
+    const size_type a_size = a->size();
+    const size_type b_size = b->size();
     DCHECK_GE(a_size, b_size);
     // 'a' is larger. Swap the elements up to the smaller array size.
     std::swap_ranges(a->inlined_space(),
@@ -853,8 +840,8 @@ void InlinedVector<T, N, A>::swap(InlinedVector& other) {
   }
   DCHECK(!a->allocated());
   DCHECK(b->allocated());
-  const size_t a_size = a->size();
-  const size_t b_size = b->size();
+  const size_type a_size = a->size();
+  const size_type b_size = b->size();
 
   // Made Local copies of size(), don't need tag() accurate anymore
   swap(a->tag(), b->tag());
@@ -879,15 +866,15 @@ void InlinedVector<T, N, A>::swap(InlinedVector& other) {
 }
 
 template <typename T, int N, typename A>
-void InlinedVector<T, N, A>::EnlargeBy(size_t delta) {
-  const size_t s = size();
+void InlinedVector<T, N, A>::EnlargeBy(size_type delta) {
+  const size_type s = size();
   DCHECK_LE(s, capacity());
 
-  size_t target = std::max(static_cast<size_t>(N), s + delta);
+  size_type target = std::max(static_cast<size_type>(N), s + delta);
 
   // Compute new capacity by repeatedly doubling current capacity
   // TODO(user): Check and avoid overflow?
-  size_t new_capacity = capacity();
+  size_type new_capacity = capacity();
   while (new_capacity < target) {
     new_capacity <<= 1;
   }
@@ -901,8 +888,8 @@ void InlinedVector<T, N, A>::EnlargeBy(size_t delta) {
 }
 
 template <typename T, int N, typename A>
-inline void InlinedVector<T, N, A>::DestroyInlined(value_type* ptr,
-                                                   value_type* ptr_last) {
+void InlinedVector<T, N, A>::DestroyInlined(value_type* ptr,
+                                            value_type* ptr_last) {
   for (value_type* p = ptr; p != ptr_last; ++p) {
     p->~value_type();
   }
@@ -919,8 +906,8 @@ inline void InlinedVector<T, N, A>::DestroyInlined(value_type* ptr,
 }
 
 template <typename T, int N, typename A>
-inline void InlinedVector<T, N, A>::DestroyAllocated(value_type* ptr,
-                                                     value_type* ptr_last) {
+void InlinedVector<T, N, A>::DestroyAllocated(value_type* ptr,
+                                              value_type* ptr_last) {
   for (value_type* p = ptr; p != ptr_last; ++p) {
     AllocatorTraits::destroy(allocator(), p);
   }
@@ -938,15 +925,8 @@ inline void InlinedVector<T, N, A>::DestroyAllocated(value_type* ptr,
 
 template <typename T, int N, typename A>
 template <typename Iter>
-inline void InlinedVector<T, N, A>::AppendRange(
-    Iter first, Iter last, std::input_iterator_tag) {
-  std::copy(first, last, std::back_inserter(*this));
-}
-
-template <typename T, int N, typename A>
-template <typename Iter>
-inline void InlinedVector<T, N, A>::AppendRange(
-    Iter first, Iter last, std::forward_iterator_tag) {
+void InlinedVector<T, N, A>::AppendRange(Iter first, Iter last,
+                                         std::forward_iterator_tag) {
   typedef typename std::iterator_traits<Iter>::difference_type Length;
   Length length = std::distance(first, last);
   reserve(size() + length);
@@ -960,15 +940,8 @@ inline void InlinedVector<T, N, A>::AppendRange(
 
 template <typename T, int N, typename A>
 template <typename Iter>
-inline void InlinedVector<T, N, A>::AppendRange(Iter first, Iter last) {
-  typedef typename std::iterator_traits<Iter>::iterator_category IterTag;
-  AppendRange(first, last, IterTag());
-}
-
-template <typename T, int N, typename A>
-template <typename Iter>
-inline void InlinedVector<T, N, A>::AssignRange(
-    Iter first, Iter last, std::input_iterator_tag) {
+void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last,
+                                         std::input_iterator_tag) {
   // Optimized to avoid reallocation.
   // Prefer reassignment to copy construction for elements.
   iterator out = begin();
@@ -980,8 +953,8 @@ inline void InlinedVector<T, N, A>::AssignRange(
 
 template <typename T, int N, typename A>
 template <typename Iter>
-inline void InlinedVector<T, N, A>::AssignRange(
-    Iter first, Iter last, std::forward_iterator_tag) {
+void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last,
+                                         std::forward_iterator_tag) {
   typedef typename std::iterator_traits<Iter>::difference_type Length;
   Length length = std::distance(first, last);
   // Prefer reassignment to copy construction for elements.
@@ -997,13 +970,6 @@ inline void InlinedVector<T, N, A>::AssignRange(
   else
     UninitializedCopyInlined(first, last, out);
   set_size_internal(length);
-}
-
-template <typename T, int N, typename A>
-template <typename Iter>
-inline void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last) {
-  typedef typename std::iterator_traits<Iter>::iterator_category IterTag;
-  AssignRange(first, last, IterTag());
 }
 
 }  // namespace gtl

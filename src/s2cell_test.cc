@@ -249,7 +249,7 @@ static void TestSubdivide(S2Cell const& cell) {
       R2Point(DBL_EPSILON, kMaxSizeUV),   // Longest edge/diagonal
     };
     bool force_subdivide = false;
-    for (int k = 0; k < ARRAYSIZE(special_uv); ++k) {
+    for (int k = 0; k < arraysize(special_uv); ++k) {
       if (children[i].GetBoundUV().Contains(special_uv[k]))
         force_subdivide = true;
     }

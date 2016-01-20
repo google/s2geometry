@@ -25,7 +25,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "base/casts.h"
 #include "base/integral_types.h"
 #include <glog/logging.h>
 #include <gtest/gtest.h>
@@ -936,31 +935,6 @@ TEST(S2, S2PointHashSpreads) {
   EXPECT_EQ(0, kTestPoints - points.size());
   // Allow a few for the hash.
   EXPECT_GE(10, kTestPoints - set.size());
-}
-
-TEST(S2, S2PointHashCollapsesZero) {
-  double zero = 0;
-  double minus_zero = -zero;
-  EXPECT_NE(bit_cast<uint64>(zero), bit_cast<uint64>(minus_zero));
-  unordered_map<S2Point, int, S2PointHash> map;
-  S2Point zero_pt(zero, zero, zero);
-  S2Point minus_zero_pt(minus_zero, minus_zero, minus_zero);
-
-  map[zero_pt] = 1;
-  map[minus_zero_pt] = 2;
-  ASSERT_EQ(1, map.size());
-}
-
-static double FlipDoubleLowOrderBit(double x) {
-  return bit_cast<double>(bit_cast<uint64>(x) ^ 0x1);
-}
-
-TEST(S2, S2PointHashCollapsesLowOrderBit) {
-  S2Point p1(1.0, 2.0, 3.0);
-  S2Point p2(FlipDoubleLowOrderBit(p1.x()),
-             FlipDoubleLowOrderBit(p1.y()),
-             FlipDoubleLowOrderBit(p1.z()));
-  EXPECT_EQ(S2PointHash()(p1), S2PointHash()(p2));
 }
 
 // Given a point P, return the minimum level at which an edge of some S2Cell

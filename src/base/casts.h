@@ -59,37 +59,42 @@ inline To implicit_cast(typename base::identity_<From>::type const &f) {
 }
 
 
-// When you upcast (that is, cast a pointer from type Foo to type
-// SuperclassOfFoo), it's fine to use implicit_cast<>, since upcasts
-// always succeed.  When you downcast (that is, cast a pointer from
-// type Foo to type SubclassOfFoo), static_cast<> isn't safe, because
-// how do you know the pointer is really of type SubclassOfFoo?  It
-// could be a bare Foo, or of type DifferentSubclassOfFoo.  Thus,
-// when you downcast, you should use this macro.  In debug mode, we
-// use dynamic_cast<> to double-check the downcast is legal (we die
-// if it's not).  In normal mode, we do the efficient static_cast<>
-// instead.  Thus, it's important to test in debug mode to make sure
-// the cast is legal!
-//    This is the only place in the code we should use dynamic_cast<>.
-// In particular, you SHOULDN'T be using dynamic_cast<> in order to
-// do RTTI (eg code like this:
-//    if (dynamic_cast<Subclass1>(foo)) HandleASubclass1Object(foo);
-//    if (dynamic_cast<Subclass2>(foo)) HandleASubclass2Object(foo);
+// An "upcast", i.e. a conversion from a pointer to an object to a pointer to a
+// base subobject, always succeeds if the base is unambiguous and accessible,
+// and so it's fine to use implicit_cast.
+//
+// A "downcast", i.e. a conversion from a pointer to an object to a pointer
+// to a more-derived object that may contain the original object as a base
+// subobject, cannot safely be done using static_cast, because you do not
+// generally know whether the source object is really the base subobject of
+// a containing, more-derived object of the target type. Thus, when you
+// downcast in a polymorphic type hierarchy, you should use the following
+// function template.
+//
+// In debug mode, we use dynamic_cast to double-check whether the downcast is
+// legal (we die if it's not). In normal mode, we do the efficient static_cast
+// instead. Thus, it's important to test in debug mode to make sure the cast is
+// legal!
+//
+// This is the only place in the codebase we should use dynamic_cast.
+// In particular, you should NOT use dynamic_cast for RTTI, e.g. for
+// code like this:
+//    if (auto* p = dynamic_cast<Subclass1*>(foo)) HandleASubclass1Object(p);
+//    if (auto* p = dynamic_cast<Subclass2*>(foo)) HandleASubclass2Object(p);
 // You should design the code some other way not to need this.
 
 template<typename To, typename From>     // use like this: down_cast<T*>(foo);
-inline To down_cast(From* f) {                   // so we only accept pointers
-  // Ensures that To is a sub-type of From *.  This test is here only
-  // for compile-time type checking, and has no overhead in an
-  // optimized build at run-time, as it will be optimized away
-  // completely.
+inline To down_cast(From* f) {           // so we only accept pointers
+  // Ensures that To is a sub-type of From. This test is here only for
+  // compile-time type checking and has no run-time overhead in an optimized
+  // build, as it will be optimized away completely.
 
   // TODO(user): This should use COMPILE_ASSERT.
   if (false) {
     ::implicit_cast<From*, To>(nullptr);
   }
 
-  // uses RTTI in dbg and fastbuild. asserts are disabled in opt builds.
+  // Uses RTTI in dbg and fastbuild. asserts are disabled in opt builds.
   assert(f == nullptr || dynamic_cast<To>(f) != nullptr);
   return static_cast<To>(f);
 }

@@ -243,7 +243,7 @@ void S2Testing::ConcentricLoopsPolygon(S2Point const& center,
     }
     loops.push_back(new S2Loop(vertices));
   }
-  polygon->Init(&loops);
+  polygon->InitNested(&loops);
 }
 
 S2Point S2Testing::SamplePoint(S2Cap const& cap) {

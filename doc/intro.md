@@ -4,19 +4,23 @@
 
 ## Overview
 
-This is a package for manipulating geometric shapes.  It is rather
-heavily weighted towards spherical geometry because currently it is
-mainly used for geographic data.  Other types of geometric primitives
-will be added as necessary.
+This is a package for manipulating geometric shapes.  It is especially
+suitable for geographic data, because the S2 library has excellent support for
+spherical geometry (i.e., shapes drawn directly on the sphere rather than on a
+2D map).  In fact, the name "S2" is derived from the mathematical notation
+for the unit sphere.
 
 Currently the package consists of:
 
-* Basic representations of angles, latitude-longitude points, unit 3-vectors,
-  and conversions among them.
+* Basic representations of angles, intervals, latitude-longitude points, unit
+  3D vectors, and conversions among them.
 
-* Various shapes over the unit sphere, such as spherical caps,
-  latitude-longitude rectangles, and polygons.  These
-  are collectively known as "regions".
+* Various shapes over the unit sphere, such as spherical caps ("discs"),
+  latitude-longitude rectangles, polylines, and polygons.  These are
+  collectively known as "regions".
+
+* Support for spatial indexing of collections of geometry, and algorithms for
+  testing containment, finding nearby objects, finding intersections, etc.
 
 * A hierarchical decomposition of the sphere into regions called "cells".
   The hierarchy starts with the six faces of a projected cube and
@@ -33,9 +37,11 @@ representations of empty and full regions) and numerical accuracy
 
 Note that the intent of this package is to represent geometry as a
 mathematical abstraction.  For example, although the unit sphere is
-obviously a useful approximation for the Earth's surface, functions that
-are specifically related to geography should be put elsewhere
-(e.g. easting/northing conversions, the Earth's diameter, etc).
+obviously a useful approximation for the Earth's surface, functions
+that are specifically related to geography are not part of the core
+library (e.g. easting/northing conversions, ellipsoid approximations,
+geodetic vs. geocentric coordinates, etc), except for one file
+(`s2earth.h`) that has some very basic conversion functions.
 
 ## Basic Types
 
@@ -290,21 +296,12 @@ class S2LatLngRect : public S2Region {
   // Construct a rectangle from latitude and longitude intervals.  The two
   // intervals must either be both empty or both non-empty, and the latitude
   // interval must not extend outside [-90, +90] degrees.
-  // Note that both intervals (and hence the rectangle) are closed.
   S2LatLngRect(R1Interval const& lat, S1Interval const& lng);
 
   // The default constructor creates an empty S2LatLngRect.
   S2LatLngRect();
 
   // Construct a rectangle of the given size centered around the given point.
-  // "center" needs to be normalized, but "size" does not.  The latitude
-  // interval of the result is clamped to [-90,90] degrees, and the longitude
-  // interval of the result is Full() if and only if the longitude size is
-  // 360 degrees or more.  Examples of clamping (in degrees):
-  //
-  //   center=(80,170),  size=(40,60)   -> lat=[60,90],   lng=[140,-160]
-  //   center=(10,40),   size=(210,400) -> lat=[-90,90],  lng=[-180,180]
-  //   center=(-90,180), size=(20,50)   -> lat=[-90,-80], lng=[155,-155]
   static S2LatLngRect FromCenterSize(S2LatLng const& center,
                                      S2LatLng const& size);
 
@@ -312,10 +309,7 @@ class S2LatLngRect : public S2Region {
   static S2LatLngRect FromPoint(S2LatLng const& p);
 
   // Construct the minimal bounding rectangle containing the two given
-  // normalized points.  This is equivalent to starting with an empty
-  // rectangle and calling AddPoint() twice.  Note that it is different than
-  // the S2LatLngRect(lo, hi) constructor, where the first point is always
-  // used as the lower-left corner of the resulting rectangle.
+  // normalized points.  The points do not need to be ordered.
   static S2LatLngRect FromPointPair(S2LatLng const& p1, S2LatLng const& p2);
 
   // Accessor methods.
@@ -330,11 +324,8 @@ class S2LatLngRect : public S2Region {
   S2LatLng lo() const;
   S2LatLng hi() const;
 
-  // The canonical empty and full rectangles, as derived from the Empty
-  // and Full R1 and S1 Intervals.
-  // Empty: lat_lo=1, lat_hi=0, lng_lo=Pi, lng_hi=-Pi (radians)
+  // The canonical empty and full rectangles.
   static S2LatLngRect Empty();
-  // Full: lat_lo=-Pi/2, lat_hi=Pi/2, lng_lo=-Pi, lng_hi=Pi (radians)
   static S2LatLngRect Full();
 
   // Return true if the rectangle is valid, which essentially just means
@@ -352,10 +343,6 @@ class S2LatLngRect : public S2Region {
   // Return true if the rectangle is a point, i.e. lo() == hi()
   bool is_point() const;
 
-  // Return true if lng_.lo() > lng_.hi(), i.e. the rectangle crosses
-  // the 180 degree longitude line.
-  bool is_inverted() const { return lng_.is_inverted(); }
-
   // Return the k-th vertex of the rectangle (k = 0,1,2,3) in CCW order (lower
   // left, lower right, upper right, upper left).
   S2LatLng GetVertex(int k) const;
@@ -371,31 +358,25 @@ class S2LatLngRect : public S2Region {
   // Returns the surface area of this rectangle on the unit sphere.
   double Area() const;
 
-  // Return the true centroid of the rectangle multiplied by its surface area
-  // (see s2.h for details on centroids).  The result is not unit length, so
-  // you may want to normalize it.  Note that in general the centroid is
-  // *not* at the center of the rectangle, and in fact it may not even be
-  // contained by the rectangle.  (It is the "center of mass" of the rectangle
-  // viewed as subset of the unit sphere, i.e. it is the point in space about
-  // which this curved shape would rotate.)
+  // Return the true centroid of the rectangle multiplied by its surface area.
+  // The true centroid is the "center of mass" of the rectangle viewed as
+  // subset of the unit sphere, i.e. it is the point in space about which this
+  // curved shape would rotate.)
   //
   // The reason for multiplying the result by the rectangle area is to make it
-  // easier to compute the centroid of more complicated shapes.  The centroid
-  // of a union of disjoint regions can be computed simply by adding their
-  // GetCentroid() results.
+  // easier to compute the centroid of more complicated shapes.
   S2Point GetCentroid() const;
 
   // More efficient version of Contains() that accepts a S2LatLng rather than
-  // an S2Point.  The argument must be normalized.
+  // an S2Point.
   bool Contains(S2LatLng const& ll) const;
 
   // Return true if and only if the given point is contained in the interior
-  // of the region (i.e. the region excluding its boundary).  The point 'p'
-  // does not need to be normalized.
+  // of the region (i.e. the region excluding its boundary).
   bool InteriorContains(S2Point const& p) const;
 
   // More efficient version of InteriorContains() that accepts a S2LatLng
-  // rather than an S2Point.  The argument must be normalized.
+  // rather than an S2Point.
   bool InteriorContains(S2LatLng const& ll) const;
 
   // Return true if and only if the rectangle contains the given other
@@ -419,8 +400,7 @@ class S2LatLngRect : public S2Region {
   bool InteriorIntersects(S2LatLngRect const& other) const;
 
   // Increase the size of the bounding rectangle to include the given point.
-  // The rectangle is expanded by the minimum amount possible.  The S2LatLng
-  // argument must be normalized.
+  // The rectangle is expanded by the minimum amount possible.
   void AddPoint(S2Point const& p);
   void AddPoint(S2LatLng const& ll);
 
@@ -428,21 +408,6 @@ class S2LatLngRect : public S2Region {
   // the latitude direction, and by margin.lng() on each side in the longitude
   // direction.  If either margin is negative, then shrink the rectangle on
   // the corresponding sides instead.  The resulting rectangle may be empty.
-  //
-  // As noted above, the latitude-longitude space has the topology of a
-  // cylinder.  Longitudes "wrap around" at +/-180 degrees, while latitudes
-  // are clamped to range [-90, 90].  This means that any expansion (positive
-  // or negative) of the full longitude range remains full (since the
-  // "rectangle" is actually a continuous band around the cylinder), while
-  // expansion of the full latitude range remains full only if the margin is
-  // positive.
-  //
-  // If either the latitude or longitude interval becomes empty after
-  // expansion by a negative margin, the result is empty.
-  //
-  // Note that if an expanded rectangle contains a pole, it may not contain
-  // all possible lat/lng representations of that pole (see header above).
-  // Use the PolarClosure() method if you do not want this behavior.
   //
   // If you are trying to grow a rectangle by a certain *distance* on the
   // sphere (e.g. 5km), use the ExpandedByDistance() method instead.
@@ -472,33 +437,7 @@ class S2LatLngRect : public S2Region {
   // Unlike Expanded(), this method treats the rectangle as a set of points on
   // the sphere, and measures distances on the sphere.  For example, you can
   // use this method to find a rectangle that contains all points within 5km
-  // of a given rectangle.  Because this method uses the topology of the
-  // sphere, note the following:
-  //
-  //  - The full and empty rectangles have no boundary on the sphere.  Any
-  //    expansion (positive or negative) of these rectangles leaves them
-  //    unchanged.
-  //
-  //  - Any rectangle that covers the full longitude range does not have an
-  //    east or west boundary, therefore no expansion (positive or negative)
-  //    will occur in that direction.
-  //
-  //  - Any rectangle that covers the full longitude range and also includes
-  //    a pole will not be expanded or contracted at that pole, because it
-  //    does not have a boundary there.
-  //
-  //  - If a rectangle is within the given distance of a pole, the result will
-  //    include the full longitude range (because all longitudes are present
-  //    at the poles).
-  //
-  // Expansion and contraction are defined such that they are inverses whenver
-  // possible, i.e.
-  //
-  //   rect.ExpandedByDistance(x).ExpandedByDistance(-x) == rect
-  //
-  // (approximately), so long as the first operation does not cause a
-  // rectangle boundary to disappear (i.e., the longitude range newly becomes
-  // full or empty, or the latitude range expands to include a pole).
+  // of a given rectangle.
   S2LatLngRect ExpandedByDistance(S1Angle distance) const;
 
   // Returns the minimum distance (measured along the surface of the sphere) to
@@ -507,15 +446,7 @@ class S2LatLngRect : public S2Region {
 
   // Returns the minimum distance (measured along the surface of the sphere)
   // from a given point to the rectangle (both its boundary and its interior).
-  // The latlng must be valid.
   S1Angle GetDistance(S2LatLng const& p) const;
-
-  // This test is cheap but is NOT exact.  Use Intersects() if you want a more
-  // accurate and more expensive test.  Note that when this method is used by
-  // an S2RegionCoverer, the accuracy isn't all that important since if a cell
-  // may intersect the region then it is subdivided, and the accuracy of this
-  // method goes up as the cells get smaller.
-  virtual bool MayIntersect(S2Cell const& cell) const;
 
   // The point 'p' does not need to be normalized.
   bool Contains(S2Point const& p) const;
@@ -527,19 +458,24 @@ class S2LatLngRect : public S2Region {
   virtual S2Cap GetCapBound() const;
   virtual S2LatLngRect GetRectBound() const;
   virtual bool Contains(S2Cell const& cell) const;
-  virtual bool VirtualContainsPoint(S2Point const& p);
+
+  // This test is cheap but is NOT exact.  Use Intersects() if you want a more
+  // accurate and more expensive test.
+  virtual bool MayIntersect(S2Cell const& cell) const;
+
+  virtual void Encode(Encoder* const encoder) const;
+  virtual bool Decode(Decoder* const decoder);
 };
 ```
 
 See `s2latlngrect.h` for additional methods.
 
-### S2Cap
+### S2Cap ("S2Disc")
 
 An `S2Cap` represents a spherical cap, i.e. a portion of a sphere cut off
-by a plane.  The cap is defined by its axis and height.  This
-representation has good numerical accuracy for very small caps, unlike the
-(axis, min-distance-from-origin) representation, and is also efficient for
-containment tests, unlike the (axis, angle) representation.
+by a plane.  This is the equivalent of a *closed disc* in planar geometry
+(i.e., a circle together with its interior), so if you are looking for a way
+to represent a circle or disc then you are probably looking for an `S2Cap`.
 
 Here are the methods available:
 
@@ -551,22 +487,23 @@ class S2Cap : public S2Region {
 
   // Construct a cap with the given center and radius.  A negative radius
   // yields an empty cap; a radius of 180 degrees or more yields a full cap
-  // (containing the entire sphere).  "center" should be unit length.
+  // (containing the entire sphere).
   S2Cap(S2Point const& center, S1Angle radius);
 
   // Convenience function that creates a cap containing a single point.  This
   // method is more efficient that the S2Cap(center, radius) constructor.
   static S2Cap FromPoint(S2Point const& center);
 
-  // Return a cap with the given center and height (see comments above).  A
-  // negative height yields an empty cap; a height of 2 or more yields a full
-  // cap.  "center" should be unit length.
+  // Return a cap with the given center and height.  (The height of a cap is
+  // the distance from the cap center to the cutoff plane; see comments
+  // above.)  A negative height yields an empty cap; a height of 2 or more
+  // yields a full cap.
   static S2Cap FromCenterHeight(S2Point const& center, double height);
 
   // Return a cap with the given center and surface area.  Note that the area
   // can also be interpreted as the solid angle subtended by the cap (because
   // the sphere has unit radius).  A negative area yields an empty cap; an
-  // area of 4*Pi or more yields a full cap.  "center" should be unit length.
+  // area of 4*Pi or more yields a full cap.
   static S2Cap FromCenterArea(S2Point const& center, double area);
 
   // Return an empty cap, i.e. a cap that contains no points.
@@ -580,26 +517,19 @@ class S2Cap : public S2Region {
   double height() const;
 
   // Return the cap radius.  (This method is relatively expensive since only
-  // the cap height is stored, and may yield a slightly different result than
-  // the value passed to the (center, radius) constructor.)
+  // the cap height is stored internally, and may yield a slightly different
+  // result than the value passed to the (center, radius) constructor.)
   S1Angle GetRadius() const;
 
   // Return the area of the cap.
   double GetArea() const;
 
-  // Return the true centroid of the cap multiplied by its surface area
-  // (see s2.h for details on centroids). The result lies on the ray from
-  // the origin through the cap's center, but it is not unit length. Note
+  // Return the true centroid of the cap multiplied by its surface area.  Note
   // that if you just want the "surface centroid", i.e. the normalized result,
   // then it is much simpler just to call center().
   //
   // The reason for multiplying the result by the cap area is to make it
-  // easier to compute the centroid of more complicated shapes.  The centroid
-  // of a union of disjoint regions can be computed simply by adding their
-  // GetCentroid() results. Caveat: for caps that contain a single point
-  // (i.e., zero radius), this method always returns the origin (0, 0, 0).
-  // This is because shapes with no area don't affect the centroid of a
-  // union whose total area is positive.
+  // easier to compute the centroid of more complicated shapes.
   S2Point GetCentroid() const;
 
   // We allow negative heights (to represent empty caps) but heights are
@@ -614,9 +544,6 @@ class S2Cap : public S2Region {
 
   // Return the complement of the interior of the cap.  A cap and its
   // complement have the same boundary but do not share any interior points.
-  // The complement operator is not a bijection because the complement of a
-  // singleton cap (containing a single point) is the same as the complement
-  // of an empty cap.
   S2Cap Complement() const;
 
   // Return true if and only if this cap contains the given other cap
@@ -633,13 +560,12 @@ class S2Cap : public S2Region {
   bool InteriorIntersects(S2Cap const& other) const;
 
   // Return true if and only if the given point is contained in the interior
-  // of the cap (i.e. the cap excluding its boundary).  "p" should be be a
-  // unit-length vector.
+  // of the cap (i.e. the cap excluding its boundary).
   bool InteriorContains(S2Point const& p) const;
 
   // Increase the cap height if necessary to include the given point.  If the
   // cap is empty then the center is set to the given point, but otherwise the
-  // center is not changed.  "p" should be a unit-length vector.
+  // center is not changed.
   void AddPoint(S2Point const& p);
 
   // Increase the cap height if necessary to include "other".  If the current
@@ -649,13 +575,6 @@ class S2Cap : public S2Region {
   // Return a cap that contains all points within a given distance of this
   // cap.  Note that any expansion of the empty cap is still empty.
   S2Cap Expanded(S1Angle distance) const;
-
-  // Return the cap height corresponding to the given radius.  This method can
-  // be used to efficiently construct many caps of the same radius (since
-  // converting the radius to a height is relatively expensive).  Negative
-  // radii are mapped to negative heights (i.e., empty caps), while radii of
-  // of 180 degrees or more are mapped to a height of 2 (i.e., a full cap).
-  static double RadiusToHeight(S1Angle radius);
 
   // Return the smallest cap that encloses this cap and "other".
   S2Cap Union(S2Cap const& other) const;
@@ -671,11 +590,706 @@ class S2Cap : public S2Region {
   virtual S2LatLngRect GetRectBound() const;
   virtual bool Contains(S2Cell const& cell) const;
   virtual bool MayIntersect(S2Cell const& cell) const;
-  virtual bool VirtualContainsPoint(S2Point const& p);
 };
 ```
 
 See `s2cap.h` for additional methods.
+
+### S2Polyline
+
+An `S2Polyline` represents a sequence of zero or more vertices connected by
+straight edges (geodesics).  Edges of length 0 and 180 degrees are not
+allowed, i.e. adjacent vertices should not be identical or antipodal.
+
+```c++
+class S2Polyline : public S2Region {
+ public:
+  // Creates an empty S2Polyline that should be initialized by calling Init()
+  // or Decode().
+  S2Polyline();
+
+  // Convenience constructors that call Init() with the given vertices.
+  explicit S2Polyline(std::vector<S2Point> const& vertices);
+  explicit S2Polyline(std::vector<S2LatLng> const& vertices);
+
+  // Initialize a polyline that connects the given vertices. Empty polylines are
+  // allowed.  Adjacent vertices should not be identical or antipodal.  All
+  // vertices should be unit length.
+  void Init(std::vector<S2Point> const& vertices);
+
+  // Convenience initialization function that accepts latitude-longitude
+  // coordinates rather than S2Points.
+  void Init(std::vector<S2LatLng> const& vertices);
+
+  ~S2Polyline();
+
+  // Return true if the given vertices form a valid polyline.
+  bool IsValid() const;
+  static bool IsValid(std::vector<S2Point> const& vertices);
+
+  // Accessor methods.
+  int num_vertices() const;
+  S2Point const& vertex(int k) const;
+
+  // Return the length of the polyline.
+  S1Angle GetLength() const;
+
+  // Return the true centroid of the polyline multiplied by the length of the
+  // polyline.  Prescaling by the polyline length makes it easy to compute the
+  // centroid of several polylines (by simply adding up their centroids).
+  S2Point GetCentroid() const;
+
+  // Return the point whose distance from vertex 0 along the polyline is the
+  // given fraction of the polyline's total length.  Fractions less than zero
+  // or greater than one are clamped.  The return value is unit length.
+  S2Point Interpolate(double fraction) const;
+
+  // Like Interpolate(), but also return the index of the next polyline
+  // vertex after the interpolated point P.  This allows the caller to easily
+  // construct a given suffix of the polyline by concatenating P with the
+  // polyline vertices starting at "next_vertex".
+  S2Point GetSuffix(double fraction, int* next_vertex) const;
+
+  // The inverse operation of GetSuffix/Interpolate.  Given a point on the
+  // polyline, returns the ratio of the distance to the point from the
+  // beginning of the polyline over the length of the polyline.  The return
+  // value is always betwen 0 and 1 inclusive.  See GetSuffix() for the
+  // meaning of "next_vertex".
+  double UnInterpolate(S2Point const& point, int next_vertex) const;
+
+  // Given a point, returns a point on the polyline that is closest to the given
+  // point.  See GetSuffix() for the meaning of "next_vertex".
+  S2Point Project(S2Point const& point, int* next_vertex) const;
+
+  // Returns true if the point given is on the right hand side of the polyline,
+  // using a naive definition of "right-hand-sideness" where the point is on
+  // the RHS of the polyline iff the point is on the RHS of the line segment in
+  // the polyline which it is closest to.
+  bool IsOnRight(S2Point const& point) const;
+
+  // Return true if this polyline intersects the given polyline. If the
+  // polylines share a vertex they are considered to be intersecting.
+  bool Intersects(S2Polyline const* line) const;
+
+  // Reverse the order of the polyline vertices.
+  void Reverse();
+
+  // Return a subsequence of vertex indices such that the polyline connecting
+  // these vertices is never further than "tolerance" from the original
+  // polyline.
+  void SubsampleVertices(S1Angle tolerance, std::vector<int>* indices) const;
+
+  // Return true if two polylines have the same number of vertices, and
+  // corresponding vertex pairs are separated by no more than "max_error".
+  bool ApproxEquals(S2Polyline const* b, double max_error = 1e-15) const;
+
+  // Return true if "covered" is within "max_error" of a contiguous subpath of
+  // this polyline over its entire length.  Specifically, this method returns
+  // true if this polyline has parameterization a:[0,1] -> S^2, "covered" has
+  // parameterization b:[0,1] -> S^2, and there is a non-decreasing function
+  // f:[0,1] -> [0,1] such that distance(a(f(t)), b(t)) <= max_error for all t.
+  //
+  // You can think of this as testing whether it is possible to drive a car
+  // along "covered" and a car along some subpath of this polyline such that no
+  // car ever goes backward, and the cars are always within "max_error" of each
+  // other.
+  bool NearlyCoversPolyline(S2Polyline const& covered,
+                            S1Angle max_error) const;
+
+  ////////////////////////////////////////////////////////////////////////
+  // S2Region interface (see s2region.h for details):
+
+  virtual S2Polyline* Clone() const;
+  virtual S2Cap GetCapBound() const;
+  virtual S2LatLngRect GetRectBound() const;
+  virtual bool Contains(S2Cell const& cell) const { return false; }
+  virtual bool MayIntersect(S2Cell const& cell) const;
+
+  virtual void Encode(Encoder* const encoder) const;
+  virtual bool Decode(Decoder* const decoder);
+};
+```
+
+### S2Loop
+
+An `S2Loop` represents a simple spherical polygon.  It consists of a single
+chain of vertices where the first vertex is implicitly connected to the
+last. All loops are defined to have a CCW orientation, i.e. the interior of
+the loop is on the left side of the edges.  This implies that a clockwise
+loop enclosing a small area is interpreted to be a CCW loop enclosing a
+very large area.
+
+Loops are not allowed to have any duplicate vertices (whether adjacent or
+not), and non-adjacent edges are not allowed to intersect.  Loops must have
+at least 3 vertices (except for the "empty" and "full" loops discussed
+below).  These restrictions make it possible to implement exact
+polygon-polygon containment and intersection tests very efficiently.  See
+`S2PolygonBuilder` if your data does not meet these requirements.
+
+There are two special loops: the "empty" loop contains no points, while the
+"full" loop contains all points.  These loops do not have any edges, but to
+preserve the invariant that every loop can be represented as a vertex
+chain, they are defined as having exactly one vertex each (see kEmpty and
+kFull).
+
+Point containment of loops is defined such that if the sphere is subdivided
+into faces (loops), every point is contained by exactly one face.  This
+implies that loops do not necessarily contain their vertices.
+```c++
+class S2Loop : public S2Region {
+ public:
+  // Default constructor.  The loop must be initialized by calling Init() or
+  // Decode() before it is used.
+  S2Loop();
+
+  // Convenience constructor that calls Init() with the given vertices.
+  explicit S2Loop(std::vector<S2Point> const& vertices);
+
+  // Initialize a loop with given vertices.  The last vertex is implicitly
+  // connected to the first.  All points should be unit length.  Loops must
+  // have at least 3 vertices (except for the "empty" and "full" loops, see
+  // kEmpty and kFull).  This method may be called multiple times.
+  void Init(std::vector<S2Point> const& vertices);
+
+  // A special vertex chain of length 1 that creates an empty loop (i.e., a
+  // loop with no edges that contains no points).  Example usage:
+  //    S2Loop empty(S2Loop::kEmpty());
+  static std::vector<S2Point> kEmpty();
+
+  // A special vertex chain of length 1 that creates a full loop (i.e., a loop
+  // with no edges that contains all points).  See kEmpty() for details.
+  static std::vector<S2Point> kFull();
+
+  // Construct a loop corresponding to the given cell.
+
+  // Note that the loop and cell *do not* contain exactly the same set of
+  // points, because S2Loop and S2Cell have slightly different definitions of
+  // point containment.  For example, an S2Cell vertex is contained by all
+  // four neighboring S2Cells, but it is contained by exactly one of four
+  // S2Loops constructed from those cells.
+  explicit S2Loop(S2Cell const& cell);
+
+  ~S2Loop();
+
+  // Returns true if this is a valid loop.
+  bool IsValid() const;
+
+  // Returns true if this is *not* a valid loop and sets "error"
+  // appropriately.  Otherwise returns false and leaves "error" unchanged.
+  bool FindValidationError(S2Error* error) const;
+
+  int num_vertices() const;
+
+  // For convenience, we make two entire copies of the vertex list available:
+  // vertex(n..2*n-1) is mapped to vertex(0..n-1), where n == num_vertices().
+  S2Point const& vertex(int i) const;
+
+  // Return true if this is the special "empty" loop that contains no points.
+  bool is_empty() const;
+
+  // Return true if this is the special "full" loop that contains all points.
+  bool is_full() const;
+
+  // Return true if this loop is either "empty" or "full".
+  bool is_empty_or_full() const;
+
+  // The depth of a loop is defined as its nesting level within its containing
+  // polygon.  "Outer shell" loops have depth 0, holes within those loops have
+  // depth 1, shells within those holes have depth 2, etc.  This field is only
+  // used by the S2Polygon implementation.
+  int depth() const;
+  void set_depth(int depth);
+
+  // Return true if this loop represents a hole in its containing polygon.
+  bool is_hole() const;
+
+  // The sign of a loop is -1 if the loop represents a hole in its containing
+  // polygon, and +1 otherwise.
+  int sign() const;
+
+  // Return true if the loop area is at most 2*Pi.
+  bool IsNormalized() const;
+
+  // Invert the loop if necessary so that the area enclosed by the loop is at
+  // most 2*Pi.
+  void Normalize();
+
+  // Reverse the order of the loop vertices, effectively complementing
+  // the region represented by the loop.
+  void Invert();
+
+  // Return the area of the loop interior, i.e. the region on the left side of
+  // the loop.  The return value is between 0 and 4*Pi.
+  double GetArea() const;
+
+  // Return the true centroid of the loop multiplied by the area of the loop.
+  // We prescale by the loop area for two reasons: (1) it is cheaper to
+  // compute this way, and (2) it makes it easier to compute the centroid of
+  // more complicated shapes (by splitting them into disjoint regions and
+  // adding their centroids).
+  S2Point GetCentroid() const;
+
+  // Return the sum of the turning angles at each vertex.  The return value is
+  // positive if the loop is counter-clockwise, negative if the loop is
+  // clockwise, and zero if the loop is a great circle.
+  //
+  // This quantity is also called the "geodesic curvature" of the loop.
+  double GetTurningAngle() const;
+
+  // Return the maximum error in GetTurningAngle().  The return value is not
+  // constant; it depends on the loop.
+  double GetTurningAngleMaxError() const;
+
+  // Return the distance from the given point to the loop interior.  If the
+  // loop is empty, return S1Angle::Infinity().
+  S1Angle GetDistance(S2Point const& x) const;
+
+  // Return the distance from the given point to the loop boundary.  If the
+  // loop is empty or full, return S1Angle::Infinity() (since the loop has no
+  // boundary).
+  S1Angle GetDistanceToBoundary(S2Point const& x) const;
+
+  // If the given point is contained by the loop, return it.  Otherwise return
+  // the closest point on the loop boundary.  If the loop is empty, return the
+  // input argument.
+  S2Point Project(S2Point const& x) const;
+
+  // Return the closest point on the loop boundary to the given point.  If the
+  // loop is empty or full, return the input argument (since the loop has no
+  // boundary).
+  S2Point ProjectToBoundary(S2Point const& x) const;
+
+  // Return true if the loop contains the given point.  Point containment is
+  // defined such that if the sphere is subdivided into faces (loops), every
+  // point is contained by exactly one face.  This implies that loops do not
+  // necessarily contain their vertices.
+  bool Contains(S2Point const& p) const;
+
+  // Return true if the region contained by this loop is a superset of the
+  // region contained by the given other loop.
+  bool Contains(S2Loop const* b) const;
+
+  // Return true if the region contained by this loop intersects the region
+  // contained by the given other loop.
+  bool Intersects(S2Loop const* b) const;
+
+  // Return true if two loops have the same vertices in the same linear order
+  // (i.e., cyclic rotations are not allowed).
+  bool Equals(S2Loop const* b) const;
+
+  // Return true if two loops have the same boundary.  This is true if and
+  // only if the loops have the same vertices in the same cyclic order (i.e.,
+  // the vertices may be cyclically rotated).  The empty and full loops are
+  // considered to have different boundaries.
+  bool BoundaryEquals(S2Loop const* b) const;
+
+  // Return true if two loops have the same boundary except for vertex
+  // perturbations.  More precisely, the vertices in the two loops must be in
+  // the same cyclic order, and corresponding vertex pairs must be separated
+  // by no more than "max_error".
+  bool BoundaryApproxEquals(S2Loop const* b, double max_error = 1e-15) const;
+
+  // Return true if the two loop boundaries are within "max_error" of each
+  // other along their entire lengths.  The two loops may have different
+  // numbers of vertices.  More precisely, this method returns true if the two
+  // loops have parameterizations a:[0,1] -> S^2, b:[0,1] -> S^2 such that
+  // distance(a(t), b(t)) <= max_error for all t.  You can think of this as
+  // testing whether it is possible to drive two cars all the way around the
+  // two loops such that no car ever goes backward and the cars are always
+  // within "max_error" of each other.
+  bool BoundaryNear(S2Loop const* b, double max_error = 1e-15) const;
+
+  // This method computes the oriented surface integral of some quantity f(x)
+  // over the loop interior, given a function f_tri(A,B,C) that returns the
+  // corresponding integral over the spherical triangle ABC.
+  template <class T>
+  T GetSurfaceIntegral(T f_tri(S2Point const&, S2Point const&, S2Point const&))
+      const;
+
+  // Constructs a regular polygon with the given number of vertices, all
+  // located on a circle of the specified radius around "center".  The radius
+  // is the actual distance from "center" to each vertex.
+  static S2Loop* MakeRegularLoop(S2Point const& center,
+                                 S1Angle radius,
+                                 int num_vertices);
+
+  // Like the function above, but this version constructs a loop centered
+  // around the z-axis of the given coordinate frame, with the first vertex in
+  // the direction of the positive x-axis.  (This allows the loop to be
+  // rotated for testing purposes.)
+  static S2Loop* MakeRegularLoop(Matrix3x3_d const& frame,
+                                 S1Angle radius,
+                                 int num_vertices);
+
+  ////////////////////////////////////////////////////////////////////////
+  // S2Region interface (see s2region.h for details):
+
+  virtual S2Loop* Clone() const;
+
+  // GetRectBound() returns essentially tight results, while GetCapBound()
+  // might have a lot of extra padding.  Both bounds are conservative in that
+  // if the loop contains a point P, then the bound contains P also.
+  virtual S2Cap GetCapBound() const;
+  virtual S2LatLngRect GetRectBound() const;
+  virtual bool Contains(S2Cell const& cell) const;
+  virtual bool MayIntersect(S2Cell const& cell) const;
+
+  // Generally clients should not use S2Loop::Encode().  Instead they should
+  // encode an S2Polygon, which unlike this method supports (lossless)
+  // compression.
+  virtual void Encode(Encoder* const encoder) const;
+
+  // Decode a loop encoded with Encode() or EncodeCompressed().  These methods
+  // may be called with loops that have already been initialized.
+  virtual bool Decode(Decoder* const decoder);
+  virtual bool DecodeWithinScope(Decoder* const decoder);
+};
+```
+
+### S2Polygon
+
+An `S2Polygon` is an `S2Region` object that represents a polygon.  A polygon is
+defined by zero or more loops; recall that the interior of a loop is
+defined to be its left-hand side (see `S2Loop`).  There are two different
+conventions for creating an `S2Polygon`:
+
+* `InitNested()` expects the input loops to be nested hierarchically.  The
+  polygon interior then consists of the set of points contained by an odd
+  number of loops.  So for example, a circular region with a hole in it would
+  be defined as two CCW loops, with one loop containing the other.  The loops
+  can be provided in any order.
+
+  When the orientation of the input loops is unknown, the nesting requirement
+  is typically met by calling `S2Loop::Normalize()` on each loop (which inverts
+  the loop if necessary so that it encloses at most half the sphere).  But in
+  fact any set of loops can be used as long as (1) there is no pair of loops
+  that cross, and (2) there is no pair of loops whose union is the entire
+  sphere.
+
+* `InitOriented()` expects the input loops to be oriented such that the polygon
+  interior is on the left-hand side of every loop.  So for example, a
+  circular region with a hole in it would be defined using a CCW outer loop
+  and a CW inner loop.  The loop orientations must all be consistent; for
+  example, it is not valid to have one CCW loop nested inside another CCW
+  loop, because the region between the two loops is on the left-hand side of
+  one loop and the right-hand side of the other.
+
+Most clients will not call these methods directly; instead they should use
+`S2PolygonBuilder`, which has better support for dealing with imperfect data.
+
+When the polygon is initialized, the given loops are automatically
+converted into a canonical form consisting of "shells" and "holes".  Shells
+and holes are both oriented CCW, and are nested hierarchically.  The loops
+are reordered to correspond to a preorder traversal of the nesting
+hierarchy; `InitOriented()` may also invert some loops.
+
+Polygons may represent any region of the sphere with a polygonal boundary,
+including the entire sphere (known as the "full" polygon).  The full
+polygon consists of a single full loop (see `S2Loop`), whereas the empty
+polygon has no loops at all.
+
+Polygons have the following restrictions:
+
+* Loops may not cross, i.e. the boundary of a loop may not intersect both the
+  interior and exterior of any other loop.
+
+* Loops may not share edges, i.e. if a loop contains an edge AB, then
+  no other loop may contain AB or BA.
+
+* Loops may share vertices, however no vertex may appear twice in a
+  single loop (see `S2Loop`).
+
+* No loop may be empty.  The full loop may appear only in the full polygon.
+
+```c++
+class S2Polygon : public S2Region {
+ public:
+  // The default constructor creates an empty polygon.  It can be made
+  // non-empty by calling Init(), Decode(), etc.
+  S2Polygon();
+
+  // Convenience constructor that calls InitNested() with the given loops.
+  // Takes ownership of the loops and clears the vector.
+  explicit S2Polygon(std::vector<S2Loop*>* loops);
+
+  // Convenience constructor that creates a polygon with a single loop
+  // corresponding to the given cell.
+  explicit S2Polygon(S2Cell const& cell);
+
+  // Convenience constructor that calls Init(S2Loop*).
+  explicit S2Polygon(S2Loop* loop);
+
+  // Create a polygon from a set of hierarchically nested loops.  The polygon
+  // interior consists of the points contained by an odd number of loops.
+  // (Recall that a loop contains the set of points on its left-hand side.)
+  //
+  // This method takes ownership of the given loops and clears the given
+  // vector.  It then figures out the loop nesting hierarchy and assigns every
+  // loop a depth.  Shells have even depths, and holes have odd depths.  Note
+  // that the loops are reordered so the hierarchy can be traversed more
+  // easily (see GetParent(), GetLastDescendant(), and S2Loop::depth()).
+  //
+  // This method may be called more than once, in which case any existing
+  // loops are deleted before being replaced by the input loops.
+  void InitNested(std::vector<S2Loop*>* loops);
+
+  // Like InitNested(), but expects loops to be oriented such that the polygon
+  // interior is on the left-hand side of all loops.  This implies that shells
+  // and holes should have opposite orientations in the input to this method.
+  void InitOriented(std::vector<S2Loop*>* loops);
+
+  // Initialize a polygon from a single loop.  Takes ownership of the loop.
+  void Init(S2Loop* loop);
+
+  // Releases ownership of the loops of this polygon, appends them to "loops" if
+  // non-NULL, and resets the polygon to be empty.
+  void Release(std::vector<S2Loop*>* loops);
+
+  // Makes a deep copy of the given source polygon.  The destination polygon
+  // will be cleared if necessary.
+  void Copy(S2Polygon const* src);
+
+  // Destroys the polygon and frees its loops.
+  ~S2Polygon();
+
+  // Returns true if this is a valid polygon (including checking whether all
+  // the loops are themselves valid).
+  bool IsValid() const;
+
+  // Returns true if this is *not* a valid polygon and sets "error"
+  // appropriately.  Otherwise returns false and leaves "error" unchanged.
+  bool FindValidationError(S2Error* error) const;
+
+  // Return true if this is the empty polygon (consisting of no loops).
+  bool is_empty() const;
+
+  // Return true if this is the full polygon (consisting of a single loop that
+  // encompasses the entire sphere).
+  bool is_full() const;
+
+  // Return the number of loops in this polygon.
+  int num_loops() const;
+
+  // Total number of vertices in all loops.
+  int num_vertices() const;
+
+  // Return the loop at the given index.  Note that during initialization, the
+  // given loops are reordered according to a preorder traversal of the loop
+  // nesting hierarchy.  This implies that every loop is immediately followed
+  // by its descendants.  This hierarchy can be traversed using the methods
+  // GetParent(), GetLastDescendant(), and S2Loop::depth().
+  S2Loop const* loop(int k) const;
+  S2Loop* loop(int k);
+
+  // Return the index of the parent of loop k, or -1 if it has no parent.
+  int GetParent(int k) const;
+
+  // Return the index of the last loop that is contained within loop k.
+  int GetLastDescendant(int k) const;
+
+  // Return the area of the polygon interior, i.e. the region on the left side
+  // of an odd number of loops.  The return value is between 0 and 4*Pi.
+  double GetArea() const;
+
+  // Return the true centroid of the polygon multiplied by the area of the
+  // polygon.  We prescale by the polygon area for two reasons: (1) it is
+  // cheaper to compute this way, and (2) it makes it easier to compute the
+  // centroid of more complicated shapes (by splitting them into disjoint
+  // regions and adding their centroids).
+  S2Point GetCentroid() const;
+
+  // If all of the polygon's vertices happen to be the centers of S2Cells at
+  // some level, then return that level, otherwise return -1.
+  int GetSnapLevel() const;
+
+  // Return the distance from the given point to the polygon interior.  If the
+  // polygon is empty, return S1Angle::Infinity().
+  S1Angle GetDistance(S2Point const& x) const;
+
+  // Return the distance from the given point to the polygon boundary.  If the
+  // polygon is empty or full, return S1Angle::Infinity() (since the polygon
+  // has no boundary).
+  S1Angle GetDistanceToBoundary(S2Point const& x) const;
+
+  // Return the overlap fractions between two polygons, i.e. the ratios of the
+  // area of intersection to the area of each polygon.
+  static std::pair<double, double> GetOverlapFractions(S2Polygon const* a,
+                                                       S2Polygon const* b);
+
+  // If the given point is contained by the polygon, return it.  Otherwise
+  // return the closest point on the polygon boundary.  If the polygon is
+  // empty, return the input argument.
+  S2Point Project(S2Point const& x) const;
+
+  // Return the closest point on the polygon boundary to the given point.  If
+  // the polygon is empty or full, return the input argument (since the
+  // polygon has no boundary).
+  S2Point ProjectToBoundary(S2Point const& x) const;
+
+  // Return true if the polygon contains the given point.  Point containment
+  // is defined such that if the sphere is subdivided into polygons, every
+  // point is contained by exactly one polygons.  This implies that polygons
+  // do not necessarily contain their vertices.
+  bool Contains(S2Point const& p) const;
+
+  // Return true if this polygon contains the given other polygon, i.e.
+  // if polygon A contains all points contained by polygon B.
+  bool Contains(S2Polygon const* b) const;
+
+  // Returns true if this polgyon (A) approximately contains the given other
+  // polygon (B). This is true if it is possible to move the vertices of B
+  // no further than "tolerance" such that A contains the modified B.
+  //
+  // For example, the empty polygon will contain any polygon whose maximum
+  // width is no more than "tolerance".
+  bool ApproxContains(S2Polygon const* b, S1Angle tolerance) const;
+
+  // Return true if this polygon intersects the given other polygon, i.e.
+  // if there is a point that is contained by both polygons.
+  bool Intersects(S2Polygon const* b) const;
+
+  // Returns true if this polgyon (A) and the given polygon (B) are
+  // approximately disjoint.  This is true if it is possible to ensure that A
+  // and B do not intersect by moving their vertices no further than
+  // "tolerance".
+  //
+  // For example, any polygon is approximately disjoint from a polygon whose
+  // maximum width is no more than "tolerance".
+  bool ApproxDisjoint(S2Polygon const* b, S1Angle tolerance) const;
+
+  // Initialize this polygon to the intersection, union, or difference
+  // (A - B) of the given two polygons.  The "vertex_merge_radius" determines
+  // how close two vertices must be to be merged together and how close a
+  // vertex must be to an edge in order to be spliced into it (see
+  // S2PolygonBuilder for details).  By default, the merge radius is just
+  // large enough to compensate for errors that occur when computing
+  // intersection points between edges.
+  void InitToIntersection(S2Polygon const* a, S2Polygon const* b);
+  void InitToApproxIntersection(S2Polygon const* a, S2Polygon const* b,
+                                S1Angle vertex_merge_radius);
+  void InitToUnion(S2Polygon const* a, S2Polygon const* b);
+  void InitToApproxUnion(S2Polygon const* a, S2Polygon const* b,
+                         S1Angle vertex_merge_radius);
+  void InitToDifference(S2Polygon const* a, S2Polygon const* b);
+  void InitToApproxDifference(S2Polygon const* a, S2Polygon const* b,
+                              S1Angle vertex_merge_radius);
+
+  // Initializes this polygon to a polygon that contains fewer vertices and
+  // is within tolerance of the polygon "a", with some caveats.  If
+  // "snap_to_cell_centers" is true, the vertices of this polygon will be
+  // snapped to the centers of leaf cells at the smallest level that is
+  // guaranteed to produce a valid polygon given the specified tolerance.
+  void InitToSimplified(S2Polygon const* a, S1Angle tolerance,
+                        bool snap_to_cell_centers);
+
+  // Use S2PolygonBuilder to build this polygon by assembling the edges of a
+  // given polygon after snapping its vertices to the center of leaf cells at
+  // the given "snap_level".  The default snap level corresponds to a
+  // tolerance of approximately 1.5cm on the surface of the Earth.
+  // Such a polygon can be efficiently compressed when serialized.
+  void InitToSnapped(S2Polygon const* polygon,
+                     int snap_level = S2CellId::kMaxLevel);
+
+  // Initialize this polygon to the complement of the given polygon.
+  void InitToComplement(S2Polygon const* a);
+
+  // Invert the polygon (replace it by its complement).
+  void Invert();
+
+  // Intersect this polygon with the polyline "in" and append the resulting
+  // zero or more polylines to "out" (which must be empty).  The polylines
+  // are appended in the order they would be encountered by traversing "in"
+  // from beginning to end.  Note that the output may include polylines with
+  // only one vertex, but there will not be any zero-vertex polylines.
+  void IntersectWithPolyline(S2Polyline const* in,
+                             std::vector<S2Polyline*> *out) const;
+
+  // Similar to IntersectWithPolyline(), except that vertices will be
+  // dropped as necessary to ensure that all adjacent vertices in the
+  // sequence obtained by concatenating the output polylines will be
+  // farther than "vertex_merge_radius" apart.
+  void ApproxIntersectWithPolyline(S2Polyline const* in,
+                                   std::vector<S2Polyline*> *out,
+                                   S1Angle vertex_merge_radius) const;
+
+  // Like IntersectWithPolyline, but subtracts this polygon from
+  // the given polyline.
+  void SubtractFromPolyline(S2Polyline const* in,
+                            std::vector<S2Polyline*> *out) const;
+
+  // Like IntersectWithPolylineSloppy, but subtracts this polygon
+  // from the given polyline.
+  void ApproxSubtractFromPolyline(S2Polyline const* in,
+                                  std::vector<S2Polyline*> *out,
+                                  S1Angle vertex_merge_radius) const;
+
+  // Return a polygon which is the union of the given polygons.
+  // Clears the vector and deletes the polygons.
+  static S2Polygon* DestructiveUnion(std::vector<S2Polygon*>* polygons);
+  static S2Polygon* DestructiveApproxUnion(std::vector<S2Polygon*>* polygons,
+                                           S1Angle vertex_merge_radius);
+
+  // Initialize this polygon to the outline of the given cell union.
+  // In principle this polygon should exactly contain the cell union and
+  // this polygon's inverse should not intersect the cell union, but rounding
+  // issues may cause this not to be the case.
+  void InitToCellUnionBorder(S2CellUnion const& cells);
+
+  // Return true if every loop of this polygon shares at most one vertex with
+  // its parent loop.  Every polygon has a unique normalized form.  Normalized
+  // polygons are useful for testing since it is easy to compare whether two
+  // polygons represent the same region.
+  bool IsNormalized() const;
+
+  // Return true if two polygons have exactly the same loops.  The loops must
+  // appear in the same order, and corresponding loops must have the same
+  // linear vertex ordering (i.e., cyclic rotations are not allowed).
+  bool Equals(S2Polygon const* b) const;
+
+  // Return true if two polygons have the same boundary.  More precisely, this
+  // method requires that both polygons have loops with the same cyclic vertex
+  // order and the same nesting hierarchy.  (This implies that vertices may be
+  // cyclically rotated between corresponding loops, and the loop ordering may
+  // be different between the two polygons as long as the nesting hierarchy is
+  // the same.)
+  bool BoundaryEquals(S2Polygon const* b) const;
+
+  // Return true if two polygons have the same boundary except for vertex
+  // perturbations.  Both polygons must have loops with the same cyclic vertex
+  // order and the same nesting hierarchy, but the vertex locations are
+  // allowed to differ by up to "max_error".
+  bool BoundaryApproxEquals(S2Polygon const* b, double max_error = 1e-15) const;
+
+  // Return true if two polygons have boundaries that are within "max_error"
+  // of each other along their entire lengths.  More precisely, there must be
+  // a bijection between the two sets of loops such that for each pair of
+  // loops, "a_loop->BoundaryNear(b_loop)" is true.
+  bool BoundaryNear(S2Polygon const* b, double max_error = 1e-15) const;
+
+  ////////////////////////////////////////////////////////////////////////
+  // S2Region interface (see s2region.h for details):
+
+  // GetRectBound() returns essentially tight results, while GetCapBound()
+  // might have a lot of extra padding.  Both bounds are conservative in that
+  // if the loop contains a point P, then the bound contains P also.
+  virtual S2Polygon* Clone() const;
+  virtual S2Cap GetCapBound() const;
+  virtual S2LatLngRect GetRectBound() const;
+
+  virtual bool Contains(S2Cell const& cell) const;
+  virtual bool MayIntersect(S2Cell const& cell) const;
+
+  // Encode the polygon with about 4 bytes per vertex, assuming the vertices
+  // have all been snapped to the centers of S2Cells at a given level
+  // (typically with InitToSnapped).  The other vertices are stored using 24
+  // bytes.  Decoding a polygon encoded this way always returns the original
+  // polygon, without any loss of precision.
+  virtual void Encode(Encoder* const encoder) const;
+
+  // Decode a polygon encoded with Encode().
+  virtual bool Decode(Decoder* const decoder);
+};
+```
 
 ## Cell Hierarchy
 
