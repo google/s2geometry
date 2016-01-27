@@ -323,7 +323,7 @@ TEST_F(S2ShapeIndexTest, SimpleUpdates) {
   }
   for (int i = 0; i < polygon.num_loops(); ++i) {
     S2Shape* shape = index_.shape(i);
-    Remove(shape)->Release();
+    delete Remove(shape);
     QuadraticValidate();
   }
 }

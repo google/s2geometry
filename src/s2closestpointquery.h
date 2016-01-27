@@ -76,7 +76,7 @@
 template <class Data>
 class S2ClosestPointQuery {
  public:
-  typedef S2PointIndex<Data> Index;
+  using Index = S2PointIndex<Data>;
 
   // Convenience constructor that calls Init().
   explicit S2ClosestPointQuery(Index const& index);
@@ -168,8 +168,8 @@ class S2ClosestPointQuery {
   Data const& data(int i) const;
 
  private:
-  typedef typename Index::PointData PointData;
-  typedef typename Index::Iterator Iterator;
+  using PointData = typename Index::PointData;
+  using Iterator = typename Index::Iterator;
 
   class PointTarget {
    public:
@@ -271,7 +271,7 @@ class S2ClosestPointQuery {
       return distance < other.distance;
     }
   };
-  typedef priority_queue_sequence<Result> ResultHeap;
+  using ResultHeap = priority_queue_sequence<Result>;
   ResultHeap results_;
 
   // The distance beyond which we can safely ignore further candidate points.
@@ -295,9 +295,8 @@ class S2ClosestPointQuery {
       return distance > other.distance;
     }
   };
-  typedef std::priority_queue<QueueEntry,
-                              util::gtl::InlinedVector<QueueEntry, 16>>
-      CellQueue;
+  using CellQueue =
+      std::priority_queue<QueueEntry, util::gtl::InlinedVector<QueueEntry, 16>>;
   CellQueue queue_;
 
   // Temporaries, defined here to avoid multiple allocations / initializations.

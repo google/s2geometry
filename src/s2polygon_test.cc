@@ -787,14 +787,14 @@ TEST_F(S2PolygonTestBase, Operations) {
   far_south.InitToIntersection(far_H, south_H);
   CheckEqual(&far_south, far_H_south_H, 1e-15);
 
-  for (int i = 0; i < arraysize(test_cases); ++i) {
-    SCOPED_TRACE(StringPrintf("Polygon operation test case %d", i));
-    TestCase* test = test_cases + i;
-    unique_ptr<S2Polygon> a(MakePolygon(test->a));
-    unique_ptr<S2Polygon> b(MakePolygon(test->b));
-    unique_ptr<S2Polygon> expected_a_and_b(MakePolygon(test->a_and_b));
-    unique_ptr<S2Polygon> expected_a_or_b(MakePolygon(test->a_or_b));
-    unique_ptr<S2Polygon> expected_a_minus_b(MakePolygon(test->a_minus_b));
+  int i = 0;
+  for (TestCase const& test : test_cases) {
+    SCOPED_TRACE(StringPrintf("Polygon operation test case %d", i++));
+    unique_ptr<S2Polygon> a(MakePolygon(test.a));
+    unique_ptr<S2Polygon> b(MakePolygon(test.b));
+    unique_ptr<S2Polygon> expected_a_and_b(MakePolygon(test.a_and_b));
+    unique_ptr<S2Polygon> expected_a_or_b(MakePolygon(test.a_or_b));
+    unique_ptr<S2Polygon> expected_a_minus_b(MakePolygon(test.a_minus_b));
 
     // The intersections in the "expected" data were computed in lat-lng
     // space, while the actual intersections are computed using geodesics.
@@ -823,10 +823,8 @@ TEST_F(S2PolygonTestBase, Operations) {
 }
 
 void ClearPolylineVector(vector<S2Polyline*>* polylines) {
-  for (vector<S2Polyline*>::const_iterator it = polylines->begin();
-       it != polylines->end(); ++it) {
-    delete *it;
-  }
+  for (S2Polyline* polyline : *polylines)
+    delete polyline;
   polylines->clear();
 }
 
@@ -882,12 +880,12 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
   // it with the polygon B. It then converts B to a polyline and intersects
   // it with A. It then feeds all of the results into a polygon builder and
   // tests that the output is equal to doing an intersection between A and B.
-  for (int i = 0; i < arraysize(test_cases); ++i) {
-    SCOPED_TRACE(StringPrintf("Polyline intersection test case %d", i));
-    TestCase* test = test_cases + i;
-    unique_ptr<S2Polygon> a(MakePolygon(test->a));
-    unique_ptr<S2Polygon> b(MakePolygon(test->b));
-    unique_ptr<S2Polygon> expected_a_and_b(MakePolygon(test->a_and_b));
+  int i = 0;
+  for (TestCase const& test : test_cases) {
+    SCOPED_TRACE(StringPrintf("Polyline intersection test case %d", i++));
+    unique_ptr<S2Polygon> a(MakePolygon(test.a));
+    unique_ptr<S2Polygon> b(MakePolygon(test.b));
+    unique_ptr<S2Polygon> expected_a_and_b(MakePolygon(test.a_and_b));
 
     vector<S2Point> points;
     vector<S2Polyline *> polylines;
@@ -1100,18 +1098,16 @@ TEST(S2Polygon, InitToCellUnionBorder) {
 }
 
 TEST(S2Polygon, UnionWithAmbgiuousCrossings) {
-  S2Point const a_data[] = {
+  vector<S2Point> a_vertices = {
     S2Point(0.044856812877680216, -0.80679210859571904, 0.5891301722422051),
     S2Point(0.044851868273159699, -0.80679240802900054, 0.5891301386444033),
     S2Point(0.044854246527738666, -0.80679240292188514, 0.58912996457145106)
   };
-  S2Point const b_data[3] = {
+  vector<S2Point> b_vertices = {
     S2Point(0.044849715793028468, -0.80679253837178111, 0.58913012401412856),
     S2Point(0.044855344598821352, -0.80679219751320641, 0.589130162266992),
     S2Point(0.044854017712818696, -0.80679210327223405, 0.58913039235179754)
   };
-  vector<S2Point> a_vertices(a_data, a_data + arraysize(a_data));
-  vector<S2Point> b_vertices(b_data, b_data + arraysize(b_data));
   S2Polygon a(new S2Loop(a_vertices));
   S2Polygon b(new S2Loop(b_vertices));
   S2Polygon c;
@@ -2007,22 +2003,20 @@ TEST_F(S2PolygonTestBase, EmptyPolygonShape) {
 void TestPolygonShape(S2Polygon const* polygon) {
   DCHECK(!polygon->is_full());
   // Allocate the shape so that we can Release() it below.
-  S2Polygon::Shape* shape = new S2Polygon::Shape(polygon);
-  EXPECT_EQ(polygon, shape->polygon());
-  EXPECT_EQ(polygon->num_vertices(), shape->num_edges());
+  S2Polygon::Shape shape(polygon);
+  EXPECT_EQ(polygon, shape.polygon());
+  EXPECT_EQ(polygon->num_vertices(), shape.num_edges());
   for (int e = 0, i = 0; i < polygon->num_loops(); ++i) {
     S2Loop const* loop_i = polygon->loop(i);
     for (int j = 0; j < loop_i->num_vertices(); ++j, ++e) {
       S2Point const *v0, *v1;
-      shape->GetEdge(e, &v0, &v1);
+      shape.GetEdge(e, &v0, &v1);
       EXPECT_EQ(&loop_i->vertex(j), v0);
       EXPECT_EQ(&loop_i->vertex(j+1), v1);
     }
   }
-  EXPECT_TRUE(shape->has_interior());
-  EXPECT_EQ(polygon->Contains(S2::Origin()), shape->contains_origin());
-  // In debug mode this tests that "shape" is deleted but "polygon" is not.
-  shape->Release();
+  EXPECT_TRUE(shape.has_interior());
+  EXPECT_EQ(polygon->Contains(S2::Origin()), shape.contains_origin());
 }
 
 TEST_F(S2PolygonTestBase, OneLoopPolygonShape) {

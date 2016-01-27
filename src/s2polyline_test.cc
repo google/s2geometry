@@ -400,18 +400,15 @@ TEST(S2Polyline, EncodeDecode) {
 TEST(S2PolylineShape, Basic) {
   unique_ptr<S2Polyline> polyline(MakePolyline("0:0, 1:0, 1:1, 2:1"));
   // Allocate the shape so that we can Release() it below.
-  S2Polyline::Shape* shape = new S2Polyline::Shape(polyline.get());
-  EXPECT_EQ(polyline.get(), shape->polyline());
-  EXPECT_EQ(3, shape->num_edges());
+  S2Polyline::Shape shape(polyline.get());
+  EXPECT_EQ(polyline.get(), shape.polyline());
+  EXPECT_EQ(3, shape.num_edges());
   S2Point const *v2, *v3;
-  shape->GetEdge(2, &v2, &v3);
+  shape.GetEdge(2, &v2, &v3);
   EXPECT_EQ(S2LatLng::FromDegrees(1, 1).ToPoint(), *v2);
   EXPECT_EQ(S2LatLng::FromDegrees(2, 1).ToPoint(), *v3);
-  EXPECT_FALSE(shape->has_interior());
-  EXPECT_FALSE(shape->contains_origin());
-
-  // In debug mode this tests that "shape" is deleted but "polyline" is not.
-  shape->Release();
+  EXPECT_FALSE(shape.has_interior());
+  EXPECT_FALSE(shape.contains_origin());
 }
 
 TEST(S2PolylineShape, EmptyPolyline) {

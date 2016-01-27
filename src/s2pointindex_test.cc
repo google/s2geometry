@@ -26,9 +26,9 @@
 
 class S2PointIndexTest : public ::testing::Test {
  private:
-  typedef S2PointIndex<int> Index;
-  typedef Index::PointData PointData;
-  typedef std::multiset<PointData> Contents;
+  using Index = S2PointIndex<int>;
+  using PointData = Index::PointData;
+  using Contents = std::multiset<PointData>;
   Index index_;
   Contents contents_;
 

@@ -51,11 +51,14 @@
 #include "s2shapeindex.h"
 #include "s2shapeutil.h"
 #include "util/gtl/fixedarray.h"
+#include "util/gtl/ptr_util.h"
+#include "util/gtl/stl_util.h"
 
 using std::max;
 using std::min;
 using std::pair;
 using std::set;
+using std::unique_ptr;
 using std::vector;
 
 DEFINE_bool(
@@ -943,7 +946,7 @@ bool S2Polygon::DecodeLossless(Decoder* const decoder, bool within_scope) {
 // Each intersection is a pair (t, P) where "t" is the interpolation parameter
 // along the edge (a fraction in the range [0,1]), and P is the actual
 // intersection point.
-typedef vector<pair<double, S2Point>> IntersectionSet;
+using IntersectionSet = vector<pair<double, S2Point>>;
 
 // EdgeClipper find all the intersections of a given edge with the edges
 // contained in an S2ShapeIndex.  It is used to implement polygon operations
@@ -1034,10 +1037,9 @@ void EdgeClipper::ClipEdge(S2Point const& a0, S2Point const& a1,
   // each loop.
   intersections_ = intersections;
   S2EdgeUtil::EdgeCrosser crosser(&a0, &a1);
-  for (S2CrossingEdgeQuery::EdgeMap::const_iterator it = edge_map_.begin();
-       it != edge_map_.end(); ++it) {
-    S2Shape const* b_shape = it->first;
-    vector<int> const& b_candidates = it->second;
+  for (const auto& p : edge_map_) {
+    S2Shape const* b_shape = p.first;
+    vector<int> const& b_candidates = p.second;
     int n = b_candidates.size();
     for (int j = 0; j < n; ++j) {
       S2Point const *b0, *b1;
@@ -1336,8 +1338,9 @@ class CellBoundaryVertexFilter : public S2VertexFilter {
 // polyline.  Always keeps the first vertex from the loop, as well as the
 // vertices for which should_keep returns true. This function does not take
 // ownership of should_keep, which can be nullptr.
-vector<S2Point>* SimplifyLoopAsPolyline(S2Loop const* loop, S1Angle tolerance,
-                                        const S2VertexFilter* should_keep) {
+unique_ptr<vector<S2Point>> SimplifyLoopAsPolyline(
+    S2Loop const* loop, S1Angle tolerance,
+    const S2VertexFilter* should_keep) {
   vector<S2Point> points(loop->num_vertices() + 1);
   // Add the first vertex at the beginning and at the end.
   for (int i = 0; i <= loop->num_vertices(); ++i) {
@@ -1364,7 +1367,8 @@ vector<S2Point>* SimplifyLoopAsPolyline(S2Loop const* loop, S1Angle tolerance,
     }
   }
   // Add them all except the last: it is the same as the first.
-  vector<S2Point>* simplified_line = new vector<S2Point>(indices.size() - 1);
+  auto simplified_line =
+      util::gtl::MakeUnique<vector<S2Point>>(indices.size() - 1);
   VLOG(4) << "Now simplified to: ";
   for (int i = 0; i + 1 < indices.size(); ++i) {
     (*simplified_line)[i] = line.vertex(indices[i]);
@@ -1422,8 +1426,7 @@ class PointVectorLoopShape : public S2Shape {
   }
   bool has_interior() const { return false; }  // Not needed
   bool contains_origin() const { return false; }
-  void Release() const { delete this; }
- protected:
+ private:
   int num_vertices_;
   S2Point const* vertices_;
 };
@@ -1437,8 +1440,8 @@ class PointVectorLoopShape : public S2Shape {
 //   2. Break any edge in pieces such that no piece intersects any
 //      other.
 //   3. Use the polygon builder to regenerate the full polygon.
-//   4. If should_keep is not nullptr, the vertices for which it returns true are
-//      kept in the simplified polygon.
+//   4. If should_keep is not nullptr, the vertices for which it returns true
+//      are kept in the simplified polygon.
 void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
                                          S1Angle tolerance,
                                          bool snap_to_cell_centers,
@@ -1469,13 +1472,13 @@ void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
 
   // Simplify each loop separately and add to the edge index.
   S2ShapeIndex index;
-  vector<vector<S2Point>*> simplified_loops;
+  vector<unique_ptr<vector<S2Point>>> simplified_loops;
   for (int i = 0; i < a->num_loops(); ++i) {
-    vector<S2Point>* simpler = SimplifyLoopAsPolyline(a->loop(i), tolerance,
-        should_keep);
+    unique_ptr<vector<S2Point>> simpler =
+        SimplifyLoopAsPolyline(a->loop(i), tolerance, should_keep);
     if (nullptr == simpler) continue;
-    simplified_loops.push_back(simpler);
-    index.Add(new PointVectorLoopShape(simpler));
+    index.Add(new PointVectorLoopShape(simpler.get()));
+    simplified_loops.push_back(std::move(simpler));
   }
   if (index.num_shape_ids() > 0) {
     BreakEdgesAndAddToBuilder(index, &builder);
@@ -1488,10 +1491,6 @@ void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
       if (a->bound_.Area() > 2 * M_PI && a->GetArea() > 2 * M_PI) Invert();
     }
   }
-  for (int i = 0; i < simplified_loops.size(); ++i) {
-    delete simplified_loops[i];
-  }
-  simplified_loops.clear();
 }
 
 void S2Polygon::InitToSimplified(S2Polygon const* a, S1Angle tolerance,
@@ -1626,7 +1625,7 @@ S2Polygon* S2Polygon::DestructiveApproxUnion(vector<S2Polygon*>* polygons,
   // Effectively create a priority queue of polygons in order of number of
   // vertices.  Repeatedly union the two smallest polygons and add the result
   // to the queue until we have a single polygon to return.
-  typedef std::multimap<int, S2Polygon*> QueueType;
+  using QueueType = std::multimap<int, S2Polygon*>;
   QueueType queue;  // Map from # of vertices to polygon.
   for (int i = 0; i < polygons->size(); ++i)
     queue.insert(
@@ -1637,18 +1636,17 @@ S2Polygon* S2Polygon::DestructiveApproxUnion(vector<S2Polygon*>* polygons,
     // Pop two simplest polygons from queue.
     QueueType::iterator smallest_it = queue.begin();
     int a_size = smallest_it->first;
-    S2Polygon* a_polygon = smallest_it->second;
+    unique_ptr<S2Polygon> a_polygon(smallest_it->second);
     queue.erase(smallest_it);
     smallest_it = queue.begin();
     int b_size = smallest_it->first;
-    S2Polygon* b_polygon = smallest_it->second;
+    unique_ptr<S2Polygon> b_polygon(smallest_it->second);
     queue.erase(smallest_it);
 
     // Union and add result back to queue.
     S2Polygon* union_polygon = new S2Polygon();
-    union_polygon->InitToApproxUnion(a_polygon, b_polygon, vertex_merge_radius);
-    delete a_polygon;
-    delete b_polygon;
+    union_polygon->InitToApproxUnion(a_polygon.get(), b_polygon.get(),
+                                     vertex_merge_radius);
     queue.insert(std::make_pair(a_size + b_size, union_polygon));
     // We assume that the number of vertices in the union polygon is the
     // sum of the number of vertices in the original polygons, which is not

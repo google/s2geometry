@@ -143,6 +143,33 @@ class S2CellId {
   // Return the bounds of this cell in (u,v)-space.
   R2Rect GetBoundUV() const;
 
+  // Expand a rectangle in (u,v)-space so that it contains all points within
+  // the given distance of the boundary, and return the smallest such
+  // rectangle.  If the distance is negative, then instead shrink this
+  // rectangle so that it excludes all points within the given absolute
+  // distance of the boundary.
+  //
+  // Distances are measured *on the sphere*, not in (u,v)-space.  For example,
+  // you can use this method to expand the (u,v)-bound of an S2CellId so that
+  // it contains all points within 5km of the original cell.  You can then
+  // test whether a point lies within the expanded bounds like this:
+  //
+  //   R2Point uv;
+  //   if (S2::FaceXYZtoUV(face, point, &uv) && bound.Contains(uv)) { ... }
+  //
+  // Limitations:
+  //
+  //  - Because the rectangle is drawn on one of the six cube-face planes
+  //    (i.e., {x,y,z} = +/-1), it can cover at most one hemisphere.  This
+  //    limits the maximum amount that a rectangle can be expanded.  For
+  //    example, S2CellId bounds can be expanded safely by at most 45 degrees
+  //    (about 5000 km on the Earth's surface).
+  //
+  //  - The implementation is not exact for negative distances.  The resulting
+  //    rectangle will exclude all points within the given distance of the
+  //    boundary but may be slightly smaller than necessary.
+  static R2Rect ExpandedByDistanceUV(R2Rect const& uv, S1Angle distance);
+
   // Return the (face, si, ti) coordinates of the center of the cell.  Note
   // that although (si,ti) coordinates span the range [0,2**31] in general,
   // the cell center coordinates are always in the range [1,2**31-1] and

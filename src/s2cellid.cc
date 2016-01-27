@@ -398,6 +398,35 @@ R2Rect S2CellId::GetBoundUV() const {
   return IJLevelToBoundUV(ij, level());
 }
 
+// This is a helper function for ExpandedByDistanceUV().
+//
+// Given an edge of the form (u,v0)-(u,v1), let max_v = max(abs(v0), abs(v1)).
+// This method returns a new u-coordinate u' such that the distance from the
+// line u=u' to the given edge (u,v0)-(u,v1) is exactly the given distance
+// (which is specified as the sine of the angle corresponding to the distance).
+static double ExpandEndpoint(double u, double max_v, double sin_dist) {
+  // This is based on solving a spherical right triangle, similar to the
+  // calculation in S2Cap::GetRectBound.
+  double sin_u_shift = sin_dist * sqrt((1 + u * u + max_v * max_v) /
+                                       (1 + u * u));
+  return tan(atan(u) + asin(sin_u_shift));
+}
+
+/* static */
+R2Rect S2CellId::ExpandedByDistanceUV(R2Rect const& uv, S1Angle distance) {
+  // Expand each of the four sides of the rectangle just enough to include all
+  // points within the given distance of that side.  (The rectangle may be
+  // expanded by a different amount in (u,v)-space on each side.)
+  double u0 = uv[0][0], u1 = uv[0][1], v0 = uv[1][0], v1 = uv[1][1];
+  double max_u = std::max(std::abs(u0), std::abs(u1));
+  double max_v = std::max(std::abs(v0), std::abs(v1));
+  double sin_dist = sin(distance);
+  return R2Rect(R1Interval(ExpandEndpoint(u0, max_v, -sin_dist),
+                           ExpandEndpoint(u1, max_v, sin_dist)),
+                R1Interval(ExpandEndpoint(v0, max_u, -sin_dist),
+                           ExpandEndpoint(v1, max_u, sin_dist)));
+}
+
 S2CellId S2CellId::FromFaceIJWrap(int face, int i, int j) {
   // Convert i and j to the coordinates of a leaf cell just beyond the
   // boundary of this face.  This prevents 32-bit overflow in the case

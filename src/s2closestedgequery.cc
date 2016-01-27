@@ -164,11 +164,7 @@ void S2ClosestEdgeQuery::FindClosestEdgesToTarget() {
     FindClosestEdgesOptimized();
   }
   if (max_edges_ > 1) {
-    results_.reserve(tmp_results_.size());
-    for (ResultSet::const_iterator it = tmp_results_.begin(),
-             end = tmp_results_.end(); it != end; ++it) {
-      results_.push_back(*it);
-    }
+    results_.assign(tmp_results_.begin(), tmp_results_.end());
     tmp_results_.clear();
   } else if (tmp_result_singleton_.shape_id >= 0) {
     results_.push_back(tmp_result_singleton_);

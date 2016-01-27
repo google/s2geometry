@@ -914,6 +914,7 @@ struct AlignType { typedef char result[Size]; };
 #include <winsock2.h>
 #include <cassert>
 #include <windows.h>
+#include <process.h>  // _getpid()
 #undef ERROR
 
 #include <cfloat>  // for nextafter functionality on windows
@@ -976,7 +977,11 @@ BASE_PORT_MSVC_DLL_MACRO
 #define chdir  _chdir
 #define getcwd _getcwd
 #define putenv  _putenv
-
+#if _MSC_VER >= 1900  // Only needed for VS2015+
+#define getpid _getpid
+#define timezone _timezone
+#define tzname _tzname
+#endif
 
 // You say tomato, I say toma
 inline int random() { return rand(); }
@@ -1431,11 +1436,13 @@ std::ostream& operator << (std::ostream& out, const pthread_t& thread_id);
 // GXX_EXPERIMENTAL_CXX0X is defined by gcc and clang up to at least
 // gcc-4.7 and clang-3.1 (2011-12-13).  __cplusplus was defined to 1
 // in gcc before 4.7 (Crosstool 16) and clang before 3.1, but is
-// defined according to the language version in effect thereafter.  I
-// believe MSVC will also define __cplusplus according to the language
-// version, but haven't checked that. Stlport is used by many Android projects
-// and does not have full C++11 STL support.
-#if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L) && \
+// defined according to the language version in effect thereafter.
+// Microsoft Visual Studio 14 (2015) sets __cplusplus==199711 despite
+// reasonably good C++11 support, so we set LANG_CXX for it and
+// newer versions (_MSC_VER >= 1900).  Stlport is used by many Android
+// projects and does not have full C++11 STL support.
+#if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L || \
+     (defined(_MSC_VER) && _MSC_VER >= 1900)) &&                      \
     !defined(STLPORT)
 // Define this to 1 if the code is compiled in C++11 mode; leave it
 // undefined otherwise.  Do NOT define it to 0 -- that causes

@@ -27,6 +27,438 @@ using std::vector;
 
 namespace s2shapeutil {
 
+FaceLoopShape::FaceLoopShape(vector<S2Point> const& vertices) {
+  Init(vertices);
+}
+
+FaceLoopShape::FaceLoopShape(S2Loop const& loop) {
+  Init(loop);
+}
+
+void FaceLoopShape::Init(vector<S2Point> const& vertices) {
+  num_vertices_ = vertices.size();
+  vertices_.reset(new S2Point[num_vertices_]);
+  std::copy(vertices.begin(), vertices.end(), vertices_.get());
+}
+
+void FaceLoopShape::Init(S2Loop const& loop) {
+  DCHECK(!loop.is_full()) << "Full loops not currently supported";
+  if (loop.is_empty()) {
+    num_vertices_ = 0;
+    vertices_ = nullptr;
+  } else {
+    num_vertices_ = loop.num_vertices();
+    vertices_.reset(new S2Point[num_vertices_]);
+    std::copy(&loop.vertex(0), &loop.vertex(0) + num_vertices_,
+              vertices_.get());
+  }
+}
+
+FaceLoopShape::~FaceLoopShape() {
+}
+
+void FaceLoopShape::GetEdge(int e, S2Point const** a,
+                              S2Point const** b) const {
+  DCHECK_LT(e, num_edges());
+  *a = &vertices_[e];
+  if (++e == num_vertices()) e = 0;
+  *b = &vertices_[e];
+}
+
+bool FaceLoopShape::contains_origin() const {
+  return IsOriginOnLeft(*this);
+}
+
+// VertexArray points to an existing array of vertices.  It allows code
+// sharing between the S2Polygon and vector<vector<S2Point>> constructors.
+class FaceShape::VertexArray {
+ public:
+  VertexArray(S2Point const* begin, size_t size)
+      : begin_(begin), size_(size) {
+  }
+  S2Point const* begin() const { return begin_; }
+  S2Point const* end() const { return begin_ + size_; }
+  size_t size() const { return size_; }
+ private:
+  S2Point const* begin_;
+  size_t size_;
+};
+
+FaceShape::FaceShape(vector<FaceShape::Loop> const& loops) {
+  Init(loops);
+}
+
+FaceShape::FaceShape(S2Polygon const& polygon) {
+  Init(polygon);
+}
+
+void FaceShape::Init(vector<FaceShape::Loop> const& loops) {
+  vector<VertexArray> v_arrays;
+  for (int i = 0; i < loops.size(); ++i) {
+    FaceShape::Loop const& loop = loops[i];
+    v_arrays.push_back(VertexArray(&*loop.begin(), loop.size()));
+  }
+  Init(v_arrays);
+}
+
+void FaceShape::Init(S2Polygon const& polygon) {
+  vector<VertexArray> v_arrays;
+  for (int i = 0; i < polygon.num_loops(); ++i) {
+    S2Loop const* loop = polygon.loop(i);
+    v_arrays.push_back(VertexArray(&loop->vertex(0), loop->num_vertices()));
+  }
+  Init(v_arrays);
+}
+
+void FaceShape::Init(vector<VertexArray> const& loops) {
+  num_loops_ = loops.size();
+  if (num_loops_ == 0) {
+    num_vertices_ = 0;
+    vertices_ = nullptr;
+  } else if (num_loops_ == 1) {
+    num_vertices_ = loops[0].size();
+    vertices_.reset(new S2Point[num_vertices_]);
+    std::copy(loops[0].begin(), loops[0].end(), vertices_.get());
+  } else {
+    cumulative_vertices_ = new int32[num_loops_ + 1];
+    int32 num_vertices = 0;
+    for (int i = 0; i < num_loops_; ++i) {
+      cumulative_vertices_[i] = num_vertices;
+      num_vertices += loops[i].size();
+    }
+    cumulative_vertices_[num_loops_] = num_vertices;
+    vertices_.reset(new S2Point[num_vertices]);
+    for (int i = 0; i < num_loops_; ++i) {
+      std::copy(loops[i].begin(), loops[i].end(),
+                vertices_.get() + cumulative_vertices_[i]);
+    }
+  }
+}
+
+FaceShape::~FaceShape() {
+  if (num_loops() > 1) {
+    delete[] cumulative_vertices_;
+  }
+}
+
+int FaceShape::num_vertices() const {
+  if (num_loops() <= 1) {
+    return num_vertices_;
+  } else {
+    return cumulative_vertices_[num_loops()];
+  }
+}
+
+int FaceShape::num_loop_vertices(int i) const {
+  DCHECK_LT(i, num_loops());
+  if (num_loops() == 1) {
+    return num_vertices_;
+  } else {
+    return cumulative_vertices_[i + 1] - cumulative_vertices_[i];
+  }
+}
+
+S2Point const& FaceShape::loop_vertex(int i, int j) const {
+  DCHECK_LT(i, num_loops());
+  DCHECK_LT(j, num_loop_vertices(i));
+  if (num_loops() == 1) {
+    return vertices_[j];
+  } else {
+    return vertices_[cumulative_vertices_[i] + j];
+  }
+}
+
+void FaceShape::GetEdge(int e, S2Point const** a, S2Point const** b) const {
+  DCHECK_LT(e, num_edges());
+  int const kMaxLinearSearchLoops = 12;  // From benchmarks.
+
+  // Since all loop vertices were concatenated, we don't need to figure out
+  // which loop the edge belongs to in order to retrieve its first vertex.
+  *a = &vertices_[e];
+  if (num_loops() == 1) {
+    if (++e == num_vertices_) { e = 0; }
+  } else {
+    // Find the index of the first vertex of the loop following this one.
+    int* next = cumulative_vertices_ + 1;
+    if (num_loops() <= kMaxLinearSearchLoops) {
+      while (*next <= e) ++next;
+    } else {
+      next = std::upper_bound(next, next + num_loops(), e);
+    }
+    // Wrap around to the first vertex of the loop if necessary.
+    if (++e == *next) { e = next[-1]; }
+  }
+  *b = &vertices_[e];
+}
+
+bool FaceShape::contains_origin() const {
+  return IsOriginOnLeft(*this);
+}
+
+// This is a helper function for IsOriginOnLeft(), defined below.
+//
+// If the given vertex "vtest" is degenerate (see definition in header file),
+// returns false.  Otherwise sets "result" to indicate whether "shape"
+// contains S2::Origin() and returns true.
+static bool IsOriginOnLeftAtVertex(S2Shape const& shape,
+                                   S2Point const& vtest, bool* result) {
+  // Let P be a non-degenerate vertex.  Vertex P is defined to be inside the
+  // region if the region contains a particular direction vector starting from
+  // P, namely the direction S2::Ortho(P).  Since the interior is defined as
+  // the region to the left of all loops, this means we need to find the
+  // unmatched edge incident to P that is immediately clockwise from
+  // S2::Ortho(P).  P is contained by the region if and only if this edge is
+  // outgoing.
+  //
+  // To convert this into a contains_origin() value, we count the number of
+  // edges crossed between P and S2::Origin(), and invert the result for
+  // every crossing.
+  S2Point origin = S2::Origin();
+  S2EdgeUtil::EdgeCrosser crosser(&origin, &vtest);
+  bool crossing_parity = false;
+  util::btree::btree_map<S2Point, int> edge_map;
+  int n = shape.num_edges();
+  for (int e = 0; e < n; ++e) {
+    S2Point const *v0, *v1;
+    shape.GetEdge(e, &v0, &v1);
+    if (*v0 == *v1) continue;
+
+    // Check whether this edge crosses the edge between P and S2::Origin().
+    crossing_parity ^= crosser.EdgeOrVertexCrossing(v0, v1);
+
+    // Keep track of (outgoing edges) - (incoming edges) for each vertex that
+    // is adjacent to "vtest".
+    if (*v0 == vtest) ++edge_map[*v1];
+    if (*v1 == vtest) --edge_map[*v0];
+  }
+  // Find the unmatched edge that is immediately clockwise from S2::Ortho(P).
+  S2Point reference_dir = S2::Ortho(vtest);
+  pair<S2Point, int> best(reference_dir, 0);
+  for (auto const& e : edge_map) {
+    if (e.second == 0) continue;  // This is a "matched" edge.
+    if (S2::OrderedCCW(reference_dir, best.first, e.first, vtest)) {
+      best = e;
+    }
+  }
+  if (best.second == 0) {
+    return false;  // There are no unmatched edges incident to this vertex.
+  }
+  // Point P is contained by the shape if the edge immediately clockwise from
+  // S2::Ortho(P) is an outgoing edge.  We then invert this result if the
+  // number of crossings between P and S2::Origin() was odd.
+  *result = crossing_parity != (best.second > 0);
+  return true;
+}
+
+// See documentation in header file.
+bool IsOriginOnLeft(S2Shape const& shape) {
+  if (shape.num_edges() == 0) {
+    return false;
+  }
+  // Define a "matched" edge as one that can be paired with a corresponding
+  // reversed edge.  Define a vertex as "degenerate" if all of its edges are
+  // matched. In order to determine containment, we must find a non-degenerate
+  // vertex.  Often every vertex is non-degenerate, so we start by trying an
+  // arbitrary vertex.
+  S2Point const *v0, *v1;
+  shape.GetEdge(shape.num_edges() / 2, &v0, &v1);  // The "middle" edge.
+  bool result = false;
+  if (IsOriginOnLeftAtVertex(shape, *v0, &result)) {
+    return result;
+  }
+  // That didn't work, so now we do some extract work to find a non-degenerate
+  // vertex (if any).  Essentially we gather a list of edges and a list of
+  // reversed edges, and then sort them.  The first edge that appears in one
+  // list but not the other is guaranteed to be unmatched.
+  class Edge {
+   public:
+    Edge(S2Point const* v0, S2Point const* v1) : v0_(v0), v1_(v1) {}
+    // Define accessors to ensure that we don't accidentally compare pointers.
+    S2Point const& v0() const { return *v0_; }
+    S2Point const& v1() const { return *v1_; }
+    bool operator<(Edge const& other) const {
+      return v0() < other.v0() || (v0() == other.v0() && v1() < other.v1());
+    }
+   private:
+    S2Point const *v0_, *v1_;
+  };
+  int n = shape.num_edges();
+  vector<Edge> edges, rev_edges;
+  edges.reserve(n);
+  rev_edges.reserve(n);
+  for (int i = 0; i < n; ++i) {
+    shape.GetEdge(i, &v0, &v1);
+    edges.push_back(Edge(v0, v1));
+    rev_edges.push_back(Edge(v1, v0));
+  }
+  std::sort(edges.begin(), edges.end());
+  std::sort(rev_edges.begin(), rev_edges.end());
+  for (int i = 0; i < n; ++i) {
+    if (edges[i] < rev_edges[i]) {  // edges[i] is unmatched
+      CHECK(IsOriginOnLeftAtVertex(shape, edges[i].v0(), &result));
+      return result;
+    }
+    if (rev_edges[i] < edges[i]) {  // rev_edges[i] is unmatched
+      CHECK(IsOriginOnLeftAtVertex(shape, rev_edges[i].v0(), &result));
+      return result;
+    }
+  }
+  return false;  // All vertices are degenerate.
+}
+
+std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
+  return os << id.shape_id() << ":" << id.edge_id();
+}
+
+// A structure representing one edge within a S2ShapeIndexCell.
+struct CellEdge {
+  CellEdge() : edge_id(-1, -1), v0(nullptr), v1(nullptr) {}
+  ShapeEdgeId edge_id;
+  S2Point const *v0, *v1;
+};
+
+// Returns a vector representing all edges in the given S2ShapeIndexCell.
+static void GetCellEdges(S2ShapeIndex const& index,
+                         S2ShapeIndexCell const& cell,
+                         vector<CellEdge>* cell_edges) {
+  int num_edges = 0;
+  for (int s = 0; s < cell.num_shapes(); ++s) {
+    num_edges += cell.clipped(s).num_edges();
+  }
+  cell_edges->resize(num_edges);
+  int out = 0;
+  for (int s = 0; s < cell.num_shapes(); ++s) {
+    S2ClippedShape const& clipped = cell.clipped(s);
+    int32 shape_id = clipped.shape_id();
+    S2Shape* shape = index.shape(shape_id);
+    int num_clipped = clipped.num_edges();
+    for (int i = 0; i < num_clipped; ++i) {
+      CellEdge* cell_edge = &(*cell_edges)[out++];
+      int32 edge_id = clipped.edge(i);
+      cell_edge->edge_id = ShapeEdgeId(shape_id, edge_id);
+      shape->GetEdge(edge_id, &cell_edge->v0, &cell_edge->v1);
+    }
+  }
+  DCHECK_EQ(num_edges, out);
+}
+
+// Given a vector of edges within an S2ShapeIndexCell, append all pairs of
+// crossing edges (of the given CrossingType) to "edge_pairs".
+static void AppendCrossingEdgePairs(vector<CellEdge> const& cell_edges,
+                                    CrossingType type,
+                                    EdgePairList* edge_pairs) {
+  int min_crossing_value = (type == CrossingType::ALL) ? 0 : 1;
+  int num_edges = cell_edges.size();
+  for (int i = 0; i + 1 < num_edges; ++i) {
+    CellEdge const& a = cell_edges[i];
+    S2EdgeUtil::EdgeCrosser crosser(a.v0, a.v1);
+    for (int j = i + 1; j < num_edges; ++j) {
+      CellEdge const& b = cell_edges[j];
+      if (crosser.CrossingSign(b.v0, b.v1) >= min_crossing_value) {
+        edge_pairs->push_back(std::make_pair(a.edge_id, b.edge_id));
+      }
+    }
+  }
+}
+
+bool GetCrossingEdgePairs(S2ShapeIndex const& index,
+                          CrossingType type,
+                          EdgePairList* edge_pairs) {
+  edge_pairs->clear();
+  vector<CellEdge> cell_edges;
+  for (S2ShapeIndex::Iterator it(index); !it.Done(); it.Next()) {
+    GetCellEdges(index, *it.cell(), &cell_edges);
+    AppendCrossingEdgePairs(cell_edges, type, edge_pairs);
+  }
+  if (edge_pairs->size() > 1) {
+    sort(edge_pairs->begin(), edge_pairs->end());
+    edge_pairs->erase(std::unique(edge_pairs->begin(), edge_pairs->end()),
+                      edge_pairs->end());
+  }
+  return !edge_pairs->empty();
+}
+
+void ResolveLoopContainment(vector<vector<S2Shape*>> const& components,
+                            vector<vector<S2Shape*>>* faces) {
+  faces->clear();
+  if (components.empty()) return;
+
+  // Since the loops do not overlap, any point on the sphere determines a loop
+  // nesting hierarchy.  We choose to build a hierarchy around S2::Origin().
+  // The hierarchy then determines the face structure.  Here are the details:
+  //
+  // 1. Build an S2ShapeIndex of all loops that do not contain S2::Origin().
+  //    This leaves at most one unindexed loop per connected component
+  //    (the "outer loop").
+  // 2. For each component, choose a representative vertex and determine
+  //    which indexed loops contain it.  The "depth" of this component is
+  //    defined as the number of such loops.
+  // 3. Assign the outer loop of each component to the containing loop whose
+  //    depth is one less.  This generates a set of multi-loop faces.
+  // 4. The output loops of all components at depth 0 become a single face.
+
+  S2ShapeIndex index;
+  // A map from shape.id() to the corresponding component number.
+  vector<int> component_ids;
+  vector<S2Shape*> outer_loops;
+  for (int i = 0; i < components.size(); ++i) {
+    auto const& component = components[i];
+    for (int j = 0; j < component.size(); ++j) {
+      auto loop = component[j];
+      if (component.size() > 1 && !loop->contains_origin()) {
+        index.Add(loop);
+        component_ids.push_back(i);
+      } else {
+        outer_loops.push_back(loop);
+      }
+    }
+    // Check that there is exactly one outer loop in each component.
+    DCHECK_EQ(i + 1, outer_loops.size()) << "Component is not a subdivision";
+  }
+  // Find the loops containing each component.
+  vector<vector<S2Shape*>> ancestors(components.size());
+  for (int i = 0; i < outer_loops.size(); ++i) {
+    auto loop = outer_loops[i];
+    S2Point const *v0, *v1;
+    DCHECK_GT(loop->num_edges(), 0);
+    loop->GetEdge(0, &v0, &v1);
+    index.GetContainingShapes(*v0, &ancestors[i]);
+  }
+  // Assign each outer loop to the component whose depth is one less.
+  // Components at depth 0 become a single face.
+  util::btree::btree_map<S2Shape*, vector<S2Shape*>> children;
+  for (int i = 0; i < outer_loops.size(); ++i) {
+    S2Shape* ancestor = nullptr;
+    int depth = ancestors[i].size();
+    if (depth > 0) {
+      for (auto candidate : ancestors[i]) {
+        if (ancestors[component_ids[candidate->id()]].size() == depth - 1) {
+          DCHECK(ancestor == nullptr);
+          ancestor = candidate;
+        }
+      }
+      DCHECK(ancestor != nullptr);
+    }
+    children[ancestor].push_back(outer_loops[i]);
+  }
+  // There is one face per loop that is not an outer loop, plus one for the
+  // outer loops of components at depth 0.
+  faces->resize(index.num_shape_ids() + 1);
+  for (int i = 0; i < index.num_shape_ids(); ++i) {
+    auto face = &(*faces)[i];
+    auto loop = index.shape(i);
+    auto itr = children.find(loop);
+    if (itr != children.end()) {
+      *face = itr->second;
+    }
+    face->push_back(loop);
+  }
+  faces->back() = children[nullptr];
+
+  // Explicitly remove the shapes from the index so they are not Release()d.
+  index.RemoveAll();
+}
+
 static bool FindSelfIntersection(S2ClippedShape const& a_clipped,
                                  S2Loop const& a_loop, S2Error* error) {
   // Test for crossings between all edge pairs that do not share a vertex.
@@ -140,7 +572,7 @@ static bool FindLoopCrossing(vector<S2Loop*> const& loops,
   // one chain of 8 edges, the number of calls to Sign is 1*10=10 if the
   // shapes are sorted by edge count, and 8*3=24 otherwise.
   //
-  // typedef pair<int, S2ShapeIndex::ClippedShape const*> SortedShape;
+  // using SortedShape = pair<int, S2ShapeIndex::ClippedShape const*>;
   // vector<SortedShape> sorted_shapes;
 
   for (int a = 0; a < cell.num_shapes() - 1; ++a) {

@@ -21,6 +21,6 @@
 #include "fpcontractoff.h"
 #include "util/math/vector2.h"  // IWYU pragma: export
 
-typedef Vector2_d R2Point;
+using R2Point = Vector2_d;
 
 #endif  // S2GEOMETRY_R2_H_

@@ -15,12 +15,14 @@ Requirements for End Users
 --------------------------
 
 * [CMake](http://www.cmake.org/)
-* A C++ compiler with minimal C++11 support, such as [gcc](https://gcc.gnu.org/)
+* A C++ compiler with C++11 support, such as [g++](https://gcc.gnu.org/)
+  \>= 4.7.
 * [gflags command line flags](https://github.com/gflags/gflags)
 * [glog logging module](https://github.com/google/glog)
 * [OpenSSL](https://github.com/openssl/openssl) (for its bignums)
 * [googletest testing framework](https://github.com/google/googletest)
   (to build tests, optional)
+* A POSIX system (for pthreads and getrusage).
 
 On Ubuntu, all of these can be installed via apt-get.  Otherwise, you may need
 to install some from source.

@@ -218,9 +218,6 @@ class S2Testing {
   // Returns the user time consumed by this process, in seconds.
   static double GetCpuTime();
 
-  // Delete all loops in the vector, and clear the vector.
-  static void DeleteLoops(std::vector<S2Loop*>* loops);
-
 
  private:
   // Contains static methods

@@ -122,7 +122,7 @@ class S2PointIndex {
 
  private:
   // Defined here because the Iterator class below uses it.
-  typedef util::btree::btree_multimap<S2CellId, PointData> Map;
+  using Map = util::btree::btree_multimap<S2CellId, PointData>;
 
  public:
   class Iterator {

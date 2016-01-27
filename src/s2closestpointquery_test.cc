@@ -110,8 +110,8 @@ bool CheckDistanceResults(
 }  // namespace
 //////////////////////////////////////////////////////////////////////////
 
-typedef S2PointIndex<int> TestIndex;
-typedef S2ClosestPointQuery<int> TestQuery;
+using TestIndex = S2PointIndex<int>;
+using TestQuery = S2ClosestPointQuery<int>;
 
 TEST(S2ClosestPointQuery, NoPoints) {
   TestIndex index;
@@ -205,7 +205,7 @@ static S1Angle const kRadius = S2Testing::KmToAngle(10);
 // distances (say, less than Pi/2) due to using S1ChordAngle.
 static double kChordAngleError = 1e-15;
 
-typedef pair<S1Angle, int> Result;
+using Result = pair<S1Angle, int>;
 
 class PointTarget {
  public:

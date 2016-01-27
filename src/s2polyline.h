@@ -237,37 +237,19 @@ class S2Polyline : public S2Region {
   // Wrapper class for indexing a polyline (see S2ShapeIndex).  Once this
   // object is inserted into an S2ShapeIndex it is owned by that index, and
   // will be automatically deleted when no longer needed by the index.  Note
-  // that this class does *not* take ownership of the polyline itself; you can
-  // change this by using s2shapeutil::S2PolylineOwningShape instead, or by
-  // overriding Release().  You can also subtype this class to store extra
-  // information about the polyline; for example, if want to store a pointer
-  // with the polyline, you could write
-  //
-  //   class MyShape : public S2Polyline::Shape {
-  //    public:
-  //     MyShape(S2Polyline* polyline, MyData* data)
-  //         : S2Polyline::Shape(polyline), data_(data) {
-  //     }
-  //     MyData* data() const { return data_; }
-  //    private:
-  //     MyData* data_;
-  //   };
-  //
-  // Then you can retrieve the pointer associated with an edge returned by the
-  // S2ShapeIndex like this:
-  //
-  // MyData* data = down_cast<MyShape const*>(index->shape(shape_id))->data();
+  // that this class does not take ownership of the polyline; if you want this
+  // behavior, see s2shapeutil::S2PolylineOwningShape.  You can also subtype
+  // this class to store additional data (see S2Shape for details).
 #ifndef SWIG
   class Shape : public S2Shape {
    public:
-    // Does not take ownership of "polyline".
-    Shape() {}  // Must call Init().
-    explicit Shape(S2Polyline const* polyline) { Init(polyline); }
-    S2Polyline const* polyline() const { return polyline_; }
+    Shape() : polyline_(nullptr) {}  // Must call Init().
 
-    // Initialization method for default constructor.
-    // Does not take ownership of "polyline".
+    // Initialization.  Does not take ownership of "loop".
+    explicit Shape(S2Polyline const* polyline) { Init(polyline); }
     void Init(S2Polyline const* polyline) { polyline_ = polyline; }
+
+    S2Polyline const* polyline() const { return polyline_; }
 
     // S2Shape interface:
     int num_edges() const {
@@ -279,9 +261,8 @@ class S2Polyline : public S2Region {
     }
     bool has_interior() const { return false; }
     bool contains_origin() const { return false; }
-    void Release() const { delete this; }
 
-   protected:
+   private:
     S2Polyline const* polyline_;
   };
 #endif  // SWIG

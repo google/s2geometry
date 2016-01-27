@@ -309,7 +309,7 @@ class S2ClosestEdgeQuery {
     S1ChordAngle distance;
     int shape_id, edge_id;
   };
-  typedef util::btree::btree_set<Result> ResultSet;
+  using ResultSet = util::btree::btree_set<Result>;
   ResultSet tmp_results_;
 
   // For efficiency, when max_edges() == 1 we keep the current best result in
@@ -360,8 +360,8 @@ class S2ClosestEdgeQuery {
       return distance > other.distance;
     }
   };
-  typedef std::priority_queue<
-      QueueEntry, util::gtl::InlinedVector<QueueEntry, 16>> CellQueue;
+  using CellQueue =
+      std::priority_queue<QueueEntry, util::gtl::InlinedVector<QueueEntry, 16>>;
   CellQueue queue_;
 
   // Temporaries, defined here to avoid multiple allocations / initializations.

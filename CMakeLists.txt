@@ -95,8 +95,7 @@ install(FILES src/util/bits/bits.h
 install(FILES src/util/gtl/inlined_vector.h
               src/util/gtl/manual_constructor.h
         DESTINATION include/s2geometry/util/gtl)
-install(FILES src/util/hash/builtin_type_hash.h
-              src/util/hash/mix.h
+install(FILES src/util/hash/mix.h
         DESTINATION include/s2geometry/util/hash)
 install(FILES src/util/math/mathutil.h
               src/util/math/matrix3x3.h

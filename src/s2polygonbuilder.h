@@ -269,7 +269,7 @@ class S2PolygonBuilder {
   void AddPolygon(S2Polygon const* polygon);
 
   // This type is used to return any edges that could not be assembled.
-  typedef std::vector<std::pair<S2Point, S2Point>> EdgeList;
+  using EdgeList = std::vector<std::pair<S2Point, S2Point>>;
 
   // Assembles the given edges into as many non-crossing loops as possible.
   // When there is a choice about how to assemble the loops, then CCW loops
@@ -331,8 +331,8 @@ class S2PolygonBuilder {
   // Assembles and returns a single loop starting with the given edge.
   // If a loop cannot be assembled starting from this edge, returns nullptr
   // and updates "unused_edges".
-  S2Loop* AssembleLoop(S2Point const& v0, S2Point const& v1,
-                       EdgeList* unused_edges);
+  std::unique_ptr<S2Loop> AssembleLoop(S2Point const& v0, S2Point const& v1,
+                                       EdgeList* unused_edges);
 
   // Adds all the given edges to "unused_edges".
   void RejectLoop(S2Point const* v, int n, EdgeList* unused_edges);
@@ -342,7 +342,7 @@ class S2PolygonBuilder {
   // containing all of the vertices that do not need to be moved.
   class PointIndex;
 
-  typedef std::unordered_map<S2Point, S2Point, S2PointHash> MergeMap;
+  using MergeMap = std::unordered_map<S2Point, S2Point, S2PointHash>;
   void BuildMergeMap(PointIndex* index, MergeMap* merge_map);
 
   // Moves a set of vertices from old to new positions.
@@ -361,8 +361,8 @@ class S2PolygonBuilder {
   // vertices is a multiset so that the same edge can be present more than
   // once.  We could have also used a multiset<pair<S2Point, S2Point>>,
   // but this representation is a bit more convenient.
-  typedef std::multiset<S2Point> VertexSet;
-  typedef std::unordered_map<S2Point, VertexSet, S2PointHash> EdgeSet;
+  using VertexSet = std::multiset<S2Point>;
+  using EdgeSet = std::unordered_map<S2Point, VertexSet, S2PointHash>;
   EdgeSet edges_;
 
   // Unique collection of the starting (first) vertex of all edges,

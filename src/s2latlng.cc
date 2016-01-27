@@ -37,17 +37,8 @@ S2LatLng S2LatLng::Normalized() const {
 S2Point S2LatLng::ToPoint() const {
   DLOG_IF(ERROR, !is_valid())
       << "Invalid S2LatLng in S2LatLng::ToPoint: " << *this;
-  // As of crosstool v14, gcc tries to calculate sin(phi), cos(phi),
-  // sin(theta), cos(theta) on the following section by two sincos()
-  // calls. However, for some inputs, sincos() returns significantly
-  // different values between AMD and Intel.
-  //
-  // As a temporary workaround, "volatile" is added to phi and theta
-  // to prohibit the compiler to use such sincos() call, because sin()
-  // and cos() don't seem to have the problem. See b/3088321 for
-  // details.
-  volatile double phi = lat().radians();
-  volatile double theta = lng().radians();
+  double phi = lat().radians();
+  double theta = lng().radians();
   double cosphi = cos(phi);
   return S2Point(cos(theta) * cosphi, sin(theta) * cosphi, sin(phi));
 }

@@ -43,8 +43,11 @@ using std::vector;
 // is subdivided.  This flag can be overridden via S2ShapeIndexOptions.
 // Reasonable values range from 10 to about 50 or so.
 DEFINE_int32(
-    s2shapeindex_default_max_edges_per_cell, 10,  // TODO(ericv): Adjust
-    "Default maximum number of edges (not counting 'long' edges) per cell");
+    s2shapeindex_default_max_edges_per_cell, 10,
+    "Default maximum number of edges (not counting 'long' edges) per cell; "
+    "reasonable values range from 10 to 50.  Small values makes queries "
+    "faster, while large values make construction faster and use less "
+    "memory.");
 
 // FLAGS_s2shapeindex_tmp_memory_budget_mb
 //
@@ -275,27 +278,31 @@ void S2ShapeIndex::Remove(S2Shape* shape) {
       removed->edges.push_back(std::make_pair(*va, *vb));
     }
   }
-  // Return ownership to the caller; do not call Release().
+  // Return ownership to the caller; do not delete the shape.
   base::subtle::NoBarrier_Store(&index_status_, STALE);
 }
 
-void S2ShapeIndex::Reset() {
+void S2ShapeIndex::RemoveAll() {
+  // Note that vector::clear() does not actually free storage.
+  vector<S2Shape*> empty_shapes;
+  shapes_.swap(empty_shapes);
+
   Iterator it;
   for (it.InitStale(*this); !it.Done(); it.Next()) {
     delete it.cell();
   }
-  for (int id = 0; id < shapes_.size(); ++id) {
-    S2Shape* shape = shapes_[id];
-    if (shape) shape->Release();
-  }
   cell_map_.clear();
-  // Note that vector::clear() does not actually free storage.
-  vector<S2Shape*> empty_shapes;
-  shapes_.swap(empty_shapes);
   pending_additions_begin_ = 0;
   pending_removals_.reset();
   DCHECK(update_state_ == nullptr);
   base::subtle::NoBarrier_Store(&index_status_, FRESH);
+}
+
+void S2ShapeIndex::Reset() {
+  for (S2Shape* shape : shapes_) {
+    delete shape;
+  }
+  RemoveAll();
 }
 
 // Helper class for testing whether the point "p" is contained by one or more

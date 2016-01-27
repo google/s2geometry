@@ -31,15 +31,16 @@
 using std::vector;
 
 bool S2CrossingEdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
-                                       S2Shape const* shape,
+                                       S2Shape const* shape, CrossingType type,
                                        vector<int>* edges) {
   if (!GetCandidates(a0, a1, shape, edges)) return false;
+  int min_crossing_value = (type == CrossingType::ALL) ? 0 : 1;
   S2EdgeUtil::EdgeCrosser crosser(&a0, &a1);
   int out = 0, n = edges->size();
   for (int in = 0; in < n; ++in) {
     S2Point const *b0, *b1;
     shape->GetEdge((*edges)[in], &b0, &b1);
-    if (crosser.CrossingSign(b0, b1) >= 0) {
+    if (crosser.CrossingSign(b0, b1) >= min_crossing_value) {
       (*edges)[out++] = (*edges)[in];
     }
   }
@@ -52,17 +53,18 @@ bool S2CrossingEdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
 }
 
 bool S2CrossingEdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
-                                       EdgeMap* edge_map) {
+                                       CrossingType type, EdgeMap* edge_map) {
   if (!GetCandidates(a0, a1, edge_map)) return false;
+  int min_crossing_value = (type == CrossingType::ALL) ? 0 : 1;
   S2EdgeUtil::EdgeCrosser crosser(&a0, &a1);
-  for (EdgeMap::iterator it = edge_map->begin(); it != edge_map->end();) {
+  for (EdgeMap::iterator it = edge_map->begin(); it != edge_map->end(); ) {
     S2Shape const* shape = it->first;
     vector<int>* edges = &it->second;
     int out = 0, n = edges->size();
     for (int in = 0; in < n; ++in) {
       S2Point const *b0, *b1;
       shape->GetEdge((*edges)[in], &b0, &b1);
-      if (crosser.CrossingSign(b0, b1) >= 0) {
+      if (crosser.CrossingSign(b0, b1) >= min_crossing_value) {
         (*edges)[out++] = (*edges)[in];
       }
     }
@@ -151,8 +153,8 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
     }
   }
   if (cells_.size() > 1) {
-    for (EdgeMap::iterator i = edge_map->begin(); i != edge_map->end(); ++i) {
-      vector<int>* edges = &i->second;
+    for (auto& p : *edge_map) {
+      vector<int>* edges = &p.second;
       std::sort(edges->begin(), edges->end());
       edges->erase(std::unique(edges->begin(), edges->end()), edges->end());
     }

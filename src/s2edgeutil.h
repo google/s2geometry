@@ -498,7 +498,7 @@ class S2EdgeUtil {
     int face;
     R2Point a, b;
   };
-  typedef util::gtl::InlinedVector<FaceSegment, 6> FaceSegmentVector;
+  using FaceSegmentVector = util::gtl::InlinedVector<FaceSegment, 6>;
 
   // Subdivide the given edge AB at every point where it crosses the boundary
   // between two S2 cube faces and return the corresponding FaceSegments.  The
