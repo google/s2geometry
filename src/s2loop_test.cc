@@ -514,14 +514,14 @@ TEST_F(S2LoopTestBase, Contains) {
       loops.push_back(new S2Loop(loop_vertices));
       loop_vertices.clear();
     }
-    for (set<S2Point>::const_iterator i = points.begin();
-        i != points.end(); ++i) {
+    for (S2Point const& point : points) {
       int count = 0;
       for (int j = 0; j < loops.size(); ++j) {
-        if (loops[j]->Contains(*i)) ++count;
+        if (loops[j]->Contains(point)) ++count;
         // Contains and VirtualContainsPoint should have identical
         // implementation.
-        EXPECT_EQ(loops[j]->Contains(*i), loops[j]->VirtualContainsPoint(*i));
+        EXPECT_EQ(loops[j]->Contains(point),
+                  loops[j]->VirtualContainsPoint(point));
       }
       EXPECT_EQ(count, 1);
     }

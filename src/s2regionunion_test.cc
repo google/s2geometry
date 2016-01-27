@@ -28,6 +28,7 @@
 #include "s2latlngrect.h"
 #include "s2pointregion.h"
 #include "s2regioncoverer.h"
+#include "util/gtl/ptr_util.h"
 
 using std::unique_ptr;
 using std::vector;
@@ -48,11 +49,11 @@ TEST(S2RegionUnionTest, Basic) {
                                       .ToPoint()));
 
   // Check that Clone() returns a deep copy.
-  S2RegionUnion* two_points_orig = new S2RegionUnion(&regions);
+  auto two_points_orig = util::gtl::MakeUnique<S2RegionUnion>(&regions);
   EXPECT_TRUE(regions.empty());
 
   unique_ptr<S2RegionUnion> two_points(two_points_orig->Clone());
-  delete two_points_orig;
+  two_points_orig.reset();
   EXPECT_EQ(S2LatLngRect(S2LatLng::FromDegrees(-35, -40),
                          S2LatLng::FromDegrees(35, 40)),
             two_points->GetRectBound());

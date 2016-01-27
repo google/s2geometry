@@ -36,6 +36,7 @@
 #include "s2latlng.h"
 #include "s2loop.h"
 #include "s2polygon.h"
+#include "util/gtl/ptr_util.h"
 #include "util/math/matrix3x3.h"
 
 using std::min;
@@ -193,18 +194,17 @@ void S2PolygonBuilder::DumpEdges(S2Point const& v0) const {
   EdgeSet::const_iterator candidates = edges_.find(v0);
   if (candidates != edges_.end()) {
     VertexSet const& vset = candidates->second;
-    for (VertexSet::const_iterator i = vset.begin(); i != vset.end(); ++i) {
+    for (S2Point const& v : vset) {
       std::cout << "    ";
-      DumpVertex(*i);
+      DumpVertex(v);
       std::cout << "\n";
     }
   }
 }
 
 void S2PolygonBuilder::Dump() const {
-  for (EdgeSet::const_iterator i = edges_.begin(); i != edges_.end(); ++i) {
-    DumpEdges(i->first);
-  }
+  for (const auto& p : edges_)
+    DumpEdges(p.first);
 }
 
 void S2PolygonBuilder::EraseLoop(S2Point const* v, int n) {
@@ -220,8 +220,9 @@ void S2PolygonBuilder::RejectLoop(S2Point const* v, int n,
   }
 }
 
-S2Loop* S2PolygonBuilder::AssembleLoop(S2Point const& v0, S2Point const& v1,
-                                       EdgeList* unused_edges) {
+unique_ptr<S2Loop> S2PolygonBuilder::AssembleLoop(
+    S2Point const& v0, S2Point const& v1,
+    EdgeList* unused_edges) {
   // We start at the given edge and assemble a loop taking left turns
   // whenever possible.  We stop the loop as soon as we encounter any
   // vertex that we have seen before *except* for the first vertex (v0).
@@ -243,10 +244,10 @@ S2Loop* S2PolygonBuilder::AssembleLoop(S2Point const& v0, S2Point const& v1,
     EdgeSet::const_iterator candidates = edges_.find(v1);
     if (candidates != edges_.end()) {
       VertexSet const& vset = candidates->second;
-      for (VertexSet::const_iterator i = vset.begin(); i != vset.end(); ++i) {
+      for (S2Point const& v : vset) {
         // We prefer the leftmost outgoing edge, ignoring any reverse edges.
-        if (*i == v0) continue;
-        if (!v2_found || S2::OrderedCCW(v0, v2, *i, v1)) { v2 = *i; }
+        if (v == v0) continue;
+        if (!v2_found || S2::OrderedCCW(v0, v2, v, v1)) { v2 = v; }
         v2_found = true;
       }
     }
@@ -277,18 +278,17 @@ S2Loop* S2PolygonBuilder::AssembleLoop(S2Point const& v0, S2Point const& v1,
       // This is guaranteed to assemble a loop that is interior to the previous
       // one and will therefore eventually terminate.
 
-      S2Loop* loop = new S2Loop(path, options_.s2debug_override());
+      auto loop =
+          util::gtl::MakeUnique<S2Loop>(path, options_.s2debug_override());
       if (options_.validate() && !loop->IsValid()) {
         // We've constructed a loop that crosses itself, which can only
         // happen if there is bad input data.  Throw away the whole loop.
         RejectLoop(&path[0], path.size(), unused_edges);
         EraseLoop(&path[0], path.size());
-        delete loop;
         return nullptr;
       }
 
       if (options_.undirected_edges() && !loop->IsNormalized()) {
-        unique_ptr<S2Loop> deleter(loop);  // XXX for debugging
         return AssembleLoop(path[1], path[0], unused_edges);
       }
       return loop;
@@ -313,7 +313,7 @@ class S2PolygonBuilder::PointIndex {
   // AssembleLoops which is single-threaded.
 
  private:
-  typedef std::multimap<S2CellId, S2Point> Map;
+  using Map = std::multimap<S2CellId, S2Point>;
   Map map_;
 
   double vertex_radius_;
@@ -436,41 +436,38 @@ void S2PolygonBuilder::BuildMergeMap(PointIndex* index, MergeMap* merge_map) {
   // First, we build the set of all the distinct vertices in the input.
   // We need to include the source and destination of every edge.
   std::unordered_set<S2Point, S2PointHash> vertices;
-  for (EdgeSet::const_iterator i = edges_.begin(); i != edges_.end(); ++i) {
-    vertices.insert(i->first);
-    VertexSet const& vset = i->second;
-    for (VertexSet::const_iterator j = vset.begin(); j != vset.end(); ++j)
-      vertices.insert(*j);
+  for (auto const& p : edges_) {
+    vertices.insert(p.first);
+    VertexSet const& vset = p.second;
+    for (S2Point const& v : vset)
+      vertices.insert(v);
   }
 
   // Build a spatial index containing all the distinct vertices.
-  for (std::unordered_set<S2Point, S2PointHash>::const_iterator i = vertices.begin();
-       i != vertices.end(); ++i) {
-    index->Insert(*i);
-  }
+  for (auto const& p : vertices)
+    index->Insert(p);
 
   // Next, we loop through all the vertices and attempt to grow a maximial
   // mergeable group starting from each vertex.
   vector<S2Point> frontier, mergeable;
-  for (std::unordered_set<S2Point, S2PointHash>::const_iterator vstart = vertices.begin();
-       vstart != vertices.end(); ++vstart) {
+  for (const auto& vstart : vertices) {
     // Skip any vertices that have already been merged with another vertex.
-    if (merge_map->find(*vstart) != merge_map->end()) continue;
+    if (merge_map->find(vstart) != merge_map->end()) continue;
 
     // Grow a maximal mergeable component starting from "vstart", the
     // canonical representative of the mergeable group.
-    frontier.push_back(*vstart);
+    frontier.push_back(vstart);
     while (!frontier.empty()) {
       index->QueryCap(frontier.back(), &mergeable);
       frontier.pop_back();  // Do this before entering the loop below.
       for (int j = mergeable.size(); --j >= 0; ) {
         S2Point const& v1 = mergeable[j];
-        if (v1 != *vstart) {
+        if (v1 != vstart) {
           // Erase from the index any vertices that will be merged.  This
           // ensures that we won't try to merge the same vertex twice.
           index->Erase(v1);
           frontier.push_back(v1);
-          (*merge_map)[v1] = *vstart;
+          (*merge_map)[v1] = vstart;
         }
       }
     }
@@ -483,11 +480,10 @@ void S2PolygonBuilder::MoveVertices(MergeMap const& merge_map) {
   // We need to copy the set of edges affected by the move, since
   // edges_ could be reallocated when we start modifying it.
   vector<pair<S2Point, S2Point>> edges;
-  for (EdgeSet::const_iterator i = edges_.begin(); i != edges_.end(); ++i) {
-    S2Point const& v0 = i->first;
-    VertexSet const& vset = i->second;
-    for (VertexSet::const_iterator j = vset.begin(); j != vset.end(); ++j) {
-      S2Point const& v1 = *j;
+  for (auto const& p : edges_) {
+    S2Point const& v0 = p.first;
+    VertexSet const& vset = p.second;
+    for (S2Point const& v1 : vset) {
       if (merge_map.find(v0) != merge_map.end() ||
           merge_map.find(v1) != merge_map.end()) {
         // We only need to modify one copy of each undirected edge.
@@ -517,11 +513,10 @@ void S2PolygonBuilder::SpliceEdges(PointIndex const& index) {
   // We keep a stack of unprocessed edges.  Initially all edges are
   // pushed onto the stack.
   vector<pair<S2Point, S2Point>> edges;
-  for (EdgeSet::const_iterator i = edges_.begin(); i != edges_.end(); ++i) {
-    S2Point const& v0 = i->first;
-    VertexSet const& vset = i->second;
-    for (VertexSet::const_iterator j = vset.begin(); j != vset.end(); ++j) {
-      S2Point const& v1 = *j;
+  for (auto const& p : edges_) {
+    S2Point const& v0 = p.first;
+    VertexSet const& vset = p.second;
+    for (S2Point const& v1 : vset) {
       // We only need to modify one copy of each undirected edge.
       if (!options_.undirected_edges() || v0 < v1) {
         edges.push_back(std::make_pair(v0, v1));
@@ -559,12 +554,12 @@ S2Point SnapPointToLevel(S2Point const& p, int level) {
 // Returns a newly allocated loop, whose vertices have been snapped to
 // the centers of cells at the specified level.  The caller owns the
 // returned loop and is responsible for deleting it.
-S2Loop* SnapLoopToLevel(S2Loop const& loop, int level) {
+unique_ptr<S2Loop> SnapLoopToLevel(S2Loop const& loop, int level) {
   vector<S2Point> snapped_vertices(loop.num_vertices());
   for (int i = 0; i < loop.num_vertices(); ++i) {
     snapped_vertices[i] = SnapPointToLevel(loop.vertex(i), level);
   }
-  return new S2Loop(snapped_vertices);
+  return util::gtl::MakeUnique<S2Loop>(snapped_vertices);
 }
 }  // namespace
 
@@ -605,20 +600,8 @@ bool S2PolygonBuilder::AssembleLoops(vector<S2Loop*>* loops,
       ++i;
       continue;
     }
-    // NOTE(user): If we have such two S2Points a, b that:
-    //
-    //   a.x = b.x, a.y = b.y and
-    //   -- a.z = b.z if CPU is Intel
-    //   -- a.z <> b.z if CPU is AMD
-    //
-    // then the order of points picked up as v1 on the following line
-    // can be inconsistent between different machine architectures.
-    //
-    // As of b/3088321 and of cl/17847332, it's not clear if such
-    // input really exists in our input and probably it's O.K. not to
-    // address it in favor of the speed.
     S2Point const& v1 = *(candidates->second.begin());
-    S2Loop* loop = AssembleLoop(v0, v1, unused_edges);
+    unique_ptr<S2Loop> loop(AssembleLoop(v0, v1, unused_edges));
     if (loop != nullptr) {
       EraseLoop(&loop->vertex(0), loop->num_vertices());
 
@@ -626,12 +609,10 @@ bool S2PolygonBuilder::AssembleLoops(vector<S2Loop*>* loops,
         // TODO(user): Change AssembleLoop to return a vector<S2Point>,
         //   then optionally snap that before constructing the loop.
         //   This would prevent us from constructing two loops.
-        S2Loop* snapped_loop = SnapLoopToLevel(*loop, snap_level);
-        delete loop;
-        loop = snapped_loop;
+        loop = SnapLoopToLevel(*loop, snap_level);
       }
 
-      loops->push_back(loop);
+      loops->push_back(loop.release());
     }
   }
   return unused_edges->empty();

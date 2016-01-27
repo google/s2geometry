@@ -113,7 +113,7 @@ S2Polygon* MakeVerbatimPolygon(string const& str) {
 
 static void AppendVertex(S2Point const& p, string* out) {
   S2LatLng ll(p);
-  StringAppendF(out, "%.17g:%.17g", ll.lat().degrees(), ll.lng().degrees());
+  StringAppendF(out, "%.15g:%.15g", ll.lat().degrees(), ll.lng().degrees());
 }
 
 static void AppendVertices(S2Point const* v, int n, string* out) {

@@ -406,37 +406,19 @@ class S2Loop : public S2Region {
   // REQUIRES: if b->is_full(), then reverse_b == false.
   bool ContainsNonCrossingBoundary(S2Loop const* b, bool reverse_b) const;
 
-  // Wrapper class for indexing a loop (see S2ShapeIndex).  Once this
-  // object is inserted into an S2ShapeIndex it is owned by that index, and
-  // will be automatically deleted when no longer needed by the index.  Note
-  // that this class does *not* take ownership of the loop itself; you can
-  // change this by using s2shapeutil::S2LoopOwningShape instead, or by
-  // overriding Release().  You can also subtype this class to store extra
-  // information about the loop; for example, if want to store a pointer
-  // with the loop, you could write
-  //
-  //   class MyShape : public S2Loop::Shape {
-  //    public:
-  //     MyShape(S2Loop* loop, MyData* data)
-  //         : S2Loop::Shape(loop), data_(data) {
-  //     }
-  //     MyData* data() const { return data_; }
-  //    private:
-  //     MyData* data_;
-  //   };
-  //
-  // Then you can retrieve the pointer associated with an edge returned by the
-  // S2ShapeIndex like this:
-  //
-  // MyData* data = down_cast<MyShape const*>(index->shape(shape_id))->data();
+  // Wrapper class for indexing a loop (see S2ShapeIndex).  Once this object
+  // is inserted into an S2ShapeIndex it is owned by that index, and will be
+  // automatically deleted when no longer needed by the index.  Note that this
+  // class does not take ownership of the loop; if you want this behavior, see
+  // s2shapeutil::S2LoopOwningShape.  You can also subtype this class to store
+  // additional data (see S2Shape for details).
 #ifndef SWIG
   class Shape : public S2Shape {
    public:
-    Shape() {}  // Must call Init().
-    explicit Shape(S2Loop const* loop) { Init(loop); }
+    Shape() : loop_(nullptr) {}  // Must call Init().
 
-    // Initialization method for default constructor.
-    // Does not take ownership of "loop".
+    // Initialize the shape.  Does not take ownership of "loop".
+    explicit Shape(S2Loop const* loop) { Init(loop); }
     void Init(S2Loop const* loop) { loop_ = loop; }
 
     S2Loop const* loop() const { return loop_; }
@@ -451,9 +433,8 @@ class S2Loop : public S2Region {
     }
     bool has_interior() const { return true; }
     bool contains_origin() const { return loop_->contains_origin(); }
-    void Release() const { delete this; }
 
-   protected:
+   private:
     S2Loop const* loop_;
   };
 #endif  // SWIG
@@ -524,9 +505,6 @@ class S2Loop : public S2Region {
   // to efficiently encode boolean values.  Properties are
   // origin_inside and whether the bound was encoded.
   std::bitset<2> GetCompressedEncodingProperties() const;
-
-  // Internal implementation of the Intersects() method above.
-  bool IntersectsInternal(S2Loop const* b) const;
 
   // Given an iterator that is already positioned at the S2ShapeIndexCell
   // containing "p", returns Contains(p).
@@ -610,14 +588,7 @@ class S2Loop : public S2Region {
 
   // Every S2Loop has a "shape_" member that is used to index the loop.  This
   // shape belongs to the S2Loop and does not need to be freed separately.
-#ifndef SWIG
-  class BuiltinShape : public Shape {
-   public:
-    explicit BuiltinShape(S2Loop const* loop) : Shape(loop) {}
-    void Release() const { /*owned by the S2Loop*/ }
-  };
-#endif  // SWIG
-  BuiltinShape shape_;
+  Shape shape_;
 
   // Spatial index for this loop.
   S2ShapeIndex index_;

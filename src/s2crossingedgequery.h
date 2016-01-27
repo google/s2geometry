@@ -28,6 +28,7 @@
 #include "r2rect.h"
 #include "s2.h"
 #include "s2shapeindex.h"
+#include "s2shapeutil.h"
 #include "util/gtl/inlined_vector.h"
 
 class R2Rect;
@@ -46,7 +47,9 @@ class S2Shape;
 //   }
 //   S2CrossingEdgeQuery query(index);
 //   S2CrossingEdgeQuery::EdgeMap edge_map;
-//   if (!query.GetCrossings(a, b, &edge_map)) return;
+//   if (!query.GetCrossings(a, b, s2shapeutil::CrossingType::ALL, &edge_map)) {
+//     return;
+//   }
 //   for (auto const& it : edge_map) {
 //     S2Shape const* shape = it.first;
 //     S2Polyline* polyline = polylines[shape->id()];
@@ -54,7 +57,7 @@ class S2Shape;
 //     for (int edge : edges) {
 //       S2Point const& b0 = polyline->vertex(edge);
 //       S2Point const& b1 = polyline->vertex(edge) + 1);
-//       CHECK_GE(S2EdgeUtil::RobustCrossing(a0, a1, b0, b1), 0);
+//       CHECK_GE(S2EdgeUtil::CrossingSign(a0, a1, b0, b1), 0);
 //     }
 //   }
 // }
@@ -62,6 +65,9 @@ class S2Shape;
 // Note that if you need to query many edges, it is more efficient to declare
 // a single S2CrossingEdgeQuery object and reuse it so that temporary storage
 // does not need to be reallocated each time.
+//
+// If you want to find *all* pairs of crossing edges, it is more efficient to
+// call s2shapeutil::GetCrossingEdgePairs().
 class S2CrossingEdgeQuery {
  public:
   // An EdgeMap stores a sorted set of edge ids for each shape.  Its type
@@ -71,9 +77,8 @@ class S2CrossingEdgeQuery {
   struct CompareBtreeLinearSearch : public std::less<S2Shape const*> {
     using goog_btree_prefer_linear_node_search = std::true_type;
   };
-  typedef util::btree::btree_map<S2Shape const*, std::vector<int>,
-                                 CompareBtreeLinearSearch>
-      EdgeMap;
+  using EdgeMap = util::btree::btree_map<S2Shape const*, std::vector<int>,
+                                         CompareBtreeLinearSearch>;
 
   // Convenience constructor that calls Init().
   explicit S2CrossingEdgeQuery(S2ShapeIndex const& index);
@@ -85,16 +90,25 @@ class S2CrossingEdgeQuery {
   void Init(S2ShapeIndex const& index);
 
   // Given a query edge AB and a shape S, return all the edges of S that
-  // either cross AB or share a vertex with AB.  Returns false if no edges
-  // intersect AB.
-  bool GetCrossings(S2Point const& a, S2Point const& b, S2Shape const* shape,
+  // intersect AB.  If "type" is CrossingType::INTERIOR, then only
+  // intersections at a point interior to both edges are reported, while if
+  // "type" is CrossingType::ALL then edges that share a vertex are also
+  // reported.  Returns false if no edges cross AB.
+  using CrossingType = s2shapeutil::CrossingType;
+  bool GetCrossings(S2Point const& a, S2Point const& b,
+                    S2Shape const* shape, CrossingType type,
                     std::vector<int>* edges);
 
-  // Given a query edge AB, return all the edges that either cross AB or share
-  // a vertex with AB.  The edges are returned as a map from shapes to the
-  // edges of that shape that intersect AB.  Every returned shape has at least
-  // one crossing edge.  Returns false if no edges intersect AB.
-  bool GetCrossings(S2Point const& a, S2Point const& b, EdgeMap* edge_map);
+  // Given a query edge AB, return all the edges that intersect AB.  If "type"
+  // is CrossingType::INTERIOR, then only intersections at a point interior to
+  // both edges are reported, while if "type" is CrossingType::ALL then edges
+  // that share a vertex are also reported.
+  //
+  // The edges are returned as a map from shapes to the edges of that shape
+  // that intersect AB.  Every returned shape has at least one crossing edge.
+  // Returns false if no edges intersect AB.
+  bool GetCrossings(S2Point const& a, S2Point const& b, CrossingType type,
+                    EdgeMap* edge_map);
 
   /////////////////////////// Low-Level Methods ////////////////////////////
   //

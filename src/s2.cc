@@ -248,7 +248,7 @@ int S2::Sign(S2Point const& a, S2Point const& b, S2Point const& c) {
 // supported an option based on MPFR, but that has an LGPL license and is
 // therefore not suited for some applications.)
 
-typedef Vector3<ExactFloat> Vector3_xf;
+using Vector3_xf = Vector3<ExactFloat>;
 
 int S2::ExpensiveSign(S2Point const& a, S2Point const& b, S2Point const& c) {
   // Return zero if and only if two points are the same.  This ensures (1).

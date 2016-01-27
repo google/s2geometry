@@ -735,6 +735,7 @@ kFull).
 Point containment of loops is defined such that if the sphere is subdivided
 into faces (loops), every point is contained by exactly one face.  This
 implies that loops do not necessarily contain their vertices.
+
 ```c++
 class S2Loop : public S2Region {
  public:

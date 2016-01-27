@@ -191,7 +191,7 @@ ostream& operator<<(ostream& out, EdgeId const& x) {
   return out << '(' << x.shape_id << ", " << x.edge_id << ')';
 }
 
-typedef pair<S1Angle, EdgeId> Result;
+using Result = pair<S1Angle, EdgeId>;
 
 class PointTarget {
  public:

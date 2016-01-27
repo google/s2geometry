@@ -42,7 +42,8 @@ using std::vector;
 
 namespace {
 
-typedef pair<S2Point, S2Point> TestEdge;
+using TestEdge = pair<S2Point, S2Point>;
+using CrossingType = s2shapeutil::CrossingType;
 
 S2Point PerturbAtDistance(S1Angle distance, S2Point const& a0,
                           S2Point const& b0) {
@@ -125,12 +126,16 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
     EXPECT_LT(candidates.back(), shape->num_edges());
     num_candidates += candidates.size();
     string missing_candidates;
-    vector<int> expected_crossings;
+    vector<int> expected_crossings, expected_interior_crossings;
     for (int i = 0; i < shape->num_edges(); ++i) {
       S2Point const *c, *d;
       shape->GetEdge(i, &c, &d);
-      if (S2EdgeUtil::CrossingSign(a, b, *c, *d) >= 0) {
+      int sign = S2EdgeUtil::CrossingSign(a, b, *c, *d);
+      if (sign >= 0) {
         expected_crossings.push_back(i);
+        if (sign > 0) {
+          expected_interior_crossings.push_back(i);
+        }
         ++num_nearby_pairs;
         if (!std::binary_search(candidates.begin(), candidates.end(), i)) {
           StringAppendF(&missing_candidates, " %d", i);
@@ -149,14 +154,18 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
 
     // Test that GetCrossings() returns only the actual crossing edges.
     vector<int> actual_crossings;
-    query.GetCrossings(a, b, shape, &actual_crossings);
+    query.GetCrossings(a, b, shape, CrossingType::ALL, &actual_crossings);
     EXPECT_EQ(expected_crossings, actual_crossings);
 
     // Verify that the second version of GetCrossings returns the same result.
-    query.GetCrossings(a, b, &edge_map);
+    query.GetCrossings(a, b, CrossingType::ALL, &edge_map);
     EXPECT_EQ(1, edge_map.size());
     EXPECT_EQ(shape, edge_map.begin()->first);
     EXPECT_EQ(expected_crossings, edge_map.begin()->second);
+
+    // Verify that CrossingType::INTERIOR returns only the interior crossings.
+    query.GetCrossings(a, b, shape, CrossingType::INTERIOR, &actual_crossings);
+    EXPECT_EQ(expected_interior_crossings, actual_crossings);
   }
   // There is nothing magical about this particular ratio; this check exists
   // to catch changes that dramatically increase the number of candidates.
@@ -250,12 +259,11 @@ void TestPolylineCrossings(vector<S2Polyline*> const& polylines,
   }
   S2CrossingEdgeQuery query(index);
   S2CrossingEdgeQuery::EdgeMap edge_map;
-  if (!query.GetCrossings(a0, a1, &edge_map)) return;
-  for (S2CrossingEdgeQuery::EdgeMap::const_iterator it = edge_map.begin();
-       it != edge_map.end(); ++it) {
-    S2Shape const* shape = it->first;
+  if (!query.GetCrossings(a0, a1, CrossingType::ALL, &edge_map)) return;
+  for (auto const& p : edge_map) {
+    S2Shape const* shape = p.first;
     S2Polyline* polyline = polylines[shape->id()];
-    vector<int> const& edges = it->second;
+    vector<int> const& edges = p.second;
     // Shapes with no crossings should be filtered out by this method.
     EXPECT_FALSE(edges.empty());
     for (int j = 0; j < edges.size(); ++j) {

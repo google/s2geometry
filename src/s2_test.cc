@@ -759,7 +759,7 @@ TEST_F(StableSignTest, FailureRate) {
 template<int dim>
 class MetricBundle {
  public:
-  typedef S2::Metric<dim> Metric;
+  using Metric = S2::Metric<dim>;
   MetricBundle(Metric const& min, Metric const& max, Metric const& avg) :
     min_(min), max_(max), avg_(avg) {}
   Metric const& min_;

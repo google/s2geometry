@@ -29,7 +29,10 @@
 #include <glog/logging.h>
 #include "base/macros.h"
 #include <gtest/gtest.h>
+#include "r2.h"
+#include "r2rect.h"
 #include "s2.h"
+#include "s2cap.h"
 #include "s2latlng.h"
 #include "s2testing.h"
 
@@ -498,6 +501,74 @@ TEST(S2CellId, Neighbors) {
     int max_diff = min(6, S2CellId::kMaxLevel - id.level() - 1);
     int level = id.level() + S2Testing::rnd.Uniform(max_diff);
     TestAllNeighbors(id, level);
+  }
+}
+
+// Returns a random point on the boundary of the given rectangle.
+static R2Point SampleBoundary(R2Rect const& rect) {
+  R2Point uv;
+  int d = S2Testing::rnd.Uniform(2);
+  uv[d] = S2Testing::rnd.UniformDouble(rect[d][0], rect[d][1]);
+  uv[1-d] = S2Testing::rnd.OneIn(2) ? rect[1-d][0] : rect[1-d][1];
+  return uv;
+}
+
+// Returns the closest point to "uv" on the boundary of "rect".
+static R2Point ProjectToBoundary(R2Point const& uv, R2Rect const& rect) {
+  double du0 = std::abs(uv[0] - rect[0][0]);
+  double du1 = std::abs(uv[0] - rect[0][1]);
+  double dv0 = std::abs(uv[1] - rect[1][0]);
+  double dv1 = std::abs(uv[1] - rect[1][1]);
+  double dmin = min(min(du0, du1), min(dv0, dv1));
+  if (du0 == dmin) return R2Point(rect[0][0], rect[1].ClampPoint(uv[1]));
+  if (du1 == dmin) return R2Point(rect[0][1], rect[1].ClampPoint(uv[1]));
+  if (dv0 == dmin) return R2Point(rect[0].ClampPoint(uv[0]), rect[1][0]);
+  CHECK_EQ(dmin, dv1) << "Bug in ProjectToBoundary";
+  return R2Point(rect[0].ClampPoint(uv[0]), rect[1][1]);
+}
+
+void TestExpandedByDistanceUV(S2CellId id, S1Angle distance) {
+  R2Rect bound = id.GetBoundUV();
+  R2Rect expanded = S2CellId::ExpandedByDistanceUV(bound, distance);
+  for (int iter = 0; iter < 100; ++iter) {
+    // Choose a point on the boundary of the rectangle.
+    int face = S2Testing::rnd.Uniform(6);
+    R2Point center_uv = SampleBoundary(bound);
+    S2Point center = S2::FaceUVtoXYZ(face, center_uv).Normalize();
+
+    // Now sample a point from a disc of radius (2 * distance).
+    S2Point p = S2Testing::SamplePoint(S2Cap(center, 2 * distance.abs()));
+
+    // Find the closest point on the boundary to the sampled point.
+    R2Point uv;
+    if (!S2::FaceXYZtoUV(face, p, &uv)) continue;
+    R2Point closest_uv = ProjectToBoundary(uv, bound);
+    S2Point closest = S2::FaceUVtoXYZ(face, closest_uv).Normalize();
+    S1Angle actual_dist = S1Angle(p, closest);
+
+    if (distance >= S1Angle::Zero()) {
+      // "expanded" should contain all points in the original bound, and also
+      // all points within "distance" of the boundary.
+      if (bound.Contains(uv) || actual_dist < distance) {
+        EXPECT_TRUE(expanded.Contains(uv));
+      }
+    } else {
+      // "expanded" should not contain any points within "distance" of the
+      // original boundary.
+      if (actual_dist < -distance) {
+        EXPECT_FALSE(expanded.Contains(uv));
+      }
+    }
+  }
+}
+
+TEST(S2CellId, ExpandedByDistanceUV) {
+  double max_dist_degrees = 10;
+  for (int iter = 0; iter < 100; ++iter) {
+    S2CellId id = S2Testing::GetRandomCellId();
+    double dist_degrees = S2Testing::rnd.UniformDouble(-max_dist_degrees,
+                                                       max_dist_degrees);
+    TestExpandedByDistanceUV(id, S1Angle::Degrees(dist_degrees));
   }
 }
 

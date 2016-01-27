@@ -117,7 +117,7 @@ S2debugOverride S2Loop::s2debug_override() const {
 
 void S2Loop::ResetMutableFields() {
   base::subtle::NoBarrier_Store(&unindexed_contains_calls_, 0);
-  index_.Reset();
+  index_.RemoveAll();  // Prevent shape_ from being deleted.
 }
 
 void S2Loop::Init(vector<S2Point> const& vertices) {
@@ -302,6 +302,7 @@ S2Loop::S2Loop(S2Cell const& cell)
 
 S2Loop::~S2Loop() {
   if (owns_vertices_) delete[] vertices_;
+  index_.RemoveAll();  // Prevent shape_ from being deleted.
 }
 
 S2Loop::S2Loop(S2Loop const* src)

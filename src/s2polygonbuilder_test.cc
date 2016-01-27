@@ -568,9 +568,10 @@ bool TestBuilder(TestCase const* test) {
 }
 
 TEST(S2PolygonBuilder, AssembleLoops) {
-  for (int i = 0; i < arraysize(test_cases); ++i) {
-    SCOPED_TRACE(StringPrintf("Test case %d", i));
-    EXPECT_TRUE(TestBuilder(&test_cases[i]));
+  int i = 0;
+  for (TestCase const& test_case : test_cases) {
+    SCOPED_TRACE(StringPrintf("Test case %d", i++));
+    EXPECT_TRUE(TestBuilder(&test_case));
   }
 }
 

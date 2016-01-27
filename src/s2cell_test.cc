@@ -47,6 +47,7 @@
 using std::map;
 using std::max;
 using std::min;
+using std::pair;
 using std::vector;
 
 TEST(S2Cell, TestFaces) {
@@ -74,14 +75,10 @@ TEST(S2Cell, TestFaces) {
     }
   }
   // Check that edges have multiplicity 2 and vertices have multiplicity 3.
-  for (map<S2Point, int>::iterator i = edge_counts.begin();
-       i != edge_counts.end(); ++i) {
-    EXPECT_EQ(2, i->second);
-  }
-  for (map<S2Point, int>::iterator i = vertex_counts.begin();
-       i != vertex_counts.end(); ++i) {
-    EXPECT_EQ(3, i->second);
-  }
+  for (pair<S2Point, int> const& p : edge_counts)
+    EXPECT_EQ(2, p.second);
+  for (pair<S2Point, int> const& p : vertex_counts)
+    EXPECT_EQ(3, p.second);
 }
 
 struct LevelStats {
@@ -249,8 +246,8 @@ static void TestSubdivide(S2Cell const& cell) {
       R2Point(DBL_EPSILON, kMaxSizeUV),   // Longest edge/diagonal
     };
     bool force_subdivide = false;
-    for (int k = 0; k < arraysize(special_uv); ++k) {
-      if (children[i].GetBoundUV().Contains(special_uv[k]))
+    for (R2Point const& uv : special_uv) {
+      if (children[i].GetBoundUV().Contains(uv))
         force_subdivide = true;
     }
     if (force_subdivide ||
@@ -555,7 +552,8 @@ static S1ChordAngle GetDistanceToEdgeBruteForce(
   index.Add(new S2Loop::Shape(&loop));
   S2CrossingEdgeQuery query(index);
   vector<int> edges;
-  if (query.GetCrossings(a, b, index.shape(0), &edges)) {
+  if (query.GetCrossings(a, b, index.shape(0), s2shapeutil::CrossingType::ALL,
+                         &edges)) {
     return S1ChordAngle::Zero();
   }
   S1ChordAngle min_dist = S1ChordAngle::Infinity();

@@ -128,10 +128,8 @@ void Faces::AddFace(int face) {
 }
 
 void Faces::Encode(Encoder* encoder) const {
-  for (vector<FaceRun>::const_iterator i = faces_.begin();
-       i != faces_.end(); ++i) {
-    i->Encode(encoder);
-  }
+  for (FaceRun const& face_run : faces_)
+    face_run.Encode(encoder);
 }
 
 bool Faces::Decode(int num_vertices, Decoder* decoder) {

@@ -120,16 +120,17 @@ TEST(S2LatLng, TestToString) {
     {91.3, 190.4, 90, -169.6},
     {-100, -710, -90, 10},
   };
-  for (int i = 0; i < arraysize(values); ++i) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", i));
-    S2LatLng p = S2LatLng::FromDegrees(values[i].lat, values[i].lng);
+  int i = 0;
+  for (auto const& v : values) {
+    SCOPED_TRACE(StringPrintf("Iteration %d", i++));
+    S2LatLng p = S2LatLng::FromDegrees(v.lat, v.lng);
     string output;
     p.ToStringInDegrees(&output);
 
     double lat, lng;
     ASSERT_EQ(2, std::sscanf(output.c_str(), "%lf,%lf", &lat, &lng));
-    EXPECT_NEAR(values[i].expected_lat, lat, 1e-8);
-    EXPECT_NEAR(values[i].expected_lng, lng, 1e-8);
+    EXPECT_NEAR(v.expected_lat, lat, 1e-8);
+    EXPECT_NEAR(v.expected_lng, lng, 1e-8);
   }
 }
 

@@ -34,12 +34,6 @@
 #include "util/math/vector3.h"  // IWYU pragma: export
 #include "util/math/vector3_hash.h"  // IWYU pragma: export
 
-#ifdef LANG_CXX11
-# define S2_CONSTEXPR constexpr
-#else
-# define S2_CONSTEXPR
-#endif
-
 class S1Angle;
 
 // This flag enables extra validity checking throughout the S2 code.  It is
@@ -64,9 +58,9 @@ enum S2debugOverride {
 // this.  See util/math/vector3.h for the methods available.  Among other
 // things, there are overloaded operators that make it convenient to write
 // arithmetic expressions (e.g. (1-x)*p1 + x*p2).
-typedef Vector3_d S2Point;
+using S2Point = Vector3_d;
 
-typedef GoodFastHash<S2Point> S2PointHash;
+using S2PointHash = GoodFastHash<S2Point>;
 
 // The S2 class is simply a namespace for constants and static utility
 // functions related to spherical geometry, such as area calculations and edge
@@ -569,7 +563,7 @@ class S2 {
   // Defines a cell metric of the given dimension (1 == length, 2 == area).
   template <int dim> class Metric {
    public:
-    explicit S2_CONSTEXPR Metric(double deriv) : deriv_(deriv) {}
+    explicit constexpr Metric(double deriv) : deriv_(deriv) {}
 
     // The "deriv" value of a metric is a derivative, and must be multiplied by
     // a length or area in (s,t)-space to get a useful value.
@@ -606,8 +600,8 @@ class S2 {
     Metric(Metric const&) = delete;
     void operator=(Metric const&) = delete;
   };
-  typedef Metric<1> LengthMetric;
-  typedef Metric<2> AreaMetric;
+  using LengthMetric = Metric<1>;
+  using AreaMetric = Metric<2>;
 
   // Each cell is bounded by four planes passing through its four edges and
   // the center of the sphere.  These metrics relate to the angle between each
@@ -1012,7 +1006,5 @@ template <int dim>
 int S2::Metric<dim>::GetClosestLevel(double value) const {
   return GetMinLevel((dim == 1 ? M_SQRT2 : 2) * value);
 }
-
-#undef S2_CONSTEXPR
 
 #endif  // S2GEOMETRY_S2_H_

@@ -128,8 +128,8 @@ bool S2EdgeUtil::EdgeOrVertexCrossing(S2Point const& a, S2Point const& b,
   return VertexCrossing(a, b, c, d);
 }
 
-typedef Vector3<long double> Vector3_ld;
-typedef Vector3<ExactFloat> Vector3_xf;
+using Vector3_ld = Vector3<long double>;
+using Vector3_xf = Vector3<ExactFloat>;
 
 // Computes the cross product of "x" and "y", normalizes it to be unit length,
 // and stores the result in "result".  Also returns the length of the cross
@@ -504,14 +504,7 @@ double S2EdgeUtil::GetDistanceFraction(S2Point const& x,
 
 S2Point S2EdgeUtil::InterpolateAtDistance(S1Angle ax_angle,
                                           S2Point const& a, S2Point const& b) {
-  // As of crosstool v14, gcc tries to calculate sin(ax) and cos(ax) using one
-  // sincos() call.  However, for some inputs sincos() returns significantly
-  // different values between AMD and Intel.
-  //
-  // As a temporary workaround, "ax" is declared as "volatile" to prohibit the
-  // compiler from using sincos(), because sin() and cos() don't seem to have
-  // the problem.  See b/3088321 for details.
-  volatile double ax = ax_angle.radians();
+  double ax = ax_angle.radians();
 
   DCHECK(S2::IsUnitLength(a));
   DCHECK(S2::IsUnitLength(b));
@@ -1194,7 +1187,7 @@ S2EdgeUtil::LongitudePruner::LongitudePruner(S1Interval const& interval,
 
 // S2PointUVW is used to document that a given S2Point is expressed in the
 // (u,v,w) coordinates of some cube face.
-typedef S2Point S2PointUVW;
+using S2PointUVW = S2Point;
 
 // The three functions below all compare a sum (u + v) to a third value w.
 // They are implemented in such a way that they produce an exact result even
