@@ -17,8 +17,8 @@
 
 #include "s2polygonbuilder.h"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <unordered_map>
 #include <unordered_set>
 #include <iomanip>

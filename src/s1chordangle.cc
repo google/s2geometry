@@ -18,6 +18,7 @@
 #include "s1chordangle.h"
 
 #include <cmath>
+
 #include "s1angle.h"
 
 using std::max;

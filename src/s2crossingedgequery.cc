@@ -97,8 +97,7 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
 
   // Gather all the edges that intersect those cells and sort them.
   int shape_id = shape->id();
-  for (int i = 0; i < cells_.size(); ++i) {
-    S2ShapeIndexCell const* cell = cells_[i];
+  for (S2ShapeIndexCell const* cell : cells_) {
     S2ClippedShape const* clipped = cell->find_clipped(shape_id);
     if (clipped == nullptr) continue;
     edges->reserve(edges->size() + clipped->num_edges());
@@ -141,8 +140,7 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
   if (cells_.empty()) return false;
 
   // Gather all the edges that intersect those cells and sort them.
-  for (int i = 0; i < cells_.size(); ++i) {
-    S2ShapeIndexCell const* cell = cells_[i];
+  for (S2ShapeIndexCell const* cell : cells_) {
     for (int s = 0; s < cell->num_shapes(); ++s) {
       S2ClippedShape const& clipped = cell->clipped(s);
       vector<int>* edges = &(*edge_map)[index_->shape(clipped.shape_id())];
@@ -167,16 +165,16 @@ void S2CrossingEdgeQuery::GetCells(S2Point const& a, S2Point const& b) {
   cells_.clear();
   S2EdgeUtil::FaceSegmentVector segments;
   S2EdgeUtil::GetFaceSegments(a, b, &segments);
-  for (int i = 0; i < segments.size(); ++i) {
-    a_ = segments[i].a;
-    b_ = segments[i].b;
+  for (auto const& segment : segments) {
+    a_ = segment.a;
+    b_ = segment.b;
 
     // Optimization: rather than always starting the recursive subdivision at
     // the top level face cell, instead we start at the smallest S2CellId that
     // contains the edge (the "edge root cell").  This typically lets us skip
     // quite a few levels of recursion since most edges are short.
     R2Rect edge_bound = R2Rect::FromPointPair(a_, b_);
-    S2PaddedCell pcell(S2CellId::FromFace(segments[i].face), 0);
+    S2PaddedCell pcell(S2CellId::FromFace(segment.face), 0);
     S2CellId edge_root = pcell.ShrinkToFit(edge_bound);
 
     // Now we need to determine how the edge root cell is related to the cells

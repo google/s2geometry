@@ -201,8 +201,7 @@ void S2RegionCoverer::AdjustCellLevels(vector<S2CellId>* cells) const {
   if (level_mod() == 1) return;
 
   int out = 0;
-  for (int i = 0; i < cells->size(); ++i) {
-    S2CellId id = (*cells)[i];
+  for (S2CellId id : *cells) {
     int level = id.level();
     int new_level = AdjustLevel(level);
     if (new_level != level) id = id.parent(new_level);
@@ -222,8 +221,8 @@ void S2RegionCoverer::GetInitialCandidates() {
   vector<S2CellId> cells;
   tmp_coverer.GetFastCovering(region_->GetCapBound(), &cells);
   AdjustCellLevels(&cells);
-  for (int i = 0; i < cells.size(); ++i) {
-    AddCandidate(NewCandidate(S2Cell(cells[i])));
+  for (S2CellId cell_id : cells) {
+    AddCandidate(NewCandidate(S2Cell(cell_id)));
   }
 }
 

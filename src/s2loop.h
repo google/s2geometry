@@ -18,9 +18,9 @@
 #ifndef S2GEOMETRY_S2LOOP_H_
 #define S2GEOMETRY_S2LOOP_H_
 
+#include <bitset>
 #include <cmath>
 #include <cstddef>
-#include <bitset>
 #include <map>
 #include <vector>
 
@@ -567,7 +567,7 @@ class S2Loop : public S2Region {
   S2Point* vertices_;
   bool owns_vertices_;
 
-  uint8 s2debug_override_;  // Store enum in 1 byte rather than 4.
+  S2debugOverride s2debug_override_;
   bool origin_inside_;      // Does the loop contains S2::Origin()?
 
   // In general we build the index the first time it is needed, but we make an

@@ -17,10 +17,10 @@
 
 #include "s2cellid.h"
 
-#include <cfloat>
 #include <pthread.h>
-#include <cstring>
 #include <algorithm>
+#include <cfloat>
+#include <cstring>
 #include <iosfwd>
 #include <vector>
 

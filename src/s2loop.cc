@@ -17,9 +17,9 @@
 
 #include "s2loop.h"
 
-#include <cfloat>
 #include <algorithm>
 #include <bitset>
+#include <cfloat>
 #include <set>
 #include <utility>
 #include <vector>
@@ -113,7 +113,7 @@ void S2Loop::set_s2debug_override(S2debugOverride override) {
 }
 
 S2debugOverride S2Loop::s2debug_override() const {
-  return static_cast<S2debugOverride>(s2debug_override_);
+  return s2debug_override_;
 }
 
 void S2Loop::ResetMutableFields() {

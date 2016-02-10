@@ -19,6 +19,7 @@
 #define S2GEOMETRY_S2CLOSESTPOINTQUERY_H_
 
 #include <vector>
+
 #include <glog/logging.h>
 #include "priority_queue_sequence.h"
 #include "s1angle.h"
@@ -40,13 +41,13 @@
 //   // The template argument allows auxiliary data to be attached to each
 //   // point (in this case, the array index).
 //   S2PointIndex<int> index;
-//   for (int i = 0; i < points.size(); ++i) {
-//     index.Add(points[i], i);
+//   for (S2Point const& point : points) {
+//     index.Add(point, i);
 //   }
 //   S2ClosestPointQuery<int> query(index);
 //   query.set_max_points(15);
-//   for (int i = 0; i < targets.size(); ++i) {
-//     query.FindClosestPoints(targets[i]);
+//   for (S2Point const& target : targets) {
+//     query.FindClosestPoints(target);
 //     for (int j = 0; j < query.num_points(); ++j) {
 //       // query.data(j) is the auxiliary data (the "points" array index).
 //       // query.distance(j) is the distance to the target point.

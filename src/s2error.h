@@ -22,7 +22,6 @@
 #define S2GEOMETRY_S2ERROR_H_
 
 #include <cstdarg>
-
 #include <ostream>
 #include <string>
 

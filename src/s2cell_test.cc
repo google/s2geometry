@@ -17,10 +17,10 @@
 
 #include "s2cell.h"
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
-#include <algorithm>
 #include <map>
 #include <utility>
 #include <vector>

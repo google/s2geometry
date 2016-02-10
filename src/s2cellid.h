@@ -20,7 +20,6 @@
 
 #include <cstddef>
 #include <functional>
-#include <iosfwd>     // No longer needed
 #include <iostream>
 #include <string>
 #include <type_traits>

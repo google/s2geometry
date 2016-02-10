@@ -92,7 +92,13 @@ install(FILES src/util/bits/bits.h
               src/util/bits/bits-internal-unknown.h
               src/util/bits/bits-internal-windows.h
         DESTINATION include/s2geometry/util/bits)
+install(FILES src/util/btree/btree.h
+              src/util/btree/btree_container.h
+              src/util/btree/btree_map.h
+              src/util/btree/btree_set.h
+        DESTINATION include/util/btree)
 install(FILES src/util/gtl/inlined_vector.h
+              src/util/gtl/gtl_namespace.h
               src/util/gtl/manual_constructor.h
         DESTINATION include/s2geometry/util/gtl)
 install(FILES src/util/hash/mix.h

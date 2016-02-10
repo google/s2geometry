@@ -44,6 +44,7 @@
 #include "base/macros.h"
 #include "base/port.h"
 #include "base/template_util.h"
+#include "util/gtl/gtl_namespace.h"
 
 #ifdef LANG_CXX11  // must follow base/port.h
 #include <forward_list>
@@ -278,20 +279,28 @@ inline void STLAppendToString(string* str, const char* ptr, size_t n) {
 // we will need to change this as well.
 template<typename T, typename Allocator>
 inline T* vector_as_array(std::vector<T, Allocator>* v) {
-# if defined NDEBUG && !defined _GLIBCXX_DEBUG
+#ifdef LANG_CXX11
+  return v->data();
+#else
+#if defined NDEBUG && !defined _GLIBCXX_DEBUG
   return &*v->begin();
-# else
+#else
   return v->empty() ? nullptr : &*v->begin();
-# endif
+#endif
+#endif
 }
 // vector_as_array overload for const vector<>.
 template<typename T, typename Allocator>
 inline const T* vector_as_array(const std::vector<T, Allocator>* v) {
-# if defined NDEBUG && !defined _GLIBCXX_DEBUG
+#ifdef LANG_CXX11
+  return v->data();
+#else
+#if defined NDEBUG && !defined _GLIBCXX_DEBUG
   return &*v->begin();
-# else
+#else
   return v->empty() ? nullptr : &*v->begin();
-# endif
+#endif
+#endif
 }
 
 // Returns a mutable char* pointing to a string's internal buffer, which may not

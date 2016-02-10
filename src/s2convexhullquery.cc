@@ -154,8 +154,7 @@ S2Loop* S2ConvexHullQuery::GetConvexHull() {
 // such that the edge chain makes only left (CCW) turns.
 void S2ConvexHullQuery::GetMonotoneChain(vector<S2Point>* output) {
   DCHECK(output->empty());
-  for (int i = 0; i < points_.size(); ++i) {
-    S2Point p = points_[i];
+  for (S2Point const& p : points_) {
     // Remove any points that would cause the chain to make a clockwise turn.
     while (output->size() >= 2 &&
            S2::Sign(output->end()[-2], output->back(), p) <= 0) {

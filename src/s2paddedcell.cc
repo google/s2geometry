@@ -17,8 +17,8 @@
 
 #include "s2paddedcell.h"
 
-#include <cfloat>
 #include <algorithm>
+#include <cfloat>
 
 #include "util/bits/bits.h"
 #include "r1interval.h"

@@ -17,9 +17,9 @@
 
 #include "s2edgeutil.h"
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -1153,9 +1153,9 @@ void TestFaceClipping(S2Point const& a_raw, S2Point const& b_raw) {
   ::testing::Message msg;
   msg << "\nA=" << a_raw << "\nB=" << b_raw;
   msg << "\nN=" << S2::RobustCrossProd(a, b) << "\nSegments:\n";
-  for (int i = 0; i < n; ++i) {
-    S2EdgeUtil::FaceSegment const& s = segments[i];
-    msg << i << ": face=" << s.face << ", a=" << s.a << ", b=" << s.b << "\n";
+  int i = 0;
+  for (S2EdgeUtil::FaceSegment const& s : segments) {
+    msg << i++ << ": face=" << s.face << ", a=" << s.a << ", b=" << s.b << "\n";
   }
   SCOPED_TRACE(msg);
 

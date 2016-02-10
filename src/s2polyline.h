@@ -215,6 +215,10 @@ class S2Polyline : public S2Region {
   // along "covered" and a car along some subpath of this polyline such that no
   // car ever goes backward, and the cars are always within "max_error" of each
   // other.
+  //
+  // This function is well-defined for empty polylines:
+  //    anything.covers(empty) = true
+  //    empty.covers(nonempty) = false
   bool NearlyCoversPolyline(S2Polyline const& covered,
                             S1Angle max_error) const;
 
@@ -277,7 +281,7 @@ class S2Polyline : public S2Region {
 
   // Allows overriding the automatic validity checking controlled by the
   // --s2debug flag.
-  uint8 s2debug_override_;  // Store enum in 1 byte rather than 4.
+  S2debugOverride s2debug_override_;
 
   // We store the vertices in an array rather than a vector because we don't
   // need any STL methods, and computing the number of vertices using size()

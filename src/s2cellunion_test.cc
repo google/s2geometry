@@ -161,45 +161,45 @@ TEST(S2CellUnion, Normalize) {
     }
 
     // Test Contains(S2CellId) and Intersects(S2CellId).
-    for (int j = 0; j < input.size(); ++j) {
-      EXPECT_TRUE(cellunion.Contains(input[j]));
-      EXPECT_TRUE(cellunion.Contains(input[j].ToPoint()));
-      EXPECT_TRUE(cellunion.VirtualContainsPoint(input[j].ToPoint()));
-      EXPECT_TRUE(cellunion.Intersects(input[j]));
-      if (!input[j].is_face()) {
-        EXPECT_TRUE(cellunion.Intersects(input[j].parent()));
-        if (input[j].level() > 1) {
-          EXPECT_TRUE(cellunion.Intersects(input[j].parent().parent()));
-          EXPECT_TRUE(cellunion.Intersects(input[j].parent(0)));
+    for (S2CellId input_id : input) {
+      EXPECT_TRUE(cellunion.Contains(input_id));
+      EXPECT_TRUE(cellunion.Contains(input_id.ToPoint()));
+      EXPECT_TRUE(cellunion.VirtualContainsPoint(input_id.ToPoint()));
+      EXPECT_TRUE(cellunion.Intersects(input_id));
+      if (!input_id.is_face()) {
+        EXPECT_TRUE(cellunion.Intersects(input_id.parent()));
+        if (input_id.level() > 1) {
+          EXPECT_TRUE(cellunion.Intersects(input_id.parent().parent()));
+          EXPECT_TRUE(cellunion.Intersects(input_id.parent(0)));
         }
       }
-      if (!input[j].is_leaf()) {
-        EXPECT_TRUE(cellunion.Contains(input[j].child_begin()));
-        EXPECT_TRUE(cellunion.Intersects(input[j].child_begin()));
-        EXPECT_TRUE(cellunion.Contains(input[j].child_end().prev()));
-        EXPECT_TRUE(cellunion.Intersects(input[j].child_end().prev()));
+      if (!input_id.is_leaf()) {
+        EXPECT_TRUE(cellunion.Contains(input_id.child_begin()));
+        EXPECT_TRUE(cellunion.Intersects(input_id.child_begin()));
+        EXPECT_TRUE(cellunion.Contains(input_id.child_end().prev()));
+        EXPECT_TRUE(cellunion.Intersects(input_id.child_end().prev()));
         EXPECT_TRUE(cellunion.Contains(
-                        input[j].child_begin(S2CellId::kMaxLevel)));
+                        input_id.child_begin(S2CellId::kMaxLevel)));
         EXPECT_TRUE(cellunion.Intersects(
-                        input[j].child_begin(S2CellId::kMaxLevel)));
+                        input_id.child_begin(S2CellId::kMaxLevel)));
       }
     }
-    for (int j = 0; j < expected.size(); ++j) {
-      if (!expected[j].is_face()) {
-        EXPECT_TRUE(!cellunion.Contains(expected[j].parent()));
-        EXPECT_TRUE(!cellunion.Contains(expected[j].parent(0)));
+    for (S2CellId expected_id : expected) {
+      if (!expected_id.is_face()) {
+        EXPECT_TRUE(!cellunion.Contains(expected_id.parent()));
+        EXPECT_TRUE(!cellunion.Contains(expected_id.parent(0)));
       }
     }
 
     // Test Contains(S2CellUnion*), Intersects(S2CellUnion*),
     // GetUnion(), GetIntersection(), and GetDifference().
     vector<S2CellId> x, y, x_or_y, x_and_y;
-    for (int j = 0; j < input.size(); ++j) {
+    for (S2CellId input_id : input) {
       bool in_x = rnd.OneIn(2);
       bool in_y = rnd.OneIn(2);
-      if (in_x) x.push_back(input[j]);
-      if (in_y) y.push_back(input[j]);
-      if (in_x || in_y) x_or_y.push_back(input[j]);
+      if (in_x) x.push_back(input_id);
+      if (in_y) y.push_back(input_id);
+      if (in_x || in_y) x_or_y.push_back(input_id);
     }
     S2CellUnion xcells, ycells, x_or_y_expected, x_and_y_expected;
     xcells.Init(x);
@@ -253,14 +253,14 @@ TEST(S2CellUnion, Normalize) {
 
     vector<S2CellId> test, dummy;
     AddCells(S2CellId::None(), false, &test, &dummy);
-    for (int j = 0; j < test.size(); ++j) {
+    for (S2CellId test_id : test) {
       bool contains = false, intersects = false;
-      for (int k = 0; k < expected.size(); ++k) {
-        if (expected[k].contains(test[j])) contains = true;
-        if (expected[k].intersects(test[j])) intersects = true;
+      for (S2CellId expected_id : expected) {
+        if (expected_id.contains(test_id)) contains = true;
+        if (expected_id.intersects(test_id)) intersects = true;
       }
-      EXPECT_EQ(contains, cellunion.Contains(test[j]));
-      EXPECT_EQ(intersects, cellunion.Intersects(test[j]));
+      EXPECT_EQ(contains, cellunion.Contains(test_id));
+      EXPECT_EQ(intersects, cellunion.Intersects(test_id));
     }
   }
   printf("avg in %.2f, avg out %.2f\n", in_sum / kIters, out_sum / kIters);

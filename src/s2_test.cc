@@ -17,11 +17,10 @@
 
 #include "s2.h"
 
-#include <cstddef>
 #include <algorithm>
+#include <cstddef>
 #include <functional>
 #include <iterator>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -39,7 +38,6 @@
 
 using std::max;
 using std::min;
-using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 

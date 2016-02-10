@@ -21,7 +21,6 @@
 #include <cmath>
 #include <cstddef>
 #include <set>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -112,7 +111,7 @@ void S2Polygon::set_s2debug_override(S2debugOverride override) {
 }
 
 S2debugOverride S2Polygon::s2debug_override() const {
-  return static_cast<S2debugOverride>(s2debug_override_);
+  return s2debug_override_;
 }
 
 void S2Polygon::Copy(S2Polygon const* src) {

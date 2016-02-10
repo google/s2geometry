@@ -20,7 +20,9 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
+
 #include <gtest/gtest.h>
+
 #include "base/stringprintf.h"
 #include "s1angle.h"
 #include "s2cap.h"
@@ -33,7 +35,7 @@
 #include "s2textformat.h"
 #include "util/gtl/stl_util.h"
 
-using s2shapeutil::S2EdgeVectorShape;
+using s2shapeutil::EdgeVectorShape;
 using s2textformat::MakePoint;
 using s2textformat::MakePolyline;
 using std::pair;
@@ -90,9 +92,9 @@ void GetCapEdges(S2Cap const& center_cap, S1Angle max_length, int count,
 }
 
 void TestAllCrossings(vector<TestEdge> const& edges) {
-  S2EdgeVectorShape* shape = new S2EdgeVectorShape;
-  for (int i = 0; i < edges.size(); ++i) {
-    shape->Add(edges[i].first, edges[i].second);
+  EdgeVectorShape* shape = new EdgeVectorShape;
+  for (TestEdge const& edge : edges) {
+    shape->Add(edge.first, edge.second);
   }
   // Force more subdivision than usual to make the test more challenging.
   S2ShapeIndexOptions options;
@@ -103,10 +105,11 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
   // total number of candidates that the total number of edge pairs that
   // either intersect or are very close to intersecting.
   int num_candidates = 0, num_nearby_pairs = 0;
-  for (int i = 0; i < edges.size(); ++i) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", i));
-    S2Point const& a = edges[i].first;
-    S2Point const& b = edges[i].second;
+  int i = 0;
+  for (TestEdge const& edge : edges) {
+    SCOPED_TRACE(StringPrintf("Iteration %d", i++));
+    S2Point const& a = edge.first;
+    S2Point const& b = edge.second;
     vector<int> candidates;
     S2CrossingEdgeQuery query(index);
     query.GetCandidates(a, b, shape, &candidates);
@@ -253,8 +256,8 @@ TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
 void TestPolylineCrossings(vector<S2Polyline*> const& polylines,
                            S2Point const& a0, S2Point const& a1) {
   S2ShapeIndex index;
-  for (int i = 0; i < polylines.size(); ++i) {
-    index.Add(new S2Polyline::Shape(polylines[i]));
+  for (S2Polyline* polyline : polylines) {
+    index.Add(new S2Polyline::Shape(polyline));
   }
   S2CrossingEdgeQuery query(index);
   S2CrossingEdgeQuery::EdgeMap edge_map;
@@ -265,9 +268,9 @@ void TestPolylineCrossings(vector<S2Polyline*> const& polylines,
     vector<int> const& edges = p.second;
     // Shapes with no crossings should be filtered out by this method.
     EXPECT_FALSE(edges.empty());
-    for (int j = 0; j < edges.size(); ++j) {
-      S2Point const& b0 = polyline->vertex(edges[j]);
-      S2Point const& b1 = polyline->vertex(edges[j] + 1);
+    for (int edge : edges) {
+      S2Point const& b0 = polyline->vertex(edge);
+      S2Point const& b1 = polyline->vertex(edge + 1);
       CHECK_GE(S2EdgeUtil::CrossingSign(a0, a1, b0, b1), 0);
     }
   }

@@ -141,6 +141,11 @@ class btree_container {
     return !operator==(other);
   }
 
+  // The allocator used by the btree.
+  allocator_type get_allocator() const {
+    return tree_.get_allocator();
+  }
+
   // Exposed only for tests.
   static bool testonly_uses_linear_node_search() {
     return Tree::testonly_uses_linear_node_search();

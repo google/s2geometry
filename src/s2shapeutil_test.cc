@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <vector>
+
 #include <gtest/gtest.h>
 #include "s2cap.h"
 #include "s2loop.h"
@@ -33,57 +34,9 @@ using std::vector;
 
 namespace s2shapeutil {
 
-TEST(S2EdgeVectorShape, EdgeAccess) {
-  S2EdgeVectorShape shape;
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
-  int const kNumEdges = 100;
-  for (int i = 0; i < kNumEdges; ++i) {
-    S2Point a = S2Testing::RandomPoint();  // Control the evaluation order
-    shape.Add(a, S2Testing::RandomPoint());
-  }
-  EXPECT_EQ(kNumEdges, shape.num_edges());
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
-  for (int i = 0; i < kNumEdges; ++i) {
-    S2Point const *a, *b;
-    shape.GetEdge(i, &a, &b);
-    EXPECT_EQ(S2Testing::RandomPoint(), *a);
-    EXPECT_EQ(S2Testing::RandomPoint(), *b);
-  }
-}
-
-TEST(S2EdgeVectorShape, SingletonConstructor) {
-  S2Point a(1, 0, 0), b(0, 1, 0);
-  S2EdgeVectorShape shape(a, b);
-  EXPECT_EQ(1, shape.num_edges());
-  S2Point const *pa, *pb;
-  shape.GetEdge(0, &pa, &pb);
-  EXPECT_EQ(a, *pa);
-  EXPECT_EQ(b, *pb);
-}
-
-TEST(S2LoopOwningShape, Ownership) {
-  // Debug mode builds will catch any memory leak below.
-  S2Loop* loop = new S2Loop(S2Loop::kEmpty());
-  S2LoopOwningShape shape(loop);
-}
-
-TEST(S2PolygonOwningShape, Ownership) {
-  // Debug mode builds will catch any memory leak below.
-  vector<S2Loop*> loops;
-  S2Polygon* polygon = new S2Polygon(&loops);
-  S2PolygonOwningShape shape(polygon);
-}
-
-TEST(S2PolylineOwningShape, Ownership) {
-  // Debug mode builds will catch any memory leak below.
-  vector<S2Point> vertices;
-  S2Polyline* polyline = new S2Polyline(vertices);
-  S2PolylineOwningShape shape(polyline);
-}
-
-TEST(FaceLoopShape, EmptyLoop) {
+TEST(LoopShape, EmptyLoop) {
   // Test S2Loop constructor.
-  FaceLoopShape shape;
+  LoopShape shape;
   shape.Init(S2Loop(S2Loop::kEmpty()));
   EXPECT_EQ(0, shape.num_vertices());
   EXPECT_EQ(0, shape.num_edges());
@@ -91,11 +44,11 @@ TEST(FaceLoopShape, EmptyLoop) {
   EXPECT_FALSE(shape.contains_origin());
 }
 
-TEST(FaceLoopShape, NonEmptyLoop) {
+TEST(LoopShape, NonEmptyLoop) {
   // Test vector<S2Point> constructor.
   vector<S2Point> vertices;
   s2textformat::ParsePoints("0:0, 0:1, 1:1, 1:0", &vertices);
-  FaceLoopShape shape(vertices);
+  LoopShape shape(vertices);
   EXPECT_EQ(vertices.size(), shape.num_vertices());
   for (int i = 0; i < vertices.size(); ++i) {
     EXPECT_EQ(vertices[i], shape.vertex(i));
@@ -109,9 +62,17 @@ TEST(FaceLoopShape, NonEmptyLoop) {
   EXPECT_FALSE(shape.contains_origin());
 }
 
-TEST(FaceShape, EmptyPolygon) {
+TEST(ClosedPolylineShape, NoInterior) {
+  vector<S2Point> vertices;
+  s2textformat::ParsePoints("0:0, 0:1, 1:1, 1:0", &vertices);
+  ClosedPolylineShape shape(vertices);
+  EXPECT_FALSE(shape.has_interior());
+  EXPECT_FALSE(shape.contains_origin());
+}
+
+TEST(PolygonShape, EmptyPolygon) {
   S2Polygon a;
-  FaceShape shape(a);
+  PolygonShape shape(a);
   EXPECT_EQ(0, shape.num_loops());
   EXPECT_EQ(0, shape.num_vertices());
   EXPECT_EQ(0, shape.num_edges());
@@ -119,11 +80,11 @@ TEST(FaceShape, EmptyPolygon) {
   EXPECT_FALSE(shape.contains_origin());
 }
 
-TEST(FaceShape, SingleLoopPolygon) {
+TEST(PolygonShape, SingleLoopPolygon) {
   // Test S2Polygon constructor.
   vector<S2Point> vertices;
   s2textformat::ParsePoints("0:0, 0:1, 1:1, 1:0", &vertices);
-  FaceShape shape(S2Polygon(new S2Loop(vertices)));
+  PolygonShape shape(S2Polygon(new S2Loop(vertices)));
   EXPECT_EQ(1, shape.num_loops());
   EXPECT_EQ(vertices.size(), shape.num_vertices());
   EXPECT_EQ(vertices.size(), shape.num_loop_vertices(0));
@@ -139,12 +100,12 @@ TEST(FaceShape, SingleLoopPolygon) {
   EXPECT_FALSE(shape.contains_origin());
 }
 
-TEST(FaceShape, MultiLoopPolygon) {
+TEST(PolygonShape, MultiLoopPolygon) {
   // Test vector<vector<S2Point>> constructor.
-  vector<FaceShape::Loop> loops(2);
+  vector<PolygonShape::Loop> loops(2);
   s2textformat::ParsePoints("1:1, 1:2, 2:2", &loops[0]);
   s2textformat::ParsePoints("0:0, 0:3, 3:3", &loops[1]);
-  FaceShape shape(loops);
+  PolygonShape shape(loops);
 
   EXPECT_EQ(loops.size(), shape.num_loops());
   int num_vertices = 0;
@@ -165,30 +126,30 @@ TEST(FaceShape, MultiLoopPolygon) {
   EXPECT_FALSE(shape.contains_origin());
 }
 
-TEST(FaceShape, DegenerateLoops) {
-  vector<FaceShape::Loop> loops(3);
+TEST(PolygonShape, DegenerateLoops) {
+  vector<PolygonShape::Loop> loops(3);
   s2textformat::ParsePoints("1:1, 1:2, 2:2, 1:2, 1:3, 1:2, 1:1", &loops[0]);
   s2textformat::ParsePoints("0:0, 0:3, 0:6, 0:9, 0:6, 0:3, 0:0", &loops[1]);
   s2textformat::ParsePoints("5:5, 6:6",  &loops[2]);
-  FaceShape shape(loops);
+  PolygonShape shape(loops);
   EXPECT_FALSE(shape.contains_origin());
 }
 
-TEST(FaceShape, InvertedLoops) {
-  vector<FaceShape::Loop> loops(2);
+TEST(PolygonShape, InvertedLoops) {
+  vector<PolygonShape::Loop> loops(2);
   s2textformat::ParsePoints("1:2, 1:1, 2:2", &loops[0]);
   s2textformat::ParsePoints("3:4, 3:3, 4:4", &loops[1]);
-  FaceShape shape(loops);
+  PolygonShape shape(loops);
   EXPECT_TRUE(shape.contains_origin());
 }
 
-TEST(FaceShape, PartiallyDegenerateLoops) {
+TEST(PolygonShape, PartiallyDegenerateLoops) {
   for (int iter = 0; iter < 100; ++iter) {
     // First we construct a long convoluted edge chain that follows the
     // S2CellId Hilbert curve.  At some random point along the curve, we
     // insert a small triangular loop.
-    vector<FaceShape::Loop> loops(1);
-    FaceShape::Loop* loop = &loops[0];
+    vector<PolygonShape::Loop> loops(1);
+    PolygonShape::Loop* loop = &loops[0];
     int const num_vertices = 100;
     S2CellId start = S2Testing::GetRandomCellId(S2CellId::kMaxLevel - 1);
     S2CellId end = start.advance_wrap(num_vertices);
@@ -217,7 +178,7 @@ TEST(FaceShape, PartiallyDegenerateLoops) {
         loop->push_back(cellid.ToPoint());
       }
     }
-    FaceShape shape(loops);
+    PolygonShape shape(loops);
     S2Loop triangle_loop(triangle);
     EXPECT_EQ(triangle_loop.Contains(S2::Origin()), shape.contains_origin());
   }
@@ -233,7 +194,7 @@ void CompareS2LoopToShape(S2Loop const* loop, S2Shape* shape) {
   }
 }
 
-TEST(FaceShapes, CompareToS2Loop) {
+TEST(PolygonShapes, CompareToS2Loop) {
   for (int iter = 0; iter < 100; ++iter) {
     S2Testing::Fractal fractal;
     fractal.set_max_level(S2Testing::rnd.Uniform(5));
@@ -242,15 +203,98 @@ TEST(FaceShapes, CompareToS2Loop) {
     unique_ptr<S2Loop> loop(fractal.MakeLoop(
         S2Testing::GetRandomFrameAt(center), S1Angle::Degrees(5)));
 
-    // Compare S2Loop to FaceLoopShape.
-    CompareS2LoopToShape(loop.get(), new FaceLoopShape(*loop));
+    // Compare S2Loop to LoopShape.
+    CompareS2LoopToShape(loop.get(), new LoopShape(*loop));
 
-    // Compare S2Loop to FaceShape.
-    vector<FaceShape::Loop> loops(
+    // Compare S2Loop to PolygonShape.
+    vector<PolygonShape::Loop> loops(
         1, vector<S2Point>(&loop->vertex(0),
                            &loop->vertex(0) + loop->num_vertices()));
-    CompareS2LoopToShape(loop.get(), new FaceShape(loops));
+    CompareS2LoopToShape(loop.get(), new PolygonShape(loops));
   }
+}
+
+TEST(PolylineShape, NoVertices) {
+  vector<S2Point> vertices;
+  PolylineShape shape(vertices);
+  EXPECT_EQ(0, shape.num_edges());
+}
+
+TEST(PolylineShape, EdgeAccess) {
+  vector<S2Point> vertices;
+  s2textformat::ParsePoints("0:0, 0:1, 1:1", &vertices);
+  PolylineShape shape(vertices);
+  EXPECT_EQ(2, shape.num_edges());
+  S2Point const *v0, *v1;
+  shape.GetEdge(0, &v0, &v1);
+  EXPECT_EQ(vertices[0], *v0);
+  EXPECT_EQ(vertices[1], *v1);
+  shape.GetEdge(1, &v0, &v1);
+  EXPECT_EQ(vertices[1], *v0);
+  EXPECT_EQ(vertices[2], *v1);
+}
+
+TEST(EdgeVectorShape, EdgeAccess) {
+  EdgeVectorShape shape;
+  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  int const kNumEdges = 100;
+  for (int i = 0; i < kNumEdges; ++i) {
+    S2Point a = S2Testing::RandomPoint();  // Control the evaluation order
+    shape.Add(a, S2Testing::RandomPoint());
+  }
+  EXPECT_EQ(kNumEdges, shape.num_edges());
+  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  for (int i = 0; i < kNumEdges; ++i) {
+    S2Point const *a, *b;
+    shape.GetEdge(i, &a, &b);
+    EXPECT_EQ(S2Testing::RandomPoint(), *a);
+    EXPECT_EQ(S2Testing::RandomPoint(), *b);
+  }
+}
+
+TEST(EdgeVectorShape, SingletonConstructor) {
+  S2Point a(1, 0, 0), b(0, 1, 0);
+  EdgeVectorShape shape(a, b);
+  EXPECT_EQ(1, shape.num_edges());
+  S2Point const *pa, *pb;
+  shape.GetEdge(0, &pa, &pb);
+  EXPECT_EQ(a, *pa);
+  EXPECT_EQ(b, *pb);
+}
+
+TEST(VertexIdLoopShape, InvertedLoop) {
+  vector<S2Point> vertex_array;
+  s2textformat::ParsePoints("0:0, 0:1, 1:1, 1:0", &vertex_array);
+  vector<int32> vertex_ids { 0, 3, 2, 1 };  // Inverted.
+  VertexIdLoopShape shape(vertex_ids, &vertex_array[0]);
+  EXPECT_EQ(4, shape.num_edges());
+  EXPECT_EQ(4, shape.num_vertices());
+  EXPECT_EQ(&vertex_array[0], &shape.vertex(0));
+  EXPECT_EQ(&vertex_array[3], &shape.vertex(1));
+  EXPECT_EQ(&vertex_array[2], &shape.vertex(2));
+  EXPECT_EQ(&vertex_array[1], &shape.vertex(3));
+  EXPECT_TRUE(shape.has_interior());
+  EXPECT_TRUE(shape.contains_origin());
+}
+
+TEST(S2LoopOwningShape, Ownership) {
+  // Debug mode builds will catch any memory leak below.
+  S2Loop* loop = new S2Loop(S2Loop::kEmpty());
+  S2LoopOwningShape shape(loop);
+}
+
+TEST(S2PolygonOwningShape, Ownership) {
+  // Debug mode builds will catch any memory leak below.
+  vector<S2Loop*> loops;
+  S2Polygon* polygon = new S2Polygon(&loops);
+  S2PolygonOwningShape shape(polygon);
+}
+
+TEST(S2PolylineOwningShape, Ownership) {
+  // Debug mode builds will catch any memory leak below.
+  vector<S2Point> vertices;
+  S2Polyline* polyline = new S2Polyline(vertices);
+  S2PolylineOwningShape shape(polyline);
 }
 
 // An iterator that advances through all edges in an S2ShapeIndex.
@@ -342,7 +386,7 @@ TEST(GetCrossingEdgePairs, NoIntersections) {
 TEST(GetCrossingEdgePairs, EdgeGrid) {
   int const kGridSize = 10;  // (kGridSize + 1) * (kGridSize + 1) crossings
   S2ShapeIndex index;
-  S2EdgeVectorShape* shape = new S2EdgeVectorShape;
+  EdgeVectorShape* shape = new EdgeVectorShape;
   for (int i = 0; i <= kGridSize; ++i) {
     shape->Add(S2LatLng::FromDegrees(0, i).ToPoint(),
               S2LatLng::FromDegrees(kGridSize, i).ToPoint());
@@ -354,7 +398,7 @@ TEST(GetCrossingEdgePairs, EdgeGrid) {
   TestGetCrossingEdgePairs(index, CrossingType::INTERIOR);
 }
 
-class TestLoopShape : public FaceLoopShape {
+class TestLoopShape : public LoopShape {
  public:
   TestLoopShape(string const& vertex_str) {
     vector<S2Point> vertices;

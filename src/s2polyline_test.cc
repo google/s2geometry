@@ -399,7 +399,6 @@ TEST(S2Polyline, EncodeDecode) {
 
 TEST(S2PolylineShape, Basic) {
   unique_ptr<S2Polyline> polyline(MakePolyline("0:0, 1:0, 1:1, 2:1"));
-  // Allocate the shape so that we can Release() it below.
   S2Polyline::Shape shape(polyline.get());
   EXPECT_EQ(polyline.get(), shape.polyline());
   EXPECT_EQ(3, shape.num_edges());
@@ -496,6 +495,14 @@ TEST(S2PolylineCoveringTest, StraightAndWigglyPolylinesCoverEachOther) {
                    "39.9:0.9, 40:1.1, 30:1.15, 29:0.95, 28:1.1, 27:1.15, "
                    "26:1.05, 25:0.85, 24:1.1, 23:0.9, 20:0.99",
                    0.2, true, true);
+}
+
+TEST(S2PolylineCoveringTest, EmptyPolylines) {
+  // We expect:
+  //    anything.covers(empty) = true
+  //    empty.covers(nonempty) = false
+  TestNearlyCovers("0:1, 0:2", "", 0.0, false, true);
+  TestNearlyCovers("", "", 0.0, true, true);
 }
 
 }  // namespace

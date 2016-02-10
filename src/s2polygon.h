@@ -117,7 +117,9 @@ class S2Polygon : public S2Region {
   // automatically converts the special empty loop (see S2Loop) into an empty
   // polygon, unlike the vector-of-loops constructor which does not allow
   // empty loops at all.  Takes ownership of the loop.
-  explicit S2Polygon(S2Loop* loop);
+  // The _disown suffix is used to tell SWIG that S2Polygon takes ownership
+  // of the loop.
+  explicit S2Polygon(S2Loop* loop_disown);
 
   // Convenience constructor to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
@@ -616,7 +618,7 @@ class S2Polygon : public S2Region {
 
   // Allows overriding the automatic validity checking controlled by the
   // --s2debug flag.
-  uint8 s2debug_override_;  // Store enum in 1 byte rather than 4.
+  S2debugOverride s2debug_override_;
 
   // True if InitOriented() was called and the given loops had inconsistent
   // orientations (i.e., it is not possible to construct a polygon such that
