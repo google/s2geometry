@@ -21,6 +21,7 @@
 #include <memory>
 #include <type_traits>
 #include <vector>
+
 #include "util/btree/btree_set.h"  // Like std::set, but faster and smaller.
 #include "fpcontractoff.h"
 #include "priority_queue_sequence.h"
@@ -39,8 +40,8 @@
 //
 // void Test(vector<S2Polyline*> const& polylines, S2Point const& target) {
 //   S2ShapeIndex index;
-//   for (int i = 0; i < polylines.size(); ++i) {
-//     index.Add(new S2Polyline::Shape(polylines[i]));
+//   for (S2Polyline* polyline : polylines) {
+//     index.Add(new S2Polyline::Shape(polyline));
 //   }
 //   S2ClosestEdgeQuery query(index);
 //   query.set_max_edges(5);

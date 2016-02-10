@@ -20,6 +20,7 @@
 
 #include <functional>
 #include <queue>
+
 #include "util/gtl/inlined_vector.h"
 
 // Like std::priority_queue, except that:

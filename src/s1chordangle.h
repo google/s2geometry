@@ -19,9 +19,7 @@
 #define S2GEOMETRY_S1CHORDANGLE_H_
 
 #include <cmath>
-
 #include <limits>
-#include <iosfwd>   // No longer needed
 #include <ostream>
 #include <type_traits>
 

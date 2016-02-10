@@ -17,12 +17,12 @@
 
 #include "s2testing.h"
 
-#include <cmath>
-#include <cstddef>
-#include <cstdlib>
 #include <sys/resource.h>   // for rusage, RUSAGE_SELF
 #include <sys/time.h>
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdlib>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -430,9 +430,8 @@ S2Loop* S2Testing::Fractal::MakeLoop(Matrix3x3_d const& frame,
   vector<R2Point> r2vertices;
   GetR2Vertices(&r2vertices);
   vector<S2Point> vertices;
-  for (int i = 0; i < r2vertices.size(); ++i) {
+  for (R2Point const& v : r2vertices) {
     // Convert each vertex to polar coordinates.
-    R2Point const& v = r2vertices[i];
     double theta = atan2(v[1], v[0]);
     double radius = nominal_radius.radians() * v.Norm();
 

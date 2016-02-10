@@ -20,7 +20,6 @@
 
 #include <cmath>
 #include <limits>
-#include <iosfwd>   // No longer needed
 #include <ostream>
 #include <type_traits>
 

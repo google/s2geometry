@@ -326,8 +326,7 @@ void S2EncodePointsCompressed(S2XYZFaceSiTi const* points,
                   (Encoder::kVarintMax32 + sizeof(S2Point)) * num_off_center);
   encoder->put_varint32(num_off_center);
   DCHECK_GE(encoder->avail(), 0);
-  for (int i = 0; i < num_off_center; ++i) {
-    int index = off_center[i];
+  for (int index : off_center) {
     encoder->put_varint32(index);
     encoder->putn(&points[index].xyz, sizeof(points[index].xyz));
     DCHECK_GE(encoder->avail(), 0);

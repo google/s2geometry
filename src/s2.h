@@ -18,12 +18,13 @@
 #ifndef S2GEOMETRY_S2_H_
 #define S2GEOMETRY_S2_H_
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <algorithm>
 #include <functional>
 
 #include <gflags/gflags.h>
+#include "base/integral_types.h"
 #include <glog/logging.h>
 #include "base/macros.h"
 #include "base/port.h"
@@ -48,7 +49,7 @@ DECLARE_bool(s2debug);
 
 // Alternatively, some classes have methods that allow the --s2debug flag to
 // be disabled for specific objects (e.g., see S2Polygon).
-enum S2debugOverride {
+enum S2debugOverride : uint8 {
   ALLOW_S2DEBUG,    // Validity checks are controlled by --s2debug
   DISABLE_S2DEBUG   // No validity checks even when --s2debug is true
 };

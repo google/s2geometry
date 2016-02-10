@@ -17,9 +17,9 @@
 
 #include "s2cellid.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <algorithm>
 #include <iosfwd>
 #include <iostream>
 #include <unordered_map>
@@ -43,9 +43,6 @@ using std::vector;
 
 DEFINE_int32(iters, 20000000,
              "Number of iterations for timing tests with optimized build");
-
-DEFINE_int32(htm_level, 29, "Maximum HTM level to use");
-DEFINE_int32(build_level, 5, "HTM build level to use");
 
 static S2CellId GetCellId(double lat_degrees, double lng_degrees) {
   S2CellId id = S2CellId::FromLatLng(S2LatLng::FromDegrees(lat_degrees,
@@ -360,21 +357,21 @@ TEST(S2CellId, Containment) {
   for (int face = 0; face < 6; ++face) {
     ExpandCell(S2CellId::FromFace(face), &cells, &parent_map);
   }
-  for (int i = 0; i < cells.size(); ++i) {
-    for (int j = 0; j < cells.size(); ++j) {
+  for (S2CellId end_id : cells) {
+    for (S2CellId begin_id : cells) {
       bool contained = true;
-      for (S2CellId id = cells[j]; id != cells[i]; id = parent_map[id]) {
+      for (S2CellId id = begin_id; id != end_id; id = parent_map[id]) {
         if (parent_map.find(id) == parent_map.end()) {
           contained = false;
           break;
         }
       }
-      EXPECT_EQ(contained, cells[i].contains(cells[j]));
+      EXPECT_EQ(contained, end_id.contains(begin_id));
       EXPECT_EQ(contained,
-                cells[j] >= cells[i].range_min() &&
-                cells[j] <= cells[i].range_max());
-      EXPECT_EQ(cells[i].intersects(cells[j]),
-                cells[i].contains(cells[j]) || cells[j].contains(cells[i]));
+                begin_id >= end_id.range_min() &&
+                begin_id <= end_id.range_max());
+      EXPECT_EQ(end_id.intersects(begin_id),
+                end_id.contains(begin_id) || begin_id.contains(end_id));
     }
   }
 }

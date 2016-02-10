@@ -18,6 +18,7 @@
 #include "s2convexhullquery.h"
 
 #include <memory>
+
 #include <gtest/gtest.h>
 #include "s2testing.h"
 #include "s2textformat.h"

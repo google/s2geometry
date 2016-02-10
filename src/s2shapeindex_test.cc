@@ -42,7 +42,7 @@
 #include "s2textformat.h"
 #include "util/gtl/stl_util.h"
 
-using s2shapeutil::S2EdgeVectorShape;
+using s2shapeutil::EdgeVectorShape;
 using s2shapeutil::S2LoopOwningShape;
 using s2shapeutil::S2PolylineOwningShape;
 using s2textformat::MakePolyline;
@@ -238,7 +238,7 @@ TEST_F(S2ShapeIndexTest, NoEdges) {
 }
 
 TEST_F(S2ShapeIndexTest, OneEdge) {
-  index_.Add(new S2EdgeVectorShape(S2Point(1, 0, 0), S2Point(0, 1, 0)));
+  index_.Add(new EdgeVectorShape(S2Point(1, 0, 0), S2Point(0, 1, 0)));
   QuadraticValidate();
   TestIteratorMethods(index_);
 }
@@ -265,8 +265,8 @@ TEST_F(S2ShapeIndexTest, LoopsSpanningThreeFaces) {
                                     kNumEdges, &polygon);
   vector<S2Loop*> loops;
   polygon.Release(&loops);
-  for (int i = 0; i < loops.size(); ++i) {
-    index_.Add(new S2Loop::Shape(loops[i]));
+  for (S2Loop* loop : loops) {
+    index_.Add(new S2Loop::Shape(loop));
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
@@ -279,7 +279,7 @@ TEST_F(S2ShapeIndexTest, ManyIdenticalEdges) {
   S2Point a = S2Point(0.99, 0.99, 1).Normalize();
   S2Point b = S2Point(-0.99, -0.99, 1).Normalize();
   for (int i = 0; i < kNumEdges; ++i) {
-    index_.Add(new S2EdgeVectorShape(a, b));
+    index_.Add(new EdgeVectorShape(a, b));
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
@@ -297,7 +297,7 @@ TEST_F(S2ShapeIndexTest, ManyTinyEdges) {
   // Construct two points in the same leaf cell.
   S2Point a = S2CellId::FromPoint(S2Point(1, 0, 0)).ToPoint();
   S2Point b = (a + S2Point(0, 1e-12, 0)).Normalize();
-  S2EdgeVectorShape* shape = new S2EdgeVectorShape;
+  EdgeVectorShape* shape = new EdgeVectorShape;
   for (int i = 0; i < kNumEdges; ++i) {
     shape->Add(a, b);
   }
@@ -393,16 +393,16 @@ TEST_F(S2ShapeIndexTest, RandomUpdates) {
     QuadraticValidate();
   }
   // Let the index free all the shapes.
-  for (int i = 0; i < removed.size(); ++i) {
-    index_.Add(removed[i]);
+  for (S2Shape* r : removed) {
+    index_.Add(r);
   }
 }
 
 
 // Add the loops to the given index.
 void AddLoops(vector<S2Loop*> const& loops, S2ShapeIndex* index) {
-  for (int i = 0; i < loops.size(); ++i) {
-    index->Add(new S2Loop::Shape(loops[i]));
+  for (S2Loop* loop : loops) {
+    index->Add(new S2Loop::Shape(loop));
   }
 }
 
@@ -603,8 +603,8 @@ TEST(S2ShapeIndex, MixedGeometry) {
   polylines.push_back(MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"));
   polylines.push_back(MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"));
   S2ShapeIndex index;
-  for (int i = 0; i < polylines.size(); ++i) {
-    index.Add(new S2Polyline::Shape(polylines[i]));
+  for (S2Polyline* polyline : polylines) {
+    index.Add(new S2Polyline::Shape(polyline));
   }
   S2Loop loop(S2Cell(S2CellId::Begin(S2CellId::kMaxLevel)));
   index.Add(new S2Loop::Shape(&loop));
@@ -619,10 +619,10 @@ TEST(S2Shape, user_data) {
     int x, y;
     MyData(int _x, int _y) : x(_x), y(_y) {}
   };
-  class MyEdgeVectorShape : public S2EdgeVectorShape {
+  class MyEdgeVectorShape : public EdgeVectorShape {
    public:
     explicit MyEdgeVectorShape(MyData const& data)
-        : S2EdgeVectorShape(), data_(data) {
+        : EdgeVectorShape(), data_(data) {
     }
     void const* user_data() const { return &data_; }
     void* mutable_user_data() { return &data_; }

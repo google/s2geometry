@@ -35,8 +35,9 @@ using std::unique_ptr;
 // TODO(ericv): Move this code to s2testing.h after s2testing is no longer
 // used in production code and this restriction is enforced (testonly=1).
 
-#include <utility>
 #include <set>
+#include <utility>
+
 #include <algorithm>
 
 namespace {
@@ -79,11 +80,11 @@ bool CheckResultSet(std::vector<std::pair<S1Angle, Id>> const& x,
     limit = x.back().first - max_error - max_pruning_error;
   }
   bool result = true;
-  for (int i = 0; i < y.size(); ++i) {
-    if (y[i].first < limit && std::count(x.begin(), x.end(), y[i]) != 1) {
+  for (auto const& p : y) {
+    if (p.first < limit && std::count(x.begin(), x.end(), p) != 1) {
       result = false;
-      std::cout << label << " distance = " << y[i].first
-                << ", id = " << y[i].second << "\n";
+      std::cout << label << " distance = " << p.first
+                << ", id = " << p.second << "\n";
     }
   }
   return result;

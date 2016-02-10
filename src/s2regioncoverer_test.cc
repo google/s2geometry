@@ -17,9 +17,9 @@
 
 #include "s2regioncoverer.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <algorithm>
 #include <queue>
 #include <string>
 #include <unordered_map>
@@ -75,12 +75,12 @@ static void CheckCovering(S2RegionCoverer const& coverer,
                           bool interior) {
   // Keep track of how many cells have the same coverer.min_level() ancestor.
   unordered_map<S2CellId, int, S2CellIdHash> min_level_cells;
-  for (int i = 0; i < covering.size(); ++i) {
-    int level = covering[i].level();
+  for (S2CellId cell_id : covering) {
+    int level = cell_id.level();
     EXPECT_GE(level, coverer.min_level());
     EXPECT_LE(level, coverer.max_level());
     EXPECT_EQ((level - coverer.min_level()) % coverer.level_mod(), 0);
-    min_level_cells[covering[i].parent(coverer.min_level())] += 1;
+    min_level_cells[cell_id.parent(coverer.min_level())] += 1;
   }
   if (covering.size() > coverer.max_cells()) {
     // If the covering has more than the requested number of cells, then check
@@ -92,8 +92,8 @@ static void CheckCovering(S2RegionCoverer const& coverer,
     }
   }
   if (interior) {
-    for (int i = 0; i < covering.size(); ++i) {
-      EXPECT_TRUE(region.Contains(S2Cell(covering[i])));
+    for (S2CellId cell_id : covering) {
+      EXPECT_TRUE(region.Contains(S2Cell(cell_id)));
     }
   } else {
     S2CellUnion cell_union;
@@ -216,8 +216,8 @@ static void TestAccuracy(int max_cells) {
       coverer.GetCovering(cap, &covering);
 
       double union_area = 0;
-      for (int j = 0; j < covering.size(); ++j) {
-        union_area += S2Cell(covering[j]).ExactArea();
+      for (S2CellId cell_id : covering) {
+        union_area += S2Cell(cell_id).ExactArea();
       }
       cells[method] = covering.size();
       min_cells = min(cells[method], min_cells);

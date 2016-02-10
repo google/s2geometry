@@ -17,8 +17,8 @@
 
 #include "s2polyline.h"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <set>
 #include <utility>
@@ -81,7 +81,7 @@ void S2Polyline::set_s2debug_override(S2debugOverride override) {
 }
 
 S2debugOverride S2Polyline::s2debug_override() const {
-  return static_cast<S2debugOverride>(s2debug_override_);
+  return s2debug_override_;
 }
 
 void S2Polyline::Init(vector<S2Point> const& vertices) {
@@ -563,6 +563,10 @@ bool S2Polyline::NearlyCoversPolyline(S2Polyline const& covered,
   // O((n*m)^2).  Using set, the running time is O((n*m) log (n*m)).
   //
   // TODO(user): Benchmark this, and see if the set is worth it.
+
+  if (covered.num_vertices() == 0) return true;
+  if (this->num_vertices() == 0) return false;
+
   vector<SearchState> pending;
   set<SearchState, SearchStateKeyCompare> done;
 

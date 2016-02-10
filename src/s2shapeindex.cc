@@ -17,8 +17,8 @@
 
 #include "s2shapeindex.h"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 
 #include "base/atomicops.h"
 #include <gflags/gflags.h>
@@ -144,9 +144,8 @@ inline void S2ClippedShape::Destruct() {
 
 S2ShapeIndexCell::~S2ShapeIndexCell() {
   // Free memory for all shapes owned by this cell.
-  for (int i = 0; i < shapes_.size(); ++i) {
-    shapes_[i].Destruct();
-  }
+  for (S2ClippedShape& s : shapes_)
+    s.Destruct();
   shapes_.clear();
 }
 
@@ -155,8 +154,8 @@ S2ShapeIndexCell::find_clipped(int shape_id) const {
   // Linear search is fine because the number of shapes per cell is typically
   // very small (most often 1), and is large only for pathological inputs
   // (e.g. very deeply nested loops).
-  for (int i = 0; i < shapes_.size(); ++i) {
-    if (shapes_[i].shape_id() == shape_id) return &shapes_[i];
+  for (auto const& s : shapes_) {
+    if (s.shape_id() == shape_id) return &s;
   }
   return nullptr;
 }
@@ -692,18 +691,18 @@ void S2ShapeIndex::ApplyUpdatesInternal() {
   // to 20x as much memory (per edge) as the final index size.
   vector<BatchDescriptor> batches;
   GetUpdateBatches(&batches);
-  for (int i = 0; i < batches.size(); ++i) {
+  int i = 0;
+  for (BatchDescriptor const& batch : batches) {
     vector<FaceEdge> all_edges[6];
-    BatchDescriptor const& batch = batches[i];
-    VLOG(1) << "Batch " << i << ": shape_limit=" << batch.additions_end
+    VLOG(1) << "Batch " << i++ << ": shape_limit=" << batch.additions_end
                << ", edges=" << batch.num_edges;
 
     ReserveSpace(batch, all_edges);
     InteriorTracker tracker;
     if (pending_removals_) {
       // The first batch implicitly includes all shapes being removed.
-      for (int j = 0; j < pending_removals_->size(); ++j) {
-        RemoveShape((*pending_removals_)[j], all_edges, &tracker);
+      for (auto const& pending_removal : *pending_removals_) {
+        RemoveShape(pending_removal, all_edges, &tracker);
       }
     }
     for (int id = pending_additions_begin_; id < batch.additions_end; ++id) {
@@ -730,8 +729,8 @@ void S2ShapeIndex::GetUpdateBatches(vector<BatchDescriptor>* batches) const {
   // Count the edges being removed and added.
   int num_edges_removed = 0;
   if (pending_removals_) {
-    for (int i = 0; i < pending_removals_->size(); ++i) {
-      num_edges_removed += (*pending_removals_)[i].edges.size();
+    for (auto const& pending_removal : *pending_removals_) {
+      num_edges_removed += pending_removal.edges.size();
     }
   }
   int num_edges_added = 0;
@@ -897,8 +896,7 @@ void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
   int const actual_sample_size = (batch.num_edges + edge_id) / sample_interval;
   int face_count[6] = { 0, 0, 0, 0, 0, 0 };
   if (pending_removals_) {
-    for (int i = 0; i < pending_removals_->size(); ++i) {
-      RemovedShape const& removed = (*pending_removals_)[i];
+    for (RemovedShape const& removed : *pending_removals_) {
       edge_id += removed.edges.size();
       while (edge_id >= sample_interval) {
         edge_id -= sample_interval;
@@ -978,9 +976,9 @@ void S2ShapeIndex::RemoveShape(RemovedShape const& removed,
   if (edge.has_interior) {
     tracker->AddShape(edge.shape_id, removed.contains_origin);
   }
-  for (int j = 0; j < removed.edges.size(); ++j) {
-    edge.va = &removed.edges[j].first;
-    edge.vb = &removed.edges[j].second;
+  for (auto const& removed_edge : removed.edges) {
+    edge.va = &removed_edge.first;
+    edge.vb = &removed_edge.second;
     edge.max_level = GetEdgeMaxLevel(*edge.va, *edge.vb);
     if (edge.has_interior) {
       tracker->TestEdge(edge.shape_id, edge.va, edge.vb);
@@ -1428,8 +1426,8 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
     }
     tracker->DrawTo(pcell.GetExitVertex());
     tracker->set_next_cellid(pcell.id().next());
-    for (int e = 0; e < edges->size(); ++e) {
-      FaceEdge const* face_edge = (*edges)[e]->face_edge;
+    for (ClippedEdge const* edge : *edges) {
+      FaceEdge const* face_edge = edge->face_edge;
       if (!is_shape_being_removed(face_edge->shape_id)) {
         break;  // All shapes being removed come first.
       }
@@ -1492,8 +1490,7 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
   }
   // Now create a ClippedEdge for each FaceEdge, and put them in "new_edges".
   vector<ClippedEdge const*> new_edges;
-  for (int i = 0; i < face_edges->size(); ++i) {
-    FaceEdge const& face_edge = (*face_edges)[i];
+  for (FaceEdge const& face_edge : *face_edges) {
     ClippedEdge* clipped = alloc->NewClippedEdge();
     clipped->face_edge = &face_edge;
     clipped->bound = S2EdgeUtil::GetClippedEdgeBound(face_edge.a, face_edge.b,
@@ -1530,8 +1527,8 @@ bool S2ShapeIndex::MakeIndexCell(S2PaddedCell const& pcell,
   // Count the number of edges that have not reached their maximum level yet.
   // Return false if there are too many such edges.
   int count = 0;
-  for (int e = 0; e < edges.size(); ++e) {
-    count += (pcell.level() < edges[e]->face_edge->max_level);
+  for (ClippedEdge const* edge : edges) {
+    count += (pcell.level() < edge->face_edge->max_level);
     if (count > options_.max_edges_per_cell())
       return false;
   }
@@ -1632,8 +1629,8 @@ bool S2ShapeIndex::MakeIndexCell(S2PaddedCell const& pcell,
 /* static */
 void S2ShapeIndex::TestAllEdges(vector<ClippedEdge const*> const& edges,
                                 InteriorTracker* tracker) {
-  for (int e = 0; e < edges.size(); ++e) {
-    FaceEdge const* face_edge = edges[e]->face_edge;
+  for (ClippedEdge const* edge : edges) {
+    FaceEdge const* face_edge = edge->face_edge;
     if (face_edge->has_interior) {
       tracker->TestEdge(face_edge->shape_id, face_edge->va, face_edge->vb);
     }
@@ -1648,10 +1645,10 @@ int S2ShapeIndex::CountShapes(vector<ClippedEdge const*> const& edges,
   int count = 0;
   int last_shape_id = -1;
   ShapeIdSet::const_iterator cnext = cshape_ids.begin();  // Next shape
-  for (int e = 0; e < edges.size(); ++e) {
-    if (edges[e]->face_edge->shape_id != last_shape_id) {
+  for (ClippedEdge const* edge : edges) {
+    if (edge->face_edge->shape_id != last_shape_id) {
       ++count;
-      last_shape_id = edges[e]->face_edge->shape_id;
+      last_shape_id = edge->face_edge->shape_id;
       // Skip over any containing shapes up to and including this one,
       // updating "count" appropriately.
       for (; cnext != cshape_ids.end(); ++cnext) {
@@ -1669,9 +1666,9 @@ int S2ShapeIndex::GetNumEdges() const {
   // There is no need to apply updates before counting edges, since shapes are
   // added or removed from the "shapes_" vector immediately.
   int num_edges = 0;
-  for (int id = 0; id < shapes_.size(); ++id) {
-    if (shapes_[id] == nullptr) continue;
-    num_edges += shapes_[id]->num_edges();
+  for (S2Shape* s : shapes_) {
+    if (s == nullptr) continue;
+    num_edges += s->num_edges();
   }
   return num_edges;
 }

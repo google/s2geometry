@@ -18,6 +18,7 @@
 #include "r2rect.h"
 
 #include <iosfwd>
+
 #include <glog/logging.h>
 #include "r1interval.h"
 #include "r2.h"

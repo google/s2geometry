@@ -42,8 +42,8 @@ class S2Shape;
 // void Test(vector<S2Polyline*> const& polylines,
 //           S2Point const& a0, S2Point const &a1) {
 //   S2ShapeIndex index;
-//   for (int i = 0; i < polylines.size(); ++i) {
-//     index.Add(new S2Polyline::Shape(polylines[i]));
+//   for (S2Polyline* polyline : polylines) {
+//     index.Add(new S2Polyline::Shape(polyline));
 //   }
 //   S2CrossingEdgeQuery query(index);
 //   S2CrossingEdgeQuery::EdgeMap edge_map;

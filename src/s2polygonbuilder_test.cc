@@ -17,9 +17,9 @@
 
 #include "s2polygonbuilder.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <algorithm>
 #include <memory>
 #include <string>
 
@@ -297,13 +297,13 @@ bool FindLoop(S2Loop const* loop, vector<S2Loop*> const& candidates,
   // Return true if "loop" matches any of the given candidates.  The type
   // of matching depends on whether any edge splitting was done.
 
-  for (int i = 0; i < candidates.size(); ++i) {
+  for (S2Loop* candidate : candidates) {
     if (max_splits == 0) {
       // The two loops should match except for vertex perturbations.
-      if (loop->BoundaryApproxEquals(candidates[i], max_error)) return true;
+      if (loop->BoundaryApproxEquals(candidate, max_error)) return true;
     } else {
       // The two loops may have different numbers of vertices.
-      if (loop->BoundaryNear(candidates[i], max_error)) return true;
+      if (loop->BoundaryNear(candidate, max_error)) return true;
     }
   }
   return false;
@@ -316,12 +316,12 @@ bool FindMissingLoops(vector<S2Loop*> const& actual,
                       char const* label) {
   // Dump any loops from "actual" that are not present in "expected".
   bool found = false;
-  for (int i = 0; i < actual.size(); ++i) {
-    if (FindLoop(actual[i], expected, max_splits, max_error))
+  int i = 0;
+  for (S2Loop* loop : actual) {
+    if (FindLoop(loop, expected, max_splits, max_error))
       continue;
 
     fprintf(stderr, "%s loop %d:\n", label, i);
-    S2Loop* loop = actual[i];
     for (int j = 0; j < loop->num_vertices(); ++j) {
       S2LatLng ll(m.Transpose() * loop->vertex(j));
       fprintf(stderr, "   [%.6f, %.6f]\n",
@@ -355,9 +355,9 @@ void DumpUnusedEdges(vector<pair<S2Point, S2Point>> const& unused_edges,
   fprintf(stderr,
           "Wrong number of unused edges (%d expected, %" PRIuS " actual):\n",
           num_expected, unused_edges.size());
-  for (int i = 0; i < unused_edges.size(); ++i) {
-    S2LatLng p0(m.Transpose() * unused_edges[i].first);
-    S2LatLng p1(m.Transpose() * unused_edges[i].second);
+  for (auto const& unused_edge : unused_edges) {
+    S2LatLng p0(m.Transpose() * unused_edge.first);
+    S2LatLng p1(m.Transpose() * unused_edge.second);
     fprintf(stderr, "  [%.6f, %.6f] -> [%.6f, %.5f]\n",
             p0.lat().degrees(), p0.lng().degrees(),
             p1.lat().degrees(), p1.lng().degrees());
@@ -513,8 +513,8 @@ bool TestBuilder(TestCase const* test) {
       S2Polygon polygon;
       builder.AssemblePolygon(&polygon, &unused_edges);
       polygon.Release(&loops);
-      for (int i = 0; i < loops.size(); ++i) {
-        loops[i]->Normalize();
+      for (S2Loop* loop : loops) {
+        loop->Normalize();
       }
     }
     vector<S2Loop*> expected;

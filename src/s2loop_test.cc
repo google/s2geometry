@@ -17,8 +17,8 @@
 
 #include "s2loop.h"
 
-#include <cstdio>
 #include <algorithm>
+#include <cstdio>
 #include <map>
 #include <memory>
 #include <set>
@@ -284,8 +284,7 @@ TEST_F(S2LoopTestBase, AreaConsistentWithTurningAngle) {
   // turning angle of the loop computed using GetTurnAngle().  According to
   // the Gauss-Bonnet theorem, the area of the loop should be equal to 2*Pi
   // minus its turning angle.
-  for (int i = 0; i < all_loops.size(); ++i) {
-    S2Loop const* loop = all_loops[i];
+  for (S2Loop const* loop : all_loops) {
     double area = loop->GetArea();
     double gauss_area = 2 * M_PI - loop->GetTurningAngle();
     // TODO(ericv): The error bound below is much larger than it should be.
@@ -516,12 +515,12 @@ TEST_F(S2LoopTestBase, Contains) {
     }
     for (S2Point const& point : points) {
       int count = 0;
-      for (int j = 0; j < loops.size(); ++j) {
-        if (loops[j]->Contains(point)) ++count;
+      for (S2Loop* loop : loops) {
+        if (loop->Contains(point)) ++count;
         // Contains and VirtualContainsPoint should have identical
         // implementation.
-        EXPECT_EQ(loops[j]->Contains(point),
-                  loops[j]->VirtualContainsPoint(point));
+        EXPECT_EQ(loop->Contains(point),
+                  loop->VirtualContainsPoint(point));
       }
       EXPECT_EQ(count, 1);
     }

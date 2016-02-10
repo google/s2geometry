@@ -1014,8 +1014,8 @@ class btree : public Params::key_compare {
   typedef typename node_type::root_fields root_fields;
   typedef typename Params::is_key_compare_to is_key_compare_to;
 
-  friend class btree_internal_locate_plain_compare;
-  friend class btree_internal_locate_compare_to;
+  friend struct btree_internal_locate_plain_compare;
+  friend struct btree_internal_locate_compare_to;
   typedef typename std::conditional<
     is_key_compare_to::value,
     btree_internal_locate_compare_to,
@@ -1382,6 +1382,11 @@ class btree : public Params::key_compare {
       return 0.0;
     }
     return (bytes_used() - size() * kValueSize) / double(size());
+  }
+
+  // The allocator used by the btree.
+  allocator_type get_allocator() const {
+    return internal_allocator();
   }
 
  private:

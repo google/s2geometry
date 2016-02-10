@@ -359,7 +359,7 @@ class S2EdgeUtil {
   static bool EdgeOrVertexCrossing(S2Point const& a, S2Point const& b,
                                    S2Point const& c, S2Point const& d);
 
-  // Given two edges AB and CD such that CrossingSign() is true, return
+  // Given two edges AB and CD such that CrossingSign(A, B, C, D) > 0, return
   // their intersection point.  Useful properties of GetIntersection (GI):
   //
   //  (1) GI(b,a,c,d) == GI(a,b,d,c) == GI(a,b,c,d)

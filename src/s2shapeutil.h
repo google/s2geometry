@@ -17,24 +17,31 @@
 //
 // This file contains various subclasses of S2Shape:
 //
-//  - S2FaceLoopShape (like S2Loop::Shape but more compact and flexible).
-//  - S2FaceShape (like S2Polygon::Shape but more compact and flexible).
-//  - S2EdgeVectorShape (for indexing random collections of edges).
-//  - S2LoopOwningShape (like S2SLoop::Shape but owns the loop).
-//  - S2PolygonOwningShape (like S2SPolygon::Shape but owns the polygon).
-//  - S2PolylineOwningShape (like S2SPolyline::Shape but owns the polyline).
+//  - LoopShape: like S2Loop::Shape but allows duplicate vertices & edges,
+//               more compact representation, faster to initialize.
+//  - PolygonShape: like S2Polygon::Shape but allows duplicate vertices & edges,
+//                  more compact representation, faster to initialize.
+//  - PolylineShape: like S2Polyline::Shape but slightly more compact.
+//  - ClosedPolylineShape: like PolylineShape but joins last vertex to first.
+//  - EdgeVectorShape: represents an arbitrary collection of edges.
+//  - VertexIdLoopShape: like LoopShape, but vertices are specified as indices
+//                       into a vertex array.
+//  - S2LoopOwningShape: like S2SLoop::Shape but owns the underlying S2Loop.
+//  - S2PolygonOwningShape: like S2SPolygon::Shape but owns the S2Polygon.
+//  - S2PolylineOwningShape: like S2SPolyline::Shape but owns the S2Polyline.
 //
 // and various functions related to S2ShapeIndex:
 //
-//  - IsOriginOnLeft (helper for implementing S2Shape::contains_origin).
-//  - FindSelfIntersection (helper function for S2Loop validation).
-//  - FindAnyCrossing (helper function for S2Polygon validation).
+//  - IsOriginOnLeft: helper for implementing S2Shape::contains_origin.
+//  - FindSelfIntersection: helper function for S2Loop validation.
+//  - FindAnyCrossing: helper function for S2Polygon validation.
 
 #ifndef S2GEOMETRY_S2SHAPEUTIL_H_
 #define S2GEOMETRY_S2SHAPEUTIL_H_
 
 #include <utility>
 #include <vector>
+
 #include "fpcontractoff.h"
 #include "s2.h"
 #include "s2loop.h"
@@ -50,25 +57,24 @@ namespace s2shapeutil {
 /////////////////////////////////////////////////////////////////////////////
 ///////////////////////////  Utility Shape Types  ///////////////////////////
 
-// FaceLoopShape represents a closed loop of edges surrounding an interior
+// LoopShape represents a closed loop of edges surrounding an interior
 // region.  It is similar to S2Loop::Shape except that this class allows
 // duplicate vertices and edges.  Loops may have any number of vertices,
 // including 0, 1, or 2.  (A one-vertex loop defines a degenerate edge
 // consisting of a single point.)
 //
-// Note that FaceLoopShape is faster to initialize and more compact than
+// Note that LoopShape is faster to initialize and more compact than
 // S2Loop::Shape, but does not support the same operations as S2Loop.
-class FaceLoopShape : public S2Shape {
+class LoopShape : public S2Shape {
  public:
-  FaceLoopShape() {}  // Must call Init().
-  explicit FaceLoopShape(std::vector<S2Point> const& vertices);
-  explicit FaceLoopShape(S2Loop const& loop);
-  ~FaceLoopShape();
+  LoopShape() {}  // Must call Init().
+  explicit LoopShape(std::vector<S2Point> const& vertices);
+  explicit LoopShape(S2Loop const& loop);  // Copies the loop data.
 
   // Initialize the shape.
   void Init(std::vector<S2Point> const& vertices);
 
-  // Initialize from an S2Loop.  Does not take ownership of "loop".
+  // Initialize from an S2Loop (by copying its data).
   // REQUIRES: !loop->is_full()
   void Init(S2Loop const& loop);
 
@@ -88,27 +94,27 @@ class FaceLoopShape : public S2Shape {
   std::unique_ptr<S2Point[]> vertices_;
 };
 
-// FaceShape represents a region defined by a collection of closed loops.  The
-// interior is the region to the left of all loops.  This is similar to
+// PolygonShape represents a region defined by a collection of closed loops.
+// The interior is the region to the left of all loops.  This is similar to
 // S2Polygon::Shape except that this class allows duplicate vertices and edges
 // (within loops and/or shared between loops).  There can be zero or more
 // loops, and each loop must have at least one vertex.  (A one-vertex loop
 // defines a degenerate edge consisting of a single point.)
 //
-// Note that FaceShape is faster to initialize and more compact than
+// Note that PolygonShape is faster to initialize and more compact than
 // S2Polygon::Shape, but does not support the same operations as S2Polygon.
-class FaceShape : public S2Shape {
+class PolygonShape : public S2Shape {
  public:
-  FaceShape() {}  // Must call Init().
+  PolygonShape() {}  // Must call Init().
   typedef std::vector<S2Point> Loop;
-  explicit FaceShape(std::vector<Loop> const& loops);
-  explicit FaceShape(S2Polygon const& polygon);
-  ~FaceShape();
+  explicit PolygonShape(std::vector<Loop> const& loops);
+  explicit PolygonShape(S2Polygon const& polygon);  // Copies the polygon data.
+  ~PolygonShape();
 
   // Initialize the shape.
   void Init(std::vector<Loop> const& loops);
 
-  // Initialize from an S2Polygon.  Does not take ownership of "polygon".
+  // Initialize from an S2Polygon (by copying its data).
   // REQUIRES: !polygon->is_full()
   void Init(S2Polygon const& polygon);
 
@@ -147,10 +153,54 @@ class FaceShape : public S2Shape {
   };
 };
 
-// S2EdgeVectorShape is an S2Shape representing a set of unrelated edges.
-// It is mainly used for testing, but it can also be useful if you have, say,
-// a collection of polylines and don't care about memory efficiency (since
-// this class would store most of the vertices twice).
+// PolylineShape represents a polyline.  It is similar to S2Polyline::Shape
+// except that duplicate vertices are allowed, and the representation is
+// slightly more compact.  Polylines may have any number of vertices, but note
+// that polylines with fewer than 2 vertices do not define any edges.
+class PolylineShape : public S2Shape {
+ public:
+  PolylineShape() {}  // Must call Init().
+  explicit PolylineShape(std::vector<S2Point> const& vertices);
+  explicit PolylineShape(S2Polyline const& polyline);  // Copies the data.
+
+  // Initialize the shape.
+  void Init(std::vector<S2Point> const& vertices);
+
+  // Initialize from an S2Polyline (by copying its data).
+  void Init(S2Polyline const& polyline);
+
+  int num_vertices() const { return num_vertices_; }
+  S2Point const& vertex(int i) const { return vertices_[i]; }
+
+  // S2Shape interface:
+  int num_edges() const { return std::max(0, num_vertices() - 1); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const;
+  bool has_interior() const { return false; }
+  bool contains_origin() const { return false; }
+
+ private:
+  // For clients that have many small polylines, we save some memory by
+  // representing the vertices as an array rather than using std::vector.
+  int32 num_vertices_;
+  std::unique_ptr<S2Point[]> vertices_;
+};
+
+// ClosedPolylineShape is like PolylineShape except that the last vertex is
+// implicitly joined to the first.  It is also like LoopShape except that it
+// does not have an interior (which makes it more efficient to index).
+class ClosedPolylineShape : public LoopShape {
+ public:
+  ClosedPolylineShape() {}  // Must call Init().
+  explicit ClosedPolylineShape(std::vector<S2Point> const& vertices);
+  explicit ClosedPolylineShape(S2Loop const& loop);  // Copies the loop data.
+  bool has_interior() const { return false; }
+  bool contains_origin() const { return false; }
+};
+
+// EdgeVectorShape is an S2Shape representing an arbitrary set of edges.  It
+// is mainly used for testing, but it can also be useful if you have, say, a
+// collection of polylines and don't care about memory efficiency (since this
+// class would store most of the vertices twice).
 //
 // Note that if you already have data stored in an S2Loop, S2Polyline, or
 // S2Polygon, then you would be better off using the "Shape" class defined
@@ -158,19 +208,17 @@ class FaceShape : public S2Shape {
 // is stored in your own data structures, you can easily write your own
 // subclass of S2Shape that points to the existing vertex data rather than
 // copying it.
-//
-// When an object of this class is inserted into an S2ShapeIndex, the index
-// takes ownership.  The object and edge data will be deleted automatically
-// when the index no longer needs it.  You can subtype this class to change
-// this behavior.
-class S2EdgeVectorShape : public S2Shape {
+class EdgeVectorShape : public S2Shape {
  public:
-  S2EdgeVectorShape() {}
+  EdgeVectorShape() {}
   // Convenience constructor for creating a vector of length 1.
-  S2EdgeVectorShape(S2Point const& a, S2Point const& b) {
+  EdgeVectorShape(S2Point const& a, S2Point const& b) {
     edges_.push_back(std::make_pair(a, b));
   }
-  // Add an edge to the vector.
+  // Add an edge to the vector.  IMPORTANT: This method should only be called
+  // *before* adding the EdgeVectorShape to an S2ShapeIndex.  S2Shapes can
+  // only be modified by removing them from the index, making changes, and
+  // then adding them back again.
   void Add(S2Point const& a, S2Point const& b) {
     edges_.push_back(std::make_pair(a, b));
   }
@@ -186,6 +234,39 @@ class S2EdgeVectorShape : public S2Shape {
 
  private:
   std::vector<std::pair<S2Point, S2Point>> edges_;
+};
+// Backwards compatibility: Delete once all references have been updated.
+using S2EdgeVectorShape = EdgeVectorShape;
+
+// VertexIdLoopShape is just like LoopShape, except that vertices are
+// specified as indices into a vertex array.  This representation can be more
+// compact when many loops are arranged in a mesh structure.
+class VertexIdLoopShape : public S2Shape {
+ public:
+  VertexIdLoopShape() {}  // Must call Init().
+  explicit VertexIdLoopShape(std::vector<int32> const& vertex_ids,
+                             S2Point const* vertex_array);
+
+  // Initialize the shape.  "vertex_ids" is a vector of indices into
+  // "vertex_array".
+  void Init(std::vector<int32> const& vertex_ids,
+            S2Point const* vertex_array);
+
+  // Returns the number of vertices in the loop.
+  int num_vertices() const { return num_vertices_; }
+  int32 vertex_id(int i) const { return vertex_ids_[i]; }
+  S2Point const& vertex(int i) const { return vertex_array_[vertex_id(i)]; }
+
+  // S2Shape interface:
+  int num_edges() const { return num_vertices(); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const;
+  bool has_interior() const { return true; }
+  bool contains_origin() const;
+
+ private:
+  int32 num_vertices_;
+  std::unique_ptr<int32[]> vertex_ids_;
+  S2Point const* vertex_array_;
 };
 
 // Like S2Loop::Shape, except that the referenced S2Loop is automatically

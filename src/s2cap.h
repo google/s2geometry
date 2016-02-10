@@ -18,8 +18,8 @@
 #ifndef S2GEOMETRY_S2CAP_H_
 #define S2GEOMETRY_S2CAP_H_
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <iosfwd>
 
 #include <glog/logging.h>

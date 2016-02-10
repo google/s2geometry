@@ -59,8 +59,8 @@
 //
 // void Test(vector<S2Polyline*> const& polylines) {
 //   S2ShapeIndex index;
-//   for (int i = 0; i < polylines.size(); ++i) {
-//     index.Add(new S2Polyline::Shape(polylines[i]));
+//   for (S2Polyline* polyline : polylines) {
+//     index.Add(new S2Polyline::Shape(polyline));
 //   }
 //   // Now use an S2CrossingEdgeQuery or S2ClosestEdgeQuery here ...
 // }
@@ -68,8 +68,8 @@
 #ifndef S2GEOMETRY_S2SHAPEINDEX_H_
 #define S2GEOMETRY_S2SHAPEINDEX_H_
 
-#include <cstddef>
 #include <array>
+#include <cstddef>
 #include <memory>
 #include <utility>
 #include <vector>

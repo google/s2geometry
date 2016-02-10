@@ -17,9 +17,9 @@
 
 #include "s2cell.h"
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
-#include <algorithm>
 
 #include <glog/logging.h>
 #include "r1interval.h"

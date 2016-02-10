@@ -27,21 +27,21 @@ using std::vector;
 
 namespace s2shapeutil {
 
-FaceLoopShape::FaceLoopShape(vector<S2Point> const& vertices) {
+LoopShape::LoopShape(vector<S2Point> const& vertices) {
   Init(vertices);
 }
 
-FaceLoopShape::FaceLoopShape(S2Loop const& loop) {
+LoopShape::LoopShape(S2Loop const& loop) {
   Init(loop);
 }
 
-void FaceLoopShape::Init(vector<S2Point> const& vertices) {
+void LoopShape::Init(vector<S2Point> const& vertices) {
   num_vertices_ = vertices.size();
   vertices_.reset(new S2Point[num_vertices_]);
   std::copy(vertices.begin(), vertices.end(), vertices_.get());
 }
 
-void FaceLoopShape::Init(S2Loop const& loop) {
+void LoopShape::Init(S2Loop const& loop) {
   DCHECK(!loop.is_full()) << "Full loops not currently supported";
   if (loop.is_empty()) {
     num_vertices_ = 0;
@@ -54,24 +54,28 @@ void FaceLoopShape::Init(S2Loop const& loop) {
   }
 }
 
-FaceLoopShape::~FaceLoopShape() {
-}
-
-void FaceLoopShape::GetEdge(int e, S2Point const** a,
-                              S2Point const** b) const {
+void LoopShape::GetEdge(int e, S2Point const** a, S2Point const** b) const {
   DCHECK_LT(e, num_edges());
   *a = &vertices_[e];
   if (++e == num_vertices()) e = 0;
   *b = &vertices_[e];
 }
 
-bool FaceLoopShape::contains_origin() const {
+bool LoopShape::contains_origin() const {
   return IsOriginOnLeft(*this);
+}
+
+ClosedPolylineShape::ClosedPolylineShape(std::vector<S2Point> const& vertices) {
+  Init(vertices);
+}
+
+ClosedPolylineShape::ClosedPolylineShape(S2Loop const& loop) {
+  Init(loop);
 }
 
 // VertexArray points to an existing array of vertices.  It allows code
 // sharing between the S2Polygon and vector<vector<S2Point>> constructors.
-class FaceShape::VertexArray {
+class PolygonShape::VertexArray {
  public:
   VertexArray(S2Point const* begin, size_t size)
       : begin_(begin), size_(size) {
@@ -84,24 +88,23 @@ class FaceShape::VertexArray {
   size_t size_;
 };
 
-FaceShape::FaceShape(vector<FaceShape::Loop> const& loops) {
+PolygonShape::PolygonShape(vector<PolygonShape::Loop> const& loops) {
   Init(loops);
 }
 
-FaceShape::FaceShape(S2Polygon const& polygon) {
+PolygonShape::PolygonShape(S2Polygon const& polygon) {
   Init(polygon);
 }
 
-void FaceShape::Init(vector<FaceShape::Loop> const& loops) {
+void PolygonShape::Init(vector<PolygonShape::Loop> const& loops) {
   vector<VertexArray> v_arrays;
-  for (int i = 0; i < loops.size(); ++i) {
-    FaceShape::Loop const& loop = loops[i];
+  for (PolygonShape::Loop const& loop : loops) {
     v_arrays.push_back(VertexArray(&*loop.begin(), loop.size()));
   }
   Init(v_arrays);
 }
 
-void FaceShape::Init(S2Polygon const& polygon) {
+void PolygonShape::Init(S2Polygon const& polygon) {
   vector<VertexArray> v_arrays;
   for (int i = 0; i < polygon.num_loops(); ++i) {
     S2Loop const* loop = polygon.loop(i);
@@ -110,7 +113,7 @@ void FaceShape::Init(S2Polygon const& polygon) {
   Init(v_arrays);
 }
 
-void FaceShape::Init(vector<VertexArray> const& loops) {
+void PolygonShape::Init(vector<VertexArray> const& loops) {
   num_loops_ = loops.size();
   if (num_loops_ == 0) {
     num_vertices_ = 0;
@@ -135,13 +138,13 @@ void FaceShape::Init(vector<VertexArray> const& loops) {
   }
 }
 
-FaceShape::~FaceShape() {
+PolygonShape::~PolygonShape() {
   if (num_loops() > 1) {
     delete[] cumulative_vertices_;
   }
 }
 
-int FaceShape::num_vertices() const {
+int PolygonShape::num_vertices() const {
   if (num_loops() <= 1) {
     return num_vertices_;
   } else {
@@ -149,7 +152,7 @@ int FaceShape::num_vertices() const {
   }
 }
 
-int FaceShape::num_loop_vertices(int i) const {
+int PolygonShape::num_loop_vertices(int i) const {
   DCHECK_LT(i, num_loops());
   if (num_loops() == 1) {
     return num_vertices_;
@@ -158,7 +161,7 @@ int FaceShape::num_loop_vertices(int i) const {
   }
 }
 
-S2Point const& FaceShape::loop_vertex(int i, int j) const {
+S2Point const& PolygonShape::loop_vertex(int i, int j) const {
   DCHECK_LT(i, num_loops());
   DCHECK_LT(j, num_loop_vertices(i));
   if (num_loops() == 1) {
@@ -168,7 +171,7 @@ S2Point const& FaceShape::loop_vertex(int i, int j) const {
   }
 }
 
-void FaceShape::GetEdge(int e, S2Point const** a, S2Point const** b) const {
+void PolygonShape::GetEdge(int e, S2Point const** a, S2Point const** b) const {
   DCHECK_LT(e, num_edges());
   int const kMaxLinearSearchLoops = 12;  // From benchmarks.
 
@@ -191,7 +194,59 @@ void FaceShape::GetEdge(int e, S2Point const** a, S2Point const** b) const {
   *b = &vertices_[e];
 }
 
-bool FaceShape::contains_origin() const {
+bool PolygonShape::contains_origin() const {
+  return IsOriginOnLeft(*this);
+}
+
+PolylineShape::PolylineShape(vector<S2Point> const& vertices) {
+  Init(vertices);
+}
+
+PolylineShape::PolylineShape(S2Polyline const& polyline) {
+  Init(polyline);
+}
+
+void PolylineShape::Init(vector<S2Point> const& vertices) {
+  num_vertices_ = vertices.size();
+  vertices_.reset(new S2Point[num_vertices_]);
+  std::copy(vertices.begin(), vertices.end(), vertices_.get());
+}
+
+void PolylineShape::Init(S2Polyline const& polyline) {
+  num_vertices_ = polyline.num_vertices();
+  vertices_.reset(new S2Point[num_vertices_]);
+  std::copy(&polyline.vertex(0), &polyline.vertex(0) + num_vertices_,
+            vertices_.get());
+}
+
+void PolylineShape::GetEdge(int e, S2Point const** a,
+                            S2Point const** b) const {
+  DCHECK_LT(e, num_edges());
+  *a = &vertices_[e];
+  *b = &vertices_[e + 1];
+}
+
+VertexIdLoopShape::VertexIdLoopShape(std::vector<int32> const& vertex_ids,
+                                     S2Point const* vertex_array) {
+  Init(vertex_ids, vertex_array);
+}
+
+void VertexIdLoopShape::Init(std::vector<int32> const& vertex_ids,
+                             S2Point const* vertex_array) {
+  num_vertices_ = vertex_ids.size();
+  vertex_ids_.reset(new int32[num_vertices_]);
+  std::copy(vertex_ids.begin(), vertex_ids.end(), vertex_ids_.get());
+  vertex_array_ = vertex_array;
+}
+
+void VertexIdLoopShape::GetEdge(int e, S2Point const** a, S2Point const** b) const {
+  DCHECK_LT(e, num_edges());
+  *a = &vertex(e);
+  if (++e == num_vertices()) e = 0;
+  *b = &vertex(e);
+}
+
+bool VertexIdLoopShape::contains_origin() const {
   return IsOriginOnLeft(*this);
 }
 
@@ -403,8 +458,7 @@ void ResolveLoopContainment(vector<vector<S2Shape*>> const& components,
   vector<S2Shape*> outer_loops;
   for (int i = 0; i < components.size(); ++i) {
     auto const& component = components[i];
-    for (int j = 0; j < component.size(); ++j) {
-      auto loop = component[j];
+    for (S2Shape* loop : component) {
       if (component.size() > 1 && !loop->contains_origin()) {
         index.Add(loop);
         component_ids.push_back(i);
@@ -455,7 +509,7 @@ void ResolveLoopContainment(vector<vector<S2Shape*>> const& components,
   }
   faces->back() = children[nullptr];
 
-  // Explicitly remove the shapes from the index so they are not Release()d.
+  // Explicitly remove the shapes from the index so they are not deleted.
   index.RemoveAll();
 }
 

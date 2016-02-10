@@ -18,6 +18,7 @@
 #include "priority_queue_sequence.h"
 
 #include <algorithm>
+
 #include <gtest/gtest.h>
 #include "s2testing.h"
 

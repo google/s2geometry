@@ -17,8 +17,8 @@
 
 #include "s2edgeutil.h"
 
-#include <cfloat>
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <limits>
 

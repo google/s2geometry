@@ -41,12 +41,12 @@ static double ParseDouble(const string& str) {
 }
 
 void ParseLatLngs(string const& str, vector<S2LatLng>* latlngs) {
-  vector<pair<string, string>> p;
-  CHECK(DictionaryParse(str, &p)) << ": str == \"" << str << "\"";
+  vector<pair<string, string>> ps;
+  CHECK(DictionaryParse(str, &ps)) << ": str == \"" << str << "\"";
   latlngs->clear();
-  for (int i = 0; i < p.size(); ++i) {
-    latlngs->push_back(S2LatLng::FromDegrees(ParseDouble(p[i].first),
-                                             ParseDouble(p[i].second)));
+  for (auto const& p : ps) {
+    latlngs->push_back(S2LatLng::FromDegrees(ParseDouble(p.first),
+                                             ParseDouble(p.second)));
   }
 }
 
@@ -54,8 +54,8 @@ void ParsePoints(string const& str, vector<S2Point>* vertices) {
   vector<S2LatLng> latlngs;
   ParseLatLngs(str, &latlngs);
   vertices->clear();
-  for (int i = 0; i < latlngs.size(); ++i) {
-    vertices->push_back(latlngs[i].ToPoint());
+  for (auto const& latlng : latlngs) {
+    vertices->push_back(latlng.ToPoint());
   }
 }
 
@@ -95,8 +95,8 @@ static S2Polygon* InternalMakePolygon(string const& str,
                                       bool normalize_loops) {
   vector<string> loop_strs = strings::Split(str, ';', strings::SkipEmpty());
   vector<S2Loop*> loops;
-  for (int i = 0; i < loop_strs.size(); ++i) {
-    S2Loop* loop = MakeLoop(loop_strs[i]);
+  for (auto const& loop_str : loop_strs) {
+    S2Loop* loop = MakeLoop(loop_str);
     if (normalize_loops) loop->Normalize();
     loops.push_back(loop);
   }

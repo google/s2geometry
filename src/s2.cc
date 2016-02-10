@@ -18,6 +18,7 @@
 #include "s2.h"
 
 #include <cfloat>
+
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "util/bits/bits.h"

@@ -25,6 +25,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "util/gtl/gtl_namespace.h"
+
 namespace util {
 namespace gtl {
 

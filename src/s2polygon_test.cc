@@ -18,9 +18,9 @@
 
 #include "s2polygon.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include <algorithm>
 #include <limits>
 #include <memory>
 #include <string>
@@ -388,7 +388,11 @@ static void CheckEqual(S2Polygon const* a, S2Polygon const* b,
   ASSERT_TRUE(builder.AssemblePolygon(&a2, nullptr));
   builder.AddPolygon(b);
   ASSERT_TRUE(builder.AssemblePolygon(&b2, nullptr));
-  EXPECT_TRUE(a2.BoundaryApproxEquals(&b2, max_error));
+  EXPECT_TRUE(a2.BoundaryApproxEquals(&b2, max_error))
+      << "\na: " << s2textformat::ToString(a)
+      << "\nb: " << s2textformat::ToString(b)
+      << "\na2: " << s2textformat::ToString(&a2)
+      << "\nb2: " << s2textformat::ToString(&b2);
 }
 
 static void CheckComplementary(S2Polygon const* a, S2Polygon const* b) {
@@ -910,11 +914,11 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
     }
 
     S2PolygonBuilder builder(S2PolygonBuilderOptions::DIRECTED_XOR());
-    for (int i = 0; i < polylines.size(); i++) {
-      for (int j = 0; j < polylines[i]->num_vertices() - 1; j++) {
-        builder.AddEdge(polylines[i]->vertex(j), polylines[i]->vertex(j + 1));
-        VLOG(3) << " ... Adding edge: " << polylines[i]->vertex(j) << " - " <<
-            polylines[i]->vertex(j + 1);
+    for (S2Polyline* polyline : polylines) {
+      for (int j = 0; j < polyline->num_vertices() - 1; j++) {
+        builder.AddEdge(polyline->vertex(j), polyline->vertex(j + 1));
+        VLOG(3) << " ... Adding edge: " << polyline->vertex(j) << " - " <<
+            polyline->vertex(j + 1);
       }
     }
     ClearPolylineVector(&polylines);
@@ -941,8 +945,8 @@ static void CheckCoveringIsConservative(S2Polygon const& polygon,
   //  - If the polygon intersects the cell polygon, then MayIntersect(cell)
   //    must return true.
   //
-  for (int i = 0; i < cells.size(); ++i) {
-    S2Cell cell(cells[i]);
+  for (S2CellId cell_id : cells) {
+    S2Cell cell(cell_id);
     S2Polygon cell_poly(cell);
     if (polygon.Contains(cell)) {
       EXPECT_TRUE(polygon.Contains(&cell_poly));
@@ -989,13 +993,14 @@ static void SplitAndAssemble(S2Polygon const* polygon) {
     CheckCoveringIsConservative(*polygon, cells);
     VLOG(2) << cells.size() << " cells in covering";
     vector<S2Polygon*> pieces;
-    for (int i = 0; i < cells.size(); ++i) {
-      S2Cell cell(cells[i]);
+    int i = 0;
+    for (S2CellId cell_id : cells) {
+      S2Cell cell(cell_id);
       S2Polygon window(cell);
       S2Polygon* piece = new S2Polygon;
       piece->InitToIntersection(polygon, &window);
       pieces.push_back(piece);
-      VLOG(4) << "\nPiece " << i << ":\n  Window: "
+      VLOG(4) << "\nPiece " << i++ << ":\n  Window: "
               << s2textformat::ToString(&window)
               << "\n  Piece: " << s2textformat::ToString(piece);
     }
@@ -1413,8 +1418,8 @@ class IsValidTest : public testing::Test {
 
   void CheckInvalid(string const& snippet) {
     vector<S2Loop*> loops;
-    for (int i = 0; i < vloops_.size(); ++i) {
-      loops.push_back(new S2Loop(*vloops_[i], DISABLE_S2DEBUG));
+    for (vector<S2Point>* vloop : vloops_) {
+      loops.push_back(new S2Loop(*vloop, DISABLE_S2DEBUG));
     }
     std::random_shuffle(loops.begin(), loops.end(), *rnd_);
     S2Polygon polygon;
@@ -2001,7 +2006,6 @@ TEST_F(S2PolygonTestBase, EmptyPolygonShape) {
 
 void TestPolygonShape(S2Polygon const* polygon) {
   DCHECK(!polygon->is_full());
-  // Allocate the shape so that we can Release() it below.
   S2Polygon::Shape shape(polygon);
   EXPECT_EQ(polygon, shape.polygon());
   EXPECT_EQ(polygon->num_vertices(), shape.num_edges());

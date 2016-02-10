@@ -93,9 +93,7 @@ bool S2CellUnion::Normalize() {
 
   std::sort(ids->begin(), ids->end());
   int out = 0;
-  for (int i = 0; i < ids->size(); ++i) {
-    S2CellId id = (*ids)[i];
-
+  for (S2CellId id : *ids) {
     // Check whether this cell is contained by the previous cell.
     if (out > 0 && (*ids)[out-1].contains(id)) continue;
 

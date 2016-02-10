@@ -234,7 +234,10 @@ class FixedArray {
     template <typename Ignored>
     struct Impl<0, Ignored> {
       static const size_type kSize = 0;
-      Buffer* get() { return nullptr; }
+      Buffer* get() {
+        static Buffer buffer;
+        return &buffer;
+      }
       void Annotate(size_t n, bool creating) const {}
     };
 
