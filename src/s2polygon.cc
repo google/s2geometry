@@ -18,6 +18,7 @@
 #include "s2polygon.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <set>
@@ -243,8 +244,7 @@ void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
   for (bool done = false; !done; ) {
     children = &(*loop_map)[parent];
     done = true;
-    for (int i = 0; i < children->size(); ++i) {
-      S2Loop* child  = (*children)[i];
+    for (S2Loop* child : *children) {
       if (child->ContainsNested(new_loop)) {
         parent = child;
         done = false;
@@ -468,8 +468,7 @@ S2Point S2Polygon::GetCentroid() const {
 
 int S2Polygon::GetSnapLevel() const {
   int snap_level = -1;
-  for (int i = 0; i < loops_.size(); ++i) {
-    S2Loop const* child = loop(i);
+  for (S2Loop const* child : loops_) {
     for (int j = 0; j < child->num_vertices(); ++j) {
       int face;
       unsigned int si, ti;
@@ -834,19 +833,17 @@ void S2Polygon::Encode(Encoder* const encoder) const {
   // Converts all the polygon vertices to S2XYZFaceSiTi format.
   FixedArray<S2XYZFaceSiTi> all_vertices(num_vertices_);
   S2XYZFaceSiTi* current_loop_vertices = all_vertices.get();
-  for (int i = 0; i < loops_.size(); ++i) {
-    loops_[i]->GetXYZFaceSiTiVertices(current_loop_vertices);
-    current_loop_vertices += loops_[i]->num_vertices();
+  for (S2Loop const* loop : loops_) {
+    loop->GetXYZFaceSiTiVertices(current_loop_vertices);
+    current_loop_vertices += loop->num_vertices();
   }
   // Computes a histogram of the cell levels at which the vertices are snapped.
   // (histogram[0] is the number of unsnapped vertices, histogram[i] the number
   // of vertices snapped at level i-1).
-  int histogram[S2::kMaxCellLevel + 2];
-  for (int i = 0; i <= S2::kMaxCellLevel + 1; ++i) {
-    histogram[i] = 0;
-  }
-  for (int i = 0; i < num_vertices_; ++i) {
-    histogram[all_vertices[i].cell_level + 1] += 1;
+  std::array<int, S2::kMaxCellLevel + 2> histogram;
+  histogram.fill(0);
+  for (auto const& v : all_vertices) {
+    histogram[v.cell_level + 1] += 1;
   }
   // Computes the level at which most of the vertices are snapped.
   int snap_level = 0;
@@ -1625,9 +1622,8 @@ S2Polygon* S2Polygon::DestructiveApproxUnion(vector<S2Polygon*>* polygons,
   // to the queue until we have a single polygon to return.
   using QueueType = std::multimap<int, S2Polygon*>;
   QueueType queue;  // Map from # of vertices to polygon.
-  for (int i = 0; i < polygons->size(); ++i)
-    queue.insert(
-        std::make_pair((*polygons)[i]->num_vertices(), (*polygons)[i]));
+  for (S2Polygon* polygon : *polygons)
+    queue.insert(std::make_pair(polygon->num_vertices(), polygon));
   polygons->clear();
 
   while (queue.size() > 1) {

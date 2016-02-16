@@ -273,5 +273,39 @@ TEST_F(S2PointCompressionTest, StraightLineCompressesWell) {
   EXPECT_EQ(line_.size() + 17, encoder_.length());
 }
 
+TEST_F(S2PointCompressionTest, FirstPointOnFaceEdge) {
+  // This test used to trigger a bug in which EncodeFirstPointFixedLength()
+  // tried to encode a pi/qi value of (2**level) in "level" bits (which did
+  // not work out so well).  The fix is documented in SiTitoPiQi().
+  //
+  // The test data consists of two points, where the first point is exactly on
+  // an S2Cell face edge (with ti == S2::kMaxSiTi), and the second point is
+  // encodable at snap level 8.  This used to cause the code to try encoding
+  // qi = 256 in 8 bits.
+  S2XYZFaceSiTi points[] = {
+    {
+      S2Point(0.054299323861222645, -0.70606358900180299,
+              0.70606358900180299),
+      2,                      // face
+      956301312, 2147483648,  // si, ti
+      -1                      // level
+    },
+    {
+      S2Point(0.056482651436986935, -0.70781701406865505,
+              0.70413406726388494),
+      4,                    // face
+      4194304, 1195376640,  // si, ti
+      8                     // level
+    }};
+
+  Encoder encoder;
+  S2EncodePointsCompressed(points, 2, 8, &encoder);
+  Decoder decoder(encoder.base(), encoder.length());
+  S2Point result[2];
+  S2DecodePointsCompressed(&decoder, 2, 8, result);
+  CHECK(result[0] == points[0].xyz);
+  CHECK(result[1] == points[1].xyz);
+}
+
 
 }  // namespace

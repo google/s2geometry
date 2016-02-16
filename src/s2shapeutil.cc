@@ -426,7 +426,7 @@ bool GetCrossingEdgePairs(S2ShapeIndex const& index,
     AppendCrossingEdgePairs(cell_edges, type, edge_pairs);
   }
   if (edge_pairs->size() > 1) {
-    sort(edge_pairs->begin(), edge_pairs->end());
+    std::sort(edge_pairs->begin(), edge_pairs->end());
     edge_pairs->erase(std::unique(edge_pairs->begin(), edge_pairs->end()),
                       edge_pairs->end());
   }
