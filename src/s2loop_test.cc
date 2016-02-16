@@ -44,6 +44,7 @@
 #include "s2testing.h"
 #include "s2textformat.h"
 #include "util/gtl/fixedarray.h"
+#include "util/gtl/ptr_util.h"
 #include "util/gtl/stl_util.h"
 #include "util/math/matrix3x3.h"
 #include "util/math/vector3.h"
@@ -841,7 +842,7 @@ TEST_F(S2LoopTestBase, LoopRelationsWhenSameExceptPiecesStickingOutAndIn) {
 
 #undef TestRelation
 
-static S2Loop* MakeCellLoop(S2CellId begin, S2CellId end) {
+static unique_ptr<S2Loop> MakeCellLoop(S2CellId begin, S2CellId end) {
   // Construct a CCW polygon whose boundary is the union of the cell ids
   // in the range [begin, end).  We add the edges one by one, removing
   // any edges that are already present in the opposite direction.
@@ -873,7 +874,7 @@ static S2Loop* MakeCellLoop(S2CellId begin, S2CellId end) {
     p = next;
   }
 
-  return new S2Loop(vertices);
+  return util::gtl::MakeUnique<S2Loop>(vertices);
 }
 
 TEST(S2Loop, LoopRelations2) {

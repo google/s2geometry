@@ -161,6 +161,7 @@ int Faces::Iterator::Next() {
   return faces_[face_index_].face;
 }
 
+// Unused function (for documentation purposes only).
 inline int STtoPiQi(double s, int level) {
   // We introduce a new coordinate system (pi, qi), which is (si, ti)
   // with the bits that are constant for cells of that level shifted
@@ -176,6 +177,12 @@ inline int STtoPiQi(double s, int level) {
 
 inline int SiTitoPiQi(unsigned int si, int level) {
   // See STtoPiQi for the definition of the PiQi coordinate system.
+  //
+  // EncodeFirstPointFixedLength encodes the return value using "level" bits,
+  // so we clamp "si" to the range [0, 2**level - 1] before trying to encode
+  // it.  This is okay because if si == kMaxSiTi, then it is not a cell center
+  // anyway and will be encoded separately as an "off-center" point.
+  si = std::min(si, S2::kMaxSiTi - 1);
   return si >> (S2::kMaxCellLevel + 1 - level);
 }
 

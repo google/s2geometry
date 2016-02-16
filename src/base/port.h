@@ -524,6 +524,13 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 #define ATTRIBUTE_NO_SANITIZE_THREAD
 #endif
 
+// Tell ControlFlowIntegrity sanitizer to not instrument a given function.
+#ifdef CONTROL_FLOW_INTEGRITY
+#define ATTRIBUTE_NO_SANITIZE_CFI __attribute__((no_sanitize("cfi")))
+#else
+#define ATTRIBUTE_NO_SANITIZE_CFI
+#endif
+
 #ifndef HAVE_ATTRIBUTE_SECTION  // may have been pre-set to 0, e.g. for Darwin
 #define HAVE_ATTRIBUTE_SECTION 1
 #endif

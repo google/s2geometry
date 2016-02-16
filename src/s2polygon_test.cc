@@ -52,6 +52,7 @@
 #include "s2testing.h"
 #include "s2textformat.h"
 #include "util/gtl/fixedarray.h"
+#include "util/gtl/ptr_util.h"
 #include "util/gtl/stl_util.h"
 #include "util/math/matrix3x3.h"
 
@@ -1697,34 +1698,22 @@ double MaximumDistanceInDegrees(S2Polygon const& poly_a,
 
 class S2PolygonSimplifierTest : public ::testing::Test {
  protected:
-  S2PolygonSimplifierTest() {
-    simplified = nullptr;
-    original = nullptr;
-  }
+  void SetInput(unique_ptr<S2Polygon> poly, double tolerance_in_degrees) {
+    original = std::move(poly);
 
-  ~S2PolygonSimplifierTest() {
-    delete simplified;
-    delete original;
-  }
-
-  // Owns poly.
-  void SetInput(S2Polygon* poly, double tolerance_in_degrees) {
-    delete original;
-    delete simplified;
-    original = poly;
-
-    simplified = new S2Polygon();
-    simplified->InitToSimplified(original,
+    simplified = util::gtl::MakeUnique<S2Polygon>();
+    simplified->InitToSimplified(original.get(),
                                  S1Angle::Degrees(tolerance_in_degrees),
                                  false);  // snap_to_cell_centers
   }
 
   void SetInput(string const& poly, double tolerance_in_degrees) {
-    SetInput(s2textformat::MakePolygon(poly), tolerance_in_degrees);
+    SetInput(unique_ptr<S2Polygon>(s2textformat::MakePolygon(poly)),
+             tolerance_in_degrees);
   }
 
-  S2Polygon* simplified;
-  S2Polygon* original;
+  unique_ptr<S2Polygon> simplified;
+  unique_ptr<S2Polygon> original;
 };
 
 TEST_F(S2PolygonSimplifierTest, NoSimplification) {
@@ -1798,7 +1787,7 @@ TEST_F(S2PolygonSimplifierTest, EdgesOverlap) {
 
 // Creates a loop from a comma separated list of u:v coordinates relative to a
 // cell. The loop "0:0, 1:0, 1:1, 0:1" is counter-clockwise.
-S2Polygon* MakeCellLoop(const S2Cell& cell, string const& str) {
+unique_ptr<S2Polygon> MakeCellLoop(const S2Cell& cell, string const& str) {
   vector<S2Point> vertices;
   for (int i = 0; i < 4; ++i) {
     vertices.push_back(cell.GetVertex(i));
@@ -1813,7 +1802,7 @@ S2Polygon* MakeCellLoop(const S2Cell& cell, string const& str) {
         (vertices[2] * (1.0 - u) + vertices[3] * u) * v;
     loop_vertices.push_back(p.Normalize());
   }
-  return new S2Polygon(new S2Loop(loop_vertices));
+  return util::gtl::MakeUnique<S2Polygon>(new S2Loop(loop_vertices));
 }
 
 TEST(InitToSimplifiedInCell, PointsOnCellBoundaryKept) {
@@ -1847,11 +1836,12 @@ TEST(InitToSimplifiedInCell, PointsInsideCellSimplified) {
   EXPECT_EQ(-1, simplified_loop.GetSnapLevel());
 }
 
-S2Polygon* MakeRegularPolygon(const string& center,
-                              int num_points, double radius_in_degrees) {
+unique_ptr<S2Polygon> MakeRegularPolygon(
+    const string& center, int num_points, double radius_in_degrees) {
   S1Angle radius = S1Angle::Degrees(radius_in_degrees);
-  return new S2Polygon(S2Loop::MakeRegularLoop(
-      s2textformat::MakePoint(center), radius, num_points));
+  return util::gtl::MakeUnique<S2Polygon>(
+      S2Loop::MakeRegularLoop(s2textformat::MakePoint(center),
+                              radius, num_points));
 }
 
 // Tests that a regular polygon with many points gets simplified
@@ -1862,8 +1852,7 @@ TEST_F(S2PolygonSimplifierTest, LargeRegularPolygon) {
   const int num_desired_points = 250;
   double tolerance = 1.05 * kRadius * (1 - cos(M_PI / num_desired_points));
 
-  S2Polygon* p = MakeRegularPolygon("0:0", num_initial_points, kRadius);
-  SetInput(p, tolerance);
+  SetInput(MakeRegularPolygon("0:0", num_initial_points, kRadius), tolerance);
 
   EXPECT_GE(tolerance, MaximumDistanceInDegrees(*simplified, *original, 0));
   EXPECT_GE(tolerance, MaximumDistanceInDegrees(*original, *simplified, 0));

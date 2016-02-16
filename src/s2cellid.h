@@ -23,7 +23,6 @@
 #include <iostream>
 #include <string>
 #include <type_traits>
-#include <unordered_map>
 #include <vector>
 
 #include <glog/logging.h>
