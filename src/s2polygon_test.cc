@@ -133,55 +133,54 @@ string const kOverlap4 = "-10:0, 10:0, 10:-10, -10:-10";
 class S2PolygonTestBase : public testing::Test {
  public:
   S2PolygonTestBase();
-  ~S2PolygonTestBase();
 
  protected:
   // Some standard polygons to use in the tests.
-  S2Polygon const* const empty;
-  S2Polygon const* const full;
-  S2Polygon const* const near_0;
-  S2Polygon const* const near_10;
-  S2Polygon const* const near_30;
-  S2Polygon const* const near_32;
-  S2Polygon const* const near_3210;
-  S2Polygon const* const near_H3210;
+  unique_ptr<S2Polygon const> const empty;
+  unique_ptr<S2Polygon const> const full;
+  unique_ptr<S2Polygon const> const near_0;
+  unique_ptr<S2Polygon const> const near_10;
+  unique_ptr<S2Polygon const> const near_30;
+  unique_ptr<S2Polygon const> const near_32;
+  unique_ptr<S2Polygon const> const near_3210;
+  unique_ptr<S2Polygon const> const near_H3210;
 
-  S2Polygon const* const far_10;
-  S2Polygon const* const far_21;
-  S2Polygon const* const far_321;
-  S2Polygon const* const far_H20;
-  S2Polygon const* const far_H3210;
+  unique_ptr<S2Polygon const> const far_10;
+  unique_ptr<S2Polygon const> const far_21;
+  unique_ptr<S2Polygon const> const far_321;
+  unique_ptr<S2Polygon const> const far_H20;
+  unique_ptr<S2Polygon const> const far_H3210;
 
-  S2Polygon const* const south_0ab;
-  S2Polygon const* const south_2;
-  S2Polygon const* const south_210b;
-  S2Polygon const* const south_H21;
-  S2Polygon const* const south_H20abc;
+  unique_ptr<S2Polygon const> const south_0ab;
+  unique_ptr<S2Polygon const> const south_2;
+  unique_ptr<S2Polygon const> const south_210b;
+  unique_ptr<S2Polygon const> const south_H21;
+  unique_ptr<S2Polygon const> const south_H20abc;
 
-  S2Polygon const* const nf1_n10_f2_s10abc;
+  unique_ptr<S2Polygon const> const nf1_n10_f2_s10abc;
 
-  S2Polygon const* const nf2_n2_f210_s210ab;
+  unique_ptr<S2Polygon const> const nf2_n2_f210_s210ab;
 
-  S2Polygon const* const f32_n0;
-  S2Polygon const* const n32_s0b;
+  unique_ptr<S2Polygon const> const f32_n0;
+  unique_ptr<S2Polygon const> const n32_s0b;
 
-  S2Polygon const* const cross1;
-  S2Polygon const* const cross1_side_hole;
-  S2Polygon const* const cross1_center_hole;
-  S2Polygon const* const cross2;
-  S2Polygon const* const cross2_side_hole;
-  S2Polygon const* const cross2_center_hole;
+  unique_ptr<S2Polygon const> const cross1;
+  unique_ptr<S2Polygon const> const cross1_side_hole;
+  unique_ptr<S2Polygon const> const cross1_center_hole;
+  unique_ptr<S2Polygon const> const cross2;
+  unique_ptr<S2Polygon const> const cross2_side_hole;
+  unique_ptr<S2Polygon const> const cross2_center_hole;
 
-  S2Polygon const* const overlap1;
-  S2Polygon const* const overlap1_side_hole;
-  S2Polygon const* const overlap1_center_hole;
-  S2Polygon const* const overlap2;
-  S2Polygon const* const overlap2_side_hole;
-  S2Polygon const* const overlap2_center_hole;
+  unique_ptr<S2Polygon const> const overlap1;
+  unique_ptr<S2Polygon const> const overlap1_side_hole;
+  unique_ptr<S2Polygon const> const overlap1_center_hole;
+  unique_ptr<S2Polygon const> const overlap2;
+  unique_ptr<S2Polygon const> const overlap2_side_hole;
+  unique_ptr<S2Polygon const> const overlap2_center_hole;
 
-  S2Polygon const* const far_H;
-  S2Polygon const* const south_H;
-  S2Polygon const* const far_H_south_H;
+  unique_ptr<S2Polygon const> const far_H;
+  unique_ptr<S2Polygon const> const south_H;
+  unique_ptr<S2Polygon const> const far_H_south_H;
 };
 
 static bool TestEncodeDecode(const S2Polygon* src) {
@@ -193,7 +192,7 @@ static bool TestEncodeDecode(const S2Polygon* src) {
   return src->Equals(&dst);
 }
 
-static S2Polygon* MakePolygon(string const& str) {
+static unique_ptr<S2Polygon> MakePolygon(string const& str) {
   unique_ptr<S2Polygon> polygon(s2textformat::MakeVerbatimPolygon(str));
 
 #if 0
@@ -207,17 +206,15 @@ static S2Polygon* MakePolygon(string const& str) {
 
   // Check that Decode(Encode(x)) is the identity function.
   EXPECT_TRUE(TestEncodeDecode(polygon.get()));
-  return polygon.release();
+  return polygon;
 }
 
 static void CheckContains(string const& a_str, string const& b_str) {
-  S2Polygon* a = MakePolygon(a_str);
-  S2Polygon* b = MakePolygon(b_str);
-  unique_ptr<S2Polygon> delete_a(a);
-  unique_ptr<S2Polygon> delete_b(b);
-  EXPECT_TRUE(a->Contains(b));
-  EXPECT_TRUE(a->ApproxContains(b, S1Angle::Radians(1e-15)));
-  EXPECT_FALSE(a->ApproxDisjoint(b, S1Angle::Radians(1e-15)));
+  unique_ptr<S2Polygon> a = MakePolygon(a_str);
+  unique_ptr<S2Polygon> b = MakePolygon(b_str);
+  EXPECT_TRUE(a->Contains(b.get()));
+  EXPECT_TRUE(a->ApproxContains(b.get(), S1Angle::Radians(1e-15)));
+  EXPECT_FALSE(a->ApproxDisjoint(b.get(), S1Angle::Radians(1e-15)));
 }
 
 static void CheckContainsPoint(string const& a_str, string const& b_str) {
@@ -262,12 +259,12 @@ TEST(S2Polygon, OverlapFractions) {
   EXPECT_DOUBLE_EQ(1.0, result.first);
   EXPECT_DOUBLE_EQ(1.0, result.second);
 
-  b.reset(MakePolygon(kOverlap3));
+  b = MakePolygon(kOverlap3);
   result = S2Polygon::GetOverlapFractions(a.get(), b.get());
   EXPECT_DOUBLE_EQ(1.0, result.first);
   EXPECT_DOUBLE_EQ(0.0, result.second);
 
-  a.reset(MakePolygon(kOverlap4));
+  a = MakePolygon(kOverlap4);
   result = S2Polygon::GetOverlapFractions(a.get(), b.get());
   EXPECT_NEAR(0.5, result.first, 1e-14);
   EXPECT_NEAR(0.5, result.second, 1e-14);
@@ -333,74 +330,26 @@ S2PolygonTestBase::S2PolygonTestBase() :
     far_H_south_H(MakePolygon(kFarHSouthH)) {
 }
 
-S2PolygonTestBase::~S2PolygonTestBase() {
-  delete empty;
-  delete full;
-  delete near_0;
-  delete near_10;
-  delete near_30;
-  delete near_32;
-  delete near_3210;
-  delete near_H3210;
-
-  delete far_10;
-  delete far_21;
-  delete far_321;
-  delete far_H20;
-  delete far_H3210;
-
-  delete south_0ab;
-  delete south_2;
-  delete south_210b;
-  delete south_H21;
-  delete south_H20abc;
-
-  delete nf1_n10_f2_s10abc;
-
-  delete nf2_n2_f210_s210ab;
-
-  delete f32_n0;
-  delete n32_s0b;
-
-  delete cross1;
-  delete cross1_side_hole;
-  delete cross1_center_hole;
-  delete cross2;
-  delete cross2_side_hole;
-  delete cross2_center_hole;
-
-  delete overlap1;
-  delete overlap1_side_hole;
-  delete overlap1_center_hole;
-  delete overlap2;
-  delete overlap2_side_hole;
-  delete overlap2_center_hole;
-
-  delete far_H;
-  delete south_H;
-  delete far_H_south_H;
-}
-
-static void CheckEqual(S2Polygon const* a, S2Polygon const* b,
+static void CheckEqual(S2Polygon const& a, S2Polygon const& b,
                        double max_error = 0) {
-  if (a->BoundaryApproxEquals(b, max_error)) return;
+  if (a.BoundaryApproxEquals(&b, max_error)) return;
   S2PolygonBuilder builder(S2PolygonBuilderOptions::DIRECTED_XOR());
   S2Polygon a2, b2;
-  builder.AddPolygon(a);
+  builder.AddPolygon(&a);
   ASSERT_TRUE(builder.AssemblePolygon(&a2, nullptr));
-  builder.AddPolygon(b);
+  builder.AddPolygon(&b);
   ASSERT_TRUE(builder.AssemblePolygon(&b2, nullptr));
   EXPECT_TRUE(a2.BoundaryApproxEquals(&b2, max_error))
-      << "\na: " << s2textformat::ToString(a)
-      << "\nb: " << s2textformat::ToString(b)
+      << "\na: " << s2textformat::ToString(&a)
+      << "\nb: " << s2textformat::ToString(&b)
       << "\na2: " << s2textformat::ToString(&a2)
       << "\nb2: " << s2textformat::ToString(&b2);
 }
 
-static void CheckComplementary(S2Polygon const* a, S2Polygon const* b) {
+static void CheckComplementary(S2Polygon const& a, S2Polygon const& b) {
   S2Polygon b1;
-  b1.InitToComplement(b);
-  CheckEqual(a, &b1);
+  b1.InitToComplement(&b);
+  CheckEqual(a, b1);
 }
 
 TEST(S2Polygon, TestApproxContainsAndDisjoint) {
@@ -447,164 +396,164 @@ TEST(S2Polygon, TestApproxContainsAndDisjoint) {
 
 // Given a pair of polygons where A contains B, check that various identities
 // involving union, intersection, and difference operations hold true.
-static void TestOneNestedPair(S2Polygon const* a, S2Polygon const* b) {
-  EXPECT_TRUE(a->Contains(b));
-  EXPECT_EQ(!b->is_empty(), a->Intersects(b));
-  EXPECT_EQ(!b->is_empty(), b->Intersects(a));
+static void TestOneNestedPair(S2Polygon const& a, S2Polygon const& b) {
+  EXPECT_TRUE(a.Contains(&b));
+  EXPECT_EQ(!b.is_empty(), a.Intersects(&b));
+  EXPECT_EQ(!b.is_empty(), b.Intersects(&a));
 
   S2Polygon c, d, e;
-  c.InitToUnion(a, b);
-  CheckEqual(&c, a);
+  c.InitToUnion(&a, &b);
+  CheckEqual(c, a);
 
-  d.InitToIntersection(a, b);
-  CheckEqual(&d, b);
+  d.InitToIntersection(&a, &b);
+  CheckEqual(d, b);
 
-  e.InitToDifference(b, a);
+  e.InitToDifference(&b, &a);
   EXPECT_TRUE(e.is_empty());
 }
 
 // Given a pair of disjoint polygons A and B, check that various identities
 // involving union, intersection, and difference operations hold true.
-static void TestOneDisjointPair(S2Polygon const* a, S2Polygon const* b) {
-  EXPECT_FALSE(a->Intersects(b));
-  EXPECT_FALSE(b->Intersects(a));
-  EXPECT_EQ(b->is_empty(), a->Contains(b));
-  EXPECT_EQ(a->is_empty(), b->Contains(a));
+static void TestOneDisjointPair(S2Polygon const& a, S2Polygon const& b) {
+  EXPECT_FALSE(a.Intersects(&b));
+  EXPECT_FALSE(b.Intersects(&a));
+  EXPECT_EQ(b.is_empty(), a.Contains(&b));
+  EXPECT_EQ(a.is_empty(), b.Contains(&a));
 
   S2Polygon ab, c, d, e, f;
   S2PolygonBuilder builder(S2PolygonBuilderOptions::DIRECTED_XOR());
-  builder.AddPolygon(a);
-  builder.AddPolygon(b);
+  builder.AddPolygon(&a);
+  builder.AddPolygon(&b);
   ASSERT_TRUE(builder.AssemblePolygon(&ab, nullptr));
 
-  c.InitToUnion(a, b);
-  CheckEqual(&c, &ab);
+  c.InitToUnion(&a, &b);
+  CheckEqual(c, ab);
 
-  d.InitToIntersection(a, b);
+  d.InitToIntersection(&a, &b);
   EXPECT_TRUE(d.is_empty());
 
-  e.InitToDifference(a, b);
-  CheckEqual(&e, a);
+  e.InitToDifference(&a, &b);
+  CheckEqual(e, a);
 
-  f.InitToDifference(b, a);
-  CheckEqual(&f, b);
+  f.InitToDifference(&b, &a);
+  CheckEqual(f, b);
 }
 
 // Given polygons A and B whose union covers the sphere, check that various
 // identities involving union, intersection, and difference hold true.
-static void TestOneCoveringPair(S2Polygon const* a, S2Polygon const* b) {
-  EXPECT_EQ(a->is_full(), a->Contains(b));
-  EXPECT_EQ(b->is_full(), b->Contains(a));
+static void TestOneCoveringPair(S2Polygon const& a, S2Polygon const& b) {
+  EXPECT_EQ(a.is_full(), a.Contains(&b));
+  EXPECT_EQ(b.is_full(), b.Contains(&a));
 
   S2Polygon c, d, e, f;
-  c.InitToUnion(a, b);
+  c.InitToUnion(&a, &b);
   EXPECT_TRUE(c.is_full());
 }
 
 // Given polygons A and B such that both A and its complement intersect both B
 // and its complement, check that various identities involving union,
 // intersection, and difference hold true.
-static void TestOneOverlappingPair(S2Polygon const* a, S2Polygon const* b) {
-  EXPECT_FALSE(a->Contains(b));
-  EXPECT_FALSE(b->Contains(a));
-  EXPECT_TRUE(a->Intersects(b));
+static void TestOneOverlappingPair(S2Polygon const& a, S2Polygon const& b) {
+  EXPECT_FALSE(a.Contains(&b));
+  EXPECT_FALSE(b.Contains(&a));
+  EXPECT_TRUE(a.Intersects(&b));
 
   S2Polygon c, d, e;
-  c.InitToUnion(a, b);
+  c.InitToUnion(&a, &b);
   EXPECT_FALSE(c.is_full());
 
-  d.InitToIntersection(a, b);
+  d.InitToIntersection(&a, &b);
   EXPECT_FALSE(d.is_empty());
 
-  e.InitToDifference(b, a);
+  e.InitToDifference(&b, &a);
   EXPECT_FALSE(e.is_empty());
 }
 
 // Given a pair of polygons where A contains B, test various identities
 // involving A, B, and their complements.
-static void TestNestedPair(S2Polygon const* a, S2Polygon const* b) {
+static void TestNestedPair(S2Polygon const& a, S2Polygon const& b) {
   S2Polygon a1, b1;
-  a1.InitToComplement(a);
-  b1.InitToComplement(b);
+  a1.InitToComplement(&a);
+  b1.InitToComplement(&b);
 
   TestOneNestedPair(a, b);
-  TestOneNestedPair(&b1, &a1);
-  TestOneDisjointPair(&a1, b);
-  TestOneCoveringPair(a, &b1);
+  TestOneNestedPair(b1, a1);
+  TestOneDisjointPair(a1, b);
+  TestOneCoveringPair(a, b1);
 }
 
 // Given a pair of disjoint polygons A and B, test various identities
 // involving A, B, and their complements.
-static void TestDisjointPair(S2Polygon const* a, S2Polygon const* b) {
+static void TestDisjointPair(S2Polygon const& a, S2Polygon const& b) {
   S2Polygon a1, b1;
-  a1.InitToComplement(a);
-  b1.InitToComplement(b);
+  a1.InitToComplement(&a);
+  b1.InitToComplement(&b);
 
   TestOneDisjointPair(a, b);
-  TestOneCoveringPair(&a1, &b1);
-  TestOneNestedPair(&a1, b);
-  TestOneNestedPair(&b1, a);
+  TestOneCoveringPair(a1, b1);
+  TestOneNestedPair(a1, b);
+  TestOneNestedPair(b1, a);
 }
 
 // Given polygons A and B such that both A and its complement intersect both B
 // and its complement, test various identities involving these four polygons.
-static void TestOverlappingPair(S2Polygon const* a, S2Polygon const* b) {
+static void TestOverlappingPair(S2Polygon const& a, S2Polygon const& b) {
   S2Polygon a1, b1;
-  a1.InitToComplement(a);
-  b1.InitToComplement(b);
+  a1.InitToComplement(&a);
+  b1.InitToComplement(&b);
 
   TestOneOverlappingPair(a, b);
-  TestOneOverlappingPair(&a1, &b1);
-  TestOneOverlappingPair(&a1, b);
-  TestOneOverlappingPair(a, &b1);
+  TestOneOverlappingPair(a1, b1);
+  TestOneOverlappingPair(a1, b);
+  TestOneOverlappingPair(a, b1);
 }
 
 // "a1" is the complement of "a", and "b1" is the complement of "b".
-static void TestOneComplementPair(S2Polygon const* a, S2Polygon const* a1,
-                                  S2Polygon const* b, S2Polygon const* b1) {
+static void TestOneComplementPair(S2Polygon const& a, S2Polygon const& a1,
+                                  S2Polygon const& b, S2Polygon const& b1) {
   // Check DeMorgan's Law and that subtraction is the same as intersection
   // with the complement.  This function is called multiple times in order to
   // test the various combinations of complements.
 
   S2Polygon a1_or_b, a_and_b1, a_minus_b;
-  a_and_b1.InitToIntersection(a, b1);
-  a1_or_b.InitToUnion(a1, b);
-  a_minus_b.InitToDifference(a, b);
+  a_and_b1.InitToIntersection(&a, &b1);
+  a1_or_b.InitToUnion(&a1, &b);
+  a_minus_b.InitToDifference(&a, &b);
 
-  CheckComplementary(&a1_or_b, &a_and_b1);
-  CheckEqual(&a_minus_b, &a_and_b1);
+  CheckComplementary(a1_or_b, a_and_b1);
+  CheckEqual(a_minus_b, a_and_b1);
 }
 
 // Test identities that should hold for any pair of polygons A, B and their
 // complements.
-static void TestComplements(S2Polygon const* a, S2Polygon const* b) {
+static void TestComplements(S2Polygon const& a, S2Polygon const& b) {
   S2Polygon a1, b1;
-  a1.InitToComplement(a);
-  b1.InitToComplement(b);
+  a1.InitToComplement(&a);
+  b1.InitToComplement(&b);
 
-  TestOneComplementPair(a, &a1, b, &b1);
-  TestOneComplementPair(&a1, a, b, &b1);
-  TestOneComplementPair(a, &a1, &b1, b);
-  TestOneComplementPair(&a1, a, &b1, b);
+  TestOneComplementPair(a, a1, b, b1);
+  TestOneComplementPair(a1, a, b, b1);
+  TestOneComplementPair(a, a1, b1, b);
+  TestOneComplementPair(a1, a, b1, b);
 }
 
-static void TestDestructiveUnion(S2Polygon const* a, S2Polygon const* b) {
+static void TestDestructiveUnion(S2Polygon const& a, S2Polygon const& b) {
   S2Polygon c;
-  c.InitToUnion(a, b);
+  c.InitToUnion(&a, &b);
   vector<S2Polygon*> polygons;
-  polygons.push_back(a->Clone());
-  polygons.push_back(b->Clone());
+  polygons.push_back(a.Clone());
+  polygons.push_back(b.Clone());
   unique_ptr<S2Polygon> c_destructive(S2Polygon::DestructiveUnion(&polygons));
-  CheckEqual(&c, c_destructive.get());
+  CheckEqual(c, *c_destructive);
 }
 
-static void TestRelationWithDesc(S2Polygon const* a, S2Polygon const* b,
+static void TestRelationWithDesc(S2Polygon const& a, S2Polygon const& b,
                                  bool contains, bool contained,
                                  bool intersects, const char* description) {
   SCOPED_TRACE(description);
-  EXPECT_EQ(contains, a->Contains(b));
-  EXPECT_EQ(contained, b->Contains(a));
-  EXPECT_EQ(intersects, a->Intersects(b));
+  EXPECT_EQ(contains, a.Contains(&b));
+  EXPECT_EQ(contained, b.Contains(&a));
+  EXPECT_EQ(intersects, a.Intersects(&b));
   if (contains) TestNestedPair(a, b);
   if (contained) TestNestedPair(b, a);
   if (!intersects) TestDisjointPair(a, b);
@@ -620,75 +569,76 @@ TEST_F(S2PolygonTestBase, Relations) {
   TestRelationWithDesc(a, b, contains, contained, intersects, \
                        "args " #a ", " #b)
 
-  TestRelation(near_10, empty, true, false, false);
-  TestRelation(near_10, near_10, true, true, true);
-  TestRelation(full, near_10, true, false, true);
-  TestRelation(near_10, near_30, false, true, true);
-  TestRelation(near_10, near_32, false, false, false);
-  TestRelation(near_10, near_3210, false, true, true);
-  TestRelation(near_10, near_H3210, false, false, false);
-  TestRelation(near_30, near_32, true, false, true);
-  TestRelation(near_30, near_3210, true, false, true);
-  TestRelation(near_30, near_H3210, false, false, true);
-  TestRelation(near_32, near_3210, false, true, true);
-  TestRelation(near_32, near_H3210, false, false, false);
-  TestRelation(near_3210, near_H3210, false, false, false);
+  TestRelation(*near_10, *empty, true, false, false);
+  TestRelation(*near_10, *near_10, true, true, true);
+  TestRelation(*full, *near_10, true, false, true);
+  TestRelation(*near_10, *near_30, false, true, true);
+  TestRelation(*near_10, *near_32, false, false, false);
+  TestRelation(*near_10, *near_3210, false, true, true);
+  TestRelation(*near_10, *near_H3210, false, false, false);
+  TestRelation(*near_30, *near_32, true, false, true);
+  TestRelation(*near_30, *near_3210, true, false, true);
+  TestRelation(*near_30, *near_H3210, false, false, true);
+  TestRelation(*near_32, *near_3210, false, true, true);
+  TestRelation(*near_32, *near_H3210, false, false, false);
+  TestRelation(*near_3210, *near_H3210, false, false, false);
 
-  TestRelation(far_10, far_21, false, false, false);
-  TestRelation(far_10, far_321, false, true, true);
-  TestRelation(far_10, far_H20, false, false, false);
-  TestRelation(far_10, far_H3210, false, false, false);
-  TestRelation(far_21, far_321, false, false, false);
-  TestRelation(far_21, far_H20, false, false, false);
-  TestRelation(far_21, far_H3210, false, true, true);
-  TestRelation(far_321, far_H20, false, false, true);
-  TestRelation(far_321, far_H3210, false, false, true);
-  TestRelation(far_H20, far_H3210, false, false, true);
+  TestRelation(*far_10, *far_21, false, false, false);
+  TestRelation(*far_10, *far_321, false, true, true);
+  TestRelation(*far_10, *far_H20, false, false, false);
+  TestRelation(*far_10, *far_H3210, false, false, false);
+  TestRelation(*far_21, *far_321, false, false, false);
+  TestRelation(*far_21, *far_H20, false, false, false);
+  TestRelation(*far_21, *far_H3210, false, true, true);
+  TestRelation(*far_321, *far_H20, false, false, true);
+  TestRelation(*far_321, *far_H3210, false, false, true);
+  TestRelation(*far_H20, *far_H3210, false, false, true);
 
-  TestRelation(south_0ab, south_2, false, true, true);
-  TestRelation(south_0ab, south_210b, false, false, true);
-  TestRelation(south_0ab, south_H21, false, true, true);
-  TestRelation(south_0ab, south_H20abc, false, true, true);
-  TestRelation(south_2, south_210b, true, false, true);
-  TestRelation(south_2, south_H21, false, false, true);
-  TestRelation(south_2, south_H20abc, false, false, true);
-  TestRelation(south_210b, south_H21, false, false, true);
-  TestRelation(south_210b, south_H20abc, false, false, true);
-  TestRelation(south_H21, south_H20abc, true, false, true);
+  TestRelation(*south_0ab, *south_2, false, true, true);
+  TestRelation(*south_0ab, *south_210b, false, false, true);
+  TestRelation(*south_0ab, *south_H21, false, true, true);
+  TestRelation(*south_0ab, *south_H20abc, false, true, true);
+  TestRelation(*south_2, *south_210b, true, false, true);
+  TestRelation(*south_2, *south_H21, false, false, true);
+  TestRelation(*south_2, *south_H20abc, false, false, true);
+  TestRelation(*south_210b, *south_H21, false, false, true);
+  TestRelation(*south_210b, *south_H20abc, false, false, true);
+  TestRelation(*south_H21, *south_H20abc, true, false, true);
 
-  TestRelation(nf1_n10_f2_s10abc, nf2_n2_f210_s210ab, false, false, true);
-  TestRelation(nf1_n10_f2_s10abc, near_32, true, false, true);
-  TestRelation(nf1_n10_f2_s10abc, far_21, false, false, false);
-  TestRelation(nf1_n10_f2_s10abc, south_0ab, false, false, false);
-  TestRelation(nf1_n10_f2_s10abc, f32_n0, true, false, true);
+  TestRelation(*nf1_n10_f2_s10abc, *nf2_n2_f210_s210ab, false, false, true);
+  TestRelation(*nf1_n10_f2_s10abc, *near_32, true, false, true);
+  TestRelation(*nf1_n10_f2_s10abc, *far_21, false, false, false);
+  TestRelation(*nf1_n10_f2_s10abc, *south_0ab, false, false, false);
+  TestRelation(*nf1_n10_f2_s10abc, *f32_n0, true, false, true);
 
-  TestRelation(nf2_n2_f210_s210ab, near_10, false, false, false);
-  TestRelation(nf2_n2_f210_s210ab, far_10, true, false, true);
-  TestRelation(nf2_n2_f210_s210ab, south_210b, true, false, true);
-  TestRelation(nf2_n2_f210_s210ab, south_0ab, true, false, true);
-  TestRelation(nf2_n2_f210_s210ab, n32_s0b, true, false, true);
+  TestRelation(*nf2_n2_f210_s210ab, *near_10, false, false, false);
+  TestRelation(*nf2_n2_f210_s210ab, *far_10, true, false, true);
+  TestRelation(*nf2_n2_f210_s210ab, *south_210b, true, false, true);
+  TestRelation(*nf2_n2_f210_s210ab, *south_0ab, true, false, true);
+  TestRelation(*nf2_n2_f210_s210ab, *n32_s0b, true, false, true);
 
-  TestRelation(cross1, cross2, false, false, true);
-  TestRelation(cross1_side_hole, cross2, false, false, true);
-  TestRelation(cross1_center_hole, cross2, false, false, true);
-  TestRelation(cross1, cross2_side_hole, false, false, true);
-  TestRelation(cross1, cross2_center_hole, false, false, true);
-  TestRelation(cross1_side_hole, cross2_side_hole, false, false, true);
-  TestRelation(cross1_center_hole, cross2_side_hole, false, false, true);
-  TestRelation(cross1_side_hole, cross2_center_hole, false, false, true);
-  TestRelation(cross1_center_hole, cross2_center_hole, false, false, true);
+  TestRelation(*cross1, *cross2, false, false, true);
+  TestRelation(*cross1_side_hole, *cross2, false, false, true);
+  TestRelation(*cross1_center_hole, *cross2, false, false, true);
+  TestRelation(*cross1, *cross2_side_hole, false, false, true);
+  TestRelation(*cross1, *cross2_center_hole, false, false, true);
+  TestRelation(*cross1_side_hole, *cross2_side_hole, false, false, true);
+  TestRelation(*cross1_center_hole, *cross2_side_hole, false, false, true);
+  TestRelation(*cross1_side_hole, *cross2_center_hole, false, false, true);
+  TestRelation(*cross1_center_hole, *cross2_center_hole, false, false, true);
 
   // These cases, when either polygon has a hole, test a different code path
   // from the other cases.
-  TestRelation(overlap1, overlap2, false, false, true);
-  TestRelation(overlap1_side_hole, overlap2, false, false, true);
-  TestRelation(overlap1_center_hole, overlap2, false, false, true);
-  TestRelation(overlap1, overlap2_side_hole, false, false, true);
-  TestRelation(overlap1, overlap2_center_hole, false, false, true);
-  TestRelation(overlap1_side_hole, overlap2_side_hole, false, false, true);
-  TestRelation(overlap1_center_hole, overlap2_side_hole, false, false, true);
-  TestRelation(overlap1_side_hole, overlap2_center_hole, false, false, true);
-  TestRelation(overlap1_center_hole, overlap2_center_hole, false, false, true);
+  TestRelation(*overlap1, *overlap2, false, false, true);
+  TestRelation(*overlap1_side_hole, *overlap2, false, false, true);
+  TestRelation(*overlap1_center_hole, *overlap2, false, false, true);
+  TestRelation(*overlap1, *overlap2_side_hole, false, false, true);
+  TestRelation(*overlap1, *overlap2_center_hole, false, false, true);
+  TestRelation(*overlap1_side_hole, *overlap2_side_hole, false, false, true);
+  TestRelation(*overlap1_center_hole, *overlap2_side_hole, false, false, true);
+  TestRelation(*overlap1_side_hole, *overlap2_center_hole, false, false, true);
+  TestRelation(*overlap1_center_hole, *overlap2_center_hole,
+               false, false, true);
 #undef TestRelation
 }
 
@@ -698,9 +648,9 @@ TEST_F(S2PolygonTestBase, EmptyAndFull) {
   EXPECT_FALSE(empty->is_full());
   EXPECT_TRUE(full->is_full());
 
-  TestNestedPair(empty, empty);
-  TestNestedPair(full, empty);
-  TestNestedPair(full, full);
+  TestNestedPair(*empty, *empty);
+  TestNestedPair(*full, *empty);
+  TestNestedPair(*full, *full);
 }
 
 struct TestCase {
@@ -789,8 +739,8 @@ TestCase test_cases[] = {
 
 TEST_F(S2PolygonTestBase, Operations) {
   S2Polygon far_south;
-  far_south.InitToIntersection(far_H, south_H);
-  CheckEqual(&far_south, far_H_south_H, 1e-15);
+  far_south.InitToIntersection(far_H.get(), south_H.get());
+  CheckEqual(far_south, *far_H_south_H, 1e-15);
 
   int i = 0;
   for (TestCase const& test : test_cases) {
@@ -818,12 +768,12 @@ TEST_F(S2PolygonTestBase, Operations) {
 
     S2Polygon a_and_b, a_or_b, a_minus_b;
     a_and_b.InitToIntersection(a.get(), b.get());
-    CheckEqual(&a_and_b, expected_a_and_b.get(), kMaxError);
+    CheckEqual(a_and_b, *expected_a_and_b, kMaxError);
     a_or_b.InitToUnion(a.get(), b.get());
-    CheckEqual(&a_or_b, expected_a_or_b.get(), kMaxError);
-    TestDestructiveUnion(a.get(), b.get());
+    CheckEqual(a_or_b, *expected_a_or_b, kMaxError);
+    TestDestructiveUnion(*a, *b);
     a_minus_b.InitToDifference(a.get(), b.get());
-    CheckEqual(&a_minus_b, expected_a_minus_b.get(), kMaxError);
+    CheckEqual(a_minus_b, *expected_a_minus_b, kMaxError);
   }
 }
 
@@ -833,34 +783,34 @@ void ClearPolylineVector(vector<S2Polyline*>* polylines) {
   polylines->clear();
 }
 
-static void PolylineIntersectionSharedEdgeTest(const S2Polygon *p,
+static void PolylineIntersectionSharedEdgeTest(S2Polygon const& p,
                                                int start_vertex,
                                                int direction) {
   SCOPED_TRACE(StringPrintf("Polyline intersection shared edge test "
                             " start=%d direction=%d",
                             start_vertex, direction));
   vector<S2Point> points;
-  points.push_back(p->loop(0)->vertex(start_vertex));
-  points.push_back(p->loop(0)->vertex(start_vertex + direction));
+  points.push_back(p.loop(0)->vertex(start_vertex));
+  points.push_back(p.loop(0)->vertex(start_vertex + direction));
   S2Polyline polyline(points);
   vector<S2Polyline*> polylines;
   if (direction < 0) {
-    p->IntersectWithPolyline(&polyline, &polylines);
+    p.IntersectWithPolyline(&polyline, &polylines);
     EXPECT_EQ(0, polylines.size());
     ClearPolylineVector(&polylines);
-    p->SubtractFromPolyline(&polyline, &polylines);
+    p.SubtractFromPolyline(&polyline, &polylines);
     ASSERT_EQ(1, polylines.size());
     ASSERT_EQ(2, polylines[0]->num_vertices());
     EXPECT_EQ(points[0], polylines[0]->vertex(0));
     EXPECT_EQ(points[1], polylines[0]->vertex(1));
   } else {
-    p->IntersectWithPolyline(&polyline, &polylines);
+    p.IntersectWithPolyline(&polyline, &polylines);
     ASSERT_EQ(1, polylines.size());
     ASSERT_EQ(2, polylines[0]->num_vertices());
     EXPECT_EQ(points[0], polylines[0]->vertex(0));
     EXPECT_EQ(points[1], polylines[0]->vertex(1));
     ClearPolylineVector(&polylines);
-    p->SubtractFromPolyline(&polyline, &polylines);
+    p.SubtractFromPolyline(&polyline, &polylines);
     EXPECT_EQ(0, polylines.size());
   }
   ClearPolylineVector(&polylines);
@@ -871,10 +821,10 @@ static void PolylineIntersectionSharedEdgeTest(const S2Polygon *p,
 // extra tests for shared edges.
 TEST_F(S2PolygonTestBase, PolylineIntersection) {
   for (int v = 0; v < 3; ++v) {
-    PolylineIntersectionSharedEdgeTest(cross1, v, 1);
-    PolylineIntersectionSharedEdgeTest(cross1, v + 1, -1);
-    PolylineIntersectionSharedEdgeTest(cross1_side_hole, v, 1);
-    PolylineIntersectionSharedEdgeTest(cross1_side_hole, v + 1, -1);
+    PolylineIntersectionSharedEdgeTest(*cross1, v, 1);
+    PolylineIntersectionSharedEdgeTest(*cross1, v + 1, -1);
+    PolylineIntersectionSharedEdgeTest(*cross1_side_hole, v, 1);
+    PolylineIntersectionSharedEdgeTest(*cross1_side_hole, v + 1, -1);
   }
 
   // See comments in TestOperations about the vlue of this constant.
@@ -927,7 +877,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
 
     S2Polygon a_and_b;
     ASSERT_TRUE(builder.AssemblePolygon(&a_and_b, nullptr));
-    CheckEqual(&a_and_b, expected_a_and_b.get(), kMaxError);
+    CheckEqual(a_and_b, *expected_a_and_b, kMaxError);
   }
 }
 
@@ -967,17 +917,17 @@ static S2Polygon* ChoosePiece(vector<S2Polygon*> *pieces) {
   return result;
 }
 
-static void SplitAndAssemble(S2Polygon const* polygon) {
+static void SplitAndAssemble(S2Polygon const& polygon) {
   S2PolygonBuilder builder(S2PolygonBuilderOptions::DIRECTED_XOR());
   S2Polygon expected;
-  builder.AddPolygon(polygon);
+  builder.AddPolygon(&polygon);
   ASSERT_TRUE(builder.AssemblePolygon(&expected, nullptr));
 
   for (int iter = 0; iter < 10; ++iter) {
     S2RegionCoverer coverer;
     // Compute the minimum level such that the polygon's bounding
     // cap is guaranteed to be cut.
-    double diameter = 2 * polygon->GetCapBound().GetRadius().radians();
+    double diameter = 2 * polygon.GetCapBound().GetRadius().radians();
     int min_level = S2::kMaxWidth.GetMinLevel(diameter);
 
     // TODO(ericv): Choose a level that will have up to 256 cells in the
@@ -988,11 +938,11 @@ static void SplitAndAssemble(S2Polygon const* polygon) {
     coverer.set_max_cells(500);
 
     vector<S2CellId> cells;
-    coverer.GetCovering(*polygon, &cells);
+    coverer.GetCovering(polygon, &cells);
     S2CellUnion covering;
     covering.Init(cells);
-    S2Testing::CheckCovering(*polygon, covering, false);
-    CheckCoveringIsConservative(*polygon, cells);
+    S2Testing::CheckCovering(polygon, covering, false);
+    CheckCoveringIsConservative(polygon, cells);
     VLOG(2) << cells.size() << " cells in covering";
     vector<S2Polygon*> pieces;
     int i = 0;
@@ -1000,7 +950,7 @@ static void SplitAndAssemble(S2Polygon const* polygon) {
       S2Cell cell(cell_id);
       S2Polygon window(cell);
       S2Polygon* piece = new S2Polygon;
-      piece->InitToIntersection(polygon, &window);
+      piece->InitToIntersection(&polygon, &window);
       pieces.push_back(piece);
       VLOG(4) << "\nPiece " << i++ << ":\n  Window: "
               << s2textformat::ToString(&window)
@@ -1039,17 +989,17 @@ TEST_F(S2PolygonTestBase, Splitting) {
   // It takes too long to test all the polygons in debug mode, so we just pick
   // out some of the more interesting ones.
 
-  SplitAndAssemble(near_10);
-  SplitAndAssemble(near_H3210);
-  SplitAndAssemble(far_H3210);
-  SplitAndAssemble(south_0ab);
-  SplitAndAssemble(south_210b);
-  SplitAndAssemble(south_H20abc);
-  SplitAndAssemble(nf1_n10_f2_s10abc);
-  SplitAndAssemble(nf2_n2_f210_s210ab);
-  SplitAndAssemble(far_H);
-  SplitAndAssemble(south_H);
-  SplitAndAssemble(far_H_south_H);
+  SplitAndAssemble(*near_10);
+  SplitAndAssemble(*near_H3210);
+  SplitAndAssemble(*far_H3210);
+  SplitAndAssemble(*south_0ab);
+  SplitAndAssemble(*south_210b);
+  SplitAndAssemble(*south_H20abc);
+  SplitAndAssemble(*nf1_n10_f2_s10abc);
+  SplitAndAssemble(*nf2_n2_f210_s210ab);
+  SplitAndAssemble(*far_H);
+  SplitAndAssemble(*south_H);
+  SplitAndAssemble(*far_H_south_H);
 }
 
 TEST(S2Polygon, InitToCellUnionBorder) {
@@ -1243,7 +1193,7 @@ TEST_F(S2PolygonTestBase, CompressedEncodedPolygonRequires69Bytes) {
 TEST_F(S2PolygonTestBase, CompressedEncodedPolygonDecodesApproxEqual) {
   // To compare the boundaries, etc we want to snap first.
   S2Polygon snapped;
-  snapped.InitToSnapped(near_30);
+  snapped.InitToSnapped(near_30.get());
   ASSERT_EQ(2, snapped.num_loops());
   EXPECT_EQ(0, snapped.loop(0)->depth());
   EXPECT_EQ(1, snapped.loop(1)->depth());
@@ -1981,26 +1931,26 @@ TEST_F(S2PolygonDecodeTest, FuzzEverything) {
 }
 
 TEST_F(S2PolygonTestBase, FullPolygonShape) {
-  S2Polygon::Shape shape(full);
+  S2Polygon::Shape shape(full.get());
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_TRUE(shape.has_interior());
   EXPECT_TRUE(shape.contains_origin());
 }
 
 TEST_F(S2PolygonTestBase, EmptyPolygonShape) {
-  S2Polygon::Shape shape(empty);
+  S2Polygon::Shape shape(empty.get());
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.contains_origin());
 }
 
-void TestPolygonShape(S2Polygon const* polygon) {
-  DCHECK(!polygon->is_full());
-  S2Polygon::Shape shape(polygon);
-  EXPECT_EQ(polygon, shape.polygon());
-  EXPECT_EQ(polygon->num_vertices(), shape.num_edges());
-  for (int e = 0, i = 0; i < polygon->num_loops(); ++i) {
-    S2Loop const* loop_i = polygon->loop(i);
+void TestPolygonShape(S2Polygon const& polygon) {
+  DCHECK(!polygon.is_full());
+  S2Polygon::Shape shape(&polygon);
+  EXPECT_EQ(&polygon, shape.polygon());
+  EXPECT_EQ(polygon.num_vertices(), shape.num_edges());
+  for (int e = 0, i = 0; i < polygon.num_loops(); ++i) {
+    S2Loop const* loop_i = polygon.loop(i);
     for (int j = 0; j < loop_i->num_vertices(); ++j, ++e) {
       S2Point const *v0, *v1;
       shape.GetEdge(e, &v0, &v1);
@@ -2009,15 +1959,15 @@ void TestPolygonShape(S2Polygon const* polygon) {
     }
   }
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_EQ(polygon->Contains(S2::Origin()), shape.contains_origin());
+  EXPECT_EQ(polygon.Contains(S2::Origin()), shape.contains_origin());
 }
 
 TEST_F(S2PolygonTestBase, OneLoopPolygonShape) {
-  TestPolygonShape(near_0);
+  TestPolygonShape(*near_0);
 }
 
 TEST_F(S2PolygonTestBase, SeveralLoopPolygonShape) {
-  TestPolygonShape(near_3210);
+  TestPolygonShape(*near_3210);
 }
 
 TEST_F(S2PolygonTestBase, ManyLoopPolygonShape) {
@@ -2026,7 +1976,7 @@ TEST_F(S2PolygonTestBase, ManyLoopPolygonShape) {
   S2Polygon polygon;
   S2Testing::ConcentricLoopsPolygon(S2Point(1, 0, 0), kNumLoops,
                                     kNumVerticesPerLoop, &polygon);
-  TestPolygonShape(&polygon);
+  TestPolygonShape(polygon);
 }
 
 TEST(S2Polygon, PointInBigLoop) {

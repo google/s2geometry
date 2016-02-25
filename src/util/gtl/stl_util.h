@@ -50,8 +50,7 @@
 #include <forward_list>
 #endif  // LANG_CXX11
 
-namespace util {
-namespace gtl {
+GTL_NAMESPACE_BEGIN
 namespace internal {
 template <typename LessFunc>
 class Equiv {
@@ -65,8 +64,7 @@ class Equiv {
   LessFunc f_;
 };
 }  // namespace internal
-}  // namespace gtl
-}  // namespace util
+GTL_NAMESPACE_END
 
 // Sorts and removes duplicates from a sequence container.
 // If specified, the 'less_func' is used to compose an
@@ -610,8 +608,7 @@ template<typename T> T* release_ptr(T** ptr) {
   return tmp;
 }
 
-namespace util {
-namespace gtl {
+GTL_NAMESPACE_BEGIN
 namespace stl_util_internal {
 
 // Poor-man's std::is_function.
@@ -642,8 +639,7 @@ struct TransparentLess {
 };
 
 }  // namespace stl_util_internal
-}  // namespace gtl
-}  // namespace util
+GTL_NAMESPACE_END
 
 // STLSetDifference:
 //

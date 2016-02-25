@@ -293,7 +293,7 @@ void AddChain(Chain const& chain, Matrix3x3_d const& m,
   }
 }
 
-bool FindLoop(S2Loop const* loop, vector<S2Loop*> const& candidates,
+bool FindLoop(S2Loop const& loop, vector<S2Loop*> const& candidates,
               int max_splits, double max_error) {
   // Return true if "loop" matches any of the given candidates.  The type
   // of matching depends on whether any edge splitting was done.
@@ -301,10 +301,10 @@ bool FindLoop(S2Loop const* loop, vector<S2Loop*> const& candidates,
   for (S2Loop* candidate : candidates) {
     if (max_splits == 0) {
       // The two loops should match except for vertex perturbations.
-      if (loop->BoundaryApproxEquals(candidate, max_error)) return true;
+      if (loop.BoundaryApproxEquals(candidate, max_error)) return true;
     } else {
       // The two loops may have different numbers of vertices.
-      if (loop->BoundaryNear(candidate, max_error)) return true;
+      if (loop.BoundaryNear(candidate, max_error)) return true;
     }
   }
   return false;
@@ -319,7 +319,7 @@ bool FindMissingLoops(vector<S2Loop*> const& actual,
   bool found = false;
   int i = 0;
   for (S2Loop* loop : actual) {
-    if (FindLoop(loop, expected, max_splits, max_error))
+    if (FindLoop(*loop, expected, max_splits, max_error))
       continue;
 
     fprintf(stderr, "%s loop %d:\n", label, i);

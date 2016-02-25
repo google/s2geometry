@@ -230,10 +230,10 @@ class S2LoopTestBase : public testing::Test {
 
   // Wrapper function that encodes "loop" into "encoder" using the private
   // EncodeCompressed() method.
-  void TestEncodeCompressed(S2Loop const* loop, int level, Encoder* encoder) {
-    FixedArray<S2XYZFaceSiTi> points(loop->num_vertices());
-    loop->GetXYZFaceSiTiVertices(points.get());
-    loop->EncodeCompressed(encoder, points.get(), level);
+  void TestEncodeCompressed(S2Loop const& loop, int level, Encoder* encoder) {
+    FixedArray<S2XYZFaceSiTi> points(loop.num_vertices());
+    loop.GetXYZFaceSiTiVertices(points.get());
+    loop.EncodeCompressed(encoder, points.get(), level);
   }
 
   // Wrapper function that decodes the contents of "encoder" into "loop" using
@@ -452,23 +452,23 @@ TEST_F(S2LoopTestBase, GetTurningAngle) {
 
 // Checks that if a loop is normalized, it doesn't contain a
 // point outside of it, and vice versa.
-static void CheckNormalizeAndContains(S2Loop const* loop) {
+static void CheckNormalizeAndContains(S2Loop const& loop) {
   S2Point p = s2textformat::MakePoint("40:40");
 
-  unique_ptr<S2Loop> flip(loop->Clone());
+  unique_ptr<S2Loop> flip(loop.Clone());
   flip->Invert();
-  EXPECT_TRUE(loop->IsNormalized() ^ loop->Contains(p));
+  EXPECT_TRUE(loop.IsNormalized() ^ loop.Contains(p));
   EXPECT_TRUE(flip->IsNormalized() ^ flip->Contains(p));
 
-  EXPECT_TRUE(loop->IsNormalized() ^ flip->IsNormalized());
+  EXPECT_TRUE(loop.IsNormalized() ^ flip->IsNormalized());
 
   flip->Normalize();
   EXPECT_FALSE(flip->Contains(p));
 }
 
 TEST_F(S2LoopTestBase, NormalizedCompatibleWithContains) {
-  CheckNormalizeAndContains(line_triangle);
-  CheckNormalizeAndContains(skinny_chevron);
+  CheckNormalizeAndContains(*line_triangle);
+  CheckNormalizeAndContains(*skinny_chevron);
 }
 
 TEST_F(S2LoopTestBase, Contains) {
@@ -599,81 +599,81 @@ TEST(S2Loop, ContainsMatchesCrossingSign) {
 }
 
 // Given a pair of loops where A contains B, check various identities.
-static void TestOneNestedPair(S2Loop const* a, S2Loop const* b) {
-  EXPECT_TRUE(a->Contains(b));
-  EXPECT_EQ(a->BoundaryEquals(b), b->Contains(a));
-  EXPECT_EQ(!b->is_empty(), a->Intersects(b));
-  EXPECT_EQ(!b->is_empty(), b->Intersects(a));
+static void TestOneNestedPair(S2Loop const& a, S2Loop const& b) {
+  EXPECT_TRUE(a.Contains(&b));
+  EXPECT_EQ(a.BoundaryEquals(&b), b.Contains(&a));
+  EXPECT_EQ(!b.is_empty(), a.Intersects(&b));
+  EXPECT_EQ(!b.is_empty(), b.Intersects(&a));
 }
 
 // Given a pair of disjoint loops A and B, check various identities.
-static void TestOneDisjointPair(S2Loop const* a, S2Loop const* b) {
-  EXPECT_FALSE(a->Intersects(b));
-  EXPECT_FALSE(b->Intersects(a));
-  EXPECT_EQ(b->is_empty(), a->Contains(b));
-  EXPECT_EQ(a->is_empty(), b->Contains(a));
+static void TestOneDisjointPair(S2Loop const& a, S2Loop const& b) {
+  EXPECT_FALSE(a.Intersects(&b));
+  EXPECT_FALSE(b.Intersects(&a));
+  EXPECT_EQ(b.is_empty(), a.Contains(&b));
+  EXPECT_EQ(a.is_empty(), b.Contains(&a));
 }
 
 // Given loops A and B whose union covers the sphere, check various identities.
-static void TestOneCoveringPair(S2Loop const* a, S2Loop const* b) {
-  EXPECT_EQ(a->is_full(), a->Contains(b));
-  EXPECT_EQ(b->is_full(), b->Contains(a));
-  unique_ptr<S2Loop> a1(a->Clone());
+static void TestOneCoveringPair(S2Loop const& a, S2Loop const& b) {
+  EXPECT_EQ(a.is_full(), a.Contains(&b));
+  EXPECT_EQ(b.is_full(), b.Contains(&a));
+  unique_ptr<S2Loop> a1(a.Clone());
   a1->Invert();
-  bool complementary = a1->BoundaryEquals(b);
-  EXPECT_EQ(!complementary, a->Intersects(b));
-  EXPECT_EQ(!complementary, b->Intersects(a));
+  bool complementary = a1->BoundaryEquals(&b);
+  EXPECT_EQ(!complementary, a.Intersects(&b));
+  EXPECT_EQ(!complementary, b.Intersects(&a));
 }
 
 // Given loops A and B such that both A and its complement intersect both B
 // and its complement, check various identities.
-static void TestOneOverlappingPair(S2Loop const* a, S2Loop const* b) {
-  EXPECT_FALSE(a->Contains(b));
-  EXPECT_FALSE(b->Contains(a));
-  EXPECT_TRUE(a->Intersects(b));
-  EXPECT_TRUE(b->Intersects(a));
+static void TestOneOverlappingPair(S2Loop const& a, S2Loop const& b) {
+  EXPECT_FALSE(a.Contains(&b));
+  EXPECT_FALSE(b.Contains(&a));
+  EXPECT_TRUE(a.Intersects(&b));
+  EXPECT_TRUE(b.Intersects(&a));
 }
 
 // Given a pair of loops where A contains B, test various identities
 // involving A, B, and their complements.
-static void TestNestedPair(S2Loop const* a, S2Loop const* b) {
-  unique_ptr<S2Loop> a1(a->Clone());
-  unique_ptr<S2Loop> b1(b->Clone());
+static void TestNestedPair(S2Loop const& a, S2Loop const& b) {
+  unique_ptr<S2Loop> a1(a.Clone());
+  unique_ptr<S2Loop> b1(b.Clone());
   a1->Invert();
   b1->Invert();
   TestOneNestedPair(a, b);
-  TestOneNestedPair(b1.get(), a1.get());
-  TestOneDisjointPair(a1.get(), b);
-  TestOneCoveringPair(a, b1.get());
+  TestOneNestedPair(*b1, *a1);
+  TestOneDisjointPair(*a1, b);
+  TestOneCoveringPair(a, *b1);
 }
 
 // Given a pair of disjoint loops A and B, test various identities
 // involving A, B, and their complements.
-static void TestDisjointPair(S2Loop const* a, S2Loop const* b) {
-  unique_ptr<S2Loop> a1(a->Clone());
+static void TestDisjointPair(S2Loop const& a, S2Loop const& b) {
+  unique_ptr<S2Loop> a1(a.Clone());
   a1->Invert();
-  TestNestedPair(a1.get(), b);
+  TestNestedPair(*a1, b);
 }
 
 // Given loops A and B whose union covers the sphere, test various identities
 // involving A, B, and their complements.
-static void TestCoveringPair(S2Loop const* a, S2Loop const* b) {
-  unique_ptr<S2Loop> b1(b->Clone());
+static void TestCoveringPair(S2Loop const& a, S2Loop const& b) {
+  unique_ptr<S2Loop> b1(b.Clone());
   b1->Invert();
-  TestNestedPair(a, b1.get());
+  TestNestedPair(a, *b1);
 }
 
 // Given loops A and B such that both A and its complement intersect both B
 // and its complement, test various identities involving these four loops.
-static void TestOverlappingPair(S2Loop const* a, S2Loop const* b) {
-  unique_ptr<S2Loop> a1(a->Clone());
-  unique_ptr<S2Loop> b1(b->Clone());
+static void TestOverlappingPair(S2Loop const& a, S2Loop const& b) {
+  unique_ptr<S2Loop> a1(a.Clone());
+  unique_ptr<S2Loop> b1(b.Clone());
   a1->Invert();
   b1->Invert();
   TestOneOverlappingPair(a, b);
-  TestOneOverlappingPair(a1.get(), b1.get());
-  TestOneOverlappingPair(a1.get(), b);
-  TestOneOverlappingPair(a, b1.get());
+  TestOneOverlappingPair(*a1, *b1);
+  TestOneOverlappingPair(*a1, b);
+  TestOneOverlappingPair(a, *b1);
 }
 
 enum RelationFlags {
@@ -686,7 +686,7 @@ enum RelationFlags {
 // Verify the relationship between two loops A and B.  "flags" is the set of
 // RelationFlags that apply.  "shared_edge" means that the loops share at
 // least one edge (possibly reversed).
-static void TestRelationWithDesc(S2Loop const* a, S2Loop const* b,
+static void TestRelationWithDesc(S2Loop const& a, S2Loop const& b,
                                  int flags, bool shared_edge,
                                  const char* test_description) {
   SCOPED_TRACE(test_description);
@@ -705,7 +705,7 @@ static void TestRelationWithDesc(S2Loop const* a, S2Loop const* b,
     TestOverlappingPair(a, b);
   }
   if (!shared_edge && (flags & (CONTAINS|CONTAINED|DISJOINT))) {
-    EXPECT_EQ(a->Contains(b), a->ContainsNested(b));
+    EXPECT_EQ(a.Contains(&b), a.ContainsNested(&b));
   }
   // A contains the boundary of B if either A contains B, or the two loops
   // contain each other's boundaries and there are no shared edges (since at
@@ -722,13 +722,13 @@ static void TestRelationWithDesc(S2Loop const* a, S2Loop const* b,
     comparison = -1;
   }
   // CompareBoundary requires that neither loop is empty.
-  if (!a->is_empty() && !b->is_empty()) {
-    EXPECT_EQ(comparison, a->CompareBoundary(b));
+  if (!a.is_empty() && !b.is_empty()) {
+    EXPECT_EQ(comparison, a.CompareBoundary(&b));
   }
 }
 
 #define TestRelation(a, b, flags, shared_edge)                          \
-  TestRelationWithDesc(a, b, flags, shared_edge, "args " #a ", " #b)
+  TestRelationWithDesc(*a, *b, flags, shared_edge, "args " #a ", " #b)
 
 TEST_F(S2LoopTestBase, LoopRelations) {
   // Check full and empty relationships with normal loops and each other.
@@ -942,47 +942,47 @@ TEST(S2Loop, BoundsForLoopContainment) {
   }
 }
 
-void DebugDumpCrossings(S2Loop const* loop) {
+void DebugDumpCrossings(S2Loop const& loop) {
   // This function is useful for debugging.
 
-  LOG(INFO) << "Ortho(v1): " << S2::Ortho(loop->vertex(1));
-  printf("Contains(kOrigin): %d\n", loop->Contains(S2::Origin()));
-  for (int i = 1; i <= loop->num_vertices(); ++i) {
-    S2Point a = S2::Ortho(loop->vertex(i));
-    S2Point b = loop->vertex(i-1);
-    S2Point c = loop->vertex(i+1);
-    S2Point o = loop->vertex(i);
+  LOG(INFO) << "Ortho(v1): " << S2::Ortho(loop.vertex(1));
+  printf("Contains(kOrigin): %d\n", loop.Contains(S2::Origin()));
+  for (int i = 1; i <= loop.num_vertices(); ++i) {
+    S2Point a = S2::Ortho(loop.vertex(i));
+    S2Point b = loop.vertex(i-1);
+    S2Point c = loop.vertex(i+1);
+    S2Point o = loop.vertex(i);
     printf("Vertex %d: [%.17g, %.17g, %.17g], "
            "%d%dR=%d, %d%d%d=%d, R%d%d=%d, inside: %d\n",
-           i, loop->vertex(i).x(), loop->vertex(i).y(), loop->vertex(i).z(),
+           i, loop.vertex(i).x(), loop.vertex(i).y(), loop.vertex(i).z(),
            i - 1, i, S2::Sign(b, o, a),
            i + 1, i, i - 1, S2::Sign(c, o, b),
            i, i + 1, S2::Sign(a, o, c),
            S2::OrderedCCW(a, b, c, o));
   }
-  for (int i = 0; i < loop->num_vertices() + 2; ++i) {
+  for (int i = 0; i < loop.num_vertices() + 2; ++i) {
     S2Point orig = S2::Origin();
     S2Point dest;
-    if (i < loop->num_vertices()) {
-      dest = loop->vertex(i);
+    if (i < loop.num_vertices()) {
+      dest = loop.vertex(i);
       printf("Origin->%d crosses:", i);
     } else {
       dest = S2Point(0, 0, 1);
-      if (i == loop->num_vertices() + 1) orig = loop->vertex(1);
+      if (i == loop.num_vertices() + 1) orig = loop.vertex(1);
       printf("Case %d:", i);
     }
-    for (int j = 0; j < loop->num_vertices(); ++j) {
+    for (int j = 0; j < loop.num_vertices(); ++j) {
       printf(" %d", S2EdgeUtil::EdgeOrVertexCrossing(
-                 orig, dest, loop->vertex(j), loop->vertex(j+1)));
+                 orig, dest, loop.vertex(j), loop.vertex(j+1)));
     }
     printf("\n");
   }
   for (int i = 0; i <= 2; i += 2) {
     printf("Origin->v1 crossing v%d->v1: ", i);
-    S2Point a = S2::Ortho(loop->vertex(1));
-    S2Point b = loop->vertex(i);
+    S2Point a = S2::Ortho(loop.vertex(1));
+    S2Point b = loop.vertex(i);
     S2Point c = S2::Origin();
-    S2Point o = loop->vertex(1);
+    S2Point o = loop.vertex(1);
     printf("%d1R=%d, M1%d=%d, R1M=%d, crosses: %d\n",
            i, S2::Sign(b, o, a),
            i, S2::Sign(c, o, b),
@@ -1024,68 +1024,68 @@ TEST(S2Loop, BoundaryNear) {
   TestNear(t1, t2, 0.5 * degree, false);
 }
 
-static void CheckIdentical(S2Loop const* loop, S2Loop const* loop2) {
-  EXPECT_EQ(loop->depth(), loop2->depth());
-  EXPECT_EQ(loop->num_vertices(), loop2->num_vertices());
-  for (int i = 0; i < loop->num_vertices(); ++i) {
-    EXPECT_EQ(loop->vertex(i), loop2->vertex(i));
+static void CheckIdentical(S2Loop const& loop, S2Loop const& loop2) {
+  EXPECT_EQ(loop.depth(), loop2.depth());
+  EXPECT_EQ(loop.num_vertices(), loop2.num_vertices());
+  for (int i = 0; i < loop.num_vertices(); ++i) {
+    EXPECT_EQ(loop.vertex(i), loop2.vertex(i));
   }
-  EXPECT_EQ(loop->is_empty(), loop2->is_empty());
-  EXPECT_EQ(loop->is_full(), loop2->is_full());
-  EXPECT_EQ(loop->depth(), loop2->depth());
-  EXPECT_EQ(loop->IsNormalized(), loop2->IsNormalized());
-  EXPECT_EQ(loop->Contains(S2::Origin()), loop2->Contains(S2::Origin()));
-  EXPECT_EQ(loop->GetRectBound(), loop2->GetRectBound());
+  EXPECT_EQ(loop.is_empty(), loop2.is_empty());
+  EXPECT_EQ(loop.is_full(), loop2.is_full());
+  EXPECT_EQ(loop.depth(), loop2.depth());
+  EXPECT_EQ(loop.IsNormalized(), loop2.IsNormalized());
+  EXPECT_EQ(loop.Contains(S2::Origin()), loop2.Contains(S2::Origin()));
+  EXPECT_EQ(loop.GetRectBound(), loop2.GetRectBound());
 }
 
-static void TestEncodeDecode(S2Loop* loop) {
+static void TestEncodeDecode(S2Loop const& loop) {
   Encoder encoder;
-  loop->Encode(&encoder);
+  loop.Encode(&encoder);
   Decoder decoder(encoder.base(), encoder.length());
   S2Loop loop2;
-  loop2.set_s2debug_override(loop->s2debug_override());
+  loop2.set_s2debug_override(loop.s2debug_override());
   ASSERT_TRUE(loop2.Decode(&decoder));
-  CheckIdentical(loop, &loop2);
+  CheckIdentical(loop, loop2);
 }
 
 TEST(S2Loop, EncodeDecode) {
   unique_ptr<S2Loop> l(s2textformat::MakeLoop("30:20, 40:20, 39:43, 33:35"));
   l->set_depth(3);
-  TestEncodeDecode(l.get());
+  TestEncodeDecode(*l);
 
   S2Loop empty(S2Loop::kEmpty());
-  TestEncodeDecode(&empty);
+  TestEncodeDecode(empty);
   S2Loop full(S2Loop::kFull());
-  TestEncodeDecode(&full);
+  TestEncodeDecode(full);
 
   S2Loop uninitialized;
-  TestEncodeDecode(&uninitialized);
+  TestEncodeDecode(uninitialized);
 }
 
-static void TestEmptyFullSnapped(S2Loop* loop, int level) {
-  CHECK(loop->is_empty_or_full());
+static void TestEmptyFullSnapped(S2Loop const& loop, int level) {
+  CHECK(loop.is_empty_or_full());
   vector<S2Point> vertices;
-  S2CellId cellid = S2CellId::FromPoint(loop->vertex(0)).parent(level);
+  S2CellId cellid = S2CellId::FromPoint(loop.vertex(0)).parent(level);
   vertices.push_back(cellid.ToPoint());
   S2Loop loop2(vertices);
-  EXPECT_TRUE(loop->BoundaryEquals(&loop2));
-  EXPECT_TRUE(loop->BoundaryApproxEquals(&loop2));
-  EXPECT_TRUE(loop->BoundaryNear(&loop2));
+  EXPECT_TRUE(loop.BoundaryEquals(&loop2));
+  EXPECT_TRUE(loop.BoundaryApproxEquals(&loop2));
+  EXPECT_TRUE(loop.BoundaryNear(&loop2));
 }
 
 // Test converting the empty/full loops to S2LatLng representations.  (We
 // don't bother testing E5/E6/E7 because that test is less demanding.)
-static void TestEmptyFullLatLng(S2Loop* loop) {
-  CHECK(loop->is_empty_or_full());
+static void TestEmptyFullLatLng(S2Loop const& loop) {
+  CHECK(loop.is_empty_or_full());
   vector<S2Point> vertices;
-  vertices.push_back(S2LatLng(loop->vertex(0)).ToPoint());
+  vertices.push_back(S2LatLng(loop.vertex(0)).ToPoint());
   S2Loop loop2(vertices);
-  EXPECT_TRUE(loop->BoundaryEquals(&loop2));
-  EXPECT_TRUE(loop->BoundaryApproxEquals(&loop2));
-  EXPECT_TRUE(loop->BoundaryNear(&loop2));
+  EXPECT_TRUE(loop.BoundaryEquals(&loop2));
+  EXPECT_TRUE(loop.BoundaryApproxEquals(&loop2));
+  EXPECT_TRUE(loop.BoundaryNear(&loop2));
 }
 
-static void TestEmptyFullConversions(S2Loop* loop) {
+static void TestEmptyFullConversions(S2Loop const& loop) {
   TestEmptyFullSnapped(loop, S2CellId::kMaxLevel);
   TestEmptyFullSnapped(loop, 1);  // Worst case for approximation
   TestEmptyFullSnapped(loop, 0);
@@ -1095,10 +1095,10 @@ static void TestEmptyFullConversions(S2Loop* loop) {
 TEST(S2Loop, EmptyFullLossyConversions) {
   // Verify that the empty and full loops can be encoded lossily.
   S2Loop empty(S2Loop::kEmpty());
-  TestEmptyFullConversions(&empty);
+  TestEmptyFullConversions(empty);
 
   S2Loop full(S2Loop::kFull());
-  TestEmptyFullConversions(&full);
+  TestEmptyFullConversions(full);
 }
 
 TEST(S2Loop, EncodeDecodeWithinScope) {
@@ -1147,7 +1147,7 @@ TEST(S2Loop, EncodeDecodeWithinScope) {
 
 TEST_F(S2LoopTestBase, FourVertexCompressedLoopRequires36Bytes) {
   Encoder encoder;
-  TestEncodeCompressed(snapped_loop_a, S2CellId::kMaxLevel, &encoder);
+  TestEncodeCompressed(*snapped_loop_a, S2CellId::kMaxLevel, &encoder);
 
   // 1 byte for num_vertices
   // 1 byte for origin_inside and boolean indicating we did not
@@ -1165,10 +1165,10 @@ TEST_F(S2LoopTestBase, CompressedEncodedLoopDecodesApproxEqual) {
   loop->set_depth(3);
 
   Encoder encoder;
-  TestEncodeCompressed(loop.get(), S2CellId::kMaxLevel, &encoder);
+  TestEncodeCompressed(*loop, S2CellId::kMaxLevel, &encoder);
   S2Loop decoded_loop;
   TestDecodeCompressed(encoder, S2CellId::kMaxLevel, &decoded_loop);
-  CheckIdentical(loop.get(), &decoded_loop);
+  CheckIdentical(*loop, decoded_loop);
 }
 
 // This test checks that S2Loops created directly from S2Cells behave

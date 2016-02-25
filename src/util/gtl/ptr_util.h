@@ -27,8 +27,7 @@
 
 #include "util/gtl/gtl_namespace.h"
 
-namespace util {
-namespace gtl {
+GTL_NAMESPACE_BEGIN
 
 // Transfers ownership of a raw pointer to a std::unique_ptr of deduced type.
 // Example:
@@ -143,7 +142,6 @@ auto RawPtr(T&& ptr) -> decltype(&*ptr) {  // NOLINT
 }
 inline std::nullptr_t RawPtr(std::nullptr_t) { return nullptr; }
 
-}  // namespace gtl
-}  // namespace util
+GTL_NAMESPACE_END
 
 #endif  // S2GEOMETRY_UTIL_GTL_PTR_UTIL_H_

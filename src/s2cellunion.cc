@@ -29,10 +29,13 @@
 #include "s2cell.h"
 #include "s2cellid.h"
 #include "s2latlngrect.h"
+#include "util/coding/coder.h"
 
 using std::max;
 using std::min;
 using std::vector;
+
+static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
 void S2CellUnion::Init(vector<S2CellId> const& cell_ids) {
   InitRaw(cell_ids);
@@ -454,6 +457,36 @@ bool S2CellUnion::Contains(S2Cell const& cell) const {
 
 bool S2CellUnion::MayIntersect(S2Cell const& cell) const {
   return Intersects(cell.id());
+}
+
+void S2CellUnion::Encode(Encoder* const encoder) const {
+  // Unsigned char for version number, and N+1 uint64's for N cell_ids
+  // (1 for vector length, N for the ids).
+  encoder->Ensure(sizeof(unsigned char) +
+                  sizeof(uint64) * (1 + cell_ids_.size()));
+
+  encoder->put8(kCurrentLosslessEncodingVersionNumber);
+  encoder->put64(static_cast<uint64>(cell_ids_.size()));
+  for (const S2CellId& cell_id : cell_ids_) {
+    encoder->put64(cell_id.id());
+  }
+  DCHECK_GE(encoder->avail(), 0);
+}
+
+bool S2CellUnion::Decode(Decoder* const decoder) {
+  // Should contain at least version and vector length.
+  if (decoder->avail() < sizeof(unsigned char) + sizeof(uint64)) return false;
+  unsigned char version = decoder->get8();
+  if (version > kCurrentLosslessEncodingVersionNumber) return false;
+
+  uint64 num_cells = decoder->get64();
+  // Verify enough length for N cell_ids.
+  if (decoder->avail() < sizeof(uint64) * num_cells) return false;
+  cell_ids_.resize(num_cells);
+  for (int i = 0; i < num_cells; ++i) {
+    cell_ids_[i] = S2CellId(decoder->get64());
+  }
+  return true;
 }
 
 bool S2CellUnion::Contains(S2Point const& p) const {

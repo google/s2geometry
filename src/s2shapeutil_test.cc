@@ -184,13 +184,13 @@ TEST(PolygonShape, PartiallyDegenerateLoops) {
   }
 }
 
-void CompareS2LoopToShape(S2Loop const* loop, S2Shape* shape) {
+void CompareS2LoopToShape(S2Loop const& loop, S2Shape* shape) {
   S2ShapeIndex index;
   index.Add(shape);
-  S2Cap cap = loop->GetCapBound();
+  S2Cap cap = loop.GetCapBound();
   for (int iter = 0; iter < 100; ++iter) {
     S2Point point = S2Testing::SamplePoint(cap);
-    EXPECT_EQ(loop->Contains(point), index.ShapeContains(shape, point));
+    EXPECT_EQ(loop.Contains(point), index.ShapeContains(shape, point));
   }
 }
 
@@ -204,13 +204,13 @@ TEST(PolygonShapes, CompareToS2Loop) {
         S2Testing::GetRandomFrameAt(center), S1Angle::Degrees(5)));
 
     // Compare S2Loop to LoopShape.
-    CompareS2LoopToShape(loop.get(), new LoopShape(*loop));
+    CompareS2LoopToShape(*loop, new LoopShape(*loop));
 
     // Compare S2Loop to PolygonShape.
     vector<PolygonShape::Loop> loops(
         1, vector<S2Point>(&loop->vertex(0),
                            &loop->vertex(0) + loop->num_vertices()));
-    CompareS2LoopToShape(loop.get(), new PolygonShape(loops));
+    CompareS2LoopToShape(*loop, new PolygonShape(loops));
   }
 }
 

@@ -846,15 +846,15 @@ void S2Polygon::Encode(Encoder* const encoder) const {
   for (auto const& v : all_vertices) {
     histogram[v.cell_level + 1] += 1;
   }
-  // Computes the level at which most of the vertices are snapped.
-  int snap_level = 0;
-  int num_snapped = histogram[snap_level + 1];
-  for (int i = 1; i <= S2::kMaxCellLevel; ++i) {
-    if (histogram[i + 1] > num_snapped) {
-      snap_level = i;
-      num_snapped = histogram[i + 1];
-    }
-  }
+  // Compute the level at which most of the vertices are snapped.
+  // If multiple levels have the same maximum number of vertices
+  // snapped to it, the first one (lowest level number / largest
+  // area / smallest encoding length) will be chosen, so this
+  // is desired.
+  auto const max_elem =
+      std::max_element(histogram.begin() + 1, histogram.end());
+  int const snap_level = max_elem - (histogram.begin() + 1);
+  int const num_snapped = *max_elem;
   // Choose an encoding format based on the number of unsnapped vertices and a
   // rough estimate of the encoded sizes.
 
