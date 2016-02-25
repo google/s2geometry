@@ -26,101 +26,101 @@ include_directories(src)
 # Explicitly list S2 files until we move test files to test dir.
 # TODO: Move test files to another dir.
 file(GLOB S2FilesGlob
-     src/base/*.cc
-     src/r2rect.cc
-     src/s1angle.cc
-     src/s1chordangle.cc
-     src/s1interval.cc
-     src/s2.cc
-     src/s2cap.cc
-     src/s2cell.cc
-     src/s2cellid.cc
-     src/s2cellunion.cc
-     src/s2closestedgequery.cc
-     src/s2convexhullquery.cc
-     src/s2crossingedgequery.cc
-     src/s2edgeutil.cc
-     src/s2error.cc
-     src/s2latlng.cc
-     src/s2latlngrect.cc
-     src/s2loop.cc
-     src/s2paddedcell.cc
-     src/s2pointcompression.cc
-     src/s2pointregion.cc
-     src/s2polygon.cc
-     src/s2polygonbuilder.cc
-     src/s2polyline.cc
-     src/s2r2rect.cc
-     src/s2region.cc
-     src/s2regioncoverer.cc
-     src/s2regionintersection.cc
-     src/s2regionunion.cc
-     src/s2shapeindex.cc
-     src/s2shapeutil.cc
-     src/s2textformat.cc
-     src/strings/*.cc
-     src/util/bits/*.cc
-     src/util/coding/*.cc
-     src/util/hash/*.cc
-     src/util/math/exactfloat/*.cc
-     src/util/math/*.cc)
+     src/s2/base/*.cc
+     src/s2/r2rect.cc
+     src/s2/s1angle.cc
+     src/s2/s1chordangle.cc
+     src/s2/s1interval.cc
+     src/s2/s2.cc
+     src/s2/s2cap.cc
+     src/s2/s2cell.cc
+     src/s2/s2cellid.cc
+     src/s2/s2cellunion.cc
+     src/s2/s2closestedgequery.cc
+     src/s2/s2convexhullquery.cc
+     src/s2/s2crossingedgequery.cc
+     src/s2/s2edgeutil.cc
+     src/s2/s2error.cc
+     src/s2/s2latlng.cc
+     src/s2/s2latlngrect.cc
+     src/s2/s2loop.cc
+     src/s2/s2paddedcell.cc
+     src/s2/s2pointcompression.cc
+     src/s2/s2pointregion.cc
+     src/s2/s2polygon.cc
+     src/s2/s2polygonbuilder.cc
+     src/s2/s2polyline.cc
+     src/s2/s2r2rect.cc
+     src/s2/s2region.cc
+     src/s2/s2regioncoverer.cc
+     src/s2/s2regionintersection.cc
+     src/s2/s2regionunion.cc
+     src/s2/s2shapeindex.cc
+     src/s2/s2shapeutil.cc
+     src/s2/s2textformat.cc
+     src/s2/strings/*.cc
+     src/s2/util/bits/*.cc
+     src/s2/util/coding/*.cc
+     src/s2/util/hash/*.cc
+     src/s2/util/math/exactfloat/*.cc
+     src/s2/util/math/*.cc)
 
-add_library(s2geometry SHARED ${S2FilesGlob})
+add_library(s2 SHARED ${S2FilesGlob})
 target_link_libraries(
-    s2geometry
+    s2
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT})
 
-file(GLOB S2Headers src/*.h)
+file(GLOB S2Headers src/s2/*.h)
 
 # We don't need to install all headers, only those
 # transitively included by s2 headers we are exporting.
 install(FILES ${S2Headers}
-        DESTINATION include/s2geometry)
-install(FILES src/base/atomicops.h
-              src/base/casts.h
-              src/base/int128.h
-              src/base/integral_types.h
-              src/base/macros.h
-              src/base/mutex.h
-              src/base/port.h
-              src/base/port_hash.h
-              src/base/spinlock.h
-              src/base/template_util.h
-        DESTINATION include/s2geometry/base)
-install(FILES src/util/bits/bits.h
-              src/util/bits/bits-internal-unknown.h
-              src/util/bits/bits-internal-windows.h
-        DESTINATION include/s2geometry/util/bits)
-install(FILES src/util/btree/btree.h
-              src/util/btree/btree_container.h
-              src/util/btree/btree_map.h
-              src/util/btree/btree_set.h
-        DESTINATION include/util/btree)
-install(FILES src/util/gtl/inlined_vector.h
-              src/util/gtl/gtl_namespace.h
-              src/util/gtl/manual_constructor.h
-        DESTINATION include/s2geometry/util/gtl)
-install(FILES src/util/hash/mix.h
-        DESTINATION include/s2geometry/util/hash)
-install(FILES src/util/math/mathutil.h
-              src/util/math/matrix3x3.h
-              src/util/math/vector2.h
-              src/util/math/vector3.h
-              src/util/math/vector3_hash.h
-              src/util/math/vector4.h
-        DESTINATION include/s2geometry/util/math)
-install(FILES src/util/units/length-units.h
-              src/util/units/physical-units.h
-        DESTINATION include/s2geometry/util/units)
-install(TARGETS s2geometry DESTINATION lib)
+        DESTINATION include/s2)
+install(FILES src/s2/base/atomicops.h
+              src/s2/base/casts.h
+              src/s2/base/int128.h
+              src/s2/base/integral_types.h
+              src/s2/base/macros.h
+              src/s2/base/mutex.h
+              src/s2/base/port.h
+              src/s2/base/port_hash.h
+              src/s2/base/spinlock.h
+              src/s2/base/template_util.h
+        DESTINATION include/s2/base)
+install(FILES src/s2/util/bits/bits.h
+              src/s2/util/bits/bits-internal-unknown.h
+              src/s2/util/bits/bits-internal-windows.h
+        DESTINATION include/s2/util/bits)
+install(FILES src/s2/util/btree/btree.h
+              src/s2/util/btree/btree_container.h
+              src/s2/util/btree/btree_map.h
+              src/s2/util/btree/btree_set.h
+        DESTINATION include/s2/util/btree)
+install(FILES src/s2/util/gtl/inlined_vector.h
+              src/s2/util/gtl/gtl_namespace.h
+              src/s2/util/gtl/manual_constructor.h
+        DESTINATION include/s2/util/gtl)
+install(FILES src/s2/util/hash/mix.h
+        DESTINATION include/s2/util/hash)
+install(FILES src/s2/util/math/mathutil.h
+              src/s2/util/math/matrix3x3.h
+              src/s2/util/math/vector2.h
+              src/s2/util/math/vector3.h
+              src/s2/util/math/vector3_hash.h
+              src/s2/util/math/vector4.h
+        DESTINATION include/s2/util/math)
+install(FILES src/s2/util/units/length-units.h
+              src/s2/util/units/physical-units.h
+        DESTINATION include/s2/util/units)
+install(TARGETS s2 DESTINATION lib)
 
 message("GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
   add_library(gtest_main STATIC ${GTEST_ROOT}/src/gtest-all.cc ${GTEST_ROOT}/src/gtest_main.cc)
-  add_library(s2testing STATIC src/s2testing.cc)
+  add_library(s2testing STATIC src/s2/s2testing.cc)
 
-  file(GLOB S2TestFilesGlob src/*_test.cc)
+  file(GLOB S2TestFilesGlob src/s2/*_test.cc)
 
   enable_testing()
   include_directories(${GTEST_ROOT}/include)
@@ -131,7 +131,7 @@ if (GTEST_ROOT)
     add_executable(${test} ${test_cc})
     target_link_libraries(
         ${test}
-        s2testing s2geometry gtest_main)
+        s2testing s2 gtest_main)
     add_test(${test} ${test})
   endforeach()
 endif()
