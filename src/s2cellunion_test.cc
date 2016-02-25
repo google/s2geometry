@@ -26,6 +26,7 @@
 #include <glog/logging.h>
 #include "base/stringprintf.h"
 #include <gtest/gtest.h>
+#include "util/coding/coder.h"
 #include "s1angle.h"
 #include "s2cap.h"
 #include "s2cell.h"
@@ -343,6 +344,32 @@ TEST(S2CellUnion, Expand) {
     EXPECT_LE(expanded_covering_radius - covering_radius,
               2 * S2::kMaxDiag.GetValue(expand_level));
   }
+}
+
+TEST(S2CellUnion, EncodeDecode) {
+  S2CellUnion cell_union;
+  vector<S2CellId> cell_ids = {S2CellId(0x33), S2CellId(0x0),
+                               S2CellId(0x8e3748fab),
+                               S2CellId(0x91230abcdef83427)};
+  cell_union.InitRawSwap(&cell_ids);
+
+  Encoder encoder;
+  cell_union.Encode(&encoder);
+  Decoder decoder(encoder.base(), encoder.length());
+  S2CellUnion decoded_cell_union;
+  EXPECT_TRUE(decoded_cell_union.Decode(&decoder));
+  EXPECT_EQ(cell_union, decoded_cell_union);
+}
+
+TEST(S2CellUnion, EncodeDecodeEmpty) {
+  S2CellUnion empty_cell_union;
+
+  Encoder encoder;
+  empty_cell_union.Encode(&encoder);
+  Decoder decoder(encoder.base(), encoder.length());
+  S2CellUnion decoded_cell_union;
+  EXPECT_TRUE(decoded_cell_union.Decode(&decoder));
+  EXPECT_EQ(empty_cell_union, decoded_cell_union);
 }
 
 static void TestInitFromMinMax(S2CellId min_id, S2CellId max_id) {

@@ -212,10 +212,8 @@ class S2CellUnion : public S2Region {
     return Contains(p);  // The same as Contains() below, just virtual.
   }
 
-  virtual void Encode(Encoder* const encoder) const {
-    LOG(FATAL) << "Unimplemented";
-  }
-  virtual bool Decode(Decoder* const decoder) { return false; }
+  virtual void Encode(Encoder* const encoder) const;
+  virtual bool Decode(Decoder* const decoder);
 
   // The point 'p' does not need to be normalized.
   // This is a fast operation (logarithmic in the size of the cell union).

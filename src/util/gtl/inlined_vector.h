@@ -51,8 +51,7 @@
 #endif  // LANG_CXX11
 
 
-namespace util {
-namespace gtl {
+GTL_NAMESPACE_BEGIN
 
 template <typename T, int N, typename A = std::allocator<T> >
 class InlinedVector {
@@ -973,7 +972,6 @@ void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last,
   set_size_internal(length);
 }
 
-}  // namespace gtl
-}  // namespace util
+GTL_NAMESPACE_END
 
 #endif  // S2GEOMETRY_UTIL_GTL_INLINED_VECTOR_H_

@@ -67,8 +67,7 @@
 
 namespace google {
 
-namespace util {
-namespace gtl {
+GTL_NAMESPACE_BEGIN
 namespace internal {
 
 //
@@ -142,8 +141,7 @@ struct AlignType { typedef char result[Size]; };
 #endif  // !SWIG
 
 }  // namespace internal
-}  // namespace gtl
-}  // namespace util
+GTL_NAMESPACE_END
 
 template <typename Type>
 class ManualConstructor {

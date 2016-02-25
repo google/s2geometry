@@ -60,10 +60,10 @@
 
 #include "base/integral_types.h"
 
-// We support gcc 4.6 and later.
+// We support gcc 4.7 and later.
 #if defined(__GNUC__) && !defined(__clang__)
-#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6)
-#error "This package requires gcc 4.6 or higher"
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
+#error "This package requires gcc 4.7 or higher"
 #endif
 #endif
 
