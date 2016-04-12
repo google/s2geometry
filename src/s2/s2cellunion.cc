@@ -468,9 +468,8 @@ void S2CellUnion::Encode(Encoder* const encoder) const {
   encoder->put8(kCurrentLosslessEncodingVersionNumber);
   encoder->put64(static_cast<uint64>(cell_ids_.size()));
   for (const S2CellId& cell_id : cell_ids_) {
-    encoder->put64(cell_id.id());
+    cell_id.Encode(encoder);
   }
-  DCHECK_GE(encoder->avail(), 0);
 }
 
 bool S2CellUnion::Decode(Decoder* const decoder) {
@@ -480,12 +479,11 @@ bool S2CellUnion::Decode(Decoder* const decoder) {
   if (version > kCurrentLosslessEncodingVersionNumber) return false;
 
   uint64 num_cells = decoder->get64();
-  // Verify enough length for N cell_ids.
-  if (decoder->avail() < sizeof(uint64) * num_cells) return false;
-  cell_ids_.resize(num_cells);
+  vector<S2CellId> temp_cell_ids(num_cells);
   for (int i = 0; i < num_cells; ++i) {
-    cell_ids_[i] = S2CellId(decoder->get64());
+    if (!temp_cell_ids[i].Decode(decoder)) return false;
   }
+  cell_ids_.swap(temp_cell_ids);
   return true;
 }
 

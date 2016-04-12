@@ -283,6 +283,17 @@ bool S2Cell::Contains(S2Point const& p) const {
   return uv_.Expanded(DBL_EPSILON).Contains(uv);
 }
 
+void S2Cell::Encode(Encoder* const encoder) const {
+  id_.Encode(encoder);
+}
+
+bool S2Cell::Decode(Decoder* const decoder) {
+  S2CellId id;
+  if (!id.Decode(decoder)) return false;
+  Init(id);
+  return true;
+}
+
 // Return the squared chord distance from point P to corner vertex (i,j).
 inline double S2Cell::VertexChordDist2(S2Point const& p, int i, int j) const {
   S2Point vertex = S2Point(uv_[0][i], uv_[1][j], 1).Normalize();

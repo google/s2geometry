@@ -590,14 +590,15 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 #define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
 #endif
 
-
-//
 // Tell the compiler to warn about unused return values for functions declared
-// with this macro.  The macro should be used on function declarations
-// following the argument list:
+// with this macro. The macro must appear as the very first part of a function
+// declaration or definition:
 //
-//   Sprocket* AllocateSprocket() MUST_USE_RESULT;
+//   MUST_USE_RESULT Sprocket* AllocateSprocket();
 //
+// This placement has the broadest compatibility with GCC, Clang, and MSVC, with
+// both defs and decls, and with GCC-style attributes, MSVC declspec, and C++11
+// attributes. Note: past advice was to place the macro after the argument list.
 #if defined(SWIG)
 #define MUST_USE_RESULT
 #elif __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
@@ -825,7 +826,8 @@ template<int size> struct AlignType<0, size> { typedef char result[size]; };
 #if defined(_MSC_VER)
 #define BASE_PORT_H_ALIGN_ATTRIBUTE(X) __declspec(align(X))
 #define BASE_PORT_H_ALIGN_OF(T) __alignof(T)
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || __GNUC__ >= 3 || defined(__APPLE__) || \
+    defined(__INTEL_COMPILER) || defined(__nacl__) || defined(__clang__)
 #define BASE_PORT_H_ALIGN_ATTRIBUTE(X) __attribute__((aligned(X)))
 #define BASE_PORT_H_ALIGN_OF(T) __alignof__(T)
 #endif
@@ -871,6 +873,9 @@ BASE_PORT_H_ALIGNTYPE_TEMPLATE(8192);
 template<typename Size>
 struct AlignType { typedef char result[Size]; };
 #define ALIGNED_CHAR_ARRAY(T, Size) AlignType<Size * sizeof(T)>::result
+
+// Enough to parse with SWIG, will never be used by running code.
+#define BASE_PORT_H_ALIGN_OF(Type) 16
 
 #endif // !SWIG
 #else  // __cpluscplus

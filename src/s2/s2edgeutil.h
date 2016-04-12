@@ -617,6 +617,7 @@ class S2EdgeUtil {
   static S2Point S2PointFromExact(Vector3<ExactFloat> const& x);
 
  private:
+  friend class GetIntersectionStats;
   friend class S2EdgeUtilTesting;
 
   // This is an *internal only* method declared here for testing purposes.
@@ -626,6 +627,14 @@ class S2EdgeUtil {
   // The maximum error in the method above.
   static S1Angle const kIntersectionExactError;
 
+  // The following field is used exclusively by S2EdgeUtilTesting in order to
+  // measure how often each intersection method is used by GetIntersection().
+  // If non-nullptr, then it points to an array of integers indexed by an
+  // IntersectionMethod enum value.  Each call to GetIntersection() increments
+  // the array entry corresponding to the intersection method that was used.
+  static int* intersection_method_tally_;
+
+  // The list of intersection methods implemented by GetIntersection().
   enum IntersectionMethod {
     SIMPLE,
     SIMPLE_LD,
@@ -634,7 +643,6 @@ class S2EdgeUtil {
     EXACT,
     NUM_INTERSECTION_METHODS
   };
-  static IntersectionMethod last_intersection_method_;
   static char const* GetIntersectionMethodName(IntersectionMethod method);
 
   // Contains only static members.

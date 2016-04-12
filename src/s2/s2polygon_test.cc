@@ -136,51 +136,51 @@ class S2PolygonTestBase : public testing::Test {
 
  protected:
   // Some standard polygons to use in the tests.
-  unique_ptr<S2Polygon const> const empty;
-  unique_ptr<S2Polygon const> const full;
-  unique_ptr<S2Polygon const> const near_0;
-  unique_ptr<S2Polygon const> const near_10;
-  unique_ptr<S2Polygon const> const near_30;
-  unique_ptr<S2Polygon const> const near_32;
-  unique_ptr<S2Polygon const> const near_3210;
-  unique_ptr<S2Polygon const> const near_H3210;
+  unique_ptr<S2Polygon const> const empty_;
+  unique_ptr<S2Polygon const> const full_;
+  unique_ptr<S2Polygon const> const near_0_;
+  unique_ptr<S2Polygon const> const near_10_;
+  unique_ptr<S2Polygon const> const near_30_;
+  unique_ptr<S2Polygon const> const near_32_;
+  unique_ptr<S2Polygon const> const near_3210_;
+  unique_ptr<S2Polygon const> const near_H3210_;
 
-  unique_ptr<S2Polygon const> const far_10;
-  unique_ptr<S2Polygon const> const far_21;
-  unique_ptr<S2Polygon const> const far_321;
-  unique_ptr<S2Polygon const> const far_H20;
-  unique_ptr<S2Polygon const> const far_H3210;
+  unique_ptr<S2Polygon const> const far_10_;
+  unique_ptr<S2Polygon const> const far_21_;
+  unique_ptr<S2Polygon const> const far_321_;
+  unique_ptr<S2Polygon const> const far_H20_;
+  unique_ptr<S2Polygon const> const far_H3210_;
 
-  unique_ptr<S2Polygon const> const south_0ab;
-  unique_ptr<S2Polygon const> const south_2;
-  unique_ptr<S2Polygon const> const south_210b;
-  unique_ptr<S2Polygon const> const south_H21;
-  unique_ptr<S2Polygon const> const south_H20abc;
+  unique_ptr<S2Polygon const> const south_0ab_;
+  unique_ptr<S2Polygon const> const south_2_;
+  unique_ptr<S2Polygon const> const south_210b_;
+  unique_ptr<S2Polygon const> const south_H21_;
+  unique_ptr<S2Polygon const> const south_H20abc_;
 
-  unique_ptr<S2Polygon const> const nf1_n10_f2_s10abc;
+  unique_ptr<S2Polygon const> const nf1_n10_f2_s10abc_;
 
-  unique_ptr<S2Polygon const> const nf2_n2_f210_s210ab;
+  unique_ptr<S2Polygon const> const nf2_n2_f210_s210ab_;
 
-  unique_ptr<S2Polygon const> const f32_n0;
-  unique_ptr<S2Polygon const> const n32_s0b;
+  unique_ptr<S2Polygon const> const f32_n0_;
+  unique_ptr<S2Polygon const> const n32_s0b_;
 
-  unique_ptr<S2Polygon const> const cross1;
-  unique_ptr<S2Polygon const> const cross1_side_hole;
-  unique_ptr<S2Polygon const> const cross1_center_hole;
-  unique_ptr<S2Polygon const> const cross2;
-  unique_ptr<S2Polygon const> const cross2_side_hole;
-  unique_ptr<S2Polygon const> const cross2_center_hole;
+  unique_ptr<S2Polygon const> const cross1_;
+  unique_ptr<S2Polygon const> const cross1_side_hole_;
+  unique_ptr<S2Polygon const> const cross1_center_hole_;
+  unique_ptr<S2Polygon const> const cross2_;
+  unique_ptr<S2Polygon const> const cross2_side_hole_;
+  unique_ptr<S2Polygon const> const cross2_center_hole_;
 
-  unique_ptr<S2Polygon const> const overlap1;
-  unique_ptr<S2Polygon const> const overlap1_side_hole;
-  unique_ptr<S2Polygon const> const overlap1_center_hole;
-  unique_ptr<S2Polygon const> const overlap2;
-  unique_ptr<S2Polygon const> const overlap2_side_hole;
-  unique_ptr<S2Polygon const> const overlap2_center_hole;
+  unique_ptr<S2Polygon const> const overlap1_;
+  unique_ptr<S2Polygon const> const overlap1_side_hole_;
+  unique_ptr<S2Polygon const> const overlap1_center_hole_;
+  unique_ptr<S2Polygon const> const overlap2_;
+  unique_ptr<S2Polygon const> const overlap2_side_hole_;
+  unique_ptr<S2Polygon const> const overlap2_center_hole_;
 
-  unique_ptr<S2Polygon const> const far_H;
-  unique_ptr<S2Polygon const> const south_H;
-  unique_ptr<S2Polygon const> const far_H_south_H;
+  unique_ptr<S2Polygon const> const far_H_;
+  unique_ptr<S2Polygon const> const south_H_;
+  unique_ptr<S2Polygon const> const far_H_south_H_;
 };
 
 static bool TestEncodeDecode(const S2Polygon* src) {
@@ -279,55 +279,55 @@ TEST(S2Polygon, OriginNearPole) {
   EXPECT_GE(S2LatLng::Latitude(S2::Origin()).degrees(), 80);
 }
 
-S2PolygonTestBase::S2PolygonTestBase() :
-    empty(new S2Polygon()),
-    full(MakePolygon("full")),
-    near_0(MakePolygon(kNear0)),
-    near_10(MakePolygon(kNear0 + kNear1)),
-    near_30(MakePolygon(kNear3 + kNear0)),
-    near_32(MakePolygon(kNear2 + kNear3)),
-    near_3210(MakePolygon(kNear0 + kNear2 + kNear3 + kNear1)),
-    near_H3210(MakePolygon(kNear0 + kNear2 + kNear3 + kNearHemi + kNear1)),
+S2PolygonTestBase::S2PolygonTestBase()
+  : empty_(new S2Polygon()),
+    full_(MakePolygon("full")),
+    near_0_(MakePolygon(kNear0)),
+    near_10_(MakePolygon(kNear0 + kNear1)),
+    near_30_(MakePolygon(kNear3 + kNear0)),
+    near_32_(MakePolygon(kNear2 + kNear3)),
+    near_3210_(MakePolygon(kNear0 + kNear2 + kNear3 + kNear1)),
+    near_H3210_(MakePolygon(kNear0 + kNear2 + kNear3 + kNearHemi + kNear1)),
 
-    far_10(MakePolygon(kFar0 + kFar1)),
-    far_21(MakePolygon(kFar2 + kFar1)),
-    far_321(MakePolygon(kFar2 + kFar3 + kFar1)),
-    far_H20(MakePolygon(kFar2 + kFarHemi + kFar0)),
-    far_H3210(MakePolygon(kFar2 + kFarHemi + kFar0 + kFar1 + kFar3)),
+    far_10_(MakePolygon(kFar0 + kFar1)),
+    far_21_(MakePolygon(kFar2 + kFar1)),
+    far_321_(MakePolygon(kFar2 + kFar3 + kFar1)),
+    far_H20_(MakePolygon(kFar2 + kFarHemi + kFar0)),
+    far_H3210_(MakePolygon(kFar2 + kFarHemi + kFar0 + kFar1 + kFar3)),
 
-    south_0ab(MakePolygon(kSouth0a + kSouth0b)),
-    south_2(MakePolygon(kSouth2)),
-    south_210b(MakePolygon(kSouth2 + kSouth0b + kSouth1)),
-    south_H21(MakePolygon(kSouth2 + kSouthHemi + kSouth1)),
-    south_H20abc(MakePolygon(kSouth2 + kSouth0b + kSouthHemi +
-                             kSouth0a + kSouth0c)),
+    south_0ab_(MakePolygon(kSouth0a + kSouth0b)),
+    south_2_(MakePolygon(kSouth2)),
+    south_210b_(MakePolygon(kSouth2 + kSouth0b + kSouth1)),
+    south_H21_(MakePolygon(kSouth2 + kSouthHemi + kSouth1)),
+    south_H20abc_(MakePolygon(kSouth2 + kSouth0b + kSouthHemi +
+                              kSouth0a + kSouth0c)),
 
-    nf1_n10_f2_s10abc(MakePolygon(kSouth0c + kFar2 + kNear1 + kNearFar1 +
-                                  kNear0 + kSouth1 + kSouth0b + kSouth0a)),
+    nf1_n10_f2_s10abc_(MakePolygon(kSouth0c + kFar2 + kNear1 + kNearFar1 +
+                                   kNear0 + kSouth1 + kSouth0b + kSouth0a)),
 
-    nf2_n2_f210_s210ab(MakePolygon(kFar2 + kSouth0a + kFar1 + kSouth1 + kFar0 +
-                                   kSouth0b + kNearFar2 + kSouth2 + kNear2)),
+    nf2_n2_f210_s210ab_(MakePolygon(kFar2 + kSouth0a + kFar1 + kSouth1 + kFar0 +
+                                    kSouth0b + kNearFar2 + kSouth2 + kNear2)),
 
-    f32_n0(MakePolygon(kFar2 + kNear0 + kFar3)),
-    n32_s0b(MakePolygon(kNear3 + kSouth0b + kNear2)),
+    f32_n0_(MakePolygon(kFar2 + kNear0 + kFar3)),
+    n32_s0b_(MakePolygon(kNear3 + kSouth0b + kNear2)),
 
-    cross1(MakePolygon(kCross1)),
-    cross1_side_hole(MakePolygon(kCross1 + kCross1SideHole)),
-    cross1_center_hole(MakePolygon(kCross1 + kCrossCenterHole)),
-    cross2(MakePolygon(kCross2)),
-    cross2_side_hole(MakePolygon(kCross2 + kCross2SideHole)),
-    cross2_center_hole(MakePolygon(kCross2 + kCrossCenterHole)),
+    cross1_(MakePolygon(kCross1)),
+    cross1_side_hole_(MakePolygon(kCross1 + kCross1SideHole)),
+    cross1_center_hole_(MakePolygon(kCross1 + kCrossCenterHole)),
+    cross2_(MakePolygon(kCross2)),
+    cross2_side_hole_(MakePolygon(kCross2 + kCross2SideHole)),
+    cross2_center_hole_(MakePolygon(kCross2 + kCrossCenterHole)),
 
-    overlap1(MakePolygon(kOverlap1)),
-    overlap1_side_hole(MakePolygon(kOverlap1 + kOverlap1SideHole)),
-    overlap1_center_hole(MakePolygon(kOverlap1 + kOverlapCenterHole)),
-    overlap2(MakePolygon(kOverlap2)),
-    overlap2_side_hole(MakePolygon(kOverlap2 + kOverlap2SideHole)),
-    overlap2_center_hole(MakePolygon(kOverlap2 + kOverlapCenterHole)),
+    overlap1_(MakePolygon(kOverlap1)),
+    overlap1_side_hole_(MakePolygon(kOverlap1 + kOverlap1SideHole)),
+    overlap1_center_hole_(MakePolygon(kOverlap1 + kOverlapCenterHole)),
+    overlap2_(MakePolygon(kOverlap2)),
+    overlap2_side_hole_(MakePolygon(kOverlap2 + kOverlap2SideHole)),
+    overlap2_center_hole_(MakePolygon(kOverlap2 + kOverlapCenterHole)),
 
-    far_H(MakePolygon(kFarHemi)),
-    south_H(MakePolygon(kSouthHemi)),
-    far_H_south_H(MakePolygon(kFarHSouthH)) {
+    far_H_(MakePolygon(kFarHemi)),
+    south_H_(MakePolygon(kSouthHemi)),
+    far_H_south_H_(MakePolygon(kFarHSouthH)) {
 }
 
 static void CheckEqual(S2Polygon const& a, S2Polygon const& b,
@@ -569,88 +569,90 @@ TEST_F(S2PolygonTestBase, Relations) {
   TestRelationWithDesc(a, b, contains, contained, intersects, \
                        "args " #a ", " #b)
 
-  TestRelation(*near_10, *empty, true, false, false);
-  TestRelation(*near_10, *near_10, true, true, true);
-  TestRelation(*full, *near_10, true, false, true);
-  TestRelation(*near_10, *near_30, false, true, true);
-  TestRelation(*near_10, *near_32, false, false, false);
-  TestRelation(*near_10, *near_3210, false, true, true);
-  TestRelation(*near_10, *near_H3210, false, false, false);
-  TestRelation(*near_30, *near_32, true, false, true);
-  TestRelation(*near_30, *near_3210, true, false, true);
-  TestRelation(*near_30, *near_H3210, false, false, true);
-  TestRelation(*near_32, *near_3210, false, true, true);
-  TestRelation(*near_32, *near_H3210, false, false, false);
-  TestRelation(*near_3210, *near_H3210, false, false, false);
+  TestRelation(*near_10_, *empty_, true, false, false);
+  TestRelation(*near_10_, *near_10_, true, true, true);
+  TestRelation(*full_, *near_10_, true, false, true);
+  TestRelation(*near_10_, *near_30_, false, true, true);
+  TestRelation(*near_10_, *near_32_, false, false, false);
+  TestRelation(*near_10_, *near_3210_, false, true, true);
+  TestRelation(*near_10_, *near_H3210_, false, false, false);
+  TestRelation(*near_30_, *near_32_, true, false, true);
+  TestRelation(*near_30_, *near_3210_, true, false, true);
+  TestRelation(*near_30_, *near_H3210_, false, false, true);
+  TestRelation(*near_32_, *near_3210_, false, true, true);
+  TestRelation(*near_32_, *near_H3210_, false, false, false);
+  TestRelation(*near_3210_, *near_H3210_, false, false, false);
 
-  TestRelation(*far_10, *far_21, false, false, false);
-  TestRelation(*far_10, *far_321, false, true, true);
-  TestRelation(*far_10, *far_H20, false, false, false);
-  TestRelation(*far_10, *far_H3210, false, false, false);
-  TestRelation(*far_21, *far_321, false, false, false);
-  TestRelation(*far_21, *far_H20, false, false, false);
-  TestRelation(*far_21, *far_H3210, false, true, true);
-  TestRelation(*far_321, *far_H20, false, false, true);
-  TestRelation(*far_321, *far_H3210, false, false, true);
-  TestRelation(*far_H20, *far_H3210, false, false, true);
+  TestRelation(*far_10_, *far_21_, false, false, false);
+  TestRelation(*far_10_, *far_321_, false, true, true);
+  TestRelation(*far_10_, *far_H20_, false, false, false);
+  TestRelation(*far_10_, *far_H3210_, false, false, false);
+  TestRelation(*far_21_, *far_321_, false, false, false);
+  TestRelation(*far_21_, *far_H20_, false, false, false);
+  TestRelation(*far_21_, *far_H3210_, false, true, true);
+  TestRelation(*far_321_, *far_H20_, false, false, true);
+  TestRelation(*far_321_, *far_H3210_, false, false, true);
+  TestRelation(*far_H20_, *far_H3210_, false, false, true);
 
-  TestRelation(*south_0ab, *south_2, false, true, true);
-  TestRelation(*south_0ab, *south_210b, false, false, true);
-  TestRelation(*south_0ab, *south_H21, false, true, true);
-  TestRelation(*south_0ab, *south_H20abc, false, true, true);
-  TestRelation(*south_2, *south_210b, true, false, true);
-  TestRelation(*south_2, *south_H21, false, false, true);
-  TestRelation(*south_2, *south_H20abc, false, false, true);
-  TestRelation(*south_210b, *south_H21, false, false, true);
-  TestRelation(*south_210b, *south_H20abc, false, false, true);
-  TestRelation(*south_H21, *south_H20abc, true, false, true);
+  TestRelation(*south_0ab_, *south_2_, false, true, true);
+  TestRelation(*south_0ab_, *south_210b_, false, false, true);
+  TestRelation(*south_0ab_, *south_H21_, false, true, true);
+  TestRelation(*south_0ab_, *south_H20abc_, false, true, true);
+  TestRelation(*south_2_, *south_210b_, true, false, true);
+  TestRelation(*south_2_, *south_H21_, false, false, true);
+  TestRelation(*south_2_, *south_H20abc_, false, false, true);
+  TestRelation(*south_210b_, *south_H21_, false, false, true);
+  TestRelation(*south_210b_, *south_H20abc_, false, false, true);
+  TestRelation(*south_H21_, *south_H20abc_, true, false, true);
 
-  TestRelation(*nf1_n10_f2_s10abc, *nf2_n2_f210_s210ab, false, false, true);
-  TestRelation(*nf1_n10_f2_s10abc, *near_32, true, false, true);
-  TestRelation(*nf1_n10_f2_s10abc, *far_21, false, false, false);
-  TestRelation(*nf1_n10_f2_s10abc, *south_0ab, false, false, false);
-  TestRelation(*nf1_n10_f2_s10abc, *f32_n0, true, false, true);
+  TestRelation(*nf1_n10_f2_s10abc_, *nf2_n2_f210_s210ab_, false, false, true);
+  TestRelation(*nf1_n10_f2_s10abc_, *near_32_, true, false, true);
+  TestRelation(*nf1_n10_f2_s10abc_, *far_21_, false, false, false);
+  TestRelation(*nf1_n10_f2_s10abc_, *south_0ab_, false, false, false);
+  TestRelation(*nf1_n10_f2_s10abc_, *f32_n0_, true, false, true);
 
-  TestRelation(*nf2_n2_f210_s210ab, *near_10, false, false, false);
-  TestRelation(*nf2_n2_f210_s210ab, *far_10, true, false, true);
-  TestRelation(*nf2_n2_f210_s210ab, *south_210b, true, false, true);
-  TestRelation(*nf2_n2_f210_s210ab, *south_0ab, true, false, true);
-  TestRelation(*nf2_n2_f210_s210ab, *n32_s0b, true, false, true);
+  TestRelation(*nf2_n2_f210_s210ab_, *near_10_, false, false, false);
+  TestRelation(*nf2_n2_f210_s210ab_, *far_10_, true, false, true);
+  TestRelation(*nf2_n2_f210_s210ab_, *south_210b_, true, false, true);
+  TestRelation(*nf2_n2_f210_s210ab_, *south_0ab_, true, false, true);
+  TestRelation(*nf2_n2_f210_s210ab_, *n32_s0b_, true, false, true);
 
-  TestRelation(*cross1, *cross2, false, false, true);
-  TestRelation(*cross1_side_hole, *cross2, false, false, true);
-  TestRelation(*cross1_center_hole, *cross2, false, false, true);
-  TestRelation(*cross1, *cross2_side_hole, false, false, true);
-  TestRelation(*cross1, *cross2_center_hole, false, false, true);
-  TestRelation(*cross1_side_hole, *cross2_side_hole, false, false, true);
-  TestRelation(*cross1_center_hole, *cross2_side_hole, false, false, true);
-  TestRelation(*cross1_side_hole, *cross2_center_hole, false, false, true);
-  TestRelation(*cross1_center_hole, *cross2_center_hole, false, false, true);
+  TestRelation(*cross1_, *cross2_, false, false, true);
+  TestRelation(*cross1_side_hole_, *cross2_, false, false, true);
+  TestRelation(*cross1_center_hole_, *cross2_, false, false, true);
+  TestRelation(*cross1_, *cross2_side_hole_, false, false, true);
+  TestRelation(*cross1_, *cross2_center_hole_, false, false, true);
+  TestRelation(*cross1_side_hole_, *cross2_side_hole_, false, false, true);
+  TestRelation(*cross1_center_hole_, *cross2_side_hole_, false, false, true);
+  TestRelation(*cross1_side_hole_, *cross2_center_hole_, false, false, true);
+  TestRelation(*cross1_center_hole_, *cross2_center_hole_, false, false, true);
 
-  // These cases, when either polygon has a hole, test a different code path
+  // These cases_, when either polygon has a hole, test a different code path
   // from the other cases.
-  TestRelation(*overlap1, *overlap2, false, false, true);
-  TestRelation(*overlap1_side_hole, *overlap2, false, false, true);
-  TestRelation(*overlap1_center_hole, *overlap2, false, false, true);
-  TestRelation(*overlap1, *overlap2_side_hole, false, false, true);
-  TestRelation(*overlap1, *overlap2_center_hole, false, false, true);
-  TestRelation(*overlap1_side_hole, *overlap2_side_hole, false, false, true);
-  TestRelation(*overlap1_center_hole, *overlap2_side_hole, false, false, true);
-  TestRelation(*overlap1_side_hole, *overlap2_center_hole, false, false, true);
-  TestRelation(*overlap1_center_hole, *overlap2_center_hole,
+  TestRelation(*overlap1_, *overlap2_, false, false, true);
+  TestRelation(*overlap1_side_hole_, *overlap2_, false, false, true);
+  TestRelation(*overlap1_center_hole_, *overlap2_, false, false, true);
+  TestRelation(*overlap1_, *overlap2_side_hole_, false, false, true);
+  TestRelation(*overlap1_, *overlap2_center_hole_, false, false, true);
+  TestRelation(*overlap1_side_hole_, *overlap2_side_hole_, false, false, true);
+  TestRelation(*overlap1_center_hole_, *overlap2_side_hole_,
+               false, false, true);
+  TestRelation(*overlap1_side_hole_, *overlap2_center_hole_,
+               false, false, true);
+  TestRelation(*overlap1_center_hole_, *overlap2_center_hole_,
                false, false, true);
 #undef TestRelation
 }
 
 TEST_F(S2PolygonTestBase, EmptyAndFull) {
-  EXPECT_TRUE(empty->is_empty());
-  EXPECT_FALSE(full->is_empty());
-  EXPECT_FALSE(empty->is_full());
-  EXPECT_TRUE(full->is_full());
+  EXPECT_TRUE(empty_->is_empty());
+  EXPECT_FALSE(full_->is_empty());
+  EXPECT_FALSE(empty_->is_full());
+  EXPECT_TRUE(full_->is_full());
 
-  TestNestedPair(*empty, *empty);
-  TestNestedPair(*full, *empty);
-  TestNestedPair(*full, *full);
+  TestNestedPair(*empty_, *empty_);
+  TestNestedPair(*full_, *empty_);
+  TestNestedPair(*full_, *full_);
 }
 
 struct TestCase {
@@ -739,8 +741,8 @@ TestCase test_cases[] = {
 
 TEST_F(S2PolygonTestBase, Operations) {
   S2Polygon far_south;
-  far_south.InitToIntersection(far_H.get(), south_H.get());
-  CheckEqual(far_south, *far_H_south_H, 1e-15);
+  far_south.InitToIntersection(far_H_.get(), south_H_.get());
+  CheckEqual(far_south, *far_H_south_H_, 1e-15);
 
   int i = 0;
   for (TestCase const& test : test_cases) {
@@ -821,10 +823,10 @@ static void PolylineIntersectionSharedEdgeTest(S2Polygon const& p,
 // extra tests for shared edges.
 TEST_F(S2PolygonTestBase, PolylineIntersection) {
   for (int v = 0; v < 3; ++v) {
-    PolylineIntersectionSharedEdgeTest(*cross1, v, 1);
-    PolylineIntersectionSharedEdgeTest(*cross1, v + 1, -1);
-    PolylineIntersectionSharedEdgeTest(*cross1_side_hole, v, 1);
-    PolylineIntersectionSharedEdgeTest(*cross1_side_hole, v + 1, -1);
+    PolylineIntersectionSharedEdgeTest(*cross1_, v, 1);
+    PolylineIntersectionSharedEdgeTest(*cross1_, v + 1, -1);
+    PolylineIntersectionSharedEdgeTest(*cross1_side_hole_, v, 1);
+    PolylineIntersectionSharedEdgeTest(*cross1_side_hole_, v + 1, -1);
   }
 
   // See comments in TestOperations about the vlue of this constant.
@@ -989,17 +991,17 @@ TEST_F(S2PolygonTestBase, Splitting) {
   // It takes too long to test all the polygons in debug mode, so we just pick
   // out some of the more interesting ones.
 
-  SplitAndAssemble(*near_10);
-  SplitAndAssemble(*near_H3210);
-  SplitAndAssemble(*far_H3210);
-  SplitAndAssemble(*south_0ab);
-  SplitAndAssemble(*south_210b);
-  SplitAndAssemble(*south_H20abc);
-  SplitAndAssemble(*nf1_n10_f2_s10abc);
-  SplitAndAssemble(*nf2_n2_f210_s210ab);
-  SplitAndAssemble(*far_H);
-  SplitAndAssemble(*south_H);
-  SplitAndAssemble(*far_H_south_H);
+  SplitAndAssemble(*near_10_);
+  SplitAndAssemble(*near_H3210_);
+  SplitAndAssemble(*far_H3210_);
+  SplitAndAssemble(*south_0ab_);
+  SplitAndAssemble(*south_210b_);
+  SplitAndAssemble(*south_H20abc_);
+  SplitAndAssemble(*nf1_n10_f2_s10abc_);
+  SplitAndAssemble(*nf2_n2_f210_s210ab_);
+  SplitAndAssemble(*far_H_);
+  SplitAndAssemble(*south_H_);
+  SplitAndAssemble(*far_H_south_H_);
 }
 
 TEST(S2Polygon, InitToCellUnionBorder) {
@@ -1141,12 +1143,12 @@ TEST(S2Polygon, InitSingleLoop) {
 
 TEST_F(S2PolygonTestBase, TestSimpleEncodeDecode) {
   Encoder encoder;
-  cross1->Encode(&encoder);
+  cross1_->Encode(&encoder);
   Decoder decoder(encoder.base(), encoder.length());
   S2Polygon decoded_polygon;
   ASSERT_TRUE(decoded_polygon.Decode(&decoder));
-  EXPECT_TRUE(cross1->BoundaryEquals(&decoded_polygon));
-  EXPECT_EQ(cross1->GetRectBound(), decoded_polygon.GetRectBound());
+  EXPECT_TRUE(cross1_->BoundaryEquals(&decoded_polygon));
+  EXPECT_EQ(cross1_->GetRectBound(), decoded_polygon.GetRectBound());
 }
 
 TEST_F(S2PolygonTestBase, TestEncodeDecodeDefaultPolygon) {
@@ -1193,7 +1195,7 @@ TEST_F(S2PolygonTestBase, CompressedEncodedPolygonRequires69Bytes) {
 TEST_F(S2PolygonTestBase, CompressedEncodedPolygonDecodesApproxEqual) {
   // To compare the boundaries, etc we want to snap first.
   S2Polygon snapped;
-  snapped.InitToSnapped(near_30.get());
+  snapped.InitToSnapped(near_30_.get());
   ASSERT_EQ(2, snapped.num_loops());
   EXPECT_EQ(0, snapped.loop(0)->depth());
   EXPECT_EQ(1, snapped.loop(1)->depth());
@@ -1286,8 +1288,8 @@ static void TestDistanceMethods(S2Polygon const& polygon, S2Point const& x,
 
 TEST_F(S2PolygonTestBase, GetDistance) {
   // The empty and full loops don't have boundaries.
-  TestDistanceMethods(*empty, S2Point(0, 1, 0), S2Point());
-  TestDistanceMethods(*full, S2Point(0, 1, 0), S2Point());
+  TestDistanceMethods(*empty_, S2Point(0, 1, 0), S2Point());
+  TestDistanceMethods(*full_, S2Point(0, 1, 0), S2Point());
 
   // A polygon consisting of two nested rectangles centered around
   // S2LatLng(0,0).  Note that because lines of latitude are curved on the
@@ -1931,14 +1933,14 @@ TEST_F(S2PolygonDecodeTest, FuzzEverything) {
 }
 
 TEST_F(S2PolygonTestBase, FullPolygonShape) {
-  S2Polygon::Shape shape(full.get());
+  S2Polygon::Shape shape(full_.get());
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_TRUE(shape.has_interior());
   EXPECT_TRUE(shape.contains_origin());
 }
 
 TEST_F(S2PolygonTestBase, EmptyPolygonShape) {
-  S2Polygon::Shape shape(empty.get());
+  S2Polygon::Shape shape(empty_.get());
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.contains_origin());
@@ -1963,11 +1965,11 @@ void TestPolygonShape(S2Polygon const& polygon) {
 }
 
 TEST_F(S2PolygonTestBase, OneLoopPolygonShape) {
-  TestPolygonShape(*near_0);
+  TestPolygonShape(*near_0_);
 }
 
 TEST_F(S2PolygonTestBase, SeveralLoopPolygonShape) {
-  TestPolygonShape(*near_3210);
+  TestPolygonShape(*near_3210_);
 }
 
 TEST_F(S2PolygonTestBase, ManyLoopPolygonShape) {

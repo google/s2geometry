@@ -30,6 +30,7 @@
 #include "s2/base/integral_types.h"
 #include "s2/base/port.h"  // for HASH_NAMESPACE_DECLARATION_START
 #include "s2/util/bits/bits.h"
+#include "s2/util/coding/coder.h"
 #include "s2/fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -335,6 +336,13 @@ class S2CellId {
   string ToToken() const;
   static S2CellId FromToken(const char* token, size_t length);
   static S2CellId FromToken(string const& token);
+
+  // Use encoder to generate a serialized representation of this cell id.
+  // Can also encode an invalid cell.
+  void Encode(Encoder* const encoder) const;
+
+  // Decodes an S2CellId encoded by Encode(). Returns true on success.
+  bool Decode(Decoder* const decoder);
 
   // Creates a debug human readable string. Used for << and available for direct
   // usage as well.

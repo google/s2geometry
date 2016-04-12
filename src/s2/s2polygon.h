@@ -400,7 +400,7 @@ class S2Polygon : public S2Region {
   void SubtractFromPolyline(S2Polyline const* in,
                             std::vector<S2Polyline*> *out) const;
 
-  // Same as IntersectWithPolylineSloppy, but subtracts this polygon
+  // Same as ApproxIntersectWithPolyline, but subtracts this polygon
   // from the given polyline.
   void ApproxSubtractFromPolyline(S2Polyline const* in,
                                   std::vector<S2Polyline*> *out,
@@ -545,7 +545,7 @@ class S2Polygon : public S2Region {
   typedef std::map<S2Loop*, std::vector<S2Loop*> > LoopMap;
 
   void InsertLoop(S2Loop* new_loop, S2Loop* parent, LoopMap* loop_map);
-  void InitLoop(S2Loop* loop, int depth, LoopMap* loop_map);
+  void InitLoops(LoopMap* loop_map);
 
   // Add the polygon's loops to the S2ShapeIndex.  (The actual work of
   // building the index only happens when the index is first used.)

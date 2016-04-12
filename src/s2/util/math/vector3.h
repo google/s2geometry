@@ -53,8 +53,7 @@
 #include "s2/base/integral_types.h"
 #include "s2/base/macros.h"
 #include "s2/base/template_util.h"
-#include "s2/util/math/vector2.h"
-#include "s2/util/math/vector4.h"
+#include "s2/util/math/vector.h"
 
 // TODO(user): Look into creating conversion operators to remove the
 // need to forward-declare.

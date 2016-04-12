@@ -1218,7 +1218,7 @@ class S2Polygon : public S2Region {
   void SubtractFromPolyline(S2Polyline const* in,
                             std::vector<S2Polyline*> *out) const;
 
-  // Like IntersectWithPolylineSloppy, but subtracts this polygon
+  // Like ApproxIntersectWithPolyline, but subtracts this polygon
   // from the given polyline.
   void ApproxSubtractFromPolyline(S2Polyline const* in,
                                   std::vector<S2Polyline*> *out,

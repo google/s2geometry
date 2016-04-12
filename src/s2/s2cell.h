@@ -166,10 +166,8 @@ class S2Cell : public S2Region {
   // The point "p" does not need to be normalized.
   bool Contains(S2Point const& p) const;
 
-  virtual void Encode(Encoder* const encoder) const {
-    LOG(FATAL) << "Unimplemented";
-  }
-  virtual bool Decode(Decoder* const decoder) { return false; }
+  virtual void Encode(Encoder* const encoder) const;
+  virtual bool Decode(Decoder* const decoder);
 
  private:
   // Internal method that does the actual work in the constructors.
@@ -191,6 +189,30 @@ class S2Cell : public S2Region {
   S2CellId id_;
   R2Rect uv_;
 };
+
+inline bool operator==(S2Cell x, S2Cell y) {
+  return x.id() == y.id();
+}
+
+inline bool operator!=(S2Cell x, S2Cell y) {
+  return x.id() != y.id();
+}
+
+inline bool operator<(S2Cell x, S2Cell y) {
+  return x.id() < y.id();
+}
+
+inline bool operator>(S2Cell x, S2Cell y) {
+  return x.id() > y.id();
+}
+
+inline bool operator<=(S2Cell x, S2Cell y) {
+  return x.id() <= y.id();
+}
+
+inline bool operator>=(S2Cell x, S2Cell y) {
+  return x.id() >= y.id();
+}
 
 inline int S2Cell::GetSizeIJ() const {
   return S2CellId::GetSizeIJ(level());

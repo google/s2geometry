@@ -86,7 +86,10 @@ class S2RegionCoverer {
   //
   // Note: min_level() takes priority over max_cells(), i.e. cells below the
   // given level will never be used even if this causes a large number of
-  // cells to be returned.
+  // cells to be returned.  (This doesn't apply to interior coverings, since
+  // interior coverings make no completeness guarantees -- the result is
+  // simply a set of cells that covers as much of the interior as possible
+  // while satisfying the given restrictions.)
   void set_min_level(int min_level);
   void set_max_level(int max_level);
   int min_level() const { return min_level_; }

@@ -79,6 +79,11 @@ inline uint16 gbswap_16(uint16 host_int) {
 
 #endif  // intrinics available
 
+inline uint128 gbswap_128(uint128 host_int) {
+  return uint128(gbswap_64(Uint128Low64(host_int)),
+                 gbswap_64(Uint128High64(host_int)));
+}
+
 #ifdef IS_LITTLE_ENDIAN
 
 // Definitions for ntohl etc. that don't require us to include
@@ -172,6 +177,9 @@ class LittleEndian {
   static uint64 FromHost64(uint64 x) { return x; }
   static uint64 ToHost64(uint64 x) { return x; }
 
+  static uint128 FromHost128(uint128 x) { return x; }
+  static uint128 ToHost128(uint128 x) { return x; }
+
   static bool IsLittleEndian() { return true; }
 
 #elif defined IS_BIG_ENDIAN
@@ -184,6 +192,9 @@ class LittleEndian {
 
   static uint64 FromHost64(uint64 x) { return gbswap_64(x); }
   static uint64 ToHost64(uint64 x) { return gbswap_64(x); }
+
+  static uint128 FromHost128(uint128 x) { return gbswap_128(x); }
+  static uint128 ToHost128(uint128 x) { return gbswap_128(x); }
 
   static bool IsLittleEndian() { return false; }
 
@@ -332,6 +343,9 @@ class BigEndian {
   static uint64 FromHost64(uint64 x) { return gbswap_64(x); }
   static uint64 ToHost64(uint64 x) { return gbswap_64(x); }
 
+  static uint128 FromHost128(uint128 x) { return gbswap_128(x); }
+  static uint128 ToHost128(uint128 x) { return gbswap_128(x); }
+
   static bool IsLittleEndian() { return true; }
 
 #elif defined IS_BIG_ENDIAN
@@ -344,6 +358,9 @@ class BigEndian {
 
   static uint64 FromHost64(uint64 x) { return x; }
   static uint64 ToHost64(uint64 x) { return x; }
+
+  static uint128 FromHost128(uint128 x) { return x; }
+  static uint128 ToHost128(uint128 x) { return x; }
 
   static bool IsLittleEndian() { return false; }
 
@@ -509,6 +526,7 @@ FROMHOST_TYPE_MAP(uint64, int64);
 FROMHOST_TYPE_MAP(uint32, float);
 FROMHOST_TYPE_MAP(uint64, double);
 FROMHOST_TYPE_MAP(uint8, bool);
+FROMHOST_TYPE_MAP(uint128, uint128);
 #undef FROMHOST_TYPE_MAP
 
 // Default implementation for the unified FromHost(ValueType) API, which
@@ -555,6 +573,17 @@ class GeneralFormatConverter<EndianClass, float> {
   static typename fromhost_value_type_traits<float>::int_type
   FromHost(float v) {
     return EndianClass::FromHost32(bit_cast<uint32>(v));
+  }
+};
+
+// Specialization of the unified FromHost(ValueType) API, which handles
+// uint128 types (ValueType is uint128).
+template<class EndianClass>
+class GeneralFormatConverter<EndianClass, uint128> {
+ public:
+  static typename fromhost_value_type_traits<uint128>::int_type
+  FromHost(uint128 v) {
+    return EndianClass::FromHost128(v);
   }
 };
 
@@ -710,6 +739,28 @@ inline double BigEndian::Load<double>(const char* p) {
 template<>
 inline void BigEndian::Store<double>(double value, char* p) {
   endian_internal::StoreDouble<BigEndian>(value, p);
+}
+
+// Load/Store for uint128.
+
+template<>
+inline uint128 LittleEndian::Load<uint128>(const char* p) {
+  return LittleEndian::Load128(p);
+}
+
+template<>
+inline void LittleEndian::Store<uint128>(uint128 value, char* p) {
+  LittleEndian::Store128(p, value);
+}
+
+template<>
+inline uint128 BigEndian::Load<uint128>(const char* p) {
+  return BigEndian::Load128(p);
+}
+
+template<>
+inline void BigEndian::Store<uint128>(uint128 value, char* p) {
+  BigEndian::Store128(p, value);
 }
 
 #endif  // S2_UTIL_ENDIAN_ENDIAN_H_

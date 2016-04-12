@@ -29,8 +29,6 @@
 #include "s2/base/casts.h"
 #include "s2/base/integral_types.h"
 #include "s2/base/stringprintf.h"
-#include "s2/base/strtoint.h"
-#include "s2/strings/ascii_ctype.h"
 #include "s2/r1interval.h"
 #include "s2/s2.h"
 #include "s2/s2latlng.h"
@@ -220,23 +218,36 @@ string S2CellId::ToToken() const {
 
 S2CellId S2CellId::FromToken(const char* token, size_t length) {
   if (length > 16) return S2CellId::None();
-  char digits[17] = "0000000000000000";
-  memcpy(digits, token, length);
-
-  // strtou64 ignores leading whitespace, so make sure the token starts
-  // with a hex digit rather than whitespace.
-  if (!ascii_isxdigit(digits[0])) return S2CellId::None();
-
-  // Make sure all of digits was consumed.  Since we consume exactly
-  // 16 digits, we do not need to worry about overflow.
-  char* end = nullptr;
-  const uint64 id = strtou64(digits, &end, 16 /*base*/);
-  if (end != &digits[16]) return S2CellId::None();
+  uint64 id = 0;
+  for (int i = 0, pos = 60; i < length; ++i, pos -= 4) {
+    uint64 d;
+    if ('0' <= token[i] && token[i] <= '9') {
+      d = token[i] - '0';
+    } else if ('a' <= token[i] && token[i] <= 'f') {
+      d = token[i] - 'a' + 10;
+    } else if ('A' <= token[i] && token[i] <= 'F') {
+      d = token[i] - 'A' + 10;
+    } else {
+      return S2CellId::None();
+    }
+    id |= d << pos;
+  }
   return S2CellId(id);
 }
 
 S2CellId S2CellId::FromToken(string const& token) {
   return FromToken(token.data(), token.size());
+}
+
+void S2CellId::Encode(Encoder* const encoder) const {
+  encoder->Ensure(sizeof(uint64));  // A single uint64.
+  encoder->put64(id_);
+}
+
+bool S2CellId::Decode(Decoder* const decoder) {
+  if (decoder->avail() < sizeof(uint64)) return false;
+  id_ = decoder->get64();
+  return true;
 }
 
 S2CellId S2CellId::FromFaceIJ(int face, int i, int j) {
