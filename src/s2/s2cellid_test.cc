@@ -316,6 +316,37 @@ TEST(S2CellId, Tokens) {
   EXPECT_EQ(S2CellId::None(), S2CellId::FromToken(" 876bee99"));
 }
 
+TEST(S2CellId, EncodeDecode) {
+  S2CellId id(0x7837423);
+  Encoder encoder;
+  id.Encode(&encoder);
+  Decoder decoder(encoder.base(), encoder.length());
+  S2CellId decoded_id;
+  EXPECT_TRUE(decoded_id.Decode(&decoder));
+  EXPECT_EQ(id, decoded_id);
+}
+
+TEST(S2CellId, EncodeDecodeNoneCell) {
+  S2CellId none_id = S2CellId::None();
+  Encoder encoder;
+  none_id.Encode(&encoder);
+  Decoder decoder(encoder.base(), encoder.length());
+  S2CellId decoded_id;
+  EXPECT_TRUE(decoded_id.Decode(&decoder));
+  EXPECT_EQ(none_id, decoded_id);
+}
+
+TEST(S2CellId, DecodeFailsWithTruncatedBuffer) {
+  S2CellId id(0x7837423);
+  Encoder encoder;
+  id.Encode(&encoder);
+
+  // Truncate encoded buffer.
+  Decoder decoder(encoder.base(), encoder.length() - 2);
+  S2CellId decoded_id;
+  EXPECT_FALSE(decoded_id.Decode(&decoder));
+}
+
 
 static const int kMaxExpandLevel = 3;
 

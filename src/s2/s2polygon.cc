@@ -22,6 +22,7 @@
 #include <cmath>
 #include <cstddef>
 #include <set>
+#include <stack>
 #include <utility>
 #include <vector>
 
@@ -268,14 +269,23 @@ void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
   children->push_back(new_loop);
 }
 
-void S2Polygon::InitLoop(S2Loop* loop, int depth, LoopMap* loop_map) {
-  if (loop) {
-    loop->set_depth(depth);
-    loops_.push_back(loop);
-  }
-  vector<S2Loop*> const& children = (*loop_map)[loop];
-  for (int i = 0; i < children.size(); ++i) {
-    InitLoop(children[i], depth + 1, loop_map);
+void S2Polygon::InitLoops(LoopMap* loop_map) {
+  std::stack<S2Loop*> loop_stack({nullptr});
+  int depth = -1;
+  while (!loop_stack.empty()) {
+    S2Loop* loop = loop_stack.top();
+    loop_stack.pop();
+    if (loop != nullptr) {
+      depth = loop->depth();
+      loops_.push_back(loop);
+    }
+    const vector<S2Loop*>& children = (*loop_map)[loop];
+    for (int i = children.size() - 1; i >= 0; --i) {
+      S2Loop* child = children[i];
+      DCHECK(child != nullptr);
+      child->set_depth(depth + 1);
+      loop_stack.push(child);
+    }
   }
 }
 
@@ -307,7 +317,7 @@ void S2Polygon::InitNested(vector<S2Loop*>* loops) {
   }
   // Reorder the loops in depth-first traversal order.
   loops_.clear();
-  InitLoop(nullptr, -1, &loop_map);
+  InitLoops(&loop_map);
 
   // Compute has_holes_, num_vertices_, bound_, subregion_bound_.
   InitLoopProperties();

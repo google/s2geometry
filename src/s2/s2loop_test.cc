@@ -61,122 +61,121 @@ class S2LoopTestBase : public testing::Test {
   vector<S2Loop const*> all_loops;
 
   // Some standard loops to use in the tests (see descriptions below).
-  S2Loop const* const empty;
-  S2Loop const* const full;
-  S2Loop const* const north_hemi;
-  S2Loop const* const north_hemi3;
-  S2Loop const* const south_hemi;
-  S2Loop const* const west_hemi;
-  S2Loop const* const east_hemi;
-  S2Loop const* const near_hemi;
-  S2Loop const* const far_hemi;
-  S2Loop const* const candy_cane;
-  S2Loop const* const small_ne_cw;
-  S2Loop const* const arctic_80;
-  S2Loop const* const antarctic_80;
-  S2Loop const* const line_triangle;
-  S2Loop const* const skinny_chevron;
-  S2Loop const* const loop_a;
-  S2Loop const* const loop_b;
-  S2Loop const* const a_intersect_b;
-  S2Loop const* const a_union_b;
-  S2Loop const* const a_minus_b;
-  S2Loop const* const b_minus_a;
-  S2Loop const* const loop_c;
-  S2Loop const* const loop_d;
-  S2Loop const* const loop_e;
-  S2Loop const* const loop_f;
-  S2Loop const* const loop_g;
-  S2Loop const* const loop_h;
-  S2Loop const* const loop_i;
-  S2Loop const* snapped_loop_a;
+  unique_ptr<S2Loop const> const empty_;
+  unique_ptr<S2Loop const> const full_;
+  unique_ptr<S2Loop const> const north_hemi_;
+  unique_ptr<S2Loop const> const north_hemi3_;
+  unique_ptr<S2Loop const> const south_hemi_;
+  unique_ptr<S2Loop const> const west_hemi_;
+  unique_ptr<S2Loop const> const east_hemi_;
+  unique_ptr<S2Loop const> const near_hemi_;
+  unique_ptr<S2Loop const> const far_hemi_;
+  unique_ptr<S2Loop const> const candy_cane_;
+  unique_ptr<S2Loop const> const small_ne_cw_;
+  unique_ptr<S2Loop const> const arctic_80_;
+  unique_ptr<S2Loop const> const antarctic_80_;
+  unique_ptr<S2Loop const> const line_triangle_;
+  unique_ptr<S2Loop const> const skinny_chevron_;
+  unique_ptr<S2Loop const> const loop_a_;
+  unique_ptr<S2Loop const> const loop_b_;
+  unique_ptr<S2Loop const> const a_intersect_b_;
+  unique_ptr<S2Loop const> const a_union_b_;
+  unique_ptr<S2Loop const> const a_minus_b_;
+  unique_ptr<S2Loop const> const b_minus_a_;
+  unique_ptr<S2Loop const> const loop_c_;
+  unique_ptr<S2Loop const> const loop_d_;
+  unique_ptr<S2Loop const> const loop_e_;
+  unique_ptr<S2Loop const> const loop_f_;
+  unique_ptr<S2Loop const> const loop_g_;
+  unique_ptr<S2Loop const> const loop_h_;
+  unique_ptr<S2Loop const> const loop_i_;
+  unique_ptr<S2Loop const> snapped_loop_a_;
 
  private:
-  S2Loop const* AddLoop(string const& str) {
+  unique_ptr<S2Loop const> AddLoop(string const& str) {
     return AddLoop(s2textformat::MakeLoop(str));
   }
 
-  S2Loop const* AddLoop(S2Loop const* loop) {
+  unique_ptr<S2Loop const> AddLoop(S2Loop const* loop) {
     all_loops.push_back(loop);
-    return loop;
+    return unique_ptr<S2Loop const>(loop);
   }
 
  public:
-  S2LoopTestBase():
+  S2LoopTestBase()
       // The empty loop.
-      empty(AddLoop(new S2Loop(S2Loop::kEmpty()))),
+    : empty_(AddLoop(new S2Loop(S2Loop::kEmpty()))),
 
       // The full loop.
-      full(AddLoop(new S2Loop(S2Loop::kFull()))),
+      full_(AddLoop(new S2Loop(S2Loop::kFull()))),
 
       // The northern hemisphere, defined using two pairs of antipodal points.
-      north_hemi(AddLoop("0:-180, 0:-90, 0:0, 0:90")),
+      north_hemi_(AddLoop("0:-180, 0:-90, 0:0, 0:90")),
 
       // The northern hemisphere, defined using three points 120 degrees apart.
-      north_hemi3(AddLoop("0:-180, 0:-60, 0:60")),
+      north_hemi3_(AddLoop("0:-180, 0:-60, 0:60")),
 
       // The southern hemisphere, defined using two pairs of antipodal points.
-      south_hemi(AddLoop("0:90, 0:0, 0:-90, 0:-180")),
+      south_hemi_(AddLoop("0:90, 0:0, 0:-90, 0:-180")),
 
       // The western hemisphere, defined using two pairs of antipodal points.
-      west_hemi(AddLoop("0:-180, -90:0, 0:0, 90:0")),
+      west_hemi_(AddLoop("0:-180, -90:0, 0:0, 90:0")),
 
       // The eastern hemisphere, defined using two pairs of antipodal points.
-      east_hemi(AddLoop("90:0, 0:0, -90:0, 0:-180")),
+      east_hemi_(AddLoop("90:0, 0:0, -90:0, 0:-180")),
 
       // The "near" hemisphere, defined using two pairs of antipodal points.
-      near_hemi(AddLoop("0:-90, -90:0, 0:90, 90:0")),
+      near_hemi_(AddLoop("0:-90, -90:0, 0:90, 90:0")),
 
       // The "far" hemisphere, defined using two pairs of antipodal points.
-      far_hemi(AddLoop("90:0, 0:90, -90:0, 0:-90")),
+      far_hemi_(AddLoop("90:0, 0:90, -90:0, 0:-90")),
 
       // A spiral stripe that slightly over-wraps the equator.
-      candy_cane(AddLoop("-20:150, -20:-70, 0:70, 10:-150, 10:70, -10:-70")),
+      candy_cane_(AddLoop("-20:150, -20:-70, 0:70, 10:-150, 10:70, -10:-70")),
 
       // A small clockwise loop in the northern & eastern hemisperes.
-      small_ne_cw(AddLoop("35:20, 45:20, 40:25")),
+      small_ne_cw_(AddLoop("35:20, 45:20, 40:25")),
 
       // Loop around the north pole at 80 degrees.
-      arctic_80(AddLoop("80:-150, 80:-30, 80:90")),
+      arctic_80_(AddLoop("80:-150, 80:-30, 80:90")),
 
       // Loop around the south pole at 80 degrees.
-      antarctic_80(AddLoop("-80:120, -80:0, -80:-120")),
+      antarctic_80_(AddLoop("-80:120, -80:0, -80:-120")),
 
       // A completely degenerate triangle along the equator that Sign()
       // considers to be CCW.
-      line_triangle(AddLoop("0:1, 0:2, 0:3")),
+      line_triangle_(AddLoop("0:1, 0:2, 0:3")),
 
       // A nearly-degenerate CCW chevron near the equator with very long sides
       // (about 80 degrees).  Its area is less than 1e-640, which is too small
       // to represent in double precision.
-      skinny_chevron(AddLoop("0:0, -1e-320:80, 0:1e-320, 1e-320:80")),
+      skinny_chevron_(AddLoop("0:0, -1e-320:80, 0:1e-320, 1e-320:80")),
 
       // A diamond-shaped loop around the point 0:180.
-      loop_a(AddLoop("0:178, -1:180, 0:-179, 1:-180")),
+      loop_a_(AddLoop("0:178, -1:180, 0:-179, 1:-180")),
 
       // Another diamond-shaped loop around the point 0:180.
-      loop_b(AddLoop("0:179, -1:180, 0:-178, 1:-180")),
+      loop_b_(AddLoop("0:179, -1:180, 0:-178, 1:-180")),
 
       // The intersection of A and B.
-      a_intersect_b(AddLoop("0:179, -1:180, 0:-179, 1:-180")),
+      a_intersect_b_(AddLoop("0:179, -1:180, 0:-179, 1:-180")),
 
       // The union of A and B.
-      a_union_b(AddLoop("0:178, -1:180, 0:-178, 1:-180")),
+      a_union_b_(AddLoop("0:178, -1:180, 0:-178, 1:-180")),
 
       // A minus B (concave).
-      a_minus_b(AddLoop("0:178, -1:180, 0:179, 1:-180")),
+      a_minus_b_(AddLoop("0:178, -1:180, 0:179, 1:-180")),
 
       // B minus A (concave).
-      b_minus_a(AddLoop("0:-179, -1:180, 0:-178, 1:-180")),
+      b_minus_a_(AddLoop("0:-179, -1:180, 0:-178, 1:-180")),
 
       // A shape gotten from A by adding a triangle to one edge, and
       // subtracting a triangle from the opposite edge.
-      loop_c(AddLoop(
-          "0:178, 0:180, -1:180, 0:-179, 1:-179, 1:-180")),
+      loop_c_(AddLoop("0:178, 0:180, -1:180, 0:-179, 1:-179, 1:-180")),
 
       // A shape gotten from A by adding a triangle to one edge, and
       // adding another triangle to the opposite edge.
-      loop_d(AddLoop("0:178, -1:178, -1:180, 0:-179, 1:-179, 1:-180")),
+      loop_d_(AddLoop("0:178, -1:178, -1:180, 0:-179, 1:-179, 1:-180")),
 
       //   3------------2
       //   |            |               ^
@@ -201,13 +200,13 @@ class S2LoopTestBase : public testing::Test {
       // Loop G:  0,6,7,8,9,a,b,c,d,1,2,3
       // Loop H:  0,6,f,e,9,a,b,c,d,1,2,3
       // Loop I:  7,6,f,e,9,8
-      loop_e(AddLoop("0:30, 0:34, 0:36, 0:39, 0:41, 0:44, 30:44, 30:30")),
-      loop_f(AddLoop("0:30, -30:30, -30:44, 0:44, 0:41, 0:39, 0:36, 0:34")),
-      loop_g(AddLoop("0:30, 0:34, 10:34, 10:36, 0:36, 0:39, 10:39, "
-                     "10:41, 0:41, 0:44, 30:44, 30:30")),
-      loop_h(AddLoop("0:30, 0:34, -10:34, -10:36, 0:36, 0:39, "
-                     "10:39, 10:41, 0:41, 0:44, 30:44, 30:30")),
-      loop_i(AddLoop("10:34, 0:34, -10:34, -10:36, 0:36, 10:36")) {
+      loop_e_(AddLoop("0:30, 0:34, 0:36, 0:39, 0:41, 0:44, 30:44, 30:30")),
+      loop_f_(AddLoop("0:30, -30:30, -30:44, 0:44, 0:41, 0:39, 0:36, 0:34")),
+      loop_g_(AddLoop("0:30, 0:34, 10:34, 10:36, 0:36, 0:39, 10:39, "
+                      "10:41, 0:41, 0:44, 30:44, 30:30")),
+      loop_h_(AddLoop("0:30, 0:34, -10:34, -10:36, 0:36, 0:39, "
+                      "10:39, 10:41, 0:41, 0:44, 30:44, 30:30")),
+      loop_i_(AddLoop("10:34, 0:34, -10:34, -10:36, 0:36, 10:36")) {
     // Like loop_a, but the vertices are at leaf cell centers.
     vector<S2Point> snapped_loop_a_vertices;
     snapped_loop_a_vertices.push_back(
@@ -218,12 +217,7 @@ class S2LoopTestBase : public testing::Test {
         S2CellId::FromPoint(s2textformat::MakePoint("0:-179")).ToPoint());
     snapped_loop_a_vertices.push_back(
         S2CellId::FromPoint(s2textformat::MakePoint("1:-180")).ToPoint());
-    snapped_loop_a = new S2Loop(snapped_loop_a_vertices);
-    AddLoop(snapped_loop_a);
-  }
-
-  ~S2LoopTestBase() {
-    STLDeleteElements(&all_loops);
+    snapped_loop_a_ = AddLoop(new S2Loop(snapped_loop_a_vertices));
   }
 
   // Wrapper function that encodes "loop" into "encoder" using the private
@@ -245,29 +239,29 @@ class S2LoopTestBase : public testing::Test {
 static S2LatLng const kRectError = S2EdgeUtil::RectBounder::MaxErrorForTests();
 
 TEST_F(S2LoopTestBase, GetRectBound) {
-  EXPECT_TRUE(empty->GetRectBound().is_empty());
-  EXPECT_TRUE(full->GetRectBound().is_full());
-  EXPECT_TRUE(candy_cane->GetRectBound().lng().is_full());
-  EXPECT_LT(candy_cane->GetRectBound().lat_lo().degrees(), -20);
-  EXPECT_GT(candy_cane->GetRectBound().lat_hi().degrees(), 10);
-  EXPECT_TRUE(small_ne_cw->GetRectBound().is_full());
-  EXPECT_TRUE(arctic_80->GetRectBound().ApproxEquals(
+  EXPECT_TRUE(empty_->GetRectBound().is_empty());
+  EXPECT_TRUE(full_->GetRectBound().is_full());
+  EXPECT_TRUE(candy_cane_->GetRectBound().lng().is_full());
+  EXPECT_LT(candy_cane_->GetRectBound().lat_lo().degrees(), -20);
+  EXPECT_GT(candy_cane_->GetRectBound().lat_hi().degrees(), 10);
+  EXPECT_TRUE(small_ne_cw_->GetRectBound().is_full());
+  EXPECT_TRUE(arctic_80_->GetRectBound().ApproxEquals(
       S2LatLngRect(S2LatLng::FromDegrees(80, -180),
                    S2LatLng::FromDegrees(90, 180)), kRectError));
-  EXPECT_TRUE(antarctic_80->GetRectBound().ApproxEquals(
+  EXPECT_TRUE(antarctic_80_->GetRectBound().ApproxEquals(
       S2LatLngRect(S2LatLng::FromDegrees(-90, -180),
                    S2LatLng::FromDegrees(-80, 180)), kRectError));
 
   // Create a loop that contains the complement of the "arctic_80" loop.
-  unique_ptr<S2Loop> arctic_80_inv(arctic_80->Clone());
+  unique_ptr<S2Loop> arctic_80_inv(arctic_80_->Clone());
   arctic_80_inv->Invert();
   // The highest latitude of each edge is attained at its midpoint.
   S2Point mid = 0.5 * (arctic_80_inv->vertex(0) + arctic_80_inv->vertex(1));
   EXPECT_NEAR(arctic_80_inv->GetRectBound().lat_hi().radians(),
               S2LatLng(mid).lat().radians(), kRectError.lat().radians());
 
-  EXPECT_TRUE(south_hemi->GetRectBound().lng().is_full());
-  EXPECT_TRUE(south_hemi->GetRectBound().lat().ApproxEquals(
+  EXPECT_TRUE(south_hemi_->GetRectBound().lng().is_full());
+  EXPECT_TRUE(south_hemi_->GetRectBound().lat().ApproxEquals(
       R1Interval(-M_PI_2, 0), kRectError.lat().radians()));
 }
 
@@ -334,14 +328,14 @@ TEST_F(S2LoopTestBase, GetAreaAccuracy) {
 }
 
 TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
-  EXPECT_EQ(0.0, empty->GetArea());
-  EXPECT_EQ(4 * M_PI, full->GetArea());
-  EXPECT_EQ(S2Point(0, 0, 0), empty->GetCentroid());
-  EXPECT_EQ(S2Point(0, 0, 0), full->GetCentroid());
+  EXPECT_EQ(0.0, empty_->GetArea());
+  EXPECT_EQ(4 * M_PI, full_->GetArea());
+  EXPECT_EQ(S2Point(0, 0, 0), empty_->GetCentroid());
+  EXPECT_EQ(S2Point(0, 0, 0), full_->GetCentroid());
 
-  EXPECT_DOUBLE_EQ(north_hemi->GetArea(), 2 * M_PI);
-  EXPECT_LE(east_hemi->GetArea(), 2 * M_PI + 1e-12);
-  EXPECT_GE(east_hemi->GetArea(), 2 * M_PI - 1e-12);
+  EXPECT_DOUBLE_EQ(north_hemi_->GetArea(), 2 * M_PI);
+  EXPECT_LE(east_hemi_->GetArea(), 2 * M_PI + 1e-12);
+  EXPECT_GE(east_hemi_->GetArea(), 2 * M_PI - 1e-12);
 
   // Construct spherical caps of random height, and approximate their boundary
   // with closely spaces vertices.  Then check that the area and centroid are
@@ -385,10 +379,10 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
 
 // Check that the turning angle is *identical* when the vertex order is
 // rotated, and that the sign is inverted when the vertices are reversed.
-static void CheckTurningAngleInvariants(S2Loop const* loop) {
-  double expected = loop->GetTurningAngle();
-  unique_ptr<S2Loop> loop_copy(loop->Clone());
-  for (int i = 0; i < loop->num_vertices(); ++i) {
+static void CheckTurningAngleInvariants(S2Loop const& loop) {
+  double expected = loop.GetTurningAngle();
+  unique_ptr<S2Loop> loop_copy(loop.Clone());
+  for (int i = 0; i < loop.num_vertices(); ++i) {
     loop_copy->Invert();
     EXPECT_EQ(-expected, loop_copy->GetTurningAngle());
     loop_copy->Invert();
@@ -398,24 +392,24 @@ static void CheckTurningAngleInvariants(S2Loop const* loop) {
 }
 
 TEST_F(S2LoopTestBase, GetTurningAngle) {
-  EXPECT_EQ(2 * M_PI, empty->GetTurningAngle());
-  EXPECT_EQ(-2 * M_PI, full->GetTurningAngle());
+  EXPECT_EQ(2 * M_PI, empty_->GetTurningAngle());
+  EXPECT_EQ(-2 * M_PI, full_->GetTurningAngle());
 
-  EXPECT_NEAR(0, north_hemi3->GetTurningAngle(), 1e-15);
-  CheckTurningAngleInvariants(north_hemi3);
+  EXPECT_NEAR(0, north_hemi3_->GetTurningAngle(), 1e-15);
+  CheckTurningAngleInvariants(*north_hemi3_);
 
-  EXPECT_NEAR(0, west_hemi->GetTurningAngle(), 1e-15);
-  CheckTurningAngleInvariants(west_hemi);
+  EXPECT_NEAR(0, west_hemi_->GetTurningAngle(), 1e-15);
+  CheckTurningAngleInvariants(*west_hemi_);
 
   // We don't have an easy way to estimate the turning angle of this loop, but
   // we can still check that the expected invariants hold.
-  CheckTurningAngleInvariants(candy_cane);
+  CheckTurningAngleInvariants(*candy_cane_);
 
-  EXPECT_DOUBLE_EQ(2 * M_PI, line_triangle->GetTurningAngle());
-  CheckTurningAngleInvariants(line_triangle);
+  EXPECT_DOUBLE_EQ(2 * M_PI, line_triangle_->GetTurningAngle());
+  CheckTurningAngleInvariants(*line_triangle_);
 
-  EXPECT_DOUBLE_EQ(2 * M_PI, skinny_chevron->GetTurningAngle());
-  CheckTurningAngleInvariants(skinny_chevron);
+  EXPECT_DOUBLE_EQ(2 * M_PI, skinny_chevron_->GetTurningAngle());
+  CheckTurningAngleInvariants(*skinny_chevron_);
 
   // Build a narrow spiral loop starting at the north pole.  This is designed
   // to test that the error in GetTurningAngle is linear in the number of
@@ -465,23 +459,23 @@ static void CheckNormalizeAndContains(S2Loop const& loop) {
 }
 
 TEST_F(S2LoopTestBase, NormalizedCompatibleWithContains) {
-  CheckNormalizeAndContains(*line_triangle);
-  CheckNormalizeAndContains(*skinny_chevron);
+  CheckNormalizeAndContains(*line_triangle_);
+  CheckNormalizeAndContains(*skinny_chevron_);
 }
 
 TEST_F(S2LoopTestBase, Contains) {
   // Check the full and empty loops have the correct containment relationship
   // with the special "vertex" that defines them.
-  EXPECT_FALSE(empty->Contains(S2Loop::kEmpty()[0]));
-  EXPECT_TRUE(full->Contains(S2Loop::kFull()[0]));
+  EXPECT_FALSE(empty_->Contains(S2Loop::kEmpty()[0]));
+  EXPECT_TRUE(full_->Contains(S2Loop::kFull()[0]));
 
-  EXPECT_TRUE(candy_cane->Contains(S2LatLng::FromDegrees(5, 71).ToPoint()));
+  EXPECT_TRUE(candy_cane_->Contains(S2LatLng::FromDegrees(5, 71).ToPoint()));
 
   // Create copies of these loops so that we can change the vertex order.
-  unique_ptr<S2Loop> north_copy(north_hemi->Clone());
-  unique_ptr<S2Loop> south_copy(south_hemi->Clone());
-  unique_ptr<S2Loop> west_copy(west_hemi->Clone());
-  unique_ptr<S2Loop> east_copy(east_hemi->Clone());
+  unique_ptr<S2Loop> north_copy(north_hemi_->Clone());
+  unique_ptr<S2Loop> south_copy(south_hemi_->Clone());
+  unique_ptr<S2Loop> west_copy(west_hemi_->Clone());
+  unique_ptr<S2Loop> east_copy(east_hemi_->Clone());
   for (int i = 0; i < 4; ++i) {
     EXPECT_TRUE(north_copy->Contains(S2Point(0, 0, 1)));
     EXPECT_FALSE(north_copy->Contains(S2Point(0, 0, -1)));
@@ -730,112 +724,112 @@ static void TestRelationWithDesc(S2Loop const& a, S2Loop const& b,
 
 TEST_F(S2LoopTestBase, LoopRelations) {
   // Check full and empty relationships with normal loops and each other.
-  TestRelation(full, full, CONTAINS|CONTAINED|COVERS, true);
-  TestRelation(full, north_hemi, CONTAINS|COVERS, false);
-  TestRelation(full, empty, CONTAINS|DISJOINT|COVERS, false);
-  TestRelation(north_hemi, full, CONTAINED|COVERS, false);
-  TestRelation(north_hemi, empty, CONTAINS|DISJOINT, false);
-  TestRelation(empty, full, CONTAINED|DISJOINT|COVERS, false);
-  TestRelation(empty, north_hemi, CONTAINED|DISJOINT, false);
-  TestRelation(empty, empty, CONTAINS|CONTAINED|DISJOINT, false);
+  TestRelation(full_, full_, CONTAINS|CONTAINED|COVERS, true);
+  TestRelation(full_, north_hemi_, CONTAINS|COVERS, false);
+  TestRelation(full_, empty_, CONTAINS|DISJOINT|COVERS, false);
+  TestRelation(north_hemi_, full_, CONTAINED|COVERS, false);
+  TestRelation(north_hemi_, empty_, CONTAINS|DISJOINT, false);
+  TestRelation(empty_, full_, CONTAINED|DISJOINT|COVERS, false);
+  TestRelation(empty_, north_hemi_, CONTAINED|DISJOINT, false);
+  TestRelation(empty_, empty_, CONTAINS|CONTAINED|DISJOINT, false);
 
-  TestRelation(north_hemi, north_hemi, CONTAINS|CONTAINED, true);
-  TestRelation(north_hemi, south_hemi, DISJOINT|COVERS, true);
-  TestRelation(north_hemi, east_hemi, 0, false);
-  TestRelation(north_hemi, arctic_80, CONTAINS, false);
-  TestRelation(north_hemi, antarctic_80, DISJOINT, false);
-  TestRelation(north_hemi, candy_cane, 0, false);
+  TestRelation(north_hemi_, north_hemi_, CONTAINS|CONTAINED, true);
+  TestRelation(north_hemi_, south_hemi_, DISJOINT|COVERS, true);
+  TestRelation(north_hemi_, east_hemi_, 0, false);
+  TestRelation(north_hemi_, arctic_80_, CONTAINS, false);
+  TestRelation(north_hemi_, antarctic_80_, DISJOINT, false);
+  TestRelation(north_hemi_, candy_cane_, 0, false);
 
   // We can't compare north_hemi3 vs. north_hemi or south_hemi because the
   // result depends on the "simulation of simplicity" implementation details.
-  TestRelation(north_hemi3, north_hemi3, CONTAINS|CONTAINED, true);
-  TestRelation(north_hemi3, east_hemi, 0, false);
-  TestRelation(north_hemi3, arctic_80, CONTAINS, false);
-  TestRelation(north_hemi3, antarctic_80, DISJOINT, false);
-  TestRelation(north_hemi3, candy_cane, 0, false);
+  TestRelation(north_hemi3_, north_hemi3_, CONTAINS|CONTAINED, true);
+  TestRelation(north_hemi3_, east_hemi_, 0, false);
+  TestRelation(north_hemi3_, arctic_80_, CONTAINS, false);
+  TestRelation(north_hemi3_, antarctic_80_, DISJOINT, false);
+  TestRelation(north_hemi3_, candy_cane_, 0, false);
 
-  TestRelation(south_hemi, north_hemi, DISJOINT|COVERS, true);
-  TestRelation(south_hemi, south_hemi, CONTAINS|CONTAINED, true);
-  TestRelation(south_hemi, far_hemi, 0, false);
-  TestRelation(south_hemi, arctic_80, DISJOINT, false);
-  TestRelation(south_hemi, antarctic_80, CONTAINS, false);
-  TestRelation(south_hemi, candy_cane, 0, false);
+  TestRelation(south_hemi_, north_hemi_, DISJOINT|COVERS, true);
+  TestRelation(south_hemi_, south_hemi_, CONTAINS|CONTAINED, true);
+  TestRelation(south_hemi_, far_hemi_, 0, false);
+  TestRelation(south_hemi_, arctic_80_, DISJOINT, false);
+  TestRelation(south_hemi_, antarctic_80_, CONTAINS, false);
+  TestRelation(south_hemi_, candy_cane_, 0, false);
 
-  TestRelation(candy_cane, north_hemi, 0, false);
-  TestRelation(candy_cane, south_hemi, 0, false);
-  TestRelation(candy_cane, arctic_80, DISJOINT, false);
-  TestRelation(candy_cane, antarctic_80, DISJOINT, false);
-  TestRelation(candy_cane, candy_cane, CONTAINS|CONTAINED, true);
+  TestRelation(candy_cane_, north_hemi_, 0, false);
+  TestRelation(candy_cane_, south_hemi_, 0, false);
+  TestRelation(candy_cane_, arctic_80_, DISJOINT, false);
+  TestRelation(candy_cane_, antarctic_80_, DISJOINT, false);
+  TestRelation(candy_cane_, candy_cane_, CONTAINS|CONTAINED, true);
 
-  TestRelation(near_hemi, west_hemi, 0, false);
+  TestRelation(near_hemi_, west_hemi_, 0, false);
 
-  TestRelation(small_ne_cw, south_hemi, CONTAINS, false);
-  TestRelation(small_ne_cw, west_hemi, CONTAINS, false);
+  TestRelation(small_ne_cw_, south_hemi_, CONTAINS, false);
+  TestRelation(small_ne_cw_, west_hemi_, CONTAINS, false);
 
-  TestRelation(small_ne_cw, north_hemi, COVERS, false);
-  TestRelation(small_ne_cw, east_hemi, COVERS, false);
+  TestRelation(small_ne_cw_, north_hemi_, COVERS, false);
+  TestRelation(small_ne_cw_, east_hemi_, COVERS, false);
 
-  TestRelation(loop_a, loop_a, CONTAINS|CONTAINED, true);
-  TestRelation(loop_a, loop_b, 0, false);
-  TestRelation(loop_a, a_intersect_b, CONTAINS, true);
-  TestRelation(loop_a, a_union_b, CONTAINED, true);
-  TestRelation(loop_a, a_minus_b, CONTAINS, true);
-  TestRelation(loop_a, b_minus_a, DISJOINT, true);
+  TestRelation(loop_a_, loop_a_, CONTAINS|CONTAINED, true);
+  TestRelation(loop_a_, loop_b_, 0, false);
+  TestRelation(loop_a_, a_intersect_b_, CONTAINS, true);
+  TestRelation(loop_a_, a_union_b_, CONTAINED, true);
+  TestRelation(loop_a_, a_minus_b_, CONTAINS, true);
+  TestRelation(loop_a_, b_minus_a_, DISJOINT, true);
 
-  TestRelation(loop_b, loop_a, 0, false);
-  TestRelation(loop_b, loop_b, CONTAINS|CONTAINED, true);
-  TestRelation(loop_b, a_intersect_b, CONTAINS, true);
-  TestRelation(loop_b, a_union_b, CONTAINED, true);
-  TestRelation(loop_b, a_minus_b, DISJOINT, true);
-  TestRelation(loop_b, b_minus_a, CONTAINS, true);
+  TestRelation(loop_b_, loop_a_, 0, false);
+  TestRelation(loop_b_, loop_b_, CONTAINS|CONTAINED, true);
+  TestRelation(loop_b_, a_intersect_b_, CONTAINS, true);
+  TestRelation(loop_b_, a_union_b_, CONTAINED, true);
+  TestRelation(loop_b_, a_minus_b_, DISJOINT, true);
+  TestRelation(loop_b_, b_minus_a_, CONTAINS, true);
 
-  TestRelation(a_intersect_b, loop_a, CONTAINED, true);
-  TestRelation(a_intersect_b, loop_b, CONTAINED, true);
-  TestRelation(a_intersect_b, a_intersect_b, CONTAINS|CONTAINED, true);
-  TestRelation(a_intersect_b, a_union_b, CONTAINED, false);
-  TestRelation(a_intersect_b, a_minus_b, DISJOINT, true);
-  TestRelation(a_intersect_b, b_minus_a, DISJOINT, true);
+  TestRelation(a_intersect_b_, loop_a_, CONTAINED, true);
+  TestRelation(a_intersect_b_, loop_b_, CONTAINED, true);
+  TestRelation(a_intersect_b_, a_intersect_b_, CONTAINS|CONTAINED, true);
+  TestRelation(a_intersect_b_, a_union_b_, CONTAINED, false);
+  TestRelation(a_intersect_b_, a_minus_b_, DISJOINT, true);
+  TestRelation(a_intersect_b_, b_minus_a_, DISJOINT, true);
 
-  TestRelation(a_union_b, loop_a, CONTAINS, true);
-  TestRelation(a_union_b, loop_b, CONTAINS, true);
-  TestRelation(a_union_b, a_intersect_b, CONTAINS, false);
-  TestRelation(a_union_b, a_union_b, CONTAINS|CONTAINED, true);
-  TestRelation(a_union_b, a_minus_b, CONTAINS, true);
-  TestRelation(a_union_b, b_minus_a, CONTAINS, true);
+  TestRelation(a_union_b_, loop_a_, CONTAINS, true);
+  TestRelation(a_union_b_, loop_b_, CONTAINS, true);
+  TestRelation(a_union_b_, a_intersect_b_, CONTAINS, false);
+  TestRelation(a_union_b_, a_union_b_, CONTAINS|CONTAINED, true);
+  TestRelation(a_union_b_, a_minus_b_, CONTAINS, true);
+  TestRelation(a_union_b_, b_minus_a_, CONTAINS, true);
 
-  TestRelation(a_minus_b, loop_a, CONTAINED, true);
-  TestRelation(a_minus_b, loop_b, DISJOINT, true);
-  TestRelation(a_minus_b, a_intersect_b, DISJOINT, true);
-  TestRelation(a_minus_b, a_union_b, CONTAINED, true);
-  TestRelation(a_minus_b, a_minus_b, CONTAINS|CONTAINED, true);
-  TestRelation(a_minus_b, b_minus_a, DISJOINT, false);
+  TestRelation(a_minus_b_, loop_a_, CONTAINED, true);
+  TestRelation(a_minus_b_, loop_b_, DISJOINT, true);
+  TestRelation(a_minus_b_, a_intersect_b_, DISJOINT, true);
+  TestRelation(a_minus_b_, a_union_b_, CONTAINED, true);
+  TestRelation(a_minus_b_, a_minus_b_, CONTAINS|CONTAINED, true);
+  TestRelation(a_minus_b_, b_minus_a_, DISJOINT, false);
 
-  TestRelation(b_minus_a, loop_a, DISJOINT, true);
-  TestRelation(b_minus_a, loop_b, CONTAINED, true);
-  TestRelation(b_minus_a, a_intersect_b, DISJOINT, true);
-  TestRelation(b_minus_a, a_union_b, CONTAINED, true);
-  TestRelation(b_minus_a, a_minus_b, DISJOINT, false);
-  TestRelation(b_minus_a, b_minus_a, CONTAINS|CONTAINED, true);
+  TestRelation(b_minus_a_, loop_a_, DISJOINT, true);
+  TestRelation(b_minus_a_, loop_b_, CONTAINED, true);
+  TestRelation(b_minus_a_, a_intersect_b_, DISJOINT, true);
+  TestRelation(b_minus_a_, a_union_b_, CONTAINED, true);
+  TestRelation(b_minus_a_, a_minus_b_, DISJOINT, false);
+  TestRelation(b_minus_a_, b_minus_a_, CONTAINS|CONTAINED, true);
 }
 
 // Make sure the relations are correct if the loop crossing happens on
 // two ends of a shared boundary segment.
 TEST_F(S2LoopTestBase, LoopRelationsWhenSameExceptPiecesStickingOutAndIn) {
-  TestRelation(loop_a, loop_c, 0, true);
-  TestRelation(loop_c, loop_a, 0, true);
-  TestRelation(loop_a, loop_d, CONTAINED, true);
-  TestRelation(loop_d, loop_a, CONTAINS, true);
-  TestRelation(loop_e, loop_f, DISJOINT, true);
-  TestRelation(loop_e, loop_g, CONTAINS, true);
-  TestRelation(loop_e, loop_h, 0, true);
-  TestRelation(loop_e, loop_i, 0, false);
-  TestRelation(loop_f, loop_g, DISJOINT, true);
-  TestRelation(loop_f, loop_h, 0, true);
-  TestRelation(loop_f, loop_i, 0, false);
-  TestRelation(loop_g, loop_h, CONTAINED, true);
-  TestRelation(loop_h, loop_g, CONTAINS, true);
-  TestRelation(loop_g, loop_i, DISJOINT, true);
-  TestRelation(loop_h, loop_i, CONTAINS, true);
+  TestRelation(loop_a_, loop_c_, 0, true);
+  TestRelation(loop_c_, loop_a_, 0, true);
+  TestRelation(loop_a_, loop_d_, CONTAINED, true);
+  TestRelation(loop_d_, loop_a_, CONTAINS, true);
+  TestRelation(loop_e_, loop_f_, DISJOINT, true);
+  TestRelation(loop_e_, loop_g_, CONTAINS, true);
+  TestRelation(loop_e_, loop_h_, 0, true);
+  TestRelation(loop_e_, loop_i_, 0, false);
+  TestRelation(loop_f_, loop_g_, DISJOINT, true);
+  TestRelation(loop_f_, loop_h_, 0, true);
+  TestRelation(loop_f_, loop_i_, 0, false);
+  TestRelation(loop_g_, loop_h_, CONTAINED, true);
+  TestRelation(loop_h_, loop_g_, CONTAINS, true);
+  TestRelation(loop_g_, loop_i_, DISJOINT, true);
+  TestRelation(loop_h_, loop_i_, CONTAINS, true);
 }
 
 #undef TestRelation
@@ -1145,7 +1139,7 @@ TEST(S2Loop, EncodeDecodeWithinScope) {
 
 TEST_F(S2LoopTestBase, FourVertexCompressedLoopRequires36Bytes) {
   Encoder encoder;
-  TestEncodeCompressed(*snapped_loop_a, S2CellId::kMaxLevel, &encoder);
+  TestEncodeCompressed(*snapped_loop_a_, S2CellId::kMaxLevel, &encoder);
 
   // 1 byte for num_vertices
   // 1 byte for origin_inside and boolean indicating we did not
@@ -1159,7 +1153,7 @@ TEST_F(S2LoopTestBase, FourVertexCompressedLoopRequires36Bytes) {
 }
 
 TEST_F(S2LoopTestBase, CompressedEncodedLoopDecodesApproxEqual) {
-  unique_ptr<S2Loop> loop(snapped_loop_a->Clone());
+  unique_ptr<S2Loop> loop(snapped_loop_a_->Clone());
   loop->set_depth(3);
 
   Encoder encoder;
@@ -1260,8 +1254,8 @@ TEST_F(S2LoopTestBase, DistanceMethods) {
   // S2ClosestEdgeQuery is already tested, so just do a bit of sanity checking.
 
   // The empty and full loops don't have boundaries.
-  TestDistanceMethods(*empty, S2Point(0, 1, 0), S2Point());
-  TestDistanceMethods(*full, S2Point(0, 1, 0), S2Point());
+  TestDistanceMethods(*empty_, S2Point(0, 1, 0), S2Point());
+  TestDistanceMethods(*full_, S2Point(0, 1, 0), S2Point());
 
   // A CCW square around the S2LatLng point (0,0).  Note that because lines of
   // latitude are curved on the sphere, it is not straightforward to project

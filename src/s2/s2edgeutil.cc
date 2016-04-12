@@ -62,7 +62,7 @@ S1Angle const S2EdgeUtil::kIntersectionMergeRadius = 2 * kIntersectionError;
 S1Angle const S2EdgeUtil::kIntersectionExactError =
     S1Angle::Radians(DBL_EPSILON);
 
-S2EdgeUtil::IntersectionMethod S2EdgeUtil::last_intersection_method_;
+int* S2EdgeUtil::intersection_method_tally_ = nullptr;
 
 char const* S2EdgeUtil::GetIntersectionMethodName(IntersectionMethod method) {
   switch (method) {
@@ -465,20 +465,22 @@ S2Point S2EdgeUtil::GetIntersection(S2Point const& a0, S2Point const& a1,
   static bool const kHasLongDouble = (numeric_limits<long double>::epsilon() <
                                       numeric_limits<double>::epsilon());
   S2Point result;
+  IntersectionMethod method;
   if (kUseSimpleMethod && GetIntersectionSimple(a0, a1, b0, b1, &result)) {
-    last_intersection_method_ = SIMPLE;
+    method = SIMPLE;
   } else if (kUseSimpleMethod && kHasLongDouble &&
              GetIntersectionSimpleLD(a0, a1, b0, b1, &result)) {
-    last_intersection_method_ = SIMPLE_LD;
+    method = SIMPLE_LD;
   } else if (GetIntersectionStable(a0, a1, b0, b1, &result)) {
-    last_intersection_method_ = STABLE;
+    method = STABLE;
   } else if (kHasLongDouble &&
              GetIntersectionStableLD(a0, a1, b0, b1, &result)) {
-    last_intersection_method_ = STABLE_LD;
+    method = STABLE_LD;
   } else {
     result = GetIntersectionExact(a0, a1, b0, b1);
-    last_intersection_method_ = EXACT;
+    method = EXACT;
   }
+  if (intersection_method_tally_) ++intersection_method_tally_[method];
 
   // Make sure the intersection point is on the correct side of the sphere.
   // Since all vertices are unit length, and edges are less than 180 degrees,

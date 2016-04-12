@@ -13,16 +13,11 @@
 // limitations under the License.
 //
 
-// Temporary header providing transition support for the gtl namespace
-
-#ifndef S2_UTIL_GTL_GTL_NAMESPACE_H_
-#define S2_UTIL_GTL_GTL_NAMESPACE_H_
-
-namespace gtl {}
-
-// Namespace alias to support legacy code that refers to util::gtl.
-namespace util {
-namespace gtl = ::gtl;
-}  // namespace util
-
-#endif  // S2_UTIL_GTL_GTL_NAMESPACE_H_
+// Placeholder file: future home of the common util/math:vector implementation.
+// ALl of vector2.h, vector2.h, and vector4.h #include this.
+#ifndef S2_UTIL_MATH_VECTOR_H_
+#define S2_UTIL_MATH_VECTOR_H_
+#include "s2/util/math/vector2.h"
+#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector4.h"
+#endif  // S2_UTIL_MATH_VECTOR_H_

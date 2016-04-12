@@ -76,7 +76,7 @@ const char* Varint::Parse64Fallback(const char* p, uint64* OUTPUT) {
   byte = *(ptr++); res2 |= (byte & 127) << 21; if (byte < 128) goto done2;
 
   byte = *(ptr++); res3 = byte & 127;          if (byte < 128) goto done3;
-  byte = *(ptr++); res3 |= (byte & 127) <<  7; if (byte < 128) goto done3;
+  byte = *(ptr++); res3 |= (byte & 127) <<  7; if (byte < 2) goto done3;
 
   return nullptr;       // Value is too long to be a varint64
 

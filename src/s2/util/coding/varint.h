@@ -220,7 +220,7 @@ inline const char* Varint::Skip32(const char* p) {
   if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
   if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
   if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
-  if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
+  if (*ptr++ < 16) return reinterpret_cast<const char*>(ptr);
   return nullptr; // value is too long to be a varint32
 }
 
@@ -315,7 +315,7 @@ inline const char* Varint::Skip64(const char* p) {
   if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
   if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
   if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
-  if (*ptr++ < 128) return reinterpret_cast<const char*>(ptr);
+  if (*ptr++ < 2) return reinterpret_cast<const char*>(ptr);
   return nullptr; // value is too long to be a varint64
 }
 

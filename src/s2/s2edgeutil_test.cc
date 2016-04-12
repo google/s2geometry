@@ -703,16 +703,19 @@ TEST(S2EdgeUtil, RepeatedInterpolation) {
   }
 }
 
-class S2EdgeUtilTesting {
+// This class records statistics about the intersection methods used by
+// GetIntersection().
+class GetIntersectionStats {
  public:
-  static S2Point GetIntersection(S2Point const& a, S2Point const& b,
-                                 S2Point const& c, S2Point const& d) {
-    S2Point result = S2EdgeUtil::GetIntersection(a, b, c, d);
-    ++tally_[S2EdgeUtil::last_intersection_method_];
-    return result;
+  GetIntersectionStats() {
+    S2EdgeUtil::intersection_method_tally_ = tally_;
   }
 
-  static void PrintIntersectionStats() {
+  ~GetIntersectionStats() {
+    S2EdgeUtil::intersection_method_tally_ = nullptr;
+  }
+
+  void Print() {
     int total = 0;
     int totals[kNumMethods];
     for (int i = kNumMethods; --i >= 0; ) {
@@ -733,6 +736,13 @@ class S2EdgeUtilTesting {
     for (int i = 0; i < kNumMethods; ++i) tally_[i] = 0;
   }
 
+ private:
+  static int constexpr kNumMethods = S2EdgeUtil::NUM_INTERSECTION_METHODS;
+  int tally_[kNumMethods] = {0};
+};
+
+class S2EdgeUtilTesting {
+ public:
   // This returns the true intersection point of two line segments (a0,a1) and
   // (b0,b1), with a relative error of at most DBL_EPSILON in each coordinate
   // (i.e., one ulp, or twice the double precision rounding error).
@@ -742,12 +752,7 @@ class S2EdgeUtilTesting {
     if (x.DotProd((a0 + a1) + (b0 + b1)) < 0) x = -x;
     return x;
   }
-
- private:
-  static int const kNumMethods = S2EdgeUtil::NUM_INTERSECTION_METHODS;
-  static int tally_[kNumMethods];
 };
-int S2EdgeUtilTesting::tally_[kNumMethods];
 
 // The approximate maximum error in GetDistance() for small distances.
 S1Angle kGetDistanceAbsError = S1Angle::Radians(3 * DBL_EPSILON);
@@ -757,6 +762,7 @@ TEST(S2EdgeUtil, IntersectionError) {
   // measure the distance from the actual intersection point "x" to the
   // exact intersection point and also to the edges.
 
+  GetIntersectionStats stats;
   S1Angle max_point_dist, max_edge_dist;
   S2Testing::Random* rnd = &S2Testing::rnd;
   for (int iter = 0; iter < 5000; ++iter) {
@@ -809,7 +815,7 @@ TEST(S2EdgeUtil, IntersectionError) {
               S2EdgeUtil::kIntersectionError);
 
     // Now we actually test the GetIntersection() method.
-    S2Point actual = S2EdgeUtilTesting::GetIntersection(a, b, c, d);
+    S2Point actual = S2EdgeUtil::GetIntersection(a, b, c, d);
     S1Angle dist_ab = S2EdgeUtil::GetDistance(actual, a, b);
     S1Angle dist_cd = S2EdgeUtil::GetDistance(actual, c, d);
     EXPECT_LE(dist_ab, S2EdgeUtil::kIntersectionError + kGetDistanceAbsError);
@@ -819,7 +825,7 @@ TEST(S2EdgeUtil, IntersectionError) {
     EXPECT_LE(point_dist, S2EdgeUtil::kIntersectionError);
     max_point_dist = max(max_point_dist, point_dist);
   }
-  S2EdgeUtilTesting::PrintIntersectionStats();
+  stats.Print();
   LOG(INFO) << "Max distance to either edge being intersected: "
             << max_edge_dist.radians();
   LOG(INFO) << "Maximum distance to expected intersection point: "
@@ -842,6 +848,7 @@ TEST(S2EdgeUtil, GrazingIntersections) {
   // that CD and CE both cross AB.  It then checks that the intersection
   // points returned by GetIntersection() have the correct relative ordering
   // along AB (to within kIntersectionError).
+  GetIntersectionStats stats;
   for (int iter = 0; iter < 1000; ++iter) {
     Vector3_d x, y, z;
     S2Testing::GetRandomFrame(&x, &y, &z);
@@ -856,8 +863,8 @@ TEST(S2EdgeUtil, GrazingIntersections) {
     } while (ab.Norm() < 50 * DBL_EPSILON ||
              S2EdgeUtil::CrossingSign(a, b, c, d) <= 0 ||
              S2EdgeUtil::CrossingSign(a, b, c, e) <= 0);
-    S2Point xcd = S2EdgeUtilTesting::GetIntersection(a, b, c, d);
-    S2Point xce = S2EdgeUtilTesting::GetIntersection(a, b, c, e);
+    S2Point xcd = S2EdgeUtil::GetIntersection(a, b, c, d);
+    S2Point xce = S2EdgeUtil::GetIntersection(a, b, c, e);
     // Essentially this says that if CDE and CAB have the same orientation,
     // then CD and CE should intersect along AB in that order.
     ab = ab.Normalize();
@@ -866,7 +873,7 @@ TEST(S2EdgeUtil, GrazingIntersections) {
                 S2::Sign(ab, xcd, xce) > 0);
     }
   }
-  S2EdgeUtilTesting::PrintIntersectionStats();
+  stats.Print();
 }
 
 TEST(S2EdgeUtil, GetIntersectionInvariants) {

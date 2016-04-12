@@ -367,10 +367,80 @@ inline int Bits::Log2FloorNonZero64(uint64 n) {
 inline int Bits::FindLSBSetNonZero64(uint64 n) {
   return __builtin_ctzll(n);
 }
+
 #elif defined(_MSC_VER)
-#include "s2/util/bits/bits-internal-windows.h"
+
+inline int Bits::FindLSBSetNonZero(uint32 n) {
+  return Bits::FindLSBSetNonZero_Portable(n);
+}
+
+inline int Bits::FindLSBSetNonZero64(uint64 n) {
+  return Bits::FindLSBSetNonZero64_Portable(n);
+}
+
+inline int Bits::Log2FloorNonZero(uint32 n) {
+#ifdef _M_IX86
+  _asm {
+    bsr ebx, n
+    mov n, ebx
+  }
+  return n;
 #else
-#include "s2/util/bits/bits-internal-unknown.h"
+  return Bits::Log2FloorNonZero_Portable(n);
+#endif
+}
+
+inline int Bits::Log2Floor(uint32 n) {
+#ifdef _M_IX86
+  _asm {
+    xor ebx, ebx
+    mov eax, n
+    and eax, eax
+    jz return_ebx
+    bsr ebx, eax
+return_ebx:
+    mov n, ebx
+  }
+  return n;
+#else
+  return Bits::Log2Floor_Portable(n);
+#endif
+}
+
+inline int Bits::Log2Floor64(uint64 n) {
+  return Bits::Log2Floor64_Portable(n);
+}
+
+inline int Bits::Log2FloorNonZero64(uint64 n) {
+  return Bits::Log2FloorNonZero64_Portable(n);
+}
+
+#else  // !__GNUC__ && !_MSC_VER
+
+inline int Bits::Log2Floor(uint32 n) {
+  return Bits::Log2Floor_Portable(n);
+}
+
+inline int Bits::Log2FloorNonZero(uint32 n) {
+  return Bits::Log2FloorNonZero_Portable(n);
+}
+
+inline int Bits::FindLSBSetNonZero(uint32 n) {
+  return Bits::FindLSBSetNonZero_Portable(n);
+}
+
+inline int Bits::Log2Floor64(uint64 n) {
+  return Bits::Log2Floor64_Portable(n);
+}
+
+inline int Bits::Log2FloorNonZero64(uint64 n) {
+  return Bits::Log2FloorNonZero64_Portable(n);
+}
+
+inline int Bits::FindLSBSetNonZero64(uint64 n) {
+  return Bits::FindLSBSetNonZero64_Portable(n);
+}
+
 #endif
 
 inline int Bits::Log2Floor128(uint128 n) {

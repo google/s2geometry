@@ -10,6 +10,9 @@ find_package(GFlags REQUIRED)
 find_package(Glog REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
+find_package(SWIG)
+find_package(PythonInterp)
+find_package(PythonLibs)
 
 add_definitions(-Wno-deprecated-declarations -std=c++11)
 # Controls HASH_NAMESPACE in port.h.
@@ -20,7 +23,8 @@ add_definitions(-DUSE_STD_HASH)
 # something like:
 # OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
 include_directories(
-    ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+    ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR}
+    ${PYTHON_INCLUDE_DIRS})
 include_directories(src)
 
 # Explicitly list S2 files until we move test files to test dir.
@@ -89,14 +93,17 @@ install(FILES src/s2/base/atomicops.h
               src/s2/base/template_util.h
         DESTINATION include/s2/base)
 install(FILES src/s2/util/bits/bits.h
-              src/s2/util/bits/bits-internal-unknown.h
-              src/s2/util/bits/bits-internal-windows.h
         DESTINATION include/s2/util/bits)
 install(FILES src/s2/util/btree/btree.h
               src/s2/util/btree/btree_container.h
               src/s2/util/btree/btree_map.h
               src/s2/util/btree/btree_set.h
         DESTINATION include/s2/util/btree)
+install(FILES src/s2/util/coding/coder.h
+              src/s2/util/coding/varint.h
+        DESTINATION include/s2/util/coding)
+install(FILES src/s2/util/endian/endian.h
+        DESTINATION include/s2/util/endian)
 install(FILES src/s2/util/gtl/inlined_vector.h
               src/s2/util/gtl/gtl_namespace.h
               src/s2/util/gtl/manual_constructor.h
@@ -105,6 +112,7 @@ install(FILES src/s2/util/hash/mix.h
         DESTINATION include/s2/util/hash)
 install(FILES src/s2/util/math/mathutil.h
               src/s2/util/math/matrix3x3.h
+              src/s2/util/math/vector.h
               src/s2/util/math/vector2.h
               src/s2/util/math/vector3.h
               src/s2/util/math/vector3_hash.h
@@ -136,3 +144,17 @@ if (GTEST_ROOT)
   endforeach()
 endif()
 
+if (${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
+  include(${SWIG_USE_FILE})
+  include_directories(${PYTHON_INCLUDE_PATH})
+  set(CMAKE_SWIG_FLAGS "")
+  set_property(SOURCE src/s2/s2.i PROPERTY SWIG_FLAGS "-module" "pywraps2")
+  set_property(SOURCE src/s2/s2.i PROPERTY CPLUSPLUS ON)
+  swig_add_module(pywraps2 python src/s2/s2.i)
+  swig_link_libraries(pywraps2 ${PYTHON_LIBRARIES} s2)
+  enable_testing()
+  add_test(NAME pywraps2_test COMMAND
+           ${PYTHON_EXECUTABLE} "${PROJECT_SOURCE_DIR}/src/s2/pywraps2_test.py")
+  set_property(TEST pywraps2_test PROPERTY ENVIRONMENT
+               "PYTHONPATH=$ENV{PYTHONPATH}:${PROJECT_BINARY_DIR}")
+endif()

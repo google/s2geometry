@@ -143,9 +143,15 @@ void S2PolygonBuilder::AddLoop(S2Loop const* loop) {
       AddEdge(loop->vertex(i), loop->vertex(i + 1));
     }
   } else {
-    // In order to preserve the cyclic order of the loop vertices, we need to
-    // add the last edge first.  This is because AssembleLoops() tries to
-    // assemble loops starting from vertices in the order they were added.
+    // In order to preserve the cyclic order of the loop vertices, we add the
+    // edge from vertex n-1 to vertex n-2 first.  This is because these edges
+    // will be assembed into a clockwise loop, which will eventually be
+    // normalized by calling S2Loop::Invert().  S2Loop::Invert() reverses the
+    // order of the vertices, so if we want to end up with the original vertex
+    // order (0, 1, ..., n-1) then we need to build a clockwise loop with
+    // vertex order (n-1, n-2, ..., 0).  This is done by adding the edge (n-1,
+    // n-2) first, and then ensuring that AssembleLoop() tries to assemble
+    // loops starting from vertices in the order they were added.
     for (int i = 2 * n - 1; i >= n; --i) {
       AddEdge(loop->vertex(i), loop->vertex(i - 1));
     }
@@ -225,8 +231,10 @@ unique_ptr<S2Loop> S2PolygonBuilder::AssembleLoop(
     EdgeList* unused_edges) {
   // We start at the given edge and assemble a loop taking left turns
   // whenever possible.  We stop the loop as soon as we encounter any
-  // vertex that we have seen before *except* for the first vertex (v0).
-  // This ensures that only CCW loops are constructed when possible.
+  // vertex that we have seen before.  In the case of undirected edges, this
+  // may assemble a clockwise loop when it is possible to assemble a CCW loop
+  // (by starting with an edge in the opposite direction), but this is
+  // handled by explicitly detecting and fixing this condition below.
 
   vector<S2Point> path;          // The path so far.
   // Maps a vertex to its index in "path".
@@ -234,6 +242,7 @@ unique_ptr<S2Loop> S2PolygonBuilder::AssembleLoop(
 
   path.push_back(v0);
   path.push_back(v1);
+  index[v0] = 0;
   index[v1] = 1;
   while (path.size() >= 2) {
     // Note that "v0" and "v1" become invalid if "path" is modified.
@@ -266,11 +275,7 @@ unique_ptr<S2Loop> S2PolygonBuilder::AssembleLoop(
       // the loop starts with the given vertex "v0" whenever possible.  More
       // rarely, the path may have a prefix of vertices that are not part of
       // the loop, in which case those vertices need to be removed.
-      if (index[v2] == 1 && path.front() == path.back()) {
-        path.pop_back();
-      } else {
-        path.erase(path.begin(), path.begin() + index[v2]);
-      }
+      path.erase(path.begin(), path.begin() + index[v2]);
 
       // In the case of undirected edges, we may have assembled a clockwise
       // loop while trying to assemble a CCW loop.  To fix this, we assemble
