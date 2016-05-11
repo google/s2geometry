@@ -201,3 +201,49 @@ TEST(S1Angle, TestPerformance) {
   EXPECT_LE(from_e6_time / to_e6_time, 3);
   EXPECT_LE(to_e6_time / from_e6_time, 3);
 }
+
+// The current implementation guarantees exact conversions between
+// Degrees() and E6() when the Degrees() argument is an integer.
+TEST(S1Angle, DegreesVsE6) {
+  for (int i = 0; i <= 180; ++i) {
+    EXPECT_EQ(S1Angle::Degrees(i), S1Angle::E6(1000000 * i));
+  }
+}
+
+// The current implementation guarantees exact conversions between
+// Degrees() and E7() when the Degrees() argument is an integer.
+TEST(S1Angle, DegreesVsE7) {
+  for (int i = 0; i <= 180; ++i) {
+    EXPECT_EQ(S1Angle::Degrees(i), S1Angle::E7(10000000 * i));
+  }
+}
+
+// The current implementation guarantees exact conversions between
+// E6() and E7() when the E6() argument is an integer.
+TEST(S1Angle, E6VsE7) {
+  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  for (int iter = 0; iter < 1000; ++iter) {
+    int i = S2Testing::rnd.Uniform(180000000);
+    EXPECT_EQ(S1Angle::E6(i), S1Angle::E7(10 * i));
+  }
+}
+
+// The current implementation guarantees certain exact conversions between
+// degrees and radians (see the header file for details).
+TEST(S1Angle, DegreesVsRadians) {
+  for (int k = -8; k <= 8; ++k) {
+    EXPECT_EQ(S1Angle::Degrees(45 * k), S1Angle::Radians(k * M_PI / 4));
+    EXPECT_EQ(45 * k, S1Angle::Degrees(45 * k).degrees());
+  }
+  for (int k = 0; k <= 30; ++k) {
+    int n = 1 << k;
+    EXPECT_EQ(S1Angle::Degrees(180. / n), S1Angle::Radians(M_PI / n));
+    EXPECT_EQ(S1Angle::Degrees(60. / n), S1Angle::Radians(M_PI / (3. * n)));
+    EXPECT_EQ(S1Angle::Degrees(36. / n), S1Angle::Radians(M_PI / (5. * n)));
+    EXPECT_EQ(S1Angle::Degrees(20. / n), S1Angle::Radians(M_PI / (9. * n)));
+    EXPECT_EQ(S1Angle::Degrees(4. / n), S1Angle::Radians(M_PI / (45. * n)));
+  }
+  // We also spot check a couple of non-identities.
+  EXPECT_NE(S1Angle::Degrees(3), S1Angle::Radians(M_PI / 60));
+  EXPECT_NE(60, S1Angle::Degrees(60).degrees());
+}

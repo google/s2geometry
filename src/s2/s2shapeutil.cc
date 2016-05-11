@@ -316,12 +316,12 @@ bool IsOriginOnLeft(S2Shape const& shape) {
   // vertex.  Often every vertex is non-degenerate, so we start by trying an
   // arbitrary vertex.
   S2Point const *v0, *v1;
-  shape.GetEdge(shape.num_edges() / 2, &v0, &v1);  // The "middle" edge.
+  shape.GetEdge(0, &v0, &v1);
   bool result = false;
   if (IsOriginOnLeftAtVertex(shape, *v0, &result)) {
     return result;
   }
-  // That didn't work, so now we do some extract work to find a non-degenerate
+  // That didn't work, so now we do some extra work to find a non-degenerate
   // vertex (if any).  Essentially we gather a list of edges and a list of
   // reversed edges, and then sort them.  The first edge that appears in one
   // list but not the other is guaranteed to be unmatched.
@@ -433,8 +433,8 @@ bool GetCrossingEdgePairs(S2ShapeIndex const& index,
   return !edge_pairs->empty();
 }
 
-void ResolveLoopContainment(vector<vector<S2Shape*>> const& components,
-                            vector<vector<S2Shape*>>* faces) {
+void ResolveComponents(vector<vector<S2Shape*>> const& components,
+                       vector<vector<S2Shape*>>* faces) {
   faces->clear();
   if (components.empty()) return;
 

@@ -257,8 +257,13 @@ static T GetProjection(Vector3<T> const& x,
   // the normal, the subtraction of one endpoint, and the dot product itself.
   // (DBL_EPSILON appears because the input points are assumed to be
   // normalized in double precision rather than in the given type T.)
-  *error = ((3.5 * a_norm_len + 8 * sqrt(3) * DBL_EPSILON) * dist
-            + 0.75 * std::abs(result)) * numeric_limits<T>::epsilon();
+  //
+  // For reference, the bounds that went into this calculation are:
+  // ||N'-N|| <= ((0.5 + sqrt(3))||N|| + 8 * sqrt(3) * DBL_EPSILON) * T_epsilon
+  // |(A.B)'-(A.B)| <= (0.75 * (A.B) + 0.75 * ||A|| * ||B||) * T_epsilon
+  // ||(X-Y)'-(X-Y)|| <= 0.5 * ||X-Y|| * T_epsilon
+  *error = (((1.75 + sqrt(3)) * a_norm_len + 8 * sqrt(3) * DBL_EPSILON)
+            * dist + 0.75 * std::abs(result)) * numeric_limits<T>::epsilon();
   return result;
 }
 
@@ -534,6 +539,87 @@ S2Point S2EdgeUtil::Interpolate(double t, S2Point const& a, S2Point const& b) {
   return InterpolateAtDistance(t * ab, a, b);
 }
 
+// If the minimum distance from X to AB is attained at an interior point of AB
+// (i.e., not an endpoint), and that distance is less than "min_dist" or
+// "always_update" is true, then update "min_dist" and return true.  Otherwise
+// return false.
+//
+// The "Always" in the function name refers to the template argument, i.e.
+// AlwaysUpdateMinInteriorDistance<true> always updates the given distance,
+// while AlwaysUpdateMinInteriorDistance<false> does not.  This optimization
+// increases the speed of GetDistance() by about 10% without creating code
+// duplication.
+template <bool always_update>
+inline bool AlwaysUpdateMinInteriorDistance(
+    S2Point const& x, S2Point const& a, S2Point const& b,
+    double xa2, double xb2, S1ChordAngle* min_dist) {
+  DCHECK(S2::IsUnitLength(x) && S2::IsUnitLength(a) && S2::IsUnitLength(b));
+  DCHECK_EQ(xa2, (x-a).Norm2());
+  DCHECK_EQ(xb2, (x-b).Norm2());
+
+  // The closest point on AB could either be one of the two vertices (the
+  // "vertex case") or in the interior (the "interior case").  Let C = A x B.
+  // If X is in the spherical wedge extending from A to B around the axis
+  // through C, then we are in the interior case.  Otherwise we are in the
+  // vertex case.
+  //
+  // Check whether we might be in the interior case.  For this to be true, XAB
+  // and XBA must both be acute angles.  Checking this condition exactly is
+  // expensive, so instead we consider the planar triangle ABX (which passes
+  // through the sphere's interior).  The planar angles XAB and XBA are always
+  // less than the corresponding spherical angles, so if we are in the
+  // interior case then both of these angles must be acute.
+  //
+  // We check this by computing the squared edge lengths of the planar
+  // triangle ABX, and testing acuteness using the law of cosines:
+  //
+  //             max(XA^2, XB^2) < min(XA^2, XB^2) + AB^2
+  //
+  if (max(xa2, xb2) >= min(xa2, xb2) + (a-b).Norm2()) {
+    return false;
+  }
+  // The minimum distance might be to a point on the edge interior.  Let R
+  // be closest point to X that lies on the great circle through AB.  Rather
+  // than computing the geodesic distance along the surface of the sphere,
+  // instead we compute the "chord length" through the sphere's interior.
+  // If the squared chord length exceeds min_dist.length2() then we can
+  // return "false" immediately.
+  //
+  // The squared chord length XR^2 can be expressed as XQ^2 + QR^2, where Q
+  // is the point X projected onto the plane through the great circle AB.
+  // The distance XQ^2 can be written as (X.C)^2 / |C|^2 where C = A x B.
+  // We ignore the QR^2 term and instead use XQ^2 as a lower bound, since it
+  // is faster and the corresponding distance on the Earth's surface is
+  // accurate to within 1% for distances up to about 1800km.
+  S2Point c = S2::RobustCrossProd(a, b);
+  double c2 = c.Norm2();
+  double x_dot_c = x.DotProd(c);
+  double x_dot_c2 = x_dot_c * x_dot_c;
+  if (!always_update && x_dot_c2 >= c2 * min_dist->length2()) {
+    // The closest point on the great circle AB is too far away.
+    return false;
+  }
+  // Otherwise we do the exact, more expensive test for the interior case.
+  // This test is very likely to succeed because of the conservative planar
+  // test we did initially.
+  S2Point cx = c.CrossProd(x);
+  if (a.DotProd(cx) >= 0 || b.DotProd(cx) <= 0) {
+    return false;
+  }
+  // Compute the squared chord length XR^2 = XQ^2 + QR^2 (see above).
+  // This calculation has good accuracy for all chord lengths since it
+  // is based on both the dot product and cross product (rather than
+  // deriving one from the other).  However, note that the chord length
+  // representation itself loses accuracy as the angle approaches Pi.
+  double qr = 1 - sqrt(cx.Norm2() / c2);
+  double dist2 = (x_dot_c2 / c2) + (qr * qr);
+  if (!always_update && dist2 >= min_dist->length2()) {
+    return false;
+  }
+  *min_dist = S1ChordAngle::FromLength2(dist2);
+  return true;
+}
+
 // This function computes the distance from a point X to a line segment AB.
 // If the distance is less than "min_dist" or "always_update" is true, it
 // updates "min_dist" and returns true.  Otherwise it returns false.
@@ -548,63 +634,16 @@ inline bool AlwaysUpdateMinDistance(S2Point const& x,
                                     S1ChordAngle* min_dist) {
   DCHECK(S2::IsUnitLength(x) && S2::IsUnitLength(a) && S2::IsUnitLength(b));
 
-  // We divide the problem into two cases, based on whether the closest point
-  // on AB is one of the two vertices (the "vertex case") or in the interior
-  // (the "interior case").  Let C = A x B.  If X is in the spherical wedge
-  // extending from A to B around the axis through C, then we are in the
-  // interior case.  Otherwise we are in the vertex case.
-
-  // Check whether we might be in the interior case.  For this to be true, XAB
-  // and XBA must both be acute angles.  Checking this condition exactly is
-  // expensive, so instead we consider the planar triangle ABX (which passes
-  // through the sphere's interior).  The planar angles XAB and XBA are always
-  // less than the corresponding spherical angles, so if we are in the
-  // interior case then both of these angles must be acute.
-  //
-  // We check this by computing the squared edge lengths of the planar
-  // triangle ABX, and testing acuteness using the law of cosines:
-  //
-  //             max(XA^2, XB^2) < AB^2 + min(XA^2, XB^2)
-  //
-  double xa2 = (x-a).Norm2(), xb2 = (x-b).Norm2(), ab2 = (a-b).Norm2();
-  double dist2 = min(xa2, xb2);
-  if (max(xa2, xb2) < ab2 + dist2) {
-    // The minimum distance might be to a point on the edge interior.  Let R
-    // be closest point to X that lies on the great circle through AB.  Rather
-    // than computing the geodesic distance along the surface of the sphere,
-    // instead we compute the "chord length" through the sphere's interior.
-    // If the squared chord length exceeds min_dist.length2() then we can
-    // return "false" immediately.
-    //
-    // The squared chord length XR^2 can be expressed as XQ^2 + QR^2, where Q
-    // is the point X projected onto the plane through the great circle AB.
-    // The distance XQ^2 can be written as (X.C)^2 / |C|^2 where C = A x B.
-    // We ignore the QR^2 term and instead use XQ^2 as a lower bound, since it
-    // is faster and the corresponding distance on the Earth's surface is
-    // accurate to within 1% for distances up to about 1800km.
-    S2Point c = S2::RobustCrossProd(a, b);
-    double c2 = c.Norm2();
-    double x_dot_c = x.DotProd(c);
-    double x_dot_c2 = x_dot_c * x_dot_c;
-    if (!always_update && x_dot_c2 >= c2 * min_dist->length2()) {
-      // The closest point on the great circle AB is too far away.
-      return false;
-    }
-    // Otherwise we do the exact, more expensive test for the interior case.
-    // This test is very likely to succeed because of the conservative planar
-    // test we did initially.
-    S2Point cx = c.CrossProd(x);
-    if (a.DotProd(cx) < 0 && b.DotProd(cx) > 0) {
-      // Compute the squared chord length XR^2 = XQ^2 + QR^2 (see above).
-      // This calculation has good accuracy for all chord lengths since it
-      // is based on both the dot product and cross product (rather than
-      // deriving one from the other).  However, note that the chord length
-      // representation itself loses accuracy as the angle approaches Pi.
-      double qr = 1 - sqrt(cx.Norm2() / c2);
-      dist2 = (x_dot_c2 / c2) + (qr * qr);
-    }
+  double xa2 = (x-a).Norm2(), xb2 = (x-b).Norm2();
+  if (AlwaysUpdateMinInteriorDistance<always_update>(x, a, b, xa2, xb2,
+                                                     min_dist)) {
+    return true;  // Minimum distance is attained along the edge interior.
   }
-  if (!always_update && dist2 >= min_dist->length2()) return false;
+  // Otherwise the minimum distance is to one of the endpoints.
+  double dist2 = min(xa2, xb2);
+  if (!always_update && dist2 >= min_dist->length2()) {
+    return false;
+  }
   *min_dist = S1ChordAngle::FromLength2(dist2);
   return true;
 }
@@ -622,6 +661,37 @@ bool S2EdgeUtil::UpdateMinDistance(S2Point const& x,
   return AlwaysUpdateMinDistance<false>(x, a, b, min_dist);
 }
 
+bool S2EdgeUtil::UpdateMinInteriorDistance(S2Point const& x,
+                                           S2Point const& a, S2Point const& b,
+                                           S1ChordAngle* min_dist) {
+  double xa2 = (x-a).Norm2(), xb2 = (x-b).Norm2();
+  return AlwaysUpdateMinInteriorDistance<false>(x, a, b, xa2, xb2, min_dist);
+}
+
+// Returns the maximum error in the result of UpdateMinInteriorDistance,
+// assuming that all input points are normalized to within the bounds
+// guaranteed by S2Point::Normalize().  The error can be added or subtracted
+// from an S1ChordAngle "x" using x.PlusError(error).
+static double GetUpdateMinInteriorDistanceMaxError(S1ChordAngle dist) {
+  // This bound includes all source of error, assuming that the input points
+  // are normalized to within the bounds guaranteed to S2Point::Normalize().
+  // "a" and "b" are components of chord length that are perpendicular and
+  // parallel to plane containing the edge respectively.
+  double x = dist.length2();
+  double b = 0.5 * x * x;
+  double a = x * sqrt(1 - 0.5 * b);
+  return ((2.5 + 2 * sqrt(3) + 8.5 * a) * a +
+          (2 + 2 * sqrt(3) / 3 + 6.5 * (1 - b)) * b +
+          (23 + 16 / sqrt(3)) * DBL_EPSILON) * DBL_EPSILON;
+}
+
+double S2EdgeUtil::GetUpdateMinDistanceMaxError(S1ChordAngle dist) {
+  // There are two cases for the maximum error in UpdateMinDistance(),
+  // depending on whether the closest point is interior to the edge.
+  return max(GetUpdateMinInteriorDistanceMaxError(dist),
+             dist.GetS2PointConstructorMaxError());
+}
+
 S2Point S2EdgeUtil::GetClosestPoint(S2Point const& x,
                                     S2Point const& a, S2Point const& b,
                                     Vector3_d const& a_cross_b) {
@@ -633,9 +703,9 @@ S2Point S2EdgeUtil::GetClosestPoint(S2Point const& x,
   S2Point p = x - (x.DotProd(a_cross_b) / a_cross_b.Norm2()) * a_cross_b;
 
   // If this point is on the edge AB, then it's the closest point.
-  if (S2::SimpleCCW(a_cross_b, a, p) && S2::SimpleCCW(p, b, a_cross_b))
+  if (S2::SimpleCCW(a_cross_b, a, p) && S2::SimpleCCW(p, b, a_cross_b)) {
     return p.Normalize();
-
+  }
   // Otherwise, the closest point is either A or B.
   return ((x - a).Norm2() <= (x - b).Norm2()) ? a : b;
 }

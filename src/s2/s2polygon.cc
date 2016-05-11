@@ -82,37 +82,37 @@ static const unsigned char kCurrentCompressedEncodingVersionNumber = 4;
 
 S2Polygon::S2Polygon()
     : has_holes_(false),
-      s2debug_override_(ALLOW_S2DEBUG),
+      s2debug_override_(S2Debug::ALLOW),
       error_inconsistent_loop_orientations_(false),
       num_vertices_(0),
       unindexed_contains_calls_(0) {
 }
 
 S2Polygon::S2Polygon(vector<S2Loop*>* loops)
-    : s2debug_override_(ALLOW_S2DEBUG) {
+    : s2debug_override_(S2Debug::ALLOW) {
   InitNested(loops);
 }
 
-S2Polygon::S2Polygon(vector<S2Loop*>* loops, S2debugOverride override)
+S2Polygon::S2Polygon(vector<S2Loop*>* loops, S2Debug override)
     : s2debug_override_(override) {
   InitNested(loops);
 }
 
 S2Polygon::S2Polygon(S2Loop* loop)
-    : s2debug_override_(ALLOW_S2DEBUG) {
+    : s2debug_override_(S2Debug::ALLOW) {
   Init(loop);
 }
 
 S2Polygon::S2Polygon(S2Cell const& cell)
-    : s2debug_override_(ALLOW_S2DEBUG) {
+    : s2debug_override_(S2Debug::ALLOW) {
   Init(new S2Loop(cell));
 }
 
-void S2Polygon::set_s2debug_override(S2debugOverride override) {
+void S2Polygon::set_s2debug_override(S2Debug override) {
   s2debug_override_ = override;
 }
 
-S2debugOverride S2Polygon::s2debug_override() const {
+S2Debug S2Polygon::s2debug_override() const {
   return s2debug_override_;
 }
 
@@ -298,7 +298,7 @@ void S2Polygon::InitIndex() {
   if (!FLAGS_s2polygon_lazy_indexing) {
     index_.ForceApplyUpdates();  // Force index construction now.
   }
-  if (FLAGS_s2debug && s2debug_override_ == ALLOW_S2DEBUG) {
+  if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
     // Note that FLAGS_s2debug is false in optimized builds (by default).
     CHECK(IsValid());
   }
@@ -1373,8 +1373,7 @@ unique_ptr<vector<S2Point>> SimplifyLoopAsPolyline(
     }
   }
   // Add them all except the last: it is the same as the first.
-  auto simplified_line =
-      util::gtl::MakeUnique<vector<S2Point>>(indices.size() - 1);
+  auto simplified_line = gtl::MakeUnique<vector<S2Point>>(indices.size() - 1);
   VLOG(4) << "Now simplified to: ";
   for (int i = 0; i + 1 < indices.size(); ++i) {
     (*simplified_line)[i] = line.vertex(indices[i]);

@@ -534,3 +534,18 @@ TEST(S2CellUnion, LeafCellsCovered) {
   EXPECT_EQ(expected, cell_union.LeafCellsCovered());
 }
 
+TEST(S2CellUnion, MoveOnlyAndWorksInContainers) {
+  vector<S2CellId> ids;
+  ids.push_back(S2CellId::FromFace(1));
+
+  S2CellUnion cell_union0;
+  cell_union0.Init(ids);
+
+  // This gives a compilation error if the S2CellUnion is neither movable nor
+  // copyable.
+  vector<S2CellUnion> union_vector;
+  union_vector.push_back(std::move(cell_union0));
+
+  EXPECT_EQ(ids, union_vector.back().cell_ids());
+}
+

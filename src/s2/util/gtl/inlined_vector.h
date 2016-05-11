@@ -111,6 +111,10 @@ class InlinedVector {
 
   InlinedVector(const InlinedVector& v);
 
+#ifdef LANG_CXX11
+  InlinedVector(InlinedVector&& v);
+#endif  // LANG_CXX11
+
   ~InlinedVector() { clear(); }
 
   InlinedVector& operator=(const InlinedVector& v) {
@@ -126,6 +130,32 @@ class InlinedVector {
     }
     return *this;
   }
+
+#ifdef LANG_CXX11
+  InlinedVector& operator=(InlinedVector&& v) {
+    if (v.allocated()) {
+      clear();
+      set_allocated();
+      init_allocation(v.allocation());
+      v.tag() = Tag();
+    } else {
+      if (allocated()) clear();
+      // Both are inlined now.
+      if (size() < v.size()) {
+        auto mid = std::make_move_iterator(v.begin() + size());
+        std::copy(std::make_move_iterator(v.begin()), mid, begin());
+        UninitializedCopyInlined(
+            mid, std::make_move_iterator(v.end()), end());
+      } else {
+        auto new_end = std::copy(std::make_move_iterator(v.begin()),
+                                 std::make_move_iterator(v.end()), begin());
+        DestroyInlined(new_end, end());
+      }
+      set_size_internal(v.size());
+    }
+    return *this;
+  }
+#endif  // LANG_CXX11
 
   template <class InputIterator>
   void assign(InputIterator first, InputIterator last,
@@ -649,6 +679,20 @@ InlinedVector<T, N, A>::InlinedVector(const InlinedVector& v)
     UninitializedCopyInlined(v.begin(), v.end(), inlined_space());
   }
   set_size_internal(v.size());
+}
+
+template <typename T, int N, typename A>
+InlinedVector<T, N, A>::InlinedVector(InlinedVector&& v)
+    : allocator_and_tag_(v.allocator_and_tag_) {
+  if (v.allocated()) {
+    init_allocation(v.allocation());  // Copy the alloc
+    v.tag() = Tag();                  // Reset the source
+  } else {
+    UninitializedCopyInlined(
+        std::make_move_iterator(v.inlined_space()),
+        std::make_move_iterator(v.inlined_space() + v.size()),
+        inlined_space());
+  }
 }
 
 template <typename T, int N, typename A>

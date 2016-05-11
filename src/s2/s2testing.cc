@@ -162,19 +162,23 @@ S1Angle S2Testing::MetersToAngle(double meters) {
   return KmToAngle(0.001 * meters);
 }
 
+void Dump(S2Point const& p) {
+  std::cout << "S2Point: " << s2textformat::ToString(p) << "\n";
+}
+
 void DumpLoop(S2Loop const* loop) {
   // Only for calling from a debugger.
-  std::cout << s2textformat::ToString(loop) << "\n";
+  std::cout << "S2Polygon: " << s2textformat::ToString(loop) << "\n";
 }
 
 void DumpPolyline(S2Polyline const* polyline) {
   // Only for calling from a debugger.
-  std::cout << s2textformat::ToString(polyline) << "\n";
+  std::cout << "S2Polyline: " << s2textformat::ToString(polyline) << "\n";
 }
 
 void DumpPolygon(S2Polygon const* polygon) {
   // Only for calling from a debugger.
-  std::cout << s2textformat::ToString(polygon) << "\n";
+  std::cout << "S2Polygon: " << s2textformat::ToString(polygon) << "\n";
 }
 
 S2Point S2Testing::RandomPoint() {
@@ -431,15 +435,9 @@ S2Loop* S2Testing::Fractal::MakeLoop(Matrix3x3_d const& frame,
   vector<R2Point> r2vertices;
   GetR2Vertices(&r2vertices);
   vector<S2Point> vertices;
+  double r = nominal_radius.radians();
   for (R2Point const& v : r2vertices) {
-    // Convert each vertex to polar coordinates.
-    double theta = atan2(v[1], v[0]);
-    double radius = nominal_radius.radians() * v.Norm();
-
-    // See the comments in S2Loop::MakeRegularLoop.
-    double z = cos(radius);
-    double r = sin(radius);
-    S2Point p(r * cos(theta), r * sin(theta), z);
+    S2Point p(v[0] * r, v[1] * r, 1);
     vertices.push_back(S2::FromFrame(frame, p).Normalize());
   }
   return new S2Loop(vertices);

@@ -53,6 +53,9 @@ class S1ChordAngle {
   // Return the zero chord angle.
   static S1ChordAngle Zero();
 
+  // Return a chord angle of 90 degrees (a "right angle").
+  static S1ChordAngle Right();
+
   // Return a chord angle of 180 degrees (a "straight angle").  This is the
   // maximum finite chord angle.
   static S1ChordAngle Straight();
@@ -125,6 +128,23 @@ class S1ChordAngle {
   // The squared length of the chord.  (Most clients will not need this.)
   double length2() const { return length2_; }
 
+  // Returns a new S1ChordAngle that has been adjusted by the given error
+  // bound (which can be positive or negative).  "error" should be the value
+  // returned by one of the error bound methods below.  For example:
+  //    S1ChordAngle a(x, y);
+  //    S1ChordAngle a1 = a.PlusError(a.GetS2PointConstructorMaxError());
+  S1ChordAngle PlusError(double error) const;
+
+  // Return the maximum error in length2() for the S1ChordAngle(x, y)
+  // constructor, assuming that "x" and "y" are normalized to within the
+  // bounds guaranteed by S2Point::Normalize().  (The error is defined with
+  // respect to the true distance after the points are projected to lie
+  // exactly on the sphere.)
+  double GetS2PointConstructorMaxError() const;
+
+  // Return the maximum error in length2() for the S1Angle constructor.
+  double GetS1AngleConstructorMaxError() const;
+
   // Return true if the internal representation is valid.  Negative() and
   // Infinity() are both considered valid.
   bool is_valid() const;
@@ -155,6 +175,10 @@ inline S1ChordAngle S1ChordAngle::Zero() {
   return S1ChordAngle(0);
 }
 
+inline S1ChordAngle S1ChordAngle::Right() {
+  return S1ChordAngle(2);
+}
+
 inline S1ChordAngle S1ChordAngle::Straight() {
   return S1ChordAngle(4);
 }
@@ -178,6 +202,7 @@ inline bool S1ChordAngle::is_zero() const {
 }
 
 inline bool S1ChordAngle::is_negative() const {
+  // TODO(ericv): Consider stricter check here -- only allow Negative().
   return length2_ < 0;
 }
 

@@ -153,6 +153,9 @@ void S2ClosestEdgeQuery::FindClosestEdgesToEdge(S2Point const& a,
 
 void S2ClosestEdgeQuery::FindClosestEdgesToTarget() {
   max_distance_limit_ = S1ChordAngle(max_distance_);
+  max_distance_limit_ = max_distance_limit_.PlusError(
+      max_distance_limit_.GetS1AngleConstructorMaxError() +
+      S2EdgeUtil::GetUpdateMinDistanceMaxError(max_distance_limit_));
   max_error_ = S1ChordAngle(max_error_arg_);
   DCHECK(tmp_results_.empty());
   tmp_result_singleton_ = Result(S1ChordAngle::Infinity(), -1, -1);

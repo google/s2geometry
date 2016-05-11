@@ -50,9 +50,9 @@ DECLARE_bool(s2debug);
 
 // Alternatively, some classes have methods that allow the --s2debug flag to
 // be disabled for specific objects (e.g., see S2Polygon).
-enum S2debugOverride : uint8 {
-  ALLOW_S2DEBUG,    // Validity checks are controlled by --s2debug
-  DISABLE_S2DEBUG   // No validity checks even when --s2debug is true
+enum class S2Debug : uint8 {
+  ALLOW,    // Validity checks are controlled by --s2debug
+  DISABLE   // No validity checks even when --s2debug is true
 };
 
 // An S2Point represents a point on the unit sphere as a 3D vector.  Usually
@@ -417,7 +417,7 @@ class S2 {
   static unsigned int const kMaxSiTi = 1U << (kMaxCellLevel + 1);
 
   // Convert an s- or t-value to the corresponding u- or v-value.  This is
-  // a non-linear transformation from [-1,1] to [-1,1] that attempts to
+  // a non-linear transformation from [0,1] to [-1,1] that attempts to
   // make the cell sizes more uniform.
   inline static double STtoUV(double s);
 
@@ -587,6 +587,7 @@ class S2 {
     // S2::kMaxDiag.GetMinLevel(0.1) returns the minimum level such that all
     // cell diagonal lengths are 0.1 or smaller.  The return value is always a
     // valid level.
+    // TODO(ericv): Rename to GetCeilingLevel(), or GetLevelForMaxValue()
     int GetMinLevel(double value) const;
 
     // Return the maximum level such that the metric is at least the given
@@ -594,6 +595,7 @@ class S2 {
     // S2::kMinWidth.GetMaxLevel(0.1) returns the maximum level such that all
     // cells have a minimum width of 0.1 or larger.  The return value is
     // always a valid level.
+    // TODO(ericv): Rename to GetFloorLevel(), or GetLevelForMinValue()
     int GetMaxLevel(double value) const;
 
    private:

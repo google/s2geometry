@@ -235,8 +235,6 @@ class EdgeVectorShape : public S2Shape {
  private:
   std::vector<std::pair<S2Point, S2Point>> edges_;
 };
-// Backwards compatibility: Delete once all references have been updated.
-using S2EdgeVectorShape = EdgeVectorShape;
 
 // VertexIdLoopShape is just like LoopShape, except that vertices are
 // specified as indices into a vertex array.  This representation can be more
@@ -413,7 +411,7 @@ bool IsOriginOnLeft(S2Shape const& shape);
 // collection of loops that form its boundary.  This function does not
 // actually construct any S2Shapes; it simply identifies the loops that belong
 // to each polygon.
-void ResolveLoopContainment(
+void ResolveComponents(
     std::vector<std::vector<S2Shape*>> const& components,
     std::vector<std::vector<S2Shape*>>* polygons);
 

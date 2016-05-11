@@ -146,6 +146,20 @@ class S2Point {
   }
 };
 
+// We provide our own definition of S2EdgeUtil, because the real one is too
+// difficult to wrap correctly because of C++ 11 syntax in old versions of swig.
+class S2EdgeUtil {
+ public:
+  static S2Point GetIntersection(S2Point const& a, S2Point const& b,
+                                 S2Point const& c, S2Point const& d);
+  static int CrossingSign(S2Point const& a, S2Point const& b, S2Point const& c,
+                          S2Point const& d);
+
+ private:
+  // The constructor is deleted, so must be marked private to be ignored.
+  S2EdgeUtil() {};
+};
+
 %ignoreall
 
 %unignore R1Interval;
@@ -359,7 +373,7 @@ class S2Point {
 %unignore S2Polyline::S2Polyline();
 %unignore S2Polyline::S2Polyline(std::vector<S2LatLng> const &);
 %ignore S2Polyline::S2Polyline(std::vector<S2Point> const &);
-%ignore S2Polyline::S2Polyline(std::vector<S2Point> const &, S2debugOverride);
+%ignore S2Polyline::S2Polyline(std::vector<S2Point> const &, S2Debug);
 %unignore S2Polyline::~S2Polyline;
 %unignore S2Polyline::ApproxEquals;
 %unignore S2Polyline::Clone;

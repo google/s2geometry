@@ -101,10 +101,11 @@ TEST(PolygonShape, SingleLoopPolygon) {
 }
 
 TEST(PolygonShape, MultiLoopPolygon) {
-  // Test vector<vector<S2Point>> constructor.
+  // Test vector<vector<S2Point>> constructor.  Make sure that the loops are
+  // oriented so that the interior of the polygon is always on the left.
   vector<PolygonShape::Loop> loops(2);
-  s2textformat::ParsePoints("1:1, 1:2, 2:2", &loops[0]);
-  s2textformat::ParsePoints("0:0, 0:3, 3:3", &loops[1]);
+  s2textformat::ParsePoints("0:0, 0:3, 3:3", &loops[0]);  // CCW
+  s2textformat::ParsePoints("1:1, 2:2, 1:2", &loops[1]);  // CW
   PolygonShape shape(loops);
 
   EXPECT_EQ(loops.size(), shape.num_loops());
@@ -407,63 +408,63 @@ class TestLoopShape : public LoopShape {
   }
 };
 
-TEST(ResolveLoopContainment, NoComponents) {
+TEST(ResolveComponents, NoComponents) {
   vector<vector<S2Shape*>> faces, components;
-  ResolveLoopContainment(components, &faces);
+  ResolveComponents(components, &faces);
   EXPECT_EQ(0, faces.size());
 }
 
-TEST(ResolveLoopContainment, OneLoop) {
+TEST(ResolveComponents, OneLoop) {
   TestLoopShape a0("0:0, 1:0, 0:1");  // Outer face
   TestLoopShape a1("0:0, 0:1, 1:0");
   vector<vector<S2Shape*>> faces, components = {{&a0, &a1}};
-  ResolveLoopContainment(components, &faces);
+  ResolveComponents(components, &faces);
   EXPECT_EQ(2, faces.size());
 }
 
-TEST(ResolveLoopContainment, TwoLoopsSameComponent) {
+TEST(ResolveComponents, TwoLoopsSameComponent) {
   TestLoopShape a0("0:0, 1:0, 0:1");  // Outer face
   TestLoopShape a1("0:0, 0:1, 1:0");
   TestLoopShape a2("1:0, 0:1, 1:1");
   vector<vector<S2Shape*>> faces, components = {{&a0, &a1, &a2}};
-  ResolveLoopContainment(components, &faces);
+  ResolveComponents(components, &faces);
   EXPECT_EQ(3, faces.size());
 }
 
-TEST(ResolveLoopContainment, TwoNestedLoops) {
+TEST(ResolveComponents, TwoNestedLoops) {
   TestLoopShape a0("0:0, 3:0, 0:3");  // Outer face
   TestLoopShape a1("0:0, 0:3, 3:0");
   TestLoopShape b0("1:1, 2:0, 0:2");  // Outer face
   TestLoopShape b1("1:1, 0:2, 2:0");
   vector<vector<S2Shape*>> faces, components = {{&a0, &a1}, {&b0, &b1}};
-  ResolveLoopContainment(components, &faces);
+  ResolveComponents(components, &faces);
   EXPECT_EQ(3, faces.size());
   EXPECT_EQ((vector<S2Shape*>{&b0, &a1}), faces[0]);
 }
 
-TEST(ResolveLoopContainment, TwoLoopsDifferentComponents) {
+TEST(ResolveComponents, TwoLoopsDifferentComponents) {
   TestLoopShape a0("0:0, 1:0, 0:1");  // Outer face
   TestLoopShape a1("0:0, 0:1, 1:0");
   TestLoopShape b0("0:2, 1:2, 0:3");  // Outer face
   TestLoopShape b1("0:2, 0:3, 1:2");
   vector<vector<S2Shape*>> faces, components = {{&a0, &a1}, {&b0, &b1}};
-  ResolveLoopContainment(components, &faces);
+  ResolveComponents(components, &faces);
   EXPECT_EQ(3, faces.size());
   EXPECT_EQ((vector<S2Shape*>{&a0, &b0}), faces[2]);
 }
 
-TEST(ResolveLoopContainment, OneDegenerateLoop) {
+TEST(ResolveComponents, OneDegenerateLoop) {
   TestLoopShape a0("0:0, 1:0, 0:0");
   vector<vector<S2Shape*>> faces, components = {{&a0}};
-  ResolveLoopContainment(components, &faces);
+  ResolveComponents(components, &faces);
   EXPECT_EQ(1, faces.size());
 }
 
-TEST(ResolveLoopContainment, TwoDegenerateLoops) {
+TEST(ResolveComponents, TwoDegenerateLoops) {
   TestLoopShape a0("0:0, 1:0, 0:0");
   TestLoopShape b0("2:0, 3:0, 2:0");
   vector<vector<S2Shape*>> faces, components = {{&a0}, {&b0}};
-  ResolveLoopContainment(components, &faces);
+  ResolveComponents(components, &faces);
   EXPECT_EQ(1, faces.size());
   EXPECT_EQ(2, faces[0].size());
 }
@@ -475,7 +476,7 @@ static void SortFaces(vector<vector<S2Shape*>>* faces) {
   std::sort(faces->begin(), faces->end());
 }
 
-TEST(ResolveLoopContainment, ComplexTest1) {
+TEST(ResolveComponents, ComplexTest1) {
   // Loops at index 0 are the outer (clockwise) loops.
   // Component "a" consists of 4 adjacent squares forming a larger square.
   TestLoopShape a0("0:0, 25:0, 50:0, 50:25, 50:50, 25:50, 0:50, 0:50");
@@ -532,7 +533,7 @@ TEST(ResolveLoopContainment, ComplexTest1) {
     {&a4, &a4_a0, &a4_b0, &a4_c0, &a4_d0}
   };
   vector<vector<S2Shape*>> faces;
-  ResolveLoopContainment(components, &faces);
+  ResolveComponents(components, &faces);
   EXPECT_EQ(expected_faces.size(), faces.size());
   SortFaces(&expected_faces);
   SortFaces(&faces);
