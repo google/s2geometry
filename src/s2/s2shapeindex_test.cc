@@ -604,14 +604,13 @@ TEST(S2ShapeIndex, MixedGeometry) {
   polylines.push_back(MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"));
   S2ShapeIndex index;
   for (S2Polyline* polyline : polylines) {
-    index.Add(new S2Polyline::Shape(polyline));
+    index.Add(new S2PolylineOwningShape(polyline));
   }
   S2Loop loop(S2Cell(S2CellId::Begin(S2CellId::kMaxLevel)));
   index.Add(new S2Loop::Shape(&loop));
   S2ShapeIndex::Iterator it(index);
   // No geometry intersects face 1, so there should be no index cells there.
   EXPECT_EQ(S2ShapeIndex::DISJOINT, it.Locate(S2CellId::FromFace(1)));
-  STLDeleteElements(&polylines);
 }
 
 TEST(S2Shape, user_data) {

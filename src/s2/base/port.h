@@ -47,12 +47,7 @@
 #endif  // defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
 #endif  // defined(__APPLE__)
 
-#if defined(__APPLE__) || defined(OS_IOS)
-// This was added for getpagesize(), which is no longer used here.
-// Clients incorrectly depend on this include.
-// TODO(user): Update clients and remove this.
-#include <unistd.h>
-#elif defined(OS_CYGWIN) || defined(__ANDROID__)
+#if defined(OS_CYGWIN) || defined(__ANDROID__)
 #include <malloc.h>         // for memalign()
 #elif defined(_MSC_VER)
 #include <cstdio>          // declare snprintf/vsnprintf before overriding
@@ -826,8 +821,7 @@ template<int size> struct AlignType<0, size> { typedef char result[size]; };
 #if defined(_MSC_VER)
 #define BASE_PORT_H_ALIGN_ATTRIBUTE(X) __declspec(align(X))
 #define BASE_PORT_H_ALIGN_OF(T) __alignof(T)
-#elif defined(__GNUC__) || __GNUC__ >= 3 || defined(__APPLE__) || \
-    defined(__INTEL_COMPILER) || defined(__nacl__) || defined(__clang__)
+#elif defined(__GNUC__) || defined(__INTEL_COMPILER)
 #define BASE_PORT_H_ALIGN_ATTRIBUTE(X) __attribute__((aligned(X)))
 #define BASE_PORT_H_ALIGN_OF(T) __alignof__(T)
 #endif

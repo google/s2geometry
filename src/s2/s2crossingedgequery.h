@@ -157,7 +157,7 @@ class S2CrossingEdgeQuery {
 
   // This is a private field rather than a local variable to reduce memory
   // allocation when a single S2CrossingEdgeQuery object is queried many times.
-  util::gtl::InlinedVector<S2ShapeIndexCell const*, 8> cells_;
+  gtl::InlinedVector<S2ShapeIndexCell const*, 8> cells_;
 
   S2CrossingEdgeQuery(S2CrossingEdgeQuery const&) = delete;
   void operator=(S2CrossingEdgeQuery const&) = delete;

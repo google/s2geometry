@@ -82,17 +82,17 @@ class S2Loop : public S2Region {
   // Convenience constructor to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
   //
-  //   S2Loop* loop = new S2Loop(vertices, DISABLE_S2DEBUG);
+  //   S2Loop* loop = new S2Loop(vertices, S2Debug::DISABLE);
   //
   // This is equivalent to:
   //
   //   S2Loop* loop = new S2Loop;
-  //   loop->set_s2debug_override(DISABLE_S2DEBUG);
+  //   loop->set_s2debug_override(S2Debug::DISABLE);
   //   loop->Init(vertices);
   //
   // The main reason to use this constructor is if you intend to call
   // IsValid() explicitly.  See set_s2debug_override() for details.
-  S2Loop(std::vector<S2Point> const& vertices, S2debugOverride override);
+  S2Loop(std::vector<S2Point> const& vertices, S2Debug override);
 
   // Initialize a loop with given vertices.  The last vertex is implicitly
   // connected to the first.  All points should be unit length.  Loops must
@@ -133,7 +133,7 @@ class S2Loop : public S2Region {
   // this flag is if you intend to call IsValid() explicitly, like this:
   //
   //   S2Loop loop;
-  //   loop.set_s2debug_override(DISABLE_S2DEBUG);
+  //   loop.set_s2debug_override(S2Debug::DISABLE);
   //   loop.Init(...);
   //   if (!loop.IsValid()) { ... }
   //
@@ -141,8 +141,8 @@ class S2Loop : public S2Region {
   // fatal error in Init() whenever the --s2debug flag is enabled.
   //
   // This setting is preserved across calls to Init() and Decode().
-  void set_s2debug_override(S2debugOverride override);
-  S2debugOverride s2debug_override() const;
+  void set_s2debug_override(S2Debug override);
+  S2Debug s2debug_override() const;
 
   // Returns true if this is a valid loop.  Note that validity is checked
   // automatically during initialization when --s2debug is enabled (true by
@@ -566,7 +566,7 @@ class S2Loop : public S2Region {
   S2Point* vertices_;
   bool owns_vertices_;
 
-  S2debugOverride s2debug_override_;
+  S2Debug s2debug_override_;
   bool origin_inside_;      // Does the loop contains S2::Origin()?
 
   // In general we build the index the first time it is needed, but we make an

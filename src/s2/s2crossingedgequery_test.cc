@@ -33,9 +33,9 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 #include <algorithm>
-#include "s2/util/gtl/stl_util.h"
 
 using s2shapeutil::EdgeVectorShape;
+using s2shapeutil::S2PolylineOwningShape;
 using s2textformat::MakePoint;
 using s2textformat::MakePolyline;
 using std::pair;
@@ -253,18 +253,14 @@ TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
 }
 
 // This is the example from the header file, with a few extras.
-void TestPolylineCrossings(vector<S2Polyline*> const& polylines,
+void TestPolylineCrossings(S2ShapeIndex const& index,
                            S2Point const& a0, S2Point const& a1) {
-  S2ShapeIndex index;
-  for (S2Polyline* polyline : polylines) {
-    index.Add(new S2Polyline::Shape(polyline));
-  }
   S2CrossingEdgeQuery query(index);
   S2CrossingEdgeQuery::EdgeMap edge_map;
   if (!query.GetCrossings(a0, a1, CrossingType::ALL, &edge_map)) return;
   for (auto const& p : edge_map) {
-    S2Shape const* shape = p.first;
-    S2Polyline* polyline = polylines[shape->id()];
+    auto shape = down_cast<S2Polyline::Shape const*>(p.first);
+    S2Polyline const* polyline = shape->polyline();
     vector<int> const& edges = p.second;
     // Shapes with no crossings should be filtered out by this method.
     EXPECT_FALSE(edges.empty());
@@ -275,9 +271,10 @@ void TestPolylineCrossings(vector<S2Polyline*> const& polylines,
     }
   }
   // Also test that no edges are missing.
-  for (int i = 0; i < polylines.size(); ++i) {
-    vector<int> const& edges = edge_map[index.shape(i)];
-    S2Polyline const* polyline = polylines[i];
+  for (int i = 0; i < index.num_shape_ids(); ++i) {
+    auto shape = down_cast<S2Polyline::Shape*>(index.shape(i));
+    vector<int> const& edges = edge_map[shape];
+    S2Polyline const* polyline = shape->polyline();
     for (int e = 0; e < polyline->num_vertices() - 1; ++e) {
       if (S2EdgeUtil::CrossingSign(a0, a1, polyline->vertex(e),
                                    polyline->vertex(e + 1)) >= 0) {
@@ -288,14 +285,16 @@ void TestPolylineCrossings(vector<S2Polyline*> const& polylines,
 }
 
 TEST(GetCrossings, PolylineCrossings) {
-  vector<S2Polyline*> polylines;
+  S2ShapeIndex index;
   // Three zig-zag lines near the equator.
-  polylines.push_back(MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6"));
-  polylines.push_back(MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"));
-  polylines.push_back(MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"));
-  TestPolylineCrossings(polylines, MakePoint("1:0"), MakePoint("1:4"));
-  TestPolylineCrossings(polylines, MakePoint("5:5"), MakePoint("6:6"));
-  STLDeleteElements(&polylines);
+  index.Add(new S2PolylineOwningShape(
+      MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6")));
+  index.Add(new S2PolylineOwningShape(
+      MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6")));
+  index.Add(new S2PolylineOwningShape(
+      MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6")));
+  TestPolylineCrossings(index, MakePoint("1:0"), MakePoint("1:4"));
+  TestPolylineCrossings(index, MakePoint("5:5"), MakePoint("6:6"));
 }
 
 }  // namespace

@@ -67,7 +67,6 @@ class uint128 {
   friend uint64 Uint128Low64(const uint128& v);
   friend uint64 Uint128High64(const uint128& v);
 
-  // We add "std::" to avoid including all of port.h.
   friend std::ostream& operator<<(std::ostream& o, const uint128& b);
 
  private:

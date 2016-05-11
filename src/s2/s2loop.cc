@@ -81,7 +81,7 @@ S2Loop::S2Loop()
     num_vertices_(0),
     vertices_(nullptr),
     owns_vertices_(false),
-    s2debug_override_(ALLOW_S2DEBUG),
+    s2debug_override_(S2Debug::ALLOW),
     origin_inside_(false),
     shape_(this) {
   // Some fields are initialized by Init().  The loop is not valid until then.
@@ -92,12 +92,12 @@ S2Loop::S2Loop(vector<S2Point> const& vertices)
     num_vertices_(0),
     vertices_(nullptr),
     owns_vertices_(false),
-    s2debug_override_(ALLOW_S2DEBUG),
+    s2debug_override_(S2Debug::ALLOW),
     shape_(this) {
   Init(vertices);
 }
 
-S2Loop::S2Loop(vector<S2Point> const& vertices, S2debugOverride override)
+S2Loop::S2Loop(vector<S2Point> const& vertices, S2Debug override)
   : depth_(0),
     num_vertices_(0),
     vertices_(nullptr),
@@ -107,11 +107,11 @@ S2Loop::S2Loop(vector<S2Point> const& vertices, S2debugOverride override)
   Init(vertices);
 }
 
-void S2Loop::set_s2debug_override(S2debugOverride override) {
+void S2Loop::set_s2debug_override(S2Debug override) {
   s2debug_override_ = override;
 }
 
-S2debugOverride S2Loop::s2debug_override() const {
+S2Debug S2Loop::s2debug_override() const {
   return s2debug_override_;
 }
 
@@ -278,7 +278,7 @@ void S2Loop::InitIndex() {
   if (!FLAGS_s2loop_lazy_indexing) {
     index_.ForceApplyUpdates();  // Force index construction now.
   }
-  if (FLAGS_s2debug && s2debug_override_ == ALLOW_S2DEBUG) {
+  if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
     // Note that FLAGS_s2debug is false in optimized builds (by default).
     CHECK(IsValid());
   }
@@ -289,7 +289,7 @@ S2Loop::S2Loop(S2Cell const& cell)
       num_vertices_(4),
       vertices_(new S2Point[num_vertices_]),
       owns_vertices_(true),
-      s2debug_override_(ALLOW_S2DEBUG),
+      s2debug_override_(S2Debug::ALLOW),
       unindexed_contains_calls_(0),
       shape_(this) {
   for (int i = 0; i < 4; ++i) {

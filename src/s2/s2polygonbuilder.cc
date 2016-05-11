@@ -54,10 +54,10 @@ void S2PolygonBuilderOptions::set_xor_edges(bool xor_edges) {
 
 void S2PolygonBuilderOptions::set_validate(bool validate) {
   validate_ = validate;
-  set_s2debug_override(DISABLE_S2DEBUG);
+  set_s2debug_override(S2Debug::DISABLE);
 }
 
-void S2PolygonBuilderOptions::set_s2debug_override(S2debugOverride override) {
+void S2PolygonBuilderOptions::set_s2debug_override(S2Debug override) {
   s2debug_override_ = override;
 }
 
@@ -283,8 +283,7 @@ unique_ptr<S2Loop> S2PolygonBuilder::AssembleLoop(
       // This is guaranteed to assemble a loop that is interior to the previous
       // one and will therefore eventually terminate.
 
-      auto loop =
-          util::gtl::MakeUnique<S2Loop>(path, options_.s2debug_override());
+      auto loop = gtl::MakeUnique<S2Loop>(path, options_.s2debug_override());
       if (options_.validate() && !loop->IsValid()) {
         // We've constructed a loop that crosses itself, which can only
         // happen if there is bad input data.  Throw away the whole loop.
@@ -564,7 +563,7 @@ unique_ptr<S2Loop> SnapLoopToLevel(S2Loop const& loop, int level) {
   for (int i = 0; i < loop.num_vertices(); ++i) {
     snapped_vertices[i] = SnapPointToLevel(loop.vertex(i), level);
   }
-  return util::gtl::MakeUnique<S2Loop>(snapped_vertices);
+  return gtl::MakeUnique<S2Loop>(snapped_vertices);
 }
 }  // namespace
 

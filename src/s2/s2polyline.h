@@ -25,6 +25,7 @@
 #include "s2/base/macros.h"
 #include "s2/fpcontractoff.h"
 #include "s2/s2.h"
+#include "s2/s2error.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2region.h"
 #include "s2/s2shapeindex.h"
@@ -52,18 +53,18 @@ class S2Polyline : public S2Region {
   // Convenience constructors to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
   //
-  //   S2Polyline* line = new S2Polyline(vertices, DISABLE_S2DEBUG);
+  //   S2Polyline* line = new S2Polyline(vertices, S2Debug::DISABLE);
   //
   // This is equivalent to:
   //
   //   S2Polyline* line = new S2Polyline;
-  //   line->set_s2debug_override(DISABLE_S2DEBUG);
+  //   line->set_s2debug_override(S2Debug::DISABLE);
   //   line->Init(vertices);
   //
   // The main reason to use this constructors is if you intend to call
   // IsValid() explicitly.  See set_s2debug_override() for details.
-  S2Polyline(std::vector<S2Point> const& vertices, S2debugOverride override);
-  S2Polyline(std::vector<S2LatLng> const& vertices, S2debugOverride override);
+  S2Polyline(std::vector<S2Point> const& vertices, S2Debug override);
+  S2Polyline(std::vector<S2LatLng> const& vertices, S2Debug override);
 
   // Initialize a polyline that connects the given vertices. Empty polylines are
   // allowed.  Adjacent vertices should not be identical or antipodal.  All
@@ -82,18 +83,23 @@ class S2Polyline : public S2Region {
   // this flag is if you intend to call IsValid() explicitly, like this:
   //
   //   S2Polyline line;
-  //   line.set_s2debug_override(DISABLE_S2DEBUG);
+  //   line.set_s2debug_override(S2Debug::DISABLE);
   //   line.Init(...);
   //   if (!line.IsValid()) { ... }
   //
   // Without the call to set_s2debug_override(), invalid data would cause a
   // fatal error in Init() whenever the --s2debug flag is enabled.
-  void set_s2debug_override(S2debugOverride override);
-  S2debugOverride s2debug_override() const;
+  void set_s2debug_override(S2Debug override);
+  S2Debug s2debug_override() const;
 
   // Return true if the given vertices form a valid polyline.
   bool IsValid() const;
-  static bool IsValid(std::vector<S2Point> const& vertices);
+
+  // Returns true if this is *not* a valid polyline and sets "error"
+  // appropriately.  Otherwise returns false and leaves "error" unchanged.
+  //
+  // REQUIRES: error != nullptr
+  bool FindValidationError(S2Error* error) const;
 
   int num_vertices() const { return num_vertices_; }
   S2Point const& vertex(int k) const {
@@ -199,6 +205,9 @@ class S2Polyline : public S2Region {
   //    guarantees geometric equivalence.
   void SubsampleVertices(S1Angle tolerance, std::vector<int>* indices) const;
 
+  // Return true if two polylines are exactly the same.
+  bool Equals(S2Polyline const* b) const;
+
   // Return true if two polylines have the same number of vertices, and
   // corresponding vertex pairs are separated by no more than "max_error".
   // (For testing purposes.)
@@ -248,7 +257,7 @@ class S2Polyline : public S2Region {
    public:
     Shape() : polyline_(nullptr) {}  // Must call Init().
 
-    // Initialization.  Does not take ownership of "loop".
+    // Initialization.  Does not take ownership of "polyline".
     explicit Shape(S2Polyline const* polyline) { Init(polyline); }
     void Init(S2Polyline const* polyline) { polyline_ = polyline; }
 
@@ -275,12 +284,9 @@ class S2Polyline : public S2Region {
   // its argument.
   explicit S2Polyline(S2Polyline const* src);
 
-  // Return true if the given vertices form a valid polyline.
-  static bool IsValid(S2Point const* vertices, int num_vertices);
-
   // Allows overriding the automatic validity checking controlled by the
   // --s2debug flag.
-  S2debugOverride s2debug_override_;
+  S2Debug s2debug_override_;
 
   // We store the vertices in an array rather than a vector because we don't
   // need any STL methods, and computing the number of vertices using size()

@@ -117,6 +117,10 @@ class S2CellId {
   // Return the direction vector corresponding to the center of the given
   // cell.  The vector returned by ToPointRaw is not necessarily unit length.
   // This method returns the same result as S2Cell::GetCenter().
+  //
+  // The maximum directional error in ToPoint() (compared to the exact
+  // mathematical result) is 1.5 * DBL_EPSILON radians, and the maximum length
+  // error is 2 * DBL_EPSILON (the same as Normalize).
   S2Point ToPoint() const { return ToPointRaw().Normalize(); }
   S2Point ToPointRaw() const;
 

@@ -165,6 +165,9 @@ class S2ClosestPointQuery {
   // The distance to the result point at the given index.
   S1Angle distance(int i) const;
 
+  // Like distance(i), but expressed as an S1ChordAngle.
+  S1ChordAngle distance_ca(int i) const;
+
   // The client data associated with the result point at the given index.
   Data const& data(int i) const;
 
@@ -297,7 +300,7 @@ class S2ClosestPointQuery {
     }
   };
   using CellQueue =
-      std::priority_queue<QueueEntry, util::gtl::InlinedVector<QueueEntry, 16>>;
+      std::priority_queue<QueueEntry, gtl::InlinedVector<QueueEntry, 16>>;
   CellQueue queue_;
 
   // Temporaries, defined here to avoid multiple allocations / initializations.
@@ -389,8 +392,13 @@ S2Point const& S2ClosestPointQuery<Data>::point(int i) const {
 }
 
 template <class Data>
+S1ChordAngle S2ClosestPointQuery<Data>::distance_ca(int i) const {
+  return results_.rep()[i].distance;
+}
+
+template <class Data>
 S1Angle S2ClosestPointQuery<Data>::distance(int i) const {
-  return results_.rep()[i].distance.ToAngle();
+  return distance_ca(i).ToAngle();
 }
 
 template <class Data>
@@ -486,6 +494,9 @@ template <class Data> template <class Target>
 void S2ClosestPointQuery<Data>::FindClosestPointsToTarget(
     Target const& target) {
   max_distance_limit_ = S1ChordAngle(max_distance_);
+  max_distance_limit_ = max_distance_limit_.PlusError(
+      max_distance_limit_.GetS1AngleConstructorMaxError() +
+      max_distance_limit_.GetS2PointConstructorMaxError());
   results_.mutable_rep()->clear();
   if (use_brute_force_) {
     FindClosestPointsBruteForce(target);

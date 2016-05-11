@@ -1,14 +1,12 @@
-# S2 Geometry Library
-
-[TOC]
+# Introduction
 
 ## Overview
 
-This is a package for manipulating geometric shapes.  It is especially
-suitable for geographic data, because the S2 library has excellent support for
-spherical geometry (i.e., shapes drawn directly on the sphere rather than on a
-2D map).  In fact, the name "S2" is derived from the mathematical notation
-for the unit sphere.
+This is a package for manipulating geometric shapes.  Unlike many geometry
+libraries, S2 is primarily designed to work with _spherical geometry_, i.e.,
+shapes drawn on a sphere rather than on a planar 2D map.  (In fact, the name
+"S2" is derived from the mathematical notation for the unit sphere.)  This makes
+it especially suitable for working with geographic data.
 
 Currently the package consists of:
 

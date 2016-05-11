@@ -33,6 +33,7 @@
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2edgeutil.h"
+#include "s2/s2error.h"
 #include "s2/util/math/matrix3x3.h"
 
 using std::max;
@@ -43,31 +44,31 @@ using std::vector;
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
 S2Polyline::S2Polyline()
-  : s2debug_override_(ALLOW_S2DEBUG),
+  : s2debug_override_(S2Debug::ALLOW),
     num_vertices_(0) {
 }
 
 S2Polyline::S2Polyline(vector<S2Point> const& vertices)
-  : s2debug_override_(ALLOW_S2DEBUG),
+  : s2debug_override_(S2Debug::ALLOW),
     num_vertices_(0) {
   Init(vertices);
 }
 
 S2Polyline::S2Polyline(vector<S2LatLng> const& vertices)
-  : s2debug_override_(ALLOW_S2DEBUG),
+  : s2debug_override_(S2Debug::ALLOW),
     num_vertices_(0) {
   Init(vertices);
 }
 
 S2Polyline::S2Polyline(vector<S2Point> const& vertices,
-                       S2debugOverride override)
+                       S2Debug override)
   : s2debug_override_(override),
     num_vertices_(0) {
   Init(vertices);
 }
 
 S2Polyline::S2Polyline(vector<S2LatLng> const& vertices,
-                       S2debugOverride override)
+                       S2Debug override)
   : s2debug_override_(override),
     num_vertices_(0) {
   Init(vertices);
@@ -76,22 +77,21 @@ S2Polyline::S2Polyline(vector<S2LatLng> const& vertices,
 S2Polyline::~S2Polyline() {
 }
 
-void S2Polyline::set_s2debug_override(S2debugOverride override) {
+void S2Polyline::set_s2debug_override(S2Debug override) {
   s2debug_override_ = override;
 }
 
-S2debugOverride S2Polyline::s2debug_override() const {
+S2Debug S2Polyline::s2debug_override() const {
   return s2debug_override_;
 }
 
 void S2Polyline::Init(vector<S2Point> const& vertices) {
-  if (FLAGS_s2debug && s2debug_override_ == ALLOW_S2DEBUG) {
-    CHECK(IsValid(vertices));
-  }
-
   num_vertices_ = vertices.size();
   vertices_.reset(new S2Point[num_vertices_]);
   std::copy(vertices.begin(), vertices.end(), &vertices_[0]);
+  if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
+    CHECK(IsValid());
+  }
 }
 
 void S2Polyline::Init(vector<S2LatLng> const& vertices) {
@@ -100,41 +100,43 @@ void S2Polyline::Init(vector<S2LatLng> const& vertices) {
   for (int i = 0; i < num_vertices_; ++i) {
     vertices_[i] = vertices[i].ToPoint();
   }
-  if (FLAGS_s2debug && s2debug_override_ == ALLOW_S2DEBUG) {
+  if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
     CHECK(IsValid());
   }
 }
 
 bool S2Polyline::IsValid() const {
-  return IsValid(&vertices_[0], num_vertices_);
-}
-
-bool S2Polyline::IsValid(vector<S2Point> const& v) {
-  if (v.empty())
-    return true;
-  return IsValid(&v[0], v.size());
-}
-
-bool S2Polyline::IsValid(S2Point const* v, int n) {
-  // All vertices must be unit length.
-  for (int i = 0; i < n; ++i) {
-    if (!S2::IsUnitLength(v[i])) {
-      LOG(INFO) << "Vertex " << i << " is not unit length";
-      return false;
-    }
-  }
-
-  // Adjacent vertices must not be identical or antipodal.
-  for (int i = 1; i < n; ++i) {
-    if (v[i-1] == v[i] || v[i-1] == -v[i]) {
-      LOG(INFO) << "Vertices " << (i - 1) << " and " << i
-                << " are identical or antipodal";
-      return false;
-    }
+  S2Error error;
+  if (FindValidationError(&error)) {
+    LOG_IF(ERROR, FLAGS_s2debug) << error;
+    return false;
   }
   return true;
 }
 
+bool S2Polyline::FindValidationError(S2Error* error) const {
+  // All vertices must be unit length.
+  for (int i = 0; i < num_vertices(); ++i) {
+    if (!S2::IsUnitLength(vertex(i))) {
+      error->Init(S2Error::NOT_UNIT_LENGTH, "Vertex %d is not unit length", i);
+      return true;
+    }
+  }
+  // Adjacent vertices must not be identical or antipodal.
+  for (int i = 1; i < num_vertices(); ++i) {
+    if (vertex(i - 1) == vertex(i)) {
+      error->Init(S2Error::DUPLICATE_VERTICES,
+                  "Vertices %d and %d are identical", i - 1, i);
+      return true;
+    }
+    if (vertex(i - 1) == -vertex(i)) {
+      error->Init(S2Error::ANTIPODAL_VERTICES,
+                  "Vertices %d and %d are antipodal", i - 1, i);
+      return true;
+    }
+  }
+  return false;
+}
 
 S2Polyline::S2Polyline(S2Polyline const* src)
   : num_vertices_(src->num_vertices_),
@@ -368,7 +370,7 @@ bool S2Polyline::Decode(Decoder* const decoder) {
   if (decoder->avail() < num_vertices_ * sizeof(vertices_[0])) return false;
   decoder->getn(&vertices_[0], num_vertices_ * sizeof(vertices_[0]));
 
-  if (FLAGS_s2debug && s2debug_override_ == ALLOW_S2DEBUG) {
+  if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
     CHECK(IsValid());
   }
   return true;
@@ -471,6 +473,14 @@ void S2Polyline::SubsampleVertices(S1Angle tolerance,
     }
     index = next_index;
   }
+}
+
+bool S2Polyline::Equals(S2Polyline const* b) const {
+  if (num_vertices() != b->num_vertices()) return false;
+  for (int offset = 0; offset < num_vertices(); ++offset) {
+    if (vertex(offset) != b->vertex(offset)) return false;
+  }
+  return true;
 }
 
 bool S2Polyline::ApproxEquals(S2Polyline const* b, double max_error) const {

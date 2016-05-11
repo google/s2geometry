@@ -139,13 +139,17 @@ string ToString(S2LatLngRect const& rect) {
 
 string ToString(S2Loop const* loop) {
   string out;
-  AppendVertices(&loop->vertex(0), loop->num_vertices(), &out);
+  if (loop->num_vertices() > 0) {
+    AppendVertices(&loop->vertex(0), loop->num_vertices(), &out);
+  }
   return out;
 }
 
 string ToString(S2Polyline const* polyline) {
   string out;
-  AppendVertices(&polyline->vertex(0), polyline->num_vertices(), &out);
+  if (polyline->num_vertices() > 0) {
+    AppendVertices(&polyline->vertex(0), polyline->num_vertices(), &out);
+  }
   return out;
 }
 
@@ -161,7 +165,7 @@ string ToString(S2Polygon const* polygon) {
 
 string ToString(vector<S2Point> const& points) {
   string out;
-  AppendVertices(&points[0], points.size(), &out);
+  AppendVertices(points.data(), points.size(), &out);
   return out;
 }
 

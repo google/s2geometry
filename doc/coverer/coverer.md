@@ -1,3 +1,5 @@
+# S2Cell Covering Examples
+
 Here are some examples of the "cell coverage" feature of the new
 spherical geometry package. We pick some point on the sphere, and create
 a circular cap of some size around that point. We then cover the cap

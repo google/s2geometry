@@ -52,7 +52,6 @@
 #include "s2/s2textformat.h"
 #include "s2/util/gtl/fixedarray.h"
 #include "s2/util/gtl/ptr_util.h"
-#include "s2/util/gtl/stl_util.h"
 #include "s2/util/math/matrix3x3.h"
 
 using std::max;
@@ -1372,11 +1371,11 @@ class IsValidTest : public testing::Test {
   void CheckInvalid(string const& snippet) {
     vector<S2Loop*> loops;
     for (vector<S2Point>* vloop : vloops_) {
-      loops.push_back(new S2Loop(*vloop, DISABLE_S2DEBUG));
+      loops.push_back(new S2Loop(*vloop, S2Debug::DISABLE));
     }
     std::random_shuffle(loops.begin(), loops.end(), *rnd_);
     S2Polygon polygon;
-    polygon.set_s2debug_override(DISABLE_S2DEBUG);
+    polygon.set_s2debug_override(S2Debug::DISABLE);
     if (init_oriented_) {
       polygon.InitOriented(&loops);
     } else {
@@ -1652,7 +1651,7 @@ class S2PolygonSimplifierTest : public ::testing::Test {
   void SetInput(unique_ptr<S2Polygon> poly, double tolerance_in_degrees) {
     original = std::move(poly);
 
-    simplified = util::gtl::MakeUnique<S2Polygon>();
+    simplified = gtl::MakeUnique<S2Polygon>();
     simplified->InitToSimplified(original.get(),
                                  S1Angle::Degrees(tolerance_in_degrees),
                                  false);  // snap_to_cell_centers
@@ -1753,7 +1752,7 @@ unique_ptr<S2Polygon> MakeCellLoop(const S2Cell& cell, string const& str) {
         (vertices[2] * (1.0 - u) + vertices[3] * u) * v;
     loop_vertices.push_back(p.Normalize());
   }
-  return util::gtl::MakeUnique<S2Polygon>(new S2Loop(loop_vertices));
+  return gtl::MakeUnique<S2Polygon>(new S2Loop(loop_vertices));
 }
 
 TEST(InitToSimplifiedInCell, PointsOnCellBoundaryKept) {
@@ -1790,7 +1789,7 @@ TEST(InitToSimplifiedInCell, PointsInsideCellSimplified) {
 unique_ptr<S2Polygon> MakeRegularPolygon(
     const string& center, int num_points, double radius_in_degrees) {
   S1Angle radius = S1Angle::Degrees(radius_in_degrees);
-  return util::gtl::MakeUnique<S2Polygon>(
+  return gtl::MakeUnique<S2Polygon>(
       S2Loop::MakeRegularLoop(s2textformat::MakePoint(center),
                               radius, num_points));
 }
@@ -1875,7 +1874,7 @@ class S2PolygonDecodeTest : public ::testing::Test {
     decoder_.reset(data_array_.data(), encoder_.length());
     encoder_.clear();
     S2Polygon polygon;
-    polygon.set_s2debug_override(DISABLE_S2DEBUG);
+    polygon.set_s2debug_override(S2Debug::DISABLE);
     return polygon.Decode(&decoder_);
   }
 

@@ -100,8 +100,11 @@ class S2ClosestEdgeQuery {
   int max_edges() const;
   void set_max_edges(int max_edges);
 
-  // Only find edges whose distance to the target is less than "max_distance".
-  // This value may be changed between calls to FindClosestEdges().
+  // Find edges whose distance to the target is less than "max_distance".
+  // (All edges whose true distance is less than the given value will be
+  // returned, along with some edges whose true distance may be slightly
+  // greater than the limit.)  This value may be changed between calls to
+  // FindClosestEdges().
   //
   // Default value: S1Angle::Infinity().
   S1Angle max_distance() const;
@@ -155,6 +158,9 @@ class S2ClosestEdgeQuery {
 
   // The distance to the given result edge.
   S1Angle distance(int i) const;
+
+  // Like distance(i), but expressed as an S1ChordAngle.
+  S1ChordAngle distance_ca(int i) const;
 
   // Returns pointers to the vertices of the given result edge.  Example usage:
   //   S2Point const *v0, *v1;
@@ -282,7 +288,7 @@ class S2ClosestEdgeQuery {
   // The covering needs to be stored in a std::vector so that we can use
   // S2CellUnion::GetIntersection().
   std::vector<S2CellId> index_covering_;
-  util::gtl::InlinedVector<S2ShapeIndexCell const*, 6> index_cells_;
+  gtl::InlinedVector<S2ShapeIndexCell const*, 6> index_cells_;
 
   ////////// Fields that are updated during a query /////////////
 
@@ -318,7 +324,7 @@ class S2ClosestEdgeQuery {
   Result tmp_result_singleton_;
 
   // Once all result edges have been found, they are copied into a vector.
-  util::gtl::InlinedVector<Result, 8> results_;
+  gtl::InlinedVector<Result, 8> results_;
 
   Result const& result(int i) const;  // Internal accessor method.
 
@@ -362,7 +368,7 @@ class S2ClosestEdgeQuery {
     }
   };
   using CellQueue =
-      std::priority_queue<QueueEntry, util::gtl::InlinedVector<QueueEntry, 16>>;
+      std::priority_queue<QueueEntry, gtl::InlinedVector<QueueEntry, 16>>;
   CellQueue queue_;
 
   // Temporaries, defined here to avoid multiple allocations / initializations.
@@ -424,8 +430,12 @@ inline int S2ClosestEdgeQuery::edge_id(int i) const {
   return results_[i].edge_id;
 }
 
+inline S1ChordAngle S2ClosestEdgeQuery::distance_ca(int i) const {
+  return results_[i].distance;
+}
+
 inline S1Angle S2ClosestEdgeQuery::distance(int i) const {
-  return results_[i].distance.ToAngle();
+  return distance_ca(i).ToAngle();
 }
 
 inline void S2ClosestEdgeQuery::GetEdge(int i, S2Point const** v0,

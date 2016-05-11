@@ -35,6 +35,43 @@ class S2LatLng;
 // or from radians, degrees, and the E5/E6/E7 representations (i.e. degrees
 // multiplied by 1e5/1e6/1e7 and rounded to the nearest integer).
 //
+// The internal representation is a double-precision value in radians, so
+// conversion to and from radians is exact.  Conversions between E5, E6, E7,
+// and Degrees are not always exact; for example, Degrees(3.1) is different
+// from E6(3100000) or E7(310000000).  However, the following properties are
+// guaranteed for any integer "n", provided that "n" is in the input range of
+// both functions:
+//
+//     Degrees(n) == E6(1000000 * n)
+//     Degrees(n) == E7(10000000 * n)
+//          E6(n) == E7(10 * n)
+//
+// The corresponding properties are *not* true for E5, so if you use E5 then
+// don't test for exact equality when comparing to other formats such as
+// Degrees or E7.
+//
+// The following conversions between degrees and radians are exact:
+//
+//          Degrees(180) == Radians(M_PI)
+//       Degrees(45 * k) == Radians(k * M_PI / 4)  for k == 0..8
+//
+// These identities also hold when the arguments are scaled up or down by any
+// power of 2.  Some similar identities are also true, for example,
+// Degrees(60) == Radians(M_PI / 3), but be aware that this type of identity
+// does not hold in general.  For example, Degrees(3) != Radians(M_PI / 60).
+//
+// Similarly, the conversion to radians means that Angle::Degrees(x).degrees()
+// does not always equal "x".  For example,
+//
+//         S1Angle::Degrees(45 * k).degrees() == 45 * k      for k == 0..8
+//   but       S1Angle::Degrees(60).degrees() != 60.
+//
+// This means that when testing for equality, you should allow for numerical
+// errors (EXPECT_DOUBLE_EQ) or convert to discrete E5/E6/E7 values first.
+//
+// CAVEAT: All of the above properties depend on "double" being the usual
+// 64-bit IEEE 754 type (which is true on almost all modern platforms).
+//
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.
 class S1Angle {
@@ -70,18 +107,19 @@ class S1Angle {
   S1Angle(S2Point const& x, S2Point const& y);
 
   // Like the constructor above, but return the angle (i.e., distance)
-  // between two S2LatLng points.
+  // between two S2LatLng points.  The result has a maximum error of
+  // 3.25 * DBL_EPSILON (or 2.5 * DBL_EPSILON for angles up to 1 radian).
   S1Angle(S2LatLng const& x, S2LatLng const& y);
 
-  double radians() const { return radians_; }
-  double degrees() const { return radians_ * (180 / M_PI); }
+  double radians() const;
+  double degrees() const;
 
-  int32 e5() const { return MathUtil::FastIntRound(degrees() * 1e5); }
-  int32 e6() const { return MathUtil::FastIntRound(degrees() * 1e6); }
-  int32 e7() const { return MathUtil::FastIntRound(degrees() * 1e7); }
+  int32 e5() const;
+  int32 e6() const;
+  int32 e7() const;
 
   // Return the absolute value of an angle.
-  S1Angle abs() const { return S1Angle(fabs(radians_)); }
+  S1Angle abs() const;
 
   // Comparison operators.
   friend bool operator==(S1Angle x, S1Angle y);
@@ -135,6 +173,35 @@ inline S1Angle S1Angle::Infinity() {
 
 inline S1Angle S1Angle::Zero() {
   return S1Angle(0);
+}
+
+inline double S1Angle::radians() const {
+  return radians_;
+}
+
+inline double S1Angle::degrees() const {
+  return (180 / M_PI) * radians_;
+}
+
+// Note that the E5, E6, and E7 conversion involve two multiplications rather
+// than one.  This is mainly for backwards compatibility (changing this would
+// break many tests), but it does have the nice side effect that conversions
+// between Degrees, E6, and E7 are exact when the arguments are integers.
+
+inline int32 S1Angle::e5() const {
+  return MathUtil::FastIntRound(1e5 * degrees());
+}
+
+inline int32 S1Angle::e6() const {
+  return MathUtil::FastIntRound(1e6 * degrees());
+}
+
+inline int32 S1Angle::e7() const {
+  return MathUtil::FastIntRound(1e7 * degrees());
+}
+
+inline S1Angle S1Angle::abs() const {
+  return S1Angle(std::fabs(radians_));
 }
 
 inline bool operator==(S1Angle x, S1Angle y) {
@@ -226,29 +293,27 @@ inline S1Angle S1Angle::Radians(double radians) {
 }
 
 inline S1Angle S1Angle::Degrees(double degrees) {
-  return S1Angle(degrees * (M_PI / 180));
+  return S1Angle((M_PI / 180) * degrees);
 }
 
 inline S1Angle S1Angle::E5(int32 e5) {
-  // Multiplying by 1e-5 isn't quite as accurate as dividing by 1e5,
-  // but it's about 10 times faster and more than accurate enough.
-  return Degrees(e5 * 1e-5);
+  return Degrees(1e-5 * e5);
 }
 
 inline S1Angle S1Angle::E6(int32 e6) {
-  return Degrees(e6 * 1e-6);
+  return Degrees(1e-6 * e6);
 }
 
 inline S1Angle S1Angle::E7(int32 e7) {
-  return Degrees(e7 * 1e-7);
+  return Degrees(1e-7 * e7);
 }
 
 inline S1Angle S1Angle::UnsignedE6(uint32 e6) {
-  return Degrees(static_cast<int32>(e6) * 1e-6);
+  return E6(static_cast<int32>(e6));
 }
 
 inline S1Angle S1Angle::UnsignedE7(uint32 e7) {
-  return Degrees(static_cast<int32>(e7) * 1e-7);
+  return E7(static_cast<int32>(e7));
 }
 
 // Writes the angle in degrees with 7 digits of precision after the

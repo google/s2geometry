@@ -30,9 +30,9 @@
 #include "s2/s2cellunion.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2paddedcell.h"
-#include "s2/util/gtl/stl_util.h"
 
 using std::max;
+using std::unique_ptr;
 using std::vector;
 
 // FLAGS_s2shapeindex_default_max_edges_per_cell
@@ -282,8 +282,7 @@ void S2ShapeIndex::Remove(S2Shape* shape) {
 
 void S2ShapeIndex::RemoveAll() {
   // Note that vector::clear() does not actually free storage.
-  vector<S2Shape*> empty_shapes;
-  shapes_.swap(empty_shapes);
+  vector<S2Shape*>().swap(shapes_);
 
   Iterator it;
   for (it.InitStale(*this); !it.Done(); it.Next()) {
@@ -711,8 +710,7 @@ void S2ShapeIndex::ApplyUpdatesInternal() {
     for (int face = 0; face < 6; ++face) {
       UpdateFaceEdges(face, all_edges[face], &tracker);
       // Save memory by clearing vectors after we are done with them.
-      vector<FaceEdge> empty;
-      all_edges[face].swap(empty);
+      vector<FaceEdge>().swap(all_edges[face]);
     }
     // We can't clear pending_removals_ until all updates are processed,
     // because FaceEdge stores pointers directly to the removed vertices.
@@ -1034,16 +1032,13 @@ class S2ShapeIndex::EdgeAllocator {
  public:
   EdgeAllocator() : size_(0) {}
 
-  ~EdgeAllocator() {
-    STLDeleteElements(&clipped_edges_);
-  }
-
-  // Return a pointer to a newly allocated edge.
+  // Return a pointer to a newly allocated edge.  The EdgeAllocator
+  // retains ownership.
   ClippedEdge* NewClippedEdge() {
     if (size_ == clipped_edges_.size()) {
-      clipped_edges_.push_back(new ClippedEdge);
+      clipped_edges_.emplace_back(new ClippedEdge);
     }
-    return clipped_edges_[size_++];
+    return clipped_edges_[size_++].get();
   }
   // Return the number of allocated edges.
   size_t size() const { return size_; }
@@ -1060,7 +1055,7 @@ class S2ShapeIndex::EdgeAllocator {
   // once they have been allocated.  Instead we keep a pool of allocated edges
   // that are all deleted together at the end.
   size_t size_;
-  vector<ClippedEdge*> clipped_edges_;
+  vector<unique_ptr<ClippedEdge>> clipped_edges_;
 
   // On the other hand, we can use vector<FaceEdge> because they are allocated
   // only at one level during the recursion (namely, the level at which we
@@ -1280,8 +1275,7 @@ void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
         if (child_edges[i][j].empty()) {
-          vector<ClippedEdge const*> empty;
-          empty.swap(child_edges[i][j]);
+          vector<ClippedEdge const*>().swap(child_edges[i][j]);
         }
       }
     }

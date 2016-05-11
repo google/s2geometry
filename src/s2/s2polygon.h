@@ -124,17 +124,17 @@ class S2Polygon : public S2Region {
   // Convenience constructor to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
   //
-  //   S2Polygon* polygon = new S2Polygon(loops, DISABLE_S2DEBUG);
+  //   S2Polygon* polygon = new S2Polygon(loops, S2Debug::DISABLE);
   //
   // This is equivalent to:
   //
   //   S2Polygon* polygon = new S2Polygon;
-  //   polygon->set_s2debug_override(DISABLE_S2DEBUG);
-  //   polygon->Init(loops);
+  //   polygon->set_s2debug_override(S2Debug::DISABLE);
+  //   polygon->InitNested(loops);
   //
   // The main reason to use this constructor is if you intend to call
   // IsValid() explicitly.  See set_s2debug_override() for details.
-  S2Polygon(std::vector<S2Loop*>* loops, S2debugOverride override);
+  S2Polygon(std::vector<S2Loop*>* loops, S2Debug override);
 
   // Create a polygon from a set of hierarchically nested loops.  The polygon
   // interior consists of the points contained by an odd number of loops.
@@ -159,8 +159,8 @@ class S2Polygon : public S2Region {
 
   // Initialize a polygon from a single loop.  Note that this method
   // automatically converts the special empty loop (see S2Loop) into an empty
-  // polygon, unlike the vector-of-loops Init() method which does not allow
-  // empty loops at all.  Takes ownership of the loop.
+  // polygon, unlike the vector-of-loops InitNested() method which does not
+  // allow empty loops at all.  Takes ownership of the loop.
   void Init(S2Loop* loop);
 
   // Releases ownership of the loops of this polygon, appends them to "loops" if
@@ -183,7 +183,7 @@ class S2Polygon : public S2Region {
   // this flag is if you intend to call IsValid() explicitly, like this:
   //
   //   S2Polygon polygon;
-  //   polygon.set_s2debug_override(DISABLE_S2DEBUG);
+  //   polygon.set_s2debug_override(S2Debug::DISABLE);
   //   polygon.Init(...);
   //   if (!polygon.IsValid()) { ... }
   //
@@ -191,8 +191,8 @@ class S2Polygon : public S2Region {
   // fatal error in Init() whenever the --s2debug flag is enabled.
   //
   // This setting is preserved across calls to Init() and Decode().
-  void set_s2debug_override(S2debugOverride override);
-  S2debugOverride s2debug_override() const;
+  void set_s2debug_override(S2Debug override);
+  S2Debug s2debug_override() const;
 
   // Returns true if this is a valid polygon (including checking whether all
   // the loops are themselves valid).  Note that validity is checked
@@ -618,7 +618,7 @@ class S2Polygon : public S2Region {
 
   // Allows overriding the automatic validity checking controlled by the
   // --s2debug flag.
-  S2debugOverride s2debug_override_;
+  S2Debug s2debug_override_;
 
   // True if InitOriented() was called and the given loops had inconsistent
   // orientations (i.e., it is not possible to construct a polygon such that

@@ -15,6 +15,7 @@
 
 #include "s2/s1chordangle.h"
 
+#include <cfloat>
 #include <limits>
 
 #include <gtest/gtest.h>
@@ -51,6 +52,10 @@ TEST(S1ChordAngle, FromLength2) {
 
 TEST(S1ChordAngle, Zero) {
   EXPECT_EQ(S1Angle::Zero(), S1ChordAngle::Zero().ToAngle());
+}
+
+TEST(S1ChordAngle, Right) {
+  EXPECT_DOUBLE_EQ(90, S1ChordAngle::Right().ToAngle().degrees());
 }
 
 TEST(S1ChordAngle, Straight) {
@@ -141,4 +146,33 @@ TEST(S1ChordAngle, Trigonometry) {
   EXPECT_EQ(0, sin(angle180));
   EXPECT_EQ(-1, cos(angle180));
   EXPECT_EQ(0, tan(angle180));
+}
+
+TEST(S1ChordAngle, PlusError) {
+  EXPECT_EQ(S1ChordAngle::Negative(), S1ChordAngle::Negative().PlusError(5));
+  EXPECT_EQ(S1ChordAngle::Infinity(), S1ChordAngle::Infinity().PlusError(-5));
+  EXPECT_EQ(S1ChordAngle::Straight(), S1ChordAngle::Straight().PlusError(5));
+  EXPECT_EQ(S1ChordAngle::Zero(), S1ChordAngle::Zero().PlusError(-5));
+  EXPECT_EQ(S1ChordAngle::FromLength2(1.25),
+            S1ChordAngle::FromLength2(1).PlusError(0.25));
+  EXPECT_EQ(S1ChordAngle::FromLength2(0.75),
+            S1ChordAngle::FromLength2(1).PlusError(-0.25));
+}
+
+TEST(S1ChordAngle, S1AngleConsistency) {
+  // This test checks that the error bounds in the S1ChordAngle constructors
+  // are consistent with the maximum error in S1Angle(x, y).
+  double const kMaxS1AngleError = 3.25 * DBL_EPSILON;
+  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  for (int iter = 0; iter < 10000; ++iter) {
+    S2Point x = S2Testing::RandomPoint();
+    S2Point y = S2Testing::RandomPoint();
+    S1ChordAngle dist1 = S1ChordAngle(S1Angle(x, y));
+    S1ChordAngle dist2(x, y);
+    double max_error = (kMaxS1AngleError +
+                        dist1.GetS1AngleConstructorMaxError() +
+                        dist2.GetS2PointConstructorMaxError());
+    EXPECT_LE(dist1, dist2.PlusError(max_error));
+    EXPECT_GE(dist1, dist2.PlusError(-max_error));
+  }
 }

@@ -84,7 +84,7 @@ void TestFractal(int min_level, int max_level, double dimension) {
 
   // "triangle_perim" is the perimeter of the original equilateral triangle
   // before any subdivision occurs.
-  double triangle_perim = 3 * sqrt(3) * nominal_radius;
+  double triangle_perim = 3 * sqrt(3) * tan(nominal_radius);
   double min_length_sum = triangle_perim * pow(expansion_factor, min_level);
   for (int level = min_level; level <= max_level; ++level) {
     expected_num_vertices += NumVerticesAtLevel(level);
@@ -103,7 +103,8 @@ void TestFractal(int min_level, int max_level, double dimension) {
   double max_radius = 0;
   double length_sum = 0;
   for (int i = 0; i < loop->num_vertices(); ++i) {
-    double r = center.Angle(loop->vertex(i));
+    // Measure the radius of the fractal in the tangent plane at "center".
+    double r = tan(center.Angle(loop->vertex(i)));
     min_radius = min(min_radius, r);
     max_radius = max(max_radius, r);
     length_sum += loop->vertex(i).Angle(loop->vertex(i+1));
@@ -138,7 +139,11 @@ TEST(S2Testing, TriangleFractal) {
 }
 
 TEST(S2Testing, TriangleMultiFractal) {
-  TestFractal(1, 6, 1.0);
+  TestFractal(2, 6, 1.0);
+}
+
+TEST(S2Testing, SpaceFillingFractal) {
+  TestFractal(4, 4, 1.999);
 }
 
 TEST(S2Testing, KochCurveFractal) {
@@ -154,7 +159,7 @@ TEST(S2Testing, CesaroFractal) {
 }
 
 TEST(S2Testing, CesaroMultiFractal) {
-  TestFractal(2, 6, 1.8);
+  TestFractal(3, 6, 1.8);
 }
 
 }  // namespace

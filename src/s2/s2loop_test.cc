@@ -302,7 +302,7 @@ TEST_F(S2LoopTestBase, GetAreaConsistentWithSign) {
     // Repeatedly choose N vertices that are exactly on the equator until we
     // find some that form a valid loop.
     S2Loop loop;
-    loop.set_s2debug_override(DISABLE_S2DEBUG);
+    loop.set_s2debug_override(S2Debug::DISABLE);
     do {
       vector<S2Point> vertices;
       for (int i = 0; i < num_vertices; ++i) {
@@ -430,7 +430,7 @@ TEST_F(S2LoopTestBase, GetTurningAngle) {
   }
   // This is a pathological loop that contains many long parallel edges, and
   // takes tens of seconds to validate in debug mode.
-  S2Loop spiral(vertices, DISABLE_S2DEBUG);
+  S2Loop spiral(vertices, S2Debug::DISABLE);
 
   // Check that GetTurningAngle() is consistent with GetArea() to within the
   // error bound of the former.  We actually use a tiny fraction of the
@@ -494,7 +494,7 @@ TEST_F(S2LoopTestBase, Contains) {
   // This code checks each cell vertex is contained by exactly one of
   // the adjacent cells.
   for (int level = 0; level < 3; ++level) {
-    vector<S2Loop*> loops;
+    vector<unique_ptr<S2Loop>> loops;
     vector<S2Point> loop_vertices;
     set<S2Point> points;
     for (S2CellId id = S2CellId::Begin(level);
@@ -505,12 +505,12 @@ TEST_F(S2LoopTestBase, Contains) {
         loop_vertices.push_back(cell.GetVertex(k));
         points.insert(cell.GetVertex(k));
       }
-      loops.push_back(new S2Loop(loop_vertices));
+      loops.push_back(gtl::MakeUnique<S2Loop>(loop_vertices));
       loop_vertices.clear();
     }
     for (S2Point const& point : points) {
       int count = 0;
-      for (S2Loop* loop : loops) {
+      for (auto const& loop : loops) {
         if (loop->Contains(point)) ++count;
         // Contains and VirtualContainsPoint should have identical
         // implementation.
@@ -519,7 +519,6 @@ TEST_F(S2LoopTestBase, Contains) {
       }
       EXPECT_EQ(count, 1);
     }
-    STLDeleteElements(&loops);
   }
 }
 
@@ -549,8 +548,7 @@ TEST(S2Loop, ContainsMatchesCrossingSign) {
 
   S2Loop const loop(points);
 
-  // Get a vertex from a grandchild cell.  Mathematically, a0 should be the
-  // same as points[0], but rounding errors make it slightly different.
+  // Get a vertex from a grandchild cell.
   // +---------------+---------------+
   // |               |               |
   // |    points[3]  |   points[2]   |
@@ -570,6 +568,13 @@ TEST(S2Loop, ContainsMatchesCrossingSign) {
   // +---------------+---------------+
   S2Cell const grandchild_cell(cell_id.child(0).child(2));
   S2Point const a0 = grandchild_cell.GetVertex(0);
+
+  // If this doesn't hold, the rest of the test is pointless.
+  ASSERT_NE(points[0], a0)
+      << "This test depends on rounding errors that should make "
+         "a0 slightly different from points[0]"
+      << std::setprecision(20) << "\npoints[0]:" << points[0]
+      << "\n       a0:" << a0;
 
   // The edge from a0 to the origin crosses one boundary.
   EXPECT_EQ(-1, S2EdgeUtil::CrossingSign(a0, S2::Origin(),
@@ -866,7 +871,7 @@ static unique_ptr<S2Loop> MakeCellLoop(S2CellId begin, S2CellId end) {
     p = next;
   }
 
-  return util::gtl::MakeUnique<S2Loop>(vertices);
+  return gtl::MakeUnique<S2Loop>(vertices);
 }
 
 TEST(S2Loop, LoopRelations2) {

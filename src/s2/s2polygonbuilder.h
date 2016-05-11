@@ -70,7 +70,7 @@ class S2PolygonBuilderOptions {
  public:
   S2PolygonBuilderOptions() :
       undirected_edges_(false), xor_edges_(true), validate_(false),
-      s2debug_override_(ALLOW_S2DEBUG), snap_to_cell_centers_(false),
+      s2debug_override_(S2Debug::ALLOW), snap_to_cell_centers_(false),
       vertex_merge_radius_(S1Angle::Radians(0)), edge_splice_fraction_(0.866) {
   }
 
@@ -139,7 +139,7 @@ class S2PolygonBuilderOptions {
   bool validate() const { return validate_; }
   void set_validate(bool validate);
 
-  // Default value: ALLOW_S2DEBUG
+  // Default value: S2Debug::ALLOW
   //
   // This method can be used to turn off the automatic validity checks
   // controlled by the --s2debug flag (which is on by default in debug mode).
@@ -149,8 +149,8 @@ class S2PolygonBuilderOptions {
   //
   // Note that AssemblePolygon() always sets polygon->s2debug_override() to
   // the value specified here (any previous value is ignored).
-  S2debugOverride s2debug_override() const { return s2debug_override_; }
-  void set_s2debug_override(S2debugOverride override);
+  S2Debug s2debug_override() const { return s2debug_override_; }
+  void set_s2debug_override(S2Debug override);
 
   // Default value: false.
   //
@@ -230,7 +230,7 @@ class S2PolygonBuilderOptions {
   bool undirected_edges_;
   bool xor_edges_;
   bool validate_;
-  S2debugOverride s2debug_override_;
+  S2Debug s2debug_override_;
   bool snap_to_cell_centers_;
   S1Angle vertex_merge_radius_;
   double edge_splice_fraction_;

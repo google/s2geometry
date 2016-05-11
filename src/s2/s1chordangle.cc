@@ -17,6 +17,7 @@
 
 #include "s2/s1chordangle.h"
 
+#include <cfloat>
 #include <cmath>
 
 #include "s2/s1angle.h"
@@ -28,6 +29,7 @@ S1ChordAngle::S1ChordAngle(S2Point const& x, S2Point const& y) {
   DCHECK(S2::IsUnitLength(x));
   DCHECK(S2::IsUnitLength(y));
   // The distance may slightly exceed 4.0 due to roundoff errors.
+  // The maximum error in the result is 2 * DBL_EPSILON * length2_.
   length2_ = min(4.0, (x - y).Norm2());
   DCHECK(is_valid());
 }
@@ -52,7 +54,28 @@ S1Angle S1ChordAngle::ToAngle() const {
 }
 
 bool S1ChordAngle::is_valid() const {
-  return (length2_ >= 0 && length2_ <= 4) || is_negative() || is_infinity();
+  return (length2_ >= 0 && length2_ <= 4) || is_special();
+}
+
+S1ChordAngle S1ChordAngle::PlusError(double error) const {
+  // If angle is Negative() or Infinity(), don't change it.
+  // Otherwise clamp it to the valid range.
+  if (is_special()) return *this;
+  return S1ChordAngle(max(0.0, min(4.0, length2_ + error)));
+}
+
+double S1ChordAngle::GetS2PointConstructorMaxError() const {
+  // There is a relative error of (2 * DBL_EPSILON) when computing the squared
+  // distance, plus an absolute error of (16 * DBL_EPSILON**2) because the
+  // lengths of the input points may differ from 1 by up to (2 * DBL_EPSILON)
+  // each.  (This is the maximum length error in S2Point::Normalize.)
+  return 2 * DBL_EPSILON * length2_ + 16 * DBL_EPSILON * DBL_EPSILON;
+}
+
+double S1ChordAngle::GetS1AngleConstructorMaxError() const {
+  // Assuming that an accurate math library is being used, the sin() call and
+  // the multiply each have a relative error of 0.5 * DBL_EPSILON.
+  return DBL_EPSILON * length2_;
 }
 
 S1ChordAngle operator+(S1ChordAngle a, S1ChordAngle b) {

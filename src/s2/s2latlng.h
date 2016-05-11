@@ -88,6 +88,8 @@ class S2LatLng {
   S2LatLng Normalized() const;
 
   // Convert a normalized S2LatLng to the equivalent unit-length vector.
+  // The maximum error in the result is 1.5 * DBL_EPSILON.  (This does not
+  // include the error of converting degrees, E5, E6, or E7 to radians.)
   S2Point ToPoint() const;
 
   // Return the distance (measured along the surface of the sphere) to the

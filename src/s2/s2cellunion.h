@@ -46,6 +46,14 @@ class S2CellUnion : public S2Region {
   // until one of the Init() methods is called.
   S2CellUnion() {}
 
+#ifndef SWIG
+  // S2CellUnion is movable but not copyable.
+  S2CellUnion(S2CellUnion&&) = default;
+  S2CellUnion& operator=(S2CellUnion&&) = default;
+  S2CellUnion(S2CellUnion const&) = delete;
+  void operator=(S2CellUnion const&) = delete;
+#endif  // SWIG
+
   // Populates a cell union with the given S2CellIds or 64-bit cells ids, and
   // then calls Normalize().  The InitSwap() version takes ownership of the
   // vector data without copying and clears the given vector.  These methods
@@ -247,11 +255,6 @@ class S2CellUnion : public S2Region {
 
  private:
   std::vector<S2CellId> cell_ids_;
-
-#ifndef SWIG
-  S2CellUnion(S2CellUnion const&) = delete;
-  void operator=(S2CellUnion const&) = delete;
-#endif  // SWIG
 };
 
 // Return true if two cell unions are identical.

@@ -26,6 +26,7 @@
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
+#include "s2/s1chordangle.h"
 #include "s2/s1interval.h"
 #include "s2/s2.h"
 #include "s2/s2latlng.h"
@@ -33,8 +34,6 @@
 #include "s2/util/gtl/inlined_vector.h"
 #include "s2/util/math/vector3.h"
 
-class S1ChordAngle;
-class S2LatLngRect;
 class ExactFloat;
 
 // This class contains various utility functions related to edges.  It
@@ -402,17 +401,54 @@ class S2EdgeUtil {
   // arguments should be unit length.  The result is very accurate for small
   // distances but may have some numerical error if the distance is large
   // (approximately Pi/2 or greater).  The case A == B is handled correctly.
+  //
+  // If you want to compare a distance against a fixed threshold, e.g.
+  //    if (S2EdgeUtil::GetDistance(x, a, b) < limit)
+  // then it is significantly faster to use UpdateMinDistance() below.
   static S1Angle GetDistance(S2Point const& x,
                              S2Point const& a, S2Point const& b);
 
-  // This is a more efficient version of GetDistance() for use when many
-  // distances are being computed and compared.  It uses an S1ChordAngle
-  // rather than an S1Angle (to avoid trigonometric operations).  If the
-  // distance is smaller than "min_dist", it updates "min_dist" and returns
-  // true.  Otherwise it returns false.  The case A == B is handled correctly.
+  // Returns true if the distance from X to the edge AB is less than "limit".
+  // This method is significantly faster than GetDistance().  If you want to
+  // compare against a fixed S1Angle, you should convert it to an S1ChordAngle
+  // once and save the value, since this step is relatively expensive.
+  static bool IsDistanceLess(S2Point const& x,
+                             S2Point const& a, S2Point const& b,
+                             S1ChordAngle limit);
+
+  // If the distance from X to the edge AB is less then "min_dist", this
+  // method updates "min_dist" and returns true.  Otherwise it returns false.
+  // The case A == B is handled correctly.
+  //
+  // Use this method when you want to compute many distances and keep track of
+  // the minimum.  It is significantly faster than using GetDistance(),
+  // because (1) using S1ChordAngle is much faster than S1Angle, and (2) it
+  // can save a lot of work by not actually computing the distance when it is
+  // obviously larger than the current minimum.
   static bool UpdateMinDistance(S2Point const& x,
                                 S2Point const& a, S2Point const& b,
                                 S1ChordAngle* min_dist);
+
+  // Returns the maximum error in the result of UpdateMinDistance (and
+  // associated functions such as UpdateMinInteriorDistance, IsDistanceLess,
+  // etc), assuming that all input points are normalized to within the bounds
+  // guaranteed by S2Point::Normalize().  The error can be added or subtracted
+  // from an S1ChordAngle "x" using x.PlusError(error).
+  static double GetUpdateMinDistanceMaxError(S1ChordAngle dist);
+
+  // Returns true if the minimum distance from X to the edge AB is attained at
+  // an interior point of AB (i.e., not an endpoint), and that distance is
+  // less than "limit".
+  static bool IsInteriorDistanceLess(S2Point const& x,
+                                     S2Point const& a, S2Point const& b,
+                                     S1ChordAngle limit);
+
+  // If the minimum distance from X to AB is attained at an interior point of
+  // AB (i.e., not an endpoint), and that distance is less than "min_dist",
+  // then update "min_dist" and return true.  Otherwise return false.
+  static bool UpdateMinInteriorDistance(S2Point const& x,
+                                        S2Point const& a, S2Point const& b,
+                                        S1ChordAngle* min_dist);
 
   // Return the point along the edge AB that is closest to the point X.
   // The fractional distance of this point along the edge AB can be obtained
@@ -497,7 +533,7 @@ class S2EdgeUtil {
     int face;
     R2Point a, b;
   };
-  using FaceSegmentVector = util::gtl::InlinedVector<FaceSegment, 6>;
+  using FaceSegmentVector = gtl::InlinedVector<FaceSegment, 6>;
 
   // Subdivide the given edge AB at every point where it crosses the boundary
   // between two S2 cube faces and return the corresponding FaceSegments.  The
@@ -782,6 +818,18 @@ inline bool S2EdgeUtil::LongitudePruner::Intersects(S2Point const& v1) {
   bool result = interval_.Intersects(S1Interval::FromPointPair(lng0_, lng1));
   lng0_ = lng1;
   return result;
+}
+
+inline bool S2EdgeUtil::IsDistanceLess(S2Point const& x,
+                                       S2Point const& a, S2Point const& b,
+                                       S1ChordAngle limit) {
+  return UpdateMinDistance(x, a, b, &limit);
+}
+
+inline bool S2EdgeUtil::IsInteriorDistanceLess(
+    S2Point const& x, S2Point const& a, S2Point const& b,
+    S1ChordAngle limit) {
+  return UpdateMinInteriorDistance(x, a, b, &limit);
 }
 
 inline bool S2EdgeUtil::ClipToFace(S2Point const& a, S2Point const& b, int face,
