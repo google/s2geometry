@@ -50,9 +50,10 @@ S2RegionCoverer::S2RegionCoverer() :
   region_(nullptr) {
 }
 
-S2RegionCoverer::~S2RegionCoverer() {
-  // Prevent inline destructor bloat by providing a definition.
-}
+// Defaulted in the implementation to prevent inline bloat.
+S2RegionCoverer::~S2RegionCoverer() = default;
+S2RegionCoverer::S2RegionCoverer(S2RegionCoverer&&) = default;
+S2RegionCoverer& S2RegionCoverer::operator=(S2RegionCoverer&&) = default;
 
 void S2RegionCoverer::set_min_level(int min_level) {
   DCHECK_GE(min_level, 0);

@@ -34,7 +34,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
-#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector.h"
 
 using std::max;
 using std::swap;

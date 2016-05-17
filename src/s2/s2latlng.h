@@ -28,7 +28,7 @@
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s2.h"
-#include "s2/util/math/vector2.h"
+#include "s2/util/math/vector.h"
 
 // This class represents a point on the unit sphere as a pair
 // of latitude-longitude coordinates.  Like the rest of the "geometry"

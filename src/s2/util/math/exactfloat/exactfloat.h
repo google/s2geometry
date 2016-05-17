@@ -77,7 +77,7 @@
 // -----------------------------------
 //
 // ExactFloat can be used with templatized classes such as Vector2 and Vector3
-// (see "util/math/vector3.h"), with the following limitations:
+// (see "util/math/vector.h"), with the following limitations:
 //
 //  - Cast() can be used to convert other vector types to an ExactFloat vector
 //    type, but not the other way around.  This is because there are no

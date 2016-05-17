@@ -26,7 +26,7 @@
 #include "s2/r1interval.h"
 #include "s2/s1chordangle.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
-#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector.h"
 
 // Avoid "using std::abs" to avoid possible programmer confusion with the
 // integer-only C function.

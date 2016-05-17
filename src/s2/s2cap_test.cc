@@ -26,7 +26,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2testing.h"
-#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector.h"
 
 static S2Point GetLatLngPoint(double lat_degrees, double lng_degrees) {
   return S2LatLng::FromDegrees(lat_degrees, lng_degrees).ToPoint();

@@ -37,8 +37,7 @@
 #include <glog/logging.h>
 #include <type_traits>
 #include "s2/util/math/mathutil.h"
-#include "s2/util/math/vector2.h"
-#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector.h"
 
 template <class VType>
 class Matrix3x3 {

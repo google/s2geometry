@@ -28,7 +28,7 @@
 #include "s2/s2edgeutil.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
-#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector.h"
 
 using std::max;
 

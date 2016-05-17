@@ -74,6 +74,13 @@ class S2RegionCoverer {
   S2RegionCoverer();
   ~S2RegionCoverer();
 
+#ifndef SWIG
+  S2RegionCoverer(const S2RegionCoverer&) = delete;
+  S2RegionCoverer& operator=(const S2RegionCoverer&) = delete;
+  S2RegionCoverer(S2RegionCoverer&&);
+  S2RegionCoverer& operator=(S2RegionCoverer&&);
+#endif  // SWIG
+
   // Set the minimum and maximum cell level to be used.  The default is to use
   // all cell levels.  Requires: max_level() >= min_level().
   //
@@ -275,11 +282,6 @@ class S2RegionCoverer {
 
   // Counter of number of candidates created, for performance evaluation.
   int candidates_created_counter_;
-
-#ifndef SWIG
-  S2RegionCoverer(S2RegionCoverer const&) = delete;
-  void operator=(S2RegionCoverer const&) = delete;
-#endif  // SWIG
 };
 
 #endif  // S2_S2REGIONCOVERER_H_

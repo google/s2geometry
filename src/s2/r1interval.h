@@ -25,7 +25,7 @@
 
 #include <glog/logging.h>
 #include "s2/fpcontractoff.h"
-#include "s2/util/math/vector2.h"  // IWYU pragma: export
+#include "s2/util/math/vector.h"  // IWYU pragma: export
 
 // An R1Interval represents a closed, bounded interval on the real line.
 // It is capable of representing the empty interval (containing no points)
