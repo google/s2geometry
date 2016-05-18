@@ -99,7 +99,7 @@ PolygonShape::PolygonShape(S2Polygon const& polygon) {
 void PolygonShape::Init(vector<PolygonShape::Loop> const& loops) {
   vector<VertexArray> v_arrays;
   for (PolygonShape::Loop const& loop : loops) {
-    v_arrays.push_back(VertexArray(&*loop.begin(), loop.size()));
+    v_arrays.push_back(VertexArray(loop.data(), loop.size()));
   }
   Init(v_arrays);
 }

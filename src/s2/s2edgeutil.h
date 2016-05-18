@@ -33,7 +33,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
 #include "s2/util/gtl/inlined_vector.h"
-#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector.h"
 
 class ExactFloat;
 

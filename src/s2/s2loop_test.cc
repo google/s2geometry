@@ -46,7 +46,7 @@
 #include "s2/util/gtl/ptr_util.h"
 #include "s2/util/gtl/stl_util.h"
 #include "s2/util/math/matrix3x3.h"
-#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector.h"
 
 using std::map;
 using std::max;

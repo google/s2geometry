@@ -25,7 +25,7 @@
 #include <glog/logging.h>
 
 #include "s2/fpcontractoff.h"
-#include "s2/util/math/vector2.h"  // IWYU pragma: export
+#include "s2/util/math/vector.h"  // IWYU pragma: export
 
 // An S1Interval represents a closed interval on a unit circle (also known
 // as a 1-dimensional sphere).  It is capable of representing the empty

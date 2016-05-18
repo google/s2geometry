@@ -1174,6 +1174,7 @@ void S2Polygon::InitToApproxIntersection(S2Polygon const* a, S2Polygon const* b,
 
   S2PolygonBuilderOptions options(S2PolygonBuilderOptions::DIRECTED_XOR());
   options.set_vertex_merge_radius(vertex_merge_radius);
+  options.set_s2debug_override(s2debug_override());
   S2PolygonBuilder builder(options);
   ClipBoundary(a, false, b, false, true, &builder);
   ClipBoundary(b, false, a, false, false, &builder);
@@ -1236,6 +1237,7 @@ void S2Polygon::InitToApproxUnion(S2Polygon const* a, S2Polygon const* b,
 
   S2PolygonBuilderOptions options(S2PolygonBuilderOptions::DIRECTED_XOR());
   options.set_vertex_merge_radius(vertex_merge_radius);
+  options.set_s2debug_override(s2debug_override());
   S2PolygonBuilder builder(options);
   ClipBoundary(a, false, b, true, true, &builder);
   ClipBoundary(b, false, a, true, false, &builder);
@@ -1271,6 +1273,7 @@ void S2Polygon::InitToApproxDifference(S2Polygon const* a, S2Polygon const* b,
 
   S2PolygonBuilderOptions options(S2PolygonBuilderOptions::DIRECTED_XOR());
   options.set_vertex_merge_radius(vertex_merge_radius);
+  options.set_s2debug_override(s2debug_override());
   S2PolygonBuilder builder(options);
   ClipBoundary(a, false, b, true, true, &builder);
   ClipBoundary(b, true, a, false, false, &builder);
@@ -1422,7 +1425,7 @@ class PointVectorLoopShape : public S2Shape {
  public:
   explicit PointVectorLoopShape(vector<S2Point> const* vertices)
       : num_vertices_(vertices->size()),
-        vertices_(&*vertices->begin()) {
+        vertices_(vertices->data()) {
   }
   int num_edges() const { return num_vertices_; }
   void GetEdge(int e, S2Point const** a, S2Point const** b) const {
@@ -1454,6 +1457,7 @@ void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
   S2PolygonBuilderOptions builder_options =
       S2PolygonBuilderOptions::UNDIRECTED_XOR();
   builder_options.set_validate(false);
+  builder_options.set_s2debug_override(s2debug_override());
   if (should_keep != nullptr) {
     // If there is a vertex filter, then we want to do as little vertex
     // merging as possible so that the vertices we want to keep don't move.
@@ -1521,6 +1525,7 @@ void S2Polygon::InitToSnapped(S2Polygon const* a, int snap_level) {
   options.SetRobustnessRadius(
       S1Angle::Radians(S2::kMaxDiag.GetValue(snap_level) / 2 + 1e-15));
   options.set_snap_to_cell_centers(true);
+  options.set_s2debug_override(s2debug_override());
 
   S2PolygonBuilder polygon_builder(options);
   polygon_builder.AddPolygon(a);
@@ -1674,6 +1679,7 @@ void S2Polygon::InitToCellUnionBorder(S2CellUnion const& cells) {
   S2PolygonBuilderOptions options(S2PolygonBuilderOptions::DIRECTED_XOR());
   double min_cell_angle = S2::kMinWidth.GetValue(S2CellId::kMaxLevel);
   options.set_vertex_merge_radius(S1Angle::Radians(min_cell_angle / 2));
+  options.set_s2debug_override(s2debug_override());
   S2PolygonBuilder builder(options);
   for (int i = 0; i < cells.num_cells(); ++i) {
     S2Loop cell_loop(S2Cell(cells.cell_id(i)));

@@ -27,7 +27,7 @@
 #include "s2/s2.h"
 #include "s2/s2cellid.h"
 #include "s2/s2region.h"
-#include "s2/util/math/vector2.h"
+#include "s2/util/math/vector.h"
 
 class Decoder;
 class Encoder;

@@ -35,7 +35,7 @@
 #include "s2/s2latlngrect.h"
 #include "s2/s2region.h"
 #include "s2/s2shapeindex.h"
-#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector.h"
 
 class Decoder;
 class Encoder;
@@ -330,7 +330,7 @@ class S2Loop : public S2Region {
   // Like the function above, but this version constructs a loop centered
   // around the z-axis of the given coordinate frame, with the first vertex in
   // the direction of the positive x-axis.  (This allows the loop to be
-  // rotated for testing purpsoes.)
+  // rotated for testing purposes.)
   static S2Loop* MakeRegularLoop(Matrix3x3_d const& frame,
                                  S1Angle radius,
                                  int num_vertices);
