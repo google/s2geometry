@@ -55,10 +55,9 @@ TEST(S2Polyline, Basic) {
   empty.Reverse();
   EXPECT_EQ(0, empty.num_vertices());
 
-  vector<S2LatLng> latlngs;
-  latlngs.push_back(S2LatLng::FromDegrees(0, 0));
-  latlngs.push_back(S2LatLng::FromDegrees(0, 90));
-  latlngs.push_back(S2LatLng::FromDegrees(0, 180));
+  vector<S2LatLng> latlngs = {S2LatLng::FromDegrees(0, 0),
+                              S2LatLng::FromDegrees(0, 90),
+                              S2LatLng::FromDegrees(0, 180)};
   S2Polyline semi_equator(latlngs);
   EXPECT_TRUE(S2::ApproxEquals(semi_equator.Interpolate(0.5),
                                S2Point(0, 1, 0)));
@@ -95,9 +94,8 @@ TEST(S2Polyline, GetLengthAndCentroid) {
 }
 
 TEST(S2Polyline, MayIntersect) {
-  vector<S2Point> vertices;
-  vertices.push_back(S2Point(1, -1.1, 0.8).Normalize());
-  vertices.push_back(S2Point(1, -0.8, 1.1).Normalize());
+  vector<S2Point> vertices = {S2Point(1, -1.1, 0.8).Normalize(),
+                              S2Point(1, -0.8, 1.1).Normalize()};
   S2Polyline line(vertices);
   for (int face = 0; face < 6; ++face) {
     S2Cell cell = S2Cell::FromFace(face);
@@ -106,11 +104,10 @@ TEST(S2Polyline, MayIntersect) {
 }
 
 TEST(S2Polyline, Interpolate) {
-  vector<S2Point> vertices;
-  vertices.push_back(S2Point(1, 0, 0));
-  vertices.push_back(S2Point(0, 1, 0));
-  vertices.push_back(S2Point(0, 1, 1).Normalize());
-  vertices.push_back(S2Point(0, 0, 1));
+  vector<S2Point> vertices = {S2Point(1, 0, 0),
+                              S2Point(0, 1, 0),
+                              S2Point(0, 1, 1).Normalize(),
+                              S2Point(0, 0, 1)};
   S2Polyline line(vertices);
   EXPECT_EQ(vertices[0], line.Interpolate(-0.1));
   EXPECT_TRUE(S2::ApproxEquals(line.Interpolate(0.1),
@@ -130,18 +127,16 @@ TEST(S2Polyline, Interpolate) {
 
   // Check the case where the interpolation fraction is so close to 1 that
   // the interpolated point is identical to the last vertex.
-  vertices.clear();
-  vertices.push_back(S2Point(1, 1, 1).Normalize());
-  vertices.push_back(S2Point(1, 1, 1 + 1e-15).Normalize());
-  vertices.push_back(S2Point(1, 1, 1 + 2e-15).Normalize());
+  vertices = {S2Point(1, 1, 1).Normalize(),
+              S2Point(1, 1, 1 + 1e-15).Normalize(),
+              S2Point(1, 1, 1 + 2e-15).Normalize()};
   S2Polyline short_line(vertices);
   EXPECT_EQ(vertices[2], short_line.GetSuffix(1.0 - 2e-16, &next_vertex));
   EXPECT_EQ(3, next_vertex);
 }
 
 TEST(S2Polyline, UnInterpolate) {
-  vector<S2Point> vertices;
-  vertices.push_back(S2Point(1, 0, 0));
+  vector<S2Point> vertices = {S2Point(1, 0, 0)};
   S2Polyline point_line(vertices);
   EXPECT_DOUBLE_EQ(0.0, point_line.UnInterpolate(S2Point(0, 1, 0), 1));
 
@@ -168,11 +163,9 @@ TEST(S2Polyline, UnInterpolate) {
 }
 
 TEST(S2Polyline, Project) {
-  vector<S2LatLng> latlngs;
-  latlngs.push_back(S2LatLng::FromDegrees(0, 0));
-  latlngs.push_back(S2LatLng::FromDegrees(0, 1));
-  latlngs.push_back(S2LatLng::FromDegrees(0, 2));
-  latlngs.push_back(S2LatLng::FromDegrees(1, 2));
+  vector<S2LatLng> latlngs = {
+      S2LatLng::FromDegrees(0, 0), S2LatLng::FromDegrees(0, 1),
+      S2LatLng::FromDegrees(0, 2), S2LatLng::FromDegrees(1, 2)};
   S2Polyline line(latlngs);
 
   int next_vertex;
@@ -204,11 +197,9 @@ TEST(S2Polyline, Project) {
 }
 
 TEST(S2Polyline, IsOnRight) {
-  vector<S2LatLng> latlngs;
-  latlngs.push_back(S2LatLng::FromDegrees(0, 0));
-  latlngs.push_back(S2LatLng::FromDegrees(0, 1));
-  latlngs.push_back(S2LatLng::FromDegrees(0, 2));
-  latlngs.push_back(S2LatLng::FromDegrees(1, 2));
+  vector<S2LatLng> latlngs = {
+      S2LatLng::FromDegrees(0, 0), S2LatLng::FromDegrees(0, 1),
+      S2LatLng::FromDegrees(0, 2), S2LatLng::FromDegrees(1, 2)};
   S2Polyline line(latlngs);
 
   EXPECT_TRUE(line.IsOnRight(S2LatLng::FromDegrees(-0.5, 0.5).ToPoint()));
@@ -219,10 +210,8 @@ TEST(S2Polyline, IsOnRight) {
   EXPECT_TRUE(line.IsOnRight(S2LatLng::FromDegrees(1.5, 2.5).ToPoint()));
 
   // Explicitly test the case where the closest point is an interior vertex.
-  latlngs.clear();
-  latlngs.push_back(S2LatLng::FromDegrees(0, 0));
-  latlngs.push_back(S2LatLng::FromDegrees(0, 1));
-  latlngs.push_back(S2LatLng::FromDegrees(-1, 0));
+  latlngs = {S2LatLng::FromDegrees(0, 0), S2LatLng::FromDegrees(0, 1),
+             S2LatLng::FromDegrees(-1, 0)};
   S2Polyline line2(latlngs);
 
   // The points are chosen such that they are on different sides of the two

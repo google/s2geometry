@@ -36,7 +36,6 @@
 #include "s2/s2latlng.h"
 #include "s2/s2testing.h"
 
-
 using std::min;
 using std::unordered_map;
 using std::vector;

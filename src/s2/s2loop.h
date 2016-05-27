@@ -47,6 +47,9 @@ class S2CrossingEdgeQuery;
 class S2Error;
 class S2Loop;
 class S2XYZFaceSiTi;
+namespace s2builderutil {
+class S2PolygonLayer;
+}  // namespace s2builderutil
 
 // An S2Loop represents a simple spherical polygon.  It consists of a single
 // chain of vertices where the first vertex is implicitly connected to the
@@ -200,8 +203,11 @@ class S2Loop : public S2Region {
   // most 2*Pi.
   void Normalize();
 
-  // Reverse the order of the loop vertices, effectively complementing
-  // the region represented by the loop.
+  // Reverse the order of the loop vertices, effectively complementing the
+  // region represented by the loop.  For example, the loop ABCD (with edges
+  // AB, BC, CD, DA) becomes the loop DCBA (with edges DC, CB, BA, AD).
+  // Notice that the last edge is the same in both cases except that its
+  // direction has been reversed.
   void Invert();
 
   // Return the area of the loop interior, i.e. the region on the left side of
@@ -447,6 +453,7 @@ class S2Loop : public S2Region {
   friend class S2Stats;
   friend class S2LoopTestBase;
   friend class LoopCrosser;
+  friend class s2builderutil::S2PolygonLayer;
 
   // Internal constructor used only by Clone() that makes a deep copy of
   // its argument.

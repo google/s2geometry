@@ -31,6 +31,7 @@ include_directories(src)
 # TODO: Move test files to another dir.
 file(GLOB S2FilesGlob
      src/s2/base/*.cc
+     src/s2/id_set_lexicon.cc
      src/s2/r2rect.cc
      src/s2/s1angle.cc
      src/s2/s1chordangle.cc
@@ -62,12 +63,14 @@ file(GLOB S2FilesGlob
      src/s2/s2shapeindex.cc
      src/s2/s2shapeutil.cc
      src/s2/s2textformat.cc
+     src/s2/sequence_lexicon.cc
      src/s2/strings/*.cc
      src/s2/util/bits/*.cc
      src/s2/util/coding/*.cc
      src/s2/util/hash/*.cc
      src/s2/util/math/exactfloat/*.cc
-     src/s2/util/math/*.cc)
+     src/s2/util/math/*.cc
+     src/s2/value_lexicon.cc)
 
 add_library(s2 SHARED ${S2FilesGlob})
 target_link_libraries(
@@ -104,8 +107,11 @@ install(FILES src/s2/util/coding/coder.h
         DESTINATION include/s2/util/coding)
 install(FILES src/s2/util/endian/endian.h
         DESTINATION include/s2/util/endian)
-install(FILES src/s2/util/gtl/inlined_vector.h
-              src/s2/util/gtl/gtl_namespace.h
+install(FILES src/s2/util/gtl/dense_hash_set.h
+              src/s2/util/gtl/densehashtable.h
+              src/s2/util/gtl/hashtable_common.h
+              src/s2/util/gtl/inlined_vector.h
+              src/s2/util/gtl/libc_allocator_with_realloc.h
               src/s2/util/gtl/manual_constructor.h
         DESTINATION include/s2/util/gtl)
 install(FILES src/s2/util/hash/mix.h
@@ -113,10 +119,7 @@ install(FILES src/s2/util/hash/mix.h
 install(FILES src/s2/util/math/mathutil.h
               src/s2/util/math/matrix3x3.h
               src/s2/util/math/vector.h
-              src/s2/util/math/vector2.h
-              src/s2/util/math/vector3.h
               src/s2/util/math/vector3_hash.h
-              src/s2/util/math/vector4.h
         DESTINATION include/s2/util/math)
 install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h

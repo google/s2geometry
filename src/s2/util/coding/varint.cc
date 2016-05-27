@@ -19,6 +19,7 @@
 #include <string>
 
 #include "s2/base/integral_types.h"
+#include "s2/util/gtl/stl_util.h"
 
 #ifndef _MSC_VER
 const int Varint::kMax32;
@@ -193,15 +194,21 @@ const char* Varint::Skip64BackwardSlow(const char* p, const char* b) {
 }
 
 void Varint::Append32Slow(string* s, uint32 value) {
-  char buf[Varint::kMax32];
-  const char* p = Varint::Encode32(buf, value);
-  s->append(buf, p - buf);
+  size_t start = s->size();
+  s->resize(start + Varint::kMax32);
+  char* base = &((*s)[start]);
+  const char* p = Varint::Encode32(base, value);
+  const size_t extra = Varint::kMax32 - (p - base);
+  s->erase(s->size() - extra, extra);
 }
 
 void Varint::Append64Slow(string* s, uint64 value) {
-  char buf[Varint::kMax64];
-  const char* p = Varint::Encode64(buf, value);
-  s->append(buf, p - buf);
+  size_t start = s->size();
+  s->resize(start + Varint::kMax64);
+  char* base = &((*s)[start]);
+  const char* p = Varint::Encode64(base, value);
+  const size_t extra = Varint::kMax64 - (p - base);
+  s->erase(s->size() - extra, extra);
 }
 
 void Varint::EncodeTwo32Values(string* s, uint32 a, uint32 b) {

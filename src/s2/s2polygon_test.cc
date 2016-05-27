@@ -538,9 +538,7 @@ static void TestComplements(S2Polygon const& a, S2Polygon const& b) {
 static void TestDestructiveUnion(S2Polygon const& a, S2Polygon const& b) {
   S2Polygon c;
   c.InitToUnion(&a, &b);
-  vector<S2Polygon*> polygons;
-  polygons.push_back(a.Clone());
-  polygons.push_back(b.Clone());
+  vector<S2Polygon*> polygons = {a.Clone(), b.Clone()};
   unique_ptr<S2Polygon> c_destructive(S2Polygon::DestructiveUnion(&polygons));
   CheckEqual(c, *c_destructive);
 }
@@ -789,9 +787,8 @@ static void PolylineIntersectionSharedEdgeTest(S2Polygon const& p,
   SCOPED_TRACE(StringPrintf("Polyline intersection shared edge test "
                             " start=%d direction=%d",
                             start_vertex, direction));
-  vector<S2Point> points;
-  points.push_back(p.loop(0)->vertex(start_vertex));
-  points.push_back(p.loop(0)->vertex(start_vertex + direction));
+  vector<S2Point> points = {p.loop(0)->vertex(start_vertex),
+                            p.loop(0)->vertex(start_vertex + direction)};
   S2Polyline polyline(points);
   vector<S2Polyline*> polylines;
   if (direction < 0) {

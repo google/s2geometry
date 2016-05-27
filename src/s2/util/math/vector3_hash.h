@@ -21,7 +21,7 @@
 #include <type_traits>
 
 #include "s2/util/hash/mix.h"
-#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector.h"
 
 template <class T>
 struct GoodFastHash;

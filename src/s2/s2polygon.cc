@@ -426,6 +426,11 @@ void S2Polygon::InitOriented(vector<S2Loop*>* loops) {
       // property of the entire set of loops.  In general there is no way to
       // determine which ones are incorrect.
       error_inconsistent_loop_orientations_ = true;
+      if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
+        // The FLAGS_s2debug validity checking usually happens in InitIndex(),
+        // but this error is detected too late for that.
+        CHECK(IsValid());  // Always fails.
+      }
     }
   }
 }
