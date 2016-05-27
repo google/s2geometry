@@ -28,7 +28,7 @@
 #include "s2/s1angle.h"
 #include "s2/s2.h"
 #include "s2/s2latlng.h"
-#include "s2/util/math/vector3.h"
+#include "s2/util/math/vector.h"
 #include "s2/util/units/length-units.h"
 
 class S2Earth {

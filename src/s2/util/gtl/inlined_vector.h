@@ -43,7 +43,6 @@
 
 #include "s2/base/macros.h"
 #include "s2/base/port.h"
-#include "s2/util/gtl/gtl_namespace.h"
 #include "s2/util/gtl/manual_constructor.h"
 
 // Must come after "base/port.h"

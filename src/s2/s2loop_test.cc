@@ -209,15 +209,11 @@ class S2LoopTestBase : public testing::Test {
                       "10:39, 10:41, 0:41, 0:44, 30:44, 30:30")),
       loop_i_(AddLoop("10:34, 0:34, -10:34, -10:36, 0:36, 10:36")) {
     // Like loop_a, but the vertices are at leaf cell centers.
-    vector<S2Point> snapped_loop_a_vertices;
-    snapped_loop_a_vertices.push_back(
-        S2CellId::FromPoint(s2textformat::MakePoint("0:178")).ToPoint());
-    snapped_loop_a_vertices.push_back(
-        S2CellId::FromPoint(s2textformat::MakePoint("-1:180")).ToPoint());
-    snapped_loop_a_vertices.push_back(
-        S2CellId::FromPoint(s2textformat::MakePoint("0:-179")).ToPoint());
-    snapped_loop_a_vertices.push_back(
-        S2CellId::FromPoint(s2textformat::MakePoint("1:-180")).ToPoint());
+    vector<S2Point> snapped_loop_a_vertices = {
+        S2CellId::FromPoint(s2textformat::MakePoint("0:178")).ToPoint(),
+        S2CellId::FromPoint(s2textformat::MakePoint("-1:180")).ToPoint(),
+        S2CellId::FromPoint(s2textformat::MakePoint("0:-179")).ToPoint(),
+        S2CellId::FromPoint(s2textformat::MakePoint("1:-180")).ToPoint()};
     snapped_loop_a_ = AddLoop(new S2Loop(snapped_loop_a_vertices));
   }
 
@@ -1062,9 +1058,8 @@ TEST(S2Loop, EncodeDecode) {
 
 static void TestEmptyFullSnapped(S2Loop const& loop, int level) {
   CHECK(loop.is_empty_or_full());
-  vector<S2Point> vertices;
   S2CellId cellid = S2CellId::FromPoint(loop.vertex(0)).parent(level);
-  vertices.push_back(cellid.ToPoint());
+  vector<S2Point> vertices = {cellid.ToPoint()};
   S2Loop loop2(vertices);
   EXPECT_TRUE(loop.BoundaryEquals(&loop2));
   EXPECT_TRUE(loop.BoundaryApproxEquals(&loop2));
@@ -1075,8 +1070,7 @@ static void TestEmptyFullSnapped(S2Loop const& loop, int level) {
 // don't bother testing E5/E6/E7 because that test is less demanding.)
 static void TestEmptyFullLatLng(S2Loop const& loop) {
   CHECK(loop.is_empty_or_full());
-  vector<S2Point> vertices;
-  vertices.push_back(S2LatLng(loop.vertex(0)).ToPoint());
+  vector<S2Point> vertices = {S2LatLng(loop.vertex(0)).ToPoint()};
   S2Loop loop2(vertices);
   EXPECT_TRUE(loop.BoundaryEquals(&loop2));
   EXPECT_TRUE(loop.BoundaryApproxEquals(&loop2));
@@ -1116,10 +1110,8 @@ TEST(S2Loop, EncodeDecodeWithinScope) {
 
   // Initialize the same loop using Init with a vector of vertices, and
   // check that it doesn't deallocate the original memory.
-  vector<S2Point> vertices;
-  vertices.push_back(loop1.vertex(0));
-  vertices.push_back(loop1.vertex(2));
-  vertices.push_back(loop1.vertex(3));
+  vector<S2Point> vertices = {loop1.vertex(0), loop1.vertex(2),
+                              loop1.vertex(3)};
   loop1.Init(vertices);
   Decoder decoder2(encoder.base(), encoder.length());
   S2Loop loop2;

@@ -33,7 +33,8 @@ class S2Error {
  public:
   enum Code {
     // Error codes that apply to more than one type of geometry:
-    NO_ERROR = 0,            // No error.
+    OK = 0,                  // No error.
+    NO_ERROR = OK,           // DEPRECATED synonym for OK.
     NOT_UNIT_LENGTH = 1,     // Vertex is not unit length.
     DUPLICATE_VERTICES = 2,  // There are two identical vertices.
     ANTIPODAL_VERTICES = 3,  // There are two antipodal vertices.
@@ -56,8 +57,27 @@ class S2Error {
     // Actual polygon nesting does not correspond to the nesting hierarchy
     // encoded by the loop depths.
     POLYGON_INVALID_LOOP_NESTING = 206,
+
+    // The S2Builder snap function moved a vertex by more than the specified
+    // snap radius.
+    BUILDER_SNAP_RADIUS_TOO_SMALL = 300,
+
+    // S2Builder expected all edges to have siblings (as specified by
+    // S2Builder::GraphOptions::SiblingPairs::REQUIRE), but some were missing.
+    BUILDER_MISSING_EXPECTED_SIBLING_EDGES = 301,
+
+    // S2Builder found an unexpected degenerate edge.  For example,
+    // Graph::GetLeftTurnMap() does not support degenerate edges.
+    BUILDER_UNEXPECTED_DEGENERATE_EDGE = 302,
+
+    // S2Builder found a vertex with (indegree != outdegree), which means
+    // that the given edges cannot be assembled into loops.
+    BUILDER_EDGES_DO_NOT_FORM_LOOPS = 303,
+
+    // The edges provided to S2Builder cannot be assembled into a polyline.
+    BUILDER_EDGES_DO_NOT_FORM_POLYLINE = 304,
   };
-  S2Error() : code_(NO_ERROR), text_() {}
+  S2Error() : code_(OK), text_() {}
 
   // Set the error to the given code and printf-style message.  Note that you
   // can prepend text to an existing error by calling Init() more than once:
@@ -65,6 +85,7 @@ class S2Error {
   //   error->Init(error->code(), "Loop %d: %s", j, error->text().c_str());
   void Init(Code code, const char* format, ...) PRINTF_ATTRIBUTE(3, 4);
 
+  bool ok() const { return code_ == OK; }
   Code code() const { return code_; }
   string text() const { return text_; }
 

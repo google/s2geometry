@@ -63,7 +63,6 @@
 #include <utility>
 
 #include "s2/base/port.h"
-#include "s2/util/gtl/gtl_namespace.h"
 
 namespace google {
 

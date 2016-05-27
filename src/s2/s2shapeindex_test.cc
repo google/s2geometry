@@ -599,10 +599,10 @@ TEST(S2ShapeIndex, MixedGeometry) {
   // interior could cause shapes that don't have an interior to suddenly
   // acquire one.  This would cause extra S2ShapeIndex cells to be created
   // that are outside the bounds of the given geometry.
-  vector<S2Polyline*> polylines;
-  polylines.push_back(MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6"));
-  polylines.push_back(MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"));
-  polylines.push_back(MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"));
+  vector<S2Polyline*> polylines = {
+      MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6"),
+      MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"),
+      MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6")};
   S2ShapeIndex index;
   for (S2Polyline* polyline : polylines) {
     index.Add(new S2PolylineOwningShape(polyline));
