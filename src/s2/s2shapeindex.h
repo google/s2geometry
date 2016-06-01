@@ -84,6 +84,7 @@
 #include "s2/fpcontractoff.h"
 #include "s2/s2.h"
 #include "s2/s2cellid.h"
+#include "s2/util/gtl/compact_array.h"
 
 class R1Interval;
 class S2PaddedCell;
@@ -265,7 +266,7 @@ class S2ShapeIndexCell {
   ~S2ShapeIndexCell();
   S2ClippedShape* add_shapes(int n);
 
-  using S2ClippedShapeSet = std::vector<S2ClippedShape>;
+  using S2ClippedShapeSet = compact_array<S2ClippedShape>;
   S2ClippedShapeSet shapes_;
 
   S2ShapeIndexCell(S2ShapeIndexCell const&) = delete;

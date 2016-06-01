@@ -27,7 +27,7 @@
 #include <glog/logging.h>
 #include "s2/base/macros.h"
 #include "s2/base/port.h"
-#include <type_traits>
+#include "s2/base/type_traits.h"
 #include "s2/util/coding/varint.h"
 #include "s2/util/endian/endian.h"
 

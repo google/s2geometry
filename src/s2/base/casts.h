@@ -32,7 +32,7 @@
 
 #include "s2/base/macros.h"
 #include "s2/base/template_util.h"
-#include <type_traits>
+#include "s2/base/type_traits.h"
 
 // Use implicit_cast as a safe version of static_cast or const_cast
 // for implicit conversions. For example:

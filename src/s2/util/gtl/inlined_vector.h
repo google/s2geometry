@@ -37,11 +37,12 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
+#include <utility>
 
 #include <glog/logging.h>
 #include "s2/base/macros.h"
 #include "s2/base/port.h"
-#include <type_traits>
+#include "s2/base/type_traits.h"
 #include "s2/util/gtl/manual_constructor.h"
 
 // Must come after "base/port.h"
@@ -266,26 +267,31 @@ class InlinedVector {
     return at(0);
   }
 
-  // Append t to the vector.
-  // Increases size() by one.
-  // Amortized complexity: O(1)
-  // Worst-case complexity: O(size())
-  void push_back(const value_type& t) {
+  template <typename... Args>
+  void emplace_back(Args&&... args) {
     size_type s = size();
     DCHECK_LE(s, capacity());
     if (s == capacity()) {
-      return GrowAndPushBack(t);
+      GrowAndEmplaceBack(std::forward<Args>(args)...);
+      return;
     }
     DCHECK_LT(s, capacity());
 
     if (allocated()) {
-      ConstructAllocated(allocated_space() + s, t);
+      ConstructAllocated(allocated_space() + s, std::forward<Args>(args)...);
     } else {
-      ConstructInlined(inlined_space() + s, t);
+      ConstructInlined(inlined_space() + s, std::forward<Args>(args)...);
     }
 
     set_size_internal(s + 1);
   }
+
+  // Append t to the vector.
+  // Increases size() by one.
+  // Amortized complexity: O(1)
+  // Worst-case complexity: O(size())
+  void push_back(const value_type& t) { emplace_back(t); }
+  void push_back(value_type&& t) { emplace_back(std::move(t)); }
 
   void pop_back() {
     DCHECK(!empty());
@@ -377,9 +383,10 @@ class InlinedVector {
       // a.construct(p, value_type());
       new (p) value_type();
     }
+    template <typename... Args>
     static void construct(allocator_type& a,  // NOLINT(runtime/references)
-                          pointer p, const value_type& t) {
-      a.construct(p, t);
+                          pointer p, Args&&... args) {
+      a.construct(p, std::forward<Args>(args)...);
     }
     static void destroy(allocator_type& a,  // NOLINT(runtime/references)
                         pointer p) {
@@ -512,15 +519,19 @@ class InlinedVector {
     }
   }
 
-  void GrowAndPushBack(const value_type& t) {
+  template <typename... Args>
+  void GrowAndEmplaceBack(Args&&... args) {
     DCHECK_EQ(size(), capacity());
     const size_type s = size();
 
     Allocation new_allocation(allocator(), 2 * capacity());
     new_allocation.set_size(s + 1);
 
-    UninitializedCopyAllocated(array(), array() + s, new_allocation.buffer());
-    ConstructAllocated(new_allocation.buffer() + s, t);
+    ConstructAllocated(new_allocation.buffer() + s,
+                       std::forward<Args>(args)...);
+    UninitializedCopyAllocated(std::make_move_iterator(data()),
+                               std::make_move_iterator(data() + s),
+                               new_allocation.buffer());
 
     ResetAllocation(new_allocation);
   }
@@ -528,19 +539,14 @@ class InlinedVector {
   void InitAssign(size_type n);
   void InitAssign(size_type n, const value_type& t);
 
-  void ConstructInlined(pointer p) {
-    new(p) value_type();
+  template <typename... Args>
+  void ConstructInlined(pointer p, Args&&... args) {
+    new(p) value_type(std::forward<Args>(args)...);
   }
 
-  void ConstructInlined(pointer p, const value_type& t) {
-    new(p) value_type(t);
-  }
-
-  void ConstructAllocated(pointer p) {
-    AllocatorTraits::construct(allocator(), p);
-  }
-  void ConstructAllocated(pointer p, const value_type& t) {
-    AllocatorTraits::construct(allocator(), p, t);
+  template <typename... Args>
+  void ConstructAllocated(pointer p, Args&&... args) {
+    AllocatorTraits::construct(allocator(), p, std::forward<Args>(args)...);
   }
 
   template <typename Iter>
@@ -925,7 +931,9 @@ void InlinedVector<T, N, A>::EnlargeBy(size_type delta) {
   Allocation new_allocation(allocator(), new_capacity);
   new_allocation.set_size(s);
 
-  UninitializedCopyAllocated(array(), array() + s, new_allocation.buffer());
+  UninitializedCopyAllocated(std::make_move_iterator(data()),
+                             std::make_move_iterator(data() + s),
+                             new_allocation.buffer());
 
   ResetAllocation(new_allocation);
 }
