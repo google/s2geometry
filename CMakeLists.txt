@@ -94,6 +94,7 @@ install(FILES src/s2/base/atomicops.h
               src/s2/base/port_hash.h
               src/s2/base/spinlock.h
               src/s2/base/template_util.h
+              src/s2/base/type_traits.h
         DESTINATION include/s2/base)
 install(FILES src/s2/util/bits/bits.h
         DESTINATION include/s2/util/bits)
@@ -107,7 +108,9 @@ install(FILES src/s2/util/coding/coder.h
         DESTINATION include/s2/util/coding)
 install(FILES src/s2/util/endian/endian.h
         DESTINATION include/s2/util/endian)
-install(FILES src/s2/util/gtl/dense_hash_set.h
+install(FILES src/s2/util/gtl/compact_array.h
+              src/s2/util/gtl/container_logging.h
+              src/s2/util/gtl/dense_hash_set.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
               src/s2/util/gtl/inlined_vector.h

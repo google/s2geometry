@@ -29,8 +29,6 @@
 #include <climits>         // for enumeration casts and tests
 #include <type_traits>
 
-#include <type_traits>
-
 #include "s2/base/macros.h"
 #include "s2/base/template_util.h"
 

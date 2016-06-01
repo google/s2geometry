@@ -34,7 +34,6 @@ class S2Error {
   enum Code {
     // Error codes that apply to more than one type of geometry:
     OK = 0,                  // No error.
-    NO_ERROR = OK,           // DEPRECATED synonym for OK.
     NOT_UNIT_LENGTH = 1,     // Vertex is not unit length.
     DUPLICATE_VERTICES = 2,  // There are two identical vertices.
     ANTIPODAL_VERTICES = 3,  // There are two antipodal vertices.

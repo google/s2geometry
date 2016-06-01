@@ -671,4 +671,15 @@ struct S2CellIdHash {
   }
 };
 
+#ifndef SWIG
+namespace base {
+// Specializations of base:: traits enable the use of S2CellId in
+// compact_array, etc. Note that S2CellId is not being declared as POD.
+// The std::is_trivially_* traits are only supported in gcc 5.
+template <> struct has_trivial_copy<S2CellId> : std::true_type {};
+template <> struct has_trivial_assign<S2CellId> : std::true_type {};
+template <> struct has_trivial_destructor<S2CellId> : std::true_type {};
+}  // namespace base
+#endif  // SWIG
+
 #endif  // S2_S2CELLID_H_

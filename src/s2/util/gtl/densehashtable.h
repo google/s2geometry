@@ -122,7 +122,7 @@
 #include "s2/util/gtl/hashtable_common.h"
 #include "s2/util/gtl/libc_allocator_with_realloc.h"
 #include "s2/base/port.h"
-#include <type_traits>
+#include "s2/base/type_traits.h"
 #include <stdexcept>                 // For length_error
 
 namespace google {

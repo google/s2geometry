@@ -758,6 +758,7 @@ std::pair<S2Point, S2Point> S2EdgeUtil::GetEdgePairClosestPoints(
     case A1: return std::make_pair(a1, GetClosestPoint(a1, b0, b1));
     case B0: return std::make_pair(GetClosestPoint(b0, a0, a1), b0);
     case B1: return std::make_pair(GetClosestPoint(b1, a0, a1), b1);
+    default: LOG(FATAL) << "Unreached (to suppress Android compiler warning)";
   }
 }
 
