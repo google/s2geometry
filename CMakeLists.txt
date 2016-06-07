@@ -37,6 +37,10 @@ file(GLOB S2FilesGlob
      src/s2/s1chordangle.cc
      src/s2/s1interval.cc
      src/s2/s2.cc
+     src/s2/s2builder.cc
+     src/s2/s2builder_graph.cc
+     src/s2/s2builderutil_layers.cc
+     src/s2/s2builderutil_snap_functions.cc
      src/s2/s2cap.cc
      src/s2/s2cell.cc
      src/s2/s2cellid.cc

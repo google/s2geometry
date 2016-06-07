@@ -17,18 +17,10 @@
 // compact_array is a more memory-efficient implementation of std::vector.
 // It uses a pointer with an integer that stores both size and capacity.
 //
-// This code is heavily lifted from compact_vector by Matt Austern, with many
-// of the same trade-offs and limitations. The primary differences are:
-// - compact_vector has a larger maximum capacity (2^32 elements rather than
-//   2^24), and it has smaller memory overhead even for large collections.
-// - compact_array has asymptotically faster insertions, because it
-//   automatically switches from linear growth to exponential growth when n
-//   gets large.
-// - compact_array_base works with a union.
-//
 // Implementation details:
 //
-// compact_array is a small-overhead STL-like Collection. It only takes 16
+// compact_array is a small-overhead STL-like Collection, but can only be used
+// for types with trivial copy, assign, and destructor. It only takes 16
 // bytes for 64-bit binary (instead of the typical 24-bytes for vector).
 // Its size can grow to 2^24 (16M) elements. compact_array is memory
 // efficient when it is small, and CPU-efficient for growing a large array.

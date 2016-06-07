@@ -62,9 +62,9 @@
 #endif
 #endif
 
-// We support MSVC++ 12.0 and later.
-#if defined(_MSC_VER) && _MSC_VER < 1800
-#error "This package requires _MSC_VER of 1800 or higher"
+// We support MSVC++ 14.0 update 2 and later.
+#if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 190023918
+#error "This package requires Visual Studio 2015 Update 2 or higher"
 #endif
 
 // We support Apple Xcode clang 4.2.1 (version 421.11.65) and later.
