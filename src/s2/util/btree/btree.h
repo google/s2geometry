@@ -138,7 +138,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/macros.h"
 
@@ -209,20 +209,15 @@ struct btree_is_key_compare_to
 // google string types with common comparison functors.
 template <typename Compare>
 struct btree_key_compare_to_adapter : Compare {
-  btree_key_compare_to_adapter() { }
+  btree_key_compare_to_adapter() = default;
   btree_key_compare_to_adapter(const Compare &c) : Compare(c) { }
-  btree_key_compare_to_adapter(const btree_key_compare_to_adapter<Compare> &c)
-      : Compare(c) {
-  }
 };
 
 template <>
 struct btree_key_compare_to_adapter<std::less<std::string> >
     : public btree_key_compare_to_tag {
-  btree_key_compare_to_adapter() {}
+  btree_key_compare_to_adapter() = default;
   btree_key_compare_to_adapter(const std::less<std::string>&) {}
-  btree_key_compare_to_adapter(
-      const btree_key_compare_to_adapter<std::less<std::string> >&) {}
   int operator()(const std::string &a, const std::string &b) const {
     return a.compare(b);
   }
@@ -231,10 +226,8 @@ struct btree_key_compare_to_adapter<std::less<std::string> >
 template <>
 struct btree_key_compare_to_adapter<std::greater<std::string> >
     : public btree_key_compare_to_tag {
-  btree_key_compare_to_adapter() {}
+  btree_key_compare_to_adapter() = default;
   btree_key_compare_to_adapter(const std::greater<std::string>&) {}
-  btree_key_compare_to_adapter(
-      const btree_key_compare_to_adapter<std::greater<std::string> >&) {}
   int operator()(const std::string &a, const std::string &b) const {
     return b.compare(a);
   }
@@ -245,7 +238,7 @@ struct btree_key_compare_to_adapter<std::greater<std::string> >
 // compare-to functor.
 template <typename Compare, bool HaveCompareTo>
 struct btree_key_comparer {
-  btree_key_comparer() {}
+  btree_key_comparer() = default;
   btree_key_comparer(Compare c) : comp(c) {}
   template <typename K, typename LK>
   static bool bool_compare(const Compare &comp, const K &x, const LK &y) {
@@ -263,7 +256,7 @@ struct btree_key_comparer {
 // code, such as insert-with-hint.
 template <typename Compare>
 struct btree_key_comparer<Compare, true> {
-  btree_key_comparer() {}
+  btree_key_comparer() = default;
   btree_key_comparer(Compare c) : comp(c) {}
   template <typename K, typename LK>
   static bool bool_compare(const Compare &comp, const K &x, const LK &y) {
@@ -435,6 +428,7 @@ struct btree_common_params {
 };
 
 // A parameters structure for holding the type parameters for a btree_map.
+// Compare and Alloc should be nothrow copy-constructible.
 template <typename Key, typename Data, typename Compare,
           typename Alloc, int TargetNodeSize>
 struct btree_map_params
@@ -455,14 +449,10 @@ struct btree_map_params
 
   static const Key& key(const value_type &x) { return x.first; }
   static const Key& key(const mutable_value_type &x) { return x.first; }
-  static void swap(mutable_value_type *a, mutable_value_type *b) {
-    using std::swap;
-    swap(a->first, b->first);
-    swap(a->second, b->second);
-  }
 };
 
 // A parameters structure for holding the type parameters for a btree_set.
+// Compare and Alloc should be nothrow copy-constructible.
 template <typename Key, typename Compare, typename Alloc, int TargetNodeSize>
 struct btree_set_params
     : public btree_common_params<Key, Compare, Alloc, TargetNodeSize,
@@ -481,10 +471,6 @@ struct btree_set_params
   };
 
   static const Key& key(const value_type &x) { return x; }
-  static void swap(mutable_value_type *a, mutable_value_type *b) {
-    using std::swap;
-    swap(*a, *b);
-  }
 };
 
 // An adapter class that converts a lower-bound compare into an upper-bound
@@ -711,7 +697,7 @@ class btree_node {
 
   // Swap value i in this node with value j in node x.
   void value_swap(int i, btree_node *x, int j) {
-    params_type::swap(mutable_value(i), x->mutable_value(j));
+    std::iter_swap(mutable_value(i), x->mutable_value(j));
   }
 
   // Getters/setter for the child at position i in the node.
@@ -1093,10 +1079,36 @@ class btree : public Params::key_compare {
 
   // Copy constructor.
   btree(const self_type &x);
+  btree(self_type &&x) noexcept : key_compare(x), root_(x.root_) {
+    static_assert(std::is_nothrow_copy_constructible<key_compare>::value,
+                  "Key comparison must be nothrow copy constructible");
+    static_assert(std::is_nothrow_copy_constructible<allocator_type>::value,
+                  "Allocator must be nothrow copy constructible");
+    static_assert(
+        std::is_nothrow_copy_constructible<internal_allocator_type>::value,
+        "Rebound allocator must be nothrow copy constructible");
+    *x.mutable_root() = nullptr;
+  }
 
   // Destructor.
   ~btree() {
     clear();
+  }
+
+  // Assign the contents of x to *this.
+  self_type &operator=(const self_type &x) {
+    if (this != &x) {
+      assign(x);
+    }
+    return *this;
+  }
+
+  self_type &operator=(self_type &&x) {
+    if (this != &x) {
+      swap(x);
+      x.clear();
+    }
+    return *this;
   }
 
   // Iterator routines.
@@ -1181,11 +1193,11 @@ class btree : public Params::key_compare {
   // before position in the tree. If it does, then the insertion will take
   // amortized constant time. If not, the insertion will take amortized
   // logarithmic time as if a call to insert_unique(v) were made.
-  iterator insert_unique(iterator position, const value_type &v);
+  iterator insert_hint_unique(iterator position, const value_type &v);
 
   // Insert a range of values into the btree.
   template <typename InputIterator>
-  void insert_unique(InputIterator b, InputIterator e);
+  void insert_iterator_unique(InputIterator b, InputIterator e);
 
   // Inserts a value into the btree. The ValuePointer type is used to avoid
   // instatiating the value unless the key is being inserted. Value is not
@@ -1203,11 +1215,11 @@ class btree : public Params::key_compare {
   // before position in the tree. If it does, then the insertion will take
   // amortized constant time. If not, the insertion will take amortized
   // logarithmic time as if a call to insert_multi(v) were made.
-  iterator insert_multi(iterator position, const value_type &v);
+  iterator insert_hint_multi(iterator position, const value_type &v);
 
   // Insert a range of values into the btree.
   template <typename InputIterator>
-  void insert_multi(InputIterator b, InputIterator e);
+  void insert_iterator_multi(InputIterator b, InputIterator e);
 
   void assign(const self_type &x);
 
@@ -1275,22 +1287,8 @@ class btree : public Params::key_compare {
   // Swap the contents of *this and x.
   void swap(self_type &x);
 
-  // Assign the contents of x to *this.
-  self_type& operator=(const self_type &x) {
-    if (&x == this) {
-      // Don't copy onto ourselves.
-      return *this;
-    }
-    assign(x);
-    return *this;
-  }
-
-  key_compare* mutable_key_comp() {
-    return this;
-  }
-  const key_compare& key_comp() const {
-    return *this;
-  }
+  key_compare *mutable_key_comp() noexcept { return this; }
+  const key_compare &key_comp() const noexcept { return *this; }
   template <typename K, typename LK>
   bool compare_keys(const K &x, const LK &y) const {
     return btree_compare_keys(key_comp(), x, y);
@@ -1393,7 +1391,7 @@ class btree : public Params::key_compare {
   // Internal accessor routines.
   node_type* root() { return root_.data; }
   const node_type* root() const { return root_.data; }
-  node_type** mutable_root() { return &root_.data; }
+  node_type **mutable_root() noexcept { return &root_.data; }
 
   // The rightmost node is stored in the root node.
   node_type* rightmost() {
@@ -1412,10 +1410,10 @@ class btree : public Params::key_compare {
   size_type* mutable_size() { return root()->mutable_size(); }
 
   // Allocator routines.
-  internal_allocator_type* mutable_internal_allocator() {
+  internal_allocator_type *mutable_internal_allocator() noexcept {
     return static_cast<internal_allocator_type*>(&root_);
   }
-  const internal_allocator_type& internal_allocator() const {
+  const internal_allocator_type &internal_allocator() const noexcept {
     return *static_cast<const internal_allocator_type*>(&root_);
   }
 
@@ -1940,8 +1938,8 @@ btree<P>::insert_unique(const key_type &key, ValuePointer value) {
 }
 
 template <typename P>
-inline typename btree<P>::iterator
-btree<P>::insert_unique(iterator position, const value_type &v) {
+inline typename btree<P>::iterator btree<P>::insert_hint_unique(
+    iterator position, const value_type &v) {
   if (!empty()) {
     const key_type &key = params_type::key(v);
     if (position == end() || compare_keys(key, position.key())) {
@@ -1965,10 +1963,11 @@ btree<P>::insert_unique(iterator position, const value_type &v) {
   return insert_unique(v).first;
 }
 
-template <typename P> template <typename InputIterator>
-void btree<P>::insert_unique(InputIterator b, InputIterator e) {
+template <typename P>
+template <typename InputIterator>
+void btree<P>::insert_iterator_unique(InputIterator b, InputIterator e) {
   for (; b != e; ++b) {
-    insert_unique(end(), *b);
+    insert_hint_unique(end(), *b);
   }
 }
 
@@ -1987,8 +1986,8 @@ btree<P>::insert_multi(const key_type &key, ValuePointer value) {
 }
 
 template <typename P>
-typename btree<P>::iterator
-btree<P>::insert_multi(iterator position, const value_type &v) {
+typename btree<P>::iterator btree<P>::insert_hint_multi(iterator position,
+                                                        const value_type &v) {
   if (!empty()) {
     const key_type &key = params_type::key(v);
     if (position == end() || !compare_keys(position.key(), key)) {
@@ -2009,10 +2008,11 @@ btree<P>::insert_multi(iterator position, const value_type &v) {
   return insert_multi(v);
 }
 
-template <typename P> template <typename InputIterator>
-void btree<P>::insert_multi(InputIterator b, InputIterator e) {
+template <typename P>
+template <typename InputIterator>
+void btree<P>::insert_iterator_multi(InputIterator b, InputIterator e) {
   for (; b != e; ++b) {
-    insert_multi(end(), *b);
+    insert_hint_multi(end(), *b);
   }
 }
 

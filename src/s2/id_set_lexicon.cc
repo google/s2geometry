@@ -56,6 +56,6 @@ IdSetLexicon::IdSet IdSetLexicon::id_set(int32 set_id) const {
   } else {
     auto sequence = id_sets_.sequence(~set_id);
     DCHECK_NE(0, sequence.size());
-    return IdSet(&*sequence.begin(), &*sequence.end());
+    return IdSet(&*sequence.begin(), &*sequence.begin() + sequence.size());
   }
 }

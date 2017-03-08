@@ -116,10 +116,10 @@ TEST(R1Interval, TestBasic) {
   EXPECT_EQ(-1, r.lo());
   EXPECT_EQ(5, r.hi());
 
-  // ClampPoint()
-  EXPECT_EQ(0.3, R1Interval(0.1, 0.4).ClampPoint(0.3));
-  EXPECT_EQ(0.1, R1Interval(0.1, 0.4).ClampPoint(-7.0));
-  EXPECT_EQ(0.4, R1Interval(0.1, 0.4).ClampPoint(0.6));
+  // Project()
+  EXPECT_EQ(0.3, R1Interval(0.1, 0.4).Project(0.3));
+  EXPECT_EQ(0.1, R1Interval(0.1, 0.4).Project(-7.0));
+  EXPECT_EQ(0.4, R1Interval(0.1, 0.4).Project(0.6));
 
   // FromPointPair()
   EXPECT_EQ(R1Interval(4, 4), R1Interval::FromPointPair(4, 4));

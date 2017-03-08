@@ -49,6 +49,8 @@
 // for memory management optimizations, where you want to initialize and
 // destroy an object multiple times but only allocate it once.
 //
+// Consider using std::aligned_storage<> directly in new code.
+//
 // (When I say ManualConstructor statically allocates space, I mean that
 // the ManualConstructor object itself is forced to be the right size.)
 //
@@ -60,9 +62,10 @@
 
 #include <cstddef>
 #include <new>
+#include <type_traits>
 #include <utility>
 
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/port.h"
 
 namespace google {
 
@@ -70,35 +73,20 @@ template <typename Type>
 class ManualConstructor {
  public:
   // No constructor or destructor because one of the most useful uses of
-  // this class is as part of a union, and members of a union cannot have
-  // constructors or destructors.  And, anyway, the whole point of this
-  // class is to bypass these.
+  // this class is as part of a union, and members of a union could not have
+  // constructors or destructors till C++11.  And, anyway, the whole point of
+  // this class is to bypass constructor and destructor.
 
-  // Support users creating arrays of ManualConstructor<>s.  This ensures that
-  // the array itself has the correct alignment.
-  static void* operator new[](size_t size) {
-    return aligned_malloc(size, BASE_PORT_H_ALIGN_OF(Type));
-  }
-  static void operator delete[](void* mem) {
-    aligned_free(mem);
-  }
+  Type* get() { return reinterpret_cast<Type*>(&space_); }
+  const Type* get() const { return reinterpret_cast<const Type*>(&space_); }
 
-  inline Type* get() {
-    return reinterpret_cast<Type*>(space_);
-  }
-  inline const Type* get() const  {
-    return reinterpret_cast<const Type*>(space_);
-  }
+  Type* operator->() { return get(); }
+  const Type* operator->() const { return get(); }
 
-  inline Type* operator->() { return get(); }
-  inline const Type* operator->() const { return get(); }
+  Type& operator*() { return *get(); }
+  const Type& operator*() const { return *get(); }
 
-  inline Type& operator*() { return *get(); }
-  inline const Type& operator*() const { return *get(); }
-
-  inline void Init() {
-    new(space_) Type;
-  }
+  void Init() { new (&space_) Type; }
 
   // Init() constructs the Type instance using the given arguments
   // (which are forwarded to Type's constructor). In C++11, Init() can
@@ -111,91 +99,22 @@ class ManualConstructor {
   // "new Type();"), so it will leave non-class types uninitialized.
   //
   // Rvalue references and std::forward are used by arbiter permission;
-#ifdef LANG_CXX11
-  template <typename ... Ts>
-  inline void Init(Ts&&... args) {  // NOLINT
-    new(space_) Type(std::forward<Ts>(args)...);  // NOLINT
-  }
-#else  // !defined(LANG_CXX11)
-  template <typename T1>
-  inline void Init(const T1& p1) {
-    new(space_) Type(p1);
+  template <typename... Ts>
+  void Init(Ts&&... args) {
+    new (&space_) Type(std::forward<Ts>(args)...);
   }
 
-  template <typename T1, typename T2>
-  inline void Init(const T1& p1, const T2& p2) {
-    new(space_) Type(p1, p2);
-  }
+  // Init() that is equivalent to copy and move construction.
+  // Enables usage like this:
+  //   ManualConstructor<std::vector<int>> v;
+  //   v.Init({1, 2, 3});
+  void Init(const Type& x) { new (&space_) Type(x); }
+  void Init(Type&& x) { new (&space_) Type(std::move(x)); }
 
-  template <typename T1, typename T2, typename T3>
-  inline void Init(const T1& p1, const T2& p2, const T3& p3) {
-    new(space_) Type(p1, p2, p3);
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4>
-  inline void Init(const T1& p1, const T2& p2, const T3& p3, const T4& p4) {
-    new(space_) Type(p1, p2, p3, p4);
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4, typename T5>
-  inline void Init(const T1& p1, const T2& p2, const T3& p3, const T4& p4,
-                   const T5& p5) {
-    new(space_) Type(p1, p2, p3, p4, p5);
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4, typename T5,
-            typename T6>
-  inline void Init(const T1& p1, const T2& p2, const T3& p3, const T4& p4,
-                   const T5& p5, const T6& p6) {
-    new(space_) Type(p1, p2, p3, p4, p5, p6);
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4, typename T5,
-            typename T6, typename T7>
-  inline void Init(const T1& p1, const T2& p2, const T3& p3, const T4& p4,
-                   const T5& p5, const T6& p6, const T7& p7) {
-    new(space_) Type(p1, p2, p3, p4, p5, p6, p7);
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4, typename T5,
-            typename T6, typename T7, typename T8>
-  inline void Init(const T1& p1, const T2& p2, const T3& p3, const T4& p4,
-                   const T5& p5, const T6& p6, const T7& p7, const T8& p8) {
-    new(space_) Type(p1, p2, p3, p4, p5, p6, p7, p8);
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4, typename T5,
-            typename T6, typename T7, typename T8, typename T9>
-  inline void Init(const T1& p1, const T2& p2, const T3& p3, const T4& p4,
-                   const T5& p5, const T6& p6, const T7& p7, const T8& p8,
-                   const T9& p9) {
-    new(space_) Type(p1, p2, p3, p4, p5, p6, p7, p8, p9);
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4, typename T5,
-            typename T6, typename T7, typename T8, typename T9, typename T10>
-  inline void Init(const T1& p1, const T2& p2, const T3& p3, const T4& p4,
-                   const T5& p5, const T6& p6, const T7& p7, const T8& p8,
-                   const T9& p9, const T10& p10) {
-    new(space_) Type(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4, typename T5,
-            typename T6, typename T7, typename T8, typename T9, typename T10,
-            typename T11>
-  inline void Init(const T1& p1, const T2& p2, const T3& p3, const T4& p4,
-                   const T5& p5, const T6& p6, const T7& p7, const T8& p8,
-                   const T9& p9, const T10& p10, const T11& p11) {
-    new(space_) Type(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
-  }
-#endif  // LANG_CXX11
-
-  inline void Destroy() {
-    get()->~Type();
-  }
+  void Destroy() { get()->~Type(); }
 
  private:
-  ALIGNED_CHAR_ARRAY(Type, 1) space_;
+  typename std::aligned_storage<sizeof(Type), alignof(Type)>::type space_;
 };
 
 }

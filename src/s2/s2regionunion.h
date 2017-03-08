@@ -18,6 +18,7 @@
 #ifndef S2_S2REGIONUNION_H_
 #define S2_S2REGIONUNION_H_
 
+#include <memory>
 #include <vector>
 
 #include <glog/logging.h>
@@ -37,53 +38,51 @@ class S2LatLngRect;
 class S2RegionUnion : public S2Region {
  public:
   // Create an empty region.  Can be made non-empty by calling Init() or Add().
-  S2RegionUnion();
+  S2RegionUnion() = default;
 
   // Create a region representing the union of the given regions.
-  // Takes ownership of all regions and clears the given vector.
-  explicit S2RegionUnion(std::vector<S2Region*>* regions);
+  explicit S2RegionUnion(std::vector<std::unique_ptr<S2Region>> regions);
 
-  virtual ~S2RegionUnion();
+  // Use {} instead of = default to work around gcc bug.
+  ~S2RegionUnion() override {}
 
   // Initialize region by taking ownership of the given regions.
-  void Init(std::vector<S2Region*>* regions);
+  void Init(std::vector<std::unique_ptr<S2Region>> regions);
 
-  // Release ownership of the regions of this union, and appends them to
-  // "regions" if non-nullptr.  Resets the region to be empty.
-  void Release(std::vector<S2Region*>* regions);
+  // Releases ownership of the regions of this union and returns them,
+  // leaving this region empty.
+  std::vector<std::unique_ptr<S2Region>> Release();
 
   // Add the given region to the union.  This method can be called repeatedly
   // as an alternative to Init().
-  // Takes ownership of the pointer.
-  void Add(S2Region* region);
+  void Add(std::unique_ptr<S2Region> region);
 
   // Accessor methods.
   int num_regions() const { return regions_.size(); }
-  S2Region const* region(int i) const { return regions_[i]; }
+  S2Region const* region(int i) const { return regions_[i].get(); }
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2RegionUnion* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool VirtualContainsPoint(S2Point const& p) const;
+  S2RegionUnion* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool VirtualContainsPoint(S2Point const& p) const override;
   bool Contains(S2Point const& p) const;
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool MayIntersect(S2Cell const& cell) const;
-  virtual void Encode(Encoder* const encoder) const {
+  bool Contains(S2Cell const& cell) const override;
+  bool MayIntersect(S2Cell const& cell) const override;
+  void Encode(Encoder* const encoder) const override {
     LOG(FATAL) << "Unimplemented";
   }
-  virtual bool Decode(Decoder* const decoder) { return false; }
+  bool Decode(Decoder* const decoder) override { return false; }
 
  private:
-  // Internal constructor used only by Clone() that makes a deep copy of
+  // Internal copy constructor used only by Clone() that makes a deep copy of
   // its argument.
-  explicit S2RegionUnion(S2RegionUnion const* src);
+  S2RegionUnion(S2RegionUnion const& src);
 
-  std::vector<S2Region*> regions_;
+  std::vector<std::unique_ptr<S2Region>> regions_;
 
-  S2RegionUnion(S2RegionUnion const&) = delete;
   void operator=(S2RegionUnion const&) = delete;
 };
 

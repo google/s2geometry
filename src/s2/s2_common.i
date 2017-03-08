@@ -36,13 +36,13 @@
 
 %typemap(argout) S2CellId *OUTPUT_ARRAY_4 {
   $result = PyList_New(4);
-  if ($result == NULL) return NULL;
+  if ($result == nullptr) return nullptr;
 
   for (int i = 0; i < 4; i++) {
     PyObject *const o = FromS2CellId($1[i]);
     if (!o) {
       Py_DECREF($result);
-      return NULL;
+      return nullptr;
     }
     PyList_SET_ITEM($result, i, o);
   }
@@ -66,7 +66,7 @@
 %apply SWIGTYPE *DISOWN {S2Loop *loop_disown};
 
 %typemap(in) std::vector<S2Loop *> * (std::vector<S2Loop *> loops){
-  PyObject *element(NULL);
+  PyObject *element(nullptr);
   PyObject *iterator(PyObject_GetIter($input));
   if (!iterator) {
     SWIG_fail;
@@ -74,7 +74,7 @@
   int i(0);
   while ((element = PyIter_Next(iterator))) {
     i++;
-    S2Loop *loop(NULL);
+    S2Loop *loop(nullptr);
     int res(SWIG_ConvertPtr(element, (void **)&loop, $descriptor(S2Loop *), 0));
     if (SWIG_IsOK(res)) {
       loops.push_back(loop->Clone());
@@ -98,14 +98,14 @@ std::vector<S2Polyline *> *out(std::vector<S2Polyline *> temp) {
 
 %typemap(argout) std::vector<S2Polyline *> *out {
   $result = PyList_New($1->size());
-  if ($result == NULL) return NULL;
+  if ($result == nullptr) return nullptr;
 
   for (int i = 0; i < $1->size(); i++) {
     PyObject *const o =
       SWIG_NewPointerObj((*$1)[i], $descriptor(S2Polyline *), SWIG_POINTER_OWN);
     if (!o) {
       Py_DECREF($result);
-      return NULL;
+      return nullptr;
     }
     PyList_SET_ITEM($result, i, o);
   }
@@ -160,6 +160,40 @@ class S2EdgeUtil {
   S2EdgeUtil() {};
 };
 
+// Add raw pointer versions of these functions because SWIG doesn't
+// understand unique_ptr and when std::move() must be used.
+// TODO(user): Make swig understand unique_ptr and vector<unique_ptr>.
+%extend S2Polygon {
+ public:
+  // Takes ownership of the loop.  The _disown suffix is used to tell SWIG
+  // that S2Polygon takes ownership of the loop.
+  explicit S2Polygon(S2Loop* loop_disown) {
+    // SWIG recognizes this as a constructor, but implements this
+    // as a free function, so write it that way.
+    return new S2Polygon(std::unique_ptr<S2Loop>(loop_disown));
+  }
+
+  void InitNested(std::vector<S2Loop*>* loops) {
+    std::vector<std::unique_ptr<S2Loop>> unique_loops(loops->size());
+    for (int i = 0; i < loops->size(); ++i) {
+      unique_loops[i].reset((*loops)[i]);
+    }
+    loops->clear();
+    $self->InitNested(std::move(unique_loops));
+  }
+
+  void IntersectWithPolyline(S2Polyline const* in,
+                             std::vector<S2Polyline*>* out) const {
+    std::vector<std::unique_ptr<S2Polyline>> polylines =
+        $self->IntersectWithPolyline(*in);
+    DCHECK(out->empty());
+    out->reserve(polylines.size());
+    for (auto& polyline : polylines) {
+      out->push_back(polyline.release());
+    }
+  }
+}
+
 %ignoreall
 
 %unignore R1Interval;
@@ -181,6 +215,8 @@ class S2EdgeUtil {
 %unignore S1Angle::e6;
 %unignore S1Angle::e7;
 %unignore S1Angle::radians;
+%unignore S1ChordAngle;
+%unignore S1ChordAngle::ToAngle;
 %unignore S1Interval;
 %ignore S1Interval::operator[];
 %unignore S1Interval::GetLength;
@@ -240,6 +276,7 @@ class S2EdgeUtil {
 %unignore S2CellId::contains;
 %unignore S2CellId::face;
 %unignore S2CellId::id;
+%unignore S2CellId::intersects;
 %unignore S2CellId::is_face;
 %unignore S2CellId::is_valid;
 %unignore S2CellId::kMaxLevel;
@@ -409,6 +446,7 @@ class S2EdgeUtil {
 
 %include "s2/r1interval.h"
 %include "s2/s1angle.h"
+%include "s2/s1chordangle.h"
 %include "s2/s1interval.h"
 %include "s2/s2cellid.h"
 %include "s2/s2region.h"
@@ -458,10 +496,10 @@ class S2EdgeUtil {
   }
 %enddef
 
-%define USE_STD_HASH_FOR_HASH(type)
+%define USE_HASH_FOR_TYPE(type, hash_type)
   %extend type {
     size_t __hash__() {
-      return HASH_NAMESPACE::hash<type>()(*self);
+      return hash_type()(*self);
     }
   }
 %enddef
@@ -475,7 +513,7 @@ USE_STREAM_INSERTOR_FOR_STR(S2LatLngRect)
 
 USE_EQUALS_FOR_EQ_AND_NE(S2CellId)
 USE_COMPARISON_FOR_LT_AND_GT(S2CellId)
-USE_STD_HASH_FOR_HASH(S2CellId)
+USE_HASH_FOR_TYPE(S2CellId, S2CellIdHash)
 
 USE_EQUALS_FOR_EQ_AND_NE(S1Angle)
 USE_COMPARISON_FOR_LT_AND_GT(S1Angle)

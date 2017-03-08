@@ -17,9 +17,11 @@
 
 #include "s2/s2cap.h"
 
+#include <cfloat>
+#include <cmath>
 #include <iosfwd>
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/r1interval.h"
 #include "s2/s1interval.h"
@@ -30,34 +32,11 @@
 #include "s2/s2latlngrect.h"
 #include "s2/util/math/vector.h"
 
+using std::fabs;
 using std::max;
 
-// Multiply a positive number by this constant to ensure that the result
-// of a floating point operation is at least as large as the true
-// infinite-precision result.
-static double const kRoundUp = 1.0 + 1.0 / (GG_LONGLONG(1) << 52);
-
-/*static*/ double S2Cap::RadiusToHeight(S1Angle radius) {
-  if (radius.radians() < 0) return -1;     // empty
-  if (radius.radians() >= M_PI) return 2;  // full
-
-  // The height of the cap can be computed as 1 - cos(r), but this isn't very
-  // accurate for angles close to zero (where cos(r) is almost 1).  The
-  // formula below has much better precision.
-  double d = sin(0.5 * radius.radians());
-  return 2 * d * d;
-}
-
-S1Angle S2Cap::GetRadius() const {
-  // This could also be computed as acos(1 - height_), but the following
-  // formula is much more accurate when the cap height is small.  It
-  // follows from the relationship h = 1 - cos(r) = 2 sin^2(r/2).
-  if (is_empty()) return S1Angle::Radians(-1);
-  return S1Angle::Radians(2 * asin(sqrt(0.5 * height_)));
-}
-
 double S2Cap::GetArea() const {
-  return 2 * M_PI * max(0.0, height_);
+  return 2 * M_PI * max(0.0, height());
 }
 
 S2Point S2Cap::GetCentroid() const {
@@ -68,35 +47,33 @@ S2Point S2Cap::GetCentroid() const {
   // that the radial component of the centroid is simply the midpoint of the
   // range of radial distances spanned by the cap. That is easily computed
   // from the cap height.
-
   if (is_empty()) return S2Point();
-  double r = 1.0 - height_ / 2.0;
-  return center_ * r * GetArea();
+  double r = 1.0 - 0.5 * height();
+  return r * GetArea() * center_;
 }
 
 S2Cap S2Cap::Complement() const {
   // The complement of a full cap is an empty cap, not a singleton.
-  // Also make sure that the complement of an empty cap has height 2.
-  double height = is_full() ? -1 : 2 - max(height_, 0.0);
-  return S2Cap::FromCenterHeight(-center_, height);
+  // Also make sure that the complement of an empty cap is full.
+  if (is_full()) return Empty();
+  if (is_empty()) return Full();
+  return S2Cap(-center_, S1ChordAngle::FromLength2(4 - radius_.length2()));
 }
 
 bool S2Cap::Contains(S2Cap const& other) const {
   if (is_full() || other.is_empty()) return true;
-  return GetRadius() >= S1Angle(center_, other.center_) + other.GetRadius();
+  return radius_ >= S1ChordAngle(center_, other.center_) + other.radius_;
 }
 
 bool S2Cap::Intersects(S2Cap const& other) const {
   if (is_empty() || other.is_empty()) return false;
-
-  return GetRadius() + other.GetRadius() >= S1Angle(center_, other.center_);
+  return radius_ + other.radius_ >= S1ChordAngle(center_, other.center_);
 }
 
 bool S2Cap::InteriorIntersects(S2Cap const& other) const {
   // Make sure this cap has an interior and the other cap is non-empty.
-  if (height_ <= 0 || other.is_empty()) return false;
-
-  return GetRadius() + other.GetRadius() > S1Angle(center_, other.center_);
+  if (radius_.length2() <= 0 || other.is_empty()) return false;
+  return radius_ + other.radius_ > S1ChordAngle(center_, other.center_);
 }
 
 void S2Cap::AddPoint(S2Point const& p) {
@@ -104,13 +81,12 @@ void S2Cap::AddPoint(S2Point const& p) {
   DCHECK(S2::IsUnitLength(p));
   if (is_empty()) {
     center_ = p;
-    height_ = 0;
+    radius_ = S1ChordAngle::Zero();
   } else {
-    // To make sure that the resulting cap actually includes this point,
-    // we need to round up the distance calculation.  That is, after
-    // calling cap.AddPoint(p), cap.Contains(p) should be true.
-    double dist2 = (center_ - p).Norm2();
-    height_ = max(height_, kRoundUp * 0.5 * dist2);
+    // After calling cap.AddPoint(p), cap.Contains(p) must be true.  However
+    // we don't need to do anything special to achieve this because Contains()
+    // does exactly the same distance calculation that we do here.
+    radius_ = max(radius_, S1ChordAngle(center_, p));
   }
 }
 
@@ -118,26 +94,27 @@ void S2Cap::AddCap(S2Cap const& other) {
   if (is_empty()) {
     *this = other;
   } else {
-    // See comments for AddPoint().  This could be optimized by doing the
-    // calculation in terms of cap heights rather than cap opening angles.
-    S1Angle radius = S1Angle(center_, other.center_) + other.GetRadius();
-    height_ = max(height_, kRoundUp * RadiusToHeight(radius));
+    // We round up the distance to ensure that the cap is actually contained.
+    // TODO(ericv): Do some error analysis in order to guarantee this.
+    S1ChordAngle dist = S1ChordAngle(center_, other.center_) + other.radius_;
+    radius_ = max(radius_, dist.PlusError(DBL_EPSILON * dist.length2()));
   }
 }
 
 S2Cap S2Cap::Expanded(S1Angle distance) const {
   DCHECK_GE(distance.radians(), 0);
   if (is_empty()) return Empty();
-  return S2Cap(center_, GetRadius() + distance);
+  return S2Cap(center_, radius_ + S1ChordAngle(distance));
 }
 
 S2Cap S2Cap::Union(S2Cap const& other) const {
-  if (height() < other.height()) {
+  if (radius_ < other.radius_) {
     return other.Union(*this);
   }
   if (is_full() || other.is_empty()) {
     return *this;
   }
+  // This calculation would be more efficient using S1ChordAngles.
   S1Angle this_radius = GetRadius();
   S1Angle other_radius = other.GetRadius();
   S1Angle distance(center(), other.center());
@@ -197,7 +174,7 @@ S2LatLngRect S2Cap::GetRectBound() const {
     //
     // The formula for sin(a) follows from the relationship h = 1 - cos(a).
 
-    double sin_a = sqrt(height_ * (2 - height_));
+    double sin_a = sin(radius_);
     double sin_c = cos(center_ll.lat().radians());
     if (sin_a <= sin_c) {
       double angle_A = asin(sin_a / sin_c);
@@ -216,7 +193,7 @@ bool S2Cap::Intersects(S2Cell const& cell, S2Point const* vertices) const {
   // If the cap is a hemisphere or larger, the cell and the complement of the
   // cap are both convex.  Therefore since no vertex of the cell is contained,
   // no other interior point of the cell is contained either.
-  if (height_ >= 1) return false;
+  if (radius_ >= S1ChordAngle::Right()) return false;
 
   // We need to check for empty caps due to the center check just below.
   if (is_empty()) return false;
@@ -229,7 +206,7 @@ bool S2Cap::Intersects(S2Cell const& cell, S2Point const* vertices) const {
   // and the cap does not contain any cell vertex.  The only way that they
   // can intersect is if the cap intersects the interior of some edge.
 
-  double sin2_angle = height_ * (2 - height_);  // sin^2(cap_angle)
+  double sin2_angle = sin2(radius_);
   for (int k = 0; k < 4; ++k) {
     S2Point edge = cell.GetEdgeRaw(k);
     double dot = center_.DotProd(edge);
@@ -282,30 +259,59 @@ bool S2Cap::MayIntersect(S2Cell const& cell) const {
 
 bool S2Cap::Contains(S2Point const& p) const {
   DCHECK(S2::IsUnitLength(p));
-  return (center_ - p).Norm2() <= 2 * height_;
+  return S1ChordAngle(center_, p) <= radius_;
 }
 
 bool S2Cap::InteriorContains(S2Point const& p) const {
   DCHECK(S2::IsUnitLength(p));
-  return is_full() || (center_ - p).Norm2() < 2 * height_;
+  return is_full() || S1ChordAngle(center_, p) < radius_;
 }
 
 bool S2Cap::operator==(S2Cap const& other) const {
-  return (center_ == other.center_ && height_ == other.height_) ||
+  return (center_ == other.center_ && radius_ == other.radius_) ||
          (is_empty() && other.is_empty()) ||
          (is_full() && other.is_full());
 }
 
-bool S2Cap::ApproxEquals(S2Cap const& other, double max_error) const {
-  return (S2::ApproxEquals(center_, other.center_, max_error) &&
-          fabs(height_ - other.height_) <= max_error) ||
-         (is_empty() && other.height_ <= max_error) ||
-         (other.is_empty() && height_ <= max_error) ||
-         (is_full() && other.height_ >= 2 - max_error) ||
-         (other.is_full() && height_ >= 2 - max_error);
+bool S2Cap::ApproxEquals(S2Cap const& other, S1Angle max_error_angle) const {
+  const double max_error = max_error_angle.radians();
+  const double r2 = radius_.length2();
+  const double other_r2 = other.radius_.length2();
+  return (S2::ApproxEquals(center_, other.center_, max_error_angle) &&
+          fabs(r2 - other_r2) <= max_error) ||
+         (is_empty() && other_r2 <= max_error) ||
+         (other.is_empty() && r2 <= max_error) ||
+         (is_full() && other_r2 >= 2 - max_error) ||
+         (other.is_full() && r2 >= 2 - max_error);
 }
 
 std::ostream& operator<<(std::ostream& os, S2Cap const& cap) {
   return os << "[Center=" << cap.center()
             << ", Radius=" << cap.GetRadius() << "]";
+}
+
+void S2Cap::Encode(Encoder* encoder) const {
+  encoder->Ensure(4 * sizeof(double));
+
+  encoder->putdouble(center_.x());
+  encoder->putdouble(center_.y());
+  encoder->putdouble(center_.z());
+  encoder->putdouble(radius_.length2());
+
+  DCHECK_GE(encoder->avail(), 0);
+}
+
+bool S2Cap::Decode(Decoder* decoder) {
+  if (decoder->avail() < 4 * sizeof(double)) return false;
+
+  double x = decoder->getdouble();
+  double y = decoder->getdouble();
+  double z = decoder->getdouble();
+  center_ = S2Point(x, y, z);
+  radius_ = S1ChordAngle::FromLength2(decoder->getdouble());
+
+  if (FLAGS_s2debug) {
+     CHECK(is_valid()) << "Invalid S2Cap: " << *this;
+  }
+  return true;
 }

@@ -61,8 +61,8 @@ void R2Rect::AddRect(R2Rect const& other) {
   bounds_[1].AddInterval(other[1]);
 }
 
-R2Point R2Rect::ClampPoint(R2Point const& p) const {
-  return R2Point(x().ClampPoint(p.x()), y().ClampPoint(p.y()));
+R2Point R2Rect::Project(R2Point const& p) const {
+  return R2Point(x().Project(p.x()), y().Project(p.y()));
 }
 
 R2Rect R2Rect::Expanded(R2Point const& margin) const {

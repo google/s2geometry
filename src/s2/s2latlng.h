@@ -23,7 +23,7 @@
 #include <ostream>
 #include <string>
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
@@ -115,8 +115,9 @@ class S2LatLng {
   bool operator<=(S2LatLng const& o) const { return coords_ <= o.coords_; }
   bool operator>=(S2LatLng const& o) const { return coords_ >= o.coords_; }
 
-  bool ApproxEquals(S2LatLng const& o, double max_error = 1e-15) const {
-    return coords_.aequal(o.coords_, max_error);
+  bool ApproxEquals(S2LatLng const& o,
+                    S1Angle max_error = S1Angle::Radians(1e-15)) const {
+    return coords_.aequal(o.coords_, max_error.radians());
   }
 
   // Export the latitude and longitude in degrees, separated by a comma.
@@ -185,7 +186,8 @@ inline S1Angle S2LatLng::Longitude(S2Point const& p) {
 }
 
 inline bool S2LatLng::is_valid() const {
-  return fabs(lat().radians()) <= M_PI_2 && fabs(lng().radians()) <= M_PI;
+  return (std::fabs(lat().radians()) <= M_PI_2 &&
+          std::fabs(lng().radians()) <= M_PI);
 }
 
 inline S2LatLng operator+(S2LatLng const& a, S2LatLng const& b) {

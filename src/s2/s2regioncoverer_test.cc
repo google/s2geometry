@@ -26,7 +26,7 @@
 #include <vector>
 
 #include <gflags/gflags.h>
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/stringprintf.h"
 #include "s2/base/strtoint.h"
@@ -288,7 +288,7 @@ TEST(S2RegionCoverer, InteriorCovering) {
   // that were not effected by removal of a grandchild.
   const int level = 12;
   S2CellId small_cell =
-      S2CellId::FromPoint(S2Testing::RandomPoint()).parent(level + 2);
+      S2CellId(S2Testing::RandomPoint()).parent(level + 2);
   S2CellId large_cell = small_cell.parent(level);
   vector<S2CellId> small_cell_vector(1, small_cell);
   vector<S2CellId> large_cell_vector(1, large_cell);

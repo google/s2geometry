@@ -43,12 +43,16 @@
 // Bits) containing a few bit patterns (which vary based on value of template
 // parameter).
 
+#if defined(__i386__) || defined(__x86_64__)
+#include <x86intrin.h>
+#endif
+
 #include "s2/base/casts.h"
 #include "s2/base/int128.h"
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/macros.h"
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/port.h"
 
 class Bits {
  public:
@@ -70,10 +74,13 @@ class Bits {
 #if defined(__powerpc64__) && defined(__GNUC__)
     // Use popcount builtin if we know it is inlined and fast.
     return PopcountWithBuiltin<uint32>(n);
+#elif (defined(__i386__) || defined(__x86_64__)) && defined(__POPCNT__) && \
+    defined(__GNUC__)
+    return PopcountWithBuiltin<uint32>(n);
 #else
     n -= ((n >> 1) & 0x55555555);
     n = ((n >> 2) & 0x33333333) + (n & 0x33333333);
-    return (((n + (n >> 4)) & 0xF0F0F0F) * 0x1010101) >> 24;
+    return static_cast<int>((((n + (n >> 4)) & 0xF0F0F0F) * 0x1010101) >> 24);
 #endif
   }
 
@@ -81,11 +88,13 @@ class Bits {
   static inline int CountOnes64(uint64 n) {
 #if defined(__powerpc64__) && defined(__GNUC__)
     return PopcountWithBuiltin<uint64>(n);
+#elif defined(__x86_64__) && defined(__POPCNT__) && defined(__GNUC__)
+    return PopcountWithBuiltin<uint64>(n);
 #elif defined(_LP64)
     n -= (n >> 1) & 0x5555555555555555ULL;
     n = ((n >> 2) & 0x3333333333333333ULL) + (n & 0x3333333333333333ULL);
-    return (((n + (n >> 4)) & 0xF0F0F0F0F0F0F0FULL)
-            * 0x101010101010101ULL) >> 56;
+    return static_cast<int>(
+        (((n + (n >> 4)) & 0xF0F0F0F0F0F0F0FULL) * 0x101010101010101ULL) >> 56);
 #else
     return CountOnes(n >> 32) + CountOnes(n & 0xffffffff);
 #endif
@@ -105,7 +114,7 @@ class Bits {
 #if defined(__x86_64__) && defined __GNUC__
     int64 count = 0;
     asm("popcnt %1,%0" : "=r"(count) : "rm"(n) : "cc");
-    return count;
+    return static_cast<int>(count);
 #else
     return CountOnes64(n);
 #endif
@@ -123,14 +132,17 @@ class Bits {
     int32 count;
     asm("clz %w0,%w1" : "=r"(count) : "r"(n));
     return count;
+#elif (defined(__i386__) || defined(__x86_64__)) && defined(__LZCNT__) && \
+    defined(__GNUC__)
+    return __lzcnt32(n);
 #elif (defined(__i386__) || defined(__x86_64__)) && defined(__GNUC__)
-    int32 idx, neg1 = -1;
-    asm("bsr %1,%0\n\t"
-        "cmovz %2,%0"
-        : "=&r"(idx)          // idx is early-clobbered
-        : "ro"(n), "r"(neg1)
+    if (n == 0) return 32;
+    int32 idx;
+    asm("bsr %1, %0"
+        : "=r"(idx)
+        : "ro"(n)
         : "cc");              // bsr writes Z flag
-    return 31 - idx;
+    return 31 ^ idx;
 #elif defined(__powerpc64__) && defined(__GNUC__)
     int32 count;
     asm("cntlzw %0,%1" : "=r"(count) : "r"(n));
@@ -151,14 +163,17 @@ class Bits {
     int64 count;
     asm("cntlzd %0,%1" : "=r"(count) : "r"(n));
     return count;
+#elif (defined(__i386__) || defined(__x86_64__)) && defined(__LZCNT__) && \
+    defined(__GNUC__)
+    return __lzcnt64(n);
 #elif defined(__x86_64__) && defined(__GNUC__)
-    int64 idx, neg1 = -1;
-    asm ("bsr %1,%0\n"
-         "cmovz %2,%0\n"
-         : "=&r"(idx)          // idx is early-clobbered
-         : "ro"(n), "r"(neg1)
+    if (n == 0) return 64;
+    int64 idx;
+    asm ("bsr %1, %0"
+         : "=r"(idx)
+         : "ro"(n)
          : "cc");              // bsr writes Z flag
-    return 63 - idx;
+    return static_cast<int>(63 ^ idx);
 #elif defined(__GNUC__)
     return CountLeadingZerosWithBuiltin<uint64>(n);
 #else
@@ -291,7 +306,8 @@ class Bits {
   template<typename UnsignedT>
   static UnsignedT NBitsFromLSB(const int nbits) {
     const UnsignedT all_ones = ~static_cast<UnsignedT>(0);
-    return nbits == 0 ? 0U : all_ones >> (sizeof(UnsignedT) * 8 - nbits);
+    return nbits == 0 ? static_cast<UnsignedT>(0)
+                      : all_ones >> (sizeof(UnsignedT) * 8 - nbits);
   }
 
 #ifdef __GNUC__
@@ -473,9 +489,9 @@ inline uint8 Bits::ReverseBits8(unsigned char n) {
   asm("rbit %w0, %w1" : "=r"(result) : "r"(n_shifted));
   return result;
 #else
-  n = ((n >> 1) & 0x55) | ((n & 0x55) << 1);
-  n = ((n >> 2) & 0x33) | ((n & 0x33) << 2);
-  return ((n >> 4) & 0x0f)  | ((n & 0x0f) << 4);
+  n = static_cast<unsigned char>(((n >> 1) & 0x55) | ((n & 0x55) << 1));
+  n = static_cast<unsigned char>(((n >> 2) & 0x33) | ((n & 0x33) << 2));
+  return static_cast<unsigned char>(((n >> 4) & 0x0f)  | ((n & 0x0f) << 4));
 #endif
 }
 
@@ -509,8 +525,8 @@ inline uint64 Bits::ReverseBits64(uint64 n) {
 }
 
 inline uint128 Bits::ReverseBits128(uint128 n) {
-  return uint128(ReverseBits64(Uint128Low64(n)),
-                 ReverseBits64(Uint128High64(n)));
+  return absl::MakeUint128(ReverseBits64(Uint128Low64(n)),
+                           ReverseBits64(Uint128High64(n)));
 }
 
 inline int Bits::Log2FloorNonZero_Portable(uint32 n) {
@@ -604,6 +620,11 @@ struct Bits::UnsignedTypeBySize<4> {
 template<>
 struct Bits::UnsignedTypeBySize<8> {
   typedef uint64 Type;
+};
+
+template<>
+struct Bits::UnsignedTypeBySize<16> {
+  typedef uint128 Type;
 };
 
 #ifdef __GNUC__

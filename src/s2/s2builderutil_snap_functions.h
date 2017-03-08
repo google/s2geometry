@@ -46,19 +46,19 @@ class IdentitySnapFunction : public S2Builder::SnapFunction {
 
   // REQUIRES: snap_radius <= SnapFunction::kMaxSnapRadius()
   void set_snap_radius(S1Angle snap_radius);
-  virtual S1Angle snap_radius() const;
+  S1Angle snap_radius() const override;
 
   // For the identity snap function, all vertex pairs are separated by at
   // least snap_radius().
-  virtual S1Angle min_vertex_separation() const;
+  S1Angle min_vertex_separation() const override;
 
   // For the identity snap function, edges are separated from all non-incident
   // vertices by at least 0.5 * snap_radius().
-  virtual S1Angle min_edge_vertex_separation() const;
+  S1Angle min_edge_vertex_separation() const override;
 
-  virtual S2Point SnapPoint(S2Point const& point) const;
+  S2Point SnapPoint(S2Point const& point) const override;
 
-  virtual std::unique_ptr<SnapFunction> Clone() const;
+  std::unique_ptr<SnapFunction> Clone() const override;
 
  private:
   // Copying and assignment are allowed.
@@ -104,7 +104,7 @@ class S2CellIdSnapFunction : public S2Builder::SnapFunction {
   // REQUIRES: snap_radius >= MinSnapRadiusForLevel(level())
   // REQUIRES: snap_radius <= SnapFunction::kMaxSnapRadius()
   void set_snap_radius(S1Angle snap_radius);
-  virtual S1Angle snap_radius() const;
+  S1Angle snap_radius() const override;
 
   // Returns the minimum allowable snap radius for the given S2Cell level
   // (approximately equal to half of the maximum cell diagonal length).
@@ -125,17 +125,17 @@ class S2CellIdSnapFunction : public S2Builder::SnapFunction {
   // For S2CellId snapping, the minimum separation between vertices depends on
   // level() and snap_radius().  It can vary between 0.5 * snap_radius()
   // and snap_radius().
-  virtual S1Angle min_vertex_separation() const;
+  S1Angle min_vertex_separation() const override;
 
   // For S2CellId snapping, the minimum separation between edges and
   // non-incident vertices depends on level() and snap_radius().  It can
   // be as low as 0.219 * snap_radius(), but is typically 0.5 * snap_radius()
   // or more.
-  virtual S1Angle min_edge_vertex_separation() const;
+  S1Angle min_edge_vertex_separation() const override;
 
-  virtual S2Point SnapPoint(S2Point const& point) const;
+  S2Point SnapPoint(S2Point const& point) const override;
 
-  virtual std::unique_ptr<SnapFunction> Clone() const;
+  std::unique_ptr<SnapFunction> Clone() const override;
 
  private:
   // Copying and assignment are allowed.
@@ -197,7 +197,7 @@ class IntLatLngSnapFunction : public S2Builder::SnapFunction {
   // REQUIRES: snap_radius >= MinSnapRadiusForExponent(exponent())
   // REQUIRES: snap_radius <= SnapFunction::kMaxSnapRadius()
   void set_snap_radius(S1Angle snap_radius);
-  virtual S1Angle snap_radius() const;
+  S1Angle snap_radius() const override;
 
   // Returns the minimum allowable snap radius for the given exponent
   // (approximately equal to (pow(10, -exponent) / sqrt(2)) degrees).
@@ -218,15 +218,15 @@ class IntLatLngSnapFunction : public S2Builder::SnapFunction {
   // For IntLatLng snapping, the minimum separation between vertices depends on
   // exponent() and snap_radius().  It can vary between snap_radius()
   // and snap_radius().
-  virtual S1Angle min_vertex_separation() const;
+  S1Angle min_vertex_separation() const override;
 
   // For IntLatLng snapping, the minimum separation between edges and
   // non-incident vertices depends on level() and snap_radius().  It can
   // be as low as 0.222 * snap_radius(), but is typically 0.39 * snap_radius()
   // or more.
-  virtual S1Angle min_edge_vertex_separation() const;
-  virtual S2Point SnapPoint(S2Point const& point) const;
-  virtual std::unique_ptr<SnapFunction> Clone() const;
+  S1Angle min_edge_vertex_separation() const override;
+  S2Point SnapPoint(S2Point const& point) const override;
+  std::unique_ptr<SnapFunction> Clone() const override;
 
  private:
   // Copying and assignment are allowed.

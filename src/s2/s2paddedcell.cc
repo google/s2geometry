@@ -25,6 +25,10 @@
 
 using std::max;
 using std::min;
+using S2::internal::kSwapMask;
+using S2::internal::kInvertMask;
+using S2::internal::kIJtoPos;
+using S2::internal::kPosToOrientation;
 
 S2PaddedCell::S2PaddedCell(S2CellId id, double padding)
     : id_(id), padding_(padding) {
@@ -54,12 +58,12 @@ S2PaddedCell::S2PaddedCell(S2PaddedCell const& parent, int i, int j)
       level_(parent.level_ + 1) {
   // Compute the position and orientation of the child incrementally from the
   // orientation of the parent.
-  int pos = S2::kIJtoPos[parent.orientation_][2*i+j];
+  int pos = kIJtoPos[parent.orientation_][2*i+j];
   id_ = parent.id_.child(pos);
   int ij_size = S2CellId::GetSizeIJ(level_);
   ij_lo_[0] = parent.ij_lo_[0] + i * ij_size;
   ij_lo_[1] = parent.ij_lo_[1] + j * ij_size;
-  orientation_ = parent.orientation_ ^ S2::kPosToOrientation[pos];
+  orientation_ = parent.orientation_ ^ kPosToOrientation[pos];
   // For each child, one corner of the bound is taken directly from the parent
   // while the diagonally opposite corner is taken from middle().
   R2Rect const& middle = parent.middle();
@@ -92,7 +96,7 @@ S2Point S2PaddedCell::GetEntryVertex() const {
   // reversed, in which case it enters at the (1,1) vertex.
   int i = ij_lo_[0];
   int j = ij_lo_[1];
-  if (orientation_ & S2::kInvertMask) {
+  if (orientation_ & kInvertMask) {
     int ij_size = S2CellId::GetSizeIJ(level_);
     i += ij_size;
     j += ij_size;
@@ -106,7 +110,7 @@ S2Point S2PaddedCell::GetExitVertex() const {
   int i = ij_lo_[0];
   int j = ij_lo_[1];
   int ij_size = S2CellId::GetSizeIJ(level_);
-  if (orientation_ == 0 || orientation_ == S2::kSwapMask + S2::kInvertMask) {
+  if (orientation_ == 0 || orientation_ == kSwapMask + kInvertMask) {
     i += ij_size;
   } else {
     j += ij_size;

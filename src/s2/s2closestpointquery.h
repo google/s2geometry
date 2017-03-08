@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <glog/logging.h>
+#include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/priority_queue_sequence.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
@@ -31,7 +32,6 @@
 #include "s2/s2edgeutil.h"
 #include "s2/s2pointindex.h"
 #include "s2/s2regioncoverer.h"
-#include "s2/util/gtl/inlined_vector.h"
 
 // Given a set of points stored in an S2PointIndex, S2ClosestPointQuery
 // provides methods that find the closest point(s) to a given query point
@@ -578,7 +578,7 @@ void S2ClosestPointQuery<Data>::InitQueue(Target const& target) {
     // also this would require extending MaybeAddResult() so that it can
     // remove duplicate entries.  (The points added here may be re-added by
     // AddCell(), but this is okay when max_points() == 1.)
-    iter_.Seek(S2CellId::FromPoint(target.center()));
+    iter_.Seek(S2CellId(target.center()));
     if (!iter_.Done()) {
       MaybeAddResult(iter_.point_data(), target);
     }

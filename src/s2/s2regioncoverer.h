@@ -134,7 +134,7 @@ class S2RegionCoverer {
   // Accuracy is measured by dividing the area of the covering by the area of
   // the original region.  The following table shows the median and worst case
   // values for this area ratio on a test case consisting of 100,000 spherical
-  // caps of random size (generated using s2regioncoverer_unittest):
+  // caps of random size (generated using s2regioncoverer_test):
   //
   //   max_cells:        3      4     5     6     8    12    20   100   1000
   //   median ratio:  5.33   3.32  2.73  2.34  1.98  1.66  1.42  1.11   1.01

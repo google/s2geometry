@@ -54,8 +54,8 @@ void TestFractal(int min_level, int max_level, double dimension) {
   fractal.set_max_level(max_level);
   fractal.set_fractal_dimension(dimension);
   Matrix3x3_d frame = S2Testing::GetRandomFrame();
-  unique_ptr<S2Loop> loop(fractal.MakeLoop(frame,
-                                           S1Angle::Radians(nominal_radius)));
+  unique_ptr<S2Loop> loop(
+      fractal.MakeLoop(frame, S1Angle::Radians(nominal_radius)));
   ASSERT_TRUE(loop->IsValid());
 
   // If min_level and max_level are not equal, then the number of vertices and

@@ -140,7 +140,7 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
 
   // Gather all the edges that intersect those cells and sort them.
   for (S2ShapeIndexCell const* cell : cells_) {
-    for (int s = 0; s < cell->num_shapes(); ++s) {
+    for (int s = 0; s < cell->num_clipped(); ++s) {
       S2ClippedShape const& clipped = cell->clipped(s);
       vector<int>* edges = &(*edge_map)[index_->shape(clipped.shape_id())];
       edges->reserve(edges->size() + clipped.num_edges());
@@ -189,7 +189,7 @@ void S2CrossingEdgeQuery::GetCells(S2Point const& a, S2Point const& b) {
     if (relation == S2ShapeIndex::INDEXED) {
       // edge_root is an index cell or is contained by an index cell (case 1).
       DCHECK(iter_.id().contains(edge_root));
-      cells_.push_back(iter_.cell());
+      cells_.push_back(&iter_.cell());
     } else if (relation == S2ShapeIndex::SUBDIVIDED) {
       // edge_root is subdivided into one or more index cells (case 2).  We
       // find the cells intersected by AB using recursive subdivision.
@@ -230,7 +230,7 @@ void S2CrossingEdgeQuery::GetCells(S2PaddedCell const& pcell,
   }
   if (iter_.id() == pcell.id()) {
     // The index contains this cell exactly.
-    cells_.push_back(iter_.cell());
+    cells_.push_back(&iter_.cell());
     return;
   }
 
@@ -289,7 +289,7 @@ inline void S2CrossingEdgeQuery::ClipVAxis(R2Rect const& edge_bound,
 void S2CrossingEdgeQuery::SplitUBound(R2Rect const& edge_bound, double u,
                                       R2Rect child_bounds[2]) const {
   // See comments in S2ShapeIndex::ClipUBound.
-  double v = edge_bound[1].ClampPoint(
+  double v = edge_bound[1].Project(
       S2EdgeUtil::InterpolateDouble(u, a_[0], b_[0], a_[1], b_[1]));
 
   // "diag_" indicates which diagonal of the bounding box is spanned by AB:
@@ -302,7 +302,7 @@ void S2CrossingEdgeQuery::SplitUBound(R2Rect const& edge_bound, double u,
 // return the bound for each child.
 void S2CrossingEdgeQuery::SplitVBound(R2Rect const& edge_bound, double v,
                                       R2Rect child_bounds[2]) const {
-  double u = edge_bound[0].ClampPoint(
+  double u = edge_bound[0].Project(
       S2EdgeUtil::InterpolateDouble(v, a_[1], b_[1], a_[0], b_[0]));
   int diag = (a_[0] > b_[0]) != (a_[1] > b_[1]);
   SplitBound(edge_bound, diag, u, 0, v, child_bounds);

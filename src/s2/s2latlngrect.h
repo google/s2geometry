@@ -312,7 +312,8 @@ class S2LatLngRect : public S2Region {
   // Return true if the latitude and longitude intervals of the two rectangles
   // are the same up to the given tolerance (see r1interval.h and s1interval.h
   // for details).
-  bool ApproxEquals(S2LatLngRect const& other, double max_error = 1e-15) const;
+  bool ApproxEquals(S2LatLngRect const& other,
+                    S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   // ApproxEquals() with separate tolerances for latitude and longitude.
   bool ApproxEquals(S2LatLngRect const& other, S2LatLng const& max_error) const;
@@ -320,11 +321,11 @@ class S2LatLngRect : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2LatLngRect* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool VirtualContainsPoint(S2Point const& p) const {
+  S2LatLngRect* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool Contains(S2Cell const& cell) const override;
+  bool VirtualContainsPoint(S2Point const& p) const override {
     return Contains(p);  // The same as Contains() below, just virtual.
   }
 
@@ -333,13 +334,13 @@ class S2LatLngRect : public S2Region {
   // an S2RegionCoverer, the accuracy isn't all that important since if a cell
   // may intersect the region then it is subdivided, and the accuracy of this
   // method goes up as the cells get smaller.
-  virtual bool MayIntersect(S2Cell const& cell) const;
+  bool MayIntersect(S2Cell const& cell) const override;
 
   // The point 'p' does not need to be normalized.
   bool Contains(S2Point const& p) const;
 
-  virtual void Encode(Encoder* const encoder) const;
-  virtual bool Decode(Decoder* const decoder);
+  void Encode(Encoder* const encoder) const override;
+  bool Decode(Decoder* const decoder) override;
 
   // Return true if the edge AB intersects the given edge of constant
   // longitude.
@@ -395,8 +396,8 @@ inline S2LatLngRect S2LatLngRect::Full() {
 
 inline bool S2LatLngRect::is_valid() const {
   // The lat/lng ranges must either be both empty or both non-empty.
-  return (fabs(lat_.lo()) <= M_PI_2 &&
-          fabs(lat_.hi()) <= M_PI_2 &&
+  return (std::fabs(lat_.lo()) <= M_PI_2 &&
+          std::fabs(lat_.hi()) <= M_PI_2 &&
           lng_.is_valid() &&
           lat_.is_empty() == lng_.is_empty());
 }

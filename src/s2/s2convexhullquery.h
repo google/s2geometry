@@ -18,6 +18,7 @@
 #ifndef S2_S2CONVEXHULLQUERY_H_
 #define S2_S2CONVEXHULLQUERY_H_
 
+#include <memory>
 #include <vector>
 
 #include "s2/fpcontractoff.h"
@@ -93,12 +94,12 @@ class S2ConvexHullQuery {
   //
   // Note that this method does not clear the geometry; you can continue
   // adding to it and call this method again if desired.
-  S2Loop* GetConvexHull();
+  std::unique_ptr<S2Loop> GetConvexHull();
 
  private:
   void GetMonotoneChain(std::vector<S2Point>* output);
-  S2Loop* GetSinglePointLoop(S2Point const& p);
-  S2Loop* GetSingleEdgeLoop(S2Point const& a, S2Point const& b);
+  std::unique_ptr<S2Loop> GetSinglePointLoop(S2Point const& p);
+  std::unique_ptr<S2Loop> GetSingleEdgeLoop(S2Point const& a, S2Point const& b);
 
   S2LatLngRect bound_;
   std::vector<S2Point> points_;

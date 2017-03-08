@@ -14,24 +14,39 @@
 //
 
 //
-//
+// Various portability macros, type definitions, and inline functions
+// This file is used for both C and C++!
 //
 // These are weird things we need to do to get this compiling on
 // random systems (and on SWIG).
 //
 
-#ifndef S2_BASE_PORT_H_
-#define S2_BASE_PORT_H_
+#ifndef S2_THIRD_PARTY_ABSL_BASE_PORT_H_
+#define S2_THIRD_PARTY_ABSL_BASE_PORT_H_
 
 #include <climits>         // So we can set the bounds of our types
 #include <cstring>         // for memcpy()
 #include <cstdlib>         // for free()
 
-#if defined(OS_CYGWIN)
-#error "Cygwin is not supported."
+#include "s2/third_party/absl/base/config.h"
+
+#if defined(__cplusplus)
+#include <cstddef>
+#if defined(_STLPORT_VERSION)
+#error "STLPort is not supported."
+#endif
 #endif
 
-#if defined(__CYGWIN__)
+// Enforce C++11 as the minimum.  Note that Visual Studio has not
+// advanced __cplusplus despite being good enough for our purposes, so
+// so we exempt it from the check.
+#if defined(__cplusplus) && !defined(_MSC_VER) && !defined(SWIG)
+#if __cplusplus < 201103L
+#error "C++ versions less than C++11 are not supported."
+#endif
+#endif
+
+#if defined(OS_CYGWIN) || defined(__CYGWIN__)
 #error "Cygwin is not supported."
 #endif
 
@@ -53,7 +68,7 @@
 #include <cstdio>          // declare snprintf/vsnprintf before overriding
 #endif
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 
 // We support gcc 4.7 and later.
 #if defined(__GNUC__) && !defined(__clang__)
@@ -123,10 +138,6 @@ typedef unsigned long ulong;
 #endif
 #endif
 
-#if defined(__cplusplus)
-#include <cstddef>              // For _GLIBCXX macros
-#endif
-
 #if !defined(HAVE_TLS) && \
     (defined(GOOGLE_LIBCXX) || defined(_GLIBCXX_HAVE_TLS)) && \
     (defined(ARCH_K8) || defined(ARCH_POWERPC64) || defined(ARCH_PPC) || \
@@ -172,7 +183,7 @@ typedef unsigned long ulong;
 #else
 
 static inline uint16 bswap_16(uint16 x) {
-  return static_cast<uint16>(((x & 0xFF) << 8) | ((x & 0xFF00) >> 8));
+  return (uint16)(((x & 0xFF) << 8) | ((x & 0xFF00) >> 8));  // NOLINT
 }
 #define bswap_16(x) bswap_16(x)
 static inline uint32 bswap_32(uint32 x) {
@@ -260,65 +271,8 @@ typedef int uid_t;
 // Linux has this in <linux/errno.h>
 #define EXFULL      ENOMEM  // not really that great a translation...
 
-// Mach-O supports sections (albeit with small names), but doesn't have
-// vars at the beginning and end.  Instead you should call the function
-// getsectdata("__DATA", name, &size).
-#define HAVE_ATTRIBUTE_SECTION 1
-
-// Any function with ATTRIBUTE_SECTION must not be inlined, or it will
-// be placed into whatever section its caller is placed into.
-#define ATTRIBUTE_SECTION(name) \
-  __attribute__ ((section ("__DATA, " #name))) __attribute__ ((noinline))
-
-#define ENUM_DYLD_BOOL  // so that we don't pollute the global namespace
-extern "C" {
-  #include <mach-o/getsect.h>
-  #include <mach-o/dyld.h>
-}
-class AssignAttributeStartEnd {
- public:
-  AssignAttributeStartEnd(const char* name, char** pstart, char** pend) {
-    // Find out what dynamic library name is defined in
-    for (int i = _dyld_image_count() - 1; i >= 0; --i) {
-      const mach_header* hdr = _dyld_get_image_header(i);
-      uint32_t len;
-      *pstart = getsectdatafromheader(hdr, "__DATA", name, &len);
-      if (*pstart) {   // nullptr if not defined in this dynamic library
-        *pstart += _dyld_get_image_vmaddr_slide(i);   // correct for reloc
-        *pend = *pstart + len;
-        return;
-      }
-    }
-    // If we get here, not defined in a dll at all.  See if defined statically.
-    unsigned long len;    // don't ask me why this type isn't uint32_t too...
-    *pstart = getsectdata("__DATA", name, &len);
-    *pend = *pstart + len;
-  }
-};
-
-// 1) DEFINE_ATTRIBUTE_SECTION_VARS: must be called once per unique
-//    name.  You want to make sure this is executed before any
-//    DECLARE_ATTRIBUTE_SECTION_VARS; the easiest way is to put them
-//    in the same .cc file.  Put this call at the global level.
-// 2) INIT_ATTRIBUTE_SECTION_VARS: you can scatter calls to this in
-//    multiple places to help ensure execution before any
-//    DECLARE_ATTRIBUTE_SECTION_VARS.  You must have at least one
-//    DEFINE, but you can have many INITs.  Put each in its own scope.
-// 3) DECLARE_ATTRIBUTE_SECTION_VARS: must be called before using
-//    ATTRIBUTE_SECTION_START or ATTRIBUTE_SECTION_STOP on a name.
-//    Put this call at the global level.
-#define DECLARE_ATTRIBUTE_SECTION_VARS(name) \
-  extern char* __start_##name; \
-  extern char* __stop_##name;
-
-#define INIT_ATTRIBUTE_SECTION_VARS(name)               \
-  DECLARE_ATTRIBUTE_SECTION_VARS(name);                 \
-  static const AssignAttributeStartEnd __assign_##name( \
-    #name, &__start_##name, &__stop_##name)
-
-#define DEFINE_ATTRIBUTE_SECTION_VARS(name)             \
-  char* __start_##name, *__stop_##name;                 \
-  INIT_ATTRIBUTE_SECTION_VARS(name)
+// Labeled sections are not supported on Darwin/iOS.
+#define HAVE_ATTRIBUTE_SECTION 0
 
 // Darwin doesn't have strnlen. No comment.
 inline size_t strnlen(const char *s, size_t maxlen) {
@@ -403,7 +357,7 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 #elif defined(__powerpc64__)
 #define CACHELINE_SIZE 128
 #elif defined(__aarch64__)
-// We would need to read special regiter ctr_el0 to find out L1 dcache size.
+// We would need to read special register ctr_el0 to find out L1 dcache size.
 // This value is a good estimate based on a real aarch64 machine.
 #define CACHELINE_SIZE 64
 #elif defined(__arm__)
@@ -424,21 +378,47 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 #define CACHELINE_SIZE 64
 #endif
 
+// On some compilers, expands to __attribute__((aligned(CACHELINE_SIZE))).
+// For compilers where this is not known to work, expands to nothing.
+//
+// No further guarantees are made here.  The result of applying the macro
+// to variables and types is always implementation defined.
+//
+// WARNING: It is easy to use this attribute incorrectly, even to the point
+// of causing bugs that are difficult to diagnose, crash, etc.  It does not
+// guarantee that objects are aligned to a cache line.
+//
+// Recommendations:
+//
+// 1) Consult compiler documentation; this comment is not kept in sync as
+//    toolchains evolve.
+// 2) Verify your use has the intended effect. This often requires inspecting
+//    the generated machine code.
+// 3) Prefer applying this attribute to individual variables.  Avoid
+//    applying it to types.  This tends to localize the effect.
 #define CACHELINE_ALIGNED __attribute__((aligned(CACHELINE_SIZE)))
 
-//
 // Prevent the compiler from complaining about or optimizing away variables
 // that appear unused
 #undef ATTRIBUTE_UNUSED
 #define ATTRIBUTE_UNUSED __attribute__ ((__unused__))
 
-//
 // For functions we want to force inline or not inline.
 // Introduced in gcc 3.1.
 #define ATTRIBUTE_ALWAYS_INLINE  __attribute__ ((always_inline))
 #define HAVE_ATTRIBUTE_ALWAYS_INLINE 1
 #define ATTRIBUTE_NOINLINE __attribute__ ((noinline))
 #define HAVE_ATTRIBUTE_NOINLINE 1
+
+// Prevent the compiler from optimizing away stack frames for functions which
+// end in a call to another function.
+#ifdef __clang__
+#define ATTRIBUTE_NO_TAIL_CALL __attribute__((disable_tail_calls))
+#else
+#define ATTRIBUTE_NO_TAIL_CALL \
+  __attribute__((optimize("no-optimize-sibling-calls")))
+#endif
+#define HAVE_ATTRIBUTE_NO_TAIL_CALL 1
 
 // For weak functions
 #undef ATTRIBUTE_WEAK
@@ -463,14 +443,14 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 // For static class member functions, there is no implicit "this", and
 // the first explicit argument is arg 1.
 //
-//   /* arg_a cannot be nullptr, but arg_b can */
+//   /* arg_a cannot be null, but arg_b can */
 //   void Function(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
 //
 //   class C {
-//     /* arg_a cannot be nullptr, but arg_b can */
+//     /* arg_a cannot be null, but arg_b can */
 //     void Method(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(2);
 //
-//     /* arg_a cannot be nullptr, but arg_b can */
+//     /* arg_a cannot be null, but arg_b can */
 //     static void StaticMethod(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
 //   };
 //
@@ -517,6 +497,15 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 #define ATTRIBUTE_NO_SANITIZE_THREAD __attribute__((no_sanitize_thread))
 #else
 #define ATTRIBUTE_NO_SANITIZE_THREAD
+#endif
+
+// Tell UndefinedSanitizer to ignore a given function. Useful for cases
+// where certain behavior (eg. devision by zero) is being used intentionally.
+#ifdef UNDEFINED_BEHAVIOR_SANITIZER
+#define ATTRIBUTE_NO_SANITIZE_UNDEFINED \
+  __attribute__((no_sanitize("undefined")))
+#else
+#define ATTRIBUTE_NO_SANITIZE_UNDEFINED
 #endif
 
 // Tell ControlFlowIntegrity sanitizer to not instrument a given function.
@@ -611,7 +600,7 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 #define ATTRIBUTE_PACKED
 #endif
 
-
+#ifdef __cplusplus
 #if defined(__GNUC__) || defined(__llvm__)
 // Defined behavior on some of the uarchs:
 // PREFETCH_HINT_T0:
@@ -692,7 +681,6 @@ extern inline void prefetch(const void *x, int hint) {
 #endif
 }
 
-#ifdef __cplusplus
 // prefetch intrinsic (bring data to L1 without polluting L2 cache)
 extern inline void prefetch(const void *x) {
   return prefetch(x, 0);
@@ -740,21 +728,27 @@ extern inline void prefetch(const void *x) {
 #define ATTRIBUTE_UNUSED
 #define ATTRIBUTE_ALWAYS_INLINE
 #define ATTRIBUTE_NOINLINE
+#define ATTRIBUTE_NO_TAIL_CALL
+#define HAVE_ATTRIBUTE_NO_TAIL_CALL 0
 #define ATTRIBUTE_HOT
 #define ATTRIBUTE_COLD
 #define ATTRIBUTE_WEAK
 #define HAVE_ATTRIBUTE_WEAK 0
 #define ATTRIBUTE_INITIAL_EXEC
-#define ATTRIBUTE_NONNULL(arg_index)
+#define ATTRIBUTE_NONNULL(...)
 #define ATTRIBUTE_NORETURN
 #define ATTRIBUTE_NO_SANITIZE_ADDRESS
 #define ATTRIBUTE_NO_SANITIZE_MEMORY
+#if !defined(SWIG) || SWIG_VERSION >= 0x020000
 #define HAVE_ATTRIBUTE_SECTION 0
+#endif
 #define ATTRIBUTE_PACKED
 #define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
 #define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
 #define MUST_USE_RESULT
+#if defined(__cplusplus)
 extern inline void prefetch(const void*) {}
+#endif
 #define PREDICT_FALSE(x) x
 #define PREDICT_TRUE(x) x
 
@@ -765,16 +759,11 @@ extern inline void prefetch(const void*) {}
 
 #endif  // GCC
 
-#if ((defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) ||  \
-      defined(__NVCC__)) && !defined(SWIG)) ||                            \
-    ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__))
-
-#if !defined(__cplusplus) && !defined(__APPLE__) && !defined(OS_IOS) && \
-    !defined(OS_CYGWIN)
-// stdlib.h only declares this in C++, not in C, so we declare it here.
-// Also make sure to avoid declaring it on platforms which don't support it.
-extern int posix_memalign(void **memptr, size_t alignment, size_t size);
-#endif
+#if defined(__cplusplus) &&                                               \
+    (((defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) || \
+       defined(__NVCC__)) &&                                              \
+      !defined(SWIG)) ||                                                  \
+     ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)))
 
 inline void *aligned_malloc(size_t size, int minimum_alignment) {
 #if defined(__ANDROID__) || defined(OS_ANDROID) || defined(OS_CYGWIN)
@@ -798,10 +787,7 @@ inline void aligned_free(void *aligned_memory) {
   free(aligned_memory);
 }
 
-#endif
-// #if ((defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) ||
-// defined(__NVCC__)) && !defined(SWIG)) ||
-// ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__))
+#endif  // aligned_malloc
 
 //
 // Provides a char array with the exact same alignment as another type. The
@@ -872,7 +858,7 @@ struct AlignType { typedef char result[Size]; };
 #define BASE_PORT_H_ALIGN_OF(Type) 16
 
 #endif // !SWIG
-#else  // __cpluscplus
+#else  // __cplusplus
 #define ALIGNED_CHAR_ARRAY ALIGNED_CHAR_ARRAY_is_not_available_without_Cplusplus
 #endif // __cplusplus
 
@@ -896,26 +882,68 @@ struct AlignType { typedef char result[Size]; };
 #error chars must be unsigned!  Use the /J flag on the compiler command line.
 #endif
 
-// MSVC is a little hyper-active in its warnings
-// Signed vs. unsigned comparison is ok.
-#pragma warning(disable : 4018 )
-// We know casting from a long to a char may lose data
-#pragma warning(disable : 4244 )
-// Don't need performance warnings about converting ints to bools
-#pragma warning(disable : 4800 )
-// Integral constant overflow is apparently ok too
-// for example:
-//  short k;  int n;
-//  k = k + n;
-#pragma warning(disable : 4307 )
-// It's ok to use this* in constructor
-// Example:
-//  class C {
-//   Container cont_;
-//   C() : cont_(this) { ...
-#pragma warning(disable : 4355 )
-// Truncating from double to float is ok
-#pragma warning(disable : 4305 )
+// Allow comparisons between signed and unsigned values.
+//
+// Lots of Google code uses this pattern:
+//   for (int i = 0; i < container.size(); ++i)
+// Since size() returns an unsigned value, this warning would trigger
+// frequently.  Very few of these instances are actually bugs since containers
+// rarely exceed MAX_INT items.  Unfortunately, there are bugs related to
+// signed-unsigned comparisons that have been missed because we disable this
+// warning.  For example:
+//   const long stop_time = os::GetMilliseconds() + kWaitTimeoutMillis;
+//   while (os::GetMilliseconds() <= stop_time) { ... }
+#pragma warning(disable : 4018)  // level 3
+
+// Don't warn about unused local variables.
+//
+// extension to silence particular instances of this warning.  There's no way
+// to define ATTRIBUTE_UNUSED to quiet particular instances of this warning in
+// VC++, so we disable it globally.  Currently, there aren't many false
+// positives, so perhaps we can address those in the future and re-enable these
+// warnings, which sometimes catch real bugs.
+#pragma warning(disable : 4101)  // level 3
+
+// Allow initialization and assignment to a smaller type without warnings about
+// possible loss of data.
+//
+// There is a distinct warning, 4267, that warns about size_t conversions to
+// smaller types, but we don't currently disable that warning.
+//
+// Correct code can be written in such a way as to avoid false positives
+// by making the conversion explicit, but Google code isn't usually that
+// verbose.  There are too many false positives to address at this time.  Note
+// that this warning triggers at levels 2, 3, and 4 depending on the specific
+// type of conversion.  By disabling it, we not only silence minor narrowing
+// conversions but also serious ones.
+#pragma warning(disable : 4244)  // level 2, 3, and 4
+
+// Allow silent truncation of double to float.
+//
+// Silencing this warning has caused us to miss some subtle bugs.
+#pragma warning(disable : 4305)  // level 1
+
+// Allow a constant to be assigned to a type that is too small.
+//
+// I don't know why we allow this at all.  I can't think of a case where this
+// wouldn't be a bug, but enabling the warning breaks many builds today.
+#pragma warning(disable : 4307)  // level 2
+
+// Allow passing the this pointer to an initializer even though it refers
+// to an uninitialized object.
+//
+// Some observer implementations rely on saving the this pointer.  Those are
+// safe because the pointer is not dereferenced until after the object is fully
+// constructed.  This could however, obscure other instances.  In the future, we
+// should look into disabling this warning locally rather globally.
+#pragma warning(disable : 4355)  // level 1 and 4
+
+// Allow implicit coercion from an integral type to a bool.
+//
+// These could be avoided by making the code more explicit, but that's never
+// been the style here, so there would be many false positives.  It's not
+// obvious if a true positive would ever help to find an actual bug.
+#pragma warning(disable : 4800)  // level 3
 
 #include <winsock2.h>
 #include <cassert>
@@ -923,15 +951,19 @@ struct AlignType { typedef char result[Size]; };
 #include <process.h>  // _getpid()
 #undef ERROR
 
-#include <cfloat>  // for nextafter functionality on windows
 #include <cmath>  // for HUGE_VAL
 
 #ifndef HUGE_VALF
 #define HUGE_VALF (static_cast<float>(HUGE_VAL))
 #endif
 
-namespace std {}  // Avoid error if we didn't see std.
-using namespace std;
+#ifdef __cplusplus
+// Define a minimal set of things typically available in the global
+// namespace in Google code.  ::string is handled elsewhere, and uniformly
+// for all targets.
+#include <functional>
+using std::hash;
+#endif  // __cplusplus
 
 // VC++ doesn't understand "uint"
 #ifndef HAVE_UINT
@@ -977,7 +1009,6 @@ BASE_PORT_MSVC_DLL_MACRO
 // You say tomato, I say _tomato
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
-#define nextafter _nextafter
 #define strdup _strdup
 #define tempnam _tempnam
 #define chdir  _chdir
@@ -1005,66 +1036,6 @@ inline void aligned_free(void *aligned_memory) {
 }
 
 // ----- BEGIN VC++ STUBS & FAKE DEFINITIONS ---------------------------------
-
-// See http://en.wikipedia.org/wiki/IEEE_754 for details of
-// floating point format.
-
-inline int fpclassify_double(double x) {
-  const int float_point_class =_fpclass(x);
-  int c99_class;
-  switch  (float_point_class) {
-  case _FPCLASS_SNAN:  // Signaling NaN
-  case _FPCLASS_QNAN:  // Quiet NaN
-    c99_class = FP_NAN;
-    break;
-  case _FPCLASS_NZ:  // Negative zero ( -0)
-  case _FPCLASS_PZ:  // Positive 0 (+0)
-    c99_class = FP_ZERO;
-    break;
-  case _FPCLASS_NINF:  // Negative infinity ( -INF)
-  case _FPCLASS_PINF:  // Positive infinity (+INF)
-    c99_class = FP_INFINITE;
-    break;
-  case _FPCLASS_ND:  // Negative denormalized
-  case _FPCLASS_PD:  // Positive denormalized
-    c99_class = FP_SUBNORMAL;
-    break;
-  case _FPCLASS_NN:  // Negative normalized non-zero
-  case _FPCLASS_PN:  // Positive normalized non-zero
-    c99_class = FP_NORMAL;
-    break;
-  default:
-    c99_class = FP_NAN;  // Should never happen
-    break;
-  }
-  return  c99_class;
-}
-
-// This function handle the special subnormal case for float; it will
-// become a normal number while casting to double.
-// bit_cast is avoided to simplify dependency and to create a code that is
-// easy to deploy in C code
-inline int fpclassify_float(float x) {
-  uint32 bitwise_representation;
-  memcpy(&bitwise_representation, &x, 4);
-  if ((bitwise_representation & 0x7f800000) == 0 &&
-      (bitwise_representation & 0x007fffff) != 0)
-    return FP_SUBNORMAL;
-  return fpclassify_double(x);
-}
-//
-// This define takes care of the denormalized float; the casting to
-// double make it a normal number
-#define fpclassify(x) ((sizeof(x) == sizeof(float)) ? fpclassify_float(x) : fpclassify_double(x))
-
-#define isnan _isnan
-
-inline int isinf(double x) {
-  const int float_point_class =_fpclass(x);
-  if (float_point_class == _FPCLASS_PINF) return 1;
-  if (float_point_class == _FPCLASS_NINF) return -1;
-  return 0;
-}
 
 typedef void (*sig_t)(int);
 
@@ -1098,11 +1069,13 @@ typedef short int16_t;
 
 #endif  // _MSC_VER
 
+#ifdef __cplusplus
 #ifdef STL_MSVC  // not always the same as _MSC_VER
-#include "s2/base/port_hash.h"
+#include "s2/third_party/absl/base/internal/port_hash.inc"
 #else
 struct PortableHashBase { };
 #endif
+#endif  // __cplusplus
 
 #if defined(OS_WINDOWS) || defined(__APPLE__) || defined(OS_IOS)
 // gethostbyname() *is* thread-safe for Windows native threads. It is also
@@ -1128,9 +1101,6 @@ struct PortableHashBase { };
 #if defined(__GNUC__) && defined(GOOGLE_GLIBCXX_VERSION)
 // Crosstool v17 or later.
 #define HASH_NAMESPACE __gnu_cxx
-#elif defined(__GNUC__) && (defined(STLPORT) || defined(USE_STD_HASH))
-// A version of gcc with stlport.
-#define HASH_NAMESPACE std
 #elif defined(_MSC_VER)
 // MSVC.
 // http://msdn.microsoft.com/en-us/library/6x7w9f6z(v=vs.100).aspx
@@ -1163,11 +1133,11 @@ struct PortableHashBase { };
 #endif
 
 #if defined __GNUC__
-#define STREAM_SET(s, bit) (s).setstate(ios_base::bit)
-#define STREAM_SETF(s, flag) (s).setf(ios_base::flag)
+#define STREAM_SET(s, bit) (s).setstate(std::ios_base::bit)
+#define STREAM_SETF(s, flag) (s).setf(std::ios_base::flag)
 #else
-#define STREAM_SET(s, bit) (s).set(ios::bit)
-#define STREAM_SETF(s, flag) (s).setf(ios::flag)
+#define STREAM_SET(s, bit) (s).set(std::ios::bit)
+#define STREAM_SETF(s, flag) (s).setf(std::ios::flag)
 #endif
 
 // Portable handling of unaligned loads, stores, and copies.
@@ -1180,6 +1150,10 @@ struct PortableHashBase { };
 // happens in a pass that's quite late in compilation, which means the resulting
 // loads and stores cannot participate in many other optimizations, leading to
 // overall worse code.
+
+// The unaligned API is C++ only.  The declarations use C++ features
+// (namespaces, inline) which are absent or incompatible in C.
+#if defined(__cplusplus)
 
 #if defined(ADDRESS_SANITIZER) || defined(THREAD_SANITIZER) ||\
     defined(MEMORY_SANITIZER)
@@ -1197,18 +1171,14 @@ struct PortableHashBase { };
 // Make sure uint16_t/uint32_t/uint64_t are defined.
 #include <cstdint>
 
-#ifdef __cplusplus
 extern "C" {
-#endif  // __cplusplus
 uint16_t __sanitizer_unaligned_load16(const void *p);
 uint32_t __sanitizer_unaligned_load32(const void *p);
 uint64_t __sanitizer_unaligned_load64(const void *p);
 void __sanitizer_unaligned_store16(void *p, uint16_t v);
 void __sanitizer_unaligned_store32(void *p, uint32_t v);
 void __sanitizer_unaligned_store64(void *p, uint64_t v);
-#ifdef __cplusplus
 }  // extern "C"
-#endif  // __cplusplus
 
 inline uint16 UNALIGNED_LOAD16(const void *p) {
   return __sanitizer_unaligned_load16(p);
@@ -1372,11 +1342,6 @@ inline void UNALIGNED_STORE64(void *p, uint64 v) {
 #define UNALIGNED_STOREW(_p, _val) UNALIGNED_STORE32(_p, _val)
 #endif
 
-// NOTE(user): These are only exported to C++ because the macros they depend on
-// use C++-only syntax. This #ifdef can be removed if/when the macros are fixed.
-
-#if defined(__cplusplus)
-
 inline void UnalignedCopy16(const void *src, void *dst) {
   UNALIGNED_STORE16(dst, UNALIGNED_LOAD16(src));
 }
@@ -1397,7 +1362,7 @@ inline void UnalignedCopy64(const void *src, void *dst) {
   }
 }
 
-#endif  // defined(__cpluscplus)
+#endif  // defined(__cplusplus), end of unaligned API
 
 // printf macros for size_t, in the style of inttypes.h
 #if defined(_LP64) || defined(OS_IOS)
@@ -1445,11 +1410,9 @@ std::ostream& operator << (std::ostream& out, const pthread_t& thread_id);
 // defined according to the language version in effect thereafter.
 // Microsoft Visual Studio 14 (2015) sets __cplusplus==199711 despite
 // reasonably good C++11 support, so we set LANG_CXX for it and
-// newer versions (_MSC_VER >= 1900).  Stlport is used by many Android
-// projects and does not have full C++11 STL support.
+// newer versions (_MSC_VER >= 1900).
 #if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L || \
-     (defined(_MSC_VER) && _MSC_VER >= 1900)) &&                      \
-    !defined(STLPORT)
+     (defined(_MSC_VER) && _MSC_VER >= 1900))
 // Define this to 1 if the code is compiled in C++11 mode; leave it
 // undefined otherwise.  Do NOT define it to 0 -- that causes
 // '#ifdef LANG_CXX11' to behave differently from '#if LANG_CXX11'.
@@ -1478,44 +1441,10 @@ enum { kPlatformUsesOPDSections = 0 };
 #endif
 
 #ifdef __cplusplus
-// We support C++11's static_assert(expression, message) for all C++
-// builds, though for some pre-C++11 toolchains we fall back to using
-// GG_PRIVATE_STATIC_ASSERT, which has two limitations: (1) the
-// expression argument will need to be parenthesized if it would
-// otherwise contain commas outside of parentheses, and (2) the
-// message is ignored (though the compiler error will likely mention
-// "static_assert_failed" and point to the line with the failing assertion).
-
-// Something else (perhaps libc++) may have provided its own definition of
-// static_assert.
-#ifndef static_assert
-#if LANG_CXX11 || __has_extension(cxx_static_assert) || defined(_MSC_VER)
-// There's a native implementation of static_assert, no need to define our own.
-#elif __has_extension(c_static_assert)
-// C11's _Static_assert is available, and makes a great static_assert.
-#define static_assert _Static_assert
-#else
-// Fall back on our home-grown implementation, with its limitations.
-#define static_assert GG_PRIVATE_STATIC_ASSERT
-#endif
-#endif
-
-// CompileAssert is an implementation detail of COMPILE_ASSERT and
-// GG_PRIVATE_STATIC_ASSERT.
+// CompileAssert<T> is deprecated.  Use static_assert instead.
 template <bool>
 struct CompileAssert {
 };
-
-// GG_PRIVATE_STATIC_ASSERT: A poor man's static_assert.  This doesn't handle
-// condition expressions that contain unparenthesized top-level commas;
-// write GG_PRIVATE_STATIC_ASSERT((expr), "comment") when needed.
-#define GG_PRIVATE_CAT_IMMEDIATE(a, b) a ## b
-#define GG_PRIVATE_CAT(a, b) GG_PRIVATE_CAT_IMMEDIATE(a, b)
-#define GG_PRIVATE_STATIC_ASSERT(expr, ignored) \
-  typedef CompileAssert<(static_cast<bool>(expr))> \
-  GG_PRIVATE_CAT(static_assert_failed_at_line, __LINE__)[bool(expr) ? 1 : -1] \
-  ATTRIBUTE_UNUSED
-
 #endif  // __cplusplus
 
 // Some platforms have a ::string class that is different from ::std::string
@@ -1530,4 +1459,25 @@ using std::string;
 #endif  // HAS_GLOBAL_STRING
 #endif  // SWIG, __cplusplus
 
-#endif  // S2_BASE_PORT_H_
+#ifdef __cplusplus
+namespace base {
+// We support C++14's sized deallocation for all C++ builds,
+// though for other toolchains, we fall back to using delete.
+inline void sized_delete(void* ptr, size_t size) {
+#ifdef GOOGLE_HAVE_SIZED_DELETE
+  ::operator delete(ptr, size);
+#else
+  (void)size;
+  ::operator delete(ptr);
+#endif  // GOOGLE_HAVE_SIZED_DELETE
+}
+}  // namespace base
+#endif  // __cplusplus
+
+// This sanity check can be removed when all references to
+// LANG_CXX11 is removed from the code base.
+#if defined(__cplusplus) && !defined(LANG_CXX11) && !defined(SWIG)
+#error "LANG_CXX11 is required."
+#endif
+
+#endif  // S2_THIRD_PARTY_ABSL_BASE_PORT_H_

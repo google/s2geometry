@@ -65,21 +65,31 @@ class libc_allocator_with_realloc {
   typedef T& reference;
   typedef const T& const_reference;
 
-  libc_allocator_with_realloc() {}
-  libc_allocator_with_realloc(const libc_allocator_with_realloc&) {}
-  ~libc_allocator_with_realloc() {}
+  template<class U>
+  struct rebind {
+    typedef libc_allocator_with_realloc<U> other;
+  };
+
+  libc_allocator_with_realloc() = default;
+
+  template <class U>
+  libc_allocator_with_realloc(const libc_allocator_with_realloc<U>&) {}
 
   pointer address(reference r) const  { return &r; }
   const_pointer address(const_reference r) const  { return &r; }
 
-  pointer allocate(size_type n, const_pointer = 0) {
-    return static_cast<pointer>(malloc(n * sizeof(value_type)));
+  pointer allocate(size_type n, const_pointer = nullptr) {
+    pointer p = static_cast<pointer>(malloc(n * sizeof(value_type)));
+    if (p == nullptr && n != 0) throw std::bad_alloc();
+    return p;
   }
   void deallocate(pointer p, size_type) {
     free(p);
   }
   pointer reallocate(pointer p, size_type n) {
-    return static_cast<pointer>(realloc(p, n * sizeof(value_type)));
+    p = static_cast<pointer>(realloc(p, n * sizeof(value_type)));
+    if (p == nullptr && n != 0) throw std::bad_alloc();
+    return p;
   }
 
   size_type max_size() const  {
@@ -90,14 +100,6 @@ class libc_allocator_with_realloc {
     new(p) value_type(val);
   }
   void destroy(pointer p) { p->~value_type(); }
-
-  template <class U>
-  libc_allocator_with_realloc(const libc_allocator_with_realloc<U>&) {}
-
-  template<class U>
-  struct rebind {
-    typedef libc_allocator_with_realloc<U> other;
-  };
 };
 
 // libc_allocator_with_realloc<void> specialization.
@@ -114,6 +116,11 @@ class libc_allocator_with_realloc<void> {
   struct rebind {
     typedef libc_allocator_with_realloc<U> other;
   };
+
+  libc_allocator_with_realloc() = default;
+
+  template <class U>
+  libc_allocator_with_realloc(const libc_allocator_with_realloc<U>&) {}
 };
 
 template<class T>

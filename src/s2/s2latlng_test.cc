@@ -17,6 +17,7 @@
 
 #include "s2/s2latlng.h"
 
+#include <cmath>
 #include <cstdio>
 
 #include <glog/logging.h>
@@ -24,6 +25,8 @@
 #include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
 #include "s2/s2testing.h"
+
+using std::fabs;
 
 TEST(S2LatLng, TestBasic) {
   S2LatLng ll_rad = S2LatLng::FromRadians(M_PI_4, M_PI_2);

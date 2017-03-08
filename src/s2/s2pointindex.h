@@ -133,7 +133,7 @@ class S2PointIndex {
     // Convenience constructor that calls Init().
     explicit Iterator(S2PointIndex const& index);
 
-    // Initialize an iterator for the given S2ShapeIndex.  If the index is
+    // Initialize an iterator for the given S2PointIndex.  If the index is
     // non-empty, the iterator is positioned at the first cell.
     void Init(S2PointIndex const& index);
 
@@ -210,7 +210,7 @@ inline int S2PointIndex<Data>::num_points() const {
 
 template <class Data>
 void S2PointIndex<Data>::Add(PointData const& point_data) {
-  S2CellId id = S2CellId::FromPoint(point_data.point());
+  S2CellId id(point_data.point());
   map_.insert(std::make_pair(id, point_data));
 }
 
@@ -221,7 +221,7 @@ void S2PointIndex<Data>::Add(S2Point const& point, Data const& data) {
 
 template <class Data>
 bool S2PointIndex<Data>::Remove(PointData const& point_data) {
-  S2CellId id = S2CellId::FromPoint(point_data.point());
+  S2CellId id(point_data.point());
   for (typename Map::iterator it = map_.lower_bound(id), end = map_.end();
        it != end && it->first == id; ++it) {
     if (it->second == point_data) {

@@ -22,6 +22,8 @@
 #include <type_traits>
 #include <vector>
 
+#include <glog/logging.h>
+#include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/util/btree/btree_set.h"  // Like std::set, but faster and smaller.
 #include "s2/fpcontractoff.h"
 #include "s2/priority_queue_sequence.h"
@@ -32,7 +34,6 @@
 #include "s2/s2cellid.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2shapeindex.h"
-#include "s2/util/gtl/inlined_vector.h"
 
 // S2ClosestEdgeQuery is a helper class for finding the closest edge(s) to a
 // given query point or query edge.  For example, given a set of polylines,
@@ -218,16 +219,17 @@ class S2ClosestEdgeQuery {
   class PointTarget : public Target {
    public:
     explicit PointTarget(S2Point const& point) : point_(point) {}
-    S2Point center() const { return point_; }
-    S1Angle radius() const { return S1Angle::Zero(); }
+    S2Point center() const override { return point_; }
+    S1Angle radius() const override { return S1Angle::Zero(); }
     bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
-                           S1ChordAngle* min_dist) const {
+                           S1ChordAngle* min_dist) const override {
       return S2EdgeUtil::UpdateMinDistance(point_, v0, v1, min_dist);
     }
-    S1ChordAngle GetDistance(S2Cell const& cell) const {
+    S1ChordAngle GetDistance(S2Cell const& cell) const override {
       return cell.GetDistance(point_);
     }
-    S2Point GetClosestPointOnEdge(S2Point const&v0, S2Point const& v1) const {
+    S2Point GetClosestPointOnEdge(S2Point const& v0,
+                                  S2Point const& v1) const override {
       return S2EdgeUtil::GetClosestPoint(point_, v0, v1);
     }
    private:
@@ -237,16 +239,17 @@ class S2ClosestEdgeQuery {
   class EdgeTarget : public Target {
    public:
     EdgeTarget(S2Point const& a, S2Point const& b) : a_(a), b_(b) {}
-    S2Point center() const { return (a_ + b_).Normalize(); }
-    S1Angle radius() const { return 0.5 * S1Angle(a_, b_); }
+    S2Point center() const override { return (a_ + b_).Normalize(); }
+    S1Angle radius() const override { return 0.5 * S1Angle(a_, b_); }
     bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
-                           S1ChordAngle* min_dist) const {
+                           S1ChordAngle* min_dist) const override {
       return S2EdgeUtil::UpdateEdgePairMinDistance(a_, b_, v0, v1, min_dist);
     }
-    S1ChordAngle GetDistance(S2Cell const& cell) const {
+    S1ChordAngle GetDistance(S2Cell const& cell) const override {
       return cell.GetDistanceToEdge(a_, b_);
     }
-    S2Point GetClosestPointOnEdge(S2Point const& v0, S2Point const& v1) const {
+    S2Point GetClosestPointOnEdge(S2Point const& v0,
+                                  S2Point const& v1) const override {
       return S2EdgeUtil::GetEdgePairClosestPoints(a_, b_, v0, v1).second;
     }
    private:
@@ -260,7 +263,7 @@ class S2ClosestEdgeQuery {
   void FindClosestEdgesBruteForce();
   void FindClosestEdgesOptimized();
   void InitQueue();
-  void MaybeAddResult(S2Shape const* shape, int edge_id);
+  void MaybeAddResult(S2Shape const& shape, int edge_id);
   void ProcessEdges(QueueEntry const& entry);
   void EnqueueCell(S2CellId id, S2ShapeIndexCell const* index_cell);
   void EnqueueCurrentCell(S2CellId id);

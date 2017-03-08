@@ -36,6 +36,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2testing.h"
 
+using S2::internal::kPosToOrientation;
 using std::min;
 using std::unordered_map;
 using std::vector;
@@ -44,8 +45,7 @@ DEFINE_int32(iters, 20000000,
              "Number of iterations for timing tests with optimized build");
 
 static S2CellId GetCellId(double lat_degrees, double lng_degrees) {
-  S2CellId id = S2CellId::FromLatLng(S2LatLng::FromDegrees(lat_degrees,
-                                                           lng_degrees));
+  S2CellId id(S2LatLng::FromDegrees(lat_degrees, lng_degrees));
   LOG(INFO) << std::hex << id.id();
   return id;
 }
@@ -276,7 +276,7 @@ TEST(S2CellId, Inverses) {
     EXPECT_TRUE(id.is_leaf());
     EXPECT_EQ(S2CellId::kMaxLevel, id.level());
     S2LatLng center = id.ToLatLng();
-    EXPECT_EQ(id.id(), S2CellId::FromLatLng(center).id());
+    EXPECT_EQ(id.id(), S2CellId(center).id());
   }
 }
 
@@ -375,7 +375,7 @@ static void ExpandCell(
     EXPECT_FALSE(child.is_leaf());
     int child_orientation;
     EXPECT_EQ(face, child.ToFaceIJOrientation(&i, &j, &child_orientation));
-    EXPECT_EQ(orientation ^ S2::kPosToOrientation[pos], child_orientation);
+    EXPECT_EQ(orientation ^ kPosToOrientation[pos], child_orientation);
     ExpandCell(child, cells, parent_map);
   }
 }
@@ -442,7 +442,7 @@ TEST(S2CellId, Coverage) {
   double max_dist = 0.5 * S2::kMaxDiag.GetValue(S2CellId::kMaxLevel);
   for (int i = 0; i < 1000000; ++i) {
     S2Point p = S2Testing::RandomPoint();
-    S2Point q = S2CellId::FromPoint(p).ToPointRaw();
+    S2Point q = S2CellId(p).ToPointRaw();
     EXPECT_LE(p.Angle(q), max_dist);
   }
 }
@@ -498,7 +498,7 @@ TEST(S2CellId, Neighbors) {
 
   // Check the vertex neighbors of the center of face 2 at level 5.
   vector<S2CellId> nbrs;
-  S2CellId::FromPoint(S2Point(0, 0, 1)).AppendVertexNeighbors(5, &nbrs);
+  S2CellId(S2Point(0, 0, 1)).AppendVertexNeighbors(5, &nbrs);
   std::sort(nbrs.begin(), nbrs.end());
   for (int i = 0; i < 4; ++i) {
     EXPECT_EQ(S2CellId::FromFaceIJ(
@@ -547,11 +547,11 @@ static R2Point ProjectToBoundary(R2Point const& uv, R2Rect const& rect) {
   double dv0 = std::abs(uv[1] - rect[1][0]);
   double dv1 = std::abs(uv[1] - rect[1][1]);
   double dmin = min(min(du0, du1), min(dv0, dv1));
-  if (du0 == dmin) return R2Point(rect[0][0], rect[1].ClampPoint(uv[1]));
-  if (du1 == dmin) return R2Point(rect[0][1], rect[1].ClampPoint(uv[1]));
-  if (dv0 == dmin) return R2Point(rect[0].ClampPoint(uv[0]), rect[1][0]);
+  if (du0 == dmin) return R2Point(rect[0][0], rect[1].Project(uv[1]));
+  if (du1 == dmin) return R2Point(rect[0][1], rect[1].Project(uv[1]));
+  if (dv0 == dmin) return R2Point(rect[0].Project(uv[0]), rect[1][0]);
   CHECK_EQ(dmin, dv1) << "Bug in ProjectToBoundary";
-  return R2Point(rect[0].ClampPoint(uv[0]), rect[1][1]);
+  return R2Point(rect[0].Project(uv[0]), rect[1][1]);
 }
 
 void TestExpandedByDistanceUV(S2CellId id, S1Angle distance) {
@@ -681,7 +681,7 @@ TEST(S2CellId, FromPointBenchmark) {
   p = start;
   for (int i = FLAGS_iters; i > 0; --i) {
     p += S2Point(-dt * p.y(), dt * p.x(), dz);
-    isum += S2CellId::FromPoint(p).id();
+    isum += S2CellId(p).id();
   }
   double test_time = S2Testing::GetCpuTime() - test_start - control_time;
   printf("\tFromPoint:  %8.3f usecs\n", 1e6 * test_time / FLAGS_iters);

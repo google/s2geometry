@@ -55,10 +55,11 @@ class btree_container {
       : tree_(comp, alloc) {
   }
 
-  // Copy constructor.
-  btree_container(const self_type &x)
-      : tree_(x.tree_) {
-  }
+  // Constructor/assignments.
+  btree_container(const self_type &x) = default;
+  btree_container(self_type &&x) = default;
+  self_type &operator=(const self_type &x) = default;
+  self_type &operator=(self_type &&x) = default;
 
   // Iterator routines.
   iterator begin() { return tree_.begin(); }
@@ -125,20 +126,15 @@ class btree_container {
   double fullness() const { return tree_.fullness(); }
   double overhead() const { return tree_.overhead(); }
 
-  bool operator==(const self_type& x) const {
-    if (size() != x.size()) {
-      return false;
-    }
-    for (const_iterator i = begin(), xi = x.begin(); i != end(); ++i, ++xi) {
-      if (*i != *xi) {
-        return false;
-      }
-    }
-    return true;
+  friend
+  bool operator==(const self_type& x, const self_type& y) {
+    if (x.size() != y.size()) return false;
+    return std::equal(x.begin(), x.end(), y.begin());
   }
 
-  bool operator!=(const self_type& other) const {
-    return !operator==(other);
+  friend
+  bool operator!=(const self_type& x, const self_type& y) {
+    return !(x == y);
   }
 
   // The allocator used by the btree.
@@ -169,7 +165,9 @@ class btree_unique_container : public btree_container<Tree> {
 
  public:
   typedef typename Tree::key_type key_type;
+  typedef typename Tree::data_type data_type;
   typedef typename Tree::value_type value_type;
+  typedef typename Tree::mapped_type mapped_type;
   typedef typename Tree::size_type size_type;
   typedef typename Tree::key_compare key_compare;
   typedef typename Tree::allocator_type allocator_type;
@@ -180,13 +178,7 @@ class btree_unique_container : public btree_container<Tree> {
   // Default constructor.
   btree_unique_container(const key_compare &comp = key_compare(),
                          const allocator_type &alloc = allocator_type())
-      : super_type(comp, alloc) {
-  }
-
-  // Copy constructor.
-  btree_unique_container(const self_type &x)
-      : super_type(x) {
-  }
+      : super_type(comp, alloc) {}
 
   // Range constructor.
   template <class InputIterator>
@@ -196,6 +188,12 @@ class btree_unique_container : public btree_container<Tree> {
       : super_type(comp, alloc) {
     insert(b, e);
   }
+
+  // Constructor/assignments.
+  btree_unique_container(const self_type &x) = default;
+  btree_unique_container(self_type &&x) = default;
+  self_type &operator=(const self_type &x) = default;
+  self_type &operator=(self_type &&x) = default;
 
   // Lookup routines.
   template <typename K>
@@ -216,11 +214,11 @@ class btree_unique_container : public btree_container<Tree> {
     return this->tree_.insert_unique(x);
   }
   iterator insert(iterator position, const value_type &x) {
-    return this->tree_.insert_unique(position, x);
+    return this->tree_.insert_hint_unique(position, x);
   }
   template <typename InputIterator>
   void insert(InputIterator b, InputIterator e) {
-    this->tree_.insert_unique(b, e);
+    this->tree_.insert_iterator_unique(b, e);
   }
 
   // Deletion routines.
@@ -238,6 +236,13 @@ class btree_unique_container : public btree_container<Tree> {
     this->tree_.erase(first, last);
   }
 };
+
+// Provide swap reachable by ADL for btree_unique_container.
+template <typename Tree>
+inline void swap(btree_unique_container<Tree> &x,
+                 btree_unique_container<Tree> &y) {
+  x.swap(y);
+}
 
 // A common base class for btree_map and safe_btree_map.
 template <typename Tree>
@@ -272,11 +277,6 @@ class btree_map_container : public btree_unique_container<Tree> {
       : super_type(comp, alloc) {
   }
 
-  // Copy constructor.
-  btree_map_container(const self_type &x)
-      : super_type(x) {
-  }
-
   // Range constructor.
   template <class InputIterator>
   btree_map_container(InputIterator b, InputIterator e,
@@ -285,11 +285,23 @@ class btree_map_container : public btree_unique_container<Tree> {
       : super_type(b, e, comp, alloc) {
   }
 
+  // Constructor/assignments.
+  btree_map_container(const self_type &x) = default;
+  btree_map_container(self_type &&x) = default;
+  self_type &operator=(const self_type &x) = default;
+  self_type &operator=(self_type &&x) = default;
+
   // Insertion routines.
   data_type& operator[](const key_type &key) {
     return this->tree_.insert_unique(key, generate_value(key)).first->second;
   }
 };
+
+// Provide swap reachable by ADL for btree_map_container.
+template <typename Tree>
+inline void swap(btree_map_container<Tree> &x, btree_map_container<Tree> &y) {
+  x.swap(y);
+}
 
 // A common base class for btree_multiset and btree_multimap.
 template <typename Tree>
@@ -300,6 +312,7 @@ class btree_multi_container : public btree_container<Tree> {
  public:
   typedef typename Tree::key_type key_type;
   typedef typename Tree::value_type value_type;
+  typedef typename Tree::mapped_type mapped_type;
   typedef typename Tree::size_type size_type;
   typedef typename Tree::key_compare key_compare;
   typedef typename Tree::allocator_type allocator_type;
@@ -313,11 +326,6 @@ class btree_multi_container : public btree_container<Tree> {
       : super_type(comp, alloc) {
   }
 
-  // Copy constructor.
-  btree_multi_container(const self_type &x)
-      : super_type(x) {
-  }
-
   // Range constructor.
   template <class InputIterator>
   btree_multi_container(InputIterator b, InputIterator e,
@@ -326,6 +334,12 @@ class btree_multi_container : public btree_container<Tree> {
       : super_type(comp, alloc) {
     insert(b, e);
   }
+
+  // Constructor/assignments.
+  btree_multi_container(const self_type &x) = default;
+  btree_multi_container(self_type &&x) = default;
+  self_type &operator=(const self_type &x) = default;
+  self_type &operator=(self_type &&x) = default;
 
   // Lookup routines.
   template <typename K>
@@ -346,11 +360,11 @@ class btree_multi_container : public btree_container<Tree> {
     return this->tree_.insert_multi(x);
   }
   iterator insert(iterator position, const value_type &x) {
-    return this->tree_.insert_multi(position, x);
+    return this->tree_.insert_hint_multi(position, x);
   }
   template <typename InputIterator>
   void insert(InputIterator b, InputIterator e) {
-    this->tree_.insert_multi(b, e);
+    this->tree_.insert_iterator_multi(b, e);
   }
 
   // Deletion routines.
@@ -369,7 +383,14 @@ class btree_multi_container : public btree_container<Tree> {
   }
 };
 
-} // namespace btree
-} // namespace util
+// Provide swap reachable by ADL for btree_multi_container.
+template <typename Tree>
+inline void swap(btree_multi_container<Tree> &x,
+                 btree_multi_container<Tree> &y) {
+  x.swap(y);
+}
+
+}  // namespace btree
+}  // namespace util
 
 #endif  // UTIL_BTREE_BTREE_CONTAINER_H__

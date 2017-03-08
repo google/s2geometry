@@ -65,7 +65,7 @@ class S2PointIndexTest : public ::testing::Test {
     S2CellId min_cellid = S2CellId::Begin(S2CellId::kMaxLevel);
     for (it.Reset(); !it.Done(); it.Next()) {
       S2CellId cellid = it.id();
-      EXPECT_EQ(cellid, S2CellId::FromPoint(it.point()));
+      EXPECT_EQ(cellid, S2CellId(it.point()));
 
       typename Index::Iterator it2(index_);
       if (cellid == prev_cellid) {

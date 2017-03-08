@@ -15,9 +15,9 @@
 
 // Author: ericv@google.com (Eric Veach)
 //
-// S2ShapeIndex indexes a set of "shapes", where a shape is a collection of
-// edges that optionally defines an interior.  A shape can be as simple as a
-// single edge, or as complex as a collection of loops.  For shapes that have
+// S2ShapeIndex indexes a set of shapes.  A shape is a collection of edges
+// that optionally defines an interior.  It can be used to represent a set of
+// points, a set of polylines, or a set of polygons.  For shapes that have
 // interiors, the index makes it very fast to determine the shape(s) that
 // contain a given point or region.
 //
@@ -75,7 +75,7 @@
 #include <vector>
 
 #include "s2/base/atomicops.h"
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/macros.h"
 #include "s2/base/mutex.h"
@@ -90,12 +90,15 @@ class R1Interval;
 class S2PaddedCell;
 class S2ShapeIndex;
 
-// S2Shape is an abstract base class that defines a shape.  Typically it
-// wraps some other geometric object in order to provide access to its edges
-// without duplicating the edge data.  Shapes are immutable once they have
-// been indexed; to modify a shape it must be removed and then added again.
-// A shape can be removed from one S2ShapeIndex and then added to another,
-// but it can belong to only one index at a time.
+// An S2Shape is an abstract base class that defines a shape.  A shape is a
+// collection of edges that optionally defines an interior.  It can be used to
+// represent a set of points, a set of polylines, or a set of polygons.
+//
+// Typically an S2Shape wraps some other geometric object in order to provide
+// access to its edges without duplicating the edge data.  Shapes are
+// immutable once they have been indexed; to modify a shape it must be removed
+// and then added again.  A shape can be removed from one S2ShapeIndex and
+// then added to another, but it can belong to only one index at a time.
 //
 // There are various useful subtypes defined in s2shapeutil.h, and also in the
 // polygonal geometry classes such as S2Polygon and S2Polyline.
@@ -143,13 +146,31 @@ class S2Shape {
   virtual int num_edges() const = 0;
 
   // Return pointers to the edge endpoints for the given edge id.
+  // Zero-length edges are allowed, and can be used to represent points.
+  //
   // REQUIRES: 0 <= id < num_edges()
-  // PROVIDES: (**a) != (**b), i.e. zero-length edges are not allowed.
   virtual void GetEdge(int id, S2Point const** a, S2Point const** b) const = 0;
 
-  // Return true if this shape has an interior, i.e. the shape consists of one
-  // or more closed non-intersecting loops.
-  virtual bool has_interior() const = 0;
+  // Returns the dimension of the geometry represented by this shape.
+  //
+  //  0 - Point geometry.  Each point is represented as a degenerate edge.
+  //
+  //  1 - Polyline geometry.  Polyline edges may be degenerate.  A shape may
+  //      represent any number of polylines.  Polylines edges may intersect.
+  //
+  //  2 - Polygon geometry.  The edges may be returned in any order, but it
+  //      must be possible to assemble them into a collection of non-crossing
+  //      loops such that the polygon interior is always on the left.
+  //      Polygons may have degeneracies (e.g., degenerate edges or sibling
+  //      pairs consisting of an edge and its corresponding reversed edge).
+  //
+  // Note that this method allows degenerate geometry of different dimensions
+  // to be distinguished, e.g. it allows a point to be distinguished from a
+  // polyline or polygon that has been simplified to a single point.
+  virtual int dimension() const = 0;
+
+  // Returns true if this shape has an interior.
+  inline bool has_interior() const { return dimension() == 2; }
 
   // Returns true if this shape contains S2::Origin().  Should return false
   // for shapes that do not have an interior.
@@ -157,6 +178,25 @@ class S2Shape {
   // TODO(ericv): Consider allowing shapes to also return their own choice of
   // origin(), to make this method easier to implement for arbitrary shapes.
   virtual bool contains_origin() const = 0;
+
+  // Returns the number of contiguous edge chains in the shape.  For example,
+  // a shape whose edges are [AB, BC, CD, AE, EF] would consist of two chains
+  // (AB,BC,CD and AE,EF).  This method allows some algorithms to be optimized
+  // by skipping over edge chains that do not affect the output.
+  //
+  // Note that it is always acceptable to implement this method by returning
+  // num_edges(), i.e. every chain consists of a single edge.
+  virtual int num_chains() const = 0;
+
+  // Returns the id of the first edge in the i-th edge chain, and returns
+  // num_edges() when i == num_chains().  For example, if there are two chains
+  // AB,BC,CD and AE,EF, the chain starts would be [0, 3, 5].
+  //
+  // REQUIRES: 0 <= i <= num_chains()
+  // REQUIRES: chain_start(0) == 0
+  // REQUIRES: chains_start(i) < chain_start(i+1)
+  // REQUIRES: chain_start(num_chains()) == num_edges()
+  virtual int chain_start(int i) const = 0;
 
   // A unique id assigned to this shape by S2ShapeIndex.  Shape ids are
   // assigned sequentially starting from 0 in the order shapes are added.
@@ -244,12 +284,12 @@ class S2ClippedShape {
 class S2ShapeIndexCell {
  public:
   // Return the number of clipped shapes in this cell.
-  int num_shapes() const { return shapes_.size(); }
+  int num_clipped() const { return shapes_.size(); }
 
   // Return the clipped shape at the given index.  Shapes are kept sorted in
   // increasing order of shape id.
   //
-  // REQUIRES: 0 <= i < num_shapes()
+  // REQUIRES: 0 <= i < num_clipped()
   S2ClippedShape const& clipped(int i) const { return shapes_[i]; }
 
   // Return a pointer to the clipped shape corresponding to the given shape,
@@ -406,8 +446,8 @@ class S2ShapeIndex {
     // The cell id for this cell.
     S2CellId id() const;
 
-    // Pointer to the cell contents.
-    S2ShapeIndexCell const* cell() const;
+    // Reference to the cell contents.
+    S2ShapeIndexCell const& cell() const;
 
     // The center of the cell (used as a reference point for shape interiors).
     S2Point center() const;
@@ -502,7 +542,7 @@ class S2ShapeIndex {
   class EdgeAllocator;
   class FaceEdge;
   class InteriorTracker;
-  class RemovedShape;
+  struct RemovedShape;
 
   using ShapeIdSet = std::vector<int>;
 
@@ -703,9 +743,9 @@ inline S2CellId S2ShapeIndex::Iterator::id() const {
   DCHECK(!Done());
   return iter_->first;
 }
-inline S2ShapeIndexCell const* S2ShapeIndex::Iterator::cell() const {
+inline S2ShapeIndexCell const& S2ShapeIndex::Iterator::cell() const {
   DCHECK(!Done());
-  return iter_->second;
+  return *iter_->second;
 }
 inline void S2ShapeIndex::Iterator::Next() {
   DCHECK(!Done());

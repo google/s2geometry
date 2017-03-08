@@ -25,22 +25,48 @@
 #include <ostream>
 #include <string>
 
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/port.h"
 
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.
 class S2Error {
  public:
   enum Code {
-    // Error codes that apply to more than one type of geometry:
     OK = 0,                  // No error.
+
+    ////////////////////////////////////////////////////////////////////
+    // Generic errors, not specific to geometric objects:
+
+    UNKNOWN = 1000,              // Unknown error.
+    UNIMPLEMENTED = 1001,        // Operation is not implemented.
+    OUT_OF_RANGE = 1002,         // Argument is out of range.
+    INVALID_ARGUMENT = 1003,     // Invalid argument (other than a range error).
+    FAILED_PRECONDITION = 1004,  // Object is not in the required state.
+    INTERNAL = 1005,             // An internal invariant has failed.
+    DATA_LOSS = 1006,            // Data loss or corruption.
+    RESOURCE_EXHAUSTED = 1007,   // A resource has been exhausted.
+
+    ////////////////////////////////////////////////////////////////////
+    // Error codes in the following range can be defined by clients:
+
+    USER_DEFINED_START = 1000000,
+    USER_DEFINED_END   = 9999999,
+
+    ////////////////////////////////////////////////////////////////////
+    // Errors that apply to more than one type of geometry:
+
     NOT_UNIT_LENGTH = 1,     // Vertex is not unit length.
     DUPLICATE_VERTICES = 2,  // There are two identical vertices.
     ANTIPODAL_VERTICES = 3,  // There are two antipodal vertices.
 
-    // Error codes that only apply to certain geometric objects:
+    ////////////////////////////////////////////////////////////////////
+    // S2Loop errors:
+
     LOOP_NOT_ENOUGH_VERTICES = 100,  // Loop with fewer than 3 vertices.
     LOOP_SELF_INTERSECTION = 101,    // Loop has a self-intersection.
+
+    ////////////////////////////////////////////////////////////////////
+    // S2Polygon errors:
 
     POLYGON_LOOPS_SHARE_EDGE = 200,  // Two polygon loops share an edge.
     POLYGON_LOOPS_CROSS = 201,       // Two polygon loops cross.
@@ -56,6 +82,9 @@ class S2Error {
     // Actual polygon nesting does not correspond to the nesting hierarchy
     // encoded by the loop depths.
     POLYGON_INVALID_LOOP_NESTING = 206,
+
+    ////////////////////////////////////////////////////////////////////
+    // S2Builder errors:
 
     // The S2Builder snap function moved a vertex by more than the specified
     // snap radius.
@@ -88,13 +117,25 @@ class S2Error {
   Code code() const { return code_; }
   string text() const { return text_; }
 
+  // Clear the error to contain the OK code and no error message.
+  void Clear();
+
  private:
   Code code_;
   string text_;
 };
 
+
+//////////////////   Implementation details follow   ////////////////////
+
+
 inline std::ostream& operator<<(std::ostream& os, S2Error const& error) {
   return os << error.text();
+}
+
+inline void S2Error::Clear() {
+  code_ = OK;
+  text_.clear();
 }
 
 #endif  // S2_S2ERROR_H_

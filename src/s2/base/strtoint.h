@@ -46,9 +46,9 @@
 
 #include <cstdlib> // For strtol* functions.
 #include <string>
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/base/macros.h"
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/port.h"
 
 // Adapter functions for handling overflow and errno.
 int32 strto32_adapter(const char *nptr, char **endptr, int base);
@@ -73,14 +73,14 @@ inline uint32 strtou32(const char *nptr, char **endptr, int base) {
 // For now, long long is 64-bit on all the platforms we care about, so these
 // functions can simply pass the call to strto[u]ll.
 inline int64 strto64(const char *nptr, char **endptr, int base) {
-  COMPILE_ASSERT(sizeof(int64) == sizeof(long long),
-                 sizeof_int64_is_not_sizeof_long_long);
+  static_assert(sizeof(int64) == sizeof(long long),
+                "sizeof int64 is not sizeof long long");
   return strtoll(nptr, endptr, base);
 }
 
 inline uint64 strtou64(const char *nptr, char **endptr, int base) {
-  COMPILE_ASSERT(sizeof(uint64) == sizeof(unsigned long long),
-                 sizeof_uint64_is_not_sizeof_long_long);
+  static_assert(sizeof(uint64) == sizeof(unsigned long long),
+                "sizeof uint64 is not sizeof long long");
   return strtoull(nptr, endptr, base);
 }
 

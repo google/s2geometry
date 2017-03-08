@@ -22,46 +22,34 @@
 
 using std::vector;
 
-S2RegionUnion::S2RegionUnion() { }
-
-S2RegionUnion::S2RegionUnion(vector<S2Region*>* regions) {
-  Init(regions);
+S2RegionUnion::S2RegionUnion(vector<std::unique_ptr<S2Region>> regions) {
+  Init(std::move(regions));
 }
 
-S2RegionUnion::~S2RegionUnion() {
-  for (int i = 0; i < regions_.size(); ++i) {
-    delete regions_[i];
-  }
-  regions_.clear();
-}
-
-void S2RegionUnion::Init(vector<S2Region*>* regions) {
+void S2RegionUnion::Init(vector<std::unique_ptr<S2Region>> regions) {
   DCHECK(regions_.empty());
-  // We copy the vector rather than calling swap() to optimize storage.
-  regions_ = *regions;
-  regions->clear();
+  regions_ = std::move(regions);
 }
 
-S2RegionUnion::S2RegionUnion(S2RegionUnion const* src)
-  : regions_(src->num_regions()) {
+S2RegionUnion::S2RegionUnion(S2RegionUnion const& src)
+  : regions_(src.num_regions()) {
   for (int i = 0; i < num_regions(); ++i) {
-    regions_[i] = src->region(i)->Clone();
+    regions_[i].reset(src.region(i)->Clone());
   }
 }
 
-void S2RegionUnion::Release(vector<S2Region*>* regions) {
-  if (regions != nullptr) {
-    regions->insert(regions->end(), regions_.begin(), regions_.end());
-  }
-  regions_.clear();
+vector<std::unique_ptr<S2Region>> S2RegionUnion::Release() {
+  vector<std::unique_ptr<S2Region>> result;
+  result.swap(regions_);
+  return result;
 }
 
-void S2RegionUnion::Add(S2Region* region) {
-  regions_.push_back(region);
+void S2RegionUnion::Add(std::unique_ptr<S2Region> region) {
+  regions_.push_back(std::move(region));
 }
 
 S2RegionUnion* S2RegionUnion::Clone() const {
-  return new S2RegionUnion(this);
+  return new S2RegionUnion(*this);
 }
 
 S2Cap S2RegionUnion::GetCapBound() const {

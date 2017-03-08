@@ -25,11 +25,13 @@
 #include <glog/logging.h>
 #include "s2/r1interval.h"
 #include "s2/s1chordangle.h"
+#include "s2/s2predicates.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 #include "s2/util/math/vector.h"
 
 // Avoid "using std::abs" to avoid possible programmer confusion with the
 // integer-only C function.
+using std::fabs;
 using std::max;
 using std::min;
 using std::numeric_limits;
@@ -66,12 +68,12 @@ int* S2EdgeUtil::intersection_method_tally_ = nullptr;
 
 char const* S2EdgeUtil::GetIntersectionMethodName(IntersectionMethod method) {
   switch (method) {
-    case SIMPLE:    return "Simple";
-    case SIMPLE_LD: return "Simple_ld";
-    case STABLE:    return "Stable";
-    case STABLE_LD: return "Stable_ld";
-    case EXACT:     return "Exact";
-    default:        return "Unknown";
+    case IntersectionMethod::SIMPLE:    return "Simple";
+    case IntersectionMethod::SIMPLE_LD: return "Simple_ld";
+    case IntersectionMethod::STABLE:    return "Stable";
+    case IntersectionMethod::STABLE_LD: return "Stable_ld";
+    case IntersectionMethod::EXACT:     return "Exact";
+    default:                            return "Unknown";
   }
 }
 
@@ -111,10 +113,10 @@ bool S2EdgeUtil::VertexCrossing(S2Point const& a, S2Point const& b,
   // if OrderedCCW() indicates that the edge AB is further CCW around the
   // shared vertex O (either A or B) than the edge CD, starting from an
   // arbitrary fixed reference point.
-  if (a == d) return S2::OrderedCCW(S2::Ortho(a), c, b, a);
-  if (b == c) return S2::OrderedCCW(S2::Ortho(b), d, a, b);
-  if (a == c) return S2::OrderedCCW(S2::Ortho(a), d, b, a);
-  if (b == d) return S2::OrderedCCW(S2::Ortho(b), c, a, b);
+  if (a == d) return s2pred::OrderedCCW(S2::Ortho(a), c, b, a);
+  if (b == c) return s2pred::OrderedCCW(S2::Ortho(b), d, a, b);
+  if (a == c) return s2pred::OrderedCCW(S2::Ortho(a), d, b, a);
+  if (b == d) return s2pred::OrderedCCW(S2::Ortho(b), c, a, b);
 
   LOG(DFATAL) << "VertexCrossing called with 4 distinct vertices";
   return false;
@@ -407,10 +409,10 @@ S2Point S2EdgeUtil::GetIntersectionExact(S2Point const& a0, S2Point const& a1,
     x = S2Point(10, 10, 10);  // Greater than any valid S2Point
     S2Point a_norm = S2EdgeUtil::S2PointFromExact(a_norm_xf);
     S2Point b_norm = S2EdgeUtil::S2PointFromExact(b_norm_xf);
-    if (S2::OrderedCCW(b0, a0, b1, b_norm) && a0 < x) x = a0;
-    if (S2::OrderedCCW(b0, a1, b1, b_norm) && a1 < x) x = a1;
-    if (S2::OrderedCCW(a0, b0, a1, a_norm) && b0 < x) x = b0;
-    if (S2::OrderedCCW(a0, b1, a1, a_norm) && b1 < x) x = b1;
+    if (s2pred::OrderedCCW(b0, a0, b1, b_norm) && a0 < x) x = a0;
+    if (s2pred::OrderedCCW(b0, a1, b1, b_norm) && a1 < x) x = a1;
+    if (s2pred::OrderedCCW(a0, b0, a1, a_norm) && b0 < x) x = b0;
+    if (s2pred::OrderedCCW(a0, b1, a1, a_norm) && b1 < x) x = b1;
   }
   DCHECK(S2::IsUnitLength(x));
   return x;
@@ -425,7 +427,7 @@ static bool ApproximatelyOrdered(S2Point const& a, S2Point const& x,
                                  S2Point const& b, double tolerance) {
   if ((x - a).Norm2() <= tolerance * tolerance) return true;
   if ((x - b).Norm2() <= tolerance * tolerance) return true;
-  return S2::OrderedCCW(a, x, b, S2::RobustCrossProd(a, b).Normalize());
+  return s2pred::OrderedCCW(a, x, b, S2::RobustCrossProd(a, b).Normalize());
 }
 
 S2Point S2EdgeUtil::GetIntersection(S2Point const& a0, S2Point const& a1,
@@ -472,20 +474,22 @@ S2Point S2EdgeUtil::GetIntersection(S2Point const& a0, S2Point const& a1,
   S2Point result;
   IntersectionMethod method;
   if (kUseSimpleMethod && GetIntersectionSimple(a0, a1, b0, b1, &result)) {
-    method = SIMPLE;
+    method = IntersectionMethod::SIMPLE;
   } else if (kUseSimpleMethod && kHasLongDouble &&
              GetIntersectionSimpleLD(a0, a1, b0, b1, &result)) {
-    method = SIMPLE_LD;
+    method = IntersectionMethod::SIMPLE_LD;
   } else if (GetIntersectionStable(a0, a1, b0, b1, &result)) {
-    method = STABLE;
+    method = IntersectionMethod::STABLE;
   } else if (kHasLongDouble &&
              GetIntersectionStableLD(a0, a1, b0, b1, &result)) {
-    method = STABLE_LD;
+    method = IntersectionMethod::STABLE_LD;
   } else {
     result = GetIntersectionExact(a0, a1, b0, b1);
-    method = EXACT;
+    method = IntersectionMethod::EXACT;
   }
-  if (intersection_method_tally_) ++intersection_method_tally_[method];
+  if (intersection_method_tally_) {
+    ++intersection_method_tally_[static_cast<int>(method)];
+  }
 
   // Make sure the intersection point is on the correct side of the sphere.
   // Since all vertices are unit length, and edges are less than 180 degrees,
@@ -782,7 +786,7 @@ bool S2EdgeUtil::IsEdgeBNearEdgeA(S2Point const& a0, S2Point const& a1,
   // oriented but otherwise might be near each other.  We check orientation and
   // invert rather than computing a_nearest_b0 x a_nearest_b1 because those two
   // points might be equal, and have an unhelpful cross product.
-  if (S2::Sign(a_ortho, a_nearest_b0, a_nearest_b1) < 0) a_ortho *= -1;
+  if (s2pred::Sign(a_ortho, a_nearest_b0, a_nearest_b1) < 0) a_ortho *= -1;
 
   // To check if all points on B are within tolerance of A, we first check to
   // see if the endpoints of B are near A.  If they are not, B is not near A.
@@ -839,10 +843,10 @@ bool S2EdgeUtil::IsEdgeBNearEdgeA(S2Point const& a0, S2Point const& a1,
   // A point p lies on B if you can proceed from b_ortho to b0 to p to b1 and
   // back to b_ortho without ever turning right.  We test this for furthest and
   // furthest_inv, and return true if neither point lies on B.
-  return !((S2::Sign(b_ortho, b0, furthest) > 0 &&
-            S2::Sign(furthest, b1, b_ortho) > 0) ||
-           (S2::Sign(b_ortho, b0, furthest_inv) > 0 &&
-            S2::Sign(furthest_inv, b1, b_ortho) > 0));
+  return !((s2pred::Sign(b_ortho, b0, furthest) > 0 &&
+            s2pred::Sign(furthest, b1, b_ortho) > 0) ||
+           (s2pred::Sign(b_ortho, b0, furthest_inv) > 0 &&
+            s2pred::Sign(furthest_inv, b1, b_ortho) > 0));
 }
 
 
@@ -852,7 +856,8 @@ bool S2EdgeUtil::WedgeContains(S2Point const& a0, S2Point const& ab1,
   // For A to contain B (where each loop interior is defined to be its left
   // side), the CCW edge order around ab1 must be a2 b2 b0 a0.  We split
   // this test into two parts that test three vertices each.
-  return S2::OrderedCCW(a2, b2, b0, ab1) && S2::OrderedCCW(b0, a0, a2, ab1);
+  return (s2pred::OrderedCCW(a2, b2, b0, ab1) &&
+          s2pred::OrderedCCW(b0, a0, a2, ab1));
 }
 
 bool S2EdgeUtil::WedgeIntersects(S2Point const& a0, S2Point const& ab1,
@@ -863,7 +868,8 @@ bool S2EdgeUtil::WedgeIntersects(S2Point const& a0, S2Point const& ab1,
   // Note that it's important to write these conditions as negatives
   // (!OrderedCCW(a,b,c,o) rather than Ordered(c,b,a,o)) to get correct
   // results when two vertices are the same.
-  return !(S2::OrderedCCW(a0, b2, b0, ab1) && S2::OrderedCCW(b0, a2, a0, ab1));
+  return !(s2pred::OrderedCCW(a0, b2, b0, ab1) &&
+           s2pred::OrderedCCW(b0, a2, a0, ab1));
 }
 
 S2EdgeUtil::WedgeRelation S2EdgeUtil::GetWedgeRelation(
@@ -885,18 +891,18 @@ S2EdgeUtil::WedgeRelation S2EdgeUtil::GetWedgeRelation(
   // the most specific.
   if (a0 == b0 && a2 == b2) return WEDGE_EQUALS;
 
-  if (S2::OrderedCCW(a0, a2, b2, ab1)) {
+  if (s2pred::OrderedCCW(a0, a2, b2, ab1)) {
     // The cases with this vertex ordering are 1, 5, and 6,
     // although case 2 is also possible if a2 == b2.
-    if (S2::OrderedCCW(b2, b0, a0, ab1)) return WEDGE_PROPERLY_CONTAINS;
+    if (s2pred::OrderedCCW(b2, b0, a0, ab1)) return WEDGE_PROPERLY_CONTAINS;
 
     // We are in case 5 or 6, or case 2 if a2 == b2.
     return (a2 == b2) ? WEDGE_IS_PROPERLY_CONTAINED : WEDGE_PROPERLY_OVERLAPS;
   }
 
   // We are in case 2, 3, or 4.
-  if (S2::OrderedCCW(a0, b0, b2, ab1)) return WEDGE_IS_PROPERLY_CONTAINED;
-  return S2::OrderedCCW(a0, b0, a2, ab1) ?
+  if (s2pred::OrderedCCW(a0, b0, b2, ab1)) return WEDGE_IS_PROPERLY_CONTAINED;
+  return s2pred::OrderedCCW(a0, b0, a2, ab1) ?
       WEDGE_IS_DISJOINT : WEDGE_PROPERLY_OVERLAPS;
 }
 
@@ -904,16 +910,16 @@ int S2EdgeUtil::EdgeCrosser::CrossingSignInternal(S2Point const* d) {
   // Compute the actual result, and then save the current vertex D as the next
   // vertex C, and save the orientation of the next triangle ACB (which is
   // opposite to the current triangle BDA).
-  int result = CrossingSignInternal2(d);
+  int result = CrossingSignInternal2(*d);
   c_ = d;
   acb_ = -bda_;
   return result;
 }
 
-inline int S2EdgeUtil::EdgeCrosser::CrossingSignInternal2(S2Point const* d) {
+inline int S2EdgeUtil::EdgeCrosser::CrossingSignInternal2(S2Point const& d) {
   // Sign is very expensive, so we avoid calling it if at all possible.
   // First eliminate the cases where two vertices are equal.
-  if (*a_ == *c_ || *a_ == *d || *b_ == *c_ || *b_ == *d) return 0;
+  if (*a_ == *c_ || *a_ == d || *b_ == *c_ || *b_ == d) return 0;
 
   // At this point, a very common situation is that A,B,C,D are four points on
   // a line such that AB does not overlap CD.  (For example, this happens when
@@ -922,7 +928,7 @@ inline int S2EdgeUtil::EdgeCrosser::CrossingSignInternal2(S2Point const* d) {
   // that AB and CD do not intersect by computing the two outward-facing
   // tangents at A and B (parallel to AB) and testing whether AB and CD are on
   // opposite sides of the plane perpendicular to one of these tangents.  This
-  // is moderately expensive but still much cheaper than S2::ExpensiveSign().
+  // is moderately expensive but still much cheaper than s2pred::ExpensiveSign.
   if (!have_tangents_) {
     S2Point norm = S2::RobustCrossProd(*a_, *b_).Normalize();
     a_tangent_ = a_->CrossProd(norm);
@@ -936,26 +942,26 @@ inline int S2EdgeUtil::EdgeCrosser::CrossingSignInternal2(S2Point const* d) {
   // term that is insignificant because we are comparing the result against a
   // constant that is very close to zero.)
   static const double kError = (1.5 + 1/sqrt(3)) * DBL_EPSILON;
-  if ((c_->DotProd(a_tangent_) > kError && d->DotProd(a_tangent_) > kError) ||
-      (c_->DotProd(b_tangent_) > kError && d->DotProd(b_tangent_) > kError)) {
+  if ((c_->DotProd(a_tangent_) > kError && d.DotProd(a_tangent_) > kError) ||
+      (c_->DotProd(b_tangent_) > kError && d.DotProd(b_tangent_) > kError)) {
     return -1;
   }
 
   // Otherwise it's time to break out the big guns.
-  if (acb_ == 0) acb_ = -S2::ExpensiveSign(*a_, *b_, *c_);
-  if (bda_ == 0) bda_ = S2::ExpensiveSign(*a_, *b_, *d);
+  if (acb_ == 0) acb_ = -s2pred::ExpensiveSign(*a_, *b_, *c_);
+  if (bda_ == 0) bda_ = s2pred::ExpensiveSign(*a_, *b_, d);
   if (bda_ != acb_) return -1;
 
-  Vector3_d c_cross_d = c_->CrossProd(*d);
-  int cbd = -S2::Sign(*c_, *d, *b_, c_cross_d);
+  Vector3_d c_cross_d = c_->CrossProd(d);
+  int cbd = -s2pred::Sign(*c_, d, *b_, c_cross_d);
   if (cbd != acb_) return -1;
-  int dac = S2::Sign(*c_, *d, *a_, c_cross_d);
+  int dac = s2pred::Sign(*c_, d, *a_, c_cross_d);
   return (dac == acb_) ? 1 : -1;
 }
 
-void S2EdgeUtil::RectBounder::AddPoint(S2Point const* b) {
-  DCHECK(S2::IsUnitLength(*b));
-  S2LatLng b_latlng(*b);
+void S2EdgeUtil::RectBounder::AddPoint(S2Point const& b) {
+  DCHECK(S2::IsUnitLength(b));
+  S2LatLng b_latlng(b);
   if (bound_.is_empty()) {
     bound_.AddPoint(b_latlng);
   } else {
@@ -963,15 +969,16 @@ void S2EdgeUtil::RectBounder::AddPoint(S2Point const* b) {
     // to the great circle through A and B.  We don't use S2::RobustCrossProd()
     // since that method returns an arbitrary vector orthogonal to A if the two
     // vectors are proportional, and we want the zero vector in that case.
-    Vector3_d n = (*a_ - *b).CrossProd(*a_ + *b);  // N = 2 * (A x B)
+    Vector3_d n = (a_ - b).CrossProd(a_ + b);  // N = 2 * (A x B)
 
     // The relative error in N gets large as its norm gets very small (i.e.,
     // when the two points are nearly identical or antipodal).  We handle this
     // by choosing a maximum allowable error, and if the error is greater than
     // this we fall back to a different technique.  Since it turns out that
-    // the other sources of error add up to at most 1.16 * DBL_EPSILON, and it
-    // is desirable to have the total error be a multiple of DBL_EPSILON, we
-    // have chosen the maximum error threshold here to be 3.84 * DBL_EPSILON.
+    // the other sources of error in converting the normal to a maximum
+    // latitude add up to at most 1.16 * DBL_EPSILON (see below), and it is
+    // desirable to have the total error be a multiple of DBL_EPSILON, we have
+    // chosen to limit the maximum error in the normal to 3.84 * DBL_EPSILON.
     // It is possible to show that the error is less than this when
     //
     //   n.Norm() >= 8 * sqrt(3) / (3.84 - 0.5 - sqrt(3)) * DBL_EPSILON
@@ -980,7 +987,7 @@ void S2EdgeUtil::RectBounder::AddPoint(S2Point const* b) {
     if (n_norm < 1.91346e-15) {
       // A and B are either nearly identical or nearly antipodal (to within
       // 4.309 * DBL_EPSILON, or about 6 nanometers on the earth's surface).
-      if (a_->DotProd(*b) < 0) {
+      if (a_.DotProd(b) < 0) {
         // The two points are nearly antipodal.  The easiest solution is to
         // assume that the edge between A and B could go in any direction
         // around the sphere.
@@ -1017,8 +1024,8 @@ void S2EdgeUtil::RectBounder::AddPoint(S2Point const* b) {
       // crosses this plane, we compute a vector M perpendicular to this
       // plane and then project A and B onto it.
       Vector3_d m = n.CrossProd(S2Point(0, 0, 1));
-      double m_a = m.DotProd(*a_);
-      double m_b = m.DotProd(*b);
+      double m_a = m.DotProd(a_);
+      double m_b = m.DotProd(b);
 
       // We want to test the signs of "m_a" and "m_b", so we need to bound
       // the error in these calculations.  It is possible to show that the
@@ -1061,7 +1068,7 @@ void S2EdgeUtil::RectBounder::AddPoint(S2Point const* b) {
         // be spent getting from A to B; the remainder bounds the round-trip
         // distance (in latitude) from A or B to the min or max latitude
         // attained along the edge AB.
-        double lat_budget = 2 * asin(0.5 * (*a_ - *b).Norm() * sin(max_lat));
+        double lat_budget = 2 * asin(0.5 * (a_ - b).Norm() * sin(max_lat));
         double max_delta = 0.5*(lat_budget - lat_ab.GetLength()) + DBL_EPSILON;
 
         // Test whether AB passes through the point of maximum latitude or

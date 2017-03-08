@@ -18,12 +18,13 @@
 
 #include "s2/base/int128.h"
 
+#include <cstdlib>
+#include <cassert>
 #include <iomanip>
 #include <iostream>  // NOLINT(readability/streams)
 #include <sstream>
 
-#include "s2/base/integral_types.h"
-#include <glog/logging.h>
+#include "s2/third_party/absl/base/integral_types.h"
 
 const uint128_pod kuint128max = {
     static_cast<uint64>(GG_LONGLONG(0xFFFFFFFFFFFFFFFF)),
@@ -44,7 +45,7 @@ const uint128_pod kuint128max = {
     }                                         \
   } while (0)
 static inline int Fls64(uint64 n) {
-  DCHECK_NE(0, n);
+  assert(n != 0);
   int pos = 0;
   STEP(uint64, n, pos, 0x20);
   uint32 n32 = n;
@@ -70,8 +71,11 @@ static inline int Fls128(uint128 n) {
 void uint128::DivModImpl(uint128 dividend, uint128 divisor,
                          uint128* quotient_ret, uint128* remainder_ret) {
   if (divisor == 0) {
-    LOG(FATAL) << "Division or mod by zero: dividend.hi=" << dividend.hi_
-               << ", lo=" << dividend.lo_;
+    assert(divisor != 0);
+    // Important to crash because on a future CPU or compiler that natively
+    // supports 128-bit division, we don't want to have to support not crashing
+    // (which is what the shift-subtract code below does.)
+    abort();
   }
 
   if (divisor > dividend) {
@@ -128,7 +132,7 @@ std::ostream& operator<<(std::ostream& o, const uint128& b) {
 
   // Select a divisor which is the largest power of the base < 2^64.
   uint128 div;
-  std::streamsize div_base_log;
+  int div_base_log;
   switch (flags & std::ios::basefield) {
     case std::ios::hex:
       div = GG_ULONGLONG(0x1000000000000000);  // 16^15

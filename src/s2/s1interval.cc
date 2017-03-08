@@ -19,9 +19,11 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <cmath>
 
 #include <glog/logging.h>
 
+using std::fabs;
 using std::max;
 
 S1Interval S1Interval::FromPoint(double p) {
@@ -180,7 +182,7 @@ void S1Interval::AddPoint(double p) {
   }
 }
 
-double S1Interval::ClampPoint(double p) const {
+double S1Interval::Project(double p) const {
   DCHECK(!is_empty());
   DCHECK_LE(fabs(p), M_PI);
   if (p == -M_PI) p = M_PI;

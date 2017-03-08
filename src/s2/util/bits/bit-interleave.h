@@ -20,7 +20,7 @@
 #ifndef S2_UTIL_BITS_BIT_INTERLEAVE_H_
 #define S2_UTIL_BITS_BIT_INTERLEAVE_H_
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 
 namespace util_bits {
 

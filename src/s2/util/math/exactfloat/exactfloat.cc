@@ -24,7 +24,7 @@
 #include <cmath>
 #include <limits>
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/macros.h"
 #include <openssl/bn.h>

@@ -18,8 +18,11 @@
 #include "s2/s1interval.h"
 
 #include <cfloat>
+#include <cmath>
 
 #include <gtest/gtest.h>
+
+using std::fabs;
 
 class S1IntervalTestBase : public testing::Test {
  public:
@@ -105,6 +108,17 @@ TEST_F(S1IntervalTestBase, SimplePredicates) {
   EXPECT_TRUE(!quad23.is_empty() && !quad23.is_full() && quad23.is_inverted());
   EXPECT_TRUE(pi.is_valid() && !pi.is_empty() && !pi.is_inverted());
   EXPECT_TRUE(mipi.is_valid() && !mipi.is_empty() && !mipi.is_inverted());
+}
+
+TEST_F(S1IntervalTestBase, AlmostEmptyOrFull) {
+  // Test that rounding errors don't cause intervals that are almost empty or
+  // full to be considered empty or full.  The following value is the greatest
+  // representable value less than Pi.
+  double const kAlmostPi = M_PI - 2 * DBL_EPSILON;
+  EXPECT_FALSE(S1Interval(-kAlmostPi, M_PI).is_full());
+  EXPECT_FALSE(S1Interval(-M_PI, kAlmostPi).is_full());
+  EXPECT_FALSE(S1Interval(M_PI, -kAlmostPi).is_empty());
+  EXPECT_FALSE(S1Interval(kAlmostPi, -M_PI).is_empty());
 }
 
 TEST_F(S1IntervalTestBase, GetCenter) {
@@ -338,21 +352,21 @@ TEST_F(S1IntervalTestBase, AddPoint) {
   EXPECT_TRUE(r.is_full());
 }
 
-TEST_F(S1IntervalTestBase, ClampPoint) {
+TEST_F(S1IntervalTestBase, Project) {
   S1Interval r(-M_PI, -M_PI);
-  EXPECT_EQ(M_PI, r.ClampPoint(-M_PI));
-  EXPECT_EQ(M_PI, r.ClampPoint(0));
+  EXPECT_EQ(M_PI, r.Project(-M_PI));
+  EXPECT_EQ(M_PI, r.Project(0));
   r = S1Interval(0, M_PI);
-  EXPECT_EQ(0.1, r.ClampPoint(0.1));
-  EXPECT_EQ(0, r.ClampPoint(-M_PI_2 + 1e-15));
-  EXPECT_EQ(M_PI, r.ClampPoint(-M_PI_2 - 1e-15));
+  EXPECT_EQ(0.1, r.Project(0.1));
+  EXPECT_EQ(0, r.Project(-M_PI_2 + 1e-15));
+  EXPECT_EQ(M_PI, r.Project(-M_PI_2 - 1e-15));
   r = S1Interval(M_PI - 0.1, -M_PI + 0.1);
-  EXPECT_EQ(M_PI, r.ClampPoint(M_PI));
-  EXPECT_EQ(M_PI - 0.1, r.ClampPoint(1e-15));
-  EXPECT_EQ(-M_PI + 0.1, r.ClampPoint(-1e-15));
-  EXPECT_EQ(0, S1Interval::Full().ClampPoint(0));
-  EXPECT_EQ(M_PI, S1Interval::Full().ClampPoint(M_PI));
-  EXPECT_EQ(M_PI, S1Interval::Full().ClampPoint(-M_PI));
+  EXPECT_EQ(M_PI, r.Project(M_PI));
+  EXPECT_EQ(M_PI - 0.1, r.Project(1e-15));
+  EXPECT_EQ(-M_PI + 0.1, r.Project(-1e-15));
+  EXPECT_EQ(0, S1Interval::Full().Project(0));
+  EXPECT_EQ(M_PI, S1Interval::Full().Project(M_PI));
+  EXPECT_EQ(M_PI, S1Interval::Full().Project(-M_PI));
 }
 
 TEST_F(S1IntervalTestBase, FromPointPair) {

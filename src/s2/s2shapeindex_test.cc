@@ -17,7 +17,7 @@
 
 #include "s2/s2shapeindex.h"
 
-#include <pthread.h>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -25,6 +25,8 @@
 #include <gflags/gflags.h>
 #include "s2/base/mutex.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/memory/memory.h"
+#include <thread>
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -40,7 +42,6 @@
 #include "s2/s2shapeutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
-#include "s2/util/gtl/stl_util.h"
 
 using s2shapeutil::EdgeVectorShape;
 using s2shapeutil::S2LoopOwningShape;
@@ -48,7 +49,6 @@ using s2shapeutil::S2PolylineOwningShape;
 using s2textformat::MakePolyline;
 using std::unique_ptr;
 using std::vector;
-
 
 class S2ShapeIndexTest : public ::testing::Test {
  protected:
@@ -104,7 +104,7 @@ void S2ShapeIndexTest::QuadraticValidate() {
     for (int id = 0; id < index_.num_shape_ids(); ++id) {
       S2Shape const* shape = index_.shape(id);
       S2ClippedShape const* clipped = nullptr;
-      if (!it.Done()) clipped = it.cell()->find_clipped(id);
+      if (!it.Done()) clipped = it.cell().find_clipped(id);
 
       // First check that contains_center() is set correctly.
       for (int j = 0; j < skipped.num_cells(); ++j) {
@@ -263,16 +263,13 @@ TEST_F(S2ShapeIndexTest, LoopsSpanningThreeFaces) {
   // around the cube vertex at the start of the Hilbert curve.
   S2Testing::ConcentricLoopsPolygon(S2Point(1, -1, -1).Normalize(), 2,
                                     kNumEdges, &polygon);
-  vector<S2Loop*> loops;
-  polygon.Release(&loops);
-  for (S2Loop* loop : loops) {
-    index_.Add(new S2Loop::Shape(loop));
+  vector<unique_ptr<S2Loop>> loops = polygon.Release();
+  for (auto& loop : loops) {
+    index_.Add(new S2Loop::Shape(&*loop));
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
-  STLDeleteElements(&loops);
 }
-
 
 TEST_F(S2ShapeIndexTest, ManyIdenticalEdges) {
   int const kNumEdges = 100;  // Validation is quadratic
@@ -290,12 +287,30 @@ TEST_F(S2ShapeIndexTest, ManyIdenticalEdges) {
   }
 }
 
+TEST_F(S2ShapeIndexTest, DegenerateEdge) {
+  // This test verifies that degenerate edges are supported.  The following
+  // point is a cube face vertex, and so it should be indexed in 3 cells.
+  S2Point a = S2Point(1, 1, 1).Normalize();
+  EdgeVectorShape* shape = new EdgeVectorShape;
+  shape->Add(a, a);
+  index_.Add(shape);
+  QuadraticValidate();
+  // Check that exactly 3 index cells contain the degenerate edge.
+  int count = 0;
+  for (S2ShapeIndex::Iterator it(index_); !it.Done(); it.Next(), ++count) {
+    EXPECT_TRUE(it.id().is_leaf());
+    EXPECT_EQ(1, it.cell().num_clipped());
+    EXPECT_EQ(1, it.cell().clipped(0).num_edges());
+  }
+  EXPECT_EQ(3, count);
+}
+
 TEST_F(S2ShapeIndexTest, ManyTinyEdges) {
   // This test adds many edges to a single leaf cell, to check that
   // subdivision stops when no further subdivision is possible.
   int const kNumEdges = 100;  // Validation is quadratic
   // Construct two points in the same leaf cell.
-  S2Point a = S2CellId::FromPoint(S2Point(1, 0, 0)).ToPoint();
+  S2Point a = S2CellId(S2Point(1, 0, 0)).ToPoint();
   S2Point b = (a + S2Point(0, 1e-12, 0)).Normalize();
   EdgeVectorShape* shape = new EdgeVectorShape;
   for (int i = 0; i < kNumEdges; ++i) {
@@ -340,9 +355,8 @@ TEST_F(S2ShapeIndexTest, RandomUpdates) {
       MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6")));
 
   // A loop that used to trigger an indexing bug.
-  index_.Add(new S2LoopOwningShape(
-      S2Loop::MakeRegularLoop(S2Point(1, 0.5, 0.5).Normalize(),
-                              S1Angle::Degrees(89), 20)));
+  index_.Add(new S2LoopOwningShape(S2Loop::MakeRegularLoop(
+      S2Point(1, 0.5, 0.5).Normalize(), S1Angle::Degrees(89), 20)));
 
   // Five concentric loops.
   S2Polygon polygon5;
@@ -359,10 +373,10 @@ TEST_F(S2ShapeIndexTest, RandomUpdates) {
       S2Point(-1, -1, -1).Normalize(), S1Angle::Radians(M_PI - 0.001), 10)));
 
   // A shape with no edges and no interior.
-  index_.Add(new S2LoopOwningShape(new S2Loop(S2Loop::kEmpty())));
+  index_.Add(new S2LoopOwningShape(gtl::MakeUnique<S2Loop>(S2Loop::kEmpty())));
 
   // A shape with no edges that covers the entire sphere.
-  index_.Add(new S2LoopOwningShape(new S2Loop(S2Loop::kFull())));
+  index_.Add(new S2LoopOwningShape(gtl::MakeUnique<S2Loop>(S2Loop::kFull())));
 
   vector<S2Shape*> added, removed;
   for (int id = 0; id < index_.num_shape_ids(); ++id) {
@@ -398,11 +412,11 @@ TEST_F(S2ShapeIndexTest, RandomUpdates) {
   }
 }
 
-
 // Add the loops to the given index.
-void AddLoops(vector<S2Loop*> const& loops, S2ShapeIndex* index) {
-  for (S2Loop* loop : loops) {
-    index->Add(new S2Loop::Shape(loop));
+void AddLoops(vector<unique_ptr<S2Loop>> const& loops,
+              S2ShapeIndex* index) {
+  for (unique_ptr<S2Loop> const& loop : loops) {
+    index->Add(new S2Loop::Shape(loop.get()));
   }
 }
 
@@ -410,7 +424,7 @@ void AddLoops(vector<S2Loop*> const& loops, S2ShapeIndex* index) {
 // and duplicate edges), or any loop has a self-intersection (including
 // duplicate vertices).
 static bool HasAnyCrossing(S2ShapeIndex const& index,
-                           vector<S2Loop*> const& loops) {
+                           vector<unique_ptr<S2Loop>> const& loops) {
   S2Error error;
   if (s2shapeutil::FindAnyCrossing(index, loops, &error)) {
     VLOG(1) << error;
@@ -422,24 +436,23 @@ static bool HasAnyCrossing(S2ShapeIndex const& index,
 // This function recursively verifies that HasCrossing returns the given
 // result for all possible cyclic permutations of the loop vertices for the
 // given set of loops.
-void TestHasCrossingPermutations(vector<S2Loop*>* loops, int i,
+void TestHasCrossingPermutations(vector<unique_ptr<S2Loop>>* loops, int i,
                                  bool has_crossing) {
   if (i == loops->size()) {
     S2ShapeIndex index;
     AddLoops(*loops, &index);
     EXPECT_EQ(has_crossing, HasAnyCrossing(index, *loops));
   } else {
-    S2Loop* orig_loop = (*loops)[i];
+    unique_ptr<S2Loop> orig_loop = std::move((*loops)[i]);
     for (int j = 0; j < orig_loop->num_vertices(); ++j) {
       vector<S2Point> vertices;
       for (int k = 0; k < orig_loop->num_vertices(); ++k) {
         vertices.push_back(orig_loop->vertex(j + k));
       }
-      unique_ptr<S2Loop> new_loop(new S2Loop(vertices));
-      (*loops)[i] = new_loop.get();
+      (*loops)[i] = gtl::MakeUnique<S2Loop>(vertices);
       TestHasCrossingPermutations(loops, i+1, has_crossing);
     }
-    (*loops)[i] = orig_loop;
+    (*loops)[i] = std::move(orig_loop);
   }
 }
 
@@ -450,10 +463,8 @@ void TestHasCrossingPermutations(vector<S2Loop*>* loops, int i,
 void TestHasCrossing(const string& polygon_str, bool has_crossing) {
   FLAGS_s2debug = false;  // Allow invalid polygons (restored by gUnit)
   unique_ptr<S2Polygon> polygon(s2textformat::MakePolygon(polygon_str));
-  vector<S2Loop*> loops;
-  polygon->Release(&loops);
+  vector<unique_ptr<S2Loop>> loops = polygon->Release();
   TestHasCrossingPermutations(&loops, 0, has_crossing);
-  STLDeleteElements(&loops);
 }
 
 TEST_F(S2ShapeIndexTest, HasCrossing) {
@@ -516,11 +527,6 @@ void LazyUpdatesTest::ReaderThread() {
   lock_.Unlock();
 }
 
-static void* StartReader(void* arg) {
-  static_cast<LazyUpdatesTest*>(arg)->ReaderThread();
-  return nullptr;
-}
-
 TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
   // Ensure that lazy updates are thread-safe.  In other words, make sure that
   // nothing bad happens when multiple threads call "const" methods that
@@ -529,10 +535,9 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
   // The number of readers should be large enough so that it is likely that
   // several readers will be running at once (with a multiple-core CPU).
   int const kNumReaders = 8;
-  pthread_t readers[kNumReaders];
+  std::thread threads[kNumReaders];
   for (int i = 0; i < kNumReaders; ++i) {
-    CHECK_EQ(0, pthread_create(&readers[i], nullptr, StartReader,
-                               static_cast<void*>(this)));
+    threads[i] = std::thread(&LazyUpdatesTest::ReaderThread, this);
   }
   lock_.Lock();
   int const kIters = 100;
@@ -556,9 +561,7 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
   num_updates_ = -1;
   update_ready_.SignalAll();
   lock_.Unlock();
-  for (int i = 0; i < kNumReaders; ++i) {
-    CHECK_EQ(0, pthread_join(readers[i], nullptr));
-  }
+  for (auto& t : threads) t.join();
 }
 
 TEST(S2ShapeIndex, GetContainingShapes) {
@@ -569,11 +572,10 @@ TEST(S2ShapeIndex, GetContainingShapes) {
   using LoopShape = s2shapeutil::S2LoopOwningShape;
   S2ShapeIndex index;
   for (int i = 0; i < 100; ++i) {
-    S2Loop* loop = S2Loop::MakeRegularLoop(
+    std::unique_ptr<S2Loop> loop = S2Loop::MakeRegularLoop(
         S2Testing::SamplePoint(center_cap),
-        S2Testing::rnd.RandDouble() * kMaxLoopRadius,
-        kNumVerticesPerLoop);
-    index.Add(new LoopShape(loop));
+        S2Testing::rnd.RandDouble() * kMaxLoopRadius, kNumVerticesPerLoop);
+    index.Add(new LoopShape(std::move(loop)));
   }
   for (int i = 0; i < 100; ++i) {
     S2Point p = S2Testing::SamplePoint(center_cap);
@@ -598,13 +600,13 @@ TEST(S2ShapeIndex, MixedGeometry) {
   // interior could cause shapes that don't have an interior to suddenly
   // acquire one.  This would cause extra S2ShapeIndex cells to be created
   // that are outside the bounds of the given geometry.
-  vector<S2Polyline*> polylines = {
-      MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6"),
-      MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"),
-      MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6")};
+  vector<unique_ptr<S2Polyline>> polylines;
+  polylines.push_back(MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6"));
+  polylines.push_back(MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"));
+  polylines.push_back(MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"));
   S2ShapeIndex index;
-  for (S2Polyline* polyline : polylines) {
-    index.Add(new S2PolylineOwningShape(polyline));
+  for (auto& polyline : polylines) {
+    index.Add(new S2PolylineOwningShape(std::move(polyline)));
   }
   S2Loop loop(S2Cell(S2CellId::Begin(S2CellId::kMaxLevel)));
   index.Add(new S2Loop::Shape(&loop));
@@ -623,8 +625,9 @@ TEST(S2Shape, user_data) {
     explicit MyEdgeVectorShape(MyData const& data)
         : EdgeVectorShape(), data_(data) {
     }
-    void const* user_data() const { return &data_; }
-    void* mutable_user_data() { return &data_; }
+    void const* user_data() const override { return &data_; }
+    void* mutable_user_data() override { return &data_; }
+
    private:
     MyData data_;
   };
@@ -634,6 +637,5 @@ TEST(S2Shape, user_data) {
   data->y = 10;
   DCHECK_EQ(10, static_cast<MyData const*>(shape.user_data())->y);
 }
-
 
 }  // namespace

@@ -162,7 +162,7 @@ class R1Interval {
 
   // Return the closest point in the interval to the given point "p".
   // The interval must be non-empty.
-  double ClampPoint(double p) const {
+  double Project(double p) const {
     DCHECK(!is_empty());
     return std::max(lo(), std::min(hi(), p));
   }
@@ -207,8 +207,8 @@ class R1Interval {
   bool ApproxEquals(R1Interval const& y, double max_error = 1e-15) const {
     if (is_empty()) return y.GetLength() <= 2 * max_error;
     if (y.is_empty()) return GetLength() <= 2 * max_error;
-    return (fabs(y.lo() - lo()) <= max_error &&
-            fabs(y.hi() - hi()) <= max_error);
+    return (std::fabs(y.lo() - lo()) <= max_error &&
+            std::fabs(y.hi() - hi()) <= max_error);
   }
 
  private:

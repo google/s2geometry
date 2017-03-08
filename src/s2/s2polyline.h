@@ -24,6 +24,7 @@
 #include <glog/logging.h>
 #include "s2/base/macros.h"
 #include "s2/fpcontractoff.h"
+#include "s2/s1angle.h"
 #include "s2/s2.h"
 #include "s2/s2error.h"
 #include "s2/s2latlngrect.h"
@@ -75,7 +76,7 @@ class S2Polyline : public S2Region {
   // coordinates rather than S2Points.
   void Init(std::vector<S2LatLng> const& vertices);
 
-  ~S2Polyline();
+  ~S2Polyline() override;
 
   // Allows overriding the automatic validity checks controlled by the
   // --s2debug flag.  If this flag is true, then polylines are automatically
@@ -211,7 +212,8 @@ class S2Polyline : public S2Region {
   // Return true if two polylines have the same number of vertices, and
   // corresponding vertex pairs are separated by no more than "max_error".
   // (For testing purposes.)
-  bool ApproxEquals(S2Polyline const* b, double max_error = 1e-15) const;
+  bool ApproxEquals(S2Polyline const& b,
+                    S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   // Return true if "covered" is within "max_error" of a contiguous subpath of
   // this polyline over its entire length.  Specifically, this method returns
@@ -233,18 +235,18 @@ class S2Polyline : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2Polyline* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool Contains(S2Cell const& cell) const { return false; }
-  virtual bool MayIntersect(S2Cell const& cell) const;
+  S2Polyline* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool Contains(S2Cell const& cell) const override { return false; }
+  bool MayIntersect(S2Cell const& cell) const override;
 
   // Polylines do not have a Contains(S2Point) method, because "containment"
   // is not numerically well-defined except at the polyline vertices.
-  virtual bool VirtualContainsPoint(S2Point const& p) const { return false; }
+  bool VirtualContainsPoint(S2Point const& p) const override { return false; }
 
-  virtual void Encode(Encoder* const encoder) const;
-  virtual bool Decode(Decoder* const decoder);
+  void Encode(Encoder* const encoder) const override;
+  bool Decode(Decoder* const decoder) override;
 
   // Wrapper class for indexing a polyline (see S2ShapeIndex).  Once this
   // object is inserted into an S2ShapeIndex it is owned by that index, and
@@ -264,15 +266,17 @@ class S2Polyline : public S2Region {
     S2Polyline const* polyline() const { return polyline_; }
 
     // S2Shape interface:
-    int num_edges() const {
+    int num_edges() const override {
       return std::max(0, polyline_->num_vertices() - 1);
     }
-    void GetEdge(int e, S2Point const** a, S2Point const** b) const {
+    void GetEdge(int e, S2Point const** a, S2Point const** b) const override {
       *a = &polyline_->vertex(e);
       *b = &polyline_->vertex(e+1);
     }
-    bool has_interior() const { return false; }
-    bool contains_origin() const { return false; }
+    int dimension() const override { return 1; }
+    bool contains_origin() const override { return false; }
+    int num_chains() const override;
+    int chain_start(int i) const override;
 
    private:
     S2Polyline const* polyline_;
@@ -280,9 +284,9 @@ class S2Polyline : public S2Region {
 #endif  // SWIG
 
  private:
-  // Internal constructor used only by Clone() that makes a deep copy of
+  // Internal copy constructor used only by Clone() that makes a deep copy of
   // its argument.
-  explicit S2Polyline(S2Polyline const* src);
+  S2Polyline(S2Polyline const& src);
 
   // Allows overriding the automatic validity checking controlled by the
   // --s2debug flag.
@@ -295,7 +299,6 @@ class S2Polyline : public S2Region {
   std::unique_ptr<S2Point[]> vertices_;
 
 #ifndef SWIG
-  S2Polyline(S2Polyline const&) = delete;
   void operator=(S2Polyline const&) = delete;
 #endif  // SWIG
 };

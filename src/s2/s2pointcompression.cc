@@ -20,9 +20,10 @@
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/macros.h"
+#include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/util/bits/bit-interleave.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/nth-derivative.h"
@@ -30,7 +31,6 @@
 #include "s2/util/endian/endian.h"
 #include "s2/s2.h"
 #include "s2/s2cellid.h"
-#include "s2/util/gtl/fixedarray.h"
 
 using std::pair;
 using std::vector;

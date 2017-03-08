@@ -21,17 +21,14 @@
 #include <cassert>
 #include <algorithm>
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 
 // An initialization value used when we are allowed to
 unsigned char Encoder::kEmptyBuffer = 0;
 
 Encoder::Encoder()
-  : orig_(nullptr),
-    buf_(nullptr),
-    limit_(nullptr),
-    underlying_buffer_(&kEmptyBuffer) {
+  : underlying_buffer_(&kEmptyBuffer) {
 }
 
 Encoder::~Encoder() {
@@ -79,45 +76,4 @@ void Encoder::Resize(size_t N) {
   CHECK(length() >= N);
   buf_ = orig_ + N;
   assert(length() == N);
-}
-
-// Special optimized version: does not use Varint
-bool Decoder::get_varint32(uint32* v) {
-  const char* r = Varint::Parse32WithLimit(
-                                   reinterpret_cast<const char*>(buf_),
-                                   reinterpret_cast<const char*>(limit_), v);
-  if (r == nullptr) { return false; }
-  buf_ = reinterpret_cast<const unsigned char*>(r);
-  return true;
-}
-
-// Special optimized version: does not use Varint
-bool Decoder::get_varint64(uint64* v) {
-  uint64 result = 0;
-
-  if (buf_ + Varint::kMax64 <= limit_) {
-    const char* r = Varint::Parse64(reinterpret_cast<const char*>(buf_), v);
-    if (r == nullptr) {
-      return false;
-    } else {
-      buf_ = reinterpret_cast<const unsigned char*>(r);
-      return true;
-    }
-  } else {
-    int shift = 0;        // How much to shift next set of bits
-    unsigned char byte;
-    do {
-      if ((shift >= 64) || (buf_ >= limit_)) {
-        // Out of range
-        return false;
-      }
-
-      // Get 7 bits from next byte
-      byte = *(buf_++);
-      result |= static_cast<uint64>(byte & 127) << shift;
-      shift += 7;
-    } while ((byte & 128) != 0);
-    *v = result;
-    return true;
-  }
 }

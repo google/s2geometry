@@ -18,6 +18,7 @@
 #include "s2/s2loop.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <map>
 #include <memory>
@@ -29,6 +30,8 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/container/fixed_array.h"
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
@@ -38,22 +41,22 @@
 #include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
 #include "s2/s2latlng.h"
+#include "s2/s2measures.h"
 #include "s2/s2pointcompression.h"
+#include "s2/s2predicates.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
-#include "s2/util/gtl/fixedarray.h"
-#include "s2/util/gtl/ptr_util.h"
 #include "s2/util/gtl/stl_util.h"
 #include "s2/util/math/matrix3x3.h"
 #include "s2/util/math/vector.h"
 
+using std::fabs;
 using std::map;
 using std::max;
 using std::min;
 using std::set;
 using std::unique_ptr;
 using std::vector;
-
 
 class S2LoopTestBase : public testing::Test {
  protected:
@@ -96,18 +99,18 @@ class S2LoopTestBase : public testing::Test {
     return AddLoop(s2textformat::MakeLoop(str));
   }
 
-  unique_ptr<S2Loop const> AddLoop(S2Loop const* loop) {
-    all_loops.push_back(loop);
-    return unique_ptr<S2Loop const>(loop);
+  unique_ptr<S2Loop const> AddLoop(std::unique_ptr<S2Loop const> loop) {
+    all_loops.push_back(&*loop);
+    return loop;
   }
 
  public:
   S2LoopTestBase()
       // The empty loop.
-    : empty_(AddLoop(new S2Loop(S2Loop::kEmpty()))),
+    : empty_(AddLoop(gtl::MakeUnique<S2Loop>(S2Loop::kEmpty()))),
 
       // The full loop.
-      full_(AddLoop(new S2Loop(S2Loop::kFull()))),
+      full_(AddLoop(gtl::MakeUnique<S2Loop>(S2Loop::kFull()))),
 
       // The northern hemisphere, defined using two pairs of antipodal points.
       north_hemi_(AddLoop("0:-180, 0:-90, 0:0, 0:90")),
@@ -209,11 +212,11 @@ class S2LoopTestBase : public testing::Test {
       loop_i_(AddLoop("10:34, 0:34, -10:34, -10:36, 0:36, 10:36")) {
     // Like loop_a, but the vertices are at leaf cell centers.
     vector<S2Point> snapped_loop_a_vertices = {
-        S2CellId::FromPoint(s2textformat::MakePoint("0:178")).ToPoint(),
-        S2CellId::FromPoint(s2textformat::MakePoint("-1:180")).ToPoint(),
-        S2CellId::FromPoint(s2textformat::MakePoint("0:-179")).ToPoint(),
-        S2CellId::FromPoint(s2textformat::MakePoint("1:-180")).ToPoint()};
-    snapped_loop_a_ = AddLoop(new S2Loop(snapped_loop_a_vertices));
+        S2CellId(s2textformat::MakePoint("0:178")).ToPoint(),
+        S2CellId(s2textformat::MakePoint("-1:180")).ToPoint(),
+        S2CellId(s2textformat::MakePoint("0:-179")).ToPoint(),
+        S2CellId(s2textformat::MakePoint("1:-180")).ToPoint()};
+    snapped_loop_a_ = AddLoop(gtl::MakeUnique<S2Loop>(snapped_loop_a_vertices));
   }
 
   // Wrapper function that encodes "loop" into "encoder" using the private
@@ -281,7 +284,7 @@ TEST_F(S2LoopTestBase, AreaConsistentWithTurningAngle) {
     // TODO(ericv): The error bound below is much larger than it should be.
     // Need to improve the error minimization analysis in S2::Area().
     EXPECT_LE(fabs(area - gauss_area), 1e-9)
-        << "Failed loop: " << s2textformat::ToString(loop)
+        << "Failed loop: " << s2textformat::ToString(*loop)
         << "\nArea = " << area << ", Gauss Area = " << gauss_area;
   }
 }
@@ -313,7 +316,7 @@ TEST_F(S2LoopTestBase, GetAreaConsistentWithSign) {
     // TODO(ericv): The error bound below is much larger than it should be.
     // Need to improve the error minimization analysis in S2::Area().
     EXPECT_NEAR(ccw ? 0 : 4 * M_PI, loop.GetArea(), 1e-8)
-        << "Failed loop " << i << ": " << s2textformat::ToString(&loop);
+        << "Failed loop " << i << ": " << s2textformat::ToString(loop);
     EXPECT_EQ(!ccw, loop.Contains(S2Point(0, 0, 1)));
   }
 }
@@ -529,7 +532,7 @@ TEST(S2Loop, ContainsMatchesCrossingSign) {
   // be inside the bound of L.
 
   // Start with a cell that ends up producing the problem.
-  S2CellId const cell_id = S2CellId::FromPoint(S2Point(1, 1, 1)).parent(21);
+  S2CellId const cell_id = S2CellId(S2Point(1, 1, 1)).parent(21);
 
   S2Cell children[4];
   S2Cell(cell_id).Subdivide(children);
@@ -915,7 +918,7 @@ TEST(S2Loop, BoundsForLoopContainment) {
     S2Point v = b.CrossProd(S2Point(0, 0, 1)).Normalize();
     S2Point a = S2EdgeUtil::Interpolate(rnd->RandDouble(), -v, b);
     S2Point c = S2EdgeUtil::Interpolate(rnd->RandDouble(), b, v);
-    if (S2::Sign(a, b, c) < 0) {
+    if (s2pred::Sign(a, b, c) < 0) {
       --iter; continue;
     }
     // Now construct another point D directly below B, and create two loops
@@ -948,10 +951,10 @@ void DebugDumpCrossings(S2Loop const& loop) {
     printf("Vertex %d: [%.17g, %.17g, %.17g], "
            "%d%dR=%d, %d%d%d=%d, R%d%d=%d, inside: %d\n",
            i, loop.vertex(i).x(), loop.vertex(i).y(), loop.vertex(i).z(),
-           i - 1, i, S2::Sign(b, o, a),
-           i + 1, i, i - 1, S2::Sign(c, o, b),
-           i, i + 1, S2::Sign(a, o, c),
-           S2::OrderedCCW(a, b, c, o));
+           i - 1, i, s2pred::Sign(b, o, a),
+           i + 1, i, i - 1, s2pred::Sign(c, o, b),
+           i, i + 1, s2pred::Sign(a, o, c),
+           s2pred::OrderedCCW(a, b, c, o));
   }
   for (int i = 0; i < loop.num_vertices() + 2; ++i) {
     S2Point orig = S2::Origin();
@@ -977,30 +980,30 @@ void DebugDumpCrossings(S2Loop const& loop) {
     S2Point c = S2::Origin();
     S2Point o = loop.vertex(1);
     printf("%d1R=%d, M1%d=%d, R1M=%d, crosses: %d\n",
-           i, S2::Sign(b, o, a),
-           i, S2::Sign(c, o, b),
-           S2::Sign(a, o, c),
+           i, s2pred::Sign(b, o, a),
+           i, s2pred::Sign(c, o, b),
+           s2pred::Sign(a, o, c),
            S2EdgeUtil::EdgeOrVertexCrossing(c, o, b, a));
   }
 }
 
 static void TestNear(char const* a_str, char const* b_str,
-                     double max_error, bool expected) {
+                     S1Angle max_error, bool expected) {
   unique_ptr<S2Loop> a(s2textformat::MakeLoop(a_str));
   unique_ptr<S2Loop> b(s2textformat::MakeLoop(b_str));
-  EXPECT_EQ(a->BoundaryNear(b.get(), max_error), expected);
-  EXPECT_EQ(b->BoundaryNear(a.get(), max_error), expected);
+  EXPECT_EQ(a->BoundaryNear(*b, max_error), expected);
+  EXPECT_EQ(b->BoundaryNear(*a, max_error), expected);
 }
 
 TEST(S2Loop, BoundaryNear) {
-  double degree = S1Angle::Degrees(1).radians();
+  S1Angle degree = S1Angle::Degrees(1);
 
   TestNear("0:0, 0:10, 5:5",
            "0:0.1, -0.1:9.9, 5:5.2",
            0.5 * degree, true);
   TestNear("0:0, 0:3, 0:7, 0:10, 3:7, 5:5",
            "0:0, 0:10, 2:8, 5:5, 4:4, 3:3, 1:1",
-           1e-3, true);
+           S1Angle::Radians(1e-3), true);
 
   // All vertices close to some edge, but not equivalent.
   TestNear("0:0, 0:2, 2:2, 2:0",
@@ -1057,12 +1060,12 @@ TEST(S2Loop, EncodeDecode) {
 
 static void TestEmptyFullSnapped(S2Loop const& loop, int level) {
   CHECK(loop.is_empty_or_full());
-  S2CellId cellid = S2CellId::FromPoint(loop.vertex(0)).parent(level);
+  S2CellId cellid = S2CellId(loop.vertex(0)).parent(level);
   vector<S2Point> vertices = {cellid.ToPoint()};
   S2Loop loop2(vertices);
   EXPECT_TRUE(loop.BoundaryEquals(&loop2));
-  EXPECT_TRUE(loop.BoundaryApproxEquals(&loop2));
-  EXPECT_TRUE(loop.BoundaryNear(&loop2));
+  EXPECT_TRUE(loop.BoundaryApproxEquals(loop2));
+  EXPECT_TRUE(loop.BoundaryNear(loop2));
 }
 
 // Test converting the empty/full loops to S2LatLng representations.  (We
@@ -1072,8 +1075,8 @@ static void TestEmptyFullLatLng(S2Loop const& loop) {
   vector<S2Point> vertices = {S2LatLng(loop.vertex(0)).ToPoint()};
   S2Loop loop2(vertices);
   EXPECT_TRUE(loop.BoundaryEquals(&loop2));
-  EXPECT_TRUE(loop.BoundaryApproxEquals(&loop2));
-  EXPECT_TRUE(loop.BoundaryNear(&loop2));
+  EXPECT_TRUE(loop.BoundaryApproxEquals(loop2));
+  EXPECT_TRUE(loop.BoundaryNear(loop2));
 }
 
 static void TestEmptyFullConversions(S2Loop const& loop) {
@@ -1166,7 +1169,7 @@ TEST_F(S2LoopTestBase, CompressedEncodedLoopDecodesApproxEqual) {
 // rectangles slightly differently, and S2Loops created from them just copied
 // the S2Cell bounds.
 TEST(S2Loop, S2CellConstructorAndContains) {
-  S2Cell cell(S2CellId::FromLatLng(S2LatLng::FromE6(40565459, -74645276)));
+  S2Cell cell(S2CellId(S2LatLng::FromE6(40565459, -74645276)));
   S2Loop cell_as_loop(cell);
 
   vector<S2Point> vertices;
@@ -1182,7 +1185,8 @@ TEST(S2Loop, S2CellConstructorAndContains) {
   EXPECT_FALSE(loop_copy.GetRectBound().Contains(cell.GetRectBound()));
 }
 
-// Construct a loop using s2textformat::MakeLoop(str) and check that it produces
+// Construct a loop using s2textformat::MakeLoop(str) and check that it
+// produces
 // a validation error that includes "snippet".
 static void CheckLoopIsInvalid(const string& str, const string& snippet) {
   unique_ptr<S2Loop> loop(s2textformat::MakeLoop(str));
@@ -1210,7 +1214,7 @@ TEST(S2Loop, IsValidDetectsInvalidLoops) {
   CheckLoopIsInvalid("20:20, 21:21, 21:20.5, 21:20, 20:21", "crosses");
 
   // We can't test non-unit length vertices in debug mode, because loop
-  // construction will CHECK-fail in S2::Sign.
+  // construction will CHECK-fail in s2pred::Sign.
   if (!google::DEBUG_MODE) {
     S2Point v4[] = { S2Point(2, 0, 0), S2Point(0, 1, 0), S2Point(0, 0, 1) };
     S2Loop l4(vector<S2Point>(v4, v4 + 3));
@@ -1318,5 +1322,36 @@ TEST_F(S2LoopTestBase, MakeRegularLoop) {
   EXPECT_DOUBLE_EQ(-119.13042521187423, S2LatLng(p2).lng().degrees());
   EXPECT_DOUBLE_EQ(75.524190079054392, S2LatLng(p3).lat().degrees());
   EXPECT_DOUBLE_EQ(26.392175948257943, S2LatLng(p3).lng().degrees());
+}
+
+TEST(S2LoopShape, Basic) {
+  unique_ptr<S2Loop> loop = s2textformat::MakeLoop("0:0, 0:1, 1:0");
+  S2Loop::Shape shape(loop.get());
+  EXPECT_EQ(loop.get(), shape.loop());
+  EXPECT_EQ(3, shape.num_edges());
+  EXPECT_EQ(1, shape.num_chains());
+  EXPECT_EQ(0, shape.chain_start(0));
+  EXPECT_EQ(3, shape.chain_start(1));
+  S2Point const *v2, *v3;
+  shape.GetEdge(2, &v2, &v3);
+  EXPECT_EQ("1:0", s2textformat::ToString(*v2));
+  EXPECT_EQ("0:0", s2textformat::ToString(*v3));
+  EXPECT_EQ(2, shape.dimension());
+  EXPECT_TRUE(shape.has_interior());
+  EXPECT_FALSE(shape.contains_origin());
+}
+
+TEST(S2LoopShape, EmptyLoop) {
+  S2Loop loop(S2Loop::kEmpty());
+  S2Loop::Shape shape(&loop);
+  EXPECT_EQ(0, shape.num_edges());
+  EXPECT_EQ(0, shape.num_chains());
+}
+
+TEST(S2LoopShape, FullLoop) {
+  S2Loop loop(S2Loop::kFull());
+  S2Loop::Shape shape(&loop);
+  EXPECT_EQ(0, shape.num_edges());
+  EXPECT_EQ(0, shape.num_chains());
 }
 

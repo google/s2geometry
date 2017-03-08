@@ -65,11 +65,11 @@ S1ChordAngle S1ChordAngle::PlusError(double error) const {
 }
 
 double S1ChordAngle::GetS2PointConstructorMaxError() const {
-  // There is a relative error of (2 * DBL_EPSILON) when computing the squared
+  // There is a relative error of 2.5 * DBL_EPSILON when computing the squared
   // distance, plus an absolute error of (16 * DBL_EPSILON**2) because the
   // lengths of the input points may differ from 1 by up to (2 * DBL_EPSILON)
   // each.  (This is the maximum length error in S2Point::Normalize.)
-  return 2 * DBL_EPSILON * length2_ + 16 * DBL_EPSILON * DBL_EPSILON;
+  return 2.5 * DBL_EPSILON * length2_ + 16 * DBL_EPSILON * DBL_EPSILON;
 }
 
 double S1ChordAngle::GetS1AngleConstructorMaxError() const {
@@ -116,15 +116,18 @@ S1ChordAngle operator-(S1ChordAngle a, S1ChordAngle b) {
   return S1ChordAngle(max(0.0, x + y - 2 * sqrt(x * y)));
 }
 
-double sin(S1ChordAngle a) {
+double sin2(S1ChordAngle a) {
   DCHECK(!a.is_special());
   // Let "a" be the (non-squared) chord length, and let A be the corresponding
   // half-angle (a = 2*sin(A)).  The formula below can be derived from:
   //   sin(2*A) = 2 * sin(A) * cos(A)
   //   cos^2(A) = 1 - sin^2(A)
   // This is much faster than converting to an angle and computing its sine.
-  double sin2 = a.length2() * (1 - 0.25 * a.length2());
-  return sqrt(sin2);
+  return a.length2() * (1 - 0.25 * a.length2());
+}
+
+double sin(S1ChordAngle a) {
+  return sqrt(sin2(a));
 }
 
 double cos(S1ChordAngle a) {

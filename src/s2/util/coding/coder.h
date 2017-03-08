@@ -23,15 +23,16 @@
 #include <cstring>
 
 // Avoid adding expensive includes here.
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/macros.h"
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/port.h"
 #include "s2/base/type_traits.h"
 #include "s2/util/coding/varint.h"
 #include "s2/util/endian/endian.h"
 
 /* Class for encoding data into a memory buffer */
+class Decoder;
 class Encoder {
  public:
   // Creates an empty Encoder with no room that is enlarged
@@ -66,9 +67,22 @@ class Encoder {
   static const int kVarintMax64 = Varint::kMax64;
 
   void put_varint32(uint32 v);
+  void put_varint32_inline(uint32 v);
   void put_varint64(uint64 v);
   static int varint32_length(uint32 v);  // Length of var encoding of "v"
   static int varint64_length(uint64 v);  // Length of var encoding of "v"
+
+  // The fast implementation of the code below with boundary checks.
+  //   uint64 val;
+  //   if (!dec->get_varint64(&val))
+  //     return false;
+  //   enc->put_varint64(val);
+  //   return true;
+  // We assume that the encoder and decoder point to different buffers.
+  // If the decoder has invalid value, i.e., dec->get_varint64(&val)
+  // returns false, the decoder is not updated, which is different from
+  // dec->get_varint64(&val).
+  bool put_varint64_from_decoder(Decoder* dec);
 
   // DEPRECATED
   //
@@ -99,7 +113,7 @@ class Encoder {
 
   // Return ptr to start of encoded data.  This pointer remains valid
   // until reset or Ensure is called.
-  const char* base() const { return (const char*)orig_; }
+  const char* base() const { return reinterpret_cast<const char*>(orig_); }
 
   // Advances the write pointer by "N" bytes.
   void skip(size_t N) { buf_ += N; }
@@ -115,14 +129,20 @@ class Encoder {
  private:
   void EnsureSlowPath(size_t N);
 
-  unsigned char* orig_;
-  unsigned char* buf_;
-  unsigned char* limit_;
+  // buf_ points into the orig_ buffer, just past the last encoded byte.
+  unsigned char* buf_ = nullptr;
 
-  // If constructed with the zero-argument constructor, we're allowed
-  // to use Ensure; otherwise we're not.  If Ensure is allowed,
-  // underlying_buffer_ is non-nullptr; otherwise it is set to nullptr.
-  unsigned char* underlying_buffer_;
+  // limits_ points just past the last allocated byte in the orig_ buffer.
+  unsigned char* limit_ = nullptr;
+
+
+  // If this Encoder owns its buffer, underlying_buffer_ is non-nullptr
+  // and the Encoder is allowed to resize it when Ensure() is called.
+  unsigned char* underlying_buffer_ = nullptr;
+
+  // orig_ points to the start of the encoding buffer,
+  // whether or not the Encoder owns it.
+  unsigned char* orig_ = nullptr;
 
   static unsigned char kEmptyBuffer;
 
@@ -146,7 +166,7 @@ class Decoder {
   void reset(const void* buf, size_t maxn);
 
   // Decoding routines.  Note that these do not check bounds
-  unsigned char  get8();
+  unsigned char get8();
   uint16 get16();
   uint32 get32();
   uint64 get64();
@@ -182,6 +202,7 @@ class Decoder {
 
  private:
   friend class IndexBlockDecoder;
+  friend bool Encoder::put_varint64_from_decoder(Decoder* dec);
   const unsigned char* orig_;
   const unsigned char* buf_;
   const unsigned char* limit_;
@@ -189,11 +210,10 @@ class Decoder {
 
 /***** Implementation details.  Clients should ignore them. *****/
 
-inline Encoder::Encoder(void* b, size_t maxn) {
-  orig_ = buf_ = reinterpret_cast<unsigned char*>(b);
-  limit_ = orig_ + maxn;
-  underlying_buffer_ = nullptr;
-}
+inline Encoder::Encoder(void* b, size_t maxn) :
+    buf_(reinterpret_cast<unsigned char*>(b)),
+    limit_(reinterpret_cast<unsigned char*>(b) + maxn),
+    orig_(reinterpret_cast<unsigned char*>(b)) { }
 
 inline void Encoder::reset(void* b, size_t maxn) {
   orig_ = buf_ = reinterpret_cast<unsigned char*>(b);
@@ -253,9 +273,46 @@ inline void Encoder::put_varint32(uint32 v) {
          (Varint::Encode32(reinterpret_cast<char*>(buf_), v));
 }
 
+inline void Encoder::put_varint32_inline(uint32 v) {
+  buf_ = reinterpret_cast<unsigned char*>
+         (Varint::Encode32Inline(reinterpret_cast<char*>(buf_), v));
+}
+
 inline void Encoder::put_varint64(uint64 v) {
   buf_ = reinterpret_cast<unsigned char*>
          (Varint::Encode64(reinterpret_cast<char*>(buf_), v));
+}
+
+// The fast implementation of the code below with boundary checks.
+//   uint64 val;
+//   if (!dec->get_varint64(&val))
+//     return false;
+//   enc->put_varint64(val);
+//   return true;
+// BM_getvarfrom* in corder_unittest.cc are the benchmarks that measure the
+// performance of different implementations.
+inline bool Encoder::put_varint64_from_decoder(Decoder* dec) {
+  unsigned char c;
+  unsigned char* enc_ptr = buf_;
+  const unsigned char* dec_ptr = dec->buf_;
+  // The loop executes at most kVarintMax64 (10) iterations. We must be
+  // careful about the cost of moving any computation out of the loop.
+  // Xref cl/133546957 for more details of various implementations we explored.
+  do {
+    if (dec_ptr >= dec->limit_)
+      return false;
+    if (enc_ptr >= limit_)
+      return false;
+    c = *dec_ptr;
+    *enc_ptr = c;
+    ++dec_ptr;
+    ++enc_ptr;
+  } while (c >= 128);
+  if (dec_ptr - dec->buf_ > kVarintMax64)
+    return false;
+  dec->buf_ = dec_ptr;
+  buf_ = enc_ptr;
+  return true;
 }
 
 // DEPRECATED
@@ -307,7 +364,7 @@ inline void Decoder::getcn(void* dst, int c, size_t n) {
 inline void Decoder::gets(void* dst, size_t n) {
   size_t len = n - 1;
   DCHECK_GE(limit_, buf_);
-  if (n > 1 + limit_ - buf_) {
+  if (n > static_cast<size_t>(1 + limit_ - buf_)) {
     len = limit_ - buf_;
   }
   (reinterpret_cast<char *>(dst))[len] = '\0';
@@ -447,6 +504,28 @@ inline double Decoder::getdouble() {
     ATTRIBUTE_UNUSED;
   memcpy(&d, &v, sizeof(d));
   return d;
+}
+
+inline bool Decoder::get_varint32(uint32* v) {
+  const char* const r =
+      Varint::Parse32WithLimit(reinterpret_cast<const char*>(buf_),
+                               reinterpret_cast<const char*>(limit_), v);
+  if (r == nullptr) {
+    return false;
+  }
+  buf_ = reinterpret_cast<const unsigned char*>(r);
+  return true;
+}
+
+inline bool Decoder::get_varint64(uint64* v) {
+  const char* const r =
+      Varint::Parse64WithLimit(reinterpret_cast<const char*>(buf_),
+                               reinterpret_cast<const char*>(limit_), v);
+  if (r == nullptr) {
+    return false;
+  }
+  buf_ = reinterpret_cast<const unsigned char*>(r);
+  return true;
 }
 
 #endif  // UTIL_CODING_CODER_H__

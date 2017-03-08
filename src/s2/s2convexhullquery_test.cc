@@ -93,8 +93,8 @@ TEST(S2ConvexHullQueryTest, FullLoop) {
 
 TEST(S2ConvexHullQueryTest, EmptyPolygon) {
   S2ConvexHullQuery query;
-  vector<S2Loop*> loops;
-  S2Polygon empty(&loops);
+  vector<unique_ptr<S2Loop>> loops;
+  S2Polygon empty(std::move(loops));
   query.AddPolygon(empty);
   unique_ptr<S2Loop> result(query.GetConvexHull());
   EXPECT_TRUE(result->is_empty());
@@ -121,8 +121,8 @@ TEST(S2ConvexHullQueryTest, SimplePolyline) {
   S2ConvexHullQuery query;
   query.AddPolyline(*polyline);
   unique_ptr<S2Loop> result(query.GetConvexHull());
-  unique_ptr<S2Loop> expected_result(s2textformat::MakeLoop(
-      "0:1, 0:9, 3:10, 4:10, 5:5, 4:0, 3:0"));
+  unique_ptr<S2Loop> expected_result(
+      s2textformat::MakeLoop("0:1, 0:9, 3:10, 4:10, 5:5, 4:0, 3:0"));
   EXPECT_TRUE(result->BoundaryEquals(expected_result.get()));
 }
 
@@ -132,8 +132,8 @@ void TestNorthPoleLoop(S1Angle radius, int num_vertices) {
   DCHECK_GE(std::abs(radius.radians() - M_PI_2), 1e-15);
 
   S2ConvexHullQuery query;
-  unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(S2Point(0, 0, 1),
-                                                  radius, num_vertices));
+  unique_ptr<S2Loop> loop(
+      S2Loop::MakeRegularLoop(S2Point(0, 0, 1), radius, num_vertices));
   query.AddLoop(*loop);
   unique_ptr<S2Loop> result(query.GetConvexHull());
   if (radius > S1Angle::Radians(M_PI_2)) {
@@ -163,6 +163,8 @@ TEST(S2ConvexHullQueryTest, PointsInsideHull) {
   // always be the same.
   int const kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
+    S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
+
     // Choose points from within a cap of random size, up to but not including
     // an entire hemisphere.
     S2Cap cap = S2Testing::GetRandomCap(1e-15, 1.999 * M_PI);
@@ -172,7 +174,22 @@ TEST(S2ConvexHullQueryTest, PointsInsideHull) {
       query.AddPoint(S2Testing::SamplePoint(cap));
     }
     unique_ptr<S2Loop> hull(query.GetConvexHull());
-    // Now add more points inside the convex hull.
+
+    // When the convex hull is nearly a hemisphere, the algorithm sometimes
+    // returns a full cap instead.  This is because it first computes a
+    // bounding rectangle for all the input points/edges and then converts it
+    // to a bounding cap, which sometimes yields a non-convex cap (radius
+    // larger than 90 degrees).  This should not be a problem in practice
+    // (since most convex hulls are not hemispheres), but in order make this
+    // test pass reliably it means that we need to reject convex hulls whose
+    // bounding cap (when computed from a bounding rectangle) is not convex.
+    //
+    // TODO(ericv): This test can still fail (about 1 iteration in 500,000)
+    // because the S2LatLngRect::GetCapBound implementation does not guarantee
+    // that A.Contains(B) implies A.GetCapBound().Contains(B.GetCapBound()).
+    if (hull->GetCapBound().height() >= 1) continue;
+
+    // Otherwise, add more points inside the convex hull.
     int const num_points2 = 1000;
     for (int i = 0; i < num_points2; ++i) {
       S2Point p = S2Testing::SamplePoint(cap);
@@ -182,7 +199,7 @@ TEST(S2ConvexHullQueryTest, PointsInsideHull) {
     }
     // Finally, build a new convex hull and check that it hasn't changed.
     unique_ptr<S2Loop> hull2(query.GetConvexHull());
-    EXPECT_TRUE(hull2->BoundaryEquals(hull.get()));
+    EXPECT_TRUE(hull2->BoundaryEquals(hull.get())) << "Iteration: " << iter;
   }
 }
 

@@ -24,7 +24,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/base/macros.h"
 #include "s2/fpcontractoff.h"
 #include "s2/id_set_lexicon.h"
@@ -159,7 +159,7 @@ class S2Builder {
   //
   // 1. The SnapPoint() method, which snaps a point P to a nearby point (the
   //    "candidate snap site").  Any point may be returned, including P
-  //    itself (the "identity snap function").
+  //    itself (this is the "identity snap function").
   //
   // 2. "snap_radius", the maximum distance that vertices can move when
   //    snapped.  The snap_radius must be at least as large as the maximum
@@ -218,7 +218,7 @@ class S2Builder {
     // REQUIRES: snap_radius() <= kMaxSnapRadius
     virtual S1Angle snap_radius() const = 0;
 
-    // The maximum supported snap radius (equivalent to about 8000km).
+    // The maximum supported snap radius (equivalent to about 7800km).
     static S1Angle kMaxSnapRadius();
 
     // The maximum distance that the center of an edge can move when snapped.
@@ -263,7 +263,7 @@ class S2Builder {
     //  options.set_snap_function(s2builderutil::IdentitySnapFunction(
     //      S2EdgeUtil::kIntersectionSnapRadius));
     //
-    // Default value: s2builderutil::SnapFunction(S1Angle::Zero()).
+    // Default value: s2builderutil::IdentitySnapFunction(S1Angle::Zero()).
     // [This does no snapping and preserves all input vertices exactly.]
     SnapFunction const& snap_function() const;
     void set_snap_function(SnapFunction const& snap_function);
@@ -301,10 +301,9 @@ class S2Builder {
     // with the SnapFunction class).  For example, simplified edges are
     // guaranteed to pass within snap_radius() of the *original* positions of
     // all vertices that were removed from that edge.  This is a much tighter
-    // guarantee than could be achieved by snapping and simplifying
-    // separately.
+    // guarantee than can be achieved by snapping and simplifying separately.
     //
-    // However, note that this option does *not* guarantee idempotency.  In
+    // However, note that this option does not guarantee idempotency.  In
     // other words, simplifying geometry that has already been simplified once
     // may simplify it further.  (This is unavoidable, since tolerances are
     // measured with respect to the original geometry, which is no longer
@@ -315,14 +314,20 @@ class S2Builder {
     // the same way across layers, and simplification preserves topological
     // relationships between layers (e.g., no crossing edges will be created).
     //
+    // Note that edge chains are approximated as parametric curves rather than
+    // point sets.  This means that if an edge chain backtracks on itself (for
+    // example, ABCDEFEDCDEFGH) then such backtracking will be preserved to
+    // within snap_radius() (for example, if the preceding point were all in a
+    // straight line then the edge chain would be simplified to ACFCFH, noting
+    // that C and F have degree > 2 and therefore can't be simplified away).
+    //
     // For this option to have any effect, a SnapFunction with a non-zero
-    // snap_radius() must be specified.
+    // snap_radius() must be specified.  Also note that vertices specified
+    // using ForceVertex are never simplified away.
     //
     // Default value: false.
     bool simplify_edge_chains() const;
-#if 0  // FUTURE
     void set_simplify_edge_chains(bool simplify_edge_chains);
-#endif
 
     // If true, then snapping occurs only when the input geometry does not
     // already meet the S2Builder output guarantees (see the SnapFunction
@@ -420,9 +425,11 @@ class S2Builder {
   // prevent edges from being split by new vertices.
   //
   // Forced vertices are never snapped; if this is desired then you need to
-  // call options().snap_function().SnapPoint() explicitly.  Also, since this
-  // method can place vertices arbitrarily close together, S2Builder makes no
-  // minimum separation guaranteees about forced vertices.
+  // call options().snap_function().SnapPoint() explicitly.  Forced vertices
+  // are also never simplified away (if simplify_edge_chains() is used).
+  //
+  // Caveat: Since this method can place vertices arbitrarily close together,
+  // S2Builder makes no minimum separation guaranteees with forced vertices.
   void ForceVertex(S2Point const& vertex);
 
   // Every edge can have a set of non-negative integer labels attached to it.
@@ -464,12 +471,6 @@ class S2Builder {
   // appropriately.  Depending on the error, some or all output layers may
   // have been created.  Automatically resets the S2Builder state so that it
   // can be reused.
-  //
-  // CAVEAT: Because polygons are constructed from their boundaries, this
-  // method cannot distinguish between the empty and full polygons.  An empty
-  // boundary always yields an empty polygon.  If the result should sometimes
-  // be the full polygon, such logic must be implemented outside of this class
-  // (and will need to consider factors other than the polygon's boundary).
   //
   // REQUIRES: error != nullptr.
   bool Build(S2Error* error);
@@ -522,12 +523,18 @@ class S2Builder {
   // Identifies an output edge.
   using EdgeId = int32;
 
+  // Identifies an output edge in a particular layer.
+  using LayerEdgeId = std::pair<int, EdgeId>;
+
+  class EdgeChainSimplifier;
+
   InputVertexId AddVertex(S2Point const& v);
   void ChooseSites();
   void CopyInputEdges();
   std::vector<InputVertexKey> SortInputVertices();
   void AddEdgeCrossings(S2ShapeIndex const& input_edge_index);
   void AddForcedSites(S2PointIndex<SiteId>* site_index);
+  bool is_forced(SiteId v) const;
   void ChooseInitialSites(
       S2PointIndex<SiteId>* site_index,
       S2PointIndex<InputVertexId>* rejected_vertex_index);
@@ -552,12 +559,8 @@ class S2Builder {
                             InputEdgeId input_edge_id) const;
   S2Point GetCoverageEndpoint(S2Point const& p, S2Point const& x,
                               S2Point const& y, S2Point const& n) const;
-  void SnapEdge(InputEdgeId e, std::vector<SiteId>* chain);
+  void SnapEdge(InputEdgeId e, std::vector<SiteId>* chain) const;
 
-  enum ExclusionResult { FIRST_EXCLUDED, SECOND_EXCLUDED, NEITHER_EXCLUDED };
-  ExclusionResult GetVoronoiSiteExclusion(S2Point const& a, S2Point const& b,
-                                          S2Point const& x, S2Point const& y,
-                                          S2Point const& n) const;
   void BuildLayers();
   void BuildLayerEdges(
       std::vector<std::vector<Edge>>* layer_edges,
@@ -566,14 +569,26 @@ class S2Builder {
   void AddSnappedEdges(
       InputEdgeId begin, InputEdgeId end, GraphOptions const& options,
       std::vector<Edge>* edges, std::vector<InputEdgeIdSetId>* input_edge_ids,
-      IdSetLexicon* input_edge_id_set_lexicon);
+      IdSetLexicon* input_edge_id_set_lexicon,
+      std::vector<compact_array<InputVertexId>>* site_vertices) const;
+  void MaybeAddInputVertex(
+      InputVertexId v, SiteId id,
+      std::vector<compact_array<InputVertexId>>* site_vertices) const;
   void AddSnappedEdge(GraphOptions const& options, SiteId src, SiteId dst,
                       InputEdgeIdSetId id, std::vector<Edge>* edges,
-                      std::vector<InputEdgeIdSetId>* input_edge_ids);
+                      std::vector<InputEdgeIdSetId>* input_edge_ids) const;
   void SimplifyEdgeChains(
+      std::vector<compact_array<InputVertexId>> const& site_vertices,
       std::vector<std::vector<Edge>>* layer_edges,
       std::vector<std::vector<InputEdgeIdSetId>>* layer_input_edge_ids,
-      IdSetLexicon* input_edge_id_set_lexicon);
+      IdSetLexicon* input_edge_id_set_lexicon) const;
+  void MergeLayerEdges(
+      std::vector<std::vector<Edge>> const& layer_edges,
+      std::vector<std::vector<InputEdgeIdSetId>> const& layer_input_edge_ids,
+      std::vector<Edge>* edges,
+      std::vector<InputEdgeIdSetId>* input_edge_ids) const;
+  static bool StableLessThan(Edge const& a, Edge const& b,
+                             LayerEdgeId const& ai, LayerEdgeId const& bi);
 
   //////////// Parameters /////////////
 
@@ -662,6 +677,10 @@ class S2Builder {
   // The set of snapped vertex locations ("sites").
   std::vector<S2Point> sites_;
 
+  // The number of sites specified using ForceVertex().  These sites are
+  // always at the beginning of the sites_ vector.
+  SiteId num_forced_sites_;
+
   // A map from each input edge to the set of sites "nearby" that edge,
   // defined as the set of sites that are candidates for snapping and/or
   // avoidance.  Note that compact_array will inline up to two sites, which
@@ -701,7 +720,15 @@ class S2Builder::GraphOptions {
   // Controls how degenerate edges (i.e., an edge from a vertex to itself) are
   // handled.  Such edges can be present in the input, or they can be created
   // when both endpoints of an edge are snapped to the same output vertex.
-  // Normally such edges are discarded.
+  //
+  // Normally such edges are discarded.  The main reason for keeping them is
+  // if you want to ensure that there is an output edge for every input edge.
+  // For example, suppose that you are simplifying a polygon and want to
+  // ensure that degenerate geometry is kept (rather than having tiny loops
+  // simply disappear).  You could do this by creating a layer type that
+  // transforms degenerate edges into point geometry and sibling pairs into
+  // polyline geometry, and then passes the remaining non-degenerate geometry
+  // to S2PolygonLayer for further assembly.
   enum class DegenerateEdges { DISCARD, KEEP };
   DegenerateEdges degenerate_edges() const;
   void set_degenerate_edges(DegenerateEdges degenerate_edges);
@@ -725,7 +752,7 @@ class S2Builder::GraphOptions {
   //
   //   KEEP: Keeps siblings pairs.  This can be used to create polylines that
   //         double back on themselves, or degenerate loops (with a layer type
-  //         such as s2shapeutil::PolygonShape).
+  //         such as s2shapeutil::LaxPolygon).
   //
   //   REQUIRE: Requires that all edges have a sibling (and returns an error
   //            otherwise).  This is useful with layer types that create a
@@ -746,6 +773,13 @@ class S2Builder::GraphOptions {
   // undirected input edges between vertices A and B would first be converted
   // into two directed edges in each direction, and then one edge of each pair
   // would be discarded leaving only one edge in each direction.
+  //
+  // Finally, degenerate edges are considered not to have siblings.  Therefore
+  // if such edges are present, they are passed through unchanged by
+  // SiblingEdges::DISCARD.  Similarly, when undirected edges are used and
+  // SiblingEdges::REQUIRE or SiblingEdges::CREATE is specified (causing the
+  // graph to be converted to EdgeType::DIRECTED), then the number of copies
+  // of each degenerate edge is reduced by a factor of two (just like above).
   enum class SiblingPairs { DISCARD, KEEP, REQUIRE, CREATE };
   SiblingPairs sibling_pairs() const;
   void set_sibling_pairs(SiblingPairs sibling_pairs);
@@ -764,6 +798,9 @@ class S2Builder::GraphOptions {
 // The maximum snap radius is just large enough to support snapping to
 // S2CellId level 0.  It is equivalent to 7800km on the Earth's surface.
 inline S1Angle S2Builder::SnapFunction::kMaxSnapRadius() {
+  // This value can't be larger than 85.7 degrees without changing the code
+  // related to min_edge_length_to_split_ca_, and increasing it to 90 degrees
+  // or more would most likely require significant changes to the algorithm.
   return S1Angle::Degrees(70);
 }
 
@@ -790,7 +827,6 @@ inline bool S2Builder::Options::simplify_edge_chains() const {
   return simplify_edge_chains_;
 }
 
-#if 0  // FUTURE
 inline void S2Builder::Options::set_simplify_edge_chains(
     bool simplify_edge_chains) {
   simplify_edge_chains_ = simplify_edge_chains;
@@ -802,7 +838,6 @@ inline void S2Builder::Options::set_simplify_edge_chains(
   // approaching non-incident vertices too closely, for example.
   set_idempotent(false);
 }
-#endif
 
 inline bool S2Builder::Options::idempotent() const {
   return idempotent_;
@@ -849,6 +884,10 @@ S2Builder::GraphOptions::sibling_pairs() const {
 inline void S2Builder::GraphOptions::set_sibling_pairs(
     SiblingPairs sibling_pairs) {
   sibling_pairs_ = sibling_pairs;
+}
+
+inline bool S2Builder::is_forced(SiteId v) const {
+  return v < num_forced_sites_;
 }
 
 #endif  // S2_S2BUILDER_H_

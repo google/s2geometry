@@ -20,15 +20,17 @@
 #include <algorithm>
 #include <bitset>
 #include <cfloat>
+#include <cmath>
 #include <set>
 #include <utility>
 #include <vector>
 
 #include "s2/base/atomicops.h"
 #include <gflags/gflags.h>
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/stringprintf.h"
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
@@ -36,16 +38,20 @@
 #include "s2/s2.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2centroids.h"
 #include "s2/s2closestedgequery.h"
 #include "s2/s2crossingedgequery.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
+#include "s2/s2measures.h"
 #include "s2/s2paddedcell.h"
 #include "s2/s2pointcompression.h"
+#include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil.h"
 #include "s2/util/math/matrix3x3.h"
 
+using std::fabs;
 using std::max;
 using std::min;
 using std::pair;
@@ -150,7 +156,7 @@ bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
   DCHECK(subregion_bound_.Contains(bound_));
 
   // All vertices must be unit length.  (Unfortunately this check happens too
-  // late in debug mode, because S2Loop construction calls S2::Sign which
+  // late in debug mode, because S2Loop construction calls s2pred::Sign which
   // expects vertices to be unit length.  But it is still a useful check in
   // optimized builds.)
   for (int i = 0; i < num_vertices(); ++i) {
@@ -216,8 +222,8 @@ void S2Loop::InitOriginAndBound() {
     // TODO(ericv): Investigate using vertex(0) as the reference point.
 
     origin_inside_ = false;  // Initialize before calling Contains().
-    bool v1_inside = S2::OrderedCCW(S2::Ortho(vertex(1)), vertex(0),
-                                    vertex(2), vertex(1));
+    bool v1_inside = s2pred::OrderedCCW(S2::Ortho(vertex(1)), vertex(0),
+                                        vertex(2), vertex(1));
     // Note that Contains(S2Point) only does a bounds check once InitIndex()
     // has been called, so it doesn't matter that bound_ is undefined here.
     if (v1_inside != Contains(vertex(1))) {
@@ -255,7 +261,7 @@ void S2Loop::InitBound() {
 
   S2EdgeUtil::RectBounder bounder;
   for (int i = 0; i <= num_vertices(); ++i) {
-    bounder.AddPoint(&vertex(i));
+    bounder.AddPoint(vertex(i));
   }
   S2LatLngRect b = bounder.GetBound();
   if (Contains(S2Point(0, 0, 1))) {
@@ -305,23 +311,23 @@ S2Loop::~S2Loop() {
   index_.RemoveAll();  // Prevent shape_ from being deleted.
 }
 
-S2Loop::S2Loop(S2Loop const* src)
-    : depth_(src->depth_),
-      num_vertices_(src->num_vertices_),
+S2Loop::S2Loop(S2Loop const& src)
+    : depth_(src.depth_),
+      num_vertices_(src.num_vertices_),
       vertices_(new S2Point[num_vertices_]),
       owns_vertices_(true),
-      s2debug_override_(src->s2debug_override_),
-      origin_inside_(src->origin_inside_),
+      s2debug_override_(src.s2debug_override_),
+      origin_inside_(src.origin_inside_),
       unindexed_contains_calls_(0),
-      bound_(src->bound_),
-      subregion_bound_(src->subregion_bound_),
+      bound_(src.bound_),
+      subregion_bound_(src.subregion_bound_),
       shape_(this) {
-  std::copy(&src->vertices_[0], &src->vertices_[num_vertices_], &vertices_[0]);
+  std::copy(&src.vertices_[0], &src.vertices_[num_vertices_], &vertices_[0]);
   InitIndex();
 }
 
 S2Loop* S2Loop::Clone() const {
-  return new S2Loop(this);
+  return new S2Loop(*this);
 }
 
 int S2Loop::FindVertex(S2Point const& p) const {
@@ -335,7 +341,7 @@ int S2Loop::FindVertex(S2Point const& p) const {
   S2ShapeIndex::Iterator it(index_);
   if (!it.Locate(p)) return -1;
 
-  S2ClippedShape const& a_clipped = it.cell()->clipped(0);
+  S2ClippedShape const& a_clipped = it.cell().clipped(0);
   for (int i = a_clipped.num_edges() - 1; i >= 0; --i) {
     int ai = a_clipped.edge(i);
     // Return value must be in the range [1..N].
@@ -392,7 +398,7 @@ double S2Loop::GetArea() const {
   // with S2Loop::Contains(S2Point) in that loops that contain many points
   // should have large areas, and loops that contain few points should have
   // small areas.  For example, if a degenerate triangle is considered CCW
-  // according to S2::Sign(), then it will contain very few points and
+  // according to s2pred::Sign(), then it will contain very few points and
   // its area should be approximately zero.  On the other hand if it is
   // considered clockwise, then it will contain virtually all points and so
   // its area should be approximately 4*Pi.
@@ -416,10 +422,10 @@ double S2Loop::GetArea() const {
   // that the area enclosed by the loop equals 2*Pi minus the total geodesic
   // curvature of the loop (i.e., the sum of the "turning angles" at all the
   // loop vertices).  The big advantage of this method is that as long as we
-  // use S2::Sign() to compute the turning angle at each vertex, then
+  // use s2pred::Sign() to compute the turning angle at each vertex, then
   // degeneracies are always handled correctly.  In other words, if a
   // degenerate loop is CCW according to the symbolic perturbations used by
-  // S2::Sign(), then its turning angle will be approximately 2*Pi.
+  // s2pred::Sign(), then its turning angle will be approximately 2*Pi.
   //
   // The disadvantage of the Gauss-Bonnet method is that its absolute error is
   // about 2e-15 times the number of vertices (see GetTurningAngleMaxError).
@@ -627,7 +633,7 @@ bool S2Loop::MayIntersect(S2Cell const& target) const {
 bool S2Loop::BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
                                       S2Cell const& target) const {
   DCHECK(it.id().contains(target.id()));
-  S2ClippedShape const& a_clipped = it.cell()->clipped(0);
+  S2ClippedShape const& a_clipped = it.cell().clipped(0);
   int a_num_clipped = a_clipped.num_edges();
 
   // If there are no edges, there is no intersection.
@@ -711,7 +717,7 @@ bool S2Loop::Contains(S2ShapeIndex::Iterator const& it,
                       S2Point const& p) const {
   // Test containment by drawing a line segment from the cell center to the
   // given point and counting edge crossings.
-  S2ClippedShape const& a_clipped = it.cell()->clipped(0);
+  S2ClippedShape const& a_clipped = it.cell().clipped(0);
   bool inside = a_clipped.contains_center();
   int a_num_clipped = a_clipped.num_edges();
   if (a_num_clipped > 0) {
@@ -864,7 +870,7 @@ class RangeIterator {
 
   // The current S2CellId and cell contents.
   S2CellId id() const { return id_; }
-  S2ShapeIndexCell const* cell() const { return it_.cell(); }
+  S2ShapeIndexCell const& cell() const { return it_.cell(); }
 
   // The min and max leaf cell ids covered by the current cell.  If Done() is
   // true, these methods return a value larger than any valid cell id.
@@ -911,7 +917,7 @@ class RangeIterator {
       clipped_ = nullptr;
     } else {
       id_ = it_.id();
-      clipped_ = &it_.cell()->clipped(0);
+      clipped_ = &it_.cell().clipped(0);
     }
     range_min_ = id_.range_min();
     range_max_ = id_.range_max();
@@ -1079,7 +1085,7 @@ bool LoopCrosser::HasCrossing(RangeIterator* ai, RangeIterator* bi) {
         bi->SeekBeyond(*ai);
         return false;
       }
-      b_cells_.push_back(bi->cell());
+      b_cells_.push_back(&bi->cell());
     }
     bi->Next();
   } while (bi->id() <= ai->range_max());
@@ -1168,12 +1174,11 @@ class ContainsRelation : public LoopRelation {
 
   // If A.Contains(P) == false && B.Contains(P) == true, it is equivalent to
   // having an edge crossing (i.e., Contains returns false).
-  virtual int a_crossing_target() const { return false; }
-  virtual int b_crossing_target() const { return true; }
+  int a_crossing_target() const override { return false; }
+  int b_crossing_target() const override { return true; }
 
-  virtual bool WedgesCross(S2Point const& a0, S2Point const& ab1,
-                           S2Point const& a2, S2Point const& b0,
-                           S2Point const& b2) {
+  bool WedgesCross(S2Point const& a0, S2Point const& ab1, S2Point const& a2,
+                   S2Point const& b0, S2Point const& b2) override {
     found_shared_vertex_ = true;
     return !S2EdgeUtil::WedgeContains(a0, ab1, a2, b0, b2);
   }
@@ -1237,12 +1242,11 @@ class IntersectsRelation : public LoopRelation {
 
   // If A.Contains(P) == true && B.Contains(P) == true, it is equivalent to
   // having an edge crossing (i.e., Intersects returns true).
-  virtual int a_crossing_target() const { return true; }
-  virtual int b_crossing_target() const { return true; }
+  int a_crossing_target() const override { return true; }
+  int b_crossing_target() const override { return true; }
 
-  virtual bool WedgesCross(S2Point const& a0, S2Point const& ab1,
-                           S2Point const& a2, S2Point const& b0,
-                           S2Point const& b2) {
+  bool WedgesCross(S2Point const& a0, S2Point const& ab1, S2Point const& a2,
+                   S2Point const& b0, S2Point const& b2) override {
     found_shared_vertex_ = true;
     return S2EdgeUtil::WedgeIntersects(a0, ab1, a2, b0, b2);
   }
@@ -1293,7 +1297,7 @@ inline static bool WedgeContainsSemiwedge(S2Point const& a0, S2Point const& ab1,
     // We have a shared or reversed edge.
     return (b2 == a0) == reverse_b;
   } else {
-    return S2::OrderedCCW(a0, a2, b2, ab1);
+    return s2pred::OrderedCCW(a0, a2, b2, ab1);
   }
 }
 
@@ -1318,12 +1322,11 @@ class CompareBoundaryRelation : public LoopRelation {
   // Unfortunately it isn't worth detecting this situation because by the
   // time we have seen a point in all four intersection regions, we are also
   // guaranteed to have seen at least one pair of crossing edges.
-  virtual int a_crossing_target() const { return -1; }
-  virtual int b_crossing_target() const { return -1; }
+  int a_crossing_target() const override { return -1; }
+  int b_crossing_target() const override { return -1; }
 
-  virtual bool WedgesCross(S2Point const& a0, S2Point const& ab1,
-                           S2Point const& a2, S2Point const& b0,
-                           S2Point const& b2) {
+  bool WedgesCross(S2Point const& a0, S2Point const& ab1, S2Point const& a2,
+                   S2Point const& b0, S2Point const& b2) override {
     // Because we don't care about the interior of B, only its boundary, it is
     // sufficient to check whether A contains the semiwedge (ab1, b2).
     found_shared_vertex_ = true;
@@ -1439,18 +1442,18 @@ bool S2Loop::BoundaryEquals(S2Loop const* b) const {
   return false;
 }
 
-bool S2Loop::BoundaryApproxEquals(S2Loop const* b, double max_error) const {
-  if (num_vertices() != b->num_vertices()) return false;
+bool S2Loop::BoundaryApproxEquals(S2Loop const& b, S1Angle max_error) const {
+  if (num_vertices() != b.num_vertices()) return false;
 
   // Special case to handle empty or full loops.  Since they have the same
   // number of vertices, if one loop is empty/full then so is the other.
-  if (is_empty_or_full()) return is_empty() == b->is_empty();
+  if (is_empty_or_full()) return is_empty() == b.is_empty();
 
   for (int offset = 0; offset < num_vertices(); ++offset) {
-    if (S2::ApproxEquals(vertex(offset), b->vertex(0), max_error)) {
+    if (S2::ApproxEquals(vertex(offset), b.vertex(0), max_error)) {
       bool success = true;
       for (int i = 0; i < num_vertices(); ++i) {
-        if (!S2::ApproxEquals(vertex(i + offset), b->vertex(i), max_error)) {
+        if (!S2::ApproxEquals(vertex(i + offset), b.vertex(i), max_error)) {
           success = false;
           break;
         }
@@ -1463,8 +1466,8 @@ bool S2Loop::BoundaryApproxEquals(S2Loop const* b, double max_error) const {
   return false;
 }
 
-static bool MatchBoundaries(S2Loop const* a, S2Loop const* b, int a_offset,
-                            double max_error) {
+static bool MatchBoundaries(S2Loop const& a, S2Loop const& b, int a_offset,
+                            S1Angle max_error) {
   // The state consists of a pair (i,j).  A state transition consists of
   // incrementing either "i" or "j".  "i" can be incremented only if
   // a(i+1+a_offset) is near the edge from b(j) to b(j+1), and a similar rule
@@ -1483,7 +1486,7 @@ static bool MatchBoundaries(S2Loop const* a, S2Loop const* b, int a_offset,
     int i = pending.back().first;
     int j = pending.back().second;
     pending.pop_back();
-    if (i == a->num_vertices() && j == b->num_vertices()) {
+    if (i == a.num_vertices() && j == b.num_vertices()) {
       return true;
     }
     done.insert(std::make_pair(i, j));
@@ -1492,30 +1495,30 @@ static bool MatchBoundaries(S2Loop const* a, S2Loop const* b, int a_offset,
     // then (i+1+offset) overflows the [0, 2*na-1] range allowed by vertex().
     // So we reduce the range if necessary.
     int io = i + a_offset;
-    if (io >= a->num_vertices()) io -= a->num_vertices();
+    if (io >= a.num_vertices()) io -= a.num_vertices();
 
-    if (i < a->num_vertices() && done.count(std::make_pair(i + 1, j)) == 0 &&
-        S2EdgeUtil::GetDistance(a->vertex(io + 1), b->vertex(j),
-                                b->vertex(j + 1)).radians() <= max_error) {
+    if (i < a.num_vertices() && done.count(std::make_pair(i + 1, j)) == 0 &&
+        S2EdgeUtil::GetDistance(a.vertex(io + 1), b.vertex(j),
+                                b.vertex(j + 1)) <= max_error) {
       pending.push_back(std::make_pair(i + 1, j));
     }
-    if (j < b->num_vertices() && done.count(std::make_pair(i, j + 1)) == 0 &&
-        S2EdgeUtil::GetDistance(b->vertex(j + 1), a->vertex(io),
-                                a->vertex(io + 1)).radians() <= max_error) {
+    if (j < b.num_vertices() && done.count(std::make_pair(i, j + 1)) == 0 &&
+        S2EdgeUtil::GetDistance(b.vertex(j + 1), a.vertex(io),
+                                a.vertex(io + 1)) <= max_error) {
       pending.push_back(std::make_pair(i, j + 1));
     }
   }
   return false;
 }
 
-bool S2Loop::BoundaryNear(S2Loop const* b, double max_error) const {
+bool S2Loop::BoundaryNear(S2Loop const& b, S1Angle max_error) const {
   // Special case to handle empty or full loops.
-  if (is_empty_or_full() || b->is_empty_or_full()) {
-    return (is_empty() && b->is_empty()) || (is_full() && b->is_full());
+  if (is_empty_or_full() || b.is_empty_or_full()) {
+    return (is_empty() && b.is_empty()) || (is_full() && b.is_full());
   }
 
   for (int a_offset = 0; a_offset < num_vertices(); ++a_offset) {
-    if (MatchBoundaries(this, b, a_offset, max_error)) return true;
+    if (MatchBoundaries(*this, b, a_offset, max_error)) return true;
   }
   return false;
 }
@@ -1617,19 +1620,18 @@ std::bitset<kNumProperties> S2Loop::GetCompressedEncodingProperties() const {
 }
 
 /* static */
-S2Loop* S2Loop::MakeRegularLoop(S2Point const& center,
-                                S1Angle radius,
-                                int num_vertices) {
-  // TODO(ericv): Unlike the implementation in S2Testing, this version does
-  // not support radii of Pi/2 or larger.  Fix this.
+std::unique_ptr<S2Loop> S2Loop::MakeRegularLoop(S2Point const& center,
+                                                S1Angle radius,
+                                                int num_vertices) {
   Matrix3x3_d m;
   S2::GetFrame(center, &m);  // TODO(ericv): Return by value
   return MakeRegularLoop(m, radius, num_vertices);
 }
 
 /* static */
-S2Loop* S2Loop::MakeRegularLoop(Matrix3x3_d const& frame,
-                                S1Angle radius, int num_vertices) {
+std::unique_ptr<S2Loop> S2Loop::MakeRegularLoop(Matrix3x3_d const& frame,
+                                                S1Angle radius,
+                                                int num_vertices) {
   // We construct the loop in the given frame coordinates, with the center at
   // (0, 0, 1).  For a loop of radius "r", the loop vertices have the form
   // (x, y, z) where x^2 + y^2 = sin(r) and z = cos(r).  The distance on the
@@ -1643,7 +1645,7 @@ S2Loop* S2Loop::MakeRegularLoop(Matrix3x3_d const& frame,
     S2Point p(r * cos(angle), r * sin(angle), z);
     vertices.push_back(S2::FromFrame(frame, p).Normalize());
   }
-  return new S2Loop(vertices);
+  return gtl::MakeUnique<S2Loop>(vertices);
 }
 
 size_t S2Loop::BytesUsed() const {
@@ -1652,4 +1654,12 @@ size_t S2Loop::BytesUsed() const {
   // index_ itself is already included in sizeof(*this).
   size += index_.BytesUsed() - sizeof(index_);
   return size;
+}
+
+int S2Loop::Shape::num_chains() const {
+  return loop_->is_empty_or_full() ? 0 : 1;
+}
+
+int S2Loop::Shape::chain_start(int i) const {
+  return i == 0 ? 0 : Shape::num_edges();
 }

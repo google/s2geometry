@@ -28,11 +28,12 @@
 #include <vector>
 
 #include <gflags/gflags.h>
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/stringprintf.h"
 #include "s2/strings/serialize.h"
 #include "s2/strings/split.h"
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -49,7 +50,6 @@
 #include "s2/util/math/matrix3x3.h"
 
 using std::max;
-using std::pair;
 using std::unique_ptr;
 using std::vector;
 
@@ -161,23 +161,21 @@ S1Angle S2Testing::MetersToAngle(double meters) {
   return KmToAngle(0.001 * meters);
 }
 
+// The overloaded Dump() function is for use within a debugger.
 void Dump(S2Point const& p) {
-  std::cout << "S2Point: " << s2textformat::ToString(p) << "\n";
+  std::cout << "S2Point: " << s2textformat::ToString(p) << std::endl;
 }
 
-void DumpLoop(S2Loop const* loop) {
-  // Only for calling from a debugger.
-  std::cout << "S2Polygon: " << s2textformat::ToString(loop) << "\n";
+void Dump(S2Loop const& loop) {
+  std::cout << "S2Polygon: " << s2textformat::ToString(loop) << std::endl;
 }
 
-void DumpPolyline(S2Polyline const* polyline) {
-  // Only for calling from a debugger.
-  std::cout << "S2Polyline: " << s2textformat::ToString(polyline) << "\n";
+void Dump(S2Polyline const& polyline) {
+  std::cout << "S2Polyline: " << s2textformat::ToString(polyline) << std::endl;
 }
 
-void DumpPolygon(S2Polygon const* polygon) {
-  // Only for calling from a debugger.
-  std::cout << "S2Polygon: " << s2textformat::ToString(polygon) << "\n";
+void Dump(S2Polygon const& polygon) {
+  std::cout << "S2Polygon: " << s2textformat::ToString(polygon) << std::endl;
 }
 
 S2Point S2Testing::RandomPoint() {
@@ -235,7 +233,7 @@ void S2Testing::ConcentricLoopsPolygon(S2Point const& center,
                                        S2Polygon* polygon) {
   Matrix3x3_d m;
   S2::GetFrame(center, &m);
-  vector<S2Loop*> loops;
+  vector<unique_ptr<S2Loop>> loops;
   for (int li = 0; li < num_loops; ++li) {
     vector<S2Point> vertices;
     double radius = 0.005 * (li + 1) / num_loops;
@@ -245,9 +243,9 @@ void S2Testing::ConcentricLoopsPolygon(S2Point const& center,
       S2Point p(radius * cos(angle), radius * sin(angle), 1);
       vertices.push_back(S2::FromFrame(m, p.Normalize()));
     }
-    loops.push_back(new S2Loop(vertices));
+    loops.push_back(gtl::MakeUnique<S2Loop>(vertices));
   }
-  polygon->InitNested(&loops);
+  polygon->InitNested(std::move(loops));
 }
 
 S2Point S2Testing::SamplePoint(S2Cap const& cap) {
@@ -315,7 +313,6 @@ double S2Testing::GetCpuTime() {
   CHECK_EQ(getrusage(RUSAGE_SELF, &ru), 0);
   return ru.ru_utime.tv_sec + ru.ru_utime.tv_usec / 1e6;
 }
-
 
 S2Testing::Fractal::Fractal()
     : max_level_(-1), min_level_arg_(-1), min_level_(-1),
@@ -429,8 +426,9 @@ void S2Testing::Fractal::GetR2VerticesHelper(R2Point const& v0,
   GetR2VerticesHelper(v3, v4, level+1, vertices);
 }
 
-S2Loop* S2Testing::Fractal::MakeLoop(Matrix3x3_d const& frame,
-                                     S1Angle nominal_radius) const {
+std::unique_ptr<S2Loop> S2Testing::Fractal::MakeLoop(
+    Matrix3x3_d const& frame,
+    S1Angle nominal_radius) const {
   vector<R2Point> r2vertices;
   GetR2Vertices(&r2vertices);
   vector<S2Point> vertices;
@@ -439,5 +437,5 @@ S2Loop* S2Testing::Fractal::MakeLoop(Matrix3x3_d const& frame,
     S2Point p(v[0] * r, v[1] * r, 1);
     vertices.push_back(S2::FromFrame(frame, p).Normalize());
   }
-  return new S2Loop(vertices);
+  return gtl::MakeUnique<S2Loop>(vertices);
 }

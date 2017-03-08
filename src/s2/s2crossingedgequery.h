@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "s2/base/macros.h"
+#include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/util/btree/btree_map.h"  // Like std::map, but faster and smaller.
 #include "s2/fpcontractoff.h"
 #include "s2/r2.h"
@@ -29,7 +30,6 @@
 #include "s2/s2.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil.h"
-#include "s2/util/gtl/inlined_vector.h"
 
 class R2Rect;
 class S2PaddedCell;
@@ -71,11 +71,17 @@ class S2Shape;
 class S2CrossingEdgeQuery {
  public:
   // An EdgeMap stores a sorted set of edge ids for each shape.  Its type
-  // may change, but can be treated as "map<S2Shape const*, vector<int>>".
+  // may change, but can be treated as "map<S2Shape const*, vector<int>>"
+  // except that the shapes are sorted by shape id rather than pointer (to
+  // ensure repeatable behavior).
+  //
   // For simple comparisons (pointers in this case), it is much faster to use
   // linear rather than binary search within btree nodes.
-  struct CompareBtreeLinearSearch : public std::less<S2Shape const*> {
+  struct CompareBtreeLinearSearch {
     using goog_btree_prefer_linear_node_search = std::true_type;
+    bool operator()(S2Shape const* x, S2Shape const* y) const {
+      return x->id() < y->id();
+    }
   };
   using EdgeMap = util::btree::btree_map<S2Shape const*, std::vector<int>,
                                          CompareBtreeLinearSearch>;

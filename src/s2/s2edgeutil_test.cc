@@ -31,11 +31,13 @@
 #include "s2/r2rect.h"
 #include "s2/s1chordangle.h"
 #include "s2/s2polyline.h"
+#include "s2/s2predicates.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 #include "s2/util/math/vector.h"
 
+using std::fabs;
 using std::max;
 using std::swap;
 using std::unique_ptr;
@@ -118,7 +120,7 @@ void TestCrossings(S2Point a, S2Point b, S2Point c, S2Point d,
 }
 
 TEST(S2EdgeUtil, Crossings) {
-  // The real tests of edge crossings are in s2{loop,polygon}_unittest,
+  // The real tests of edge crossings are in s2{loop,polygon}_test,
   // but we do a few simple tests here.
 
   // Two regular edges that cross.
@@ -179,11 +181,10 @@ TEST(S2EdgeUtil, Crossings) {
                 -1, false, false);
 }
 
-
 S2LatLngRect GetEdgeBound(S2Point const& a, S2Point const& b) {
   S2EdgeUtil::RectBounder bounder;
-  bounder.AddPoint(&a);
-  bounder.AddPoint(&b);
+  bounder.AddPoint(a);
+  bounder.AddPoint(b);
   return bounder.GetBound();
 }
 
@@ -611,7 +612,7 @@ void CheckInterpolate(double t, S2Point a, S2Point b, S2Point expected) {
 
   // We allow a bit more than the usual 1e-15 error tolerance because
   // Interpolate() uses trig functions.
-  EXPECT_TRUE(S2::ApproxEquals(expected, actual, 3e-15))
+  EXPECT_TRUE(S2::ApproxEquals(expected, actual, S1Angle::Radians(3e-15)))
       << "Expected: " << expected << ", actual: " << actual;
 }
 
@@ -737,7 +738,8 @@ class GetIntersectionStats {
   }
 
  private:
-  static int constexpr kNumMethods = S2EdgeUtil::NUM_INTERSECTION_METHODS;
+  static int constexpr kNumMethods =
+      static_cast<int>(S2EdgeUtil::IntersectionMethod::NUM_METHODS);
   int tally_[kNumMethods] = {0};
 };
 
@@ -869,8 +871,8 @@ TEST(S2EdgeUtil, GrazingIntersections) {
     // then CD and CE should intersect along AB in that order.
     ab = ab.Normalize();
     if (S1Angle(xcd, xce) > 2 * S2EdgeUtil::kIntersectionError) {
-      EXPECT_EQ(S2::Sign(c, d, e) == S2::Sign(c, a, b),
-                S2::Sign(ab, xcd, xce) > 0);
+      EXPECT_EQ(s2pred::Sign(c, d, e) == s2pred::Sign(c, a, b),
+                s2pred::Sign(ab, xcd, xce) > 0);
     }
   }
   stats.Print();
@@ -1107,7 +1109,7 @@ TEST(S2EdgeUtil, CoincidentZeroLengthEdgesThatDontTouch) {
   // coincident on the sphere and the norms of A,B,C,D are monotonically
   // increasing.  Such edge pairs should never intersect.  (This is not
   // obvious, since it depends on the particular symbolic perturbations used
-  // by S2::Sign().  It would be better to replace this with a test that
+  // by s2pred::Sign().  It would be better to replace this with a test that
   // says that the CCW results must be consistent with each other.)
   const int kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
@@ -1437,4 +1439,3 @@ TEST(S2EdgeUtil, EdgeClipping) {
   TestEdgeClipping(R2Rect::FromPoint(R2Point(0.3, 0.8)));
   TestEdgeClipping(R2Rect::Empty());
 }
-

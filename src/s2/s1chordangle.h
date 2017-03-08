@@ -35,8 +35,11 @@
 // to be calculated and compared.  Otherwise it is simpler to use S1Angle.
 //
 // S1ChordAngle also loses some accuracy as the angle approaches Pi radians.
-// Specifically, the representation of (Pi - x) radians can be expected to
-// have an error of about (1e-15 / x), with a maximum error of about 1e-7.
+// Specifically, the representation of (Pi - x) radians has an error of about
+// (1e-15 / x), with a maximum error of about 2e-8 radians (about 13cm on the
+// Earth's surface).  For comparison, for angles up to 90 degrees (10000km)
+// the worst-case representation error is about 2e-16 radians (1 nanonmeter),
+// which is about the same as S1Angle.
 //
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.
@@ -113,7 +116,11 @@ class S1ChordAngle {
   bool is_special() const;  // Negative or infinity.
 
   // Only addition and subtraction of S1ChordAngles is supported.  These
-  // methods add or subtract the corresponding S1Angles.
+  // methods add or subtract the corresponding S1Angles, and clamp the result
+  // to the range [0, Pi].  Both arguments must be non-negative and
+  // non-infinite.
+  //
+  // REQUIRES: !a.is_special() && !b.is_special()
   friend S1ChordAngle operator+(S1ChordAngle a, S1ChordAngle b);
   friend S1ChordAngle operator-(S1ChordAngle a, S1ChordAngle b);
   S1ChordAngle& operator+=(S1ChordAngle a);
@@ -124,6 +131,9 @@ class S1ChordAngle {
   friend double sin(S1ChordAngle a);
   friend double cos(S1ChordAngle a);
   friend double tan(S1ChordAngle a);
+
+  // Returns sin(a)**2, but computed more efficiently.
+  friend double sin2(S1ChordAngle a);
 
   // The squared length of the chord.  (Most clients will not need this.)
   double length2() const { return length2_; }
@@ -152,7 +162,7 @@ class S1ChordAngle {
   // When S1ChordAngle is used as a key in one of the btree container types
   // (util/btree), indicate that linear rather than binary search should be
   // used.  This is much faster when the comparison function is cheap.
-  using goog_btree_prefer_linear_node_search = std::true_type;
+  typedef std::true_type goog_btree_prefer_linear_node_search;
 
  private:
   // S1ChordAngles are represented by the squared chord length, which can

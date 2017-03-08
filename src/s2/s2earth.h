@@ -22,13 +22,9 @@
 #ifndef S2_S2EARTH_H_
 #define S2_S2EARTH_H_
 
-#include <cmath>
-#include <algorithm>
-
 #include "s2/s1angle.h"
 #include "s2/s2.h"
 #include "s2/s2latlng.h"
-#include "s2/util/math/vector.h"
 #include "s2/util/units/length-units.h"
 
 class S2Earth {
@@ -52,8 +48,8 @@ class S2Earth {
   inline static double MetersToRadians(double meters);
   inline static double RadiansToMeters(double radians);
 
-  inline static double ToLongitudeRadians(util::units::Meters const& distance,
-                                          double latitude_radians);
+  static double ToLongitudeRadians(util::units::Meters const& distance,
+                                   double latitude_radians);
   // Convenience function for the frequent case where you need to call
   // ToRadians in order to convert an east-west distance on the globe to
   // radians. The output is a function of how close to the poles you are
@@ -61,6 +57,13 @@ class S2Earth {
   // much farther distance). The function will never return more than 2*PI
   // radians, even if you're trying to go 100 million miles west at the north
   // pole.
+
+  static S1Angle GetInitialBearing(S2LatLng const& a, S2LatLng const& b);
+  // Computes the initial bearing from a to b. This is the bearing an observer
+  // at point a has when facing point b. A bearing of 0 degrees is north, and it
+  // increases clockwise (90 degrees is east, etc).
+  // If a == b, a == -b, or a is one of the Earths' poles, the return value is
+  // undefined.
 
   // Convenience functions.  These methods also return a double-precision
   // result, unlike the generic ToDistance() method.
@@ -151,13 +154,6 @@ inline double S2Earth::MetersToRadians(double meters) {
 
 inline double S2Earth::RadiansToMeters(double radians) {
   return radians * RadiusMeters();
-}
-
-inline double S2Earth::ToLongitudeRadians(util::units::Meters const& distance,
-                                          double latitude_radians) {
-  double scalar = cos(latitude_radians);
-  if (scalar == 0) return M_PI * 2;
-  return std::min(ToRadians(distance) / scalar, M_PI * 2);
 }
 
 inline util::units::Meters S2Earth::GetDistance(S2Point const& a,

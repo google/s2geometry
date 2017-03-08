@@ -20,7 +20,7 @@
 #include <algorithm>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
@@ -29,16 +29,16 @@
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 #include "s2/s2latlngrect.h"
-#include <algorithm>
 
+using std::is_sorted;
 using std::max;
 using std::min;
 using std::vector;
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
-void S2CellUnion::Init(vector<S2CellId> const& cell_ids) {
-  InitRaw(cell_ids);
+void S2CellUnion::Init(vector<S2CellId> cell_ids) {
+  InitRaw(std::move(cell_ids));
   Normalize();
 }
 
@@ -47,13 +47,8 @@ void S2CellUnion::Init(vector<uint64> const& cell_ids) {
   Normalize();
 }
 
-void S2CellUnion::InitSwap(vector<S2CellId>* cell_ids) {
-  InitRawSwap(cell_ids);
-  Normalize();
-}
-
-void S2CellUnion::InitRaw(vector<S2CellId> const& cell_ids) {
-  cell_ids_ = cell_ids;
+void S2CellUnion::InitRaw(vector<S2CellId> cell_ids) {
+  cell_ids_ = std::move(cell_ids);
 }
 
 void S2CellUnion::InitRaw(vector<uint64> const& cell_ids) {
@@ -63,14 +58,12 @@ void S2CellUnion::InitRaw(vector<uint64> const& cell_ids) {
   }
 }
 
-void S2CellUnion::InitRawSwap(vector<S2CellId>* cell_ids) {
-  cell_ids_.swap(*cell_ids);
-  cell_ids->clear();
-}
-
-void S2CellUnion::Detach(vector<S2CellId>* cell_ids) {
-  cell_ids_.swap(*cell_ids);
-  cell_ids_.clear();
+vector<S2CellId> S2CellUnion::Release() {
+  // vector's rvalue reference constructor does not necessarily leave
+  // moved-from value in empty state, so swap instead.
+  vector<S2CellId> cell_ids;
+  cell_ids_.swap(cell_ids);
+  return cell_ids;
 }
 
 void S2CellUnion::Pack(int excess) {
@@ -283,8 +276,8 @@ void S2CellUnion::GetIntersection(S2CellUnion const* x, S2CellUnion const* y) {
                                              vector<S2CellId>* out) {
   DCHECK_NE(out, &x);
   DCHECK_NE(out, &y);
-  DCHECK(std::is_sorted(x.begin(), x.end()));
-  DCHECK(std::is_sorted(y.begin(), y.end()));
+  DCHECK(is_sorted(x.begin(), x.end()));
+  DCHECK(is_sorted(y.begin(), y.end()));
 
   // This is a fairly efficient calculation that uses binary search to skip
   // over sections of both input vectors.  It takes constant time if all the
@@ -323,7 +316,7 @@ void S2CellUnion::GetIntersection(S2CellUnion const* x, S2CellUnion const* y) {
     }
   }
   // The output is generated in sorted order.
-  DCHECK(std::is_sorted(out->begin(), out->end()));
+  DCHECK(is_sorted(out->begin(), out->end()));
 }
 
 static void GetDifferenceInternal(S2CellId cell,
@@ -356,7 +349,7 @@ void S2CellUnion::GetDifference(S2CellUnion const* x, S2CellUnion const* y) {
   }
   // The output is generated in sorted order, and there should not be any
   // cells that can be merged (provided that both inputs were normalized).
-  DCHECK(std::is_sorted(cell_ids_.begin(), cell_ids_.end()));
+  DCHECK(is_sorted(cell_ids_.begin(), cell_ids_.end()));
   DCHECK(!Normalize());
 }
 
@@ -374,7 +367,7 @@ void S2CellUnion::Expand(int level) {
     output.push_back(id);
     id.AppendAllNeighbors(level, &output);
   }
-  InitSwap(&output);
+  Init(std::move(output));
 }
 
 void S2CellUnion::Expand(S1Angle min_radius, int max_level_diff) {
@@ -383,7 +376,7 @@ void S2CellUnion::Expand(S1Angle min_radius, int max_level_diff) {
     min_level = min(min_level, cell_id(i).level());
   }
   // Find the maximum level such that all cells are at least "min_radius" wide.
-  int radius_level = S2::kMinWidth.GetMaxLevel(min_radius.radians());
+  int radius_level = S2::kMinWidth.GetLevelForMinValue(min_radius.radians());
   if (radius_level == 0 && min_radius.radians() > S2::kMinWidth.GetValue(0)) {
     // The requested expansion is greater than the width of a face cell.
     // The easiest way to handle this is to expand twice.
@@ -409,7 +402,7 @@ void S2CellUnion::InitFromBeginEnd(S2CellId begin, S2CellId end) {
     cell_ids_.push_back(id);
   }
   // The output is already normalized.
-  DCHECK(std::is_sorted(cell_ids_.begin(), cell_ids_.end()));
+  DCHECK(is_sorted(cell_ids_.begin(), cell_ids_.end()));
   DCHECK(!Normalize());
 }
 
@@ -488,5 +481,5 @@ bool S2CellUnion::Decode(Decoder* const decoder) {
 }
 
 bool S2CellUnion::Contains(S2Point const& p) const {
-  return Contains(S2CellId::FromPoint(p));
+  return Contains(S2CellId(p));
 }

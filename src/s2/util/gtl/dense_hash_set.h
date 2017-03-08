@@ -117,14 +117,14 @@
 #define S2_UTIL_GTL_DENSE_HASH_SET_H_
 
 #include <cstdio>
-#include <algorithm>                        // needed by stl_alloc
-#include <functional>                       // for equal_to<>, select1st<>, etc
+#include <algorithm>
+#include <functional>
 #include <unordered_map>
-#include <memory>                           // for alloc
-#include <utility>                          // for pair<>
+#include <memory>
+#include <utility>
 #include <vector>
 
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/port.h"
 #include "s2/util/gtl/densehashtable.h"        // IWYU pragma: export
 #include "s2/util/gtl/libc_allocator_with_realloc.h"
 
@@ -278,12 +278,10 @@ class dense_hash_set {
     std::pair<typename ht::iterator, bool> p = rep.insert(obj);
     return std::pair<iterator, bool>(p.first, p.second);   // const to non-const
   }
-#ifdef LANG_CXX11
   std::pair<iterator, bool> insert(value_type&& obj) {  // NOLINT
     std::pair<typename ht::iterator, bool> p = rep.insert(std::move(obj));
     return std::pair<iterator, bool>(p.first, p.second);   // const to non-const
   }
-#endif
   template <class InputIterator> void insert(InputIterator f, InputIterator l) {
     rep.insert(f, l);
   }
@@ -294,11 +292,9 @@ class dense_hash_set {
   iterator insert(iterator, const value_type& obj) {
     return insert(obj).first;
   }
-#ifdef LANG_CXX11
   iterator insert(iterator, value_type&& obj) {  // NOLINT
     return insert(std::move(obj)).first;
   }
-#endif
 
   // Deletion and empty routines
   // THESE ARE NON-STANDARD!  I make you specify an "impossible" key

@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
@@ -28,7 +29,6 @@
 #include "s2/s2latlngrect.h"
 #include "s2/s2pointregion.h"
 #include "s2/s2regioncoverer.h"
-#include "s2/util/gtl/ptr_util.h"
 
 using std::unique_ptr;
 using std::vector;
@@ -36,22 +36,23 @@ using std::vector;
 namespace {
 
 TEST(S2RegionUnionTest, Basic) {
-  vector<S2Region*> regions;
-  S2RegionUnion ru_empty(&regions);
+  S2RegionUnion ru_empty((vector<unique_ptr<S2Region>>()));
   EXPECT_EQ(0, ru_empty.num_regions());
   EXPECT_EQ(S2Cap::Empty(), ru_empty.GetCapBound());
   EXPECT_EQ(S2LatLngRect::Empty(), ru_empty.GetRectBound());
   unique_ptr<S2Region> empty_clone(ru_empty.Clone());
 
-  regions.push_back(new S2PointRegion(S2LatLng::FromDegrees(35, 40)
-                                      .ToPoint()));
-  regions.push_back(new S2PointRegion(S2LatLng::FromDegrees(-35, -40)
-                                      .ToPoint()));
+  vector<unique_ptr<S2Region>> two_point_region;
+  two_point_region.emplace_back(
+      new S2PointRegion(S2LatLng::FromDegrees(35, 40).ToPoint()));
+  two_point_region.emplace_back(
+      new S2PointRegion(S2LatLng::FromDegrees(-35, -40).ToPoint()));
+
+  auto two_points_orig =
+      gtl::MakeUnique<S2RegionUnion>(std::move(two_point_region));
+  // two_point_region is in a valid, but unspecified, state.
 
   // Check that Clone() returns a deep copy.
-  auto two_points_orig = gtl::MakeUnique<S2RegionUnion>(&regions);
-  EXPECT_TRUE(regions.empty());
-
   unique_ptr<S2RegionUnion> two_points(two_points_orig->Clone());
   two_points_orig.reset();
   EXPECT_EQ(S2LatLngRect(S2LatLng::FromDegrees(-35, -40),
@@ -69,8 +70,8 @@ TEST(S2RegionUnionTest, Basic) {
   // Check that we can Add() another region.
   unique_ptr<S2RegionUnion> three_points(two_points->Clone());
   EXPECT_FALSE(three_points->Contains(S2LatLng::FromDegrees(10, 10).ToPoint()));
-  three_points->Add(new S2PointRegion(S2LatLng::FromDegrees(10, 10)
-                                          .ToPoint()));
+  three_points->Add(
+      gtl::MakeUnique<S2PointRegion>(S2LatLng::FromDegrees(10, 10).ToPoint()));
   EXPECT_TRUE(three_points->Contains(S2LatLng::FromDegrees(10, 10).ToPoint()));
 
   S2RegionCoverer coverer;

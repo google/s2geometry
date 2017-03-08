@@ -20,7 +20,7 @@
 
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/macros.h"
 #include "s2/fpcontractoff.h"
@@ -58,23 +58,22 @@ class S2CellUnion : public S2Region {
   // then calls Normalize().  The InitSwap() version takes ownership of the
   // vector data without copying and clears the given vector.  These methods
   // may be called multiple times.
-  void Init(std::vector<S2CellId> const& cell_ids);
+  void Init(std::vector<S2CellId> cell_ids);
   void Init(std::vector<uint64> const& cell_ids);
-  void InitSwap(std::vector<S2CellId>* cell_ids);
 
   // Like Init(), but does not call Normalize().  The cell union *must* be
   // normalized before doing any calculations with it, so it is the caller's
   // responsibility to make sure that the input is normalized.  This method is
   // useful when converting cell unions to another representation and back.
   // These methods may be called multiple times.
-  void InitRaw(std::vector<S2CellId> const& cell_ids);
+  void InitRaw(std::vector<S2CellId> cell_ids);
   void InitRaw(std::vector<uint64> const& cell_ids);
-  void InitRawSwap(std::vector<S2CellId>* cell_ids);
 
   // Gives ownership of the vector data to the client without copying, and
   // clears the content of the cell union.  The original data in cell_ids
-  // is lost if there was any.  This is the opposite of InitRawSwap().
-  void Detach(std::vector<S2CellId>* cell_ids);
+  // is lost if there was any.  This is the opposite of
+  // InitRaw(vector<S2CellId>).
+  std::vector<S2CellId> Release();
 
   // Convenience methods for accessing the individual cell ids.
   int num_cells() const { return cell_ids_.size(); }
@@ -206,22 +205,22 @@ class S2CellUnion : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2CellUnion* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
+  S2CellUnion* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
 
   // This is a fast operation (logarithmic in the size of the cell union).
-  virtual bool Contains(S2Cell const& cell) const;
+  bool Contains(S2Cell const& cell) const override;
 
   // This is a fast operation (logarithmic in the size of the cell union).
-  virtual bool MayIntersect(S2Cell const& cell) const;
+  bool MayIntersect(S2Cell const& cell) const override;
 
-  virtual bool VirtualContainsPoint(S2Point const& p) const {
+  bool VirtualContainsPoint(S2Point const& p) const override {
     return Contains(p);  // The same as Contains() below, just virtual.
   }
 
-  virtual void Encode(Encoder* const encoder) const;
-  virtual bool Decode(Decoder* const decoder);
+  void Encode(Encoder* const encoder) const override;
+  bool Decode(Decoder* const decoder) override;
 
   // The point 'p' does not need to be normalized.
   // This is a fast operation (logarithmic in the size of the cell union).
@@ -235,7 +234,7 @@ class S2CellUnion : public S2Region {
   // Equivalent to the following:
   //    S2CellUnion cell_union;
   //    cell_union.Init(*cell_ids);
-  //    cell_union.Detach(cell_ids);
+  //    *cell_ids = cell_union.Release();
   static bool Normalize(std::vector<S2CellId>* cell_ids);
 
   // Like GetIntersection(), but works directly with vectors of S2CellIds,
@@ -244,7 +243,7 @@ class S2CellUnion : public S2Region {
   //    x_union.Init(x);
   //    y_union.Init(y);
   //    result_union.GetIntersection(&x_union, &y_union);
-  //    result_union.Detach(out);
+  //    *out = result_union.Release();
   // except that this method has slightly more relaxed normalization
   // requirements: the input vectors may contain groups of 4 child cells that
   // all have the same parent.  (In a normalized S2CellUnion, such groups are

@@ -27,6 +27,7 @@
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
+#include "s2/s2predicates.h"
 
 using std::make_pair;
 using std::min;
@@ -52,20 +53,6 @@ Graph::Graph(GraphOptions const& options,
       label_set_ids_(label_set_ids),
       label_set_lexicon_(label_set_lexicon) {
   DCHECK(std::is_sorted(edges_.begin(), edges_.end()));
-}
-
-// A comparision function that allows stable sorting with std::sort (which is
-// fast but not stable).  It breaks ties between equal edges by comparing
-// their edge ids.
-inline bool StableLessThan(Graph::Edge const& a, Graph::Edge const& b,
-                           Graph::EdgeId ai, Graph::EdgeId bi) {
-  // Compiler doesn't optimize this as well as it should:
-  //   return make_pair(a, ai) < make_pair(b, bi);
-  if (a.first < b.first) return true;
-  if (b.first < a.first) return false;
-  if (a.second < b.second) return true;
-  if (b.second < a.second) return false;
-  return ai < bi;  // Stable sort.
 }
 
 vector<Graph::EdgeId> Graph::GetInEdgeIds() const {
@@ -244,8 +231,8 @@ bool Graph::GetLeftTurnMap(vector<EdgeId> const& in_edge_ids,
         if (a.endpoint == b.endpoint) return a.rank < b.rank;
         if (a.endpoint == min_endpoint) return true;
         if (b.endpoint == min_endpoint) return false;
-        return !S2::OrderedCCW(vertex(a.endpoint), vertex(b.endpoint),
-                               vertex(min_endpoint), vertex(v0));
+        return !s2pred::OrderedCCW(vertex(a.endpoint), vertex(b.endpoint),
+                                   vertex(min_endpoint), vertex(v0));
       });
     // Match incoming with outgoing edges.  We do this by keeping a stack of
     // unmatched incoming edges.  We also keep a stack of outgoing edges with
@@ -282,33 +269,31 @@ bool Graph::GetLeftTurnMap(vector<EdgeId> const& in_edge_ids,
 void Graph::CanonicalizeLoopOrder(vector<InputEdgeId> const& min_input_ids,
                                   vector<EdgeId>* loop) {
   if (loop->empty()) return;
+  // Find the position of the element with the highest input edge id.  If
+  // there are multiple such elements together (i.e., the edge was split
+  // into several pieces by snapping it to several vertices), then we choose
+  // the last such position in cyclic order (this attempts to preserve the
+  // original loop order even when new vertices are added).  For example, if
+  // the input edge id sequence is (7, 7, 4, 5, 6, 7) then we would rotate
+  // it to obtain (4, 5, 6, 7, 7, 7).
+
   // The reason that we put the highest-numbered edge last, rather than the
   // lowest-numbered edge first, is that S2Loop::Invert() reverses the loop
   // edge order *except* for the last edge.  For example, the loop ABCD (with
   // edges AB, BC, CD, DA) becomes DCBA (with edges DC, CB, BA, AD).  Note
   // that the last edge is the same except for its direction (DA vs. AD).
-  // This has the advantage that if an undirected loop is provided with the
-  // wrong orientation, we *still* end up preserving the original cyclic
-  // vertex order.
-
-  // Find the position of the element with the highest input edge id.  If
-  // there are multiple such elements together (i.e., the edge was split into
-  // several pieces by snapping it to several vertices), then we choose the
-  // last such position in cyclic order (this attempts to preserve the
-  // original loop order even when new vertices are added).  For example, if
-  // the input edge id sequence is (7, 7, 4, 5, 6, 7) then we would rotate it
-  // to obtain (4, 5, 6, 7, 7, 7).
+  // This has the advantage that if an undirected loop is assembled with the
+  // wrong orientation and later inverted (e.g. by S2Polygon::InitOriented),
+  // we still end up preserving the original cyclic vertex order.
   int pos = 0;
   bool saw_gap = false;
   for (int i = 1; i < loop->size(); ++i) {
     int cmp = min_input_ids[(*loop)[i]] - min_input_ids[(*loop)[pos]];
-    if (cmp > 0) {
+    if (cmp < 0) {
+      saw_gap = true;
+    } else if (cmp > 0 || !saw_gap) {
       pos = i;
       saw_gap = false;
-    } else if (cmp < 0) {
-      saw_gap = true;
-    } else if (!saw_gap) {
-      pos = i;
     }
   }
   if (++pos == loop->size()) pos = 0;  // Convert loop end to loop start.
@@ -549,7 +534,7 @@ bool Graph::GetUndirectedComponents(LoopType loop_type,
 
 class Graph::PolylineBuilder {
  public:
-  PolylineBuilder(Graph const& g);
+  explicit PolylineBuilder(Graph const& g);
   vector<EdgePolyline> BuildPaths();
   vector<EdgePolyline> BuildWalks();
 
@@ -606,12 +591,18 @@ inline int Graph::PolylineBuilder::excess_degree(VertexId v) {
 }
 
 vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildPaths() {
-  vector<EdgePolyline> polylines;
+  // Note that this code does not preserve the direction of undirected
+  // polylines, since we don't have enough information available to do this
+  // reliably.  (This could be fixed by having S2Builder::Graph have a boolean
+  // for each edge indicating whether it is in the same direction as the
+  // corresponding input edge of minimal input edge id.)
+
   // First build polylines starting at all the vertices that cannot be in the
   // polyline interior (i.e., indegree != 1 or outdegree != 1 for directed
   // edges, or degree != 2 for undirected edges).  Unlike with walks, the
   // order that we build paths doesn't affect idempotency because there is
   // only one possible outgoing edge at each interior vertex of a path.
+  vector<EdgePolyline> polylines;
   for (VertexId v = 0; v < g_.num_vertices(); ++v) {
     if (is_interior(v) || out_.degree(v) == 0) continue;
     for (EdgeId e : out_.edge_ids(v)) {
@@ -664,14 +655,9 @@ Graph::EdgePolyline Graph::PolylineBuilder::BuildPath(EdgeId e) {
 
 vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildWalks() {
   // Note that this code does not preserve the direction of undirected
-  // polylines, since we don't have enough information available to do this
-  // reliably.  (This could be fixed by having S2Builder::Graph have a boolean
-  // for each edge indicating whether it is in the same direction as the
-  // corresponding input edge of minimal input edge id.)
-  //
-  // Also, some of this code is worst-case quadratic in the maximum vertex
-  // degree.  This could be fixed with a few extra arrays, but it should not
-  // be a problem in practice.
+  // polylines (see BuildPaths).  Also, some of this code is worst-case
+  // quadratic in the maximum vertex degree.  This could be fixed with a few
+  // extra arrays, but it should not be a problem in practice.
 
   // First, build polylines from all vertices where outdegree > indegree (or
   // for undirected edges, vertices whose degree is odd).  We consider the
@@ -749,15 +735,17 @@ Graph::EdgePolyline Graph::PolylineBuilder::BuildWalk(VertexId v) {
       best_edge = e;
     }
     if (best_edge < 0) return polyline;
-    // For idempotency with multiple input polylines, we stop the walk early
-    // if there is an incoming edge that is a better match.
-    int excess = excess_degree(v);
-    if (directed_ ? (excess < 0) : (excess % 2 != 0)) {
-      excess -= excess_used_[v];
-      if (directed_ ? (excess < 0) : (excess % 2 != 0)) {
+    // For idempotency when there are multiple input polylines, we stop the
+    // walk early if "best_edge" might be a continuation of a different
+    // incoming edge.  (This doesn't work for undirected edges, but we don't
+    // guarantee idempotency in that case anyway.)
+    if (directed_) {
+      int excess = excess_degree(v) - excess_used_[v];
+      if (excess < 0) {
         for (EdgeId e : in_.edge_ids(v)) {
-          if (used_[e] || min_input_ids_[e] <= best_out_id)
+          if (!used_[e] && min_input_ids_[e] <= best_out_id) {
             return polyline;
+          }
         }
       }
     }
@@ -775,8 +763,9 @@ void Graph::PolylineBuilder::MaximizeWalk(EdgePolyline* polyline) {
   // and insert it into the polyline.  (The walk is guaranteed to be a loop
   // because this method is only called when all vertices have equal numbers
   // of unused incoming and outgoing edges.)
-  for (int i = 0; i < polyline->size(); ++i) {
-    VertexId v = g_.edge((*polyline)[i]).first;
+  for (int i = 0; i <= polyline->size(); ++i) {
+    VertexId v = (i == 0 ? g_.edge((*polyline)[i]).first
+                  : g_.edge((*polyline)[i - 1]).second);
     for (EdgeId e : out_.edge_ids(v)) {
       if (!used_[e]) {
         EdgePolyline loop = BuildWalk(v);

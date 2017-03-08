@@ -21,7 +21,7 @@
 #include <functional>
 #include <queue>
 
-#include "s2/util/gtl/inlined_vector.h"
+#include "s2/third_party/absl/container/inlined_vector.h"
 
 // Like std::priority_queue, except that:
 //

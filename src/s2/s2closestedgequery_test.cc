@@ -18,6 +18,7 @@
 #include "s2/s2closestedgequery.h"
 
 #include <memory>
+#include <set>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -28,93 +29,11 @@
 #include "s2/s2shapeutil.h"
 #include "s2/s2testing.h"
 
-using std::cout;
 using std::make_pair;
 using std::min;
 using std::ostream;
 using std::pair;
-using std::unique_ptr;
 using std::vector;
-
-//////////////////////////////////////////////////////////////////////////
-// TODO(ericv): Move this code to s2testing.h after s2testing is no longer
-// used in production code and this restriction is enforced (testonly=1).
-
-#include <set>
-#include <utility>
-
-#include <algorithm>
-
-namespace {
-
-template <typename Id>
-struct CompareFirst {
-  inline bool operator()(std::pair<S1Angle, Id> const& x,
-                         std::pair<S1Angle, Id> const& y) {
-    return x.first < y.first;
-  }
-};
-
-// Check that result set "x" contains all the expected results from "y", and
-// does not include any duplicate results.
-template <typename Id>
-bool CheckResultSet(std::vector<std::pair<S1Angle, Id>> const& x,
-                    std::vector<std::pair<S1Angle, Id>> const& y,
-                    int max_size, S1Angle max_distance, S1Angle max_error,
-                    S1Angle max_pruning_error, string const& label) {
-  // Results should be sorted by distance.
-  CompareFirst<Id> cmp;
-  EXPECT_TRUE(std::is_sorted(x.begin(), x.end(), cmp));
-
-  // Make sure there are no duplicate values.
-  std::set<std::pair<S1Angle, Id>> x_set(x.begin(), x.end());
-  EXPECT_EQ(x_set.size(), x.size()) << "Result set contains duplicates";
-
-  // Result set X should contain all the items from U whose distance is less
-  // than "limit" computed below.
-  S1Angle limit = S1Angle::Zero();
-  if (x.size() < max_size) {
-    // Result set X was not limited by "max_size", so it should contain all
-    // the items up to "max_distance", except that a few items right near the
-    // distance limit may be missed because the distance measurements used for
-    // pruning S2Cells are not conservative.
-    limit = max_distance - max_pruning_error;
-  } else if (x.size() > 0) {
-    // Result set X contains only the closest "max_size" items, to within a
-    // tolerance of "max_error + max_pruning_error".
-    limit = x.back().first - max_error - max_pruning_error;
-  }
-  bool result = true;
-  for (auto const& p : y) {
-    if (p.first < limit && std::count(x.begin(), x.end(), p) != 1) {
-      result = false;
-      cout << label << " distance = " << p.first
-           << ", id = " << p.second << "\n";
-    }
-  }
-  return result;
-}
-
-// Compare two sets of "closest" items, where "expected" is computed via brute
-// force (i.e., considering every possible candidate) and "actual" is computed
-// using a spatial data structure.  Here "max_size" is a bound on the maximum
-// number of items, "max_distance" is a limit on the distance to any item, and
-// "max_error" is the maximum error allowed when selecting which items are
-// closest (see S2ClosestEdgeQuery::max_error).
-template <typename Id>
-bool CheckDistanceResults(
-    std::vector<std::pair<S1Angle, Id>> const& expected,
-    std::vector<std::pair<S1Angle, Id>> const& actual,
-    int max_size, S1Angle max_distance, S1Angle max_error) {
-  static S1Angle const kMaxPruningError = S1Angle::Radians(1e-15);
-  return (CheckResultSet(actual, expected, max_size, max_distance,
-                         max_error, kMaxPruningError, "Missing") & /*not &&*/
-          CheckResultSet(expected, actual, max_size, max_distance,
-                         max_error, S1Angle::Zero(), "Extra"));
-}
-
-}  // namespace
-//////////////////////////////////////////////////////////////////////////
 
 TEST(S2ClosestEdgeQuery, NoEdges) {
   S2ShapeIndex index;
@@ -145,11 +64,10 @@ class ShapeIndexFactory {
 // immediately adjacent to the loop.
 class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
-  virtual void AddEdges(S2Cap const& query_cap, int num_edges,
-                        S2ShapeIndex* index) const {
-    index->Add(new s2shapeutil::S2LoopOwningShape(
-        S2Loop::MakeRegularLoop(query_cap.center(),
-                                0.5 * query_cap.GetRadius(), num_edges)));
+  void AddEdges(S2Cap const& query_cap, int num_edges,
+                S2ShapeIndex* index) const override {
+    index->Add(new s2shapeutil::S2LoopOwningShape(S2Loop::MakeRegularLoop(
+        query_cap.center(), 0.5 * query_cap.GetRadius(), num_edges)));
   }
 };
 
@@ -157,8 +75,8 @@ class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
 // i.e. random query points have a 25% chance of being inside the loop.
 class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
-  virtual void AddEdges(S2Cap const& query_cap, int num_edges,
-                        S2ShapeIndex* index) const {
+  void AddEdges(S2Cap const& query_cap, int num_edges,
+                S2ShapeIndex* index) const override {
     S2Testing::Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(num_edges);
     index->Add(new s2shapeutil::S2LoopOwningShape(

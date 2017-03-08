@@ -1,4 +1,4 @@
-// Copyright 2016 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@
 #include "s2/base/stringprintf.h"
 #include "s2/strings/serialize.h"
 #include "s2/strings/split.h"
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2.h"
 #include "s2/s2latlng.h"
 #include "s2/s2loop.h"
@@ -29,6 +30,7 @@
 #include "s2/s2polyline.h"
 
 using std::pair;
+using std::unique_ptr;
 using std::vector;
 
 namespace s2textformat {
@@ -40,35 +42,34 @@ static double ParseDouble(const string& str) {
   return value;
 }
 
-void ParseLatLngs(string const& str, vector<S2LatLng>* latlngs) {
+vector<S2LatLng> ParseLatLngs(string const& str) {
   vector<pair<string, string>> ps;
   CHECK(DictionaryParse(str, &ps)) << ": str == \"" << str << "\"";
-  latlngs->clear();
+  vector<S2LatLng> latlngs;
   for (auto const& p : ps) {
-    latlngs->push_back(S2LatLng::FromDegrees(ParseDouble(p.first),
-                                             ParseDouble(p.second)));
+    latlngs.push_back(S2LatLng::FromDegrees(ParseDouble(p.first),
+                                            ParseDouble(p.second)));
   }
+  return latlngs;
 }
 
-void ParsePoints(string const& str, vector<S2Point>* vertices) {
-  vector<S2LatLng> latlngs;
-  ParseLatLngs(str, &latlngs);
-  vertices->clear();
+vector<S2Point> ParsePoints(string const& str) {
+  vector<S2LatLng> latlngs = ParseLatLngs(str);
+  vector<S2Point> vertices;
   for (auto const& latlng : latlngs) {
-    vertices->push_back(latlng.ToPoint());
+    vertices.push_back(latlng.ToPoint());
   }
+  return vertices;
 }
 
 S2Point MakePoint(string const& str) {
-  vector<S2Point> vertices;
-  ParsePoints(str, &vertices);
+  vector<S2Point> vertices = ParsePoints(str);
   CHECK_EQ(vertices.size(), 1);
   return vertices[0];
 }
 
 S2LatLngRect MakeLatLngRect(string const& str) {
-  vector<S2LatLng> latlngs;
-  ParseLatLngs(str, &latlngs);
+  vector<S2LatLng> latlngs = ParseLatLngs(str);
   CHECK_GT(latlngs.size(), 0);
   S2LatLngRect rect = S2LatLngRect::FromPoint(latlngs[0]);
   for (int i = 1; i < latlngs.size(); ++i) {
@@ -77,37 +78,35 @@ S2LatLngRect MakeLatLngRect(string const& str) {
   return rect;
 }
 
-S2Loop* MakeLoop(string const& str) {
-  if (str == "empty") return new S2Loop(S2Loop::kEmpty());
-  if (str == "full") return new S2Loop(S2Loop::kFull());
-  vector<S2Point> vertices;
-  ParsePoints(str, &vertices);
-  return new S2Loop(vertices);
+unique_ptr<S2Loop> MakeLoop(string const& str) {
+  if (str == "empty") return gtl::MakeUnique<S2Loop>(S2Loop::kEmpty());
+  if (str == "full") return gtl::MakeUnique<S2Loop>(S2Loop::kFull());
+  vector<S2Point> vertices = ParsePoints(str);
+  return gtl::MakeUnique<S2Loop>(vertices);
 }
 
-S2Polyline* MakePolyline(string const& str) {
-  vector<S2Point> vertices;
-  ParsePoints(str, &vertices);
-  return new S2Polyline(vertices);
+unique_ptr<S2Polyline> MakePolyline(string const& str) {
+  vector<S2Point> vertices = ParsePoints(str);
+  return gtl::MakeUnique<S2Polyline>(vertices);
 }
 
-static S2Polygon* InternalMakePolygon(string const& str,
-                                      bool normalize_loops) {
+static unique_ptr<S2Polygon> InternalMakePolygon(string const& str,
+                                                 bool normalize_loops) {
   vector<string> loop_strs = strings::Split(str, ';', strings::SkipEmpty());
-  vector<S2Loop*> loops;
+  vector<unique_ptr<S2Loop>> loops;
   for (auto const& loop_str : loop_strs) {
-    S2Loop* loop = MakeLoop(loop_str);
+    auto loop = MakeLoop(loop_str);
     if (normalize_loops) loop->Normalize();
-    loops.push_back(loop);
+    loops.push_back(std::move(loop));
   }
-  return new S2Polygon(&loops);  // Takes ownership.
+  return gtl::MakeUnique<S2Polygon>(std::move(loops));
 }
 
-S2Polygon* MakePolygon(string const& str) {
+unique_ptr<S2Polygon> MakePolygon(string const& str) {
   return InternalMakePolygon(str, true);
 }
 
-S2Polygon* MakeVerbatimPolygon(string const& str) {
+unique_ptr<S2Polygon> MakeVerbatimPolygon(string const& str) {
   return InternalMakePolygon(str, false);
 }
 
@@ -137,28 +136,28 @@ string ToString(S2LatLngRect const& rect) {
   return out;
 }
 
-string ToString(S2Loop const* loop) {
+string ToString(S2Loop const& loop) {
   string out;
-  if (loop->num_vertices() > 0) {
-    AppendVertices(&loop->vertex(0), loop->num_vertices(), &out);
+  if (loop.num_vertices() > 0) {
+    AppendVertices(&loop.vertex(0), loop.num_vertices(), &out);
   }
   return out;
 }
 
-string ToString(S2Polyline const* polyline) {
+string ToString(S2Polyline const& polyline) {
   string out;
-  if (polyline->num_vertices() > 0) {
-    AppendVertices(&polyline->vertex(0), polyline->num_vertices(), &out);
+  if (polyline.num_vertices() > 0) {
+    AppendVertices(&polyline.vertex(0), polyline.num_vertices(), &out);
   }
   return out;
 }
 
-string ToString(S2Polygon const* polygon) {
+string ToString(S2Polygon const& polygon) {
   string out;
-  for (int i = 0; i < polygon->num_loops(); ++i) {
+  for (int i = 0; i < polygon.num_loops(); ++i) {
     if (i > 0) out += ";\n";
-    S2Loop const* loop = polygon->loop(i);
-    AppendVertices(&loop->vertex(0), loop->num_vertices(), &out);
+    S2Loop const& loop = *polygon.loop(i);
+    AppendVertices(&loop.vertex(0), loop.num_vertices(), &out);
   }
   return out;
 }

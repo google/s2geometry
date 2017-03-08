@@ -57,7 +57,7 @@
 #ifndef S2_UTIL_CODING_NTH_DERIVATIVE_H_
 #define S2_UTIL_CODING_NTH_DERIVATIVE_H_
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/type_traits.h"
 

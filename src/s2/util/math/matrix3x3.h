@@ -107,19 +107,6 @@ class Matrix3x3 {
     return (*this);
   }
 
-  // Compare
-  inline bool operator==(const Matrix3x3 &mb) const {
-    return (m_[0][0] == mb.m_[0][0]) &&
-           (m_[0][1] == mb.m_[0][1]) &&
-           (m_[0][2] == mb.m_[0][2]) &&
-           (m_[1][0] == mb.m_[1][0]) &&
-           (m_[1][1] == mb.m_[1][1]) &&
-           (m_[1][2] == mb.m_[1][2]) &&
-           (m_[2][0] == mb.m_[2][0]) &&
-           (m_[2][1] == mb.m_[2][1]) &&
-           (m_[2][2] == mb.m_[2][2]);
-  }
-
   // Matrix addition
   inline Matrix3x3& operator+=(const Matrix3x3 &mb) {
     m_[0][0] += mb.m_[0][0];
@@ -527,6 +514,22 @@ class Matrix3x3 {
       }
     }
     return false;
+  }
+
+  friend bool operator==(const Matrix3x3 &a, const Matrix3x3 &b) {
+    return a.m_[0][0] == b.m_[0][0] &&
+           a.m_[0][1] == b.m_[0][1] &&
+           a.m_[0][2] == b.m_[0][2] &&
+           a.m_[1][0] == b.m_[1][0] &&
+           a.m_[1][1] == b.m_[1][1] &&
+           a.m_[1][2] == b.m_[1][2] &&
+           a.m_[2][0] == b.m_[2][0] &&
+           a.m_[2][1] == b.m_[2][1] &&
+           a.m_[2][2] == b.m_[2][2];
+  }
+
+  friend bool operator!=(const Matrix3x3 &a, const Matrix3x3 &b) {
+    return !(a == b);
   }
 
   friend std::ostream &operator <<(std::ostream &out, const Matrix3x3 &mb) {

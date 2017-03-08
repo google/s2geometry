@@ -34,6 +34,7 @@
 #include "s2/s2cell.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
+#include "s2/s2predicates.h"
 #include "s2/util/math/matrix3x3.h"
 
 using std::max;
@@ -138,14 +139,14 @@ bool S2Polyline::FindValidationError(S2Error* error) const {
   return false;
 }
 
-S2Polyline::S2Polyline(S2Polyline const* src)
-  : num_vertices_(src->num_vertices_),
+S2Polyline::S2Polyline(S2Polyline const& src)
+  : num_vertices_(src.num_vertices_),
     vertices_(new S2Point[num_vertices_]) {
-  std::copy(&src->vertices_[0], &src->vertices_[num_vertices_], &vertices_[0]);
+  std::copy(&src.vertices_[0], &src.vertices_[num_vertices_], &vertices_[0]);
 }
 
 S2Polyline* S2Polyline::Clone() const {
-  return new S2Polyline(this);
+  return new S2Polyline(*this);
 }
 
 S1Angle S2Polyline::GetLength() const {
@@ -274,8 +275,8 @@ bool S2Polyline::IsOnRight(S2Point const& point) const {
       next_vertex < num_vertices()) {
     if (point == vertex(next_vertex-1))
       return false;  // Polyline vertices are not on the RHS.
-    return S2::OrderedCCW(vertex(next_vertex-2), point, vertex(next_vertex),
-                          vertex(next_vertex-1));
+    return s2pred::OrderedCCW(vertex(next_vertex-2), point, vertex(next_vertex),
+                              vertex(next_vertex-1));
   }
 
   // Otherwise, the closest point C is incident to exactly one polyline edge.
@@ -283,7 +284,7 @@ bool S2Polyline::IsOnRight(S2Point const& point) const {
   if (next_vertex == num_vertices())
     --next_vertex;
 
-  return S2::Sign(point, vertex(next_vertex), vertex(next_vertex - 1)) > 0;
+  return s2pred::Sign(point, vertex(next_vertex), vertex(next_vertex - 1)) > 0;
 }
 
 bool S2Polyline::Intersects(S2Polyline const* line) const {
@@ -315,7 +316,7 @@ void S2Polyline::Reverse() {
 S2LatLngRect S2Polyline::GetRectBound() const {
   S2EdgeUtil::RectBounder bounder;
   for (int i = 0; i < num_vertices(); ++i) {
-    bounder.AddPoint(&vertex(i));
+    bounder.AddPoint(vertex(i));
   }
   return bounder.GetBound();
 }
@@ -483,10 +484,10 @@ bool S2Polyline::Equals(S2Polyline const* b) const {
   return true;
 }
 
-bool S2Polyline::ApproxEquals(S2Polyline const* b, double max_error) const {
-  if (num_vertices() != b->num_vertices()) return false;
+bool S2Polyline::ApproxEquals(S2Polyline const& b, S1Angle max_error) const {
+  if (num_vertices() != b.num_vertices()) return false;
   for (int offset = 0; offset < num_vertices(); ++offset) {
-    if (!S2::ApproxEquals(vertex(offset), b->vertex(offset), max_error)) {
+    if (!S2::ApproxEquals(vertex(offset), b.vertex(offset), max_error)) {
       return false;
     }
   }
@@ -628,4 +629,12 @@ bool S2Polyline::NearlyCoversPolyline(S2Polyline const& covered,
     }
   }
   return false;
+}
+
+int S2Polyline::Shape::num_chains() const {
+  return min(1, Shape::num_edges());  // Avoid virtual call.
+}
+
+int S2Polyline::Shape::chain_start(int i) const {
+  return i == 0 ? 0 : Shape::num_edges();  // Avoid virtual call.
 }

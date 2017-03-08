@@ -22,12 +22,12 @@
 #include <memory>
 #include <set>
 #include <string>
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/strings/join.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2textformat.h"
-#include "s2/util/gtl/ptr_util.h"
 #include "s2/util/gtl/stl_util.h"
 
 using gtl::MakeUnique;
@@ -35,8 +35,6 @@ using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
 using s2builderutil::S2PolylineVectorLayer;
 using std::map;
-using std::max;
-using std::pair;
 using std::set;
 using std::unique_ptr;
 using std::vector;
@@ -65,8 +63,8 @@ void TestS2Polygon(vector<char const*> const& input_strs,
   // The input strings in tests may not be in normalized form, so we build an
   // S2Polygon and convert it back to a string.
   unique_ptr<S2Polygon> expected(s2textformat::MakePolygon(expected_str));
-  EXPECT_EQ(s2textformat::ToString(expected.get()),
-            s2textformat::ToString(&output));
+  EXPECT_EQ(s2textformat::ToString(*expected),
+            s2textformat::ToString(output));
 }
 
 void TestS2Polygon(vector<char const*> const& input_strs,
@@ -169,7 +167,7 @@ static void TestEdgeLabels(EdgeType edge_type) {
                         0, &builder, &edge_label_map);
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
-  LOG(INFO) << s2textformat::ToString(&output);
+  LOG(INFO) << s2textformat::ToString(output);
   vector<int> expected_loop_sizes = { 4, 3, 3 };
   ASSERT_EQ(expected_loop_sizes.size(), label_set_ids.size());
   for (int i = 0; i < expected_loop_sizes.size(); ++i) {
@@ -204,7 +202,7 @@ TEST(S2PolygonLayer, ThreeLoopsIntoOne) {
 }
 
 TEST(S2PolygonLayer, TrianglePyramid) {
-  // A big CCW triangle contained 3 CW triangular holes.  The whole thing
+  // A big CCW triangle containing 3 CW triangular holes.  The whole thing
   // looks like a pyramid of nine triangles.  The output consists of 6
   // positive triangles with no holes.
   TestS2Polygon(
@@ -286,7 +284,7 @@ void TestS2Polyline(
   }
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
-  EXPECT_EQ(expected_str, s2textformat::ToString(&output));
+  EXPECT_EQ(expected_str, s2textformat::ToString(output));
 }
 
 // Convenience function that tests both directed and undirected edges.
@@ -319,6 +317,29 @@ TEST(S2PolylineLayer, OneEdge) {
 TEST(S2PolylineLayer, StraightLineWithBacktracking) {
   char const* input = "0:0, 1:0, 2:0, 3:0, 2:0, 1:0, 2:0, 3:0, 4:0";
   TestS2Polyline({input}, input, input);
+}
+
+TEST(S2PolylineLayer, EarlyWalkTerminationWithEndLoop1) {
+  // Test that the "early walk termination" code (which is needed by
+  // S2PolylineVectorLayer in order to implement idempotency) does not create
+  // two polylines when it is possible to assemble the edges into one.
+  //
+  // This example tests a code path where the early walk termination code
+  // should not be triggered at all (but was at one point due to a bug).
+  S2Builder::Options options;
+  options.set_snap_function(s2builderutil::IntLatLngSnapFunction(2));
+  TestS2Polyline({"0:0, 0:2, 0:1"},
+                 "0:0, 0:1, 0:2, 0:1",
+                 EdgeType::DIRECTED, options);
+}
+
+TEST(S2PolylineLayer, EarlyWalkTerminationWithEndLoop2) {
+  // This tests a different code path where the walk is terminated early
+  // (yield a polyline with one edge), and then the walk is "maximimzed" by
+  // appending a two-edge loop to the end.
+  TestS2Polyline({"0:0, 0:1", "0:2, 0:1", "0:1, 0:2"},
+                 "0:0, 0:1, 0:2, 0:1",
+                 EdgeType::DIRECTED);
 }
 
 TEST(S2PolylineLayer, SimpleLoop) {
@@ -425,7 +446,7 @@ void TestS2PolylineVector(
   SCOPED_TRACE(layer_options.edge_type() == EdgeType::DIRECTED ?
                "DIRECTED" : "UNDIRECTED");
   S2Builder builder(builder_options);
-  vector<S2Polyline*> output;
+  vector<unique_ptr<S2Polyline>> output;
   builder.StartLayer(MakeUnique<S2PolylineVectorLayer>(&output, layer_options));
   for (auto input_str : input_strs) {
     builder.AddPolyline(*MakePolyline(input_str));
@@ -433,12 +454,11 @@ void TestS2PolylineVector(
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   vector<string> output_strs;
-  for (S2Polyline* polyline : output) {
-    output_strs.push_back(s2textformat::ToString(polyline));
+  for (auto const& polyline : output) {
+    output_strs.push_back(s2textformat::ToString(*polyline));
   }
   EXPECT_EQ(strings::Join(expected_strs, "; "),
             strings::Join(output_strs, "; "));
-  STLDeleteElements(&output);
 }
 
 // Convenience function that tests both directed and undirected edges.
@@ -546,7 +566,15 @@ TEST(S2PolylineVectorLayer, EarlyWalkTermination) {
     "0:2, 1:2, 2:2",
     "2:1, 2:2, 2:3"
   };
-  TestS2PolylineVector(input, input, input, layer_options);
+  // Note that this is *not* guaranteed to build the original polylines when
+  // the input edges are undirected.
+  vector<char const*> undirected = {
+    "0:1, 1:1, 1:0",
+    "1:1, 1:2, 0:2",
+    "2:2, 1:2",
+    "2:1, 2:2, 2:3"
+  };
+  TestS2PolylineVector(input, input, undirected, layer_options);
 }
 
 TEST(S2PolylineVectorLayer, InputEdgeStartsMultipleLoops) {
@@ -584,20 +612,54 @@ TEST(S2PolylineVectorLayer, InputEdgeStartsMultipleLoops) {
                        layer_options, builder_options);
 }
 
+TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
+  S2Builder builder((S2Builder::Options()));
+  vector<unique_ptr<S2Polyline>> output;
+  S2PolylineVectorLayer::LabelSetIds label_set_ids;
+  IdSetLexicon label_set_lexicon;
+  S2PolylineVectorLayer::Options layer_options;
+  layer_options.set_duplicate_edges(
+      S2PolylineVectorLayer::Options::DuplicateEdges::MERGE);
+  builder.StartLayer(MakeUnique<S2PolylineVectorLayer>(
+      &output, &label_set_ids, &label_set_lexicon, layer_options));
+  builder.set_label(1);
+  builder.AddPolyline(*MakePolyline("0:0, 0:1, 0:2"));
+  builder.set_label(2);
+  builder.AddPolyline(*MakePolyline("0:1, 0:2, 0:3"));
+  builder.clear_labels();
+  builder.AddPolyline(*MakePolyline("0:4, 0:5"));
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  vector<vector<vector<int32>>> expected = {{{1}, {1, 2}, {2}}, {{}}};
+  ASSERT_EQ(expected.size(), label_set_ids.size());
+  for (int i = 0; i < expected.size(); ++i) {
+    ASSERT_EQ(expected[i].size(), label_set_ids[i].size());
+    for (int j = 0; j < expected[i].size(); ++j) {
+      ASSERT_EQ(expected[i][j].size(),
+                label_set_lexicon.id_set(label_set_ids[i][j]).size());
+      int k = 0;
+      for (int32 label : label_set_lexicon.id_set(label_set_ids[i][j])) {
+        EXPECT_EQ(expected[i][j][k++], label);
+      }
+    }
+  }
+}
+
+
 #if 0
 // Sketch of a test that converts a road network into a polygon mesh.
-TEST(PolygonShapeVectorLayer, RoadNetwork) {
+TEST(LaxPolygonVectorLayer, RoadNetwork) {
   S2Builder::Options builder_options;
   builder_options.set_snap_function(s2builderutil::IntLatLngSnapFunction(7));
   builder_options.set_split_crossing_edges(true);
   S2Builder builder(builder_options);
-  PolygonShapeVectorLayer::Options layer_options;
+  LaxPolygonVectorLayer::Options layer_options;
   layer_options.set_degenerate_boundaries(
-      PolygonShapeVectorLayer::Options::DegenerateBoundaries::KEEP);
-  vector<s2shapeutil::PolygonShape*> polygons;
-  PolygonShapeVectorLayer::LabelSetIds label_set_ids;
+      LaxPolygonVectorLayer::Options::DegenerateBoundaries::KEEP);
+  LaxPolygonVector polygons;
+  LaxPolygonVectorLayer::LabelSetIds label_set_ids;
   IdSetLexicon label_set_lexicon;
-  builder.StartLayer(MakeUnique<PolygonShapeVectorLayer>(
+  builder.StartLayer(MakeUnique<LaxPolygonVectorLayer>(
       &polygons, &label_set_ids, &label_set_lexicon, layer_options));
   ValueLexicon<FeatureId> feature_id_lexicon;
   for (auto const& feature : features) {

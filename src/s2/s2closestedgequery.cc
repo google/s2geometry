@@ -26,8 +26,6 @@
 #include "s2/s2edgeutil.h"
 #include "s2/s2regioncoverer.h"
 
-using std::vector;
-
 S2ClosestEdgeQuery::~S2ClosestEdgeQuery() {
   // Prevent inline destructor bloat by providing a definition.
 }
@@ -112,7 +110,7 @@ void S2ClosestEdgeQuery::AddInitialRange(S2ShapeIndex::Iterator const& first,
   if (first.id() == last.id()) {
     // The range consists of a single index cell.
     index_covering_.push_back(first.id());
-    index_cells_.push_back(first.cell());
+    index_cells_.push_back(&first.cell());
   } else {
     // Add the lowest common ancestor of the given range.
     int level = first.id().GetCommonAncestorLevel(last.id());
@@ -180,7 +178,7 @@ void S2ClosestEdgeQuery::FindClosestEdgesBruteForce() {
     if (shape == nullptr) continue;
     int num_edges = shape->num_edges();
     for (int e = 0; e < num_edges; ++e) {
-      MaybeAddResult(shape, e);
+      MaybeAddResult(*shape, e);
     }
   }
 }
@@ -242,7 +240,7 @@ void S2ClosestEdgeQuery::InitQueue() {
   // cell containing "target" will be processed twice, but in general this is
   // still faster.
   if (max_edges_ == 1 && iter_.Locate(target_->center())) {
-    ProcessEdges(QueueEntry(S1ChordAngle::Zero(), iter_.id(), iter_.cell()));
+    ProcessEdges(QueueEntry(S1ChordAngle::Zero(), iter_.id(), &iter_.cell()));
   }
   if (max_distance_limit_ == S1ChordAngle::Infinity()) {
     // Start with the precomputed index covering.
@@ -280,7 +278,7 @@ void S2ClosestEdgeQuery::InitQueue() {
         if (r == S2ShapeIndex::INDEXED) {
           // This cell is a descendant of an index cell.  Enqueue it and skip
           // any other initial cells that are also descendants of this cell.
-          EnqueueCell(iter_.id(), iter_.cell());
+          EnqueueCell(iter_.id(), &iter_.cell());
           S2CellId const last_id = iter_.id().range_max();
           while (++i < initial_cells_.size() && initial_cells_[i] <= last_id)
             continue;
@@ -294,22 +292,22 @@ void S2ClosestEdgeQuery::InitQueue() {
   }
 }
 
-void S2ClosestEdgeQuery::MaybeAddResult(S2Shape const* shape, int edge_id) {
+void S2ClosestEdgeQuery::MaybeAddResult(S2Shape const& shape, int edge_id) {
   S2Point const *v0, *v1;
-  shape->GetEdge(edge_id, &v0, &v1);
+  shape.GetEdge(edge_id, &v0, &v1);
 
   S1ChordAngle distance = max_distance_limit_;
   if (!target_->UpdateMinDistance(*v0, *v1, &distance)) return;
 
   if (max_edges_ == 1) {
     // Optimization for the common case where only the closest edge is wanted.
-    tmp_result_singleton_ = Result(distance, shape->id(), edge_id);
+    tmp_result_singleton_ = Result(distance, shape.id(), edge_id);
     max_distance_limit_ = distance - max_error_;
   } else {
     // Add this edge to tmp_results_.  Note that even if we already have
     // enough edges, we can't erase an element before insertion because the
     // "new" edge might in fact be a duplicate.
-    tmp_results_.insert(Result(distance, shape->id(), edge_id));
+    tmp_results_.insert(Result(distance, shape.id(), edge_id));
     int size = tmp_results_.size();
     if (size >= max_edges_) {
       if (size > max_edges_) {
@@ -323,7 +321,7 @@ void S2ClosestEdgeQuery::MaybeAddResult(S2Shape const* shape, int edge_id) {
 // Return the number of edges in the given index cell.
 int CountEdges(S2ShapeIndexCell const* cell) {
   int count = 0;
-  for (int s = 0; s < cell->num_shapes(); ++s) {
+  for (int s = 0; s < cell->num_clipped(); ++s) {
     count += cell->clipped(s).num_edges();
   }
   return count;
@@ -332,11 +330,11 @@ int CountEdges(S2ShapeIndexCell const* cell) {
 // Process all the edges of the given index cell.
 void S2ClosestEdgeQuery::ProcessEdges(QueueEntry const& entry) {
   S2ShapeIndexCell const* index_cell = entry.index_cell;
-  for (int s = 0; s < index_cell->num_shapes(); ++s) {
+  for (int s = 0; s < index_cell->num_clipped(); ++s) {
     S2ClippedShape const& clipped = index_cell->clipped(s);
     S2Shape const* shape = index_->shape(clipped.shape_id());
     for (int j = 0; j < clipped.num_edges(); ++j) {
-      MaybeAddResult(shape, clipped.edge(j));
+      MaybeAddResult(*shape, clipped.edge(j));
     }
   }
 }
@@ -346,7 +344,7 @@ void S2ClosestEdgeQuery::ProcessEdges(QueueEntry const& entry) {
 inline void S2ClosestEdgeQuery::EnqueueCurrentCell(S2CellId id) {
   DCHECK(id.contains(iter_.id()));
   if (iter_.id() == id) {
-    EnqueueCell(id, iter_.cell());
+    EnqueueCell(id, &iter_.cell());
   } else {
     EnqueueCell(id, nullptr);
   }
