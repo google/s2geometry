@@ -15,9 +15,6 @@ find_package(PythonInterp)
 find_package(PythonLibs)
 
 add_definitions(-Wno-deprecated-declarations -std=c++11)
-# Controls HASH_NAMESPACE in port.h.
-# Use std::hash instead of __gnu_cxx::hash.
-add_definitions(-DUSE_STD_HASH)
 
 # If OpenSSL is installed in a non-standard location, configure with
 # something like:
@@ -36,7 +33,7 @@ file(GLOB S2FilesGlob
      src/s2/s1angle.cc
      src/s2/s1chordangle.cc
      src/s2/s1interval.cc
-     src/s2/s2.cc
+     src/s2/s2boundary_operation.cc
      src/s2/s2builder.cc
      src/s2/s2builder_graph.cc
      src/s2/s2builderutil_layers.cc
@@ -45,20 +42,28 @@ file(GLOB S2FilesGlob
      src/s2/s2cell.cc
      src/s2/s2cellid.cc
      src/s2/s2cellunion.cc
+     src/s2/s2centroids.cc
      src/s2/s2closestedgequery.cc
      src/s2/s2convexhullquery.cc
+     src/s2/s2coords.cc
      src/s2/s2crossingedgequery.cc
+     src/s2/s2debug.cc
+     src/s2/s2earth.cc
      src/s2/s2edgeutil.cc
      src/s2/s2error.cc
      src/s2/s2latlng.cc
      src/s2/s2latlngrect.cc
      src/s2/s2loop.cc
+     src/s2/s2measures.cc
+     src/s2/s2metrics.cc
      src/s2/s2paddedcell.cc
      src/s2/s2pointcompression.cc
      src/s2/s2pointregion.cc
+     src/s2/s2pointutil.cc
      src/s2/s2polygon.cc
-     src/s2/s2polygonbuilder.cc
      src/s2/s2polyline.cc
+     src/s2/s2polyline_simplifier.cc
+     src/s2/s2predicates.cc
      src/s2/s2r2rect.cc
      src/s2/s2region.cc
      src/s2/s2regioncoverer.cc
@@ -69,6 +74,7 @@ file(GLOB S2FilesGlob
      src/s2/s2textformat.cc
      src/s2/sequence_lexicon.cc
      src/s2/strings/*.cc
+     src/s2/third_party/absl/port/internal/*.cc
      src/s2/util/bits/*.cc
      src/s2/util/coding/*.cc
      src/s2/util/hash/*.cc
@@ -91,15 +97,22 @@ install(FILES ${S2Headers}
 install(FILES src/s2/base/atomicops.h
               src/s2/base/casts.h
               src/s2/base/int128.h
-              src/s2/base/integral_types.h
               src/s2/base/macros.h
               src/s2/base/mutex.h
-              src/s2/base/port.h
-              src/s2/base/port_hash.h
               src/s2/base/spinlock.h
               src/s2/base/template_util.h
               src/s2/base/type_traits.h
         DESTINATION include/s2/base)
+install(FILES src/s2/third_party/absl/base/config.h
+              src/s2/third_party/absl/base/integral_types.h
+              src/s2/third_party/absl/base/port.h
+        DESTINATION include/s2/third_party/absl/base)
+install(FILES src/s2/third_party/absl/base/internal/port_hash.inc
+        DESTINATION include/s2/third_party/absl/base/internal)
+install(FILES src/s2/third_party/absl/container/inlined_vector.h
+        DESTINATION include/s2/third_party/absl/container)
+install(FILES src/s2/third_party/absl/meta/type_traits.h
+        DESTINATION include/s2/third_party/absl/meta)
 install(FILES src/s2/util/bits/bits.h
         DESTINATION include/s2/util/bits)
 install(FILES src/s2/util/btree/btree.h
@@ -117,7 +130,6 @@ install(FILES src/s2/util/gtl/compact_array.h
               src/s2/util/gtl/dense_hash_set.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
-              src/s2/util/gtl/inlined_vector.h
               src/s2/util/gtl/libc_allocator_with_realloc.h
               src/s2/util/gtl/manual_constructor.h
         DESTINATION include/s2/util/gtl)

@@ -25,6 +25,10 @@
 
 #include "s2/s2convexhullquery.h"
 
+#include "s2/third_party/absl/memory/memory.h"
+#include "s2/s2predicates.h"
+
+using std::unique_ptr;
 using std::vector;
 
 S2ConvexHullQuery::S2ConvexHullQuery()
@@ -88,13 +92,13 @@ class OrderedCcwAround {
   explicit OrderedCcwAround(S2Point const& center) : center_(center) {}
   bool operator()(S2Point const& x, S2Point const& y) const {
     // If X and Y are equal, this will return false (as desired).
-    return S2::Sign(center_, x, y) > 0;
+    return s2pred::Sign(center_, x, y) > 0;
   }
  private:
   S2Point center_;
 };
 
-S2Loop* S2ConvexHullQuery::GetConvexHull() {
+unique_ptr<S2Loop> S2ConvexHullQuery::GetConvexHull() {
   S2Cap cap = GetCapBound();
   if (cap.height() >= 1) {
     // The bounding cap is not convex.  The current bounding cap
@@ -103,7 +107,7 @@ S2Loop* S2ConvexHullQuery::GetConvexHull() {
     // case, we need a convex bounding cap to proceed with the algorithm below
     // (in order to construct a point "origin" that is definitely outside the
     // convex hull).
-    return new S2Loop(S2Loop::kFull());
+    return gtl::MakeUnique<S2Loop>(S2Loop::kFull());
   }
   // This code implements Andrew's monotone chain algorithm, which is a simple
   // variant of the Graham scan.  Rather than sorting by x-coordinate, instead
@@ -122,7 +126,7 @@ S2Loop* S2ConvexHullQuery::GetConvexHull() {
   // Special cases for fewer than 3 points.
   if (points_.size() < 3) {
     if (points_.empty()) {
-      return new S2Loop(S2Loop::kEmpty());
+      return gtl::MakeUnique<S2Loop>(S2Loop::kEmpty());
     } else if (points_.size() == 1) {
       return GetSinglePointLoop(points_[0]);
     } else {
@@ -131,7 +135,7 @@ S2Loop* S2ConvexHullQuery::GetConvexHull() {
   }
 
   // Verify that all points lie within a 180 degree span around the origin.
-  DCHECK_GE(S2::Sign(origin, points_.front(), points_.back()), 0);
+  DCHECK_GE(s2pred::Sign(origin, points_.front(), points_.back()), 0);
 
   // Generate the lower and upper halves of the convex hull.  Each half
   // consists of the maximal subset of vertices such that the edge chain makes
@@ -147,7 +151,7 @@ S2Loop* S2ConvexHullQuery::GetConvexHull() {
   lower.pop_back();
   upper.pop_back();
   lower.insert(lower.end(), upper.begin(), upper.end());
-  return new S2Loop(lower);
+  return gtl::MakeUnique<S2Loop>(lower);
 }
 
 // Iterate through the given points, selecting the maximal subset of points
@@ -157,14 +161,14 @@ void S2ConvexHullQuery::GetMonotoneChain(vector<S2Point>* output) {
   for (S2Point const& p : points_) {
     // Remove any points that would cause the chain to make a clockwise turn.
     while (output->size() >= 2 &&
-           S2::Sign(output->end()[-2], output->back(), p) <= 0) {
+           s2pred::Sign(output->end()[-2], output->back(), p) <= 0) {
       output->pop_back();
     }
     output->push_back(p);
   }
 }
 
-S2Loop* S2ConvexHullQuery::GetSinglePointLoop(S2Point const& p) {
+unique_ptr<S2Loop> S2ConvexHullQuery::GetSinglePointLoop(S2Point const& p) {
   // Construct a 3-vertex polygon consisting of "p" and two nearby vertices.
   // Note that Contains(p) may be false for the resulting loop (see comments
   // in header file).
@@ -175,17 +179,17 @@ S2Loop* S2ConvexHullQuery::GetSinglePointLoop(S2Point const& p) {
   vertices.push_back(p);
   vertices.push_back((p + kOffset * d0).Normalize());
   vertices.push_back((p + kOffset * d1).Normalize());
-  return new S2Loop(vertices);
+  return gtl::MakeUnique<S2Loop>(vertices);
 }
 
-S2Loop* S2ConvexHullQuery::GetSingleEdgeLoop(S2Point const& a,
-                                             S2Point const& b) {
+unique_ptr<S2Loop> S2ConvexHullQuery::GetSingleEdgeLoop(S2Point const& a,
+                                                        S2Point const& b) {
   // Construct a loop consisting of the two vertices and their midpoint.
   vector<S2Point> vertices;
   vertices.push_back(a);
   vertices.push_back(b);
   vertices.push_back((a + b).Normalize());
-  S2Loop* loop = new S2Loop(vertices);
+  auto loop = gtl::MakeUnique<S2Loop>(vertices);
   // The resulting loop may be clockwise, so invert it if necessary.
   loop->Normalize();
   return loop;

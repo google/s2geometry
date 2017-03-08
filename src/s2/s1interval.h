@@ -94,10 +94,10 @@ class S1Interval {
   bool is_valid() const;
 
   // Return true if the interval contains all points on the unit circle.
-  bool is_full() const { return hi() - lo() == 2 * M_PI; }
+  bool is_full() const { return lo() == -M_PI && hi() == M_PI; }
 
   // Return true if the interval is empty, i.e. it contains no points.
-  bool is_empty() const { return lo() - hi() == 2 * M_PI; }
+  bool is_empty() const { return lo() == M_PI && hi() == -M_PI; }
 
   // Return true if lo() > hi().  (This is true for empty intervals.)
   bool is_inverted() const { return lo() > hi(); }
@@ -160,7 +160,7 @@ class S1Interval {
 
   // Return the closest point in the interval to the given point "p".
   // The interval must be non-empty.
-  double ClampPoint(double p) const;
+  double Project(double p) const;
 
   // Return an interval that has been expanded on each side by the given
   // distance "margin".  If "margin" is negative, then shrink the interval on
@@ -241,7 +241,7 @@ inline S1Interval S1Interval::Full() {
 }
 
 inline bool S1Interval::is_valid() const {
-  return (fabs(lo()) <= M_PI && fabs(hi()) <= M_PI &&
+  return (std::fabs(lo()) <= M_PI && std::fabs(hi()) <= M_PI &&
           !(lo() == -M_PI && hi() != M_PI) &&
           !(hi() == -M_PI && lo() != M_PI));
 }

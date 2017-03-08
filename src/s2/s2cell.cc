@@ -32,7 +32,10 @@
 #include "s2/s2edgeutil.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2measures.h"
 
+using S2::internal::kPosToIJ;
+using S2::internal::kPosToOrientation;
 using std::min;
 
 // Since S2Cells are copied by value, the following assertion is a reminder
@@ -45,6 +48,15 @@ using std::min;
 static_assert(sizeof(S2Cell) <= ((43+2*sizeof(void*)-1) & -sizeof(void*)),
               "S2Cell is getting bloated");
 
+S2Cell::S2Cell(S2CellId id) {
+  id_ = id;
+  int ij[2], orientation;
+  face_ = id.ToFaceIJOrientation(&ij[0], &ij[1], &orientation);
+  orientation_ = orientation;  // Compress int to a byte.
+  level_ = id.level();
+  uv_ = S2CellId::IJLevelToBoundUV(ij, level_);
+}
+
 S2Point S2Cell::GetVertexRaw(int k) const {
   return S2::FaceUVtoXYZ(face_, uv_.GetVertex(k));
 }
@@ -56,15 +68,6 @@ S2Point S2Cell::GetEdgeRaw(int k) const {
     case 2:  return -S2::GetVNorm(face_, uv_[1][1]);  // Top
     default: return -S2::GetUNorm(face_, uv_[0][0]);  // Left
   }
-}
-
-void S2Cell::Init(S2CellId id) {
-  id_ = id;
-  int ij[2], orientation;
-  face_ = id.ToFaceIJOrientation(&ij[0], &ij[1], &orientation);
-  orientation_ = orientation;  // Compress int to a byte.
-  level_ = id.level();
-  uv_ = S2CellId::IJLevelToBoundUV(ij, level_);
 }
 
 bool S2Cell::Subdivide(S2Cell children[4]) const {
@@ -82,12 +85,12 @@ bool S2Cell::Subdivide(S2Cell children[4]) const {
     S2Cell *child = &children[pos];
     child->face_ = face_;
     child->level_ = level_ + 1;
-    child->orientation_ = orientation_ ^ S2::kPosToOrientation[pos];
+    child->orientation_ = orientation_ ^ kPosToOrientation[pos];
     child->id_ = id;
     // We want to split the cell in half in "u" and "v".  To decide which
     // side to set equal to the midpoint value, we look at cell's (i,j)
     // position within its parent.  The index for "i" is in bit 1 of ij.
-    int ij = S2::kPosToIJ[orientation_][pos];
+    int ij = kPosToIJ[orientation_][pos];
     int i = ij >> 1;
     int j = ij & 1;
     child->uv_[0][i] = uv_[0][i];
@@ -275,7 +278,7 @@ bool S2Cell::Contains(S2Point const& p) const {
 
   // Expand the (u,v) bound to ensure that
   //
-  //   S2Cell(S2CellId::FromPoint(p)).Contains(p)
+  //   S2Cell(S2CellId(p)).Contains(p)
   //
   // is always true.  To do this, we need to account for the error when
   // converting from (u,v) coordinates to (s,t) coordinates.  At least in the
@@ -290,7 +293,8 @@ void S2Cell::Encode(Encoder* const encoder) const {
 bool S2Cell::Decode(Decoder* const decoder) {
   S2CellId id;
   if (!id.Decode(decoder)) return false;
-  Init(id);
+  this->~S2Cell();
+  new (this) S2Cell(id);
   return true;
 }
 
@@ -326,7 +330,6 @@ bool S2Cell::VEdgeIsClosest(S2Point const& p, int u_end) const {
 // Given the dot product of a point P with the normal of a u- or v-edge at the
 // given coordinate value, return the distance from P to that edge.
 inline static S1ChordAngle EdgeDistance(double dirIJ, double uv) {
-  DCHECK_GE(dirIJ, 0);
   // Let P by the target point and let R be the closest point on the given
   // edge AB.  The desired distance PR can be expressed as PR^2 = PQ^2 + QR^2
   // where Q is the point P projected onto the plane through the great circle
@@ -342,7 +345,8 @@ inline static S1ChordAngle EdgeDistance(double dirIJ, double uv) {
   return S1ChordAngle::FromLength2(pq2 + qr * qr);
 }
 
-S1ChordAngle S2Cell::GetDistance(S2Point const& target_xyz) const {
+S1ChordAngle S2Cell::GetDistanceInternal(S2Point const& target_xyz,
+                                         bool to_interior) const {
   // All calculations are done in the (u,v,w) coordinates of this cell's face.
   S2Point target = S2::FaceXYZtoUVW(face_, target_xyz);
 
@@ -371,8 +375,17 @@ S1ChordAngle S2Cell::GetDistance(S2Point const& target_xyz) const {
     inside = false;  // Target is above the cell
     if (UEdgeIsClosest(target, 1)) return EdgeDistance(dir11, uv_[1][1]);
   }
-  if (inside) return S1ChordAngle::Zero();
-
+  if (inside) {
+    if (to_interior) return S1ChordAngle::Zero();
+    // Although you might think of S2Cells as rectangles, they are actually
+    // arbitrary quadrilaterals after they are projected onto the sphere.
+    // Therefore the simplest approach is just to find the minimum distance to
+    // any of the four edges.
+    return min(min(EdgeDistance(-dir00, uv_[0][0]),
+                   EdgeDistance(dir01, uv_[0][1])),
+               min(EdgeDistance(-dir10, uv_[1][0]),
+                   EdgeDistance(dir11, uv_[1][1])));
+  }
   // Otherwise, the closest point is one of the four cell vertices.  Note that
   // it is *not* trivial to narrow down the candidates based on the edge sign
   // tests above, because (1) the edges don't meet at right angles and (2)
@@ -383,6 +396,14 @@ S1ChordAngle S2Cell::GetDistance(S2Point const& target_xyz) const {
                             min(VertexChordDist2(target, 0, 1),
                                 VertexChordDist2(target, 1, 1)));
   return S1ChordAngle::FromLength2(chord_dist2);
+}
+
+S1ChordAngle S2Cell::GetDistance(S2Point const& target) const {
+  return GetDistanceInternal(target, true /*to_interior*/);
+}
+
+S1ChordAngle S2Cell::GetBoundaryDistance(S2Point const& target) const {
+  return GetDistanceInternal(target, false /*to_interior*/);
 }
 
 S1ChordAngle S2Cell::GetDistanceToEdge(S2Point const& a,

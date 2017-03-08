@@ -240,7 +240,7 @@ struct sh_is_transparent {
   template<class U> static No Test(...);
 
  public:
-  enum { value = sizeof(Test<T>(0)) == sizeof(Yes) };
+  enum { value = sizeof(Test<T>(nullptr)) == sizeof(Yes) };
 };
 
 #endif  // S2_UTIL_GTL_HASHTABLE_COMMON_H_

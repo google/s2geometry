@@ -48,6 +48,11 @@ TEST(S2Cap, Basic) {
   EXPECT_EQ(2, full.height());
   EXPECT_DOUBLE_EQ(180.0, full.GetRadius().degrees());
 
+  // Test the S1Angle constructor using out-of-range arguments.
+  EXPECT_TRUE(S2Cap(S2Point(1, 0, 0), S1Angle::Radians(-20)).is_empty());
+  EXPECT_TRUE(S2Cap(S2Point(1, 0, 0), S1Angle::Radians(5)).is_full());
+  EXPECT_TRUE(S2Cap(S2Point(1, 0, 0), S1Angle::Infinity()).is_full());
+
   // Check that the default S2Cap is identical to Empty().
   S2Cap default_empty;
   EXPECT_TRUE(default_empty.is_valid());
@@ -326,3 +331,14 @@ TEST(S2Cap, Union) {
   S2Cap hemi = S2Cap::FromCenterHeight(S2Point(0, 0, 1).Normalize(), 1);
   EXPECT_TRUE(hemi.Union(hemi.Complement()).is_full());
 }
+
+TEST(S2Cap, EncodeDecode) {
+  S2Cap cap = S2Cap::FromCenterHeight(S2Point(3, 2, 1).Normalize(), 1);
+  Encoder encoder;
+  cap.Encode(&encoder);
+  Decoder decoder(encoder.base(), encoder.length());
+  S2Cap decoded_cap;
+  EXPECT_TRUE(decoded_cap.Decode(&decoder));
+  EXPECT_EQ(cap, decoded_cap);
+}
+

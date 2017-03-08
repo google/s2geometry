@@ -35,6 +35,10 @@
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2.h"
+#include "s2/s2boundary_operation.h"
+#include "s2/s2builder.h"
+#include "s2/s2builderutil_snap_functions.h"
+#include "s2/s2builderutil_layers.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
@@ -46,19 +50,28 @@
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2loop.h"
+#include "s2/s2measures.h"
 #include "s2/s2pointcompression.h"
-#include "s2/s2polygonbuilder.h"
 #include "s2/s2polyline.h"
+#include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil.h"
-#include "s2/util/gtl/fixedarray.h"
-#include "s2/util/gtl/ptr_util.h"
+#include "s2/third_party/absl/container/fixed_array.h"
+#include "s2/third_party/absl/container/inlined_vector.h"
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/gtl/stl_util.h"
 
+using s2builderutil::IdentitySnapFunction;
+using s2builderutil::S2PolygonLayer;
+using s2builderutil::S2PolylineLayer;
+using s2builderutil::S2PolylineVectorLayer;
+using s2builderutil::S2CellIdSnapFunction;
+using std::fabs;
 using std::max;
 using std::min;
 using std::pair;
 using std::set;
+using std::sqrt;
 using std::unique_ptr;
 using std::vector;
 
@@ -88,24 +101,19 @@ S2Polygon::S2Polygon()
       unindexed_contains_calls_(0) {
 }
 
-S2Polygon::S2Polygon(vector<S2Loop*>* loops)
-    : s2debug_override_(S2Debug::ALLOW) {
-  InitNested(loops);
-}
-
-S2Polygon::S2Polygon(vector<S2Loop*>* loops, S2Debug override)
+S2Polygon::S2Polygon(vector<unique_ptr<S2Loop>> loops, S2Debug override)
     : s2debug_override_(override) {
-  InitNested(loops);
+  InitNested(std::move(loops));
 }
 
-S2Polygon::S2Polygon(S2Loop* loop)
-    : s2debug_override_(S2Debug::ALLOW) {
-  Init(loop);
+S2Polygon::S2Polygon(unique_ptr<S2Loop> loop, S2Debug override)
+    : s2debug_override_(override) {
+  Init(std::move(loop));
 }
 
 S2Polygon::S2Polygon(S2Cell const& cell)
     : s2debug_override_(S2Debug::ALLOW) {
-  Init(new S2Loop(cell));
+  Init(gtl::MakeUnique<S2Loop>(cell));
 }
 
 void S2Polygon::set_s2debug_override(S2Debug override) {
@@ -119,7 +127,7 @@ S2Debug S2Polygon::s2debug_override() const {
 void S2Polygon::Copy(S2Polygon const* src) {
   ClearLoops();
   for (int i = 0; i < src->num_loops(); ++i) {
-    loops_.push_back(src->loop(i)->Clone());
+    loops_.emplace_back(src->loop(i)->Clone());
   }
   has_holes_ = src->has_holes_;
   s2debug_override_ = src->s2debug_override_;
@@ -138,24 +146,20 @@ S2Polygon* S2Polygon::Clone() const {
   return result;
 }
 
-void S2Polygon::Release(vector<S2Loop*>* loops) {
-  if (loops != nullptr) {
-    loops->insert(loops->end(), loops_.begin(), loops_.end());
-  }
+vector<unique_ptr<S2Loop>> S2Polygon::Release() {
   // Reset the polygon to be empty.
-  loops_.clear();
+  vector<unique_ptr<S2Loop>> loops;
+  loops.swap(loops_);
   has_holes_ = false;
   num_vertices_ = 0;
   bound_ = S2LatLngRect::Empty();
   subregion_bound_ = S2LatLngRect::Empty();
   index_.Reset();
+  return loops;
 }
 
 void S2Polygon::ClearLoops() {
   index_.Reset();
-  for (int i = 0; i < loops_.size(); ++i) {
-    delete loops_[i];
-  }
   loops_.clear();
   base::subtle::NoBarrier_Store(&unindexed_contains_calls_, 0);
   error_inconsistent_loop_orientations_ = false;
@@ -278,7 +282,7 @@ void S2Polygon::InitLoops(LoopMap* loop_map) {
     loop_stack.pop();
     if (loop != nullptr) {
       depth = loop->depth();
-      loops_.push_back(loop);
+      loops_.emplace_back(loop);
     }
     const vector<S2Loop*>& children = (*loop_map)[loop];
     for (int i = children.size() - 1; i >= 0; --i) {
@@ -304,9 +308,9 @@ void S2Polygon::InitIndex() {
   }
 }
 
-void S2Polygon::InitNested(vector<S2Loop*>* loops) {
+void S2Polygon::InitNested(vector<unique_ptr<S2Loop>> loops) {
   ClearLoops();
-  loops_.swap(*loops);
+  loops_.swap(loops);
 
   if (num_loops() == 1) {
     InitOneLoop();
@@ -317,6 +321,9 @@ void S2Polygon::InitNested(vector<S2Loop*>* loops) {
     InsertLoop(loop(i), nullptr, &loop_map);
   }
   // Reorder the loops in depth-first traversal order.
+  // Loops are now owned by loop_map, don't let them be
+  // deleted by clear().
+  for (auto& loop : loops_) loop.release();
   loops_.clear();
   InitLoops(&loop_map);
 
@@ -324,15 +331,14 @@ void S2Polygon::InitNested(vector<S2Loop*>* loops) {
   InitLoopProperties();
 }
 
-void S2Polygon::Init(S2Loop* loop) {
+void S2Polygon::Init(unique_ptr<S2Loop> loop) {
   // We don't allow empty loops in the other Init() methods because deleting
   // them changes the number of loops, which is awkward to handle.
   ClearLoops();
   if (loop->is_empty()) {
-    delete loop;
     InitLoopProperties();
   } else {
-    loops_.push_back(loop);
+    loops_.push_back(std::move(loop));
     InitOneLoop();
   }
 }
@@ -341,7 +347,7 @@ void S2Polygon::Init(S2Loop* loop) {
 // initialized with a single non-empty loop.
 void S2Polygon::InitOneLoop() {
   DCHECK_EQ(1, num_loops());
-  S2Loop* loop = loops_[0];
+  S2Loop* loop = loops_[0].get();
   loop->set_depth(0);
   has_holes_ = false;
   error_inconsistent_loop_orientations_ = false;
@@ -351,7 +357,7 @@ void S2Polygon::InitOneLoop() {
   InitIndex();
 }
 
-void S2Polygon::InitOriented(vector<S2Loop*>* loops) {
+void S2Polygon::InitOriented(vector<unique_ptr<S2Loop>> loops) {
   // Here is the algorithm:
   //
   // 1. Remember which of the given loops contain S2::Origin().
@@ -389,8 +395,8 @@ void S2Polygon::InitOriented(vector<S2Loop*>* loops) {
   //    represent it.
 
   set<S2Loop const*> contained_origin;
-  for (int i = 0; i < loops->size(); ++i) {
-    S2Loop* loop = (*loops)[i];
+  for (int i = 0; i < loops.size(); ++i) {
+    S2Loop* loop = loops[i].get();
     if (loop->contains_origin()) {
       contained_origin.insert(loop);
     }
@@ -403,7 +409,7 @@ void S2Polygon::InitOriented(vector<S2Loop*>* loops) {
       if (loop->contains_origin()) loop->Invert();
     }
   }
-  InitNested(loops);
+  InitNested(std::move(loops));
   if (num_loops() > 0) {
     S2Loop* origin_loop = loop(0);
     bool polygon_contains_origin = false;
@@ -484,7 +490,7 @@ S2Point S2Polygon::GetCentroid() const {
 
 int S2Polygon::GetSnapLevel() const {
   int snap_level = -1;
-  for (S2Loop const* child : loops_) {
+  for (unique_ptr<S2Loop> const& child : loops_) {
     for (int j = 0; j < child->num_vertices(); ++j) {
       int face;
       unsigned int si, ti;
@@ -725,6 +731,17 @@ bool S2Polygon::ApproxDisjoint(S2Polygon const* b, S1Angle tolerance) const {
   return intersection.is_empty();
 }
 
+bool S2Polygon::ApproxEquals(S2Polygon const* b, S1Angle tolerance) const {
+  // TODO(ericv): This can be implemented more cheaply with S2Builder, by
+  // simply adding all the edges from one polygon, adding the reversed edge
+  // from the other polygon, and turning on the options to split edges and
+  // discard sibling pairs.  Then the polygons are approximately equal if the
+  // output graph has no edges.
+  S2Polygon symmetric_difference;
+  symmetric_difference.InitToApproxSymmetricDifference(b, this, tolerance);
+  return symmetric_difference.is_empty();
+}
+
 bool S2Polygon::MayIntersect(S2Cell const& target) const {
   S2ShapeIndex::Iterator it(index_);
   S2ShapeIndex::CellRelation relation = it.Locate(target.id());
@@ -749,9 +766,9 @@ bool S2Polygon::MayIntersect(S2Cell const& target) const {
 bool S2Polygon::BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
                                          S2Cell const& target) const {
   DCHECK(it.id().contains(target.id()));
-  S2ShapeIndexCell const* cell = it.cell();
-  for (int a = 0; a < cell->num_shapes(); ++a) {
-    S2ClippedShape const& a_clipped = cell->clipped(a);
+  S2ShapeIndexCell const& cell = it.cell();
+  for (int a = 0; a < cell.num_clipped(); ++a) {
+    S2ClippedShape const& a_clipped = cell.clipped(a);
     int a_num_clipped = a_clipped.num_edges();
     if (a_num_clipped == 0) continue;
 
@@ -813,13 +830,13 @@ bool S2Polygon::Contains(S2ShapeIndex::Iterator const& it,
                          S2Point const& p) const {
   // Test containment by drawing a line segment from the cell center to the
   // given point and counting edge crossings.
-  S2ShapeIndexCell const* cell = it.cell();
+  S2ShapeIndexCell const& cell = it.cell();
   bool inside = false;
   bool crosser_initialized = false;
   S2EdgeUtil::EdgeCrosser crosser;
   S2Point center;
-  for (int a = 0; a < cell->num_shapes(); ++a) {
-    S2ClippedShape const& a_clipped = cell->clipped(a);
+  for (int a = 0; a < cell.num_clipped(); ++a) {
+    S2ClippedShape const& a_clipped = cell.clipped(a);
     inside ^= a_clipped.contains_center();
     int a_num_clipped = a_clipped.num_edges();
     if (a_num_clipped > 0) {
@@ -849,7 +866,7 @@ void S2Polygon::Encode(Encoder* const encoder) const {
   // Converts all the polygon vertices to S2XYZFaceSiTi format.
   FixedArray<S2XYZFaceSiTi> all_vertices(num_vertices_);
   S2XYZFaceSiTi* current_loop_vertices = all_vertices.get();
-  for (S2Loop const* loop : loops_) {
+  for (unique_ptr<S2Loop> const& loop : loops_) {
     loop->GetXYZFaceSiTiVertices(current_loop_vertices);
     current_loop_vertices += loop->num_vertices();
   }
@@ -938,7 +955,7 @@ bool S2Polygon::DecodeLossless(Decoder* const decoder, bool within_scope) {
   loops_.reserve(num_loops);
   num_vertices_ = 0;
   for (int i = 0; i < num_loops; ++i) {
-    loops_.push_back(new S2Loop);
+    loops_.push_back(gtl::MakeUnique<S2Loop>());
     loops_.back()->set_s2debug_override(s2debug_override());
     if (within_scope) {
       if (!loops_.back()->DecodeWithinScope(decoder)) return false;
@@ -953,152 +970,21 @@ bool S2Polygon::DecodeLossless(Decoder* const decoder, bool within_scope) {
   return true;
 }
 
-// IntersectionSet represents a set of intersections with a particular edge.
-// Each intersection is a pair (t, P) where "t" is the interpolation parameter
-// along the edge (a fraction in the range [0,1]), and P is the actual
-// intersection point.
-using IntersectionSet = vector<pair<double, S2Point>>;
-
-// EdgeClipper find all the intersections of a given edge with the edges
-// contained in an S2ShapeIndex.  It is used to implement polygon operations
-// such as intersection and union.
-class EdgeClipper {
- public:
-  // Initialize an EdgeClipper for the given S2ShapeIndex.  If the query edge
-  // is the same as an index edge (a "shared edge"), then the edge will be
-  // included in the output if and only if "add_shared_edges" is true.  The
-  // "reverse_edges" function allows the edges of any index shape to be
-  // reversed before this test is performed (this is used to reverse the loop
-  // orientation of "holes" in certain algorithms).
-  EdgeClipper(S2ShapeIndex const& index, bool add_shared_edges,
-              bool (*reverse_edges)(S2Shape const* shape));
-
-  // Find all intersections of the edge (a0, a1) with edges in the index and
-  // append them to "intersections".  (The result is unsorted.)
-  void ClipEdge(S2Point const& a0, S2Point const& a1,
-                IntersectionSet* intersections);
-
- private:
-  // Given two edges A and B such that CrossingSign(A, B) >= 0, determine if
-  // they intersect and add any intersection point to "intersections_".
-  // "b_shape" is the S2Shape containing edge B, and "crossing" is the result
-  // of CrossingSign(A, B).
-  void AddIntersection(S2Point const& a0, S2Point const& a1,
-                       S2Point const& b0, S2Point const& b1,
-                       S2Shape const* b_shape, int crossing);
-
-  bool const add_shared_edges_;
-  bool (* const reverse_edges_)(S2Shape const* shape);
-
-  // Temporary variables used while processing a query, declared here to
-  // reduce memory allocation and argument-passing overhead.
-  S2CrossingEdgeQuery query_;
-  S2CrossingEdgeQuery::EdgeMap edge_map_;
-  IntersectionSet* intersections_;
-};
-
-EdgeClipper::EdgeClipper(S2ShapeIndex const& index, bool add_shared_edges,
-                         bool (*reverse_edges)(S2Shape const* shape))
-    : add_shared_edges_(add_shared_edges),
-      reverse_edges_(reverse_edges) {
-  query_.Init(index);
-}
-
-void EdgeClipper::AddIntersection(S2Point const& a0, S2Point const& a1,
-                                  S2Point const& b0, S2Point const& b1,
-                                  S2Shape const* b_shape, int crossing) {
-  DCHECK_GE(crossing, 0);
-  if (crossing > 0) {
-    // There is a proper edge crossing.
-    S2Point x = S2EdgeUtil::GetIntersection(a0, a1, b0, b1);
-    double t = S2EdgeUtil::GetDistanceFraction(x, a0, a1);
-    intersections_->push_back(std::make_pair(t, x));
-
-  } else if (S2EdgeUtil::VertexCrossing(a0, a1, b0, b1)) {
-    // There is a crossing at one of the vertices.  The basic rule is simple:
-    // if a0 equals one of the "b" vertices, the crossing occurs at t=0;
-    // otherwise, it occurs at t=1.
-    //
-    // This has the effect that when two reversed edges exist (i.e., a0==b1
-    // and a1==b0) and each edge is clipped against the other, neither one is
-    // included in the output (which is correct).  However when two shared
-    // edges exist (i.e., a0==b0 and a1==b1), both are included in the output
-    // (which is incorrect).  The "add_shared_edges" flag gives explicit
-    // control over whether these shared edges are included in the output; if
-    // it is false, shared edges are excluded by changing their intersection
-    // parameter from 0 to 1.  This allows exactly one copy of shared edges to
-    // be preserved, by calling ClipBoundary() twice with opposite values of
-    // the "add_shared_edges" flag.
-    double t = (a0 == b0 || a0 == b1) ? 0 : 1;
-    if (!add_shared_edges_ && a1 == (reverse_edges_(b_shape) ? b0 : b1)) {
-      t = 1;  // Excludes (a0,a1) from the output.
-    }
-    intersections_->push_back(std::make_pair(t, t == 0 ? a0 : a1));
+// TODO(ericv): Consider adding this to the S2Loop API.  (May also want an
+// undirected version (CompareDirected vs CompareUndirected); should they
+// return a sign, or have separate "<" and "==" methods?)
+int S2Polygon::CompareLoops(S2Loop const* a, S2Loop const* b) {
+  if (a->num_vertices() != b->num_vertices()) {
+    return a->num_vertices() - b->num_vertices();
   }
-}
-
-// Find all points where the polygon B intersects the edge (a0,a1),
-// and add the corresponding parameter values (in the range [0,1]) to
-// "intersections".
-void EdgeClipper::ClipEdge(S2Point const& a0, S2Point const& a1,
-                           IntersectionSet* intersections) {
-  if (!query_.GetCandidates(a0, a1, &edge_map_)) return;
-
-  // Iterate through the candidate loops, and then the candidate edges within
-  // each loop.
-  intersections_ = intersections;
-  S2EdgeUtil::EdgeCrosser crosser(&a0, &a1);
-  for (const auto& p : edge_map_) {
-    S2Shape const* b_shape = p.first;
-    vector<int> const& b_candidates = p.second;
-    int n = b_candidates.size();
-    for (int j = 0; j < n; ++j) {
-      S2Point const *b0, *b1;
-      b_shape->GetEdge(b_candidates[j], &b0, &b1);
-      int crossing = crosser.CrossingSign(b0, b1);
-      if (crossing < 0) continue;
-      AddIntersection(a0, a1, *b0, *b1, b_shape, crossing);
-    }
+  int a_dir, ai = a->GetCanonicalFirstVertex(&a_dir);
+  int b_dir, bi = b->GetCanonicalFirstVertex(&b_dir);
+  if (a_dir != b_dir) return a_dir - b_dir;
+  for (int n = a->num_vertices(); --n >= 0; ai += a_dir, bi += b_dir) {
+    if (a->vertex(ai) < b->vertex(bi)) return -1;
+    if (a->vertex(ai) > b->vertex(bi)) return 1;
   }
-}
-
-static bool ReverseHoles(S2Shape const* shape) {
-  return down_cast<S2Loop::Shape const*>(shape)->loop()->is_hole();
-}
-
-// Clip the boundary of A to the interior of B, and add the resulting edges to
-// "builder".  Shells are directed CCW and holes are directed clockwise.  If
-// "reverse_a" is true, these directions are reversed in polygon A.  If
-// "invert_b" is true, the boundary of A is clipped to the exterior rather
-// than the interior of B.  If "add_shared_edges" is true, then the output
-// will include any edges that are shared between A and B (both edges must be
-// in the same direction after any edge reversals are taken into account).
-void S2Polygon::ClipBoundary(S2Polygon const* a, bool reverse_a,
-                             S2Polygon const* b, bool invert_b,
-                             bool add_shared_edges, S2PolygonBuilder* builder) {
-  EdgeClipper clipper(b->index_, add_shared_edges, ReverseHoles);
-  IntersectionSet intersections;
-  for (int i = 0; i < a->num_loops(); ++i) {
-    S2Loop const* a_loop = a->loop(i);
-    int n = a_loop->num_vertices();
-    int dir = (a_loop->is_hole() ^ reverse_a) ? -1 : 1;
-    bool inside = b->Contains(a_loop->vertex(0)) ^ invert_b;
-    for (int j = (dir > 0) ? 0 : n; n > 0; --n, j += dir) {
-      S2Point const& a0 = a_loop->vertex(j);
-      S2Point const& a1 = a_loop->vertex(j + dir);
-      clipper.ClipEdge(a0, a1, &intersections);
-      if (inside) intersections.push_back(std::make_pair(0, a0));
-      inside = (intersections.size() & 1);
-      DCHECK_EQ((b->Contains(a1) ^ invert_b), inside);
-      if (inside) intersections.push_back(std::make_pair(1, a1));
-      std::sort(intersections.begin(), intersections.end());
-      for (int k = 0; k < intersections.size(); k += 2) {
-        if (intersections[k] == intersections[k+1]) continue;
-        builder->AddEdge(intersections[k].second, intersections[k+1].second);
-      }
-      intersections.clear();  // Reuse to avoid repeated memory allocation
-    }
-  }
+  return 0;
 }
 
 void S2Polygon::Invert() {
@@ -1110,7 +996,7 @@ void S2Polygon::Invert() {
 
   // The empty and full polygons are handled specially.
   if (is_empty()) {
-    loops_.push_back(new S2Loop(S2Loop::kFull()));
+    loops_.push_back(gtl::MakeUnique<S2Loop>(S2Loop::kFull()));
   } else if (is_full()) {
     ClearLoops();
   } else {
@@ -1127,7 +1013,10 @@ void S2Polygon::Invert() {
         // that the polygon has another top-level shell.
         if (best_angle == kNone) best_angle = loop(best)->GetTurningAngle();
         double angle = loop(i)->GetTurningAngle();
-        if (angle < best_angle) {
+        // We break ties deterministically in order to avoid having the output
+        // depend on the input order of the loops.
+        if (angle < best_angle ||
+            (angle == best_angle && CompareLoops(loop(i), loop(best)) < 0)) {
           best = i;
           best_angle = angle;
         }
@@ -1135,22 +1024,22 @@ void S2Polygon::Invert() {
     }
     // Build the new loops vector, starting with the inverted loop.
     loop(best)->Invert();
-    vector<S2Loop*> new_loops;
+    vector<unique_ptr<S2Loop>> new_loops;
     new_loops.reserve(num_loops());
-    new_loops.push_back(loop(best));
     // Add the former siblings of this loop as descendants.
     int last_best = GetLastDescendant(best);
+    new_loops.push_back(std::move(loops_[best]));
     for (int i = 0; i < num_loops(); ++i) {
       if (i < best || i > last_best) {
         loop(i)->set_depth(loop(i)->depth() + 1);
-        new_loops.push_back(loop(i));
+        new_loops.push_back(std::move(loops_[i]));
       }
     }
     // Add the former children of this loop as siblings.
     for (int i = 0; i < num_loops(); ++i) {
       if (i > best && i <= last_best) {
         loop(i)->set_depth(loop(i)->depth() - 1);
-        new_loops.push_back(loop(i));
+        new_loops.push_back(std::move(loops_[i]));
       }
     }
     loops_.swap(new_loops);
@@ -1165,52 +1054,65 @@ void S2Polygon::InitToComplement(S2Polygon const* a) {
   Invert();
 }
 
+static std::function<bool (S2Point const&)> ContainsPoint(S2Polygon const& a) {
+  return [&a](S2Point const& p) {
+    return a.Contains(p);
+  };
+}
+
+static std::function<bool (S2Shape const&)> ReverseHoles(S2Polygon const& a) {
+  return [&a](S2Shape const& shape) {
+    return down_cast<S2Loop::Shape const&>(shape).loop()->is_hole();
+  };
+}
+
+bool S2Polygon::InitToOperation(S2BoundaryOperation::OpType op_type,
+                                S2Builder::SnapFunction const& snap_function,
+                                S2Polygon const& a, S2Polygon const& b) {
+  S2BoundaryOperation::Options options;
+  options.set_snap_function(snap_function);
+  S2BoundaryOperation op(op_type, gtl::MakeUnique<S2PolygonLayer>(this),
+                         options);
+  op.AddRegion(a.index_, ContainsPoint(a), ReverseHoles(a));
+  op.AddRegion(b.index_, ContainsPoint(b), ReverseHoles(b));
+  S2Error error;
+  if (!op.Build(&error)) {
+    LOG(DFATAL) << S2BoundaryOperation::OpTypeToString(op_type)
+                << " operation failed: " << error.text();
+    return false;
+  }
+  return true;
+}
+
 void S2Polygon::InitToIntersection(S2Polygon const* a, S2Polygon const* b) {
   InitToApproxIntersection(a, b, S2EdgeUtil::kIntersectionMergeRadius);
 }
 
 void S2Polygon::InitToApproxIntersection(S2Polygon const* a, S2Polygon const* b,
-                                         S1Angle vertex_merge_radius) {
-  if (!a->bound_.Intersects(b->bound_)) return;
+                                         S1Angle snap_radius) {
+  InitToIntersection(*a, *b, IdentitySnapFunction(snap_radius));
+}
 
-  // We want the boundary of A clipped to the interior of B,
-  // plus the boundary of B clipped to the interior of A,
-  // plus one copy of any directed edges that are in both boundaries.
+void S2Polygon::InitToIntersection(
+    S2Polygon const& a, S2Polygon const& b,
+    S2Builder::SnapFunction const& snap_function) {
+  if (!a.bound_.Intersects(b.bound_)) return;
+  InitToOperation(S2BoundaryOperation::OpType::INTERSECTION,
+                  snap_function, a, b);
 
-  S2PolygonBuilderOptions options(S2PolygonBuilderOptions::DIRECTED_XOR());
-  options.set_vertex_merge_radius(vertex_merge_radius);
-  options.set_s2debug_override(s2debug_override());
-  S2PolygonBuilder builder(options);
-  ClipBoundary(a, false, b, false, true, &builder);
-  ClipBoundary(b, false, a, false, false, &builder);
-  if (!builder.AssemblePolygon(this, nullptr)) {
-    LOG(DFATAL) << "Bad directed edges in InitToIntersection";
-  }
-  // If the result had a non-empty boundary then we are done.  Unfortunately,
-  // if the boundary is empty then there are two possible results: the empty
-  // polygon or the full polygon.  This choice would be trivial to resolve
-  // except for the existence of "vertex_merge_radius" and also numerical
-  // errors when computing edge intersection points.  In particular:
+  // If the boundary is empty then there are two possible results: the empty
+  // polygon or the full polygon.  Note that the (approximate) intersection of
+  // two non-full polygons may be full, because one or both polygons may have
+  // tiny cracks or holes that are eliminated by snapping.  Similarly, the
+  // (approximate) intersection of two polygons that contain a common point
+  // may be empty, since the point might be contained by tiny loops that are
+  // snapped away.
   //
-  //  - The intersection of two non-full polygons may be full.  For example,
-  //    one or both polygons may have tiny cracks that are eliminated due to
-  //    vertex merging/edge splicing.
-  //
-  //  - The intersection of two polygons that both contain S2::Origin() (or
-  //    any other point) may be empty.  For example, both polygons may have
-  //    tiny shells that surround the common point but that are eliminated.
-  //
-  //  - Even before any vertex merging/edge splicing, the computed boundary
-  //    edges are not useful in distinguishing almost-full polygons from
-  //    almost-empty due to numerical errors in computing edge intersections.
-  //    Such errors can reverse the orientation of narrow cracks or slivers.
-  //
-  // So instead we fall back to heuristics.  Essentially we compute the
-  // minimum and maximum intersection area based on the areas of the two input
-  // polygons.  If only one of {0, 4*Pi} is possible then we return that
-  // result.  If neither is possible (before vertex merging, etc) then we
-  // return the one that is closest to being possible.  (It never true that
-  // both are possible.)
+  // So instead we fall back to heuristics.  First we compute the minimum and
+  // maximum intersection area based on the areas of the two input polygons.
+  // If only one of {0, 4*Pi} is possible then we return that result.  If
+  // neither is possible (before snapping) then we return the one that is
+  // closest to being possible.  (It never true that both are possible.)
   if (num_loops() == 0) {
     // We know that both polygons are non-empty due to the initial bounds
     // check.  By far the most common case is that the intersection is empty,
@@ -1218,15 +1120,16 @@ void S2Polygon::InitToApproxIntersection(S2Polygon const* a, S2Polygon const* b,
     //
     //   max(0, A + B - 4*Pi) <= Intersection(A, B) <= min(A, B)
     //
-    // where A, B refer to a polygon and/or its area.  Note that if either A
+    // where A, B can refer to a polygon or its area.  Note that if either A
     // or B is at most 2*Pi, the result must be "empty".  We can use the
     // bounding rectangle areas as upper bounds on the polygon areas.
-    if (a->bound_.Area() <= 2 * M_PI || b->bound_.Area() <= 2 * M_PI) return;
-    double a_area = a->GetArea(), b_area = b->GetArea();
+    if (a.bound_.Area() <= 2 * M_PI || b.bound_.Area() <= 2 * M_PI) return;
+    double a_area = a.GetArea(), b_area = b.GetArea();
     double min_area = max(0.0, a_area + b_area - 4 * M_PI);
     double max_area = min(a_area, b_area);
-    if (min_area > 4 * M_PI - max_area)
+    if (min_area > 4 * M_PI - max_area) {
       Invert();
+    }
   }
 }
 
@@ -1235,34 +1138,30 @@ void S2Polygon::InitToUnion(S2Polygon const* a, S2Polygon const* b) {
 }
 
 void S2Polygon::InitToApproxUnion(S2Polygon const* a, S2Polygon const* b,
-                                  S1Angle vertex_merge_radius) {
-  // We want the boundary of A clipped to the exterior of B,
-  // plus the boundary of B clipped to the exterior of A,
-  // plus one copy of any directed edges that are in both boundaries.
+                                  S1Angle snap_radius) {
+  InitToUnion(*a, *b, IdentitySnapFunction(snap_radius));
+}
 
-  S2PolygonBuilderOptions options(S2PolygonBuilderOptions::DIRECTED_XOR());
-  options.set_vertex_merge_radius(vertex_merge_radius);
-  options.set_s2debug_override(s2debug_override());
-  S2PolygonBuilder builder(options);
-  ClipBoundary(a, false, b, true, true, &builder);
-  ClipBoundary(b, false, a, true, false, &builder);
-  if (!builder.AssemblePolygon(this, nullptr)) {
-    LOG(DFATAL) << "Bad directed edges";
-  }
+void S2Polygon::InitToUnion(
+    S2Polygon const& a, S2Polygon const& b,
+    S2Builder::SnapFunction const& snap_function) {
+  InitToOperation(S2BoundaryOperation::OpType::UNION, snap_function, a, b);
   if (num_loops() == 0) {
     // See comments in InitToApproxIntersection().  In this case, the union
     // area satisfies:
     //
     //   max(A, B) <= Union(A, B) <= min(4*Pi, A + B)
     //
-    // The most common case is that neither input polygon is empty, but the
-    // union is empty due to vertex merging/simplification.
-    if (a->bound_.Area() + b->bound_.Area() <= 2 * M_PI) return;
-    double a_area = a->GetArea(), b_area = b->GetArea();
+    // where A, B can refer to a polygon or its area.  The most common case is
+    // that neither input polygon is empty, but the union is empty due to
+    // snapping.
+    if (a.bound_.Area() + b.bound_.Area() <= 2 * M_PI) return;
+    double a_area = a.GetArea(), b_area = b.GetArea();
     double min_area = max(a_area, b_area);
     double max_area = min(4 * M_PI, a_area + b_area);
-    if (min_area > 4 * M_PI - max_area)
+    if (min_area > 4 * M_PI - max_area) {
       Invert();
+    }
   }
 }
 
@@ -1271,271 +1170,187 @@ void S2Polygon::InitToDifference(S2Polygon const* a, S2Polygon const* b) {
 }
 
 void S2Polygon::InitToApproxDifference(S2Polygon const* a, S2Polygon const* b,
-                                       S1Angle vertex_merge_radius) {
-  // We want the boundary of A clipped to the exterior of B,
-  // plus the reversed boundary of B clipped to the interior of A,
-  // plus one copy of any edge in A that is also a reverse edge in B.
+                                       S1Angle snap_radius) {
+  InitToDifference(*a, *b, IdentitySnapFunction(snap_radius));
+}
 
-  S2PolygonBuilderOptions options(S2PolygonBuilderOptions::DIRECTED_XOR());
-  options.set_vertex_merge_radius(vertex_merge_radius);
-  options.set_s2debug_override(s2debug_override());
-  S2PolygonBuilder builder(options);
-  ClipBoundary(a, false, b, true, true, &builder);
-  ClipBoundary(b, true, a, false, false, &builder);
-  if (!builder.AssemblePolygon(this, nullptr)) {
-    LOG(DFATAL) << "Bad directed edges in InitToDifference";
-  }
+void S2Polygon::InitToDifference(
+    S2Polygon const& a, S2Polygon const& b,
+    S2Builder::SnapFunction const& snap_function) {
+  InitToOperation(S2BoundaryOperation::OpType::DIFFERENCE, snap_function, a, b);
   if (num_loops() == 0) {
     // See comments in InitToApproxIntersection().  In this case, the
     // difference area satisfies:
     //
     //   max(0, A - B) <= Difference(A, B) <= min(A, 4*Pi - B)
     //
-    // By far the most common case is that result is empty.
-    if (a->bound_.Area() <= 2 * M_PI || b->bound_.Area() >= 2 * M_PI) return;
-    double a_area = a->GetArea(), b_area = b->GetArea();
+    // where A, B can refer to a polygon or its area.  By far the most common
+    // case is that result is empty.
+    if (a.bound_.Area() <= 2 * M_PI || b.bound_.Area() >= 2 * M_PI) return;
+    double a_area = a.GetArea(), b_area = b.GetArea();
     double min_area = max(0.0, a_area - b_area);
     double max_area = min(a_area, 4 * M_PI - b_area);
-    if (min_area > 4 * M_PI - max_area)
+    if (min_area > 4 * M_PI - max_area) {
       Invert();
-  }
-}
-
-// An abstract class used to specify which vertices must be kept when
-// simplifying a loop in SimplifyLoopAsPolyline below.
-class S2VertexFilter {
- public:
-  S2VertexFilter() { }
-  virtual ~S2VertexFilter() { }
-
-  // Returns true if the given vertex must be kept in the simplified loop
-  // (returning false does not mean that the vertex *must* be removed, but that
-  // it *can* be removed if it satisfies the simplification criteria).
-  virtual bool ShouldKeepVertex(const S2Point& vertex) const = 0;
-
- private:
-  S2VertexFilter(S2VertexFilter const&) = delete;
-  void operator=(S2VertexFilter const&) = delete;
-};
-
-// An S2VertexFilter subclass to keep the vertices that are close to the
-// boundary of a given S2 cell.
-namespace {
-class CellBoundaryVertexFilter : public S2VertexFilter {
- public:
-  explicit CellBoundaryVertexFilter(const S2Cell& cell) {
-    // Computes and stores the cell vertices and their dot products, to optimize
-    // computations ShouldKeepVertex.
-    for (int i = 0; i < 4; ++i) {
-      cell_vertices_[i] = cell.GetVertex(i);
-    }
-  }
-
-  virtual bool ShouldKeepVertex(const S2Point& vertex) const {
-    const S1Angle kTolerance = S1Angle::Radians(1e-15);
-    for (int i = 0; i < 4; ++i) {
-      if (S2EdgeUtil::GetDistance(vertex,
-                                  cell_vertices_[i],
-                                  cell_vertices_[(i + 1) % 4]) < kTolerance) {
-        return true;
-      }
-    }
-    return false;
-  }
-
- private:
-  S2Point cell_vertices_[4];
-};
-}  // namespace
-
-// Takes a loop and simplifies it.  This may return a self-intersecting
-// polyline.  Always keeps the first vertex from the loop, as well as the
-// vertices for which should_keep returns true. This function does not take
-// ownership of should_keep, which can be nullptr.
-unique_ptr<vector<S2Point>> SimplifyLoopAsPolyline(
-    S2Loop const* loop, S1Angle tolerance,
-    const S2VertexFilter* should_keep) {
-  vector<S2Point> points(loop->num_vertices() + 1);
-  // Add the first vertex at the beginning and at the end.
-  for (int i = 0; i <= loop->num_vertices(); ++i) {
-    points[i] = loop->vertex(i);
-  }
-  S2Polyline line(points);
-  vector<int> indices;
-  line.SubsampleVertices(tolerance, &indices);
-  if (indices.size() <= 2) return nullptr;
-  if (should_keep != nullptr) {
-    vector<int> to_keep;
-    // Remember the indices of the vertices that we must keep.
-    for (int i = 0; i <= loop->num_vertices(); ++i) {
-      if (should_keep->ShouldKeepVertex(loop->vertex(i))) {
-        to_keep.push_back(i);
-      }
-    }
-    if (!to_keep.empty()) {
-      vector<int> new_indices;
-      std::set_union(indices.begin(), indices.end(),
-                     to_keep.begin(), to_keep.end(),
-                     std::inserter(new_indices, new_indices.end()));
-      swap(indices, new_indices);
-    }
-  }
-  // Add them all except the last: it is the same as the first.
-  auto simplified_line = gtl::MakeUnique<vector<S2Point>>(indices.size() - 1);
-  VLOG(4) << "Now simplified to: ";
-  for (int i = 0; i + 1 < indices.size(); ++i) {
-    (*simplified_line)[i] = line.vertex(indices[i]);
-    VLOG(4) << S2LatLng(line.vertex(indices[i]));
-  }
-  return simplified_line;
-}
-
-static bool ReverseNone(S2Shape const* shape) {
-  return false;
-}
-
-// Takes a set of possibly intersecting edges, stored in an S2ShapeIndex.
-// Breaks the edges into small pieces so that there is no intersection
-// anymore, and adds all these edges to the builder.
-void BreakEdgesAndAddToBuilder(S2ShapeIndex const& index,
-                               S2PolygonBuilder* builder) {
-  // If there are self intersections, we add the pieces separately.
-  // add_shared_edges ("true" below) can be false or true: it makes no
-  // difference due to the way we call ClipEdge.
-  EdgeClipper clipper(index, true, ReverseNone);
-  IntersectionSet intersections;
-  for (int id = 0; id < index.num_shape_ids(); ++id) {
-    S2Shape const* shape = index.shape(id);
-    int num_edges = shape->num_edges();
-    for (int e = 0; e < num_edges; ++e) {
-      S2Point const *from, *to;
-      shape->GetEdge(e, &from, &to);
-      intersections.push_back(std::make_pair(0, *from));
-      clipper.ClipEdge(*from, *to, &intersections);
-      intersections.push_back(std::make_pair(1, *to));
-      std::sort(intersections.begin(), intersections.end());
-      for (int k = 0; k + 1 < intersections.size(); ++k) {
-        if (intersections[k] == intersections[k+1]) continue;
-        builder->AddEdge(intersections[k].second, intersections[k+1].second);
-      }
-      intersections.clear();
     }
   }
 }
 
-namespace {
-// A loop represented as a vector of S2Points.  As with S2Loop, the last
-// vertex is implicitly joined to the first.
-class PointVectorLoopShape : public S2Shape {
- public:
-  explicit PointVectorLoopShape(vector<S2Point> const* vertices)
-      : num_vertices_(vertices->size()),
-        vertices_(vertices->data()) {
-  }
-  int num_edges() const { return num_vertices_; }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const {
-    *a = &vertices_[e];
-    *b = &vertices_[e+1 == num_vertices_ ? 0 : e+1];
-  }
-  bool has_interior() const { return false; }  // Not needed
-  bool contains_origin() const { return false; }
- private:
-  int num_vertices_;
-  S2Point const* vertices_;
-};
-}  // namespace
+void S2Polygon::InitToSymmetricDifference(S2Polygon const* a,
+                                          S2Polygon const* b) {
+  InitToApproxSymmetricDifference(a, b, S2EdgeUtil::kIntersectionMergeRadius);
+}
 
-// Simplifies the polygon.   The algorithm is straightforward and naive:
-//   1. Simplify each loop by removing points while staying in the
-//      tolerance zone.  This uses S2Polyline::SubsampleVertices(),
-//      which is not guaranteed to be optimal in terms of number of
-//      points.
-//   2. Break any edge in pieces such that no piece intersects any
-//      other.
-//   3. Use the polygon builder to regenerate the full polygon.
-//   4. If should_keep is not nullptr, the vertices for which it returns true
-//      are kept in the simplified polygon.
-void S2Polygon::InitToSimplifiedInternal(S2Polygon const* a,
-                                         S1Angle tolerance,
-                                         bool snap_to_cell_centers,
-                                         S2VertexFilter const* should_keep) {
-  S2PolygonBuilderOptions builder_options =
-      S2PolygonBuilderOptions::UNDIRECTED_XOR();
-  builder_options.set_validate(false);
-  builder_options.set_s2debug_override(s2debug_override());
-  if (should_keep != nullptr) {
-    // If there is a vertex filter, then we want to do as little vertex
-    // merging as possible so that the vertices we want to keep don't move.
-    // But on the other hand, when we break intersecting edges into pieces
-    // there is some error in the intersection point.  S2PolygonBuilder needs
-    // to be able to move vertices by up to this amount in order to produce
-    // valid output.
-    builder_options.set_vertex_merge_radius(
-        S2EdgeUtil::kIntersectionMergeRadius);
-  } else {
-    // Ideally, we would want to set the vertex_merge_radius of the
-    // builder roughly to tolerance (and in fact forego the edge
-    // splitting step).  Alas, if we do that, we are liable to the
-    // 'chain effect', where vertices are merged with closeby vertices
-    // and so on, so that a vertex can move by an arbitrary distance.
-    // So we remain conservative:
-    builder_options.set_vertex_merge_radius(tolerance * 0.10);
-    builder_options.set_snap_to_cell_centers(snap_to_cell_centers);
-  }
-  S2PolygonBuilder builder(builder_options);
+void S2Polygon::InitToApproxSymmetricDifference(S2Polygon const* a,
+                                                S2Polygon const* b,
+                                                S1Angle snap_radius) {
+  InitToSymmetricDifference(*a, *b, IdentitySnapFunction(snap_radius));
+}
 
-  // Simplify each loop separately and add to the edge index.
-  S2ShapeIndex index;
-  vector<unique_ptr<vector<S2Point>>> simplified_loops;
-  for (int i = 0; i < a->num_loops(); ++i) {
-    unique_ptr<vector<S2Point>> simpler =
-        SimplifyLoopAsPolyline(a->loop(i), tolerance, should_keep);
-    if (nullptr == simpler) continue;
-    index.Add(new PointVectorLoopShape(simpler.get()));
-    simplified_loops.push_back(std::move(simpler));
-  }
-  if (index.num_shape_ids() > 0) {
-    BreakEdgesAndAddToBuilder(index, &builder);
-    if (!builder.AssemblePolygon(this, nullptr)) {
-      LOG(DFATAL) << "Bad edges in InitToSimplified.";
-    }
-    // If there are no loops, check whether the result should be the full
-    // polygon rather than the empty one.  (See InitToApproxIntersection.)
-    if (num_loops() == 0) {
-      if (a->bound_.Area() > 2 * M_PI && a->GetArea() > 2 * M_PI) Invert();
+void S2Polygon::InitToSymmetricDifference(
+    S2Polygon const& a, S2Polygon const& b,
+    S2Builder::SnapFunction const& snap_function) {
+  InitToOperation(S2BoundaryOperation::OpType::SYMMETRIC_DIFFERENCE,
+                  snap_function, a, b);
+  if (num_loops() == 0) {
+    // See comments in InitToApproxIntersection().  In this case, the
+    // difference area satisfies:
+    //
+    //   |A - B| <= SymmetricDifference(A, B) <= 4*Pi - |4*Pi - (A + B)|
+    //
+    // where A, B can refer to a polygon or its area.  By far the most common
+    // case is that result is empty.
+    if (a.bound_.Area() + b.bound_.Area() <= 2 * M_PI) return;
+    double a_area = a.GetArea(), b_area = b.GetArea();
+    double min_area = fabs(a_area - b_area);
+    double max_area = 4 * M_PI - fabs(4 * M_PI - (a_area + b_area));
+    // If both input polygons have area 2*Pi, the result could be either empty
+    // or full.  We explicitly want to choose "empty" in this case since it is
+    // much more likely that the user is computing the difference between two
+    // nearly identical polygons.  Hence the bias below.
+    static constexpr double kBiasTowardsEmpty = 1e-14;
+    if (min_area - kBiasTowardsEmpty > 4 * M_PI - max_area) {
+      Invert();
     }
   }
 }
 
-void S2Polygon::InitToSimplified(S2Polygon const* a, S1Angle tolerance,
-                                 bool snap_to_cell_centers) {
-  InitToSimplifiedInternal(a, tolerance, snap_to_cell_centers, nullptr);
-}
-
-void S2Polygon::InitToSimplifiedInCell(S2Polygon const* a, S2Cell const& cell,
-                                       S1Angle tolerance) {
-  CellBoundaryVertexFilter cell_filter(cell);
-  InitToSimplifiedInternal(a, tolerance, false, &cell_filter);
+void S2Polygon::InitFromBuilder(S2Polygon const& a, S2Builder* builder) {
+  builder->StartLayer(gtl::MakeUnique<S2PolygonLayer>(this));
+  builder->AddPolygon(a);
+  S2Error error;
+  if (!builder->Build(&error)) {
+    LOG(DFATAL) << "Could not build polygon: " << error.text();
+  }
+  // If there are no loops, check whether the result should be the full
+  // polygon rather than the empty one.  (See InitToApproxIntersection.)
+  if (num_loops() == 0) {
+    if (a.bound_.Area() > 2 * M_PI && a.GetArea() > 2 * M_PI) Invert();
+  }
 }
 
 void S2Polygon::InitToSnapped(S2Polygon const* a, int snap_level) {
-  // TODO(user): Remove (tolerance * 0.1) from InitToSimplified
-  //   and use that instead.
-  S2PolygonBuilderOptions options;
-  // Ensure that there will be no two vertices within the max leaf cell
-  // diagonal of each other, therefore no two vertices in the same leaf cell,
-  // and that no vertex will cross an edge after the points have been snapped
-  // to the centers of leaf cells.  Add 1e-15 to the tolerance so we don't
-  // set a tighter than leaf cell level because of numerical inaccuracy.
-  options.SetRobustnessRadius(
-      S1Angle::Radians(S2::kMaxDiag.GetValue(snap_level) / 2 + 1e-15));
-  options.set_snap_to_cell_centers(true);
-  options.set_s2debug_override(s2debug_override());
+  S2Builder builder((S2Builder::Options(S2CellIdSnapFunction(snap_level))));
+  InitFromBuilder(*a, &builder);
+}
 
-  S2PolygonBuilder polygon_builder(options);
-  polygon_builder.AddPolygon(a);
-  if (!polygon_builder.AssemblePolygon(this, nullptr)) {
-    LOG(DFATAL) << "AssemblePolygon failed in BuildSnappedPolygon";
+void S2Polygon::InitToSimplified(S2Polygon const& a,
+                                 S2Builder::SnapFunction const& snap_function) {
+  S2Builder::Options options(snap_function);
+  options.set_simplify_edge_chains(true);
+  S2Builder builder(options);
+  InitFromBuilder(a, &builder);
+}
+
+// Given a point "p" inside an S2Cell or on its boundary, return a mask
+// indicating which of the S2Cell edges the point lies on.  All boundary
+// comparisons are to within a maximum "u" or "v" error of "tolerance_uv".
+// Bit "i" in the result is set if and only "p" is incident to the edge
+// corresponding to S2Cell::GetEdge(i).
+uint8 GetCellEdgeIncidenceMask(S2Cell const& cell, S2Point const& p,
+                               double tolerance_uv) {
+  uint8 mask = 0;
+  R2Point uv;
+  if (S2::FaceXYZtoUV(cell.face(), p, &uv)) {
+    R2Rect bound = cell.GetBoundUV();
+    if (FLAGS_s2debug) DCHECK(bound.Expanded(tolerance_uv).Contains(uv));
+    if (fabs(uv[1] - bound[1][0]) <= tolerance_uv) mask |= 1;
+    if (fabs(uv[0] - bound[0][1]) <= tolerance_uv) mask |= 2;
+    if (fabs(uv[1] - bound[1][1]) <= tolerance_uv) mask |= 4;
+    if (fabs(uv[0] - bound[0][0]) <= tolerance_uv) mask |= 8;
+  }
+  return mask;
+}
+
+void S2Polygon::InitToSimplifiedInCell(
+    S2Polygon const* a, S2Cell const& cell,
+    S1Angle snap_radius, S1Angle boundary_tolerance) {
+  // The polygon to be simplified consists of "boundary edges" that follow the
+  // cell boundary and "interior edges" that do not.  We want to simplify the
+  // interior edges while leaving the boundary edges unchanged.  It's not
+  // sufficient to call S2Builder::ForceVertex() on all boundary vertices.
+  // For example, suppose the polygon includes a triangle ABC where all three
+  // vertices are on the cell boundary and B is a cell corner.  Then if
+  // interior edge AC snaps to vertex B, this loop would become degenerate and
+  // be removed.  Similarly, we don't want boundary edges to snap to interior
+  // vertices, since this also would cause portions of the polygon along the
+  // boundary to be removed.
+  //
+  // Instead we use a two-pass algorithm.  In the first pass, we simplify
+  // *only* the interior edges, using ForceVertex() to ensure that any edge
+  // endpoints on the cell boundary do not move.  In the second pass, we add
+  // the boundary edges (which are guaranteed to still form loops with the
+  // interior edges) and build the output polygon.
+  //
+  // Note that in theory, simplifying the interior edges could create an
+  // intersection with one of the boundary edges, since if two interior edges
+  // intersect very near the boundary then the intersection point could be
+  // slightly outside the cell (by at most S2EdgeUtil::kIntersectionError).
+  // This is the *only* way that a self-intersection can be created, and it is
+  // expected to be extremely rare.  Nevertheless we use a small snap radius
+  // in the second pass in order to eliminate any such self-intersections.
+  //
+  // We also want to preserve the cyclic vertex order of loops, so that the
+  // original polygon can be reconstructed when no simplification is possible
+  // (i.e., idempotency).  In order to do this, we group the input edges into
+  // a sequence of polylines.  Each polyline contains only one type of edge
+  // (interior or boundary).  We use S2Builder to simplify the interior
+  // polylines, while the boundary polylines are passed through unchanged.
+  // Each interior polyline is in its own S2Builder layer in order to keep the
+  // edges in sequence.  This lets us ensure that in the second pass, the
+  // edges are added in their original order so that S2PolygonLayer can
+  // reconstruct the original loops.
+
+  // We want an upper bound on how much "u" or "v" can change when a point on
+  // the boundary of the S2Cell is moved away by up to "boundary_tolerance".
+  // Inverting this, instead we could compute a lower bound on how far a point
+  // can move away from an S2Cell edge when "u" or "v" is changed by a given
+  // amount.  The latter quantity is simplify (S2::kMinWidth.deriv() / 2)
+  // under the S2_LINEAR_PROJECTION model, where we divide by 2 because we
+  // want the bound in terms of (u = 2 * s - 1) rather than "s" itself.
+  // Consulting s2metrics.cc, this value is sqrt(2/3)/2 = sqrt(1/6).
+  // Going back to the original problem, this gives:
+  double boundary_tolerance_uv = sqrt(6) * boundary_tolerance.radians();
+
+  // The first pass yields a collection of simplified polylines that preserve
+  // the original cyclic vertex order.
+  auto polylines = SimplifyEdgesInCell(*a, cell, boundary_tolerance_uv,
+                                       snap_radius);
+
+  // The second pass eliminates any intersections between interior edges and
+  // boundary edges, and then assembles the edges into a polygon.
+  S2Builder::Options options(
+      (IdentitySnapFunction(S2EdgeUtil::kIntersectionError)));
+  options.set_idempotent(false);  // Force snapping up to the given radius
+  S2Builder builder(options);
+  builder.StartLayer(gtl::MakeUnique<S2PolygonLayer>(this));
+  for (auto const& polyline : polylines) {
+    builder.AddPolyline(*polyline);
+  }
+  S2Error error;
+  if (!builder.Build(&error)) {
+    LOG(DFATAL) << "Could not build polygon: " << error.text();
+    return;
   }
   // If there are no loops, check whether the result should be the full
   // polygon rather than the empty one.  (See InitToApproxIntersection.)
@@ -1544,124 +1359,168 @@ void S2Polygon::InitToSnapped(S2Polygon const* a, int snap_level) {
   }
 }
 
-void S2Polygon::InternalClipPolyline(bool invert,
-                                     S2Polyline const* a,
-                                     vector<S2Polyline*> *out,
-                                     S1Angle merge_radius) const {
-  // Clip the polyline A to the interior of this polygon.
-  // The resulting polyline(s) will be appended to 'out'.
-  // If invert is true, we clip A to the exterior of this polygon instead.
-  // Vertices will be dropped such that adjacent vertices will not
-  // be closer than 'merge_radius'.
-  //
-  // We do the intersection/subtraction by walking the polyline edges.
-  // For each edge, we compute all intersections with the polygon boundary
-  // and sort them in increasing order of distance along that edge.
-  // We then divide the intersection points into pairs, and output a
-  // clipped polyline segment for each one.
-  // We keep track of whether we're inside or outside of the polygon at
-  // all times to decide which segments to output.
-
-  DCHECK(out->empty());
-  int n = a->num_vertices();
-  if (n == 0) return;
-
-  EdgeClipper clipper(index_, true, ReverseNone);
-  IntersectionSet intersections;
-  vector<S2Point> vertices;
-  bool inside = Contains(a->vertex(0)) ^ invert;
-  for (int j = 0; j < n-1; j++) {
-    S2Point const& a0 = a->vertex(j);
-    S2Point const& a1 = a->vertex(j + 1);
-    clipper.ClipEdge(a0, a1, &intersections);
-    if (inside) intersections.push_back(std::make_pair(0, a0));
-    inside = (intersections.size() & 1);
-    DCHECK_EQ((Contains(a1) ^ invert), inside);
-    if (inside) intersections.push_back(std::make_pair(1, a1));
-    std::sort(intersections.begin(), intersections.end());
-    // At this point we have a sorted array of vertex pairs representing
-    // the edge(s) obtained after clipping (a0,a1) against the polygon.
-    for (int k = 0; k < intersections.size(); k += 2) {
-      if (intersections[k] == intersections[k+1]) continue;
-      S2Point const& v0 = intersections[k].second;
-      S2Point const& v1 = intersections[k+1].second;
-
-      // If the gap from the previous vertex to this one is large
-      // enough, start a new polyline.
-      if (!vertices.empty() && S1Angle(vertices.back(), v0) > merge_radius) {
-        out->push_back(new S2Polyline(vertices));
-        vertices.clear();
+// See comments in InitToSimplifiedInCell.
+vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
+    S2Polygon const& a, S2Cell const& cell,
+    double tolerance_uv, S1Angle snap_radius) {
+  S2Builder::Options options((IdentitySnapFunction(snap_radius)));
+  options.set_simplify_edge_chains(true);
+  S2Builder builder(options);
+  // The output consists of a sequence of polylines.  Polylines consisting of
+  // interior edges are simplified using S2Builder, while polylines consisting
+  // of boundary edges are returned unchanged.
+  vector<unique_ptr<S2Polyline>> polylines;
+  for (int i = 0; i < a.num_loops(); ++i) {
+    S2Loop const& a_loop = *a.loop(i);
+    S2Point const* v0 = &a_loop.oriented_vertex(0);
+    uint8 mask0 = GetCellEdgeIncidenceMask(cell, *v0, tolerance_uv);
+    bool in_interior = false;  // Was the last edge an interior edge?
+    for (int j = 1; j <= a_loop.num_vertices(); ++j) {
+      S2Point const* v1 = &a_loop.oriented_vertex(j);
+      uint8 mask1 = GetCellEdgeIncidenceMask(cell, *v1, tolerance_uv);
+      if ((mask0 & mask1) != 0) {
+        // This is an edge along the cell boundary.  Such edges do not get
+        // simplified; we add them directly to the output.  (We create a
+        // separate polyline for each edge to keep things simple.)
+        DCHECK(!in_interior);
+        polylines.emplace_back(new S2Polyline(vector<S2Point>{*v0, *v1}));
+      } else {
+        // This is an interior edge.  If this is the first edge of an interior
+        // chain, then start a new S2Builder layer.  Also ensure that any
+        // polyline vertices on the boundary do not move, so that they will
+        // still connect with any boundary edge(s) there.
+        if (!in_interior) {
+          S2Polyline* polyline = new S2Polyline;
+          builder.StartLayer(gtl::MakeUnique<S2PolylineLayer>(polyline));
+          polylines.emplace_back(polyline);
+          if (mask0 != 0) builder.ForceVertex(*v0);
+          in_interior = true;
+        }
+        builder.AddEdge(*v0, *v1);
+        if (mask1 != 0) {
+          builder.ForceVertex(*v1);
+          in_interior = false;  // Terminate this polyline.
+        }
       }
-      // Append this segment to the current polyline, ignoring any
-      // vertices that are too close to the previous vertex.
-      if (vertices.empty()) vertices.push_back(v0);
-      if (S1Angle(vertices.back(), v1) > merge_radius) {
-        vertices.push_back(v1);
-      }
+      v0 = v1;
+      mask0 = mask1;
     }
-    intersections.clear();
   }
-  if (!vertices.empty()) {
-    out->push_back(new S2Polyline(vertices));
+  S2Error error;
+  if (!builder.Build(&error)) {
+    LOG(DFATAL) << "InitToSimplifiedInCell failed: " << error.text();
   }
+  return polylines;
 }
 
-void S2Polygon::IntersectWithPolyline(
-    S2Polyline const* a,
-    vector<S2Polyline*> *out) const {
-  ApproxIntersectWithPolyline(a, out, S2EdgeUtil::kIntersectionMergeRadius);
+vector<unique_ptr<S2Polyline>> S2Polygon::OperationWithPolyline(
+    S2BoundaryOperation::OpType op_type,
+    S2Builder::SnapFunction const& snap_function,
+    S2Polyline const& a) const {
+  S2BoundaryOperation::Options options;
+  options.set_snap_function(snap_function);
+  vector<unique_ptr<S2Polyline>> result;
+  S2PolylineVectorLayer::Options layer_options;
+  layer_options.set_polyline_type(
+      S2PolylineVectorLayer::Options::PolylineType::WALK);
+  S2BoundaryOperation op(
+      op_type, gtl::MakeUnique<S2PolylineVectorLayer>(&result, layer_options),
+      options);
+  S2ShapeIndex a_index;
+  a_index.Add(new S2Polyline::Shape(&a));
+  op.AddRegion(a_index, [](S2Point const& p) { return false; },
+               [](S2Shape const& shape) { return false; });
+  op.AddRegion(index_, ContainsPoint(*this), ReverseHoles(*this));
+  S2Error error;
+  if (!op.Build(&error)) {
+    LOG(DFATAL) << "Polyline " << S2BoundaryOperation::OpTypeToString(op_type)
+                << " operation failed: " << error.text();
+  }
+  return result;
 }
 
-void S2Polygon::ApproxIntersectWithPolyline(
-    S2Polyline const* a,
-    vector<S2Polyline*> *out,
-    S1Angle vertex_merge_radius) const {
-  InternalClipPolyline(false, a, out, vertex_merge_radius);
+vector<unique_ptr<S2Polyline>> S2Polygon::IntersectWithPolyline(
+    S2Polyline const& a) const {
+  return ApproxIntersectWithPolyline(a, S2EdgeUtil::kIntersectionMergeRadius);
 }
 
-void S2Polygon::SubtractFromPolyline(S2Polyline const* a,
-                                     vector<S2Polyline*> *out) const {
-  ApproxSubtractFromPolyline(a, out, S2EdgeUtil::kIntersectionMergeRadius);
+vector<unique_ptr<S2Polyline>> S2Polygon::ApproxIntersectWithPolyline(
+    S2Polyline const& a, S1Angle snap_radius) const {
+  return IntersectWithPolyline(a, IdentitySnapFunction(snap_radius));
 }
 
-void S2Polygon::ApproxSubtractFromPolyline(
-    S2Polyline const* a,
-    vector<S2Polyline*> *out,
-    S1Angle vertex_merge_radius) const {
-  InternalClipPolyline(true, a, out, vertex_merge_radius);
+vector<unique_ptr<S2Polyline>> S2Polygon::IntersectWithPolyline(
+    S2Polyline const& a, S2Builder::SnapFunction const& snap_function) const {
+  return OperationWithPolyline(S2BoundaryOperation::OpType::INTERSECTION,
+                               snap_function, a);
 }
 
-S2Polygon* S2Polygon::DestructiveUnion(vector<S2Polygon*>* polygons) {
-  return DestructiveApproxUnion(polygons, S2EdgeUtil::kIntersectionMergeRadius);
+vector<unique_ptr<S2Polyline>> S2Polygon::SubtractFromPolyline(
+    S2Polyline const& a) const {
+  return ApproxSubtractFromPolyline(a, S2EdgeUtil::kIntersectionMergeRadius);
 }
 
-S2Polygon* S2Polygon::DestructiveApproxUnion(vector<S2Polygon*>* polygons,
-                                             S1Angle vertex_merge_radius) {
+vector<unique_ptr<S2Polyline>> S2Polygon::ApproxSubtractFromPolyline(
+    S2Polyline const& a, S1Angle snap_radius) const {
+  return SubtractFromPolyline(a, IdentitySnapFunction(snap_radius));
+}
+
+vector<unique_ptr<S2Polyline>> S2Polygon::SubtractFromPolyline(
+    S2Polyline const& a, S2Builder::SnapFunction const& snap_function) const {
+  return OperationWithPolyline(S2BoundaryOperation::OpType::DIFFERENCE,
+                               snap_function, a);
+}
+
+bool S2Polygon::Contains(S2Polyline const& b) const {
+  return ApproxContains(b, S2EdgeUtil::kIntersectionMergeRadius);
+}
+
+bool S2Polygon::ApproxContains(S2Polyline const& b, S1Angle tolerance) const {
+  auto difference = ApproxSubtractFromPolyline(b, tolerance);
+  return difference.empty();
+}
+
+bool S2Polygon::Intersects(S2Polyline const& b) const {
+  return !ApproxDisjoint(b, S2EdgeUtil::kIntersectionMergeRadius);
+}
+
+bool S2Polygon::ApproxDisjoint(S2Polyline const& b, S1Angle tolerance) const {
+  auto intersection = ApproxIntersectWithPolyline(b, tolerance);
+  return intersection.empty();
+}
+
+unique_ptr<S2Polygon> S2Polygon::DestructiveUnion(
+    vector<unique_ptr<S2Polygon>> polygons) {
+  return DestructiveApproxUnion(std::move(polygons),
+                                S2EdgeUtil::kIntersectionMergeRadius);
+}
+
+unique_ptr<S2Polygon> S2Polygon::DestructiveApproxUnion(
+    vector<unique_ptr<S2Polygon>> polygons, S1Angle snap_radius) {
   // Effectively create a priority queue of polygons in order of number of
   // vertices.  Repeatedly union the two smallest polygons and add the result
   // to the queue until we have a single polygon to return.
-  using QueueType = std::multimap<int, S2Polygon*>;
+  using QueueType = std::multimap<int, unique_ptr<S2Polygon>>;
   QueueType queue;  // Map from # of vertices to polygon.
-  for (S2Polygon* polygon : *polygons)
-    queue.insert(std::make_pair(polygon->num_vertices(), polygon));
-  polygons->clear();
+  for (auto& polygon : polygons)
+    queue.insert(std::make_pair(polygon->num_vertices(), std::move(polygon)));
 
   while (queue.size() > 1) {
     // Pop two simplest polygons from queue.
     QueueType::iterator smallest_it = queue.begin();
     int a_size = smallest_it->first;
-    unique_ptr<S2Polygon> a_polygon(smallest_it->second);
+    unique_ptr<S2Polygon> a_polygon(std::move(smallest_it->second));
     queue.erase(smallest_it);
     smallest_it = queue.begin();
     int b_size = smallest_it->first;
-    unique_ptr<S2Polygon> b_polygon(smallest_it->second);
+    unique_ptr<S2Polygon> b_polygon(std::move(smallest_it->second));
     queue.erase(smallest_it);
 
     // Union and add result back to queue.
-    S2Polygon* union_polygon = new S2Polygon();
+    auto union_polygon = gtl::MakeUnique<S2Polygon>();
     union_polygon->InitToApproxUnion(a_polygon.get(), b_polygon.get(),
-                                     vertex_merge_radius);
-    queue.insert(std::make_pair(a_size + b_size, union_polygon));
+                                     snap_radius);
+    queue.insert(std::make_pair(a_size + b_size, std::move(union_polygon)));
     // We assume that the number of vertices in the union polygon is the
     // sum of the number of vertices in the original polygons, which is not
     // always true, but will almost always be a decent approximation, and
@@ -1669,34 +1528,33 @@ S2Polygon* S2Polygon::DestructiveApproxUnion(vector<S2Polygon*>* polygons,
   }
 
   if (queue.empty())
-    return new S2Polygon();
+    return gtl::MakeUnique<S2Polygon>();
   else
-    return queue.begin()->second;
+    return std::move(queue.begin()->second);
 }
 
 void S2Polygon::InitToCellUnionBorder(S2CellUnion const& cells) {
-  // Use a polygon builder to union the cells in the union.  Due to rounding
-  // errors, we can't do an exact union - when a small cell is adjacent to a
-  // larger cell, the shared edges can fail to line up exactly.  Two cell edges
-  // cannot come closer then kMinWidth, so if we have the polygon builder merge
-  // edges within half that distance, we should always merge shared edges
-  // without merging different edges.
-  S2PolygonBuilderOptions options(S2PolygonBuilderOptions::DIRECTED_XOR());
-  double min_cell_angle = S2::kMinWidth.GetValue(S2CellId::kMaxLevel);
-  options.set_vertex_merge_radius(S1Angle::Radians(min_cell_angle / 2));
-  options.set_s2debug_override(s2debug_override());
-  S2PolygonBuilder builder(options);
+  // We use S2Builder to compute the union.  Due to rounding errors, we can't
+  // compute an exact union - when a small cell is adjacent to a larger cell,
+  // the shared edges can fail to line up exactly.  Two cell edges cannot come
+  // closer then kMinWidth, so if we have S2Builder snap edges within half
+  // that distance, then we should always merge shared edges without merging
+  // different edges.
+  double snap_radius = 0.5 * S2::kMinWidth.GetValue(S2CellId::kMaxLevel);
+  S2Builder builder((S2Builder::Options(
+      IdentitySnapFunction(S1Angle::Radians(snap_radius)))));
+  builder.StartLayer(gtl::MakeUnique<S2PolygonLayer>(this));
   for (int i = 0; i < cells.num_cells(); ++i) {
     S2Loop cell_loop(S2Cell(cells.cell_id(i)));
-    builder.AddLoop(&cell_loop);
+    builder.AddLoop(cell_loop);
   }
-  if (!builder.AssemblePolygon(this, nullptr)) {
-    LOG(DFATAL) << "AssemblePolygon failed in InitToCellUnionBorder";
+  S2Error error;
+  if (!builder.Build(&error)) {
+    LOG(DFATAL) << "InitToCellUnionBorder failed: " << error.text();
   }
   // If there are no loops, check whether the result should be the full
-  // polygon rather than the empty one.  There are only two ways that this
-  // should happen: either the cell union is empty, or it consists of all six
-  // faces.
+  // polygon rather than the empty one.  There are only two ways that this can
+  // happen: either the cell union is empty, or it consists of all six faces.
   if (num_loops() == 0) {
     if (cells.num_cells() == 0) return;
     DCHECK_EQ(static_cast<uint64>(6) << (2 * S2CellId::kMaxLevel),
@@ -1764,20 +1622,20 @@ bool S2Polygon::BoundaryEquals(S2Polygon const* b) const {
   return true;
 }
 
-bool S2Polygon::BoundaryApproxEquals(S2Polygon const* b,
-                                     double max_error) const {
-  if (num_loops() != b->num_loops()) return false;
+bool S2Polygon::BoundaryApproxEquals(S2Polygon const& b,
+                                     S1Angle max_error) const {
+  if (num_loops() != b.num_loops()) return false;
 
   // For now, we assume that there is at most one candidate match for each
   // loop.  (So far this method is just used for testing.)
 
   for (int i = 0; i < num_loops(); ++i) {
-    S2Loop const* a_loop = loop(i);
+    S2Loop const& a_loop = *loop(i);
     bool success = false;
     for (int j = 0; j < num_loops(); ++j) {
-      S2Loop const* b_loop = b->loop(j);
-      if (b_loop->depth() == a_loop->depth() &&
-          b_loop->BoundaryApproxEquals(a_loop, max_error)) {
+      S2Loop const& b_loop = *b.loop(j);
+      if (b_loop.depth() == a_loop.depth() &&
+          b_loop.BoundaryApproxEquals(a_loop, max_error)) {
         success = true;
         break;
       }
@@ -1787,19 +1645,19 @@ bool S2Polygon::BoundaryApproxEquals(S2Polygon const* b,
   return true;
 }
 
-bool S2Polygon::BoundaryNear(S2Polygon const* b, double max_error) const {
-  if (num_loops() != b->num_loops()) return false;
+bool S2Polygon::BoundaryNear(S2Polygon const& b, S1Angle max_error) const {
+  if (num_loops() != b.num_loops()) return false;
 
   // For now, we assume that there is at most one candidate match for each
   // loop.  (So far this method is just used for testing.)
 
   for (int i = 0; i < num_loops(); ++i) {
-    S2Loop const* a_loop = loop(i);
+    S2Loop const& a_loop = *loop(i);
     bool success = false;
     for (int j = 0; j < num_loops(); ++j) {
-      S2Loop const* b_loop = b->loop(j);
-      if (b_loop->depth() == a_loop->depth() &&
-          b_loop->BoundaryNear(a_loop, max_error)) {
+      S2Loop const& b_loop = *b.loop(j);
+      if (b_loop.depth() == a_loop.depth() &&
+          b_loop.BoundaryNear(a_loop, max_error)) {
         success = true;
         break;
       }
@@ -1841,12 +1699,12 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   if (num_loops > FLAGS_s2polygon_decode_max_num_loops) return false;
   loops_.reserve(num_loops);
   for (int i = 0; i < num_loops; ++i) {
-    S2Loop* loop = new S2Loop;
+    auto loop = gtl::MakeUnique<S2Loop>();
     loop->set_s2debug_override(s2debug_override());
-    loops_.push_back(loop);
     if (!loop->DecodeCompressed(decoder, snap_level)) {
       return false;
     }
+    loops_.push_back(std::move(loop));
   }
   InitLoopProperties();
   return true;
@@ -1895,8 +1753,8 @@ void S2Polygon::Shape::GetEdge(int e, S2Point const** a, S2Point const** b)
       e -= p->loop(i)->num_vertices();
     }
   }
-  *a = &p->loop(i)->vertex(e);
-  *b = &p->loop(i)->vertex(e+1);
+  *a = &p->loop(i)->oriented_vertex(e);
+  *b = &p->loop(i)->oriented_vertex(e+1);
 }
 
 bool S2Polygon::Shape::contains_origin() const {
@@ -1906,6 +1764,21 @@ bool S2Polygon::Shape::contains_origin() const {
     contains_origin ^= p->loop(i)->contains_origin();
   }
   return contains_origin;
+}
+
+int S2Polygon::Shape::num_chains() const {
+  return polygon_->is_full() ? 0 : polygon_->num_loops();
+}
+
+int S2Polygon::Shape::chain_start(int i) const {
+  DCHECK_LE(i, Shape::num_chains());
+  if (cumulative_edges_) {
+    return i == polygon_->num_loops() ? num_edges_ : cumulative_edges_[i];
+  } else {
+    int e = 0;
+    while (--i >= 0) e += polygon_->loop(i)->num_vertices();
+    return e;
+  }
 }
 
 size_t S2Polygon::BytesUsed() const {

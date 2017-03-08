@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+
 //
 // Various Google-specific casting templates.
 //
@@ -85,9 +86,9 @@ inline To implicit_cast(typename base::identity_<From>::type const &f) {
 
 template<typename To, typename From>     // use like this: down_cast<T*>(foo);
 inline To down_cast(From* f) {           // so we only accept pointers
-  COMPILE_ASSERT(
+  static_assert(
       (std::is_base_of<From, typename std::remove_pointer<To>::type>::value),
-      target_type_not_derived_from_source_type);
+      "target type not derived from source type");
 
   // We skip the assert and hence the dynamic_cast if RTTI is disabled.
 #if !defined(__GNUC__) || defined(__GXX_RTTI)
@@ -108,15 +109,17 @@ inline To down_cast(From* f) {           // so we only accept pointers
 // compiler will just bind From to const T.
 template<typename To, typename From>
 inline To down_cast(From& f) {
-  COMPILE_ASSERT(std::is_reference<To>::value, target_type_not_a_reference);
-  COMPILE_ASSERT(
+  static_assert(
+      std::is_lvalue_reference<To>::value, "target type not a reference");
+  static_assert(
       (std::is_base_of<From, typename std::remove_reference<To>::type>::value),
-      target_type_not_derived_from_source_type);
+      "target type not derived from source type");
 
   // We skip the assert and hence the dynamic_cast if RTTI is disabled.
 #if !defined(__GNUC__) || defined(__GXX_RTTI)
   // RTTI: debug mode only
-  assert(dynamic_cast<typename std::remove_reference<To>::type*>(&f) != nullptr);
+  assert(dynamic_cast<typename std::remove_reference<To>::type*>(&f) !=
+         nullptr);
 #endif  // !defined(__GNUC__) || defined(__GXX_RTTI)
 
   return static_cast<To>(f);
@@ -183,10 +186,8 @@ inline To down_cast(From& f) {
 
 template <class Dest, class Source>
 inline Dest bit_cast(const Source& source) {
-  // Compile time assertion: sizeof(Dest) == sizeof(Source)
-  // A compile error here means your Dest and Source have different sizes.
-  typedef char VerifySizesAreEqual[sizeof(Dest) == sizeof(Source) ? 1 : -1]
-    ATTRIBUTE_UNUSED;
+  static_assert(sizeof(Dest) == sizeof(Source),
+                "Source and destination types should have equal sizes.");
 
   Dest dest;
   memcpy(&dest, &source, sizeof(dest));
@@ -272,8 +273,8 @@ public: \
   static const ENUM_TYPE min_enumerator = ENUM_MIN; \
   static const ENUM_TYPE max_enumerator = ENUM_MAX; \
   static const bool is_specialized = true; \
-  COMPILE_ASSERT(ENUM_MIN >= INT_MIN, enumerator_too_negative_for_int); \
-  COMPILE_ASSERT(ENUM_MAX <= INT_MAX, enumerator_too_positive_for_int); \
+  static_assert(ENUM_MIN >= INT_MIN, "enumerator too negative for int"); \
+  static_assert(ENUM_MAX <= INT_MAX, "enumerator too positive for int"); \
 };
 
 // The loose enum test/cast is actually the more complicated one,
@@ -303,10 +304,11 @@ public: \
 
 template <typename Enum>
 inline bool loose_enum_test(int e_val) {
-  COMPILE_ASSERT(enum_limits<Enum>::is_specialized, missing_MAKE_ENUM_LIMITS);
+  static_assert(enum_limits<Enum>::is_specialized, "missing MAKE_ENUM_LIMITS");
   const Enum e_min = enum_limits<Enum>::min_enumerator;
   const Enum e_max = enum_limits<Enum>::max_enumerator;
-  COMPILE_ASSERT(sizeof(e_val) == 4 || sizeof(e_val) == 8, unexpected_int_size);
+  static_assert(sizeof(e_val) == 4 || sizeof(e_val) == 8,
+                "unexpected int size");
 
   // Find the unary bounding negative number of e_min and e_max.
 
@@ -357,7 +359,7 @@ inline bool loose_enum_test(int e_val) {
 
 template <typename Enum>
 inline bool tight_enum_test(int e_val) {
-  COMPILE_ASSERT(enum_limits<Enum>::is_specialized, missing_MAKE_ENUM_LIMITS);
+  static_assert(enum_limits<Enum>::is_specialized, "missing MAKE_ENUM_LIMITS");
   const Enum e_min = enum_limits<Enum>::min_enumerator;
   const Enum e_max = enum_limits<Enum>::max_enumerator;
   return e_min <= e_val && e_val <= e_max;

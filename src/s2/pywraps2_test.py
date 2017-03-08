@@ -17,13 +17,13 @@ class PyWrapS2TestCase(unittest.TestCase):
 
   def testS2CellIdEqualsIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
-    cell = s2.S2CellId.FromLatLng(london)
-    same_cell = s2.S2CellId.FromLatLng(london)
+    cell = s2.S2CellId(london)
+    same_cell = s2.S2CellId(london)
     self.assertEquals(cell, same_cell)
 
   def testS2CellIdComparsionIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
-    cell = s2.S2CellId.FromLatLng(london)
+    cell = s2.S2CellId(london)
     self.assertTrue(cell < cell.next())
     self.assertTrue(cell.next() > cell)
 
@@ -36,10 +36,20 @@ class PyWrapS2TestCase(unittest.TestCase):
     neighbors = cell.GetEdgeNeighbors()
     self.assertEqual(neighbors, expected_neighbors)
 
+  def testS2CellIdIntersectsIsTrueForOverlap(self):
+    cell1 = s2.S2CellId(0x89c259c000000000)
+    cell2 = s2.S2CellId(0x89c2590000000000)
+    self.assertTrue(cell1.intersects(cell2))
+
+  def testS2CellIdIntersectsIsFalseForNonOverlap(self):
+    cell1 = s2.S2CellId(0x89c259c000000000)
+    cell2 = s2.S2CellId(0x89e83d0000000000)
+    self.assertFalse(cell1.intersects(cell2))
+
   def testS2HashingIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
-    cell = s2.S2CellId.FromLatLng(london)
-    same_cell = s2.S2CellId.FromLatLng(london)
+    cell = s2.S2CellId(london)
+    same_cell = s2.S2CellId(london)
     self.assertEquals(hash(cell), hash(same_cell))
 
   def testCovererIsWrappedCorrectly(self):
@@ -60,18 +70,18 @@ class PyWrapS2TestCase(unittest.TestCase):
     cell_union.Init([0x466d319000000000, 0x466d31b000000000])
     self.assertEquals(cell_union.num_cells(), 2)
     trondheim = s2.S2LatLng.FromDegrees(63.431052, 10.395083)
-    self.assertTrue(cell_union.Contains(s2.S2CellId.FromLatLng(trondheim)))
+    self.assertTrue(cell_union.Contains(s2.S2CellId(trondheim)))
 
   def testS2PolygonIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
-    polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId.FromLatLng(london)))
+    polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId(london)))
     self.assertEquals(polygon.num_loops(), 1)
     point = london.ToPoint()
     self.assertTrue(polygon.Contains(point))
 
   def testS2LoopIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
-    polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId.FromLatLng(london)))
+    polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId(london)))
     loop = polygon.loop(0)
     self.assertTrue(loop.IsValid())
     self.assertEqual(0, loop.depth())
@@ -82,19 +92,19 @@ class PyWrapS2TestCase(unittest.TestCase):
 
   def testS2PolygonCopiesLoopInConstructorBecauseItTakesOwnership(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
-    loop = s2.S2Loop(s2.S2Cell(s2.S2CellId.FromLatLng(london)))
+    loop = s2.S2Loop(s2.S2Cell(s2.S2CellId(london)))
     s2.S2Polygon(loop)
 
   def testS2PolygonInitNestedIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
-    small_loop = s2.S2Loop(s2.S2Cell(s2.S2CellId.FromLatLng(london)))
-    big_loop = s2.S2Loop(s2.S2Cell(s2.S2CellId.FromLatLng(london).parent(1)))
+    small_loop = s2.S2Loop(s2.S2Cell(s2.S2CellId(london)))
+    big_loop = s2.S2Loop(s2.S2Cell(s2.S2CellId(london).parent(1)))
     polygon = s2.S2Polygon()
     polygon.InitNested([big_loop, small_loop])
 
   def testS2PolygonInitNestedWithIncorrectTypeIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
-    loop = s2.S2Loop(s2.S2Cell(s2.S2CellId.FromLatLng(london)))
+    loop = s2.S2Loop(s2.S2Cell(s2.S2CellId(london)))
     polygon = s2.S2Polygon()
     with self.assertRaises(TypeError):
       polygon.InitNested([loop, s2.S2CellId()])
@@ -102,7 +112,7 @@ class PyWrapS2TestCase(unittest.TestCase):
   def testS2PolygonGetAreaIsWrappedCorrectly(self):
     # Cell at level 10 containing central London.
 
-    london_level_10 = s2.S2CellId.FromLatLng(
+    london_level_10 = s2.S2CellId(
         s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)).parent(10)
     polygon = s2.S2Polygon(s2.S2Cell(london_level_10))
     # Because S2Cell.ExactArea() isn't swigged, compare S2Polygon.GetArea() with
@@ -113,7 +123,7 @@ class PyWrapS2TestCase(unittest.TestCase):
 
   def testGetS2LatLngVertexIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
-    polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId.FromLatLng(london)))
+    polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId(london)))
     loop = polygon.loop(0)
     first_vertex = loop.GetS2LatLngVertex(0)
     self.assertTrue(isinstance(first_vertex, s2.S2LatLng))
@@ -155,7 +165,7 @@ class PyWrapS2TestCase(unittest.TestCase):
 
   def testS2PolygonIntersectsWithPolyline(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
-    polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId.FromLatLng(london).parent(15)))
+    polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId(london).parent(15)))
     line = s2.S2Polyline()
     line.InitFromS2LatLngs([s2.S2LatLng.FromDegrees(51.5, -0.128),
                             s2.S2LatLng.FromDegrees(51.5, -0.125)])
@@ -177,6 +187,20 @@ class PyWrapS2TestCase(unittest.TestCase):
     intersection = s2.S2EdgeUtil.GetIntersection(a, b, c, d)
     self.assertEqual(
         "0.000000,0.000000", s2.S2LatLng(intersection).ToStringInDegrees())
+
+  def testS2CellDistance(self):
+    # Level-0 cell (i.e. face) centered at (0, 0)
+    cell = s2.S2Cell(s2.S2CellId(0x1000000000000000))
+
+    p1 = s2.S2LatLng.FromDegrees(0, 0).ToPoint()
+    self.assertTrue(cell.Contains(p1))
+    d1 = cell.GetDistance(p1).ToAngle().degrees()
+    self.assertEqual(0.0, d1)
+
+    p2 = s2.S2LatLng.FromDegrees(0, 90).ToPoint()
+    self.assertTrue(not cell.Contains(p2))
+    d2 = cell.GetDistance(p2).ToAngle().degrees()
+    self.assertAlmostEqual(45.0, d2)
 
 if __name__ == "__main__":
   unittest.main()

@@ -18,11 +18,11 @@
 #ifndef S2_S2BUILDER_GRAPH_H_
 #define S2_S2BUILDER_GRAPH_H_
 
-#include <cstddef>
 #include <array>
+#include <cstddef>
 #include <utility>
 #include <vector>
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2.h"
 #include "s2/s2builder.h"
@@ -57,6 +57,12 @@ class S2Builder::Graph {
   // Identifies an S2Builder *input* edge (before snapping).
   using InputEdgeId = S2Builder::InputEdgeId;
 
+  // Identifies a set of S2Builder input edges.
+  using InputEdgeIdSetId = S2Builder::InputEdgeIdSetId;
+
+  // Identifies a set of edge labels.
+  using LabelSetId = S2Builder::LabelSetId;
+
   // The constructor is typically used only by S2Builder and testing code.
   // Note that most of the parameters are passed by const reference and must
   // exist for the duration of the Graph object.  Notes on parameters:
@@ -66,7 +72,8 @@ class S2Builder::Graph {
   // "vertices":
   //   - a vector of S2Points indexed by VertexId.
   // "edges":
-  //   - a vector of VertexId pairs indexed by EdgeId.
+  //   - a vector of VertexId pairs (sorted in lexicographic order)
+  //     indexed by EdgeId.
   // "input_edge_id_set_ids":
   //   - a vector indexed by EdgeId that allows access to the set of
   //     InputEdgeIds that were mapped to the given edge, by looking up the
@@ -157,8 +164,10 @@ class S2Builder::Graph {
       EdgeId const& operator*() const { return id_; }
       Iterator& operator++() { ++id_; return *this; }
       Iterator operator++(int) { return Iterator(id_++); }
+      size_t operator-(Iterator const& x) const { return id_ - x.id_; }
       bool operator==(Iterator const& x) const { return id_ == x.id_; }
       bool operator!=(Iterator const& x) const { return id_ != x.id_; }
+
      private:
       EdgeId id_;
     };
@@ -179,9 +188,14 @@ class S2Builder::Graph {
   class VertexOutMap {
    public:
     explicit VertexOutMap(Graph const& g);
+
+    int degree(VertexId v) const;
     VertexOutEdges edges(VertexId v) const;
     VertexOutEdgeIds edge_ids(VertexId v) const;
-    int degree(VertexId v) const;
+
+    // Return the edges (or edge ids) between a specific pair of vertices.
+    VertexOutEdges edges(VertexId v0, VertexId v1) const;
+    VertexOutEdgeIds edge_ids(VertexId v0, VertexId v1) const;
 
    private:
     std::vector<Edge> const& edges_;
@@ -211,8 +225,9 @@ class S2Builder::Graph {
   class VertexInMap {
    public:
     explicit VertexInMap(Graph const& g);
-    VertexInEdgeIds edge_ids(VertexId v) const;
+
     int degree(VertexId v) const;
+    VertexInEdgeIds edge_ids(VertexId v) const;
 
     // Returns a sorted vector of all incoming edges (see GetInEdgeIds).  As
     // mentioned above (see GetSiblingMap), this vector is also a map from an
@@ -241,6 +256,10 @@ class S2Builder::Graph {
   // input edge ids that were snapped to the given edge.  The elements of
   // the IdSet can be accessed using input_edge_id_set_lexicon().
   InputEdgeIdSetId input_edge_id_set_id(EdgeId e) const;
+
+  // Low-level method that returns a vector where each element represents the
+  // set of input edge ids that were snapped to a particular output edge.
+  std::vector<InputEdgeIdSetId> const& input_edge_id_set_ids() const;
 
   // Returns a mapping from an InputEdgeIdSetId to a set of input edge ids.
   IdSetLexicon const& input_edge_id_set_lexicon() const;
@@ -273,6 +292,10 @@ class S2Builder::Graph {
   // labels associated with a given input edge.  The elements of
   // the IdSet can be accessed using label_set_lexicon().
   LabelSetId label_set_id(InputEdgeId e) const;
+
+  // Low-level method that returns a vector where each element represents the
+  // set of labels associated with a particular output edge.
+  std::vector<LabelSetId> const& label_set_ids() const;
 
   // Returns a mapping from a LabelSetId to a set of labels.
   IdSetLexicon const& label_set_lexicon() const;
@@ -361,7 +384,7 @@ class S2Builder::Graph {
   // to each other: for example, several loops from different components may
   // bound the same region on the sphere, in which case all of those loops are
   // combined into a single polygon.  (See s2shapeutil::ResolveComponents and
-  // s2builderutil::PolygonShapeVectorLayer for details.)
+  // s2builderutil::LaxPolygonVectorLayer for details.)
   //
   // Note that loops may include both edges of a sibling pair.  When several
   // such edges are connected in a chain or a spanning tree, they form a
@@ -450,6 +473,7 @@ class S2Builder::Graph {
   // assembled into arbitrary polylines without considering the input.)
   //
   // REQUIRES: options.degenerate_edges() == DISCARD
+  //           [It would be easy to add support for KEEP.]
   // REQUIRES: options.sibling_pairs() == { DISCARD, KEEP }
   using EdgePolyline = std::vector<EdgeId>;
   std::vector<EdgePolyline> GetPolylines(PolylineType polyline_type) const;
@@ -461,9 +485,10 @@ class S2Builder::Graph {
   // given set of GraphOptions.  This includes actions such as discarding
   // degenerate edges; merging duplicate edges; and canonicalizing sibling
   // edge pairs in several possible ways (e.g. discarding or creating them).
+  // The output is suitable for passing to the Graph constructor.
   //
-  // If options.edge_type() == EdgeType::DIRECTED, then all input edges should
-  // already have been transformed into a pair of directed edges.
+  // If options.edge_type() == EdgeType::UNDIRECTED, then all input edges
+  // should already have been transformed into a pair of directed edges.
   //
   // "input_ids" is a vector of the same length as "edges" that indicates
   // which input edges were snapped to each edge.  This vector is also updated
@@ -497,6 +522,12 @@ class S2Builder::Graph {
   static std::vector<S2Point> FilterVertices(
       std::vector<S2Point> const& vertices, std::vector<Edge>* edges,
       std::vector<VertexId>* tmp);
+
+  // A comparision function that allows stable sorting with std::sort (which is
+  // fast but not stable).  It breaks ties between equal edges by comparing
+  // their edge ids.
+  static bool StableLessThan(Edge const& a, Edge const& b,
+                             EdgeId ai, EdgeId bi);
 
  private:
   class EdgeProcessor;
@@ -556,8 +587,16 @@ inline S2Builder::Graph::VertexOutEdges::VertexOutEdges(Edge const* begin,
 
 inline S2Builder::Graph::VertexOutEdges
 S2Builder::Graph::VertexOutMap::edges(VertexId v) const {
-  return VertexOutEdges(&edges_[edge_begins_[v]],
-                        &edges_[edge_begins_[v + 1]]);
+  return VertexOutEdges(edges_.data() + edge_begins_[v],
+                        edges_.data() + edge_begins_[v + 1]);
+}
+
+inline S2Builder::Graph::VertexOutEdges
+S2Builder::Graph::VertexOutMap::edges(VertexId v0, VertexId v1) const {
+  auto range = std::equal_range(edges_.data() + edge_begins_[v0],
+                                edges_.data() + edge_begins_[v0 + 1],
+                                Edge(v0, v1));
+  return VertexOutEdges(range.first, range.second);
 }
 
 inline S2Builder::Graph::VertexOutEdgeIds::VertexOutEdgeIds(EdgeId begin,
@@ -568,6 +607,15 @@ inline S2Builder::Graph::VertexOutEdgeIds::VertexOutEdgeIds(EdgeId begin,
 inline S2Builder::Graph::VertexOutEdgeIds
 S2Builder::Graph::VertexOutMap::edge_ids(VertexId v) const {
   return VertexOutEdgeIds(edge_begins_[v], edge_begins_[v + 1]);
+}
+
+inline S2Builder::Graph::VertexOutEdgeIds
+S2Builder::Graph::VertexOutMap::edge_ids(VertexId v0, VertexId v1) const {
+  auto range = std::equal_range(edges_.data() + edge_begins_[v0],
+                                edges_.data() + edge_begins_[v0 + 1],
+                                Edge(v0, v1));
+  return VertexOutEdgeIds(range.first - edges_.data(),
+                          range.second - edges_.data());
 }
 
 inline int S2Builder::Graph::VertexOutMap::degree(VertexId v) const {
@@ -593,6 +641,11 @@ inline IdSetLexicon::IdSet S2Builder::Graph::input_edge_ids(EdgeId e) const {
   return input_edge_id_set_lexicon_.id_set(input_edge_id_set_ids_[e]);
 }
 
+inline std::vector<S2Builder::InputEdgeIdSetId> const&
+S2Builder::Graph::input_edge_id_set_ids() const {
+  return input_edge_id_set_ids_;
+}
+
 inline S2Builder::InputEdgeIdSetId
 S2Builder::Graph::input_edge_id_set_id(EdgeId e) const {
   return input_edge_id_set_ids_[e];
@@ -610,8 +663,25 @@ inline S2Builder::LabelSetId S2Builder::Graph::label_set_id(EdgeId e) const {
   return label_set_ids_[e];
 }
 
+inline std::vector<S2Builder::LabelSetId> const&
+S2Builder::Graph::label_set_ids() const {
+  return label_set_ids_;
+}
+
 inline IdSetLexicon const& S2Builder::Graph::label_set_lexicon() const {
   return label_set_lexicon_;
+}
+
+inline bool S2Builder::Graph::StableLessThan(
+    Edge const& a, Edge const& b, EdgeId ai, EdgeId bi) {
+  // The following is simpler but the compiler (2016) doesn't optimize it as
+  // well as it should:
+  //   return make_pair(a, ai) < make_pair(b, bi);
+  if (a.first < b.first) return true;
+  if (b.first < a.first) return false;
+  if (a.second < b.second) return true;
+  if (b.second < a.second) return false;
+  return ai < bi;  // Stable sort.
 }
 
 #endif  // S2_S2BUILDER_GRAPH_H_

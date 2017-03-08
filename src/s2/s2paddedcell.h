@@ -101,7 +101,7 @@ class S2PaddedCell {
 
 
 inline void S2PaddedCell::GetChildIJ(int pos, int* i, int* j) const {
-  int ij = S2::kPosToIJ[orientation_][pos];
+  int ij = S2::internal::kPosToIJ[orientation_][pos];
   *i = ij >> 1;
   *j = ij & 1;
 }

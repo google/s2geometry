@@ -51,17 +51,18 @@ class S2Region {
   // The bounds are not guaranteed to be tight.
   virtual S2LatLngRect GetRectBound() const = 0;
 
-  // If this method returns true, the region completely contains the given
-  // cell.  Otherwise, either the region does not contain the cell or the
-  // containment relationship could not be determined.
-  //
-  // TODO(ericv): Rename this method to MustContain(), or create a method
-  // Classify() that combines this method with MayIntersect().
+  // Returns true if the region completely contains the given cell, otherwise
+  // returns false.
   virtual bool Contains(S2Cell const& cell) const = 0;
 
   // If this method returns false, the region does not intersect the given
   // cell.  Otherwise, either region intersects the cell, or the intersection
   // relationship could not be determined.
+  //
+  // Note that there is currently exactly one implementation of this method
+  // (S2LatLngRect::MayIntersect) that takes advantage of the semantics above
+  // to be more efficient.  For all other S2Region subtypes, this method
+  // returns true if the region intersect the cell and false otherwise.
   virtual bool MayIntersect(S2Cell const& cell) const = 0;
 
   // Return true if and only if the given point is contained by the region.

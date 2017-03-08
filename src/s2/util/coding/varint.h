@@ -35,8 +35,8 @@
 #include <cstddef>
 #include <string>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/third_party/absl/base/port.h"
 #include "s2/util/bits/bits.h"
 
 // Just a namespace, not a real class
@@ -117,8 +117,6 @@ class Varint {
   static int Length32(uint32 v);
   static int Length64(uint64 v);
 
-  static int Length32NonInline(uint32 v);
-
   // EFFECTS    Appends the varint representation of "value" to "*s".
   static void Append32(string* s, uint32 value);
   static void Append64(string* s, uint64 value);
@@ -165,10 +163,6 @@ class Varint {
   static void Append32Slow(string* s, uint32 value);
   static void Append64Slow(string* s, uint64 value);
 
-  // Mapping from rightmost bit set to the number of bytes required
-  // bit positions count from 1 to bit-size of a word.  Entry 0 is
-  // for the case when input is 0.
-  static const char kLengthBytesRequired[65];
 };
 
 /***** Implementation details; clients should ignore *****/
@@ -268,29 +262,26 @@ inline const char* Varint::Skip32Backward(const char* p, const char* base) {
 inline const char* Varint::Parse32WithLimit(const char* p,
                                             const char* l,
                                             uint32* OUTPUT) {
-  if (p + kMax32 <= l) {
-    return Parse32(p, OUTPUT);
-  } else {
-    // Slow version with bounds checks
-    const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
-    const unsigned char* limit = reinterpret_cast<const unsigned char*>(l);
-    uint32 b, result;
-    if (ptr >= limit) return nullptr;
-    b = *(ptr++); result = b & 127;          if (b < 128) goto done;
-    if (ptr >= limit) return nullptr;
-    b = *(ptr++); result |= (b & 127) <<  7; if (b < 128) goto done;
-    if (ptr >= limit) return nullptr;
-    b = *(ptr++); result |= (b & 127) << 14; if (b < 128) goto done;
-    if (ptr >= limit) return nullptr;
-    b = *(ptr++); result |= (b & 127) << 21; if (b < 128) goto done;
-    if (ptr >= limit) return nullptr;
-    b = *(ptr++); result |= (b & 127) << 28; if (b < 16) goto done;
-    return nullptr;       // Value is too long to be a varint32
-   done:
-    *OUTPUT = result;
-    return reinterpret_cast<const char*>(ptr);
-  }
-
+  // Version with bounds checks.
+  // This formerly had an optimization to inline the non-bounds checking Parse32
+  // but it was found to be slower than the straightforward implementation.
+  const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
+  const unsigned char* limit = reinterpret_cast<const unsigned char*>(l);
+  uint32 b, result;
+  if (ptr >= limit) return nullptr;
+  b = *(ptr++); result = b & 127;          if (b < 128) goto done;
+  if (ptr >= limit) return nullptr;
+  b = *(ptr++); result |= (b & 127) <<  7; if (b < 128) goto done;
+  if (ptr >= limit) return nullptr;
+  b = *(ptr++); result |= (b & 127) << 14; if (b < 128) goto done;
+  if (ptr >= limit) return nullptr;
+  b = *(ptr++); result |= (b & 127) << 21; if (b < 128) goto done;
+  if (ptr >= limit) return nullptr;
+  b = *(ptr++); result |= (b & 127) << 28; if (b < 16) goto done;
+  return nullptr;       // Value is too long to be a varint32
+ done:
+  *OUTPUT = result;
+  return reinterpret_cast<const char*>(ptr);
 }
 
 inline const char* Varint::Parse64(const char* p, uint64* OUTPUT) {
@@ -395,20 +386,22 @@ inline const char* Varint::DecodeTwo32Values(const char* p,
 }
 
 inline int Varint::Length32(uint32 v) {
-  // On x86, subtraction below is eliminated together with another subtraction
-  // in Bits::CountLeadingZeros32() by a compiler so the criical path is 2
-  // instructions (a bsr followed by a cmovz).  On POWER and aarch64, the
-  // subtraction costs us one extra instruction but clz can be done with one
-  // instruction on those platforms.
-  const int leading_zeros = Bits::CountLeadingZeros32(v);
-  return Varint::kLengthBytesRequired[32-leading_zeros];
+  // This computes value == 0 ? 1 : floor(log2(v)) / 7 + 1
+  // Use an explicit multiplication to implement the divide of
+  // a number in the 1..31 range.
+  // Explicit OR 0x1 to handle v == 0.
+  uint32 log2value = Bits::Log2FloorNonZero(v | 0x1);
+  return static_cast<int>((log2value * 9 + 73) / 64);
 }
 
 inline int Varint::Length64(uint64 v) {
-  const int leading_zeros = Bits::CountLeadingZeros64(v);
-  return Varint::kLengthBytesRequired[64-leading_zeros];
+  // This computes value == 0 ? 1 : floor(log2(v)) / 7 + 1
+  // Use an explicit multiplication to implement the divide of
+  // a number in the 1..63 range.
+  // Explicit OR 0x1 to handle v == 0.
+  uint32 log2value = Bits::Log2FloorNonZero64(v | 0x1);
+  return static_cast<int>((log2value * 9 + 73) / 64);
 }
-
 
 inline void Varint::Append32(string* s, uint32 value) {
   // Inline the fast-path for single-character output, but fall back to the .cc

@@ -20,28 +20,30 @@
 #include "s2/base/stringprintf.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
+#include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
 
 using std::pair;
+using std::unique_ptr;
 using std::vector;
 
 namespace s2shapeutil {
 
-LoopShape::LoopShape(vector<S2Point> const& vertices) {
+LaxLoop::LaxLoop(vector<S2Point> const& vertices) {
   Init(vertices);
 }
 
-LoopShape::LoopShape(S2Loop const& loop) {
+LaxLoop::LaxLoop(S2Loop const& loop) {
   Init(loop);
 }
 
-void LoopShape::Init(vector<S2Point> const& vertices) {
+void LaxLoop::Init(vector<S2Point> const& vertices) {
   num_vertices_ = vertices.size();
   vertices_.reset(new S2Point[num_vertices_]);
   std::copy(vertices.begin(), vertices.end(), vertices_.get());
 }
 
-void LoopShape::Init(S2Loop const& loop) {
+void LaxLoop::Init(S2Loop const& loop) {
   DCHECK(!loop.is_full()) << "Full loops not currently supported";
   if (loop.is_empty()) {
     num_vertices_ = 0;
@@ -54,28 +56,28 @@ void LoopShape::Init(S2Loop const& loop) {
   }
 }
 
-void LoopShape::GetEdge(int e, S2Point const** a, S2Point const** b) const {
+void LaxLoop::GetEdge(int e, S2Point const** a, S2Point const** b) const {
   DCHECK_LT(e, num_edges());
   *a = &vertices_[e];
   if (++e == num_vertices()) e = 0;
   *b = &vertices_[e];
 }
 
-bool LoopShape::contains_origin() const {
+bool LaxLoop::contains_origin() const {
   return IsOriginOnLeft(*this);
 }
 
-ClosedPolylineShape::ClosedPolylineShape(std::vector<S2Point> const& vertices) {
+ClosedLaxPolyline::ClosedLaxPolyline(std::vector<S2Point> const& vertices) {
   Init(vertices);
 }
 
-ClosedPolylineShape::ClosedPolylineShape(S2Loop const& loop) {
+ClosedLaxPolyline::ClosedLaxPolyline(S2Loop const& loop) {
   Init(loop);
 }
 
 // VertexArray points to an existing array of vertices.  It allows code
 // sharing between the S2Polygon and vector<vector<S2Point>> constructors.
-class PolygonShape::VertexArray {
+class LaxPolygon::VertexArray {
  public:
   VertexArray(S2Point const* begin, size_t size)
       : begin_(begin), size_(size) {
@@ -88,23 +90,23 @@ class PolygonShape::VertexArray {
   size_t size_;
 };
 
-PolygonShape::PolygonShape(vector<PolygonShape::Loop> const& loops) {
+LaxPolygon::LaxPolygon(vector<LaxPolygon::Loop> const& loops) {
   Init(loops);
 }
 
-PolygonShape::PolygonShape(S2Polygon const& polygon) {
+LaxPolygon::LaxPolygon(S2Polygon const& polygon) {
   Init(polygon);
 }
 
-void PolygonShape::Init(vector<PolygonShape::Loop> const& loops) {
+void LaxPolygon::Init(vector<LaxPolygon::Loop> const& loops) {
   vector<VertexArray> v_arrays;
-  for (PolygonShape::Loop const& loop : loops) {
+  for (LaxPolygon::Loop const& loop : loops) {
     v_arrays.push_back(VertexArray(loop.data(), loop.size()));
   }
   Init(v_arrays);
 }
 
-void PolygonShape::Init(S2Polygon const& polygon) {
+void LaxPolygon::Init(S2Polygon const& polygon) {
   vector<VertexArray> v_arrays;
   for (int i = 0; i < polygon.num_loops(); ++i) {
     S2Loop const* loop = polygon.loop(i);
@@ -113,7 +115,7 @@ void PolygonShape::Init(S2Polygon const& polygon) {
   Init(v_arrays);
 }
 
-void PolygonShape::Init(vector<VertexArray> const& loops) {
+void LaxPolygon::Init(vector<VertexArray> const& loops) {
   num_loops_ = loops.size();
   if (num_loops_ == 0) {
     num_vertices_ = 0;
@@ -138,13 +140,13 @@ void PolygonShape::Init(vector<VertexArray> const& loops) {
   }
 }
 
-PolygonShape::~PolygonShape() {
+LaxPolygon::~LaxPolygon() {
   if (num_loops() > 1) {
     delete[] cumulative_vertices_;
   }
 }
 
-int PolygonShape::num_vertices() const {
+int LaxPolygon::num_vertices() const {
   if (num_loops() <= 1) {
     return num_vertices_;
   } else {
@@ -152,7 +154,7 @@ int PolygonShape::num_vertices() const {
   }
 }
 
-int PolygonShape::num_loop_vertices(int i) const {
+int LaxPolygon::num_loop_vertices(int i) const {
   DCHECK_LT(i, num_loops());
   if (num_loops() == 1) {
     return num_vertices_;
@@ -161,7 +163,7 @@ int PolygonShape::num_loop_vertices(int i) const {
   }
 }
 
-S2Point const& PolygonShape::loop_vertex(int i, int j) const {
+S2Point const& LaxPolygon::loop_vertex(int i, int j) const {
   DCHECK_LT(i, num_loops());
   DCHECK_LT(j, num_loop_vertices(i));
   if (num_loops() == 1) {
@@ -171,7 +173,7 @@ S2Point const& PolygonShape::loop_vertex(int i, int j) const {
   }
 }
 
-void PolygonShape::GetEdge(int e, S2Point const** a, S2Point const** b) const {
+void LaxPolygon::GetEdge(int e, S2Point const** a, S2Point const** b) const {
   DCHECK_LT(e, num_edges());
   int const kMaxLinearSearchLoops = 12;  // From benchmarks.
 
@@ -194,59 +196,77 @@ void PolygonShape::GetEdge(int e, S2Point const** a, S2Point const** b) const {
   *b = &vertices_[e];
 }
 
-bool PolygonShape::contains_origin() const {
+bool LaxPolygon::contains_origin() const {
   return IsOriginOnLeft(*this);
 }
 
-PolylineShape::PolylineShape(vector<S2Point> const& vertices) {
+int LaxPolygon::chain_start(int i) const {
+  DCHECK_LE(i, num_loops());
+  if (num_loops() == 1) {
+    return i == 0 ? 0 : num_vertices_;
+  } else {
+    return cumulative_vertices_[i];
+  }
+}
+
+LaxPolyline::LaxPolyline(vector<S2Point> const& vertices) {
   Init(vertices);
 }
 
-PolylineShape::PolylineShape(S2Polyline const& polyline) {
+LaxPolyline::LaxPolyline(S2Polyline const& polyline) {
   Init(polyline);
 }
 
-void PolylineShape::Init(vector<S2Point> const& vertices) {
+void LaxPolyline::Init(vector<S2Point> const& vertices) {
   num_vertices_ = vertices.size();
   vertices_.reset(new S2Point[num_vertices_]);
   std::copy(vertices.begin(), vertices.end(), vertices_.get());
 }
 
-void PolylineShape::Init(S2Polyline const& polyline) {
+void LaxPolyline::Init(S2Polyline const& polyline) {
   num_vertices_ = polyline.num_vertices();
   vertices_.reset(new S2Point[num_vertices_]);
   std::copy(&polyline.vertex(0), &polyline.vertex(0) + num_vertices_,
             vertices_.get());
 }
 
-void PolylineShape::GetEdge(int e, S2Point const** a,
+void LaxPolyline::GetEdge(int e, S2Point const** a,
                             S2Point const** b) const {
   DCHECK_LT(e, num_edges());
   *a = &vertices_[e];
   *b = &vertices_[e + 1];
 }
 
-VertexIdLoopShape::VertexIdLoopShape(std::vector<int32> const& vertex_ids,
-                                     S2Point const* vertex_array) {
+int LaxPolyline::num_chains() const {
+  return std::min(1, LaxPolyline::num_edges());  // Avoid virtual call.
+}
+
+int LaxPolyline::chain_start(int i) const {
+  return i == 0 ? 0 : LaxPolyline::num_edges();  // Avoid virtual call.
+}
+
+VertexIdLaxLoop::VertexIdLaxLoop(std::vector<int32> const& vertex_ids,
+                                 S2Point const* vertex_array) {
   Init(vertex_ids, vertex_array);
 }
 
-void VertexIdLoopShape::Init(std::vector<int32> const& vertex_ids,
-                             S2Point const* vertex_array) {
+void VertexIdLaxLoop::Init(std::vector<int32> const& vertex_ids,
+                           S2Point const* vertex_array) {
   num_vertices_ = vertex_ids.size();
   vertex_ids_.reset(new int32[num_vertices_]);
   std::copy(vertex_ids.begin(), vertex_ids.end(), vertex_ids_.get());
   vertex_array_ = vertex_array;
 }
 
-void VertexIdLoopShape::GetEdge(int e, S2Point const** a, S2Point const** b) const {
+void VertexIdLaxLoop::GetEdge(int e, S2Point const** a, S2Point const** b)
+    const {
   DCHECK_LT(e, num_edges());
   *a = &vertex(e);
   if (++e == num_vertices()) e = 0;
   *b = &vertex(e);
 }
 
-bool VertexIdLoopShape::contains_origin() const {
+bool VertexIdLaxLoop::contains_origin() const {
   return IsOriginOnLeft(*this);
 }
 
@@ -291,7 +311,7 @@ static bool IsOriginOnLeftAtVertex(S2Shape const& shape,
   pair<S2Point, int> best(reference_dir, 0);
   for (auto const& e : edge_map) {
     if (e.second == 0) continue;  // This is a "matched" edge.
-    if (S2::OrderedCCW(reference_dir, best.first, e.first, vtest)) {
+    if (s2pred::OrderedCCW(reference_dir, best.first, e.first, vtest)) {
       best = e;
     }
   }
@@ -366,32 +386,32 @@ std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
 }
 
 // A structure representing one edge within a S2ShapeIndexCell.
-struct CellEdge {
-  CellEdge() : edge_id(-1, -1), v0(nullptr), v1(nullptr) {}
+struct ShapeEdge {
+  ShapeEdge() : edge_id(-1, -1), v0(nullptr), v1(nullptr) {}
   ShapeEdgeId edge_id;
   S2Point const *v0, *v1;
 };
 
 // Returns a vector representing all edges in the given S2ShapeIndexCell.
-static void GetCellEdges(S2ShapeIndex const& index,
-                         S2ShapeIndexCell const& cell,
-                         vector<CellEdge>* cell_edges) {
+static void GetShapeEdges(S2ShapeIndex const& index,
+                          S2ShapeIndexCell const& cell,
+                          vector<ShapeEdge>* shape_edges) {
   int num_edges = 0;
-  for (int s = 0; s < cell.num_shapes(); ++s) {
+  for (int s = 0; s < cell.num_clipped(); ++s) {
     num_edges += cell.clipped(s).num_edges();
   }
-  cell_edges->resize(num_edges);
+  shape_edges->resize(num_edges);
   int out = 0;
-  for (int s = 0; s < cell.num_shapes(); ++s) {
+  for (int s = 0; s < cell.num_clipped(); ++s) {
     S2ClippedShape const& clipped = cell.clipped(s);
     int32 shape_id = clipped.shape_id();
     S2Shape* shape = index.shape(shape_id);
     int num_clipped = clipped.num_edges();
     for (int i = 0; i < num_clipped; ++i) {
-      CellEdge* cell_edge = &(*cell_edges)[out++];
+      ShapeEdge* shape_edge = &(*shape_edges)[out++];
       int32 edge_id = clipped.edge(i);
-      cell_edge->edge_id = ShapeEdgeId(shape_id, edge_id);
-      shape->GetEdge(edge_id, &cell_edge->v0, &cell_edge->v1);
+      shape_edge->edge_id = ShapeEdgeId(shape_id, edge_id);
+      shape->GetEdge(edge_id, &shape_edge->v0, &shape_edge->v1);
     }
   }
   DCHECK_EQ(num_edges, out);
@@ -399,38 +419,40 @@ static void GetCellEdges(S2ShapeIndex const& index,
 
 // Given a vector of edges within an S2ShapeIndexCell, append all pairs of
 // crossing edges (of the given CrossingType) to "edge_pairs".
-static void AppendCrossingEdgePairs(vector<CellEdge> const& cell_edges,
+static void AppendCrossingEdgePairs(vector<ShapeEdge> const& shape_edges,
                                     CrossingType type,
-                                    EdgePairList* edge_pairs) {
+                                    EdgePairVector* edge_pairs) {
   int min_crossing_value = (type == CrossingType::ALL) ? 0 : 1;
-  int num_edges = cell_edges.size();
+  int num_edges = shape_edges.size();
   for (int i = 0; i + 1 < num_edges; ++i) {
-    CellEdge const& a = cell_edges[i];
+    ShapeEdge const& a = shape_edges[i];
     S2EdgeUtil::EdgeCrosser crosser(a.v0, a.v1);
     for (int j = i + 1; j < num_edges; ++j) {
-      CellEdge const& b = cell_edges[j];
-      if (crosser.CrossingSign(b.v0, b.v1) >= min_crossing_value) {
+      ShapeEdge const& b = shape_edges[j];
+      int sign = crosser.CrossingSign(b.v0, b.v1);
+      if (sign >= min_crossing_value) {
         edge_pairs->push_back(std::make_pair(a.edge_id, b.edge_id));
       }
     }
   }
 }
 
-bool GetCrossingEdgePairs(S2ShapeIndex const& index,
-                          CrossingType type,
-                          EdgePairList* edge_pairs) {
-  edge_pairs->clear();
-  vector<CellEdge> cell_edges;
+EdgePairVector GetCrossingEdgePairs(S2ShapeIndex const& index,
+                                    CrossingType type) {
+  // TODO(ericv): Use brute force if the total number of edges is small enough
+  // (using a larger threshold if the S2ShapeIndex is not constructed yet).
+  EdgePairVector edge_pairs;
+  vector<ShapeEdge> shape_edges;
   for (S2ShapeIndex::Iterator it(index); !it.Done(); it.Next()) {
-    GetCellEdges(index, *it.cell(), &cell_edges);
-    AppendCrossingEdgePairs(cell_edges, type, edge_pairs);
+    GetShapeEdges(index, it.cell(), &shape_edges);
+    AppendCrossingEdgePairs(shape_edges, type, &edge_pairs);
   }
-  if (edge_pairs->size() > 1) {
-    std::sort(edge_pairs->begin(), edge_pairs->end());
-    edge_pairs->erase(std::unique(edge_pairs->begin(), edge_pairs->end()),
-                      edge_pairs->end());
+  if (edge_pairs.size() > 1) {
+    std::sort(edge_pairs.begin(), edge_pairs.end());
+    edge_pairs.erase(std::unique(edge_pairs.begin(), edge_pairs.end()),
+                     edge_pairs.end());
   }
-  return !edge_pairs->empty();
+  return edge_pairs;
 }
 
 void ResolveComponents(vector<vector<S2Shape*>> const& components,
@@ -554,10 +576,11 @@ static bool FindSelfIntersection(S2ClippedShape const& a_clipped,
 // duplicate vertex), and set "error" to a human-readable error message.
 // Otherwise return false and leave "error" unchanged.  All tests are limited
 // to edges that intersect the given cell.
-inline static bool FindSelfIntersection(vector<S2Loop*> const& loops,
-                                        S2ShapeIndexCell const& cell,
-                                        S2Error* error) {
-  for (int a = 0; a < cell.num_shapes(); ++a) {
+inline static bool FindSelfIntersection(
+    vector<unique_ptr<S2Loop>> const& loops,
+    S2ShapeIndexCell const& cell,
+    S2Error* error) {
+  for (int a = 0; a < cell.num_clipped(); ++a) {
     S2ClippedShape const& a_clipped = cell.clipped(a);
     if (FindSelfIntersection(a_clipped, *loops[a_clipped.shape_id()], error)) {
       error->Init(error->code(),
@@ -612,11 +635,11 @@ static bool GetCrossingError(S2Loop const& a_loop, int a_shape_id, int ai,
 // vertex crossings) or two loops share a common edge, and set "error" to a
 // human-readable error message.  Otherwise return false and leave "error"
 // unchanged.  All tests are limited to edges that intersect the given cell.
-static bool FindLoopCrossing(vector<S2Loop*> const& loops,
+static bool FindLoopCrossing(vector<unique_ptr<S2Loop>> const& loops,
                              S2ShapeIndexCell const& cell, S2Error* error) {
   // Possible optimization:
   // Sort the ClippedShapes by edge count to reduce the number of calls to
-  // S2::Sign.  If n is the total number of shapes in the cell, n_i is
+  // s2pred::Sign.  If n is the total number of shapes in the cell, n_i is
   // the number of edges in shape i, and c_i is the number of continuous
   // chains formed by these edges, the total number of calls is
   //
@@ -629,14 +652,14 @@ static bool FindLoopCrossing(vector<S2Loop*> const& loops,
   // using SortedShape = pair<int, S2ShapeIndex::ClippedShape const*>;
   // vector<SortedShape> sorted_shapes;
 
-  for (int a = 0; a < cell.num_shapes() - 1; ++a) {
+  for (int a = 0; a < cell.num_clipped() - 1; ++a) {
     S2ClippedShape const& a_clipped = cell.clipped(a);
     S2Loop const& a_loop = *loops[a_clipped.shape_id()];
     int a_num_clipped = a_clipped.num_edges();
     for (int i = 0; i < a_num_clipped; ++i) {
       int ai = a_clipped.edge(i);
       S2EdgeUtil::EdgeCrosser crosser(&a_loop.vertex(ai), &a_loop.vertex(ai+1));
-      for (int b = a + 1; b < cell.num_shapes(); ++b) {
+      for (int b = a + 1; b < cell.num_clipped(); ++b) {
         S2ClippedShape const& b_clipped = cell.clipped(b);
         S2Loop const& b_loop = *loops[b_clipped.shape_id()];
         int bj_prev = -2;
@@ -663,21 +686,22 @@ bool FindSelfIntersection(S2ShapeIndex const& index, S2Loop const& loop,
                           S2Error* error) {
   DCHECK_EQ(1, index.num_shape_ids());
   for (S2ShapeIndex::Iterator it(index); !it.Done(); it.Next()) {
-    if (FindSelfIntersection(it.cell()->clipped(0), loop, error)) {
+    if (FindSelfIntersection(it.cell().clipped(0), loop, error)) {
       return true;
     }
   }
   return false;
 }
 
-bool FindAnyCrossing(S2ShapeIndex const& index, vector<S2Loop*> const& loops,
+bool FindAnyCrossing(S2ShapeIndex const& index,
+                     vector<unique_ptr<S2Loop>> const& loops,
                      S2Error* error) {
   for (S2ShapeIndex::Iterator it(index); !it.Done(); it.Next()) {
-    if (FindSelfIntersection(loops, *it.cell(), error)) {
+    if (FindSelfIntersection(loops, it.cell(), error)) {
       return true;
     }
-    if (it.cell()->num_shapes() >= 2 &&
-        FindLoopCrossing(loops, *it.cell(), error)) {
+    if (it.cell().num_clipped() >= 2 &&
+        FindLoopCrossing(loops, it.cell(), error)) {
       return true;
     }
   }

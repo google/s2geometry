@@ -1,4 +1,4 @@
-// Copyright 2016 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 // precision of the original object, so it should not be used
 // for data storage.
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -52,10 +53,10 @@ S2LatLngRect MakeLatLngRect(string const& str);
 // return a newly allocated loop.  Example of the input format:
 //     "-20:150, 10:-120, 0.123:-170.652"
 // The strings "empty" or "full" create an empty or full loop respectively.
-S2Loop* MakeLoop(string const& str);
+std::unique_ptr<S2Loop> MakeLoop(string const& str);
 
 // Similar to MakeLoop(), but returns an S2Polyline rather than an S2Loop.
-S2Polyline* MakePolyline(string const& str);
+std::unique_ptr<S2Polyline> MakePolyline(string const& str);
 
 // Given a sequence of loops separated by semicolons, return a newly
 // allocated polygon.  Loops are automatically normalized by inverting them
@@ -70,27 +71,27 @@ S2Polyline* MakePolyline(string const& str);
 //     ""       // the empty polygon (consisting of no loops)
 //     "full"   // the full polygon (consisting of one full loop)
 //     "empty"  // **INVALID** (a polygon consisting of one empty loop)
-S2Polygon* MakePolygon(string const& str);
+std::unique_ptr<S2Polygon> MakePolygon(string const& str);
 
 // Like MakePolygon(), except that it does not normalize loops (i.e., it
 // gives you exactly what you asked for).
-S2Polygon* MakeVerbatimPolygon(string const& str);
+std::unique_ptr<S2Polygon> MakeVerbatimPolygon(string const& str);
 
 // Parse a string in the same format as MakeLatLngRect, and return the
 // corresponding vector of S2LatLng points.
-void ParseLatLngs(string const& str, std::vector<S2LatLng>* latlngs);
+std::vector<S2LatLng> ParseLatLngs(string const& str);
 
 // Parse a string in the same format as MakeLatLngRect, and return the
 // corresponding vector of S2Point values.
-void ParsePoints(string const& str, std::vector<S2Point>* vertices);
+std::vector<S2Point> ParsePoints(string const& str);
 
 // Convert a point, lat-lng rect, loop, polyline, or polygon to the string
 // format above.
 string ToString(S2Point const& point);
 string ToString(S2LatLngRect const& rect);
-string ToString(S2Loop const* loop);
-string ToString(S2Polyline const* polyline);
-string ToString(S2Polygon const* polygon);
+string ToString(S2Loop const& loop);
+string ToString(S2Polyline const& polyline);
+string ToString(S2Polygon const& polygon);
 string ToString(std::vector<S2Point> const& points);
 string ToString(std::vector<S2LatLng> const& points);
 

@@ -23,6 +23,7 @@
 #include <glog/logging.h>
 
 #include "s2/base/macros.h"
+#include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -32,7 +33,7 @@
 #include "s2/s2.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
-#include "s2/util/gtl/inlined_vector.h"
+#include "s2/s2predicates.h"
 #include "s2/util/math/vector.h"
 
 class ExactFloat;
@@ -99,7 +100,7 @@ class S2EdgeUtil {
     // that even if you have 4 points A, B, C, D that lie exactly in a line
     // (say, around the equator), C and D will be treated as being slightly to
     // one side or the other of AB.  This is done in a way such that the
-    // results are always consistent (see S2::Sign).
+    // results are always consistent (see s2pred::Sign).
     //
     // Note that if you want to check an edge against a chain of other edges,
     // it is slightly more efficient to use the single-argument version of
@@ -163,7 +164,7 @@ class S2EdgeUtil {
 
     // These functions handle the "slow path" of CrossingSign().
     int CrossingSignInternal(S2Point const* d);
-    int CrossingSignInternal2(S2Point const* d);
+    int CrossingSignInternal2(S2Point const& d);
 
     // Used internally by CopyingEdgeCrosser.  Updates "c_" only.
     void set_c(S2Point const* c) { c_ = c; }
@@ -173,7 +174,7 @@ class S2EdgeUtil {
     S2Point const* b_;
     Vector3_d a_cross_b_;
 
-    // To reduce the number of calls to S2::ExpensiveSign(), we compute an
+    // To reduce the number of calls to s2pred::ExpensiveSign(), we compute an
     // outward-facing tangent at A and B if necessary.  If the plane
     // perpendicular to one of these tangents separates AB from CD (i.e., one
     // edge on each side) then there is no intersection.
@@ -233,13 +234,9 @@ class S2EdgeUtil {
    public:
     RectBounder() : bound_(S2LatLngRect::Empty()) {}
 
-    // This method is called to add each vertex to the chain.  'b'
-    // must point to fixed storage that persists through the next call
-    // to AddPoint.  This means that if you don't store all of your
-    // points for the lifetime of the bounder, you must at least store
-    // the last two points and alternate which one you use for the
-    // next point.  Requires that b has unit length.
-    void AddPoint(S2Point const* b);
+    // This method is called to add each vertex to the chain.  Requires that 'b'
+    // has unit length.
+    void AddPoint(S2Point const& b);
 
     // Return the bounding rectangle of the edge chain that connects the
     // vertices defined so far.  This bound satisfies the guarantee made
@@ -269,7 +266,7 @@ class S2EdgeUtil {
     static S2LatLng MaxErrorForTests();
 
    private:
-    S2Point const* a_;      // The previous vertex in the chain.
+    S2Point a_;             // The previous vertex in the chain.
     S2LatLng a_latlng_;     // The corresponding latitude-longitude.
     S2LatLngRect bound_;    // The current bounding rectangle.
 
@@ -310,7 +307,7 @@ class S2EdgeUtil {
 
   // Like SimpleCrossing, except that points that lie exactly on a line are
   // arbitrarily classified as being on one side or the other (according to
-  // the rules of S2::Sign).  It returns +1 if there is a crossing, -1
+  // the rules of s2pred::Sign).  It returns +1 if there is a crossing, -1
   // if there is no crossing, and 0 if any two vertices from different edges
   // are the same.  Returns 0 or -1 if either edge is degenerate.
   // Properties of CrossingSign:
@@ -544,7 +541,7 @@ class S2EdgeUtil {
   // This method guarantees that the returned segments form a continuous path
   // from A to B, and that all vertices are within kFaceClipErrorUVDist of the
   // line AB.  All vertices lie within the [-1,1]x[-1,1] cube face rectangles.
-  // The results are consistent with S2::Sign(), i.e. the edge is
+  // The results are consistent with s2pred::Sign(), i.e. the edge is
   // well-defined even its endpoints are antipodal.  [TODO(ericv): Extend the
   // implementation of S2::RobustCrossProd so that this statement is true.]
   static void GetFaceSegments(S2Point const& a, S2Point const& b,
@@ -671,13 +668,13 @@ class S2EdgeUtil {
   static int* intersection_method_tally_;
 
   // The list of intersection methods implemented by GetIntersection().
-  enum IntersectionMethod {
+  enum class IntersectionMethod {
     SIMPLE,
     SIMPLE_LD,
     STABLE,
     STABLE_LD,
     EXACT,
-    NUM_INTERSECTION_METHODS
+    NUM_METHODS
   };
   static char const* GetIntersectionMethodName(IntersectionMethod method);
 
@@ -729,7 +726,7 @@ inline S2EdgeUtil::EdgeCrosser::EdgeCrosser(
 inline void S2EdgeUtil::EdgeCrosser::RestartAt(S2Point const* c) {
   DCHECK(S2::IsUnitLength(*c));
   c_ = c;
-  acb_ = -S2::TriageSign(*a_, *b_, *c_, a_cross_b_);
+  acb_ = -s2pred::TriageSign(*a_, *b_, *c_, a_cross_b_);
 }
 
 inline int S2EdgeUtil::EdgeCrosser::CrossingSign(S2Point const* d) {
@@ -742,7 +739,7 @@ inline int S2EdgeUtil::EdgeCrosser::CrossingSign(S2Point const* d) {
 
   // Recall that TriageSign is invariant with respect to rotating its
   // arguments, i.e. ABD has the same orientation as BDA.
-  int bda = S2::TriageSign(*a_, *b_, *d, a_cross_b_);
+  int bda = s2pred::TriageSign(*a_, *b_, *d, a_cross_b_);
   if (acb_ == -bda && bda != 0) {
     // The most common case -- triangles have opposite orientations.  Save the
     // current vertex D as the next vertex C, and also save the orientation of
@@ -843,7 +840,7 @@ inline double S2EdgeUtil::InterpolateDouble(double x, double a, double b,
   DCHECK_NE(a, b);
   // To get results that are accurate near both A and B, we interpolate
   // starting from the closer of the two points.
-  if (fabs(a - x) <= fabs(b - x)) {
+  if (std::fabs(a - x) <= std::fabs(b - x)) {
     return a1 + (b1 - a1) * (x - a) / (b - a);
   } else {
     return b1 + (a1 - b1) * (x - b) / (a - b);

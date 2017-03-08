@@ -17,6 +17,7 @@
 #ifndef S2_S2REGIONINTERSECTION_H_
 #define S2_S2REGIONINTERSECTION_H_
 
+#include <memory>
 #include <vector>
 
 #include <glog/logging.h>
@@ -39,48 +40,46 @@ class S2RegionIntersection : public S2Region {
  public:
   // Creates an empty intersection that should be initialized by calling Init().
   // Note: an intersection of no regions covers the entire sphere.
-  S2RegionIntersection();
+  S2RegionIntersection() = default;
 
   // Create a region representing the intersection of the given regions.
-  // Takes ownership of all regions and clears the given vector.
-  explicit S2RegionIntersection(std::vector<S2Region*>* regions);
+  explicit S2RegionIntersection(std::vector<std::unique_ptr<S2Region>> regions);
 
-  virtual ~S2RegionIntersection();
+  ~S2RegionIntersection() override = default;
 
   // Initialize region by taking ownership of the given regions.
-  void Init(std::vector<S2Region*>* regions);
+  void Init(std::vector<std::unique_ptr<S2Region>> regions);
 
-  // Release ownership of the regions of this union, and appends them to
-  // "regions" if non-nullptr.  Resets the region to be empty.
-  void Release(std::vector<S2Region*>* regions);
+  // Releases ownership of the regions of this intersection and returns them,
+  // leaving this region empty.
+  std::vector<std::unique_ptr<S2Region>> Release();
 
   // Accessor methods.
   int num_regions() const { return regions_.size(); }
-  S2Region const* region(int i) const { return regions_[i]; }
+  S2Region const* region(int i) const { return regions_[i].get(); }
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2RegionIntersection* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool VirtualContainsPoint(S2Point const& p) const;
+  S2RegionIntersection* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool VirtualContainsPoint(S2Point const& p) const override;
   bool Contains(S2Point const& p) const;
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool MayIntersect(S2Cell const& cell) const;
-  virtual void Encode(Encoder* const encoder) const {
+  bool Contains(S2Cell const& cell) const override;
+  bool MayIntersect(S2Cell const& cell) const override;
+  void Encode(Encoder* const encoder) const override {
     LOG(FATAL) << "Unimplemented";
   }
-  virtual bool Decode(Decoder* const decoder) { return false; }
+  bool Decode(Decoder* const decoder) override { return false; }
 
  private:
-  // Internal constructor used only by Clone() that makes a deep copy of
+  // Internal copy constructor used only by Clone() that makes a deep copy of
   // its argument.
-  explicit S2RegionIntersection(S2RegionIntersection const* src);
+  S2RegionIntersection(S2RegionIntersection const& src);
 
-  std::vector<S2Region*> regions_;
+  std::vector<std::unique_ptr<S2Region>> regions_;
 
-  S2RegionIntersection(S2RegionIntersection const&) = delete;
   void operator=(S2RegionIntersection const&) = delete;
 };
 

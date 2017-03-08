@@ -34,7 +34,7 @@ class S2Builder::Layer {
   virtual ~Layer() {}
 
   // Defines options for building the edge graph that is passed to Build().
-  virtual GraphOptions const& graph_options() const = 0;
+  virtual GraphOptions graph_options() const = 0;
 
   // Assembles a graph of snapped edges into the geometry type implemented by
   // this layer.  If an error is encountered, sets "error" appropriately.

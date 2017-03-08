@@ -21,9 +21,9 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "s2/base/integral_types.h"
 #include "s2/s2latlng.h"
 #include "s2/s2testing.h"
+#include "s2/third_party/absl/base/integral_types.h"
 
 DEFINE_int32(iters,
              (google::DEBUG_MODE ? 100 : 1000) * (1000 * 1000),

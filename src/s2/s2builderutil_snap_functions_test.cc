@@ -30,9 +30,9 @@
 #include <map>
 #include <set>
 #include <string>
-#include <vector>
 #include <utility>
-#include "s2/base/integral_types.h"
+#include <vector>
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include "s2/r2.h"
@@ -42,6 +42,7 @@
 #include "s2/s2cellid.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2latlng.h"
+#include "s2/s2measures.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 #include "s2/util/math/mathutil.h"

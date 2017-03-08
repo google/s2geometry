@@ -1,4 +1,4 @@
-// Copyright 2016 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,13 +16,11 @@
 #ifndef S2_BASE_MACROS_H_
 #define S2_BASE_MACROS_H_
 
-#include <cstddef>
-
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/port.h"
 
 #define COMPILE_ASSERT(expr, msg) static_assert(expr, #msg)
 
-template <typename T, std::size_t N>
-constexpr std::size_t arraysize(const T (&)[N]) { return N; }
+#define GOOGLE_DEPRECATED(msg) [[deprecated(msg)]]
+#define ABSL_DEPRECATED(msg) [[deprecated(msg)]]
 
 #endif  // S2_BASE_MACROS_H_

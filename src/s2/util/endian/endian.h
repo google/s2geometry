@@ -25,13 +25,14 @@
 #define S2_UTIL_ENDIAN_ENDIAN_H_
 
 #include <cassert>
+#include <type_traits>
 
 #include <glog/logging.h>
 
 #include "s2/base/casts.h"
 #include "s2/base/int128.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/third_party/absl/base/port.h"
 
 // Use compiler byte-swapping intrinsics if they are available.  32-bit
 // and 64-bit versions are available in Clang and GCC as of GCC 4.3.0.
@@ -80,8 +81,8 @@ inline uint16 gbswap_16(uint16 host_int) {
 #endif  // intrinics available
 
 inline uint128 gbswap_128(uint128 host_int) {
-  return uint128(gbswap_64(Uint128Low64(host_int)),
-                 gbswap_64(Uint128High64(host_int)));
+  return absl::MakeUint128(gbswap_64(Uint128Low64(host_int)),
+                           gbswap_64(Uint128High64(host_int)));
 }
 
 #ifdef IS_LITTLE_ENDIAN
@@ -263,8 +264,8 @@ class LittleEndian {
   }
 
   static uint128 Load128(const void *p) {
-    return uint128(
-        ToHost64(UNALIGNED_LOAD64(reinterpret_cast<const uint64 *>(p) + 1)),
+    return absl::MakeUint128(
+        ToHost64(UNALIGNED_LOAD64(reinterpret_cast<const uint64*>(p) + 1)),
         ToHost64(UNALIGNED_LOAD64(p)));
   }
 
@@ -282,8 +283,8 @@ class LittleEndian {
     if (len <= 8) {
       return uint128(Load64VariableLength(p, len));
     } else {
-      return uint128(
-          Load64VariableLength(static_cast<const char *>(p) + 8, len - 8),
+      return absl::MakeUint128(
+          Load64VariableLength(static_cast<const char*>(p) + 8, len - 8),
           Load64(p));
     }
   }
@@ -429,9 +430,9 @@ class BigEndian {
   }
 
   static uint128 Load128(const void *p) {
-    return uint128(
+    return absl::MakeUint128(
         ToHost64(UNALIGNED_LOAD64(p)),
-        ToHost64(UNALIGNED_LOAD64(reinterpret_cast<const uint64 *>(p) + 1)));
+        ToHost64(UNALIGNED_LOAD64(reinterpret_cast<const uint64*>(p) + 1)));
   }
 
   static void Store128(void *p, const uint128 v) {
@@ -449,12 +450,11 @@ class BigEndian {
       return uint128(Load64VariableLength(static_cast<const char *>(p),
                                           len));
     } else if (len < 16) {
-      return uint128(
-          Load64VariableLength(p, len - 8 ),
-          Load64(static_cast<const char *>(p)+ len - 8));
+      return absl::MakeUint128(Load64VariableLength(p, len - 8),
+                               Load64(static_cast<const char*>(p) + len - 8));
     } else {
-      return uint128(Load64(static_cast<const char *>(p)),
-                     Load64(static_cast<const char *>(p)+8));
+      return absl::MakeUint128(Load64(static_cast<const char*>(p)),
+                               Load64(static_cast<const char*>(p) + 8));
     }
   }
 

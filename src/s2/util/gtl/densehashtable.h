@@ -118,11 +118,11 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <type_traits>
 
 #include "s2/util/gtl/hashtable_common.h"
 #include "s2/util/gtl/libc_allocator_with_realloc.h"
-#include "s2/base/port.h"
-#include "s2/base/type_traits.h"
+#include "s2/third_party/absl/base/port.h"
 #include <stdexcept>                 // For length_error
 
 namespace google {
@@ -401,14 +401,14 @@ class dense_hashtable {
   // ACCESSOR FUNCTIONS for the things we templatize on, basically
   hasher hash_funct() const               { return settings; }
   key_equal key_eq() const                { return key_info; }
-  allocator_type get_allocator() const { return key_info; }
+  value_alloc_type get_allocator() const { return key_info; }
 
   // Accessor function for statistics gathering.
   int num_table_copies() const { return settings.num_ht_copies(); }
 
  private:
   // Annoyingly, we can't copy values around, because they might have
-  // const components (they're probably pair<const X, Y>).  We use
+  // const components (they're probably std::pair<const X, Y>).  We use
   // explicit destructor invocation and placement new to get around
   // this.  Arg.
   static void set_value(pointer dst, const_reference src) {
@@ -416,12 +416,10 @@ class dense_hashtable {
     new(dst) value_type(src);
   }
 
-#if LANG_CXX11
   static void set_value(pointer dst, value_type&& src) {  // NOLINT
     dst->~value_type();
     new(dst) value_type(std::move(src));
   }
-#endif
 
   void destroy_buckets(size_type first, size_type last) {
     for ( ; first != last; ++first)
@@ -690,7 +688,7 @@ class dense_hashtable {
     return true;
   }
 
-  // We require table be not-nullptr and empty before calling this.
+  // We require table be non-null and empty before calling this.
   void resize_table(size_type /*old_size*/, size_type new_size,
                     std::true_type) {
     table = get_internal_allocator().realloc_or_die(table, new_size);
@@ -749,14 +747,9 @@ class dense_hashtable {
     pointer new_table = get_internal_allocator().allocate(new_num_buckets);
 
     fill_range_with_empty(new_table, new_table + new_num_buckets);
-#if LANG_CXX11
     copy_elements(std::make_move_iterator(begin()),
                   std::make_move_iterator(end()),
                   new_table, new_num_buckets);
-#else
-    copy_elements(begin(), end(),
-                  new_table, new_num_buckets);
-#endif
 
     destroy_buckets(0, num_buckets);  // Destroy table's elements.
     get_internal_allocator().deallocate(table, num_buckets);
@@ -823,11 +816,18 @@ class dense_hashtable {
   dense_hashtable(const dense_hashtable& ht,
                   size_type min_buckets_wanted = HT_DEFAULT_STARTING_BUCKETS)
       : settings(ht.settings),
-        key_info(ht.key_info),
+        key_info(ht.key_info.as_extract_key(), ht.key_info.as_set_key(),
+                 ht.key_info.as_equal_key(),
+                 alloc_impl<value_alloc_type>(
+                     std::allocator_traits<value_alloc_type>::
+                         select_on_container_copy_construction(
+                             ht.key_info.as_value_alloc()))),
         num_deleted(0),
         num_elements(0),
         num_buckets(0),
         table(nullptr) {
+    key_info.delkey = ht.key_info.delkey;
+    key_info.empty = ht.key_info.empty;
     if (!ht.settings.use_empty()) {
       // If use_empty isn't set, copy_from will crash, so we do our own copying.
       assert(ht.empty());
@@ -841,33 +841,108 @@ class dense_hashtable {
 
   dense_hashtable& operator=(const dense_hashtable& ht) {
     if (&ht == this)  return *this;        // don't copy onto ourselves
-    if (!ht.settings.use_empty()) {
-      assert(ht.empty());
-      dense_hashtable empty_table(ht);  // empty table with ht's thresholds
-      this->swap(empty_table);
-      return *this;
-    }
     settings = ht.settings;
-    // Copy everything but the allocator.
-    static_cast<ExtractKey&>(key_info) =
-        static_cast<const ExtractKey&>(ht.key_info);
-    static_cast<SetKey&>(key_info) = static_cast<const SetKey&>(ht.key_info);
-    static_cast<EqualKey&>(key_info) =
-        static_cast<const EqualKey&>(ht.key_info);
+    key_info.as_extract_key() = ht.key_info.as_extract_key();
+    key_info.as_set_key() = ht.key_info.as_set_key();
+    key_info.as_equal_key() = ht.key_info.as_equal_key();
+    if (std::allocator_traits<
+            value_alloc_type>::propagate_on_container_copy_assignment::value) {
+      // If we're about to overwrite our allocator, we need to free all
+      // memory using our old allocator.
+      if (key_info.as_value_alloc() != ht.key_info.as_value_alloc()) {
+        destroy_table();
+        table = nullptr;
+      }
+      static_cast<alloc_impl<value_alloc_type>&>(key_info) =
+          static_cast<const alloc_impl<value_alloc_type>&>(ht.key_info);
+    }
     key_info.empty = ht.key_info.empty;
     key_info.delkey = ht.key_info.delkey;
-    // copy_from() calls clear and sets num_deleted to 0 too
-    copy_from(ht, HT_MIN_BUCKETS);
+
+    if (ht.settings.use_empty()) {
+      // copy_from() calls clear and sets num_deleted to 0 too
+      copy_from(ht, HT_MIN_BUCKETS);
+    } else {
+      assert(ht.empty());
+      destroy_table();
+      table = nullptr;
+    }
+
     // we purposefully don't copy the allocator, which may not be copyable
     return *this;
   }
 
-  ~dense_hashtable() {
-    if (table) {
-      destroy_buckets(0, num_buckets);
-      get_internal_allocator().deallocate(table, num_buckets);
-    }
+  dense_hashtable(dense_hashtable&& ht)
+      : settings(std::move(ht.settings)),
+        key_info(std::move(ht.key_info)),
+        num_deleted(ht.num_deleted),
+        num_elements(ht.num_elements),
+        num_buckets(ht.num_buckets),
+        table(ht.table) {
+    ht.num_deleted = 0;
+    ht.num_elements = 0;
+    ht.table = nullptr;
+    ht.num_buckets = 0;
+    ht.settings.set_use_empty(false);
+    ht.settings.set_use_deleted(false);
   }
+
+  dense_hashtable& operator=(dense_hashtable&& ht) {
+    if (&ht == this) return *this;        // don't move onto ourselves
+
+    const bool can_move_table =
+        std::allocator_traits<
+            Alloc>::propagate_on_container_move_assignment::value ||
+        key_info.as_value_alloc() == ht.key_info.as_value_alloc();
+
+    // First, deallocate with this's allocator.
+    destroy_table();
+
+    if (std::allocator_traits<
+            value_alloc_type>::propagate_on_container_move_assignment::value) {
+      // This moves the allocator.
+      key_info = std::move(ht.key_info);
+    } else {
+      // Move all other base classes of key_info from ht, but don't move the
+      // allocator.
+      key_info.as_extract_key() = std::move(ht.key_info.as_extract_key());
+      key_info.as_set_key() = std::move(ht.key_info.as_set_key());
+      key_info.as_equal_key() = std::move(ht.key_info.as_equal_key());
+      key_info.delkey = std::move(ht.key_info.delkey);
+      key_info.empty = std::move(ht.key_info.empty);
+    }
+
+    settings = std::move(ht.settings);
+    num_deleted = ht.num_deleted;
+    ht.num_deleted = 0;
+    num_elements = ht.num_elements;
+    ht.num_elements = 0;
+    num_buckets = ht.num_buckets;
+    ht.num_buckets = HT_DEFAULT_STARTING_BUCKETS;
+    ht.settings.set_use_empty(false);
+    ht.settings.set_use_deleted(false);
+
+    if (can_move_table) {
+      // We can transfer ownership of the table from ht to this because either
+      // we're propagating the allocator or ht's allocator is equal to this's.
+      table = ht.table;
+      ht.table = nullptr;
+    } else {
+      // We can't transfer ownership of any memory from ht to this, so the
+      // best we can do is move element-by-element.
+      table = get_internal_allocator().allocate(num_buckets);
+      for (size_type i = 0; i < num_buckets; ++i) {
+        new(table + i) Value(std::move(ht.table[i]));
+      }
+
+      ht.destroy_table();
+      ht.table = nullptr;
+    }
+
+    return *this;
+  }
+
+  ~dense_hashtable() { destroy_table(); }
 
   // Many STL algorithms use swap instead of copy constructors
   void swap(dense_hashtable& ht) {
@@ -875,22 +950,34 @@ class dense_hashtable {
     using std::swap;
     swap(settings, ht.settings);
     // Swap everything in key_info but the allocator.
-    swap(static_cast<ExtractKey&>(key_info),
-         static_cast<ExtractKey&>(ht.key_info));
-    swap(static_cast<SetKey&>(key_info), static_cast<SetKey&>(ht.key_info));
-    swap(static_cast<EqualKey&>(key_info), static_cast<EqualKey&>(ht.key_info));
+    swap(key_info.as_extract_key(), ht.key_info.as_extract_key());
+    swap(key_info.as_set_key(), ht.key_info.as_set_key());
+    swap(key_info.as_equal_key(), ht.key_info.as_equal_key());
+    if (std::allocator_traits<
+            value_alloc_type>::propagate_on_container_swap::value) {
+      swap(static_cast<alloc_impl<value_alloc_type>&>(key_info),
+           static_cast<alloc_impl<value_alloc_type>&>(ht.key_info));
+    } else {
+      // Swapping when allocators are unequal and
+      // propagate_on_container_swap is false is undefined behavior.
+      CHECK(key_info.as_value_alloc() == ht.key_info.as_value_alloc());
+    }
     swap(key_info.empty, ht.key_info.empty);
     swap(key_info.delkey, ht.key_info.delkey);
     swap(num_deleted, ht.num_deleted);
     swap(num_elements, ht.num_elements);
     swap(num_buckets, ht.num_buckets);
     swap(table, ht.table);
-    settings.reset_thresholds(bucket_count());  // also resets consider_shrink
-    ht.settings.reset_thresholds(ht.bucket_count());
-    // we purposefully don't swap the allocator, which may not be swap-able
   }
 
  private:
+  void destroy_table() {
+    if (table) {
+      destroy_buckets(0, num_buckets);
+      get_internal_allocator().deallocate(table, num_buckets);
+    }
+  }
+
   void clear_to_size(size_type new_num_buckets) {
     if (!table) {
       table = get_internal_allocator().allocate(new_num_buckets);
@@ -899,7 +986,7 @@ class dense_hashtable {
       if (new_num_buckets != num_buckets) {   // resize, if necessary
         typedef std::integral_constant<bool,
             std::is_same<value_alloc_type,
-                          libc_allocator_with_realloc<value_type> >::value>
+                         libc_allocator_with_realloc<value_type> >::value>
             realloc_ok;
         resize_table(num_buckets, new_num_buckets, realloc_ok());
       }
@@ -942,6 +1029,15 @@ class dense_hashtable {
   // LOOKUP ROUTINES
  private:
   template <class K>
+  void assert_key_is_not_empty_or_deleted(const K& key) const {
+    assert(settings.use_empty() && "set_empty_key() was not called");
+    assert(!equals(key, key_info.empty) &&
+           "Using the empty key as a regular key");
+    assert((!settings.use_deleted() || !equals(key, key_info.delkey))
+           && "Using the deleted key as a regular key");
+  }
+
+  template <class K>
   std::pair<size_type, size_type> find_position(const K& key) const {
     return find_position_using_hash(hash(key), key);
   }
@@ -954,6 +1050,7 @@ class dense_hashtable {
   template <class K>
   std::pair<size_type, size_type> find_position_using_hash(
       const size_type key_hash, const K& key) const {
+    assert_key_is_not_empty_or_deleted(key);
     size_type num_probes = 0;              // how many times we've probed
     const size_type bucket_count_minus_one = bucket_count() - 1;
     size_type bucknum = key_hash & bucket_count_minus_one;
@@ -997,10 +1094,7 @@ class dense_hashtable {
   template <class K>
   std::pair<size_type, bool> find_if_present_using_hash(
       const size_type key_hash, const K& key) const {
-    assert(!settings.use_deleted() || !equals(deleted_key(), key));
-    if (!initialized() || equals(key_info.empty, key)) {
-      return std::pair<size_type, bool>(0, false);
-    }
+    assert_key_is_not_empty_or_deleted(key);
     size_type num_probes = 0;              // how many times we've probed
     const size_type bucket_count_minus_one = bucket_count() - 1;
     size_type bucknum = key_hash & bucket_count_minus_one;
@@ -1098,14 +1192,9 @@ class dense_hashtable {
   // INSERTION ROUTINES
  private:
   // Private method used by insert_noresize and find_or_insert.
-#if LANG_CXX11
   // 'obj' is either value_type&& or const value_type&.
   template <typename U>
-  iterator insert_at(U&& obj, size_type pos)  // NOLINT
-#else
-  iterator insert_at(const value_type& obj, size_type pos)
-#endif
-  {
+  iterator insert_at(U&& obj, size_type pos) {
     if (size() >= max_size()) {
       throw std::length_error("insert overflow");
     }
@@ -1118,46 +1207,22 @@ class dense_hashtable {
     } else {
       ++num_elements;               // replacing an empty bucket
     }
-    set_value(&table[pos],
-#if LANG_CXX11
-              std::forward<U>(obj));  // NOLINT(build/c++11)
-#else
-              obj);
-#endif
+    set_value(&table[pos], std::forward<U>(obj));
     return iterator(this, table + pos, table + num_buckets, false);
   }
 
   // If you know *this is big enough to hold obj, use this routine
   // 'obj' is value_type&& or const value_type&.
-#if LANG_CXX11
   template <typename U>
   std::pair<iterator, bool> insert_noresize(U&& obj) {  // NOLINT
-    return insert_noresize_using_hash(
-        hash(get_key(obj)),
-        std::forward<U>(obj));  // NOLINT(build/c++11)
+    return insert_noresize_using_hash(hash(get_key(obj)), std::forward<U>(obj));
   }
-#else
-  std::pair<iterator, bool> insert_noresize(const value_type& obj) {
-    return insert_noresize_using_hash(hash(get_key(obj)), obj);
-  }
-#endif
 
   // If you know *this is big enough to hold obj, use this routine
-#if LANG_CXX11
   // 'obj' is value_type&& or const value_type&.
   template <typename U>
   std::pair<iterator, bool> insert_noresize_using_hash(const size_type key_hash,
-                                                       U&& obj)  // NOLINT
-#else
-  std::pair<iterator, bool> insert_noresize_using_hash(const size_type key_hash,
-                                                       const value_type& obj)
-#endif
-  {
-    // First, double-check we're not inserting delkey or empty
-    assert((!settings.use_empty() || !equals(get_key(obj), key_info.empty)) &&
-           "Inserting the empty key");
-    assert((!settings.use_deleted() || !equals(get_key(obj), key_info.delkey))
-           && "Inserting the deleted key");
+                                                       U&& obj) {
     const std::pair<size_type, size_type> pos =
         find_position_using_hash(key_hash, get_key(obj));
     if (pos.first != ILLEGAL_BUCKET) {      // object was already there
@@ -1165,13 +1230,7 @@ class dense_hashtable {
                                           table + num_buckets, false),
                                  false);          // false: we didn't insert
     } else {                                 // pos.second says where to put it
-      iterator i = insert_at(
-#if LANG_CXX11
-          std::forward<U>(obj),  // NOLINT(build/c++11)
-#else
-          obj,
-#endif
-          pos.second);
+      iterator i = insert_at(std::forward<U>(obj), pos.second);
       return std::pair<iterator, bool>(i, true);
     }
   }
@@ -1204,13 +1263,11 @@ class dense_hashtable {
     return insert_noresize(obj);
   }
 
-#if LANG_CXX11
   std::pair<iterator, bool> insert(value_type&& obj) {  // NOLINT
     resize_delta(1);                      // adding an object, grow if need be
     return insert_noresize(std::move(obj));
   }
 
-#endif
 
   // When inserting a lot at a time, we specialize on the type of iterator
   template <class InputIterator>
@@ -1230,12 +1287,6 @@ class dense_hashtable {
   template <class DefaultValue>
   value_type& find_or_insert_using_hash(const size_type key_hash,
                                         const key_type& key) {
-    // First, double-check we're not inserting empty or delkey
-    assert((!settings.use_empty() || !equals(key, key_info.empty)) &&
-           "Inserting the empty key");
-    assert((!settings.use_deleted() || !equals(key, key_info.delkey))
-           && "Inserting the deleted key");
-
     const std::pair<size_type, size_type> pos =
         find_position_using_hash(key_hash, key);
     DefaultValue default_value;
@@ -1254,11 +1305,6 @@ class dense_hashtable {
  private:
   template <class K>
   size_type erase_impl(const K& key) {
-    // First, double-check we're not trying to erase delkey or empty.
-    assert((!settings.use_empty() || !equals(key, key_info.empty)) &&
-           "Erasing the empty key");
-    assert((!settings.use_deleted() || !equals(key, key_info.delkey))
-           && "Erasing the deleted key");
     const_iterator pos = find(key);   // shrug: shouldn't need to be const
     if (pos != end()) {
       assert(!test_deleted(pos));  // or find() shouldn't have returned it
@@ -1278,7 +1324,6 @@ class dense_hashtable {
   }
 
 
-  // We return the iterator past the deleted item.
   void erase(iterator pos) {
     if (pos == end()) return;    // sanity check
     if (set_deleted(pos)) {      // true if object has been newly deleted
@@ -1519,7 +1564,19 @@ class dense_hashtable {
         : ExtractKey(ek),
           SetKey(sk),
           EqualKey(eq),
-          alloc_impl<value_alloc_type>(a) {}
+          alloc_impl<value_alloc_type>(a),
+          delkey(),
+          empty() {}
+
+    // Accessors for convenient access to base classes.
+    ExtractKey& as_extract_key() { return *this; }
+    const ExtractKey& as_extract_key() const { return *this; }
+    SetKey& as_set_key() { return *this; }
+    const SetKey& as_set_key() const { return *this; }
+    EqualKey& as_equal_key() { return *this; }
+    const EqualKey& as_equal_key() const { return *this; }
+    value_alloc_type& as_value_alloc() { return *this; }
+    const value_alloc_type& as_value_alloc() const { return *this; }
 
     // We want to return the exact same type as ExtractKey: Key or const Key&
     typename ExtractKey::result_type get_key(const_reference v) const {

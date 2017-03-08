@@ -21,14 +21,13 @@
 #include <cfloat>
 #include <cmath>
 #include <memory>
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2.h"
 #include "s2/s2cellid.h"
 #include "s2/s2latlng.h"
-#include "s2/util/gtl/ptr_util.h"
 
-using gtl::MakeUnique;
 using std::max;
 using std::min;
 using std::unique_ptr;
@@ -119,7 +118,7 @@ S1Angle S2CellIdSnapFunction::MinSnapRadiusForLevel(int level) {
 int S2CellIdSnapFunction::LevelForMaxSnapRadius(S1Angle snap_radius) {
   // When choosing a level, we need to acount for the error bound of
   // 4 * DBL_EPSILON that is added by MinSnapRadiusForLevel().
-  return S2::kMaxDiag.GetMinLevel(
+  return S2::kMaxDiag.GetLevelForMaxValue(
       2 * (snap_radius.radians() - 4 * DBL_EPSILON));
 }
 
@@ -199,7 +198,7 @@ S1Angle S2CellIdSnapFunction::min_edge_vertex_separation() const {
 }
 
 S2Point S2CellIdSnapFunction::SnapPoint(S2Point const& point) const {
-  return S2CellId::FromPoint(point).parent(level_).ToPoint();
+  return S2CellId(point).parent(level_).ToPoint();
 }
 
 unique_ptr<S2Builder::SnapFunction> S2CellIdSnapFunction::Clone() const {

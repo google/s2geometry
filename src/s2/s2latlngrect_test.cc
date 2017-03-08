@@ -22,6 +22,7 @@
 #include "s2/s2latlngrect.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include <gtest/gtest.h>
 #include "s2/util/coding/coder.h"
@@ -32,6 +33,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2testing.h"
 
+using std::fabs;
 using std::min;
 
 static S2LatLngRect RectFromDegrees(double lat_lo, double lng_lo,
@@ -85,10 +87,10 @@ TEST(S2LatLngRect, ApproxEquals) {
   // Test the max_error (double) parameter.
   EXPECT_TRUE(RectFromDegrees(10, 10, 20, 20).
               ApproxEquals(RectFromDegrees(11, 11, 19, 19),
-                           S1Angle::Degrees(1.001).radians()));
+                           S1Angle::Degrees(1.001)));
   EXPECT_FALSE(RectFromDegrees(10, 10, 20, 20).
                ApproxEquals(RectFromDegrees(11, 11, 19, 19),
-                            S1Angle::Degrees(0.999).radians()));
+                            S1Angle::Degrees(0.999)));
 
   // Test the max_error (S2LatLng) parameter.
   EXPECT_TRUE(RectFromDegrees(0, 10, 20, 30).
@@ -207,8 +209,8 @@ TEST(S2LatLngRect, IntervalOps) {
   // Contains(S2LatLngRect), InteriorContains(S2LatLngRect),
   // Intersects(), InteriorIntersects(), Union(), Intersection().
   //
-  // Much more testing of these methods is done in s1interval_unittest
-  // and r1interval_unittest.
+  // Much more testing of these methods is done in s1interval_test
+  // and r1interval_test.
 
   // Rectangle "r1" covers one-quarter of the sphere.
   S2LatLngRect r1 = RectFromDegrees(0, -180, 90, 0);

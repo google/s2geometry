@@ -24,28 +24,29 @@
 //         S2PolylineVectorLayer
 //   Single polygon output:
 //         S2PolygonLayer
-//         [PolygonShapeLayer]
+//         [LaxPolygonLayer]
 //   Polygon mesh output:
-//         [PolygonShapeVectorLayer]
+//         [LaxPolygonVectorLayer]
 //         [S2PolygonMeshLayer]
 //
 // Notice that there are two supported output types for polygons: S2Polygon
-// and PolygonShape. Use S2Polygon if you need the full range of operations
-// that S2Polygon implements.  Use PolygonShape if you want to represent
+// and LaxPolygon. Use S2Polygon if you need the full range of operations
+// that S2Polygon implements.  Use LaxPolygon if you want to represent
 // polygons with zero-area degenerate regions, or if you need a type that has
 // low memory overhead and fast initialization.  However, be aware that to
-// convert from a PolygonShape to an S2Polygon you will need to use S2Builder
+// convert from a LaxPolygon to an S2Polygon you will need to use S2Builder
 // again.
 //
 // Similarly, there are two supported output formats for polygon meshes:
-// vector<PolygonShape*> and S2PolygonMesh.  Use S2PolygonMesh if you need to
-// be able to determine which polygons are adjacent to each edge or vertex;
-// otherwise use vector<PolygonShape*>, which uses less memory and is faster
-// to construct.
+// LaxPolygonVector and S2PolygonMesh.  Use S2PolygonMesh if you need to be
+// able to determine which polygons are adjacent to each edge or vertex;
+// otherwise use LaxPolygonVector, which uses less memory and is faster to
+// construct.
 
 #ifndef S2_S2BUILDERUTIL_LAYERS_H_
 #define S2_S2BUILDERUTIL_LAYERS_H_
 
+#include <memory>
 #include <utility>
 #include <vector>
 #include <glog/logging.h>
@@ -72,12 +73,18 @@ namespace s2builderutil {
 // Before the edges are assembled into loops, "sibling pairs" consisting of an
 // edge and its reverse edge are automatically removed.  Such edge pairs
 // represent zero-area degenerate regions, which S2Polygon does not allow.
-// (If you need to build polygons with degeneracies, use PolygonShapeLayer
+// (If you need to build polygons with degeneracies, use LaxPolygonLayer
 // instead.)
 //
 // S2PolygonLayer is implemented such that if the input to S2Builder is a
 // polygon and is not modified, then the output has the same cyclic ordering
 // of loop vertices and the same loop ordering as the input polygon.
+//
+// CAVEAT: Because polygons are constructed from their boundaries, this method
+// cannot distinguish between the empty and full polygons.  An empty boundary
+// always yields an empty polygon.  If the result should sometimes be the full
+// polygon, such logic must be implemented outside of this class (and will
+// need to consider factors other than the polygon's boundary).
 class S2PolygonLayer : public S2Builder::Layer {
  public:
   class Options {
@@ -135,26 +142,26 @@ class S2PolygonLayer : public S2Builder::Layer {
                  Options const& options = Options());
 
   // Layer interface:
-  virtual GraphOptions const& graph_options() const;
-  virtual void Build(Graph const& g, S2Error* error);
+  GraphOptions graph_options() const override;
+  void Build(Graph const& g, S2Error* error) override;
 
  private:
   void Init(S2Polygon* polygon, LabelSetIds* label_set_ids,
             IdSetLexicon* label_set_lexicon, Options const& options);
   void AppendS2Loops(Graph const& g,
                      std::vector<Graph::EdgeLoop> const& edge_loops,
-                     std::vector<S2Loop*>* loops) const;
+                     std::vector<std::unique_ptr<S2Loop>>* loops) const;
   void AppendEdgeLabels(Graph const& g,
                         std::vector<Graph::EdgeLoop> const& edge_loops);
   using LoopMap = util::btree::btree_map<S2Loop*, std::pair<int, bool>>;
-  void InitLoopMap(std::vector<S2Loop*> const& loops, LoopMap* loop_map) const;
+  void InitLoopMap(std::vector<std::unique_ptr<S2Loop>> const& loops,
+                   LoopMap* loop_map) const;
   void ReorderEdgeLabels(LoopMap const& loop_map);
 
   S2Polygon* polygon_;
   LabelSetIds* label_set_ids_;
   IdSetLexicon* label_set_lexicon_;
   Options options_;
-  GraphOptions graph_options_;
 };
 
 // A layer type that assembles edges (directed or undirected) into an
@@ -224,8 +231,8 @@ class S2PolylineLayer : public S2Builder::Layer {
                  Options const& options = Options());
 
   // Layer interface:
-  virtual GraphOptions const& graph_options() const;
-  virtual void Build(Graph const& g, S2Error* error);
+  GraphOptions graph_options() const override;
+  void Build(Graph const& g, S2Error* error) override;
 
  private:
   void Init(S2Polyline* polyline, LabelSetIds* label_set_ids,
@@ -235,7 +242,6 @@ class S2PolylineLayer : public S2Builder::Layer {
   LabelSetIds* label_set_ids_;
   IdSetLexicon* label_set_lexicon_;
   Options options_;
-  GraphOptions graph_options_;
 };
 
 // A layer type that assembles edges (directed or undirected) into multiple
@@ -250,10 +256,6 @@ class S2PolylineLayer : public S2Builder::Layer {
 // forms a loop.  However, note that this is not guaranteed when undirected
 // edges are used: for example, if the input consists of a single undirected
 // edge, then either directed edge may be returned.
-//
-// S2PolylineLayer does not support options such as discarding sibling pairs
-// or merging duplicate edges because these options can split the polyline
-// into several pieces.  Use S2PolylineVectorLayer if you need these features.
 class S2PolylineVectorLayer : public S2Builder::Layer {
  public:
   class Options {
@@ -354,8 +356,9 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
 
   // Specifies that a vector of polylines should be constructed using the
   // given options.
-  explicit S2PolylineVectorLayer(std::vector<S2Polyline*>* polylines,
-                                 Options const& options = Options());
+  explicit S2PolylineVectorLayer(
+      std::vector<std::unique_ptr<S2Polyline>>* polylines,
+      Options const& options = Options());
 
   // Specifies that a vector of polylines should be constructed using the
   // given options, and that any labels attached to the input edges should be
@@ -366,24 +369,24 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
   //
   //   for (int32 label : label_set_lexicon.id_set(label_set_ids[i][j])) {...}
   using LabelSetIds = std::vector<std::vector<LabelSetId>>;
-  S2PolylineVectorLayer(std::vector<S2Polyline*>* polylines,
+  S2PolylineVectorLayer(std::vector<std::unique_ptr<S2Polyline>>* polylines,
                         LabelSetIds* label_set_ids,
                         IdSetLexicon* label_set_lexicon,
                         Options const& options = Options());
 
   // Layer interface:
-  virtual GraphOptions const& graph_options() const;
-  virtual void Build(Graph const& g, S2Error* error);
+  GraphOptions graph_options() const override;
+  void Build(Graph const& g, S2Error* error) override;
 
  private:
-  void Init(std::vector<S2Polyline*>* polylines, LabelSetIds* label_set_ids,
-            IdSetLexicon* label_set_lexicon, Options const& options);
+  void Init(std::vector<std::unique_ptr<S2Polyline>>* polylines,
+            LabelSetIds* label_set_ids, IdSetLexicon* label_set_lexicon,
+            Options const& options);
 
-  std::vector<S2Polyline*>* polylines_;
+  std::vector<std::unique_ptr<S2Polyline>>* polylines_;
   LabelSetIds* label_set_ids_;
   IdSetLexicon* label_set_lexicon_;
   Options options_;
-  GraphOptions graph_options_;
 };
 
 #if 0
@@ -405,14 +408,14 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
 class S2MeshLayer;
 
 // Similar to S2PolygonMeshLayer, except that the polygons are returned as a
-// vector of s2shapeutil::PolygonShapes rather than an S2Mesh.  PolygonShape
-// is similar to S2Polygon except that it has more relaxed rules about
-// duplicate vertices and edges (which is why it is being used here).
+// vector of s2shapeutil::LaxPolygon rather than an S2Mesh.  LaxPolygon is
+// similar to S2Polygon except that it has more relaxed rules about duplicate
+// vertices and edges (which is why it is being used here).
 //
 // This has the same effect as building an S2Mesh and extracting the faces,
 // but it is faster and uses less memory.
-using PolygonShapeVector = std::vector<s2shapeutil::PolygonShape*>;
-class PolygonShapeVectorLayer;
+using LaxPolygonVector = std::vector<std::unique_ptr<s2shapeutil::LaxPolygon>>;
+class LaxPolygonVectorLayer;
 #endif
 
 

@@ -17,28 +17,38 @@
 //
 // This file contains various subclasses of S2Shape:
 //
-//  - LoopShape: like S2Loop::Shape but allows duplicate vertices & edges,
-//               more compact representation, faster to initialize.
-//  - PolygonShape: like S2Polygon::Shape but allows duplicate vertices & edges,
-//                  more compact representation, faster to initialize.
-//  - PolylineShape: like S2Polyline::Shape but slightly more compact.
-//  - ClosedPolylineShape: like PolylineShape but joins last vertex to first.
+//  - LaxLoop: like S2Loop::Shape but allows duplicate vertices & edges,
+//             more compact representation, faster to initialize.
+//  - LaxPolygon: like S2Polygon::Shape but allows duplicate vertices & edges,
+//                more compact representation, faster to initialize.
+//  - LaxPolyline: like S2Polyline::Shape but slightly more compact.
+//  - ClosedLaxPolyline: like LaxPolyline but joins last vertex to first.
+//  - VertexIdLaxLoop: like LaxLoop, but vertices are specified as indices
+//                     into a vertex array.
 //  - EdgeVectorShape: represents an arbitrary collection of edges.
-//  - VertexIdLoopShape: like LoopShape, but vertices are specified as indices
-//                       into a vertex array.
 //  - S2LoopOwningShape: like S2SLoop::Shape but owns the underlying S2Loop.
 //  - S2PolygonOwningShape: like S2SPolygon::Shape but owns the S2Polygon.
 //  - S2PolylineOwningShape: like S2SPolyline::Shape but owns the S2Polyline.
 //
-// and various functions related to S2ShapeIndex:
+// It also contains miscellaneous S2ShapeIndex utility functions:
 //
+//  - GetCrossingEdgePairs: finds all edge intersections in an S2ShapeIndex.
 //  - IsOriginOnLeft: helper for implementing S2Shape::contains_origin.
+//
+// And functions that are mainly useful internally in the S2 library:
+//
+//  - ResolveComponents: computes containment relationships among loops.
 //  - FindSelfIntersection: helper function for S2Loop validation.
 //  - FindAnyCrossing: helper function for S2Polygon validation.
+//
+// TODO(ericv): The *OwningShapes could probably be removed by allowing the
+// underlying shapes (e.g., S2Polygon::Shape) to take ownership.
 
 #ifndef S2_S2SHAPEUTIL_H_
 #define S2_S2SHAPEUTIL_H_
 
+#include <algorithm>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -57,19 +67,19 @@ namespace s2shapeutil {
 /////////////////////////////////////////////////////////////////////////////
 ///////////////////////////  Utility Shape Types  ///////////////////////////
 
-// LoopShape represents a closed loop of edges surrounding an interior
+// LaxLoop represents a closed loop of edges surrounding an interior
 // region.  It is similar to S2Loop::Shape except that this class allows
 // duplicate vertices and edges.  Loops may have any number of vertices,
 // including 0, 1, or 2.  (A one-vertex loop defines a degenerate edge
 // consisting of a single point.)
 //
-// Note that LoopShape is faster to initialize and more compact than
+// Note that LaxLoop is faster to initialize and more compact than
 // S2Loop::Shape, but does not support the same operations as S2Loop.
-class LoopShape : public S2Shape {
+class LaxLoop : public S2Shape {
  public:
-  LoopShape() {}  // Must call Init().
-  explicit LoopShape(std::vector<S2Point> const& vertices);
-  explicit LoopShape(S2Loop const& loop);  // Copies the loop data.
+  LaxLoop() {}  // Must call Init().
+  explicit LaxLoop(std::vector<S2Point> const& vertices);
+  explicit LaxLoop(S2Loop const& loop);  // Copies the loop data.
 
   // Initialize the shape.
   void Init(std::vector<S2Point> const& vertices);
@@ -82,10 +92,12 @@ class LoopShape : public S2Shape {
   S2Point const& vertex(int i) const { return vertices_[i]; }
 
   // S2Shape interface:
-  int num_edges() const { return num_vertices(); }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const;
-  bool has_interior() const { return true; }
-  bool contains_origin() const;
+  int num_edges() const override { return num_vertices(); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const override;
+  int dimension() const override { return 2; }
+  bool contains_origin() const override;
+  int num_chains() const override { return std::min(1, num_vertices_); }
+  int chain_start(int i) const override { return i == 0 ? 0 : num_vertices_; }
 
  private:
   // For clients that have many small loops, we save some memory by
@@ -94,22 +106,22 @@ class LoopShape : public S2Shape {
   std::unique_ptr<S2Point[]> vertices_;
 };
 
-// PolygonShape represents a region defined by a collection of closed loops.
+// LaxPolygon represents a region defined by a collection of closed loops.
 // The interior is the region to the left of all loops.  This is similar to
 // S2Polygon::Shape except that this class allows duplicate vertices and edges
 // (within loops and/or shared between loops).  There can be zero or more
 // loops, and each loop must have at least one vertex.  (A one-vertex loop
 // defines a degenerate edge consisting of a single point.)
 //
-// Note that PolygonShape is faster to initialize and more compact than
+// Note that LaxPolygon is faster to initialize and more compact than
 // S2Polygon::Shape, but does not support the same operations as S2Polygon.
-class PolygonShape : public S2Shape {
+class LaxPolygon : public S2Shape {
  public:
-  PolygonShape() {}  // Must call Init().
-  typedef std::vector<S2Point> Loop;
-  explicit PolygonShape(std::vector<Loop> const& loops);
-  explicit PolygonShape(S2Polygon const& polygon);  // Copies the polygon data.
-  ~PolygonShape();
+  LaxPolygon() {}  // Must call Init().
+  using Loop = std::vector<S2Point>;
+  explicit LaxPolygon(std::vector<Loop> const& loops);
+  explicit LaxPolygon(S2Polygon const& polygon);  // Copies the polygon data.
+  ~LaxPolygon() override;
 
   // Initialize the shape.
   void Init(std::vector<Loop> const& loops);
@@ -133,10 +145,12 @@ class PolygonShape : public S2Shape {
   S2Point const& loop_vertex(int i, int j) const;
 
   // S2Shape interface:
-  int num_edges() const { return num_vertices(); }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const;
-  bool has_interior() const { return true; }
-  bool contains_origin() const;
+  int num_edges() const override { return num_vertices(); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const override;
+  int dimension() const override { return 2; }
+  bool contains_origin() const override;
+  int num_chains() const override { return num_loops(); }
+  int chain_start(int i) const override;
 
  private:
   class VertexArray;
@@ -153,15 +167,15 @@ class PolygonShape : public S2Shape {
   };
 };
 
-// PolylineShape represents a polyline.  It is similar to S2Polyline::Shape
+// LaxPolyline represents a polyline.  It is similar to S2Polyline::Shape
 // except that duplicate vertices are allowed, and the representation is
 // slightly more compact.  Polylines may have any number of vertices, but note
 // that polylines with fewer than 2 vertices do not define any edges.
-class PolylineShape : public S2Shape {
+class LaxPolyline : public S2Shape {
  public:
-  PolylineShape() {}  // Must call Init().
-  explicit PolylineShape(std::vector<S2Point> const& vertices);
-  explicit PolylineShape(S2Polyline const& polyline);  // Copies the data.
+  LaxPolyline() {}  // Must call Init().
+  explicit LaxPolyline(std::vector<S2Point> const& vertices);
+  explicit LaxPolyline(S2Polyline const& polyline);  // Copies the data.
 
   // Initialize the shape.
   void Init(std::vector<S2Point> const& vertices);
@@ -173,10 +187,12 @@ class PolylineShape : public S2Shape {
   S2Point const& vertex(int i) const { return vertices_[i]; }
 
   // S2Shape interface:
-  int num_edges() const { return std::max(0, num_vertices() - 1); }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const;
-  bool has_interior() const { return false; }
-  bool contains_origin() const { return false; }
+  int num_edges() const override { return std::max(0, num_vertices() - 1); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const override;
+  int dimension() const override { return 1; }
+  bool contains_origin() const override { return false; }
+  int num_chains() const override;
+  int chain_start(int i) const override;
 
  private:
   // For clients that have many small polylines, we save some memory by
@@ -185,16 +201,16 @@ class PolylineShape : public S2Shape {
   std::unique_ptr<S2Point[]> vertices_;
 };
 
-// ClosedPolylineShape is like PolylineShape except that the last vertex is
-// implicitly joined to the first.  It is also like LoopShape except that it
+// ClosedLaxPolyline is like LaxPolyline except that the last vertex is
+// implicitly joined to the first.  It is also like LaxLoop except that it
 // does not have an interior (which makes it more efficient to index).
-class ClosedPolylineShape : public LoopShape {
+class ClosedLaxPolyline : public LaxLoop {
  public:
-  ClosedPolylineShape() {}  // Must call Init().
-  explicit ClosedPolylineShape(std::vector<S2Point> const& vertices);
-  explicit ClosedPolylineShape(S2Loop const& loop);  // Copies the loop data.
-  bool has_interior() const { return false; }
-  bool contains_origin() const { return false; }
+  ClosedLaxPolyline() {}  // Must call Init().
+  explicit ClosedLaxPolyline(std::vector<S2Point> const& vertices);
+  explicit ClosedLaxPolyline(S2Loop const& loop);  // Copies the loop data.
+  int dimension() const override { return 1; }
+  bool contains_origin() const override { return false; }
 };
 
 // EdgeVectorShape is an S2Shape representing an arbitrary set of edges.  It
@@ -224,26 +240,28 @@ class EdgeVectorShape : public S2Shape {
   }
 
   // S2Shape interface:
-  int num_edges() const { return edges_.size(); }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const {
+  int num_edges() const override { return edges_.size(); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const override {
     *a = &edges_[e].first;
     *b = &edges_[e].second;
   }
-  bool has_interior() const { return false; }
-  bool contains_origin() const { return false; }
+  int dimension() const override { return 1; }
+  bool contains_origin() const override { return false; }
+  int num_chains() const override { return edges_.size(); }
+  int chain_start(int i) const override { return i; }
 
  private:
   std::vector<std::pair<S2Point, S2Point>> edges_;
 };
 
-// VertexIdLoopShape is just like LoopShape, except that vertices are
+// VertexIdLaxLoop is just like LaxLoop, except that vertices are
 // specified as indices into a vertex array.  This representation can be more
 // compact when many loops are arranged in a mesh structure.
-class VertexIdLoopShape : public S2Shape {
+class VertexIdLaxLoop : public S2Shape {
  public:
-  VertexIdLoopShape() {}  // Must call Init().
-  explicit VertexIdLoopShape(std::vector<int32> const& vertex_ids,
-                             S2Point const* vertex_array);
+  VertexIdLaxLoop() {}  // Must call Init().
+  explicit VertexIdLaxLoop(std::vector<int32> const& vertex_ids,
+                           S2Point const* vertex_array);
 
   // Initialize the shape.  "vertex_ids" is a vector of indices into
   // "vertex_array".
@@ -256,10 +274,12 @@ class VertexIdLoopShape : public S2Shape {
   S2Point const& vertex(int i) const { return vertex_array_[vertex_id(i)]; }
 
   // S2Shape interface:
-  int num_edges() const { return num_vertices(); }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const;
-  bool has_interior() const { return true; }
-  bool contains_origin() const;
+  int num_edges() const override { return num_vertices(); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const override;
+  int dimension() const override { return 2; }
+  bool contains_origin() const override;
+  int num_chains() const override { return 1; }
+  int chain_start(int i) const override { return i == 0 ? 0 : num_vertices_; }
 
  private:
   int32 num_vertices_;
@@ -273,12 +293,10 @@ class VertexIdLoopShape : public S2Shape {
 class S2LoopOwningShape : public S2Loop::Shape {
  public:
   S2LoopOwningShape() {}  // Must call Init().
-  explicit S2LoopOwningShape(S2Loop const* loop)
-      : S2Loop::Shape(loop) {
+  explicit S2LoopOwningShape(std::unique_ptr<S2Loop const> loop)
+      : S2Loop::Shape(loop.release()) {
   }
-  ~S2LoopOwningShape() {
-    delete loop();
-  }
+  ~S2LoopOwningShape() override { delete loop(); }
 };
 
 // Like S2Polygon::Shape, except that the referenced S2Polygon is
@@ -288,12 +306,10 @@ class S2LoopOwningShape : public S2Loop::Shape {
 class S2PolygonOwningShape : public S2Polygon::Shape {
  public:
   S2PolygonOwningShape() {}  // Must call Init().
-  explicit S2PolygonOwningShape(S2Polygon const* polygon)
-      : S2Polygon::Shape(polygon) {
+  explicit S2PolygonOwningShape(std::unique_ptr<S2Polygon const> polygon)
+      : S2Polygon::Shape(polygon.release()) {
   }
-  ~S2PolygonOwningShape() {
-    delete polygon();
-  }
+  ~S2PolygonOwningShape() override { delete polygon(); }
 };
 
 // Like S2Polyline::Shape, except that the referenced S2Polyline is
@@ -303,12 +319,10 @@ class S2PolygonOwningShape : public S2Polygon::Shape {
 class S2PolylineOwningShape : public S2Polyline::Shape {
  public:
   S2PolylineOwningShape() {}  // Must call Init().
-  explicit S2PolylineOwningShape(S2Polyline const* polyline)
-      : S2Polyline::Shape(polyline) {
+  explicit S2PolylineOwningShape(std::unique_ptr<S2Polyline const> polyline)
+      : S2Polyline::Shape(polyline.release()) {
   }
-  ~S2PolylineOwningShape() {
-    delete polyline();
-  }
+  ~S2PolylineOwningShape() override { delete polyline(); }
 };
 
 
@@ -334,7 +348,7 @@ class ShapeEdgeId {
 std::ostream& operator<<(std::ostream& os, ShapeEdgeId id);
 
 // A set of edge pairs within an S2ShapeIndex.
-using EdgePairList = std::vector<std::pair<ShapeEdgeId, ShapeEdgeId>>;
+using EdgePairVector = std::vector<std::pair<ShapeEdgeId, ShapeEdgeId>>;
 
 // A parameter that controls the reporting of edge intersections.
 //
@@ -348,12 +362,10 @@ enum class CrossingType { INTERIOR, ALL };
 // Return all pairs of intersecting edges in the given S2ShapeIndex.  If
 // "type" is CrossingType::INTERIOR, then only intersections at a point
 // interior to both edges are reported, while if "type" is CrossingType::ALL
-// then edges that share a vertex are also reported.
-//
-// The result is sorted in lexicographic order.  Returns true if any
-// crossing edge pairs were found.
-bool GetCrossingEdgePairs(S2ShapeIndex const& index, CrossingType type,
-                          EdgePairList* edge_pairs);
+// then edges that share a vertex are also reported.  The crossings are sorted
+// in lexicographic order.
+EdgePairVector GetCrossingEdgePairs(S2ShapeIndex const& index,
+                                    CrossingType type);
 
 // This is a helper function for implementing S2Shape::contains_origin().
 //
@@ -382,7 +394,7 @@ bool IsOriginOnLeft(S2Shape const& shape);
 // The purpose of this function is to construct polygons consisting of
 // multiple loops.  It takes as input a collection of loops whose boundaries
 // do not cross, and groups them into polygons whose interiors do not
-// intersect (where the boundary of each polygon may consists of multiple
+// intersect (where the boundary of each polygon may consist of multiple
 // loops).
 //
 // some of those islands have lakes, then the input to this function would
@@ -407,8 +419,8 @@ bool IsOriginOnLeft(S2Shape const& shape);
 //
 //  - No component should be empty, and no loop should have zero edges.
 //
-// The output consists of a set of polygons, where each polygon is defined by a
-// collection of loops that form its boundary.  This function does not
+// The output consists of a set of polygons, where each polygon is defined by
+// the collection of loops that form its boundary.  This function does not
 // actually construct any S2Shapes; it simply identifies the loops that belong
 // to each polygon.
 void ResolveComponents(
@@ -428,7 +440,7 @@ bool FindSelfIntersection(S2ShapeIndex const& index, S2Loop const& loop,
 // human-readable error message.  Otherwise return false and leave "error"
 // unchanged.
 bool FindAnyCrossing(S2ShapeIndex const& index,
-                     std::vector<S2Loop*> const& loops,
+                     std::vector<std::unique_ptr<S2Loop>> const& loops,
                      S2Error* error);
 
 

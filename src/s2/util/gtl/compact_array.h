@@ -44,23 +44,19 @@
 #include <iterator>
 #include <memory>
 #include <ostream>  // NOLINT
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/macros.h"
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/port.h"
 #include "s2/base/template_util.h"
-// TODO(b/10715438): no std::is_trivially_constructible yet.
-#include "s2/base/type_traits.h"
+#include "s2/third_party/absl/meta/type_traits.h"
 #include "s2/util/bits/bits.h"
-#include "s2/util/gtl/libc_allocator_with_realloc.h"
 #include "s2/util/gtl/container_logging.h"
-
-// TODO(user): If this code is ever intended to be used outside Google, or
-// if Google turns on exceptions, then:
-//   (a) check the return value of malloc/realloc and throw std::bad_alloc on
-//       failure.
-//   (b) throw bad_alloc in at() when the argument is out of range.
+#include "s2/util/gtl/libc_allocator_with_realloc.h"
 
 template <typename T,
           typename A =
@@ -109,8 +105,8 @@ class compact_array_base {
 
   T* Array() { return IsInlined() ? InlinedSpace() : pointer_; }
   void SetArray(T* p) {
-    COMPILE_ASSERT(sizeof(*this) == 16, size_assumption);
-    COMPILE_ASSERT(sizeof(this) == 8, pointer_size_assumption);
+    static_assert(sizeof(*this) == 16, "size assumption");
+    static_assert(sizeof(this) == 8, "pointer size assumption");
     is_inlined_ = false;
     pointer_ = p;
   }
@@ -196,9 +192,7 @@ class compact_array_base {
 
   // Init() replace the default constructors; so it can be used in "union".
   // This means Init() must be called for every new compact_array_base
-  void Init() {
-    memset(this, 0, sizeof(*this));
-  }
+  void Init() noexcept { memset(this, 0, sizeof(*this)); }
 
   // Construct an array of size n and initialize the values to v.
   // Any old contents, if heap-allocated, will be leaked.
@@ -244,7 +238,10 @@ class compact_array_base {
     Init();
   }
 
-  void swap(compact_array_base& v) {
+  // Safe against self-swapping.
+  // copying/destruction of compact_array_base is fairly trivial as the type
+  // was designed to be useable in a C++98 union.
+  void swap(compact_array_base& v) noexcept {
     compact_array_base tmp = *this;
     *this = v;
     v = tmp;
@@ -278,8 +275,7 @@ class compact_array_base {
   // This Insert() is private because it might return the end().
   iterator Insert(const_iterator p, const value_type& v) {
     if (size() >= kMaxSize) {
-      LOG(DFATAL) << "compact_array size cannot excced " << kMaxSize;
-      return end();
+      throw std::length_error("compact_array size exceeded");
     }
     iterator r = make_hole(p, 1);
     *r = v;
@@ -293,8 +289,7 @@ class compact_array_base {
 
   void insert(const_iterator p, size_type n, const value_type& v) {
     if (n + size() > kMaxSize) {
-      LOG(DFATAL) << "compact_array size cannot exceed " << kMaxSize;
-      return;
+      throw std::length_error("compact_array size exceeded");
     }
     value_insert(p, n, v);
   }
@@ -348,12 +343,16 @@ class compact_array_base {
   }
 
   reference at(size_type n) {
-    DCHECK_LT(n, size_);
+    if (n >= size_) {
+      throw std::out_of_range("compact_array index out of range");
+    }
     return Array()[n];
   }
 
   const_reference at(size_type n) const {
-    DCHECK_LT(n, size_);
+    if (n >= size_) {
+      throw std::out_of_range("compact_array index out of range");
+    }
     return ConstArray()[n];
   }
 
@@ -373,7 +372,8 @@ class compact_array_base {
     // needed.
     // Destroying elements on shrinking resize isn't a concern, since the
     // value_type must be trivially destructible.
-    if (n > size() && !base::has_trivial_constructor<value_type>::value) {
+    if (n > size() &&
+        !gtl::is_trivially_default_constructible<value_type>::value) {
       // Increasing size would expose unconstructed elements.
       value_type *new_end = Array() + n;
       for (value_type *p = Array() + size(); p != new_end; ++p)
@@ -483,8 +483,7 @@ class compact_array_base {
 
   void value_insert(const_iterator p, size_type n, const value_type& v) {
     if (n + size() > kMaxSize) {
-      LOG(DFATAL) << "compact_array size cannot exceed " << kMaxSize;
-      return;
+      throw std::length_error("compact_array size exceeded");
     }
     iterator hole = make_hole(p, n);
     std::fill(hole, hole + n, v);
@@ -505,8 +504,7 @@ class compact_array_base {
                     std::forward_iterator_tag) {
     size_type n = std::distance(first, last);
     if (n + size() > kMaxSize) {
-      LOG(DFATAL) << "compact_array size cannot exceed " << kMaxSize;
-      return;
+      throw std::length_error("compact_array size exceeded");
     }
     std::copy(first, last, make_hole(p, n));
   }
@@ -522,13 +520,10 @@ class compact_array_base {
     typedef typename std::iterator_traits<Iterator>::iterator_category Cat;
     range_insert(p, first, last, Cat());
   }
-
-  static_assert(
-      base::has_trivial_copy<value_type>::value &&
-      base::has_trivial_assign<value_type>::value &&
-      base::has_trivial_destructor<value_type>::value,
-      "Requires trivial copy, assignment, and destructor. If T is "
-      "truly suitable, specialize the appropriate base:: traits.");
+  static_assert(gtl::is_trivially_copy_constructible<value_type>::value &&
+                gtl::is_trivially_copy_assignable<value_type>::value &&
+                gtl::is_trivially_destructible<value_type>::value,
+                "Requires trivial copy, assignment, and destructor.");
 };
 
 // Allocates storage for constants in compact_array_base<T>
@@ -565,7 +560,7 @@ class compact_array : public compact_array_base<T, A> {
   typedef typename Base::reverse_iterator reverse_iterator;
   typedef typename Base::const_reverse_iterator const_reverse_iterator;
 
-  compact_array() {
+  compact_array() noexcept(noexcept(std::declval<Base&>().Init())) {
     Base::Init();
   }
 
@@ -587,8 +582,22 @@ class compact_array : public compact_array_base<T, A> {
     Base::CopyFrom(v);
   }
 
+  compact_array(compact_array&& v) noexcept(
+      noexcept(compact_array()) && noexcept(std::declval<Base&>().swap(v)))
+      : compact_array() {
+    Base::swap(v);
+  }
+
   compact_array& operator=(const compact_array& v) {
     Base::AssignFrom(v);
+    return *this;
+  }
+
+  compact_array& operator=(compact_array&& v) {
+    // swap is only right here because the objects are trivially destructible
+    // and thus there are no side effects on their destructor.
+    // Otherwise we must destroy the objects on `this`.
+    Base::swap(v);
     return *this;
   }
 

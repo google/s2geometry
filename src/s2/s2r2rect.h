@@ -26,6 +26,7 @@
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
+#include "s2/s1angle.h"
 #include "s2/s2.h"
 #include "s2/s2region.h"
 
@@ -159,7 +160,7 @@ class S2R2Rect : public S2Region {
 
   // Return the closest point in the rectangle to the given point "p".
   // The rectangle must be non-empty.
-  R2Point ClampPoint(R2Point const& p) const;
+  R2Point Project(R2Point const& p) const;
 
   // Return a rectangle that has been expanded on each side in the x-direction
   // by margin.x(), and on each side in the y-direction by margin.y().  If
@@ -182,7 +183,8 @@ class S2R2Rect : public S2Region {
 
   // Return true if the x- and y-intervals of the two rectangles are the same
   // up to the given tolerance (see r1interval.h for details).
-  bool ApproxEquals(S2R2Rect const& other, double max_error = 1e-15) const;
+  bool ApproxEquals(S2R2Rect const& other,
+                    S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   // Return the unit-length S2Point corresponding to the given point "p" in
   // the (s,t)-plane.  "p" need not be restricted to the range [0,1]x[0,1].
@@ -191,19 +193,19 @@ class S2R2Rect : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2R2Rect* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool VirtualContainsPoint(S2Point const& p) const {
+  S2R2Rect* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool VirtualContainsPoint(S2Point const& p) const override {
     return Contains(p);  // The same as Contains() below, just virtual.
   }
   bool Contains(S2Point const& p) const;
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool MayIntersect(S2Cell const& cell) const;
-  virtual void Encode(Encoder* const encoder) const {
+  bool Contains(S2Cell const& cell) const override;
+  bool MayIntersect(S2Cell const& cell) const override;
+  void Encode(Encoder* const encoder) const override {
     LOG(FATAL) << "Unimplemented";
   }
-  virtual bool Decode(Decoder* const decoder) { return false; }
+  bool Decode(Decoder* const decoder) override { return false; }
 
  private:
   R2Rect rect_;
@@ -272,8 +274,8 @@ inline bool S2R2Rect::InteriorIntersects(S2R2Rect const& other) const {
 inline void S2R2Rect::AddPoint(R2Point const& p) {
   rect_.AddPoint(p);
 }
-inline R2Point S2R2Rect::ClampPoint(R2Point const& p) const {
-  return rect_.ClampPoint(p);
+inline R2Point S2R2Rect::Project(R2Point const& p) const {
+  return rect_.Project(p);
 }
 inline S2R2Rect S2R2Rect::Expanded(R2Point const& margin) const {
   return S2R2Rect(rect_.Expanded(margin));
@@ -291,8 +293,8 @@ inline bool S2R2Rect::operator==(S2R2Rect const& other) const {
   return rect_ == other.rect_;
 }
 inline bool S2R2Rect::ApproxEquals(S2R2Rect const& other,
-                                   double max_error) const {
-  return rect_.ApproxEquals(other.rect_, max_error);
+                                   S1Angle max_error) const {
+  return rect_.ApproxEquals(other.rect_, max_error.radians());
 }
 
 #endif  // S2_S2R2RECT_H_

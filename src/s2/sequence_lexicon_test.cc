@@ -17,6 +17,8 @@
 
 #include "s2/sequence_lexicon.h"
 
+#include <array>
+
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include "s2/s2.h"

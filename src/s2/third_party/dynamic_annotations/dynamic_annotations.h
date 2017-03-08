@@ -304,6 +304,7 @@
 
 
 /* Use the macros above rather than using these functions directly. */
+#include <cstddef>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -334,7 +335,7 @@ void AnnotateBenignRace(const char *file, int line,
                         const char *description);
 void AnnotateBenignRaceSized(const char *file, int line,
                         const volatile void *address,
-                        long size,
+                        size_t size,
                         const char *description);
 void AnnotateTraceMemory(const char *file, int line,
                          const volatile void *arg);
@@ -356,9 +357,9 @@ void AnnotateEnableRaceDetection(const char *file, int line, int enable);
 void AnnotateNoOp(const char *file, int line,
                   const volatile void *arg);
 void AnnotateMemoryIsInitialized(const char *file, int line,
-                                 const volatile void *mem, long size);
+                                 const volatile void *mem, size_t size);
 void AnnotateMemoryIsUninitialized(const char *file, int line,
-                                   const volatile void *mem, long size);
+                                   const volatile void *mem, size_t size);
 
 /* Return non-zero value if running under valgrind.
 

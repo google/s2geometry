@@ -20,15 +20,19 @@
 #define S2_BASE_INT128_H_
 
 #include <iosfwd>
-#include "s2/base/integral_types.h"
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/macros.h"
+#include "s2/third_party/absl/base/port.h"
 
 struct uint128_pod;
 
-#ifdef LANG_CXX11
-# define UINT128_CONSTEXPR constexpr
-#else
+#ifdef SWIG
+// TODO(b/31825045): SWIG does not understand 'constexpr'.  Remove this
+// preprocessor conditional when the dependent code is migrated from SWIG to
+// CLIF.
 # define UINT128_CONSTEXPR
+#else
+# define UINT128_CONSTEXPR constexpr
 #endif
 
 // An unsigned 128-bit integer type. Thread-compatible.
@@ -43,9 +47,20 @@ class uint128 {
   UINT128_CONSTEXPR uint128(uint64 bottom);   // hi_ = 0
   UINT128_CONSTEXPR uint128(const uint128_pod &val);
 
-  // Trivial copy constructor, assignment operator and destructor.
+#ifndef SWIG
+  // TODO(b/31825045): SWIG does not understand '= delete'.  Remove this
+  // preprocessor conditional when the dependent code is migrated from SWIG to
+  // CLIF.
 
-  void Initialize(uint64 top, uint64 bottom);
+  // Disallow the following implicit type conversions while providing good
+  // compile-time diagnostics.
+  uint128(uint8) = delete;  // NOLINT(runtime/explicit)
+  uint128(uint16) = delete;  // NOLINT(runtime/explicit)
+  uint128(float) = delete;  // NOLINT(runtime/explicit)
+  uint128(double) = delete;  // NOLINT(runtime/explicit)
+#endif
+
+  // Trivial copy constructor, assignment operator and destructor.
 
   // Arithmetic operators.
   uint128& operator+=(const uint128& b);
@@ -78,13 +93,13 @@ class uint128 {
   // See util/endian/endian.h and Load128/Store128 for storing a uint128.
   uint64        lo_;
   uint64        hi_;
-
-  // Not implemented, just declared for catching automatic type conversions.
-  uint128(uint8);
-  uint128(uint16);
-  uint128(float v);
-  uint128(double v);
 };
+
+namespace absl {
+
+UINT128_CONSTEXPR uint128 MakeUint128(uint64 top, uint64 bottom);
+
+}  // namespace absl
 
 // This is a POD form of uint128 which can be used for static variables which
 // need to be operated on as uint128.
@@ -134,14 +149,18 @@ inline UINT128_CONSTEXPR uint128::uint128(uint32 bottom)
     : lo_(bottom), hi_(0) {}
 inline UINT128_CONSTEXPR uint128::uint128(int bottom)
     : lo_(bottom), hi_(static_cast<int64>((bottom < 0) ? -1 : 0)) {}
-#endif
+
+#endif  // SWIG
+
+namespace absl {
+
+inline UINT128_CONSTEXPR uint128 MakeUint128(uint64 top, uint64 bottom) {
+  return uint128(top, bottom);
+}
+
+}  // namespace absl
 
 #undef UINT128_CONSTEXPR
-
-inline void uint128::Initialize(uint64 top, uint64 bottom) {
-  hi_ = top;
-  lo_ = bottom;
-}
 
 // Comparison operators.
 

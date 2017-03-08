@@ -21,8 +21,9 @@
 // any changes here, make sure that you're not breaking any platforms.
 //
 
-#ifndef S2_BASE_INTEGRAL_TYPES_H_
-#define S2_BASE_INTEGRAL_TYPES_H_
+
+#ifndef S2_THIRD_PARTY_ABSL_BASE_INTEGRAL_TYPES_H_
+#define S2_THIRD_PARTY_ABSL_BASE_INTEGRAL_TYPES_H_
 
 // These typedefs are also defined in base/swig/google.swig. In the
 // SWIG environment, we use those definitions and avoid duplicate
@@ -114,6 +115,12 @@ static const  int32 kint32min  = (( int32) ~0x7FFFFFFF);
 static const  int32 kint32max  = (( int32) 0x7FFFFFFF);
 static const  int64 kint64min  = (( int64) GG_LONGLONG(~0x7FFFFFFFFFFFFFFF));
 static const  int64 kint64max  = (( int64) GG_LONGLONG(0x7FFFFFFFFFFFFFFF));
+// The following are not real constants, but we list them so CodeSearch and
+// other tools find them, in case people are looking for the above constants
+// under different names:
+// kMaxUint8, kMaxUint16, kMaxUint32, kMaxUint64
+// kMinInt8, kMaxInt8, kMinInt16, kMaxInt16, kMinInt32, kMaxInt32,
+// kMinInt64, kMaxInt64
 
 // TODO(jyrki): remove this eventually.
 // No object has kIllegalFprint as its Fingerprint.
@@ -121,4 +128,4 @@ typedef uint64 Fprint;
 static const Fprint kIllegalFprint = 0;
 static const Fprint kMaxFprint = GG_ULONGLONG(0xFFFFFFFFFFFFFFFF);
 
-#endif  // S2_BASE_INTEGRAL_TYPES_H_
+#endif  // S2_THIRD_PARTY_ABSL_BASE_INTEGRAL_TYPES_H_

@@ -22,7 +22,6 @@
 
 #include <gtest/gtest.h>
 
-#include "s2/base/integral_types.h"
 #include "s2/base/stringprintf.h"
 #include "s2/r1interval.h"
 #include "s2/s2.h"
@@ -32,6 +31,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2testing.h"
+#include "s2/third_party/absl/base/integral_types.h"
 
 static void TestIntervalOps(S2R2Rect const& x, S2R2Rect const& y,
                             const char* expected_rexion,
@@ -160,8 +160,8 @@ TEST(S2R2Rect, IntervalOperations) {
   // Contains(S2R2Rect), InteriorContains(S2R2Rect),
   // Intersects(), InteriorIntersects(), Union(), Intersection().
   //
-  // Much more testing of these methods is done in s1interval_unittest
-  // and r1interval_unittest.
+  // Much more testing of these methods is done in s1interval_test
+  // and r1interval_test.
 
   S2R2Rect empty = S2R2Rect::Empty();
   R2Point sw1 = R2Point(0, 0.25);
@@ -215,18 +215,18 @@ TEST(S2R2Rect, AddPoint) {
   EXPECT_EQ(r1, r2);
 }
 
-TEST(S2R2Rect, ClampPoint) {
+TEST(S2R2Rect, Project) {
   S2R2Rect r1(R1Interval(0, 0.5), R1Interval(0.25, 0.75));
 
-  EXPECT_EQ(R2Point(0, 0.25), r1.ClampPoint(R2Point(-0.01, 0.24)));
-  EXPECT_EQ(R2Point(0, 0.48), r1.ClampPoint(R2Point(-5.0, 0.48)));
-  EXPECT_EQ(R2Point(0, 0.75), r1.ClampPoint(R2Point(-5.0, 2.48)));
-  EXPECT_EQ(R2Point(0.19, 0.75), r1.ClampPoint(R2Point(0.19, 2.48)));
-  EXPECT_EQ(R2Point(0.5, 0.75), r1.ClampPoint(R2Point(6.19, 2.48)));
-  EXPECT_EQ(R2Point(0.5, 0.53), r1.ClampPoint(R2Point(6.19, 0.53)));
-  EXPECT_EQ(R2Point(0.5, 0.25), r1.ClampPoint(R2Point(6.19, -2.53)));
-  EXPECT_EQ(R2Point(0.33, 0.25), r1.ClampPoint(R2Point(0.33, -2.53)));
-  EXPECT_EQ(R2Point(0.33, 0.37), r1.ClampPoint(R2Point(0.33, 0.37)));
+  EXPECT_EQ(R2Point(0, 0.25), r1.Project(R2Point(-0.01, 0.24)));
+  EXPECT_EQ(R2Point(0, 0.48), r1.Project(R2Point(-5.0, 0.48)));
+  EXPECT_EQ(R2Point(0, 0.75), r1.Project(R2Point(-5.0, 2.48)));
+  EXPECT_EQ(R2Point(0.19, 0.75), r1.Project(R2Point(0.19, 2.48)));
+  EXPECT_EQ(R2Point(0.5, 0.75), r1.Project(R2Point(6.19, 2.48)));
+  EXPECT_EQ(R2Point(0.5, 0.53), r1.Project(R2Point(6.19, 0.53)));
+  EXPECT_EQ(R2Point(0.5, 0.25), r1.Project(R2Point(6.19, -2.53)));
+  EXPECT_EQ(R2Point(0.33, 0.25), r1.Project(R2Point(0.33, -2.53)));
+  EXPECT_EQ(R2Point(0.33, 0.37), r1.Project(R2Point(0.33, 0.37)));
 }
 
 TEST(S2R2Rect, Expanded) {

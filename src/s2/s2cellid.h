@@ -22,19 +22,18 @@
 #include <functional>
 #include <iostream>
 #include <string>
-#include <type_traits>
 #include <vector>
 
 #include <glog/logging.h>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/port.h"  // for HASH_NAMESPACE_DECLARATION_START
 #include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
 #include "s2/fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s2.h"
+#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/third_party/absl/base/port.h"
 
 class S2LatLng;
 
@@ -71,9 +70,9 @@ class S2LatLng;
 // the default copy constructor and assignment operator.
 class S2CellId {
  public:
-  // Although only 60 bits are needed to represent the index of a leaf
-  // cell, we need an extra bit in order to represent the position of
-  // the center of the leaf cell along the Hilbert curve.
+  // The extra position bit (61 rather than 60) let us encode each cell as its
+  // Hilbert curve position at the cell center (which is halfway along the
+  // portion of the Hilbert curve that fills that cell).
   static int const kFaceBits = 3;
   static int const kNumFaces = 6;
   static int const kMaxLevel = S2::kMaxCellLevel;  // Valid levels: 0..kMaxLevel
@@ -81,6 +80,20 @@ class S2CellId {
   static int const kMaxSize = 1 << kMaxLevel;
 
   explicit S2CellId(uint64 id) : id_(id) {}
+
+  // Construct a leaf cell containing the given point "p".  Usually there is
+  // is exactly one such cell, but for points along the edge of a cell, any
+  // adjacent cell may be (deterministically) chosen.  This is because
+  // S2CellIds are considered to be closed sets.  The returned cell will
+  // always contain the given point, i.e.
+  //
+  //   S2Cell(S2CellId(p)).Contains(p)
+  //
+  // is always true.  The point "p" does not need to be normalized.
+  explicit S2CellId(S2Point const& p);
+
+  // Construct a leaf cell containing the given normalized S2LatLng.
+  explicit S2CellId(S2LatLng const& ll);
 
   // The default constructor returns an invalid cell id.
   S2CellId() : id_(0) {}
@@ -100,20 +113,6 @@ class S2CellId {
   // is a static function rather than a constructor in order to indicate what
   // the arguments represent.
   static S2CellId FromFacePosLevel(int face, uint64 pos, int level);
-
-  // Return a leaf cell containing the given point "p".  Usually there is
-  // exactly one such cell, but for points along the edge of a cell, any
-  // adjacent cell may be (deterministically) chosen.  This is because
-  // S2CellIds are considered to be closed sets.  The returned cell will
-  // always contain the given point, i.e.
-  //
-  //   S2Cell(S2CellId::FromPoint(p)).Contains(p)
-  //
-  // is always true.  The point "p" does not need to be normalized.
-  static S2CellId FromPoint(S2Point const& p);
-
-  // Return the leaf cell containing the given normalized S2LatLng.
-  static S2CellId FromLatLng(S2LatLng const& ll);
 
   // Return the direction vector corresponding to the center of the given
   // cell.  The vector returned by ToPointRaw is not necessarily unit length.
@@ -369,10 +368,10 @@ class S2CellId {
   // Append all neighbors of this cell at the given level to "output".  Two
   // cells X and Y are neighbors if their boundaries intersect but their
   // interiors do not.  In particular, two cells that intersect at a single
-  // point are neighbors.
+  // point are neighbors.  Note that for cells adjacent to a face vertex, the
+  // same neighbor may be appended more than once.
   //
-  // Requires: nbr_level >= this->level().  Note that for cells adjacent to a
-  // face vertex, the same neighbor may be appended more than once.
+  // REQUIRES: nbr_level >= this->level().
   void AppendAllNeighbors(int nbr_level, std::vector<S2CellId>* output) const;
 
   /////////////////////////////////////////////////////////////////////
@@ -648,21 +647,6 @@ inline S2CellId S2CellId::End(int level) {
 
 std::ostream& operator<<(std::ostream& os, S2CellId id);
 
-// Hash specialization for STL hash_* containers.  (For std::unordered_*
-// containers the hasher must be given explicitly; see S2CellIdHash below
-// and go/enabling-unordered.)
-#ifndef SWIG
-HASH_NAMESPACE_DECLARATION_START
-
-template<> struct hash<S2CellId> {
-  size_t operator()(S2CellId id) const {
-    return static_cast<size_t>(id.id() >> 32) + static_cast<size_t>(id.id());
-  }
-};
-
-HASH_NAMESPACE_DECLARATION_END
-#endif  // SWIG
-
 // Hasher for S2CellId.
 // Example use: std::unordered_map<S2CellId, int, S2CellIdHash>.
 struct S2CellIdHash {
@@ -670,16 +654,5 @@ struct S2CellIdHash {
     return std::hash<uint64>()(id.id());
   }
 };
-
-#ifndef SWIG
-namespace base {
-// Specializations of base:: traits enable the use of S2CellId in
-// compact_array, etc. Note that S2CellId is not being declared as POD.
-// The std::is_trivially_* traits are only supported in gcc 5.
-template <> struct has_trivial_copy<S2CellId> : std::true_type {};
-template <> struct has_trivial_assign<S2CellId> : std::true_type {};
-template <> struct has_trivial_destructor<S2CellId> : std::true_type {};
-}  // namespace base
-#endif  // SWIG
 
 #endif  // S2_S2CELLID_H_

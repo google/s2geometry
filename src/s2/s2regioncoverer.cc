@@ -34,6 +34,7 @@
 #include "s2/s2cellunion.h"
 #include "s2/s2region.h"
 
+using std::is_sorted;
 using std::max;
 using std::min;
 using std::unordered_set;
@@ -198,7 +199,7 @@ inline int S2RegionCoverer::AdjustLevel(int level) const {
 }
 
 void S2RegionCoverer::AdjustCellLevels(vector<S2CellId>* cells) const {
-  DCHECK(std::is_sorted(cells->begin(), cells->end()));
+  DCHECK(is_sorted(cells->begin(), cells->end()));
   if (level_mod() == 1) return;
 
   int out = 0;
@@ -315,14 +316,14 @@ void S2RegionCoverer::GetCellUnion(S2Region const& region,
                                    S2CellUnion* covering) {
   interior_covering_ = false;
   GetCoveringInternal(region);
-  covering->InitSwap(&result_);
+  covering->Init(std::move(result_));
 }
 
 void S2RegionCoverer::GetInteriorCellUnion(S2Region const& region,
                                            S2CellUnion* interior) {
   interior_covering_ = true;
   GetCoveringInternal(region);
-  interior->InitSwap(&result_);
+  interior->Init(std::move(result_));
 }
 
 void S2RegionCoverer::GetFastCovering(S2Cap const& cap,
@@ -340,7 +341,7 @@ void S2RegionCoverer::GetRawFastCovering(S2Cap const& cap,
 
   // Find the maximum level such that the cap contains at most one cell vertex
   // and such that S2CellId::AppendVertexNeighbors() can be called.
-  int level = S2::kMinWidth.GetMaxLevel(2 * cap.GetRadius().radians());
+  int level = S2::kMinWidth.GetLevelForMinValue(2 * cap.GetRadius().radians());
   level = min(level, S2CellId::kMaxLevel - 1);
 
   // Don't bother trying to optimize the level == 0 case, since more than
@@ -354,7 +355,7 @@ void S2RegionCoverer::GetRawFastCovering(S2Cap const& cap,
     // The covering consists of the 4 cells at the given level that share the
     // cell vertex that is closest to the cap center.
     covering->reserve(4);
-    S2CellId id = S2CellId::FromPoint(cap.center());
+    S2CellId id(cap.center());
     id.AppendVertexNeighbors(level, covering);
   }
 }
@@ -402,7 +403,7 @@ void S2RegionCoverer::NormalizeCovering(vector<S2CellId>* covering) {
   // possibly at the expense of satisfying max_cells().
   if (min_level() > 0 || level_mod() > 1) {
     S2CellUnion result;
-    result.InitRawSwap(covering);
+    result.InitRaw(std::move(*covering));
     result.Denormalize(min_level(), level_mod(), covering);
   }
 }
@@ -434,5 +435,5 @@ void S2RegionCoverer::FloodFill(S2Region const& region, S2CellId start,
 void S2RegionCoverer::GetSimpleCovering(
     S2Region const& region, S2Point const& start,
     int level, vector<S2CellId>* output) {
-  return FloodFill(region, S2CellId::FromPoint(start).parent(level), output);
+  return FloodFill(region, S2CellId(start).parent(level), output);
 }

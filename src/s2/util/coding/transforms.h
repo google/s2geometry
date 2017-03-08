@@ -20,7 +20,7 @@
 #ifndef UTIL_CODING_TRANSFORMS_H__
 #define UTIL_CODING_TRANSFORMS_H__
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 
 // ZigZag Transform
 //

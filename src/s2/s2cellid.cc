@@ -17,22 +17,26 @@
 
 #include "s2/s2cellid.h"
 
-#include <pthread.h>
 #include <algorithm>
 #include <cfloat>
 #include <cstring>
 #include <iosfwd>
+#include <mutex>
 #include <vector>
 
 #include <glog/logging.h>
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
 #include "s2/base/stringprintf.h"
 #include "s2/r1interval.h"
 #include "s2/s2.h"
 #include "s2/s2latlng.h"
+#include "s2/third_party/absl/base/integral_types.h"
 
+using S2::internal::kSwapMask;
+using S2::internal::kInvertMask;
+using S2::internal::kPosToIJ;
+using S2::internal::kPosToOrientation;
 using std::max;
 using std::min;
 using std::vector;
@@ -66,9 +70,6 @@ int const S2CellId::kPosBits;
 int const S2CellId::kMaxSize;
 
 static int const kLookupBits = 4;
-static int const kSwapMask = 0x01;
-static int const kInvertMask = 0x02;
-
 static uint16 lookup_pos[1 << (2 * kLookupBits + 2)];
 static uint16 lookup_ij[1 << (2 * kLookupBits + 2)];
 
@@ -83,15 +84,15 @@ static void InitLookupCell(int level, int i, int j, int orig_orientation,
     i <<= 1;
     j <<= 1;
     pos <<= 2;
-    int const* r = S2::kPosToIJ[orientation];
+    int const* r = kPosToIJ[orientation];
     InitLookupCell(level, i + (r[0] >> 1), j + (r[0] & 1), orig_orientation,
-                   pos, orientation ^ S2::kPosToOrientation[0]);
+                   pos, orientation ^ kPosToOrientation[0]);
     InitLookupCell(level, i + (r[1] >> 1), j + (r[1] & 1), orig_orientation,
-                   pos + 1, orientation ^ S2::kPosToOrientation[1]);
+                   pos + 1, orientation ^ kPosToOrientation[1]);
     InitLookupCell(level, i + (r[2] >> 1), j + (r[2] & 1), orig_orientation,
-                   pos + 2, orientation ^ S2::kPosToOrientation[2]);
+                   pos + 2, orientation ^ kPosToOrientation[2]);
     InitLookupCell(level, i + (r[3] >> 1), j + (r[3] & 1), orig_orientation,
-                   pos + 3, orientation ^ S2::kPosToOrientation[3]);
+                   pos + 3, orientation ^ kPosToOrientation[3]);
   }
 }
 
@@ -102,9 +103,9 @@ static void Init() {
   InitLookupCell(0, 0, 0, kSwapMask|kInvertMask, 0, kSwapMask|kInvertMask);
 }
 
-static pthread_once_t init_once = PTHREAD_ONCE_INIT;
+static std::once_flag init_once;
 inline static void MaybeInit() {
-  pthread_once(&init_once, Init);
+  std::call_once(init_once, Init);
 }
 
 S2CellId S2CellId::advance(int64 steps) const {
@@ -294,16 +295,16 @@ S2CellId S2CellId::FromFaceIJ(int face, int i, int j) {
   return S2CellId(n * 2 + 1);
 }
 
-S2CellId S2CellId::FromPoint(S2Point const& p) {
+S2CellId::S2CellId(S2Point const& p) {
   double u, v;
   int face = S2::XYZtoFaceUV(p, &u, &v);
   int i = S2::STtoIJ(S2::UVtoST(u));
   int j = S2::STtoIJ(S2::UVtoST(v));
-  return FromFaceIJ(face, i, j);
+  id_ = FromFaceIJ(face, i, j).id();
 }
 
-S2CellId S2CellId::FromLatLng(S2LatLng const& ll) {
-  return FromPoint(ll.ToPoint());
+S2CellId::S2CellId(S2LatLng const& ll)
+  : S2CellId(ll.ToPoint()) {
 }
 
 int S2CellId::ToFaceIJOrientation(int* pi, int* pj, int* orientation) const {
@@ -353,10 +354,10 @@ int S2CellId::ToFaceIJOrientation(int* pi, int* pj, int* orientation) const {
     // by (kMaxLevel-n-1) repetitions of "00", followed by "0".  The "10" has
     // no effect, while each occurrence of "00" has the effect of reversing
     // the kSwapMask bit.
-    DCHECK_EQ(0, S2::kPosToOrientation[2]);
-    DCHECK_EQ(S2::kSwapMask, S2::kPosToOrientation[0]);
+    DCHECK_EQ(0, kPosToOrientation[2]);
+    DCHECK_EQ(kSwapMask, kPosToOrientation[0]);
     if (lsb() & GG_ULONGLONG(0x1111111111111110)) {
-      bits ^= S2::kSwapMask;
+      bits ^= kSwapMask;
     }
     *orientation = bits;
   }
@@ -420,7 +421,9 @@ static double ExpandEndpoint(double u, double max_v, double sin_dist) {
   // calculation in S2Cap::GetRectBound.
   double sin_u_shift = sin_dist * sqrt((1 + u * u + max_v * max_v) /
                                        (1 + u * u));
-  return tan(atan(u) + asin(sin_u_shift));
+  double cos_u_shift = sqrt(1 - sin_u_shift * sin_u_shift);
+  // The following is an expansion of tan(atan(u) + asin(sin_u_shift)).
+  return (cos_u_shift * u + sin_u_shift) / (cos_u_shift - sin_u_shift * u);
 }
 
 /* static */
@@ -537,6 +540,7 @@ void S2CellId::AppendVertexNeighbors(int level,
 
 void S2CellId::AppendAllNeighbors(int nbr_level,
                                   vector<S2CellId>* output) const {
+  DCHECK_GE(nbr_level, level());
   int i, j;
   int face = ToFaceIJOrientation(&i, &j, nullptr);
 

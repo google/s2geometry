@@ -131,7 +131,7 @@ class R2Rect {
 
   // Return the closest point in the rectangle to the given point "p".
   // The rectangle must be non-empty.
-  R2Point ClampPoint(R2Point const& p) const;
+  R2Point Project(R2Point const& p) const;
 
   // Return a rectangle that has been expanded on each side in the x-direction
   // by margin.x(), and on each side in the y-direction by margin.y().  If

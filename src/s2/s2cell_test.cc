@@ -45,6 +45,8 @@
 #include "s2/s2shapeindex.h"
 #include "s2/s2testing.h"
 
+using S2::internal::kSwapMask;
+using std::fabs;
 using std::map;
 using std::max;
 using std::min;
@@ -61,7 +63,7 @@ TEST(S2Cell, TestFaces) {
     EXPECT_EQ(face, cell.face());
     EXPECT_EQ(0, cell.level());
     // Top-level faces have alternating orientations to get RHS coordinates.
-    EXPECT_EQ(face & S2::kSwapMask, cell.orientation());
+    EXPECT_EQ(face & kSwapMask, cell.orientation());
     EXPECT_FALSE(cell.is_leaf());
     for (int k = 0; k < 4; ++k) {
       edge_counts[cell.GetEdgeRaw(k)] += 1;
@@ -303,12 +305,12 @@ static void CheckMinMaxAvg(
   double min_error = min_value - min_metric.GetValue(level);
   double max_error = max_metric.GetValue(level) - max_value;
   double avg_error = fabs(avg_metric.GetValue(level) - avg_value);
-  printf("%-10s (%6.0f samples, tolerance %8.3g) - min (%9.3g : %9.3g) "
-         "max (%9.3g : %9.3g), avg (%9.3g : %9.3g)\n",
+  printf("%-10s (%6.0f samples, tolerance %8.3g) - min %9.4g (%9.3g : %9.3g) "
+         "max %9.4g (%9.3g : %9.3g), avg %9.4g (%9.3g : %9.3g)\n",
          label, count, tolerance,
-         min_error / min_value, min_error / tolerance,
-         max_error / max_value, max_error / tolerance,
-         avg_error / avg_value, avg_error / tolerance);
+         min_value, min_error / min_value, min_error / tolerance,
+         max_value, max_error / max_value, max_error / tolerance,
+         avg_value, avg_error / avg_value, avg_error / tolerance);
 
   EXPECT_LE(min_metric.GetValue(level), min_value + abs_error);
   EXPECT_GE(min_metric.GetValue(level), min_value - tolerance);
@@ -323,6 +325,9 @@ TEST(S2Cell, TestSubdivide) {
   TestSubdivide(S2Cell::FromFace(3));
   TestSubdivide(S2Cell::FromFace(5));
 
+  // This table is useful in evaluating the quality of the various S2
+  // projections.
+  //
   // The maximum edge *ratio* is the ratio of the longest edge of any cell to
   // the shortest edge of any cell at the same level (and similarly for the
   // maximum diagonal ratio).
@@ -330,9 +335,13 @@ TEST(S2Cell, TestSubdivide) {
   // The maximum edge *aspect* is the maximum ratio of the longest edge of a
   // cell to the shortest edge of that same cell (and similarly for the
   // maximum diagonal aspect).
-
-  printf("Level    Area      Edge          Diag          Approx       Average\n");
-  printf("        Ratio  Ratio Aspect  Ratio Aspect    Min    Max    Min    Max\n");
+  printf(
+      "Ratio:  (Max value for any cell) / (Min value for any cell)\n"
+      "Aspect: (Max value / min value) for any cell\n"
+      "                   Edge          Diag       Approx Area/    Avg Area/\n"
+      "         Area     Length        Length       Exact Area    Exact Area\n"
+      "Level   Ratio  Ratio Aspect  Ratio Aspect    Min    Max    Min    Max\n"
+      "--------------------------------------------------------------------\n");
   for (int i = 0; i <= S2CellId::kMaxLevel; ++i) {
     LevelStats* s = &level_stats[i];
     if (s->count > 0) {
@@ -356,7 +365,7 @@ TEST(S2Cell, TestSubdivide) {
     LevelStats const* s = &level_stats[i];
     if (s->count == 0) continue;
 
-    printf("Level %2d - metric (error/actual : error/tolerance)\n", i);
+    printf("Level %2d - metric value (error/actual : error/tolerance)\n", i);
 
     // The various length calculations are only accurate to 1e-15 or so,
     // so we need to allow for this amount of discrepancy with the theoretical
@@ -466,7 +475,7 @@ TEST(S2Cell, RectBoundIsLargeEnough) {
 
 TEST(S2Cell, ConsistentWithS2CellIdFromPoint) {
   // Construct many points that are nearly on an S2Cell edge, and verify that
-  // S2Cell(S2CellId::FromPoint(p)).Contains(p) is always true.
+  // S2Cell(S2CellId(p)).Contains(p) is always true.
 
   for (int iter = 0; iter < 1000; ++iter) {
     S2Cell cell(S2Testing::GetRandomCellId());
@@ -476,7 +485,7 @@ TEST(S2Cell, ConsistentWithS2CellIdFromPoint) {
     S2Point v2 = S2Testing::SamplePoint(
         S2Cap(cell.GetVertex(i2), S1Angle::Radians(1e-15)));
     S2Point p = S2EdgeUtil::Interpolate(S2Testing::rnd.RandDouble(), v1, v2);
-    EXPECT_TRUE(S2Cell(S2CellId::FromPoint(p)).Contains(p));
+    EXPECT_TRUE(S2Cell(S2CellId(p)).Contains(p));
   }
 }
 
@@ -489,19 +498,18 @@ TEST(S2CellId, AmbiguousContainsPoint) {
   // (x,y,z) gives x = 6.1e-17.  When xyz is converted to uv, this gives u =
   // -6.1e-17.  However when converting to st, which is centered at 0.5 rather
   // than 0, the low precision bits of u are lost and we wind up with s = 0.5.
-  // S2CellId::FromPoint then chooses an arbitrary neighboring cell.
+  // S2CellId(const S2Point&) then chooses an arbitrary neighboring cell.
   //
   // This tests that S2Cell::Contains() expands the cell bounds sufficiently
   // so that the returned cell is still considered to contain "p".
   S2Point p = S2LatLng::FromDegrees(-2, 90).ToPoint();
-  S2CellId cell_id = S2CellId::FromPoint(p).parent(1);
+  S2CellId cell_id = S2CellId(p).parent(1);
   S2Cell cell(cell_id);
   EXPECT_TRUE(cell.Contains(p));
 }
 
 static S1ChordAngle GetDistanceToPointBruteForce(S2Cell const& cell,
                                                  S2Point const& target) {
-  if (cell.Contains(target)) return S1ChordAngle::Zero();
   S1ChordAngle min_distance = S1ChordAngle::Infinity();
   for (int i = 0; i < 4; ++i) {
     S2EdgeUtil::UpdateMinDistance(target, cell.GetVertex(i),
@@ -516,13 +524,23 @@ TEST(S2Cell, GetDistanceToPoint) {
     SCOPED_TRACE(StringPrintf("Iteration %d", iter));
     S2Cell cell(S2Testing::GetRandomCellId());
     S2Point target = S2Testing::RandomPoint();
-    S1Angle expected = GetDistanceToPointBruteForce(cell, target).ToAngle();
-    S1Angle actual = cell.GetDistance(target).ToAngle();
+    S1Angle expected_to_boundary =
+        GetDistanceToPointBruteForce(cell, target).ToAngle();
+    S1Angle expected_to_interior =
+        cell.Contains(target) ? S1Angle::Zero() : expected_to_boundary;
+    S1Angle actual_to_boundary = cell.GetBoundaryDistance(target).ToAngle();
+    S1Angle actual_to_interior = cell.GetDistance(target).ToAngle();
     // The error has a peak near Pi/2 for edge distance, and another peak near
     // Pi for vertex distance.
-    EXPECT_NEAR(expected.radians(), actual.radians(), 1e-12);
-    if (expected.radians() <= M_PI / 3) {
-      EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15);
+    EXPECT_NEAR(expected_to_boundary.radians(),
+                actual_to_boundary.radians(), 1e-12);
+    EXPECT_NEAR(expected_to_interior.radians(),
+                actual_to_interior.radians(), 1e-12);
+    if (expected_to_boundary.radians() <= M_PI / 3) {
+      EXPECT_NEAR(expected_to_boundary.radians(),
+                  actual_to_boundary.radians(), 1e-15);
+      EXPECT_NEAR(expected_to_interior.radians(),
+                  actual_to_interior.radians(), 1e-15);
     }
   }
 }
@@ -584,4 +602,21 @@ TEST(S2Cell, GetDistanceToEdge) {
       EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15);
     }
   }
+}
+
+TEST(S2Cell, EncodeDecode) {
+  S2Cell orig_cell(S2LatLng::FromDegrees(40.7406264, -74.0029963));
+  Encoder encoder;
+  orig_cell.Encode(&encoder);
+
+  S2Cell decoded_cell(S2LatLng::FromDegrees(51.494987, -0.146585));
+  Decoder decoder(encoder.base(), encoder.length());
+  decoded_cell.Decode(&decoder);
+
+  EXPECT_EQ(orig_cell, decoded_cell);
+  EXPECT_EQ(orig_cell.face(), decoded_cell.face());
+  EXPECT_EQ(orig_cell.level(), decoded_cell.level());
+  EXPECT_EQ(orig_cell.orientation(), decoded_cell.orientation());
+  EXPECT_EQ(orig_cell.id(), decoded_cell.id());
+  EXPECT_EQ(orig_cell.GetBoundUV(), decoded_cell.GetBoundUV());
 }

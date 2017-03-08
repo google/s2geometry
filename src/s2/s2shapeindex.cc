@@ -32,6 +32,7 @@
 #include "s2/s2edgeutil.h"
 #include "s2/s2paddedcell.h"
 
+using std::fabs;
 using std::max;
 using std::unique_ptr;
 using std::vector;
@@ -190,7 +191,7 @@ bool S2ShapeIndex::Iterator::Locate(S2Point const& target_point) {
   // containing cell is either I or I'.  We test for containment by comparing
   // the ranges of leaf cells spanned by T, I, and I'.
 
-  S2CellId target = S2CellId::FromPoint(target_point);
+  S2CellId target(target_point);
   Seek(target);
   if (!Done() && id().range_min() <= target) return true;
   if (!AtBegin()) {
@@ -287,7 +288,7 @@ void S2ShapeIndex::RemoveAll() {
 
   Iterator it;
   for (it.InitStale(*this); !it.Done(); it.Next()) {
-    delete it.cell();
+    delete &it.cell();
   }
   cell_map_.clear();
   pending_additions_begin_ = 0;
@@ -354,7 +355,7 @@ bool S2ShapeIndex::ShapeContains(S2Shape const* shape, S2Point const& p) const {
   S2ShapeIndex::Iterator it(*this);
   if (!it.Locate(p)) return false;
 
-  S2ClippedShape const* clipped = it.cell()->find_clipped(shape);
+  S2ClippedShape const* clipped = it.cell().find_clipped(shape);
   if (clipped == nullptr) return false;
 
   PointContainmentTester point_tester(it, p);
@@ -368,12 +369,12 @@ bool S2ShapeIndex::GetContainingShapes(S2Point const& p,
   S2ShapeIndex::Iterator it(*this);
   if (!it.Locate(p)) return false;
 
-  int num_shapes = it.cell()->num_shapes();
-  if (num_shapes == 0) return false;
+  int num_clipped = it.cell().num_clipped();
+  if (num_clipped == 0) return false;
 
   PointContainmentTester point_tester(it, p);
-  for (int s = 0; s < num_shapes; ++s) {
-    S2ClippedShape const& clipped = it.cell()->clipped(s);
+  for (int s = 0; s < num_clipped; ++s) {
+    S2ClippedShape const& clipped = it.cell().clipped(s);
     S2Shape* shape = shapes_[clipped.shape_id()];
     if (point_tester.ContainedBy(shape, clipped)) {
       shapes->push_back(shape);
@@ -1020,7 +1021,7 @@ int S2ShapeIndex::GetEdgeMaxLevel(S2Point const& a, S2Point const& b) const {
                       FLAGS_s2shapeindex_cell_size_to_long_edge_ratio);
   // Now return the first level encountered during subdivision where the
   // average cell size is at most "cell_size".
-  return S2::kAvgEdge.GetMinLevel(cell_size);
+  return S2::kAvgEdge.GetLevelForMaxValue(cell_size);
 }
 
 // EdgeAllocator provides temporary storage for new ClippedEdges that are
@@ -1341,7 +1342,7 @@ S2ShapeIndex::ClipUBound(ClippedEdge const* edge, int u_end, double u,
   // roundoff errors due to repeated interpolations.  The result needs to be
   // clamped to ensure that it is in the appropriate range.
   FaceEdge const& e = *edge->face_edge;
-  double v = edge->bound[1].ClampPoint(
+  double v = edge->bound[1].Project(
       S2EdgeUtil::InterpolateDouble(u, e.a[0], e.b[0], e.a[1], e.b[1]));
 
   // Determine which endpoint of the v-axis bound to update.  If the edge
@@ -1364,7 +1365,7 @@ S2ShapeIndex::ClipVBound(ClippedEdge const* edge, int v_end, double v,
     if (edge->bound[1].hi() <= v) return edge;
   }
   FaceEdge const& e = *edge->face_edge;
-  double u = edge->bound[0].ClampPoint(
+  double u = edge->bound[0].Project(
       S2EdgeUtil::InterpolateDouble(v, e.a[1], e.b[1], e.a[0], e.b[0]));
   int u_end = v_end ^ ((e.a[0] > e.b[0]) != (e.a[1] > e.b[1]));
   return UpdateBound(edge, u_end, u, v_end, v, alloc);
@@ -1442,9 +1443,9 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
   vector<FaceEdge>* face_edges = alloc->mutable_face_edges();
   face_edges->clear();
   bool tracker_moved = false;
-  S2ShapeIndexCell const* cell = iter.cell();
-  for (int s = 0; s < cell->num_shapes(); ++s) {
-    S2ClippedShape const& clipped = cell->clipped(s);
+  S2ShapeIndexCell const& cell = iter.cell();
+  for (int s = 0; s < cell.num_clipped(); ++s) {
+    S2ClippedShape const& clipped = cell.clipped(s);
     int shape_id = clipped.shape_id();
     S2Shape const* shape = shapes_[shape_id];
     if (shape == nullptr) continue;  // This shape is being removed.
@@ -1504,7 +1505,7 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
   // Update the edge list and delete this cell from the index.
   edges->swap(new_edges);
   cell_map_.erase(pcell.id());
-  delete cell;
+  delete &cell;
 }
 
 // Attempt to build an index cell containing the given edges, and return true
@@ -1677,10 +1678,10 @@ size_t S2ShapeIndex::BytesUsed() const {
   size += cell_map_.size() * sizeof(S2ShapeIndexCell);
   Iterator it;
   for (it.InitStale(*this); !it.Done(); it.Next()) {
-    S2ShapeIndexCell const* cell = it.cell();
-    size += cell->shapes_.capacity() * sizeof(S2ClippedShape);
-    for (int s = 0; s < cell->num_shapes(); ++s) {
-      S2ClippedShape const& clipped = cell->clipped(s);
+    S2ShapeIndexCell const& cell = it.cell();
+    size += cell.shapes_.capacity() * sizeof(S2ClippedShape);
+    for (int s = 0; s < cell.num_clipped(); ++s) {
+      S2ClippedShape const& clipped = cell.clipped(s);
       if (!clipped.is_inline()) {
         size += clipped.num_edges() * sizeof(int32);
       }

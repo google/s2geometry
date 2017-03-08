@@ -38,6 +38,7 @@ using s2shapeutil::EdgeVectorShape;
 using s2shapeutil::S2PolylineOwningShape;
 using s2textformat::MakePoint;
 using s2textformat::MakePolyline;
+using std::is_sorted;
 using std::pair;
 using std::vector;
 
@@ -123,7 +124,7 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
     EXPECT_TRUE(!candidates.empty());
 
     // Now check the actual candidates.
-    EXPECT_TRUE(std::is_sorted(candidates.begin(), candidates.end()));
+    EXPECT_TRUE(is_sorted(candidates.begin(), candidates.end()));
     EXPECT_GE(candidates.front(), 0);
     EXPECT_LT(candidates.back(), shape->num_edges());
     num_candidates += candidates.size();
@@ -191,7 +192,7 @@ TEST(GetCrossingCandidates, PerturbedCubeEdges) {
     S2Point a0 = S2::FaceUVtoXYZ(face, scale * uv);
     S2Point b0 = a0 - 2 * S2::GetNorm(face);
     // TODO(ericv): This test is currently slow because *every* crossing test
-    // needs to invoke S2::ExpensiveSign().
+    // needs to invoke s2pred::ExpensiveSign().
     GetPerturbedSubEdges(a0, b0, 30, &edges);
     TestAllCrossings(edges);
   }

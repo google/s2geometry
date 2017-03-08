@@ -1,4 +1,4 @@
-// Copyright 2016 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,13 +26,13 @@
 #include <iosfwd>
 #include <iostream>  // NOLINT(readability/streams)
 #include <limits>
+#include <type_traits>
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/base/macros.h"
 #include "s2/base/template_util.h"
 #include "s2/base/type_traits.h"
-#include "s2/util/math/vector.h"
 
 template <typename T> class Vector2;
 template <typename T> class Vector3;
@@ -61,9 +61,8 @@ class BasicVector {
   // FloatType is the type returned by Norm() and Angle().  These methods are
   // special because they return floating-point values even when VType is an
   // integer.
-  // TODO(user): Fix callers and use <type_traits> exclusively.
   typedef typename std::conditional<std::is_integral<T>::value,
-                             double, T>::type FloatType;
+                                    double, T>::type FloatType;
 
   using IdxSeqN = typename MkIdxSeq<N>::type;
 
@@ -148,6 +147,12 @@ class BasicVector {
     return Generate([](const T& x) { return -x; }, a);
   }
 
+  // Convert from another vector type
+  template <typename T2>
+  static D Cast(const VecTemplate<T2> &b) {
+    return Generate([](const T2& x) { return static_cast<T>(x); }, b);
+  }
+
   // multiply two vectors component by component
   D MulComponents(const D &b) const {
     return Generate([](const T& x, const T& y) { return x * y; }, AsD(), b);
@@ -180,7 +185,10 @@ class BasicVector {
   T Norm2() const { return DotProd(AsD()); }
 
   // Euclidean norm. For integer T, correct only if Norm2 does not overflow.
-  FloatType Norm() const { return sqrt(Norm2()); }
+  FloatType Norm() const {
+    using std::sqrt;
+    return sqrt(Norm2());
+  }
 
   // Normalized vector if the norm is nonzero. Not for integer types.
   D Normalize() const {
@@ -194,7 +202,10 @@ class BasicVector {
 
   // Compose a vector from the sqrt of each component.
   D Sqrt() const {
-    return Generate([](const T& x) { return sqrt(x); }, AsD());
+    return Generate([](const T& x) {
+      using std::sqrt;
+      return sqrt(x);
+    }, AsD());
   }
 
   // Take the floor of each component.
@@ -233,12 +244,12 @@ class BasicVector {
     return Generate([] { return std::numeric_limits<T>::quiet_NaN(); });
   }
 
-  friend std::ostream& operator<<(std::ostream& out, const BasicVector& v) {
+  friend std::ostream& operator<<(std::ostream& out, const D& v) {
     out << "[";
     const char *sep = "";
     for (int i = 0; i < SIZE; ++i) {
       out << sep;
-      Print(out, v.AsD()[i]);
+      Print(out, v[i]);
       sep = ", ";
     }
     return out << "]";
@@ -350,13 +361,8 @@ class Vector2
   T x() const { return c_[0]; }
   T y() const { return c_[1]; }
 
-  // Convert from another vector type
-  template <typename T2>
-  static Vector2 Cast(const Vector2<T2> &b) {
-    return Base::Generate([](const T2& x) { return static_cast<T>(x); }, b);
-  }
-
   bool aequal(const Vector2 &vb, FloatType margin) const {
+    using std::fabs;
     return (fabs(c_[0]-vb.c_[0]) < margin) && (fabs(c_[1]-vb.c_[1]) < margin);
   }
 
@@ -370,6 +376,7 @@ class Vector2
 
   // return the angle between "this" and v in radians
   FloatType Angle(const Vector2 &v) const {
+    using std::atan2;
     return atan2(CrossProd(v), this->DotProd(v));
   }
 
@@ -379,6 +386,7 @@ class Vector2
 
   // TODO(user): unify Fabs/Abs between all Vector classes.
   Vector2 Fabs() const {
+    using std::fabs;
     return Vector2(fabs(c_[0]), fabs(c_[1]));
   }
   Vector2 Abs() const {
@@ -423,13 +431,6 @@ class Vector3
   T y() const { return c_[1]; }
   T z() const { return c_[2]; }
 
-  // Convert from another vector type
-  // TODO(user): use static_cast<T> like Vector2 and Vector4.
-  template <typename T2>
-  static Vector3 Cast(const Vector3<T2> &b) {
-    return Base::Generate([](const T2& x) { return T(x); }, b);
-  }
-
   bool aequal(const Vector3 &vb, FloatType margin) const {
     using std::abs;
     return (abs(c_[0] - vb.c_[0]) < margin)
@@ -459,6 +460,7 @@ class Vector3
 
   // return the angle between two vectors in radians
   FloatType Angle(const Vector3 &va) const {
+    using std::atan2;
     return atan2(CrossProd(va).Norm(), this->DotProd(va));
   }
 
@@ -526,13 +528,8 @@ class Vector4
   T* Data() { return c_; }
   const T* Data() const { return c_; }
 
-  // Convert from another vector type
-  template <typename T2>
-  static Vector4 Cast(const Vector4<T2> &b) {
-    return Base::Generate([](const T2& x) { return static_cast<T>(x); }, b);
-  }
-
   bool aequal(const Vector4 &vb, FloatType margin) const {
+    using std::fabs;
     return (fabs(c_[0] - vb.c_[0]) < margin)
         && (fabs(c_[1] - vb.c_[1]) < margin)
         && (fabs(c_[2] - vb.c_[2]) < margin)
@@ -551,6 +548,7 @@ class Vector4
   void Set(T x, T y, T z, T w) { *this = Vector4(x, y, z, w); }
 
   Vector4 Fabs() const {
+    using std::fabs;
     return Vector4(fabs(c_[0]), fabs(c_[1]), fabs(c_[2]), fabs(c_[3]));
   }
 

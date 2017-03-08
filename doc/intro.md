@@ -1,54 +1,56 @@
 # Introduction
 
+[TOC]
+
 ## Overview
 
-This is a package for manipulating geometric shapes.  Unlike many geometry
+This is a package for manipulating geometric shapes. Unlike many geometry
 libraries, S2 is primarily designed to work with _spherical geometry_, i.e.,
-shapes drawn on a sphere rather than on a planar 2D map.  (In fact, the name
-"S2" is derived from the mathematical notation for the unit sphere.)  This makes
-it especially suitable for working with geographic data.
+shapes drawn on a sphere rather than on a planar 2D map. (In fact, the name "S2"
+is derived from the mathematical notation for the unit sphere.) This makes it
+especially suitable for working with geographic data.
 
 Currently the package consists of:
 
-* Basic representations of angles, intervals, latitude-longitude points, unit
-  3D vectors, and conversions among them.
+*   Basic representations of angles, intervals, latitude-longitude points, unit
+    3D vectors, and conversions among them.
 
-* Various shapes over the unit sphere, such as spherical caps ("discs"),
-  latitude-longitude rectangles, polylines, and polygons.  These are
-  collectively known as "regions".
+*   Various shapes over the unit sphere, such as spherical caps ("discs"),
+    latitude-longitude rectangles, polylines, and polygons. These are
+    collectively known as "regions".
 
-* Support for spatial indexing of collections of geometry, and algorithms for
-  testing containment, finding nearby objects, finding intersections, etc.
+*   Support for spatial indexing of collections of geometry, and algorithms for
+    testing containment, finding nearby objects, finding intersections, etc.
 
-* A hierarchical decomposition of the sphere into regions called "cells".
-  The hierarchy starts with the six faces of a projected cube and
-  recursively subdivides them in a quadtree-like fashion.
+*   A hierarchical decomposition of the sphere into regions called "cells". The
+    hierarchy starts with the six faces of a projected cube and recursively
+    subdivides them in a quadtree-like fashion.
 
-* The ability to approximate arbitrary regions as a collection of
-  cells.  This is useful for building inverted indexes that allow
-  queries over arbitrarily shaped regions.
+*   The ability to approximate arbitrary regions as a collection of cells. This
+    is useful for building inverted indexes that allow queries over arbitrarily
+    shaped regions.
 
 The implementations attempt to be precise both in terms of mathematical
-definitions (e.g. whether regions include their boundaries,
-representations of empty and full regions) and numerical accuracy
-(e.g. avoiding cancellation error).
+definitions (e.g. whether regions include their boundaries, representations of
+empty and full regions) and numerical accuracy (e.g. avoiding cancellation
+error).
 
-Note that the intent of this package is to represent geometry as a
-mathematical abstraction.  For example, although the unit sphere is
-obviously a useful approximation for the Earth's surface, functions
-that are specifically related to geography are not part of the core
-library (e.g. easting/northing conversions, ellipsoid approximations,
-geodetic vs. geocentric coordinates, etc), except for one file
-(`s2earth.h`) that has some very basic conversion functions.
+Note that the intent of this package is to represent geometry as a mathematical
+abstraction. For example, although the unit sphere is obviously a useful
+approximation for the Earth's surface, functions that are specifically related
+to geography are not part of the core library (e.g. easting/northing
+conversions, ellipsoid approximations, geodetic vs. geocentric coordinates,
+etc), except for one file (`s2earth.h`) that has some very basic conversion
+functions.
 
 ## Basic Types
 
 ### S1Angle
 
-The `S1Angle` class represents a one-dimensional angle (as opposed to a
-2D solid angle).  It has methods for converting angles to or from
-radians, degrees, and the E5/E6/E7 representations (i.e. degrees multiplied
-by 1e5/1e6/1e7 and rounded to the nearest integer).
+The `S1Angle` class represents a one-dimensional angle (as opposed to a 2D solid
+angle). It has methods for converting angles to or from radians, degrees, and
+the E5/E6/E7 representations (i.e. degrees multiplied by 1e5/1e6/1e7 and rounded
+to the nearest integer).
 
 ```c++
 class S1Angle {
@@ -95,9 +97,8 @@ class S1Angle {
 };
 ```
 
-See `s1angle.h` for additional methods, including comparison and
-arithmetic operators. For example, if `x` and `y` are angles, then you can
-write
+See `s1angle.h` for additional methods, including comparison and arithmetic
+operators. For example, if `x` and `y` are angles, then you can write
 
 ```
 if (sin(0.5 * x) > (x + y) / (x - y)) { ... }
@@ -105,12 +106,11 @@ if (sin(0.5 * x) > (x + y) / (x - y)) { ... }
 
 ### S2Point
 
-The `S2Point` class represents a point on the unit sphere as a 3D
-vector.  Usually points are normalized to be unit length, but some
-methods do not require this.  The `S2Point` class is simply a synonym
-for the `Vector_3d` class from `util/math/vector3-inl.h`, which defines
-overloaded operators that make it convenient to write arithmetic
-expressions (e.g. `x*p1 + (1-x)*p2`).
+The `S2Point` class represents a point on the unit sphere as a 3D vector.
+Usually points are normalized to be unit length, but some methods do not require
+this. The `S2Point` class is simply a synonym for the `Vector_3d` class from
+`util/math/vector.h`, which defines overloaded operators that make it convenient
+to write arithmetic expressions (e.g. `x*p1 + (1-x)*p2`).
 
 Some of its more useful methods include:
 
@@ -146,7 +146,7 @@ typedef Vector3<double> Vector3_d;
 typedef Vector3_d S2Point;
 ```
 
-See `util/math/vector3-inl.h` for details and additional methods.
+See `util/math/vector.h` for details and additional methods.
 
 ### S2LatLng
 
@@ -206,19 +206,18 @@ class S2LatLng {
 };
 ```
 
-See `s2latlng.h` for additional methods, including comparison and
-arithmetic operators.
+See `s2latlng.h` for additional methods, including comparison and arithmetic
+operators.
 
 ### S2Region
 
-An `S2Region` represents a two-dimensional region over the unit sphere.
-It is an abstract interface with various concrete subtypes.
+An `S2Region` represents a two-dimensional region over the unit sphere. It is an
+abstract interface with various concrete subtypes.
 
 The main purpose of this interface is to allow complex regions to be
-approximated as simpler regions.  So rather than having a wide variety
-of virtual methods that are implemented by all subtypes, the interface
-is restricted to methods that are useful for computing approximations.
-Here they are:
+approximated as simpler regions. So rather than having a wide variety of virtual
+methods that are implemented by all subtypes, the interface is restricted to
+methods that are useful for computing approximations. Here they are:
 
 ```c++
 class S2Region {
@@ -265,21 +264,20 @@ class S2Region {
 };
 ```
 
-In addition, all `S2Region` subtypes implement a
-`Contains(S2Point const& p)` method that returns true if the given point
-`p` is contained by the region.  The point is generally required to be unit
-length, although some subtypes may relax this restriction.
+In addition, all `S2Region` subtypes implement a `Contains(S2Point const& p)`
+method that returns true if the given point `p` is contained by the region. The
+point is generally required to be unit length, although some subtypes may relax
+this restriction.
 
 See `s2region.h` for the full interface.
 
 ### S2LatLngRect
 
 An `S2LatLngRect` is a type of `S2Region` that represents a rectangle in
-latitude-longitude space.  It is capable of representing the empty and
-full rectangles as well as single points.  It has an `AddPoint` method
-that makes it easy to construct a bounding rectangle for a set of points,
-including point sets that span the 180 degree meridian.  Here are its
-methods:
+latitude-longitude space. It is capable of representing the empty and full
+rectangles as well as single points. It has an `AddPoint` method that makes it
+easy to construct a bounding rectangle for a set of points, including point sets
+that span the 180 degree meridian. Here are its methods:
 
 ```c++
 class S2LatLngRect : public S2Region {
@@ -470,10 +468,10 @@ See `s2latlngrect.h` for additional methods.
 
 ### S2Cap ("S2Disc")
 
-An `S2Cap` represents a spherical cap, i.e. a portion of a sphere cut off
-by a plane.  This is the equivalent of a *closed disc* in planar geometry
-(i.e., a circle together with its interior), so if you are looking for a way
-to represent a circle or disc then you are probably looking for an `S2Cap`.
+An `S2Cap` represents a spherical cap, i.e. a portion of a sphere cut off by a
+plane. This is the equivalent of a *closed disc* in planar geometry (i.e., a
+circle together with its interior), so if you are looking for a way to represent
+a circle or disc then you are probably looking for an `S2Cap`.
 
 Here are the methods available:
 
@@ -596,8 +594,8 @@ See `s2cap.h` for additional methods.
 ### S2Polyline
 
 An `S2Polyline` represents a sequence of zero or more vertices connected by
-straight edges (geodesics).  Edges of length 0 and 180 degrees are not
-allowed, i.e. adjacent vertices should not be identical or antipodal.
+straight edges (geodesics). Edges of length 0 and 180 degrees are not allowed,
+i.e. adjacent vertices should not be identical or antipodal.
 
 ```c++
 class S2Polyline : public S2Region {
@@ -710,29 +708,27 @@ class S2Polyline : public S2Region {
 
 ### S2Loop
 
-An `S2Loop` represents a simple spherical polygon.  It consists of a single
-chain of vertices where the first vertex is implicitly connected to the
-last. All loops are defined to have a CCW orientation, i.e. the interior of
-the loop is on the left side of the edges.  This implies that a clockwise
-loop enclosing a small area is interpreted to be a CCW loop enclosing a
-very large area.
+An `S2Loop` represents a simple spherical polygon. It consists of a single chain
+of vertices where the first vertex is implicitly connected to the last. All
+loops are defined to have a CCW orientation, i.e. the interior of the loop is on
+the left side of the edges. This implies that a clockwise loop enclosing a small
+area is interpreted to be a CCW loop enclosing a very large area.
 
-Loops are not allowed to have any duplicate vertices (whether adjacent or
-not), and non-adjacent edges are not allowed to intersect.  Loops must have
-at least 3 vertices (except for the "empty" and "full" loops discussed
-below).  These restrictions make it possible to implement exact
-polygon-polygon containment and intersection tests very efficiently.  See
-`S2PolygonBuilder` if your data does not meet these requirements.
+Loops are not allowed to have any duplicate vertices (whether adjacent or not),
+and non-adjacent edges are not allowed to intersect. Loops must have at least 3
+vertices (except for the "empty" and "full" loops discussed below). These
+restrictions make it possible to implement exact polygon-polygon containment and
+intersection tests very efficiently. See `S2Builder` if your data does not meet
+these requirements.
 
 There are two special loops: the "empty" loop contains no points, while the
-"full" loop contains all points.  These loops do not have any edges, but to
-preserve the invariant that every loop can be represented as a vertex
-chain, they are defined as having exactly one vertex each (see kEmpty and
-kFull).
+"full" loop contains all points. These loops do not have any edges, but to
+preserve the invariant that every loop can be represented as a vertex chain,
+they are defined as having exactly one vertex each (see kEmpty and kFull).
 
-Point containment of loops is defined such that if the sphere is subdivided
-into faces (loops), every point is contained by exactly one face.  This
-implies that loops do not necessarily contain their vertices.
+Point containment of loops is defined such that if the sphere is subdivided into
+faces (loops), every point is contained by exactly one face. This implies that
+loops do not necessarily contain their vertices.
 
 ```c++
 class S2Loop : public S2Region {
@@ -908,17 +904,17 @@ class S2Loop : public S2Region {
   // Constructs a regular polygon with the given number of vertices, all
   // located on a circle of the specified radius around "center".  The radius
   // is the actual distance from "center" to each vertex.
-  static S2Loop* MakeRegularLoop(S2Point const& center,
-                                 S1Angle radius,
-                                 int num_vertices);
+  static std::unique_ptr<S2Loop> MakeRegularLoop(S2Point const& center,
+                                                 S1Angle radius,
+                                                 int num_vertices);
 
   // Like the function above, but this version constructs a loop centered
   // around the z-axis of the given coordinate frame, with the first vertex in
   // the direction of the positive x-axis.  (This allows the loop to be
   // rotated for testing purposes.)
-  static S2Loop* MakeRegularLoop(Matrix3x3_d const& frame,
-                                 S1Angle radius,
-                                 int num_vertices);
+  static std::unique_ptr<S2Loop> MakeRegularLoop(Matrix3x3_d const& frame,
+                                                 S1Angle radius,
+                                                 int num_vertices);
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -947,58 +943,58 @@ class S2Loop : public S2Region {
 
 ### S2Polygon
 
-An `S2Polygon` is an `S2Region` object that represents a polygon.  A polygon is
-defined by zero or more loops; recall that the interior of a loop is
-defined to be its left-hand side (see `S2Loop`).  There are two different
-conventions for creating an `S2Polygon`:
+An `S2Polygon` is an `S2Region` object that represents a polygon. A polygon is
+defined by zero or more loops; recall that the interior of a loop is defined to
+be its left-hand side (see `S2Loop`). There are two different conventions for
+creating an `S2Polygon`:
 
-* `InitNested()` expects the input loops to be nested hierarchically.  The
-  polygon interior then consists of the set of points contained by an odd
-  number of loops.  So for example, a circular region with a hole in it would
-  be defined as two CCW loops, with one loop containing the other.  The loops
-  can be provided in any order.
+*   `InitNested()` expects the input loops to be nested hierarchically. The
+    polygon interior then consists of the set of points contained by an odd
+    number of loops. So for example, a circular region with a hole in it would
+    be defined as two CCW loops, with one loop containing the other. The loops
+    can be provided in any order.
 
-  When the orientation of the input loops is unknown, the nesting requirement
-  is typically met by calling `S2Loop::Normalize()` on each loop (which inverts
-  the loop if necessary so that it encloses at most half the sphere).  But in
-  fact any set of loops can be used as long as (1) there is no pair of loops
-  that cross, and (2) there is no pair of loops whose union is the entire
-  sphere.
+    When the orientation of the input loops is unknown, the nesting requirement
+    is typically met by calling `S2Loop::Normalize()` on each loop (which
+    inverts the loop if necessary so that it encloses at most half the sphere).
+    But in fact any set of loops can be used as long as (1) there is no pair of
+    loops that cross, and (2) there is no pair of loops whose union is the
+    entire sphere.
 
-* `InitOriented()` expects the input loops to be oriented such that the polygon
-  interior is on the left-hand side of every loop.  So for example, a
-  circular region with a hole in it would be defined using a CCW outer loop
-  and a CW inner loop.  The loop orientations must all be consistent; for
-  example, it is not valid to have one CCW loop nested inside another CCW
-  loop, because the region between the two loops is on the left-hand side of
-  one loop and the right-hand side of the other.
+*   `InitOriented()` expects the input loops to be oriented such that the
+    polygon interior is on the left-hand side of every loop. So for example, a
+    circular region with a hole in it would be defined using a CCW outer loop
+    and a CW inner loop. The loop orientations must all be consistent; for
+    example, it is not valid to have one CCW loop nested inside another CCW
+    loop, because the region between the two loops is on the left-hand side of
+    one loop and the right-hand side of the other.
 
 Most clients will not call these methods directly; instead they should use
-`S2PolygonBuilder`, which has better support for dealing with imperfect data.
+`S2Builder`, which has better support for dealing with imperfect data.
 
-When the polygon is initialized, the given loops are automatically
-converted into a canonical form consisting of "shells" and "holes".  Shells
-and holes are both oriented CCW, and are nested hierarchically.  The loops
-are reordered to correspond to a preorder traversal of the nesting
-hierarchy; `InitOriented()` may also invert some loops.
+When the polygon is initialized, the given loops are automatically converted
+into a canonical form consisting of "shells" and "holes". Shells and holes are
+both oriented CCW, and are nested hierarchically. The loops are reordered to
+correspond to a preorder traversal of the nesting hierarchy; `InitOriented()`
+may also invert some loops.
 
 Polygons may represent any region of the sphere with a polygonal boundary,
-including the entire sphere (known as the "full" polygon).  The full
-polygon consists of a single full loop (see `S2Loop`), whereas the empty
-polygon has no loops at all.
+including the entire sphere (known as the "full" polygon). The full polygon
+consists of a single full loop (see `S2Loop`), whereas the empty polygon has no
+loops at all.
 
 Polygons have the following restrictions:
 
-* Loops may not cross, i.e. the boundary of a loop may not intersect both the
-  interior and exterior of any other loop.
+*   Loops may not cross, i.e. the boundary of a loop may not intersect both the
+    interior and exterior of any other loop.
 
-* Loops may not share edges, i.e. if a loop contains an edge AB, then
-  no other loop may contain AB or BA.
+*   Loops may not share edges, i.e. if a loop contains an edge AB, then no other
+    loop may contain AB or BA.
 
-* Loops may share vertices, however no vertex may appear twice in a
-  single loop (see `S2Loop`).
+*   Loops may share vertices, however no vertex may appear twice in a single
+    loop (see `S2Loop`).
 
-* No loop may be empty.  The full loop may appear only in the full polygon.
+*   No loop may be empty. The full loop may appear only in the full polygon.
 
 ```c++
 class S2Polygon : public S2Region {
@@ -1009,14 +1005,14 @@ class S2Polygon : public S2Region {
 
   // Convenience constructor that calls InitNested() with the given loops.
   // Takes ownership of the loops and clears the vector.
-  explicit S2Polygon(std::vector<S2Loop*>* loops);
+  explicit S2Polygon(std::vector<std::unique_ptr<S2Loop>> loops);
 
   // Convenience constructor that creates a polygon with a single loop
   // corresponding to the given cell.
   explicit S2Polygon(S2Cell const& cell);
 
-  // Convenience constructor that calls Init(S2Loop*).
-  explicit S2Polygon(S2Loop* loop);
+  // Convenience constructor that calls Init(unique_ptr<S2Loop>).
+  explicit S2Polygon(std::unique_ptr<S2Loop> loop);
 
   // Create a polygon from a set of hierarchically nested loops.  The polygon
   // interior consists of the points contained by an odd number of loops.
@@ -1030,15 +1026,15 @@ class S2Polygon : public S2Region {
   //
   // This method may be called more than once, in which case any existing
   // loops are deleted before being replaced by the input loops.
-  void InitNested(std::vector<S2Loop*>* loops);
+  void InitNested(std::vector<std::unique_ptr<S2Loop>> loops);
 
   // Like InitNested(), but expects loops to be oriented such that the polygon
   // interior is on the left-hand side of all loops.  This implies that shells
   // and holes should have opposite orientations in the input to this method.
-  void InitOriented(std::vector<S2Loop*>* loops);
+  void InitOriented(std::vector<std::unique_ptr<S2Loop>> loops);
 
   // Initialize a polygon from a single loop.  Takes ownership of the loop.
-  void Init(S2Loop* loop);
+  void Init(std::unique_ptr<S2Loop> loop);
 
   // Releases ownership of the loops of this polygon, appends them to "loops" if
   // non-NULL, and resets the polygon to be empty.
@@ -1200,33 +1196,35 @@ class S2Polygon : public S2Region {
   // are appended in the order they would be encountered by traversing "in"
   // from beginning to end.  Note that the output may include polylines with
   // only one vertex, but there will not be any zero-vertex polylines.
-  void IntersectWithPolyline(S2Polyline const* in,
-                             std::vector<S2Polyline*> *out) const;
+  std::vector<std::unique_ptr<S2Polyline>>
+  IntersectWithPolyline(S2Polyline const& in) const;
 
   // Similar to IntersectWithPolyline(), except that vertices will be
   // dropped as necessary to ensure that all adjacent vertices in the
   // sequence obtained by concatenating the output polylines will be
   // farther than "vertex_merge_radius" apart.
-  void ApproxIntersectWithPolyline(S2Polyline const* in,
-                                   std::vector<S2Polyline*> *out,
-                                   S1Angle vertex_merge_radius) const;
+  std::vector<std::unique_ptr<S2Polyline>>
+  ApproxIntersectWithPolyline(S2Polyline const& in,
+                              S1Angle vertex_merge_radius) const;
 
   // Like IntersectWithPolyline, but subtracts this polygon from
   // the given polyline.
-  void SubtractFromPolyline(S2Polyline const* in,
-                            std::vector<S2Polyline*> *out) const;
+  std::vector<std::unique_ptr<S2Polyline>>
+  SubtractFromPolyline(S2Polyline const& in) const;
 
   // Like ApproxIntersectWithPolyline, but subtracts this polygon
   // from the given polyline.
-  void ApproxSubtractFromPolyline(S2Polyline const* in,
-                                  std::vector<S2Polyline*> *out,
-                                  S1Angle vertex_merge_radius) const;
+  std::vector<std::unique_ptr<S2Polyline>>
+  ApproxSubtractFromPolyline(S2Polyline const& in,
+                             S1Angle vertex_merge_radius) const;
 
   // Return a polygon which is the union of the given polygons.
   // Clears the vector and deletes the polygons.
-  static S2Polygon* DestructiveUnion(std::vector<S2Polygon*>* polygons);
-  static S2Polygon* DestructiveApproxUnion(std::vector<S2Polygon*>* polygons,
-                                           S1Angle vertex_merge_radius);
+  static std::unique_ptr<S2Polygon>
+  DestructiveUnion(std::vector<std::unique_ptr<S2Polygon>> polygons);
+  static std::unique_ptr<S2Polygon>
+  DestructiveApproxUnion(std::vector<std::unique_ptr<S2Polygon>> polygons,
+                         S1Angle vertex_merge_radius);
 
   // Initialize this polygon to the outline of the given cell union.
   // In principle this polygon should exactly contain the cell union and
@@ -1293,85 +1291,83 @@ class S2Polygon : public S2Region {
 ## Cell Hierarchy
 
 The library provides methods for subdividing the sphere into a hierarchical
-collection of "cells".  The cells have a space-filling curve structure
-that makes them useful for spatial indexing.  There are methods for
-approximating arbitrary regions as a collection of cells.
+collection of "cells". The cells have a space-filling curve structure that makes
+them useful for spatial indexing. There are methods for approximating arbitrary
+regions as a collection of cells.
 
-The S2 cell structure is defined as follows.  There are six top-level
-*face cells*, obtained by projecting the six faces of a cube -- (face, u, v)
-coordinates below -- onto the unit sphere -- (x, y, z) coordinates below.
-We call this cube the uv-cube.
+The S2 cell structure is defined as follows. There are six top-level *face
+cells*, obtained by projecting the six faces of a cube -- (face, u, v)
+coordinates below -- onto the unit sphere -- (x, y, z) coordinates below. We
+call this cube the uv-cube.
 
-Each face is then subdivided recursively into four cells
-in a quadtree-like fashion. On the uv-cube, a cell is a rectangle whose edges
-are aligned with the sides of its face.
-On the sphere, it is a spherical quadrilateral bounded by four geodesics
-(great circle segments).
+Each face is then subdivided recursively into four cells in a quadtree-like
+fashion. On the uv-cube, a cell is a rectangle whose edges are aligned with the
+sides of its face. On the sphere, it is a spherical quadrilateral bounded by
+four geodesics (great circle segments).
 
-There are a total of 30
-levels of subdivision defined (i.e. 6 * 4<sup>30</sup> leaf cells),
-which gives a resolution of about 1cm
-everywhere on a sphere the size of the earth. Details on the cell areas at
-each level appear on the [S2 Cell Statistics page](cell_statistics.md).
-Each cell is uniquely identified by a 64-bit *cell id*.
+There are a total of 30 levels of subdivision defined (i.e. 6 * 4<sup>30</sup>
+leaf cells), which gives a resolution of about 1cm everywhere on a sphere the
+size of the earth. Details on the cell areas at each level appear on the [S2
+Cell Statistics page](cell_statistics.md). Each cell is uniquely identified by a
+64-bit *cell id*.
 
 ### Coordinate Systems
-------------------
 
-In order for cells to be roughly the same size on the sphere, they are not
-the same size on the uv-cube.  We introduce another cube -- the st-cube.
-On this cube the cells are perfectly square and divided through their center.
-The st-cube is projected on the uv-cube so that cells at the periphery of an
-st-face are larger than cells at their center.
-In a 2-d projection, it looks like this:
+--------------------------------------------------------------------------------
 
-<a href="xyz_to_uv_to_st.jpg">
-<img src="xyz_to_uv_to_st.jpg" alt="xyz_to_uv_to_st.jpg"  width="320" height="240"  />
+In order for cells to be roughly the same size on the sphere, they are not the
+same size on the uv-cube. We introduce another cube -- the st-cube. On this cube
+the cells are perfectly square and divided through their center. The st-cube is
+projected on the uv-cube so that cells at the periphery of an st-face are larger
+than cells at their center. In a 2-d projection, it looks like this:
+
+<a href="xyz_to_uv_to_st.png">
+<img src="xyz_to_uv_to_st.png" alt="xyz_to_uv_to_st.png"  width="320" height="240"  />
 </a>
 
 Note that a cell on the st-cube is not bounded by straight lines.
 
 There are a few more coordinate systems worth introducing:
 
-* (id)<br> Cell id.  A 64-bit encoding of a face and a
-  Hilbert curve position on that face, as discussed below.  The Hilbert
-  curve position implicitly encodes both the position of a cell and its
-  subdivision level.
+*   (id)<br> Cell id.  A 64-bit encoding of a face and a
+    Hilbert curve position on that face, as discussed below.  The Hilbert
+    curve position implicitly encodes both the position of a cell and its
+    subdivision level.
 
-* (face, i, j)<br> Leaf-cell coordinates.  "i" and "j" are integers in
-  the range [0,(2**30)-1] that identify a particular leaf cell on a
-  given face.  The (i, j) coordinate system is right-handed on every
-  face, and the faces are oriented such that Hilbert curves connect
+*   (face, i, j)<br> Leaf-cell coordinates.  "i" and "j" are integers in
+    the range [0,(2**30)-1] that identify a particular leaf cell on a
+    given face.  The (i, j) coordinate system is right-handed on every
+    face, and the faces are oriented such that Hilbert curves connect
 
-* (face, s, t)<br> Cell-space coordinates.  "s" and "t" are real numbers
-  in the range [0,1] that identify a point on the given face.  For
-  example, the point (s, t) = (0.5, 0.5) corresponds to the center of the
-  top-level face cell.  This point is also a vertex of exactly four
-  cells at each subdivision level greater than zero.
+*   (face, s, t)<br> Cell-space coordinates.  "s" and "t" are real numbers
+    in the range [0,1] that identify a point on the given face.  For
+    example, the point (s, t) = (0.5, 0.5) corresponds to the center of the
+    top-level face cell.  This point is also a vertex of exactly four
+    cells at each subdivision level greater than zero.
 
-* (face, si, ti)<br> Discrete cell-space coordinates.  These are
-  obtained by multiplying "s" and "t" by 2**31 and rounding to the
-  nearest integer.  Discrete coordinates lie in the range
-  [0,2**31].  This coordinate system can represent the edge and
-  center positions of all cells with no loss of precision (including
-  non-leaf cells).
+*   (face, si, ti)<br> Discrete cell-space coordinates.  These are
+    obtained by multiplying "s" and "t" by 2**31 and rounding to the
+    nearest integer.  Discrete coordinates lie in the range
+    [0,2**31].  This coordinate system can represent the edge and
+    center positions of all cells with no loss of precision (including
+    non-leaf cells).
 
-* (face, u, v)<br> Cube-space coordinates.  To make the cells at each
-  level more uniform in size after they are projected onto the sphere,
-  we apply a nonlinear transformation of the form u=f(s), v=f(t), where
-  f(s) = (4 s^2 - 1) / 3 if s >= 1/2 and (1 - 4 (1 - s)^2) / 3 if s < 1/2.
-  The (u, v) coordinates after this transformation give the actual
-  coordinates of a point on the cube face (modulo some 90 degree
-  rotations) before it is projected onto the unit sphere.
+*   (face, u, v)<br> Cube-space coordinates.  To make the cells at each
+    level more uniform in size after they are projected onto the sphere,
+    we apply a nonlinear transformation of the form u=f(s), v=f(t), where
+    f(s) = (4 s^2 - 1) / 3 if s >= 1/2 and (1 - 4 (1 - s)^2) / 3 if s < 1/2.
+    The (u, v) coordinates after this transformation give the actual
+    coordinates of a point on the cube face (modulo some 90 degree
+    rotations) before it is projected onto the unit sphere.
 
-* (x, y, z)<br> Direction vector (`S2Point`).  Direction vectors are not
-  necessarily unit length, and are often chosen to be points on the
-  biunit cube [-1,+1]x[-1,+1]x[-1,+1].  They can be be normalized
-  to obtain the corresponding point on the unit sphere.
+*   (x, y, z)<br> Direction vector (`S2Point`).  Direction vectors are not
+    necessarily unit length, and are often chosen to be points on the
+    biunit cube [-1,+1]x[-1,+1]x[-1,+1].  They can be be normalized
+    to obtain the corresponding point on the unit sphere.
 
-* (lat, lng)<br> Latitude and longitude (`S2LatLng`).  Latitudes must be
-  between -90 and 90 degrees inclusive, and longitudes must be between
-  -180 and 180 degrees inclusive.
+*   (lat, lng)<br> Latitude and longitude (`S2LatLng`).  Latitudes must be
+    between -90 and 90 degrees inclusive, and longitudes must be between
+    -180 and 180 degrees inclusive.
 
 Note that the (i, j), (s, t), (si, ti), and (u, v) coordinate systems are
 right-handed on all six faces.
@@ -1380,27 +1376,26 @@ Conversion between coordinate systems can lead to precision problems.
 
 ### Cell Ids
 
-Cell ids are a convenient representation for both points and regions
-on the unit sphere.  Points are generally represented as leaf
-cells, while regions are represented as collections of cells
-at any level.
+Cell ids are a convenient representation for both points and regions on the unit
+sphere. Points are generally represented as leaf cells, while regions are
+represented as collections of cells at any level.
 
-An `S2CellId` is a 64-bit unsigned integer that uniquely identifies a
-cell in the S2 cell decomposition.  It has the following format:
+An `S2CellId` is a 64-bit unsigned integer that uniquely identifies a cell in
+the S2 cell decomposition. It has the following format:
 
 ```
    id = [face][face_pos]
 ```
 
-where "face" is a 3-bit number (range 0..5) encoding the cube face,
-and "face_pos" is a 61-bit number encoding the position of the center
-of this cell along a space-filling curve over this face (see below).
+where "face" is a 3-bit number (range 0..5) encoding the cube face, and
+"face_pos" is a 61-bit number encoding the position of the center of this cell
+along a space-filling curve over this face (see below).
 
-In particular, the id of a cell at level "k" consists of a 3-bit face
-number, followed by k pairs of bits that recursively select one of the
-four children of each cell.  The remainder consists of a single 1-bit
-followed by zeros (this is the Hilbert curve position corresponding
-to the center of the cell as discussed above).  For example:
+In particular, the id of a cell at level "k" consists of a 3-bit face number,
+followed by k pairs of bits that recursively select one of the four children of
+each cell. The remainder consists of a single 1-bit followed by zeros (this is
+the Hilbert curve position corresponding to the center of the cell as discussed
+above). For example:
 
     01010000...0   The top-level cell of face 2.  (The Hilbert curve
                    position 0.10* corresponds to the center of the cell.)
@@ -1408,40 +1403,40 @@ to the center of the cell as discussed above).  For example:
 
 Cell ids have the following convenient properties:
 
-* The level of a cell id can be determined by looking at the position
-  of its lowest-numbered 1-bit.  For a cell at level k, the
-  lowest-numbered 1-bit is at position 2*(kMaxLevel-k).
+*   The level of a cell id can be determined by looking at the position of its
+    lowest-numbered 1-bit. For a cell at level k, the lowest-numbered 1-bit is
+    at position 2*(kMaxLevel-k).
 
-* The id of a parent cell is at the midpoint of the range of ids
-  spanned by its children (or by its descendants at any level).
+*   The id of a parent cell is at the midpoint of the range of ids spanned by
+    its children (or by its descendants at any level).
 
 ### Cell Id to ST Coordinates
 
-Each cell is a spherical quadrilateral bounded by four geodesics (great
-circle segments).  The level 0 subdivision (the top level) consists of six
-face cells.  The children of each face cell are numbered according
-to their traversal order along a Hilbert curve.
+Each cell is a spherical quadrilateral bounded by four geodesics (great circle
+segments). The level 0 subdivision (the top level) consists of six face cells.
+The children of each face cell are numbered according to their traversal order
+along a Hilbert curve.
 
-The canonical Hilbert curve on a cell visits its children in the
-following (i,j) order: (0,0), (0,1), (1,1), (1,0).  Graphically, the
-traversal order looks like an inverted U:
+The canonical Hilbert curve on a cell visits its children in the following (i,j)
+order: (0,0), (0,1), (1,1), (1,0). Graphically, the traversal order looks like
+an inverted U:
 
              (0,1) ^----> (1,1)
                    |    |
                    |    |
              (0,0) x    v (1,0)
 
-The traversal order in each subcell is obtained by applying the
-following transformations to the ordering in its parent cell:
+The traversal order in each subcell is obtained by applying the following
+transformations to the ordering in its parent cell:
 
           (0,0):   (i,j) -> (j,i)       [axes swapped]
           (0,1):   (i,j) -> (i,j)
           (1,1):   (i,j) -> (i,j)
           (1,0):   (i,j) -> (1-j,1-i)   [axes swapped and inverted]
 
-For example, the traversal order in the four subcells of cell (0,0) is
-(0,0), (1,0), (1,1), (0,1) (the i- and j-axes have been swapped).  After
-one level of expansion according to these rules, the curve looks like this:
+For example, the traversal order in the four subcells of cell (0,0) is (0,0),
+(1,0), (1,1), (0,1) (the i- and j-axes have been swapped). After one level of
+expansion according to these rules, the curve looks like this:
 
               ^-->  ^-->
               |  |  |  |
@@ -1452,42 +1447,37 @@ one level of expansion according to these rules, the curve looks like this:
               x-->  v-->
 
 Each leaf cell can be assigned a label according to its position in the
-traversal order.  For example, the traversal above has 16 positions
-ranging from 0000 to 1111 in binary notation.  The cell marked (*) has
-the label 1011.  Notice that we can obtain the traversal position of the
-parent of any cell (within its own traversal order) by stripping the
-last two bits from its label.
+traversal order. For example, the traversal above has 16 positions ranging from
+0000 to 1111 in binary notation. The cell marked (*) has the label 1011. Notice
+that we can obtain the traversal position of the parent of any cell (within its
+own traversal order) by stripping the last two bits from its label.
 
-We typically think of the Hilbert curve position as a real number
-between 0 and 1, by prefixing "0." to the binary number above.
-For example, position 0.1000 in binary (0.5 in decimal) is at
-the beginning of curve in subcell 10 of the root cell, which
-turns out to be the middle of the top-level face.  Note that
-it is true in general that the Hilbert curve position at the
-middle of any cell is the average of the positions at the points
-where the curve enters and exits that cell.
+We typically think of the Hilbert curve position as a real number between 0 and
+1, by prefixing "0." to the binary number above. For example, position 0.1000 in
+binary (0.5 in decimal) is at the beginning of curve in subcell 10 of the root
+cell, which turns out to be the middle of the top-level face. Note that it is
+true in general that the Hilbert curve position at the middle of any cell is the
+average of the positions at the points where the curve enters and exits that
+cell.
 
-A particular cell can be uniquely identified by the Hilbert
-curve position at the center of that cell.  Note that no two
-cells have the same center position.  For example, the Hilbert
-curve position at the center of the top-level face cell is
-0.10* in binary notation (where 0* denotes infinitely many
-zeroes).  The position at the center of subcell (0,0) of the
-top-level face cell is 0.0010*.  Note that a Hilbert curve
-position specifies both the position **and** the subdivision
-level of a particular cell.
+A particular cell can be uniquely identified by the Hilbert curve position at
+the center of that cell. Note that no two cells have the same center position.
+For example, the Hilbert curve position at the center of the top-level face cell
+is 0.10* in binary notation (where 0* denotes infinitely many zeroes). The
+position at the center of subcell (0,0) of the top-level face cell is 0.0010*.
+Note that a Hilbert curve position specifies both the position **and** the
+subdivision level of a particular cell.
 
 [Images of the Earth projected onto S2 cells can be found
 here.](earthcube/earthcube.md)
 
 ### `S2CellId` Class
 
-The `S2CellId` class is a thin wrapper over a 64-bit cell id that
-provides methods for navigating the cell hierarchy (finding parents,
-children, containment tests, etc).  Since leaf cells are often used
-to represent points on the unit sphere, the `S2CellId` class also
-provides methods for converting directly to and from an `S2Point`.
-Here are its methods:
+The `S2CellId` class is a thin wrapper over a 64-bit cell id that provides
+methods for navigating the cell hierarchy (finding parents, children,
+containment tests, etc). Since leaf cells are often used to represent points on
+the unit sphere, the `S2CellId` class also provides methods for converting
+directly to and from an `S2Point`. Here are its methods:
 
 ```c++
 class S2CellId {
@@ -1701,9 +1691,9 @@ See `s2cellid.h` for additional methods.
 
 ### `S2Cell` Class
 
-An `S2Cell` is an `S2Region` object that represents a cell.  Unlike `S2CellId`,
+An `S2Cell` is an `S2Region` object that represents a cell. Unlike `S2CellId`,
 it views a cell as a representing a spherical quadrilateral rather than a point,
-and it supports efficient containment and intersection tests.  However, it is
+and it supports efficient containment and intersection tests. However, it is
 also a more expensive representation (currently 48 bytes rather than 8).
 
 Here are its methods:
@@ -1825,11 +1815,11 @@ See `s2cell.h` for additional methods.
 
 ### Cell Unions
 
-An `S2CellUnion` is an `S2Region` consisting of cells of various sizes.
-A cell union is typically used to approximate some other shape.
-There is a tradeoff between the accuracy of the approximation and how many
-cells are used. Unlike polygons, cells have a fixed hierarchical structure.
-This makes them more suitable for spatial indexing.
+An `S2CellUnion` is an `S2Region` consisting of cells of various sizes. A cell
+union is typically used to approximate some other shape. There is a tradeoff
+between the accuracy of the approximation and how many cells are used. Unlike
+polygons, cells have a fixed hierarchical structure. This makes them more
+suitable for spatial indexing.
 
 Here is the interface:
 
@@ -1975,9 +1965,9 @@ class S2CellUnion : public S2Region {
 
 ### Approximating Regions
 
-An `S2RegionCoverer` is a class that allows arbitrary regions to be
-approximated as unions of cells (`S2CellUnion`).  This is useful for
-implementing various sorts of search and precomputation operations.
+An `S2RegionCoverer` is a class that allows arbitrary regions to be approximated
+as unions of cells (`S2CellUnion`). This is useful for implementing various
+sorts of search and precomputation operations.
 
 Typical usage:
 
@@ -1991,15 +1981,15 @@ The result is a cell union of at most 5 cells that is guaranteed to cover the
 given cap (a disc-shaped region on the sphere).
 
 The approximation algorithm is not optimal but does a pretty good job in
-practice.  The output does not always use the maximum number of cells
-allowed, both because this would not always yield a better approximation,
-and because `max_cells()` is a limit on how much work is done exploring the
-possible covering as well as a limit on the final output size.
+practice. The output does not always use the maximum number of cells allowed,
+both because this would not always yield a better approximation, and because
+`max_cells()` is a limit on how much work is done exploring the possible
+covering as well as a limit on the final output size.
 
 The default `max_cells()` value of 8 is a reasonable point on the
-precision/performance tradeoff curve for caps, but you may want to use
-higher values for odd-shaped regions, such as long skinny lat-lng rects.
-[Here are some examples of approximations.](coverer/coverer.md)
+precision/performance tradeoff curve for caps, but you may want to use higher
+values for odd-shaped regions, such as long skinny lat-lng rects. [Here are some
+examples of approximations.](coverer/coverer.md)
 
 Here is the interface of `S2RegionCoverer`:
 
@@ -2064,7 +2054,7 @@ class S2RegionCoverer {
   // Accuracy is measured by dividing the area of the covering by the area of
   // the original region.  The following table shows the median and worst case
   // values for this area ratio on a test case consisting of 100,000 spherical
-  // caps of random size (generated using s2regioncoverer_unittest):
+  // caps of random size (generated using s2regioncoverer_test):
   //
   //   max_cells:        3      4     5     6     8    12    20   100   1000
   //   median ratio:  5.33   3.32  2.73  2.34  1.98  1.66  1.42  1.11   1.01
@@ -2083,30 +2073,28 @@ class S2RegionCoverer {
 
 ## Spatial Indexing
 
-There are several reasonable approaches to using cells for spatial
-indexing, depending on what you want to index (points vs. regions),
-what operations your indexing data structure support (range queries
-vs. key lookups only), and what sort of queries you want to make
-(point location vs. region queries).  Let's go over a few examples.
+There are several reasonable approaches to using cells for spatial indexing,
+depending on what you want to index (points vs. regions), what operations your
+indexing data structure support (range queries vs. key lookups only), and what
+sort of queries you want to make (point location vs. region queries). Let's go
+over a few examples.
 
 ### Indexing Points
 
-First, suppose you have a bunch of points in memory, and you want
-to repeatedly find the set of points enclosed by various disc-shaped
-regions (e.g. all points within 5km of the north pole).  Do the
-following:
+First, suppose you have a bunch of points in memory, and you want to repeatedly
+find the set of points enclosed by various disc-shaped regions (e.g. all points
+within 5km of the north pole). Do the following:
 
-* Convert each point to a corresponding leaf cell id
-  (`S2CellId::FromPoint`).
-* Put all the cell ids in a vector and sort them.
-* Construct an `S2Cap` corresponding to the query region
-  (`S2Cap::FromAxisAngle`).
-* Find a set of cell ids that cover the cap (an `S2CellUnion`)
-   by calling `S2RegionCoverer::GetCellUnion`.
-* For each cell "x" in the covering, do a range query on the vector
-  of points to find all the leaf cell ids that are contained by "x".
-* If you only want the points that are exactly contained by the disc,
-  rather than just a superset of them, test each point against the cap.
+*   Convert each point to a corresponding leaf cell id (`S2CellId::FromPoint`).
+*   Put all the cell ids in a vector and sort them.
+*   Construct an `S2Cap` corresponding to the query region
+    (`S2Cap::FromAxisAngle`).
+*   Find a set of cell ids that cover the cap (an `S2CellUnion`) by calling
+    `S2RegionCoverer::GetCellUnion`.
+*   For each cell "x" in the covering, do a range query on the vector of points
+    to find all the leaf cell ids that are contained by "x".
+*   If you only want the points that are exactly contained by the disc, rather
+    than just a superset of them, test each point against the cap.
 
 Here is some example code:
 
@@ -2135,21 +2123,20 @@ for (int i = 0; i < cell_ids.size(); ++i) {
 
 Some observations:
 
-* If you want to add or delete points from the index, use a
-  `set<S2CellId>` rather than a vector.  Sets have built-in
-  `lower_bound()` and `upper_bound()` methods.  If you have
-  additional data that you want to associate with each cell id,
-  use a `map<S2CellId, MyData*>` or `multimap<S2CellId, MyData*>`.
+*   If you want to add or delete points from the index, use a `set<S2CellId>`
+    rather than a vector. Sets have built-in `lower_bound()` and `upper_bound()`
+    methods. If you have additional data that you want to associate with each
+    cell id, use a `map<S2CellId, MyData*>` or `multimap<S2CellId, MyData*>`.
 
-* If the points don't all fit in memory, suitable choices for the
-  index include `SSTable` and `BigTable`, both of which support
-  efficient range queries.
+*   If the points don't all fit in memory, suitable choices for the index
+    include `SSTable` and `BigTable`, both of which support efficient range
+    queries.
 
-* The code above can be made slightly more efficient by skipping
-  the upper_bound() call and instead advancing sequentially until
-  the id exceeds range_max().  To use this approach, you should
-  insert an S2CellId::Sentinel() in the index so that you don't
-  also need to check for the end of the vector.  For example:
+*   The code above can be made slightly more efficient by skipping the
+    upper_bound() call and instead advancing sequentially until the id exceeds
+    range_max(). To use this approach, you should insert an S2CellId::Sentinel()
+    in the index so that you don't also need to check for the end of the vector.
+    For example:
 
 ```c++
 index.push_back(S2CellId::Sentinel());
@@ -2165,17 +2152,16 @@ for (int i = 0; i < cells.size(); ++i) {
 
 ### Indexing Regions
 
-Suppose that the objects to be indexed are regions rather than points.
-The easiest approach is convert each region to a collection of cell ids,
-and create one index entry for each cell id.  This increases the index
-size by a small constant factor that depends on how accurate an
-approximation is desired.
+Suppose that the objects to be indexed are regions rather than points. The
+easiest approach is convert each region to a collection of cell ids, and create
+one index entry for each cell id. This increases the index size by a small
+constant factor that depends on how accurate an approximation is desired.
 
-To execute a query, convert the query region to a collection of cell ids
-and do a range query for each one just as before.  However, since index
-entries now consist of cells of all sizes, an extra step is required.
-For each cell id in the query region, you also need to compute all the
-ancestors of those cell ids and do key lookups on those as well:
+To execute a query, convert the query region to a collection of cell ids and do
+a range query for each one just as before. However, since index entries now
+consist of cells of all sizes, an extra step is required. For each cell id in
+the query region, you also need to compute all the ancestors of those cell ids
+and do key lookups on those as well:
 
 ```c++
 typedef multimap<S2CellId, MyRegion*> MyIndex;
@@ -2207,102 +2193,95 @@ for (int i = 0; i < cells.size(); ++i) {
 }
 ```
 
-This code computes the set of original regions whose coverings intersect
-the covering of the query region.  The regions can be filtered further
-if a more exact intersection test is desired.
+This code computes the set of original regions whose coverings intersect the
+covering of the query region. The regions can be filtered further if a more
+exact intersection test is desired.
 
-See s2edgeindex.cc for a fully worked-out example with edges
-(where a lot of optimizations can be done).
+See s2edgeindex.cc for a fully worked-out example with edges (where a lot of
+optimizations can be done).
 
 ### Indexes Without Range Queries
 
 Indexing systems that do not support efficient range queries need a different
-alternative for indexing regions, which is to expand the index by
-inserting all the ancestors of each cell.  To make this efficient, the
-ancestor cells are labelled differently than the cells that actually
-belong to the coverings.  In other words, there are two separate terms
-(tokens) for each cell id: one for cells that belong to a covering
-("covering" terms), and another for ancestors of these cells
-("ancestor" terms).
+alternative for indexing regions, which is to expand the index by inserting all
+the ancestors of each cell. To make this efficient, the ancestor cells are
+labelled differently than the cells that actually belong to the coverings. In
+other words, there are two separate terms (tokens) for each cell id: one for
+cells that belong to a covering ("covering" terms), and another for ancestors of
+these cells ("ancestor" terms).
 
-To execute a query, we simply compute a covering for the query region,
-and then look up all the "ancestor" terms for the cells in this covering,
-plus all the "covering" terms for these cells and their ancestors.
-This effectively divides the query into two parts: one to find all of
-the regions whose covering contains a cell that is descendant of a cell
-in the query region, and another to find all the regions whose covering
-contains a cell that is a ancestor of a cell in the query region.
-(Cells that are identical to a cell in the query region are handled as
-part of the second group, since we only inserted "covering" terms for
+To execute a query, we simply compute a covering for the query region, and then
+look up all the "ancestor" terms for the cells in this covering, plus all the
+"covering" terms for these cells and their ancestors. This effectively divides
+the query into two parts: one to find all of the regions whose covering contains
+a cell that is descendant of a cell in the query region, and another to find all
+the regions whose covering contains a cell that is a ancestor of a cell in the
+query region. (Cells that are identical to a cell in the query region are
+handled as part of the second group, since we only inserted "covering" terms for
 these cells into the index.)
 
-This technique does not require any range queries, and can efficiently
-compute overlaps between query and index regions of any size.
-The total number of lookups per query is about 4-10 for
-the base covering (depending on how accurate an approximation is
-desired) plus about 10-20 for the ancestors of these cells (assuming the
-query region diameter is at least 10m).
+This technique does not require any range queries, and can efficiently compute
+overlaps between query and index regions of any size. The total number of
+lookups per query is about 4-10 for the base covering (depending on how accurate
+an approximation is desired) plus about 10-20 for the ancestors of these cells
+(assuming the query region diameter is at least 10m).
 
-If it is important to reduce the number of lookups, here are a few ways
-to do this:
+If it is important to reduce the number of lookups, here are a few ways to do
+this:
 
-* Set a minimum subdivision level for cell ids.  For example, cells
-  at subdivision level 10 happen to be about 10km wide.  If the index
-  only contains cells that are 10km or smaller (i.e. level 10 or
-  higher), then ancestors at levels less than 10 can be skipped during
-  the query process (eliminating 10 lookups).  To use this technique,
-  just call `GetCellUnion` normally, and then iterate through the
-  children of any cells that are too big as outlined below.  Of
-  course, very large regions such as Canada will need a lot of cells.
+*   Set a minimum subdivision level for cell ids. For example, cells at
+    subdivision level 10 happen to be about 10km wide. If the index only
+    contains cells that are 10km or smaller (i.e. level 10 or higher), then
+    ancestors at levels less than 10 can be skipped during the query process
+    (eliminating 10 lookups). To use this technique, just call `GetCellUnion`
+    normally, and then iterate through the children of any cells that are too
+    big as outlined below. Of course, very large regions such as Canada will
+    need a lot of cells.
 
-  ```c++
-   S2CellId id = cells[i].id();
-   int level = max(id.level(), kMinIndexLevel);
-   S2CellId end = id.child_end(level);
-   for (S2CellId c = id.child_begin(level); c != end; c = c.next()) {
-     index[c] = region;
-   }
-  ```
+    ```c++
+     S2CellId id = cells[i].id();
+     int level = max(id.level(), kMinIndexLevel);
+     S2CellId end = id.child_end(level);
+     for (S2CellId c = id.child_begin(level); c != end; c = c.next()) {
+       index[c] = region;
+     }
+    ```
 
-* Set a maximum subdivision level for cell ids.  For example, cells
-  at subdivision level 20 happen to be about 10m wide.  If query
-  regions never use cells smaller than this, then they will never need
-  to look up more than 20 levels of ancestors (or if the minimum level
-  is 10, then only 10 levels of ancestors).  To use this technique,
-  just call `S2RegionCoverer::set_max_level()`.
+*   Set a maximum subdivision level for cell ids. For example, cells at
+    subdivision level 20 happen to be about 10m wide. If query regions never use
+    cells smaller than this, then they will never need to look up more than 20
+    levels of ancestors (or if the minimum level is 10, then only 10 levels of
+    ancestors). To use this technique, just call
+    `S2RegionCoverer::set_max_level()`.
 
-* Skip some levels of the `S2Cell` hierarchy.  For example, if only
-  even levels are used, then the hierarchy effectively has a fan-out
-  of 16 rather than 4, and the number of ancestors of each cell is
-  halved.  This can be implemented by modifying the output of
-  `GetCellUnion` similar to the example above.
+*   Skip some levels of the `S2Cell` hierarchy. For example, if only even levels
+    are used, then the hierarchy effectively has a fan-out of 16 rather than 4,
+    and the number of ancestors of each cell is halved. This can be implemented
+    by modifying the output of `GetCellUnion` similar to the example above.
 
-* You can reduce the number of query terms by creating both "ancestor"
-  and "covering" terms at index time for the cells in each covering.
-  Then queries only need to include "ancestor" terms for the cells in
-  the query region, rather than both "ancestor" and "covering" terms.
+*   You can reduce the number of query terms by creating both "ancestor" and
+    "covering" terms at index time for the cells in each covering. Then queries
+    only need to include "ancestor" terms for the cells in the query region,
+    rather than both "ancestor" and "covering" terms.
 
-Note that all of these techniques can also be used with
-indexes that support range queries (maps, `SSTable`, `BigTable`).
-In that case, the minimum subdivision level only needs to be enforced
-when indexing regions, and the maximum subdivision level only needs to
-be used when querying regions.
+Note that all of these techniques can also be used with indexes that support
+range queries (maps, `SSTable`, `BigTable`). In that case, the minimum
+subdivision level only needs to be enforced when indexing regions, and the
+maximum subdivision level only needs to be used when querying regions.
 
 ### Unique Indexes
 
-Suppose that furthermore, we only want to have one index entry for each
-region in our index.  For example, we might have a collection of
-features stored in a `BigTable` and want to look them up and edit
-them in place.
+Suppose that furthermore, we only want to have one index entry for each region
+in our index. For example, we might have a collection of features stored in a
+`BigTable` and want to look them up and edit them in place.
 
-The problem in this case is that features cannot in general be covered
-with one cell.  (Consider a small circle at the intersection of three
-face cells, or a large region like the southern hemisphere.)  The
-solution is to have a two-level index with keys of the form
-`(radius_bucket, cell_id)`.  When indexing a feature, we first compute a
-bounding spherical cap, which effectively gives us a center and a
-radius.  The center point is converted to a leaf cell id, and the radius
-is discretized into one of a small number of "buckets".  For example:
+The problem in this case is that features cannot in general be covered with one
+cell. (Consider a small circle at the intersection of three face cells, or a
+large region like the southern hemisphere.) The solution is to have a two-level
+index with keys of the form `(radius_bucket, cell_id)`. When indexing a feature,
+we first compute a bounding spherical cap, which effectively gives us a center
+and a radius. The center point is converted to a leaf cell id, and the radius is
+discretized into one of a small number of "buckets". For example:
 
 ```c++
 // Make the smallest bucket have a radius of 100m (converted to radians),
@@ -2321,17 +2300,16 @@ pair<int, S2CellId> GetKey(S2Region const& region) {
 }
 ```
 
-To index a set of regions, we sort them by their `(bucket, cell_id)` key
-(e.g. by inserting them in a `BigTable`).  Then given a query, we can
-find all the regions that intersect the query region by doing one lookup
-per radius bucket.  To find the matching regions in a given bucket, we
-first expand the query region on all sides by a distance equal to the
-bucket radius (i.e. the maximum radius of regions that were inserted
-into that bucket).  We then do a simple point location query to find all
-of the cell ids at that level that lie within the expanded query
-region.  This is equivalent to finding all the bounding caps at that
-level that intersect the original, non-expanded query region.  Here is
-some example code:
+To index a set of regions, we sort them by their `(bucket, cell_id)` key (e.g.
+by inserting them in a `BigTable`). Then given a query, we can find all the
+regions that intersect the query region by doing one lookup per radius bucket.
+To find the matching regions in a given bucket, we first expand the query region
+on all sides by a distance equal to the bucket radius (i.e. the maximum radius
+of regions that were inserted into that bucket). We then do a simple point
+location query to find all of the cell ids at that level that lie within the
+expanded query region. This is equivalent to finding all the bounding caps at
+that level that intersect the original, non-expanded query region. Here is some
+example code:
 
 ```c++
 typedef map<pair<int, S2CellId>, MyRegion*> MyIndex;
@@ -2358,71 +2336,65 @@ void FindMatches(S2LatLngRect const& query, vector<MyRegion *> *result) {
 
 A few notes about this type of indexing:
 
-* Since all regions are converted to discs before indexing, long
-  skinny regions are not handled efficiently.  It is not a problem
-  if there are relatively few such regions, but this technique is
-  not a good choice if your data is dominated by long linear features.
+*   Since all regions are converted to discs before indexing, long skinny
+    regions are not handled efficiently. It is not a problem if there are
+    relatively few such regions, but this technique is not a good choice if your
+    data is dominated by long linear features.
 
-* If your regions need to be indexed in more than one way, e.g. if
-  you have a unique identifier so that regions can refer to other
-  regions, then having only one index entry per region is not much
-  of an advantage.  For example, a Maps Wiki might have one table
-  in a `BigTable` that stores each feature that has been edited,
-  keyed by its unique identifier, and a secondary table that is
-  used only for spatial indexing.  There is no particular reason
-  that the secondary table needs to have only one entry per region.
+*   If your regions need to be indexed in more than one way, e.g. if you have a
+    unique identifier so that regions can refer to other regions, then having
+    only one index entry per region is not much of an advantage. For example, a
+    Maps Wiki might have one table in a `BigTable` that stores each feature that
+    has been edited, keyed by its unique identifier, and a secondary table that
+    is used only for spatial indexing. There is no particular reason that the
+    secondary table needs to have only one entry per region.
 
 ## Appendix: Alternatives Considered
 
 The S2 subdivision scheme has a number of advantages over the Hierarchical
-Triangular Mesh (http://skyserver.org/HTM) framework currently used by
-local search and others:
+Triangular Mesh (http://skyserver.org/HTM) framework currently used by local
+search and others:
 
-* Converting from a cell id to a point or vice versa is about
-  100 times faster than the corresponding HTM operation.  For example,
-  a unit vector can be converted to an S2CellId in about
-  0.15 microseconds, while converting a unit vector to an HTM triangle
-  id takes about 25 microseconds.  Similarly, converting an S2CellId to
-  a vector takes about 0.04 microseconds, while the same HTM operation
-  takes about 19 microseconds.  (If full resolution is not needed, the
-  HTM times can be improved by using fewer levels -- e.g. by using
-  15 levels rather than 30, conversions are about twice as fast, but
-  the maximum resolution is reduced from 1cm to about 300 meters.
-  The S2 library is still about 100 times faster, though.)
+*   Converting from a cell id to a point or vice versa is about 100 times faster
+    than the corresponding HTM operation. For example, a unit vector can be
+    converted to an S2CellId in about 0.15 microseconds, while converting a unit
+    vector to an HTM triangle id takes about 25 microseconds. Similarly,
+    converting an S2CellId to a vector takes about 0.04 microseconds, while the
+    same HTM operation takes about 19 microseconds. (If full resolution is not
+    needed, the HTM times can be improved by using fewer levels -- e.g. by using
+    15 levels rather than 30, conversions are about twice as fast, but the
+    maximum resolution is reduced from 1cm to about 300 meters. The S2 library
+    is still about 100 times faster, though.)
 
-* The S2 library has no storage requirements.  In contrast, the HTM
-  library precomputes the upper levels of the mesh during initialization
-  to get even the performance numbers mentioned above.  Computing the
-  first 6 levels (the default) takes about 2MB of memory and 5
-  milliseconds.  It is not practical to precompute much more than this
-  because memory requirements increase by a factor of 4 for each
-  additional level.
+*   The S2 library has no storage requirements. In contrast, the HTM library
+    precomputes the upper levels of the mesh during initialization to get even
+    the performance numbers mentioned above. Computing the first 6 levels (the
+    default) takes about 2MB of memory and 5 milliseconds. It is not practical
+    to precompute much more than this because memory requirements increase by a
+    factor of 4 for each additional level.
 
-* A linear scan of a set of S2CellIds follows a space-filling curve,
-  which maximizes locality of reference.  For example, if each cell id
-  is looked up in a spatial index of some sort, a space-filling curve
-  minimizes the number of times that we switch from one index element to
-  the next.  In theory this should help cache performance (including
-  non-local caches such as BigTable).  A linear scan through HTM
-  triangles also has fairly good locality of reference due to the
-  hierarchical structure, but it does not define a space-filling curve
-  (due to the triangle ordering chosen by its inventors) and therefore
-  the locality of reference is not quite as good.  (At any given level,
-  the HTM path is about 2.2 times longer than the corresonding S2CellId
-  path.)
+*   A linear scan of a set of S2CellIds follows a space-filling curve, which
+    maximizes locality of reference. For example, if each cell id is looked up
+    in a spatial index of some sort, a space-filling curve minimizes the number
+    of times that we switch from one index element to the next. In theory this
+    should help cache performance (including non-local caches such as BigTable).
+    A linear scan through HTM triangles also has fairly good locality of
+    reference due to the hierarchical structure, but it does not define a
+    space-filling curve (due to the triangle ordering chosen by its inventors)
+    and therefore the locality of reference is not quite as good. (At any given
+    level, the HTM path is about 2.2 times longer than the corresonding S2CellId
+    path.)
 
 Another frequently mentioned alternative is HEALPix
-[http://www.eso.org/science/healpix](http://www.eso.org/science/healpix).
-The main advantage of HEALPix is that it is suitable for calculations
-involving spherical harmonics.  This isn't relevant to any of our
-current applications, and the scheme otherwise has several disadvantages
-from our point of view (e.g. cell boundaries are not geodesics, base
-structure is more complicated).
+[http://www.eso.org/science/healpix](http://www.eso.org/science/healpix). The
+main advantage of HEALPix is that it is suitable for calculations involving
+spherical harmonics. This isn't relevant to any of our current applications, and
+the scheme otherwise has several disadvantages from our point of view (e.g. cell
+boundaries are not geodesics, base structure is more complicated).
 
 The COBE quadrilateralized spherical cube projection
-(http://lambda.gsfc.nasa.gov/product/cobe/skymap_info_new.cfm)
-also starts by projecting the six faces of a cube onto the unit
-sphere, and subdivides each face in a quadtree fashion.  However,
-it does not use a space-filling curve scheme for labelling the
-cells, the cell edges are not geodesics, and it uses a much more
-complicated projection scheme designed to minimize distortion.
+(http://lambda.gsfc.nasa.gov/product/cobe/skymap_info_new.cfm) also starts by
+projecting the six faces of a cube onto the unit sphere, and subdivides each
+face in a quadtree fashion. However, it does not use a space-filling curve
+scheme for labelling the cells, the cell edges are not geodesics, and it uses a
+much more complicated projection scheme designed to minimize distortion.

@@ -18,18 +18,22 @@
 #ifndef S2_S2TESTING_H_
 #define S2_S2TESTING_H_
 
+#include <algorithm>
+#include <memory>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <gflags/gflags.h>
 
-#include "s2/base/integral_types.h"
 #include "s2/base/macros.h"
 #include "s2/fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s2.h"
 #include "s2/s2cellid.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/util/math/matrix3x3.h"
 
 class S1Angle;
@@ -137,7 +141,8 @@ class S2Testing {
     // (touching at the fractal's center point) and then projecting the edges
     // onto the sphere.  This has the side effect of shrinking the fractal
     // slightly compared to its nominal radius.
-    S2Loop* MakeLoop(Matrix3x3_d const& frame, S1Angle nominal_radius) const;
+    std::unique_ptr<S2Loop> MakeLoop(Matrix3x3_d const& frame,
+                                     S1Angle nominal_radius) const;
 
    private:
     void ComputeMinLevel();
@@ -164,6 +169,7 @@ class S2Testing {
   };
 
   // Convert a distance on the Earth's surface to an angle.
+  // Do not use these methods in non-testing code; use s2earth.h instead.
   static S1Angle KmToAngle(double km);
   static S1Angle MetersToAngle(double meters);
 
@@ -224,7 +230,6 @@ class S2Testing {
   // Returns the user time consumed by this process, in seconds.
   static double GetCpuTime();
 
-
  private:
   // Contains static methods
   S2Testing() = delete;
@@ -280,5 +285,89 @@ class S2Testing::Random {
   Random(Random const&) = delete;
   void operator=(Random const&) = delete;
 };
+
+// Compare two sets of "closest" items, where "expected" is computed via brute
+// force (i.e., considering every possible candidate) and "actual" is computed
+// using a spatial data structure.  Here "max_size" is a bound on the maximum
+// number of items, "max_distance" is a limit on the distance to any item, and
+// "max_error" is the maximum error allowed when selecting which items are
+// closest (see S2ClosestEdgeQuery::max_error).
+template <typename Id>
+bool CheckDistanceResults(
+    std::vector<std::pair<S1Angle, Id>> const& expected,
+    std::vector<std::pair<S1Angle, Id>> const& actual,
+    int max_size, S1Angle max_distance, S1Angle max_error);
+
+
+//////////////////// Implementation Details Follow ////////////////////////
+
+
+namespace S2 {
+namespace internal {
+
+template <typename T1, typename T2>
+struct CompareFirst {
+  inline bool operator()(std::pair<T1, T2> const& x,
+                         std::pair<T1, T2> const& y) {
+    return x.first < y.first;
+  }
+};
+
+// Check that result set "x" contains all the expected results from "y", and
+// does not include any duplicate results.
+template <typename Id>
+bool CheckResultSet(std::vector<std::pair<S1Angle, Id>> const& x,
+                    std::vector<std::pair<S1Angle, Id>> const& y,
+                    int max_size, S1Angle max_distance, S1Angle max_error,
+                    S1Angle max_pruning_error, string const& label) {
+  // Results should be sorted by distance.
+  CompareFirst<S1Angle, Id> cmp;
+  EXPECT_TRUE(std::is_sorted(x.begin(), x.end(), cmp));
+
+  // Make sure there are no duplicate values.
+  std::set<std::pair<S1Angle, Id>> x_set(x.begin(), x.end());
+  EXPECT_EQ(x_set.size(), x.size()) << "Result set contains duplicates";
+
+  // Result set X should contain all the items from U whose distance is less
+  // than "limit" computed below.
+  S1Angle limit = S1Angle::Zero();
+  if (x.size() < max_size) {
+    // Result set X was not limited by "max_size", so it should contain all
+    // the items up to "max_distance", except that a few items right near the
+    // distance limit may be missed because the distance measurements used for
+    // pruning S2Cells are not conservative.
+    limit = max_distance - max_pruning_error;
+  } else if (!x.empty()) {
+    // Result set X contains only the closest "max_size" items, to within a
+    // tolerance of "max_error + max_pruning_error".
+    limit = x.back().first - max_error - max_pruning_error;
+  }
+  bool result = true;
+  for (auto const& p : y) {
+    if (p.first < limit && std::count(x.begin(), x.end(), p) != 1) {
+      result = false;
+      std::cout << label << " distance = " << p.first
+                << ", id = " << p.second << std::endl;
+    }
+  }
+  return result;
+}
+
+}  // namespace internal
+}  // namespace S2
+
+template <typename Id>
+bool CheckDistanceResults(
+    std::vector<std::pair<S1Angle, Id>> const& expected,
+    std::vector<std::pair<S1Angle, Id>> const& actual,
+    int max_size, S1Angle max_distance, S1Angle max_error) {
+  static S1Angle const kMaxPruningError = S1Angle::Radians(1e-15);
+  return (S2::internal::CheckResultSet(
+              actual, expected, max_size, max_distance, max_error,
+              kMaxPruningError, "Missing") & /*not &&*/
+          S2::internal::CheckResultSet(
+              expected, actual, max_size, max_distance, max_error,
+              S1Angle::Zero(), "Extra"));
+}
 
 #endif  // S2_S2TESTING_H_

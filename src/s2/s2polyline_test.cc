@@ -34,6 +34,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
+using std::fabs;
 using std::unique_ptr;
 using std::vector;
 
@@ -236,8 +237,10 @@ TEST(S2Polyline, IntersectsOnePointPolyline) {
 TEST(S2Polyline, Intersects) {
   unique_ptr<S2Polyline> line1(s2textformat::MakePolyline("1:1, 4:4"));
   unique_ptr<S2Polyline> small_crossing(s2textformat::MakePolyline("1:2, 2:1"));
-  unique_ptr<S2Polyline> small_noncrossing(s2textformat::MakePolyline("1:2, 2:3"));
-  unique_ptr<S2Polyline> big_crossing(s2textformat::MakePolyline("1:2, 2:3, 4:3"));
+  unique_ptr<S2Polyline> small_noncrossing(
+      s2textformat::MakePolyline("1:2, 2:3"));
+  unique_ptr<S2Polyline> big_crossing(
+      s2textformat::MakePolyline("1:2, 2:3, 4:3"));
 
   EXPECT_TRUE(line1->Intersects(small_crossing.get()));
   EXPECT_FALSE(line1->Intersects(small_noncrossing.get()));
@@ -350,14 +353,14 @@ TEST(S2Polyline, SubsampleVerticesGuarantees) {
 
 static bool TestEquals(char const* a_str,
                        char const* b_str,
-                       double max_error) {
+                       S1Angle max_error) {
   unique_ptr<S2Polyline> a(MakePolyline(a_str));
   unique_ptr<S2Polyline> b(MakePolyline(b_str));
-  return a->ApproxEquals(b.get(), max_error);
+  return a->ApproxEquals(*b, max_error);
 }
 
 TEST(S2Polyline, ApproxEquals) {
-  double degree = S1Angle::Degrees(1).radians();
+  S1Angle degree = S1Angle::Degrees(1);
 
   // Close lines, differences within max_error.
   EXPECT_TRUE(TestEquals("0:0, 0:10, 5:5",
@@ -383,7 +386,7 @@ TEST(S2Polyline, EncodeDecode) {
   Decoder decoder(encoder.base(), encoder.length());
   S2Polyline decoded_polyline;
   EXPECT_TRUE(decoded_polyline.Decode(&decoder));
-  EXPECT_TRUE(decoded_polyline.ApproxEquals(polyline.get(), 0));
+  EXPECT_TRUE(decoded_polyline.ApproxEquals(*polyline, S1Angle::Zero()));
 }
 
 TEST(S2PolylineShape, Basic) {
@@ -391,10 +394,14 @@ TEST(S2PolylineShape, Basic) {
   S2Polyline::Shape shape(polyline.get());
   EXPECT_EQ(polyline.get(), shape.polyline());
   EXPECT_EQ(3, shape.num_edges());
+  EXPECT_EQ(1, shape.num_chains());
+  EXPECT_EQ(0, shape.chain_start(0));
+  EXPECT_EQ(3, shape.chain_start(1));
   S2Point const *v2, *v3;
   shape.GetEdge(2, &v2, &v3);
   EXPECT_EQ(S2LatLng::FromDegrees(1, 1).ToPoint(), *v2);
   EXPECT_EQ(S2LatLng::FromDegrees(2, 1).ToPoint(), *v3);
+  EXPECT_EQ(1, shape.dimension());
   EXPECT_FALSE(shape.has_interior());
   EXPECT_FALSE(shape.contains_origin());
 }
@@ -403,6 +410,7 @@ TEST(S2PolylineShape, EmptyPolyline) {
   S2Polyline polyline;
   S2Polyline::Shape shape(&polyline);
   EXPECT_EQ(0, shape.num_edges());
+  EXPECT_EQ(0, shape.num_chains());
 }
 
 void TestNearlyCovers(string const& a_str, string const& b_str,

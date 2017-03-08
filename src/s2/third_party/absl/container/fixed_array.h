@@ -14,20 +14,22 @@
 //
 
 
-#ifndef S2_UTIL_GTL_FIXEDARRAY_H_
-#define S2_UTIL_GTL_FIXEDARRAY_H_
+#ifndef S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_
+#define S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_
 
 #include <cstddef>
 #include <algorithm>
-#include <iterator>
+#include <cassert>
 #include <initializer_list>
+#include <iterator>
 #include <memory>
 #include <new>
+#include <type_traits>
 
 #include <glog/logging.h>
 
 #include "s2/base/macros.h"
-#include "s2/base/port.h"
+#include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/dynamic_annotations/dynamic_annotations.h"
 #include "s2/util/gtl/manual_constructor.h"
 
@@ -63,19 +65,26 @@
 // ::operator new[]() and ::operator delete[](), not with any class-scope
 // overrides in T.  As FixedArray is emulating stack-based variable-length
 // arrays, this should not be surprising.
-template <typename T, ssize_t inline_elements = -1>
+namespace gtl {
+namespace fixed_array {
+const std::size_t kInlineElementsDefault = static_cast<std::size_t>(-1);
+}  // namespace fixed_array
+}  // namespace gtl
+
+template <typename T, std::size_t inline_elements
+    = gtl::fixed_array::kInlineElementsDefault>
 class FixedArray {
  public:
   // For playing nicely with stl:
-  typedef T value_type;
-  typedef T* iterator;
-  typedef T const* const_iterator;
-  typedef T& reference;
-  typedef T const& const_reference;
-  typedef T* pointer;
-  typedef T const* const_pointer;
-  typedef ptrdiff_t difference_type;
-  typedef size_t size_type;
+  using value_type = T;
+  using iterator = T*;
+  using const_iterator = T const*;
+  using reference = T&;
+  using const_reference = T const&;
+  using pointer = T*;
+  using const_pointer = T const*;
+  using difference_type = ptrdiff_t;
+  using size_type = size_t;
 
   // Creates an array object that can store "n" elements.
   // Note that trivially constructible elements will be uninitialized.
@@ -116,16 +125,14 @@ class FixedArray {
   // REQUIRES: 0 <= i < size()
   // Returns a reference to the "i"th element.
   reference operator[](size_type i) {
-    DCHECK_GE(i, 0);
-    DCHECK_LT(i, size());
+    assert(i < size());
     return get()[i];
   }
 
   // REQUIRES: 0 <= i < size()
   // Returns a reference to the "i"th element.
   const_reference operator[](size_type i) const {
-    DCHECK_GE(i, 0);
-    DCHECK_LT(i, size());
+    assert(i < size());
     return get()[i];
   }
 
@@ -158,7 +165,7 @@ class FixedArray {
   class HolderTraits {
     template <typename U>
     struct SelectImpl {
-      typedef U type;
+      using type = U;
       static pointer AsValue(type* p) { return p; }
     };
 
@@ -166,13 +173,13 @@ class FixedArray {
     template <typename U, size_t N>
     struct SelectImpl<U[N]> {
       struct Holder { U v[N]; };
-      typedef Holder type;
+      using type = Holder;
       static pointer AsValue(type* p) { return &p->v; }
     };
-    typedef SelectImpl<value_type> Impl;
+    using Impl = SelectImpl<value_type>;
 
    public:
-    typedef typename Impl::type type;
+    using type = typename Impl::type;
 
     static pointer AsValue(type *p) { return Impl::AsValue(p); }
 
@@ -182,7 +189,7 @@ class FixedArray {
                   "Holder must be same size as value_type");
   };
 
-  typedef typename HolderTraits::type Holder;
+  using Holder = typename HolderTraits::type;
   static pointer AsValue(Holder *p) { return HolderTraits::AsValue(p); }
 
   // ----------------------------------------
@@ -197,10 +204,11 @@ class FixedArray {
   //   b. Never use 0 length arrays (not ISO C++)
   //
   class InlineSpace {
-    typedef google::ManualConstructor<Holder> Buffer;
+    using Buffer =
+        typename std::aligned_storage<sizeof(Holder), alignof(Holder)>::type;
     static const size_type kDefaultBytes = 256;
 
-    template <ssize_t N, typename Ignored>
+    template <std::size_t N, typename Ignored>
     struct Impl {
       static const size_type kSize = N;
       Buffer* get() { return space_; }
@@ -242,20 +250,21 @@ class FixedArray {
       void Annotate(size_t n, bool creating) const {}
     };
 
-    // specialize for default (-1) case. Use up to kDefaultBytes.
+    // specialize for kInlineElementsDefault case.
+    // Use up to kDefaultBytes.
     template <typename Ignored>
-    struct Impl<-1, Ignored> :
-        Impl<kDefaultBytes / sizeof(value_type), Ignored> {
+    struct Impl<gtl::fixed_array::kInlineElementsDefault, Ignored>
+        : Impl<kDefaultBytes / sizeof(value_type), Ignored> {
     };
 
-    typedef Impl<inline_elements, void> ImplType;
+    using ImplType = Impl<inline_elements, void>;
 
     ImplType space_;
 
    public:
     static const size_type kSize = ImplType::kSize;
 
-    Holder* get() { return space_.get()[0].get(); }
+    Holder* get() { return reinterpret_cast<Holder*>(&space_.get()[0]); }
     void AnnotateConstruct(size_t n) const { space_.Annotate(n, true); }
     void AnnotateDestruct(size_t n) const { space_.Annotate(n, false); }
   };
@@ -317,7 +326,7 @@ class FixedArray {
 
   template <typename Iter>
   Rep MakeRep(Iter first, Iter last) {
-    typedef typename std::iterator_traits<Iter> IterTraits;
+    using IterTraits = std::iterator_traits<Iter>;
     return MakeRep(first, last, typename IterTraits::iterator_category());
   }
 
@@ -338,4 +347,4 @@ class FixedArray {
   InlineSpace inline_space_;
 };
 
-#endif  // S2_UTIL_GTL_FIXEDARRAY_H_
+#endif  // S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_

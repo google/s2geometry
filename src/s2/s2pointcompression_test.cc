@@ -30,7 +30,7 @@
 #include "s2/s2cellid.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
-#include "s2/util/gtl/fixedarray.h"
+#include "s2/third_party/absl/container/fixed_array.h"
 
 using std::vector;
 
@@ -42,7 +42,7 @@ DEFINE_double(s2pointcompression_bm_radius_km, 1000.0,
 namespace {
 
 S2Point SnapPointToLevel(S2Point const& point, int level) {
-  return S2CellId::FromPoint(point).parent(level).ToPoint();
+  return S2CellId(point).parent(level).ToPoint();
 }
 
 vector<S2Point> SnapPointsToLevel(vector<S2Point> const& points,
@@ -89,7 +89,7 @@ bool PointsEqual(S2Point const* a, int num_a, S2Point const* b, int num_b) {
 
 class S2PointCompressionTest : public ::testing::Test {
  protected:
-  virtual void SetUp() {
+  void SetUp() override {
     loop_4_ = MakeRegularPoints(4, 0.1, S2::kMaxCellLevel);
 
     S2Point const center = S2Point(1.0, 1.0, 1.0).Normalize();
@@ -307,6 +307,5 @@ TEST_F(S2PointCompressionTest, FirstPointOnFaceEdge) {
   CHECK(result[0] == points[0].xyz);
   CHECK(result[1] == points[1].xyz);
 }
-
 
 }  // namespace

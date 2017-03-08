@@ -18,6 +18,7 @@
 #include "s2/s2latlngrect.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iosfwd>
 #include <iostream>
 
@@ -28,6 +29,7 @@
 #include "s2/s2cell.h"
 #include "s2/s2edgeutil.h"
 
+using std::fabs;
 using std::max;
 using std::min;
 
@@ -219,14 +221,11 @@ S2LatLngRect S2LatLngRect::ExpandedByDistance(S1Angle distance) const {
     // vertex and take the union of all the bounding rectangles (including the
     // original rectangle; this is necessary for very large rectangles).
 
-    // TODO(ericv): Update this code to use an algorithm similar to the one
-    // below.
-    double height = S2Cap::RadiusToHeight(distance);
+    // TODO(ericv): Update this code to use an algorithm like the one below.
+    S1ChordAngle radius(distance);
     S2LatLngRect r = *this;
     for (int k = 0; k < 4; ++k) {
-      S2Cap vertex_cap =
-          S2Cap::FromCenterHeight(GetVertex(k).ToPoint(), height);
-      r = r.Union(vertex_cap.GetRectBound());
+      r = r.Union(S2Cap(GetVertex(k).ToPoint(), radius).GetRectBound());
     }
     return r;
   } else {
@@ -693,9 +692,9 @@ bool S2LatLngRect::Contains(S2Point const& p) const {
 }
 
 bool S2LatLngRect::ApproxEquals(S2LatLngRect const& other,
-                                double max_error) const {
-  return (lat_.ApproxEquals(other.lat_, max_error) &&
-          lng_.ApproxEquals(other.lng_, max_error));
+                                S1Angle max_error) const {
+  return (lat_.ApproxEquals(other.lat_, max_error.radians()) &&
+          lng_.ApproxEquals(other.lng_, max_error.radians()));
 }
 
 bool S2LatLngRect::ApproxEquals(S2LatLngRect const& other,

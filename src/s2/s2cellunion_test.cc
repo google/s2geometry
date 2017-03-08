@@ -25,7 +25,6 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "s2/base/integral_types.h"
 #include "s2/base/stringprintf.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
@@ -35,6 +34,7 @@
 #include "s2/s2edgeutil.h"
 #include "s2/s2regioncoverer.h"
 #include "s2/s2testing.h"
+#include "s2/third_party/absl/base/integral_types.h"
 
 using std::max;
 using std::min;
@@ -331,7 +331,7 @@ TEST(S2CellUnion, Expand) {
       min_level = min(min_level, covering.cell_id(i).level());
     }
     int expand_level = min(min_level + max_level_diff,
-                           S2::kMinWidth.GetMaxLevel(radius));
+                           S2::kMinWidth.GetLevelForMinValue(radius));
 
     // Generate a covering for the expanded cap, and measure the new maximum
     // distance from the cap center to any point in the covering.
@@ -352,7 +352,7 @@ TEST(S2CellUnion, EncodeDecode) {
   vector<S2CellId> cell_ids = {S2CellId(0x33), S2CellId(0x0),
                                S2CellId(0x8e3748fab),
                                S2CellId(0x91230abcdef83427)};
-  cell_union.InitRawSwap(&cell_ids);
+  cell_union.InitRaw(std::move(cell_ids));
 
   Encoder encoder;
   cell_union.Encode(&encoder);
@@ -482,7 +482,7 @@ TEST(S2CellUnion, Empty) {
   EXPECT_EQ(0, empty_cell_union.num_cells());
 }
 
-TEST(S2CellUnion, Detach) {
+TEST(S2CellUnion, Release) {
   S2CellId face1_id = S2CellId::FromFace(1);
   S2CellUnion face1_union;
   vector<S2CellId> ids;
@@ -491,11 +491,9 @@ TEST(S2CellUnion, Detach) {
   ASSERT_EQ(1, face1_union.num_cells());
   EXPECT_EQ(face1_id, face1_union.cell_id(0));
 
-  vector<S2CellId> retrieve;
-  retrieve.push_back(S2CellId::Sentinel());
-  face1_union.Detach(&retrieve);
-  ASSERT_EQ(1, retrieve.size());
-  EXPECT_EQ(face1_id, retrieve[0]);
+  vector<S2CellId> released = face1_union.Release();
+  ASSERT_EQ(1, released.size());
+  EXPECT_EQ(face1_id, released[0]);
   EXPECT_EQ(0, face1_union.num_cells());
 }
 

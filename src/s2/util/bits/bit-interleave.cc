@@ -27,7 +27,7 @@
 
 #include "s2/util/bits/bit-interleave.h"
 
-#include "s2/base/integral_types.h"
+#include "s2/third_party/absl/base/integral_types.h"
 
 namespace util_bits {
 
@@ -222,7 +222,8 @@ static uint64 SplitFor3(uint8 x) {
 }
 
 uint32 InterleaveUint8(uint8 val0, uint8 val1, uint8 val2) {
-  return (SplitFor3<0>(val0) | SplitFor3<1>(val1) | SplitFor3<2>(val2)) >> 20;
+  return static_cast<uint32>(
+      (SplitFor3<0>(val0) | SplitFor3<1>(val1) | SplitFor3<2>(val2)) >> 20);
 }
 
 // Multiplication based de-interleave algorithm:
