@@ -806,7 +806,7 @@ void S2BoundaryOperation::CrossingQuery::GetCrossings(
 
 class S2BoundaryOperation::Impl {
  public:
-  Impl(S2BoundaryOperation* op) : op_(op) {}
+  explicit Impl(S2BoundaryOperation* op) : op_(op) {}
 
   bool Build(S2Error* error);
 

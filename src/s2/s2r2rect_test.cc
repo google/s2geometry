@@ -24,10 +24,10 @@
 #include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
 #include "s2/r1interval.h"
-#include "s2/s2.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
+#include "s2/s2coords.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2testing.h"

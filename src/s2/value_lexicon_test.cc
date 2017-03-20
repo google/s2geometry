@@ -18,7 +18,8 @@
 #include "s2/value_lexicon.h"
 
 #include <gtest/gtest.h>
-#include "s2/s2.h"
+#include "s2/s1angle.h"
+#include "s2/s2point.h"
 
 TEST(ValueLexicon, DuplicateValues) {
   ValueLexicon<int64> lex;

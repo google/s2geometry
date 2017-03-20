@@ -26,7 +26,9 @@
 #include "s2/util/coding/coder.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2debug.h"
 #include "s2/s2edgeutil.h"
+#include "s2/s2pointutil.h"
 
 using std::fabs;
 using std::max;

@@ -21,10 +21,10 @@
 
 #include <glog/logging.h>
 #include "s2/r1interval.h"
-#include "s2/s2.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
+#include "s2/s2coords.h"
 #include "s2/s2latlngrect.h"
 
 S2R2Rect S2R2Rect::FromCell(S2Cell const& cell) {

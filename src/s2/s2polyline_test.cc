@@ -27,9 +27,10 @@
 #include <gtest/gtest.h>
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
-#include "s2/s2.h"
 #include "s2/s2cell.h"
+#include "s2/s2debug.h"
 #include "s2/s2latlng.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 

@@ -26,8 +26,8 @@
 #include <gtest/gtest.h>
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
-#include "s2/s2.h"
 #include "s2/s2edgeutil.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 #include "s2/util/math/vector.h"

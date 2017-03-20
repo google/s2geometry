@@ -25,11 +25,12 @@
 #include <glog/logging.h>
 #include "s2/r1interval.h"
 #include "s2/s1interval.h"
-#include "s2/s2.h"
 #include "s2/s2cell.h"
+#include "s2/s2debug.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2pointutil.h"
 #include "s2/util/math/vector.h"
 
 using std::fabs;

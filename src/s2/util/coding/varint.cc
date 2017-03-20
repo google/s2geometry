@@ -89,7 +89,7 @@ const char* Varint::Parse64Fallback(const char* p, uint64* OUTPUT) {
   //    res2    bits 28..55
   //    res3    bits 56..63
 
-  uint32 byte, res1, res2=0, res3=0;
+  uint64 byte, res1, res2 = 0, res3 = 0;
   byte = *(ptr++); res1 = byte;
   byte = *(ptr++); res1 += (byte - 1) <<  7; if (byte < 128) goto done1;
   byte = *(ptr++); res1 += (byte - 1) << 14; if (byte < 128) goto done1;
@@ -113,12 +113,11 @@ const char* Varint::Parse64Fallback(const char* p, uint64* OUTPUT) {
 
  done2:
   assert(res3 == 0);
-  *OUTPUT = res1 + ((static_cast<int64>(res2) - 1) << 28);
+  *OUTPUT = res1 + ((res2 - 1) << 28);
   return reinterpret_cast<const char*>(ptr);
 
  done3:
-  *OUTPUT = res1 + ((static_cast<int64>(res2) - 1) << 28)
-      + ((static_cast<int64>(res3) - 1) << 56);
+  *OUTPUT = res1 + ((res2 - 1) << 28) + ((res3 - 1) << 56);
   return reinterpret_cast<const char*>(ptr);
 #else
   uint32 byte, res1, res2=0, res3=0;

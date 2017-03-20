@@ -19,7 +19,7 @@
 #define S2_S2REGION_H_
 
 #include "s2/fpcontractoff.h"
-#include "s2/s2.h"
+#include "s2/s1angle.h"
 
 class Decoder;
 class Encoder;

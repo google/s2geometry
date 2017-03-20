@@ -19,7 +19,6 @@
 #define S2_S2POINTINDEX_H_
 
 #include "s2/util/btree/btree_map.h"  // Like std::map, but faster and smaller.
-#include "s2/s2.h"
 #include "s2/s2cellid.h"
 
 // S2PointIndex maintains an index of points sorted by leaf S2CellId.  Each

@@ -26,6 +26,7 @@
 #include "s2/s2cap.h"
 #include "s2/s2cellid.h"
 #include "s2/s2loop.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
 using std::make_pair;

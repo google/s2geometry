@@ -21,6 +21,7 @@
 #include <cmath>
 
 #include "s2/s1angle.h"
+#include "s2/s2pointutil.h"
 
 using std::max;
 using std::min;

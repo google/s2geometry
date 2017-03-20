@@ -32,7 +32,8 @@
 #include "s2/fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
-#include "s2/s2.h"
+#include "s2/s1angle.h"
+#include "s2/s2coords.h"
 
 class S2LatLng;
 

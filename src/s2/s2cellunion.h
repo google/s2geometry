@@ -24,7 +24,6 @@
 #include <glog/logging.h>
 #include "s2/base/macros.h"
 #include "s2/fpcontractoff.h"
-#include "s2/s2.h"
 #include "s2/s2cellid.h"
 #include "s2/s2region.h"
 
@@ -55,9 +54,7 @@ class S2CellUnion : public S2Region {
 #endif  // SWIG
 
   // Populates a cell union with the given S2CellIds or 64-bit cells ids, and
-  // then calls Normalize().  The InitSwap() version takes ownership of the
-  // vector data without copying and clears the given vector.  These methods
-  // may be called multiple times.
+  // then calls Normalize().  These methods may be called multiple times.
   void Init(std::vector<S2CellId> cell_ids);
   void Init(std::vector<uint64> const& cell_ids);
 

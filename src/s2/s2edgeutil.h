@@ -29,9 +29,9 @@
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
 #include "s2/s1interval.h"
-#include "s2/s2.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/util/math/vector.h"
 

@@ -32,6 +32,7 @@
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 #include "s2/s2edgeutil.h"
+#include "s2/s2metrics.h"
 #include "s2/s2regioncoverer.h"
 #include "s2/s2testing.h"
 

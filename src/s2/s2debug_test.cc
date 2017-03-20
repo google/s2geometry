@@ -23,18 +23,12 @@
 // This pair of tests expects the tests to be run in order (which they are),
 // otherwise it won't test anything.
 
-class S2DebugTest : public testing::Test {
- public:
-  S2DebugTest() {}
-  virtual ~S2DebugTest() {}
-};
-
-TEST_F(S2DebugTest, Restore_Part1) {
+TEST(FLAGS_s2debug, Restore_Part1) {
   EXPECT_EQ(google::DEBUG_MODE, FLAGS_s2debug);
   FLAGS_s2debug = !FLAGS_s2debug;
 }
 
-TEST_F(S2DebugTest, Restore_Part2) {
+TEST(FLAGS_s2debug, Restore_Part2) {
   // Verify that the flag value was automatically restored to the default.
   EXPECT_EQ(google::DEBUG_MODE, FLAGS_s2debug);
 }

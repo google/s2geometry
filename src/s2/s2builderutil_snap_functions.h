@@ -20,7 +20,6 @@
 
 #include <memory>
 #include "s2/s1angle.h"
-#include "s2/s2.h"
 #include "s2/s2builder.h"
 #include "s2/s2cellid.h"
 

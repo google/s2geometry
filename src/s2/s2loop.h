@@ -29,11 +29,13 @@
 #include "s2/base/macros.h"
 #include "s2/fpcontractoff.h"
 #include "s2/s1angle.h"
-#include "s2/s2.h"
+#include "s2/s2debug.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2region.h"
 #include "s2/s2shapeindex.h"
+#include "s2/util/math/matrix3x3.h"
 #include "s2/util/math/vector.h"
 
 class Decoder;

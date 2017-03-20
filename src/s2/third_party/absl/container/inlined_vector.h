@@ -38,14 +38,13 @@
 #include <type_traits>
 #include <utility>
 
-#include <glog/logging.h>
 #include "s2/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 #include "s2/base/type_traits.h"
 
 
 
-namespace gtl {
+namespace absl {
 
 // TODO(b/34147068): Short-term during migration of N to size_t.
 using InlinedVectorNType = int;
@@ -215,12 +214,6 @@ class InlinedVector {
   pointer data() noexcept {
     return allocated() ? allocated_space() : inlined_space();
   }
-
-  // An older name for the more standard-friendly .data().
-  ABSL_DEPRECATED("Use data() instead")
-  const_pointer array() const { return data(); }
-  ABSL_DEPRECATED("Use data() instead")
-  pointer mutable_array() { return data(); }
 
   // Remove all elements
   void clear() noexcept {
@@ -1097,7 +1090,7 @@ auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
                                              std::input_iterator_tag)
     -> iterator {
   assert(position >= begin() && position <= end());
-  size_type index = std::distance(begin(), position);
+  size_type index = position - cbegin();
   size_type i = index;
   while (first != last) insert(begin() + i++, *first++);
   return begin() + index;
@@ -1118,11 +1111,19 @@ auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
   Length n = std::distance(first, last);
   std::pair<iterator, iterator> it_pair = ShiftRight(position, n);
   size_type used_spots = it_pair.second - it_pair.first;
-  std::copy(first, first + used_spots, it_pair.first);
-  UninitializedCopy(first + used_spots, last, it_pair.second);
+  ForwardIter open_spot = std::next(first, used_spots);
+  std::copy(first, open_spot, it_pair.first);
+  UninitializedCopy(open_spot, last, it_pair.second);
   tag().add_size(n);
   return it_pair.first;
 }
-}  // namespace gtl
+}  // namespace absl
+
+// Temporary aliases while moving into the absl namespace.
+// TODO(user): Delete temporary aliases after namespace update.
+namespace gtl {
+using absl::InlinedVector;
+using absl::InlinedVectorNType;
+}
 
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_

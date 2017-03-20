@@ -17,10 +17,10 @@
 
 #include "s2/s2coords.h"
 
+#include <gtest/gtest.h>
 #include "s2/s2cellid.h"
 #include "s2/s2coords-internal.h"
 #include "s2/s2testing.h"
-#include <gtest/gtest.h>
 
 using S2::internal::kSwapMask;
 using S2::internal::kInvertMask;

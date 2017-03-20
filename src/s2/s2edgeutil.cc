@@ -25,6 +25,8 @@
 #include <glog/logging.h>
 #include "s2/r1interval.h"
 #include "s2/s1chordangle.h"
+#include "s2/s2coords.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 #include "s2/util/math/vector.h"

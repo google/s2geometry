@@ -53,7 +53,6 @@
 #include <vector>
 
 #include "s2/fpcontractoff.h"
-#include "s2/s2.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"

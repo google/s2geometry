@@ -37,12 +37,12 @@
 #include <gtest/gtest.h>
 #include "s2/r2.h"
 #include "s2/s1angle.h"
-#include "s2/s2.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2latlng.h"
 #include "s2/s2measures.h"
+#include "s2/s2metrics.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 #include "s2/util/math/mathutil.h"
@@ -227,7 +227,7 @@ static S1Angle GetCircumRadius(S2Point const& a, S2Point const& b,
   // We return this value is the circumradius is very large.
   S1Angle kTooBig = S1Angle::Radians(M_PI);
   double turn_angle = S2::TurnAngle(a, b, c);
-  if (std::abs(std::remainder(turn_angle, M_PI)) < 1e-2) return kTooBig;
+  if (std::abs(remainder(turn_angle, M_PI)) < 1e-2) return kTooBig;
 
   long double a2 = (b - c).Norm2();
   long double b2 = (c - a).Norm2();

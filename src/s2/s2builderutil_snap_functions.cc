@@ -24,9 +24,9 @@
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/third_party/absl/memory/memory.h"
-#include "s2/s2.h"
 #include "s2/s2cellid.h"
 #include "s2/s2latlng.h"
+#include "s2/s2metrics.h"
 
 using std::max;
 using std::min;

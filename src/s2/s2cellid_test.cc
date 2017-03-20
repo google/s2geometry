@@ -31,9 +31,9 @@
 #include <gtest/gtest.h>
 #include "s2/r2.h"
 #include "s2/r2rect.h"
-#include "s2/s2.h"
 #include "s2/s2cap.h"
 #include "s2/s2latlng.h"
+#include "s2/s2metrics.h"
 #include "s2/s2testing.h"
 
 using S2::internal::kPosToOrientation;
@@ -488,7 +488,7 @@ TEST(S2CellId, Neighbors) {
     S2CellId nbrs[4];
     id.GetEdgeNeighbors(nbrs);
     // These neighbors were determined manually using the face and axis
-    // relationships defined in s2.cc.
+    // relationships defined in s2coords.cc.
     int size_ij = S2CellId::GetSizeIJ(level);
     EXPECT_EQ(S2CellId::FromFaceIJ(5, kMaxIJ, kMaxIJ).parent(level), nbrs[0]);
     EXPECT_EQ(S2CellId::FromFaceIJ(1, size_ij, 0).parent(level), nbrs[1]);

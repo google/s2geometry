@@ -26,7 +26,7 @@
 #include "s2/fpcontractoff.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
-#include "s2/s2.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2region.h"
 
 class Decoder;

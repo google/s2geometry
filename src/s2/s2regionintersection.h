@@ -23,7 +23,6 @@
 #include <glog/logging.h>
 #include "s2/base/macros.h"
 #include "s2/fpcontractoff.h"
-#include "s2/s2.h"
 #include "s2/s2region.h"
 
 class Decoder;

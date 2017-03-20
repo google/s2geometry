@@ -25,7 +25,6 @@
 #include "s2/priority_queue_sequence.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
-#include "s2/s2.h"
 #include "s2/s2cap.h"
 #include "s2/s2cellid.h"
 #include "s2/s2cellunion.h"

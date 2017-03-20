@@ -29,6 +29,7 @@
 #include "s2/s2cellid.h"
 #include "s2/s2cellunion.h"
 #include "s2/s2edgeutil.h"
+#include "s2/s2metrics.h"
 #include "s2/s2paddedcell.h"
 
 using std::fabs;

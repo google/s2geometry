@@ -20,7 +20,6 @@
 
 #include "s2/fpcontractoff.h"
 #include "s2/r2rect.h"
-#include "s2/s2.h"
 #include "s2/s2cellid.h"
 
 // S2PaddedCell represents an S2Cell whose (u,v)-range has been expanded on

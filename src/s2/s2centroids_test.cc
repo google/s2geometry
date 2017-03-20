@@ -17,8 +17,8 @@
 
 #include "s2/s2centroids.h"
 
-#include "s2/s2testing.h"
 #include <gtest/gtest.h>
+#include "s2/s2testing.h"
 
 TEST(S2, TrueCentroid) {
   // Test TrueCentroid() with very small triangles.  This test assumes that

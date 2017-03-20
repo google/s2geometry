@@ -30,7 +30,7 @@
 
 #include "s2/third_party/absl/base/config.h"
 
-namespace gtl {
+namespace absl {
 
 namespace internal_type_traits {
 template <typename... Ts>
@@ -173,6 +173,21 @@ struct is_trivially_copy_assignable
 #endif  // GOOGLE_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
 };
 
+}  // namespace absl
+
+// Temporary aliases while moving into the absl namespace.
+// TODO(user): Delete temporary aliases after namespace update.
+namespace gtl {
+template <typename... Ts>
+using void_t = typename absl::void_t<Ts...>;
+
+using absl::conjunction;
+using absl::disjunction;
+using absl::negation;
+using absl::is_trivially_destructible;
+using absl::is_trivially_default_constructible;
+using absl::is_trivially_copy_constructible;
+using absl::is_trivially_copy_assignable;
 }  // namespace gtl
 
 #endif  // S2_THIRD_PARTY_ABSL_META_TYPE_TRAITS_H_

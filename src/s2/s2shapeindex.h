@@ -82,7 +82,6 @@
 #include "s2/base/spinlock.h"
 #include "s2/util/btree/btree_map.h"  // Like std::map, but faster and smaller.
 #include "s2/fpcontractoff.h"
-#include "s2/s2.h"
 #include "s2/s2cellid.h"
 #include "s2/util/gtl/compact_array.h"
 

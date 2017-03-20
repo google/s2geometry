@@ -31,7 +31,6 @@
 #include "s2/fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
-#include "s2/s2.h"
 #include "s2/s2cellid.h"
 #include "s2/util/math/matrix3x3.h"
 

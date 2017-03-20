@@ -27,7 +27,6 @@
 #include <string>
 #include <vector>
 
-#include "s2/s2.h"
 #include "s2/s2latlngrect.h"
 
 class S2LatLng;

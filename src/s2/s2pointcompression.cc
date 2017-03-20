@@ -29,8 +29,8 @@
 #include "s2/util/coding/nth-derivative.h"
 #include "s2/util/coding/transforms.h"
 #include "s2/util/endian/endian.h"
-#include "s2/s2.h"
 #include "s2/s2cellid.h"
+#include "s2/s2coords.h"
 
 using std::pair;
 using std::vector;

@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <cmath>
 
-#include "s2/s2.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 

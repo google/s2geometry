@@ -21,7 +21,6 @@
 
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-#include "s2/s2.h"
 
 template <class T>
 void ExpectSequence(std::vector<T> const& expected,

@@ -30,7 +30,6 @@
 #include "s2/id_set_lexicon.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
-#include "s2/s2.h"
 #include "s2/s2cellid.h"
 #include "s2/s2error.h"
 #include "s2/s2pointindex.h"
@@ -188,7 +187,7 @@ class S2Builder {
   // and each input vertex will be mapped to the closest site.  Therefore you
   // cannot assume that P is necessarily snapped to SnapPoint(P).
   //
-  // S2Builder makes the following guarantees (within a small error margin):
+  // S2Builder makes the following guarantees:
   //
   // 1. Every vertex is at a location returned by SnapPoint().
   //
@@ -621,7 +620,6 @@ class S2Builder {
   // The maximum distance that an edge can move when snapping to a snap site.
   // It can be slightly larger than the site snap radius when edges are being
   // split at crossings.
-  S1Angle edge_snap_radius_;
   S1ChordAngle edge_snap_radius_ca_;
 
   S1Angle max_edge_deviation_;
@@ -630,9 +628,11 @@ class S2Builder {
 
   S1Angle min_site_separation_;
   S1ChordAngle min_site_separation_ca_;
+  S1ChordAngle min_site_separation_ca_limit_;
 
   S1Angle min_edge_site_separation_;
   S1ChordAngle min_edge_site_separation_ca_;
+  S1ChordAngle min_edge_site_separation_ca_limit_;
 
   S1ChordAngle max_adjacent_site_separation_ca_;
 

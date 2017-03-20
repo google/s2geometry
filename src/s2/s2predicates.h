@@ -36,7 +36,8 @@
 
 #include "s2/fpcontractoff.h"
 #include "s2/s1chordangle.h"
-#include "s2/s2.h"
+#include "s2/s2debug.h"
+#include "s2/s2pointutil.h"
 
 namespace s2pred {
 
