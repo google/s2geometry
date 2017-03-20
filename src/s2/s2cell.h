@@ -23,7 +23,6 @@
 #include "s2/fpcontractoff.h"
 #include "s2/r2rect.h"
 #include "s2/s1chordangle.h"
-#include "s2/s2.h"
 #include "s2/s2cellid.h"
 #include "s2/s2region.h"
 #include "s2/third_party/absl/base/integral_types.h"

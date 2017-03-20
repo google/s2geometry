@@ -196,4 +196,4 @@ int Metric<dim>::GetClosestLevel(double value) const {
 
 }  // namespace S2
 
-#endif  // S2_S2_H_
+#endif  // S2_S2METRICS_H_

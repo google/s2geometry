@@ -20,6 +20,7 @@
 #include "s2/base/stringprintf.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
 

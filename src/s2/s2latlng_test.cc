@@ -25,6 +25,7 @@
 
 #include "s2/base/macros.h"
 #include "s2/base/stringprintf.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
 using std::fabs;

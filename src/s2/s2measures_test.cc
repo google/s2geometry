@@ -17,9 +17,9 @@
 
 #include "s2/s2measures.h"
 
+#include <gtest/gtest.h>
 #include "s2/s2latlng.h"
 #include "s2/s2testing.h"
-#include <gtest/gtest.h>
 
 TEST(S2, AngleMethods) {
   S2Point pz(0, 0, 1);

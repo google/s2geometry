@@ -23,7 +23,6 @@
 #include "s2/strings/serialize.h"
 #include "s2/strings/split.h"
 #include "s2/third_party/absl/memory/memory.h"
-#include "s2/s2.h"
 #include "s2/s2latlng.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"

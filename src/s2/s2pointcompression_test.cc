@@ -26,8 +26,8 @@
 
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
-#include "s2/s2.h"
 #include "s2/s2cellid.h"
+#include "s2/s2coords.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 #include "s2/third_party/absl/container/fixed_array.h"

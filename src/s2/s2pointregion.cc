@@ -24,6 +24,7 @@
 #include "s2/s2cell.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2pointutil.h"
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 

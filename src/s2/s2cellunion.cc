@@ -24,11 +24,11 @@
 
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
-#include "s2/s2.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2metrics.h"
 #include "s2/third_party/absl/base/integral_types.h"
 
 using std::is_sorted;

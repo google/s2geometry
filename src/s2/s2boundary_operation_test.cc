@@ -73,7 +73,7 @@ S2Error::Code INDEXES_DO_NOT_MATCH = S2Error::USER_DEFINED_START;
 
 class IndexMatchingLayer : public S2Builder::Layer {
  public:
-  IndexMatchingLayer(S2ShapeIndex const& index) : index_(index) {
+  explicit IndexMatchingLayer(S2ShapeIndex const& index) : index_(index) {
     // Don't do any preprocessing of the graph edges.
     graph_options_.set_edge_type(EdgeType::DIRECTED);
     graph_options_.set_degenerate_edges(DegenerateEdges::KEEP);

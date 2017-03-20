@@ -26,12 +26,9 @@
 #include <new>
 #include <type_traits>
 
-#include <glog/logging.h>
-
 #include "s2/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/dynamic_annotations/dynamic_annotations.h"
-#include "s2/util/gtl/manual_constructor.h"
 
 // A FixedArray<T> represents a non-resizable array of T where the
 // length of the array does not need to be a compile time constant.
@@ -65,14 +62,13 @@
 // ::operator new[]() and ::operator delete[](), not with any class-scope
 // overrides in T.  As FixedArray is emulating stack-based variable-length
 // arrays, this should not be surprising.
-namespace gtl {
-namespace fixed_array {
+namespace absl {
+namespace fixed_array_internal {
 const std::size_t kInlineElementsDefault = static_cast<std::size_t>(-1);
-}  // namespace fixed_array
-}  // namespace gtl
+}  // namespace fixed_array_internal
 
-template <typename T, std::size_t inline_elements
-    = gtl::fixed_array::kInlineElementsDefault>
+template <typename T, std::size_t inline_elements =
+                          fixed_array_internal::kInlineElementsDefault>
 class FixedArray {
  public:
   // For playing nicely with stl:
@@ -253,9 +249,8 @@ class FixedArray {
     // specialize for kInlineElementsDefault case.
     // Use up to kDefaultBytes.
     template <typename Ignored>
-    struct Impl<gtl::fixed_array::kInlineElementsDefault, Ignored>
-        : Impl<kDefaultBytes / sizeof(value_type), Ignored> {
-    };
+    struct Impl<fixed_array_internal::kInlineElementsDefault, Ignored>
+        : Impl<kDefaultBytes / sizeof(value_type), Ignored> {};
 
     using ImplType = Impl<inline_elements, void>;
 
@@ -346,5 +341,16 @@ class FixedArray {
   Rep const rep_;
   InlineSpace inline_space_;
 };
+
+}  // namespace absl
+
+// Temporary aliases while moving into the absl namespace.
+// TODO(user): Delete temporary aliases after namespace update.
+namespace gtl {
+namespace fixed_array {
+using absl::fixed_array_internal::kInlineElementsDefault;
+}
+}
+using absl::FixedArray;
 
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_

@@ -29,7 +29,6 @@
 #include "s2/base/casts.h"
 #include "s2/base/stringprintf.h"
 #include "s2/r1interval.h"
-#include "s2/s2.h"
 #include "s2/s2latlng.h"
 #include "s2/third_party/absl/base/integral_types.h"
 
@@ -463,8 +462,10 @@ S2CellId S2CellId::FromFaceIJWrap(int face, int i, int j) {
   // coordinates enough so that we end up in the wrong leaf cell.
   static const double kScale = 1.0 / kMaxSize;
   static const double kLimit = 1.0 + DBL_EPSILON;
-  double u = max(-kLimit, min(kLimit, kScale * ((i << 1) + 1 - kMaxSize)));
-  double v = max(-kLimit, min(kLimit, kScale * ((j << 1) + 1 - kMaxSize)));
+  // The arithmetic below is designed to avoid 32-bit integer overflows.
+  DCHECK_EQ(0, kMaxSize % 2);
+  double u = max(-kLimit, min(kLimit, kScale * (2 * (i - kMaxSize / 2) + 1)));
+  double v = max(-kLimit, min(kLimit, kScale * (2 * (j - kMaxSize / 2) + 1)));
 
   // Find the leaf cell coordinates on the adjacent face, and convert
   // them to a cell id at the appropriate level.

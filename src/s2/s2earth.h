@@ -23,8 +23,8 @@
 #define S2_S2EARTH_H_
 
 #include "s2/s1angle.h"
-#include "s2/s2.h"
 #include "s2/s2latlng.h"
+#include "s2/s2point.h"
 #include "s2/util/units/length-units.h"
 
 class S2Earth {

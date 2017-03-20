@@ -52,10 +52,10 @@
 #include <glog/logging.h>
 #include "s2/util/btree/btree_map.h"
 #include "s2/id_set_lexicon.h"
-#include "s2/s2.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
+#include "s2/s2debug.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"
@@ -540,8 +540,7 @@ inline void S2PolylineVectorLayer::Options::set_validate(bool validate) {
   set_s2debug_override(S2Debug::DISABLE);
 }
 
-inline S2Debug S2PolylineVectorLayer::Options::s2debug_override()
-    const {
+inline S2Debug S2PolylineVectorLayer::Options::s2debug_override() const {
   return s2debug_override_;
 }
 

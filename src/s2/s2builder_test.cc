@@ -33,6 +33,7 @@
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2cap.h"
 #include "s2/s2cellid.h"
+#include "s2/s2debug.h"
 #include "s2/s2latlng.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"
@@ -193,26 +194,104 @@ TEST(S2Builder, MinEdgeVertexSeparation) {
   ExpectPolygonsApproxEqual(*expected, output, S1Angle::Radians(1e-15));
 }
 
-TEST(S2Builder, SnappingIdempotence) {
-  // Check that re-snapping a polygon does not change it.
+TEST(S2Builder, IdempotencySnapsUnsnappedVertices) {
+  // When idempotency is requested, no snapping is done unless S2Builder finds
+  // at least one vertex or edge that could not be the output of a previous
+  // snapping operation.  This test checks that S2Builder detects vertices
+  // that are not at a valid location returned by the given snap function.
 
-  unique_ptr<S2Polygon> input(MakePolygon("0:0, 0:10, 5:10, 1:5, 5:0"));
-  unique_ptr<S2Polygon> expected(MakePolygon("0.5:0, 0.5:10, 5:10, 1:5, 5:0"));
-  S2Builder::Options options(IdentitySnapFunction(S1Angle::Degrees(0.6)));
+  // In this example we snap two vertices to integer lat/lng coordinates.  The
+  // two vertices are far enough apart (more than min_vertex_separation) so
+  // that they might be the result of a previous snapping operation, but one
+  // of the two vertices does not have integer lat/lng coordinates.  We use
+  // internal knowledge of how snap sites are chosen (namely, that candidates
+  // are considered in S2CellId order) to construct two different cases, one
+  // where the snapped vertex is processed first and one where the unsnapped
+  // vertex is processed first.  This exercises two different code paths.
+  IntLatLngSnapFunction snap_function(0);
+  EXPECT_GE(snap_function.snap_radius(), S1Angle::Degrees(0.7));
+  EXPECT_LE(snap_function.min_vertex_separation(), S1Angle::Degrees(0.35));
+  S2Builder builder((S2Builder::Options(snap_function)));
+
+  // In this example, the snapped vertex (0, 0) is processed first and is
+  // selected as a Voronoi site (i.e., output vertex).  The second vertex is
+  // closer than snap_radius(), therefore it is snapped to the first vertex
+  // and the polyline becomes degenerate.
+  S2Point a = S2LatLng::FromDegrees(0, 0).ToPoint();
+  S2Point b = S2LatLng::FromDegrees(0.01, 0.6).ToPoint();
+  EXPECT_LT(S2CellId(a), S2CellId(b));
+  S2Polyline input1(vector<S2Point>{a, b}), output1;
+  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output1));
+  builder.AddPolyline(input1);
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  EXPECT_EQ("", s2textformat::ToString(output1));
+
+  // In this example the unsnapped vertex is processed first and is snapped to
+  // (0, 0).  The second vertex is further than snap_radius() away, so it is
+  // also snapped (which does nothing) and is left at (0, 1).
+  S2Point c = S2LatLng::FromDegrees(0.01, 0.4).ToPoint();
+  S2Point d = S2LatLng::FromDegrees(0, 1).ToPoint();
+  EXPECT_LT(S2CellId(c), S2CellId(d));
+  S2Polyline input2(vector<S2Point>{c, d}), output2;
+  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output2));
+  builder.AddPolyline(input2);
+  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  EXPECT_EQ("0:0, 0:1", s2textformat::ToString(output2));
+}
+
+TEST(S2Builder, IdempotencySnapsEdgesWithTinySnapRadius) {
+  // When idempotency is requested, no snapping is done unless S2Builder finds
+  // at least one vertex or edge that could not be the output of a previous
+  // snapping operation.  This test checks that S2Builder detects edges that
+  // are too close to vertices even when the snap radius is very small
+  // (e.g., S2EdgeUtil::kIntersectionError).
+  //
+  // Previously S2Builder used a conservative approximation to decide whether
+  // edges were too close to vertices; unfortunately this meant that when the
+  // snap radius was very small then no snapping would be done at all, because
+  // even an edge/vertex distance of zero was considered far enough apart.
+  //
+  // This tests that the current code (which uses exact predicates) handles
+  // this situation correctly (i.e., that an edge separated from a
+  // non-incident vertex by a distance of zero cannot be the output of a
+  // previous snapping operation).
+  S2Builder::Options options;
+  options.set_snap_function(
+      s2builderutil::IdentitySnapFunction(S2EdgeUtil::kIntersectionError));
+  S2PolylineVectorLayer::Options layer_options;
+  layer_options.set_duplicate_edges(
+      S2PolylineVectorLayer::Options::DuplicateEdges::MERGE);
+  S2Builder builder(options);
+  vector<unique_ptr<S2Polyline>> output;
+  builder.StartLayer(MakeUnique<S2PolylineVectorLayer>(&output, layer_options));
+  builder.AddPolyline(*s2textformat::MakePolyline("0:0, 0:10"));
+  builder.AddPolyline(*s2textformat::MakePolyline("0:5, 0:7"));
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  ASSERT_EQ(1, output.size());
+  EXPECT_EQ("0:0, 0:5, 0:7, 0:10", s2textformat::ToString(*output[0]));
+}
+
+TEST(S2Builder, IdempotencyDoesNotSnapAdequatelySeparatedEdges) {
+  // When idempotency is requested, no snapping is done unless S2Builder finds
+  // at least one vertex or edge that could not be the output of a previous
+  // snapping operation.  This test checks that when an edge is further away
+  // than min_edge_vertex_separation() then no snapping is done.
+  S2Builder::Options options(IntLatLngSnapFunction(0));
+  options.set_idempotent(true);  // Test fails if this is "false".
   S2Builder builder(options);
   S2Polygon output1, output2;
   builder.StartLayer(MakeUnique<S2PolygonLayer>(&output1));
-  builder.AddPolygon(*input);
-  builder.ForceVertex(S2LatLng::FromDegrees(0.5, 0).ToPoint());
-  builder.ForceVertex(S2LatLng::FromDegrees(0.5, 10).ToPoint());
+  builder.AddPolygon(*MakePolygon("1.49:0, 0:2, 0.49:3"));
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error));
-  ExpectPolygonsEqual(*expected, output1);
-
+  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  const char* expected = "1:0, 0:2, 0:3";
+  EXPECT_EQ(expected, s2textformat::ToString(output1));
   builder.StartLayer(MakeUnique<S2PolygonLayer>(&output2));
   builder.AddPolygon(output1);
   ASSERT_TRUE(builder.Build(&error)) << error.text();
-  ExpectPolygonsEqual(output1, output2);
+  EXPECT_EQ(expected, s2textformat::ToString(output2));
 }
 
 TEST(S2Builder, kMaxSnapRadiusCanSnapAtLevel0) {

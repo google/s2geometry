@@ -30,11 +30,12 @@
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
-#include "s2/s2.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2debug.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/util/math/matrix3x3.h"
 

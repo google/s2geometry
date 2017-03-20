@@ -56,7 +56,6 @@
 #include "s2/fpcontractoff.h"
 #include "s2/s1chordangle.h"
 #include "s2/s1interval.h"
-#include "s2/s2.h"
 
 class S2PolylineSimplifier {
  public:

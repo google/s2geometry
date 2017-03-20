@@ -26,6 +26,7 @@
 #include "s2/s2convexhullquery.h"
 
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 
 using std::unique_ptr;

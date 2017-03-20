@@ -29,9 +29,9 @@
 #include <glog/logging.h>
 
 #include "s2/s1angle.h"
-#include "s2/s2.h"
 #include "s2/s2cap.h"
 #include "s2/s2cellunion.h"
+#include "s2/s2metrics.h"
 #include "s2/s2region.h"
 
 using std::is_sorted;

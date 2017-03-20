@@ -79,7 +79,6 @@
 #include "s2/id_set_lexicon.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
-#include "s2/s2.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
@@ -89,6 +88,7 @@
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
 #include "s2/s2pointindex.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2polyline_simplifier.h"
@@ -157,30 +157,24 @@ S2Builder::Options& S2Builder::Options::operator=(Options const& options) {
   return *this;
 }
 
-static S1ChordAngle GetMaxPointToPointDist(S1Angle a) {
+// Helper functions for computing error bounds:
+
+static S1ChordAngle RoundUp(S1Angle a) {
   S1ChordAngle ca(a);
-  return ca.PlusError(ca.GetS1AngleConstructorMaxError() +
-                      ca.GetS2PointConstructorMaxError());
+  return ca.PlusError(ca.GetS1AngleConstructorMaxError());
 }
 
-static S1ChordAngle GetMinPointToPointDist(S1Angle a) {
+static S1ChordAngle RoundDown(S1Angle a) {
   S1ChordAngle ca(a);
-  return ca.PlusError(-(ca.GetS1AngleConstructorMaxError() +
-                        ca.GetS2PointConstructorMaxError()));
+  return ca.PlusError(-ca.GetS1AngleConstructorMaxError());
 }
 
-#if 0  // not used yet
-static S1ChordAngle GetMaxPointToEdgeDist(S1Angle a) {
-  S1ChordAngle ca(a);
-  return ca.PlusError(ca.GetS1AngleConstructorMaxError() +
-                      S2EdgeUtil::GetUpdateMinDistanceMaxError(ca));
+static S1ChordAngle AddPointToPointError(S1ChordAngle ca) {
+  return ca.PlusError(ca.GetS2PointConstructorMaxError());
 }
-#endif
 
-static S1ChordAngle GetMinPointToEdgeDist(S1Angle a) {
-  S1ChordAngle ca(a);
-  return ca.PlusError(-(ca.GetS1AngleConstructorMaxError() +
-                        S2EdgeUtil::GetUpdateMinDistanceMaxError(ca)));
+static S1ChordAngle AddPointToEdgeError(S1ChordAngle ca) {
+  return ca.PlusError(S2EdgeUtil::GetUpdateMinDistanceMaxError(ca));
 }
 
 S2Builder::S2Builder() {
@@ -194,35 +188,28 @@ void S2Builder::Init(Options const& options) {
   options_ = options;
   SnapFunction const& snap_function = options.snap_function();
   snap_radius_ = snap_function.snap_radius();
-  edge_snap_radius_ = snap_radius_;
   DCHECK_LE(snap_radius_, SnapFunction::kMaxSnapRadius());
 
-  if (options.split_crossing_edges()) {
-    // Increase the snap radius for edges so that both edges are snapped to
-    // the edge intersection location.  The problem is that the intersection
-    // vertex itself may have been snapped to another vertex that is up to
-    // snap_radius_ away.  Since the intersection vertex was not exactly at
-    // the intersection point, we need to increase the snap radius slightly so
-    // that both edges are guaranteed to be snapped to its new position.
-    edge_snap_radius_ += S2EdgeUtil::kIntersectionError;
-  }
-  snapping_requested_ = (edge_snap_radius_ > S1Angle::Zero());
-
-  // Increase the snap radius to account for errors in converting
-  // snap_radius() to an S1ChordAngle and in measuring the S1ChordAngle
-  // between two points.
-  //
-  // This does *not* account for errors in the implementation of
-  // SnapPoint().  For example, S2CellId::ToPoint() has a maximum error of
-  // 1.5 * DBL_EPSILON.  These errors are handled by having the SnapFunction
-  // increase the snap_radius() before passing it to S2Builder.
+  // Convert the snap radius to an S1ChordAngle.  This is the "true snap
+  // radius" used when evaluating exact predicates (s2predicates.h).
   site_snap_radius_ca_ = S1ChordAngle(snap_radius_);
 
-  // Convert the edge snap radius to an S1ChordAngle, and increase it to
-  // account for errors.
-  edge_snap_radius_ca_ = S1ChordAngle(edge_snap_radius_);
-  edge_snap_radius_ca_ = edge_snap_radius_ca_.PlusError(
-      edge_snap_radius_ca_.GetS1AngleConstructorMaxError());
+  // When split_crossing_edges() is true, we need to use a larger snap radius
+  // for edges than for vertices to ensure that both edges are snapped to the
+  // edge intersection location.  This is because the computed intersection
+  // point is not exact; it may be up to kIntersectionError away from its true
+  // position.  The computed intersection point might then be snapped to some
+  // other vertex up to snap_radius away.  So to ensure that both edges are
+  // snapped to a common vertex, we need to increase the snap radius for edges
+  // to at least the sum of these two values (calculated conservatively).
+  S1Angle edge_snap_radius = snap_radius_;
+  if (!options.split_crossing_edges()) {
+    edge_snap_radius_ca_ = site_snap_radius_ca_;
+  } else {
+    edge_snap_radius += S2EdgeUtil::kIntersectionError;
+    edge_snap_radius_ca_ = RoundUp(edge_snap_radius);
+  }
+  snapping_requested_ = (edge_snap_radius > S1Angle::Zero());
 
   // Compute the maximum distance that a vertex can be separated from an
   // edge while still affecting how that edge is snapped.
@@ -234,7 +221,7 @@ void S2Builder::Init(Options const& options) {
   // the maximum distance allowed (i.e., snap_radius), the center of the edge
   // will still move by less than max_edge_deviation().  This saves us a lot
   // of work since then we don't need to check the actual deviation.
-  min_edge_length_to_split_ca_ = GetMinPointToPointDist(S1Angle::Radians(
+  min_edge_length_to_split_ca_ = S1ChordAngle(S1Angle::Radians(
       2 * acos(sin(snap_radius_) / sin(max_edge_deviation_))));
 
   // If the condition below is violated, then AddExtraSites() needs to be
@@ -251,31 +238,35 @@ void S2Builder::Init(Options const& options) {
             snap_function.snap_radius() +
             snap_function.min_edge_vertex_separation());
 
-  // Adjust the other snap function parameters to account for errors.  Note
-  // that min_site_separation_ca_ is adjusted *downwards* since it is used to
-  // test whether input vertices too close together, and we want this test to
-  // be conservative (in order to implement idempotency).  Similarly,
-  // min_edge_site_separation_ca_ is used to test whether we need to add
-  // "separation sites" so that edges do not approach non-incident vertices
-  // too closely, and we only want to do this when we are sure that the edge
-  // and vertex are definitely too close.
+  // To implement idempotency, we check whether the input geometry could
+  // possibly be the output of a previous S2Builder invocation.  This involves
+  // testing whether any site/site or edge/site pairs are too close together.
+  // This is done using exact predicates, which require converting the minimum
+  // separation values to an S1ChordAngle (rounding down).  However we use
+  // S2ClosestPointQuery and S2ClosestEdgeQuery to find candidate pairs, and
+  // those classes compute distances approximately, so we also compute a
+  // "limit" defined as the maximum distance that those classes might compute
+  // for a pair that is too close together.
   min_site_separation_ = snap_function.min_vertex_separation();
-  min_site_separation_ca_ = GetMinPointToPointDist(min_site_separation_);
+  min_site_separation_ca_ = RoundDown(min_site_separation_);
+  min_site_separation_ca_limit_ = AddPointToPointError(min_site_separation_ca_);
+
   min_edge_site_separation_ = snap_function.min_edge_vertex_separation();
-  min_edge_site_separation_ca_ = GetMinPointToEdgeDist(
-      min_edge_site_separation_);
+  min_edge_site_separation_ca_ = RoundDown(min_edge_site_separation_);
+  min_edge_site_separation_ca_limit_ =
+      AddPointToEdgeError(min_edge_site_separation_ca_);
 
   // Compute the maximum possible distance between two sites whose Voronoi
   // regions touch.  (The maximum radius of each Voronoi region is
   // edge_snap_radius_.)  Then increase this bound to account for errors.
   max_adjacent_site_separation_ca_ =
-      GetMaxPointToPointDist(2 * edge_snap_radius_);
+      AddPointToPointError(RoundUp(2 * edge_snap_radius));
 
   // Finally, we also precompute sin^2(edge_snap_radius), which is simply the
   // squared distance between a vertex and an edge measured perpendicular to
   // the plane containing the edge, and increase this value by the maximum
   // error in the calculation to compare this distance against the bound.
-  double d = sin(edge_snap_radius_);
+  double d = sin(edge_snap_radius);
   edge_snap_radius_sin2_ = d * d;
   edge_snap_radius_sin2_ += ((9.5 * d + 2.5 + 2 * sqrt(3)) * d +
                              9 * DBL_EPSILON) * DBL_EPSILON;
@@ -616,40 +607,63 @@ void S2Builder::AddForcedSites(S2PointIndex<SiteId>* site_index) {
 void S2Builder::ChooseInitialSites(
     S2PointIndex<SiteId>* site_index,
     S2PointIndex<InputVertexId>* rejected_vertex_index) {
-  // Sort the input vertices in a determinstic order.
-  vector<InputVertexKey> sorted = SortInputVertices();
-
-  // Consider the vertices in order.  If an existing site is already close
-  // enough, then nothing more needs to be done.  Otherwise we snap the vertex
-  // and add it to the list of sites.
   S2ClosestPointQuery<SiteId> site_query(*site_index);
   site_query.set_max_distance(snap_radius_);
   S2ClosestPointQuery<InputVertexId> vertex_query(*rejected_vertex_index);
   vertex_query.set_max_distance(min_site_separation_);
+
+  // For each input vertex, check whether all existing sites are further away
+  // than "snap_radius".  If so, then add the vertex as a new site.
+  vector<InputVertexKey> sorted = SortInputVertices();
   for (int i = 0; i < sorted.size(); ++i) {
     S2Point const& vertex = input_vertices_[sorted[i].second];
-    site_query.FindClosestPoint(vertex);
-    if (site_query.num_points() == 0 ||
-        s2pred::CompareDistance(vertex, site_query.point(0),
-                                site_snap_radius_ca_) > 0) {
+    site_query.FindClosestPoints(vertex);
+    bool add_site = true;
+    for (int j = 0; j < site_query.num_points(); ++j) {
+      add_site &= s2pred::CompareDistance(vertex, site_query.point(j),
+                                          site_snap_radius_ca_) > 0;
+    }
+    if (add_site) {
       S2Point site = SnapSite(vertex);
       if (site != vertex) snapping_needed_ = true;
       site_index->Add(site, sites_.size());
       sites_.push_back(site);
       site_query.Reset();
     } else if (!snapping_needed_) {
-      // Check whether this vertex is too close to any other input vertex
-      // (including input vertices that were not selected as Voronoi sites).
-      if (site_query.distance_ca(0) < min_site_separation_ca_) {
-        if (site_query.point(0) == vertex) continue;
+      // Idempotency was requested and the input so far appears to be already
+      // snapped.  Check whether this vertex also appears to be snapped.
+      if (SnapSite(vertex) != vertex) {
         snapping_needed_ = true;
       } else {
-        vertex_query.FindClosestPoint(vertex);
-        if (vertex_query.num_points() > 0 &&
-            vertex_query.distance_ca(0) < min_site_separation_ca_) {
-          if (vertex_query.point(0) == vertex) continue;
-          snapping_needed_ = true;
-        } else {
+        // Check whether this vertex is too close to any other input vertex
+        // (including input vertices that were not selected as Voronoi sites).
+        //
+        // A tiny amount of work could be saved by short-circuiting the code
+        // below if snapping_needed_ becomes true, but it's not worthwhile.
+        bool add_rejected = true;
+        for (int j = 0; j < site_query.num_points(); ++j) {
+          if (site_query.distance_ca(j) < min_site_separation_ca_limit_) {
+            // Note that there can be duplicate input vertices.
+            if (site_query.point(j) == vertex) {
+              add_rejected = false;
+            } else {
+              snapping_needed_ |= s2pred::CompareDistance(
+                  vertex, site_query.point(j), min_site_separation_ca_) < 0;
+            }
+          }
+        }
+        vertex_query.FindClosestPoints(vertex);
+        for (int j = 0; j < vertex_query.num_points(); ++j) {
+          if (vertex_query.distance_ca(j) < min_site_separation_ca_limit_) {
+            if (vertex_query.point(j) == vertex) {
+              add_rejected = false;
+            } else {
+              snapping_needed_ |= s2pred::CompareDistance(
+                  vertex, vertex_query.point(j), min_site_separation_ca_) < 0;
+            }
+          }
+        }
+        if (add_rejected && !snapping_needed_) {
           rejected_vertex_index->Add(vertex, sorted[i].second);
           vertex_query.Reset();
         }
@@ -659,9 +673,7 @@ void S2Builder::ChooseInitialSites(
 }
 
 S2Point S2Builder::SnapSite(S2Point const& point) const {
-  if (!snapping_requested_) {
-    return point;
-  }
+  if (!snapping_requested_) return point;
   S2Point site = options_.snap_function().SnapPoint(point);
   S1ChordAngle dist_moved(site, point);
   if (dist_moved > site_snap_radius_ca_) {
@@ -690,30 +702,34 @@ void S2Builder::CollectSiteEdges(
     InputEdge const& edge = input_edges_[e];
     S2Point const& v0 = input_vertices_[edge.first];
     S2Point const& v1 = input_vertices_[edge.second];
+    if (s2builder_verbose) {
+      std::cout << "S2Polyline: " << s2textformat::ToString(v0)
+                << ", " << s2textformat::ToString(v1) << "\n";
+    }
     site_query.FindClosestPointsToEdge(v0, v1);
     auto* sites = &edge_sites_[e];
     sites->reserve(site_query.num_points());
     for (int j = 0; j < site_query.num_points(); ++j) {
       sites->push_back(site_query.data(j));
       if (!snapping_needed_ &&
-          site_query.distance_ca(j) < min_edge_site_separation_ca_ &&
-          site_query.point(j) != v0 && site_query.point(j) != v1) {
+          site_query.distance_ca(j) < min_edge_site_separation_ca_limit_ &&
+          site_query.point(j) != v0 && site_query.point(j) != v1 &&
+          s2pred::CompareEdgeDistance(site_query.point(j), v0, v1,
+                                      min_edge_site_separation_ca_) < 0) {
         snapping_needed_ = true;
       }
     }
     if (!snapping_needed_) {
       vertex_query.FindClosestPointsToEdge(v0, v1);
       for (int j = 0; j < vertex_query.num_points(); ++j) {
-        if (vertex_query.point(j) != v0 && vertex_query.point(j) != v1) {
+        if (vertex_query.point(j) != v0 && vertex_query.point(j) != v1 &&
+            s2pred::CompareEdgeDistance(vertex_query.point(j), v0, v1,
+                                        min_edge_site_separation_ca_) < 0) {
           snapping_needed_ = true;
         }
       }
     }
     SortSitesByDistance(v0, sites);
-    if (s2builder_verbose) {
-      std::cout << "S2Polyline: " << s2textformat::ToString(v0)
-                << ", " << s2textformat::ToString(v1) << "\n";
-    }
   }
 }
 
@@ -800,19 +816,17 @@ void S2Builder::MaybeAddExtraSites(InputEdgeId edge_id,
       }
     } else if (i > 0 && id >= num_forced_sites_) {
       // Check whether this "site to avoid" is closer to the snapped edge than
-      // min_edge_vertex_separation().  We only need to consider the edge
-      // interior, because all sites are separated by at least snap_radius().
-      // Similarly, *only* this edge can be too close because its vertices
-      // must span the point where "site_to_avoid" projects onto the input
-      // edge XY.  Both of these claims rely on the fact that all sites are
-      // separated by at least snap_radius().  We don't try to avoid sites
-      // added using ForceVertex() because we don't guarantee any minimum
-      // separation from such sites.
+      // min_edge_vertex_separation().  Note that this is the only edge of the
+      // chain that can be too close because its vertices must span the point
+      // where "site_to_avoid" projects onto the input edge XY (this claim
+      // relies on the fact that all sites are separated by at least the snap
+      // radius).  We don't try to avoid sites added using ForceVertex()
+      // because we don't guarantee any minimum separation from such sites.
       S2Point const& site_to_avoid = sites_[id];
       S2Point const& v0 = sites_[chain[i - 1]];
       S2Point const& v1 = sites_[chain[i]];
-      if (S2EdgeUtil::IsInteriorDistanceLess(
-              site_to_avoid, v0, v1, min_edge_site_separation_ca_)) {
+      if (s2pred::CompareEdgeDistance(
+              site_to_avoid, v0, v1, min_edge_site_separation_ca_) < 0) {
         // A snapped edge can only approach a site too closely when there are
         // no sites near the input edge near that point.  We fix that by
         // adding a new site along the input edge (a "separation site"), then

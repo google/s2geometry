@@ -94,8 +94,8 @@ S2Point S2PaddedCell::GetCenter() const {
 S2Point S2PaddedCell::GetEntryVertex() const {
   // The curve enters at the (0,0) vertex unless the axis directions are
   // reversed, in which case it enters at the (1,1) vertex.
-  int i = ij_lo_[0];
-  int j = ij_lo_[1];
+  unsigned int i = ij_lo_[0];
+  unsigned int j = ij_lo_[1];
   if (orientation_ & kInvertMask) {
     int ij_size = S2CellId::GetSizeIJ(level_);
     i += ij_size;
@@ -107,8 +107,8 @@ S2Point S2PaddedCell::GetEntryVertex() const {
 S2Point S2PaddedCell::GetExitVertex() const {
   // The curve exits at the (1,0) vertex unless the axes are swapped or
   // inverted but not both, in which case it exits at the (0,1) vertex.
-  int i = ij_lo_[0];
-  int j = ij_lo_[1];
+  unsigned int i = ij_lo_[0];
+  unsigned int j = ij_lo_[1];
   int ij_size = S2CellId::GetSizeIJ(level_);
   if (orientation_ == 0 || orientation_ == kSwapMask + kInvertMask) {
     i += ij_size;
