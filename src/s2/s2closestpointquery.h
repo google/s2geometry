@@ -299,7 +299,7 @@ class S2ClosestPointQuery {
     }
   };
   using CellQueue =
-      std::priority_queue<QueueEntry, gtl::InlinedVector<QueueEntry, 16>>;
+      std::priority_queue<QueueEntry, absl::InlinedVector<QueueEntry, 16>>;
   CellQueue queue_;
 
   // Temporaries, defined here to avoid multiple allocations / initializations.

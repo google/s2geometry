@@ -207,20 +207,9 @@ MakeUnique(Args&&... /* args */) = delete;
 // Temporary aliases while moving into the absl namespace.
 // All functions will eventually be moved, in stages.
 // TODO(user): Delete temporary aliases after namespace update.
-template <typename T>
-auto RawPtr(T&& ptr) -> decltype(&*ptr) {
-  return absl::RawPtr(std::forward<T>(ptr));
-}
-inline std::nullptr_t RawPtr(std::nullptr_t) { return absl::RawPtr(nullptr); }
-
 template <typename T, typename D>
 std::shared_ptr<T> ShareUniquePtr(std::unique_ptr<T, D>&& ptr) {
   return absl::ShareUniquePtr(std::forward<std::unique_ptr<T, D>>(ptr));
-}
-
-template <typename T>
-std::weak_ptr<T> WeakenPtr(const std::shared_ptr<T>& ptr) {
-  return absl::WeakenPtr(ptr);
 }
 
 }  // namespace gtl

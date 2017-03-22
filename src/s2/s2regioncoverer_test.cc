@@ -163,7 +163,7 @@ struct WorstCap {
   S2Cap cap;
   int num_cells;
   bool operator<(WorstCap const& o) const { return ratio > o.ratio; }
-  WorstCap(double r, S2Cap c, int n) : ratio(r), cap(c), num_cells(n) {}
+  WorstCap(double r, const S2Cap& c, int n) : ratio(r), cap(c), num_cells(n) {}
 };
 
 static void TestAccuracy(int max_cells) {

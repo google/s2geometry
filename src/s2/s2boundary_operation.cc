@@ -63,6 +63,7 @@
 #include "s2/s2boundary_operation.h"
 
 #include <memory>
+#include <utility>
 
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2builder.h"
@@ -172,7 +173,7 @@ struct CrossingGraphEdge {
   bool outgoing;
   VertexId dst;
 };
-using CrossingGraphEdgeVector = gtl::InlinedVector<CrossingGraphEdge, 2>;
+using CrossingGraphEdgeVector = absl::InlinedVector<CrossingGraphEdge, 2>;
 
 // Returns a vector of EdgeIds sorted by input edge id.  When more than one
 // output edge has the same input edge id (i.e., the input edge snapped to a
@@ -1128,8 +1129,8 @@ void S2BoundaryOperation::AddRegion(
     std::function<bool (S2Point const&)> contains,
     std::function<bool (S2Shape const&)> reverse_edges) {
   DCHECK_LT(regions_.size(), 2);
-  regions_.push_back(
-      Region(regions_.size(), index, contains, reverse_edges));
+  regions_.push_back(Region(regions_.size(), index, std::move(contains),
+                            std::move(reverse_edges)));
 }
 
 bool S2BoundaryOperation::Build(S2Error* error) {

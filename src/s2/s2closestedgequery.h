@@ -290,7 +290,7 @@ class S2ClosestEdgeQuery {
   // The covering needs to be stored in a std::vector so that we can use
   // S2CellUnion::GetIntersection().
   std::vector<S2CellId> index_covering_;
-  gtl::InlinedVector<S2ShapeIndexCell const*, 6> index_cells_;
+  absl::InlinedVector<S2ShapeIndexCell const*, 6> index_cells_;
 
   ////////// Fields that are updated during a query /////////////
 
@@ -326,7 +326,7 @@ class S2ClosestEdgeQuery {
   Result tmp_result_singleton_;
 
   // Once all result edges have been found, they are copied into a vector.
-  gtl::InlinedVector<Result, 8> results_;
+  absl::InlinedVector<Result, 8> results_;
 
   Result const& result(int i) const;  // Internal accessor method.
 
@@ -370,7 +370,7 @@ class S2ClosestEdgeQuery {
     }
   };
   using CellQueue =
-      std::priority_queue<QueueEntry, gtl::InlinedVector<QueueEntry, 16>>;
+      std::priority_queue<QueueEntry, absl::InlinedVector<QueueEntry, 16>>;
   CellQueue queue_;
 
   // Temporaries, defined here to avoid multiple allocations / initializations.

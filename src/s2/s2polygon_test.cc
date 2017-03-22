@@ -62,7 +62,6 @@ using s2builderutil::S2PolygonLayer;
 using std::max;
 using std::min;
 using std::numeric_limits;
-using std::pair;
 using std::swap;
 using std::unique_ptr;
 using std::vector;
@@ -2789,7 +2788,7 @@ class S2PolygonDecodeTest : public ::testing::Test {
   const int kMaxBytes = 256;
 
   // The data array.
-  FixedArray<int8> data_array_;
+  absl::FixedArray<int8> data_array_;
 
   // Encoder that is used to put data into the array.
   Encoder encoder_;

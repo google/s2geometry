@@ -193,27 +193,27 @@ class S2Cell : public S2Region {
   R2Rect uv_;
 };
 
-inline bool operator==(S2Cell x, S2Cell y) {
+inline bool operator==(const S2Cell& x, const S2Cell& y) {
   return x.id() == y.id();
 }
 
-inline bool operator!=(S2Cell x, S2Cell y) {
+inline bool operator!=(const S2Cell& x, const S2Cell& y) {
   return x.id() != y.id();
 }
 
-inline bool operator<(S2Cell x, S2Cell y) {
+inline bool operator<(const S2Cell& x, const S2Cell& y) {
   return x.id() < y.id();
 }
 
-inline bool operator>(S2Cell x, S2Cell y) {
+inline bool operator>(const S2Cell& x, const S2Cell& y) {
   return x.id() > y.id();
 }
 
-inline bool operator<=(S2Cell x, S2Cell y) {
+inline bool operator<=(const S2Cell& x, const S2Cell& y) {
   return x.id() <= y.id();
 }
 
-inline bool operator>=(S2Cell x, S2Cell y) {
+inline bool operator>=(const S2Cell& x, const S2Cell& y) {
   return x.id() >= y.id();
 }
 
