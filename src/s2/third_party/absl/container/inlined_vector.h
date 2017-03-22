@@ -40,7 +40,6 @@
 
 #include "s2/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
-#include "s2/base/type_traits.h"
 
 
 

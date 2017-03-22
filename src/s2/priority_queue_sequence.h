@@ -27,7 +27,7 @@
 //
 //  (1) the underlying sequence type is accessible via rep() and mutable_rep()
 //      methods, so that clients can manipulate it directly if desired; and
-//  (2) the default sequence type is gtl::InlinedVector.
+//  (2) the default sequence type is absl::InlinedVector.
 //
 // Exposing the sequence type gives more flexibility in how it is used,
 // e.g. the queue can be emptied by calling clear(), the elements in the
@@ -38,7 +38,7 @@
 // Using InlinedVector as the default sequence type increases efficiency in
 // cases where the maximum queue size is small.
 
-template <class T, class Sequence = gtl::InlinedVector<T, 16>,
+template <class T, class Sequence = absl::InlinedVector<T, 16>,
           class Compare = std::less<typename Sequence::value_type>>
 class priority_queue_sequence
     : public std::priority_queue<T, Sequence, Compare> {

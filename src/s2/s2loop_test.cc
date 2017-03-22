@@ -225,7 +225,7 @@ class S2LoopTestBase : public testing::Test {
   // Wrapper function that encodes "loop" into "encoder" using the private
   // EncodeCompressed() method.
   void TestEncodeCompressed(S2Loop const& loop, int level, Encoder* encoder) {
-    FixedArray<S2XYZFaceSiTi> points(loop.num_vertices());
+    absl::FixedArray<S2XYZFaceSiTi> points(loop.num_vertices());
     loop.GetXYZFaceSiTiVertices(points.get());
     loop.EncodeCompressed(encoder, points.get(), level);
   }

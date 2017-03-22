@@ -865,7 +865,7 @@ void S2Polygon::Encode(Encoder* const encoder) const {
     return;
   }
   // Converts all the polygon vertices to S2XYZFaceSiTi format.
-  FixedArray<S2XYZFaceSiTi> all_vertices(num_vertices_);
+  absl::FixedArray<S2XYZFaceSiTi> all_vertices(num_vertices_);
   S2XYZFaceSiTi* current_loop_vertices = all_vertices.get();
   for (unique_ptr<S2Loop> const& loop : loops_) {
     loop->GetXYZFaceSiTiVertices(current_loop_vertices);
