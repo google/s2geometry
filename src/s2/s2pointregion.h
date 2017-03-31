@@ -19,7 +19,7 @@
 #define S2_S2POINTREGION_H_
 
 #include <glog/logging.h>
-#include "s2/base/macros.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/fpcontractoff.h"
 #include "s2/s1angle.h"
 #include "s2/s2pointutil.h"

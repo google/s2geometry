@@ -29,7 +29,7 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include "s2/base/macros.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/base/stringprintf.h"
 #include "s2/strings/serialize.h"
 #include <gtest/gtest.h>

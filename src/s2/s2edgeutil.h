@@ -21,7 +21,7 @@
 #include <cmath>
 
 #include <glog/logging.h>
-#include "s2/base/macros.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/fpcontractoff.h"
 #include "s2/r2.h"

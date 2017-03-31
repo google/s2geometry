@@ -28,7 +28,7 @@
 #include <type_traits>
 
 #include "s2/base/casts.h"
-#include "s2/base/int128.h"
+#include "s2/third_party/absl/numeric/int128.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/port.h"

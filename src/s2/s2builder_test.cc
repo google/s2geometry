@@ -24,6 +24,7 @@
 #include <string>
 #include <gflags/gflags.h>
 #include <glog/log_severity.h>
+#include "s2/base/stringprintf.h"
 #include "s2/base/timer.h"
 #include "s2/strings/join.h"
 #include <gtest/gtest.h>
@@ -45,7 +46,9 @@
 using gtl::MakeUnique;
 using std::cout;
 using std::endl;
+using std::make_pair;
 using std::min;
+using std::pair;
 using std::unique_ptr;
 using std::vector;
 using s2builderutil::IdentitySnapFunction;
@@ -57,6 +60,8 @@ using s2builderutil::S2PolylineVectorLayer;
 using s2textformat::MakePolygon;
 using s2textformat::MakePolyline;
 using EdgeType = S2Builder::EdgeType;
+using InputEdgeId = S2Builder::Graph::InputEdgeId;
+using Graph = S2Builder::Graph;
 using GraphOptions = S2Builder::GraphOptions;;
 
 DEFINE_int32(iteration_multiplier, 1,
@@ -390,7 +395,7 @@ TEST(S2Builder, SelfIntersectingPolygon) {
   builder.StartLayer(MakeUnique<S2PolygonLayer>(
       &output, S2PolygonLayer::Options(EdgeType::UNDIRECTED)));
   unique_ptr<S2Polyline> input(MakePolyline("3:1, 1:3, 1:1, 3:3, 3:1"));
-  unique_ptr<S2Polygon> expected(MakePolygon("1:1, 1:3, 2:2; 3:1, 2:2, 3:3"));
+  unique_ptr<S2Polygon> expected(MakePolygon("1:1, 1:3, 2:2; 3:3, 3:1, 2:2"));
   builder.AddPolyline(*input);
   S2Error error;
   ASSERT_TRUE(builder.Build(&error)) << error.text();
@@ -657,6 +662,230 @@ TEST(S2Builder, SimplifyMergesDuplicateEdges) {
   TestPolylineVector(
       {"0:0, 0:10", "0:0, 0.6:5, 0:10"},
       {"0:0, 0:10"}, layer_options, options);
+}
+
+// A set of (edge string, vector<InputEdgeId>) pairs representing the
+// InputEdgeIds attached to the edges of a graph.  Edges are in
+// s2textformat::ToString() format, such as "1:3, 4:5".
+using EdgeInputEdgeIds = vector<pair<string, vector<int>>>;
+
+S2Error::Code INPUT_EDGE_ID_MISMATCH = S2Error::USER_DEFINED_START;
+
+class InputEdgeIdCheckingLayer : public S2Builder::Layer {
+ public:
+  InputEdgeIdCheckingLayer(EdgeInputEdgeIds const& expected,
+                           GraphOptions const& graph_options)
+      : expected_(expected), graph_options_(graph_options) {
+  }
+  GraphOptions graph_options() const override { return graph_options_; }
+  void Build(Graph const& g, S2Error* error) override;
+
+ private:
+  string ToString(pair<string, vector<int>> const& p) {
+    string r = StringPrintf("  (%s)={", p.first.c_str());
+    if (!p.second.empty()) {
+      for (int id : p.second) {
+        StringAppendF(&r, "%d, ", id);
+      }
+      r.erase(r.size() - 2, 2);
+    }
+    r += "}\n";
+    return r;
+  }
+
+  EdgeInputEdgeIds expected_;
+  GraphOptions graph_options_;
+};
+
+void InputEdgeIdCheckingLayer::Build(Graph const& g, S2Error* error) {
+  EdgeInputEdgeIds actual;
+  vector<S2Point> vertices;
+  for (Graph::EdgeId e = 0; e < g.num_edges(); ++e) {
+    vertices.clear();
+    vertices.push_back(g.vertex(g.edge(e).first));
+    vertices.push_back(g.vertex(g.edge(e).second));
+    string edge = s2textformat::ToString(
+        vector<S2Point>{g.vertex(g.edge(e).first),
+                        g.vertex(g.edge(e).second)});
+    auto ids = g.input_edge_ids(e);
+    actual.push_back(make_pair(
+        edge, vector<InputEdgeId>(ids.begin(), ids.end())));
+  }
+  // This comparison doesn't consider multiplicity, but that's fine.
+  string missing, extra;
+  for (auto const& p : expected_) {
+    if (std::count(actual.begin(), actual.end(), p) > 0) continue;
+    missing += ToString(p);
+  }
+  for (auto const& p : actual) {
+    if (std::count(expected_.begin(), expected_.end(), p) > 0) continue;
+    extra += ToString(p);
+  }
+  if (!missing.empty() || !extra.empty()) {
+    error->Init(INPUT_EDGE_ID_MISMATCH, "Missing:\n%sExtra:\n%s\n",
+                missing.c_str(), extra.c_str());
+  }
+}
+
+void TestInputEdgeIds(
+    vector<char const*> const& input_strs, EdgeInputEdgeIds const& expected,
+    GraphOptions const& graph_options, S2Builder::Options const& options) {
+  S2Builder builder(options);
+  builder.StartLayer(MakeUnique<InputEdgeIdCheckingLayer>(expected,
+                                                          graph_options));
+  for (auto input_str : input_strs) {
+    builder.AddPolyline(*MakePolyline(input_str));
+  }
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error)) << error.text();
+}
+
+TEST(S2Builder, InputEdgeIdAssignment) {
+  // Check that input edge ids are assigned in order.
+  TestInputEdgeIds({"0:0, 0:1, 0:2"}, {{"0:0, 0:1", {0}}, {"0:1, 0:2", {1}}},
+                   GraphOptions(), S2Builder::Options());
+}
+
+TEST(S2Builder, UndirectedSiblingsDontHaveInputEdgeIds) {
+  // Check that the siblings of undirected edges do not have InputEdgeIds.
+  GraphOptions graph_options;
+  graph_options.set_edge_type(EdgeType::UNDIRECTED);
+  TestInputEdgeIds({"0:0, 0:1, 0:2"},
+                   {{"0:0, 0:1", {0}}, {"0:1, 0:2", {1}},
+                    {"0:1, 0:0", {}}, {"0:2, 0:1", {}}},
+                   graph_options, S2Builder::Options());
+}
+
+TEST(S2Builder, CreatedSiblingsDontHaveInputEdgeIds) {
+  // Check that edges created by SiblingPairs::CREATE do not have
+  // InputEdgeIds.
+  GraphOptions graph_options;
+  graph_options.set_sibling_pairs(GraphOptions::SiblingPairs::CREATE);
+  TestInputEdgeIds({"0:0, 0:1, 0:2"}, {{"0:0, 0:1", {0}}, {"0:1, 0:2", {1}}},
+                   GraphOptions(), S2Builder::Options());
+}
+
+TEST(S2Builder, EdgeMergingDirected) {
+  // Tests that input edge ids are merged when directed edges are merged.
+  GraphOptions graph_options;
+  graph_options.set_duplicate_edges(GraphOptions::DuplicateEdges::MERGE);
+  TestInputEdgeIds({"0:0, 0:1", "0:0, 0:1"}, {{"0:0, 0:1", {0, 1}}},
+                   graph_options, S2Builder::Options());
+}
+
+TEST(S2Builder, EdgeMergingUndirected) {
+  // Tests that input edge ids are merged when undirected edges are merged.
+  GraphOptions graph_options;
+  graph_options.set_duplicate_edges(GraphOptions::DuplicateEdges::MERGE);
+  graph_options.set_sibling_pairs(GraphOptions::SiblingPairs::KEEP);
+  TestInputEdgeIds({"0:0, 0:1, 0:2", "0:0, 0:1", "0:2, 0:1"}, {
+      {"0:0, 0:1", {0, 2}}, {"0:1, 0:2", {1}}, {"0:2, 0:1", {3}}
+    }, graph_options, S2Builder::Options());
+}
+
+TEST(S2Builder, SimplifyDegenerateEdgeMergingEasy) {
+  // Check that when an input edge is snapped to a chain that includes
+  // degenerate edges, and the edge chain is simplified, that the InputEdgeIds
+  // attached to those degenerate edges are transferred to the simplified
+  // edge.  For example (using integers for vertices), an edge chain 1->2,
+  // 2->2, 2->3 that is simplified to 1->3 should get the InputEdgeIds
+  // associated with all three original edges.  (This ensures that the labels
+  // attached to those edges are also transferred.)
+  //
+  // This also tests that degenerate edges at the start and end of the
+  // simplified chain are *not* merged.  (It's up to the output layer to
+  // decide what to do with these edges.  The only reason we merge degenerate
+  // edges in the interior of the interior of the simplified edge is because
+  // those edges are being removed from the graph.)
+  GraphOptions graph_options;
+  graph_options.set_degenerate_edges(GraphOptions::DegenerateEdges::KEEP);
+  S2Builder::Options options(IntLatLngSnapFunction(0));
+  options.set_simplify_edge_chains(true);
+  TestInputEdgeIds({"0:0, 0:0.1, 0:1.1, 0:1, 0:0.9, 0:2, 0:2.1"}, {
+      {"0:0, 0:0", {0}}, {"0:0, 0:2", {1, 2, 3, 4}}, {"0:2, 0:2", {5}}
+    }, graph_options, options);
+}
+
+TEST(S2Builder, SimplifyDegenerateEdgeMergingHard) {
+  // This is a harder version of the test above.  Now there are several edge
+  // chains that overlap each other in both directions, and several degenerate
+  // edges at that middle vertex.  This tests that if exactly one edge chain
+  // contains a degenerate edge in input edge order (e.g., the input order was
+  // AB, BB, BC), then the degenerate edge is assigned to that edge chain.
+  // Otherwise the edge is assigned to an arbitrary chain.
+  GraphOptions graph_options;
+  graph_options.set_edge_type(EdgeType::DIRECTED);
+  graph_options.set_duplicate_edges(GraphOptions::DuplicateEdges::KEEP);
+  graph_options.set_degenerate_edges(GraphOptions::DegenerateEdges::KEEP);
+  graph_options.set_sibling_pairs(GraphOptions::SiblingPairs::KEEP);
+  S2Builder::Options options(IntLatLngSnapFunction(0));
+  options.set_simplify_edge_chains(true);
+  vector<char const*> input {
+    "0:1, 0:1.1", "0:0, 0:1, 0:2",  // Degenerate edge defined before chain
+    "0:0, 0:0.9, 0:1, 0:1.1, 0:2",  // Degenerate edge defined in chain
+    "0:2, 0:1, 0:0.9, 0:0",         // Defined in chain, chain reversed
+    "0:2, 0:1, 0:0", "0:1.1, 0:1", "0:1, 0:1.1",  // Defined after chain
+  };
+  EdgeInputEdgeIds expected {
+    {"0:0, 0:2", {0, 1, 2}}, {"0:0, 0:2", {3, 4, 5, 6}},
+    {"0:2, 0:0", {7, 8, 9}}, {"0:2, 0:0", {10, 11, 12, 13}}
+  };
+  TestInputEdgeIds(input, expected, graph_options, options);
+
+  // Now try the same test with undirected edges.  This results in four more
+  // simplified edges that are not labelled with any input edge ids.
+  expected.insert(expected.end(), {
+      {"0:0, 0:2", {}}, {"0:0, 0:2", {}}, {"0:2, 0:0", {}}, {"0:2, 0:0", {}}
+    });
+  graph_options.set_edge_type(EdgeType::UNDIRECTED);
+  TestInputEdgeIds(input, expected, graph_options, options);
+}
+
+TEST(S2Builder, SimplifyDegenerateEdgeMergingMultipleLayers) {
+  // Check that degenerate edges are assigned to an edge in the correct layer
+  // when multiple edge chains in different layers are simplified in the same
+  // way (i.e., yielding a set of identical or reversed edges in different
+  // layers).
+  GraphOptions graph_options;
+  graph_options.set_edge_type(EdgeType::DIRECTED);
+  graph_options.set_duplicate_edges(GraphOptions::DuplicateEdges::KEEP);
+  graph_options.set_degenerate_edges(GraphOptions::DegenerateEdges::KEEP);
+  graph_options.set_sibling_pairs(GraphOptions::SiblingPairs::KEEP);
+  S2Builder::Options options(IntLatLngSnapFunction(0));
+  options.set_simplify_edge_chains(true);
+
+  // Note below that the edge chains in different layers have different vertex
+  // locations, different number of interior vertices, different degenerate
+  // edges, etc, and yet they can all be simplified together.
+  vector<vector<char const*>> input { {
+      "0.1:5, 0:5.2", "0.1:0, 0:9.9",   // Defined before chain
+      "0:10.1, 0:0.1", "0:3.1, 0:2.9",  // Defined after chain
+    }, {
+      "0.1:3, 0:3.2", "-0.1:0, 0:4.1, 0:9.9",  // Defined before chain
+      "0.1:9.9, 0:7, 0.1:6.9, 0.1:0.2",        // Defined inside chain
+    }, {
+      "0.2:0.3, 0.1:6, 0:5.9, 0.1:10.2",       // Defined inside chain
+      "0.1:0.1, 0:9.8", "0.1:2, 0:2.1",        // Defined after chain
+    }
+  };
+  vector<EdgeInputEdgeIds> expected { {
+      {"0:0, 0:10", {0, 1}}, {"0:10, 0:0", {2, 3}}
+    }, {
+      {"0:0, 0:10", {4, 5, 6}}, {"0:10, 0:0", {7, 8, 9}}
+    }, {
+      {"0:0, 0:10", {10, 11, 12}}, {"0:0, 0:10", {13, 14}}
+    }
+  };
+  S2Builder builder(options);
+  for (int i = 0; i < input.size(); ++i) {
+    builder.StartLayer(MakeUnique<InputEdgeIdCheckingLayer>(expected[i],
+                                                            graph_options));
+    for (auto input_str : input[i]) {
+      builder.AddPolyline(*MakePolyline(input_str));
+    }
+  }
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error)) << error.text();
 }
 
 TEST(S2Builder, HighPrecisionPredicates) {

@@ -13,16 +13,15 @@
 // limitations under the License.
 //
 
-
 // All Rights Reserved.
 //
 
-#ifndef S2_BASE_INT128_H_
-#define S2_BASE_INT128_H_
+#ifndef S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_
+#define S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_
 
 #include <iosfwd>
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/base/macros.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 
 struct uint128_pod;
@@ -378,4 +377,4 @@ inline uint128& uint128::operator--() {
   return *this;
 }
 
-#endif  // S2_BASE_INT128_H_
+#endif  // S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_

@@ -12,6 +12,8 @@
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2loop.h"
+#include "s2/s2measures.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2regioncoverer.h"
@@ -220,6 +222,9 @@ class S2EdgeUtil {
 %unignore S1Interval;
 %ignore S1Interval::operator[];
 %unignore S1Interval::GetLength;
+%unignore S2;
+%unignore S2::Rotate;
+%unignore S2::TurnAngle;
 %unignore S2Cap;
 %unignore S2Cap::S2Cap;
 %unignore S2Cap::~S2Cap;
@@ -454,6 +459,8 @@ class S2EdgeUtil {
 %include "s2/s2latlng.h"
 %include "s2/s2latlngrect.h"
 %include "s2/s2loop.h"
+%include "s2/s2measures.h"
+%include "s2/s2pointutil.h"
 %include "s2/s2polygon.h"
 %include "s2/s2polyline.h"
 %include "s2/s2regioncoverer.h"

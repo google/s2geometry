@@ -25,7 +25,7 @@
 // Avoid adding expensive includes here.
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
-#include "s2/base/macros.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 #include "s2/base/type_traits.h"
 #include "s2/util/coding/varint.h"

@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/macros.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/fpcontractoff.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"

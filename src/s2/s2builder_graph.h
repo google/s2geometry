@@ -241,6 +241,14 @@ class S2Builder::Graph {
     void operator=(VertexInMap const&) = delete;
   };
 
+  // Defines a value larger than any valid InputEdgeId.
+  static InputEdgeId const kMaxInputEdgeId =
+      std::numeric_limits<InputEdgeId>::max();
+
+  // The following value of InputEdgeId means that an edge does not
+  // corresponds to any input edge.
+  static InputEdgeId const kNoInputEdgeId = kMaxInputEdgeId - 1;
+
   // Returns the set of input edge ids that were snapped to the given
   // edge.  ("Input edge ids" are assigned to input edges sequentially in
   // the order they are added to the builder.)  For example, if input
@@ -249,11 +257,23 @@ class S2Builder::Graph {
   //
   //   for (InputEdgeId input_edge_id : g.input_edge_ids(e)) { ... }
   //
+  // Please note the following:
+  //
+  //  - When edge chains are simplified, the simplified edge is assigned all
+  //    the input edge ids associated with edges of the chain.
+  //
+  //  - Edges can also have multiple input edge ids due to edge merging
+  //    (if DuplicateEdges::MERGE is specified).
+  //
+  //  - Siblings edges automatically created by EdgeType::UNDIRECTED or
+  //    SiblingPairs::CREATE have an empty set of input edge ids.  (However
+  //    you can use a LabelFetcher to retrieve the set of labels associated
+  //    with both edges of a given sibling pair.)
   IdSetLexicon::IdSet input_edge_ids(EdgeId e) const;
 
   // Low-level method that returns an integer representing the entire set of
-  // input edge ids that were snapped to the given edge.  The elements of
-  // the IdSet can be accessed using input_edge_id_set_lexicon().
+  // input edge ids that were snapped to the given edge.  The elements of the
+  // IdSet can be accessed using input_edge_id_set_lexicon().
   InputEdgeIdSetId input_edge_id_set_id(EdgeId e) const;
 
   // Low-level method that returns a vector where each element represents the
@@ -270,6 +290,7 @@ class S2Builder::Graph {
   InputEdgeId min_input_edge_id(EdgeId e) const;
 
   // Returns a vector containing the minimum input edge id for every edge.
+  // If an edge has no input ids, kNoInputEdgeId is used.
   std::vector<InputEdgeId> GetMinInputEdgeIds() const;
 
   // Returns a vector of EdgeIds sorted by minimum input edge id.  This is an
@@ -277,11 +298,37 @@ class S2Builder::Graph {
   std::vector<EdgeId> GetInputEdgeOrder(
       std::vector<InputEdgeId> const& min_input_edge_ids) const;
 
-  // Convenience method that returns the set of labels associated with all the
-  // input edges that were snapped to this edge.  (The value is returned by
-  // pointer to allow clients to avoid allocating a new vector on every call
-  // to this method.)
-  void GetLabels(EdgeId e, std::vector<S2Builder::Label>* labels) const;
+  // Convenience class to return the set of labels associated with a given
+  // graph edge.  Note that due to snapping, one graph edge may correspond to
+  // several different input edges and will have all of their labels.
+  // This class is the preferred way to retrieve edge labels.
+  //
+  // The reason this is a class rather than a graph method is because for
+  // undirected edges, we need to fetch the labels associated with both
+  // siblings.  This is because only the original edge of the sibling pair has
+  // labels; the automatically generated sibling edge does not.
+  class LabelFetcher {
+   public:
+    // Prepares to fetch labels associated with the given edge type.  For
+    // EdgeType::UNDIRECTED, labels associated with both edges of the sibling
+    // pair will be returned.  "edge_type" is a parameter (rather than using
+    // g.options().edge_type()) so that clients can explicitly control whether
+    // labels from one or both siblings are returned.
+    LabelFetcher(Graph const& g, EdgeType edge_type);
+
+    // Returns the set of labels associated with edge "e" (and also the labels
+    // associated with the sibling of "e" if edge_type() is UNDIRECTED).
+    // Labels are sorted and duplicate labels are automatically removed.
+    //
+    // This method uses an output parameter rather than returning by value in
+    // order to avoid allocating a new vector on every call to this method.
+    void Fetch(EdgeId e, std::vector<S2Builder::Label>* labels);
+
+   private:
+    Graph const& g_;
+    EdgeType edge_type_;
+    std::vector<EdgeId> sibling_map_;
+  };
 
   // Returns the set of labels associated with a given input edge.  Example:
   //   for (Label label : g.labels(input_edge_id)) { ... }
@@ -467,9 +514,9 @@ class S2Builder::Graph {
   // reconstructing a polyline that has been snapped to a lower resolution,
   // since snapping can cause edges to become identical.
   //
-  // If edge_type() == DIRECTED, this method tries to preserve the input edge
-  // ordering in order to implement idempotency.  (Undirected edges are
-  // assembled into arbitrary polylines without considering the input.)
+  // This method attempts to preserve the input edge ordering in order to
+  // implement idempotency, even when there are repeated edges or loops.  This
+  // is true whether directed or undirected edges are used.
   //
   // REQUIRES: options.degenerate_edges() == DISCARD
   //           [It would be easy to add support for KEEP.]

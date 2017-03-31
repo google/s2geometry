@@ -27,7 +27,7 @@
 #include <type_traits>
 
 #include "s2/third_party/dynamic_annotations/dynamic_annotations.h"
-#include "s2/base/macros.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 
 // A FixedArray<T> represents a non-resizable array of T where the
