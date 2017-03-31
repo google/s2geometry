@@ -23,7 +23,6 @@
 
 #include <glog/logging.h>
 
-#include "s2/base/macros.h"
 #include "s2/fpcontractoff.h"
 #include "s2/s1angle.h"
 #include "s2/s2debug.h"
@@ -31,6 +30,7 @@
 #include "s2/s2latlngrect.h"
 #include "s2/s2region.h"
 #include "s2/s2shapeindex.h"
+#include "s2/third_party/absl/base/macros.h"
 
 class Decoder;
 class Encoder;

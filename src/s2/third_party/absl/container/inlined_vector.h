@@ -38,7 +38,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "s2/base/macros.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 
 

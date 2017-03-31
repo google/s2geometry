@@ -202,5 +202,20 @@ class PyWrapS2TestCase(unittest.TestCase):
     d2 = cell.GetDistance(p2).ToAngle().degrees()
     self.assertAlmostEqual(45.0, d2)
 
+  def testS2Rotate(self):
+    mtv_a = s2.S2LatLng.FromDegrees(37.4402777, -121.9638888).ToPoint()
+    mtv_b = s2.S2LatLng.FromDegrees(37.3613888, -121.9283333).ToPoint()
+    angle = s2.S1Angle.Radians(0.039678)
+    point = s2.Rotate(mtv_a, mtv_b, angle)
+    self.assertEqual("37.439095,-121.967802",
+                     s2.S2LatLng(point).ToStringInDegrees())
+
+  def testS2TurnAngle(self):
+    mtv_a = s2.S2LatLng.FromDegrees(37.4402777, -121.9638888).ToPoint()
+    mtv_b = s2.S2LatLng.FromDegrees(37.3613888, -121.9283333).ToPoint()
+    mtv_c = s2.S2LatLng.FromDegrees(37.3447222, -122.0308333).ToPoint()
+    angle = s2.TurnAngle(mtv_a, mtv_b, mtv_c)
+    self.assertAlmostEqual(-1.7132025, angle)
+
 if __name__ == "__main__":
   unittest.main()

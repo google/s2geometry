@@ -736,7 +736,11 @@ extern inline void prefetch(const void *x) {
 #define HAVE_ATTRIBUTE_WEAK 0
 #define ATTRIBUTE_INITIAL_EXEC
 #define ATTRIBUTE_NONNULL(...)
+#if defined(_MSC_VER)
+#define ATTRIBUTE_NORETURN __declspec(noreturn)
+#else
 #define ATTRIBUTE_NORETURN
+#endif
 #define ATTRIBUTE_NO_SANITIZE_ADDRESS
 #define ATTRIBUTE_NO_SANITIZE_MEMORY
 #if !defined(SWIG) || SWIG_VERSION >= 0x020000
@@ -1479,5 +1483,27 @@ inline void sized_delete(void* ptr, size_t size) {
 #if defined(__cplusplus) && !defined(LANG_CXX11) && !defined(SWIG)
 #error "LANG_CXX11 is required."
 #endif
+
+// A variable declaration annotated with the ABSL_CONST_INIT attribute will
+// not compile (on supported platforms) unless the variable has a constant
+// initializer. This is useful for variables with static and thread storage
+// duration, because it guarantees that they will not suffer from the so-called
+// "static init order fiasco".
+//
+// Sample usage:
+//
+// ABSL_CONST_INIT static MyType my_var = MakeMyType(...);
+//
+// Note that this attribute is redundant if the variable is declared constexpr.
+#if defined(__has_cpp_attribute)
+#if __has_cpp_attribute(clang::require_constant_initialization)
+// NOLINTNEXTLINE(whitespace/braces) (b/36288871)
+#define ABSL_CONST_INIT [[clang::require_constant_initialization]]
+#else
+#define ABSL_CONST_INIT
+#endif  // __has_cpp_attribute(clang::require_constant_initialization)
+#else
+#define ABSL_CONST_INIT
+#endif  // defined(__has_cpp_attribute)
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_PORT_H_

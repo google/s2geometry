@@ -22,8 +22,6 @@
 
 #include <glog/logging.h>
 
-#include "s2/base/macros.h"
-#include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -34,6 +32,8 @@
 #include "s2/s2latlngrect.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
+#include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/util/math/vector.h"
 
 class ExactFloat;

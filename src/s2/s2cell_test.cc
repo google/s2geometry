@@ -28,7 +28,6 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "s2/base/macros.h"
 #include "s2/base/stringprintf.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -44,6 +43,7 @@
 #include "s2/s2metrics.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2testing.h"
+#include "s2/third_party/absl/base/macros.h"
 
 using S2::internal::kSwapMask;
 using std::fabs;

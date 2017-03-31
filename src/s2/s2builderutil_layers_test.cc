@@ -49,7 +49,7 @@ unique_ptr<S2Polyline> MakePolyline(string const& str) {
 }
 
 void TestS2Polygon(vector<char const*> const& input_strs,
-                   EdgeType edge_type, char const* expected_str) {
+                   char const* expected_str, EdgeType edge_type) {
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder((S2Builder::Options()));
   S2Polygon output;
@@ -70,8 +70,8 @@ void TestS2Polygon(vector<char const*> const& input_strs,
 
 void TestS2Polygon(vector<char const*> const& input_strs,
                    char const* expected_str) {
-  TestS2Polygon(input_strs, EdgeType::DIRECTED, expected_str);
-  TestS2Polygon(input_strs, EdgeType::UNDIRECTED, expected_str);
+  TestS2Polygon(input_strs, expected_str, EdgeType::DIRECTED);
+  TestS2Polygon(input_strs, expected_str, EdgeType::UNDIRECTED);
 }
 
 void TestS2PolygonUnchanged(char const* input_str) {
@@ -140,12 +140,15 @@ TEST(S2PolygonLayer, DuplicateInputEdges) {
 // unchanged when the endpoints of an edge are swapped.
 using EdgeLabelMap = map<S2Point, set<int32>>;
 
-void AddPolylineWithLabels(S2Polyline const& polyline, int32 label_begin,
-                           S2Builder* builder, EdgeLabelMap *edge_label_map) {
+void AddPolylineWithLabels(S2Polyline const& polyline, EdgeType edge_type,
+                           int32 label_begin, S2Builder* builder,
+                           EdgeLabelMap *edge_label_map) {
   for (int i = 0; i + 1 < polyline.num_vertices(); ++i) {
     int32 label = label_begin + i;
     builder->set_label(label);
-    builder->AddEdge(polyline.vertex(i), polyline.vertex(i + 1));
+    // With undirected edges, reverse the direction of every other input edge.
+    int dir = edge_type == EdgeType::DIRECTED ? 1 : (i & 1);
+    builder->AddEdge(polyline.vertex(i + (1 - dir)), polyline.vertex(i + dir));
     S2Point key = polyline.vertex(i) + polyline.vertex(i + 1);
     (*edge_label_map)[key].insert(label);
   }
@@ -165,10 +168,9 @@ static void TestEdgeLabels(EdgeType edge_type) {
   EdgeLabelMap edge_label_map;
   AddPolylineWithLabels(*MakePolyline("0:0, 9:1, 1:9, 0:0, 2:8, 8:2, "
                                       "0:0, 0:10, 10:10, 10:0, 0:0"),
-                        0, &builder, &edge_label_map);
+                        edge_type, 0, &builder, &edge_label_map);
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
-  LOG(INFO) << s2textformat::ToString(output);
   vector<int> expected_loop_sizes = { 4, 3, 3 };
   ASSERT_EQ(expected_loop_sizes.size(), label_set_ids.size());
   for (int i = 0; i < expected_loop_sizes.size(); ++i) {
@@ -289,35 +291,30 @@ void TestS2Polyline(
 }
 
 // Convenience function that tests both directed and undirected edges.
-//
-// Note that all of the EdgeType::UNDIRECTED results are *fragile* in the
-// sense that they depend on the internal details of how S2Builder sorts
-// vertices (S2Builder::CopyInputEdges and S2Builder::ChooseInitialSites).
-// If these functions change, then the undirected output may change.
 void TestS2Polyline(
-    vector<char const*> const& input_strs,
-    char const* directed_expected_str, char const* undirected_expected_str,
+    vector<char const*> const& input_strs, char const* expected_str,
     S2Builder::Options const& options = S2Builder::Options()) {
-  TestS2Polyline(input_strs, directed_expected_str,
-                 EdgeType::DIRECTED, options);
-  TestS2Polyline(input_strs, undirected_expected_str,
-                 EdgeType::UNDIRECTED, options);
+  TestS2Polyline(input_strs, expected_str, EdgeType::DIRECTED, options);
+  TestS2Polyline(input_strs, expected_str, EdgeType::UNDIRECTED, options);
+}
+
+void TestS2PolylineUnchanged(char const* input_str) {
+  TestS2Polyline(vector<char const*>{input_str}, input_str);
 }
 
 TEST(S2PolylineLayer, NoEdges) {
-  TestS2Polyline({}, "", "");
+  TestS2Polyline({}, "");
 }
 
 TEST(S2PolylineLayer, OneEdge) {
-  // This test requires directed edges, since the input edge id ordering is
-  // not sufficient to reconstruct the original edge direction.
-  char const* input = "3:4, 1:1";
-  TestS2Polyline({input}, input, "1:1, 3:4");
+  // Even with undirected edges, S2PolylineLayer prefers to reconstruct edges
+  // in their original direction.
+  TestS2PolylineUnchanged("3:4, 1:1");
+  TestS2PolylineUnchanged("1:1, 3:4");
 }
 
 TEST(S2PolylineLayer, StraightLineWithBacktracking) {
-  char const* input = "0:0, 1:0, 2:0, 3:0, 2:0, 1:0, 2:0, 3:0, 4:0";
-  TestS2Polyline({input}, input, input);
+  TestS2PolylineUnchanged("0:0, 1:0, 2:0, 3:0, 2:0, 1:0, 2:0, 3:0, 4:0");
 }
 
 TEST(S2PolylineLayer, EarlyWalkTerminationWithEndLoop1) {
@@ -329,9 +326,7 @@ TEST(S2PolylineLayer, EarlyWalkTerminationWithEndLoop1) {
   // should not be triggered at all (but was at one point due to a bug).
   S2Builder::Options options;
   options.set_snap_function(s2builderutil::IntLatLngSnapFunction(2));
-  TestS2Polyline({"0:0, 0:2, 0:1"},
-                 "0:0, 0:1, 0:2, 0:1",
-                 EdgeType::DIRECTED, options);
+  TestS2Polyline({"0:0, 0:2, 0:1"}, "0:0, 0:1, 0:2, 0:1", options);
 }
 
 TEST(S2PolylineLayer, EarlyWalkTerminationWithEndLoop2) {
@@ -339,24 +334,21 @@ TEST(S2PolylineLayer, EarlyWalkTerminationWithEndLoop2) {
   // (yield a polyline with one edge), and then the walk is "maximimzed" by
   // appending a two-edge loop to the end.
   TestS2Polyline({"0:0, 0:1", "0:2, 0:1", "0:1, 0:2"},
-                 "0:0, 0:1, 0:2, 0:1",
-                 EdgeType::DIRECTED);
+                 "0:0, 0:1, 0:2, 0:1");
 }
 
 TEST(S2PolylineLayer, SimpleLoop) {
-  char const* input = "0:0, 0:5, 5:5, 5:0, 0:0";
-  TestS2Polyline({input}, input, input);
+  TestS2PolylineUnchanged("0:0, 0:5, 5:5, 5:0, 0:0");
 }
 
 TEST(S2PolylineLayer, ManyLoops) {
   // This polyline consists of many overlapping loops that keep returning to
   // the same starting vertex (2:2).  This tests whether the implementation is
   // able to assemble the polyline in the original order.
-  char const* input = (
+  TestS2PolylineUnchanged(
       "0:0, 2:2, 2:4, 2:2, 2:4, 4:4, 4:2, 2:2, 4:4, 4:2, 2:2, 2:0, 2:2, "
       "2:0, 4:0, 2:2, 4:2, 2:2, 0:2, 0:4, 2:2, 0:4, 0:2, 2:2, 0:4, 2:2, "
       "0:2, 2:2, 0:0, 0:2, 2:2, 0:0");
-  TestS2Polyline({input}, input, input);
 }
 
 TEST(S2PolylineLayer, UnorderedLoops) {
@@ -371,9 +363,7 @@ TEST(S2PolylineLayer, UnorderedLoops) {
       "1:1, 1:2, 2:2, 2:1, 1:1",  // Central square
       },
     "3:3, 3:2, 2:2, 2:1, 3:1, 3:0, 2:0, 2:1, 1:1, 1:0, 0:0, "
-    "0:1, 1:1, 1:2, 0:2, 0:1, 1:3, 1:2, 2:2, 2:3, 3:3",
-    "3:3, 3:2, 2:2, 1:2, 1:3, 0:1, 0:0, 1:0, 1:1, 0:1, 0:2, "
-    "1:2, 1:1, 2:1, 2:0, 3:0, 3:1, 2:1, 2:2, 2:3, 3:3");
+    "0:1, 1:1, 1:2, 0:2, 0:1, 1:3, 1:2, 2:2, 2:3, 3:3");
 }
 
 TEST(S2PolylineLayer, SplitEdges) {
@@ -389,8 +379,6 @@ TEST(S2PolylineLayer, SplitEdges) {
       {"0:10, 0:0, 1:0, -1:2, 1:4, -1:6, 1:8, -1:10, -5:0, 0:0, 0:10"},
       "0:10, 0:9, 0:7, 0:5, 0:3, 0:1, 0:0, 1:0, 0:1, -1:2, 0:3, 1:4, 0:5, "
       "-1:6, 0:7, 1:8, 0:9, -1:10, -5:0, 0:0, 0:1, 0:3, 0:5, 0:7, 0:9, 0:10",
-      "0:0, 0:1, 0:3, 0:5, 0:7, 0:9, 0:10, 0:9, 1:8, 0:7, -1:6, 0:5, 1:4, "
-      "0:3, -1:2, 0:1, 1:0, 0:0, -5:0, -1:10, 0:9, 0:7, 0:5, 0:3, 0:1, 0:0",
       options);
 }
 
@@ -399,16 +387,17 @@ TEST(S2PolylineLayer, SimpleEdgeLabels) {
   S2Polyline output;
   S2PolylineLayer::LabelSetIds label_set_ids;
   IdSetLexicon label_set_lexicon;
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output, &label_set_ids,
-                                                 &label_set_lexicon));
+  builder.StartLayer(MakeUnique<S2PolylineLayer>(
+      &output, &label_set_ids, &label_set_lexicon,
+      S2PolylineLayer::Options(EdgeType::UNDIRECTED)));
   builder.set_label(5);
   builder.AddPolyline(*MakePolyline("0:0, 0:1, 0:2"));
   builder.push_label(7);
-  builder.AddPolyline(*MakePolyline("0:2, 0:3"));
+  builder.AddPolyline(*MakePolyline("0:3, 0:2"));
   builder.clear_labels();
   builder.AddPolyline(*MakePolyline("0:3, 0:4, 0:5"));
   builder.set_label(11);
-  builder.AddPolyline(*MakePolyline("0:5, 0:6"));
+  builder.AddPolyline(*MakePolyline("0:6, 0:5"));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   vector<vector<int32>> expected = {{5}, {5}, {5, 7}, {}, {}, {11}};
@@ -442,10 +431,12 @@ TEST(S2PolylineLayer, InvalidPolyline) {
 void TestS2PolylineVector(
     vector<char const*> const& input_strs,
     vector<char const*> const& expected_strs,
-    S2PolylineVectorLayer::Options const& layer_options,
+    EdgeType edge_type,
+    S2PolylineVectorLayer::Options layer_options =  // by value
+    S2PolylineVectorLayer::Options(),
     S2Builder::Options const& builder_options = S2Builder::Options()) {
-  SCOPED_TRACE(layer_options.edge_type() == EdgeType::DIRECTED ?
-               "DIRECTED" : "UNDIRECTED");
+  layer_options.set_edge_type(edge_type);
+  SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder(builder_options);
   vector<unique_ptr<S2Polyline>> output;
   builder.StartLayer(MakeUnique<S2PolylineVectorLayer>(&output, layer_options));
@@ -463,82 +454,58 @@ void TestS2PolylineVector(
 }
 
 // Convenience function that tests both directed and undirected edges.
-//
-// Note that all of the EdgeType::UNDIRECTED results are *fragile* in the
-// sense that they depend on the internal details of how S2Builder sorts
-// vertices (S2Builder::CopyInputEdges and S2Builder::ChooseInitialSites).
-// If these functions change, then the undirected output may change.
 void TestS2PolylineVector(
     vector<char const*> const& input_strs,
-    vector<char const*> const& directed_expected_strs,
-    vector<char const*> const& undirected_expected_strs,
-    S2PolylineVectorLayer::Options layer_options,  // by value
+    vector<char const*> const& expected_strs,
+    S2PolylineVectorLayer::Options const& layer_options =
+    S2PolylineVectorLayer::Options(),
     S2Builder::Options const& builder_options = S2Builder::Options()) {
-  layer_options.set_edge_type(EdgeType::DIRECTED);
-  TestS2PolylineVector(input_strs, directed_expected_strs,
+  TestS2PolylineVector(input_strs, expected_strs, EdgeType::DIRECTED,
                        layer_options, builder_options);
-  layer_options.set_edge_type(EdgeType::UNDIRECTED);
-  TestS2PolylineVector(input_strs, undirected_expected_strs,
+  TestS2PolylineVector(input_strs, expected_strs, EdgeType::UNDIRECTED,
                        layer_options, builder_options);
+}
+
+void TestS2PolylineVectorUnchanged(vector<char const*> const& input_strs) {
+  TestS2PolylineVector(input_strs, input_strs);
 }
 
 TEST(S2PolylineVectorLayer, NoEdges) {
-  S2PolylineVectorLayer::Options layer_options;
-  TestS2PolylineVector({}, {}, {}, layer_options);
+  TestS2PolylineVectorUnchanged({});
 }
 
 TEST(S2PolylineVectorLayer, TwoPolylines) {
-  S2PolylineVectorLayer::Options layer_options;
-  vector<char const*> input = {"0:0, 1:1, 2:2", "4:4, 3:3"};
-  TestS2PolylineVector(
-      input, input, {"0:0, 1:1, 2:2", "3:3, 4:4"}, layer_options);
+  TestS2PolylineVectorUnchanged({"0:0, 1:1, 2:2", "4:4, 3:3"});
 }
 
 TEST(S2PolylineVectorLayer, JoiningPolylines) {
   // Check that polylines are joined together when possible, even if they were
-  // not adjacent in the input.
-  S2PolylineVectorLayer::Options layer_options;
+  // not adjacent in the input.  For undirected edges, the polyline direction
+  // should be chosen such that the first edge of the polyline was added to
+  // S2Builder before the last edge of the polyline.
   TestS2PolylineVector({"1:1, 2:2", "3:3, 2:2", "0:0, 1:1"},
-                            {"3:3, 2:2", "0:0, 1:1, 2:2"},
-                            {"0:0, 1:1, 2:2, 3:3"}, layer_options);
+                       {"3:3, 2:2", "0:0, 1:1, 2:2"}, EdgeType::DIRECTED);
+  TestS2PolylineVector({"1:1, 2:2", "3:3, 2:2", "0:0, 1:1"},
+                       {"3:3, 2:2, 1:1, 0:0"}, EdgeType::UNDIRECTED);
 }
 
 TEST(S2PolylineVectorLayer, SegmentNetwork) {
   // Test a complex network of polylines that meet at shared vertices.
-  S2PolylineVectorLayer::Options layer_options;
-  vector<char const*> input = {
-    "0:0, 1:1, 2:2",
-    "2:2, 2:3, 2:4",
-    "2:4, 3:4, 4:4",
-    "2:2, 3:2, 4:2",
-    "4:2, 4:3, 4:4",
-    "1:0, 2:2",
-    "0:1, 2:2",
-    "5:4, 4:4",
-    "4:5, 4:4",
-    "2:4, 2:5, 1:5, 1:4, 2:4",
-    "4:2, 6:1, 5:0",  // Two nested loops
-    "4:2, 7:0, 6:-1",
-    "11:1, 11:0, 10:0, 10:1, 11:1",  // Isolated loop
-  };
-  // The directed output is identical.  The undirected output is similar
-  // except that some of the polyline directions are reversed.
-  vector<char const*> undirected = {
-    "0:0, 1:1, 2:2",
-    "2:2, 2:3, 2:4",
-    "2:4, 3:4, 4:4",
-    "2:2, 3:2, 4:2",
-    "4:4, 4:3, 4:2",
-    "1:0, 2:2",
-    "0:1, 2:2",
-    "4:4, 5:4",
-    "4:4, 4:5",
-    "2:4, 1:4, 1:5, 2:5, 2:4",
-    "4:2, 6:1, 5:0",
-    "6:-1, 7:0, 4:2",
-    "11:1, 11:0, 10:0, 10:1, 11:1"
-  };
-  TestS2PolylineVector(input, input, undirected, layer_options);
+  TestS2PolylineVectorUnchanged({
+      "0:0, 1:1, 2:2",
+      "2:2, 2:3, 2:4",
+      "2:4, 3:4, 4:4",
+      "2:2, 3:2, 4:2",
+      "4:2, 4:3, 4:4",
+      "1:0, 2:2",
+      "0:1, 2:2",
+      "5:4, 4:4",
+      "4:5, 4:4",
+      "2:4, 2:5, 1:5, 1:4, 2:4",
+      "4:2, 6:1, 5:0",  // Two nested loops
+      "4:2, 7:0, 6:-1",
+      "11:1, 11:0, 10:0, 10:1, 11:1"  // Isolated loop
+    });
 }
 
 TEST(S2PolylineVectorLayer, MultipleIntersectingWalks) {
@@ -552,13 +519,13 @@ TEST(S2PolylineVectorLayer, MultipleIntersectingWalks) {
     "4:4, 5:5, 6:5, 5:6, 5:5, 5:6, 6:5, 5:5, 4:5",
     "3:5, 5:5, 5:6, 6:5, 5:5, 5:6, 6:6, 7:7",
   };
-  TestS2PolylineVector(input, input, input, layer_options);
+  TestS2PolylineVector(input, input, layer_options);
 }
 
 TEST(S2PolylineVectorLayer, EarlyWalkTermination) {
-  // This checks idempotency for directed edges in cases where earlier
-  // polylines in the input happen to terminate in the middle of later
-  // polylines.  This requires building non-maximal polylines.
+  // This checks idempotency for cases where earlier polylines in the input
+  // happen to terminate in the middle of later polylines.  This requires
+  // building non-maximal polylines.
   S2PolylineVectorLayer::Options layer_options;
   layer_options.set_polyline_type(PolylineType::WALK);
   vector<char const*> input = {
@@ -567,15 +534,7 @@ TEST(S2PolylineVectorLayer, EarlyWalkTermination) {
     "0:2, 1:2, 2:2",
     "2:1, 2:2, 2:3"
   };
-  // Note that this is *not* guaranteed to build the original polylines when
-  // the input edges are undirected.
-  vector<char const*> undirected = {
-    "0:1, 1:1, 1:0",
-    "1:1, 1:2, 0:2",
-    "2:2, 1:2",
-    "2:1, 2:2, 2:3"
-  };
-  TestS2PolylineVector(input, input, undirected, layer_options);
+  TestS2PolylineVector(input, input, layer_options);
 }
 
 TEST(S2PolylineVectorLayer, InputEdgeStartsMultipleLoops) {
@@ -595,22 +554,14 @@ TEST(S2PolylineVectorLayer, InputEdgeStartsMultipleLoops) {
     "0:0, 1:0, 1:1, 0:1, 0:2",
     "0:4, 1:4, 1:5, 0:5, 0:6",
   };
-  vector<char const*> directed = {
+  vector<char const*> expected = {
     "0:1, 0:0, 1:0, 1:1, 0:1",
     "0:3, 0:2, 1:2, 1:3, 0:3",
     "0:5, 0:4, 1:4, 1:5, 0:5",
     "0:7, 0:6, 1:6, 1:7, 0:7",
     "0:9, 0:8, 1:8, 1:9, 0:9",
   };
-  vector<char const*> undirected = {
-    "0:0, 0:1, 1:1, 1:0, 0:0",
-    "0:2, 0:3, 1:3, 1:2, 0:2",
-    "0:4, 0:5, 1:5, 1:4, 0:4",
-    "0:6, 0:7, 1:7, 1:6, 0:6",
-    "0:8, 0:9, 1:9, 1:8, 0:8",
-  };
-  TestS2PolylineVector(input, directed, undirected,
-                       layer_options, builder_options);
+  TestS2PolylineVector(input, expected, layer_options, builder_options);
 }
 
 TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
@@ -619,6 +570,7 @@ TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
   S2PolylineVectorLayer::LabelSetIds label_set_ids;
   IdSetLexicon label_set_lexicon;
   S2PolylineVectorLayer::Options layer_options;
+  layer_options.set_edge_type(EdgeType::UNDIRECTED);
   layer_options.set_duplicate_edges(
       S2PolylineVectorLayer::Options::DuplicateEdges::MERGE);
   builder.StartLayer(MakeUnique<S2PolylineVectorLayer>(
@@ -626,7 +578,7 @@ TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
   builder.set_label(1);
   builder.AddPolyline(*MakePolyline("0:0, 0:1, 0:2"));
   builder.set_label(2);
-  builder.AddPolyline(*MakePolyline("0:1, 0:2, 0:3"));
+  builder.AddPolyline(*MakePolyline("0:3, 0:2, 0:1"));
   builder.clear_labels();
   builder.AddPolyline(*MakePolyline("0:4, 0:5"));
   S2Error error;
@@ -645,7 +597,6 @@ TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
     }
   }
 }
-
 
 #if 0
 // Sketch of a test that converts a road network into a polygon mesh.

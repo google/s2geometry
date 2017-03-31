@@ -98,9 +98,9 @@ class IdSetLexicon {
   int32 AddSingleton(int32 id) const;
 
   // Convenience method that returns the unique id for the empty set.  Note
-  // that because the empty set takes up no space, this method is const.
-  // Equivalent to calling Add() with an empty container.
-  int32 AddEmptySet() const;
+  // that because the empty set takes up no space and has a fixed id, this
+  // method is static.  Equivalent to calling Add() with an empty container.
+  static int32 EmptySetId();
 
   // Iterator type; please treat this as an opaque forward iterator.
   using Iterator = int32 const*;
@@ -173,7 +173,7 @@ inline int32 IdSetLexicon::AddSingleton(int32 id) const {
   return id;
 }
 
-inline int32 IdSetLexicon::AddEmptySet() const {
+/*static*/ inline int32 IdSetLexicon::EmptySetId() {
   return kEmptySetId;
 }
 

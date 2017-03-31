@@ -13,11 +13,10 @@
 // limitations under the License.
 //
 
-
 // All Rights Reserved.
 //
 
-#include "s2/base/int128.h"
+#include "s2/third_party/absl/numeric/int128.h"
 
 #include <cstdlib>
 #include <cassert>

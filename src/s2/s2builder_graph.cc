@@ -95,11 +95,23 @@ Graph::VertexInMap::VertexInMap(Graph const& g)
   }
 }
 
-void Graph::GetLabels(EdgeId e, vector<S2Builder::Label>* labels) const {
+Graph::LabelFetcher::LabelFetcher(Graph const& g, EdgeType edge_type)
+    : g_(g), edge_type_(edge_type) {
+  if (edge_type == EdgeType::UNDIRECTED) sibling_map_ = g.GetSiblingMap();
+}
+
+void Graph::LabelFetcher::Fetch(EdgeId e, vector<S2Builder::Label>* labels) {
   labels->clear();
-  for (InputEdgeId input_edge_id : input_edge_ids(e)) {
-    for (Label label : this->labels(input_edge_id)) {
+  for (InputEdgeId input_edge_id : g_.input_edge_ids(e)) {
+    for (Label label : g_.labels(input_edge_id)) {
       labels->push_back(label);
+    }
+  }
+  if (edge_type_ == EdgeType::UNDIRECTED) {
+    for (InputEdgeId input_edge_id : g_.input_edge_ids(sibling_map_[e])) {
+      for (Label label : g_.labels(input_edge_id)) {
+        labels->push_back(label);
+      }
     }
   }
   if (labels->size() > 1) {
@@ -110,7 +122,7 @@ void Graph::GetLabels(EdgeId e, vector<S2Builder::Label>* labels) const {
 
 S2Builder::InputEdgeId Graph::min_input_edge_id(EdgeId e) const {
   IdSetLexicon::IdSet id_set = input_edge_ids(e);
-  return (id_set.size() == 0) ? -1 : *id_set.begin();
+  return (id_set.size() == 0) ? kNoInputEdgeId : *id_set.begin();
 }
 
 vector<S2Builder::InputEdgeId> Graph::GetMinInputEdgeIds() const {
@@ -591,31 +603,29 @@ inline int Graph::PolylineBuilder::excess_degree(VertexId v) {
 }
 
 vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildPaths() {
-  // Note that this code does not preserve the direction of undirected
-  // polylines, since we don't have enough information available to do this
-  // reliably.  (This could be fixed by having S2Builder::Graph have a boolean
-  // for each edge indicating whether it is in the same direction as the
-  // corresponding input edge of minimal input edge id.)
-
   // First build polylines starting at all the vertices that cannot be in the
   // polyline interior (i.e., indegree != 1 or outdegree != 1 for directed
-  // edges, or degree != 2 for undirected edges).  Unlike with walks, the
-  // order that we build paths doesn't affect idempotency because there is
-  // only one possible outgoing edge at each interior vertex of a path.
+  // edges, or degree != 2 for undirected edges).  We consider the possible
+  // starting edges in input edge id order so that we preserve the input path
+  // direction even when undirected edges are used.  (Undirected edges are
+  // represented by sibling pairs where only the edge in the input direction
+  // is labeled with an input edge id.)
   vector<EdgePolyline> polylines;
-  for (VertexId v = 0; v < g_.num_vertices(); ++v) {
-    if (is_interior(v) || out_.degree(v) == 0) continue;
-    for (EdgeId e : out_.edge_ids(v)) {
-      if (!used_[e]) polylines.push_back(BuildPath(e));
+  vector<EdgeId> edges = g_.GetInputEdgeOrder(min_input_ids_);
+  for (int i = 0; i < edges.size(); ++i) {
+    EdgeId e = edges[i];
+    if (!used_[e] && !is_interior(g_.edge(e).first)) {
+      polylines.push_back(BuildPath(e));
     }
   }
   // If there are any edges left, they form non-intersecting loops.  We build
-  // each loop and then canonicalize its edge order.  (For directed edges,
-  // this is necessary for idempotency to ensure that the loop starts at the
-  // original vertex; for undirected edges, it ensures that if an input edge
-  // was split into an edge chain then the loop does not start in the middle
-  // of such a chain, which is not required but is nice for tests).
-  for (EdgeId e = 0; e < g_.num_edges() && edges_left_ > 0; ++e) {
+  // each loop and then canonicalize its edge order.  We consider candidate
+  // starting edges in input edge id order in order to preserve the input
+  // direction of undirected loops.  Even so, we still need to canonicalize
+  // the edge order to ensure that when an input edge is split into an edge
+  // chain, the loop does not start in the middle of such a chain.
+  for (int i = 0; i < edges.size() && edges_left_ > 0; ++i) {
+    EdgeId e = edges[i];
     if (used_[e]) continue;
     EdgePolyline polyline = BuildPath(e);
     CanonicalizeLoopOrder(min_input_ids_, &polyline);
@@ -654,10 +664,9 @@ Graph::EdgePolyline Graph::PolylineBuilder::BuildPath(EdgeId e) {
 }
 
 vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildWalks() {
-  // Note that this code does not preserve the direction of undirected
-  // polylines (see BuildPaths).  Also, some of this code is worst-case
-  // quadratic in the maximum vertex degree.  This could be fixed with a few
-  // extra arrays, but it should not be a problem in practice.
+  // Note that some of this code is worst-case quadratic in the maximum vertex
+  // degree.  This could be fixed with a few extra arrays, but it should not
+  // be a problem in practice.
 
   // First, build polylines from all vertices where outdegree > indegree (or
   // for undirected edges, vertices whose degree is odd).  We consider the
@@ -687,12 +696,10 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildWalks() {
     }
   }
   // Finally, if there are still unused edges then we build loops.  If the
-  // input is a directed polyline that forms a loop, then for idempotency we
-  // need to start from the edge with minimum input edge id.  If the minimal
-  // input edge was split into several edges, then we start from the first
-  // edge of the chain.  (This is not required but mimics the behavior of
-  // GetDirectedLoops.)  With undirected edges we can start anywhere, but it's
-  // simpler to use the same logic.
+  // input is a polyline that forms a loop, then for idempotency we need to
+  // start from the edge with minimum input edge id.  If the minimal input
+  // edge was split into several edges, then we start from the first edge of
+  // the chain.
   for (int i = 0; i < edges.size() && edges_left_ > 0; ++i) {
     EdgeId e = edges[i];
     if (used_[e]) continue;
@@ -700,7 +707,7 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildWalks() {
     // Determine whether the origin of this edge is the start of an edge
     // chain.  To do this, we test whether (outdegree - indegree == 1) for the
     // origin, considering only unused edges with the same minimum input edge
-    // id.  (For undirected edges, we check whether (outdegree == 1) instead.)
+    // id.  (Undirected edges have input edge ids in one direction only.)
     VertexId v = g_.edge(e).first;
     InputEdgeId id = min_input_ids_[e];
     int excess = 0;
@@ -708,7 +715,7 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildWalks() {
       EdgeId e2 = edges[j];
       if (used_[e2]) continue;
       if (g_.edge(e2).first == v) ++excess;
-      if (directed_ && g_.edge(e2).second == v) --excess;
+      if (g_.edge(e2).second == v) --excess;
     }
     if (excess == 1) {
       EdgePolyline polyline = BuildWalk(v);
@@ -737,15 +744,12 @@ Graph::EdgePolyline Graph::PolylineBuilder::BuildWalk(VertexId v) {
     if (best_edge < 0) return polyline;
     // For idempotency when there are multiple input polylines, we stop the
     // walk early if "best_edge" might be a continuation of a different
-    // incoming edge.  (This doesn't work for undirected edges, but we don't
-    // guarantee idempotency in that case anyway.)
-    if (directed_) {
-      int excess = excess_degree(v) - excess_used_[v];
-      if (excess < 0) {
-        for (EdgeId e : in_.edge_ids(v)) {
-          if (!used_[e] && min_input_ids_[e] <= best_out_id) {
-            return polyline;
-          }
+    // incoming edge.
+    int excess = excess_degree(v) - excess_used_[v];
+    if (directed_ ? (excess < 0) : (excess % 2) == 1) {
+      for (EdgeId e : in_.edge_ids(v)) {
+        if (!used_[e] && min_input_ids_[e] <= best_out_id) {
+          return polyline;
         }
       }
     }

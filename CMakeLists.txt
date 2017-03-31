@@ -96,15 +96,15 @@ install(FILES ${S2Headers}
         DESTINATION include/s2)
 install(FILES src/s2/base/atomicops.h
               src/s2/base/casts.h
-              src/s2/base/int128.h
-              src/s2/base/macros.h
               src/s2/base/mutex.h
               src/s2/base/spinlock.h
               src/s2/base/template_util.h
               src/s2/base/type_traits.h
         DESTINATION include/s2/base)
-install(FILES src/s2/third_party/absl/base/config.h
+install(FILES src/s2/third_party/absl/base/casts.h
+              src/s2/third_party/absl/base/config.h
               src/s2/third_party/absl/base/integral_types.h
+              src/s2/third_party/absl/base/macros.h
               src/s2/third_party/absl/base/port.h
         DESTINATION include/s2/third_party/absl/base)
 install(FILES src/s2/third_party/absl/base/internal/port_hash.inc
@@ -113,6 +113,8 @@ install(FILES src/s2/third_party/absl/container/inlined_vector.h
         DESTINATION include/s2/third_party/absl/container)
 install(FILES src/s2/third_party/absl/meta/type_traits.h
         DESTINATION include/s2/third_party/absl/meta)
+install(FILES src/s2/third_party/absl/numeric/int128.h
+        DESTINATION include/s2/third_party/absl/numeric)
 install(FILES src/s2/util/bits/bits.h
         DESTINATION include/s2/util/bits)
 install(FILES src/s2/util/btree/btree.h

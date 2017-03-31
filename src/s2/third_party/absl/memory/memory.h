@@ -29,6 +29,29 @@
 
 namespace absl {
 
+// WrapUnique() transfers ownership of a raw pointer to a std::unique_ptr.
+// The returned value is a std::unique_ptr of deduced type.
+//
+// Example:
+//   X* NewX(int, int);
+//   auto x = WrapUnique(NewX(1, 2));  // 'x' is std::unique_ptr<X>.
+//
+// WrapUnique is useful for capturing the output of a raw pointer factory.
+// However, prefer 'MakeUnique<T>(args...) over 'WrapUnique(new T(args...))'.
+//
+//   auto x = WrapUnique(new X(1, 2));  // works, but nonideal.
+//   auto x = MakeUnique<X>(1, 2);      // safer, standard, avoids raw 'new'.
+//
+// Note: WrapUnique() cannot wrap pointers to arrays of unknown bounds
+// (i.e. U(*)[]).
+template <typename T>
+std::unique_ptr<T> WrapUnique(T* ptr) {
+  static_assert(
+      !std::is_array<T>::value || std::extent<T>::value != 0,
+      "types T[0] or T[] are unsupported");
+  return std::unique_ptr<T>(ptr);
+}
+
 // RawPtr() extracts the raw pointer from a pointer-like 'ptr'. RawPtr
 // is useful within templates that need to handle a complement of raw pointers,
 // std::nullptr_t, and smart pointers.
@@ -79,30 +102,6 @@ std::weak_ptr<T> WeakenPtr(const std::shared_ptr<T>& ptr) {
 }  // namespace absl
 
 namespace gtl {
-
-// WrapUnique() transfers ownership of a raw pointer to a std::unique_ptr.
-// The returned value is a std::unique_ptr of deduced type.
-//
-// Example:
-//   X* NewX(int, int);
-//   auto x = WrapUnique(NewX(1, 2));  // 'x' is std::unique_ptr<X>.
-//
-// WrapUnique is useful for capturing the output of a raw pointer factory.
-// However, prefer 'MakeUnique<T>(args...) over 'WrapUnique(new T(args...))'.
-//
-//   auto x = WrapUnique(new X(1, 2));  // works, but nonideal.
-//   auto x = MakeUnique<X>(1, 2);      // safer, standard, avoids raw 'new'.
-//
-// Note: WrapUnique() cannot wrap pointers to arrays of unknown bounds
-// (i.e. U(*)[]).
-template <typename T>
-std::unique_ptr<T> WrapUnique(T* ptr) {
-  static_assert(
-      !std::is_array<T>::value || std::extent<T>::value != 0,
-      "types T[0] or T[] are unsupported");
-  return std::unique_ptr<T>(ptr);
-}
-
 
 namespace internal {
 
@@ -207,9 +206,10 @@ MakeUnique(Args&&... /* args */) = delete;
 // Temporary aliases while moving into the absl namespace.
 // All functions will eventually be moved, in stages.
 // TODO(user): Delete temporary aliases after namespace update.
-template <typename T, typename D>
-std::shared_ptr<T> ShareUniquePtr(std::unique_ptr<T, D>&& ptr) {
-  return absl::ShareUniquePtr(std::forward<std::unique_ptr<T, D>>(ptr));
+
+template <typename T>
+std::unique_ptr<T> WrapUnique(T* ptr) {
+  return absl::WrapUnique(ptr);
 }
 
 }  // namespace gtl

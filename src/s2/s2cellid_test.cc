@@ -29,13 +29,13 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "s2/base/macros.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s2cap.h"
 #include "s2/s2latlng.h"
 #include "s2/s2metrics.h"
 #include "s2/s2testing.h"
+#include "s2/third_party/absl/base/macros.h"
 
 using S2::internal::kPosToOrientation;
 using std::min;

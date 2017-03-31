@@ -272,7 +272,7 @@ void S2Builder::Init(Options const& options) {
                              9 * DBL_EPSILON) * DBL_EPSILON;
 
   // Initialize the current label set.
-  label_set_id_ = label_set_lexicon_.AddEmptySet();
+  label_set_id_ = label_set_lexicon_.EmptySetId();
   label_set_modified_ = false;
 
   // If snapping was requested, we try to determine whether the input geometry
@@ -1150,13 +1150,13 @@ void S2Builder::AddSnappedEdges(
     MaybeAddInputVertex(input_edges_[e].first, chain[0], site_vertices);
     if (chain.size() == 1) {
       if (!keep_degenerate_edges) continue;
-      AddSnappedEdge(options, chain[0], chain[0], id,
+      AddSnappedEdge(chain[0], chain[0], id, options.edge_type(),
                      edges, input_edge_ids);
     } else {
       MaybeAddInputVertex(input_edges_[e].second, chain.back(), site_vertices);
       for (int i = 1; i < chain.size(); ++i) {
-        AddSnappedEdge(options, chain[i-1], chain[i], id,
-                     edges, input_edge_ids);
+        AddSnappedEdge(chain[i-1], chain[i], id, options.edge_type(),
+                       edges, input_edge_ids);
       }
     }
   }
@@ -1182,26 +1182,28 @@ inline void S2Builder::MaybeAddInputVertex(
 // Adds the given edge to "edges" and "input_edge_ids".  If undirected edges
 // are being used, also adds an edge in the opposite direction.
 inline void S2Builder::AddSnappedEdge(
-    GraphOptions const& options, SiteId src, SiteId dst, InputEdgeIdSetId id,
+    SiteId src, SiteId dst, InputEdgeIdSetId id, EdgeType edge_type,
     vector<Edge>* edges, vector<InputEdgeIdSetId>* input_edge_ids) const {
   edges->push_back(Edge(src, dst));
   input_edge_ids->push_back(id);
-  if (options.edge_type() == EdgeType::UNDIRECTED) {
+  if (edge_type == EdgeType::UNDIRECTED) {
     edges->push_back(Edge(dst, src));
-    input_edge_ids->push_back(id);
+    input_edge_ids->push_back(IdSetLexicon::EmptySetId());
   }
 }
 
 // A class that encapsulates the state needed for simplifying edge chains.
 class S2Builder::EdgeChainSimplifier {
  public:
-  // The graph "g" contains all edges from all layers.  "site_vertices" is a
-  // map from SiteId to the set of InputVertexIds that were snapped to that
-  // site.  The remaining arguments are input/output arguments that are
-  // updated to reflect the simplified edge chains.  The input edges and
-  // output edges for each layer are not sorted.
+  // The graph "g" contains all edges from all layers.  "edge_layers"
+  // indicates the original layer for each edge.  "site_vertices" is a map
+  // from SiteId to the set of InputVertexIds that were snapped to that site.
+  // "layer_edges" and "layer_input_edge_ids" are output arguments where the
+  // simplified edge chains will be placed.  The input and output edges are
+  // not sorted.
   EdgeChainSimplifier(
       S2Builder const& builder, Graph const& g,
+      vector<int> const& edge_layers,
       vector<compact_array<InputVertexId>> const& site_vertices,
       vector<vector<Edge>>* layer_edges,
       vector<vector<InputEdgeIdSetId>>* layer_input_edge_ids,
@@ -1232,6 +1234,7 @@ class S2Builder::EdgeChainSimplifier {
   Graph const& g_;
   Graph::VertexInMap in_;
   Graph::VertexOutMap out_;
+  vector<int> edge_layers_;
   vector<compact_array<InputVertexId>> const& site_vertices_;
   vector<vector<Edge>>* layer_edges_;
   vector<vector<InputEdgeIdSetId>>* layer_input_edge_ids_;
@@ -1256,6 +1259,7 @@ class S2Builder::EdgeChainSimplifier {
   // The output edges after simplification.
   vector<Edge> new_edges_;
   vector<InputEdgeIdSetId> new_input_edge_ids_;
+  vector<int> new_edge_layers_;
 };
 
 // Simplifies edge chains, updating its input/output arguments as necessary.
@@ -1269,8 +1273,9 @@ void S2Builder::SimplifyEdgeChains(
   // Merge the edges from all layers (in order to build a single graph).
   vector<Edge> merged_edges;
   vector<InputEdgeIdSetId> merged_input_edge_ids;
+  vector<int> merged_edge_layers;
   MergeLayerEdges(*layer_edges, *layer_input_edge_ids,
-                  &merged_edges, &merged_input_edge_ids);
+                  &merged_edges, &merged_input_edge_ids, &merged_edge_layers);
 
   // The following fields will be reconstructed by EdgeChainSimplifier.
   for (auto& edges : *layer_edges) edges.clear();
@@ -1285,9 +1290,9 @@ void S2Builder::SimplifyEdgeChains(
   graph_options.set_sibling_pairs(GraphOptions::SiblingPairs::KEEP);
   Graph graph(graph_options, sites_, merged_edges, merged_input_edge_ids,
               *input_edge_id_set_lexicon, label_set_ids_, label_set_lexicon_);
-  EdgeChainSimplifier simplifier(*this, graph, site_vertices,
-                                 layer_edges, layer_input_edge_ids,
-                                 input_edge_id_set_lexicon);
+  EdgeChainSimplifier simplifier(
+      *this, graph, merged_edge_layers, site_vertices,
+      layer_edges, layer_input_edge_ids, input_edge_id_set_lexicon);
   simplifier.Run();
 }
 
@@ -1297,8 +1302,8 @@ void S2Builder::SimplifyEdgeChains(
 void S2Builder::MergeLayerEdges(
     vector<vector<Edge>> const& layer_edges,
     vector<vector<InputEdgeIdSetId>> const& layer_input_edge_ids,
-    vector<Edge>* edges,
-    vector<InputEdgeIdSetId>* input_edge_ids) const {
+    vector<Edge>* edges, vector<InputEdgeIdSetId>* input_edge_ids,
+    vector<int>* edge_layers) const {
   vector<LayerEdgeId> order;
   for (int i = 0; i < layer_edges.size(); ++i) {
     for (int e = 0; e < layer_edges[i].size(); ++e) {
@@ -1312,10 +1317,12 @@ void S2Builder::MergeLayerEdges(
             });
   edges->reserve(order.size());
   input_edge_ids->reserve(order.size());
+  edge_layers->reserve(order.size());
   for (int i = 0; i < order.size(); ++i) {
     LayerEdgeId const& id = order[i];
     edges->push_back(layer_edges[id.first][id.second]);
     input_edge_ids->push_back(layer_input_edge_ids[id.first][id.second]);
+    edge_layers->push_back(id.first);
   }
 }
 
@@ -1335,18 +1342,20 @@ inline bool S2Builder::StableLessThan(
 }
 
 S2Builder::EdgeChainSimplifier::EdgeChainSimplifier(
-    S2Builder const& builder, Graph const& g,
+    S2Builder const& builder, Graph const& g, vector<int> const& edge_layers,
     vector<compact_array<InputVertexId>> const& site_vertices,
     vector<vector<Edge>>* layer_edges,
     vector<vector<InputEdgeIdSetId>>* layer_input_edge_ids,
     IdSetLexicon* input_edge_id_set_lexicon)
-    : builder_(builder), g_(g), in_(g), out_(g), site_vertices_(site_vertices),
-      layer_edges_(layer_edges), layer_input_edge_ids_(layer_input_edge_ids),
+    : builder_(builder), g_(g), in_(g), out_(g), edge_layers_(edge_layers),
+      site_vertices_(site_vertices), layer_edges_(layer_edges),
+      layer_input_edge_ids_(layer_input_edge_ids),
       input_edge_id_set_lexicon_(input_edge_id_set_lexicon),
       layer_begins_(builder_.layer_begins_),
       is_interior_(g.num_vertices()), used_(g.num_edges()) {
   new_edges_.reserve(g.num_edges());
   new_input_edge_ids_.reserve(g.num_edges());
+  new_edge_layers_.reserve(g.num_edges());
 }
 
 void S2Builder::EdgeChainSimplifier::Run() {
@@ -1391,16 +1400,12 @@ void S2Builder::EdgeChainSimplifier::Run() {
     }
   }
 
-  // Finally, copy the output edges into the appropriate layers.  We use the
-  // input edge id(s) of each edge to identify which layer it came from.  They
-  // don't need to be sorted because the input edges were also unsorted.
+  // Finally, copy the output edges into the appropriate layers.  They don't
+  // need to be sorted because the input edges were also unsorted.
   for (int e = 0; e < new_edges_.size(); ++e) {
-    InputEdgeIdSetId id_set_id = new_input_edge_ids_[e];
-    IdSetLexicon::IdSet ids = input_edge_id_set_lexicon_->id_set(id_set_id);
-    DCHECK_GT(ids.size(), 0);
-    int layer = input_edge_layer(*ids.begin());
+    int layer = new_edge_layers_[e];
     (*layer_edges_)[layer].push_back(new_edges_[e]);
-    (*layer_input_edge_ids_)[layer].push_back(id_set_id);
+    (*layer_input_edge_ids_)[layer].push_back(new_input_edge_ids_[e]);
   }
 }
 
@@ -1408,12 +1413,13 @@ void S2Builder::EdgeChainSimplifier::Run() {
 inline void S2Builder::EdgeChainSimplifier::OutputEdge(EdgeId e) {
   new_edges_.push_back(g_.edge(e));
   new_input_edge_ids_.push_back(g_.input_edge_id_set_id(e));
+  new_edge_layers_.push_back(edge_layers_[e]);
   used_[e] = true;
 }
 
 // Returns the layer that a given graph edge belongs to.
 inline int S2Builder::EdgeChainSimplifier::graph_edge_layer(EdgeId e) const {
-  return input_edge_layer(g_.min_input_edge_id(e));
+  return edge_layers_[e];
 }
 
 // Returns the layer than a given input edge belongs to.
@@ -1676,7 +1682,7 @@ void S2Builder::EdgeChainSimplifier::MergeChain(
     vector<VertexId> const& vertices) {
   // Suppose that all interior vertices have M outgoing edges and N incoming
   // edges.  Our goal is to group the edges into M outgoing chains and N
-  // incoming chains, and the replace each chain by a single edge.
+  // incoming chains, and then replace each chain by a single edge.
   vector<vector<InputEdgeId>> merged_input_ids;
   vector<InputEdgeId> degenerate_ids;
   int num_out;  // Edge count in the outgoing direction.
@@ -1726,16 +1732,20 @@ void S2Builder::EdgeChainSimplifier::MergeChain(
     DCHECK_EQ(merged_input_ids.size(), j);
   }
   if (!degenerate_ids.empty()) {
-    // Sort the degenerate input ids but do not remove duplicates.  Duplicates
-    // can only occur if there are undirected edges, in which case we assign
-    // one copy to the edge in each direction (see AssignDegenerateEdges).
     std::sort(degenerate_ids.begin(), degenerate_ids.end());
     AssignDegenerateEdges(degenerate_ids, &merged_input_ids);
   }
   // Output the merged edges.
-  VertexId v0 = vertices.front(), v1 = vertices.back();
+  VertexId v0 = vertices[0], v1 = vertices[1], vb = vertices.back();
+  for (EdgeId e : out_.edge_ids(v0, v1)) {
+    new_edges_.push_back(Edge(v0, vb));
+    new_edge_layers_.push_back(graph_edge_layer(e));
+  }
+  for (EdgeId e : out_.edge_ids(v1, v0)) {
+    new_edges_.push_back(Edge(vb, v0));
+    new_edge_layers_.push_back(graph_edge_layer(e));
+  }
   for (auto const& ids : merged_input_ids) {
-    new_edges_.push_back(--num_out >= 0 ? Edge(v0, v1) : Edge(v1, v0));
     new_input_edge_ids_.push_back(input_edge_id_set_lexicon_->Add(ids));
   }
 }
@@ -1745,7 +1755,7 @@ void S2Builder::EdgeChainSimplifier::MergeChain(
 // edges.
 void S2Builder::EdgeChainSimplifier::AssignDegenerateEdges(
     vector<InputEdgeId> const& degenerate_ids,
-    vector<vector<InputEdgeId>>* merged_input_ids) const {
+    vector<vector<InputEdgeId>>* merged_ids) const {
   // Each degenerate edge is assigned to an output edge in the appropriate
   // layer.  If there is more than one candidate, we use heuristics so that if
   // the input consists of a chain of edges provided in consecutive order
@@ -1763,14 +1773,20 @@ void S2Builder::EdgeChainSimplifier::AssignDegenerateEdges(
 
   // Duplicate edge ids don't affect the heuristic below, so we don't bother
   // removing them.  (They will be removed by IdSetLexicon::Add.)
-  for (auto& ids : *merged_input_ids) std::sort(ids.begin(), ids.end());
+  for (auto& ids : *merged_ids) std::sort(ids.begin(), ids.end());
 
   // Sort the output edges by their minimum input edge id.  This is sufficient
-  // for the purpose of determining which layer they belong to.
-  vector<int> order(merged_input_ids->size());
-  std::iota(order.begin(), order.end(), 0);
-  std::sort(order.begin(), order.end(), [&merged_input_ids](int i, int j) {
-      return merged_input_ids[i][0] < merged_input_ids[j][0];
+  // for the purpose of determining which layer they belong to.  With
+  // EdgeType::UNDIRECTED, some edges might not have any input edge ids (i.e.,
+  // if they consist entirely of siblings of input edges).  We simply remove
+  // such edges from the lists of candidates.
+  vector<unsigned> order;
+  order.reserve(merged_ids->size());
+  for (int i = 0; i < merged_ids->size(); ++i) {
+    if (!(*merged_ids)[i].empty()) order.push_back(i);
+  }
+  std::sort(order.begin(), order.end(), [&merged_ids](int i, int j) {
+      return (*merged_ids)[i][0] < (*merged_ids)[j][0];
     });
 
   // Now determine where each degenerate edge should be assigned.
@@ -1781,27 +1797,14 @@ void S2Builder::EdgeChainSimplifier::AssignDegenerateEdges(
     // Find the first output edge whose range of input edge ids starts after
     // "degenerate_id".  If the previous edge belongs to the correct layer,
     // then we assign the degenerate edge to it.
-    auto it = std::upper_bound(
-        merged_input_ids->begin(), merged_input_ids->end(), degenerate_id,
-        [](InputEdgeId x, vector<InputEdgeId> const& y) { return x < y[0]; });
-    if (it != merged_input_ids->begin() && it[-1][0] >= layer_begins_[layer]) {
-      // If this layer has undirected edges, then there will be two edges with
-      // identical sets of input edge ids.  Here we ensure that we are
-      // positioned at the first such edge.
-      --it;
-      while (it - 1 != merged_input_ids->begin() && it[-1][0] == it[0][0]) --it;
+    auto it = std::upper_bound(order.begin(), order.end(), degenerate_id,
+                               [&merged_ids](InputEdgeId x, unsigned y) {
+                                 return x < (*merged_ids)[y][0];
+                               });
+    if (it != order.begin()) {
+      if ((*merged_ids)[it[-1]][0] >= layer_begins_[layer]) --it;
     }
-    DCHECK_EQ(layer, input_edge_layer(it[0][0]));
-    it[0].push_back(degenerate_id);
-
-    // If this layer has undirected edges, then there will be two copies of
-    // each degenerate edge.  We assign one copy to each of the two sibling
-    // output edges, to maintain the invariant that they both have exactly the
-    // same set of input edge ids.
-    if (i != degenerate_ids.size() && degenerate_ids[i + 1] == degenerate_id) {
-      DCHECK(it + 1 != merged_input_ids->end());
-      it[1].push_back(degenerate_id);
-      DCHECK(it[0] == it[1]);  // Exactly the same set of input ids.
-    }
+    DCHECK_EQ(layer, input_edge_layer((*merged_ids)[it[0]][0]));
+    (*merged_ids)[it[0]].push_back(degenerate_id);
   }
 }

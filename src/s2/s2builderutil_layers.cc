@@ -104,11 +104,12 @@ void S2PolygonLayer::AppendEdgeLabels(
   if (!label_set_ids_) return;
 
   vector<Label> labels;  // Temporary storage for labels.
+  Graph::LabelFetcher fetcher(g, options_.edge_type());
   for (auto const& edge_loop : edge_loops) {
     vector<LabelSetId> loop_label_set_ids;
     loop_label_set_ids.reserve(edge_loop.size());
     for (auto edge_id : edge_loop) {
-      g.GetLabels(edge_id, &labels);
+      fetcher.Fetch(edge_id, &labels);
       loop_label_set_ids.push_back(label_set_lexicon_->Add(labels));
     }
     label_set_ids_->push_back(std::move(loop_label_set_ids));
@@ -239,14 +240,17 @@ void S2PolylineLayer::Build(Graph const& g, S2Error* error) {
   }
   Graph::EdgePolyline const& edge_polyline = edge_polylines[0];
   vector<S2Point> vertices;  // Temporary storage for vertices.
-  vector<Label> labels;  // Temporary storage for labels.
   vertices.reserve(edge_polyline.size());
-  if (label_set_ids_) label_set_ids_->reserve(edge_polyline.size());
   vertices.push_back(g.vertex(g.edge(edge_polyline[0]).first));
   for (EdgeId e : edge_polyline) {
     vertices.push_back(g.vertex(g.edge(e).second));
-    if (label_set_ids_) {
-      g.GetLabels(e, &labels);
+  }
+  if (label_set_ids_) {
+    Graph::LabelFetcher fetcher(g, options_.edge_type());
+    vector<Label> labels;  // Temporary storage for labels.
+    label_set_ids_->reserve(edge_polyline.size());
+    for (EdgeId e : edge_polyline) {
+      fetcher.Fetch(e, &labels);
       label_set_ids_->push_back(label_set_lexicon_->Add(labels));
     }
   }
@@ -294,17 +298,11 @@ void S2PolylineVectorLayer::Build(Graph const& g, S2Error* error) {
   polylines_->reserve(edge_polylines.size());
   if (label_set_ids_) label_set_ids_->reserve(edge_polylines.size());
   vector<S2Point> vertices;  // Temporary storage for vertices.
-  vector<Label> labels;      // Temporary storage for labels.
+  vector<Label> labels;  // Temporary storage for labels.
   for (auto const& edge_polyline : edge_polylines) {
     vertices.push_back(g.vertex(g.edge(edge_polyline[0]).first));
-    vector<LabelSetId> polyline_labels;
-    if (label_set_ids_) polyline_labels.reserve(edge_polyline.size());
     for (EdgeId e : edge_polyline) {
       vertices.push_back(g.vertex(g.edge(e).second));
-      if (label_set_ids_) {
-        g.GetLabels(e, &labels);
-        polyline_labels.push_back(label_set_lexicon_->Add(labels));
-      }
     }
     S2Polyline* polyline = new S2Polyline(vertices,
                                           options_.s2debug_override());
@@ -313,7 +311,16 @@ void S2PolylineVectorLayer::Build(Graph const& g, S2Error* error) {
       polyline->FindValidationError(error);
     }
     polylines_->emplace_back(polyline);
-    if (label_set_ids_) label_set_ids_->push_back(std::move(polyline_labels));
+    if (label_set_ids_) {
+      Graph::LabelFetcher fetcher(g, options_.edge_type());
+      vector<LabelSetId> polyline_labels;
+      polyline_labels.reserve(edge_polyline.size());
+      for (EdgeId e : edge_polyline) {
+        fetcher.Fetch(e, &labels);
+        polyline_labels.push_back(label_set_lexicon_->Add(labels));
+      }
+      label_set_ids_->push_back(std::move(polyline_labels));
+    }
   }
 }
 

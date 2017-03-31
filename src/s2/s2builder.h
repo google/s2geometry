@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/base/macros.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/fpcontractoff.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s1angle.h"
@@ -132,15 +132,19 @@ class S2Builder {
   // Indicates whether the input edges are undirected.  Typically this is
   // specified for each output layer (e.g., s2builderutil::S2PolygonLayer).
   //
-  // Directed edges should be used whenever possible, since otherwise the
-  // output is ambiguous.  For example, polylines might be generated in either
-  // direction, and output polygons may be the *inverse* of the intended
-  // result (e.g., a polygon intended to represent the world's oceans may
-  // instead represent the world's land masses).  S2Builder has heuristics
-  // that allow it to guess the intended result most of the time, (e.g., that
-  // your polygon probably covers less than half of the sphere), but there are
-  // no guarantees.  In particular, there is no guarantee of idempotency with
-  // respect to edge direction when undirected edges are used.
+  // Directed edges are preferred, since otherwise the output is ambiguous.
+  // For example, output polygons may be the *inverse* of the intended result
+  // (e.g., a polygon intended to represent the world's oceans may instead
+  // represent the world's land masses).  Directed edges are also somewhat
+  // more efficient.
+  //
+  // However even with undirected edges, most S2Builder layer types try to
+  // preserve the input edge direction whenever possible.  Generally, edges
+  // are reversed only when it would yield a simpler output.  For example,
+  // S2PolygonLayer assumes that polygons created from undirected edges should
+  // cover at most half of the sphere.  Similarly, S2PolylineVectorLayer
+  // assembles edges into as few polylines as possible, even if this means
+  // reversing some of the "undirected" input edges.
   //
   // For shapes with interiors, directed edges should be oriented so that the
   // interior is to the left of all edges.  This means that for a polygon with
@@ -312,6 +316,11 @@ class S2Builder {
     // guaranteed to be consistent: for example, edge chains are simplified in
     // the same way across layers, and simplification preserves topological
     // relationships between layers (e.g., no crossing edges will be created).
+    // Note that edge chains in different layers do not need to be identical
+    // (or even have the same number of vertices, etc) in order to be
+    // simplified together.  All that is required is that they are close
+    // enough together so that the same simplified edge can meet all of their
+    // individual snapping guarantees.
     //
     // Note that edge chains are approximated as parametric curves rather than
     // point sets.  This means that if an edge chain backtracks on itself (for
@@ -319,6 +328,9 @@ class S2Builder {
     // within snap_radius() (for example, if the preceding point were all in a
     // straight line then the edge chain would be simplified to ACFCFH, noting
     // that C and F have degree > 2 and therefore can't be simplified away).
+    //
+    // Simplified edges are assigned all labels associated with the edges of
+    // the simplified chain.
     //
     // For this option to have any effect, a SnapFunction with a non-zero
     // snap_radius() must be specified.  Also note that vertices specified
@@ -573,8 +585,8 @@ class S2Builder {
   void MaybeAddInputVertex(
       InputVertexId v, SiteId id,
       std::vector<compact_array<InputVertexId>>* site_vertices) const;
-  void AddSnappedEdge(GraphOptions const& options, SiteId src, SiteId dst,
-                      InputEdgeIdSetId id, std::vector<Edge>* edges,
+  void AddSnappedEdge(SiteId src, SiteId dst, InputEdgeIdSetId id,
+                      EdgeType edge_type, std::vector<Edge>* edges,
                       std::vector<InputEdgeIdSetId>* input_edge_ids) const;
   void SimplifyEdgeChains(
       std::vector<compact_array<InputVertexId>> const& site_vertices,
@@ -585,7 +597,8 @@ class S2Builder {
       std::vector<std::vector<Edge>> const& layer_edges,
       std::vector<std::vector<InputEdgeIdSetId>> const& layer_input_edge_ids,
       std::vector<Edge>* edges,
-      std::vector<InputEdgeIdSetId>* input_edge_ids) const;
+      std::vector<InputEdgeIdSetId>* input_edge_ids,
+      std::vector<int>* edge_layers) const;
   static bool StableLessThan(Edge const& a, Edge const& b,
                              LayerEdgeId const& ai, LayerEdgeId const& bi);
 
@@ -700,6 +713,10 @@ class S2Builder {
 // This class is only needed by Layer implementations.
 class S2Builder::GraphOptions {
  public:
+  // TODO(ericv): Change the default options for DegenerateEdges,
+  // DuplicateEdges, and SiblingPairs to KEEP, since this produces the least
+  // surprising output, and makes it easier to diagnose the problem when the
+  // wrong option is chosen.
   GraphOptions() : edge_type_(EdgeType::DIRECTED),
                    degenerate_edges_(DegenerateEdges::DISCARD),
                    duplicate_edges_(DuplicateEdges::MERGE),
@@ -708,11 +725,12 @@ class S2Builder::GraphOptions {
 
   // Specifies whether the S2Builder input edges should be treated as
   // undirected.  If true, then all input edges are duplicated into pairs
-  // consisting of an edge and its reverse edge.  The layer implementation is
-  // responsible for ensuring that exactly one edge from each pair is used in
-  // the output, i.e. *only half* of the graph edges will be used.  (Note that
-  // some values of the sibling_pairs() option automatically take care of this
-  // issue by removing half of the edges and changing edge_type() to DIRECTED.)
+  // consisting of an edge and a sibling (reverse) edge.  The layer
+  // implementation is responsible for ensuring that exactly one edge from
+  // each pair is used in the output, i.e. *only half* of the graph edges will
+  // be used.  (Note that some values of the sibling_pairs() option
+  // automatically take care of this issue by removing half of the edges and
+  // changing edge_type() to DIRECTED.)
   using EdgeType = S2Builder::EdgeType;
   EdgeType edge_type() const;
   void set_edge_type(EdgeType edge_type);
@@ -759,8 +777,9 @@ class S2Builder::GraphOptions {
   //            collection of adjacent polygons (a polygon mesh).
   //
   //   CREATE: Ensures that all edges have a sibling edge by creating them if
-  //           necessary.  This is useful with polygon meshes where the
-  //           input polygons do not cover the entire sphere.
+  //           necessary.  This is useful with polygon meshes where the input
+  //           polygons do not cover the entire sphere.  Such edges always
+  //           have an empty set of labels.
   //
   // If edge_type() is EdgeType::UNDIRECTED, a sibling edge pair is considered
   // to consist of four edges (two duplicate edges and their siblings), since
