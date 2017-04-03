@@ -366,6 +366,7 @@ bool Graph::GetDirectedLoops(LoopType loop_type, vector<EdgeLoop>* loops,
     } else {
       CanonicalizeLoopOrder(min_input_ids, &path);
       loops->push_back(std::move(path));
+      path.clear();
     }
   }
   CanonicalizeVectorOrder(min_input_ids, loops);

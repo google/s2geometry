@@ -17,6 +17,7 @@
 
 #include "s2/s2debug.h"
 
+#include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
@@ -24,6 +25,7 @@
 // otherwise it won't test anything.
 
 TEST(FLAGS_s2debug, Restore_Part1) {
+  google::FlagSaver flag_saver;
   EXPECT_EQ(google::DEBUG_MODE, FLAGS_s2debug);
   FLAGS_s2debug = !FLAGS_s2debug;
 }
