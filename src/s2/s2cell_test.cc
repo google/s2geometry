@@ -78,10 +78,12 @@ TEST(S2Cell, TestFaces) {
     }
   }
   // Check that edges have multiplicity 2 and vertices have multiplicity 3.
-  for (pair<S2Point, int> const& p : edge_counts)
+  for (auto const& p : edge_counts) {
     EXPECT_EQ(2, p.second);
-  for (pair<S2Point, int> const& p : vertex_counts)
+  }
+  for (auto const& p : vertex_counts) {
     EXPECT_EQ(3, p.second);
+  }
 }
 
 struct LevelStats {

@@ -1199,6 +1199,7 @@ static void CheckLoopIsInvalid(const string& str, const string& snippet) {
 }
 
 TEST(S2Loop, IsValidDetectsInvalidLoops) {
+  google::FlagSaver flag_saver;
   FLAGS_s2debug = false;
 
   // Not enough vertices.  Note that all single-vertex loops are valid; they

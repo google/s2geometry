@@ -1975,7 +1975,6 @@ TEST(S2Polygon, MultipleInit) {
   loops.push_back(s2textformat::MakeLoop("40:30, 20:10, 20:50"));
   polygon->InitNested(std::move(loops));
   EXPECT_TRUE(polygon->IsValid());
-  EXPECT_TRUE(loops.empty());
   EXPECT_EQ(2, polygon->num_loops());
   EXPECT_EQ(6, polygon->num_vertices());
   EXPECT_TRUE(bound1 != polygon->GetRectBound());
