@@ -698,9 +698,9 @@ double S2EdgeUtil::GetUpdateMinDistanceMaxError(S1ChordAngle dist) {
              dist.GetS2PointConstructorMaxError());
 }
 
-S2Point S2EdgeUtil::GetClosestPoint(S2Point const& x,
-                                    S2Point const& a, S2Point const& b,
-                                    Vector3_d const& a_cross_b) {
+S2Point S2EdgeUtil::Project(S2Point const& x,
+                            S2Point const& a, S2Point const& b,
+                            Vector3_d const& a_cross_b) {
   DCHECK(S2::IsUnitLength(a));
   DCHECK(S2::IsUnitLength(b));
   DCHECK(S2::IsUnitLength(x));
@@ -716,9 +716,9 @@ S2Point S2EdgeUtil::GetClosestPoint(S2Point const& x,
   return ((x - a).Norm2() <= (x - b).Norm2()) ? a : b;
 }
 
-S2Point S2EdgeUtil::GetClosestPoint(S2Point const& x,
-                                    S2Point const& a, S2Point const& b) {
-  return GetClosestPoint(x, a, b, S2::RobustCrossProd(a, b));
+S2Point S2EdgeUtil::Project(S2Point const& x,
+                            S2Point const& a, S2Point const& b) {
+  return Project(x, a, b, S2::RobustCrossProd(a, b));
 }
 
 bool S2EdgeUtil::UpdateEdgePairMinDistance(
@@ -760,10 +760,10 @@ std::pair<S2Point, S2Point> S2EdgeUtil::GetEdgePairClosestPoints(
   if (UpdateMinDistance(b0, a0, a1, &min_dist)) { closest_vertex = B0; }
   if (UpdateMinDistance(b1, a0, a1, &min_dist)) { closest_vertex = B1; }
   switch (closest_vertex) {
-    case A0: return std::make_pair(a0, GetClosestPoint(a0, b0, b1));
-    case A1: return std::make_pair(a1, GetClosestPoint(a1, b0, b1));
-    case B0: return std::make_pair(GetClosestPoint(b0, a0, a1), b0);
-    case B1: return std::make_pair(GetClosestPoint(b1, a0, a1), b1);
+    case A0: return std::make_pair(a0, Project(a0, b0, b1));
+    case A1: return std::make_pair(a1, Project(a1, b0, b1));
+    case B0: return std::make_pair(Project(b0, a0, a1), b0);
+    case B1: return std::make_pair(Project(b1, a0, a1), b1);
     default: LOG(FATAL) << "Unreached (to suppress Android compiler warning)";
   }
 }
@@ -781,8 +781,8 @@ bool S2EdgeUtil::IsEdgeBNearEdgeA(S2Point const& a0, S2Point const& a1,
   // containing them.
 
   Vector3_d a_ortho = S2::RobustCrossProd(a0, a1).Normalize();
-  S2Point const a_nearest_b0 = GetClosestPoint(b0, a0, a1, a_ortho);
-  S2Point const a_nearest_b1 = GetClosestPoint(b1, a0, a1, a_ortho);
+  S2Point const a_nearest_b0 = Project(b0, a0, a1, a_ortho);
+  S2Point const a_nearest_b1 = Project(b1, a0, a1, a_ortho);
   // If a_nearest_b0 and a_nearest_b1 have opposite orientation from a0 and a1,
   // we invert a_ortho so that it points in the same direction as a_nearest_b0 x
   // a_nearest_b1.  This helps us handle the case where A and B are oppositely

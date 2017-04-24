@@ -494,19 +494,13 @@ class dense_hashtable {
     assert(settings.use_deleted());
   }
 
-  // Set it so test_deleted is true.  true if object didn't used to be deleted.
-  bool set_deleted(iterator &it) {
+  // Write the deleted key to the position specified.
+  // Requires: !test_deleted(it)
+  void set_deleted(iterator &it) {
     check_use_deleted("set_deleted()");
-    bool retval = !test_deleted(it);
+    assert(!test_deleted(it));
     // &* converts from iterator to value-type.
     set_key(&(*it), key_info.delkey);
-    return retval;
-  }
-  // Set it so test_deleted is false.  true if object used to be deleted.
-  bool clear_deleted(iterator &it) {
-    check_use_deleted("clear_deleted()");
-    // Happens automatically when we assign something else in its place.
-    return test_deleted(it);
   }
 
   // We also allow to set/clear the deleted bit on a const iterator.
@@ -514,16 +508,11 @@ class dense_hashtable {
   // const pointer: it's convenient, and semantically you can't use
   // 'it' after it's been deleted anyway, so its const-ness doesn't
   // really matter.
-  bool set_deleted(const_iterator &it) {
+  // Requires: !test_deleted(it)
+  void set_deleted(const_iterator &it) {
     check_use_deleted("set_deleted()");
-    bool retval = !test_deleted(it);
+    assert(!test_deleted(it));
     set_key(const_cast<pointer>(&(*it)), key_info.delkey);
-    return retval;
-  }
-  // Set it so test_deleted is false.  true if object used to be deleted.
-  bool clear_deleted(const_iterator &it) {
-    check_use_deleted("clear_deleted()");
-    return test_deleted(it);
   }
 
   // EMPTY HELPER FUNCTIONS
@@ -1199,9 +1188,6 @@ class dense_hashtable {
       throw std::length_error("insert overflow");
     }
     if ( test_deleted(pos) ) {      // just replace if it's been del.
-      // shrug: shouldn't need to be const.
-      const_iterator delpos(this, table + pos, table + num_buckets, false);
-      clear_deleted(delpos);
       assert(num_deleted > 0);
       --num_deleted;                // used to be, now it isn't
     } else {
@@ -1305,7 +1291,7 @@ class dense_hashtable {
  private:
   template <class K>
   size_type erase_impl(const K& key) {
-    const_iterator pos = find(key);   // shrug: shouldn't need to be const
+    iterator pos = find(key);
     if (pos != end()) {
       assert(!test_deleted(pos));  // or find() shouldn't have returned it
       set_deleted(pos);
@@ -1326,17 +1312,16 @@ class dense_hashtable {
 
   void erase(iterator pos) {
     if (pos == end()) return;    // sanity check
-    if (set_deleted(pos)) {      // true if object has been newly deleted
-      ++num_deleted;
-      // will think about shrink after next insert
-      settings.set_consider_shrink(true);
-    }
+    set_deleted(pos);
+    ++num_deleted;
+    // will think about shrink after next insert
+    settings.set_consider_shrink(true);
   }
 
   void erase(iterator f, iterator l) {
     for (; f != l; ++f) {
-      if (set_deleted(f))       // should always be true
-        ++num_deleted;
+      set_deleted(f);
+      ++num_deleted;
     }
     // will think about shrink after next insert
     settings.set_consider_shrink(true);
@@ -1349,16 +1334,15 @@ class dense_hashtable {
   // if it's const or not.
   void erase(const_iterator pos) {
     if (pos == end()) return;    // sanity check
-    if (set_deleted(pos)) {      // true if object has been newly deleted
-      ++num_deleted;
-      // will think about shrink after next insert
-      settings.set_consider_shrink(true);
-    }
+    set_deleted(pos);
+    ++num_deleted;
+    // will think about shrink after next insert
+    settings.set_consider_shrink(true);
   }
   void erase(const_iterator f, const_iterator l) {
     for ( ; f != l; ++f) {
-      if (set_deleted(f))       // should always be true
-        ++num_deleted;
+      set_deleted(f);
+      ++num_deleted;
     }
     // will think about shrink after next insert
     settings.set_consider_shrink(true);

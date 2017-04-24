@@ -49,15 +49,18 @@ TEST(S2RegionUnionTest, Basic) {
       new S2PointRegion(S2LatLng::FromDegrees(-35, -40).ToPoint()));
 
   auto two_points_orig =
-      gtl::MakeUnique<S2RegionUnion>(std::move(two_point_region));
+      absl::MakeUnique<S2RegionUnion>(std::move(two_point_region));
   // two_point_region is in a valid, but unspecified, state.
 
   // Check that Clone() returns a deep copy.
   unique_ptr<S2RegionUnion> two_points(two_points_orig->Clone());
   two_points_orig.reset();
-  EXPECT_EQ(S2LatLngRect(S2LatLng::FromDegrees(-35, -40),
-                         S2LatLng::FromDegrees(35, 40)),
-            two_points->GetRectBound());
+  // The bounds below may not be exactly equal because the S2PointRegion
+  // version converts each S2LatLng value to an S2Point and back.
+  EXPECT_TRUE(S2LatLngRect(S2LatLng::FromDegrees(-35, -40),
+                           S2LatLng::FromDegrees(35, 40)).ApproxEquals(
+                               two_points->GetRectBound()))
+      << two_points->GetRectBound();
 
   S2Cell face0 = S2Cell::FromFace(0);
   EXPECT_TRUE(two_points->MayIntersect(face0));
@@ -71,7 +74,7 @@ TEST(S2RegionUnionTest, Basic) {
   unique_ptr<S2RegionUnion> three_points(two_points->Clone());
   EXPECT_FALSE(three_points->Contains(S2LatLng::FromDegrees(10, 10).ToPoint()));
   three_points->Add(
-      gtl::MakeUnique<S2PointRegion>(S2LatLng::FromDegrees(10, 10).ToPoint()));
+      absl::MakeUnique<S2PointRegion>(S2LatLng::FromDegrees(10, 10).ToPoint()));
   EXPECT_TRUE(three_points->Contains(S2LatLng::FromDegrees(10, 10).ToPoint()));
 
   S2RegionCoverer coverer;

@@ -116,6 +116,20 @@
 //    single chain of edges, i.e. it must be a closed loop, a single polyline,
 //    or a single point (represented as a degenerate edge).
 //    TODO(ericv): Consider relaxing this requirement.
+//
+// Example usage:
+//   S2ShapeIndex a, b;  // Input geometry, e.g. containing polygons.
+//   S2Polygon polygon;  // Output geometry.
+//   S2BoundaryOperation::Options options;
+//   options.set_snap_function(snap_function);
+//   S2BoundaryOperation op(S2BoundaryOperation::OpType::INTERSECTION,
+//                          absl::MakeUnique<S2PolygonLayer>(&polygon),
+//                          options);
+//   S2Error error;
+//   if (!op.Build(a, b, &error)) {
+//     LOG(ERROR) << error.text();
+//     ...
+//   }
 class S2BoundaryOperation {
  public:
   // The supported operation types.
@@ -261,16 +275,16 @@ class S2BoundaryOperation {
                       std::unique_ptr<S2Builder::Layer> layer,
                       Options const& options = Options());
 
-#if 0
-  // Specifies that "result_empty" should be set to indicate whether the exact
-  // result of the operation is empty (contains no edges).  This can be used
-  // to efficiently implement boolean relationship predicates.  For example,
-  // you can check whether a polygon contains a polyline by subtracting the
-  // polygon from the polyline (BuildDifference) and testing whether the
-  // result is empty.
-  S2BoundaryOperation(OpType op_type, bool* result_empty,
+  // Specifies that "result_non_empty" should be set to indicate whether the
+  // exact result of the operation is non-empty (contains at least one edge).
+  // This can be used to efficiently implement boolean relationship
+  // predicates.  For example, you can check whether a polygon contains a
+  // polyline by subtracting the polygon from the polyline (BuildDifference)
+  // and testing whether the result is empty.
+  S2BoundaryOperation(OpType op_type, bool* result_non_empty,
                       Options const& options = Options());
 
+#if 0
   // Specifies that the output boundary edges should be sent to three
   // different layers according to their dimension.  Points (represented by
   // degenerate edges) are sent to "layer0", polyline edges are sent to
@@ -290,19 +304,12 @@ class S2BoundaryOperation {
                       Options const& options = Options());
 #endif
 
-  // Adds an input region consisting of the geometry in the given
-  // S2ShapeIndex.  There must be exactly two calls to this method, since this
-  // class only supports operations on pairs of regions.
-  //
-  // The index may contain any mixture of 0D, 1D, and 2D geometry (i.e.,
-  // points, polyline, and polygons).  The rules for combining geometric
-  // primitives in each dimension are documented above.
-  void AddRegion(S2ShapeIndex const& index);
+  OpType op_type() const { return op_type_; }
 
   // Executes the given operation.  Returns true on success, and otherwise
   // sets "error" appropriately.  (This class does not generate any errors
   // itself, but the S2Builder::Layer might.)
-  bool Build(S2Error* error);
+  bool Build(S2ShapeIndex const& a, S2ShapeIndex const& b, S2Error* error);
 
   // SourceId identifies an edge from one of the two input S2ShapeIndexes.
   // It consists of a region id (0 or 1), a shape id within that region's
@@ -311,6 +318,7 @@ class S2BoundaryOperation {
    public:
     SourceId();
     SourceId(int region_id, int32 shape_id, int32 edge_id);
+    explicit SourceId(int32 special_edge_id);
     int region_id() const { return region_id_; }
     int32 shape_id() const { return shape_id_; }
     int32 edge_id() const { return edge_id_; }
@@ -323,45 +331,8 @@ class S2BoundaryOperation {
     int32 edge_id_;
   };
 
-  // This version of AddRegion() is used internally by S2Polygon to adapt its
-  // internal S2ShapeIndex to the requirements of this class.
-  //
-  // The function "contains" indicates whether the given point is contained by
-  // the region.  The result must depend only on the shapes in the index where
-  // has_interior() is true (i.e., polygons).  Furthermore, the result must
-  // change whenever an edge from one of these shapes is crossed.  This
-  // implies that for a given set of indexed shapes, only two (complementary)
-  // definitions of the interior are possible.
-  //
-  // The function "reverse_edges" indicates whether the edges of the given
-  // shape should be reversed before using them.  After any such reversal, it
-  // must be true that the interior of the region is to the left of all edges
-  // that define the interior (i.e., shapes where has_interior() is true).
-  // (Shapes that define polylines or point sets have no such restrictions.)
-  void AddRegion(S2ShapeIndex const& index,
-                 std::function<bool (S2Point const&)> contains,
-                 std::function<bool (S2Shape const&)> reverse_edges);
-
  private:
   class Impl;  // The actual implementation.
-  class CrossingQuery;  // Helper class.
-
-  // A Region consists of an S2ShapeIndex together with the functions that
-  // define point containment and whether any shape edges are reversed.
-  struct Region {
-    int id;  // The input region id (0 or 1).
-    S2ShapeIndex const& index;
-    std::function<bool (S2Point const&)> contains;
-    std::function<bool (S2Shape const&)> reverse_edges;
-
-    Region(int _id, S2ShapeIndex const& _index,
-           std::function<bool (S2Point const&)> _contains,
-           std::function<bool (S2Shape const&)> _reverse_edges)
-        : id(_id), index(_index),
-          contains(std::move(_contains)),
-          reverse_edges(std::move(_reverse_edges)) {
-    }
-  };
 
   // Internal constructor to reduce code duplication.
   S2BoundaryOperation(OpType op_type, Options const& options);
@@ -369,14 +340,14 @@ class S2BoundaryOperation {
   OpType op_type_;
   Options options_;
 
-  // The input regions (there are always exactly two when Build is called).
-  std::vector<Region> regions_;
+  // The input regions.
+  S2ShapeIndex const* regions_[2];
 
   // The output consists either of zero layers, one layer, or three layers.
   std::vector<std::unique_ptr<S2Builder::Layer>> layers_;
 
   // The following field is set if and only if there are no output layers.
-  bool* result_nonempty_;
+  bool* result_non_empty_;
 };
 
 
@@ -390,6 +361,10 @@ inline S2BoundaryOperation::SourceId::SourceId()
 inline S2BoundaryOperation::SourceId::SourceId(
     int region_id, int32 shape_id, int32 edge_id)
     : region_id_(region_id), shape_id_(shape_id), edge_id_(edge_id) {
+}
+
+inline S2BoundaryOperation::SourceId::SourceId(int special_edge_id)
+    : region_id_(0), shape_id_(0), edge_id_(special_edge_id) {
 }
 
 inline bool S2BoundaryOperation::SourceId::operator==(SourceId other) const {

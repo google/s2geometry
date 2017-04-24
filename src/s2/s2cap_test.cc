@@ -17,6 +17,7 @@
 
 #include "s2/s2cap.h"
 
+#include <cfloat>
 #include <gtest/gtest.h>
 #include "s2/r1interval.h"
 #include "s2/s1interval.h"
@@ -110,12 +111,22 @@ TEST(S2Cap, Basic) {
   EXPECT_TRUE(hemi.Contains(S2Point(1, 0, -(1-kEps)).Normalize()));
   EXPECT_FALSE(hemi.InteriorContains(S2Point(1, 0, -(1+kEps)).Normalize()));
 
-  // A concave cap.
-  S2Cap concave(GetLatLngPoint(80, 10), S1Angle::Degrees(150));
-  EXPECT_TRUE(concave.Contains(GetLatLngPoint(-70 * (1 - kEps), 10)));
-  EXPECT_FALSE(concave.Contains(GetLatLngPoint(-70 * (1 + kEps), 10)));
-  EXPECT_TRUE(concave.Contains(GetLatLngPoint(-50 * (1 - kEps), -170)));
-  EXPECT_FALSE(concave.Contains(GetLatLngPoint(-50 * (1 + kEps), -170)));
+  // A concave cap.  Note that the error bounds for point containment tests
+  // increase with the cap angle, so we need to use a larger error bound
+  // here.  (It would be painful to do this everywhere, but this at least
+  // gives an example of how to compute the maximum error.)
+  S2Point center = GetLatLngPoint(80, 10);
+  S1ChordAngle radius(S1Angle::Degrees(150));
+  double max_error = (radius.GetS2PointConstructorMaxError() +
+                      radius.GetS1AngleConstructorMaxError() +
+                      3 * DBL_EPSILON);  // GetLatLngPoint() error
+  S2Cap concave(center, radius);
+  S2Cap concave_min(center, radius.PlusError(-max_error));
+  S2Cap concave_max(center, radius.PlusError(max_error));
+  EXPECT_TRUE(concave_max.Contains(GetLatLngPoint(-70, 10)));
+  EXPECT_FALSE(concave_min.Contains(GetLatLngPoint(-70, 10)));
+  EXPECT_TRUE(concave_max.Contains(GetLatLngPoint(-50, -170)));
+  EXPECT_FALSE(concave_min.Contains(GetLatLngPoint(-50, -170)));
 
   // Cap containment tests.
   EXPECT_FALSE(empty.Contains(xaxis));
@@ -341,4 +352,3 @@ TEST(S2Cap, EncodeDecode) {
   EXPECT_TRUE(decoded_cap.Decode(&decoder));
   EXPECT_EQ(cap, decoded_cap);
 }
-

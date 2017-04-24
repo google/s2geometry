@@ -1451,6 +1451,13 @@ template int TriageCompareSin2Distance<double>(
 template int TriageCompareSin2Distance<long double>(
     Vector3_ld const&, Vector3_ld const&, long double r2);
 
+template int TriageCompareEdgeDistance<double>(
+    S2Point const& x, S2Point const& a0, S2Point const& a1, double r2);
+
+template int TriageCompareEdgeDistance<long double>(
+    Vector3_ld const& x, Vector3_ld const& a0, Vector3_ld const& a1,
+    long double r2);
+
 template int TriageCompareEdgeDirections<double>(
     S2Point const& a0, S2Point const& a1,
     S2Point const& b0, S2Point const& b1);

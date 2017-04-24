@@ -400,12 +400,16 @@ class VertexIdEdgeVectorShape : public S2Shape {
   S2Point const& vertex1(int e) const { return vertex(edges_[e].second); }
 
   // S2Shape interface:
-  int num_edges() const override { return edges_.size(); }
-  void GetEdge(int e, S2Point const** v0, S2Point const** v1) const override;
-  int dimension() const override { return 1; }
-  bool contains_origin() const override { return false; }
-  int num_chains() const override { return edges_.size(); }
-  int chain_start(int i) const override { return i; }
+  int num_edges() const final { return edges_.size(); }
+  void GetEdge(int e, S2Point const** v0, S2Point const** v1) const final;
+  int dimension() const final { return 1; }
+  bool contains_origin() const final { return false; }
+  int num_chains() const final { return edges_.size(); }
+  Chain chain(int i) const final { return Chain(i, 1); }
+  Edge chain_edge(int i, int j) const final;
+  ChainPosition chain_position(int e) const final {
+    return ChainPosition(e, 0);
+  }
 
  private:
   S2Point const& vertex(int i) const { return vertices_[i]; }
@@ -419,6 +423,12 @@ void VertexIdEdgeVectorShape::GetEdge(int e, S2Point const** v0,
   auto const& edge = edges_[e];
   *v0 = &vertices_[edge.first];
   *v1 = &vertices_[edge.second];
+}
+
+S2Shape::Edge VertexIdEdgeVectorShape::chain_edge(int i, int j) const {
+  DCHECK_EQ(j, 0);
+  auto const& edge = edges_[i];
+  return Edge(&vertices_[edge.first], &vertices_[edge.second]);
 }
 
 bool S2Builder::Build(S2Error* error) {
@@ -580,16 +590,20 @@ vector<S2Builder::InputVertexKey> S2Builder::SortInputVertices() {
 // points to input_vertices_.  (The intersection points will be snapped and
 // merged with the other vertices during site selection.)
 void S2Builder::AddEdgeCrossings(S2ShapeIndex const& input_edge_index) {
-  auto edge_pairs = s2shapeutil::GetCrossingEdgePairs(
-      input_edge_index, s2shapeutil::CrossingType::INTERIOR);
-  auto shape = down_cast<VertexIdEdgeVectorShape*>(input_edge_index.shape(0));
-  for (auto const& edge_pair : edge_pairs) {
+  // We need to build a list of intersections and add them afterwards so that
+  // we don't reallocate vertices_ during the VisitCrossings() call.
+  vector<S2Point> new_vertices;
+  s2shapeutil::VisitCrossings(
+      input_edge_index, s2shapeutil::CrossingType::INTERIOR,
+      [&new_vertices](s2shapeutil::ShapeEdge const& a,
+                      s2shapeutil::ShapeEdge const& b, bool) {
+        new_vertices.push_back(
+            S2EdgeUtil::GetIntersection(a.v0(), a.v1(), b.v0(), b.v1()));
+        return true;  // Continue visiting.
+      });
+  if (!new_vertices.empty()) {
     snapping_needed_ = true;
-    InputEdgeId e0 = edge_pair.first.edge_id();
-    InputEdgeId e1 = edge_pair.second.edge_id();
-    AddVertex(S2EdgeUtil::GetIntersection(
-        shape->vertex0(e0), shape->vertex1(e0),
-        shape->vertex0(e1), shape->vertex1(e1)));
+    for (auto const& vertex : new_vertices) AddVertex(vertex);
   }
 }
 
@@ -808,8 +822,8 @@ void S2Builder::MaybeAddExtraSites(InputEdgeId edge_id,
         // edge wraps around the sphere the "wrong way".  To handle this we
         // find the preferred split location by projecting both endpoints onto
         // the input edge and taking their midpoint.
-        S2Point mid = (S2EdgeUtil::GetClosestPoint(v0, a0, a1) +
-                       S2EdgeUtil::GetClosestPoint(v1, a0, a1)).Normalize();
+        S2Point mid = (S2EdgeUtil::Project(v0, a0, a1) +
+                       S2EdgeUtil::Project(v1, a0, a1)).Normalize();
         S2Point new_site = GetSeparationSite(mid, v0, v1, edge_id);
         AddExtraSite(new_site, max_edge_id, input_edge_index, snap_queue);
         return;
@@ -886,7 +900,7 @@ S2Point S2Builder::GetSeparationSite(S2Point const& site_to_avoid,
   S2Point const& y = input_vertices_[edge.second];
   Vector3_d xy_dir = y - x;
   S2Point n = S2::RobustCrossProd(x, y);
-  S2Point new_site = S2EdgeUtil::GetClosestPoint(site_to_avoid, x, y, n);
+  S2Point new_site = S2EdgeUtil::Project(site_to_avoid, x, y, n);
   S2Point gap_min = GetCoverageEndpoint(v0, x, y, n);
   S2Point gap_max = GetCoverageEndpoint(v1, y, x, -n);
   if ((new_site - gap_min).DotProd(xy_dir) < 0) {

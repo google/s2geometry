@@ -40,7 +40,7 @@ class S2LatLngRect;
 // between the accuracy of the approximation and how many cells are used.
 // Unlike polygons, cells have a fixed hierarchical structure.  This makes
 // them more suitable for optimizations based on preprocessing.
-class S2CellUnion : public S2Region {
+class S2CellUnion final : public S2Region {
  public:
   // The default constructor does nothing.  The cell union cannot be used
   // until one of the Init() methods is called.

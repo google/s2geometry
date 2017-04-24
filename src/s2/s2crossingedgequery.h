@@ -66,7 +66,7 @@ class S2Shape;
 // does not need to be reallocated each time.
 //
 // If you want to find *all* pairs of crossing edges, it is more efficient to
-// call s2shapeutil::GetCrossingEdgePairs().
+// call s2shapeutil::VisitCrossings().
 class S2CrossingEdgeQuery {
  public:
   // An EdgeMap stores a sorted set of edge ids for each shape.  Its type

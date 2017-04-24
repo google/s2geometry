@@ -50,7 +50,7 @@ static inline int Fls64(uint64 n) {
   assert(n != 0);
   int pos = 0;
   STEP(uint64, n, pos, 0x20);
-  uint32 n32 = n;
+  uint32 n32 = static_cast<uint32>(n);
   STEP(uint32, n32, pos, 0x10);
   STEP(uint32, n32, pos, 0x08);
   STEP(uint32, n32, pos, 0x04);

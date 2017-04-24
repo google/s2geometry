@@ -449,6 +449,11 @@ class S2EdgeUtil {
 %unignore S2RegionCoverer::set_max_level;
 %unignore S2RegionCoverer::set_min_level;
 
+// SWIG <3.0 does not understand constexpr (unsure of exact version).
+#if SWIG_VERSION < 0x030000
+%define constexpr %enddef
+#endif
+
 %include "s2/r1interval.h"
 %include "s2/s1angle.h"
 %include "s2/s1chordangle.h"

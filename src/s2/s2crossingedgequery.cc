@@ -100,7 +100,6 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
   for (S2ShapeIndexCell const* cell : cells_) {
     S2ClippedShape const* clipped = cell->find_clipped(shape_id);
     if (clipped == nullptr) continue;
-    edges->reserve(edges->size() + clipped->num_edges());
     for (int j = 0; j < clipped->num_edges(); ++j) {
       edges->push_back(clipped->edge(j));
     }
@@ -144,7 +143,6 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
     for (int s = 0; s < cell->num_clipped(); ++s) {
       S2ClippedShape const& clipped = cell->clipped(s);
       vector<int>* edges = &(*edge_map)[index_->shape(clipped.shape_id())];
-      edges->reserve(edges->size() + clipped.num_edges());
       for (int j = 0; j < clipped.num_edges(); ++j) {
         edges->push_back(clipped.edge(j));
       }

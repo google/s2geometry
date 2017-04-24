@@ -49,7 +49,7 @@ unique_ptr<S2ShapeIndex> MakeIndex(
     vector<string> const& loops,
     vector<string> const& polylines = vector<string>(),
     string const& points = string()) {
-  unique_ptr<S2ShapeIndex> index(new S2ShapeIndex);
+  auto index = absl::MakeUnique<S2ShapeIndex>();
   if (!loops.empty()) {
     vector<vector<S2Point>> polygon;
     for (string const& str : loops) {
@@ -147,13 +147,19 @@ void ExpectResult(S2BoundaryOperation::OpType op_type ,
                   S2ShapeIndex const& a, S2ShapeIndex const& b,
                   S2ShapeIndex const& expected) {
   S2BoundaryOperation op(
-      op_type, gtl::MakeUnique<IndexMatchingLayer>(expected), options);
-  op.AddRegion(a);
-  op.AddRegion(b);
+      op_type, absl::MakeUnique<IndexMatchingLayer>(expected), options);
   S2Error error;
-  EXPECT_TRUE(op.Build(&error))
+  EXPECT_TRUE(op.Build(a, b, &error))
       << S2BoundaryOperation::OpTypeToString(op_type) << " failed:\n"
       << error.text();
+
+  // Now try the same thing with boolean output.
+  bool result_empty;
+  S2BoundaryOperation op2(op_type, &result_empty, options);
+  EXPECT_TRUE(op2.Build(a, b, &error)) << "Boolean "
+      << S2BoundaryOperation::OpTypeToString(op_type) << " failed:\n"
+      << error.text();
+  EXPECT_EQ(expected.num_shape_ids() == 0, result_empty);
 }
 
 }  // namespace
@@ -166,6 +172,20 @@ static S2BoundaryOperation::Options RoundToE(int exp) {
   S2BoundaryOperation::Options options;
   options.set_snap_function(s2builderutil::IntLatLngSnapFunction(exp));
   return options;
+}
+
+TEST(S2BoundaryOperation, TwoDisjointTriangles) {
+  S2BoundaryOperation::Options options;
+  auto a = MakeIndex({"4:2, 3:1, 3:3"});
+  auto b = MakeIndex({"2:0, 0:0, 2:2"});
+  ExpectResult(OpType::UNION, options, *a, *b,
+               *MakeIndex({"4:2, 3:1, 3:3", "2:0, 0:0, 2:2"}));
+  ExpectResult(OpType::INTERSECTION, options, *a, *b,
+               *MakeIndex({}));
+  ExpectResult(OpType::DIFFERENCE, options, *a, *b,
+               *MakeIndex({"4:2, 3:1, 3:3"}));
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, *a, *b,
+               *MakeIndex({"4:2, 3:1, 3:3", "2:0, 0:0, 2:2"}));
 }
 
 TEST(S2BoundaryOperation, TwoTrianglesSharingEdge) {
@@ -186,7 +206,8 @@ TEST(S2BoundaryOperation, TwoTrianglesSharingEdge) {
 }
 
 TEST(S2BoundaryOperation, ThreeOverlappingBars) {
-  // Two vertical bars and a horizontal bar connecting them.
+  // Two vertical bars and a horizontal bar that overlaps both of the other
+  // bars and connects them.
 
   // Round intersection points to E2 precision because the expected results
   // were computed in lat/lng space rather than using geodesics.

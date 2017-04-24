@@ -375,10 +375,10 @@ TEST_F(S2ShapeIndexTest, RandomUpdates) {
       S2Point(-1, -1, -1).Normalize(), S1Angle::Radians(M_PI - 0.001), 10)));
 
   // A shape with no edges and no interior.
-  index_.Add(new S2LoopOwningShape(gtl::MakeUnique<S2Loop>(S2Loop::kEmpty())));
+  index_.Add(new S2LoopOwningShape(absl::MakeUnique<S2Loop>(S2Loop::kEmpty())));
 
   // A shape with no edges that covers the entire sphere.
-  index_.Add(new S2LoopOwningShape(gtl::MakeUnique<S2Loop>(S2Loop::kFull())));
+  index_.Add(new S2LoopOwningShape(absl::MakeUnique<S2Loop>(S2Loop::kFull())));
 
   vector<S2Shape*> added, removed;
   for (int id = 0; id < index_.num_shape_ids(); ++id) {
@@ -414,21 +414,13 @@ TEST_F(S2ShapeIndexTest, RandomUpdates) {
   }
 }
 
-// Add the loops to the given index.
-void AddLoops(vector<unique_ptr<S2Loop>> const& loops,
-              S2ShapeIndex* index) {
-  for (unique_ptr<S2Loop> const& loop : loops) {
-    index->Add(new S2Loop::Shape(loop.get()));
-  }
-}
 
 // Return true if any loop crosses any other loop (including vertex crossings
 // and duplicate edges), or any loop has a self-intersection (including
 // duplicate vertices).
-static bool HasAnyCrossing(S2ShapeIndex const& index,
-                           vector<unique_ptr<S2Loop>> const& loops) {
+static bool HasAnyCrossing(S2ShapeIndex const& index) {
   S2Error error;
-  if (s2shapeutil::FindAnyCrossing(index, loops, &error)) {
+  if (s2shapeutil::FindAnyCrossing(index, &error)) {
     VLOG(1) << error;
     return true;
   }
@@ -442,8 +434,10 @@ void TestHasCrossingPermutations(vector<unique_ptr<S2Loop>>* loops, int i,
                                  bool has_crossing) {
   if (i == loops->size()) {
     S2ShapeIndex index;
-    AddLoops(*loops, &index);
-    EXPECT_EQ(has_crossing, HasAnyCrossing(index, *loops));
+    S2Polygon polygon(std::move(*loops));
+    index.Add(new S2Polygon::Shape(&polygon));
+    EXPECT_EQ(has_crossing, HasAnyCrossing(index));
+    *loops = polygon.Release();
   } else {
     unique_ptr<S2Loop> orig_loop = std::move((*loops)[i]);
     for (int j = 0; j < orig_loop->num_vertices(); ++j) {
@@ -451,7 +445,7 @@ void TestHasCrossingPermutations(vector<unique_ptr<S2Loop>>* loops, int i,
       for (int k = 0; k < orig_loop->num_vertices(); ++k) {
         vertices.push_back(orig_loop->vertex(j + k));
       }
-      (*loops)[i] = gtl::MakeUnique<S2Loop>(vertices);
+      (*loops)[i] = absl::MakeUnique<S2Loop>(vertices);
       TestHasCrossingPermutations(loops, i+1, has_crossing);
     }
     (*loops)[i] = std::move(orig_loop);

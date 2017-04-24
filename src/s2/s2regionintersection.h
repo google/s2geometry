@@ -35,7 +35,7 @@ class S2LatLngRect;
 // An S2RegionIntersection represents the intersection of a set of regions.
 // It is convenient for computing a covering of the intersection of a set of
 // regions.
-class S2RegionIntersection : public S2Region {
+class S2RegionIntersection final : public S2Region {
  public:
   // Creates an empty intersection that should be initialized by calling Init().
   // Note: an intersection of no regions covers the entire sphere.

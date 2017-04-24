@@ -37,7 +37,7 @@ class S2LatLngRect;
 //
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.
-class S2PointRegion : public S2Region {
+class S2PointRegion final : public S2Region {
  public:
   // Create a region containing the given point, which must be unit length.
   explicit S2PointRegion(S2Point const& point);

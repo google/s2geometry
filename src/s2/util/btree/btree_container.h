@@ -142,6 +142,9 @@ class btree_container {
     return tree_.get_allocator();
   }
 
+  // The key comparator used by the btree.
+  key_compare key_comp() const { return tree_.key_comp(); }
+
   // Exposed only for tests.
   static bool testonly_uses_linear_node_search() {
     return Tree::testonly_uses_linear_node_search();
@@ -157,7 +160,7 @@ inline std::ostream& operator<<(std::ostream &os, const btree_container<T> &b) {
   return os;
 }
 
-// A common base class for btree_set and safe_btree_set.
+// Base class for btree_set.
 template <typename Tree>
 class btree_unique_container : public btree_container<Tree> {
   typedef btree_unique_container<Tree> self_type;
@@ -167,6 +170,7 @@ class btree_unique_container : public btree_container<Tree> {
   typedef typename Tree::key_type key_type;
   typedef typename Tree::data_type data_type;
   typedef typename Tree::value_type value_type;
+  typedef typename Tree::mutable_value_type mutable_value_type;
   typedef typename Tree::mapped_type mapped_type;
   typedef typename Tree::size_type size_type;
   typedef typename Tree::key_compare key_compare;
@@ -210,11 +214,21 @@ class btree_unique_container : public btree_container<Tree> {
   }
 
   // Insertion routines.
-  std::pair<iterator,bool> insert(const value_type &x) {
+  std::pair<iterator, bool> insert(const value_type &x) {
     return this->tree_.insert_unique(x);
+  }
+  template <typename... Args>
+  std::pair<iterator, bool> emplace(Args &&... args) {
+    mutable_value_type v(std::move(args)...);
+    return this->tree_.insert_unique(std::move(v));
   }
   iterator insert(iterator position, const value_type &x) {
     return this->tree_.insert_hint_unique(position, x);
+  }
+  template <typename... Args>
+  iterator emplace_hint(iterator position, Args &&... args) {
+    mutable_value_type v(std::move(args)...);
+    return this->tree_.insert_hint_unique(position, std::move(v));
   }
   template <typename InputIterator>
   void insert(InputIterator b, InputIterator e) {
@@ -244,7 +258,7 @@ inline void swap(btree_unique_container<Tree> &x,
   x.swap(y);
 }
 
-// A common base class for btree_map and safe_btree_map.
+// Base class for btree_map.
 template <typename Tree>
 class btree_map_container : public btree_unique_container<Tree> {
   typedef btree_map_container<Tree> self_type;
@@ -254,6 +268,7 @@ class btree_map_container : public btree_unique_container<Tree> {
   typedef typename Tree::key_type key_type;
   typedef typename Tree::data_type data_type;
   typedef typename Tree::value_type value_type;
+  typedef typename Tree::mutable_value_type mutable_value_type;
   typedef typename Tree::mapped_type mapped_type;
   typedef typename Tree::key_compare key_compare;
   typedef typename Tree::allocator_type allocator_type;
@@ -263,11 +278,21 @@ class btree_map_container : public btree_unique_container<Tree> {
   // dereferenced. Used by operator[] to avoid constructing an empty data_type
   // if the key already exists in the map.
   struct generate_value {
-    generate_value(const key_type &k)
-        : key(k) {
+    explicit generate_value(const key_type &k) : key(k) {}
+    mutable_value_type operator*() const {
+      return std::make_pair(key, data_type());
     }
-    value_type operator*() const { return std::make_pair(key, data_type()); }
     const key_type &key;
+  };
+
+  // Same thing, but when the key value is movable.  We need to generate
+  // mutable_value_type, as that's what the btree nodes actually store.
+  struct generate_movable_value {
+    explicit generate_movable_value(key_type *k) : key(k) {}
+    mutable_value_type operator*() const {
+      return std::make_pair(std::move(*key), data_type());
+    }
+    key_type *key;
   };
 
  public:
@@ -294,6 +319,10 @@ class btree_map_container : public btree_unique_container<Tree> {
   // Insertion routines.
   data_type& operator[](const key_type &key) {
     return this->tree_.insert_unique(key, generate_value(key)).first->second;
+  }
+  data_type &operator[](key_type &&key) {
+    return this->tree_.insert_unique(key, generate_movable_value(&key))
+        .first->second;
   }
 };
 

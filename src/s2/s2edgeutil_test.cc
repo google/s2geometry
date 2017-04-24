@@ -555,7 +555,7 @@ void CheckDistance(S2Point x, S2Point a, S2Point b,
   expected_closest = expected_closest.Normalize();
   EXPECT_NEAR(distance_radians, S2EdgeUtil::GetDistance(x, a, b).radians(),
               1e-15);
-  S2Point closest = S2EdgeUtil::GetClosestPoint(x, a, b);
+  S2Point closest = S2EdgeUtil::Project(x, a, b);
   if (expected_closest == S2Point(0, 0, 0)) {
     // This special value says that the result should be A or B.
     EXPECT_TRUE(closest == a || closest == b);

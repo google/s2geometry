@@ -52,57 +52,6 @@ std::unique_ptr<T> WrapUnique(T* ptr) {
   return std::unique_ptr<T>(ptr);
 }
 
-// RawPtr() extracts the raw pointer from a pointer-like 'ptr'. RawPtr
-// is useful within templates that need to handle a complement of raw pointers,
-// std::nullptr_t, and smart pointers.
-template <typename T>
-auto RawPtr(T&& ptr) -> decltype(&*ptr) {  // NOLINT
-  // ptr is a universal reference to support Ts with non-const operators.
-  return (ptr != nullptr) ? &*ptr : nullptr;
-}
-inline std::nullptr_t RawPtr(std::nullptr_t) { return nullptr; }
-
-// ShareUniquePtr transforms a std::unique_ptr rvalue into a std::shared_ptr.
-// The returned value is a std::shared_ptr of deduced type and ownership is
-// transferred to the shared pointer.
-//
-// Example:
-//
-//     auto up = absl::MakeUnique<int>(10);
-//     auto sp = absl::ShareUniquePtr(std::move(up));  // shared_ptr<int>
-//     CHECK_EQ(*sp, 10);
-//     CHECK(up == nullptr);
-//
-// Note that this conversion is correct even when T is an array type, although
-// the resulting shared pointer may not be very useful.
-//
-// Implements the resolution of [LWG 2415](http://wg21.link/lwg2415), by which a
-// null shared pointer does not attempt to call the deleter.
-template <typename T, typename D>
-std::shared_ptr<T> ShareUniquePtr(std::unique_ptr<T, D>&& ptr) {  // NOLINT
-  return ptr ? std::shared_ptr<T>(std::move(ptr)) : std::shared_ptr<T>();
-}
-
-// WeakenPtr creates a weak pointer associated with a given shared pointer.
-// The returned value is a std::weak_ptr of deduced type.
-//
-// Example:
-//
-//    auto sp = std::make_shared<int>(10);
-//    auto wp = absl::WeakenPtr(sp);
-//    CHECK_EQ(sp.get(), wp.lock().get());
-//    sp.reset();
-//    CHECK(wp.lock() == nullptr);
-//
-template <typename T>
-std::weak_ptr<T> WeakenPtr(const std::shared_ptr<T>& ptr) {
-  return std::weak_ptr<T>(ptr);
-}
-
-}  // namespace absl
-
-namespace gtl {
-
 namespace internal {
 
 // Traits to select proper overload and return type for MakeUnique.
@@ -203,6 +152,57 @@ template <typename T, typename... Args>
 typename internal::MakeUniqueResult<T>::invalid
 MakeUnique(Args&&... /* args */) = delete;
 
+// RawPtr() extracts the raw pointer from a pointer-like 'ptr'. RawPtr
+// is useful within templates that need to handle a complement of raw pointers,
+// std::nullptr_t, and smart pointers.
+template <typename T>
+auto RawPtr(T&& ptr) -> decltype(&*ptr) {  // NOLINT
+  // ptr is a universal reference to support Ts with non-const operators.
+  return (ptr != nullptr) ? &*ptr : nullptr;
+}
+inline std::nullptr_t RawPtr(std::nullptr_t) { return nullptr; }
+
+// ShareUniquePtr transforms a std::unique_ptr rvalue into a std::shared_ptr.
+// The returned value is a std::shared_ptr of deduced type and ownership is
+// transferred to the shared pointer.
+//
+// Example:
+//
+//     auto up = absl::MakeUnique<int>(10);
+//     auto sp = absl::ShareUniquePtr(std::move(up));  // shared_ptr<int>
+//     CHECK_EQ(*sp, 10);
+//     CHECK(up == nullptr);
+//
+// Note that this conversion is correct even when T is an array type, although
+// the resulting shared pointer may not be very useful.
+//
+// Implements the resolution of [LWG 2415](http://wg21.link/lwg2415), by which a
+// null shared pointer does not attempt to call the deleter.
+template <typename T, typename D>
+std::shared_ptr<T> ShareUniquePtr(std::unique_ptr<T, D>&& ptr) {  // NOLINT
+  return ptr ? std::shared_ptr<T>(std::move(ptr)) : std::shared_ptr<T>();
+}
+
+// WeakenPtr creates a weak pointer associated with a given shared pointer.
+// The returned value is a std::weak_ptr of deduced type.
+//
+// Example:
+//
+//    auto sp = std::make_shared<int>(10);
+//    auto wp = absl::WeakenPtr(sp);
+//    CHECK_EQ(sp.get(), wp.lock().get());
+//    sp.reset();
+//    CHECK(wp.lock() == nullptr);
+//
+template <typename T>
+std::weak_ptr<T> WeakenPtr(const std::shared_ptr<T>& ptr) {
+  return std::weak_ptr<T>(ptr);
+}
+
+}  // namespace absl
+
+namespace gtl {
+
 // Temporary aliases while moving into the absl namespace.
 // All functions will eventually be moved, in stages.
 // TODO(user): Delete temporary aliases after namespace update.
@@ -211,6 +211,8 @@ template <typename T>
 std::unique_ptr<T> WrapUnique(T* ptr) {
   return absl::WrapUnique(ptr);
 }
+
+using absl::MakeUnique;
 
 }  // namespace gtl
 

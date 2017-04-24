@@ -42,7 +42,7 @@ class S2LatLng;
 // An S2Polyline represents a sequence of zero or more vertices connected by
 // straight edges (geodesics).  Edges of length 0 and 180 degrees are not
 // allowed, i.e. adjacent vertices should not be identical or antipodal.
-class S2Polyline : public S2Region {
+class S2Polyline final : public S2Region {
  public:
   // Creates an empty S2Polyline that should be initialized by calling Init()
   // or Decode().
@@ -230,8 +230,7 @@ class S2Polyline : public S2Region {
   // This function is well-defined for empty polylines:
   //    anything.covers(empty) = true
   //    empty.covers(nonempty) = false
-  bool NearlyCoversPolyline(S2Polyline const& covered,
-                            S1Angle max_error) const;
+  bool NearlyCovers(S2Polyline const& covered, S1Angle max_error) const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -267,17 +266,24 @@ class S2Polyline : public S2Region {
     S2Polyline const* polyline() const { return polyline_; }
 
     // S2Shape interface:
-    int num_edges() const override {
+    int num_edges() const final {
       return std::max(0, polyline_->num_vertices() - 1);
     }
-    void GetEdge(int e, S2Point const** a, S2Point const** b) const override {
+    void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
       *a = &polyline_->vertex(e);
       *b = &polyline_->vertex(e+1);
     }
-    int dimension() const override { return 1; }
-    bool contains_origin() const override { return false; }
-    int num_chains() const override;
-    int chain_start(int i) const override;
+    int dimension() const final { return 1; }
+    bool contains_origin() const final { return false; }
+    int num_chains() const final;
+    Chain chain(int i) const final;
+    Edge chain_edge(int i, int j) const final {
+      DCHECK_EQ(i, 0);
+      return Edge(&polyline_->vertex(j), &polyline_->vertex(j + 1));
+    }
+    ChainPosition chain_position(int e) const final {
+      return ChainPosition(0, e);
+    }
 
    private:
     S2Polyline const* polyline_;

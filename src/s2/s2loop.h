@@ -81,7 +81,7 @@ class S2PolygonLayer;
 // allowed is that they make it harder to define and implement loop
 // relationships, e.g. whether one loop contains another.  If your data does
 // not satisfy these restrictions, you can use S2Builder to normalize it.
-class S2Loop : public S2Region {
+class S2Loop final : public S2Region {
  public:
   // Default constructor.  The loop must be initialized by calling Init() or
   // Decode() before it is used.
@@ -187,8 +187,12 @@ class S2Loop : public S2Region {
   //
   // REQUIRES: 0 <= i < 2 * num_vertices()
   S2Point const& oriented_vertex(int i) const {
-    if (is_hole()) i = (2 * num_vertices() - 1) - i;
-    return vertex(i);
+    DCHECK_GE(i, 0);
+    DCHECK_LT(i, 2 * num_vertices());
+    int j = i - num_vertices();
+    if (j < 0) j = i;
+    if (is_hole()) j = num_vertices() - 1 - j;
+    return vertices_[j];
   }
 
   // Return true if this is the special "empty" loop that contains no points.
@@ -453,17 +457,24 @@ class S2Loop : public S2Region {
     S2Loop const* loop() const { return loop_; }
 
     // S2Shape interface:
-    int num_edges() const override {
+    int num_edges() const final {
       return loop_->is_empty_or_full() ? 0 : loop_->num_vertices();
     }
-    void GetEdge(int e, S2Point const** a, S2Point const** b) const override {
+    void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
       *a = &loop_->vertex(e);
       *b = &loop_->vertex(e + 1);
     }
-    int dimension() const override { return 2; }
-    bool contains_origin() const override { return loop_->contains_origin(); }
-    int num_chains() const override;
-    int chain_start(int i) const override;
+    int dimension() const final { return 2; }
+    bool contains_origin() const final { return loop_->contains_origin(); }
+    int num_chains() const final;
+    Chain chain(int i) const final;
+    Edge chain_edge(int i, int j) const final {
+      DCHECK_EQ(i, 0);
+      return Edge(&loop_->vertex(j), &loop_->vertex(j + 1));
+    }
+    ChainPosition chain_position(int e) const final {
+      return ChainPosition(0, e);
+    }
 
    private:
     S2Loop const* loop_;
@@ -582,7 +593,7 @@ class S2Loop : public S2Region {
 
   // When the loop is modified (Invert(), or Init() called again) then the
   // indexing structures need to be deleted as they become invalid.
-  void ResetMutableFields();
+  void ResetIndex();
 
   // The nesting depth, if this field belongs to an S2Polygon.  We define it
   // here to optimize field packing.

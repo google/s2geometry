@@ -26,7 +26,6 @@
 #include <gtest/gtest.h>
 
 #include "s2/base/stringprintf.h"
-#include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell.h"
 #include "s2/s2debug.h"
@@ -34,6 +33,8 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
+#include "s2/third_party/absl/memory/memory.h"
+#include "s2/util/coding/coder.h"
 
 using std::fabs;
 using std::unique_ptr;
@@ -46,7 +47,7 @@ S2Polyline* MakePolyline(string const& str) {
   Encoder encoder;
   polyline->Encode(&encoder);
   Decoder decoder(encoder.base(), encoder.length());
-  unique_ptr<S2Polyline> decoded_polyline(new S2Polyline);
+  auto decoded_polyline = absl::MakeUnique<S2Polyline>();
   decoded_polyline->Decode(&decoder);
   return decoded_polyline.release();
 }
@@ -318,7 +319,7 @@ TEST(S2Polyline, SubsampleVerticesTrivialInputs) {
   // And finally, verify that we still do something reasonable if the client
   // passes in an invalid polyline with two or more adjacent vertices.
   google::FlagSaver flag_saver;
-  FLAGS_s2debug = false;  // Restored by gUnit
+  FLAGS_s2debug = false;
   CheckSubsample("0:1, 0:1, 0:1, 0:2", 0.0, "0,3");
 }
 
@@ -397,8 +398,8 @@ TEST(S2PolylineShape, Basic) {
   EXPECT_EQ(polyline.get(), shape.polyline());
   EXPECT_EQ(3, shape.num_edges());
   EXPECT_EQ(1, shape.num_chains());
-  EXPECT_EQ(0, shape.chain_start(0));
-  EXPECT_EQ(3, shape.chain_start(1));
+  EXPECT_EQ(0, shape.chain(0).start);
+  EXPECT_EQ(3, shape.chain(0).length);
   S2Point const *v2, *v3;
   shape.GetEdge(2, &v2, &v3);
   EXPECT_EQ(S2LatLng::FromDegrees(1, 1).ToPoint(), *v2);
@@ -423,8 +424,8 @@ void TestNearlyCovers(string const& a_str, string const& b_str,
   unique_ptr<S2Polyline> a(s2textformat::MakePolyline(a_str));
   unique_ptr<S2Polyline> b(s2textformat::MakePolyline(b_str));
   S1Angle max_error = S1Angle::Degrees(max_error_degrees);
-  EXPECT_EQ(expect_b_covers_a, b->NearlyCoversPolyline(*a, max_error));
-  EXPECT_EQ(expect_a_covers_b, a->NearlyCoversPolyline(*b, max_error));
+  EXPECT_EQ(expect_b_covers_a, b->NearlyCovers(*a, max_error));
+  EXPECT_EQ(expect_a_covers_b, a->NearlyCovers(*b, max_error));
 }
 
 TEST(S2PolylineCoveringTest, PolylineOverlapsSelf) {
@@ -476,7 +477,7 @@ TEST(S2PolylineCoveringTest, IsResilientToDuplicatePoints) {
   // points, but it happens in practice.  When --s2debug=true, debug-mode
   // binaries abort on such polylines, so we also set --s2debug=false.
   google::FlagSaver flag_saver;
-  FLAGS_s2debug = false;  // Restored by gUnit
+  FLAGS_s2debug = false;
   TestNearlyCovers("0:1, 0:2, 0:2, 0:3", "0:1, 0:1, 0:1, 0:3",
                    1e-10, true, true);
 }

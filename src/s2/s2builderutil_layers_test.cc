@@ -31,10 +31,11 @@
 #include "s2/s2textformat.h"
 #include "s2/util/gtl/stl_util.h"
 
-using gtl::MakeUnique;
+using absl::MakeUnique;
 using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
 using s2builderutil::S2PolylineVectorLayer;
+using s2textformat::MakePolyline;
 using std::map;
 using std::set;
 using std::unique_ptr;
@@ -43,10 +44,6 @@ using EdgeType = S2Builder::EdgeType;
 using PolylineType = S2PolylineVectorLayer::Options::PolylineType;
 
 namespace {
-
-unique_ptr<S2Polyline> MakePolyline(string const& str) {
-  return unique_ptr<S2Polyline>(s2textformat::MakePolyline(str));
-}
 
 void TestS2Polygon(vector<char const*> const& input_strs,
                    char const* expected_str, EdgeType edge_type) {

@@ -41,7 +41,7 @@
 // iterators on insert/erase except, of course, for iterators pointing to the
 // value being erased.  A partial workaround when erasing is available:
 // erase() returns an iterator pointing to the item just after the one that was
-// erased (or end() if none exists).  See also safe_btree.
+// erased (or end() if none exists).
 
 // PERFORMANCE
 //
@@ -437,6 +437,7 @@ struct btree_map_params
   typedef Data data_type;
   typedef Data mapped_type;
   typedef std::pair<const Key, data_type> value_type;
+  // TODO(user): Remove this and use std::move() in the right places instead.
   typedef std::pair<Key, data_type> mutable_value_type;
   typedef value_type* pointer;
   typedef const value_type* const_pointer;
@@ -794,6 +795,7 @@ class btree_node {
   // Inserts the value x at position i, shifting all existing values and
   // children at positions >= i to the right by 1.
   void insert_value(int i, const value_type &x);
+  void insert_value(int i, mutable_value_type &&x);
 
   // Removes the value at position i, shifting all existing values and children
   // at positions > i to the left by 1.
@@ -856,11 +858,17 @@ class btree_node {
   }
 
  private:
+  // Performs the non-value related part of insert_value().  Both overloads call
+  // this after putting the value in its slot in the btree node.
+  void insert_value_postamble(int i);
   void value_init(int i) {
     new (&fields_.values[i]) mutable_value_type;
   }
   void value_init(int i, const value_type &x) {
     new (&fields_.values[i]) mutable_value_type(x);
+  }
+  void value_init(int i, mutable_value_type &&x) {
+    new (&fields_.values[i]) mutable_value_type(std::move(x));
   }
   void value_destroy(int i) {
     fields_.values[i].~mutable_value_type();
@@ -1057,6 +1065,7 @@ class btree : public Params::key_compare {
   typedef typename Params::data_type data_type;
   typedef typename Params::mapped_type mapped_type;
   typedef typename Params::value_type value_type;
+  typedef typename Params::mutable_value_type mutable_value_type;
   typedef typename Params::key_compare key_compare;
   typedef typename Params::pointer pointer;
   typedef typename Params::const_pointer const_pointer;
@@ -1119,10 +1128,12 @@ class btree : public Params::key_compare {
     return const_iterator(leftmost(), 0);
   }
   iterator end() {
-    return iterator(rightmost(), rightmost() ? rightmost()->count() : 0);
+    auto* r = rightmost();
+    return iterator(r, r ? r->count() : 0);
   }
   const_iterator end() const {
-    return const_iterator(rightmost(), rightmost() ? rightmost()->count() : 0);
+    auto* r = rightmost();
+    return const_iterator(r, r ? r->count() : 0);
   }
   reverse_iterator rbegin() {
     return reverse_iterator(end());
@@ -1182,11 +1193,16 @@ class btree : public Params::key_compare {
   // the btree. See btree_map::operator[].
   template <typename ValuePointer>
   std::pair<iterator,bool> insert_unique(const key_type &key, ValuePointer value);
+  std::pair<iterator, bool> insert_unique(const key_type &key,
+                                          mutable_value_type &&value);
 
   // Inserts a value into the btree only if it does not already exist. The
   // boolean return value indicates whether insertion succeeded or failed.
   std::pair<iterator,bool> insert_unique(const value_type &v) {
     return insert_unique(params_type::key(v), &v);
+  }
+  std::pair<iterator, bool> insert_unique(mutable_value_type &&v) {
+    return insert_unique(params_type::key(v), std::move(v));
   }
 
   // Insert with hint. Check to see if the value should be placed immediately
@@ -1489,6 +1505,16 @@ class btree : public Params::key_compare {
   // Inserts a value into the btree immediately before iter. Requires that
   // key(v) <= iter.key() and (--iter).key() <= key(v).
   iterator internal_insert(iterator iter, const value_type &v);
+  iterator internal_insert(iterator iter, mutable_value_type &&v);
+
+  // Shared code for the two overloads above that does the non-value-related
+  // part of the insertion.  Both overloads call this and then place the value.
+  void internal_insert_preamble(iterator* iter);
+
+  // Shared code for the two overloads of insert_unique() that does the
+  // non-value-related part of the insertion.  Both overloads call this and then
+  // insert_internal() the value.
+  std::pair<iterator, bool> insert_unique_preamble(const key_type &key);
 
   // Returns an iterator pointing to the first value >= the value "iter" is
   // pointing at. Note that "iter" might be pointing to an invalid location as
@@ -1596,6 +1622,18 @@ template <typename P>
 inline void btree_node<P>::insert_value(int i, const value_type &x) {
   DCHECK_LE(i, count());
   value_init(count(), x);
+  insert_value_postamble(i);
+}
+
+template <typename P>
+inline void btree_node<P>::insert_value(int i, mutable_value_type &&x) {
+  DCHECK_LE(i, count());
+  value_init(count(), std::move(x));
+  insert_value_postamble(i);
+}
+
+template <typename P>
+inline void btree_node<P>::insert_value_postamble(int i) {
   for (int j = count(); j > i; --j) {
     value_swap(j, this, j - 1);
   }
@@ -1748,7 +1786,7 @@ void btree_node<P>::split(btree_node *dest, int insert_position) {
 
   // The split key is the largest value in the left sibling.
   set_count(count() - 1);
-  parent()->insert_value(position(), value_type());
+  parent()->insert_value(position(), mutable_value_type());
   value_swap(count(), parent(), position());
   value_destroy(count());
   parent()->set_child(position() + 1, dest);
@@ -1914,9 +1952,9 @@ btree<P>::btree(const self_type &x)
   assign(x);
 }
 
-template <typename P> template <typename ValuePointer>
-std::pair<typename btree<P>::iterator, bool>
-btree<P>::insert_unique(const key_type &key, ValuePointer value) {
+template <typename P>
+std::pair<typename btree<P>::iterator, bool> btree<P>::insert_unique_preamble(
+    const key_type &key) {
   if (empty()) {
     *mutable_root() = new_leaf_root_node(1);
   }
@@ -1933,8 +1971,26 @@ btree<P>::insert_unique(const key_type &key, ValuePointer value) {
       return std::make_pair(last, false);
     }
   }
+  return std::make_pair(iter, true);
+}
 
-  return std::make_pair(internal_insert(iter, *value), true);
+template <typename P>
+template <typename ValuePointer>
+std::pair<typename btree<P>::iterator, bool> btree<P>::insert_unique(
+    const key_type &key, ValuePointer value) {
+  std::pair<iterator, bool> rv = insert_unique_preamble(key);
+  if (!rv.second) return rv;
+
+  return std::make_pair(internal_insert(rv.first, *value), true);
+}
+
+template <typename P>
+std::pair<typename btree<P>::iterator, bool> btree<P>::insert_unique(
+    const key_type &key, mutable_value_type &&value) {
+  std::pair<iterator, bool> rv = insert_unique_preamble(key);
+  if (!rv.second) return rv;
+
+  return std::make_pair(internal_insert(rv.first, std::move(value)), true);
 }
 
 template <typename P>
@@ -2375,33 +2431,46 @@ inline IterType btree<P>::internal_last(IterType iter) {
 }
 
 template <typename P>
-inline typename btree<P>::iterator
-btree<P>::internal_insert(iterator iter, const value_type &v) {
-  if (!iter.node->leaf()) {
+void btree<P>::internal_insert_preamble(iterator* iter) {
+  if (!iter->node->leaf()) {
     // We can't insert on an internal node. Instead, we'll insert after the
     // previous value which is guaranteed to be on a leaf node.
-    --iter;
-    ++iter.position;
+    --(*iter);
+    ++iter->position;
   }
-  if (iter.node->count() == iter.node->max_count()) {
+  if (iter->node->count() == iter->node->max_count()) {
     // Make room in the leaf for the new item.
-    if (iter.node->max_count() < kNodeValues) {
+    if (iter->node->max_count() < kNodeValues) {
       // Insertion into the root where the root is smaller that the full node
       // size. Simply grow the size of the root node.
-      DCHECK(iter.node == root());
-      iter.node = new_leaf_root_node(
-          std::min<int>(kNodeValues, 2 * iter.node->max_count()));
-      iter.node->swap(root());
+      DCHECK(iter->node == root());
+      iter->node = new_leaf_root_node(
+          std::min<int>(kNodeValues, 2 * iter->node->max_count()));
+      iter->node->swap(root());
       delete_leaf_node(root());
-      *mutable_root() = iter.node;
+      *mutable_root() = iter->node;
     } else {
-      rebalance_or_split(&iter);
+      rebalance_or_split(iter);
       ++*mutable_size();
     }
   } else if (!root()->leaf()) {
     ++*mutable_size();
   }
+}
+
+template <typename P>
+inline typename btree<P>::iterator
+btree<P>::internal_insert(iterator iter, const value_type &v) {
+  internal_insert_preamble(&iter);
   iter.node->insert_value(iter.position, v);
+  return iter;
+}
+
+template <typename P>
+inline typename btree<P>::iterator btree<P>::internal_insert(
+    iterator iter, mutable_value_type &&v) {
+  internal_insert_preamble(&iter);
+  iter.node->insert_value(iter.position, std::move(v));
   return iter;
 }
 
