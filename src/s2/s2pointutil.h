@@ -102,7 +102,7 @@ S2Point FromFrame(Matrix3x3_d const& m, S2Point const& q);
 // However, the implementation guarantees the following:
 //
 //   If SimpleCCW(a,b,c), then !SimpleCCW(c,b,a) for all a,b,c.
-GOOGLE_DEPRECATED("Use s2pred::Sign instead.")
+ABSL_DEPRECATED("Use s2pred::Sign instead.")
 bool SimpleCCW(S2Point const& a, S2Point const& b, S2Point const& c);
 
 

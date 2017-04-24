@@ -333,11 +333,11 @@ static void CheckEqual(S2Polygon const& a, S2Polygon const& b,
   if (a.BoundaryApproxEquals(b, max_error)) return;
   S2Builder builder((S2Builder::Options()));
   S2Polygon a2, b2;
-  builder.StartLayer(gtl::MakeUnique<S2PolygonLayer>(&a2));
+  builder.StartLayer(absl::MakeUnique<S2PolygonLayer>(&a2));
   builder.AddPolygon(a);
   S2Error error;
   ASSERT_TRUE(builder.Build(&error)) << error.text();
-  builder.StartLayer(gtl::MakeUnique<S2PolygonLayer>(&b2));
+  builder.StartLayer(absl::MakeUnique<S2PolygonLayer>(&b2));
   builder.AddPolygon(b);
   ASSERT_TRUE(builder.Build(&error)) << error.text();
   EXPECT_TRUE(a2.BoundaryApproxEquals(b2, max_error))
@@ -449,7 +449,7 @@ static void TestOneDisjointPair(S2Polygon const& a, S2Polygon const& b) {
 
   S2Polygon ab, c, d, e, f, g;
   S2Builder builder((S2Builder::Options()));
-  builder.StartLayer(gtl::MakeUnique<S2PolygonLayer>(&ab));
+  builder.StartLayer(absl::MakeUnique<S2PolygonLayer>(&ab));
   builder.AddPolygon(a);
   builder.AddPolygon(b);
   S2Error error;
@@ -1633,7 +1633,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
     S2Builder builder((S2Builder::Options()));
     S2Polygon a_and_b;
     builder.StartLayer(
-        gtl::MakeUnique<s2builderutil::S2PolygonLayer>(&a_and_b));
+        absl::MakeUnique<s2builderutil::S2PolygonLayer>(&a_and_b));
     for (auto const& polyline : polylines) {
       builder.AddPolyline(*polyline);
     }
@@ -1685,7 +1685,7 @@ static void SplitAndAssemble(S2Polygon const& polygon) {
   S2Builder builder((S2Builder::Options()));
   S2Polygon expected;
   builder.StartLayer(
-      gtl::MakeUnique<s2builderutil::S2PolygonLayer>(&expected));
+      absl::MakeUnique<s2builderutil::S2PolygonLayer>(&expected));
   builder.AddPolygon(polygon);
 
   S2Error error;
@@ -1840,8 +1840,8 @@ TEST(S2Polygon, UnionWithAmbgiuousCrossings) {
     S2Point(0.044855344598821352, -0.80679219751320641, 0.589130162266992),
     S2Point(0.044854017712818696, -0.80679210327223405, 0.58913039235179754)
   };
-  S2Polygon a(gtl::MakeUnique<S2Loop>(a_vertices));
-  S2Polygon b(gtl::MakeUnique<S2Loop>(b_vertices));
+  S2Polygon a(absl::MakeUnique<S2Loop>(a_vertices));
+  S2Polygon b(absl::MakeUnique<S2Loop>(b_vertices));
   S2Polygon c;
   c.InitToUnion(&a, &b);
   EXPECT_FALSE(c.is_empty());
@@ -1980,9 +1980,9 @@ TEST(S2Polygon, MultipleInit) {
 }
 
 TEST(S2Polygon, InitSingleLoop) {
-  S2Polygon polygon(gtl::MakeUnique<S2Loop>(S2Loop::kEmpty()));
+  S2Polygon polygon(absl::MakeUnique<S2Loop>(S2Loop::kEmpty()));
   EXPECT_TRUE(polygon.is_empty());
-  polygon.Init(gtl::MakeUnique<S2Loop>(S2Loop::kFull()));
+  polygon.Init(absl::MakeUnique<S2Loop>(S2Loop::kFull()));
   EXPECT_TRUE(polygon.is_full());
   polygon.Init(s2textformat::MakeLoop("0:0, 0:10, 10:0"));
   EXPECT_EQ(3, polygon.num_vertices());
@@ -2175,6 +2175,11 @@ TEST_F(S2PolygonTestBase, GetDistance) {
                       S2LatLng::FromDegrees(0, 1).ToPoint());
 }
 
+TEST(S2Polygon, UninitializedIsValid) {
+  S2Polygon polygon;
+  EXPECT_TRUE(polygon.IsValid());
+}
+
 class IsValidTest : public testing::Test {
  public:
   IsValidTest() {
@@ -2218,7 +2223,7 @@ class IsValidTest : public testing::Test {
   void CheckInvalid(string const& snippet) {
     vector<unique_ptr<S2Loop>> loops;
     for (vector<S2Point>* vloop : vloops_) {
-      loops.push_back(gtl::MakeUnique<S2Loop>(*vloop, S2Debug::DISABLE));
+      loops.push_back(absl::MakeUnique<S2Loop>(*vloop, S2Debug::DISABLE));
     }
     std::random_shuffle(loops.begin(), loops.end(), *rnd_);
     S2Polygon polygon;
@@ -2394,6 +2399,12 @@ TEST_F(IsValidTest, LoopNestingInvalid) {
   modify_polygon_hook_ = SetInvalidLoopNesting;
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(2 + rnd_->Uniform(4), 3 /*min_vertices*/);
+    // Randomly invert all the loops in order to generate cases where the
+    // outer loop encompasses almost the entire sphere.  This tests different
+    // code paths because bounding box checks are not as useful.
+    if (rnd_->OneIn(2)) {
+      for (auto loop : vloops_) std::reverse(loop->begin(), loop->end());
+    }
     CheckInvalid("Invalid nesting");
   }
 }
@@ -2498,7 +2509,7 @@ class S2PolygonSimplifierTest : public ::testing::Test {
   void SetInput(unique_ptr<S2Polygon> poly, double tolerance_in_degrees) {
     original = std::move(poly);
 
-    simplified = gtl::MakeUnique<S2Polygon>();
+    simplified = absl::MakeUnique<S2Polygon>();
     simplified->InitToSimplified(*original,
                                  s2builderutil::IdentitySnapFunction(
                                      S1Angle::Degrees(tolerance_in_degrees)));
@@ -2600,7 +2611,7 @@ unique_ptr<S2Polygon> MakeCellPolygon(
     }
     loops.emplace_back(new S2Loop(loop_vertices));
   }
-  return gtl::MakeUnique<S2Polygon>(std::move(loops));
+  return absl::MakeUnique<S2Polygon>(std::move(loops));
 }
 
 TEST(InitToSimplifiedInCell, PointsOnCellBoundaryKept) {
@@ -2692,7 +2703,7 @@ TEST(InitToSimplifiedInCell, PolylineAssemblyBug) {
 unique_ptr<S2Polygon> MakeRegularPolygon(
     const string& center, int num_points, double radius_in_degrees) {
   S1Angle radius = S1Angle::Degrees(radius_in_degrees);
-  return gtl::MakeUnique<S2Polygon>(S2Loop::MakeRegularLoop(
+  return absl::MakeUnique<S2Polygon>(S2Loop::MakeRegularLoop(
       s2textformat::MakePoint(center), radius, num_points));
 }
 
@@ -2856,14 +2867,14 @@ void TestPolygonShape(S2Polygon const& polygon) {
   EXPECT_EQ(polygon.num_loops(), shape.num_chains());
   for (int e = 0, i = 0; i < polygon.num_loops(); ++i) {
     S2Loop const* loop_i = polygon.loop(i);
-    EXPECT_EQ(e, shape.chain_start(i));
+    EXPECT_EQ(e, shape.chain(i).start);
+    EXPECT_EQ(loop_i->num_vertices(), shape.chain(i).length);
     for (int j = 0; j < loop_i->num_vertices(); ++j, ++e) {
       S2Point const *v0, *v1;
       shape.GetEdge(e, &v0, &v1);
       EXPECT_EQ(&loop_i->oriented_vertex(j), v0);
       EXPECT_EQ(&loop_i->oriented_vertex(j+1), v1);
     }
-    EXPECT_EQ(e, shape.chain_start(i + 1));
   }
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());

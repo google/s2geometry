@@ -253,8 +253,8 @@ S2Point S2Polyline::Project(S2Point const& point, int* next_vertex) const {
   DCHECK_NE(min_index, -1);
 
   // Compute the point on the segment found that is closest to the point given.
-  S2Point closest_point = S2EdgeUtil::GetClosestPoint(
-      point, vertex(min_index-1), vertex(min_index));
+  S2Point closest_point =
+      S2EdgeUtil::Project(point, vertex(min_index - 1), vertex(min_index));
 
   *next_vertex = min_index + (closest_point == vertex(min_index) ? 1 : 0);
   return closest_point;
@@ -507,7 +507,7 @@ inline int NextDistinctVertex(S2Polyline const& pline, int index) {
   return index;
 }
 
-// This struct represents a search state in the NearlyCoversPolyline algorithm
+// This struct represents a search state in the NearlyCovers algorithm
 // below.  See the description of the algorithm for details.
 struct SearchState {
   inline SearchState(int i_val, int j_val, bool i_in_progress_val)
@@ -530,8 +530,8 @@ struct SearchStateKeyCompare {
 
 }  // namespace
 
-bool S2Polyline::NearlyCoversPolyline(S2Polyline const& covered,
-                                      S1Angle max_error) const {
+bool S2Polyline::NearlyCovers(S2Polyline const& covered,
+                              S1Angle max_error) const {
   // NOTE: This algorithm is described assuming that adjacent vertices in a
   // polyline are never at the same point.  That is, the ith and i+1th vertices
   // of a polyline are never at the same point in space.  The implementation
@@ -586,7 +586,7 @@ bool S2Polyline::NearlyCoversPolyline(S2Polyline const& covered,
   for (int i = 0, next_i = NextDistinctVertex(*this, 0);
        next_i < this->num_vertices();
        i = next_i, next_i = NextDistinctVertex(*this, next_i)) {
-    S2Point closest_point = S2EdgeUtil::GetClosestPoint(
+    S2Point closest_point = S2EdgeUtil::Project(
         covered.vertex(0), this->vertex(i), this->vertex(next_i));
     if (closest_point != this->vertex(next_i) &&
         S1Angle(closest_point, covered.vertex(0)) <= max_error) {
@@ -610,11 +610,11 @@ bool S2Polyline::NearlyCoversPolyline(S2Polyline const& covered,
     S2Point i_begin, j_begin;
     if (state.i_in_progress) {
       j_begin = covered.vertex(state.j);
-      i_begin = S2EdgeUtil::GetClosestPoint(
+      i_begin = S2EdgeUtil::Project(
           j_begin, this->vertex(state.i), this->vertex(next_i));
     } else {
       i_begin = this->vertex(state.i);
-      j_begin = S2EdgeUtil::GetClosestPoint(
+      j_begin = S2EdgeUtil::Project(
           i_begin, covered.vertex(state.j), covered.vertex(next_j));
     }
 
@@ -636,6 +636,7 @@ int S2Polyline::Shape::num_chains() const {
   return min(1, Shape::num_edges());  // Avoid virtual call.
 }
 
-int S2Polyline::Shape::chain_start(int i) const {
-  return i == 0 ? 0 : Shape::num_edges();  // Avoid virtual call.
+S2Shape::Chain S2Polyline::Shape::chain(int i) const {
+  DCHECK_EQ(i, 0);
+  return Chain(0, Shape::num_edges());  // Avoid virtual call.
 }

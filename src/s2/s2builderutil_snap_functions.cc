@@ -71,7 +71,7 @@ S2Point IdentitySnapFunction::SnapPoint(S2Point const& point) const {
 }
 
 unique_ptr<S2Builder::SnapFunction> IdentitySnapFunction::Clone() const {
-  return unique_ptr<SnapFunction>(new IdentitySnapFunction(*this));
+  return absl::MakeUnique<IdentitySnapFunction>(*this);
 }
 
 
@@ -202,7 +202,7 @@ S2Point S2CellIdSnapFunction::SnapPoint(S2Point const& point) const {
 }
 
 unique_ptr<S2Builder::SnapFunction> S2CellIdSnapFunction::Clone() const {
-  return unique_ptr<SnapFunction>(new S2CellIdSnapFunction(*this));
+  return absl::MakeUnique<S2CellIdSnapFunction>(*this);
 }
 
 IntLatLngSnapFunction::IntLatLngSnapFunction()
@@ -347,7 +347,7 @@ S2Point IntLatLngSnapFunction::SnapPoint(S2Point const& point) const {
 }
 
 unique_ptr<S2Builder::SnapFunction> IntLatLngSnapFunction::Clone() const {
-  return unique_ptr<SnapFunction>(new IntLatLngSnapFunction(*this));
+  return absl::MakeUnique<IntLatLngSnapFunction>(*this);
 }
 
 }  // namespace s2builderutil

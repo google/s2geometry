@@ -120,7 +120,7 @@ class S2Polyline;
 //  using s2builderutil::IntLatLngSnapFunction;
 //  S2Builder builder(S2Builder::Options(IntLatLngSnapFunction(7)));
 //  S2Polygon output;
-//  builder.StartLayer(gtl::MakeUnique<s2builderutil::S2PolygonLayer>(&output));
+//  builder.StartLayer(absl::MakeUnique<s2builderutil::S2PolygonLayer>(&output));
 //  builder.AddPolygon(input);
 //  S2Error error;
 //  if (!builder.Build(&error)) {

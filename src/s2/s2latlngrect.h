@@ -57,7 +57,7 @@ class S2Cell;
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator, however it is
 // not a "plain old datatype" (POD) because it has virtual functions.
-class S2LatLngRect : public S2Region {
+class S2LatLngRect final : public S2Region {
  public:
   // Construct a rectangle from minimum and maximum latitudes and longitudes.
   // If lo.lng() > hi.lng(), the rectangle spans the 180 degree longitude

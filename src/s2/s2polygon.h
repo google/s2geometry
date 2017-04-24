@@ -100,7 +100,7 @@ class S2XYZFaceSiTi;
 //
 //  - No loop may be empty.  The full loop may appear only in the full polygon.
 
-class S2Polygon : public S2Region {
+class S2Polygon final : public S2Region {
  public:
   // The default constructor creates an empty polygon.  It can be made
   // non-empty by calling Init(), Decode(), etc.
@@ -205,6 +205,9 @@ class S2Polygon : public S2Region {
 
   // Returns true if this is *not* a valid polygon and sets "error"
   // appropriately.  Otherwise returns false and leaves "error" unchanged.
+  //
+  // Note that in error messages, loops that represent holes have their edges
+  // numbered in reverse order, starting from the last vertex of the loop.
   //
   // REQUIRES: error != nullptr
   bool FindValidationError(S2Error* error) const;
@@ -664,28 +667,36 @@ class S2Polygon : public S2Region {
   // such that the polygon interior is always on the left.
   class Shape : public S2Shape {
    public:
-    Shape() {}  // Must call Init().
+    Shape() : polygon_(nullptr), cumulative_edges_(nullptr) {}
     ~Shape() override;
 
-    // Initialization.  Does not take ownership of "loop".
+    // Initialization.  Does not take ownership of "polygon".  May be called
+    // more than once.
+    // TODO(ericv/jrosenstock): Make "polygon" a const reference.
     explicit Shape(S2Polygon const* polygon);
     void Init(S2Polygon const* polygon);
 
     S2Polygon const* polygon() const { return polygon_; }
 
     // S2Shape interface:
-    int num_edges() const override { return num_edges_; }
-    void GetEdge(int e, S2Point const** a, S2Point const** b) const override;
-    int dimension() const override { return 2; }
-    bool contains_origin() const override;
-    int num_chains() const override;
-    int chain_start(int i) const override;
+    int num_edges() const final { return num_edges_; }
+    void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
+    int dimension() const final { return 2; }
+    bool contains_origin() const final;
+    int num_chains() const final;
+    Chain chain(int i) const final;
+    Edge chain_edge(int i, int j) const final;
+    ChainPosition chain_position(int e) const final;
 
    private:
     // The total number of edges in the polygon.  This is the same as
     // polygon_->num_vertices() except in one case (polygon_->is_full()).  On
     // the other hand this field doesn't take up any extra space due to field
     // packing with S2Shape::id_.
+    //
+    // TODO(ericv): Consider using this field instead as an Atomic32 hint to
+    // speed up edge location when there are a large number of loops.  Also
+    // consider changing S2Polygon::num_vertices to num_edges instead.
     int num_edges_;
 
     S2Polygon const* polygon_;
@@ -723,6 +734,10 @@ class S2Polygon : public S2Region {
   // Add the polygon's loops to the S2ShapeIndex.  (The actual work of
   // building the index only happens when the index is first used.)
   void InitIndex();
+
+  // When the loop is modified (Invert(), or Init() called again) then the
+  // indexing structures need to be deleted as they become invalid.
+  void ResetIndex();
 
   // Initializes the polygon to the result of the given boundary operation.
   bool InitToOperation(S2BoundaryOperation::OpType op_type,
@@ -835,7 +850,11 @@ class S2Polygon : public S2Region {
   // if A.Contains(B), then A.subregion_bound_.Contains(B.bound_).
   S2LatLngRect subregion_bound_;
 
-  // Spatial index of all the polygon loops.
+  // Every S2Polygon has a "shape_" member that is used to index the polygon.
+  // This shape belongs to the S2Polygon and does not need to be freed.
+  Shape shape_;
+
+  // Spatial index containing "shape_".
   S2ShapeIndex index_;
 
 #ifndef SWIG

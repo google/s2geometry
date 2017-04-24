@@ -78,15 +78,15 @@ S2LatLngRect MakeLatLngRect(string const& str) {
 }
 
 unique_ptr<S2Loop> MakeLoop(string const& str) {
-  if (str == "empty") return gtl::MakeUnique<S2Loop>(S2Loop::kEmpty());
-  if (str == "full") return gtl::MakeUnique<S2Loop>(S2Loop::kFull());
+  if (str == "empty") return absl::MakeUnique<S2Loop>(S2Loop::kEmpty());
+  if (str == "full") return absl::MakeUnique<S2Loop>(S2Loop::kFull());
   vector<S2Point> vertices = ParsePoints(str);
-  return gtl::MakeUnique<S2Loop>(vertices);
+  return absl::MakeUnique<S2Loop>(vertices);
 }
 
 unique_ptr<S2Polyline> MakePolyline(string const& str) {
   vector<S2Point> vertices = ParsePoints(str);
-  return gtl::MakeUnique<S2Polyline>(vertices);
+  return absl::MakeUnique<S2Polyline>(vertices);
 }
 
 static unique_ptr<S2Polygon> InternalMakePolygon(string const& str,
@@ -98,7 +98,7 @@ static unique_ptr<S2Polygon> InternalMakePolygon(string const& str,
     if (normalize_loops) loop->Normalize();
     loops.push_back(std::move(loop));
   }
-  return gtl::MakeUnique<S2Polygon>(std::move(loops));
+  return absl::MakeUnique<S2Polygon>(std::move(loops));
 }
 
 unique_ptr<S2Polygon> MakePolygon(string const& str) {

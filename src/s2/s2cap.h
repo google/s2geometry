@@ -55,7 +55,7 @@ class S2LatLngRect;
 // This class is intended to be copied by value as desired.  It uses the
 // default copy constructor and assignment operator, however it is not a
 // "plain old datatype" (POD) because it has virtual functions.
-class S2Cap : public S2Region {
+class S2Cap final : public S2Region {
  public:
   // The default constructor returns an empty S2Cap.
   S2Cap() : center_(1, 0, 0), radius_(S1ChordAngle::Negative()) {}

@@ -51,144 +51,150 @@
 #include <cstddef>
 #endif  // __cplusplus
 
-// Compiler-specific features.
+// GOOGLE_HAVE_SIZED_DELETE is defined when C++14's sized deallocation
+// operators are available.
+#if (defined(__clang__) && defined(__cpp_sized_deallocation)) || \
+    defined(__GXX_DELETE_WITH_SIZE__)
+#define GOOGLE_HAVE_SIZED_DELETE
+#endif
+
+// GOOGLE_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE is defined when
+// std::is_trivially_destructible<T> is supported.
 //
-// Note: compilers such as clang and ICC define the symbol __GNUC__.
-// Most of these implement GCC-compatible frontends, so if the __GNUC__
-// macro is defined we bring in a generic GCC-compatibility layer first
-// and compiler-specific includes later.
-#if defined(__GNUC__)
-
-#define GOOGLE_GCC_VERSION \
-  (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-
-#if defined(__clang__)
-
-// clang specific feature tests
-#if defined(__cpp_sized_deallocation)
-#define GOOGLE_HAVE_SIZED_DELETE
-#else
-#undef GOOGLE_HAVE_SIZED_DELETE
+// All supported compilers using libc++ have it, as does gcc >= 4.8
+// using libstdc++, as does Visual Studio.
+// https://gcc.gnu.org/onlinedocs/gcc-4.8.1/libstdc++/manual/manual/status.html#status.iso.2011
+// is the first version where std::is_trivially_destructible no longer
+// appeared as missing in the Type properties row.
+#if defined(_LIBCPP_VERSION) ||                                          \
+    (!defined(__clang__) && defined(__GNUC__) && defined(__GLIBCXX__) && \
+     (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8))) ||        \
+    defined(_MSC_VER)
+#define GOOGLE_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
 #endif
 
-// clang only claims to be compatible with libstdc++ 4.2, which doesn't
-// implement is_trivially_xxx traits
-#ifndef __GLIBCXX__
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
+// GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE is defined when
+// std::is_trivially_default_constructible<T> and
+// std::is_trivially_copy_constructible<T> are supported.
+//
+// GOOGLE_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE is defined when
+// std::is_trivially_copy_assignable<T> is supported.
+//
+// Clang with libc++ supports it, as does gcc >= 5.1 with either
+// libc++ or libstdc++, as does Visual Studio.
+// https://gcc.gnu.org/gcc-5/changes.html lists as new
+// "std::is_trivially_constructible, std::is_trivially_assignable
+// etc."
+#if (defined(__clang__) && defined(_LIBCPP_VERSION)) ||          \
+    (!defined(__clang__) && defined(__GNUC__) &&                 \
+     (__GNUC__ > 5 || (__GNUC__ == 5 && __GNUC_MINOR__ >= 1)) && \
+     (defined(_LIBCPP_VERSION) || defined(__GLIBCXX__))) ||      \
+    defined(_MSC_VER)
 #define GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
 #define GOOGLE_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
 #endif
 
-#else  // not clang, so assume gcc
-
-// gcc specific feature tests
-#if defined(__GXX_DELETE_WITH_SIZE__)
-#define GOOGLE_HAVE_SIZED_DELETE
-#else
-#undef GOOGLE_HAVE_SIZED_DELETE
-#endif  // __GXX_DELETE_WITH_SIZE__
-
-#if defined(__GLIBCXX__)  // libstdc++
-// using gcc and libstdc++
-// std::is_trivially_destructible is implemented since libstdc++ 4.8.
-#if GOOGLE_GCC_VERSION >= 40800
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
+// ABSL_HAVE_THREAD_LOCAL is defined when C++11's thread_local is available.
+// Clang implements thread_local keyword but Xcode did not support the
+// implementation until Xcode 8.
+#if !defined(__apple_build_version__) || __apple_build_version__ >= 8000042
+#define ABSL_HAVE_THREAD_LOCAL
 #endif
-// std::is_trivially_constructible and std::is_trivially_assignable are
-// implemented since libstdc++ 5.1.
-#if GOOGLE_GCC_VERSION >= 50100
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
-#endif
-
-#elif defined(_LIBCPP_VERSION)  // libc++
-// using gcc and libc++
-// libc++ fully implements is_trivially_destructible if GCC version >= 4.3.
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
-// libc++ fully implements is_trivially_constructible and
-// is_trivially_assignable if GCC version >= 5.1.
-#if GOOGLE_GCC_VERSION >= 50100
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
-#endif
-
-#endif  // libstdc++ or libc++
-#endif  // gcc or clang
-
-#elif defined(_MSC_VER)
-
-#undef GOOGLE_HAVE_SIZED_DELETE
-
-// is_trivially_xxx are supported since Visual Studio 2012.
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
-
-#endif  // _MSC_VER
 
 // Operating system-specific features.
-#if defined(__linux__)
+//
+// Currently supported operating systems and associated preprocessor
+// symbols:
+//
+//   Linux and Linux-derived           __linux__
+//   Android                           __ANDROID__ (implies __linux__)
+//   Linux (non-Android)               __linux__ && !__ANDROID__
+//   Darwin (Mac OS X and iOS)         __APPLE__ && __MACH__
+//   Akaros (http://akaros.org)        __ros__
+//   Windows                           _WIN32
+//   NaCL                              __native_client__
+//   AsmJS                             __asmjs__
+//   Fuschia                           __Fuchsia__
+//
+// Note that since Android defines both __ANDROID__ and __linux__, one
+// may probe for either Linux or Android by simply testing for __linux__.
+//
+
+// GOOGLE_HAVE_GETPAGESIZE is defined when the system has a getpagesize(2)
+// implementation.  Note: getpagesize(2) was removed in POSIX.1-2001.  New
+// code should use `sysconf(_SC_PAGESIZE)` instead.
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
+    defined(__ros__) || defined(__native_client__)
 #define GOOGLE_HAVE_GETPAGESIZE 1
-#define GOOGLE_HAVE_MLOCK 1
-#define GOOGLE_HAVE_MMAP 1
-#define GOOGLE_HAS_PTHREAD_GETSCHEDPARAM 1
-#define GOOGLE_HAVE_SCHED_GETCPU 1
-#define GOOGLE_HAVE_SCHED_YIELD 1
-#define GOOGLE_HAVE_SEMAPHORE_H 1
-#define GOOGLE_HAVE_SIGINFO_T 1
-#elif defined(__APPLE__) && defined(__MACH__)
-#define GOOGLE_HAVE_GETPAGESIZE 1
-#define GOOGLE_HAVE_MLOCK 1
-#define GOOGLE_HAVE_MMAP 1
-#define GOOGLE_HAS_PTHREAD_GETSCHEDPARAM 1
-#undef GOOGLE_HAVE_SCHED_GETCPU
-#define GOOGLE_HAVE_SCHED_YIELD 1
-#undef GOOGLE_HAVE_SEMAPHORE_H
-#define GOOGLE_HAVE_SIGINFO_T 1
-#elif defined(__ros__)
-#define GOOGLE_HAVE_GETPAGESIZE 1
-#define GOOGLE_HAVE_MLOCK 1
-#define GOOGLE_HAVE_MMAP 1
-#define GOOGLE_HAS_PTHREAD_GETSCHEDPARAM 1
-#define GOOGLE_HAVE_SCHED_GETCPU 1
-#define GOOGLE_HAVE_SCHED_YIELD 1
-#define GOOGLE_HAVE_SEMAPHORE_H 1
-#define GOOGLE_HAVE_SIGINFO_T 1
-#elif defined(_WIN32)
+#else
 #undef GOOGLE_HAVE_GETPAGESIZE
+#endif
+
+// GOOGLE_HAVE_MLOCK is defined when the system has an mlock(2) implementation
+// as defined in POSIX.1-2001.
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
+    defined(__ros__)
+#define GOOGLE_HAVE_MLOCK 1
+#else
 #undef GOOGLE_HAVE_MLOCK
+#endif
+
+// GOOGLE_HAVE_MMAP is defined when the system has an mmap(2) implementation
+// as defined in POSIX.1-2001.
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) ||      \
+    defined(__ros__) || defined(__native_client__) || defined(__asmjs__) || \
+    defined(__Fuchsia__)
+#define GOOGLE_HAVE_MMAP 1
+#else
 #undef GOOGLE_HAVE_MMAP
+#endif
+
+// GOOGLE_HAS_PTHREAD_GETSCHEDPARAM is defined when the system implements the
+// pthread_(get|set)schedparam(3) functions as defined in POSIX.1-2001.
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
+    defined(__ros__)
+// TODO(user): This should probably be called GOOGLE_HAVE_PTHREAD_SCHEDPARAM.
+// It may not be grammatically correct, but it would be consistent with other
+// symbols.
+#define GOOGLE_HAS_PTHREAD_GETSCHEDPARAM 1
+#else
 #undef GOOGLE_HAS_PTHREAD_GETSCHEDPARAM
+#endif
+
+// GOOGLE_HAVE_SCHED_GETCPU is defined when the system implements
+// sched_getcpu(3) as by glibc and it's imitators.
+#if defined(__linux__) || defined(__ros__)
+#define GOOGLE_HAVE_SCHED_GETCPU 1
+#else
 #undef GOOGLE_HAVE_SCHED_GETCPU
-#undef GOOGLE_HAVE_SCHED_YIELD
-#undef GOOGLE_HAVE_SEMAPHORE_H
-#undef GOOGLE_HAVE_SIGINFO_T
-#elif defined(__native_client__)
-#define GOOGLE_HAVE_GETPAGESIZE 1
-#undef GOOGLE_HAVE_MLOCK
-#define GOOGLE_HAVE_MMAP 1
-#undef GOOGLE_HAS_PTHREAD_GETSCHEDPARAM
-#undef GOOGLE_HAVE_SCHED_GETCPU
+#endif
+
+// GOOGLE_HAVE_SCHED_YIELD is defined when the system implements
+// sched_yield(2) as defined in POSIX.1-2001.
+#if defined(__linux__) || defined(__ros__) || defined(__native_client__)
 #define GOOGLE_HAVE_SCHED_YIELD 1
-#undef GOOGLE_HAVE_SEMAPHORE_H
-#undef GOOGLE_HAVE_SIGINFO_T
-#elif defined(__asmjs__)
-#undef GOOGLE_HAVE_GETPAGESIZE
-#undef GOOGLE_HAVE_MLOCK
-#define GOOGLE_HAVE_MMAP 1
-#undef GOOGLE_HAS_PTHREAD_GETSCHEDPARAM
-#undef GOOGLE_HAVE_SCHED_GETCPU
+#else
 #undef GOOGLE_HAVE_SCHED_YIELD
+#endif
+
+// GOOGLE_HAVE_SEMAPHORE_H is defined when the system supports the <semaphore.h>
+// header and sem_open(3) family of functions as standardized in POSIX.1-2001.
+//
+// Note: While Apple does have <semaphore.h> for both iOS and macOS, it is
+// explicity deprecated and will cause build failures if enabled for those
+// systems.  We side-step the issue by not defining it here for Apple platforms.
+#if defined(__linux__) || defined(__ros__)
+#define GOOGLE_HAVE_SEMAPHORE_H 1
+#else
 #undef GOOGLE_HAVE_SEMAPHORE_H
-#undef GOOGLE_HAVE_SIGINFO_T
-#elif defined(__Fuchsia__)
-#undef GOOGLE_HAVE_GETPAGESIZE
-#undef GOOGLE_HAVE_MLOCK
-#define GOOGLE_HAVE_MMAP 1
-#undef GOOGLE_HAS_PTHREAD_GETSCHEDPARAM
-#undef GOOGLE_HAVE_SCHED_GETCPU
-#undef GOOGLE_HAVE_SCHED_YIELD
-#undef GOOGLE_HAVE_SEMAPHORE_H
+#endif
+
+// GOOGLE_HAVE_SIGINFO_T is defined when the implementation provides the
+// siginfo_t for the sigaction(2) interface, as standardized in POSIX.1-2001.
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
+    defined(__ros__)
+#define GOOGLE_HAVE_SIGINFO_T 1
+#else
 #undef GOOGLE_HAVE_SIGINFO_T
 #endif
 

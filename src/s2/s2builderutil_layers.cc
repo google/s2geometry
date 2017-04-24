@@ -93,7 +93,7 @@ void S2PolygonLayer::AppendS2Loops(Graph const& g,
       vertices.push_back(g.vertex(g.edge(edge_id).first));
     }
     loops->push_back(
-        gtl::MakeUnique<S2Loop>(vertices, polygon_->s2debug_override()));
+        absl::MakeUnique<S2Loop>(vertices, polygon_->s2debug_override()));
     vertices.clear();
   }
 }

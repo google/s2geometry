@@ -220,7 +220,7 @@ class InlinedVector {
     if (allocated()) {
       Destroy(allocated_space(), allocated_space() + s);
       allocation().Dealloc(allocator());
-    } else {
+    } else if (s != 0) {  // do nothing for empty vectors
       Destroy(inlined_space(), inlined_space() + s);
     }
     tag() = Tag();

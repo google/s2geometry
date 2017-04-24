@@ -34,7 +34,7 @@ class S2LatLngRect;
 
 // An S2RegionUnion represents a union of possibly overlapping regions.
 // It is convenient for computing a covering of a set of regions.
-class S2RegionUnion : public S2Region {
+class S2RegionUnion final : public S2Region {
  public:
   // Create an empty region.  Can be made non-empty by calling Init() or Add().
   S2RegionUnion() = default;

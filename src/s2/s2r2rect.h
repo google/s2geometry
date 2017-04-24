@@ -57,7 +57,7 @@ class S2LatLngRect;
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator, however it is
 // not a "plain old datatype" (POD) because it has virtual functions.
-class S2R2Rect : public S2Region {
+class S2R2Rect final : public S2Region {
  public:
   // Construct a rectangle from an R2Rect.
   explicit S2R2Rect(R2Rect const& rect);

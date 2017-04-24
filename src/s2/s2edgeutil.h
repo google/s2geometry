@@ -451,17 +451,15 @@ class S2EdgeUtil {
   // The fractional distance of this point along the edge AB can be obtained
   // using GetDistanceFraction() above.  Requires that all vectors have
   // unit length.
-  static S2Point GetClosestPoint(S2Point const& x,
-                                 S2Point const& a, S2Point const& b);
+  static S2Point Project(S2Point const& x, S2Point const& a, S2Point const& b);
 
-  // A slightly more efficient version of GetClosestPoint() where the cross
+  // A slightly more efficient version of Project() where the cross
   // product of the two endpoints has been precomputed.  The cross product
   // does not need to be normalized, but should be computed using
   // S2::RobustCrossProd() for the most accurate results.  Requires that
   // x, a, and b have unit length.
-  static S2Point GetClosestPoint(S2Point const& x,
-                                 S2Point const& a, S2Point const& b,
-                                 Vector3_d const& a_cross_b);
+  static S2Point Project(S2Point const& x, S2Point const& a, S2Point const& b,
+                         Vector3_d const& a_cross_b);
 
   /////////////////////////////////////////////////////////////////////
   ///////////////     Methods for pairs of edges      /////////////////

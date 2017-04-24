@@ -74,11 +74,11 @@ class FixedArray {
   // For playing nicely with stl:
   using value_type = T;
   using iterator = T*;
-  using const_iterator = T const*;
+  using const_iterator = const T*;
   using reference = T&;
-  using const_reference = T const&;
+  using const_reference = const T&;
   using pointer = T*;
-  using const_pointer = T const*;
+  using const_pointer = const T*;
   using difference_type = ptrdiff_t;
   using size_type = size_t;
 

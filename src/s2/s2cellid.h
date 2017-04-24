@@ -26,7 +26,6 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
-#include "s2/third_party/absl/base/port.h"  // for HASH_NAMESPACE_DECLARATION_START
 #include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
 #include "s2/fpcontractoff.h"

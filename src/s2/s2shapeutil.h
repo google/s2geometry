@@ -30,16 +30,16 @@
 //  - S2PolygonOwningShape: like S2SPolygon::Shape but owns the S2Polygon.
 //  - S2PolylineOwningShape: like S2SPolyline::Shape but owns the S2Polyline.
 //
-// It also contains miscellaneous S2ShapeIndex utility functions:
+// It also contains miscellaneous S2ShapeIndex utility functions and classes:
 //
-//  - GetCrossingEdgePairs: finds all edge intersections in an S2ShapeIndex.
+//  - RangeIterator: useful for merging two or more S2ShapeIndexes.
+//  - VisitCrossings: finds all edge intersections between S2ShapeIndexes.
 //  - IsOriginOnLeft: helper for implementing S2Shape::contains_origin.
 //
 // And functions that are mainly useful internally in the S2 library:
 //
 //  - ResolveComponents: computes containment relationships among loops.
-//  - FindSelfIntersection: helper function for S2Loop validation.
-//  - FindAnyCrossing: helper function for S2Polygon validation.
+//  - FindAnyCrossing: helper function for S2Loop and S2Polygon validation.
 //
 // TODO(ericv): The *OwningShapes could probably be removed by allowing the
 // underlying shapes (e.g., S2Polygon::Shape) to take ownership.
@@ -91,12 +91,18 @@ class LaxLoop : public S2Shape {
   S2Point const& vertex(int i) const { return vertices_[i]; }
 
   // S2Shape interface:
-  int num_edges() const override { return num_vertices(); }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const override;
+  int num_edges() const final { return num_vertices(); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
+  // Not final; overridden by ClosedLaxPolyline.
   int dimension() const override { return 2; }
+  // Not final; overridden by ClosedLaxPolyline.
   bool contains_origin() const override;
-  int num_chains() const override { return std::min(1, num_vertices_); }
-  int chain_start(int i) const override { return i == 0 ? 0 : num_vertices_; }
+  int num_chains() const final { return std::min(1, num_vertices_); }
+  Chain chain(int i) const final { return Chain(0, num_vertices_); }
+  Edge chain_edge(int i, int j) const final;
+  ChainPosition chain_position(int e) const final {
+    return ChainPosition(0, e);
+  }
 
  private:
   // For clients that have many small loops, we save some memory by
@@ -144,12 +150,14 @@ class LaxPolygon : public S2Shape {
   S2Point const& loop_vertex(int i, int j) const;
 
   // S2Shape interface:
-  int num_edges() const override { return num_vertices(); }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const override;
-  int dimension() const override { return 2; }
-  bool contains_origin() const override;
-  int num_chains() const override { return num_loops(); }
-  int chain_start(int i) const override;
+  int num_edges() const final { return num_vertices(); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
+  int dimension() const final { return 2; }
+  bool contains_origin() const final;
+  int num_chains() const final { return num_loops(); }
+  Chain chain(int i) const final;
+  Edge chain_edge(int i, int j) const final;
+  ChainPosition chain_position(int e) const final;
 
  private:
   class VertexArray;
@@ -186,12 +194,14 @@ class LaxPolyline : public S2Shape {
   S2Point const& vertex(int i) const { return vertices_[i]; }
 
   // S2Shape interface:
-  int num_edges() const override { return std::max(0, num_vertices() - 1); }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const override;
-  int dimension() const override { return 1; }
-  bool contains_origin() const override { return false; }
-  int num_chains() const override;
-  int chain_start(int i) const override;
+  int num_edges() const final { return std::max(0, num_vertices() - 1); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
+  int dimension() const final { return 1; }
+  bool contains_origin() const final { return false; }
+  int num_chains() const final;
+  Chain chain(int i) const final;
+  Edge chain_edge(int i, int j) const final;
+  ChainPosition chain_position(int e) const final;
 
  private:
   // For clients that have many small polylines, we save some memory by
@@ -208,8 +218,8 @@ class ClosedLaxPolyline : public LaxLoop {
   ClosedLaxPolyline() {}  // Must call Init().
   explicit ClosedLaxPolyline(std::vector<S2Point> const& vertices);
   explicit ClosedLaxPolyline(S2Loop const& loop);  // Copies the loop data.
-  int dimension() const override { return 1; }
-  bool contains_origin() const override { return false; }
+  int dimension() const final { return 1; }
+  bool contains_origin() const final { return false; }
 };
 
 // EdgeVectorShape is an S2Shape representing an arbitrary set of edges.  It
@@ -239,18 +249,68 @@ class EdgeVectorShape : public S2Shape {
   }
 
   // S2Shape interface:
-  int num_edges() const override { return edges_.size(); }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const override {
+  int num_edges() const final { return edges_.size(); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
     *a = &edges_[e].first;
     *b = &edges_[e].second;
   }
-  int dimension() const override { return 1; }
-  bool contains_origin() const override { return false; }
-  int num_chains() const override { return edges_.size(); }
-  int chain_start(int i) const override { return i; }
+  int dimension() const final { return 1; }
+  bool contains_origin() const final { return false; }
+  int num_chains() const final { return edges_.size(); }
+  Chain chain(int i) const final { return Chain(i, 1); }
+  Edge chain_edge(int i, int j) const final {
+    DCHECK_EQ(j, 0);
+    return Edge(&edges_[i].first, &edges_[i].second);
+  }
+  ChainPosition chain_position(int e) const final {
+    return ChainPosition(e, 0);
+  }
 
  private:
   std::vector<std::pair<S2Point, S2Point>> edges_;
+};
+
+// PointVectorShape is an S2Shape representing a set of S2Points. Each point
+// is reprsented as a degenerate edge with the same starting and ending
+// vertices.
+//
+// This class is useful for adding a collection of points to an S2ShapeIndex.
+class PointVectorShape : public S2Shape {
+ public:
+  ~PointVectorShape() override = default;
+
+  // TODO(user): Change the signature to
+  // PointVectorShape(std::vector<S2Point> &&points)
+  // once we get an exception to the style rules.
+
+  // Transfers the contents of "points" to this class and leaves "points" empty.
+  explicit PointVectorShape(std::vector<S2Point>* points) {
+    points_.swap(*points);
+  }
+
+  // S2Shape interface:
+  int num_edges() const final { return points_.size(); }
+  void GetEdge(int id, S2Point const** a, S2Point const** b) const final {
+    *a = &points_[id];
+    *b = &points_[id];
+  }
+  int dimension() const final { return 0; }
+  bool contains_origin() const final { return false; }
+  int num_chains() const final { return points_.size(); }
+  Chain chain(int i) const final { return Chain(i, 1); }
+  Edge chain_edge(int i, int j) const final {
+    DCHECK_EQ(j, 0);
+    return Edge(&points_[i], &points_[i]);
+  }
+  ChainPosition chain_position(int e) const final {
+    return ChainPosition(e, 0);
+  }
+
+ private:
+  std::vector<S2Point> points_;
+
+  PointVectorShape(const PointVectorShape&) = delete;
+  PointVectorShape& operator=(const PointVectorShape&) = delete;
 };
 
 // VertexIdLaxLoop is just like LaxLoop, except that vertices are
@@ -273,12 +333,16 @@ class VertexIdLaxLoop : public S2Shape {
   S2Point const& vertex(int i) const { return vertex_array_[vertex_id(i)]; }
 
   // S2Shape interface:
-  int num_edges() const override { return num_vertices(); }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const override;
-  int dimension() const override { return 2; }
-  bool contains_origin() const override;
-  int num_chains() const override { return 1; }
-  int chain_start(int i) const override { return i == 0 ? 0 : num_vertices_; }
+  int num_edges() const final { return num_vertices(); }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
+  int dimension() const final { return 2; }
+  bool contains_origin() const final;
+  int num_chains() const final { return 1; }
+  Chain chain(int i) const final { return Chain(0, num_vertices_); }
+  Edge chain_edge(int i, int j) const final;
+  ChainPosition chain_position(int e) const final {
+    return ChainPosition(0, e);
+  }
 
  private:
   int32 num_vertices_;
@@ -326,19 +390,71 @@ class S2PolylineOwningShape : public S2Polyline::Shape {
 
 
 /////////////////////////////////////////////////////////////////////////////
-/////////////////////////////// Utility Functions ///////////////////////////
+////////////////////// Utility Functions and Classes ////////////////////////
 
+// RangeIterator is a wrapper over S2ShapeIndex::Iterator with extra methods
+// that are useful for merging the contents of two or more S2ShapeIndexes.
+class RangeIterator {
+ public:
+  // Construct a new RangeIterator positioned at the first cell of the index.
+  explicit RangeIterator(S2ShapeIndex const& index);
+
+  // The current S2CellId and cell contents.
+  S2CellId id() const { return id_; }
+  S2ShapeIndexCell const& cell() const { return it_.cell(); }
+
+  // The min and max leaf cell ids covered by the current cell.  If Done() is
+  // true, these methods return a value larger than any valid cell id.
+  S2CellId range_min() const { return range_min_; }
+  S2CellId range_max() const { return range_max_; }
+
+  void Next();
+  bool Done() { return id_ == end_; }
+
+  // Position the iterator at the first cell that overlaps or follows
+  // "target", i.e. such that range_max() >= target.range_min().
+  void SeekTo(RangeIterator const& target);
+
+  // Position the iterator at the first cell that follows "target", i.e. the
+  // first cell such that range_min() > target.range_max().
+  void SeekBeyond(RangeIterator const& target);
+
+ private:
+  // Updates internal state after the iterator has been repositioned.
+  void Refresh();
+  S2ShapeIndex::Iterator it_;
+  S2CellId const end_;
+  S2CellId id_, range_min_, range_max_;
+  S2ShapeIndexCell const* cell_;
+};
+
+// A parameter that controls the reporting of edge intersections.
+//
+//  - CrossingType::INTERIOR reports intersections that occur at a point
+//    interior to both edges (i.e., not at a vertex).
+//
+//  - CrossingType::ALL reports all intersections, even those where two edges
+//    intersect only because they share a common vertex.
+//
+// - CrossingType::NON_ADJACENT reports all intersections except for pairs of
+//    the form (AB, BC) where both edges are from the same S2ShapeIndex.
+//    (This is an optimization for checking polygon validity.)
+enum class CrossingType { INTERIOR, ALL, NON_ADJACENT };
 
 // ShapeEdgeId is a unique identifier for an edge within an S2ShapeIndex,
 // consisting of a (shape_id, edge_id) pair.  It is similar to
 // std::pair<int32, int32> except that it has named fields.
-class ShapeEdgeId {
+// It should be passed and returned by value.
+struct ShapeEdgeId {
  public:
-  ShapeEdgeId(int32 shape_id, int32 edge_id);
-  int32 shape_id() const { return shape_id_; }
-  int32 edge_id() const { return edge_id_; }
+  int32 shape_id, edge_id;
+  ShapeEdgeId(int32 _shape_id, int32 _edge_id);
   bool operator==(ShapeEdgeId other) const;
+  bool operator!=(ShapeEdgeId other) const;
   bool operator<(ShapeEdgeId other) const;
+  bool operator>(ShapeEdgeId other) const;
+  bool operator<=(ShapeEdgeId other) const;
+  bool operator>=(ShapeEdgeId other) const;
 
  private:
   int32 shape_id_;
@@ -346,25 +462,46 @@ class ShapeEdgeId {
 };
 std::ostream& operator<<(std::ostream& os, ShapeEdgeId id);
 
-// A set of edge pairs within an S2ShapeIndex.
-using EdgePairVector = std::vector<std::pair<ShapeEdgeId, ShapeEdgeId>>;
+// A class representing a ShapeEdgeId together with the two endpoints of that
+// edge.  It should be passed by reference.
+struct ShapeEdge {
+ public:
+  ShapeEdge() : id_(-1, -1), v0_(nullptr), v1_(nullptr) {}
+  ShapeEdge(S2Shape const& shape, int32 edge_id);
+  ShapeEdgeId id() const { return id_; }
+  S2Point const& v0() const { return *v0_; }
+  S2Point const& v1() const { return *v1_; }
 
-// A parameter that controls the reporting of edge intersections.
-//
-//  - CrossingType::INTERIOR says to report only intersections that occur at
-//    a point interior to both edges (i.e., not at a vertex).
-//
-//  - CrossingType::ALL says to report all intersections, even those where
-//    two edges intersect only because they share a common vertex.
-enum class CrossingType { INTERIOR, ALL };
+ private:
+  ShapeEdgeId id_;
+  S2Point const *v0_, *v1_;
+};
 
-// Return all pairs of intersecting edges in the given S2ShapeIndex.  If
-// "type" is CrossingType::INTERIOR, then only intersections at a point
-// interior to both edges are reported, while if "type" is CrossingType::ALL
-// then edges that share a vertex are also reported.  The crossings are sorted
-// in lexicographic order.
-EdgePairVector GetCrossingEdgePairs(S2ShapeIndex const& index,
-                                    CrossingType type);
+// A function that is called with pairs of crossing edges.  The function may
+// return false in order to request that the algorithm should be terminated,
+// i.e. no further crossings are needed.
+//
+// "is_interior" indicates that the crossing is at a point interior to both
+// edges (i.e., not at a vertex).  (The calling function already has this
+// information and it is moderately expensive to recompute.)
+using EdgePairVisitor = std::function<
+  bool (ShapeEdge const& a, ShapeEdge const& b, bool is_interior)>;
+
+// Visits all pairs of crossing edges in the given S2ShapeIndex, terminating
+// early if the given EdgePairVisitor function returns false (in which case
+// VisitCrossings returns false as well).  "type" indicates whether all
+// crossings should be visited, or only interior crossings.
+//
+// CAVEAT: Crossings may be visited more than once.
+bool VisitCrossings(S2ShapeIndex const& index, CrossingType type,
+                    EdgePairVisitor const& visitor);
+
+// Like the above, but visits all pairs of crossing edges where one edge comes
+// from each S2ShapeIndex.
+//
+// REQUIRES: type != CrossingType::NON_ADJACENT (not supported)
+bool VisitCrossings(S2ShapeIndex const& a, S2ShapeIndex const& b,
+                    CrossingType type, EdgePairVisitor const& visitor);
 
 // This is a helper function for implementing S2Shape::contains_origin().
 //
@@ -426,38 +563,56 @@ void ResolveComponents(
     std::vector<std::vector<S2Shape*>> const& components,
     std::vector<std::vector<S2Shape*>>* polygons);
 
-// Given an S2ShapeIndex containing a single loop, return true if the loop has
-// a self-intersection (including duplicate vertices) and set "error" to a
-// human-readable error message.  Otherwise return false and leave "error"
-// unchanged.
-bool FindSelfIntersection(S2ShapeIndex const& index, S2Loop const& loop,
-                          S2Error* error);
-
-// Given an S2ShapeIndex containing a set of loops, return true if any loop
-// has a self-intersection (including duplicate vertices) or crosses any other
-// loop (including vertex crossings and duplicate edges) and set "error" to a
-// human-readable error message.  Otherwise return false and leave "error"
-// unchanged.
-bool FindAnyCrossing(S2ShapeIndex const& index,
-                     std::vector<std::unique_ptr<S2Loop>> const& loops,
-                     S2Error* error);
+// Given an S2ShapeIndex containing a single polygonal shape (e.g., an
+// S2Polygon or S2Loop), return true if any loop has a self-intersection
+// (including duplicate vertices) or crosses any other loop (including vertex
+// crossings and duplicate edges) and set "error" to a human-readable error
+// message.  Otherwise return false and leave "error" unchanged.
+//
+// This method is used to implement the FindValidationError methods of S2Loop
+// and S2Polygon.
+//
+// TODO(ericv): Add an option to support LaxPolygon rules (i.e., duplicate
+// vertices and edges are allowed, but loop crossings are not).
+bool FindAnyCrossing(S2ShapeIndex const& index, S2Error* error);
 
 
 //////////////////   Implementation details follow   ////////////////////
 
 
-inline ShapeEdgeId::ShapeEdgeId(int32 shape_id, int32 edge_id)
-    : shape_id_(shape_id), edge_id_(edge_id) {
+inline ShapeEdgeId::ShapeEdgeId(int32 _shape_id, int32 _edge_id)
+    : shape_id(_shape_id), edge_id(_edge_id) {
 }
 
 inline bool ShapeEdgeId::operator==(ShapeEdgeId other) const {
-  return shape_id_ == other.shape_id_ && edge_id_ == other.edge_id_;
+  return shape_id == other.shape_id && edge_id == other.edge_id;
+}
+
+inline bool ShapeEdgeId::operator!=(ShapeEdgeId other) const {
+  return !(*this == other);
 }
 
 inline bool ShapeEdgeId::operator<(ShapeEdgeId other) const {
-  if (shape_id_ < other.shape_id_) return true;
-  if (other.shape_id_ < shape_id_) return false;
-  return edge_id_ < other.edge_id_;
+  if (shape_id < other.shape_id) return true;
+  if (other.shape_id < shape_id) return false;
+  return edge_id < other.edge_id;
+}
+
+inline bool ShapeEdgeId::operator>(ShapeEdgeId other) const {
+  return other < *this;
+}
+
+inline bool ShapeEdgeId::operator<=(ShapeEdgeId other) const {
+  return !(other < *this);
+}
+
+inline bool ShapeEdgeId::operator>=(ShapeEdgeId other) const {
+  return !(*this < other);
+}
+
+inline ShapeEdge::ShapeEdge(S2Shape const& shape, int32 edge_id)
+    : id_(shape.id(), edge_id) {
+  shape.GetEdge(edge_id, &v0_, &v1_);
 }
 
 }  // namespace s2shapeutil

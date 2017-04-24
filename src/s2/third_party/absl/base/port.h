@@ -1495,7 +1495,9 @@ inline void sized_delete(void* ptr, size_t size) {
 // ABSL_CONST_INIT static MyType my_var = MakeMyType(...);
 //
 // Note that this attribute is redundant if the variable is declared constexpr.
-#if defined(__has_cpp_attribute)
+#if defined(__cplusplus) && defined(__has_cpp_attribute)
+// NOTE: requiring __cplusplus above should not be necessary, but
+// works around https://bugs.llvm.org/show_bug.cgi?id=23435.
 #if __has_cpp_attribute(clang::require_constant_initialization)
 // NOLINTNEXTLINE(whitespace/braces) (b/36288871)
 #define ABSL_CONST_INIT [[clang::require_constant_initialization]]

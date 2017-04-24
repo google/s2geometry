@@ -81,28 +81,28 @@ class S1Angle {
  public:
   // These methods construct S1Angle objects from their measure in radians
   // or degrees.
-  static S1Angle Radians(double radians);
-  static S1Angle Degrees(double degrees);
-  static S1Angle E5(int32 e5);
-  static S1Angle E6(int32 e6);
-  static S1Angle E7(int32 e7);
+  static constexpr S1Angle Radians(double radians);
+  static constexpr S1Angle Degrees(double degrees);
+  static constexpr S1Angle E5(int32 e5);
+  static constexpr S1Angle E6(int32 e6);
+  static constexpr S1Angle E7(int32 e7);
 
   // Convenience functions -- to use when args have been fixed32s in protos.
   //
   // The arguments are static_cast into int32, so very large unsigned values
   // are treated as negative numbers.
-  static S1Angle UnsignedE6(uint32 e6);
-  static S1Angle UnsignedE7(uint32 e7);
+  static constexpr S1Angle UnsignedE6(uint32 e6);
+  static constexpr S1Angle UnsignedE7(uint32 e7);
 
   // The default constructor yields a zero angle.  This is useful for STL
   // containers and class methods with output arguments.
-  S1Angle() : radians_(0) {}
+  constexpr S1Angle() : radians_(0) {}
 
   // Return an angle larger than any finite angle.
-  static S1Angle Infinity();
+  static constexpr S1Angle Infinity();
 
   // A explicit shorthand for the default constructor.
-  static S1Angle Zero();
+  static constexpr S1Angle Zero();
 
   // Return the angle between two points, which is also equal to the distance
   // between these points on the unit sphere.  The points do not need to be
@@ -114,8 +114,8 @@ class S1Angle {
   // 3.25 * DBL_EPSILON (or 2.5 * DBL_EPSILON for angles up to 1 radian).
   S1Angle(S2LatLng const& x, S2LatLng const& y);
 
-  double radians() const;
-  double degrees() const;
+  constexpr double radians() const;
+  constexpr double degrees() const;
 
   int32 e5() const;
   int32 e6() const;
@@ -162,7 +162,7 @@ class S1Angle {
   typedef std::true_type goog_btree_prefer_linear_node_search;
 
  private:
-  explicit S1Angle(double radians) : radians_(radians) {}
+  explicit constexpr S1Angle(double radians) : radians_(radians) {}
   double radians_;
 };
 
@@ -170,19 +170,19 @@ class S1Angle {
 //////////////////   Implementation details follow   ////////////////////
 
 
-inline S1Angle S1Angle::Infinity() {
+inline constexpr S1Angle S1Angle::Infinity() {
   return S1Angle(std::numeric_limits<double>::infinity());
 }
 
-inline S1Angle S1Angle::Zero() {
+inline constexpr S1Angle S1Angle::Zero() {
   return S1Angle(0);
 }
 
-inline double S1Angle::radians() const {
+inline constexpr double S1Angle::radians() const {
   return radians_;
 }
 
-inline double S1Angle::degrees() const {
+inline constexpr double S1Angle::degrees() const {
   return (180 / M_PI) * radians_;
 }
 
@@ -291,31 +291,31 @@ inline double tan(S1Angle a) {
   return tan(a.radians());
 }
 
-inline S1Angle S1Angle::Radians(double radians) {
+inline constexpr S1Angle S1Angle::Radians(double radians) {
   return S1Angle(radians);
 }
 
-inline S1Angle S1Angle::Degrees(double degrees) {
+inline constexpr S1Angle S1Angle::Degrees(double degrees) {
   return S1Angle((M_PI / 180) * degrees);
 }
 
-inline S1Angle S1Angle::E5(int32 e5) {
+inline constexpr S1Angle S1Angle::E5(int32 e5) {
   return Degrees(1e-5 * e5);
 }
 
-inline S1Angle S1Angle::E6(int32 e6) {
+inline constexpr S1Angle S1Angle::E6(int32 e6) {
   return Degrees(1e-6 * e6);
 }
 
-inline S1Angle S1Angle::E7(int32 e7) {
+inline constexpr S1Angle S1Angle::E7(int32 e7) {
   return Degrees(1e-7 * e7);
 }
 
-inline S1Angle S1Angle::UnsignedE6(uint32 e6) {
+inline constexpr S1Angle S1Angle::UnsignedE6(uint32 e6) {
   return E6(static_cast<int32>(e6));
 }
 
-inline S1Angle S1Angle::UnsignedE7(uint32 e7) {
+inline constexpr S1Angle S1Angle::UnsignedE7(uint32 e7) {
   return E7(static_cast<int32>(e7));
 }
 

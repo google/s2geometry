@@ -296,6 +296,19 @@ class dense_hash_set {
     return insert(std::move(obj)).first;
   }
 
+  // Unlike std::set, we cannot construct an element in place, as we do not have
+  // a layer of indirection like std::set nodes. Therefore, emplace* methods do
+  // not provide a performance advantage over insert + move.
+  template <typename... Args>
+  std::pair<iterator, bool> emplace(Args&&... args) {
+    return rep.insert(value_type(std::forward<Args>(args)...));
+  }
+  // The passed-in const_iterator is ignored.
+  template <typename... Args>
+  iterator emplace_hint(const_iterator, Args&&... args) {
+    return rep.insert(value_type(std::forward<Args>(args)...)).first;
+  }
+
   // Deletion and empty routines
   // THESE ARE NON-STANDARD!  I make you specify an "impossible" key
   // value to identify deleted and empty buckets.  You can change the

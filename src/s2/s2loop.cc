@@ -122,13 +122,13 @@ S2Debug S2Loop::s2debug_override() const {
   return s2debug_override_;
 }
 
-void S2Loop::ResetMutableFields() {
+void S2Loop::ResetIndex() {
   base::subtle::NoBarrier_Store(&unindexed_contains_calls_, 0);
   index_.RemoveAll();  // Prevent shape_ from being deleted.
 }
 
 void S2Loop::Init(vector<S2Point> const& vertices) {
-  ResetMutableFields();
+  ResetIndex();
   if (owns_vertices_) delete[] vertices_;
   num_vertices_ = vertices.size();
   vertices_ = new S2Point[num_vertices_];
@@ -148,7 +148,7 @@ bool S2Loop::IsValid() const {
 
 bool S2Loop::FindValidationError(S2Error* error) const {
   return (FindValidationErrorNoIndex(error) ||
-          s2shapeutil::FindSelfIntersection(index_, *this, error));
+          s2shapeutil::FindAnyCrossing(index_, error));
 }
 
 bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
@@ -372,7 +372,7 @@ void S2Loop::Normalize() {
 
 void S2Loop::Invert() {
   CHECK(owns_vertices_);
-  ResetMutableFields();
+  ResetIndex();
   if (is_empty_or_full()) {
     vertices_[0] = is_full() ? kEmptyVertex() : kFullVertex();
   } else {
@@ -782,7 +782,7 @@ bool S2Loop::DecodeInternal(Decoder* const decoder,
                           sizeof(uint8) + sizeof(uint32))) {
     return false;
   }
-  ResetMutableFields();
+  ResetIndex();
   if (owns_vertices_) delete[] vertices_;
   num_vertices_ = num_vertices;
 
@@ -1565,7 +1565,7 @@ bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
       unsigned_num_vertices > FLAGS_s2polygon_decode_max_num_vertices) {
     return false;
   }
-  ResetMutableFields();
+  ResetIndex();
   if (owns_vertices_) delete[] vertices_;
   num_vertices_ = unsigned_num_vertices;
   vertices_ = new S2Point[num_vertices_];
@@ -1646,7 +1646,7 @@ std::unique_ptr<S2Loop> S2Loop::MakeRegularLoop(Matrix3x3_d const& frame,
     S2Point p(r * cos(angle), r * sin(angle), z);
     vertices.push_back(S2::FromFrame(frame, p).Normalize());
   }
-  return gtl::MakeUnique<S2Loop>(vertices);
+  return absl::MakeUnique<S2Loop>(vertices);
 }
 
 size_t S2Loop::BytesUsed() const {
@@ -1661,6 +1661,7 @@ int S2Loop::Shape::num_chains() const {
   return loop_->is_empty_or_full() ? 0 : 1;
 }
 
-int S2Loop::Shape::chain_start(int i) const {
-  return i == 0 ? 0 : Shape::num_edges();
+S2Shape::Chain S2Loop::Shape::chain(int i) const {
+  DCHECK_EQ(i, 0);
+  return Chain(0, Shape::num_edges());  // Avoid virtual call.
 }

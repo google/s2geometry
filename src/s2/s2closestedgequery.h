@@ -229,7 +229,7 @@ class S2ClosestEdgeQuery {
     }
     S2Point GetClosestPointOnEdge(S2Point const& v0,
                                   S2Point const& v1) const override {
-      return S2EdgeUtil::GetClosestPoint(point_, v0, v1);
+      return S2EdgeUtil::Project(point_, v0, v1);
     }
    private:
     S2Point point_;

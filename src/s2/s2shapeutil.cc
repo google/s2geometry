@@ -18,8 +18,10 @@
 #include "s2/s2shapeutil.h"
 
 #include "s2/base/stringprintf.h"
+#include "s2/s2crossingedgequery.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
+#include "s2/s2paddedcell.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
@@ -27,6 +29,7 @@
 using std::pair;
 using std::unique_ptr;
 using std::vector;
+using ChainPosition = S2Shape::ChainPosition;
 
 namespace s2shapeutil {
 
@@ -62,6 +65,13 @@ void LaxLoop::GetEdge(int e, S2Point const** a, S2Point const** b) const {
   *a = &vertices_[e];
   if (++e == num_vertices()) e = 0;
   *b = &vertices_[e];
+}
+
+S2Shape::Edge LaxLoop::chain_edge(int i, int j) const {
+  DCHECK_EQ(i, 0);
+  DCHECK_LT(j, num_edges());
+  int k = (j + 1 == num_vertices()) ? 0 : j + 1;
+  return Edge(&vertices_[j], &vertices_[k]);
 }
 
 bool LaxLoop::contains_origin() const {
@@ -201,12 +211,43 @@ bool LaxPolygon::contains_origin() const {
   return IsOriginOnLeft(*this);
 }
 
-int LaxPolygon::chain_start(int i) const {
-  DCHECK_LE(i, num_loops());
+S2Shape::Chain LaxPolygon::chain(int i) const {
+  DCHECK_LT(i, num_loops());
   if (num_loops() == 1) {
-    return i == 0 ? 0 : num_vertices_;
+    return Chain(0, num_vertices_);
   } else {
-    return cumulative_vertices_[i];
+    int start = cumulative_vertices_[i];
+    return Chain(start, cumulative_vertices_[i + 1] - start);
+  }
+}
+
+S2Shape::Edge LaxPolygon::chain_edge(int i, int j) const {
+  DCHECK_LT(i, num_loops());
+  DCHECK_LT(j, num_loop_vertices(i));
+  int n = num_loop_vertices(i);
+  int k = (j + 1 == n) ? 0 : j + 1;
+  if (num_loops() == 1) {
+    return Edge(&vertices_[j], &vertices_[k]);
+  } else {
+    int base = cumulative_vertices_[i];
+    return Edge(&vertices_[base + j], &vertices_[base + k]);
+  }
+}
+
+S2Shape::ChainPosition LaxPolygon::chain_position(int e) const {
+  DCHECK_LT(e, num_edges());
+  int const kMaxLinearSearchLoops = 12;  // From benchmarks.
+  if (num_loops() == 1) {
+    return ChainPosition(0, e);
+  } else {
+    // Find the index of the first vertex of the loop following this one.
+    int* next = cumulative_vertices_ + 1;
+    if (num_loops() <= kMaxLinearSearchLoops) {
+      while (*next <= e) ++next;
+    } else {
+      next = std::upper_bound(next, next + num_loops(), e);
+    }
+    return ChainPosition(next - (cumulative_vertices_ + 1), e - next[-1]);
   }
 }
 
@@ -242,8 +283,18 @@ int LaxPolyline::num_chains() const {
   return std::min(1, LaxPolyline::num_edges());  // Avoid virtual call.
 }
 
-int LaxPolyline::chain_start(int i) const {
-  return i == 0 ? 0 : LaxPolyline::num_edges();  // Avoid virtual call.
+S2Shape::Chain LaxPolyline::chain(int i) const {
+  return Chain(0, LaxPolyline::num_edges());  // Avoid virtual call.
+}
+
+S2Shape::Edge LaxPolyline::chain_edge(int i, int j) const {
+  DCHECK_EQ(i, 0);
+  DCHECK_LT(j, num_edges());
+  return Edge(&vertices_[j], &vertices_[j + 1]);
+}
+
+S2Shape::ChainPosition LaxPolyline::chain_position(int e) const {
+  return ChainPosition(0, e);
 }
 
 VertexIdLaxLoop::VertexIdLaxLoop(std::vector<int32> const& vertex_ids,
@@ -265,6 +316,13 @@ void VertexIdLaxLoop::GetEdge(int e, S2Point const** a, S2Point const** b)
   *a = &vertex(e);
   if (++e == num_vertices()) e = 0;
   *b = &vertex(e);
+}
+
+S2Shape::Edge VertexIdLaxLoop::chain_edge(int i, int j) const {
+  DCHECK_EQ(i, 0);
+  DCHECK_LT(j, num_edges());
+  int k = (j + 1 == num_vertices()) ? 0 : j + 1;
+  return Edge(&vertex(j), &vertex(k));
 }
 
 bool VertexIdLaxLoop::contains_origin() const {
@@ -383,77 +441,318 @@ bool IsOriginOnLeft(S2Shape const& shape) {
 }
 
 std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
-  return os << id.shape_id() << ":" << id.edge_id();
+  return os << id.shape_id << ":" << id.edge_id;
 }
 
-// A structure representing one edge within a S2ShapeIndexCell.
-struct ShapeEdge {
-  ShapeEdge() : edge_id(-1, -1), v0(nullptr), v1(nullptr) {}
-  ShapeEdgeId edge_id;
-  S2Point const *v0, *v1;
-};
+// Ensure that we don't usually need to allocate memory when collecting the
+// edges in an S2ShapeIndex cell (which by default have about 10 edges).
+using ShapeEdgeVector = absl::InlinedVector<ShapeEdge, 16>;
 
-// Returns a vector representing all edges in the given S2ShapeIndexCell.
+// Returns a vector containing all edges in the given S2ShapeIndexCell.
+// (The result is returned as an output parameter so that the same storage can
+// be reused, rather than allocating a new temporary vector each time.)
 static void GetShapeEdges(S2ShapeIndex const& index,
                           S2ShapeIndexCell const& cell,
-                          vector<ShapeEdge>* shape_edges) {
-  int num_edges = 0;
-  for (int s = 0; s < cell.num_clipped(); ++s) {
-    num_edges += cell.clipped(s).num_edges();
-  }
-  shape_edges->resize(num_edges);
-  int out = 0;
+                          ShapeEdgeVector* shape_edges) {
+  shape_edges->clear();
   for (int s = 0; s < cell.num_clipped(); ++s) {
     S2ClippedShape const& clipped = cell.clipped(s);
-    int32 shape_id = clipped.shape_id();
-    S2Shape* shape = index.shape(shape_id);
+    S2Shape const& shape = *index.shape(clipped.shape_id());
     int num_clipped = clipped.num_edges();
     for (int i = 0; i < num_clipped; ++i) {
-      ShapeEdge* shape_edge = &(*shape_edges)[out++];
-      int32 edge_id = clipped.edge(i);
-      shape_edge->edge_id = ShapeEdgeId(shape_id, edge_id);
-      shape->GetEdge(edge_id, &shape_edge->v0, &shape_edge->v1);
+      shape_edges->push_back(ShapeEdge(shape, clipped.edge(i)));
     }
   }
-  DCHECK_EQ(num_edges, out);
 }
 
-// Given a vector of edges within an S2ShapeIndexCell, append all pairs of
-// crossing edges (of the given CrossingType) to "edge_pairs".
-static void AppendCrossingEdgePairs(vector<ShapeEdge> const& shape_edges,
-                                    CrossingType type,
-                                    EdgePairVector* edge_pairs) {
-  int min_crossing_value = (type == CrossingType::ALL) ? 0 : 1;
+// Given a vector of edges within an S2ShapeIndexCell, visit all pairs of
+// crossing edges (of the given CrossingType).
+static bool VisitCrossings(ShapeEdgeVector const& shape_edges,
+                           CrossingType type, EdgePairVisitor const& visitor) {
+  int min_crossing_sign = (type == CrossingType::INTERIOR) ? 1 : 0;
   int num_edges = shape_edges.size();
   for (int i = 0; i + 1 < num_edges; ++i) {
     ShapeEdge const& a = shape_edges[i];
-    S2EdgeUtil::EdgeCrosser crosser(a.v0, a.v1);
-    for (int j = i + 1; j < num_edges; ++j) {
+    int j = i + 1;
+    // A common situation is that an edge AB is followed by an edge BC.  We
+    // only need to visit such crossings if CrossingType::ALL is specified
+    // (even if AB and BC belong to different edge chains).
+    if (type != CrossingType::ALL && &a.v1() == &shape_edges[j].v0()) {
+      if (++j >= num_edges) break;
+    }
+    S2EdgeUtil::EdgeCrosser crosser(&a.v0(), &a.v1());
+    for (; j < num_edges; ++j) {
       ShapeEdge const& b = shape_edges[j];
-      int sign = crosser.CrossingSign(b.v0, b.v1);
-      if (sign >= min_crossing_value) {
-        edge_pairs->push_back(std::make_pair(a.edge_id, b.edge_id));
+      int sign = crosser.CrossingSign(&b.v0(), &b.v1());
+      if (sign >= min_crossing_sign) {
+        if (!visitor(a, b, sign == 1)) return false;
       }
     }
   }
+  return true;
 }
 
-EdgePairVector GetCrossingEdgePairs(S2ShapeIndex const& index,
-                                    CrossingType type) {
+bool VisitCrossings(S2ShapeIndex const& index, CrossingType type,
+                    EdgePairVisitor const& visitor) {
   // TODO(ericv): Use brute force if the total number of edges is small enough
   // (using a larger threshold if the S2ShapeIndex is not constructed yet).
-  EdgePairVector edge_pairs;
-  vector<ShapeEdge> shape_edges;
+  ShapeEdgeVector shape_edges;
   for (S2ShapeIndex::Iterator it(index); !it.Done(); it.Next()) {
     GetShapeEdges(index, it.cell(), &shape_edges);
-    AppendCrossingEdgePairs(shape_edges, type, &edge_pairs);
+    if (!VisitCrossings(shape_edges, type, visitor)) return false;
   }
-  if (edge_pairs.size() > 1) {
-    std::sort(edge_pairs.begin(), edge_pairs.end());
-    edge_pairs.erase(std::unique(edge_pairs.begin(), edge_pairs.end()),
-                     edge_pairs.end());
+  return true;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+RangeIterator::RangeIterator(S2ShapeIndex const& index)
+    : it_(index), end_(S2CellId::End(0)) {
+  Refresh();
+}
+
+void RangeIterator::Next() {
+  it_.Next();
+  Refresh();
+}
+
+void RangeIterator::SeekTo(RangeIterator const& target) {
+  it_.Seek(target.range_min());
+  // If the current cell does not overlap "target", it is possible that the
+  // previous cell is the one we are looking for.  This can only happen when
+  // the previous cell contains "target" but has a smaller S2CellId.
+  if (it_.Done() || it_.id().range_min() > target.range_max()) {
+    it_.Prev();
+    if (it_.id().range_max() < target.id()) it_.Next();
   }
-  return edge_pairs;
+  Refresh();
+}
+
+void RangeIterator::SeekBeyond(RangeIterator const& target) {
+  it_.Seek(target.range_max().next());
+  if (!it_.Done() && it_.id().range_min() <= target.range_max()) {
+    it_.Next();
+  }
+  Refresh();
+}
+
+// This method is inline, but is only called by non-inline methods defined in
+// this file.  Putting the definition here enforces this requirement.
+inline void RangeIterator::Refresh() {
+  if (it_.Done()) {
+    id_ = end_;
+    cell_ = nullptr;
+  } else {
+    id_ = it_.id();
+    cell_ = &it_.cell();
+  }
+  range_min_ = id_.range_min();
+  range_max_ = id_.range_max();
+}
+
+// IndexCrosser is a helper class for determining whether two loops cross.
+// It is instantiated twice for each pair of loops to be tested, once for the
+// pair (A,B) and once for the pair (B,A), in order to be able to test edge
+// crossings in the most efficient order.
+class IndexCrosser {
+ public:
+  // If "swapped" is true, the loops A and B have been swapped.  This affects
+  // how arguments are passed to the given loop relation, since for example
+  // A.Contains(B) is not the same as B.Contains(A).
+  IndexCrosser(S2ShapeIndex const& a_index, S2ShapeIndex const& b_index,
+               CrossingType type, EdgePairVisitor const& visitor, bool swapped)
+      : a_index_(a_index), b_index_(b_index),
+        min_crossing_sign_(type == CrossingType::INTERIOR ? 1 : 0),
+        visitor_(visitor), swapped_(swapped), b_query_(b_index_) {
+  }
+
+  // Given two iterators positioned such that ai->id().Contains(bi->id()),
+  // visit all crossings between edges of A and B that intersect a->id().
+  // Terminates early and returns false if visitor_ returns false.
+  // Advances both iterators past ai->id().
+  bool VisitCrossings(RangeIterator* ai, RangeIterator* bi);
+
+  // Given two index cells, visit all crossings between edges of those cells.
+  // Terminates early and returns false if visitor_ returns false.
+  bool VisitCellCellCrossings(S2ShapeIndexCell const& a_cell,
+                              S2ShapeIndexCell const& b_cell);
+
+ private:
+  bool VisitEdgePair(ShapeEdge const& a, ShapeEdge const& b, bool is_interior);
+
+  // Visit all crossings of the current edge with all edges of the given index
+  // cell of B.  Terminates early and returns false if visitor_ returns false.
+  bool VisitEdgeCellCrossings(ShapeEdge const& a,
+                              S2ShapeIndexCell const& b_cell);
+
+  // Visit all crossings of any edge in "a_cell" with any index cell of B that
+  // is a descendant of "b_id".  Terminates early and returns false if
+  // visitor_ returns false.
+  bool VisitSubcellCrossings(S2ShapeIndexCell const& a_cell, S2CellId b_id);
+
+  S2ShapeIndex const& a_index_;
+  S2ShapeIndex const& b_index_;
+  int const min_crossing_sign_;
+  EdgePairVisitor const& visitor_;
+  bool const swapped_;
+
+  // Temporary data declared here to avoid repeated memory allocations.
+  S2CrossingEdgeQuery b_query_;
+  S2EdgeUtil::EdgeCrosser crosser_;
+  vector<S2ShapeIndexCell const*> b_cells_;
+  ShapeEdgeVector a_shape_edges_;
+  ShapeEdgeVector b_shape_edges_;
+};
+
+inline bool IndexCrosser::VisitEdgePair(ShapeEdge const& a, ShapeEdge const& b,
+                                        bool is_interior) {
+  if (swapped_) {
+    return visitor_(b, a, is_interior);
+  } else {
+    return visitor_(a, b, is_interior);
+  }
+}
+
+bool IndexCrosser::VisitEdgeCellCrossings(ShapeEdge const& a,
+                                          S2ShapeIndexCell const& b_cell) {
+  // Test the current edge of A against all edges of "b_cell".
+  GetShapeEdges(b_index_, b_cell, &b_shape_edges_);
+  for (int j = 0; j < b_shape_edges_.size(); ++j) {
+    ShapeEdge const& b = b_shape_edges_[j];
+    int sign = crosser_.CrossingSign(&b.v0(), &b.v1());
+    if (sign >= min_crossing_sign_) {
+      if (!VisitEdgePair(a, b, sign == 1)) return false;
+    }
+  }
+  return true;
+}
+
+bool IndexCrosser::VisitSubcellCrossings(S2ShapeIndexCell const& a_cell,
+                                         S2CellId b_id) {
+  // Test all edges of "a_cell" against the edges contained in B index cells
+  // that are descendants of "b_id".
+  GetShapeEdges(a_index_, a_cell, &a_shape_edges_);
+  S2PaddedCell b_root(b_id, 0);
+  for (int i = 0; i < a_shape_edges_.size(); ++i) {
+    // Use an S2CrossingEdgeQuery starting at "b_root" to find the index cells
+    // of B that might contain crossing edges.
+    ShapeEdge const& a = a_shape_edges_[i];
+    if (b_query_.GetCells(a.v0(), a.v1(), b_root, &b_cells_)) {
+      crosser_.Init(&a.v0(), &a.v1());
+      for (int c = 0; c < b_cells_.size(); ++c) {
+        if (!VisitEdgeCellCrossings(a, *b_cells_[c])) return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool IndexCrosser::VisitCellCellCrossings(S2ShapeIndexCell const& a_cell,
+                                          S2ShapeIndexCell const& b_cell) {
+  // Test all edges of "a_shape_edges_" against all edges of "b_cell".
+  // TODO(ericv): Refactor this so that we don't need to gather the edges of
+  // "a_cell" every time when testing against multiple B cells.
+  // TODO(ericv): Process the cell with fewer edges in the outer loop.
+  GetShapeEdges(a_index_, a_cell, &a_shape_edges_);
+  GetShapeEdges(b_index_, b_cell, &b_shape_edges_);
+  for (int i = 0; i < a_shape_edges_.size(); ++i) {
+    ShapeEdge const& a = a_shape_edges_[i];
+    S2EdgeUtil::EdgeCrosser crosser(&a.v0(), &a.v1());
+    for (int j = 0; j < b_shape_edges_.size(); ++j) {
+      ShapeEdge const& b = b_shape_edges_[j];
+      int sign = crosser.CrossingSign(&b.v0(), &b.v1());
+      if (sign >= min_crossing_sign_) {
+        if (!VisitEdgePair(a, b, sign == 1)) return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool IndexCrosser::VisitCrossings(RangeIterator* ai, RangeIterator* bi) {
+  DCHECK(ai->id().contains(bi->id()));
+  if (ai->cell().num_edges() == 0) {
+    // Skip over the cells of B using binary search.
+    bi->SeekBeyond(*ai);
+  } else {
+    // If ai->id() intersects many edges of B, then it is faster to use
+    // S2CrossingEdgeQuery to narrow down the candidates.  But if it
+    // intersects only a few edges, it is faster to check all the crossings
+    // directly.  We handle this by advancing "bi" and keeping track of how
+    // many edges we would need to test.
+    static int const kEdgeQueryMinEdges = 20;  // TODO: Tune using benchmarks.
+    int b_edges = 0;
+    b_cells_.clear();
+    do {
+      int cell_edges = bi->cell().num_edges();
+      if (cell_edges > 0) {
+        b_edges += cell_edges;
+        if (b_edges >= kEdgeQueryMinEdges) {
+          // There are too many edges, so use an S2CrossingEdgeQuery.
+          if (!VisitSubcellCrossings(ai->cell(), ai->id())) return false;
+          bi->SeekBeyond(*ai);
+          return true;
+        }
+        b_cells_.push_back(&bi->cell());
+      }
+      bi->Next();
+    } while (bi->id() <= ai->range_max());
+
+    // Test all the edge crossings directly.
+    for (int c = 0; c < b_cells_.size(); ++c) {
+      if (!VisitCellCellCrossings(ai->cell(), *b_cells_[c])) {
+        return false;
+      }
+    }
+  }
+  ai->Next();
+  return true;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+bool VisitCrossings(S2ShapeIndex const& a_index, S2ShapeIndex const& b_index,
+                    CrossingType type, EdgePairVisitor const& visitor) {
+  DCHECK(type != CrossingType::NON_ADJACENT);
+  // We look for S2CellId ranges where the indexes of A and B overlap, and
+  // then test those edges for crossings.
+  //
+  // TODO(ericv): Use brute force if the total number of edges is small enough
+  // (using a larger threshold if the S2ShapeIndex is not constructed yet).
+  //
+  // TODO(ericv): Consider using one crosser and passing "a_index", "b_index",
+  // and "swapped" as parameters.  This would allow cell-cell intersections to
+  // be optimized by processing the index with fewer edges in the outer loop.
+  RangeIterator ai(a_index), bi(b_index);
+  IndexCrosser ab(a_index, b_index, type, visitor, false); // Tests A against B
+  IndexCrosser ba(b_index, a_index, type, visitor, true);  // Tests B against A
+  while (!ai.Done() || !bi.Done()) {
+    if (ai.range_max() < bi.range_min()) {
+      // The A and B cells don't overlap, and A precedes B.
+      ai.SeekTo(bi);
+    } else if (bi.range_max() < ai.range_min()) {
+      // The A and B cells don't overlap, and B precedes A.
+      bi.SeekTo(ai);
+    } else {
+      // One cell contains the other.  Determine which cell is larger.
+      int64 ab_relation = ai.id().lsb() - bi.id().lsb();
+      if (ab_relation > 0) {
+        // A's index cell is larger.
+        if (!ab.VisitCrossings(&ai, &bi)) return false;
+      } else if (ab_relation < 0) {
+        // B's index cell is larger.
+        if (!ba.VisitCrossings(&bi, &ai)) return false;
+      } else {
+        // The A and B cells are the same.
+        if (ai.cell().num_edges() > 0 && bi.cell().num_edges() > 0) {
+          if (!ab.VisitCellCellCrossings(ai.cell(), bi.cell())) return false;
+        }
+        ai.Next();
+        bi.Next();
+      }
+    }
+  }
+  return true;
 }
 
 void ResolveComponents(vector<vector<S2Shape*>> const& components,
@@ -536,177 +835,88 @@ void ResolveComponents(vector<vector<S2Shape*>> const& components,
   index.RemoveAll();
 }
 
-static bool FindSelfIntersection(S2ClippedShape const& a_clipped,
-                                 S2Loop const& a_loop, S2Error* error) {
-  // Test for crossings between all edge pairs that do not share a vertex.
-  // This means that (a) the loop edge indices must differ by 2 or more, and
-  // (b) the pair cannot consist of the first and last loop edges.  Part (b)
-  // is worthwhile in the case of very small loops; e.g. it reduces the
-  // number of crossing tests in a loop with four edges from two to one.
-
-  int a_num_clipped = a_clipped.num_edges();
-  for (int i = 0; i < a_num_clipped - 1; ++i) {
-    int ai = a_clipped.edge(i);
-    int j = i + 1;
-    if (a_clipped.edge(j) == ai+1) {  // Adjacent edges
-      if (++j >= a_num_clipped) continue;
-    }
-    S2EdgeUtil::EdgeCrosser crosser(&a_loop.vertex(ai), &a_loop.vertex(ai+1));
-    for (int aj_prev = -2; j < a_num_clipped; ++j) {
-      int aj = a_clipped.edge(j);
-      if (aj - ai == a_loop.num_vertices() - 1) break;  // First and last edges
-      if (aj != aj_prev + 1) crosser.RestartAt(&a_loop.vertex(aj));
-      aj_prev = aj;
-      // This test also catches duplicate vertices.
-      int crossing = crosser.CrossingSign(&a_loop.vertex(aj + 1));
-      if (crossing < 0) continue;
-      if (crossing == 0) {
-        error->Init(S2Error::DUPLICATE_VERTICES,
-                    "Edge %d has duplicate vertex with edge %d", ai, aj);
-      } else {
-        error->Init(S2Error::LOOP_SELF_INTERSECTION,
-                    "Edge %d crosses edge %d", ai, aj);
-      }
-      return true;
-    }
+// Helper function that formats a loop error message.  If the loop belongs to
+// a multi-loop polygon, adds a prefix indicating which loop is affected.
+static void InitLoopError(S2Error::Code code, char const* format,
+                          ChainPosition ap, ChainPosition bp,
+                          bool is_polygon, S2Error* error) {
+  error->Init(code, format, ap.offset, bp.offset);
+  if (is_polygon) {
+    error->Init(code, "Loop %d: %s", ap.chain_id, error->text().c_str());
   }
-  return false;
 }
 
-// Return true if any of the given loops has a self-intersection (including a
-// duplicate vertex), and set "error" to a human-readable error message.
-// Otherwise return false and leave "error" unchanged.  All tests are limited
-// to edges that intersect the given cell.
-inline static bool FindSelfIntersection(
-    vector<unique_ptr<S2Loop>> const& loops,
-    S2ShapeIndexCell const& cell,
-    S2Error* error) {
-  for (int a = 0; a < cell.num_clipped(); ++a) {
-    S2ClippedShape const& a_clipped = cell.clipped(a);
-    if (FindSelfIntersection(a_clipped, *loops[a_clipped.shape_id()], error)) {
-      error->Init(error->code(),
-                  "Loop %d: %s", a_clipped.shape_id(), error->text().c_str());
-      return true;
-    }
-  }
-  return false;
-}
-
-// Given two loop edges for which CrossingSign returned a non-negative
-// result "crossing", return true if there is a crossing and set "error" to a
-// human-readable error message.
-static bool GetCrossingError(S2Loop const& a_loop, int a_shape_id, int ai,
-                             S2Loop const& b_loop, int b_shape_id, int bj,
-                             int crossing, S2Error* error) {
-  if (crossing > 0) {
-    error->Init(S2Error::POLYGON_LOOPS_CROSS,
-                "Loop %d edge %d crosses loop %d edge %d",
-                a_shape_id, ai, b_shape_id, bj);
-    return true;
-  }
-  // Loops are not allowed to share edges or cross at vertices.  We
-  // only need to check this once per edge pair, so we also require
-  // that the two edges have the same end vertex.  (This is only valid
-  // because we are iterating over all the cells in the index.)
-  if (a_loop.vertex(ai+1) == b_loop.vertex(bj+1)) {
-    if (a_loop.vertex(ai) == b_loop.vertex(bj) ||
-        a_loop.vertex(ai) == b_loop.vertex(bj+2)) {
-      // The second edge index is sometimes off by one, hence "near".
-      error->Init(S2Error::POLYGON_LOOPS_SHARE_EDGE,
-                  "Loop %d edge %d has duplicate near loop %d edge %d",
-                  a_shape_id, ai, b_shape_id, bj);
-      return true;
-    }
-    // Note that we don't need to maintain any state regarding loop
-    // crossings because duplicate edges are not allowed.
-    if (S2EdgeUtil::GetWedgeRelation(
-            a_loop.vertex(ai), a_loop.vertex(ai+1), a_loop.vertex(ai+2),
-            b_loop.vertex(bj), b_loop.vertex(bj+2)) ==
-        S2EdgeUtil::WEDGE_PROPERLY_OVERLAPS) {
+// Given two loop edges that cross (including at a shared vertex), return true
+// if there is a crossing error and set "error" to a human-readable message.
+static bool FindCrossingError(S2Shape const& shape,
+                              ShapeEdge const& a, ShapeEdge const& b,
+                              bool is_interior, S2Error* error) {
+  bool is_polygon = shape.num_chains() > 1;
+  S2Shape::ChainPosition ap = shape.chain_position(a.id().edge_id);
+  S2Shape::ChainPosition bp = shape.chain_position(b.id().edge_id);
+  if (is_interior) {
+    if (ap.chain_id != bp.chain_id) {
       error->Init(S2Error::POLYGON_LOOPS_CROSS,
                   "Loop %d edge %d crosses loop %d edge %d",
-                  a_shape_id, ai, b_shape_id, bj);
-      return true;
+                  ap.chain_id, ap.offset, bp.chain_id, bp.offset);
+    } else {
+      InitLoopError(S2Error::LOOP_SELF_INTERSECTION,
+                    "Edge %d crosses edge %d", ap, bp, is_polygon, error);
     }
+    return true;
+  }
+  // Loops are not allowed to have duplicate vertices, and separate loops
+  // are not allowed to share edges or cross at vertices.  We only need to
+  // check a given vertex once, so we also require that the two edges have
+  // the same end vertex.
+  if (a.v1() != b.v1()) return false;
+  if (ap.chain_id == bp.chain_id) {
+    InitLoopError(S2Error::DUPLICATE_VERTICES,
+                  "Edge %d has duplicate vertex with edge %d",
+                  ap, bp, is_polygon, error);
+    return true;
+  }
+  int a_len = shape.chain(ap.chain_id).length;
+  int b_len = shape.chain(bp.chain_id).length;
+  int a_next = (ap.offset + 1 == a_len) ? 0 : ap.offset + 1;
+  int b_next = (bp.offset + 1 == b_len) ? 0 : bp.offset + 1;
+  S2Point const& a2 = *shape.chain_edge(ap.chain_id, a_next).v1;
+  S2Point const& b2 = *shape.chain_edge(bp.chain_id, b_next).v1;
+  if (a.v0() == b.v0() || a.v0() == b2) {
+    // The second edge index is sometimes off by one, hence "near".
+    error->Init(S2Error::POLYGON_LOOPS_SHARE_EDGE,
+                "Loop %d edge %d has duplicate near loop %d edge %d",
+                ap.chain_id, ap.offset, bp.chain_id, bp.offset);
+    return true;
+  }
+  // Since S2ShapeIndex loops are oriented such that the polygon interior is
+  // always on the left, we need to handle the case where one wedge contains
+  // the complement of the other wedge.  This is not specifically detected by
+  // GetWedgeRelation, so there are two cases to check for.
+  //
+  // Note that we don't need to maintain any state regarding loop crossings
+  // because duplicate edges are detected and rejected above.
+  if (S2EdgeUtil::GetWedgeRelation(a.v0(), a.v1(), a2, b.v0(), b2) ==
+      S2EdgeUtil::WEDGE_PROPERLY_OVERLAPS &&
+      S2EdgeUtil::GetWedgeRelation(a.v0(), a.v1(), a2, b2, b.v0()) ==
+      S2EdgeUtil::WEDGE_PROPERLY_OVERLAPS) {
+    error->Init(S2Error::POLYGON_LOOPS_CROSS,
+                "Loop %d edge %d crosses loop %d edge %d",
+                ap.chain_id, ap.offset, bp.chain_id, bp.offset);
+    return true;
   }
   return false;
 }
 
-// Return true if any of the given loops crosses a different loop (including
-// vertex crossings) or two loops share a common edge, and set "error" to a
-// human-readable error message.  Otherwise return false and leave "error"
-// unchanged.  All tests are limited to edges that intersect the given cell.
-static bool FindLoopCrossing(vector<unique_ptr<S2Loop>> const& loops,
-                             S2ShapeIndexCell const& cell, S2Error* error) {
-  // Possible optimization:
-  // Sort the ClippedShapes by edge count to reduce the number of calls to
-  // s2pred::Sign.  If n is the total number of shapes in the cell, n_i is
-  // the number of edges in shape i, and c_i is the number of continuous
-  // chains formed by these edges, the total number of calls is
-  //
-  //   sum(n_i * (1 + c_j + n_j), i=0..n-2, j=i+1..n-1)
-  //
-  // So for example if n=2, shape 0 has one chain of 1 edge, and shape 1 has
-  // one chain of 8 edges, the number of calls to Sign is 1*10=10 if the
-  // shapes are sorted by edge count, and 8*3=24 otherwise.
-  //
-  // using SortedShape = pair<int, S2ShapeIndex::ClippedShape const*>;
-  // vector<SortedShape> sorted_shapes;
-
-  for (int a = 0; a < cell.num_clipped() - 1; ++a) {
-    S2ClippedShape const& a_clipped = cell.clipped(a);
-    S2Loop const& a_loop = *loops[a_clipped.shape_id()];
-    int a_num_clipped = a_clipped.num_edges();
-    for (int i = 0; i < a_num_clipped; ++i) {
-      int ai = a_clipped.edge(i);
-      S2EdgeUtil::EdgeCrosser crosser(&a_loop.vertex(ai), &a_loop.vertex(ai+1));
-      for (int b = a + 1; b < cell.num_clipped(); ++b) {
-        S2ClippedShape const& b_clipped = cell.clipped(b);
-        S2Loop const& b_loop = *loops[b_clipped.shape_id()];
-        int bj_prev = -2;
-        int b_num_clipped = b_clipped.num_edges();
-        for (int j = 0; j < b_num_clipped; ++j) {
-          int bj = b_clipped.edge(j);
-          if (bj != bj_prev + 1) crosser.RestartAt(&b_loop.vertex(bj));
-          bj_prev = bj;
-          int crossing = crosser.CrossingSign(&b_loop.vertex(bj + 1));
-          if (crossing < 0) continue;  // No crossing
-          if (GetCrossingError(a_loop, a_clipped.shape_id(), ai,
-                               b_loop, b_clipped.shape_id(), bj,
-                               crossing, error)) {
-            return true;
-          }
-        }
-      }
-    }
-  }
-  return false;
-}
-
-bool FindSelfIntersection(S2ShapeIndex const& index, S2Loop const& loop,
-                          S2Error* error) {
+bool FindAnyCrossing(S2ShapeIndex const& index, S2Error* error) {
+  if (index.num_shape_ids() == 0) return false;
   DCHECK_EQ(1, index.num_shape_ids());
-  for (S2ShapeIndex::Iterator it(index); !it.Done(); it.Next()) {
-    if (FindSelfIntersection(it.cell().clipped(0), loop, error)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool FindAnyCrossing(S2ShapeIndex const& index,
-                     vector<unique_ptr<S2Loop>> const& loops,
-                     S2Error* error) {
-  for (S2ShapeIndex::Iterator it(index); !it.Done(); it.Next()) {
-    if (FindSelfIntersection(loops, it.cell(), error)) {
-      return true;
-    }
-    if (it.cell().num_clipped() >= 2 &&
-        FindLoopCrossing(loops, it.cell(), error)) {
-      return true;
-    }
-  }
-  return false;
+  S2Shape const& shape = *index.shape(0);
+  return !VisitCrossings(
+      index, CrossingType::NON_ADJACENT,
+      [&](ShapeEdge const& a, ShapeEdge const& b, bool is_interior) {
+        return !FindCrossingError(shape, a, b, is_interior, error);
+      });
 }
 
 }  // namespace s2shapeutil

@@ -135,8 +135,30 @@ class S2ShapeIndex;
 //      ...
 //      S2Shape* shape = index.shape(id);
 //      MyData* my_data = static_cast<MyData*>(shape->mutable_user_data());
+//
+// TODO(ericv):
+// - Change the return type of GetEdge() to Edge.
+// - Change Edge to represent S2Points by value (slower but more flexible).
+// - Rename GetEdge() to edge().
 class S2Shape {
  public:
+  // Represents an S2Shape edge.
+  struct Edge {
+    Edge(S2Point const* _v0, S2Point const* _v1) : v0(_v0), v1(_v1) {}
+    S2Point const *v0, *v1;
+  };
+  // Represents an edge id range corresponding to a chain of connected edges.
+  struct Chain {
+    Chain(int32 _start, int32 _length) : start(_start), length(_length) {}
+    int32 start, length;
+  };
+  // Represents the position of an edge within an edge chain.
+  struct ChainPosition {
+    ChainPosition(int32 _chain_id, int32 _offset)
+        : chain_id(_chain_id), offset(_offset) {}
+    int32 chain_id, offset;
+  };
+
   S2Shape() : id_(-1) {}
   virtual ~S2Shape() {}
 
@@ -168,7 +190,7 @@ class S2Shape {
   // polyline or polygon that has been simplified to a single point.
   virtual int dimension() const = 0;
 
-  // Returns true if this shape has an interior.
+  // Convenience function that returns true if this shape has an interior.
   inline bool has_interior() const { return dimension() == 2; }
 
   // Returns true if this shape contains S2::Origin().  Should return false
@@ -195,7 +217,16 @@ class S2Shape {
   // REQUIRES: chain_start(0) == 0
   // REQUIRES: chains_start(i) < chain_start(i+1)
   // REQUIRES: chain_start(num_chains()) == num_edges()
-  virtual int chain_start(int i) const = 0;
+  virtual Chain chain(int chain_id) const = 0;
+
+  // Returns the j-th edge of the i-th edge chain.  Equivalent to calling
+  // "edge(chain_start(i) + j)" but may be more efficient.
+  virtual Edge chain_edge(int chain_id, int offset) const = 0;
+
+  // Returns a pair (i, j) such that "e" is the j-th edge of the i-th chain.
+  // REQUIRES: chain_start(i) + j == e
+  // REQUIRES: chain_start(i + 1) > e
+  virtual ChainPosition chain_position(int edge_id) const = 0;
 
   // A unique id assigned to this shape by S2ShapeIndex.  Shape ids are
   // assigned sequentially starting from 0 in the order shapes are added.
@@ -296,6 +327,10 @@ class S2ShapeIndexCell {
   S2ClippedShape const* find_clipped(S2Shape const* shape) const;
   S2ClippedShape const* find_clipped(int shape_id) const;
 
+  // Convenience method that returns the total number of edges in all clipped
+  // shapes.
+  int num_edges() const;
+
  private:
   friend class S2ShapeIndex;  // shapes_ write access
   friend class S2Stats;
@@ -319,9 +354,9 @@ class S2ShapeIndexOptions {
   S2ShapeIndexOptions();
 
   // The maximum number of edges per cell.  If a cell has more than this many
-  // edges that are "long" relative to the cell size, and it is not a leaf
-  // cell, then it is subdivided.  (Whether an edge is considered "long" is
-  // controlled by the --s2shapeindex_min_cell_size_for_edge flag.)
+  // edges that are not considered "long" relative to the cell size, and it is
+  // not a leaf cell, then it is subdivided.  (Whether an edge is considered
+  // "long" is controlled by the --s2shapeindex_min_cell_size_for_edge flag.)
   //
   // Values between 10 and 50 represent a reasonable balance between memory
   // usage, construction time, and query time.  Small values make queries
@@ -722,6 +757,13 @@ inline bool S2ClippedShape::is_inline() const {
 inline S2ClippedShape const* S2ShapeIndexCell::find_clipped(
     S2Shape const* shape) const {
   return find_clipped(shape->id());
+}
+
+// Inline because an index cell frequently contains just one shape.
+inline int S2ShapeIndexCell::num_edges() const {
+  int n = 0;
+  for (int i = 0; i < num_clipped(); ++i) n += clipped(i).num_edges();
+  return n;
 }
 
 inline S2ShapeIndex::Iterator::Iterator() : index_(nullptr) {

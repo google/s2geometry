@@ -52,8 +52,8 @@ TEST(LaxLoop, NonEmptyLoop) {
   EXPECT_EQ(vertices.size(), shape.num_vertices());
   EXPECT_EQ(vertices.size(), shape.num_edges());
   EXPECT_EQ(1, shape.num_chains());
-  EXPECT_EQ(0, shape.chain_start(0));
-  EXPECT_EQ(vertices.size(), shape.chain_start(1));
+  EXPECT_EQ(0, shape.chain(0).start);
+  EXPECT_EQ(vertices.size(), shape.chain(0).length);
   for (int i = 0; i < vertices.size(); ++i) {
     EXPECT_EQ(vertices[i], shape.vertex(i));
     S2Point const *v0, *v1;
@@ -89,20 +89,22 @@ TEST(LaxPolygon, EmptyPolygon) {
 TEST(LaxPolygon, SingleLoopPolygon) {
   // Test S2Polygon constructor.
   vector<S2Point> vertices = s2textformat::ParsePoints("0:0, 0:1, 1:1, 1:0");
-  LaxPolygon shape(S2Polygon(gtl::MakeUnique<S2Loop>(vertices)));
+  LaxPolygon shape(S2Polygon(absl::MakeUnique<S2Loop>(vertices)));
   EXPECT_EQ(1, shape.num_loops());
   EXPECT_EQ(vertices.size(), shape.num_vertices());
   EXPECT_EQ(vertices.size(), shape.num_loop_vertices(0));
   EXPECT_EQ(vertices.size(), shape.num_edges());
   EXPECT_EQ(1, shape.num_chains());
-  EXPECT_EQ(0, shape.chain_start(0));
-  EXPECT_EQ(vertices.size(), shape.chain_start(1));
+  EXPECT_EQ(0, shape.chain(0).start);
+  EXPECT_EQ(vertices.size(), shape.chain(0).length);
   for (int i = 0; i < vertices.size(); ++i) {
     EXPECT_EQ(vertices[i], shape.loop_vertex(0, i));
     S2Point const *v0, *v1;
     shape.GetEdge(i, &v0, &v1);
     EXPECT_EQ(vertices[i], *v0);
     EXPECT_EQ(vertices[(i + 1) % vertices.size()], *v1);
+    EXPECT_EQ(v0, shape.chain_edge(0, i).v0);
+    EXPECT_EQ(v1, shape.chain_edge(0, i).v1);
   }
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
@@ -123,7 +125,8 @@ TEST(LaxPolygon, MultiLoopPolygon) {
   EXPECT_EQ(loops.size(), shape.num_chains());
   for (int i = 0; i < loops.size(); ++i) {
     EXPECT_EQ(loops[i].size(), shape.num_loop_vertices(i));
-    EXPECT_EQ(num_vertices, shape.chain_start(i));
+    EXPECT_EQ(num_vertices, shape.chain(i).start);
+    EXPECT_EQ(loops[i].size(), shape.chain(i).length);
     for (int j = 0; j < loops[i].size(); ++j) {
       EXPECT_EQ(loops[i][j], shape.loop_vertex(i, j));
       S2Point const *v0, *v1;
@@ -132,7 +135,6 @@ TEST(LaxPolygon, MultiLoopPolygon) {
       EXPECT_EQ(loops[i][(j + 1) % loops[i].size()], *v1);
     }
     num_vertices += loops[i].size();
-    EXPECT_EQ(num_vertices, shape.chain_start(i + 1));
   }
   EXPECT_EQ(num_vertices, shape.num_vertices());
   EXPECT_EQ(num_vertices, shape.num_edges());
@@ -252,8 +254,8 @@ TEST(LaxPolyline, EdgeAccess) {
   LaxPolyline shape(vertices);
   EXPECT_EQ(2, shape.num_edges());
   EXPECT_EQ(1, shape.num_chains());
-  EXPECT_EQ(0, shape.chain_start(0));
-  EXPECT_EQ(2, shape.chain_start(1));
+  EXPECT_EQ(0, shape.chain(0).start);
+  EXPECT_EQ(2, shape.chain(0).length);
   EXPECT_EQ(1, shape.dimension());
   S2Point const *v0, *v1;
   shape.GetEdge(0, &v0, &v1);
@@ -277,8 +279,8 @@ TEST(EdgeVectorShape, EdgeAccess) {
   EXPECT_EQ(1, shape.dimension());
   S2Testing::rnd.Reset(FLAGS_s2_random_seed);
   for (int i = 0; i < kNumEdges; ++i) {
-    EXPECT_EQ(i, shape.chain_start(i));
-    EXPECT_EQ(i + 1, shape.chain_start(i + 1));
+    EXPECT_EQ(i, shape.chain(i).start);
+    EXPECT_EQ(1, shape.chain(i).length);
     S2Point const *a, *b;
     shape.GetEdge(i, &a, &b);
     EXPECT_EQ(S2Testing::RandomPoint(), *a);
@@ -297,6 +299,30 @@ TEST(EdgeVectorShape, SingletonConstructor) {
   EXPECT_EQ(b, *pb);
 }
 
+TEST(PointVectorShape, ConstructionAndAccess) {
+  std::vector<S2Point> points;
+  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  int const kNumPoints = 100;
+  for (int i = 0; i < kNumPoints; ++i) {
+    points.push_back(S2Testing::RandomPoint());
+  }
+  PointVectorShape shape(&points);
+
+  EXPECT_EQ(kNumPoints, shape.num_edges());
+  EXPECT_EQ(kNumPoints, shape.num_chains());
+  EXPECT_EQ(0, shape.dimension());
+  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  for (int i = 0; i < kNumPoints; ++i) {
+    EXPECT_EQ(i, shape.chain(i).start);
+    EXPECT_EQ(1, shape.chain(i).length);
+    S2Point const *a, *b;
+    shape.GetEdge(i, &a, &b);
+    S2Point pt = S2Testing::RandomPoint();
+    EXPECT_EQ(pt, *a);
+    EXPECT_EQ(pt, *b);
+  }
+}
+
 TEST(VertexIdLaxLoop, InvertedLoop) {
   vector<S2Point> vertex_array =
       s2textformat::ParsePoints("0:0, 0:1, 1:1, 1:0");
@@ -305,8 +331,8 @@ TEST(VertexIdLaxLoop, InvertedLoop) {
   EXPECT_EQ(4, shape.num_edges());
   EXPECT_EQ(4, shape.num_vertices());
   EXPECT_EQ(1, shape.num_chains());
-  EXPECT_EQ(0, shape.chain_start(0));
-  EXPECT_EQ(4, shape.chain_start(1));
+  EXPECT_EQ(0, shape.chain(0).start);
+  EXPECT_EQ(4, shape.chain(0).length);
   EXPECT_EQ(&vertex_array[0], &shape.vertex(0));
   EXPECT_EQ(&vertex_array[3], &shape.vertex(1));
   EXPECT_EQ(&vertex_array[2], &shape.vertex(2));
@@ -318,22 +344,40 @@ TEST(VertexIdLaxLoop, InvertedLoop) {
 
 TEST(S2LoopOwningShape, Ownership) {
   // Debug mode builds will catch any memory leak below.
-  auto loop = gtl::MakeUnique<S2Loop>(S2Loop::kEmpty());
+  auto loop = absl::MakeUnique<S2Loop>(S2Loop::kEmpty());
   S2LoopOwningShape shape(std::move(loop));
 }
 
 TEST(S2PolygonOwningShape, Ownership) {
   // Debug mode builds will catch any memory leak below.
   vector<unique_ptr<S2Loop>> loops;
-  auto polygon = gtl::MakeUnique<S2Polygon>(std::move(loops));
+  auto polygon = absl::MakeUnique<S2Polygon>(std::move(loops));
   S2PolygonOwningShape shape(std::move(polygon));
 }
 
 TEST(S2PolylineOwningShape, Ownership) {
   // Debug mode builds will catch any memory leak below.
   vector<S2Point> vertices;
-  auto polyline = gtl::MakeUnique<S2Polyline>(vertices);
+  auto polyline = absl::MakeUnique<S2Polyline>(vertices);
   S2PolylineOwningShape shape(std::move(polyline));
+}
+
+// A set of edge pairs within an S2ShapeIndex.
+using EdgePairVector = std::vector<std::pair<ShapeEdgeId, ShapeEdgeId>>;
+
+EdgePairVector GetCrossings(S2ShapeIndex const& index, CrossingType type) {
+  EdgePairVector edge_pairs;
+  VisitCrossings(index, type,
+                 [&edge_pairs](ShapeEdge const& a, ShapeEdge const& b, bool) {
+                   edge_pairs.push_back(std::make_pair(a.id(), b.id()));
+                   return true;  // Continue visiting.
+                 });
+  if (edge_pairs.size() > 1) {
+    std::sort(edge_pairs.begin(), edge_pairs.end());
+    edge_pairs.erase(std::unique(edge_pairs.begin(), edge_pairs.end()),
+                     edge_pairs.end());
+  }
+  return edge_pairs;
 }
 
 // An iterator that advances through all edges in an S2ShapeIndex.
@@ -398,7 +442,7 @@ std::ostream& operator<<(std::ostream& os,
 
 void TestGetCrossingEdgePairs(S2ShapeIndex const& index, CrossingType type) {
   EdgePairVector expected = GetCrossingEdgePairsBruteForce(index, type);
-  EdgePairVector actual = GetCrossingEdgePairs(index, type);
+  EdgePairVector actual = GetCrossings(index, type);
   if (actual != expected) {
     ADD_FAILURE() << "Unexpected edge pairs; see details below."
                   << "\nExpected number of edge pairs: " << expected.size()
