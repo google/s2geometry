@@ -165,7 +165,6 @@ TEST(S2CellUnion, Normalize) {
     for (S2CellId input_id : input) {
       EXPECT_TRUE(cellunion.Contains(input_id));
       EXPECT_TRUE(cellunion.Contains(input_id.ToPoint()));
-      EXPECT_TRUE(cellunion.VirtualContainsPoint(input_id.ToPoint()));
       EXPECT_TRUE(cellunion.Intersects(input_id));
       if (!input_id.is_face()) {
         EXPECT_TRUE(cellunion.Intersects(input_id.parent()));

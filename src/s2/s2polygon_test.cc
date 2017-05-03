@@ -217,7 +217,7 @@ static void CheckContains(string const& a_str, string const& b_str) {
 
 static void CheckContainsPoint(string const& a_str, string const& b_str) {
   unique_ptr<S2Polygon> a(s2textformat::MakePolygon(a_str));
-  EXPECT_TRUE(a->VirtualContainsPoint(s2textformat::MakePoint(b_str)))
+  EXPECT_TRUE(a->Contains(s2textformat::MakePoint(b_str)))
     << " " << a_str << " did not contain " << b_str;
 }
 

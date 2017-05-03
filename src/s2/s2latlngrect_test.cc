@@ -159,7 +159,7 @@ TEST(S2LatLngRect, GetVertex) {
 }
 
 TEST(S2LatLngRect, Contains) {
-  // Contains(S2LatLng), InteriorContains(S2LatLng), VirtualContainsPoint()
+  // Contains(S2LatLng), InteriorContains(S2LatLng), Contains()
   S2LatLng eq_m180 = S2LatLng::FromRadians(0, -M_PI);
   S2LatLng north_pole = S2LatLng::FromRadians(M_PI_2, 0);
   S2LatLngRect r1(eq_m180, north_pole);
@@ -173,9 +173,7 @@ TEST(S2LatLngRect, Contains) {
   EXPECT_TRUE(r1.Contains(north_pole));
   EXPECT_FALSE(r1.InteriorContains(north_pole));
   EXPECT_TRUE(r1.Contains(S2Point(0.5, -0.3, 0.1)));
-  EXPECT_TRUE(r1.VirtualContainsPoint(S2Point(0.5, -0.3, 0.1)));
   EXPECT_FALSE(r1.Contains(S2Point(0.5, 0.2, 0.1)));
-  EXPECT_FALSE(r1.VirtualContainsPoint(S2Point(0.5, 0.2, 0.1)));
 }
 
 static void TestIntervalOps(S2LatLngRect const& x, S2LatLngRect const& y,

@@ -178,7 +178,7 @@ static void GetClosestPoints(Target const& target, TestQuery* query,
                 query->distance(i).radians(), kChordAngleError);
     // Check that the point satisfies the region() condition.
     if (query->region()) {
-      EXPECT_TRUE(query->region()->VirtualContainsPoint(query->point(i)));
+      EXPECT_TRUE(query->region()->Contains(query->point(i)));
     }
     // Check that it satisfies the max_distance() condition.
     EXPECT_LE(query->distance(i), query->max_distance());

@@ -324,9 +324,6 @@ class S2LatLngRect final : public S2Region {
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
   bool Contains(S2Cell const& cell) const override;
-  bool VirtualContainsPoint(S2Point const& p) const override {
-    return Contains(p);  // The same as Contains() below, just virtual.
-  }
 
   // This test is cheap but is NOT exact.  Use Intersects() if you want a more
   // accurate and more expensive test.  Note that when this method is used by
@@ -336,7 +333,7 @@ class S2LatLngRect final : public S2Region {
   bool MayIntersect(S2Cell const& cell) const override;
 
   // The point 'p' does not need to be normalized.
-  bool Contains(S2Point const& p) const;
+  bool Contains(S2Point const& p) const override;
 
   void Encode(Encoder* const encoder) const override;
   bool Decode(Decoder* const decoder) override;

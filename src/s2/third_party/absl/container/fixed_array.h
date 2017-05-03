@@ -22,6 +22,7 @@
 #include <cassert>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -106,6 +107,16 @@ class FixedArray {
 
   // Returns the length of the array.
   size_type size() const { return rep_.size(); }
+
+  // Returns the largest possible value of std::distance(begin(), end()) for a
+  // FixedArray<T>.  This is equivalent to the most possible addressable bytes
+  // over the number of bytes taken by T.
+  constexpr size_type max_size() const {
+    return std::numeric_limits<difference_type>::max() / sizeof(value_type);
+  }
+
+  // Returns whether or not the array is empty.
+  bool empty() const { return size() == 0; }
 
   // Returns the memory size of the array in bytes.
   size_t memsize() const { return size() * sizeof(value_type); }

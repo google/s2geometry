@@ -629,10 +629,9 @@ class S2Polygon final : public S2Region {
 
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
-  bool VirtualContainsPoint(S2Point const& p) const override;
 
   // The point 'p' does not need to be normalized.
-  bool Contains(S2Point const& p) const;
+  bool Contains(S2Point const& p) const override;
 
   //  Encode the polygon with about 4 bytes per vertex on Google's geographic
   //  repository, assuming the vertices have all been snapped to the centers of

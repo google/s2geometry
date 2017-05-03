@@ -72,9 +72,7 @@ TEST(S2Cap, Basic) {
   // Singleton cap containing the x-axis.
   S2Cap xaxis = S2Cap::FromPoint(S2Point(1, 0, 0));
   EXPECT_TRUE(xaxis.Contains(S2Point(1, 0, 0)));
-  EXPECT_TRUE(xaxis.VirtualContainsPoint(S2Point(1, 0, 0)));
   EXPECT_FALSE(xaxis.Contains(S2Point(1, 1e-20, 0)));
-  EXPECT_FALSE(xaxis.VirtualContainsPoint(S2Point(1, 1e-20, 0)));
   EXPECT_EQ(0, xaxis.GetRadius().radians());
 
   // Singleton cap containing the y-axis.

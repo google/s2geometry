@@ -183,12 +183,9 @@ class S2Cap final : public S2Region {
   S2LatLngRect GetRectBound() const override;
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
-  bool VirtualContainsPoint(S2Point const& p) const override {
-    return Contains(p);  // The same as Contains() below, just virtual.
-  }
 
   // The point "p" should be a unit-length vector.
-  bool Contains(S2Point const& p) const;
+  bool Contains(S2Point const& p) const override;
 
   void Encode(Encoder* const encoder) const override;
   bool Decode(Decoder* const decoder) override;

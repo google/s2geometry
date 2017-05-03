@@ -31,7 +31,6 @@
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/base/type_traits.h"
 
 template <typename T> class Vector2;
 template <typename T> class Vector3;
@@ -576,10 +575,6 @@ typedef Vector4<uint8>  Vector4_b;
 typedef Vector4<int>    Vector4_i;
 typedef Vector4<float>  Vector4_f;
 typedef Vector4<double> Vector4_d;
-
-// TODO(user): Vector?<T> does not actually satisfy the definition of a POD
-// type even when T is a POD. Pretending that Vector?<T> is a POD probably
-// won't cause any immediate problems, but eventually this should be fixed.
 
 
 #endif  // S2_UTIL_MATH_VECTOR_H_

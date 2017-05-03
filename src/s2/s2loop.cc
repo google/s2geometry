@@ -84,32 +84,16 @@ enum CompressedLoopProperty {
 };
 
 S2Loop::S2Loop()
-  : depth_(0),
-    num_vertices_(0),
-    vertices_(nullptr),
-    owns_vertices_(false),
-    s2debug_override_(S2Debug::ALLOW),
-    origin_inside_(false),
-    shape_(this) {
+  : shape_(this) {
   // Some fields are initialized by Init().  The loop is not valid until then.
 }
 
 S2Loop::S2Loop(vector<S2Point> const& vertices)
-  : depth_(0),
-    num_vertices_(0),
-    vertices_(nullptr),
-    owns_vertices_(false),
-    s2debug_override_(S2Debug::ALLOW),
-    shape_(this) {
-  Init(vertices);
-}
+  : S2Loop(vertices, S2Debug::ALLOW) {}
 
-S2Loop::S2Loop(vector<S2Point> const& vertices, S2Debug override)
-  : depth_(0),
-    num_vertices_(0),
-    vertices_(nullptr),
-    owns_vertices_(false),
-    s2debug_override_(override),
+S2Loop::S2Loop(vector<S2Point> const& vertices,
+               S2Debug override)
+  : s2debug_override_(override),
     shape_(this) {
   Init(vertices);
 }

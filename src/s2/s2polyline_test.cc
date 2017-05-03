@@ -41,14 +41,15 @@ using std::vector;
 
 namespace {
 
-S2Polyline* MakePolyline(string const& str) {
+// Wraps s2textformat::MakePolyline in order to test Encode/Decode.
+unique_ptr<S2Polyline> MakePolyline(string const& str) {
   unique_ptr<S2Polyline> polyline(s2textformat::MakePolyline(str));
   Encoder encoder;
   polyline->Encode(&encoder);
   Decoder decoder(encoder.base(), encoder.length());
   auto decoded_polyline = absl::MakeUnique<S2Polyline>();
   decoded_polyline->Decode(&decoder);
-  return decoded_polyline.release();
+  return decoded_polyline;
 }
 
 TEST(S2Polyline, Basic) {
@@ -224,24 +225,22 @@ TEST(S2Polyline, IsOnRight) {
 }
 
 TEST(S2Polyline, IntersectsEmptyPolyline) {
-  unique_ptr<S2Polyline> line1(s2textformat::MakePolyline("1:1, 4:4"));
+  unique_ptr<S2Polyline> line1(MakePolyline("1:1, 4:4"));
   S2Polyline empty_polyline;
   EXPECT_FALSE(empty_polyline.Intersects(line1.get()));
 }
 
 TEST(S2Polyline, IntersectsOnePointPolyline) {
-  unique_ptr<S2Polyline> line1(s2textformat::MakePolyline("1:1, 4:4"));
-  unique_ptr<S2Polyline> line2(s2textformat::MakePolyline("1:1"));
+  unique_ptr<S2Polyline> line1(MakePolyline("1:1, 4:4"));
+  unique_ptr<S2Polyline> line2(MakePolyline("1:1"));
   EXPECT_FALSE(line1->Intersects(line2.get()));
 }
 
 TEST(S2Polyline, Intersects) {
-  unique_ptr<S2Polyline> line1(s2textformat::MakePolyline("1:1, 4:4"));
-  unique_ptr<S2Polyline> small_crossing(s2textformat::MakePolyline("1:2, 2:1"));
-  unique_ptr<S2Polyline> small_noncrossing(
-      s2textformat::MakePolyline("1:2, 2:3"));
-  unique_ptr<S2Polyline> big_crossing(
-      s2textformat::MakePolyline("1:2, 2:3, 4:3"));
+  unique_ptr<S2Polyline> line1(MakePolyline("1:1, 4:4"));
+  unique_ptr<S2Polyline> small_crossing(MakePolyline("1:2, 2:1"));
+  unique_ptr<S2Polyline> small_noncrossing(MakePolyline("1:2, 2:3"));
+  unique_ptr<S2Polyline> big_crossing(MakePolyline("1:2, 2:3, 4:3"));
 
   EXPECT_TRUE(line1->Intersects(small_crossing.get()));
   EXPECT_FALSE(line1->Intersects(small_noncrossing.get()));
@@ -249,22 +248,18 @@ TEST(S2Polyline, Intersects) {
 }
 
 TEST(S2Polyline, IntersectsAtVertex) {
-  unique_ptr<S2Polyline> line1(s2textformat::MakePolyline("1:1, 4:4, 4:6"));
-  unique_ptr<S2Polyline> line2(s2textformat::MakePolyline("1:1, 1:2"));
-  unique_ptr<S2Polyline> line3(s2textformat::MakePolyline("5:1, 4:4, 2:2"));
+  unique_ptr<S2Polyline> line1(MakePolyline("1:1, 4:4, 4:6"));
+  unique_ptr<S2Polyline> line2(MakePolyline("1:1, 1:2"));
+  unique_ptr<S2Polyline> line3(MakePolyline("5:1, 4:4, 2:2"));
   EXPECT_TRUE(line1->Intersects(line2.get()));
   EXPECT_TRUE(line1->Intersects(line3.get()));
 }
 
 TEST(S2Polyline, IntersectsVertexOnEdge)  {
-  unique_ptr<S2Polyline> horizontal_left_to_right(
-      s2textformat::MakePolyline("0:1, 0:3"));
-  unique_ptr<S2Polyline> vertical_bottom_to_top(
-      s2textformat::MakePolyline("-1:2, 0:2, 1:2"));
-  unique_ptr<S2Polyline> horizontal_right_to_left(
-      s2textformat::MakePolyline("0:3, 0:1"));
-  unique_ptr<S2Polyline> vertical_top_to_bottom(
-      s2textformat::MakePolyline("1:2, 0:2, -1:2"));
+  unique_ptr<S2Polyline> horizontal_left_to_right(MakePolyline("0:1, 0:3"));
+  unique_ptr<S2Polyline> vertical_bottom_to_top(MakePolyline("-1:2, 0:2, 1:2"));
+  unique_ptr<S2Polyline> horizontal_right_to_left(MakePolyline("0:3, 0:1"));
+  unique_ptr<S2Polyline> vertical_top_to_bottom(MakePolyline("1:2, 0:2, -1:2"));
   EXPECT_TRUE(horizontal_left_to_right->Intersects(
       vertical_bottom_to_top.get()));
   EXPECT_TRUE(horizontal_left_to_right->Intersects(
@@ -420,8 +415,8 @@ void TestNearlyCovers(string const& a_str, string const& b_str,
                       bool expect_a_covers_b) {
   SCOPED_TRACE(StringPrintf("a=\"%s\", b=\"%s\", max error=%f",
                             a_str.c_str(), b_str.c_str(), max_error_degrees));
-  unique_ptr<S2Polyline> a(s2textformat::MakePolyline(a_str));
-  unique_ptr<S2Polyline> b(s2textformat::MakePolyline(b_str));
+  unique_ptr<S2Polyline> a(MakePolyline(a_str));
+  unique_ptr<S2Polyline> b(MakePolyline(b_str));
   S1Angle max_error = S1Angle::Degrees(max_error_degrees);
   EXPECT_EQ(expect_b_covers_a, b->NearlyCovers(*a, max_error));
   EXPECT_EQ(expect_a_covers_b, a->NearlyCovers(*b, max_error));

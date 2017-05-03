@@ -514,10 +514,6 @@ TEST_F(S2LoopTestBase, Contains) {
       int count = 0;
       for (auto const& loop : loops) {
         if (loop->Contains(point)) ++count;
-        // Contains and VirtualContainsPoint should have identical
-        // implementation.
-        EXPECT_EQ(loop->Contains(point),
-                  loop->VirtualContainsPoint(point));
       }
       EXPECT_EQ(count, 1);
     }

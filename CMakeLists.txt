@@ -49,6 +49,7 @@ file(GLOB S2FilesGlob
      src/s2/s2crossingedgequery.cc
      src/s2/s2debug.cc
      src/s2/s2earth.cc
+     src/s2/s2edge_tessellator.cc
      src/s2/s2edgeutil.cc
      src/s2/s2error.cc
      src/s2/s2latlng.cc
@@ -64,6 +65,7 @@ file(GLOB S2FilesGlob
      src/s2/s2polyline.cc
      src/s2/s2polyline_simplifier.cc
      src/s2/s2predicates.cc
+     src/s2/s2projections.cc
      src/s2/s2r2rect.cc
      src/s2/s2region.cc
      src/s2/s2regioncoverer.cc
@@ -98,9 +100,9 @@ install(FILES src/s2/base/atomicops.h
               src/s2/base/casts.h
               src/s2/base/mutex.h
               src/s2/base/spinlock.h
-              src/s2/base/template_util.h
-              src/s2/base/type_traits.h
         DESTINATION include/s2/base)
+install(FILES src/s2/third_party/absl/algorithm/algorithm.h
+        DESTINATION include/s2/third_party/absl/algorithm)
 install(FILES src/s2/third_party/absl/base/casts.h
               src/s2/third_party/absl/base/config.h
               src/s2/third_party/absl/base/integral_types.h

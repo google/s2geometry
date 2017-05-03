@@ -93,6 +93,14 @@ class S2ShapeIndex;
 // collection of edges that optionally defines an interior.  It can be used to
 // represent a set of points, a set of polylines, or a set of polygons.
 //
+// The edges of an S2Shape are indexed by a contiguous range of "edge ids"
+// starting at 0.  The edges are further subdivided into "chains", where each
+// chain consists of a sequence of edges connected end-to-end (a polyline).
+// S2Shape has methods that allow edges to be accessed either using the global
+// numbering (edge id) or within a particular chain.  The global numbering is
+// sufficient for most purposes, but the chain representation is useful for
+// certain algorithms such as intersection (see S2BoundaryOperation).
+//
 // Typically an S2Shape wraps some other geometric object in order to provide
 // access to its edges without duplicating the edge data.  Shapes are
 // immutable once they have been indexed; to modify a shape it must be removed
@@ -116,14 +124,13 @@ class S2ShapeIndex;
 //    and add your own methods and fields.  You can access this data by
 //    downcasting the S2Shape pointers returned by S2ShapeIndex methods.
 //
-//  - [More general] If you need shapes of different types, then you can still
-//    attach extra data in a uniform way by overriding the user_data() method.
-//    This is a virtual method declared in the S2Shape base class that returns
-//    an arbitrary pointer.  Because it exists in all S2Shapes, you can
-//    override it in each type of shape you need to use, and given a S2Shape
-//    pointer, you can call this method without knowing the actual S2Shape
-//    subtype.  For example, if you need to use polyline and polygon shapes,
-//    you can do this:
+//  - [More general] If you need shapes of different types in the same index,
+//    you can still attach extra data in a uniform way by overriding the
+//    user_data() method.  This is a virtual method declared in the S2Shape
+//    base class that returns an arbitrary pointer.  Because it exists in all
+//    S2Shapes, you can override it in each type of shape you have and call it
+//    without knowing the concrete S2Shape subtype.  For example, if you have
+//    polyline and polygon shapes, you can do this:
 //
 //      class MyPolyline : public S2Polyline::Shape {
 //       public:
@@ -135,28 +142,30 @@ class S2ShapeIndex;
 //      ...
 //      S2Shape* shape = index.shape(id);
 //      MyData* my_data = static_cast<MyData*>(shape->mutable_user_data());
-//
-// TODO(ericv):
-// - Change the return type of GetEdge() to Edge.
-// - Change Edge to represent S2Points by value (slower but more flexible).
-// - Rename GetEdge() to edge().
 class S2Shape {
  public:
-  // Represents an S2Shape edge.
+  // An edge, consisting of two vertices "v0" and "v1".
+  // TODO(ericv): Represent S2Points by value (slower but more flexible).
   struct Edge {
-    Edge(S2Point const* _v0, S2Point const* _v1) : v0(_v0), v1(_v1) {}
     S2Point const *v0, *v1;
+    Edge(S2Point const* _v0, S2Point const* _v1) : v0(_v0), v1(_v1) {}
   };
-  // Represents an edge id range corresponding to a chain of connected edges.
+
+  // A range of edge ids corresponding to a chain of connected edges,
+  // specified as a (start, length) pair.  The chain is defined to consist of
+  // edge ids {start, start + 1, ..., start + length - 1}.
   struct Chain {
-    Chain(int32 _start, int32 _length) : start(_start), length(_length) {}
     int32 start, length;
+    Chain(int32 _start, int32 _length) : start(_start), length(_length) {}
   };
-  // Represents the position of an edge within an edge chain.
+
+  // The position of an edge within a given edge chain, specified as a
+  // (chain_id, offset) pair.  Chains are numbered sequentially starting from
+  // zero, and offsets are measured from the start of each chain.
   struct ChainPosition {
+    int32 chain_id, offset;
     ChainPosition(int32 _chain_id, int32 _offset)
         : chain_id(_chain_id), offset(_offset) {}
-    int32 chain_id, offset;
   };
 
   S2Shape() : id_(-1) {}
@@ -168,6 +177,7 @@ class S2Shape {
 
   // Return pointers to the edge endpoints for the given edge id.
   // Zero-length edges are allowed, and can be used to represent points.
+  // TODO(ericv): Change the return type to Edge, and rename to edge().
   //
   // REQUIRES: 0 <= id < num_edges()
   virtual void GetEdge(int id, S2Point const** a, S2Point const** b) const = 0;
@@ -202,30 +212,39 @@ class S2Shape {
 
   // Returns the number of contiguous edge chains in the shape.  For example,
   // a shape whose edges are [AB, BC, CD, AE, EF] would consist of two chains
-  // (AB,BC,CD and AE,EF).  This method allows some algorithms to be optimized
-  // by skipping over edge chains that do not affect the output.
+  // (AB,BC,CD and AE,EF).  Every chain is assigned a "chain id" numbered
+  // sequentially starting from zero.
   //
   // Note that it is always acceptable to implement this method by returning
-  // num_edges(), i.e. every chain consists of a single edge.
+  // num_edges() (i.e. every chain consists of a single edge), but this may
+  // reduce the efficiency of some algorithms.
   virtual int num_chains() const = 0;
 
-  // Returns the id of the first edge in the i-th edge chain, and returns
-  // num_edges() when i == num_chains().  For example, if there are two chains
-  // AB,BC,CD and AE,EF, the chain starts would be [0, 3, 5].
+  // Returns the range of edge ids corresponding to the given edge chain.
+  // Edge chains must consist of contiguous, non-overlapping ranges that cover
+  // the entire range of edge ids.  This is spelled out more formally below:
   //
-  // REQUIRES: 0 <= i <= num_chains()
-  // REQUIRES: chain_start(0) == 0
-  // REQUIRES: chains_start(i) < chain_start(i+1)
-  // REQUIRES: chain_start(num_chains()) == num_edges()
+  // REQUIRES: 0 <= i < num_chains()
+  // REQUIRES: chain(i).length > 0, for all i
+  // REQUIRES: chain(0).start == 0
+  // REQUIRES: chain(i).start + chain(i).length == chain(i+1).start,
+  //           for i < num_chains() - 1
+  // REQUIRES: chain(i).start + chain(i).length == num_edges(),
+  //           for i == num_chains() - 1
   virtual Chain chain(int chain_id) const = 0;
 
-  // Returns the j-th edge of the i-th edge chain.  Equivalent to calling
-  // "edge(chain_start(i) + j)" but may be more efficient.
+  // Returns the edge at offset "offset" within edge chain "chain_id".
+  // Equivalent to "shape.edge(shape.chain(chain_id).start + offset)"
+  // but may be more efficient.
   virtual Edge chain_edge(int chain_id, int offset) const = 0;
 
-  // Returns a pair (i, j) such that "e" is the j-th edge of the i-th chain.
-  // REQUIRES: chain_start(i) + j == e
-  // REQUIRES: chain_start(i + 1) > e
+  // Finds the chain containing the given edge, and returns the position of
+  // that edge as a (chain_id, offset) pair.
+  //
+  // REQUIRES: shape.chain(pos.chain_id).start + pos.offset == edge_id
+  // REQUIRES: shape.chain(pos.chain_id + 1).start > edge_id
+  //
+  // where     pos == shape.chain_position(edge_id).
   virtual ChainPosition chain_position(int edge_id) const = 0;
 
   // A unique id assigned to this shape by S2ShapeIndex.  Shape ids are
@@ -356,7 +375,8 @@ class S2ShapeIndexOptions {
   // The maximum number of edges per cell.  If a cell has more than this many
   // edges that are not considered "long" relative to the cell size, and it is
   // not a leaf cell, then it is subdivided.  (Whether an edge is considered
-  // "long" is controlled by the --s2shapeindex_min_cell_size_for_edge flag.)
+  // "long" is controlled by the --s2shapeindex_cell_size_to_long_edge_ratio
+  // flag.)
   //
   // Values between 10 and 50 represent a reasonable balance between memory
   // usage, construction time, and query time.  Small values make queries

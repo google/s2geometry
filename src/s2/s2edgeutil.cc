@@ -919,10 +919,6 @@ int S2EdgeUtil::EdgeCrosser::CrossingSignInternal(S2Point const* d) {
 }
 
 inline int S2EdgeUtil::EdgeCrosser::CrossingSignInternal2(S2Point const& d) {
-  // Sign is very expensive, so we avoid calling it if at all possible.
-  // First eliminate the cases where two vertices are equal.
-  if (*a_ == *c_ || *a_ == d || *b_ == *c_ || *b_ == d) return 0;
-
   // At this point, a very common situation is that A,B,C,D are four points on
   // a line such that AB does not overlap CD.  (For example, this happens when
   // a line or curve is sampled finely, or when geometry is constructed by
@@ -949,16 +945,33 @@ inline int S2EdgeUtil::EdgeCrosser::CrossingSignInternal2(S2Point const& d) {
     return -1;
   }
 
+  // Otherwise, eliminate the cases where any two vertices are equal.  (These
+  // cases could be handled in the code below, but since ExpensiveSign lives
+  // up to its name we would rather avoid calling it if possible.)
+  //
+  // These are the cases where two vertices from different edges are equal.
+  if (*a_ == *c_ || *a_ == d || *b_ == *c_ || *b_ == d) return 0;
+
+  // These are the cases where an input edge is degenerate.  (Note that in
+  // most cases, if CD is degenerate then this method is not even called
+  // because acb_ and bda have different signs.  That's why this method is
+  // documented to return either 0 or -1 when an input edge is degenerate.)
+  if (*a_ == *b_ || *c_ == d) return 0;
+
   // Otherwise it's time to break out the big guns.
   if (acb_ == 0) acb_ = -s2pred::ExpensiveSign(*a_, *b_, *c_);
+  DCHECK_NE(acb_, 0);
   if (bda_ == 0) bda_ = s2pred::ExpensiveSign(*a_, *b_, d);
+  DCHECK_NE(bda_, 0);
   if (bda_ != acb_) return -1;
 
   Vector3_d c_cross_d = c_->CrossProd(d);
   int cbd = -s2pred::Sign(*c_, d, *b_, c_cross_d);
+  DCHECK_NE(cbd, 0);
   if (cbd != acb_) return -1;
   int dac = s2pred::Sign(*c_, d, *a_, c_cross_d);
-  return (dac == acb_) ? 1 : -1;
+  DCHECK_NE(dac, 0);
+  return (dac != acb_) ? -1 : 1;
 }
 
 void S2EdgeUtil::RectBounder::AddPoint(S2Point const& b) {

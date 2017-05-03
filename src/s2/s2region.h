@@ -68,11 +68,7 @@ class S2Region {
   // Return true if and only if the given point is contained by the region.
   // The point 'p' is generally required to be unit length, although some
   // subtypes may relax this restriction.
-  //
-  // NOTE: If you will be calling this function on one specific subtype only,
-  // or if performance is a consideration, please use the non-virtual
-  // method Contains(S2Point const& p) declared below!
-  virtual bool VirtualContainsPoint(S2Point const& p) const = 0;
+  virtual bool Contains(S2Point const& p) const = 0;
 
   // Use encoder to generate a serialized representation of this region.
   // Assumes that encoder can be enlarged using calls to Ensure(int).
@@ -106,17 +102,6 @@ class S2Region {
   // within the scope (lifetime) of the Decoder's memory buffer.
   // Default implementation just calls Decode.
   virtual bool DecodeWithinScope(Decoder* const decoder);
-
-  /////////////////////////////////////////////////////////////////////////
-  // The following are NON-VIRTUAL methods (for efficiency reasons) that
-  // happen to be implemented by all subclasses.  You cannot call these
-  // methods unless you have an object of a particular subtype.
-  //
-  // bool Contains(S2Point const& p) const;
-  //
-  // Return true if and only if the given point is contained by the region.
-  // The point 'p' is generally required to be unit length, although some
-  // subtypes may relax this restriction.
 };
 
 #endif  // S2_S2REGION_H_

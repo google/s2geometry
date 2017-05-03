@@ -212,16 +212,12 @@ class S2CellUnion final : public S2Region {
   // This is a fast operation (logarithmic in the size of the cell union).
   bool MayIntersect(S2Cell const& cell) const override;
 
-  bool VirtualContainsPoint(S2Point const& p) const override {
-    return Contains(p);  // The same as Contains() below, just virtual.
-  }
-
   void Encode(Encoder* const encoder) const override;
   bool Decode(Decoder* const decoder) override;
 
   // The point 'p' does not need to be normalized.
   // This is a fast operation (logarithmic in the size of the cell union).
-  bool Contains(S2Point const& p) const;
+  bool Contains(S2Point const& p) const override;
 
   ////////////////////////////////////////////////////////////////////////
   // Static methods intended for high-performance clients that prefer to

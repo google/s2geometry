@@ -542,7 +542,7 @@ void S2ClosestPointQuery<Data>::MaybeAddResult(
     PointData const& point_data, Target const& target) {
   S1ChordAngle distance = max_distance_limit_;
   if (!target.UpdateMinDistance(point_data.point(), &distance)) return;
-  if (region_ && !region_->VirtualContainsPoint(point_data.point())) return;
+  if (region_ && !region_->Contains(point_data.point())) return;
 
   // Add this point to results_.
   if (results_.size() >= max_points_) {

@@ -31,7 +31,6 @@
 #include <type_traits>
 
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/base/type_traits.h"
 #include "s2/third_party/absl/base/casts.h"
 
 // An "upcast", i.e. a conversion from a pointer to an object to a pointer to a

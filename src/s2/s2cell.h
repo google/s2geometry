@@ -151,9 +151,6 @@ class S2Cell final : public S2Region {
   S2LatLngRect GetRectBound() const override;
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
-  bool VirtualContainsPoint(S2Point const& p) const override {
-    return Contains(p);  // The same as Contains() below, just virtual.
-  }
 
   // Return true if the cell contains the given point "p".  Note that unlike
   // S2Loop/S2Polygon, S2Cells are considered to be closed sets.  This means
@@ -165,7 +162,7 @@ class S2Cell final : public S2Region {
   // containment this way).
   //
   // The point "p" does not need to be normalized.
-  bool Contains(S2Point const& p) const;
+  bool Contains(S2Point const& p) const override;
 
   void Encode(Encoder* const encoder) const override;
   bool Decode(Decoder* const decoder) override;
