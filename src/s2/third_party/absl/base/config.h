@@ -51,6 +51,19 @@
 #include <cstddef>
 #endif  // __cplusplus
 
+// If we're using glibc, make sure we meet a minimum version requirement
+// before we proceed much further.
+//
+// We have chosen glibc 2.12 as the minimum as it was tagged for release
+// in May, 2010 and includes some functionality used in Google software
+// (for instance pthread_setname_np):
+// https://sourceware.org/ml/libc-alpha/2010-05/msg00000.html
+#ifdef __GLIBC_PREREQ
+#if !__GLIBC_PREREQ(2, 12)
+#error "Minimum required version of glibc is 2.12."
+#endif
+#endif
+
 // GOOGLE_HAVE_SIZED_DELETE is defined when C++14's sized deallocation
 // operators are available.
 #if (defined(__clang__) && defined(__cpp_sized_deallocation)) || \
@@ -120,6 +133,24 @@
 // may probe for either Linux or Android by simply testing for __linux__.
 //
 
+// GOOGLE_HAVE_FADVISE is defined when the system provides the posix_fadvise(2)
+// system call as defined in POSIX.1-2001.
+#if defined(__linux__) || defined(__ros__)
+#define GOOGLE_HAVE_FADVISE 1
+#else
+#undef GOOGLE_HAVE_FADVISE
+#endif
+
+// GOOGLE_HAVE_FORK is defined when the system provides the fork(2) function
+// to create a new process.  fork() has existed on every version of Unix since
+// 1970, and many other systems as well.
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
+    defined(__ros__) || defined(__native_client__)
+#define GOOGLE_HAVE_FORK 1
+#else
+#undef GOOGLE_HAVE_FORK
+#endif
+//
 // GOOGLE_HAVE_GETPAGESIZE is defined when the system has a getpagesize(2)
 // implementation.  Note: getpagesize(2) was removed in POSIX.1-2001.  New
 // code should use `sysconf(_SC_PAGESIZE)` instead.
@@ -139,6 +170,16 @@
 #undef GOOGLE_HAVE_MLOCK
 #endif
 
+// GOOGLE_HAVE_MLOCKALL is defined when the system has an mlockall(2)
+// implementation as defined in POSIX.1-2001.  See also mlock(2) and
+// GOOGLE_HAVE_MLOCK.
+#if (defined(__linux__) && !defined(__ANDROID__)) || \
+    (defined(__APPLE__) && defined(__MACH__))
+#define GOOGLE_HAVE_MLOCKALL 1
+#else
+#undef GOOGLE_HAVE_MLOCKALL
+#endif
+
 // GOOGLE_HAVE_MMAP is defined when the system has an mmap(2) implementation
 // as defined in POSIX.1-2001.
 #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) ||      \
@@ -147,6 +188,48 @@
 #define GOOGLE_HAVE_MMAP 1
 #else
 #undef GOOGLE_HAVE_MMAP
+#endif
+
+// GOOGLE_HAVE_POSIX_MEMALIGN is defined when the system provides the
+// posix_memalign(3) function to allocate memory aligned on a boundary,
+// as defined in POSIX.1-2001.
+#if (defined(__linux__) && !defined(__ANDROID__)) ||                 \
+    (defined(__APPLE__) && defined(__MACH__)) || defined(__ros__) || \
+    defined(__native_client__)
+#define GOOGLE_HAVE_POSIX_MEMALIGN 1
+#else
+#undef GOOGLE_HAVE_POSIX_MEMALIGN
+#endif
+
+// GOOGLE_HAVE_POSIX_SIGNAL_STACK is defined on systems that provide
+// support for separate signals stacks via the sigaltstack(2) call,
+// as defined by POSIX.1-2008.  Note that "sigaltstack" looks like a
+// typo, but is not: it is "Sig Alt Stack" not "signal stack".
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
+#define GOOGLE_HAVE_POSIX_SIGNAL_ALT_STACK 1
+#else
+#undef GOOGLE_HAVE_POSIX_SIGNAL_ALT_STACK
+#endif
+
+// GOOGLE_HAVE_POSIX_SPAWN is defined when the system provides the
+// posix_spawn(3) call, as defined by the POSIX advanced realtime support
+// supplement and version 3 of the Single UNIX Specification (SUSv3).
+//
+// See also Austin T. Clements et al, "The Scalable Commutativity
+// Rule: Designing Scalable Software for Multicore Processors"
+// (https://people.csail.mit.edu/nickolai/papers/clements-sc.pdf).
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
+#define GOOGLE_HAVE_POSIX_SPAWN 1
+#else
+#undef GOOGLE_HAVE_POSIX_SPAWN
+#endif
+
+// GOOGLE_HAVE_POSIX_TIMER is defined on systems that provide the
+// timer_create(2) family of functions as specified in POSIX.1-2001.
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
+#define GOOGLE_HAVE_POSIX_TIMER 1
+#else
+#undef GOOGLE_HAVE_POSIX_TIMER
 #endif
 
 // GOOGLE_HAS_PTHREAD_GETSCHEDPARAM is defined when the system implements the
@@ -159,6 +242,19 @@
 #define GOOGLE_HAS_PTHREAD_GETSCHEDPARAM 1
 #else
 #undef GOOGLE_HAS_PTHREAD_GETSCHEDPARAM
+#endif
+
+// GOOGLE_HAVE_PTHREAD_SETNAME_NP is defined when the system provides the
+// pthread_setname_np(3) function as defined by the behavior of the
+// implementation in glibc.  Note that this is a non-standard but common
+// extension to the pthreads interface.
+#if (defined(__linux__) && !defined(__ANDROID__)) || \
+    (defined(__APPLE__) && defined(__MACH__)) || \
+    defined(__native_client__) || \
+    (defined(__ANDROID__) && defined(__ANDROID_API__) && __ANDROID_API__ >= 10)
+#define GOOGLE_HAVE_PTHREAD_SETNAME_NP 1
+#else
+#undef GOOGLE_HAVE_PTHREAD_SETNAME_NP
 #endif
 
 // GOOGLE_HAVE_SCHED_GETCPU is defined when the system implements
@@ -187,6 +283,22 @@
 #define GOOGLE_HAVE_SEMAPHORE_H 1
 #else
 #undef GOOGLE_HAVE_SEMAPHORE_H
+#endif
+
+// GOOGLE_HAVE_SETGID is defined on systems that provide the setgid(2) system
+// call as defined by POSIX.1-2001.
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
+#define GOOGLE_HAVE_SETGID 1
+#else
+#undef GOOGLE_HAVE_SETGID
+#endif
+
+// GOOGLE_HAVE_SETUID is defined on systems that provide the setuid(2) system
+// call as defined by POSIX.1-2001.
+#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
+#define GOOGLE_HAVE_SETUID 1
+#else
+#undef GOOGLE_HAVE_SETUID
 #endif
 
 // GOOGLE_HAVE_SIGINFO_T is defined when the implementation provides the

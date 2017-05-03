@@ -39,6 +39,7 @@
 #include <utility>
 
 #include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/algorithm/algorithm.h"
 #include "s2/third_party/absl/base/port.h"
 
 
@@ -611,7 +612,7 @@ void swap(InlinedVector<T, N, A>& a,
 template <typename T, InlinedVectorNType N, typename A>
 bool operator==(const InlinedVector<T, N, A>& a,
                 const InlinedVector<T, N, A>& b) {
-  return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin());
+  return absl::equal(a.begin(), a.end(), b.begin(), b.end());
 }
 
 template <typename T, InlinedVectorNType N, typename A>

@@ -125,39 +125,45 @@ inline uint64 ghtonll(uint64 x) { return x; }
 #define ntohll(x) htonll(x)
 #endif  // ntohll
 
-// We provide a unified FromHost API for all integral types and float,
+// We provide unified FromHost and ToHost APIs for all integral types and float,
 // double types. If variable v's type is known to be one of these types, the
 // client can simply call the following function without worrying about its
 // return type.
 //     LittleEndian::FromHost(v), or BigEndian::FromHost(v)
-// This unified FromHost API is useful inside a template when the type of
-// v is a template parameter.
+//     LittleEndian::ToHost(v), or BigEndian::ToHost(v)
+// This unified FromHost and ToHost APIs are useful inside a template when the
+// type of v is a template parameter.
 //
-// In order to unify all "IntType FromHostxx(ValueType)" API, we
-// use the following trait class to automatically find the corresponding
-// IntType given a ValueType, where IntType is an unsigned integer type
-// with the same size of ValueType. The supported ValueTypes are uint8,
-// uint16, uint32, uint64, int8, int16, int32, int64, bool, float, double.
+// In order to unify all "IntType FromHostxx(ValueType)" and "IntType
+// ToHostxx(ValueType)" APIs, we use the following trait class to automatically
+// find the corresponding IntType given a ValueType, where IntType is an
+// unsigned integer type with the same size of ValueType. The supported
+// ValueTypes are uint8, uint16, uint32, uint64, int8, int16, int32, int64,
+// bool, float, double.
 //
 // template <class ValueType>
-// struct fromhost_value_type_traits {
+// struct tofromhost_value_type_traits {
 //   typedef ValueType value_type;
 //   typedef IntType int_type;
 // }
 //
 // We don't provide the default implementation for this trait struct.
-// So that if ValueType is not supported by FromHost API, it will give
-// a compile time error.
-template <class ValueType> struct fromhost_value_type_traits;
+// So that if ValueType is not supported by the FromHost and ToHost APIs, it
+// will give a compile time error.
+template <class ValueType>
+struct tofromhost_value_type_traits;
 
 // General byte order converter class template. It provides a common
-// implementation for LittleEndian::FromHost(ValueType) and
-// BigEndian::FromHost(ValueType).
+// implementation for LittleEndian::FromHost(ValueType),
+// BigEndian::FromHost(ValueType), LittleEndian::ToHost(ValueType), and
+// BigEndian::ToHost(ValueType).
 template <class EndianClass, typename ValueType>
 class GeneralFormatConverter {
  public:
-  static typename fromhost_value_type_traits<ValueType>::int_type
-  FromHost(ValueType v);
+  static typename tofromhost_value_type_traits<ValueType>::int_type FromHost(
+      ValueType v);
+  static typename tofromhost_value_type_traits<ValueType>::int_type ToHost(
+      ValueType v);
 };
 
 // Utilities to convert numbers between the current hosts's native byte
@@ -203,9 +209,16 @@ class LittleEndian {
 
   // Unified LittleEndian::FromHost(ValueType v) API.
   template <class ValueType>
-  static typename fromhost_value_type_traits<ValueType>::int_type
-  FromHost(ValueType v) {
+  static typename tofromhost_value_type_traits<ValueType>::int_type FromHost(
+      ValueType v) {
     return GeneralFormatConverter<LittleEndian, ValueType>::FromHost(v);
+  }
+
+  // Unified LittleEndian::ToHost(ValueType v) API.
+  template <class ValueType>
+  static typename tofromhost_value_type_traits<ValueType>::value_type ToHost(
+      ValueType v) {
+    return GeneralFormatConverter<LittleEndian, ValueType>::ToHost(v);
   }
 
   // Functions to do unaligned loads and stores in little-endian order.
@@ -369,9 +382,16 @@ class BigEndian {
 
   // Unified BigEndian::FromHost(ValueType v) API.
   template <class ValueType>
-  static typename fromhost_value_type_traits<ValueType>::int_type
-  FromHost(ValueType v) {
+  static typename tofromhost_value_type_traits<ValueType>::int_type FromHost(
+      ValueType v) {
     return GeneralFormatConverter<BigEndian, ValueType>::FromHost(v);
+  }
+
+  // Unified BigEndian::ToHost(ValueType v) API.
+  template <class ValueType>
+  static typename tofromhost_value_type_traits<ValueType>::value_type ToHost(
+      ValueType v) {
+    return GeneralFormatConverter<BigEndian, ValueType>::ToHost(v);
   }
 
   // Functions to do unaligned loads and stores in big-endian order.
@@ -504,16 +524,16 @@ typedef BigEndian NetworkByteOrder;
 //
 // Define ValueType->IntType mapping for the unified
 // "IntType FromHost(ValueType)" API. The mapping is implemented via
-// fromhost_value_type_traits trait struct. Every legal ValueType has its own
+// tofromhost_value_type_traits trait struct. Every legal ValueType has its own
 // specialization. There is no default body for this trait struct, so that
 // any type that is not supported by the unified FromHost API
 // will trigger a compile time error.
-#define FROMHOST_TYPE_MAP(ITYPE, VTYPE) \
-template<> \
-struct fromhost_value_type_traits<VTYPE> { \
-  typedef VTYPE value_type; \
-  typedef ITYPE int_type; \
-};
+#define FROMHOST_TYPE_MAP(ITYPE, VTYPE)        \
+  template <>                                  \
+  struct tofromhost_value_type_traits<VTYPE> { \
+    typedef VTYPE value_type;                  \
+    typedef ITYPE int_type;                    \
+  };
 
 FROMHOST_TYPE_MAP(uint8, uint8);
 FROMHOST_TYPE_MAP(uint8, int8);
@@ -534,7 +554,7 @@ FROMHOST_TYPE_MAP(uint128, uint128);
 // uint32, int32, uint64, int64). The compiler will remove the switch case
 // branches and unnecessary static_cast, when the template is expanded.
 template <class EndianClass, typename ValueType>
-typename fromhost_value_type_traits<ValueType>::int_type
+typename tofromhost_value_type_traits<ValueType>::int_type
 GeneralFormatConverter<EndianClass, ValueType>::FromHost(ValueType v) {
   switch (sizeof(ValueType)) {
     case 1:
@@ -554,25 +574,58 @@ GeneralFormatConverter<EndianClass, ValueType>::FromHost(ValueType v) {
   }
 }
 
+// Default implementation for the unified ToHost(ValueType) API, which handles
+// all integral types (ValueType is one of uint8, int8, uint16, int16, uint32,
+// int32, uint64, int64). The compiler will remove the switch case branches and
+// unnecessary static_cast, when the template is expanded.
+template <class EndianClass, typename ValueType>
+typename tofromhost_value_type_traits<ValueType>::int_type
+GeneralFormatConverter<EndianClass, ValueType>::ToHost(ValueType v) {
+  switch (sizeof(ValueType)) {
+    case 1:
+      return static_cast<uint8>(v);
+      break;
+    case 2:
+      return EndianClass::ToHost16(static_cast<uint16>(v));
+      break;
+    case 4:
+      return EndianClass::ToHost32(static_cast<uint32>(v));
+      break;
+    case 8:
+      return EndianClass::ToHost64(static_cast<uint64>(v));
+      break;
+    default:
+      LOG(FATAL) << "Unexpected value size: " << sizeof(ValueType);
+  }
+}
+
 // Specialization of the unified FromHost(ValueType) API, which handles
 // float types (ValueType is float).
-template<class EndianClass>
-class GeneralFormatConverter<EndianClass, double> {
+template <class EndianClass>
+class GeneralFormatConverter<EndianClass, float> {
  public:
-  static typename fromhost_value_type_traits<double>::int_type
-  FromHost(double v) {
-    return EndianClass::FromHost64(bit_cast<uint64>(v));
+  static typename tofromhost_value_type_traits<float>::int_type FromHost(
+      float v) {
+    return EndianClass::FromHost32(bit_cast<uint32>(v));
+  }
+  static typename tofromhost_value_type_traits<float>::int_type ToHost(
+      float v) {
+    return bit_cast<float>(EndianClass::ToHost32(bit_cast<uint32>(v)));
   }
 };
 
 // Specialization of the unified FromHost(ValueType) API, which handles
 // double types (ValueType is double).
-template<class EndianClass>
-class GeneralFormatConverter<EndianClass, float> {
+template <class EndianClass>
+class GeneralFormatConverter<EndianClass, double> {
  public:
-  static typename fromhost_value_type_traits<float>::int_type
-  FromHost(float v) {
-    return EndianClass::FromHost32(bit_cast<uint32>(v));
+  static typename tofromhost_value_type_traits<double>::int_type FromHost(
+      double v) {
+    return EndianClass::FromHost64(bit_cast<uint64>(v));
+  }
+  static typename tofromhost_value_type_traits<double>::int_type ToHost(
+      double v) {
+    return bit_cast<double>(EndianClass::ToHost64(bit_cast<uint64>(v)));
   }
 };
 
@@ -581,9 +634,13 @@ class GeneralFormatConverter<EndianClass, float> {
 template<class EndianClass>
 class GeneralFormatConverter<EndianClass, uint128> {
  public:
-  static typename fromhost_value_type_traits<uint128>::int_type
-  FromHost(uint128 v) {
+  static typename tofromhost_value_type_traits<uint128>::int_type FromHost(
+      uint128 v) {
     return EndianClass::FromHost128(v);
+  }
+  static typename tofromhost_value_type_traits<uint128>::int_type ToHost(
+      uint128 v) {
+    return EndianClass::ToHost128(v);
   }
 };
 

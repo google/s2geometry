@@ -29,7 +29,6 @@
 #include <climits>         // for enumeration casts and tests
 #include <type_traits>
 
-#include "s2/base/type_traits.h"
 #include "s2/third_party/absl/base/casts.h"
 #include "s2/third_party/absl/base/macros.h"
 

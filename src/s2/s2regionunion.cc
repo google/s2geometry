@@ -66,10 +66,6 @@ S2LatLngRect S2RegionUnion::GetRectBound() const {
   return result;
 }
 
-bool S2RegionUnion::VirtualContainsPoint(S2Point const& p) const {
-  return Contains(p);  // The same as Contains(), just virtual.
-}
-
 bool S2RegionUnion::Contains(S2Cell const& cell) const {
   // Note that this method is allowed to return false even if the cell
   // is contained by the region.
@@ -81,7 +77,7 @@ bool S2RegionUnion::Contains(S2Cell const& cell) const {
 
 bool S2RegionUnion::Contains(S2Point const& p) const {
   for (int i = 0; i < num_regions(); ++i) {
-    if (region(i)->VirtualContainsPoint(p)) return true;
+    if (region(i)->Contains(p)) return true;
   }
   return false;
 }

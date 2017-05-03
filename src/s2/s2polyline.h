@@ -241,9 +241,9 @@ class S2Polyline final : public S2Region {
   bool Contains(S2Cell const& cell) const override { return false; }
   bool MayIntersect(S2Cell const& cell) const override;
 
-  // Polylines do not have a Contains(S2Point) method, because "containment"
-  // is not numerically well-defined except at the polyline vertices.
-  bool VirtualContainsPoint(S2Point const& p) const override { return false; }
+  // Always return false, because "containment" is not numerically
+  // well-defined except at the polyline vertices.
+  bool Contains(S2Point const& p) const override { return false; }
 
   void Encode(Encoder* const encoder) const override;
   bool Decode(Decoder* const decoder) override;
@@ -302,7 +302,7 @@ class S2Polyline final : public S2Region {
   // We store the vertices in an array rather than a vector because we don't
   // need any STL methods, and computing the number of vertices using size()
   // would be relatively expensive (due to division by sizeof(S2Point) == 24).
-  int num_vertices_;
+  int num_vertices_ = 0;
   std::unique_ptr<S2Point[]> vertices_;
 
 #ifndef SWIG

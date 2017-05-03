@@ -54,10 +54,7 @@ class S2PointRegion final : public S2Region {
   S2LatLngRect GetRectBound() const override;
   bool Contains(S2Cell const& cell) const override { return false; }
   bool MayIntersect(S2Cell const& cell) const override;
-  bool VirtualContainsPoint(S2Point const& p) const override {
-    return Contains(p);
-  }
-  bool Contains(S2Point const& p) const { return (point_ == p); }
+  bool Contains(S2Point const& p) const override { return (point_ == p); }
   void Encode(Encoder* const encoder) const override;
   // Ensures the decoded point has unit length.
   bool Decode(Decoder* const decoder) override;

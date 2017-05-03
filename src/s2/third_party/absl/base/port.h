@@ -46,7 +46,7 @@
 #endif
 #endif
 
-#if defined(OS_CYGWIN) || defined(__CYGWIN__)
+#if defined(__CYGWIN__)
 #error "Cygwin is not supported."
 #endif
 
@@ -62,7 +62,7 @@
 #endif  // defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
 #endif  // defined(__APPLE__)
 
-#if defined(OS_CYGWIN) || defined(__ANDROID__)
+#if defined(__ANDROID__)
 #include <malloc.h>         // for memalign()
 #elif defined(_MSC_VER)
 #include <cstdio>          // declare snprintf/vsnprintf before overriding
@@ -102,13 +102,13 @@
 /* We use SIGPWR since that seems unlikely to be used for other reasons. */
 #define GOOGLE_OBSCURE_SIGNAL  SIGPWR
 
-#if defined OS_LINUX || defined OS_CYGWIN || defined OS_ANDROID || \
+#if defined OS_LINUX || defined OS_ANDROID || \
     defined(__ANDROID__)
 // _BIG_ENDIAN
 #include <endian.h>
 #endif
 
-#if defined OS_LINUX || defined OS_CYGWIN
+#if defined OS_LINUX
 
 // GLIBC-related macros.
 #include <features.h>
@@ -145,11 +145,6 @@ typedef unsigned long ulong;
 #define HAVE_TLS 1
 #endif
 
-#elif defined OS_FREEBSD
-
-// _BIG_ENDIAN
-#include <machine/endian.h>
-
 #elif defined(__APPLE__) || defined(OS_IOS)
 
 // BIG_ENDIAN
@@ -177,7 +172,7 @@ typedef unsigned long ulong;
 #define bswap_32(x) OSSwapInt32(x)
 #define bswap_64(x) OSSwapInt64(x)
 
-#elif defined(__GLIBC__) || defined(__CYGWIN__)
+#elif defined(__GLIBC__)
 #include <byteswap.h>  // IWYU pragma: export
 
 #else
@@ -288,42 +283,6 @@ inline size_t strnlen(const char *s, size_t maxlen) {
 // No SIGPWR on MacOSX.  SIGINFO seems suitably obscure.
 #undef GOOGLE_OBSCURE_SIGNAL
 #define GOOGLE_OBSCURE_SIGNAL  SIGINFO
-
-#elif defined(OS_CYGWIN)  // Cygwin-specific behavior.
-
-#if defined(__CYGWIN32__)
-#define __WORDSIZE 32
-#else
-// It's probably possible to support 64-bit, but the #defines will need checked.
-#error "Cygwin is currently only 32-bit."
-#endif
-
-// No signalling on Windows.
-#undef GOOGLE_OBSCURE_SIGNAL
-#define GOOGLE_OBSCURE_SIGNAL 0
-
-struct stack_t {
-  void* ss_sp;
-  int ss_flags;
-  size_t ss_size;
-};
-inline int sigaltstack(stack_t* ss, stack_t* oss) { return 0; }
-
-#define PTHREAD_STACK_MIN 0  // Not provided by cygwin
-
-// Scans memory for a character.
-// memrchr is used in a few places, but it's linux-specific.
-inline void* memrchr(const void* bytes, int find_char, size_t len) {
-  const unsigned char* cursor =
-      reinterpret_cast<const unsigned char*>(bytes) + len - 1;
-  unsigned char actual_char = find_char;
-  for (; cursor >= bytes; --cursor) {
-    if (*cursor == actual_char) {
-      return const_cast<void*>(reinterpret_cast<const void*>(cursor));
-    }
-  }
-  return nullptr;
-}
 
 #endif
 
@@ -770,9 +729,9 @@ extern inline void prefetch(const void*) {}
      ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)))
 
 inline void *aligned_malloc(size_t size, int minimum_alignment) {
-#if defined(__ANDROID__) || defined(OS_ANDROID) || defined(OS_CYGWIN)
+#if defined(__ANDROID__) || defined(OS_ANDROID)
   return memalign(minimum_alignment, size);
-#else  // !__ANDROID__ && !OS_ANDROID && !OS_CYGWIN
+#else  // !__ANDROID__ && !OS_ANDROID
   void *ptr = nullptr;
   // posix_memalign requires that the requested alignment be at least
   // sizeof(void*). In this case, fall back on malloc which should return memory
@@ -1388,11 +1347,7 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 
 #define GPRIuPTHREAD "lu"
 #define GPRIxPTHREAD "lx"
-#ifdef OS_CYGWIN
-#define PRINTABLE_PTHREAD(pthreadt) reinterpret_cast<uintptr_t>(pthreadt)
-#else
 #define PRINTABLE_PTHREAD(pthreadt) pthreadt
-#endif
 
 #define SIZEOF_MEMBER(t, f)   sizeof(((t*) 4096)->f)
 

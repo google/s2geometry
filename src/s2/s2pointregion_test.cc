@@ -35,9 +35,8 @@ TEST(S2PointRegionTest, Basic) {
   S2PointRegion r0(p);
   EXPECT_EQ(r0.point(), p);
   EXPECT_TRUE(r0.Contains(p));
-  EXPECT_TRUE(r0.VirtualContainsPoint(p));
-  EXPECT_TRUE(r0.VirtualContainsPoint(r0.point()));
-  EXPECT_FALSE(r0.VirtualContainsPoint(S2Point(1, 0, 1)));
+  EXPECT_TRUE(r0.Contains(r0.point()));
+  EXPECT_FALSE(r0.Contains(S2Point(1, 0, 1)));
   unique_ptr<S2PointRegion> r0_clone(r0.Clone());
   EXPECT_EQ(r0_clone->point(), r0.point());
   EXPECT_EQ(r0.GetCapBound(), S2Cap::FromPoint(p));

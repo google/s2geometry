@@ -383,12 +383,9 @@ class S2Loop final : public S2Region {
 
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
-  bool VirtualContainsPoint(S2Point const& p) const override {
-    return Contains(p);  // The same as Contains() below, just virtual.
-  }
 
   // The point 'p' does not need to be normalized.
-  bool Contains(S2Point const& p) const;
+  bool Contains(S2Point const& p) const override;
 
   // Generally clients should not use S2Loop::Encode().  Instead they should
   // encode an S2Polygon, which unlike this method supports (lossless)
@@ -597,7 +594,7 @@ class S2Loop final : public S2Region {
 
   // The nesting depth, if this field belongs to an S2Polygon.  We define it
   // here to optimize field packing.
-  int depth_;
+  int depth_ = 0;
 
   // We store the vertices in an array rather than a vector because we don't
   // need any STL methods, and computing the number of vertices using size()
@@ -605,12 +602,12 @@ class S2Loop final : public S2Region {
   // When DecodeWithinScope is used to initialize the loop, we do not
   // take ownership of the memory for vertices_, and the owns_vertices_ field
   // is used to prevent deallocation and overwriting.
-  int num_vertices_;
-  S2Point* vertices_;
-  bool owns_vertices_;
+  int num_vertices_ = 0;
+  S2Point* vertices_ = nullptr;
+  bool owns_vertices_ = false;
 
-  S2Debug s2debug_override_;
-  bool origin_inside_;      // Does the loop contains S2::Origin()?
+  S2Debug s2debug_override_ = S2Debug::ALLOW;
+  bool origin_inside_ = false;  // Does the loop contain S2::Origin()?
 
   // In general we build the index the first time it is needed, but we make an
   // exception for Contains(S2Point) because this method has a simple brute

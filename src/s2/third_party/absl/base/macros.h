@@ -96,7 +96,7 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 //
 //  In either case this macro has no effect on runtime behavior and performance
 //  of code.
-#if defined(__clang__) && defined(LANG_CXX11) && defined(__has_warning)
+#if defined(__clang__) && defined(__has_warning)
 #if __has_feature(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
 #define FALLTHROUGH_INTENDED [[clang::fallthrough]]  // NOLINT
 #endif

@@ -111,7 +111,7 @@ struct MakeUniqueResult<T[N]> {
 //       NOTE: an array of unknown bounds T[] may still be (and often will be)
 //       initialized to have a size, and will still use this overload. E.g:
 //
-//         auto my_array = gtl::MakeUnique<int[]>(10);
+//         auto my_array = absl::MakeUnique<int[]>(10);
 //
 //   - For an array of known bounds T[N]:
 //
@@ -121,12 +121,12 @@ struct MakeUniqueResult<T[N]> {
 //       NOTE: an array of known bounds T[N] is not considered a useful
 //       construction, and may cause undefined behavior in templates. E.g:
 //
-//         auto my_array = gtl::MakeUnique<int[10]>();
+//         auto my_array = absl::MakeUnique<int[10]>();
 //
 //       In those cases, of course, you can still use the overload above and
 //       simply intialize it to its desired size:
 //
-//         auto my_array = gtl::MakeUnique<int[]>(10);
+//         auto my_array = absl::MakeUnique<int[]>(10);
 
 // MakeUnique overload for non-array types.
 template <typename T, typename... Args>
@@ -157,7 +157,7 @@ MakeUnique(Args&&... /* args */) = delete;
 // std::nullptr_t, and smart pointers.
 template <typename T>
 auto RawPtr(T&& ptr) -> decltype(&*ptr) {  // NOLINT
-  // ptr is a universal reference to support Ts with non-const operators.
+  // ptr is a forwarding reference to support Ts with non-const operators.
   return (ptr != nullptr) ? &*ptr : nullptr;
 }
 inline std::nullptr_t RawPtr(std::nullptr_t) { return nullptr; }

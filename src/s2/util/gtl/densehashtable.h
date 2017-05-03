@@ -840,7 +840,6 @@ class dense_hashtable {
       // memory using our old allocator.
       if (key_info.as_value_alloc() != ht.key_info.as_value_alloc()) {
         destroy_table();
-        table = nullptr;
       }
       static_cast<alloc_impl<value_alloc_type>&>(key_info) =
           static_cast<const alloc_impl<value_alloc_type>&>(ht.key_info);
@@ -854,7 +853,6 @@ class dense_hashtable {
     } else {
       assert(ht.empty());
       destroy_table();
-      table = nullptr;
     }
 
     // we purposefully don't copy the allocator, which may not be copyable
@@ -871,7 +869,7 @@ class dense_hashtable {
     ht.num_deleted = 0;
     ht.num_elements = 0;
     ht.table = nullptr;
-    ht.num_buckets = 0;
+    ht.num_buckets = HT_DEFAULT_STARTING_BUCKETS;
     ht.settings.set_use_empty(false);
     ht.settings.set_use_deleted(false);
   }
@@ -916,16 +914,14 @@ class dense_hashtable {
       // we're propagating the allocator or ht's allocator is equal to this's.
       table = ht.table;
       ht.table = nullptr;
-    } else {
+    } else if (ht.table) {
       // We can't transfer ownership of any memory from ht to this, so the
       // best we can do is move element-by-element.
       table = get_internal_allocator().allocate(num_buckets);
       for (size_type i = 0; i < num_buckets; ++i) {
         new(table + i) Value(std::move(ht.table[i]));
       }
-
       ht.destroy_table();
-      ht.table = nullptr;
     }
 
     return *this;
@@ -964,6 +960,7 @@ class dense_hashtable {
     if (table) {
       destroy_buckets(0, num_buckets);
       get_internal_allocator().deallocate(table, num_buckets);
+      table = nullptr;
     }
   }
 

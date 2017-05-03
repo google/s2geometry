@@ -186,13 +186,10 @@ static void TestSubdivide(S2Cell const& cell) {
     EXPECT_TRUE(cell.MayIntersect(children[i]));
     EXPECT_FALSE(children[i].Contains(cell));
     EXPECT_TRUE(cell.Contains(children[i].GetCenterRaw()));
-    EXPECT_TRUE(cell.VirtualContainsPoint(children[i].GetCenterRaw()));
     for (int j = 0; j < 4; ++j) {
       EXPECT_TRUE(cell.Contains(children[i].GetVertexRaw(j)));
       if (j != i) {
         EXPECT_FALSE(children[i].Contains(children[j].GetCenterRaw()));
-        EXPECT_FALSE(
-            children[i].VirtualContainsPoint(children[j].GetCenterRaw()));
         EXPECT_FALSE(children[i].MayIntersect(children[j]));
       }
     }

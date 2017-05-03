@@ -62,10 +62,6 @@ S2LatLngRect S2RegionIntersection::GetRectBound() const {
   return result;
 }
 
-bool S2RegionIntersection::VirtualContainsPoint(S2Point const& p) const {
-  return Contains(p);  // The same as Contains(), just virtual.
-}
-
 bool S2RegionIntersection::Contains(S2Cell const& cell) const {
   for (int i = 0; i < num_regions(); ++i) {
     if (!region(i)->Contains(cell)) return false;
@@ -75,7 +71,7 @@ bool S2RegionIntersection::Contains(S2Cell const& cell) const {
 
 bool S2RegionIntersection::Contains(S2Point const& p) const {
   for (int i = 0; i < num_regions(); ++i) {
-    if (!region(i)->VirtualContainsPoint(p)) return false;
+    if (!region(i)->Contains(p)) return false;
   }
   return true;
 }

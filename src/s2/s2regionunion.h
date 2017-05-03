@@ -67,8 +67,7 @@ class S2RegionUnion final : public S2Region {
   S2RegionUnion* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
-  bool VirtualContainsPoint(S2Point const& p) const override;
-  bool Contains(S2Point const& p) const;
+  bool Contains(S2Point const& p) const override;
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
   void Encode(Encoder* const encoder) const override {

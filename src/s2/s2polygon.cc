@@ -802,10 +802,6 @@ bool S2Polygon::BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
   return false;
 }
 
-bool S2Polygon::VirtualContainsPoint(S2Point const& p) const {
-  return Contains(p);  // The same as Contains() below, just virtual.
-}
-
 bool S2Polygon::Contains(S2Point const& p) const {
   // NOTE(ericv): A bounds check slows down this function by about 50%.  It is
   // worthwhile only when it might allow us to delay building the index.

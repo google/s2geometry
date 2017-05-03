@@ -117,6 +117,7 @@ void TestCrossings(S2Point a, S2Point b, S2Point c, S2Point d,
   TestCrossing(b, a, d, c, robust, edge_or_vertex, simple);
   TestCrossing(a, a, c, d, kDegen, 0, false);
   TestCrossing(a, b, c, c, kDegen, 0, false);
+  TestCrossing(a, a, c, c, kDegen, 0, false);
   TestCrossing(a, b, a, b, 0, 1, false);
   TestCrossing(c, d, a, b, robust, edge_or_vertex ^ (robust == 0), simple);
 }
@@ -129,21 +130,22 @@ TEST(S2EdgeUtil, Crossings) {
   TestCrossings(S2Point(1, 2, 1), S2Point(1, -3, 0.5),
                 S2Point(1, -0.5, -3), S2Point(0.1, 0.5, 3), 1, true, true);
 
-  // Two regular edges that cross antipodal points.
+  // Two regular edges that intersect antipodal points.
   TestCrossings(S2Point(1, 2, 1), S2Point(1, -3, 0.5),
                 S2Point(-1, 0.5, 3), S2Point(-0.1, -0.5, -3), -1, false, true);
 
-  // Two edges on the same great circle.
+  // Two edges on the same great circle that start at antipodal points.
   TestCrossings(S2Point(0, 0, -1), S2Point(0, 1, 0),
-                S2Point(0, 1, 1), S2Point(0, 0, 1), -1, false, true);
+                S2Point(0, 0, 1), S2Point(0, 1, 1), -1, false, true);
 
   // Two edges that cross where one vertex is S2::Origin().
   TestCrossings(S2Point(1, 0, 0), S2::Origin(),
                 S2Point(1, -0.1, 1), S2Point(1, 1, -0.1), 1, true, true);
 
-  // Two edges that cross antipodal points where one vertex is S2::Origin().
-  TestCrossings(S2Point(1, 0, 0), S2Point(0, 1, 0),
-                S2Point(0, 0, -1), S2Point(-1, -1, 1), -1, false, true);
+  // Two edges that intersect antipodal points where one vertex is
+  // S2::Origin().
+  TestCrossings(S2Point(1, 0, 0), S2::Origin(),
+                S2Point(-1, 0.1, -1), S2Point(-1, -1, 0.1), -1, false, true);
 
   // Two edges that share an endpoint.  The Ortho() direction is (-4,0,2),
   // and edge CD is further CCW around (2,3,4) than AB.
@@ -965,6 +967,11 @@ TEST(S2EdgeUtil, EdgePairDistance) {
   CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
                         S2Point(0, 1, 0), S2Point(0, 1, 0),
                         M_PI_2, S2Point(1, 0, 0), S2Point(0, 1, 0));
+
+  // Both edges are degenerate and antipodal.
+  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                        S2Point(-1, 0, 0), S2Point(-1, 0, 0),
+                        M_PI, S2Point(1, 0, 0), S2Point(-1, 0, 0));
 
   // Two identical edges.
   CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
