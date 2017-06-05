@@ -67,6 +67,9 @@ class S2Shape;
 //
 // If you want to find *all* pairs of crossing edges, it is more efficient to
 // call s2shapeutil::VisitCrossings().
+//
+// TODO(ericv): Convert this API to a "visitor" idiom, similar to
+// s2shapeutil::VisitCrossings().
 class S2CrossingEdgeQuery {
  public:
   // An EdgeMap stores a sorted set of edge ids for each shape.  Its type

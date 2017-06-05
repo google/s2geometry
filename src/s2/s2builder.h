@@ -607,17 +607,6 @@ class S2Builder {
   // S2Builder options.
   Options options_;
 
-  // True if snapping was requested.  This is true if either snap_radius() is
-  // positive, or split_crossing_edges() is true (which implicitly requests
-  // snapping to ensure that both crossing edges are snapped to the
-  // intersection point).
-  bool snapping_requested_;
-
-  // Initially false, and set to true when it is discovered that at least one
-  // input vertex or edge does not meet the output guarantees (e.g., that
-  // vertices are separated by at least snap_function.min_vertex_separation).
-  bool snapping_needed_;
-
   // The maximum allowed edge length when a snap function is being used.
   // Edges longer than this are automatically split into pieces.
   S1ChordAngle max_edge_length_before_snapping_ca_;
@@ -658,7 +647,22 @@ class S2Builder {
   // A copy of the argument to Build().
   S2Error* error_;
 
+  // True if snapping was requested.  This is true if either snap_radius() is
+  // positive, or split_crossing_edges() is true (which implicitly requests
+  // snapping to ensure that both crossing edges are snapped to the
+  // intersection point).
+  bool snapping_requested_;
+
+  // Initially false, and set to true when it is discovered that at least one
+  // input vertex or edge does not meet the output guarantees (e.g., that
+  // vertices are separated by at least snap_function.min_vertex_separation).
+  bool snapping_needed_;
+
   //////////// Input Data /////////////
+
+  // A flag indicating whether label_set_ has been modified since the last
+  // time label_set_id_ was computed.
+  bool label_set_modified_;
 
   std::vector<S2Point> input_vertices_;
   std::vector<InputEdge> input_edges_;
@@ -681,18 +685,14 @@ class S2Builder {
   // (by adding it to label_set_lexicon()).
   LabelSetId label_set_id_;
 
-  // A flag indicating whether label_set_ has been modified since the last
-  // time label_set_id_ was computed.
-  bool label_set_modified_;
-
   ////////////// Data for Snapping and Simplifying //////////////
-
-  // The set of snapped vertex locations ("sites").
-  std::vector<S2Point> sites_;
 
   // The number of sites specified using ForceVertex().  These sites are
   // always at the beginning of the sites_ vector.
   SiteId num_forced_sites_;
+
+  // The set of snapped vertex locations ("sites").
+  std::vector<S2Point> sites_;
 
   // A map from each input edge to the set of sites "nearby" that edge,
   // defined as the set of sites that are candidates for snapping and/or
@@ -713,14 +713,26 @@ class S2Builder {
 // This class is only needed by Layer implementations.
 class S2Builder::GraphOptions {
  public:
-  // TODO(ericv): Change the default options for DegenerateEdges,
-  // DuplicateEdges, and SiblingPairs to KEEP, since this produces the least
-  // surprising output, and makes it easier to diagnose the problem when the
-  // wrong option is chosen.
+  using EdgeType = S2Builder::EdgeType;
+  enum class DegenerateEdges;
+  enum class DuplicateEdges;
+  enum class SiblingPairs;
+
+  // All S2Builder::Layer subtypes should specify all GraphOptions explicitly.
+  //
+  // The default options specify that all edge should be kept, since this
+  // produces the least surprising output and makes it easier to diagnose the
+  // problem when an option is left unspecified.
   GraphOptions() : edge_type_(EdgeType::DIRECTED),
-                   degenerate_edges_(DegenerateEdges::DISCARD),
-                   duplicate_edges_(DuplicateEdges::MERGE),
-                   sibling_pairs_(SiblingPairs::DISCARD) {
+                   degenerate_edges_(DegenerateEdges::KEEP),
+                   duplicate_edges_(DuplicateEdges::KEEP),
+                   sibling_pairs_(SiblingPairs::KEEP) {
+  }
+
+  GraphOptions(EdgeType edge_type, DegenerateEdges degenerate_edges,
+               DuplicateEdges duplicate_edges, SiblingPairs sibling_pairs)
+      : edge_type_(edge_type), degenerate_edges_(degenerate_edges),
+        duplicate_edges_(duplicate_edges), sibling_pairs_(sibling_pairs) {
   }
 
   // Specifies whether the S2Builder input edges should be treated as
@@ -731,23 +743,28 @@ class S2Builder::GraphOptions {
   // be used.  (Note that some values of the sibling_pairs() option
   // automatically take care of this issue by removing half of the edges and
   // changing edge_type() to DIRECTED.)
-  using EdgeType = S2Builder::EdgeType;
   EdgeType edge_type() const;
   void set_edge_type(EdgeType edge_type);
 
   // Controls how degenerate edges (i.e., an edge from a vertex to itself) are
-  // handled.  Such edges can be present in the input, or they can be created
+  // handled.  Such edges may be present in the input, or they may be created
   // when both endpoints of an edge are snapped to the same output vertex.
+  // The options available are:
   //
-  // Normally such edges are discarded.  The main reason for keeping them is
-  // if you want to ensure that there is an output edge for every input edge.
-  // For example, suppose that you are simplifying a polygon and want to
-  // ensure that degenerate geometry is kept (rather than having tiny loops
-  // simply disappear).  You could do this by creating a layer type that
-  // transforms degenerate edges into point geometry and sibling pairs into
-  // polyline geometry, and then passes the remaining non-degenerate geometry
-  // to S2PolygonLayer for further assembly.
-  enum class DegenerateEdges { DISCARD, KEEP };
+  // DISCARD: Discards all degenerate edges.  This is useful for layers that
+  //          do not support degeneracies, such as S2PolygonLayer.
+  //
+  // DISCARD_EXCESS: Discards all degenerate edges that are connected to
+  //                 non-degenerate edges.  (Any remaining duplicate edges can
+  //                 be merged using DuplicateEdges::MERGE.)  This is useful
+  //                 for simplifying polygons while ensuring that loops that
+  //                 collapse to a single point do not disappear.
+  //
+  // KEEP: Keeps all degenerate edges.  Be aware that this may create many
+  //       redundant edges when simplifying geometry (e.g., a polyline of the
+  //       form AABBBBBCCCCCCDDDD).  DegenerateEdges::KEEP is mainly useful
+  //       for algorithms that require an output edge for every input edge.
+  enum class DegenerateEdges { DISCARD, DISCARD_EXCESS, KEEP };
   DegenerateEdges degenerate_edges() const;
   void set_degenerate_edges(DegenerateEdges degenerate_edges);
 
@@ -766,20 +783,26 @@ class S2Builder::GraphOptions {
   // affect the result (i.e., they define a "loop" with no interior).  The
   // various options include:
   //
-  //   DISCARD: Discard all sibling edge pairs.
+  // DISCARD: Discards all sibling edge pairs.
   //
-  //   KEEP: Keeps siblings pairs.  This can be used to create polylines that
-  //         double back on themselves, or degenerate loops (with a layer type
-  //         such as s2shapeutil::LaxPolygon).
+  // DISCARD_EXCESS: Like DISCARD, except that a single sibling pair is kept
+  //                 if the result would otherwise be empty.  This is useful
+  //                 for modeling polygons with degeneracies (LaxPolygon), and
+  //                 for simplifying polylines while ensuring that they are
+  //                 not split into multiple disconnected pieces.
   //
-  //   REQUIRE: Requires that all edges have a sibling (and returns an error
-  //            otherwise).  This is useful with layer types that create a
-  //            collection of adjacent polygons (a polygon mesh).
+  // KEEP: Keeps sibling pairs.  This can be used to create polylines that
+  //       double back on themselves, or degenerate loops (with a layer type
+  //       such as s2shapeutil::LaxPolygon).
   //
-  //   CREATE: Ensures that all edges have a sibling edge by creating them if
-  //           necessary.  This is useful with polygon meshes where the input
-  //           polygons do not cover the entire sphere.  Such edges always
-  //           have an empty set of labels.
+  // REQUIRE: Requires that all edges have a sibling (and returns an error
+  //          otherwise).  This is useful with layer types that create a
+  //          collection of adjacent polygons (a polygon mesh).
+  //
+  // CREATE: Ensures that all edges have a sibling edge by creating them if
+  //         necessary.  This is useful with polygon meshes where the input
+  //         polygons do not cover the entire sphere.  Such edges always
+  //         have an empty set of labels.
   //
   // If edge_type() is EdgeType::UNDIRECTED, a sibling edge pair is considered
   // to consist of four edges (two duplicate edges and their siblings), since
@@ -793,13 +816,25 @@ class S2Builder::GraphOptions {
   // into two directed edges in each direction, and then one edge of each pair
   // would be discarded leaving only one edge in each direction.
   //
-  // Finally, degenerate edges are considered not to have siblings.  Therefore
-  // if such edges are present, they are passed through unchanged by
-  // SiblingEdges::DISCARD.  Similarly, when undirected edges are used and
-  // SiblingEdges::REQUIRE or SiblingEdges::CREATE is specified (causing the
-  // graph to be converted to EdgeType::DIRECTED), then the number of copies
-  // of each degenerate edge is reduced by a factor of two (just like above).
-  enum class SiblingPairs { DISCARD, KEEP, REQUIRE, CREATE };
+  // Degenerate edges are considered not to have siblings.  If such edges are
+  // present, they are passed through unchanged by SiblingPairs::DISCARD.  For
+  // SiblingPairs::REQUIRE or SiblingPairs::CREATE with undirected edges, the
+  // number of copies of each degenerate edge is reduced by a factor of two.
+  //
+  // Any of the options that discard edges (DISCARD, DISCARD_EXCESS, and
+  // REQUIRE/CREATE in the case of undirected edges) have the side effect that
+  // when duplicate edges are present, all of the corresponding edge labels
+  // are merged together and assigned to the remaining edges.  (This avoids
+  // the problem of having to decide which edges are discarded.)  Note that
+  // this merging takes place even when all copies of an edge are kept, and
+  // that even labels attached to duplicate degenerate edges are merged.  For
+  // example, consider the graph {AB1, AB2, BA3, CD4, CD5} (where XYn denotes
+  // an edge from X to Y with label "n").  With SiblingPairs::DISCARD, we need
+  // to discard one of the copies of AB.  But which one?  Rather than choosing
+  // arbitrarily, instead we merge the labels of all duplicate edges (even
+  // ones where no sibling pairs were discarded), yielding {AB12, CD45, CD45}
+  // (assuming that duplicate edges are being kept).
+  enum class SiblingPairs { DISCARD, DISCARD_EXCESS, KEEP, REQUIRE, CREATE };
   SiblingPairs sibling_pairs() const;
   void set_sibling_pairs(SiblingPairs sibling_pairs);
 

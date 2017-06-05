@@ -242,16 +242,16 @@ class S2ClosestPointQuery {
 
   //////////// Parameters ////////////
 
-  int max_points_;
   S1Angle max_distance_;
   S2Region const* region_;
+  int max_points_;
 
   //////////// Fields that are constant during a query ////////////
 
-  Index const* index_;
-
   // If the index has few edges, it is cheaper to use a brute force algorithm.
   bool use_brute_force_;
+
+  Index const* index_;
 
   // A small precomputed S2CellId covering of the indexed points.
   std::vector<S2CellId> index_covering_;

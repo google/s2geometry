@@ -23,10 +23,10 @@
 // For example, suppose a programmer wants to write a program that uses the
 // 'mmap' system call. Then one might write:
 //
-// #include "s2/third_party/absl/base/config.h"
+// #include "third_party/absl/base/config.h"
 //
 // #ifdef GOOGLE_HAVE_MMAP
-// #include "s2/sys/mman.h"
+// #include "sys/mman.h"
 // #endif  // GOOGLE_HAVE_MMAP
 //
 // ...
@@ -62,6 +62,17 @@
 #if !__GLIBC_PREREQ(2, 12)
 #error "Minimum required version of glibc is 2.12."
 #endif
+#endif
+
+// ABSL_HAVE_BUILTIN is a function-like feature checking macro.
+// It's a wrapper around __has_builtin, which is defined by only clang now.
+// It evaluates to 1 if the builtin is supported or 0 if not.
+// Define it to avoid an extra level of #ifdef __has_builtin check.
+// http://releases.llvm.org/3.3/tools/clang/docs/LanguageExtensions.html
+#ifdef __has_builtin
+#define ABSL_HAVE_BUILTIN(x) __has_builtin(x)
+#else
+#define ABSL_HAVE_BUILTIN(x) 0
 #endif
 
 // GOOGLE_HAVE_SIZED_DELETE is defined when C++14's sized deallocation
@@ -112,6 +123,23 @@
 // implementation until Xcode 8.
 #if !defined(__apple_build_version__) || __apple_build_version__ >= 8000042
 #define ABSL_HAVE_THREAD_LOCAL
+#endif
+
+// ABSL_HAVE_INTRINSIC_INT128 is defined when the implementation provides the
+// 128 bit integral type: __int128.
+//
+// __SIZEOF_INT128__ is defined by Clang and GCC when __int128 is supported.
+// Clang on ppc64 and aarch64 are exceptions where __int128 exists but has a
+// sporadic compiler crashing bug. Nvidia's nvcc also defines __GNUC__ and
+// __SIZEOF_INT128__ but not all versions that do this support __int128. Support
+// has been tested for versions >= 7.
+#if (defined(__clang__) && defined(__SIZEOF_INT128__) &&                 \
+     !defined(__ppc64__) && !defined(__aarch64__)) ||                    \
+    (defined(__CUDACC__) && defined(__SIZEOF_INT128__) &&                \
+     __CUDACC_VER__ >= 70000) ||                                         \
+    (!defined(__clang__) && !defined(__CUDACC__) && defined(__GNUC__) && \
+     defined(__SIZEOF_INT128__))
+#define ABSL_HAVE_INTRINSIC_INT128
 #endif
 
 // Operating system-specific features.

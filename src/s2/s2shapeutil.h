@@ -92,6 +92,7 @@ class LaxLoop : public S2Shape {
 
   // S2Shape interface:
   int num_edges() const final { return num_vertices(); }
+  Edge edge(int e) const final;
   void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
   // Not final; overridden by ClosedLaxPolyline.
   int dimension() const override { return 2; }
@@ -111,15 +112,48 @@ class LaxLoop : public S2Shape {
   std::unique_ptr<S2Point[]> vertices_;
 };
 
-// LaxPolygon represents a region defined by a collection of closed loops.
-// The interior is the region to the left of all loops.  This is similar to
-// S2Polygon::Shape except that this class allows duplicate vertices and edges
-// (within loops and/or shared between loops).  There can be zero or more
-// loops, and each loop must have at least one vertex.  (A one-vertex loop
-// defines a degenerate edge consisting of a single point.)
+// LaxPolygon represents a region defined by a collection of zero or more
+// closed loops.  The interior is the region to the left of all loops.  This
+// is similar to S2Polygon::Shape except that this class supports polygons
+// with degeneracies.  Degeneracies are of two types: degenerate edges (from a
+// vertex to itself) and sibling edge pairs (consisting of two oppositely
+// oriented edges).  Degeneracies can represent either "shells" or "holes"
+// depending on the loop they are contained by.  For example, a degenerate
+// edge or sibling pair contained by a "shell" would be interpreted as a
+// degenerate hole.  Such edges form part of the boundary of the polygon.
 //
-// Note that LaxPolygon is faster to initialize and more compact than
-// S2Polygon::Shape, but does not support the same operations as S2Polygon.
+// Loops with fewer than three vertices are interpreted as follows:
+//  - A loop with two vertices defines two edges (in opposite directions).
+//  - A loop with one vertex defines a single degenerate edge.
+//  - A loop with no vertices is interpreted as the "full loop" containing
+//    all points on the sphere.  If this loop is present, then all other loops
+//    must form degeneracies (i.e., degenerate edges or sibling pairs).  For
+//    example, two loops {} and {X} would be interpreted as the full polygon
+//    with a degenerate single-point hole at X.
+//
+// LaxPolygon does not have any error checking, and it is perfectly fine to
+// create LaxPolygon objects that do not meet the requirements below (e.g., in
+// order to analyze or fix those problems).  However, LaxPolygons must satisfy
+// some additional conditions in order to perform certain operations:
+//
+//  - In order to be valid for point containment tests, the polygon must
+//    satisfy the "interior is on the left" rule.  This means that there must
+//    not be any crossing edges, and if there are duplicate edges then all but
+//    at most one of thm must belong to a sibling pair (i.e., the number of
+//    edges in opposite directions must differ by at most one).
+//
+//  - To be valid for polygon operations (S2BoundaryOperation), degenerate
+//    edges and sibling pairs cannot coincide with any other edges.  For
+//    example, the following situations are not allowed:
+//
+//      {AA, AA}      // degenerate edge coincides with another edge
+//      {AA, AB}      // degenerate edge coincides with another edge
+//      {AB, BA, AB}  // sibling pair coincides with another edge
+//
+// Note that LaxPolygon is must faster to initialize and is more compact than
+// S2Polygon, but unlike S2Polygon it does not have any built-in operations.
+// Instead you should use S2ShapeIndex operations (S2BoundaryOperation,
+// S2ClosestEdgeQuery, etc).
 class LaxPolygon : public S2Shape {
  public:
   LaxPolygon() {}  // Must call Init().
@@ -151,6 +185,7 @@ class LaxPolygon : public S2Shape {
 
   // S2Shape interface:
   int num_edges() const final { return num_vertices(); }
+  Edge edge(int e) const final;
   void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
   int dimension() const final { return 2; }
   bool contains_origin() const final;
@@ -195,6 +230,7 @@ class LaxPolyline : public S2Shape {
 
   // S2Shape interface:
   int num_edges() const final { return std::max(0, num_vertices() - 1); }
+  Edge edge(int e) const final;
   void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
   int dimension() const final { return 1; }
   bool contains_origin() const final { return false; }
@@ -250,6 +286,9 @@ class EdgeVectorShape : public S2Shape {
 
   // S2Shape interface:
   int num_edges() const final { return edges_.size(); }
+  Edge edge(int e) const final {
+    return Edge(edges_[e].first, edges_[e].second);
+  }
   void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
     *a = &edges_[e].first;
     *b = &edges_[e].second;
@@ -260,7 +299,7 @@ class EdgeVectorShape : public S2Shape {
   Chain chain(int i) const final { return Chain(i, 1); }
   Edge chain_edge(int i, int j) const final {
     DCHECK_EQ(j, 0);
-    return Edge(&edges_[i].first, &edges_[i].second);
+    return Edge(edges_[i].first, edges_[i].second);
   }
   ChainPosition chain_position(int e) const final {
     return ChainPosition(e, 0);
@@ -290,9 +329,12 @@ class PointVectorShape : public S2Shape {
 
   // S2Shape interface:
   int num_edges() const final { return points_.size(); }
-  void GetEdge(int id, S2Point const** a, S2Point const** b) const final {
-    *a = &points_[id];
-    *b = &points_[id];
+  Edge edge(int e) const final {
+    return Edge(points_[e], points_[e]);
+  }
+  void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
+    *a = &points_[e];
+    *b = &points_[e];
   }
   int dimension() const final { return 0; }
   bool contains_origin() const final { return false; }
@@ -300,7 +342,7 @@ class PointVectorShape : public S2Shape {
   Chain chain(int i) const final { return Chain(i, 1); }
   Edge chain_edge(int i, int j) const final {
     DCHECK_EQ(j, 0);
-    return Edge(&points_[i], &points_[i]);
+    return Edge(points_[i], points_[i]);
   }
   ChainPosition chain_position(int e) const final {
     return ChainPosition(e, 0);
@@ -334,6 +376,7 @@ class VertexIdLaxLoop : public S2Shape {
 
   // S2Shape interface:
   int num_edges() const final { return num_vertices(); }
+  Edge edge(int e) const final;
   void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
   int dimension() const final { return 2; }
   bool contains_origin() const final;
@@ -455,10 +498,6 @@ struct ShapeEdgeId {
   bool operator>(ShapeEdgeId other) const;
   bool operator<=(ShapeEdgeId other) const;
   bool operator>=(ShapeEdgeId other) const;
-
- private:
-  int32 shape_id_;
-  int32 edge_id_;
 };
 std::ostream& operator<<(std::ostream& os, ShapeEdgeId id);
 
@@ -466,15 +505,15 @@ std::ostream& operator<<(std::ostream& os, ShapeEdgeId id);
 // edge.  It should be passed by reference.
 struct ShapeEdge {
  public:
-  ShapeEdge() : id_(-1, -1), v0_(nullptr), v1_(nullptr) {}
+  ShapeEdge() : id_(-1, -1) {}
   ShapeEdge(S2Shape const& shape, int32 edge_id);
   ShapeEdgeId id() const { return id_; }
-  S2Point const& v0() const { return *v0_; }
-  S2Point const& v1() const { return *v1_; }
+  S2Point const& v0() const { return edge_.v0; }
+  S2Point const& v1() const { return edge_.v1; }
 
  private:
   ShapeEdgeId id_;
-  S2Point const *v0_, *v1_;
+  S2Shape::Edge edge_;
 };
 
 // A function that is called with pairs of crossing edges.  The function may
@@ -514,7 +553,9 @@ bool VisitCrossings(S2ShapeIndex const& a, S2ShapeIndex const& b,
 // edges, which requires some extra care with definitions.  The rule that we
 // apply is that an edge and its reverse edge "cancel" each other: the result
 // is the same as if that edge pair were not present.  Therefore shapes that
-// consist only of degenerate loop(s) are considered to be empty.
+// consist only of degenerate loop(s) are either empty or full; by convention,
+// the shape is considered full if and only if it contains an empty loop (see
+// LaxPolygon for details).
 //
 // Determining whether a loop on the sphere contains a point is harder than
 // the corresponding problem in 2D plane geometry.  It cannot be implemented
@@ -611,8 +652,7 @@ inline bool ShapeEdgeId::operator>=(ShapeEdgeId other) const {
 }
 
 inline ShapeEdge::ShapeEdge(S2Shape const& shape, int32 edge_id)
-    : id_(shape.id(), edge_id) {
-  shape.GetEdge(edge_id, &v0_, &v1_);
+    : id_(shape.id(), edge_id), edge_(shape.edge(edge_id)) {
 }
 
 }  // namespace s2shapeutil

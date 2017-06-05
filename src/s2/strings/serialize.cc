@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "s2/strings/split.h"
+#include "s2/third_party/absl/strings/str_split.h"
 
 bool DictionaryParse(std::string const& encoded_str,
                      std::vector<std::pair<std::string, std::string>>* items) {

@@ -67,7 +67,7 @@ S1Angle GetMaxDistance(S2::Projection const& proj,
 
 DistStats TestUnprojected(S2::Projection const& proj, S1Angle tolerance,
                           R2Point const& pa, R2Point const& pb) {
-  S2EdgeTessellator tess(proj, tolerance);
+  S2EdgeTessellator tess(&proj, tolerance);
   vector<S2Point> vertices;
   tess.AppendUnprojected(pa, pb, &vertices);
   EXPECT_TRUE(S2::ApproxEquals(proj.Unproject(pa), vertices.front()));
@@ -99,7 +99,7 @@ DistStats TestUnprojected(S2::Projection const& proj, S1Angle tolerance,
 
 DistStats TestProjected(S2::Projection const& proj, S1Angle tolerance,
                         S2Point const& a, S2Point const& b) {
-  S2EdgeTessellator tess(proj, tolerance);
+  S2EdgeTessellator tess(&proj, tolerance);
   vector<R2Point> vertices;
   tess.AppendProjected(a, b, &vertices);
   EXPECT_TRUE(S2::ApproxEquals(a, proj.Unproject(vertices.front())));
@@ -130,7 +130,7 @@ DistStats TestProjected(S2::Projection const& proj, S1Angle tolerance,
 
 TEST(S2EdgeTessellator, ProjectedNoTessellation) {
   S2::PlateCarreeProjection proj(180);
-  S2EdgeTessellator tess(proj, S1Angle::Degrees(0.01));
+  S2EdgeTessellator tess(&proj, S1Angle::Degrees(0.01));
   vector<R2Point> vertices;
   tess.AppendProjected(S2Point(1, 0, 0), S2Point(0, 1, 0), &vertices);
   EXPECT_EQ(2, vertices.size());
@@ -138,7 +138,7 @@ TEST(S2EdgeTessellator, ProjectedNoTessellation) {
 
 TEST(S2EdgeTessellator, UnprojectedNoTessellation) {
   S2::PlateCarreeProjection proj(180);
-  S2EdgeTessellator tess(proj, S1Angle::Degrees(0.01));
+  S2EdgeTessellator tess(&proj, S1Angle::Degrees(0.01));
   vector<S2Point> vertices;
   tess.AppendUnprojected(R2Point(0, 30), R2Point(0, 50), &vertices);
   EXPECT_EQ(2, vertices.size());
@@ -149,7 +149,7 @@ TEST(S2EdgeTessellator, WrapUnprojected) {
   // goes the "short way" around the sphere.
 
   S2::PlateCarreeProjection proj(180);
-  S2EdgeTessellator tess(proj, S1Angle::Degrees(0.01));
+  S2EdgeTessellator tess(&proj, S1Angle::Degrees(0.01));
   vector<S2Point> vertices;
   tess.AppendUnprojected(R2Point(-170, 0), R2Point(170, 80), &vertices);
   for (auto const& v : vertices) {
@@ -163,7 +163,7 @@ TEST(S2EdgeTessellator, ProjectedWrapping) {
   // (i.e., absolute longitudes greater than 180 degrees) but that don't have
   // any sudden jumps in value, which is convenient for interpolating them.
   S2::PlateCarreeProjection proj(180);
-  S2EdgeTessellator tess(proj, S1Angle::Degrees(0.01));
+  S2EdgeTessellator tess(&proj, S1Angle::Degrees(0.01));
   vector<R2Point> vertices;
   tess.AppendProjected(S2LatLng::FromDegrees(0, -170).ToPoint(),
                        S2LatLng::FromDegrees(0, 170).ToPoint(), &vertices);

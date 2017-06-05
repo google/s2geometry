@@ -234,74 +234,38 @@
 
 #endif  /* DYNAMIC_ANNOTATIONS_ENABLED */
 
-/* Macro definitions for GCC attributes that allow static thread safety
-   analysis to recognize and use some of the dynamic annotations as
-   escape hatches.
-   TODO(user): remove the check for __SUPPORT_DYN_ANNOTATION__ once the
-   default crosstool/GCC supports these GCC attributes.  */
+/* Clang provides limited support for static thread-safety analysis
+   through a feature called Annotalysis. We configure macro-definitions
+   according to whether (and which) Annotalysis support is available. */
 
-#define ANNOTALYSIS_STATIC_INLINE
-#define ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY ;
-#define ANNOTALYSIS_IGNORE_READS_BEGIN
-#define ANNOTALYSIS_IGNORE_READS_END
-#define ANNOTALYSIS_IGNORE_WRITES_BEGIN
-#define ANNOTALYSIS_IGNORE_WRITES_END
-#define ANNOTALYSIS_UNPROTECTED_READ
-
-#if defined(__GNUC__) && (!defined(SWIG)) && (!defined(__clang__))
-
-#if DYNAMIC_ANNOTATIONS_ENABLED == 0
-#define ANNOTALYSIS_ONLY 1
-#undef ANNOTALYSIS_STATIC_INLINE
-#define ANNOTALYSIS_STATIC_INLINE static inline
-#undef ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY
-#define ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY { (void)file; (void)line; }
-#endif
-
-/* Only emit attributes when annotalysis is enabled. */
-#if defined(__SUPPORT_TS_ANNOTATION__) && defined(__SUPPORT_DYN_ANNOTATION__)
-#undef  ANNOTALYSIS_IGNORE_READS_BEGIN
-#define ANNOTALYSIS_IGNORE_READS_BEGIN  __attribute__ ((ignore_reads_begin))
-#undef  ANNOTALYSIS_IGNORE_READS_END
-#define ANNOTALYSIS_IGNORE_READS_END    __attribute__ ((ignore_reads_end))
-#undef  ANNOTALYSIS_IGNORE_WRITES_BEGIN
-#define ANNOTALYSIS_IGNORE_WRITES_BEGIN __attribute__ ((ignore_writes_begin))
-#undef  ANNOTALYSIS_IGNORE_WRITES_END
-#define ANNOTALYSIS_IGNORE_WRITES_END   __attribute__ ((ignore_writes_end))
-#undef  ANNOTALYSIS_UNPROTECTED_READ
-#define ANNOTALYSIS_UNPROTECTED_READ    __attribute__ ((unprotected_read))
-#endif
-
-#endif // defined(__GNUC__) && (!defined(SWIG)) && (!defined(__clang__))
-
-
-/* TODO(user) -- Replace __CLANG_SUPPORT_DYN_ANNOTATION__ with the 
+/* TODO(user) -- Replace __CLANG_SUPPORT_DYN_ANNOTATION__ with the
    appropriate feature ID. */
 #if defined(__clang__) && (!defined(SWIG)) \
     && defined(__CLANG_SUPPORT_DYN_ANNOTATION__)
+#define ANNOTALYSIS_SUPPORT
+#endif
 
-/* TODO(user) -- The exclusive lock here ignores writes as well, but 
+/* TODO(user) -- The exclusive lock here ignores writes as well, but
    allows INGORE_READS_AND_WRITES to work properly. */
-#undef  ANNOTALYSIS_IGNORE_READS_BEGIN
-#define ANNOTALYSIS_IGNORE_READS_BEGIN \
-  __attribute__((exclusive_lock_function("*")))
-#undef  ANNOTALYSIS_IGNORE_READS_END
-#define ANNOTALYSIS_IGNORE_READS_END \
-  __attribute__((unlock_function("*")))
+#ifdef ANNOTALYSIS_SUPPORT
+  #define ANNOTALYSIS_IGNORE_READS_BEGIN \
+      __attribute__((exclusive_lock_function("*")))
+  #define ANNOTALYSIS_IGNORE_READS_END \
+      __attribute__((unlock_function("*")))
+#else
+  #define ANNOTALYSIS_IGNORE_READS_BEGIN
+  #define ANNOTALYSIS_IGNORE_READS_END
+#endif  /* ANNOTALYSIS_SUPPORT */
 
-#if DYNAMIC_ANNOTATIONS_ENABLED == 0
-/* Turn on certain macros for static analysis, even if dynamic annotations are 
+#if DYNAMIC_ANNOTATIONS_ENABLED == 0 && defined(ANNOTALYSIS_SUPPORT)
+/* Turn on certain macros for static analysis, even if dynamic annotations are
    not enabled. */
-#define CLANG_ANNOTALYSIS_ONLY 1
-
-#undef ANNOTALYSIS_STATIC_INLINE
-#define ANNOTALYSIS_STATIC_INLINE static inline
-#undef ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY
-#define ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY { (void)file; (void)line; }
-
-#endif  /* DYNAMIC_ANNOTATIONS_ENABLED == 0 */
-#endif  /* defined(__clang__) && (!defined(SWIG)) */
-
+  #define ANNOTALYSIS_STATIC_INLINE static inline
+  #define ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY { (void)file; (void)line; }
+#else
+  #define ANNOTALYSIS_STATIC_INLINE
+  #define ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY ;
+#endif  /* DYNAMIC_ANNOTATIONS_ENABLED == 0 && defined(ANNOTALYSIS_SUPPORT) */
 
 /* Use the macros above rather than using these functions directly. */
 #include <cstddef>
@@ -349,10 +313,10 @@ void AnnotateIgnoreReadsEnd(const char *file, int line)
     ANNOTALYSIS_IGNORE_READS_END ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY
 ANNOTALYSIS_STATIC_INLINE
 void AnnotateIgnoreWritesBegin(const char *file, int line)
-    ANNOTALYSIS_IGNORE_WRITES_BEGIN ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY
+    ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY
 ANNOTALYSIS_STATIC_INLINE
 void AnnotateIgnoreWritesEnd(const char *file, int line)
-    ANNOTALYSIS_IGNORE_WRITES_END ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY
+    ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY
 void AnnotateEnableRaceDetection(const char *file, int line, int enable);
 void AnnotateNoOp(const char *file, int line,
                   const volatile void *arg);
@@ -406,8 +370,7 @@ double ValgrindSlowdown(void);
      one can use
         ... = ANNOTATE_UNPROTECTED_READ(x); */
   template <class T>
-  inline T ANNOTATE_UNPROTECTED_READ(const volatile T &x)
-      ANNOTALYSIS_UNPROTECTED_READ {
+  inline T ANNOTATE_UNPROTECTED_READ(const volatile T &x) {
     ANNOTATE_IGNORE_READS_BEGIN();
     T res = x;
     ANNOTATE_IGNORE_READS_END();
@@ -447,69 +410,7 @@ double ValgrindSlowdown(void);
 #define ADDRESS_SANITIZER_REDZONE(name)
 #endif  // ADDRESS_SANITIZER
 
-/* Annotalysis, a GCC based static analyzer, is able to understand and use
-   some of the dynamic annotations defined in this file. However, dynamic
-   annotations are usually disabled in the opt mode (to avoid additional
-   runtime overheads) while Annotalysis only works in the opt mode.
-   In order for Annotalysis to use these dynamic annotations when they
-   are disabled, we re-define these annotations here. Note that unlike the
-   original macro definitions above, these macros are expanded to calls to
-   static inline functions so that the compiler will be able to remove the
-   calls after the analysis. */
-
-#ifdef ANNOTALYSIS_ONLY
-
-  #undef ANNOTALYSIS_ONLY
-
-  /* Undefine and re-define the macros that the static analyzer understands. */
-  #undef ANNOTATE_IGNORE_READS_BEGIN
-  #define ANNOTATE_IGNORE_READS_BEGIN()           \
-    AnnotateIgnoreReadsBegin(__FILE__, __LINE__)
-
-  #undef ANNOTATE_IGNORE_READS_END
-  #define ANNOTATE_IGNORE_READS_END()             \
-    AnnotateIgnoreReadsEnd(__FILE__, __LINE__)
-
-  #undef ANNOTATE_IGNORE_WRITES_BEGIN
-  #define ANNOTATE_IGNORE_WRITES_BEGIN()          \
-    AnnotateIgnoreWritesBegin(__FILE__, __LINE__)
-
-  #undef ANNOTATE_IGNORE_WRITES_END
-  #define ANNOTATE_IGNORE_WRITES_END()            \
-    AnnotateIgnoreWritesEnd(__FILE__, __LINE__)
-
-  #undef ANNOTATE_IGNORE_READS_AND_WRITES_BEGIN
-  #define ANNOTATE_IGNORE_READS_AND_WRITES_BEGIN()       \
-    do {                                                 \
-      ANNOTATE_IGNORE_READS_BEGIN();                     \
-      ANNOTATE_IGNORE_WRITES_BEGIN();                    \
-    }while(0)                                            \
-
-  #undef ANNOTATE_IGNORE_READS_AND_WRITES_END
-  #define ANNOTATE_IGNORE_READS_AND_WRITES_END()  \
-    do {                                          \
-      ANNOTATE_IGNORE_WRITES_END();               \
-      ANNOTATE_IGNORE_READS_END();                \
-    }while(0)                                     \
-
-  #if defined(__cplusplus)
-    #undef ANNOTATE_UNPROTECTED_READ
-    template <class T>
-    inline T ANNOTATE_UNPROTECTED_READ(const volatile T &x)
-         ANNOTALYSIS_UNPROTECTED_READ {
-      ANNOTATE_IGNORE_READS_BEGIN();
-      T res = x;
-      ANNOTATE_IGNORE_READS_END();
-      return res;
-    }
-  #endif /* __cplusplus */
-
-#endif /* ANNOTALYSIS_ONLY */
-
-
-#ifdef CLANG_ANNOTALYSIS_ONLY
-
-#undef CLANG_ANNOTALYSIS_ONLY
+#if DYNAMIC_ANNOTATIONS_ENABLED==0 && defined(ANNOTALYSIS_SUPPORT)
 
 /* Turn on macros that the static analyzer understands.  These should be on
  * even if dynamic annotations are off. */
@@ -547,11 +448,12 @@ double ValgrindSlowdown(void);
   }
   #endif
 
-#endif  /* CLANG_ANNOTALYSIS_ONLY */
+#endif  /* DYNAMIC_ANNOTATIONS_ENABLED==0 && defined(ANNOTALYSIS_SUPPORT) */
 
 
 /* Undefine the macros intended only in this file. */
 #undef ANNOTALYSIS_STATIC_INLINE
 #undef ANNOTALYSIS_SEMICOLON_OR_EMPTY_BODY
+#undef ANNOTALYSIS_SUPPORT
 
 #endif  /* __DYNAMIC_ANNOTATIONS_H__ */

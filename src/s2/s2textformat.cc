@@ -21,12 +21,13 @@
 #include <glog/logging.h>
 #include "s2/base/stringprintf.h"
 #include "s2/strings/serialize.h"
-#include "s2/strings/split.h"
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/strings/str_split.h"
 #include "s2/s2latlng.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2shapeutil.h"
 
 using std::pair;
 using std::unique_ptr;
@@ -107,6 +108,20 @@ unique_ptr<S2Polygon> MakePolygon(string const& str) {
 
 unique_ptr<S2Polygon> MakeVerbatimPolygon(string const& str) {
   return InternalMakePolygon(str, false);
+}
+
+s2shapeutil::LaxPolygon* MakeLaxPolygon(string const& str) {
+  vector<string> loop_strs = strings::Split(str, ';',
+                                            strings::SkipWhitespace());
+  vector<vector<S2Point>> loops;
+  for (auto const& loop_str : loop_strs) {
+    if (loop_str == "full") {
+      loops.push_back(vector<S2Point>());
+    } else {
+      loops.push_back(ParsePoints(loop_str));
+    }
+  }
+  return new s2shapeutil::LaxPolygon(loops);
 }
 
 static void AppendVertex(S2Point const& p, string* out) {

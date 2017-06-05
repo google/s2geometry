@@ -269,6 +269,9 @@ class S2Polyline final : public S2Region {
     int num_edges() const final {
       return std::max(0, polyline_->num_vertices() - 1);
     }
+    Edge edge(int e) const final {
+      return Edge(polyline_->vertex(e), polyline_->vertex(e + 1));
+    }
     void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
       *a = &polyline_->vertex(e);
       *b = &polyline_->vertex(e+1);
@@ -279,7 +282,7 @@ class S2Polyline final : public S2Region {
     Chain chain(int i) const final;
     Edge chain_edge(int i, int j) const final {
       DCHECK_EQ(i, 0);
-      return Edge(&polyline_->vertex(j), &polyline_->vertex(j + 1));
+      return Edge(polyline_->vertex(j), polyline_->vertex(j + 1));
     }
     ChainPosition chain_position(int e) const final {
       return ChainPosition(0, e);

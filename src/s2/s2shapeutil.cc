@@ -60,6 +60,13 @@ void LaxLoop::Init(S2Loop const& loop) {
   }
 }
 
+S2Shape::Edge LaxLoop::edge(int e0) const {
+  DCHECK_LT(e0, num_edges());
+  int e1 = e0 + 1;
+  if (e1 == num_vertices()) e1 = 0;
+  return Edge(vertices_[e0], vertices_[e1]);
+}
+
 void LaxLoop::GetEdge(int e, S2Point const** a, S2Point const** b) const {
   DCHECK_LT(e, num_edges());
   *a = &vertices_[e];
@@ -71,10 +78,12 @@ S2Shape::Edge LaxLoop::chain_edge(int i, int j) const {
   DCHECK_EQ(i, 0);
   DCHECK_LT(j, num_edges());
   int k = (j + 1 == num_vertices()) ? 0 : j + 1;
-  return Edge(&vertices_[j], &vertices_[k]);
+  return Edge(vertices_[j], vertices_[k]);
 }
 
 bool LaxLoop::contains_origin() const {
+  // IsOriginOnLeft interprets a loop with no vertices as "full".
+  if (num_vertices() == 0) return false;
   return IsOriginOnLeft(*this);
 }
 
@@ -121,7 +130,11 @@ void LaxPolygon::Init(S2Polygon const& polygon) {
   vector<VertexArray> v_arrays;
   for (int i = 0; i < polygon.num_loops(); ++i) {
     S2Loop const* loop = polygon.loop(i);
-    v_arrays.push_back(VertexArray(&loop->vertex(0), loop->num_vertices()));
+    if (loop->is_full()) {
+      v_arrays.push_back(VertexArray(nullptr, 0));
+    } else {
+      v_arrays.push_back(VertexArray(&loop->vertex(0), loop->num_vertices()));
+    }
   }
   Init(v_arrays);
 }
@@ -184,6 +197,26 @@ S2Point const& LaxPolygon::loop_vertex(int i, int j) const {
   }
 }
 
+S2Shape::Edge LaxPolygon::edge(int e0) const {
+  DCHECK_LT(e0, num_edges());
+  int e1 = e0 + 1;
+  if (num_loops() == 1) {
+    if (e1 == num_vertices_) { e1 = 0; }
+  } else {
+    // Find the index of the first vertex of the loop following this one.
+    int const kMaxLinearSearchLoops = 12;  // From benchmarks.
+    int* next = cumulative_vertices_ + 1;
+    if (num_loops() <= kMaxLinearSearchLoops) {
+      while (*next <= e0) ++next;
+    } else {
+      next = std::upper_bound(next, next + num_loops(), e0);
+    }
+    // Wrap around to the first vertex of the loop if necessary.
+    if (e1 == *next) { e1 = next[-1]; }
+  }
+  return Edge(vertices_[e0], vertices_[e1]);
+}
+
 void LaxPolygon::GetEdge(int e, S2Point const** a, S2Point const** b) const {
   DCHECK_LT(e, num_edges());
   int const kMaxLinearSearchLoops = 12;  // From benchmarks.
@@ -227,10 +260,10 @@ S2Shape::Edge LaxPolygon::chain_edge(int i, int j) const {
   int n = num_loop_vertices(i);
   int k = (j + 1 == n) ? 0 : j + 1;
   if (num_loops() == 1) {
-    return Edge(&vertices_[j], &vertices_[k]);
+    return Edge(vertices_[j], vertices_[k]);
   } else {
     int base = cumulative_vertices_[i];
-    return Edge(&vertices_[base + j], &vertices_[base + k]);
+    return Edge(vertices_[base + j], vertices_[base + k]);
   }
 }
 
@@ -261,19 +294,27 @@ LaxPolyline::LaxPolyline(S2Polyline const& polyline) {
 
 void LaxPolyline::Init(vector<S2Point> const& vertices) {
   num_vertices_ = vertices.size();
+  LOG_IF(WARNING, num_vertices_ == 1)
+      << "s2shapeutil::LaxPolyline with one vertex defines no edges";
   vertices_.reset(new S2Point[num_vertices_]);
   std::copy(vertices.begin(), vertices.end(), vertices_.get());
 }
 
 void LaxPolyline::Init(S2Polyline const& polyline) {
   num_vertices_ = polyline.num_vertices();
+  LOG_IF(WARNING, num_vertices_ == 1)
+      << "s2shapeutil::LaxPolyline with one vertex defines no edges";
   vertices_.reset(new S2Point[num_vertices_]);
   std::copy(&polyline.vertex(0), &polyline.vertex(0) + num_vertices_,
             vertices_.get());
 }
 
-void LaxPolyline::GetEdge(int e, S2Point const** a,
-                            S2Point const** b) const {
+S2Shape::Edge LaxPolyline::edge(int e) const {
+  DCHECK_LT(e, num_edges());
+  return Edge(vertices_[e], vertices_[e + 1]);
+}
+
+void LaxPolyline::GetEdge(int e, S2Point const** a, S2Point const** b) const {
   DCHECK_LT(e, num_edges());
   *a = &vertices_[e];
   *b = &vertices_[e + 1];
@@ -290,7 +331,7 @@ S2Shape::Chain LaxPolyline::chain(int i) const {
 S2Shape::Edge LaxPolyline::chain_edge(int i, int j) const {
   DCHECK_EQ(i, 0);
   DCHECK_LT(j, num_edges());
-  return Edge(&vertices_[j], &vertices_[j + 1]);
+  return Edge(vertices_[j], vertices_[j + 1]);
 }
 
 S2Shape::ChainPosition LaxPolyline::chain_position(int e) const {
@@ -310,8 +351,15 @@ void VertexIdLaxLoop::Init(std::vector<int32> const& vertex_ids,
   vertex_array_ = vertex_array;
 }
 
-void VertexIdLaxLoop::GetEdge(int e, S2Point const** a, S2Point const** b)
-    const {
+S2Shape::Edge VertexIdLaxLoop::edge(int e0) const {
+  DCHECK_LT(e0, num_edges());
+  int e1 = e0 + 1;
+  if (e1 == num_vertices()) e1 = 0;
+  return Edge(vertex(e0), vertex(e1));
+}
+
+void VertexIdLaxLoop::GetEdge(int e, S2Point const** a,
+                              S2Point const** b) const {
   DCHECK_LT(e, num_edges());
   *a = &vertex(e);
   if (++e == num_vertices()) e = 0;
@@ -322,21 +370,23 @@ S2Shape::Edge VertexIdLaxLoop::chain_edge(int i, int j) const {
   DCHECK_EQ(i, 0);
   DCHECK_LT(j, num_edges());
   int k = (j + 1 == num_vertices()) ? 0 : j + 1;
-  return Edge(&vertex(j), &vertex(k));
+  return Edge(vertex(j), vertex(k));
 }
 
 bool VertexIdLaxLoop::contains_origin() const {
+  // IsOriginOnLeft interprets a loop with no vertices as "full".
+  if (num_vertices() == 0) return false;
   return IsOriginOnLeft(*this);
 }
 
 // This is a helper function for IsOriginOnLeft(), defined below.
 //
-// If the given vertex "vtest" is degenerate (see definition in header file),
-// returns false.  Otherwise sets "result" to indicate whether "shape"
-// contains S2::Origin() and returns true.
+// If the given vertex "vtest" is unbalanced (see definition below), sets
+// "result" to indicate whether "shape" contains S2::Origin() and returns
+// true.  Otherwise returns false.
 static bool IsOriginOnLeftAtVertex(S2Shape const& shape,
                                    S2Point const& vtest, bool* result) {
-  // Let P be a non-degenerate vertex.  Vertex P is defined to be inside the
+  // Let P be an unbalanced vertex.  Vertex P is defined to be inside the
   // region if the region contains a particular direction vector starting from
   // P, namely the direction S2::Ortho(P).  Since the interior is defined as
   // the region to the left of all loops, this means we need to find the
@@ -347,23 +397,21 @@ static bool IsOriginOnLeftAtVertex(S2Shape const& shape,
   // To convert this into a contains_origin() value, we count the number of
   // edges crossed between P and S2::Origin(), and invert the result for
   // every crossing.
-  S2Point origin = S2::Origin();
-  S2EdgeUtil::EdgeCrosser crosser(&origin, &vtest);
+  S2EdgeUtil::CopyingEdgeCrosser crosser(S2::Origin(), vtest);
   bool crossing_parity = false;
   util::btree::btree_map<S2Point, int> edge_map;
   int n = shape.num_edges();
   for (int e = 0; e < n; ++e) {
-    S2Point const *v0, *v1;
-    shape.GetEdge(e, &v0, &v1);
-    if (*v0 == *v1) continue;
+    auto edge = shape.edge(e);
+    if (edge.v0 == edge.v1) continue;
 
     // Check whether this edge crosses the edge between P and S2::Origin().
-    crossing_parity ^= crosser.EdgeOrVertexCrossing(v0, v1);
+    crossing_parity ^= crosser.EdgeOrVertexCrossing(edge.v0, edge.v1);
 
     // Keep track of (outgoing edges) - (incoming edges) for each vertex that
     // is adjacent to "vtest".
-    if (*v0 == vtest) ++edge_map[*v1];
-    if (*v1 == vtest) --edge_map[*v0];
+    if (edge.v0 == vtest) ++edge_map[edge.v1];
+    if (edge.v1 == vtest) --edge_map[edge.v0];
   }
   // Find the unmatched edge that is immediately clockwise from S2::Ortho(P).
   S2Point reference_dir = S2::Ortho(vtest);
@@ -387,57 +435,50 @@ static bool IsOriginOnLeftAtVertex(S2Shape const& shape,
 // See documentation in header file.
 bool IsOriginOnLeft(S2Shape const& shape) {
   if (shape.num_edges() == 0) {
-    return false;
+    // The shape is defined to be "full" if it contains an empty loop.
+    return shape.num_chains() > 0;
   }
   // Define a "matched" edge as one that can be paired with a corresponding
-  // reversed edge.  Define a vertex as "degenerate" if all of its edges are
-  // matched. In order to determine containment, we must find a non-degenerate
-  // vertex.  Often every vertex is non-degenerate, so we start by trying an
+  // reversed edge.  Define a vertex as "balanced" if all of its edges are
+  // matched. In order to determine containment, we must find an unbalanced
+  // vertex.  Often every vertex is unbalanced, so we start by trying an
   // arbitrary vertex.
-  S2Point const *v0, *v1;
-  shape.GetEdge(0, &v0, &v1);
+  auto edge = shape.edge(0);
   bool result = false;
-  if (IsOriginOnLeftAtVertex(shape, *v0, &result)) {
+  if (IsOriginOnLeftAtVertex(shape, edge.v0, &result)) {
     return result;
   }
-  // That didn't work, so now we do some extra work to find a non-degenerate
+  // That didn't work, so now we do some extra work to find an unbalanced
   // vertex (if any).  Essentially we gather a list of edges and a list of
   // reversed edges, and then sort them.  The first edge that appears in one
   // list but not the other is guaranteed to be unmatched.
-  class Edge {
-   public:
-    Edge(S2Point const* v0, S2Point const* v1) : v0_(v0), v1_(v1) {}
-    // Define accessors to ensure that we don't accidentally compare pointers.
-    S2Point const& v0() const { return *v0_; }
-    S2Point const& v1() const { return *v1_; }
-    bool operator<(Edge const& other) const {
-      return v0() < other.v0() || (v0() == other.v0() && v1() < other.v1());
-    }
-   private:
-    S2Point const *v0_, *v1_;
-  };
   int n = shape.num_edges();
-  vector<Edge> edges, rev_edges;
+  vector<S2Shape::Edge> edges, rev_edges;
   edges.reserve(n);
   rev_edges.reserve(n);
   for (int i = 0; i < n; ++i) {
-    shape.GetEdge(i, &v0, &v1);
-    edges.push_back(Edge(v0, v1));
-    rev_edges.push_back(Edge(v1, v0));
+    auto edge = shape.edge(i);
+    edges.push_back(edge);
+    rev_edges.push_back(S2Shape::Edge(edge.v1, edge.v0));
   }
   std::sort(edges.begin(), edges.end());
   std::sort(rev_edges.begin(), rev_edges.end());
   for (int i = 0; i < n; ++i) {
     if (edges[i] < rev_edges[i]) {  // edges[i] is unmatched
-      CHECK(IsOriginOnLeftAtVertex(shape, edges[i].v0(), &result));
+      CHECK(IsOriginOnLeftAtVertex(shape, edges[i].v0, &result));
       return result;
     }
     if (rev_edges[i] < edges[i]) {  // rev_edges[i] is unmatched
-      CHECK(IsOriginOnLeftAtVertex(shape, rev_edges[i].v0(), &result));
+      CHECK(IsOriginOnLeftAtVertex(shape, rev_edges[i].v0, &result));
       return result;
     }
   }
-  return false;  // All vertices are degenerate.
+  // All vertices are balanced, so this polygon is either empty or full.  By
+  // convention it is defined to be "full" if it contains any empty loop.
+  for (int i = 0; i < shape.num_chains(); ++i) {
+    if (shape.chain(i).length == 0) return true;
+  }
+  return false;
 }
 
 std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
@@ -477,7 +518,7 @@ static bool VisitCrossings(ShapeEdgeVector const& shape_edges,
     // A common situation is that an edge AB is followed by an edge BC.  We
     // only need to visit such crossings if CrossingType::ALL is specified
     // (even if AB and BC belong to different edge chains).
-    if (type != CrossingType::ALL && &a.v1() == &shape_edges[j].v0()) {
+    if (type != CrossingType::ALL && a.v1() == shape_edges[j].v0()) {
       if (++j >= num_edges) break;
     }
     S2EdgeUtil::EdgeCrosser crosser(&a.v0(), &a.v1());
@@ -561,9 +602,9 @@ class IndexCrosser {
   // A.Contains(B) is not the same as B.Contains(A).
   IndexCrosser(S2ShapeIndex const& a_index, S2ShapeIndex const& b_index,
                CrossingType type, EdgePairVisitor const& visitor, bool swapped)
-      : a_index_(a_index), b_index_(b_index),
+      : a_index_(a_index), b_index_(b_index), visitor_(visitor),
         min_crossing_sign_(type == CrossingType::INTERIOR ? 1 : 0),
-        visitor_(visitor), swapped_(swapped), b_query_(b_index_) {
+        swapped_(swapped), b_query_(b_index_) {
   }
 
   // Given two iterators positioned such that ai->id().Contains(bi->id()),
@@ -592,8 +633,8 @@ class IndexCrosser {
 
   S2ShapeIndex const& a_index_;
   S2ShapeIndex const& b_index_;
-  int const min_crossing_sign_;
   EdgePairVisitor const& visitor_;
+  int const min_crossing_sign_;
   bool const swapped_;
 
   // Temporary data declared here to avoid repeated memory allocations.
@@ -657,10 +698,10 @@ bool IndexCrosser::VisitCellCellCrossings(S2ShapeIndexCell const& a_cell,
   GetShapeEdges(b_index_, b_cell, &b_shape_edges_);
   for (int i = 0; i < a_shape_edges_.size(); ++i) {
     ShapeEdge const& a = a_shape_edges_[i];
-    S2EdgeUtil::EdgeCrosser crosser(&a.v0(), &a.v1());
+    crosser_.Init(&a.v0(), &a.v1());
     for (int j = 0; j < b_shape_edges_.size(); ++j) {
       ShapeEdge const& b = b_shape_edges_[j];
-      int sign = crosser.CrossingSign(&b.v0(), &b.v1());
+      int sign = crosser_.CrossingSign(&b.v0(), &b.v1());
       if (sign >= min_crossing_sign_) {
         if (!VisitEdgePair(a, b, sign == 1)) return false;
       }
@@ -795,10 +836,8 @@ void ResolveComponents(vector<vector<S2Shape*>> const& components,
   vector<vector<S2Shape*>> ancestors(components.size());
   for (int i = 0; i < outer_loops.size(); ++i) {
     auto loop = outer_loops[i];
-    S2Point const *v0, *v1;
     DCHECK_GT(loop->num_edges(), 0);
-    loop->GetEdge(0, &v0, &v1);
-    index.GetContainingShapes(*v0, &ancestors[i]);
+    index.GetContainingShapes(loop->edge(0).v0, &ancestors[i]);
   }
   // Assign each outer loop to the component whose depth is one less.
   // Components at depth 0 become a single face.
@@ -880,8 +919,8 @@ static bool FindCrossingError(S2Shape const& shape,
   int b_len = shape.chain(bp.chain_id).length;
   int a_next = (ap.offset + 1 == a_len) ? 0 : ap.offset + 1;
   int b_next = (bp.offset + 1 == b_len) ? 0 : bp.offset + 1;
-  S2Point const& a2 = *shape.chain_edge(ap.chain_id, a_next).v1;
-  S2Point const& b2 = *shape.chain_edge(bp.chain_id, b_next).v1;
+  S2Point a2 = shape.chain_edge(ap.chain_id, a_next).v1;
+  S2Point b2 = shape.chain_edge(bp.chain_id, b_next).v1;
   if (a.v0() == b.v0() || a.v0() == b2) {
     // The second edge index is sometimes off by one, hence "near".
     error->Init(S2Error::POLYGON_LOOPS_SHARE_EDGE,

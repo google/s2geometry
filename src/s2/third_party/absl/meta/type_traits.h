@@ -259,7 +259,6 @@ using result_of_t = typename std::result_of<T>::type;
 
 }  // namespace absl
 
-// Temporary aliases while moving into the absl namespace.
 // TODO(user): Delete temporary aliases after namespace update.
 namespace gtl {
 template <typename... Ts>
@@ -274,5 +273,4 @@ using absl::is_trivially_copy_constructible;
 using absl::is_trivially_copy_assignable;
 
 }  // namespace gtl
-
 #endif  // S2_THIRD_PARTY_ABSL_META_TYPE_TRAITS_H_

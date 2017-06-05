@@ -31,7 +31,6 @@
 
 #include "s2/base/stringprintf.h"
 #include "s2/base/strtoint.h"
-#include "s2/strings/split.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -41,6 +40,7 @@
 #include "s2/s2region.h"
 #include "s2/s2testing.h"
 #include "s2/third_party/absl/base/integral_types.h"
+#include "s2/third_party/absl/strings/str_split.h"
 
 using std::max;
 using std::min;

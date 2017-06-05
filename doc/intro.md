@@ -57,21 +57,21 @@ class S1Angle {
  public:
   // These methods construct S1Angle objects from their measure in radians
   // or degrees.
-  static S1Angle Radians(double radians);
-  static S1Angle Degrees(double degrees);
-  static S1Angle E5(int32 e5);
-  static S1Angle E6(int32 e6);
-  static S1Angle E7(int32 e7);
+  static constexpr S1Angle Radians(double radians);
+  static constexpr S1Angle Degrees(double degrees);
+  static constexpr S1Angle E5(int32 e5);
+  static constexpr S1Angle E6(int32 e6);
+  static constexpr S1Angle E7(int32 e7);
 
   // The default constructor yields a zero angle.  This is useful for STL
   // containers and class methods with output arguments.
-  S1Angle();
+  constexpr S1Angle();
 
   // Return an angle larger than any finite angle.
-  static S1Angle Infinity();
+  static constexpr S1Angle Infinity();
 
   // A explicit shorthand for the default constructor.
-  static S1Angle Zero();
+  static constexpr S1Angle Zero();
 
   // Return the angle between two points, which is also equal to the distance
   // between these points on the unit sphere.  The points do not need to be
@@ -82,12 +82,15 @@ class S1Angle {
   // between two S2LatLng points.
   S1Angle(S2LatLng const& x, S2LatLng const& y);
 
-  double radians() const;
-  double degrees() const;
+  constexpr double radians() const;
+  constexpr double degrees() const;
 
   int32 e5() const;
   int32 e6() const;
   int32 e7() const;
+
+  // Return the absolute value of an angle.
+  S1Angle abs() const;
 
   // Return the angle normalized to the range (-180, 180] degrees.
   S1Angle Normalized() const;
@@ -168,7 +171,7 @@ class S2LatLng {
   // Convert a direction vector (not necessarily unit length) to an S2LatLng.
   explicit S2LatLng(S2Point const& p);
 
-  // Return an S2LatLng for which is_valid() will return false.
+  // Returns an S2LatLng for which is_valid() will return false.
   static S2LatLng Invalid();
 
   // Convenience functions -- shorter than calling S1Angle::Radians(), etc.
@@ -339,6 +342,9 @@ class S2LatLngRect : public S2Region {
   // Return true if the rectangle is a point, i.e. lo() == hi()
   bool is_point() const;
 
+  // Return true if the rectangle crosses the 180 degree longitude line.
+  bool is_inverted() const;
+
   // Return the k-th vertex of the rectangle (k = 0,1,2,3) in CCW order (lower
   // left, lower right, upper right, upper left).
   S2LatLng GetVertex(int k) const;
@@ -450,17 +456,14 @@ class S2LatLngRect : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2LatLngRect* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool Contains(S2Cell const& cell) const;
+  S2LatLngRect* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool Contains(S2Cell const& cell) const override;
 
   // This test is cheap but is NOT exact.  Use Intersects() if you want a more
   // accurate and more expensive test.
-  virtual bool MayIntersect(S2Cell const& cell) const;
-
-  virtual void Encode(Encoder* const encoder) const;
-  virtual bool Decode(Decoder* const decoder);
+  bool MayIntersect(S2Cell const& cell) const override;
 };
 ```
 
@@ -510,6 +513,7 @@ class S2Cap : public S2Region {
 
   // Accessor methods.
   S2Point const& center() const;
+  S1ChordAngle radius() const;
   double height() const;
 
   // Return the cap radius.  (This method is relatively expensive since only
@@ -572,7 +576,7 @@ class S2Cap : public S2Region {
   // cap.  Note that any expansion of the empty cap is still empty.
   S2Cap Expanded(S1Angle distance) const;
 
-  // Return the smallest cap that encloses this cap and "other".
+  // Return the smallest cap which encloses this cap and "other".
   S2Cap Union(S2Cap const& other) const;
 
   // The point "p" should be a unit-length vector.
@@ -581,11 +585,11 @@ class S2Cap : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2Cap* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool MayIntersect(S2Cell const& cell) const;
+  S2Cap* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool Contains(S2Cell const& cell) const override;
+  bool MayIntersect(S2Cell const& cell) const override;
 };
 ```
 
@@ -608,6 +612,8 @@ class S2Polyline : public S2Region {
   explicit S2Polyline(std::vector<S2Point> const& vertices);
   explicit S2Polyline(std::vector<S2LatLng> const& vertices);
 
+  ~S2Polyline();
+
   // Initialize a polyline that connects the given vertices. Empty polylines are
   // allowed.  Adjacent vertices should not be identical or antipodal.  All
   // vertices should be unit length.
@@ -617,11 +623,12 @@ class S2Polyline : public S2Region {
   // coordinates rather than S2Points.
   void Init(std::vector<S2LatLng> const& vertices);
 
-  ~S2Polyline();
-
   // Return true if the given vertices form a valid polyline.
   bool IsValid() const;
-  static bool IsValid(std::vector<S2Point> const& vertices);
+
+  // Returns true if this is *not* a valid polyline and sets "error"
+  // appropriately.  Otherwise returns false and leaves "error" unchanged.
+  bool FindValidationError(S2Error* error) const;
 
   // Accessor methods.
   int num_vertices() const;
@@ -675,10 +682,6 @@ class S2Polyline : public S2Region {
   // polyline.
   void SubsampleVertices(S1Angle tolerance, std::vector<int>* indices) const;
 
-  // Return true if two polylines have the same number of vertices, and
-  // corresponding vertex pairs are separated by no more than "max_error".
-  bool ApproxEquals(S2Polyline const* b, double max_error = 1e-15) const;
-
   // Return true if "covered" is within "max_error" of a contiguous subpath of
   // this polyline over its entire length.  Specifically, this method returns
   // true if this polyline has parameterization a:[0,1] -> S^2, "covered" has
@@ -695,14 +698,11 @@ class S2Polyline : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2Polyline* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool Contains(S2Cell const& cell) const { return false; }
-  virtual bool MayIntersect(S2Cell const& cell) const;
-
-  virtual void Encode(Encoder* const encoder) const;
-  virtual bool Decode(Decoder* const decoder);
+  S2Polyline* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool Contains(S2Cell const& cell) const override;
+  bool MayIntersect(S2Cell const& cell) const override;
 };
 ```
 
@@ -740,6 +740,17 @@ class S2Loop : public S2Region {
   // Convenience constructor that calls Init() with the given vertices.
   explicit S2Loop(std::vector<S2Point> const& vertices);
 
+  // Construct a loop corresponding to the given cell.
+  //
+  // Note that the loop and cell *do not* contain exactly the same set of
+  // points, because S2Loop and S2Cell have slightly different definitions of
+  // point containment.  For example, an S2Cell vertex is contained by all
+  // four neighboring S2Cells, but it is contained by exactly one of four
+  // S2Loops constructed from those cells.
+  explicit S2Loop(S2Cell const& cell);
+
+  ~S2Loop();
+
   // Initialize a loop with given vertices.  The last vertex is implicitly
   // connected to the first.  All points should be unit length.  Loops must
   // have at least 3 vertices (except for the "empty" and "full" loops, see
@@ -755,17 +766,6 @@ class S2Loop : public S2Region {
   // with no edges that contains all points).  See kEmpty() for details.
   static std::vector<S2Point> kFull();
 
-  // Construct a loop corresponding to the given cell.
-
-  // Note that the loop and cell *do not* contain exactly the same set of
-  // points, because S2Loop and S2Cell have slightly different definitions of
-  // point containment.  For example, an S2Cell vertex is contained by all
-  // four neighboring S2Cells, but it is contained by exactly one of four
-  // S2Loops constructed from those cells.
-  explicit S2Loop(S2Cell const& cell);
-
-  ~S2Loop();
-
   // Returns true if this is a valid loop.
   bool IsValid() const;
 
@@ -778,6 +778,11 @@ class S2Loop : public S2Region {
   // For convenience, we make two entire copies of the vertex list available:
   // vertex(n..2*n-1) is mapped to vertex(0..n-1), where n == num_vertices().
   S2Point const& vertex(int i) const;
+
+  // Like vertex(), but this method returns vertices in reverse order if the
+  // loop represents a polygon hole. This ensures that the interior of the
+  // polygon is always to the left of the vertex chain.
+  S2Point const& oriented_vertex(int i) const;
 
   // Return true if this is the special "empty" loop that contains no points.
   bool is_empty() const;
@@ -919,25 +924,25 @@ class S2Loop : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2Loop* Clone() const;
+  S2Loop* Clone() const override;
 
   // GetRectBound() returns essentially tight results, while GetCapBound()
   // might have a lot of extra padding.  Both bounds are conservative in that
   // if the loop contains a point P, then the bound contains P also.
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool MayIntersect(S2Cell const& cell) const;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool Contains(S2Cell const& cell) const override;
+  bool MayIntersect(S2Cell const& cell) const override;
 
   // Generally clients should not use S2Loop::Encode().  Instead they should
   // encode an S2Polygon, which unlike this method supports (lossless)
   // compression.
-  virtual void Encode(Encoder* const encoder) const;
+  void Encode(Encoder* const encoder) const override;
 
   // Decode a loop encoded with Encode() or EncodeCompressed().  These methods
   // may be called with loops that have already been initialized.
-  virtual bool Decode(Decoder* const decoder);
-  virtual bool DecodeWithinScope(Decoder* const decoder);
+  bool Decode(Decoder* const decoder) override;
+  bool DecodeWithinScope(Decoder* const decoder) override;
 };
 ```
 
@@ -996,6 +1001,7 @@ Polygons have the following restrictions:
 
 *   No loop may be empty. The full loop may appear only in the full polygon.
 
+
 ```c++
 class S2Polygon : public S2Region {
  public:
@@ -1013,6 +1019,9 @@ class S2Polygon : public S2Region {
 
   // Convenience constructor that calls Init(unique_ptr<S2Loop>).
   explicit S2Polygon(std::unique_ptr<S2Loop> loop);
+
+  // Destroys the polygon and frees its loops.
+  ~S2Polygon();
 
   // Create a polygon from a set of hierarchically nested loops.  The polygon
   // interior consists of the points contained by an odd number of loops.
@@ -1043,9 +1052,6 @@ class S2Polygon : public S2Region {
   // Makes a deep copy of the given source polygon.  The destination polygon
   // will be cleared if necessary.
   void Copy(S2Polygon const* src);
-
-  // Destroys the polygon and frees its loops.
-  ~S2Polygon();
 
   // Returns true if this is a valid polygon (including checking whether all
   // the loops are themselves valid).
@@ -1156,7 +1162,7 @@ class S2Polygon : public S2Region {
   // (A - B) of the given two polygons.  The "vertex_merge_radius" determines
   // how close two vertices must be to be merged together and how close a
   // vertex must be to an edge in order to be spliced into it (see
-  // S2PolygonBuilder for details).  By default, the merge radius is just
+  // S2Builder for details).  By default, the merge radius is just
   // large enough to compensate for errors that occur when computing
   // intersection points between edges.
   void InitToIntersection(S2Polygon const* a, S2Polygon const* b);
@@ -1169,15 +1175,18 @@ class S2Polygon : public S2Region {
   void InitToApproxDifference(S2Polygon const* a, S2Polygon const* b,
                               S1Angle vertex_merge_radius);
 
-  // Initializes this polygon to a polygon that contains fewer vertices and
-  // is within tolerance of the polygon "a", with some caveats.  If
-  // "snap_to_cell_centers" is true, the vertices of this polygon will be
-  // snapped to the centers of leaf cells at the smallest level that is
-  // guaranteed to produce a valid polygon given the specified tolerance.
-  void InitToSimplified(S2Polygon const* a, S1Angle tolerance,
-                        bool snap_to_cell_centers);
+  // Initializes this polygon according to the given "snap_function" and
+  // reduces the number of vertices if possible, while ensuring that no vertex
+  // moves further than snap_function.snap_radius().
+  //
+  // Simplification works by replacing nearly straight chains of short edges
+  // with longer edges, in a way that preserves the topology of the input
+  // polygon up to the creation of degeneracies.  This means that loops or
+  // portions of loops may become degenerate, in which case they are removed.
+  void InitToSimplified(S2Polygon const& a,
+                        S2Builder::SnapFunction const& snap_function);
 
-  // Use S2PolygonBuilder to build this polygon by assembling the edges of a
+  // Use S2Builder to build this polygon by assembling the edges of a
   // given polygon after snapping its vertices to the center of leaf cells at
   // the given "snap_level".  The default snap level corresponds to a
   // tolerance of approximately 1.5cm on the surface of the Earth.
@@ -1269,22 +1278,22 @@ class S2Polygon : public S2Region {
   // GetRectBound() returns essentially tight results, while GetCapBound()
   // might have a lot of extra padding.  Both bounds are conservative in that
   // if the loop contains a point P, then the bound contains P also.
-  virtual S2Polygon* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
+  S2Polygon* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
 
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool MayIntersect(S2Cell const& cell) const;
+  bool Contains(S2Cell const& cell) const override;
+  bool MayIntersect(S2Cell const& cell) const override;
 
   // Encode the polygon with about 4 bytes per vertex, assuming the vertices
   // have all been snapped to the centers of S2Cells at a given level
   // (typically with InitToSnapped).  The other vertices are stored using 24
   // bytes.  Decoding a polygon encoded this way always returns the original
   // polygon, without any loss of precision.
-  virtual void Encode(Encoder* const encoder) const;
+  void Encode(Encoder* const encoder) const override;
 
   // Decode a polygon encoded with Encode().
-  virtual bool Decode(Decoder* const decoder);
+  bool Decode(Decoder* const decoder) override;
 };
 ```
 
@@ -1492,7 +1501,7 @@ class S2CellId {
   // the center of the leaf cell along the Hilbert curve.
   static int const kPosBits = 2 * kMaxLevel + 1;
 
-  explicit S2CellId(uint64 id) : id_(id) {}
+  explicit S2CellId(uint64 id);
 
   // The default constructor returns an invalid cell id.
   S2CellId();
@@ -1513,19 +1522,19 @@ class S2CellId {
   // the arguments represent.
   static S2CellId FromFacePosLevel(int face, uint64 pos, int level);
 
-  // Return a leaf cell containing the given point "p".  Usually there is
+  // Construct a leaf cell containing the given point "p".  Usually there is
   // exactly one such cell, but for points along the edge of a cell, any
   // adjacent cell may be (deterministically) chosen.  This is because
   // S2CellIds are considered to be closed sets.  The returned cell will
   // always contain the given point, i.e.
   //
-  //   S2Cell(S2CellId::FromPoint(p)).Contains(p)
+  //   S2Cell(S2CellId(p)).Contains(p)
   //
   // is always true.  The point "p" does not need to be normalized.
-  static S2CellId FromPoint(S2Point const& p);
+  explicit S2CellId(S2Point const& p);
 
-  // Return the leaf cell containing the given normalized S2LatLng.
-  static S2CellId FromLatLng(S2LatLng const& ll);
+  // Construct a leaf cell containing the given normalized S2LatLng.
+  explicit S2CellId(S2LatLng const& ll);
 
   // Return the direction vector corresponding to the center of the given
   // cell.  The vector returned by ToPointRaw is not necessarily unit length.
@@ -1709,6 +1718,10 @@ class S2Cell : public S2Region {
   // constructors are just convenience methods.
   explicit S2Cell(S2CellId id);
 
+  // Convenience constructors.  The S2LatLng must be normalized.
+  explicit S2Cell(S2Point const& p);
+  explicit S2Cell(S2LatLng const& ll);
+
   // Return the cell corresponding to the given S2 cube face.
   static S2Cell FromFace(int face);
 
@@ -1719,10 +1732,6 @@ class S2Cell : public S2Region {
   // is a static function rather than a constructor in order to indicate what
   // the arguments represent.
   static S2Cell FromFacePosLevel(int face, uint64 pos, int level);
-
-  // Convenience methods.  The S2LatLng must be normalized.
-  explicit S2Cell(S2Point const& p);
-  explicit S2Cell(S2LatLng const& ll);
 
   S2CellId id() const;
   int face() const;
@@ -1783,6 +1792,9 @@ class S2Cell : public S2Region {
   // the point is inside the cell.
   S1ChordAngle GetDistance(S2Point const& target) const;
 
+  // Return the distance from the cell boundary to the given point.
+  S1ChordAngle GetBoundaryDistance(S2Point const& target) const;
+
   // Return the minimum distance from the cell to the given edge AB.  Returns
   // zero if the edge intersects the cell interior.
   S1ChordAngle GetDistanceToEdge(S2Point const& a, S2Point const& b) const;
@@ -1802,12 +1814,12 @@ class S2Cell : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2Cap* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool MayIntersect(S2Cell const& cell) const;
-  virtual bool VirtualContainsPoint(S2Point const& p);
+  S2Cell* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool Contains(S2Cell const& cell) const override;
+  bool MayIntersect(S2Cell const& cell) const override;
+  bool VirtualContainsPoint(S2Point const& p) override;
 };
 ```
 
@@ -1954,12 +1966,12 @@ class S2CellUnion : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
-  virtual S2Cap* Clone() const;
-  virtual S2Cap GetCapBound() const;
-  virtual S2LatLngRect GetRectBound() const;
-  virtual bool Contains(S2Cell const& cell) const;
-  virtual bool MayIntersect(S2Cell const& cell) const;
-  virtual bool VirtualContainsPoint(S2Point const& p);
+  S2CellUnion* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool Contains(S2Cell const& cell) const override;
+  bool MayIntersect(S2Cell const& cell) const override;
+  bool VirtualContainsPoint(S2Point const& p) override;
 };
 ```
 

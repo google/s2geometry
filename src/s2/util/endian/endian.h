@@ -55,7 +55,8 @@ inline uint16 gbswap_16(uint16 host_int) {
 #else
 
 inline uint64 gbswap_64(uint64 host_int) {
-#if defined(__GNUC__) && defined(__x86_64__) && !defined(__APPLE__)
+#if defined(__GNUC__) && defined(__x86_64__) && \
+    !(defined(__APPLE__) && defined(__MACH__))
   // Adapted from /usr/include/byteswap.h.  Not available on Mac.
   if (__builtin_constant_p(host_int)) {
     return __bswap_constant_64(host_int);
@@ -117,9 +118,9 @@ inline uint64 ghtonll(uint64 x) { return x; }
 
 // ntoh* and hton* are the same thing for any size and bytesex,
 // since the function is an involution, i.e., its own inverse.
-#define gntohl(x) ghtonl(x)
-#define gntohs(x) ghtons(x)
-#define gntohll(x) ghtonll(x)
+inline uint16 gntohs(uint16 x) { return ghtons(x); }
+inline uint32 gntohl(uint32 x) { return ghtonl(x); }
+inline uint64 gntohll(uint64 x) { return ghtonll(x); }
 
 #ifndef ntohll
 #define ntohll(x) htonll(x)
@@ -187,7 +188,7 @@ class LittleEndian {
   static uint128 FromHost128(uint128 x) { return x; }
   static uint128 ToHost128(uint128 x) { return x; }
 
-  static bool IsLittleEndian() { return true; }
+  static constexpr bool IsLittleEndian() { return true; }
 
 #elif defined IS_BIG_ENDIAN
 
@@ -203,7 +204,7 @@ class LittleEndian {
   static uint128 FromHost128(uint128 x) { return gbswap_128(x); }
   static uint128 ToHost128(uint128 x) { return gbswap_128(x); }
 
-  static bool IsLittleEndian() { return false; }
+  static constexpr bool IsLittleEndian() { return false; }
 
 #endif /* ENDIAN */
 
@@ -360,7 +361,7 @@ class BigEndian {
   static uint128 FromHost128(uint128 x) { return gbswap_128(x); }
   static uint128 ToHost128(uint128 x) { return gbswap_128(x); }
 
-  static bool IsLittleEndian() { return true; }
+  static constexpr bool IsLittleEndian() { return true; }
 
 #elif defined IS_BIG_ENDIAN
 
@@ -376,7 +377,7 @@ class BigEndian {
   static uint128 FromHost128(uint128 x) { return x; }
   static uint128 ToHost128(uint128 x) { return x; }
 
-  static bool IsLittleEndian() { return false; }
+  static constexpr bool IsLittleEndian() { return false; }
 
 #endif /* ENDIAN */
 

@@ -33,6 +33,7 @@ class S2LatLng;
 class S2Loop;
 class S2Polygon;
 class S2Polyline;
+namespace s2shapeutil { class LaxPolygon; }
 
 namespace s2textformat {
 
@@ -75,6 +76,18 @@ std::unique_ptr<S2Polygon> MakePolygon(string const& str);
 // Like MakePolygon(), except that it does not normalize loops (i.e., it
 // gives you exactly what you asked for).
 std::unique_ptr<S2Polygon> MakeVerbatimPolygon(string const& str);
+
+// Parses a string in the same format as MakePolygon, except that loops must
+// be oriented so that the interior of the loop is always on the left, and
+// polygons with degeneracies are supported.  As with MakePolygon, "full"
+// denotes the full polygon and "empty" is not allowed (instead, create a
+// polygon with no loops).
+//
+// This method does not return std::unique_ptr<T> in order to be compatible
+// with S2ShapeIndex::Add.  Example usage:
+//
+//     index.Add(s2textformat::MakeLaxPolygon("0:0"));
+s2shapeutil::LaxPolygon* MakeLaxPolygon(string const& str);
 
 // Parse a string in the same format as MakeLatLngRect, and return the
 // corresponding vector of S2LatLng points.

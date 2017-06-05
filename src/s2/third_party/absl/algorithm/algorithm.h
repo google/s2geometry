@@ -13,7 +13,12 @@
 // limitations under the License.
 //
 
-// This file contains Google extensions to the standard <algorithm> C++ header.
+// -----------------------------------------------------------------------------
+// File: algorithm.h
+// -----------------------------------------------------------------------------
+//
+// This header file contains Google extensions to the standard <algorithm> C++
+// header.
 
 #ifndef S2_THIRD_PARTY_ABSL_ALGORITHM_ALGORITHM_H_
 #define S2_THIRD_PARTY_ABSL_ALGORITHM_ALGORITHM_H_
@@ -25,7 +30,7 @@ namespace absl {
 
 namespace internal_algorithm {
 
-// Performs comparisons with operator==, similar to C++14's std::equal_to<>.
+// Performs comparisons with operator==, similar to C++14's `std::equal_to<>`.
 struct EqualTo {
   template <typename T, typename U>
   bool operator()(const T& a, const U& b) const {
@@ -56,16 +61,20 @@ bool EqualImpl(InputIter1 first1, InputIter1 last1, InputIter2 first2,
 
 }  // namespace internal_algorithm
 
+// -----------------------------------------------------------------------------
+// Function Template: equal()
+// -----------------------------------------------------------------------------
+//
 // Compares the equality of two ranges specified by pairs of iterators, using
 // the given predicate, returning true iff for each corresponding iterator i1
 // and i2 in the first and second range respectively, pred(*i1, *i2) == true
 //
-// This comparison takes at most min(last1 - first1, last2 - first2) invocations
-// of the predicate.  Additionally, if InputIter1 and InputIter2 are both
-// random-access iterators, and last1 - first1 != last2 - first2, then the
-// predicate is never invoked and the function returns false.
+// This comparison takes at most min(`last1` - `first1`, `last2` - `first2`)
+// invocations of the predicate. Additionally, if InputIter1 and InputIter2 are
+// both random-access iterators, and `last1` - `first1` != `last2` - `first2`,
+// then the predicate is never invoked and the function returns false.
 //
-// This is a C++11-compatible implementation of C++14 std::equal.  See
+// This is a C++11-compatible implementation of C++14 `std::equal`.  See
 // http://en.cppreference.com/w/cpp/algorithm/equal for more information.
 template <typename InputIter1, typename InputIter2, typename Pred>
 bool equal(InputIter1 first1, InputIter1 last1, InputIter2 first2,
@@ -81,15 +90,20 @@ bool equal(InputIter1 first1, InputIter1 last1, InputIter2 first2,
 template <typename InputIter1, typename InputIter2>
 bool equal(InputIter1 first1, InputIter1 last1, InputIter2 first2,
            InputIter2 last2) {
-  return equal(first1, last1, first2, last2, internal_algorithm::EqualTo{});
+  return absl::equal(first1, last1, first2, last2,
+                     internal_algorithm::EqualTo{});
 }
 
-// Performs a linear search for "value" using the iterator "first" up to
-// but not including "last", returning true if [first, last) contains an element
-// equal to value.
+// -----------------------------------------------------------------------------
+// Function Template: linear_search()
+// -----------------------------------------------------------------------------
+//
+// Performs a linear search for `value` using the iterator `first` up to
+// but not including `last`, returning true if [`first`, `last`) contains an
+// element equal to `value`.
 //
 // A linear search is of O(n) complexity which is guaranteed to make at most
-// n = (last - first) comparisons. A linear search over short containers
+// n = (`last` - `first`) comparisons. A linear search over short containers
 // may be faster than a binary search, even when the container is sorted.
 template <typename InputIterator, typename EqualityComparable>
 bool linear_search(InputIterator first, InputIterator last,

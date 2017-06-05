@@ -125,27 +125,6 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 #define ABSL_DEPRECATED(message)
 #endif
 
-// ABCL_DEPRECATED will be replaced by ABSL_DEPRECATED once all usage are
-// replaced.
-#if defined(__clang__) && __cplusplus >= 201103L && defined(__has_warning)
-#define ABCL_DEPRECATED(message) __attribute__((deprecated(message)))  // NOLINT
-#endif
-
-#ifndef ABCL_DEPRECATED
-#define ABCL_DEPRECATED(message)
-#endif
-
-// GOOGLE_DEPRECATED will be replaced by ABSL_DEPRECATED once all usage are
-// replaced.
-#if defined(__clang__) && defined(LANG_CXX11) && defined(__has_warning)
-#define GOOGLE_DEPRECATED(message) \
-  __attribute__((deprecated(message)))  // NOLINT
-#endif
-
-#ifndef GOOGLE_DEPRECATED
-#define GOOGLE_DEPRECATED(message)
-#endif
-
 // The CLANG_BAD_CALL_IF macro can be used on a function overload to trap
 // bad calls: any call that matches the overload will cause a compile-time
 // error.  This uses a clang-specific "enable_if" attribute, as described at

@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-#include "s2/strings/split.h"
+#include "s2/third_party/absl/strings/str_split.h"
 
 #include <functional>
 #include <sstream>
@@ -31,6 +31,12 @@ std::vector<std::string> Split(
   while (std::getline(ss, item, delim)) {
     if (predicate(item))
       elems.push_back(std::move(item));
+  }
+  // If the text ends with a delim, getline will not give
+  // us the chance to add a final empty string.
+  if (text.empty() || *text.rbegin() == delim) {
+    if (predicate(std::string()))
+      elems.push_back(std::string());
   }
   return elems;
 }

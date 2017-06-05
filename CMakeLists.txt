@@ -76,7 +76,9 @@ file(GLOB S2FilesGlob
      src/s2/s2textformat.cc
      src/s2/sequence_lexicon.cc
      src/s2/strings/*.cc
+     src/s2/third_party/absl/numeric/*.cc
      src/s2/third_party/absl/port/internal/*.cc
+     src/s2/third_party/absl/strings/*.cc
      src/s2/util/bits/*.cc
      src/s2/util/coding/*.cc
      src/s2/util/hash/*.cc
@@ -105,11 +107,14 @@ install(FILES src/s2/third_party/absl/algorithm/algorithm.h
         DESTINATION include/s2/third_party/absl/algorithm)
 install(FILES src/s2/third_party/absl/base/casts.h
               src/s2/third_party/absl/base/config.h
+              src/s2/third_party/absl/base/dynamic_annotations.h
+              src/s2/third_party/absl/base/gdb_scripting.h
               src/s2/third_party/absl/base/integral_types.h
               src/s2/third_party/absl/base/macros.h
               src/s2/third_party/absl/base/port.h
         DESTINATION include/s2/third_party/absl/base)
-install(FILES src/s2/third_party/absl/base/internal/port_hash.inc
+install(FILES src/s2/third_party/absl/base/internal/identity.h
+              src/s2/third_party/absl/base/internal/port_hash.inc
         DESTINATION include/s2/third_party/absl/base/internal)
 install(FILES src/s2/third_party/absl/container/inlined_vector.h
         DESTINATION include/s2/third_party/absl/container)

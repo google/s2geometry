@@ -446,8 +446,7 @@ class Vector3
                    c_[0] * vb.c_[1] - c_[1] * vb.c_[0]);
   }
 
-
-  // Return a vector orthogonal to this one
+  // Returns a unit vector orthogonal to this one.
   Vector3 Ortho() const {
     int k = LargestAbsComponent() - 1;
     if (k < 0) k = 2;

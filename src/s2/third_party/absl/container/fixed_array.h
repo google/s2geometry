@@ -1,4 +1,4 @@
-// Copyright 2005 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,12 +13,12 @@
 // limitations under the License.
 //
 
-
 #ifndef S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_
 #define S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_
 
 #include <cstddef>
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <initializer_list>
 #include <iterator>
@@ -27,9 +27,10 @@
 #include <new>
 #include <type_traits>
 
-#include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/algorithm/algorithm.h"
+#include "s2/third_party/absl/base/dynamic_annotations.h"
+#include "s2/third_party/absl/base/gdb_scripting.h"
 #include "s2/third_party/absl/base/port.h"
-#include "s2/third_party/dynamic_annotations/dynamic_annotations.h"
 
 // A FixedArray<T> represents a non-resizable array of T where the
 // length of the array does not need to be a compile time constant.
@@ -64,13 +65,22 @@
 // overrides in T.  As FixedArray is emulating stack-based variable-length
 // arrays, this should not be surprising.
 namespace absl {
-namespace fixed_array_internal {
-const std::size_t kInlineElementsDefault = static_cast<std::size_t>(-1);
-}  // namespace fixed_array_internal
 
-template <typename T, std::size_t inline_elements =
-                          fixed_array_internal::kInlineElementsDefault>
+constexpr static auto kFixedArrayUseDefault = static_cast<std::size_t>(-1);
+
+template <typename T, std::size_t inlined = kFixedArrayUseDefault>
 class FixedArray {
+  static constexpr std::size_t kInlineBytesDefault = 256;
+
+  // std::iterator_traits isn't guaranteed to be SFINAE-friendly until C++17,
+  // but this seems to be mostly pedantic.
+  template <typename Iter>
+  using EnableIfForwardIterator = typename std::enable_if<
+      std::is_convertible<
+          typename std::iterator_traits<Iter>::iterator_category,
+          std::forward_iterator_tag>::value,
+      int>::type;
+
  public:
   // For playing nicely with stl:
   using value_type = T;
@@ -83,16 +93,26 @@ class FixedArray {
   using difference_type = ptrdiff_t;
   using size_type = size_t;
 
+  static constexpr size_type inline_elements =
+      inlined == kFixedArrayUseDefault
+          ? kInlineBytesDefault / sizeof(value_type)
+          : inlined;
+
   // Creates an array object that can store "n" elements.
   // Note that trivially constructible elements will be uninitialized.
   // Please see class-level documentation above.
   explicit FixedArray(size_type n) : rep_(MakeRep(n)) { }
 
+  // Creates an array initialized with "n" copies of "val".
+  FixedArray(size_type n, const value_type& val) : rep_(MakeRep(n, val)) {}
+
   // Creates an array initialized with the elements from the input
   // range. The size will always be "std::distance(first, last)".
   // REQUIRES: Iter must be a forward_iterator or better.
-  template <typename Iter>
-  FixedArray(Iter first, Iter last) : rep_(MakeRep(first, last)) { }
+  // TODO(user) The same disambiguation in std::vector requires only
+  // InputIterator, not ForwardIterator.  Investigate this restriction.
+  template <typename Iter, EnableIfForwardIterator<Iter> = 0>
+  FixedArray(Iter first, Iter last) : rep_(MakeRep(first, last)) {}
 
   // Create the array from an initializer_list.
   FixedArray(std::initializer_list<T> init_list)
@@ -102,6 +122,10 @@ class FixedArray {
     CleanUpRep(&rep_);
   }
 
+  // Copy and move construction and assignment are deleted because (1) you can't
+  // copy or move an array, (2) assignment breaks the invariant that a
+  // FixedArray's size never changes, and (3) there's no clear answer as to what
+  // should happen to a moved-from FixedArray.
   FixedArray(const FixedArray&) = delete;
   void operator=(const FixedArray&) = delete;
 
@@ -148,6 +172,33 @@ class FixedArray {
 
   const_iterator begin() const { return get(); }
   const_iterator end() const { return get() + size(); }
+
+  // Relational operators.  Equality operators are elementwise using operator==,
+  // while order operators order FixedArrays lexicographically.
+  friend bool operator==(const FixedArray& lhs, const FixedArray& rhs) {
+    return absl::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+  }
+
+  friend bool operator!=(const FixedArray& lhs, const FixedArray& rhs) {
+    return !(lhs == rhs);
+  }
+
+  friend bool operator<(const FixedArray& lhs, const FixedArray& rhs) {
+    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
+                                        rhs.end());
+  }
+
+  friend bool operator>(const FixedArray& lhs, const FixedArray& rhs) {
+    return rhs < lhs;
+  }
+
+  friend bool operator<=(const FixedArray& lhs, const FixedArray& rhs) {
+    return !(rhs < lhs);
+  }
+
+  friend bool operator>=(const FixedArray& lhs, const FixedArray& rhs) {
+    return !(lhs < rhs);
+  }
 
  private:
   // ----------------------------------------
@@ -204,78 +255,46 @@ class FixedArray {
   // Allocate some space, not an array of elements of type T, so that we can
   // skip calling the T constructors and destructors for space we never use.
   // How many elements should we store inline?
-  //   a. If not specified, use a default of 256 bytes (256 bytes
-  //      seems small enough to not cause stack overflow or unnecessary
-  //      stack pollution, while still allowing stack allocation for
-  //      reasonably long character arrays.
+  //   a. If not specified, use a default of kInlineBytesDefault bytes (This is
+  //   currently 256 bytes, which seems small enough to not cause stack overflow
+  //   or unnecessary stack pollution, while still allowing stack allocation for
+  //   reasonably long character arrays).
   //   b. Never use 0 length arrays (not ISO C++)
   //
   class InlineSpace {
+   public:
+    Holder* get() { return reinterpret_cast<Holder*>(space_.data()); }
+    void AnnotateConstruct(size_t n) const { Annotate(n, true); }
+    void AnnotateDestruct(size_t n) const { Annotate(n, false); }
+
+   private:
+#ifndef ADDRESS_SANITIZER
+    void Annotate(size_t, bool) const { }
+#else
+    void Annotate(size_t n, bool creating) const {
+      if (!n) return;
+      const void* bot = &left_redzone_;
+      const void* beg = space_.data();
+      const void* end = space_.data() + n;
+      const void* top = &right_redzone_ + 1;
+      // args: (beg, end, old_mid, new_mid)
+      if (creating) {
+        ANNOTATE_CONTIGUOUS_CONTAINER(beg, top, top, end);
+        ANNOTATE_CONTIGUOUS_CONTAINER(bot, beg, beg, bot);
+      } else {
+        ANNOTATE_CONTIGUOUS_CONTAINER(beg, top, end, top);
+        ANNOTATE_CONTIGUOUS_CONTAINER(bot, beg, bot, beg);
+      }
+    }
+#endif  // ADDRESS_SANITIZER
+
     using Buffer =
         typename std::aligned_storage<sizeof(Holder), alignof(Holder)>::type;
-    static const size_type kDefaultBytes = 256;
 
-    template <std::size_t N, typename Ignored>
-    struct Impl {
-      static const size_type kSize = N;
-      Buffer* get() { return space_; }
-      // Annotate left_redzone_, right_redzone_, and the unusable portion of
-      // space_ with ANNOTATE_CONTIGUOUS_CONTAINER.
-      void Annotate(size_t n, bool creating) const {
-#ifdef ADDRESS_SANITIZER
-        if (!n) return;
-        const void* bot = &left_redzone_;
-        const void* beg = &space_[0];
-        const void* end = &space_[n];
-        const void* top = &right_redzone_ + 1;
-        // args: (beg, end, old_mid, new_mid)
-        if (creating) {
-          ANNOTATE_CONTIGUOUS_CONTAINER(beg, top, top, end);
-          ANNOTATE_CONTIGUOUS_CONTAINER(bot, beg, beg, bot);
-        } else {
-          ANNOTATE_CONTIGUOUS_CONTAINER(beg, top, end, top);
-          ANNOTATE_CONTIGUOUS_CONTAINER(bot, beg, bot, beg);
-        }
-#endif  // ADDRESS_SANITIZER
-      }
-
-     private:
-      static_assert(kSize > 0, "kSize must be positive");
-      ADDRESS_SANITIZER_REDZONE(left_redzone_);
-      Buffer space_[kSize];
-      ADDRESS_SANITIZER_REDZONE(right_redzone_);
-    };
-
-    // specialize for 0-element case: no 'space_' array.
-    template <typename Ignored>
-    struct Impl<0, Ignored> {
-      static const size_type kSize = 0;
-      Buffer* get() {
-        static Buffer buffer;
-        return &buffer;
-      }
-      void Annotate(size_t n, bool creating) const {}
-    };
-
-    // specialize for kInlineElementsDefault case.
-    // Use up to kDefaultBytes.
-    template <typename Ignored>
-    struct Impl<fixed_array_internal::kInlineElementsDefault, Ignored>
-        : Impl<kDefaultBytes / sizeof(value_type), Ignored> {};
-
-    using ImplType = Impl<inline_elements, void>;
-
-    ImplType space_;
-
-   public:
-    static const size_type kSize = ImplType::kSize;
-
-    Holder* get() { return reinterpret_cast<Holder*>(&space_.get()[0]); }
-    void AnnotateConstruct(size_t n) const { space_.Annotate(n, true); }
-    void AnnotateDestruct(size_t n) const { space_.Annotate(n, false); }
+    ADDRESS_SANITIZER_REDZONE(left_redzone_);
+    std::array<Buffer, inline_elements> space_;
+    ADDRESS_SANITIZER_REDZONE(right_redzone_);
   };
-
-  static const size_type kInlineElements = InlineSpace::kSize;
 
   Holder* inline_space() { return inline_space_.get(); }
 
@@ -300,32 +319,45 @@ class FixedArray {
     for (Holder* p = rep->end(); p != rep->begin(); )
       (--p)->~Holder();
     if (IsAllocated(rep->size())) {
-      Deallocate(rep->begin());
+      ::operator delete[](rep->begin());
     } else {
       inline_space_.AnnotateDestruct(rep->size());
     }
   }
 
+  void MaybeAnnotateInlineSpace(size_t n) {
+    if (!IsAllocated(n)) {
+      inline_space_.AnnotateConstruct(n);
+    }
+  }
+
+  Holder* MakeHolder(size_type n) {
+    return IsAllocated(n) ? Allocate(n) : inline_space();
+  }
+
+  Rep MakeRep(size_type n, const value_type& val) {
+    Holder* pa = MakeHolder(n);
+    std::uninitialized_fill_n(pa, n, val);
+    MaybeAnnotateInlineSpace(n);
+    return Rep(n, pa);
+  }
+
   Rep MakeRep(size_type n) {
-    Holder *pa = IsAllocated(n) ? Allocate(n) : inline_space();
+    Holder* pa = MakeHolder(n);
     // Loop optimizes to nothing for trivially constructible T.
     for (Holder *p = pa; p != pa + n; ++p)
       // Note: no parens: default init only.
       // Also note '::' to avoid Holder class placement new operator.
       ::new(p) Holder;
-    if (!IsAllocated(n)) {
-      inline_space_.AnnotateConstruct(n);
-    }
+    MaybeAnnotateInlineSpace(n);
     return Rep(n, pa);
   }
 
   template <typename Iter>
   Rep MakeRep(Iter first, Iter last, std::forward_iterator_tag) {
     size_type n = std::distance(first, last);
-    Holder *pa = IsAllocated(n) ? Allocate(n) : inline_space();
-    if (!IsAllocated(n)) {
-      inline_space_.AnnotateConstruct(n);
-    }
+    Holder* pa = MakeHolder(n);
+    MaybeAnnotateInlineSpace(n);
     std::uninitialized_copy(first, last, AsValue(pa));
     return Rep(n, pa);
   }
@@ -340,11 +372,7 @@ class FixedArray {
     return static_cast<Holder*>(::operator new[](n * sizeof(Holder)));
   }
 
-  void Deallocate(Holder* p) {
-    return ::operator delete[](p);
-  }
-
-  bool IsAllocated(size_type n) const { return n > kInlineElements; }
+  bool IsAllocated(size_type n) const { return n > inline_elements; }
 
   // ----------------------------------------
   // Data members
@@ -353,15 +381,14 @@ class FixedArray {
   InlineSpace inline_space_;
 };
 
+template <typename T, size_t N>
+constexpr std::size_t FixedArray<T, N>::inline_elements;
+
+template <typename T, size_t N>
+constexpr std::size_t FixedArray<T, N>::kInlineBytesDefault;
+
 }  // namespace absl
 
-// Temporary aliases while moving into the absl namespace.
-// TODO(user): Delete temporary aliases after namespace update.
-namespace gtl {
-namespace fixed_array {
-using absl::fixed_array_internal::kInlineElementsDefault;
-}
-}
 using absl::FixedArray;
 
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_

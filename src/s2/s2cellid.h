@@ -80,7 +80,7 @@ class S2CellId {
   static int const kPosBits = 2 * kMaxLevel + 1;
   static int const kMaxSize = 1 << kMaxLevel;
 
-  explicit S2CellId(uint64 id) : id_(id) {}
+  explicit constexpr S2CellId(uint64 id) : id_(id) {}
 
   // Construct a leaf cell containing the given point "p".  Usually there is
   // is exactly one such cell, but for points along the edge of a cell, any
@@ -97,12 +97,12 @@ class S2CellId {
   explicit S2CellId(S2LatLng const& ll);
 
   // The default constructor returns an invalid cell id.
-  S2CellId() : id_(0) {}
-  static S2CellId None() { return S2CellId(); }
+  constexpr S2CellId() : id_(0) {}
+  static constexpr S2CellId None() { return S2CellId(); }
 
   // Returns an invalid cell id guaranteed to be larger than any
   // valid cell id.  Useful for creating indexes.
-  static S2CellId Sentinel() { return S2CellId(~uint64(0)); }
+  static constexpr S2CellId Sentinel() { return S2CellId(~uint64(0)); }
 
   // Return the cell corresponding to a given S2 cube face.
   static S2CellId FromFace(int face);

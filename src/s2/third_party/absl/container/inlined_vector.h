@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 // limitations under the License.
 //
 
-//
 // An InlinedVector<T,N,A> is like a std::vector<T,A>, except that storage
 // for sequences of length <= N are provided inline without requiring
 // any heap allocation.  Typically N is very small (e.g., 4) so that
@@ -38,11 +37,11 @@
 #include <type_traits>
 #include <utility>
 
-#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/algorithm/algorithm.h"
 #include "s2/third_party/absl/base/port.h"
+#include "s2/third_party/absl/base/gdb_scripting.h"
 
-
+DEFINE_GDB_AUTO_SCRIPT("devtools/gdb/component/core/inlined_vector.py")
 
 namespace absl {
 
@@ -1119,11 +1118,9 @@ auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
 }
 }  // namespace absl
 
-// Temporary aliases while moving into the absl namespace.
 // TODO(user): Delete temporary aliases after namespace update.
 namespace gtl {
 using absl::InlinedVector;
 using absl::InlinedVectorNType;
 }
-
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_

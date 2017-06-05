@@ -32,7 +32,6 @@
 
 #include "s2/base/stringprintf.h"
 #include "s2/strings/serialize.h"
-#include "s2/strings/split.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -49,6 +48,7 @@
 #include "s2/s2textformat.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/strings/str_split.h"
 #include "s2/util/math/matrix3x3.h"
 
 using std::max;

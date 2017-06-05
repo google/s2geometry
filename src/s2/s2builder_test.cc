@@ -26,9 +26,9 @@
 #include <glog/log_severity.h>
 #include "s2/base/stringprintf.h"
 #include "s2/base/timer.h"
-#include "s2/strings/join.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/strings/str_join.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_layers.h"
 #include "s2/s2builderutil_snap_functions.h"
@@ -813,11 +813,7 @@ TEST(S2Builder, SimplifyDegenerateEdgeMergingHard) {
   // contains a degenerate edge in input edge order (e.g., the input order was
   // AB, BB, BC), then the degenerate edge is assigned to that edge chain.
   // Otherwise the edge is assigned to an arbitrary chain.
-  GraphOptions graph_options;
-  graph_options.set_edge_type(EdgeType::DIRECTED);
-  graph_options.set_duplicate_edges(GraphOptions::DuplicateEdges::KEEP);
-  graph_options.set_degenerate_edges(GraphOptions::DegenerateEdges::KEEP);
-  graph_options.set_sibling_pairs(GraphOptions::SiblingPairs::KEEP);
+  GraphOptions graph_options;  // Default options keep everything.
   S2Builder::Options options(IntLatLngSnapFunction(0));
   options.set_simplify_edge_chains(true);
   vector<char const*> input {
@@ -846,11 +842,7 @@ TEST(S2Builder, SimplifyDegenerateEdgeMergingMultipleLayers) {
   // when multiple edge chains in different layers are simplified in the same
   // way (i.e., yielding a set of identical or reversed edges in different
   // layers).
-  GraphOptions graph_options;
-  graph_options.set_edge_type(EdgeType::DIRECTED);
-  graph_options.set_duplicate_edges(GraphOptions::DuplicateEdges::KEEP);
-  graph_options.set_degenerate_edges(GraphOptions::DegenerateEdges::KEEP);
-  graph_options.set_sibling_pairs(GraphOptions::SiblingPairs::KEEP);
+  GraphOptions graph_options;  // Default options keep everything.
   S2Builder::Options options(IntLatLngSnapFunction(0));
   options.set_simplify_edge_chains(true);
 

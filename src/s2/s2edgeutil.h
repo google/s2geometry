@@ -85,15 +85,17 @@ class S2EdgeUtil {
     // This function determines whether the edge AB intersects the edge CD.
     // Returns +1 if AB crosses CD at a point that is interior to both edges.
     // Returns  0 if any two vertices from different edges are the same.
-    // Returns -1 if there is no crossing.
-    // Returns -1 or 0 if either edge is degenerate (A == B or C == D).
+    // Returns -1 otherwise.
+    //
+    // Note that if an edge is degenerate (A == B or C == D), the return value
+    // is 0 if two vertices from different edges are the same and -1 otherwise.
     //
     // Properties of CrossingSign:
     //
     //  (1) CrossingSign(b,a,c,d) == CrossingSign(a,b,c,d)
     //  (2) CrossingSign(c,d,a,b) == CrossingSign(a,b,c,d)
     //  (3) CrossingSign(a,b,c,d) == 0 if a==c, a==d, b==c, b==d
-    //  (3) CrossingSign(a,b,c,d) <= 0 if a==b or c==d
+    //  (3) CrossingSign(a,b,c,d) <= 0 if a==b or c==d (see above)
     //
     // This function implements an exact, consistent perturbation model such
     // that no three points are ever considered to be collinear.  This means
