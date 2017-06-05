@@ -16,15 +16,19 @@
 #include "s2/s2textformat.h"
 
 #include <vector>
-#include "s2/strings/split.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/strings/str_split.h"
 #include "s2/s1angle.h"
 #include "s2/s2latlng.h"
 #include "s2/s2loop.h"
 #include "s2/s2polyline.h"
+#include "s2/s2shapeutil.h"
 #include "s2/s2testing.h"
 
+using std::unique_ptr;
 using std::vector;
+
+using LaxPolygon = s2shapeutil::LaxPolygon;
 
 namespace {
 
@@ -110,6 +114,25 @@ TEST(ToString, EmptyPolyline) {
 TEST(ToString, EmptyPointVector) {
   vector<S2Point> points;
   EXPECT_EQ("", s2textformat::ToString(points));
+}
+
+TEST(MakeLaxPolygon, Empty) {
+  unique_ptr<LaxPolygon> shape(s2textformat::MakeLaxPolygon(""));
+  EXPECT_EQ(0, shape->num_loops());
+}
+
+TEST(MakeLaxPolygon, Full) {
+  unique_ptr<LaxPolygon> shape(s2textformat::MakeLaxPolygon("full"));
+  EXPECT_EQ(1, shape->num_loops());
+  EXPECT_EQ(0, shape->num_loop_vertices(0));
+}
+
+TEST(MakeLaxPolygon, FullWithHole) {
+  unique_ptr<LaxPolygon> shape(s2textformat::MakeLaxPolygon("full; 0:0"));
+  EXPECT_EQ(2, shape->num_loops());
+  EXPECT_EQ(0, shape->num_loop_vertices(0));
+  EXPECT_EQ(1, shape->num_loop_vertices(1));
+  EXPECT_EQ(1, shape->num_edges());
 }
 
 }  // namespace

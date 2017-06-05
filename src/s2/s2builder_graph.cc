@@ -30,6 +30,7 @@
 #include "s2/s2predicates.h"
 
 using std::make_pair;
+using std::max;
 using std::min;
 using std::pair;
 using std::vector;
@@ -41,17 +42,17 @@ using DuplicateEdges = GraphOptions::DuplicateEdges;
 using SiblingPairs = GraphOptions::SiblingPairs;
 
 Graph::Graph(GraphOptions const& options,
-             vector<S2Point> const& vertices,
-             vector<Edge> const& edges,
-             vector<InputEdgeIdSetId> const& input_edge_id_set_ids,
-             IdSetLexicon const& input_edge_id_set_lexicon,
-             vector<LabelSetId> const& label_set_ids,
-             IdSetLexicon const& label_set_lexicon)
-    : options_(options), num_vertices_(vertices.size()), vertices_(vertices),
-      edges_(edges), input_edge_id_set_ids_(input_edge_id_set_ids),
-      input_edge_id_set_lexicon_(input_edge_id_set_lexicon),
-      label_set_ids_(label_set_ids),
-      label_set_lexicon_(label_set_lexicon) {
+             vector<S2Point> const* vertices,
+             vector<Edge> const* edges,
+             vector<InputEdgeIdSetId> const* input_edge_id_set_ids,
+             IdSetLexicon const* input_edge_id_set_lexicon,
+             vector<LabelSetId> const* label_set_ids,
+             IdSetLexicon const* label_set_lexicon)
+    : options_(options), num_vertices_(vertices->size()), vertices_(*vertices),
+      edges_(*edges), input_edge_id_set_ids_(*input_edge_id_set_ids),
+      input_edge_id_set_lexicon_(*input_edge_id_set_lexicon),
+      label_set_ids_(*label_set_ids),
+      label_set_lexicon_(*label_set_lexicon) {
   DCHECK(std::is_sorted(edges_.begin(), edges_.end()));
 }
 
@@ -881,13 +882,13 @@ S2Builder::InputEdgeIdSetId Graph::EdgeProcessor::MergeInputIds(
 }
 
 void Graph::EdgeProcessor::Run(S2Error* error) {
-  // Walk through the two sorted arrays.  For each edge, gather all the
-  // duplicate copies of the edge in both directions (outgoing and incoming).
-  // Then decide what to do based on "options_" and how many copies of the edge
-  // there are in each direction.
   int num_edges = edges_.size();
   if (num_edges == 0) return;
 
+  // Walk through the two sorted arrays performing a merge join.  For each
+  // edge, gather all the duplicate copies of the edge in both directions
+  // (outgoing and incoming).  Then decide what to do based on "options_" and
+  // how many copies of the edge there are in each direction.
   int out = 0, in = 0;
   Edge const* out_edge = &edges_[out_edges_[out]];
   Edge const* in_edge = &edges_[in_edges_[in]];
@@ -910,18 +911,32 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
       DCHECK_EQ(n_out, n_in);
       if (options_.degenerate_edges() == DegenerateEdges::DISCARD) {
         continue;
-      } else if (options_.duplicate_edges() == DuplicateEdges::MERGE) {
-        AddEdge(edge, MergeInputIds(out_begin, out));
-      } else if (options_.sibling_pairs() == SiblingPairs::DISCARD) {
-        // This option merges the input ids of duplicate edges (see below).
-        AddEdges(n_out, edge, MergeInputIds(out_begin, out));
-      } else if (options_.edge_type() == EdgeType::UNDIRECTED &&
-                 (options_.sibling_pairs() == SiblingPairs::REQUIRE ||
-                  options_.sibling_pairs() == SiblingPairs::CREATE)) {
-        // When we have undirected edges or are guaranteed to have siblings,
+      }
+      if (options_.degenerate_edges() == DegenerateEdges::DISCARD_EXCESS &&
+          ((out_begin > 0 &&
+            edges_[out_edges_[out_begin - 1]].first == edge.first) ||
+           (out < num_edges && edges_[out_edges_[out]].first == edge.first) ||
+           (in_begin > 0 &&
+            edges_[in_edges_[in_begin - 1]].second == edge.first) ||
+           (in < num_edges && edges_[in_edges_[in]].second == edge.first))) {
+        continue;  // There were non-degenerate incident edges, so discard.
+      }
+      if (options_.edge_type() == EdgeType::UNDIRECTED &&
+          (options_.sibling_pairs() == SiblingPairs::REQUIRE ||
+           options_.sibling_pairs() == SiblingPairs::CREATE)) {
+        // When we have undirected edges and are guaranteed to have siblings,
         // we cut the number of edges in half (see s2builder.h).
-        DCHECK_EQ(0, n_out & 1);  // Number of edges is even
-        AddEdges(n_out / 2, edge, MergeInputIds(out_begin, out));
+        DCHECK_EQ(0, n_out & 1);  // Number of edges is always even.
+        AddEdges(options_.duplicate_edges() == DuplicateEdges::MERGE ?
+                 1 : (n_out / 2), edge, MergeInputIds(out_begin, out));
+      } else if (options_.duplicate_edges() == DuplicateEdges::MERGE) {
+        AddEdges(options_.edge_type() == EdgeType::UNDIRECTED ? 2 : 1,
+                 edge, MergeInputIds(out_begin, out));
+      } else if (options_.sibling_pairs() == SiblingPairs::DISCARD ||
+                 options_.sibling_pairs() == SiblingPairs::DISCARD_EXCESS) {
+        // Any SiblingPair option that discards edges causes the labels of all
+        // duplicate edges to be merged together (see s2builder.h).
+        AddEdges(n_out, edge, MergeInputIds(out_begin, out));
       } else {
         CopyEdges(out_begin, out);
       }
@@ -933,17 +948,34 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
       }
     } else if (options_.sibling_pairs() == SiblingPairs::DISCARD) {
       if (options_.edge_type() == EdgeType::DIRECTED) {
+        // If n_out == n_in: balanced sibling pairs
+        // If n_out < n_in:  unbalanced siblings, in the form AB, BA, BA
+        // If n_out > n_in:  unbalanced siblings, in the form AB, AB, BA
         if (n_out <= n_in) continue;
+        // Any option that discards edges causes the labels of all duplicate
+        // edges to be merged together (see s2builder.h).
         AddEdges(options_.duplicate_edges() == DuplicateEdges::MERGE ?
                  1 : (n_out - n_in), edge, MergeInputIds(out_begin, out));
       } else {
         if ((n_out & 1) == 0) continue;
         AddEdge(edge, MergeInputIds(out_begin, out));
       }
+    } else if (options_.sibling_pairs() == SiblingPairs::DISCARD_EXCESS) {
+      if (options_.edge_type() == EdgeType::DIRECTED) {
+        // See comments above.  The only difference is that if there are
+        // balanced sibling pairs, we want to keep one such pair.
+        if (n_out < n_in) continue;
+        AddEdges(options_.duplicate_edges() == DuplicateEdges::MERGE ?
+                 1 : max(1, n_out - n_in), edge, MergeInputIds(out_begin, out));
+      } else {
+        AddEdges((n_out & 1) ? 1 : 2, edge, MergeInputIds(out_begin, out));
+      }
     } else {
+      DCHECK(options_.sibling_pairs() == SiblingPairs::REQUIRE ||
+             options_.sibling_pairs() == SiblingPairs::CREATE);
       if (error->ok() && options_.sibling_pairs() == SiblingPairs::REQUIRE &&
-          options_.edge_type() == EdgeType::DIRECTED ? (n_out != n_in)
-                                                     : ((n_out & 1) != 0)) {
+          (options_.edge_type() == EdgeType::DIRECTED ? (n_out != n_in)
+                                                      : ((n_out & 1) != 0))) {
         error->Init(S2Error::BUILDER_MISSING_EXPECTED_SIBLING_EDGES,
                     "Expected all input edges to have siblings, "
                     "but some were missing");

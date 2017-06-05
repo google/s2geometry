@@ -1210,6 +1210,7 @@ class btree : public Params::key_compare {
   // amortized constant time. If not, the insertion will take amortized
   // logarithmic time as if a call to insert_unique(v) were made.
   iterator insert_hint_unique(iterator position, const value_type &v);
+  iterator insert_hint_unique(iterator position, mutable_value_type &&v);
 
   // Insert a range of values into the btree.
   template <typename InputIterator>
@@ -2017,6 +2018,32 @@ inline typename btree<P>::iterator btree<P>::insert_hint_unique(
     }
   }
   return insert_unique(v).first;
+}
+
+template <typename P>
+inline typename btree<P>::iterator btree<P>::insert_hint_unique(
+    iterator position, mutable_value_type &&v) {
+  if (!empty()) {
+    const key_type &key = params_type::key(v);
+    if (position == end() || compare_keys(key, position.key())) {
+      iterator prev = position;
+      if (position == begin() || compare_keys((--prev).key(), key)) {
+        // prev.key() < key < position.key()
+        return internal_insert(position, std::move(v));
+      }
+    } else if (compare_keys(position.key(), key)) {
+      iterator next = position;
+      ++next;
+      if (next == end() || compare_keys(key, next.key())) {
+        // position.key() < key < next.key()
+        return internal_insert(next, std::move(v));
+      }
+    } else {
+      // position.key() == key
+      return position;
+    }
+  }
+  return insert_unique(std::move(v)).first;
 }
 
 template <typename P>

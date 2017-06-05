@@ -401,12 +401,15 @@ class VertexIdEdgeVectorShape : public S2Shape {
 
   // S2Shape interface:
   int num_edges() const final { return edges_.size(); }
-  void GetEdge(int e, S2Point const** v0, S2Point const** v1) const final;
+  Edge edge(int e) const final {
+    return Edge(vertices_[edges_[e].first], vertices_[edges_[e].second]);
+  }
+  void GetEdge(int e, S2Point const** v0, S2Point const** v1) const final {}
   int dimension() const final { return 1; }
   bool contains_origin() const final { return false; }
   int num_chains() const final { return edges_.size(); }
   Chain chain(int i) const final { return Chain(i, 1); }
-  Edge chain_edge(int i, int j) const final;
+  Edge chain_edge(int i, int j) const final { return edge(i); }
   ChainPosition chain_position(int e) const final {
     return ChainPosition(e, 0);
   }
@@ -417,19 +420,6 @@ class VertexIdEdgeVectorShape : public S2Shape {
   vector<std::pair<int32, int32>> const& edges_;
   vector<S2Point> const& vertices_;
 };
-
-void VertexIdEdgeVectorShape::GetEdge(int e, S2Point const** v0,
-                                      S2Point const** v1) const {
-  auto const& edge = edges_[e];
-  *v0 = &vertices_[edge.first];
-  *v1 = &vertices_[edge.second];
-}
-
-S2Shape::Edge VertexIdEdgeVectorShape::chain_edge(int i, int j) const {
-  DCHECK_EQ(j, 0);
-  auto const& edge = edges_[i];
-  return Edge(&vertices_[edge.first], &vertices_[edge.second]);
-}
 
 bool S2Builder::Build(S2Error* error) {
   // CHECK rather than DCHECK because this is friendlier than crashing on the
@@ -1083,9 +1073,9 @@ void S2Builder::BuildLayers() {
     vector<InputEdgeIdSetId>& input_edge_ids = layer_input_edge_ids[i];
     vector<S2Point>& vertices = (layer_vertices.empty() ? sites_
                                                         : layer_vertices[i]);
-    Graph graph(options, vertices, edges, input_edge_ids,
-                input_edge_id_set_lexicon, label_set_ids_,
-                label_set_lexicon_);
+    Graph graph(options, &vertices, &edges, &input_edge_ids,
+                &input_edge_id_set_lexicon, &label_set_ids_,
+                &label_set_lexicon_);
     layers_[i]->Build(graph, error_);
 
     // Clear data as we go along to save space.
@@ -1155,15 +1145,15 @@ void S2Builder::AddSnappedEdges(
     vector<Edge>* edges, vector<InputEdgeIdSetId>* input_edge_ids,
     IdSetLexicon* input_edge_id_set_lexicon,
     vector<compact_array<InputVertexId>>* site_vertices) const {
-  bool keep_degenerate_edges = (options.degenerate_edges() ==
-                                GraphOptions::DegenerateEdges::KEEP);
+  bool discard_degenerate_edges = (options.degenerate_edges() ==
+                                   GraphOptions::DegenerateEdges::DISCARD);
   vector<SiteId> chain;
   for (InputEdgeId e = begin; e < end; ++e) {
     InputEdgeIdSetId id = input_edge_id_set_lexicon->AddSingleton(e);
     SnapEdge(e, &chain);
     MaybeAddInputVertex(input_edges_[e].first, chain[0], site_vertices);
     if (chain.size() == 1) {
-      if (!keep_degenerate_edges) continue;
+      if (discard_degenerate_edges) continue;
       AddSnappedEdge(chain[0], chain[0], id, options.edge_type(),
                      edges, input_edge_ids);
     } else {
@@ -1297,13 +1287,12 @@ void S2Builder::SimplifyEdgeChains(
 
   // The graph options are irrelevant for edge chain simplification, but we
   // try to set them appropriately anyway.
-  S2Builder::GraphOptions graph_options;
-  graph_options.set_edge_type(EdgeType::DIRECTED);
-  graph_options.set_degenerate_edges(GraphOptions::DegenerateEdges::KEEP);
-  graph_options.set_duplicate_edges(GraphOptions::DuplicateEdges::KEEP);
-  graph_options.set_sibling_pairs(GraphOptions::SiblingPairs::KEEP);
-  Graph graph(graph_options, sites_, merged_edges, merged_input_edge_ids,
-              *input_edge_id_set_lexicon, label_set_ids_, label_set_lexicon_);
+  S2Builder::GraphOptions graph_options(EdgeType::DIRECTED,
+                                        GraphOptions::DegenerateEdges::KEEP,
+                                        GraphOptions::DuplicateEdges::KEEP,
+                                        GraphOptions::SiblingPairs::KEEP);
+  Graph graph(graph_options, &sites_, &merged_edges, &merged_input_edge_ids,
+              input_edge_id_set_lexicon, &label_set_ids_, &label_set_lexicon_);
   EdgeChainSimplifier simplifier(
       *this, graph, merged_edge_layers, site_vertices,
       layer_edges, layer_input_edge_ids, input_edge_id_set_lexicon);

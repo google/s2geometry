@@ -36,13 +36,15 @@
 // these objects, except that polygon interiors must be disjoint from all
 // other geometry (including other polygon interiors).  If the input geometry
 // for a region does not meet this condition, it can be normalized by
-// computing its union first.
+// computing its union first.  Note that points or polylines are allowed to
+// coincide with the boundaries of polygons.
 //
 // Degeneracies are supported.  A polygon loop or polyline may consist of a
 // single edge from a vertex to itself, and polygons may contain "sibling
-// pairs" consisting of an edge and its corresponding reverse edge.  Polylines
-// may also be self-intersecting or contain duplicate edges, however each
-// polygon edge may occur only once in a given input region.
+// pairs" consisting of an edge and its corresponding reverse edge.  Polygons
+// must not have any duplicate edges (due to the requirement that polygon
+// interiors are disjoint), but polylines may have duplicate edges or can even
+// be self-intersecting.
 //
 // Points and polyline edges are treated as multisets: if the same point or
 // polyline edge appears multiple times in the input, it will appear multiple
@@ -92,6 +94,22 @@
 //    this is the only model where polygons that touch at a vertex or along an
 //    edge intersect.
 //
+// Operations between geometry of different dimensions are defined as follows:
+//
+//  - For UNION, the higher-dimensional primitive always wins.  For example
+//    the union of a closed polygon A with a polyline B that coincides with
+//    the boundary of A consists only of the polygon A.
+//
+//  - For INTERSECTION, the lower-dimensional primitive always wins.  For
+//    example, the intersection of a closed polygon A with a point B that
+//    coincides with a vertex of A consists only of the point B.
+//
+//  - For DIFFERENCE, higher-dimensional primitives are not affected by
+//    lower-dimensional ones.  For example, subtracting a point or polyline B
+//    from a polygon A yields the original polygon A.  (If instead you want to
+//    remove a degenerate portion of the polygon, then the input point or
+//    polyline must be modeled as a degenerate polygon instead.)
+//
 // Note the following differences between S2BoundaryOperation and the similar
 // S2MultiBoundaryOperation class:
 //
@@ -110,13 +128,6 @@
 //    regions, since it requires only one snapping operation for any number of
 //    input regions.
 //
-// CAVEATS:
-//
-//  - Currently this class requires that every S2Shape must consist of a
-//    single chain of edges, i.e. it must be a closed loop, a single polyline,
-//    or a single point (represented as a degenerate edge).
-//    TODO(ericv): Consider relaxing this requirement.
-//
 // Example usage:
 //   S2ShapeIndex a, b;  // Input geometry, e.g. containing polygons.
 //   S2Polygon polygon;  // Output geometry.
@@ -130,6 +141,19 @@
 //     LOG(ERROR) << error.text();
 //     ...
 //   }
+//
+// If the output includes objects of different dimensions, they can be
+// assembled into different layers with code like this:
+//
+//   vector<S2Point> points;
+//   vector<unique_ptr<S2Polyline>> polylines;
+//   S2Polygon polygon;
+//   S2BoundaryOperation op(
+//       S2BoundaryOperation::OpType::UNION,
+//       absl::MakeUnique<s2builderutil::PointVectorLayer>(&points),
+//       absl::MakeUnique<s2builderutil::S2PolylineVectorLayer>(&polylines),
+//       absl::MakeUnique<S2PolygonLayer>(&polygon));
+
 class S2BoundaryOperation {
  public:
   // The supported operation types.
@@ -153,19 +177,24 @@ class S2BoundaryOperation {
   // With Precision::EXACT, the boundary operation is evaluated using the
   // exact input geometry.  Predicates that use this option will produce exact
   // results; for example, they can distinguish between a polyline that barely
-  // intersects a polygon from one that barely misses it.  The corresponding
-  // operations (yielding a new geometric object) are implemented by computing
-  // the exact result and then snap rounding it.  (This is as close as it is
-  // possible to get to the exact result while requiring that vertex
-  // coordinates have type "double".)
+  // intersects a polygon from one that barely misses it.  Constructive
+  // operations (ones that yield new geometry, as opposed to predicates) are
+  // implemented by computing the exact result and then snap rounding it
+  // according to the given snap_function() (see below).  This is as close as
+  // it is possible to get to the exact result while requiring that vertex
+  // coordinates have type "double".
   //
-  // With Precision::SNAPPED, the input regions are snapped together before
+  // With Precision::SNAPPED, the input regions are snapped together *before*
   // the boundary operation is evaluated.  So for example, two polygons that
   // overlap slightly will be treated as though they share a common boundary,
   // and similarly two polygons that are slightly separated from each other
   // will be treated as though they share a common boundary.  Snapped results
   // are useful for dealing with points, since in S2 the only points that lie
   // exactly on a polyline or polygon edge are the endpoints of that edge.
+  //
+  // Conceptually, the difference between these two options is that with
+  // Precision::SNAPPED, the inputs are snap rounded (together), whereas with
+  // Precision::EXACT only the result is snap rounded.
   enum class Precision { EXACT, SNAPPED };
 
   // Forward declaration for Options::set_source_id_lexicon().  (This option
@@ -193,13 +222,13 @@ class S2BoundaryOperation {
     //
     // Default value: SEMI_OPEN.
     PolygonModel polygon_model() const;
-    // void set_polygon_model(PolygonModel model);
+    void set_polygon_model(PolygonModel model);
 
     // Defines whether polylines are considered to contain their vertices.
     //
     // Default value: CLOSED.
     PolylineModel polyline_model() const;
-    // void set_polyline_model(PolylineModel model);
+    void set_polyline_model(PolylineModel model);
 
     // Specifies whether the operation should use the exact input geometry
     // (Precision::EXACT), or whether the two input regions should be snapped
@@ -211,28 +240,30 @@ class S2BoundaryOperation {
 
     // If true, the input geometry is interpreted as representing nearby
     // geometry that has been snapped or simplified.  It then outputs a
-    // conservative result based on the value of polygon_model():
+    // conservative result based on the value of polygon_model() and
+    // polyline_model().  For the most part, this only affects the handling of
+    // degeneracies.
     //
-    // - If polygon_model() is OPEN, the result is as open as possible.  For
-    //   example, points never intersect polylines or other inputs points
-    //   under this model since if the points are moved slightly then the
-    //   intersection vanishes.  Similarly, two polylines intersect only if
-    //   one polyline properly crosses the other, since if the two polylines
-    //   touch without crossing then the intersection can be removed by
-    //   perturbing the input geometry slightly.
+    // - If the model is OPEN, the result is as open as possible.  For
+    //   example, the intersection of two identical degenerate shells is empty
+    //   under PolygonModel::OPEN because they could have been disjoint before
+    //   snapping.  Similarly, two identical degenerate polylines have an
+    //   empty intersection under PolylineModel::OPEN.
     //
-    // - In the CLOSED model, the result is as closed as possible.  For
-    //   example subtracting point or polylines from other points or polylines
-    //   will not have any effect, since the intersection can be removed by
-    //   perturbing the geometry slightly.  A more surprising result is that
-    //   subtracting a polygon from itself yields the boundary of that
-    //   polygon, because the first polygon may have properly contained the
-    //   second polygon before snapping.
+    // - If the model is CLOSED, the result is as closed as possible.  In the
+    //   case of the DIFFERENCE operation, this is equivalent to evaluating
+    //   A - B as Closure(A) - Interior(B).  For other operations, it affects
+    //   only the handling of degeneracies.  For example, the union of two
+    //   identical degenerate holes is empty under PolygonModel::CLOSED
+    //   (i.e., the hole disappears) because the holes could have been
+    //   disjoint before snapping.
     //
-    // - In the SEMI_OPEN model, the result is as degenerate as possible.  In
-    //   particular, degeneracies that coincide with the opposite region's
-    //   boundary are retained unless this would cause a duplicate edge to be
-    //   emitted.
+    // - If the model is SEMI_OPEN, the result is as degenerate as possible.
+    //   New degeneracies will not be created, but all degeneracies that
+    //   coincide with the opposite region's boundary are retained unless this
+    //   would cause a duplicate polygon edge to be created.  This model is
+    //   is very useful for working with input data that has both positive and
+    //   negative degeneracies (i.e., degenerate shells and holes).
     //
     // Default value: false.
     bool conservative_output() const;
@@ -284,7 +315,6 @@ class S2BoundaryOperation {
   S2BoundaryOperation(OpType op_type, bool* result_non_empty,
                       Options const& options = Options());
 
-#if 0
   // Specifies that the output boundary edges should be sent to three
   // different layers according to their dimension.  Points (represented by
   // degenerate edges) are sent to "layer0", polyline edges are sent to
@@ -297,12 +327,17 @@ class S2BoundaryOperation {
   // reclassify such polylines as points if desired, but this rule makes it
   // easier for clients that want to process point, polyline, and polygon
   // inputs differently.
+  //
+  // The layers are always built in the order 0, 1, 2, and all arguments to
+  // the Build() calls are guaranteed to be valid until the last call returns.
+  // All Graph objects have the same set of vertices and the same lexicon
+  // objects, in order to make it easier to write classes that process all the
+  // edges in parallel.
   S2BoundaryOperation(OpType op_type,
                       std::unique_ptr<S2Builder::Layer> layer0,
                       std::unique_ptr<S2Builder::Layer> layer1,
                       std::unique_ptr<S2Builder::Layer> layer2,
                       Options const& options = Options());
-#endif
 
   OpType op_type() const { return op_type_; }
 
@@ -322,6 +357,7 @@ class S2BoundaryOperation {
     int region_id() const { return region_id_; }
     int32 shape_id() const { return shape_id_; }
     int32 edge_id() const { return edge_id_; }
+    // TODO(ericv): Convert to functions, define all 6 comparisons.
     bool operator==(SourceId other) const;
     bool operator<(SourceId other) const;
 

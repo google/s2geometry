@@ -120,9 +120,7 @@ void S2ClosestEdgeQuery::AddInitialRange(S2ShapeIndex::Iterator const& first,
 }
 
 S2Point S2ClosestEdgeQuery::GetClosestPointOnEdge(int i) const {
-  S2Point const *v0, *v1;
-  GetEdge(i, &v0, &v1);
-  return target_->GetClosestPointOnEdge(*v0, *v1);
+  return target_->GetClosestPointOnEdge(edge(i));
 }
 
 S1Angle S2ClosestEdgeQuery::GetDistance(S2Point const& target) {
@@ -292,11 +290,9 @@ void S2ClosestEdgeQuery::InitQueue() {
 }
 
 void S2ClosestEdgeQuery::MaybeAddResult(S2Shape const& shape, int edge_id) {
-  S2Point const *v0, *v1;
-  shape.GetEdge(edge_id, &v0, &v1);
-
+  auto edge = shape.edge(edge_id);
   S1ChordAngle distance = max_distance_limit_;
-  if (!target_->UpdateMinDistance(*v0, *v1, &distance)) return;
+  if (!target_->UpdateMinDistance(edge.v0, edge.v1, &distance)) return;
 
   if (max_edges_ == 1) {
     // Optimization for the common case where only the closest edge is wanted.

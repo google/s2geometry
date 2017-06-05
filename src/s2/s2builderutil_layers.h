@@ -58,6 +58,7 @@
 #include "s2/s2debug.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 
@@ -389,6 +390,45 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
   Options options_;
 };
 
+// A layer type that collects degenerate edges as points.
+// This layer expects all edges to be degenerate. In case of finding
+// non-degenerate edges it sets S2Error but it still generates the
+// output with degenerate edges.
+class S2PointVectorLayer : public S2Builder::Layer {
+ public:
+  class Options {
+   public:
+    using DuplicateEdges = GraphOptions::DuplicateEdges;
+    Options();
+    explicit Options(DuplicateEdges duplicate_edges);
+
+    // Default value: DuplicateEdges::MERGE.
+    DuplicateEdges duplicate_edges() const;
+    void set_duplicate_edges(DuplicateEdges duplicate_edges);
+
+   private:
+    DuplicateEdges duplicate_edges_;
+  };
+
+  explicit S2PointVectorLayer(std::vector<S2Point>* points,
+                              Options const& options = Options());
+
+  using LabelSetIds = std::vector<LabelSetId>;
+  S2PointVectorLayer(std::vector<S2Point>* points, LabelSetIds* label_set_ids,
+                     IdSetLexicon* label_set_lexicon,
+                     Options const& options = Options());
+
+  // Layer interface:
+  GraphOptions graph_options() const override;
+  void Build(Graph const& g, S2Error* error) override;
+
+ private:
+  std::vector<S2Point>* points_;
+  LabelSetIds* label_set_ids_;
+  IdSetLexicon* label_set_lexicon_;
+  Options options_;
+};
+
 #if 0
 // A layer type that assembles edges into a polygon mesh.  A polygon mesh
 // represents a subdivision of the sphere into faces, where each face is
@@ -547,6 +587,22 @@ inline S2Debug S2PolylineVectorLayer::Options::s2debug_override() const {
 inline void S2PolylineVectorLayer::Options::set_s2debug_override(
     S2Debug s2debug_override) {
   s2debug_override_ = s2debug_override;
+}
+
+inline S2PointVectorLayer::Options::Options()
+    : duplicate_edges_(DuplicateEdges::MERGE) {}
+
+inline S2PointVectorLayer::Options::Options(DuplicateEdges duplicate_edges)
+    : duplicate_edges_(duplicate_edges) {}
+
+inline S2Builder::GraphOptions::DuplicateEdges
+S2PointVectorLayer::Options::duplicate_edges() const {
+  return duplicate_edges_;
+}
+
+inline void S2PointVectorLayer::Options::set_duplicate_edges(
+    S2Builder::GraphOptions::DuplicateEdges duplicate_edges) {
+  duplicate_edges_ = duplicate_edges;
 }
 
 }  // namespace s2builderutil

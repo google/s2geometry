@@ -41,7 +41,7 @@ class S2EdgeTessellator {
   // ------------------|------------------------|-----------------------
   // AppendProjected   | S2 geodesics           | Planar projected edges
   // AppendUnprojected | Planar projected edges | S2 geodesics
-  S2EdgeTessellator(S2::Projection const& projection, S1Angle tolerance);
+  S2EdgeTessellator(S2::Projection const* projection, S1Angle tolerance);
 
   // Converts the spherical geodesic edge AB to a chain of planar edges in the
   // given projection and appends the corresponding vertices to "vertices".

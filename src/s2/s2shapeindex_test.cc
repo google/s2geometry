@@ -122,15 +122,15 @@ void S2ShapeIndexTest::QuadraticValidate() {
       }
       // Otherwise check that the appropriate edges are present.
       for (int e = 0; e < shape->num_edges(); ++e) {
-        S2Point const *a, *b;
-        shape->GetEdge(e, &a, &b);
+        auto edge = shape->edge(e);
         for (int j = 0; j < skipped.num_cells(); ++j) {
-          ValidateEdge(*a, *b, skipped.cell_id(j), false);
+          ValidateEdge(edge.v0, edge.v1, skipped.cell_id(j), false);
         }
         if (!it.Done()) {
           bool has_edge = clipped && clipped->ContainsEdge(e);
-          ValidateEdge(*a, *b, it.id(), has_edge);
-          if (has_edge && it.id().level() < index_.GetEdgeMaxLevel(*a, *b)) {
+          ValidateEdge(edge.v0, edge.v1, it.id(), has_edge);
+          int max_level = index_.GetEdgeMaxLevel(edge);
+          if (has_edge && it.id().level() < max_level) {
             ++short_edges;
           }
         }
@@ -161,13 +161,11 @@ void S2ShapeIndexTest::ValidateInterior(S2Shape const* shape, S2CellId id,
   if (shape == nullptr || !shape->has_interior()) {
     EXPECT_FALSE(index_contains_center);
   } else {
-    S2Point a = S2::Origin(), b = id.ToPoint();
-    S2EdgeUtil::EdgeCrosser crosser(&a, &b);
+    S2EdgeUtil::CopyingEdgeCrosser crosser(S2::Origin(), id.ToPoint());
     bool contains_center = shape->contains_origin();
     for (int e = 0; e < shape->num_edges(); ++e) {
-      S2Point const *c, *d;
-      shape->GetEdge(e, &c, &d);
-      contains_center ^= crosser.EdgeOrVertexCrossing(c, d);
+      auto edge = shape->edge(e);
+      contains_center ^= crosser.EdgeOrVertexCrossing(edge.v0, edge.v1);
     }
     EXPECT_EQ(contains_center, index_contains_center);
   }

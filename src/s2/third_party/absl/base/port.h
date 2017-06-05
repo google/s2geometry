@@ -1,4 +1,4 @@
-// Copyright 1999 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,12 +13,28 @@
 // limitations under the License.
 //
 
-//
 // Various portability macros, type definitions, and inline functions
 // This file is used for both C and C++!
 //
 // These are weird things we need to do to get this compiling on
 // random systems (and on SWIG).
+//
+// This files is structured into the following high-level categories:
+// - Platform checks (OS, Compiler, C++, Library)
+// - Platform specific requirement
+//   - MSVC
+// - Feature macros
+// - Utility macros
+// - Utility functions
+// - Endianness
+// - Global variables
+// - Hash
+// - Type alias
+// - Predefined system/language macros
+// - Predefined system/language functions
+// - Compiler attributes (__attribute__)
+// - Performance optimization (alignment, prefetch, branch prediction)
+// - Obsolete
 //
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_PORT_H_
@@ -29,13 +45,41 @@
 #include <cstdlib>         // for free()
 
 #include "s2/third_party/absl/base/config.h"
+#include "s2/third_party/absl/base/integral_types.h"
 
-#if defined(__cplusplus)
-#include <cstddef>
-#if defined(_STLPORT_VERSION)
-#error "STLPort is not supported."
+// -----------------------------------------------------------------------------
+// Operating System Check
+// -----------------------------------------------------------------------------
+
+#if defined(__CYGWIN__)
+#error "Cygwin is not supported."
+#endif
+
+// -----------------------------------------------------------------------------
+// Compiler Check
+// -----------------------------------------------------------------------------
+
+// We support MSVC++ 14.0 update 2 and later.
+#if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 190023918
+#error "This package requires Visual Studio 2015 Update 2 or higher"
+#endif
+
+// We support gcc 4.7 and later.
+#if defined(__GNUC__) && !defined(__clang__)
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
+#error "This package requires gcc 4.7 or higher"
 #endif
 #endif
+
+// We support Apple Xcode clang 4.2.1 (version 421.11.65) and later.
+// This corresponds to Apple Xcode version 4.5.
+#if defined(__apple_build_version__) && __apple_build_version__ < 4211165
+#error "This package requires __apple_build_version__ of 4211165 or higher"
+#endif
+
+// -----------------------------------------------------------------------------
+// C++ Version Check
+// -----------------------------------------------------------------------------
 
 // Enforce C++11 as the minimum.  Note that Visual Studio has not
 // advanced __cplusplus despite being good enough for our purposes, so
@@ -46,10 +90,124 @@
 #endif
 #endif
 
-#if defined(__CYGWIN__)
-#error "Cygwin is not supported."
+// -----------------------------------------------------------------------------
+// C++ Standard Library Check
+// -----------------------------------------------------------------------------
+
+#if defined(__cplusplus)
+#include <cstddef>
+#if defined(_STLPORT_VERSION)
+#error "STLPort is not supported."
+#endif
 #endif
 
+// -----------------------------------------------------------------------------
+// MSVC Specific Requirements
+// -----------------------------------------------------------------------------
+
+#ifdef _MSC_VER /* if Visual C++ */
+
+// This compiler flag can be easily overlooked on MSVC.
+// _CHAR_UNSIGNED gets set with the /J flag.
+#ifndef _CHAR_UNSIGNED
+#error chars must be unsigned!  Use the /J flag on the compiler command line.  // NOLINT
+#endif
+
+// Allow comparisons between signed and unsigned values.
+//
+// Lots of Google code uses this pattern:
+//   for (int i = 0; i < container.size(); ++i)
+// Since size() returns an unsigned value, this warning would trigger
+// frequently.  Very few of these instances are actually bugs since containers
+// rarely exceed MAX_INT items.  Unfortunately, there are bugs related to
+// signed-unsigned comparisons that have been missed because we disable this
+// warning.  For example:
+//   const long stop_time = os::GetMilliseconds() + kWaitTimeoutMillis;
+//   while (os::GetMilliseconds() <= stop_time) { ... }
+#pragma warning(disable : 4018)  // level 3
+
+// Don't warn about unused local variables.
+//
+// extension to silence particular instances of this warning.  There's no way
+// to define ATTRIBUTE_UNUSED to quiet particular instances of this warning in
+// VC++, so we disable it globally.  Currently, there aren't many false
+// positives, so perhaps we can address those in the future and re-enable these
+// warnings, which sometimes catch real bugs.
+#pragma warning(disable : 4101)  // level 3
+
+// Allow initialization and assignment to a smaller type without warnings about
+// possible loss of data.
+//
+// There is a distinct warning, 4267, that warns about size_t conversions to
+// smaller types, but we don't currently disable that warning.
+//
+// Correct code can be written in such a way as to avoid false positives
+// by making the conversion explicit, but Google code isn't usually that
+// verbose.  There are too many false positives to address at this time.  Note
+// that this warning triggers at levels 2, 3, and 4 depending on the specific
+// type of conversion.  By disabling it, we not only silence minor narrowing
+// conversions but also serious ones.
+#pragma warning(disable : 4244)  // level 2, 3, and 4
+
+// Allow silent truncation of double to float.
+//
+// Silencing this warning has caused us to miss some subtle bugs.
+#pragma warning(disable : 4305)  // level 1
+
+// Allow a constant to be assigned to a type that is too small.
+//
+// I don't know why we allow this at all.  I can't think of a case where this
+// wouldn't be a bug, but enabling the warning breaks many builds today.
+#pragma warning(disable : 4307)  // level 2
+
+// Allow passing the this pointer to an initializer even though it refers
+// to an uninitialized object.
+//
+// Some observer implementations rely on saving the this pointer.  Those are
+// safe because the pointer is not dereferenced until after the object is fully
+// constructed.  This could however, obscure other instances.  In the future, we
+// should look into disabling this warning locally rather globally.
+#pragma warning(disable : 4355)  // level 1 and 4
+
+// Allow implicit coercion from an integral type to a bool.
+//
+// These could be avoided by making the code more explicit, but that's never
+// been the style here, so there would be many false positives.  It's not
+// obvious if a true positive would ever help to find an actual bug.
+#pragma warning(disable : 4800)  // level 3
+
+#include <winsock2.h>  // Must come before <windows.h>
+#include <cassert>
+#include <process.h>  // _getpid()
+#include <windows.h>
+#undef ERROR
+
+#endif  // _MSC_VER
+
+// -----------------------------------------------------------------------------
+// Feature Macros
+// -----------------------------------------------------------------------------
+
+#if defined(OS_LINUX) && !defined(HAVE_TLS) &&                           \
+    (defined(GOOGLE_LIBCXX) || defined(_GLIBCXX_HAVE_TLS)) &&            \
+    (defined(ARCH_K8) || defined(ARCH_POWERPC64) || defined(ARCH_PPC) || \
+     defined(ARCH_ARM))
+#define HAVE_TLS 1
+#endif
+
+#ifdef ABSL_HAVE_TLS
+#error ABSL_HAVE_TLS cannot be directly set
+#elif defined(OS_LINUX) &&                                               \
+    (defined(GOOGLE_LIBCXX) || defined(_GLIBCXX_HAVE_TLS)) &&            \
+    (defined(ARCH_K8) || defined(ARCH_POWERPC64) || defined(ARCH_PPC) || \
+     defined(ARCH_ARM))
+#define ABSL_HAVE_TLS 1
+#endif
+// -----------------------------------------------------------------------------
+// Utility Macros
+// -----------------------------------------------------------------------------
+
+// OS_IOS
 #if defined(__APPLE__)
 // traditionally defined __APPLE__ themselves via other build systems, since mac
 // TODO(user): Remove this when all toolchains make the proper defines.
@@ -62,88 +220,107 @@
 #endif  // defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
 #endif  // defined(__APPLE__)
 
-#if defined(__ANDROID__)
-#include <malloc.h>         // for memalign()
-#elif defined(_MSC_VER)
-#include <cstdio>          // declare snprintf/vsnprintf before overriding
-#endif
-
-#include "s2/third_party/absl/base/integral_types.h"
-
-// We support gcc 4.7 and later.
-#if defined(__GNUC__) && !defined(__clang__)
-#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
-#error "This package requires gcc 4.7 or higher"
-#endif
-#endif
-
-// We support MSVC++ 14.0 update 2 and later.
-#if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 190023918
-#error "This package requires Visual Studio 2015 Update 2 or higher"
-#endif
-
-// We support Apple Xcode clang 4.2.1 (version 421.11.65) and later.
-// This corresponds to Apple Xcode version 4.5.
-#if defined(__apple_build_version__) && __apple_build_version__ < 4211165
-#error "This package requires __apple_build_version__ of 4211165 or higher"
-#endif
-
-// Must happens before inttypes.h inclusion */
-#if defined(__APPLE__)
-/* From MacOSX's inttypes.h:
- * "C++ implementations should define these macros only when
- *  __STDC_FORMAT_MACROS is defined before <inttypes.h> is included." */
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif  /* __STDC_FORMAT_MACROS */
-#endif  /* __APPLE__ */
-
-/* Default for most OSes */
-/* We use SIGPWR since that seems unlikely to be used for other reasons. */
-#define GOOGLE_OBSCURE_SIGNAL  SIGPWR
-
-#if defined OS_LINUX || defined OS_ANDROID || \
-    defined(__ANDROID__)
-// _BIG_ENDIAN
-#include <endian.h>
-#endif
-
+// __GLIBC_PREREQ
 #if defined OS_LINUX
-
 // GLIBC-related macros.
 #include <features.h>
 
 #ifndef __GLIBC_PREREQ
 #define __GLIBC_PREREQ(a, b) 0  // not a GLIBC system
 #endif
+#endif  // OS_LINUX
 
-// The uint mess:
-// mysql.h sets _GNU_SOURCE which sets __USE_MISC in <features.h>
-// sys/types.h typedefs uint if __USE_MISC
-// mysql typedefs uint if HAVE_UINT not set
-// The following typedef is carefully considered, and should not cause
-//  any clashes
-#if !defined(__USE_MISC)
-#if !defined(HAVE_UINT)
-#define HAVE_UINT 1
-typedef unsigned int uint;
-#endif
-#if !defined(HAVE_USHORT)
-#define HAVE_USHORT 1
-typedef unsigned short ushort;
-#endif
-#if !defined(HAVE_ULONG)
-#define HAVE_ULONG 1
-typedef unsigned long ulong;
-#endif
+// STATIC_ANALYSIS
+// Klocwork static analysis tool's C/C++ complier kwcc
+#if defined(__KLOCWORK__)
+#define STATIC_ANALYSIS
+#endif  // __KLOCWORK__
+
+// SIZEOF_MEMBER, OFFSETOF_MEMBER
+#define SIZEOF_MEMBER(t, f) sizeof(reinterpret_cast<t *>(4096)->f)
+
+#define OFFSETOF_MEMBER(t, f)                                  \
+  (reinterpret_cast<char *>(&(reinterpret_cast<t *>(16)->f)) - \
+   reinterpret_cast<char *>(16))
+
+// LANG_CXX11
+// GXX_EXPERIMENTAL_CXX0X is defined by gcc and clang up to at least
+// gcc-4.7 and clang-3.1 (2011-12-13).  __cplusplus was defined to 1
+// in gcc before 4.7 (Crosstool 16) and clang before 3.1, but is
+// defined according to the language version in effect thereafter.
+// Microsoft Visual Studio 14 (2015) sets __cplusplus==199711 despite
+// reasonably good C++11 support, so we set LANG_CXX for it and
+// newer versions (_MSC_VER >= 1900).
+#if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L || \
+     (defined(_MSC_VER) && _MSC_VER >= 1900))
+// DEPRECATED: Do not key off LANG_CXX11. Instead, write more accurate condition
+// that checks whether the C++ feature you need is available or missing, and
+// define a more specific feature macro (GOOGLE_HAVE_FEATURE_FOO). You can check
+// http://en.cppreference.com/w/cpp/compiler_support for compiler support on C++
+// features.
+// Define this to 1 if the code is compiled in C++11 mode; leave it
+// undefined otherwise.  Do NOT define it to 0 -- that causes
+// '#ifdef LANG_CXX11' to behave differently from '#if LANG_CXX11'.
+#define LANG_CXX11 1
 #endif
 
-#if !defined(HAVE_TLS) && \
-    (defined(GOOGLE_LIBCXX) || defined(_GLIBCXX_HAVE_TLS)) && \
-    (defined(ARCH_K8) || defined(ARCH_POWERPC64) || defined(ARCH_PPC) || \
-     defined(ARCH_ARM))
-#define HAVE_TLS 1
+// This sanity check can be removed when all references to
+// LANG_CXX11 is removed from the code base.
+#if defined(__cplusplus) && !defined(LANG_CXX11) && !defined(SWIG)
+#error "LANG_CXX11 is required."
 #endif
+
+// FUNC_PTR_TO_CHAR_PTR
+// On some platforms, a "function pointer" points to a function descriptor
+// rather than directly to the function itself.  Use FUNC_PTR_TO_CHAR_PTR(func)
+// to get a char-pointer to the first instruction of the function func.
+#if (defined(__powerpc__) && !(_CALL_ELF > 1)) || defined(__ia64)
+// use opd section for function descriptors on these platforms, the function
+// address is the first word of the descriptor
+enum { kPlatformUsesOPDSections = 1 };
+#define FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char **>(func)[0])
+#else
+enum { kPlatformUsesOPDSections = 0 };
+#define FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char *>(func))
+#endif
+
+// GOOGLE_OBSCURE_SIGNAL
+#if defined(__APPLE__) || defined(OS_IOS)
+// No SIGPWR on MacOSX.  SIGINFO seems suitably obscure.
+#define GOOGLE_OBSCURE_SIGNAL SIGINFO
+#else
+/* We use SIGPWR since that seems unlikely to be used for other reasons. */
+#define GOOGLE_OBSCURE_SIGNAL SIGPWR
+#endif
+
+// -----------------------------------------------------------------------------
+// Utility Functions
+// -----------------------------------------------------------------------------
+
+// sized_delete
+#ifdef __cplusplus
+namespace base {
+// We support C++14's sized deallocation for all C++ builds,
+// though for other toolchains, we fall back to using delete.
+inline void sized_delete(void *ptr, size_t size) {
+#ifdef GOOGLE_HAVE_SIZED_DELETE
+  ::operator delete(ptr, size);
+#else
+  (void)size;
+  ::operator delete(ptr);
+#endif  // GOOGLE_HAVE_SIZED_DELETE
+}
+}  // namespace base
+#endif  // __cplusplus
+
+// -----------------------------------------------------------------------------
+// Endianness
+// -----------------------------------------------------------------------------
+
+// IS_LITTLE_ENDIAN, IS_BIG_ENDIAN
+#if defined OS_LINUX || defined OS_ANDROID || defined(__ANDROID__)
+// _BIG_ENDIAN
+#include <endian.h>
 
 #elif defined(__APPLE__) || defined(OS_IOS)
 
@@ -156,11 +333,40 @@ typedef unsigned long ulong;
 
 #endif
 
-// The following guarantees declaration of the byte swap functions, and
 // defines __BYTE_ORDER for MSVC
 #ifdef _MSC_VER
-#include <cstdlib>  // NOLINT(build/include)
 #define __BYTE_ORDER __LITTLE_ENDIAN
+#define IS_LITTLE_ENDIAN
+#else
+
+// define the macros IS_LITTLE_ENDIAN or IS_BIG_ENDIAN
+// using the above endian definitions from endian.h if
+// endian.h was included
+#ifdef __BYTE_ORDER
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define IS_LITTLE_ENDIAN
+#endif
+
+#if __BYTE_ORDER == __BIG_ENDIAN
+#define IS_BIG_ENDIAN
+#endif
+
+#else  // __BYTE_ORDER
+
+#if defined(__LITTLE_ENDIAN__)
+#define IS_LITTLE_ENDIAN
+#elif defined(__BIG_ENDIAN__)
+#define IS_BIG_ENDIAN
+#endif
+
+#endif  // __BYTE_ORDER
+#endif  // _MSC_VER
+
+// byte swap functions (bswap_16, bswap_32, bswap_64).
+
+// The following guarantees declaration of the byte swap functions
+#ifdef _MSC_VER
+#include <cstdlib>  // NOLINT(build/include)
 #define bswap_16(x) _byteswap_ushort(x)
 #define bswap_32(x) _byteswap_ulong(x)
 #define bswap_64(x) _byteswap_uint64(x)
@@ -202,31 +408,11 @@ static inline uint64 bswap_64(uint64 x) {
 
 #endif
 
+// -----------------------------------------------------------------------------
+// Global Variables
+// -----------------------------------------------------------------------------
 
-// define the macros IS_LITTLE_ENDIAN or IS_BIG_ENDIAN
-// using the above endian definitions from endian.h if
-// endian.h was included
-#ifdef __BYTE_ORDER
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define IS_LITTLE_ENDIAN
-#endif
-
-#if __BYTE_ORDER == __BIG_ENDIAN
-#define IS_BIG_ENDIAN
-#endif
-
-#else
-
-#if defined(__LITTLE_ENDIAN__)
-#define IS_LITTLE_ENDIAN
-#elif defined(__BIG_ENDIAN__)
-#define IS_BIG_ENDIAN
-#endif
-
-// there is also PDP endian ...
-
-#endif  // __BYTE_ORDER
-
+// PATH_SEPARATOR
 // Define the OS's path separator
 #ifdef __cplusplus  // C won't merge duplicate const variables at link time
 // Some headers provide a macro for this (GCC's system.h), remove it so that we
@@ -236,39 +422,257 @@ static inline uint64 bswap_64(uint64 x) {
 const char PATH_SEPARATOR = '\\';
 #else
 const char PATH_SEPARATOR = '/';
-#endif
+#endif  // OS_WINDOWS
+#endif  // __cplusplus
+
+// -----------------------------------------------------------------------------
+// Hash
+// -----------------------------------------------------------------------------
+
+#ifdef __cplusplus
+#ifdef STL_MSVC  // not always the same as _MSC_VER
+#include "s2/third_party/absl/base/internal/port_hash.inc"
+#else
+struct PortableHashBase {};
+#endif  // STL_MSVC
+#endif  // __cplusplus
+
+// HASH_NAMESPACE, HASH_NAMESPACE_DECLARATION_START/END
+
+// Define the namespace for pre-C++11 functors for hash_map and hash_set.
+// This is not the namespace for C++11 functors (that namespace is "std").
+//
+// We used to require that the build tool or Makefile provide this definition.
+// Now we usually get it from testing target macros. If the testing target
+// macros are different from an external definition, you will get a build
+// error.
+//
+// TODO(user): always get HASH_NAMESPACE from testing target macros.
+
+#if defined(__GNUC__) && defined(GOOGLE_GLIBCXX_VERSION)
+// Crosstool v17 or later.
+#define HASH_NAMESPACE __gnu_cxx
+#elif defined(_MSC_VER)
+// MSVC.
+// http://msdn.microsoft.com/en-us/library/6x7w9f6z(v=vs.100).aspx
+#define HASH_NAMESPACE stdext
+#elif defined(__APPLE__)
+// Xcode.
+#define HASH_NAMESPACE __gnu_cxx
+#elif defined(__GNUC__)
+// Some other version of gcc.
+#define HASH_NAMESPACE __gnu_cxx
+#else
+// HASH_NAMESPACE defined externally.
+// TODO(user): make this an error. Do not use external value of HASH_NAMESPACE.
 #endif
 
+#ifndef HASH_NAMESPACE
+// TODO(user): try to delete this.
+// I think gcc 2.95.3 was the last toolchain to use this.
+#define HASH_NAMESPACE_DECLARATION_START
+#define HASH_NAMESPACE_DECLARATION_END
+#else
+#define HASH_NAMESPACE_DECLARATION_START namespace HASH_NAMESPACE {
+#define HASH_NAMESPACE_DECLARATION_END }
+#endif
+
+// -----------------------------------------------------------------------------
+// Type Alias
+// -----------------------------------------------------------------------------
+
+// uint, ushort, ulong
+#if defined OS_LINUX
+// The uint mess:
+// mysql.h sets _GNU_SOURCE which sets __USE_MISC in <features.h>
+// sys/types.h typedefs uint if __USE_MISC
+// mysql typedefs uint if HAVE_UINT not set
+// The following typedef is carefully considered, and should not cause
+//  any clashes
+#if !defined(__USE_MISC)
+#if !defined(HAVE_UINT)
+#define HAVE_UINT 1
+typedef unsigned int uint;
+#endif  // !HAVE_UINT
+#if !defined(HAVE_USHORT)
+#define HAVE_USHORT 1
+typedef unsigned short ushort;
+#endif  // !HAVE_USHORT
+#if !defined(HAVE_ULONG)
+#define HAVE_ULONG 1
+typedef unsigned long ulong;
+#endif  // !HAVE_ULONG
+#endif  // !__USE_MISC
+
+#endif  // OS_LINUX
+
+#ifdef _MSC_VER /* if Visual C++ */
+// VC++ doesn't understand "uint"
+#ifndef HAVE_UINT
+#define HAVE_UINT 1
+typedef unsigned int uint;
+#endif  // !HAVE_UINT
+#endif  // _MSC_VER
+
+// uid_t
+#ifdef _MSC_VER
+// MSVC doesn't have uid_t
+typedef int uid_t;
+#endif  // _MSC_VER
+
+// pid_t
+#ifdef _MSC_VER
+// Defined all over the place.
+typedef int pid_t;
+#endif  // _MSC_VER
+
+// mode_t
+#ifdef _MSC_VER
+// From stat.h
+typedef unsigned int mode_t;
+#endif  // _MSC_VER
+
+// sig_t
+#ifdef _MSC_VER
+typedef void (*sig_t)(int);
+#endif  // _MSC_VER
+
+// u_int16_t, int16_t
+#ifdef _MSC_VER
+// u_int16_t, int16_t don't exist in MSVC
+typedef unsigned short u_int16_t;  // NOLINT
+typedef short int16_t;             // NOLINT
+#endif                             // _MSC_VER
+
+// ssize_t
+#ifdef _MSC_VER
+// VC++ doesn't understand "ssize_t"
+// <windows.h> from above includes <BaseTsd.h> and <BaseTsd.h> defines SSIZE_T
+#ifndef HAVE_SSIZET
+#define HAVE_SSIZET 1
+typedef SSIZE_T ssize_t;
+#endif  // !HAVE_SSIZET
+#endif  // _MSC_VER
+
+// using std::hash
+#ifdef _MSC_VER
+#ifdef __cplusplus
+// Define a minimal set of things typically available in the global
+// namespace in Google code.  ::string is handled elsewhere, and uniformly
+// for all targets.
+#include <functional>
+using std::hash;
+#endif  // __cplusplus
+#endif  // _MSC_VER
+
+// -----------------------------------------------------------------------------
+// Predefined System/Language Macros
+// -----------------------------------------------------------------------------
+
+// O_BINARY
 // Windows has O_BINARY as a flag to open() (like "b" for fopen).
 // Linux doesn't need make this distinction.
 #if defined OS_LINUX && !defined O_BINARY
 #define O_BINARY 0
 #endif
 
-#ifdef _MSC_VER
-// doesn't have uid_t
-typedef int uid_t;
-#endif
-
-// Mac OS X / Darwin and iOS features
-
+// EXFULL
 #if defined(__APPLE__) || defined(OS_IOS)
+// Linux has this in <linux/errno.h>
+#define EXFULL ENOMEM  // not really that great a translation...
+#endif                 // __APPLE__ || OS_IOS
+#ifdef _MSC_VER
+// This actually belongs in errno.h but there's a name conflict in errno
+// on WinNT. They (and a ton more) are also found in Winsock2.h, but
+// if'd out under NT. We need this subset at minimum.
+#define EXFULL ENOMEM  // not really that great a translation...
+#endif                 // _MSC_VER
 
+// MAP_ANONYMOUS
+#if defined(__APPLE__) || defined(OS_IOS)
 // For mmap, Linux defines both MAP_ANONYMOUS and MAP_ANON and says MAP_ANON is
 // deprecated. In Darwin, MAP_ANON is all there is.
 #if !defined MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
-#endif
+#endif  // !MAP_ANONYMOUS
+#endif  // __APPLE__ || OS_IOS
 
+// MSG_NOSIGNAL
+#if defined(__APPLE__) || defined(OS_IOS)
+// Doesn't exist on OSX.
+#define MSG_NOSIGNAL 0
+#endif  // __APPLE__ || OS_IOS
+
+// __ptr_t
+#if defined(__APPLE__) || defined(OS_IOS)
 // Linux has this in <sys/cdefs.h>
 #define __ptr_t void *
+#endif  // __APPLE__ || OS_IOS
+#ifdef _MSC_VER
+// From glob.h
+#define __ptr_t void *
+#endif
 
-// Linux has this in <linux/errno.h>
-#define EXFULL      ENOMEM  // not really that great a translation...
+// HUGE_VALF
+#ifdef _MSC_VER
+#include <cmath>  // for HUGE_VAL
 
-// Labeled sections are not supported on Darwin/iOS.
-#define HAVE_ATTRIBUTE_SECTION 0
+#ifndef HUGE_VALF
+#define HUGE_VALF (static_cast<float>(HUGE_VAL))
+#endif
+#endif  // _MSC_VER
 
+// PATH_MAX
+// You say tomato, I say atotom
+#ifdef _MSC_VER
+#define PATH_MAX MAX_PATH
+#endif
+
+// printf macros
+// __STDC_FORMAT_MACROS must be defined before inttypes.h inclusion */
+#if defined(__APPLE__)
+/* From MacOSX's inttypes.h:
+ * "C++ implementations should define these macros only when
+ *  __STDC_FORMAT_MACROS is defined before <inttypes.h> is included." */
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif /* __STDC_FORMAT_MACROS */
+#endif /* __APPLE__ */
+
+// printf macros for size_t, in the style of inttypes.h
+#if defined(_LP64) || defined(OS_IOS)
+#define __PRIS_PREFIX "z"
+#else
+#define __PRIS_PREFIX
+#endif
+
+// Use these macros after a % in a printf format string
+// to get correct 32/64 bit behavior, like this:
+// size_t size = records.size();
+// printf("%" PRIuS "\n", size);
+#define PRIdS __PRIS_PREFIX "d"
+#define PRIxS __PRIS_PREFIX "x"
+#define PRIuS __PRIS_PREFIX "u"
+#define PRIXS __PRIS_PREFIX "X"
+#define PRIoS __PRIS_PREFIX "o"
+
+#define GPRIuPTHREAD "lu"
+#define GPRIxPTHREAD "lx"
+#define PRINTABLE_PTHREAD(pthreadt) pthreadt
+
+#ifdef PTHREADS_REDHAT_WIN32
+#include <pthread.h>  // NOLINT(build/include)
+#include <iosfwd>     // NOLINT(build/include)
+// pthread_t is not a simple integer or pointer on Win32
+std::ostream &operator<<(std::ostream &out, const pthread_t &thread_id);
+#endif
+
+// -----------------------------------------------------------------------------
+// Predefined System/Language Functions
+// -----------------------------------------------------------------------------
+
+// strnlen
+#if defined(__APPLE__) || defined(OS_IOS)
 // Darwin doesn't have strnlen. No comment.
 inline size_t strnlen(const char *s, size_t maxlen) {
   const char* end = (const char *)memchr(s, '\0', maxlen);
@@ -276,27 +680,99 @@ inline size_t strnlen(const char *s, size_t maxlen) {
     return end - s;
   return maxlen;
 }
-
-// Doesn't exist on OSX.
-#define MSG_NOSIGNAL 0
-
-// No SIGPWR on MacOSX.  SIGINFO seems suitably obscure.
-#undef GOOGLE_OBSCURE_SIGNAL
-#define GOOGLE_OBSCURE_SIGNAL  SIGINFO
-
 #endif
 
-// Klocwork static analysis tool's C/C++ complier kwcc
-#if defined(__KLOCWORK__)
-#define STATIC_ANALYSIS
-#endif // __KLOCWORK__
+// strtoq, strouq, strtoll, strtoull, atoll
+#ifdef _MSC_VER
+#define strtoq _strtoi64
+#define strtouq _strtoui64
+#define strtoll _strtoi64
+#define strtoull _strtoui64
+#define atoll _atoi64
+#endif  // _MSC_VER
 
-// GCC-specific features
+// snprintf, vsnprintf, BASE_PORT_MSVC_DLL_MACRO
+#ifdef _MSC_VER
+#include <cstdio>  // declare snprintf/vsnprintf before overriding
 
+// MSVC requires to know how code will be linked in order to compile it.
+// This information can be provided via a .def file or __declspec() annotations.
+// The following macro can be set on the compiler command line by those wishing
+// to use __declspec.
+#ifndef BASE_PORT_MSVC_DLL_MACRO
+#define BASE_PORT_MSVC_DLL_MACRO
+#endif
+
+// Wrap Microsoft _snprintf/_vsnprintf calls so they nul-terminate on buffer
+// overflow.
+#define vsnprintf base_port_MSVC_vsnprintf
+BASE_PORT_MSVC_DLL_MACRO
+int base_port_MSVC_vsnprintf(char *str, size_t size, const char *format,
+                             va_list ap);
+#define snprintf base_port_MSVC_snprintf
+BASE_PORT_MSVC_DLL_MACRO
+int base_port_MSVC_snprintf(char *str, size_t size, const char *fmt, ...);
+
+#endif  // _MSC_VER
+
+#ifdef _MSC_VER
+// You say tomato, I say _tomato
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#define strdup _strdup
+#define tempnam _tempnam
+#define chdir _chdir
+#define getcwd _getcwd
+#define putenv _putenv
+#if _MSC_VER >= 1900  // Only needed for VS2015+
+#define getpid _getpid
+#define timezone _timezone
+#define tzname _tzname
+#endif
+#endif  // _MSC_VER
+
+// random, srandom
+#ifdef _MSC_VER
+// You say tomato, I say toma
+inline int random() { return rand(); }
+inline void srandom(unsigned int seed) { srand(seed); }
+#endif  // _MSC_VER
+
+// bcopy, bzero
+#ifdef _MSC_VER
+// You say juxtapose, I say transpose
+#define bcopy(s, d, n) memcpy(d, s, n)
+// Really from <string.h>
+inline void bzero(void *s, int n) { memset(s, 0, n); }
+#endif  // _MSC_VER
+
+// gethostbyname
+#if defined(OS_WINDOWS) || defined(__APPLE__) || defined(OS_IOS)
+// gethostbyname() *is* thread-safe for Windows native threads. It is also
+// safe on Mac OS X and iOS, where it uses thread-local storage, even though the
+// manpages claim otherwise. For details, see
+// http://lists.apple.com/archives/Darwin-dev/2006/May/msg00008.html
+#else
+// gethostbyname() is not thread-safe.  So disallow its use.  People
+// should either use the HostLookup::Lookup*() methods, or gethostbyname_r()
+#define gethostbyname gethostbyname_is_not_thread_safe_DO_NOT_USE
+#endif
+
+// __has_extension
+// Private implementation detail: __has_extension is useful to implement
+// static_assert, and defining it for all toolchains avoids an extra level of
+// nesting of #if/#ifdef/#ifndef.
+#ifndef __has_extension
+#define __has_extension(x) 0  // MSVC 10's preprocessor can't handle 'false'.
+#endif
+
+// -----------------------------------------------------------------------------
+// Compiler Attributes
+// -----------------------------------------------------------------------------
+
+// PRINTF_ATTRIBUTE, SCANF_ATTRIBUTE
 #if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
     !defined(SWIG)
-
-//
 // Tell the compiler to do printf format string checking if the
 // compiler supports it; see the 'format' attribute in
 // <http://gcc.gnu.org/onlinedocs/gcc-4.3.0/gcc/Function-Attributes.html>.
@@ -304,12 +780,350 @@ inline size_t strnlen(const char *s, size_t maxlen) {
 // N.B.: As the GCC manual states, "[s]ince non-static C++ methods
 // have an implicit 'this' argument, the arguments of such methods
 // should be counted from two, not one."
-//
 #define PRINTF_ATTRIBUTE(string_index, first_to_check) \
     __attribute__((__format__ (__printf__, string_index, first_to_check)))
 #define SCANF_ATTRIBUTE(string_index, first_to_check) \
     __attribute__((__format__ (__scanf__, string_index, first_to_check)))
+#else
+#define PRINTF_ATTRIBUTE(string_index, first_to_check)
+#define SCANF_ATTRIBUTE(string_index, first_to_check)
+#endif
 
+// ATTRIBUTE_UNUSED
+// Prevent the compiler from complaining about or optimizing away variables
+// that appear unused
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#undef ATTRIBUTE_UNUSED
+#define ATTRIBUTE_UNUSED __attribute__ ((__unused__))
+#else
+#define ATTRIBUTE_UNUSED
+#endif
+
+// ATTRIBUTE_ALWAYS_INLINE, ATTRIBUTE_NOINLINE
+// For functions we want to force inline or not inline.
+// Introduced in gcc 3.1.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#define ATTRIBUTE_ALWAYS_INLINE  __attribute__ ((always_inline))
+#define HAVE_ATTRIBUTE_ALWAYS_INLINE 1
+#define ATTRIBUTE_NOINLINE __attribute__ ((noinline))
+#define HAVE_ATTRIBUTE_NOINLINE 1
+#else
+#define ATTRIBUTE_ALWAYS_INLINE
+#define ATTRIBUTE_NOINLINE
+#endif
+
+// ATTRIBUTE_NO_TAIL_CALL
+// Prevent the compiler from optimizing away stack frames for functions which
+// end in a call to another function.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#ifdef __clang__
+#define ATTRIBUTE_NO_TAIL_CALL __attribute__((disable_tail_calls))
+#else  // __clang__
+#define ATTRIBUTE_NO_TAIL_CALL \
+  __attribute__((optimize("no-optimize-sibling-calls")))
+#endif  // __clang
+#define HAVE_ATTRIBUTE_NO_TAIL_CALL 1
+#else
+#define ATTRIBUTE_NO_TAIL_CALL
+#define HAVE_ATTRIBUTE_NO_TAIL_CALL 0
+#endif
+
+// ATTRIBUTE_WEAK
+// For weak functions
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#undef ATTRIBUTE_WEAK
+#define ATTRIBUTE_WEAK __attribute__ ((weak))
+#define HAVE_ATTRIBUTE_WEAK 1
+#else
+#define ATTRIBUTE_WEAK
+#define HAVE_ATTRIBUTE_WEAK 0
+#endif
+
+// ATTRIBUTE_INITIAL_EXEC
+// Tell the compiler to use "initial-exec" mode for a thread-local variable.
+// See http://people.redhat.com/drepper/tls.pdf for the gory details.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#define ATTRIBUTE_INITIAL_EXEC __attribute__ ((tls_model ("initial-exec")))
+#else
+#define ATTRIBUTE_INITIAL_EXEC
+#endif
+
+// ATTRIBUTE_NONNULL
+// Tell the compiler either that a particular function parameter
+// should be a non-null pointer, or that all pointer arguments should
+// be non-null.
+//
+// Note: As the GCC manual states, "[s]ince non-static C++ methods
+// have an implicit 'this' argument, the arguments of such methods
+// should be counted from two, not one."
+//
+// Args are indexed starting at 1.
+// For non-static class member functions, the implicit "this" argument
+// is arg 1, and the first explicit argument is arg 2.
+// For static class member functions, there is no implicit "this", and
+// the first explicit argument is arg 1.
+//
+//   /* arg_a cannot be null, but arg_b can */
+//   void Function(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
+//
+//   class C {
+//     /* arg_a cannot be null, but arg_b can */
+//     void Method(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(2);
+//
+//     /* arg_a cannot be null, but arg_b can */
+//     static void StaticMethod(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
+//   };
+//
+// If no arguments are provided, then all pointer arguments should be non-null.
+//
+//  /* No pointer arguments may be null. */
+//  void Function(void* arg_a, void* arg_b, int arg_c) ATTRIBUTE_NONNULL();
+//
+// NOTE: The GCC nonnull attribute actually accepts a list of arguments, but
+// ATTRIBUTE_NONNULL does not.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#define ATTRIBUTE_NONNULL(arg_index) __attribute__((nonnull(arg_index)))
+#else
+#define ATTRIBUTE_NONNULL(...)
+#endif
+
+// ATTRIBUTE_NORETURN
+// Tell the compiler that a given function never returns
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#define ATTRIBUTE_NORETURN __attribute__((noreturn))
+#elif defined(_MSC_VER)
+#define ATTRIBUTE_NORETURN __declspec(noreturn)
+#else
+#define ATTRIBUTE_NORETURN
+#endif
+
+// ATTRIBUTE_NO_SANITIZE_ADDRESS
+// Tell AddressSanitizer (or other memory testing tools) to ignore a given
+// function. Useful for cases when a function reads random locations on stack,
+// calls _exit from a cloned subprocess, deliberately accesses buffer
+// out of bounds or does other scary things with memory.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG) && defined(ADDRESS_SANITIZER)
+#define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
+#else
+#define ATTRIBUTE_NO_SANITIZE_ADDRESS
+#endif
+
+// ATTRIBUTE_NO_SANITIZE_MEMORY
+// Tell MemorySanitizer to relax the handling of a given function. All "Use of
+// uninitialized value" warnings from such functions will be suppressed, and all
+// values loaded from memory will be considered fully initialized.
+// This is similar to the ADDRESS_SANITIZER attribute above, but deals with
+// initializedness rather than addressability issues.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG) && defined(MEMORY_SANITIZER)
+#define ATTRIBUTE_NO_SANITIZE_MEMORY __attribute__((no_sanitize_memory))
+#else
+#define ATTRIBUTE_NO_SANITIZE_MEMORY
+#endif
+
+// ATTRIBUTE_NO_SANITIZE_THREAD
+// Tell ThreadSanitizer to not instrument a given function.
+// If you are adding this attribute, please cc dynamic-tools@ on the cl.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG) && defined(THREAD_SANITIZER)
+#define ATTRIBUTE_NO_SANITIZE_THREAD __attribute__((no_sanitize_thread))
+#else
+#define ATTRIBUTE_NO_SANITIZE_THREAD
+#endif
+
+// ATTRIBUTE_NO_SANITIZE_UNDEFINED
+// Tell UndefinedSanitizer to ignore a given function. Useful for cases
+// where certain behavior (eg. devision by zero) is being used intentionally.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG) && defined(UNDEFINED_BEHAVIOR_SANITIZER)
+#define ATTRIBUTE_NO_SANITIZE_UNDEFINED \
+  __attribute__((no_sanitize("undefined")))
+#else
+#define ATTRIBUTE_NO_SANITIZE_UNDEFINED
+#endif
+
+// ATTRIBUTE_NO_SANITIZE_CFI
+// Tell ControlFlowIntegrity sanitizer to not instrument a given function.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG) && defined(CONTROL_FLOW_INTEGRITY)
+#define ATTRIBUTE_NO_SANITIZE_CFI __attribute__((no_sanitize("cfi")))
+#else
+#define ATTRIBUTE_NO_SANITIZE_CFI
+#endif
+
+// ATTRIBUTE_SECTION
+// Labeled sections are not supported on Darwin/iOS.
+#ifdef ABSL_HAVE_ATTRIBUTE_SECTION
+#error ABSL_HAVE_ATTRIBUTE_SECTION cannot be directly set
+#elif defined(__GNUC__) && !defined(__APPLE__) && !defined(OS_IOS) && \
+    !defined(SWIG)
+#define ABSL_HAVE_ATTRIBUTE_SECTION 1
+//
+// Tell the compiler/linker to put a given function into a section and define
+// "__start_ ## name" and "__stop_ ## name" symbols to bracket the section.
+// This functionality is supported by GNU linker.
+// Any function with ATTRIBUTE_SECTION must not be inlined, or it will
+// be placed into whatever section its caller is placed into.
+//
+#ifndef ATTRIBUTE_SECTION
+#define ATTRIBUTE_SECTION(name) \
+  __attribute__ ((section (#name))) __attribute__ ((noinline))
+#endif
+
+// Tell the compiler/linker to put a given variable into a section and define
+// "__start_ ## name" and "__stop_ ## name" symbols to bracket the section.
+// This functionality is supported by GNU linker.
+#ifndef ATTRIBUTE_SECTION_VARIABLE
+#define ATTRIBUTE_SECTION_VARIABLE(name) \
+  __attribute__ ((section (#name)))
+#endif
+
+//
+// Weak section declaration to be used as a global declaration
+// for ATTRIBUTE_SECTION_START|STOP(name) to compile and link
+// even without functions with ATTRIBUTE_SECTION(name).
+// DEFINE_ATTRIBUTE_SECTION should be in the exactly one file; it's
+// a no-op on ELF but not on Mach-O.
+//
+#ifndef DECLARE_ATTRIBUTE_SECTION_VARS
+#define DECLARE_ATTRIBUTE_SECTION_VARS(name) \
+  extern char __start_##name[] ATTRIBUTE_WEAK; \
+  extern char __stop_##name[] ATTRIBUTE_WEAK
+#endif
+#ifndef DEFINE_ATTRIBUTE_SECTION_VARS
+#define INIT_ATTRIBUTE_SECTION_VARS(name)
+#define DEFINE_ATTRIBUTE_SECTION_VARS(name)
+#endif
+
+//
+// Return void* pointers to start/end of a section of code with
+// functions having ATTRIBUTE_SECTION(name).
+// Returns 0 if no such functions exits.
+// One must DECLARE_ATTRIBUTE_SECTION_VARS(name) for this to compile and link.
+//
+#define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void*>(__start_##name))
+#define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void*>(__stop_##name))
+
+#else  // !ABSL_HAVE_ATTRIBUTE_SECTION
+
+#if !defined(SWIG) || SWIG_VERSION >= 0x020000
+#define ABSL_HAVE_ATTRIBUTE_SECTION 0
+#endif
+
+// provide dummy definitions
+#define ATTRIBUTE_SECTION(name)
+#define ATTRIBUTE_SECTION_VARIABLE(name)
+#define INIT_ATTRIBUTE_SECTION_VARS(name)
+#define DEFINE_ATTRIBUTE_SECTION_VARS(name)
+#define DECLARE_ATTRIBUTE_SECTION_VARS(name)
+#define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void *>(0))
+#define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void *>(0))
+
+#endif  // ATTRIBUTE_SECTION
+
+// ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
+// Support for aligning the stack on 32-bit x86.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#if defined(__i386__)
+#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC \
+  __attribute__((force_align_arg_pointer))
+#define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
+#elif defined(__x86_64__)
+#define REQUIRE_STACK_ALIGN_TRAMPOLINE (1)
+#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
+#else  // !__i386__ && !__x86_64
+#define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
+#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
+#endif  // __i386__
+#else
+#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
+#define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
+#endif
+
+// MUST_USE_RESULT
+// Tell the compiler to warn about unused return values for functions declared
+// with this macro. The macro must appear as the very first part of a function
+// declaration or definition:
+//
+//   MUST_USE_RESULT Sprocket* AllocateSprocket();
+//
+// This placement has the broadest compatibility with GCC, Clang, and MSVC, with
+// both defs and decls, and with GCC-style attributes, MSVC declspec, and C++11
+// attributes. Note: past advice was to place the macro after the argument list.
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#define MUST_USE_RESULT __attribute__ ((warn_unused_result))
+#else
+#define MUST_USE_RESULT
+#endif
+
+// ATTRIBUTE_PACKED
+// Prevent the compiler from padding a structure to natural alignment
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG) && defined(__GNUC__)
+#define ATTRIBUTE_PACKED __attribute__((__packed__))
+#else
+#define ATTRIBUTE_PACKED
+#endif
+
+// ATTRIBUTE_HOT, ATTRIBUTE_COLD
+// Tell GCC that a function is hot or cold. GCC can use this information to
+// improve static analysis, i.e. a conditional branch to a cold function
+// is likely to be not-taken.
+// This annotation is used for function declarations, e.g.:
+//   int foo() ATTRIBUTE_HOT;
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
+#define ATTRIBUTE_HOT __attribute__ ((hot))
+#define ATTRIBUTE_COLD __attribute__ ((cold))
+#else
+#define ATTRIBUTE_HOT
+#define ATTRIBUTE_COLD
+#endif
+
+// ABSL_CONST_INIT
+// A variable declaration annotated with the ABSL_CONST_INIT attribute will
+// not compile (on supported platforms) unless the variable has a constant
+// initializer. This is useful for variables with static and thread storage
+// duration, because it guarantees that they will not suffer from the so-called
+// "static init order fiasco".
+//
+// Sample usage:
+//
+// ABSL_CONST_INIT static MyType my_var = MakeMyType(...);
+//
+// Note that this attribute is redundant if the variable is declared constexpr.
+#if defined(__cplusplus) && defined(__has_cpp_attribute)
+// NOTE: requiring __cplusplus above should not be necessary, but
+// works around https://bugs.llvm.org/show_bug.cgi?id=23435.
+#if __has_cpp_attribute(clang::require_constant_initialization)
+// NOLINTNEXTLINE(whitespace/braces) (b/36288871)
+#define ABSL_CONST_INIT [[clang::require_constant_initialization]]
+#else
+#define ABSL_CONST_INIT
+#endif  // __has_cpp_attribute(clang::require_constant_initialization)
+#else
+#define ABSL_CONST_INIT
+#endif  // defined(__has_cpp_attribute)
+
+// -----------------------------------------------------------------------------
+// Performance Optimization
+// -----------------------------------------------------------------------------
+
+// Alignment
+
+// CACHELINE_SIZE, CACHELINE_ALIGNED
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
 // Cache line alignment
 #if defined(__i386__) || defined(__x86_64__)
 #define CACHELINE_SIZE 64
@@ -357,381 +1171,28 @@ inline size_t strnlen(const char *s, size_t maxlen) {
 //    applying it to types.  This tends to localize the effect.
 #define CACHELINE_ALIGNED __attribute__((aligned(CACHELINE_SIZE)))
 
-// Prevent the compiler from complaining about or optimizing away variables
-// that appear unused
-#undef ATTRIBUTE_UNUSED
-#define ATTRIBUTE_UNUSED __attribute__ ((__unused__))
-
-// For functions we want to force inline or not inline.
-// Introduced in gcc 3.1.
-#define ATTRIBUTE_ALWAYS_INLINE  __attribute__ ((always_inline))
-#define HAVE_ATTRIBUTE_ALWAYS_INLINE 1
-#define ATTRIBUTE_NOINLINE __attribute__ ((noinline))
-#define HAVE_ATTRIBUTE_NOINLINE 1
-
-// Prevent the compiler from optimizing away stack frames for functions which
-// end in a call to another function.
-#ifdef __clang__
-#define ATTRIBUTE_NO_TAIL_CALL __attribute__((disable_tail_calls))
-#else
-#define ATTRIBUTE_NO_TAIL_CALL \
-  __attribute__((optimize("no-optimize-sibling-calls")))
-#endif
-#define HAVE_ATTRIBUTE_NO_TAIL_CALL 1
-
-// For weak functions
-#undef ATTRIBUTE_WEAK
-#define ATTRIBUTE_WEAK __attribute__ ((weak))
-#define HAVE_ATTRIBUTE_WEAK 1
-
-// Tell the compiler to use "initial-exec" mode for a thread-local variable.
-// See http://people.redhat.com/drepper/tls.pdf for the gory details.
-#define ATTRIBUTE_INITIAL_EXEC __attribute__ ((tls_model ("initial-exec")))
-
-// Tell the compiler either that a particular function parameter
-// should be a non-null pointer, or that all pointer arguments should
-// be non-null.
-//
-// Note: As the GCC manual states, "[s]ince non-static C++ methods
-// have an implicit 'this' argument, the arguments of such methods
-// should be counted from two, not one."
-//
-// Args are indexed starting at 1.
-// For non-static class member functions, the implicit "this" argument
-// is arg 1, and the first explicit argument is arg 2.
-// For static class member functions, there is no implicit "this", and
-// the first explicit argument is arg 1.
-//
-//   /* arg_a cannot be null, but arg_b can */
-//   void Function(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
-//
-//   class C {
-//     /* arg_a cannot be null, but arg_b can */
-//     void Method(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(2);
-//
-//     /* arg_a cannot be null, but arg_b can */
-//     static void StaticMethod(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
-//   };
-//
-// If no arguments are provided, then all pointer arguments should be non-null.
-//
-//  /* No pointer arguments may be null. */
-//  void Function(void* arg_a, void* arg_b, int arg_c) ATTRIBUTE_NONNULL();
-//
-// NOTE: The GCC nonnull attribute actually accepts a list of arguments, but
-// ATTRIBUTE_NONNULL does not.
-#define ATTRIBUTE_NONNULL(arg_index) __attribute__((nonnull(arg_index)))
-
-//
-// Tell the compiler that a given function never returns
-//
-#define ATTRIBUTE_NORETURN __attribute__((noreturn))
-
-// Tell AddressSanitizer (or other memory testing tools) to ignore a given
-// function. Useful for cases when a function reads random locations on stack,
-// calls _exit from a cloned subprocess, deliberately accesses buffer
-// out of bounds or does other scary things with memory.
-#ifdef ADDRESS_SANITIZER
-#define ATTRIBUTE_NO_SANITIZE_ADDRESS \
-    __attribute__((no_sanitize_address))
-#else
-#define ATTRIBUTE_NO_SANITIZE_ADDRESS
-#endif
-
-// Tell MemorySanitizer to relax the handling of a given function. All "Use of
-// uninitialized value" warnings from such functions will be suppressed, and all
-// values loaded from memory will be considered fully initialized.
-// This is similar to the ADDRESS_SANITIZER attribute above, but deals with
-// initializedness rather than addressability issues.
-#ifdef MEMORY_SANITIZER
-#define ATTRIBUTE_NO_SANITIZE_MEMORY \
-    __attribute__((no_sanitize_memory))
-#else
-#define ATTRIBUTE_NO_SANITIZE_MEMORY
-#endif
-
-// Tell ThreadSanitizer to not instrument a given function.
-// If you are adding this attribute, please cc dynamic-tools@ on the cl.
-#ifdef THREAD_SANITIZER
-#define ATTRIBUTE_NO_SANITIZE_THREAD __attribute__((no_sanitize_thread))
-#else
-#define ATTRIBUTE_NO_SANITIZE_THREAD
-#endif
-
-// Tell UndefinedSanitizer to ignore a given function. Useful for cases
-// where certain behavior (eg. devision by zero) is being used intentionally.
-#ifdef UNDEFINED_BEHAVIOR_SANITIZER
-#define ATTRIBUTE_NO_SANITIZE_UNDEFINED \
-  __attribute__((no_sanitize("undefined")))
-#else
-#define ATTRIBUTE_NO_SANITIZE_UNDEFINED
-#endif
-
-// Tell ControlFlowIntegrity sanitizer to not instrument a given function.
-#ifdef CONTROL_FLOW_INTEGRITY
-#define ATTRIBUTE_NO_SANITIZE_CFI __attribute__((no_sanitize("cfi")))
-#else
-#define ATTRIBUTE_NO_SANITIZE_CFI
-#endif
-
-#ifndef HAVE_ATTRIBUTE_SECTION  // may have been pre-set to 0, e.g. for Darwin
-#define HAVE_ATTRIBUTE_SECTION 1
-#endif
-
-#if HAVE_ATTRIBUTE_SECTION  // define section support for the case of GCC
-
-//
-// Tell the compiler/linker to put a given function into a section and define
-// "__start_ ## name" and "__stop_ ## name" symbols to bracket the section.
-// This functionality is supported by GNU linker.
-// Any function with ATTRIBUTE_SECTION must not be inlined, or it will
-// be placed into whatever section its caller is placed into.
-//
-#ifndef ATTRIBUTE_SECTION
-#define ATTRIBUTE_SECTION(name) \
-  __attribute__ ((section (#name))) __attribute__ ((noinline))
-#endif
-
-//
-// Weak section declaration to be used as a global declaration
-// for ATTRIBUTE_SECTION_START|STOP(name) to compile and link
-// even without functions with ATTRIBUTE_SECTION(name).
-// DEFINE_ATTRIBUTE_SECTION should be in the exactly one file; it's
-// a no-op on ELF but not on Mach-O.
-//
-#ifndef DECLARE_ATTRIBUTE_SECTION_VARS
-#define DECLARE_ATTRIBUTE_SECTION_VARS(name) \
-  extern char __start_##name[] ATTRIBUTE_WEAK; \
-  extern char __stop_##name[] ATTRIBUTE_WEAK
-#endif
-#ifndef DEFINE_ATTRIBUTE_SECTION_VARS
-#define INIT_ATTRIBUTE_SECTION_VARS(name)
-#define DEFINE_ATTRIBUTE_SECTION_VARS(name)
-#endif
-
-//
-// Return void* pointers to start/end of a section of code with
-// functions having ATTRIBUTE_SECTION(name).
-// Returns 0 if no such functions exits.
-// One must DECLARE_ATTRIBUTE_SECTION_VARS(name) for this to compile and link.
-//
-#define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void*>(__start_##name))
-#define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void*>(__stop_##name))
-
-#endif  // HAVE_ATTRIBUTE_SECTION
-
-// Support for aligning the stack on 32-bit x86.
-
-#if defined(__i386__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))
-#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC __attribute__((force_align_arg_pointer))
-#define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
-#elif defined(__i386__) || defined(__x86_64__)
-#define REQUIRE_STACK_ALIGN_TRAMPOLINE (1)
-#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
-#else
-#define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
-#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
-#endif
-
-// Tell the compiler to warn about unused return values for functions declared
-// with this macro. The macro must appear as the very first part of a function
-// declaration or definition:
-//
-//   MUST_USE_RESULT Sprocket* AllocateSprocket();
-//
-// This placement has the broadest compatibility with GCC, Clang, and MSVC, with
-// both defs and decls, and with GCC-style attributes, MSVC declspec, and C++11
-// attributes. Note: past advice was to place the macro after the argument list.
-#if defined(SWIG)
-#define MUST_USE_RESULT
-#elif __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
-#define MUST_USE_RESULT __attribute__ ((warn_unused_result))
-#else
-#define MUST_USE_RESULT
-#endif
-
-//
-// Prevent the compiler from padding a structure to natural alignment
-//
-#if __GNUC__ && !defined(SWIG)
-#define ATTRIBUTE_PACKED __attribute__((__packed__))
-#else
-#define ATTRIBUTE_PACKED
-#endif
-
-#ifdef __cplusplus
-#if defined(__GNUC__) || defined(__llvm__)
-// Defined behavior on some of the uarchs:
-// PREFETCH_HINT_T0:
-//   prefetch to all levels of the hierarchy (except on p4: prefetch to L2)
-// PREFETCH_HINT_NTA:
-//   p4: fetch to L2, but limit to 1 way (out of the 8 ways)
-//   core: skip L2, go directly to L1
-//   k8 rev E and later: skip L2, can go to either of the 2-ways in L1
-enum PrefetchHint {
-  PREFETCH_HINT_T0 = 3,  // More temporal locality
-  PREFETCH_HINT_T1 = 2,
-  PREFETCH_HINT_T2 = 1,  // Less temporal locality
-  PREFETCH_HINT_NTA = 0  // No temporal locality
-};
-#else
-// prefetch is a no-op for this target. Feel free to add more sections above.
-#endif
-
-// The default behavior of prefetch is to speculatively load for read only. This
-// is safe for all currently supported platforms. However, prefetch for store
-// may have problems depending on the target platform (x86, PPC, arm). Check
-// with the platforms team (platforms-servers@) before introducing any changes
-// to this function to identify potential impact on current and future servers.
-extern inline void prefetch(const void *x, int hint) {
-#if defined(__llvm__)
-  // In the gcc version of prefetch(), hint is only a constant _after_ inlining
-  // (assumed to have been successful).  llvm views things differently, and
-  // checks constant-ness _before_ inlining.  This leads to compilation errors
-  // with using the other version of this code with llvm.
-  //
-  // One way round this is to use a switch statement to explicitly match
-  // prefetch hint enumerations, and invoke __builtin_prefetch for each valid
-  // value.  llvm's optimization removes the switch and unused case statements
-  // after inlining, so that this boils down in the end to the same as for gcc;
-  // that is, a single inlined prefetchX instruction.
-  //
-  // Note that this version of prefetch() cannot verify constant-ness of hint.
-  // If client code calls prefetch() with a variable value for hint, it will
-  // receive the full expansion of the switch below, perhaps also not inlined.
-  // This should however not be a problem in the general case of well behaved
-  // caller code that uses the supplied prefetch hint enumerations.
-  switch (hint) {
-    case PREFETCH_HINT_T0:
-      __builtin_prefetch(x, 0, PREFETCH_HINT_T0);
-      break;
-    case PREFETCH_HINT_T1:
-      __builtin_prefetch(x, 0, PREFETCH_HINT_T1);
-      break;
-    case PREFETCH_HINT_T2:
-      __builtin_prefetch(x, 0, PREFETCH_HINT_T2);
-      break;
-    case PREFETCH_HINT_NTA:
-      __builtin_prefetch(x, 0, PREFETCH_HINT_NTA);
-      break;
-    default:
-      __builtin_prefetch(x);
-      break;
-  }
-#elif defined(__GNUC__)
- #if !defined(ARCH_PIII) || defined(__SSE__)
-  if (__builtin_constant_p(hint)) {
-    __builtin_prefetch(x, 0, hint);
-  } else {
-    // Defaults to PREFETCH_HINT_T0
-    __builtin_prefetch(x);
-  }
-#else
-  // We want a __builtin_prefetch, but we build with the default -march=i386
-  // where __builtin_prefetch quietly turns into nothing.
-  // Once we crank up to -march=pentium3 or higher the __SSE__
-  // clause above will kick in with the builtin.
-  // -- mec 2006-06-06
-  if (hint == PREFETCH_HINT_NTA)
-    __asm__ __volatile__("prefetchnta (%0)" : : "r"(x));
- #endif
-#else
-  // You get no effect.  Feel free to add more sections above.
-#endif
-}
-
-// prefetch intrinsic (bring data to L1 without polluting L2 cache)
-extern inline void prefetch(const void *x) {
-  return prefetch(x, 0);
-}
-#endif  // ifdef __cplusplus
-
-//
-// GCC can be told that a certain branch is not likely to be taken (for
-// instance, a CHECK failure), and use that information in static analysis.
-// Giving it this information can help it optimize for the common case in
-// the absence of better information (ie. -fprofile-arcs).
-//
-#if defined(__GNUC__)
-#define PREDICT_FALSE(x) (__builtin_expect(x, 0))
-#define PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
-#else
-#define PREDICT_FALSE(x) x
-#define PREDICT_TRUE(x) x
-#endif
-
-//
-// Tell GCC that a function is hot or cold. GCC can use this information to
-// improve static analysis, i.e. a conditional branch to a cold function
-// is likely to be not-taken.
-// This annotation is used for function declarations, e.g.:
-//   int foo() ATTRIBUTE_HOT;
-//
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)
-#define ATTRIBUTE_HOT __attribute__ ((hot))
-#define ATTRIBUTE_COLD __attribute__ ((cold))
-#else
-#define ATTRIBUTE_HOT
-#define ATTRIBUTE_COLD
-#endif
-
-#define FTELLO ftello
-#define FSEEKO fseeko
-
-#else   // not GCC
-
-#define PRINTF_ATTRIBUTE(string_index, first_to_check)
-#define SCANF_ATTRIBUTE(string_index, first_to_check)
+#else  // not GCC
 #define CACHELINE_SIZE 64
 #define CACHELINE_ALIGNED
-#define ATTRIBUTE_UNUSED
-#define ATTRIBUTE_ALWAYS_INLINE
-#define ATTRIBUTE_NOINLINE
-#define ATTRIBUTE_NO_TAIL_CALL
-#define HAVE_ATTRIBUTE_NO_TAIL_CALL 0
-#define ATTRIBUTE_HOT
-#define ATTRIBUTE_COLD
-#define ATTRIBUTE_WEAK
-#define HAVE_ATTRIBUTE_WEAK 0
-#define ATTRIBUTE_INITIAL_EXEC
-#define ATTRIBUTE_NONNULL(...)
-#if defined(_MSC_VER)
-#define ATTRIBUTE_NORETURN __declspec(noreturn)
-#else
-#define ATTRIBUTE_NORETURN
 #endif
-#define ATTRIBUTE_NO_SANITIZE_ADDRESS
-#define ATTRIBUTE_NO_SANITIZE_MEMORY
-#if !defined(SWIG) || SWIG_VERSION >= 0x020000
-#define HAVE_ATTRIBUTE_SECTION 0
+
+// aligned_malloc, aligned_free
+#if defined(__ANDROID__) || defined(SGX_ENCLAVE)
+#include <malloc.h>  // for memalign()
 #endif
-#define ATTRIBUTE_PACKED
-#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
-#define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
-#define MUST_USE_RESULT
-#if defined(__cplusplus)
-extern inline void prefetch(const void*) {}
-#endif
-#define PREDICT_FALSE(x) x
-#define PREDICT_TRUE(x) x
 
-// These should be redefined appropriately if better alternatives to
-// ftell/fseek exist in the compiler
-#define FTELLO ftell
-#define FSEEKO fseek
-
-#endif  // GCC
-
+// SGX_ENCLAVE platform uses newlib without an underlying OS, which provides
+// memalign, but not posix_memalign.
 #if defined(__cplusplus) &&                                               \
     (((defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) || \
        defined(__NVCC__)) &&                                              \
       !defined(SWIG)) ||                                                  \
-     ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)))
-
+     ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)) ||   \
+     defined(SGX_ENCLAVE))
 inline void *aligned_malloc(size_t size, int minimum_alignment) {
-#if defined(__ANDROID__) || defined(OS_ANDROID)
+#if defined(__ANDROID__) || defined(OS_ANDROID) || defined(SGX_ENCLAVE)
   return memalign(minimum_alignment, size);
-#else  // !__ANDROID__ && !OS_ANDROID
+#else  // !__ANDROID__ && !OS_ANDROID && !SGX_ENCLAVE
   void *ptr = nullptr;
   // posix_memalign requires that the requested alignment be at least
   // sizeof(void*). In this case, fall back on malloc which should return memory
@@ -750,8 +1211,19 @@ inline void aligned_free(void *aligned_memory) {
   free(aligned_memory);
 }
 
-#endif  // aligned_malloc
+#elif defined(_MSC_VER)  // MSVC
 
+inline void *aligned_malloc(size_t size, int minimum_alignment) {
+  return _aligned_malloc(size, minimum_alignment);
+}
+
+inline void aligned_free(void *aligned_memory) {
+  _aligned_free(aligned_memory);
+}
+
+#endif  // aligned_malloc, aligned_free
+
+// ALIGNED_CHAR_ARRAY
 //
 // Provides a char array with the exact same alignment as another type. The
 // first parameter must be a complete type, the second parameter is how many
@@ -825,283 +1297,7 @@ struct AlignType { typedef char result[Size]; };
 #define ALIGNED_CHAR_ARRAY ALIGNED_CHAR_ARRAY_is_not_available_without_Cplusplus
 #endif // __cplusplus
 
-#if !HAVE_ATTRIBUTE_SECTION  // provide dummy definitions
-
-#define ATTRIBUTE_SECTION(name)
-#define INIT_ATTRIBUTE_SECTION_VARS(name)
-#define DEFINE_ATTRIBUTE_SECTION_VARS(name)
-#define DECLARE_ATTRIBUTE_SECTION_VARS(name)
-#define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void*>(0))
-#define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void*>(0))
-
-#endif  // !HAVE_ATTRIBUTE_SECTION
-
-
-#ifdef _MSC_VER     /* if Visual C++ */
-
-// This compiler flag can be easily overlooked on MSVC.
-// _CHAR_UNSIGNED gets set with the /J flag.
-#ifndef _CHAR_UNSIGNED
-#error chars must be unsigned!  Use the /J flag on the compiler command line.
-#endif
-
-// Allow comparisons between signed and unsigned values.
-//
-// Lots of Google code uses this pattern:
-//   for (int i = 0; i < container.size(); ++i)
-// Since size() returns an unsigned value, this warning would trigger
-// frequently.  Very few of these instances are actually bugs since containers
-// rarely exceed MAX_INT items.  Unfortunately, there are bugs related to
-// signed-unsigned comparisons that have been missed because we disable this
-// warning.  For example:
-//   const long stop_time = os::GetMilliseconds() + kWaitTimeoutMillis;
-//   while (os::GetMilliseconds() <= stop_time) { ... }
-#pragma warning(disable : 4018)  // level 3
-
-// Don't warn about unused local variables.
-//
-// extension to silence particular instances of this warning.  There's no way
-// to define ATTRIBUTE_UNUSED to quiet particular instances of this warning in
-// VC++, so we disable it globally.  Currently, there aren't many false
-// positives, so perhaps we can address those in the future and re-enable these
-// warnings, which sometimes catch real bugs.
-#pragma warning(disable : 4101)  // level 3
-
-// Allow initialization and assignment to a smaller type without warnings about
-// possible loss of data.
-//
-// There is a distinct warning, 4267, that warns about size_t conversions to
-// smaller types, but we don't currently disable that warning.
-//
-// Correct code can be written in such a way as to avoid false positives
-// by making the conversion explicit, but Google code isn't usually that
-// verbose.  There are too many false positives to address at this time.  Note
-// that this warning triggers at levels 2, 3, and 4 depending on the specific
-// type of conversion.  By disabling it, we not only silence minor narrowing
-// conversions but also serious ones.
-#pragma warning(disable : 4244)  // level 2, 3, and 4
-
-// Allow silent truncation of double to float.
-//
-// Silencing this warning has caused us to miss some subtle bugs.
-#pragma warning(disable : 4305)  // level 1
-
-// Allow a constant to be assigned to a type that is too small.
-//
-// I don't know why we allow this at all.  I can't think of a case where this
-// wouldn't be a bug, but enabling the warning breaks many builds today.
-#pragma warning(disable : 4307)  // level 2
-
-// Allow passing the this pointer to an initializer even though it refers
-// to an uninitialized object.
-//
-// Some observer implementations rely on saving the this pointer.  Those are
-// safe because the pointer is not dereferenced until after the object is fully
-// constructed.  This could however, obscure other instances.  In the future, we
-// should look into disabling this warning locally rather globally.
-#pragma warning(disable : 4355)  // level 1 and 4
-
-// Allow implicit coercion from an integral type to a bool.
-//
-// These could be avoided by making the code more explicit, but that's never
-// been the style here, so there would be many false positives.  It's not
-// obvious if a true positive would ever help to find an actual bug.
-#pragma warning(disable : 4800)  // level 3
-
-#include <winsock2.h>
-#include <cassert>
-#include <windows.h>
-#include <process.h>  // _getpid()
-#undef ERROR
-
-#include <cmath>  // for HUGE_VAL
-
-#ifndef HUGE_VALF
-#define HUGE_VALF (static_cast<float>(HUGE_VAL))
-#endif
-
-#ifdef __cplusplus
-// Define a minimal set of things typically available in the global
-// namespace in Google code.  ::string is handled elsewhere, and uniformly
-// for all targets.
-#include <functional>
-using std::hash;
-#endif  // __cplusplus
-
-// VC++ doesn't understand "uint"
-#ifndef HAVE_UINT
-#define HAVE_UINT 1
-typedef unsigned int uint;
-#endif
-
-// VC++ doesn't understand "ssize_t"
-// <windows.h> from above includes <BaseTsd.h> and <BaseTsd.h> defines SSIZE_T
-#ifndef HAVE_SSIZET
-#define HAVE_SSIZET 1
-typedef SSIZE_T ssize_t;
-#endif
-
-#define strtoq   _strtoi64
-#define strtouq  _strtoui64
-#define strtoll  _strtoi64
-#define strtoull _strtoui64
-#define atoll    _atoi64
-
-
-// You say tomato, I say atotom
-#define PATH_MAX MAX_PATH
-
-// MSVC requires to know how code will be linked in order to compile it.
-// This information can be provided via a .def file or __declspec() annotations.
-// The following macro can be set on the compiler command line by those wishing
-// to use __declspec.
-#ifndef BASE_PORT_MSVC_DLL_MACRO
-#define BASE_PORT_MSVC_DLL_MACRO
-#endif
-
-// Wrap Microsoft _snprintf/_vsnprintf calls so they nul-terminate on buffer
-// overflow.
-#define vsnprintf base_port_MSVC_vsnprintf
-BASE_PORT_MSVC_DLL_MACRO
-    int base_port_MSVC_vsnprintf(char *str, size_t size,
-                                 const char *format, va_list ap);
-#define snprintf base_port_MSVC_snprintf
-BASE_PORT_MSVC_DLL_MACRO
-    int base_port_MSVC_snprintf(char *str, size_t size, const char *fmt, ...);
-
-// You say tomato, I say _tomato
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-#define strdup _strdup
-#define tempnam _tempnam
-#define chdir  _chdir
-#define getcwd _getcwd
-#define putenv  _putenv
-#if _MSC_VER >= 1900  // Only needed for VS2015+
-#define getpid _getpid
-#define timezone _timezone
-#define tzname _tzname
-#endif
-
-// You say tomato, I say toma
-inline int random() { return rand(); }
-inline void srandom(unsigned int seed) { srand(seed); }
-
-// You say juxtapose, I say transpose
-#define bcopy(s, d, n) memcpy(d, s, n)
-
-inline void *aligned_malloc(size_t size, int minimum_alignment) {
-  return _aligned_malloc(size, minimum_alignment);
-}
-
-inline void aligned_free(void *aligned_memory) {
-  _aligned_free(aligned_memory);
-}
-
-// ----- BEGIN VC++ STUBS & FAKE DEFINITIONS ---------------------------------
-
-typedef void (*sig_t)(int);
-
-// This actually belongs in errno.h but there's a name conflict in errno
-// on WinNT. They (and a ton more) are also found in Winsock2.h, but
-// if'd out under NT. We need this subset at minimum.
-#define EXFULL      ENOMEM  // not really that great a translation...
-
-//
-// Really from <string.h>
-//
-
-inline void bzero(void *s, int n) {
-  memset(s, 0, n);
-}
-
-// From glob.h
-#define __ptr_t   void *
-
-// Defined all over the place.
-typedef int pid_t;
-
-// From stat.h
-typedef unsigned int mode_t;
-
-// u_int16_t, int16_t don't exist in MSVC
-typedef unsigned short u_int16_t;
-typedef short int16_t;
-
-// ----- END VC++ STUBS & FAKE DEFINITIONS ----------------------------------
-
-#endif  // _MSC_VER
-
-#ifdef __cplusplus
-#ifdef STL_MSVC  // not always the same as _MSC_VER
-#include "s2/third_party/absl/base/internal/port_hash.inc"
-#else
-struct PortableHashBase { };
-#endif
-#endif  // __cplusplus
-
-#if defined(OS_WINDOWS) || defined(__APPLE__) || defined(OS_IOS)
-// gethostbyname() *is* thread-safe for Windows native threads. It is also
-// safe on Mac OS X and iOS, where it uses thread-local storage, even though the
-// manpages claim otherwise. For details, see
-// http://lists.apple.com/archives/Darwin-dev/2006/May/msg00008.html
-#else
-// gethostbyname() is not thread-safe.  So disallow its use.  People
-// should either use the HostLookup::Lookup*() methods, or gethostbyname_r()
-#define gethostbyname gethostbyname_is_not_thread_safe_DO_NOT_USE
-#endif
-
-// Define the namespace for pre-C++11 functors for hash_map and hash_set.
-// This is not the namespace for C++11 functors (that namespace is "std").
-//
-// We used to require that the build tool or Makefile provide this definition.
-// Now we usually get it from testing target macros. If the testing target
-// macros are different from an external definition, you will get a build
-// error.
-//
-// TODO(user): always get HASH_NAMESPACE from testing target macros.
-
-#if defined(__GNUC__) && defined(GOOGLE_GLIBCXX_VERSION)
-// Crosstool v17 or later.
-#define HASH_NAMESPACE __gnu_cxx
-#elif defined(_MSC_VER)
-// MSVC.
-// http://msdn.microsoft.com/en-us/library/6x7w9f6z(v=vs.100).aspx
-#define HASH_NAMESPACE stdext
-#elif defined(__APPLE__)
-// Xcode.
-#define HASH_NAMESPACE __gnu_cxx
-#elif defined(__GNUC__)
-// Some other version of gcc.
-#define HASH_NAMESPACE __gnu_cxx
-#else
-// HASH_NAMESPACE defined externally.
-// TODO(user): make this an error. Do not use external value of HASH_NAMESPACE.
-#endif
-
-#ifndef HASH_NAMESPACE
-// TODO(user): try to delete this.
-// I think gcc 2.95.3 was the last toolchain to use this.
-#define HASH_NAMESPACE_DECLARATION_START
-#define HASH_NAMESPACE_DECLARATION_END
-#else
-#define HASH_NAMESPACE_DECLARATION_START  namespace HASH_NAMESPACE {
-#define HASH_NAMESPACE_DECLARATION_END    }
-#endif
-
-// Our STL-like classes use __STD.
-#if defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) || \
-    defined(_MSC_VER)
-#define __STD std
-#endif
-
-#if defined __GNUC__
-#define STREAM_SET(s, bit) (s).setstate(std::ios_base::bit)
-#define STREAM_SETF(s, flag) (s).setf(std::ios_base::flag)
-#else
-#define STREAM_SET(s, bit) (s).set(std::ios::bit)
-#define STREAM_SETF(s, flag) (s).setf(std::ios::flag)
-#endif
+// unaligned APIs
 
 // Portable handling of unaligned loads, stores, and copies.
 // On some platforms, like ARM, the copy functions can be more efficient
@@ -1327,78 +1523,146 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 
 #endif  // defined(__cplusplus), end of unaligned API
 
-// printf macros for size_t, in the style of inttypes.h
-#if defined(_LP64) || defined(OS_IOS)
-#define __PRIS_PREFIX "z"
+// Prefetch
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#ifdef __cplusplus
+#if defined(__GNUC__) || defined(__llvm__)
+// Defined behavior on some of the uarchs:
+// PREFETCH_HINT_T0:
+//   prefetch to all levels of the hierarchy (except on p4: prefetch to L2)
+// PREFETCH_HINT_NTA:
+//   p4: fetch to L2, but limit to 1 way (out of the 8 ways)
+//   core: skip L2, go directly to L1
+//   k8 rev E and later: skip L2, can go to either of the 2-ways in L1
+enum PrefetchHint {
+  PREFETCH_HINT_T0 = 3,  // More temporal locality
+  PREFETCH_HINT_T1 = 2,
+  PREFETCH_HINT_T2 = 1,  // Less temporal locality
+  PREFETCH_HINT_NTA = 0  // No temporal locality
+};
 #else
-#define __PRIS_PREFIX
+// prefetch is a no-op for this target. Feel free to add more sections above.
 #endif
 
-// Use these macros after a % in a printf format string
-// to get correct 32/64 bit behavior, like this:
-// size_t size = records.size();
-// printf("%" PRIuS "\n", size);
-
-#define PRIdS __PRIS_PREFIX "d"
-#define PRIxS __PRIS_PREFIX "x"
-#define PRIuS __PRIS_PREFIX "u"
-#define PRIXS __PRIS_PREFIX "X"
-#define PRIoS __PRIS_PREFIX "o"
-
-#define GPRIuPTHREAD "lu"
-#define GPRIxPTHREAD "lx"
-#define PRINTABLE_PTHREAD(pthreadt) pthreadt
-
-#define SIZEOF_MEMBER(t, f)   sizeof(((t*) 4096)->f)
-
-#define OFFSETOF_MEMBER(t, f)         \
-  (reinterpret_cast<char*>(           \
-     &reinterpret_cast<t*>(16)->f) -  \
-   reinterpret_cast<char*>(16))
-
-#ifdef PTHREADS_REDHAT_WIN32
-#include <iosfwd>     // NOLINT(build/include)
-#include <pthread.h>  // NOLINT(build/include)
-// pthread_t is not a simple integer or pointer on Win32
-std::ostream& operator << (std::ostream& out, const pthread_t& thread_id);
-#endif
-
-// GXX_EXPERIMENTAL_CXX0X is defined by gcc and clang up to at least
-// gcc-4.7 and clang-3.1 (2011-12-13).  __cplusplus was defined to 1
-// in gcc before 4.7 (Crosstool 16) and clang before 3.1, but is
-// defined according to the language version in effect thereafter.
-// Microsoft Visual Studio 14 (2015) sets __cplusplus==199711 despite
-// reasonably good C++11 support, so we set LANG_CXX for it and
-// newer versions (_MSC_VER >= 1900).
-#if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L || \
-     (defined(_MSC_VER) && _MSC_VER >= 1900))
-// Define this to 1 if the code is compiled in C++11 mode; leave it
-// undefined otherwise.  Do NOT define it to 0 -- that causes
-// '#ifdef LANG_CXX11' to behave differently from '#if LANG_CXX11'.
-#define LANG_CXX11 1
-#endif
-
-// On some platforms, a "function pointer" points to a function descriptor
-// rather than directly to the function itself.  Use FUNC_PTR_TO_CHAR_PTR(func)
-// to get a char-pointer to the first instruction of the function func.
-#if (defined(__powerpc__) && !(_CALL_ELF > 1)) || \
-    defined(__ia64)
-// use opd section for function descriptors on these platforms, the function
-// address is the first word of the descriptor
-enum { kPlatformUsesOPDSections = 1 };
-#define FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char**>(func)[0])
+// The default behavior of prefetch is to speculatively load for read only. This
+// is safe for all currently supported platforms. However, prefetch for store
+// may have problems depending on the target platform (x86, PPC, arm). Check
+// with the platforms team (platforms-servers@) before introducing any changes
+// to this function to identify potential impact on current and future servers.
+extern inline void prefetch(const void *x, int hint) {
+#if defined(__llvm__)
+  // In the gcc version of prefetch(), hint is only a constant _after_ inlining
+  // (assumed to have been successful).  llvm views things differently, and
+  // checks constant-ness _before_ inlining.  This leads to compilation errors
+  // with using the other version of this code with llvm.
+  //
+  // One way round this is to use a switch statement to explicitly match
+  // prefetch hint enumerations, and invoke __builtin_prefetch for each valid
+  // value.  llvm's optimization removes the switch and unused case statements
+  // after inlining, so that this boils down in the end to the same as for gcc;
+  // that is, a single inlined prefetchX instruction.
+  //
+  // Note that this version of prefetch() cannot verify constant-ness of hint.
+  // If client code calls prefetch() with a variable value for hint, it will
+  // receive the full expansion of the switch below, perhaps also not inlined.
+  // This should however not be a problem in the general case of well behaved
+  // caller code that uses the supplied prefetch hint enumerations.
+  switch (hint) {
+    case PREFETCH_HINT_T0:
+      __builtin_prefetch(x, 0, PREFETCH_HINT_T0);
+      break;
+    case PREFETCH_HINT_T1:
+      __builtin_prefetch(x, 0, PREFETCH_HINT_T1);
+      break;
+    case PREFETCH_HINT_T2:
+      __builtin_prefetch(x, 0, PREFETCH_HINT_T2);
+      break;
+    case PREFETCH_HINT_NTA:
+      __builtin_prefetch(x, 0, PREFETCH_HINT_NTA);
+      break;
+    default:
+      __builtin_prefetch(x);
+      break;
+  }
+#elif defined(__GNUC__)
+#if !defined(ARCH_PIII) || defined(__SSE__)
+  if (__builtin_constant_p(hint)) {
+    __builtin_prefetch(x, 0, hint);
+  } else {
+    // Defaults to PREFETCH_HINT_T0
+    __builtin_prefetch(x);
+  }
 #else
-enum { kPlatformUsesOPDSections = 0 };
-#define FUNC_PTR_TO_CHAR_PTR(func)  (reinterpret_cast<char *>(func))
+  // We want a __builtin_prefetch, but we build with the default -march=i386
+  // where __builtin_prefetch quietly turns into nothing.
+  // Once we crank up to -march=pentium3 or higher the __SSE__
+  // clause above will kick in with the builtin.
+  // -- mec 2006-06-06
+  if (hint == PREFETCH_HINT_NTA)
+    __asm__ __volatile__("prefetchnta (%0)" : : "r"(x));
+#endif
+#else
+// You get no effect.  Feel free to add more sections above.
+#endif
+}
+
+// prefetch intrinsic (bring data to L1 without polluting L2 cache)
+extern inline void prefetch(const void *x) { return prefetch(x, 0); }
+#endif  // ifdef __cplusplus
+#else   // not GCC
+#if defined(__cplusplus)
+extern inline void prefetch(const void *) {}
+#endif
+#endif  // Prefetch
+
+// PREDICT_TRUE, PREDICT_FALSE
+//
+// GCC can be told that a certain branch is not likely to be taken (for
+// instance, a CHECK failure), and use that information in static analysis.
+// Giving it this information can help it optimize for the common case in
+// the absence of better information (ie. -fprofile-arcs).
+#if defined(__GNUC__) && !defined(SWIG)
+#define PREDICT_FALSE(x) (__builtin_expect(x, 0))
+#define PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
+#else
+#define PREDICT_FALSE(x) x
+#define PREDICT_TRUE(x) x
 #endif
 
-// Private implementation detail: __has_extension is useful to implement
-// static_assert, and defining it for all toolchains avoids an extra level of
-// nesting of #if/#ifdef/#ifndef.
-#ifndef __has_extension
-#define __has_extension(x) 0  // MSVC 10's preprocessor can't handle 'false'.
+// -----------------------------------------------------------------------------
+// Obsolete (to be removed)
+// -----------------------------------------------------------------------------
+
+// FTELLO, FSEEKO
+#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+    !defined(SWIG)
+#define FTELLO ftello
+#define FSEEKO fseeko
+#else  // not GCC
+// These should be redefined appropriately if better alternatives to
+// ftell/fseek exist in the compiler
+#define FTELLO ftell
+#define FSEEKO fseek
+#endif  // GCC
+
+// __STD
+// Our STL-like classes use __STD.
+#if defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) || \
+    defined(_MSC_VER)
+#define __STD std
 #endif
 
+// STREAM_SET, STREAM_SETF
+#if defined __GNUC__
+#define STREAM_SET(s, bit) (s).setstate(std::ios_base::bit)
+#define STREAM_SETF(s, flag) (s).setf(std::ios_base::flag)
+#else
+#define STREAM_SET(s, bit) (s).set(std::ios::bit)
+#define STREAM_SETF(s, flag) (s).setf(std::ios::flag)
+#endif
+
+// CompileAssert
 #ifdef __cplusplus
 // CompileAssert<T> is deprecated.  Use static_assert instead.
 template <bool>
@@ -1406,6 +1670,7 @@ struct CompileAssert {
 };
 #endif  // __cplusplus
 
+// HAS_GLOBAL_STRING
 // Some platforms have a ::string class that is different from ::std::string
 // (although the interface is the same, of course).  On other platforms,
 // ::string is the same as ::std::string.
@@ -1417,50 +1682,5 @@ using std::string;
 // TODO(user): using std::wstring?
 #endif  // HAS_GLOBAL_STRING
 #endif  // SWIG, __cplusplus
-
-#ifdef __cplusplus
-namespace base {
-// We support C++14's sized deallocation for all C++ builds,
-// though for other toolchains, we fall back to using delete.
-inline void sized_delete(void* ptr, size_t size) {
-#ifdef GOOGLE_HAVE_SIZED_DELETE
-  ::operator delete(ptr, size);
-#else
-  (void)size;
-  ::operator delete(ptr);
-#endif  // GOOGLE_HAVE_SIZED_DELETE
-}
-}  // namespace base
-#endif  // __cplusplus
-
-// This sanity check can be removed when all references to
-// LANG_CXX11 is removed from the code base.
-#if defined(__cplusplus) && !defined(LANG_CXX11) && !defined(SWIG)
-#error "LANG_CXX11 is required."
-#endif
-
-// A variable declaration annotated with the ABSL_CONST_INIT attribute will
-// not compile (on supported platforms) unless the variable has a constant
-// initializer. This is useful for variables with static and thread storage
-// duration, because it guarantees that they will not suffer from the so-called
-// "static init order fiasco".
-//
-// Sample usage:
-//
-// ABSL_CONST_INIT static MyType my_var = MakeMyType(...);
-//
-// Note that this attribute is redundant if the variable is declared constexpr.
-#if defined(__cplusplus) && defined(__has_cpp_attribute)
-// NOTE: requiring __cplusplus above should not be necessary, but
-// works around https://bugs.llvm.org/show_bug.cgi?id=23435.
-#if __has_cpp_attribute(clang::require_constant_initialization)
-// NOLINTNEXTLINE(whitespace/braces) (b/36288871)
-#define ABSL_CONST_INIT [[clang::require_constant_initialization]]
-#else
-#define ABSL_CONST_INIT
-#endif  // __has_cpp_attribute(clang::require_constant_initialization)
-#else
-#define ABSL_CONST_INIT
-#endif  // defined(__has_cpp_attribute)
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_PORT_H_

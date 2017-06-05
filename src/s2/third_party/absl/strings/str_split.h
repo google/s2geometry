@@ -13,12 +13,14 @@
 // limitations under the License.
 //
 
-#ifndef S2_STRINGS_SPLIT_H_
-#define S2_STRINGS_SPLIT_H_
+#ifndef S2_THIRD_PARTY_ABSL_STRINGS_STR_SPLIT_H_
+#define S2_THIRD_PARTY_ABSL_STRINGS_STR_SPLIT_H_
 
 #include <functional>
 #include <string>
 #include <vector>
+
+#include "s2/third_party/absl/strings/strip.h"
 
 namespace strings {
 
@@ -27,10 +29,27 @@ std::vector<std::string> Split(
     std::function<bool(std::string const&)> predicate);
 std::vector<std::string> Split(std::string const& text, char delim);
 
+// Returns false if the given StringPiece is empty, indicating that the
+// strings::Split() API should omit the empty string.
+//
+// std::vector<string> v = Split(" a , ,,b,", ',', SkipEmpty());
+// EXPECT_THAT(v, ElementsAre(" a ", " ", "b"));
 struct SkipEmpty {
-  bool operator()(std::string const& s) { return !s.empty(); }
+  bool operator()(std::string const& s) const { return !s.empty(); }
+};
+
+// Returns false if the given string is empty or contains only whitespace,
+// indicating that the strings::Split() API should omit the string.
+//
+// std::vector<string> v = Split(" a , ,,b,", ',', SkipWhitespace());
+// EXPECT_THAT(v, ElementsAre(" a ", "b"));
+struct SkipWhitespace {
+  bool operator()(std::string s) const {
+    StripWhitespace(&s);
+    return !s.empty();
+  }
 };
 
 }  // namespace strings
 
-#endif  // S2_STRINGS_SPLIT_H_
+#endif  // S2_THIRD_PARTY_ABSL_STRINGS_STR_SPLIT_H_

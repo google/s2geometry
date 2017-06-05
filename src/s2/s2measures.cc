@@ -24,7 +24,7 @@
 #include "s2/s2predicates.h"
 
 // TODO(ericv): Convert to using s2pred::Sign().
-//#include "s2/util/geometry/s2predicates.h"
+//#include "util/geometry/s2predicates.h"
 
 using std::atan;
 using std::max;

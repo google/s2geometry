@@ -870,6 +870,31 @@ TEST(S2Polygon, IntersectionPreservesLoopOrder) {
   EXPECT_EQ(s2textformat::ToString(*b), s2textformat::ToString(actual));
 }
 
+// Verifies that S2Polygon does not destroy or replace pointers to S2Loop, so
+// caller can rely on using raw pointers.
+TEST(S2Polygon, LoopPointers) {
+  vector<unique_ptr<S2Loop>> loops;
+  loops.emplace_back(s2textformat::MakeLoop("4:4, 4:6, 6:6, 6:4"));
+  loops.emplace_back(s2textformat::MakeLoop("3:3, 3:7, 7:7, 7:3"));
+  loops.emplace_back(s2textformat::MakeLoop("2:2, 2:8, 8:8, 8:2"));
+  loops.emplace_back(s2textformat::MakeLoop("1:1, 1:9, 9:9, 9:1"));
+  loops.emplace_back(s2textformat::MakeLoop("10:10, 15:15, 20:10"));
+  loops.emplace_back(s2textformat::MakeLoop("-1:-1, -9:-1, -9:-9, -1:-9"));
+  loops.emplace_back(s2textformat::MakeLoop("-5:-5, -6:-5, -6:-6, -5:-6"));
+
+  std::set<S2Loop const*> loops_raw_ptrs;
+  for (auto& loop : loops) {
+    loops_raw_ptrs.insert(loop.get());
+  }
+  S2Polygon polygon(std::move(loops));
+
+  // Check that loop pointers didn't change (but could've gotten reordered).
+  EXPECT_EQ(loops_raw_ptrs.size(), polygon.num_loops());
+  for (int i = 0; i < polygon.num_loops(); i++) {
+     EXPECT_EQ(1, loops_raw_ptrs.count(polygon.loop(i))) << "loop " << i;
+  }
+}
+
 static vector<unique_ptr<S2Loop>> MakeLoops(
     vector<vector<S2Point>> const& loop_vertices) {
   vector<unique_ptr<S2Loop>> result;
@@ -2870,10 +2895,9 @@ void TestPolygonShape(S2Polygon const& polygon) {
     EXPECT_EQ(e, shape.chain(i).start);
     EXPECT_EQ(loop_i->num_vertices(), shape.chain(i).length);
     for (int j = 0; j < loop_i->num_vertices(); ++j, ++e) {
-      S2Point const *v0, *v1;
-      shape.GetEdge(e, &v0, &v1);
-      EXPECT_EQ(&loop_i->oriented_vertex(j), v0);
-      EXPECT_EQ(&loop_i->oriented_vertex(j+1), v1);
+      auto edge = shape.edge(e);
+      EXPECT_EQ(loop_i->oriented_vertex(j), edge.v0);
+      EXPECT_EQ(loop_i->oriented_vertex(j+1), edge.v1);
     }
   }
   EXPECT_EQ(2, shape.dimension());

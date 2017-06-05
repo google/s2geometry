@@ -30,8 +30,8 @@
 #include <glog/logging.h>
 #include "s2/base/stringprintf.h"
 #include "s2/base/strtoint.h"
-#include "s2/strings/split.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/strings/str_split.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"

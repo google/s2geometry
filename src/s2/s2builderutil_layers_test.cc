@@ -23,9 +23,9 @@
 #include <set>
 #include <string>
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/strings/join.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/strings/str_join.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2debug.h"
 #include "s2/s2textformat.h"
@@ -35,7 +35,9 @@ using absl::MakeUnique;
 using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
 using s2builderutil::S2PolylineVectorLayer;
+using s2builderutil::S2PointVectorLayer;
 using s2textformat::MakePolyline;
+using s2textformat::MakePoint;
 using std::map;
 using std::set;
 using std::unique_ptr;
@@ -593,6 +595,108 @@ TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
       }
     }
   }
+}
+
+void VerifyS2PointVectorLayerResults(
+    S2PointVectorLayer::LabelSetIds const& label_set_ids,
+    IdSetLexicon const& label_set_lexicon, vector<S2Point> const& output,
+    string const& str_expected_points,
+    vector<vector<int32>> const& expected_labels) {
+  vector<S2Point> expected_points =
+      s2textformat::ParsePoints(str_expected_points);
+
+  ASSERT_EQ(expected_labels.size(), label_set_ids.size());
+  for (int i = 0; i < output.size(); ++i) {
+    EXPECT_EQ(expected_points[i], output[i]);
+    ASSERT_EQ(expected_labels[i].size(),
+              label_set_lexicon.id_set(label_set_ids[i]).size());
+    int k = 0;
+    for (int32 label : label_set_lexicon.id_set(label_set_ids[i])) {
+      EXPECT_EQ(expected_labels[i][k++], label);
+    }
+  }
+}
+
+void AddPoint(S2Point p, S2Builder* builder) { builder->AddEdge(p, p); }
+
+TEST(S2PointVectorLayer, MergeDuplicates) {
+  S2Builder builder((S2Builder::Options()));
+  std::vector<S2Point> output;
+  IdSetLexicon label_set_lexicon;
+  S2PointVectorLayer::LabelSetIds label_set_ids;
+  builder.StartLayer(MakeUnique<S2PointVectorLayer>(
+      &output, &label_set_ids, &label_set_lexicon,
+      S2PointVectorLayer::Options(
+          S2Builder::GraphOptions::DuplicateEdges::MERGE)));
+
+  builder.set_label(1);
+  AddPoint(MakePoint("0:1"), &builder);
+  AddPoint(MakePoint("0:2"), &builder);
+  builder.set_label(2);
+  AddPoint(MakePoint("0:1"), &builder);
+  AddPoint(MakePoint("0:4"), &builder);
+  AddPoint(MakePoint("0:5"), &builder);
+  builder.clear_labels();
+  AddPoint(MakePoint("0:5"), &builder);
+  AddPoint(MakePoint("0:6"), &builder);
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+
+  vector<vector<int32>> expected_labels = {{1, 2}, {1}, {2}, {2}, {}};
+  string expected_points = "0:1, 0:2, 0:4, 0:5, 0:6";
+
+  VerifyS2PointVectorLayerResults(label_set_ids, label_set_lexicon, output,
+                                  expected_points, expected_labels);
+}
+
+TEST(S2PointVectorLayer, KeepDuplicates) {
+  S2Builder builder((S2Builder::Options()));
+  std::vector<S2Point> output;
+  IdSetLexicon label_set_lexicon;
+  S2PointVectorLayer::LabelSetIds label_set_ids;
+  builder.StartLayer(MakeUnique<S2PointVectorLayer>(
+      &output, &label_set_ids, &label_set_lexicon,
+      S2PointVectorLayer::Options(
+          S2Builder::GraphOptions::DuplicateEdges::KEEP)));
+
+  builder.set_label(1);
+  AddPoint(MakePoint("0:1"), &builder);
+  AddPoint(MakePoint("0:2"), &builder);
+  builder.set_label(2);
+  AddPoint(MakePoint("0:1"), &builder);
+  AddPoint(MakePoint("0:4"), &builder);
+  AddPoint(MakePoint("0:5"), &builder);
+  builder.clear_labels();
+  AddPoint(MakePoint("0:5"), &builder);
+  AddPoint(MakePoint("0:6"), &builder);
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+
+  vector<vector<int32>> expected_labels = {{1}, {2}, {1}, {2}, {2}, {}, {}};
+  string expected_points = "0:1, 0:1, 0:2, 0:4, 0:5, 0:5, 0:6";
+
+  VerifyS2PointVectorLayerResults(label_set_ids, label_set_lexicon, output,
+                                  expected_points, expected_labels);
+}
+
+TEST(S2PointVectorLayer, Error) {
+  S2Builder builder((S2Builder::Options()));
+  std::vector<S2Point> output;
+  builder.StartLayer(MakeUnique<S2PointVectorLayer>(
+      &output, S2PointVectorLayer::Options(
+                   S2Builder::GraphOptions::DuplicateEdges::KEEP)));
+
+  AddPoint(MakePoint("0:1"), &builder);
+  builder.AddEdge(MakePoint("0:3"), MakePoint("0:4"));
+  AddPoint(MakePoint("0:5"), &builder);
+  S2Error error;
+  EXPECT_FALSE(builder.Build(&error));
+  EXPECT_EQ(error.code(), S2Error::INVALID_ARGUMENT);
+  EXPECT_EQ(error.text(), "Found non-degenerate edges");
+
+  EXPECT_EQ(2, output.size());
+  EXPECT_EQ(MakePoint("0:1"), output[0]);
+  EXPECT_EQ(MakePoint("0:5"), output[1]);
 }
 
 #if 0

@@ -790,10 +790,10 @@ bool S2Polygon::BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
   R2Rect bound = target.GetBoundUV().Expanded(kMaxError);
   int const face = target.face();
   for (int i = 0; i < a_num_clipped; ++i) {
-    S2Point const *v0, *v1;
-    shape_.GetEdge(a_clipped.edge(i), &v0, &v1);
+    auto edge = shape_.edge(a_clipped.edge(i));
     R2Point p0, p1;
-    if (S2EdgeUtil::ClipToPaddedFace(*v0, *v1, face, kMaxError, &p0, &p1) &&
+    if (S2EdgeUtil::ClipToPaddedFace(edge.v0, edge.v1, face, kMaxError,
+                                     &p0, &p1) &&
         S2EdgeUtil::IntersectsRect(p0, p1, bound)) {
       return true;
     }
@@ -837,15 +837,13 @@ bool S2Polygon::Contains(S2ShapeIndex::Iterator const& it,
   bool inside = a_clipped.contains_center();
   int a_num_clipped = a_clipped.num_edges();
   if (a_num_clipped > 0) {
-    S2Point center = it.center();
-    S2EdgeUtil::EdgeCrosser crosser(&center, &p);
+    S2EdgeUtil::CopyingEdgeCrosser crosser(it.center(), p);
     // TODO(ericv): For more polygons with a large number of loops, it would
     // be more efficient to test the edges of each chain separately.  This
     // would avoid the need to figure out which loop contains each edge.
     for (int i = 0; i < a_num_clipped; ++i) {
-      S2Point const *v0, *v1;
-      shape_.GetEdge(a_clipped.edge(i), &v0, &v1);
-      inside ^= crosser.EdgeOrVertexCrossing(v0, v1);
+      auto edge = shape_.edge(a_clipped.edge(i));
+      inside ^= crosser.EdgeOrVertexCrossing(edge.v0, edge.v1);
     }
   }
   return inside;
@@ -1713,6 +1711,27 @@ S2Polygon::Shape::~Shape() {
   delete[] cumulative_edges_;
 }
 
+S2Shape::Edge S2Polygon::Shape::edge(int e) const {
+  DCHECK_LT(e, num_edges());
+  S2Polygon const* p = polygon();
+  int i;
+  if (cumulative_edges_) {
+    // "upper_bound" finds the loop just beyond the one we want.
+    int* start = std::upper_bound(cumulative_edges_,
+                                  cumulative_edges_ + p->num_loops(), e) - 1;
+    i = start - cumulative_edges_;
+    e -= *start;
+  } else {
+    // When the number of loops is small, linear search is faster.  Most often
+    // there is exactly one loop and the code below executes zero times.
+    for (i = 0; e >= p->loop(i)->num_vertices(); ++i) {
+      e -= p->loop(i)->num_vertices();
+    }
+  }
+  return Edge(p->loop(i)->oriented_vertex(e),
+              p->loop(i)->oriented_vertex(e + 1));
+}
+
 void S2Polygon::Shape::GetEdge(int e, S2Point const** a, S2Point const** b)
     const {
   DCHECK_LT(e, num_edges());
@@ -1762,8 +1781,8 @@ S2Shape::Chain S2Polygon::Shape::chain(int i) const {
 S2Shape::Edge S2Polygon::Shape::chain_edge(int i, int j) const {
   DCHECK_LT(i, Shape::num_chains());
   DCHECK_LT(j, polygon_->loop(i)->num_vertices());
-  return Edge(&polygon()->loop(i)->oriented_vertex(j),
-              &polygon()->loop(i)->oriented_vertex(j + 1));
+  return Edge(polygon()->loop(i)->oriented_vertex(j),
+              polygon()->loop(i)->oriented_vertex(j + 1));
 }
 
 S2Shape::ChainPosition S2Polygon::Shape::chain_position(int e) const {

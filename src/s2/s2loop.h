@@ -49,9 +49,7 @@ class S2CrossingEdgeQuery;
 class S2Error;
 class S2Loop;
 class S2XYZFaceSiTi;
-namespace s2builderutil {
-class S2PolygonLayer;
-}  // namespace s2builderutil
+namespace s2builderutil { class S2PolygonLayer; }
 
 // An S2Loop represents a simple spherical polygon.  It consists of a single
 // chain of vertices where the first vertex is implicitly connected to the
@@ -456,9 +454,12 @@ class S2Loop final : public S2Region {
     int num_edges() const final {
       return loop_->is_empty_or_full() ? 0 : loop_->num_vertices();
     }
+    Edge edge(int e) const final {
+      return Edge(loop_->vertex(e), loop_->vertex(e + 1));
+    }
     void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
       *a = &loop_->vertex(e);
-      *b = &loop_->vertex(e + 1);
+      *b = &loop_->vertex(e+1);
     }
     int dimension() const final { return 2; }
     bool contains_origin() const final { return loop_->contains_origin(); }
@@ -466,7 +467,7 @@ class S2Loop final : public S2Region {
     Chain chain(int i) const final;
     Edge chain_edge(int i, int j) const final {
       DCHECK_EQ(i, 0);
-      return Edge(&loop_->vertex(j), &loop_->vertex(j + 1));
+      return Edge(loop_->vertex(j), loop_->vertex(j + 1));
     }
     ChainPosition chain_position(int e) const final {
       return ChainPosition(0, e);

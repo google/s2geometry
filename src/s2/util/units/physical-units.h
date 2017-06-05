@@ -36,7 +36,7 @@
 // All units share common functionality, as demonstrated in this
 // example:
 //
-//   #include "s2/angle-units.h"
+//   #include "angle-units.h"
 //
 //   class Nomad {
 //     Radians latitude_;

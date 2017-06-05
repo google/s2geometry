@@ -165,9 +165,8 @@ static void GetClosestEdges(Target const& target, S2ClosestEdgeQuery *query,
     // S1Angle(edge, target) distance.  They may be slightly different
     // because query->distance() is computed using S1ChordAngle.  Note that
     // the error gets considerably larger (1e-7) as the angle approaches Pi.
-    S2Point const *v0, *v1;
-    query->GetEdge(i, &v0, &v1);
-    EXPECT_NEAR(target.GetDistanceToEdge(*v0, *v1).radians(),
+    auto edge = query->edge(i);
+    EXPECT_NEAR(target.GetDistanceToEdge(edge.v0, edge.v1).radians(),
                 query->distance(i).radians(), kChordAngleError);
 
     // Check that the edge satisfies the max_distance() condition.

@@ -47,32 +47,20 @@ using std::vector;
 extern void PrintIntersectionStats();
 extern int exact_calls;
 
-const int kDegen = -2;
-void CompareResult(int actual, int expected) {
-  // HACK ALERT: CrossingSign() is allowed to return 0 or -1 if either edge
-  // is degenerate.  We use the value kDegen to represent this possibility.
-  if (expected == kDegen) {
-    EXPECT_LE(actual, 0);
-  } else {
-    EXPECT_EQ(expected, actual);
-  }
-}
-
-void TestCrossing(S2Point a, S2Point b, S2Point c, S2Point d,
+void TestCrossing(S2Point const& a, S2Point const& b,
+                  S2Point const& c, S2Point const& d,
                   int robust, bool edge_or_vertex, bool simple) {
-  a = a.Normalize();
-  b = b.Normalize();
-  c = c.Normalize();
-  d = d.Normalize();
-  CompareResult(S2EdgeUtil::CrossingSign(a, b, c, d), robust);
+  // Modify the expected result if two vertices from different edges match.
+  if (a == c || a == d || b == c || b == d) robust = 0;
+  EXPECT_EQ(robust, S2EdgeUtil::CrossingSign(a, b, c, d));
   if (simple) {
     EXPECT_EQ(robust > 0, S2EdgeUtil::SimpleCrossing(a, b, c, d));
   }
   S2EdgeUtil::EdgeCrosser crosser(&a, &b, &c);
-  CompareResult(crosser.CrossingSign(&d), robust);
-  CompareResult(crosser.CrossingSign(&c), robust);
-  CompareResult(crosser.CrossingSign(&d, &c), robust);
-  CompareResult(crosser.CrossingSign(&c, &d), robust);
+  EXPECT_EQ(robust, crosser.CrossingSign(&d));
+  EXPECT_EQ(robust, crosser.CrossingSign(&c));
+  EXPECT_EQ(robust, crosser.CrossingSign(&d, &c));
+  EXPECT_EQ(robust, crosser.CrossingSign(&c, &d));
 
   EXPECT_EQ(edge_or_vertex, S2EdgeUtil::EdgeOrVertexCrossing(a, b, c, d));
   crosser.RestartAt(&c);
@@ -84,15 +72,15 @@ void TestCrossing(S2Point a, S2Point b, S2Point c, S2Point d,
   // Check that the crosser can be re-used.
   crosser.Init(&c, &d);
   crosser.RestartAt(&a);
-  CompareResult(crosser.CrossingSign(&b), robust);
-  CompareResult(crosser.CrossingSign(&a), robust);
+  EXPECT_EQ(robust, crosser.CrossingSign(&b));
+  EXPECT_EQ(robust, crosser.CrossingSign(&a));
 
   // Now try all the same tests with CopyingEdgeCrosser.
   S2EdgeUtil::CopyingEdgeCrosser crosser2(a, b, c);
-  CompareResult(crosser2.CrossingSign(d), robust);
-  CompareResult(crosser2.CrossingSign(c), robust);
-  CompareResult(crosser2.CrossingSign(d, c), robust);
-  CompareResult(crosser2.CrossingSign(c, d), robust);
+  EXPECT_EQ(robust, crosser2.CrossingSign(d));
+  EXPECT_EQ(robust, crosser2.CrossingSign(c));
+  EXPECT_EQ(robust, crosser2.CrossingSign(d, c));
+  EXPECT_EQ(robust, crosser2.CrossingSign(c, d));
 
   EXPECT_EQ(edge_or_vertex, S2EdgeUtil::EdgeOrVertexCrossing(a, b, c, d));
   crosser2.RestartAt(c);
@@ -104,19 +92,23 @@ void TestCrossing(S2Point a, S2Point b, S2Point c, S2Point d,
   // Check that the crosser can be re-used.
   crosser2.Init(c, d);
   crosser2.RestartAt(a);
-  CompareResult(crosser2.CrossingSign(b), robust);
-  CompareResult(crosser2.CrossingSign(a), robust);
+  EXPECT_EQ(robust, crosser2.CrossingSign(b));
+  EXPECT_EQ(robust, crosser2.CrossingSign(a));
 }
 
 void TestCrossings(S2Point a, S2Point b, S2Point c, S2Point d,
                    int robust, bool edge_or_vertex, bool simple) {
+  a = a.Normalize();
+  b = b.Normalize();
+  c = c.Normalize();
+  d = d.Normalize();
   TestCrossing(a, b, c, d, robust, edge_or_vertex, simple);
   TestCrossing(b, a, c, d, robust, edge_or_vertex, simple);
   TestCrossing(a, b, d, c, robust, edge_or_vertex, simple);
   TestCrossing(b, a, d, c, robust, edge_or_vertex, simple);
-  TestCrossing(a, a, c, d, kDegen, 0, false);
-  TestCrossing(a, b, c, c, kDegen, 0, false);
-  TestCrossing(a, a, c, c, kDegen, 0, false);
+  TestCrossing(a, a, c, d, -1, 0, false);
+  TestCrossing(a, b, c, c, -1, 0, false);
+  TestCrossing(a, a, c, c, -1, 0, false);
   TestCrossing(a, b, a, b, 0, 1, false);
   TestCrossing(c, d, a, b, robust, edge_or_vertex ^ (robust == 0), simple);
 }

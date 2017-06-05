@@ -131,9 +131,10 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
     string missing_candidates;
     vector<int> expected_crossings, expected_interior_crossings;
     for (int i = 0; i < shape->num_edges(); ++i) {
-      S2Point const *c, *d;
-      shape->GetEdge(i, &c, &d);
-      int sign = S2EdgeUtil::CrossingSign(a, b, *c, *d);
+      auto edge = shape->edge(i);
+      S2Point const& c = edge.v0;
+      S2Point const& d = edge.v1;
+      int sign = S2EdgeUtil::CrossingSign(a, b, c, d);
       if (sign >= 0) {
         expected_crossings.push_back(i);
         if (sign > 0) {
@@ -145,10 +146,10 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
         }
       } else {
         double const kMaxDist = S2::kMaxDiag.GetValue(S2::kMaxCellLevel);
-        if (S2EdgeUtil::GetDistance(a, *c, *d).radians() < kMaxDist ||
-            S2EdgeUtil::GetDistance(b, *c, *d).radians() < kMaxDist ||
-            S2EdgeUtil::GetDistance(*c, a, b).radians() < kMaxDist ||
-            S2EdgeUtil::GetDistance(*d, a, b).radians() < kMaxDist) {
+        if (S2EdgeUtil::GetDistance(a, c, d).radians() < kMaxDist ||
+            S2EdgeUtil::GetDistance(b, c, d).radians() < kMaxDist ||
+            S2EdgeUtil::GetDistance(c, a, b).radians() < kMaxDist ||
+            S2EdgeUtil::GetDistance(d, a, b).radians() < kMaxDist) {
           ++num_nearby_pairs;
         }
       }

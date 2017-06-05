@@ -1332,10 +1332,9 @@ TEST(S2LoopShape, Basic) {
   EXPECT_EQ(1, shape.num_chains());
   EXPECT_EQ(0, shape.chain(0).start);
   EXPECT_EQ(3, shape.chain(0).length);
-  S2Point const *v2, *v3;
-  shape.GetEdge(2, &v2, &v3);
-  EXPECT_EQ("1:0", s2textformat::ToString(*v2));
-  EXPECT_EQ("0:0", s2textformat::ToString(*v3));
+  auto edge2 = shape.edge(2);
+  EXPECT_EQ("1:0", s2textformat::ToString(edge2.v0));
+  EXPECT_EQ("0:0", s2textformat::ToString(edge2.v1));
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.contains_origin());

@@ -21,7 +21,6 @@
 #include <cstdio> // MSVC requires this for _vsnprintf
 #include <vector>
 #include <glog/logging.h>
-#include "s2/third_party/absl/base/macros.h"
 
 #ifdef _MSC_VER
 enum { IS__MSC_VER = 1 };

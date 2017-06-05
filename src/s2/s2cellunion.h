@@ -74,7 +74,7 @@ class S2CellUnion final : public S2Region {
 
   // Convenience methods for accessing the individual cell ids.
   int num_cells() const { return cell_ids_.size(); }
-  S2CellId const& cell_id(int i) const { return cell_ids_[i]; }
+  S2CellId const cell_id(int i) const { return cell_ids_[i]; }
 
   // Direct access to the underlying vector for STL algorithms.
   std::vector<S2CellId> const& cell_ids() const { return cell_ids_; }

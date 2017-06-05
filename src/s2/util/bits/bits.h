@@ -334,9 +334,9 @@ class Bits {
   // Allow tests to call _Portable variants directly.
   // Originally, I wanted to depend on //testing/production_stub/public
   // so that I would be able to
-  // #include "s2/testing/production_stub/public/gunit_prod.h", which provides
+  // #include "testing/production_stub/public/gunit_prod.h", which provides
   // the previously mentioned header file says to instead
-  // #include "s2/testing/base/gunit_prod.h". I cannot find a library that a)
+  // #include "testing/base/gunit_prod.h". I cannot find a library that a)
   // provides the alternative header file b) is visisble. Thus, I have thrown
   // my hands up in frustration, and gone with raw friend instead of using the
   // usual FRIEND_TEST macro. Hate the game, not the player.

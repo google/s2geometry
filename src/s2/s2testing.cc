@@ -32,8 +32,8 @@
 #include <glog/logging.h>
 #include "s2/base/stringprintf.h"
 #include "s2/strings/serialize.h"
-#include "s2/strings/split.h"
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/strings/str_split.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"

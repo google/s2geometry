@@ -273,9 +273,7 @@ void S2ShapeIndex::Remove(S2Shape* shape) {
     int num_edges = shape->num_edges();
     removed->edges.reserve(num_edges);
     for (int e = 0; e < num_edges; ++e) {
-      S2Point const *va, *vb;
-      shape->GetEdge(e, &va, &vb);
-      removed->edges.push_back(std::make_pair(*va, *vb));
+      removed->edges.push_back(shape->edge(e));
     }
   }
   // Return ownership to the caller; do not delete the shape.
@@ -319,8 +317,7 @@ class PointContainmentTester {
   S2ShapeIndex::Iterator const& it_;
   S2Point const& point_;
   bool crosser_initialized_;
-  S2Point center_;
-  S2EdgeUtil::EdgeCrosser crosser_;
+  S2EdgeUtil::CopyingEdgeCrosser crosser_;
 };
 
 bool PointContainmentTester::ContainedBy(S2Shape const* shape,
@@ -336,16 +333,14 @@ bool PointContainmentTester::ContainedBy(S2Shape const* shape,
   // We initialize the EdgeCrosser lazily.  This saves work when the cell
   // does not intersect any edges (which happens with interior cells).
   if (!crosser_initialized_) {
-    center_ = it_.center();
-    crosser_.Init(&center_, &point_);
+    crosser_.Init(it_.center(), point_);
     crosser_initialized_ = true;
   }
   // Test containment by drawing a line segment from the cell center to the
   // given point and counting edge crossings.
   for (int i = 0; i < num_clipped; ++i) {
-    S2Point const *a0, *a1;
-    shape->GetEdge(clipped.edge(i), &a0, &a1);
-    inside ^= crosser_.EdgeOrVertexCrossing(a0, a1);
+    auto edge = shape->edge(clipped.edge(i));
+    inside ^= crosser_.EdgeOrVertexCrossing(edge.v0, edge.v1);
   }
   return inside;
 }
@@ -402,13 +397,12 @@ bool S2ShapeIndex::GetContainingShapes(S2Point const& p,
 //    ClippedEdge and this data is cached more successfully.
 
 struct S2ShapeIndex::FaceEdge {
-  int32 shape_id;     // The shape that this edge belongs to
-  int32 edge_id;      // Edge id within that shape
-  int32 max_level;    // Not desirable to subdivide this edge beyond this level
-  bool has_interior;  // Belongs to a shape that has an interior
-  R2Point a, b;       // The edge endpoints, clipped to a given face
-  S2Point const* va;  // The original S2Loop vertices
-  S2Point const* vb;
+  int32 shape_id;      // The shape that this edge belongs to
+  int32 edge_id;       // Edge id within that shape
+  int32 max_level;     // Not desirable to subdivide this edge beyond this level
+  bool has_interior;   // Belongs to a shape that has an interior
+  R2Point a, b;        // The edge endpoints, clipped to a given face
+  S2Shape::Edge edge;  // The edge endpoints
 };
 
 struct S2ShapeIndex::ClippedEdge {
@@ -470,8 +464,7 @@ class S2ShapeIndex::InteriorTracker {
   // Indicate that the given edge of the given shape may cross the line
   // segment between the old and new focus locations (see DrawTo).
   // REQUIRES: shape->has_interior()
-  inline void TestEdge(int32 shape_id,
-                       S2Point const* c, S2Point const* d);
+  inline void TestEdge(int32 shape_id, S2Shape::Edge const& edge);
 
   // The set of shape ids that contain the current focus.
   ShapeIdSet const& shape_ids() const { return shape_ids_; }
@@ -567,10 +560,9 @@ void S2ShapeIndex::InteriorTracker::DrawTo(S2Point const& b) {
   crosser_.Init(&a_, &b_);
 }
 
-inline void S2ShapeIndex::InteriorTracker::TestEdge(int32 shape_id,
-                                                    S2Point const* c,
-                                                    S2Point const* d) {
-  if (crosser_.EdgeOrVertexCrossing(c, d)) {
+inline void S2ShapeIndex::InteriorTracker::TestEdge(
+    int32 shape_id, S2Shape::Edge const& edge) {
+  if (crosser_.EdgeOrVertexCrossing(&edge.v0, &edge.v1)) {
     ToggleShape(shape_id);
   }
 }
@@ -705,6 +697,7 @@ void S2ShapeIndex::ApplyUpdatesInternal() {
       for (auto const& pending_removal : *pending_removals_) {
         RemoveShape(pending_removal, all_edges, &tracker);
       }
+      pending_removals_.reset(nullptr);
     }
     for (int id = pending_additions_begin_; id < batch.additions_end; ++id) {
       AddShape(id, all_edges, &tracker);
@@ -714,9 +707,6 @@ void S2ShapeIndex::ApplyUpdatesInternal() {
       // Save memory by clearing vectors after we are done with them.
       vector<FaceEdge>().swap(all_edges[face]);
     }
-    // We can't clear pending_removals_ until all updates are processed,
-    // because FaceEdge stores pointers directly to the removed vertices.
-    pending_removals_.reset(nullptr);
     pending_additions_begin_ = batch.additions_end;
   }
   // It is the caller's responsibility to update index_status_.
@@ -900,7 +890,7 @@ void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
       edge_id += removed.edges.size();
       while (edge_id >= sample_interval) {
         edge_id -= sample_interval;
-        face_count[S2::GetFace(removed.edges[edge_id].first)] += 1;
+        face_count[S2::GetFace(removed.edges[edge_id].v0)] += 1;
       }
     }
   }
@@ -910,12 +900,10 @@ void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
     edge_id += shape->num_edges();
     while (edge_id >= sample_interval) {
       edge_id -= sample_interval;
-      S2Point const *a, *b;
-      shape->GetEdge(edge_id, &a, &b);
       // For speed, we only count the face containing one endpoint of the
       // edge.  In general the edge could span all 6 faces (with padding), but
       // it's not worth the expense to compute this more accurately.
-      face_count[S2::GetFace(*a)] += 1;
+      face_count[S2::GetFace(shape->edge(edge_id).v0)] += 1;
     }
   }
   // Now given the raw face counts, compute a confidence interval such that we
@@ -959,9 +947,9 @@ void S2ShapeIndex::AddShape(int id, vector<FaceEdge> all_edges[6],
   int num_edges = shape->num_edges();
   for (int e = 0; e < num_edges; ++e) {
     edge.edge_id = e;
-    shape->GetEdge(e, &edge.va, &edge.vb);
-    edge.max_level = GetEdgeMaxLevel(*edge.va, *edge.vb);
-    if (edge.has_interior) tracker->TestEdge(id, edge.va, edge.vb);
+    edge.edge = shape->edge(e);
+    edge.max_level = GetEdgeMaxLevel(edge.edge);
+    if (edge.has_interior) tracker->TestEdge(id, edge.edge);
     AddFaceEdge(&edge, all_edges);
   }
 }
@@ -977,11 +965,10 @@ void S2ShapeIndex::RemoveShape(RemovedShape const& removed,
     tracker->AddShape(edge.shape_id, removed.contains_origin);
   }
   for (auto const& removed_edge : removed.edges) {
-    edge.va = &removed_edge.first;
-    edge.vb = &removed_edge.second;
-    edge.max_level = GetEdgeMaxLevel(*edge.va, *edge.vb);
+    edge.edge = removed_edge;
+    edge.max_level = GetEdgeMaxLevel(edge.edge);
     if (edge.has_interior) {
-      tracker->TestEdge(edge.shape_id, edge.va, edge.vb);
+      tracker->TestEdge(edge.shape_id, edge.edge);
     }
     AddFaceEdge(&edge, all_edges);
   }
@@ -991,10 +978,10 @@ inline void S2ShapeIndex::AddFaceEdge(FaceEdge* edge,
                                       vector<FaceEdge> all_edges[6]) const {
   // Fast path: both endpoints are on the same face, and are far enough from
   // the edge of the face that don't intersect any (padded) adjacent face.
-  int a_face = S2::GetFace(*edge->va);
-  if (a_face == S2::GetFace(*edge->vb)) {
-    S2::ValidFaceXYZtoUV(a_face, *edge->va, &edge->a);
-    S2::ValidFaceXYZtoUV(a_face, *edge->vb, &edge->b);
+  int a_face = S2::GetFace(edge->edge.v0);
+  if (a_face == S2::GetFace(edge->edge.v1)) {
+    S2::ValidFaceXYZtoUV(a_face, edge->edge.v0, &edge->a);
+    S2::ValidFaceXYZtoUV(a_face, edge->edge.v1, &edge->b);
     double const kMaxUV = 1 - kCellPadding;
     if (fabs(edge->a[0]) <= kMaxUV && fabs(edge->a[1]) <= kMaxUV &&
         fabs(edge->b[0]) <= kMaxUV && fabs(edge->b[1]) <= kMaxUV) {
@@ -1004,8 +991,8 @@ inline void S2ShapeIndex::AddFaceEdge(FaceEdge* edge,
   }
   // Otherwise we simply clip the edge to all six faces.
   for (int face = 0; face < 6; ++face) {
-    if (S2EdgeUtil::ClipToPaddedFace(*edge->va, *edge->vb, face, kCellPadding,
-                                     &edge->a, &edge->b)) {
+    if (S2EdgeUtil::ClipToPaddedFace(edge->edge.v0, edge->edge.v1, face,
+                                     kCellPadding, &edge->a, &edge->b)) {
       all_edges[face].push_back(*edge);
     }
   }
@@ -1013,11 +1000,11 @@ inline void S2ShapeIndex::AddFaceEdge(FaceEdge* edge,
 
 // Return the first level at which the edge will *not* contribute towards
 // the decision to subdivide.
-int S2ShapeIndex::GetEdgeMaxLevel(S2Point const& a, S2Point const& b) const {
+int S2ShapeIndex::GetEdgeMaxLevel(S2Shape::Edge const& edge) const {
   // Compute the maximum cell size for which this edge is considered "long".
   // The calculation does not need to be perfectly accurate, so we use Norm()
   // rather than Angle() for speed.
-  double cell_size = ((a - b).Norm() *
+  double cell_size = ((edge.v0 - edge.v1).Norm() *
                       FLAGS_s2shapeindex_cell_size_to_long_edge_ratio);
   // Now return the first level encountered during subdivision where the
   // average cell size is at most "cell_size".
@@ -1428,7 +1415,7 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
         break;  // All shapes being removed come first.
       }
       if (face_edge->has_interior) {
-        tracker->TestEdge(face_edge->shape_id, face_edge->va, face_edge->vb);
+        tracker->TestEdge(face_edge->shape_id, face_edge->edge);
       }
     }
   }
@@ -1474,11 +1461,12 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
     for (int i = 0; i < num_clipped; ++i) {
       int e = clipped.edge(i);
       edge.edge_id = e;
-      shape->GetEdge(e, &edge.va, &edge.vb);
-      edge.max_level = GetEdgeMaxLevel(*edge.va, *edge.vb);
-      if (edge.has_interior) tracker->TestEdge(shape_id, edge.va, edge.vb);
-      if (!S2EdgeUtil::ClipToPaddedFace(*edge.va, *edge.vb, pcell.id().face(),
-                                        kCellPadding, &edge.a, &edge.b)) {
+      edge.edge = shape->edge(e);
+      edge.max_level = GetEdgeMaxLevel(edge.edge);
+      if (edge.has_interior) tracker->TestEdge(shape_id, edge.edge);
+      if (!S2EdgeUtil::ClipToPaddedFace(edge.edge.v0, edge.edge.v1,
+                                        pcell.id().face(), kCellPadding,
+                                        &edge.a, &edge.b)) {
         LOG(DFATAL) << "Invariant failure in S2ShapeIndex";
       }
       face_edges->push_back(edge);
@@ -1628,7 +1616,7 @@ void S2ShapeIndex::TestAllEdges(vector<ClippedEdge const*> const& edges,
   for (ClippedEdge const* edge : edges) {
     FaceEdge const* face_edge = edge->face_edge;
     if (face_edge->has_interior) {
-      tracker->TestEdge(face_edge->shape_id, face_edge->va, face_edge->vb);
+      tracker->TestEdge(face_edge->shape_id, face_edge->edge);
     }
   }
 }

@@ -50,7 +50,7 @@
 //     // query.shape_id(i) and query.edge_id(i) identify the edge.
 //     // Convenience methods:
 //     //   query.distance(i) is the distance to the target point.
-//     //   query.GetEdge(i, &v0, &v1) retrieves the edge endpoints.
+//     //   query.edge(i) retrieves the edge endpoints.
 //     //   query.GetClosestPointOnEdge(i) returns the point on the edge
 //     //     that is closest to the target point.
 //     int polyline_index = query.shape_id(i);
@@ -162,8 +162,11 @@ class S2ClosestEdgeQuery {
   // Like distance(i), but expressed as an S1ChordAngle.
   S1ChordAngle distance_ca(int i) const;
 
+  // Returns the endpoints of the given result edge.
+  S2Shape::Edge edge(int i) const;
+
   // Returns pointers to the vertices of the given result edge.  Example usage:
-  //   S2Point const *v0, *v1;
+  //   S2Point const **v0, *v*1;
   //   query.GetEdge(i, &v0, &v1);
   void GetEdge(int i, S2Point const** v0, S2Point const** v1) const;
 
@@ -211,11 +214,10 @@ class S2ClosestEdgeQuery {
     virtual bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
                                    S1ChordAngle* min_dist) const = 0;
     virtual S1ChordAngle GetDistance(S2Cell const& cell) const = 0;
-    virtual S2Point GetClosestPointOnEdge(S2Point const& v0,
-                                          S2Point const& v1) const = 0;
+    virtual S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const = 0;
   };
 
-  class PointTarget : public Target {
+  class PointTarget final : public Target {
    public:
     explicit PointTarget(S2Point const& point) : point_(point) {}
     S2Point center() const override { return point_; }
@@ -227,15 +229,14 @@ class S2ClosestEdgeQuery {
     S1ChordAngle GetDistance(S2Cell const& cell) const override {
       return cell.GetDistance(point_);
     }
-    S2Point GetClosestPointOnEdge(S2Point const& v0,
-                                  S2Point const& v1) const override {
-      return S2EdgeUtil::Project(point_, v0, v1);
+    S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const override {
+      return S2EdgeUtil::Project(point_, edge.v0, edge.v1);
     }
    private:
     S2Point point_;
   };
 
-  class EdgeTarget : public Target {
+  class EdgeTarget final : public Target {
    public:
     EdgeTarget(S2Point const& a, S2Point const& b) : a_(a), b_(b) {}
     S2Point center() const override { return (a_ + b_).Normalize(); }
@@ -247,9 +248,9 @@ class S2ClosestEdgeQuery {
     S1ChordAngle GetDistance(S2Cell const& cell) const override {
       return cell.GetDistanceToEdge(a_, b_);
     }
-    S2Point GetClosestPointOnEdge(S2Point const& v0,
-                                  S2Point const& v1) const override {
-      return S2EdgeUtil::GetEdgePairClosestPoints(a_, b_, v0, v1).second;
+    S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const override {
+      return S2EdgeUtil::GetEdgePairClosestPoints(
+          a_, b_, edge.v0, edge.v1).second;
     }
    private:
     S2Point a_, b_;
@@ -269,17 +270,17 @@ class S2ClosestEdgeQuery {
 
   //////////// Parameters /////////////
 
-  int max_edges_;
   S1Angle max_distance_;
   S1Angle max_error_arg_;
   std::unique_ptr<const Target> target_;
+  int max_edges_;
 
   ////////// Fields that are constant after Init() is called /////////////
 
-  S2ShapeIndex const* index_;
-
   // If the index has few edges, it is cheaper to use a brute force algorithm.
   bool use_brute_force_;
+
+  S2ShapeIndex const* index_;
 
   // During Init() we precompute the top-level S2CellIds that will be added to
   // the priority queue.  There can be at most 6 of these cells.  Essentially
@@ -438,6 +439,10 @@ inline S1ChordAngle S2ClosestEdgeQuery::distance_ca(int i) const {
 
 inline S1Angle S2ClosestEdgeQuery::distance(int i) const {
   return distance_ca(i).ToAngle();
+}
+
+inline S2Shape::Edge S2ClosestEdgeQuery::edge(int i) const {
+  return index_->shape(shape_id(i))->edge(edge_id(i));
 }
 
 inline void S2ClosestEdgeQuery::GetEdge(int i, S2Point const** v0,

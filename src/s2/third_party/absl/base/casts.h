@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 // limitations under the License.
 //
 
-//
 // Various Google-specific casting templates.
 //
 // This code is compiled directly on many platforms, including client
@@ -24,9 +23,10 @@
 #ifndef S2_THIRD_PARTY_ABSL_BASE_CASTS_H_
 #define S2_THIRD_PARTY_ABSL_BASE_CASTS_H_
 
-#include <cstring>         // for memcpy
-
+#include <cstring>
 #include <type_traits>
+
+#include "s2/third_party/absl/base/internal/identity.h"
 
 // Use implicit_cast as a safe version of static_cast or const_cast
 // for implicit conversions. For example:
@@ -39,24 +39,16 @@
 //   DoSomething(to);
 // to this
 //   DoSomething(implicit_cast<To>(from));
-//
-// identity_ is used to make a non-deduced context, which
-// forces all callers to explicitly specify the template argument.
-
-template <class T>
-struct identity_ {
-  typedef T type;
-};
 
 template <typename To>
-inline To implicit_cast(typename ::identity_<To>::type to) {
+inline To implicit_cast(typename absl::internal::identity_t<To> to) {
   return to;
 }
 
 // This version of implicit_cast is used when two template arguments
 // are specified. It's obsolete and should not be used.
 template <typename To, typename From>
-inline To implicit_cast(typename ::identity_<From>::type const& f) {
+inline To implicit_cast(typename absl::internal::identity_t<From> const& f) {
   return f;
 }
 

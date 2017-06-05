@@ -75,12 +75,8 @@ GraphOptions S2PolygonLayer::graph_options() const {
   // Prevent degenerate edges and sibling edge pairs.  There should not be any
   // duplicate edges if the input is valid, but if there are then we keep them
   // since this tends to produce more comprehensible errors.
-  GraphOptions graph_options;
-  graph_options.set_edge_type(options_.edge_type());
-  graph_options.set_degenerate_edges(DegenerateEdges::DISCARD);
-  graph_options.set_duplicate_edges(DuplicateEdges::KEEP);
-  graph_options.set_sibling_pairs(SiblingPairs::DISCARD);
-  return graph_options;
+  return GraphOptions(options_.edge_type(), DegenerateEdges::DISCARD,
+                      DuplicateEdges::KEEP, SiblingPairs::DISCARD);
 }
 
 void S2PolygonLayer::AppendS2Loops(Graph const& g,
@@ -218,12 +214,8 @@ GraphOptions S2PolylineLayer::graph_options() const {
   // Remove edges that collapse to a single vertex, but keep duplicate and
   // sibling edges, since merging duplicates or discarding siblings can make
   // it impossible to assemble the edges into a single polyline.
-  GraphOptions graph_options;
-  graph_options.set_edge_type(options_.edge_type());
-  graph_options.set_degenerate_edges(DegenerateEdges::DISCARD);
-  graph_options.set_duplicate_edges(DuplicateEdges::KEEP);
-  graph_options.set_sibling_pairs(SiblingPairs::KEEP);
-  return graph_options;
+  return GraphOptions(options_.edge_type(), DegenerateEdges::DISCARD,
+                      DuplicateEdges::KEEP, SiblingPairs::KEEP);
 }
 
 void S2PolylineLayer::Build(Graph const& g, S2Error* error) {
@@ -284,12 +276,8 @@ void S2PolylineVectorLayer::Init(vector<unique_ptr<S2Polyline>>* polylines,
 }
 
 GraphOptions S2PolylineVectorLayer::graph_options() const {
-  GraphOptions graph_options;
-  graph_options.set_edge_type(options_.edge_type());
-  graph_options.set_degenerate_edges(DegenerateEdges::DISCARD);
-  graph_options.set_duplicate_edges(options_.duplicate_edges());
-  graph_options.set_sibling_pairs(options_.sibling_pairs());
-  return graph_options;
+  return GraphOptions(options_.edge_type(), DegenerateEdges::DISCARD,
+                      options_.duplicate_edges(), options_.sibling_pairs());
 }
 
 void S2PolylineVectorLayer::Build(Graph const& g, S2Error* error) {
@@ -322,6 +310,43 @@ void S2PolylineVectorLayer::Build(Graph const& g, S2Error* error) {
       label_set_ids_->push_back(std::move(polyline_labels));
     }
   }
+}
+
+S2PointVectorLayer::S2PointVectorLayer(std::vector<S2Point>* points,
+                                       Options const& options)
+    : S2PointVectorLayer(points, nullptr, nullptr, options) {}
+
+S2PointVectorLayer::S2PointVectorLayer(std::vector<S2Point>* points,
+                                       LabelSetIds* label_set_ids,
+                                       IdSetLexicon* label_set_lexicon,
+                                       Options const& options)
+    : points_(points),
+      label_set_ids_(label_set_ids),
+      label_set_lexicon_(label_set_lexicon),
+      options_(options) {}
+
+void S2PointVectorLayer::Build(Graph const& g, S2Error* error) {
+  Graph::LabelFetcher fetcher(g, EdgeType::DIRECTED);
+
+  vector<Label> labels;  // Temporary storage for labels.
+  for (EdgeId edge_id = 0; edge_id < g.edges().size(); edge_id++) {
+    auto& edge = g.edge(edge_id);
+    if (edge.first != edge.second) {
+      error->Init(S2Error::INVALID_ARGUMENT, "Found non-degenerate edges");
+      continue;
+    }
+    points_->push_back(g.vertex(edge.first));
+    if (label_set_ids_) {
+      fetcher.Fetch(edge_id, &labels);
+      int set_id = label_set_lexicon_->Add(labels);
+      label_set_ids_->push_back(set_id);
+    }
+  }
+}
+
+GraphOptions S2PointVectorLayer::graph_options() const {
+  return GraphOptions(EdgeType::DIRECTED, DegenerateEdges::KEEP,
+                      options_.duplicate_edges(), SiblingPairs::KEEP);
 }
 
 }  // namespace s2builderutil

@@ -86,12 +86,12 @@ class S2Builder::Graph {
   // "label_set_lexicon":
   //   - a class that maps a LabelSetId to a set of S2Builder::Labels.
   Graph(GraphOptions const& options,
-        std::vector<S2Point> const& vertices,
-        std::vector<Edge> const& edges,
-        std::vector<InputEdgeIdSetId> const& input_edge_id_set_ids,
-        IdSetLexicon const& input_edge_id_set_lexicon,
-        std::vector<LabelSetId> const& label_set_ids,
-        IdSetLexicon const& label_set_lexicon);
+        std::vector<S2Point> const* vertices,
+        std::vector<Edge> const* edges,
+        std::vector<InputEdgeIdSetId> const* input_edge_id_set_ids,
+        IdSetLexicon const* input_edge_id_set_lexicon,
+        std::vector<LabelSetId> const* label_set_ids,
+        IdSetLexicon const* label_set_lexicon);
 
   GraphOptions const& options() const;
 
@@ -472,8 +472,8 @@ class S2Builder::Graph {
   // attempt to resolve this ambiguity, but instead returns both possibilities
   // for each connected component and lets the client choose among them.
   //
-  // This method is used to build single polygons (use GetDirectedComponents
-  // to build polygon meshes, even when the input edges are undirected).  To
+  // This method is used to build single polygons.  (Use GetDirectedComponents
+  // to build polygon meshes, even when the input edges are undirected.)  To
   // convert the output of this method into a polygon, the client must choose
   // one complement from each component such that the entire set of loops is
   // oriented consistently (i.e., they define a region such that the interior

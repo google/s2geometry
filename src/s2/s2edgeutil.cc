@@ -945,18 +945,15 @@ inline int S2EdgeUtil::EdgeCrosser::CrossingSignInternal2(S2Point const& d) {
     return -1;
   }
 
-  // Otherwise, eliminate the cases where any two vertices are equal.  (These
-  // cases could be handled in the code below, but since ExpensiveSign lives
-  // up to its name we would rather avoid calling it if possible.)
-  //
-  // These are the cases where two vertices from different edges are equal.
+  // Otherwise, eliminate the cases where two vertices from different edges
+  // are equal.  (These cases could be handled in the code below, but we would
+  // rather avoid calling ExpensiveSign whenever possible.)
   if (*a_ == *c_ || *a_ == d || *b_ == *c_ || *b_ == d) return 0;
 
-  // These are the cases where an input edge is degenerate.  (Note that in
-  // most cases, if CD is degenerate then this method is not even called
-  // because acb_ and bda have different signs.  That's why this method is
-  // documented to return either 0 or -1 when an input edge is degenerate.)
-  if (*a_ == *b_ || *c_ == d) return 0;
+  // Eliminate cases where an input edge is degenerate.  (Note that in most
+  // cases, if CD is degenerate then this method is not even called because
+  // acb_ and bda have different signs.)
+  if (*a_ == *b_ || *c_ == d) return -1;
 
   // Otherwise it's time to break out the big guns.
   if (acb_ == 0) acb_ = -s2pred::ExpensiveSign(*a_, *b_, *c_);

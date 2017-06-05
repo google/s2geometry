@@ -80,7 +80,9 @@ class S2XYZFaceSiTi;
 // converted into a canonical form consisting of "shells" and "holes".  Shells
 // and holes are both oriented CCW, and are nested hierarchically.  The loops
 // are reordered to correspond to a preorder traversal of the nesting
-// hierarchy; InitOriented may also invert some loops.
+// hierarchy; InitOriented may also invert some loops. The set of input S2Loop
+// pointers is always preserved; the caller can use this to determine how the
+// loops were reordered if desired.
 //
 // Polygons may represent any region of the sphere with a polygonal boundary,
 // including the entire sphere (known as the "full" polygon).  The full
@@ -679,6 +681,7 @@ class S2Polygon final : public S2Region {
 
     // S2Shape interface:
     int num_edges() const final { return num_edges_; }
+    Edge edge(int e) const final;
     void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
     int dimension() const final { return 2; }
     bool contains_origin() const final;

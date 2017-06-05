@@ -394,10 +394,9 @@ TEST(S2PolylineShape, Basic) {
   EXPECT_EQ(1, shape.num_chains());
   EXPECT_EQ(0, shape.chain(0).start);
   EXPECT_EQ(3, shape.chain(0).length);
-  S2Point const *v2, *v3;
-  shape.GetEdge(2, &v2, &v3);
-  EXPECT_EQ(S2LatLng::FromDegrees(1, 1).ToPoint(), *v2);
-  EXPECT_EQ(S2LatLng::FromDegrees(2, 1).ToPoint(), *v3);
+  auto edge2 = shape.edge(2);
+  EXPECT_EQ(S2LatLng::FromDegrees(1, 1).ToPoint(), edge2.v0);
+  EXPECT_EQ(S2LatLng::FromDegrees(2, 1).ToPoint(), edge2.v1);
   EXPECT_EQ(1, shape.dimension());
   EXPECT_FALSE(shape.has_interior());
   EXPECT_FALSE(shape.contains_origin());

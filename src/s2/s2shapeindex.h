@@ -144,11 +144,20 @@ class S2ShapeIndex;
 //      MyData* my_data = static_cast<MyData*>(shape->mutable_user_data());
 class S2Shape {
  public:
-  // An edge, consisting of two vertices "v0" and "v1".
-  // TODO(ericv): Represent S2Points by value (slower but more flexible).
+  // An edge, consisting of two vertices "v0" and "v1".  Zero-length edges are
+  // allowed, and can be used to represent points.
   struct Edge {
-    S2Point const *v0, *v1;
-    Edge(S2Point const* _v0, S2Point const* _v1) : v0(_v0), v1(_v1) {}
+    S2Point v0, v1;
+    Edge() = default;
+    Edge(S2Point const& _v0, S2Point const& _v1) : v0(_v0), v1(_v1) {}
+
+    // TODO(ericv): Convert to functions, define all 6 comparisons.
+    bool operator==(Edge const& other) const {
+      return v0 == other.v0 && v1 == other.v1;
+    }
+    bool operator<(Edge const& other) const {
+      return v0 < other.v0 || (v0 == other.v0 && v1 < other.v1);
+    }
   };
 
   // A range of edge ids corresponding to a chain of connected edges,
@@ -156,6 +165,7 @@ class S2Shape {
   // edge ids {start, start + 1, ..., start + length - 1}.
   struct Chain {
     int32 start, length;
+    Chain() = default;
     Chain(int32 _start, int32 _length) : start(_start), length(_length) {}
   };
 
@@ -164,6 +174,7 @@ class S2Shape {
   // zero, and offsets are measured from the start of each chain.
   struct ChainPosition {
     int32 chain_id, offset;
+    ChainPosition() = default;
     ChainPosition(int32 _chain_id, int32 _offset)
         : chain_id(_chain_id), offset(_offset) {}
   };
@@ -177,10 +188,15 @@ class S2Shape {
 
   // Return pointers to the edge endpoints for the given edge id.
   // Zero-length edges are allowed, and can be used to represent points.
-  // TODO(ericv): Change the return type to Edge, and rename to edge().
   //
   // REQUIRES: 0 <= id < num_edges()
+  ABSL_DEPRECATED("Use edge(id) instead.")
   virtual void GetEdge(int id, S2Point const** a, S2Point const** b) const = 0;
+
+  // Return the endpoints of the given edge id.
+  //
+  // REQUIRES: 0 <= id < num_edges()
+  virtual Edge edge(int edge_id) const = 0;
 
   // Returns the dimension of the geometry represented by this shape.
   //
@@ -435,6 +451,15 @@ class S2ShapeIndex {
   // sequentially starting from 0 in the order shapes are added.  Invalidates
   // all iterators and their associated data.
   //
+  // Note that this method does not require that the given S2Shape is
+  // allocated on the heap; S2Shapes may be allocated on the stack, or in
+  // vectors, or as members of another class, for example.  However, any
+  // shapes that were not allocated via "new" must be removed from the index
+  // (using Remove or RemoveAll) before the index is Reset() or destroyed.
+  // This feature is used by classes such as S2Polygon that have a built-in
+  // S2ShapeIndex.  This is also the reason why the argument type is not
+  // std::unique_ptr<S2Shape>.
+  //
   // REQUIRES: "shape" is not currently in any other S2ShapeIndex.
   // REQUIRES: "shape" persists for the lifetime of the index or until
   //           Remove(shape) is called.
@@ -442,6 +467,8 @@ class S2ShapeIndex {
 
   // Remove the given shape from the index and return ownership to the caller.
   // Invalidates all iterators and their associated data.
+  //
+  // See Add() for why this method does not return std::unique_ptr<S2Shape>.
   void Remove(S2Shape* shape);
 
   // Resets the index to its original state and returns ownership of all
@@ -634,7 +661,7 @@ class S2ShapeIndex {
                        std::vector<ClippedEdge const*>* edges,
                        InteriorTracker* tracker,
                        EdgeAllocator* alloc);
-  int GetEdgeMaxLevel(S2Point const& a, S2Point const& b) const;
+  int GetEdgeMaxLevel(S2Shape::Edge const& edge) const;
   static int CountShapes(std::vector<ClippedEdge const*> const& edges,
                          ShapeIdSet const& cshape_ids);
   bool MakeIndexCell(S2PaddedCell const& pcell,
@@ -683,7 +710,7 @@ class S2ShapeIndex {
     int32 shape_id;
     bool has_interior;
     bool contains_origin;
-    std::vector<std::pair<S2Point, S2Point>> edges;
+    std::vector<S2Shape::Edge> edges;
   };
 
   // The set of shapes that have been queued for removal but not processed

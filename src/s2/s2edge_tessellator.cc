@@ -29,11 +29,11 @@ S1Angle S2EdgeTessellator::kMinTolerance() {
   return S1Angle::Radians(1e-13);
 }
 
-S2EdgeTessellator::S2EdgeTessellator(S2::Projection const& projection,
+S2EdgeTessellator::S2EdgeTessellator(S2::Projection const* projection,
                                      S1Angle tolerance)
-    : proj_(projection),
+    : proj_(*projection),
       tolerance_(std::max(tolerance, kMinTolerance())),
-      wrap_distance_(projection.wrap_distance()) {
+      wrap_distance_(projection->wrap_distance()) {
   if (tolerance < kMinTolerance()) LOG(DFATAL) << "Tolerance too small";
 }
 

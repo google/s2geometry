@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef S2_STRINGS_JOIN_H_
-#define S2_STRINGS_JOIN_H_
+#ifndef S2_THIRD_PARTY_ABSL_STRINGS_STR_JOIN_H_
+#define S2_THIRD_PARTY_ABSL_STRINGS_STR_JOIN_H_
 
 #include <string>
 
@@ -34,4 +34,4 @@ std::string Join(const Range& strs, const char* delim) {
 
 }  // namespace strings
 
-#endif  // S2_STRINGS_JOIN_H_
+#endif  // S2_THIRD_PARTY_ABSL_STRINGS_STR_JOIN_H_
