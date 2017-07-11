@@ -26,7 +26,7 @@
 #include <vector>
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
@@ -260,13 +260,13 @@ class S2Builder {
     // internally, so you can safely pass a temporary object.
     //
     // Note that if your input data includes vertices that were created using
-    // S2EdgeUtil::GetIntersection(), then you should use a "snap_radius" of
-    // at least S2EdgeUtil::kIntersectionSnapRadius, e.g. by calling
+    // S2::GetIntersection(), then you should use a "snap_radius" of
+    // at least S2::kIntersectionSnapRadius, e.g. by calling
     //
     //  options.set_snap_function(s2builderutil::IdentitySnapFunction(
-    //      S2EdgeUtil::kIntersectionSnapRadius));
+    //      S2::kIntersectionSnapRadius));
     //
-    // Default value: s2builderutil::IdentitySnapFunction(S1Angle::Zero()).
+    // DEFAULT: s2builderutil::IdentitySnapFunction(S1Angle::Zero())
     // [This does no snapping and preserves all input vertices exactly.]
     SnapFunction const& snap_function() const;
     void set_snap_function(SnapFunction const& snap_function);
@@ -275,9 +275,9 @@ class S2Builder {
     // adding a new vertex at their intersection point.
     //
     // When this option is true, the effective snap_radius() for edges is
-    // increased by S2EdgeUtil::kIntersectionError to take into account the
+    // increased by S2::kIntersectionError to take into account the
     // additional error when computing intersection points.  In other words,
-    // edges may move by up to snap_radius() + S2EdgeUtil::kIntersectionError.
+    // edges may move by up to snap_radius() + S2::kIntersectionError.
     //
     // Undirected edges should always be used when the output is a polygon,
     // since splitting a directed loop at a self-intersection converts it into
@@ -292,7 +292,7 @@ class S2Builder {
     // original projected edges (which are curves on the sphere).  This can
     // be done using s2builderutil::EdgeSplitter(), for example.
     //
-    // Default value: false.
+    // DEFAULT: false
     bool split_crossing_edges() const;
     void set_split_crossing_edges(bool split_crossing_edges);
 
@@ -336,7 +336,7 @@ class S2Builder {
     // snap_radius() must be specified.  Also note that vertices specified
     // using ForceVertex are never simplified away.
     //
-    // Default value: false.
+    // DEFAULT: false
     bool simplify_edge_chains() const;
     void set_simplify_edge_chains(bool simplify_edge_chains);
 
@@ -355,7 +355,7 @@ class S2Builder {
     // This option is automatically turned off by simplify_edge_chains(),
     // since simplifying edge chains is never guaranteed to be idempotent.
     //
-    // Default value: true.
+    // DEFAULT: true
     bool idempotent() const;
     void set_idempotent(bool idempotent);
 
@@ -369,6 +369,28 @@ class S2Builder {
     bool simplify_edge_chains_;
     bool idempotent_;
   };
+
+  // The following classes are only needed by Layer implementations.
+  class GraphOptions;
+  class Graph;
+
+  // For output layers that represent polygons, there is an ambiguity inherent
+  // in spherical geometry that does not exist in planar geometry.  Namely, if
+  // a polygon has no edges, does it represent the empty polygon (containing
+  // no points) or the full polygon (containing all points)?  This ambiguity
+  // also occurs for polygons that consist only of degeneracies, e.g. a
+  // degenerate loop with only two edges, or a single edge from a vertex to
+  // itself.
+  //
+  // To resolve this ambiguity, an IsFullPolygonPredicate may be specified for
+  // each input layer (see AddIsFullPolygonPredicate below).  If the layer
+  // consists only of polygon degeneracies, the layer implementation may call
+  // this method to determine whether the polygon is empty or full.
+  //
+  // This predicate is only required for layers that will be assembled into
+  // polygons.  It is not used by other layer types.
+  using IsFullPolygonPredicate =
+      std::function<bool (Graph const& g, S2Error* error)>;
 
   // Default constructor; requires Init() to be called.
   S2Builder();
@@ -410,6 +432,9 @@ class S2Builder {
   class Layer;
   void StartLayer(std::unique_ptr<Layer> layer);
 
+  // Adds a degenerate edge (representing a point) to the current layer.
+  void AddPoint(S2Point const& v);
+
   // Adds the given edge to the current layer.
   void AddEdge(S2Point const& v0, S2Point const& v1);
 
@@ -429,6 +454,19 @@ class S2Builder {
   // polygons, i.e. adding a full polygon has the same effect as adding an
   // empty one.
   void AddPolygon(S2Polygon const& polygon);
+
+  // For layers that will be assembled into polygons, this method specifies a
+  // predicate that will be called to determine whether the polygon is empty
+  // (contains no points) or full (contains all points) in the case where the
+  // layer is discovered to consist entirely of degeneracies.  See also
+  // IsFullPolygonPredicate above.
+  //
+  // This method should be called at most once per layer; additional calls
+  // simply overwrite the previous value for the current layer.
+  //
+  // The default implementation sets an appropriate error and returns false
+  // (i.e., degenerate polygons are assumed to be empty).
+  void AddIsFullPolygonPredicate(IsFullPolygonPredicate predicate);
 
   // Forces a vertex to be located at the given position.  This can be used to
   // prevent certain input vertices from moving.  However if you are trying to
@@ -490,10 +528,6 @@ class S2Builder {
   // specified are preserved.
   void Reset();
 
-  // The following classes are only needed by Layer implementations.
-  class GraphOptions;
-  class Graph;
-
  private:
   //////////////////////  Input Types  /////////////////////////
   // All types associated with the S2Builder inputs are prefixed with "Input".
@@ -516,16 +550,11 @@ class S2Builder {
 
   //////////////////////  Output Types  /////////////////////////
   // These types define the output vertices and edges.
-  //
-  // S2Builder::Graph also defines types representing vertices and edges, but
-  // they are not the same as ones defined here because each Graph only
-  // contains the vertices and edges needed to build one layer.  If there are
-  // many layers, S2Builder extracts a subset of the vertices (SiteIds) for
-  // each Graph and renumbers them sequentially.
 
   // Identifies a snapped vertex ("snap site").  If there is only one layer,
   // than SiteId is the same as Graph::VertexId, but if there are many layers
-  // then each Graph only contains a subset of the sites.
+  // then each Graph may contain only a subset of the sites.  Also see
+  // GraphOptions::allow_vertex_filtering().
   using SiteId = int32;
 
   // Defines an output edge.
@@ -670,6 +699,7 @@ class S2Builder {
   std::vector<std::unique_ptr<Layer>> layers_;
   std::vector<GraphOptions> layer_options_;
   std::vector<InputEdgeId> layer_begins_;
+  std::vector<IsFullPolygonPredicate> layer_is_full_polygon_predicates_;
 
   // Each input edge has "label set id" (an int32) representing the set of
   // labels attached to that edge.  This vector is populated only if at least
@@ -710,7 +740,13 @@ class S2Builder {
   S2Builder& operator=(S2Builder const&) = delete;
 };
 
-// This class is only needed by Layer implementations.
+// This class is only needed by S2Builder::Layer implementations.  A layer is
+// responsible for assembling an S2Builder::Graph of snapped edges into the
+// desired output format (e.g., an S2Polygon).  The GraphOptions class allows
+// each Layer type to specify requirements on its input graph: for example, if
+// DegenerateEdges::DISCARD is specified, then S2Builder will ensure that all
+// degenerate edges are removed before passing the graph to the S2Layer::Build
+// method.
 class S2Builder::GraphOptions {
  public:
   using EdgeType = S2Builder::EdgeType;
@@ -718,21 +754,23 @@ class S2Builder::GraphOptions {
   enum class DuplicateEdges;
   enum class SiblingPairs;
 
-  // All S2Builder::Layer subtypes should specify all GraphOptions explicitly.
-  //
-  // The default options specify that all edge should be kept, since this
+  // All S2Builder::Layer subtypes should specify GraphOptions explicitly
+  // using this constructor, rather than relying on default values.
+  GraphOptions(EdgeType edge_type, DegenerateEdges degenerate_edges,
+               DuplicateEdges duplicate_edges, SiblingPairs sibling_pairs)
+      : edge_type_(edge_type), degenerate_edges_(degenerate_edges),
+        duplicate_edges_(duplicate_edges), sibling_pairs_(sibling_pairs),
+        allow_vertex_filtering_(true) {
+  }
+
+  // The default options specify that all edges should be kept, since this
   // produces the least surprising output and makes it easier to diagnose the
   // problem when an option is left unspecified.
   GraphOptions() : edge_type_(EdgeType::DIRECTED),
                    degenerate_edges_(DegenerateEdges::KEEP),
                    duplicate_edges_(DuplicateEdges::KEEP),
-                   sibling_pairs_(SiblingPairs::KEEP) {
-  }
-
-  GraphOptions(EdgeType edge_type, DegenerateEdges degenerate_edges,
-               DuplicateEdges duplicate_edges, SiblingPairs sibling_pairs)
-      : edge_type_(edge_type), degenerate_edges_(degenerate_edges),
-        duplicate_edges_(duplicate_edges), sibling_pairs_(sibling_pairs) {
+                   sibling_pairs_(SiblingPairs::KEEP),
+                   allow_vertex_filtering_(true) {
   }
 
   // Specifies whether the S2Builder input edges should be treated as
@@ -838,12 +876,38 @@ class S2Builder::GraphOptions {
   SiblingPairs sibling_pairs() const;
   void set_sibling_pairs(SiblingPairs sibling_pairs);
 
+  // This is a specialized option that is only needed by clients want to work
+  // with the graphs for multiple layers at the same time (e.g., in order to
+  // check whether the same edge is present in two different graphs).  [Note
+  // that if you need to do this, usually it is easier just to build a single
+  // graph with suitable edge labels.]
+  //
+  // When there are a large number of layers, then by default S2Builder builds
+  // a minimal subgraph for each layer containing only the vertices needed by
+  // the edges in that layer.  This ensures that layer types that iterate over
+  // the vertices run in time proportional to the size of that layer rather
+  // than the size of all layers combined.  (For example, if there are a
+  // million layers with one edge each, then each layer would be passed a
+  // graph with 2 vertices rather than 2 million vertices.)
+  //
+  // If this option is set to false, this optimization is disabled.  Instead
+  // the graph passed to this layer will contain the full set of vertices.
+  // (This is not recommended when the number of layers could be large.)
+  //
+  // DEFAULT: true
+  bool allow_vertex_filtering() const;
+  void set_allow_vertex_filtering(bool allow_vertex_filtering);
+
  private:
   EdgeType edge_type_;
   DegenerateEdges degenerate_edges_;
   DuplicateEdges duplicate_edges_;
   SiblingPairs sibling_pairs_;
+  bool allow_vertex_filtering_;
 };
+
+bool operator==(S2Builder::GraphOptions const& x,
+                S2Builder::GraphOptions const& y);
 
 
 //////////////////   Implementation details follow   ////////////////////
@@ -940,8 +1004,21 @@ inline void S2Builder::GraphOptions::set_sibling_pairs(
   sibling_pairs_ = sibling_pairs;
 }
 
+inline bool S2Builder::GraphOptions::allow_vertex_filtering() const {
+  return allow_vertex_filtering_;
+}
+
+inline void S2Builder::GraphOptions::set_allow_vertex_filtering(
+    bool allow_vertex_filtering) {
+  allow_vertex_filtering_ = allow_vertex_filtering;
+}
+
 inline bool S2Builder::is_forced(SiteId v) const {
   return v < num_forced_sites_;
+}
+
+inline void S2Builder::AddPoint(S2Point const& v) {
+  AddEdge(v, v);
 }
 
 #endif  // S2_S2BUILDER_H_

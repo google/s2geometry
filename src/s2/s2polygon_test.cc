@@ -381,14 +381,14 @@ TEST(S2Polygon, TestApproxContainsAndDisjoint) {
       ++exact_contains;
     }
     EXPECT_TRUE(parent_polygon.ApproxContains(
-        &intersection, S2EdgeUtil::kIntersectionMergeRadius));
+        &intersection, S2::kIntersectionMergeRadius));
 
     S2Polygon adjacent_polygon(S2Cell(id.child(1)));
     if (!adjacent_polygon.Intersects(&intersection)) {
       ++exact_disjoint;
     }
     EXPECT_TRUE(adjacent_polygon.ApproxDisjoint(
-        &intersection, S2EdgeUtil::kIntersectionMergeRadius));
+        &intersection, S2::kIntersectionMergeRadius));
   }
   // All of the approximate results are true, so we check that at least some
   // of the exact results are false in order to make sure that this test
@@ -800,7 +800,7 @@ TestCase test_cases[] = {
     "",  // Empty intersection!
 
     // Original square with extra vertex, and triangle disappears (due to
-    // default vertex_merge_radius of S2EdgeUtil::kIntersectionMergeRadius).
+    // default vertex_merge_radius of S2::kIntersectionMergeRadius).
     "10:44, 10:46, 12:46, 12:45.001774937, 12:44;",  // or
 
     "10:44, 10:46, 12:46, 12:45.001774937, 12:44;",  // minus
@@ -1778,10 +1778,10 @@ static void SplitAndAssemble(S2Polygon const& polygon) {
 
     // Check that ApproxEquals produces the same result.
     if (!expected.ApproxEquals(result.get(),
-                               S2EdgeUtil::kIntersectionMergeRadius)) {
+                               S2::kIntersectionMergeRadius)) {
       S2Polygon symmetric_difference;
       symmetric_difference.InitToApproxSymmetricDifference(
-          &expected, result.get(), S2EdgeUtil::kIntersectionMergeRadius);
+          &expected, result.get(), S2::kIntersectionMergeRadius);
       ADD_FAILURE() << s2textformat::ToString(symmetric_difference);
     }
   }
@@ -2179,7 +2179,7 @@ TEST_F(S2PolygonTestBase, GetDistance) {
       // A vertex.
       TestDistanceMethods(*nested, loop->vertex(j), S2Point());
       // A point along an edge.
-      TestDistanceMethods(*nested, S2EdgeUtil::Interpolate(
+      TestDistanceMethods(*nested, S2::Interpolate(
           S2Testing::rnd.RandDouble(), loop->vertex(j), loop->vertex(j+1)),
                           S2Point());
     }
@@ -2492,7 +2492,7 @@ S1Angle LoopDiameter(S2Loop const& loop) {
     S2Point test_point = loop.vertex(i);
     for (int j = i + 1; j < loop.num_vertices(); ++j) {
       diameter = max(diameter,
-                     S2EdgeUtil::GetDistance(test_point, loop.vertex(j),
+                     S2::GetDistance(test_point, loop.vertex(j),
                                              loop.vertex(j+1)));
     }
   }
@@ -2921,6 +2921,13 @@ TEST(S2Polygon, ManyLoopPolygonShape) {
   S2Testing::ConcentricLoopsPolygon(S2Point(1, 0, 0), kNumLoops,
                                     kNumVerticesPerLoop, &polygon);
   TestPolygonShape(polygon);
+}
+
+TEST(S2PolygonOwningShape, Ownership) {
+  // Debug mode builds will catch any memory leak below.
+  vector<unique_ptr<S2Loop>> loops;
+  auto polygon = absl::MakeUnique<S2Polygon>(std::move(loops));
+  S2Polygon::OwningShape shape(std::move(polygon));
 }
 
 TEST(S2Polygon, PointInBigLoop) {

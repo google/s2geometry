@@ -9,6 +9,7 @@
 #include "s2/s2cellid.h"
 #include "s2/s2region.h"
 #include "s2/s2cap.h"
+#include "s2/s2edge_crossings.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2loop.h"
@@ -148,19 +149,17 @@ class S2Point {
   }
 };
 
-// We provide our own definition of S2EdgeUtil, because the real one is too
-// difficult to wrap correctly because of C++ 11 syntax in old versions of swig.
-class S2EdgeUtil {
- public:
-  static S2Point GetIntersection(S2Point const& a, S2Point const& b,
-                                 S2Point const& c, S2Point const& d);
-  static int CrossingSign(S2Point const& a, S2Point const& b, S2Point const& c,
-                          S2Point const& d);
-
- private:
-  // The constructor is deleted, so must be marked private to be ignored.
-  S2EdgeUtil() {};
-};
+// TODO(ericv): Remove this when splitting s2edgeutil.h.
+namespace S2 {
+inline S2Point GetIntersection(S2Point const& a, S2Point const& b,
+                               S2Point const& c, S2Point const& d) {
+  return S2EdgeUtil::GetIntersection(a, b, c, d);
+}
+inline int CrossingSign(S2Point const& a, S2Point const& b, S2Point const& c,
+                        S2Point const& d) {
+  return S2EdgeUtil::CrossingSign(a, b, c, d);
+}
+}  // namespace S2
 
 // Add raw pointer versions of these functions because SWIG doesn't
 // understand unique_ptr and when std::move() must be used.
@@ -223,6 +222,8 @@ class S2EdgeUtil {
 %ignore S1Interval::operator[];
 %unignore S1Interval::GetLength;
 %unignore S2;
+%unignore S2::CrossingSign;
+%unignore S2::GetIntersection;
 %unignore S2::Rotate;
 %unignore S2::TurnAngle;
 %unignore S2Cap;
@@ -459,6 +460,7 @@ class S2EdgeUtil {
 %include "s2/s1chordangle.h"
 %include "s2/s1interval.h"
 %include "s2/s2cellid.h"
+%include "s2/s2edge_crossings.h"
 %include "s2/s2region.h"
 %include "s2/s2cap.h"
 %include "s2/s2latlng.h"

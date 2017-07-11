@@ -65,7 +65,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "s2/third_party/absl/base/port.h"
+#include "s2/base/port.h"
 
 namespace google {
 

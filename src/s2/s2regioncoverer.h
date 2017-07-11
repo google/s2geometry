@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 
@@ -96,10 +96,14 @@ class S2RegionCoverer {
   // interior coverings make no completeness guarantees -- the result is
   // simply a set of cells that covers as much of the interior as possible
   // while satisfying the given restrictions.)
-  void set_min_level(int min_level);
-  void set_max_level(int max_level);
+  //
+  // DEFAULT: 0
   int min_level() const { return min_level_; }
+  void set_min_level(int min_level);
+
+  // DEFAULT: S2cellId::kMaxLevel
   int max_level() const { return max_level_; }
+  void set_max_level(int max_level);
 
   // Convenience function that sets both the maximum and minimum cell levels.
   // Note that since min_level() takes priority over max_cells(), an arbitrary
@@ -111,6 +115,8 @@ class S2RegionCoverer {
   // branching factor of the S2CellId hierarchy to be increased.  Currently
   // the only parameter values allowed are 1, 2, or 3, corresponding to
   // branching factors of 4, 16, and 64 respectively.
+  //
+  // DEFAULT: 1
   void set_level_mod(int level_mod);
   int level_mod() const { return level_mod_; }
 
@@ -138,6 +144,8 @@ class S2RegionCoverer {
   //   max_cells:        3      4     5     6     8    12    20   100   1000
   //   median ratio:  5.33   3.32  2.73  2.34  1.98  1.66  1.42  1.11   1.01
   //   worst case:  215518  14.41  9.72  5.26  3.91  2.75  1.92  1.20   1.02
+  //
+  // DEFAULT: kDefaultMaxCells == 8
   void set_max_cells(int max_cells);
   int max_cells() const { return max_cells_; }
 

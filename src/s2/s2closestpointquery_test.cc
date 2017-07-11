@@ -147,7 +147,7 @@ class EdgeTarget {
  public:
   EdgeTarget(S2Point const& a, S2Point const& b) : a_(a), b_(b) {}
   S1Angle GetDistance(S2Point const& x) const {
-    return S2EdgeUtil::GetDistance(x, a_, b_);
+    return S2::GetDistance(x, a_, b_);
   }
   void FindClosestPoints(TestQuery* query) const {
     query->FindClosestPointsToEdge(a_, b_);

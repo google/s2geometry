@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 //
-// This file also contains documentation of the various coordinate systems
-// used throughout the library.  Most importantly, S2 defines a framework for
+// This file contains documentation of the various coordinate systems used
+// throughout the library.  Most importantly, S2 defines a framework for
 // decomposing the unit sphere into a hierarchy of "cells".  Each cell is a
 // quadrilateral bounded by four geodesics.  The top level of the hierarchy is
 // obtained by projecting the six faces of a cube onto the unit sphere, and

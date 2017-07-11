@@ -103,6 +103,11 @@ TEST(S2CellId, ParentChildRelationships) {
   EXPECT_EQ(2 * id.id(), id.range_min().id() + id.range_max().id());
 }
 
+TEST(S2CellId, SentinelRangeMinMax) {
+  EXPECT_EQ(S2CellId::Sentinel(), S2CellId::Sentinel().range_min());
+  EXPECT_EQ(S2CellId::Sentinel(), S2CellId::Sentinel().range_max());
+}
+
 TEST(S2CellId, CenterSiTi) {
   S2CellId id = S2CellId::FromFacePosLevel(3, 0x12345678,
                                            S2CellId::kMaxLevel);

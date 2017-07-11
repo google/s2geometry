@@ -18,7 +18,7 @@
 #ifndef S2_S2POINT_H_
 #define S2_S2POINT_H_
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/util/math/vector.h"  // IWYU pragma: export
 #include "s2/util/math/vector3_hash.h"
 

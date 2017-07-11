@@ -50,9 +50,9 @@
 #include <glog/logging.h>
 
 #include "s2/base/casts.h"
+#include "s2/base/port.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/absl/numeric/int128.h"
 
 class Bits {
@@ -112,7 +112,12 @@ class Bits {
   // Please use TestCPUFeature(POPCNT) from base/cpuid/cpuid.h before using
   // this.
   static inline int CountOnes64withPopcount(uint64 n) {
-#if defined(__x86_64__) && defined __GNUC__
+    // POPCNT has a false data dependency on its output register.
+    // gcc / clang will optimize the intrinsic, but not inline asm.
+    // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=62011
+#if defined(__x86_64__) && defined(__POPCNT__)
+    return _popcnt64(n);
+#elif defined(__x86_64__) && defined(__GNUC__)
     int64 count = 0;
     asm("popcnt %1,%0" : "=r"(count) : "rm"(n) : "cc");
     return static_cast<int>(count);
@@ -159,7 +164,7 @@ class Bits {
 #if defined(__aarch64__) && defined(__GNUC__)
     int64 count;
     asm("clz %0,%1" : "=r"(count) : "r"(n));
-    return count;
+    return static_cast<int>(count);
 #elif defined(__powerpc64__) && defined(__GNUC__)
     int64 count;
     asm("cntlzd %0,%1" : "=r"(count) : "r"(n));
@@ -488,7 +493,7 @@ inline uint8 Bits::ReverseBits8(unsigned char n) {
   uint32 result;
   const uint32 n_shifted = static_cast<uint32>(n) << 24;
   asm("rbit %w0, %w1" : "=r"(result) : "r"(n_shifted));
-  return result;
+  return static_cast<uint8>(result);
 #else
   n = static_cast<unsigned char>(((n >> 1) & 0x55) | ((n & 0x55) << 1));
   n = static_cast<unsigned char>(((n >> 2) & 0x33) | ((n & 0x33) << 2));

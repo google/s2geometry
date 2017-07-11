@@ -27,38 +27,55 @@
 #include <string>
 #include <vector>
 
+#include "s2/third_party/absl/strings/string_view.h"
 #include "s2/s2latlngrect.h"
 
 class S2LatLng;
 class S2Loop;
 class S2Polygon;
 class S2Polyline;
+class S2ShapeIndex;
 namespace s2shapeutil { class LaxPolygon; }
+namespace s2shapeutil { class LaxPolyline; }
+namespace s2shapeutil { class LaxPolyline; }
 
 namespace s2textformat {
 
-// Given a latitude-longitude coordinate in degrees,
-// return a newly allocated point.  Example of the input format:
+// Returns an S2Point corresponding to the given a latitude-longitude
+// coordinate in degrees.  Example of the input format:
 //     "-20:150"
-S2Point MakePoint(string const& str);
+S2Point MakePoint(absl::string_view str);
 
-// Given a string of one or more latitude-longitude coordinates in degrees,
-// return the minimal bounding S2LatLngRect that contains the coordinates.
-// Example of the input format:
+// Parses a string of one or more latitude-longitude coordinates in degrees,
+// and return the corresponding vector of S2LatLng points.
+// Examples of the input format:
+//     ""                            // no points
 //     "-20:150"                     // one point
 //     "-20:150, -20:151, -19:150"   // three points
-S2LatLngRect MakeLatLngRect(string const& str);
+std::vector<S2LatLng> ParseLatLngs(absl::string_view str);
+
+// Parses a string in the same format as ParseLatLngs, and return the
+// corresponding vector of S2Point values.
+std::vector<S2Point> ParsePoints(absl::string_view str);
+
+// Given a string in the same format as ParseLatLngs, returns the minimal
+// bounding S2LatLngRect that contains the coordinates.
+S2LatLngRect MakeLatLngRect(absl::string_view str);
 
 // Given a string of latitude-longitude coordinates in degrees,
-// return a newly allocated loop.  Example of the input format:
+// returns a newly allocated loop.  Example of the input format:
 //     "-20:150, 10:-120, 0.123:-170.652"
 // The strings "empty" or "full" create an empty or full loop respectively.
-std::unique_ptr<S2Loop> MakeLoop(string const& str);
+std::unique_ptr<S2Loop> MakeLoop(absl::string_view str);
 
 // Similar to MakeLoop(), but returns an S2Polyline rather than an S2Loop.
-std::unique_ptr<S2Polyline> MakePolyline(string const& str);
+std::unique_ptr<S2Polyline> MakePolyline(absl::string_view str);
 
-// Given a sequence of loops separated by semicolons, return a newly
+// Like MakePolyline, but returns an s2shapeutil::LaxPolyline instead.
+std::unique_ptr<s2shapeutil::LaxPolyline> MakeLaxPolyline(
+    absl::string_view str);
+
+// Given a sequence of loops separated by semicolons, returns a newly
 // allocated polygon.  Loops are automatically normalized by inverting them
 // if necessary so that they enclose at most half of the unit sphere.
 // (Historically this was once a requirement of polygon loops.  It also
@@ -71,31 +88,33 @@ std::unique_ptr<S2Polyline> MakePolyline(string const& str);
 //     ""       // the empty polygon (consisting of no loops)
 //     "full"   // the full polygon (consisting of one full loop)
 //     "empty"  // **INVALID** (a polygon consisting of one empty loop)
-std::unique_ptr<S2Polygon> MakePolygon(string const& str);
+std::unique_ptr<S2Polygon> MakePolygon(absl::string_view str);
 
 // Like MakePolygon(), except that it does not normalize loops (i.e., it
 // gives you exactly what you asked for).
-std::unique_ptr<S2Polygon> MakeVerbatimPolygon(string const& str);
+std::unique_ptr<S2Polygon> MakeVerbatimPolygon(absl::string_view str);
 
 // Parses a string in the same format as MakePolygon, except that loops must
 // be oriented so that the interior of the loop is always on the left, and
 // polygons with degeneracies are supported.  As with MakePolygon, "full"
 // denotes the full polygon and "empty" is not allowed (instead, create a
 // polygon with no loops).
-//
-// This method does not return std::unique_ptr<T> in order to be compatible
-// with S2ShapeIndex::Add.  Example usage:
-//
-//     index.Add(s2textformat::MakeLaxPolygon("0:0"));
-s2shapeutil::LaxPolygon* MakeLaxPolygon(string const& str);
+std::unique_ptr<s2shapeutil::LaxPolygon> MakeLaxPolygon(absl::string_view str);
 
-// Parse a string in the same format as MakeLatLngRect, and return the
-// corresponding vector of S2LatLng points.
-std::vector<S2LatLng> ParseLatLngs(string const& str);
-
-// Parse a string in the same format as MakeLatLngRect, and return the
-// corresponding vector of S2Point values.
-std::vector<S2Point> ParsePoints(string const& str);
+// Returns an S2ShapeIndex containing the points, polylines, and loops (in the
+// form of a single polygon) described by the following format:
+//
+//   point1|point2|... # line1|line2|... # polygon1|polygon2|...
+//
+// Examples:
+//   1:2 | 2:3 # #                     // Two points
+//   # 0:0, 1:1, 2:2 | 3:3, 4:4 #      // Two polylines
+//   # # 0:0, 0:3, 3:0; 1:1, 2:1, 1:2  // Two nested loops (one polygon)
+//   5:5 # 6:6, 7:7 # 0:0, 0:1, 1:0    // One of each
+//
+// Loops should be directed so that the region's interior is on the left.
+// Loops can be degenerate (they do not need to meet S2Loop requirements).
+std::unique_ptr<S2ShapeIndex> MakeIndex(absl::string_view str);
 
 // Convert a point, lat-lng rect, loop, polyline, or polygon to the string
 // format above.
@@ -106,6 +125,14 @@ string ToString(S2Polyline const& polyline);
 string ToString(S2Polygon const& polygon);
 string ToString(std::vector<S2Point> const& points);
 string ToString(std::vector<S2LatLng> const& points);
+string ToString(s2shapeutil::LaxPolyline const& polyline);
+string ToString(s2shapeutil::LaxPolygon const& polygon);
+
+// Convert the contents of an S2ShapeIndex to the format above.  The index may
+// contain S2Shapes of any type.  Shapes are reordered if necessary so that
+// all point geometry (shapes of dimension 0) are first, followed by all
+// polyline geometry, followed by all polygon geometry.
+string ToString(S2ShapeIndex const& index);
 
 }  // namespace s2textformat
 

@@ -184,7 +184,7 @@ S2Point S2Polyline::GetSuffix(double fraction, int* next_vertex) const {
     if (target < length) {
       // This interpolates with respect to arc length rather than
       // straight-line distance, and produces a unit-length result.
-      S2Point result = S2EdgeUtil::InterpolateAtDistance(target, vertex(i-1),
+      S2Point result = S2::InterpolateAtDistance(target, vertex(i-1),
                                                          vertex(i));
       // It is possible that (result == vertex(i)) due to rounding errors.
       *next_vertex = (result == vertex(i)) ? (i + 1) : i;
@@ -234,7 +234,7 @@ S2Point S2Polyline::Project(S2Point const& point, int* next_vertex) const {
 
   // Find the line segment in the polyline that is closest to the point given.
   for (int i = 1; i < num_vertices(); ++i) {
-    S1Angle distance_to_segment = S2EdgeUtil::GetDistance(point, vertex(i-1),
+    S1Angle distance_to_segment = S2::GetDistance(point, vertex(i-1),
                                                           vertex(i));
     if (distance_to_segment < min_distance) {
       min_distance = distance_to_segment;
@@ -245,7 +245,7 @@ S2Point S2Polyline::Project(S2Point const& point, int* next_vertex) const {
 
   // Compute the point on the segment found that is closest to the point given.
   S2Point closest_point =
-      S2EdgeUtil::Project(point, vertex(min_index - 1), vertex(min_index));
+      S2::Project(point, vertex(min_index - 1), vertex(min_index));
 
   *next_vertex = min_index + (closest_point == vertex(min_index) ? 1 : 0);
   return closest_point;
@@ -290,7 +290,7 @@ bool S2Polyline::Intersects(S2Polyline const* line) const {
 
   // TODO(ericv): Use S2ShapeIndex here.
   for (int i = 1; i < num_vertices(); ++i) {
-    S2EdgeUtil::EdgeCrosser crosser(
+    S2EdgeCrosser crosser(
         &vertex(i - 1), &vertex(i), &line->vertex(0));
     for (int j = 1; j < line->num_vertices(); ++j) {
       if (crosser.CrossingSign(&line->vertex(j)) >= 0) {
@@ -306,7 +306,7 @@ void S2Polyline::Reverse() {
 }
 
 S2LatLngRect S2Polyline::GetRectBound() const {
-  S2EdgeUtil::RectBounder bounder;
+  S2LatLngRectBounder bounder;
   for (int i = 0; i < num_vertices(); ++i) {
     bounder.AddPoint(vertex(i));
   }
@@ -331,7 +331,7 @@ bool S2Polyline::MayIntersect(S2Cell const& cell) const {
     cell_vertices[i] = cell.GetVertex(i);
   }
   for (int j = 0; j < 4; ++j) {
-    S2EdgeUtil::EdgeCrosser crosser(&cell_vertices[j], &cell_vertices[(j+1)&3],
+    S2EdgeCrosser crosser(&cell_vertices[j], &cell_vertices[(j+1)&3],
                                     &vertex(0));
     for (int i = 1; i < num_vertices(); ++i) {
       if (crosser.CrossingSign(&vertex(i)) >= 0) {
@@ -577,7 +577,7 @@ bool S2Polyline::NearlyCovers(S2Polyline const& covered,
   for (int i = 0, next_i = NextDistinctVertex(*this, 0);
        next_i < this->num_vertices();
        i = next_i, next_i = NextDistinctVertex(*this, next_i)) {
-    S2Point closest_point = S2EdgeUtil::Project(
+    S2Point closest_point = S2::Project(
         covered.vertex(0), this->vertex(i), this->vertex(next_i));
     if (closest_point != this->vertex(next_i) &&
         S1Angle(closest_point, covered.vertex(0)) <= max_error) {
@@ -601,26 +601,32 @@ bool S2Polyline::NearlyCovers(S2Polyline const& covered,
     S2Point i_begin, j_begin;
     if (state.i_in_progress) {
       j_begin = covered.vertex(state.j);
-      i_begin = S2EdgeUtil::Project(
+      i_begin = S2::Project(
           j_begin, this->vertex(state.i), this->vertex(next_i));
     } else {
       i_begin = this->vertex(state.i);
-      j_begin = S2EdgeUtil::Project(
+      j_begin = S2::Project(
           i_begin, covered.vertex(state.j), covered.vertex(next_j));
     }
 
-    if (S2EdgeUtil::IsEdgeBNearEdgeA(j_begin, covered.vertex(next_j),
+    if (S2::IsEdgeBNearEdgeA(j_begin, covered.vertex(next_j),
                                      i_begin, this->vertex(next_i),
                                      max_error)) {
       pending.push_back(SearchState(next_i, state.j, false));
     }
-    if (S2EdgeUtil::IsEdgeBNearEdgeA(i_begin, this->vertex(next_i),
+    if (S2::IsEdgeBNearEdgeA(i_begin, this->vertex(next_i),
                                      j_begin, covered.vertex(next_j),
                                      max_error)) {
       pending.push_back(SearchState(state.i, next_j, true));
     }
   }
   return false;
+}
+
+void S2Polyline::Shape::Init(S2Polyline const* polyline) {
+  LOG_IF(WARNING, polyline->num_vertices() == 1)
+      << "S2Polyline::Shape with one vertex has no edges";
+  polyline_ = polyline;
 }
 
 int S2Polyline::Shape::num_chains() const {

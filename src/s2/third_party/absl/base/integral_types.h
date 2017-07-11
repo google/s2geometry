@@ -101,7 +101,24 @@ typedef unsigned long      uword_t;
 
 #endif  // _MSC_VER
 
-
+// There are still some requirements that we build these headers in
+// C-compatibility mode. Unfortunately, -Wall doesn't like c-style
+// casts, and C doesn't know how to read braced-initialization for
+// integers.
+#if defined(__cplusplus)
+const uint8   kuint8max{0xFF};
+const uint16 kuint16max{0xFFFF};
+const uint32 kuint32max{0xFFFFFFFF};
+const uint64 kuint64max{GG_ULONGLONG(0xFFFFFFFFFFFFFFFF)};
+const  int8    kint8min{~0x7F};
+const  int8    kint8max{0x7F};
+const  int16  kint16min{~0x7FFF};
+const  int16  kint16max{0x7FFF};
+const  int32  kint32min{~0x7FFFFFFF};
+const  int32  kint32max{0x7FFFFFFF};
+const  int64  kint64min{GG_LONGLONG(~0x7FFFFFFFFFFFFFFF)};
+const  int64  kint64max{GG_LONGLONG(0x7FFFFFFFFFFFFFFF)};
+#else   // not __cplusplus, this branch exists only for C-compat
 static const uint8  kuint8max  = (( uint8) 0xFF);
 static const uint16 kuint16max = ((uint16) 0xFFFF);
 static const uint32 kuint32max = ((uint32) 0xFFFFFFFF);
@@ -114,6 +131,8 @@ static const  int32 kint32min  = (( int32) ~0x7FFFFFFF);
 static const  int32 kint32max  = (( int32) 0x7FFFFFFF);
 static const  int64 kint64min  = (( int64) GG_LONGLONG(~0x7FFFFFFFFFFFFFFF));
 static const  int64 kint64max  = (( int64) GG_LONGLONG(0x7FFFFFFFFFFFFFFF));
+#endif  // __cplusplus
+
 // The following are not real constants, but we list them so CodeSearch and
 // other tools find them, in case people are looking for the above constants
 // under different names:

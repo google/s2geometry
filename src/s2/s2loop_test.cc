@@ -239,7 +239,7 @@ class S2LoopTestBase : public testing::Test {
   }
 };
 
-static S2LatLng const kRectError = S2EdgeUtil::RectBounder::MaxErrorForTests();
+static S2LatLng const kRectError = S2LatLngRectBounder::MaxErrorForTests();
 
 TEST_F(S2LoopTestBase, GetRectBound) {
   EXPECT_TRUE(empty_->GetRectBound().is_empty());
@@ -576,13 +576,13 @@ TEST(S2Loop, ContainsMatchesCrossingSign) {
       << "\n       a0:" << a0;
 
   // The edge from a0 to the origin crosses one boundary.
-  EXPECT_EQ(-1, S2EdgeUtil::CrossingSign(a0, S2::Origin(),
+  EXPECT_EQ(-1, S2::CrossingSign(a0, S2::Origin(),
                                          loop.vertex(0), loop.vertex(1)));
-  EXPECT_EQ(1, S2EdgeUtil::CrossingSign(a0, S2::Origin(),
+  EXPECT_EQ(1, S2::CrossingSign(a0, S2::Origin(),
                                         loop.vertex(1), loop.vertex(2)));
-  EXPECT_EQ(-1, S2EdgeUtil::CrossingSign(a0, S2::Origin(),
+  EXPECT_EQ(-1, S2::CrossingSign(a0, S2::Origin(),
                                          loop.vertex(2), loop.vertex(3)));
-  EXPECT_EQ(-1, S2EdgeUtil::CrossingSign(a0, S2::Origin(),
+  EXPECT_EQ(-1, S2::CrossingSign(a0, S2::Origin(),
                                          loop.vertex(3), loop.vertex(4)));
 
   // Contains should return false for the origin, and true for a0.
@@ -848,7 +848,7 @@ static unique_ptr<S2Loop> MakeCellLoop(S2CellId begin, S2CellId end) {
     S2Cell cell(id);
     for (int k = 0; k < 4; ++k) {
       S2Point a = cell.GetVertex(k);
-      S2Point b = cell.GetVertex((k + 1) & 3);
+      S2Point b = cell.GetVertex(k + 1);
       if (edges[b].erase(a) == 0) {
         edges[a].insert(b);
       } else if (edges[b].empty()) {
@@ -916,8 +916,8 @@ TEST(S2Loop, BoundsForLoopContainment) {
     // below B (i.e., ABC is CCW).
     S2Point b = (S2Testing::RandomPoint() + S2Point(0, 0, 1)).Normalize();
     S2Point v = b.CrossProd(S2Point(0, 0, 1)).Normalize();
-    S2Point a = S2EdgeUtil::Interpolate(rnd->RandDouble(), -v, b);
-    S2Point c = S2EdgeUtil::Interpolate(rnd->RandDouble(), b, v);
+    S2Point a = S2::Interpolate(rnd->RandDouble(), -v, b);
+    S2Point c = S2::Interpolate(rnd->RandDouble(), b, v);
     if (s2pred::Sign(a, b, c) < 0) {
       --iter; continue;
     }
@@ -968,7 +968,7 @@ void DebugDumpCrossings(S2Loop const& loop) {
       printf("Case %d:", i);
     }
     for (int j = 0; j < loop.num_vertices(); ++j) {
-      printf(" %d", S2EdgeUtil::EdgeOrVertexCrossing(
+      printf(" %d", S2::EdgeOrVertexCrossing(
                  orig, dest, loop.vertex(j), loop.vertex(j+1)));
     }
     printf("\n");
@@ -983,7 +983,7 @@ void DebugDumpCrossings(S2Loop const& loop) {
            i, s2pred::Sign(b, o, a),
            i, s2pred::Sign(c, o, b),
            s2pred::Sign(a, o, c),
-           S2EdgeUtil::EdgeOrVertexCrossing(c, o, b, a));
+           S2::EdgeOrVertexCrossing(c, o, b, a));
   }
 }
 
@@ -1353,5 +1353,11 @@ TEST(S2LoopShape, FullLoop) {
   S2Loop::Shape shape(&loop);
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(0, shape.num_chains());
+}
+
+TEST(S2LoopOwningShape, Ownership) {
+  // Debug mode builds will catch any memory leak below.
+  auto loop = absl::MakeUnique<S2Loop>(S2Loop::kEmpty());
+  S2Loop::OwningShape shape(std::move(loop));
 }
 

@@ -75,6 +75,7 @@
 #include <string>
 #include "s2/base/casts.h"
 #include <glog/logging.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/bits/bits.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s1angle.h"
@@ -157,6 +158,15 @@ S2Builder::Options& S2Builder::Options::operator=(Options const& options) {
   return *this;
 }
 
+bool operator==(S2Builder::GraphOptions const& x,
+                S2Builder::GraphOptions const& y) {
+  return (x.edge_type() == y.edge_type() &&
+          x.degenerate_edges() == y.degenerate_edges() &&
+          x.duplicate_edges() == y.duplicate_edges() &&
+          x.sibling_pairs() == y.sibling_pairs() &&
+          x.allow_vertex_filtering() == y.allow_vertex_filtering());
+}
+
 // Helper functions for computing error bounds:
 
 static S1ChordAngle RoundUp(S1Angle a) {
@@ -174,7 +184,7 @@ static S1ChordAngle AddPointToPointError(S1ChordAngle ca) {
 }
 
 static S1ChordAngle AddPointToEdgeError(S1ChordAngle ca) {
-  return ca.PlusError(S2EdgeUtil::GetUpdateMinDistanceMaxError(ca));
+  return ca.PlusError(S2::GetUpdateMinDistanceMaxError(ca));
 }
 
 S2Builder::S2Builder() {
@@ -206,7 +216,7 @@ void S2Builder::Init(Options const& options) {
   if (!options.split_crossing_edges()) {
     edge_snap_radius_ca_ = site_snap_radius_ca_;
   } else {
-    edge_snap_radius += S2EdgeUtil::kIntersectionError;
+    edge_snap_radius += S2::kIntersectionError;
     edge_snap_radius_ca_ = RoundUp(edge_snap_radius);
   }
   snapping_requested_ = (edge_snap_radius > S1Angle::Zero());
@@ -305,9 +315,18 @@ void S2Builder::set_label(Label label) {
   label_set_modified_ = true;
 }
 
+static bool IsFullPolygonUnspecified(S2Builder::Graph const& g,
+                                     S2Error* error) {
+  error->Init(S2Error::BUILDER_IS_FULL_PREDICATE_NOT_SPECIFIED,
+              "Attempted to assemble a degenerate polygon without specifying "
+              "a predicate to decide whether the result is empty or full");
+  return false;  // Assumes the polygon is empty.
+}
+
 void S2Builder::StartLayer(unique_ptr<Layer> layer) {
-  layer_begins_.push_back(input_edges_.size());
   layer_options_.push_back(layer->graph_options());
+  layer_begins_.push_back(input_edges_.size());
+  layer_is_full_polygon_predicates_.push_back(IsFullPolygonUnspecified);
   layers_.push_back(std::move(layer));
 }
 
@@ -382,6 +401,10 @@ void S2Builder::AddPolygon(S2Polygon const& polygon) {
   }
 }
 
+void S2Builder::AddIsFullPolygonPredicate(IsFullPolygonPredicate predicate) {
+  layer_is_full_polygon_predicates_.back() = std::move(predicate);
+}
+
 void S2Builder::ForceVertex(S2Point const& vertex) {
   sites_.push_back(vertex);
 }
@@ -404,7 +427,6 @@ class VertexIdEdgeVectorShape : public S2Shape {
   Edge edge(int e) const final {
     return Edge(vertices_[edges_[e].first], vertices_[edges_[e].second]);
   }
-  void GetEdge(int e, S2Point const** v0, S2Point const** v1) const final {}
   int dimension() const final { return 1; }
   bool contains_origin() const final { return false; }
   int num_chains() const final { return edges_.size(); }
@@ -462,8 +484,8 @@ void S2Builder::ChooseSites() {
   if (input_vertices_.empty()) return;
 
   S2ShapeIndex input_edge_index;
-  input_edge_index.Add(new VertexIdEdgeVectorShape(input_edges_,
-                                                   input_vertices_));
+  input_edge_index.Add(absl::MakeUnique<VertexIdEdgeVectorShape>(
+      input_edges_, input_vertices_));
   if (options_.split_crossing_edges()) {
     AddEdgeCrossings(input_edge_index);
   }
@@ -588,7 +610,7 @@ void S2Builder::AddEdgeCrossings(S2ShapeIndex const& input_edge_index) {
       [&new_vertices](s2shapeutil::ShapeEdge const& a,
                       s2shapeutil::ShapeEdge const& b, bool) {
         new_vertices.push_back(
-            S2EdgeUtil::GetIntersection(a.v0(), a.v1(), b.v0(), b.v1()));
+            S2::GetIntersection(a.v0(), a.v1(), b.v0(), b.v1()));
         return true;  // Continue visiting.
       });
   if (!new_vertices.empty()) {
@@ -802,7 +824,7 @@ void S2Builder::MaybeAddExtraSites(InputEdgeId edge_id,
       InputEdge const& edge = input_edges_[edge_id];
       S2Point const& a0 = input_vertices_[edge.first];
       S2Point const& a1 = input_vertices_[edge.second];
-      if (!S2EdgeUtil::IsEdgeBNearEdgeA(a0, a1, v0, v1, max_edge_deviation_)) {
+      if (!S2::IsEdgeBNearEdgeA(a0, a1, v0, v1, max_edge_deviation_)) {
         // Add a new site on the input edge, positioned so that it splits the
         // snapped edge into two approximately equal pieces.  Then we find all
         // the edges near the new site (including this one) and add them to
@@ -812,8 +834,8 @@ void S2Builder::MaybeAddExtraSites(InputEdgeId edge_id,
         // edge wraps around the sphere the "wrong way".  To handle this we
         // find the preferred split location by projecting both endpoints onto
         // the input edge and taking their midpoint.
-        S2Point mid = (S2EdgeUtil::Project(v0, a0, a1) +
-                       S2EdgeUtil::Project(v1, a0, a1)).Normalize();
+        S2Point mid = (S2::Project(v0, a0, a1) +
+                       S2::Project(v1, a0, a1)).Normalize();
         S2Point new_site = GetSeparationSite(mid, v0, v1, edge_id);
         AddExtraSite(new_site, max_edge_id, input_edge_index, snap_queue);
         return;
@@ -890,7 +912,7 @@ S2Point S2Builder::GetSeparationSite(S2Point const& site_to_avoid,
   S2Point const& y = input_vertices_[edge.second];
   Vector3_d xy_dir = y - x;
   S2Point n = S2::RobustCrossProd(x, y);
-  S2Point new_site = S2EdgeUtil::Project(site_to_avoid, x, y, n);
+  S2Point new_site = S2::Project(site_to_avoid, x, y, n);
   S2Point gap_min = GetCoverageEndpoint(v0, x, y, n);
   S2Point gap_max = GetCoverageEndpoint(v1, y, x, -n);
   if ((new_site - gap_min).DotProd(xy_dir) < 0) {
@@ -1058,14 +1080,24 @@ void S2Builder::BuildLayers() {
   // vertices will run in time proportional to the size of that layer rather
   // than the size of all layers combined.
   vector<vector<S2Point>> layer_vertices;
-  if (layers_.size() > 10) {
-    vector<Graph::VertexId> filter_tmp;  // Temporary used by FilterVertices.
-    layer_vertices.resize(layers_.size());
-    for (int i = 0; i < layers_.size(); ++i) {
-      layer_vertices[i] = Graph::FilterVertices(sites_, &layer_edges[i],
-                                                &filter_tmp);
+  static int const kMinLayersForVertexFiltering = 10;
+  if (layers_.size() >= kMinLayersForVertexFiltering) {
+    // Disable vertex filtering if it is disallowed by any layer.  (This could
+    // be optimized, but in current applications either all layers allow
+    // filtering or none of them do.)
+    bool allow_vertex_filtering = false;
+    for (auto const& options : layer_options_) {
+      allow_vertex_filtering &= options.allow_vertex_filtering();
     }
-    vector<S2Point>().swap(sites_);  // Release memory
+    if (allow_vertex_filtering) {
+      vector<Graph::VertexId> filter_tmp;  // Temporary used by FilterVertices.
+      layer_vertices.resize(layers_.size());
+      for (int i = 0; i < layers_.size(); ++i) {
+        layer_vertices[i] = Graph::FilterVertices(sites_, &layer_edges[i],
+                                                  &filter_tmp);
+      }
+      vector<S2Point>().swap(sites_);  // Release memory
+    }
   }
   for (int i = 0; i < layers_.size(); ++i) {
     GraphOptions const& options = layer_options_[i];
@@ -1075,7 +1107,7 @@ void S2Builder::BuildLayers() {
                                                         : layer_vertices[i]);
     Graph graph(options, &vertices, &edges, &input_edge_ids,
                 &input_edge_id_set_lexicon, &label_set_ids_,
-                &label_set_lexicon_);
+                &label_set_lexicon_, layer_is_full_polygon_predicates_[i]);
     layers_[i]->Build(graph, error_);
 
     // Clear data as we go along to save space.
@@ -1292,7 +1324,8 @@ void S2Builder::SimplifyEdgeChains(
                                         GraphOptions::DuplicateEdges::KEEP,
                                         GraphOptions::SiblingPairs::KEEP);
   Graph graph(graph_options, &sites_, &merged_edges, &merged_input_edge_ids,
-              input_edge_id_set_lexicon, &label_set_ids_, &label_set_lexicon_);
+              input_edge_id_set_lexicon, nullptr, nullptr,
+              IsFullPolygonPredicate());
   EdgeChainSimplifier simplifier(
       *this, graph, merged_edge_layers, site_vertices,
       layer_edges, layer_input_edge_ids, input_edge_id_set_lexicon);

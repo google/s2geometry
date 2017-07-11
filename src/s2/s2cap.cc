@@ -124,7 +124,7 @@ S2Cap S2Cap::Union(S2Cap const& other) const {
     return *this;
   } else {
     S1Angle result_radius = 0.5 * (distance + this_radius + other_radius);
-    S2Point result_center = S2EdgeUtil::InterpolateAtDistance(
+    S2Point result_center = S2::InterpolateAtDistance(
         0.5 * (distance - this_radius + other_radius),
         center(),
         other.center());

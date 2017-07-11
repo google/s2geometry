@@ -26,15 +26,15 @@
 
 #include <glog/logging.h>
 
+#include "s2/base/port.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
 #include "s2/s2coords.h"
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/third_party/absl/base/port.h"
 
 class S2LatLng;
 
@@ -222,20 +222,31 @@ class S2CellId {
   // REQUIRES: 1 <= level <= this->level().
   int child_position(int level) const;
 
-  // Methods that return the range of cell ids that are contained
-  // within this cell (including itself).  The range is *inclusive*
-  // (i.e. test using >= and <=) and the return values of both
-  // methods are valid leaf cell ids.
+  // These methods return the range of cell ids that are contained within this
+  // cell (including itself).  The range is *inclusive* (i.e. test using >=
+  // and <=) and the return values of both methods are valid leaf cell ids.
+  // In other words, a.contains(b) if and only if
   //
-  // These methods should not be used for iteration.  If you want to
-  // iterate through all the leaf cells, call child_begin(kMaxLevel) and
-  // child_end(kMaxLevel) instead.  Also see maximum_tile(), which can be used
-  // to iterate through cell ranges using cells at different levels.
+  //     (b >= a.range_min() && b <= a.range_max())
   //
-  // It would in fact be error-prone to define a range_end() method, because
-  // this method would need to return (range_max().id() + 1) which is not
-  // always a valid cell id.  This also means that iterators would need to be
-  // tested using "<" rather that the usual "!=".
+  // If you want to iterate through all the descendants of this cell at a
+  // particular level, use child_begin(level) and child_end(level) instead.
+  // Also see maximum_tile(), which can be used to iterate through a range of
+  // cells using S2CellIds at different levels that are as large as possible.
+  //
+  // If you need to convert the range to a semi-open interval [min, limit)
+  // (e.g., in order to use a key-value store that only supports semi-open
+  // range queries), do not attempt to define "limit" as range_max.next().
+  // The problem is that leaf S2CellIds are 2 units apart, so the semi-open
+  // interval [min, limit) includes an additional value (range_max.id() + 1)
+  // which is happens to be a valid S2CellId about one-third of the time and
+  // is *never* contained by this cell.  (It always correpsonds to a cell that
+  // is larger than this one.)  You can define "limit" as (range_max.id() + 1)
+  // if necessary (which is not always a valid S2CellId but can still be used
+  // with FromToken/ToToken), or you can convert range_max() to the key space
+  // of your key-value store and define "limit" as Successor(key).
+  //
+  // Note that Sentinel().range_min() == Sentinel.range_max() == Sentinel().
   S2CellId range_min() const;
   S2CellId range_max() const;
 

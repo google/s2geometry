@@ -23,7 +23,7 @@
 
 #include <glog/logging.h>
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s1angle.h"
 #include "s2/s2debug.h"
 #include "s2/s2error.h"
@@ -251,30 +251,31 @@ class S2Polyline final : public S2Region {
   // Wrapper class for indexing a polyline (see S2ShapeIndex).  Once this
   // object is inserted into an S2ShapeIndex it is owned by that index, and
   // will be automatically deleted when no longer needed by the index.  Note
-  // that this class does not take ownership of the polyline; if you want this
-  // behavior, see s2shapeutil::S2PolylineOwningShape.  You can also subtype
-  // this class to store additional data (see S2Shape for details).
+  // that this class does not take ownership of the polyline itself (see
+  // OwningShape below).  You can also subtype this class to store additional
+  // data (see S2Shape for details).
 #ifndef SWIG
   class Shape : public S2Shape {
    public:
     Shape() : polyline_(nullptr) {}  // Must call Init().
 
     // Initialization.  Does not take ownership of "polyline".
+    //
+    // Note that a polyline with one vertex is defined to have no edges.  Use
+    // s2shapeutil::LaxPolyline or s2shapeutil::ClosedLaxPolyline if you want
+    // to define a polyline consisting of a single degenerate edge.
     explicit Shape(S2Polyline const* polyline) { Init(polyline); }
-    void Init(S2Polyline const* polyline) { polyline_ = polyline; }
+    void Init(S2Polyline const* polyline);
 
     S2Polyline const* polyline() const { return polyline_; }
 
     // S2Shape interface:
+
     int num_edges() const final {
       return std::max(0, polyline_->num_vertices() - 1);
     }
     Edge edge(int e) const final {
       return Edge(polyline_->vertex(e), polyline_->vertex(e + 1));
-    }
-    void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
-      *a = &polyline_->vertex(e);
-      *b = &polyline_->vertex(e+1);
     }
     int dimension() const final { return 1; }
     bool contains_origin() const final { return false; }
@@ -290,6 +291,21 @@ class S2Polyline final : public S2Region {
 
    private:
     S2Polyline const* polyline_;
+  };
+
+  // Like Shape, except that the S2Polyline is automatically deleted when this
+  // object is deleted by the S2ShapeIndex.  This is useful when an S2Polyline
+  // is constructed solely for the purpose of indexing it.
+  class OwningShape : public Shape {
+   public:
+    OwningShape() {}  // Must call Init().
+    explicit OwningShape(std::unique_ptr<S2Polyline const> polyline)
+        : Shape(polyline.release()) {
+    }
+    void Init(std::unique_ptr<S2Polyline const> polyline) {
+      Shape::Init(polyline.release());
+    }
+    ~OwningShape() override { delete polyline(); }
   };
 #endif  // SWIG
 

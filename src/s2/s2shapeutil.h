@@ -26,9 +26,6 @@
 //  - VertexIdLaxLoop: like LaxLoop, but vertices are specified as indices
 //                     into a vertex array.
 //  - EdgeVectorShape: represents an arbitrary collection of edges.
-//  - S2LoopOwningShape: like S2SLoop::Shape but owns the underlying S2Loop.
-//  - S2PolygonOwningShape: like S2SPolygon::Shape but owns the S2Polygon.
-//  - S2PolylineOwningShape: like S2SPolyline::Shape but owns the S2Polyline.
 //
 // It also contains miscellaneous S2ShapeIndex utility functions and classes:
 //
@@ -40,9 +37,6 @@
 //
 //  - ResolveComponents: computes containment relationships among loops.
 //  - FindAnyCrossing: helper function for S2Loop and S2Polygon validation.
-//
-// TODO(ericv): The *OwningShapes could probably be removed by allowing the
-// underlying shapes (e.g., S2Polygon::Shape) to take ownership.
 
 #ifndef S2_S2SHAPEUTIL_H_
 #define S2_S2SHAPEUTIL_H_
@@ -52,7 +46,7 @@
 #include <utility>
 #include <vector>
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
@@ -93,7 +87,6 @@ class LaxLoop : public S2Shape {
   // S2Shape interface:
   int num_edges() const final { return num_vertices(); }
   Edge edge(int e) const final;
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
   // Not final; overridden by ClosedLaxPolyline.
   int dimension() const override { return 2; }
   // Not final; overridden by ClosedLaxPolyline.
@@ -186,7 +179,6 @@ class LaxPolygon : public S2Shape {
   // S2Shape interface:
   int num_edges() const final { return num_vertices(); }
   Edge edge(int e) const final;
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
   int dimension() const final { return 2; }
   bool contains_origin() const final;
   int num_chains() const final { return num_loops(); }
@@ -213,6 +205,8 @@ class LaxPolygon : public S2Shape {
 // except that duplicate vertices are allowed, and the representation is
 // slightly more compact.  Polylines may have any number of vertices, but note
 // that polylines with fewer than 2 vertices do not define any edges.
+// (To create a polyline consisting of a single degenerate edge, either repeat
+// the same vertex twice or use s2shapeutil::ClosedLaxPolyline.)
 class LaxPolyline : public S2Shape {
  public:
   LaxPolyline() {}  // Must call Init().
@@ -231,7 +225,6 @@ class LaxPolyline : public S2Shape {
   // S2Shape interface:
   int num_edges() const final { return std::max(0, num_vertices() - 1); }
   Edge edge(int e) const final;
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
   int dimension() const final { return 1; }
   bool contains_origin() const final { return false; }
   int num_chains() const final;
@@ -289,10 +282,6 @@ class EdgeVectorShape : public S2Shape {
   Edge edge(int e) const final {
     return Edge(edges_[e].first, edges_[e].second);
   }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
-    *a = &edges_[e].first;
-    *b = &edges_[e].second;
-  }
   int dimension() const final { return 1; }
   bool contains_origin() const final { return false; }
   int num_chains() const final { return edges_.size(); }
@@ -316,25 +305,23 @@ class EdgeVectorShape : public S2Shape {
 // This class is useful for adding a collection of points to an S2ShapeIndex.
 class PointVectorShape : public S2Shape {
  public:
+  PointVectorShape() {}  // Must call Init().
+  explicit PointVectorShape(std::vector<S2Point>* points) { Init(points); }
   ~PointVectorShape() override = default;
 
-  // TODO(user): Change the signature to
-  // PointVectorShape(std::vector<S2Point> &&points)
-  // once we get an exception to the style rules.
-
   // Transfers the contents of "points" to this class and leaves "points" empty.
-  explicit PointVectorShape(std::vector<S2Point>* points) {
-    points_.swap(*points);
-  }
+  //
+  // TODO(user): Change the signature to Init(std::vector<S2Point> &&)
+  // once we get an exception to the C++ style rules.
+  void Init(std::vector<S2Point>* points) { points_.swap(*points); }
+
+  int num_points() const { return points_.size(); }
+  S2Point const& point(int i) const { return points_[i]; }
 
   // S2Shape interface:
   int num_edges() const final { return points_.size(); }
   Edge edge(int e) const final {
     return Edge(points_[e], points_[e]);
-  }
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
-    *a = &points_[e];
-    *b = &points_[e];
   }
   int dimension() const final { return 0; }
   bool contains_origin() const final { return false; }
@@ -377,7 +364,6 @@ class VertexIdLaxLoop : public S2Shape {
   // S2Shape interface:
   int num_edges() const final { return num_vertices(); }
   Edge edge(int e) const final;
-  void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
   int dimension() const final { return 2; }
   bool contains_origin() const final;
   int num_chains() const final { return 1; }
@@ -393,43 +379,10 @@ class VertexIdLaxLoop : public S2Shape {
   S2Point const* vertex_array_;
 };
 
-// Like S2Loop::Shape, except that the referenced S2Loop is automatically
-// deleted when this object is released by the S2ShapeIndex.  This is useful
-// when an S2Loop is constructed solely for the purpose of indexing it.
-class S2LoopOwningShape : public S2Loop::Shape {
- public:
-  S2LoopOwningShape() {}  // Must call Init().
-  explicit S2LoopOwningShape(std::unique_ptr<S2Loop const> loop)
-      : S2Loop::Shape(loop.release()) {
-  }
-  ~S2LoopOwningShape() override { delete loop(); }
-};
-
-// Like S2Polygon::Shape, except that the referenced S2Polygon is
-// automatically deleted when this object is released by the S2ShapeIndex.
-// This is useful when an S2Polygon is constructed solely for the purpose of
-// indexing it.
-class S2PolygonOwningShape : public S2Polygon::Shape {
- public:
-  S2PolygonOwningShape() {}  // Must call Init().
-  explicit S2PolygonOwningShape(std::unique_ptr<S2Polygon const> polygon)
-      : S2Polygon::Shape(polygon.release()) {
-  }
-  ~S2PolygonOwningShape() override { delete polygon(); }
-};
-
-// Like S2Polyline::Shape, except that the referenced S2Polyline is
-// automatically deleted when this object is released by the S2ShapeIndex.
-// This is useful when an S2Polyline is constructed solely for the purpose of
-// indexing it.
-class S2PolylineOwningShape : public S2Polyline::Shape {
- public:
-  S2PolylineOwningShape() {}  // Must call Init().
-  explicit S2PolylineOwningShape(std::unique_ptr<S2Polyline const> polyline)
-      : S2Polyline::Shape(polyline.release()) {
-  }
-  ~S2PolylineOwningShape() override { delete polyline(); }
-};
+// TODO(ericv/jrosenstock): Remove these ABSL_DEPRECATED synonyms.
+using S2LoopOwningShape = S2Loop::OwningShape;
+using S2PolygonOwningShape = S2Polygon::OwningShape;
+using S2PolylineOwningShape = S2Polyline::OwningShape;
 
 
 /////////////////////////////////////////////////////////////////////////////

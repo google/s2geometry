@@ -25,7 +25,7 @@
 #include <ostream>
 #include <string>
 
-#include "s2/third_party/absl/base/port.h"
+#include "s2/base/port.h"
 
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.
@@ -104,6 +104,12 @@ class S2Error {
 
     // The edges provided to S2Builder cannot be assembled into a polyline.
     BUILDER_EDGES_DO_NOT_FORM_POLYLINE = 304,
+
+    // There was an attempt to assemble a polygon from degenerate geometry
+    // without having specified a predicate to decide whether the output is
+    // the empty polygon (containing no points) or the full polygon
+    // (containing all points).
+    BUILDER_IS_FULL_PREDICATE_NOT_SPECIFIED = 305,
   };
   S2Error() : code_(OK), text_() {}
 

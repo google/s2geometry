@@ -62,7 +62,7 @@ S2Point S2Cell::GetVertexRaw(int k) const {
 }
 
 S2Point S2Cell::GetEdgeRaw(int k) const {
-  switch (k) {
+  switch (k & 3) {
     case 0:  return S2::GetVNorm(face_, uv_[1][0]);   // Bottom
     case 1:  return S2::GetUNorm(face_, uv_[0][1]);   // Right
     case 2:  return -S2::GetVNorm(face_, uv_[1][1]);  // Top
@@ -424,12 +424,12 @@ S1ChordAngle S2Cell::GetDistanceToEdge(S2Point const& a,
   if (min_dist == S1ChordAngle::Zero()) return min_dist;
 
   // Otherwise, check whether the edge crosses the cell boundary.
-  // Note that S2EdgeUtil::EdgeCrosser needs pointers to vertices.
+  // Note that S2EdgeCrosser needs pointers to vertices.
   S2Point v[4];
   for (int i = 0; i < 4; ++i) {
     v[i] = GetVertex(i);
   }
-  S2EdgeUtil::EdgeCrosser crosser(&a, &b, &v[3]);
+  S2EdgeCrosser crosser(&a, &b, &v[3]);
   for (int i = 0; i < 4; ++i) {
     if (crosser.CrossingSign(&v[i]) >= 0) {
       return S1ChordAngle::Zero();
@@ -443,7 +443,7 @@ S1ChordAngle S2Cell::GetDistanceToEdge(S2Point const& a,
   // the interior of a cell edge, because the only way that this distance can
   // be minimal is if the two edges cross (already checked above).
   for (int i = 0; i < 4; ++i) {
-    S2EdgeUtil::UpdateMinDistance(v[i], a, b, &min_dist);
+    S2::UpdateMinDistance(v[i], a, b, &min_dist);
   }
   return min_dist;
 }

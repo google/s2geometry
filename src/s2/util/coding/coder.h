@@ -28,7 +28,7 @@
 // Avoid adding expensive includes here.
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/base/port.h"
+#include "s2/base/port.h"
 #include "s2/util/coding/varint.h"
 #include "s2/util/endian/endian.h"
 
@@ -147,8 +147,10 @@ class Encoder {
 
   static unsigned char kEmptyBuffer;
 
+#ifndef SWIG
   Encoder(Encoder const&) = delete;
   void operator=(Encoder const&) = delete;
+#endif  // SWIG
 };
 
 /* Class for decoding data from a memory buffer */
@@ -180,7 +182,7 @@ class Decoder {
   void   gets(void* mem, size_t n);            // get a c-string no more than
                                                // n bytes. always appends '\0'
   void   skip(size_t n);
-  unsigned char const* ptr();       // Return ptr to current position in buffer
+  unsigned char const* ptr() const;  // Return ptr to current position in buffer
 
   // "get_varint" actually checks bounds
   bool get_varint32(uint32* v);
@@ -208,6 +210,8 @@ class Decoder {
   const unsigned char* buf_;
   const unsigned char* limit_;
 };
+#ifndef SWIG
+#endif                 // SWIG
 
 /***** Implementation details.  Clients should ignore them. *****/
 
@@ -328,8 +332,7 @@ inline void Encoder::put_varsigned32(int32 n) {
 }
 
 inline Decoder::Decoder(const void* b, size_t maxn) {
-  orig_ = buf_ = reinterpret_cast<const unsigned char*>(b);
-  limit_ = orig_ + maxn;
+  reset(b, maxn);
 }
 
 inline void Decoder::reset(const void* b, size_t maxn) {
@@ -376,7 +379,7 @@ inline void Decoder::skip(size_t n) {
   buf_ += n;
 }
 
-inline unsigned char const* Decoder::ptr() {
+inline unsigned char const* Decoder::ptr() const {
   return buf_;
 }
 

@@ -64,29 +64,28 @@ extern const char kAsciiToLower[256];
 }  // namespace internal
 }  // namespace absl
 
+// TODO(b/34745279) -Wunused-function does not like 'static inline' functions.
+// once ascii_is... functions are not in global namespace anymore, they no
+// longer have to be static.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 // Public functions.
 
-// -----------------------------------------------------------------------------
 // ascii_isalpha()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character is an alphabetic character.
 static inline bool ascii_isalpha(unsigned char c) {
   return (absl::internal::kAsciiPropertyBits[c] & 0x01) != 0;
 }
 
-// -----------------------------------------------------------------------------
 // ascii_isalnum()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character is an alphanumeric character.
 static inline bool ascii_isalnum(unsigned char c) {
   return (absl::internal::kAsciiPropertyBits[c] & 0x04) != 0;
 }
 
-// -----------------------------------------------------------------------------
 // ascii_isspace()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character is a whitespace character (space,
 // tab, vertical tab, formfeed, linefeed, or carriage return).
@@ -94,36 +93,28 @@ static inline bool ascii_isspace(unsigned char c) {
   return (absl::internal::kAsciiPropertyBits[c] & 0x08) != 0;
 }
 
-// -----------------------------------------------------------------------------
 // ascii_ispunct()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character is a punctuation character.
 static inline bool ascii_ispunct(unsigned char c) {
   return (absl::internal::kAsciiPropertyBits[c] & 0x10) != 0;
 }
 
-// -----------------------------------------------------------------------------
 // ascii_isblank()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character is a blank character (tab or space).
 static inline bool ascii_isblank(unsigned char c) {
   return (absl::internal::kAsciiPropertyBits[c] & 0x20) != 0;
 }
 
-// -----------------------------------------------------------------------------
 // ascii_iscntrl()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character is a control character.
 static inline bool ascii_iscntrl(unsigned char c) {
   return (absl::internal::kAsciiPropertyBits[c] & 0x40) != 0;
 }
 
-// -----------------------------------------------------------------------------
 // ascii_isxdigit()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character can be represented as a hexadecimal
 // digit character (i.e. {0-9} or {A-F}).
@@ -131,9 +122,7 @@ static inline bool ascii_isxdigit(unsigned char c) {
   return (absl::internal::kAsciiPropertyBits[c] & 0x80) != 0;
 }
 
-// -----------------------------------------------------------------------------
 // ascii_isdigit()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character can be represented as a decimal
 // digit character (i.e. {0-9}).
@@ -141,54 +130,42 @@ static inline bool ascii_isdigit(unsigned char c) {
   return c >= '0' && c <= '9';
 }
 
-// -----------------------------------------------------------------------------
 // ascii_isprint()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character is printable, including whitespace.
 static inline bool ascii_isprint(unsigned char c) {
   return c >= 32 && c < 127;
 }
 
-// -----------------------------------------------------------------------------
 // ascii_isgraph()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character has a graphical representation.
 static inline bool ascii_isgraph(unsigned char c) {
   return c >  32 && c < 127;
 }
 
-// -----------------------------------------------------------------------------
 // ascii_isupper()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character is uppercase.
 static inline bool ascii_isupper(unsigned char c) {
   return c >= 'A' && c <= 'Z';
 }
 
-// -----------------------------------------------------------------------------
 // ascii_islower()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character is lowercase.
 static inline bool ascii_islower(unsigned char c) {
   return c >= 'a' && c <= 'z';
 }
 
-// -----------------------------------------------------------------------------
 // ascii_isascii()
-// -----------------------------------------------------------------------------
 //
 // Determines whether the given character is ASCII.
 static inline bool ascii_isascii(unsigned char c) {
   return c < 128;
 }
 
-// -----------------------------------------------------------------------------
 // ascii_tolower()
-// -----------------------------------------------------------------------------
 //
 // Returns an ASCII character, converting to lowercase if uppercase is
 // passed. Note that character values > 127 are simply returned.
@@ -196,14 +173,13 @@ static inline char ascii_tolower(unsigned char c) {
   return absl::internal::kAsciiToLower[c];
 }
 
-// -----------------------------------------------------------------------------
 // ascii_toupper()
-// -----------------------------------------------------------------------------
 //
 // Returns the ASCII character, converting to upper-case if lower-case is
 // passed. Note that characters values > 127 are simply returned.
 static inline char ascii_toupper(unsigned char c) {
   return absl::internal::kAsciiToUpper[c];
 }
+#pragma GCC diagnostic pop  // -Wunused-function
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_ASCII_CTYPE_H_

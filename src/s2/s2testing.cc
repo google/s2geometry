@@ -155,12 +155,20 @@ vector<S2Point> S2Testing::MakeRegularPoints(S2Point const& center,
   return points;
 }
 
+S1Angle S2Testing::MetersToAngle(double meters) {
+  return KmToAngle(0.001 * meters);
+}
+
 S1Angle S2Testing::KmToAngle(double km) {
   return S1Angle::Radians(km / kEarthRadiusKm);
 }
 
-S1Angle S2Testing::MetersToAngle(double meters) {
-  return KmToAngle(0.001 * meters);
+double S2Testing::AreaToMeters2(double steradians) {
+  return 1e6 * AreaToKm2(steradians);
+}
+
+double S2Testing::AreaToKm2(double steradians) {
+  return steradians * kEarthRadiusKm * kEarthRadiusKm;
 }
 
 // The overloaded Dump() function is for use within a debugger.

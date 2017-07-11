@@ -252,11 +252,7 @@ class S2Region {
   // Return true if and only if the given point is contained by the region.
   // The point 'p' is generally required to be unit length, although some
   // subtypes may relax this restriction.
-  //
-  // NOTE: If you will be calling this function on one specific subtype only,
-  // or if performance is a consideration, please use the non-virtual
-  // method Contains(S2Point const& p) defined for each subtype.
-  virtual bool VirtualContainsPoint(S2Point const& p) const = 0;
+  virtual bool Contains(S2Point const& p) const = 0;
 
   // Use encoder to generate a serialized representation of this region.
   virtual void Encode(Encoder* const encoder) const = 0;
@@ -266,11 +262,6 @@ class S2Region {
   virtual bool Decode(Decoder* const decoder) = 0;
 };
 ```
-
-In addition, all `S2Region` subtypes implement a `Contains(S2Point const& p)`
-method that returns true if the given point `p` is contained by the region. The
-point is generally required to be unit length, although some subtypes may relax
-this restriction.
 
 See `s2region.h` for the full interface.
 
@@ -283,7 +274,7 @@ easy to construct a bounding rectangle for a set of points, including point sets
 that span the 180 degree meridian. Here are its methods:
 
 ```c++
-class S2LatLngRect : public S2Region {
+class S2LatLngRect final : public S2Region {
  public:
   // Construct a rectangle from minimum and maximum latitudes and longitudes.
   // If lo.lng() > hi.lng(), the rectangle spans the 180 degree longitude
@@ -450,15 +441,13 @@ class S2LatLngRect : public S2Region {
   // from a given point to the rectangle (both its boundary and its interior).
   S1Angle GetDistance(S2LatLng const& p) const;
 
-  // The point 'p' does not need to be normalized.
-  bool Contains(S2Point const& p) const;
-
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
   S2LatLngRect* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  // The point 'p' does not need to be normalized.
   bool Contains(S2Cell const& cell) const override;
 
   // This test is cheap but is NOT exact.  Use Intersects() if you want a more
@@ -479,7 +468,7 @@ a circle or disc then you are probably looking for an `S2Cap`.
 Here are the methods available:
 
 ```c++
-class S2Cap : public S2Region {
+class S2Cap final : public S2Region {
  public:
   // The default constructor returns an empty S2Cap.
   S2Cap();
@@ -579,15 +568,13 @@ class S2Cap : public S2Region {
   // Return the smallest cap which encloses this cap and "other".
   S2Cap Union(S2Cap const& other) const;
 
-  // The point "p" should be a unit-length vector.
-  bool Contains(S2Point const& p) const;
-
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
   S2Cap* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  // The point "p" should be a unit-length vector.
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
 };
@@ -602,7 +589,7 @@ straight edges (geodesics). Edges of length 0 and 180 degrees are not allowed,
 i.e. adjacent vertices should not be identical or antipodal.
 
 ```c++
-class S2Polyline : public S2Region {
+class S2Polyline final : public S2Region {
  public:
   // Creates an empty S2Polyline that should be initialized by calling Init()
   // or Decode().
@@ -731,7 +718,7 @@ faces (loops), every point is contained by exactly one face. This implies that
 loops do not necessarily contain their vertices.
 
 ```c++
-class S2Loop : public S2Region {
+class S2Loop final : public S2Region {
  public:
   // Default constructor.  The loop must be initialized by calling Init() or
   // Decode() before it is used.
@@ -859,12 +846,6 @@ class S2Loop : public S2Region {
   // boundary).
   S2Point ProjectToBoundary(S2Point const& x) const;
 
-  // Return true if the loop contains the given point.  Point containment is
-  // defined such that if the sphere is subdivided into faces (loops), every
-  // point is contained by exactly one face.  This implies that loops do not
-  // necessarily contain their vertices.
-  bool Contains(S2Point const& p) const;
-
   // Return true if the region contained by this loop is a superset of the
   // region contained by the given other loop.
   bool Contains(S2Loop const* b) const;
@@ -887,7 +868,8 @@ class S2Loop : public S2Region {
   // perturbations.  More precisely, the vertices in the two loops must be in
   // the same cyclic order, and corresponding vertex pairs must be separated
   // by no more than "max_error".
-  bool BoundaryApproxEquals(S2Loop const* b, double max_error = 1e-15) const;
+  bool BoundaryApproxEquals(S2Loop const& b,
+                            S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   // Return true if the two loop boundaries are within "max_error" of each
   // other along their entire lengths.  The two loops may have different
@@ -897,7 +879,8 @@ class S2Loop : public S2Region {
   // testing whether it is possible to drive two cars all the way around the
   // two loops such that no car ever goes backward and the cars are always
   // within "max_error" of each other.
-  bool BoundaryNear(S2Loop const* b, double max_error = 1e-15) const;
+  bool BoundaryNear(S2Loop const& b,
+                    S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   // This method computes the oriented surface integral of some quantity f(x)
   // over the loop interior, given a function f_tri(A,B,C) that returns the
@@ -905,21 +888,6 @@ class S2Loop : public S2Region {
   template <class T>
   T GetSurfaceIntegral(T f_tri(S2Point const&, S2Point const&, S2Point const&))
       const;
-
-  // Constructs a regular polygon with the given number of vertices, all
-  // located on a circle of the specified radius around "center".  The radius
-  // is the actual distance from "center" to each vertex.
-  static std::unique_ptr<S2Loop> MakeRegularLoop(S2Point const& center,
-                                                 S1Angle radius,
-                                                 int num_vertices);
-
-  // Like the function above, but this version constructs a loop centered
-  // around the z-axis of the given coordinate frame, with the first vertex in
-  // the direction of the positive x-axis.  (This allows the loop to be
-  // rotated for testing purposes.)
-  static std::unique_ptr<S2Loop> MakeRegularLoop(Matrix3x3_d const& frame,
-                                                 S1Angle radius,
-                                                 int num_vertices);
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -933,6 +901,11 @@ class S2Loop : public S2Region {
   S2LatLngRect GetRectBound() const override;
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
+  // Return true if the loop contains the given point.  Point containment is
+  // defined such that if the sphere is subdivided into faces (loops), every
+  // point is contained by exactly one face.  This implies that loops do not
+  // necessarily contain their vertices.
+  bool Contains(S2Point const& p) const override;
 
   // Generally clients should not use S2Loop::Encode().  Instead they should
   // encode an S2Polygon, which unlike this method supports (lossless)
@@ -1003,7 +976,7 @@ Polygons have the following restrictions:
 
 
 ```c++
-class S2Polygon : public S2Region {
+class S2Polygon final : public S2Region {
  public:
   // The default constructor creates an empty polygon.  It can be made
   // non-empty by calling Init(), Decode(), etc.
@@ -1045,9 +1018,9 @@ class S2Polygon : public S2Region {
   // Initialize a polygon from a single loop.  Takes ownership of the loop.
   void Init(std::unique_ptr<S2Loop> loop);
 
-  // Releases ownership of the loops of this polygon, appends them to "loops" if
-  // non-NULL, and resets the polygon to be empty.
-  void Release(std::vector<S2Loop*>* loops);
+  // Releases ownership of and returns the loops of this polygon, and resets
+  // the polygon to be empty.
+  std::vector<std::unique_ptr<S2Loop>> Release();
 
   // Makes a deep copy of the given source polygon.  The destination polygon
   // will be cleared if necessary.
@@ -1127,12 +1100,6 @@ class S2Polygon : public S2Region {
   // polygon has no boundary).
   S2Point ProjectToBoundary(S2Point const& x) const;
 
-  // Return true if the polygon contains the given point.  Point containment
-  // is defined such that if the sphere is subdivided into polygons, every
-  // point is contained by exactly one polygons.  This implies that polygons
-  // do not necessarily contain their vertices.
-  bool Contains(S2Point const& p) const;
-
   // Return true if this polygon contains the given other polygon, i.e.
   // if polygon A contains all points contained by polygon B.
   bool Contains(S2Polygon const* b) const;
@@ -1156,24 +1123,43 @@ class S2Polygon : public S2Region {
   //
   // For example, any polygon is approximately disjoint from a polygon whose
   // maximum width is no more than "tolerance".
-  bool ApproxDisjoint(S2Polygon const* b, S1Angle tolerance) const;
+  bool ApproxDisjoint(S2Polygon const& b, S1Angle tolerance) const;
 
-  // Initialize this polygon to the intersection, union, or difference
-  // (A - B) of the given two polygons.  The "vertex_merge_radius" determines
-  // how close two vertices must be to be merged together and how close a
-  // vertex must be to an edge in order to be spliced into it (see
-  // S2Builder for details).  By default, the merge radius is just
-  // large enough to compensate for errors that occur when computing
-  // intersection points between edges.
+  // Initialize this polygon to the intersection, union, difference (A - B),
+  // or symmetric difference (XOR) of the given two polygons.
+  //
+  // "snap_function" allows you to specify a minimum spacing between output
+  // vertices, and/or that the vertices should be snapped to a discrete set of
+  // points (e.g. S2CellId centers or E7 lat/lng coordinates).  Any snap
+  // function can be used, including the IdentitySnapFunction with a
+  // snap_radius of zero (which preserves the input vertices exactly).
   void InitToIntersection(S2Polygon const* a, S2Polygon const* b);
+  void InitToIntersection(S2Polygon const& a, S2Polygon const& b,
+                          S2Builder::SnapFunction const& snap_function);
+
+  void InitToUnion(S2Polygon const* a, S2Polygon const* b);
+  void InitToUnion(S2Polygon const& a, S2Polygon const& b,
+                   S2Builder::SnapFunction const& snap_function);
+
+  void InitToDifference(S2Polygon const* a, S2Polygon const* b);
+  void InitToDifference(S2Polygon const& a, S2Polygon const& b,
+                        S2Builder::SnapFunction const& snap_function);
+
+  void InitToSymmetricDifference(S2Polygon const* a, S2Polygon const* b);
+  void InitToSymmetricDifference(
+      S2Polygon const& a, S2Polygon const& b,
+      S2Builder::SnapFunction const& snap_function);
+
+  // Convenience functions that use the IdentitySnapFunction with the given
+  // snap radius.
   void InitToApproxIntersection(S2Polygon const* a, S2Polygon const* b,
                                 S1Angle vertex_merge_radius);
-  void InitToUnion(S2Polygon const* a, S2Polygon const* b);
   void InitToApproxUnion(S2Polygon const* a, S2Polygon const* b,
                          S1Angle vertex_merge_radius);
-  void InitToDifference(S2Polygon const* a, S2Polygon const* b);
   void InitToApproxDifference(S2Polygon const* a, S2Polygon const* b,
                               S1Angle vertex_merge_radius);
+  void InitToApproxSymmetricDifference(S2Polygon const* a, S2Polygon const* b,
+                                       S1Angle vertex_merge_radius);
 
   // Initializes this polygon according to the given "snap_function" and
   // reduces the number of vertices if possible, while ensuring that no vertex
@@ -1264,13 +1250,15 @@ class S2Polygon : public S2Region {
   // perturbations.  Both polygons must have loops with the same cyclic vertex
   // order and the same nesting hierarchy, but the vertex locations are
   // allowed to differ by up to "max_error".
-  bool BoundaryApproxEquals(S2Polygon const* b, double max_error = 1e-15) const;
+  bool BoundaryApproxEquals(S2Polygon const& b,
+                            S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   // Return true if two polygons have boundaries that are within "max_error"
   // of each other along their entire lengths.  More precisely, there must be
   // a bijection between the two sets of loops such that for each pair of
   // loops, "a_loop->BoundaryNear(b_loop)" is true.
-  bool BoundaryNear(S2Polygon const* b, double max_error = 1e-15) const;
+  bool BoundaryNear(S2Polygon const& b,
+                    S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -1284,6 +1272,11 @@ class S2Polygon : public S2Region {
 
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
+  // Return true if the polygon contains the given point.  Point containment
+  // is defined such that if the sphere is subdivided into polygons, every
+  // point is contained by exactly one polygons.  This implies that polygons
+  // do not necessarily contain their vertices.
+  bool Contains(S2Point const& p) const override;
 
   // Encode the polygon with about 4 bytes per vertex, assuming the vertices
   // have all been snapped to the centers of S2Cells at a given level
@@ -1344,7 +1337,7 @@ There are a few more coordinate systems worth introducing:
     subdivision level.
 
 *   (face, i, j)<br> Leaf-cell coordinates.  "i" and "j" are integers in
-    the range [0,(2**30)-1] that identify a particular leaf cell on a
+    the range [0,(2^30)-1] that identify a particular leaf cell on a
     given face.  The (i, j) coordinate system is right-handed on every
     face, and the faces are oriented such that Hilbert curves connect
 
@@ -1355,9 +1348,9 @@ There are a few more coordinate systems worth introducing:
     cells at each subdivision level greater than zero.
 
 *   (face, si, ti)<br> Discrete cell-space coordinates.  These are
-    obtained by multiplying "s" and "t" by 2**31 and rounding to the
+    obtained by multiplying "s" and "t" by 2^31 and rounding to the
     nearest integer.  Discrete coordinates lie in the range
-    [0,2**31].  This coordinate system can represent the edge and
+    [0,2^31].  This coordinate system can represent the edge and
     center positions of all cells with no loss of precision (including
     non-leaf cells).
 
@@ -1555,7 +1548,7 @@ class S2CellId {
   int face() const;
 
   // The position of the cell center along the Hilbert curve over this face,
-  // in the range 0..(2**kPosBits-1).
+  // in the range 0..(2^kPosBits-1).
   uint64 pos() const;
 
   // Return the subdivision level of the cell (range 0..kMaxLevel).
@@ -1708,7 +1701,7 @@ also a more expensive representation (currently 48 bytes rather than 8).
 Here are its methods:
 
 ```c++
-class S2Cell : public S2Region {
+class S2Cell final : public S2Region {
  public:
   // The default constructor is required in order to use freelists.
   // Cells should otherwise always be constructed explicitly.
@@ -1799,6 +1792,15 @@ class S2Cell : public S2Region {
   // zero if the edge intersects the cell interior.
   S1ChordAngle GetDistanceToEdge(S2Point const& a, S2Point const& b) const;
 
+  ////////////////////////////////////////////////////////////////////////
+  // S2Region interface (see s2region.h for details):
+
+  S2Cell* Clone() const override;
+  S2Cap GetCapBound() const override;
+  S2LatLngRect GetRectBound() const override;
+  bool Contains(S2Cell const& cell) const override;
+  bool MayIntersect(S2Cell const& cell) const override;
+
   // Return true if the cell contains the given point "p".  Note that unlike
   // S2Loop/S2Polygon, S2Cells are considered to be closed sets.  This means
   // that points along an S2Cell edge (or at a vertex) belong to the adjacent
@@ -1809,17 +1811,7 @@ class S2Cell : public S2Region {
   // containment this way).
   //
   // The point "p" does not need to be normalized.
-  bool Contains(S2Point const& p) const;
-
-  ////////////////////////////////////////////////////////////////////////
-  // S2Region interface (see s2region.h for details):
-
-  S2Cell* Clone() const override;
-  S2Cap GetCapBound() const override;
-  S2LatLngRect GetRectBound() const override;
-  bool Contains(S2Cell const& cell) const override;
-  bool MayIntersect(S2Cell const& cell) const override;
-  bool VirtualContainsPoint(S2Point const& p) override;
+  bool Contains(S2Point const& p) const override;
 };
 ```
 
@@ -1836,7 +1828,7 @@ suitable for spatial indexing.
 Here is the interface:
 
 ```c++
-class S2CellUnion : public S2Region {
+class S2CellUnion final : public S2Region {
  public:
   // The default constructor does nothing.  The cell union cannot be used
   // until one of the Init() methods is called.
@@ -1935,7 +1927,7 @@ class S2CellUnion : public S2Region {
   // (e.g. expanding Canada by 1km).  For example, if max_level_diff == 4 the
   // region will always be expanded by approximately 1/16 the width of its
   // largest cell.  Note that in the worst case, the number of cells in the
-  // output can be up to 4 * (1 + 2 ** max_level_diff) times larger than the
+  // output can be up to 4 * (1 + 2 ^ max_level_diff) times larger than the
   // number of cells in the input.
   void Expand(S1Angle min_radius, int max_level_diff);
 
@@ -1959,10 +1951,6 @@ class S2CellUnion : public S2Region {
   // contained cell, using the Exact method from the S2Cell class.
   double ExactArea() const;
 
-  // The point 'p' does not need to be normalized.
-  // This is a fast operation (logarithmic in the size of the cell union).
-  bool Contains(S2Point const& p) const;
-
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
@@ -1971,7 +1959,10 @@ class S2CellUnion : public S2Region {
   S2LatLngRect GetRectBound() const override;
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
-  bool VirtualContainsPoint(S2Point const& p) override;
+
+  // The point 'p' does not need to be normalized.
+  // This is a fast operation (logarithmic in the size of the cell union).
+  bool Contains(S2Point const& p) const override;
 };
 ```
 

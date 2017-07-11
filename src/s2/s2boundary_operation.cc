@@ -26,7 +26,7 @@
 // We use exact predicates, but inexact constructions (e.g. computing the
 // intersection point of two edges).  Nevertheless, the following algorithm is
 // guaranteed to be 100% robust, in that the computed boundary stays within a
-// small tolerance (snap_radius + S2EdgeUtil::kIntersectionError) of the exact
+// small tolerance (snap_radius + S2::kIntersectionError) of the exact
 // result, and also preserves the correct topology (i.e., no crossing edges).
 //
 // Unfortunately this robustness cannot quite be achieved using the strategy
@@ -252,15 +252,18 @@ class GraphEdgeClipper {
   // "input_dimensions" is a vector specifying the dimension of each input
   // edge (0, 1, or 2).  "input_crossings" is the set of all crossings to be
   // used when clipping the edges of "g", sorted in lexicographic order.
-  GraphEdgeClipper(Graph const& g, vector<int8> const* input_dimensions,
-                   InputEdgeCrossings const* input_crossings);
-
-  // Returns the clipped set of edges and their corresponding set of input
-  // edge ids.  (This is used to construct a new S2Builder::Graph.)
-  void Run(vector<Graph::Edge>* new_edges,
-           vector<InputEdgeIdSetId>* new_input_edge_ids) const;
+  //
+  // The clipped set of edges and their corresponding set of input edge ids
+  // are returned in "new_edges" and "new_input_edge_ids".  (These can be used
+  // to construct a new S2Builder::Graph.)
+  GraphEdgeClipper(Graph const& g, vector<int8> const& input_dimensions,
+                   InputEdgeCrossings const& input_crossings,
+                   vector<Graph::Edge>* new_edges,
+                   vector<InputEdgeIdSetId>* new_input_edge_ids);
+  void Run();
 
  private:
+  void AddEdge(Graph::Edge edge, InputEdgeId input_edge_id);
   void GatherIncidentEdges(
       vector<VertexId> const& a, int ai,
       vector<CrossingInputEdge> const& b_input_edges,
@@ -277,6 +280,8 @@ class GraphEdgeClipper {
   Graph::VertexOutMap out_;
   vector<int8> const& input_dimensions_;
   InputEdgeCrossings const& input_crossings_;
+  vector<Graph::Edge>* new_edges_;
+  vector<InputEdgeIdSetId>* new_input_edge_ids_;
 
   // Every graph edge is associated with exactly one input edge in our case,
   // which means that we can declare g_.input_edge_id_set_ids() as a vector of
@@ -289,11 +294,16 @@ class GraphEdgeClipper {
   vector<int> rank_;      // The rank of each graph edge within order_.
 };
 
-GraphEdgeClipper::GraphEdgeClipper(Graph const& g,
-                                   vector<int8> const* input_dimensions,
-                                   InputEdgeCrossings const* input_crossings)
-    : g_(g), in_(g), out_(g), input_dimensions_(*input_dimensions),
-      input_crossings_(*input_crossings),
+GraphEdgeClipper::GraphEdgeClipper(
+    Graph const& g, vector<int8> const& input_dimensions,
+    InputEdgeCrossings const& input_crossings,
+    vector<Graph::Edge>* new_edges,
+    vector<InputEdgeIdSetId>* new_input_edge_ids)
+    : g_(g), in_(g), out_(g),
+      input_dimensions_(input_dimensions),
+      input_crossings_(input_crossings),
+      new_edges_(new_edges),
+      new_input_edge_ids_(new_input_edge_ids),
       input_ids_(g.input_edge_id_set_ids()),
       order_(GetInputEdgeChainOrder(g_, input_ids_)),
       rank_(order_.size()) {
@@ -302,8 +312,13 @@ GraphEdgeClipper::GraphEdgeClipper(Graph const& g,
   }
 }
 
-void GraphEdgeClipper::Run(vector<Graph::Edge>* new_edges,
-                           vector<InputEdgeIdSetId>* new_input_edge_ids) const {
+inline void GraphEdgeClipper::AddEdge(Graph::Edge edge,
+                                      InputEdgeId input_edge_id) {
+  new_edges_->push_back(edge);
+  new_input_edge_ids_->push_back(input_edge_id);
+}
+
+void GraphEdgeClipper::Run() {
   // Declare vectors here and reuse them to avoid reallocation.
   vector<VertexId> a_vertices;
   vector<int> a_num_crossings;
@@ -339,8 +354,7 @@ void GraphEdgeClipper::Run(vector<Graph::Edge>* new_edges,
     // DegenerateEdges::DISCARD, then remove the edge here.
     if (edge0.first == edge0.second) {
       inside ^= (b_input_edges.size() & 1);
-      new_edges->push_back(edge0);
-      new_input_edge_ids->push_back(a_input_id);
+      AddEdge(edge0, a_input_id);
       continue;
     }
     // Optimization for the case where there are no crossings.
@@ -350,8 +364,7 @@ void GraphEdgeClipper::Run(vector<Graph::Edge>* new_edges,
       // polyline/polygon operations, where the polygon edges are needed to
       // compute the polyline output but are not emitted themselves.
       if (inside) {
-        new_edges->push_back(reverse_a ? Graph::reverse(edge0) : edge0);
-        new_input_edge_ids->push_back(a_input_id);
+        AddEdge(reverse_a ? Graph::reverse(edge0) : edge0, a_input_id);
       }
       continue;
     }
@@ -411,8 +424,8 @@ void GraphEdgeClipper::Run(vector<Graph::Edge>* new_edges,
       int sign = is_line ? 0 : (left_to_right == invert_b) ? -1 : 1;
       a_num_crossings[a_index] += sign;
 
-      // Any polyline vertex that has at least one crossing but where an
-      // adjacent edge was not emitted may be emitted as an isolated vertex.
+      // Any polyline or polygon vertex that has at least one crossing but no
+      // adjacent emitted edge may be emitted as an isolated vertex.
       a_isolated[a_index] = true;
     }
     if (s2builder_verbose) std::cout << std::endl;
@@ -431,13 +444,11 @@ void GraphEdgeClipper::Run(vector<Graph::Edge>* new_edges,
       int edge_count = reverse_a ? -multiplicity : multiplicity;
       // Output any forward edges required.
       for (int i = 0; i < edge_count; ++i) {
-        new_edges->push_back(Graph::Edge(a_vertices[ai - 1], a_vertices[ai]));
-        new_input_edge_ids->push_back(a_input_id);
+        AddEdge(Graph::Edge(a_vertices[ai - 1], a_vertices[ai]), a_input_id);
       }
       // Output any reverse edges required.
       for (int i = edge_count; i < 0; ++i) {
-        new_edges->push_back(Graph::Edge(a_vertices[ai], a_vertices[ai - 1]));
-        new_input_edge_ids->push_back(a_input_id);
+        AddEdge(Graph::Edge(a_vertices[ai], a_vertices[ai - 1]), a_input_id);
       }
       multiplicity += a_num_crossings[ai];
     }
@@ -447,11 +458,10 @@ void GraphEdgeClipper::Run(vector<Graph::Edge>* new_edges,
 
     // Output any isolated polyline vertices.
     // TODO(ericv): Only do this if an output layer wants degenerate edges.
-    if (input_dimensions_[a_input_id] == 1) {
+    if (input_dimensions_[a_input_id] != 0) {
       for (int ai = 0; ai < a_vertices.size(); ++ai) {
         if (a_isolated[ai]) {
-          new_edges->push_back(Graph::Edge(a_vertices[ai], a_vertices[ai]));
-          new_input_edge_ids->push_back(a_input_id);
+          AddEdge(Graph::Edge(a_vertices[ai], a_vertices[ai]), a_input_id);
         }
       }
     }
@@ -686,12 +696,36 @@ GraphOptions EdgeClippingLayer::graph_options() const {
                       DuplicateEdges::KEEP, SiblingPairs::KEEP);
 }
 
+// Helper function (in anonymous namespace) to create an S2Builder::Graph from
+// a vector of edges.
+Graph MakeGraph(
+    Graph const& g, GraphOptions* options, vector<Graph::Edge>* new_edges,
+    vector<InputEdgeIdSetId>* new_input_edge_ids,
+    IdSetLexicon* new_input_edge_id_set_lexicon, S2Error* error) {
+  if (options->edge_type() == EdgeType::UNDIRECTED) {
+    // Create a reversed edge for every edge.
+    int n = new_edges->size();
+    new_edges->reserve(2 * n);
+    new_input_edge_ids->reserve(2 * n);
+    for (int i = 0; i < n; ++i) {
+      new_edges->push_back(Graph::reverse((*new_edges)[i]));
+      new_input_edge_ids->push_back(IdSetLexicon::EmptySetId());
+    }
+  }
+  Graph::ProcessEdges(options, new_edges, new_input_edge_ids,
+                      new_input_edge_id_set_lexicon, error);
+  return Graph(*options, &g.vertices(), new_edges, new_input_edge_ids,
+               new_input_edge_id_set_lexicon, &g.label_set_ids(),
+               &g.label_set_lexicon(), g.is_full_polygon_predicate());
+}
+
 void EdgeClippingLayer::Build(Graph const& g, S2Error* error) {
   // The bulk of the work is handled by GraphEdgeClipper.
   vector<Graph::Edge> new_edges;
   vector<InputEdgeIdSetId> new_input_edge_ids;
-  GraphEdgeClipper clipper(g, &input_dimensions_, &input_crossings_);
-  clipper.Run(&new_edges, &new_input_edge_ids);
+  // Destroy the GraphEdgeClipper immediately to save memory.
+  GraphEdgeClipper(g, input_dimensions_, input_crossings_,
+                   &new_edges, &new_input_edge_ids).Run();
   if (s2builder_verbose) {
     std::cout << "Edges after clipping: " << std::endl;
     for (int i = 0; i < new_edges.size(); ++i) {
@@ -704,11 +738,8 @@ void EdgeClippingLayer::Build(Graph const& g, S2Error* error) {
   IdSetLexicon new_input_edge_id_set_lexicon;
   if (layers_.size() == 1) {
     GraphOptions options = layers_[0]->graph_options();
-    Graph::ProcessEdges(&options, &new_edges, &new_input_edge_ids,
-                        &new_input_edge_id_set_lexicon, error);
-    Graph new_graph(options, &g.vertices(), &new_edges, &new_input_edge_ids,
-                    &new_input_edge_id_set_lexicon, &g.label_set_ids(),
-                    &g.label_set_lexicon());
+    Graph new_graph = MakeGraph(g, &options, &new_edges, &new_input_edge_ids,
+                                &new_input_edge_id_set_lexicon, error);
     layers_[0]->Build(new_graph, error);
   } else {
     // The Graph objects must be valid until the last Build() call completes,
@@ -730,13 +761,9 @@ void EdgeClippingLayer::Build(Graph const& g, S2Error* error) {
     vector<InputEdgeIdSetId>().swap(new_input_edge_ids);
     for (int d = 0; d < 3; ++d) {
       layer_options[d] = layers_[d]->graph_options();
-      Graph::ProcessEdges(&layer_options[d], &layer_edges[d],
-                          &layer_input_edge_ids[d],
-                          &new_input_edge_id_set_lexicon, error);
-      layer_graphs.push_back(Graph(
-          layer_options[d], &g.vertices(), &layer_edges[d],
-          &layer_input_edge_ids[d], &new_input_edge_id_set_lexicon,
-          &g.label_set_ids(), &g.label_set_lexicon()));
+      layer_graphs.push_back(MakeGraph(
+          g, &layer_options[d], &layer_edges[d], &layer_input_edge_ids[d],
+          &new_input_edge_id_set_lexicon, error));
       layers_[d]->Build(layer_graphs[d], error);
     }
   }
@@ -952,6 +979,28 @@ class S2BoundaryOperation::Impl::CrossingProcessor {
 
   InputEdgeId input_edge_id() const { return input_dimensions_->size(); }
 
+  // Returns true if the edges on either side of the first vertex of the
+  // current edge have not been emitted.
+  //
+  // REQUIRES: This method is called just after updating "inside_" for "v0".
+  bool is_v0_isolated(ShapeEdgeId a_id) const {
+    return !inside_ && v0_emitted_max_edge_id_ < a_id.edge_id;
+  }
+
+  // Returns true if "a_id" is the last edge of the current chain, and the
+  // edges on either side of the last vertex have not been emitted (including
+  // the possibility that the chain forms a loop).
+  bool is_chain_last_vertex_isolated(ShapeEdgeId a_id) const {
+    return (a_id.edge_id == chain_limit_ - 1 && !chain_v0_emitted_ &&
+            v0_emitted_max_edge_id_ <= a_id.edge_id);
+  }
+
+  // Returns true if the given polyline edge contains "v0", taking into
+  // account the specified PolylineModel.
+  bool polyline_contains_v0(int edge_id, int chain_start) const {
+    return (polyline_model_ != PolylineModel::OPEN || edge_id > chain_start);
+  }
+
   void AddCrossing(SourceEdgeCrossing const& crossing) {
     source_edge_crossings_.push_back(make_pair(input_edge_id(), crossing));
   }
@@ -978,6 +1027,15 @@ class S2BoundaryOperation::Impl::CrossingProcessor {
     return true;
   }
 
+  bool AddPointEdge(S2Point const& p, int dimension) {
+    if (builder_ == nullptr) return false;  // Boolean output.
+    if (!prev_inside_) SetClippingState(kSetInside, true);
+    input_dimensions_->push_back(dimension);
+    builder_->AddEdge(p, p);
+    prev_inside_ = true;
+    return true;
+  }
+
   bool ProcessEdge0(ShapeEdgeId a_id, S2Shape::Edge const& a,
                     CrossingIterator* it);
   bool ProcessEdge1(ShapeEdgeId a_id, S2Shape::Edge const& a,
@@ -989,10 +1047,11 @@ class S2BoundaryOperation::Impl::CrossingProcessor {
   PointCrossingResult ProcessPointCrossings(
       ShapeEdgeId a_id, S2Point const& a0, CrossingIterator* it) const;
   EdgeCrossingResult ProcessEdgeCrossings(
-      ShapeEdgeId a_id, S2Shape::Edge const& a, CrossingIterator* it);
+      ShapeEdgeId a_id, S2Shape::Edge const& a, bool check_polygon_vertices,
+      CrossingIterator* it);
 
-  bool PolylineContainsVertex(S2Point const& v,
-                              CrossingIterator const& it) const;
+  bool PolylineEdgeContainsVertex(S2Point const& v,
+                                  CrossingIterator const& it) const;
 
   // Constructor parameters:
 
@@ -1069,7 +1128,7 @@ class S2BoundaryOperation::Impl::CrossingProcessor {
   // The maximum edge id of any edge in the current chain whose v0 vertex has
   // already been emitted.  This is used to determine when an isolated vertex
   // needs to be emitted, e.g. when two closed polygons share only a vertex.
-  int max_edge_id_v0_emitted_;
+  int v0_emitted_max_edge_id_;
 
   // True if the first vertex of the current chain has been emitted.  This is
   // used when processing loops in order to determine whether the first/last
@@ -1106,7 +1165,7 @@ inline void S2BoundaryOperation::Impl::CrossingProcessor::StartChain(
   chain_start_ = chain_start;
   chain_limit_ = chain_limit;
   inside_ = inside;
-  max_edge_id_v0_emitted_ = chain_start - 1;  // No edges emitted yet.
+  v0_emitted_max_edge_id_ = chain_start - 1;  // No edges emitted yet.
   chain_v0_emitted_ = false;
 }
 
@@ -1125,16 +1184,18 @@ bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge(
   }
 }
 
-// Information that is extracted from the set of crossing edges and is needed
-// to implement point operations.
+// PointCrossingResult summarizes the relationship between a point from
+// region A (the "test point") and a set of crossing edges from region B.
+// For example, "has_polygon_match" indicates whether a polygon vertex from
+// region B matches the test point.
 struct S2BoundaryOperation::Impl::CrossingProcessor::PointCrossingResult {
   PointCrossingResult()
       : has_point_match(false), has_polyline_match(false),
         has_polygon_match(false) {
   }
-  bool has_point_match;     // Matching point.
-  bool has_polyline_match;  // Matching polyline vertex.
-  bool has_polygon_match;   // Matching polygon vertex.
+  bool has_point_match;     // Matches point.
+  bool has_polyline_match;  // Matches polyline vertex.
+  bool has_polygon_match;   // Matches polygon vertex.
 };
 
 // Processes an edge of dimension 0 (i.e., a point) from region A.
@@ -1156,31 +1217,59 @@ bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge0(
   }
   if (r.has_polyline_match) force_emit = 1;
 
-  // For UNION, if there are duplicate points in the other region then we emit
-  // all of them (i.e., the input and output are multisets).
+  // Note that the point/polyline output for UNION includes duplicates.
   if (!is_union_ && r.has_point_match) force_emit = 1;
   if (invert_b_) force_emit = -force_emit;
   if (force_emit > 0 || (force_emit == 0 && inside_)) {
-    inside_ = true;
-    return AddEdge(a_id, a, 0 /*dimension*/, 0 /*interior_crossings*/);
+    return AddPointEdge(a.v0, 0);
   }
   return true;
 }
 
-// Information that is extracted from the set of crossing edges and is needed
-// to implement edge operations (i.e., polyline and polygon operations).
+// Skip any crossings that were not needed to determine the result.
+inline void S2BoundaryOperation::Impl::CrossingProcessor::SkipCrossings(
+    ShapeEdgeId a_id, CrossingIterator* it) {
+  while (!it->Done(a_id)) it->Next();
+}
+
+// Returns a summary of the relationship between a test point from region A and
+// a set of crossing edges from region B (see PointCrossingResult).
+S2BoundaryOperation::Impl::CrossingProcessor::PointCrossingResult
+S2BoundaryOperation::Impl::CrossingProcessor::ProcessPointCrossings(
+    ShapeEdgeId a_id, S2Point const& a0, CrossingIterator* it) const {
+  PointCrossingResult r;
+  for (; !it->Done(a_id); it->Next()) {
+    if (it->b_dimension() == 0) {
+      r.has_point_match = true;
+    } else if (it->b_dimension() == 1) {
+      if (PolylineEdgeContainsVertex(a0, *it)) {
+        r.has_polyline_match = true;
+      }
+    } else {
+      r.has_polygon_match = true;
+    }
+  }
+  return r;
+}
+
+// EdgeCrossingResult summarizes the relationship between a edge from region A
+// (the "test edge") and a set of crossing edges from region B.  For example,
+// "has_polygon_match" indicates whether a polygon edge from region B matches
+// the test edge.
 struct S2BoundaryOperation::Impl::CrossingProcessor::EdgeCrossingResult {
   EdgeCrossingResult()
       : has_polyline_match(false), has_polygon_match(false),
-        has_polygon_sibling(false), a0_crossings(0), a1_crossings(0),
-        interior_crossings(0) {
+        has_polygon_sibling(false), contains_a0(false), contains_a1(false),
+        a0_crossings(0), a1_crossings(0), interior_crossings(0) {
   }
-  bool has_polyline_match;   // Matching polyline edge (either direction).
-  bool has_polygon_match;    // Matching polygon edge (same direction).
-  bool has_polygon_sibling;  // Matching polygon edge (reverse direction).
-  int a0_crossings;          // Polygon crossings at edge start vertex.
-  int a1_crossings;          // Polygon crossings at edge end vertex.
-  int interior_crossings;    // Polygon crossings in the edge interior.
+  bool has_polyline_match;   // Matches polyline edge (either direction).
+  bool has_polygon_match;    // Matches polygon edge (same direction).
+  bool has_polygon_sibling;  // Matches polygon edge (reverse direction).
+  bool contains_a0;          // Start vertex is contained by matching vertex.
+  bool contains_a1;          // End vertex is contained by matching vertex.
+  int a0_crossings;          // Count of polygon crossings at start vertex.
+  int a1_crossings;          // Count of polygon crossings at end vertex.
+  int interior_crossings;    // Count of polygon crossings in edge interior.
 };
 
 // Processes an edge of dimension 1 (i.e., a polyline edge) from region A.
@@ -1191,11 +1280,18 @@ bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge1(
     SkipCrossings(a_id, it);
     return true;
   }
-  EdgeCrossingResult r = ProcessEdgeCrossings(a_id, a, it);
+  bool check_polygon_vertices = (polygon_model_ == PolygonModel::CLOSED);
+  EdgeCrossingResult r = ProcessEdgeCrossings(a_id, a,
+                                              check_polygon_vertices, it);
+  if (polygon_model_ == PolygonModel::SEMI_OPEN) {
+    r.contains_a0 |= inside_ ^ invert_b_;
+  }
   inside_ ^= (r.a0_crossings & 1);
 
   // If force_emit > 0, the edge will be emitted.  If force_emit < 0, the
   // edge will be discarded.  Otherwise the current inside_ state is used.
+  // (Note that in the SEMI_OPEN model, polygon sibling pairs cancel each
+  // other and have no effect on point or edge containment.)
   int force_emit = 0;
   if (r.has_polygon_match) {
     force_emit += (polygon_model_ == PolygonModel::OPEN) ? -1 : 1;
@@ -1203,35 +1299,54 @@ bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge1(
   if (r.has_polygon_sibling) {
     force_emit += (polygon_model_ == PolygonModel::CLOSED) ? 1 : -1;
   }
+  // Note that the point/polyline output for UNION includes duplicates.
+  if (!is_union_ && r.has_polyline_match) force_emit = 1;
   if (invert_b_) force_emit = -force_emit;
 
-  // For UNION, if there are duplicate polyline edges  in the other region
-  // then we emit all of them (i.e., the input and output are multisets).
-  if (!is_union_ && r.has_polyline_match) {
-    force_emit = (invert_b_ != invert_result_) ? -1 : 1;
-  }
   if (force_emit != 0 && inside_ != (force_emit > 0)) {
     inside_ = (force_emit > 0);
     ++r.a1_crossings;  // Restores the correct (semi-open) inside_ state.
   }
-  // TODO(ericv): Handle degenerate output of a0.
+  // If neither edge adjacent to v0 was emitted, and this polyline contains
+  // v0, and the other region contains v0, then emit an isolated vertex.
+  if (is_v0_isolated(a_id) &&
+      polyline_contains_v0(a_id.edge_id, chain_start_) &&
+      r.contains_a0 ^ invert_b_) {
+    if (!AddPointEdge(a.v0, 1)) return false;
+  }
   if (inside_ || r.interior_crossings > 0) {
     if (!AddEdge(a_id, a, 1 /*dimension*/, r.interior_crossings)) {
       return false;
     }
   }
-  // polyline_prev_a1_emitted_ = inside_;
+  if (inside_) v0_emitted_max_edge_id_ = a_id.edge_id + 1;
   inside_ ^= (r.a1_crossings & 1);
   DCHECK_EQ(S2ContainsPointQuery(&it->b_index()).Contains(a.v1) ^ invert_b_,
             inside_);
-  // TODO(ericv): Handle degenerate output of a1 if this is the last edge.
+  if (polygon_model_ == PolygonModel::SEMI_OPEN) {
+    r.contains_a1 |= inside_ ^ invert_b_;
+  }
+  if (polyline_model_ == PolylineModel::CLOSED &&
+      is_chain_last_vertex_isolated(a_id) && r.contains_a1 ^ invert_b_) {
+    if (!AddPointEdge(a.v1, 1)) return false;
+  }
   return true;
 }
 
 // Processes an edge of dimension 2 (i.e., a polygon edge) from region A.
 bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge2(
     ShapeEdgeId a_id, S2Shape::Edge const& a, CrossingIterator* it) {
-  EdgeCrossingResult r = ProcessEdgeCrossings(a_id, a, it);
+  // In order to keep only one copy of any shared polygon edges, we only
+  // output shared edges when processing the second region.
+  bool emit_shared = (a_region_id_ == 1);
+
+  // Degeneracies such as isolated vertices and sibling pairs can only be
+  // created by intersecting CLOSED polygons or unioning OPEN polygons.
+  bool emit_degenerate =
+      (polygon_model_ == PolygonModel::CLOSED && !invert_a_ && !invert_b_) ||
+      (polygon_model_ == PolygonModel::OPEN && invert_a_ && invert_b_);
+
+  EdgeCrossingResult r = ProcessEdgeCrossings(a_id, a, emit_degenerate, it);
   DCHECK(!r.has_polyline_match);
   inside_ ^= (r.a0_crossings & 1);
 
@@ -1241,75 +1356,55 @@ bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge2(
   DCHECK(!r.has_polygon_match || !r.has_polygon_sibling);
   int force_emit = 0;
   if (invert_a_ != invert_b_) swap(r.has_polygon_match, r.has_polygon_sibling);
-  if (r.has_polygon_match) force_emit = (a_region_id_ == 1 ? 1 : -1);
-  if (r.has_polygon_sibling) {
-    // SEMI_OPEN and difference operations never yield sibling pairs.
-    if (polygon_model_ == PolygonModel::SEMI_OPEN || invert_a_ != invert_b_) {
-      force_emit = -1;
-    } else {
-      // Open unions and closed intersections can yield sibling pairs.
-      bool is_open = (polygon_model_ == PolygonModel::OPEN);
-      force_emit = (is_open == invert_a_) ? 1 : -1;
-    }
-  }
+  if (r.has_polygon_match) force_emit = emit_shared ? 1 : -1;
+  if (r.has_polygon_sibling) force_emit = emit_degenerate ? 1 : -1;
+
   if (force_emit != 0 && inside_ != (force_emit > 0)) {
     inside_ = (force_emit > 0);
     ++r.a1_crossings;  // Restores the correct (semi-open) inside_ state.
+  }
+  if (a_id.edge_id == chain_start_) {
+    chain_v0_emitted_ = inside_;
+  } else if (emit_shared && r.contains_a0 && is_v0_isolated(a_id)) {
+    if (!AddPointEdge(a.v0, 2)) return false;
   }
   if (inside_ || r.interior_crossings > 0) {
     if (!AddEdge(a_id, a, 2 /*dimension*/, r.interior_crossings)) {
       return false;
     }
   }
+  if (inside_) v0_emitted_max_edge_id_ = a_id.edge_id + 1;
   inside_ ^= (r.a1_crossings & 1);
   DCHECK_EQ(S2ContainsPointQuery(&it->b_index()).Contains(a.v1) ^ invert_b_,
             inside_);
+  if (emit_shared && r.contains_a1 && is_chain_last_vertex_isolated(a_id)) {
+    if (!AddPointEdge(a.v1, 2)) return false;
+  }
   return true;
 }
 
-// Skip any crossings that were not needed to determine the result.
-inline void S2BoundaryOperation::Impl::CrossingProcessor::SkipCrossings(
-    ShapeEdgeId a_id, CrossingIterator* it) {
-  while (!it->Done(a_id)) it->Next();
-}
-
-// Processes the set of edges that intersect a point, and returns a summary
-// that is sufficient to determine whether the point should be emitted.
-S2BoundaryOperation::Impl::CrossingProcessor::PointCrossingResult
-S2BoundaryOperation::Impl::CrossingProcessor::ProcessPointCrossings(
-    ShapeEdgeId a_id, S2Point const& a0, CrossingIterator* it) const {
-  PointCrossingResult r;
-  for (; !it->Done(a_id); it->Next()) {
-    if (it->b_dimension() == 0) {
-      r.has_point_match = true;
-    } else if (it->b_dimension() == 1) {
-      if (PolylineContainsVertex(a0, *it)) {
-        r.has_polyline_match = true;
-      }
-    } else {
-      r.has_polygon_match = true;
-    }
-  }
-  return r;
-}
-
-// Processes the set of edges that intersect a polyline or polygon edge, and
-// returns a summary that is sufficient to determine whether the polyline or
-// polygon edge should be emitted.
+// Returns a summary of the relationship between a test edge from region A and
+// a set of crossing edges from region B (see EdgeCrossingResult).
+// "check_polygon_vertices" specifies whether polygon vertices should be
+// considered to contain the endpoints of the test edge.
 S2BoundaryOperation::Impl::CrossingProcessor::EdgeCrossingResult
 S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdgeCrossings(
-    ShapeEdgeId a_id, S2Shape::Edge const& a, CrossingIterator* it) {
+    ShapeEdgeId a_id, S2Shape::Edge const& a, bool check_polygon_vertices,
+    CrossingIterator* it) {
   EdgeCrossingResult r;
   if (it->Done(a_id)) return r;
 
-  S2EdgeUtil::CopyingEdgeCrosser crosser(a.v0, a.v1);
+  // TODO(ericv): bool a_degenerate = (a.v0 == a.v1);
+  S2CopyingEdgeCrosser crosser(a.v0, a.v1);
   for (; !it->Done(a_id); it->Next()) {
     if (it->b_dimension() == 0) continue;
     S2Shape::Edge b = it->b_edge();
     int crossing = crosser.CrossingSign(b.v0, b.v1);
     if (crossing < 0) continue;
     if (crossing > 0) {
-      // The crossing occurs in the edge interior.
+      // The crossing occurs in the edge interior.  The condition below says
+      // that (1) polyline crossings don't affect polygon output, and (2)
+      // subtracting a crossing polyline from a polyline has no effect.
       if (a_dimension_ <= it->b_dimension() &&
           !(invert_b_ != invert_result_ && it->b_dimension() == 1)) {
         SourceId src_id(b_region_id_, it->b_shape_id(), it->b_edge_id());
@@ -1321,19 +1416,36 @@ S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdgeCrossings(
       if (a_dimension_ == 2) continue;
       if ((a.v0 == b.v0 && a.v1 == b.v1) || (a.v0 == b.v1 && a.v1 == b.v0)) {
         r.has_polyline_match = true;
-      } else {
-        // TODO(ericv): Handle degenerate polyline output.
       }
-    } else if (S2EdgeUtil::VertexCrossing(a.v0, a.v1, b.v0, b.v1)) {
-      if (a.v0 == b.v0 || a.v0 == b.v1) {
-        ++r.a0_crossings;
-        if (a.v0 == b.v0 && a.v1 == b.v1) {
-          r.has_polygon_match = true;
-        } else if (a.v0 == b.v1 && a.v1 == b.v0) {
-          r.has_polygon_sibling = true;
+      if (!is_union_) {
+        if ((a.v0 == b.v0 || a.v0 == b.v1) &&
+            PolylineEdgeContainsVertex(a.v0, *it)) {
+          r.contains_a0 = true;
         }
-      } else {
-        ++r.a1_crossings;
+        if ((a.v1 == b.v0 || a.v1 == b.v1) &&
+            PolylineEdgeContainsVertex(a.v1, *it)) {
+          r.contains_a1 = true;
+        }
+      }
+    } else {
+      if (S2::VertexCrossing(a.v0, a.v1, b.v0, b.v1)) {
+        if (a.v0 == b.v0 || a.v0 == b.v1) {
+          ++r.a0_crossings;
+          if (a.v0 == b.v0 && a.v1 == b.v1) {
+            r.has_polygon_match = true;
+          } else if (a.v0 == b.v1 && a.v1 == b.v0) {
+            r.has_polygon_sibling = true;
+          }
+        } else {
+          ++r.a1_crossings;
+        }
+      }
+      if (check_polygon_vertices) {
+        if (a.v0 == b.v0 || a.v0 == b.v1) {
+          r.contains_a0 = true;
+        } else {
+          r.contains_a1 = true;
+        }
       }
     }
   }
@@ -1345,26 +1457,22 @@ S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdgeCrossings(
 //
 // REQUIRES: it.b_dimension() == 1
 // REQUIRES: "v" is an endpoint of it.b_edge()
-bool S2BoundaryOperation::Impl::CrossingProcessor::PolylineContainsVertex(
+bool S2BoundaryOperation::Impl::CrossingProcessor::PolylineEdgeContainsVertex(
     S2Point const& v, CrossingIterator const& it) const {
   DCHECK_EQ(1, it.b_dimension());
+  DCHECK(it.b_edge().v0 == v || it.b_edge().v1 == v);
+
   // Closed polylines contain all their vertices.
   if (polyline_model_ == PolylineModel::CLOSED) return true;
 
-  // Polylines always contain all interior vertices, and non-open polylines
-  // also contain their first vertex.  The real test is done below, but this
-  // extra condition lets avoid fetching the edge most of the time.
-  auto const& chain = it.b_chain_info();
+  // All interior polyline vertices are contained.
+  // The last polyline vertex is contained iff the model is CLOSED.
+  // The first polyline vertex is contained iff the model is not OPEN.
+  // The test below is written such that usually b_edge() is not needed.
+  auto const& b_chain = it.b_chain_info();
   int b_edge_id = it.b_edge_id();
-  if (b_edge_id < chain.limit - 1 &&
-      (polyline_model_ != PolylineModel::OPEN || b_edge_id > chain.start)) {
-    return true;
-  }
-  auto b = it.b_shape().chain_edge(chain.chain_id, b_edge_id - chain.start);
-  DCHECK(b.v0 == v || b.v1 == v);
-  return ((b_edge_id < chain.limit - 1 || b.v1 != v) &&
-          (polyline_model_ != PolylineModel::OPEN ||
-           b_edge_id > chain.start || b.v0 != v));
+  return (b_edge_id < b_chain.limit - 1 || it.b_edge().v1 != v) &&
+      (polyline_contains_v0(b_edge_id, b_chain.start) || it.b_edge().v0 != v);
 }
 
 // Translates the temporary representation of crossing edges (SourceId) into
@@ -1657,7 +1765,7 @@ S2BoundaryOperation::Options::Options()
 S2BoundaryOperation::Options::Options(SnapFunction const& snap_function)
     : snap_function_(snap_function.Clone()),
       polygon_model_(PolygonModel::SEMI_OPEN),
-      polyline_model_(PolylineModel::OPEN) {
+      polyline_model_(PolylineModel::CLOSED) {
 }
 
 S2BoundaryOperation::Options::Options(Options const& options)
@@ -1722,20 +1830,15 @@ S2BoundaryOperation::S2BoundaryOperation(OpType op_type, bool* result_non_empty,
 
 S2BoundaryOperation::S2BoundaryOperation(
     OpType op_type, unique_ptr<S2Builder::Layer> layer, Options const& options)
-    : S2BoundaryOperation(op_type, options) {
+    : op_type_(op_type), options_(options), result_non_empty_(nullptr) {
   layers_.push_back(std::move(layer));
 }
 
-S2BoundaryOperation::S2BoundaryOperation(OpType op_type,
-                                         unique_ptr<S2Builder::Layer> layer0,
-                                         unique_ptr<S2Builder::Layer> layer1,
-                                         unique_ptr<S2Builder::Layer> layer2,
-                                         Options const& options)
-    : S2BoundaryOperation(op_type, options) {
-  layers_.reserve(3);
-  layers_.push_back(std::move(layer0));
-  layers_.push_back(std::move(layer1));
-  layers_.push_back(std::move(layer2));
+S2BoundaryOperation::S2BoundaryOperation(
+    OpType op_type, vector<unique_ptr<S2Builder::Layer>> layers,
+    Options const& options)
+    : op_type_(op_type), options_(options), layers_(std::move(layers)),
+      result_non_empty_(nullptr) {
 }
 
 bool S2BoundaryOperation::Build(S2ShapeIndex const& a, S2ShapeIndex const& b,

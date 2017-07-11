@@ -15,8 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#ifndef S2_FPCONTRACTOFF_H_
-#define S2_FPCONTRACTOFF_H_
+#ifndef S2__FPCONTRACTOFF_H_
+#define S2__FPCONTRACTOFF_H_
 
 // Turn off the fused multiply-add optimization ("fp-contract").  With
 // fp-contract on, any expression of the form "a * b + c" has two possible
@@ -35,7 +35,8 @@
 // at the level of compound statements rather than entire functions.
 //
 // This file may be included with other files in any order, as long as it
-// appears before the first non-inline function definition.
+// appears before the first non-inline function definition.  It is
+// named with an underscore so that it is included first among the S2 headers.
 
 // TODO(compiler-team): Figure out how to do this in a portable way.
 #if defined(HAVE_ARMEABI_V7A)
@@ -56,4 +57,4 @@
 #pragma GCC optimize("fp-contract=off")
 #endif
 
-#endif  // S2_FPCONTRACTOFF_H_
+#endif  // S2__FPCONTRACTOFF_H_

@@ -21,7 +21,7 @@
 #include <memory>
 #include <vector>
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s2cap.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2loop.h"

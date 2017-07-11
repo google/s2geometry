@@ -18,6 +18,7 @@
 #ifndef S2_S2LOOP_H_
 #define S2_S2LOOP_H_
 
+#include <atomic>
 #include <bitset>
 #include <cmath>
 #include <cstddef>
@@ -26,7 +27,7 @@
 
 #include <glog/logging.h>
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s1angle.h"
 #include "s2/s2debug.h"
 #include "s2/s2edgeutil.h"
@@ -437,9 +438,9 @@ class S2Loop final : public S2Region {
   // Wrapper class for indexing a loop (see S2ShapeIndex).  Once this object
   // is inserted into an S2ShapeIndex it is owned by that index, and will be
   // automatically deleted when no longer needed by the index.  Note that this
-  // class does not take ownership of the loop; if you want this behavior, see
-  // s2shapeutil::S2LoopOwningShape.  You can also subtype this class to store
-  // additional data (see S2Shape for details).
+  // class does not take ownership of the loop itself (see OwningShape below).
+  // You can also subtype this class to store additional data (see S2Shape for
+  // details).
 #ifndef SWIG
   class Shape : public S2Shape {
    public:
@@ -458,10 +459,6 @@ class S2Loop final : public S2Region {
     Edge edge(int e) const final {
       return Edge(loop_->vertex(e), loop_->vertex(e + 1));
     }
-    void GetEdge(int e, S2Point const** a, S2Point const** b) const final {
-      *a = &loop_->vertex(e);
-      *b = &loop_->vertex(e+1);
-    }
     int dimension() const final { return 2; }
     bool contains_origin() const final { return loop_->contains_origin(); }
     int num_chains() const final;
@@ -476,6 +473,21 @@ class S2Loop final : public S2Region {
 
    private:
     S2Loop const* loop_;
+  };
+
+  // Like Shape, except that the S2Loop is automatically deleted when this
+  // object is deleted by the S2ShapeIndex.  This is useful when an S2Loop
+  // is constructed solely for the purpose of indexing it.
+  class OwningShape : public Shape {
+   public:
+    OwningShape() {}  // Must call Init().
+    explicit OwningShape(std::unique_ptr<S2Loop const> loop)
+        : Shape(loop.release()) {
+    }
+    void Init(std::unique_ptr<S2Loop const> loop) {
+      Shape::Init(loop.release());
+    }
+    ~OwningShape() override { delete loop(); }
   };
 #endif  // SWIG
 
@@ -615,7 +627,7 @@ class S2Loop final : public S2Region {
   // force implementation that is also relatively cheap.  For this one method
   // we keep track of the number of calls made and only build the index once
   // enough calls have been made that we think an index would be worthwhile.
-  mutable Atomic32 unindexed_contains_calls_;
+  mutable std::atomic<int32> unindexed_contains_calls_;
 
   // "bound_" is a conservative bound on all points contained by this loop:
   // if A.Contains(P), then A.bound_.Contains(S2LatLng(P)).
@@ -626,10 +638,6 @@ class S2Loop final : public S2Region {
   // has been expanded sufficiently to account for this error, i.e.
   // if A.Contains(B), then A.subregion_bound_.Contains(B.bound_).
   S2LatLngRect subregion_bound_;
-
-  // Every S2Loop has a "shape_" member that is used to index the loop.  This
-  // shape belongs to the S2Loop and does not need to be freed separately.
-  Shape shape_;
 
   // Spatial index for this loop.
   S2ShapeIndex index_;

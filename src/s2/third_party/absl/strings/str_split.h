@@ -20,14 +20,17 @@
 #include <string>
 #include <vector>
 
+#include "s2/third_party/absl/strings/string_view.h"
 #include "s2/third_party/absl/strings/strip.h"
 
 namespace strings {
 
-std::vector<std::string> Split(
-    std::string const& text, char delim,
-    std::function<bool(std::string const&)> predicate);
-std::vector<std::string> Split(std::string const& text, char delim);
+template <typename String>
+std::vector<String> Split(
+    String const& text, char delim,
+    std::function<bool(absl::string_view)> predicate);
+template <typename String>
+std::vector<String> Split(String const& text, char delim);
 
 // Returns false if the given StringPiece is empty, indicating that the
 // strings::Split() API should omit the empty string.
@@ -35,7 +38,7 @@ std::vector<std::string> Split(std::string const& text, char delim);
 // std::vector<string> v = Split(" a , ,,b,", ',', SkipEmpty());
 // EXPECT_THAT(v, ElementsAre(" a ", " ", "b"));
 struct SkipEmpty {
-  bool operator()(std::string const& s) const { return !s.empty(); }
+  bool operator()(absl::string_view sv) const { return !sv.empty(); }
 };
 
 // Returns false if the given string is empty or contains only whitespace,
@@ -44,9 +47,9 @@ struct SkipEmpty {
 // std::vector<string> v = Split(" a , ,,b,", ',', SkipWhitespace());
 // EXPECT_THAT(v, ElementsAre(" a ", "b"));
 struct SkipWhitespace {
-  bool operator()(std::string s) const {
-    StripWhitespace(&s);
-    return !s.empty();
+  bool operator()(absl::string_view sv) const {
+    StripWhitespace(&sv);
+    return !sv.empty();
   }
 };
 

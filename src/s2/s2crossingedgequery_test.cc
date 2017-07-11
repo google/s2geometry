@@ -34,13 +34,14 @@
 #include "s2/s2shapeutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
+#include "s2/third_party/absl/memory/memory.h"
 
 using s2shapeutil::EdgeVectorShape;
-using s2shapeutil::S2PolylineOwningShape;
 using s2textformat::MakePoint;
 using s2textformat::MakePolyline;
 using std::is_sorted;
 using std::pair;
+using std::unique_ptr;
 using std::vector;
 
 namespace {
@@ -50,7 +51,7 @@ using CrossingType = s2shapeutil::CrossingType;
 
 S2Point PerturbAtDistance(S1Angle distance, S2Point const& a0,
                           S2Point const& b0) {
-  S2Point x = S2EdgeUtil::InterpolateAtDistance(distance, a0, b0);
+  S2Point x = S2::InterpolateAtDistance(distance, a0, b0);
   if (S2Testing::rnd.OneIn(2)) {
     for (int i = 0; i < 3; ++i) {
       x[i] = nextafter(x[i], S2Testing::rnd.OneIn(2) ? 1 : -1);
@@ -94,7 +95,7 @@ void GetCapEdges(S2Cap const& center_cap, S1Angle max_length, int count,
 }
 
 void TestAllCrossings(vector<TestEdge> const& edges) {
-  EdgeVectorShape* shape = new EdgeVectorShape;
+  auto shape = new EdgeVectorShape;  // raw pointer since "shape" is used below
   for (TestEdge const& edge : edges) {
     shape->Add(edge.first, edge.second);
   }
@@ -102,7 +103,7 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
   S2ShapeIndexOptions options;
   options.set_max_edges_per_cell(1);
   S2ShapeIndex index(options);
-  index.Add(shape);  // Takes ownership
+  index.Add(unique_ptr<S2Shape>(shape));
   // To check that candidates are being filtered reasonably, we count the
   // total number of candidates that the total number of edge pairs that
   // either intersect or are very close to intersecting.
@@ -135,7 +136,7 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
       auto edge = shape->edge(i);
       S2Point const& c = edge.v0;
       S2Point const& d = edge.v1;
-      int sign = S2EdgeUtil::CrossingSign(a, b, c, d);
+      int sign = S2::CrossingSign(a, b, c, d);
       if (sign >= 0) {
         expected_crossings.push_back(i);
         if (sign > 0) {
@@ -147,10 +148,10 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
         }
       } else {
         double const kMaxDist = S2::kMaxDiag.GetValue(S2::kMaxCellLevel);
-        if (S2EdgeUtil::GetDistance(a, c, d).radians() < kMaxDist ||
-            S2EdgeUtil::GetDistance(b, c, d).radians() < kMaxDist ||
-            S2EdgeUtil::GetDistance(c, a, b).radians() < kMaxDist ||
-            S2EdgeUtil::GetDistance(d, a, b).radians() < kMaxDist) {
+        if (S2::GetDistance(a, c, d).radians() < kMaxDist ||
+            S2::GetDistance(b, c, d).radians() < kMaxDist ||
+            S2::GetDistance(c, a, b).radians() < kMaxDist ||
+            S2::GetDistance(d, a, b).radians() < kMaxDist) {
           ++num_nearby_pairs;
         }
       }
@@ -239,10 +240,9 @@ TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
   const int kNumEdgeIntervals = 8;  // 9*8/2 = 36 edges
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
     S2Cell cell(S2Testing::GetRandomCellId(level));
-    int v1 = S2Testing::rnd.Uniform(4);
-    int v2 = (v1 + 1) & 3;
-    S2Point p1 = cell.GetVertexRaw(v1);
-    S2Point p2 = cell.GetVertexRaw(v2);
+    int i = S2Testing::rnd.Uniform(4);
+    S2Point p1 = cell.GetVertexRaw(i);
+    S2Point p2 = cell.GetVertexRaw(i + 1);
     S2Point delta = (p2 - p1) / kNumEdgeIntervals;
     vector<TestEdge> edges;
     for (int i = 0; i <= kNumEdgeIntervals; ++i) {
@@ -270,7 +270,7 @@ void TestPolylineCrossings(S2ShapeIndex const& index,
     for (int edge : edges) {
       S2Point const& b0 = polyline->vertex(edge);
       S2Point const& b1 = polyline->vertex(edge + 1);
-      CHECK_GE(S2EdgeUtil::CrossingSign(a0, a1, b0, b1), 0);
+      CHECK_GE(S2::CrossingSign(a0, a1, b0, b1), 0);
     }
   }
   // Also test that no edges are missing.
@@ -279,7 +279,7 @@ void TestPolylineCrossings(S2ShapeIndex const& index,
     vector<int> const& edges = edge_map[shape];
     S2Polyline const* polyline = shape->polyline();
     for (int e = 0; e < polyline->num_vertices() - 1; ++e) {
-      if (S2EdgeUtil::CrossingSign(a0, a1, polyline->vertex(e),
+      if (S2::CrossingSign(a0, a1, polyline->vertex(e),
                                    polyline->vertex(e + 1)) >= 0) {
         EXPECT_EQ(1, std::count(edges.begin(), edges.end(), e));
       }
@@ -290,11 +290,11 @@ void TestPolylineCrossings(S2ShapeIndex const& index,
 TEST(GetCrossings, PolylineCrossings) {
   S2ShapeIndex index;
   // Three zig-zag lines near the equator.
-  index.Add(new S2PolylineOwningShape(
+  index.Add(absl::MakeUnique<S2Polyline::OwningShape>(
       MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6")));
-  index.Add(new S2PolylineOwningShape(
+  index.Add(absl::MakeUnique<S2Polyline::OwningShape>(
       MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6")));
-  index.Add(new S2PolylineOwningShape(
+  index.Add(absl::MakeUnique<S2Polyline::OwningShape>(
       MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6")));
   TestPolylineCrossings(index, MakePoint("1:0"), MakePoint("1:4"));
   TestPolylineCrossings(index, MakePoint("5:5"), MakePoint("6:6"));

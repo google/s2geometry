@@ -18,7 +18,7 @@
 #ifndef S2_S2PADDEDCELL_H_
 #define S2_S2PADDEDCELL_H_
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/r2rect.h"
 #include "s2/s2cellid.h"
 

@@ -29,9 +29,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include "s2/base/atomicops.h"
 #include "s2/base/casts.h"
-#include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2boundary_operation.h"
@@ -60,6 +58,7 @@
 #include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/util/coding/coder.h"
 #include "s2/util/gtl/stl_util.h"
 
 using s2builderutil::IdentitySnapFunction;
@@ -135,7 +134,7 @@ void S2Polygon::Copy(S2Polygon const* src) {
   // Don't copy error_inconsistent_loop_orientations_, since this is not a
   // property of the polygon but only of the way the polygon was constructed.
   num_vertices_ = src->num_vertices();
-  base::subtle::NoBarrier_Store(&unindexed_contains_calls_, 0);
+  unindexed_contains_calls_.store(0, std::memory_order_relaxed);
   bound_ = src->bound_;
   subregion_bound_ = src->subregion_bound_;
   InitIndex();  // TODO(ericv): Copy the index efficiently.
@@ -297,8 +296,7 @@ void S2Polygon::InitLoops(LoopMap* loop_map) {
 
 void S2Polygon::InitIndex() {
   DCHECK_EQ(0, index_.num_shape_ids());
-  shape_.Init(this);
-  index_.Add(&shape_);
+  index_.Add(absl::MakeUnique<Shape>(this));
   if (!FLAGS_s2polygon_lazy_indexing) {
     index_.ForceApplyUpdates();  // Force index construction now.
   }
@@ -309,8 +307,7 @@ void S2Polygon::InitIndex() {
 }
 
 void S2Polygon::ResetIndex() {
-  base::subtle::NoBarrier_Store(&unindexed_contains_calls_, 0);
-  index_.RemoveAll();  // Prevent shape_ from being deleted.
+  unindexed_contains_calls_.store(0, std::memory_order_relaxed);
   index_.Reset();
 }
 
@@ -359,7 +356,7 @@ void S2Polygon::InitOneLoop() {
   error_inconsistent_loop_orientations_ = false;
   num_vertices_ = loop->num_vertices();
   bound_ = loop->GetRectBound();
-  subregion_bound_ = S2EdgeUtil::RectBounder::ExpandForSubregions(bound_);
+  subregion_bound_ = S2LatLngRectBounder::ExpandForSubregions(bound_);
   InitIndex();
 }
 
@@ -460,7 +457,7 @@ void S2Polygon::InitLoopProperties() {
     }
     num_vertices_ += loop(i)->num_vertices();
   }
-  subregion_bound_ = S2EdgeUtil::RectBounder::ExpandForSubregions(bound_);
+  subregion_bound_ = S2LatLngRectBounder::ExpandForSubregions(bound_);
   InitIndex();
 }
 
@@ -786,16 +783,17 @@ bool S2Polygon::BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
   if (it.id() == target.id()) return true;
 
   // Otherwise check whether any of the edges intersect "target".
-  static double const kMaxError = (S2EdgeUtil::kFaceClipErrorUVCoord +
-                                   S2EdgeUtil::kIntersectsRectErrorUVDist);
+  static double const kMaxError = (S2::kFaceClipErrorUVCoord +
+                                   S2::kIntersectsRectErrorUVDist);
   R2Rect bound = target.GetBoundUV().Expanded(kMaxError);
   int const face = target.face();
+  auto shape = down_cast<Shape const*>(index_.shape(0));
   for (int i = 0; i < a_num_clipped; ++i) {
-    auto edge = shape_.edge(a_clipped.edge(i));
+    auto edge = shape->edge(a_clipped.edge(i));
     R2Point p0, p1;
-    if (S2EdgeUtil::ClipToPaddedFace(edge.v0, edge.v1, face, kMaxError,
+    if (S2::ClipToPaddedFace(edge.v0, edge.v1, face, kMaxError,
                                      &p0, &p1) &&
-        S2EdgeUtil::IntersectsRect(p0, p1, bound)) {
+        S2::IntersectsRect(p0, p1, bound)) {
       return true;
     }
   }
@@ -815,8 +813,7 @@ bool S2Polygon::Contains(S2Point const& p) const {
   static int const kMaxUnindexedContainsCalls = 20;
   if (num_vertices() <= kMaxBruteForceVertices ||
       (!index_.is_fresh() &&
-       base::subtle::Barrier_AtomicIncrement(&unindexed_contains_calls_, 1) !=
-       kMaxUnindexedContainsCalls)) {
+       ++unindexed_contains_calls_ != kMaxUnindexedContainsCalls)) {
     bool inside = false;
     for (int i = 0; i < num_loops(); ++i) {
       // Use brute force to avoid building the loop's S2ShapeIndex.
@@ -838,12 +835,13 @@ bool S2Polygon::Contains(S2ShapeIndex::Iterator const& it,
   bool inside = a_clipped.contains_center();
   int a_num_clipped = a_clipped.num_edges();
   if (a_num_clipped > 0) {
-    S2EdgeUtil::CopyingEdgeCrosser crosser(it.center(), p);
+    auto shape = down_cast<Shape const*>(index_.shape(0));
+    S2CopyingEdgeCrosser crosser(it.center(), p);
     // TODO(ericv): For more polygons with a large number of loops, it would
     // be more efficient to test the edges of each chain separately.  This
     // would avoid the need to figure out which loop contains each edge.
     for (int i = 0; i < a_num_clipped; ++i) {
-      auto edge = shape_.edge(a_clipped.edge(i));
+      auto edge = shape->edge(a_clipped.edge(i));
       inside ^= crosser.EdgeOrVertexCrossing(edge.v0, edge.v1);
     }
   }
@@ -957,7 +955,7 @@ bool S2Polygon::DecodeLossless(Decoder* const decoder, bool within_scope) {
     num_vertices_ += loops_.back()->num_vertices();
   }
   if (!bound_.Decode(decoder)) return false;
-  subregion_bound_ = S2EdgeUtil::RectBounder::ExpandForSubregions(bound_);
+  subregion_bound_ = S2LatLngRectBounder::ExpandForSubregions(bound_);
   InitIndex();
   return true;
 }
@@ -1063,7 +1061,7 @@ bool S2Polygon::InitToOperation(S2BoundaryOperation::OpType op_type,
 }
 
 void S2Polygon::InitToIntersection(S2Polygon const* a, S2Polygon const* b) {
-  InitToApproxIntersection(a, b, S2EdgeUtil::kIntersectionMergeRadius);
+  InitToApproxIntersection(a, b, S2::kIntersectionMergeRadius);
 }
 
 void S2Polygon::InitToApproxIntersection(S2Polygon const* a, S2Polygon const* b,
@@ -1112,7 +1110,7 @@ void S2Polygon::InitToIntersection(
 }
 
 void S2Polygon::InitToUnion(S2Polygon const* a, S2Polygon const* b) {
-  InitToApproxUnion(a, b, S2EdgeUtil::kIntersectionMergeRadius);
+  InitToApproxUnion(a, b, S2::kIntersectionMergeRadius);
 }
 
 void S2Polygon::InitToApproxUnion(S2Polygon const* a, S2Polygon const* b,
@@ -1144,7 +1142,7 @@ void S2Polygon::InitToUnion(
 }
 
 void S2Polygon::InitToDifference(S2Polygon const* a, S2Polygon const* b) {
-  InitToApproxDifference(a, b, S2EdgeUtil::kIntersectionMergeRadius);
+  InitToApproxDifference(a, b, S2::kIntersectionMergeRadius);
 }
 
 void S2Polygon::InitToApproxDifference(S2Polygon const* a, S2Polygon const* b,
@@ -1176,7 +1174,7 @@ void S2Polygon::InitToDifference(
 
 void S2Polygon::InitToSymmetricDifference(S2Polygon const* a,
                                           S2Polygon const* b) {
-  InitToApproxSymmetricDifference(a, b, S2EdgeUtil::kIntersectionMergeRadius);
+  InitToApproxSymmetricDifference(a, b, S2::kIntersectionMergeRadius);
 }
 
 void S2Polygon::InitToApproxSymmetricDifference(S2Polygon const* a,
@@ -1244,7 +1242,7 @@ void S2Polygon::InitToSimplified(S2Polygon const& a,
 // indicating which of the S2Cell edges the point lies on.  All boundary
 // comparisons are to within a maximum "u" or "v" error of "tolerance_uv".
 // Bit "i" in the result is set if and only "p" is incident to the edge
-// corresponding to S2Cell::GetEdge(i).
+// corresponding to S2Cell::edge(i).
 uint8 GetCellEdgeIncidenceMask(S2Cell const& cell, S2Point const& p,
                                double tolerance_uv) {
   uint8 mask = 0;
@@ -1283,7 +1281,7 @@ void S2Polygon::InitToSimplifiedInCell(
   // Note that in theory, simplifying the interior edges could create an
   // intersection with one of the boundary edges, since if two interior edges
   // intersect very near the boundary then the intersection point could be
-  // slightly outside the cell (by at most S2EdgeUtil::kIntersectionError).
+  // slightly outside the cell (by at most S2::kIntersectionError).
   // This is the *only* way that a self-intersection can be created, and it is
   // expected to be extremely rare.  Nevertheless we use a small snap radius
   // in the second pass in order to eliminate any such self-intersections.
@@ -1318,7 +1316,7 @@ void S2Polygon::InitToSimplifiedInCell(
   // The second pass eliminates any intersections between interior edges and
   // boundary edges, and then assembles the edges into a polygon.
   S2Builder::Options options(
-      (IdentitySnapFunction(S2EdgeUtil::kIntersectionError)));
+      (IdentitySnapFunction(S2::kIntersectionError)));
   options.set_idempotent(false);  // Force snapping up to the given radius
   S2Builder builder(options);
   builder.StartLayer(absl::MakeUnique<S2PolygonLayer>(this));
@@ -1405,7 +1403,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::OperationWithPolyline(
       op_type, absl::MakeUnique<S2PolylineVectorLayer>(&result, layer_options),
       options);
   S2ShapeIndex a_index;
-  a_index.Add(new S2Polyline::Shape(&a));
+  a_index.Add(absl::MakeUnique<S2Polyline::Shape>(&a));
   S2Error error;
   if (!op.Build(a_index, index_, &error)) {
     LOG(DFATAL) << "Polyline " << S2BoundaryOperation::OpTypeToString(op_type)
@@ -1416,7 +1414,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::OperationWithPolyline(
 
 vector<unique_ptr<S2Polyline>> S2Polygon::IntersectWithPolyline(
     S2Polyline const& a) const {
-  return ApproxIntersectWithPolyline(a, S2EdgeUtil::kIntersectionMergeRadius);
+  return ApproxIntersectWithPolyline(a, S2::kIntersectionMergeRadius);
 }
 
 vector<unique_ptr<S2Polyline>> S2Polygon::ApproxIntersectWithPolyline(
@@ -1432,7 +1430,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::IntersectWithPolyline(
 
 vector<unique_ptr<S2Polyline>> S2Polygon::SubtractFromPolyline(
     S2Polyline const& a) const {
-  return ApproxSubtractFromPolyline(a, S2EdgeUtil::kIntersectionMergeRadius);
+  return ApproxSubtractFromPolyline(a, S2::kIntersectionMergeRadius);
 }
 
 vector<unique_ptr<S2Polyline>> S2Polygon::ApproxSubtractFromPolyline(
@@ -1447,7 +1445,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::SubtractFromPolyline(
 }
 
 bool S2Polygon::Contains(S2Polyline const& b) const {
-  return ApproxContains(b, S2EdgeUtil::kIntersectionMergeRadius);
+  return ApproxContains(b, S2::kIntersectionMergeRadius);
 }
 
 bool S2Polygon::ApproxContains(S2Polyline const& b, S1Angle tolerance) const {
@@ -1456,7 +1454,7 @@ bool S2Polygon::ApproxContains(S2Polyline const& b, S1Angle tolerance) const {
 }
 
 bool S2Polygon::Intersects(S2Polyline const& b) const {
-  return !ApproxDisjoint(b, S2EdgeUtil::kIntersectionMergeRadius);
+  return !ApproxDisjoint(b, S2::kIntersectionMergeRadius);
 }
 
 bool S2Polygon::ApproxDisjoint(S2Polyline const& b, S1Angle tolerance) const {
@@ -1467,7 +1465,7 @@ bool S2Polygon::ApproxDisjoint(S2Polyline const& b, S1Angle tolerance) const {
 unique_ptr<S2Polygon> S2Polygon::DestructiveUnion(
     vector<unique_ptr<S2Polygon>> polygons) {
   return DestructiveApproxUnion(std::move(polygons),
-                                S2EdgeUtil::kIntersectionMergeRadius);
+                                S2::kIntersectionMergeRadius);
 }
 
 unique_ptr<S2Polygon> S2Polygon::DestructiveApproxUnion(
@@ -1731,28 +1729,6 @@ S2Shape::Edge S2Polygon::Shape::edge(int e) const {
   }
   return Edge(p->loop(i)->oriented_vertex(e),
               p->loop(i)->oriented_vertex(e + 1));
-}
-
-void S2Polygon::Shape::GetEdge(int e, S2Point const** a, S2Point const** b)
-    const {
-  DCHECK_LT(e, num_edges());
-  S2Polygon const* p = polygon();
-  int i;
-  if (cumulative_edges_) {
-    // "upper_bound" finds the loop just beyond the one we want.
-    int* start = std::upper_bound(cumulative_edges_,
-                                  cumulative_edges_ + p->num_loops(), e) - 1;
-    i = start - cumulative_edges_;
-    e -= *start;
-  } else {
-    // When the number of loops is small, linear search is faster.  Most often
-    // there is exactly one loop and the code below executes zero times.
-    for (i = 0; e >= p->loop(i)->num_vertices(); ++i) {
-      e -= p->loop(i)->num_vertices();
-    }
-  }
-  *a = &p->loop(i)->oriented_vertex(e);
-  *b = &p->loop(i)->oriented_vertex(e+1);
 }
 
 bool S2Polygon::Shape::contains_origin() const {

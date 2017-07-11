@@ -79,7 +79,7 @@ TEST(S2, Rotate) {
     double distance = M_PI * pow(1e-15, S2Testing::rnd.RandDouble());
     // Sometimes choose points near the far side of the axis.
     if (S2Testing::rnd.OneIn(5)) distance = M_PI - distance;
-    S2Point p = S2EdgeUtil::InterpolateAtDistance(S1Angle::Radians(distance),
+    S2Point p = S2::InterpolateAtDistance(S1Angle::Radians(distance),
                                                   axis, target);
     // Choose the rotation angle.
     double angle = 2 * M_PI * pow(1e-15, S2Testing::rnd.RandDouble());
@@ -99,7 +99,7 @@ static int GetMinExpensiveLevel(S2Point const& p) {
     S2Cell cell(id.parent(level));
     for (int k = 0; k < 4; ++k) {
       S2Point a = cell.GetVertex(k);
-      S2Point b = cell.GetVertex((k + 1) & 3);
+      S2Point b = cell.GetVertex(k + 1);
       if (s2pred::TriageSign(a, b, S2::Origin(), a.CrossProd(b)) == 0) {
         return level;
       }

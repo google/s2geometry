@@ -29,9 +29,9 @@
 
 #include <glog/logging.h>
 
+#include "s2/base/port.h"
 #include "s2/third_party/absl/base/casts.h"
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/absl/numeric/int128.h"
 
 // Use compiler byte-swapping intrinsics if they are available.  32-bit

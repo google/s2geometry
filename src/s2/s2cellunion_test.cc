@@ -275,18 +275,18 @@ static double GetRadius(S2CellUnion const& covering, S2Point const& axis) {
     S2Cell cell(covering.cell_id(i));
     for (int j = 0; j < 4; ++j) {
       S2Point a = cell.GetVertex(j);
-      S2Point b = cell.GetVertex((j + 1) & 3);
+      S2Point b = cell.GetVertex(j + 1);
       double dist;
       // The maximum distance is not always attained at a cell vertex: if at
       // least one vertex is in the opposite hemisphere from "axis" then the
       // maximum may be attained along an edge.  We solve this by computing
       // the minimum distance from the edge to (-axis) instead.  We can't
-      // simply do this all the time because S2EdgeUtil::GetDistance() has
+      // simply do this all the time because S2::GetDistance() has
       // poor accuracy when the result is close to Pi.
       //
-      // TODO(ericv): Improve S2EdgeUtil::GetDistance() accuracy near Pi.
+      // TODO(ericv): Improve S2::GetDistance() accuracy near Pi.
       if (a.Angle(axis) > M_PI_2 || b.Angle(axis) > M_PI_2) {
-        dist = M_PI - S2EdgeUtil::GetDistance(-axis, a, b).radians();
+        dist = M_PI - S2::GetDistance(-axis, a, b).radians();
       } else {
         dist = a.Angle(axis);
       }

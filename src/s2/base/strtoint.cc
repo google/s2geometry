@@ -20,7 +20,7 @@
 
 #include <cerrno>
 #include <climits>
-#include "s2/third_party/absl/base/port.h"
+#include "s2/base/port.h"
 #include "s2/base/strtoint.h"
 
 // Replacement strto[u]l functions that have identical overflow and underflow

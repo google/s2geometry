@@ -53,7 +53,7 @@
 #ifndef S2_S2POLYLINE_SIMPLIFIER_H_
 #define S2_S2POLYLINE_SIMPLIFIER_H_
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s1chordangle.h"
 #include "s2/s1interval.h"
 

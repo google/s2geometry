@@ -24,7 +24,7 @@
 
 #include <glog/logging.h>
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
 #include "s2/s2pointutil.h"

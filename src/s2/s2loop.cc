@@ -18,6 +18,7 @@
 #include "s2/s2loop.h"
 
 #include <algorithm>
+#include <atomic>
 #include <bitset>
 #include <cfloat>
 #include <cmath>
@@ -28,10 +29,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include "s2/base/atomicops.h"
 #include "s2/base/stringprintf.h"
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -51,6 +49,8 @@
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil.h"
 #include "s2/third_party/absl/base/integral_types.h"
+#include "s2/third_party/absl/memory/memory.h"
+#include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
 using std::fabs;
@@ -84,9 +84,8 @@ enum CompressedLoopProperty {
   kNumProperties
 };
 
-S2Loop::S2Loop()
-  : shape_(this) {
-  // Some fields are initialized by Init().  The loop is not valid until then.
+S2Loop::S2Loop() {
+  // The loop is not valid until Init() is called.
 }
 
 S2Loop::S2Loop(vector<S2Point> const& vertices)
@@ -94,8 +93,7 @@ S2Loop::S2Loop(vector<S2Point> const& vertices)
 
 S2Loop::S2Loop(vector<S2Point> const& vertices,
                S2Debug override)
-  : s2debug_override_(override),
-    shape_(this) {
+  : s2debug_override_(override) {
   Init(vertices);
 }
 
@@ -108,8 +106,8 @@ S2Debug S2Loop::s2debug_override() const {
 }
 
 void S2Loop::ResetIndex() {
-  base::subtle::NoBarrier_Store(&unindexed_contains_calls_, 0);
-  index_.RemoveAll();  // Prevent shape_ from being deleted.
+  unindexed_contains_calls_.store(0, std::memory_order_relaxed);
+  index_.Reset();
 }
 
 void S2Loop::Init(vector<S2Point> const& vertices) {
@@ -202,7 +200,7 @@ void S2Loop::InitOriginAndBound() {
     // the fixed vector R = S2::Ortho(B) is contained by the wedge ABC.  The
     // wedge is closed at A and open at C, i.e. the point B is inside the loop
     // if A=R but not if C=R.  This convention is required for compatibility
-    // with S2EdgeUtil::VertexCrossing.  (Note that we can't use S2::Origin()
+    // with S2::VertexCrossing.  (Note that we can't use S2::Origin()
     // as the fixed vector because of the possibility that B == S2::Origin().)
     //
     // TODO(ericv): Investigate using vertex(0) as the reference point.
@@ -245,7 +243,7 @@ void S2Loop::InitBound() {
   // candy-cane stripe).  Third, the loop may include one or both poles.
   // Note that a small clockwise loop near the equator contains both poles.
 
-  S2EdgeUtil::RectBounder bounder;
+  S2LatLngRectBounder bounder;
   for (int i = 0; i <= num_vertices(); ++i) {
     bounder.AddPoint(vertex(i));
   }
@@ -262,11 +260,11 @@ void S2Loop::InitBound() {
     b.mutable_lat()->set_lo(-M_PI_2);
   }
   bound_ = b;
-  subregion_bound_ = S2EdgeUtil::RectBounder::ExpandForSubregions(bound_);
+  subregion_bound_ = S2LatLngRectBounder::ExpandForSubregions(bound_);
 }
 
 void S2Loop::InitIndex() {
-  index_.Add(&shape_);
+  index_.Add(absl::MakeUnique<Shape>(this));
   if (!FLAGS_s2loop_lazy_indexing) {
     index_.ForceApplyUpdates();  // Force index construction now.
   }
@@ -282,8 +280,7 @@ S2Loop::S2Loop(S2Cell const& cell)
       vertices_(new S2Point[num_vertices_]),
       owns_vertices_(true),
       s2debug_override_(S2Debug::ALLOW),
-      unindexed_contains_calls_(0),
-      shape_(this) {
+      unindexed_contains_calls_(0) {
   for (int i = 0; i < 4; ++i) {
     vertices_[i] = cell.GetVertex(i);
   }
@@ -294,7 +291,6 @@ S2Loop::S2Loop(S2Cell const& cell)
 
 S2Loop::~S2Loop() {
   if (owns_vertices_) delete[] vertices_;
-  index_.RemoveAll();  // Prevent shape_ from being deleted.
 }
 
 S2Loop::S2Loop(S2Loop const& src)
@@ -306,8 +302,7 @@ S2Loop::S2Loop(S2Loop const& src)
       origin_inside_(src.origin_inside_),
       unindexed_contains_calls_(0),
       bound_(src.bound_),
-      subregion_bound_(src.subregion_bound_),
-      shape_(this) {
+      subregion_bound_(src.subregion_bound_) {
   std::copy(&src.vertices_[0], &src.vertices_[num_vertices_], &vertices_[0]);
   InitIndex();
 }
@@ -629,15 +624,15 @@ bool S2Loop::BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
   if (it.id() == target.id()) return true;
 
   // Otherwise check whether any of the edges intersect "target".
-  static double const kMaxError = (S2EdgeUtil::kFaceClipErrorUVCoord +
-                                   S2EdgeUtil::kIntersectsRectErrorUVDist);
+  static double const kMaxError = (S2::kFaceClipErrorUVCoord +
+                                   S2::kIntersectsRectErrorUVDist);
   R2Rect bound = target.GetBoundUV().Expanded(kMaxError);
   for (int i = 0; i < a_num_clipped; ++i) {
     int ai = a_clipped.edge(i);
     R2Point v0, v1;
-    if (S2EdgeUtil::ClipToPaddedFace(vertex(ai), vertex(ai+1), target.face(),
+    if (S2::ClipToPaddedFace(vertex(ai), vertex(ai+1), target.face(),
                                      kMaxError, &v0, &v1) &&
-        S2EdgeUtil::IntersectsRect(v0, v1, bound)) {
+        S2::IntersectsRect(v0, v1, bound)) {
       return true;
     }
   }
@@ -674,8 +669,7 @@ bool S2Loop::Contains(S2Point const& p) const {
   if (index_.num_shape_ids() == 0 ||  // InitIndex() not called yet
       num_vertices() <= kMaxBruteForceVertices ||
       (!index_.is_fresh() &&
-       base::subtle::Barrier_AtomicIncrement(&unindexed_contains_calls_, 1) !=
-       kMaxUnindexedContainsCalls)) {
+       ++unindexed_contains_calls_ != kMaxUnindexedContainsCalls)) {
     return BruteForceContains(p);
   }
   // Otherwise we look up the S2ShapeIndex cell containing this point.  Note
@@ -691,7 +685,7 @@ bool S2Loop::BruteForceContains(S2Point const& p) const {
   if (num_vertices() < 3) return origin_inside_;
 
   S2Point origin = S2::Origin();
-  S2EdgeUtil::EdgeCrosser crosser(&origin, &p, &vertex(0));
+  S2EdgeCrosser crosser(&origin, &p, &vertex(0));
   bool inside = origin_inside_;
   for (int i = 1; i <= num_vertices(); ++i) {
     inside ^= crosser.EdgeOrVertexCrossing(&vertex(i));
@@ -708,7 +702,7 @@ bool S2Loop::Contains(S2ShapeIndex::Iterator const& it,
   int a_num_clipped = a_clipped.num_edges();
   if (a_num_clipped > 0) {
     S2Point center = it.center();
-    S2EdgeUtil::EdgeCrosser crosser(&center, &p);
+    S2EdgeCrosser crosser(&center, &p);
     int ai_prev = -2;
     for (int i = 0; i < a_num_clipped; ++i) {
       int ai = a_clipped.edge(i);
@@ -793,7 +787,7 @@ bool S2Loop::DecodeInternal(Decoder* const decoder,
   origin_inside_ = decoder->get8();
   depth_ = decoder->get32();
   if (!bound_.Decode(decoder)) return false;
-  subregion_bound_ = S2EdgeUtil::RectBounder::ExpandForSubregions(bound_);
+  subregion_bound_ = S2LatLngRectBounder::ExpandForSubregions(bound_);
 
   // An initialized loop will have some non-zero count of vertices. A default
   // (uninitialized) has zero vertices. This code supports encoding and
@@ -975,7 +969,7 @@ class LoopCrosser {
   int a_crossing_target_, b_crossing_target_;
 
   // State maintained by StartEdge() and EdgeCrossesCell().
-  S2EdgeUtil::EdgeCrosser crosser_;
+  S2EdgeCrosser crosser_;
   int aj_, bj_prev_;
 
   // Temporary data declared here to avoid repeated memory allocations.
@@ -1166,7 +1160,7 @@ class ContainsRelation : public LoopRelation {
   bool WedgesCross(S2Point const& a0, S2Point const& ab1, S2Point const& a2,
                    S2Point const& b0, S2Point const& b2) override {
     found_shared_vertex_ = true;
-    return !S2EdgeUtil::WedgeContains(a0, ab1, a2, b0, b2);
+    return !S2::WedgeContains(a0, ab1, a2, b0, b2);
   }
 
  private:
@@ -1234,7 +1228,7 @@ class IntersectsRelation : public LoopRelation {
   bool WedgesCross(S2Point const& a0, S2Point const& ab1, S2Point const& a2,
                    S2Point const& b0, S2Point const& b2) override {
     found_shared_vertex_ = true;
-    return S2EdgeUtil::WedgeIntersects(a0, ab1, a2, b0, b2);
+    return S2::WedgeIntersects(a0, ab1, a2, b0, b2);
   }
 
  private:
@@ -1397,7 +1391,7 @@ bool S2Loop::ContainsNested(S2Loop const* b) const {
   }
   // Check whether the edge order around b->vertex(1) is compatible with
   // A containing B.
-  return S2EdgeUtil::WedgeContains(vertex(m-1), vertex(m), vertex(m+1),
+  return S2::WedgeContains(vertex(m-1), vertex(m), vertex(m+1),
                                    b->vertex(0), b->vertex(2));
 }
 
@@ -1484,12 +1478,12 @@ static bool MatchBoundaries(S2Loop const& a, S2Loop const& b, int a_offset,
     if (io >= a.num_vertices()) io -= a.num_vertices();
 
     if (i < a.num_vertices() && done.count(std::make_pair(i + 1, j)) == 0 &&
-        S2EdgeUtil::GetDistance(a.vertex(io + 1), b.vertex(j),
+        S2::GetDistance(a.vertex(io + 1), b.vertex(j),
                                 b.vertex(j + 1)) <= max_error) {
       pending.push_back(std::make_pair(i + 1, j));
     }
     if (j < b.num_vertices() && done.count(std::make_pair(i, j + 1)) == 0 &&
-        S2EdgeUtil::GetDistance(b.vertex(j + 1), a.vertex(io),
+        S2::GetDistance(b.vertex(j + 1), a.vertex(io),
                                 a.vertex(io + 1)) <= max_error) {
       pending.push_back(std::make_pair(i, j + 1));
     }
@@ -1577,7 +1571,7 @@ bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
     if (!bound_.Decode(decoder)) {
       return false;
     }
-    subregion_bound_ = S2EdgeUtil::RectBounder::ExpandForSubregions(bound_);
+    subregion_bound_ = S2LatLngRectBounder::ExpandForSubregions(bound_);
   } else {
     InitBound();
   }

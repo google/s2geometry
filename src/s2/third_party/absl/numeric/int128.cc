@@ -28,13 +28,13 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 
-const uint128_pod kuint128max = {
-    static_cast<uint64>(GG_LONGLONG(0xFFFFFFFFFFFFFFFF)),
-    static_cast<uint64>(GG_LONGLONG(0xFFFFFFFFFFFFFFFF))
-};
+const uint128 kuint128max = absl::MakeUint128(
+    std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
+
+namespace {
 
 // Returns the 0-based position of the last set bit (i.e., most significant bit)
-// in the given uint64. The argument may not be 0.
+// in the given uint64_t. The argument may not be 0.
 //
 // For example:
 //   Given: 5 (decimal) == 101 (binary)
@@ -46,22 +46,22 @@ const uint128_pod kuint128max = {
       (pos) |= (sh);                          \
     }                                         \
   } while (0)
-static inline int Fls64(uint64 n) {
+static inline int Fls64(uint64_t n) {
   assert(n != 0);
   int pos = 0;
-  STEP(uint64, n, pos, 0x20);
-  uint32 n32 = static_cast<uint32>(n);
-  STEP(uint32, n32, pos, 0x10);
-  STEP(uint32, n32, pos, 0x08);
-  STEP(uint32, n32, pos, 0x04);
-  return pos + ((GG_ULONGLONG(0x3333333322221100) >> (n32 << 2)) & 0x3);
+  STEP(uint64_t, n, pos, 0x20);
+  uint32_t n32 = static_cast<uint32_t>(n);
+  STEP(uint32_t, n32, pos, 0x10);
+  STEP(uint32_t, n32, pos, 0x08);
+  STEP(uint32_t, n32, pos, 0x04);
+  return pos + ((uint64_t{0x3333333322221100} >> (n32 << 2)) & 0x3);
 }
 #undef STEP
 
 // Like Fls64() above, but returns the 0-based position of the last set bit
 // (i.e., most significant bit) in the given uint128. The argument may not be 0.
 static inline int Fls128(uint128 n) {
-  if (uint64 hi = Uint128High64(n)) {
+  if (uint64_t hi = Uint128High64(n)) {
     return Fls64(hi) + 64;
   }
   return Fls64(Uint128Low64(n));
@@ -70,15 +70,9 @@ static inline int Fls128(uint128 n) {
 // Long division/modulo for uint128 implemented using the shift-subtract
 // division algorithm adapted from:
 // http://stackoverflow.com/questions/5386377/division-without-using
-void uint128::DivModImpl(uint128 dividend, uint128 divisor,
-                         uint128* quotient_ret, uint128* remainder_ret) {
-  if (divisor == 0) {
-    assert(divisor != 0);
-    // Important to crash because on a future CPU or compiler that natively
-    // supports 128-bit division, we don't want to have to support not crashing
-    // (which is what the shift-subtract code below does.)
-    abort();
-  }
+void DivModImpl(uint128 dividend, uint128 divisor, uint128* quotient_ret,
+                uint128* remainder_ret) {
+  assert(divisor != 0);
 
   if (divisor > dividend) {
     *quotient_ret = 0;
@@ -113,6 +107,29 @@ void uint128::DivModImpl(uint128 dividend, uint128 divisor,
   *quotient_ret = quotient;
   *remainder_ret = dividend;
 }
+}  // namespace
+
+namespace {
+template <typename T>
+uint128 Initialize128FromFloat(T v) {
+  // Rounding behavior is towards zero, same as for built-in types.
+
+  // Undefined behavior if v is NaN or cannot fit into uint128.
+  assert(!std::isnan(v) && v > -1 && v < std::ldexp(static_cast<T>(1), 128));
+
+  if (v >= std::ldexp(static_cast<T>(1), 64)) {
+    uint64_t hi = static_cast<uint64_t>(std::ldexp(v, -64));
+    uint64_t lo = static_cast<uint64_t>(v - std::ldexp(static_cast<T>(hi), 64));
+    return absl::MakeUint128(hi, lo);
+  }
+
+  return absl::MakeUint128(0, static_cast<uint64_t>(v));
+}
+}  // namespace
+
+uint128::uint128(float v) : uint128(Initialize128FromFloat(v)) {}
+uint128::uint128(double v) : uint128(Initialize128FromFloat(v)) {}
+uint128::uint128(long double v) : uint128(Initialize128FromFloat(v)) {}
 
 uint128& uint128::operator/=(const uint128& divisor) {
   uint128 quotient = 0;
@@ -137,41 +154,41 @@ std::ostream& operator<<(std::ostream& o, const uint128& b) {
   int div_base_log;
   switch (flags & std::ios::basefield) {
     case std::ios::hex:
-      div = GG_ULONGLONG(0x1000000000000000);  // 16^15
+      div = 0x1000000000000000;  // 16^15
       div_base_log = 15;
       break;
     case std::ios::oct:
-      div = GG_ULONGLONG(01000000000000000000000);  // 8^21
+      div = 01000000000000000000000;  // 8^21
       div_base_log = 21;
       break;
     default:  // std::ios::dec
-      div = GG_ULONGLONG(10000000000000000000);  // 10^19
+      div = 10000000000000000000u;  // 10^19
       div_base_log = 19;
       break;
   }
 
   // Now piece together the uint128 representation from three chunks of
   // the original value, each less than "div" and therefore representable
-  // as a uint64.
+  // as a uint64_t.
   std::ostringstream os;
   std::ios_base::fmtflags copy_mask =
       std::ios::basefield | std::ios::showbase | std::ios::uppercase;
   os.setf(flags & copy_mask, copy_mask);
   uint128 high = b;
   uint128 low;
-  uint128::DivModImpl(high, div, &high, &low);
+  DivModImpl(high, div, &high, &low);
   uint128 mid;
-  uint128::DivModImpl(high, div, &high, &mid);
-  if (high.lo_ != 0) {
-    os << high.lo_;
+  DivModImpl(high, div, &high, &mid);
+  if (Uint128Low64(high) != 0) {
+    os << Uint128Low64(high);
     os << std::noshowbase << std::setfill('0') << std::setw(div_base_log);
-    os << mid.lo_;
+    os << Uint128Low64(mid);
     os << std::setw(div_base_log);
-  } else if (mid.lo_ != 0) {
-    os << mid.lo_;
+  } else if (Uint128Low64(mid) != 0) {
+    os << Uint128Low64(mid);
     os << std::noshowbase << std::setfill('0') << std::setw(div_base_log);
   }
-  os << low.lo_;
+  os << Uint128Low64(low);
   std::string rep = os.str();
 
   // Add the requisite padding.

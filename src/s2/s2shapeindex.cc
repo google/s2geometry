@@ -18,11 +18,11 @@
 #include "s2/s2shapeindex.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 
 #include <gflags/gflags.h>
 
-#include "s2/base/atomicops.h"
 #include "s2/base/spinlock.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
@@ -93,14 +93,14 @@ DEFINE_double(
 
 // The total error when clipping an edge comes from two sources:
 // (1) Clipping the original spherical edge to a cube face (the "face edge").
-//     The maximum error in this step is S2EdgeUtil::kFaceClipErrorUVCoord.
+//     The maximum error in this step is S2::kFaceClipErrorUVCoord.
 // (2) Clipping the face edge to the u- or v-coordinate of a cell boundary.
-//     The maximum error in this step is S2EdgeUtil::kEdgeClipErrorUVCoord.
+//     The maximum error in this step is S2::kEdgeClipErrorUVCoord.
 // Finally, since we encounter the same errors when clipping query edges, we
 // double the total error so that we only need to pad edges during indexing
 // and not at query time.
 double const S2ShapeIndex::kCellPadding = 2 *
-    (S2EdgeUtil::kFaceClipErrorUVCoord + S2EdgeUtil::kEdgeClipErrorUVCoord);
+    (S2::kFaceClipErrorUVCoord + S2::kEdgeClipErrorUVCoord);
 
 bool S2ClippedShape::ContainsEdge(int id) const {
   // Linear search is fast because the number of edges per shape is typically
@@ -241,22 +241,21 @@ S2ShapeIndex::~S2ShapeIndex() {
   Reset();
 }
 
-void S2ShapeIndex::Add(S2Shape* shape) {
+void S2ShapeIndex::Add(unique_ptr<S2Shape> shape) {
   // Additions are processed lazily by ApplyUpdates().
   shape->id_ = shapes_.size();
-  shapes_.push_back(shape);
-  base::subtle::NoBarrier_Store(&index_status_, STALE);
+  shapes_.push_back(std::move(shape));
+  index_status_.store(STALE, std::memory_order_relaxed);
 }
 
-void S2ShapeIndex::Remove(S2Shape* shape) {
+unique_ptr<S2Shape> S2ShapeIndex::Release(int shape_id) {
   // This class updates itself lazily, because it is much more efficient to
   // process additions and removals in batches.  However this means that when
   // a shape is removed, we need to make a copy of all its edges, since the
   // client is free to delete "shape" once this call is finished.
 
-  int32 shape_id = shape->id();
   DCHECK(shapes_[shape_id] != nullptr);
-  shapes_[shape_id] = nullptr;
+  auto shape = std::move(shapes_[shape_id]);
   if (shape_id >= pending_additions_begin_) {
     // We are removing a shape that has not yet been added to the index,
     // so there is nothing else to do.
@@ -277,14 +276,11 @@ void S2ShapeIndex::Remove(S2Shape* shape) {
       removed->edges.push_back(shape->edge(e));
     }
   }
-  // Return ownership to the caller; do not delete the shape.
-  base::subtle::NoBarrier_Store(&index_status_, STALE);
+  index_status_.store(STALE, std::memory_order_relaxed);
+  return shape;
 }
 
-void S2ShapeIndex::RemoveAll() {
-  // Note that vector::clear() does not actually free storage.
-  vector<S2Shape*>().swap(shapes_);
-
+vector<unique_ptr<S2Shape>> S2ShapeIndex::ReleaseAll() {
   Iterator it;
   for (it.InitStale(*this); !it.Done(); it.Next()) {
     delete &it.cell();
@@ -293,14 +289,14 @@ void S2ShapeIndex::RemoveAll() {
   pending_additions_begin_ = 0;
   pending_removals_.reset();
   DCHECK(update_state_ == nullptr);
-  base::subtle::NoBarrier_Store(&index_status_, FRESH);
+  index_status_.store(FRESH, std::memory_order_relaxed);
+  vector<unique_ptr<S2Shape>> result;
+  result.swap(shapes_);
+  return result;
 }
 
 void S2ShapeIndex::Reset() {
-  for (S2Shape* shape : shapes_) {
-    delete shape;
-  }
-  RemoveAll();
+  ReleaseAll();
 }
 
 // Helper class for testing whether the point "p" is contained by one or more
@@ -318,7 +314,7 @@ class PointContainmentTester {
   S2ShapeIndex::Iterator const& it_;
   S2Point const& point_;
   bool crosser_initialized_;
-  S2EdgeUtil::CopyingEdgeCrosser crosser_;
+  S2CopyingEdgeCrosser crosser_;
 };
 
 bool PointContainmentTester::ContainedBy(S2Shape const* shape,
@@ -371,7 +367,7 @@ bool S2ShapeIndex::GetContainingShapes(S2Point const& p,
   PointContainmentTester point_tester(it, p);
   for (int s = 0; s < num_clipped; ++s) {
     S2ClippedShape const& clipped = it.cell().clipped(s);
-    S2Shape* shape = shapes_[clipped.shape_id()];
+    S2Shape* shape = this->shape(clipped.shape_id());
     if (point_tester.ContainedBy(shape, clipped)) {
       shapes->push_back(shape);
     }
@@ -506,7 +502,7 @@ class S2ShapeIndex::InteriorTracker {
   bool is_active_;
   S2Point a_, b_;
   S2CellId next_cellid_;
-  S2EdgeUtil::EdgeCrosser crosser_;
+  S2EdgeCrosser crosser_;
   ShapeIdSet shape_ids_;
 
   // Shape ids saved by SaveAndClearStateBefore().  The state is never saved
@@ -595,9 +591,9 @@ void S2ShapeIndex::InteriorTracker::RestoreStateBefore(int32 limit_shape_id) {
 // Apply any pending updates in a thread-safe way.
 void S2ShapeIndex::ApplyUpdatesThreadSafe() {
   lock_.Lock();
-  if (base::subtle::NoBarrier_Load(&index_status_) == FRESH) {
+  if (index_status_.load(std::memory_order_relaxed) == FRESH) {
     lock_.Unlock();
-  } else if (base::subtle::NoBarrier_Load(&index_status_) == UPDATING) {
+  } else if (index_status_.load(std::memory_order_relaxed) == UPDATING) {
     // Wait until the updating thread is finished.  We do this by attempting
     // to lock a mutex that is held by the updating thread.  When this mutex
     // is unlocked the index_status_ is guaranteed to be FRESH.
@@ -609,7 +605,7 @@ void S2ShapeIndex::ApplyUpdatesThreadSafe() {
     UnlockAndSignal();  // Notify other waiting threads.
   } else {
     DCHECK_EQ(STALE, index_status_);
-    base::subtle::NoBarrier_Store(&index_status_, UPDATING);
+    index_status_.store(UPDATING, std::memory_order_relaxed);
     // Allocate the extra state needed for thread synchronization.  We keep
     // the spinlock held while doing this, because (1) memory allocation is
     // fast, so the chance of a context switch while holding the lock is low;
@@ -628,7 +624,7 @@ void S2ShapeIndex::ApplyUpdatesThreadSafe() {
     // index_status_ can be updated to FRESH only while locked *and* using
     // an atomic store operation, so that MaybeApplyUpdates() can check
     // whether the index is FRESH without acquiring the spinlock.
-    base::subtle::Release_Store(&index_status_, FRESH);
+    index_status_.store(FRESH, std::memory_order_release);
     UnlockAndSignal();  // Notify any waiting threads.
   }
 }
@@ -657,9 +653,9 @@ inline void S2ShapeIndex::UnlockAndSignal() {
 void S2ShapeIndex::ForceApplyUpdates() {
   // No locks required because this is not a const method.  It is the client's
   // responsibility to ensure correct thread synchronization.
-  if (base::subtle::NoBarrier_Load(&index_status_) != FRESH) {
+  if (index_status_.load(std::memory_order_relaxed) != FRESH) {
     ApplyUpdatesInternal();
-    base::subtle::NoBarrier_Store(&index_status_, FRESH);
+    index_status_.store(FRESH, std::memory_order_relaxed);
   }
 }
 
@@ -726,7 +722,7 @@ void S2ShapeIndex::GetUpdateBatches(vector<BatchDescriptor>* batches) const {
   }
   int num_edges_added = 0;
   for (int id = pending_additions_begin_; id < shapes_.size(); ++id) {
-    S2Shape const* shape = shapes_[id];
+    S2Shape const* shape = this->shape(id);
     if (shape == nullptr) continue;
     num_edges_added += shape->num_edges();
   }
@@ -786,7 +782,7 @@ void S2ShapeIndex::GetUpdateBatches(vector<BatchDescriptor>* batches) const {
   // Keep adding shapes to each batch until the recommended number of edges
   // for that batch is reached, then move on to the next batch.
   for (int id = pending_additions_begin_; id < shapes_.size(); ++id) {
-    S2Shape const* shape = shapes_[id];
+    S2Shape const* shape = this->shape(id);
     if (shape == nullptr) continue;
     num_edges += shape->num_edges();
     if (num_edges >= batch_sizes[batches->size()]) {
@@ -896,7 +892,7 @@ void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
     }
   }
   for (int id = pending_additions_begin_; id < batch.additions_end; ++id) {
-    S2Shape const* shape = shapes_[id];
+    S2Shape const* shape = this->shape(id);
     if (shape == nullptr) continue;
     edge_id += shape->num_edges();
     while (edge_id >= sample_interval) {
@@ -937,7 +933,7 @@ void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
 // edges to "all_edges", and start tracking its interior if necessary.
 void S2ShapeIndex::AddShape(int id, vector<FaceEdge> all_edges[6],
                             InteriorTracker* tracker) const {
-  S2Shape const* shape = shapes_[id];
+  S2Shape const* shape = this->shape(id);
   if (shape == nullptr) {
     return;  // This shape has already been removed.
   }
@@ -992,7 +988,7 @@ inline void S2ShapeIndex::AddFaceEdge(FaceEdge* edge,
   }
   // Otherwise we simply clip the edge to all six faces.
   for (int face = 0; face < 6; ++face) {
-    if (S2EdgeUtil::ClipToPaddedFace(edge->edge.v0, edge->edge.v1, face,
+    if (S2::ClipToPaddedFace(edge->edge.v0, edge->edge.v1, face,
                                      kCellPadding, &edge->a, &edge->b)) {
       all_edges[face].push_back(*edge);
     }
@@ -1331,7 +1327,7 @@ S2ShapeIndex::ClipUBound(ClippedEdge const* edge, int u_end, double u,
   // clamped to ensure that it is in the appropriate range.
   FaceEdge const& e = *edge->face_edge;
   double v = edge->bound[1].Project(
-      S2EdgeUtil::InterpolateDouble(u, e.a[0], e.b[0], e.a[1], e.b[1]));
+      S2::InterpolateDouble(u, e.a[0], e.b[0], e.a[1], e.b[1]));
 
   // Determine which endpoint of the v-axis bound to update.  If the edge
   // slope is positive we update the same endpoint, otherwise we update the
@@ -1354,7 +1350,7 @@ S2ShapeIndex::ClipVBound(ClippedEdge const* edge, int v_end, double v,
   }
   FaceEdge const& e = *edge->face_edge;
   double u = edge->bound[0].Project(
-      S2EdgeUtil::InterpolateDouble(v, e.a[1], e.b[1], e.a[0], e.b[0]));
+      S2::InterpolateDouble(v, e.a[1], e.b[1], e.a[0], e.b[0]));
   int u_end = v_end ^ ((e.a[0] > e.b[0]) != (e.a[1] > e.b[1]));
   return UpdateBound(edge, u_end, u, v_end, v, alloc);
 }
@@ -1435,7 +1431,7 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
   for (int s = 0; s < cell.num_clipped(); ++s) {
     S2ClippedShape const& clipped = cell.clipped(s);
     int shape_id = clipped.shape_id();
-    S2Shape const* shape = shapes_[shape_id];
+    S2Shape const* shape = this->shape(shape_id);
     if (shape == nullptr) continue;  // This shape is being removed.
     int num_clipped = clipped.num_edges();
 
@@ -1465,7 +1461,7 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
       edge.edge = shape->edge(e);
       edge.max_level = GetEdgeMaxLevel(edge.edge);
       if (edge.has_interior) tracker->TestEdge(shape_id, edge.edge);
-      if (!S2EdgeUtil::ClipToPaddedFace(edge.edge.v0, edge.edge.v1,
+      if (!S2::ClipToPaddedFace(edge.edge.v0, edge.edge.v1,
                                         pcell.id().face(), kCellPadding,
                                         &edge.a, &edge.b)) {
         LOG(DFATAL) << "Invariant failure in S2ShapeIndex";
@@ -1478,7 +1474,7 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
   for (FaceEdge const& face_edge : *face_edges) {
     ClippedEdge* clipped = alloc->NewClippedEdge();
     clipped->face_edge = &face_edge;
-    clipped->bound = S2EdgeUtil::GetClippedEdgeBound(face_edge.a, face_edge.b,
+    clipped->bound = S2::GetClippedEdgeBound(face_edge.a, face_edge.b,
                                                      pcell.bound());
     new_edges.push_back(clipped);
   }
@@ -1651,7 +1647,7 @@ int S2ShapeIndex::GetNumEdges() const {
   // There is no need to apply updates before counting edges, since shapes are
   // added or removed from the "shapes_" vector immediately.
   int num_edges = 0;
-  for (S2Shape* s : shapes_) {
+  for (auto const& s : shapes_) {
     if (s == nullptr) continue;
     num_edges += s->num_edges();
   }

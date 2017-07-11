@@ -27,7 +27,7 @@
 
 #include <gflags/gflags.h>
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s2cellid.h"
@@ -105,6 +105,8 @@ class S2Testing {
     // default value of -1 causes the min and max levels to be the same.  A
     // min_level of 0 should be avoided since this creates a significant
     // chance that none of the three original edges will be subdivided at all.
+    //
+    // DEFAULT: max_level()
     void set_min_level(int min_level_arg);
     int min_level() const { return min_level_arg_; }
 
@@ -116,6 +118,8 @@ class S2Testing {
     // Set the fractal dimension.  The default value of approximately 1.26
     // corresponds to the stardard Koch curve.  The value must lie in the
     // range [1.0, 2.0).
+    //
+    // DEFAULT: log(4) / log(3) ~= 1.26
     void set_fractal_dimension(double dimension);
     double fractal_dimension() const { return dimension_; }
 
@@ -169,8 +173,13 @@ class S2Testing {
 
   // Convert a distance on the Earth's surface to an angle.
   // Do not use these methods in non-testing code; use s2earth.h instead.
-  static S1Angle KmToAngle(double km);
   static S1Angle MetersToAngle(double meters);
+  static S1Angle KmToAngle(double km);
+
+  // Convert an area in steradians (as returned by the S2 area methods) to
+  // square meters or square kilometers.
+  static double AreaToMeters2(double steradians);
+  static double AreaToKm2(double steradians);
 
   // The Earth's mean radius in kilometers (according to NASA).
   static double const kEarthRadiusKm;

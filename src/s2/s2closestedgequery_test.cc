@@ -22,6 +22,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2edgeutil.h"
@@ -66,7 +67,7 @@ class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
   void AddEdges(S2Cap const& query_cap, int num_edges,
                 S2ShapeIndex* index) const override {
-    index->Add(new s2shapeutil::S2LoopOwningShape(S2Loop::MakeRegularLoop(
+    index->Add(absl::MakeUnique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
         query_cap.center(), 0.5 * query_cap.GetRadius(), num_edges)));
   }
 };
@@ -79,7 +80,7 @@ class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
                 S2ShapeIndex* index) const override {
     S2Testing::Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(num_edges);
-    index->Add(new s2shapeutil::S2LoopOwningShape(
+    index->Add(absl::MakeUnique<S2Loop::OwningShape>(
         fractal.MakeLoop(S2Testing::GetRandomFrameAt(query_cap.center()),
                          0.5 * query_cap.GetRadius())));
   }
@@ -119,7 +120,7 @@ class PointTarget {
     return S1Angle(x, point_);
   }
   S1Angle GetDistanceToEdge(S2Point const& v0, S2Point const& v1) const {
-    return S2EdgeUtil::GetDistance(point_, v0, v1);
+    return S2::GetDistance(point_, v0, v1);
   }
   void FindClosestEdges(S2ClosestEdgeQuery* query) const {
     query->FindClosestEdges(point_);
@@ -132,11 +133,11 @@ class EdgeTarget {
  public:
   EdgeTarget(S2Point const& a, S2Point const& b) : a_(a), b_(b) {}
   S1Angle GetDistanceToPoint(S2Point const& x) const {
-    return S2EdgeUtil::GetDistance(x, a_, b_);
+    return S2::GetDistance(x, a_, b_);
   }
   S1Angle GetDistanceToEdge(S2Point const& v0, S2Point const& v1) const {
     S1ChordAngle distance = S1ChordAngle::Infinity();
-    S2EdgeUtil::UpdateEdgePairMinDistance(a_, b_, v0, v1, &distance);
+    S2::UpdateEdgePairMinDistance(a_, b_, v0, v1, &distance);
     return distance.ToAngle();
   }
   void FindClosestEdges(S2ClosestEdgeQuery* query) const {

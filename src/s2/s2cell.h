@@ -20,7 +20,7 @@
 
 #include <glog/logging.h>
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/r2rect.h"
 #include "s2/s1chordangle.h"
 #include "s2/s2cellid.h"
@@ -84,12 +84,14 @@ class S2Cell final : public S2Region {
   // Return the k-th vertex of the cell (k = 0,1,2,3).  Vertices are returned
   // in CCW order (lower left, lower right, upper right, upper left in the UV
   // plane).  The points returned by GetVertexRaw are not normalized.
+  // For convenience, the argument is reduced modulo 4 to the range [0..3].
   S2Point GetVertex(int k) const { return GetVertexRaw(k).Normalize(); }
   S2Point GetVertexRaw(int k) const;
 
-  // Return the inward-facing normal of the great circle passing through
-  // the edge from vertex k to vertex k+1 (mod 4).  The normals returned
-  // by GetEdgeRaw are not necessarily unit length.
+  // Return the inward-facing normal of the great circle passing through the
+  // edge from vertex k to vertex k+1 (mod 4).  The normals returned by
+  // GetEdgeRaw are not necessarily unit length.  For convenience, the
+  // argument is reduced modulo 4 to the range [0..3].
   S2Point GetEdge(int k) const { return GetEdgeRaw(k).Normalize(); }
   S2Point GetEdgeRaw(int k) const;
 

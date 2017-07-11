@@ -17,7 +17,10 @@
 
 #include "s2/value_lexicon.h"
 
+#include <memory>
+
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 
@@ -65,5 +68,52 @@ TEST(ValueLexicon, FloatEquality) {
   EXPECT_EQ(0, lex.Add(c));
   EXPECT_EQ(1, lex.size());
   EXPECT_EQ(0, memcmp(&a, &lex.value(0), sizeof(a)));
+}
+
+TEST(ValueLexicon, CopyConstructor) {
+  auto original = absl::MakeUnique<ValueLexicon<int64>>();
+  EXPECT_EQ(0, original->Add(5));
+  auto lex = *original;
+  original.reset(nullptr);
+  EXPECT_EQ(1, lex.Add(10));
+  EXPECT_EQ(5, lex.value(0));
+  EXPECT_EQ(10, lex.value(1));
+}
+
+TEST(ValueLexicon, MoveConstructor) {
+  auto original = absl::MakeUnique<ValueLexicon<int64>>();
+  EXPECT_EQ(0, original->Add(5));
+  auto lex = std::move(*original);
+  original.reset(nullptr);
+  EXPECT_EQ(1, lex.Add(10));
+  EXPECT_EQ(5, lex.value(0));
+  EXPECT_EQ(10, lex.value(1));
+}
+
+TEST(ValueLexicon, CopyAssignmentOperator) {
+  auto original = absl::MakeUnique<ValueLexicon<int64>>();
+  EXPECT_EQ(0, original->Add(5));
+  ValueLexicon<int64> lex;
+  EXPECT_EQ(0, lex.Add(10));
+  EXPECT_EQ(1, lex.Add(15));
+  lex = *original;
+  original.reset(nullptr);
+  lex = lex;  // Tests self-assignment.
+  EXPECT_EQ(1, lex.Add(20));
+  EXPECT_EQ(5, lex.value(0));
+  EXPECT_EQ(20, lex.value(1));
+}
+
+TEST(ValueLexicon, MoveAssignmentOperator) {
+  auto original = absl::MakeUnique<ValueLexicon<int64>>();
+  EXPECT_EQ(0, original->Add(5));
+  ValueLexicon<int64> lex;
+  EXPECT_EQ(0, lex.Add(10));
+  EXPECT_EQ(1, lex.Add(15));
+  lex = std::move(*original);
+  original.reset(nullptr);
+  EXPECT_EQ(1, lex.Add(20));
+  EXPECT_EQ(5, lex.value(0));
+  EXPECT_EQ(20, lex.value(1));
 }
 

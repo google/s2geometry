@@ -95,16 +95,14 @@ static void InitLookupCell(int level, int i, int j, int orig_orientation,
   }
 }
 
-static void Init() {
-  InitLookupCell(0, 0, 0, 0, 0, 0);
-  InitLookupCell(0, 0, 0, kSwapMask, 0, kSwapMask);
-  InitLookupCell(0, 0, 0, kInvertMask, 0, kInvertMask);
-  InitLookupCell(0, 0, 0, kSwapMask|kInvertMask, 0, kSwapMask|kInvertMask);
-}
-
-static std::once_flag init_once;
+static std::once_flag flag;
 inline static void MaybeInit() {
-  std::call_once(init_once, Init);
+  std::call_once(flag, []{
+    InitLookupCell(0, 0, 0, 0, 0, 0);
+    InitLookupCell(0, 0, 0, kSwapMask, 0, kSwapMask);
+    InitLookupCell(0, 0, 0, kInvertMask, 0, kInvertMask);
+    InitLookupCell(0, 0, 0, kSwapMask|kInvertMask, 0, kSwapMask|kInvertMask);
+  });
 }
 
 S2CellId S2CellId::advance(int64 steps) const {
