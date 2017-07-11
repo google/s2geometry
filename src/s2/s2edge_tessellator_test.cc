@@ -59,7 +59,7 @@ S1Angle GetMaxDistance(S2::Projection const& proj,
   for (double f = 0.5 / kNumSteps; f < 1.0; f += 1.0 / kNumSteps) {
     S1ChordAngle dist = S1ChordAngle::Infinity();
     S2Point p = proj.Unproject(proj.Interpolate(f, px, py));
-    S2EdgeUtil::UpdateMinDistance(p, x, y, &dist);
+    S2::UpdateMinDistance(p, x, y, &dist);
     if (dist > max_dist) max_dist = dist;
   }
   return max_dist.ToAngle();
@@ -116,7 +116,7 @@ DistStats TestProjected(S2::Projection const& proj, S1Angle tolerance,
     S2Point y = proj.Unproject(py);
     // Check that every vertex is on the geodesic edge.
     static S1ChordAngle kMaxInterpolationError(S1Angle::Radians(1e-14));
-    EXPECT_TRUE(S2EdgeUtil::IsDistanceLess(y, a, b, kMaxInterpolationError));
+    EXPECT_TRUE(S2::IsDistanceLess(y, a, b, kMaxInterpolationError));
     stats.Tally(GetMaxDistance(proj, px, x, py, y));
     x = y;
     px = py;

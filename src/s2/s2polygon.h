@@ -18,13 +18,14 @@
 #ifndef S2_S2POLYGON_H_
 #define S2_S2POLYGON_H_
 
+#include <atomic>
 #include <cstddef>
 #include <map>
 #include <vector>
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s1angle.h"
 #include "s2/s2boundary_operation.h"
 #include "s2/s2builder.h"
@@ -328,7 +329,7 @@ class S2Polygon final : public S2Region {
   // snap_radius of zero (which preserves the input vertices exactly).
   //
   // The boundary of the output polygon before snapping is guaranteed to be
-  // accurate to within S2EdgeUtil::kIntersectionError of the exact result.
+  // accurate to within S2::kIntersectionError of the exact result.
   // Snapping can move the boundary by an additional distance that depends on
   // the snap function.  Finally, any degenerate portions of the output
   // polygon are automatically removed (i.e., regions that do not contain any
@@ -339,7 +340,7 @@ class S2Polygon final : public S2Region {
   // s2builderutil::IntLatLngSnapFunction(7).
   //
   // The default snap function is the IdentitySnapFunction with a snap radius
-  // of S2EdgeUtil::kIntersectionMergeRadius (equal to about 1.8e-15 radians
+  // of S2::kIntersectionMergeRadius (equal to about 1.8e-15 radians
   // or 11 nanometers on the Earth's surface).  This means that vertices may
   // be positioned arbitrarily, but vertices that are extremely close together
   // can be merged together.  The reason for a non-zero default snap radius is
@@ -436,7 +437,7 @@ class S2Polygon final : public S2Region {
   // "boundary_tolerance" specifies how close a vertex must be to the cell
   // boundary to be kept.  The default tolerance is large enough to handle any
   // reasonable way of interpolating points along the cell boundary, such as
-  // S2EdgeUtil::GetIntersection(), S2EdgeUtil::Interpolate(), or direct (u,v)
+  // S2::GetIntersection(), S2::Interpolate(), or direct (u,v)
   // interpolation using S2::FaceUVtoXYZ().  However, if the vertices have
   // been snapped to a lower-precision representation (e.g., S2CellId centers
   // or E7 coordinates) then you will need to set this tolerance explicitly.
@@ -511,7 +512,7 @@ class S2Polygon final : public S2Region {
   // but there will not be any zero-vertex polylines.
   //
   // This is equivalent to calling ApproxIntersectWithPolyline() with the
-  // "snap_radius" set to S2EdgeUtil::kIntersectionMergeRadius.
+  // "snap_radius" set to S2::kIntersectionMergeRadius.
   std::vector<std::unique_ptr<S2Polyline> > IntersectWithPolyline(
       S2Polyline const& in) const;
 
@@ -659,9 +660,9 @@ class S2Polygon final : public S2Region {
   // Wrapper class for indexing a polygon (see S2ShapeIndex).  Once this
   // object is inserted into an S2ShapeIndex it is owned by that index, and
   // will be automatically deleted when no longer needed by the index.  Note
-  // that this class does not take ownership of the polygon; if you want this
-  // behavior, see s2shapeutil::S2PolygonOwningShape.  You can also subtype
-  // this class to store additional data (see S2Shape for details).
+  // that this class does not take ownership of the polygon itself (see
+  // OwningShape below).  You can also subtype this class to store additional
+  // data (see S2Shape for details).
 
 #ifndef SWIG
   // Note that unlike S2Polygon, the edges of S2Polygon::Shape are directed
@@ -682,7 +683,6 @@ class S2Polygon final : public S2Region {
     // S2Shape interface:
     int num_edges() const final { return num_edges_; }
     Edge edge(int e) const final;
-    void GetEdge(int e, S2Point const** a, S2Point const** b) const final;
     int dimension() const final { return 2; }
     bool contains_origin() const final;
     int num_chains() const final;
@@ -696,7 +696,7 @@ class S2Polygon final : public S2Region {
     // the other hand this field doesn't take up any extra space due to field
     // packing with S2Shape::id_.
     //
-    // TODO(ericv): Consider using this field instead as an Atomic32 hint to
+    // TODO(ericv): Consider using this field instead as an atomic<int> hint to
     // speed up edge location when there are a large number of loops.  Also
     // consider changing S2Polygon::num_vertices to num_edges instead.
     int num_edges_;
@@ -706,6 +706,21 @@ class S2Polygon final : public S2Region {
     // An array where element "i" is the total number of edges in loops 0..i-1.
     // This field is only used for polygons that have a large number of loops.
     int* cumulative_edges_;
+  };
+
+  // Like Shape, except that the S2Polygon is automatically deleted when this
+  // object is deleted by the S2ShapeIndex.  This is useful when an S2Polygon
+  // is constructed solely for the purpose of indexing it.
+  class OwningShape : public Shape {
+   public:
+    OwningShape() {}  // Must call Init().
+    explicit OwningShape(std::unique_ptr<S2Polygon const> polygon)
+        : Shape(polygon.release()) {
+    }
+    void Init(std::unique_ptr<S2Polygon const> polygon) {
+      Shape::Init(polygon.release());
+    }
+    ~OwningShape() override { delete polygon(); }
   };
 #endif  // SWIG
 
@@ -840,7 +855,7 @@ class S2Polygon final : public S2Region {
   // force implementation that is also relatively cheap.  For this one method
   // we keep track of the number of calls made and only build the index once
   // enough calls have been made that we think an index would be worthwhile.
-  mutable Atomic32 unindexed_contains_calls_;
+  mutable std::atomic<int32> unindexed_contains_calls_;
 
   // "bound_" is a conservative bound on all points contained by this polygon:
   // if A.Contains(P), then A.bound_.Contains(S2LatLng(P)).
@@ -852,11 +867,7 @@ class S2Polygon final : public S2Region {
   // if A.Contains(B), then A.subregion_bound_.Contains(B.bound_).
   S2LatLngRect subregion_bound_;
 
-  // Every S2Polygon has a "shape_" member that is used to index the polygon.
-  // This shape belongs to the S2Polygon and does not need to be freed.
-  Shape shape_;
-
-  // Spatial index containing "shape_".
+  // Spatial index containing this polygon.
   S2ShapeIndex index_;
 
 #ifndef SWIG

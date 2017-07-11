@@ -331,7 +331,7 @@ static double GetS2CellIdMinEdgeSeparation(
                     S2CellIdSnapFunction::MinSnapRadiusForLevel(level));
 
           // This is a valid configuration, so evaluate it.
-          S1Angle edge_sep = S2EdgeUtil::GetDistance(site0, site1, site2);
+          S1Angle edge_sep = S2::GetDistance(site0, site1, site2);
           double score = objective(level, edge_sep,
                                    min_snap_radius, max_snap_radius);
           double& best_score = best_scores[id0];
@@ -615,7 +615,7 @@ static double GetLatLngMinEdgeSeparation(
               if (max_snap_radius < min_snap_radius_at_scale) continue;
 
               // This is a valid configuration, so evaluate it.
-              S1Angle edge_sep = S2EdgeUtil::GetDistance(site0, site1, site2);
+              S1Angle edge_sep = S2::GetDistance(site0, site1, site2);
               double score = objective(scale, edge_sep, max_snap_radius);
               LatLngConfig config(scale, ll0, ll1, ll2);
               scores.push_back(make_pair(score, config));

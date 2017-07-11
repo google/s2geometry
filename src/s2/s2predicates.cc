@@ -588,7 +588,7 @@ int TriageCompareLineSin2Distance(Vector3<T> const& x, Vector3<T> const& a0,
   if (r2 >= 2.0) return -1;  // distance < limit
 
   // Otherwise we compute sin^2(distance to edge) to get the best accuracy
-  // when the distance limit is small (e.g., S2EdgeUtil::kIntersectionError).
+  // when the distance limit is small (e.g., S2::kIntersectionError).
   T n2sin2_r = n2 * r2 * (1 - 0.25 * r2);
   T n2sin2_r_error = 6 * T_ERR * n2sin2_r;
   T ax2, xDn = (x - GetClosestVertex(x, a0, a1, &ax2)).DotProd(n);

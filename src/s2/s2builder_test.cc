@@ -250,7 +250,7 @@ TEST(S2Builder, IdempotencySnapsEdgesWithTinySnapRadius) {
   // at least one vertex or edge that could not be the output of a previous
   // snapping operation.  This test checks that S2Builder detects edges that
   // are too close to vertices even when the snap radius is very small
-  // (e.g., S2EdgeUtil::kIntersectionError).
+  // (e.g., S2::kIntersectionError).
   //
   // Previously S2Builder used a conservative approximation to decide whether
   // edges were too close to vertices; unfortunately this meant that when the
@@ -263,7 +263,7 @@ TEST(S2Builder, IdempotencySnapsEdgesWithTinySnapRadius) {
   // previous snapping operation).
   S2Builder::Options options;
   options.set_snap_function(
-      s2builderutil::IdentitySnapFunction(S2EdgeUtil::kIntersectionError));
+      s2builderutil::IdentitySnapFunction(S2::kIntersectionError));
   S2PolylineVectorLayer::Options layer_options;
   layer_options.set_duplicate_edges(
       S2PolylineVectorLayer::Options::DuplicateEdges::MERGE);
@@ -890,7 +890,7 @@ TEST(S2Builder, HighPrecisionPredicates) {
     {-0.10531192039116592, -0.80522217309701472, 0.58354661457028933},
   };
   S2Polyline input(vertices);
-  S1Angle snap_radius = S2EdgeUtil::kIntersectionMergeRadius;
+  S1Angle snap_radius = S2::kIntersectionMergeRadius;
   S2Builder::Options options((IdentitySnapFunction(snap_radius)));
   options.set_idempotent(false);
   S2Builder builder(options);
@@ -920,14 +920,14 @@ TEST(S2Builder, HighPrecisionStressTest) {
   // This test constructs many small, random inputs such that the output is
   // likely to be inconsistent unless high-precision predicates are used.
 
-  S1Angle snap_radius = S2EdgeUtil::kIntersectionMergeRadius;
+  S1Angle snap_radius = S2::kIntersectionMergeRadius;
   // Some S2Builder calculations use an upper bound that takes into account
   // S1ChordAngle errors.  We sometimes try perturbing points by very close to
   // that distance in an attempt to expose errors.
   S1ChordAngle ca(snap_radius);
   S1Angle snap_radius_with_error = ca.PlusError(
       ca.GetS1AngleConstructorMaxError() +
-      S2EdgeUtil::GetUpdateMinDistanceMaxError(ca)).ToAngle();
+      S2::GetUpdateMinDistanceMaxError(ca)).ToAngle();
 
   auto& rnd = S2Testing::rnd;
   int non_degenerate = 0;
@@ -947,10 +947,10 @@ TEST(S2Builder, HighPrecisionStressTest) {
     // v2 is located along (v0,v1) but is perturbed by up to 2 * snap_radius.
     S2Point v1 = ChoosePoint(), v0_dir = ChoosePoint();
     double d0 = pow(1e-16, rnd.RandDouble());
-    S2Point v0 = S2EdgeUtil::InterpolateAtDistance(S1Angle::Radians(d0),
+    S2Point v0 = S2::InterpolateAtDistance(S1Angle::Radians(d0),
                                                    v1, v0_dir);
     double d2 = 0.5 * d0 * pow(1e-16, pow(rnd.RandDouble(), 2));
-    S2Point v2 = S2EdgeUtil::InterpolateAtDistance(S1Angle::Radians(d2),
+    S2Point v2 = S2::InterpolateAtDistance(S1Angle::Radians(d2),
                                                    v1, v0_dir);
     v2 = S2Testing::SamplePoint(S2Cap(v2, 2 * snap_radius));
     // Vary the edge directions by randomly swapping v0 and v2.
@@ -964,10 +964,10 @@ TEST(S2Builder, HighPrecisionStressTest) {
     S2Point v3;
     if (rnd.OneIn(5)) {
       v3 = rnd.OneIn(2) ? v1 : v2;
-      v3 = S2EdgeUtil::InterpolateAtDistance(d3, v3, ChoosePoint());
+      v3 = S2::InterpolateAtDistance(d3, v3, ChoosePoint());
     } else {
-      v3 = S2EdgeUtil::Interpolate(pow(1e-16, rnd.RandDouble()), v1, v2);
-      v3 = S2EdgeUtil::InterpolateAtDistance(d3, v3,
+      v3 = S2::Interpolate(pow(1e-16, rnd.RandDouble()), v1, v2);
+      v3 = S2::InterpolateAtDistance(d3, v3,
                                              v1.CrossProd(v2).Normalize());
     }
     S2Builder::Options options((IdentitySnapFunction(snap_radius)));

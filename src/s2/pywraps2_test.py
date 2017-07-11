@@ -172,19 +172,22 @@ class PyWrapS2TestCase(unittest.TestCase):
     intersections = polygon.IntersectWithPolyline(line)
     self.assertEqual(1, len(intersections))
 
-  def testEdgeCrosserCrossingSign(self):
+  def testCrossingSign(self):
     a = s2.S2LatLng.FromDegrees(-1, 0).ToPoint()
     b = s2.S2LatLng.FromDegrees(1, 0).ToPoint()
     c = s2.S2LatLng.FromDegrees(0, -1).ToPoint()
     d = s2.S2LatLng.FromDegrees(0, 1).ToPoint()
-    self.assertEqual(1, s2.S2EdgeUtil.CrossingSign(a, b, c, d))
+    # SWIG flattens namespaces, so this is just s2.CrossingSign,
+    # not s2.S2.CrossingSign.
+    self.assertEqual(1, s2.CrossingSign(a, b, c, d))
 
-  def testS2EdgeUtilGetIntersection(self):
+  def testGetIntersection(self):
     a = s2.S2LatLng.FromDegrees(-1, 0).ToPoint()
     b = s2.S2LatLng.FromDegrees(1, 0).ToPoint()
     c = s2.S2LatLng.FromDegrees(0, -1).ToPoint()
     d = s2.S2LatLng.FromDegrees(0, 1).ToPoint()
-    intersection = s2.S2EdgeUtil.GetIntersection(a, b, c, d)
+    # SWIG namespace flattening as above.
+    intersection = s2.GetIntersection(a, b, c, d)
     self.assertEqual(
         "0.000000,0.000000", s2.S2LatLng(intersection).ToStringInDegrees())
 

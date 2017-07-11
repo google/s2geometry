@@ -25,15 +25,15 @@
 //
 // #include "third_party/absl/base/config.h"
 //
-// #ifdef GOOGLE_HAVE_MMAP
+// #ifdef ABSL_HAVE_MMAP
 // #include "sys/mman.h"
-// #endif  // GOOGLE_HAVE_MMAP
+// #endif  //ABSL_HAVE_MMAP
 //
 // ...
-// #ifdef GOOGLE_HAVE_MMAP
+// #ifdef ABSL_HAVE_MMAP
 // void *ptr = mmap(...);
 // ...
-// #endif  // GOOGLE_HAVE_MMAP
+// #endif  // ABSL_HAVE_MMAP
 //
 // As a special note, using feature macros from config.h to determine whether
 // to include a particular header requires violating the style guide's required
@@ -75,14 +75,7 @@
 #define ABSL_HAVE_BUILTIN(x) 0
 #endif
 
-// GOOGLE_HAVE_SIZED_DELETE is defined when C++14's sized deallocation
-// operators are available.
-#if (defined(__clang__) && defined(__cpp_sized_deallocation)) || \
-    defined(__GXX_DELETE_WITH_SIZE__)
-#define GOOGLE_HAVE_SIZED_DELETE
-#endif
-
-// GOOGLE_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE is defined when
+// ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE is defined when
 // std::is_trivially_destructible<T> is supported.
 //
 // All supported compilers using libc++ have it, as does gcc >= 4.8
@@ -90,18 +83,20 @@
 // https://gcc.gnu.org/onlinedocs/gcc-4.8.1/libstdc++/manual/manual/status.html#status.iso.2011
 // is the first version where std::is_trivially_destructible no longer
 // appeared as missing in the Type properties row.
-#if defined(_LIBCPP_VERSION) ||                                          \
+#ifdef ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
+#error ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE cannot be directly set
+#elif defined(_LIBCPP_VERSION) ||                                        \
     (!defined(__clang__) && defined(__GNUC__) && defined(__GLIBCXX__) && \
      (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8))) ||        \
     defined(_MSC_VER)
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
+#define ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE 1
 #endif
 
-// GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE is defined when
+// ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE is defined when
 // std::is_trivially_default_constructible<T> and
 // std::is_trivially_copy_constructible<T> are supported.
 //
-// GOOGLE_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE is defined when
+// ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE is defined when
 // std::is_trivially_copy_assignable<T> is supported.
 //
 // Clang with libc++ supports it, as does gcc >= 5.1 with either
@@ -109,20 +104,26 @@
 // https://gcc.gnu.org/gcc-5/changes.html lists as new
 // "std::is_trivially_constructible, std::is_trivially_assignable
 // etc."
-#if (defined(__clang__) && defined(_LIBCPP_VERSION)) ||          \
+#if defined(ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE)
+#error ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE cannot be directly set
+#elif defined(ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE)
+#error ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE cannot directly set
+#elif (defined(__clang__) && defined(_LIBCPP_VERSION)) ||        \
     (!defined(__clang__) && defined(__GNUC__) &&                 \
      (__GNUC__ > 5 || (__GNUC__ == 5 && __GNUC_MINOR__ >= 1)) && \
      (defined(_LIBCPP_VERSION) || defined(__GLIBCXX__))) ||      \
     defined(_MSC_VER)
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
-#define GOOGLE_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
+#define ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE 1
+#define ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE 1
 #endif
 
 // ABSL_HAVE_THREAD_LOCAL is defined when C++11's thread_local is available.
 // Clang implements thread_local keyword but Xcode did not support the
 // implementation until Xcode 8.
-#if !defined(__apple_build_version__) || __apple_build_version__ >= 8000042
-#define ABSL_HAVE_THREAD_LOCAL
+#ifdef ABSL_HAVE_THREAD_LOCAL
+#error ABSL_HAVE_THREAD_LOCAL cannot be directly set
+#elif !defined(__apple_build_version__) || __apple_build_version__ >= 8000042
+#define ABSL_HAVE_THREAD_LOCAL 1
 #endif
 
 // ABSL_HAVE_INTRINSIC_INT128 is defined when the implementation provides the
@@ -133,13 +134,15 @@
 // sporadic compiler crashing bug. Nvidia's nvcc also defines __GNUC__ and
 // __SIZEOF_INT128__ but not all versions that do this support __int128. Support
 // has been tested for versions >= 7.
-#if (defined(__clang__) && defined(__SIZEOF_INT128__) &&                 \
-     !defined(__ppc64__) && !defined(__aarch64__)) ||                    \
+#ifdef ABSL_HAVE_INTRINSIC_INT128
+#error ABSL_HAVE_INTRINSIC_INT128 cannot be directly set
+#elif (defined(__clang__) && defined(__SIZEOF_INT128__) &&               \
+       !defined(__ppc64__) && !defined(__aarch64__)) ||                  \
     (defined(__CUDACC__) && defined(__SIZEOF_INT128__) &&                \
      __CUDACC_VER__ >= 70000) ||                                         \
     (!defined(__clang__) && !defined(__CUDACC__) && defined(__GNUC__) && \
      defined(__SIZEOF_INT128__))
-#define ABSL_HAVE_INTRINSIC_INT128
+#define ABSL_HAVE_INTRINSIC_INT128 1
 #endif
 
 // Operating system-specific features.
@@ -161,222 +164,148 @@
 // may probe for either Linux or Android by simply testing for __linux__.
 //
 
-// GOOGLE_HAVE_FADVISE is defined when the system provides the posix_fadvise(2)
-// system call as defined in POSIX.1-2001.
-#if defined(__linux__) || defined(__ros__)
-#define GOOGLE_HAVE_FADVISE 1
-#else
-#undef GOOGLE_HAVE_FADVISE
-#endif
-
-// GOOGLE_HAVE_FORK is defined when the system provides the fork(2) function
-// to create a new process.  fork() has existed on every version of Unix since
-// 1970, and many other systems as well.
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
-    defined(__ros__) || defined(__native_client__)
-#define GOOGLE_HAVE_FORK 1
-#else
-#undef GOOGLE_HAVE_FORK
-#endif
-//
-// GOOGLE_HAVE_GETPAGESIZE is defined when the system has a getpagesize(2)
-// implementation.  Note: getpagesize(2) was removed in POSIX.1-2001.  New
-// code should use `sysconf(_SC_PAGESIZE)` instead.
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
-    defined(__ros__) || defined(__native_client__)
-#define GOOGLE_HAVE_GETPAGESIZE 1
-#else
-#undef GOOGLE_HAVE_GETPAGESIZE
-#endif
-
-// GOOGLE_HAVE_MLOCK is defined when the system has an mlock(2) implementation
+// ABSL_HAVE_MMAP is defined when the system has an mmap(2) implementation
 // as defined in POSIX.1-2001.
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
-    defined(__ros__)
-#define GOOGLE_HAVE_MLOCK 1
-#else
-#undef GOOGLE_HAVE_MLOCK
-#endif
-
-// GOOGLE_HAVE_MLOCKALL is defined when the system has an mlockall(2)
-// implementation as defined in POSIX.1-2001.  See also mlock(2) and
-// GOOGLE_HAVE_MLOCK.
-#if (defined(__linux__) && !defined(__ANDROID__)) || \
-    (defined(__APPLE__) && defined(__MACH__))
-#define GOOGLE_HAVE_MLOCKALL 1
-#else
-#undef GOOGLE_HAVE_MLOCKALL
-#endif
-
-// GOOGLE_HAVE_MMAP is defined when the system has an mmap(2) implementation
-// as defined in POSIX.1-2001.
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) ||      \
+#ifdef ABSL_HAVE_MMAP
+#error ABSL_HAVE_MMAP cannot be directly set
+#elif defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) ||    \
     defined(__ros__) || defined(__native_client__) || defined(__asmjs__) || \
     defined(__Fuchsia__)
-#define GOOGLE_HAVE_MMAP 1
-#else
-#undef GOOGLE_HAVE_MMAP
+#define ABSL_HAVE_MMAP 1
 #endif
 
-// GOOGLE_HAVE_POSIX_MEMALIGN is defined when the system provides the
-// posix_memalign(3) function to allocate memory aligned on a boundary,
-// as defined in POSIX.1-2001.
-#if (defined(__linux__) && !defined(__ANDROID__)) ||                 \
-    (defined(__APPLE__) && defined(__MACH__)) || defined(__ros__) || \
-    defined(__native_client__)
-#define GOOGLE_HAVE_POSIX_MEMALIGN 1
-#else
-#undef GOOGLE_HAVE_POSIX_MEMALIGN
-#endif
-
-// GOOGLE_HAVE_POSIX_SIGNAL_STACK is defined on systems that provide
-// support for separate signals stacks via the sigaltstack(2) call,
-// as defined by POSIX.1-2008.  Note that "sigaltstack" looks like a
-// typo, but is not: it is "Sig Alt Stack" not "signal stack".
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-#define GOOGLE_HAVE_POSIX_SIGNAL_ALT_STACK 1
-#else
-#undef GOOGLE_HAVE_POSIX_SIGNAL_ALT_STACK
-#endif
-
-// GOOGLE_HAVE_POSIX_SPAWN is defined when the system provides the
-// posix_spawn(3) call, as defined by the POSIX advanced realtime support
-// supplement and version 3 of the Single UNIX Specification (SUSv3).
-//
-// See also Austin T. Clements et al, "The Scalable Commutativity
-// Rule: Designing Scalable Software for Multicore Processors"
-// (https://people.csail.mit.edu/nickolai/papers/clements-sc.pdf).
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-#define GOOGLE_HAVE_POSIX_SPAWN 1
-#else
-#undef GOOGLE_HAVE_POSIX_SPAWN
-#endif
-
-// GOOGLE_HAVE_POSIX_TIMER is defined on systems that provide the
-// timer_create(2) family of functions as specified in POSIX.1-2001.
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-#define GOOGLE_HAVE_POSIX_TIMER 1
-#else
-#undef GOOGLE_HAVE_POSIX_TIMER
-#endif
-
-// GOOGLE_HAS_PTHREAD_GETSCHEDPARAM is defined when the system implements the
+// ABSL_HAS_PTHREAD_GETSCHEDPARAM is defined when the system implements the
 // pthread_(get|set)schedparam(3) functions as defined in POSIX.1-2001.
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
+#ifdef ABSL_HAVE_PTHREAD_GETSCHEDPARAM
+#error ABSL_HAVE_PTHREAD_GETSCHEDPARAM cannot be directly set
+#elif defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
     defined(__ros__)
-// TODO(user): This should probably be called GOOGLE_HAVE_PTHREAD_SCHEDPARAM.
-// It may not be grammatically correct, but it would be consistent with other
-// symbols.
-#define GOOGLE_HAS_PTHREAD_GETSCHEDPARAM 1
-#else
-#undef GOOGLE_HAS_PTHREAD_GETSCHEDPARAM
+#define ABSL_HAVE_PTHREAD_GETSCHEDPARAM 1
 #endif
 
-// GOOGLE_HAVE_PTHREAD_SETNAME_NP is defined when the system provides the
-// pthread_setname_np(3) function as defined by the behavior of the
-// implementation in glibc.  Note that this is a non-standard but common
-// extension to the pthreads interface.
-#if (defined(__linux__) && !defined(__ANDROID__)) || \
-    (defined(__APPLE__) && defined(__MACH__)) || \
-    defined(__native_client__) || \
-    (defined(__ANDROID__) && defined(__ANDROID_API__) && __ANDROID_API__ >= 10)
-#define GOOGLE_HAVE_PTHREAD_SETNAME_NP 1
-#else
-#undef GOOGLE_HAVE_PTHREAD_SETNAME_NP
-#endif
-
-// GOOGLE_HAVE_SCHED_GETCPU is defined when the system implements
-// sched_getcpu(3) as by glibc and it's imitators.
-#if defined(__linux__) || defined(__ros__)
-#define GOOGLE_HAVE_SCHED_GETCPU 1
-#else
-#undef GOOGLE_HAVE_SCHED_GETCPU
-#endif
-
-// GOOGLE_HAVE_SCHED_YIELD is defined when the system implements
+// ABSL_HAVE_SCHED_YIELD is defined when the system implements
 // sched_yield(2) as defined in POSIX.1-2001.
-#if defined(__linux__) || defined(__ros__) || defined(__native_client__)
-#define GOOGLE_HAVE_SCHED_YIELD 1
-#else
-#undef GOOGLE_HAVE_SCHED_YIELD
+#ifdef ABSL_HAVE_SCHED_YIELD
+#error ABSL_HAVE_SCHED_YIELD cannot be directly set
+#elif defined(__linux__) || defined(__ros__) || defined(__native_client__)
+#define ABSL_HAVE_SCHED_YIELD 1
 #endif
 
-// GOOGLE_HAVE_SEMAPHORE_H is defined when the system supports the <semaphore.h>
+// ABSL_HAVE_SEMAPHORE_H is defined when the system supports the <semaphore.h>
 // header and sem_open(3) family of functions as standardized in POSIX.1-2001.
 //
 // Note: While Apple does have <semaphore.h> for both iOS and macOS, it is
 // explicity deprecated and will cause build failures if enabled for those
 // systems.  We side-step the issue by not defining it here for Apple platforms.
-#if defined(__linux__) || defined(__ros__)
-#define GOOGLE_HAVE_SEMAPHORE_H 1
-#else
-#undef GOOGLE_HAVE_SEMAPHORE_H
-#endif
-
-// GOOGLE_HAVE_SETGID is defined on systems that provide the setgid(2) system
-// call as defined by POSIX.1-2001.
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-#define GOOGLE_HAVE_SETGID 1
-#else
-#undef GOOGLE_HAVE_SETGID
-#endif
-
-// GOOGLE_HAVE_SETUID is defined on systems that provide the setuid(2) system
-// call as defined by POSIX.1-2001.
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-#define GOOGLE_HAVE_SETUID 1
-#else
-#undef GOOGLE_HAVE_SETUID
-#endif
-
-// GOOGLE_HAVE_SIGINFO_T is defined when the implementation provides the
-// siginfo_t for the sigaction(2) interface, as standardized in POSIX.1-2001.
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
-    defined(__ros__)
-#define GOOGLE_HAVE_SIGINFO_T 1
-#else
-#undef GOOGLE_HAVE_SIGINFO_T
-#endif
-
-// ABI-specific features.
-#if defined(__x86_64__)
-// x86_64 System V/Intel C++ ABI-specific definitions.
-#elif defined(_M_X64)
-// x86_64 Win32 ABI-specific definitions.
-#elif defined(__aarch64__)
-// ARMv8 aarch64 EABI specific definitions.
-#elif defined(__arm__)
-// ARM EABI specific definitions.
-#elif defined(__ppc64__)
-// PowerPC64 ELF specific definitions.
-#elif defined(__ppc__)
-// PowerPC ELF specific definitions.
+#ifdef ABSL_HAVE_SEMAPHORE_H
+#error ABSL_HAVE_SEMAPHORE_H cannot be directly set
+#elif defined(__linux__) || defined(__ros__)
+#define ABSL_HAVE_SEMAPHORE_H 1
 #endif
 
 // Library-specific features.
-#if defined(__GOOGLE_GRTE_VERSION__)
+#ifdef ABSL_HAVE_ALARM
+#error ABSL_HAVE_ALARM cannot be directly set
+#elif defined(__GOOGLE_GRTE_VERSION__)
 // feature tests for Google's GRTE
-#define GOOGLE_HAVE_ALARM 1
+#define ABSL_HAVE_ALARM 1
 #elif defined(__GLIBC__)
 // feature test for glibc
-#define GOOGLE_HAVE_ALARM 1
+#define ABSL_HAVE_ALARM 1
 #elif defined(_MSC_VER)
 // feature tests for Microsoft's library
-#undef GOOGLE_HAVE_ALARM
 #elif defined(__native_client__)
-#undef GOOGLE_HAVE_ALARM
 #else
 // other standard libraries
-#define GOOGLE_HAVE_ALARM 1
-#endif
-
-// POSIX library support (not part of the C/C++ standard).
-#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 2
-#define GOOGLE_HAVE_FNMATCH 1
+#define ABSL_HAVE_ALARM 1
 #endif
 
 #if defined(_STLPORT_VERSION)
 #error "STLPort is not supported."
+#endif
+
+// -----------------------------------------------------------------------------
+// Endianness
+// -----------------------------------------------------------------------------
+// Define ABSL_IS_LITTLE_ENDIAN, ABSL_IS_BIG_ENDIAN.
+// Some compilers or system headers provide macros to specify endianness.
+// Unfortunately, there is no standard for the names of the macros or even of
+// the header files.
+// Reference: https://sourceforge.net/p/predef/wiki/Endianness/
+#if defined(ABSL_IS_BIG_ENDIAN) || defined(ABSL_IS_LITTLE_ENDIAN)
+#error "ABSL_IS_(BIG|LITTLE)_ENDIAN cannot be directly set."
+
+#elif defined(__GLIBC__) || defined(__linux__)
+// Operating systems that use the GNU C library generally provide <endian.h>
+// containing __BYTE_ORDER, __LITTLE_ENDIAN, __BIG_ENDIAN.
+#include <endian.h>
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define ABSL_IS_LITTLE_ENDIAN 1
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define ABSL_IS_BIG_ENDIAN 1
+#else  // __BYTE_ORDER != __LITTLE_ENDIAN && __BYTE_ORDER != __BIG_ENDIAN
+#error "Unknown endianness"
+#endif  // __BYTE_ORDER
+
+#elif defined(__APPLE__) && defined(__MACH__)
+// Apple has <machine/endian.h> containing BYTE_ORDER, BIG_ENDIAN,
+// LITTLE_ENDIAN.
+#include <machine/endian.h>  // NOLINT(build/include)
+
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define ABSL_IS_LITTLE_ENDIAN 1
+#elif BYTE_ORDER == BIG_ENDIAN
+#define ABSL_IS_BIG_ENDIAN 1
+#else  // BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN
+#error "Unknown endianness"
+#endif  // BYTE_ORDER
+
+#elif defined(_WIN32)
+// Assume Windows is little-endian.
+#define ABSL_IS_LITTLE_ENDIAN 1
+
+#elif defined(__LITTLE_ENDIAN__) || defined(__ARMEL__) ||                 \
+    defined(__THUMBEL__) || defined(__AARCH64EL__) || defined(_MIPSEL) || \
+    defined(__MIPSEL) || defined(__MIPSEL__)
+#define ABSL_IS_LITTLE_ENDIAN 1
+
+#elif defined(__BIG_ENDIAN__) || defined(__ARMEB__) ||                 \
+    defined(__THUMBEB__) || defined(__AARCH64EB__) || defined(_MIPSEB) || \
+    defined(__MIPSEB) || defined(__MIPSEB__)
+#define ABSL_IS_BIG_ENDIAN 1
+
+#else
+#error "absl endian detection needs to be set up on your platform."
+#endif
+
+// ABSL_HAVE_EXCEPTIONS is defined when exceptions are enabled.  Many
+// compilers support a "no exceptions" mode that disables exceptions.
+//
+// Generally, when ABSL_HAVE_EXCEPTIONS is not defined:
+//
+// - Code using `throw` and `try` may not compile.
+// - The `noexcept` specifier will still compile and behave as normal.
+// - The `noexcept` operator may still return `false`.
+//
+// For further details, consult the compiler's documentation.
+#ifdef ABSL_HAVE_EXCEPTIONS
+#error ABSL_HAVE_EXCEPTIONS cannot be directly set.
+
+#elif defined(__clang__)
+// TODO(user)
+//   Switch to using __cpp_exceptions when we no longer support versions < 3.6.
+// For details on this check, see:
+//   https://goo.gl/PilDrJ
+#if defined(__EXCEPTIONS) && __has_feature(cxx_exceptions)
+#define ABSL_HAVE_EXCEPTIONS 1
+#endif  // defined(__EXCEPTIONS) && __has_feature(cxx_exceptions)
+
+// Handle remaining special cases and default to exceptions being supported.
+#elif !(defined(__GNUC__) && (__GNUC__ < 5) && !defined(__EXCEPTIONS)) &&    \
+    !(defined(__GNUC__) && (__GNUC__ >= 5) && !defined(__cpp_exceptions)) && \
+    !(defined(_MSC_VER) && !defined(_CPPUNWIND))
+#define ABSL_HAVE_EXCEPTIONS 1
 #endif
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_CONFIG_H_

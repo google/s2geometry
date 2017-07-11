@@ -73,6 +73,12 @@ class IdSetLexicon {
   IdSetLexicon();
   ~IdSetLexicon();
 
+  // IdSetLexicon is copyable and moveable.
+  IdSetLexicon(IdSetLexicon const&);
+  IdSetLexicon& operator=(IdSetLexicon const&);
+  IdSetLexicon(IdSetLexicon&&);
+  IdSetLexicon& operator=(IdSetLexicon&&);
+
   // Clears all data from the lexicon.
   void Clear();
 
@@ -132,9 +138,6 @@ class IdSetLexicon {
   SequenceLexicon<int32> id_sets_;
 
   std::vector<int32> tmp_;  // temporary storage used during Add()
-
-  IdSetLexicon(IdSetLexicon const&) = delete;
-  IdSetLexicon& operator=(IdSetLexicon const&) = delete;
 };
 
 
@@ -192,6 +195,5 @@ template <class Container>
 int32 IdSetLexicon::Add(Container const& container) {
   return Add(std::begin(container), std::end(container));
 }
-
 
 #endif  // S2_ID_SET_LEXICON_H_

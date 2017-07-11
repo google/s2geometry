@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-#include "s2/third_party/absl/base/port.h"
+#include "s2/base/port.h"
 
 // Return a C++ string
 extern string StringPrintf(const char* format, ...)

@@ -26,7 +26,7 @@
 #include <type_traits>
 
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/third_party/absl/base/port.h"
+#include "s2/base/port.h"
 
 namespace gtl {
 
@@ -219,8 +219,7 @@ class EnumLogger {
 
 // Log a range using "policy".  For example:
 //
-//   LOG(INFO) << gtl::LogRange(start_pos, end_pos,
-//                                    gtl::LogMultiline());
+//   LOG(INFO) << gtl::LogRange(start_pos, end_pos, gtl::LogMultiline());
 //
 // The above example will print the range using newlines between
 // elements, enclosed in [] braces.

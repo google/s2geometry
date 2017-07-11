@@ -19,7 +19,18 @@
 #include <string>
 #include <vector>
 
-bool DictionaryParse(std::string const& encoded_str,
+#include "s2/third_party/absl/strings/string_view.h"
+
+// -------------------------------------------------------------------------
+// DictionaryParse
+//   This routine parses a common dictionary format (key and value separated
+//   by ':', entries separated by commas). This format is used for many
+//   complex commandline flags. It is also used to encode dictionaries for
+//   exporting them or writing them to a checkpoint. Returns a vector of
+//   <key, value> pairs. Returns true if there if no error in parsing, false
+//   otherwise.
+// -------------------------------------------------------------------------
+bool DictionaryParse(absl::string_view encoded_str,
                      std::vector<std::pair<std::string, std::string>>* items);
 
 #endif  // S2_STRINGS_SERIALIZE_H_

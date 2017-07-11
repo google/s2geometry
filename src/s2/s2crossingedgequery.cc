@@ -34,7 +34,7 @@ bool S2CrossingEdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
                                        vector<int>* edges) {
   if (!GetCandidates(a0, a1, shape, edges)) return false;
   int min_crossing_value = (type == CrossingType::ALL) ? 0 : 1;
-  S2EdgeUtil::CopyingEdgeCrosser crosser(a0, a1);
+  S2CopyingEdgeCrosser crosser(a0, a1);
   int out = 0, n = edges->size();
   for (int in = 0; in < n; ++in) {
     auto b = shape->edge((*edges)[in]);
@@ -54,7 +54,7 @@ bool S2CrossingEdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
                                        CrossingType type, EdgeMap* edge_map) {
   if (!GetCandidates(a0, a1, edge_map)) return false;
   int min_crossing_value = (type == CrossingType::ALL) ? 0 : 1;
-  S2EdgeUtil::CopyingEdgeCrosser crosser(a0, a1);
+  S2CopyingEdgeCrosser crosser(a0, a1);
   for (EdgeMap::iterator it = edge_map->begin(); it != edge_map->end(); ) {
     S2Shape const* shape = it->first;
     vector<int>* edges = &it->second;
@@ -158,8 +158,8 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
 // Set cells_ to the set of index cells intersected by an edge AB.
 void S2CrossingEdgeQuery::GetCells(S2Point const& a, S2Point const& b) {
   cells_.clear();
-  S2EdgeUtil::FaceSegmentVector segments;
-  S2EdgeUtil::GetFaceSegments(a, b, &segments);
+  S2::FaceSegmentVector segments;
+  S2::GetFaceSegments(a, b, &segments);
   for (auto const& segment : segments) {
     a_ = segment.a;
     b_ = segment.b;
@@ -199,7 +199,7 @@ bool S2CrossingEdgeQuery::GetCells(S2Point const& a, S2Point const& b,
                                    S2PaddedCell const& root,
                                    vector<S2ShapeIndexCell const*>* cells) {
   cells_.clear();
-  if (S2EdgeUtil::ClipToFace(a, b, root.id().face(), &a_, &b_)) {
+  if (S2::ClipToFace(a, b, root.id().face(), &a_, &b_)) {
     R2Rect edge_bound = R2Rect::FromPointPair(a_, b_);
     if (root.bound().Intersects(edge_bound)) {
       GetCells(root, edge_bound);
@@ -286,7 +286,7 @@ void S2CrossingEdgeQuery::SplitUBound(R2Rect const& edge_bound, double u,
                                       R2Rect child_bounds[2]) const {
   // See comments in S2ShapeIndex::ClipUBound.
   double v = edge_bound[1].Project(
-      S2EdgeUtil::InterpolateDouble(u, a_[0], b_[0], a_[1], b_[1]));
+      S2::InterpolateDouble(u, a_[0], b_[0], a_[1], b_[1]));
 
   // "diag_" indicates which diagonal of the bounding box is spanned by AB:
   // it is 0 if AB has positive slope, and 1 if AB has negative slope.
@@ -299,7 +299,7 @@ void S2CrossingEdgeQuery::SplitUBound(R2Rect const& edge_bound, double u,
 void S2CrossingEdgeQuery::SplitVBound(R2Rect const& edge_bound, double v,
                                       R2Rect child_bounds[2]) const {
   double u = edge_bound[0].Project(
-      S2EdgeUtil::InterpolateDouble(v, a_[1], b_[1], a_[0], b_[0]));
+      S2::InterpolateDouble(v, a_[1], b_[1], a_[0], b_[0]));
   int diag = (a_[0] > b_[0]) != (a_[1] > b_[1]);
   SplitBound(edge_bound, diag, u, 0, v, child_bounds);
 }

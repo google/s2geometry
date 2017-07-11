@@ -123,7 +123,7 @@
 #include <utility>
 #include <vector>
 
-#include "s2/third_party/absl/base/port.h"
+#include "s2/base/port.h"
 #include "s2/util/gtl/densehashtable.h"        // IWYU pragma: export
 #include "s2/util/gtl/libc_allocator_with_realloc.h"
 

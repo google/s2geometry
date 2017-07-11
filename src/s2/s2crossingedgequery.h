@@ -23,8 +23,8 @@
 
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/inlined_vector.h"
-#include "s2/util/btree/btree_map.h"  // Like std::map, but faster and smaller.
-#include "s2/fpcontractoff.h"
+#include "s2/util/btree/btree_map.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s2shapeindex.h"
@@ -56,7 +56,7 @@ class S2Shape;
 //     for (int edge : edges) {
 //       S2Point const& b0 = polyline->vertex(edge);
 //       S2Point const& b1 = polyline->vertex(edge) + 1);
-//       CHECK_GE(S2EdgeUtil::CrossingSign(a0, a1, b0, b1), 0);
+//       CHECK_GE(S2::CrossingSign(a0, a1, b0, b1), 0);
 //     }
 //   }
 // }

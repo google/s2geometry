@@ -69,7 +69,7 @@ class NthDerivativeCoder {
   };
 
   // Initialize a new NthDerivativeCoder of the given N.
-  NthDerivativeCoder(int n);
+  explicit NthDerivativeCoder(int n);
 
   // Encode the next value in the sequence.  Don't mix with Decode() calls.
   int32 Encode(int32 k);

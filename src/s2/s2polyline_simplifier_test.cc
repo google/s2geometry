@@ -116,7 +116,7 @@ TEST(S2PolylineSimplifier, TargetAndAvoid) {
 
 TEST(S2PolylineSimplifier, Precision) {
   // This is a rough upper bound on both the error in constructing the disc
-  // locations (i.e., S2EdgeUtil::InterpolateAtDistance, etc), and also on the
+  // locations (i.e., S2::InterpolateAtDistance, etc), and also on the
   // padding that S2PolylineSimplifier uses to ensure that its results are
   // conservative (i.e., the error calculated by GetSemiwidth).
   S1Angle const kMaxError = S1Angle::Radians(25 * DBL_EPSILON);
@@ -131,7 +131,7 @@ TEST(S2PolylineSimplifier, Precision) {
     S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
     S2Point src = S2Testing::RandomPoint();
     simplifier.Init(src);
-    S2Point dst = S2EdgeUtil::InterpolateAtDistance(
+    S2Point dst = S2::InterpolateAtDistance(
         S1Angle::Radians(S2Testing::rnd.RandDouble()),
         src, S2Testing::RandomPoint());
     S2Point n = S2::RobustCrossProd(src, dst).Normalize();
@@ -144,7 +144,7 @@ TEST(S2PolylineSimplifier, Precision) {
       S2Point a = ((1 - f) * src + f * dst).Normalize();
       S1Angle r = S1Angle::Radians(S2Testing::rnd.RandDouble());
       bool on_left = S2Testing::rnd.OneIn(2);
-      S2Point x = S2EdgeUtil::InterpolateAtDistance(r, a, on_left ? n : -n);
+      S2Point x = S2::InterpolateAtDistance(r, a, on_left ? n : -n);
       // We grow the radius slightly if we want to target the disc and shrink
       // it otherwise, *unless* we want targeting to fail for this disc, in
       // which case these actions are reversed.

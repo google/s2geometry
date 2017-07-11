@@ -24,8 +24,8 @@
 
 #include <glog/logging.h>
 #include "s2/third_party/absl/container/inlined_vector.h"
-#include "s2/util/btree/btree_set.h"  // Like std::set, but faster and smaller.
-#include "s2/fpcontractoff.h"
+#include "s2/util/btree/btree_set.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/priority_queue_sequence.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
@@ -95,7 +95,7 @@ class S2ClosestEdgeQuery {
   // Only find the "max_edges" closest edges.
   // This value may be changed between calls to FindClosestEdges().
   //
-  // Default value: numeric_limits<int>::max()
+  // DEFAULT: numeric_limits<int>::max()
   // REQUIRES: max_edges >= 1
   int max_edges() const;
   void set_max_edges(int max_edges);
@@ -106,7 +106,7 @@ class S2ClosestEdgeQuery {
   // greater than the limit.)  This value may be changed between calls to
   // FindClosestEdges().
   //
-  // Default value: S1Angle::Infinity().
+  // DEFAULT: S1Angle::Infinity()
   S1Angle max_distance() const;
   void set_max_distance(S1Angle max_distance);
 
@@ -119,7 +119,7 @@ class S2ClosestEdgeQuery {
   // "max_error" further away than E1 (and that satisfies all the remaining
   // search criteria, including max_distance).
   //
-  // Default value: S1Angle::Zero().
+  // DEFAULT: S1Angle::Zero()
   S1Angle max_error() const;
   void set_max_error(S1Angle max_error);
 
@@ -131,7 +131,7 @@ class S2ClosestEdgeQuery {
   void FindClosestEdges(S2Point const& target);
 
   // Find the closest edges to the given edge AB.  Otherwise similar to
-  // FindClosestEdgess().
+  // FindClosestEdges().
   void FindClosestEdgesToEdge(S2Point const& a, S2Point const& b);
 
   // Manually specify whether distances are computed using "brute force"
@@ -164,11 +164,6 @@ class S2ClosestEdgeQuery {
 
   // Returns the endpoints of the given result edge.
   S2Shape::Edge edge(int i) const;
-
-  // Returns pointers to the vertices of the given result edge.  Example usage:
-  //   S2Point const **v0, *v*1;
-  //   query.GetEdge(i, &v0, &v1);
-  void GetEdge(int i, S2Point const** v0, S2Point const** v1) const;
 
   // Returns the point on given result edge that is closest to the target.
   S2Point GetClosestPointOnEdge(int i) const;
@@ -204,8 +199,6 @@ class S2ClosestEdgeQuery {
   void AddInitialRange(S2ShapeIndex::Iterator const& first,
                        S2ShapeIndex::Iterator const& last);
 
-  // TODO(ericv): Should the Target classes be factored out somewhere so that
-  // they can be shared with the similar classes in S2ClosestPointQuery?
   class Target {
    public:
     virtual ~Target() {}
@@ -224,13 +217,13 @@ class S2ClosestEdgeQuery {
     S1Angle radius() const override { return S1Angle::Zero(); }
     bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
                            S1ChordAngle* min_dist) const override {
-      return S2EdgeUtil::UpdateMinDistance(point_, v0, v1, min_dist);
+      return S2::UpdateMinDistance(point_, v0, v1, min_dist);
     }
     S1ChordAngle GetDistance(S2Cell const& cell) const override {
       return cell.GetDistance(point_);
     }
     S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const override {
-      return S2EdgeUtil::Project(point_, edge.v0, edge.v1);
+      return S2::Project(point_, edge.v0, edge.v1);
     }
    private:
     S2Point point_;
@@ -243,13 +236,13 @@ class S2ClosestEdgeQuery {
     S1Angle radius() const override { return 0.5 * S1Angle(a_, b_); }
     bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
                            S1ChordAngle* min_dist) const override {
-      return S2EdgeUtil::UpdateEdgePairMinDistance(a_, b_, v0, v1, min_dist);
+      return S2::UpdateEdgePairMinDistance(a_, b_, v0, v1, min_dist);
     }
     S1ChordAngle GetDistance(S2Cell const& cell) const override {
       return cell.GetDistanceToEdge(a_, b_);
     }
     S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const override {
-      return S2EdgeUtil::GetEdgePairClosestPoints(
+      return S2::GetEdgePairClosestPoints(
           a_, b_, edge.v0, edge.v1).second;
     }
    private:
@@ -443,11 +436,6 @@ inline S1Angle S2ClosestEdgeQuery::distance(int i) const {
 
 inline S2Shape::Edge S2ClosestEdgeQuery::edge(int i) const {
   return index_->shape(shape_id(i))->edge(edge_id(i));
-}
-
-inline void S2ClosestEdgeQuery::GetEdge(int i, S2Point const** v0,
-                                        S2Point const** v1) const {
-  index_->shape(shape_id(i))->GetEdge(edge_id(i), v0, v1);
 }
 
 inline void S2ClosestEdgeQuery::FindClosestEdge(S2Point const& target) {

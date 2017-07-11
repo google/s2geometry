@@ -409,6 +409,13 @@ TEST(S2PolylineShape, EmptyPolyline) {
   EXPECT_EQ(0, shape.num_chains());
 }
 
+TEST(S2PolylineOwningShape, Ownership) {
+  // Debug mode builds will catch any memory leak below.
+  vector<S2Point> vertices;
+  auto polyline = absl::MakeUnique<S2Polyline>(vertices);
+  S2Polyline::OwningShape shape(std::move(polyline));
+}
+
 void TestNearlyCovers(string const& a_str, string const& b_str,
                       double max_error_degrees, bool expect_b_covers_a,
                       bool expect_a_covers_b) {

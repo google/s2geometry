@@ -36,7 +36,7 @@
 #include <string>
 
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/third_party/absl/base/port.h"
+#include "s2/base/port.h"
 #include "s2/util/bits/bits.h"
 
 // Just a namespace, not a real class
@@ -427,28 +427,28 @@ inline void Varint::Append64(string* s, uint64 value) {
 
 inline char* Varint::Encode32Inline(char* sptr, uint32 v) {
   // Operate on characters as unsigneds
-  unsigned char* ptr = reinterpret_cast<unsigned char*>(sptr);
-  static const int B = 128;
+  uint8* ptr = reinterpret_cast<uint8*>(sptr);
+  static const uint32 B = 128;
   if (v < (1<<7)) {
-    *(ptr++) = v;
+    *(ptr++) = static_cast<uint8>(v);
   } else if (v < (1<<14)) {
-    *(ptr++) = v | B;
-    *(ptr++) = v>>7;
+    *(ptr++) = static_cast<uint8>(v | B);
+    *(ptr++) = static_cast<uint8>(v>>7);
   } else if (v < (1<<21)) {
-    *(ptr++) = v | B;
-    *(ptr++) = (v>>7) | B;
-    *(ptr++) = v>>14;
+    *(ptr++) = static_cast<uint8>(v | B);
+    *(ptr++) = static_cast<uint8>((v>>7) | B);
+    *(ptr++) = static_cast<uint8>(v>>14);
   } else if (v < (1<<28)) {
-    *(ptr++) = v | B;
-    *(ptr++) = (v>>7) | B;
-    *(ptr++) = (v>>14) | B;
-    *(ptr++) = v>>21;
+    *(ptr++) = static_cast<uint8>(v | B);
+    *(ptr++) = static_cast<uint8>((v>>7) | B);
+    *(ptr++) = static_cast<uint8>((v>>14) | B);
+    *(ptr++) = static_cast<uint8>(v>>21);
   } else {
-    *(ptr++) = v | B;
-    *(ptr++) = (v>>7) | B;
-    *(ptr++) = (v>>14) | B;
-    *(ptr++) = (v>>21) | B;
-    *(ptr++) = v>>28;
+    *(ptr++) = static_cast<uint8>(v | B);
+    *(ptr++) = static_cast<uint8>((v>>7) | B);
+    *(ptr++) = static_cast<uint8>((v>>14) | B);
+    *(ptr++) = static_cast<uint8>((v>>21) | B);
+    *(ptr++) = static_cast<uint8>(v>>28);
   }
   return reinterpret_cast<char*>(ptr);
 }

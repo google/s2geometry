@@ -64,7 +64,7 @@ class S2EdgeTessellator {
   //
   // This method can be called multiple times with the same output vector to
   // convert an entire polyline or loop.  All vertices of the first edge are
-  // appended, but the first vertex of subsequent edges is omitted (and is
+  // appended, but the first vertex of each subsequent edge is omitted (and is
   // required to match that last vertex of the previous edge).
   //
   // Note that to construct an S2Loop, you must call vertices->pop_back() at

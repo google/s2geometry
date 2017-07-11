@@ -22,6 +22,11 @@
 //
 // WARNING: use of many of the constructs in this header will count as "complex
 // template metaprogramming", so before proceeding, please carefully consider
+//
+// WARNING: using template metaprogramming to detect or depend on API
+// features is brittle and not guaranteed. Neither the standard library nor
+// Abseil provides any guarantee that APIs are stable in the face of TMP.
+// Use with caution.
 
 #ifndef S2_THIRD_PARTY_ABSL_META_TYPE_TRAITS_H_
 #define S2_THIRD_PARTY_ABSL_META_TYPE_TRAITS_H_
@@ -113,11 +118,11 @@ template <typename T>
 struct is_trivially_destructible
     : std::integral_constant<bool, __has_trivial_destructor(T) &&
                                        std::is_destructible<T>::value> {
-#ifdef GOOGLE_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
+#ifdef ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
   static_assert(std::is_trivially_destructible<T>::value ==
                     is_trivially_destructible::value,
                 "Not compliant with std::is_trivially_destructible");
-#endif  // GOOGLE_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
+#endif  // ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
 };
 
 // According to C++ standard, Section: 20.15.4.3 [meta.unary.prop]
@@ -148,11 +153,11 @@ struct is_trivially_default_constructible
                              __has_trivial_constructor(T) &&
                                  std::is_default_constructible<T>::value &&
                                  is_trivially_destructible<T>::value> {
-#ifdef GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
+#ifdef ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
   static_assert(std::is_trivially_default_constructible<T>::value ==
                     is_trivially_default_constructible::value,
                 "Not compliant with std::is_trivially_default_constructible");
-#endif  // GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
+#endif  // ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
 };
 
 // "T obj(declval<const T&>());" need to be well-formed and not call any
@@ -163,11 +168,11 @@ struct is_trivially_copy_constructible
     : std::integral_constant<bool, __has_trivial_copy(T) &&
                                        std::is_copy_constructible<T>::value &&
                                        is_trivially_destructible<T>::value> {
-#ifdef GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
+#ifdef ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
   static_assert(std::is_trivially_copy_constructible<T>::value ==
                     is_trivially_copy_constructible::value,
                 "Not compliant with std::is_trivially_copy_constructible");
-#endif  // GOOGLE_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
+#endif  // ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
 };
 
 // is_assignable<T, U>::value is true if the expression "declval<T>() =
@@ -179,11 +184,11 @@ template <typename T>
 struct is_trivially_copy_assignable
     : std::integral_constant<bool, __has_trivial_assign(T) &&
                                        std::is_copy_assignable<T>::value> {
-#ifdef GOOGLE_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
+#ifdef ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
   static_assert(std::is_trivially_copy_assignable<T>::value ==
                     is_trivially_copy_assignable::value,
                 "Not compliant with std::is_trivially_copy_assignable");
-#endif  // GOOGLE_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
+#endif  // ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
 };
 
 ///////////////////////////////////

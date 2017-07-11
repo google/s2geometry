@@ -135,4 +135,21 @@ TEST(MakeLaxPolygon, FullWithHole) {
   EXPECT_EQ(1, shape->num_edges());
 }
 
+void TestS2ShapeIndex(string const& str) {
+  EXPECT_EQ(str, s2textformat::ToString(*s2textformat::MakeIndex(str)));
+}
+
+TEST(ToString, S2ShapeIndex) {
+  TestS2ShapeIndex("# #");
+  TestS2ShapeIndex("0:0 # #");
+  TestS2ShapeIndex("0:0 | 1:0 # #");
+  TestS2ShapeIndex("0:0 | 1:0 # #");
+  TestS2ShapeIndex("# 0:0, 0:0 #");
+  TestS2ShapeIndex("# 0:0, 0:0 | 1:0, 2:0 #");
+  TestS2ShapeIndex("# # 0:0");
+  TestS2ShapeIndex("# # 0:0, 0:1");
+  TestS2ShapeIndex("# # 0:0, 0:1, 1:0");
+  TestS2ShapeIndex("# # 0:0, 0:1, 1:0; 2:2");
+}
+
 }  // namespace

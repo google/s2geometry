@@ -26,6 +26,7 @@
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2shapeutil_edge_iterator.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
@@ -231,13 +232,13 @@ TEST(LaxPolygon, PartiallyDegenerateLoops) {
   }
 }
 
-void CompareS2LoopToShape(S2Loop const& loop, S2Shape* shape) {
+void CompareS2LoopToShape(S2Loop const& loop, unique_ptr<S2Shape> shape) {
   S2ShapeIndex index;
-  index.Add(shape);
+  index.Add(std::move(shape));
   S2Cap cap = loop.GetCapBound();
   for (int iter = 0; iter < 100; ++iter) {
     S2Point point = S2Testing::SamplePoint(cap);
-    EXPECT_EQ(loop.Contains(point), index.ShapeContains(shape, point));
+    EXPECT_EQ(loop.Contains(point), index.ShapeContains(index.shape(0), point));
   }
 }
 
@@ -251,13 +252,13 @@ TEST(LaxPolygon, CompareToS2Loop) {
         S2Testing::GetRandomFrameAt(center), S1Angle::Degrees(5)));
 
     // Compare S2Loop to LaxLoop.
-    CompareS2LoopToShape(*loop, new LaxLoop(*loop));
+    CompareS2LoopToShape(*loop, absl::MakeUnique<LaxLoop>(*loop));
 
     // Compare S2Loop to LaxPolygon.
     vector<LaxPolygon::Loop> loops(
         1, vector<S2Point>(&loop->vertex(0),
                            &loop->vertex(0) + loop->num_vertices()));
-    CompareS2LoopToShape(*loop, new LaxPolygon(loops));
+    CompareS2LoopToShape(*loop, absl::MakeUnique<LaxPolygon>(loops));
   }
 }
 
@@ -376,26 +377,6 @@ TEST(VertexIdLaxLoop, InvertedLoop) {
   EXPECT_TRUE(shape.contains_origin());
 }
 
-TEST(S2LoopOwningShape, Ownership) {
-  // Debug mode builds will catch any memory leak below.
-  auto loop = absl::MakeUnique<S2Loop>(S2Loop::kEmpty());
-  S2LoopOwningShape shape(std::move(loop));
-}
-
-TEST(S2PolygonOwningShape, Ownership) {
-  // Debug mode builds will catch any memory leak below.
-  vector<unique_ptr<S2Loop>> loops;
-  auto polygon = absl::MakeUnique<S2Polygon>(std::move(loops));
-  S2PolygonOwningShape shape(std::move(polygon));
-}
-
-TEST(S2PolylineOwningShape, Ownership) {
-  // Debug mode builds will catch any memory leak below.
-  vector<S2Point> vertices;
-  auto polyline = absl::MakeUnique<S2Polyline>(vertices);
-  S2PolylineOwningShape shape(std::move(polyline));
-}
-
 // A set of edge pairs within an S2ShapeIndex.
 using EdgePairVector = std::vector<std::pair<ShapeEdgeId, ShapeEdgeId>>;
 
@@ -414,51 +395,16 @@ EdgePairVector GetCrossings(S2ShapeIndex const& index, CrossingType type) {
   return edge_pairs;
 }
 
-// An iterator that advances through all edges in an S2ShapeIndex.
-// TODO(ericv): Consider moving this to S2ShapeIndex, or s2shapeutil?
-class EdgeIterator {
- public:
-  explicit EdgeIterator(S2ShapeIndex const& index)
-      : index_(index), shape_id_(-1), num_edges_(0), edge_id_(-1) {
-    Next();
-  }
-  int32 shape_id() const { return shape_id_; }
-  int32 edge_id() const { return edge_id_; }
-  ShapeEdgeId shape_edge_id() const {
-    return ShapeEdgeId(shape_id_, edge_id_);
-  }
-  S2Shape::Edge edge() {
-    return index_.shape(shape_id_)->edge(edge_id_);
-  }
-  bool Done() const {
-    return shape_id() >= index_.num_shape_ids();
-  }
-  void Next() {
-    while (++edge_id_ >= num_edges_) {
-      if (++shape_id_ >= index_.num_shape_ids()) break;
-      S2Shape* shape = index_.shape(shape_id_);
-      num_edges_= (shape == nullptr) ? 0 : shape->num_edges();
-      edge_id_ = -1;
-    }
-  }
-
- private:
-  S2ShapeIndex const& index_;
-  int32 shape_id_;
-  int32 num_edges_;
-  int32 edge_id_;
-};
-
 EdgePairVector GetCrossingEdgePairsBruteForce(S2ShapeIndex const& index,
                                               CrossingType type) {
   EdgePairVector result;
   int min_sign = (type == CrossingType::ALL) ? 0 : 1;
-  for (EdgeIterator a_iter(index); !a_iter.Done(); a_iter.Next()) {
+  for (EdgeIterator a_iter(&index); !a_iter.Done(); a_iter.Next()) {
     auto a = a_iter.edge();
     EdgeIterator b_iter = a_iter;
     for (b_iter.Next(); !b_iter.Done(); b_iter.Next()) {
       auto b = b_iter.edge();
-      if (S2EdgeUtil::CrossingSign(a.v0, a.v1, b.v0, b.v1) >= min_sign) {
+      if (S2::CrossingSign(a.v0, a.v1, b.v0, b.v1) >= min_sign) {
         result.push_back(
             std::make_pair(a_iter.shape_edge_id(), b_iter.shape_edge_id()));
       }
@@ -501,14 +447,14 @@ TEST(GetCrossingEdgePairs, NoIntersections) {
 TEST(GetCrossingEdgePairs, EdgeGrid) {
   int const kGridSize = 10;  // (kGridSize + 1) * (kGridSize + 1) crossings
   S2ShapeIndex index;
-  EdgeVectorShape* shape = new EdgeVectorShape;
+  auto shape = absl::MakeUnique<EdgeVectorShape>();
   for (int i = 0; i <= kGridSize; ++i) {
     shape->Add(S2LatLng::FromDegrees(0, i).ToPoint(),
               S2LatLng::FromDegrees(kGridSize, i).ToPoint());
     shape->Add(S2LatLng::FromDegrees(i, 0).ToPoint(),
               S2LatLng::FromDegrees(i, kGridSize).ToPoint());
   }
-  index.Add(shape);
+  index.Add(std::move(shape));
   TestGetCrossingEdgePairs(index, CrossingType::ALL);
   TestGetCrossingEdgePairs(index, CrossingType::INTERIOR);
 }

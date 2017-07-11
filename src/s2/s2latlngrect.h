@@ -23,7 +23,7 @@
 #include <iostream>
 
 #include <glog/logging.h>
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -140,7 +140,8 @@ class S2LatLngRect final : public S2Region {
   bool is_inverted() const { return lng_.is_inverted(); }
 
   // Return the k-th vertex of the rectangle (k = 0,1,2,3) in CCW order (lower
-  // left, lower right, upper right, upper left).
+  // left, lower right, upper right, upper left).  For convenience, the
+  // argument is reduced modulo 4 to the range [0..3].
   S2LatLng GetVertex(int k) const;
 
   // Return the center of the rectangle in latitude-longitude space

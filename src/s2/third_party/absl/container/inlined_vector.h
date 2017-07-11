@@ -13,15 +13,25 @@
 // limitations under the License.
 //
 
-// An InlinedVector<T,N,A> is like a std::vector<T,A>, except that storage
-// for sequences of length <= N are provided inline without requiring
-// any heap allocation.  Typically N is very small (e.g., 4) so that
-// sequences that are expected to be short do not require allocations.
+// -----------------------------------------------------------------------------
+// File: inlined_vector.h
+// -----------------------------------------------------------------------------
 //
-// NOTE: We steal one bit from the size storage so the maximum size of the
-// container is (std::numeric_limits<size_t>::max() / 2).
-// It is not relevant where size_t is 64-bits, but it might be reached when
-// size_t is 32-bits.
+// This header file contains the declaration and definition of an "inlined
+// vector" which behaves in an equivalent fashion to a `std::vector`, except
+// that storage for small sequences of the vector are provided inline without
+// requiring any heap allocation.
+
+// An `absl::InlinedVector<T,N>` specifies the size N at which to inline as one
+// of its template parameters. Vectors of length <= N are provided inline.
+// Typically N is very small (e.g., 4) so that sequences that are expected to be
+// short do not require allocations.
+
+// An `absl::InlinedVector` does not usually require a specific allocator; if
+// the inlined vector grows beyond its initial constraints, it will need to
+// allocate (as any normal `std::vector` would) and it will generally use the
+// default allocator in that case; optionally, a custom allocator may be
+// specified using an `absl::InlinedVector<T,N,A>` construction.
 
 #ifndef S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_
 #define S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_
@@ -46,8 +56,18 @@ DEFINE_GDB_AUTO_SCRIPT("devtools/gdb/component/core/inlined_vector.py")
 namespace absl {
 
 // TODO(b/34147068): Short-term during migration of N to size_t.
-using InlinedVectorNType = int;
+using InlinedVectorNType = size_t;
 
+// -----------------------------------------------------------------------------
+// InlinedVector
+// -----------------------------------------------------------------------------
+//
+// An `absl::InlinedVector` is designed to be a drop-in replacement for
+// `std::vector` for use cases where the vector's size is sufficiently small
+// that it can be inlined. If the inlined vector does grow beyond its estimated
+// size, it will trigger an initial allocation on the heap, and will behave as a
+// `std:vector`. The API of the `absl::InlinedVector` within this file is
+// designed to cover the same API footprint as covered by `std::vector`.
 template <typename T, InlinedVectorNType N, typename A = std::allocator<T> >
 class InlinedVector {
   using AllocatorTraits = std::allocator_traits<A>;
@@ -158,6 +178,10 @@ class InlinedVector {
     return *this;
   }
 
+  // InlinedVector::assign()
+  //
+  // Replaces the contents of the inlined vector with copies of those in the
+  // iterator range [first, last).
   template <class InputIterator>
   void assign(InputIterator first, InputIterator last,
               typename std::enable_if<
@@ -165,10 +189,14 @@ class InlinedVector {
     AssignRange(first, last);
   }
 
+  // Overload of `InlinedVector::assign()` to take values from elements of an
+  // initializer list
   void assign(std::initializer_list<value_type> init) {
     AssignRange(init.begin(), init.end());
   }
 
+  // Overload of `InlinedVector::assign()` to replace the first `n` elements of
+  // the inlined vector with `elem` values.
   void assign(size_type n, const value_type& elem) {
     if (n <= size()) {  // Possibly shrink
       std::fill_n(begin(), n, elem);
@@ -188,33 +216,56 @@ class InlinedVector {
     }
   }
 
+  // InlinedVector::size()
+  //
+  // Returns the number of elements in the inlined vector.
   size_type size() const noexcept { return tag().size(); }
 
+  // InlinedVector::empty()
+  //
+  // Checks if the inlined vector has no elements.
   bool empty() const noexcept { return (size() == 0); }
 
-  // Return number of elements that can be stored in vector
-  // without requiring a reallocation of underlying memory
+  // InlinedVector::capacity()
+  //
+  // Returns the number of elements that can be stored in an inlined vector
+  // without requiring a reallocation of underlying memory. Note that for
+  // most inlined vectors, `capacity()` should equal its initial size `N`; for
+  // inlined vectors which exceed this capacity, they will no longer be inlined,
+  // and `capacity()` will equal its capacity on the allocated heap.
   size_type capacity() const noexcept {
     return allocated() ? allocation().capacity() : N;
   }
 
-  // Return the maximum number of elements the vector can hold
+  // InlinedVector::max_size()
+  //
+  // Returns the maximum number of elements the vector can hold.
   size_type max_size() const noexcept {
-    // Since we steal one bit from the size storage, the maximum size of the
-    // container that we can express is half of the max for our size type.
+    // One bit of the size storage is used to indicate whether the inlined
+    // vector is allocated; as a result, the maximum size of the container that
+    // we can express is half of the max for our size type.
     return std::numeric_limits<size_type>::max() / 2;
   }
 
-  // Return a pointer to the underlying array.
-  // Only result[0,size()-1] are defined.
+  // InlinedVector::data()
+  //
+  // Returns a const T* pointer to elements of the inlined vector. This pointer
+  // can be used to access (but not modify) the contained elements.
+  // Only results within the range `[0,size())` are defined.
   const_pointer data() const noexcept {
     return allocated() ? allocated_space() : inlined_space();
   }
+
+  // Overload of InlinedVector::data() to return a T* pointer to elements of the
+  // inlined vector. This pointer can be used to access and modify the contained
+  // elements.
   pointer data() noexcept {
     return allocated() ? allocated_space() : inlined_space();
   }
 
-  // Remove all elements
+  // InlinedVector::clear()
+  //
+  // Removes all elements from the inlined vector.
   void clear() noexcept {
     size_type s = size();
     if (allocated()) {
@@ -226,48 +277,69 @@ class InlinedVector {
     tag() = Tag();
   }
 
-  // Return the ith element
-  // REQUIRES: 0 <= i < size()
+  // InlinedVector::at()
+  //
+  // Returns the ith element of an inlined vector.
   const value_type& at(size_type i) const {
     assert(i < size());
     return data()[i];
   }
+
+  // InlinedVector::operator[]
+  //
+  // Returns the ith element of an inlined vector using the array operator.
   const value_type& operator[](size_type i) const {
     assert(i < size());
     return data()[i];
   }
 
-  // Return a non-const reference to the ith element
-  // REQUIRES: 0 <= i < size()
+  // Overload of InlinedVector::at() to return the ith element of an inlined
+  // vector.
   value_type& at(size_type i) {
     assert(i < size());
     return data()[i];
   }
+
+  // Overload of InlinedVector::operator[] to return the ith element of an
+  // inlined vector.
   value_type& operator[](size_type i) {
     assert(i < size());
     return data()[i];
   }
 
+  // InlinedVector::back()
+  //
+  // Returns a reference to the last element of an inlined vector.
   value_type& back() {
     assert(!empty());
     return at(size() - 1);
   }
 
+  // Overload of InlinedVector::back() returns a reference to the last element
+  // of an inlined vector of const values.
   const value_type& back() const {
     assert(!empty());
     return at(size() - 1);
   }
 
+  // InlinedVector::front()
+  //
+  // Returns a reference to the first element of an inlined vector.
   value_type& front() {
     assert(!empty());
     return at(0);
   }
 
+  // Overload of InlinedVector::front() returns a reference to the first element
+  // of an inlined vector of const values.
   const value_type& front() const {
     assert(!empty());
     return at(0);
   }
 
+  // InlinedVector::emplace_back()
+  //
+  // Constructs and appends an object to the inlined vector.
   template <typename... Args>
   void emplace_back(Args&&... args) {
     size_type s = size();
@@ -287,13 +359,18 @@ class InlinedVector {
     }
   }
 
-  // Append t to the vector.
-  // Increases size() by one.
-  // Amortized complexity: O(1)
-  // Worst-case complexity: O(size())
+  // InlinedVector::push_back()
+  //
+  // Appends a const element to the inlined vector.
   void push_back(const value_type& t) { emplace_back(t); }
+
+  // Overload of InlinedVector::push_back() to append a move-only element to the
+  // inlined vector.
   void push_back(value_type&& t) { emplace_back(std::move(t)); }
 
+  // InlinedVector::pop_back()
+  //
+  // Removes the last element (which is destroyed) in the inlined vector.
   void pop_back() {
     assert(!empty());
     size_type s = size();
@@ -306,49 +383,110 @@ class InlinedVector {
     }
   }
 
-  // Resizes the vector to contain "n" elements.
-  // If "n" is smaller than the initial size, extra elements are destroyed.
-  // If "n" is larger than the initial size, enough copies of "elem"
-  // are appended to increase the size to "n". If "elem" is omitted,
-  // new elements are value-initialized.
+  // InlinedVector::resize()
+  //
+  // Resizes the inlined vector to contain `n` elements. If `n` is smaller than
+  // the inlined vector's current size, extra elements are destroyed. If `n` is
+  // larger than the initial size, new elements are value-initialized.
   void resize(size_type n);
+
+  // Overload of InlinedVector::resize() to resize the inlined vector to contain
+  // `n` elements. If `n` is larger than the current size, enough copies of
+  // `elem` are appended to increase its size to `n`.
   void resize(size_type n, const value_type& elem);
 
+  // InlinedVector::begin()
+  //
+  // Returns an iterator to the beginning of the inlined vector.
   iterator begin() noexcept { return data(); }
+
+  // Overload of InlinedVector::begin() for returning a const iterator to the
+  // beginning of the inlined vector.
   const_iterator begin() const noexcept { return data(); }
+
+  // InlinedVector::cbegin()
+  //
+  // Returns a const iterator to the beginning of the inlined vector.
   const_iterator cbegin() const noexcept { return begin(); }
 
+  // InlinedVector::end()
+  //
+  // Returns an iterator to the end of the inlined vector.
   iterator end() noexcept { return data() + size(); }
+
+  // Overload of InlinedVector::end() for returning a const iterator to the end
+  // of the inlined vector.
   const_iterator end() const noexcept { return data() + size(); }
+
+  // InlinedVector::cend()
+  //
+  // Returns a const iterator to the end of the inlined vector.
   const_iterator cend() const noexcept { return end(); }
 
+  // InlinedVector::rbegin()
+  //
+  // Returns a reverse iterator from the end of the inlined vector.
   reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+
+  // Overload of InlinedVector::rbegin() for returning a const reverse iterator
+  // from the end of the inlined vector.
   const_reverse_iterator rbegin() const noexcept {
     return const_reverse_iterator(end());
   }
+
+  // InlinedVector::crbegin()
+  //
+  // Returns a const reverse iterator from the end of the inlined vector.
   const_reverse_iterator crbegin() const noexcept { return rbegin(); }
 
+  // InlinedVector::rend()
+  //
+  // Returns a reverse iterator from the beginning of the inlined vector.
   reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+
+  // Overload of InlinedVector::rend() for returning a const reverse iterator
+  // from the beginning of the inlined vector.
   const_reverse_iterator rend() const noexcept {
     return const_reverse_iterator(begin());
   }
+
+  // InlinedVector::crend()
+  //
+  // Returns a reverse iterator from the beginning of the inlined vector.
   const_reverse_iterator crend() const noexcept { return rend(); }
 
+  // InlinedVector::emplace()
+  //
+  // Constructs and inserts an object to the inlined vector at the given
+  // `position`, returning an iterator pointing to the newly emplaced element.
   template <typename... Args>
   iterator emplace(const_iterator position, Args&&... args);
 
-  // Inserts the specified elements before the specified position
+  // InlinedVector::insert()
+  //
+  // Inserts an element of the specified value at `position`, returning an
+  // iterator pointing to the newly inserted element.
   iterator insert(const_iterator position, const value_type& v) {
     return emplace(position, v);
   }
+
+  // Overload of InlinedVector::insert() for inserting an element of the
+  // specified rvalue, returning an iterator pointing to the newly inserted
+  // element.
   iterator insert(const_iterator position, value_type&& v) {
     return emplace(position, std::move(v));
   }
+
+  // Overload of InlinedVector::insert() for inserting `n` elements of the
+  // specified value at `position`, returning an iterator pointing to the first
+  // of the newly inserted elements.
   iterator insert(const_iterator position, size_type n, const value_type& v) {
     return InsertWithCount(position, n, v);
   }
-  // The default template parameter disambiguates the two three-argument
-  // overloads of insert().
+
+  // Overload of `InlinedVector::insert()` to disambiguate the two
+  // three-argument overloads of `insert()`, returning an iterator pointing to
+  // the first of the newly inserted elements.
   template <class InputIterator,
             typename = typename std::enable_if<std::is_convertible<
                 typename std::iterator_traits<InputIterator>::iterator_category,
@@ -359,11 +497,20 @@ class InlinedVector {
         typename std::iterator_traits<InputIterator>::iterator_category;
     return InsertWithRange(position, first, last, IterType());
   }
+
+  // Overload of InlinedVector::insert() for inserting a list of elements at
+  // `position`, returning an iterator pointing to the first of the newly
+  // inserted elements.
   iterator insert(const_iterator position,
                   std::initializer_list<value_type> init) {
     return insert(position, init.begin(), init.end());
   }
 
+  // InlinedVector::erase()
+  //
+  // Erases the element at `position` of the inlined vector, returning an
+  // iterator pointing to the following element or the container's end if the
+  // last element was erased.
   iterator erase(const_iterator position) {
     assert(position >= begin());
     assert(position < end());
@@ -374,11 +521,23 @@ class InlinedVector {
     return pos;
   }
 
+  // Overload of InlinedVector::erase() for erasing all elements in the
+  // iteraror range [first, last) in the inlined vector, returning an iterator
+  // pointing to the first element following the range erased, or the
+  // container's end if range included the container's last element.
   iterator erase(const_iterator first, const_iterator last);
 
-  // Enlarges the underlying representation so it can hold at least
-  // "n" elements without reallocation.
-  // Does not change size() or the actual contents of the vector.
+  // InlinedVector::reserve()
+  //
+  // Enlarges the underlying representation of the inlined vector so it can hold
+  // at least `n` elements. This method does not change `size()` or the actual
+  // contents of the vector.
+  //
+  // Note that if `n` does not exceed the inlined vector's initial size `N`,
+  // `reserve()` will have no effect; if it does exceed its initial size,
+  // `reserve()` will trigger an initial allocation and move the inlined vector
+  // onto the heap. If the vector already exists on the heap and the requested
+  // size exceeds it, a reallocation will be performed.
   void reserve(size_type n) {
     if (n > capacity()) {
       // Make room for new elements
@@ -386,10 +545,14 @@ class InlinedVector {
     }
   }
 
-  // Swap the contents of *this with other.
-  // REQUIRES: value_type is swappable and copyable.
+  // InlinedVector::swap()
+  //
+  // Swaps the contents of this inlined vector with the contents of `other`.
   void swap(InlinedVector& other);
 
+  // InlinedVector::get_allocator()
+  //
+  // Returns the allocator of this inlined vector.
   allocator_type get_allocator() const { return allocator(); }
 
  private:
@@ -602,51 +765,83 @@ class InlinedVector {
   } rep_;
 };
 
+// -----------------------------------------------------------------------------
+// InlinedVector Non-Member Functions
+// -----------------------------------------------------------------------------
+
+// swap()
+//
+// Swaps the contents of two inlined vectors. This convenience function
+// simply calls InlinedVector::swap(other_inlined_vector).
 template <typename T, InlinedVectorNType N, typename A>
 void swap(InlinedVector<T, N, A>& a,
           InlinedVector<T, N, A>& b) noexcept(noexcept(a.swap(b))) {
   a.swap(b);
 }
 
+// operator==()
+//
+// Tests the equivalency of the contents of two inlined vectors.
 template <typename T, InlinedVectorNType N, typename A>
 bool operator==(const InlinedVector<T, N, A>& a,
                 const InlinedVector<T, N, A>& b) {
   return absl::equal(a.begin(), a.end(), b.begin(), b.end());
 }
 
+// operator!=()
+//
+// Tests the inequality of the contents of two inlined vectors.
 template <typename T, InlinedVectorNType N, typename A>
 bool operator!=(const InlinedVector<T, N, A>& a,
                 const InlinedVector<T, N, A>& b) {
   return !(a == b);
 }
 
+// operator<()
+//
+// Tests whether the contents of one inlined vector are less than the contents
+// of another through a lexicographical comparison operation.
 template <typename T, InlinedVectorNType N, typename A>
 bool operator<(const InlinedVector<T, N, A>& a,
                const InlinedVector<T, N, A>& b) {
   return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
 }
 
+// operator>()
+//
+// Tests whether the contents of one inlined vector are greater than the
+// contents of another through a lexicographical comparison operation.
 template <typename T, InlinedVectorNType N, typename A>
 bool operator>(const InlinedVector<T, N, A>& a,
                const InlinedVector<T, N, A>& b) {
   return b < a;
 }
 
+// operator<=()
+//
+// Tests whether the contents of one inlined vector are less than or equal to
+// the contents of another through a lexicographical comparison operation.
 template <typename T, InlinedVectorNType N, typename A>
 bool operator<=(const InlinedVector<T, N, A>& a,
                 const InlinedVector<T, N, A>& b) {
   return !(b < a);
 }
 
+// operator>=()
+//
+// Tests whether the contents of one inlined vector are greater than or equal to
+// the contents of another through a lexicographical comparison operation.
 template <typename T, InlinedVectorNType N, typename A>
 bool operator>=(const InlinedVector<T, N, A>& a,
                 const InlinedVector<T, N, A>& b) {
   return !(a < b);
 }
 
-
-// ========================================
-// Implementation
+// -----------------------------------------------------------------------------
+// Implementation of InlinedVector
+// -----------------------------------------------------------------------------
+//
+// Do not depend on any implementation details below this line.
 
 template <typename T, InlinedVectorNType N, typename A>
 InlinedVector<T, N, A>::InlinedVector(const InlinedVector& v)
@@ -1095,6 +1290,7 @@ auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
   return begin() + index;
 }
 
+// Overload of InlinedVector::InsertWithRange()
 template <typename T, InlinedVectorNType N, typename A>
 template <typename ForwardIter>
 auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
@@ -1116,6 +1312,7 @@ auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
   tag().add_size(n);
   return it_pair.first;
 }
+
 }  // namespace absl
 
 // TODO(user): Delete temporary aliases after namespace update.
@@ -1123,4 +1320,5 @@ namespace gtl {
 using absl::InlinedVector;
 using absl::InlinedVectorNType;
 }
+
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_

@@ -19,17 +19,21 @@
 #include <vector>
 
 #include "s2/third_party/absl/strings/str_split.h"
+#include "s2/third_party/absl/strings/string_view.h"
 
-bool DictionaryParse(std::string const& encoded_str,
+using absl::string_view;
+
+bool DictionaryParse(string_view encoded_str,
                      std::vector<std::pair<std::string, std::string>>* items) {
   if (encoded_str.empty())
     return true;
-  std::vector<std::string> const entries  = strings::Split(encoded_str, ',');
+  std::vector<string_view> const entries  = strings::Split(encoded_str, ',');
   for (int i = 0; i < entries.size(); ++i) {
-    std::vector<std::string> const fields = strings::Split(entries[i], ':');
+    std::vector<string_view> const fields = strings::Split(entries[i], ':');
     if (fields.size() != 2)  // parsing error
       return false;
-    items->push_back(std::make_pair(fields[0], fields[1]));
+    items->push_back(std::make_pair(std::string(fields[0]),
+                                    std::string(fields[1])));
   }
   return true;
 }

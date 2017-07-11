@@ -23,7 +23,7 @@
 #include <ostream>
 #include <type_traits>
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s1angle.h"
 
 // S1ChordAngle represents the angle subtended by a chord (i.e., the straight

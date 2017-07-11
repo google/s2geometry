@@ -125,23 +125,24 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 #define ABSL_DEPRECATED(message)
 #endif
 
-// The CLANG_BAD_CALL_IF macro can be used on a function overload to trap
+// The ABSL_BAD_CALL_IF macro can be used on a function overload to trap
 // bad calls: any call that matches the overload will cause a compile-time
 // error.  This uses a clang-specific "enable_if" attribute, as described at
 // http://clang.llvm.org/docs/AttributeReference.html#enable-if
 //
 // Overloads which use this macro should be surrounded by
-// "#ifdef CLANG_BAD_CALL_IF".  For example:
+// "#ifdef ABSL_BAD_CALL_IF".  For example:
 //
 // int isdigit(int c);
-// #ifdef CLANG_BAD_CALL_IF
+// #ifdef ABSL_BAD_CALL_IF
 // int isdigit(int c)
-//     CLANG_BAD_CALL_IF(c <= -1 || c > 255,
+//     ABSL_BAD_CALL_IF(c <= -1 || c > 255,
 //                       "'c' must have the value of an unsigned char or EOF");
-// #endif // CLANG_BAD_CALL_IF
+// #endif // ABSL_BAD_CALL_IF
+
 #if defined(__clang__)
 # if __has_attribute(enable_if)
-#  define CLANG_BAD_CALL_IF(expr, msg) \
+#  define ABSL_BAD_CALL_IF(expr, msg) \
     __attribute__((enable_if(expr, "Bad call trap"), unavailable(msg)))
 # endif
 #endif

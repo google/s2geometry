@@ -31,14 +31,16 @@
 #include <type_traits>
 #include <utility>
 
+#include "s2/third_party/absl/meta/type_traits.h"
+
 namespace absl {
 
 // -----------------------------------------------------------------------------
 // Function Template: WrapUnique()
 // -----------------------------------------------------------------------------
 //
-// `absl::WrapUnique()` transfers ownership of a raw pointer to a
-// `std::unique_ptr`. The returned value is a `std::unique_ptr` of deduced type.
+// Transfers ownership of a raw pointer to a `std::unique_ptr`. The returned
+// value is a `std::unique_ptr` of deduced type.
 //
 // Example:
 //   X* NewX(int, int);
@@ -51,13 +53,14 @@ namespace absl {
 //   auto x = WrapUnique(new X(1, 2));  // works, but nonideal.
 //   auto x = MakeUnique<X>(1, 2);      // safer, standard, avoids raw 'new'.
 //
-// Note: `absl::WrapUnique()` cannot wrap pointers to arrays of unknown bounds
-// (i.e. U(*)[]).
+// Note that `absl::WrapUnique(p)` is valid only if `delete p` is a valid
+// expression. In particular, `absl::WrapUnique()` cannot wrap pointers to
+// arrays, functions or void, and it must not be used to capture pointers
+// obtained from array-new expressions (even though that would compile!).
 template <typename T>
 std::unique_ptr<T> WrapUnique(T* ptr) {
-  static_assert(
-      !std::is_array<T>::value || std::extent<T>::value != 0,
-      "types T[0] or T[] are unsupported");
+  static_assert(!std::is_array<T>::value, "array types are unsupported");
+  static_assert(std::is_object<T>::value, "non-object types are unsupported");
   return std::unique_ptr<T>(ptr);
 }
 
@@ -80,13 +83,12 @@ struct MakeUniqueResult<T[N]> {
 }  // namespace internal
 
 // -----------------------------------------------------------------------------
-// Function Template: MakeUnique<T>()
+// Function Template: MakeUnique<T>() / make_unique<T>()
 // -----------------------------------------------------------------------------
 //
-// `absl::MakeUnique<T>(...)` creates a `std::unique_ptr<>`, while avoiding
-// issues creating temporaries during the construction process.
-// `absl::MakeUnique<>` also avoids redundant type declarations, by avoiding the
-// need to explicitly use the `new` operator.
+// Creates a `std::unique_ptr<>`, while avoiding issues creating temporaries
+// during the construction process. `absl::MakeUnique<>` also avoids redundant
+// type declarations, by avoiding the need to explicitly use the `new` operator.
 //
 // This implementation of `absl::MakeUnique<>` is designed for C++11 code and
 // will be replaced in C++14 by the equivalent `std::make_unique<>` abstraction.
@@ -146,8 +148,7 @@ struct MakeUniqueResult<T[N]> {
 template <typename T, typename... Args>
 typename internal::MakeUniqueResult<T>::scalar
 MakeUnique(Args&&... args) {
-  return std::unique_ptr<T>(
-      new T(std::forward<Args>(args)...));
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
 // `absl::MakeUnique` overload for an array T[] of unknown bounds.
@@ -157,7 +158,7 @@ MakeUnique(Args&&... args) {
 template <typename T>
 typename internal::MakeUniqueResult<T>::array
 MakeUnique(size_t n) {
-  return std::unique_ptr<T>(new typename std::remove_extent<T>::type[n]());
+  return std::unique_ptr<T>(new typename absl::remove_extent_t<T>[n]());
 }
 
 // `absl::MakeUnique` overload for an array T[N] of known bounds.
@@ -165,6 +166,29 @@ MakeUnique(size_t n) {
 template <typename T, typename... Args>
 typename internal::MakeUniqueResult<T>::invalid
 MakeUnique(Args&&... /* args */) = delete;
+
+// `absl::make_unique` overload for non-array types.
+template <typename T, typename... Args>
+typename internal::MakeUniqueResult<T>::scalar
+make_unique(Args&&... args) {
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
+// `absl::make_unique` overload for an array T[] of unknown bounds.
+// The array allocation needs to use the `new T[size]` form and cannot take
+// element constructor arguments. The `std::unique_ptr` will manage destructing
+// these array elements.
+template <typename T>
+typename internal::MakeUniqueResult<T>::array
+make_unique(size_t n) {
+  return std::unique_ptr<T>(new typename absl::remove_extent_t<T>[n]());
+}
+
+// `absl::make_unique` overload for an array T[N] of known bounds.
+// This construction will be rejected.
+template <typename T, typename... Args>
+typename internal::MakeUniqueResult<T>::invalid
+make_unique(Args&&... /* args */) = delete;
 
 // -----------------------------------------------------------------------------
 // Function Template: RawPtr()

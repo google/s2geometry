@@ -16,33 +16,48 @@
 #include "s2/third_party/absl/strings/str_split.h"
 
 #include <functional>
-#include <sstream>
 #include <string>
 #include <vector>
 
+#include "s2/third_party/absl/strings/string_view.h"
+
+using absl::string_view;
+
 namespace strings {
 
-std::vector<std::string> Split(
-    std::string const& text, char const delim,
-    std::function<bool(std::string const&)> predicate) {
-  std::stringstream ss(text);
-  std::string item;
-  std::vector<std::string> elems;
-  while (std::getline(ss, item, delim)) {
-    if (predicate(item))
-      elems.push_back(std::move(item));
+template <typename String>
+std::vector<String> Split(
+    String const& text, char const delim,
+    std::function<bool(string_view)> predicate) {
+  std::vector<String> elems;
+  typename String::size_type begin = 0;
+  typename String::size_type end;
+  while ((end = text.find(delim, begin)) != String::npos) {
+    string_view view(text.data() + begin, end - begin);
+    if (predicate(view))
+      elems.emplace_back(view);
+    begin = end + 1;
   }
-  // If the text ends with a delim, getline will not give
-  // us the chance to add a final empty string.
-  if (text.empty() || *text.rbegin() == delim) {
-    if (predicate(std::string()))
-      elems.push_back(std::string());
-  }
+  // Try to add the portion after the last delim.
+  string_view view(text.data() + begin, text.size() - begin);
+  if (predicate(view))
+    elems.emplace_back(view);
   return elems;
 }
+template std::vector<std::string> Split(
+    std::string const& text, char const delim,
+    std::function<bool(string_view)> predicate);
+template std::vector<string_view> Split(
+    string_view const& text, char const delim,
+    std::function<bool(string_view)> predicate);
 
-std::vector<std::string> Split(std::string const& text, char const delim) {
-  return Split(text, delim, [](const std::string&) { return true; });
+template <typename String>
+std::vector<String> Split(String const& text, char const delim) {
+  return Split(text, delim, [](string_view) { return true; });
 }
+template std::vector<std::string> Split(std::string const& text,
+                                        char const delim);
+template std::vector<string_view> Split(string_view const& text,
+                                        char const delim);
 
 }  // namespace strings

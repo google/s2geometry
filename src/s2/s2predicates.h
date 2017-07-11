@@ -21,7 +21,7 @@
 // precision or even exact arithmetic when the result is uncertain.  Such
 // predicates are useful in implementing robust algorithms.
 //
-// See also S2EdgeUtil::EdgeCrosser, which implements various exact
+// See also S2EdgeCrosser, which implements various exact
 // edge-crossing predicates more efficiently than can be done here.
 //
 // TODO(ericv): Add InCircleSign() (the Voronoi/Delaunay predicate).
@@ -34,7 +34,7 @@
 #include <cfloat>
 #include <iosfwd>
 
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s1chordangle.h"
 #include "s2/s2debug.h"
 #include "s2/s2pointutil.h"
@@ -42,7 +42,7 @@
 namespace s2pred {
 
 // S2EdgeUtil contains the following exact predicates that test for edge
-// crossings.  (Usually you will want to use S2EdgeUtil::EdgeCrosser, which
+// crossings.  (Usually you will want to use S2EdgeCrosser, which
 // implements them much more efficiently.)
 //
 // int CrossingSign(S2Point const& a0, S2Point const& a1,

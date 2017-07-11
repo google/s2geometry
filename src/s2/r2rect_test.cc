@@ -129,9 +129,9 @@ TEST(R2Rect, SimplePredicates) {
 
   // Make sure that GetVertex() returns vertices in CCW order.
   for (int k = 0; k < 4; ++k) {
-    R2Point a = r1.GetVertex((k-1)&3);
+    R2Point a = r1.GetVertex(k - 1);
     R2Point b = r1.GetVertex(k);
-    R2Point c = r1.GetVertex((k+1)&3);
+    R2Point c = r1.GetVertex(k + 1);
     EXPECT_GT((b - a).Ortho().DotProd(c - a), 0);
   }
 }

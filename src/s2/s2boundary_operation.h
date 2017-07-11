@@ -21,7 +21,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "s2/util/btree/btree_map.h"  // Like std::map, but faster and smaller.
+#include "s2/util/btree/btree_map.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/value_lexicon.h"
@@ -48,10 +48,12 @@
 //
 // Points and polyline edges are treated as multisets: if the same point or
 // polyline edge appears multiple times in the input, it will appear multiple
-// times in the output.  This is useful for reconstructing polylines that loop
-// back on themselves, or distinct polylines that have been snapped together.
-// (Duplicate edges can be merged using GraphOptions::DuplicateEdges::MERGE in
-// the S2Builder output layer, if desired.)
+// times in the output.  This is useful for modeling large sets of points or
+// polylines as a single region while maintaining their distinct identities,
+// even when the points or polylines intersect each other.  It is also useful
+// for reconstructing polylines that loop back on themselves.  (Duplicate
+// edges can be merged using GraphOptions::DuplicateEdges::MERGE in the
+// S2Builder output layer, if desired.)
 //
 // Polylines are always considered to be directed.  Polyline edges between the
 // same pair of vertices are defined to intersect even if the two edges are in
@@ -68,10 +70,20 @@
 // or closed.  For polylines these options are defined as follows:
 //
 //  - In the OPEN model, polylines do not contain their first or last vertex.
+//
 //  - In the SEMI_OPEN model, polylines contain vertices except the last.
 //    Therefore if one polyline starts where another polyline stops, the two
 //    polylines do not intersect.
+//
 //  - In the CLOSED model, polylines contain all of their vertices.
+//
+// When multiple polylines are present, they are processed independently and
+// have no effect on each other.  For example, in the OPEN boundary model the
+// polyline ABC contains the vertex B, while set of polylines {AB, BC} does
+// not.  (If you want to treat the polylines as a union instead, with
+// boundaries merged according to the "mod 2" rule, this can be achieved by
+// reassembling the edges into maximal polylines using S2PolylineVectorLayer
+// with EdgeType::UNDIRECTED, DuplicateEdges::MERGE, and PolylineType::WALK.)
 //
 // For polygons:
 //
@@ -105,10 +117,22 @@
 //    coincides with a vertex of A consists only of the point B.
 //
 //  - For DIFFERENCE, higher-dimensional primitives are not affected by
-//    lower-dimensional ones.  For example, subtracting a point or polyline B
-//    from a polygon A yields the original polygon A.  (If instead you want to
-//    remove a degenerate portion of the polygon, then the input point or
-//    polyline must be modeled as a degenerate polygon instead.)
+//    subtracting lower-dimensional subsets.  For example, subtracting a point
+//    or polyline from a polygon A yields the original polygon A.  This rule
+//    exists because in general, it is impossible to represent the output
+//    using the specified boundary model(s).  (Consider subtracting one vertex
+//    from a PolylineModel::CLOSED polyline, or subtracting one edge from a
+//    PolygonModel::CLOSED polygon.)  If you want to perform operations like
+//    this, consider representing all boundaries explicitly (topological
+//    boundaries) using OPEN boundary models.  Another option for polygons is
+//    to subtract a degenerate loop, which yields a polygon with a degenerate
+//    hole (see s2shapeutil::LaxPolygon).
+//
+// Note that in the case of Precision::EXACT operations, the above remarks
+// only apply to the output before snapping.  Snapping may cause nearby
+// distinct edges to become coincident, e.g. a polyline may become coincident
+// with a polygon boundary.  However also note that S2BoundaryOperation is
+// perfectly happy to accept such geometry as input.
 //
 // Note the following differences between S2BoundaryOperation and the similar
 // S2MultiBoundaryOperation class:
@@ -210,23 +234,23 @@ class S2BoundaryOperation {
 
     // Specifies the function to be used for snap rounding.
     //
-    // Default value: s2builderutil::IdentitySnapFunction(S1Angle::Zero()).
-    // This does no snapping and preserves all input vertices exactly unless
-    // there are crossing edges, in which case the snap radius is increased to
-    // the maximum intersection point error (S2EdgeUtil::kIntersectionError).
+    // DEFAULT: s2builderutil::IdentitySnapFunction(S1Angle::Zero())
+    // [This does no snapping and preserves all input vertices exactly unless
+    //  there are crossing edges, in which case the snap radius is increased
+    //  to the maximum intersection point error (S2::kIntersectionError.]
     S2Builder::SnapFunction const& snap_function() const;
     void set_snap_function(S2Builder::SnapFunction const& snap_function);
 
     // Defines whether polygons are considered to contain their vertices
     // and/or edges.
     //
-    // Default value: SEMI_OPEN.
+    // DEFAULT: PolygonModel::SEMI_OPEN
     PolygonModel polygon_model() const;
     void set_polygon_model(PolygonModel model);
 
     // Defines whether polylines are considered to contain their vertices.
     //
-    // Default value: CLOSED.
+    // DEFAULT: PolylineModel::CLOSED
     PolylineModel polyline_model() const;
     void set_polyline_model(PolylineModel model);
 
@@ -234,7 +258,7 @@ class S2BoundaryOperation {
     // (Precision::EXACT), or whether the two input regions should be snapped
     // together first (Precision::SNAPPED).
     //
-    // Default value: EXACT.
+    // DEFAULT: Precision::EXACT
     Precision precision() const;
     // void set_precision(Precision precision);
 
@@ -265,7 +289,7 @@ class S2BoundaryOperation {
     //   is very useful for working with input data that has both positive and
     //   negative degeneracies (i.e., degenerate shells and holes).
     //
-    // Default value: false.
+    // DEFAULT: false
     bool conservative_output() const;
     // void set_conservative_output(bool conservative);
 
@@ -285,7 +309,7 @@ class S2BoundaryOperation {
     //   DoSomething(src.region_id(), src.shape_id(), src.edge_id());
     // }
     //
-    // Default value: nullptr.
+    // DEFAULT: nullptr
     ValueLexicon<SourceId>* source_id_lexicon() const;
     // void set_source_id_lexicon(ValueLexicon<SourceId>* source_id_lexicon);
 
@@ -317,13 +341,13 @@ class S2BoundaryOperation {
 
   // Specifies that the output boundary edges should be sent to three
   // different layers according to their dimension.  Points (represented by
-  // degenerate edges) are sent to "layer0", polyline edges are sent to
-  // "layer1", and polygon edges are sent to "layer2".
+  // degenerate edges) are sent to layer 0, polyline edges are sent to
+  // layer 1, and polygon edges are sent to layer 2.
   //
   // The dimension of an edge is defined as the minimum dimension of the two
   // input edges that produced it.  For example, the intersection of two
   // crossing polyline edges is a considered to be a degenerate polyline
-  // rather than a point, so it is sent to "layer1".  Clients can easily
+  // rather than a point, so it is sent to layer 1.  Clients can easily
   // reclassify such polylines as points if desired, but this rule makes it
   // easier for clients that want to process point, polyline, and polygon
   // inputs differently.
@@ -334,9 +358,7 @@ class S2BoundaryOperation {
   // objects, in order to make it easier to write classes that process all the
   // edges in parallel.
   S2BoundaryOperation(OpType op_type,
-                      std::unique_ptr<S2Builder::Layer> layer0,
-                      std::unique_ptr<S2Builder::Layer> layer1,
-                      std::unique_ptr<S2Builder::Layer> layer2,
+                      std::vector<std::unique_ptr<S2Builder::Layer>> layers,
                       Options const& options = Options());
 
   OpType op_type() const { return op_type_; }

@@ -148,12 +148,12 @@ TEST(S2LatLngRect, GetVertex) {
     double lat = M_PI_4 * (i - 2);
     double lng = M_PI_2 * (i - 2) + 0.2;
     S2LatLngRect r(R1Interval(lat, lat + M_PI_4),
-                   S1Interval(remainder(lng, 2*M_PI),
-                              remainder(lng + M_PI_2, 2*M_PI)));
+                   S1Interval(remainder(lng, 2 * M_PI),
+                              remainder(lng + M_PI_2, 2 * M_PI)));
     for (int k = 0; k < 4; ++k) {
-      EXPECT_TRUE(S2::SimpleCCW(r.GetVertex((k - 1) & 3).ToPoint(),
+      EXPECT_TRUE(S2::SimpleCCW(r.GetVertex(k - 1).ToPoint(),
                                 r.GetVertex(k).ToPoint(),
-                                r.GetVertex((k + 1) & 3).ToPoint()));
+                                r.GetVertex(k + 1).ToPoint()));
     }
   }
 }
@@ -635,9 +635,9 @@ static S1Angle BruteForceDistance(const S2LatLngRect& a,
       // Get distances to latitude and longitude edges.
       S1Angle a_to_lat = GetDistance(current_a, lat_b[j], b.lng());
       S1Angle b_to_lat = GetDistance(current_b, lat_a[j], a.lng());
-      S1Angle a_to_lng = S2EdgeUtil::GetDistance(
+      S1Angle a_to_lng = S2::GetDistance(
           current_a.ToPoint(), lng_edge_b[j][0], lng_edge_b[j][1]);
-      S1Angle b_to_lng = S2EdgeUtil::GetDistance(
+      S1Angle b_to_lng = S2::GetDistance(
           current_b.ToPoint(), lng_edge_a[j][0], lng_edge_a[j][1]);
 
       min_distance = min(min_distance,
@@ -655,11 +655,11 @@ static S1Angle BruteForceRectPointDistance(const S2LatLngRect& a,
 
   S1Angle b_to_lo_lat = GetDistance(b, a.lat_lo(), a.lng());
   S1Angle b_to_hi_lat = GetDistance(b, a.lat_hi(), a.lng());
-  S1Angle b_to_lo_lng = S2EdgeUtil::GetDistance(
+  S1Angle b_to_lo_lng = S2::GetDistance(
       b.ToPoint(),
       S2LatLng(a.lat_lo(), a.lng_lo()).ToPoint(),
       S2LatLng(a.lat_hi(), a.lng_lo()).ToPoint());
-  S1Angle b_to_hi_lng = S2EdgeUtil::GetDistance(
+  S1Angle b_to_hi_lng = S2::GetDistance(
       b.ToPoint(),
       S2LatLng(a.lat_lo(), a.lng_hi()).ToPoint(),
       S2LatLng(a.lat_hi(), a.lng_hi()).ToPoint());

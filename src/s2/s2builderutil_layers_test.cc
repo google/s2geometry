@@ -32,16 +32,21 @@
 #include "s2/util/gtl/stl_util.h"
 
 using absl::MakeUnique;
+using s2builderutil::IndexedS2PointVectorLayer;
+using s2builderutil::IndexedS2PolygonLayer;
+using s2builderutil::IndexedS2PolylineLayer;
+using s2builderutil::IndexedS2PolylineVectorLayer;
+using s2builderutil::S2PointVectorLayer;
 using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
 using s2builderutil::S2PolylineVectorLayer;
-using s2builderutil::S2PointVectorLayer;
-using s2textformat::MakePolyline;
 using s2textformat::MakePoint;
+using s2textformat::MakePolyline;
 using std::map;
 using std::set;
 using std::unique_ptr;
 using std::vector;
+
 using EdgeType = S2Builder::EdgeType;
 using PolylineType = S2PolylineVectorLayer::Options::PolylineType;
 
@@ -55,8 +60,7 @@ void TestS2Polygon(vector<char const*> const& input_strs,
   builder.StartLayer(MakeUnique<S2PolygonLayer>(
       &output, S2PolygonLayer::Options(edge_type)));
   for (auto input_str : input_strs) {
-    unique_ptr<S2Polygon> input(s2textformat::MakeVerbatimPolygon(input_str));
-    builder.AddPolygon(*input);
+    builder.AddPolygon(*s2textformat::MakeVerbatimPolygon(input_str));
   }
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
@@ -272,6 +276,20 @@ TEST(S2PolygonLayer, SevenDiamondsTouchingAtOnePointPerPair) {
                          "0:-10, -20:0, 0:10, 10:0");
 }
 
+TEST(IndexedS2PolygonLayer, AddsShape) {
+  S2Builder builder((S2Builder::Options()));
+  S2ShapeIndex index;
+  builder.StartLayer(MakeUnique<IndexedS2PolygonLayer>(&index));
+  string const& polygon_str = "0:0, 0:10, 10:0";
+  builder.AddPolygon(*s2textformat::MakePolygon(polygon_str));
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  EXPECT_EQ(1, index.num_shape_ids());
+  S2Polygon const* polygon = down_cast<S2Polygon::Shape const*>(
+      index.shape(0))->polygon();
+  EXPECT_EQ(polygon_str, s2textformat::ToString(*polygon));
+}
+
 void TestS2Polyline(
     vector<char const*> const& input_strs,
     char const* expected_str, EdgeType edge_type,
@@ -425,6 +443,20 @@ TEST(S2PolylineLayer, InvalidPolyline) {
   S2Error error;
   EXPECT_FALSE(builder.Build(&error));
   EXPECT_EQ(S2Error::ANTIPODAL_VERTICES, error.code());
+}
+
+TEST(IndexedS2PolylineLayer, AddsShape) {
+  S2Builder builder((S2Builder::Options()));
+  S2ShapeIndex index;
+  builder.StartLayer(MakeUnique<IndexedS2PolylineLayer>(&index));
+  string const& polyline_str = "0:0, 0:10";
+  builder.AddPolyline(*s2textformat::MakePolyline(polyline_str));
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  EXPECT_EQ(1, index.num_shape_ids());
+  S2Polyline const* polyline = down_cast<S2Polyline::Shape const*>(
+      index.shape(0))->polyline();
+  EXPECT_EQ(polyline_str, s2textformat::ToString(*polyline));
 }
 
 void TestS2PolylineVector(
@@ -597,6 +629,25 @@ TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
   }
 }
 
+TEST(IndexedS2PolylineVectorLayer, AddsShapes) {
+  S2Builder builder((S2Builder::Options()));
+  S2ShapeIndex index;
+  builder.StartLayer(MakeUnique<IndexedS2PolylineVectorLayer>(&index));
+  string polyline0_str = "0:0, 1:1";
+  string polyline1_str = "2:2, 3:3";
+  builder.AddPolyline(*s2textformat::MakePolyline(polyline0_str));
+  builder.AddPolyline(*s2textformat::MakePolyline(polyline1_str));
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  EXPECT_EQ(2, index.num_shape_ids());
+  S2Polyline const* polyline0 = down_cast<S2Polyline::Shape const*>(
+      index.shape(0))->polyline();
+  S2Polyline const* polyline1 = down_cast<S2Polyline::Shape const*>(
+      index.shape(1))->polyline();
+  EXPECT_EQ(polyline0_str, s2textformat::ToString(*polyline0));
+  EXPECT_EQ(polyline1_str, s2textformat::ToString(*polyline1));
+}
+
 void VerifyS2PointVectorLayerResults(
     S2PointVectorLayer::LabelSetIds const& label_set_ids,
     IdSetLexicon const& label_set_lexicon, vector<S2Point> const& output,
@@ -697,6 +748,23 @@ TEST(S2PointVectorLayer, Error) {
   EXPECT_EQ(2, output.size());
   EXPECT_EQ(MakePoint("0:1"), output[0]);
   EXPECT_EQ(MakePoint("0:5"), output[1]);
+}
+
+TEST(IndexedS2PointVectorLayer, AddsShapes) {
+  S2Builder builder((S2Builder::Options()));
+  S2ShapeIndex index;
+  builder.StartLayer(MakeUnique<IndexedS2PointVectorLayer>(&index));
+  string point0_str = "0:0";
+  string point1_str = "2:2";
+  builder.AddPoint(s2textformat::MakePoint(point0_str));
+  builder.AddPoint(s2textformat::MakePoint(point1_str));
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  EXPECT_EQ(1, index.num_shape_ids());
+  auto shape = down_cast<s2shapeutil::PointVectorShape*>(index.shape(0));
+  EXPECT_EQ(2, shape->num_points());
+  EXPECT_EQ(point0_str, s2textformat::ToString(shape->point(0)));
+  EXPECT_EQ(point1_str, s2textformat::ToString(shape->point(1)));
 }
 
 #if 0

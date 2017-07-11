@@ -47,13 +47,15 @@ Graph::Graph(GraphOptions const& options,
              vector<InputEdgeIdSetId> const* input_edge_id_set_ids,
              IdSetLexicon const* input_edge_id_set_lexicon,
              vector<LabelSetId> const* label_set_ids,
-             IdSetLexicon const* label_set_lexicon)
-    : options_(options), num_vertices_(vertices->size()), vertices_(*vertices),
-      edges_(*edges), input_edge_id_set_ids_(*input_edge_id_set_ids),
-      input_edge_id_set_lexicon_(*input_edge_id_set_lexicon),
-      label_set_ids_(*label_set_ids),
-      label_set_lexicon_(*label_set_lexicon) {
-  DCHECK(std::is_sorted(edges_.begin(), edges_.end()));
+             IdSetLexicon const* label_set_lexicon,
+             IsFullPolygonPredicate is_full_polygon_predicate)
+    : options_(options), num_vertices_(vertices->size()), vertices_(vertices),
+      edges_(edges), input_edge_id_set_ids_(input_edge_id_set_ids),
+      input_edge_id_set_lexicon_(input_edge_id_set_lexicon),
+      label_set_ids_(label_set_ids),
+      label_set_lexicon_(label_set_lexicon),
+      is_full_polygon_predicate_(std::move(is_full_polygon_predicate)) {
+  DCHECK(std::is_sorted(edges->begin(), edges->end()));
 }
 
 vector<Graph::EdgeId> Graph::GetInEdgeIds() const {

@@ -29,6 +29,7 @@
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -69,11 +70,10 @@ TEST(S2Cell, TestFaces) {
       vertex_counts[cell.GetVertexRaw(k)] += 1;
       EXPECT_DOUBLE_EQ(0.0, cell.GetVertexRaw(k).DotProd(cell.GetEdgeRaw(k)));
       EXPECT_DOUBLE_EQ(0.0,
-                       cell.GetVertexRaw((k+1)&3).DotProd(cell.GetEdgeRaw(k)));
+                       cell.GetVertexRaw(k + 1).DotProd(cell.GetEdgeRaw(k)));
       EXPECT_DOUBLE_EQ(1.0,
-                       cell.GetVertexRaw(k)
-                       .CrossProd(cell.GetVertexRaw((k+1)&3))
-                       .Normalize().DotProd(cell.GetEdge(k)));
+                       cell.GetVertexRaw(k).CrossProd(cell.GetVertexRaw(k + 1)).
+                       Normalize().DotProd(cell.GetEdge(k)));
     }
   }
   // Check that edges have multiplicity 2 and vertices have multiplicity 3.
@@ -112,19 +112,19 @@ static void GatherStats(S2Cell const& cell) {
   double min_width = 100, max_width = 0;
   double min_angle_span = 100, max_angle_span = 0;
   for (int i = 0; i < 4; ++i) {
-    double edge = cell.GetVertexRaw(i).Angle(cell.GetVertexRaw((i+1)&3));
+    double edge = cell.GetVertexRaw(i).Angle(cell.GetVertexRaw(i + 1));
     min_edge = min(edge, min_edge);
     max_edge = max(edge, max_edge);
     avg_edge += 0.25 * edge;
-    S2Point mid = cell.GetVertexRaw(i) + cell.GetVertexRaw((i+1)&3);
-    double width = M_PI_2 - mid.Angle(cell.GetEdgeRaw(i^2));
+    S2Point mid = cell.GetVertexRaw(i) + cell.GetVertexRaw(i + 1);
+    double width = M_PI_2 - mid.Angle(cell.GetEdgeRaw(i + 2));
     min_width = min(width, min_width);
     max_width = max(width, max_width);
     if (i < 2) {
-      double diag = cell.GetVertexRaw(i).Angle(cell.GetVertexRaw(i^2));
+      double diag = cell.GetVertexRaw(i).Angle(cell.GetVertexRaw(i + 2));
       min_diag = min(diag, min_diag);
       max_diag = max(diag, max_diag);
-      double angle_span = cell.GetEdgeRaw(i).Angle(-cell.GetEdgeRaw(i^2));
+      double angle_span = cell.GetEdgeRaw(i).Angle(-cell.GetEdgeRaw(i + 2));
       min_angle_span = min(angle_span, min_angle_span);
       max_angle_span = max(angle_span, max_angle_span);
     }
@@ -440,7 +440,7 @@ TEST(S2Cell, CellVsLoopRectBound) {
   static S2LatLng kCellError = S2LatLng::FromRadians(2 * DBL_EPSILON,
                                                      4 * DBL_EPSILON);
   // Possible additional S2Loop error compared to S2Cell error:
-  static S2LatLng kLoopError = S2EdgeUtil::RectBounder::MaxErrorForTests();
+  static S2LatLng kLoopError = S2LatLngRectBounder::MaxErrorForTests();
 
   for (int iter = 0; iter < 1000; ++iter) {
     S2Cell cell(S2Testing::GetRandomCellId());
@@ -458,12 +458,11 @@ TEST(S2Cell, RectBoundIsLargeEnough) {
 
   for (int iter = 0; iter < 1000; /* advanced in loop below */) {
     S2Cell cell(S2Testing::GetRandomCellId());
-    int i1 = S2Testing::rnd.Uniform(4);
-    int i2 = (i1 + 1) & 3;
-    S2Point v1 = cell.GetVertex(i1);
+    int i = S2Testing::rnd.Uniform(4);
+    S2Point v1 = cell.GetVertex(i);
     S2Point v2 = S2Testing::SamplePoint(
-        S2Cap(cell.GetVertex(i2), S1Angle::Radians(1e-15)));
-    S2Point p = S2EdgeUtil::Interpolate(S2Testing::rnd.RandDouble(), v1, v2);
+        S2Cap(cell.GetVertex(i + 1), S1Angle::Radians(1e-15)));
+    S2Point p = S2::Interpolate(S2Testing::rnd.RandDouble(), v1, v2);
     if (S2Loop(cell).Contains(p)) {
       EXPECT_TRUE(cell.GetRectBound().Contains(S2LatLng(p)));
       ++iter;
@@ -477,12 +476,11 @@ TEST(S2Cell, ConsistentWithS2CellIdFromPoint) {
 
   for (int iter = 0; iter < 1000; ++iter) {
     S2Cell cell(S2Testing::GetRandomCellId());
-    int i1 = S2Testing::rnd.Uniform(4);
-    int i2 = (i1 + 1) & 3;
-    S2Point v1 = cell.GetVertex(i1);
+    int i = S2Testing::rnd.Uniform(4);
+    S2Point v1 = cell.GetVertex(i);
     S2Point v2 = S2Testing::SamplePoint(
-        S2Cap(cell.GetVertex(i2), S1Angle::Radians(1e-15)));
-    S2Point p = S2EdgeUtil::Interpolate(S2Testing::rnd.RandDouble(), v1, v2);
+        S2Cap(cell.GetVertex(i + 1), S1Angle::Radians(1e-15)));
+    S2Point p = S2::Interpolate(S2Testing::rnd.RandDouble(), v1, v2);
     EXPECT_TRUE(S2Cell(S2CellId(p)).Contains(p));
   }
 }
@@ -510,8 +508,8 @@ static S1ChordAngle GetDistanceToPointBruteForce(S2Cell const& cell,
                                                  S2Point const& target) {
   S1ChordAngle min_distance = S1ChordAngle::Infinity();
   for (int i = 0; i < 4; ++i) {
-    S2EdgeUtil::UpdateMinDistance(target, cell.GetVertex(i),
-                                  cell.GetVertex((i + 1) & 3), &min_distance);
+    S2::UpdateMinDistance(target, cell.GetVertex(i),
+                                  cell.GetVertex(i + 1), &min_distance);
   }
   return min_distance;
 }
@@ -566,7 +564,7 @@ static S1ChordAngle GetDistanceToEdgeBruteForce(
   }
   S2Loop loop(cell);
   S2ShapeIndex index;
-  index.Add(new S2Loop::Shape(&loop));
+  index.Add(absl::MakeUnique<S2Loop::Shape>(&loop));
   S2CrossingEdgeQuery query(index);
   vector<int> edges;
   if (query.GetCrossings(a, b, index.shape(0), s2shapeutil::CrossingType::ALL,
@@ -576,10 +574,10 @@ static S1ChordAngle GetDistanceToEdgeBruteForce(
   S1ChordAngle min_dist = S1ChordAngle::Infinity();
   for (int i = 0; i < 4; ++i) {
     S2Point v0 = cell.GetVertex(i);
-    S2Point v1 = cell.GetVertex((i + 1) & 3);
-    S2EdgeUtil::UpdateMinDistance(a, v0, v1, &min_dist);
-    S2EdgeUtil::UpdateMinDistance(b, v0, v1, &min_dist);
-    S2EdgeUtil::UpdateMinDistance(v0, a, b, &min_dist);
+    S2Point v1 = cell.GetVertex(i + 1);
+    S2::UpdateMinDistance(a, v0, v1, &min_dist);
+    S2::UpdateMinDistance(b, v0, v1, &min_dist);
+    S2::UpdateMinDistance(v0, a, b, &min_dist);
   }
   return min_dist;
 }

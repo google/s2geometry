@@ -27,11 +27,11 @@
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
 
-// An S2Builder::Graph represents a collection of snapped edges that is
-// passed to a Layer for assembly.  (Example layers include polygons,
-// polylines, and polygon meshes.)  It is designed for space efficiency
-// rather than convenience.  You will only need this interface if you want
-// to implement a new Layer subtype.
+// An S2Builder::Graph represents a collection of snapped edges that is passed
+// to a Layer for assembly.  (Example layers include polygons, polylines, and
+// polygon meshes.)  The Graph object does not own any of its underlying data;
+// it is simply a view of data that is stored elsewhere.  You will only
+// need this interface if you want to implement a new Layer subtype.
 //
 // The graph consists of vertices and directed edges.  Vertices are numbered
 // sequentially starting from zero.  An edge is represented as a pair of
@@ -62,7 +62,14 @@ class S2Builder::Graph {
   // Identifies a set of edge labels.
   using LabelSetId = S2Builder::LabelSetId;
 
-  // The constructor is typically used only by S2Builder and testing code.
+  // Determines whether a degenerate polygon is empty or full.
+  using IsFullPolygonPredicate = S2Builder::IsFullPolygonPredicate;
+
+  // The default constructor exists only for the benefit of STL containers.
+  // The graph must be initialized (using the assignment operator) before it
+  // is used.
+  Graph();
+
   // Note that most of the parameters are passed by const reference and must
   // exist for the duration of the Graph object.  Notes on parameters:
   // "options":
@@ -85,13 +92,20 @@ class S2Builder::Graph {
   //     returned value (a LabelSetId) in the "label_set_lexicon".
   // "label_set_lexicon":
   //   - a class that maps a LabelSetId to a set of S2Builder::Labels.
+  // "is_full_polygon_predicate":
+  //   - a predicate called to determine whether a graph consisting only of
+  //     polygon degeneracies represents the empty polygon or the full polygon
+  //     (see s2builder.h for details).
   Graph(GraphOptions const& options,
         std::vector<S2Point> const* vertices,
         std::vector<Edge> const* edges,
         std::vector<InputEdgeIdSetId> const* input_edge_id_set_ids,
         IdSetLexicon const* input_edge_id_set_lexicon,
         std::vector<LabelSetId> const* label_set_ids,
-        IdSetLexicon const* label_set_lexicon);
+        IdSetLexicon const* label_set_lexicon,
+        // TODO(ericv/hagzonal): Fix st_lib and remove default parameter.
+        IsFullPolygonPredicate is_full_polygon_predicate =
+        IsFullPolygonPredicate());
 
   GraphOptions const& options() const;
 
@@ -346,6 +360,16 @@ class S2Builder::Graph {
   // Returns a mapping from a LabelSetId to a set of labels.
   IdSetLexicon const& label_set_lexicon() const;
 
+  // Convenience method that calls is_full_polygon_predicate() to determine
+  // whether a graph that consists only of polygon degeneracies represents the
+  // empty polygon or the full polygon (see s2builder.h for details).
+  bool IsFullPolygon(S2Error* error) const;
+
+  // Returns a method that determines whether a graph that consists only of
+  // polygon degeneracies represents the empty polygon or the full polygon
+  // (see s2builder.h for details).
+  IsFullPolygonPredicate const& is_full_polygon_predicate() const;
+
   // Returns a map "m" that maps each edge e=(v0,v1) to the following outgoing
   // edge around "v1" in clockwise order.  (This corresponds to making a "left
   // turn" at the vertex.)  By starting at a given edge and making only left
@@ -581,17 +605,25 @@ class S2Builder::Graph {
 
   GraphOptions options_;
   VertexId num_vertices_;  // Cached to avoid division by 24.
-  std::vector<S2Point> const& vertices_;
-  std::vector<Edge> const& edges_;
-  std::vector<InputEdgeIdSetId> const& input_edge_id_set_ids_;
-  IdSetLexicon const& input_edge_id_set_lexicon_;
-  std::vector<LabelSetId> const& label_set_ids_;
-  IdSetLexicon const& label_set_lexicon_;
+
+  std::vector<S2Point> const* vertices_;
+  std::vector<Edge> const* edges_;
+  std::vector<InputEdgeIdSetId> const* input_edge_id_set_ids_;
+  IdSetLexicon const* input_edge_id_set_lexicon_;
+  std::vector<LabelSetId> const* label_set_ids_;
+  IdSetLexicon const* label_set_lexicon_;
+  IsFullPolygonPredicate is_full_polygon_predicate_;
 };
 
 
 //////////////////   Implementation details follow   ////////////////////
 
+
+inline S2Builder::Graph::Graph()
+    : options_(), num_vertices_(-1), vertices_(nullptr), edges_(nullptr),
+      input_edge_id_set_ids_(nullptr), input_edge_id_set_lexicon_(nullptr),
+      label_set_ids_(nullptr), label_set_lexicon_(nullptr) {
+}
 
 inline S2Builder::GraphOptions const& S2Builder::Graph::options() const {
   return options_;
@@ -602,24 +634,24 @@ inline S2Builder::Graph::VertexId S2Builder::Graph::num_vertices() const {
 }
 
 inline S2Point const& S2Builder::Graph::vertex(VertexId v) const {
-  return vertices_[v];
+  return vertices()[v];
 }
 
 inline std::vector<S2Point> const& S2Builder::Graph::vertices() const {
-  return vertices_;
+  return *vertices_;
 }
 
 inline S2Builder::Graph::EdgeId S2Builder::Graph::num_edges() const {
-  return edges_.size();
+  return edges().size();
 }
 
 inline S2Builder::Graph::Edge const& S2Builder::Graph::edge(EdgeId e) const {
-  return edges_[e];
+  return edges()[e];
 }
 
 inline std::vector<S2Builder::Graph::Edge> const&
 S2Builder::Graph::edges() const {
-  return edges_;
+  return *edges_;
 }
 
 inline S2Builder::Graph::Edge S2Builder::Graph::reverse(Edge const& e) {
@@ -684,38 +716,47 @@ inline int S2Builder::Graph::VertexInMap::degree(VertexId v) const {
 }
 
 inline IdSetLexicon::IdSet S2Builder::Graph::input_edge_ids(EdgeId e) const {
-  return input_edge_id_set_lexicon_.id_set(input_edge_id_set_ids_[e]);
+  return input_edge_id_set_lexicon().id_set(input_edge_id_set_ids()[e]);
 }
 
 inline std::vector<S2Builder::InputEdgeIdSetId> const&
 S2Builder::Graph::input_edge_id_set_ids() const {
-  return input_edge_id_set_ids_;
+  return *input_edge_id_set_ids_;
 }
 
 inline S2Builder::InputEdgeIdSetId
 S2Builder::Graph::input_edge_id_set_id(EdgeId e) const {
-  return input_edge_id_set_ids_[e];
+  return input_edge_id_set_ids()[e];
 }
 
 inline IdSetLexicon const& S2Builder::Graph::input_edge_id_set_lexicon() const {
-  return input_edge_id_set_lexicon_;
+  return *input_edge_id_set_lexicon_;
 }
 
 inline IdSetLexicon::IdSet S2Builder::Graph::labels(LabelSetId id) const {
-  return label_set_lexicon_.id_set(label_set_ids_[id]);
+  return label_set_lexicon().id_set(label_set_ids()[id]);
 }
 
 inline S2Builder::LabelSetId S2Builder::Graph::label_set_id(EdgeId e) const {
-  return label_set_ids_[e];
+  return label_set_ids()[e];
 }
 
 inline std::vector<S2Builder::LabelSetId> const&
 S2Builder::Graph::label_set_ids() const {
-  return label_set_ids_;
+  return *label_set_ids_;
 }
 
 inline IdSetLexicon const& S2Builder::Graph::label_set_lexicon() const {
-  return label_set_lexicon_;
+  return *label_set_lexicon_;
+}
+
+inline bool S2Builder::Graph::IsFullPolygon(S2Error* error) const {
+  return is_full_polygon_predicate_(*this, error);
+}
+
+inline S2Builder::IsFullPolygonPredicate const&
+S2Builder::Graph::is_full_polygon_predicate() const {
+  return is_full_polygon_predicate_;
 }
 
 inline bool S2Builder::Graph::StableLessThan(

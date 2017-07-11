@@ -67,13 +67,6 @@ S2Shape::Edge LaxLoop::edge(int e0) const {
   return Edge(vertices_[e0], vertices_[e1]);
 }
 
-void LaxLoop::GetEdge(int e, S2Point const** a, S2Point const** b) const {
-  DCHECK_LT(e, num_edges());
-  *a = &vertices_[e];
-  if (++e == num_vertices()) e = 0;
-  *b = &vertices_[e];
-}
-
 S2Shape::Edge LaxLoop::chain_edge(int i, int j) const {
   DCHECK_EQ(i, 0);
   DCHECK_LT(j, num_edges());
@@ -217,29 +210,6 @@ S2Shape::Edge LaxPolygon::edge(int e0) const {
   return Edge(vertices_[e0], vertices_[e1]);
 }
 
-void LaxPolygon::GetEdge(int e, S2Point const** a, S2Point const** b) const {
-  DCHECK_LT(e, num_edges());
-  int const kMaxLinearSearchLoops = 12;  // From benchmarks.
-
-  // Since all loop vertices were concatenated, we don't need to figure out
-  // which loop the edge belongs to in order to retrieve its first vertex.
-  *a = &vertices_[e];
-  if (num_loops() == 1) {
-    if (++e == num_vertices_) { e = 0; }
-  } else {
-    // Find the index of the first vertex of the loop following this one.
-    int* next = cumulative_vertices_ + 1;
-    if (num_loops() <= kMaxLinearSearchLoops) {
-      while (*next <= e) ++next;
-    } else {
-      next = std::upper_bound(next, next + num_loops(), e);
-    }
-    // Wrap around to the first vertex of the loop if necessary.
-    if (++e == *next) { e = next[-1]; }
-  }
-  *b = &vertices_[e];
-}
-
 bool LaxPolygon::contains_origin() const {
   return IsOriginOnLeft(*this);
 }
@@ -295,7 +265,7 @@ LaxPolyline::LaxPolyline(S2Polyline const& polyline) {
 void LaxPolyline::Init(vector<S2Point> const& vertices) {
   num_vertices_ = vertices.size();
   LOG_IF(WARNING, num_vertices_ == 1)
-      << "s2shapeutil::LaxPolyline with one vertex defines no edges";
+      << "s2shapeutil::LaxPolyline with one vertex has no edges";
   vertices_.reset(new S2Point[num_vertices_]);
   std::copy(vertices.begin(), vertices.end(), vertices_.get());
 }
@@ -303,7 +273,7 @@ void LaxPolyline::Init(vector<S2Point> const& vertices) {
 void LaxPolyline::Init(S2Polyline const& polyline) {
   num_vertices_ = polyline.num_vertices();
   LOG_IF(WARNING, num_vertices_ == 1)
-      << "s2shapeutil::LaxPolyline with one vertex defines no edges";
+      << "s2shapeutil::LaxPolyline with one vertex has no edges";
   vertices_.reset(new S2Point[num_vertices_]);
   std::copy(&polyline.vertex(0), &polyline.vertex(0) + num_vertices_,
             vertices_.get());
@@ -312,12 +282,6 @@ void LaxPolyline::Init(S2Polyline const& polyline) {
 S2Shape::Edge LaxPolyline::edge(int e) const {
   DCHECK_LT(e, num_edges());
   return Edge(vertices_[e], vertices_[e + 1]);
-}
-
-void LaxPolyline::GetEdge(int e, S2Point const** a, S2Point const** b) const {
-  DCHECK_LT(e, num_edges());
-  *a = &vertices_[e];
-  *b = &vertices_[e + 1];
 }
 
 int LaxPolyline::num_chains() const {
@@ -358,14 +322,6 @@ S2Shape::Edge VertexIdLaxLoop::edge(int e0) const {
   return Edge(vertex(e0), vertex(e1));
 }
 
-void VertexIdLaxLoop::GetEdge(int e, S2Point const** a,
-                              S2Point const** b) const {
-  DCHECK_LT(e, num_edges());
-  *a = &vertex(e);
-  if (++e == num_vertices()) e = 0;
-  *b = &vertex(e);
-}
-
 S2Shape::Edge VertexIdLaxLoop::chain_edge(int i, int j) const {
   DCHECK_EQ(i, 0);
   DCHECK_LT(j, num_edges());
@@ -397,7 +353,7 @@ static bool IsOriginOnLeftAtVertex(S2Shape const& shape,
   // To convert this into a contains_origin() value, we count the number of
   // edges crossed between P and S2::Origin(), and invert the result for
   // every crossing.
-  S2EdgeUtil::CopyingEdgeCrosser crosser(S2::Origin(), vtest);
+  S2CopyingEdgeCrosser crosser(S2::Origin(), vtest);
   bool crossing_parity = false;
   util::btree::btree_map<S2Point, int> edge_map;
   int n = shape.num_edges();
@@ -521,7 +477,7 @@ static bool VisitCrossings(ShapeEdgeVector const& shape_edges,
     if (type != CrossingType::ALL && a.v1() == shape_edges[j].v0()) {
       if (++j >= num_edges) break;
     }
-    S2EdgeUtil::EdgeCrosser crosser(&a.v0(), &a.v1());
+    S2EdgeCrosser crosser(&a.v0(), &a.v1());
     for (; j < num_edges; ++j) {
       ShapeEdge const& b = shape_edges[j];
       int sign = crosser.CrossingSign(&b.v0(), &b.v1());
@@ -639,7 +595,7 @@ class IndexCrosser {
 
   // Temporary data declared here to avoid repeated memory allocations.
   S2CrossingEdgeQuery b_query_;
-  S2EdgeUtil::EdgeCrosser crosser_;
+  S2EdgeCrosser crosser_;
   vector<S2ShapeIndexCell const*> b_cells_;
   ShapeEdgeVector a_shape_edges_;
   ShapeEdgeVector b_shape_edges_;
@@ -823,7 +779,8 @@ void ResolveComponents(vector<vector<S2Shape*>> const& components,
     auto const& component = components[i];
     for (S2Shape* loop : component) {
       if (component.size() > 1 && !loop->contains_origin()) {
-        index.Add(loop);
+        // Ownership is transferred back at the end of this function.
+        index.Add(std::unique_ptr<S2Shape>(loop));
         component_ids.push_back(i);
       } else {
         outer_loops.push_back(loop);
@@ -870,8 +827,8 @@ void ResolveComponents(vector<vector<S2Shape*>> const& components,
   }
   faces->back() = children[nullptr];
 
-  // Explicitly remove the shapes from the index so they are not deleted.
-  index.RemoveAll();
+  // Explicitly release the shapes from the index so they are not deleted.
+  for (auto& ptr : index.ReleaseAll()) ptr.release();
 }
 
 // Helper function that formats a loop error message.  If the loop belongs to
@@ -935,10 +892,10 @@ static bool FindCrossingError(S2Shape const& shape,
   //
   // Note that we don't need to maintain any state regarding loop crossings
   // because duplicate edges are detected and rejected above.
-  if (S2EdgeUtil::GetWedgeRelation(a.v0(), a.v1(), a2, b.v0(), b2) ==
-      S2EdgeUtil::WEDGE_PROPERLY_OVERLAPS &&
-      S2EdgeUtil::GetWedgeRelation(a.v0(), a.v1(), a2, b2, b.v0()) ==
-      S2EdgeUtil::WEDGE_PROPERLY_OVERLAPS) {
+  if (S2::GetWedgeRelation(a.v0(), a.v1(), a2, b.v0(), b2) ==
+      S2::WEDGE_PROPERLY_OVERLAPS &&
+      S2::GetWedgeRelation(a.v0(), a.v1(), a2, b2, b.v0()) ==
+      S2::WEDGE_PROPERLY_OVERLAPS) {
     error->Init(S2Error::POLYGON_LOOPS_CROSS,
                 "Loop %d edge %d crosses loop %d edge %d",
                 ap.chain_id, ap.offset, bp.chain_id, bp.offset);

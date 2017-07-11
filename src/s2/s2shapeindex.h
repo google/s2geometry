@@ -69,19 +69,19 @@
 #define S2_S2SHAPEINDEX_H_
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "s2/base/atomicops.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/base/mutex.h"
 #include "s2/base/spinlock.h"
-#include "s2/util/btree/btree_map.h"  // Like std::map, but faster and smaller.
-#include "s2/fpcontractoff.h"
+#include "s2/util/btree/btree_map.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/s2cellid.h"
 #include "s2/util/gtl/compact_array.h"
 
@@ -103,9 +103,10 @@ class S2ShapeIndex;
 //
 // Typically an S2Shape wraps some other geometric object in order to provide
 // access to its edges without duplicating the edge data.  Shapes are
-// immutable once they have been indexed; to modify a shape it must be removed
-// and then added again.  A shape can be removed from one S2ShapeIndex and
-// then added to another, but it can belong to only one index at a time.
+// immutable once they have been indexed; to modify a shape it must be
+// removed from the index and then added again.  A shape can be removed from
+// one S2ShapeIndex and then added to another, but it can belong to only one
+// index at a time.
 //
 // There are various useful subtypes defined in s2shapeutil.h, and also in the
 // polygonal geometry classes such as S2Polygon and S2Polyline.
@@ -185,13 +186,6 @@ class S2Shape {
   // Return the number of edges in this shape.  Edges have ids ranging from 0
   // to num_edges() - 1.
   virtual int num_edges() const = 0;
-
-  // Return pointers to the edge endpoints for the given edge id.
-  // Zero-length edges are allowed, and can be used to represent points.
-  //
-  // REQUIRES: 0 <= id < num_edges()
-  ABSL_DEPRECATED("Use edge(id) instead.")
-  virtual void GetEdge(int id, S2Point const** a, S2Point const** b) const = 0;
 
   // Return the endpoints of the given edge id.
   //
@@ -444,37 +438,22 @@ class S2ShapeIndex {
 
   // Return a pointer to the shape with the given id, or nullptr if the shape
   // has been removed from the index.
-  S2Shape* shape(int id) const { return shapes_[id]; }
+  S2Shape* shape(int id) const { return shapes_[id].get(); }
 
   // Take ownership of the given shape and add it to the index.  Also assigns
   // a unique id to the shape (shape->id()).  Shape ids are assigned
   // sequentially starting from 0 in the order shapes are added.  Invalidates
   // all iterators and their associated data.
-  //
-  // Note that this method does not require that the given S2Shape is
-  // allocated on the heap; S2Shapes may be allocated on the stack, or in
-  // vectors, or as members of another class, for example.  However, any
-  // shapes that were not allocated via "new" must be removed from the index
-  // (using Remove or RemoveAll) before the index is Reset() or destroyed.
-  // This feature is used by classes such as S2Polygon that have a built-in
-  // S2ShapeIndex.  This is also the reason why the argument type is not
-  // std::unique_ptr<S2Shape>.
-  //
-  // REQUIRES: "shape" is not currently in any other S2ShapeIndex.
-  // REQUIRES: "shape" persists for the lifetime of the index or until
-  //           Remove(shape) is called.
-  void Add(S2Shape* shape);
+  void Add(std::unique_ptr<S2Shape> shape);
 
   // Remove the given shape from the index and return ownership to the caller.
   // Invalidates all iterators and their associated data.
-  //
-  // See Add() for why this method does not return std::unique_ptr<S2Shape>.
-  void Remove(S2Shape* shape);
+  std::unique_ptr<S2Shape> Release(int shape_id);
 
   // Resets the index to its original state and returns ownership of all
   // shapes to the caller.  This method is much more efficient than removing
   // all shapes one at a time.
-  void RemoveAll();
+  std::vector<std::unique_ptr<S2Shape>> ReleaseAll();
 
   // Resets the index to its original state and deletes all shapes.  Any
   // options specified via Init() are preserved.
@@ -592,7 +571,7 @@ class S2ShapeIndex {
   // the other "const" methods (see introduction).
   size_t BytesUsed() const;
 
-  // Calls to Add() and Remove() are normally queued and processed on the
+  // Calls to Add() and Release() are normally queued and processed on the
   // first subsequent query (in a thread-safe way).  This has many advantages,
   // the most important of which is that sometimes there *is* no subsequent
   // query, which lets us avoid building the index completely.
@@ -612,6 +591,15 @@ class S2ShapeIndex {
   // efficiency hint), but it should not be used by internal methods  (see
   // MaybeApplyUpdates).
   bool is_fresh() const;
+
+  ABSL_DEPRECATED("Use Add(unique_ptr<S2Shape>) instead.")
+  void Add(S2Shape* shape) { Add(std::unique_ptr<S2Shape>(shape)); }
+
+  ABSL_DEPRECATED("Use Release instead.")
+  void Remove(S2Shape* shape) { Release(shape->id()).release(); }
+
+  ABSL_DEPRECATED("Use ReleaseAll instead.")
+  void RemoveAll() { for (auto& ptr : ReleaseAll()) ptr.release(); }
 
  private:
   friend class Iterator;           // cell_map_
@@ -689,7 +677,7 @@ class S2ShapeIndex {
 
   // The shapes in the index, accessed by their shape id.  Removed shapes are
   // replaced by nullptr pointers.
-  std::vector<S2Shape*> shapes_;
+  std::vector<std::unique_ptr<S2Shape>> shapes_;
 
   // A map from S2CellId to the set of clipped shapes that intersect that
   // cell.  The cell ids cover a set of non-overlapping regions on the
@@ -715,7 +703,7 @@ class S2ShapeIndex {
 
   // The set of shapes that have been queued for removal but not processed
   // yet.  Note that we need to copy the edge data since the caller is free to
-  // destroy the shape once Remove() has been called.  This field is present
+  // destroy the shape once Release() has been called.  This field is present
   // only when there are removed shapes to process (to save memory).
   std::unique_ptr<std::vector<RemovedShape>> pending_removals_;
 
@@ -749,7 +737,7 @@ class S2ShapeIndex {
     FRESH,     // There are no pending updates.
   };
   // Reads and writes to this field are guarded by "lock_".
-  Atomic32 index_status_;  // Stores an IndexStatus
+  std::atomic<IndexStatus> index_status_;
 
   // UpdateState holds temporary data related to thread synchronization.  It
   // is only allocated while updates are being applied.
@@ -866,7 +854,7 @@ inline void S2ShapeIndex::Iterator::Finish() {
 }
 
 inline bool S2ShapeIndex::is_fresh() const {
-  return base::subtle::NoBarrier_Load(&index_status_) == FRESH;
+  return index_status_.load(std::memory_order_relaxed) == FRESH;
 }
 
 // Return true if this is the first update to the index.
@@ -893,7 +881,7 @@ inline void S2ShapeIndex::MaybeApplyUpdates() const {
   // atomic operations when testing whether the status is FRESH and when
   // updating the status to be FRESH.  This guarantees that any thread that
   // sees a status of FRESH will also see the corresponding index updates.
-  if (base::subtle::Acquire_Load(&index_status_) != FRESH) {
+  if (index_status_.load(std::memory_order_acquire) != FRESH) {
     const_cast<S2ShapeIndex*>(this)->ApplyUpdatesThreadSafe();
   }
 }

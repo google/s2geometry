@@ -61,6 +61,7 @@
 #include "s2/s2point.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2shapeutil.h"
 
 namespace s2builderutil {
 
@@ -106,7 +107,7 @@ class S2PolygonLayer : public S2Builder::Layer {
     // counter-clockwise while the inner loops ("holes") should be directed
     // clockwise.  Note that S2Builder::AddPolygon() does this automatically.
     //
-    // Default value: S2Builder::EdgeType::DIRECTED.
+    // DEFAULT: S2Builder::EdgeType::DIRECTED
     S2Builder::EdgeType edge_type() const;
     void set_edge_type(S2Builder::EdgeType edge_type);
 
@@ -116,7 +117,7 @@ class S2PolygonLayer : public S2Builder::Layer {
     // Note that this option calls set_s2debug_override(S2Debug::DISABLE) in
     // order to turn off the default error checking in debug builds.
     //
-    // Default value: false.
+    // DEFAULT: false
     bool validate() const;
     void set_validate(bool validate);
 
@@ -165,7 +166,33 @@ class S2PolygonLayer : public S2Builder::Layer {
   Options options_;
 };
 
-// A layer type that assembles edges (directed or undirected) into an
+// Like S2PolygonLayer, but adds the polygon to an S2ShapeIndex.
+class IndexedS2PolygonLayer : public S2Builder::Layer {
+ public:
+  using Options = S2PolygonLayer::Options;
+  explicit IndexedS2PolygonLayer(S2ShapeIndex* index,
+                                 Options const& options = Options())
+      : index_(index), polygon_(new S2Polygon),
+        layer_(polygon_.get(), options) {}
+
+  GraphOptions graph_options() const override {
+    return layer_.graph_options();
+  }
+
+  void Build(Graph const& g, S2Error* error) override {
+    layer_.Build(g, error);
+    if (error->ok()) {
+      index_->Add(new S2Polygon::OwningShape(std::move(polygon_)));
+    }
+  }
+
+ private:
+  S2ShapeIndex* index_;
+  std::unique_ptr<S2Polygon> polygon_;
+  S2PolygonLayer layer_;
+};
+
+// a layer type that assembles edges (directed or undirected) into an
 // S2Polyline.  Returns an error if the edges cannot be assembled into a
 // single unbroken polyline.
 //
@@ -195,7 +222,7 @@ class S2PolylineLayer : public S2Builder::Layer {
     // undirected.  Directed edges should be used whenever possible to avoid
     // ambiguity.
     //
-    // Default value: S2Builder::EdgeType::DIRECTED.
+    // DEFAULT: S2Builder::EdgeType::DIRECTED
     S2Builder::EdgeType edge_type() const;
     void set_edge_type(S2Builder::EdgeType edge_type);
 
@@ -205,7 +232,7 @@ class S2PolylineLayer : public S2Builder::Layer {
     // Note that this option calls set_s2debug_override(S2Debug::DISABLE) in
     // order to turn off the default error checking in debug builds.
     //
-    // Default value: false.
+    // DEFAULT: false
     bool validate() const;
     void set_validate(bool validate);
 
@@ -245,6 +272,32 @@ class S2PolylineLayer : public S2Builder::Layer {
   Options options_;
 };
 
+// Like S2PolylineLayer, but adds the polyline to an S2ShapeIndex.
+class IndexedS2PolylineLayer : public S2Builder::Layer {
+ public:
+  using Options = S2PolylineLayer::Options;
+  explicit IndexedS2PolylineLayer(S2ShapeIndex* index,
+                                 Options const& options = Options())
+      : index_(index), polyline_(new S2Polyline),
+        layer_(polyline_.get(), options) {}
+
+  GraphOptions graph_options() const override {
+    return layer_.graph_options();
+  }
+
+  void Build(Graph const& g, S2Error* error) override {
+    layer_.Build(g, error);
+    if (error->ok()) {
+      index_->Add(new S2Polyline::OwningShape(std::move(polyline_)));
+    }
+  }
+
+ private:
+  S2ShapeIndex* index_;
+  std::unique_ptr<S2Polyline> polyline_;
+  S2PolylineLayer layer_;
+};
+
 // A layer type that assembles edges (directed or undirected) into multiple
 // S2Polylines.  Returns an error if S2Builder found any problem with the
 // input edges; this layer type does not generate any errors of its own.
@@ -277,7 +330,7 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
     // the same polylines in the same order.  With undirected edges, there are
     // no such guarantees.
     //
-    // Default value: S2Builder::EdgeType::DIRECTED.
+    // DEFAULT: S2Builder::EdgeType::DIRECTED
     S2Builder::EdgeType edge_type() const;
     void set_edge_type(S2Builder::EdgeType edge_type);
 
@@ -291,7 +344,7 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
     // you don't mind if your polylines backtrack or contain loops, then use
     // PolylineType::WALK.
     //
-    // Default value: PolylineType::PATH.
+    // DEFAULT: PolylineType::PATH
     using PolylineType = S2Builder::Graph::PolylineType;
     PolylineType polyline_type() const;
     void set_polyline_type(PolylineType polyline_type);
@@ -300,7 +353,7 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
     // merged together (MERGE).  Note you can use edge labels to determine
     // which input edges were merged into a given output edge.
     //
-    // Default value: DuplicateEdges::KEEP.
+    // DEFAULT: DuplicateEdges::KEEP
     using DuplicateEdges = GraphOptions::DuplicateEdges;
     DuplicateEdges duplicate_edges() const;
     void set_duplicate_edges(DuplicateEdges duplicate_edges);
@@ -315,7 +368,7 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
     // REQUIRES: sibling_pairs == { DISCARD, KEEP }
     //           (the CREATE and REQUIRE options are not allowed)
     //
-    // Default value: SiblingPairs::KEEP.
+    // DEFAULT: SiblingPairs::KEEP
     using SiblingPairs = GraphOptions::SiblingPairs;
     SiblingPairs sibling_pairs() const;
     void set_sibling_pairs(SiblingPairs sibling_pairs);
@@ -326,7 +379,7 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
     // Note that this option calls set_s2debug_override(S2Debug::DISABLE) in
     // order to turn off the default error checking in debug builds.
     //
-    // Default value: false.
+    // DEFAULT: false
     bool validate() const;
     void set_validate(bool validate);
 
@@ -342,7 +395,7 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
     // data).  The other possible error is adjacent identical vertices, but
     // this can't happen because S2Builder does not generate such polylines.
     //
-    // Default value: S2Debug::ALLOW.
+    // DEFAULT: S2Debug::ALLOW
     S2Debug s2debug_override() const;
     void set_s2debug_override(S2Debug override);
 
@@ -390,6 +443,33 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
   Options options_;
 };
 
+// Like S2PolylineVectorLayer, but adds the polylines to an S2ShapeIndex.
+class IndexedS2PolylineVectorLayer : public S2Builder::Layer {
+ public:
+  using Options = S2PolylineVectorLayer::Options;
+  explicit IndexedS2PolylineVectorLayer(S2ShapeIndex* index,
+                                        Options const& options = Options())
+      : index_(index), layer_(&polylines_, options) {}
+
+  GraphOptions graph_options() const override {
+    return layer_.graph_options();
+  }
+
+  void Build(Graph const& g, S2Error* error) override {
+    layer_.Build(g, error);
+    if (error->ok()) {
+      for (auto& polyline : polylines_) {
+        index_->Add(new S2Polyline::OwningShape(std::move(polyline)));
+      }
+    }
+  }
+
+ private:
+  S2ShapeIndex* index_;
+  std::vector<std::unique_ptr<S2Polyline>> polylines_;
+  S2PolylineVectorLayer layer_;
+};
+
 // A layer type that collects degenerate edges as points.
 // This layer expects all edges to be degenerate. In case of finding
 // non-degenerate edges it sets S2Error but it still generates the
@@ -402,7 +482,7 @@ class S2PointVectorLayer : public S2Builder::Layer {
     Options();
     explicit Options(DuplicateEdges duplicate_edges);
 
-    // Default value: DuplicateEdges::MERGE.
+    // DEFAULT: DuplicateEdges::MERGE
     DuplicateEdges duplicate_edges() const;
     void set_duplicate_edges(DuplicateEdges duplicate_edges);
 
@@ -427,6 +507,31 @@ class S2PointVectorLayer : public S2Builder::Layer {
   LabelSetIds* label_set_ids_;
   IdSetLexicon* label_set_lexicon_;
   Options options_;
+};
+
+// Like S2PointVectorLayer, but adds the points to an S2ShapeIndex.
+class IndexedS2PointVectorLayer : public S2Builder::Layer {
+ public:
+  using Options = S2PointVectorLayer::Options;
+  explicit IndexedS2PointVectorLayer(S2ShapeIndex* index,
+                                     Options const& options = Options())
+      : index_(index), layer_(&points_, options) {}
+
+  GraphOptions graph_options() const override {
+    return layer_.graph_options();
+  }
+
+  void Build(Graph const& g, S2Error* error) override {
+    layer_.Build(g, error);
+    if (error->ok()) {
+      index_->Add(new s2shapeutil::PointVectorShape(&points_));
+    }
+  }
+
+ private:
+  S2ShapeIndex* index_;
+  std::vector<S2Point> points_;
+  S2PointVectorLayer layer_;
 };
 
 #if 0

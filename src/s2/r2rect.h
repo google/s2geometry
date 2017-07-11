@@ -21,7 +21,7 @@
 #include <iosfwd>
 
 #include <glog/logging.h>
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 
@@ -79,7 +79,8 @@ class R2Rect {
   bool is_empty() const;
 
   // Return the k-th vertex of the rectangle (k = 0,1,2,3) in CCW order.
-  // Vertex 0 is in the lower-left corner.
+  // Vertex 0 is in the lower-left corner.  For convenience, the argument is
+  // reduced modulo 4 to the range [0..3].
   R2Point GetVertex(int k) const;
 
   // Return the vertex in direction "i" along the x-axis (0=left, 1=right) and
@@ -196,8 +197,8 @@ inline R2Rect R2Rect::FromPoint(R2Point const& p) {
 inline R2Point R2Rect::GetVertex(int k) const {
   // Twiddle bits to return the points in CCW order (lower left, lower right,
   // upper right, upper left).
-  DCHECK(k >= 0 && k <= 3);
-  return GetVertex((k >> 1) ^ (k & 1), k >> 1);
+  int j = (k >> 1) & 1;
+  return GetVertex(j ^ (k & 1), j);
 }
 
 inline R2Point R2Rect::GetVertex(int i, int j) const {

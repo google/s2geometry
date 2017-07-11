@@ -21,7 +21,7 @@
 #include <iosfwd>
 
 #include <glog/logging.h>
-#include "s2/fpcontractoff.h"
+#include "s2/_fpcontractoff.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -111,7 +111,8 @@ class S2R2Rect final : public S2Region {
   bool is_empty() const;
 
   // Return the k-th vertex of the rectangle (k = 0,1,2,3) in CCW order.
-  // Vertex 0 is in the lower-left corner.
+  // Vertex 0 is in the lower-left corner.  For convenience, the argument is
+  // reduced modulo 4 to the range [0..3].
   R2Point GetVertex(int k) const;
 
   // Return the vertex in direction "i" along the x-axis (0=left, 1=right) and

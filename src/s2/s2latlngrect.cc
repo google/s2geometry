@@ -69,7 +69,8 @@ S2LatLngRect* S2LatLngRect::Clone() const {
 S2LatLng S2LatLngRect::GetVertex(int k) const {
   // Twiddle bits to return the points in CCW order (lower left, lower right,
   // upper right, upper left).
-  return S2LatLng::FromRadians(lat_[k>>1], lng_[(k>>1) ^ (k&1)]);
+  int i = (k >> 1) & 1;
+  return S2LatLng::FromRadians(lat_[i], lng_[i ^ (k & 1)]);
 }
 
 S2LatLng S2LatLngRect::GetCenter() const {
@@ -359,7 +360,7 @@ bool S2LatLngRect::IntersectsLngEdge(S2Point const& a, S2Point const& b,
   // longitude.  The nice thing about edges of constant longitude is that
   // they are straight lines on the sphere (geodesics).
 
-  return S2EdgeUtil::SimpleCrossing(
+  return S2::SimpleCrossing(
       a, b, S2LatLng::FromRadians(lat.lo(), lng).ToPoint(),
       S2LatLng::FromRadians(lat.hi(), lng).ToPoint());
 }
@@ -514,10 +515,10 @@ S1Angle S2LatLngRect::GetDistance(S2LatLngRect const& other) const {
   S2Point a_hi = S2LatLng(a.lat_hi(), a_lng).ToPoint();
   S2Point b_lo = S2LatLng(b.lat_lo(), b_lng).ToPoint();
   S2Point b_hi = S2LatLng(b.lat_hi(), b_lng).ToPoint();
-  return min(S2EdgeUtil::GetDistance(a_lo, b_lo, b_hi),
-         min(S2EdgeUtil::GetDistance(a_hi, b_lo, b_hi),
-         min(S2EdgeUtil::GetDistance(b_lo, a_lo, a_hi),
-             S2EdgeUtil::GetDistance(b_hi, a_lo, a_hi))));
+  return min(S2::GetDistance(a_lo, b_lo, b_hi),
+         min(S2::GetDistance(a_hi, b_lo, b_hi),
+         min(S2::GetDistance(b_lo, a_lo, a_hi),
+             S2::GetDistance(b_hi, a_lo, a_hi))));
 }
 
 S1Angle S2LatLngRect::GetDistance(S2LatLng const& p) const {
@@ -544,7 +545,7 @@ S1Angle S2LatLngRect::GetDistance(S2LatLng const& p) const {
   }
   S2Point lo = S2LatLng::FromRadians(a.lat().lo(), a_lng).ToPoint();
   S2Point hi = S2LatLng::FromRadians(a.lat().hi(), a_lng).ToPoint();
-  return S2EdgeUtil::GetDistance(p.ToPoint(), lo, hi);
+  return S2::GetDistance(p.ToPoint(), lo, hi);
 }
 
 S1Angle S2LatLngRect::GetHausdorffDistance(S2LatLngRect const& other) const {
@@ -618,9 +619,9 @@ S1Angle S2LatLngRect::GetDirectedHausdorffDistance(
   // Cases A1 and B1.
   S2Point a_lo = S2LatLng::FromRadians(a.lo(), 0).ToPoint();
   S2Point a_hi = S2LatLng::FromRadians(a.hi(), 0).ToPoint();
-  max_distance = S2EdgeUtil::GetDistance(a_lo, b_lo, b_hi);
+  max_distance = S2::GetDistance(a_lo, b_lo, b_hi);
   max_distance = max(
-      max_distance, S2EdgeUtil::GetDistance(a_hi, b_lo, b_hi));
+      max_distance, S2::GetDistance(a_hi, b_lo, b_hi));
 
   if (lng_diff <= M_PI_2) {
     // Case A2.

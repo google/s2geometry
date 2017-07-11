@@ -13,7 +13,6 @@
 // limitations under the License.
 //
 
-
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2/s2boundary_operation.h"
@@ -46,64 +45,6 @@ using SiblingPairs = GraphOptions::SiblingPairs;
 using OpType = S2BoundaryOperation::OpType;
 using PolygonModel = S2BoundaryOperation::PolygonModel;
 using PolylineModel = S2BoundaryOperation::PolylineModel;
-
-#if 0
-PolygonModel kPolygonModels[3] = {
-  PolygonModel::OPEN,
-  PolygonModel::SEMI_OPEN,
-  PolygonModel::CLOSED,
-};
-
-PolylineModel kPolylineModels[3] = {
-  PolylineModel::OPEN,
-  PolylineModel::SEMI_OPEN,
-  PolylineModel::CLOSED,
-};
-#endif
-
-// Returns an S2ShapeIndex containing the points, polylines, and loops (in the
-// form of a single polygon) described by the following format:
-//
-//   point1; point2; ... # line1; line2; ... # loop1; loop2; ...
-//
-// Examples:
-//   1:2; 2:3 # #                                 // Two points
-//   # 0:0, 1:1, 2:2; 3:3, 4:4 #                 // Two polylines
-//   # # 0:0, 0:3, 3:0; 1:1, 2:1, 1:2             // Two nested loops
-//   5:5 # 6:6, 7:7 # 0:0, 0:1, 1:0              // One of each
-//
-// Loops should be directed so that the region's interior is on the left.
-// Loops can be degenerate (they do not need to meet S2Loop requirements).
-unique_ptr<S2ShapeIndex> MakeIndex(string const& str) {
-  vector<string> strs = strings::Split(str, '#');
-  DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
-  // TODO(ericv): Update s2textformat to understand StringPiece.
-  vector<string> dim_strs[3];
-  for (int d = 0; d < 3; ++d) {
-    dim_strs[d] = strings::Split(strs[d], ';', strings::SkipWhitespace());
-    strings::StripWhitespaceInCollection(&dim_strs[d]);
-  }
-  auto index = absl::MakeUnique<S2ShapeIndex>();
-  vector<S2Point> points;
-  for (auto const& point_str : dim_strs[0]) {
-    points.push_back(s2textformat::MakePoint(point_str));
-  }
-  if (!points.empty()) {
-    index->Add(new s2shapeutil::PointVectorShape(&points));
-  }
-  for (auto const& line_str : dim_strs[1]) {
-    auto vertices = s2textformat::ParsePoints(line_str);
-    index->Add(new s2shapeutil::LaxPolyline(vertices));
-  }
-  vector<vector<S2Point>> loops;
-  for (auto const& loop_str : dim_strs[2]) {
-    loops.push_back(s2textformat::ParsePoints(loop_str));
-  }
-  if (!loops.empty()) {
-    index->Add(new s2shapeutil::LaxPolygon(loops));
-  }
-  return index;
-}
 
 S2Error::Code INDEXES_DO_NOT_MATCH = S2Error::USER_DEFINED_START;
 
@@ -183,14 +124,14 @@ void ExpectResult(S2BoundaryOperation::OpType op_type,
                   S2BoundaryOperation::Options const& options,
                   string const& a_str, string const& b_str,
                   string const& expected_str) {
-  auto a = MakeIndex(a_str);
-  auto b = MakeIndex(b_str);
-  auto expected = MakeIndex(expected_str);
-  S2BoundaryOperation op(op_type,
-                         absl::MakeUnique<IndexMatchingLayer>(*expected, 0),
-                         absl::MakeUnique<IndexMatchingLayer>(*expected, 1),
-                         absl::MakeUnique<IndexMatchingLayer>(*expected, 2),
-                         options);
+  auto a = s2textformat::MakeIndex(a_str);
+  auto b = s2textformat::MakeIndex(b_str);
+  auto expected = s2textformat::MakeIndex(expected_str);
+  vector<unique_ptr<S2Builder::Layer>> layers;
+  for (int dim = 0; dim < 3; ++dim) {
+    layers.push_back(absl::MakeUnique<IndexMatchingLayer>(*expected, dim));
+  }
+  S2BoundaryOperation op(op_type, std::move(layers), options);
   S2Error error;
   EXPECT_TRUE(op.Build(*a, *b, &error))
       << S2BoundaryOperation::OpTypeToString(op_type) << " failed:\n"
@@ -233,7 +174,7 @@ static S2BoundaryOperation::Options RoundToE(int exp) {
 //  - disjoint, coincident
 // Point/polyline:
 //  - Start vertex, end vertex, interior vertex, degenerate polyline
-//  - With polyline_loops_have_boundary: start/end vertex, degenerate polyline
+//  - With polyline_loops_have_boundaries: start/end vertex, degenerate polyline
 // Point/polygon:
 //  - Polygon interior, exterior, vertex
 //  - Vertex of degenerate sibling pair shell, hole
@@ -260,20 +201,47 @@ static S2BoundaryOperation::Options RoundToE(int exp) {
 //  - Edge/edge: interior crossing, duplicate, reversed
 //  - Interior/interior: polygons in interior/exterior of other polygons
 
+TEST(S2BoundaryOperation, DegeneratePolylines) {
+  // Verify that degenerate polylines are preserved under all boundary models.
+  S2BoundaryOperation::Options options;
+  auto a = "# 0:0, 0:0 #";
+  auto b = "# #";
+  options.set_polyline_model(PolylineModel::OPEN);
+  ExpectResult(OpType::UNION, options, a, b, a);
+  options.set_polyline_model(PolylineModel::SEMI_OPEN);
+  ExpectResult(OpType::UNION, options, a, b, a);
+  options.set_polyline_model(PolylineModel::CLOSED);
+  ExpectResult(OpType::UNION, options, a, b, a);
+}
+
+TEST(S2BoundaryOperation, DegeneratePolygons) {
+  // Verify that degenerate polygon features (single-vertex and sibling pair
+  // shells and holes) are preserved under all boundary models.
+  S2BoundaryOperation::Options options;
+  auto a = "# # 0:0, 0:5, 5:5, 5:0; 1:1; 2:2, 3:3; 6:6; 7:7, 8:8";
+  auto b = "# #";
+  options.set_polygon_model(PolygonModel::OPEN);
+  ExpectResult(OpType::UNION, options, a, b, a);
+  options.set_polygon_model(PolygonModel::SEMI_OPEN);
+  ExpectResult(OpType::UNION, options, a, b, a);
+  options.set_polygon_model(PolygonModel::CLOSED);
+  ExpectResult(OpType::UNION, options, a, b, a);
+}
+
 TEST(S2BoundaryOperation, PointPoint) {
   S2BoundaryOperation::Options options;
-  auto a = "0:0; 1:0 # #";
-  auto b = "0:0; 2:0 # #";
+  auto a = "0:0 | 1:0 # #";
+  auto b = "0:0 | 2:0 # #";
   // Note that these results have duplicates, which is correct.  Clients can
   // eliminated the duplicates with the appropriate GraphOptions.
   ExpectResult(OpType::UNION, options, a, b,
-               "0:0; 0:0; 1:0; 2:0 # #");
+               "0:0 | 0:0 | 1:0 | 2:0 # #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-               "0:0; 0:0 # #");
+               "0:0 | 0:0 # #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
                "1:0 # #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "1:0; 2:0 # #");
+               "1:0 | 2:0 # #");
 }
 
 TEST(S2BoundaryOperation, PointOpenPolyline) {
@@ -285,16 +253,16 @@ TEST(S2BoundaryOperation, PointOpenPolyline) {
   // point 3:0 and the degenerate polyline 3:0, since they do not intersect.
   S2BoundaryOperation::Options options;
   options.set_polyline_model(PolylineModel::OPEN);
-  auto a = "0:0; 1:0; 2:0; 3:0 # #";
-  auto b = "# 0:0, 1:0, 2:0; 3:0, 3:0 #";
+  auto a = "0:0 | 1:0 | 2:0 | 3:0 # #";
+  auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 #";
   ExpectResult(OpType::UNION, options, a, b,
-               "0:0; 2:0; 3:0 # 0:0, 1:0, 2:0; 3:0, 3:0 #");
+               "0:0 | 2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "1:0 # #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "0:0; 2:0; 3:0 # #");
+               "0:0 | 2:0 | 3:0 # #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "0:0; 2:0; 3:0 # 0:0, 1:0, 2:0; 3:0, 3:0 #");
+               "0:0 | 2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
 }
 
 TEST(S2BoundaryOperation, PointSemiOpenPolyline) {
@@ -303,16 +271,16 @@ TEST(S2BoundaryOperation, PointSemiOpenPolyline) {
   // polyline "3:0, 3:0" do not intersect.
   S2BoundaryOperation::Options options;
   options.set_polyline_model(PolylineModel::SEMI_OPEN);
-  auto a = "0:0; 1:0; 2:0; 3:0 # #";
-  auto b = "# 0:0, 1:0, 2:0; 3:0, 3:0 #";
+  auto a = "0:0 | 1:0 | 2:0 | 3:0 # #";
+  auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 #";
   ExpectResult(OpType::UNION, options, a, b,
-               "2:0; 3:0 # 0:0, 1:0, 2:0; 3:0, 3:0 #");
+               "2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-               "0:0; 1:0 # #");
+               "0:0 | 1:0 # #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "2:0; 3:0 # #");
+               "2:0 | 3:0 # #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "2:0; 3:0 # 0:0, 1:0, 2:0; 3:0, 3:0 #");
+               "2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
 }
 
 TEST(S2BoundaryOperation, PointClosedPolyline) {
@@ -323,22 +291,22 @@ TEST(S2BoundaryOperation, PointClosedPolyline) {
   // difference includes only the polyline objects.
   S2BoundaryOperation::Options options;
   options.set_polyline_model(PolylineModel::CLOSED);
-  auto a = "0:0; 1:0; 2:0; 3:0 # #";
-  auto b = "# 0:0, 1:0, 2:0; 3:0, 3:0 #";
+  auto a = "0:0 | 1:0 | 2:0 | 3:0 # #";
+  auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 #";
   ExpectResult(OpType::UNION, options, a, b,
-               "# 0:0, 1:0, 2:0; 3:0, 3:0 #");
+               "# 0:0, 1:0, 2:0 | 3:0, 3:0 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-               "0:0; 1:0; 2:0; 3:0 # #");
+               "0:0 | 1:0 | 2:0 | 3:0 # #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
                "# #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "# 0:0, 1:0, 2:0; 3:0, 3:0 #");
+               "# 0:0, 1:0, 2:0 | 3:0, 3:0 #");
 }
 
 TEST(S2BoundaryOperation, PointPolygonInterior) {
   S2BoundaryOperation::Options options;  // PolygonModel is irrelevant.
   // One interior point and one exterior point.
-  auto a = "1:1; 4:4 # #";
+  auto a = "1:1 | 4:4 # #";
   auto b = "# # 0:0, 0:3, 3:0";
   ExpectResult(OpType::UNION, options, a, b,
                "4:4 # # 0:0, 0:3, 3:0");
@@ -354,16 +322,16 @@ TEST(S2BoundaryOperation, PointOpenPolygonVertex) {
   S2BoundaryOperation::Options options;
   options.set_polygon_model(PolygonModel::OPEN);
   // See notes about the two vertices below.
-  auto a = "0:1; 1:0 # #";
+  auto a = "0:1 | 1:0 # #";
   auto b = "# # 0:0, 0:1, 1:0";
   ExpectResult(OpType::UNION, options, a, b,
-               "0:1; 1:0 # # 0:0, 0:1, 1:0");
+               "0:1 | 1:0 # # 0:0, 0:1, 1:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "0:1; 1:0 # #");
+               "0:1 | 1:0 # #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "0:1; 1:0 # # 0:0, 0:1, 1:0");
+               "0:1 | 1:0 # # 0:0, 0:1, 1:0");
 }
 
 TEST(S2BoundaryOperation, PointSemiOpenPolygonVertex) {
@@ -375,7 +343,7 @@ TEST(S2BoundaryOperation, PointSemiOpenPolygonVertex) {
   auto polygon = s2textformat::MakePolygon("0:0, 0:1, 1:0");
   ASSERT_TRUE(polygon->Contains(s2textformat::MakePoint("0:1")));
   ASSERT_FALSE(polygon->Contains(s2textformat::MakePoint("1:0")));
-  auto a = "0:1; 1:0 # #";
+  auto a = "0:1 | 1:0 # #";
   auto b = "# # 0:0, 0:1, 1:0";
   ExpectResult(OpType::UNION, options, a, b,
                "1:0 # # 0:0, 0:1, 1:0");
@@ -391,12 +359,12 @@ TEST(S2BoundaryOperation, PointClosedPolygonVertex) {
   S2BoundaryOperation::Options options;
   options.set_polygon_model(PolygonModel::CLOSED);
 // See notes about the two vertices above.
-  auto a = "0:1; 1:0 # #";
+  auto a = "0:1 | 1:0 # #";
   auto b = "# # 0:0, 0:1, 1:0";
   ExpectResult(OpType::UNION, options, a, b,
                "# # 0:0, 0:1, 1:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-               "0:1; 1:0 # #");
+               "0:1 | 1:0 # #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
                "# #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
@@ -404,31 +372,111 @@ TEST(S2BoundaryOperation, PointClosedPolygonVertex) {
 }
 
 TEST(S2BoundaryOperation, PolylineVertexOpenPolylineVertex) {
-  // Not implemented yet.
+  // Test starting, ending, and middle vertices of both polylines.  Degenerate
+  // polylines are tested in PolylineEdgePolylineEdgeOverlap below.
+  S2BoundaryOperation::Options options;
+  options.set_polyline_model(PolylineModel::OPEN);
+  auto a = "# 0:0, 0:1, 0:2 #";
+  auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
+
+  // The output consists of the portion of each input polyline that intersects
+  // the opposite region, so the intersection vertex is present twice.  This
+  // allows reassembling the individual polylins that intersect, if desired.
+  // (Otherwise duplicates can be removed using DuplicateEdges::MERGE.)
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# 0:1, 0:1 | 0:1, 0:1 #");
+
+  // Note that all operations are defined such that subtracting a
+  // lower-dimensional subset of an object has no effect.  In this case,
+  // subtracting the middle vertex of a polyline has no effect.
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# 0:0, 0:1, 0:2 #");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
 }
 
 TEST(S2BoundaryOperation, PolylineVertexSemiOpenPolylineVertex) {
-  // Not implemented yet.
+  S2BoundaryOperation::Options options;
+  options.set_polyline_model(PolylineModel::SEMI_OPEN);
+  auto a = "# 0:0, 0:1, 0:2 #";
+  auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# 0:0, 0:0 | 0:0, 0:0 | 0:1, 0:1 | 0:1, 0:1 #");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# 0:0, 0:1, 0:2 #");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
 }
 
 TEST(S2BoundaryOperation, PolylineVertexClosedPolylineVertex) {
-  // Not implemented yet.
+  S2BoundaryOperation::Options options;
+  options.set_polyline_model(PolylineModel::CLOSED);
+  auto a = "# 0:0, 0:1, 0:2 #";
+  auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# 0:0, 0:0 | 0:0, 0:0 | 0:1, 0:1 | 0:1, 0:1 "
+               "| 0:2, 0:2 | 0:2, 0:2 #");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# 0:0, 0:1, 0:2 #");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
 }
 
 // Don't bother testing every PolylineModel with every PolygonModel for vertex
 // intersection, since we have already tested the PolylineModels individually
-// above.  It is sufficient to use PolylineModel::SEMI_OPEN with the various
+// above.  It is sufficient to use PolylineModel::CLOSED with the various
 // PolygonModel options.
 TEST(S2BoundaryOperation, PolylineVertexOpenPolygonVertex) {
-  // Not implemented yet.
+  S2BoundaryOperation::Options options;
+  options.set_polygon_model(PolygonModel::OPEN);
+  auto a = "# 0:1, 0:2 | 1:0, 2:0 #";
+  auto b = "# # 0:0, 0:1, 1:0";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# 0:1, 0:2| 1:0, 2:0 # 0:0, 0:1, 1:0");
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# #");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# 0:1, 0:2 | 1:0, 2:0 #");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# 0:1, 0:2| 1:0, 2:0 # 0:0, 0:1, 1:0");
 }
 
 TEST(S2BoundaryOperation, PolylineVertexSemiOpenPolygonVertex) {
-  // Not implemented yet.
+  S2BoundaryOperation::Options options;
+  options.set_polygon_model(PolygonModel::SEMI_OPEN);
+  // The polygon below contains "0:1" but not "1:0" in the SEMI_OPEN model.
+  auto a = "# 0:1, 0:2 | 1:0, 2:0 #";
+  auto b = "# # 0:0, 0:1, 1:0";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# 0:1, 0:2| 1:0, 2:0 # 0:0, 0:1, 1:0");
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# 0:1, 0:1 #");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# 0:1, 0:2 | 1:0, 2:0 #");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# 0:1, 0:2| 1:0, 2:0 # 0:0, 0:1, 1:0");
 }
 
+
 TEST(S2BoundaryOperation, PolylineVertexClosedPolygonVertex) {
-  // Not implemented yet.
+  S2BoundaryOperation::Options options;
+  options.set_polygon_model(PolygonModel::CLOSED);
+  auto a = "# 0:1, 0:2 | 1:0, 2:0 #";
+  auto b = "# # 0:0, 0:1, 1:0";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# 0:1, 0:2| 1:0, 2:0 # 0:0, 0:1, 1:0");
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# 0:1, 0:1 | 1:0, 1:0 #");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# 0:1, 0:2 | 1:0, 2:0 #");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# 0:1, 0:2| 1:0, 2:0 # 0:0, 0:1, 1:0");
 }
 
 TEST(S2BoundaryOperation, PolylineEdgePolylineEdgeCrossing) {
@@ -437,13 +485,13 @@ TEST(S2BoundaryOperation, PolylineEdgePolylineEdgeCrossing) {
   auto a = "# 0:0, 2:2 #";
   auto b = "# 2:0, 0:2 #";
   ExpectResult(OpType::UNION, options, a, b,
-               "# 0:0, 1:1, 2:2; 2:0, 1:1, 0:2 #");
+               "# 0:0, 1:1, 2:2 | 2:0, 1:1, 0:2 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-               "# 1:1, 1:1; 1:1, 1:1 #");
+               "# 1:1, 1:1 | 1:1, 1:1 #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
                "# 0:0, 2:2 #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "# 0:0, 1:1, 2:2; 2:0, 1:1, 0:2 #");
+               "# 0:0, 1:1, 2:2 | 2:0, 1:1, 0:2 #");
 }
 
 TEST(S2BoundaryOperation, PolylineEdgePolylineEdgeOverlap) {
@@ -453,20 +501,20 @@ TEST(S2BoundaryOperation, PolylineEdgePolylineEdgeOverlap) {
   S2BoundaryOperation::Options options;
   options.set_polygon_model(PolygonModel::OPEN);
   // Test edges in the same and reverse directions, and degenerate edges.
-  auto a = "# 0:0, 1:0, 2:0; 3:0, 3:0; 6:0, 5:0, 4:0 #";
-  auto b = "# 0:0, 1:0; 3:0, 3:0; 4:0, 5:0 #";
+  auto a = "# 0:0, 1:0, 2:0, 2:5 | 3:0, 3:0 | 6:0, 5:0, 4:0 #";
+  auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0 #";
   // As usual, the expected output includes the relevant portions of *both*
   // input polylines.  Duplicates can be removed using GraphOptions.
   ExpectResult(OpType::UNION, options, a, b,
-               "# 0:0, 1:0, 2:0; 0:0, 1:0; 3:0, 3:0; 3:0, 3:0; "
-               "6:0, 5:0, 4:0; 4:0, 5:0 #");
+               "# 0:0, 1:0, 2:0, 2:5 | 0:0, 1:0, 2:0 | 3:0, 3:0 | 3:0, 3:0 "
+               "| 6:0, 5:0, 4:0 | 4:0, 5:0 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-               "# 0:0, 1:0; 0:0, 1:0; 3:0, 3:0; 3:0, 3:0; "
-               "5:0, 4:0; 4:0, 5:0 #");
+               "# 0:0, 1:0, 2:0 | 0:0, 1:0, 2:0 | 3:0, 3:0 | 3:0, 3:0 "
+               "| 5:0, 4:0 | 4:0, 5:0 #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "# 1:0, 2:0; 6:0, 5:0 #");
+               "# 2:0, 2:5 | 6:0, 5:0 #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "# 1:0, 2:0; 6:0, 5:0 #");
+               "# 2:0, 2:5 | 6:0, 5:0 #");
 }
 
 TEST(S2BoundaryOperation, PolylineEdgeOpenPolygonEdgeOverlap) {
@@ -474,42 +522,47 @@ TEST(S2BoundaryOperation, PolylineEdgeOpenPolygonEdgeOverlap) {
   options.set_polygon_model(PolygonModel::OPEN);
   // A polygon and two polyline edges that coincide with the polygon boundary,
   // one in the same direction and one in the reverse direction.
-  auto a = "# 1:1, 1:3; 3:3, 1:3 # ";
+  auto a = "# 1:1, 1:3, 3:3 | 3:3, 1:3 # ";
   auto b = "# # 1:1, 1:3, 3:3, 3:1";
   ExpectResult(OpType::UNION, options, a, b,
-               "# 1:1, 1:3; 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
+               "# 1:1, 1:3, 3:3 | 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "# 1:1, 1:3; 3:3, 1:3 #");
+               "# 1:1, 1:3, 3:3 | 3:3, 1:3 #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "# 1:1, 1:3; 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
+               "# 1:1, 1:3, 3:3 | 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
 }
 
 TEST(S2BoundaryOperation, PolylineEdgeSemiOpenPolygonEdgeOverlap) {
+  auto polygon = s2textformat::MakePolygon("1:1, 1:3, 3:3, 3:1");
+  ASSERT_FALSE(polygon->Contains(s2textformat::MakePoint("1:1")));
+  ASSERT_TRUE(polygon->Contains(s2textformat::MakePoint("1:3")));
+  ASSERT_FALSE(polygon->Contains(s2textformat::MakePoint("3:3")));
+  ASSERT_FALSE(polygon->Contains(s2textformat::MakePoint("3:1")));
   S2BoundaryOperation::Options options;
   options.set_polygon_model(PolygonModel::SEMI_OPEN);
-  auto a = "# 1:1, 1:3; 3:3, 1:3 # ";
+  auto a = "# 1:1, 1:3, 3:3 | 3:3, 1:3 # ";
   auto b = "# # 1:1, 1:3, 3:3, 3:1";
   ExpectResult(OpType::UNION, options, a, b,
-               "# 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
+               "# 1:1, 1:1 | 3:3, 3:3 | 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-               "# 1:1, 1:3 #");
+               "# 1:3, 1:3 | 1:1, 1:3, 3:3 #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "# 3:3, 1:3 #");
+               "# 1:1, 1:1 | 3:3, 3:3 | 3:3, 1:3 #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "# 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
+               "# 1:1, 1:1 | 3:3, 3:3 | 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
 }
 
 TEST(S2BoundaryOperation, PolylineEdgeClosedPolygonEdgeOverlap) {
   S2BoundaryOperation::Options options;
   options.set_polygon_model(PolygonModel::CLOSED);
-  auto a = "# 1:1, 1:3; 3:3, 1:3 # ";
+  auto a = "# 1:1, 1:3, 3:3 | 3:3, 1:3 # ";
   auto b = "# # 1:1, 1:3, 3:3, 3:1";
   ExpectResult(OpType::UNION, options, a, b,
                "# # 1:1, 1:3, 3:3, 3:1");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-               "# 1:1, 1:3; 3:3, 1:3 #");
+               "# 1:1, 1:3, 3:3 | 3:3, 1:3 #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
                "# #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
@@ -520,28 +573,63 @@ TEST(S2BoundaryOperation, PolylineEdgePolygonInterior) {
   S2BoundaryOperation::Options options;  // PolygonModel is irrelevant.
   // One normal and one degenerate polyline edge in the polygon interior, and
   // similarly for the polygon exterior.
-  auto a = "# 1:1, 2:2; 3:3, 3:3; 6:6, 7:7; 8:8, 8:8 # ";
+  auto a = "# 1:1, 2:2 | 3:3, 3:3 | 6:6, 7:7 | 8:8, 8:8 # ";
   auto b = "# # 0:0, 0:5, 5:5, 5:0";
   ExpectResult(OpType::UNION, options, a, b,
-               "# 6:6, 7:7; 8:8, 8:8 # 0:0, 0:5, 5:5, 5:0");
+               "# 6:6, 7:7 | 8:8, 8:8 # 0:0, 0:5, 5:5, 5:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-               "# 1:1, 2:2; 3:3, 3:3 #");
+               "# 1:1, 2:2 | 3:3, 3:3 #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "# 6:6, 7:7; 8:8, 8:8 #");
+               "# 6:6, 7:7 | 8:8, 8:8 #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "# 6:6, 7:7; 8:8, 8:8 # 0:0, 0:5, 5:5, 5:0");
+               "# 6:6, 7:7 | 8:8, 8:8 # 0:0, 0:5, 5:5, 5:0");
 }
 
 TEST(S2BoundaryOperation, PolygonVertexOpenPolygonVertex) {
-  // Not implemented yet.
+  S2BoundaryOperation::Options options;
+  options.set_polygon_model(PolygonModel::OPEN);
+  auto a = "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5";
+  auto b = "# # 0:0, 5:3, 5:2";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# #");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
 }
 
 TEST(S2BoundaryOperation, PolygonVertexSemiOpenPolygonVertex) {
-  // Not implemented yet.
+  S2BoundaryOperation::Options options;
+  options.set_polygon_model(PolygonModel::SEMI_OPEN);
+  auto a = "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5";
+  auto b = "# # 0:0, 5:3, 5:2";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# #");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
 }
 
 TEST(S2BoundaryOperation, PolygonVertexClosedPolygonVertex) {
-  // Not implemented yet.
+  S2BoundaryOperation::Options options;
+  options.set_polygon_model(PolygonModel::CLOSED);
+  auto a = "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5";
+  auto b = "# # 0:0, 5:3, 5:2";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# # 0:0");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5");
+  ExpectResult(OpType::DIFFERENCE, options, b, a,
+               "# # 0:0, 5:3, 5:2");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
 }
 
 TEST(S2BoundaryOperation, PolygonEdgePolygonEdgeCrossing) {
@@ -628,6 +716,26 @@ TEST(S2BoundaryOperation, PolygonPolygonInterior) {
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
                "# # 0:0, 0:4, 4:4, 4:0; 2:1, 2:2, 1:2, 1:1; "
                "5:5, 5:6, 6:6, 6:5");
+}
+
+TEST(S2BoundaryOperation, PolygonEdgesDegenerateAfterSnapping) {
+  S2BoundaryOperation::Options options = RoundToE(0);
+  auto a = "# # 0:-1, 0:1, 0.1:1, 0.1:-1";
+  auto b = "# # -1:0.1, 1:0.1, 1:0, -1:0";
+  // When snapping causes an output edge to become degenerate, it is still
+  // emitted (since otherwise loops that contract to a single point would be
+  // lost).  If the output layer doesn't want such edges, they can be removed
+  // via DegenerateEdges::DISCARD or DISCARD_EXCESS.
+  ExpectResult(OpType::UNION, options, a, b,
+               "# # 0:-1, 0:-1, 0:0, 0:1, 0:1, 0:0 | "
+               "-1:0, -1:0, 0:0, 1:0, 1:0, 0:0");
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# # 0:0, 0:0, 0:0, 0:0");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# # 0:-1, 0:-1, 0:0, 0:1, 0:1, 0:0 | 0:0, 0:0");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# # 0:-1, 0:-1, 0:0, 0:1, 0:1, 0:0 | "
+               "-1:0, -1:0, 0:0, 1:0, 1:0, 0:0 | 0:0, 0:0, 0:0, 0:0");
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -739,13 +847,13 @@ TEST(S2BoundaryOperation, PolylineCrossingRectangleTwice) {
   auto a = "# 0:-5, 0:5, 5:0, -5:0 #";
   auto b = "# # 1:1, 1:-1, -1:-1, -1:1";
   ExpectResult(OpType::UNION, options, a, b,
-      "# 0:-5, 0:-1; 0:1, 0:5, 5:0, 1:0; -1:0, -5:0 "
+      "# 0:-5, 0:-1 | 0:1, 0:5, 5:0, 1:0 | -1:0, -5:0 "
       "# 1:1, 1:0, 1:-1, 0:-1, -1:-1, -1:0, -1:1, 0:1");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-      "# 0:-1, 0:0, 0:1; 1:0, 0:0, -1:0 #");
+      "# 0:-1, 0:0, 0:1 | 1:0, 0:0, -1:0 #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
-      "# 0:-5, 0:-1; 0:1, 0:5, 5:0, 1:0; -1:0, -5:0 #");
+      "# 0:-5, 0:-1 | 0:1, 0:5, 5:0, 1:0 | -1:0, -5:0 #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-      "# 0:-5, 0:-1; 0:1, 0:5, 5:0, 1:0; -1:0, -5:0 "
+      "# 0:-5, 0:-1 | 0:1, 0:5, 5:0, 1:0 | -1:0, -5:0 "
       "# 1:1, 1:0, 1:-1, 0:-1, -1:-1, -1:0, -1:1, 0:1");
 }

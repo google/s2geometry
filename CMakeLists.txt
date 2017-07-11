@@ -49,11 +49,15 @@ file(GLOB S2FilesGlob
      src/s2/s2crossingedgequery.cc
      src/s2/s2debug.cc
      src/s2/s2earth.cc
+     src/s2/s2edge_clipping.cc
+     src/s2/s2edge_crosser.cc
+     src/s2/s2edge_crossings.cc
+     src/s2/s2edge_distances.cc
      src/s2/s2edge_tessellator.cc
-     src/s2/s2edgeutil.cc
      src/s2/s2error.cc
      src/s2/s2latlng.cc
      src/s2/s2latlngrect.cc
+     src/s2/s2latlngrect_bounder.cc
      src/s2/s2loop.cc
      src/s2/s2measures.cc
      src/s2/s2metrics.cc
@@ -73,12 +77,15 @@ file(GLOB S2FilesGlob
      src/s2/s2regionunion.cc
      src/s2/s2shapeindex.cc
      src/s2/s2shapeutil.cc
+     src/s2/s2shapeutil_edge_iterator.cc
      src/s2/s2textformat.cc
+     src/s2/s2wedge_relations.cc
      src/s2/sequence_lexicon.cc
      src/s2/strings/*.cc
      src/s2/third_party/absl/numeric/*.cc
      src/s2/third_party/absl/port/internal/*.cc
      src/s2/third_party/absl/strings/*.cc
+     src/s2/third_party/absl/strings/internal/*.cc
      src/s2/util/bits/*.cc
      src/s2/util/coding/*.cc
      src/s2/util/hash/*.cc
@@ -98,14 +105,16 @@ file(GLOB S2Headers src/s2/*.h)
 # transitively included by s2 headers we are exporting.
 install(FILES ${S2Headers}
         DESTINATION include/s2)
-install(FILES src/s2/base/atomicops.h
-              src/s2/base/casts.h
+install(FILES src/s2/base/casts.h
               src/s2/base/mutex.h
+              src/s2/base/port.h
               src/s2/base/spinlock.h
+              src/s2/base/stringprintf.h
         DESTINATION include/s2/base)
 install(FILES src/s2/third_party/absl/algorithm/algorithm.h
         DESTINATION include/s2/third_party/absl/algorithm)
-install(FILES src/s2/third_party/absl/base/casts.h
+install(FILES src/s2/third_party/absl/base/attributes.h
+              src/s2/third_party/absl/base/casts.h
               src/s2/third_party/absl/base/config.h
               src/s2/third_party/absl/base/dynamic_annotations.h
               src/s2/third_party/absl/base/gdb_scripting.h
@@ -122,6 +131,10 @@ install(FILES src/s2/third_party/absl/meta/type_traits.h
         DESTINATION include/s2/third_party/absl/meta)
 install(FILES src/s2/third_party/absl/numeric/int128.h
         DESTINATION include/s2/third_party/absl/numeric)
+install(FILES src/s2/third_party/absl/strings/string_view.h
+        DESTINATION include/s2/third_party/absl/strings)
+install(FILES src/s2/third_party/absl/strings/internal/fastmem.h
+        DESTINATION include/s2/third_party/absl/strings/internal)
 install(FILES src/s2/util/bits/bits.h
         DESTINATION include/s2/util/bits)
 install(FILES src/s2/util/btree/btree.h

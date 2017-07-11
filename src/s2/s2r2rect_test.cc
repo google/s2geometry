@@ -149,9 +149,9 @@ TEST(S2R2Rect, SimplePredicates) {
   // Make sure that GetVertex() returns vertices in CCW order.
   for (int k = 0; k < 4; ++k) {
     SCOPED_TRACE(StringPrintf("k=%d", k));
-    EXPECT_TRUE(S2::SimpleCCW(S2R2Rect::ToS2Point(r1.GetVertex((k-1)&3)),
+    EXPECT_TRUE(S2::SimpleCCW(S2R2Rect::ToS2Point(r1.GetVertex(k - 1)),
                               S2R2Rect::ToS2Point(r1.GetVertex(k)),
-                              S2R2Rect::ToS2Point(r1.GetVertex((k+1)&3))));
+                              S2R2Rect::ToS2Point(r1.GetVertex(k + 1))));
   }
 }
 

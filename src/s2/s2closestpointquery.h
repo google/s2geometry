@@ -99,7 +99,7 @@ class S2ClosestPointQuery {
   // Only find the "max_points" closest points.
   // This value may be changed between calls to FindClosestPoints().
   //
-  // Default value: numeric_limits<int>::max()
+  // DEFAULT: numeric_limits<int>::max()
   // REQUIRES: max_points >= 1
   int max_points() const;
   void set_max_points(int max_points);
@@ -107,7 +107,7 @@ class S2ClosestPointQuery {
   // Only find points whose distance to the target is less than "max_distance".
   // This value may be changed between calls to FindClosestPoints().
   //
-  // Default value: S1Angle::Infinity().
+  // DEFAULT: S1Angle::Infinity()
   S1Angle max_distance() const;
   void set_max_distance(S1Angle max_distance);
 
@@ -199,7 +199,7 @@ class S2ClosestPointQuery {
     S2Point center() const { return (a_ + b_).Normalize(); }
     S1Angle radius() const { return 0.5 * S1Angle(a_, b_); }
     bool UpdateMinDistance(S2Point const& x, S1ChordAngle* min_dist) const {
-      return S2EdgeUtil::UpdateMinDistance(x, a_, b_, min_dist);
+      return S2::UpdateMinDistance(x, a_, b_, min_dist);
     }
     S1ChordAngle GetDistance(S2Cell const& cell) const {
       return cell.GetDistanceToEdge(a_, b_);

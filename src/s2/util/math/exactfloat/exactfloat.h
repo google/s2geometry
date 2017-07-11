@@ -117,7 +117,7 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
-#include "s2/third_party/absl/base/port.h"
+#include "s2/base/port.h"
 #include <openssl/bn.h>
 
 class ExactFloat {
