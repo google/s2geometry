@@ -328,7 +328,7 @@ void S2EncodePointsCompressed(S2XYZFaceSiTi const* points,
     }
   }
   faces.Encode(encoder);
-  EncodePointsCompressed(vertices_pi_qi.get(), num_points, level, encoder);
+  EncodePointsCompressed(vertices_pi_qi.data(), num_points, level, encoder);
   int num_off_center = off_center.size();
   encoder->Ensure(Encoder::kVarintMax32 +
                   (Encoder::kVarintMax32 + sizeof(S2Point)) * num_off_center);

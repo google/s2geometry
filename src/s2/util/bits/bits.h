@@ -115,8 +115,8 @@ class Bits {
     // POPCNT has a false data dependency on its output register.
     // gcc / clang will optimize the intrinsic, but not inline asm.
     // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=62011
-#if defined(__x86_64__) && defined(__POPCNT__)
-    return _popcnt64(n);
+#if defined(__x86_64__) && defined(__POPCNT__) && defined(__SSE4__)
+    return _mm_popcnt_u64(n);
 #elif defined(__x86_64__) && defined(__GNUC__)
     int64 count = 0;
     asm("popcnt %1,%0" : "=r"(count) : "rm"(n) : "cc");
@@ -266,9 +266,7 @@ class Bits {
     const UnsignedT unsigned_src = bit_cast<UnsignedT>(src);
     DCHECK_GT(sizeof(UnsignedT) * 8, offset);
     DCHECK_GE(sizeof(UnsignedT) * 8, offset + nbits);
-    const UnsignedT result =
-        (unsigned_src >> offset) & NBitsFromLSB<UnsignedT>(nbits);
-    return result;
+    return GetBitsImpl(unsigned_src, offset, nbits);
   }
 
   // Overwrite 'nbits' consecutive bits of 'dest.'.  Position of bits are
@@ -316,12 +314,27 @@ class Bits {
                       : all_ones >> (sizeof(UnsignedT) * 8 - nbits);
   }
 
+  template<typename UnsignedT>
+  static inline UnsignedT GetBitsImpl(const UnsignedT src,
+                                      const int offset,
+                                      const int nbits);
+
 #ifdef __GNUC__
   template<typename UnsignedT>
   static inline int CountLeadingZerosWithBuiltin(UnsignedT n);
   template<typename UnsignedT>
   static inline int PopcountWithBuiltin(UnsignedT n);
+#if defined(__BMI__) && (defined(__i386__) || defined(__x86_64__))
+  static inline uint32 GetBitsImpl(const uint32 src,
+                                   const int offset,
+                                   const int nbits);
 #endif
+#if defined(__BMI__) && defined(__x86_64__)
+  static inline uint64 GetBitsImpl(const uint64 src,
+                                   const int offset,
+                                   const int nbits);
+#endif
+#endif  // __GNUC__
 
   // Portable implementations.
   static int Log2Floor_Portable(uint32 n);
@@ -669,6 +682,31 @@ int Bits::PopcountWithBuiltin(UnsignedT n) {
     return __builtin_popcountll(n);
   }
 }
+
+#if defined(__BMI__) && (defined(__i386__) || defined(__x86_64__))
+inline uint32 Bits::GetBitsImpl(const uint32 src,
+                                const int offset,
+                                const int nbits) {
+  return _bextr_u32(src, offset, nbits);
+}
+#endif
+
+#if defined(__BMI__) && defined(__x86_64__)
+inline uint64 Bits::GetBitsImpl(const uint64 src,
+                                const int offset,
+                                const int nbits) {
+  return _bextr_u64(src, offset, nbits);
+}
+#endif
+
 #endif  // __GNUC__
+
+template<typename UnsignedT>
+inline UnsignedT Bits::GetBitsImpl(const UnsignedT src,
+                                   const int offset,
+                                   const int nbits) {
+  const UnsignedT result = (src >> offset) & NBitsFromLSB<UnsignedT>(nbits);
+  return result;
+}
 
 #endif  // S2_UTIL_BITS_BITS_H_
