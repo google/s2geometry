@@ -141,8 +141,8 @@ class S2PointCompressionTest : public ::testing::Test {
 
   void Encode(S2Point const* points, int num_points, int level) {
     absl::FixedArray<S2XYZFaceSiTi> pts(num_points);
-    MakeXYZFaceSiTiPoints(points, num_points, pts.get());
-    S2EncodePointsCompressed(pts.get(), num_points, level, &encoder_);
+    MakeXYZFaceSiTiPoints(points, num_points, pts.data());
+    S2EncodePointsCompressed(pts.data(), num_points, level, &encoder_);
   }
 
   void Decode(int num_points, int level, S2Point* points) {

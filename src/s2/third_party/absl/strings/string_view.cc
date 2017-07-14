@@ -25,7 +25,7 @@
 #include <string>
 
 #include "s2/third_party/absl/strings/internal/memutil.h"
-#include "s2/third_party/absl/strings/resize_uninitialized.h"
+#include "s2/third_party/absl/strings/internal/resize_uninitialized.h"
 #include "s2/third_party/absl/strings/string_view_utils.h"
 
 namespace absl {
@@ -83,7 +83,7 @@ std::ostream& operator<<(std::ostream& o, string_view piece) {
 }
 
 void string_view::CopyToString(string* target) const {
-  absl::internal::STLStringResizeUninitialized(target, length_);
+  absl::strings_internal::STLStringResizeUninitialized(target, length_);
   if (length_ == 0) return;
   memcpy(&(*target)[0], ptr_, length_);
 }

@@ -53,7 +53,6 @@ struct uint128_pod;
 //   - A built-in integer will implicitly convert to a floating point type when
 //     interacting through arithmetic operators. Our type must first be
 //     explicitly cast to a floating point type.
-// TODO(user) Remove zeroing behavior of default constructor; should be UB.
 // TODO(user) Remove public construction from two uint64's.
 // TODO(user) Remove construction from uint128_pod.
 // TODO(user) Remove zeroing behavior when shifting by >= 128; should be UB.
@@ -78,7 +77,7 @@ constexpr uint128 MakeUint128(uint64 top, uint64 bottom);
 
 class uint128 {
  public:
-  constexpr uint128();  // Sets to 0, but don't trust on this behavior.
+  uint128() = default;
   constexpr uint128(const uint128_pod &val);
 
   // Constructors from arithmetic types
@@ -294,7 +293,6 @@ inline uint64 Uint128High64(const uint128& v) { return v.hi_; }
 
 #if defined(ABSL_IS_LITTLE_ENDIAN)
 
-inline constexpr uint128::uint128() : lo_(0), hi_(0) {}
 inline constexpr uint128::uint128(uint64 top, uint64 bottom)
     : lo_(bottom), hi_(top) {}
 
@@ -323,7 +321,6 @@ inline constexpr uint128::uint128(unsigned __int128 v)
 
 #elif defined(ABSL_IS_BIG_ENDIAN)
 
-inline constexpr uint128::uint128() : hi_(0), lo_(0) {}
 inline constexpr uint128::uint128(uint64 top, uint64 bottom)
     : hi_(top), lo_(bottom) {}
 

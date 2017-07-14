@@ -14,8 +14,8 @@
 //
 
 
-#ifndef S2_THIRD_PARTY_ABSL_STRINGS_RESIZE_UNINITIALIZED_H_
-#define S2_THIRD_PARTY_ABSL_STRINGS_RESIZE_UNINITIALIZED_H_
+#ifndef S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_RESIZE_UNINITIALIZED_H_
+#define S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_RESIZE_UNINITIALIZED_H_
 
 #include <string>
 #include <utility>
@@ -25,7 +25,7 @@
 
 namespace absl {
 
-namespace internal {
+namespace strings_internal {
 
 namespace dontuse {
 
@@ -69,8 +69,8 @@ inline void STLStringResizeUninitialized(string_type* s, size_t new_size) {
                         dontuse::HasResizeUninitialized<string_type>());
 }
 
-}  // namespace internal
+}  // namespace strings_internal
 
 }  // namespace absl
 
-#endif  // S2_THIRD_PARTY_ABSL_STRINGS_RESIZE_UNINITIALIZED_H_
+#endif  // S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_RESIZE_UNINITIALIZED_H_

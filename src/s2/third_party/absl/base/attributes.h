@@ -123,6 +123,19 @@
 #define ABSL_HAVE_ATTRIBUTE(x) 0
 #endif
 
+// ABSL_HAVE_CPP_ATTRIBUTE is a function-like feature checking macro that
+// accepts C++11 style attributes. It's a wrapper around __has_cpp_attribute,
+// defined by ISO C++ SD-6
+// (http://en.cppreference.com/w/cpp/experimental/feature_test). If we don't
+// find __has_cpp_attribute, will evaluate to 0.
+#if defined(__cplusplus) && defined(__has_cpp_attribute)
+// NOTE: requiring __cplusplus above should not be necessary, but
+// works around https://bugs.llvm.org/show_bug.cgi?id=23435.
+#define ABSL_HAVE_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
+#else
+#define ABSL_HAVE_CPP_ATTRIBUTE(x) 0
+#endif
+
 // -----------------------------------------------------------------------------
 // Function Attributes
 // -----------------------------------------------------------------------------
@@ -619,6 +632,52 @@
 #define ATTRIBUTE_COLD
 #endif
 
+// ABSL_XRAY_ALWAYS_INSTRUMENT, ABSL_XRAY_NEVER_INSTRUMENT, ABSL_XRAY_LOG_ARGS
+//
+// We define the ABSL_XRAY_ALWAYS_INSTRUMENT and ABSL_XRAY_NEVER_INSTRUMENT
+// macro used as an attribute to mark functions that must always or never be
+// instrumented by XRay. Currently, this is only supported in Clang/LLVM.
+//
+// For reference on the LLVM XRay instrumentation, see
+// http://llvm.org/docs/XRay.html.
+//
+// A function with the XRAY_ALWAYS_INSTRUMENT macro attribute in its declaration
+// will always get the XRay instrumentation sleds. These sleds may introduce
+// some binary size and runtime overhead and must be used sparingly.
+//
+// These attributes only take effect when the following conditions are met:
+//
+//   - The file/target is built in at least C++11 mode, with a Clang compiler
+//   that supports XRay attributes.
+//   - The file/target is built with the -fxray-instrument flag set for the
+//   Clang/LLVM compiler.
+//   - The function is defined in the translation unit (the compiler honors the
+//   attribute in either the definition or the declaration, and must match).
+//
+// There are cases when, even when building with XRay instrumentation, users
+// might want to control specifically which functions are instrumented for a
+// particular build using special-case lists provided to the compiler. These
+// special case lists are provided to Clang via the
+// -fxray-always-instrument=... and -fxray-never-instrument=... flags. The
+// attributes in source take precedence over these special-case lists.
+//
+// To disable the XRay attributes at build-time, users may define
+// ABSL_NO_XRAY_ATTRIBUTES. Do NOT define ABSL_NO_XRAY_ATTRIBUTES on specific
+// packages/targets, as this may lead to conflicting definitions of functions at
+// link-time.
+//
+#if ABSL_HAVE_CPP_ATTRIBUTE(clang::xray_always_instrument) && \
+    !defined(ABSL_NO_XRAY_ATTRIBUTES)
+#define ABSL_XRAY_ALWAYS_INSTRUMENT [[clang::xray_always_instrument]]
+#define ABSL_XRAY_NEVER_INSTRUMENT [[clang::xray_never_instrument]]
+#define ABSL_XRAY_LOG_ARGS(N) \
+    [[clang::xray_always_instrument, clang::xray_log_args(N)]]
+#else
+#define ABSL_XRAY_ALWAYS_INSTRUMENT
+#define ABSL_XRAY_NEVER_INSTRUMENT
+#define ABSL_XRAY_LOG_ARGS(N)
+#endif
+
 // -----------------------------------------------------------------------------
 // Variable Attributes
 // -----------------------------------------------------------------------------
@@ -690,17 +749,11 @@
 // ABSL_CONST_INIT static MyType my_var = MakeMyType(...);
 //
 // Note that this attribute is redundant if the variable is declared constexpr.
-#if defined(__cplusplus) && defined(__has_cpp_attribute)
-// NOTE: requiring __cplusplus above should not be necessary, but
-// works around https://bugs.llvm.org/show_bug.cgi?id=23435.
-#if __has_cpp_attribute(clang::require_constant_initialization)
+#if ABSL_HAVE_CPP_ATTRIBUTE(clang::require_constant_initialization)
 // NOLINTNEXTLINE(whitespace/braces) (b/36288871)
 #define ABSL_CONST_INIT [[clang::require_constant_initialization]]
 #else
 #define ABSL_CONST_INIT
-#endif  // __has_cpp_attribute(clang::require_constant_initialization)
-#else
-#define ABSL_CONST_INIT
-#endif  // defined(__has_cpp_attribute)
+#endif  // ABSL_HAVE_CPP_ATTRIBUTE(clang::require_constant_initialization)
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_ATTRIBUTES_H_

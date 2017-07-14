@@ -854,7 +854,7 @@ void S2Polygon::Encode(Encoder* const encoder) const {
   }
   // Converts all the polygon vertices to S2XYZFaceSiTi format.
   absl::FixedArray<S2XYZFaceSiTi> all_vertices(num_vertices_);
-  S2XYZFaceSiTi* current_loop_vertices = all_vertices.get();
+  S2XYZFaceSiTi* current_loop_vertices = all_vertices.data();
   for (unique_ptr<S2Loop> const& loop : loops_) {
     loop->GetXYZFaceSiTiVertices(current_loop_vertices);
     current_loop_vertices += loop->num_vertices();
@@ -887,7 +887,7 @@ void S2Polygon::Encode(Encoder* const encoder) const {
   int compressed_size = 4 * num_vertices_ + exact_point_size * num_unsnapped;
   int lossless_size = sizeof(S2Point) * num_vertices_;
   if (compressed_size < lossless_size) {
-    EncodeCompressed(encoder, all_vertices.get(), snap_level);
+    EncodeCompressed(encoder, all_vertices.data(), snap_level);
   } else {
     EncodeLossless(encoder);
   }
