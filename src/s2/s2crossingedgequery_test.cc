@@ -114,7 +114,7 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
     S2Point const& a = edge.first;
     S2Point const& b = edge.second;
     vector<int> candidates;
-    S2CrossingEdgeQuery query(index);
+    S2CrossingEdgeQuery query(&index);
     query.GetCandidates(a, b, shape, &candidates);
 
     // Verify that the second version of GetCandidates returns the same result.
@@ -258,7 +258,7 @@ TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
 // This is the example from the header file, with a few extras.
 void TestPolylineCrossings(S2ShapeIndex const& index,
                            S2Point const& a0, S2Point const& a1) {
-  S2CrossingEdgeQuery query(index);
+  S2CrossingEdgeQuery query(&index);
   S2CrossingEdgeQuery::EdgeMap edge_map;
   if (!query.GetCrossings(a0, a1, CrossingType::ALL, &edge_map)) return;
   for (auto const& p : edge_map) {

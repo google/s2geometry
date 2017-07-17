@@ -89,13 +89,18 @@ class S2CrossingEdgeQuery {
                                          CompareBtreeLinearSearch>;
 
   // Convenience constructor that calls Init().
-  explicit S2CrossingEdgeQuery(S2ShapeIndex const& index);
+  explicit S2CrossingEdgeQuery(S2ShapeIndex const* index);
+  ABSL_DEPRECATED("Use pointer version.")
+  explicit S2CrossingEdgeQuery(S2ShapeIndex const& index)
+      : S2CrossingEdgeQuery(&index) {}
 
   // Default constructor; requires Init() to be called.
   S2CrossingEdgeQuery();
 
   // REQUIRES: "index" is not modified after this method is called.
-  void Init(S2ShapeIndex const& index);
+  void Init(S2ShapeIndex const* index);
+  ABSL_DEPRECATED("Use pointer version.")
+  void Init(S2ShapeIndex const& index) { Init(&index); }
 
   // Given a query edge AB and a shape S, return all the edges of S that
   // intersect AB.  If "type" is CrossingType::INTERIOR, then only
@@ -174,11 +179,11 @@ class S2CrossingEdgeQuery {
 //////////////////   Implementation details follow   ////////////////////
 
 inline S2CrossingEdgeQuery::S2CrossingEdgeQuery() : index_(nullptr) {}
-inline S2CrossingEdgeQuery::S2CrossingEdgeQuery(S2ShapeIndex const& index) {
+inline S2CrossingEdgeQuery::S2CrossingEdgeQuery(S2ShapeIndex const* index) {
   Init(index);
 }
-inline void S2CrossingEdgeQuery::Init(S2ShapeIndex const& index) {
-  index_ = &index;
+inline void S2CrossingEdgeQuery::Init(S2ShapeIndex const* index) {
+  index_ = index;
   iter_.Init(index);
 }
 

@@ -38,7 +38,7 @@ using TestQuery = S2ClosestPointQuery<int>;
 
 TEST(S2ClosestPointQuery, NoPoints) {
   TestIndex index;
-  TestQuery query(index);
+  TestQuery query(&index);
   query.FindClosestPoint(S2Point(1, 0, 0));
   EXPECT_EQ(0, query.num_points());
 }
@@ -50,7 +50,7 @@ TEST(S2ClosestPointQuery, ManyDuplicatePoints) {
   for (int i = 0; i < kNumPoints; ++i) {
     index.Add(kTestPoint, i);
   }
-  TestQuery query(index);
+  TestQuery query(&index);
   query.FindClosestPoints(kTestPoint);
   EXPECT_EQ(kNumPoints, query.num_points());
 }
@@ -212,7 +212,7 @@ static void TestWithIndexFactory(PointIndexFactory const& factory,
     factory.AddPoints(query_cap, num_vertices, &index);
     for (int i_query = 0; i_query < num_queries; ++i_query) {
       // Use a new query each time to avoid resetting default parameters.
-      TestQuery query(index);
+      TestQuery query(&index);
       query.set_max_points(1 + S2Testing::rnd.Uniform(100));
       if (S2Testing::rnd.OneIn(2)) {
         query.set_max_distance(S2Testing::rnd.RandDouble() * kRadius);

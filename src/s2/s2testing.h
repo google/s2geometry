@@ -299,7 +299,7 @@ class S2Testing::Random {
 // using a spatial data structure.  Here "max_size" is a bound on the maximum
 // number of items, "max_distance" is a limit on the distance to any item, and
 // "max_error" is the maximum error allowed when selecting which items are
-// closest (see S2ClosestEdgeQuery::max_error).
+// closest (see S2ClosestEdgeQuery::Options::max_error).
 template <typename Id>
 bool CheckDistanceResults(
     std::vector<std::pair<S1Angle, Id>> const& expected,

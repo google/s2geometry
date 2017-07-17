@@ -16,7 +16,6 @@
 #ifndef S2_S2SHAPEUTIL_EDGE_ITERATOR_H_
 #define S2_S2SHAPEUTIL_EDGE_ITERATOR_H_
 
-#include "s2/base/stringprintf.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil.h"
 
@@ -59,9 +58,7 @@ class EdgeIterator {
 
   bool operator!=(EdgeIterator const& other) const { return !(*this == other); }
 
-  string DebugString() {
-    return StringPrintf("(shape=%d, edge=%d)", shape_id_, edge_id_);
-  }
+  string DebugString() const;
 
  private:
   S2ShapeIndex const* index_;

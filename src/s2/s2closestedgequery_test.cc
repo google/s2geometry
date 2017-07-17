@@ -38,7 +38,7 @@ using std::vector;
 
 TEST(S2ClosestEdgeQuery, NoEdges) {
   S2ShapeIndex index;
-  S2ClosestEdgeQuery query(index);
+  S2ClosestEdgeQuery query(&index);
   query.FindClosestEdge(S2Point(1, 0, 0));
   EXPECT_EQ(0, query.num_edges());
   EXPECT_EQ(S1Angle::Infinity(), query.GetDistance(S2Point(1, 0, 0)));
@@ -187,9 +187,9 @@ template <class Target>
 static void TestFindClosestEdges(Target const& target,
                                  S2ClosestEdgeQuery *query) {
   vector<Result> expected, actual;
-  query->UseBruteForce(true);
+  query->mutable_options()->set_use_brute_force(true);
   GetClosestEdges(target, query, &expected);
-  query->UseBruteForce(false);
+  query->mutable_options()->set_use_brute_force(false);
   GetClosestEdges(target, query, &actual);
   EXPECT_TRUE(CheckDistanceResults(expected, actual, query->max_edges(),
                                    query->max_distance(), query->max_error()))
@@ -210,7 +210,7 @@ static void TestWithIndexFactory(ShapeIndexFactory const& factory,
     factory.AddEdges(query_cap, num_edges, &index);
     for (int i_query = 0; i_query < num_queries; ++i_query) {
       // Use a new query each time to avoid resetting default parameters.
-      S2ClosestEdgeQuery query(index);
+      S2ClosestEdgeQuery query(&index);
       query.set_max_edges(1 + S2Testing::rnd.Uniform(100));
       if (S2Testing::rnd.OneIn(2)) {
         query.set_max_distance(S2Testing::rnd.RandDouble() * kRadius);

@@ -59,7 +59,6 @@
 #include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/coding/coder.h"
-#include "s2/util/gtl/stl_util.h"
 
 using s2builderutil::IdentitySnapFunction;
 using s2builderutil::S2PolygonLayer;
@@ -513,13 +512,11 @@ int S2Polygon::GetSnapLevel() const {
 
 S1Angle S2Polygon::GetDistance(S2Point const& x) const {
   if (Contains(x)) return S1Angle::Zero();
-  S2ClosestEdgeQuery query(index_);
-  return query.GetDistance(x);
+  return S2ClosestEdgeQuery(&index_).GetDistance(x);
 }
 
 S1Angle S2Polygon::GetDistanceToBoundary(S2Point const& x) const {
-  S2ClosestEdgeQuery query(index_);
-  return query.GetDistance(x);
+  return S2ClosestEdgeQuery(&index_).GetDistance(x);
 }
 
 /*static*/ pair<double, double> S2Polygon::GetOverlapFractions(
@@ -536,13 +533,11 @@ S1Angle S2Polygon::GetDistanceToBoundary(S2Point const& x) const {
 
 S2Point S2Polygon::Project(S2Point const& x) const {
   if (Contains(x)) return x;
-  S2ClosestEdgeQuery query(index_);
-  return query.Project(x);
+  return S2ClosestEdgeQuery(&index_).Project(x);
 }
 
 S2Point S2Polygon::ProjectToBoundary(S2Point const& x) const {
-  S2ClosestEdgeQuery query(index_);
-  return query.Project(x);
+  return S2ClosestEdgeQuery(&index_).Project(x);
 }
 
 // Return +1 if this polygon (A) contains the boundary of B, -1 if A excludes
@@ -703,7 +698,7 @@ S2Cap S2Polygon::GetCapBound() const {
 }
 
 bool S2Polygon::Contains(S2Cell const& target) const {
-  S2ShapeIndex::Iterator it(index_);
+  S2ShapeIndex::Iterator it(&index_);
   S2ShapeIndex::CellRelation relation = it.Locate(target.id());
 
   // If "target" is disjoint from all index cells, it is not contained.
@@ -746,7 +741,7 @@ bool S2Polygon::ApproxEquals(S2Polygon const* b, S1Angle tolerance) const {
 }
 
 bool S2Polygon::MayIntersect(S2Cell const& target) const {
-  S2ShapeIndex::Iterator it(index_);
+  S2ShapeIndex::Iterator it(&index_);
   S2ShapeIndex::CellRelation relation = it.Locate(target.id());
 
   // If "target" does not overlap any index cell, there is no intersection.
@@ -822,7 +817,7 @@ bool S2Polygon::Contains(S2Point const& p) const {
     return inside;
   }
   // Otherwise we look up the S2ShapeIndex cell containing this point.
-  S2ShapeIndex::Iterator it(index_);
+  S2ShapeIndex::Iterator it(&index_);
   if (!it.Locate(p)) return false;
   return Contains(it, p);
 }

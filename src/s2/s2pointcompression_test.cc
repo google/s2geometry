@@ -24,13 +24,14 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s2cellid.h"
 #include "s2/s2coords.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 #include "s2/third_party/absl/container/fixed_array.h"
+#include "s2/third_party/absl/types/span.h"
+#include "s2/util/coding/coder.h"
 
 using std::vector;
 
@@ -68,23 +69,14 @@ vector<S2Point> MakeRegularPoints(int num_vertices,
   return SnapPointsToLevel(unsnapped_points, level);
 }
 
-void MakeXYZFaceSiTiPoints(S2Point const* points, int num_points,
-                           S2XYZFaceSiTi* result) {
-  for (int i = 0; i < num_points; ++i) {
+void MakeXYZFaceSiTiPoints(absl::Span<S2Point const> points,
+                           absl::Span<S2XYZFaceSiTi> result) {
+  CHECK_EQ(points.size(), result.size());
+  for (int i = 0; i < points.size(); ++i) {
     result[i].xyz = points[i];
     result[i].cell_level = S2::XYZtoFaceSiTi(points[i], &result[i].face,
                                              &result[i].si, &result[i].ti);
   }
-}
-
-bool PointsEqual(S2Point const* a, int num_a, S2Point const* b, int num_b) {
-  if (num_a != num_b) return false;
-  for (int i = 0; i < num_a; ++i) {
-    if (a[i] != b[i]) {
-      return false;
-    }
-  }
-  return true;
 }
 
 class S2PointCompressionTest : public ::testing::Test {
@@ -140,23 +132,23 @@ class S2PointCompressionTest : public ::testing::Test {
     line_ = SnapPointsToLevel(line_points, S2::kMaxCellLevel);
   }
 
-  void Encode(S2Point const* points, int num_points, int level) {
-    absl::FixedArray<S2XYZFaceSiTi> pts(num_points);
-    MakeXYZFaceSiTiPoints(points, num_points, pts.data());
-    S2EncodePointsCompressed(pts.data(), num_points, level, &encoder_);
+  void Encode(absl::Span<S2Point const> points, int level) {
+    absl::FixedArray<S2XYZFaceSiTi> pts(points.size());
+    MakeXYZFaceSiTiPoints(points, absl::MakeSpan(pts));
+    S2EncodePointsCompressed(pts, level, &encoder_);
   }
 
-  void Decode(int num_points, int level, S2Point* points) {
+  void Decode(int level, absl::Span<S2Point> points) {
     decoder_.reset(encoder_.base(), encoder_.length());
-    EXPECT_TRUE(S2DecodePointsCompressed(&decoder_, num_points, level, points));
+    EXPECT_TRUE(S2DecodePointsCompressed(&decoder_, level, points));
   }
 
   void Roundtrip(const vector<S2Point>& loop, int level) {
-    Encode(&loop[0], loop.size(), level);
+    Encode(loop, level);
     vector<S2Point> points(loop.size());
-    Decode(loop.size(), level, &points[0]);
+    Decode(level, absl::MakeSpan(points));
 
-    EXPECT_TRUE(PointsEqual(&loop[0], loop.size(), &points[0], points.size()))
+    EXPECT_TRUE(loop == points)
         << "Decoded points\n" << s2textformat::ToString(points)
         << "\ndo not match original points\n"
         << s2textformat::ToString(loop);
@@ -195,8 +187,8 @@ class S2PointCompressionTest : public ::testing::Test {
 
 TEST_F(S2PointCompressionTest, RoundtripsEmpty) {
   // Just check this doesn't crash.
-  Encode(nullptr, 0, S2::kMaxCellLevel);
-  Decode(0, S2::kMaxCellLevel, nullptr);
+  Encode(absl::Span<S2Point>(nullptr, 0), S2::kMaxCellLevel);
+  Decode(S2::kMaxCellLevel, absl::Span<S2Point>(nullptr, 0));
 }
 
 TEST_F(S2PointCompressionTest, RoundtripsFourVertexLoop) {
@@ -208,7 +200,7 @@ TEST_F(S2PointCompressionTest, RoundtripsFourVertexLoopUnsnapped) {
 }
 
 TEST_F(S2PointCompressionTest, FourVertexLoopSize) {
-  Encode(&loop_4_[0], loop_4_.size(), S2::kMaxCellLevel);
+  Encode(loop_4_, S2::kMaxCellLevel);
   // It would take 32 bytes uncompressed.
   EXPECT_EQ(39, encoder_.length());
 }
@@ -220,7 +212,7 @@ TEST_F(S2PointCompressionTest, RoundtripsFourVertexLevel14Loop) {
 
 TEST_F(S2PointCompressionTest, FourVertexLevel14LoopSize) {
   int const level = 14;
-  Encode(&loop_4_level_14_[0], loop_4_level_14_.size(), level);
+  Encode(loop_4_level_14_, level);
   // It would take 4 bytes per vertex without compression.
   EXPECT_EQ(23, encoder_.length());
 }
@@ -244,13 +236,12 @@ TEST_F(S2PointCompressionTest, Roundtrips100VertexLoopMixed25) {
 }
 
 TEST_F(S2PointCompressionTest, OneHundredVertexLoopSize) {
-  Encode(&loop_100_[0], loop_100_.size(), S2::kMaxCellLevel);
+  Encode(loop_100_, S2::kMaxCellLevel);
   EXPECT_EQ(257, encoder_.length());
 }
 
 TEST_F(S2PointCompressionTest, OneHundredVertexLoopUnsnappedSize) {
-  Encode(&loop_100_unsnapped_[0], loop_100_unsnapped_.size(),
-         S2::kMaxCellLevel);
+  Encode(loop_100_unsnapped_, S2::kMaxCellLevel);
   EXPECT_EQ(2756, encoder_.length());
 }
 
@@ -260,7 +251,7 @@ TEST_F(S2PointCompressionTest, Roundtrips100VertexLevel22Loop) {
 }
 
 TEST_F(S2PointCompressionTest, OneHundredVertexLoopLevel22Size) {
-  Encode(&loop_100_level_22_[0], loop_100_level_22_.size(), 22);
+  Encode(loop_100_level_22_, 22);
   EXPECT_EQ(148, encoder_.length());
 }
 
@@ -300,10 +291,10 @@ TEST_F(S2PointCompressionTest, FirstPointOnFaceEdge) {
     }};
 
   Encoder encoder;
-  S2EncodePointsCompressed(points, 2, 8, &encoder);
+  S2EncodePointsCompressed(points, 8, &encoder);
   Decoder decoder(encoder.base(), encoder.length());
   S2Point result[2];
-  S2DecodePointsCompressed(&decoder, 2, 8, result);
+  S2DecodePointsCompressed(&decoder, 8, result);
   CHECK(result[0] == points[0].xyz);
   CHECK(result[1] == points[1].xyz);
 }

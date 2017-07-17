@@ -79,7 +79,7 @@ void S2ShapeIndexTest::QuadraticValidate() {
 
   // "min_cellid" is the first S2CellId that has not been validated yet.
   S2CellId min_cellid = S2CellId::Begin(S2CellId::kMaxLevel);
-  for (S2ShapeIndex::Iterator it(index_); ; it.Next()) {
+  for (S2ShapeIndex::Iterator it(&index_); ; it.Next()) {
     // Generate a list of S2CellIds ("skipped cells") that cover the gap
     // between the last cell we validated and the next cell in the index.
     S2CellUnion skipped;
@@ -168,7 +168,7 @@ void S2ShapeIndexTest::ValidateInterior(S2Shape const* shape, S2CellId id,
 namespace {
 
 void TestIteratorMethods(S2ShapeIndex const& index) {
-  S2ShapeIndex::Iterator it(index);
+  S2ShapeIndex::Iterator it(&index);
   EXPECT_TRUE(it.AtBegin());
   it.Finish();
   EXPECT_TRUE(it.Done());
@@ -178,7 +178,7 @@ void TestIteratorMethods(S2ShapeIndex const& index) {
     S2CellId cellid = it.id();
     S2CellUnion skipped;
     skipped.InitFromBeginEnd(min_cellid, cellid.range_min());
-    S2ShapeIndex::Iterator it2(index);
+    S2ShapeIndex::Iterator it2(&index);
     for (int i = 0; i < skipped.num_cells(); ++i) {
       EXPECT_FALSE(it2.Locate(skipped.cell_id(i).ToPoint()));
       EXPECT_EQ(S2ShapeIndex::DISJOINT, it2.Locate(skipped.cell_id(i)));
@@ -226,7 +226,7 @@ void TestIteratorMethods(S2ShapeIndex const& index) {
 }
 
 TEST_F(S2ShapeIndexTest, NoEdges) {
-  EXPECT_TRUE(S2ShapeIndex::Iterator(index_).Done());
+  EXPECT_TRUE(S2ShapeIndex::Iterator(&index_).Done());
   TestIteratorMethods(index_);
 }
 
@@ -276,7 +276,7 @@ TEST_F(S2ShapeIndexTest, ManyIdenticalEdges) {
   TestIteratorMethods(index_);
   // Since all edges span the diagonal of a face, no subdivision should
   // have occurred (with the default index options).
-  for (S2ShapeIndex::Iterator it(index_); !it.Done(); it.Next()) {
+  for (S2ShapeIndex::Iterator it(&index_); !it.Done(); it.Next()) {
     EXPECT_EQ(0, it.id().level());
   }
 }
@@ -291,7 +291,7 @@ TEST_F(S2ShapeIndexTest, DegenerateEdge) {
   QuadraticValidate();
   // Check that exactly 3 index cells contain the degenerate edge.
   int count = 0;
-  for (S2ShapeIndex::Iterator it(index_); !it.Done(); it.Next(), ++count) {
+  for (S2ShapeIndex::Iterator it(&index_); !it.Done(); it.Next(), ++count) {
     EXPECT_TRUE(it.id().is_leaf());
     EXPECT_EQ(1, it.cell().num_clipped());
     EXPECT_EQ(1, it.cell().clipped(0).num_edges());
@@ -313,7 +313,7 @@ TEST_F(S2ShapeIndexTest, ManyTinyEdges) {
   index_.Add(std::move(shape));
   QuadraticValidate();
   // Check that there is exactly one index cell and that it is a leaf cell.
-  S2ShapeIndex::Iterator it(index_);
+  S2ShapeIndex::Iterator it(&index_);
   ASSERT_TRUE(!it.Done());
   EXPECT_TRUE(it.id().is_leaf());
   it.Next();
@@ -502,7 +502,7 @@ void LazyUpdatesTest::ReaderThread() {
     // We intentionally release the lock so that many threads have a chance
     // to access the S2ShapeIndex in parallel.
     lock_.Unlock();
-    for (S2ShapeIndex::Iterator it(index_); !it.Done(); it.Next())
+    for (S2ShapeIndex::Iterator it(&index_); !it.Done(); it.Next())
       continue;
     lock_.Lock();
     if (--num_readers_left_ == 0) {
@@ -594,7 +594,7 @@ TEST(S2ShapeIndex, MixedGeometry) {
   }
   S2Loop loop(S2Cell(S2CellId::Begin(S2CellId::kMaxLevel)));
   index.Add(absl::MakeUnique<S2Loop::Shape>(&loop));
-  S2ShapeIndex::Iterator it(index);
+  S2ShapeIndex::Iterator it(&index);
   // No geometry intersects face 1, so there should be no index cells there.
   EXPECT_EQ(S2ShapeIndex::DISJOINT, it.Locate(S2CellId::FromFace(1)));
 }

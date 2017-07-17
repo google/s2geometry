@@ -49,7 +49,6 @@
 #include "s2/s2textformat.h"
 #include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/third_party/absl/memory/memory.h"
-#include "s2/util/gtl/stl_util.h"
 #include "s2/util/math/matrix3x3.h"
 #include "s2/util/math/vector.h"
 

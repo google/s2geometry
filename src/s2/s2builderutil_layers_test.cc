@@ -29,7 +29,6 @@
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2debug.h"
 #include "s2/s2textformat.h"
-#include "s2/util/gtl/stl_util.h"
 
 using absl::MakeUnique;
 using s2builderutil::IndexedS2PointVectorLayer;

@@ -109,7 +109,6 @@ install(FILES src/s2/base/casts.h
               src/s2/base/mutex.h
               src/s2/base/port.h
               src/s2/base/spinlock.h
-              src/s2/base/stringprintf.h
         DESTINATION include/s2/base)
 install(FILES src/s2/third_party/absl/algorithm/algorithm.h
         DESTINATION include/s2/third_party/absl/algorithm)
@@ -135,6 +134,8 @@ install(FILES src/s2/third_party/absl/strings/string_view.h
         DESTINATION include/s2/third_party/absl/strings)
 install(FILES src/s2/third_party/absl/strings/internal/fastmem.h
         DESTINATION include/s2/third_party/absl/strings/internal)
+install(FILES src/s2/third_party/absl/types/span.h
+        DESTINATION include/s2/third_party/absl/types)
 install(FILES src/s2/util/bits/bits.h
         DESTINATION include/s2/util/bits)
 install(FILES src/s2/util/btree/btree.h

@@ -50,6 +50,7 @@
 #include "s2/s2shapeutil.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
@@ -319,7 +320,7 @@ int S2Loop::FindVertex(S2Point const& p) const {
     }
     return -1;
   }
-  S2ShapeIndex::Iterator it(index_);
+  S2ShapeIndex::Iterator it(&index_);
   if (!it.Locate(p)) return -1;
 
   S2ClippedShape const& a_clipped = it.cell().clipped(0);
@@ -496,24 +497,20 @@ int S2Loop::GetCanonicalFirstVertex(int* dir) const {
 
 S1Angle S2Loop::GetDistance(S2Point const& x) const {
   if (Contains(x)) return S1Angle::Zero();
-  S2ClosestEdgeQuery query(index_);
-  return query.GetDistance(x);
+  return S2ClosestEdgeQuery(&index_).GetDistance(x);
 }
 
 S1Angle S2Loop::GetDistanceToBoundary(S2Point const& x) const {
-  S2ClosestEdgeQuery query(index_);
-  return query.GetDistance(x);
+  return S2ClosestEdgeQuery(&index_).GetDistance(x);
 }
 
 S2Point S2Loop::Project(S2Point const& x) const {
   if (Contains(x)) return x;
-  S2ClosestEdgeQuery query(index_);
-  return query.Project(x);
+  return S2ClosestEdgeQuery(&index_).Project(x);
 }
 
 S2Point S2Loop::ProjectToBoundary(S2Point const& x) const {
-  S2ClosestEdgeQuery query(index_);
-  return query.Project(x);
+  return S2ClosestEdgeQuery(&index_).Project(x);
 }
 
 double S2Loop::GetTurningAngle() const {
@@ -570,7 +567,7 @@ S2Cap S2Loop::GetCapBound() const {
 }
 
 bool S2Loop::Contains(S2Cell const& target) const {
-  S2ShapeIndex::Iterator it(index_);
+  S2ShapeIndex::Iterator it(&index_);
   S2ShapeIndex::CellRelation relation = it.Locate(target.id());
 
   // If "target" is disjoint from all index cells, it is not contained.
@@ -589,7 +586,7 @@ bool S2Loop::Contains(S2Cell const& target) const {
 }
 
 bool S2Loop::MayIntersect(S2Cell const& target) const {
-  S2ShapeIndex::Iterator it(index_);
+  S2ShapeIndex::Iterator it(&index_);
   S2ShapeIndex::CellRelation relation = it.Locate(target.id());
 
   // If "target" does not overlap any index cell, there is no intersection.
@@ -674,7 +671,7 @@ bool S2Loop::Contains(S2Point const& p) const {
   }
   // Otherwise we look up the S2ShapeIndex cell containing this point.  Note
   // the index is built automatically the first time an iterator is created.
-  S2ShapeIndex::Iterator it(index_);
+  S2ShapeIndex::Iterator it(&index_);
   if (!it.Locate(p)) return false;
   return Contains(it, p);
 }
@@ -843,7 +840,7 @@ class LoopRelation {
 class RangeIterator {
  public:
   // Construct a new RangeIterator positioned at the first cell of the index.
-  explicit RangeIterator(S2ShapeIndex const& index)
+  explicit RangeIterator(S2ShapeIndex const* index)
       : it_(index), end_(S2CellId::End(0)) {
     Refresh();
   }
@@ -923,7 +920,7 @@ class LoopCrosser {
       : a_(a), b_(b), relation_(relation), swapped_(swapped),
         a_crossing_target_(relation->a_crossing_target()),
         b_crossing_target_(relation->b_crossing_target()),
-        b_query_(b.index_) {
+        b_query_(&b.index_) {
     using std::swap;
     if (swapped) swap(a_crossing_target_, b_crossing_target_);
   }
@@ -1107,7 +1104,7 @@ bool LoopCrosser::HasCrossingRelation(RangeIterator* ai, RangeIterator* bi) {
                                             LoopRelation* relation) {
   // We look for S2CellId ranges where the indexes of A and B overlap, and
   // then test those edges for crossings.
-  RangeIterator ai(a.index_), bi(b.index_);
+  RangeIterator ai(&a.index_), bi(&b.index_);
   LoopCrosser ab(a, b, relation, false);  // Tests edges of A against B
   LoopCrosser ba(b, a, relation, true);   // Tests edges of B against A
   while (!ai.Done() || !bi.Done()) {
@@ -1518,7 +1515,8 @@ void S2Loop::EncodeCompressed(Encoder* encoder, S2XYZFaceSiTi const* vertices,
   encoder->Ensure(Encoder::kVarintMax32);
   encoder->put_varint32(num_vertices_);
 
-  S2EncodePointsCompressed(vertices, num_vertices_, snap_level, encoder);
+  S2EncodePointsCompressed(absl::MakeSpan(vertices, num_vertices_),
+                           snap_level, encoder);
 
   std::bitset<kNumProperties> properties = GetCompressedEncodingProperties();
 
@@ -1550,8 +1548,8 @@ bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
   vertices_ = new S2Point[num_vertices_];
   owns_vertices_ = true;
 
-  if (!S2DecodePointsCompressed(decoder, num_vertices_, snap_level,
-                                vertices_)) {
+  if (!S2DecodePointsCompressed(decoder, snap_level,
+                                absl::MakeSpan(vertices_, num_vertices_))) {
     return false;
   }
   uint32 properties_uint32;
