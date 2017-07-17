@@ -487,7 +487,9 @@ class S2ShapeIndex {
     Iterator();
 
     // Convenience constructor that calls Init().
-    explicit Iterator(S2ShapeIndex const& index);
+    explicit Iterator(S2ShapeIndex const* index);
+    ABSL_DEPRECATED("Use pointer version.")
+    explicit Iterator(S2ShapeIndex const& index) : Iterator(&index) {}
 
     // Initialize an iterator for the given S2ShapeIndex.  If the index is
     // non-empty, the iterator is positioned at the first cell.  This method
@@ -495,7 +497,9 @@ class S2ShapeIndex {
     // after the underlying index has been updated (although it is usually
     // easier just to declare a new iterator whenever required, since iterator
     // construction is cheap).
-    void Init(S2ShapeIndex const& index);
+    void Init(S2ShapeIndex const* index);
+    ABSL_DEPRECATED("Use pointer version.")
+    void Init(S2ShapeIndex const& index) { Init(&index); }
 
     // Reset the iterator to its original state (positioned at the first cell
     // in the index).  Note that this method does *not* restore the iterator
@@ -554,7 +558,9 @@ class S2ShapeIndex {
     // Initialize an iterator for the given S2ShapeIndex without applying any
     // pending updates.  This can be used to observe the actual current state
     // of the index without modifying it in any way.
-    void InitStale(S2ShapeIndex const& index);
+    void InitStale(S2ShapeIndex const* index);
+    ABSL_DEPRECATED("Use pointer version.")
+    void InitStale(S2ShapeIndex const& index) { InitStale(&index); }
 
    private:
     S2ShapeIndex const* index_;
@@ -803,15 +809,15 @@ inline int S2ShapeIndexCell::num_edges() const {
 
 inline S2ShapeIndex::Iterator::Iterator() : index_(nullptr) {
 }
-inline S2ShapeIndex::Iterator::Iterator(S2ShapeIndex const& index) {
+inline S2ShapeIndex::Iterator::Iterator(S2ShapeIndex const* index) {
   Init(index);
 }
-inline void S2ShapeIndex::Iterator::Init(S2ShapeIndex const& index) {
-  index.MaybeApplyUpdates();
+inline void S2ShapeIndex::Iterator::Init(S2ShapeIndex const* index) {
+  index->MaybeApplyUpdates();
   InitStale(index);
 }
-inline void S2ShapeIndex::Iterator::InitStale(S2ShapeIndex const& index) {
-  index_ = &index;
+inline void S2ShapeIndex::Iterator::InitStale(S2ShapeIndex const* index) {
+  index_ = index;
   iter_ = index_->cell_map_.begin();
   end_ = index_->cell_map_.end();
 }

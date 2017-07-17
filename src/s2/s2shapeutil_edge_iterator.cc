@@ -15,6 +15,8 @@
 
 #include "s2/s2shapeutil_edge_iterator.h"
 
+#include "s2/base/stringprintf.h"
+
 namespace s2shapeutil {
 
 EdgeIterator::EdgeIterator(S2ShapeIndex const* index)
@@ -34,6 +36,10 @@ void EdgeIterator::Next() {
     num_edges_ = (shape == nullptr) ? 0 : shape->num_edges();
     edge_id_ = -1;
   }
+}
+
+string EdgeIterator::DebugString() const {
+  return StringPrintf("(shape=%d, edge=%d)", shape_id_, edge_id_);
 }
 
 }  // namespace s2shapeutil

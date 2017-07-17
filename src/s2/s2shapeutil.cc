@@ -18,6 +18,7 @@
 #include "s2/s2shapeutil.h"
 
 #include "s2/base/stringprintf.h"
+#include "s2/third_party/absl/types/span.h"
 #include "s2/s2crossingedgequery.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
@@ -26,6 +27,7 @@
 #include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
 
+using absl::Span;
 using std::pair;
 using std::unique_ptr;
 using std::vector;
@@ -88,21 +90,6 @@ ClosedLaxPolyline::ClosedLaxPolyline(S2Loop const& loop) {
   Init(loop);
 }
 
-// VertexArray points to an existing array of vertices.  It allows code
-// sharing between the S2Polygon and vector<vector<S2Point>> constructors.
-class LaxPolygon::VertexArray {
- public:
-  VertexArray(S2Point const* begin, size_t size)
-      : begin_(begin), size_(size) {
-  }
-  S2Point const* begin() const { return begin_; }
-  S2Point const* end() const { return begin_ + size_; }
-  size_t size() const { return size_; }
- private:
-  S2Point const* begin_;
-  size_t size_;
-};
-
 LaxPolygon::LaxPolygon(vector<LaxPolygon::Loop> const& loops) {
   Init(loops);
 }
@@ -112,27 +99,27 @@ LaxPolygon::LaxPolygon(S2Polygon const& polygon) {
 }
 
 void LaxPolygon::Init(vector<LaxPolygon::Loop> const& loops) {
-  vector<VertexArray> v_arrays;
+  vector<Span<S2Point const>> spans;
   for (LaxPolygon::Loop const& loop : loops) {
-    v_arrays.push_back(VertexArray(loop.data(), loop.size()));
+    spans.emplace_back(loop);
   }
-  Init(v_arrays);
+  Init(spans);
 }
 
 void LaxPolygon::Init(S2Polygon const& polygon) {
-  vector<VertexArray> v_arrays;
+  vector<Span<S2Point const>> spans;
   for (int i = 0; i < polygon.num_loops(); ++i) {
     S2Loop const* loop = polygon.loop(i);
     if (loop->is_full()) {
-      v_arrays.push_back(VertexArray(nullptr, 0));
+      spans.emplace_back();  // Empty span.
     } else {
-      v_arrays.push_back(VertexArray(&loop->vertex(0), loop->num_vertices()));
+      spans.emplace_back(&loop->vertex(0), loop->num_vertices());
     }
   }
-  Init(v_arrays);
+  Init(spans);
 }
 
-void LaxPolygon::Init(vector<VertexArray> const& loops) {
+void LaxPolygon::Init(vector<Span<S2Point const>> const& loops) {
   num_loops_ = loops.size();
   if (num_loops_ == 0) {
     num_vertices_ = 0;
@@ -494,7 +481,7 @@ bool VisitCrossings(S2ShapeIndex const& index, CrossingType type,
   // TODO(ericv): Use brute force if the total number of edges is small enough
   // (using a larger threshold if the S2ShapeIndex is not constructed yet).
   ShapeEdgeVector shape_edges;
-  for (S2ShapeIndex::Iterator it(index); !it.Done(); it.Next()) {
+  for (S2ShapeIndex::Iterator it(&index); !it.Done(); it.Next()) {
     GetShapeEdges(index, it.cell(), &shape_edges);
     if (!VisitCrossings(shape_edges, type, visitor)) return false;
   }
@@ -503,8 +490,9 @@ bool VisitCrossings(S2ShapeIndex const& index, CrossingType type,
 
 //////////////////////////////////////////////////////////////////////
 
+// TODO(user): Change arg to pointer.
 RangeIterator::RangeIterator(S2ShapeIndex const& index)
-    : it_(index), end_(S2CellId::End(0)) {
+    : it_(&index), end_(S2CellId::End(0)) {
   Refresh();
 }
 
@@ -560,7 +548,7 @@ class IndexCrosser {
                CrossingType type, EdgePairVisitor const& visitor, bool swapped)
       : a_index_(a_index), b_index_(b_index), visitor_(visitor),
         min_crossing_sign_(type == CrossingType::INTERIOR ? 1 : 0),
-        swapped_(swapped), b_query_(b_index_) {
+        swapped_(swapped), b_query_(&b_index_) {
   }
 
   // Given two iterators positioned such that ai->id().Contains(bi->id()),

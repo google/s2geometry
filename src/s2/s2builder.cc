@@ -22,7 +22,7 @@
 //
 // For each input edge, we then determine the sequence of Voronoi regions
 // crossed by that edge, and snap the edge to the corresponding sequence of
-// sites.  (In other words, each input each is replaced by an edge chain.)
+// sites.  (In other words, each input edge is replaced by an edge chain.)
 //
 // The sites are chosen by starting with the set of input vertices, optionally
 // snapping them to discrete point set (such as S2CellId centers or lat/lng E7
@@ -55,8 +55,10 @@
 // Voronoi sites:
 //
 //  - Vertices from all layers contribute to the initial selection of sites.
+//
 //  - Edges in any layer that pass too close to a site can cause new sites to
 //    be added (which affects snapping in all layers).
+//
 //  - Simplification can be thought of as removing sites.  A site can be
 //    removed only if the snapped edges stay within the error bounds of the
 //    corresponding input edges in all layers.
@@ -633,9 +635,9 @@ void S2Builder::AddForcedSites(S2PointIndex<SiteId>* site_index) {
 void S2Builder::ChooseInitialSites(
     S2PointIndex<SiteId>* site_index,
     S2PointIndex<InputVertexId>* rejected_vertex_index) {
-  S2ClosestPointQuery<SiteId> site_query(*site_index);
+  S2ClosestPointQuery<SiteId> site_query(site_index);
   site_query.set_max_distance(snap_radius_);
-  S2ClosestPointQuery<InputVertexId> vertex_query(*rejected_vertex_index);
+  S2ClosestPointQuery<InputVertexId> vertex_query(rejected_vertex_index);
   vertex_query.set_max_distance(min_site_separation_);
 
   // For each input vertex, check whether all existing sites are further away
@@ -720,9 +722,9 @@ void S2Builder::CollectSiteEdges(
     S2PointIndex<SiteId> const& site_index,
     S2PointIndex<InputVertexId> const& rejected_vertex_index) {
   edge_sites_.resize(input_edges_.size());
-  S2ClosestPointQuery<SiteId> site_query(site_index);
+  S2ClosestPointQuery<SiteId> site_query(&site_index);
   site_query.set_max_distance(edge_site_query_radius_);
-  S2ClosestPointQuery<InputVertexId> vertex_query(rejected_vertex_index);
+  S2ClosestPointQuery<InputVertexId> vertex_query(&rejected_vertex_index);
   vertex_query.set_max_distance(min_edge_site_separation_);
   for (InputEdgeId e = 0; e < input_edges_.size(); ++e) {
     InputEdge const& edge = input_edges_[e];
@@ -876,11 +878,12 @@ void S2Builder::AddExtraSite(S2Point const& new_site,
                              vector<InputEdgeId>* snap_queue) {
   SiteId new_site_id = sites_.size();
   sites_.push_back(new_site);
-  S2ClosestEdgeQuery query(input_edge_index);
-  query.set_max_distance(edge_site_query_radius_);
-  query.FindClosestEdges(new_site);
-  for (int k = 0; k < query.num_edges(); ++k) {
-    InputEdgeId e = query.edge_id(k);
+  S2ClosestEdgeQuery::Options options;
+  options.set_max_distance(edge_site_query_radius_);
+  S2ClosestEdgeQuery query(&input_edge_index, options);
+  S2ClosestEdgeQuery::PointTarget target(new_site);
+  for (auto const& result : query.FindClosestEdges(target)) {
+    InputEdgeId e = result.edge_id;
     auto* site_ids = &edge_sites_[e];
     site_ids->push_back(new_site_id);
     SortSitesByDistance(input_vertices_[input_edges_[e].first], site_ids);
@@ -970,13 +973,12 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
     return;
   }
 
+  S2Point const& x = input_vertices_[edge.first];
+  S2Point const& y = input_vertices_[edge.second];
+
   // Optimization: if there is only one nearby site, return.
   // Optimization: if there are exactly two nearby sites, and one is close
   // enough to each vertex, then return.
-
-  // Compute the edge normal.
-  S2Point const& x = input_vertices_[edge.first];
-  S2Point const& y = input_vertices_[edge.second];
 
   // Now iterate through the sites.  We keep track of the sequence of sites
   // that are visited.
@@ -1052,9 +1054,7 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
   }
   if (s2builder_verbose) {
     std::cout << "(" << edge.first << "," << edge.second << "): ";
-    for (SiteId id : *chain) {
-      std::cout << id << " ";
-    }
+    for (SiteId id : *chain) std::cout << id << " ";
     std::cout << std::endl;
   }
 }

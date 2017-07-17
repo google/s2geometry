@@ -281,7 +281,7 @@ unique_ptr<S2Shape> S2ShapeIndex::Release(int shape_id) {
 
 vector<unique_ptr<S2Shape>> S2ShapeIndex::ReleaseAll() {
   Iterator it;
-  for (it.InitStale(*this); !it.Done(); it.Next()) {
+  for (it.InitStale(this); !it.Done(); it.Next()) {
     delete &it.cell();
   }
   cell_map_.clear();
@@ -343,7 +343,7 @@ bool PointContainmentTester::ContainedBy(S2Shape const* shape,
 
 bool S2ShapeIndex::ShapeContains(S2Shape const* shape, S2Point const& p) const {
   // Look up the S2ShapeIndex cell containing this point.
-  S2ShapeIndex::Iterator it(*this);
+  S2ShapeIndex::Iterator it(this);
   if (!it.Locate(p)) return false;
 
   S2ClippedShape const* clipped = it.cell().find_clipped(shape);
@@ -357,7 +357,7 @@ bool S2ShapeIndex::GetContainingShapes(S2Point const& p,
                                        std::vector<S2Shape*>* shapes) const {
   // Look up the S2ShapeIndex cell containing this point.
   shapes->clear();
-  S2ShapeIndex::Iterator it(*this);
+  S2ShapeIndex::Iterator it(this);
   if (!it.Locate(p)) return false;
 
   int num_clipped = it.cell().num_clipped();
@@ -1114,7 +1114,7 @@ inline S2CellId S2ShapeIndex::ShrinkToFit(S2PaddedCell const& pcell,
     // Don't shrink any smaller than the existing index cells, since we need
     // to combine the new edges with those cells.
     Iterator iter;
-    iter.InitStale(*this);  // "Stale" avoids applying updates recursively.
+    iter.InitStale(this);  // "Stale" avoids applying updates recursively.
     CellRelation r = iter.Locate(shrunk_id);
     if (r == INDEXED) { shrunk_id = iter.id(); }
   }
@@ -1182,7 +1182,7 @@ void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
     // encounter such a cell, we need to combine the edges being updated with
     // the existing cell contents by "absorbing" the cell.
     Iterator iter;
-    iter.InitStale(*this);  // "Stale" avoids applying updates recursively.
+    iter.InitStale(this);  // "Stale" avoids applying updates recursively.
     CellRelation r = iter.Locate(pcell.id());
     if (r == DISJOINT) {
       disjoint_from_index = true;
@@ -1661,7 +1661,7 @@ size_t S2ShapeIndex::BytesUsed() const {
   size += cell_map_.bytes_used() - sizeof(cell_map_);
   size += cell_map_.size() * sizeof(S2ShapeIndexCell);
   Iterator it;
-  for (it.InitStale(*this); !it.Done(); it.Next()) {
+  for (it.InitStale(this); !it.Done(); it.Next()) {
     S2ShapeIndexCell const& cell = it.cell();
     size += cell.shapes_.capacity() * sizeof(S2ClippedShape);
     for (int s = 0; s < cell.num_clipped(); ++s) {

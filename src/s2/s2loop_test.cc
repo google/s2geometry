@@ -48,7 +48,6 @@
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
-#include "s2/util/gtl/stl_util.h"
 #include "s2/util/math/matrix3x3.h"
 #include "s2/util/math/vector.h"
 

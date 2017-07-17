@@ -23,6 +23,7 @@
 #include <vector>
 
 #include <glog/logging.h>
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/util/btree/btree_set.h"
 #include "s2/_fpcontractoff.h"
@@ -32,31 +33,35 @@
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 #include "s2/s2edgeutil.h"
+#include "s2/s2closestedgequery_base.h"
 #include "s2/s2shapeindex.h"
 
 // S2ClosestEdgeQuery is a helper class for finding the closest edge(s) to a
 // given query point or query edge.  For example, given a set of polylines,
 // the following code efficiently finds the closest 5 edges to a query point:
 //
-// void Test(vector<S2Polyline*> const& polylines, S2Point const& target) {
+// void Test(vector<S2Polyline*> const& polylines, S2Point const& point) {
 //   S2ShapeIndex index;
 //   for (S2Polyline* polyline : polylines) {
 //     index.Add(new S2Polyline::Shape(polyline));
 //   }
-//   S2ClosestEdgeQuery query(index);
-//   query.set_max_edges(5);
-//   query.FindClosestEdges(target);
-//   for (int i = 0; i < query.num_edges(); ++i) {
-//     // query.shape_id(i) and query.edge_id(i) identify the edge.
-//     // Convenience methods:
-//     //   query.distance(i) is the distance to the target point.
-//     //   query.edge(i) retrieves the edge endpoints.
-//     //   query.GetClosestPointOnEdge(i) returns the point on the edge
-//     //     that is closest to the target point.
-//     int polyline_index = query.shape_id(i);
-//     int edge_index = query.edge_id(i);
-//     S1Angle distance = query.distance(i);
-//     S2Point closest_point = query.GetClosestPointOnEdge(i);
+//   S2ClosestEdgeQuery query(&index);
+//   query.mutable_options()->set_max_edges(5);
+//   S2ClosestEdgeQuery::PointTarget target(point);
+//   for (auto const& result : query.FindClosestEdges(target)) {
+//     // The Result struct contains the following fields:
+//     //   "distance" is the distance to the edge.
+//     //   "shape_id" identifies the S2Shape containing the edge.
+//     //   "edge_id" identifies the edge with the given shape.
+//     // The following convenience methods may also be useful:
+//     //   query.GetEdge(result) returns the endpoints of the edge.
+//     //   query.Project(point, result) computes the closest point on the
+//     //       result edge to the given target point.
+//     int polyline_index = result.shape_id;
+//     int edge_index = result.edge_id;
+//     S1ChordAngle distance = result.distance;  // Use ToAngle() for S1Angle.
+//     S2Shape::Edge edge = query.GetEdge(result);
+//     S2Point closest_point = query.Project(point, result);
 //   }
 // }
 //
@@ -64,314 +69,263 @@
 // radius, or both (i.e., the k closest edges up to a given maximum radius).
 // E.g. to find all the edges within 5 kilometers, call
 //
-//   query.set_max_distance(S2Earth::ToAngle(util::units::Kilometers(5)));
+//   query.mutable_options()->set_max_distance(
+//       S2Earth::ToAngle(util::units::Kilometers(5)));
+//
+// By default *all* edges are returned, so you should always specify either
+// max_edges() or max_distance() or both.  There is also a FindClosestEdge()
+// convenience method that automatically sets max_edges() == 1.
 //
 // To find the closest points to a query edge rather than a point, use:
 //
-//   query.FindClosestEdgesToEdge(v0, v1);
+//   query.FindClosestEdges(v0, v1);
 //
-// The implementation is designed to be fast for both small and large sets of
-// edges.
+// The implementation is designed to be fast for both simple and complex
+// geometric objects.
 class S2ClosestEdgeQuery {
  public:
-  // Convenience constructor that calls Init().
-  explicit S2ClosestEdgeQuery(S2ShapeIndex const& index);
+  // See S2ClosestEdgeQueryBase for full documentation.
+
+  // A thin wrapper around S1ChordAngle that implements the Distance concept
+  // required by S2ClosestEdgeQueryBase.
+  struct Distance : public S1ChordAngle {
+    Distance() : S1ChordAngle() {}
+    explicit Distance(S1Angle x) : S1ChordAngle(x) {}
+    explicit Distance(S1ChordAngle x) : S1ChordAngle(x) {}
+    static Distance Zero() { return Distance(S1ChordAngle::Zero()); }
+    static Distance Infinity() { return Distance(S1ChordAngle::Infinity()); }
+    static Distance Negative() { return Distance(S1ChordAngle::Negative()); }
+    friend Distance operator-(Distance x, Distance y) {
+      return Distance(S1ChordAngle(x) - y);
+    }
+    static S1Angle GetAngleBound(Distance x) {
+      return x.PlusError(x.GetS1AngleConstructorMaxError()).ToAngle();
+    }
+  };
+  using Base = S2ClosestEdgeQueryBase<Distance>;
+  using Result = Base::Result;
+
+  // See S2ClosestEdgeQueryBase for full documentation of the available options.
+  class Options : public Base::Options {
+   public:
+    // Versions of set_max_distance() that accept S1ChordAngle / S1Angle.
+    void set_max_distance(S1ChordAngle max_distance);
+    void set_max_distance(S1Angle max_distance);
+
+    // Versions of set_max_error() that accept S1ChordAngle / S1Angle.
+    void set_max_error(S1ChordAngle max_error);
+    void set_max_error(S1Angle max_error);
+
+    // Like set_max_distance(), except that "max_distance" is increased by the
+    // maximum error in the distance calculation.  This ensures that all edges
+    // whose true distance is less than "max_distance" will be returned (along
+    // with some edges whose true distance is slightly greater).
+    //
+    // Algorithms that need to do exact distance comparisons can use this
+    // option to find a set of candidate edges that can then be filtered
+    // further (e.g., using s2pred::CompareEdgeDistance).
+    void set_conservative_max_distance(S1ChordAngle max_distance);
+  };
+
+  // TODO(ericv): Eliminate this method (and class).
+  class Target : public Base::Target {
+   public:
+    virtual S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const = 0;
+  };
+
+  // Target subtype that computes the closest distance to a point.
+  class PointTarget final : public Target {
+   public:
+    explicit PointTarget(S2Point const& point);
+    int max_brute_force_edges() const override;
+    S2Cap GetCapBound() const override;
+    bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
+                           Distance* min_dist) const override;
+    bool UpdateMinDistance(S2Cell const& cell,
+                           Distance* min_dist) const override;
+    S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const override;
+
+   private:
+    S2Point point_;
+  };
+
+  // Target subtype that computes the closest distance to an edge.
+  class EdgeTarget final : public Target {
+   public:
+    EdgeTarget(S2Point const& a, S2Point const& b);
+    int max_brute_force_edges() const override;
+    S2Cap GetCapBound() const override;
+    bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
+                           Distance* min_dist) const override;
+    bool UpdateMinDistance(S2Cell const& cell,
+                           Distance* min_dist) const override;
+    S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const override;
+
+   private:
+    S2Point a_, b_;
+  };
+
+  // Convenience constructor that calls Init().  Options may be specified here
+  // or changed at any time using the mutable_options() accessor method.
+  explicit S2ClosestEdgeQuery(S2ShapeIndex const* index,
+                              Options const& options = Options());
 
   // Default constructor; requires Init() to be called.
-  S2ClosestEdgeQuery() {}
+  S2ClosestEdgeQuery();
   ~S2ClosestEdgeQuery();
 
-  // Initialize the query.
+  // Initializes the query.  Options may be specified here or changed at any
+  // time using the mutable_options() accessor method.
+  //
   // REQUIRES: Reset() must be called if "index" is modified.
-  void Init(S2ShapeIndex const& index);
+  void Init(S2ShapeIndex const* index, Options const& options = Options());
 
   // Reset the query state.  This method must be called whenever the
-  // underlying index is modified.
+  // underlying S2ShapeIndex is modified.
   void Reset();
 
   // Return a reference to the underlying S2ShapeIndex.
   S2ShapeIndex const& index() const;
 
-  // Only find the "max_edges" closest edges.
-  // This value may be changed between calls to FindClosestEdges().
-  //
-  // DEFAULT: numeric_limits<int>::max()
-  // REQUIRES: max_edges >= 1
-  int max_edges() const;
-  void set_max_edges(int max_edges);
+  // Returns the query options.  Options can be modifed between queries.
+  Options const& options() const;
+  Options* mutable_options();
 
-  // Find edges whose distance to the target is less than "max_distance".
-  // (All edges whose true distance is less than the given value will be
-  // returned, along with some edges whose true distance may be slightly
-  // greater than the limit.)  This value may be changed between calls to
-  // FindClosestEdges().
-  //
-  // DEFAULT: S1Angle::Infinity()
-  S1Angle max_distance() const;
-  void set_max_distance(S1Angle max_distance);
+  // Returns the closest edges to the given target that satisfy the given
+  // options.  This method may be called multiple times.
+  std::vector<Result> FindClosestEdges(Target const& target);
 
-  // Allow distance errors of up to "max_error" when determining which edge(s)
-  // are closest.  Note that this does not affect how distances are measured,
-  // it just gives the algorithm permission to not work so hard to find the
-  // exact closest edge (or set of edges) when many edges are nearly equally
-  // distant.  Specifically, if E1 is some edge in the "exact" result set,
-  // then the algorithm is allowed to substitute an edge E2 that is up to
-  // "max_error" further away than E1 (and that satisfies all the remaining
-  // search criteria, including max_distance).
-  //
-  // DEFAULT: S1Angle::Zero()
-  S1Angle max_error() const;
-  void set_max_error(S1Angle max_error);
+  // This version can be more efficient when this method is called many times,
+  // since it does not require allocating a new vector on each call.
+  void FindClosestEdges(Target const& target, std::vector<Result>* results);
 
-  // Find the closest edges to "target" that satisfy the given max_distance()
-  // and/or max_edges() criteria.  If neither of these is set, then all edges
-  // are returned.  This method may be called multiple times.
-  //
-  // REQUIRES: "target" is unit length.
-  void FindClosestEdges(S2Point const& target);
+  //////////////////////// Convenience Methods ////////////////////////
 
-  // Find the closest edges to the given edge AB.  Otherwise similar to
-  // FindClosestEdges().
+  // Returns the closest edge to the target.  If no edge satisfies the search
+  // criteria, then the Result object will have distance == Infinity() and
+  // shape_id == edge_id == -1.
+  //
+  // SIDE EFFECT: Calls mutable_options()->set_max_edges(1).
+  //              All other options are unchanged.
+  Result FindClosestEdge(Target const& target);
+
+  // Returns the minimum distance to the target.  If the target has no edges,
+  // returns S1ChordAngle::Infinity().
+  //
+  // SIDE EFFECT: Calls mutable_options()->set_max_edges(1).
+  //              All other options are unchanged.
+  S1ChordAngle GetDistance(Target const& target);
+
+  // Returns the endpoints of the given result edge.
+  S2Shape::Edge GetEdge(Result const& result) const;
+
+  // Returns the point on given result edge that is closest to "point".
+  S2Point Project(S2Point const& point, Result const& result) const;
+
+  ///////////////////////// Deprecated Methods //////////////////////////
+
+  ABSL_DEPRECATED("Use S2ClosestEdgeQuery(&index, options)")
+  explicit S2ClosestEdgeQuery(S2ShapeIndex const& index)
+      : S2ClosestEdgeQuery(&index, Options()) {
+  }
+
+  ABSL_DEPRECATED("Use Init(&index, options)")
+  void Init(S2ShapeIndex const& index) {
+    Init(&index, Options());
+  }
+
+  // Results are returned using the deprecated result interface (below).
+  ABSL_DEPRECATED("Use FindClosestEdges(PointTarget(point)) instead.")
+  void FindClosestEdges(S2Point const& point);
+
+  // Results are returned using the deprecated result interface (below).
+  ABSL_DEPRECATED("Use FindClosestEdges(EdgeTarget(a, b)) instead.")
   void FindClosestEdgesToEdge(S2Point const& a, S2Point const& b);
 
-  // Manually specify whether distances are computed using "brute force"
-  // (i.e., by examining every edge) rather than using the S2ShapeIndex.
-  // This is useful for testing, benchmarking, and debugging.
-  //
-  // REQUIRES: Init() has been called.
-  void UseBruteForce(bool use_brute_force);
+  // Results are returned using the deprecated result interface (below).
+  ABSL_DEPRECATED("Use FindClosestEdges(PointTarget(point)) instead.")
+  void FindClosestEdge(S2Point const& point);
 
-  ////////////////////// Result Interface ////////////////////////
+  // Return the minimum distance from the given point to any edge of the
+  // S2ShapeIndex.  If there are no edges, return S1Angle::Infinity().
+  //
+  // SIDE EFFECTS: Calls set_max_edges(1); all other parameters are unchanged.
+  ABSL_DEPRECATED("Use GetDistance(PointTarget(point)).ToAngle() instead.")
+  S1Angle GetDistance(S2Point const& point);
+
+  ABSL_DEPRECATED("Use S2::Project instead.")
+  S2Point Project(S2Point const& point);
+
+  ABSL_DEPRECATED("Use options().max_edges()")
+  int max_edges() const { return options().max_edges(); }
+
+  ABSL_DEPRECATED("Use mutable_options()->set_max_edges()")
+  void set_max_edges(int max_edges) {
+    mutable_options()->set_max_edges(max_edges);
+  }
+
+  ABSL_DEPRECATED("Use options().max_distance()")
+  S1Angle max_distance() const { return options().max_distance().ToAngle(); }
+
+  // Note that mutable_options()->set_max_distance() expects a Distance.
+  ABSL_DEPRECATED("Use mutable_options()->set_max_distance()")
+  void set_max_distance(S1Angle max_distance) {
+    mutable_options()->set_max_distance(Distance(max_distance));
+  }
+
+  ABSL_DEPRECATED("Use options().max_error()")
+  S1Angle max_error() const { return options().max_error().ToAngle(); }
+
+  // Note that mutable_options()->set_max_error() expects a Distance.
+  ABSL_DEPRECATED("Use mutable_options()->set_max_error()")
+  void set_max_error(S1Angle max_error) {
+    mutable_options()->set_max_error(Distance(max_error));
+  }
+
+  ////////////////////// Result Interface (DEPRECATED) /////////////////////
   //
   // The result of a query consists of a set of edges which may be obtained
   // using the interface below.  Edges are sorted in order of increasing
   // distance to the target point.
 
   // The number of result edges.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   int num_edges() const;
 
   // The shape id of the given result edge.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   int shape_id(int i) const;
 
   // The edge id of the given result edge.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   int edge_id(int i) const;
 
   // The distance to the given result edge.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   S1Angle distance(int i) const;
 
   // Like distance(i), but expressed as an S1ChordAngle.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   S1ChordAngle distance_ca(int i) const;
 
   // Returns the endpoints of the given result edge.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   S2Shape::Edge edge(int i) const;
 
   // Returns the point on given result edge that is closest to the target.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   S2Point GetClosestPointOnEdge(int i) const;
 
-  //////////////////////// Convenience Methods ////////////////////////
-
-  // Finds the closest edge to the target.  Equivalent to:
-  //
-  //   query.set_max_edges(1);
-  //   query.FindClosestEdges();
-  //
-  // All other parameters are unchanged; e.g. max_distance() will still limit
-  // the search radius.
-  //
-  // REQUIRES: "target" is unit length.
-  void FindClosestEdge(S2Point const& target);
-
-  // Return the minimum distance from the given point to any edge of the
-  // S2ShapeIndex.  If there are no edges, return S1Angle::Infinity().
-  //
-  // SIDE EFFECTS: Calls set_max_edges(1); all other parameters are unchanged.
-  S1Angle GetDistance(S2Point const& target);
-
-  // Return the closest point on any edge of the S2ShapeIndex to the given
-  // point.  If the index has no edges, return the input argument.
-  //
-  // SIDE EFFECTS: Calls set_max_edges(1); all other parameters are unchanged.
-  S2Point Project(S2Point const& target);
-
  private:
-  class QueueEntry;
-
-  void AddInitialRange(S2ShapeIndex::Iterator const& first,
-                       S2ShapeIndex::Iterator const& last);
-
-  class Target {
-   public:
-    virtual ~Target() {}
-    virtual S2Point center() const = 0;
-    virtual S1Angle radius() const = 0;
-    virtual bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
-                                   S1ChordAngle* min_dist) const = 0;
-    virtual S1ChordAngle GetDistance(S2Cell const& cell) const = 0;
-    virtual S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const = 0;
-  };
-
-  class PointTarget final : public Target {
-   public:
-    explicit PointTarget(S2Point const& point) : point_(point) {}
-    S2Point center() const override { return point_; }
-    S1Angle radius() const override { return S1Angle::Zero(); }
-    bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
-                           S1ChordAngle* min_dist) const override {
-      return S2::UpdateMinDistance(point_, v0, v1, min_dist);
-    }
-    S1ChordAngle GetDistance(S2Cell const& cell) const override {
-      return cell.GetDistance(point_);
-    }
-    S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const override {
-      return S2::Project(point_, edge.v0, edge.v1);
-    }
-   private:
-    S2Point point_;
-  };
-
-  class EdgeTarget final : public Target {
-   public:
-    EdgeTarget(S2Point const& a, S2Point const& b) : a_(a), b_(b) {}
-    S2Point center() const override { return (a_ + b_).Normalize(); }
-    S1Angle radius() const override { return 0.5 * S1Angle(a_, b_); }
-    bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
-                           S1ChordAngle* min_dist) const override {
-      return S2::UpdateEdgePairMinDistance(a_, b_, v0, v1, min_dist);
-    }
-    S1ChordAngle GetDistance(S2Cell const& cell) const override {
-      return cell.GetDistanceToEdge(a_, b_);
-    }
-    S2Point GetClosestPointOnEdge(S2Shape::Edge const& edge) const override {
-      return S2::GetEdgePairClosestPoints(
-          a_, b_, edge.v0, edge.v1).second;
-    }
-   private:
-    S2Point a_, b_;
-  };
-
-  // Using templates rather than virtual functions speeds up the benchmarks
-  // by 15-25% when the brute force algorithm is used (< 150 points).
-
-  void FindClosestEdgesToTarget();
-  void FindClosestEdgesBruteForce();
-  void FindClosestEdgesOptimized();
-  void InitQueue();
-  void MaybeAddResult(S2Shape const& shape, int edge_id);
-  void ProcessEdges(QueueEntry const& entry);
-  void EnqueueCell(S2CellId id, S2ShapeIndexCell const* index_cell);
-  void EnqueueCurrentCell(S2CellId id);
-
-  //////////// Parameters /////////////
-
-  S1Angle max_distance_;
-  S1Angle max_error_arg_;
-  std::unique_ptr<const Target> target_;
-  int max_edges_;
-
-  ////////// Fields that are constant after Init() is called /////////////
-
-  // If the index has few edges, it is cheaper to use a brute force algorithm.
-  bool use_brute_force_;
-
-  S2ShapeIndex const* index_;
-
-  // During Init() we precompute the top-level S2CellIds that will be added to
-  // the priority queue.  There can be at most 6 of these cells.  Essentially
-  // this is just a covering of the indexed edges, except that we also store
-  // pointers to the corresponding S2ShapeIndexCells to reduce the number of
-  // index seeks required.
-  //
-  // The covering needs to be stored in a std::vector so that we can use
-  // S2CellUnion::GetIntersection().
-  std::vector<S2CellId> index_covering_;
-  absl::InlinedVector<S2ShapeIndexCell const*, 6> index_cells_;
-
-  ////////// Fields that are updated during a query /////////////
-
-  // The edges gathered so far are kept in a sorted container so that
-  // duplicate edges can easily be removed.
-  struct Result {
-    // Default constructor needed by standard containers.
-    Result() : distance(S1ChordAngle::Negative()), shape_id(-1), edge_id(-1) {}
-    Result(S1ChordAngle _distance, int _shape_id, int _edge_id)
-        : distance(_distance), shape_id(_shape_id), edge_id(_edge_id) {
-    }
-    bool operator<(Result const& other) const {
-      // Edges are sorted first by distance and then by unique id.
-      if (distance < other.distance) return true;
-      if (distance > other.distance) return false;
-      if (shape_id < other.shape_id) return true;
-      if (shape_id > other.shape_id) return false;
-      return edge_id < other.edge_id;
-    }
-    // Indicate that linear rather than binary search should be used within
-    // btree nodes.  This is faster even for the comparison function above
-    // since the result is determined by "distance" most of the time.
-    using goog_btree_prefer_linear_node_search = std::true_type;
-
-    S1ChordAngle distance;
-    int shape_id, edge_id;
-  };
-  using ResultSet = util::btree::btree_set<Result>;
-  ResultSet tmp_results_;
-
-  // For efficiency, when max_edges() == 1 we keep the current best result in
-  // this field rather than using "tmp_results_" above.
-  Result tmp_result_singleton_;
-
-  // Once all result edges have been found, they are copied into a vector.
-  absl::InlinedVector<Result, 8> results_;
-
   Result const& result(int i) const;  // Internal accessor method.
 
-  // The distance beyond which we can safely ignore further candidate edges.
-  // (Candidates that are exactly at the limit are ignored; this is more
-  // efficient for UpdateMinDistance() and should not affect clients since
-  // distance measurements have a small amount of error anyway.)
-  //
-  // Initially this is the same as the maximum distance specified by the user,
-  // but it can also be updated by the algorithm (see MaybeAddResult).
-  S1ChordAngle max_distance_limit_;
+  Options options_;
+  Base base_;
 
-  // Internally we convert max_error_arg_ to an S1ChordAngle for efficiency.
-  S1ChordAngle max_error_;
-
-  // The algorithm maintains a priority queue of S2CellIds that contain at
-  // least one S2ShapeIndexCell, sorted in increasing order of distance from
-  // the target point.
-  struct QueueEntry {
-    // A lower bound on the distance from the target point to any edge point
-    // within "id".  This is the key of the priority queue.
-    S1ChordAngle distance;
-
-    // The cell being queued.
-    S2CellId id;
-
-    // If "id" belongs to the index, this field stores the corresponding
-    // S2ShapeIndexCell.  Otherwise "id" is a proper ancestor of one or more
-    // S2ShapeIndexCells and this field stores nullptr.  The purpose of this
-    // field is to avoid an extra Seek() when the queue entry is processed.
-    S2ShapeIndexCell const* index_cell;
-
-    QueueEntry(S1ChordAngle _distance, S2CellId _id,
-               S2ShapeIndexCell const* _index_cell)
-        : distance(_distance), id(_id), index_cell(_index_cell) {
-    }
-    bool operator<(QueueEntry const& other) const {
-      // The priority queue returns the largest elements first, so we want the
-      // "largest" entry to have the smallest distance.
-      return distance > other.distance;
-    }
-  };
-  using CellQueue =
-      std::priority_queue<QueueEntry, absl::InlinedVector<QueueEntry, 16>>;
-  CellQueue queue_;
-
-  // Temporaries, defined here to avoid multiple allocations / initializations.
-
-  S2ShapeIndex::Iterator iter_;
-  std::vector<S2CellId> max_distance_covering_;
-  std::vector<S2CellId> initial_cells_;
+  // Deprecated methods that return results using the result interface require
+  // keeping a copy of the target and result vector.
+  std::unique_ptr<const Target> target_;
+  std::vector<Result> results_;
 
   S2ClosestEdgeQuery(S2ClosestEdgeQuery const&) = delete;
   void operator=(S2ClosestEdgeQuery const&) = delete;
@@ -381,37 +335,59 @@ class S2ClosestEdgeQuery {
 //////////////////   Implementation details follow   ////////////////////
 
 
-inline S2ClosestEdgeQuery::S2ClosestEdgeQuery(S2ShapeIndex const& index) {
-  Init(index);
+inline void S2ClosestEdgeQuery::Options::set_max_distance(
+    S1ChordAngle max_distance) {
+  Base::Options::set_max_distance(Distance(max_distance));
+}
+
+inline void S2ClosestEdgeQuery::Options::set_max_distance(
+    S1Angle max_distance) {
+  Base::Options::set_max_distance(Distance(max_distance));
+}
+
+inline void S2ClosestEdgeQuery::Options::set_max_error(S1ChordAngle max_error) {
+  Base::Options::set_max_error(Distance(max_error));
+}
+
+inline void S2ClosestEdgeQuery::Options::set_max_error(S1Angle max_error) {
+  Base::Options::set_max_error(Distance(max_error));
+}
+
+inline S2ClosestEdgeQuery::S2ClosestEdgeQuery(S2ShapeIndex const* index,
+                                              Options const& options) {
+  Init(index, options);
+}
+
+inline void S2ClosestEdgeQuery::Init(S2ShapeIndex const* index,
+                                     Options const& options) {
+  options_ = options;
+  base_.Init(index);
+}
+
+inline void S2ClosestEdgeQuery::Reset() {
+  base_.Reset();
 }
 
 inline S2ShapeIndex const& S2ClosestEdgeQuery::index() const {
-  return *index_;
+  return base_.index();
 }
 
-inline int S2ClosestEdgeQuery::max_edges() const {
-  return max_edges_;
+inline S2ClosestEdgeQuery::Options const& S2ClosestEdgeQuery::options() const {
+  return options_;
 }
 
-inline void S2ClosestEdgeQuery::set_max_edges(int max_edges) {
-  DCHECK_GE(max_edges, 1);
-  max_edges_ = max_edges;
+inline S2ClosestEdgeQuery::Options* S2ClosestEdgeQuery::mutable_options() {
+  return &options_;
 }
 
-inline S1Angle S2ClosestEdgeQuery::max_distance() const {
-  return max_distance_;
+inline std::vector<S2ClosestEdgeQuery::Result>
+S2ClosestEdgeQuery::FindClosestEdges(Target const& target) {
+  return base_.FindClosestEdges(target, options_);
 }
 
-inline void S2ClosestEdgeQuery::set_max_distance(S1Angle max_distance) {
-  max_distance_ = max_distance;
-}
-
-inline S1Angle S2ClosestEdgeQuery::max_error() const {
-  return max_error_arg_;
-}
-
-inline void S2ClosestEdgeQuery::set_max_error(S1Angle max_error) {
-  max_error_arg_ = max_error;
+inline void S2ClosestEdgeQuery::FindClosestEdges(Target const& target,
+                                                 std::vector<Result>* results) {
+  base_.FindClosestEdges(target, options_, results);
 }
 
 inline int S2ClosestEdgeQuery::num_edges() const {
@@ -435,12 +411,28 @@ inline S1Angle S2ClosestEdgeQuery::distance(int i) const {
 }
 
 inline S2Shape::Edge S2ClosestEdgeQuery::edge(int i) const {
-  return index_->shape(shape_id(i))->edge(edge_id(i));
+  return index().shape(shape_id(i))->edge(edge_id(i));
 }
 
-inline void S2ClosestEdgeQuery::FindClosestEdge(S2Point const& target) {
-  set_max_edges(1);
-  FindClosestEdges(target);
+inline S2ClosestEdgeQuery::Result S2ClosestEdgeQuery::FindClosestEdge(
+    Target const& target) {
+  options_.set_max_edges(1);
+  return base_.FindClosestEdge(target, options_);
+}
+
+inline S1ChordAngle S2ClosestEdgeQuery::GetDistance(Target const& target) {
+  return FindClosestEdge(target).distance;
+}
+
+inline S2Shape::Edge S2ClosestEdgeQuery::GetEdge(Result const& result) const {
+  return index().shape(result.shape_id)->edge(result.edge_id);
+}
+
+inline S2Point S2ClosestEdgeQuery::Project(S2Point const& point,
+                                           Result const& result) const {
+  if (result.edge_id < 0) return point;
+  auto edge = GetEdge(result);
+  return S2::Project(point, edge.v0, edge.v1);
 }
 
 #endif  // S2_S2CLOSESTEDGEQUERY_H_

@@ -46,6 +46,7 @@
 #include <utility>
 #include <vector>
 
+#include "s2/third_party/absl/types/span.h"
 #include "s2/_fpcontractoff.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"
@@ -187,8 +188,7 @@ class LaxPolygon : public S2Shape {
   ChainPosition chain_position(int e) const final;
 
  private:
-  class VertexArray;
-  void Init(std::vector<VertexArray> const& loops);
+  void Init(std::vector<absl::Span<S2Point const>> const& loops);
 
   int32 num_loops_;
   std::unique_ptr<S2Point[]> vertices_;
@@ -515,7 +515,6 @@ bool VisitCrossings(S2ShapeIndex const& a, S2ShapeIndex const& b,
 // just by counting edge crossings because there is no such thing as a "point
 // at infinity" that is guaranteed to be outside the loop.
 bool IsOriginOnLeft(S2Shape const& shape);
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///////////////// Methods used internally by the S2 library /////////////////

@@ -19,7 +19,6 @@
 #include <string>
 
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/util/gtl/stl_util.h"
 
 #ifndef _MSC_VER
 const int Varint::kMax32;

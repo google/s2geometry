@@ -565,7 +565,7 @@ static S1ChordAngle GetDistanceToEdgeBruteForce(
   S2Loop loop(cell);
   S2ShapeIndex index;
   index.Add(absl::MakeUnique<S2Loop::Shape>(&loop));
-  S2CrossingEdgeQuery query(index);
+  S2CrossingEdgeQuery query(&index);
   vector<int> edges;
   if (query.GetCrossings(a, b, index.shape(0), s2shapeutil::CrossingType::ALL,
                          &edges)) {

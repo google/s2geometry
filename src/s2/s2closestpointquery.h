@@ -43,7 +43,7 @@
 //   for (S2Point const& point : points) {
 //     index.Add(point, i);
 //   }
-//   S2ClosestPointQuery<int> query(index);
+//   S2ClosestPointQuery<int> query(&index);
 //   query.set_max_points(15);
 //   for (S2Point const& target : targets) {
 //     query.FindClosestPoints(target);
@@ -79,7 +79,10 @@ class S2ClosestPointQuery {
   using Index = S2PointIndex<Data>;
 
   // Convenience constructor that calls Init().
-  explicit S2ClosestPointQuery(Index const& index);
+  explicit S2ClosestPointQuery(Index const* index);
+  ABSL_DEPRECATED("Use pointer version.")
+  explicit S2ClosestPointQuery(Index const& index)
+    : S2ClosestPointQuery(&index) {}
 
   // Default constructor; requires Init() to be called.
   S2ClosestPointQuery() {}
@@ -87,7 +90,9 @@ class S2ClosestPointQuery {
 
   // Initialize the query.
   // REQUIRES: Reset() must be called if "index" is modified.
-  void Init(Index const& index);
+  void Init(Index const* index);
+  ABSL_DEPRECATED("Use pointer version.")
+  void Init(Index const& index) { Init(&index); }
 
   // Reset the query state.  This method must be called whenever the
   // underlying index is modified.
@@ -324,13 +329,13 @@ S2ClosestPointQuery<Data>::~S2ClosestPointQuery() {
 }
 
 template <class Data>
-S2ClosestPointQuery<Data>::S2ClosestPointQuery(Index const& index) {
+S2ClosestPointQuery<Data>::S2ClosestPointQuery(Index const* index) {
   Init(index);
 }
 
 template <class Data>
-void S2ClosestPointQuery<Data>::Init(Index const& index) {
-  index_ = &index;
+void S2ClosestPointQuery<Data>::Init(Index const* index) {
+  index_ = index;
   max_points_ = std::numeric_limits<int>::max();
   max_distance_ = S1Angle::Infinity();
   region_ = nullptr;

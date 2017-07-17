@@ -39,6 +39,8 @@
 //
 //   * (Get|Set|Copy)Bits
 //
+//   * GetLowBits - Extract N lowest bits from value.
+//
 // The only other thing is BitPattern, which is a trait class template (not in
 // Bits) containing a few bit patterns (which vary based on value of template
 // parameter).
@@ -304,6 +306,19 @@ class Bits {
     SetBits(value, dest_offset, nbits, dest);
   }
 
+  // Reset high bits. Return a copy of 'value' with upper bits reset (set to
+  // zero), starting at position 'index'. Put differently: extract 'nbits' low
+  // bits from 'value'.
+  // Bits::GetLowBits(13, 3); /* = 5 (0b1101 => 0b101) */
+  template<typename T>
+  static typename UnsignedType<T>::Type GetLowBits(const T value,
+                                                   const int index) {
+    typedef typename UnsignedType<T>::Type UnsignedT;
+    const UnsignedT unsigned_value = bit_cast<UnsignedT>(value);
+    DCHECK_GT(sizeof(UnsignedT) * 8, index);
+    return GetLowBitsImpl(unsigned_value, index);
+  }
+
  private:
   // We only use this for unsigned types and for 0 <= n <= sizeof(UnsignedT).
   template<typename UnsignedT>
@@ -333,6 +348,14 @@ class Bits {
                                    const int offset,
                                    const int nbits);
 #endif
+#if defined(__BMI2__) && (defined(__i386__) || defined(__x86_64__))
+  static inline uint32 GetLowBitsImpl(const uint32 n, const int index);
+#endif
+#if defined(__BMI2__) && defined(__x86_64__)
+  static inline uint64 GetLowBitsImpl(const uint64 n, const int index);
+#endif
+  template <typename UnsignedT>
+  static inline UnsignedT GetLowBitsImpl(const UnsignedT n, const int index);
 #endif  // __GNUC__
 
   // Portable implementations.
@@ -698,6 +721,18 @@ inline uint64 Bits::GetBitsImpl(const uint64 src,
 }
 #endif
 
+#if defined(__BMI2__) && (defined(__i386__) || defined(__x86_64__))
+inline uint32 Bits::GetLowBitsImpl(const uint32 n, const int index) {
+  return _bzhi_u32(n, index);
+}
+#endif
+
+#if defined(__BMI2__) && defined(__x86_64__)
+inline uint64 Bits::GetLowBitsImpl(const uint64 n, const int index) {
+  return _bzhi_u64(n, index);
+}
+#endif
+
 #endif  // __GNUC__
 
 template<typename UnsignedT>
@@ -706,6 +741,11 @@ inline UnsignedT Bits::GetBitsImpl(const UnsignedT src,
                                    const int nbits) {
   const UnsignedT result = (src >> offset) & NBitsFromLSB<UnsignedT>(nbits);
   return result;
+}
+
+template<typename UnsignedT>
+inline UnsignedT Bits::GetLowBitsImpl(const UnsignedT n, const int index) {
+  return GetBitsImpl(n, 0, index);
 }
 
 #endif  // S2_UTIL_BITS_BITS_H_

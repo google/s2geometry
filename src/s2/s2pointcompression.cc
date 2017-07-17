@@ -24,6 +24,7 @@
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/fixed_array.h"
+#include "s2/third_party/absl/types/span.h"
 #include "s2/util/bits/bit-interleave.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/nth-derivative.h"
@@ -241,13 +242,12 @@ void EncodePointCompressed(pair<int, int> const& vertex_pi_qi,
   DCHECK_GE(encoder->avail(), 0);
 }
 
-void EncodePointsCompressed(pair<int, int> const* vertices_pi_qi,
-                            int num_vertices,
+void EncodePointsCompressed(absl::Span<pair<int, int> const> vertices_pi_qi,
                             int level,
                             Encoder* encoder) {
   NthDerivativeCoder pi_coder(kDerivativeEncodingOrder);
   NthDerivativeCoder qi_coder(kDerivativeEncodingOrder);
-  for (int i = 0; i < num_vertices; ++i) {
+  for (int i = 0; i < vertices_pi_qi.size(); ++i) {
     if (i == 0) {
       // The first point will be just the (pi, qi) coordinates
       // of the S2Point.  NthDerivativeCoder will not save anything
@@ -311,14 +311,13 @@ bool DecodePointCompressed(Decoder* decoder,
 
 }  // namespace
 
-void S2EncodePointsCompressed(S2XYZFaceSiTi const* points,
-                              int num_points,
+void S2EncodePointsCompressed(absl::Span<S2XYZFaceSiTi const> points,
                               int level,
                               Encoder* encoder) {
-  absl::FixedArray<pair<int, int>> vertices_pi_qi(num_points);
+  absl::FixedArray<pair<int, int>> vertices_pi_qi(points.size());
   vector<int> off_center;
   Faces faces;
-  for (int i = 0; i < num_points; ++i) {
+  for (int i = 0; i < points.size(); ++i) {
     faces.AddFace(points[i].face);
     vertices_pi_qi[i].first = SiTitoPiQi(points[i].si, level);
     vertices_pi_qi[i].second = SiTitoPiQi(points[i].ti, level);
@@ -327,7 +326,7 @@ void S2EncodePointsCompressed(S2XYZFaceSiTi const* points,
     }
   }
   faces.Encode(encoder);
-  EncodePointsCompressed(vertices_pi_qi.data(), num_points, level, encoder);
+  EncodePointsCompressed(vertices_pi_qi, level, encoder);
   int num_off_center = off_center.size();
   encoder->Ensure(Encoder::kVarintMax32 +
                   (Encoder::kVarintMax32 + sizeof(S2Point)) * num_off_center);
@@ -341,18 +340,17 @@ void S2EncodePointsCompressed(S2XYZFaceSiTi const* points,
 }
 
 bool S2DecodePointsCompressed(Decoder* decoder,
-                              int num_points,
                               int level,
-                              S2Point* points) {
+                              absl::Span<S2Point> points) {
   Faces faces;
-  if (!faces.Decode(num_points, decoder)) {
+  if (!faces.Decode(points.size(), decoder)) {
     return false;
   }
 
   NthDerivativeCoder pi_coder(kDerivativeEncodingOrder);
   NthDerivativeCoder qi_coder(kDerivativeEncodingOrder);
   Faces::Iterator faces_iterator = faces.GetIterator();
-  for (int i = 0; i < num_points; ++i) {
+  for (int i = 0; i < points.size(); ++i) {
     pair<int, int> vertex_pi_qi;
     if (i == 0) {
       if (!DecodeFirstPointFixedLength(decoder, level, &pi_coder, &qi_coder,
@@ -373,12 +371,12 @@ bool S2DecodePointsCompressed(Decoder* decoder,
 
   unsigned int num_off_center;
   if (!decoder->get_varint32(&num_off_center) ||
-      num_off_center > num_points) {
+      num_off_center > points.size()) {
     return false;
   }
   for (int i = 0; i < num_off_center; ++i) {
     uint32 index;
-    if (!decoder->get_varint32(&index) || index >= num_points) {
+    if (!decoder->get_varint32(&index) || index >= points.size()) {
       return false;
     }
     if (decoder->avail() < sizeof(points[index])) return false;
