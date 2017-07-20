@@ -29,8 +29,6 @@
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 
-struct uint128_pod;
-
 // An unsigned 128-bit integer type. The API is meant to mimic an intrinsic type
 // as closely as practical including cases exhibiting undefined behavior (e.g.
 // division by zero).
@@ -53,8 +51,6 @@ struct uint128_pod;
 //   - A built-in integer will implicitly convert to a floating point type when
 //     interacting through arithmetic operators. Our type must first be
 //     explicitly cast to a floating point type.
-// TODO(user) Remove public construction from two uint64's.
-// TODO(user) Remove construction from uint128_pod.
 // TODO(user) Remove zeroing behavior when shifting by >= 128; should be UB.
 //
 // This type will eventually be removed and uint128 will be an alias for a
@@ -78,7 +74,6 @@ constexpr uint128 MakeUint128(uint64 top, uint64 bottom);
 class uint128 {
  public:
   uint128() = default;
-  constexpr uint128(const uint128_pod &val);
 
   // Constructors from arithmetic types
   constexpr uint128(int v);                 // NOLINT(runtime/explicit)
@@ -176,18 +171,6 @@ class uint128 {
 #endif  // byte order
 };
 
-// This is a POD form of uint128 which can be used for static variables which
-// need to be operated on as uint128.
-struct uint128_pod {
-  // Note: The ordering of fields is different than 'class uint128' but the
-  // same as its 2-arg constructor.  This enables more obvious initialization
-  // of static instances, which is the primary reason for this struct in the
-  // first place.  This does not seem to defeat any optimizations wrt
-  // operations involving this struct.
-  uint64 hi;
-  uint64 lo;
-};
-
 extern const uint128 kuint128max;
 
 // allow uint128 to be logged
@@ -204,9 +187,6 @@ uint64 Uint128High64(const uint128& v);
 // --------------------------------------------------------------------------
 //                      Implementation details follow
 // --------------------------------------------------------------------------
-
-inline constexpr uint128::uint128(const uint128_pod& v)
-    : uint128(v.hi, v.lo) {}
 
 namespace absl {
 

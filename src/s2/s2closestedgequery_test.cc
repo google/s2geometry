@@ -30,6 +30,7 @@
 #include "s2/s2shapeutil.h"
 #include "s2/s2testing.h"
 
+using absl::MakeUnique;
 using std::make_pair;
 using std::min;
 using std::ostream;
@@ -67,7 +68,7 @@ class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
   void AddEdges(S2Cap const& query_cap, int num_edges,
                 S2ShapeIndex* index) const override {
-    index->Add(absl::MakeUnique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
+    index->Add(MakeUnique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
         query_cap.center(), 0.5 * query_cap.GetRadius(), num_edges)));
   }
 };
@@ -80,7 +81,7 @@ class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
                 S2ShapeIndex* index) const override {
     S2Testing::Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(num_edges);
-    index->Add(absl::MakeUnique<S2Loop::OwningShape>(
+    index->Add(MakeUnique<S2Loop::OwningShape>(
         fractal.MakeLoop(S2Testing::GetRandomFrameAt(query_cap.center()),
                          0.5 * query_cap.GetRadius())));
   }

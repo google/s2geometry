@@ -100,6 +100,7 @@
 #include "s2/s2shapeutil.h"
 #include "s2/s2textformat.h"
 
+using absl::MakeUnique;
 using std::max;
 using std::pair;
 using std::unique_ptr;
@@ -486,7 +487,7 @@ void S2Builder::ChooseSites() {
   if (input_vertices_.empty()) return;
 
   S2ShapeIndex input_edge_index;
-  input_edge_index.Add(absl::MakeUnique<VertexIdEdgeVectorShape>(
+  input_edge_index.Add(MakeUnique<VertexIdEdgeVectorShape>(
       input_edges_, input_vertices_));
   if (options_.split_crossing_edges()) {
     AddEdgeCrossings(input_edge_index);

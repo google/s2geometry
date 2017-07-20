@@ -35,6 +35,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
+using absl::MakeUnique;
 using std::fabs;
 using std::unique_ptr;
 using std::vector;
@@ -47,7 +48,7 @@ unique_ptr<S2Polyline> MakePolyline(string const& str) {
   Encoder encoder;
   polyline->Encode(&encoder);
   Decoder decoder(encoder.base(), encoder.length());
-  auto decoded_polyline = absl::MakeUnique<S2Polyline>();
+  auto decoded_polyline = MakeUnique<S2Polyline>();
   decoded_polyline->Decode(&decoder);
   return decoded_polyline;
 }
@@ -412,7 +413,7 @@ TEST(S2PolylineShape, EmptyPolyline) {
 TEST(S2PolylineOwningShape, Ownership) {
   // Debug mode builds will catch any memory leak below.
   vector<S2Point> vertices;
-  auto polyline = absl::MakeUnique<S2Polyline>(vertices);
+  auto polyline = MakeUnique<S2Polyline>(vertices);
   S2Polyline::OwningShape shape(std::move(polyline));
 }
 

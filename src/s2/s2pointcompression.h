@@ -46,7 +46,6 @@
 #ifndef S2_S2POINTCOMPRESSION_H_
 #define S2_S2POINTCOMPRESSION_H_
 
-#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/types/span.h"
 #include "s2/_fpcontractoff.h"
 #include "s2/s1angle.h"
@@ -69,24 +68,11 @@ struct S2XYZFaceSiTi {
 // others.
 void S2EncodePointsCompressed(absl::Span<S2XYZFaceSiTi const> points,
                               int level, Encoder* encoder);
-ABSL_DEPRECATED("Use Span version")
-inline void S2EncodePointsCompressed(S2XYZFaceSiTi const* points,
-                                     int num_points, int level,
-                                     Encoder* encoder) {
-  S2EncodePointsCompressed(absl::MakeSpan(points, num_points),
-                           level, encoder);
-}
 
 // Decode points encoded with S2EncodePointsCompressed. Requires that the
 // level is the level that was used in S2EncodePointsCompressed. Ensures
 // that the decoded points equal the encoded points. Returns true on success.
 bool S2DecodePointsCompressed(Decoder* decoder, int level,
                               absl::Span<S2Point> points);
-ABSL_DEPRECATED("Use Span version")
-inline bool S2DecodePointsCompressed(Decoder* decoder, int num_points,
-                                     int level, S2Point* points) {
-  return S2DecodePointsCompressed(decoder, level,
-                                  absl::MakeSpan(points, num_points));
-}
 
 #endif  // S2_S2POINTCOMPRESSION_H_

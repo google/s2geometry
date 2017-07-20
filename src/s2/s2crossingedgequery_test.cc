@@ -35,6 +35,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
+using absl::MakeUnique;
 using s2shapeutil::EdgeVectorShape;
 using s2textformat::MakePoint;
 using s2textformat::MakePolyline;
@@ -289,11 +290,11 @@ void TestPolylineCrossings(S2ShapeIndex const& index,
 TEST(GetCrossings, PolylineCrossings) {
   S2ShapeIndex index;
   // Three zig-zag lines near the equator.
-  index.Add(absl::MakeUnique<S2Polyline::OwningShape>(
+  index.Add(MakeUnique<S2Polyline::OwningShape>(
       MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6")));
-  index.Add(absl::MakeUnique<S2Polyline::OwningShape>(
+  index.Add(MakeUnique<S2Polyline::OwningShape>(
       MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6")));
-  index.Add(absl::MakeUnique<S2Polyline::OwningShape>(
+  index.Add(MakeUnique<S2Polyline::OwningShape>(
       MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6")));
   TestPolylineCrossings(index, MakePoint("1:0"), MakePoint("1:4"));
   TestPolylineCrossings(index, MakePoint("5:5"), MakePoint("6:6"));

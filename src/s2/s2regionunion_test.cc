@@ -31,6 +31,7 @@
 #include "s2/s2regioncoverer.h"
 #include "s2/s2textformat.h"
 
+using absl::MakeUnique;
 using std::unique_ptr;
 using std::vector;
 
@@ -50,7 +51,7 @@ TEST(S2RegionUnionTest, Basic) {
       new S2PointRegion(S2LatLng::FromDegrees(-35, -40).ToPoint()));
 
   auto two_points_orig =
-      absl::MakeUnique<S2RegionUnion>(std::move(two_point_region));
+      MakeUnique<S2RegionUnion>(std::move(two_point_region));
   // two_point_region is in a valid, but unspecified, state.
 
   // Check that Clone() returns a deep copy.
@@ -74,7 +75,7 @@ TEST(S2RegionUnionTest, Basic) {
   unique_ptr<S2RegionUnion> three_points(two_points->Clone());
   EXPECT_FALSE(three_points->Contains(S2LatLng::FromDegrees(10, 10).ToPoint()));
   three_points->Add(
-      absl::MakeUnique<S2PointRegion>(S2LatLng::FromDegrees(10, 10).ToPoint()));
+      MakeUnique<S2PointRegion>(S2LatLng::FromDegrees(10, 10).ToPoint()));
   EXPECT_TRUE(three_points->Contains(S2LatLng::FromDegrees(10, 10).ToPoint()));
 
   S2RegionCoverer coverer;

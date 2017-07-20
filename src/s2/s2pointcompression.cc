@@ -33,6 +33,7 @@
 #include "s2/s2cellid.h"
 #include "s2/s2coords.h"
 
+using absl::Span;
 using std::pair;
 using std::vector;
 
@@ -66,6 +67,7 @@ struct FaceRun {
 
     face = face_and_count % S2CellId::kNumFaces;
     count = face_and_count / S2CellId::kNumFaces;
+    if (count == 0) return false;
 
     return true;
   }
@@ -152,6 +154,7 @@ Faces::Iterator::Iterator(Faces const& faces)
 
 int Faces::Iterator::Next() {
   DCHECK_NE(faces_.size(), face_index_);
+  DCHECK_LE(num_faces_used_for_index_, faces_[face_index_].count);
   if (num_faces_used_for_index_ == faces_[face_index_].count) {
     ++face_index_;
     num_faces_used_for_index_ = 0;
@@ -242,9 +245,8 @@ void EncodePointCompressed(pair<int, int> const& vertex_pi_qi,
   DCHECK_GE(encoder->avail(), 0);
 }
 
-void EncodePointsCompressed(absl::Span<pair<int, int> const> vertices_pi_qi,
-                            int level,
-                            Encoder* encoder) {
+void EncodePointsCompressed(Span<pair<int, int> const> vertices_pi_qi,
+                            int level, Encoder* encoder) {
   NthDerivativeCoder pi_coder(kDerivativeEncodingOrder);
   NthDerivativeCoder qi_coder(kDerivativeEncodingOrder);
   for (int i = 0; i < vertices_pi_qi.size(); ++i) {
@@ -311,7 +313,7 @@ bool DecodePointCompressed(Decoder* decoder,
 
 }  // namespace
 
-void S2EncodePointsCompressed(absl::Span<S2XYZFaceSiTi const> points,
+void S2EncodePointsCompressed(Span<S2XYZFaceSiTi const> points,
                               int level,
                               Encoder* encoder) {
   absl::FixedArray<pair<int, int>> vertices_pi_qi(points.size());
@@ -339,9 +341,8 @@ void S2EncodePointsCompressed(absl::Span<S2XYZFaceSiTi const> points,
   }
 }
 
-bool S2DecodePointsCompressed(Decoder* decoder,
-                              int level,
-                              absl::Span<S2Point> points) {
+bool S2DecodePointsCompressed(Decoder* decoder, int level,
+                              Span<S2Point> points) {
   Faces faces;
   if (!faces.Decode(points.size(), decoder)) {
     return false;

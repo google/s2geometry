@@ -53,6 +53,8 @@
 #include "s2/s2shapeutil.h"
 #include "s2/util/math/matrix3x3.h"
 
+using absl::MakeSpan;
+using absl::MakeUnique;
 using std::fabs;
 using std::max;
 using std::min;
@@ -264,7 +266,7 @@ void S2Loop::InitBound() {
 }
 
 void S2Loop::InitIndex() {
-  index_.Add(absl::MakeUnique<Shape>(this));
+  index_.Add(MakeUnique<Shape>(this));
   if (!FLAGS_s2loop_lazy_indexing) {
     index_.ForceApplyUpdates();  // Force index construction now.
   }
@@ -1514,7 +1516,7 @@ void S2Loop::EncodeCompressed(Encoder* encoder, S2XYZFaceSiTi const* vertices,
   encoder->Ensure(Encoder::kVarintMax32);
   encoder->put_varint32(num_vertices_);
 
-  S2EncodePointsCompressed(absl::MakeSpan(vertices, num_vertices_),
+  S2EncodePointsCompressed(MakeSpan(vertices, num_vertices_),
                            snap_level, encoder);
 
   std::bitset<kNumProperties> properties = GetCompressedEncodingProperties();
@@ -1548,7 +1550,7 @@ bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
   owns_vertices_ = true;
 
   if (!S2DecodePointsCompressed(decoder, snap_level,
-                                absl::MakeSpan(vertices_, num_vertices_))) {
+                                MakeSpan(vertices_, num_vertices_))) {
     return false;
   }
   uint32 properties_uint32;
@@ -1622,7 +1624,7 @@ std::unique_ptr<S2Loop> S2Loop::MakeRegularLoop(Matrix3x3_d const& frame,
     S2Point p(r * cos(angle), r * sin(angle), z);
     vertices.push_back(S2::FromFrame(frame, p).Normalize());
   }
-  return absl::MakeUnique<S2Loop>(vertices);
+  return MakeUnique<S2Loop>(vertices);
 }
 
 size_t S2Loop::BytesUsed() const {

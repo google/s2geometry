@@ -36,6 +36,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
+using absl::MakeUnique;
 using std::unique_ptr;
 using std::vector;
 
@@ -121,7 +122,7 @@ char const kEncodedLoopCross[] =
 //       S2CellId(s2textformat::MakePoint("-1:180")).ToPoint(),
 //       S2CellId(s2textformat::MakePoint("0:-179")).ToPoint(),
 //       S2CellId(s2textformat::MakePoint("1:-180")).ToPoint()};
-// snapped_loop = absl::MakeUnique<S2Loop>(snapped_loop_a_vertices));
+// snapped_loop = MakeUnique<S2Loop>(snapped_loop_a_vertices));
 // absl::FixedArray<S2XYZFaceSiTi> points(loop.num_vertices());
 // loop.GetXYZFaceSiTiVertices(points.data());
 // loop.EncodeCompressed(encoder, points.data(), level);

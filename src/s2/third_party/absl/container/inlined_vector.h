@@ -37,10 +37,10 @@
 #define S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_
 
 #include <cstddef>
-#include <cstdlib>
 #include <cstring>
 #include <algorithm>
 #include <cassert>
+#include <cstdlib>
 #include <initializer_list>
 #include <iterator>
 #include <memory>
@@ -55,9 +55,6 @@ DEFINE_GDB_AUTO_SCRIPT("devtools/gdb/component/core/inlined_vector.py")
 
 namespace absl {
 
-// TODO(b/34147068): Short-term during migration of N to size_t.
-using InlinedVectorNType = size_t;
-
 // -----------------------------------------------------------------------------
 // InlinedVector
 // -----------------------------------------------------------------------------
@@ -68,7 +65,7 @@ using InlinedVectorNType = size_t;
 // size, it will trigger an initial allocation on the heap, and will behave as a
 // `std:vector`. The API of the `absl::InlinedVector` within this file is
 // designed to cover the same API footprint as covered by `std::vector`.
-template <typename T, InlinedVectorNType N, typename A = std::allocator<T> >
+template <typename T, std::size_t N, typename A = std::allocator<T> >
 class InlinedVector {
   using AllocatorTraits = std::allocator_traits<A>;
 
@@ -773,7 +770,7 @@ class InlinedVector {
 //
 // Swaps the contents of two inlined vectors. This convenience function
 // simply calls InlinedVector::swap(other_inlined_vector).
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 void swap(InlinedVector<T, N, A>& a,
           InlinedVector<T, N, A>& b) noexcept(noexcept(a.swap(b))) {
   a.swap(b);
@@ -782,7 +779,7 @@ void swap(InlinedVector<T, N, A>& a,
 // operator==()
 //
 // Tests the equivalency of the contents of two inlined vectors.
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 bool operator==(const InlinedVector<T, N, A>& a,
                 const InlinedVector<T, N, A>& b) {
   return absl::equal(a.begin(), a.end(), b.begin(), b.end());
@@ -791,7 +788,7 @@ bool operator==(const InlinedVector<T, N, A>& a,
 // operator!=()
 //
 // Tests the inequality of the contents of two inlined vectors.
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 bool operator!=(const InlinedVector<T, N, A>& a,
                 const InlinedVector<T, N, A>& b) {
   return !(a == b);
@@ -801,7 +798,7 @@ bool operator!=(const InlinedVector<T, N, A>& a,
 //
 // Tests whether the contents of one inlined vector are less than the contents
 // of another through a lexicographical comparison operation.
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 bool operator<(const InlinedVector<T, N, A>& a,
                const InlinedVector<T, N, A>& b) {
   return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
@@ -811,7 +808,7 @@ bool operator<(const InlinedVector<T, N, A>& a,
 //
 // Tests whether the contents of one inlined vector are greater than the
 // contents of another through a lexicographical comparison operation.
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 bool operator>(const InlinedVector<T, N, A>& a,
                const InlinedVector<T, N, A>& b) {
   return b < a;
@@ -821,7 +818,7 @@ bool operator>(const InlinedVector<T, N, A>& a,
 //
 // Tests whether the contents of one inlined vector are less than or equal to
 // the contents of another through a lexicographical comparison operation.
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 bool operator<=(const InlinedVector<T, N, A>& a,
                 const InlinedVector<T, N, A>& b) {
   return !(b < a);
@@ -831,7 +828,7 @@ bool operator<=(const InlinedVector<T, N, A>& a,
 //
 // Tests whether the contents of one inlined vector are greater than or equal to
 // the contents of another through a lexicographical comparison operation.
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 bool operator>=(const InlinedVector<T, N, A>& a,
                 const InlinedVector<T, N, A>& b) {
   return !(a < b);
@@ -843,7 +840,7 @@ bool operator>=(const InlinedVector<T, N, A>& a,
 //
 // Do not depend on any implementation details below this line.
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 InlinedVector<T, N, A>::InlinedVector(const InlinedVector& v)
     : allocator_and_tag_(v.allocator()) {
   reserve(v.size());
@@ -856,7 +853,7 @@ InlinedVector<T, N, A>::InlinedVector(const InlinedVector& v)
   }
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 InlinedVector<T, N, A>::InlinedVector(const InlinedVector& v,
                                       const allocator_type& alloc)
     : allocator_and_tag_(alloc) {
@@ -870,7 +867,7 @@ InlinedVector<T, N, A>::InlinedVector(const InlinedVector& v,
   }
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 InlinedVector<T, N, A>::InlinedVector(InlinedVector&& v) noexcept
     : allocator_and_tag_(v.allocator_and_tag_) {
   if (v.allocated()) {
@@ -885,7 +882,7 @@ InlinedVector<T, N, A>::InlinedVector(InlinedVector&& v) noexcept
   }
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 InlinedVector<T, N, A>::InlinedVector(InlinedVector&& v,
                                       const allocator_type& alloc)
     : allocator_and_tag_(alloc) {
@@ -910,7 +907,7 @@ InlinedVector<T, N, A>::InlinedVector(InlinedVector&& v,
   }
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 void InlinedVector<T, N, A>::InitAssign(size_type n, const value_type& t) {
   if (n > static_cast<size_type>(N)) {
     Allocation new_allocation(allocator(), n);
@@ -923,7 +920,7 @@ void InlinedVector<T, N, A>::InitAssign(size_type n, const value_type& t) {
   }
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 void InlinedVector<T, N, A>::InitAssign(size_type n) {
   if (n > static_cast<size_type>(N)) {
     Allocation new_allocation(allocator(), n);
@@ -936,7 +933,7 @@ void InlinedVector<T, N, A>::InitAssign(size_type n) {
   }
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 void InlinedVector<T, N, A>::resize(size_type n) {
   size_type s = size();
   if (n < s) {
@@ -956,7 +953,7 @@ void InlinedVector<T, N, A>::resize(size_type n) {
   }
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 void InlinedVector<T, N, A>::resize(size_type n, const value_type& elem) {
   size_type s = size();
   if (n < s) {
@@ -976,7 +973,7 @@ void InlinedVector<T, N, A>::resize(size_type n, const value_type& elem) {
   }
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 template <typename... Args>
 typename InlinedVector<T, N, A>::iterator InlinedVector<T, N, A>::emplace(
     const_iterator position, Args&&... args) {
@@ -1010,7 +1007,7 @@ typename InlinedVector<T, N, A>::iterator InlinedVector<T, N, A>::emplace(
   return pos;
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 typename InlinedVector<T, N, A>::iterator InlinedVector<T, N, A>::erase(
     const_iterator first, const_iterator last) {
   assert(begin() <= first);
@@ -1037,7 +1034,7 @@ typename InlinedVector<T, N, A>::iterator InlinedVector<T, N, A>::erase(
   return range_start;
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 void InlinedVector<T, N, A>::swap(InlinedVector& other) {
   using std::swap;  // Augment ADL with std::swap.
   if (&other == this) {
@@ -1115,7 +1112,7 @@ void InlinedVector<T, N, A>::swap(InlinedVector& other) {
   assert(a->size() == b_size);
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 void InlinedVector<T, N, A>::EnlargeBy(size_type delta) {
   const size_type s = size();
   assert(s <= capacity());
@@ -1138,7 +1135,7 @@ void InlinedVector<T, N, A>::EnlargeBy(size_type delta) {
   ResetAllocation(new_allocation, s);
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 auto InlinedVector<T, N, A>::ShiftRight(const_iterator position, size_type n)
     -> std::pair<iterator, iterator> {
   iterator start_used = const_cast<iterator>(position);
@@ -1195,7 +1192,7 @@ auto InlinedVector<T, N, A>::ShiftRight(const_iterator position, size_type n)
   return std::make_pair(start_used, start_raw);
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 void InlinedVector<T, N, A>::Destroy(value_type* ptr, value_type* ptr_last) {
   for (value_type* p = ptr; p != ptr_last; ++p) {
     AllocatorTraits::destroy(allocator(), p);
@@ -1212,7 +1209,7 @@ void InlinedVector<T, N, A>::Destroy(value_type* ptr, value_type* ptr_last) {
 #endif
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 template <typename Iter>
 void InlinedVector<T, N, A>::AppendRange(Iter first, Iter last,
                                          std::forward_iterator_tag) {
@@ -1228,7 +1225,7 @@ void InlinedVector<T, N, A>::AppendRange(Iter first, Iter last,
   }
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 template <typename Iter>
 void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last,
                                          std::input_iterator_tag) {
@@ -1241,7 +1238,7 @@ void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last,
   std::copy(first, last, std::back_inserter(*this));
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 template <typename Iter>
 void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last,
                                          std::forward_iterator_tag) {
@@ -1264,7 +1261,7 @@ void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last,
   }
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 auto InlinedVector<T, N, A>::InsertWithCount(const_iterator position,
                                              size_type n, const value_type& v)
     -> iterator {
@@ -1277,7 +1274,7 @@ auto InlinedVector<T, N, A>::InsertWithCount(const_iterator position,
   return it_pair.first;
 }
 
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 template <typename InputIter>
 auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
                                              InputIter first, InputIter last,
@@ -1291,7 +1288,7 @@ auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
 }
 
 // Overload of InlinedVector::InsertWithRange()
-template <typename T, InlinedVectorNType N, typename A>
+template <typename T, std::size_t N, typename A>
 template <typename ForwardIter>
 auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
                                              ForwardIter first,
@@ -1318,7 +1315,6 @@ auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
 // TODO(user): Delete temporary aliases after namespace update.
 namespace gtl {
 using absl::InlinedVector;
-using absl::InlinedVectorNType;
 }
 
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_

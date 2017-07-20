@@ -24,6 +24,8 @@
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
 
+using absl::MakeUnique;
+
 template <class T>
 void ExpectSequence(std::vector<T> const& expected,
                     typename SequenceLexicon<T>::Sequence const& actual) {
@@ -62,7 +64,7 @@ TEST(SequenceLexicon, Clear) {
 }
 
 TEST(SequenceLexicon, CopyConstructor) {
-  auto original = absl::MakeUnique<SequenceLexicon<int64>>();
+  auto original = MakeUnique<SequenceLexicon<int64>>();
   EXPECT_EQ(0, original->Add(Seq{1, 2}));
   auto lex = *original;
   original.reset(nullptr);
@@ -72,7 +74,7 @@ TEST(SequenceLexicon, CopyConstructor) {
 }
 
 TEST(SequenceLexicon, MoveConstructor) {
-  auto original = absl::MakeUnique<SequenceLexicon<int64>>();
+  auto original = MakeUnique<SequenceLexicon<int64>>();
   EXPECT_EQ(0, original->Add(Seq{1, 2}));
   auto lex = std::move(*original);
   original.reset(nullptr);
@@ -82,7 +84,7 @@ TEST(SequenceLexicon, MoveConstructor) {
 }
 
 TEST(SequenceLexicon, CopyAssignmentOperator) {
-  auto original = absl::MakeUnique<SequenceLexicon<int64>>();
+  auto original = MakeUnique<SequenceLexicon<int64>>();
   EXPECT_EQ(0, original->Add(Seq{1, 2}));
   SequenceLexicon<int64> lex;
   EXPECT_EQ(0, lex.Add(Seq{3, 4}));
@@ -96,7 +98,7 @@ TEST(SequenceLexicon, CopyAssignmentOperator) {
 }
 
 TEST(SequenceLexicon, MoveAssignmentOperator) {
-  auto original = absl::MakeUnique<SequenceLexicon<int64>>();
+  auto original = MakeUnique<SequenceLexicon<int64>>();
   EXPECT_EQ(0, original->Add(Seq{1, 2}));
   SequenceLexicon<int64> lex;
   EXPECT_EQ(0, lex.Add(Seq{3, 4}));

@@ -38,7 +38,7 @@
 //   for (int i = 0; i < points.size(); ++i) {
 //     index.Add(points[i], i);
 //   }
-//   S2ClosestPointQuery<int> query(index);
+//   S2ClosestPointQuery<int> query(&index);
 //   query.FindClosestPoint(target);
 //   if (query.num_points() > 0) {
 //     // query.point(0) is the closest point (result 0).

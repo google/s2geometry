@@ -620,7 +620,7 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesOptimized() {
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
   DCHECK(queue_.empty());
-  iter_.Init(*index_);
+  iter_.Init(index_);
   if (iter_.Done()) return;  // Empty index.
 
   // Optimization: if the user is searching for just the closest edge, and the
@@ -707,8 +707,8 @@ void S2ClosestEdgeQueryBase<Distance>::InitCovering() {
 
   index_covering_.reserve(6);
   // Don't need to reserve index_cells_ since it is an InlinedVector.
-  S2ShapeIndex::Iterator next(*index_);
-  S2ShapeIndex::Iterator last(*index_);
+  S2ShapeIndex::Iterator next(index_);
+  S2ShapeIndex::Iterator last(index_);
   last.Finish();
   last.Prev();
   if (next.id() != last.id()) {

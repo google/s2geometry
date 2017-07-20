@@ -51,6 +51,7 @@
 #include "s2/util/math/matrix3x3.h"
 #include "s2/util/math/vector.h"
 
+using absl::MakeUnique;
 using std::fabs;
 using std::map;
 using std::max;
@@ -108,10 +109,10 @@ class S2LoopTestBase : public testing::Test {
  public:
   S2LoopTestBase()
       // The empty loop.
-    : empty_(AddLoop(absl::MakeUnique<S2Loop>(S2Loop::kEmpty()))),
+    : empty_(AddLoop(MakeUnique<S2Loop>(S2Loop::kEmpty()))),
 
       // The full loop.
-      full_(AddLoop(absl::MakeUnique<S2Loop>(S2Loop::kFull()))),
+      full_(AddLoop(MakeUnique<S2Loop>(S2Loop::kFull()))),
 
       // The northern hemisphere, defined using two pairs of antipodal points.
       north_hemi_(AddLoop("0:-180, 0:-90, 0:0, 0:90")),
@@ -217,8 +218,7 @@ class S2LoopTestBase : public testing::Test {
         S2CellId(s2textformat::MakePoint("-1:180")).ToPoint(),
         S2CellId(s2textformat::MakePoint("0:-179")).ToPoint(),
         S2CellId(s2textformat::MakePoint("1:-180")).ToPoint()};
-    snapped_loop_a_ =
-        AddLoop(absl::MakeUnique<S2Loop>(snapped_loop_a_vertices));
+    snapped_loop_a_ = AddLoop(MakeUnique<S2Loop>(snapped_loop_a_vertices));
   }
 
   // Wrapper function that encodes "loop" into "encoder" using the private
@@ -506,7 +506,7 @@ TEST_F(S2LoopTestBase, Contains) {
         loop_vertices.push_back(cell.GetVertex(k));
         points.insert(cell.GetVertex(k));
       }
-      loops.push_back(absl::MakeUnique<S2Loop>(loop_vertices));
+      loops.push_back(MakeUnique<S2Loop>(loop_vertices));
       loop_vertices.clear();
     }
     for (S2Point const& point : points) {
@@ -868,7 +868,7 @@ static unique_ptr<S2Loop> MakeCellLoop(S2CellId begin, S2CellId end) {
     p = next;
   }
 
-  return absl::MakeUnique<S2Loop>(vertices);
+  return MakeUnique<S2Loop>(vertices);
 }
 
 TEST(S2Loop, LoopRelations2) {
@@ -1355,7 +1355,7 @@ TEST(S2LoopShape, FullLoop) {
 
 TEST(S2LoopOwningShape, Ownership) {
   // Debug mode builds will catch any memory leak below.
-  auto loop = absl::MakeUnique<S2Loop>(S2Loop::kEmpty());
+  auto loop = MakeUnique<S2Loop>(S2Loop::kEmpty());
   S2Loop::OwningShape shape(std::move(loop));
 }
 
