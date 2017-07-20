@@ -25,6 +25,7 @@
 // - Utility macros
 // - Endianness
 // - Hash
+// - Global variables
 // - Type alias
 // - Predefined system/language macros
 // - Predefined system/language functions
@@ -43,6 +44,12 @@
 // -----------------------------------------------------------------------------
 
 #ifdef _MSC_VER /* if Visual C++ */
+
+#include <winsock2.h>  // Must come before <windows.h>
+#include <cassert>
+#include <process.h>  // _getpid()
+#include <windows.h>
+#undef ERROR
 
 // This compiler flag can be easily overlooked on MSVC.
 // _CHAR_UNSIGNED gets set with the /J flag.
@@ -181,6 +188,15 @@
 #error "LANG_CXX11 is required."
 #endif
 
+// GOOGLE_OBSCURE_SIGNAL
+#if defined(__APPLE__) && defined(__MACH__)
+// No SIGPWR on MacOSX.  SIGINFO seems suitably obscure.
+#define GOOGLE_OBSCURE_SIGNAL SIGINFO
+#else
+/* We use SIGPWR since that seems unlikely to be used for other reasons. */
+#define GOOGLE_OBSCURE_SIGNAL SIGPWR
+#endif
+
 // -----------------------------------------------------------------------------
 // Utility Functions
 // -----------------------------------------------------------------------------
@@ -306,6 +322,24 @@ static inline uint64 bswap_64(uint64 x) {
 #else
 struct PortableHashBase {};
 #endif  // STL_MSVC
+#endif  // __cplusplus
+
+// -----------------------------------------------------------------------------
+// Global Variables
+// -----------------------------------------------------------------------------
+
+// PATH_SEPARATOR
+// DEPRECATED: use absl::PathSeparator() instead.
+// Define the OS's path separator
+#ifdef __cplusplus  // C won't merge duplicate const variables at link time
+// Some headers provide a macro for this (GCC's system.h), remove it so that we
+// can use our own.
+#undef PATH_SEPARATOR
+#if defined(_WIN32)
+const char PATH_SEPARATOR = '\\';
+#else
+const char PATH_SEPARATOR = '/';
+#endif  // _WIN32
 #endif  // __cplusplus
 
 // -----------------------------------------------------------------------------
@@ -485,14 +519,16 @@ inline size_t strnlen(const char *s, size_t maxlen) {
 
 #ifdef _MSC_VER
 // You say tomato, I say _tomato
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#define strdup _strdup
 #define tempnam _tempnam
 #define chdir _chdir
+#define getpid _getpid
 #define getcwd _getcwd
 #define putenv _putenv
-#if _MSC_VER >= 1900  // Only needed for VS2015+
 #define timezone _timezone
 #define tzname _tzname
-#endif
 #endif  // _MSC_VER
 
 // random, srandom

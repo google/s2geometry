@@ -46,6 +46,7 @@
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/memory/memory.h"
 
+using absl::MakeUnique;
 using S2::internal::kSwapMask;
 using std::fabs;
 using std::map;
@@ -565,7 +566,7 @@ static S1ChordAngle GetDistanceToEdgeBruteForce(
   }
   S2Loop loop(cell);
   S2ShapeIndex index;
-  index.Add(absl::MakeUnique<S2Loop::Shape>(&loop));
+  index.Add(MakeUnique<S2Loop::Shape>(&loop));
   S2CrossingEdgeQuery query(&index);
   vector<int> edges;
   if (query.GetCrossings(a, b, index.shape(0), s2shapeutil::CrossingType::ALL,

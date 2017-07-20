@@ -29,6 +29,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 
+using absl::MakeUnique;
 using std::unique_ptr;
 using std::vector;
 
@@ -108,7 +109,7 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetConvexHull() {
     // case, we need a convex bounding cap to proceed with the algorithm below
     // (in order to construct a point "origin" that is definitely outside the
     // convex hull).
-    return absl::MakeUnique<S2Loop>(S2Loop::kFull());
+    return MakeUnique<S2Loop>(S2Loop::kFull());
   }
   // This code implements Andrew's monotone chain algorithm, which is a simple
   // variant of the Graham scan.  Rather than sorting by x-coordinate, instead
@@ -127,7 +128,7 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetConvexHull() {
   // Special cases for fewer than 3 points.
   if (points_.size() < 3) {
     if (points_.empty()) {
-      return absl::MakeUnique<S2Loop>(S2Loop::kEmpty());
+      return MakeUnique<S2Loop>(S2Loop::kEmpty());
     } else if (points_.size() == 1) {
       return GetSinglePointLoop(points_[0]);
     } else {
@@ -152,7 +153,7 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetConvexHull() {
   lower.pop_back();
   upper.pop_back();
   lower.insert(lower.end(), upper.begin(), upper.end());
-  return absl::MakeUnique<S2Loop>(lower);
+  return MakeUnique<S2Loop>(lower);
 }
 
 // Iterate through the given points, selecting the maximal subset of points
@@ -180,7 +181,7 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetSinglePointLoop(S2Point const& p) {
   vertices.push_back(p);
   vertices.push_back((p + kOffset * d0).Normalize());
   vertices.push_back((p + kOffset * d1).Normalize());
-  return absl::MakeUnique<S2Loop>(vertices);
+  return MakeUnique<S2Loop>(vertices);
 }
 
 unique_ptr<S2Loop> S2ConvexHullQuery::GetSingleEdgeLoop(S2Point const& a,
@@ -190,7 +191,7 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetSingleEdgeLoop(S2Point const& a,
   vertices.push_back(a);
   vertices.push_back(b);
   vertices.push_back((a + b).Normalize());
-  auto loop = absl::MakeUnique<S2Loop>(vertices);
+  auto loop = MakeUnique<S2Loop>(vertices);
   // The resulting loop may be clockwise, so invert it if necessary.
   loop->Normalize();
   return loop;

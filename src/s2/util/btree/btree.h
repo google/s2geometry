@@ -141,6 +141,7 @@
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/meta/type_traits.h"
 
 namespace util {
 namespace btree {
@@ -168,14 +169,46 @@ namespace btree {
 //
 // Note that we need to declare operator() for both combinations of key_type and
 // lookup_type.
-struct btree_comparator_is_transparent {
+struct ABSL_DEPRECATED(
+    "Inheriting from btree_comparator_is_transparent is deprecated due to not "
+    "conforming with C++14 standards. Instead, create a custom struct with "
+    "is_transparent defined as a member (using typedef or aliases).")
+    btree_comparator_is_transparent {
+  using is_transparent = void;
 };
 
-// A helper class that indicates if the Compare parameter is derived from
-// btree_comparator_is_transparent.
+// A helper class used to indicates if the comparator provided is transparent
+// and thus supports heterogeneous lookups. This is only used internally to
+// check if the Compare parameter has a valid is_transparent member.
+// A transparent comparator will see lookup keys with any type (lookup_type)
+// passed by the user to any of the lookup methods. The comparator then has a
+// chance to do the comparison without first converting the lookup key to a
+// key_type.
+//
+// For example, a comparator that is transparent may look like:
+//
+//  struct MyStringComparer {
+//    bool operator()(const string &a, const string &b) const {
+//      return a < b;
+//    }
+//    bool operator()(const string &a, const char* b) const {
+//      return strcmp(a.c_str(), b) < 0;
+//    }
+//    bool operator()(const char* a, const string& b) const {
+//      return strcmp(a, b.c_str()) < 0;
+//    }
+//    using is_transparent = void;
+//  };
+//
+// Note that we need to declare operator() for both combinations of key_type and
+// lookup_type. Also note that setting is_transparent to void is an arbitrary
+// decision; it can be std::true_type, int, or anything else, just as long as
+// the member is_transparent is defined to be something.
+template <typename, typename = void>
+struct btree_is_comparator_transparent : std::false_type {};
 template <typename Compare>
-struct btree_is_comparator_transparent
-    : public std::is_convertible<Compare, btree_comparator_is_transparent> {
+struct btree_is_comparator_transparent<
+    Compare, absl::void_t<typename Compare::is_transparent>> : std::true_type {
 };
 
 // A helper type used to indicate that a key-compare-to functor has been

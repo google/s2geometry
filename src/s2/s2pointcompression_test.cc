@@ -33,6 +33,9 @@
 #include "s2/third_party/absl/types/span.h"
 #include "s2/util/coding/coder.h"
 
+using absl::FixedArray;
+using absl::MakeSpan;
+using absl::Span;
 using std::vector;
 
 DEFINE_int32(s2pointcompression_bm_level, 30,
@@ -69,8 +72,8 @@ vector<S2Point> MakeRegularPoints(int num_vertices,
   return SnapPointsToLevel(unsnapped_points, level);
 }
 
-void MakeXYZFaceSiTiPoints(absl::Span<S2Point const> points,
-                           absl::Span<S2XYZFaceSiTi> result) {
+void MakeXYZFaceSiTiPoints(Span<S2Point const> points,
+                           Span<S2XYZFaceSiTi> result) {
   CHECK_EQ(points.size(), result.size());
   for (int i = 0; i < points.size(); ++i) {
     result[i].xyz = points[i];
@@ -132,13 +135,13 @@ class S2PointCompressionTest : public ::testing::Test {
     line_ = SnapPointsToLevel(line_points, S2::kMaxCellLevel);
   }
 
-  void Encode(absl::Span<S2Point const> points, int level) {
-    absl::FixedArray<S2XYZFaceSiTi> pts(points.size());
-    MakeXYZFaceSiTiPoints(points, absl::MakeSpan(pts));
+  void Encode(Span<S2Point const> points, int level) {
+    FixedArray<S2XYZFaceSiTi> pts(points.size());
+    MakeXYZFaceSiTiPoints(points, MakeSpan(pts));
     S2EncodePointsCompressed(pts, level, &encoder_);
   }
 
-  void Decode(int level, absl::Span<S2Point> points) {
+  void Decode(int level, Span<S2Point> points) {
     decoder_.reset(encoder_.base(), encoder_.length());
     EXPECT_TRUE(S2DecodePointsCompressed(&decoder_, level, points));
   }
@@ -146,7 +149,7 @@ class S2PointCompressionTest : public ::testing::Test {
   void Roundtrip(const vector<S2Point>& loop, int level) {
     Encode(loop, level);
     vector<S2Point> points(loop.size());
-    Decode(level, absl::MakeSpan(points));
+    Decode(level, MakeSpan(points));
 
     EXPECT_TRUE(loop == points)
         << "Decoded points\n" << s2textformat::ToString(points)
@@ -187,8 +190,8 @@ class S2PointCompressionTest : public ::testing::Test {
 
 TEST_F(S2PointCompressionTest, RoundtripsEmpty) {
   // Just check this doesn't crash.
-  Encode(absl::Span<S2Point>(nullptr, 0), S2::kMaxCellLevel);
-  Decode(S2::kMaxCellLevel, absl::Span<S2Point>(nullptr, 0));
+  Encode(Span<S2Point>(nullptr, 0), S2::kMaxCellLevel);
+  Decode(S2::kMaxCellLevel, Span<S2Point>(nullptr, 0));
 }
 
 TEST_F(S2PointCompressionTest, RoundtripsFourVertexLoop) {

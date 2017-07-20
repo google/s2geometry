@@ -333,6 +333,8 @@ class Bits {
   static inline UnsignedT GetBitsImpl(const UnsignedT src,
                                       const int offset,
                                       const int nbits);
+  template <typename UnsignedT>
+  static inline UnsignedT GetLowBitsImpl(const UnsignedT n, const int index);
 
 #ifdef __GNUC__
   template<typename UnsignedT>
@@ -355,8 +357,6 @@ class Bits {
 #if defined(__BMI2__) && defined(__x86_64__)
   static inline uint64 GetLowBitsImpl(const uint64 n, const int index);
 #endif
-  template <typename UnsignedT>
-  static inline UnsignedT GetLowBitsImpl(const UnsignedT n, const int index);
 #endif  // __GNUC__
 
   // Portable implementations.

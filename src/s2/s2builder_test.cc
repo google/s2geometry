@@ -412,9 +412,9 @@ TEST(S2Builder, TieBreakingIsConsistent) {
   builder.ForceVertex(S2LatLng::FromDegrees(1, 0).ToPoint());
   builder.ForceVertex(S2LatLng::FromDegrees(-1, 0).ToPoint());
   S2Polyline output1, output2;
-  builder.StartLayer(absl::MakeUnique<S2PolylineLayer>(&output1));
+  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output1));
   builder.AddPolyline(*MakePolyline("0:-5, 0:5"));
-  builder.StartLayer(absl::MakeUnique<S2PolylineLayer>(&output2));
+  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output2));
   builder.AddPolyline(*MakePolyline("0:5, 0:-5"));
   S2Error error;
   EXPECT_TRUE(builder.Build(&error)) << error.text();
@@ -895,7 +895,7 @@ TEST(S2Builder, HighPrecisionPredicates) {
   options.set_idempotent(false);
   S2Builder builder(options);
   S2Polyline output;
-  builder.StartLayer(absl::MakeUnique<S2PolylineLayer>(&output));
+  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output));
   builder.ForceVertex(S2Point(
       -0.10531192039134191, -0.80522217309705857, 0.58354661457019719));
   builder.AddPolyline(input);
@@ -975,7 +975,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
     S2Builder builder(options);
     S2Polygon output;
     output.set_s2debug_override(S2Debug::DISABLE);
-    builder.StartLayer(absl::MakeUnique<S2PolygonLayer>(&output));
+    builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
     builder.ForceVertex(v3);
     builder.AddEdge(v0, v1);
     builder.AddEdge(v1, v2);

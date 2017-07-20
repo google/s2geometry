@@ -21,10 +21,9 @@
 //
 // This files is structured into the following high-level categories:
 // - Platform checks (OS, Compiler, C++, Library)
-// - Platform specific requirement
 // - Feature macros
 // - Utility macros
-// - Global variables
+// - Utility functions
 // - Type alias
 // - Predefined system/language macros
 // - Predefined system/language functions
@@ -104,20 +103,6 @@
 #endif
 
 // -----------------------------------------------------------------------------
-// MSVC Specific Requirements
-// -----------------------------------------------------------------------------
-
-#ifdef _MSC_VER /* if Visual C++ */
-
-#include <winsock2.h>  // Must come before <windows.h>
-#include <cassert>
-#include <process.h>  // _getpid()
-#include <windows.h>
-#undef ERROR
-
-#endif  // _MSC_VER
-
-// -----------------------------------------------------------------------------
 // Feature Macros
 // -----------------------------------------------------------------------------
 
@@ -134,66 +119,61 @@
 // Utility Macros
 // -----------------------------------------------------------------------------
 
-// FUNC_PTR_TO_CHAR_PTR
+// ABSL_FUNC_PTR_TO_CHAR_PTR
 // On some platforms, a "function pointer" points to a function descriptor
-// rather than directly to the function itself.  Use FUNC_PTR_TO_CHAR_PTR(func)
-// to get a char-pointer to the first instruction of the function func.
+// rather than directly to the function itself.
+// Use ABSL_FUNC_PTR_TO_CHAR_PTR(func) to get a char-pointer to the first
+// instruction of the function func.
+#if defined(__cplusplus)
 #if (defined(__powerpc__) && !(_CALL_ELF > 1)) || defined(__ia64)
 // use opd section for function descriptors on these platforms, the function
 // address is the first word of the descriptor
+namespace absl {
 enum { kPlatformUsesOPDSections = 1 };
-#define FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char **>(func)[0])
-#else
+}  // namespace absl
+#define ABSL_FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char **>(func)[0])
+#else  // not PPC or IA64
+namespace absl {
 enum { kPlatformUsesOPDSections = 0 };
-#define FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char *>(func))
-#endif
-
-// GOOGLE_OBSCURE_SIGNAL
-#if defined(__APPLE__) && defined(__MACH__)
-// No SIGPWR on MacOSX.  SIGINFO seems suitably obscure.
-#define GOOGLE_OBSCURE_SIGNAL SIGINFO
-#else
-/* We use SIGPWR since that seems unlikely to be used for other reasons. */
-#define GOOGLE_OBSCURE_SIGNAL SIGPWR
-#endif
-
-// -----------------------------------------------------------------------------
-// Global Variables
-// -----------------------------------------------------------------------------
-
-// PATH_SEPARATOR
-// Define the OS's path separator
-#ifdef __cplusplus  // C won't merge duplicate const variables at link time
-// Some headers provide a macro for this (GCC's system.h), remove it so that we
-// can use our own.
-#undef PATH_SEPARATOR
-#if defined(_WIN32)
-const char PATH_SEPARATOR = '\\';
-#else
-const char PATH_SEPARATOR = '/';
-#endif  // _WIN32
+}  // namespace absl
+#define ABSL_FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char *>(func))
+#endif  // PPC or IA64
 #endif  // __cplusplus
+
+// -----------------------------------------------------------------------------
+// Utility Functions
+// -----------------------------------------------------------------------------
+
+#if !defined(SWIG)
+#if defined(__cplusplus)
+namespace absl {
+constexpr char PathSeparator() {
+#ifdef _WIN32
+  return '\\';
+#else
+  return '/';
+#endif
+}
+}  // namespace absl
+#endif  // __cplusplus
+#endif
 
 // -----------------------------------------------------------------------------
 // Type Alias
 // -----------------------------------------------------------------------------
 
-// uid_t
 #ifdef _MSC_VER
+// uid_t
 // MSVC doesn't have uid_t
 typedef int uid_t;
-#endif  // _MSC_VER
 
 // pid_t
-#ifdef _MSC_VER
 // Defined all over the place.
 typedef int pid_t;
-#endif  // _MSC_VER
 
 // ssize_t
-#ifdef _MSC_VER
-// VC++ doesn't understand "ssize_t"
-// <windows.h> from above includes <BaseTsd.h> and <BaseTsd.h> defines SSIZE_T
+// VC++ doesn't understand "ssize_t". SSIZE_T is defined in <basetsd.h>.
+#include <basetsd.h>
 typedef SSIZE_T ssize_t;
 #endif  // _MSC_VER
 
@@ -217,57 +197,17 @@ typedef SSIZE_T ssize_t;
 #endif
 
 // -----------------------------------------------------------------------------
-// Predefined System/Language Functions
-// -----------------------------------------------------------------------------
-
-// strtoll, strtoull
-#ifdef _MSC_VER
-#define strtoll _strtoi64
-#define strtoull _strtoui64
-#endif  // _MSC_VER
-
-// snprintf, vsnprintf, BASE_PORT_MSVC_DLL_MACRO
-#ifdef _MSC_VER
-#include <cstdio>  // declare snprintf/vsnprintf before overriding
-
-// MSVC requires to know how code will be linked in order to compile it.
-// This information can be provided via a .def file or __declspec() annotations.
-// The following macro can be set on the compiler command line by those wishing
-// to use __declspec.
-#ifndef BASE_PORT_MSVC_DLL_MACRO
-#define BASE_PORT_MSVC_DLL_MACRO
-#endif
-
-// Wrap Microsoft _snprintf/_vsnprintf calls so they nul-terminate on buffer
-// overflow.
-#define vsnprintf base_port_MSVC_vsnprintf
-BASE_PORT_MSVC_DLL_MACRO
-int base_port_MSVC_vsnprintf(char *str, size_t size, const char *format,
-                             va_list ap);
-#define snprintf base_port_MSVC_snprintf
-BASE_PORT_MSVC_DLL_MACRO
-int base_port_MSVC_snprintf(char *str, size_t size, const char *fmt, ...);
-
-#endif  // _MSC_VER
-
-#ifdef _MSC_VER
-// You say tomato, I say _tomato
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-#define strdup _strdup
-#define getcwd _getcwd
-#if _MSC_VER >= 1900  // Only needed for VS2015+
-#define getpid _getpid
-#endif
-#endif  // _MSC_VER
-
-// -----------------------------------------------------------------------------
 // Performance Optimization
 // -----------------------------------------------------------------------------
 
 // Alignment
 
 // CACHELINE_SIZE, CACHELINE_ALIGNED
+// Deprecated: Use ABSL_CACHELINE_SIZE, ABSL_CACHELINE_ALIGNED.
+// Note: When C++17 is available, consider using the following:
+// - std::hardware_constructive_interference_size
+// - std::hardware_destructive_interference_size
+// See http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0154r1.html
 #if defined(__GNUC__) && !defined(SWIG)
 /* absl:oss-replace-begin
 #if defined(__GNUC__)
@@ -275,12 +215,15 @@ absl:oss-replace-end */
 // Cache line alignment
 #if defined(__i386__) || defined(__x86_64__)
 #define CACHELINE_SIZE 64
+#define ABSL_CACHELINE_SIZE 64
 #elif defined(__powerpc64__)
 #define CACHELINE_SIZE 128
+#define ABSL_CACHELINE_SIZE 128
 #elif defined(__aarch64__)
 // We would need to read special register ctr_el0 to find out L1 dcache size.
 // This value is a good estimate based on a real aarch64 machine.
 #define CACHELINE_SIZE 64
+#define ABSL_CACHELINE_SIZE 64
 #elif defined(__arm__)
 // Cache line sizes for ARM: These values are not strictly correct since
 // cache line sizes depend on implementations, not architectures.  There
@@ -288,8 +231,10 @@ absl:oss-replace-end */
 // time.
 #if defined(__ARM_ARCH_5T__)
 #define CACHELINE_SIZE 32
+#define ABSL_CACHELINE_SIZE 32
 #elif defined(__ARM_ARCH_7A__)
 #define CACHELINE_SIZE 64
+#define ABSL_CACHELINE_SIZE 64
 #endif
 #endif
 
@@ -297,6 +242,7 @@ absl:oss-replace-end */
 // A reasonable default guess.  Note that overestimates tend to waste more
 // space, while underestimates tend to waste more time.
 #define CACHELINE_SIZE 64
+#define ABSL_CACHELINE_SIZE 64
 #endif
 
 // On some compilers, expands to __attribute__((aligned(CACHELINE_SIZE))).
@@ -318,10 +264,13 @@ absl:oss-replace-end */
 // 3) Prefer applying this attribute to individual variables.  Avoid
 //    applying it to types.  This tends to localize the effect.
 #define CACHELINE_ALIGNED __attribute__((aligned(CACHELINE_SIZE)))
+#define ABSL_CACHELINE_ALIGNED __attribute__((aligned(ABSL_CACHELINE_SIZE)))
 
 #else  // not GCC
 #define CACHELINE_SIZE 64
+#define ABSL_CACHELINE_SIZE 64
 #define CACHELINE_ALIGNED
+#define ABSL_CACHELINE_ALIGNED
 #endif
 
 // unaligned APIs
@@ -566,9 +515,13 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 absl:oss-replace-end */
 #define PREDICT_FALSE(x) (__builtin_expect(x, 0))
 #define PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
+#define ABSL_PREDICT_FALSE(x) (__builtin_expect(x, 0))
+#define ABSL_PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
 #else
 #define PREDICT_FALSE(x) x
 #define PREDICT_TRUE(x) x
+#define ABSL_PREDICT_FALSE(x) x
+#define ABSL_PREDICT_TRUE(x) x
 #endif
 
 // ABSL_ASSERT

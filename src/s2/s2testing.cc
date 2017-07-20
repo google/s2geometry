@@ -51,6 +51,7 @@
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/util/math/matrix3x3.h"
 
+using absl::MakeUnique;
 using std::max;
 using std::unique_ptr;
 using std::vector;
@@ -253,7 +254,7 @@ void S2Testing::ConcentricLoopsPolygon(S2Point const& center,
       S2Point p(radius * cos(angle), radius * sin(angle), 1);
       vertices.push_back(S2::FromFrame(m, p.Normalize()));
     }
-    loops.push_back(absl::MakeUnique<S2Loop>(vertices));
+    loops.push_back(MakeUnique<S2Loop>(vertices));
   }
   polygon->InitNested(std::move(loops));
 }
@@ -447,5 +448,5 @@ std::unique_ptr<S2Loop> S2Testing::Fractal::MakeLoop(
     S2Point p(v[0] * r, v[1] * r, 1);
     vertices.push_back(S2::FromFrame(frame, p).Normalize());
   }
-  return absl::MakeUnique<S2Loop>(vertices);
+  return MakeUnique<S2Loop>(vertices);
 }
