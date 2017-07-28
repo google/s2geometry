@@ -99,18 +99,6 @@ bool EqualIgnoreCase(absl::string_view piece1, absl::string_view piece2) {
   // memcasecmp uses ascii_tolower().
 }
 
-bool StartsWithIgnoreCase(absl::string_view text,
-                          absl::string_view starts_with) {
-  if (text.size() < starts_with.size()) return false;
-  return EqualIgnoreCase(text.substr(0, starts_with.size()), starts_with);
-}
-
-bool EndsWithIgnoreCase(absl::string_view text, absl::string_view ends_with) {
-  if (text.size() < ends_with.size()) return false;
-  return EqualIgnoreCase(text.substr(text.size() - ends_with.size()),
-                         ends_with);
-}
-
 stringpiece_ssize_type FindIgnoreCase(absl::string_view haystack,
                                       absl::string_view needle) {
   // We use the cursor to iterate through the haystack...on each

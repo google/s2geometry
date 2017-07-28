@@ -228,55 +228,28 @@
 // Endianness
 // -----------------------------------------------------------------------------
 // Define ABSL_IS_LITTLE_ENDIAN, ABSL_IS_BIG_ENDIAN.
-// Some compilers or system headers provide macros to specify endianness.
-// Unfortunately, there is no standard for the names of the macros or even of
-// the header files.
-// Reference: https://sourceforge.net/p/predef/wiki/Endianness/
-#if defined(ABSL_IS_BIG_ENDIAN) || defined(ABSL_IS_LITTLE_ENDIAN)
-#error "ABSL_IS_(BIG|LITTLE)_ENDIAN cannot be directly set."
+#if defined(ABSL_IS_BIG_ENDIAN)
+#error "ABSL_IS_BIG_ENDIAN cannot be directly set."
+#endif
+#if defined(ABSL_IS_LITTLE_ENDIAN)
+#error "ABSL_IS_LITTLE_ENDIAN cannot be directly set."
+#endif
 
-#elif defined(__GLIBC__) || defined(__linux__)
-// Operating systems that use the GNU C library generally provide <endian.h>
-// containing __BYTE_ORDER, __LITTLE_ENDIAN, __BIG_ENDIAN.
-#include <endian.h>
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
+// Use the built in endian macros provided by GCC (since 4.6) and
+// Clang (since 3.2); see
+// <https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html>.
+// Otherwise, if _WIN32, assume little endian.  Otherwise, bail with
+// an error.
+#if (defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
+     __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #define ABSL_IS_LITTLE_ENDIAN 1
-#elif __BYTE_ORDER == __BIG_ENDIAN
+#elif defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && \
+    __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #define ABSL_IS_BIG_ENDIAN 1
-#else  // __BYTE_ORDER != __LITTLE_ENDIAN && __BYTE_ORDER != __BIG_ENDIAN
-#error "Unknown endianness"
-#endif  // __BYTE_ORDER
-
-#elif defined(__APPLE__) && defined(__MACH__)
-// Apple has <machine/endian.h> containing BYTE_ORDER, BIG_ENDIAN,
-// LITTLE_ENDIAN.
-#include <machine/endian.h>  // NOLINT(build/include)
-
-#if BYTE_ORDER == LITTLE_ENDIAN
-#define ABSL_IS_LITTLE_ENDIAN 1
-#elif BYTE_ORDER == BIG_ENDIAN
-#define ABSL_IS_BIG_ENDIAN 1
-#else  // BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN
-#error "Unknown endianness"
-#endif  // BYTE_ORDER
-
 #elif defined(_WIN32)
-// Assume Windows is little-endian.
 #define ABSL_IS_LITTLE_ENDIAN 1
-
-#elif defined(__LITTLE_ENDIAN__) || defined(__ARMEL__) ||                 \
-    defined(__THUMBEL__) || defined(__AARCH64EL__) || defined(_MIPSEL) || \
-    defined(__MIPSEL) || defined(__MIPSEL__)
-#define ABSL_IS_LITTLE_ENDIAN 1
-
-#elif defined(__BIG_ENDIAN__) || defined(__ARMEB__) ||                 \
-    defined(__THUMBEB__) || defined(__AARCH64EB__) || defined(_MIPSEB) || \
-    defined(__MIPSEB) || defined(__MIPSEB__)
-#define ABSL_IS_BIG_ENDIAN 1
-
 #else
-#error "absl endian detection needs to be set up on your platform."
+#error "absl endian detection needs to be set up for your compiler"
 #endif
 
 // ABSL_HAVE_EXCEPTIONS is defined when exceptions are enabled.  Many

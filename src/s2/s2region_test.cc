@@ -28,6 +28,7 @@
 #include "s2/s2loop.h"
 #include "s2/s2pointcompression.h"
 #include "s2/s2pointregion.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2r2rect.h"

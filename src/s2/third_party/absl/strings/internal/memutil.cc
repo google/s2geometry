@@ -89,27 +89,25 @@ char* mempbrk(const char* s, size_t slen, const char* accept) {
 }
 
 template <bool case_sensitive>
-const char* int_memmatch(const char* phaystack, size_t haylen,
-                         const char* pneedle, size_t neelen) {
+const char* int_memmatch(const char* haystack, size_t haylen,
+                         const char* needle, size_t neelen) {
   if (0 == neelen) {
-    return phaystack;  // even if haylen is 0
+    return haystack;  // even if haylen is 0
   }
-  const unsigned char* haystack = (const unsigned char*)phaystack;
-  const unsigned char* hayend = (const unsigned char*)phaystack + haylen;
-  const unsigned char* needlestart = (const unsigned char*)pneedle;
-  const unsigned char* needle = (const unsigned char*)pneedle;
-  const unsigned char* needleend = (const unsigned char*)pneedle + neelen;
+  const char* hayend = haystack + haylen;
+  const char* needlestart = needle;
+  const char* needleend = needlestart + neelen;
 
   for (; haystack < hayend; ++haystack) {
-    unsigned char hay =
-        case_sensitive ? *haystack
-                       : static_cast<unsigned char>(ascii_tolower(*haystack));
-    unsigned char nee =
-        case_sensitive ? *needle
-                       : static_cast<unsigned char>(ascii_tolower(*needle));
+    char hay = case_sensitive
+                   ? *haystack
+                   : ascii_tolower(static_cast<unsigned char>(*haystack));
+    char nee = case_sensitive
+                   ? *needle
+                   : ascii_tolower(static_cast<unsigned char>(*needle));
     if (hay == nee) {
       if (++needle == needleend) {
-        return (const char*)(haystack + 1 - neelen);
+        return haystack + 1 - neelen;
       }
     } else if (needle != needlestart) {
       // must back up haystack in case a prefix matched (find "aab" in "aaab")
@@ -137,10 +135,10 @@ const char* memmatch(const char* phaystack, size_t haylen, const char* pneedle,
 
   const char* match;
   const char* hayend = phaystack + haylen - neelen + 1;
-  // A C-style cast is used here to work around the fact that memchr returns a
-  // void* on Posix-compliant systems and const void* on Windows.
-  while ((match = (const char*)(memchr(phaystack, pneedle[0],
-                                       hayend - phaystack)))) {
+  // A static cast is used here to work around the fact that memchr returns
+  // a void* on Posix-compliant systems and const void* on Windows.
+  while ((match = static_cast<const char*>(
+              memchr(phaystack, pneedle[0], hayend - phaystack)))) {
     if (memcmp(match, pneedle, neelen) == 0)
       return match;
     else

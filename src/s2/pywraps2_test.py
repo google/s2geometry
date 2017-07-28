@@ -212,12 +212,18 @@ class PyWrapS2TestCase(unittest.TestCase):
     p1 = s2.S2LatLng.FromDegrees(0, 0).ToPoint()
     self.assertTrue(cell.Contains(p1))
     d1 = cell.GetDistance(p1).ToAngle().degrees()
+    # Inside, so distance is 0, but boundary distance is not.
     self.assertEqual(0.0, d1)
+    bd1 = cell.GetBoundaryDistance(p1).ToAngle().degrees()
+    self.assertEqual(45.0, bd1)
 
     p2 = s2.S2LatLng.FromDegrees(0, 90).ToPoint()
     self.assertTrue(not cell.Contains(p2))
     d2 = cell.GetDistance(p2).ToAngle().degrees()
     self.assertAlmostEqual(45.0, d2)
+    bd2 = cell.GetBoundaryDistance(p2).ToAngle().degrees()
+    # Outside, so distance and boundary distance are the same.
+    self.assertAlmostEqual(45.0, bd2)
 
   def testS2Rotate(self):
     mtv_a = s2.S2LatLng.FromDegrees(37.4402777, -121.9638888).ToPoint()

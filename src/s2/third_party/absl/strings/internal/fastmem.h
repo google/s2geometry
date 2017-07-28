@@ -40,6 +40,7 @@
 #include <cstring>
 
 #include "s2/third_party/absl/base/integral_types.h"
+#include "s2/third_party/absl/base/internal/unaligned_access.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 
@@ -57,13 +58,15 @@ namespace strings_internal {
 // with google_internal::gg_memeq() in //third_party/stl/gcc3/string.
 inline bool memeq(const char* a, const char* b, size_t n) {
   size_t n_rounded_down = n & ~static_cast<size_t>(7);
-  if (PREDICT_FALSE(n_rounded_down == 0)) {  // n <= 7
+  if (ABSL_PREDICT_FALSE(n_rounded_down == 0)) {  // n <= 7
     return memcmp(a, b, n) == 0;
   }
   // n >= 8
   {
-    uint64 u = UNALIGNED_LOAD64(a) ^ UNALIGNED_LOAD64(b);
-    uint64 v = UNALIGNED_LOAD64(a + n - 8) ^ UNALIGNED_LOAD64(b + n - 8);
+    uint64 u =
+        ABSL_INTERNAL_UNALIGNED_LOAD64(a) ^ ABSL_INTERNAL_UNALIGNED_LOAD64(b);
+    uint64 v = ABSL_INTERNAL_UNALIGNED_LOAD64(a + n - 8) ^
+               ABSL_INTERNAL_UNALIGNED_LOAD64(b + n - 8);
     if ((u | v) != 0) {  // The first or last 8 bytes differ.
       return false;
     }
@@ -92,8 +95,10 @@ inline bool memeq(const char* a, const char* b, size_t n) {
       return false;
     }
 #else
-    uint64 x = UNALIGNED_LOAD64(a) ^ UNALIGNED_LOAD64(b);
-    uint64 y = UNALIGNED_LOAD64(a + 8) ^ UNALIGNED_LOAD64(b + 8);
+    uint64 x =
+        ABSL_INTERNAL_UNALIGNED_LOAD64(a) ^ ABSL_INTERNAL_UNALIGNED_LOAD64(b);
+    uint64 y = ABSL_INTERNAL_UNALIGNED_LOAD64(a + 8) ^
+               ABSL_INTERNAL_UNALIGNED_LOAD64(b + 8);
     if ((x | y) != 0) {
       return false;
     }

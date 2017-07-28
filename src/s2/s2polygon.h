@@ -30,6 +30,7 @@
 #include "s2/s2boundary_operation.h"
 #include "s2/s2builder.h"
 #include "s2/s2cellid.h"
+#include "s2/s2debug.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2loop.h"
 #include "s2/s2polyline.h"

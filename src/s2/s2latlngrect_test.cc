@@ -31,6 +31,7 @@
 #include "s2/s2cell.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2latlng.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
 using std::fabs;

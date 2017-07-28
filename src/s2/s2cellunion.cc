@@ -37,25 +37,76 @@ using std::vector;
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
-void S2CellUnion::Init(vector<S2CellId> cell_ids) {
-  InitRaw(std::move(cell_ids));
+vector<S2CellId> S2CellUnion::ToS2CellIds(vector<uint64> const& ids) {
+  vector<S2CellId> cell_ids;
+  cell_ids.reserve(ids.size());
+  for (auto id : ids) cell_ids.push_back(S2CellId(id));
+  return cell_ids;
+}
+
+S2CellUnion::S2CellUnion(vector<S2CellId> cell_ids)
+    : cell_ids_(std::move(cell_ids)) {
   Normalize();
+}
+
+S2CellUnion::S2CellUnion(S2CellId id)
+    : cell_ids_(1, id) {
+}
+
+S2CellUnion::S2CellUnion(vector<uint64> const& cell_ids)
+    : cell_ids_(ToS2CellIds(cell_ids)) {
+  Normalize();
+}
+
+S2CellUnion S2CellUnion::FromNormalized(vector<S2CellId> cell_ids) {
+  return S2CellUnion(std::move(cell_ids), NORMALIZED);
+}
+
+S2CellUnion S2CellUnion::FromMinMax(S2CellId min_id, S2CellId max_id) {
+  S2CellUnion result;
+  result.InitFromMinMax(min_id, max_id);
+  return result;
+}
+
+S2CellUnion S2CellUnion::FromBeginEnd(S2CellId begin, S2CellId end) {
+  S2CellUnion result;
+  result.InitFromBeginEnd(begin, end);
+  return result;
+}
+
+void S2CellUnion::Init(vector<S2CellId> cell_ids) {
+  cell_ids_ = std::move(cell_ids);
+  Normalize();
+}
+
+void S2CellUnion::Init(S2CellId cell_id) {
+  cell_ids_.clear();
+  cell_ids_.push_back(cell_id);
 }
 
 void S2CellUnion::Init(vector<uint64> const& cell_ids) {
-  InitRaw(cell_ids);
+  cell_ids_ = ToS2CellIds(cell_ids);
   Normalize();
 }
 
-void S2CellUnion::InitRaw(vector<S2CellId> cell_ids) {
-  cell_ids_ = std::move(cell_ids);
+void S2CellUnion::InitFromMinMax(S2CellId min_id, S2CellId max_id) {
+  DCHECK(max_id.is_valid());
+  InitFromBeginEnd(min_id, max_id.next());
 }
 
-void S2CellUnion::InitRaw(vector<uint64> const& cell_ids) {
-  cell_ids_.resize(cell_ids.size());
-  for (int i = 0; i < num_cells(); ++i) {
-    cell_ids_[i] = S2CellId(cell_ids[i]);
+void S2CellUnion::InitFromBeginEnd(S2CellId begin, S2CellId end) {
+  DCHECK(begin.is_leaf());
+  DCHECK(end.is_leaf());
+  DCHECK_LE(begin, end);
+
+  // We repeatedly add the largest cell we can.
+  cell_ids_.clear();
+  for (S2CellId id = begin.maximum_tile(end);
+       id != end; id = id.next().maximum_tile(end)) {
+    cell_ids_.push_back(id);
   }
+  // The output is already normalized.
+  DCHECK(IsNormalized());
 }
 
 vector<S2CellId> S2CellUnion::Release() {
@@ -68,22 +119,51 @@ vector<S2CellId> S2CellUnion::Release() {
 
 void S2CellUnion::Pack(int excess) {
   if (cell_ids_.capacity() - cell_ids_.size() > excess) {
-    vector<S2CellId> packed = cell_ids_;
-    cell_ids_.swap(packed);
+    cell_ids_.shrink_to_fit();
   }
 }
 
 S2CellUnion* S2CellUnion::Clone() const {
-  S2CellUnion* copy = new S2CellUnion;
-  copy->InitRaw(cell_ids_);
-  return copy;
+  return new S2CellUnion(cell_ids_, NORMALIZED);
 }
 
-bool S2CellUnion::Normalize() {
-  return Normalize(&cell_ids_);
+// Returns true if the given four cells have a common parent.
+// REQUIRES: The four cells are distinct.
+inline static bool AreSiblings(S2CellId a, S2CellId b, S2CellId c, S2CellId d) {
+  // A necessary (but not sufficient) condition is that the XOR of the
+  // four cells must be zero.  This is also very fast to test.
+  if ((a.id() ^ b.id() ^ c.id()) != d.id()) return false;
+
+  // Now we do a slightly more expensive but exact test.  First, compute a
+  // mask that blocks out the two bits that encode the child position of
+  // "id" with respect to its parent, then check that the other three
+  // children all agree with "mask".
+  uint64 mask = d.lsb() << 1;
+  mask = ~(mask + (mask << 1));
+  uint64 id_masked = (d.id() & mask);
+  return ((a.id() & mask) == id_masked &&
+          (b.id() & mask) == id_masked &&
+          (c.id() & mask) == id_masked &&
+          !d.is_face());
 }
 
-/*static*/ bool S2CellUnion::Normalize(vector<S2CellId>* ids) {
+bool S2CellUnion::IsNormalized() {
+  for (int i = 1; i < num_cells(); ++i) {
+    if (cell_id(i - 1).range_max() > cell_id(i).range_min()) return false;
+    if (i >= 3 && AreSiblings(cell_id(i - 3), cell_id(i - 2),
+                              cell_id(i - 1), cell_id(i))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void S2CellUnion::Normalize() {
+  Normalize(&cell_ids_);
+  DCHECK(IsNormalized());
+}
+
+/*static*/ void S2CellUnion::Normalize(vector<S2CellId>* ids) {
   // Optimize the representation by discarding cells contained by other cells,
   // and looking for cases where all subcells of a parent cell are present.
 
@@ -96,39 +176,17 @@ bool S2CellUnion::Normalize() {
     // Discard any previous cells contained by this cell.
     while (out > 0 && id.contains((*ids)[out-1])) --out;
 
-    // Check whether the last 3 elements of "output" plus "id" can be
-    // collapsed into a single parent cell.
-    while (out >= 3) {
-      // A necessary (but not sufficient) condition is that the XOR of the
-      // four cells must be zero.  This is also very fast to test.
-      if (((*ids)[out-3].id() ^ (*ids)[out-2].id() ^ (*ids)[out-1].id()) !=
-          id.id()) {
-        break;
-      }
-      // Now we do a slightly more expensive but exact test.  First, compute a
-      // mask that blocks out the two bits that encode the child position of
-      // "id" with respect to its parent, then check that the other three
-      // children all agree with "mask.
-      uint64 mask = id.lsb() << 1;
-      mask = ~(mask + (mask << 1));
-      uint64 id_masked = (id.id() & mask);
-      if (((*ids)[out-3].id() & mask) != id_masked ||
-          ((*ids)[out-2].id() & mask) != id_masked ||
-          ((*ids)[out-1].id() & mask) != id_masked ||
-          id.is_face())
-        break;
-
+    // Check whether the last 3 elements plus "id" can be collapsed into a
+    // single parent cell.
+    while (out >= 3 && AreSiblings((*ids)[out - 3], (*ids)[out - 2],
+                                   (*ids)[out - 1], id)) {
       // Replace four children by their parent cell.
       id = id.parent();
       out -= 3;
     }
     (*ids)[out++] = id;
   }
-  if (out < ids->size()) {
-    ids->resize(out);
-    return true;
-  }
-  return false;
+  ids->resize(out);
 }
 
 void S2CellUnion::Denormalize(int min_level, int level_mod,
@@ -221,54 +279,56 @@ bool S2CellUnion::Intersects(S2CellId id) const {
   return i != cell_ids_.begin() && (--i)->range_max() >= id.range_min();
 }
 
-bool S2CellUnion::Contains(S2CellUnion const* y) const {
+bool S2CellUnion::Contains(S2CellUnion const& y) const {
   // TODO(ericv): A divide-and-conquer or alternating-skip-search
   // approach may be sigificantly faster in both the average and worst case.
 
-  for (int i = 0; i < y->num_cells(); ++i) {
-    if (!Contains(y->cell_id(i))) return false;
+  for (int i = 0; i < y.num_cells(); ++i) {
+    if (!Contains(y.cell_id(i))) return false;
   }
   return true;
 }
 
-bool S2CellUnion::Intersects(S2CellUnion const* y) const {
+bool S2CellUnion::Intersects(S2CellUnion const& y) const {
   // TODO(ericv): A divide-and-conquer or alternating-skip-search
   // approach may be sigificantly faster in both the average and worst case.
 
-  for (int i = 0; i < y->num_cells(); ++i) {
-    if (Intersects(y->cell_id(i))) return true;
+  for (int i = 0; i < y.num_cells(); ++i) {
+    if (Intersects(y.cell_id(i))) return true;
   }
   return false;
 }
 
-void S2CellUnion::GetUnion(S2CellUnion const* x, S2CellUnion const* y) {
-  DCHECK_NE(this, x);
-  DCHECK_NE(this, y);
-  cell_ids_.reserve(x->num_cells() + y->num_cells());
-  cell_ids_ = x->cell_ids_;
-  cell_ids_.insert(cell_ids_.end(), y->cell_ids_.begin(), y->cell_ids_.end());
-  Normalize();
+S2CellUnion S2CellUnion::Union(S2CellUnion const& y) const {
+  S2CellUnion result;
+  result.cell_ids_.reserve(num_cells() + y.num_cells());
+  result.cell_ids_ = cell_ids_;
+  result.cell_ids_.insert(result.cell_ids_.end(),
+                          y.cell_ids_.begin(), y.cell_ids_.end());
+  result.Normalize();
+  return result;
 }
 
-void S2CellUnion::GetIntersection(S2CellUnion const* x, S2CellId id) {
-  DCHECK_NE(this, x);
-  cell_ids_.clear();
-  if (x->Contains(id)) {
-    cell_ids_.push_back(id);
+S2CellUnion S2CellUnion::Intersection(S2CellId id) const {
+  S2CellUnion result;
+  if (Contains(id)) {
+    result.cell_ids_.push_back(id);
   } else {
     vector<S2CellId>::const_iterator i = std::lower_bound(
-        x->cell_ids_.begin(), x->cell_ids_.end(), id.range_min());
-    S2CellId idmax = id.range_max();
-    while (i != x->cell_ids_.end() && *i <= idmax)
-      cell_ids_.push_back(*i++);
+        cell_ids_.begin(), cell_ids_.end(), id.range_min());
+    S2CellId id_max = id.range_max();
+    while (i != cell_ids_.end() && *i <= id_max)
+      result.cell_ids_.push_back(*i++);
   }
+  DCHECK(result.IsNormalized());
+  return result;
 }
 
-void S2CellUnion::GetIntersection(S2CellUnion const* x, S2CellUnion const* y) {
-  GetIntersection(x->cell_ids_, y->cell_ids_, &cell_ids_);
-  // Since both inputs are normalized, there should not be any cells that
-  // can be merged.
-  DCHECK(!Normalize());
+S2CellUnion S2CellUnion::Intersection(S2CellUnion const& y) const {
+  S2CellUnion result;
+  GetIntersection(cell_ids_, y.cell_ids_, &result.cell_ids_);
+  DCHECK(result.IsNormalized());
+  return result;
 }
 
 /*static*/ void S2CellUnion::GetIntersection(vector<S2CellId> const& x,
@@ -280,7 +340,7 @@ void S2CellUnion::GetIntersection(S2CellUnion const* x, S2CellUnion const* y) {
   DCHECK(is_sorted(y.begin(), y.end()));
 
   // This is a fairly efficient calculation that uses binary search to skip
-  // over sections of both input vectors.  It takes constant time if all the
+  // over sections of both input vectors.  It takes logarithmic time if all the
   // cells of "x" come before or after all the cells of "y" in S2CellId order.
 
   out->clear();
@@ -320,14 +380,13 @@ void S2CellUnion::GetIntersection(S2CellUnion const* x, S2CellUnion const* y) {
 }
 
 static void GetDifferenceInternal(S2CellId cell,
-                                  S2CellUnion const* y,
+                                  S2CellUnion const& y,
                                   vector<S2CellId>* cell_ids) {
   // Add the difference between cell and y to cell_ids.
-  // If they intersect but the difference is non-empty, divides and conquers.
-
-  if (!y->Intersects(cell)) {
+  // If they intersect but the difference is non-empty, divide and conquer.
+  if (!y.Intersects(cell)) {
     cell_ids->push_back(cell);
-  } else if (!y->Contains(cell)) {
+  } else if (!y.Contains(cell)) {
     S2CellId child = cell.child_begin();
     for (int i = 0; ; ++i) {
       GetDifferenceInternal(child, y, cell_ids);
@@ -337,32 +396,30 @@ static void GetDifferenceInternal(S2CellId cell,
   }
 }
 
-void S2CellUnion::GetDifference(S2CellUnion const* x, S2CellUnion const* y) {
-  DCHECK_NE(this, x);
-  DCHECK_NE(this, y);
+S2CellUnion S2CellUnion::Difference(S2CellUnion const& y) const {
   // TODO(ericv): this is approximately O(N*log(N)), but could probably
   // use similar techniques as GetIntersection() to be more efficient.
 
-  cell_ids_.clear();
-  for (int i = 0; i < x->num_cells(); ++i) {
-    GetDifferenceInternal(x->cell_id(i), y, &cell_ids_);
+  S2CellUnion result;
+  for (int i = 0; i < num_cells(); ++i) {
+    GetDifferenceInternal(cell_id(i), y, &result.cell_ids_);
   }
   // The output is generated in sorted order, and there should not be any
   // cells that can be merged (provided that both inputs were normalized).
-  DCHECK(is_sorted(cell_ids_.begin(), cell_ids_.end()));
-  DCHECK(!Normalize());
+  DCHECK(result.IsNormalized());
+  return result;
 }
 
 void S2CellUnion::Expand(int level) {
   vector<S2CellId> output;
   uint64 level_lsb = S2CellId::lsb_for_level(level);
-  for (int i = num_cells() - 1; i >= 0; --i) {
+  for (int i = num_cells(); --i >= 0; ) {
     S2CellId id = cell_id(i);
     if (id.lsb() < level_lsb) {
       id = id.parent(level);
       // Optimization: skip over any cells contained by this one.  This is
       // especially important when very small regions are being expanded.
-      while (i > 0 && id.contains(cell_id(i-1))) --i;
+      while (i > 0 && id.contains(cell_id(i - 1))) --i;
     }
     output.push_back(id);
     id.AppendAllNeighbors(level, &output);
@@ -383,27 +440,6 @@ void S2CellUnion::Expand(S1Angle min_radius, int max_level_diff) {
     Expand(0);
   }
   Expand(min(min_level + max_level_diff, radius_level));
-}
-
-void S2CellUnion::InitFromMinMax(S2CellId min_id, S2CellId max_id) {
-  DCHECK(max_id.is_valid());
-  InitFromBeginEnd(min_id, max_id.next());
-}
-
-void S2CellUnion::InitFromBeginEnd(S2CellId begin, S2CellId end) {
-  DCHECK(begin.is_leaf());
-  DCHECK(end.is_leaf());
-  DCHECK_LE(begin, end);
-
-  // We repeatedly add the largest cell we can.
-  cell_ids_.clear();
-  for (S2CellId id = begin.maximum_tile(end);
-       id != end; id = id.next().maximum_tile(end)) {
-    cell_ids_.push_back(id);
-  }
-  // The output is already normalized.
-  DCHECK(is_sorted(cell_ids_.begin(), cell_ids_.end()));
-  DCHECK(!Normalize());
 }
 
 uint64 S2CellUnion::LeafCellsCovered() const {

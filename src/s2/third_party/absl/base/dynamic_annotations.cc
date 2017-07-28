@@ -1,11 +1,22 @@
-#ifdef __cplusplus
-# error "This file should be built as pure C to avoid name mangling"
-#endif
+// Copyright 2017 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #include <cstdlib>
 #include <cstring>
 
-#include "third_party/absl/base/dynamic_annotations.h"
+#include "s2/third_party/absl/base/dynamic_annotations.h"
 
 #ifndef __has_feature
 #define __has_feature(x) 0
@@ -28,39 +39,49 @@
 #include <sanitizer/msan_interface.h>
 #endif
 
-void AnnotateRWLockCreate(const char *file, int line,
-                          const volatile void *lock){}
-void AnnotateRWLockDestroy(const char *file, int line,
-                           const volatile void *lock){}
-void AnnotateRWLockAcquired(const char *file, int line,
-                            const volatile void *lock, long is_w){}
-void AnnotateRWLockReleased(const char *file, int line,
-                            const volatile void *lock, long is_w){}
-void AnnotateBenignRace(const char *file, int line,
-                        const volatile void *address,
-                        const char *description){}
-void AnnotateBenignRaceSized(const char *file, int line,
-                             const volatile void *address,
-                             size_t size,
-                             const char *description) {}
-void AnnotateThreadName(const char *file, int line,
-                        const char *name){}
-void AnnotateIgnoreReadsBegin(const char *file, int line){}
-void AnnotateIgnoreReadsEnd(const char *file, int line){}
-void AnnotateIgnoreWritesBegin(const char *file, int line){}
-void AnnotateIgnoreWritesEnd(const char *file, int line){}
-void AnnotateEnableRaceDetection(const char *file, int line, int enable){}
-void AnnotateMemoryIsInitialized(const char *file, int line,
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void AnnotateRWLockCreate(const char *, int,
+                          const volatile void *){}
+void AnnotateRWLockDestroy(const char *, int,
+                           const volatile void *){}
+void AnnotateRWLockAcquired(const char *, int,
+                            const volatile void *, long){}
+void AnnotateRWLockReleased(const char *, int,
+                            const volatile void *, long){}
+void AnnotateBenignRace(const char *, int,
+                        const volatile void *,
+                        const char *){}
+void AnnotateBenignRaceSized(const char *, int,
+                             const volatile void *,
+                             size_t,
+                             const char *) {}
+void AnnotateThreadName(const char *, int,
+                        const char *){}
+void AnnotateIgnoreReadsBegin(const char *, int){}
+void AnnotateIgnoreReadsEnd(const char *, int){}
+void AnnotateIgnoreWritesBegin(const char *, int){}
+void AnnotateIgnoreWritesEnd(const char *, int){}
+void AnnotateEnableRaceDetection(const char *, int, int){}
+void AnnotateMemoryIsInitialized(const char *, int,
                                  const volatile void *mem, size_t size) {
 #if __has_feature(memory_sanitizer)
   __msan_unpoison(mem, size);
+#else
+  (void)mem;
+  (void)size;
 #endif
 }
 
-void AnnotateMemoryIsUninitialized(const char *file, int line,
+void AnnotateMemoryIsUninitialized(const char *, int,
                                    const volatile void *mem, size_t size) {
 #if __has_feature(memory_sanitizer)
   __msan_allocated_memory(mem, size);
+#else
+  (void)mem;
+  (void)size;
 #endif
 }
 
@@ -103,4 +124,7 @@ double ValgrindSlowdown(void) {
   return local_slowdown;
 }
 
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 #endif  /* DYNAMIC_ANNOTATIONS_EXTERNAL_IMPL == 0 */

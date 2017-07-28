@@ -123,6 +123,7 @@ install(FILES src/s2/third_party/absl/base/attributes.h
         DESTINATION include/s2/third_party/absl/base)
 install(FILES src/s2/third_party/absl/base/internal/identity.h
               src/s2/third_party/absl/base/internal/port_hash.inc
+              src/s2/third_party/absl/base/internal/unaligned_access.h
         DESTINATION include/s2/third_party/absl/base/internal)
 install(FILES src/s2/third_party/absl/container/inlined_vector.h
         DESTINATION include/s2/third_party/absl/container)

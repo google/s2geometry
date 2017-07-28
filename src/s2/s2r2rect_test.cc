@@ -30,6 +30,7 @@
 #include "s2/s2coords.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
 static void TestIntervalOps(S2R2Rect const& x, S2R2Rect const& y,

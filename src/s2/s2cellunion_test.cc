@@ -40,31 +40,17 @@ using std::max;
 using std::min;
 using std::vector;
 
-TEST(S2CellUnion, Basic) {
-  S2CellUnion empty;
+TEST(S2CellUnion, DefaultConstructor) {
   vector<S2CellId> ids;
-  empty.Init(ids);
+  S2CellUnion empty(ids);
   EXPECT_EQ(0, empty.num_cells());
+}
 
+TEST(S2CellUnion, S2CellIdConstructor) {
   S2CellId face1_id = S2CellId::FromFace(1);
-  S2CellUnion face1_union;
-  ids.push_back(face1_id);
-  face1_union.Init(ids);
+  S2CellUnion face1_union(face1_id);
   EXPECT_EQ(1, face1_union.num_cells());
   EXPECT_EQ(face1_id, face1_union.cell_id(0));
-
-  S2CellId face2_id = S2CellId::FromFace(2);
-  S2CellUnion face2_union;
-  vector<uint64> cell_ids;
-  cell_ids.push_back(face2_id.id());
-  face2_union.Init(cell_ids);
-  EXPECT_EQ(1, face2_union.num_cells());
-  EXPECT_EQ(face2_id, face2_union.cell_id(0));
-
-  S2Cell face1_cell(face1_id);
-  S2Cell face2_cell(face2_id);
-  EXPECT_TRUE(face1_union.Contains(face1_cell));
-  EXPECT_TRUE(!face1_union.Contains(face2_cell));
 }
 
 static S2Testing::Random& rnd = S2Testing::rnd;
@@ -141,7 +127,6 @@ TEST(S2CellUnion, Normalize) {
   // Try a bunch of random test cases, and keep track of average
   // statistics for normalization (to see if they agree with the
   // analysis above).
-  S2CellUnion cellunion;
   double in_sum = 0, out_sum = 0;
   static int const kIters = 2000;
   for (int i = 0; i < kIters; ++i) {
@@ -149,7 +134,7 @@ TEST(S2CellUnion, Normalize) {
     AddCells(S2CellId::None(), false, &input, &expected);
     in_sum += input.size();
     out_sum += expected.size();
-    cellunion.Init(input);
+    S2CellUnion cellunion(input);
     EXPECT_EQ(expected.size(), cellunion.num_cells());
     for (int i = 0; i < expected.size(); ++i) {
       EXPECT_EQ(expected[i], cellunion.cell_id(i));
@@ -191,7 +176,7 @@ TEST(S2CellUnion, Normalize) {
       }
     }
 
-    // Test Contains(S2CellUnion*), Intersects(S2CellUnion*),
+    // Test Contains(S2CellUnion), Intersects(S2CellUnion),
     // GetUnion(), GetIntersection(), and GetDifference().
     vector<S2CellId> x, y, x_or_y, x_and_y;
     for (S2CellId input_id : input) {
@@ -201,13 +186,10 @@ TEST(S2CellUnion, Normalize) {
       if (in_y) y.push_back(input_id);
       if (in_x || in_y) x_or_y.push_back(input_id);
     }
-    S2CellUnion xcells, ycells, x_or_y_expected, x_and_y_expected;
-    xcells.Init(x);
-    ycells.Init(y);
-    x_or_y_expected.Init(x_or_y);
-
-    S2CellUnion x_or_y_cells;
-    x_or_y_cells.GetUnion(&xcells, &ycells);
+    S2CellUnion xcells(std::move(x));
+    S2CellUnion ycells(std::move(y));
+    S2CellUnion x_or_y_expected(std::move(x_or_y));
+    S2CellUnion x_or_y_cells = xcells.Union(ycells);
     EXPECT_TRUE(x_or_y_cells == x_or_y_expected);
 
     // Compute the intersection of "x" with each cell of "y",
@@ -215,8 +197,7 @@ TEST(S2CellUnion, Normalize) {
     // results to x_and_y_expected.
     for (int j = 0; j < ycells.num_cells(); ++j) {
       S2CellId yid = ycells.cell_id(j);
-      S2CellUnion u;
-      u.GetIntersection(&xcells, yid);
+      S2CellUnion u = xcells.Intersection(yid);
       for (int k = 0; k < xcells.num_cells(); ++k) {
         S2CellId xid = xcells.cell_id(k);
         if (xid.contains(yid)) {
@@ -231,24 +212,20 @@ TEST(S2CellUnion, Normalize) {
       }
       x_and_y.insert(x_and_y.end(), u.cell_ids().begin(), u.cell_ids().end());
     }
-    x_and_y_expected.Init(x_and_y);
-
-    S2CellUnion x_and_y_cells;
-    x_and_y_cells.GetIntersection(&xcells, &ycells);
+    S2CellUnion x_and_y_expected(std::move(x_and_y));
+    S2CellUnion x_and_y_cells = xcells.Intersection(ycells);
     EXPECT_TRUE(x_and_y_cells == x_and_y_expected);
 
-    S2CellUnion x_minus_y_cells, y_minus_x_cells;
-    x_minus_y_cells.GetDifference(&xcells, &ycells);
-    y_minus_x_cells.GetDifference(&ycells, &xcells);
-    EXPECT_TRUE(xcells.Contains(&x_minus_y_cells));
-    EXPECT_TRUE(!x_minus_y_cells.Intersects(&ycells));
-    EXPECT_TRUE(ycells.Contains(&y_minus_x_cells));
-    EXPECT_TRUE(!y_minus_x_cells.Intersects(&xcells));
-    EXPECT_TRUE(!x_minus_y_cells.Intersects(&y_minus_x_cells));
-    S2CellUnion diff_union;
-    diff_union.GetUnion(&x_minus_y_cells, &y_minus_x_cells);
-    S2CellUnion diff_intersection_union;
-    diff_intersection_union.GetUnion(&diff_union, &x_and_y_cells);
+    S2CellUnion x_minus_y_cells = xcells.Difference(ycells);
+    S2CellUnion y_minus_x_cells = ycells.Difference(xcells);
+    EXPECT_TRUE(xcells.Contains(x_minus_y_cells));
+    EXPECT_TRUE(!x_minus_y_cells.Intersects(ycells));
+    EXPECT_TRUE(ycells.Contains(y_minus_x_cells));
+    EXPECT_TRUE(!y_minus_x_cells.Intersects(xcells));
+    EXPECT_TRUE(!x_minus_y_cells.Intersects(y_minus_x_cells));
+
+    S2CellUnion diff_intersection_union =
+        x_minus_y_cells.Union(y_minus_x_cells).Union(x_and_y_cells);
     EXPECT_TRUE(diff_intersection_union == x_or_y_cells);
 
     vector<S2CellId> test, dummy;
@@ -347,11 +324,10 @@ TEST(S2CellUnion, Expand) {
 }
 
 TEST(S2CellUnion, EncodeDecode) {
-  S2CellUnion cell_union;
   vector<S2CellId> cell_ids = {S2CellId(0x33), S2CellId(0x0),
                                S2CellId(0x8e3748fab),
                                S2CellId(0x91230abcdef83427)};
-  cell_union.InitRaw(std::move(cell_ids));
+  auto cell_union = S2CellUnion::FromNormalized(std::move(cell_ids));
 
   Encoder encoder;
   cell_union.Encode(&encoder);
@@ -372,9 +348,8 @@ TEST(S2CellUnion, EncodeDecodeEmpty) {
   EXPECT_EQ(empty_cell_union, decoded_cell_union);
 }
 
-static void TestInitFromMinMax(S2CellId min_id, S2CellId max_id) {
-  S2CellUnion cell_union;
-  cell_union.InitFromMinMax(min_id, max_id);
+static void TestFromMinMax(S2CellId min_id, S2CellId max_id) {
+  auto cell_union = S2CellUnion::FromMinMax(min_id, max_id);
   vector<S2CellId> const& cell_ids = cell_union.cell_ids();
 
   EXPECT_GT(cell_ids.size(), 0);
@@ -383,19 +358,19 @@ static void TestInitFromMinMax(S2CellId min_id, S2CellId max_id) {
   for (int i = 1; i < cell_ids.size(); ++i) {
     EXPECT_EQ(cell_ids[i].range_min(), cell_ids[i-1].range_max().next());
   }
-  EXPECT_FALSE(cell_union.Normalize());
+  EXPECT_TRUE(cell_union.IsNormalized());
 }
 
-TEST(S2CellUnion, InitFromMinMax) {
+TEST(S2CellUnion, FromMinMax) {
   // Check the very first leaf cell and face cell.
   S2CellId face1_id = S2CellId::FromFace(0);
-  TestInitFromMinMax(face1_id.range_min(), face1_id.range_min());
-  TestInitFromMinMax(face1_id.range_min(), face1_id.range_max());
+  TestFromMinMax(face1_id.range_min(), face1_id.range_min());
+  TestFromMinMax(face1_id.range_min(), face1_id.range_max());
 
   // Check the very last leaf cell and face cell.
   S2CellId face5_id = S2CellId::FromFace(5);
-  TestInitFromMinMax(face5_id.range_min(), face5_id.range_max());
-  TestInitFromMinMax(face5_id.range_max(), face5_id.range_max());
+  TestFromMinMax(face5_id.range_min(), face5_id.range_max());
+  TestFromMinMax(face5_id.range_max(), face5_id.range_max());
 
   // Check random ranges of leaf cells.
   for (int iter = 0; iter < 100; ++iter) {
@@ -403,30 +378,29 @@ TEST(S2CellUnion, InitFromMinMax) {
     S2CellId y = S2Testing::GetRandomCellId(S2CellId::kMaxLevel);
     using std::swap;
     if (x > y) swap(x, y);
-    TestInitFromMinMax(x, y);
+    TestFromMinMax(x, y);
   }
 }
 
-TEST(S2CellUnion, InitFromBeginEnd) {
-  // Since InitFromMinMax() is implemented in terms of InitFromBeginEnd(), we
+TEST(S2CellUnion, FromBeginEnd) {
+  // Since FromMinMax() is implemented in terms of FromBeginEnd(), we
   // focus on test cases that generate an empty range.
-  vector<S2CellId> initial_ids(1, S2CellId::FromFace(3));
-  S2CellUnion cell_union;
+  S2CellId initial_id = S2CellId::FromFace(3);
 
   // Test an empty range before the minimum S2CellId.
+  S2CellUnion cell_union(initial_id);
   S2CellId id_begin = S2CellId::Begin(S2CellId::kMaxLevel);
-  cell_union.Init(initial_ids);
   cell_union.InitFromBeginEnd(id_begin, id_begin);
   EXPECT_EQ(0, cell_union.num_cells());
 
   // Test an empty range after the maximum S2CellId.
+  cell_union.Init(initial_id);
   S2CellId id_end = S2CellId::End(S2CellId::kMaxLevel);
-  cell_union.Init(initial_ids);
   cell_union.InitFromBeginEnd(id_end, id_end);
   EXPECT_EQ(0, cell_union.num_cells());
 
   // Test the full sphere.
-  cell_union.InitFromBeginEnd(id_begin, id_end);
+  cell_union = S2CellUnion::FromBeginEnd(id_begin, id_end);
   EXPECT_EQ(6, cell_union.num_cells());
   for (int i = 0; i < cell_union.num_cells(); ++i) {
     EXPECT_TRUE(cell_union.cell_id(i).is_face());
@@ -458,20 +432,17 @@ TEST(S2CellUnion, Empty) {
   EXPECT_FALSE(empty_cell_union.Intersects(&empty_cell_union));
 
   // GetUnion(...)
-  S2CellUnion cell_union;
-  cell_union.GetUnion(&empty_cell_union, &empty_cell_union);
+  S2CellUnion cell_union = empty_cell_union.Union(empty_cell_union);
   EXPECT_EQ(0, cell_union.num_cells());
 
   // GetIntersection(...)
-  S2CellUnion intersection;
-  intersection.GetIntersection(&empty_cell_union, face1_id);
+  S2CellUnion intersection = empty_cell_union.Intersection(face1_id);
   EXPECT_EQ(0, intersection.num_cells());
-  intersection.GetIntersection(&empty_cell_union, &empty_cell_union);
+  intersection = empty_cell_union.Intersection(empty_cell_union);
   EXPECT_EQ(0, intersection.num_cells());
 
   // GetDifference(...)
-  S2CellUnion difference;
-  difference.GetDifference(&empty_cell_union, &empty_cell_union);
+  S2CellUnion difference = empty_cell_union.Difference(empty_cell_union);
   EXPECT_EQ(0, difference.num_cells());
 
   // Expand(...)
@@ -483,10 +454,7 @@ TEST(S2CellUnion, Empty) {
 
 TEST(S2CellUnion, Release) {
   S2CellId face1_id = S2CellId::FromFace(1);
-  S2CellUnion face1_union;
-  vector<S2CellId> ids;
-  ids.push_back(face1_id);
-  face1_union.Init(ids);
+  S2CellUnion face1_union(face1_id);
   ASSERT_EQ(1, face1_union.num_cells());
   EXPECT_EQ(face1_id, face1_union.cell_id(0));
 
@@ -531,12 +499,9 @@ TEST(S2CellUnion, LeafCellsCovered) {
   EXPECT_EQ(expected, cell_union.LeafCellsCovered());
 }
 
-TEST(S2CellUnion, MoveOnlyAndWorksInContainers) {
-  vector<S2CellId> ids;
-  ids.push_back(S2CellId::FromFace(1));
-
-  S2CellUnion cell_union0;
-  cell_union0.Init(ids);
+TEST(S2CellUnion, WorksInContainers) {
+  vector<S2CellId> ids(1, S2CellId::FromFace(1));
+  S2CellUnion cell_union0(ids);
 
   // This gives a compilation error if the S2CellUnion is neither movable nor
   // copyable.

@@ -37,14 +37,6 @@
 template <typename T, size_t N>
 char (&ArraySizeHelper(T (&array)[N]))[N];
 
-// That gcc wants both of these prototypes seems mysterious. VC, for
-// its part, can't decide which to use (another mystery). Matching of
-// template overloads: the final frontier.
-#ifndef _MSC_VER
-template <typename T, size_t N>
-char (&ArraySizeHelper(const T (&array)[N]))[N];
-#endif
-
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
 
 // The following enum should be used only as a constructor argument to indicate
