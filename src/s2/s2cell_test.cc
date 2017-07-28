@@ -41,6 +41,7 @@
 #include "s2/s2latlngrect.h"
 #include "s2/s2loop.h"
 #include "s2/s2metrics.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2testing.h"
 #include "s2/third_party/absl/base/macros.h"

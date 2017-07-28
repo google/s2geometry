@@ -320,13 +320,15 @@ class Span : private internal_span::SpanRelationals<const T> {
   // possible to pass a brace-enclosed initializer list to a function expecting
   // a Span:
   //
-  //   void Process(Span<int> x);
+  //   void Process(Span<const int> x);
   //   Process({1, 2, 3});
   //
-  // The data referenced by the initializer_list must outlive this
+  // The data referenced by the initializer list must outlive this
   // Span. For example, "Span<int> s={1,2};" and "return
   // Span<int>({3,4});" are errors, as the resulting Span may
   // reference data that is no longer valid.
+  //
+  // Only read-only Spans may be constructed from initializer_lists.
   template <typename LazyT = T,
             typename = EnableIfConstView<LazyT>>
   constexpr Span(

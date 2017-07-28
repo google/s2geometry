@@ -31,7 +31,7 @@
    - Dynamic Annotations enabled (with static thread-safety warnings disabled).
      In this case, macros expand to functions implemented by Thread Sanitizer,
      when building with TSan. When not provided an external implementation,
-     dynamic_annotations.c provides no-op implementations.
+     dynamic_annotations.cc provides no-op implementations.
 
    - Static Clang thread-safety warnings enabled.
      When building with a Clang compiler that supports thread-safety warnings,
@@ -300,6 +300,8 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 
    TODO(user) -- The exclusive lock here ignores writes as well, but
    allows INGORE_READS_AND_WRITES to work properly. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 static inline void StaticAnnotateIgnoreReadsBegin(const char *file, int line)
     ATTRIBUTE_IGNORE_READS_BEGIN { (void)file; (void)line; }
 static inline void StaticAnnotateIgnoreReadsEnd(const char *file, int line)
@@ -308,11 +310,12 @@ static inline void StaticAnnotateIgnoreWritesBegin(
     const char *file, int line) { (void)file; (void)line; }
 static inline void StaticAnnotateIgnoreWritesEnd(
     const char *file, int line) { (void)file; (void)line; }
+#pragma GCC diagnostic pop
 #endif
 
 /* Return non-zero value if running under valgrind.
 
-  If "valgrind.h" is included into dynamic_annotations.c,
+  If "valgrind.h" is included into dynamic_annotations.cc,
   the regular valgrind mechanism will be used.
   See http://valgrind.org/docs/manual/manual-core-adv.html about
   RUNNING_ON_VALGRIND and other valgrind "client requests".

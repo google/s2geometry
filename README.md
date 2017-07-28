@@ -27,8 +27,7 @@ Requirements for End Users
 On Ubuntu, all of these can be installed via apt-get.  Otherwise, you may need
 to install some from source.
 
-Thorough testing has only been done on Ubuntu 14.04.3.  Several tests are
-known to fail on OS X (patches appreciated!).
+Thorough testing has only been done on Ubuntu 14.04.3.
 
 Build and Install
 -----------------

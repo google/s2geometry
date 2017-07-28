@@ -149,18 +149,6 @@ class S2Point {
   }
 };
 
-// TODO(ericv): Remove this when splitting s2edgeutil.h.
-namespace S2 {
-inline S2Point GetIntersection(S2Point const& a, S2Point const& b,
-                               S2Point const& c, S2Point const& d) {
-  return S2EdgeUtil::GetIntersection(a, b, c, d);
-}
-inline int CrossingSign(S2Point const& a, S2Point const& b, S2Point const& c,
-                        S2Point const& d) {
-  return S2EdgeUtil::CrossingSign(a, b, c, d);
-}
-}  // namespace S2
-
 // Add raw pointer versions of these functions because SWIG doesn't
 // understand unique_ptr and when std::move() must be used.
 // TODO(user): Make swig understand unique_ptr and vector<unique_ptr>.
@@ -256,6 +244,7 @@ inline int CrossingSign(S2Point const& a, S2Point const& b, S2Point const& c,
 %unignore S2Cell::Decode;
 %unignore S2Cell::Encode;
 %unignore S2Cell::ExactArea;
+%unignore S2Cell::GetBoundaryDistance;
 %unignore S2Cell::GetCenter;
 %unignore S2Cell::GetDistance;
 %unignore S2Cell::GetRectBound;

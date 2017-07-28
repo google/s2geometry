@@ -32,6 +32,7 @@
 #include "s2/s2edgeutil.h"
 #include "s2/s2metrics.h"
 #include "s2/s2paddedcell.h"
+#include "s2/s2pointutil.h"
 
 using std::fabs;
 using std::max;

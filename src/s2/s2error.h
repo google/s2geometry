@@ -117,7 +117,7 @@ class S2Error {
   // can prepend text to an existing error by calling Init() more than once:
   //
   //   error->Init(error->code(), "Loop %d: %s", j, error->text().c_str());
-  void Init(Code code, const char* format, ...) PRINTF_ATTRIBUTE(3, 4);
+  void Init(Code code, const char* format, ...) ABSL_PRINTF_ATTRIBUTE(3, 4);
 
   bool ok() const { return code_ == OK; }
   Code code() const { return code_; }

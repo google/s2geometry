@@ -29,6 +29,8 @@
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 
+namespace absl {
+
 // An unsigned 128-bit integer type. The API is meant to mimic an intrinsic type
 // as closely as practical including cases exhibiting undefined behavior (e.g.
 // division by zero).
@@ -42,7 +44,7 @@
 // When constructing with values greater than 2**64 use the constexpr
 // absl::MakeUint128 factory function declared below. e.g.
 //
-//     uint128 big = absl::MakeUint128(1, 0);
+//     absl::uint128 big = absl::MakeUint128(1, 0);
 //
 // Ways in which this API differs from a built-in integer:
 //   - Implicit conversion that does not preserve value is valid for built-in
@@ -51,7 +53,6 @@
 //   - A built-in integer will implicitly convert to a floating point type when
 //     interacting through arithmetic operators. Our type must first be
 //     explicitly cast to a floating point type.
-// TODO(user) Remove zeroing behavior when shifting by >= 128; should be UB.
 //
 // This type will eventually be removed and uint128 will be an alias for a
 // standard uint128_t once it exists. Code written with this type will continue
@@ -63,14 +64,6 @@
 // Note that the alignment requirement of uint128 is due to change, so users
 // should take care to avoid depending on the current 8 byte alignment.
 // TODO(user) Remove alignment note above once alignof(uint128) becomes 16.
-class uint128;
-
-namespace absl {
-
-constexpr uint128 MakeUint128(uint64 top, uint64 bottom);
-
-}  // namespace absl
-
 class uint128 {
  public:
   uint128() = default;
@@ -151,7 +144,7 @@ class uint128 {
 
   friend uint64 Uint128Low64(const uint128& v);
   friend uint64 Uint128High64(const uint128& v);
-  friend constexpr uint128 absl::MakeUint128(uint64 top, uint64 bottom);
+  friend constexpr uint128 MakeUint128(uint64 top, uint64 bottom);
 
  private:
   constexpr uint128(uint64 top, uint64 bottom);
@@ -188,13 +181,9 @@ uint64 Uint128High64(const uint128& v);
 //                      Implementation details follow
 // --------------------------------------------------------------------------
 
-namespace absl {
-
 inline constexpr uint128 MakeUint128(uint64 top, uint64 bottom) {
   return uint128(top, bottom);
 }
-
-}  // namespace absl
 
 // Assignment from integer types.
 
@@ -466,9 +455,9 @@ inline uint128 operator-(const uint128& val) {
   const uint64 lo_flip = ~Uint128Low64(val);
   const uint64 lo_add = lo_flip + 1;
   if (lo_add < lo_flip) {
-    return absl::MakeUint128(hi_flip + 1, lo_add);
+    return MakeUint128(hi_flip + 1, lo_add);
   }
-  return absl::MakeUint128(hi_flip, lo_add);
+  return MakeUint128(hi_flip, lo_add);
 }
 
 inline bool operator!(const uint128& val) {
@@ -478,21 +467,21 @@ inline bool operator!(const uint128& val) {
 // Logical operators.
 
 inline uint128 operator~(const uint128& val) {
-  return absl::MakeUint128(~Uint128High64(val), ~Uint128Low64(val));
+  return MakeUint128(~Uint128High64(val), ~Uint128Low64(val));
 }
 
 inline uint128 operator|(const uint128& lhs, const uint128& rhs) {
-  return absl::MakeUint128(Uint128High64(lhs) | Uint128High64(rhs),
+  return MakeUint128(Uint128High64(lhs) | Uint128High64(rhs),
                            Uint128Low64(lhs) | Uint128Low64(rhs));
 }
 
 inline uint128 operator&(const uint128& lhs, const uint128& rhs) {
-  return absl::MakeUint128(Uint128High64(lhs) & Uint128High64(rhs),
+  return MakeUint128(Uint128High64(lhs) & Uint128High64(rhs),
                            Uint128Low64(lhs) & Uint128Low64(rhs));
 }
 
 inline uint128 operator^(const uint128& lhs, const uint128& rhs) {
-  return absl::MakeUint128(Uint128High64(lhs) ^ Uint128High64(rhs),
+  return MakeUint128(Uint128High64(lhs) ^ Uint128High64(rhs),
                            Uint128Low64(lhs) ^ Uint128Low64(rhs));
 }
 
@@ -517,34 +506,34 @@ inline uint128& uint128::operator^=(const uint128& other) {
 // Shift and arithmetic assign operators.
 
 inline uint128& uint128::operator<<=(int amount) {
+  // Shifts of >= 128 are undefined.
+  assert(amount < 128);
+
   // uint64 shifts of >= 64 are undefined, so we will need some special-casing.
   if (amount < 64) {
     if (amount != 0) {
       hi_ = (hi_ << amount) | (lo_ >> (64 - amount));
       lo_ = lo_ << amount;
     }
-  } else if (amount < 128) {
-    hi_ = lo_ << (amount - 64);
-    lo_ = 0;
   } else {
-    hi_ = 0;
+    hi_ = lo_ << (amount - 64);
     lo_ = 0;
   }
   return *this;
 }
 
 inline uint128& uint128::operator>>=(int amount) {
+  // Shifts of >= 128 are undefined.
+  assert(amount < 128);
+
   // uint64 shifts of >= 64 are undefined, so we will need some special-casing.
   if (amount < 64) {
     if (amount != 0) {
       lo_ = (lo_ >> amount) | (hi_ << (64 - amount));
       hi_ = hi_ >> amount;
     }
-  } else if (amount < 128) {
-    lo_ = hi_ >> (amount - 64);
-    hi_ = 0;
   } else {
-    lo_ = 0;
+    lo_ = hi_ >> (amount - 64);
     hi_ = 0;
   }
   return *this;
@@ -621,5 +610,12 @@ inline uint128& uint128::operator--() {
   *this -= 1;
   return *this;
 }
+
+}  // namespace absl
+
+using ::absl::Uint128High64;  // NOLINT
+using ::absl::Uint128Low64;   // NOLINT
+using ::absl::uint128;        // NOLINT
+extern const uint128 kuint128max;
 
 #endif  // S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_

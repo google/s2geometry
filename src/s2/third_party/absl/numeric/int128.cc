@@ -31,6 +31,11 @@
 const uint128 kuint128max = absl::MakeUint128(
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
 
+namespace absl {
+
+const uint128 kuint128max = MakeUint128(std::numeric_limits<uint64_t>::max(),
+                                        std::numeric_limits<uint64_t>::max());
+
 namespace {
 
 // Returns the 0-based position of the last set bit (i.e., most significant bit)
@@ -120,10 +125,10 @@ uint128 Initialize128FromFloat(T v) {
   if (v >= std::ldexp(static_cast<T>(1), 64)) {
     uint64_t hi = static_cast<uint64_t>(std::ldexp(v, -64));
     uint64_t lo = static_cast<uint64_t>(v - std::ldexp(static_cast<T>(hi), 64));
-    return absl::MakeUint128(hi, lo);
+    return MakeUint128(hi, lo);
   }
 
-  return absl::MakeUint128(0, static_cast<uint64_t>(v));
+  return MakeUint128(0, static_cast<uint64_t>(v));
 }
 }  // namespace
 
@@ -204,3 +209,5 @@ std::ostream& operator<<(std::ostream& o, const uint128& b) {
   // Stream the final representation in a single "<<" call.
   return o << rep;
 }
+
+}  // namespace absl

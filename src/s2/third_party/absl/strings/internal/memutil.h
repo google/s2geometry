@@ -116,42 +116,4 @@ const char* memmatch(const char* phaystack, size_t haylen, const char* pneedle,
 }  // namespace strings_internal
 }  // namespace absl
 
-// The ""'s catch people who don't pass in a literal for "str"
-#define strliterallen(str) (sizeof("" str "") - 1)
-
-// Must use a string literal for prefix.
-#define memprefix(str, len, prefix)                  \
-  ((((len) >= strliterallen(prefix)) &&              \
-    memcmp(str, prefix, strliterallen(prefix)) == 0) \
-       ? str + strliterallen(prefix)                 \
-       : nullptr)
-
-#define memcaseprefix(str, len, prefix)                  \
-  ((((len) >= strliterallen(prefix)) &&                  \
-    memcasecmp(str, prefix, strliterallen(prefix)) == 0) \
-       ? str + strliterallen(prefix)                     \
-       : nullptr)
-
-// Must use a string literal for suffix.
-#define memsuffix(str, len, suffix)                   \
-  ((((len) >= strliterallen(suffix)) &&               \
-    memcmp(str + (len)-strliterallen(suffix), suffix, \
-           strliterallen(suffix)) == 0)               \
-       ? str + (len)-strliterallen(suffix)            \
-       : nullptr)
-
-#define memcasesuffix(str, len, suffix)                   \
-  ((((len) >= strliterallen(suffix)) &&                   \
-    memcasecmp(str + (len)-strliterallen(suffix), suffix, \
-               strliterallen(suffix)) == 0)               \
-       ? str + (len)-strliterallen(suffix)                \
-       : nullptr)
-
-#define memis(str, len, literal)         \
-  ((((len) == strliterallen(literal)) && \
-    memcmp(str, literal, strliterallen(literal)) == 0))
-
-#define memcaseis(str, len, literal)     \
-  ((((len) == strliterallen(literal)) && \
-    memcasecmp(str, literal, strliterallen(literal)) == 0))
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_MEMUTIL_H_

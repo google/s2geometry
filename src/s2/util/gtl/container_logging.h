@@ -249,8 +249,8 @@ detail::RangeLogger<IteratorT, LogDefault> LogRange(
 // The above example will print the container using newlines between
 // elements, enclosed in [] braces.
 template <typename ContainerT, typename PolicyT>
-detail::RangeLogger<typename ContainerT::const_iterator, PolicyT>
-    LogContainer(const ContainerT &container, const PolicyT &policy) {
+auto LogContainer(const ContainerT &container, const PolicyT &policy)
+    -> decltype(gtl::LogRange(container.begin(), container.end(), policy)) {
   return gtl::LogRange(container.begin(), container.end(), policy);
 }
 
@@ -261,8 +261,8 @@ detail::RangeLogger<typename ContainerT::const_iterator, PolicyT>
 // By default, Container() uses the LogShortUpTo100 policy: comma-space
 // separation, no newlines, and with limit of 100 items.
 template <typename ContainerT>
-detail::RangeLogger<typename ContainerT::const_iterator, LogDefault>
-    LogContainer(const ContainerT &container) {
+auto LogContainer(const ContainerT &container)
+    -> decltype(gtl::LogContainer(container, LogDefault())) {
   return gtl::LogContainer(container, LogDefault());
 }
 

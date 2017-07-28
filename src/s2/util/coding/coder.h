@@ -443,16 +443,18 @@ inline void Encoder::putword(uword_t v) {
 
 inline void Encoder::putfloat(float f) {
   uint32 v;
-  typedef char VerifySizesAreEqual[sizeof(f) == sizeof(v) ? 1 : -1]
-    ATTRIBUTE_UNUSED;
+  typedef char VerifySizesAreEqual[sizeof(f) == sizeof(v)
+                                       ? 1
+                                       : -1] ABSL_ATTRIBUTE_UNUSED;
   memcpy(&v, &f, sizeof(f));
   put32(v);
 }
 
 inline void Encoder::putdouble(double d) {
   uint64 v;
-  typedef char VerifySizesAreEqual[sizeof(d) == sizeof(v) ? 1 : -1]
-    ATTRIBUTE_UNUSED;
+  typedef char VerifySizesAreEqual[sizeof(d) == sizeof(v)
+                                       ? 1
+                                       : -1] ABSL_ATTRIBUTE_UNUSED;
   memcpy(&v, &d, sizeof(d));
   put64(v);
 }
@@ -495,8 +497,9 @@ inline uword_t Decoder::getword() {
 inline float Decoder::getfloat() {
   uint32 v = get32();
   float f;
-  typedef char VerifySizesAreEqual[sizeof(f) == sizeof(v) ? 1 : -1]
-    ATTRIBUTE_UNUSED;
+  typedef char VerifySizesAreEqual[sizeof(f) == sizeof(v)
+                                       ? 1
+                                       : -1] ABSL_ATTRIBUTE_UNUSED;
   memcpy(&f, &v, sizeof(f));
   return f;
 }
@@ -504,8 +507,9 @@ inline float Decoder::getfloat() {
 inline double Decoder::getdouble() {
   uint64 v = get64();
   double d;
-  typedef char VerifySizesAreEqual[sizeof(d) == sizeof(v) ? 1 : -1]
-    ATTRIBUTE_UNUSED;
+  typedef char VerifySizesAreEqual[sizeof(d) == sizeof(v)
+                                       ? 1
+                                       : -1] ABSL_ATTRIBUTE_UNUSED;
   memcpy(&d, &v, sizeof(d));
   return d;
 }

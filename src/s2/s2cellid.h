@@ -436,8 +436,8 @@ class S2CellId {
   static S2CellId FromFaceIJSame(int face, int i, int j, bool same_face);
 
   uint64 id_;
-} ATTRIBUTE_PACKED;  // Necessary so that structures containing S2CellId's can
-                     // be ATTRIBUTE_PACKED.
+} ABSL_ATTRIBUTE_PACKED;  // Necessary so that structures containing S2CellId's
+                          // can be ABSL_ATTRIBUTE_PACKED.
 
 inline bool operator==(S2CellId x, S2CellId y) {
   return x.id() == y.id();

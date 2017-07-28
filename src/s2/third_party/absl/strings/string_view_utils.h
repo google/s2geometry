@@ -27,30 +27,11 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/strings/internal/fastmem.h"
+#include "s2/third_party/absl/strings/match.h"
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
 namespace absl {
-
-// Returns whether s begins with x.
-inline bool StartsWith(absl::string_view s, absl::string_view x) {
-  return x.empty() ||
-         (s.size() >= x.size() &&
-          absl::strings_internal::memeq(s.data(), x.data(), x.size()));
-}
-
-// Returns whether s ends with x.
-inline bool EndsWith(absl::string_view s, absl::string_view x) {
-  return x.empty() ||
-         (s.size() >= x.size() &&
-          absl::strings_internal::memeq(s.data() + (s.size() - x.size()),
-                                        x.data(), x.size()));
-}
-
-// Returns whether s contains x.
-inline bool StrContains(absl::string_view s, absl::string_view x) {
-  return static_cast<absl::string_view::size_type>(s.find(x, 0)) != s.npos;
-}
 
 // If "*s" starts with "expected", consume it and return true.
 // Otherwise, return false.
@@ -137,15 +118,6 @@ inline bool ConsumeLeadingChar(absl::string_view* s, char expected) {
 // Checks if two stringpiece values are equal ignoring case.
 bool EqualIgnoreCase(absl::string_view piece1, absl::string_view piece2);
 
-// Returns true if "text" starts with "starts_with". The comparison ignores
-// case.
-bool StartsWithIgnoreCase(absl::string_view text,
-                          absl::string_view starts_with);
-
-// Returns true if "text" ends with "ends_with". The comparison ignores
-// case.
-bool EndsWithIgnoreCase(absl::string_view text, absl::string_view ends_with);
-
 // This is similar to gstrncasestr() in strutil.h, except that it works with
 // absl::string_views. It acts the same as absl::string_view::find(), except
 // that it is case insensitive.
@@ -176,6 +148,9 @@ inline bool ConsumeCaseSuffix(absl::string_view* s,
 // Pointer-wise, the returned result is a subset of input "a".
 absl::string_view FindLongestCommonPrefix(absl::string_view a,
                                           absl::string_view b);
+
+using absl::EndsWithIgnoreCase;
+using absl::StartsWithIgnoreCase;
 
 }  // namespace strings
 

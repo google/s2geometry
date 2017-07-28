@@ -30,6 +30,7 @@
 #include "s2/s2coords.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/third_party/absl/base/integral_types.h"
 

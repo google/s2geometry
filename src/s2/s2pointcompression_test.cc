@@ -190,8 +190,8 @@ class S2PointCompressionTest : public ::testing::Test {
 
 TEST_F(S2PointCompressionTest, RoundtripsEmpty) {
   // Just check this doesn't crash.
-  Encode(Span<S2Point>(nullptr, 0), S2::kMaxCellLevel);
-  Decode(S2::kMaxCellLevel, Span<S2Point>(nullptr, 0));
+  Encode(Span<S2Point>(), S2::kMaxCellLevel);
+  Decode(S2::kMaxCellLevel, Span<S2Point>());
 }
 
 TEST_F(S2PointCompressionTest, RoundtripsFourVertexLoop) {
