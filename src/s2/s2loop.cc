@@ -843,12 +843,12 @@ class RangeIterator {
  public:
   // Construct a new RangeIterator positioned at the first cell of the index.
   explicit RangeIterator(S2ShapeIndex const* index)
-      : it_(index), end_(S2CellId::End(0)) {
+      : it_(index, S2ShapeIndex::BEGIN) {
     Refresh();
   }
 
   // The current S2CellId and cell contents.
-  S2CellId id() const { return id_; }
+  S2CellId id() const { return it_.id(); }
   S2ShapeIndexCell const& cell() const { return it_.cell(); }
 
   // The min and max leaf cell ids covered by the current cell.  If Done() is
@@ -857,12 +857,13 @@ class RangeIterator {
   S2CellId range_max() const { return range_max_; }
 
   // Various other convenience methods for the current cell.
-  S2ClippedShape const& clipped() const { return *clipped_; }
+  S2ClippedShape const& clipped() const { return cell().clipped(0); }
+
   int num_edges() const { return clipped().num_edges(); }
   bool contains_center() const { return clipped().contains_center(); }
 
   void Next() { it_.Next(); Refresh(); }
-  bool Done() { return id_ == end_; }
+  bool Done() { return it_.done(); }
 
   // Position the iterator at the first cell that overlaps or follows
   // "target", i.e. such that range_max() >= target.range_min().
@@ -871,9 +872,8 @@ class RangeIterator {
     // If the current cell does not overlap "target", it is possible that the
     // previous cell is the one we are looking for.  This can only happen when
     // the previous cell contains "target" but has a smaller S2CellId.
-    if (it_.Done() || it_.id().range_min() > target.range_max()) {
-      it_.Prev();
-      if (it_.id().range_max() < target.id()) it_.Next();
+    if (it_.done() || it_.id().range_min() > target.range_max()) {
+      if (it_.Prev() && it_.id().range_max() < target.id()) it_.Next();
     }
     Refresh();
   }
@@ -882,7 +882,7 @@ class RangeIterator {
   // first cell such that range_min() > target.range_max().
   void SeekBeyond(RangeIterator const& target) {
     it_.Seek(target.range_max().next());
-    if (!it_.Done() && it_.id().range_min() <= target.range_max()) {
+    if (!it_.done() && it_.id().range_min() <= target.range_max()) {
       it_.Next();
     }
     Refresh();
@@ -891,20 +891,12 @@ class RangeIterator {
  private:
   // Updates internal state after the iterator has been repositioned.
   void Refresh() {
-    if (it_.Done()) {
-      id_ = end_;
-      clipped_ = nullptr;
-    } else {
-      id_ = it_.id();
-      clipped_ = &it_.cell().clipped(0);
-    }
-    range_min_ = id_.range_min();
-    range_max_ = id_.range_max();
+    range_min_ = id().range_min();
+    range_max_ = id().range_max();
   }
 
   S2ShapeIndex::Iterator it_;
-  S2CellId const end_;
-  S2CellId id_, range_min_, range_max_;
+  S2CellId range_min_, range_max_;
   S2ClippedShape const* clipped_;
 };
 

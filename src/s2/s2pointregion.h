@@ -55,8 +55,15 @@ class S2PointRegion final : public S2Region {
   bool Contains(S2Cell const& cell) const override { return false; }
   bool MayIntersect(S2Cell const& cell) const override;
   bool Contains(S2Point const& p) const override { return (point_ == p); }
+
+  // Appends a serialized representation of the S2Point to "encoder".
+  //
+  // REQUIRES: "encoder" uses the default constructor, so that its buffer
+  //           can be enlarged as necessary by calling Ensure(int).
   void Encode(Encoder* const encoder) const override;
-  // Ensures the decoded point has unit length.
+
+  // Decodes an S2Point encoded with Encode().  Returns true on success.
+  // (Returns false if the encoded point is not unit length.)
   bool Decode(Decoder* const decoder) override;
 
  private:

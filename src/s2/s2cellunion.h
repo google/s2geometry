@@ -52,10 +52,10 @@ class S2CellUnion final : public S2Region {
   //
   // The argument is passed by value, so if you are passing a named variable
   // and have no further use for it, consider using std::move().
+  //
+  // You can construct an S2CellUnion containing a single S2CellId by using
+  // uniform initialization, like this: S2CellUnion example({cell_id}).
   explicit S2CellUnion(std::vector<S2CellId> cell_ids);
-
-  // Constructs a cell union containing a single cell.
-  explicit S2CellUnion(S2CellId id);
 
   // Convenience constructor that accepts a vector of uint64.  Note that
   // unlike the constructor above, this one makes a copy of "cell_ids".
@@ -88,7 +88,6 @@ class S2CellUnion final : public S2Region {
   // TODO(ericv): Consider deprecating these methods in favor of using the
   // constructors and move assignment operator.
   void Init(std::vector<S2CellId> cell_ids);
-  void Init(S2CellId cell_id);
   void Init(std::vector<uint64> const& cell_ids);
   void InitFromMinMax(S2CellId min_id, S2CellId max_id);
   void InitFromBeginEnd(S2CellId begin, S2CellId end);
@@ -113,7 +112,10 @@ class S2CellUnion final : public S2Region {
   // Normalizes the cell union by discarding cells that are contained by other
   // cells, replacing groups of 4 child cells by their parent cell whenever
   // possible, and sorting all the cell ids in increasing order.
-  void Normalize();
+  //
+  // Returns true if the number of cells was reduced.
+  // TODO(ericv): Change this method to return void.
+  bool Normalize();
 
   // Replaces "output" with an expanded version of the cell union where any
   // cells whose level is less than "min_level" or where (level - min_level)
@@ -229,12 +231,18 @@ class S2CellUnion final : public S2Region {
   // This is a fast operation (logarithmic in the size of the cell union).
   bool MayIntersect(S2Cell const& cell) const override;
 
-  void Encode(Encoder* const encoder) const override;
-  bool Decode(Decoder* const decoder) override;
-
   // The point 'p' does not need to be normalized.
   // This is a fast operation (logarithmic in the size of the cell union).
   bool Contains(S2Point const& p) const override;
+
+  // Appends a serialized representation of the S2CellUnion to "encoder".
+  //
+  // REQUIRES: "encoder" uses the default constructor, so that its buffer
+  //           can be enlarged as necessary by calling Ensure(int).
+  void Encode(Encoder* const encoder) const override;
+
+  // Decodes an S2CellUnion encoded with Encode().  Returns true on success.
+  bool Decode(Decoder* const decoder) override;
 
   ////////////////////////////////////////////////////////////////////////
   // Static methods intended for high-performance clients that prefer to
@@ -243,7 +251,7 @@ class S2CellUnion final : public S2Region {
   // Like Normalize(), but works directly with a vector of S2CellIds.
   // Equivalent to:
   //   *cell_ids = S2CellUnion(std::move(*cell_ids)).Release();
-  static void Normalize(std::vector<S2CellId>* cell_ids);
+  static bool Normalize(std::vector<S2CellId>* cell_ids);
 
   // Like GetIntersection(), but works directly with vectors of S2CellIds,
   // Equivalent to:

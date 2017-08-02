@@ -637,35 +637,45 @@ class S2Polygon final : public S2Region {
   // The point 'p' does not need to be normalized.
   bool Contains(S2Point const& p) const override;
 
-  //  Encode the polygon with about 4 bytes per vertex on Google's geographic
-  //  repository, assuming the vertices have all been snapped to the centers of
-  //  S2Cells at a given level (typically with InitToSnapped). The other
-  //  vertices are stored using 24 bytes. Decoding a polygon encoded this way
-  //  always returns the original polygon, without any loss of precision. The
-  //  snap level is chosen to be the one that has the most vertices snapped to
-  //  S2Cells at that level. If most vertices need 24 bytes, then all vertices
-  //  are encoded this way (this method automatically chooses the encoding that
-  //  has the best chance of giving the smaller output size).
+  // Appends a serialized representation of the S2Polygon to "encoder".
+  //
+  // The encoding uses about 4 bytes per vertex for typical polygons in
+  // Google's geographic repository, assuming that most vertices have been
+  // snapped to the centers of S2Cells at some fixed level (typically using
+  // InitToSnapped). The remaining vertices are stored using 24 bytes.
+  // Decoding a polygon encoded this way always returns the original polygon,
+  // without any loss of precision.
+  //
+  // The snap level is chosen to be the one that has the most vertices snapped
+  // to S2Cells at that level.  If most vertices need 24 bytes, then all
+  // vertices are encoded this way (this method automatically chooses the
+  // encoding that has the best chance of giving the smaller output size).
+  //
+  // REQUIRES: "encoder" uses the default constructor, so that its buffer
+  //           can be enlarged as necessary by calling Ensure(int).
   void Encode(Encoder* const encoder) const override;
 
-  // Decode a polygon encoded with Encode().
+  // Decodes a polygon encoded with Encode().  Returns true on success.
   bool Decode(Decoder* const decoder) override;
 
-  // This function decodes a polygon by pointing the S2Loop vertices directly to
-  // the memory of decoder (that needs to be persistent). It is much faster than
-  // Decode(). However, it does this only if all the polygon vertices were
-  // encoded exactly: this happens only if the polygon wasn't snapped beforehand
-  // to a given level. Otherwise it falls back to Decode().
+  // Decodes a polygon by pointing the S2Loop vertices directly into the
+  // decoder's memory buffer (which needs to persist for the lifetime of the
+  // decoded S2Polygon).  It is much faster than Decode(), but requires that
+  // all the polygon vertices were encoded exactly using 24 bytes per vertex.
+  // This essentially requires that the polygon was not snapped beforehand to
+  // a given S2Cell level; otherwise this method falls back to Decode().
+  //
+  // Returns true on success.
   bool DecodeWithinScope(Decoder* const decoder) override;
 
+#ifndef SWIG
   // Wrapper class for indexing a polygon (see S2ShapeIndex).  Once this
   // object is inserted into an S2ShapeIndex it is owned by that index, and
   // will be automatically deleted when no longer needed by the index.  Note
   // that this class does not take ownership of the polygon itself (see
   // OwningShape below).  You can also subtype this class to store additional
   // data (see S2Shape for details).
-
-#ifndef SWIG
+  //
   // Note that unlike S2Polygon, the edges of S2Polygon::Shape are directed
   // such that the polygon interior is always on the left.
   class Shape : public S2Shape {

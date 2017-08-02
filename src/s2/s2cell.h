@@ -167,7 +167,13 @@ class S2Cell final : public S2Region {
   // The point "p" does not need to be normalized.
   bool Contains(S2Point const& p) const override;
 
+  // Appends a serialized representation of the S2Cell to "encoder".
+  //
+  // REQUIRES: "encoder" uses the default constructor, so that its buffer
+  //           can be enlarged as necessary by calling Ensure(int).
   void Encode(Encoder* const encoder) const override;
+
+  // Decodes an S2Cell encoded with Encode().  Returns true on success.
   bool Decode(Decoder* const decoder) override;
 
  private:

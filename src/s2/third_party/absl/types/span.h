@@ -126,6 +126,26 @@
 //    static const int kMyArray[] = {1, 2, 3, 4, 5};
 //    auto boxed_array = MakeArraySlice(kMyArray);
 //    auto partial_array = MakeArraySlice(kMyArray, 3);
+//
+//  As of August 2017, the differences between absl::Span and the current
+//  proposal for std::span (http://wg21.link/p0122) are:
+//    * absl::Span uses std::size_t for size_type
+//    * absl::Span has no operator()
+//    * absl::Span has no ctors for std::unique_ptr or std::shared_ptr
+//    * absl::Span has the factory functions make_span and make_const_span
+//    * absl::Span has front() and back()
+//    * bounds-checked access to absl::Span is accomplished with at()
+//    * absl::Span has compiler-provided move and copy constructors and
+//      assignment.  This is due to them being spec'd as constexpr, but that
+//      implies const in C++11.
+//    * absl::Span has no element_type or index_type typedefs
+//    * A read-only absl::Span can be implicitly constructed from an initializer
+//      list.
+//    * absl::Span has no bytes(), size_bytes(), as_bytes(), or
+//      as_mutable_bytes()
+//    * absl::Span has no static extent template parameter, nor constructors
+//      which exist only because of the static extent parameter.
+//    * absl::Span's mutable-ref ctor is explicit
 
 #ifndef S2_THIRD_PARTY_ABSL_TYPES_SPAN_H_
 #define S2_THIRD_PARTY_ABSL_TYPES_SPAN_H_
@@ -171,7 +191,7 @@ constexpr auto GetDataImpl(C& c, int) noexcept  // NOLINT(runtime/references)
 // Before C++17, string::data returns a const char* in all cases.
 inline char* GetDataImpl(string& s,
                          int) noexcept {  // NOLINT(runtime/references)
-  return s.empty() ? nullptr : &*s.begin();
+  return const_cast<char*>(s.data());
 }
 
 template <typename C>
@@ -185,7 +205,7 @@ template <typename C>
 using HasSize =
     std::is_integral<absl::decay_t<decltype(std::declval<C&>().size())>>;
 
-// We want to enable conversion from vector<T*> to Span<const T*> but
+// We want to enable conversion from vector<T*> to Span<const T* const> but
 // disable conversion from vector<Derived> to Span<Base>. Here we use
 // the fact that U** is convertible to Q* const* if and only if Q is the same
 // type or a more cv-qualified version of U.  We also decay the result type of
@@ -272,7 +292,7 @@ class Span : private internal_span::SpanRelationals<const T> {
   using EnableIfMutableView = absl::enable_if_t<!std::is_const<T>::value, U>;
 
  public:
-  using value_type = absl::remove_const_t<T>;
+  using value_type = absl::remove_cv_t<T>;
   using pointer = T*;
   using const_pointer = const T*;
   using reference = T&;
@@ -287,7 +307,6 @@ class Span : private internal_span::SpanRelationals<const T> {
   static const size_type npos = -1;
 
   constexpr Span() noexcept : Span(nullptr, 0) {}
-  constexpr explicit Span(std::nullptr_t) noexcept : Span() {}
   constexpr Span(pointer array, size_type length) noexcept
       : ptr_(array), len_(length) {}
 
@@ -295,6 +314,14 @@ class Span : private internal_span::SpanRelationals<const T> {
   template <size_t N>
   constexpr Span(T (&a)[N]) noexcept  // NOLINT(runtime/explicit)
       : Span(a, N) {}
+
+  // Substring of another Span.
+  // pos must be non-negative and <= x.length().
+  // len must be non-negative and will be pinned to at most x.length() - pos.
+  // If len==npos, the substring continues till the end of x.
+  ABSL_DEPRECATED("Prefer Span(...).subspan(pos, len)")
+  constexpr Span(Span x, size_type pos, size_type len) noexcept
+      : ptr_(x.ptr_ + pos), len_(internal_span::Min(x.len_ - pos, len)) {}
 
   // The constructor for any class supplying 'T* data()' or 'T* mutable_data()'
   // (the former is called if both exist), and 'some_integral_type size()
@@ -320,27 +347,18 @@ class Span : private internal_span::SpanRelationals<const T> {
   // possible to pass a brace-enclosed initializer list to a function expecting
   // a Span:
   //
-  //   void Process(Span<const int> x);
+  //   void Process(Span<int> x);
   //   Process({1, 2, 3});
   //
-  // The data referenced by the initializer list must outlive this
+  // The data referenced by the initializer_list must outlive this
   // Span. For example, "Span<int> s={1,2};" and "return
   // Span<int>({3,4});" are errors, as the resulting Span may
   // reference data that is no longer valid.
-  //
-  // Only read-only Spans may be constructed from initializer_lists.
   template <typename LazyT = T,
             typename = EnableIfConstView<LazyT>>
   constexpr Span(
       std::initializer_list<value_type> v) noexcept  // NOLINT(runtime/explicit)
       : Span(v.begin(), v.size()) {}
-
-  // Substring of another Span.
-  // pos must be non-negative and <= x.length().
-  // len must be non-negative and will be pinned to at most x.length() - pos.
-  // If len==npos, the substring continues till the end of x.
-  constexpr Span(Span x, size_type pos, size_type len) noexcept
-      : ptr_(x.ptr_ + pos), len_(internal_span::Min(x.len_ - pos, len)) {}
 
   // Accessors.
   constexpr pointer data() const noexcept { return ptr_; }

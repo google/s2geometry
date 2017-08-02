@@ -89,18 +89,18 @@ class S2CrossingEdgeQuery {
                                          CompareBtreeLinearSearch>;
 
   // Convenience constructor that calls Init().
-  explicit S2CrossingEdgeQuery(S2ShapeIndex const* index);
+  explicit S2CrossingEdgeQuery(S2ShapeIndexBase const* index);
   ABSL_DEPRECATED("Use pointer version.")
-  explicit S2CrossingEdgeQuery(S2ShapeIndex const& index)
+  explicit S2CrossingEdgeQuery(S2ShapeIndexBase const& index)
       : S2CrossingEdgeQuery(&index) {}
 
   // Default constructor; requires Init() to be called.
   S2CrossingEdgeQuery();
 
   // REQUIRES: "index" is not modified after this method is called.
-  void Init(S2ShapeIndex const* index);
+  void Init(S2ShapeIndexBase const* index);
   ABSL_DEPRECATED("Use pointer version.")
-  void Init(S2ShapeIndex const& index) { Init(&index); }
+  void Init(S2ShapeIndexBase const& index) { Init(&index); }
 
   // Given a query edge AB and a shape S, return all the edges of S that
   // intersect AB.  If "type" is CrossingType::INTERIOR, then only
@@ -161,12 +161,12 @@ class S2CrossingEdgeQuery {
   static void SplitBound(R2Rect const& edge_bound, int u_end, double u,
                          int v_end, double v, R2Rect child_bounds[2]);
 
-  S2ShapeIndex const* index_;
+  S2ShapeIndexBase const* index_;
 
   // Temporary storage used while processing a query.
   R2Point a_;
   R2Point b_;
-  S2ShapeIndex::Iterator iter_;
+  S2ShapeIndexBase::Iterator iter_;
 
   // This is a private field rather than a local variable to reduce memory
   // allocation when a single S2CrossingEdgeQuery object is queried many times.
@@ -179,10 +179,10 @@ class S2CrossingEdgeQuery {
 //////////////////   Implementation details follow   ////////////////////
 
 inline S2CrossingEdgeQuery::S2CrossingEdgeQuery() : index_(nullptr) {}
-inline S2CrossingEdgeQuery::S2CrossingEdgeQuery(S2ShapeIndex const* index) {
+inline S2CrossingEdgeQuery::S2CrossingEdgeQuery(S2ShapeIndexBase const* index) {
   Init(index);
 }
-inline void S2CrossingEdgeQuery::Init(S2ShapeIndex const* index) {
+inline void S2CrossingEdgeQuery::Init(S2ShapeIndexBase const* index) {
   index_ = index;
   iter_.Init(index);
 }

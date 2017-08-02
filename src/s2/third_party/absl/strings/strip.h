@@ -1,4 +1,4 @@
-// Copyright 2011 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,14 +13,8 @@
 // limitations under the License.
 //
 
-// Author: jyrki@google.com (Jyrki Alakuijala)
-//
 // This file contains various functions for "stripping" aka removing various
-// characters and substrings from a string. Much of the code in here is old and
-// operates on C-style strings such as char* and const char*. Prefer the
-// interfaces that take and return absl::string_view and C++ string objects. See
-// //third_party/absl/strings/string_view_utils.h for similar functions that
-// operate on absl::string_view.
+// characters and substrings from a string.
 
 #ifndef S2_THIRD_PARTY_ABSL_STRINGS_STRIP_H_
 #define S2_THIRD_PARTY_ABSL_STRINGS_STRIP_H_
@@ -31,7 +25,28 @@
 
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/strings/ascii_ctype.h"
+#include "s2/third_party/absl/strings/match.h"
 #include "s2/third_party/absl/strings/string_view.h"
+
+namespace absl {
+
+// If "*s" starts with "expected", consume it and return true.
+// Otherwise, return false.
+inline bool ConsumePrefix(absl::string_view* s, absl::string_view expected) {
+  if (!absl::StartsWith(*s, expected)) return false;
+  s->remove_prefix(expected.size());
+  return true;
+}
+
+// If "*s" ends with "expected", remove it and return true.
+// Otherwise, return false.
+inline bool ConsumeSuffix(absl::string_view* s, absl::string_view expected) {
+  if (!absl::EndsWith(*s, expected)) return false;
+  s->remove_suffix(expected.size());
+  return true;
+}
+
+}  // namespace absl
 
 // Returns a copy of the input string 'str' with the given 'prefix' removed. If
 // the prefix doesn't match, returns a copy of the original string.

@@ -586,8 +586,7 @@ void S2ClosestPointQuery<Data>::InitQueue(Target const& target) {
     if (!iter_.Done()) {
       MaybeAddResult(iter_.point_data(), target);
     }
-    if (!iter_.AtBegin()) {
-      iter_.Prev();
+    if (iter_.Prev()) {
       MaybeAddResult(iter_.point_data(), target);
     }
   }

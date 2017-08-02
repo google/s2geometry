@@ -50,10 +50,6 @@ S2CellUnion::S2CellUnion(vector<S2CellId> cell_ids)
   Normalize();
 }
 
-S2CellUnion::S2CellUnion(S2CellId id)
-    : cell_ids_(1, id) {
-}
-
 S2CellUnion::S2CellUnion(vector<uint64> const& cell_ids)
     : cell_ids_(ToS2CellIds(cell_ids)) {
   Normalize();
@@ -78,11 +74,6 @@ S2CellUnion S2CellUnion::FromBeginEnd(S2CellId begin, S2CellId end) {
 void S2CellUnion::Init(vector<S2CellId> cell_ids) {
   cell_ids_ = std::move(cell_ids);
   Normalize();
-}
-
-void S2CellUnion::Init(S2CellId cell_id) {
-  cell_ids_.clear();
-  cell_ids_.push_back(cell_id);
 }
 
 void S2CellUnion::Init(vector<uint64> const& cell_ids) {
@@ -159,12 +150,11 @@ bool S2CellUnion::IsNormalized() {
   return true;
 }
 
-void S2CellUnion::Normalize() {
-  Normalize(&cell_ids_);
-  DCHECK(IsNormalized());
+bool S2CellUnion::Normalize() {
+  return Normalize(&cell_ids_);
 }
 
-/*static*/ void S2CellUnion::Normalize(vector<S2CellId>* ids) {
+/*static*/ bool S2CellUnion::Normalize(vector<S2CellId>* ids) {
   // Optimize the representation by discarding cells contained by other cells,
   // and looking for cases where all subcells of a parent cell are present.
 
@@ -187,7 +177,9 @@ void S2CellUnion::Normalize() {
     }
     (*ids)[out++] = id;
   }
+  if (ids->size() == out) return false;
   ids->resize(out);
+  return true;
 }
 
 void S2CellUnion::Denormalize(int min_level, int level_mod,

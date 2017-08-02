@@ -129,7 +129,7 @@
 
 // OS_IOS
 #if defined(__APPLE__)
-// traditionally defined __APPLE__ themselves via other build systems, since mac
+// traditionally defined OS_IOS themselves via other build systems, since mac
 // TODO(user): Remove this when all toolchains make the proper defines.
 #include <TargetConditionals.h>
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
@@ -227,7 +227,7 @@ inline void sized_delete(void *ptr, size_t size) {
 // _BIG_ENDIAN
 #include <endian.h>
 
-#elif defined(__APPLE__) || defined(OS_IOS)
+#elif defined(__APPLE__)
 
 // BIG_ENDIAN
 #include <machine/endian.h>  // NOLINT(build/include)
@@ -276,7 +276,7 @@ inline void sized_delete(void *ptr, size_t size) {
 #define bswap_32(x) _byteswap_ulong(x)
 #define bswap_64(x) _byteswap_uint64(x)
 
-#elif defined(__APPLE__) || defined(OS_IOS)
+#elif defined(__APPLE__)
 // Mac OS X / Darwin features
 #include <libkern/OSByteOrder.h>
 #define bswap_16(x) OSSwapInt16(x)
@@ -460,10 +460,10 @@ std::ostream &operator<<(std::ostream &out, const pthread_t &thread_id);
 #endif
 
 // EXFULL
-#if defined(__APPLE__) || defined(OS_IOS)
+#if defined(__APPLE__)
 // Linux has this in <linux/errno.h>
 #define EXFULL ENOMEM  // not really that great a translation...
-#endif                 // __APPLE__ || OS_IOS
+#endif                 // __APPLE__
 #ifdef _MSC_VER
 // This actually belongs in errno.h but there's a name conflict in errno
 // on WinNT. They (and a ton more) are also found in Winsock2.h, but
@@ -472,16 +472,16 @@ std::ostream &operator<<(std::ostream &out, const pthread_t &thread_id);
 #endif                 // _MSC_VER
 
 // MSG_NOSIGNAL
-#if defined(__APPLE__) || defined(OS_IOS)
+#if defined(__APPLE__)
 // Doesn't exist on OSX.
 #define MSG_NOSIGNAL 0
-#endif  // __APPLE__ || OS_IOS
+#endif  // __APPLE__
 
 // __ptr_t
-#if defined(__APPLE__) || defined(OS_IOS)
+#if defined(__APPLE__)
 // Linux has this in <sys/cdefs.h>
 #define __ptr_t void *
-#endif  // __APPLE__ || OS_IOS
+#endif  // __APPLE__
 #ifdef _MSC_VER
 // From glob.h
 #define __ptr_t void *
@@ -501,7 +501,7 @@ std::ostream &operator<<(std::ostream &out, const pthread_t &thread_id);
 // -----------------------------------------------------------------------------
 
 // strnlen
-#if defined(__APPLE__) || defined(OS_IOS)
+#if defined(__APPLE__)
 // Darwin doesn't have strnlen. No comment.
 inline size_t strnlen(const char *s, size_t maxlen) {
   const char* end = (const char *)memchr(s, '\0', maxlen);
@@ -548,7 +548,7 @@ inline void bzero(void *s, int n) { memset(s, 0, n); }
 #endif  // _MSC_VER
 
 // gethostbyname
-#if defined(OS_WINDOWS) || defined(__APPLE__) || defined(OS_IOS)
+#if defined(OS_WINDOWS) || defined(__APPLE__)
 // gethostbyname() *is* thread-safe for Windows native threads. It is also
 // safe on Mac OS X and iOS, where it uses thread-local storage, even though the
 // manpages claim otherwise. For details, see
@@ -797,7 +797,7 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 // __GENCLAVE__ platform uses newlib without an underlying OS, which provides
 // memalign, but not posix_memalign.
 #if defined(__cplusplus) &&                                               \
-    (((defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) || \
+    (((defined(__GNUC__) || defined(__APPLE__) || \
        defined(__NVCC__)) &&                                              \
       !defined(SWIG)) ||                                                  \
      ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)) ||   \
@@ -911,7 +911,7 @@ struct AlignType { typedef char result[Size]; };
 #endif  // __cplusplus
 
 // Prefetch
-#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+#if (defined(__GNUC__) || defined(__APPLE__)) && \
     !defined(SWIG)
 #ifdef __cplusplus
 #if defined(__GNUC__) || defined(__llvm__)
@@ -1008,7 +1008,7 @@ extern inline void prefetch(const void *) {}
 // -----------------------------------------------------------------------------
 
 // FTELLO, FSEEKO
-#if (defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS)) && \
+#if (defined(__GNUC__) || defined(__APPLE__)) && \
     !defined(SWIG)
 #define FTELLO ftello
 #define FSEEKO fseeko
@@ -1021,7 +1021,7 @@ extern inline void prefetch(const void *) {}
 
 // __STD
 // Our STL-like classes use __STD.
-#if defined(__GNUC__) || defined(__APPLE__) || defined(OS_IOS) || \
+#if defined(__GNUC__) || defined(__APPLE__) || \
     defined(_MSC_VER)
 #define __STD std
 #endif

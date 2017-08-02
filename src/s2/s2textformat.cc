@@ -245,7 +245,7 @@ string ToString(s2shapeutil::LaxPolygon const& polygon) {
   return out;
 }
 
-string ToString(S2ShapeIndex const& index) {
+string ToString(S2ShapeIndexBase const& index) {
   string out;
   for (int dim = 0; dim < 3; ++dim) {
     if (dim > 0) out += "#";

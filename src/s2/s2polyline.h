@@ -245,16 +245,22 @@ class S2Polyline final : public S2Region {
   // well-defined except at the polyline vertices.
   bool Contains(S2Point const& p) const override { return false; }
 
+  // Appends a serialized representation of the S2Polyline to "encoder".
+  //
+  // REQUIRES: "encoder" uses the default constructor, so that its buffer
+  //           can be enlarged as necessary by calling Ensure(int).
   void Encode(Encoder* const encoder) const override;
+
+  // Decodes an S2Polyline encoded with Encode().  Returns true on success.
   bool Decode(Decoder* const decoder) override;
 
+#ifndef SWIG
   // Wrapper class for indexing a polyline (see S2ShapeIndex).  Once this
   // object is inserted into an S2ShapeIndex it is owned by that index, and
   // will be automatically deleted when no longer needed by the index.  Note
   // that this class does not take ownership of the polyline itself (see
   // OwningShape below).  You can also subtype this class to store additional
   // data (see S2Shape for details).
-#ifndef SWIG
   class Shape : public S2Shape {
    public:
     Shape() : polyline_(nullptr) {}  // Must call Init().

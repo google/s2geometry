@@ -159,7 +159,7 @@ static void GetClosestEdges(Target const& target, S2ClosestEdgeQuery *query,
   EXPECT_LE(query->num_edges(), query->max_edges());
   if (query->max_distance() == S1Angle::Infinity()) {
     // We can predict exactly how many edges should be returned.
-    EXPECT_EQ(min(query->max_edges(), query->index().GetNumEdges()),
+    EXPECT_EQ(min(query->max_edges(), s2shapeutil::GetNumEdges(query->index())),
               query->num_edges());
   }
   for (int i = 0; i < query->num_edges(); ++i) {

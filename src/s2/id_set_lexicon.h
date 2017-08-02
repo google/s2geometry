@@ -73,7 +73,7 @@ class IdSetLexicon {
   IdSetLexicon();
   ~IdSetLexicon();
 
-  // IdSetLexicon is copyable and moveable.
+  // IdSetLexicon is movable and copyable.
   IdSetLexicon(IdSetLexicon const&);
   IdSetLexicon& operator=(IdSetLexicon const&);
   IdSetLexicon(IdSetLexicon&&);

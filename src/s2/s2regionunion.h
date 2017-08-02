@@ -70,10 +70,6 @@ class S2RegionUnion final : public S2Region {
   bool Contains(S2Point const& p) const override;
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
-  void Encode(Encoder* const encoder) const override {
-    LOG(FATAL) << "Unimplemented";
-  }
-  bool Decode(Decoder* const decoder) override { return false; }
 
  private:
   // Internal copy constructor used only by Clone() that makes a deep copy of

@@ -46,7 +46,7 @@ class S2PointIndexTest : public ::testing::Test {
 
   void Verify() {
     Contents remaining = contents_;
-    for (Index::Iterator it(index_); !it.Done(); it.Next()) {
+    for (Index::Iterator it(index_); !it.done(); it.Next()) {
       Contents::iterator element = remaining.find(it.point_data());
       EXPECT_TRUE(element != remaining.end());
       remaining.erase(element);
@@ -56,14 +56,14 @@ class S2PointIndexTest : public ::testing::Test {
 
   void TestIteratorMethods() {
     Index::Iterator it(index_);
-    EXPECT_TRUE(it.AtBegin());
+    EXPECT_FALSE(it.Prev());
     it.Finish();
-    EXPECT_TRUE(it.Done());
+    EXPECT_TRUE(it.done());
 
     // Iterate through all the cells in the index.
     S2CellId prev_cellid = S2CellId::None();
     S2CellId min_cellid = S2CellId::Begin(S2CellId::kMaxLevel);
-    for (it.Reset(); !it.Done(); it.Next()) {
+    for (it.Reset(); !it.done(); it.Next()) {
       S2CellId cellid = it.id();
       EXPECT_EQ(cellid, S2CellId(it.point()));
 
@@ -83,9 +83,8 @@ class S2PointIndexTest : public ::testing::Test {
       }
       // Test Prev(), Next(), Seek(), and SeekForward().
       if (prev_cellid.is_valid()) {
-        EXPECT_FALSE(it.AtBegin());
         it2 = it;
-        it2.Prev();
+        EXPECT_TRUE(it2.Prev());
         EXPECT_EQ(prev_cellid, it2.id());
         it2.Next();
         EXPECT_EQ(cellid, it2.id());

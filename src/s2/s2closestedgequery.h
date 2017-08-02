@@ -167,7 +167,7 @@ class S2ClosestEdgeQuery {
 
   // Convenience constructor that calls Init().  Options may be specified here
   // or changed at any time using the mutable_options() accessor method.
-  explicit S2ClosestEdgeQuery(S2ShapeIndex const* index,
+  explicit S2ClosestEdgeQuery(S2ShapeIndexBase const* index,
                               Options const& options = Options());
 
   // Default constructor; requires Init() to be called.
@@ -178,14 +178,14 @@ class S2ClosestEdgeQuery {
   // time using the mutable_options() accessor method.
   //
   // REQUIRES: Reset() must be called if "index" is modified.
-  void Init(S2ShapeIndex const* index, Options const& options = Options());
+  void Init(S2ShapeIndexBase const* index, Options const& options = Options());
 
   // Reset the query state.  This method must be called whenever the
   // underlying S2ShapeIndex is modified.
   void Reset();
 
   // Return a reference to the underlying S2ShapeIndex.
-  S2ShapeIndex const& index() const;
+  S2ShapeIndexBase const& index() const;
 
   // Returns the query options.  Options can be modifed between queries.
   Options const& options() const;
@@ -225,12 +225,12 @@ class S2ClosestEdgeQuery {
   ///////////////////////// Deprecated Methods //////////////////////////
 
   ABSL_DEPRECATED("Use S2ClosestEdgeQuery(&index, options)")
-  explicit S2ClosestEdgeQuery(S2ShapeIndex const& index)
+  explicit S2ClosestEdgeQuery(S2ShapeIndexBase const& index)
       : S2ClosestEdgeQuery(&index, Options()) {
   }
 
   ABSL_DEPRECATED("Use Init(&index, options)")
-  void Init(S2ShapeIndex const& index) {
+  void Init(S2ShapeIndexBase const& index) {
     Init(&index, Options());
   }
 
@@ -353,12 +353,12 @@ inline void S2ClosestEdgeQuery::Options::set_max_error(S1Angle max_error) {
   Base::Options::set_max_error(Distance(max_error));
 }
 
-inline S2ClosestEdgeQuery::S2ClosestEdgeQuery(S2ShapeIndex const* index,
+inline S2ClosestEdgeQuery::S2ClosestEdgeQuery(S2ShapeIndexBase const* index,
                                               Options const& options) {
   Init(index, options);
 }
 
-inline void S2ClosestEdgeQuery::Init(S2ShapeIndex const* index,
+inline void S2ClosestEdgeQuery::Init(S2ShapeIndexBase const* index,
                                      Options const& options) {
   options_ = options;
   base_.Init(index);
@@ -368,7 +368,7 @@ inline void S2ClosestEdgeQuery::Reset() {
   base_.Reset();
 }
 
-inline S2ShapeIndex const& S2ClosestEdgeQuery::index() const {
+inline S2ShapeIndexBase const& S2ClosestEdgeQuery::index() const {
   return base_.index();
 }
 
