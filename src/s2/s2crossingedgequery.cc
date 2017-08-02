@@ -220,7 +220,7 @@ bool S2CrossingEdgeQuery::GetCells(S2Point const& a, S2Point const& b,
 void S2CrossingEdgeQuery::GetCells(S2PaddedCell const& pcell,
                                    R2Rect const& edge_bound) {
   iter_.Seek(pcell.id().range_min());
-  if (iter_.Done() || iter_.id() > pcell.id().range_max()) {
+  if (iter_.done() || iter_.id() > pcell.id().range_max()) {
     // The index does not contain "pcell" or any of its descendants.
     return;
   }

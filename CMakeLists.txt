@@ -127,6 +127,8 @@ install(FILES src/s2/third_party/absl/base/internal/identity.h
         DESTINATION include/s2/third_party/absl/base/internal)
 install(FILES src/s2/third_party/absl/container/inlined_vector.h
         DESTINATION include/s2/third_party/absl/container)
+install(FILES src/s2/third_party/absl/memory/memory.h
+        DESTINATION include/s2/third_party/absl/memory)
 install(FILES src/s2/third_party/absl/meta/type_traits.h
         DESTINATION include/s2/third_party/absl/meta)
 install(FILES src/s2/third_party/absl/numeric/int128.h

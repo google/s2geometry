@@ -379,6 +379,41 @@ TEST(VertexIdLaxLoop, InvertedLoop) {
   EXPECT_TRUE(shape.contains_origin());
 }
 
+TEST(RangeIterator, Next) {
+  // Create an index with one point each on S2CellId faces 0, 1, and 2.
+  auto index = s2textformat::MakeIndex("0:0 | 0:90 | 90:0 # #");
+  RangeIterator it(*index);
+  EXPECT_EQ(0, it.id().face());
+  it.Next();
+  EXPECT_EQ(1, it.id().face());
+  it.Next();
+  EXPECT_EQ(2, it.id().face());
+  it.Next();
+  EXPECT_EQ(S2CellId::Sentinel(), it.id());
+  EXPECT_TRUE(it.done());
+}
+
+TEST(RangeIterator, EmptyIndex) {
+  auto empty = s2textformat::MakeIndex("# #");
+  auto non_empty = s2textformat::MakeIndex("0:0 # #");
+  RangeIterator empty_it(*empty);
+  RangeIterator non_empty_it(*non_empty);
+  EXPECT_FALSE(non_empty_it.done());
+  EXPECT_TRUE(empty_it.done());
+
+  empty_it.SeekTo(non_empty_it);
+  EXPECT_TRUE(empty_it.done());
+
+  empty_it.SeekBeyond(non_empty_it);
+  EXPECT_TRUE(empty_it.done());
+
+  empty_it.SeekTo(empty_it);
+  EXPECT_TRUE(empty_it.done());
+
+  empty_it.SeekBeyond(empty_it);
+  EXPECT_TRUE(empty_it.done());
+}
+
 // A set of edge pairs within an S2ShapeIndex.
 using EdgePairVector = std::vector<std::pair<ShapeEdgeId, ShapeEdgeId>>;
 

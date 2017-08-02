@@ -60,7 +60,7 @@ class SequenceLexicon {
   explicit SequenceLexicon(Hasher const& hasher = Hasher(),
                            KeyEqual const& key_equal = KeyEqual());
 
-  // SequenceLexicon is copyable and moveable.
+  // SequenceLexicon is movable and copyable.
   SequenceLexicon(SequenceLexicon const&);
   SequenceLexicon& operator=(SequenceLexicon const&);
   SequenceLexicon(SequenceLexicon&&);

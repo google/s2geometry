@@ -15,21 +15,30 @@
 
 #include "s2/third_party/absl/strings/match.h"
 
-#include "s2/third_party/absl/strings/string_view_utils.h"
+#include "s2/third_party/absl/strings/internal/memutil.h"
 
 namespace absl {
+
+namespace {
+// Forked from string_view_utils. Should re-unify with numbers.cc at
+// some point.
+bool CaseEqual(absl::string_view piece1, absl::string_view piece2) {
+  return (piece1.size() == piece2.size() &&
+          0 == absl::strings_internal::memcasecmp(piece1.data(), piece2.data(),
+                                                  piece1.size()));
+  // memcasecmp uses ascii_tolower().
+}
+}  // namespace
 
 bool StartsWithIgnoreCase(absl::string_view text,
                           absl::string_view starts_with) {
   if (text.size() < starts_with.size()) return false;
-  return strings::EqualIgnoreCase(text.substr(0, starts_with.size()),
-                                  starts_with);
+  return CaseEqual(text.substr(0, starts_with.size()), starts_with);
 }
 
 bool EndsWithIgnoreCase(absl::string_view text, absl::string_view ends_with) {
   if (text.size() < ends_with.size()) return false;
-  return strings::EqualIgnoreCase(text.substr(text.size() - ends_with.size()),
-                                  ends_with);
+  return CaseEqual(text.substr(text.size() - ends_with.size()), ends_with);
 }
 
 }  // namespace absl

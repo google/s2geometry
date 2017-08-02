@@ -141,7 +141,7 @@ struct MakeUniqueResult<T[N]> {
 //         auto my_array = absl::MakeUnique<int[10]>();
 //
 //       In those cases, of course, you can still use the overload above and
-//       simply intialize it to its desired size:
+//       simply initialize it to its desired size:
 //
 //         auto my_array = absl::MakeUnique<int[]>(10);
 

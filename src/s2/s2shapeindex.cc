@@ -42,7 +42,7 @@ using std::vector;
 //
 // The default maximum number of edges per cell (not counting "long" edges).
 // If a cell has more than this many edges, and it is not a leaf cell, then it
-// is subdivided.  This flag can be overridden via S2ShapeIndexOptions.
+// is subdivided.  This flag can be overridden via S2ShapeIndex::Options.
 // Reasonable values range from 10 to about 50 or so.
 DEFINE_int32(
     s2shapeindex_default_max_edges_per_cell, 10,
@@ -173,52 +173,34 @@ S2ClippedShape* S2ShapeIndexCell::add_shapes(int n) {
   return &shapes_[size];
 }
 
-S2ShapeIndexOptions::S2ShapeIndexOptions()
+S2ShapeIndex::Options::Options()
     : max_edges_per_cell_(FLAGS_s2shapeindex_default_max_edges_per_cell) {
 }
 
-void S2ShapeIndexOptions::set_max_edges_per_cell(
+void S2ShapeIndex::Options::set_max_edges_per_cell(
     int max_edges_per_cell) {
   max_edges_per_cell_ = max_edges_per_cell;
 }
 
-S2Point S2ShapeIndex::Iterator::center() const {
-  return id().ToPoint();
-}
-
-bool S2ShapeIndex::Iterator::Locate(S2Point const& target_point) {
-  // Let I = cell_map_->lower_bound(T), where T is the leaf cell containing
-  // "target_point".  Then if T is contained by an index cell, then the
-  // containing cell is either I or I'.  We test for containment by comparing
-  // the ranges of leaf cells spanned by T, I, and I'.
-
-  S2CellId target(target_point);
-  Seek(target);
-  if (!Done() && id().range_min() <= target) return true;
-  if (!AtBegin()) {
-    Prev();
-    if (id().range_max() >= target) return true;
-  }
-  return false;
+bool S2ShapeIndex::Iterator::Locate(S2Point const& target) {
+  return LocateImpl(target, this);
 }
 
 S2ShapeIndex::CellRelation S2ShapeIndex::Iterator::Locate(S2CellId target) {
-  // Let T be the target, let I = cell_map_->lower_bound(T.range_min()), and
-  // let I' be the predecessor of I.  If T contains any index cells, then T
-  // contains I.  Similarly, if T is contained by an index cell, then the
-  // containing cell is either I or I'.  We test for containment by comparing
-  // the ranges of leaf cells spanned by T, I, and I'.
+  return LocateImpl(target, this);
+}
 
-  Seek(target.range_min());
-  if (!Done()) {
-    if (id() >= target && id().range_min() <= target) return INDEXED;
-    if (id() <= target.range_max()) return SUBDIVIDED;
-  }
-  if (!AtBegin()) {
-    Prev();
-    if (id().range_max() >= target) return INDEXED;
-  }
-  return DISJOINT;
+S2ShapeIndexCell const* S2ShapeIndex::Iterator::GetCell() const {
+  LOG(DFATAL) << "Should never be called";
+  return nullptr;
+}
+
+unique_ptr<S2ShapeIndex::IteratorBase> S2ShapeIndex::Iterator::Clone() const {
+  return absl::MakeUnique<Iterator>(*this);
+}
+
+void S2ShapeIndex::Iterator::Copy(IteratorBase const& other)  {
+  *this = *down_cast<Iterator const*>(&other);
 }
 
 S2ShapeIndex::S2ShapeIndex()
@@ -226,19 +208,24 @@ S2ShapeIndex::S2ShapeIndex()
       index_status_(FRESH) {
 }
 
-S2ShapeIndex::S2ShapeIndex(S2ShapeIndexOptions const& options)
+S2ShapeIndex::S2ShapeIndex(Options const& options)
     : options_(options),
       pending_additions_begin_(0),
       index_status_(FRESH) {
 }
 
-void S2ShapeIndex::Init(S2ShapeIndexOptions const& options) {
+void S2ShapeIndex::Init(Options const& options) {
   DCHECK(shapes_.empty());
   options_ = options;
 }
 
 S2ShapeIndex::~S2ShapeIndex() {
   Reset();
+}
+
+void S2ShapeIndex::Minimize() {
+  // TODO(ericv): Implement.  In theory we should be able to discard the
+  // entire index and rebuild it the next time it is needed.
 }
 
 void S2ShapeIndex::Add(unique_ptr<S2Shape> shape) {
@@ -282,7 +269,7 @@ unique_ptr<S2Shape> S2ShapeIndex::Release(int shape_id) {
 
 vector<unique_ptr<S2Shape>> S2ShapeIndex::ReleaseAll() {
   Iterator it;
-  for (it.InitStale(this); !it.Done(); it.Next()) {
+  for (it.InitStale(this, S2ShapeIndex::BEGIN); !it.done(); it.Next()) {
     delete &it.cell();
   }
   cell_map_.clear();
@@ -731,8 +718,8 @@ void S2ShapeIndex::GetUpdateBatches(vector<BatchDescriptor>* batches) const {
   // The following memory estimates are based on heap profiling.
   //
   // The final size of an S2ShapeIndex depends mainly on how finely the index
-  // is subdivided, as controlled by S2ShapeIndexOptions::max_edges_per_cell()
-  // and --s2shapeindex_default_max_edges_per_cell. For realistic values of
+  // is subdivided, as controlled by Options::max_edges_per_cell() and
+  // --s2shapeindex_default_max_edges_per_cell. For realistic values of
   // max_edges_per_cell() and shapes with moderate numbers of edges, it is
   // difficult to get much below 8 bytes per edge.  [The minimum possible size
   // is 4 bytes per edge (to store a 32-bit edge id in an S2ClippedShape) plus
@@ -1114,8 +1101,9 @@ inline S2CellId S2ShapeIndex::ShrinkToFit(S2PaddedCell const& pcell,
   if (!is_first_update() && shrunk_id != pcell.id()) {
     // Don't shrink any smaller than the existing index cells, since we need
     // to combine the new edges with those cells.
+    // Use InitStale() to avoid applying updated recursively.
     Iterator iter;
-    iter.InitStale(this);  // "Stale" avoids applying updates recursively.
+    iter.InitStale(this);
     CellRelation r = iter.Locate(shrunk_id);
     if (r == INDEXED) { shrunk_id = iter.id(); }
   }
@@ -1182,8 +1170,9 @@ void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
     // There may be existing index cells contained inside "pcell".  If we
     // encounter such a cell, we need to combine the edges being updated with
     // the existing cell contents by "absorbing" the cell.
+    // Use InitStale() to avoid applying updated recursively.
     Iterator iter;
-    iter.InitStale(this);  // "Stale" avoids applying updates recursively.
+    iter.InitStale(this);
     CellRelation r = iter.Locate(pcell.id());
     if (r == DISJOINT) {
       disjoint_from_index = true;
@@ -1643,17 +1632,6 @@ int S2ShapeIndex::CountShapes(vector<ClippedEdge const*> const& edges,
   return count;
 }
 
-int S2ShapeIndex::GetNumEdges() const {
-  // There is no need to apply updates before counting edges, since shapes are
-  // added or removed from the "shapes_" vector immediately.
-  int num_edges = 0;
-  for (auto const& s : shapes_) {
-    if (s == nullptr) continue;
-    num_edges += s->num_edges();
-  }
-  return num_edges;
-}
-
 size_t S2ShapeIndex::BytesUsed() const {
   MaybeApplyUpdates();
   size_t size = sizeof(*this);
@@ -1662,7 +1640,7 @@ size_t S2ShapeIndex::BytesUsed() const {
   size += cell_map_.bytes_used() - sizeof(cell_map_);
   size += cell_map_.size() * sizeof(S2ShapeIndexCell);
   Iterator it;
-  for (it.InitStale(this); !it.Done(); it.Next()) {
+  for (it.InitStale(this, S2ShapeIndex::BEGIN); !it.done(); it.Next()) {
     S2ShapeIndexCell const& cell = it.cell();
     size += cell.shapes_.capacity() * sizeof(S2ClippedShape);
     for (int s = 0; s < cell.num_clipped(); ++s) {

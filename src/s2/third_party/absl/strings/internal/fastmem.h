@@ -120,35 +120,35 @@ inline int fastmemcmp_inlined(const void* va, const void* vb, size_t n) {
       if (*pa != *pb) return *pa < *pb ? -1 : +1;
       ++pa;
       ++pb;
-      FALLTHROUGH_INTENDED;
+      ABSL_FALLTHROUGH_INTENDED;
     case 6:
       if (*pa != *pb) return *pa < *pb ? -1 : +1;
       ++pa;
       ++pb;
-      FALLTHROUGH_INTENDED;
+      ABSL_FALLTHROUGH_INTENDED;
     case 5:
       if (*pa != *pb) return *pa < *pb ? -1 : +1;
       ++pa;
       ++pb;
-      FALLTHROUGH_INTENDED;
+      ABSL_FALLTHROUGH_INTENDED;
     case 4:
       if (*pa != *pb) return *pa < *pb ? -1 : +1;
       ++pa;
       ++pb;
-      FALLTHROUGH_INTENDED;
+      ABSL_FALLTHROUGH_INTENDED;
     case 3:
       if (*pa != *pb) return *pa < *pb ? -1 : +1;
       ++pa;
       ++pb;
-      FALLTHROUGH_INTENDED;
+      ABSL_FALLTHROUGH_INTENDED;
     case 2:
       if (*pa != *pb) return *pa < *pb ? -1 : +1;
       ++pa;
       ++pb;
-      FALLTHROUGH_INTENDED;
+      ABSL_FALLTHROUGH_INTENDED;
     case 1:
       if (*pa != *pb) return *pa < *pb ? -1 : +1;
-      FALLTHROUGH_INTENDED;
+      ABSL_FALLTHROUGH_INTENDED;
     case 0:
       break;
   }

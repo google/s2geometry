@@ -28,7 +28,6 @@
 
 #include "s2/third_party/absl/strings/ascii_ctype.h"
 #include "s2/third_party/absl/strings/string_view.h"
-#include "s2/third_party/absl/strings/string_view_utils.h"
 
 string StripPrefixString(absl::string_view str, absl::string_view prefix) {
   if (absl::StartsWith(str, prefix)) str.remove_prefix(prefix.length());

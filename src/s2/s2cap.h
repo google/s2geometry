@@ -187,7 +187,13 @@ class S2Cap final : public S2Region {
   // The point "p" should be a unit-length vector.
   bool Contains(S2Point const& p) const override;
 
+  // Appends a serialized representation of the S2Cap to "encoder".
+  //
+  // REQUIRES: "encoder" uses the default constructor, so that its buffer
+  //           can be enlarged as necessary by calling Ensure(int).
   void Encode(Encoder* const encoder) const override;
+
+  // Decodes an S2Cap encoded with Encode().  Returns true on success.
   bool Decode(Decoder* const decoder) override;
 
   ///////////////////////////////////////////////////////////////////////

@@ -574,12 +574,12 @@
 #define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
 #endif
 
-// MUST_USE_RESULT
+// ABSL_MUST_USE_RESULT
 // Tell the compiler to warn about unused return values for functions declared
 // with this macro. The macro must appear as the very first part of a function
 // declaration or definition:
 //
-//   MUST_USE_RESULT Sprocket* AllocateSprocket();
+//   ABSL_MUST_USE_RESULT Sprocket* AllocateSprocket();
 //
 // This placement has the broadest compatibility with GCC, Clang, and MSVC, with
 // both defs and decls, and with GCC-style attributes, MSVC declspec, and C++11

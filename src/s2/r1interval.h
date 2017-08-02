@@ -50,12 +50,10 @@ class R1Interval {
   R1Interval() : bounds_(1, 0) {}
 
   // Returns an empty interval.
-  static inline R1Interval Empty() { return R1Interval(); }
+  static R1Interval Empty() { return R1Interval(); }
 
   // Convenience method to construct an interval containing a single point.
-  static R1Interval FromPoint(double p) {
-    return R1Interval(p, p);
-  }
+  static R1Interval FromPoint(double p) { return R1Interval(p, p); }
 
   // Convenience method to construct the minimal interval containing
   // the two given points.  This is equivalent to starting with an empty

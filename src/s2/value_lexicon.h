@@ -53,7 +53,7 @@ class ValueLexicon {
   explicit ValueLexicon(Hasher const& hasher = Hasher(),
                         KeyEqual const& key_equal = KeyEqual());
 
-  // ValueLexicon is copyable and moveable.
+  // ValueLexicon is movable and copyable.
   ValueLexicon(ValueLexicon const&);
   ValueLexicon& operator=(ValueLexicon const&);
   ValueLexicon(ValueLexicon&&);

@@ -80,11 +80,11 @@ void S2ShapeIndexTest::QuadraticValidate() {
 
   // "min_cellid" is the first S2CellId that has not been validated yet.
   S2CellId min_cellid = S2CellId::Begin(S2CellId::kMaxLevel);
-  for (S2ShapeIndex::Iterator it(&index_); ; it.Next()) {
+  for (S2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN); ; it.Next()) {
     // Generate a list of S2CellIds ("skipped cells") that cover the gap
     // between the last cell we validated and the next cell in the index.
     S2CellUnion skipped;
-    if (!it.Done()) {
+    if (!it.done()) {
       S2CellId cellid = it.id();
       EXPECT_GE(cellid, min_cellid);
       skipped.InitFromBeginEnd(min_cellid, cellid.range_min());
@@ -100,13 +100,13 @@ void S2ShapeIndexTest::QuadraticValidate() {
     for (int id = 0; id < index_.num_shape_ids(); ++id) {
       S2Shape const* shape = index_.shape(id);
       S2ClippedShape const* clipped = nullptr;
-      if (!it.Done()) clipped = it.cell().find_clipped(id);
+      if (!it.done()) clipped = it.cell().find_clipped(id);
 
       // First check that contains_center() is set correctly.
       for (int j = 0; j < skipped.num_cells(); ++j) {
         ValidateInterior(shape, skipped.cell_id(j), false);
       }
-      if (!it.Done()) {
+      if (!it.done()) {
         bool contains_center = clipped && clipped->contains_center();
         ValidateInterior(shape, it.id(), contains_center);
       }
@@ -121,7 +121,7 @@ void S2ShapeIndexTest::QuadraticValidate() {
         for (int j = 0; j < skipped.num_cells(); ++j) {
           ValidateEdge(edge.v0, edge.v1, skipped.cell_id(j), false);
         }
-        if (!it.Done()) {
+        if (!it.done()) {
           bool has_edge = clipped && clipped->ContainsEdge(e);
           ValidateEdge(edge.v0, edge.v1, it.id(), has_edge);
           int max_level = index_.GetEdgeMaxLevel(edge);
@@ -132,7 +132,7 @@ void S2ShapeIndexTest::QuadraticValidate() {
       }
     }
     EXPECT_LE(short_edges, index_.options().max_edges_per_cell());
-    if (it.Done()) break;
+    if (it.done()) break;
   }
 }
 
@@ -169,54 +169,49 @@ void S2ShapeIndexTest::ValidateInterior(S2Shape const* shape, S2CellId id,
 namespace {
 
 void TestIteratorMethods(S2ShapeIndex const& index) {
-  S2ShapeIndex::Iterator it(&index);
-  EXPECT_TRUE(it.AtBegin());
+  S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
+  EXPECT_FALSE(it.Prev());
   it.Finish();
-  EXPECT_TRUE(it.Done());
+  EXPECT_TRUE(it.done());
   vector<S2CellId> ids;
   S2CellId min_cellid = S2CellId::Begin(S2CellId::kMaxLevel);
-  for (it.Reset(); !it.Done(); it.Next()) {
+  for (it.Begin(); !it.done(); it.Next()) {
     S2CellId cellid = it.id();
     S2CellUnion skipped;
     skipped.InitFromBeginEnd(min_cellid, cellid.range_min());
-    S2ShapeIndex::Iterator it2(&index);
+    S2ShapeIndex::Iterator it2(&index, S2ShapeIndex::END);
     for (int i = 0; i < skipped.num_cells(); ++i) {
       EXPECT_FALSE(it2.Locate(skipped.cell_id(i).ToPoint()));
       EXPECT_EQ(S2ShapeIndex::DISJOINT, it2.Locate(skipped.cell_id(i)));
-      it2.Reset();
+      it2.Begin();
       it2.Seek(skipped.cell_id(i));
       EXPECT_EQ(cellid, it2.id());
     }
     if (!ids.empty()) {
-      EXPECT_FALSE(it.AtBegin());
       it2 = it;
-      it2.Prev();
+      EXPECT_TRUE(it2.Prev());
       EXPECT_EQ(ids.back(), it2.id());
       it2.Next();
       EXPECT_EQ(cellid, it2.id());
       it2.Seek(ids.back());
       EXPECT_EQ(ids.back(), it2.id());
-      it2.SeekForward(cellid);
-      EXPECT_EQ(cellid, it2.id());
-      it2.SeekForward(ids.back());
-      EXPECT_EQ(cellid, it2.id());
     }
-    it2.Reset();
+    it2.Begin();
     EXPECT_EQ(cellid.ToPoint(), it.center());
     EXPECT_TRUE(it2.Locate(it.center()));
     EXPECT_EQ(cellid, it2.id());
-    it2.Reset();
+    it2.Begin();
     EXPECT_EQ(S2ShapeIndex::INDEXED, it2.Locate(cellid));
     EXPECT_EQ(cellid, it2.id());
     if (!cellid.is_face()) {
-      it2.Reset();
+      it2.Begin();
       EXPECT_EQ(S2ShapeIndex::SUBDIVIDED, it2.Locate(cellid.parent()));
       EXPECT_LE(it2.id(), cellid);
       EXPECT_GE(it2.id(), cellid.parent().range_min());
     }
     if (!cellid.is_leaf()) {
       for (int i = 0; i < 4; ++i) {
-        it2.Reset();
+        it2.Begin();
         EXPECT_EQ(S2ShapeIndex::INDEXED, it2.Locate(cellid.child(i)));
         EXPECT_EQ(cellid, it2.id());
       }
@@ -227,7 +222,7 @@ void TestIteratorMethods(S2ShapeIndex const& index) {
 }
 
 TEST_F(S2ShapeIndexTest, NoEdges) {
-  EXPECT_TRUE(S2ShapeIndex::Iterator(&index_).Done());
+  EXPECT_TRUE(S2ShapeIndex::Iterator(&index_, S2ShapeIndex::BEGIN).done());
   TestIteratorMethods(index_);
 }
 
@@ -277,7 +272,8 @@ TEST_F(S2ShapeIndexTest, ManyIdenticalEdges) {
   TestIteratorMethods(index_);
   // Since all edges span the diagonal of a face, no subdivision should
   // have occurred (with the default index options).
-  for (S2ShapeIndex::Iterator it(&index_); !it.Done(); it.Next()) {
+  for (S2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN);
+       !it.done(); it.Next()) {
     EXPECT_EQ(0, it.id().level());
   }
 }
@@ -292,7 +288,8 @@ TEST_F(S2ShapeIndexTest, DegenerateEdge) {
   QuadraticValidate();
   // Check that exactly 3 index cells contain the degenerate edge.
   int count = 0;
-  for (S2ShapeIndex::Iterator it(&index_); !it.Done(); it.Next(), ++count) {
+  for (S2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN);
+       !it.done(); it.Next(), ++count) {
     EXPECT_TRUE(it.id().is_leaf());
     EXPECT_EQ(1, it.cell().num_clipped());
     EXPECT_EQ(1, it.cell().clipped(0).num_edges());
@@ -314,11 +311,11 @@ TEST_F(S2ShapeIndexTest, ManyTinyEdges) {
   index_.Add(std::move(shape));
   QuadraticValidate();
   // Check that there is exactly one index cell and that it is a leaf cell.
-  S2ShapeIndex::Iterator it(&index_);
-  ASSERT_TRUE(!it.Done());
+  S2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN);
+  ASSERT_TRUE(!it.done());
   EXPECT_TRUE(it.id().is_leaf());
   it.Next();
-  EXPECT_TRUE(it.Done());
+  EXPECT_TRUE(it.done());
 }
 
 TEST_F(S2ShapeIndexTest, SimpleUpdates) {
@@ -503,8 +500,10 @@ void LazyUpdatesTest::ReaderThread() {
     // We intentionally release the lock so that many threads have a chance
     // to access the S2ShapeIndex in parallel.
     lock_.Unlock();
-    for (S2ShapeIndex::Iterator it(&index_); !it.Done(); it.Next())
+    for (S2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN);
+         !it.done(); it.Next()) {
       continue;
+    }
     lock_.Lock();
     if (--num_readers_left_ == 0) {
       all_readers_done_.Signal();

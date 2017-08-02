@@ -17,9 +17,11 @@
 //
 // S2ShapeIndex indexes a set of shapes.  A shape is a collection of edges
 // that optionally defines an interior.  It can be used to represent a set of
-// points, a set of polylines, or a set of polygons.  For shapes that have
-// interiors, the index makes it very fast to determine the shape(s) that
-// contain a given point or region.
+// points, a set of polylines, or a set of polygons.  The shapes in the index
+// are allowed to intersect arbitrarily.  The index makes it very fast to
+// answer queries such as finding the closest shape(s) to a given point,
+// determing which shape(s) contain a given point, determining whether two
+// S2ShapeIndexes intersect, etc.
 //
 // For example, to index a set of polygons and then determine which polygons
 // contain various query points:
@@ -39,11 +41,22 @@
 //   }
 // }
 //
-// The index can be updated incrementally by adding or removing shapes
-// (although each individual shape is immutable).  It is designed to handle up
-// to hundreds of millions of edges.  All data structures are designed to be
-// small, so the index is compact; generally it is smaller than the underlying
-// data being indexed.  The index is also fast to construct.
+// TODO(ericv): There are currently two S2ShapeIndex implementations, both
+// derived from a common base class (S2ShapeIndexBase).  S2ShapeIndex itself
+// represents a mutable index that can be updated incrementally by adding or
+// removing shapes.  It also has an Encode method that allows the index to be
+// serialized.  An encoded S2ShapeIndex can be decoded either into its
+// original form (S2ShapeIndex) or into an EncodedS2ShapeIndex (the other
+// subtype of S2ShapeIndexBase).  The main advantage of EncodedS2ShapeIndex is
+// that it can be constructed instantaneously, since the index is kept in its
+// original encoded form.  Data is decoded only when an operation needs it.
+// For example, to determine which shapes(s) contain a given query point only
+// requires decoding the data in the S2ShapeIndexCell that contains that point.
+//
+// S2ShapeIndex is designed to handle up to hundreds of millions of edges.
+// All data structures are designed to be small, so the index is compact;
+// generally it is smaller than the underlying data being indexed.  The index
+// is also fast to construct.
 //
 // All "const" methods are thread-safe provided that they do not overlap with
 // calls to non-const methods.  Non-const methods are not thread-safe.  This
@@ -80,6 +93,7 @@
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/base/mutex.h"
 #include "s2/base/spinlock.h"
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/btree/btree_map.h"
 #include "s2/_fpcontractoff.h"
 #include "s2/s2cellid.h"
@@ -152,13 +166,12 @@ class S2Shape {
     Edge() = default;
     Edge(S2Point const& _v0, S2Point const& _v1) : v0(_v0), v1(_v1) {}
 
-    // TODO(ericv): Convert to functions, define all 6 comparisons.
-    bool operator==(Edge const& other) const {
-      return v0 == other.v0 && v1 == other.v1;
+    // TODO(ericv): Define all 6 comparisons.
+    friend bool operator==(Edge const& x, Edge const& y) {
+      return x.v0 == y.v0 && x.v1 == y.v1;
     }
-    bool operator<(Edge const& other) const {
-      return v0 < other.v0 || (v0 == other.v0 && v1 < other.v1);
-    }
+    friend bool operator<(Edge const& x, Edge const& y) {
+      return x.v0 < y.v0 || (x.v0 == y.v0 && x.v1 < y.v1); }
   };
 
   // A range of edge ids corresponding to a chain of connected edges,
@@ -339,7 +352,7 @@ class S2ClippedShape {
 };
 
 // S2ShapeIndexCell stores the index contents for a particular S2CellId.
-// Currently it consists of a set of clipped shapes.
+// It consists of a set of clipped shapes.
 class S2ShapeIndexCell {
  public:
   // Return the number of clipped shapes in this cell.
@@ -376,69 +389,426 @@ class S2ShapeIndexCell {
   void operator=(S2ShapeIndexCell const&) = delete;
 };
 
-// Options that affect construction of the S2ShapeIndex.
-// This class is intended to be copied by value as desired.
-class S2ShapeIndexOptions {
+// S2ShapeIndexBase is an abstract base class for all S2ShapeIndex
+// implementations.  An S2ShapeIndex is essentially a map from S2CellIds to
+// the set of clipped shapes that intersect each S2CellId.  It is adaptively
+// refined to ensure that no cell contains more than a small number of edges.
+//
+// In addition to implementing a shared set of virtual methods, all
+// S2ShapeIndex subtypes define an Iterator type with the same API.  This
+// makes it easy to convert code that uses a particular S2ShapeIndex subtype
+// to instead use the abstract base class (or vice versa).  It also makes it
+// possible to avoid the overhead of virtual method calls if desired by
+// making the S2ShapeIndex subtype a template argument.
+//
+// TODO(ericv/jrosenstock): Rename this class to S2ShapeIndex.
+class S2ShapeIndexBase {
+ protected:
+  class IteratorBase;
+
  public:
-  S2ShapeIndexOptions();
+  virtual ~S2ShapeIndexBase() {}
 
-  // The maximum number of edges per cell.  If a cell has more than this many
-  // edges that are not considered "long" relative to the cell size, and it is
-  // not a leaf cell, then it is subdivided.  (Whether an edge is considered
-  // "long" is controlled by the --s2shapeindex_cell_size_to_long_edge_ratio
-  // flag.)
-  //
-  // Values between 10 and 50 represent a reasonable balance between memory
-  // usage, construction time, and query time.  Small values make queries
-  // faster, while large values make construction faster and use less memory.
-  // Values higher than 50 do not save significant additional memory, and
-  // query times can increase substantially, especially for algorithms that
-  // visit all pairs of potentially intersecting edges (such as polygon
-  // validation), since this is quadratic in the number of edges per cell.
-  //
-  // Note that the *average* number of edges per cell is generally slightly
-  // less than half of the maximum value defined here.
-  //
-  // Defaults to value given by --s2shapeindex_default_max_edges_per_cell.
-  int max_edges_per_cell() const { return max_edges_per_cell_; }
-  void set_max_edges_per_cell(int max_edges_per_cell);
+  // Returns the number of distinct shape ids in the index.  This is the same
+  // as the number of shapes provided that no shapes have ever been removed.
+  // (Shape ids are never reused.)
+  virtual int num_shape_ids() const = 0;
 
- private:
-  int max_edges_per_cell_;
+  // Returns a pointer to the shape with the given id, or nullptr if the shape
+  // has been removed from the index.
+  virtual S2Shape* shape(int id) const = 0;
+
+  // Minimizes memory usage by requesting that any data structures that can be
+  // rebuilt should be discarded.  This method invalidates all iterators.
+  //
+  // Like all non-const methods, this method is not thread-safe.
+  virtual void Minimize() = 0;
+
+  // The possible relationships between a "target" cell and the cells of the
+  // S2ShapeIndex.  If the target is an index cell or is contained by an index
+  // cell, it is "INDEXED".  If the target is subdivided into one or more
+  // index cells, it is "SUBDIVIDED".  Otherwise it is "DISJOINT".
+  enum CellRelation {
+    INDEXED,       // Target is contained by an index cell
+    SUBDIVIDED,    // Target is subdivided into one or more index cells
+    DISJOINT       // Target does not intersect any index cells
+  };
+
+  // When passed to an Iterator constructor, specifies whether the iterator
+  // should be positioned at the beginning of the index (BEGIN), the end of
+  // the index (END), or arbitrarily (UNPOSITIONED).  By default iterators are
+  // unpositioned, since this avoids an extra seek in this situation where one
+  // of the seek methods (such as Locate) is immediately called.
+  enum InitialPosition { BEGIN, END, UNPOSITIONED };
+
+  // A random access iterator that provides low-level access to the cells of
+  // the index.  Cells are sorted in increasing order of S2CellId.
+  class Iterator {
+   public:
+    // Default constructor; must be followed by a call to Init().
+    Iterator() : iter_(nullptr) {}
+
+    // Constructs an iterator positioned as specified.  By default iterators
+    // are unpositioned, since this avoids an extra seek in this situation
+    // where one of the seek methods (such as Locate) is immediately called.
+    //
+    // If you want to position the iterator at the beginning, e.g. in order to
+    // loop through the entire index, do this instead:
+    //
+    //   for (S2ShapeIndexBase::Iterator it(&index, S2ShapeIndex::BEGIN);
+    //        !it.done(); it.Next()) { ... }
+    explicit Iterator(S2ShapeIndexBase const* index,
+                      InitialPosition pos = UNPOSITIONED)
+        : iter_(index->NewIterator(pos)) {}
+
+    // Initializes an iterator for the given S2ShapeIndex.  This method may
+    // also be called in order to restore an iterator to a valid state after
+    // the underlying index has been updated (although it is usually easier
+    // just to declare a new iterator whenever required, since iterator
+    // construction is cheap).
+    void Init(S2ShapeIndexBase const* index,
+              InitialPosition pos = UNPOSITIONED) {
+      iter_ = index->NewIterator(pos);
+    }
+
+    // Iterators are copyable and moveable.
+    Iterator(Iterator const&);
+    Iterator& operator=(Iterator const&);
+    Iterator(Iterator&&);
+    Iterator& operator=(Iterator&&);
+
+    // Returns the S2CellId of the current index cell.  If done() is true,
+    // returns a value larger than any valid S2CellId (S2CellId::Sentinel()).
+    S2CellId id() const { return iter_->id(); }
+
+    // Returns the center point of the cell.
+    // REQUIRES: !done()
+    S2Point center() const { return id().ToPoint(); }
+
+    // Returns a reference to the contents of the current index cell.
+    // REQUIRES: !done()
+    S2ShapeIndexCell const& cell() const { return iter_->cell(); }
+
+    // Returns true if the iterator is positioned past the last index cell.
+    bool done() const { return iter_->done(); }
+
+    // Positions the iterator at the first index cell (if any).
+    void Begin() { iter_->Begin(); }
+
+    // Positions the iterator past the last index cell.
+    void Finish() { iter_->Finish(); }
+
+    // Positions the iterator at the next index cell.
+    // REQUIRES: !done()
+    void Next() { iter_->Next(); }
+
+    // If the iterator is already positioned at the beginning, returns false.
+    // Otherwise positions the iterator at the previous entry and returns true.
+    bool Prev() { return iter_->Prev(); }
+
+    // Positions the iterator at the first cell with id() >= target, or at the
+    // end of the index if no such cell exists.
+    void Seek(S2CellId target) { iter_->Seek(target); }
+
+    // Positions the iterator at the cell containing "target".  If no such cell
+    // exists, returns false and leaves the iterator positioned arbitrarily.
+    // The returned index cell is guaranteed to contain all edges that might
+    // intersect the line segment between "target" and the cell center.
+    bool Locate(S2Point const& target) {
+      return IteratorBase::LocateImpl(target, this);
+    }
+
+    // Let T be the target S2CellId.  If T is contained by some index cell I
+    // (including equality), this method positions the iterator at I and
+    // returns INDEXED.  Otherwise if T contains one or more (smaller) index
+    // cells, it positions the iterator at the first such cell I and returns
+    // SUBDIVIDED.  Otherwise it returns DISJOINT and leaves the iterator
+    // positioned arbitrarily.
+    CellRelation Locate(S2CellId target) {
+      return IteratorBase::LocateImpl(target, this);
+    }
+
+   private:
+    // Although S2ShapeIndexBase::Iterator can be used to iterate over any
+    // index subtype, it is more efficient to use the subtype's iterator when
+    // the subtype is known at compile time.  For example, MutableS2ShapeIndex
+    // should use a MutableS2ShapeIndex::Iterator.
+    //
+    // The following declarations prevent accidental use of
+    // S2ShapeIndexBase::Iterator with known subtypes.  (If you really want to
+    // do this, you can down_cast the index argument to S2ShapeIndexBase.)
+    template <class T>
+    explicit Iterator(T const* index, InitialPosition pos = UNPOSITIONED) {}
+
+    template <class T>
+    void Init(T const* index, InitialPosition pos = UNPOSITIONED) {}
+
+    std::unique_ptr<IteratorBase> iter_;
+  };
+
+ protected:
+  // Each subtype of S2ShapeIndexBase should define an Iterator type derived
+  // from the following base class.
+  class IteratorBase {
+   public:
+    virtual ~IteratorBase() {}
+
+    IteratorBase(IteratorBase const&);
+    IteratorBase& operator=(IteratorBase const&);
+
+    // Returns the S2CellId of the current index cell.  If done() is true,
+    // returns a value larger than any valid S2CellId (S2CellId::Sentinel()).
+    S2CellId id() const;
+
+    // Returns the center point of the cell.
+    // REQUIRES: !done()
+    S2Point center() const;
+
+    // Returns a reference to the contents of the current index cell.
+    // REQUIRES: !done()
+    S2ShapeIndexCell const& cell() const;
+
+    // Returns true if the iterator is positioned past the last index cell.
+    bool done() const;
+
+    // Positions the iterator at the first index cell (if any).
+    virtual void Begin() = 0;
+
+    // Positions the iterator past the last index cell.
+    virtual void Finish() = 0;
+
+    // Positions the iterator at the next index cell.
+    // REQUIRES: !done()
+    virtual void Next() = 0;
+
+    // If the iterator is already positioned at the beginning, returns false.
+    // Otherwise positions the iterator at the previous entry and returns true.
+    virtual bool Prev() = 0;
+
+    // Positions the iterator at the first cell with id() >= target, or at the
+    // end of the index if no such cell exists.
+    virtual void Seek(S2CellId target) = 0;
+
+    // Positions the iterator at the cell containing "target".  If no such cell
+    // exists, returns false and leaves the iterator positioned arbitrarily.
+    // The returned index cell is guaranteed to contain all edges that might
+    // intersect the line segment between "target" and the cell center.
+    virtual bool Locate(S2Point const& target) = 0;
+
+    // Let T be the target S2CellId.  If T is contained by some index cell I
+    // (including equality), this method positions the iterator at I and
+    // returns INDEXED.  Otherwise if T contains one or more (smaller) index
+    // cells, it positions the iterator at the first such cell I and returns
+    // SUBDIVIDED.  Otherwise it returns DISJOINT and leaves the iterator
+    // positioned arbitrarily.
+    virtual CellRelation Locate(S2CellId target) = 0;
+
+    ABSL_DEPRECATED("Use done()")
+    bool Done() const { return done(); }
+
+   protected:
+    IteratorBase() : id_(S2CellId::Sentinel()), cell_(nullptr) {}
+
+    // Sets the iterator state.  "cell" typically points to the cell contents,
+    // but may also be given as "nullptr" in order to implement decoding on
+    // demand.  In that situation, the first that the client attempts to
+    // access the cell contents, the GetCell() method is called and "cell_" is
+    // updated in a thread-safe way.
+    void set_state(S2CellId id, S2ShapeIndexCell const* cell);
+
+    // Sets the iterator state so that done() is true.
+    void set_finished();
+
+    // Returns the current contents of the "cell_" field, which may be nullptr
+    // if the cell contents have not been decoded yet.
+    S2ShapeIndexCell const* raw_cell() const;
+
+    // This method is called to decode the contents of the current cell, if
+    // set_state() was previously called with a nullptr "cell" argument.  This
+    // allows decoding on demand for subtypes that keep the cell contents in
+    // an encoded state.  It does not need to be implemented at all if
+    // set_state() is always called with (cell != nullptr).
+    //
+    // REQUIRES: This method is thread-safe.
+    // REQUIRES: Multiple calls to this method return the same value.
+    virtual S2ShapeIndexCell const* GetCell() const = 0;
+
+    // Returns an exact copy of this iterator.
+    virtual std::unique_ptr<IteratorBase> Clone() const = 0;
+
+    // Makes a copy of the given source iterator.
+    // REQUIRES: "other" has the same concrete type as "this".
+    virtual void Copy(IteratorBase const& other) = 0;
+
+    // The default implementation of Locate(S2Point).  It is instantiated by
+    // each subtype in order to (1) minimize the number of virtual method
+    // calls (since subtypes are typically "final") and (2) ensure that the
+    // correct versions of non-virtual methods such as cell() are called.
+    template <class Iter>
+    static bool LocateImpl(S2Point const& target, Iter* iter);
+
+    // The default implementation of Locate(S2CellId) (see comments above).
+    template <class Iter>
+    static CellRelation LocateImpl(S2CellId target, Iter* iter);
+
+   private:
+    friend class Iterator;
+
+    // This method is "const" because it is used internally by "const" methods
+    // in order to implement decoding on demand.
+    void set_cell(S2ShapeIndexCell const* cell) const;
+
+    S2CellId id_;
+    mutable std::atomic<S2ShapeIndexCell const*> cell_;
+  };
+
+  // Returns a new iterator positioned as specified.
+  virtual std::unique_ptr<IteratorBase> NewIterator(InitialPosition pos)
+      const = 0;
 };
 
-// The shape index is essentially a map from S2CellId to a set of clipped
-// shaped that intersect that cell id.  It is adaptively refined to ensure
+// S2ShapeIndex is essentially a map from S2CellIds to the set of clipped
+// shaped that intersect each S2CellId.  It is adaptively refined to ensure
 // that no cell contains more than a small number of edges.
-class S2ShapeIndex {
+//
+// TODO(ericv/jrosenstock): Rename this class to MutableS2ShapeIndex, and
+// probably split into a different file.
+class S2ShapeIndex final : public S2ShapeIndexBase {
  private:
   using CellMap = util::btree::btree_map<S2CellId, S2ShapeIndexCell*>;
 
  public:
+  // Options that affect construction of the S2ShapeIndex.
+  class Options {
+   public:
+    Options();
+
+    // The maximum number of edges per cell.  If a cell has more than this
+    // many edges that are not considered "long" relative to the cell size,
+    // then it is subdivided.  (Whether an edge is considered "long" is
+    // controlled by --s2shapeindex_cell_size_to_long_edge_ratio flag.)
+    //
+    // Values between 10 and 50 represent a reasonable balance between memory
+    // usage, construction time, and query time.  Small values make queries
+    // faster, while large values make construction faster and use less memory.
+    // Values higher than 50 do not save significant additional memory, and
+    // query times can increase substantially, especially for algorithms that
+    // visit all pairs of potentially intersecting edges (such as polygon
+    // validation), since this is quadratic in the number of edges per cell.
+    //
+    // Note that the *average* number of edges per cell is generally slightly
+    // less than half of the maximum value defined here.
+    //
+    // Defaults to value given by --s2shapeindex_default_max_edges_per_cell.
+    int max_edges_per_cell() const { return max_edges_per_cell_; }
+    void set_max_edges_per_cell(int max_edges_per_cell);
+
+   private:
+    int max_edges_per_cell_;
+  };
+
   // Create an S2ShapeIndex that uses the default option settings.  Option
   // values may be changed by calling Init().
   S2ShapeIndex();
 
   // Create an S2ShapeIndex with the given options.
-  explicit S2ShapeIndex(S2ShapeIndexOptions const& options);
+  explicit S2ShapeIndex(Options const& options);
 
   ~S2ShapeIndex();
 
   // Initialize an S2ShapeIndex with the given options.  This method may only
   // be called when the index is empty (i.e. newly created or Reset() has
   // just been called).
-  void Init(S2ShapeIndexOptions const& options);
+  void Init(Options const& options);
 
-  S2ShapeIndexOptions const& options() const { return options_; }
+  Options const& options() const { return options_; }
 
   // The number of distinct shape ids that have been assigned.  This equals
   // the number of shapes in the index provided that no shapes have ever been
   // removed.  (Shape ids are not reused.)
-  int num_shape_ids() const { return shapes_.size(); }
+  int num_shape_ids() const override { return shapes_.size(); }
 
   // Return a pointer to the shape with the given id, or nullptr if the shape
   // has been removed from the index.
-  S2Shape* shape(int id) const { return shapes_[id].get(); }
+  S2Shape* shape(int id) const override { return shapes_[id].get(); }
+
+  // Minimizes memory usage by requesting that any data structures that can be
+  // rebuilt should be discarded.  This method invalidates all iterators.
+  //
+  // Like all non-const methods, this method is not thread-safe.
+  void Minimize() override;
+
+  class Iterator final : public IteratorBase {
+   public:
+    // Default constructor; must be followed by a call to Init().
+    Iterator();
+
+    // Constructs an iterator positioned as specified.  By default iterators
+    // are unpositioned, since this avoids an extra seek in this situation
+    // where one of the seek methods (such as Locate) is immediately called.
+    //
+    // If you want to position the iterator at the beginning, e.g. in order to
+    // loop through the entire index, do this instead:
+    //
+    //   for (S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
+    //        !it.done(); it.Next()) { ... }
+    explicit Iterator(S2ShapeIndex const* index,
+                      // TODO(ericv): Change default to UNPOSITIONED.
+                      InitialPosition pos = BEGIN);
+
+    // Initializes an iterator for the given S2ShapeIndex.  This method may
+    // also be called in order to restore an iterator to a valid state after
+    // the underlying index has been updated (although it is usually easier
+    // just to declare a new iterator whenever required, since iterator
+    // construction is cheap).
+    // TODO(ericv): Change default to UNPOSITIONED.
+    void Init(S2ShapeIndex const* index, InitialPosition pos = BEGIN);
+
+    // Initialize an iterator for the given S2ShapeIndex without applying any
+    // pending updates.  This can be used to observe the actual current state
+    // of the index without modifying it in any way.
+    // TODO(ericv): Change default to UNPOSITIONED.
+    void InitStale(S2ShapeIndex const* index,
+                   InitialPosition pos = BEGIN);
+
+    // Inherited non-virtual methods:
+    //   S2CellId id() const;
+    //   bool done() const;
+    //   S2Point center() const;
+    S2ShapeIndexCell const& cell() const;
+
+    // IteratorBase API:
+    void Begin() override;
+    void Finish() override;
+    void Next() override;
+    bool Prev() override;
+    void Seek(S2CellId target) override;
+    bool Locate(S2Point const& target) override;
+    CellRelation Locate(S2CellId target) override;
+
+    ABSL_DEPRECATED("Use Iterator(S2ShapeIndex const*)")
+    explicit Iterator(S2ShapeIndex const& index) : Iterator(&index, BEGIN) {}
+
+    ABSL_DEPRECATED("Use Init(S2ShapeIndex const*)")
+    void Init(S2ShapeIndex const& index) {
+      Init(&index, BEGIN);
+    }
+
+    ABSL_DEPRECATED("Use InitStale(S2ShapeIndex const*)")
+    void InitStale(S2ShapeIndex const& index) {
+      InitStale(&index, BEGIN);
+    }
+
+   protected:
+    S2ShapeIndexCell const* GetCell() const;
+    std::unique_ptr<IteratorBase> Clone() const override;
+    void Copy(IteratorBase const& other) override;
+
+   private:
+    void Refresh();  // Updates the IteratorBase fields.
+    S2ShapeIndex const* index_;
+    CellMap::const_iterator iter_, end_;
+  };
 
   // Take ownership of the given shape and add it to the index.  Also assigns
   // a unique id to the shape (shape->id()).  Shape ids are assigned
@@ -460,116 +830,16 @@ class S2ShapeIndex {
   void Reset();
 
   // Return true if "shape" contains the given point P.
+  //
+  // TODO(ericv): Replace this with a new class "S2ContainsPointQuery".
   bool ShapeContains(S2Shape const* shape, S2Point const& p) const;
 
   // Return true if the given point P is contained by at least one shape,
   // and return a list of the containing shapes.
+  //
+  // TODO(ericv): Replace this with a new class "S2IntersectingShapesQuery."
   bool GetContainingShapes(S2Point const& p,
                            std::vector<S2Shape*>* shapes) const;
-
-  // The possible relationships between a "target" cell and the cells of the
-  // S2ShapeIndex.  If the target is an index cell or is contained by an index
-  // cell, it is "INDEXED".  If the target is subdivided into one or more
-  // index cells, it is "SUBDIVIDED".  Otherwise it is "DISJOINT".
-  enum CellRelation {
-    INDEXED,       // Target is contained by an index cell
-    SUBDIVIDED,    // Target is subdivided into one or more index cells
-    DISJOINT       // Target does not intersect any index cells
-  };
-
-  // A random access iterator that provides low-level access to the cells of
-  // the index.  Cells are sorted in increasing order of S2CellId.
-  //
-  // This class is intended to be copied by value as desired.
-  class Iterator {
-   public:
-    // Default constructor; must be followed by a call to Init().
-    Iterator();
-
-    // Convenience constructor that calls Init().
-    explicit Iterator(S2ShapeIndex const* index);
-    ABSL_DEPRECATED("Use pointer version.")
-    explicit Iterator(S2ShapeIndex const& index) : Iterator(&index) {}
-
-    // Initialize an iterator for the given S2ShapeIndex.  If the index is
-    // non-empty, the iterator is positioned at the first cell.  This method
-    // may also be called in order to restore an iterator to a valid state
-    // after the underlying index has been updated (although it is usually
-    // easier just to declare a new iterator whenever required, since iterator
-    // construction is cheap).
-    void Init(S2ShapeIndex const* index);
-    ABSL_DEPRECATED("Use pointer version.")
-    void Init(S2ShapeIndex const& index) { Init(&index); }
-
-    // Reset the iterator to its original state (positioned at the first cell
-    // in the index).  Note that this method does *not* restore the iterator
-    // to a valid state after the underlying index has been updated; to do
-    // that you must call Init().
-    void Reset();
-
-    // The cell id for this cell.
-    S2CellId id() const;
-
-    // Reference to the cell contents.
-    S2ShapeIndexCell const& cell() const;
-
-    // The center of the cell (used as a reference point for shape interiors).
-    S2Point center() const;
-
-    // Advance the iterator to the next cell in the index.
-    // REQUIRES: !Done()
-    void Next();
-
-    // Position the iterator at the previous cell in the index.
-    // REQUIRES: !AtBegin()
-    void Prev();
-
-    // Return true if the iterator is positioned past the last index cell.
-    bool Done() const;
-
-    // Return true if the iterator is positioned at the first index cell.
-    bool AtBegin() const;
-
-    // Position the iterator at the first cell with id() >= target, or at the
-    // end of the index if no such cell exists.
-    void Seek(S2CellId target);
-
-    // Advance the iterator to the next cell with id() >= target.  If the
-    // iterator is Done() or already satisfies id() >= target, do nothing.
-    void SeekForward(S2CellId target);
-
-    // Position the iterator so that Done() is true.
-    void Finish();
-
-    // Position the iterator at the cell containing "target".  If no such cell
-    // exists, returns false and leaves the iterator positioned arbitrarily.
-    // The returned index cell is guaranteed to contain all edges that might
-    // intersect the line segment between "target" and the cell center.
-    bool Locate(S2Point const& target);
-
-    // Let T be the target S2CellId.  If T is contained by some index cell I
-    // (including equality), then position the iterator at I and return
-    // INDEXED.  Otherwise if T contains one or more (smaller) index cells,
-    // then position the iterator at the first such cell I and return
-    // SUBDIVIDED.  Otherwise return DISJOINT and leave the iterator
-    // positioned arbitrarily.
-    CellRelation Locate(S2CellId target);
-
-    // Initialize an iterator for the given S2ShapeIndex without applying any
-    // pending updates.  This can be used to observe the actual current state
-    // of the index without modifying it in any way.
-    void InitStale(S2ShapeIndex const* index);
-    ABSL_DEPRECATED("Use pointer version.")
-    void InitStale(S2ShapeIndex const& index) { InitStale(&index); }
-
-   private:
-    S2ShapeIndex const* index_;
-    CellMap::const_iterator iter_, end_;
-  };
-
-  // Return the total number of edges in all indexed shapes.  This method
-  // takes time linear in the number of shapes.
-  int GetNumEdges() const;
 
   // Return the number of bytes occupied by the index (including any unused
   // space at the end of vectors, etc).  This method applies any pending
@@ -606,6 +876,9 @@ class S2ShapeIndex {
 
   ABSL_DEPRECATED("Use ReleaseAll instead.")
   void RemoveAll() { for (auto& ptr : ReleaseAll()) ptr.release(); }
+
+ protected:
+  std::unique_ptr<IteratorBase> NewIterator(InitialPosition pos) const override;
 
  private:
   friend class Iterator;           // cell_map_
@@ -693,7 +966,7 @@ class S2ShapeIndex {
   CellMap cell_map_;
 
   // The options supplied for this index.
-  S2ShapeIndexOptions options_;
+  Options options_;
 
   // The id of the first shape that has been queued for addition but not
   // processed yet.
@@ -782,15 +1055,19 @@ class S2ShapeIndex {
 inline int S2ClippedShape::shape_id() const {
   return shape_id_;
 }
+
 inline bool S2ClippedShape::contains_center() const {
   return contains_center_;
 }
+
 inline int S2ClippedShape::num_edges() const {
   return num_edges_;
 }
+
 inline int S2ClippedShape::edge(int i) const {
   return is_inline() ? inline_edges_[i] : edges_[i];
 }
+
 inline bool S2ClippedShape::is_inline() const {
   return num_edges_ <= inline_edges_.size();
 }
@@ -807,56 +1084,188 @@ inline int S2ShapeIndexCell::num_edges() const {
   return n;
 }
 
+inline S2ShapeIndexBase::IteratorBase::IteratorBase(IteratorBase const& other)
+    : id_(other.id_), cell_(other.raw_cell()) {
+}
+
+inline S2ShapeIndexBase::IteratorBase&
+S2ShapeIndexBase::IteratorBase::operator=(IteratorBase const& other) {
+  id_ = other.id_;
+  set_cell(other.raw_cell());
+  return *this;
+}
+
+inline S2CellId S2ShapeIndexBase::IteratorBase::id() const {
+  return id_;
+}
+
+inline S2ShapeIndexCell const& S2ShapeIndexBase::IteratorBase::cell() const {
+  DCHECK(!done());
+  auto cell = raw_cell();
+  if (cell == nullptr) {
+    cell = GetCell();
+    set_cell(cell);
+  }
+  return *cell;
+}
+
+inline bool S2ShapeIndexBase::IteratorBase::done() const {
+  return id_ == S2CellId::Sentinel();
+}
+
+inline S2Point S2ShapeIndexBase::IteratorBase::center() const {
+  DCHECK(!done());
+  return id().ToPoint();
+}
+
+inline void S2ShapeIndexBase::IteratorBase::set_state(
+    S2CellId id, S2ShapeIndexCell const* cell) {
+  id_ = id;
+  set_cell(cell);
+}
+
+inline void S2ShapeIndexBase::IteratorBase::set_finished() {
+  id_ = S2CellId::Sentinel();
+  set_cell(nullptr);
+}
+
+inline S2ShapeIndexCell const* S2ShapeIndexBase::IteratorBase::raw_cell()
+    const {
+  return cell_.load(std::memory_order_relaxed);
+}
+
+inline void S2ShapeIndexBase::IteratorBase::set_cell(
+    S2ShapeIndexCell const* cell) const {
+  cell_.store(cell, std::memory_order_relaxed);
+}
+
+template <class Iter>
+inline bool S2ShapeIndexBase::IteratorBase::LocateImpl(
+    S2Point const& target_point, Iter* it) {
+  // Let I = cell_map_->lower_bound(T), where T is the leaf cell containing
+  // "target_point".  Then if T is contained by an index cell, then the
+  // containing cell is either I or I'.  We test for containment by comparing
+  // the ranges of leaf cells spanned by T, I, and I'.
+
+  S2CellId target(target_point);
+  it->Seek(target);
+  if (!it->done() && it->id().range_min() <= target) return true;
+  if (it->Prev() && it->id().range_max() >= target) return true;
+  return false;
+}
+
+template <class Iter>
+inline S2ShapeIndexBase::CellRelation
+S2ShapeIndexBase::IteratorBase::LocateImpl(S2CellId target, Iter* it) {
+  // Let T be the target, let I = cell_map_->lower_bound(T.range_min()), and
+  // let I' be the predecessor of I.  If T contains any index cells, then T
+  // contains I.  Similarly, if T is contained by an index cell, then the
+  // containing cell is either I or I'.  We test for containment by comparing
+  // the ranges of leaf cells spanned by T, I, and I'.
+
+  it->Seek(target.range_min());
+  if (!it->done()) {
+    if (it->id() >= target && it->id().range_min() <= target) return INDEXED;
+    if (it->id() <= target.range_max()) return SUBDIVIDED;
+  }
+  if (it->Prev() && it->id().range_max() >= target) return INDEXED;
+  return DISJOINT;
+}
+
+inline S2ShapeIndexBase::Iterator::Iterator(Iterator const& other)
+    : iter_(other.iter_->Clone()) {
+}
+
+inline S2ShapeIndexBase::Iterator& S2ShapeIndexBase::Iterator::operator=(
+    Iterator const& other) {
+  iter_->Copy(*other.iter_);
+  return *this;
+}
+
+inline S2ShapeIndexBase::Iterator::Iterator(Iterator&& other)
+    : iter_(std::move(other.iter_)) {
+}
+
+inline S2ShapeIndexBase::Iterator& S2ShapeIndexBase::Iterator::operator=(
+    Iterator&& other) {
+  iter_ = std::move(other.iter_);
+  return *this;
+}
+
 inline S2ShapeIndex::Iterator::Iterator() : index_(nullptr) {
 }
-inline S2ShapeIndex::Iterator::Iterator(S2ShapeIndex const* index) {
-  Init(index);
+
+inline S2ShapeIndex::Iterator::Iterator(S2ShapeIndex const* index,
+                                        InitialPosition pos) {
+  Init(index, pos);
 }
-inline void S2ShapeIndex::Iterator::Init(S2ShapeIndex const* index) {
+
+inline void S2ShapeIndex::Iterator::Init(S2ShapeIndex const* index,
+                                         InitialPosition pos) {
   index->MaybeApplyUpdates();
-  InitStale(index);
+  InitStale(index, pos);
 }
-inline void S2ShapeIndex::Iterator::InitStale(S2ShapeIndex const* index) {
+
+inline void S2ShapeIndex::Iterator::InitStale(S2ShapeIndex const* index,
+                                              InitialPosition pos) {
   index_ = index;
-  iter_ = index_->cell_map_.begin();
   end_ = index_->cell_map_.end();
+  if (pos == BEGIN) {
+    iter_ = index_->cell_map_.begin();
+  } else {
+    iter_ = end_;
+  }
+  Refresh();
 }
-inline S2CellId S2ShapeIndex::Iterator::id() const {
-  DCHECK(!Done());
-  return iter_->first;
-}
+
 inline S2ShapeIndexCell const& S2ShapeIndex::Iterator::cell() const {
-  DCHECK(!Done());
-  return *iter_->second;
+  // Since S2ShapeIndex always sets the "cell_" field, we can skip the logic
+  // in the base class that conditionally calls GetCell().
+  return *raw_cell();
 }
-inline void S2ShapeIndex::Iterator::Next() {
-  DCHECK(!Done());
-  ++iter_;
+
+inline void S2ShapeIndex::Iterator::Refresh() {
+  if (iter_ == end_) {
+    set_finished();
+  } else {
+    set_state(iter_->first, iter_->second);
+  }
 }
-inline void S2ShapeIndex::Iterator::Prev() {
-  DCHECK(!AtBegin());
-  --iter_;
-}
-inline bool S2ShapeIndex::Iterator::Done() const {
-  return iter_ == end_;
-}
-inline bool S2ShapeIndex::Iterator::AtBegin() const {
-  return iter_ == index_->cell_map_.begin();
-}
-inline void S2ShapeIndex::Iterator::Reset() {
+
+inline void S2ShapeIndex::Iterator::Begin() {
   // Make sure that the index has not been modified since Init() was called.
   DCHECK(index_->is_fresh());
   iter_ = index_->cell_map_.begin();
   end_ = index_->cell_map_.end();
+  Refresh();
 }
-inline void S2ShapeIndex::Iterator::Seek(S2CellId target) {
-  iter_ = index_->cell_map_.lower_bound(target);
-}
-inline void S2ShapeIndex::Iterator::SeekForward(S2CellId target) {
-  if (!Done() && id() < target) Seek(target);
-}
+
 inline void S2ShapeIndex::Iterator::Finish() {
   iter_ = end_;
+  Refresh();
+}
+
+inline void S2ShapeIndex::Iterator::Next() {
+  DCHECK(!done());
+  ++iter_;
+  Refresh();
+}
+
+inline bool S2ShapeIndex::Iterator::Prev() {
+  if (iter_ == index_->cell_map_.begin()) return false;
+  --iter_;
+  Refresh();
+  return true;
+}
+
+inline void S2ShapeIndex::Iterator::Seek(S2CellId target) {
+  iter_ = index_->cell_map_.lower_bound(target);
+  Refresh();
+}
+
+inline std::unique_ptr<S2ShapeIndex::IteratorBase> S2ShapeIndex::NewIterator(
+    InitialPosition pos) const {
+  return absl::MakeUnique<Iterator>(this, pos);
 }
 
 inline bool S2ShapeIndex::is_fresh() const {

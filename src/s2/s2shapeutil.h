@@ -393,19 +393,19 @@ using S2PolylineOwningShape = S2Polyline::OwningShape;
 class RangeIterator {
  public:
   // Construct a new RangeIterator positioned at the first cell of the index.
-  explicit RangeIterator(S2ShapeIndex const& index);
+  explicit RangeIterator(S2ShapeIndexBase const& index);
 
   // The current S2CellId and cell contents.
-  S2CellId id() const { return id_; }
+  S2CellId id() const { return it_.id(); }
   S2ShapeIndexCell const& cell() const { return it_.cell(); }
 
-  // The min and max leaf cell ids covered by the current cell.  If Done() is
+  // The min and max leaf cell ids covered by the current cell.  If done() is
   // true, these methods return a value larger than any valid cell id.
   S2CellId range_min() const { return range_min_; }
   S2CellId range_max() const { return range_max_; }
 
   void Next();
-  bool Done() { return id_ == end_; }
+  bool done() { return it_.done(); }
 
   // Position the iterator at the first cell that overlaps or follows
   // "target", i.e. such that range_max() >= target.range_min().
@@ -418,10 +418,8 @@ class RangeIterator {
  private:
   // Updates internal state after the iterator has been repositioned.
   void Refresh();
-  S2ShapeIndex::Iterator it_;
-  S2CellId const end_;
-  S2CellId id_, range_min_, range_max_;
-  S2ShapeIndexCell const* cell_;
+  S2ShapeIndexBase::Iterator it_;
+  S2CellId range_min_, range_max_;
 };
 
 // A parameter that controls the reporting of edge intersections.
@@ -485,14 +483,14 @@ using EdgePairVisitor = std::function<
 // crossings should be visited, or only interior crossings.
 //
 // CAVEAT: Crossings may be visited more than once.
-bool VisitCrossings(S2ShapeIndex const& index, CrossingType type,
+bool VisitCrossings(S2ShapeIndexBase const& index, CrossingType type,
                     EdgePairVisitor const& visitor);
 
 // Like the above, but visits all pairs of crossing edges where one edge comes
 // from each S2ShapeIndex.
 //
 // REQUIRES: type != CrossingType::NON_ADJACENT (not supported)
-bool VisitCrossings(S2ShapeIndex const& a, S2ShapeIndex const& b,
+bool VisitCrossings(S2ShapeIndexBase const& a, S2ShapeIndexBase const& b,
                     CrossingType type, EdgePairVisitor const& visitor);
 
 // This is a helper function for implementing S2Shape::contains_origin().
@@ -515,6 +513,11 @@ bool VisitCrossings(S2ShapeIndex const& a, S2ShapeIndex const& b,
 // just by counting edge crossings because there is no such thing as a "point
 // at infinity" that is guaranteed to be outside the loop.
 bool IsOriginOnLeft(S2Shape const& shape);
+
+// Returns the total number of edges in all indexed shapes.  This method
+// takes time linear in the number of shapes.
+template <class S2ShapeIndexType>
+int GetNumEdges(S2ShapeIndexType const& index);
 
 /////////////////////////////////////////////////////////////////////////////
 ///////////////// Methods used internally by the S2 library /////////////////
@@ -567,7 +570,7 @@ void ResolveComponents(
 //
 // TODO(ericv): Add an option to support LaxPolygon rules (i.e., duplicate
 // vertices and edges are allowed, but loop crossings are not).
-bool FindAnyCrossing(S2ShapeIndex const& index, S2Error* error);
+bool FindAnyCrossing(S2ShapeIndexBase const& index, S2Error* error);
 
 
 //////////////////   Implementation details follow   ////////////////////
@@ -605,6 +608,19 @@ inline bool ShapeEdgeId::operator>=(ShapeEdgeId other) const {
 
 inline ShapeEdge::ShapeEdge(S2Shape const& shape, int32 edge_id)
     : id_(shape.id(), edge_id), edge_(shape.edge(edge_id)) {
+}
+
+template <class S2ShapeIndexType>
+int GetNumEdges(S2ShapeIndexType const& index) {
+  // There is no need to apply updates before counting edges, since shapes are
+  // added or removed from the "shapes_" vector immediately.
+  int num_edges = 0;
+  for (int s = index.num_shape_ids(); --s >= 0; ) {
+    S2Shape* shape = index.shape(s);
+    if (shape == nullptr) continue;
+    num_edges += shape->num_edges();
+  }
+  return num_edges;
 }
 
 }  // namespace s2shapeutil

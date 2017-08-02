@@ -1568,7 +1568,8 @@ bool S2BoundaryOperation::Impl::GetChainStarts(
   bool b_has_interior = HasInterior(b_index);
   if (b_has_interior || invert_b) {
     S2ContainsPointQuery query(&b_index);
-    for (int s = 0; s < a_index.num_shape_ids(); ++s) {
+    int num_shape_ids = a_index.num_shape_ids();
+    for (int s = 0; s < num_shape_ids; ++s) {
       S2Shape* a_shape = a_index.shape(s);
       if (a_shape == nullptr) continue;
 
@@ -1650,8 +1651,8 @@ bool S2BoundaryOperation::Impl::FindChainStarts() {
 #endif
 
 bool S2BoundaryOperation::Impl::HasInterior(S2ShapeIndex const& index) {
-  for (int i = 0; i < index.num_shape_ids(); ++i) {
-    S2Shape* shape = index.shape(i);
+  for (int s = index.num_shape_ids(); --s >= 0; ) {
+    S2Shape* shape = index.shape(s);
     if (shape && shape->has_interior()) return true;
   }
   return false;

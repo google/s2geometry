@@ -100,7 +100,7 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
     shape->Add(edge.first, edge.second);
   }
   // Force more subdivision than usual to make the test more challenging.
-  S2ShapeIndexOptions options;
+  S2ShapeIndex::Options options;
   options.set_max_edges_per_cell(1);
   S2ShapeIndex index(options);
   index.Add(unique_ptr<S2Shape>(shape));

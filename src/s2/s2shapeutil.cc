@@ -435,7 +435,7 @@ using ShapeEdgeVector = absl::InlinedVector<ShapeEdge, 16>;
 // Returns a vector containing all edges in the given S2ShapeIndexCell.
 // (The result is returned as an output parameter so that the same storage can
 // be reused, rather than allocating a new temporary vector each time.)
-static void GetShapeEdges(S2ShapeIndex const& index,
+static void GetShapeEdges(S2ShapeIndexBase const& index,
                           S2ShapeIndexCell const& cell,
                           ShapeEdgeVector* shape_edges) {
   shape_edges->clear();
@@ -476,12 +476,13 @@ static bool VisitCrossings(ShapeEdgeVector const& shape_edges,
   return true;
 }
 
-bool VisitCrossings(S2ShapeIndex const& index, CrossingType type,
+bool VisitCrossings(S2ShapeIndexBase const& index, CrossingType type,
                     EdgePairVisitor const& visitor) {
   // TODO(ericv): Use brute force if the total number of edges is small enough
   // (using a larger threshold if the S2ShapeIndex is not constructed yet).
   ShapeEdgeVector shape_edges;
-  for (S2ShapeIndex::Iterator it(&index); !it.Done(); it.Next()) {
+  for (S2ShapeIndexBase::Iterator it(&index, S2ShapeIndex::BEGIN);
+       !it.done(); it.Next()) {
     GetShapeEdges(index, it.cell(), &shape_edges);
     if (!VisitCrossings(shape_edges, type, visitor)) return false;
   }
@@ -490,9 +491,8 @@ bool VisitCrossings(S2ShapeIndex const& index, CrossingType type,
 
 //////////////////////////////////////////////////////////////////////
 
-// TODO(user): Change arg to pointer.
-RangeIterator::RangeIterator(S2ShapeIndex const& index)
-    : it_(&index), end_(S2CellId::End(0)) {
+RangeIterator::RangeIterator(S2ShapeIndexBase const& index)
+    : it_(&index, S2ShapeIndex::BEGIN) {
   Refresh();
 }
 
@@ -506,16 +506,15 @@ void RangeIterator::SeekTo(RangeIterator const& target) {
   // If the current cell does not overlap "target", it is possible that the
   // previous cell is the one we are looking for.  This can only happen when
   // the previous cell contains "target" but has a smaller S2CellId.
-  if (it_.Done() || it_.id().range_min() > target.range_max()) {
-    it_.Prev();
-    if (it_.id().range_max() < target.id()) it_.Next();
+  if (it_.done() || it_.id().range_min() > target.range_max()) {
+    if (it_.Prev() && it_.id().range_max() < target.id()) it_.Next();
   }
   Refresh();
 }
 
 void RangeIterator::SeekBeyond(RangeIterator const& target) {
   it_.Seek(target.range_max().next());
-  if (!it_.Done() && it_.id().range_min() <= target.range_max()) {
+  if (!it_.done() && it_.id().range_min() <= target.range_max()) {
     it_.Next();
   }
   Refresh();
@@ -524,27 +523,20 @@ void RangeIterator::SeekBeyond(RangeIterator const& target) {
 // This method is inline, but is only called by non-inline methods defined in
 // this file.  Putting the definition here enforces this requirement.
 inline void RangeIterator::Refresh() {
-  if (it_.Done()) {
-    id_ = end_;
-    cell_ = nullptr;
-  } else {
-    id_ = it_.id();
-    cell_ = &it_.cell();
-  }
-  range_min_ = id_.range_min();
-  range_max_ = id_.range_max();
+  range_min_ = id().range_min();
+  range_max_ = id().range_max();
 }
 
-// IndexCrosser is a helper class for determining whether two loops cross.
-// It is instantiated twice for each pair of loops to be tested, once for the
-// pair (A,B) and once for the pair (B,A), in order to be able to test edge
+// IndexCrosser is a helper class for finding the edge crossings between a
+// pair of S2ShapeIndexes.  It is instantiated twice, once for the index pair
+// (A,B) and once for the index pair (B,A), in order to be able to test edge
 // crossings in the most efficient order.
 class IndexCrosser {
  public:
   // If "swapped" is true, the loops A and B have been swapped.  This affects
   // how arguments are passed to the given loop relation, since for example
   // A.Contains(B) is not the same as B.Contains(A).
-  IndexCrosser(S2ShapeIndex const& a_index, S2ShapeIndex const& b_index,
+  IndexCrosser(S2ShapeIndexBase const& a_index, S2ShapeIndexBase const& b_index,
                CrossingType type, EdgePairVisitor const& visitor, bool swapped)
       : a_index_(a_index), b_index_(b_index), visitor_(visitor),
         min_crossing_sign_(type == CrossingType::INTERIOR ? 1 : 0),
@@ -575,8 +567,8 @@ class IndexCrosser {
   // visitor_ returns false.
   bool VisitSubcellCrossings(S2ShapeIndexCell const& a_cell, S2CellId b_id);
 
-  S2ShapeIndex const& a_index_;
-  S2ShapeIndex const& b_index_;
+  S2ShapeIndexBase const& a_index_;
+  S2ShapeIndexBase const& b_index_;
   EdgePairVisitor const& visitor_;
   int const min_crossing_sign_;
   bool const swapped_;
@@ -696,7 +688,8 @@ bool IndexCrosser::VisitCrossings(RangeIterator* ai, RangeIterator* bi) {
 
 //////////////////////////////////////////////////////////////////////
 
-bool VisitCrossings(S2ShapeIndex const& a_index, S2ShapeIndex const& b_index,
+bool VisitCrossings(S2ShapeIndexBase const& a_index,
+                    S2ShapeIndexBase const& b_index,
                     CrossingType type, EdgePairVisitor const& visitor) {
   DCHECK(type != CrossingType::NON_ADJACENT);
   // We look for S2CellId ranges where the indexes of A and B overlap, and
@@ -711,7 +704,7 @@ bool VisitCrossings(S2ShapeIndex const& a_index, S2ShapeIndex const& b_index,
   RangeIterator ai(a_index), bi(b_index);
   IndexCrosser ab(a_index, b_index, type, visitor, false); // Tests A against B
   IndexCrosser ba(b_index, a_index, type, visitor, true);  // Tests B against A
-  while (!ai.Done() || !bi.Done()) {
+  while (!ai.done() || !bi.done()) {
     if (ai.range_max() < bi.range_min()) {
       // The A and B cells don't overlap, and A precedes B.
       ai.SeekTo(bi);
@@ -892,7 +885,7 @@ static bool FindCrossingError(S2Shape const& shape,
   return false;
 }
 
-bool FindAnyCrossing(S2ShapeIndex const& index, S2Error* error) {
+bool FindAnyCrossing(S2ShapeIndexBase const& index, S2Error* error) {
   if (index.num_shape_ids() == 0) return false;
   DCHECK_EQ(1, index.num_shape_ids());
   S2Shape const& shape = *index.shape(0);

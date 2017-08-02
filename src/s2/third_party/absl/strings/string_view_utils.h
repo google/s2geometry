@@ -30,26 +30,9 @@
 #include "s2/third_party/absl/strings/match.h"
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/third_party/absl/strings/string_view.h"
+#include "s2/third_party/absl/strings/strip.h"
 
 namespace absl {
-
-// If "*s" starts with "expected", consume it and return true.
-// Otherwise, return false.
-inline bool ConsumePrefix(absl::string_view* s, absl::string_view expected) {
-  if (!StartsWith(*s, expected))
-    return false;
-  s->remove_prefix(expected.size());
-  return true;
-}
-
-// If "*s" ends with "expected", remove it and return true.
-// Otherwise, return false.
-inline bool ConsumeSuffix(absl::string_view* s, absl::string_view expected) {
-  if (!EndsWith(*s, expected))
-    return false;
-  s->remove_suffix(expected.size());
-  return true;
-}
 
 // Assigns 'src' to '*dest'.
 inline void CopyToString(absl::string_view src, string* dest) {
@@ -57,6 +40,7 @@ inline void CopyToString(absl::string_view src, string* dest) {
 }
 
 }  // namespace absl
+
 
 namespace strings {
 
@@ -115,7 +99,7 @@ inline bool ConsumeLeadingChar(absl::string_view* s, char expected) {
   }
 }
 
-// Checks if two stringpiece values are equal ignoring case.
+// Checks if two string_views are equal, ignoring case.
 bool EqualIgnoreCase(absl::string_view piece1, absl::string_view piece2);
 
 // This is similar to gstrncasestr() in strutil.h, except that it works with
@@ -172,5 +156,6 @@ struct StringPieceCaseEqual {
     return strings::EqualIgnoreCase(piece1, piece2);
   }
 };
+
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_UTILS_H_

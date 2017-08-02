@@ -48,7 +48,7 @@ TEST(S2CellUnion, DefaultConstructor) {
 
 TEST(S2CellUnion, S2CellIdConstructor) {
   S2CellId face1_id = S2CellId::FromFace(1);
-  S2CellUnion face1_union(face1_id);
+  S2CellUnion face1_union({face1_id});
   EXPECT_EQ(1, face1_union.num_cells());
   EXPECT_EQ(face1_id, face1_union.cell_id(0));
 }
@@ -388,13 +388,13 @@ TEST(S2CellUnion, FromBeginEnd) {
   S2CellId initial_id = S2CellId::FromFace(3);
 
   // Test an empty range before the minimum S2CellId.
-  S2CellUnion cell_union(initial_id);
+  S2CellUnion cell_union({initial_id});
   S2CellId id_begin = S2CellId::Begin(S2CellId::kMaxLevel);
   cell_union.InitFromBeginEnd(id_begin, id_begin);
   EXPECT_EQ(0, cell_union.num_cells());
 
   // Test an empty range after the maximum S2CellId.
-  cell_union.Init(initial_id);
+  cell_union.Init({initial_id});
   S2CellId id_end = S2CellId::End(S2CellId::kMaxLevel);
   cell_union.InitFromBeginEnd(id_end, id_end);
   EXPECT_EQ(0, cell_union.num_cells());
@@ -454,7 +454,7 @@ TEST(S2CellUnion, Empty) {
 
 TEST(S2CellUnion, Release) {
   S2CellId face1_id = S2CellId::FromFace(1);
-  S2CellUnion face1_union(face1_id);
+  S2CellUnion face1_union({face1_id});
   ASSERT_EQ(1, face1_union.num_cells());
   EXPECT_EQ(face1_id, face1_union.cell_id(0));
 

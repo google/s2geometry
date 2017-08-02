@@ -26,7 +26,7 @@
 #include <cstddef>         // For size_t
 #include "s2/third_party/absl/base/port.h"
 
-// The arraysize(arr) macro returns the # of elements in an array arr.
+// The ABSL_ARRAYSIZE(arr) macro returns the # of elements in an array arr.
 // The expression is a compile-time constant, and therefore can be
 // used in defining new arrays, for example.  If you use arraysize on
 // a pointer by mistake, you will get a compile-time error.
@@ -37,7 +37,9 @@
 template <typename T, size_t N>
 char (&ArraySizeHelper(T (&array)[N]))[N];
 
+// TODO(b/62370839): Replace arraysize() with ABSL_ARRAYSIZE().
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
+#define ABSL_ARRAYSIZE(array) (sizeof(ArraySizeHelper(array)))
 
 // The following enum should be used only as a constructor argument to indicate
 // that the variable has static storage class, and that the constructor should
@@ -56,38 +58,40 @@ namespace base {
 enum LinkerInitialized { LINKER_INITIALIZED };
 }
 
-// The FALLTHROUGH_INTENDED macro can be used to annotate implicit fall-through
-// between switch labels:
+// The ABSL_FALLTHROUGH_INTENDED macro can be used to annotate implicit
+// fall-through between switch labels:
 //  switch (x) {
 //    case 40:
 //    case 41:
 //      if (truth_is_out_there) {
 //        ++x;
-//        FALLTHROUGH_INTENDED;  // Use instead of/along with annotations in
-//                               // comments.
+//        ABSL_FALLTHROUGH_INTENDED;  // Use instead of/along with annotations
+//                                    // in comments
 //      } else {
 //        return x;
 //      }
 //    case 42:
 //      ...
 //
-//  As shown in the example above, the FALLTHROUGH_INTENDED macro should be
+//  As shown in the example above, the ABSL_FALLTHROUGH_INTENDED macro should be
 //  followed by a semicolon. It is designed to mimic control-flow statements
 //  like 'break;', so it can be placed in most places where 'break;' can, but
 //  only if there are no statements on the execution path between it and the
 //  next switch label.
 //
-//  When compiled with clang in C++11 mode, the FALLTHROUGH_INTENDED macro is
-//  expanded to [[clang::fallthrough]] attribute, which is analysed when
+//  When compiled with clang in C++11 mode, the ABSL_FALLTHROUGH_INTENDED macro
+//  is expanded to [[clang::fallthrough]] attribute, which is analysed when
 //  performing switch labels fall-through diagnostic ('-Wimplicit-fallthrough').
 //  See clang documentation on language extensions for details:
 //  http://clang.llvm.org/docs/AttributeReference.html#fallthrough-clang-fallthrough
 //
-//  When used with unsupported compilers, the FALLTHROUGH_INTENDED macro has no
-//  effect on diagnostics.
+//  When used with unsupported compilers, the ABSL_FALLTHROUGH_INTENDED macro
+//  has no effect on diagnostics.
 //
 //  In either case this macro has no effect on runtime behavior and performance
 //  of code.
+// TODO(b/62370839): Replace FALLTHROUGH_INTENDED with
+// ABSL_FALLTHROUGH_INTENDED.
 #if defined(__clang__) && defined(__has_warning)
 #if __has_feature(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
 #define FALLTHROUGH_INTENDED [[clang::fallthrough]]  // NOLINT
@@ -96,6 +100,21 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 
 #ifndef FALLTHROUGH_INTENDED
 #define FALLTHROUGH_INTENDED do { } while (0)
+#endif
+#ifdef ABSL_FALLTHROUGH_INTENDED
+#error "ABSL_FALLTHROUGH_INTENDED should not be defined."
+#endif
+
+#if defined(__clang__) && defined(__has_warning)
+#if __has_feature(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
+#define ABSL_FALLTHROUGH_INTENDED [[clang::fallthrough]]  // NOLINT
+#endif
+#endif
+
+#ifndef ABSL_FALLTHROUGH_INTENDED
+#define ABSL_FALLTHROUGH_INTENDED \
+  do {                            \
+  } while (0)
 #endif
 
 // The ABSL_DEPRECATED(...) macro can be used to mark deprecated class,

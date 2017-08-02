@@ -54,7 +54,7 @@
 //
 //   S2PointIndex<int>::Iterator it(index);
 //   it.Seek(target_id.range_min());
-//   for (; !it.Done() && it.id() <= target_id.range_max(); it.Next()) {
+//   for (; !it.done() && it.id() <= target_id.range_max(); it.Next()) {
 //     DoSomething(it.id(), it.point(), it.data());
 //   }
 //
@@ -142,44 +142,44 @@ class S2PointIndex {
     void Reset();
 
     // The S2CellId for the current index entry.
-    // REQUIRES: !Done()
+    // REQUIRES: !done()
     S2CellId id() const;
 
     // The point associated with the current index entry.
-    // REQUIRES: !Done()
+    // REQUIRES: !done()
     S2Point const& point() const;
 
     // The client-supplied data associated with the current index entry.
-    // REQUIRES: !Done()
+    // REQUIRES: !done()
     Data const& data() const;
 
     // The (S2Point, data) pair associated with the current index entry.
     PointData const& point_data() const;
 
     // Advance the iterator to the next index entry.
-    // REQUIRES: !Done()
+    // REQUIRES: !done()
     void Next();
 
-    // Position the iterator at the previous index entry.
-    // REQUIRES: !AtBegin()
-    void Prev();
+    // If the iterator is already positioned at the beginning, returns false.
+    // Otherwise positions the iterator at the previous entry and returns true.
+    bool Prev();
 
     // Return true if the iterator is positioned past the last index entry.
-    bool Done() const;
-
-    // Return true if the iterator is positioned at the first index entry.
-    bool AtBegin() const;
+    bool done() const;
 
     // Position the iterator at the first entry with id() >= target, or at the
     // end of the index if no such entry exists.
     void Seek(S2CellId target);
 
     // Advance the iterator to the next entry with id() >= target.  If the
-    // iterator is Done() or already satisfies id() >= target, do nothing.
+    // iterator is done() or already satisfies id() >= target, do nothing.
     void SeekForward(S2CellId target);
 
-    // Position the iterator so that Done() is true.
+    // Position the iterator so that done() is true.
     void Finish();
+
+    ABSL_DEPRECATED("Use done()")
+    bool Done() const { return done(); }
 
    private:
     Map const* map_;
@@ -266,49 +266,45 @@ inline void S2PointIndex<Data>::Iterator::Reset() {
 
 template <class Data>
 inline S2CellId S2PointIndex<Data>::Iterator::id() const {
-  DCHECK(!Done());
+  DCHECK(!done());
   return iter_->first;
 }
 
 template <class Data>
 inline S2Point const& S2PointIndex<Data>::Iterator::point() const {
-  DCHECK(!Done());
+  DCHECK(!done());
   return iter_->second.point();
 }
 
 template <class Data>
 inline Data const& S2PointIndex<Data>::Iterator::data() const {
-  DCHECK(!Done());
+  DCHECK(!done());
   return iter_->second.data();
 }
 
 template <class Data>
 inline typename S2PointIndex<Data>::PointData const&
 S2PointIndex<Data>::Iterator::point_data() const {
-  DCHECK(!Done());
+  DCHECK(!done());
   return iter_->second;
 }
 
 template <class Data>
 inline void S2PointIndex<Data>::Iterator::Next() {
-  DCHECK(!Done());
+  DCHECK(!done());
   ++iter_;
 }
 
 template <class Data>
-inline void S2PointIndex<Data>::Iterator::Prev() {
-  DCHECK(!AtBegin());
+inline bool S2PointIndex<Data>::Iterator::Prev() {
+  if (iter_ == map_->begin()) return false;
   --iter_;
+  return true;
 }
 
 template <class Data>
-inline bool S2PointIndex<Data>::Iterator::Done() const {
+inline bool S2PointIndex<Data>::Iterator::done() const {
   return iter_ == end_;
-}
-
-template <class Data>
-inline bool S2PointIndex<Data>::Iterator::AtBegin() const {
-  return iter_ == map_->begin();
 }
 
 template <class Data>
@@ -319,7 +315,7 @@ inline void S2PointIndex<Data>::Iterator::Seek(S2CellId target) {
 template <class Data>
 inline void S2PointIndex<Data>::Iterator::SeekForward(
     S2CellId target) {
-  if (!Done() && id() < target) Seek(target);
+  if (!done() && id() < target) Seek(target);
 }
 
 template <class Data>
