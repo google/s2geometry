@@ -9,8 +9,8 @@
 may not be included directly
 #endif  // THIRD_PARTY_ABSL_BASE_PORT_CC_
 
-#include <stdio.h>
-#include <stdarg.h>
+#include <cstdio>
+#include <cstdarg>
 
 #include "third_party/absl/base/port.h"
 

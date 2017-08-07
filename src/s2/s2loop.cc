@@ -40,10 +40,15 @@
 #include "s2/s2cell.h"
 #include "s2/s2centroids.h"
 #include "s2/s2closestedgequery.h"
+#include "s2/s2coords.h"
 #include "s2/s2crossingedgequery.h"
 #include "s2/s2debug.h"
+#include "s2/s2edge_clipping.h"
+#include "s2/s2edge_crosser.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
+#include "s2/s2latlngrect_bounder.h"
 #include "s2/s2measures.h"
 #include "s2/s2paddedcell.h"
 #include "s2/s2pointcompression.h"
@@ -51,6 +56,7 @@
 #include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil.h"
+#include "s2/s2wedge_relations.h"
 #include "s2/util/math/matrix3x3.h"
 
 using absl::MakeSpan;

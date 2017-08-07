@@ -36,6 +36,8 @@
 #include "s2/s2cellid.h"
 #include "s2/s2cellunion.h"
 #include "s2/s2debug.h"
+#include "s2/s2edge_clipping.h"
+#include "s2/s2edge_crosser.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"

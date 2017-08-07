@@ -14,6 +14,8 @@
 //
 
 // Various macros for C++ attributes
+// This file is used for both C and C++!
+//
 // Most macros here are exposing GCC or Clang features, and are stubbed out for
 // other compilers.
 // GCC attributes documentation:
@@ -142,7 +144,7 @@
 // GCC: https://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html
 // Clang: https://clang.llvm.org/docs/AttributeReference.html
 
-// PRINTF_ATTRIBUTE, SCANF_ATTRIBUTE
+// ABSL_PRINTF_ATTRIBUTE, ABSL_SCANF_ATTRIBUTE
 // Tell the compiler to do printf format string checking if the
 // compiler supports it; see the 'format' attribute in
 // <http://gcc.gnu.org/onlinedocs/gcc-4.7.0/gcc/Function-Attributes.html>.
@@ -159,7 +161,6 @@
 #define ABSL_PRINTF_ATTRIBUTE(string_index, first_to_check)
 #define ABSL_SCANF_ATTRIBUTE(string_index, first_to_check)
 #endif
-
 // To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
 // TODO(user): delete macros
 #if ABSL_HAVE_ATTRIBUTE(format) || (defined(__GNUC__) && !defined(__clang__))
@@ -172,7 +173,7 @@
 #define SCANF_ATTRIBUTE(string_index, first_to_check)
 #endif
 
-// ATTRIBUTE_ALWAYS_INLINE, ATTRIBUTE_NOINLINE
+// ABSL_ATTRIBUTE_ALWAYS_INLINE, ABSL_ATTRIBUTE_NOINLINE
 // For functions we want to force inline or not inline.
 // Introduced in gcc 3.1.
 #if ABSL_HAVE_ATTRIBUTE(always_inline) || \
@@ -207,7 +208,7 @@
 #define ATTRIBUTE_NOINLINE
 #endif
 
-// ATTRIBUTE_NO_TAIL_CALL
+// ABSL_ATTRIBUTE_NO_TAIL_CALL
 // Prevent the compiler from optimizing away stack frames for functions which
 // end in a call to another function.
 #if ABSL_HAVE_ATTRIBUTE(disable_tail_calls)
@@ -236,7 +237,7 @@
 #define HAVE_ATTRIBUTE_NO_TAIL_CALL 0
 #endif
 
-// ATTRIBUTE_WEAK
+// ABSL_ATTRIBUTE_WEAK
 // For weak functions
 #if ABSL_HAVE_ATTRIBUTE(weak) || (defined(__GNUC__) && !defined(__clang__))
 #undef ABSL_ATTRIBUTE_WEAK
@@ -258,7 +259,7 @@
 #define HAVE_ATTRIBUTE_WEAK 0
 #endif
 
-// ATTRIBUTE_NONNULL
+// ABSL_ATTRIBUTE_NONNULL
 // Tell the compiler either that a particular function parameter
 // should be a non-null pointer, or that all pointer arguments should
 // be non-null.
@@ -274,23 +275,24 @@
 // the first explicit argument is arg 1.
 //
 //   /* arg_a cannot be null, but arg_b can */
-//   void Function(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
+//   void Function(void* arg_a, void* arg_b) ABSL_ATTRIBUTE_NONNULL(1);
 //
 //   class C {
 //     /* arg_a cannot be null, but arg_b can */
-//     void Method(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(2);
+//     void Method(void* arg_a, void* arg_b) ABSL_ATTRIBUTE_NONNULL(2);
 //
 //     /* arg_a cannot be null, but arg_b can */
-//     static void StaticMethod(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
+//     static void StaticMethod(void* arg_a, void* arg_b)
+//     ABSL_ATTRIBUTE_NONNULL(1);
 //   };
 //
 // If no arguments are provided, then all pointer arguments should be non-null.
 //
 //  /* No pointer arguments may be null. */
-//  void Function(void* arg_a, void* arg_b, int arg_c) ATTRIBUTE_NONNULL();
+//  void Function(void* arg_a, void* arg_b, int arg_c) ABSL_ATTRIBUTE_NONNULL();
 //
 // NOTE: The GCC nonnull attribute actually accepts a list of arguments, but
-// ATTRIBUTE_NONNULL does not.
+// ABSL_ATTRIBUTE_NONNULL does not.
 #if ABSL_HAVE_ATTRIBUTE(nonnull) || (defined(__GNUC__) && !defined(__clang__))
 #define ABSL_ATTRIBUTE_NONNULL(arg_index) __attribute__((nonnull(arg_index)))
 #else
@@ -305,7 +307,7 @@
 #define ATTRIBUTE_NONNULL(...)
 #endif
 
-// ATTRIBUTE_NORETURN
+// ABSL_ATTRIBUTE_NORETURN
 // Tell the compiler that a given function never returns
 #if ABSL_HAVE_ATTRIBUTE(noreturn) || (defined(__GNUC__) && !defined(__clang__))
 #define ABSL_ATTRIBUTE_NORETURN __attribute__((noreturn))
@@ -325,7 +327,7 @@
 #define ATTRIBUTE_NORETURN
 #endif
 
-// ATTRIBUTE_NO_SANITIZE_ADDRESS
+// ABSL_ATTRIBUTE_NO_SANITIZE_ADDRESS
 // Tell AddressSanitizer (or other memory testing tools) to ignore a given
 // function. Useful for cases when a function reads random locations on stack,
 // calls _exit from a cloned subprocess, deliberately accesses buffer
@@ -346,7 +348,7 @@
 #define ATTRIBUTE_NO_SANITIZE_ADDRESS
 #endif
 
-// ATTRIBUTE_NO_SANITIZE_MEMORY
+// ABSL_ATTRIBUTE_NO_SANITIZE_MEMORY
 // Tell MemorySanitizer to relax the handling of a given function. All "Use of
 // uninitialized value" warnings from such functions will be suppressed, and all
 // values loaded from memory will be considered fully initialized.
@@ -367,7 +369,7 @@
 #define ATTRIBUTE_NO_SANITIZE_MEMORY
 #endif
 
-// ATTRIBUTE_NO_SANITIZE_THREAD
+// ABSL_ATTRIBUTE_NO_SANITIZE_THREAD
 // Tell ThreadSanitizer to not instrument a given function.
 // If you are adding this attribute, please cc dynamic-tools@ on the cl.
 // NOTE: GCC supports ThreadSanitizer(tsan) since 4.8.
@@ -386,28 +388,20 @@
 #define ATTRIBUTE_NO_SANITIZE_THREAD
 #endif
 
-// ATTRIBUTE_NO_SANITIZE_UNDEFINED
+// ABSL_ATTRIBUTE_NO_SANITIZE_UNDEFINED
 // Tell UndefinedSanitizer to ignore a given function. Useful for cases
 // where certain behavior (eg. devision by zero) is being used intentionally.
 // NOTE: GCC supports UndefinedBehaviorSanitizer(ubsan) since 4.9.
 // https://gcc.gnu.org/gcc-4.9/changes.html
-#if defined(__GNUC__) && defined(UNDEFINED_BEHAVIOR_SANITIZER)
+#if defined(__GNUC__) && \
+    (defined(UNDEFINED_BEHAVIOR_SANITIZER) || defined(ADDRESS_SANITIZER))
 #define ABSL_ATTRIBUTE_NO_SANITIZE_UNDEFINED \
   __attribute__((no_sanitize("undefined")))
 #else
 #define ABSL_ATTRIBUTE_NO_SANITIZE_UNDEFINED
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if defined(__GNUC__) && defined(UNDEFINED_BEHAVIOR_SANITIZER)
-#define ATTRIBUTE_NO_SANITIZE_UNDEFINED \
-  __attribute__((no_sanitize("undefined")))
-#else
-#define ATTRIBUTE_NO_SANITIZE_UNDEFINED
-#endif
-
-// ATTRIBUTE_NO_SANITIZE_CFI
+// ABSL_ATTRIBUTE_NO_SANITIZE_CFI
 // Tell ControlFlowIntegrity sanitizer to not instrument a given function.
 #if defined(__GNUC__) && defined(CONTROL_FLOW_INTEGRITY)
 #define ABSL_ATTRIBUTE_NO_SANITIZE_CFI __attribute__((no_sanitize("cfi")))
@@ -435,7 +429,7 @@
 // Tell the compiler/linker to put a given function into a section and define
 // "__start_ ## name" and "__stop_ ## name" symbols to bracket the section.
 // This functionality is supported by GNU linker.
-// Any function with ATTRIBUTE_SECTION must not be inlined, or it will
+// Any function with ABSL_ATTRIBUTE_SECTION must not be inlined, or it will
 // be placed into whatever section its caller is placed into.
 //
 #ifndef ABSL_ATTRIBUTE_SECTION
@@ -466,9 +460,9 @@
 
 //
 // Weak section declaration to be used as a global declaration
-// for ATTRIBUTE_SECTION_START|STOP(name) to compile and link
-// even without functions with ATTRIBUTE_SECTION(name).
-// DEFINE_ATTRIBUTE_SECTION should be in the exactly one file; it's
+// for ABSL_ATTRIBUTE_SECTION_START|STOP(name) to compile and link
+// even without functions with ABSL_ATTRIBUTE_SECTION(name).
+// ABSL_DEFINE_ATTRIBUTE_SECTION should be in the exactly one file; it's
 // a no-op on ELF but not on Mach-O.
 //
 #ifndef ABSL_DECLARE_ATTRIBUTE_SECTION_VARS
@@ -495,9 +489,10 @@
 
 //
 // Return void* pointers to start/end of a section of code with
-// functions having ATTRIBUTE_SECTION(name).
+// functions having ABSL_ATTRIBUTE_SECTION(name).
 // Returns 0 if no such functions exits.
-// One must DECLARE_ATTRIBUTE_SECTION_VARS(name) for this to compile and link.
+// One must ABSL_DECLARE_ATTRIBUTE_SECTION_VARS(name) for this to compile and
+// link.
 //
 #define ABSL_ATTRIBUTE_SECTION_START(name) \
   (reinterpret_cast<void *>(__start_##name))
@@ -532,9 +527,9 @@
 #define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void *>(0))
 #define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void *>(0))
 
-#endif  // ATTRIBUTE_SECTION
+#endif  // ABSL_ATTRIBUTE_SECTION
 
-// ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
+// ABSL_ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
 // Support for aligning the stack on 32-bit x86.
 #if ABSL_HAVE_ATTRIBUTE(force_align_arg_pointer) || \
     (defined(__GNUC__) && !defined(__clang__))
@@ -600,12 +595,12 @@
 #define MUST_USE_RESULT
 #endif
 
-// ATTRIBUTE_HOT, ATTRIBUTE_COLD
+// ABSL_ATTRIBUTE_HOT, ABSL_ATTRIBUTE_COLD
 // Tell GCC that a function is hot or cold. GCC can use this information to
 // improve static analysis, i.e. a conditional branch to a cold function
 // is likely to be not-taken.
 // This annotation is used for function declarations, e.g.:
-//   int foo() ATTRIBUTE_HOT;
+//   int foo() ABSL_ATTRIBUTE_HOT;
 #if ABSL_HAVE_ATTRIBUTE(hot) || (defined(__GNUC__) && !defined(__clang__))
 #define ABSL_ATTRIBUTE_HOT __attribute__((hot))
 #else
@@ -682,7 +677,7 @@
 // Variable Attributes
 // -----------------------------------------------------------------------------
 
-// ATTRIBUTE_UNUSED
+// ABSL_ATTRIBUTE_UNUSED
 // Prevent the compiler from complaining about or optimizing away variables
 // that appear unused.
 // This is also defined in other files, e.g. third_party/libxml/xmlversion.h.
@@ -702,7 +697,7 @@
 #define ATTRIBUTE_UNUSED
 #endif
 
-// ATTRIBUTE_INITIAL_EXEC
+// ABSL_ATTRIBUTE_INITIAL_EXEC
 // Tell the compiler to use "initial-exec" mode for a thread-local variable.
 // See http://people.redhat.com/drepper/tls.pdf for the gory details.
 #if ABSL_HAVE_ATTRIBUTE(tls_model) || (defined(__GNUC__) && !defined(__clang__))
@@ -719,7 +714,7 @@
 #define ATTRIBUTE_INITIAL_EXEC
 #endif
 
-// ATTRIBUTE_PACKED
+// ABSL_ATTRIBUTE_PACKED
 // Prevent the compiler from padding a structure to natural alignment
 #if ABSL_HAVE_ATTRIBUTE(packed) || (defined(__GNUC__) && !defined(__clang__))
 #define ABSL_ATTRIBUTE_PACKED __attribute__((__packed__))

@@ -22,6 +22,7 @@
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 #include "s2/s2cellunion.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2regioncoverer.h"
 

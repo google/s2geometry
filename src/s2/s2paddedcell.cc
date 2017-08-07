@@ -22,6 +22,7 @@
 
 #include "s2/util/bits/bits.h"
 #include "s2/r1interval.h"
+#include "s2/s2coords.h"
 
 using std::max;
 using std::min;

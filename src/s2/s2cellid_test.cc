@@ -32,6 +32,7 @@
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s2cap.h"
+#include "s2/s2coords.h"
 #include "s2/s2latlng.h"
 #include "s2/s2metrics.h"
 #include "s2/s2testing.h"

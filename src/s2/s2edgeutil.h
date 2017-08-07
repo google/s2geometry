@@ -31,7 +31,4 @@
 #include "s2/s2latlngrect_bounder.h"
 #include "s2/s2wedge_relations.h"
 
-// ABSL_DEPECRECATED("Use S2::")
-namespace S2EdgeUtil = S2;
-
 #endif  // S2_S2EDGEUTIL_H_

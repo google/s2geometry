@@ -25,6 +25,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2loop.h"
 #include "s2/s2shapeutil.h"

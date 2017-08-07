@@ -73,6 +73,8 @@
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2crossingedgequery.h"
+#include "s2/s2edge_crosser.h"
+#include "s2/s2edge_crossings.h"
 #include "s2/s2measures.h"
 #include "s2/s2predicates.h"
 

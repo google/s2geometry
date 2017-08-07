@@ -18,8 +18,8 @@
 
 #include "s2/third_party/absl/numeric/int128.h"
 
-#include <cstdlib>
 #include <cassert>
+#include <cstdlib>
 #include <iomanip>
 #include <iostream>  // NOLINT(readability/streams)
 #include <sstream>

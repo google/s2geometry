@@ -218,8 +218,8 @@ class S2RegionEncodeDecodeTest : public testing::Test {
  protected:
   // TestEncodeDecode tests that the input encodes to match the expected
   // golden data, and then returns the decode of the data into dst.
-  void TestEncodeDecode(string const& golden, S2Region const& src,
-                        S2Region* dst) {
+  template <class Region>
+  void TestEncodeDecode(string const& golden, Region const& src, Region* dst) {
     Encoder encoder;
     src.Encode(&encoder);
 

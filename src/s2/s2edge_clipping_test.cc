@@ -28,6 +28,7 @@
 #include "s2/r2rect.h"
 #include "s2/s1chordangle.h"
 #include "s2/s1interval.h"
+#include "s2/s2coords.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 

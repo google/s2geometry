@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2cap.h"
+#include "s2/s2edge_crossings.h"
 #include "s2/s2loop.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"

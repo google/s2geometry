@@ -59,11 +59,11 @@ class S2PointRegion final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const override;
+  void Encode(Encoder* const encoder) const;
 
   // Decodes an S2Point encoded with Encode().  Returns true on success.
   // (Returns false if the encoded point is not unit length.)
-  bool Decode(Decoder* const decoder) override;
+  bool Decode(Decoder* const decoder);
 
  private:
   S2Point point_;

@@ -379,11 +379,6 @@ class VertexIdLaxLoop : public S2Shape {
   S2Point const* vertex_array_;
 };
 
-// TODO(ericv/jrosenstock): Remove these ABSL_DEPRECATED synonyms.
-using S2LoopOwningShape = S2Loop::OwningShape;
-using S2PolygonOwningShape = S2Polygon::OwningShape;
-using S2PolylineOwningShape = S2Polyline::OwningShape;
-
 
 /////////////////////////////////////////////////////////////////////////////
 ////////////////////// Utility Functions and Classes ////////////////////////

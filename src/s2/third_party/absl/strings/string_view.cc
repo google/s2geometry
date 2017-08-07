@@ -18,9 +18,9 @@
 
 #include "s2/third_party/absl/strings/string_view.h"
 
-#include <cstring>
 #include <algorithm>
 #include <climits>
+#include <cstring>
 #include <ostream>
 #include <string>
 
@@ -119,7 +119,7 @@ string_view::size_type string_view::copy(char* buf, size_type n,
 
 bool string_view::contains(string_view s) const { return find(s, 0) != npos; }
 
-stringpiece_ssize_type string_view::find(string_view s, size_type pos) const
+string_view::size_type string_view::find(string_view s, size_type pos) const
     noexcept {
   if (empty() || pos > length_) {
     if (empty() && pos == 0 && s.empty()) return 0;
@@ -130,7 +130,7 @@ stringpiece_ssize_type string_view::find(string_view s, size_type pos) const
   return result ? result - ptr_ : npos;
 }
 
-stringpiece_ssize_type string_view::find(char c, size_type pos) const noexcept {
+string_view::size_type string_view::find(char c, size_type pos) const noexcept {
   if (empty() || pos >= length_) {
     return npos;
   }
@@ -139,7 +139,7 @@ stringpiece_ssize_type string_view::find(char c, size_type pos) const noexcept {
   return result != nullptr ? result - ptr_ : npos;
 }
 
-stringpiece_ssize_type string_view::rfind(string_view s, size_type pos) const
+string_view::size_type string_view::rfind(string_view s, size_type pos) const
     noexcept {
   if (length_ < s.length_) return npos;
   if (s.empty()) return std::min(length_, pos);
@@ -149,7 +149,7 @@ stringpiece_ssize_type string_view::rfind(string_view s, size_type pos) const
 }
 
 // Search range is [0..pos] inclusive.  If pos == npos, search everything.
-stringpiece_ssize_type string_view::rfind(char c, size_type pos) const
+string_view::size_type string_view::rfind(char c, size_type pos) const
     noexcept {
   // Note: memrchr() is not available on Windows.
   if (empty()) return npos;
@@ -162,7 +162,7 @@ stringpiece_ssize_type string_view::rfind(char c, size_type pos) const
   return npos;
 }
 
-stringpiece_ssize_type string_view::find_first_of(string_view s,
+string_view::size_type string_view::find_first_of(string_view s,
                                                   size_type pos) const
     noexcept {
   if (empty() || s.empty()) {
@@ -179,7 +179,7 @@ stringpiece_ssize_type string_view::find_first_of(string_view s,
   return npos;
 }
 
-stringpiece_ssize_type string_view::find_first_not_of(string_view s,
+string_view::size_type string_view::find_first_not_of(string_view s,
                                                       size_type pos) const
     noexcept {
   if (empty()) return npos;
@@ -194,7 +194,7 @@ stringpiece_ssize_type string_view::find_first_not_of(string_view s,
   return npos;
 }
 
-stringpiece_ssize_type string_view::find_first_not_of(char c,
+string_view::size_type string_view::find_first_not_of(char c,
                                                       size_type pos) const
     noexcept {
   if (empty()) return npos;
@@ -206,7 +206,7 @@ stringpiece_ssize_type string_view::find_first_not_of(char c,
   return npos;
 }
 
-stringpiece_ssize_type string_view::find_last_of(string_view s,
+string_view::size_type string_view::find_last_of(string_view s,
                                                  size_type pos) const noexcept {
   if (empty() || s.empty()) return npos;
   // Avoid the cost of LookupTable() for a single-character search.
@@ -221,7 +221,7 @@ stringpiece_ssize_type string_view::find_last_of(string_view s,
   return npos;
 }
 
-stringpiece_ssize_type string_view::find_last_not_of(string_view s,
+string_view::size_type string_view::find_last_not_of(string_view s,
                                                      size_type pos) const
     noexcept {
   if (empty()) return npos;
@@ -239,7 +239,7 @@ stringpiece_ssize_type string_view::find_last_not_of(string_view s,
   return npos;
 }
 
-stringpiece_ssize_type string_view::find_last_not_of(char c,
+string_view::size_type string_view::find_last_not_of(char c,
                                                      size_type pos) const
     noexcept {
   if (empty()) return npos;

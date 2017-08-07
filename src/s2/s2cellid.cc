@@ -29,6 +29,7 @@
 #include "s2/base/stringprintf.h"
 #include <mutex>
 #include "s2/r1interval.h"
+#include "s2/s2coords.h"
 #include "s2/s2latlng.h"
 
 using S2::internal::kSwapMask;

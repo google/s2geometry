@@ -8,7 +8,7 @@
 #ifndef THIRD_PARTY_ABSL_BASE_INTERNAL_PORT_HASH_INC_
 #define THIRD_PARTY_ABSL_BASE_INTERNAL_PORT_HASH_INC_
 
-#include <assert.h>
+#include <cassert>
 #include <hash_set>
 #include <hash_map>
 #include <functional>

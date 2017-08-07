@@ -36,11 +36,11 @@
 #ifndef S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_
 #define S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_
 
-#include <cstddef>
-#include <cstring>
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <initializer_list>
 #include <iterator>
 #include <memory>

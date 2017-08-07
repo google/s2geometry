@@ -30,15 +30,14 @@ bool CaseEqual(absl::string_view piece1, absl::string_view piece2) {
 }
 }  // namespace
 
-bool StartsWithIgnoreCase(absl::string_view text,
-                          absl::string_view starts_with) {
-  if (text.size() < starts_with.size()) return false;
-  return CaseEqual(text.substr(0, starts_with.size()), starts_with);
+bool StartsWithIgnoreCase(absl::string_view text, absl::string_view preffix) {
+  return (text.size() >= preffix.size()) &&
+         CaseEqual(text.substr(0, preffix.size()), preffix);
 }
 
-bool EndsWithIgnoreCase(absl::string_view text, absl::string_view ends_with) {
-  if (text.size() < ends_with.size()) return false;
-  return CaseEqual(text.substr(text.size() - ends_with.size()), ends_with);
+bool EndsWithIgnoreCase(absl::string_view text, absl::string_view suffix) {
+  return (text.size() >= suffix.size()) &&
+         CaseEqual(text.substr(text.size() - suffix.size()), suffix);
 }
 
 }  // namespace absl

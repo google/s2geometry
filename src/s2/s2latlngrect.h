@@ -340,10 +340,10 @@ class S2LatLngRect final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const override;
+  void Encode(Encoder* const encoder) const;
 
   // Decodes an S2LatLngRect encoded with Encode().  Returns true on success.
-  bool Decode(Decoder* const decoder) override;
+  bool Decode(Decoder* const decoder);
 
   // Return true if the edge AB intersects the given edge of constant
   // longitude.

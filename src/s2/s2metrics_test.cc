@@ -18,6 +18,7 @@
 #include "s2/s2metrics.h"
 
 #include <gtest/gtest.h>
+#include "s2/s2coords.h"
 
 // Note: obviously, I could have defined a bundle of metrics like this in the
 // S2 class itself rather than just for testing.  However, it's not clear that

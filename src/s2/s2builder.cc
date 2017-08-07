@@ -87,6 +87,8 @@
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2closestedgequery.h"
 #include "s2/s2closestpointquery.h"
+#include "s2/s2edge_crossings.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"

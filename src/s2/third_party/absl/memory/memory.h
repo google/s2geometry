@@ -25,8 +25,6 @@
 #define S2_THIRD_PARTY_ABSL_MEMORY_MEMORY_H_
 
 #include <cstddef>
-
-#include <cstddef>
 #include <limits>
 #include <memory>
 #include <type_traits>

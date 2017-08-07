@@ -170,10 +170,10 @@ class S2Cell final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const override;
+  void Encode(Encoder* const encoder) const;
 
   // Decodes an S2Cell encoded with Encode().  Returns true on success.
-  bool Decode(Decoder* const decoder) override;
+  bool Decode(Decoder* const decoder);
 
  private:
   // Return the latitude or longitude of the cell vertex given by (i,j),

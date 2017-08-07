@@ -27,6 +27,7 @@
 #include "s2/s1interval.h"
 #include "s2/s2cell.h"
 #include "s2/s2debug.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"

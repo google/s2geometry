@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2textformat.h"
 
 namespace {

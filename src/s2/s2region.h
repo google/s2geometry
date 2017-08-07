@@ -73,7 +73,7 @@ class S2Region {
   virtual bool Contains(S2Point const& p) const = 0;
 
   //////////////////////////////////////////////////////////////////////////
-  // Many S2Region subtypes also include the following methods.
+  // Many S2Region subtypes also define the following non-virtual methods.
   //////////////////////////////////////////////////////////////////////////
 
   // Appends a serialized representation of the region to "encoder".
@@ -89,9 +89,7 @@ class S2Region {
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
   //
-  // TODO(ericv): Remove this method from the S2Region interface, since Decode
-  // is never called as a virtual method.
-  virtual void Encode(Encoder* const encoder) const {}
+  // void Encode(Encoder* const encoder) const;
 
   // Decodes an S2Region encoded with Encode().  Note that this method
   // requires that an S2Region object of the appropriate concrete type has
@@ -105,9 +103,7 @@ class S2Region {
   //
   // Returns true on success.
   //
-  // TODO(ericv): Remove this method from the S2Region interface, since Decode
-  // is never called as a virtual method.
-  virtual bool Decode(Decoder* const decoder) { return false; }
+  // bool Decode(Decoder* const decoder);
 
   // Provides the same functionality as Decode, except that decoded regions
   // are allowed to point directly into the Decoder's memory buffer rather
@@ -115,9 +111,7 @@ class S2Region {
   // have a lot of data (such as polygons), but the decoded region is only
   // valid within the scope (lifetime) of the Decoder's memory buffer.
   //
-  // TODO(ericv): Remove this method from the S2Region interface, since Decode
-  // is never called as a virtual method.
-  virtual bool DecodeWithinScope(Decoder* const decoder);
+  // bool DecodeWithinScope(Decoder* const decoder);
 };
 
 #endif  // S2_S2REGION_H_
