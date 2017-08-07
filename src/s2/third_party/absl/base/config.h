@@ -14,6 +14,8 @@
 //
 
 // Defines preprocessor macros describing the presence of "features" available.
+// This file is used for both C and C++!
+//
 // This facilitates writing portable code by parameterizing the compilation
 // based on the presence or lack of a feature.
 //

@@ -29,6 +29,7 @@
 #include "s2/base/casts.h"
 #include "s2/base/stringprintf.h"
 #include "s2/r1interval.h"
+#include "s2/s2coords.h"
 #include "s2/s2latlng.h"
 #include "s2/third_party/absl/base/integral_types.h"
 

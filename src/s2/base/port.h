@@ -289,7 +289,11 @@ inline void sized_delete(void *ptr, size_t size) {
 #else
 
 static inline uint16 bswap_16(uint16 x) {
+#ifdef __cplusplus
+  return static_cast<uint16>(((x & 0xFF) << 8) | ((x & 0xFF00) >> 8));
+#else
   return (uint16)(((x & 0xFF) << 8) | ((x & 0xFF00) >> 8));  // NOLINT
+#endif  // __cplusplus
 }
 #define bswap_16(x) bswap_16(x)
 static inline uint32 bswap_32(uint32 x) {
@@ -421,7 +425,7 @@ using std::hash;
 #endif /* __APPLE__ && __MACH__ */
 
 // printf macros for size_t, in the style of inttypes.h
-#if defined(_LP64) || defined(OS_IOS)
+#if defined(_LP64) || defined(__APPLE__)
 #define __PRIS_PREFIX "z"
 #else
 #define __PRIS_PREFIX

@@ -21,7 +21,7 @@
 #ifndef S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_UTILS_H_
 #define S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_UTILS_H_
 
-#include <ctype.h>
+#include <cctype>
 #include <cstddef>
 #include <vector>
 
@@ -54,15 +54,15 @@ inline bool Contains(absl::string_view s, absl::string_view x) {
   return absl::StrContains(s, x);
 }
 
-// Removes leading ascii_isspace() characters.
+// Removes leading absl::ascii_isspace() characters.
 // Returns number of characters removed.
 stringpiece_ssize_type RemoveLeadingWhitespace(absl::string_view* text);
 
-// Removes trailing ascii_isspace() characters.
+// Removes trailing absl::ascii_isspace() characters.
 // Returns number of characters removed.
 stringpiece_ssize_type RemoveTrailingWhitespace(absl::string_view* text);
 
-// Removes leading and trailing ascii_isspace() chars.
+// Removes leading and trailing absl::ascii_isspace() chars.
 // Returns number of chars removed.
 stringpiece_ssize_type RemoveWhitespaceContext(absl::string_view* text);
 

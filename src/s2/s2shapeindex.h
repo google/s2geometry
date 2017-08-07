@@ -787,21 +787,8 @@ class S2ShapeIndex final : public S2ShapeIndexBase {
     bool Locate(S2Point const& target) override;
     CellRelation Locate(S2CellId target) override;
 
-    ABSL_DEPRECATED("Use Iterator(S2ShapeIndex const*)")
-    explicit Iterator(S2ShapeIndex const& index) : Iterator(&index, BEGIN) {}
-
-    ABSL_DEPRECATED("Use Init(S2ShapeIndex const*)")
-    void Init(S2ShapeIndex const& index) {
-      Init(&index, BEGIN);
-    }
-
-    ABSL_DEPRECATED("Use InitStale(S2ShapeIndex const*)")
-    void InitStale(S2ShapeIndex const& index) {
-      InitStale(&index, BEGIN);
-    }
-
    protected:
-    S2ShapeIndexCell const* GetCell() const;
+    S2ShapeIndexCell const* GetCell() const override;
     std::unique_ptr<IteratorBase> Clone() const override;
     void Copy(IteratorBase const& other) override;
 

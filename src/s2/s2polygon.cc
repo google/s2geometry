@@ -41,12 +41,17 @@
 #include "s2/s2cellid.h"
 #include "s2/s2cellunion.h"
 #include "s2/s2closestedgequery.h"
+#include "s2/s2coords.h"
 #include "s2/s2crossingedgequery.h"
 #include "s2/s2debug.h"
+#include "s2/s2edge_clipping.h"
+#include "s2/s2edge_crosser.h"
+#include "s2/s2edge_crossings.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2latlngrect_bounder.h"
 #include "s2/s2loop.h"
 #include "s2/s2measures.h"
 #include "s2/s2metrics.h"
@@ -857,8 +862,10 @@ void S2Polygon::Encode(Encoder* const encoder) const {
     current_loop_vertices += loop->num_vertices();
   }
   // Computes a histogram of the cell levels at which the vertices are snapped.
-  // (histogram[0] is the number of unsnapped vertices, histogram[i] the number
-  // of vertices snapped at level i-1).
+  // cell_level is -1 for unsnapped, or 0 through kMaxCellLevel if snapped,
+  // so we add one to it to get a non-negative index.  (histogram[0] is the
+  // number of unsnapped vertices, histogram[i] the number of vertices
+  // snapped at level i-1).
   std::array<int, S2::kMaxCellLevel + 2> histogram;
   histogram.fill(0);
   for (auto const& v : all_vertices) {
@@ -868,11 +875,13 @@ void S2Polygon::Encode(Encoder* const encoder) const {
   // If multiple levels have the same maximum number of vertices
   // snapped to it, the first one (lowest level number / largest
   // area / smallest encoding length) will be chosen, so this
-  // is desired.
-  auto const max_elem =
+  // is desired.  Start with histogram[1] since histogram[0] is
+  // the number of unsnapped vertices, which we don't care about.
+  auto const max_iter =
       std::max_element(histogram.begin() + 1, histogram.end());
-  int const snap_level = max_elem - (histogram.begin() + 1);
-  int const num_snapped = *max_elem;
+  // snap_level will be at position histogram[snap_level + 1], see above.
+  int const snap_level = max_iter - (histogram.begin() + 1);
+  int const num_snapped = *max_iter;
   // Choose an encoding format based on the number of unsnapped vertices and a
   // rough estimate of the encoded sizes.
 

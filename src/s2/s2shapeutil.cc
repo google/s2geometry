@@ -20,12 +20,14 @@
 #include "s2/base/stringprintf.h"
 #include "s2/third_party/absl/types/span.h"
 #include "s2/s2crossingedgequery.h"
+#include "s2/s2edge_crosser.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
 #include "s2/s2paddedcell.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
+#include "s2/s2wedge_relations.h"
 
 using absl::Span;
 using std::pair;

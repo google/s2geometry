@@ -14,6 +14,7 @@
 //
 
 // Basic integer type definitions for various platforms
+// This file is used for both C and C++!
 //
 // This code is compiled directly on many platforms, including client
 // platforms like Windows, Mac, and embedded systems.  Before making

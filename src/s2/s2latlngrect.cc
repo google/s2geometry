@@ -28,6 +28,8 @@
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2debug.h"
+#include "s2/s2edge_crossings.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2pointutil.h"
 

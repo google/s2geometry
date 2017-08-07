@@ -35,6 +35,8 @@
 #include "s2/s2cap.h"
 #include "s2/s2cellid.h"
 #include "s2/s2debug.h"
+#include "s2/s2edge_crossings.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"

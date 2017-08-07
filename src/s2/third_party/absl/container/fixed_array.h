@@ -31,10 +31,10 @@
 #ifndef S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_
 #define S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_
 
-#include <cstddef>
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <initializer_list>
 #include <iterator>
 #include <limits>

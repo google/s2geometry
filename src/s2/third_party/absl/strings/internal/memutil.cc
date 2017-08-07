@@ -18,9 +18,9 @@
 
 #include "s2/third_party/absl/strings/internal/memutil.h"
 
-#include <cstdlib>  // for malloc
+#include <cstdlib>
 
-#include "s2/third_party/absl/strings/ascii_ctype.h"  // for ascii_tolower
+#include "s2/third_party/absl/strings/ascii.h"  // for absl::ascii_tolower
 
 namespace absl {
 namespace strings_internal {
@@ -28,10 +28,10 @@ int memcasecmp(const char* s1, const char* s2, size_t len) {
   const unsigned char* us1 = reinterpret_cast<const unsigned char*>(s1);
   const unsigned char* us2 = reinterpret_cast<const unsigned char*>(s2);
 
-  for (int i = 0; i < len; i++) {
+  for (size_t i = 0; i < len; i++) {
     const int diff =
-        static_cast<int>(static_cast<unsigned char>(ascii_tolower(us1[i]))) -
-        static_cast<int>(static_cast<unsigned char>(ascii_tolower(us2[i])));
+        int{static_cast<unsigned char>(absl::ascii_tolower(us1[i]))} -
+        int{static_cast<unsigned char>(absl::ascii_tolower(us2[i]))};
     if (diff != 0) return diff;
   }
   return 0;
@@ -101,10 +101,10 @@ const char* int_memmatch(const char* haystack, size_t haylen,
   for (; haystack < hayend; ++haystack) {
     char hay = case_sensitive
                    ? *haystack
-                   : ascii_tolower(static_cast<unsigned char>(*haystack));
+                   : absl::ascii_tolower(static_cast<unsigned char>(*haystack));
     char nee = case_sensitive
                    ? *needle
-                   : ascii_tolower(static_cast<unsigned char>(*needle));
+                   : absl::ascii_tolower(static_cast<unsigned char>(*needle));
     if (hay == nee) {
       if (++needle == needleend) {
         return haystack + 1 - neelen;

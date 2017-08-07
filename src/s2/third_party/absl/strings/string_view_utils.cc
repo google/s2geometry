@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-#include "s2/third_party/absl/strings/ascii_ctype.h"
+#include "s2/third_party/absl/strings/ascii.h"
 #include "s2/third_party/absl/strings/internal/memutil.h"
 
 namespace strings {
@@ -29,7 +29,7 @@ namespace strings {
 stringpiece_ssize_type RemoveLeadingWhitespace(absl::string_view* text) {
   stringpiece_ssize_type count = 0;
   const char* ptr = text->data();
-  while (count < text->size() && ascii_isspace(*ptr)) {
+  while (count < text->size() && absl::ascii_isspace(*ptr)) {
     count++;
     ptr++;
   }
@@ -40,7 +40,7 @@ stringpiece_ssize_type RemoveLeadingWhitespace(absl::string_view* text) {
 stringpiece_ssize_type RemoveTrailingWhitespace(absl::string_view* text) {
   stringpiece_ssize_type count = 0;
   const char* ptr = text->data() + text->size() - 1;
-  while (count < text->size() && ascii_isspace(*ptr)) {
+  while (count < text->size() && absl::ascii_isspace(*ptr)) {
     ++count;
     --ptr;
   }
@@ -97,7 +97,7 @@ bool EqualIgnoreCase(absl::string_view piece1, absl::string_view piece2) {
   return (piece1.size() == piece2.size() &&
           0 == absl::strings_internal::memcasecmp(piece1.data(), piece2.data(),
                                                   piece1.size()));
-  // memcasecmp uses ascii_tolower().
+  // memcasecmp uses absl::ascii_tolower().
 }
 
 stringpiece_ssize_type FindIgnoreCase(absl::string_view haystack,
@@ -141,7 +141,7 @@ size_t StringPieceCaseHash::operator()(absl::string_view sp) const {
   // based on __stl_string_hash in http://www.sgi.com/tech/stl/string
   size_t hash_val = 0;
   for (const char c : sp) {
-    hash_val = 5 * hash_val + ascii_tolower(c);
+    hash_val = 5 * hash_val + absl::ascii_tolower(c);
   }
   return hash_val;
 }

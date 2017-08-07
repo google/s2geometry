@@ -23,7 +23,8 @@
 #ifndef S2_THIRD_PARTY_ABSL_BASE_MACROS_H_
 #define S2_THIRD_PARTY_ABSL_BASE_MACROS_H_
 
-#include <cstddef>         // For size_t
+#include <cstddef>
+
 #include "s2/third_party/absl/base/port.h"
 
 // The ABSL_ARRAYSIZE(arr) macro returns the # of elements in an array arr.

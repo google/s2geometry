@@ -653,10 +653,10 @@ class S2Polygon final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const override;
+  void Encode(Encoder* const encoder) const;
 
   // Decodes a polygon encoded with Encode().  Returns true on success.
-  bool Decode(Decoder* const decoder) override;
+  bool Decode(Decoder* const decoder);
 
   // Decodes a polygon by pointing the S2Loop vertices directly into the
   // decoder's memory buffer (which needs to persist for the lifetime of the
@@ -666,7 +666,7 @@ class S2Polygon final : public S2Region {
   // a given S2Cell level; otherwise this method falls back to Decode().
   //
   // Returns true on success.
-  bool DecodeWithinScope(Decoder* const decoder) override;
+  bool DecodeWithinScope(Decoder* const decoder);
 
 #ifndef SWIG
   // Wrapper class for indexing a polygon (see S2ShapeIndex).  Once this

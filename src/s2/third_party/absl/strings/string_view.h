@@ -122,10 +122,10 @@
 #ifndef S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_H_
 #define S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_H_
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
-#include <algorithm>
 #include <iosfwd>
 #include <iterator>
 #include <limits>
@@ -216,10 +216,10 @@ class string_view {
   const_reverse_iterator crend() const noexcept { return rend(); }
 
   // [string.view.capacity]
-  constexpr stringpiece_ssize_type size() const noexcept {
-    return static_cast<stringpiece_ssize_type>(length_);
+  constexpr size_type size() const noexcept {
+    return length_;
   }
-  constexpr stringpiece_ssize_type length() const noexcept { return size(); }
+  constexpr size_type length() const noexcept { return size(); }
   constexpr size_type max_size() const noexcept { return kMaxSize; }
   constexpr bool empty() const noexcept { return length_ == 0; }
 
@@ -374,35 +374,35 @@ class string_view {
 
   // [string.view.find]
 
-  stringpiece_ssize_type find(string_view s, size_type pos = 0) const noexcept;
-  stringpiece_ssize_type find(char c, size_type pos = 0) const noexcept;
+  size_type find(string_view s, size_type pos = 0) const noexcept;
+  size_type find(char c, size_type pos = 0) const noexcept;
 
-  stringpiece_ssize_type rfind(string_view s, size_type pos = npos) const
+  size_type rfind(string_view s, size_type pos = npos) const
       noexcept;
-  stringpiece_ssize_type rfind(char c, size_type pos = npos) const noexcept;
+  size_type rfind(char c, size_type pos = npos) const noexcept;
 
-  stringpiece_ssize_type find_first_of(string_view s, size_type pos = 0) const
+  size_type find_first_of(string_view s, size_type pos = 0) const
       noexcept;
-  stringpiece_ssize_type find_first_of(char c, size_type pos = 0) const
+  size_type find_first_of(char c, size_type pos = 0) const
       noexcept {
     return find(c, pos);
   }
 
-  stringpiece_ssize_type find_last_of(string_view s, size_type pos = npos) const
+  size_type find_last_of(string_view s, size_type pos = npos) const
       noexcept;
-  stringpiece_ssize_type find_last_of(char c, size_type pos = npos) const
+  size_type find_last_of(char c, size_type pos = npos) const
       noexcept {
     return rfind(c, pos);
   }
 
-  stringpiece_ssize_type find_first_not_of(string_view s,
+  size_type find_first_not_of(string_view s,
                                            size_type pos = 0) const noexcept;
-  stringpiece_ssize_type find_first_not_of(char c, size_type pos = 0) const
+  size_type find_first_not_of(char c, size_type pos = 0) const
       noexcept;
 
-  stringpiece_ssize_type find_last_not_of(string_view s,
+  size_type find_last_not_of(string_view s,
                                           size_type pos = npos) const noexcept;
-  stringpiece_ssize_type find_last_not_of(char c, size_type pos = npos) const
+  size_type find_last_not_of(char c, size_type pos = npos) const
       noexcept;
 
   // Legacy variants of the size and find family returning their old signed

@@ -20,10 +20,10 @@
 #define S2_THIRD_PARTY_ABSL_STRINGS_STRIP_H_
 
 #include <cstddef>
-
 #include <string>
 
 #include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/strings/ascii.h"
 #include "s2/third_party/absl/strings/ascii_ctype.h"
 #include "s2/third_party/absl/strings/match.h"
 #include "s2/third_party/absl/strings/string_view.h"
@@ -163,8 +163,7 @@ inline void StripWhitespaceInCollection(Collection* collection) {
 void StripLeadingWhitespace(string* str);
 inline const char* StripLeadingWhitespace(const char* line) {
   // skip leading whitespace
-  while (ascii_isspace(*line))
-    ++line;
+  while (absl::ascii_isspace(*line)) ++line;
 
   if ('\0' == *line)  // end of line, no non-whitespace
     return nullptr;
@@ -190,13 +189,11 @@ void RemoveExtraWhitespace(string* s);
 // Returns a pointer to the first non-whitespace character in 'str'. Never
 // returns nullptr. 'str' must be NUL-terminated.
 inline const char* SkipLeadingWhitespace(const char* str) {
-  while (ascii_isspace(*str))
-    ++str;
+  while (absl::ascii_isspace(*str)) ++str;
   return str;
 }
 inline char* SkipLeadingWhitespace(char* str) {
-  while (ascii_isspace(*str))
-    ++str;
+  while (absl::ascii_isspace(*str)) ++str;
   return str;
 }
 

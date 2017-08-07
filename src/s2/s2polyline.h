@@ -249,10 +249,10 @@ class S2Polyline final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const override;
+  void Encode(Encoder* const encoder) const;
 
   // Decodes an S2Polyline encoded with Encode().  Returns true on success.
-  bool Decode(Decoder* const decoder) override;
+  bool Decode(Decoder* const decoder);
 
 #ifndef SWIG
   // Wrapper class for indexing a polyline (see S2ShapeIndex).  Once this

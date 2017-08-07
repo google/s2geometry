@@ -28,6 +28,7 @@
 #include "s2/s2cap.h"
 #include "s2/s2cellid.h"
 #include "s2/s2cellunion.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2edgeutil.h"
 #include "s2/s2pointindex.h"
 #include "s2/s2regioncoverer.h"
@@ -80,9 +81,6 @@ class S2ClosestPointQuery {
 
   // Convenience constructor that calls Init().
   explicit S2ClosestPointQuery(Index const* index);
-  ABSL_DEPRECATED("Use pointer version.")
-  explicit S2ClosestPointQuery(Index const& index)
-    : S2ClosestPointQuery(&index) {}
 
   // Default constructor; requires Init() to be called.
   S2ClosestPointQuery() {}
@@ -91,8 +89,6 @@ class S2ClosestPointQuery {
   // Initialize the query.
   // REQUIRES: Reset() must be called if "index" is modified.
   void Init(Index const* index);
-  ABSL_DEPRECATED("Use pointer version.")
-  void Init(Index const& index) { Init(&index); }
 
   // Reset the query state.  This method must be called whenever the
   // underlying index is modified.
@@ -435,7 +431,7 @@ void S2ClosestPointQuery<Data>::InitIndexCovering() {
   // this will save work on every subsequent query.
   index_covering_.clear();
   iter_.Reset();
-  if (iter_.Done()) return;  // Empty index.
+  if (iter_.done()) return;  // Empty index.
 
   Iterator next = iter_, last = iter_;
   last.Finish();
@@ -513,7 +509,7 @@ void S2ClosestPointQuery<Data>::FindClosestPointsToTarget(
 template <class Data> template <class Target>
 void S2ClosestPointQuery<Data>::FindClosestPointsBruteForce(
     Target const& target) {
-  for (iter_.Reset(); !iter_.Done(); iter_.Next()) {
+  for (iter_.Reset(); !iter_.done(); iter_.Next()) {
     MaybeAddResult(iter_.point_data(), target);
   }
 }
@@ -583,7 +579,7 @@ void S2ClosestPointQuery<Data>::InitQueue(Target const& target) {
     // remove duplicate entries.  (The points added here may be re-added by
     // AddCell(), but this is okay when max_points() == 1.)
     iter_.Seek(S2CellId(target.center()));
-    if (!iter_.Done()) {
+    if (!iter_.done()) {
       MaybeAddResult(iter_.point_data(), target);
     }
     if (iter_.Prev()) {
@@ -612,7 +608,7 @@ void S2ClosestPointQuery<Data>::InitQueue(Target const& target) {
     initial_cells = &intersection_with_max_distance_;
   }
   iter_.Reset();
-  for (int i = 0; i < initial_cells->size() && !iter_.Done(); ++i) {
+  for (int i = 0; i < initial_cells->size() && !iter_.done(); ++i) {
     S2CellId id = (*initial_cells)[i];
     AddCell(id, &iter_, id.range_min() > iter_.id() /*seek*/, target);
   }
@@ -631,14 +627,14 @@ bool S2ClosestPointQuery<Data>::AddCell(S2CellId id, Iterator* iter,
   if (seek) iter->Seek(id.range_min());
   if (id.is_leaf()) {
     // Leaf cells can't be subdivided.
-    for (; !iter->Done() && iter->id() == id; iter->Next()) {
+    for (; !iter->done() && iter->id() == id; iter->Next()) {
       MaybeAddResult(iter->point_data(), target);
     }
     return false;  // No need to seek to next child.
   }
   S2CellId last = id.range_max();
   int num_points = 0;
-  for (; !iter->Done() && iter->id() <= last; iter->Next()) {
+  for (; !iter->done() && iter->id() <= last; iter->Next()) {
     if (num_points == kMaxLeafPoints) {
       // This child cell has too many points, so enqueue it.
       S2Cell cell(id);

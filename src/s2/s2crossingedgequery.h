@@ -90,17 +90,12 @@ class S2CrossingEdgeQuery {
 
   // Convenience constructor that calls Init().
   explicit S2CrossingEdgeQuery(S2ShapeIndexBase const* index);
-  ABSL_DEPRECATED("Use pointer version.")
-  explicit S2CrossingEdgeQuery(S2ShapeIndexBase const& index)
-      : S2CrossingEdgeQuery(&index) {}
 
   // Default constructor; requires Init() to be called.
   S2CrossingEdgeQuery();
 
   // REQUIRES: "index" is not modified after this method is called.
   void Init(S2ShapeIndexBase const* index);
-  ABSL_DEPRECATED("Use pointer version.")
-  void Init(S2ShapeIndexBase const& index) { Init(&index); }
 
   // Given a query edge AB and a shape S, return all the edges of S that
   // intersect AB.  If "type" is CrossingType::INTERIOR, then only

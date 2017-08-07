@@ -63,10 +63,10 @@ inline bool memeq(const char* a, const char* b, size_t n) {
   }
   // n >= 8
   {
-    uint64 u =
+    uint64_t u =
         ABSL_INTERNAL_UNALIGNED_LOAD64(a) ^ ABSL_INTERNAL_UNALIGNED_LOAD64(b);
-    uint64 v = ABSL_INTERNAL_UNALIGNED_LOAD64(a + n - 8) ^
-               ABSL_INTERNAL_UNALIGNED_LOAD64(b + n - 8);
+    uint64_t v = ABSL_INTERNAL_UNALIGNED_LOAD64(a + n - 8) ^
+                 ABSL_INTERNAL_UNALIGNED_LOAD64(b + n - 8);
     if ((u | v) != 0) {  // The first or last 8 bytes differ.
       return false;
     }
@@ -95,10 +95,10 @@ inline bool memeq(const char* a, const char* b, size_t n) {
       return false;
     }
 #else
-    uint64 x =
+    uint64_t x =
         ABSL_INTERNAL_UNALIGNED_LOAD64(a) ^ ABSL_INTERNAL_UNALIGNED_LOAD64(b);
-    uint64 y = ABSL_INTERNAL_UNALIGNED_LOAD64(a + 8) ^
-               ABSL_INTERNAL_UNALIGNED_LOAD64(b + 8);
+    uint64_t y = ABSL_INTERNAL_UNALIGNED_LOAD64(a + 8) ^
+                 ABSL_INTERNAL_UNALIGNED_LOAD64(b + 8);
     if ((x | y) != 0) {
       return false;
     }

@@ -32,8 +32,9 @@
 #include "s2/s1chordangle.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2closestedgequery_base.h"
+#include "s2/s2edge_distances.h"
+#include "s2/s2edgeutil.h"
 #include "s2/s2shapeindex.h"
 
 // S2ClosestEdgeQuery is a helper class for finding the closest edge(s) to a

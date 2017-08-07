@@ -394,20 +394,20 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const override;
+  void Encode(Encoder* const encoder) const;
 
   // Decodes a loop encoded with Encode() or the private method
   // EncodeCompressed() (used by the S2Polygon encoder).  Returns true on
   // success.
   //
   // This method may be called with loops that have already been initialized.
-  bool Decode(Decoder* const decoder) override;
+  bool Decode(Decoder* const decoder);
 
   // Provides the same functionality as Decode, except that decoded regions
   // are allowed to point directly into the Decoder's memory buffer rather
   // than copying the data.  This can be much faster, but the decoded loop is
   // only valid within the scope (lifetime) of the Decoder's memory buffer.
-  bool DecodeWithinScope(Decoder* const decoder) override;
+  bool DecodeWithinScope(Decoder* const decoder);
 
   ////////////////////////////////////////////////////////////////////////
   // Methods intended primarily for use by the S2Polygon implementation:

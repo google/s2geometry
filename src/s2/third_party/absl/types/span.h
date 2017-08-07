@@ -150,9 +150,9 @@
 #ifndef S2_THIRD_PARTY_ABSL_TYPES_SPAN_H_
 #define S2_THIRD_PARTY_ABSL_TYPES_SPAN_H_
 
-#include <cstddef>
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <initializer_list>
 #include <iterator>
 #include <string>

@@ -25,7 +25,7 @@
 // The difference between the mem and str versions is the mem version
 // takes a pointer and a length, rather than a '\0'-terminated string.
 // The memcase* routines defined here assume the locale is "C"
-// (they use ascii_tolower instead of tolower).
+// (they use absl::ascii_tolower instead of tolower).
 //
 // These routines are based on the BSD library.
 //
@@ -64,7 +64,7 @@
 #define S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_MEMUTIL_H_
 
 #include <cstddef>
-#include <cstring>  // to get the POSIX mem*() routines
+#include <cstring>
 
 #include "s2/third_party/absl/base/port.h"  // disable some warnings on Windows
 
