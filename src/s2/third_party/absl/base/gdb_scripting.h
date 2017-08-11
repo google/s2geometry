@@ -29,6 +29,11 @@
 // DEFINE_GDB_AUTO_SCRIPT("mylib/mylib_gdb.py")
 //
 //
+// NOTE FOR GOOGLERS:
+//
+// Overview docs can be found at go/gdbscripts
+//
+// IWYU pragma: private, include "base/gdb-scripting.h"
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_GDB_SCRIPTING_H_
 #define S2_THIRD_PARTY_ABSL_BASE_GDB_SCRIPTING_H_

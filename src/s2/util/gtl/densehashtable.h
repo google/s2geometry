@@ -657,15 +657,17 @@ class dense_hashtable {
     size_type resize_to =
       settings.min_buckets(num_elements - num_deleted + delta, bucket_count());
 
-    if (resize_to < needed_size &&    // may double resize_to
-        resize_to < (std::numeric_limits<size_type>::max)() / 2) {
+    if (resize_to < needed_size) {
       // This situation means that we have enough deleted elements,
       // that once we purge them, we won't actually have needed to
       // grow.  But we may want to grow anyway: if we just purge one
       // element, say, we'll have to grow anyway next time we
       // insert.  Might as well grow now, since we're already going
-      // through the trouble of copying (in order to purge the
-      // deleted elements).
+      // through the trouble of rebucketing in order to purge the
+      // deleted elements.  (Safety note: Can resize_to * 2 overflow? No.
+      // The output of min_buckets() is always a power of two, so resize_to
+      // and needed_size are powers of two. That plus resize_to < needed_size
+      // proves that overflow isn't a concern.)
       const size_type target =
           static_cast<size_type>(settings.shrink_size(resize_to*2));
       if (num_elements - num_deleted + delta >= target) {

@@ -119,20 +119,24 @@ ptrdiff_t StripDupCharacters(string* s, char dup_char, ptrdiff_t start_pos);
 // string, or absl::string_view. If the caller is using NUL-terminated strings,
 // it is the caller's responsibility to insert the NUL character at the end of
 // the substring.
-void StripWhitespace(const char** str, ptrdiff_t* len);
-inline void StripWhitespace(char** str, ptrdiff_t* len) {
-  // The "real" type for StripWhitespace is ForAll char types C, take
-  // (C, int) as input and return (C, int) as output.  We're using the
-  // cast here to assert that we can take a char*, even though the
-  // function thinks it's assigning to const char*.
-  StripWhitespace(const_cast<const char**>(str), len);
+ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
+inline void StripWhitespace(const char** str, ptrdiff_t* len) {
+  auto stripped = absl::StripAsciiWhitespace(absl::string_view(*str, *len));
+  *len = stripped.size();
+  if (*len) *str = &*stripped.begin();
 }
-void StripWhitespace(string* str);
+ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
+inline void StripWhitespace(char** str, ptrdiff_t* len) {
+  auto stripped = absl::StripAsciiWhitespace(absl::string_view(*str, *len));
+  *len = stripped.size();
+  if (*len) *str = const_cast<char*>(&*stripped.begin());
+}
+ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
+inline void StripWhitespace(string* str) { absl::StripAsciiWhitespace(str); }
+
+ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
 inline void StripWhitespace(absl::string_view* str) {
-  const char* data = str->data();
-  ptrdiff_t len = str->size();
-  StripWhitespace(&data, &len);
-  *str = absl::string_view(data, len);
+  *str = absl::StripAsciiWhitespace(*str);
 }
 
 namespace strings {
@@ -160,31 +164,39 @@ inline void StripWhitespaceInCollection(Collection* collection) {
 // The versions that take C-strings return a pointer to the first non-whitespace
 // character if one is present or nullptr otherwise. 'line' must be
 // NUL-terminated.
-void StripLeadingWhitespace(string* str);
+inline void StripLeadingWhitespace(string* str) {
+  absl::StripLeadingAsciiWhitespace(str);
+}
+
 inline const char* StripLeadingWhitespace(const char* line) {
-  // skip leading whitespace
-  while (absl::ascii_isspace(*line)) ++line;
+  auto stripped = absl::StripLeadingAsciiWhitespace(line);
 
-  if ('\0' == *line)  // end of line, no non-whitespace
-    return nullptr;
+  if (stripped.empty()) return nullptr;
 
-  return line;
+  return stripped.begin();
 }
 // StripLeadingWhitespace for non-const strings.
 inline char* StripLeadingWhitespace(char* line) {
-  return const_cast<char*>(
-      StripLeadingWhitespace(const_cast<const char*>(line)));
+  auto stripped = absl::StripLeadingAsciiWhitespace(line);
+
+  if (stripped.empty()) return nullptr;
+
+  return const_cast<char*>(stripped.begin());
 }
 
 // Removes whitespace from the end of the given string.
-void StripTrailingWhitespace(string* s);
+inline void StripTrailingWhitespace(string* s) {
+  absl::StripTrailingAsciiWhitespace(s);
+}
 
 // Removes the trailing '\n' or '\r\n' from 's', if one exists. Returns true if
 // a newline was found and removed.
 bool StripTrailingNewline(string* s);
 
 // Removes leading, trailing, and duplicate internal whitespace.
-void RemoveExtraWhitespace(string* s);
+inline void RemoveExtraWhitespace(string* s) {
+  absl::RemoveExtraAsciiWhitespace(s);
+}
 
 // Returns a pointer to the first non-whitespace character in 'str'. Never
 // returns nullptr. 'str' must be NUL-terminated.
@@ -275,5 +287,4 @@ StripWhitespace(char** str, T* len) {
   StripWhitespace(str, &pdt);
   *len = static_cast<int>(pdt);
 }
-
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STRIP_H_

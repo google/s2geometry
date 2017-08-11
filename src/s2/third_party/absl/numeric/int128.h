@@ -1,4 +1,4 @@
-// Copyright 2004 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,13 @@
 // limitations under the License.
 //
 
-// All Rights Reserved.
+// -----------------------------------------------------------------------------
+// File: int128.h
+// -----------------------------------------------------------------------------
 //
+// This header file defines 128-bit integer types. Currently, this file defines
+// `uint128`, an unsigned 128-bit integer; a signed 128-bit integer is
+// forthcoming.
 
 #ifndef S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_
 #define S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_
@@ -32,37 +37,48 @@
 
 namespace absl {
 
+// uint128
+//
 // An unsigned 128-bit integer type. The API is meant to mimic an intrinsic type
-// as closely as practical including cases exhibiting undefined behavior (e.g.
-// division by zero).
+// as closely as is practical, including exhibiting undefined behavior in
+// analogous cases (e.g. division by zero). This type is intended to be a
+// drop-in replacement once C++ supports an intrinsic `uint128_t` type; when
+// that occurs, existing uses of `uint128` will continue to work using that new
+// type.
 //
-// Supports:
-//   - Implicit constexpr construction from integral types.
-//   - Explicit constexpr conversion to integral types.
-//   - Explicit construction from and conversion to floating point types.
-//   - Interaction with __int128 where the type is available.
+// Note: code written with this type will continue to compile once `unint128_t`
+// is introduced, provided the replacement helper functions
+// `Uint128(Low|High)64()` and `MakeUint128()` are made.
 //
-// When constructing with values greater than 2**64 use the constexpr
-// absl::MakeUint128 factory function declared below. e.g.
+// A `uint128` supports the following:
 //
-//     absl::uint128 big = absl::MakeUint128(1, 0);
+//   * Implicit construction from integral types
+//   * Explicit conversion to integral types
 //
-// Ways in which this API differs from a built-in integer:
-//   - Implicit conversion that does not preserve value is valid for built-in
-//     types except when treated as an error by the compiler. Our type behaves
-//     as if these compiler errors (e.g. Wnarrowing, Wconversion) are always on.
-//   - A built-in integer will implicitly convert to a floating point type when
-//     interacting through arithmetic operators. Our type must first be
-//     explicitly cast to a floating point type.
+// Additionally, if your compiler supports `__int128`, `uint128` is
+// interoperable with that type. (Abseil checks for this compatibility through
+// the `ABSL_HAVE_INTRINSIC_INT128` macro.)
 //
-// This type will eventually be removed and uint128 will be an alias for a
-// standard uint128_t once it exists. Code written with this type will continue
-// to compile when that happens, provided replacement helper functions
-// Uint128(Low|High)64 and MakeUint128 are made. The leftover cruft to be
-// removed will be unnecessary static_cast's when doing arithmetic operations
-// between uint128 and floating point types.
+// However, a `uint128` differs from intrinsic integral types in the following
+// ways:
 //
-// Note that the alignment requirement of uint128 is due to change, so users
+//   * Errors on implicit conversions that does not preserve value (such as
+//     loss of precision when converting to float values).
+//   * Requires explicit construction from and conversion to floating point
+//     types.
+//   * Conversion to integral types requires an explicit static_cast() to
+//     mimic use of the `-Wnarrowing` compiler flag.
+//
+// Example:
+//
+//     float y = kuint128max; // Error. uint128 cannot be implicitly converted
+//                            // to float.
+//
+//     uint128 v;
+//     uint64_t i = v                          // Error
+//     uint64_t i = static_cast<uint64_t>(v)   // OK
+//
+// NOTE: the alignment requirement of `uint128` is due to change, so users
 // should take care to avoid depending on the current 8 byte alignment.
 // TODO(user) Remove alignment note above once alignof(uint128) becomes 16.
 class uint128 {
@@ -143,8 +159,25 @@ class uint128 {
   uint128& operator++();
   uint128& operator--();
 
+  // Uint128Low64()
+  //
+  // Returns the lower 64-bit value of a `uint128` value.
   friend uint64 Uint128Low64(const uint128& v);
+
+  // Uint128High64()
+  //
+  // Returns the higher 64-bit value of a `uint128` value.
   friend uint64 Uint128High64(const uint128& v);
+
+  // MakeUInt128()
+  //
+  // Constructs a `uint128` numeric value from two 64-bit unsigned integers.
+  // Note that this factory function is the only way to construct a `uint128`
+  // from integer values greater than 2^64.
+  //
+  // Example:
+  //
+  //   absl::uint128 big = absl::MakeUint128(1, 0);
   friend constexpr uint128 MakeUint128(uint64_t top, uint64_t bottom);
 
  private:

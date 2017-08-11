@@ -18,6 +18,7 @@
 #include "s2/s2shapeutil.h"
 
 #include "s2/base/stringprintf.h"
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/types/span.h"
 #include "s2/s2crossingedgequery.h"
 #include "s2/s2edge_crosser.h"
@@ -30,6 +31,7 @@
 #include "s2/s2wedge_relations.h"
 
 using absl::Span;
+using absl::WrapUnique;
 using std::pair;
 using std::unique_ptr;
 using std::vector;
@@ -763,7 +765,7 @@ void ResolveComponents(vector<vector<S2Shape*>> const& components,
     for (S2Shape* loop : component) {
       if (component.size() > 1 && !loop->contains_origin()) {
         // Ownership is transferred back at the end of this function.
-        index.Add(std::unique_ptr<S2Shape>(loop));
+        index.Add(WrapUnique(loop));
         component_ids.push_back(i);
       } else {
         outer_loops.push_back(loop);

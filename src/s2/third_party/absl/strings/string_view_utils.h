@@ -1,4 +1,4 @@
-// Copyright 2003 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 // limitations under the License.
 //
 
-//
 // Utility functions for operating on absl::string_views
 // Collected here for convenience
 //
@@ -40,7 +39,6 @@ inline void CopyToString(absl::string_view src, string* dest) {
 }
 
 }  // namespace absl
-
 
 namespace strings {
 
@@ -156,6 +154,5 @@ struct StringPieceCaseEqual {
     return strings::EqualIgnoreCase(piece1, piece2);
   }
 };
-
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_UTILS_H_

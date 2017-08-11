@@ -41,10 +41,13 @@ using std::vector;
 TEST(S2ClosestEdgeQuery, NoEdges) {
   S2ShapeIndex index;
   S2ClosestEdgeQuery query(&index);
-  query.FindClosestEdge(S2Point(1, 0, 0));
-  EXPECT_EQ(0, query.num_edges());
-  EXPECT_EQ(S1Angle::Infinity(), query.GetDistance(S2Point(1, 0, 0)));
-  EXPECT_EQ(S2Point(1, 0, 0), query.Project(S2Point(1, 0, 0)));
+  query.mutable_options()->set_max_edges(1);
+  S2ClosestEdgeQuery::PointTarget const target(S2Point(1, 0, 0));
+  auto const edge = query.FindClosestEdge(target);
+  EXPECT_EQ(S1ChordAngle::Infinity(), edge.distance);
+  EXPECT_EQ(-1, edge.edge_id);
+  EXPECT_EQ(-1, edge.shape_id);
+  EXPECT_EQ(S1ChordAngle::Infinity(), query.GetDistance(target));
 }
 
 // An abstract class that adds edges to an S2ShapeIndex for benchmarking.
@@ -95,109 +98,62 @@ static S1Angle const kRadius = S2Testing::KmToAngle(100);
 // distances (say, less than Pi/2) due to using S1ChordAngle.
 static double kChordAngleError = 1e-15;
 
-// A (shape_id, edge_id) pair, used to identify a result edge.
-struct EdgeId {
-  EdgeId(int _shape_id, int _edge_id)
-      : shape_id(_shape_id), edge_id(_edge_id) {
-  }
-  int shape_id, edge_id;
-};
-bool operator==(EdgeId const& x, EdgeId const& y) {
-  return x.shape_id == y.shape_id && x.edge_id == y.edge_id;
-}
-bool operator<(EdgeId const& x, EdgeId const& y) {
-  return (x.shape_id < y.shape_id ||
-          (x.shape_id == y.shape_id && x.edge_id < y.edge_id));
-}
-ostream& operator<<(ostream& out, EdgeId const& x) {
-  return out << '(' << x.shape_id << ", " << x.edge_id << ')';
-}
+using Result = pair<S1Angle, s2shapeutil::ShapeEdgeId>;
 
-using Result = pair<S1Angle, EdgeId>;
-
-class PointTarget {
- public:
-  explicit PointTarget(S2Point const& point) : point_(point) {}
-  S1Angle GetDistanceToPoint(S2Point const& x) const {
-    return S1Angle(x, point_);
+// Converts to the format required by CheckDistanceResults() in s2testing.h
+vector<Result> ConvertResults(vector<S2ClosestEdgeQuery::Result> const& edges) {
+  vector<Result> results;
+  for (auto const& edge : edges) {
+    results.push_back(
+        make_pair(edge.distance.ToAngle(),
+                  s2shapeutil::ShapeEdgeId(edge.shape_id, edge.edge_id)));
   }
-  S1Angle GetDistanceToEdge(S2Point const& v0, S2Point const& v1) const {
-    return S2::GetDistance(point_, v0, v1);
-  }
-  void FindClosestEdges(S2ClosestEdgeQuery* query) const {
-    query->FindClosestEdges(point_);
-  }
- private:
-  S2Point point_;
-};
-
-class EdgeTarget {
- public:
-  EdgeTarget(S2Point const& a, S2Point const& b) : a_(a), b_(b) {}
-  S1Angle GetDistanceToPoint(S2Point const& x) const {
-    return S2::GetDistance(x, a_, b_);
-  }
-  S1Angle GetDistanceToEdge(S2Point const& v0, S2Point const& v1) const {
-    S1ChordAngle distance = S1ChordAngle::Infinity();
-    S2::UpdateEdgePairMinDistance(a_, b_, v0, v1, &distance);
-    return distance.ToAngle();
-  }
-  void FindClosestEdges(S2ClosestEdgeQuery* query) const {
-    query->FindClosestEdgesToEdge(a_, b_);
-  }
- private:
-  S2Point a_, b_;
-};
+  return results;
+}
 
 // Use "query" to find the closest edge(s) to the given target, then convert
 // the query results into two parallel vectors, one for distances and one for
 // (shape_id, edge_id) pairs.  Also verify that the results satisfy the search
 // criteria.
-template <class Target>
-static void GetClosestEdges(Target const& target, S2ClosestEdgeQuery *query,
-                            vector<Result>* results) {
-  target.FindClosestEdges(query);
-  EXPECT_LE(query->num_edges(), query->max_edges());
-  if (query->max_distance() == S1Angle::Infinity()) {
+static void GetClosestEdges(S2ClosestEdgeQuery::Target const& target,
+                            S2ClosestEdgeQuery *query,
+                            vector<S2ClosestEdgeQuery::Result>* edges) {
+  query->FindClosestEdges(target, edges);
+  EXPECT_LE(edges->size(), query->options().max_edges());
+  if (query->options().max_distance() ==
+      S2ClosestEdgeQuery::Distance::Infinity()) {
     // We can predict exactly how many edges should be returned.
-    EXPECT_EQ(min(query->max_edges(), s2shapeutil::GetNumEdges(query->index())),
-              query->num_edges());
+    EXPECT_EQ(min(query->options().max_edges(),
+                  s2shapeutil::GetNumEdges(query->index())),
+              edges->size());
   }
-  for (int i = 0; i < query->num_edges(); ++i) {
-    // Check that query->distance() is approximately equal to the
-    // S1Angle(edge, target) distance.  They may be slightly different
-    // because query->distance() is computed using S1ChordAngle.  Note that
-    // the error gets considerably larger (1e-7) as the angle approaches Pi.
-    auto edge = query->edge(i);
-    EXPECT_NEAR(target.GetDistanceToEdge(edge.v0, edge.v1).radians(),
-                query->distance(i).radians(), kChordAngleError);
-
+  for (auto const& edge : *edges) {
     // Check that the edge satisfies the max_distance() condition.
-    EXPECT_LE(query->distance(i), query->max_distance());
-    results->push_back(make_pair(query->distance(i),
-                                 EdgeId(query->shape_id(i),
-                                        query->edge_id(i))));
-
-    // Find the closest point on the edge and check its distance as well.
-    S2Point closest = query->GetClosestPointOnEdge(i);
-    EXPECT_NEAR(target.GetDistanceToPoint(closest).radians(),
-                query->distance(i).radians(), kChordAngleError);
+    EXPECT_LE(edge.distance, query->options().max_distance());
   }
 }
 
-template <class Target>
-static void TestFindClosestEdges(Target const& target,
-                                 S2ClosestEdgeQuery *query) {
-  vector<Result> expected, actual;
+static int TestFindClosestEdges(S2ClosestEdgeQuery::Target const& target,
+                                S2ClosestEdgeQuery *query,
+                                S2ClosestEdgeQuery::Result *closest_edge) {
+  vector<S2ClosestEdgeQuery::Result> expected, actual;
   query->mutable_options()->set_use_brute_force(true);
   GetClosestEdges(target, query, &expected);
   query->mutable_options()->set_use_brute_force(false);
   GetClosestEdges(target, query, &actual);
-  EXPECT_TRUE(CheckDistanceResults(expected, actual, query->max_edges(),
-                                   query->max_distance(), query->max_error()))
-      << "max_edges=" << query->max_edges()
-      << ", max_distance=" << query->max_distance()
-      << ", max_error=" << query->max_error();
+  EXPECT_TRUE(CheckDistanceResults(ConvertResults(expected),
+                                   ConvertResults(actual),
+                                   query->options().max_edges(),
+                                   query->options().max_distance().ToAngle(),
+                                   query->options().max_error().ToAngle()))
+      << "max_edges=" << query->options().max_edges()
+      << ", max_distance=" << query->options().max_distance()
+      << ", max_error=" << query->options().max_error();
+
+  if (closest_edge != nullptr && !actual.empty())
+    *closest_edge = actual.at(0);
+
+  return actual.size();
 }
 
 // The running time of this test is proportional to
@@ -213,14 +169,15 @@ static void TestWithIndexFactory(ShapeIndexFactory const& factory,
     for (int i_query = 0; i_query < num_queries; ++i_query) {
       // Use a new query each time to avoid resetting default parameters.
       S2ClosestEdgeQuery query(&index);
-      query.set_max_edges(1 + S2Testing::rnd.Uniform(100));
+      query.mutable_options()->set_max_edges(1 + S2Testing::rnd.Uniform(100));
       if (S2Testing::rnd.OneIn(2)) {
-        query.set_max_distance(S2Testing::rnd.RandDouble() * kRadius);
+        query.mutable_options()->set_max_distance(
+            S2Testing::rnd.RandDouble() * kRadius);
       }
       if (S2Testing::rnd.OneIn(2)) {
         // Choose a maximum error whose logarithm is uniformly distributed over
         // a reasonable range, except that it is sometimes zero.
-        query.set_max_error(S1Angle::Radians(
+        query.mutable_options()->set_max_error(S1Angle::Radians(
             pow(1e-4, S2Testing::rnd.RandDouble()) * kRadius.radians()));
       }
       if (S2Testing::rnd.OneIn(2)) {
@@ -228,22 +185,24 @@ static void TestWithIndexFactory(ShapeIndexFactory const& factory,
         S2Point a = S2Testing::SamplePoint(query_cap);
         S2Point b = S2Testing::SamplePoint(
             S2Cap(a, pow(1e-4, S2Testing::rnd.RandDouble()) * kRadius));
-        TestFindClosestEdges(EdgeTarget(a, b), &query);
+        S2ClosestEdgeQuery::EdgeTarget target(a, b);
+        TestFindClosestEdges(target, &query, nullptr);
       } else {
-        S2Point target = S2Testing::SamplePoint(query_cap);
+        S2Point point = S2Testing::SamplePoint(query_cap);
+        S2ClosestEdgeQuery::PointTarget target(point);
         // Find the closest edges to a given query point.
-        TestFindClosestEdges(PointTarget(target), &query);
+        S2ClosestEdgeQuery::Result closest_edge;
+        int num_edges = TestFindClosestEdges(target, &query, &closest_edge);
         // Also test the GetDistance() and Project() query methods.
-        if (query.num_edges() == 0) {
-          EXPECT_EQ(S1Angle::Infinity(), query.GetDistance(target));
-          EXPECT_EQ(target, query.Project(target));
+        if (num_edges == 0) {
+          EXPECT_EQ(S1ChordAngle::Infinity(), query.GetDistance(target));
         } else {
-          S1Angle expected_min_distance = query.distance(0);
-          S1Angle actual_min_distance = query.GetDistance(target);
+          S1ChordAngle expected_min_distance = closest_edge.distance;
+          S1ChordAngle actual_min_distance = query.GetDistance(target);
           EXPECT_LE(actual_min_distance,
-                    expected_min_distance + query.max_error());
-          EXPECT_NEAR(actual_min_distance.radians(),
-                      S1Angle(target, query.Project(target)).radians(),
+                    expected_min_distance + query.options().max_error());
+          EXPECT_NEAR(actual_min_distance.ToAngle().radians(),
+                      S1Angle(point, query.Project(point)).radians(),
                       kChordAngleError);
         }
       }

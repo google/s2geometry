@@ -17,6 +17,7 @@
 #define S2_THIRD_PARTY_ABSL_BASE_INTERNAL_UNALIGNED_ACCESS_H_
 
 #include <cstring>
+#include <cstdint>
 
 #include "s2/third_party/absl/base/attributes.h"
 #include "s2/third_party/absl/base/integral_types.h"

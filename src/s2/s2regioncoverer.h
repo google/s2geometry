@@ -174,7 +174,7 @@ class S2RegionCoverer {
   //
   // This function is useful as a starting point for algorithms that
   // recursively subdivide cells.
-  void GetFastCovering(S2Cap const& cap, std::vector<S2CellId>* covering);
+  void GetFastCovering(S2Region const& region, std::vector<S2CellId>* covering);
 
   // Given a connected region and a starting point, return a set of cells at
   // the given level that cover the region.
@@ -233,15 +233,6 @@ class S2RegionCoverer {
   // than min_level() are not modified (see AdjustLevel).  The output is
   // then normalized to ensure that no redundant cells are present.
   void AdjustCellLevels(std::vector<S2CellId>* cells) const;
-
-  // Compute a covering of the given cap.  In general the covering consists of
-  // at most 4 cells (except for very large caps, which may need up to 6
-  // cells).  The output is not sorted.
-  //
-  // "max_cells_hint" can be used to request a more accurate covering (but is
-  // currently ignored).
-  static void GetRawFastCovering(S2Cap const& cap, int max_cells_hint,
-                                 std::vector<S2CellId>* covering);
 
   // Normalize "covering" so that it conforms to the current covering
   // parameters (max_cells, min_level, max_level, and level_mod).

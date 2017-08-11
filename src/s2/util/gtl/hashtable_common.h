@@ -174,8 +174,9 @@ class sh_hashtable_settings : public HashFunc {
     set_enlarge_factor(grow);
   }
 
-  // This is the smallest size a hashtable can be without being too crowded
-  // If you like, you can give a min #buckets as well as a min #elts
+  // This is the smallest size a hashtable can be without being too crowded.
+  // If you like, you can give a min #buckets as well as a min #elts.
+  // This is guaranteed to return a power of two.
   size_type min_buckets(size_type num_elts, size_type min_buckets_wanted) {
     float enlarge = enlarge_factor();
     size_type sz = HT_MIN_BUCKETS;             // min buckets allowed

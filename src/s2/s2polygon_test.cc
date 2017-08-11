@@ -1704,9 +1704,10 @@ static void CheckCoveringIsConservative(S2Polygon const& polygon,
 }
 
 // Remove a random polygon from "pieces" and return it.
-static S2Polygon* ChoosePiece(vector<S2Polygon*> *pieces) {
+static unique_ptr<S2Polygon> ChoosePiece(
+    vector<unique_ptr<S2Polygon>> *pieces) {
   int i = S2Testing::rnd.Uniform(pieces->size());
-  S2Polygon* result = (*pieces)[i];
+  unique_ptr<S2Polygon> result = std::move((*pieces)[i]);
   pieces->erase(pieces->begin() + i);
   return result;
 }
@@ -1741,17 +1742,17 @@ static void SplitAndAssemble(S2Polygon const& polygon) {
     S2Testing::CheckCovering(polygon, covering, false);
     CheckCoveringIsConservative(polygon, cells);
     VLOG(2) << cells.size() << " cells in covering";
-    vector<S2Polygon*> pieces;
+    vector<unique_ptr<S2Polygon>> pieces;
     int i = 0;
     for (S2CellId cell_id : cells) {
       S2Cell cell(cell_id);
       S2Polygon window(cell);
-      S2Polygon* piece = new S2Polygon;
+      auto piece = MakeUnique<S2Polygon>();
       piece->InitToIntersection(&polygon, &window);
-      pieces.push_back(piece);
       VLOG(4) << "\nPiece " << i++ << ":\n  Window: "
               << s2textformat::ToString(window)
               << "\n  Piece: " << s2textformat::ToString(*piece);
+      pieces.push_back(std::move(piece));
     }
 
     // Now we repeatedly remove two random pieces, compute their union, and
@@ -1765,14 +1766,14 @@ static void SplitAndAssemble(S2Polygon const& polygon) {
     while (pieces.size() > 1) {
       unique_ptr<S2Polygon> a(ChoosePiece(&pieces));
       unique_ptr<S2Polygon> b(ChoosePiece(&pieces));
-      S2Polygon* c = new S2Polygon;
+      auto c = MakeUnique<S2Polygon>();
       c->InitToUnion(a.get(), b.get());
-      pieces.push_back(c);
       VLOG(4) << "\nJoining piece a: " << s2textformat::ToString(*a)
               << "\n  With piece b: " << s2textformat::ToString(*b)
               << "\n  To get piece c: " << s2textformat::ToString(*c);
+      pieces.push_back(std::move(c));
     }
-    unique_ptr<S2Polygon> result(pieces[0]);
+    unique_ptr<S2Polygon> result(std::move(pieces[0]));
     pieces.pop_back();
 
     // The moment of truth!
@@ -2546,8 +2547,7 @@ class S2PolygonSimplifierTest : public ::testing::Test {
   }
 
   void SetInput(string const& poly, double tolerance_in_degrees) {
-    SetInput(unique_ptr<S2Polygon>(s2textformat::MakePolygon(poly)),
-             tolerance_in_degrees);
+    SetInput(s2textformat::MakePolygon(poly), tolerance_in_degrees);
   }
 
   unique_ptr<S2Polygon> simplified;

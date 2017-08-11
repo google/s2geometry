@@ -59,6 +59,7 @@
 #include "s2/s2polyline.h"
 #include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
+#include "s2/s2shapeindex_region.h"
 #include "s2/s2shapeutil.h"
 #include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/third_party/absl/container/inlined_vector.h"
@@ -518,11 +519,12 @@ int S2Polygon::GetSnapLevel() const {
 
 S1Angle S2Polygon::GetDistance(S2Point const& x) const {
   if (Contains(x)) return S1Angle::Zero();
-  return S2ClosestEdgeQuery(&index_).GetDistance(x);
+  return GetDistanceToBoundary(x);
 }
 
 S1Angle S2Polygon::GetDistanceToBoundary(S2Point const& x) const {
-  return S2ClosestEdgeQuery(&index_).GetDistance(x);
+  S2ClosestEdgeQuery::PointTarget t(x);
+  return S2ClosestEdgeQuery(&index_).GetDistance(t).ToAngle();
 }
 
 /*static*/ pair<double, double> S2Polygon::GetOverlapFractions(
@@ -539,11 +541,14 @@ S1Angle S2Polygon::GetDistanceToBoundary(S2Point const& x) const {
 
 S2Point S2Polygon::Project(S2Point const& x) const {
   if (Contains(x)) return x;
-  return S2ClosestEdgeQuery(&index_).Project(x);
+  return ProjectToBoundary(x);
 }
 
 S2Point S2Polygon::ProjectToBoundary(S2Point const& x) const {
-  return S2ClosestEdgeQuery(&index_).Project(x);
+  S2ClosestEdgeQuery q(&index_);
+  S2ClosestEdgeQuery::Result edge =
+      q.FindClosestEdge(S2ClosestEdgeQuery::PointTarget(x));
+  return q.Project(x, edge);
 }
 
 // Return +1 if this polygon (A) contains the boundary of B, -1 if A excludes
@@ -703,24 +708,12 @@ S2Cap S2Polygon::GetCapBound() const {
   return bound_.GetCapBound();
 }
 
+void S2Polygon::GetCellUnionBound(vector<S2CellId> *cell_ids) const {
+  return MakeS2ShapeIndexRegion(&index_).GetCellUnionBound(cell_ids);
+}
+
 bool S2Polygon::Contains(S2Cell const& target) const {
-  S2ShapeIndex::Iterator it(&index_);
-  S2ShapeIndex::CellRelation relation = it.Locate(target.id());
-
-  // If "target" is disjoint from all index cells, it is not contained.
-  // Similarly, if "target" is subdivided into one or more index cells then it
-  // is not contained, since index cells are subdivided only if they (nearly)
-  // intersect a sufficient number of edges.  (But note that if "target" itself
-  // is an index cell then it may be contained, since it could be a cell with
-  // no indexed edges in the polygon interior.)
-  if (relation != S2ShapeIndex::INDEXED) return false;
-
-  // Otherwise check if any edges intersect "target".  At this point, the
-  // iterator is guaranteed to point to an index cell containing "target".
-  if (BoundaryApproxIntersects(it, target)) return false;
-
-  // Otherwise check if the polygon contains the center of "target".
-  return Contains(it, target.GetCenter());
+  return MakeS2ShapeIndexRegion(&index_).Contains(target);
 }
 
 bool S2Polygon::ApproxContains(S2Polygon const* b, S1Angle tolerance) const {
@@ -747,58 +740,7 @@ bool S2Polygon::ApproxEquals(S2Polygon const* b, S1Angle tolerance) const {
 }
 
 bool S2Polygon::MayIntersect(S2Cell const& target) const {
-  S2ShapeIndex::Iterator it(&index_);
-  S2ShapeIndex::CellRelation relation = it.Locate(target.id());
-
-  // If "target" does not overlap any index cell, there is no intersection.
-  if (relation == S2ShapeIndex::DISJOINT) return false;
-
-  // If "target" is subdivided into one or more index cells, there is an
-  // intersection to within the S2ShapeIndex error bound (see Contains).
-  if (relation == S2ShapeIndex::SUBDIVIDED) return true;
-
-  // If "target" is an index cell, there is an intersection because index cells
-  // are created only if they have at least one edge or they are entirely
-  // contained by the loop.
-  if (it.id() == target.id()) return true;
-
-  // Otherwise check if any edges intersect "target".
-  if (BoundaryApproxIntersects(it, target)) return true;
-
-  // Otherwise check if the polygon contains the center of "target".
-  return Contains(it, target.GetCenter());
-}
-
-bool S2Polygon::BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
-                                         S2Cell const& target) const {
-  DCHECK(it.id().contains(target.id()));
-  DCHECK_EQ(1, it.cell().num_clipped());
-  S2ClippedShape const& a_clipped = it.cell().clipped(0);
-  int a_num_clipped = a_clipped.num_edges();
-
-  // If there are no edges, there is no intersection.
-  if (a_num_clipped == 0) return false;
-
-  // We can save some work if "target" is the index cell itself (given that
-  // there is at least one indexed edge).
-  if (it.id() == target.id()) return true;
-
-  // Otherwise check whether any of the edges intersect "target".
-  static double const kMaxError = (S2::kFaceClipErrorUVCoord +
-                                   S2::kIntersectsRectErrorUVDist);
-  R2Rect bound = target.GetBoundUV().Expanded(kMaxError);
-  int const face = target.face();
-  auto shape = down_cast<Shape const*>(index_.shape(0));
-  for (int i = 0; i < a_num_clipped; ++i) {
-    auto edge = shape->edge(a_clipped.edge(i));
-    R2Point p0, p1;
-    if (S2::ClipToPaddedFace(edge.v0, edge.v1, face, kMaxError,
-                                     &p0, &p1) &&
-        S2::IntersectsRect(p0, p1, bound)) {
-      return true;
-    }
-  }
-  return false;
+  return MakeS2ShapeIndexRegion(&index_).MayIntersect(target);
 }
 
 bool S2Polygon::Contains(S2Point const& p) const {

@@ -167,4 +167,33 @@ void AsciiStrToUpper(string* s) {
   }
 }
 
+void RemoveExtraAsciiWhitespace(string* str) {
+  auto stripped = StripAsciiWhitespace(*str);
+
+  if (stripped.empty()) {
+    str->clear();
+    return;
+  }
+
+  auto input_it = stripped.begin();
+  auto input_end = stripped.end();
+  auto output_it = &(*str)[0];
+  bool is_ws = false;
+
+  for (; input_it < input_end; ++input_it) {
+    if (is_ws) {
+      // Consecutive whitespace?  Keep only the last.
+      is_ws = absl::ascii_isspace(*input_it);
+      if (is_ws) --output_it;
+    } else {
+      is_ws = absl::ascii_isspace(*input_it);
+    }
+
+    *output_it = *input_it;
+    ++output_it;
+  }
+
+  str->erase(output_it - &(*str)[0]);
+}
+
 }  // namespace absl

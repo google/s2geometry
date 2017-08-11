@@ -225,7 +225,7 @@ class S2Shape {
   virtual int dimension() const = 0;
 
   // Convenience function that returns true if this shape has an interior.
-  inline bool has_interior() const { return dimension() == 2; }
+  bool has_interior() const { return dimension() == 2; }
 
   // Returns true if this shape contains S2::Origin().  Should return false
   // for shapes that do not have an interior.
@@ -646,11 +646,11 @@ class S2ShapeIndexBase {
     // calls (since subtypes are typically "final") and (2) ensure that the
     // correct versions of non-virtual methods such as cell() are called.
     template <class Iter>
-    static bool LocateImpl(S2Point const& target, Iter* iter);
+    static bool LocateImpl(S2Point const& target, Iter* it);
 
     // The default implementation of Locate(S2CellId) (see comments above).
     template <class Iter>
-    static CellRelation LocateImpl(S2CellId target, Iter* iter);
+    static CellRelation LocateImpl(S2CellId target, Iter* it);
 
    private:
     friend class Iterator;
@@ -857,7 +857,7 @@ class S2ShapeIndex final : public S2ShapeIndexBase {
   bool is_fresh() const;
 
   ABSL_DEPRECATED("Use Add(unique_ptr<S2Shape>) instead.")
-  void Add(S2Shape* shape) { Add(std::unique_ptr<S2Shape>(shape)); }
+  void Add(S2Shape* shape) { Add(absl::WrapUnique(shape)); }
 
   ABSL_DEPRECATED("Use Release instead.")
   void Remove(S2Shape* shape) { Release(shape->id()).release(); }

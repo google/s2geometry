@@ -19,6 +19,9 @@
 // platforms like Windows, Mac, and embedded systems.  Before making
 // any changes here, make sure that you're not breaking any platforms.
 //
+// NOTE FOR GOOGLERS:
+//
+// IWYU pragma: private, include "base/casts.h"
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_CASTS_H_
 #define S2_THIRD_PARTY_ABSL_BASE_CASTS_H_

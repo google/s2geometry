@@ -107,7 +107,7 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
   S2ShapeIndex::Options options;
   options.set_max_edges_per_cell(1);
   S2ShapeIndex index(options);
-  index.Add(unique_ptr<S2Shape>(shape));
+  index.Add(absl::WrapUnique(shape));
   // To check that candidates are being filtered reasonably, we count the
   // total number of candidates that the total number of edge pairs that
   // either intersect or are very close to intersecting.

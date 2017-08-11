@@ -606,6 +606,29 @@ TEST(S2CellId, ExpandedByDistanceUV) {
   }
 }
 
+TEST(S2CellId, ToString) {
+  EXPECT_EQ("3/", S2CellId::FromFace(3).ToString());
+  EXPECT_EQ("4/000000000000000000000000000000",
+            S2CellId::FromFace(4).range_min().ToString());
+  EXPECT_EQ("Invalid: 0000000000000000", S2CellId::None().ToString());
+}
+
+TEST(S2CellId, FromDebugString) {
+  EXPECT_EQ(S2CellId::FromFace(3), S2CellId::FromDebugString("3/"));
+  EXPECT_EQ(S2CellId::FromFace(0).child(2).child(1),
+            S2CellId::FromDebugString("0/21"));
+  EXPECT_EQ(S2CellId::FromFace(4).range_min(),
+            S2CellId::FromDebugString("4/000000000000000000000000000000"));
+  EXPECT_EQ(S2CellId::None(),
+            S2CellId::FromDebugString("4/0000000000000000000000000000000"));
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromDebugString(""));
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromDebugString("7/"));
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromDebugString(" /"));
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromDebugString("3:0"));
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromDebugString("3/ 12"));
+  EXPECT_EQ(S2CellId::None(), S2CellId::FromDebugString("3/1241"));
+}
+
 TEST(S2CellId, OutputOperator) {
   S2CellId cell(0xbb04000000000000ULL);
   std::ostringstream s;

@@ -26,6 +26,7 @@ class Encoder;
 
 class S2Cap;
 class S2Cell;
+class S2CellId;
 class S2LatLngRect;
 
 // An S2Region represents a two-dimensional region over the unit sphere.
@@ -52,6 +53,25 @@ class S2Region {
   // Returns a bounding latitude-longitude rectangle that contains the region.
   // The bound may not be tight.
   virtual S2LatLngRect GetRectBound() const = 0;
+
+  // Returns a small collection of S2CellIds whose union covers the region.
+  // The cells are not sorted, may have redundancies (such as cells that
+  // contain other cells), and may cover much more area than necessary.
+  //
+  // This method is not intended for direct use by client code.  Clients
+  // should typically use S2RegionCoverer::GetCovering, which has options to
+  // control the size and accuracy of the covering.  Alternatively, if you
+  // want a fast covering and don't care about accuracy, consider calling
+  // S2RegionCoverer::GetFastCovering (which returns a cleaned-up version of
+  // the covering computed by this method).
+  //
+  // GetCellUnionBound() implementations should attempt to return a small
+  // covering (ideally 4 cells or fewer) that covers the region and can be
+  // computed quickly.  The result is used by S2RegionCoverer as a starting
+  // point for further refinement.
+  //
+  // TODO(ericv): Remove the default implementation.
+  virtual void GetCellUnionBound(std::vector<S2CellId> *cell_ids) const;
 
   // Returns true if the region completely contains the given cell, otherwise
   // returns false.

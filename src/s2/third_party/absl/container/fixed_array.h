@@ -175,8 +175,6 @@ class FixedArray {
   const_pointer get() const { return data(); }
   ABSL_DEPRECATED("Use data() instead")
   pointer get() { return data(); }
-
-
   // FixedArray::operator[]
   //
   // Returns a reference the ith element of the fixed array.
@@ -483,4 +481,6 @@ constexpr std::size_t FixedArray<T, N>::kInlineBytesDefault;
 
 using absl::FixedArray;
 
+// Tell gdb to load the pretty-printer.
+DEFINE_GDB_AUTO_SCRIPT("devtools/gdb/component/core/fixedarray.py")
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_

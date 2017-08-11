@@ -182,6 +182,7 @@ class S2Cap final : public S2Region {
   S2Cap* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  void GetCellUnionBound(std::vector<S2CellId> *cell_ids) const override;
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
 

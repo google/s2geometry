@@ -97,8 +97,7 @@ static void CheckCovering(S2RegionCoverer const& coverer,
       EXPECT_TRUE(region.Contains(S2Cell(cell_id)));
     }
   } else {
-    S2CellUnion cell_union;
-    cell_union.Init(covering);
+    S2CellUnion cell_union(covering);
     S2Testing::CheckCovering(region, cell_union, true);
   }
 }
@@ -132,8 +131,7 @@ TEST(S2RegionCoverer, RandomCaps) {
     // may still be different and smaller than "covering" because
     // S2RegionCoverer does not guarantee that it will not output all four
     // children of the same parent.
-    S2CellUnion cells;
-    cells.Init(covering);
+    S2CellUnion cells(covering);
     vector<S2CellId> denormalized;
     cells.Denormalize(coverer.min_level(), coverer.level_mod(), &denormalized);
     CheckCovering(coverer, cap, denormalized, false);
@@ -291,14 +289,8 @@ TEST(S2RegionCoverer, InteriorCovering) {
   S2CellId small_cell =
       S2CellId(S2Testing::RandomPoint()).parent(level + 2);
   S2CellId large_cell = small_cell.parent(level);
-  vector<S2CellId> small_cell_vector(1, small_cell);
-  vector<S2CellId> large_cell_vector(1, large_cell);
-  S2CellUnion small_cell_union;
-  small_cell_union.Init(small_cell_vector);
-  S2CellUnion large_cell_union;
-  large_cell_union.Init(large_cell_vector);
-  S2CellUnion diff;
-  diff.GetDifference(&large_cell_union, &small_cell_union);
+  S2CellUnion diff =
+      S2CellUnion({large_cell}).Difference(S2CellUnion({small_cell}));
   S2RegionCoverer coverer;
   coverer.set_max_cells(3);
   coverer.set_max_level(level + 3);

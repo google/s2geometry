@@ -50,6 +50,7 @@
 #include <utility>
 #include <vector>
 #include <glog/logging.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/btree/btree_map.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
@@ -182,7 +183,8 @@ class IndexedS2PolygonLayer : public S2Builder::Layer {
   void Build(Graph const& g, S2Error* error) override {
     layer_.Build(g, error);
     if (error->ok()) {
-      index_->Add(new S2Polygon::OwningShape(std::move(polygon_)));
+      index_->Add(
+          absl::MakeUnique<S2Polygon::OwningShape>(std::move(polygon_)));
     }
   }
 
@@ -288,7 +290,8 @@ class IndexedS2PolylineLayer : public S2Builder::Layer {
   void Build(Graph const& g, S2Error* error) override {
     layer_.Build(g, error);
     if (error->ok()) {
-      index_->Add(new S2Polyline::OwningShape(std::move(polyline_)));
+      index_->Add(
+          absl::MakeUnique<S2Polyline::OwningShape>(std::move(polyline_)));
     }
   }
 
@@ -459,7 +462,8 @@ class IndexedS2PolylineVectorLayer : public S2Builder::Layer {
     layer_.Build(g, error);
     if (error->ok()) {
       for (auto& polyline : polylines_) {
-        index_->Add(new S2Polyline::OwningShape(std::move(polyline)));
+        index_->Add(
+            absl::MakeUnique<S2Polyline::OwningShape>(std::move(polyline)));
       }
     }
   }
@@ -524,7 +528,7 @@ class IndexedS2PointVectorLayer : public S2Builder::Layer {
   void Build(Graph const& g, S2Error* error) override {
     layer_.Build(g, error);
     if (error->ok()) {
-      index_->Add(new s2shapeutil::PointVectorShape(&points_));
+      index_->Add(absl::MakeUnique<s2shapeutil::PointVectorShape>(&points_));
     }
   }
 

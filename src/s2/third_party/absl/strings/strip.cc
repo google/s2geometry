@@ -1,4 +1,4 @@
-// Copyright 2011 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,9 +13,6 @@
 // limitations under the License.
 //
 
-// Author: jyrki@google.com (Jyrki Alakuijala)
-// based on contributions of various authors in strings/strutil_unittest.cc
-//
 // This file contains functions that remove a defined part from the string,
 // i.e., strip the string.
 
@@ -77,22 +74,6 @@ void ReplaceCharacters(string* s, absl::string_view remove, char replace_with) {
   }
 }
 
-// ----------------------------------------------------------------------
-// StripWhitespace
-// ----------------------------------------------------------------------
-void StripWhitespace(const char** str, ptrdiff_t* len) {
-  // strip off trailing whitespace
-  while ((*len) > 0 && absl::ascii_isspace((*str)[(*len) - 1])) {
-    (*len)--;
-  }
-
-  // strip off leading whitespace
-  while ((*len) > 0 && absl::ascii_isspace((*str)[0])) {
-    (*len)--;
-    (*str)++;
-  }
-}
-
 bool StripTrailingNewline(string* s) {
   if (!s->empty() && (*s)[s->size() - 1] == '\n') {
     if (s->size() > 1 && (*s)[s->size() - 2] == '\r')
@@ -102,35 +83,6 @@ bool StripTrailingNewline(string* s) {
     return true;
   }
   return false;
-}
-
-void StripWhitespace(string* str) {
-  size_t str_length = str->length();
-
-  // Strip off leading whitespace.
-  size_t first = 0;
-  while (first < str_length && absl::ascii_isspace(str->at(first))) {
-    ++first;
-  }
-  // If entire string is white space.
-  if (first == str_length) {
-    str->clear();
-    return;
-  }
-  if (first > 0) {
-    str->erase(0, first);
-    str_length -= first;
-  }
-
-  // Strip off trailing whitespace.
-  // Here, the string is not empty and the first character is not whitespace.
-  size_t last = str_length - 1;
-  while (absl::ascii_isspace(str->at(last))) {
-    --last;
-  }
-  if (last != (str_length - 1)) {
-    str->erase(last + 1, string::npos);
-  }
 }
 
 // ----------------------------------------------------------------------
@@ -172,7 +124,7 @@ string OutputWithMarkupTagsStripped(const string& s) {
 }
 
 ptrdiff_t TrimStringLeft(string* s, absl::string_view remove) {
-  ptrdiff_t i = 0;
+  size_t i = 0;
   while (i < s->size() && memchr(remove.data(), (*s)[i], remove.size())) {
     ++i;
   }
@@ -181,7 +133,7 @@ ptrdiff_t TrimStringLeft(string* s, absl::string_view remove) {
 }
 
 ptrdiff_t TrimStringRight(string* s, absl::string_view remove) {
-  ptrdiff_t i = s->size(), trimmed = 0;
+  size_t i = s->size(), trimmed = 0;
   while (i > 0 && memchr(remove.data(), (*s)[i - 1], remove.size())) {
     --i;
   }
@@ -195,7 +147,7 @@ ptrdiff_t TrimStringRight(string* s, absl::string_view remove) {
 // Unfortunately, absl::string_view does not have erase, so we've to replicate
 // the implementation with remove_prefix()/remove_suffix()
 ptrdiff_t TrimStringLeft(absl::string_view* s, absl::string_view remove) {
-  ptrdiff_t i = 0;
+  size_t i = 0;
   while (i < s->size() && memchr(remove.data(), (*s)[i], remove.size())) {
     ++i;
   }
@@ -204,7 +156,7 @@ ptrdiff_t TrimStringLeft(absl::string_view* s, absl::string_view remove) {
 }
 
 ptrdiff_t TrimStringRight(absl::string_view* s, absl::string_view remove) {
-  ptrdiff_t i = s->size(), trimmed = 0;
+  size_t i = s->size(), trimmed = 0;
   while (i > 0 && memchr(remove.data(), (*s)[i - 1], remove.size())) {
     --i;
   }
@@ -298,65 +250,6 @@ ptrdiff_t StripDupCharacters(string* s, char dup_char, ptrdiff_t start_pos) {
   const ptrdiff_t num_deleted = input_pos - output_pos;
   s->resize(s->size() - num_deleted);
   return num_deleted;
-}
-
-// ----------------------------------------------------------------------
-// RemoveExtraWhitespace()
-//   Remove leading, trailing, and duplicate internal whitespace.
-// ----------------------------------------------------------------------
-void RemoveExtraWhitespace(string* s) {
-  assert(s != nullptr);
-  // Empty strings clearly have no whitespace, and this code assumes that
-  // string length is greater than 0
-  if (s->empty()) return;
-
-  size_t input_pos = 0;   // current reader position
-  size_t output_pos = 0;  // current writer position
-  const size_t input_end = s->size();
-  // Strip off leading space
-  while (input_pos < input_end && absl::ascii_isspace((*s)[input_pos]))
-    input_pos++;
-
-  while (input_pos < input_end - 1) {
-    char c = (*s)[input_pos];
-    char next = (*s)[input_pos + 1];
-    // Copy each non-whitespace character to the right position.
-    // For a block of whitespace, print the last one.
-    if (!absl::ascii_isspace(c) || !absl::ascii_isspace(next)) {
-      if (output_pos != input_pos) {  // only copy if needed
-        (*s)[output_pos] = c;
-      }
-      output_pos++;
-    }
-    input_pos++;
-  }
-  // Pick up the last character if needed.
-  char c = (*s)[input_end - 1];
-  if (!absl::ascii_isspace(c)) (*s)[output_pos++] = c;
-
-  s->resize(output_pos);
-}
-
-//------------------------------------------------------------------------
-// See comment in header file for a complete description.
-//------------------------------------------------------------------------
-void StripLeadingWhitespace(string* str) {
-  char const* const leading = StripLeadingWhitespace(
-      const_cast<char*>(str->c_str()));
-  if (leading != nullptr) {
-    string const tmp(leading);
-    str->assign(tmp);
-  } else {
-    str->assign("");
-  }
-}
-
-void StripTrailingWhitespace(string* const s) {
-  string::size_type i;
-  for (i = s->size(); i > 0 && absl::ascii_isspace((*s)[i - 1]); --i) {
-  }
-
-  s->resize(i);
 }
 
 // ----------------------------------------------------------------------

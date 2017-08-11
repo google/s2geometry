@@ -13,34 +13,39 @@
 // limitations under the License.
 //
 
-// Defines preprocessor macros describing the presence of "features" available.
-// This file is used for both C and C++!
+// -----------------------------------------------------------------------------
+// File: config.h
+// -----------------------------------------------------------------------------
 //
-// This facilitates writing portable code by parameterizing the compilation
-// based on the presence or lack of a feature.
+// This header file defines a set of macros for checking the presence of
+// important compiler and platform features. Such macros can be used to
+// produce portable code by parameterizing compilation based on the presence or
+// lack of a given feature.
 //
-// We define a feature as some interface we wish to program to: for example,
-// some library function or system call.
+// We define a "feature" as some interface we wish to program to: for example,
+// a library function or system call. A value of `1` indicates support for
+// that feature; any other value indicates the feature support is undefined.
 //
-// For example, suppose a programmer wants to write a program that uses the
-// 'mmap' system call. Then one might write:
+// Example:
 //
-// #include "third_party/absl/base/config.h"
+// Suppose a programmer wants to write a program that uses the 'mmap()' system
+// call. The Abseil macro for that feature (`ABSL_HAVE_MMAP`) allows you to
+// selectively include the `mmap.h` header and bracket code using that feature
+// in the macro:
 //
-// #ifdef ABSL_HAVE_MMAP
-// #include "sys/mman.h"
-// #endif  //ABSL_HAVE_MMAP
+//   #include "absl/base/config.h"
 //
-// ...
-// #ifdef ABSL_HAVE_MMAP
-// void *ptr = mmap(...);
-// ...
-// #endif  // ABSL_HAVE_MMAP
+//   #ifdef ABSL_HAVE_MMAP
+//   #include "sys/mman.h"
+//   #endif  //ABSL_HAVE_MMAP
 //
-// As a special note, using feature macros from config.h to determine whether
-// to include a particular header requires violating the style guide's required
-// ordering for headers: this is permitted.
-
+//   ...
+//   #ifdef ABSL_HAVE_MMAP
+//   void *ptr = mmap(...);
+//   ...
+//   #endif  // ABSL_HAVE_MMAP
+//
+// NOTE FOR GOOGLERS:
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_CONFIG_H_
 #define S2_THIRD_PARTY_ABSL_BASE_CONFIG_H_
@@ -66,10 +71,18 @@
 #endif
 #endif
 
-// ABSL_HAVE_BUILTIN is a function-like feature checking macro.
-// It's a wrapper around __has_builtin, which is defined by only clang now.
-// It evaluates to 1 if the builtin is supported or 0 if not.
-// Define it to avoid an extra level of #ifdef __has_builtin check.
+// -----------------------------------------------------------------------------
+// Compiler Feature Checks
+// -----------------------------------------------------------------------------
+
+// ABSL_HAVE_BUILTIN()
+//
+// Checks whether the compiler supports a Clang Feature Checking Macro, and if
+// so, checks whether it supports the provided builtin function "x" where x
+// is one of the functions noted in
+// https://clang.llvm.org/docs/LanguageExtensions.html
+//
+// Note: Use this macro to avoid an extra level of #ifdef __has_builtin check.
 // http://releases.llvm.org/3.3/tools/clang/docs/LanguageExtensions.html
 #ifdef __has_builtin
 #define ABSL_HAVE_BUILTIN(x) __has_builtin(x)
@@ -77,14 +90,12 @@
 #define ABSL_HAVE_BUILTIN(x) 0
 #endif
 
-// ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE is defined when
-// std::is_trivially_destructible<T> is supported.
+// ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
 //
-// All supported compilers using libc++ have it, as does gcc >= 4.8
-// using libstdc++, as does Visual Studio.
-// https://gcc.gnu.org/onlinedocs/gcc-4.8.1/libstdc++/manual/manual/status.html#status.iso.2011
-// is the first version where std::is_trivially_destructible no longer
-// appeared as missing in the Type properties row.
+// Checks whether `std::is_trivially_destructible<T>` is supported.
+//
+// Notes: All supported compilers using libc++ support this feature, as does
+// gcc >= 4.8.1 using libstdc++, and Visual Studio.
 #ifdef ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
 #error ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE cannot be directly set
 #elif defined(_LIBCPP_VERSION) ||                                        \
@@ -94,18 +105,17 @@
 #define ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE 1
 #endif
 
-// ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE is defined when
-// std::is_trivially_default_constructible<T> and
-// std::is_trivially_copy_constructible<T> are supported.
+// ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
 //
-// ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE is defined when
-// std::is_trivially_copy_assignable<T> is supported.
+// Checks whether `std::is_trivially_default_constructible<T>` and
+// `std::is_trivially_copy_constructible<T>` are supported.
+
+// ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
 //
-// Clang with libc++ supports it, as does gcc >= 5.1 with either
-// libc++ or libstdc++, as does Visual Studio.
-// https://gcc.gnu.org/gcc-5/changes.html lists as new
-// "std::is_trivially_constructible, std::is_trivially_assignable
-// etc."
+// Checks whether `std::is_trivially_copy_assignable<T>` is supported.
+
+// Notes: Clang with libc++ supports these features, as does gcc >= 5.1 with
+// either libc++ or libstdc++, and Visual Studio.
 #if defined(ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE)
 #error ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE cannot be directly set
 #elif defined(ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE)
@@ -119,23 +129,28 @@
 #define ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE 1
 #endif
 
-// ABSL_HAVE_THREAD_LOCAL is defined when C++11's thread_local is available.
-// Clang implements thread_local keyword but Xcode did not support the
-// implementation until Xcode 8.
+// ABSL_HAVE_THREAD_LOCAL
+//
+// Checks whether C++11's `thread_local` storage duration specifier is
+// supported.
+//
+// Notes: Clang implements the `thread_local` keyword but Xcode did not support
+// the implementation until Xcode 8.
 #ifdef ABSL_HAVE_THREAD_LOCAL
 #error ABSL_HAVE_THREAD_LOCAL cannot be directly set
 #elif !defined(__apple_build_version__) || __apple_build_version__ >= 8000042
 #define ABSL_HAVE_THREAD_LOCAL 1
 #endif
 
-// ABSL_HAVE_INTRINSIC_INT128 is defined when the implementation provides the
-// 128 bit integral type: __int128.
+// ABSL_HAVE_INTRINSIC_INT128
 //
-// __SIZEOF_INT128__ is defined by Clang and GCC when __int128 is supported.
-// Clang on ppc64 and aarch64 are exceptions where __int128 exists but has a
-// sporadic compiler crashing bug. Nvidia's nvcc also defines __GNUC__ and
-// __SIZEOF_INT128__ but not all versions that do this support __int128. Support
-// has been tested for versions >= 7.
+// Checks whether the __int128 compiler extension for a 128-bit integral type is
+// supported.
+//
+// Notes: __SIZEOF_INT128__ is defined by Clang and GCC when __int128 is
+// supported, except on ppc64 and aarch64 where __int128 exists but has exhibits
+// a sporadic compiler crashing bug. Nvidia's nvcc also defines __GNUC__ and
+// __SIZEOF_INT128__ but not all versions actually support __int128.
 #ifdef ABSL_HAVE_INTRINSIC_INT128
 #error ABSL_HAVE_INTRINSIC_INT128 cannot be directly set
 #elif (defined(__clang__) && defined(__SIZEOF_INT128__) &&               \
@@ -147,8 +162,41 @@
 #define ABSL_HAVE_INTRINSIC_INT128 1
 #endif
 
-// Operating system-specific features.
+// ABSL_HAVE_EXCEPTIONS
 //
+// Checks whether the compiler both supports and enables exceptions. Many
+// compilers support a "no exceptions" mode that disables exceptions.
+//
+// Generally, when ABSL_HAVE_EXCEPTIONS is not defined:
+//
+// * Code using `throw` and `try` may not compile.
+// * The `noexcept` specifier will still compile and behave as normal.
+// * The `noexcept` operator may still return `false`.
+//
+// For further details, consult the compiler's documentation.
+#ifdef ABSL_HAVE_EXCEPTIONS
+#error ABSL_HAVE_EXCEPTIONS cannot be directly set.
+
+#elif defined(__clang__)
+// TODO(user)
+// Switch to using __cpp_exceptions when we no longer support versions < 3.6.
+// For details on this check, see:
+//   https://goo.gl/PilDrJ
+#if defined(__EXCEPTIONS) && __has_feature(cxx_exceptions)
+#define ABSL_HAVE_EXCEPTIONS 1
+#endif  // defined(__EXCEPTIONS) && __has_feature(cxx_exceptions)
+
+// Handle remaining special cases and default to exceptions being supported.
+#elif !(defined(__GNUC__) && (__GNUC__ < 5) && !defined(__EXCEPTIONS)) &&    \
+    !(defined(__GNUC__) && (__GNUC__ >= 5) && !defined(__cpp_exceptions)) && \
+    !(defined(_MSC_VER) && !defined(_CPPUNWIND))
+#define ABSL_HAVE_EXCEPTIONS 1
+#endif
+
+// -----------------------------------------------------------------------------
+// Platform Feature Checks
+// -----------------------------------------------------------------------------
+
 // Currently supported operating systems and associated preprocessor
 // symbols:
 //
@@ -164,10 +212,11 @@
 //
 // Note that since Android defines both __ANDROID__ and __linux__, one
 // may probe for either Linux or Android by simply testing for __linux__.
-//
 
-// ABSL_HAVE_MMAP is defined when the system has an mmap(2) implementation
-// as defined in POSIX.1-2001.
+// ABSL_HAVE_MMAP
+//
+// Checks whether the platform has an mmap(2) implementation as defined in
+// POSIX.1-2001.
 #ifdef ABSL_HAVE_MMAP
 #error ABSL_HAVE_MMAP cannot be directly set
 #elif defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) ||    \
@@ -176,8 +225,10 @@
 #define ABSL_HAVE_MMAP 1
 #endif
 
-// ABSL_HAS_PTHREAD_GETSCHEDPARAM is defined when the system implements the
-// pthread_(get|set)schedparam(3) functions as defined in POSIX.1-2001.
+// ABSL_HAS_PTHREAD_GETSCHEDPARAM
+//
+// Checks whether the platform implements the pthread_(get|set)schedparam(3)
+// functions as defined in POSIX.1-2001.
 #ifdef ABSL_HAVE_PTHREAD_GETSCHEDPARAM
 #error ABSL_HAVE_PTHREAD_GETSCHEDPARAM cannot be directly set
 #elif defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
@@ -185,27 +236,35 @@
 #define ABSL_HAVE_PTHREAD_GETSCHEDPARAM 1
 #endif
 
-// ABSL_HAVE_SCHED_YIELD is defined when the system implements
-// sched_yield(2) as defined in POSIX.1-2001.
+// ABSL_HAVE_SCHED_YIELD
+//
+// Checks whether the platform implements sched_yield(2) as defined in
+// POSIX.1-2001.
 #ifdef ABSL_HAVE_SCHED_YIELD
 #error ABSL_HAVE_SCHED_YIELD cannot be directly set
 #elif defined(__linux__) || defined(__ros__) || defined(__native_client__)
 #define ABSL_HAVE_SCHED_YIELD 1
 #endif
 
-// ABSL_HAVE_SEMAPHORE_H is defined when the system supports the <semaphore.h>
-// header and sem_open(3) family of functions as standardized in POSIX.1-2001.
+// ABSL_HAVE_SEMAPHORE_H
 //
-// Note: While Apple does have <semaphore.h> for both iOS and macOS, it is
+// Checks whether the platform supports the <semaphore.h> header and sem_open(3)
+// family of functions as standardized in POSIX.1-2001.
+//
+// Note: While Apple provides <semaphore.h> for both iOS and macOS, it is
 // explicity deprecated and will cause build failures if enabled for those
-// systems.  We side-step the issue by not defining it here for Apple platforms.
+// platforms.  We side-step the issue by not defining it here for Apple
+// platforms.
 #ifdef ABSL_HAVE_SEMAPHORE_H
 #error ABSL_HAVE_SEMAPHORE_H cannot be directly set
 #elif defined(__linux__) || defined(__ros__)
 #define ABSL_HAVE_SEMAPHORE_H 1
 #endif
 
-// Library-specific features.
+// ABSL_HAVE_ALARM
+//
+// Checks whether the platform supports the <signal.h> header and alarm(2)
+// function as standardized in POSIX.1-2001.
 #ifdef ABSL_HAVE_ALARM
 #error ABSL_HAVE_ALARM cannot be directly set
 #elif defined(__GOOGLE_GRTE_VERSION__)
@@ -226,10 +285,15 @@
 #error "STLPort is not supported."
 #endif
 
-// -----------------------------------------------------------------------------
-// Endianness
-// -----------------------------------------------------------------------------
-// Define ABSL_IS_LITTLE_ENDIAN, ABSL_IS_BIG_ENDIAN.
+// ABSL_IS_LITTLE_ENDIAN
+// ABSL_IS_BIG_ENDIAN
+//
+// Checks the endianness of the platform.
+//
+// Notes: uses the built in endian macros provided by GCC (since 4.6) and
+// Clang (since 3.2); see
+// https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html.
+// Otherwise, if _WIN32, assume little endian. Otherwise, bail with an error.
 #if defined(ABSL_IS_BIG_ENDIAN)
 #error "ABSL_IS_BIG_ENDIAN cannot be directly set."
 #endif
@@ -237,11 +301,6 @@
 #error "ABSL_IS_LITTLE_ENDIAN cannot be directly set."
 #endif
 
-// Use the built in endian macros provided by GCC (since 4.6) and
-// Clang (since 3.2); see
-// <https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html>.
-// Otherwise, if _WIN32, assume little endian.  Otherwise, bail with
-// an error.
 #if (defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
      __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #define ABSL_IS_LITTLE_ENDIAN 1
@@ -252,35 +311,6 @@
 #define ABSL_IS_LITTLE_ENDIAN 1
 #else
 #error "absl endian detection needs to be set up for your compiler"
-#endif
-
-// ABSL_HAVE_EXCEPTIONS is defined when exceptions are enabled.  Many
-// compilers support a "no exceptions" mode that disables exceptions.
-//
-// Generally, when ABSL_HAVE_EXCEPTIONS is not defined:
-//
-// - Code using `throw` and `try` may not compile.
-// - The `noexcept` specifier will still compile and behave as normal.
-// - The `noexcept` operator may still return `false`.
-//
-// For further details, consult the compiler's documentation.
-#ifdef ABSL_HAVE_EXCEPTIONS
-#error ABSL_HAVE_EXCEPTIONS cannot be directly set.
-
-#elif defined(__clang__)
-// TODO(user)
-//   Switch to using __cpp_exceptions when we no longer support versions < 3.6.
-// For details on this check, see:
-//   https://goo.gl/PilDrJ
-#if defined(__EXCEPTIONS) && __has_feature(cxx_exceptions)
-#define ABSL_HAVE_EXCEPTIONS 1
-#endif  // defined(__EXCEPTIONS) && __has_feature(cxx_exceptions)
-
-// Handle remaining special cases and default to exceptions being supported.
-#elif !(defined(__GNUC__) && (__GNUC__ < 5) && !defined(__EXCEPTIONS)) &&    \
-    !(defined(__GNUC__) && (__GNUC__ >= 5) && !defined(__cpp_exceptions)) && \
-    !(defined(_MSC_VER) && !defined(_CPPUNWIND))
-#define ABSL_HAVE_EXCEPTIONS 1
 #endif
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_CONFIG_H_

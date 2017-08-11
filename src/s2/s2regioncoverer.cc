@@ -221,7 +221,7 @@ void S2RegionCoverer::GetInitialCandidates() {
   tmp_coverer.set_max_cells(min(4, max_cells()));
   tmp_coverer.set_max_level(max_level());
   vector<S2CellId> cells;
-  tmp_coverer.GetFastCovering(region_->GetCapBound(), &cells);
+  tmp_coverer.GetFastCovering(*region_, &cells);
   AdjustCellLevels(&cells);
   for (S2CellId cell_id : cells) {
     AddCandidate(NewCandidate(S2Cell(cell_id)));
@@ -254,14 +254,14 @@ void S2RegionCoverer::GetCoveringInternal(S2Region const& region) {
     Candidate* candidate = pq_.top().second;
     pq_.pop();
     VLOG(2) << "Pop: " << candidate->cell.id();
-    // For interior covering we keep subdividing no matter how many children
-    // candidate has. If we reach max_cells_ before expanding all children,
-    // we will just use some of them.
-    // For exterior covering we cannot do this, because result has to cover the
-    // whole region, so all children have to be used.
-    // candidate->num_children == 1 case takes care of the situation when we
-    // already have more then max_cells_ in relust (min_level is too high).
-    // Subdividing of the candidate with one child does no harm in this case.
+    // For interior coverings we keep subdividing no matter how many children
+    // the candidate has.  If we reach max_cells_ before expanding all
+    // children, we will just use some of them.  For exterior coverings we
+    // cannot do this, because the result has to cover the whole region, so
+    // all children have to be used.  The (candidate->num_children == 1) case
+    // takes care of the situation when we already have more than max_cells_
+    // in results (min_level is too high).  Subdividing the candidate with one
+    // child does no harm in this case.
     if (interior_covering_ ||
         candidate->cell.level() < min_level_ ||
         candidate->num_children == 1 ||
@@ -326,38 +326,10 @@ void S2RegionCoverer::GetInteriorCellUnion(S2Region const& region,
   interior->Init(std::move(result_));
 }
 
-void S2RegionCoverer::GetFastCovering(S2Cap const& cap,
+void S2RegionCoverer::GetFastCovering(S2Region const& region,
                                       vector<S2CellId>* covering) {
-  GetRawFastCovering(cap, max_cells(), covering);
+  region.GetCellUnionBound(covering);
   NormalizeCovering(covering);
-}
-
-void S2RegionCoverer::GetRawFastCovering(S2Cap const& cap,
-                                         int max_cells_hint,
-                                         vector<S2CellId>* covering) {
-  // TODO(ericv): The covering could be made quite a bit tighter by mapping
-  // the cap to a rectangle in (i,j)-space and finding a covering for that.
-  covering->clear();
-
-  // Find the maximum level such that the cap contains at most one cell vertex
-  // and such that S2CellId::AppendVertexNeighbors() can be called.
-  int level = S2::kMinWidth.GetLevelForMinValue(2 * cap.GetRadius().radians());
-  level = min(level, S2CellId::kMaxLevel - 1);
-
-  // Don't bother trying to optimize the level == 0 case, since more than
-  // four face cells may be required.
-  if (level == 0) {
-    covering->reserve(6);
-    for (int face = 0; face < 6; ++face) {
-      covering->push_back(S2CellId::FromFace(face));
-    }
-  } else {
-    // The covering consists of the 4 cells at the given level that share the
-    // cell vertex that is closest to the cap center.
-    covering->reserve(4);
-    S2CellId id(cap.center());
-    id.AppendVertexNeighbors(level, covering);
-  }
 }
 
 void S2RegionCoverer::NormalizeCovering(vector<S2CellId>* covering) {
@@ -402,8 +374,7 @@ void S2RegionCoverer::NormalizeCovering(vector<S2CellId>* covering) {
   // Make sure that the covering satisfies min_level() and level_mod(),
   // possibly at the expense of satisfying max_cells().
   if (min_level() > 0 || level_mod() > 1) {
-    S2CellUnion result;
-    result.InitRaw(std::move(*covering));
+    S2CellUnion result = S2CellUnion::FromNormalized(std::move(*covering));
     result.Denormalize(min_level(), level_mod(), covering);
   }
 }

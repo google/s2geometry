@@ -134,8 +134,8 @@ S1Angle S2Builder::SnapFunction::max_edge_deviation() const {
 }
 
 S2Builder::Options::Options()
-    : snap_function_(unique_ptr<SnapFunction>(
-          new s2builderutil::IdentitySnapFunction(S1Angle::Zero()))),
+    : snap_function_(
+          MakeUnique<s2builderutil::IdentitySnapFunction>(S1Angle::Zero())),
       split_crossing_edges_(false),
       simplify_edge_chains_(false),
       idempotent_(true) {

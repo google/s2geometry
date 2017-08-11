@@ -1,4 +1,4 @@
-// Copyright 2003 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
 // limitations under the License.
 //
 
-
-
 #include "s2/third_party/absl/strings/string_view_utils.h"
 
 #include <algorithm>
@@ -27,7 +25,7 @@
 namespace strings {
 
 stringpiece_ssize_type RemoveLeadingWhitespace(absl::string_view* text) {
-  stringpiece_ssize_type count = 0;
+  size_t count = 0;
   const char* ptr = text->data();
   while (count < text->size() && absl::ascii_isspace(*ptr)) {
     count++;
@@ -38,7 +36,7 @@ stringpiece_ssize_type RemoveLeadingWhitespace(absl::string_view* text) {
 }
 
 stringpiece_ssize_type RemoveTrailingWhitespace(absl::string_view* text) {
-  stringpiece_ssize_type count = 0;
+  size_t count = 0;
   const char* ptr = text->data() + text->size() - 1;
   while (count < text->size() && absl::ascii_isspace(*ptr)) {
     ++count;
@@ -54,7 +52,7 @@ stringpiece_ssize_type RemoveWhitespaceContext(absl::string_view* text) {
 }
 
 stringpiece_ssize_type RemoveUntil(absl::string_view* text, char sentinel) {
-  stringpiece_ssize_type count = 0;
+  size_t count = 0;
   const char* ptr = text->data();
   while (count < text->size() && (sentinel != *ptr)) {
     count++;
