@@ -1,4 +1,4 @@
-// Copyright 2008 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 // limitations under the License.
 //
 
-//
 // Fast memory copying and comparison routines.
 //   strings::fastmemcmp_inlined() replaces memcmp()
 //   strings::memcpy_inlined() replaces memcpy()

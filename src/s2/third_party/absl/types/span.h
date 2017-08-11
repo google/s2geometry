@@ -191,7 +191,7 @@ constexpr auto GetDataImpl(C& c, int) noexcept  // NOLINT(runtime/references)
 // Before C++17, string::data returns a const char* in all cases.
 inline char* GetDataImpl(string& s,
                          int) noexcept {  // NOLINT(runtime/references)
-  return const_cast<char*>(s.data());
+  return &s[0];
 }
 
 template <typename C>
@@ -233,48 +233,26 @@ using ElementT = typename ElementType<C>::type;
 template <typename T>
 using EnableIfMutable = absl::enable_if_t<!std::is_const<T>::value, int>;
 
-// This struct allows us to write Span's relational operators in such a way that
-// we can compare any type convertible to a Span and a Span, regardless of left
-// or right-hand positioning or the const-ness of the underlying elements.
+// Used in defining relationals for Span.  Identity<T> in an argument list puts
+// T in a non-deduced context.
+template <typename SpanT>
+using Identity = absl::decay_t<SpanT>;
+
 template <typename T>
-struct SpanRelationals {
-  static_assert(
-      std::is_const<T>::value,
-      "SpanRelationals must be used with a const parameter type to work.");
+bool EqualImpl(Span<T> a, Span<T> b) {
+  static_assert(std::is_const<T>::value, "");
+  return absl::equal(a.begin(), a.end(), b.begin(), b.end());
+}
 
-  // These relational operators have the same semantics as the
-  // vector<T> relational operators: they do deep (elementwise)
-  // comparisons.  Spans are equal iff their size is the same and all their
-  // elements are equal.  Spans are ordered by lexicographical comparison.
-  friend bool operator==(Span<T> lhs, Span<T> rhs) noexcept {
-    return absl::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
-  }
-
-  friend bool operator!=(Span<T> lhs, Span<T> rhs) noexcept {
-    return !(lhs == rhs);
-  }
-
-  friend bool operator<(Span<T> lhs, Span<T> rhs) noexcept {
-    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
-                                        rhs.end());
-  }
-
-  // We can't use std::lexicographical_compare with std::greater, because then
-  // an empty range would be both less than and greater than a non-empty range.
-  friend bool operator>(Span<T> lhs, Span<T> rhs) noexcept { return rhs < lhs; }
-
-  friend bool operator<=(Span<T> lhs, Span<T> rhs) noexcept {
-    return !(rhs < lhs);
-  }
-
-  friend bool operator>=(Span<T> lhs, Span<T> rhs) noexcept {
-    return !(lhs < rhs);
-  }
-};
+template <typename T>
+bool LessThanImpl(Span<T> a, Span<T> b) {
+  static_assert(std::is_const<T>::value, "");
+  return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
+}
 }  // namespace internal_span
 
 template <typename T>
-class Span : private internal_span::SpanRelationals<const T> {
+class Span {
  private:
   // Used to determine whether a Span can be constructed from a container of
   // type C.
@@ -416,6 +394,90 @@ class Span : private internal_span::SpanRelationals<const T> {
 
 template <typename T>
 const typename Span<T>::size_type Span<T>::npos;
+
+// Span relationals.  Equality is compared element-by-element, while ordering is
+// lexicographical.
+//
+// We provide three overloads for each operator to cover any combination on the
+// left or right hand side of mutable Span<T>, read-only Span<T>, and
+// convertible-to-read-only Span<T>
+template <typename T>
+constexpr bool operator==(Span<T> a, Span<T> b) {
+  return internal_span::EqualImpl<const T>(a, b);
+}
+template <typename T>
+constexpr bool operator==(internal_span::Identity<Span<const T>> a, Span<T> b) {
+  return internal_span::EqualImpl<const T>(a, b);
+}
+template <typename T>
+constexpr bool operator==(Span<T> a, internal_span::Identity<Span<const T>> b) {
+  return internal_span::EqualImpl<const T>(a, b);
+}
+
+template <typename T>
+constexpr bool operator!=(Span<T> a, Span<T> b) {
+  return !(a == b);
+}
+template <typename T>
+constexpr bool operator!=(internal_span::Identity<Span<const T>> a, Span<T> b) {
+  return !(a == b);
+}
+template <typename T>
+constexpr bool operator!=(Span<T> a, internal_span::Identity<Span<const T>> b) {
+  return !(a == b);
+}
+
+template <typename T>
+constexpr bool operator<(Span<T> a, Span<T> b) {
+  return internal_span::LessThanImpl<const T>(a, b);
+}
+template <typename T>
+constexpr bool operator<(internal_span::Identity<Span<const T>> a, Span<T> b) {
+  return internal_span::LessThanImpl<const T>(a, b);
+}
+template <typename T>
+constexpr bool operator<(Span<T> a, internal_span::Identity<Span<const T>> b) {
+  return internal_span::LessThanImpl<const T>(a, b);
+}
+
+template <typename T>
+constexpr bool operator>(Span<T> a, Span<T> b) {
+  return b < a;
+}
+template <typename T>
+constexpr bool operator>(internal_span::Identity<Span<const T>> a, Span<T> b) {
+  return b < a;
+}
+template <typename T>
+constexpr bool operator>(Span<T> a, internal_span::Identity<Span<const T>> b) {
+  return b < a;
+}
+
+template <typename T>
+constexpr bool operator<=(Span<T> a, Span<T> b) {
+  return !(b < a);
+}
+template <typename T>
+constexpr bool operator<=(internal_span::Identity<Span<const T>> a, Span<T> b) {
+  return !(b < a);
+}
+template <typename T>
+constexpr bool operator<=(Span<T> a, internal_span::Identity<Span<const T>> b) {
+  return !(b < a);
+}
+
+template <typename T>
+constexpr bool operator>=(Span<T> a, Span<T> b) {
+  return !(a < b);
+}
+template <typename T>
+constexpr bool operator>=(internal_span::Identity<Span<const T>> a, Span<T> b) {
+  return !(a < b);
+}
+template <typename T>
+constexpr bool operator>=(Span<T> a, internal_span::Identity<Span<const T>> b) {
+  return !(a < b);
+}
 
 // MakeSpan constructs a Span<T>, deducing T automatically.  The
 // pointer-accepting versions return a Span<const T> if T is const, and a

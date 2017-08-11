@@ -595,6 +595,47 @@ struct allocator_traits {
   }
 };
 
+namespace memory_internal {
+
+// This template alias transforms Alloc::is_nothrow into a metafunction with
+// Alloc as a parameter so it can be used with ExtractOrT<>.
+template <typename Alloc>
+using GetIsNothrow = typename Alloc::is_nothrow;
+
+}  // namespace memory_internal
+
+// ABSL_ALLOCATOR_NOTHROW is a build time configuration macro for user to
+// specify whether the default allocation function can throw or never throws.
+// If the allocation function never throws, user should define it to a non-zero
+// value (e.g. via `-DABSL_ALLOCATOR_NOTHROW`).
+// If the allocation function can throw, user should leave it undefined or
+// define it to zero.
+//
+// allocator_is_nothrow<Alloc> is a traits class that derives from
+// Alloc::is_nothrow if present, otherwise std::false_type. It's specialized
+// for Alloc = std::allocator<T> for any type T according to the state of
+// ABSL_ALLOCATOR_NOTHROW.
+//
+// default_allocator_is_nothrow is a class that derives from std::true_type
+// when the default allocator (global operator new) never throws, and
+// std::false_type when it can throw. It is a convenience shorthand for writing
+// allocator_is_nothrow<std::allocator<T>> (T can be any type).
+// NOTE: allocator_is_nothrow<std::allocator<T>> is guaranteed to derive from
+// the same type for all T, because users should specialize neither
+// allocator_is_nothrow nor std::allocator.
+template <typename Alloc>
+struct allocator_is_nothrow
+    : memory_internal::ExtractOrT<memory_internal::GetIsNothrow, Alloc,
+                                  std::false_type> {};
+
+#if ABSL_ALLOCATOR_NOTHROW
+template <typename T>
+struct allocator_is_nothrow<std::allocator<T>> : std::true_type {};
+struct default_allocator_is_nothrow : std::true_type {};
+#else
+struct default_allocator_is_nothrow : std::false_type {};
+#endif
+
 }  // namespace absl
 
 // TODO(user): Delete temporary aliases after namespace update.

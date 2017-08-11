@@ -49,6 +49,8 @@
 #include <x86intrin.h>
 #endif
 
+#include <type_traits>
+
 #include "s2/base/casts.h"
 #include "s2/third_party/absl/numeric/int128.h"
 #include "s2/third_party/absl/base/integral_types.h"
@@ -389,10 +391,11 @@ class Bits {
 // were chosen to match Knuth Volume 4: l is 0x010101... and h is 0x808080...;
 // half_ones is ones in the lower half only.  We assume sizeof(T) is 1 or even.
 template <class T> struct BitPattern {
-  static const T half_ones = (static_cast<T>(1) << (sizeof(T)*4)) - 1;
-  static const T l = (sizeof(T) == 1) ? 1 :
-                       (half_ones / 0xff * (half_ones + 2));
-  static const T h = ~(l * 0x7f);
+  typedef typename std::make_unsigned<T>::type U;
+  static const U half_ones = (static_cast<U>(1) << (sizeof(U) * 4)) - 1;
+  static const U l =
+      (sizeof(U) == 1) ? 1 : (half_ones / 0xff * (half_ones + 2));
+  static const U h = ~(l * 0x7f);
 };
 
 // ------------------------------------------------------------------------
@@ -610,8 +613,8 @@ inline int Bits::FindLSBSetNonZero64_Portable(uint64 n) {
 
 template <class T>
 inline bool Bits::BytesContainByteLessThan(T bytes, uint8 c) {
-  T l = BitPattern<T>::l;
-  T h = BitPattern<T>::h;
+  auto l = BitPattern<T>::l;
+  auto h = BitPattern<T>::h;
   // The c <= 0x80 code is straight out of Knuth Volume 4.
   // Usually c will be manifestly constant.
   return c <= 0x80 ?
@@ -626,15 +629,15 @@ template <class T> inline bool Bits::BytesContainByte(T bytes, uint8 c) {
 
 template <class T>
 inline bool Bits::BytesAllInRange(T bytes, uint8 lo, uint8 hi) {
-  T l = BitPattern<T>::l;
-  T h = BitPattern<T>::h;
+  auto l = BitPattern<T>::l;
+  auto h = BitPattern<T>::h;
   // In the common case, lo and hi are manifest constants.
   if (lo > hi) {
     return false;
   }
   if (hi - lo < 128) {
-    T x = bytes - l * lo;
-    T y = bytes + l * (127 - hi);
+    auto x = bytes - l * lo;
+    auto y = bytes + l * (127 - hi);
     return ((x | y) & h) == 0;
   }
   return !Bits::BytesContainByteLessThan(bytes + (255 - hi) * l,

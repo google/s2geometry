@@ -254,7 +254,7 @@ class S2ClosestEdgeQuery {
   ABSL_DEPRECATED("Use GetDistance(PointTarget(point)).ToAngle() instead.")
   S1Angle GetDistance(S2Point const& point);
 
-  ABSL_DEPRECATED("Use S2::Project instead.")
+  ABSL_DEPRECATED("Use Project(S2Point, Result) instead.")
   S2Point Project(S2Point const& point);
 
   ABSL_DEPRECATED("Use options().max_edges()")

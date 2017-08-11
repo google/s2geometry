@@ -630,6 +630,7 @@ class S2Polygon final : public S2Region {
   S2Polygon* Clone() const override;
   S2Cap GetCapBound() const override;  // Cap surrounding rect bound.
   S2LatLngRect GetRectBound() const override { return bound_; }
+  void GetCellUnionBound(std::vector<S2CellId> *cell_ids) const override;
 
   bool Contains(S2Cell const& cell) const override;
   bool MayIntersect(S2Cell const& cell) const override;
@@ -786,15 +787,6 @@ class S2Polygon final : public S2Region {
   // Given an iterator that is already positioned at the S2ShapeIndexCell
   // containing "p", returns Contains(p).
   bool Contains(S2ShapeIndex::Iterator const& it, S2Point const& p) const;
-
-  // Return true if the polygon boundary intersects "target".  It may also
-  // return true when the polygon boundary does not intersect "target" but
-  // some edge comes within the worst-case error tolerance.
-  //
-  // REQUIRES: it.id().contains(target.id())
-  // [This condition is true whenever it.Locate(target) returns INDEXED.]
-  bool BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
-                                S2Cell const& target) const;
 
   // Encode the polygon's S2Points directly as three doubles using
   // (40 + 43 * num_loops + 24 * num_vertices) bytes.

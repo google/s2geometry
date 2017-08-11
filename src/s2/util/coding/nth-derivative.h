@@ -108,7 +108,7 @@ inline NthDerivativeCoder::NthDerivativeCoder(int n) : n_(n) {
 
 inline int32 NthDerivativeCoder::Encode(int32 k) {
   for (int i = 0; i < m_; ++i) {
-    int32 delta = k - memory_[i];
+    uint32 delta = static_cast<uint32>(k) - memory_[i];
     memory_[i] = k;
     k = delta;
   }
@@ -121,7 +121,7 @@ inline int32 NthDerivativeCoder::Decode(int32 k) {
   if (m_ < n_)
     m_++;
   for (int i = m_ - 1; i >= 0; --i)
-    k = memory_[i] = memory_[i] + k;
+    k = memory_[i] = memory_[i] + static_cast<uint32>(k);
   return k;
 }
 

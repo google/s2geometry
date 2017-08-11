@@ -61,7 +61,6 @@
 //
 // There are several ways to create a null string_view:
 //   string_view()
-//   string_view(nullptr)  // Deprecated: not supported by std::string_view!
 //   string_view(nullptr, 0)
 // For all of the above, sv.data() == nullptr, sv.length() == 0, and
 // sv.empty() == true.  Also, if you create a string_view with a non-null
@@ -74,7 +73,6 @@
 // There are many ways to create an empty string_view:
 //   const char* nullcp = nullptr;
 //   string_view()
-//   string_view(nullcp)  // Deprecated
 //   string_view(nullcp, 0)
 //   string_view("")
 //   string_view("", 0)
@@ -90,7 +88,6 @@
 // All empty string_views whether null or not, are equal.
 // string_view:
 //   string_view() == string_view("", 0)
-//   string_view(nullptr) == string_view("abc", 0)  // Deprecated
 //   string_view(nullptr, 0) == string_view("abcdef"+6, 0)
 //
 // Look carefully at this example:
@@ -132,6 +129,7 @@
 #include <string>
 
 #include "s2/third_party/absl/base/integral_types.h"
+#include "s2/third_party/absl/base/internal/throw_delegate.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/absl/strings/internal/fastmem.h"
@@ -291,13 +289,14 @@ class string_view {
     return ::basic_string<char, traits_type, A>(data(), size(), a);
   }
 #else   // !HAS_GLOBAL_STRING
-  template <class A = std::allocator<char>>
-  ABSL_DEPRECATED("Use std::string(sp)")
-  std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
-    if (!data()) return std::basic_string<char, traits_type, A>(a);
-    return std::basic_string<char, traits_type, A>(data(), size(), a);
+
+template <class A = std::allocator<char>>
+ABSL_DEPRECATED("Use std::string(sp)")
+std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
+  if (!data()) return std::basic_string<char, traits_type, A>(a);
+  return std::basic_string<char, traits_type, A>(data(), size(), a);
   }
-#endif
+#endif  // HAS_GLOBAL_STRING
 
   ABSL_DEPRECATED("Use string(sp)")
   string as_string() const {
@@ -315,11 +314,11 @@ class string_view {
 
   size_type copy(char* buf, size_type n, size_type pos = 0) const;
 
-  // Note that std::string_view::substr throws if `pos > size`, and this
-  // will soon be changed to do the same (b/37991613).
+  // substr throws if `pos > size'
   // Use absl::ClippedSubstr if you need a truncating substr operation.
   string_view substr(size_type pos, size_type n = npos) const {
-    pos = std::min(pos, length_);
+    if (PREDICT_FALSE(pos > length_))
+      absl::ThrowStdOutOfRange("absl::string_view::substr");
     n = std::min(n, length_ - pos);
     return string_view(ptr_ + pos, n);
   }
@@ -541,13 +540,6 @@ inline string_view NullSafeStringView(const char* p) {
 }
 
 }  // namespace absl
-
-// ------------------------------------------------------------------
-// Functions used to create STL containers that use string_view
-//  Remember that a string_view's lifetime had better be less than
-//  that of the underlying string or char*.  If it is not, then you
-//  cannot safely store a string_view into an STL container
-// ------------------------------------------------------------------
 
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_H_

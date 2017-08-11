@@ -20,6 +20,7 @@
 #include <cfloat>
 #include <cmath>
 #include <iosfwd>
+#include <vector>
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
@@ -31,11 +32,14 @@
 #include "s2/s2edgeutil.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2metrics.h"
 #include "s2/s2pointutil.h"
 #include "s2/util/math/vector.h"
 
 using std::fabs;
 using std::max;
+using std::min;
+using std::vector;
 
 double S2Cap::GetArea() const {
   return 2 * M_PI * max(0.0, height());
@@ -186,6 +190,34 @@ S2LatLngRect S2Cap::GetRectBound() const {
   }
   return S2LatLngRect(R1Interval(lat[0], lat[1]),
                       S1Interval(lng[0], lng[1]));
+}
+
+// Computes a covering of the S2Cap.  In general the covering consists of at
+// most 4 cells except for very large caps, which may need up to 6 cells.
+// The output is not sorted.
+void S2Cap::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  // TODO(ericv): The covering could be made quite a bit tighter by mapping
+  // the cap to a rectangle in (i,j)-space and finding a covering for that.
+  cell_ids->clear();
+
+  // Find the maximum level such that the cap contains at most one cell vertex
+  // and such that S2CellId::AppendVertexNeighbors() can be called.
+  int level = S2::kMinWidth.GetLevelForMinValue(2 * GetRadius().radians());
+  level = min(level, S2CellId::kMaxLevel - 1);
+
+  // Don't bother trying to optimize the level == 0 case, since more than
+  // four face cells may be required.
+  if (level == 0) {
+    cell_ids->reserve(6);
+    for (int face = 0; face < 6; ++face) {
+      cell_ids->push_back(S2CellId::FromFace(face));
+    }
+  } else {
+    // The covering consists of the 4 cells at the given level that share the
+    // cell vertex that is closest to the cap center.
+    cell_ids->reserve(4);
+    S2CellId(center_).AppendVertexNeighbors(level, cell_ids);
+  }
 }
 
 bool S2Cap::Intersects(S2Cell const& cell, S2Point const* vertices) const {

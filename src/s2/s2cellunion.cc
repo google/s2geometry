@@ -44,18 +44,9 @@ vector<S2CellId> S2CellUnion::ToS2CellIds(vector<uint64> const& ids) {
   return cell_ids;
 }
 
-S2CellUnion::S2CellUnion(vector<S2CellId> cell_ids)
-    : cell_ids_(std::move(cell_ids)) {
-  Normalize();
-}
-
 S2CellUnion::S2CellUnion(vector<uint64> const& cell_ids)
     : cell_ids_(ToS2CellIds(cell_ids)) {
   Normalize();
-}
-
-S2CellUnion S2CellUnion::FromNormalized(vector<S2CellId> cell_ids) {
-  return S2CellUnion(std::move(cell_ids), NORMALIZED);
 }
 
 S2CellUnion S2CellUnion::FromMinMax(S2CellId min_id, S2CellId max_id) {
@@ -68,11 +59,6 @@ S2CellUnion S2CellUnion::FromBeginEnd(S2CellId begin, S2CellId end) {
   S2CellUnion result;
   result.InitFromBeginEnd(begin, end);
   return result;
-}
-
-void S2CellUnion::Init(vector<S2CellId> cell_ids) {
-  cell_ids_ = std::move(cell_ids);
-  Normalize();
 }
 
 void S2CellUnion::Init(vector<uint64> const& cell_ids) {
@@ -100,14 +86,6 @@ void S2CellUnion::InitFromBeginEnd(S2CellId begin, S2CellId end) {
   DCHECK(IsNormalized());
 }
 
-vector<S2CellId> S2CellUnion::Release() {
-  // vector's rvalue reference constructor does not necessarily leave
-  // moved-from value in empty state, so swap instead.
-  vector<S2CellId> cell_ids;
-  cell_ids_.swap(cell_ids);
-  return cell_ids;
-}
-
 void S2CellUnion::Pack(int excess) {
   if (cell_ids_.capacity() - cell_ids_.size() > excess) {
     cell_ids_.shrink_to_fit();
@@ -115,7 +93,7 @@ void S2CellUnion::Pack(int excess) {
 }
 
 S2CellUnion* S2CellUnion::Clone() const {
-  return new S2CellUnion(cell_ids_, NORMALIZED);
+  return new S2CellUnion(cell_ids_, VERBATIM);
 }
 
 // Returns true if the given four cells have a common parent.
@@ -138,9 +116,20 @@ inline static bool AreSiblings(S2CellId a, S2CellId b, S2CellId c, S2CellId d) {
           !d.is_face());
 }
 
-bool S2CellUnion::IsNormalized() {
+bool S2CellUnion::IsValid() const {
+  if (num_cells() > 0 && !cell_id(0).is_valid()) return false;
   for (int i = 1; i < num_cells(); ++i) {
-    if (cell_id(i - 1).range_max() > cell_id(i).range_min()) return false;
+    if (!cell_id(i).is_valid()) return false;
+    if (cell_id(i - 1).range_max() >= cell_id(i).range_min()) return false;
+  }
+  return true;
+}
+
+bool S2CellUnion::IsNormalized() const {
+  if (num_cells() > 0 && !cell_id(0).is_valid()) return false;
+  for (int i = 1; i < num_cells(); ++i) {
+    if (!cell_id(i).is_valid()) return false;
+    if (cell_id(i - 1).range_max() >= cell_id(i).range_min()) return false;
     if (i >= 3 && AreSiblings(cell_id(i - 3), cell_id(i - 2),
                               cell_id(i - 1), cell_id(i))) {
       return false;
@@ -190,8 +179,7 @@ void S2CellUnion::Denormalize(int min_level, int level_mod,
 
   output->clear();
   output->reserve(num_cells());
-  for (int i = 0; i < num_cells(); ++i) {
-    S2CellId id = cell_id(i);
+  for (S2CellId id : *this) {
     int level = id.level();
     int new_level = max(min_level, level);
     if (level_mod > 1) {
@@ -216,9 +204,9 @@ S2Cap S2CellUnion::GetCapBound() const {
   // bounding cap of minimal area, but it should be close enough.
   if (cell_ids_.empty()) return S2Cap::Empty();
   S2Point centroid(0, 0, 0);
-  for (int i = 0; i < num_cells(); ++i) {
-    double area = S2Cell::AverageArea(cell_id(i).level());
-    centroid += area * cell_id(i).ToPoint();
+  for (S2CellId id : *this) {
+    double area = S2Cell::AverageArea(id.level());
+    centroid += area * id.ToPoint();
   }
   if (centroid == S2Point(0, 0, 0)) {
     centroid = S2Point(1, 0, 0);
@@ -231,23 +219,21 @@ S2Cap S2CellUnion::GetCapBound() const {
   // *not* sufficient to just bound all the cell vertices because the bounding
   // cap may be concave (i.e. cover more than one hemisphere).
   S2Cap cap = S2Cap::FromPoint(centroid);
-  for (int i = 0; i < num_cells(); ++i) {
-    cap.AddCap(S2Cell(cell_id(i)).GetCapBound());
+  for (S2CellId id : *this) {
+    cap.AddCap(S2Cell(id).GetCapBound());
   }
   return cap;
 }
 
 S2LatLngRect S2CellUnion::GetRectBound() const {
   S2LatLngRect bound = S2LatLngRect::Empty();
-  for (int i = 0; i < num_cells(); ++i) {
-    bound = bound.Union(S2Cell(cell_id(i)).GetRectBound());
+  for (S2CellId id : *this) {
+    bound = bound.Union(S2Cell(id).GetRectBound());
   }
   return bound;
 }
 
 bool S2CellUnion::Contains(S2CellId id) const {
-  // This function requires that Normalize has been called first.
-  //
   // This is an exact test.  Each cell occupies a linear span of the S2
   // space-filling curve, and the cell id is simply the position at the center
   // of this span.  The cell union ids are sorted in increasing order along
@@ -262,7 +248,6 @@ bool S2CellUnion::Contains(S2CellId id) const {
 }
 
 bool S2CellUnion::Intersects(S2CellId id) const {
-  // This function requires that Normalize has been called first.
   // This is an exact test; see the comments for Contains() above.
 
   vector<S2CellId>::const_iterator i =
@@ -275,8 +260,8 @@ bool S2CellUnion::Contains(S2CellUnion const& y) const {
   // TODO(ericv): A divide-and-conquer or alternating-skip-search
   // approach may be sigificantly faster in both the average and worst case.
 
-  for (int i = 0; i < y.num_cells(); ++i) {
-    if (!Contains(y.cell_id(i))) return false;
+  for (S2CellId y_id : y) {
+    if (!Contains(y_id)) return false;
   }
   return true;
 }
@@ -285,20 +270,18 @@ bool S2CellUnion::Intersects(S2CellUnion const& y) const {
   // TODO(ericv): A divide-and-conquer or alternating-skip-search
   // approach may be sigificantly faster in both the average and worst case.
 
-  for (int i = 0; i < y.num_cells(); ++i) {
-    if (Intersects(y.cell_id(i))) return true;
+  for (S2CellId y_id : y) {
+    if (Intersects(y_id)) return true;
   }
   return false;
 }
 
 S2CellUnion S2CellUnion::Union(S2CellUnion const& y) const {
-  S2CellUnion result;
-  result.cell_ids_.reserve(num_cells() + y.num_cells());
-  result.cell_ids_ = cell_ids_;
-  result.cell_ids_.insert(result.cell_ids_.end(),
-                          y.cell_ids_.begin(), y.cell_ids_.end());
-  result.Normalize();
-  return result;
+  vector<S2CellId> cell_ids;
+  cell_ids.reserve(num_cells() + y.num_cells());
+  cell_ids = cell_ids_;
+  cell_ids.insert(cell_ids.end(), y.cell_ids_.begin(), y.cell_ids_.end());
+  return S2CellUnion(std::move(cell_ids));
 }
 
 S2CellUnion S2CellUnion::Intersection(S2CellId id) const {
@@ -312,14 +295,15 @@ S2CellUnion S2CellUnion::Intersection(S2CellId id) const {
     while (i != cell_ids_.end() && *i <= id_max)
       result.cell_ids_.push_back(*i++);
   }
-  DCHECK(result.IsNormalized());
+  DCHECK(result.IsNormalized() || !IsNormalized());
   return result;
 }
 
 S2CellUnion S2CellUnion::Intersection(S2CellUnion const& y) const {
   S2CellUnion result;
   GetIntersection(cell_ids_, y.cell_ids_, &result.cell_ids_);
-  DCHECK(result.IsNormalized());
+  // The output is normalized as long as at least one input is normalized.
+  DCHECK(result.IsNormalized() || (!IsNormalized() && !y.IsNormalized()));
   return result;
 }
 
@@ -393,12 +377,11 @@ S2CellUnion S2CellUnion::Difference(S2CellUnion const& y) const {
   // use similar techniques as GetIntersection() to be more efficient.
 
   S2CellUnion result;
-  for (int i = 0; i < num_cells(); ++i) {
-    GetDifferenceInternal(cell_id(i), y, &result.cell_ids_);
+  for (S2CellId id : *this) {
+    GetDifferenceInternal(id, y, &result.cell_ids_);
   }
-  // The output is generated in sorted order, and there should not be any
-  // cells that can be merged (provided that both inputs were normalized).
-  DCHECK(result.IsNormalized());
+  // The output is normalized as long as the first argument is normalized.
+  DCHECK(result.IsNormalized() || !IsNormalized());
   return result;
 }
 
@@ -421,8 +404,8 @@ void S2CellUnion::Expand(int level) {
 
 void S2CellUnion::Expand(S1Angle min_radius, int max_level_diff) {
   int min_level = S2CellId::kMaxLevel;
-  for (int i = 0; i < num_cells(); ++i) {
-    min_level = min(min_level, cell_id(i).level());
+  for (S2CellId id : *this) {
+    min_level = min(min_level, id.level());
   }
   // Find the maximum level such that all cells are at least "min_radius" wide.
   int radius_level = S2::kMinWidth.GetLevelForMinValue(min_radius.radians());
@@ -436,9 +419,8 @@ void S2CellUnion::Expand(S1Angle min_radius, int max_level_diff) {
 
 uint64 S2CellUnion::LeafCellsCovered() const {
   uint64 num_leaves = 0;
-  for (int i = 0; i < num_cells(); ++i) {
-    const int inverted_level =
-        S2CellId::kMaxLevel - cell_id(i).level();
+  for (S2CellId id : *this) {
+    const int inverted_level = S2CellId::kMaxLevel - id.level();
     num_leaves += (1ULL << (inverted_level << 1));
   }
   return num_leaves;
@@ -450,16 +432,16 @@ double S2CellUnion::AverageBasedArea() const {
 
 double S2CellUnion::ApproxArea() const {
   double area = 0;
-  for (int i = 0; i < num_cells(); ++i) {
-    area += S2Cell(cell_id(i)).ApproxArea();
+  for (S2CellId id : *this) {
+    area += S2Cell(id).ApproxArea();
   }
   return area;
 }
 
 double S2CellUnion::ExactArea() const {
   double area = 0;
-  for (int i = 0; i < num_cells(); ++i) {
-    area += S2Cell(cell_id(i)).ExactArea();
+  for (S2CellId id : *this) {
+    area += S2Cell(id).ExactArea();
   }
   return area;
 }

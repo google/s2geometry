@@ -41,6 +41,14 @@ using std::max;
 using std::min;
 using std::vector;
 
+class S2CellUnionTestPeer {
+ public:
+  // Creates a possibly invalid S2CellUnion without any checks.
+  static S2CellUnion FromVerbatimNoChecks(vector<S2CellId> cell_ids) {
+    return S2CellUnion(std::move(cell_ids), S2CellUnion::VERBATIM);
+  }
+};
+
 TEST(S2CellUnion, DefaultConstructor) {
   vector<S2CellId> ids;
   S2CellUnion empty(ids);
@@ -52,6 +60,35 @@ TEST(S2CellUnion, S2CellIdConstructor) {
   S2CellUnion face1_union({face1_id});
   EXPECT_EQ(1, face1_union.num_cells());
   EXPECT_EQ(face1_id, face1_union.cell_id(0));
+}
+
+TEST(S2CellUnion, DuplicateCellsNotValid) {
+  S2CellId id = S2CellId(S2Point(1, 0, 0));
+  auto cell_union = S2CellUnionTestPeer::FromVerbatimNoChecks(
+      vector<S2CellId>{id, id});
+  EXPECT_FALSE(cell_union.IsValid());
+}
+
+TEST(S2CellUnion, UnsortedCellsNotValid) {
+  S2CellId id = S2CellId(S2Point(1, 0, 0)).parent(10);
+  auto cell_union = S2CellUnionTestPeer::FromVerbatimNoChecks(
+      vector<S2CellId>{id, id.prev()});
+  EXPECT_FALSE(cell_union.IsValid());
+}
+
+TEST(S2CellUnion, InvalidCellIdNotValid) {
+  ASSERT_FALSE(S2CellId::None().is_valid());
+  auto cell_union =
+      S2CellUnionTestPeer::FromVerbatimNoChecks({S2CellId::None()});
+  EXPECT_FALSE(cell_union.IsValid());
+}
+
+TEST(S2CellUnion, IsNormalized) {
+  S2CellId id = S2CellId(S2Point(1, 0, 0)).parent(10);
+  auto cell_union = S2CellUnion::FromVerbatim(
+      vector<S2CellId>{id.child(0), id.child(1), id.child(2), id.child(3)});
+  EXPECT_TRUE(cell_union.IsValid());
+  EXPECT_FALSE(cell_union.IsNormalized());
 }
 
 static S2Testing::Random& rnd = S2Testing::rnd;
@@ -325,10 +362,10 @@ TEST(S2CellUnion, Expand) {
 }
 
 TEST(S2CellUnion, EncodeDecode) {
-  vector<S2CellId> cell_ids = {S2CellId(0x33), S2CellId(0x0),
+  vector<S2CellId> cell_ids = {S2CellId(0x33),
                                S2CellId(0x8e3748fab),
                                S2CellId(0x91230abcdef83427)};
-  auto cell_union = S2CellUnion::FromNormalized(std::move(cell_ids));
+  auto cell_union = S2CellUnion::FromVerbatim(std::move(cell_ids));
 
   Encoder encoder;
   cell_union.Encode(&encoder);
@@ -426,11 +463,11 @@ TEST(S2CellUnion, Empty) {
 
   // Contains(...)
   EXPECT_FALSE(empty_cell_union.Contains(face1_id));
-  EXPECT_TRUE(empty_cell_union.Contains(&empty_cell_union));
+  EXPECT_TRUE(empty_cell_union.Contains(empty_cell_union));
 
   // Intersects(...)
   EXPECT_FALSE(empty_cell_union.Intersects(face1_id));
-  EXPECT_FALSE(empty_cell_union.Intersects(&empty_cell_union));
+  EXPECT_FALSE(empty_cell_union.Intersects(empty_cell_union));
 
   // GetUnion(...)
   S2CellUnion cell_union = empty_cell_union.Union(empty_cell_union);

@@ -179,7 +179,7 @@ class Decoder {
                                                // stopping after c is got
   void   gets(void* mem, size_t n);            // get a c-string no more than
                                                // n bytes. always appends '\0'
-  void   skip(size_t n);
+  void   skip(ptrdiff_t n);
   unsigned char const* ptr() const;  // Return ptr to current position in buffer
 
   // "get_varint" actually checks bounds
@@ -325,7 +325,8 @@ inline bool Encoder::put_varint64_from_decoder(Decoder* dec) {
 inline void Encoder::put_varsigned32(int32 n) {
   // Encode sign in low-bit
   int sign = (n < 0) ? 1 : 0;
-  uint32 mag = (n < 0) ? -n : n;
+  // Cast to unsigned to avoid overflow negating n when n == INT_MIN.
+  uint32 mag = (n < 0) ? -static_cast<uint32>(n) : n;
   put_varint32((mag << 1) | sign);
 }
 
@@ -373,7 +374,7 @@ inline void Decoder::gets(void* dst, size_t n) {
   getcn(dst, '\0', len);
 }
 
-inline void Decoder::skip(size_t n) {
+inline void Decoder::skip(ptrdiff_t n) {
   buf_ += n;
 }
 

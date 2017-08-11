@@ -31,6 +31,9 @@
 // - Performance optimization (alignment, branch prediction)
 // - Obsolete
 //
+// NOTE FOR GOOGLERS:
+//
+// IWYU pragma: private, include "base/port.h"
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_PORT_H_
 #define S2_THIRD_PARTY_ABSL_BASE_PORT_H_
@@ -39,6 +42,10 @@
 #include <climits>         // So we can set the bounds of our types
 #include <cstdlib>         // for free()
 #include <cstring>         // for memcpy()
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
 
 #include "s2/third_party/absl/base/attributes.h"
 #include "s2/third_party/absl/base/config.h"
@@ -61,11 +68,14 @@
 // -----------------------------------------------------------------------------
 
 // We support MSVC++ 14.0 update 2 and later.
+// This minimum will go up.
 #if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 190023918
 #error "This package requires Visual Studio 2015 Update 2 or higher"
 #endif
 
 // We support gcc 4.7 and later.
+// This minimum will go up.
+// Do not test clang. As of crosstool v18, clang identifies as gcc 4.2.
 #if defined(__GNUC__) && !defined(__clang__)
 #if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
 #error "This package requires gcc 4.7 or higher"
@@ -74,6 +84,7 @@
 
 // We support Apple Xcode clang 4.2.1 (version 421.11.65) and later.
 // This corresponds to Apple Xcode version 4.5.
+// This minimum will go up.
 #if defined(__apple_build_version__) && __apple_build_version__ < 4211165
 #error "This package requires __apple_build_version__ of 4211165 or higher"
 #endif
@@ -140,6 +151,33 @@ enum { kPlatformUsesOPDSections = 0 };
 #endif  // PPC or IA64
 #endif  // __cplusplus
 
+// ABSL_BLOCK_TAIL_CALL_OPTIMIZATION
+// Under optimized builds, functions are often subject to tail-call
+// optimisation. The specific cases vary from compiler to compiler, but the
+// macro should avoid a tail-call in cases, for example, that must preserve
+// a function in the call stack.
+//
+// Example:
+//   int f() {
+//     int result = g();
+//     ABLS_BLOCK_TAIL_CALL_OPTIMIZATION();
+//     return result;
+//   }
+#if defined(__pnacl__)
+#define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() if (volatile int x = 0) { (void)x; }
+#elif defined(__clang__)
+// Clang will not tail call given inline volatile assembly.
+#define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() __asm__ __volatile__("")
+#elif defined(__GNUC__)
+// GCC will not tail call given inline volatile assembly.
+#define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() __asm__ __volatile__("")
+#elif defined(_MSC_VER)
+// The __nop() intrinsic blocks the optimisation.
+#define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() __nop()
+#else
+#define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() if (volatile int x = 0) { (void)x; }
+#endif
+
 // -----------------------------------------------------------------------------
 // Utility Functions
 // -----------------------------------------------------------------------------
@@ -197,8 +235,7 @@ typedef int pid_t;
 
 // Alignment
 
-// CACHELINE_SIZE, CACHELINE_ALIGNED
-// Deprecated: Use ABSL_CACHELINE_SIZE, ABSL_CACHELINE_ALIGNED.
+// ABSL_CACHELINE_SIZE, ABSL_CACHELINE_ALIGNED
 // Note: When C++17 is available, consider using the following:
 // - std::hardware_constructive_interference_size
 // - std::hardware_destructive_interference_size
@@ -209,15 +246,12 @@ typedef int pid_t;
 absl:oss-replace-end */
 // Cache line alignment
 #if defined(__i386__) || defined(__x86_64__)
-#define CACHELINE_SIZE 64
 #define ABSL_CACHELINE_SIZE 64
 #elif defined(__powerpc64__)
-#define CACHELINE_SIZE 128
 #define ABSL_CACHELINE_SIZE 128
 #elif defined(__aarch64__)
 // We would need to read special register ctr_el0 to find out L1 dcache size.
 // This value is a good estimate based on a real aarch64 machine.
-#define CACHELINE_SIZE 64
 #define ABSL_CACHELINE_SIZE 64
 #elif defined(__arm__)
 // Cache line sizes for ARM: These values are not strictly correct since
@@ -225,22 +259,19 @@ absl:oss-replace-end */
 // are even implementations with cache line sizes configurable at boot
 // time.
 #if defined(__ARM_ARCH_5T__)
-#define CACHELINE_SIZE 32
 #define ABSL_CACHELINE_SIZE 32
 #elif defined(__ARM_ARCH_7A__)
-#define CACHELINE_SIZE 64
 #define ABSL_CACHELINE_SIZE 64
 #endif
 #endif
 
-#ifndef CACHELINE_SIZE
+#ifndef ABSL_CACHELINE_SIZE
 // A reasonable default guess.  Note that overestimates tend to waste more
 // space, while underestimates tend to waste more time.
-#define CACHELINE_SIZE 64
 #define ABSL_CACHELINE_SIZE 64
 #endif
 
-// On some compilers, expands to __attribute__((aligned(CACHELINE_SIZE))).
+// On some compilers, expands to __attribute__((aligned(ABSL_CACHELINE_SIZE))).
 // For compilers where this is not known to work, expands to nothing.
 //
 // No further guarantees are made here.  The result of applying the macro
@@ -258,17 +289,23 @@ absl:oss-replace-end */
 //    the generated machine code.
 // 3) Prefer applying this attribute to individual variables.  Avoid
 //    applying it to types.  This tends to localize the effect.
-#define CACHELINE_ALIGNED __attribute__((aligned(CACHELINE_SIZE)))
+// 4) See go/cache-line-interference for further guidance.
 #define ABSL_CACHELINE_ALIGNED __attribute__((aligned(ABSL_CACHELINE_SIZE)))
 
 #else  // not GCC
-#define CACHELINE_SIZE 64
 #define ABSL_CACHELINE_SIZE 64
-#define CACHELINE_ALIGNED
 #define ABSL_CACHELINE_ALIGNED
 #endif
+// Deprecated: Use ABSL_CACHELINE_SIZE, ABSL_CACHELINE_ALIGNED.
+#ifdef ABSL_CACHELINE_SIZE
+#define CACHELINE_SIZE ABSL_CACHELINE_SIZE
+#endif
 
-// PREDICT_TRUE, PREDICT_FALSE
+#ifdef ABSL_CACHELINE_ALIGNED
+#define CACHELINE_ALIGNED ABSL_CACHELINE_ALIGNED
+#endif
+
+// ABSL_PREDICT_TRUE, ABSL_PREDICT_FALSE
 //
 // GCC can be told that a certain branch is not likely to be taken (for
 // instance, a CHECK failure), and use that information in static analysis.
@@ -281,17 +318,22 @@ absl:oss-replace-end */
 #if ABSL_HAVE_BUILTIN(__builtin_expect) || \
     (defined(__GNUC__) && !defined(__clang__))
 absl:oss-replace-end */
-#define PREDICT_FALSE(x) (__builtin_expect(x, 0))
-#define PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
 #define ABSL_PREDICT_FALSE(x) (__builtin_expect(x, 0))
 #define ABSL_PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
 #else
-#define PREDICT_FALSE(x) x
-#define PREDICT_TRUE(x) x
 #define ABSL_PREDICT_FALSE(x) x
 #define ABSL_PREDICT_TRUE(x) x
 #endif
 
+#if (ABSL_HAVE_BUILTIN(__builtin_expect) ||         \
+     (defined(__GNUC__) && !defined(__clang__))) && \
+    !defined(SWIG)
+#define PREDICT_FALSE(x) (__builtin_expect(x, 0))
+#define PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
+#else
+#define PREDICT_FALSE(x) x
+#define PREDICT_TRUE(x) x
+#endif
 // ABSL_ASSERT
 //
 // In C++11, `assert` can't be used portably within constexpr functions.
@@ -307,8 +349,9 @@ absl:oss-replace-end */
 #if defined(NDEBUG)
 #define ABSL_ASSERT(expr) (false ? (void)(expr) : (void)0)
 #else
-#define ABSL_ASSERT(expr) \
-  (PREDICT_TRUE((expr)) ? (void)0 : [] { assert(false && #expr); }())  // NOLINT
+#define ABSL_ASSERT(expr)              \
+  (ABSL_PREDICT_TRUE((expr)) ? (void)0 \
+                             : [] { assert(false && #expr); }())  // NOLINT
 #endif
 
 // -----------------------------------------------------------------------------

@@ -340,6 +340,8 @@ class S2CellId {
   // for display or indexing.  Cells at lower levels (i.e. larger cells) are
   // encoded into fewer characters.  The maximum token length is 16.
   //
+  // Tokens preserve ordering, i.e. ToToken(x) < ToToken(y) iff x < y.
+  //
   // ToToken() returns a string by value for convenience; the compiler
   // does this without intermediate copying in most cases.
   //
@@ -357,9 +359,22 @@ class S2CellId {
   // Decodes an S2CellId encoded by Encode(). Returns true on success.
   bool Decode(Decoder* const decoder);
 
-  // Creates a debug human readable string. Used for << and available for direct
-  // usage as well.
+  // Creates a human readable debug string.  Used for << and available for
+  // direct usage as well.  The format is "f/dd..d" where "f" is a digit in
+  // the range [0-5] representing the S2CellId face, and "dd..d" is a string
+  // of digits in the range [0-3] representing each child's position with
+  // respect to its parent.  (Note that the latter string may be empty.)
+  //
+  // For example "4/" represents S2CellId::FromFace(4), and "3/02" represents
+  // S2CellId::FromFace(3).child(0).child(2).
   string ToString() const;
+
+  // Converts a string in the format returned by ToString() to an S2CellId.
+  // Returns S2CellId::None() if the string could not be parsed.
+  //
+  // The method name includes "Debug" in order to avoid possible confusion
+  // with FromToken() above.
+  static S2CellId FromDebugString(string const& str);
 
   // Return the four cells that are adjacent across the cell's four edges.
   // Neighbors are returned in the order defined by S2Cell::GetEdge.  All

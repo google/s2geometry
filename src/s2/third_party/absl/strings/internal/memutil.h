@@ -1,4 +1,4 @@
-// Copyright 2001 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
 // limitations under the License.
 //
 
-//
-//
 // These routines provide mem versions of standard C string routines,
 // such as strpbrk.  They function exactly the same as the str versions,
 // so if you wonder what they are, replace the word "mem" by

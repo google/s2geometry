@@ -48,6 +48,7 @@
 #include "s2/s2textformat.h"
 
 using absl::MakeUnique;
+using absl::WrapUnique;
 using s2shapeutil::EdgeVectorShape;
 using s2textformat::MakePolyline;
 using std::unique_ptr;

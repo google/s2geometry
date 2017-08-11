@@ -504,20 +504,24 @@ int S2Loop::GetCanonicalFirstVertex(int* dir) const {
 
 S1Angle S2Loop::GetDistance(S2Point const& x) const {
   if (Contains(x)) return S1Angle::Zero();
-  return S2ClosestEdgeQuery(&index_).GetDistance(x);
+  return GetDistanceToBoundary(x);
 }
 
 S1Angle S2Loop::GetDistanceToBoundary(S2Point const& x) const {
-  return S2ClosestEdgeQuery(&index_).GetDistance(x);
+  S2ClosestEdgeQuery::PointTarget t(x);
+  return S2ClosestEdgeQuery(&index_).GetDistance(t).ToAngle();
 }
 
 S2Point S2Loop::Project(S2Point const& x) const {
   if (Contains(x)) return x;
-  return S2ClosestEdgeQuery(&index_).Project(x);
+  return ProjectToBoundary(x);
 }
 
 S2Point S2Loop::ProjectToBoundary(S2Point const& x) const {
-  return S2ClosestEdgeQuery(&index_).Project(x);
+  S2ClosestEdgeQuery q(&index_);
+  S2ClosestEdgeQuery::Result edge =
+      q.FindClosestEdge(S2ClosestEdgeQuery::PointTarget(x));
+  return q.Project(x, edge);
 }
 
 double S2Loop::GetTurningAngle() const {

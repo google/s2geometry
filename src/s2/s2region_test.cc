@@ -83,14 +83,12 @@ char const kEncodedCellFace0[] = "0000000000000010";
 
 // S2CellUnion.
 // An unitialized empty S2CellUnion.
-char const kEncodedCellUnionInvalid[] = "010000000000000000";
+char const kEncodedCellUnionEmpty[] = "010000000000000000";
 // S2CellUnion from an S2CellId from Face 1.
 char const kEncodedCellUnionFace1[] = "0101000000000000000000000000000030";
-// S2CellUnion from the cells {0x33, 0x0, 0x8e3748fab, 0x91230abcdef83427};
-// The second element is the invalid CellId which should be ignored.
+// S2CellUnion from the cells {0x33, 0x8e3748fab, 0x91230abcdef83427};
 char const kEncodedCellUnionFromCells[] =
-    "01040000000000000033000000000000000000000000000000AB8F74E3080000002734F8DE"
-    "BC0A2391";
+    "0103000000000000003300000000000000AB8F74E3080000002734F8DEBC0A2391";
 
 // S2LatLngRect
 char const kEncodedRectEmpty[] =
@@ -268,18 +266,16 @@ TEST_F(S2RegionEncodeDecodeTest, S2Cell) {
 
 TEST_F(S2RegionEncodeDecodeTest, S2CellUnion) {
   S2CellUnion cu;
-  S2CellUnion cu_invalid;
-  S2CellUnion cu_face1;
-  vector<S2CellId> ids{S2CellId::FromFace(1)};
-  cu_face1.Init(ids);
-  S2CellUnion cu_latlngs;
-  vector<S2CellId> cell_ids = {S2CellId(0x33), S2CellId(0x0),
-                               S2CellId(0x8e3748fab),
-                               S2CellId(0x91230abcdef83427)};
-  cu_latlngs.InitRaw(cell_ids);
+  S2CellUnion const cu_empty;
+  S2CellUnion const cu_face1({S2CellId::FromFace(1)});
+  // Cell ids taken from S2CellUnion EncodeDecode test.
+  S2CellUnion const cu_latlngs =
+      S2CellUnion::FromNormalized({S2CellId(0x33),
+                                   S2CellId(0x8e3748fab),
+                                   S2CellId(0x91230abcdef83427)});
 
-  TestEncodeDecode(kEncodedCellUnionInvalid, cu_invalid, &cu);
-  EXPECT_EQ(cu_invalid, cu);
+  TestEncodeDecode(kEncodedCellUnionEmpty, cu_empty, &cu);
+  EXPECT_EQ(cu_empty, cu);
   TestEncodeDecode(kEncodedCellUnionFace1, cu_face1, &cu);
   EXPECT_EQ(cu_face1, cu);
   TestEncodeDecode(kEncodedCellUnionFromCells, cu_latlngs, &cu);

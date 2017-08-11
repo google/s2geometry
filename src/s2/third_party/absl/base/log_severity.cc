@@ -1,4 +1,4 @@
-// Copyright 2005 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,15 +13,22 @@
 // limitations under the License.
 //
 
-// Author: ericv@google.com (Eric Veach)
+#include "s2/third_party/absl/base/log_severity.h"
 
-#include "s2/s2region.h"
+namespace base_logging {
 
-#include "s2/s2cap.h"
+const char* const LogSeverityNames[NUM_SEVERITIES] = {
+  "INFO", "WARNING", "ERROR", "FATAL"
+};
 
-S2Region::~S2Region() {
+LogSeverity NormalizeSeverity(LogSeverity s) {
+  if (s < INFO) {
+    return INFO;
+  }
+  if (s > FATAL) {
+    return ERROR;
+  }
+  return s;
 }
 
-void S2Region::GetCellUnionBound(std::vector<S2CellId> *cell_ids) const {
-  return GetCapBound().GetCellUnionBound(cell_ids);
-}
+}  // namespace base_logging

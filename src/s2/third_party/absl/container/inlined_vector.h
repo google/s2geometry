@@ -1245,7 +1245,7 @@ void InlinedVector<T, N, A>::AssignRange(Iter first, Iter last,
   using Length = typename std::iterator_traits<Iter>::difference_type;
   Length length = std::distance(first, last);
   // Prefer reassignment to copy construction for elements.
-  if (length <= size()) {
+  if (static_cast<size_type>(length) <= size()) {
     erase(std::copy(first, last, begin()), end());
     return;
   }

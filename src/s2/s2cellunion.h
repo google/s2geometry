@@ -40,6 +40,12 @@ class S2LatLngRect;
 // Unlike polygons, cells have a fixed hierarchical structure.  This makes
 // them more suitable for optimizations based on preprocessing.
 //
+// An S2CellUnion is represented as a vector of sorted, non-overlapping
+// S2CellIds.  By default the vector is also "normalized", meaning that groups
+// of 4 child cells have been replaced by their parent cell whenever possible.
+// S2CellUnions are not required to be normalized, but certain operations will
+// return different results if they are not (e.g., Contains(S2CellUnion).)
+//
 // S2CellUnion is movable and copyable.
 class S2CellUnion final : public S2Region {
  public:
@@ -47,20 +53,22 @@ class S2CellUnion final : public S2Region {
   S2CellUnion() {}
 
   // Constructs a cell union with the given S2CellIds, then calls Normalize()
-  // to sort them, remove duplicates, and merge cells when possible.
+  // to sort them, remove duplicates, and merge cells when possible.  (See
+  // FromNormalized if your vector is already normalized.)
   //
   // The argument is passed by value, so if you are passing a named variable
   // and have no further use for it, consider using std::move().
   //
-  // You can construct an S2CellUnion containing a single S2CellId by using
-  // uniform initialization, like this: S2CellUnion example({cell_id}).
+  // A cell union containing a single S2CellId may be constructed like this:
+  //
+  //     S2CellUnion example({cell_id});
   explicit S2CellUnion(std::vector<S2CellId> cell_ids);
 
   // Convenience constructor that accepts a vector of uint64.  Note that
   // unlike the constructor above, this one makes a copy of "cell_ids".
   explicit S2CellUnion(std::vector<uint64> const& cell_ids);
 
-  // Constructs a cell union from S2CellIds that have already been normalized
+  // Constructs a cell union from S2CellIds have already been normalized
   // (typically because they were extracted from another S2CellUnion).
   //
   // The argument is passed by value, so if you are passing a named variable
@@ -68,6 +76,18 @@ class S2CellUnion final : public S2Region {
   //
   // REQUIRES: "cell_ids" satisfies the requirements of IsNormalized().
   static S2CellUnion FromNormalized(std::vector<S2CellId> cell_ids);
+
+  // Constructs a cell union from a vector of sorted, non-overlapping
+  // S2CellIds.  Unlike the other constructors, FromVerbatim does not require
+  // that groups of 4 child cells have been replaced by their parent cell.  In
+  // other words, "cell_ids" must satisfy the requirements of IsValid() but
+  // not necessarily IsNormalized().
+  //
+  // Note that if the cell union is not normalized, certain operations may
+  // return different results (e.g., Contains(S2CellUnion)).
+  //
+  // REQUIRES: "cell_ids" satisfies the requirements of IsValid().
+  static S2CellUnion FromVerbatim(std::vector<S2CellId> cell_ids);
 
   // Constructs a cell union that corresponds to a continuous range of cell
   // ids.  The output is a normalized collection of cell ids that covers the
@@ -100,13 +120,24 @@ class S2CellUnion final : public S2Region {
   int num_cells() const { return cell_ids_.size(); }
   S2CellId const cell_id(int i) const { return cell_ids_[i]; }
 
+  // Standard begin/end methods, to allow range-based for loops:
+  //
+  //  for (S2CellId id : cell_union) { ... }
+  std::vector<S2CellId>::const_iterator begin() const;
+  std::vector<S2CellId>::const_iterator end() const;
+
   // Direct access to the underlying vector for STL algorithms.
   std::vector<S2CellId> const& cell_ids() const { return cell_ids_; }
 
-  // Returns true if the cell union is normalized, meaning that (1) cells are
-  // non-overlapping, (2) cells are sorted in increasing order, and (3) no
-  // four cells have a common parent.
-  bool IsNormalized();
+  // Returns true if the cell union is valid, meaning that the S2CellIds are
+  // valid, non-overlapping, and sorted in increasing order.
+  bool IsValid() const;
+
+  // Returns true if the cell union is normalized, meaning that it is
+  // satisfies IsValid() and that no four cells have a common parent.
+  // Certain operations such as Contains(S2CellUnion) will return a different
+  // result if the cell union is not normalized.
+  bool IsNormalized() const;
 
   // Normalizes the cell union by discarding cells that are contained by other
   // cells, replacing groups of 4 child cells by their parent cell whenever
@@ -139,6 +170,11 @@ class S2CellUnion final : public S2Region {
   // Returns true if the cell union contains the given cell id.  Containment
   // is defined with respect to regions, e.g. a cell contains its 4 children.
   // This is a fast operation (logarithmic in the size of the cell union).
+  //
+  // CAVEAT: If you have constructed a non-normalized S2CellUnion using
+  // FromVerbatim, note that groups of 4 child cells are *not* considered to
+  // contain their parent cell.  To get this behavior you must use one of the
+  // other constructors or call Normalize() explicitly.
   bool Contains(S2CellId id) const;
 
   // Returns true if the cell union intersects the given cell id.
@@ -146,6 +182,11 @@ class S2CellUnion final : public S2Region {
   bool Intersects(S2CellId id) const;
 
   // Returns true if this cell union contains the given other cell union.
+  //
+  // CAVEAT: If you have constructed a non-normalized S2CellUnion using
+  // FromVerbatim, note that groups of 4 child cells are *not* considered to
+  // contain their parent cell.  To get this behavior you must use one of the
+  // other constructors or call Normalize() explicitly.
   bool Contains(S2CellUnion const& y) const;
 
   // Returns true if this cell union intersects the given other cell union.
@@ -216,6 +257,12 @@ class S2CellUnion final : public S2Region {
   // Calculates this cell union's area by summing the exact area for each
   // contained cell, using the Exact method from the S2Cell class.
   double ExactArea() const;
+
+  // Return true if two cell unions are identical.
+  friend bool operator==(S2CellUnion const& x, S2CellUnion const& y);
+
+  // Return true if two cell unions are different.
+  friend bool operator!=(S2CellUnion const& x, S2CellUnion const& y);
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -306,9 +353,11 @@ class S2CellUnion final : public S2Region {
   }
 
  private:
-  // Internal constructor that does not normalize "cell_ids".
-  enum NormalizedFlag { NORMALIZED };
-  S2CellUnion(std::vector<S2CellId> cell_ids, NormalizedFlag normalized)
+  friend class S2CellUnionTestPeer;  // For creating invalid S2CellUnions.
+
+  // Internal constructor that does not check "cell_ids" for validity.
+  enum VerbatimFlag { VERBATIM };
+  S2CellUnion(std::vector<S2CellId> cell_ids, VerbatimFlag verbatim)
       : cell_ids_(std::move(cell_ids)) {}
 
   // Converts a vector of uint64 to a vector of S2CellIds.
@@ -317,10 +366,46 @@ class S2CellUnion final : public S2Region {
   std::vector<S2CellId> cell_ids_;
 };
 
-// Return true if two cell unions are identical.
-bool operator==(S2CellUnion const& x, S2CellUnion const& y);
 
-// Return true if two cell unions are different.
-bool operator!=(S2CellUnion const& x, S2CellUnion const& y);
+//////////////////   Implementation details follow   ////////////////////
+
+
+inline S2CellUnion::S2CellUnion(std::vector<S2CellId> cell_ids)
+    : cell_ids_(std::move(cell_ids)) {
+  Normalize();
+}
+
+inline S2CellUnion S2CellUnion::FromNormalized(std::vector<S2CellId> cell_ids) {
+  S2CellUnion result(std::move(cell_ids), VERBATIM);
+  DCHECK(result.IsNormalized());
+  return result;
+}
+
+inline S2CellUnion S2CellUnion::FromVerbatim(std::vector<S2CellId> cell_ids) {
+  S2CellUnion result(std::move(cell_ids), VERBATIM);
+  DCHECK(result.IsValid());
+  return result;
+}
+
+inline void S2CellUnion::Init(std::vector<S2CellId> cell_ids) {
+  cell_ids_ = std::move(cell_ids);
+  Normalize();
+}
+
+inline std::vector<S2CellId> S2CellUnion::Release() {
+  // vector's rvalue reference constructor does not necessarily leave
+  // moved-from value in empty state, so swap instead.
+  std::vector<S2CellId> cell_ids;
+  cell_ids_.swap(cell_ids);
+  return cell_ids;
+}
+
+inline std::vector<S2CellId>::const_iterator S2CellUnion::begin() const {
+  return cell_ids_.begin();
+}
+
+inline std::vector<S2CellId>::const_iterator S2CellUnion::end() const {
+  return cell_ids_.end();
+}
 
 #endif  // S2_S2CELLUNION_H_

@@ -1,4 +1,4 @@
-// Copyright 2004 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,9 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-
-//
 //
 
 #include "s2/third_party/absl/strings/string_view.h"
@@ -66,7 +63,7 @@ std::ostream& operator<<(std::ostream& o, string_view piece) {
   if (sentry) {
     size_t lpad = 0;
     size_t rpad = 0;
-    if (o.width() > piece.size()) {
+    if (static_cast<size_t>(o.width()) > piece.size()) {
       size_t pad = o.width() - piece.size();
       if ((o.flags() & o.adjustfield) == o.left) {
         rpad = pad;
