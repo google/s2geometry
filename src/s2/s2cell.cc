@@ -30,7 +30,6 @@
 #include "s2/s2coords.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2measures.h"
@@ -408,8 +407,7 @@ S1ChordAngle S2Cell::GetBoundaryDistance(S2Point const& target) const {
   return GetDistanceInternal(target, false /*to_interior*/);
 }
 
-S1ChordAngle S2Cell::GetDistanceToEdge(S2Point const& a,
-                                       S2Point const& b) const {
+S1ChordAngle S2Cell::GetDistance(S2Point const& a, S2Point const& b) const {
   // Possible optimizations:
   //  - Currently the (cell vertex, edge endpoint) distances are computed
   //    twice each, and the length of AB is computed 4 times.
@@ -446,6 +444,36 @@ S1ChordAngle S2Cell::GetDistanceToEdge(S2Point const& a,
   // be minimal is if the two edges cross (already checked above).
   for (int i = 0; i < 4; ++i) {
     S2::UpdateMinDistance(v[i], a, b, &min_dist);
+  }
+  return min_dist;
+}
+
+S1ChordAngle S2Cell::GetDistance(S2Cell const& target) const {
+  // If the cells intersect, the distance is zero.  We use the (u,v) ranges
+  // rather S2CellId::intersects() so that cells that share a partial edge or
+  // corner are considered to intersect.
+  if (face_ == target.face_ && uv_.Intersects(target.uv_)) {
+    return S1ChordAngle::Zero();
+  }
+
+  // Otherwise, the minimum distance always occurs between a vertex of one
+  // cell and an edge of the other cell (including the edge endpoints).  This
+  // represents a total of 32 possible (vertex, edge) pairs.
+  //
+  // TODO(ericv): This could be optimized to be at least 5x faster by pruning
+  // the set of possible closest vertex/edge pairs using the faces and (u,v)
+  // ranges of both cells.
+  S2Point va[4], vb[4];
+  for (int i = 0; i < 4; ++i) {
+    va[i] = GetVertex(i);
+    vb[i] = target.GetVertex(i);
+  }
+  S1ChordAngle min_dist = S1ChordAngle::Infinity();
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      S2::UpdateMinDistance(va[i], vb[j], vb[(j + 1) & 3], &min_dist);
+      S2::UpdateMinDistance(vb[i], va[j], va[(j + 1) & 3], &min_dist);
+    }
   }
   return min_dist;
 }

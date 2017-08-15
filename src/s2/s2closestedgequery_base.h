@@ -31,7 +31,6 @@
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 #include "s2/s2cellunion.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2regioncoverer.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil.h"
@@ -123,8 +122,10 @@ class S2ClosestEdgeQueryBase {
     // Specifies that edges up to max_error() further away than the true
     // closest edges may be substituted in the result set, as long as such
     // edges satisfy all the remaining search criteria (such as max_distance).
+    // This option only has an effect if max_edges() is also specified;
+    // otherwise all edges closer than max_distance() will always be returned.
     //
-    // Note that this does not affect how the distance to any result edge is
+    // Note that this does not affect how the distance between edges is
     // computed; it simply gives the algorithm permission to stop the search
     // early as soon as the best possible improvement drops below max_error().
     //
@@ -149,17 +150,9 @@ class S2ClosestEdgeQueryBase {
     // whether they are considered to belong to the interior or not.)
     //
     // DEFAULT: false
-    // TODO(ericv): Implement this.
+    // TODO(ericv): Implement this, and possibly make true by default.
     bool include_interiors() const;
     void set_include_interiors(bool include_interiors);
-
-    // Specifies that at most one result edge per S2Shape should be returned.
-    // (This option has no effect if max_edges() == 1.)
-    //
-    // DEFAULT: false
-    // TODO(ericv): Implement this.
-    bool distinct_shapes() const;
-    void set_distinct_shapes(bool distinct_shapes);
 
     // Specifies that distances should be computed by examining every edge
     // rather than using the S2ShapeIndex.  This is useful for testing,
@@ -174,13 +167,25 @@ class S2ClosestEdgeQueryBase {
     Distance max_distance_ = Distance::Infinity();
     Distance max_error_ = Distance::Zero();
     bool include_interiors_ = false;
-    bool distinct_shapes_ = false;
     bool use_brute_force_ = false;
   };
 
+  // The Target class represents the geometry to which the distance is
+  // measured.  For example, there can be subtypes for measuring the distance
+  // to a point, an edge, or to an S2ShapeIndex (an arbitrary collection of
+  // geometry).
+  //
+  // Implementations do *not* need to be thread-safe.  They may cache data or
+  // allocate temporary data structures in order to improve performance.
   class Target {
    public:
     virtual ~Target() {}
+
+    // Specifies the maximum error allowed when computing distances in the
+    // UpdateMinDistance() methods.  This method must return "true" if the
+    // Target subtype takes advantage of this parameter.  (Most Target types
+    // can use the default implementation which simply returns false.)
+    virtual bool set_max_error(Distance const& max_error) { return false; }
 
     // Specifies the maximum number of edges for which distances should be
     // computed by examining every edge rather than using the S2ShapeIndex.
@@ -261,12 +266,11 @@ class S2ClosestEdgeQueryBase {
 
   // Returns the closest edges to the given target that satisfy the given
   // options.  This method may be called multiple times.
-  std::vector<Result> FindClosestEdges(Target const& target,
-                                       Options const& options);
+  std::vector<Result> FindClosestEdges(Target* target, Options const& options);
 
   // This version can be more efficient when this method is called many times,
   // since it does not require allocating a new vector on each call.
-  void FindClosestEdges(Target const& target, Options const& options,
+  void FindClosestEdges(Target* target, Options const& options,
                         std::vector<Result>* results);
 
   // Convenience method that returns exactly one edge.  If no edges satisfy
@@ -274,12 +278,29 @@ class S2ClosestEdgeQueryBase {
   // shape_id == edge_id == -1 is returned.
   //
   // REQUIRES: options.max_edges() == 1
-  Result FindClosestEdge(Target const& target, Options const& options);
+  Result FindClosestEdge(Target* target, Options const& options);
+
+  ABSL_DEPRECATED("Use (Target *) version")
+  std::vector<Result> FindClosestEdges(Target const& target,
+                                       Options const& options) {
+    return FindClosestEdges(const_cast<Target*>(&target), options);
+  }
+
+  ABSL_DEPRECATED("Use (Target *) version")
+  void FindClosestEdges(Target const& target, Options const& options,
+                        std::vector<Result>* results) {
+    return FindClosestEdges(const_cast<Target*>(&target), options, results);
+  }
+
+  ABSL_DEPRECATED("Use (Target *) version")
+  Result FindClosestEdge(Target const& target, Options const& options) {
+    return FindClosestEdge(const_cast<Target*>(&target), options);
+  }
 
  private:
   class QueueEntry;
 
-  void FindClosestEdgesInternal(Target const& target, Options const& options);
+  void FindClosestEdgesInternal(Target* target, Options const& options);
   void FindClosestEdgesBruteForce();
   void FindClosestEdgesOptimized();
   void InitQueue();
@@ -294,7 +315,7 @@ class S2ClosestEdgeQueryBase {
 
   S2ShapeIndexBase const* index_;
   Options const* options_;
-  Target const* target_;
+  Target* target_;
 
   // For the optimized algorihm we precompute the top-level S2CellIds that
   // will be added to the priority queue.  There can be at most 6 of these
@@ -332,23 +353,24 @@ class S2ClosestEdgeQueryBase {
   std::vector<Result> result_vector_;
   util::btree::btree_set<Result> result_set_;
 
-  // When Options::distinct_shapes() is true and the results are stored in a
-  // btree_set (see above), we also maintain a map from shape_id to the
-  // current result for that shape (if any) stored in the btree_set.  This
-  // lets us update the result entries efficiently when they change.
-  struct ShapeIdHasher {
-    size_t operator()(Result const& result) {
-      return result.shape_id;
-    }
-  };
-  struct ShapeIdEqual {
-    bool operator()(Result const& result1, Result const& result2) {
-      return result1.shape_id == result2.shape_id;
-    }
-  };
-  using ShapeMap = google::
-      dense_hash_set<Result, ShapeIdHasher, ShapeIdEqual>;
-  std::unique_ptr<ShapeMap> shape_map_;
+  // When the result edges are stored in a btree_set (see above), usually
+  // duplicates can be removed simply by inserting candidate edges in the
+  // current set.  However this is not true if Options::max_error() > 0 and
+  // the Target subtype takes advantage of this by returning suboptimal
+  // distances.  This is because when UpdateMinDistance() is called with
+  // different "min_dist" parameters (i.e., the distance to beat), the
+  // implementation may return a different distance for the same edge.  Since
+  // the btree_set is keyed by (distance, shape_id, edge_id) this can create
+  // duplicate edges in the results.
+  //
+  // The flag below is true when duplicates must be avoided explicitly.  This
+  // is achieved by maintaining a separate set keyed by (shape_id, edge_id)
+  // only, and checking whether each edge is in that set before computing the
+  // distance to it.
+  bool avoid_duplicates_;
+  using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
+  google::dense_hash_set<
+    ShapeEdgeId, s2shapeutil::ShapeEdgeIdHash> tested_edges_;
 
   // The algorithm maintains a priority queue of S2CellIds that contain at
   // least one S2ShapeIndexCell, sorted in increasing order of distance from
@@ -447,17 +469,6 @@ inline void S2ClosestEdgeQueryBase<Distance>::Options::set_include_interiors(
 }
 
 template <class Distance>
-inline bool S2ClosestEdgeQueryBase<Distance>::Options::distinct_shapes() const {
-  return distinct_shapes_;
-}
-
-template <class Distance>
-inline void S2ClosestEdgeQueryBase<Distance>::Options::set_distinct_shapes(
-    bool distinct_shapes) {
-  distinct_shapes_ = distinct_shapes;
-}
-
-template <class Distance>
 inline bool S2ClosestEdgeQueryBase<Distance>::Options::use_brute_force() const {
   return use_brute_force_;
 }
@@ -504,7 +515,7 @@ inline S2ShapeIndexBase const& S2ClosestEdgeQueryBase<Distance>::index() const {
 
 template <class Distance>
 inline std::vector<typename S2ClosestEdgeQueryBase<Distance>::Result>
-S2ClosestEdgeQueryBase<Distance>::FindClosestEdges(Target const& target,
+S2ClosestEdgeQueryBase<Distance>::FindClosestEdges(Target* target,
                                                    Options const& options) {
   std::vector<Result> results;
   FindClosestEdges(target, options, &results);
@@ -513,8 +524,8 @@ S2ClosestEdgeQueryBase<Distance>::FindClosestEdges(Target const& target,
 
 template <class Distance>
 typename S2ClosestEdgeQueryBase<Distance>::Result
-S2ClosestEdgeQueryBase<Distance>::FindClosestEdge(
-    Target const& target, Options const& options) {
+S2ClosestEdgeQueryBase<Distance>::FindClosestEdge(Target* target,
+                                                  Options const& options) {
   DCHECK_EQ(options.max_edges(), 1);
   FindClosestEdgesInternal(target, options);
   return result_singleton_;
@@ -522,7 +533,7 @@ S2ClosestEdgeQueryBase<Distance>::FindClosestEdge(
 
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::FindClosestEdges(
-    Target const& target, Options const& options,
+    Target* target, Options const& options,
     std::vector<Result>* results) {
   FindClosestEdgesInternal(target, options);
   results->clear();
@@ -543,13 +554,21 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdges(
 
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
-    Target const& target, Options const& options) {
-  target_ = &target;
+    Target* target, Options const& options) {
+  target_ = target;
   options_ = &options;
   distance_limit_ = options.max_distance();
   result_singleton_ = Result();
   DCHECK(result_vector_.empty());
   DCHECK(result_set_.empty());
+
+  // If max_error() was specified and the target takes advantage of this
+  // in its UpdateMinDistance() methods, then we need to avoid duplicate edges
+  // in the results explicitly.  (Otherwise it happens automatically.)
+  avoid_duplicates_ = (
+      Distance::Zero() < options.max_error() &&
+      target_->set_max_error(options.max_error()) &&
+      options.max_edges() > 1 && !options.use_brute_force());
 
   if (options.use_brute_force() ||
       index_num_edges_ <= target_->max_brute_force_edges()) {
@@ -753,6 +772,10 @@ void S2ClosestEdgeQueryBase<Distance>::AddInitialRange(
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::MaybeAddResult(
     S2Shape const& shape, int edge_id) {
+  if (avoid_duplicates_ &&
+      !tested_edges_.insert(ShapeEdgeId(shape.id(), edge_id)).second) {
+    return;
+  }
   auto edge = shape.edge(edge_id);
   Distance distance = distance_limit_;
   if (!target_->UpdateMinDistance(edge.v0, edge.v1, &distance)) return;

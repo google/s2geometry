@@ -38,7 +38,6 @@
 #include "s2/s2cap.h"
 #include "s2/s2crossingedgequery.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2latlngrect_bounder.h"
@@ -620,3 +619,4 @@ TEST(S2Cell, EncodeDecode) {
   EXPECT_EQ(orig_cell.id(), decoded_cell.id());
   EXPECT_EQ(orig_cell.GetBoundUV(), decoded_cell.GetBoundUV());
 }
+

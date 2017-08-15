@@ -72,7 +72,7 @@ class AtomicHook<ReturnType (*)(Args...)> {
     // already set to `fn` by an earlier call.  Any other state reflects an API
     // violation (calling Store() multiple times with different values).
     //
-    // Avoid RAW_CHECK, since raw logging depends on AtomicHook.
+    // Avoid ABSL_RAW_CHECK, since raw logging depends on AtomicHook.
     assert(expected == DummyFunction || expected == fn);
   }
 

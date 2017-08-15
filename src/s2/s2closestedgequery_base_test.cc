@@ -113,7 +113,7 @@ TEST(S2ClosestEdgeQueryBase, MaxDistance) {
   FurthestPointTarget target(s2textformat::MakePoint("4:0"));
   FurthestEdgeQuery::Options options;
   options.set_max_edges(1);
-  auto results = query.FindClosestEdges(target, options);
+  auto results = query.FindClosestEdges(&target, options);
   ASSERT_EQ(1, results.size());
   EXPECT_EQ(0, results[0].shape_id);
   EXPECT_EQ(0, results[0].edge_id);

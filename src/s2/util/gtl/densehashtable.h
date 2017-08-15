@@ -460,10 +460,6 @@ class dense_hashtable {
     settings.set_use_deleted(true);
     key_info.delkey = key;
   }
-  void clear_deleted_key() {
-    squash_deleted();
-    settings.set_use_deleted(false);
-  }
   key_type deleted_key() const {
     assert(settings.use_deleted()
            && "Must set deleted key before calling deleted_key");
@@ -1065,11 +1061,6 @@ class dense_hashtable {
     }
   }
 
-  bool initialized() const {
-    assert(table != nullptr || size() == 0);
-    return table != nullptr;
-  }
-
   template <class K>
   std::pair<size_type, bool> find_if_present(const K& key) const {
     return find_if_present_using_hash(hash(key), key);
@@ -1099,8 +1090,6 @@ class dense_hashtable {
     }
   }
 
- public:
-
  private:
   template <class K>
   iterator find_impl(const K& key) {
@@ -1117,7 +1106,6 @@ class dense_hashtable {
         const_iterator(this, table + pos.first, table + num_buckets, false) :
         end();
   }
-
 
   template <class K>
   size_type bucket_impl(const K& key) const {
@@ -1154,9 +1142,7 @@ class dense_hashtable {
     }
   }
 
-
  public:
-
   iterator find(const key_type& key) { return find_impl(key); }
 
   const_iterator find(const key_type& key) const { return find_impl(key); }
@@ -1252,7 +1238,6 @@ class dense_hashtable {
     resize_delta(1);                      // adding an object, grow if need be
     return insert_noresize(std::move(obj));
   }
-
 
   // When inserting a lot at a time, we specialize on the type of iterator
   template <class InputIterator>
@@ -1380,109 +1365,6 @@ class dense_hashtable {
   typedef unsigned long MagicNumberType;
   static const MagicNumberType MAGIC_NUMBER = 0x13578642;
 
-  // Could make these faster with built-ins, but no real need.
-  template <typename IntType>
-  static bool write64(FILE *fp, IntType value) {
-    PUT_(value, 56);
-    PUT_(value, 48);
-    PUT_(value, 40);
-    PUT_(value, 32);
-    PUT_(value, 24);
-    PUT_(value, 16);
-    PUT_(value, 8);
-    PUT_(value, 0);
-    return true;
-  }
-
-  template <typename IntType>
-  static bool read64(FILE *fp, IntType *value) {  // reads into value
-    int x;   // used by GET_
-    GET_(*value, 56);
-    GET_(*value, 48);
-    GET_(*value, 40);
-    GET_(*value, 32);
-    GET_(*value, 24);
-    GET_(*value, 16);
-    GET_(*value, 8);
-    GET_(*value, 0);
-    return true;
-  }
-
- public:
-  bool write_metadata(FILE *fp) {
-    squash_deleted();           // so we don't have to worry about delkey
-    if ( !write64(fp, MAGIC_NUMBER) )  return false;
-    if ( !write64(fp, num_buckets) )  return false;
-    if ( !write64(fp, num_elements) )  return false;
-    // Now write a bitmap of non-empty buckets.
-    for (int i = 0; i < num_buckets; i += 8) {
-      unsigned char bits = 0;
-      for (int bit = 0; bit < 8; ++bit) {
-        if (i + bit < num_buckets && !test_empty(i + bit))
-          bits |= (1 << bit);
-      }
-      PUT_(bits, 0);
-    }
-    return true;
-  }
-
-  bool read_metadata(FILE *fp) {
-    num_deleted = 0;            // since we got rid before writing
-    assert(settings.use_empty() && "empty_key not set for read_metadata");
-    // we'll make our own
-    if (table) get_internal_allocator().deallocate(table, num_buckets);
-
-    size_type magic_read = 0;
-    if ( !read64(fp, &magic_read) )  return false;
-    if ( magic_read != MAGIC_NUMBER ) {
-      clear();                        // just to be consistent
-      return false;
-    }
-    if ( !read64(fp, &num_buckets) )  return false;
-    if ( !read64(fp, &num_elements) )  return false;
-
-    settings.reset_thresholds(bucket_count());
-    table = get_internal_allocator().allocate(num_buckets);
-    fill_range_with_empty(table, table + num_buckets);
-
-    // Read the bitmap of non-empty buckets.
-    for (int i = 0; i < num_buckets; i += 8) {
-      int x;   // used by GET_
-      unsigned char bits;
-      GET_(bits, 0);
-      for (int bit = 0; bit < 8; ++bit) {
-        if (i + bit < num_buckets && (bits & (1 << bit))) {  // not empty
-          // TODO(user): mark that this bucket is non-empty somehow
-          return false;
-        }
-      }
-    }
-
-    return true;
-  }
-
-  // If your keys and values are simple enough, we can write them to
-  // disk for you.  "simple enough" means value_type is a POD type
-  // that contains no pointers.  However, we don't try to normalize
-  // endianness
-  bool write_nopointer_data(FILE *fp) const {
-    for ( const_iterator it = begin(); it != end(); ++it ) {
-      if ( !fwrite(&*it, sizeof(*it), 1, fp) )  return false;
-    }
-    return false;
-  }
-
-  // When reading, we have to override the potential const-ness of *it
-  bool read_nopointer_data(FILE *fp) {
-    for ( iterator it = begin(); it != end(); ++it ) {
-      if ( !fread(reinterpret_cast<void*>(&(*it)), sizeof(*it), 1, fp) )
-        return false;
-    }
-    return false;
-  }
-
-
- private:
   template <class A>
   class alloc_impl : public A {
    public:

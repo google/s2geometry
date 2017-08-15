@@ -71,11 +71,11 @@ void __sanitizer_unaligned_store64(void *p, uint64_t v);
 
 namespace absl {
 
-inline uint16 UnalignedLoad16(const void *p) {
+inline uint16_t UnalignedLoad16(const void *p) {
   return __sanitizer_unaligned_load16(p);
 }
 
-inline uint32 UnalignedLoad32(const void *p) {
+inline uint32_t UnalignedLoad32(const void *p) {
   return __sanitizer_unaligned_load32(p);
 }
 
@@ -83,11 +83,11 @@ inline uint64 UnalignedLoad64(const void *p) {
   return __sanitizer_unaligned_load64(p);
 }
 
-inline void UnalignedStore16(void *p, uint16 v) {
+inline void UnalignedStore16(void *p, uint16_t v) {
   __sanitizer_unaligned_store16(p, v);
 }
 
-inline void UnalignedStore32(void *p, uint32 v) {
+inline void UnalignedStore32(void *p, uint32_t v) {
   __sanitizer_unaligned_store32(p, v);
 }
 
@@ -117,16 +117,16 @@ inline void UnalignedStore64(void *p, uint64 v) {
 // but note: the FPU still sends unaligned loads and stores to a trap handler!
 
 #define ABSL_INTERNAL_UNALIGNED_LOAD16(_p) \
-  (*reinterpret_cast<const uint16 *>(_p))
+  (*reinterpret_cast<const uint16_t *>(_p))
 #define ABSL_INTERNAL_UNALIGNED_LOAD32(_p) \
-  (*reinterpret_cast<const uint32 *>(_p))
+  (*reinterpret_cast<const uint32_t *>(_p))
 #define ABSL_INTERNAL_UNALIGNED_LOAD64(_p) \
   (*reinterpret_cast<const uint64 *>(_p))
 
 #define ABSL_INTERNAL_UNALIGNED_STORE16(_p, _val) \
-  (*reinterpret_cast<uint16 *>(_p) = (_val))
+  (*reinterpret_cast<uint16_t *>(_p) = (_val))
 #define ABSL_INTERNAL_UNALIGNED_STORE32(_p, _val) \
-  (*reinterpret_cast<uint32 *>(_p) = (_val))
+  (*reinterpret_cast<uint32_t *>(_p) = (_val))
 #define ABSL_INTERNAL_UNALIGNED_STORE64(_p, _val) \
   (*reinterpret_cast<uint64 *>(_p) = (_val))
 
@@ -157,7 +157,7 @@ inline void UnalignedStore64(void *p, uint64 v) {
 // allowed to be unaligned, not LDRD (two reads) or LDM (many reads). Unless we
 // explicitly tell the compiler that these accesses can be unaligned, it can and
 // will combine accesses. On armcc, the way to signal this is done by accessing
-// through the type (uint32 __packed *), but GCC has no such attribute
+// through the type (uint32_t __packed *), but GCC has no such attribute
 // (it ignores __attribute__((packed)) on individual variables). However,
 // we can tell it that a _struct_ is unaligned, which has the same effect,
 // so we do that.
@@ -166,13 +166,13 @@ namespace absl {
 namespace internal {
 
 struct Unaligned16Struct {
-  uint16 value;
-  uint8 dummy;  // To make the size non-power-of-two.
+  uint16_t value;
+  uint8_t dummy;  // To make the size non-power-of-two.
 } ABSL_ATTRIBUTE_PACKED;
 
 struct Unaligned32Struct {
-  uint32 value;
-  uint8 dummy;  // To make the size non-power-of-two.
+  uint32_t value;
+  uint8_t dummy;  // To make the size non-power-of-two.
 } ABSL_ATTRIBUTE_PACKED;
 
 }  // namespace internal
@@ -217,14 +217,14 @@ inline void UnalignedStore64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 
 namespace absl {
 
-inline uint16 UnalignedLoad16(const void *p) {
-  uint16 t;
+inline uint16_t UnalignedLoad16(const void *p) {
+  uint16_t t;
   memcpy(&t, p, sizeof t);
   return t;
 }
 
-inline uint32 UnalignedLoad32(const void *p) {
-  uint32 t;
+inline uint32_t UnalignedLoad32(const void *p) {
+  uint32_t t;
   memcpy(&t, p, sizeof t);
   return t;
 }
@@ -235,9 +235,9 @@ inline uint64 UnalignedLoad64(const void *p) {
   return t;
 }
 
-inline void UnalignedStore16(void *p, uint16 v) { memcpy(p, &v, sizeof v); }
+inline void UnalignedStore16(void *p, uint16_t v) { memcpy(p, &v, sizeof v); }
 
-inline void UnalignedStore32(void *p, uint32 v) { memcpy(p, &v, sizeof v); }
+inline void UnalignedStore32(void *p, uint32_t v) { memcpy(p, &v, sizeof v); }
 
 inline void UnalignedStore64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 

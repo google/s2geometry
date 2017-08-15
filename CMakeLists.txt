@@ -36,8 +36,11 @@ file(GLOB S2FilesGlob
      src/s2/s2boundary_operation.cc
      src/s2/s2builder.cc
      src/s2/s2builder_graph.cc
+     src/s2/s2builderutil_closed_set_normalizer.cc
+     src/s2/s2builderutil_find_polygon_degeneracies.cc
      src/s2/s2builderutil_layers.cc
      src/s2/s2builderutil_snap_functions.cc
+     src/s2/s2builderutil_testing.cc
      src/s2/s2cap.cc
      src/s2/s2cell.cc
      src/s2/s2cellid.cc
@@ -121,6 +124,7 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/gdb_scripting.h
               src/s2/third_party/absl/base/integral_types.h
               src/s2/third_party/absl/base/macros.h
+              src/s2/third_party/absl/base/optimization.h
               src/s2/third_party/absl/base/port.h
         DESTINATION include/s2/third_party/absl/base)
 install(FILES src/s2/third_party/absl/base/internal/identity.h

@@ -31,7 +31,6 @@
 #include "s2/s2coords.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2metrics.h"
 #include "s2/s2polyline.h"
 #include "s2/s2shapeutil.h"

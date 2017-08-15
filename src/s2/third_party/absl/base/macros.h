@@ -184,4 +184,24 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 # endif
 #endif
 
+// ABSL_ASSERT()
+//
+// In C++11, `assert` can't be used portably within constexpr functions.
+// ABSL_ASSERT functions as a runtime assert but works in C++11 constexpr
+// functions.  Example:
+//
+// constexpr double Divide(double a, double b) {
+//   return ABSL_ASSERT(b != 0), a / b;
+// }
+//
+// This macro is inspired by
+// https://akrzemi1.wordpress.com/2017/05/18/asserts-in-constexpr-functions/
+#if defined(NDEBUG)
+#define ABSL_ASSERT(expr) (false ? (void)(expr) : (void)0)
+#else
+#define ABSL_ASSERT(expr)              \
+  (ABSL_PREDICT_TRUE((expr)) ? (void)0 \
+                             : [] { assert(false && #expr); }())  // NOLINT
+#endif
+
 #endif  // S2_THIRD_PARTY_ABSL_BASE_MACROS_H_

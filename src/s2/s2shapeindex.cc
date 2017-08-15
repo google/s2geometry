@@ -31,7 +31,6 @@
 #include "s2/s2coords.h"
 #include "s2/s2edge_clipping.h"
 #include "s2/s2edge_crosser.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2metrics.h"
 #include "s2/s2paddedcell.h"
 #include "s2/s2pointutil.h"

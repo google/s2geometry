@@ -34,7 +34,6 @@
 #include "s2/s2debug.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
 #include "s2/s2latlngrect_bounder.h"
 #include "s2/s2pointutil.h"

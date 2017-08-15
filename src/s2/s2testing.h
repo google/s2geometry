@@ -20,7 +20,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -312,14 +311,6 @@ bool CheckDistanceResults(
 namespace S2 {
 namespace internal {
 
-template <typename T1, typename T2>
-struct CompareFirst {
-  inline bool operator()(std::pair<T1, T2> const& x,
-                         std::pair<T1, T2> const& y) {
-    return x.first < y.first;
-  }
-};
-
 // Check that result set "x" contains all the expected results from "y", and
 // does not include any duplicate results.
 template <typename Id>
@@ -327,13 +318,12 @@ bool CheckResultSet(std::vector<std::pair<S1Angle, Id>> const& x,
                     std::vector<std::pair<S1Angle, Id>> const& y,
                     int max_size, S1Angle max_distance, S1Angle max_error,
                     S1Angle max_pruning_error, string const& label) {
-  // Results should be sorted by distance.
-  CompareFirst<S1Angle, Id> cmp;
-  EXPECT_TRUE(std::is_sorted(x.begin(), x.end(), cmp));
-
-  // Make sure there are no duplicate values.
-  std::set<std::pair<S1Angle, Id>> x_set(x.begin(), x.end());
-  EXPECT_EQ(x_set.size(), x.size()) << "Result set contains duplicates";
+  using Result = std::pair<S1Angle, Id>;
+  // Results should be sorted by distance, but not necessarily then by Id.
+  EXPECT_TRUE(std::is_sorted(x.begin(), x.end(),
+                             [](Result const& x, Result const& y) {
+                               return x.first < y.first;
+                             }));
 
   // Result set X should contain all the items from U whose distance is less
   // than "limit" computed below.
@@ -350,11 +340,15 @@ bool CheckResultSet(std::vector<std::pair<S1Angle, Id>> const& x,
     limit = x.back().first - max_error - max_pruning_error;
   }
   bool result = true;
-  for (auto const& p : y) {
-    if (p.first < limit && std::count(x.begin(), x.end(), p) != 1) {
+  for (auto const& yp : y) {
+    // Note that this test also catches duplicate values.
+    int count = std::count_if(x.begin(), x.end(), [&yp](Result const& xp) {
+        return xp.second == yp.second;
+      });
+    if (yp.first < limit && count != 1) {
       result = false;
-      std::cout << label << " distance = " << p.first
-                << ", id = " << p.second << std::endl;
+      std::cout << (count > 1 ? "Duplicate" : label) << " distance = "
+                << yp.first << ", id = " << yp.second << std::endl;
     }
   }
   return result;
@@ -368,6 +362,9 @@ bool CheckDistanceResults(
     std::vector<std::pair<S1Angle, Id>> const& expected,
     std::vector<std::pair<S1Angle, Id>> const& actual,
     int max_size, S1Angle max_distance, S1Angle max_error) {
+  // This is a conservative bound on the error in computing the distance from
+  // the target geometry to an S2Cell.  Such errors can cause candidates to be
+  // pruned from the result set even though they may be slightly closer.
   static S1Angle const kMaxPruningError = S1Angle::Radians(1e-15);
   return (S2::internal::CheckResultSet(
               actual, expected, max_size, max_distance, max_error,

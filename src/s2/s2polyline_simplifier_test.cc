@@ -22,7 +22,6 @@
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"

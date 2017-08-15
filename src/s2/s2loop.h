@@ -31,7 +31,6 @@
 #include "s2/_fpcontractoff.h"
 #include "s2/s1angle.h"
 #include "s2/s2debug.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2region.h"
