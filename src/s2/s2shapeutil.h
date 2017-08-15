@@ -437,6 +437,7 @@ enum class CrossingType { INTERIOR, ALL, NON_ADJACENT };
 struct ShapeEdgeId {
  public:
   int32 shape_id, edge_id;
+  ShapeEdgeId() : shape_id(-1), edge_id(-1) {}
   ShapeEdgeId(int32 _shape_id, int32 _edge_id);
   bool operator==(ShapeEdgeId other) const;
   bool operator!=(ShapeEdgeId other) const;
@@ -447,11 +448,21 @@ struct ShapeEdgeId {
 };
 std::ostream& operator<<(std::ostream& os, ShapeEdgeId id);
 
+// Hasher for ShapeEdgeId.
+// Example use: std::unordered_set<ShapeEdgeId, ShapeEdgeIdHash>.
+struct ShapeEdgeIdHash {
+  size_t operator()(ShapeEdgeId id) const {
+    // The following preserves all bits even when edge_id < 0.
+    return std::hash<uint64>()((static_cast<uint64>(id.shape_id) << 32) |
+                               static_cast<uint32>(id.edge_id));
+  }
+};
+
 // A class representing a ShapeEdgeId together with the two endpoints of that
 // edge.  It should be passed by reference.
 struct ShapeEdge {
  public:
-  ShapeEdge() : id_(-1, -1) {}
+  ShapeEdge() {}
   ShapeEdge(S2Shape const& shape, int32 edge_id);
   ShapeEdgeId id() const { return id_; }
   S2Point const& v0() const { return edge_.v0; }

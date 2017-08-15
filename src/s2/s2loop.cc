@@ -43,7 +43,6 @@
 #include "s2/s2edge_clipping.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
 #include "s2/s2latlngrect_bounder.h"
 #include "s2/s2measures.h"
@@ -510,7 +509,7 @@ S1Angle S2Loop::GetDistance(S2Point const& x) const {
 
 S1Angle S2Loop::GetDistanceToBoundary(S2Point const& x) const {
   S2ClosestEdgeQuery::PointTarget t(x);
-  return S2ClosestEdgeQuery(&index_).GetDistance(t).ToAngle();
+  return S2ClosestEdgeQuery(&index_).GetDistance(&t).ToAngle();
 }
 
 S2Point S2Loop::Project(S2Point const& x) const {
@@ -520,8 +519,8 @@ S2Point S2Loop::Project(S2Point const& x) const {
 
 S2Point S2Loop::ProjectToBoundary(S2Point const& x) const {
   S2ClosestEdgeQuery q(&index_);
-  S2ClosestEdgeQuery::Result edge =
-      q.FindClosestEdge(S2ClosestEdgeQuery::PointTarget(x));
+  S2ClosestEdgeQuery::PointTarget target(x);
+  S2ClosestEdgeQuery::Result edge = q.FindClosestEdge(&target);
   return q.Project(x, edge);
 }
 

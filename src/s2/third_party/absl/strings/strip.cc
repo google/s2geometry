@@ -26,32 +26,6 @@
 #include "s2/third_party/absl/strings/ascii.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
-string StripPrefixString(absl::string_view str, absl::string_view prefix) {
-  if (absl::StartsWith(str, prefix)) str.remove_prefix(prefix.length());
-  return string(str);
-}
-
-bool TryStripPrefixString(absl::string_view str, absl::string_view prefix,
-                          string* result) {
-  const bool has_prefix = absl::StartsWith(str, prefix);
-  if (has_prefix) str.remove_prefix(prefix.length());
-  result->assign(str.begin(), str.end());
-  return has_prefix;
-}
-
-string StripSuffixString(absl::string_view str, absl::string_view suffix) {
-  if (absl::EndsWith(str, suffix)) str.remove_suffix(suffix.length());
-  return string(str);
-}
-
-bool TryStripSuffixString(absl::string_view str, absl::string_view suffix,
-                          string* result) {
-  const bool has_suffix = absl::EndsWith(str, suffix);
-  if (has_suffix) str.remove_suffix(suffix.length());
-  result->assign(str.begin(), str.end());
-  return has_suffix;
-}
-
 // ----------------------------------------------------------------------
 // ReplaceCharacters
 //    Replaces any occurrence of the character 'remove' (or the characters

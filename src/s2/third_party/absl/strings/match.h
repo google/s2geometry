@@ -32,6 +32,10 @@ inline bool StartsWith(absl::string_view s, absl::string_view x) {
   return x.empty() ||
          (s.size() >= x.size() &&
           absl::strings_internal::memeq(s.data(), x.data(), x.size()));
+  /* absl:oss-replace-with
+  return x.empty() ||
+         (s.size() >= x.size() && memcmp(s.data(), x.data(), x.size()) == 0);
+  absl:oss-replace-end */
 }
 
 // Returns whether s ends with x.
@@ -40,6 +44,11 @@ inline bool EndsWith(absl::string_view s, absl::string_view x) {
          (s.size() >= x.size() &&
           absl::strings_internal::memeq(s.data() + (s.size() - x.size()),
                                         x.data(), x.size()));
+  /* absl:oss-replace-with
+  return x.empty() ||
+         (s.size() >= x.size() &&
+          memcmp(s.data() + (s.size() - x.size()), x.data(), x.size()) == 0);
+  absl:oss-replace-end */
 }
 
 // Returns true if "text" starts with "starts_with". The comparison ignores

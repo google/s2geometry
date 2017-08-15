@@ -89,7 +89,6 @@
 #include "s2/s2closestpointquery.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
 #include "s2/s2pointindex.h"
@@ -885,7 +884,7 @@ void S2Builder::AddExtraSite(S2Point const& new_site,
   options.set_max_distance(edge_site_query_radius_);
   S2ClosestEdgeQuery query(&input_edge_index, options);
   S2ClosestEdgeQuery::PointTarget target(new_site);
-  for (auto const& result : query.FindClosestEdges(target)) {
+  for (auto const& result : query.FindClosestEdges(&target)) {
     InputEdgeId e = result.edge_id;
     auto* site_ids = &edge_sites_[e];
     site_ids->push_back(new_site_id);

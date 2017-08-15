@@ -27,7 +27,6 @@
 #include "s2/s2cellid.h"
 #include "s2/s2edge_clipping.h"
 #include "s2/s2edge_crosser.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2paddedcell.h"
 
 using std::vector;

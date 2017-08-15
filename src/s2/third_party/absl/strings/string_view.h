@@ -497,6 +497,10 @@ inline bool operator==(string_view x, string_view y) noexcept {
 
   return x.data() == y.data() || len <= 0 ||
          absl::strings_internal::memeq(x.data(), y.data(), len);
+  /* absl:oss-replace-with
+  return x.data() == y.data() || len <= 0 ||
+         memcmp(x.data(), y.data(), len) == 0;
+  absl:oss-replace-end */
 }
 
 inline bool operator!=(string_view x, string_view y) noexcept {

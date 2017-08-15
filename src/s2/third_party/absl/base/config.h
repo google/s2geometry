@@ -90,6 +90,15 @@
 #define ABSL_HAVE_BUILTIN(x) 0
 #endif
 
+// ABSL_HAVE_TLS is defined to 1 when __thread should be supported.
+// We assume __thread is supported on Linux when compiled with Clang or compiled
+// against libstdc++ with _GLIBCXX_HAVE_TLS defined.
+#ifdef ABSL_HAVE_TLS
+#error ABSL_HAVE_TLS cannot be directly set
+#elif defined(__linux__) && (defined(__clang__) || defined(_GLIBCXX_HAVE_TLS))
+#define ABSL_HAVE_TLS 1
+#endif
+
 // ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
 //
 // Checks whether `std::is_trivially_destructible<T>` is supported.
@@ -203,7 +212,7 @@
 //   Linux and Linux-derived           __linux__
 //   Android                           __ANDROID__ (implies __linux__)
 //   Linux (non-Android)               __linux__ && !__ANDROID__
-//   Darwin (Mac OS X and iOS)         __APPLE__ && __MACH__
+//   Darwin (Mac OS X and iOS)         __APPLE__
 //   Akaros (http://akaros.org)        __ros__
 //   Windows                           _WIN32
 //   NaCL                              __native_client__
@@ -219,9 +228,8 @@
 // POSIX.1-2001.
 #ifdef ABSL_HAVE_MMAP
 #error ABSL_HAVE_MMAP cannot be directly set
-#elif defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) ||    \
-    defined(__ros__) || defined(__native_client__) || defined(__asmjs__) || \
-    defined(__Fuchsia__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__ros__) || \
+    defined(__native_client__) || defined(__asmjs__) || defined(__Fuchsia__)
 #define ABSL_HAVE_MMAP 1
 #endif
 
@@ -231,8 +239,7 @@
 // functions as defined in POSIX.1-2001.
 #ifdef ABSL_HAVE_PTHREAD_GETSCHEDPARAM
 #error ABSL_HAVE_PTHREAD_GETSCHEDPARAM cannot be directly set
-#elif defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || \
-    defined(__ros__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__ros__)
 #define ABSL_HAVE_PTHREAD_GETSCHEDPARAM 1
 #endif
 

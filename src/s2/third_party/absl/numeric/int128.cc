@@ -24,10 +24,6 @@
 #include <iostream>  // NOLINT(readability/streams)
 #include <sstream>
 
-#include <glog/logging.h>
-
-#include "s2/third_party/absl/base/integral_types.h"
-
 const uint128 kuint128max = absl::MakeUint128(
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
 

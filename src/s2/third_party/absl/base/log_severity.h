@@ -17,12 +17,50 @@
 #ifndef S2_THIRD_PARTY_ABSL_BASE_LOG_SEVERITY_H_
 #define S2_THIRD_PARTY_ABSL_BASE_LOG_SEVERITY_H_
 
+#include "s2/third_party/absl/base/attributes.h"
 #include "s2/third_party/absl/base/port.h"
 
 // WinGDI.h defines ERROR, undef to avoid conflict naming.
 #ifdef _WIN32
 #undef ERROR
 #endif
+
+namespace absl {
+
+enum class LogSeverity : int {
+  kInfo = 0,
+  kWarning = 1,
+  kError = 2,
+  kFatal = 3,
+};
+
+// absl::kLogDebugFatal equals absl::LogSeverity::kFatal in debug builds (i.e.
+// when NDEBUG is not defined) and absl::LogSeverity::kError otherwise.
+// It is extern to prevent ODR violations when compilation units with different
+// build settings are linked together.
+ABSL_CONST_INIT extern const absl::LogSeverity kLogDebugFatal;
+
+constexpr const char* LogSeverityName(absl::LogSeverity s) {
+  return s == absl::LogSeverity::kInfo
+             ? "INFO"
+             : s == absl::LogSeverity::kWarning
+                   ? "WARNING"
+                   : s == absl::LogSeverity::kError
+                         ? "ERROR"
+                         : s == absl::LogSeverity::kFatal ? "FATAL" : "UNKNOWN";
+}
+
+// Note that out-of-range large severities normalize to kError, not kFatal.
+constexpr absl::LogSeverity NormalizeLogSeverity(absl::LogSeverity s) {
+  return s < absl::LogSeverity::kInfo
+             ? absl::LogSeverity::kInfo
+             : s > absl::LogSeverity::kFatal ? absl::LogSeverity::kError : s;
+}
+constexpr absl::LogSeverity NormalizeLogSeverity(int s) {
+  return NormalizeLogSeverity(static_cast<absl::LogSeverity>(s));
+}
+
+}  // namespace absl
 
 namespace base_logging {
 

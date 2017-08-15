@@ -33,6 +33,7 @@
 // - Obsolete
 
 #include "s2/third_party/absl/base/config.h"
+#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/port.h"  // IWYU pragma: export
 
 #ifdef SWIG
@@ -190,7 +191,7 @@
 #endif
 
 // GOOGLE_OBSCURE_SIGNAL
-#if defined(__APPLE__) && defined(__MACH__)
+#if defined(__APPLE__)
 // No SIGPWR on MacOSX.  SIGINFO seems suitably obscure.
 #define GOOGLE_OBSCURE_SIGNAL SIGINFO
 #else
@@ -415,14 +416,14 @@ using std::hash;
 
 // printf macros
 // __STDC_FORMAT_MACROS must be defined before inttypes.h inclusion */
-#if defined(__APPLE__) && defined(__MACH__)
+#if defined(__APPLE__)
 /* From MacOSX's inttypes.h:
  * "C++ implementations should define these macros only when
  *  __STDC_FORMAT_MACROS is defined before <inttypes.h> is included." */
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif /* __STDC_FORMAT_MACROS */
-#endif /* __APPLE__ && __MACH__ */
+#endif /* __APPLE__ */
 
 // printf macros for size_t, in the style of inttypes.h
 #if defined(_LP64) || defined(__APPLE__)

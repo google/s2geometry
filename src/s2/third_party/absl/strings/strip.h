@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-// This file contains various functions for "stripping" aka removing various
-// characters and substrings from a string.
+// This file contains various functions for "stripping" substrings from a
+// string.
 
 #ifndef S2_THIRD_PARTY_ABSL_STRINGS_STRIP_H_
 #define S2_THIRD_PARTY_ABSL_STRINGS_STRIP_H_
@@ -30,23 +30,40 @@
 
 namespace absl {
 
-// If "*s" starts with "expected", consume it and return true.
+// If "*str" starts with "expected", consume it and return true.
 // Otherwise, return false.
-inline bool ConsumePrefix(absl::string_view* s, absl::string_view expected) {
-  if (!absl::StartsWith(*s, expected)) return false;
-  s->remove_prefix(expected.size());
+inline bool ConsumePrefix(absl::string_view* str, absl::string_view expected) {
+  if (!absl::StartsWith(*str, expected)) return false;
+  str->remove_prefix(expected.size());
   return true;
 }
 
-// If "*s" ends with "expected", remove it and return true.
+// If "*str" ends with "expected", remove it and return true.
 // Otherwise, return false.
-inline bool ConsumeSuffix(absl::string_view* s, absl::string_view expected) {
-  if (!absl::EndsWith(*s, expected)) return false;
-  s->remove_suffix(expected.size());
+inline bool ConsumeSuffix(absl::string_view* str, absl::string_view expected) {
+  if (!absl::EndsWith(*str, expected)) return false;
+  str->remove_suffix(expected.size());
   return true;
+}
+
+// Returns a view into the input string 'str' with the given 'prefix' removed.
+// If the prefix doesn't match, returns 'str'.
+inline absl::string_view StripPrefix(absl::string_view str,
+                                     absl::string_view prefix) {
+  if (absl::StartsWith(str, prefix)) str.remove_prefix(prefix.size());
+  return str;
+}
+
+// Returns a view into the input string 'str' with the given 'suffix' removed.
+// If the suffix doesn't match, returns 'str'.
+inline absl::string_view StripSuffix(absl::string_view str,
+                                     absl::string_view suffix) {
+  if (absl::EndsWith(str, suffix)) str.remove_suffix(suffix.size());
+  return str;
 }
 
 }  // namespace absl
+
 
 // Returns a copy of the input string 'str' with the given 'prefix' removed. If
 // the prefix doesn't match, returns a copy of the original string.
@@ -56,9 +73,16 @@ inline bool ConsumeSuffix(absl::string_view* s, absl::string_view expected) {
 // point back to the input string.
 //
 // See also absl::ConsumePrefix().
-string StripPrefixString(absl::string_view str, absl::string_view prefix);
-bool TryStripPrefixString(absl::string_view str, absl::string_view prefix,
-                          string* result);
+inline string StripPrefixString(absl::string_view str,
+                                absl::string_view prefix) {
+  return string(absl::StripPrefix(str, prefix));
+}
+inline bool TryStripPrefixString(absl::string_view str,
+                                 absl::string_view prefix, string* result) {
+  bool res = absl::ConsumePrefix(&str, prefix);
+  result->assign(str.begin(), str.end());
+  return res;
+}
 
 // Returns a copy of the input string 'str' with the given 'suffix' removed. If
 // the suffix doesn't match, returns a copy of the original string.
@@ -68,9 +92,16 @@ bool TryStripPrefixString(absl::string_view str, absl::string_view prefix,
 // point back to the input string.
 //
 // See also absl::ConsumeSuffix().
-string StripSuffixString(absl::string_view str, absl::string_view suffix);
-bool TryStripSuffixString(absl::string_view str, absl::string_view suffix,
-                          string* result);
+inline string StripSuffixString(absl::string_view str,
+                                absl::string_view suffix) {
+  return string(absl::StripSuffix(str, suffix));
+}
+inline bool TryStripSuffixString(absl::string_view str,
+                                 absl::string_view suffix, string* result) {
+  bool res = absl::ConsumeSuffix(&str, suffix);
+  result->assign(str.begin(), str.end());
+  return res;
+}
 
 // Replaces any of the characters in 'remove' with the character 'replace_with'.
 //
@@ -287,4 +318,6 @@ StripWhitespace(char** str, T* len) {
   StripWhitespace(str, &pdt);
   *len = static_cast<int>(pdt);
 }
+
+
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STRIP_H_

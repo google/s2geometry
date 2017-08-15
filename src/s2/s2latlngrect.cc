@@ -30,7 +30,6 @@
 #include "s2/s2debug.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2pointutil.h"
 
 using std::fabs;

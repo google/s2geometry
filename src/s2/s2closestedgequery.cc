@@ -17,21 +17,26 @@
 
 #include "s2/s2closestedgequery.h"
 
+#include <memory>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 #include "s2/s2cellunion.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2regioncoverer.h"
+#include "s2/s2shapeindex_region.h"
 
 S2ClosestEdgeQuery::PointTarget::PointTarget(S2Point const& point)
     : point_(point) {
 }
 
 int S2ClosestEdgeQuery::PointTarget::max_brute_force_edges() const {
-  return 180;  // TODO(ericv): Re-tune using benchmarks.
+  // Using BM_FindClosest (which finds the single closest edge), the
+  // break-even points are approximately 80, 100, and 250 edges for point
+  // cloud, fractal, and regular loop geometry respectively.
+  return 120;
 }
 
 S2Cap S2ClosestEdgeQuery::PointTarget::GetCapBound() const {
@@ -51,17 +56,15 @@ bool S2ClosestEdgeQuery::PointTarget::UpdateMinDistance(
   return true;
 }
 
-S2Point S2ClosestEdgeQuery::PointTarget::GetClosestPointOnEdge(
-    S2Shape::Edge const& edge) const {
-  return S2::Project(point_, edge.v0, edge.v1);
-}
-
 S2ClosestEdgeQuery::EdgeTarget::EdgeTarget(S2Point const& a, S2Point const& b)
     : a_(a), b_(b) {
 }
 
 int S2ClosestEdgeQuery::EdgeTarget::max_brute_force_edges() const {
-  return 180;  // XXX Re-tune using benchmarks.
+  // Using BM_FindClosestToEdge (which finds the single closest edge), the
+  // break-even points are approximately 40, 50, and 100 edges for point
+  // cloud, fractal, and regular loop geometry respectively.
+  return 60;
 }
 
 S2Cap S2ClosestEdgeQuery::EdgeTarget::GetCapBound() const {
@@ -75,15 +78,78 @@ bool S2ClosestEdgeQuery::EdgeTarget::UpdateMinDistance(
 
 bool S2ClosestEdgeQuery::EdgeTarget::UpdateMinDistance(
     S2Cell const& cell, Distance* min_dist) const {
-  Distance dist(cell.GetDistanceToEdge(a_, b_));
+  Distance dist(cell.GetDistance(a_, b_));
   if (dist > *min_dist) return false;
   *min_dist = dist;
   return true;
 }
 
-S2Point S2ClosestEdgeQuery::EdgeTarget::GetClosestPointOnEdge(
-    S2Shape::Edge const& edge) const {
-  return S2::GetEdgePairClosestPoints(a_, b_, edge.v0, edge.v1).second;
+S2ClosestEdgeQuery::CellTarget::CellTarget(S2Cell const& cell)
+    : cell_(cell) {
+}
+
+int S2ClosestEdgeQuery::CellTarget::max_brute_force_edges() const {
+  // Using BM_FindClosestToCell (which finds the single closest edge), the
+  // break-even points are approximately 20, 25, and 40 edges for point cloud,
+  // fractal, and regular loop geometry respectively.
+  return 30;
+}
+
+S2Cap S2ClosestEdgeQuery::CellTarget::GetCapBound() const {
+  return cell_.GetCapBound();
+}
+
+bool S2ClosestEdgeQuery::CellTarget::UpdateMinDistance(
+    S2Point const& v0, S2Point const& v1, Distance* min_dist) const {
+  Distance dist(cell_.GetDistance(v0, v1));
+  if (dist > *min_dist) return false;
+  *min_dist = dist;
+  return true;
+}
+
+bool S2ClosestEdgeQuery::CellTarget::UpdateMinDistance(
+    S2Cell const& cell, Distance* min_dist) const {
+  Distance dist(cell_.GetDistance(cell));
+  if (dist > *min_dist) return false;
+  *min_dist = dist;
+  return true;
+}
+
+S2ClosestEdgeQuery::ShapeIndexTarget::ShapeIndexTarget(
+    S2ShapeIndex const* index)
+    : index_(index), query_(absl::MakeUnique<S2ClosestEdgeQuery>(index)) {
+}
+
+int S2ClosestEdgeQuery::ShapeIndexTarget::max_brute_force_edges() const {
+  // For BM_FindClosestToSameSizeAbuttingIndex (which uses two nearby indexes
+  // with similar edge counts), the break-even points are approximately 20,
+  // 30, and 40 edges for point cloud, fractal, and regular loop geometry
+  // respectively.
+  return 25;
+}
+
+S2Cap S2ClosestEdgeQuery::ShapeIndexTarget::GetCapBound() const {
+  return MakeS2ShapeIndexRegion(index_).GetCapBound();
+}
+
+bool S2ClosestEdgeQuery::ShapeIndexTarget::UpdateMinDistance(
+    S2Point const& v0, S2Point const& v1, Distance* min_dist) const {
+  query_->mutable_options()->set_max_distance(*min_dist);
+  EdgeTarget target(v0, v1);
+  Result r = query_->FindClosestEdge(&target);
+  if (r.shape_id < 0) return false;
+  *min_dist = r.distance;
+  return true;
+}
+
+bool S2ClosestEdgeQuery::ShapeIndexTarget::UpdateMinDistance(
+    S2Cell const& cell, Distance* min_dist) const {
+  query_->mutable_options()->set_max_distance(*min_dist);
+  CellTarget target(cell);
+  Result r = query_->FindClosestEdge(&target);
+  if (r.shape_id < 0) return false;
+  *min_dist = r.distance;
+  return true;
 }
 
 void S2ClosestEdgeQuery::Options::set_conservative_max_distance(
@@ -100,19 +166,21 @@ S2ClosestEdgeQuery::~S2ClosestEdgeQuery() {
   // Prevent inline destructor bloat by defining here.
 }
 
-S2Point S2ClosestEdgeQuery::GetClosestPointOnEdge(int i) const {
-  return target_->GetClosestPointOnEdge(edge(i));
+bool S2ClosestEdgeQuery::IsDistanceLess(Target* target, S1ChordAngle limit) {
+  options_.set_max_distance(limit);
+  options_.set_max_error(limit);
+  return FindClosestEdge(target).shape_id >= 0;
 }
 
 void S2ClosestEdgeQuery::FindClosestEdges(S2Point const& point) {
   target_.reset(new PointTarget(point));
-  FindClosestEdges(*target_, &results_);
+  FindClosestEdges(target_.get(), &results_);
 }
 
 void S2ClosestEdgeQuery::FindClosestEdgesToEdge(S2Point const& a,
                                                 S2Point const& b) {
   target_.reset(new EdgeTarget(a, b));
-  FindClosestEdges(*target_, &results_);
+  FindClosestEdges(target_.get(), &results_);
 }
 
 void S2ClosestEdgeQuery::FindClosestEdge(S2Point const& point) {
@@ -121,11 +189,6 @@ void S2ClosestEdgeQuery::FindClosestEdge(S2Point const& point) {
 }
 
 S1Angle S2ClosestEdgeQuery::GetDistance(S2Point const& point) {
-  return GetDistance(PointTarget(point)).ToAngle();
-}
-
-S2Point S2ClosestEdgeQuery::Project(S2Point const& point) {
-  FindClosestEdge(point);
-  if (num_edges() == 0) return point;
-  return GetClosestPointOnEdge(0);
+  PointTarget target(point);
+  return GetDistance(&target).ToAngle();
 }

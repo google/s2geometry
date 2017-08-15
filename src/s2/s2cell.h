@@ -144,7 +144,11 @@ class S2Cell final : public S2Region {
 
   // Return the minimum distance from the cell to the given edge AB.  Returns
   // zero if the edge intersects the cell interior.
-  S1ChordAngle GetDistanceToEdge(S2Point const& a, S2Point const& b) const;
+  S1ChordAngle GetDistance(S2Point const& a, S2Point const& b) const;
+
+  // Return the distance from the cell to the given cell.  Returns zero if
+  // one cell contains the other.
+  S1ChordAngle GetDistance(S2Cell const& target) const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -175,6 +179,11 @@ class S2Cell final : public S2Region {
 
   // Decodes an S2Cell encoded with Encode().  Returns true on success.
   bool Decode(Decoder* const decoder);
+
+  ABSL_DEPRECATED("Use GetDistance")
+  S1ChordAngle GetDistanceToEdge(S2Point const& a, S2Point const& b) const {
+    return GetDistance(a, b);
+  }
 
  private:
   // Return the latitude or longitude of the cell vertex given by (i,j),

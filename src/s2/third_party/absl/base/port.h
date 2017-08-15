@@ -21,14 +21,11 @@
 //
 // This files is structured into the following high-level categories:
 // - Platform checks (OS, Compiler, C++, Library)
-// - Feature macros
 // - Utility macros
 // - Utility functions
 // - Type alias
 // - Predefined system/language macros
 // - Predefined system/language functions
-// - Compiler attributes (__attribute__)
-// - Performance optimization (alignment, branch prediction)
 // - Obsolete
 //
 // NOTE FOR GOOGLERS:
@@ -50,6 +47,7 @@
 #include "s2/third_party/absl/base/attributes.h"
 #include "s2/third_party/absl/base/config.h"
 #include "s2/third_party/absl/base/integral_types.h"
+#include "s2/third_party/absl/base/optimization.h"
 
 #ifdef SWIG
 %include "third_party/absl/base/attributes.h"
@@ -114,19 +112,6 @@
 #endif
 
 // -----------------------------------------------------------------------------
-// Feature Macros
-// -----------------------------------------------------------------------------
-
-// ABSL_HAVE_TLS is defined to 1 when __thread should be supported.
-// We assume __thread is supported on Linux when compiled with Clang or compiled
-// against libstdc++ with _GLIBCXX_HAVE_TLS defined.
-#ifdef ABSL_HAVE_TLS
-#error ABSL_HAVE_TLS cannot be directly set
-#elif defined(__linux__) && (defined(__clang__) || defined(_GLIBCXX_HAVE_TLS))
-#define ABSL_HAVE_TLS 1
-#endif
-
-// -----------------------------------------------------------------------------
 // Utility Macros
 // -----------------------------------------------------------------------------
 
@@ -150,33 +135,6 @@ enum { kPlatformUsesOPDSections = 0 };
 #define ABSL_FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char *>(func))
 #endif  // PPC or IA64
 #endif  // __cplusplus
-
-// ABSL_BLOCK_TAIL_CALL_OPTIMIZATION
-// Under optimized builds, functions are often subject to tail-call
-// optimisation. The specific cases vary from compiler to compiler, but the
-// macro should avoid a tail-call in cases, for example, that must preserve
-// a function in the call stack.
-//
-// Example:
-//   int f() {
-//     int result = g();
-//     ABLS_BLOCK_TAIL_CALL_OPTIMIZATION();
-//     return result;
-//   }
-#if defined(__pnacl__)
-#define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() if (volatile int x = 0) { (void)x; }
-#elif defined(__clang__)
-// Clang will not tail call given inline volatile assembly.
-#define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() __asm__ __volatile__("")
-#elif defined(__GNUC__)
-// GCC will not tail call given inline volatile assembly.
-#define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() __asm__ __volatile__("")
-#elif defined(_MSC_VER)
-// The __nop() intrinsic blocks the optimisation.
-#define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() __nop()
-#else
-#define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() if (volatile int x = 0) { (void)x; }
-#endif
 
 // -----------------------------------------------------------------------------
 // Utility Functions
@@ -215,143 +173,18 @@ typedef int pid_t;
 // -----------------------------------------------------------------------------
 
 // MAP_ANONYMOUS
-#if defined(__APPLE__) && defined(__MACH__)
+#if defined(__APPLE__)
 // For mmap, Linux defines both MAP_ANONYMOUS and MAP_ANON and says MAP_ANON is
 // deprecated. In Darwin, MAP_ANON is all there is.
 #if !defined MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
 #endif  // !MAP_ANONYMOUS
-#endif  // __APPLE__ && __MACH__
+#endif  // __APPLE__
 
 // PATH_MAX
 // You say tomato, I say atotom
 #ifdef _MSC_VER
 #define PATH_MAX MAX_PATH
-#endif
-
-// -----------------------------------------------------------------------------
-// Performance Optimization
-// -----------------------------------------------------------------------------
-
-// Alignment
-
-// ABSL_CACHELINE_SIZE, ABSL_CACHELINE_ALIGNED
-// Note: When C++17 is available, consider using the following:
-// - std::hardware_constructive_interference_size
-// - std::hardware_destructive_interference_size
-// See http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0154r1.html
-#if defined(__GNUC__) && !defined(SWIG)
-/* absl:oss-replace-begin
-#if defined(__GNUC__)
-absl:oss-replace-end */
-// Cache line alignment
-#if defined(__i386__) || defined(__x86_64__)
-#define ABSL_CACHELINE_SIZE 64
-#elif defined(__powerpc64__)
-#define ABSL_CACHELINE_SIZE 128
-#elif defined(__aarch64__)
-// We would need to read special register ctr_el0 to find out L1 dcache size.
-// This value is a good estimate based on a real aarch64 machine.
-#define ABSL_CACHELINE_SIZE 64
-#elif defined(__arm__)
-// Cache line sizes for ARM: These values are not strictly correct since
-// cache line sizes depend on implementations, not architectures.  There
-// are even implementations with cache line sizes configurable at boot
-// time.
-#if defined(__ARM_ARCH_5T__)
-#define ABSL_CACHELINE_SIZE 32
-#elif defined(__ARM_ARCH_7A__)
-#define ABSL_CACHELINE_SIZE 64
-#endif
-#endif
-
-#ifndef ABSL_CACHELINE_SIZE
-// A reasonable default guess.  Note that overestimates tend to waste more
-// space, while underestimates tend to waste more time.
-#define ABSL_CACHELINE_SIZE 64
-#endif
-
-// On some compilers, expands to __attribute__((aligned(ABSL_CACHELINE_SIZE))).
-// For compilers where this is not known to work, expands to nothing.
-//
-// No further guarantees are made here.  The result of applying the macro
-// to variables and types is always implementation defined.
-//
-// WARNING: It is easy to use this attribute incorrectly, even to the point
-// of causing bugs that are difficult to diagnose, crash, etc.  It does not
-// guarantee that objects are aligned to a cache line.
-//
-// Recommendations:
-//
-// 1) Consult compiler documentation; this comment is not kept in sync as
-//    toolchains evolve.
-// 2) Verify your use has the intended effect. This often requires inspecting
-//    the generated machine code.
-// 3) Prefer applying this attribute to individual variables.  Avoid
-//    applying it to types.  This tends to localize the effect.
-// 4) See go/cache-line-interference for further guidance.
-#define ABSL_CACHELINE_ALIGNED __attribute__((aligned(ABSL_CACHELINE_SIZE)))
-
-#else  // not GCC
-#define ABSL_CACHELINE_SIZE 64
-#define ABSL_CACHELINE_ALIGNED
-#endif
-// Deprecated: Use ABSL_CACHELINE_SIZE, ABSL_CACHELINE_ALIGNED.
-#ifdef ABSL_CACHELINE_SIZE
-#define CACHELINE_SIZE ABSL_CACHELINE_SIZE
-#endif
-
-#ifdef ABSL_CACHELINE_ALIGNED
-#define CACHELINE_ALIGNED ABSL_CACHELINE_ALIGNED
-#endif
-
-// ABSL_PREDICT_TRUE, ABSL_PREDICT_FALSE
-//
-// GCC can be told that a certain branch is not likely to be taken (for
-// instance, a CHECK failure), and use that information in static analysis.
-// Giving it this information can help it optimize for the common case in
-// the absence of better information (ie. -fprofile-arcs).
-#if (ABSL_HAVE_BUILTIN(__builtin_expect) ||         \
-     (defined(__GNUC__) && !defined(__clang__))) && \
-    !defined(SWIG)
-/* absl:oss-replace-begin
-#if ABSL_HAVE_BUILTIN(__builtin_expect) || \
-    (defined(__GNUC__) && !defined(__clang__))
-absl:oss-replace-end */
-#define ABSL_PREDICT_FALSE(x) (__builtin_expect(x, 0))
-#define ABSL_PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
-#else
-#define ABSL_PREDICT_FALSE(x) x
-#define ABSL_PREDICT_TRUE(x) x
-#endif
-
-#if (ABSL_HAVE_BUILTIN(__builtin_expect) ||         \
-     (defined(__GNUC__) && !defined(__clang__))) && \
-    !defined(SWIG)
-#define PREDICT_FALSE(x) (__builtin_expect(x, 0))
-#define PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
-#else
-#define PREDICT_FALSE(x) x
-#define PREDICT_TRUE(x) x
-#endif
-// ABSL_ASSERT
-//
-// In C++11, `assert` can't be used portably within constexpr functions.
-// ABSL_ASSERT functions as a runtime assert but works in C++11 constexpr
-// functions.  Example:
-//
-// constexpr double Divide(double a, double b) {
-//   return ABSL_ASSERT(b != 0), a / b;
-// }
-//
-// This macro is inspired by
-// https://akrzemi1.wordpress.com/2017/05/18/asserts-in-constexpr-functions/
-#if defined(NDEBUG)
-#define ABSL_ASSERT(expr) (false ? (void)(expr) : (void)0)
-#else
-#define ABSL_ASSERT(expr)              \
-  (ABSL_PREDICT_TRUE((expr)) ? (void)0 \
-                             : [] { assert(false && #expr); }())  // NOLINT
 #endif
 
 // -----------------------------------------------------------------------------

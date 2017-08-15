@@ -316,7 +316,6 @@ class dense_hash_set {
   key_type empty_key() const                  { return rep.empty_key(); }
 
   void set_deleted_key(const key_type& key)   { rep.set_deleted_key(key); }
-  void clear_deleted_key()                    { rep.clear_deleted_key(); }
   key_type deleted_key() const                { return rep.deleted_key(); }
 
   // These are standard
@@ -328,24 +327,6 @@ class dense_hash_set {
   // Comparison
   bool operator==(const dense_hash_set& hs) const    { return rep == hs.rep; }
   bool operator!=(const dense_hash_set& hs) const    { return rep != hs.rep; }
-
-
-  // I/O -- this is an add-on for writing metainformation to disk
-  //
-  // For maximum flexibility, this does not assume a particular
-  // file type (though it will probably be a FILE *).  We just pass
-  // the fp through to rep.
-  template <typename OUTPUT>
-  bool write_metadata(OUTPUT *fp)       { return rep.write_metadata(fp); }
-
-  template <typename INPUT>
-  bool read_metadata(INPUT *fp)         { return rep.read_metadata(fp); }
-
-  template <typename OUTPUT>
-  bool write_nopointer_data(OUTPUT *fp) { return rep.write_nopointer_data(fp); }
-
-  template <typename INPUT>
-  bool read_nopointer_data(INPUT *fp)   { return rep.read_nopointer_data(fp); }
 };
 
 template <class Val, class HashFcn, class EqualKey, class Alloc>

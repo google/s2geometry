@@ -47,7 +47,6 @@
 #include "s2/s2edge_clipping.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings.h"
-#include "s2/s2edgeutil.h"
 #include "s2/s2error.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
@@ -524,7 +523,7 @@ S1Angle S2Polygon::GetDistance(S2Point const& x) const {
 
 S1Angle S2Polygon::GetDistanceToBoundary(S2Point const& x) const {
   S2ClosestEdgeQuery::PointTarget t(x);
-  return S2ClosestEdgeQuery(&index_).GetDistance(t).ToAngle();
+  return S2ClosestEdgeQuery(&index_).GetDistance(&t).ToAngle();
 }
 
 /*static*/ pair<double, double> S2Polygon::GetOverlapFractions(
@@ -546,8 +545,8 @@ S2Point S2Polygon::Project(S2Point const& x) const {
 
 S2Point S2Polygon::ProjectToBoundary(S2Point const& x) const {
   S2ClosestEdgeQuery q(&index_);
-  S2ClosestEdgeQuery::Result edge =
-      q.FindClosestEdge(S2ClosestEdgeQuery::PointTarget(x));
+  S2ClosestEdgeQuery::PointTarget target(x);
+  S2ClosestEdgeQuery::Result edge = q.FindClosestEdge(&target);
   return q.Project(x, edge);
 }
 

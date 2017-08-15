@@ -28,7 +28,7 @@ template <class T>
 #ifdef ABSL_HAVE_EXCEPTIONS
   throw error;
 #else
-  RAW_LOG(ERROR, "%s", error.what());
+  ABSL_RAW_LOG(ERROR, "%s", error.what());
   abort();
 #endif
 }

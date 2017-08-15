@@ -15,6 +15,14 @@
 
 #include "s2/third_party/absl/base/log_severity.h"
 
+namespace absl {
+#ifdef NDEBUG
+const absl::LogSeverity kLogDebugFatal = absl::LogSeverity::kError;
+#else
+const absl::LogSeverity kLogDebugFatal = absl::LogSeverity::kFatal;
+#endif
+}  // namespace absl
+
 namespace base_logging {
 
 const char* const LogSeverityNames[NUM_SEVERITIES] = {

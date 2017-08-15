@@ -89,23 +89,14 @@
 #define HAVE_ATTRIBUTE_WEAK 0
 #define ATTRIBUTE_NONNULL(...)
 #define ATTRIBUTE_NORETURN
-#define ATTRIBUTE_NO_SANITIZE_ADDRESS
-#define ATTRIBUTE_NO_SANITIZE_MEMORY
-#define ATTRIBUTE_NO_SANITIZE_THREAD
-#define ATTRIBUTE_NO_SANITIZE_UNDEFINED
-#define ATTRIBUTE_NO_SANITIZE_CFI
 #define ATTRIBUTE_SECTION(name)
 #define ATTRIBUTE_SECTION_VARIABLE(name)
 #define INIT_ATTRIBUTE_SECTION_VARS(name)
-#define DEFINE_ATTRIBUTE_SECTION_VARS(name)
-#define DECLARE_ATTRIBUTE_SECTION_VARS(name)
 #define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void *>(0))
 #define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void *>(0))
 #define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
 #define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
 #define MUST_USE_RESULT
-#define ATTRIBUTE_HOT
-#define ATTRIBUTE_COLD
 #define ATTRIBUTE_UNUSED
 #define ATTRIBUTE_INITIAL_EXEC
 #define ATTRIBUTE_PACKED
@@ -340,14 +331,6 @@
 #define ABSL_ATTRIBUTE_NO_SANITIZE_ADDRESS
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if defined(__GNUC__) && defined(ADDRESS_SANITIZER)
-#define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
-#else
-#define ATTRIBUTE_NO_SANITIZE_ADDRESS
-#endif
-
 // ABSL_ATTRIBUTE_NO_SANITIZE_MEMORY
 // Tell MemorySanitizer to relax the handling of a given function. All "Use of
 // uninitialized value" warnings from such functions will be suppressed, and all
@@ -361,14 +344,6 @@
 #define ABSL_ATTRIBUTE_NO_SANITIZE_MEMORY
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if defined(__GNUC__) && defined(MEMORY_SANITIZER)
-#define ATTRIBUTE_NO_SANITIZE_MEMORY __attribute__((no_sanitize_memory))
-#else
-#define ATTRIBUTE_NO_SANITIZE_MEMORY
-#endif
-
 // ABSL_ATTRIBUTE_NO_SANITIZE_THREAD
 // Tell ThreadSanitizer to not instrument a given function.
 // If you are adding this attribute, please cc dynamic-tools@ on the cl.
@@ -378,14 +353,6 @@
 #define ABSL_ATTRIBUTE_NO_SANITIZE_THREAD __attribute__((no_sanitize_thread))
 #else
 #define ABSL_ATTRIBUTE_NO_SANITIZE_THREAD
-#endif
-
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if defined(__GNUC__) && defined(THREAD_SANITIZER)
-#define ATTRIBUTE_NO_SANITIZE_THREAD __attribute__((no_sanitize_thread))
-#else
-#define ATTRIBUTE_NO_SANITIZE_THREAD
 #endif
 
 // ABSL_ATTRIBUTE_NO_SANITIZE_UNDEFINED
@@ -409,21 +376,13 @@
 #define ABSL_ATTRIBUTE_NO_SANITIZE_CFI
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if defined(__GNUC__) && defined(CONTROL_FLOW_INTEGRITY)
-#define ATTRIBUTE_NO_SANITIZE_CFI __attribute__((no_sanitize("cfi")))
-#else
-#define ATTRIBUTE_NO_SANITIZE_CFI
-#endif
-
-// ATTRIBUTE_SECTION
+// ABSL_ATTRIBUTE_SECTION
 // Labeled sections are not supported on Darwin/iOS.
 #ifdef ABSL_HAVE_ATTRIBUTE_SECTION
 #error ABSL_HAVE_ATTRIBUTE_SECTION cannot be directly set
 #elif (ABSL_HAVE_ATTRIBUTE(section) ||                \
        (defined(__GNUC__) && !defined(__clang__))) && \
-    !(defined(__APPLE__) && defined(__MACH__))
+    !defined(__APPLE__)
 #define ABSL_HAVE_ATTRIBUTE_SECTION 1
 //
 // Tell the compiler/linker to put a given function into a section and define
@@ -467,27 +426,14 @@
 //
 #ifndef ABSL_DECLARE_ATTRIBUTE_SECTION_VARS
 #define ABSL_DECLARE_ATTRIBUTE_SECTION_VARS(name) \
-  extern char __start_##name[] ATTRIBUTE_WEAK;    \
-  extern char __stop_##name[] ATTRIBUTE_WEAK
+  extern char __start_##name[] ABSL_ATTRIBUTE_WEAK;    \
+  extern char __stop_##name[] ABSL_ATTRIBUTE_WEAK
 #endif
 #ifndef ABSL_DEFINE_ATTRIBUTE_SECTION_VARS
 #define ABSL_INIT_ATTRIBUTE_SECTION_VARS(name)
 #define ABSL_DEFINE_ATTRIBUTE_SECTION_VARS(name)
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#ifndef DECLARE_ATTRIBUTE_SECTION_VARS
-#define DECLARE_ATTRIBUTE_SECTION_VARS(name) \
-  extern char __start_##name[] ATTRIBUTE_WEAK; \
-  extern char __stop_##name[] ATTRIBUTE_WEAK
-#endif
-#ifndef DEFINE_ATTRIBUTE_SECTION_VARS
-#define INIT_ATTRIBUTE_SECTION_VARS(name)
-#define DEFINE_ATTRIBUTE_SECTION_VARS(name)
-#endif
-
-//
 // Return void* pointers to start/end of a section of code with
 // functions having ABSL_ATTRIBUTE_SECTION(name).
 // Returns 0 if no such functions exits.
@@ -522,8 +468,6 @@
 #define ATTRIBUTE_SECTION(name)
 #define ATTRIBUTE_SECTION_VARIABLE(name)
 #define INIT_ATTRIBUTE_SECTION_VARS(name)
-#define DEFINE_ATTRIBUTE_SECTION_VARS(name)
-#define DECLARE_ATTRIBUTE_SECTION_VARS(name)
 #define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void *>(0))
 #define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void *>(0))
 
@@ -611,20 +555,6 @@
 #define ABSL_ATTRIBUTE_COLD __attribute__((cold))
 #else
 #define ABSL_ATTRIBUTE_COLD
-#endif
-
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(hot) || (defined(__GNUC__) && !defined(__clang__))
-#define ATTRIBUTE_HOT __attribute__ ((hot))
-#else
-#define ATTRIBUTE_HOT
-#endif
-
-#if ABSL_HAVE_ATTRIBUTE(cold) || (defined(__GNUC__) && !defined(__clang__))
-#define ATTRIBUTE_COLD __attribute__ ((cold))
-#else
-#define ATTRIBUTE_COLD
 #endif
 
 // ABSL_XRAY_ALWAYS_INSTRUMENT, ABSL_XRAY_NEVER_INSTRUMENT, ABSL_XRAY_LOG_ARGS
