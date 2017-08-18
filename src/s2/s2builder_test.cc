@@ -949,11 +949,9 @@ TEST(S2Builder, HighPrecisionStressTest) {
     // v2 is located along (v0,v1) but is perturbed by up to 2 * snap_radius.
     S2Point v1 = ChoosePoint(), v0_dir = ChoosePoint();
     double d0 = pow(1e-16, rnd.RandDouble());
-    S2Point v0 = S2::InterpolateAtDistance(S1Angle::Radians(d0),
-                                                   v1, v0_dir);
+    S2Point v0 = S2::InterpolateAtDistance(S1Angle::Radians(d0), v1, v0_dir);
     double d2 = 0.5 * d0 * pow(1e-16, pow(rnd.RandDouble(), 2));
-    S2Point v2 = S2::InterpolateAtDistance(S1Angle::Radians(d2),
-                                                   v1, v0_dir);
+    S2Point v2 = S2::InterpolateAtDistance(S1Angle::Radians(d2), v1, v0_dir);
     v2 = S2Testing::SamplePoint(S2Cap(v2, 2 * snap_radius));
     // Vary the edge directions by randomly swapping v0 and v2.
     if (rnd.OneIn(2)) std::swap(v0, v2);
@@ -969,8 +967,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
       v3 = S2::InterpolateAtDistance(d3, v3, ChoosePoint());
     } else {
       v3 = S2::Interpolate(pow(1e-16, rnd.RandDouble()), v1, v2);
-      v3 = S2::InterpolateAtDistance(d3, v3,
-                                             v1.CrossProd(v2).Normalize());
+      v3 = S2::InterpolateAtDistance(d3, v3, v1.CrossProd(v2).Normalize());
     }
     S2Builder::Options options((IdentitySnapFunction(snap_radius)));
     options.set_idempotent(false);

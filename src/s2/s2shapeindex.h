@@ -603,9 +603,6 @@ class S2ShapeIndexBase {
     // positioned arbitrarily.
     virtual CellRelation Locate(S2CellId target) = 0;
 
-    ABSL_DEPRECATED("Use done()")
-    bool Done() const { return done(); }
-
    protected:
     IteratorBase() : id_(S2CellId::Sentinel()), cell_(nullptr) {}
 

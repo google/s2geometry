@@ -48,6 +48,7 @@
 #include <utility>
 
 #include "s2/third_party/absl/algorithm/algorithm.h"
+#include "s2/third_party/absl/base/optimization.h"
 #include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/absl/base/gdb_scripting.h"
 
@@ -341,7 +342,7 @@ class InlinedVector {
   void emplace_back(Args&&... args) {
     size_type s = size();
     assert(s <= capacity());
-    if (s == capacity()) {
+    if (ABSL_PREDICT_FALSE(s == capacity())) {
       GrowAndEmplaceBack(std::forward<Args>(args)...);
       return;
     }

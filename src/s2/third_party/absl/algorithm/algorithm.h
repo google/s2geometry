@@ -28,7 +28,7 @@
 
 namespace absl {
 
-namespace internal_algorithm {
+namespace algorithm_internal_1210 {
 
 // Performs comparisons with operator==, similar to C++14's `std::equal_to<>`.
 struct EqualTo {
@@ -53,13 +53,13 @@ bool EqualImpl(InputIter1 first1, InputIter1 last1, InputIter2 first2,
 
 template <typename InputIter1, typename InputIter2, typename Pred>
 bool EqualImpl(InputIter1 first1, InputIter1 last1, InputIter2 first2,
-               InputIter2 last2, Pred pred, std::random_access_iterator_tag,
+               InputIter2 last2, Pred&& pred, std::random_access_iterator_tag,
                std::random_access_iterator_tag) {
   return (last1 - first1 == last2 - first2) &&
-         std::equal(first1, last1, first2, pred);
+         std::equal(first1, last1, first2, std::forward<Pred>(pred));
 }
 
-}  // namespace internal_algorithm
+}  // namespace algorithm_internal_1210
 
 // -----------------------------------------------------------------------------
 // Function Template: equal()
@@ -78,9 +78,9 @@ bool EqualImpl(InputIter1 first1, InputIter1 last1, InputIter2 first2,
 // http://en.cppreference.com/w/cpp/algorithm/equal for more information.
 template <typename InputIter1, typename InputIter2, typename Pred>
 bool equal(InputIter1 first1, InputIter1 last1, InputIter2 first2,
-           InputIter2 last2, Pred pred) {
-  return internal_algorithm::EqualImpl(
-      first1, last1, first2, last2, pred,
+           InputIter2 last2, Pred&& pred) {
+  return algorithm_internal_1210::EqualImpl(
+      first1, last1, first2, last2, std::forward<Pred>(pred),
       typename std::iterator_traits<InputIter1>::iterator_category{},
       typename std::iterator_traits<InputIter2>::iterator_category{});
 }
@@ -91,7 +91,7 @@ template <typename InputIter1, typename InputIter2>
 bool equal(InputIter1 first1, InputIter1 last1, InputIter2 first2,
            InputIter2 last2) {
   return absl::equal(first1, last1, first2, last2,
-                     internal_algorithm::EqualTo{});
+                     algorithm_internal_1210::EqualTo{});
 }
 
 // -----------------------------------------------------------------------------

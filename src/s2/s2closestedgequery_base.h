@@ -480,8 +480,9 @@ inline void S2ClosestEdgeQueryBase<Distance>::Options::set_use_brute_force(
 }
 
 template <class Distance>
-S2ClosestEdgeQueryBase<Distance>::S2ClosestEdgeQueryBase() {
-  // Prevent inline constructor bloat by providing a definition.
+S2ClosestEdgeQueryBase<Distance>::S2ClosestEdgeQueryBase()
+    : tested_edges_(1) /* expected_max_elements*/ {
+  tested_edges_.set_empty_key(ShapeEdgeId(-1, -1));
 }
 
 template <class Distance>
@@ -491,7 +492,7 @@ S2ClosestEdgeQueryBase<Distance>::~S2ClosestEdgeQueryBase() {
 
 template <class Distance>
 inline S2ClosestEdgeQueryBase<Distance>::S2ClosestEdgeQueryBase(
-    S2ShapeIndexBase const* index) {
+    S2ShapeIndexBase const* index) : S2ClosestEdgeQueryBase() {
   Init(index);
 }
 

@@ -178,9 +178,6 @@ class S2PointIndex {
     // Position the iterator so that done() is true.
     void Finish();
 
-    ABSL_DEPRECATED("Use done()")
-    bool Done() const { return done(); }
-
    private:
     Map const* map_;
     typename Map::const_iterator iter_, end_;
