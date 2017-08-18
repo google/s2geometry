@@ -1005,6 +1005,7 @@ extern inline void prefetch(const void *x) { return prefetch(x, 0); }
 #else   // not GCC
 #if defined(__cplusplus)
 extern inline void prefetch(const void *) {}
+extern inline void prefetch(const void *, int) {}
 #endif
 #endif  // Prefetch
 

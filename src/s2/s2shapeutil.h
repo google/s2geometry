@@ -425,7 +425,7 @@ class RangeIterator {
 //  - CrossingType::ALL reports all intersections, even those where two edges
 //    intersect only because they share a common vertex.
 //
-// - CrossingType::NON_ADJACENT reports all intersections except for pairs of
+//  - CrossingType::NON_ADJACENT reports all intersections except for pairs of
 //    the form (AB, BC) where both edges are from the same S2ShapeIndex.
 //    (This is an optimization for checking polygon validity.)
 enum class CrossingType { INTERIOR, ALL, NON_ADJACENT };

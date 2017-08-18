@@ -48,11 +48,16 @@
 
 #include <cassert>
 #include <cstddef>
+#include <algorithm>
 
 #include <stdexcept>                 // For length_error
 
 // Settings contains parameters for growing and shrinking the table.
-// It also packages zero-size functor (ie. hasher).
+// It also packages zero-size functor (ie. hasher).  One invariant
+// enforced in enlarge_size() is that we never allow all slots
+// occupied.  (This is unlikely to matter to users, because using
+// a load near 1 is slow and not recommended.  It allows other code
+// to assume there is at least one empty bucket.)
 //
 // It does some munging of the hash value in cases where we think
 // (fear) the original hash function might not be very good.  In
@@ -121,7 +126,7 @@ class sh_hashtable_settings : public HashFunc {
   }
 
   size_type enlarge_size(size_type x) const {
-    return static_cast<size_type>(x * enlarge_factor_);
+    return std::min<size_type>(x - 1, x * enlarge_factor_);
   }
   size_type shrink_size(size_type x) const {
     return static_cast<size_type>(x * shrink_factor_);

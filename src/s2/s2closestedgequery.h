@@ -248,8 +248,7 @@ class S2ClosestEdgeQuery {
     bool use_brute_force() const;
     void set_use_brute_force(bool use_brute_force);
 
-    // TODO(ericv): Take advantage of set_max_error().
-
+    bool set_max_error(Distance const& max_error) override;
     int max_brute_force_edges() const override;
     S2Cap GetCapBound() const override;
     bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,

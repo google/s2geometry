@@ -120,6 +120,12 @@ S2ClosestEdgeQuery::ShapeIndexTarget::ShapeIndexTarget(
     : index_(index), query_(absl::MakeUnique<S2ClosestEdgeQuery>(index)) {
 }
 
+bool S2ClosestEdgeQuery::ShapeIndexTarget::set_max_error(
+    Distance const& max_error) {
+  query_->mutable_options()->set_max_error(max_error);
+  return true;  // Indicates that we may return suboptimal results.
+}
+
 int S2ClosestEdgeQuery::ShapeIndexTarget::max_brute_force_edges() const {
   // For BM_FindClosestToSameSizeAbuttingIndex (which uses two nearby indexes
   // with similar edge counts), the break-even points are approximately 20,

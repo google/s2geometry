@@ -628,17 +628,20 @@ class dense_hashtable {
   // Returns true if we actually resized, false if size was already ok.
   bool resize_delta(size_type delta) {
     bool did_resize = false;
-    if ( settings.consider_shrink() ) {  // see if lots of deletes happened
-      if ( maybe_shrink() )
+    if (settings.consider_shrink()) {  // see if lots of deletes happened
+      if (maybe_shrink())
         did_resize = true;
     }
-    if (num_elements >=
-        (std::numeric_limits<size_type>::max)() - delta) {
+    if (num_elements >= std::numeric_limits<size_type>::max() - delta) {
       throw std::length_error("resize overflow");
     }
-    if ( bucket_count() >= HT_MIN_BUCKETS &&
-         (num_elements + delta) <= settings.enlarge_threshold() )
-      return did_resize;                          // we're ok as we are
+
+    assert(settings.enlarge_threshold() < bucket_count());
+    // Check if our work is done.
+    if (bucket_count() >= HT_MIN_BUCKETS &&
+        num_elements + delta <= settings.enlarge_threshold()) {
+      return did_resize;
+    }
 
     // Sometimes, we need to resize just to get rid of all the
     // "deleted" buckets that are clogging up the hashtable.  So when
@@ -647,9 +650,10 @@ class dense_hashtable {
     // size to resize to, *don't* count deleted buckets, since they
     // get discarded during the resize.
     const size_type needed_size = settings.min_buckets(num_elements + delta, 0);
-    if ( needed_size <= bucket_count() )      // we have enough buckets
+    if (needed_size <= bucket_count())      // we have enough buckets
       return did_resize;
 
+    // We will rebucket.
     size_type resize_to =
       settings.min_buckets(num_elements - num_deleted + delta, bucket_count());
 
@@ -731,6 +735,8 @@ class dense_hashtable {
     }
     assert(settings.use_empty());
     assert((new_num_buckets & (new_num_buckets - 1)) == 0);  // a power of two
+    // If settings.shrink_factor() is zero then we must not shrink.
+    assert(settings.shrink_factor() > 0 || new_num_buckets >= num_buckets);
     pointer new_table = get_internal_allocator().allocate(new_num_buckets);
 
     fill_range_with_empty(new_table, new_table + new_num_buckets);
@@ -1211,7 +1217,7 @@ class dense_hashtable {
   template <class ForwardIterator>
   void insert(ForwardIterator f, ForwardIterator l, std::forward_iterator_tag) {
     size_t dist = std::distance(f, l);
-    if (dist >= (std::numeric_limits<size_type>::max)()) {
+    if (dist >= std::numeric_limits<size_type>::max()) {
       throw std::length_error("insert-range overflow");
     }
     resize_delta(static_cast<size_type>(dist));
