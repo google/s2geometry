@@ -184,10 +184,10 @@ using LayerVector = std::vector<std::unique_ptr<S2Builder::Layer>>;
 //   polyline_options.set_polyline_type(Graph::PolylineType::WALK);
 //   polyline_options.set_duplicate_edges(DuplicateEdges::MERGE);
 //   LayerVector layers(3);
-//   layers[0] = absl::MakeUnique<IndexedS2PointVectorLayer>(index);
-//   layers[1] = absl::MakeUnique<IndexedS2PolylineVectorLayer>(
+//   layers[0] = absl::make_unique<IndexedS2PointVectorLayer>(index);
+//   layers[1] = absl::make_unique<IndexedS2PolylineVectorLayer>(
 //       index, polyline_options);
-//   layers[2] = absl::MakeUnique<IndexedS2PolygonLayer>(index);
+//   layers[2] = absl::make_unique<IndexedS2PolygonLayer>(index);
 //   S2BoundaryOperation op(S2BoundaryOperation::OpType::UNION,
 //                          NormalizeClosedSet(std::move(layers)));
 //   return op.Build(a, b, error);

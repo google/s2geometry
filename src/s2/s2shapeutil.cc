@@ -446,8 +446,8 @@ static void GetShapeEdges(S2ShapeIndexBase const& index,
   for (int s = 0; s < cell.num_clipped(); ++s) {
     S2ClippedShape const& clipped = cell.clipped(s);
     S2Shape const& shape = *index.shape(clipped.shape_id());
-    int num_clipped = clipped.num_edges();
-    for (int i = 0; i < num_clipped; ++i) {
+    int num_edges = clipped.num_edges();
+    for (int i = 0; i < num_edges; ++i) {
       shape_edges->push_back(ShapeEdge(shape, clipped.edge(i)));
     }
   }

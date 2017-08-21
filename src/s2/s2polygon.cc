@@ -65,7 +65,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/coding/coder.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using s2builderutil::IdentitySnapFunction;
 using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
@@ -118,7 +118,7 @@ S2Polygon::S2Polygon(unique_ptr<S2Loop> loop, S2Debug override)
 
 S2Polygon::S2Polygon(S2Cell const& cell)
     : s2debug_override_(S2Debug::ALLOW) {
-  Init(MakeUnique<S2Loop>(cell));
+  Init(make_unique<S2Loop>(cell));
 }
 
 void S2Polygon::set_s2debug_override(S2Debug override) {
@@ -301,7 +301,7 @@ void S2Polygon::InitLoops(LoopMap* loop_map) {
 
 void S2Polygon::InitIndex() {
   DCHECK_EQ(0, index_.num_shape_ids());
-  index_.Add(MakeUnique<Shape>(this));
+  index_.Add(make_unique<Shape>(this));
   if (!FLAGS_s2polygon_lazy_indexing) {
     index_.ForceApplyUpdates();  // Force index construction now.
   }
@@ -775,14 +775,14 @@ bool S2Polygon::Contains(S2ShapeIndex::Iterator const& it,
   // given point and counting edge crossings.
   S2ClippedShape const& a_clipped = it.cell().clipped(0);
   bool inside = a_clipped.contains_center();
-  int a_num_clipped = a_clipped.num_edges();
-  if (a_num_clipped > 0) {
+  int a_num_edges = a_clipped.num_edges();
+  if (a_num_edges > 0) {
     auto shape = down_cast<Shape const*>(index_.shape(0));
     S2CopyingEdgeCrosser crosser(it.center(), p);
     // TODO(ericv): For more polygons with a large number of loops, it would
     // be more efficient to test the edges of each chain separately.  This
     // would avoid the need to figure out which loop contains each edge.
-    for (int i = 0; i < a_num_clipped; ++i) {
+    for (int i = 0; i < a_num_edges; ++i) {
       auto edge = shape->edge(a_clipped.edge(i));
       inside ^= crosser.EdgeOrVertexCrossing(edge.v0, edge.v1);
     }
@@ -891,7 +891,7 @@ bool S2Polygon::DecodeLossless(Decoder* const decoder, bool within_scope) {
   loops_.reserve(num_loops);
   num_vertices_ = 0;
   for (int i = 0; i < num_loops; ++i) {
-    loops_.push_back(MakeUnique<S2Loop>());
+    loops_.push_back(make_unique<S2Loop>());
     loops_.back()->set_s2debug_override(s2debug_override());
     if (within_scope) {
       if (!loops_.back()->DecodeWithinScope(decoder)) return false;
@@ -932,7 +932,7 @@ void S2Polygon::Invert() {
 
   // The empty and full polygons are handled specially.
   if (is_empty()) {
-    loops_.push_back(MakeUnique<S2Loop>(S2Loop::kFull()));
+    loops_.push_back(make_unique<S2Loop>(S2Loop::kFull()));
   } else if (is_full()) {
     ClearLoops();
   } else {
@@ -995,7 +995,7 @@ bool S2Polygon::InitToOperation(S2BoundaryOperation::OpType op_type,
                                 S2Polygon const& a, S2Polygon const& b) {
   S2BoundaryOperation::Options options;
   options.set_snap_function(snap_function);
-  S2BoundaryOperation op(op_type, MakeUnique<S2PolygonLayer>(this),
+  S2BoundaryOperation op(op_type, make_unique<S2PolygonLayer>(this),
                          options);
   S2Error error;
   if (!op.Build(a.index_, b.index_, &error)) {
@@ -1158,7 +1158,7 @@ void S2Polygon::InitToSymmetricDifference(
 }
 
 void S2Polygon::InitFromBuilder(S2Polygon const& a, S2Builder* builder) {
-  builder->StartLayer(MakeUnique<S2PolygonLayer>(this));
+  builder->StartLayer(make_unique<S2PolygonLayer>(this));
   builder->AddPolygon(a);
   S2Error error;
   if (!builder->Build(&error)) {
@@ -1265,7 +1265,7 @@ void S2Polygon::InitToSimplifiedInCell(
       (IdentitySnapFunction(S2::kIntersectionError)));
   options.set_idempotent(false);  // Force snapping up to the given radius
   S2Builder builder(options);
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(this));
+  builder.StartLayer(make_unique<S2PolygonLayer>(this));
   for (auto const& polyline : polylines) {
     builder.AddPolyline(*polyline);
   }
@@ -1313,7 +1313,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
         // still connect with any boundary edge(s) there.
         if (!in_interior) {
           S2Polyline* polyline = new S2Polyline;
-          builder.StartLayer(MakeUnique<S2PolylineLayer>(polyline));
+          builder.StartLayer(make_unique<S2PolylineLayer>(polyline));
           polylines.emplace_back(polyline);
           if (mask0 != 0) builder.ForceVertex(*v0);
           in_interior = true;
@@ -1346,10 +1346,10 @@ vector<unique_ptr<S2Polyline>> S2Polygon::OperationWithPolyline(
   layer_options.set_polyline_type(
       S2PolylineVectorLayer::Options::PolylineType::WALK);
   S2BoundaryOperation op(
-      op_type, MakeUnique<S2PolylineVectorLayer>(&result, layer_options),
+      op_type, make_unique<S2PolylineVectorLayer>(&result, layer_options),
       options);
   S2ShapeIndex a_index;
-  a_index.Add(MakeUnique<S2Polyline::Shape>(&a));
+  a_index.Add(make_unique<S2Polyline::Shape>(&a));
   S2Error error;
   if (!op.Build(a_index, index_, &error)) {
     LOG(DFATAL) << "Polyline " << S2BoundaryOperation::OpTypeToString(op_type)
@@ -1436,7 +1436,7 @@ unique_ptr<S2Polygon> S2Polygon::DestructiveApproxUnion(
     queue.erase(smallest_it);
 
     // Union and add result back to queue.
-    auto union_polygon = MakeUnique<S2Polygon>();
+    auto union_polygon = make_unique<S2Polygon>();
     union_polygon->InitToApproxUnion(a_polygon.get(), b_polygon.get(),
                                      snap_radius);
     queue.insert(std::make_pair(a_size + b_size, std::move(union_polygon)));
@@ -1447,7 +1447,7 @@ unique_ptr<S2Polygon> S2Polygon::DestructiveApproxUnion(
   }
 
   if (queue.empty())
-    return MakeUnique<S2Polygon>();
+    return make_unique<S2Polygon>();
   else
     return std::move(queue.begin()->second);
 }
@@ -1462,7 +1462,7 @@ void S2Polygon::InitToCellUnionBorder(S2CellUnion const& cells) {
   double snap_radius = 0.5 * S2::kMinWidth.GetValue(S2CellId::kMaxLevel);
   S2Builder builder((S2Builder::Options(
       IdentitySnapFunction(S1Angle::Radians(snap_radius)))));
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(this));
+  builder.StartLayer(make_unique<S2PolygonLayer>(this));
   for (int i = 0; i < cells.num_cells(); ++i) {
     S2Loop cell_loop(S2Cell(cells.cell_id(i)));
     builder.AddLoop(cell_loop);
@@ -1618,7 +1618,7 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   if (num_loops > FLAGS_s2polygon_decode_max_num_loops) return false;
   loops_.reserve(num_loops);
   for (int i = 0; i < num_loops; ++i) {
-    auto loop = MakeUnique<S2Loop>();
+    auto loop = make_unique<S2Loop>();
     loop->set_s2debug_override(s2debug_override());
     if (!loop->DecodeCompressed(decoder, snap_level)) {
       return false;

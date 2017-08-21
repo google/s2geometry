@@ -62,7 +62,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/math/matrix3x3.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using s2builderutil::IntLatLngSnapFunction;
 using s2builderutil::S2PolygonLayer;
 using std::max;
@@ -339,11 +339,11 @@ static void CheckEqual(S2Polygon const& a, S2Polygon const& b,
   if (a.BoundaryApproxEquals(b, max_error)) return;
   S2Builder builder((S2Builder::Options()));
   S2Polygon a2, b2;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&a2));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&a2));
   builder.AddPolygon(a);
   S2Error error;
   ASSERT_TRUE(builder.Build(&error)) << error.text();
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&b2));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&b2));
   builder.AddPolygon(b);
   ASSERT_TRUE(builder.Build(&error)) << error.text();
   EXPECT_TRUE(a2.BoundaryApproxEquals(b2, max_error))
@@ -455,7 +455,7 @@ static void TestOneDisjointPair(S2Polygon const& a, S2Polygon const& b) {
 
   S2Polygon ab, c, d, e, f, g;
   S2Builder builder((S2Builder::Options()));
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&ab));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&ab));
   builder.AddPolygon(a);
   builder.AddPolygon(b);
   S2Error error;
@@ -1663,7 +1663,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
 
     S2Builder builder((S2Builder::Options()));
     S2Polygon a_and_b;
-    builder.StartLayer(MakeUnique<s2builderutil::S2PolygonLayer>(&a_and_b));
+    builder.StartLayer(make_unique<s2builderutil::S2PolygonLayer>(&a_and_b));
     for (auto const& polyline : polylines) {
       builder.AddPolyline(*polyline);
     }
@@ -1715,7 +1715,7 @@ static void SplitAndAssemble(S2Polygon const& polygon) {
   // Normalize the polygon's loop structure by rebuilding it with S2Builder.
   S2Builder builder((S2Builder::Options()));
   S2Polygon expected;
-  builder.StartLayer(MakeUnique<s2builderutil::S2PolygonLayer>(&expected));
+  builder.StartLayer(make_unique<s2builderutil::S2PolygonLayer>(&expected));
   builder.AddPolygon(polygon);
 
   S2Error error;
@@ -1746,7 +1746,7 @@ static void SplitAndAssemble(S2Polygon const& polygon) {
     for (S2CellId cell_id : cells) {
       S2Cell cell(cell_id);
       S2Polygon window(cell);
-      auto piece = MakeUnique<S2Polygon>();
+      auto piece = make_unique<S2Polygon>();
       piece->InitToIntersection(&polygon, &window);
       VLOG(4) << "\nPiece " << i++ << ":\n  Window: "
               << s2textformat::ToString(window)
@@ -1765,7 +1765,7 @@ static void SplitAndAssemble(S2Polygon const& polygon) {
     while (pieces.size() > 1) {
       unique_ptr<S2Polygon> a(ChoosePiece(&pieces));
       unique_ptr<S2Polygon> b(ChoosePiece(&pieces));
-      auto c = MakeUnique<S2Polygon>();
+      auto c = make_unique<S2Polygon>();
       c->InitToUnion(a.get(), b.get());
       VLOG(4) << "\nJoining piece a: " << s2textformat::ToString(*a)
               << "\n  With piece b: " << s2textformat::ToString(*b)
@@ -1870,8 +1870,8 @@ TEST(S2Polygon, UnionWithAmbgiuousCrossings) {
     S2Point(0.044855344598821352, -0.80679219751320641, 0.589130162266992),
     S2Point(0.044854017712818696, -0.80679210327223405, 0.58913039235179754)
   };
-  S2Polygon a(MakeUnique<S2Loop>(a_vertices));
-  S2Polygon b(MakeUnique<S2Loop>(b_vertices));
+  S2Polygon a(make_unique<S2Loop>(a_vertices));
+  S2Polygon b(make_unique<S2Loop>(b_vertices));
   S2Polygon c;
   c.InitToUnion(&a, &b);
   EXPECT_FALSE(c.is_empty());
@@ -2010,9 +2010,9 @@ TEST(S2Polygon, MultipleInit) {
 }
 
 TEST(S2Polygon, InitSingleLoop) {
-  S2Polygon polygon(MakeUnique<S2Loop>(S2Loop::kEmpty()));
+  S2Polygon polygon(make_unique<S2Loop>(S2Loop::kEmpty()));
   EXPECT_TRUE(polygon.is_empty());
-  polygon.Init(MakeUnique<S2Loop>(S2Loop::kFull()));
+  polygon.Init(make_unique<S2Loop>(S2Loop::kFull()));
   EXPECT_TRUE(polygon.is_full());
   polygon.Init(s2textformat::MakeLoop("0:0, 0:10, 10:0"));
   EXPECT_EQ(3, polygon.num_vertices());
@@ -2253,7 +2253,7 @@ class IsValidTest : public testing::Test {
   void CheckInvalid(string const& snippet) {
     vector<unique_ptr<S2Loop>> loops;
     for (vector<S2Point>* vloop : vloops_) {
-      loops.push_back(MakeUnique<S2Loop>(*vloop, S2Debug::DISABLE));
+      loops.push_back(make_unique<S2Loop>(*vloop, S2Debug::DISABLE));
     }
     std::random_shuffle(loops.begin(), loops.end(), *rnd_);
     S2Polygon polygon;
@@ -2539,7 +2539,7 @@ class S2PolygonSimplifierTest : public ::testing::Test {
   void SetInput(unique_ptr<S2Polygon> poly, double tolerance_in_degrees) {
     original = std::move(poly);
 
-    simplified = MakeUnique<S2Polygon>();
+    simplified = make_unique<S2Polygon>();
     simplified->InitToSimplified(*original,
                                  s2builderutil::IdentitySnapFunction(
                                      S1Angle::Degrees(tolerance_in_degrees)));
@@ -2640,7 +2640,7 @@ unique_ptr<S2Polygon> MakeCellPolygon(
     }
     loops.emplace_back(new S2Loop(loop_vertices));
   }
-  return MakeUnique<S2Polygon>(std::move(loops));
+  return make_unique<S2Polygon>(std::move(loops));
 }
 
 TEST(InitToSimplifiedInCell, PointsOnCellBoundaryKept) {
@@ -2732,7 +2732,7 @@ TEST(InitToSimplifiedInCell, PolylineAssemblyBug) {
 unique_ptr<S2Polygon> MakeRegularPolygon(
     const string& center, int num_points, double radius_in_degrees) {
   S1Angle radius = S1Angle::Degrees(radius_in_degrees);
-  return MakeUnique<S2Polygon>(S2Loop::MakeRegularLoop(
+  return make_unique<S2Polygon>(S2Loop::MakeRegularLoop(
       s2textformat::MakePoint(center), radius, num_points));
 }
 
@@ -2929,7 +2929,7 @@ TEST(S2Polygon, ManyLoopPolygonShape) {
 TEST(S2PolygonOwningShape, Ownership) {
   // Debug mode builds will catch any memory leak below.
   vector<unique_ptr<S2Loop>> loops;
-  auto polygon = MakeUnique<S2Polygon>(std::move(loops));
+  auto polygon = make_unique<S2Polygon>(std::move(loops));
   S2Polygon::OwningShape shape(std::move(polygon));
 }
 

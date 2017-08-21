@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <type_traits>
 
 namespace absl {
 
@@ -59,12 +60,19 @@ bool EqualImpl(InputIter1 first1, InputIter1 last1, InputIter2 first2,
          std::equal(first1, last1, first2, std::forward<Pred>(pred));
 }
 
+template <typename It>
+It RotateImpl(It first, It middle, It last, std::true_type) {
+  return std::rotate(first, middle, last);
+}
+
+template <typename It>
+It RotateImpl(It first, It middle, It last, std::false_type) {
+  std::rotate(first, middle, last);
+  return std::next(first, std::distance(middle, last));
+}
+
 }  // namespace algorithm_internal_1210
 
-// -----------------------------------------------------------------------------
-// Function Template: equal()
-// -----------------------------------------------------------------------------
-//
 // Compares the equality of two ranges specified by pairs of iterators, using
 // the given predicate, returning true iff for each corresponding iterator i1
 // and i2 in the first and second range respectively, pred(*i1, *i2) == true
@@ -94,10 +102,6 @@ bool equal(InputIter1 first1, InputIter1 last1, InputIter2 first2,
                      algorithm_internal_1210::EqualTo{});
 }
 
-// -----------------------------------------------------------------------------
-// Function Template: linear_search()
-// -----------------------------------------------------------------------------
-//
 // Performs a linear search for `value` using the iterator `first` up to
 // but not including `last`, returning true if [`first`, `last`) contains an
 // element equal to `value`.
@@ -109,6 +113,25 @@ template <typename InputIterator, typename EqualityComparable>
 bool linear_search(InputIterator first, InputIterator last,
                    const EqualityComparable& value) {
   return std::find(first, last, value) != last;
+}
+
+// Performs a left rotation on a range of elements (`first`, `last`) such that
+// `middle` is now the first element. `rotate()` returns an iterator pointing to
+// the first element before rotation. This function is exactly the same as
+// `std::rotate`, but fixes a bug in gcc
+// <= 4.9 where `std::rotate` returns `void` instead of an iterator.
+//
+// The complexity of this algorithm is the same as that of `std::rotate`, but if
+// `ForwardIterator` is not a random-access iterator, then `absl::rotate`
+// performs an additional pass over the range to construct the return value.
+
+template <typename ForwardIterator>
+ForwardIterator rotate(ForwardIterator first, ForwardIterator middle,
+                       ForwardIterator last) {
+  return algorithm_internal_1210::RotateImpl(
+      first, middle, last,
+      std::is_same<decltype(std::rotate(first, middle, last)),
+                   ForwardIterator>());
 }
 
 }  // namespace absl

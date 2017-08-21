@@ -199,7 +199,7 @@ S2ShapeIndexCell const* S2ShapeIndex::Iterator::GetCell() const {
 }
 
 unique_ptr<S2ShapeIndex::IteratorBase> S2ShapeIndex::Iterator::Clone() const {
-  return absl::MakeUnique<Iterator>(*this);
+  return absl::make_unique<Iterator>(*this);
 }
 
 void S2ShapeIndex::Iterator::Copy(IteratorBase const& other)  {
@@ -313,8 +313,8 @@ bool PointContainmentTester::ContainedBy(S2Shape const* shape,
     return false;
   }
   bool inside = clipped.contains_center();
-  int num_clipped = clipped.num_edges();
-  if (num_clipped == 0) {
+  int num_edges = clipped.num_edges();
+  if (num_edges == 0) {
     return inside;
   }
   // We initialize the EdgeCrosser lazily.  This saves work when the cell
@@ -325,7 +325,7 @@ bool PointContainmentTester::ContainedBy(S2Shape const* shape,
   }
   // Test containment by drawing a line segment from the cell center to the
   // given point and counting edge crossings.
-  for (int i = 0; i < num_clipped; ++i) {
+  for (int i = 0; i < num_edges; ++i) {
     auto edge = shape->edge(clipped.edge(i));
     inside ^= crosser_.EdgeOrVertexCrossing(edge.v0, edge.v1);
   }
@@ -1425,7 +1425,7 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
     int shape_id = clipped.shape_id();
     S2Shape const* shape = this->shape(shape_id);
     if (shape == nullptr) continue;  // This shape is being removed.
-    int num_clipped = clipped.num_edges();
+    int num_edges = clipped.num_edges();
 
     // If this shape has an interior, start tracking whether we are inside the
     // shape.  UpdateEdges() wants to know whether the entry vertex of this
@@ -1440,14 +1440,14 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
       // There might not be any edges in this entire cell (i.e., it might be
       // in the interior of all shapes), so we delay updating the tracker
       // until we see the first edge.
-      if (!tracker_moved && num_clipped > 0) {
+      if (!tracker_moved && num_edges > 0) {
         tracker->MoveTo(pcell.GetCenter());
         tracker->DrawTo(pcell.GetEntryVertex());
         tracker->set_next_cellid(pcell.id());
         tracker_moved = true;
       }
     }
-    for (int i = 0; i < num_clipped; ++i) {
+    for (int i = 0; i < num_edges; ++i) {
       int e = clipped.edge(i);
       edge.edge_id = e;
       edge.edge = shape->edge(e);

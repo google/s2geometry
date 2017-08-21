@@ -23,7 +23,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include <gtest/gtest.h>
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::unique_ptr;
 using std::vector;
 
@@ -43,7 +43,7 @@ TEST(GraphCloningLayer, MakeIndependentCopy) {
   S2Builder builder((S2Builder::Options()));
   GraphOptions graph_options(EdgeType::DIRECTED, DegenerateEdges::DISCARD,
                              DuplicateEdges::MERGE, SiblingPairs::KEEP);
-  builder.StartLayer(MakeUnique<GraphCloningLayer>(graph_options, &gc));
+  builder.StartLayer(make_unique<GraphCloningLayer>(graph_options, &gc));
   S2Point v0(1, 0, 0), v1(0, 1, 0);
   builder.set_label(14);
   builder.AddEdge(v0, v1);
@@ -67,11 +67,11 @@ TEST(GraphAppendingLayer, AppendsTwoGraphs) {
   vector<Graph> graphs;
   vector<unique_ptr<GraphClone>> clones;
   S2Builder builder((S2Builder::Options()));
-  builder.StartLayer(MakeUnique<GraphAppendingLayer>(
+  builder.StartLayer(make_unique<GraphAppendingLayer>(
       GraphOptions(), &graphs, &clones));
   S2Point v0(1, 0, 0), v1(0, 1, 0);
   builder.AddEdge(v0, v1);
-  builder.StartLayer(MakeUnique<GraphAppendingLayer>(
+  builder.StartLayer(make_unique<GraphAppendingLayer>(
       GraphOptions(), &graphs, &clones));
   builder.AddEdge(v1, v0);
   S2Error error;

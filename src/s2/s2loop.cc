@@ -60,7 +60,7 @@
 #include "s2/util/math/matrix3x3.h"
 
 using absl::MakeSpan;
-using absl::MakeUnique;
+using absl::make_unique;
 using std::fabs;
 using std::max;
 using std::min;
@@ -272,7 +272,7 @@ void S2Loop::InitBound() {
 }
 
 void S2Loop::InitIndex() {
-  index_.Add(MakeUnique<Shape>(this));
+  index_.Add(make_unique<Shape>(this));
   if (!FLAGS_s2loop_lazy_indexing) {
     index_.ForceApplyUpdates();  // Force index construction now.
   }
@@ -623,10 +623,10 @@ bool S2Loop::BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
                                       S2Cell const& target) const {
   DCHECK(it.id().contains(target.id()));
   S2ClippedShape const& a_clipped = it.cell().clipped(0);
-  int a_num_clipped = a_clipped.num_edges();
+  int a_num_edges = a_clipped.num_edges();
 
   // If there are no edges, there is no intersection.
-  if (a_num_clipped == 0) return false;
+  if (a_num_edges == 0) return false;
 
   // We can save some work if "target" is the index cell itself.
   if (it.id() == target.id()) return true;
@@ -635,7 +635,7 @@ bool S2Loop::BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
   static double const kMaxError = (S2::kFaceClipErrorUVCoord +
                                    S2::kIntersectsRectErrorUVDist);
   R2Rect bound = target.GetBoundUV().Expanded(kMaxError);
-  for (int i = 0; i < a_num_clipped; ++i) {
+  for (int i = 0; i < a_num_edges; ++i) {
     int ai = a_clipped.edge(i);
     R2Point v0, v1;
     if (S2::ClipToPaddedFace(vertex(ai), vertex(ai+1), target.face(),
@@ -707,12 +707,12 @@ bool S2Loop::Contains(S2ShapeIndex::Iterator const& it,
   // given point and counting edge crossings.
   S2ClippedShape const& a_clipped = it.cell().clipped(0);
   bool inside = a_clipped.contains_center();
-  int a_num_clipped = a_clipped.num_edges();
-  if (a_num_clipped > 0) {
+  int a_num_edges = a_clipped.num_edges();
+  if (a_num_edges > 0) {
     S2Point center = it.center();
     S2EdgeCrosser crosser(&center, &p);
     int ai_prev = -2;
-    for (int i = 0; i < a_num_clipped; ++i) {
+    for (int i = 0; i < a_num_edges; ++i) {
       int ai = a_clipped.edge(i);
       if (ai != ai_prev + 1) crosser.RestartAt(&vertex(ai));
       ai_prev = ai;
@@ -986,8 +986,8 @@ inline void LoopCrosser::StartEdge(int aj) {
 
 inline bool LoopCrosser::EdgeCrossesCell(S2ClippedShape const& b_clipped) {
   // Test the current edge of A against all edges of "b_clipped".
-  int b_num_clipped = b_clipped.num_edges();
-  for (int j = 0; j < b_num_clipped; ++j) {
+  int b_num_edges = b_clipped.num_edges();
+  for (int j = 0; j < b_num_edges; ++j) {
     int bj = b_clipped.edge(j);
     if (bj != bj_prev_ + 1) crosser_.RestartAt(&b_.vertex(bj));
     bj_prev_ = bj;
@@ -1014,8 +1014,8 @@ inline bool LoopCrosser::EdgeCrossesCell(S2ClippedShape const& b_clipped) {
 bool LoopCrosser::CellCrossesCell(S2ClippedShape const& a_clipped,
                                   S2ClippedShape const& b_clipped) {
   // Test all edges of "a_clipped" against all edges of "b_clipped".
-  int a_num_clipped = a_clipped.num_edges();
-  for (int i = 0; i < a_num_clipped; ++i) {
+  int a_num_edges = a_clipped.num_edges();
+  for (int i = 0; i < a_num_edges; ++i) {
     StartEdge(a_clipped.edge(i));
     if (EdgeCrossesCell(b_clipped)) return true;
   }
@@ -1028,8 +1028,8 @@ bool LoopCrosser::CellCrossesAnySubcell(S2ClippedShape const& a_clipped,
   // edges are guaranteed to be children of "b_id", which lets us find the
   // correct index cells more efficiently.
   S2PaddedCell b_root(b_id, 0);
-  int a_num_clipped = a_clipped.num_edges();
-  for (int i = 0; i < a_num_clipped; ++i) {
+  int a_num_edges = a_clipped.num_edges();
+  for (int i = 0; i < a_num_edges; ++i) {
     int aj = a_clipped.edge(i);
     // Use an S2CrossingEdgeQuery starting at "b_root" to find the index cells
     // of B that might contain crossing edges.
@@ -1626,7 +1626,7 @@ std::unique_ptr<S2Loop> S2Loop::MakeRegularLoop(Matrix3x3_d const& frame,
     S2Point p(r * cos(angle), r * sin(angle), z);
     vertices.push_back(S2::FromFrame(frame, p).Normalize());
   }
-  return MakeUnique<S2Loop>(vertices);
+  return make_unique<S2Loop>(vertices);
 }
 
 size_t S2Loop::BytesUsed() const {

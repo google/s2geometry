@@ -47,8 +47,8 @@
 #include "s2/s2textformat.h"
 #include "s2/third_party/absl/memory/memory.h"
 
-using absl::MakeUnique;
 using absl::WrapUnique;
+using absl::make_unique;
 using s2shapeutil::EdgeVectorShape;
 using s2textformat::MakePolyline;
 using std::unique_ptr;
@@ -230,7 +230,7 @@ TEST_F(S2ShapeIndexTest, NoEdges) {
 }
 
 TEST_F(S2ShapeIndexTest, OneEdge) {
-  index_.Add(MakeUnique<EdgeVectorShape>(S2Point(1, 0, 0),
+  index_.Add(make_unique<EdgeVectorShape>(S2Point(1, 0, 0),
                                          S2Point(0, 1, 0)));
   QuadraticValidate();
   TestIteratorMethods(index_);
@@ -245,7 +245,7 @@ TEST_F(S2ShapeIndexTest, ShrinkToFitOptimization) {
   // indicate that they are contained by the loop.
   unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(
       S2Point(1, 0.5, 0.5).Normalize(), S1Angle::Degrees(89), 100));
-  index_.Add(MakeUnique<S2Loop::Shape>(loop.get()));
+  index_.Add(make_unique<S2Loop::Shape>(loop.get()));
   QuadraticValidate();
 }
 
@@ -258,7 +258,7 @@ TEST_F(S2ShapeIndexTest, LoopsSpanningThreeFaces) {
                                     kNumEdges, &polygon);
   vector<unique_ptr<S2Loop>> loops = polygon.Release();
   for (auto& loop : loops) {
-    index_.Add(MakeUnique<S2Loop::Shape>(&*loop));
+    index_.Add(make_unique<S2Loop::Shape>(&*loop));
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
@@ -269,7 +269,7 @@ TEST_F(S2ShapeIndexTest, ManyIdenticalEdges) {
   S2Point a = S2Point(0.99, 0.99, 1).Normalize();
   S2Point b = S2Point(-0.99, -0.99, 1).Normalize();
   for (int i = 0; i < kNumEdges; ++i) {
-    index_.Add(MakeUnique<EdgeVectorShape>(a, b));
+    index_.Add(make_unique<EdgeVectorShape>(a, b));
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
@@ -285,7 +285,7 @@ TEST_F(S2ShapeIndexTest, DegenerateEdge) {
   // This test verifies that degenerate edges are supported.  The following
   // point is a cube face vertex, and so it should be indexed in 3 cells.
   S2Point a = S2Point(1, 1, 1).Normalize();
-  auto shape = MakeUnique<EdgeVectorShape>();
+  auto shape = make_unique<EdgeVectorShape>();
   shape->Add(a, a);
   index_.Add(std::move(shape));
   QuadraticValidate();
@@ -307,7 +307,7 @@ TEST_F(S2ShapeIndexTest, ManyTinyEdges) {
   // Construct two points in the same leaf cell.
   S2Point a = S2CellId(S2Point(1, 0, 0)).ToPoint();
   S2Point b = (a + S2Point(0, 1e-12, 0)).Normalize();
-  auto shape = MakeUnique<EdgeVectorShape>();
+  auto shape = make_unique<EdgeVectorShape>();
   for (int i = 0; i < kNumEdges; ++i) {
     shape->Add(a, b);
   }
@@ -327,7 +327,7 @@ TEST_F(S2ShapeIndexTest, SimpleUpdates) {
   S2Polygon polygon;
   S2Testing::ConcentricLoopsPolygon(S2Point(1, 0, 0), 5, 20, &polygon);
   for (int i = 0; i < polygon.num_loops(); ++i) {
-    index_.Add(MakeUnique<S2Loop::Shape>(polygon.loop(i)));
+    index_.Add(make_unique<S2Loop::Shape>(polygon.loop(i)));
     QuadraticValidate();
   }
   for (int id = 0; id < polygon.num_loops(); ++id) {
@@ -341,15 +341,15 @@ TEST_F(S2ShapeIndexTest, RandomUpdates) {
   S2Testing::rnd.Reset(FLAGS_s2_random_seed);
 
   // A few polylines.
-  index_.Add(MakeUnique<S2Polyline::OwningShape>(
+  index_.Add(make_unique<S2Polyline::OwningShape>(
       MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6")));
-  index_.Add(MakeUnique<S2Polyline::OwningShape>(
+  index_.Add(make_unique<S2Polyline::OwningShape>(
       MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6")));
-  index_.Add(MakeUnique<S2Polyline::OwningShape>(
+  index_.Add(make_unique<S2Polyline::OwningShape>(
       MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6")));
 
   // A loop that used to trigger an indexing bug.
-  index_.Add(MakeUnique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
+  index_.Add(make_unique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
       S2Point(1, 0.5, 0.5).Normalize(), S1Angle::Degrees(89), 20)));
 
   // Five concentric loops.
@@ -357,22 +357,22 @@ TEST_F(S2ShapeIndexTest, RandomUpdates) {
   S2Testing::ConcentricLoopsPolygon(S2Point(1, -1, -1).Normalize(),
                                     5, 20, &polygon5);
   for (int i = 0; i < polygon5.num_loops(); ++i) {
-    index_.Add(MakeUnique<S2Loop::Shape>(polygon5.loop(i)));
+    index_.Add(make_unique<S2Loop::Shape>(polygon5.loop(i)));
   }
 
   // Two clockwise loops around S2Cell cube vertices.
-  index_.Add(MakeUnique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
+  index_.Add(make_unique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
       S2Point(-1, 1, 1).Normalize(), S1Angle::Radians(M_PI - 0.001), 10)));
-  index_.Add(MakeUnique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
+  index_.Add(make_unique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
       S2Point(-1, -1, -1).Normalize(), S1Angle::Radians(M_PI - 0.001), 10)));
 
   // A shape with no edges and no interior.
-  index_.Add(MakeUnique<S2Loop::OwningShape>(
-      MakeUnique<S2Loop>(S2Loop::kEmpty())));
+  index_.Add(make_unique<S2Loop::OwningShape>(
+      make_unique<S2Loop>(S2Loop::kEmpty())));
 
   // A shape with no edges that covers the entire sphere.
-  index_.Add(MakeUnique<S2Loop::OwningShape>(
-      MakeUnique<S2Loop>(S2Loop::kFull())));
+  index_.Add(make_unique<S2Loop::OwningShape>(
+      make_unique<S2Loop>(S2Loop::kFull())));
 
   vector<unique_ptr<S2Shape>> released;
   vector<int> added(index_.num_shape_ids());
@@ -424,7 +424,7 @@ void TestHasCrossingPermutations(vector<unique_ptr<S2Loop>>* loops, int i,
   if (i == loops->size()) {
     S2ShapeIndex index;
     S2Polygon polygon(std::move(*loops));
-    index.Add(MakeUnique<S2Polygon::Shape>(&polygon));
+    index.Add(make_unique<S2Polygon::Shape>(&polygon));
     EXPECT_EQ(has_crossing, HasAnyCrossing(index));
     *loops = polygon.Release();
   } else {
@@ -434,7 +434,7 @@ void TestHasCrossingPermutations(vector<unique_ptr<S2Loop>>* loops, int i,
       for (int k = 0; k < orig_loop->num_vertices(); ++k) {
         vertices.push_back(orig_loop->vertex(j + k));
       }
-      (*loops)[i] = MakeUnique<S2Loop>(vertices);
+      (*loops)[i] = make_unique<S2Loop>(vertices);
       TestHasCrossingPermutations(loops, i+1, has_crossing);
     }
     (*loops)[i] = std::move(orig_loop);
@@ -537,7 +537,7 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
     int num_vertices = 4 * S2Testing::rnd.Skewed(10);  // Up to 4K vertices
     unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(
         S2Testing::RandomPoint(), S2Testing::KmToAngle(5), num_vertices));
-    index_.Add(MakeUnique<S2Loop::Shape>(loop.get()));
+    index_.Add(make_unique<S2Loop::Shape>(loop.get()));
     num_readers_left_ = kNumReaders;
     ++num_updates_;
     update_ready_.SignalAll();
@@ -562,7 +562,7 @@ TEST(S2ShapeIndex, GetContainingShapes) {
     std::unique_ptr<S2Loop> loop = S2Loop::MakeRegularLoop(
         S2Testing::SamplePoint(center_cap),
         S2Testing::rnd.RandDouble() * kMaxLoopRadius, kNumVerticesPerLoop);
-    index.Add(MakeUnique<S2Loop::OwningShape>(std::move(loop)));
+    index.Add(make_unique<S2Loop::OwningShape>(std::move(loop)));
   }
   for (int i = 0; i < 100; ++i) {
     S2Point p = S2Testing::SamplePoint(center_cap);
@@ -593,10 +593,10 @@ TEST(S2ShapeIndex, MixedGeometry) {
   polylines.push_back(MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"));
   S2ShapeIndex index;
   for (auto& polyline : polylines) {
-    index.Add(MakeUnique<S2Polyline::OwningShape>(std::move(polyline)));
+    index.Add(make_unique<S2Polyline::OwningShape>(std::move(polyline)));
   }
   S2Loop loop(S2Cell(S2CellId::Begin(S2CellId::kMaxLevel)));
-  index.Add(MakeUnique<S2Loop::Shape>(&loop));
+  index.Add(make_unique<S2Loop::Shape>(&loop));
   S2ShapeIndex::Iterator it(&index);
   // No geometry intersects face 1, so there should be no index cells there.
   EXPECT_EQ(S2ShapeIndex::DISJOINT, it.Locate(S2CellId::FromFace(1)));

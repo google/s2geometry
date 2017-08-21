@@ -33,7 +33,7 @@
 #include "s2/s2shapeutil.h"
 #include "s2/s2testing.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::fabs;
 using std::make_pair;
 using std::min;
@@ -74,7 +74,7 @@ class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
   void AddEdges(S2Cap const& index_cap, int num_edges,
                 S2ShapeIndex* index) const override {
-    index->Add(MakeUnique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
+    index->Add(make_unique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
         index_cap.center(), index_cap.GetRadius(), num_edges)));
   }
 };
@@ -86,7 +86,7 @@ class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
                 S2ShapeIndex* index) const override {
     S2Testing::Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(num_edges);
-    index->Add(MakeUnique<S2Loop::OwningShape>(
+    index->Add(make_unique<S2Loop::OwningShape>(
         fractal.MakeLoop(S2Testing::GetRandomFrameAt(index_cap.center()),
                          index_cap.GetRadius())));
   }
@@ -101,7 +101,7 @@ class PointCloudShapeIndexFactory : public ShapeIndexFactory {
     for (int i = 0; i < num_edges; ++i) {
       points.push_back(S2Testing::SamplePoint(index_cap));
     }
-    index->Add(MakeUnique<s2shapeutil::PointVectorShape>(&points));
+    index->Add(make_unique<s2shapeutil::PointVectorShape>(&points));
   }
 };
 

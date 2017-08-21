@@ -32,7 +32,7 @@
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::unique_ptr;
 using std::vector;
 
@@ -108,7 +108,7 @@ void DegeneracyCheckingLayer::Build(Graph const& g, S2Error* error) {
 void ExpectDegeneracies(string const& polygon_str,
                         vector<TestDegeneracy> const& expected) {
   S2Builder builder((S2Builder::Options()));
-  builder.StartLayer(MakeUnique<DegeneracyCheckingLayer>(expected));
+  builder.StartLayer(make_unique<DegeneracyCheckingLayer>(expected));
   unique_ptr<LaxPolygon> polygon(s2textformat::MakeLaxPolygon(polygon_str));
   builder.AddIsFullPolygonPredicate(
       [&polygon](Graph const& graph, S2Error* error) {

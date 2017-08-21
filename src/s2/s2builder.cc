@@ -101,7 +101,7 @@
 #include "s2/s2shapeutil.h"
 #include "s2/s2textformat.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::max;
 using std::pair;
 using std::unique_ptr;
@@ -134,7 +134,7 @@ S1Angle S2Builder::SnapFunction::max_edge_deviation() const {
 
 S2Builder::Options::Options()
     : snap_function_(
-          MakeUnique<s2builderutil::IdentitySnapFunction>(S1Angle::Zero())),
+          make_unique<s2builderutil::IdentitySnapFunction>(S1Angle::Zero())),
       split_crossing_edges_(false),
       simplify_edge_chains_(false),
       idempotent_(true) {
@@ -488,7 +488,7 @@ void S2Builder::ChooseSites() {
   if (input_vertices_.empty()) return;
 
   S2ShapeIndex input_edge_index;
-  input_edge_index.Add(MakeUnique<VertexIdEdgeVectorShape>(
+  input_edge_index.Add(make_unique<VertexIdEdgeVectorShape>(
       input_edges_, input_vertices_));
   if (options_.split_crossing_edges()) {
     AddEdgeCrossings(input_edge_index);

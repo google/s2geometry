@@ -24,9 +24,6 @@
 #include <iostream>  // NOLINT(readability/streams)
 #include <sstream>
 
-const uint128 kuint128max = absl::MakeUint128(
-    std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
-
 namespace absl {
 
 const uint128 kuint128max = MakeUint128(std::numeric_limits<uint64_t>::max(),
@@ -207,3 +204,7 @@ std::ostream& operator<<(std::ostream& o, const uint128& b) {
 }
 
 }  // namespace absl
+
+
+const uint128 kuint128max = absl::kuint128max;
+

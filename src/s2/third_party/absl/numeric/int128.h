@@ -649,9 +649,11 @@ inline uint128& uint128::operator--() {
 
 }  // namespace absl
 
+
 using ::absl::Uint128High64;  // NOLINT
 using ::absl::Uint128Low64;   // NOLINT
 using ::absl::uint128;        // NOLINT
 extern const uint128 kuint128max;
+
 
 #endif  // S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_

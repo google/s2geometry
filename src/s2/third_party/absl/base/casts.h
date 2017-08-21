@@ -13,13 +13,14 @@
 // limitations under the License.
 //
 
-// Various Google-specific casting templates.
+// -----------------------------------------------------------------------------
+// File: casts.h
+// -----------------------------------------------------------------------------
 //
-// This code is compiled directly on many platforms, including client
-// platforms like Windows, Mac, and embedded systems.  Before making
-// any changes here, make sure that you're not breaking any platforms.
+// This header file defines casting templates to fit use cases not covered by
+// the standard casts provided in the C++ standard. As with all cast operations,
+// use these with caution and only if alternatives do not exist.
 //
-// NOTE FOR GOOGLERS:
 //
 // IWYU pragma: private, include "base/casts.h"
 
@@ -31,89 +32,100 @@
 
 #include "s2/third_party/absl/base/internal/identity.h"
 
-// Use implicit_cast as a safe version of static_cast or const_cast
-// for implicit conversions. For example:
-// - Upcasting in a type hierarchy.
-// - Performing arithmetic conversions (int32 to int64, int to double, etc.).
-// - Adding const or volatile qualifiers.
+// implicit_cast()
 //
-// In general, implicit_cast can be used to convert this code
+// Performs an implicit conversion between types following the language
+// rules for implicit conversion; if an implicit conversion is otherwise
+// allowed by the language in the given context, this function performs such an
+// implicit conversion.
+//
+// Example:
+//
+//   // If the context allows implicit conversion:
+//   From from;
 //   To to = from;
-//   DoSomething(to);
-// to this
-//   DoSomething(implicit_cast<To>(from));
-
+//
+//   // Such code can be replaced by:
+//   implicit_cast<To>(from);
+//
+// An `implicit_cast()` may also be used to annotate numeric type conversions
+// that, although safe, may produce compiler warnings (such as `long` to `int`).
+// Additionally, an `implict_cast()` is also useful within return statements to
+// indicate a specific implicit conversion is being undertaken.
+//
+// Example:
+//
+//   return implicit_cast<double>(size_in_bytes) / capacity_;
+//
+// Annotating code with `implicit_cast()` allows you to explicitly select
+// particular overloads and template instantiations, while providing a safer
+// cast than `reinterpret_cast()` or `static_cast()`.
+//
+// Additionally, an `implicit_cast()` can be used to allow upcasting within a
+// type hierarchy where incorrect use of `static_cast()` could accidentally
+// allow downcasting.
+//
+// Finally, an `implicit_cast()` can be used to perform implicit conversions
+// from unrelated types that otherwise couldn't be implicitly cast directly;
+// C++ will normally only implicitly cast "one step" in such conversions.
+//
+// That is, if C is a type which can be implicitly converted to B, with B being
+// a type that can be implicitly converted to A, an `implicit_cast()` can be
+// used to convert C to B (which the compiler can then implicitly convert to A
+// using language rules).
+//
+// Example:
+//
+//   // Assume an object C is convertible to B, which is implicitly convertible
+//   // to A
+//   A a = implicit_cast<B>(C);
+//
+// Such implicit cast chaining may be useful within template logic.
 template <typename To>
 inline To implicit_cast(typename absl::internal::identity_t<To> to) {
   return to;
 }
 
-// This version of implicit_cast is used when two template arguments
-// are specified. It's obsolete and should not be used.
-template <typename To, typename From>
-inline To implicit_cast(typename absl::internal::identity_t<From> const& f) {
-  return f;
-}
-
-// bit_cast<Dest,Source> is a template function that implements the
-// equivalent of "*reinterpret_cast<Dest*>(&source)".  We need this in
-// very low-level functions like the protobuf library and fast math
-// support.
+// bit_cast()
+//
+// Performs a bitwise cast on a type without changing the underlying bit
+// representation of that type's value. The two types must be of the same size
+// and both types must be trivially copyable. As with most casts, use with
+// caution. A `bit_cast()` might be needed when you need to temporarily treat a
+// type as some other type, such as in the following cases:
+//
+//    * Serialization (casting temporarily to `char *` for those purposes is
+//      always allowed by the C++ standard)
+//    * Managing the individual bits of a type within mathematical operations
+//      that are not normally accessible through that type
+//    * Casting non-pointer types to pointer types (casting the other way is
+//       allowed by `reinterept_cast()` but round-trips cannot occur the other
+//       way).
+//
+// Example:
 //
 //   float f = 3.14159265358979;
 //   int i = bit_cast<int32>(f);
 //   // i = 0x40490fdb
 //
-// The classical address-casting method is:
+// Casting non-pointer types to pointer types and then dereferencing them
+// traditionally produces undefined behavior.
+//
+// Example:
 //
 //   // WRONG
 //   float f = 3.14159265358979;            // WRONG
 //   int i = * reinterpret_cast<int*>(&f);  // WRONG
 //
-// The address-casting method actually produces undefined behavior
-// according to ISO C++ specification section 3.10 -15 -.  Roughly, this
-// section says: if an object in memory has one type, and a program
-// accesses it with a different type, then the result is undefined
-// behavior for most values of "different type".
+// The address-casting method produces undefined behavior according to the ISO
+// C++ specification section [basic.lval]. Roughly, this section says: if an
+// object in memory has one type, and a program accesses it with a different
+// type, the result is undefined behavior for most values of "different type".
 //
-// This is true for any cast syntax, either *(int*)&f or
-// *reinterpret_cast<int*>(&f).  And it is particularly true for
-// conversions between integral lvalues and floating-point lvalues.
-//
-// The purpose of 3.10 -15- is to allow optimizing compilers to assume
-// that expressions with different types refer to different memory.  gcc
-// 4.0.1 has an optimizer that takes advantage of this.  So a
-// non-conforming program quietly produces wildly incorrect output.
-//
-// The problem is not the use of reinterpret_cast.  The problem is type
-// punning: holding an object in memory of one type and reading its bits
-// back using a different type.
-//
-// The C++ standard is more subtle and complex than this, but that
-// is the basic idea.
-//
-// Anyways ...
-//
-// bit_cast<> calls memcpy() which is blessed by the standard,
-// especially by the example in section 3.9 .  Also, of course,
-// bit_cast<> wraps up the nasty logic in one place.
-//
-// Fortunately memcpy() is very fast.  In optimized mode, with a
-// constant size, gcc 2.95.3, gcc 4.0.1, and msvc 7.1 produce inline
-// code with the minimal amount of data movement.  On a 32-bit system,
-// memcpy(d,s,4) compiles to one load and one store, and memcpy(d,s,8)
-// compiles to two loads and two stores.
-//
-// I tested this code with gcc 2.95.3, gcc 4.0.1, icc 8.1, and msvc 7.1.
-//
-// WARNING: if Dest or Source is a non-POD type, the result of the memcpy
-// is likely to surprise you.
-//
-// Props to Bill Gibbons for the compile time assertion technique and
-// Art Komninos and Igor Tandetnik for the msvc experiments.
-//
-// -- mec 2005-10-17
-
+// Such casting results is type punning: holding an object in memory of one type
+// and reading its bits back using a different type. A `bit_cast()` avoids this
+// issue by implementating its casts using `memcpy()`, which avoids introducing
+// this undefined behavior.
 template <class Dest, class Source>
 inline Dest bit_cast(const Source& source) {
   static_assert(sizeof(Dest) == sizeof(Source),

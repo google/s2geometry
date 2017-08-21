@@ -22,7 +22,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2builder_layer.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::vector;
@@ -249,7 +249,7 @@ class NormalizeClosedSetImpl {
     shared_ptr<Impl> impl(new Impl(std::move(output_layers), options));
     LayerVector result;
     for (int dim = 0; dim < 3; ++dim) {
-      result.push_back(MakeUnique<DimensionLayer>(
+      result.push_back(make_unique<DimensionLayer>(
           dim, impl->normalizer_.graph_options()[dim], impl));
     }
     return result;

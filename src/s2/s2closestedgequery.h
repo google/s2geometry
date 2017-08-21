@@ -329,127 +329,11 @@ class S2ClosestEdgeQuery {
   // Returns the point on given result edge that is closest to "point".
   S2Point Project(S2Point const& point, Result const& result) const;
 
-  ///////////////////////// Deprecated Methods //////////////////////////
-
-  ABSL_DEPRECATED("Use (Target *) version")
-  std::vector<Result> FindClosestEdges(Target const& target) {
-    return FindClosestEdges(const_cast<Target*>(&target));
-  }
-
-  ABSL_DEPRECATED("Use (Target *) version")
-  void FindClosestEdges(Target const& target, std::vector<Result>* results) {
-    return FindClosestEdges(const_cast<Target*>(&target), results);
-  }
-
-  ABSL_DEPRECATED("Use (Target *) version")
-  Result FindClosestEdge(Target const& target) {
-    return FindClosestEdge(const_cast<Target*>(&target));
-  }
-
-  ABSL_DEPRECATED("Use (Target *) version")
-  S1ChordAngle GetDistance(Target const& target) {
-    return GetDistance(const_cast<Target*>(&target));
-  }
-
-  ABSL_DEPRECATED("Use S2ClosestEdgeQuery(&index, options)")
-  explicit S2ClosestEdgeQuery(S2ShapeIndexBase const& index)
-      : S2ClosestEdgeQuery(&index, Options()) {
-  }
-
-  ABSL_DEPRECATED("Use Init(&index, options)")
-  void Init(S2ShapeIndexBase const& index) {
-    Init(&index, Options());
-  }
-
-  // Results are returned using the deprecated result interface (below).
-  ABSL_DEPRECATED("Use FindClosestEdges(PointTarget(point)) instead.")
-  void FindClosestEdges(S2Point const& point);
-
-  // Results are returned using the deprecated result interface (below).
-  ABSL_DEPRECATED("Use FindClosestEdges(EdgeTarget(a, b)) instead.")
-  void FindClosestEdgesToEdge(S2Point const& a, S2Point const& b);
-
-  // Results are returned using the deprecated result interface (below).
-  ABSL_DEPRECATED("Use FindClosestEdges(PointTarget(point)) instead.")
-  void FindClosestEdge(S2Point const& point);
-
-  // Return the minimum distance from the given point to any edge of the
-  // S2ShapeIndex.  If there are no edges, return S1Angle::Infinity().
-  //
-  // SIDE EFFECTS: Calls set_max_edges(1); all other parameters are unchanged.
-  ABSL_DEPRECATED("Use GetDistance(PointTarget(point)).ToAngle() instead.")
-  S1Angle GetDistance(S2Point const& point);
-
-  ABSL_DEPRECATED("Use Project(S2Point, Result) instead.")
-  S2Point Project(S2Point const& point);
-
-  ABSL_DEPRECATED("Use options().max_edges()")
-  int max_edges() const { return options().max_edges(); }
-
-  ABSL_DEPRECATED("Use mutable_options()->set_max_edges()")
-  void set_max_edges(int max_edges) {
-    mutable_options()->set_max_edges(max_edges);
-  }
-
-  ABSL_DEPRECATED("Use options().max_distance()")
-  S1Angle max_distance() const { return options().max_distance().ToAngle(); }
-
-  // Note that mutable_options()->set_max_distance() expects a Distance.
-  ABSL_DEPRECATED("Use mutable_options()->set_max_distance()")
-  void set_max_distance(S1Angle max_distance) {
-    mutable_options()->set_max_distance(Distance(max_distance));
-  }
-
-  ABSL_DEPRECATED("Use options().max_error()")
-  S1Angle max_error() const { return options().max_error().ToAngle(); }
-
-  // Note that mutable_options()->set_max_error() expects a Distance.
-  ABSL_DEPRECATED("Use mutable_options()->set_max_error()")
-  void set_max_error(S1Angle max_error) {
-    mutable_options()->set_max_error(Distance(max_error));
-  }
-
-  ////////////////////// Result Interface (DEPRECATED) /////////////////////
-  //
-  // The result of a query consists of a set of edges which may be obtained
-  // using the interface below.  Edges are sorted in order of increasing
-  // distance to the target point.
-
-  // The number of result edges.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  int num_edges() const;
-
-  // The shape id of the given result edge.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  int shape_id(int i) const;
-
-  // The edge id of the given result edge.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  int edge_id(int i) const;
-
-  // The distance to the given result edge.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  S1Angle distance(int i) const;
-
-  // Like distance(i), but expressed as an S1ChordAngle.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  S1ChordAngle distance_ca(int i) const;
-
-  // Returns the endpoints of the given result edge.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  S2Shape::Edge edge(int i) const;
-
  private:
   Result const& result(int i) const;  // Internal accessor method.
 
   Options options_;
   Base base_;
-
-  // Deprecated methods that return results using the result interface require
-  // keeping a copy of the target and result vector.
-  ABSL_DEPRECATED("TODO(ericv): Remove the fields below")
-  std::unique_ptr<Target> target_;
-  std::vector<Result> results_;
 
   S2ClosestEdgeQuery(S2ClosestEdgeQuery const&) = delete;
   void operator=(S2ClosestEdgeQuery const&) = delete;
@@ -530,30 +414,6 @@ S2ClosestEdgeQuery::FindClosestEdges(Target* target) {
 inline void S2ClosestEdgeQuery::FindClosestEdges(Target* target,
                                                  std::vector<Result>* results) {
   base_.FindClosestEdges(target, options_, results);
-}
-
-inline int S2ClosestEdgeQuery::num_edges() const {
-  return results_.size();
-}
-
-inline int S2ClosestEdgeQuery::shape_id(int i) const {
-  return results_[i].shape_id;
-}
-
-inline int S2ClosestEdgeQuery::edge_id(int i) const {
-  return results_[i].edge_id;
-}
-
-inline S1ChordAngle S2ClosestEdgeQuery::distance_ca(int i) const {
-  return results_[i].distance;
-}
-
-inline S1Angle S2ClosestEdgeQuery::distance(int i) const {
-  return distance_ca(i).ToAngle();
-}
-
-inline S2Shape::Edge S2ClosestEdgeQuery::edge(int i) const {
-  return index().shape(shape_id(i))->edge(edge_id(i));
 }
 
 inline S2ClosestEdgeQuery::Result S2ClosestEdgeQuery::FindClosestEdge(

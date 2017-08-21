@@ -158,7 +158,7 @@
 //   S2BoundaryOperation::Options options;
 //   options.set_snap_function(snap_function);
 //   S2BoundaryOperation op(S2BoundaryOperation::OpType::INTERSECTION,
-//                          absl::MakeUnique<S2PolygonLayer>(&polygon),
+//                          absl::make_unique<S2PolygonLayer>(&polygon),
 //                          options);
 //   S2Error error;
 //   if (!op.Build(a, b, &error)) {
@@ -174,9 +174,9 @@
 //   S2Polygon polygon;
 //   S2BoundaryOperation op(
 //       S2BoundaryOperation::OpType::UNION,
-//       absl::MakeUnique<s2builderutil::PointVectorLayer>(&points),
-//       absl::MakeUnique<s2builderutil::S2PolylineVectorLayer>(&polylines),
-//       absl::MakeUnique<S2PolygonLayer>(&polygon));
+//       absl::make_unique<s2builderutil::PointVectorLayer>(&points),
+//       absl::make_unique<s2builderutil::S2PolylineVectorLayer>(&polylines),
+//       absl::make_unique<S2PolygonLayer>(&polygon));
 
 class S2BoundaryOperation {
  public:

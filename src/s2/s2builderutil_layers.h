@@ -184,7 +184,7 @@ class IndexedS2PolygonLayer : public S2Builder::Layer {
     layer_.Build(g, error);
     if (error->ok()) {
       index_->Add(
-          absl::MakeUnique<S2Polygon::OwningShape>(std::move(polygon_)));
+          absl::make_unique<S2Polygon::OwningShape>(std::move(polygon_)));
     }
   }
 
@@ -291,7 +291,7 @@ class IndexedS2PolylineLayer : public S2Builder::Layer {
     layer_.Build(g, error);
     if (error->ok()) {
       index_->Add(
-          absl::MakeUnique<S2Polyline::OwningShape>(std::move(polyline_)));
+          absl::make_unique<S2Polyline::OwningShape>(std::move(polyline_)));
     }
   }
 
@@ -463,7 +463,7 @@ class IndexedS2PolylineVectorLayer : public S2Builder::Layer {
     if (error->ok()) {
       for (auto& polyline : polylines_) {
         index_->Add(
-            absl::MakeUnique<S2Polyline::OwningShape>(std::move(polyline)));
+            absl::make_unique<S2Polyline::OwningShape>(std::move(polyline)));
       }
     }
   }
@@ -528,7 +528,7 @@ class IndexedS2PointVectorLayer : public S2Builder::Layer {
   void Build(Graph const& g, S2Error* error) override {
     layer_.Build(g, error);
     if (error->ok()) {
-      index_->Add(absl::MakeUnique<s2shapeutil::PointVectorShape>(&points_));
+      index_->Add(absl::make_unique<s2shapeutil::PointVectorShape>(&points_));
     }
   }
 

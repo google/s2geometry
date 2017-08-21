@@ -28,7 +28,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2metrics.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::max;
 using std::min;
 using std::unique_ptr;
@@ -72,7 +72,7 @@ S2Point IdentitySnapFunction::SnapPoint(S2Point const& point) const {
 }
 
 unique_ptr<S2Builder::SnapFunction> IdentitySnapFunction::Clone() const {
-  return MakeUnique<IdentitySnapFunction>(*this);
+  return make_unique<IdentitySnapFunction>(*this);
 }
 
 
@@ -203,7 +203,7 @@ S2Point S2CellIdSnapFunction::SnapPoint(S2Point const& point) const {
 }
 
 unique_ptr<S2Builder::SnapFunction> S2CellIdSnapFunction::Clone() const {
-  return MakeUnique<S2CellIdSnapFunction>(*this);
+  return make_unique<S2CellIdSnapFunction>(*this);
 }
 
 IntLatLngSnapFunction::IntLatLngSnapFunction()
@@ -348,7 +348,7 @@ S2Point IntLatLngSnapFunction::SnapPoint(S2Point const& point) const {
 }
 
 unique_ptr<S2Builder::SnapFunction> IntLatLngSnapFunction::Clone() const {
-  return MakeUnique<IntLatLngSnapFunction>(*this);
+  return make_unique<IntLatLngSnapFunction>(*this);
 }
 
 }  // namespace s2builderutil

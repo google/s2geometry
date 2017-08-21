@@ -13,9 +13,11 @@
 // limitations under the License.
 //
 
-// Portable macros for performance optimization:
-// * Cacheline size/alignment
-// * Branch prediction
+// -----------------------------------------------------------------------------
+// File: optimization.h
+// -----------------------------------------------------------------------------
+//
+// This header file defines portable macros for performance optimization.
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_OPTIMIZATION_H_
 #define S2_THIRD_PARTY_ABSL_BASE_OPTIMIZATION_H_
@@ -23,12 +25,13 @@
 #include "s2/third_party/absl/base/config.h"
 
 // ABSL_BLOCK_TAIL_CALL_OPTIMIZATION
-// Under optimized builds, functions are often subject to tail-call
-// optimisation. The specific cases vary from compiler to compiler, but the
-// macro should avoid a tail-call in cases, for example, that must preserve
-// a function in the call stack.
+//
+// Instructs the compiler to avoid optimizing tail-call recursion. Use of this
+// macro is useful when you wish to preserve the existing function order within
+// a stack trace for logging, debugging, or profiling purposes.
 //
 // Example:
+//
 //   int f() {
 //     int result = g();
 //     ABLS_BLOCK_TAIL_CALL_OPTIMIZATION();
@@ -49,13 +52,21 @@
 #define ABSL_BLOCK_TAIL_CALL_OPTIMIZATION() if (volatile int x = 0) { (void)x; }
 #endif
 
-// Alignment
-
-// ABSL_CACHELINE_SIZE, ABSL_CACHELINE_ALIGNED
-// Note: When C++17 is available, consider using the following:
-// - std::hardware_constructive_interference_size
-// - std::hardware_destructive_interference_size
+// ABSL_CACHELINE_SIZE
+//
+// Explicitly defines the size of the L1 cache for purposes of alignment.
+// Setting the cacheline size allows you to specify that certain objects be
+// aligned on a cacheline boundary with `ABSL_CACHELINE_ALIGNED` declarations.
+// (See below.)
+//
+// NOTE: this macro should be replaced with the following C++17 features, when
+// those are generally available:
+//
+//   * `std::hardware_constructive_interference_size`
+//   * `std::hardware_destructive_interference_size`
+//
 // See http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0154r1.html
+// for more information.
 #if defined(__GNUC__) && !defined(SWIG)
 /* absl:oss-replace-begin
 #if defined(__GNUC__)
@@ -87,15 +98,31 @@ absl:oss-replace-end */
 #define ABSL_CACHELINE_SIZE 64
 #endif
 
-// On some compilers, expands to __attribute__((aligned(ABSL_CACHELINE_SIZE))).
-// For compilers where this is not known to work, expands to nothing.
+// ABSL_CACHELINE_ALIGNED
 //
-// No further guarantees are made here.  The result of applying the macro
-// to variables and types is always implementation defined.
+// Indicates that the declared object be cache aligned using
+// `ABSL_CACHELINE_SIZE` (see above). Cacheline aligning objects allows you to
+// load a set of related objects in the L1 cache for performance improvements.
+// Cacheline aligning objects properly allows constructive memory sharing and
+// prevents destructive (or "false") memory sharing.
+//
+// NOTE: this macro should be replaced with usage of `alignas()` using
+// `std::hardware_constructive_interference_size` and/or
+// `std::hardware_destructive_interference_size` when available within C++17.
+//
+// See http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0154r1.html
+// for more information.
+//
+// On some compilers, `ABSL_CACHELINE_ALIGNED` expands to
+// `__attribute__((aligned(ABSL_CACHELINE_SIZE)))`. For compilers where this is
+// not known to work, the macro expands to nothing.
+//
+// No further guarantees are made here. The result of applying the macro
+// to variables and types is always implementation-defined.
 //
 // WARNING: It is easy to use this attribute incorrectly, even to the point
-// of causing bugs that are difficult to diagnose, crash, etc.  It does not
-// guarantee that objects are aligned to a cache line.
+// of causing bugs that are difficult to diagnose, crash, etc. It does not
+// of itself guarantee that objects are aligned to a cache line.
 //
 // Recommendations:
 //
@@ -103,8 +130,8 @@ absl:oss-replace-end */
 //    toolchains evolve.
 // 2) Verify your use has the intended effect. This often requires inspecting
 //    the generated machine code.
-// 3) Prefer applying this attribute to individual variables.  Avoid
-//    applying it to types.  This tends to localize the effect.
+// 3) Prefer applying this attribute to individual variables. Avoid
+//    applying it to types. This tends to localize the effect.
 // 4) See go/cache-line-interference for further guidance.
 #define ABSL_CACHELINE_ALIGNED __attribute__((aligned(ABSL_CACHELINE_SIZE)))
 
@@ -123,10 +150,20 @@ absl:oss-replace-end */
 
 // ABSL_PREDICT_TRUE, ABSL_PREDICT_FALSE
 //
-// GCC can be told that a certain branch is not likely to be taken (for
-// instance, a CHECK failure), and use that information in static analysis.
-// Giving it this information can help it optimize for the common case in
-// the absence of better information (ie. -fprofile-arcs).
+// Enables the compiler to prioritize compilation using static analysis for
+// likely paths within a boolean branch.
+//
+// Example:
+//
+//   if (ABSL_PREDICT_TRUE(expression)) {
+//     return result;                        // Faster if more likely
+//   } else {
+//     return 0;
+//   }
+//
+// Compilers can use the information that a certain branch is not likely to be
+// taken (for instance, a CHECK failure) to optimize for the common case in
+// the absence of better information (ie. compiling gcc with `-fprofile-arcs`).
 #if (ABSL_HAVE_BUILTIN(__builtin_expect) ||         \
      (defined(__GNUC__) && !defined(__clang__))) && \
     !defined(SWIG)

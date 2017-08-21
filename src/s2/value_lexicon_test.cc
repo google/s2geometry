@@ -24,7 +24,7 @@
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 
 TEST(ValueLexicon, DuplicateValues) {
   ValueLexicon<int64> lex;
@@ -73,7 +73,7 @@ TEST(ValueLexicon, FloatEquality) {
 }
 
 TEST(ValueLexicon, CopyConstructor) {
-  auto original = MakeUnique<ValueLexicon<int64>>();
+  auto original = make_unique<ValueLexicon<int64>>();
   EXPECT_EQ(0, original->Add(5));
   auto lex = *original;
   original.reset(nullptr);
@@ -83,7 +83,7 @@ TEST(ValueLexicon, CopyConstructor) {
 }
 
 TEST(ValueLexicon, MoveConstructor) {
-  auto original = MakeUnique<ValueLexicon<int64>>();
+  auto original = make_unique<ValueLexicon<int64>>();
   EXPECT_EQ(0, original->Add(5));
   auto lex = std::move(*original);
   original.reset(nullptr);
@@ -93,7 +93,7 @@ TEST(ValueLexicon, MoveConstructor) {
 }
 
 TEST(ValueLexicon, CopyAssignmentOperator) {
-  auto original = MakeUnique<ValueLexicon<int64>>();
+  auto original = make_unique<ValueLexicon<int64>>();
   EXPECT_EQ(0, original->Add(5));
   ValueLexicon<int64> lex;
   EXPECT_EQ(0, lex.Add(10));
@@ -107,7 +107,7 @@ TEST(ValueLexicon, CopyAssignmentOperator) {
 }
 
 TEST(ValueLexicon, MoveAssignmentOperator) {
-  auto original = MakeUnique<ValueLexicon<int64>>();
+  auto original = make_unique<ValueLexicon<int64>>();
   EXPECT_EQ(0, original->Add(5));
   ValueLexicon<int64> lex;
   EXPECT_EQ(0, lex.Add(10));

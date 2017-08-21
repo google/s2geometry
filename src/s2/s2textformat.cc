@@ -31,7 +31,7 @@
 #include "s2/s2polyline.h"
 #include "s2/s2shapeutil.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using absl::string_view;
 using std::pair;
 using std::unique_ptr;
@@ -90,20 +90,20 @@ S2LatLngRect MakeLatLngRect(string_view str) {
 }
 
 unique_ptr<S2Loop> MakeLoop(string_view str) {
-  if (str == "empty") return MakeUnique<S2Loop>(S2Loop::kEmpty());
-  if (str == "full") return MakeUnique<S2Loop>(S2Loop::kFull());
+  if (str == "empty") return make_unique<S2Loop>(S2Loop::kEmpty());
+  if (str == "full") return make_unique<S2Loop>(S2Loop::kFull());
   vector<S2Point> vertices = ParsePoints(str);
-  return MakeUnique<S2Loop>(vertices);
+  return make_unique<S2Loop>(vertices);
 }
 
 unique_ptr<S2Polyline> MakePolyline(string_view str) {
   vector<S2Point> vertices = ParsePoints(str);
-  return MakeUnique<S2Polyline>(vertices);
+  return make_unique<S2Polyline>(vertices);
 }
 
 unique_ptr<s2shapeutil::LaxPolyline> MakeLaxPolyline(string_view str) {
   auto vertices = ParsePoints(str);
-  return MakeUnique<s2shapeutil::LaxPolyline>(vertices);
+  return make_unique<s2shapeutil::LaxPolyline>(vertices);
 }
 
 static unique_ptr<S2Polygon> InternalMakePolygon(string_view str,
@@ -115,7 +115,7 @@ static unique_ptr<S2Polygon> InternalMakePolygon(string_view str,
     if (normalize_loops) loop->Normalize();
     loops.push_back(std::move(loop));
   }
-  return MakeUnique<S2Polygon>(std::move(loops));
+  return make_unique<S2Polygon>(std::move(loops));
 }
 
 unique_ptr<S2Polygon> MakePolygon(string_view str) {
@@ -136,20 +136,20 @@ unique_ptr<s2shapeutil::LaxPolygon> MakeLaxPolygon(string_view str) {
       loops.push_back(ParsePoints(loop_str));
     }
   }
-  return MakeUnique<s2shapeutil::LaxPolygon>(loops);
+  return make_unique<s2shapeutil::LaxPolygon>(loops);
 }
 
 unique_ptr<S2ShapeIndex> MakeIndex(string_view str) {
   vector<string_view> strs = strings::Split(str, '#');
   DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
 
-  auto index = MakeUnique<S2ShapeIndex>();
+  auto index = make_unique<S2ShapeIndex>();
   vector<S2Point> points;
   for (auto const& point_str : SplitString(strs[0], '|')) {
     points.push_back(MakePoint(point_str));
   }
   if (!points.empty()) {
-    index->Add(MakeUnique<s2shapeutil::PointVectorShape>(&points));
+    index->Add(make_unique<s2shapeutil::PointVectorShape>(&points));
   }
   for (auto const& line_str : SplitString(strs[1], '|')) {
     index->Add(MakeLaxPolyline(line_str));
