@@ -852,15 +852,6 @@ class S2ShapeIndex final : public S2ShapeIndexBase {
   // MaybeApplyUpdates).
   bool is_fresh() const;
 
-  ABSL_DEPRECATED("Use Add(unique_ptr<S2Shape>) instead.")
-  void Add(S2Shape* shape) { Add(absl::WrapUnique(shape)); }
-
-  ABSL_DEPRECATED("Use Release instead.")
-  void Remove(S2Shape* shape) { Release(shape->id()).release(); }
-
-  ABSL_DEPRECATED("Use ReleaseAll instead.")
-  void RemoveAll() { for (auto& ptr : ReleaseAll()) ptr.release(); }
-
  protected:
   std::unique_ptr<IteratorBase> NewIterator(InitialPosition pos) const override;
 
@@ -1249,7 +1240,7 @@ inline void S2ShapeIndex::Iterator::Seek(S2CellId target) {
 
 inline std::unique_ptr<S2ShapeIndex::IteratorBase> S2ShapeIndex::NewIterator(
     InitialPosition pos) const {
-  return absl::MakeUnique<Iterator>(this, pos);
+  return absl::make_unique<Iterator>(this, pos);
 }
 
 inline bool S2ShapeIndex::is_fresh() const {

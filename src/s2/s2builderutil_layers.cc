@@ -25,7 +25,7 @@
 #include "s2/s2debug.h"
 #include "s2/s2polygon.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::make_pair;
 using std::pair;
 using std::unique_ptr;
@@ -90,7 +90,7 @@ void S2PolygonLayer::AppendS2Loops(Graph const& g,
       vertices.push_back(g.vertex(g.edge(edge_id).first));
     }
     loops->push_back(
-        MakeUnique<S2Loop>(vertices, polygon_->s2debug_override()));
+        make_unique<S2Loop>(vertices, polygon_->s2debug_override()));
     vertices.clear();
   }
 }

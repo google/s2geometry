@@ -117,7 +117,7 @@ bool S2ClosestEdgeQuery::CellTarget::UpdateMinDistance(
 
 S2ClosestEdgeQuery::ShapeIndexTarget::ShapeIndexTarget(
     S2ShapeIndex const* index)
-    : index_(index), query_(absl::MakeUnique<S2ClosestEdgeQuery>(index)) {
+    : index_(index), query_(absl::make_unique<S2ClosestEdgeQuery>(index)) {
 }
 
 bool S2ClosestEdgeQuery::ShapeIndexTarget::set_max_error(
@@ -170,31 +170,4 @@ S2ClosestEdgeQuery::S2ClosestEdgeQuery() {
 
 S2ClosestEdgeQuery::~S2ClosestEdgeQuery() {
   // Prevent inline destructor bloat by defining here.
-}
-
-bool S2ClosestEdgeQuery::IsDistanceLess(Target* target, S1ChordAngle limit) {
-  options_.set_max_distance(limit);
-  options_.set_max_error(limit);
-  return FindClosestEdge(target).shape_id >= 0;
-}
-
-void S2ClosestEdgeQuery::FindClosestEdges(S2Point const& point) {
-  target_.reset(new PointTarget(point));
-  FindClosestEdges(target_.get(), &results_);
-}
-
-void S2ClosestEdgeQuery::FindClosestEdgesToEdge(S2Point const& a,
-                                                S2Point const& b) {
-  target_.reset(new EdgeTarget(a, b));
-  FindClosestEdges(target_.get(), &results_);
-}
-
-void S2ClosestEdgeQuery::FindClosestEdge(S2Point const& point) {
-  set_max_edges(1);
-  FindClosestEdges(point);
-}
-
-S1Angle S2ClosestEdgeQuery::GetDistance(S2Point const& point) {
-  PointTarget target(point);
-  return GetDistance(&target).ToAngle();
 }

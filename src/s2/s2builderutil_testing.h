@@ -83,7 +83,7 @@ class GraphAppendingLayer : public S2Builder::Layer {
   }
 
   void Build(const S2Builder::Graph& g, S2Error* error) override {
-    clones_->push_back(absl::MakeUnique<GraphClone>(g));
+    clones_->push_back(absl::make_unique<GraphClone>(g));
     graphs_->push_back(clones_->back()->graph());
   }
 

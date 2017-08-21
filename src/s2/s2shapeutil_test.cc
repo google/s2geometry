@@ -32,7 +32,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::unique_ptr;
 using std::vector;
 
@@ -123,7 +123,7 @@ TEST(LaxPolygon, SingleVertexPolygon) {
 TEST(LaxPolygon, SingleLoopPolygon) {
   // Test S2Polygon constructor.
   vector<S2Point> vertices = s2textformat::ParsePoints("0:0, 0:1, 1:1, 1:0");
-  LaxPolygon shape(S2Polygon(MakeUnique<S2Loop>(vertices)));
+  LaxPolygon shape(S2Polygon(make_unique<S2Loop>(vertices)));
   EXPECT_EQ(1, shape.num_loops());
   EXPECT_EQ(vertices.size(), shape.num_vertices());
   EXPECT_EQ(vertices.size(), shape.num_loop_vertices(0));
@@ -255,13 +255,13 @@ TEST(LaxPolygon, CompareToS2Loop) {
         S2Testing::GetRandomFrameAt(center), S1Angle::Degrees(5)));
 
     // Compare S2Loop to LaxLoop.
-    CompareS2LoopToShape(*loop, MakeUnique<LaxLoop>(*loop));
+    CompareS2LoopToShape(*loop, make_unique<LaxLoop>(*loop));
 
     // Compare S2Loop to LaxPolygon.
     vector<LaxPolygon::Loop> loops(
         1, vector<S2Point>(&loop->vertex(0),
                            &loop->vertex(0) + loop->num_vertices()));
-    CompareS2LoopToShape(*loop, MakeUnique<LaxPolygon>(loops));
+    CompareS2LoopToShape(*loop, make_unique<LaxPolygon>(loops));
   }
 }
 
@@ -485,7 +485,7 @@ TEST(GetCrossingEdgePairs, NoIntersections) {
 TEST(GetCrossingEdgePairs, EdgeGrid) {
   int const kGridSize = 10;  // (kGridSize + 1) * (kGridSize + 1) crossings
   S2ShapeIndex index;
-  auto shape = MakeUnique<EdgeVectorShape>();
+  auto shape = make_unique<EdgeVectorShape>();
   for (int i = 0; i <= kGridSize; ++i) {
     shape->Add(S2LatLng::FromDegrees(0, i).ToPoint(),
               S2LatLng::FromDegrees(kGridSize, i).ToPoint());

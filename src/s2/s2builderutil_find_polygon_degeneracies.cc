@@ -29,7 +29,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::make_pair;
 using std::pair;
 using std::vector;
@@ -380,7 +380,7 @@ void DegeneracyFinder::ComputeUnknownSignsIndexed(
     VertexId known_vertex, int known_vertex_sign,
     vector<Component>* components) const {
   S2ShapeIndex index;
-  index.Add(MakeUnique<GraphShape>(&g_));
+  index.Add(make_unique<GraphShape>(&g_));
   S2CrossingEdgeQuery query(&index);
   vector<EdgeId> crossing_edges;
   S2EdgeCrosser crosser;

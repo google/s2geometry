@@ -30,7 +30,7 @@
 #include "s2/s2textformat.h"
 #include <gtest/gtest.h>
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::unique_ptr;
 using std::vector;
 
@@ -108,7 +108,7 @@ void NormalizeTest::AddLayers(
     vector<Graph>* graphs_out, S2Builder* builder) {
   auto index = s2textformat::MakeIndex(str);
   for (int dim = 0; dim < 3; ++dim) {
-    builder->StartLayer(MakeUnique<GraphAppendingLayer>(
+    builder->StartLayer(make_unique<GraphAppendingLayer>(
         graph_options[dim], graphs_out, &graph_clones_));
     for (int s = 0; s < index->num_shape_ids(); ++s) {
       S2Shape* shape = index->shape(s);
@@ -223,10 +223,10 @@ bool ComputeUnion(S2ShapeIndex const& a, S2ShapeIndex const& b,
   polyline_options.set_polyline_type(Graph::PolylineType::WALK);
   polyline_options.set_duplicate_edges(DuplicateEdges::MERGE);
   LayerVector layers(3);
-  layers[0] = MakeUnique<IndexedS2PointVectorLayer>(index);
-  layers[1] = MakeUnique<IndexedS2PolylineVectorLayer>(
+  layers[0] = make_unique<IndexedS2PointVectorLayer>(index);
+  layers[1] = make_unique<IndexedS2PolylineVectorLayer>(
       index, polyline_options);
-  layers[2] = MakeUnique<IndexedS2PolygonLayer>(index);
+  layers[2] = make_unique<IndexedS2PolygonLayer>(index);
   S2BoundaryOperation op(S2BoundaryOperation::OpType::UNION,
                          NormalizeClosedSet(std::move(layers)));
   return op.Build(a, b, error);

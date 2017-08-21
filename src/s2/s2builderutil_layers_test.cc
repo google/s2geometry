@@ -30,7 +30,7 @@
 #include "s2/s2debug.h"
 #include "s2/s2textformat.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using s2builderutil::IndexedS2PointVectorLayer;
 using s2builderutil::IndexedS2PolygonLayer;
 using s2builderutil::IndexedS2PolylineLayer;
@@ -56,7 +56,7 @@ void TestS2Polygon(vector<char const*> const& input_strs,
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder((S2Builder::Options()));
   S2Polygon output;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(
+  builder.StartLayer(make_unique<S2PolygonLayer>(
       &output, S2PolygonLayer::Options(edge_type)));
   for (auto input_str : input_strs) {
     builder.AddPolygon(*s2textformat::MakeVerbatimPolygon(input_str));
@@ -98,7 +98,7 @@ TEST(S2PolygonLayer, ThreeLoops) {
 TEST(S2PolygonLayer, PartialLoop) {
   S2Builder builder((S2Builder::Options()));
   S2Polygon output;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   builder.AddPolyline(*MakePolyline("0:1, 2:3, 4:5"));
   S2Error error;
   EXPECT_FALSE(builder.Build(&error));
@@ -111,7 +111,7 @@ TEST(S2PolygonLayer, InvalidPolygon) {
   S2Polygon output;
   S2PolygonLayer::Options options;
   options.set_validate(true);
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output, options));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output, options));
   builder.AddPolyline(*MakePolyline("0:0, 0:10, 10:0, 10:10, 0:0"));
   S2Error error;
   EXPECT_FALSE(builder.Build(&error));
@@ -125,7 +125,7 @@ TEST(S2PolygonLayer, DuplicateInputEdges) {
   S2Polygon output;
   S2PolygonLayer::Options options;
   options.set_validate(true);
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output, options));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output, options));
   builder.AddPolyline(*MakePolyline("0:0, 0:2, 2:2, 1:1, 0:2, 2:2, 2:0, 0:0"));
   S2Error error;
   EXPECT_FALSE(builder.Build(&error));
@@ -161,7 +161,7 @@ static void TestEdgeLabels(EdgeType edge_type) {
   S2Polygon output;
   S2PolygonLayer::LabelSetIds label_set_ids;
   IdSetLexicon label_set_lexicon;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(
+  builder.StartLayer(make_unique<S2PolygonLayer>(
       &output, &label_set_ids, &label_set_lexicon,
       S2PolygonLayer::Options(edge_type)));
 
@@ -278,7 +278,7 @@ TEST(S2PolygonLayer, SevenDiamondsTouchingAtOnePointPerPair) {
 TEST(IndexedS2PolygonLayer, AddsShape) {
   S2Builder builder((S2Builder::Options()));
   S2ShapeIndex index;
-  builder.StartLayer(MakeUnique<IndexedS2PolygonLayer>(&index));
+  builder.StartLayer(make_unique<IndexedS2PolygonLayer>(&index));
   string const& polygon_str = "0:0, 0:10, 10:0";
   builder.AddPolygon(*s2textformat::MakePolygon(polygon_str));
   S2Error error;
@@ -296,7 +296,7 @@ void TestS2Polyline(
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder(options);
   S2Polyline output;
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(
+  builder.StartLayer(make_unique<S2PolylineLayer>(
       &output, S2PolylineLayer::Options(edge_type)));
   for (auto input_str : input_strs) {
     builder.AddPolyline(*MakePolyline(input_str));
@@ -403,7 +403,7 @@ TEST(S2PolylineLayer, SimpleEdgeLabels) {
   S2Polyline output;
   S2PolylineLayer::LabelSetIds label_set_ids;
   IdSetLexicon label_set_lexicon;
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(
+  builder.StartLayer(make_unique<S2PolylineLayer>(
       &output, &label_set_ids, &label_set_lexicon,
       S2PolylineLayer::Options(EdgeType::UNDIRECTED)));
   builder.set_label(5);
@@ -433,7 +433,7 @@ TEST(S2PolylineLayer, InvalidPolyline) {
   S2Polyline output;
   S2PolylineLayer::Options options;
   options.set_validate(true);
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output, options));
+  builder.StartLayer(make_unique<S2PolylineLayer>(&output, options));
   vector<S2Point> vertices;
   vertices.push_back(S2Point(1, 0, 0));
   vertices.push_back(S2Point(-1, 0, 0));
@@ -447,7 +447,7 @@ TEST(S2PolylineLayer, InvalidPolyline) {
 TEST(IndexedS2PolylineLayer, AddsShape) {
   S2Builder builder((S2Builder::Options()));
   S2ShapeIndex index;
-  builder.StartLayer(MakeUnique<IndexedS2PolylineLayer>(&index));
+  builder.StartLayer(make_unique<IndexedS2PolylineLayer>(&index));
   string const& polyline_str = "0:0, 0:10";
   builder.AddPolyline(*s2textformat::MakePolyline(polyline_str));
   S2Error error;
@@ -469,7 +469,8 @@ void TestS2PolylineVector(
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder(builder_options);
   vector<unique_ptr<S2Polyline>> output;
-  builder.StartLayer(MakeUnique<S2PolylineVectorLayer>(&output, layer_options));
+  builder.StartLayer(
+      make_unique<S2PolylineVectorLayer>(&output, layer_options));
   for (auto input_str : input_strs) {
     builder.AddPolyline(*MakePolyline(input_str));
   }
@@ -603,7 +604,7 @@ TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
   layer_options.set_edge_type(EdgeType::UNDIRECTED);
   layer_options.set_duplicate_edges(
       S2PolylineVectorLayer::Options::DuplicateEdges::MERGE);
-  builder.StartLayer(MakeUnique<S2PolylineVectorLayer>(
+  builder.StartLayer(make_unique<S2PolylineVectorLayer>(
       &output, &label_set_ids, &label_set_lexicon, layer_options));
   builder.set_label(1);
   builder.AddPolyline(*MakePolyline("0:0, 0:1, 0:2"));
@@ -631,7 +632,7 @@ TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
 TEST(IndexedS2PolylineVectorLayer, AddsShapes) {
   S2Builder builder((S2Builder::Options()));
   S2ShapeIndex index;
-  builder.StartLayer(MakeUnique<IndexedS2PolylineVectorLayer>(&index));
+  builder.StartLayer(make_unique<IndexedS2PolylineVectorLayer>(&index));
   string polyline0_str = "0:0, 1:1";
   string polyline1_str = "2:2, 3:3";
   builder.AddPolyline(*s2textformat::MakePolyline(polyline0_str));
@@ -674,7 +675,7 @@ TEST(S2PointVectorLayer, MergeDuplicates) {
   std::vector<S2Point> output;
   IdSetLexicon label_set_lexicon;
   S2PointVectorLayer::LabelSetIds label_set_ids;
-  builder.StartLayer(MakeUnique<S2PointVectorLayer>(
+  builder.StartLayer(make_unique<S2PointVectorLayer>(
       &output, &label_set_ids, &label_set_lexicon,
       S2PointVectorLayer::Options(
           S2Builder::GraphOptions::DuplicateEdges::MERGE)));
@@ -704,7 +705,7 @@ TEST(S2PointVectorLayer, KeepDuplicates) {
   std::vector<S2Point> output;
   IdSetLexicon label_set_lexicon;
   S2PointVectorLayer::LabelSetIds label_set_ids;
-  builder.StartLayer(MakeUnique<S2PointVectorLayer>(
+  builder.StartLayer(make_unique<S2PointVectorLayer>(
       &output, &label_set_ids, &label_set_lexicon,
       S2PointVectorLayer::Options(
           S2Builder::GraphOptions::DuplicateEdges::KEEP)));
@@ -732,7 +733,7 @@ TEST(S2PointVectorLayer, KeepDuplicates) {
 TEST(S2PointVectorLayer, Error) {
   S2Builder builder((S2Builder::Options()));
   std::vector<S2Point> output;
-  builder.StartLayer(MakeUnique<S2PointVectorLayer>(
+  builder.StartLayer(make_unique<S2PointVectorLayer>(
       &output, S2PointVectorLayer::Options(
                    S2Builder::GraphOptions::DuplicateEdges::KEEP)));
 
@@ -752,7 +753,7 @@ TEST(S2PointVectorLayer, Error) {
 TEST(IndexedS2PointVectorLayer, AddsShapes) {
   S2Builder builder((S2Builder::Options()));
   S2ShapeIndex index;
-  builder.StartLayer(MakeUnique<IndexedS2PointVectorLayer>(&index));
+  builder.StartLayer(make_unique<IndexedS2PointVectorLayer>(&index));
   string point0_str = "0:0";
   string point1_str = "2:2";
   builder.AddPoint(s2textformat::MakePoint(point0_str));
@@ -779,7 +780,7 @@ TEST(LaxPolygonVectorLayer, RoadNetwork) {
   LaxPolygonVector polygons;
   LaxPolygonVectorLayer::LabelSetIds label_set_ids;
   IdSetLexicon label_set_lexicon;
-  builder.StartLayer(MakeUnique<LaxPolygonVectorLayer>(
+  builder.StartLayer(make_unique<LaxPolygonVectorLayer>(
       &polygons, &label_set_ids, &label_set_lexicon, layer_options));
   ValueLexicon<FeatureId> feature_id_lexicon;
   for (auto const& feature : features) {

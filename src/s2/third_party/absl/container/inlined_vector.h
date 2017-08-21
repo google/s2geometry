@@ -348,13 +348,15 @@ class InlinedVector {
     }
     assert(s < capacity());
 
+    value_type* space;
     if (allocated()) {
-      Construct(allocated_space() + s, std::forward<Args>(args)...);
       tag().set_allocated_size(s + 1);
+      space = allocated_space();
     } else {
-      Construct(inlined_space() + s, std::forward<Args>(args)...);
       tag().set_inline_size(s + 1);
+      space = inlined_space();
     }
+    Construct(space + s, std::forward<Args>(args)...);
   }
 
   // InlinedVector::push_back()

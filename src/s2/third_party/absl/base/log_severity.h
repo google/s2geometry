@@ -14,6 +14,11 @@
 //
 
 
+//
+// NOTE FOR GOOGLERS:
+//
+// IWYU pragma: private, include "base/log_severity.h"
+
 #ifndef S2_THIRD_PARTY_ABSL_BASE_LOG_SEVERITY_H_
 #define S2_THIRD_PARTY_ABSL_BASE_LOG_SEVERITY_H_
 

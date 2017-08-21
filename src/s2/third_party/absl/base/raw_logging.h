@@ -19,6 +19,11 @@
 // Thread-safe logging routines that do not allocate any memory or
 // acquire any locks, and can therefore be used by low-level memory
 // allocation, synchronization, and signal-handling code.
+//
+// NOTE FOR GOOGLERS:
+//
+// IWYU pragma: private, include "base/raw_logging.h"
+
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_RAW_LOGGING_H_
 #define S2_THIRD_PARTY_ABSL_BASE_RAW_LOGGING_H_

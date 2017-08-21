@@ -39,7 +39,7 @@ std::unique_ptr<S2Shape> NewPaddedCell(S2CellId id, double padding_uv) {
   for (int i = 0; i < 4; ++i) {
     vertices[i] = S2::FaceUVtoXYZ(face, uv.GetVertex(i)).Normalize();
   }
-  return absl::MakeUnique<s2shapeutil::LaxLoop>(vertices);
+  return absl::make_unique<s2shapeutil::LaxLoop>(vertices);
 }
 
 TEST(S2ShapeIndexRegion, GetCapBound) {

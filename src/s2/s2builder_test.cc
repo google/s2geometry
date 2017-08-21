@@ -45,7 +45,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::cout;
 using std::endl;
 using std::make_pair;
@@ -102,7 +102,7 @@ TEST(S2Builder, SimpleVertexMerging) {
   S1Angle snap_radius = S1Angle::Degrees(0.5);
   S2Builder builder((S2Builder::Options(IdentitySnapFunction(snap_radius))));
   S2Polygon output;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   unique_ptr<S2Polygon> input(MakePolygon(
       "0:0, 0.2:0.2, 0.1:0.2, 0.1:0.9, 0:1, 0.1:1.1, 0.9:1, 1:1, 1:0.9"));
   builder.AddPolygon(*input);
@@ -120,7 +120,7 @@ TEST(S2Builder, SimpleS2CellIdSnapping) {
   S2CellIdSnapFunction snap_function(level);
   S2Builder builder((S2Builder::Options(snap_function)));
   S2Polygon output;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   unique_ptr<S2Polygon> input(MakePolygon(
       "2:2, 3:4, 2:6, 4:5, 6:6, 5:4, 6:2, 4:3"));
   builder.AddPolygon(*input);
@@ -138,7 +138,7 @@ TEST(S2Builder, SimpleS2CellIdSnapping) {
 TEST(S2Builder, SimpleIntLatLngSnapping) {
   S2Builder builder(S2Builder::Options(IntLatLngSnapFunction(0)));  // E0 coords
   S2Polygon output;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   unique_ptr<S2Polygon> input(MakePolygon(
       "2.01:2.09, 3.24:4.49, 1.78:6.25, 3.51:5.49, 6.11:6.11, "
       "5.22:3.88, 5.55:2.49, 4.49:2.51"));
@@ -158,7 +158,7 @@ TEST(S2Builder, VerticesMoveLessThanSnapRadius) {
   S1Angle snap_radius = S1Angle::Degrees(1);
   S2Builder builder((S2Builder::Options(IdentitySnapFunction(snap_radius))));
   S2Polygon output;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   // The spacing between input vertices is about 2*pi*20/1000 = 0.125 degrees.
   // The output vertices are spaced between 1 and 2 degrees apart; the average
   // spacing is about 1.33 degrees.
@@ -194,7 +194,7 @@ TEST(S2Builder, MinEdgeVertexSeparation) {
   S2Builder::Options options(IdentitySnapFunction(S1Angle::Degrees(0.5)));
   S2Builder builder(options);
   S2Polygon output;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   builder.AddPolygon(*input);
   S2Error error;
   ASSERT_TRUE(builder.Build(&error)) << error.text();
@@ -228,7 +228,7 @@ TEST(S2Builder, IdempotencySnapsUnsnappedVertices) {
   S2Point b = S2LatLng::FromDegrees(0.01, 0.6).ToPoint();
   EXPECT_LT(S2CellId(a), S2CellId(b));
   S2Polyline input1(vector<S2Point>{a, b}), output1;
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output1));
+  builder.StartLayer(make_unique<S2PolylineLayer>(&output1));
   builder.AddPolyline(input1);
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
@@ -241,7 +241,7 @@ TEST(S2Builder, IdempotencySnapsUnsnappedVertices) {
   S2Point d = S2LatLng::FromDegrees(0, 1).ToPoint();
   EXPECT_LT(S2CellId(c), S2CellId(d));
   S2Polyline input2(vector<S2Point>{c, d}), output2;
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output2));
+  builder.StartLayer(make_unique<S2PolylineLayer>(&output2));
   builder.AddPolyline(input2);
   ASSERT_TRUE(builder.Build(&error)) << error.text();
   EXPECT_EQ("0:0, 0:1", s2textformat::ToString(output2));
@@ -271,7 +271,8 @@ TEST(S2Builder, IdempotencySnapsEdgesWithTinySnapRadius) {
       S2PolylineVectorLayer::Options::DuplicateEdges::MERGE);
   S2Builder builder(options);
   vector<unique_ptr<S2Polyline>> output;
-  builder.StartLayer(MakeUnique<S2PolylineVectorLayer>(&output, layer_options));
+  builder.StartLayer(
+      make_unique<S2PolylineVectorLayer>(&output, layer_options));
   builder.AddPolyline(*s2textformat::MakePolyline("0:0, 0:10"));
   builder.AddPolyline(*s2textformat::MakePolyline("0:5, 0:7"));
   S2Error error;
@@ -289,13 +290,13 @@ TEST(S2Builder, IdempotencyDoesNotSnapAdequatelySeparatedEdges) {
   options.set_idempotent(true);  // Test fails if this is "false".
   S2Builder builder(options);
   S2Polygon output1, output2;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output1));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output1));
   builder.AddPolygon(*MakePolygon("1.49:0, 0:2, 0.49:3"));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error)) << error.text();
   const char* expected = "1:0, 0:2, 0:3";
   EXPECT_EQ(expected, s2textformat::ToString(output1));
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output2));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output2));
   builder.AddPolygon(output1);
   ASSERT_TRUE(builder.Build(&error)) << error.text();
   EXPECT_EQ(expected, s2textformat::ToString(output2));
@@ -314,7 +315,7 @@ TEST(S2Builder, S2CellIdSnappingAtAllLevels) {
     S2CellIdSnapFunction snap_function(level);
     S2Builder builder((S2Builder::Options(snap_function)));
     S2Polygon output;
-    builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
+    builder.StartLayer(make_unique<S2PolygonLayer>(&output));
     builder.AddPolygon(*input);
     S2Error error;
     ASSERT_TRUE(builder.Build(&error)) << error.text();
@@ -347,7 +348,7 @@ TEST(S2Builder, SnappingDoesNotRotateVertices) {
   S2Builder::Options options((S2CellIdSnapFunction()));
   S2Builder builder(options);
   S2Polygon output1, output2;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output1));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output1));
   builder.AddPolygon(*input);
   S2Error error;
   ASSERT_TRUE(builder.Build(&error)) << error.text();
@@ -358,7 +359,7 @@ TEST(S2Builder, SnappingDoesNotRotateVertices) {
 
   // Check that snapping twice doesn't rotate the vertices.  This also
   // verifies that S2Builder can be used again after Build() is called.
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output2));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output2));
   builder.AddPolygon(output1);
   ASSERT_TRUE(builder.Build(&error)) << error.text();
   ExpectPolygonsEqual(output1, output2);
@@ -374,7 +375,7 @@ TEST(S2Builder, SelfIntersectingPolyline) {
   options.set_split_crossing_edges(true);
   S2Builder builder(options);
   S2Polyline output;
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output));
+  builder.StartLayer(make_unique<S2PolylineLayer>(&output));
   unique_ptr<S2Polyline> input(MakePolyline("3:1, 1:3, 1:1, 3:3"));
   unique_ptr<S2Polyline> expected(MakePolyline("3:1, 2:2, 1:3, 1:1, 2:2, 3:3"));
   builder.AddPolyline(*input);
@@ -394,7 +395,7 @@ TEST(S2Builder, SelfIntersectingPolygon) {
   options.set_split_crossing_edges(true);
   S2Builder builder(options);
   S2Polygon output;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(
+  builder.StartLayer(make_unique<S2PolygonLayer>(
       &output, S2PolygonLayer::Options(EdgeType::UNDIRECTED)));
   unique_ptr<S2Polyline> input(MakePolyline("3:1, 1:3, 1:1, 3:3, 3:1"));
   unique_ptr<S2Polygon> expected(MakePolygon("1:1, 1:3, 2:2; 3:3, 3:1, 2:2"));
@@ -414,9 +415,9 @@ TEST(S2Builder, TieBreakingIsConsistent) {
   builder.ForceVertex(S2LatLng::FromDegrees(1, 0).ToPoint());
   builder.ForceVertex(S2LatLng::FromDegrees(-1, 0).ToPoint());
   S2Polyline output1, output2;
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output1));
+  builder.StartLayer(make_unique<S2PolylineLayer>(&output1));
   builder.AddPolyline(*MakePolyline("0:-5, 0:5"));
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output2));
+  builder.StartLayer(make_unique<S2PolylineLayer>(&output2));
   builder.AddPolyline(*MakePolyline("0:5, 0:-5"));
   S2Error error;
   EXPECT_TRUE(builder.Build(&error)) << error.text();
@@ -438,7 +439,7 @@ void TestPolylineLayers(
   vector<unique_ptr<S2Polyline>> output;
   for (auto input_str : input_strs) {
     output.emplace_back(new S2Polyline);
-    builder.StartLayer(MakeUnique<S2PolylineLayer>(output.back().get(),
+    builder.StartLayer(make_unique<S2PolylineLayer>(output.back().get(),
                                                    layer_options));
     builder.AddPolyline(*MakePolyline(input_str));
   }
@@ -459,7 +460,8 @@ void TestPolylineVector(
     S2Builder::Options const& builder_options = S2Builder::Options()) {
   S2Builder builder(builder_options);
   vector<unique_ptr<S2Polyline>> output;
-  builder.StartLayer(MakeUnique<S2PolylineVectorLayer>(&output, layer_options));
+  builder.StartLayer(
+      make_unique<S2PolylineVectorLayer>(&output, layer_options));
   for (auto input_str : input_strs) {
     builder.AddPolyline(*MakePolyline(input_str));
   }
@@ -523,7 +525,7 @@ TEST(S2Builder, SimplifyOneLoop) {
     options.set_simplify_edge_chains(true);
     S2Builder builder(options);
     S2Polygon output;
-    builder.StartLayer(MakeUnique<S2PolygonLayer>(
+    builder.StartLayer(make_unique<S2PolygonLayer>(
         &output, S2PolygonLayer::Options(edge_type)));
     // Spacing between vertices: approximately 2*pi*20/1000 = 0.125 degrees.
     S2Polygon input(
@@ -619,7 +621,7 @@ TEST(S2Builder, SimplifyPreservesTopology) {
     input.emplace_back(new S2Polygon(S2Loop::MakeRegularLoop(
         S2Point(1, 0, 0), radius, kNumVerticesPerLoop)));
     output.emplace_back(new S2Polygon);
-    builder.StartLayer(MakeUnique<S2PolygonLayer>(output.back().get()));
+    builder.StartLayer(make_unique<S2PolygonLayer>(output.back().get()));
     builder.AddPolygon(*input.back());
   }
   S2Error error;
@@ -733,7 +735,7 @@ void TestInputEdgeIds(
     vector<char const*> const& input_strs, EdgeInputEdgeIds const& expected,
     GraphOptions const& graph_options, S2Builder::Options const& options) {
   S2Builder builder(options);
-  builder.StartLayer(MakeUnique<InputEdgeIdCheckingLayer>(expected,
+  builder.StartLayer(make_unique<InputEdgeIdCheckingLayer>(expected,
                                                           graph_options));
   for (auto input_str : input_strs) {
     builder.AddPolyline(*MakePolyline(input_str));
@@ -872,7 +874,7 @@ TEST(S2Builder, SimplifyDegenerateEdgeMergingMultipleLayers) {
   };
   S2Builder builder(options);
   for (int i = 0; i < input.size(); ++i) {
-    builder.StartLayer(MakeUnique<InputEdgeIdCheckingLayer>(expected[i],
+    builder.StartLayer(make_unique<InputEdgeIdCheckingLayer>(expected[i],
                                                             graph_options));
     for (auto input_str : input[i]) {
       builder.AddPolyline(*MakePolyline(input_str));
@@ -897,7 +899,7 @@ TEST(S2Builder, HighPrecisionPredicates) {
   options.set_idempotent(false);
   S2Builder builder(options);
   S2Polyline output;
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output));
+  builder.StartLayer(make_unique<S2PolylineLayer>(&output));
   builder.ForceVertex(S2Point(
       -0.10531192039134191, -0.80522217309705857, 0.58354661457019719));
   builder.AddPolyline(input);
@@ -974,7 +976,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
     S2Builder builder(options);
     S2Polygon output;
     output.set_s2debug_override(S2Debug::DISABLE);
-    builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
+    builder.StartLayer(make_unique<S2PolygonLayer>(&output));
     builder.ForceVertex(v3);
     builder.AddEdge(v0, v1);
     builder.AddEdge(v1, v2);
@@ -1024,7 +1026,7 @@ TEST(S2Builder, SelfIntersectionStressTest) {
     // quadratic in the number of vertices.  With 200 input vertices, the
     // output consists of about 2300 loops and 9000 vertices.
     S2Polygon output;
-    builder.StartLayer(MakeUnique<S2PolygonLayer>(
+    builder.StartLayer(make_unique<S2PolygonLayer>(
         &output, S2PolygonLayer::Options(EdgeType::UNDIRECTED)));
     vector<S2Point> vertices(google::DEBUG_MODE ? 50 : 200);
     for (S2Point& vertex : vertices) {
@@ -1071,7 +1073,7 @@ TEST(S2Builder, FractalStressTest) {
     }
     S2Builder builder(options);
     S2Polygon output;
-    builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
+    builder.StartLayer(make_unique<S2PolygonLayer>(&output));
     builder.AddPolygon(input);
     S2Error error;
     EXPECT_TRUE(builder.Build(&error)) << error.text();
@@ -1097,7 +1099,7 @@ void TestSnappingWithForcedVertices(char const* input_str,
     builder.ForceVertex(vertex);
   }
   S2Polyline output;
-  builder.StartLayer(MakeUnique<S2PolylineLayer>(&output));
+  builder.StartLayer(make_unique<S2PolylineLayer>(&output));
   builder.AddPolyline(*MakePolyline(input_str));
   S2Error error;
   EXPECT_TRUE(builder.Build(&error)) << error.text();
@@ -1168,7 +1170,7 @@ TEST(S2Builder, OldS2PolygonBuilderBug) {
   S1Angle snap_radius = S2Testing::MetersToAngle(20/0.866);
   S2Builder builder((S2Builder::Options(IdentitySnapFunction(snap_radius))));
   S2Polygon output;
-  builder.StartLayer(MakeUnique<S2PolygonLayer>(&output));
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   builder.AddPolygon(*input);
   S2Error error;
   ASSERT_TRUE(builder.Build(&error)) << error.text();

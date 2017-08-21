@@ -120,7 +120,7 @@ class S2Polyline;
 //  using s2builderutil::IntLatLngSnapFunction;
 //  S2Builder builder(S2Builder::Options(IntLatLngSnapFunction(7)));
 //  S2Polygon output;
-//  builder.StartLayer(absl::MakeUnique<s2builderutil::S2PolygonLayer>(&output));
+//  builder.StartLayer(absl::make_unique<s2builderutil::S2PolygonLayer>(&output));
 //  builder.AddPolygon(input);
 //  S2Error error;
 //  if (!builder.Build(&error)) {
@@ -423,9 +423,9 @@ class S2Builder {
   // Ownership of the layer is transferred to the S2Builder.  Example usage:
   //
   // S2Polyline line1, line2;
-  // builder.StartLayer(MakeUnique<s2builderutil::S2PolylineLayer>(&line1)));
+  // builder.StartLayer(make_unique<s2builderutil::S2PolylineLayer>(&line1)));
   // ... Add edges using builder.AddEdge(), etc ...
-  // builder.StartLayer(MakeUnique<s2builderutil::S2PolylineLayer>(&line2)));
+  // builder.StartLayer(make_unique<s2builderutil::S2PolylineLayer>(&line2)));
   // ... Add edges using builder.AddEdge(), etc ...
   // S2Error error;
   // CHECK(builder.Build(&error)) << error.text();  // Builds "line1" & "line2"

@@ -31,7 +31,7 @@
 
 namespace {
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::make_pair;
 using std::pair;
 using std::unique_ptr;
@@ -130,7 +130,7 @@ void ExpectResult(S2BoundaryOperation::OpType op_type,
   auto expected = s2textformat::MakeIndex(expected_str);
   vector<unique_ptr<S2Builder::Layer>> layers;
   for (int dim = 0; dim < 3; ++dim) {
-    layers.push_back(MakeUnique<IndexMatchingLayer>(*expected, dim));
+    layers.push_back(make_unique<IndexMatchingLayer>(*expected, dim));
   }
   S2BoundaryOperation op(op_type, std::move(layers), options);
   S2Error error;

@@ -83,7 +83,7 @@ extern bool s2builder_verbose;
 
 namespace {  // Anonymous namespace for helper classes.
 
-using absl::MakeUnique;
+using absl::make_unique;
 using std::make_pair;
 using std::max;
 using std::min;
@@ -1755,8 +1755,8 @@ bool S2BoundaryOperation::Impl::Build(S2Error* error) {
   // TODO(ericv): Ideally idempotent() should be true, but existing clients
   // expect vertices closer than the full "snap_radius" to be snapped.
   options.set_idempotent(false);
-  builder_ = MakeUnique<S2Builder>(options);
-  builder_->StartLayer(MakeUnique<EdgeClippingLayer>(
+  builder_ = make_unique<S2Builder>(options);
+  builder_->StartLayer(make_unique<EdgeClippingLayer>(
       &op_->layers_, &input_dimensions_, &input_crossings_));
   (void) BuildOpType(op_->op_type());
   return builder_->Build(error);
