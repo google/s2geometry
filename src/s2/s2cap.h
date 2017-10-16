@@ -110,11 +110,11 @@ class S2Cap final : public S2Region {
   // Return the area of the cap.
   double GetArea() const;
 
-  // Return the true centroid of the cap multiplied by its surface area
-  // (see s2.h for details on centroids). The result lies on the ray from
-  // the origin through the cap's center, but it is not unit length. Note
-  // that if you just want the "surface centroid", i.e. the normalized result,
-  // then it is much simpler just to call center().
+  // Return the true centroid of the cap multiplied by its surface area (see
+  // s2centroids.h for details on centroids). The result lies on the ray from
+  // the origin through the cap's center, but it is not unit length. Note that
+  // if you just want the "surface centroid", i.e. the normalized result, then
+  // it is much simpler just to call center().
   //
   // The reason for multiplying the result by the cap area is to make it
   // easier to compute the centroid of more complicated shapes.  The centroid

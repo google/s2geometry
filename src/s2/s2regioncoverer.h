@@ -84,7 +84,7 @@ class S2RegionCoverer {
   // all cell levels.  Requires: max_level() >= min_level().
   //
   // To find the cell level corresponding to a given physical distance, use
-  // the S2Cell metrics defined in s2.h.  For example, to find the cell
+  // the S2Cell metrics defined in s2metrics.h.  For example, to find the cell
   // level that corresponds to an average edge length of 10km, use:
   //
   //     int level = S2::kAvgEdge.GetClosestLevel(

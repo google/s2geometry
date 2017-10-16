@@ -91,8 +91,8 @@ class S2PaddedCell {
   mutable R2Rect middle_;
 
   int ij_lo_[2];     // Minimum (i,j)-coordinates of this cell, before padding
-  int orientation_;  // Hilbert curve orientation of this cell (see s2.h)
-  int level_;        // Level of this cell (see s2.h)
+  int orientation_;  // Hilbert curve orientation of this cell (see s2coords.h)
+  int level_;        // Level of this cell (see s2coords.h)
 };
 
 

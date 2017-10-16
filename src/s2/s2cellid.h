@@ -125,7 +125,7 @@ class S2CellId {
   S2Point ToPoint() const { return ToPointRaw().Normalize(); }
   S2Point ToPointRaw() const;
 
-  // Return the center of the cell in (s,t) coordinates (see s2.h).
+  // Return the center of the cell in (s,t) coordinates (see s2coords.h).
   R2Point GetCenterST() const;
 
   // Return the edge length of this cell in (s,t)-space.
@@ -137,10 +137,10 @@ class S2CellId {
   // Return the bounds of this cell in (s,t)-space.
   R2Rect GetBoundST() const;
 
-  // Return the center of the cell in (u,v) coordinates (see s2.h).  Note that
-  // the center of the cell is defined as the point at which it is recursively
-  // subdivided into four children; in general, it is not at the midpoint of
-  // the (u,v) rectangle covered by the cell.
+  // Return the center of the cell in (u,v) coordinates (see s2coords.h).
+  // Note that the center of the cell is defined as the point at which it is
+  // recursively subdivided into four children; in general, it is not at the
+  // midpoint of the (u,v) rectangle covered by the cell.
   R2Point GetCenterUV() const;
 
   // Return the bounds of this cell in (u,v)-space.
@@ -404,7 +404,7 @@ class S2CellId {
   // Low-level methods.
 
   // Return a leaf cell given its cube face (range 0..5) and
-  // i- and j-coordinates (see s2.h).
+  // i- and j-coordinates (see s2coords.h).
   static S2CellId FromFaceIJ(int face, int i, int j);
 
   // Return the (face, i, j) coordinates for the leaf cell corresponding to

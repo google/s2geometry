@@ -27,7 +27,6 @@ include_directories(src)
 
 # Explicitly list S2 files until we move test files to test dir.
 # TODO: Move test files to another dir.
-
 file(GLOB S2FilesGlob
      src/s2/base/*.cc
      src/s2/id_set_lexicon.cc
