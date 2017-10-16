@@ -58,6 +58,10 @@ class S2EdgeCrosser {
   // lifetime of the S2EdgeCrosser object (or until the next Init() call).
   S2EdgeCrosser(S2Point const* a, S2Point const* b);
 
+  // Accessors for the constructor arguments.
+  S2Point const* a() { return a_; }
+  S2Point const* b() { return b_; }
+
   // Initialize the S2EdgeCrosser with the given fixed edge AB.  The arguments
   // "a" and "b" must point to values that persist for the lifetime of the
   // S2EdgeCrosser object (or until the next Init() call).
@@ -186,6 +190,8 @@ class S2CopyingEdgeCrosser {
   // arguments can be temporaries.
   S2CopyingEdgeCrosser() {}
   S2CopyingEdgeCrosser(S2Point const& a, S2Point const& b);
+  S2Point const& a() { return a_; }
+  S2Point const& b() { return b_; }
   void Init(S2Point const& a, S2Point const& b);
   int CrossingSign(S2Point const& c, S2Point const& d);
   bool EdgeOrVertexCrossing(S2Point const& c, S2Point const& d);
@@ -196,6 +202,8 @@ class S2CopyingEdgeCrosser {
 
  private:
   S2Point a_, b_, c_;
+  // TODO(ericv): It would be more efficient to implement S2CopyingEdgeCrosser
+  // directly rather than as a wrapper around S2EdgeCrosser.
   S2EdgeCrosser crosser_;
 
   S2CopyingEdgeCrosser(S2CopyingEdgeCrosser const&) = delete;
@@ -221,14 +229,13 @@ inline void S2EdgeCrosser::Init(S2Point const* a, S2Point const* b) {
   c_ = nullptr;
 }
 
-inline int S2EdgeCrosser::CrossingSign(S2Point const* c,
-                                                 S2Point const* d) {
+inline int S2EdgeCrosser::CrossingSign(S2Point const* c, S2Point const* d) {
   if (c != c_) RestartAt(c);
   return CrossingSign(d);
 }
 
 inline bool S2EdgeCrosser::EdgeOrVertexCrossing(S2Point const* c,
-                                                          S2Point const* d) {
+                                                S2Point const* d) {
   if (c != c_) RestartAt(c);
   return EdgeOrVertexCrossing(d);
 }
@@ -280,12 +287,11 @@ inline bool S2EdgeCrosser::EdgeOrVertexCrossing(S2Point const* d) {
 }
 
 inline S2CopyingEdgeCrosser::S2CopyingEdgeCrosser(S2Point const& a,
-                                                          S2Point const& b)
+                                                  S2Point const& b)
     : a_(a), b_(b), c_(S2Point()), crosser_(&a_, &b_) {
 }
 
-inline void S2CopyingEdgeCrosser::Init(S2Point const& a,
-                                                 S2Point const& b) {
+inline void S2CopyingEdgeCrosser::Init(S2Point const& a, S2Point const& b) {
   a_ = a;
   b_ = b;
   c_ = S2Point();
@@ -293,14 +299,14 @@ inline void S2CopyingEdgeCrosser::Init(S2Point const& a,
 }
 
 inline int S2CopyingEdgeCrosser::CrossingSign(S2Point const& c,
-                                                        S2Point const& d) {
-  if (c != c_) RestartAt(c);
+                                              S2Point const& d) {
+  if (c != c_ || crosser_.c_ == nullptr) RestartAt(c);
   return CrossingSign(d);
 }
 
 inline bool S2CopyingEdgeCrosser::EdgeOrVertexCrossing(
     S2Point const& c, S2Point const& d) {
-  if (c != c_) RestartAt(c);
+  if (c != c_ || crosser_.c_ == nullptr) RestartAt(c);
   return EdgeOrVertexCrossing(d);
 }
 
@@ -321,8 +327,7 @@ inline int S2CopyingEdgeCrosser::CrossingSign(S2Point const& d) {
   return result;
 }
 
-inline bool S2CopyingEdgeCrosser::EdgeOrVertexCrossing(
-    S2Point const& d) {
+inline bool S2CopyingEdgeCrosser::EdgeOrVertexCrossing(S2Point const& d) {
   bool result = crosser_.EdgeOrVertexCrossing(&d);
   c_ = d;
   crosser_.set_c(&c_);

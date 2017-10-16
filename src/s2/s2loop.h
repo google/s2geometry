@@ -364,8 +364,8 @@ class S2Loop final : public S2Region {
                                                  S1Angle radius,
                                                  int num_vertices);
 
-  // Return the total number of bytes used by the loop.
-  size_t BytesUsed() const;
+  // Returns the total number of bytes used by the loop.
+  size_t SpaceUsed() const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -469,7 +469,9 @@ class S2Loop final : public S2Region {
       return Edge(loop_->vertex(e), loop_->vertex(e + 1));
     }
     int dimension() const final { return 2; }
-    bool contains_origin() const final { return loop_->contains_origin(); }
+    ReferencePoint GetReferencePoint() const final {
+      return ReferencePoint(S2::Origin(), loop_->contains_origin());
+    }
     int num_chains() const final;
     Chain chain(int i) const final;
     Edge chain_edge(int i, int j) const final {
@@ -499,6 +501,7 @@ class S2Loop final : public S2Region {
     ~OwningShape() override { delete loop(); }
   };
 #endif  // SWIG
+
 
  private:
   // All of the following need access to contains_origin().  Possibly this

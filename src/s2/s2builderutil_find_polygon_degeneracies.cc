@@ -24,6 +24,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/btree/btree_map.h"
 #include "s2/s2builder_graph.h"
+#include "s2/s2contains_vertex_query.h"
 #include "s2/s2crossingedgequery.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2pointutil.h"
@@ -42,51 +43,6 @@ using EdgeId = Graph::EdgeId;
 using VertexId = Graph::VertexId;
 
 namespace s2builderutil {
-
-// This class determines whether a polygon contains one of its vertices given
-// the edges incident to that vertex.  The result is +1 if the vertex is
-// contained, -1 if it is not contained, and 0 if the incident edges consist
-// of matched sibling pairs (in which case the result cannot be determined
-// locally).
-//
-// Point containment is defined according to the "semi-open" boundary model
-// (see s2boundary_operation.h), which means that if several polygons tile the
-// region around a vertex, exactly one of those polygons contains that vertex.
-//
-// TODO(ericv): Make this class public and probably rename.
-class S2ContainsVertexQuery {
- public:
-  // "target" is the vertex whose containment will be determined.
-  explicit S2ContainsVertexQuery(S2Point const& target) : target_(target) {}
-
-  // Indicates that the polygon has an edge between "target" and "v" in the
-  // given direction (+1 = outgoing, -1 = incoming).
-  void AddEdge(S2Point const& v, int direction) {
-    edge_map_[v] += direction;
-  }
-
-  // Returns +1 if the vertex is contained, -1 if it is not contained, and 0
-  // if the incident edges consisted of matched sibling pairs.
-  int ContainsSigned();
-
- private:
-  S2Point target_;
-  util::btree::btree_map<S2Point, int> edge_map_;
-};
-
-int S2ContainsVertexQuery::ContainsSigned() {
-  // Find the unmatched edge that is immediately clockwise from S2::Ortho(P).
-  S2Point reference_dir = S2::Ortho(target_);
-  pair<S2Point, int> best(reference_dir, 0);
-  for (auto const& e : edge_map_) {
-    DCHECK_LE(std::abs(e.second), 1);
-    if (e.second == 0) continue;  // This is a "matched" edge.
-    if (s2pred::OrderedCCW(reference_dir, best.first, e.first, target_)) {
-      best = e;
-    }
-  }
-  return best.second;
-}
 
 namespace {
 
@@ -122,7 +78,7 @@ class DegeneracyFinder {
   Component BuildComponent(VertexId root);
   bool CrossingParity(VertexId v0, VertexId v1, bool include_same) const;
   VertexId FindUnbalancedVertex() const;
-  int ContainsVertexSigned(VertexId v0) const;
+  int ContainsVertexSign(VertexId v0) const;
   void ComputeUnknownSignsBruteForce(VertexId known_vertex,
                                      int known_vertex_sign,
                                      vector<Component>* components) const;
@@ -195,7 +151,7 @@ vector<PolygonDegeneracy> DegeneracyFinder::Run(S2Error* error) {
   if (num_unknown_signs > 0) {
     if (known_vertex_sign == 0) {
       known_vertex = FindUnbalancedVertex();
-      known_vertex_sign = ContainsVertexSigned(known_vertex);
+      known_vertex_sign = ContainsVertexSign(known_vertex);
     }
     int const kMaxUnindexedContainsCalls = 20;  // Tuned using benchmarks.
     if (num_unknown_signs <= kMaxUnindexedContainsCalls) {
@@ -261,7 +217,7 @@ Component DegeneracyFinder::BuildComponent(VertexId root) {
     bool v0_same_inside = frontier.back().second;  // Same as root vertex?
     frontier.pop_back();
     if (result.root_sign == 0 && is_vertex_unbalanced_[v0]) {
-      int v0_sign = ContainsVertexSigned(v0);
+      int v0_sign = ContainsVertexSign(v0);
       DCHECK_NE(v0_sign, 0);
       result.root_sign = v0_same_inside ? v0_sign : -v0_sign;
     }
@@ -320,7 +276,7 @@ VertexId DegeneracyFinder::FindUnbalancedVertex() const {
   return -1;
 }
 
-int DegeneracyFinder::ContainsVertexSigned(VertexId v0) const {
+int DegeneracyFinder::ContainsVertexSign(VertexId v0) const {
   S2ContainsVertexQuery query(g_.vertex(v0));
   for (Edge const& edge : out_.edges(v0)) {
     query.AddEdge(g_.vertex(edge.second), 1);
@@ -328,7 +284,7 @@ int DegeneracyFinder::ContainsVertexSigned(VertexId v0) const {
   for (EdgeId e : in_.edge_ids(v0)) {
     query.AddEdge(g_.vertex(g_.edge(e).first), -1);
   }
-  return query.ContainsSigned();
+  return query.ContainsSign();
 }
 
 // Determines any unknown signs of component root vertices by counting
@@ -362,7 +318,9 @@ class GraphShape : public S2Shape {
     return Edge(g_.vertex(g_edge.first), g_.vertex(g_edge.second));
   }
   int dimension() const final { return 1; }
-  bool contains_origin() const final { return false; }
+  ReferencePoint GetReferencePoint() const final {
+    return ReferencePoint::Contained(false);
+  }
   int num_chains() const final { return g_.num_edges(); }
   Chain chain(int i) const final { return Chain(i, 1); }
   Edge chain_edge(int i, int j) const final { return edge(i); }

@@ -43,9 +43,10 @@ namespace S2 {
 S1Angle GetDistance(S2Point const& x, S2Point const& a, S2Point const& b);
 
 // Returns true if the distance from X to the edge AB is less than "limit".
-// This method is significantly faster than GetDistance().  If you want to
-// compare against a fixed S1Angle, you should convert it to an S1ChordAngle
-// once and save the value, since this step is relatively expensive.
+// (Specify limit.Successor() for "less than or equal to".)  This method is
+// significantly faster than GetDistance().  If you want to compare against a
+// fixed S1Angle, you should convert it to an S1ChordAngle once and save the
+// value, since this step is relatively expensive.
 //
 // See s2pred::CompareEdgeDistance() for an exact version of this predicate.
 bool IsDistanceLess(S2Point const& x, S2Point const& a, S2Point const& b,
@@ -80,7 +81,7 @@ double GetUpdateMinDistanceMaxError(S1ChordAngle dist);
 
 // Returns true if the minimum distance from X to the edge AB is attained at
 // an interior point of AB (i.e., not an endpoint), and that distance is less
-// than "limit".
+// than "limit".  (Specify limit.Successor() for "less than or equal to".)
 bool IsInteriorDistanceLess(S2Point const& x,
                             S2Point const& a, S2Point const& b,
                             S1ChordAngle limit);

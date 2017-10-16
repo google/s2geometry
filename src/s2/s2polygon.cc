@@ -44,6 +44,7 @@
 #include "s2/s2cellid.h"
 #include "s2/s2cellunion.h"
 #include "s2/s2closestedgequery.h"
+#include "s2/s2contains_point_query.h"
 #include "s2/s2coords.h"
 #include "s2/s2crossingedgequery.h"
 #include "s2/s2debug.h"
@@ -763,30 +764,7 @@ bool S2Polygon::Contains(S2Point const& p) const {
     return inside;
   }
   // Otherwise we look up the S2ShapeIndex cell containing this point.
-  S2ShapeIndex::Iterator it(&index_);
-  if (!it.Locate(p)) return false;
-  return Contains(it, p);
-}
-
-bool S2Polygon::Contains(S2ShapeIndex::Iterator const& it,
-                         S2Point const& p) const {
-  // Test containment by drawing a line segment from the cell center to the
-  // given point and counting edge crossings.
-  S2ClippedShape const& a_clipped = it.cell().clipped(0);
-  bool inside = a_clipped.contains_center();
-  int a_num_edges = a_clipped.num_edges();
-  if (a_num_edges > 0) {
-    auto shape = down_cast<Shape const*>(index_.shape(0));
-    S2CopyingEdgeCrosser crosser(it.center(), p);
-    // TODO(ericv): For more polygons with a large number of loops, it would
-    // be more efficient to test the edges of each chain separately.  This
-    // would avoid the need to figure out which loop contains each edge.
-    for (int i = 0; i < a_num_edges; ++i) {
-      auto edge = shape->edge(a_clipped.edge(i));
-      inside ^= crosser.EdgeOrVertexCrossing(edge.v0, edge.v1);
-    }
-  }
-  return inside;
+  return MakeS2ContainsPointQuery(&index_).Contains(p);
 }
 
 void S2Polygon::Encode(Encoder* const encoder) const {
@@ -1676,13 +1654,13 @@ S2Shape::Edge S2Polygon::Shape::edge(int e) const {
               p->loop(i)->oriented_vertex(e + 1));
 }
 
-bool S2Polygon::Shape::contains_origin() const {
+S2Shape::ReferencePoint S2Polygon::Shape::GetReferencePoint() const {
   S2Polygon const* p = polygon();
   bool contains_origin = false;
   for (int i = 0; i < p->num_loops(); ++i) {
     contains_origin ^= p->loop(i)->contains_origin();
   }
-  return contains_origin;
+  return ReferencePoint(S2::Origin(), contains_origin);
 }
 
 int S2Polygon::Shape::num_chains() const {
@@ -1728,11 +1706,11 @@ S2Shape::ChainPosition S2Polygon::Shape::chain_position(int e) const {
   return ChainPosition(i, e);
 }
 
-size_t S2Polygon::BytesUsed() const {
+size_t S2Polygon::SpaceUsed() const {
   size_t size = sizeof(*this);
   for (int i = 0; i < num_loops(); ++i) {
-    size += loop(i)->BytesUsed();
+    size += loop(i)->SpaceUsed();
   }
-  size += index_.BytesUsed() - sizeof(index_);
+  size += index_.SpaceUsed() - sizeof(index_);
   return size;
 }

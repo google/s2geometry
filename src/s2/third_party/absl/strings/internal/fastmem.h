@@ -13,6 +13,22 @@
 // limitations under the License.
 //
 
+/*
+ * Copyright 2017 The Abseil Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 // Fast memory copying and comparison routines.
 //   strings::fastmemcmp_inlined() replaces memcmp()
 //   strings::memcpy_inlined() replaces memcpy()
@@ -26,7 +42,6 @@
 //   strings::fastmemcmp_inlined
 //     Analysis: memcmp, fastmemcmp_inlined, fastmemcmp
 //     2012-01-30
-
 #ifndef S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_FASTMEM_H_
 #define S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_FASTMEM_H_
 

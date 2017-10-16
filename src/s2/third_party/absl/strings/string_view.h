@@ -13,6 +13,22 @@
 // limitations under the License.
 //
 
+//
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 // A string_view points to part or all of a string, Cord, double-quoted string
 // literal, or other string-like object.  A string_view does *not* own the
 // string to which it points.  A string_view is not null-terminated.
@@ -308,9 +324,6 @@ std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
     if (!data()) return {};
     return string(data(), size());
   }
-
-  ABSL_DEPRECATED("use absl::CopyToString")
-  void CopyToString(string* target) const;
 
   size_type copy(char* buf, size_type n, size_type pos = 0) const;
 

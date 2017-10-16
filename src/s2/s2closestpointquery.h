@@ -202,7 +202,7 @@ class S2ClosestPointQuery {
       return S2::UpdateMinDistance(x, a_, b_, min_dist);
     }
     S1ChordAngle GetDistance(S2Cell const& cell) const {
-      return cell.GetDistanceToEdge(a_, b_);
+      return cell.GetDistance(a_, b_);
     }
    private:
     S2Point a_, b_;

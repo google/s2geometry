@@ -213,8 +213,8 @@ TEST(S2CellUnion, Normalize) {
       }
     }
 
-    // Test Contains(S2CellUnion), Intersects(S2CellUnion),
-    // GetUnion(), GetIntersection(), and GetDifference().
+    // Test Contains(S2CellUnion), Intersects(S2CellUnion), Union(),
+    // Intersection(), and Difference().
     vector<S2CellId> x, y, x_or_y, x_and_y;
     for (S2CellId input_id : input) {
       bool in_x = rnd.OneIn(2);
@@ -468,17 +468,17 @@ TEST(S2CellUnion, Empty) {
   EXPECT_FALSE(empty_cell_union.Intersects(face1_id));
   EXPECT_FALSE(empty_cell_union.Intersects(empty_cell_union));
 
-  // GetUnion(...)
+  // Union(...)
   S2CellUnion cell_union = empty_cell_union.Union(empty_cell_union);
   EXPECT_EQ(0, cell_union.num_cells());
 
-  // GetIntersection(...)
+  // Intersection(...)
   S2CellUnion intersection = empty_cell_union.Intersection(face1_id);
   EXPECT_EQ(0, intersection.num_cells());
   intersection = empty_cell_union.Intersection(empty_cell_union);
   EXPECT_EQ(0, intersection.num_cells());
 
-  // GetDifference(...)
+  // Difference(...)
   S2CellUnion difference = empty_cell_union.Difference(empty_cell_union);
   EXPECT_EQ(0, difference.num_cells());
 

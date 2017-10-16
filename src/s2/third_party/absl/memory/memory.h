@@ -144,6 +144,11 @@ struct MakeUniqueResult<T[N]> {
 //         auto my_array = absl::make_unique<int[]>(10);
 
 // `absl::make_unique` overload for non-array types.
+// TODO(b/64762346): remove this workaround once the issue is resolved.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wover-aligned"
+#endif
 template <typename T, typename... Args>
 typename internal::MakeUniqueResult<T>::scalar
 make_unique(Args&&... args) {
@@ -187,6 +192,10 @@ typename internal::MakeUniqueResult<T>::array
 MakeUnique(size_t n) {
   return std::unique_ptr<T>(new typename absl::remove_extent_t<T>[n]());
 }
+// TODO(b/64762346): remove this workaround once the issue is resolved.
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 // `absl::MakeUnique` overload for an array T[N] of known bounds.
 // This construction will be rejected.

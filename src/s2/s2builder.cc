@@ -235,8 +235,8 @@ void S2Builder::Init(Options const& options) {
   // the maximum distance allowed (i.e., snap_radius), the center of the edge
   // will still move by less than max_edge_deviation().  This saves us a lot
   // of work since then we don't need to check the actual deviation.
-  min_edge_length_to_split_ca_ = S1ChordAngle(S1Angle::Radians(
-      2 * acos(sin(snap_radius_) / sin(max_edge_deviation_))));
+  min_edge_length_to_split_ca_ = S1ChordAngle::Radians(
+      2 * acos(sin(snap_radius_) / sin(max_edge_deviation_)));
 
   // If the condition below is violated, then AddExtraSites() needs to be
   // modified to check that snapped edges pass on the same side of each "site
@@ -322,8 +322,9 @@ void S2Builder::set_label(Label label) {
 static bool IsFullPolygonUnspecified(S2Builder::Graph const& g,
                                      S2Error* error) {
   error->Init(S2Error::BUILDER_IS_FULL_PREDICATE_NOT_SPECIFIED,
-              "Attempted to assemble a degenerate polygon without specifying "
-              "a predicate to decide whether the result is empty or full");
+              "A degenerate polygon was found, but no predicate was specified "
+              "to determine whether the polygon is empty or full.  Call "
+              "S2Builder::AddIsFullPolygonPredicate() to fix this problem.");
   return false;  // Assumes the polygon is empty.
 }
 
@@ -432,7 +433,9 @@ class VertexIdEdgeVectorShape : public S2Shape {
     return Edge(vertices_[edges_[e].first], vertices_[edges_[e].second]);
   }
   int dimension() const final { return 1; }
-  bool contains_origin() const final { return false; }
+  ReferencePoint GetReferencePoint() const final {
+    return ReferencePoint::Contained(false);
+  }
   int num_chains() const final { return edges_.size(); }
   Chain chain(int i) const final { return Chain(i, 1); }
   Edge chain_edge(int i, int j) const final { return edge(i); }

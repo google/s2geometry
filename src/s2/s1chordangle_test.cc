@@ -95,12 +95,34 @@ TEST(S1ChordAngle, ToFromS1Angle) {
                    S1ChordAngle(S1Angle::Radians(1.0)).ToAngle().radians());
 }
 
+TEST(S1ChordAngle, Successor) {
+  EXPECT_EQ(S1ChordAngle::Zero(), S1ChordAngle::Negative().Successor());
+  EXPECT_EQ(S1ChordAngle::Infinity(), S1ChordAngle::Straight().Successor());
+  EXPECT_EQ(S1ChordAngle::Infinity(), S1ChordAngle::Infinity().Successor());
+  S1ChordAngle x = S1ChordAngle::Negative();
+  for (int i = 0; i < 10; ++i) {
+    EXPECT_LT(x, x.Successor());
+    x = x.Successor();
+  }
+}
+
+TEST(S1ChordAngle, Predecessor) {
+  EXPECT_EQ(S1ChordAngle::Straight(), S1ChordAngle::Infinity().Predecessor());
+  EXPECT_EQ(S1ChordAngle::Negative(), S1ChordAngle::Zero().Predecessor());
+  EXPECT_EQ(S1ChordAngle::Negative(), S1ChordAngle::Negative().Predecessor());
+  S1ChordAngle x = S1ChordAngle::Infinity();
+  for (int i = 0; i < 10; ++i) {
+    EXPECT_GT(x, x.Predecessor());
+    x = x.Predecessor();
+  }
+}
+
 TEST(S1ChordAngle, Arithmetic) {
   S1ChordAngle zero = S1ChordAngle::Zero();
-  S1ChordAngle degree30 = S1ChordAngle(S1Angle::Degrees(30));
-  S1ChordAngle degree60 = S1ChordAngle(S1Angle::Degrees(60));
-  S1ChordAngle degree90 = S1ChordAngle(S1Angle::Degrees(90));
-  S1ChordAngle degree120 = S1ChordAngle(S1Angle::Degrees(120));
+  S1ChordAngle degree30 = S1ChordAngle::Degrees(30);
+  S1ChordAngle degree60 = S1ChordAngle::Degrees(60);
+  S1ChordAngle degree90 = S1ChordAngle::Degrees(90);
+  S1ChordAngle degree120 = S1ChordAngle::Degrees(120);
   S1ChordAngle degree180 = S1ChordAngle::Straight();
   EXPECT_EQ(0, (zero + zero).ToAngle().degrees());
   EXPECT_EQ(0, (zero - zero).ToAngle().degrees());

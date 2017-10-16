@@ -34,6 +34,7 @@
 #include "s2/s2metrics.h"
 #include "s2/s2paddedcell.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2shapeutil_contains_brute_force.h"
 
 using std::fabs;
 using std::max;
@@ -205,14 +206,20 @@ void S2ShapeIndex::Iterator::Copy(IteratorBase const& other)  {
   *this = *down_cast<Iterator const*>(&other);
 }
 
+// Defines the initial focus point of S2ShapeIndex::InteriorTracker (the start
+// of the S2CellId space-filling curve).
+//
+// TODO(ericv): Move InteriorTracker here to avoid the need for this method.
+static S2Point kInteriorTrackerOrigin() {
+  return S2::FaceUVtoXYZ(0, -1, -1).Normalize();
+}
+
 S2ShapeIndex::S2ShapeIndex()
-    : pending_additions_begin_(0),
-      index_status_(FRESH) {
+    : index_status_(FRESH) {
 }
 
 S2ShapeIndex::S2ShapeIndex(Options const& options)
     : options_(options),
-      pending_additions_begin_(0),
       index_status_(FRESH) {
 }
 
@@ -230,11 +237,13 @@ void S2ShapeIndex::Minimize() {
   // entire index and rebuild it the next time it is needed.
 }
 
-void S2ShapeIndex::Add(unique_ptr<S2Shape> shape) {
+int S2ShapeIndex::Add(unique_ptr<S2Shape> shape) {
   // Additions are processed lazily by ApplyUpdates().
-  shape->id_ = shapes_.size();
+  int const id = shapes_.size();
+  shape->id_ = id;
   shapes_.push_back(std::move(shape));
   index_status_.store(STALE, std::memory_order_relaxed);
+  return id;
 }
 
 unique_ptr<S2Shape> S2ShapeIndex::Release(int shape_id) {
@@ -258,7 +267,8 @@ unique_ptr<S2Shape> S2ShapeIndex::Release(int shape_id) {
     RemovedShape* removed = &pending_removals_->back();
     removed->shape_id = shape->id();
     removed->has_interior = shape->has_interior();
-    removed->contains_origin = shape->contains_origin();
+    removed->contains_tracker_origin =
+        s2shapeutil::ContainsBruteForce(*shape, kInteriorTrackerOrigin());
     int num_edges = shape->num_edges();
     removed->edges.reserve(num_edges);
     for (int e = 0; e < num_edges; ++e) {
@@ -286,82 +296,6 @@ vector<unique_ptr<S2Shape>> S2ShapeIndex::ReleaseAll() {
 
 void S2ShapeIndex::Reset() {
   ReleaseAll();
-}
-
-// Helper class for testing whether the point "p" is contained by one or more
-// shapes that intersect a given index cell.
-class PointContainmentTester {
- public:
-  // "it" should be positioned at the cell to be tested.  "p" is the target.
-  PointContainmentTester(S2ShapeIndex::Iterator const& it, S2Point const& p)
-      : it_(it), point_(p), crosser_initialized_(false) {
-  }
-  // Return true if the given shape contains "p".  "clipped" should point to
-  // the S2ClippedShape for "shape" in the given index cell.
-  bool ContainedBy(S2Shape const* shape, S2ClippedShape const& clipped);
- private:
-  S2ShapeIndex::Iterator const& it_;
-  S2Point const& point_;
-  bool crosser_initialized_;
-  S2CopyingEdgeCrosser crosser_;
-};
-
-bool PointContainmentTester::ContainedBy(S2Shape const* shape,
-                                         S2ClippedShape const& clipped) {
-  if (!shape->has_interior()) {
-    return false;
-  }
-  bool inside = clipped.contains_center();
-  int num_edges = clipped.num_edges();
-  if (num_edges == 0) {
-    return inside;
-  }
-  // We initialize the EdgeCrosser lazily.  This saves work when the cell
-  // does not intersect any edges (which happens with interior cells).
-  if (!crosser_initialized_) {
-    crosser_.Init(it_.center(), point_);
-    crosser_initialized_ = true;
-  }
-  // Test containment by drawing a line segment from the cell center to the
-  // given point and counting edge crossings.
-  for (int i = 0; i < num_edges; ++i) {
-    auto edge = shape->edge(clipped.edge(i));
-    inside ^= crosser_.EdgeOrVertexCrossing(edge.v0, edge.v1);
-  }
-  return inside;
-}
-
-bool S2ShapeIndex::ShapeContains(S2Shape const* shape, S2Point const& p) const {
-  // Look up the S2ShapeIndex cell containing this point.
-  S2ShapeIndex::Iterator it(this);
-  if (!it.Locate(p)) return false;
-
-  S2ClippedShape const* clipped = it.cell().find_clipped(shape);
-  if (clipped == nullptr) return false;
-
-  PointContainmentTester point_tester(it, p);
-  return point_tester.ContainedBy(shape, *clipped);
-}
-
-bool S2ShapeIndex::GetContainingShapes(S2Point const& p,
-                                       std::vector<S2Shape*>* shapes) const {
-  // Look up the S2ShapeIndex cell containing this point.
-  shapes->clear();
-  S2ShapeIndex::Iterator it(this);
-  if (!it.Locate(p)) return false;
-
-  int num_clipped = it.cell().num_clipped();
-  if (num_clipped == 0) return false;
-
-  PointContainmentTester point_tester(it, p);
-  for (int s = 0; s < num_clipped; ++s) {
-    S2ClippedShape const& clipped = it.cell().clipped(s);
-    S2Shape* shape = this->shape(clipped.shape_id());
-    if (point_tester.ContainedBy(shape, clipped)) {
-      shapes->push_back(shape);
-    }
-  }
-  return !shapes->empty();
 }
 
 // FaceEdge and ClippedEdge store temporary edge data while the index is being
@@ -403,31 +337,35 @@ struct S2ShapeIndex::ClippedEdge {
 // of every S2CellId in the index, by advancing the focus from one cell center
 // to the next.
 //
-// Initially the focus is S2::Origin(), and therefore we can initialize the
-// state of every shape to its contains_origin() value.  Next we advance the
-// focus to the start of the S2CellId space-filling curve, by drawing a line
-// segment between this point and S2::Origin() and testing whether every edge
-// of every shape intersects it.  Then we visit all the cells that are being
-// added to the S2ShapeIndex in increasing order of S2CellId.  For each cell,
-// we draw two edges: one from the entry vertex to the center, and another
-// from the center to the exit vertex (where "entry" and "exit" refer to the
-// points where the space-filling curve enters and exits the cell).  By
-// counting edge crossings we can incrementally compute which shapes contain
-// the cell center.  Note that the same set of shapes will always contain the
-// exit point of one cell and the entry point of the next cell in the index,
-// because either (a) these two points are actually the same, or (b) the
-// intervening cells in S2CellId order are all empty, and therefore there are
-// no edge crossings if we follow this path from one cell to the other.
+// Initially the focus is at the start of the S2CellId space-filling curve.
+// We then visit all the cells that are being added to the S2ShapeIndex in
+// increasing order of S2CellId.  For each cell, we draw two edges: one from
+// the entry vertex to the center, and another from the center to the exit
+// vertex (where "entry" and "exit" refer to the points where the
+// space-filling curve enters and exits the cell).  By counting edge crossings
+// we can incrementally compute which shapes contain the cell center.  Note
+// that the same set of shapes will always contain the exit point of one cell
+// and the entry point of the next cell in the index, because either (a) these
+// two points are actually the same, or (b) the intervening cells in S2CellId
+// order are all empty, and therefore there are no edge crossings if we follow
+// this path from one cell to the other.
 class S2ShapeIndex::InteriorTracker {
  public:
-  // Initialize the InteriorTracker.  You must call AddShape() for each shape
+  // Constructs the InteriorTracker.  You must call AddShape() for each shape
   // that will be tracked before calling MoveTo() or DrawTo().
   InteriorTracker();
 
-  // Return true if any shapes are being tracked.
+  // Returns the initial focus point when the InteriorTracker is constructed
+  // (corresponding to the start of the S2CellId space-filling curve).
+  static S2Point Origin();
+
+  // Returns the current focus point (see above).
+  S2Point const& focus() { return b_; }
+
+  // Returns true if any shapes are being tracked.
   bool is_active() const { return is_active_; }
 
-  // Add a shape whose interior should be tracked.  "is_inside" indicates
+  // Adds a shape whose interior should be tracked.  "is_inside" indicates
   // whether the current focus point is inside the shape.  Alternatively, if
   // the focus point is in the process of being moved (via MoveTo/DrawTo), you
   // can also specify "is_inside" at the old focus point and call TestEdge()
@@ -437,17 +375,17 @@ class S2ShapeIndex::InteriorTracker {
   // REQUIRES: shape->has_interior()
   void AddShape(int32 shape_id, bool is_inside);
 
-  // Move the focus to the given point.  This method should only be used when
+  // Moves the focus to the given point.  This method should only be used when
   // it is known that there are no edge crossings between the old and new
   // focus locations; otherwise use DrawTo().
   void MoveTo(S2Point const& b) { b_ = b; }
 
-  // Move the focus to the given point.  After this method is called,
+  // Moves the focus to the given point.  After this method is called,
   // TestEdge() should be called with all edges that may cross the line
   // segment between the old and new focus locations.
   void DrawTo(S2Point const& b);
 
-  // Indicate that the given edge of the given shape may cross the line
+  // Indicates that the given edge of the given shape may cross the line
   // segment between the old and new focus locations (see DrawTo).
   // REQUIRES: shape->has_interior()
   inline void TestEdge(int32 shape_id, S2Shape::Edge const& edge);
@@ -455,7 +393,7 @@ class S2ShapeIndex::InteriorTracker {
   // The set of shape ids that contain the current focus.
   ShapeIdSet const& shape_ids() const { return shape_ids_; }
 
-  // Indicate that the last argument to MoveTo() or DrawTo() was the entry
+  // Indicates that the last argument to MoveTo() or DrawTo() was the entry
   // vertex of the given S2CellId, i.e. the tracker is positioned at the start
   // of this cell.  By using this method together with at_cellid(), the caller
   // can avoid calling MoveTo() in cases where the exit vertex of the previous
@@ -464,28 +402,28 @@ class S2ShapeIndex::InteriorTracker {
     next_cellid_ = next_cellid.range_min();
   }
 
-  // Return true if the focus is already at the entry vertex of the given
+  // Returns true if the focus is already at the entry vertex of the given
   // S2CellId (provided that the caller calls set_next_cellid() as each cell
   // is processed).
   bool at_cellid(S2CellId cellid) const {
     return cellid.range_min() == next_cellid_;
   }
 
-  // Make an internal copy of the state for shape ids below the given limit,
+  // Makes an internal copy of the state for shape ids below the given limit,
   // and then clear the state for those shapes.  This is used during
   // incremental updates to track the state of added and removed shapes
   // separately.
   void SaveAndClearStateBefore(int32 limit_shape_id);
 
-  // Restore the state previously saved by SaveAndClearStateBefore().  This
+  // Restores the state previously saved by SaveAndClearStateBefore().  This
   // only affects the state for shape_ids below "limit_shape_id".
   void RestoreStateBefore(int32 limit_shape_id);
 
  private:
-  // Remove "shape_id" from shape_ids_ if it exists, otherwise insert it.
+  // Removes "shape_id" from shape_ids_ if it exists, otherwise insert it.
   void ToggleShape(int shape_id);
 
-  // Return a pointer to the first entry "x" where x >= shape_id.
+  // Returns a pointer to the first entry "x" where x >= shape_id.
   ShapeIdSet::iterator lower_bound(int32 shape_id);
 
   bool is_active_;
@@ -503,15 +441,19 @@ class S2ShapeIndex::InteriorTracker {
 // S2CellId space-filling curve by drawing an edge from S2::Origin() to this
 // point and counting how many shape edges cross this edge.
 S2ShapeIndex::InteriorTracker::InteriorTracker()
-    : is_active_(false), b_(S2::Origin()),
+    : is_active_(false), b_(Origin()),
       next_cellid_(S2CellId::Begin(S2CellId::kMaxLevel)) {
-  DrawTo(S2::FaceUVtoXYZ(0, -1, -1).Normalize());  // S2CellId curve start
+}
+
+S2Point S2ShapeIndex::InteriorTracker::Origin() {
+  // The start of the S2CellId space-filling curve.
+  return S2::FaceUVtoXYZ(0, -1, -1).Normalize();
 }
 
 void S2ShapeIndex::InteriorTracker::AddShape(int32 shape_id,
-                                             bool contains_origin) {
+                                             bool contains_focus) {
   is_active_ = true;
-  if (contains_origin) {
+  if (contains_focus) {
     ToggleShape(shape_id);
   }
 }
@@ -926,16 +868,19 @@ void S2ShapeIndex::AddShape(int id, vector<FaceEdge> all_edges[6],
   if (shape == nullptr) {
     return;  // This shape has already been removed.
   }
+  // Construct a template for the edges to be added.
   FaceEdge edge;
   edge.shape_id = id;
   edge.has_interior = shape->has_interior();
-  if (edge.has_interior) tracker->AddShape(id, shape->contains_origin());
+  if (edge.has_interior) {
+    tracker->AddShape(id, s2shapeutil::ContainsBruteForce(*shape,
+                                                          tracker->focus()));
+  }
   int num_edges = shape->num_edges();
   for (int e = 0; e < num_edges; ++e) {
     edge.edge_id = e;
     edge.edge = shape->edge(e);
     edge.max_level = GetEdgeMaxLevel(edge.edge);
-    if (edge.has_interior) tracker->TestEdge(id, edge.edge);
     AddFaceEdge(&edge, all_edges);
   }
 }
@@ -948,14 +893,11 @@ void S2ShapeIndex::RemoveShape(RemovedShape const& removed,
   edge.shape_id = removed.shape_id;
   edge.has_interior = removed.has_interior;
   if (edge.has_interior) {
-    tracker->AddShape(edge.shape_id, removed.contains_origin);
+    tracker->AddShape(edge.shape_id, removed.contains_tracker_origin);
   }
   for (auto const& removed_edge : removed.edges) {
     edge.edge = removed_edge;
     edge.max_level = GetEdgeMaxLevel(edge.edge);
-    if (edge.has_interior) {
-      tracker->TestEdge(edge.shape_id, edge.edge);
-    }
     AddFaceEdge(&edge, all_edges);
   }
 }
@@ -1634,10 +1576,9 @@ int S2ShapeIndex::CountShapes(vector<ClippedEdge const*> const& edges,
   return count;
 }
 
-size_t S2ShapeIndex::BytesUsed() const {
-  MaybeApplyUpdates();
+size_t S2ShapeIndex::SpaceUsed() const {
   size_t size = sizeof(*this);
-  size += shapes_.capacity() * sizeof(shapes_[0]);
+  size += shapes_.capacity() * sizeof(std::unique_ptr<S2Shape>);
   // cell_map_ itself is already included in sizeof(*this).
   size += cell_map_.bytes_used() - sizeof(cell_map_);
   size += cell_map_.size() * sizeof(S2ShapeIndexCell);
@@ -1652,6 +1593,9 @@ size_t S2ShapeIndex::BytesUsed() const {
       }
     }
   }
-  // There are no pending removals because all updates have been applied.
+  if (pending_removals_ != nullptr) {
+    size += pending_removals_->capacity() * sizeof(RemovedShape);
+  }
+
   return size;
 }

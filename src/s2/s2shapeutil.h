@@ -31,7 +31,7 @@
 //
 //  - RangeIterator: useful for merging two or more S2ShapeIndexes.
 //  - VisitCrossings: finds all edge intersections between S2ShapeIndexes.
-//  - IsOriginOnLeft: helper for implementing S2Shape::contains_origin.
+//  - GetReferencePoint: helper for implementing S2Shape::GetReferencePoint.
 //
 // And functions that are mainly useful internally in the S2 library:
 //
@@ -91,7 +91,7 @@ class LaxLoop : public S2Shape {
   // Not final; overridden by ClosedLaxPolyline.
   int dimension() const override { return 2; }
   // Not final; overridden by ClosedLaxPolyline.
-  bool contains_origin() const override;
+  ReferencePoint GetReferencePoint() const override;
   int num_chains() const final { return std::min(1, num_vertices_); }
   Chain chain(int i) const final { return Chain(0, num_vertices_); }
   Edge chain_edge(int i, int j) const final;
@@ -181,7 +181,7 @@ class LaxPolygon : public S2Shape {
   int num_edges() const final { return num_vertices(); }
   Edge edge(int e) const final;
   int dimension() const final { return 2; }
-  bool contains_origin() const final;
+  ReferencePoint GetReferencePoint() const final;
   int num_chains() const final { return num_loops(); }
   Chain chain(int i) const final;
   Edge chain_edge(int i, int j) const final;
@@ -226,7 +226,9 @@ class LaxPolyline : public S2Shape {
   int num_edges() const final { return std::max(0, num_vertices() - 1); }
   Edge edge(int e) const final;
   int dimension() const final { return 1; }
-  bool contains_origin() const final { return false; }
+  ReferencePoint GetReferencePoint() const final {
+    return ReferencePoint::Contained(false);
+  }
   int num_chains() const final;
   Chain chain(int i) const final;
   Edge chain_edge(int i, int j) const final;
@@ -248,7 +250,9 @@ class ClosedLaxPolyline : public LaxLoop {
   explicit ClosedLaxPolyline(std::vector<S2Point> const& vertices);
   explicit ClosedLaxPolyline(S2Loop const& loop);  // Copies the loop data.
   int dimension() const final { return 1; }
-  bool contains_origin() const final { return false; }
+  ReferencePoint GetReferencePoint() const final {
+    return ReferencePoint::Contained(false);
+  }
 };
 
 // EdgeVectorShape is an S2Shape representing an arbitrary set of edges.  It
@@ -283,7 +287,9 @@ class EdgeVectorShape : public S2Shape {
     return Edge(edges_[e].first, edges_[e].second);
   }
   int dimension() const final { return 1; }
-  bool contains_origin() const final { return false; }
+  ReferencePoint GetReferencePoint() const final {
+    return ReferencePoint::Contained(false);
+  }
   int num_chains() const final { return edges_.size(); }
   Chain chain(int i) const final { return Chain(i, 1); }
   Edge chain_edge(int i, int j) const final {
@@ -324,7 +330,9 @@ class PointVectorShape : public S2Shape {
     return Edge(points_[e], points_[e]);
   }
   int dimension() const final { return 0; }
-  bool contains_origin() const final { return false; }
+  ReferencePoint GetReferencePoint() const final {
+    return ReferencePoint::Contained(false);
+  }
   int num_chains() const final { return points_.size(); }
   Chain chain(int i) const final { return Chain(i, 1); }
   Edge chain_edge(int i, int j) const final {
@@ -365,7 +373,7 @@ class VertexIdLaxLoop : public S2Shape {
   int num_edges() const final { return num_vertices(); }
   Edge edge(int e) const final;
   int dimension() const final { return 2; }
-  bool contains_origin() const final;
+  ReferencePoint GetReferencePoint() const final;
   int num_chains() const final { return 1; }
   Chain chain(int i) const final { return Chain(0, num_vertices_); }
   Edge chain_edge(int i, int j) const final;
@@ -464,6 +472,7 @@ struct ShapeEdge {
  public:
   ShapeEdge() {}
   ShapeEdge(S2Shape const& shape, int32 edge_id);
+  ShapeEdge(S2Shape const& shape, int32 edge_id, S2Shape::Edge const& edge);
   ShapeEdgeId id() const { return id_; }
   S2Point const& v0() const { return edge_.v0; }
   S2Point const& v1() const { return edge_.v1; }
@@ -499,12 +508,12 @@ bool VisitCrossings(S2ShapeIndexBase const& index, CrossingType type,
 bool VisitCrossings(S2ShapeIndexBase const& a, S2ShapeIndexBase const& b,
                     CrossingType type, EdgePairVisitor const& visitor);
 
-// This is a helper function for implementing S2Shape::contains_origin().
+// This is a helper function for implementing S2Shape::GetReferencePoint().
 //
-// Given a shape consisting of closed polygonal loops, define the interior of
-// the shape to be the region to the left of all edges (which must be oriented
-// consistently).  This function then returns true if S2::Origin() is
-// contained by the shape.
+// Given a shape consisting of closed polygonal loops, the interior of the
+// shape is defined as the region to the left of all edges (which must be
+// oriented consistently).  This function then chooses an arbitrary point and
+// returns true if that point is contained by the shape.
 //
 // Unlike S2Loop and S2Polygon, this method allows duplicate vertices and
 // edges, which requires some extra care with definitions.  The rule that we
@@ -518,7 +527,7 @@ bool VisitCrossings(S2ShapeIndexBase const& a, S2ShapeIndexBase const& b,
 // the corresponding problem in 2D plane geometry.  It cannot be implemented
 // just by counting edge crossings because there is no such thing as a "point
 // at infinity" that is guaranteed to be outside the loop.
-bool IsOriginOnLeft(S2Shape const& shape);
+S2Shape::ReferencePoint GetReferencePoint(S2Shape const& shape);
 
 // Returns the total number of edges in all indexed shapes.  This method
 // takes time linear in the number of shapes.
@@ -613,7 +622,12 @@ inline bool ShapeEdgeId::operator>=(ShapeEdgeId other) const {
 }
 
 inline ShapeEdge::ShapeEdge(S2Shape const& shape, int32 edge_id)
-    : id_(shape.id(), edge_id), edge_(shape.edge(edge_id)) {
+    : ShapeEdge(shape, edge_id, shape.edge(edge_id)) {
+}
+
+inline ShapeEdge::ShapeEdge(S2Shape const& shape, int32 edge_id,
+                            S2Shape::Edge const& edge)
+    : id_(shape.id(), edge_id), edge_(edge) {
 }
 
 template <class S2ShapeIndexType>

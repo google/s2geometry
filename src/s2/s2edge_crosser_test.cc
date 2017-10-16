@@ -17,6 +17,7 @@
 
 #include "s2/s2edge_crosser.h"
 
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -28,6 +29,45 @@
 #include "s2/s2testing.h"
 
 using std::vector;
+
+#ifdef NDEBUG
+
+// In non-debug builds, check that default-constructed and/or NaN S2Point
+// arguments don't cause crashes, especially on the very first method call
+// (since S2CopyingEdgeCrosser checks whether the first vertex of each edge is
+// the same as the last vertex of the previous edged when deciding whether or
+// not to call Restart).
+
+void TestCrossingSignInvalid(S2Point const& point, int expected) {
+  S2EdgeCrosser crosser(&point, &point);
+  EXPECT_EQ(expected, crosser.CrossingSign(&point, &point));
+  S2CopyingEdgeCrosser crosser2(point, point);
+  EXPECT_EQ(expected, crosser2.CrossingSign(point, point));
+}
+
+void TestEdgeOrVertexCrossingInvalid(S2Point const& point, bool expected) {
+  S2EdgeCrosser crosser(&point, &point);
+  EXPECT_EQ(expected, crosser.EdgeOrVertexCrossing(&point, &point));
+  S2CopyingEdgeCrosser crosser2(point, point);
+  EXPECT_EQ(expected, crosser2.EdgeOrVertexCrossing(point, point));
+}
+
+TEST(S2EdgeUtil, InvalidDefaultPoints) {
+  // Check that default-constructed S2Point arguments don't cause crashes.
+  S2Point point(0, 0, 0);
+  TestCrossingSignInvalid(point, 0);
+  TestEdgeOrVertexCrossingInvalid(point, false);
+}
+
+TEST(S2EdgeUtil, InvalidNanPoints) {
+  // Check that NaN S2Point arguments don't cause crashes.
+  double const nan = std::numeric_limits<double>::quiet_NaN();
+  S2Point point(nan, nan, nan);
+  TestCrossingSignInvalid(point, -1);
+  TestEdgeOrVertexCrossingInvalid(point, false);
+}
+
+#endif
 
 void TestCrossing(S2Point const& a, S2Point const& b,
                   S2Point const& c, S2Point const& d,

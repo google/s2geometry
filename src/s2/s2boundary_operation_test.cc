@@ -140,13 +140,13 @@ void ExpectResult(S2BoundaryOperation::OpType op_type,
       << error.text();
 
   // Now try the same thing with boolean output.
-  bool result_empty;
-  S2BoundaryOperation op2(op_type, &result_empty, options);
+  bool non_empty;
+  S2BoundaryOperation op2(op_type, &non_empty, options);
   EXPECT_TRUE(op2.Build(*a, *b, &error)) << "Boolean "
       << S2BoundaryOperation::OpTypeToString(op_type) << " failed:\n"
       << "Expected result: " << expected_str << "\n"
       << error.text();
-  EXPECT_EQ(expected->num_shape_ids() == 0, result_empty);
+  EXPECT_EQ(expected->num_shape_ids() > 0, non_empty);
 }
 
 }  // namespace

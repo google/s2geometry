@@ -76,11 +76,13 @@
 // By default *all* edges are returned, so you should always specify either
 // max_edges() or max_distance() or both.  There is also a FindClosestEdge()
 // convenience method that automatically sets max_edges() == 1 and returns
-// only the closest edge, and an IsDistanceLess() method that compares the
-// minimum distance against a given threshold distance.  Note that
-// IsDistanceLess() is often *much* faster than calculating the distance and
-// comparing it yourself, since the implementation can stop as soon as it can
-// prove that the minimum distance is either above or below the threshold.
+// only the closest edge.
+//
+// If you only need to test whether the distance is above or below a given
+// threshold (e.g., 10 km), you can use the IsDistanceLess() method.  This is
+// much faster than actually calculating the distance with FindClosestEdge(),
+// since the implementation can stop as soon as it can prove that the minimum
+// distance is either above or below the threshold.
 //
 // To find the closest edges to a query edge rather than a point, use:
 //
@@ -91,6 +93,10 @@
 // S2ClosestEdgeQuery::CellTarget, and you can find the closest edges to an
 // arbitrary collection of points, polylines, and polygons by using an
 // S2ClosestEdgeQuery::ShapeIndexTarget.
+//
+// Note that by default, distances are measured to the boundaries of polygons.
+// For example, if a point even is inside a polygon then its distance will be
+// non-zero.  To change this behavior, call set_include_interiors(true).
 //
 // The implementation is designed to be fast for both simple and complex
 // geometric objects.
@@ -121,6 +127,11 @@ class S2ClosestEdgeQuery {
   class Options : public Base::Options {
    public:
     // Versions of set_max_distance() that accept S1ChordAngle / S1Angle.
+    //
+    // Note that only edges whose distance is *less than* "max_distance" are
+    // returned.  Normally this doesn't matter, because distances are not
+    // computed exactly in the first place, but if such edges are needed then
+    // you can retrieve them by specifying max_distance.Successor() instead.
     void set_max_distance(S1ChordAngle max_distance);
     void set_max_distance(S1Angle max_distance);
 
@@ -154,6 +165,8 @@ class S2ClosestEdgeQuery {
                            Distance* min_dist) const override;
     bool UpdateMinDistance(S2Cell const& cell,
                            Distance* min_dist) const override;
+    std::vector<int> GetContainingShapes(S2ShapeIndexBase const& index,
+                                         int max_shapes) const override;
 
    private:
     S2Point point_;
@@ -169,6 +182,8 @@ class S2ClosestEdgeQuery {
                            Distance* min_dist) const override;
     bool UpdateMinDistance(S2Cell const& cell,
                            Distance* min_dist) const override;
+    std::vector<int> GetContainingShapes(S2ShapeIndexBase const& index,
+                                         int max_shapes) const override;
 
    private:
     S2Point a_, b_;
@@ -185,6 +200,8 @@ class S2ClosestEdgeQuery {
                            Distance* min_dist) const override;
     bool UpdateMinDistance(S2Cell const& cell,
                            Distance* min_dist) const override;
+    std::vector<int> GetContainingShapes(S2ShapeIndexBase const& index,
+                                         int max_shapes) const override;
 
    private:
     S2Cell cell_;
@@ -255,6 +272,8 @@ class S2ClosestEdgeQuery {
                            Distance* min_dist) const override;
     bool UpdateMinDistance(S2Cell const& cell,
                            Distance* min_dist) const override;
+    std::vector<int> GetContainingShapes(S2ShapeIndexBase const& query_index,
+                                         int max_shapes) const override;
 
    private:
     S2ShapeIndex const* index_;
@@ -330,8 +349,6 @@ class S2ClosestEdgeQuery {
   S2Point Project(S2Point const& point, Result const& result) const;
 
  private:
-  Result const& result(int i) const;  // Internal accessor method.
-
   Options options_;
   Base base_;
 

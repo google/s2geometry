@@ -13,6 +13,22 @@
 // limitations under the License.
 //
 
+/*
+ * Copyright 2017 The Abseil Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 // -----------------------------------------------------------------------------
 // File: algorithm.h
 // -----------------------------------------------------------------------------
@@ -29,7 +45,7 @@
 
 namespace absl {
 
-namespace algorithm_internal_1210 {
+namespace algorithm_internal {
 
 // Performs comparisons with operator==, similar to C++14's `std::equal_to<>`.
 struct EqualTo {
@@ -71,7 +87,7 @@ It RotateImpl(It first, It middle, It last, std::false_type) {
   return std::next(first, std::distance(middle, last));
 }
 
-}  // namespace algorithm_internal_1210
+}  // namespace algorithm_internal
 
 // Compares the equality of two ranges specified by pairs of iterators, using
 // the given predicate, returning true iff for each corresponding iterator i1
@@ -87,7 +103,7 @@ It RotateImpl(It first, It middle, It last, std::false_type) {
 template <typename InputIter1, typename InputIter2, typename Pred>
 bool equal(InputIter1 first1, InputIter1 last1, InputIter2 first2,
            InputIter2 last2, Pred&& pred) {
-  return algorithm_internal_1210::EqualImpl(
+  return algorithm_internal::EqualImpl(
       first1, last1, first2, last2, std::forward<Pred>(pred),
       typename std::iterator_traits<InputIter1>::iterator_category{},
       typename std::iterator_traits<InputIter2>::iterator_category{});
@@ -99,7 +115,7 @@ template <typename InputIter1, typename InputIter2>
 bool equal(InputIter1 first1, InputIter1 last1, InputIter2 first2,
            InputIter2 last2) {
   return absl::equal(first1, last1, first2, last2,
-                     algorithm_internal_1210::EqualTo{});
+                     algorithm_internal::EqualTo{});
 }
 
 // Performs a linear search for `value` using the iterator `first` up to
@@ -128,7 +144,7 @@ bool linear_search(InputIterator first, InputIterator last,
 template <typename ForwardIterator>
 ForwardIterator rotate(ForwardIterator first, ForwardIterator middle,
                        ForwardIterator last) {
-  return algorithm_internal_1210::RotateImpl(
+  return algorithm_internal::RotateImpl(
       first, middle, last,
       std::is_same<decltype(std::rotate(first, middle, last)),
                    ForwardIterator>());

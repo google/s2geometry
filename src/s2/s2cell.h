@@ -179,11 +179,6 @@ class S2Cell final : public S2Region {
   // Decodes an S2Cell encoded with Encode().  Returns true on success.
   bool Decode(Decoder* const decoder);
 
-  ABSL_DEPRECATED("Use GetDistance")
-  S1ChordAngle GetDistanceToEdge(S2Point const& a, S2Point const& b) const {
-    return GetDistance(a, b);
-  }
-
  private:
   // Return the latitude or longitude of the cell vertex given by (i,j),
   // where "i" and "j" are either 0 or 1.

@@ -13,6 +13,22 @@
 // limitations under the License.
 //
 
+//
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 // -----------------------------------------------------------------------------
 // File: config.h
 // -----------------------------------------------------------------------------
@@ -58,18 +74,7 @@
 #include <cstddef>
 #endif  // __cplusplus
 
-// If we're using glibc, make sure we meet a minimum version requirement
-// before we proceed much further.
-//
-// We have chosen glibc 2.12 as the minimum as it was tagged for release
-// in May, 2010 and includes some functionality used in Google software
-// (for instance pthread_setname_np):
-// https://sourceware.org/ml/libc-alpha/2010-05/msg00000.html
-#ifdef __GLIBC_PREREQ
-#if !__GLIBC_PREREQ(2, 12)
-#error "Minimum required version of glibc is 2.12."
-#endif
-#endif
+#include "s2/third_party/absl/base/policy_checks.h"
 
 // -----------------------------------------------------------------------------
 // Compiler Feature Checks
@@ -98,6 +103,28 @@
 #elif defined(__linux__) && (defined(__clang__) || defined(_GLIBCXX_HAVE_TLS))
 #define ABSL_HAVE_TLS 1
 #endif
+
+// There are platforms for which TLS should not be used even though the compiler
+// makes it seem like it's supported (Android NDK < r12b for example).
+// This is primarily because of linker problems and toolchain misconfiguration:
+// Abseil does not intend to support this indefinitely. Currently, the newest
+// toolchain that we intend to support that requires this behavior is the
+// r11 NDK - allowing for a 5 year support window on that means this option
+// is likely to be removed around June of 2021.
+#if defined(__ANDROID__) && defined(__clang__)
+#if __has_include(<android/ndk-version.h>)
+#include <android/ndk-version.h>
+#endif
+// TLS isn't supported until NDK r12b per
+// https://developer.android.com/ndk/downloads/revision_history.html
+// Since NDK r16, `__NDK_MAJOR__` and `__NDK_MINOR__` are defined in
+// <android/ndk-version.h>. For NDK < r16, users should define these macros,
+// e.g. `-D__NDK_MAJOR__=11 -D__NKD_MINOR__=0` for NDK r11.
+#if defined(__NDK_MAJOR__) && defined(__NDK_MINOR__) && \
+    ((__NDK_MAJOR__ < 12) || ((__NDK_MAJOR__ == 12) && (__NDK_MINOR__ < 1)))
+#undef ABSL_HAVE_TLS
+#endif
+#endif  // defined(__ANDROID__) && defined(__clang__)
 
 // ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
 //
@@ -286,10 +313,6 @@
 #else
 // other standard libraries
 #define ABSL_HAVE_ALARM 1
-#endif
-
-#if defined(_STLPORT_VERSION)
-#error "STLPort is not supported."
 #endif
 
 // ABSL_IS_LITTLE_ENDIAN

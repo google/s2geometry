@@ -32,8 +32,11 @@
 #include "s2/s2metrics.h"
 #include "s2/s2shapeutil.h"
 #include "s2/s2testing.h"
+#include "s2/s2textformat.h"
 
 using absl::make_unique;
+using s2textformat::MakeIndex;
+using s2textformat::MakePoint;
 using std::fabs;
 using std::make_pair;
 using std::min;
@@ -41,6 +44,62 @@ using std::ostream;
 using std::pair;
 using std::unique_ptr;
 using std::vector;
+
+TEST(PointTarget, GetContainingShapes) {
+  // Only shapes 2 and 4 should contain the target point.
+  auto index = MakeIndex(
+      "1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | 0:0, 0:4, 4:0");
+  S2ClosestEdgeQuery::PointTarget target(MakePoint("1:1"));
+  EXPECT_EQ((vector<int>{2}), target.GetContainingShapes(*index, 1));
+  EXPECT_EQ((vector<int>{2, 4}), target.GetContainingShapes(*index, 5));
+}
+
+TEST(EdgeTarget, GetContainingShapes) {
+  // Only shapes 2 and 4 should contain the target point.
+  auto index = MakeIndex(
+      "1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | 0:0, 0:4, 4:0");
+  S2ClosestEdgeQuery::EdgeTarget target(MakePoint("1:2"), MakePoint("2:1"));
+  EXPECT_EQ((vector<int>{2}), target.GetContainingShapes(*index, 1));
+  EXPECT_EQ((vector<int>{2, 4}), target.GetContainingShapes(*index, 5));
+}
+
+TEST(CellTarget, GetContainingShapes) {
+  auto index = MakeIndex(
+      "1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | -1:-1, -1:5, 5:-1");
+  // Only shapes 2 and 4 should contain a very small cell near 1:1.
+  S2CellId cellid1(MakePoint("1:1"));
+  S2ClosestEdgeQuery::CellTarget target1{S2Cell(cellid1)};
+  EXPECT_EQ((vector<int>{2}), target1.GetContainingShapes(*index, 1));
+  EXPECT_EQ((vector<int>{2, 4}), target1.GetContainingShapes(*index, 5));
+
+  // For a larger cell that properly contains one or more index cells, all
+  // shapes that intersect the first such cell in S2CellId order are returned.
+  // In the test below, this happens to again be the 1st and 3rd polygons
+  // (whose shape_ids are 2 and 4).
+  S2CellId cellid2 = cellid1.parent(5);
+  S2ClosestEdgeQuery::CellTarget target2{S2Cell(cellid2)};
+  EXPECT_EQ((vector<int>{2, 4}), target2.GetContainingShapes(*index, 5));
+}
+
+TEST(ShapeIndexTarget, GetContainingShapes) {
+  // Create an index containing a repeated grouping of one point, one
+  // polyline, and one polygon.
+  auto index = MakeIndex(
+      "1:1 | 4:4 | 7:7 | 10:10 # "
+      "1:1, 1:2 | 4:4, 4:5 | 7:7, 7:8 | 10:10, 10:11 # "
+      "0:0, 0:3, 3:0 | 3:3, 3:6, 6:3 | 6:6, 6:9, 9:6 | 9:9, 9:12, 12:9");
+
+  // Construct a target consisting of one point, one polyline, and one polygon
+  // with two loops where only the second loop is contained by a polygon in
+  // the index above.
+  auto target_index = MakeIndex(
+      "1:1 # 4:5, 5:4 # 20:20, 20:21, 21:20; 10:10, 10:11, 11:10");
+
+  S2ClosestEdgeQuery::ShapeIndexTarget target(target_index.get());
+  // These are the shape_ids of the 1st, 2nd, and 4th polygons of "index"
+  // (noting that the 4 points are represented by one PointVectorShape).
+  EXPECT_EQ((vector<int>{5, 6, 8}), target.GetContainingShapes(*index, 5));
+}
 
 TEST(S2ClosestEdgeQuery, NoEdges) {
   S2ShapeIndex index;
@@ -52,6 +111,55 @@ TEST(S2ClosestEdgeQuery, NoEdges) {
   EXPECT_EQ(-1, edge.edge_id);
   EXPECT_EQ(-1, edge.shape_id);
   EXPECT_EQ(S1ChordAngle::Infinity(), query.GetDistance(&target));
+}
+
+TEST(S2ClosestEdgeQuery, TargetPointInsideIndexedPolygon) {
+  // Tests a target point in the interior of an indexed polygon.
+  // (The index also includes a polyline loop with no interior.)
+  auto index = MakeIndex("# 0:0, 0:5, 5:5, 5:0 # 0:10, 0:15, 5:15, 5:10");
+  S2ClosestEdgeQuery::Options options;
+  options.set_include_interiors(true);
+  options.set_max_distance(S1Angle::Degrees(1));
+  S2ClosestEdgeQuery query(index.get(), options);
+  S2ClosestEdgeQuery::PointTarget target(MakePoint("2:12"));
+  auto results = query.FindClosestEdges(&target);
+  ASSERT_EQ(1, results.size());
+  EXPECT_EQ(S1ChordAngle::Zero(), results[0].distance);
+  EXPECT_EQ(1, results[0].shape_id);
+  EXPECT_EQ(-1, results[0].edge_id);
+}
+
+TEST(S2ClosestEdgeQuery, TargetPointOutsideIndexedPolygon) {
+  // Tests a target point in the interior of a polyline loop with no
+  // interior.  (The index also includes a nearby polygon.)
+  auto index = MakeIndex("# 0:0, 0:5, 5:5, 5:0 # 0:10, 0:15, 5:15, 5:10");
+  S2ClosestEdgeQuery::Options options;
+  options.set_include_interiors(true);
+  options.set_max_distance(S1Angle::Degrees(1));
+  S2ClosestEdgeQuery query(index.get(), options);
+  S2ClosestEdgeQuery::PointTarget target(MakePoint("2:2"));
+  auto results = query.FindClosestEdges(&target);
+  EXPECT_EQ(0, results.size());
+}
+
+TEST(S2ClosestEdgeQuery, TargetPolygonContainingIndexedPoints) {
+  // Two points are contained within a polyline loop (no interior) and two
+  // points are contained within a polygon.
+  auto index = MakeIndex("2:2 | 3:3 | 1:11 | 3:13 # #");
+  S2ClosestEdgeQuery query(index.get());
+  query.mutable_options()->set_max_distance(S1Angle::Degrees(1));
+  auto target_index = MakeIndex(
+      "# 0:0, 0:5, 5:5, 5:0 # 0:10, 0:15, 5:15, 5:10");
+  S2ClosestEdgeQuery::ShapeIndexTarget target(target_index.get());
+  target.set_include_interiors(true);
+  auto results = query.FindClosestEdges(&target);
+  ASSERT_EQ(2, results.size());
+  EXPECT_EQ(S1ChordAngle::Zero(), results[0].distance);
+  EXPECT_EQ(0, results[0].shape_id);
+  EXPECT_EQ(2, results[0].edge_id);  // 1:11
+  EXPECT_EQ(S1ChordAngle::Zero(), results[1].distance);
+  EXPECT_EQ(0, results[1].shape_id);
+  EXPECT_EQ(3, results[1].edge_id);  // 3:13
 }
 
 // An abstract class that adds edges to an S2ShapeIndex for benchmarking.
@@ -136,10 +244,15 @@ static void GetClosestEdges(S2ClosestEdgeQuery::Target* target,
   EXPECT_LE(edges->size(), query->options().max_edges());
   if (query->options().max_distance() ==
       S2ClosestEdgeQuery::Distance::Infinity()) {
-    // We can predict exactly how many edges should be returned.
-    EXPECT_EQ(min(query->options().max_edges(),
-                  s2shapeutil::GetNumEdges(query->index())),
-              edges->size());
+    int min_expected = min(query->options().max_edges(),
+                           s2shapeutil::GetNumEdges(query->index()));
+    if (!query->options().include_interiors()) {
+      // We can predict exactly how many edges should be returned.
+      EXPECT_EQ(min_expected, edges->size());
+    } else {
+      // All edges should be returned, and possibly some shape interiors.
+      EXPECT_LE(min_expected, edges->size());
+    }
   }
   for (auto const& edge : *edges) {
     // Check that the edge satisfies the max_distance() condition.
@@ -203,10 +316,12 @@ static void TestWithIndexFactory(ShapeIndexFactory const& factory,
     S2ClosestEdgeQuery query(indexes[i_index].get());
 
     // Occasionally we don't set any limit on the number of result edges.
+    // (This may return all edges if we also don't set a distance limit.)
     if (!S2Testing::rnd.OneIn(5)) {
       query.mutable_options()->set_max_edges(1 + S2Testing::rnd.Uniform(10));
     }
-    if (S2Testing::rnd.OneIn(2)) {
+    // We set a distance limit 2/3 of the time.
+    if (!S2Testing::rnd.OneIn(3)) {
       query.mutable_options()->set_max_distance(
           S2Testing::rnd.RandDouble() * query_radius);
     }
@@ -216,6 +331,7 @@ static void TestWithIndexFactory(ShapeIndexFactory const& factory,
       query.mutable_options()->set_max_error(S1Angle::Radians(
           pow(1e-4, S2Testing::rnd.RandDouble()) * query_radius.radians()));
     }
+    query.mutable_options()->set_include_interiors(S2Testing::rnd.OneIn(2));
     int target_type = S2Testing::rnd.Uniform(4);
     if (target_type == 0) {
       // Find the edges closest to a given point.
@@ -250,6 +366,7 @@ static void TestWithIndexFactory(ShapeIndexFactory const& factory,
       // Use another one of the pre-built indexes as the target.
       int j_index = S2Testing::rnd.Uniform(num_indexes);
       S2ClosestEdgeQuery::ShapeIndexTarget target(indexes[j_index].get());
+      target.set_include_interiors(S2Testing::rnd.OneIn(2));
       TestFindClosestEdges(&target, &query);
     }
   }

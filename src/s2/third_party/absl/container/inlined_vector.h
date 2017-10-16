@@ -13,6 +13,21 @@
 // limitations under the License.
 //
 
+//
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // -----------------------------------------------------------------------------
 // File: inlined_vector.h
 // -----------------------------------------------------------------------------
@@ -51,6 +66,7 @@
 #include "s2/third_party/absl/base/optimization.h"
 #include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/absl/base/gdb_scripting.h"
+#include "s2/third_party/absl/memory/memory.h"
 
 DEFINE_GDB_AUTO_SCRIPT("devtools/gdb/component/core/inlined_vector.py")
 
@@ -126,8 +142,11 @@ class InlinedVector {
   InlinedVector(const InlinedVector& v);
   InlinedVector(const InlinedVector& v, const allocator_type& alloc);
 
-  InlinedVector(InlinedVector&& v) noexcept;
-  InlinedVector(InlinedVector&& v, const allocator_type& alloc);
+  InlinedVector(InlinedVector&& v) noexcept(
+      absl::allocator_is_nothrow<allocator_type>::value ||
+      std::is_nothrow_move_constructible<value_type>::value);
+  InlinedVector(InlinedVector&& v, const allocator_type& alloc) noexcept(
+      absl::allocator_is_nothrow<allocator_type>::value);
 
   ~InlinedVector() { clear(); }
 
@@ -871,7 +890,9 @@ InlinedVector<T, N, A>::InlinedVector(const InlinedVector& v,
 }
 
 template <typename T, std::size_t N, typename A>
-InlinedVector<T, N, A>::InlinedVector(InlinedVector&& v) noexcept
+InlinedVector<T, N, A>::InlinedVector(InlinedVector&& v) noexcept(
+    absl::allocator_is_nothrow<allocator_type>::value ||
+    std::is_nothrow_move_constructible<value_type>::value)
     : allocator_and_tag_(v.allocator_and_tag_) {
   if (v.allocated()) {
     // We can just steal the underlying buffer from the source.
@@ -886,8 +907,10 @@ InlinedVector<T, N, A>::InlinedVector(InlinedVector&& v) noexcept
 }
 
 template <typename T, std::size_t N, typename A>
-InlinedVector<T, N, A>::InlinedVector(InlinedVector&& v,
-                                      const allocator_type& alloc)
+InlinedVector<T, N, A>::InlinedVector(
+    InlinedVector&& v,
+    const allocator_type&
+        alloc) noexcept(absl::allocator_is_nothrow<allocator_type>::value)
     : allocator_and_tag_(alloc) {
   if (v.allocated()) {
     if (alloc == v.allocator()) {

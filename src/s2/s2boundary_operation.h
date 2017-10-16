@@ -24,6 +24,7 @@
 #include "s2/util/btree/btree_map.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
+#include "s2/s2builder_layer.h"
 #include "s2/value_lexicon.h"
 
 // This class implements boolean operations (intersection, union, difference,
@@ -67,7 +68,8 @@
 // easily discard degeneracies or convert them to another data type.
 //
 // The boundaries of polygons and polylines can be modeled as open, semi-open,
-// or closed.  For polylines these options are defined as follows:
+// or closed.  Polyline boundaries are controlled by the PolylineModel class,
+// whose options are as follows:
 //
 //  - In the OPEN model, polylines do not contain their first or last vertex.
 //
@@ -85,7 +87,8 @@
 // reassembling the edges into maximal polylines using S2PolylineVectorLayer
 // with EdgeType::UNDIRECTED, DuplicateEdges::MERGE, and PolylineType::WALK.)
 //
-// For polygons:
+// Polygon boundaries are controlled by the PolygonModel class, which has the
+// following options:
 //
 //  - In the OPEN model, polygons do not contain their vertices or edges.
 //    This implies that a polyline that follows the boundary of a polygon will
@@ -105,6 +108,9 @@
 //    either direction) with a polygon is defined to intersect it.  Similarly,
 //    this is the only model where polygons that touch at a vertex or along an
 //    edge intersect.
+//
+// Note that PolylineModel and PolygonModel are defined as separate classes in
+// order to allow for possible future extensions.
 //
 // Operations between geometry of different dimensions are defined as follows:
 //
@@ -366,7 +372,8 @@ class S2BoundaryOperation {
   // Executes the given operation.  Returns true on success, and otherwise
   // sets "error" appropriately.  (This class does not generate any errors
   // itself, but the S2Builder::Layer might.)
-  bool Build(S2ShapeIndex const& a, S2ShapeIndex const& b, S2Error* error);
+  bool Build(S2ShapeIndexBase const& a, S2ShapeIndexBase const& b,
+             S2Error* error);
 
   // SourceId identifies an edge from one of the two input S2ShapeIndexes.
   // It consists of a region id (0 or 1), a shape id within that region's
@@ -399,7 +406,7 @@ class S2BoundaryOperation {
   Options options_;
 
   // The input regions.
-  S2ShapeIndex const* regions_[2];
+  S2ShapeIndexBase const* regions_[2];
 
   // The output consists either of zero layers, one layer, or three layers.
   std::vector<std::unique_ptr<S2Builder::Layer>> layers_;

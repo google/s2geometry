@@ -26,8 +26,11 @@
 #include "s2/s2coords.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
+#include "s2/s2metrics.h"
 #include "s2/s2testing.h"
 #include "s2/util/math/vector.h"
+
+using std::vector;
 
 static S2Point GetLatLngPoint(double lat_degrees, double lng_degrees) {
   return S2LatLng::FromDegrees(lat_degrees, lng_degrees).ToPoint();
@@ -264,6 +267,16 @@ TEST(S2Cap, S2CellMethods) {
       EXPECT_FALSE(singleton.MayIntersect(corner_cell));
     }
   }
+}
+
+TEST(S2Cap, GetCellUnionBoundLevel1Radius) {
+  // Check that a cap whose radius is approximately the width of a level 1
+  // S2Cell can be covered by only 3 faces.
+  S2Cap cap(S2Point(1, 1, 1).Normalize(),
+            S1Angle::Radians(S2::kMinWidth.GetValue(1)));
+  vector<S2CellId> covering;
+  cap.GetCellUnionBound(&covering);
+  EXPECT_EQ(3, covering.size());
 }
 
 TEST(S2Cap, Expanded) {

@@ -72,6 +72,7 @@
 #include "s2/s2builder.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
+#include "s2/s2contains_point_query.h"
 #include "s2/s2crossingedgequery.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings.h"
@@ -774,19 +775,6 @@ void EdgeClippingLayer::Build(Graph const& g, S2Error* error) {
 
 }  // namespace
 
-// TODO(ericv): Expand this into a real public class, and remove the
-// ShapeContains and GetContainingShapes methods from S2ShapeIndex.
-class S2ContainsPointQuery {
- public:
-  explicit S2ContainsPointQuery(S2ShapeIndex const* index) : index_(*index) {}
-  bool Contains(S2Point const& p) const {
-    return index_.GetContainingShapes(p, &dummy_);
-  }
- private:
-  S2ShapeIndex const& index_;
-  mutable vector<S2Shape*> dummy_;
-};
-
 class S2BoundaryOperation::Impl {
  public:
   explicit Impl(S2BoundaryOperation* op)
@@ -800,6 +788,10 @@ class S2BoundaryOperation::Impl {
   using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
 
   bool is_boolean_output() const { return op_->result_non_empty_ != nullptr; }
+
+  // All of the methods below support "early exit" in the case of boolean
+  // results by returning "false" as soon as the result is known to be
+  // non-empty.
   bool AddBoundary(int a_region_id, bool invert_a, bool invert_b,
                    bool invert_result,
                    vector<ShapeEdgeId> const& a_chain_starts,
@@ -807,7 +799,7 @@ class S2BoundaryOperation::Impl {
   bool GetChainStarts(int a_region_id, bool invert_a, bool invert_b,
                       bool invert_result,
                       vector<ShapeEdgeId>* chain_starts) const;
-  static bool HasInterior(S2ShapeIndex const& index);
+  static bool HasInterior(S2ShapeIndexBase const& index);
   bool GetIndexCrossings(int region_id);
   bool AddBoundaryPair(bool invert_a, bool invert_b, bool invert_result,
                        CrossingProcessor* cp);
@@ -856,7 +848,7 @@ s2shapeutil::ShapeEdgeId const S2BoundaryOperation::Impl::kSentinel(
 //    }
 class S2BoundaryOperation::Impl::CrossingIterator {
  public:
-  CrossingIterator(S2ShapeIndex const* b_index,
+  CrossingIterator(S2ShapeIndexBase const* b_index,
                    EdgePairVector const& crossings)
       : b_index_(*b_index), it_(crossings.begin()), b_shape_id_(-1) {
     Update();
@@ -869,7 +861,7 @@ class S2BoundaryOperation::Impl::CrossingIterator {
 
   ShapeEdgeId a_id() const { return it_->first; }
   ShapeEdgeId b_id() const { return it_->second; }
-  S2ShapeIndex const& b_index() const { return b_index_; }
+  S2ShapeIndexBase const& b_index() const { return b_index_; }
   S2Shape const& b_shape() const { return *b_shape_; }
   int b_dimension() const { return b_dimension_; }
   int b_shape_id() const { return b_shape_id_; }
@@ -907,7 +899,7 @@ class S2BoundaryOperation::Impl::CrossingIterator {
     }
   }
 
-  S2ShapeIndex const& b_index_;
+  S2ShapeIndexBase const& b_index_;
   EdgePairVector::const_iterator it_;
   int b_shape_id_;
   S2Shape const* b_shape_;
@@ -956,6 +948,9 @@ class S2BoundaryOperation::Impl::CrossingProcessor {
 
   // Processes the given edge "a_id".  "it" should be positioned to the set of
   // edges from the other region that cross "a_id" (if any).
+  //
+  // Supports "early exit" in the case of boolean results by returning false
+  // as soon as the result is known to be non-empty.
   bool ProcessEdge(ShapeEdgeId a_id, CrossingIterator* it);
 
   // This method should be called after each pair of calls to StartBoundary.
@@ -1012,6 +1007,8 @@ class S2BoundaryOperation::Impl::CrossingProcessor {
     AddCrossing(SourceEdgeCrossing(SourceId(parameter), state));
   }
 
+  // Supports "early exit" in the case of boolean results by returning false
+  // as soon as the result is known to be non-empty.
   bool AddEdge(ShapeEdgeId a_id, S2Shape::Edge const& a,
                int dimension, int interior_crossings) {
     if (builder_ == nullptr) return false;  // Boolean output.
@@ -1030,6 +1027,8 @@ class S2BoundaryOperation::Impl::CrossingProcessor {
     return true;
   }
 
+  // Supports "early exit" in the case of boolean results by returning false
+  // as soon as the result is known to be non-empty.
   bool AddPointEdge(S2Point const& p, int dimension) {
     if (builder_ == nullptr) return false;  // Boolean output.
     if (!prev_inside_) SetClippingState(kSetInside, true);
@@ -1202,6 +1201,9 @@ struct S2BoundaryOperation::Impl::CrossingProcessor::PointCrossingResult {
 };
 
 // Processes an edge of dimension 0 (i.e., a point) from region A.
+//
+// Supports "early exit" in the case of boolean results by returning false
+// as soon as the result is known to be non-empty.
 bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge0(
     ShapeEdgeId a_id, S2Shape::Edge const& a, CrossingIterator* it) {
   DCHECK_EQ(a.v0, a.v1);
@@ -1276,6 +1278,9 @@ struct S2BoundaryOperation::Impl::CrossingProcessor::EdgeCrossingResult {
 };
 
 // Processes an edge of dimension 1 (i.e., a polyline edge) from region A.
+//
+// Supports "early exit" in the case of boolean results by returning false
+// as soon as the result is known to be non-empty.
 bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge1(
     ShapeEdgeId a_id, S2Shape::Edge const& a, CrossingIterator* it) {
   // When a region is inverted, all points and polylines are discarded.
@@ -1324,7 +1329,7 @@ bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge1(
   }
   if (inside_) v0_emitted_max_edge_id_ = a_id.edge_id + 1;
   inside_ ^= (r.a1_crossings & 1);
-  DCHECK_EQ(S2ContainsPointQuery(&it->b_index()).Contains(a.v1) ^ invert_b_,
+  DCHECK_EQ(MakeS2ContainsPointQuery(&it->b_index()).Contains(a.v1) ^ invert_b_,
             inside_);
   if (polygon_model_ == PolygonModel::SEMI_OPEN) {
     r.contains_a1 |= inside_ ^ invert_b_;
@@ -1337,6 +1342,9 @@ bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge1(
 }
 
 // Processes an edge of dimension 2 (i.e., a polygon edge) from region A.
+//
+// Supports "early exit" in the case of boolean results by returning false
+// as soon as the result is known to be non-empty.
 bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge2(
     ShapeEdgeId a_id, S2Shape::Edge const& a, CrossingIterator* it) {
   // In order to keep only one copy of any shared polygon edges, we only
@@ -1378,7 +1386,7 @@ bool S2BoundaryOperation::Impl::CrossingProcessor::ProcessEdge2(
   }
   if (inside_) v0_emitted_max_edge_id_ = a_id.edge_id + 1;
   inside_ ^= (r.a1_crossings & 1);
-  DCHECK_EQ(S2ContainsPointQuery(&it->b_index()).Contains(a.v1) ^ invert_b_,
+  DCHECK_EQ(MakeS2ContainsPointQuery(&it->b_index()).Contains(a.v1) ^ invert_b_,
             inside_);
   if (emit_shared && r.contains_a1 && is_chain_last_vertex_isolated(a_id)) {
     if (!AddPointEdge(a.v1, 2)) return false;
@@ -1511,11 +1519,14 @@ void S2BoundaryOperation::Impl::CrossingProcessor::DoneBoundaryPair() {
 //
 // This method must be called an even number of times (first to clip A to B
 // and then to clip B to A), calling DoneBoundaryPair() after each pair.
+//
+// Supports "early exit" in the case of boolean results by returning false
+// as soon as the result is known to be non-empty.
 bool S2BoundaryOperation::Impl::AddBoundary(
     int a_region_id, bool invert_a, bool invert_b, bool invert_result,
     vector<ShapeEdgeId> const& a_chain_starts, CrossingProcessor* cp) {
-  S2ShapeIndex const& a_index = *op_->regions_[a_region_id];
-  S2ShapeIndex const& b_index = *op_->regions_[1 - a_region_id];
+  S2ShapeIndexBase const& a_index = *op_->regions_[a_region_id];
+  S2ShapeIndexBase const& b_index = *op_->regions_[1 - a_region_id];
   if (!GetIndexCrossings(a_region_id)) return false;
   cp->StartBoundary(a_region_id, invert_a, invert_b, invert_result);
 
@@ -1560,16 +1571,19 @@ bool S2BoundaryOperation::Impl::AddBoundary(
   return true;
 }
 
+// Supports "early exit" in the case of boolean results by returning false
+// as soon as the result is known to be non-empty.
+// TODO(ericv): Implement early exit.
 bool S2BoundaryOperation::Impl::GetChainStarts(
     int a_region_id, bool invert_a, bool invert_b, bool invert_result,
     vector<ShapeEdgeId>* chain_starts) const {
-  S2ShapeIndex const& a_index = *op_->regions_[a_region_id];
-  S2ShapeIndex const& b_index = *op_->regions_[1 - a_region_id];
+  S2ShapeIndexBase const& a_index = *op_->regions_[a_region_id];
+  S2ShapeIndexBase const& b_index = *op_->regions_[1 - a_region_id];
 
   // Fast path for the case where region B has no two-dimensional shapes.
   bool b_has_interior = HasInterior(b_index);
   if (b_has_interior || invert_b) {
-    S2ContainsPointQuery query(&b_index);
+    auto query = MakeS2ContainsPointQuery(&b_index);
     int num_shape_ids = a_index.num_shape_ids();
     for (int s = 0; s < num_shape_ids; ++s) {
       S2Shape* a_shape = a_index.shape(s);
@@ -1652,7 +1666,7 @@ bool S2BoundaryOperation::Impl::FindChainStarts() {
 
 #endif
 
-bool S2BoundaryOperation::Impl::HasInterior(S2ShapeIndex const& index) {
+bool S2BoundaryOperation::Impl::HasInterior(S2ShapeIndexBase const& index) {
   for (int s = index.num_shape_ids(); --s >= 0; ) {
     S2Shape* shape = index.shape(s);
     if (shape && shape->has_interior()) return true;
@@ -1662,6 +1676,9 @@ bool S2BoundaryOperation::Impl::HasInterior(S2ShapeIndex const& index) {
 
 // Initialize index_crossings_ to the set of crossing edge pairs such that the
 // first element of each pair is an edge from "region_id".
+//
+// Supports "early exit" in the case of boolean results by returning false
+// as soon as the result is known to be non-empty.
 bool S2BoundaryOperation::Impl::GetIndexCrossings(int region_id) {
   if (region_id == index_crossings_first_region_id_) return true;
   if (index_crossings_first_region_id_ < 0) {
@@ -1697,6 +1714,8 @@ bool S2BoundaryOperation::Impl::GetIndexCrossings(int region_id) {
   return true;
 }
 
+// Supports "early exit" in the case of boolean results by returning false
+// as soon as the result is known to be non-empty.
 bool S2BoundaryOperation::Impl::AddBoundaryPair(
     bool invert_a, bool invert_b, bool invert_result, CrossingProcessor* cp) {
   // TODO(ericv): When computing a boolean result, there are other quick
@@ -1712,6 +1731,8 @@ bool S2BoundaryOperation::Impl::AddBoundaryPair(
   return true;
 }
 
+// Supports "early exit" in the case of boolean results by returning false
+// as soon as the result is known to be non-empty.
 bool S2BoundaryOperation::Impl::BuildOpType(OpType op_type) {
   // CrossingProcessor does the real work of emitting the output edges.
   CrossingProcessor cp(op_->options_.polygon_model(),
@@ -1739,10 +1760,26 @@ bool S2BoundaryOperation::Impl::BuildOpType(OpType op_type) {
   return false;
 }
 
+// Given a polygon edge graph containing only degenerate edges and sibling
+// edge pairs, the purpose of this function is to decide whether the polygon
+// is empty or full except for the degeneracies, i.e. whether the degeneracies
+// represent shells or holes.
+//
+// This function always returns false, meaning that the polygon is empty and
+// the degeneracies represent shells.  The main side effect of this is that
+// operations whose result should be the full polygon will instead be the
+// empty polygon.  (Classes such as S2Polygon already have code to correct for
+// this, but if that functionality were moved here then it would be useful for
+// other polygon representations such as s2shapeutil::LaxPolygon.)
+static bool IsFullPolygonNever(S2Builder::Graph const& g, S2Error* error) {
+  return false;  // Assumes the polygon is empty.
+}
+
 bool S2BoundaryOperation::Impl::Build(S2Error* error) {
   error->Clear();
   if (is_boolean_output()) {
-    *op_->result_non_empty_ = BuildOpType(op_->op_type());
+    // BuildOpType() returns true if and only if the result is empty.
+    *op_->result_non_empty_ = !BuildOpType(op_->op_type());
     return true;
   }
   // TODO(ericv): Rather than having S2Builder split the edges, it would be
@@ -1758,6 +1795,14 @@ bool S2BoundaryOperation::Impl::Build(S2Error* error) {
   builder_ = make_unique<S2Builder>(options);
   builder_->StartLayer(make_unique<EdgeClippingLayer>(
       &op_->layers_, &input_dimensions_, &input_crossings_));
+
+  // Polygons with no edges are assumed to be empty.  It is the responsibility
+  // of clients to fix this if desired (e.g. S2Polygon has code for this).
+  //
+  // TODO(ericv): Implement a predicate that can determine whether a
+  // degenerate polygon is empty or full based on the input S2ShapeIndexes.
+  // (It is possible to do this 100% robustly, but tricky.)
+  builder_->AddIsFullPolygonPredicate(IsFullPolygonNever);
   (void) BuildOpType(op_->op_type());
   return builder_->Build(error);
 }
@@ -1845,7 +1890,8 @@ S2BoundaryOperation::S2BoundaryOperation(
       result_non_empty_(nullptr) {
 }
 
-bool S2BoundaryOperation::Build(S2ShapeIndex const& a, S2ShapeIndex const& b,
+bool S2BoundaryOperation::Build(S2ShapeIndexBase const& a,
+                                S2ShapeIndexBase const& b,
                                 S2Error* error) {
   regions_[0] = &a;
   regions_[1] = &b;
