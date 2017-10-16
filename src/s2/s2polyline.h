@@ -232,6 +232,9 @@ class S2Polyline final : public S2Region {
   //    empty.covers(nonempty) = false
   bool NearlyCovers(S2Polyline const& covered, S1Angle max_error) const;
 
+  // Returns the total number of bytes used by the polyline.
+  size_t SpaceUsed() const;
+
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
@@ -284,7 +287,9 @@ class S2Polyline final : public S2Region {
       return Edge(polyline_->vertex(e), polyline_->vertex(e + 1));
     }
     int dimension() const final { return 1; }
-    bool contains_origin() const final { return false; }
+    ReferencePoint GetReferencePoint() const final {
+      return ReferencePoint::Contained(false);
+    }
     int num_chains() const final;
     Chain chain(int i) const final;
     Edge chain_edge(int i, int j) const final {

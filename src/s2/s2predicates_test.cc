@@ -461,10 +461,6 @@ TEST(Sign, SymbolicPerturbationCodeCoverage) {
   CheckSymbolicSign(1, S2Point(0, -4, 5), S2Point(0, 0, -5), S2Point(0, 0, 0));
 }
 
-inline S1ChordAngle ChordAngleRadians(double radians) {
-  return S1ChordAngle(S1Angle::Radians(radians));
-}
-
 enum Precision { DOUBLE, LONG_DOUBLE, EXACT, SYMBOLIC, NUM_PRECISIONS };
 
 static char const* kPrecisionNames[] = {
@@ -772,16 +768,16 @@ TEST(CompareDistance, Coverage) {
   // Test TriageCompareSin2Distance.
   TestCompareDistance<Sin2Distance>(
       S2Point(1, 1, 1), S2Point(1, 1 - 1e-15, 1),
-      ChordAngleRadians(1e-15), -1, DOUBLE);
+      S1ChordAngle::Radians(1e-15), -1, DOUBLE);
   TestCompareDistance<Sin2Distance>(
       S2Point(1, 0, 0), S2Point(1, 1, 0),
-      ChordAngleRadians(M_PI_4), -1, LONG_DOUBLE);
+      S1ChordAngle::Radians(M_PI_4), -1, LONG_DOUBLE);
   TestCompareDistance<Sin2Distance>(
       S2Point(1, 1e-40, 0), S2Point(1 + DBL_EPSILON, 1e-40, 0),
-      ChordAngleRadians(0.9 * DBL_EPSILON * 1e-40), 1, EXACT);
+      S1ChordAngle::Radians(0.9 * DBL_EPSILON * 1e-40), 1, EXACT);
   TestCompareDistance<Sin2Distance>(
       S2Point(1, 1e-40, 0), S2Point(1 + DBL_EPSILON, 1e-40, 0),
-      ChordAngleRadians(1.1 * DBL_EPSILON * 1e-40), -1, EXACT);
+      S1ChordAngle::Radians(1.1 * DBL_EPSILON * 1e-40), -1, EXACT);
   TestCompareDistance<Sin2Distance>(
       S2Point(1, 0, 0), S2Point(1 + DBL_EPSILON, 0, 0),
       S1ChordAngle::Zero(), 0, EXACT);
@@ -789,10 +785,10 @@ TEST(CompareDistance, Coverage) {
   // Test TriageCompareCosDistance.
   TestCompareDistance<CosDistance>(
       S2Point(1, 0, 0), S2Point(1, 1e-8, 0),
-      ChordAngleRadians(1e-7), -1, DOUBLE);
+      S1ChordAngle::Radians(1e-7), -1, DOUBLE);
   TestCompareDistance<CosDistance>(
       S2Point(1, 0, 0), S2Point(-1, 1e-8, 0),
-      ChordAngleRadians(M_PI - 1e-7), 1, DOUBLE);
+      S1ChordAngle::Radians(M_PI - 1e-7), 1, DOUBLE);
   TestCompareDistance<CosDistance>(
       S2Point(1, 1, 0), S2Point(1, -1 - 2 * DBL_EPSILON, 0),
       S1ChordAngle::Right(), 1, DOUBLE);
@@ -884,13 +880,13 @@ TEST(CompareEdgeDistance, Coverage) {
   // Test TriageCompareLineSin2Distance.
   TestCompareEdgeDistance(
       S2Point(1, 1e-10, 1e-15), S2Point(1, 0, 0), S2Point(0, 1, 0),
-      ChordAngleRadians(1e-15 + DBL_EPSILON), -1, DOUBLE);
+      S1ChordAngle::Radians(1e-15 + DBL_EPSILON), -1, DOUBLE);
   TestCompareEdgeDistance(
       S2Point(1, 1, 1e-15), S2Point(1, 0, 0), S2Point(0, 1, 0),
-      ChordAngleRadians(1e-15 + DBL_EPSILON), -1, LONG_DOUBLE);
+      S1ChordAngle::Radians(1e-15 + DBL_EPSILON), -1, LONG_DOUBLE);
   TestCompareEdgeDistance(
       S2Point(1, 1, 1e-40), S2Point(1, 0, 0), S2Point(0, 1, 0),
-      ChordAngleRadians(1e-40), -1, EXACT);
+      S1ChordAngle::Radians(1e-40), -1, EXACT);
   TestCompareEdgeDistance(
       S2Point(1, 1, 0), S2Point(1, 0, 0), S2Point(0, 1, 0),
       S1ChordAngle::Zero(), 0, EXACT);
@@ -898,11 +894,11 @@ TEST(CompareEdgeDistance, Coverage) {
   // Test TriageCompareLineCos2Distance.
   TestCompareEdgeDistance(
       S2Point(1e-15, 0, 1), S2Point(1, 0, 0), S2Point(0, 1, 0),
-      ChordAngleRadians(M_PI_2 - 1e-15 - 3 * DBL_EPSILON),
+      S1ChordAngle::Radians(M_PI_2 - 1e-15 - 3 * DBL_EPSILON),
       1, DOUBLE);
   TestCompareEdgeDistance(
       S2Point(1e-15, 0, 1), S2Point(1, 0, 0), S2Point(0, 1, 0),
-      ChordAngleRadians(M_PI_2 - 1e-15 - DBL_EPSILON),
+      S1ChordAngle::Radians(M_PI_2 - 1e-15 - DBL_EPSILON),
       1, LONG_DOUBLE);
   TestCompareEdgeDistance(
       S2Point(1e-40, 0, 1), S2Point(1, 0, 0), S2Point(0, 1, 0),
@@ -1291,54 +1287,54 @@ TEST(VoronoiSiteExclusion, Coverage) {
   // Both sites are closest to edge endpoint X0.
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-5, 0), S2Point(1, -2e-5, 0),
-      S2Point(1, 0, 0), S2Point(1, 1, 0), ChordAngleRadians(1e-3),
+      S2Point(1, 0, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1e-3),
       Excluded::SECOND, DOUBLE);
 
   // Both sites are closest to edge endpoint X1.
   TestVoronoiSiteExclusion(
       S2Point(1, 1, 1e-30), S2Point(1, 1, -1e-20),
-      S2Point(1, 0, 0), S2Point(1, 1, 0), ChordAngleRadians(1e-10),
+      S2Point(1, 0, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1e-10),
       Excluded::SECOND, DOUBLE);
 
   // Test cases where neither site is excluded.
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-10, 1e-5), S2Point(1, 1e-10, -1e-5),
-      S2Point(1, -1, 0), S2Point(1, 1, 0), ChordAngleRadians(1e-4),
+      S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1e-4),
       Excluded::NEITHER, DOUBLE);
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-10, 1e-5), S2Point(1, 1e-10, -1e-5),
-      S2Point(1, -1, 0), S2Point(1, 1, 0), ChordAngleRadians(1e-5),
+      S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1e-5),
       Excluded::NEITHER, LONG_DOUBLE);
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-17, 1e-5), S2Point(1, 1e-17, -1e-5),
-      S2Point(1, -1, 0), S2Point(1, 1, 0), ChordAngleRadians(1e-4),
+      S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1e-4),
       Excluded::NEITHER, LONG_DOUBLE);
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-20, 1e-5), S2Point(1, 1e-20, -1e-5),
-      S2Point(1, -1, 0), S2Point(1, 1, 0), ChordAngleRadians(1e-5),
+      S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1e-5),
       Excluded::NEITHER, EXACT);
 
   // Test cases where the first site is excluded.  (Tests where the second
   // site is excluded are constructed by TestVoronoiSiteExclusion.)
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-6, 1.0049999999e-5), S2Point(1, 0, -1e-5),
-      S2Point(1, -1, 0), S2Point(1, 1, 0), ChordAngleRadians(1.005e-5),
+      S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1.005e-5),
       Excluded::FIRST, DOUBLE);
   TestVoronoiSiteExclusion(
       S2Point(1, -1.00105e-6, 1.0049999999e-5), S2Point(1, 0, -1e-5),
-      S2Point(1, -1, 0), S2Point(1, 1, 0), ChordAngleRadians(1.005e-5),
+      S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1.005e-5),
       Excluded::FIRST, LONG_DOUBLE);
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-6, 1.005e-5), S2Point(1, 0, -1e-5),
-      S2Point(1, -1, 0), S2Point(1, 1, 0), ChordAngleRadians(1.005e-5),
+      S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1.005e-5),
       Excluded::FIRST, LONG_DOUBLE);
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-31, 1.005e-30), S2Point(1, 0, -1e-30),
-      S2Point(1, -1, 0), S2Point(1, 1, 0), ChordAngleRadians(1.005e-30),
+      S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1.005e-30),
       Excluded::FIRST, EXACT);
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-31, 1.005e-30), S2Point(1, 0, -1e-30),
-      S2Point(1, -1, 0), S2Point(1, 1, 0), ChordAngleRadians(1.005e-30),
+      S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1.005e-30),
       Excluded::FIRST, EXACT);
 
   // These two sites are exactly 60 degrees away from the point (1, 1, 0),

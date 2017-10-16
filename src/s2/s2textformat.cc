@@ -46,118 +46,239 @@ static vector<string_view> SplitString(string_view str, char separator) {
   return result;
 }
 
-static double ParseDouble(const string& str) {
+static bool ParseDouble(const string& str, double* value) {
   char* end_ptr = nullptr;
-  double value = strtod(str.c_str(), &end_ptr);
-  CHECK(end_ptr && *end_ptr == 0) << ": str == \"" << str << "\"";
-  return value;
+  *value = strtod(str.c_str(), &end_ptr);
+  return end_ptr && *end_ptr == 0;
 }
 
-vector<S2LatLng> ParseLatLngs(string_view str) {
-  vector<pair<string, string>> ps;
-  CHECK(DictionaryParse(str, &ps)) << ": str == \"" << str << "\"";
+vector<S2LatLng> ParseLatLngsOrDie(string_view str) {
   vector<S2LatLng> latlngs;
-  for (auto const& p : ps) {
-    latlngs.push_back(S2LatLng::FromDegrees(ParseDouble(p.first),
-                                            ParseDouble(p.second)));
-  }
+  CHECK(ParseLatLngs(str, &latlngs)) << ": str == \"" << str << "\"";
   return latlngs;
 }
 
-vector<S2Point> ParsePoints(string_view str) {
-  vector<S2LatLng> latlngs = ParseLatLngs(str);
-  vector<S2Point> vertices;
-  for (auto const& latlng : latlngs) {
-    vertices.push_back(latlng.ToPoint());
+bool ParseLatLngs(string_view str, vector<S2LatLng>* latlngs) {
+  vector<pair<string, string>> ps;
+  if (!DictionaryParse(str, &ps)) return false;
+  for (auto const& p : ps) {
+    double lat;
+    if (!ParseDouble(p.first, &lat)) return false;
+    double lng;
+    if (!ParseDouble(p.second, &lng)) return false;
+    latlngs->push_back(S2LatLng::FromDegrees(lat, lng));
   }
+  return true;
+}
+
+vector<S2Point> ParsePointsOrDie(string_view str) {
+  vector<S2Point> vertices;
+  CHECK(ParsePoints(str, &vertices)) << ": str == \"" << str << "\"";
   return vertices;
 }
 
-S2Point MakePoint(string_view str) {
-  vector<S2Point> vertices = ParsePoints(str);
-  CHECK_EQ(vertices.size(), 1);
-  return vertices[0];
+bool ParsePoints(string_view str, vector<S2Point>* vertices) {
+  vector<S2LatLng> latlngs;
+  if (!ParseLatLngs(str, &latlngs)) return false;
+  for (auto const& latlng : latlngs) {
+    vertices->push_back(latlng.ToPoint());
+  }
+  return true;
 }
 
-S2LatLngRect MakeLatLngRect(string_view str) {
-  vector<S2LatLng> latlngs = ParseLatLngs(str);
-  CHECK_GT(latlngs.size(), 0);
-  S2LatLngRect rect = S2LatLngRect::FromPoint(latlngs[0]);
+S2Point MakePointOrDie(string_view str) {
+  S2Point point;
+  CHECK(MakePoint(str, &point)) << ": str == \"" << str << "\"";
+  return point;
+}
+
+bool MakePoint(string_view str, S2Point* point) {
+  vector<S2Point> vertices;
+  if (!ParsePoints(str, &vertices) || vertices.size() != 1) return false;
+  *point = vertices[0];
+  return true;
+}
+
+S2LatLngRect MakeLatLngRectOrDie(string_view str) {
+  S2LatLngRect rect;
+  CHECK(MakeLatLngRect(str, &rect)) << ": str == \"" << str << "\"";
+  return rect;
+}
+
+bool MakeLatLngRect(string_view str, S2LatLngRect* rect) {
+  vector<S2LatLng> latlngs;
+  if (!ParseLatLngs(str, &latlngs) || latlngs.empty()) return false;
+  *rect = S2LatLngRect::FromPoint(latlngs[0]);
   for (int i = 1; i < latlngs.size(); ++i) {
-    rect.AddPoint(latlngs[i]);
+    rect->AddPoint(latlngs[i]);
   }
   return rect;
 }
 
-unique_ptr<S2Loop> MakeLoop(string_view str) {
-  if (str == "empty") return make_unique<S2Loop>(S2Loop::kEmpty());
-  if (str == "full") return make_unique<S2Loop>(S2Loop::kFull());
-  vector<S2Point> vertices = ParsePoints(str);
-  return make_unique<S2Loop>(vertices);
+unique_ptr<S2Loop> MakeLoopOrDie(string_view str) {
+  unique_ptr<S2Loop> loop;
+  CHECK(MakeLoop(str, &loop)) << ": str == \"" << str << "\"";
+  return loop;
 }
 
-unique_ptr<S2Polyline> MakePolyline(string_view str) {
-  vector<S2Point> vertices = ParsePoints(str);
-  return make_unique<S2Polyline>(vertices);
+bool MakeLoop(string_view str, unique_ptr<S2Loop>* loop) {
+  if (str == "empty") {
+    *loop = make_unique<S2Loop>(S2Loop::kEmpty());
+    return true;
+  }
+  if (str == "full") {
+    *loop = make_unique<S2Loop>(S2Loop::kFull());
+    return true;
+  }
+  vector<S2Point> vertices;
+  if (!ParsePoints(str, &vertices)) return false;
+  *loop = make_unique<S2Loop>(vertices);
+  return true;
 }
 
-unique_ptr<s2shapeutil::LaxPolyline> MakeLaxPolyline(string_view str) {
-  auto vertices = ParsePoints(str);
-  return make_unique<s2shapeutil::LaxPolyline>(vertices);
+std::unique_ptr<S2Loop> MakeLoop(absl::string_view str) {
+  return MakeLoopOrDie(str);
 }
 
-static unique_ptr<S2Polygon> InternalMakePolygon(string_view str,
-                                                 bool normalize_loops) {
+unique_ptr<S2Polyline> MakePolylineOrDie(string_view str) {
+  unique_ptr<S2Polyline> polyline;
+  CHECK(MakePolyline(str, &polyline)) << ": str == \"" << str << "\"";
+  return polyline;
+}
+
+bool MakePolyline(string_view str, unique_ptr<S2Polyline>* polyline) {
+  vector<S2Point> vertices;
+  if (!ParsePoints(str, &vertices)) return false;
+  *polyline = make_unique<S2Polyline>(vertices);
+  return true;
+}
+
+std::unique_ptr<S2Polyline> MakePolyline(absl::string_view str) {
+  return MakePolylineOrDie(str);
+}
+
+unique_ptr<s2shapeutil::LaxPolyline> MakeLaxPolylineOrDie(string_view str) {
+  unique_ptr<s2shapeutil::LaxPolyline> lax_polyline;
+  CHECK(MakeLaxPolyline(str, &lax_polyline)) << ": str == \"" << str << "\"";
+  return lax_polyline;
+}
+
+bool MakeLaxPolyline(string_view str,
+                     unique_ptr<s2shapeutil::LaxPolyline>* lax_polyline) {
+  vector<S2Point> vertices;
+  if (!ParsePoints(str, &vertices)) return false;
+  *lax_polyline = make_unique<s2shapeutil::LaxPolyline>(vertices);
+  return true;
+}
+
+std::unique_ptr<s2shapeutil::LaxPolyline> MakeLaxPolyline(
+    absl::string_view str) {
+  return MakeLaxPolylineOrDie(str);
+}
+
+static bool InternalMakePolygon(string_view str, bool normalize_loops,
+                                unique_ptr<S2Polygon>* polygon) {
   vector<string_view> loop_strs = SplitString(str, ';');
   vector<unique_ptr<S2Loop>> loops;
   for (auto const& loop_str : loop_strs) {
-    auto loop = MakeLoop(loop_str);
+    std::unique_ptr<S2Loop> loop;
+    if (!MakeLoop(loop_str, &loop)) return false;
     if (normalize_loops) loop->Normalize();
     loops.push_back(std::move(loop));
   }
-  return make_unique<S2Polygon>(std::move(loops));
+  *polygon = make_unique<S2Polygon>(std::move(loops));
+  return true;
 }
 
-unique_ptr<S2Polygon> MakePolygon(string_view str) {
-  return InternalMakePolygon(str, true);
+unique_ptr<S2Polygon> MakePolygonOrDie(string_view str) {
+  unique_ptr<S2Polygon> polygon;
+  CHECK(MakePolygon(str, &polygon)) << ": str == \"" << str << "\"";
+  return polygon;
 }
 
-unique_ptr<S2Polygon> MakeVerbatimPolygon(string_view str) {
-  return InternalMakePolygon(str, false);
+bool MakePolygon(string_view str, unique_ptr<S2Polygon>* polygon) {
+  return InternalMakePolygon(str, true, polygon);
 }
 
-unique_ptr<s2shapeutil::LaxPolygon> MakeLaxPolygon(string_view str) {
+std::unique_ptr<S2Polygon> MakePolygon(absl::string_view str) {
+  return MakePolygonOrDie(str);
+}
+
+unique_ptr<S2Polygon> MakeVerbatimPolygonOrDie(string_view str) {
+  unique_ptr<S2Polygon> polygon;
+  CHECK(MakeVerbatimPolygon(str, &polygon)) << ": str == \"" << str << "\"";
+  return polygon;
+}
+
+bool MakeVerbatimPolygon(string_view str, unique_ptr<S2Polygon>* polygon) {
+  return InternalMakePolygon(str, false, polygon);
+}
+
+std::unique_ptr<S2Polygon> MakeVerbatimPolygon(absl::string_view str) {
+  return MakeVerbatimPolygonOrDie(str);
+}
+
+unique_ptr<s2shapeutil::LaxPolygon> MakeLaxPolygonOrDie(string_view str) {
+  unique_ptr<s2shapeutil::LaxPolygon> lax_polygon;
+  CHECK(MakeLaxPolygon(str, &lax_polygon)) << ": str == \"" << str << "\"";
+  return lax_polygon;
+}
+
+bool MakeLaxPolygon(string_view str,
+                    unique_ptr<s2shapeutil::LaxPolygon>* lax_polygon) {
   vector<string_view> loop_strs = SplitString(str, ';');
   vector<vector<S2Point>> loops;
   for (auto const& loop_str : loop_strs) {
     if (loop_str == "full") {
       loops.push_back(vector<S2Point>());
     } else {
-      loops.push_back(ParsePoints(loop_str));
+      vector<S2Point> points;
+      if (!ParsePoints(loop_str, &points)) return false;
+      loops.push_back(points);
     }
   }
-  return make_unique<s2shapeutil::LaxPolygon>(loops);
+  *lax_polygon = make_unique<s2shapeutil::LaxPolygon>(loops);
+  return true;
 }
 
-unique_ptr<S2ShapeIndex> MakeIndex(string_view str) {
+std::unique_ptr<s2shapeutil::LaxPolygon> MakeLaxPolygon(absl::string_view str) {
+  return MakeLaxPolygonOrDie(str);
+}
+
+unique_ptr<S2ShapeIndex> MakeIndexOrDie(string_view str) {
+  auto index = make_unique<S2ShapeIndex>();
+  CHECK(MakeIndex(str, &index)) << ": str == \"" << str << "\"";
+  return index;
+}
+
+bool MakeIndex(string_view str, std::unique_ptr<S2ShapeIndex>* index) {
   vector<string_view> strs = strings::Split(str, '#');
   DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
 
-  auto index = make_unique<S2ShapeIndex>();
   vector<S2Point> points;
   for (auto const& point_str : SplitString(strs[0], '|')) {
-    points.push_back(MakePoint(point_str));
+    S2Point point;
+    if (!MakePoint(point_str, &point)) return false;
+    points.push_back(point);
   }
   if (!points.empty()) {
-    index->Add(make_unique<s2shapeutil::PointVectorShape>(&points));
+    (*index)->Add(make_unique<s2shapeutil::PointVectorShape>(&points));
   }
   for (auto const& line_str : SplitString(strs[1], '|')) {
-    index->Add(MakeLaxPolyline(line_str));
+    std::unique_ptr<s2shapeutil::LaxPolyline> lax_polyline;
+    if (!MakeLaxPolyline(line_str, &lax_polyline)) return false;
+    (*index)->Add(unique_ptr<S2Shape>(lax_polyline.release()));
   }
   for (auto const& polygon_str : SplitString(strs[2], '|')) {
-    index->Add(MakeLaxPolygon(polygon_str));
+    std::unique_ptr<s2shapeutil::LaxPolygon> lax_polygon;
+    if (!MakeLaxPolygon(polygon_str, &lax_polygon)) return false;
+    (*index)->Add(unique_ptr<S2Shape>(lax_polygon.release()));
   }
-  return index;
+  return true;
+}
+
+std::unique_ptr<S2ShapeIndex> MakeIndex(absl::string_view str) {
+  return MakeIndexOrDie(str);
 }
 
 static void AppendVertex(S2Point const& p, string* out) {

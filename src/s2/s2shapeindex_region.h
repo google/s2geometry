@@ -21,6 +21,7 @@
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellunion.h"
+#include "s2/s2contains_point_query.h"
 #include "s2/s2edge_clipping.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2latlngrect.h"
@@ -64,6 +65,8 @@ class S2ShapeIndexRegion final : public S2Region {
   //
   //   coverer.GetCovering(MakeS2ShapeIndexRegion(&index), &covering);
   explicit S2ShapeIndexRegion(IndexType const* index);
+
+  IndexType const& index() const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -120,8 +123,14 @@ class S2ShapeIndexRegion final : public S2Region {
   bool AnyEdgeIntersects(S2ClippedShape const& clipped,
                          S2Cell const& target) const;
 
-  S2ShapeIndex const* index_;
-  mutable Iterator iter_;      // This class is not thread-safe!
+  // This class is not thread-safe!
+  mutable S2ContainsPointQuery<IndexType> contains_query_;
+
+  // Optimization: rather than declaring our own iterator, instead we reuse
+  // the iterator declared by S2ContainsPointQuery.  (This improves benchmark
+  // times significantly for classes that create a new S2ShapeIndexRegion
+  // object on every call to Contains/MayIntersect(S2Cell).
+  Iterator& iter_ = *contains_query_.mutable_iter();
 };
 
 // Returns an S2ShapeIndexRegion that wraps the given S2ShapeIndex.  Note that
@@ -135,12 +144,17 @@ S2ShapeIndexRegion<IndexType> MakeS2ShapeIndexRegion(IndexType const* index);
 
 template <class IndexType>
 S2ShapeIndexRegion<IndexType>::S2ShapeIndexRegion(IndexType const* index)
-    : index_(index), iter_(index) {
+    : contains_query_(index) {
+}
+
+template <class IndexType>
+inline IndexType const& S2ShapeIndexRegion<IndexType>::index() const {
+  return contains_query_.index();
 }
 
 template <class IndexType>
 S2ShapeIndexRegion<IndexType>* S2ShapeIndexRegion<IndexType>::Clone() const {
-  return new S2ShapeIndexRegion<IndexType>(index_);
+  return new S2ShapeIndexRegion<IndexType>(&index());
 }
 
 template <class IndexType>
@@ -253,9 +267,9 @@ bool S2ShapeIndexRegion<IndexType>::Contains(S2Cell const& target) const {
       if (clipped.num_edges() == 0 && clipped.contains_center()) return true;
     } else {
       // It is faster to call AnyEdgeIntersects() before Contains().
-      if (index_->shape(clipped.shape_id())->has_interior() &&
+      if (index().shape(clipped.shape_id())->has_interior() &&
           !AnyEdgeIntersects(clipped, target) &&
-          Contains(iter_.id(), clipped, target.GetCenter())) {
+          contains_query_.ShapeContains(iter_, clipped, target.GetCenter())) {
         return true;
       }
     }
@@ -287,7 +301,9 @@ bool S2ShapeIndexRegion<IndexType>::MayIntersect(S2Cell const& target) const {
   for (int s = 0; s < cell.num_clipped(); ++s) {
     S2ClippedShape const& clipped = cell.clipped(s);
     if (AnyEdgeIntersects(clipped, target)) return true;
-    if (Contains(iter_.id(), clipped, target.GetCenter())) return true;
+    if (contains_query_.ShapeContains(iter_, clipped, target.GetCenter())) {
+      return true;
+    }
   }
   return false;
 }
@@ -297,7 +313,9 @@ bool S2ShapeIndexRegion<IndexType>::Contains(S2Point const& p) const {
   if (iter_.Locate(p)) {
     S2ShapeIndexCell const& cell = iter_.cell();
     for (int s = 0; s < cell.num_clipped(); ++s) {
-      if (Contains(iter_.id(), cell.clipped(s), p)) return true;
+      if (contains_query_.ShapeContains(iter_, cell.clipped(s), p)) {
+        return true;
+      }
     }
   }
   return false;
@@ -310,7 +328,7 @@ bool S2ShapeIndexRegion<IndexType>::AnyEdgeIntersects(
                                    S2::kIntersectsRectErrorUVDist);
   R2Rect const bound = target.GetBoundUV().Expanded(kMaxError);
   int const face = target.face();
-  S2Shape const& shape = *index_->shape(clipped.shape_id());
+  S2Shape const& shape = *index().shape(clipped.shape_id());
   int const num_edges = clipped.num_edges();
   for (int i = 0; i < num_edges; ++i) {
     auto const edge = shape.edge(clipped.edge(i));
@@ -321,25 +339,6 @@ bool S2ShapeIndexRegion<IndexType>::AnyEdgeIntersects(
     }
   }
   return false;
-}
-
-template <class IndexType>
-bool S2ShapeIndexRegion<IndexType>::Contains(
-    S2CellId id, S2ClippedShape const& clipped, S2Point const& p) const {
-  // Test containment by drawing a line segment from the cell center to the
-  // given point and counting edge crossings.
-  bool inside = clipped.contains_center();
-  int const num_edges = clipped.num_edges();
-  if (num_edges > 0) {
-    S2Shape const& shape = *index_->shape(clipped.shape_id());
-    if (!shape.has_interior()) return false;
-    S2CopyingEdgeCrosser crosser(id.ToPoint(), p);
-    for (int i = 0; i < num_edges; ++i) {
-      auto const edge = shape.edge(clipped.edge(i));
-      inside ^= crosser.EdgeOrVertexCrossing(edge.v0, edge.v1);
-    }
-  }
-  return inside;
 }
 
 template <class IndexType>

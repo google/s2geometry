@@ -272,6 +272,16 @@ TEST(S2Polyline, IntersectsVertexOnEdge)  {
       vertical_top_to_bottom.get()));
 }
 
+TEST(S2Polyline, SpaceUsedEmptyPolyline)  {
+  unique_ptr<S2Polyline> line(MakePolyline(""));
+  EXPECT_GT(line->SpaceUsed(), 0);
+}
+
+TEST(S2Polyline, SpaceUsedNonEmptyPolyline)  {
+  unique_ptr<S2Polyline> line(MakePolyline("1:1, 4:4, 4:6"));
+  EXPECT_GT(line->SpaceUsed(), 3 * sizeof(S2Point));
+}
+
 static string JoinInts(const vector<int>& ints) {
   string result;
   int n = ints.size();
@@ -401,7 +411,7 @@ TEST(S2PolylineShape, Basic) {
   EXPECT_EQ(S2LatLng::FromDegrees(2, 1).ToPoint(), edge2.v1);
   EXPECT_EQ(1, shape.dimension());
   EXPECT_FALSE(shape.has_interior());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 TEST(S2PolylineShape, EmptyPolyline) {

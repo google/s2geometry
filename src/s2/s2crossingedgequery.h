@@ -42,7 +42,7 @@ class S2Shape;
 //           S2Point const& a0, S2Point const &a1) {
 //   S2ShapeIndex index;
 //   for (S2Polyline* polyline : polylines) {
-//     index.Add(new S2Polyline::Shape(polyline));
+//     index.Add(absl::make_unique<S2Polyline::Shape>(polyline));
 //   }
 //   S2CrossingEdgeQuery query(index);
 //   S2CrossingEdgeQuery::EdgeMap edge_map;

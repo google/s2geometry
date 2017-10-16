@@ -1790,7 +1790,7 @@ class S2Cell final : public S2Region {
 
   // Return the minimum distance from the cell to the given edge AB.  Returns
   // zero if the edge intersects the cell interior.
-  S1ChordAngle GetDistanceToEdge(S2Point const& a, S2Point const& b) const;
+  S1ChordAngle GetDistance(S2Point const& a, S2Point const& b) const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):

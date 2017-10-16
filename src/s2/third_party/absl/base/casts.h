@@ -13,6 +13,22 @@
 // limitations under the License.
 //
 
+//
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 // -----------------------------------------------------------------------------
 // File: casts.h
 // -----------------------------------------------------------------------------
@@ -31,6 +47,8 @@
 #include <type_traits>
 
 #include "s2/third_party/absl/base/internal/identity.h"
+
+namespace absl {
 
 // implicit_cast()
 //
@@ -99,8 +117,8 @@ inline To implicit_cast(typename absl::internal::identity_t<To> to) {
 //    * Managing the individual bits of a type within mathematical operations
 //      that are not normally accessible through that type
 //    * Casting non-pointer types to pointer types (casting the other way is
-//       allowed by `reinterept_cast()` but round-trips cannot occur the other
-//       way).
+//      allowed by `reinterept_cast()` but round-trips cannot occur the other
+//      way).
 //
 // Example:
 //
@@ -135,5 +153,10 @@ inline Dest bit_cast(const Source& source) {
   memcpy(&dest, &source, sizeof(dest));
   return dest;
 }
+
+}  // namespace absl
+
+using absl::bit_cast;
+using absl::implicit_cast;
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_CASTS_H_

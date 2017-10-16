@@ -2876,7 +2876,7 @@ TEST_F(S2PolygonTestBase, FullPolygonShape) {
   S2Polygon::Shape shape(full_.get());
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.contains_origin());
+  EXPECT_TRUE(shape.GetReferencePoint().contained);
   EXPECT_EQ(0, shape.num_chains());
 }
 
@@ -2884,7 +2884,7 @@ TEST_F(S2PolygonTestBase, EmptyPolygonShape) {
   S2Polygon::Shape shape(empty_.get());
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
   EXPECT_EQ(0, shape.num_chains());
 }
 
@@ -2906,7 +2906,8 @@ void TestPolygonShape(S2Polygon const& polygon) {
   }
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_EQ(polygon.Contains(S2::Origin()), shape.contains_origin());
+  EXPECT_EQ(polygon.Contains(S2::Origin()),
+            shape.GetReferencePoint().contained);
 }
 
 TEST_F(S2PolygonTestBase, OneLoopPolygonShape) {

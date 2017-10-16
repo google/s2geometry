@@ -23,11 +23,13 @@
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2cap.h"
+#include "s2/s2contains_point_query.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2loop.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2shapeutil_contains_brute_force.h"
 #include "s2/s2shapeutil_edge_iterator.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
@@ -46,7 +48,7 @@ TEST(LaxLoop, EmptyLoop) {
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(0, shape.num_chains());
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 TEST(LaxLoop, NonEmptyLoop) {
@@ -66,7 +68,7 @@ TEST(LaxLoop, NonEmptyLoop) {
   }
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 TEST(ClosedLaxPolyline, NoInterior) {
@@ -74,7 +76,7 @@ TEST(ClosedLaxPolyline, NoInterior) {
   ClosedLaxPolyline shape(vertices);
   EXPECT_EQ(1, shape.dimension());
   EXPECT_FALSE(shape.has_interior());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 TEST(LaxPolygon, EmptyPolygon) {
@@ -85,7 +87,7 @@ TEST(LaxPolygon, EmptyPolygon) {
   EXPECT_EQ(0, shape.num_chains());
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 TEST(LaxPolygon, FullPolygon) {
@@ -96,7 +98,7 @@ TEST(LaxPolygon, FullPolygon) {
   EXPECT_EQ(1, shape.num_chains());
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_TRUE(shape.contains_origin());
+  EXPECT_TRUE(shape.GetReferencePoint().contained);
 }
 
 TEST(LaxPolygon, SingleVertexPolygon) {
@@ -117,7 +119,7 @@ TEST(LaxPolygon, SingleVertexPolygon) {
   EXPECT_TRUE(edge == shape.chain_edge(0, 0));
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 TEST(LaxPolygon, SingleLoopPolygon) {
@@ -141,7 +143,7 @@ TEST(LaxPolygon, SingleLoopPolygon) {
   }
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
 }
 
 TEST(LaxPolygon, MultiLoopPolygon) {
@@ -172,7 +174,7 @@ TEST(LaxPolygon, MultiLoopPolygon) {
   EXPECT_EQ(num_vertices, shape.num_edges());
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
 }
 
 TEST(LaxPolygon, DegenerateLoops) {
@@ -182,7 +184,7 @@ TEST(LaxPolygon, DegenerateLoops) {
     s2textformat::ParsePoints("5:5, 6:6")
   };
   LaxPolygon shape(loops);
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 TEST(LaxPolygon, InvertedLoops) {
@@ -191,7 +193,7 @@ TEST(LaxPolygon, InvertedLoops) {
     s2textformat::ParsePoints("3:4, 3:3, 4:4")
   };
   LaxPolygon shape(loops);
-  EXPECT_TRUE(shape.contains_origin());
+  EXPECT_TRUE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
 }
 
 TEST(LaxPolygon, PartiallyDegenerateLoops) {
@@ -231,7 +233,8 @@ TEST(LaxPolygon, PartiallyDegenerateLoops) {
     }
     LaxPolygon shape(loops);
     S2Loop triangle_loop(triangle);
-    EXPECT_EQ(triangle_loop.Contains(S2::Origin()), shape.contains_origin());
+    auto ref = shape.GetReferencePoint();
+    EXPECT_EQ(triangle_loop.Contains(ref.point), ref.contained);
   }
 }
 
@@ -239,9 +242,11 @@ void CompareS2LoopToShape(S2Loop const& loop, unique_ptr<S2Shape> shape) {
   S2ShapeIndex index;
   index.Add(std::move(shape));
   S2Cap cap = loop.GetCapBound();
+  auto query = MakeS2ContainsPointQuery(&index);
   for (int iter = 0; iter < 100; ++iter) {
     S2Point point = S2Testing::SamplePoint(cap);
-    EXPECT_EQ(loop.Contains(point), index.ShapeContains(index.shape(0), point));
+    EXPECT_EQ(loop.Contains(point),
+              query.ShapeContains(*index.shape(0), point));
   }
 }
 
@@ -358,7 +363,7 @@ TEST(VertexIdLaxLoop, EmptyLoop) {
   EXPECT_EQ(1, shape.num_chains());
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 TEST(VertexIdLaxLoop, InvertedLoop) {
@@ -377,7 +382,7 @@ TEST(VertexIdLaxLoop, InvertedLoop) {
   EXPECT_EQ(&vertex_array[1], &shape.vertex(3));
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_TRUE(shape.contains_origin());
+  EXPECT_TRUE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
 }
 
 TEST(RangeIterator, Next) {

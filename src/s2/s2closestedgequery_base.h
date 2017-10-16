@@ -115,6 +115,13 @@ class S2ClosestEdgeQueryBase {
     // Specifies that only edges whose distance to the target is less than
     // "max_distance" should be returned.
     //
+    // Note that edges whose distance is exactly equal to "max_distance" are
+    // not returned.  In most cases this doesn't matter (since distances are
+    // not computed exactly in the first place), but if such edges are needed
+    // then you can retrieve them by specifying "max_distance" as the next
+    // largest representable Distance.  For example, if Distance is an
+    // S1ChordAngle then you can specify max_distance.Successor().
+    //
     // DEFAULT: Distance::Infinity()
     Distance max_distance() const;
     void set_max_distance(Distance max_distance);
@@ -140,17 +147,19 @@ class S2ClosestEdgeQueryBase {
     Distance max_error() const;
     void set_max_error(Distance max_error);
 
-    // Specifies that if the query target intersects the interior of a
-    // polygonal shape, then the distance to that shape is considered to be
-    // zero.  Such shapes are returned as a (shape_id, edge_id) pair with
-    // (edge_id == -1).
+    // Specifies that polygon interiors should be included when measuring
+    // distances.  In other words, polygons that contain the target should
+    // have a distance of zero.  (For targets consisting of multiple connected
+    // components, the distance is zero if any component is contained.)  This
+    // is indicated in the results by returning a (shape_id, edge_id) pair
+    // with edge_id == -1, i.e. this value denotes the polygons's interior.
     //
-    // Polygon interiors are assumed to be semi-open sets.  (Note that since
-    // all boundary edges are considered anyway, it doesn't really matter
-    // whether they are considered to belong to the interior or not.)
+    // Note that for efficiency, any polygon that intersects the target may or
+    // may not have an (edge_id == -1) result.  Such results are optional
+    // because in that case the distance to the polygon is already zero.
     //
     // DEFAULT: false
-    // TODO(ericv): Implement this, and possibly make true by default.
+    // TODO(ericv): Consider making this option true by default.
     bool include_interiors() const;
     void set_include_interiors(bool include_interiors);
 
@@ -207,12 +216,28 @@ class S2ClosestEdgeQueryBase {
     virtual bool UpdateMinDistance(S2Cell const& cell,
                                    Distance* min_dist) const = 0;
 
-    // TODO(ericv): Needed for Options::include_interiors().
-    // Returns the set of polygonal shapes (but not more than "max_shapes")
-    // whose interior intersects the target.  (Generally polygon interiors are
-    // modeled as semi-open sets, but this is not a requirement.)
-    // virtual std::vector<int> GetIntersectingShapes(S2ShapeIndex const& index,
-    //                                                int max_shapes) const = 0;
+    // Returns the shape_ids of all polygons in "query_index" (but not more
+    // than "max_shapes") that contain any connected component of the target.
+    // (For example, a polygon with two nested loops consist of one connected
+    // component, but a polygon with two shells consists of two connected
+    // components.)  Optionally, any polygon that intersects the target to
+    // within a small error margin (e.g., a small multiple of DBL_EPSILON) may
+    // also be returned.  In other words, this method is guaranteed to return
+    // all polygons that contain any connected component of the target, along
+    // with an arbitrary subset of the polygons that intersect the target.
+    //
+    // For example, suppose that "query_index" contains two abutting polygons
+    // A and B.  If the target consisted of two points "a" contained by A and
+    // "b" contained by B, then both A and B would be returned.  But if the
+    // target consisted of the edge "ab", then any subset of {A, B} could be
+    // returned (because both polygons intersect the target but neither one
+    // contains the edge "ab").
+    //
+    // NOTE(ericv): This method exists only for the purpose of implementing
+    // the include_interiors() option efficiently.  Its API is unlikely to be
+    // useful for other purposes.
+    virtual std::vector<int> GetContainingShapes(
+        S2ShapeIndexBase const& query_index, int max_shapes) const = 0;
   };
 
   struct Result {
@@ -280,23 +305,6 @@ class S2ClosestEdgeQueryBase {
   // REQUIRES: options.max_edges() == 1
   Result FindClosestEdge(Target* target, Options const& options);
 
-  ABSL_DEPRECATED("Use (Target *) version")
-  std::vector<Result> FindClosestEdges(Target const& target,
-                                       Options const& options) {
-    return FindClosestEdges(const_cast<Target*>(&target), options);
-  }
-
-  ABSL_DEPRECATED("Use (Target *) version")
-  void FindClosestEdges(Target const& target, Options const& options,
-                        std::vector<Result>* results) {
-    return FindClosestEdges(const_cast<Target*>(&target), options, results);
-  }
-
-  ABSL_DEPRECATED("Use (Target *) version")
-  Result FindClosestEdge(Target const& target, Options const& options) {
-    return FindClosestEdge(const_cast<Target*>(&target), options);
-  }
-
  private:
   class QueueEntry;
 
@@ -308,6 +316,7 @@ class S2ClosestEdgeQueryBase {
   void AddInitialRange(S2ShapeIndexBase::Iterator const& first,
                        S2ShapeIndexBase::Iterator const& last);
   void MaybeAddResult(S2Shape const& shape, int edge_id);
+  void AddResult(Result const& result);
   void ProcessEdges(QueueEntry const& entry);
   void EnqueueCell(S2CellId id, S2ShapeIndexCell const* index_cell);
   void EnqueueCurrentCell(S2CellId id);
@@ -562,14 +571,28 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
   result_singleton_ = Result();
   DCHECK(result_vector_.empty());
   DCHECK(result_set_.empty());
+  if (distance_limit_ == Distance::Zero()) return;
+
+  if (options.max_edges() == Options::kMaxMaxEdges &&
+      options.max_distance() == Distance::Infinity()) {
+    LOG(WARNING) << "Returning all edges (max_edges/max_distance not provided)";
+  }
+
+  if (options.include_interiors()) {
+    auto shape_ids = target->GetContainingShapes(*index_, options.max_edges());
+    DCHECK_LE(shape_ids.size(), options.max_edges());
+    for (int shape_id : shape_ids) {
+      AddResult(Result(Distance::Zero(), shape_id, -1));
+    }
+    if (distance_limit_ == Distance::Zero()) return;
+  }
 
   // If max_error() was specified and the target takes advantage of this
   // in its UpdateMinDistance() methods, then we need to avoid duplicate edges
   // in the results explicitly.  (Otherwise it happens automatically.)
-  avoid_duplicates_ = (
-      Distance::Zero() < options.max_error() &&
-      target_->set_max_error(options.max_error()) &&
-      options.max_edges() > 1 && !options.use_brute_force());
+  avoid_duplicates_ = (Distance::Zero() < options.max_error() &&
+                       target_->set_max_error(options.max_error()) &&
+                       options.max_edges() > 1 && !options.use_brute_force());
 
   if (options.use_brute_force() ||
       index_num_edges_ <= target_->max_brute_force_edges()) {
@@ -779,13 +802,17 @@ void S2ClosestEdgeQueryBase<Distance>::MaybeAddResult(
   }
   auto edge = shape.edge(edge_id);
   Distance distance = distance_limit_;
-  if (!target_->UpdateMinDistance(edge.v0, edge.v1, &distance)) return;
+  if (target_->UpdateMinDistance(edge.v0, edge.v1, &distance)) {
+    AddResult(Result(distance, shape.id(), edge_id));
+  }
+}
 
-  Result result(distance, shape.id(), edge_id);
+template <class Distance>
+void S2ClosestEdgeQueryBase<Distance>::AddResult(Result const& result) {
   if (options().max_edges() == 1) {
     // Optimization for the common case where only the closest edge is wanted.
     result_singleton_ = result;
-    distance_limit_ = distance - options().max_error();
+    distance_limit_ = result.distance - options().max_error();
   } else if (options().max_edges() == Options::kMaxMaxEdges) {
     result_vector_.push_back(result);  // Sort/unique at end.
   } else {

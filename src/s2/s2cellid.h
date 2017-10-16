@@ -324,11 +324,10 @@ class S2CellId {
   // gradually get smaller (as "limit" is approached).
   S2CellId maximum_tile(S2CellId limit) const;
 
-  // Return the level of the "lowest common ancestor" of this cell and
-  // "other".  Note that because of the way that cell levels are numbered,
-  // this is actually the *highest* level of any shared ancestor.  Return -1
-  // if the two cells do not have any common ancestor (i.e., they are from
-  // different faces).
+  // Returns the level of the lowest common ancestor of this cell and "other",
+  // that is, the maximum level such that parent(level) == other.parent(level).
+  // Returns -1 if the two cells do not have any common ancestor (i.e., they
+  // are from different faces).
   int GetCommonAncestorLevel(S2CellId other) const;
 
   // Iterator-style methods for traversing all the cells along the Hilbert

@@ -112,7 +112,7 @@ void ExpectDegeneracies(string const& polygon_str,
   unique_ptr<LaxPolygon> polygon(s2textformat::MakeLaxPolygon(polygon_str));
   builder.AddIsFullPolygonPredicate(
       [&polygon](Graph const& graph, S2Error* error) {
-        return polygon->contains_origin();
+        return polygon->GetReferencePoint().contained;
       });
   for (int i = 0; i < polygon->num_edges(); ++i) {
     auto edge = polygon->edge(i);

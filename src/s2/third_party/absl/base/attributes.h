@@ -13,6 +13,22 @@
 // limitations under the License.
 //
 
+/*
+ * Copyright 2017 The Abseil Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 // Various macros for C++ attributes
 // This file is used for both C and C++!
 //
@@ -94,8 +110,6 @@
 #define INIT_ATTRIBUTE_SECTION_VARS(name)
 #define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void *>(0))
 #define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void *>(0))
-#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
-#define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
 #define MUST_USE_RESULT
 #define ATTRIBUTE_UNUSED
 #define ATTRIBUTE_INITIAL_EXEC
@@ -370,6 +384,7 @@
 
 // ABSL_ATTRIBUTE_NO_SANITIZE_CFI
 // Tell ControlFlowIntegrity sanitizer to not instrument a given function.
+// See https://clang.llvm.org/docs/ControlFlowIntegrity.html for details.
 #if defined(__GNUC__) && defined(CONTROL_FLOW_INTEGRITY)
 #define ABSL_ATTRIBUTE_NO_SANITIZE_CFI __attribute__((no_sanitize("cfi")))
 #else
@@ -436,7 +451,7 @@
 
 // Return void* pointers to start/end of a section of code with
 // functions having ABSL_ATTRIBUTE_SECTION(name).
-// Returns 0 if no such functions exits.
+// Returns 0 if no such functions exist.
 // One must ABSL_DECLARE_ATTRIBUTE_SECTION_VARS(name) for this to compile and
 // link.
 //
@@ -491,26 +506,6 @@
 #else
 #define ABSL_ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
 #define ABSL_REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
-#endif
-
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(force_align_arg_pointer) || \
-    (defined(__GNUC__) && !defined(__clang__))
-#if defined(__i386__)
-#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC \
-  __attribute__((force_align_arg_pointer))
-#define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
-#elif defined(__x86_64__)
-#define REQUIRE_STACK_ALIGN_TRAMPOLINE (1)
-#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
-#else  // !__i386__ && !__x86_64
-#define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
-#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
-#endif  // __i386__
-#else
-#define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
-#define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
 #endif
 
 // ABSL_MUST_USE_RESULT
@@ -595,8 +590,12 @@
     !defined(ABSL_NO_XRAY_ATTRIBUTES)
 #define ABSL_XRAY_ALWAYS_INSTRUMENT [[clang::xray_always_instrument]]
 #define ABSL_XRAY_NEVER_INSTRUMENT [[clang::xray_never_instrument]]
+#if ABSL_HAVE_CPP_ATTRIBUTE(clang::xray_log_args)
 #define ABSL_XRAY_LOG_ARGS(N) \
     [[clang::xray_always_instrument, clang::xray_log_args(N)]]
+#else
+#define ABSL_XRAY_LOG_ARGS(N) [[clang::xray_always_instrument]]
+#endif
 #else
 #define ABSL_XRAY_ALWAYS_INSTRUMENT
 #define ABSL_XRAY_NEVER_INSTRUMENT
@@ -610,7 +609,6 @@
 // ABSL_ATTRIBUTE_UNUSED
 // Prevent the compiler from complaining about or optimizing away variables
 // that appear unused.
-// This is also defined in other files, e.g. third_party/libxml/xmlversion.h.
 #if ABSL_HAVE_ATTRIBUTE(unused) || (defined(__GNUC__) && !defined(__clang__))
 #undef ABSL_ATTRIBUTE_UNUSED
 #define ABSL_ATTRIBUTE_UNUSED __attribute__((__unused__))

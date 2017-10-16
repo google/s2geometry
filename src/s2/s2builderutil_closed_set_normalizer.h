@@ -110,7 +110,7 @@ class ClosedSetNormalizer {
 
   // Returns the GraphOptions that should be used to construct the input
   // S2Builder::Graph of each dimension.
-  std::vector<S2Builder::GraphOptions> const& graph_options() const;
+  inline std::vector<S2Builder::GraphOptions> const& graph_options() const;
 
   // Normalizes the input graphs and returns a new set of graphs where
   // degeneracies have been discarded or converted to objects of lower
@@ -201,17 +201,17 @@ LayerVector NormalizeClosedSet(LayerVector output_layers,
 
 ClosedSetNormalizer::Options::Options() : suppress_lower_dimensions_(true) {}
 
-bool ClosedSetNormalizer::Options::suppress_lower_dimensions() const {
+inline bool ClosedSetNormalizer::Options::suppress_lower_dimensions() const {
   return suppress_lower_dimensions_;
 }
 
-void ClosedSetNormalizer::Options::set_suppress_lower_dimensions(
+inline void ClosedSetNormalizer::Options::set_suppress_lower_dimensions(
     bool suppress_lower_dimensions) {
   suppress_lower_dimensions_ = suppress_lower_dimensions;
 }
 
-std::vector<S2Builder::GraphOptions> const& ClosedSetNormalizer::graph_options()
-    const {
+inline std::vector<S2Builder::GraphOptions> const&
+ClosedSetNormalizer::graph_options() const {
   return graph_options_in_;
 }
 

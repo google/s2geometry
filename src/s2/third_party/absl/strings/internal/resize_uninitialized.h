@@ -13,6 +13,22 @@
 // limitations under the License.
 //
 
+//
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 #ifndef S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_RESIZE_UNINITIALIZED_H_
 #define S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_RESIZE_UNINITIALIZED_H_
 
@@ -23,10 +39,7 @@
 #include "s2/third_party/absl/meta/type_traits.h"  //  for void_t
 
 namespace absl {
-
 namespace strings_internal {
-
-namespace dontuse {
 
 // Is a subclass of true_type or false_type, depending on whether or not
 // T has a resize_uninitialized member.
@@ -46,8 +59,6 @@ void ResizeUninit(string_type* s, size_t new_size, std::false_type) {
   s->resize(new_size);
 }
 
-}  // namespace dontuse
-
 // Returns true if the string implementation supports a resize where
 // the new characters added to the string are left untouched.
 //
@@ -55,7 +66,7 @@ void ResizeUninit(string_type* s, size_t new_size, std::false_type) {
 // the previous function.)
 template <typename string_type>
 inline constexpr bool STLStringSupportsNontrashingResize(string_type*) {
-  return dontuse::HasResizeUninitialized<string_type>();
+  return HasResizeUninitialized<string_type>();
 }
 
 // Like str->resize(new_size), except any new characters added to "*str" as a
@@ -64,12 +75,10 @@ inline constexpr bool STLStringSupportsNontrashingResize(string_type*) {
 // store of the string with known data. Uses a Google extension to ::string.
 template <typename string_type, typename = void>
 inline void STLStringResizeUninitialized(string_type* s, size_t new_size) {
-  dontuse::ResizeUninit(s, new_size,
-                        dontuse::HasResizeUninitialized<string_type>());
+  ResizeUninit(s, new_size, HasResizeUninitialized<string_type>());
 }
 
 }  // namespace strings_internal
-
 }  // namespace absl
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_RESIZE_UNINITIALIZED_H_

@@ -14,14 +14,21 @@
 //
 
 // Author: ericv@google.com (Eric Veach)
+//
+// This file contains some basic tests of the templating support.  Testing of
+// the actual algorithms is in s2closestedgequery_test.cc.
 
 #include "s2/s2closestedgequery_base.h"
 
+#include <vector>
 #include <gtest/gtest.h>
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
+#include "s2/s2contains_point_query.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2textformat.h"
+
+using std::vector;
 
 namespace {
 
@@ -75,7 +82,7 @@ class MaxDistance {
 
 using FurthestEdgeQuery = S2ClosestEdgeQueryBase<MaxDistance>;
 
-class FurthestPointTarget : public FurthestEdgeQuery::Target {
+class FurthestPointTarget final : public FurthestEdgeQuery::Target {
  public:
   explicit FurthestPointTarget(S2Point const& point) : point_(point) {}
 
@@ -101,6 +108,27 @@ class FurthestPointTarget : public FurthestEdgeQuery::Target {
     if (*min_dist < dist) return false;
     *min_dist = dist;
     return true;
+  }
+
+  vector<int> GetContainingShapes(S2ShapeIndexBase const& index,
+                                  int max_shapes) const override {
+    // For furthest points, we return the polygons whose interior contains the
+    // antipode of the target point.  (These are the polygons whose
+    // MaxDistance() to the target is MaxDistance::Zero().)
+    //
+    // For target types consisting of multiple connected components (such as
+    // FurthestPointQuery::ShapeIndexTarget), this method should return the
+    // polygons containing the antipodal reflection of any connected
+    // component.  (It is sufficient to test containment of one vertex per
+    // connected component, since the API allows us to also return any polygon
+    // whose boundary has MaxDistance::Zero() to the target.)
+    vector<int> results;
+    MakeS2ContainsPointQuery(&index).VisitContainingShapes(
+        -point_, [&results, max_shapes](S2Shape* shape) {
+          results.push_back(shape->id());
+          return results.size() < max_shapes;
+        });
+    return results;
   }
 
  private:

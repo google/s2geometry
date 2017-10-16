@@ -618,8 +618,8 @@ class S2Polygon final : public S2Region {
   bool BoundaryNear(S2Polygon const& b,
                     S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
-  // Return the total number of bytes used by the polygon.
-  size_t BytesUsed() const;
+  // Returns the total number of bytes used by the polygon.
+  size_t SpaceUsed() const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -696,7 +696,7 @@ class S2Polygon final : public S2Region {
     int num_edges() const final { return num_edges_; }
     Edge edge(int e) const final;
     int dimension() const final { return 2; }
-    bool contains_origin() const final;
+    ReferencePoint GetReferencePoint() const final;
     int num_chains() const final;
     Chain chain(int i) const final;
     Edge chain_edge(int i, int j) const final;
@@ -735,6 +735,7 @@ class S2Polygon final : public S2Region {
     ~OwningShape() override { delete polygon(); }
   };
 #endif  // SWIG
+
 
  private:
   friend class S2Stats;
@@ -783,10 +784,6 @@ class S2Polygon final : public S2Region {
       S2BoundaryOperation::OpType op_type,
       S2Builder::SnapFunction const& snap_function,
       S2Polyline const& a) const;
-
-  // Given an iterator that is already positioned at the S2ShapeIndexCell
-  // containing "p", returns Contains(p).
-  bool Contains(S2ShapeIndex::Iterator const& it, S2Point const& p) const;
 
   // Encode the polygon's S2Points directly as three doubles using
   // (40 + 43 * num_loops + 24 * num_vertices) bytes.

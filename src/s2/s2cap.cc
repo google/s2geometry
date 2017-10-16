@@ -202,12 +202,10 @@ void S2Cap::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
 
   // Find the maximum level such that the cap contains at most one cell vertex
   // and such that S2CellId::AppendVertexNeighbors() can be called.
-  int level = S2::kMinWidth.GetLevelForMinValue(2 * GetRadius().radians());
-  level = min(level, S2CellId::kMaxLevel - 1);
+  int level = S2::kMinWidth.GetLevelForMinValue(GetRadius().radians()) - 1;
 
-  // Don't bother trying to optimize the level == 0 case, since more than
-  // four face cells may be required.
-  if (level == 0) {
+  // If level < 0, then more than three face cells are required.
+  if (level < 0) {
     cell_ids->reserve(6);
     for (int face = 0; face < 6; ++face) {
       cell_ids->push_back(S2CellId::FromFace(face));

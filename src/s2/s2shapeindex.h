@@ -30,14 +30,13 @@
 //           vector<S2Point> const& points) {
 //   S2ShapeIndex index;
 //   for (auto polygon : polygons) {
-//     index.Add(new S2Polygon::Shape(polygon));
+//     index.Add(absl::make_unique<S2Polygon::Shape>(polygon));
 //   }
 //   for (auto const& point: points) {
-//     vector<S2Shape*> shapes;
-//     index.GetContainingShapes(point, &shapes);
-//     for (auto shape: shapes) {
-//       Output(point, down_cast<S2Polygon::Shape const*>(shape)->polygon());
-//     }
+//     MakeS2ContainsPointQuery(&index).VisitContainingShapes(
+//         point, [](Shape* shape) {
+//           Output(point, down_cast<S2Polygon::Shape*>(shape)->polygon());
+//         });
 //   }
 // }
 //
@@ -73,7 +72,7 @@
 // void Test(vector<S2Polyline*> const& polylines) {
 //   S2ShapeIndex index;
 //   for (S2Polyline* polyline : polylines) {
-//     index.Add(new S2Polyline::Shape(polyline));
+//     index.Add(absl::make_unique<S2Polyline::Shape>(polyline));
 //   }
 //   // Now use an S2CrossingEdgeQuery or S2ClosestEdgeQuery here ...
 // }
@@ -94,6 +93,7 @@
 #include "s2/base/mutex.h"
 #include "s2/base/spinlock.h"
 #include "s2/s2cellid.h"
+#include "s2/s2pointutil.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/memory/memory.h"
@@ -127,7 +127,7 @@ class S2ShapeIndex;
 // polygonal geometry classes such as S2Polygon and S2Polyline.
 //
 // Sometimes you will want to add your own data to shapes, so that when an
-// S2Shape is returned by a method (such as GetContainingShapes) then you can
+// S2Shape is returned by a query (such as S2ContainsPointQuery) then you can
 // map it back to your source data.  Here are some reasonable ways to do this:
 //
 //  - [Easy] Every shape has a unique id() assigned by S2ShapeIndex.  Ids are
@@ -194,6 +194,22 @@ class S2Shape {
         : chain_id(_chain_id), offset(_offset) {}
   };
 
+  // A ReferencePoint consists of a point P and a boolean indicating whether P
+  // is contained by a particular shape.
+  struct ReferencePoint {
+    S2Point point;
+    bool contained;
+    ReferencePoint() = default;
+    ReferencePoint(S2Point _point, bool _contained)
+        : point(_point), contained(_contained) {}
+
+    // Returns a ReferencePoint with the given "contained" value and a default
+    // "point".  It should be used when all points or no points are contained.
+    static ReferencePoint Contained(bool _contained) {
+      return ReferencePoint(S2::Origin(), _contained);
+    }
+  };
+
   S2Shape() : id_(-1) {}
   virtual ~S2Shape() {}
 
@@ -227,12 +243,13 @@ class S2Shape {
   // Convenience function that returns true if this shape has an interior.
   bool has_interior() const { return dimension() == 2; }
 
-  // Returns true if this shape contains S2::Origin().  Should return false
-  // for shapes that do not have an interior.
+  // Returns an arbitrary point P along with a boolean indicating whether P is
+  // contained by the shape.  (The boolean value must be false for shapes that
+  // do not have an interior.)
   //
-  // TODO(ericv): Consider allowing shapes to also return their own choice of
-  // origin(), to make this method easier to implement for arbitrary shapes.
-  virtual bool contains_origin() const = 0;
+  // This ReferencePoint may then be used to compute the containment of other
+  // points by counting edge crossings.
+  virtual ReferencePoint GetReferencePoint() const = 0;
 
   // Returns the number of contiguous edge chains in the shape.  For example,
   // a shape whose edges are [AB, BC, CD, AE, EF] would consist of two chains
@@ -795,11 +812,11 @@ class S2ShapeIndex final : public S2ShapeIndexBase {
     CellMap::const_iterator iter_, end_;
   };
 
-  // Take ownership of the given shape and add it to the index.  Also assigns
-  // a unique id to the shape (shape->id()).  Shape ids are assigned
-  // sequentially starting from 0 in the order shapes are added.  Invalidates
-  // all iterators and their associated data.
-  void Add(std::unique_ptr<S2Shape> shape);
+  // Takes ownership of the given shape and adds it to the index.  Also assigns
+  // a unique id to the shape (shape->id()) and returns that id.  Shape ids
+  // are assigned sequentially starting from 0 in the order shapes are added.
+  // Invalidates all iterators and their associated data.
+  int Add(std::unique_ptr<S2Shape> shape);
 
   // Remove the given shape from the index and return ownership to the caller.
   // Invalidates all iterators and their associated data.
@@ -814,23 +831,10 @@ class S2ShapeIndex final : public S2ShapeIndexBase {
   // options specified via Init() are preserved.
   void Reset();
 
-  // Return true if "shape" contains the given point P.
-  //
-  // TODO(ericv): Replace this with a new class "S2ContainsPointQuery".
-  bool ShapeContains(S2Shape const* shape, S2Point const& p) const;
-
-  // Return true if the given point P is contained by at least one shape,
-  // and return a list of the containing shapes.
-  //
-  // TODO(ericv): Replace this with a new class "S2IntersectingShapesQuery."
-  bool GetContainingShapes(S2Point const& p,
-                           std::vector<S2Shape*>* shapes) const;
-
-  // Return the number of bytes occupied by the index (including any unused
-  // space at the end of vectors, etc).  This method applies any pending
-  // updates before measuring memory usage.  It has the same thread safety as
-  // the other "const" methods (see introduction).
-  size_t BytesUsed() const;
+  // Returns the number of bytes currently occupied by the index (including any
+  // unused space at the end of vectors, etc). It has the same thread safety
+  // as the other "const" methods (see introduction).
+  size_t SpaceUsed() const;
 
   // Calls to Add() and Release() are normally queued and processed on the
   // first subsequent query (in a thread-safe way).  This has many advantages,
@@ -946,13 +950,13 @@ class S2ShapeIndex final : public S2ShapeIndexBase {
 
   // The id of the first shape that has been queued for addition but not
   // processed yet.
-  int pending_additions_begin_;
+  int pending_additions_begin_ = 0;
 
   // The representation of an edge that has been queued for removal.
   struct RemovedShape {
     int32 shape_id;
     bool has_interior;
-    bool contains_origin;
+    bool contains_tracker_origin;
     std::vector<S2Shape::Edge> edges;
   };
 

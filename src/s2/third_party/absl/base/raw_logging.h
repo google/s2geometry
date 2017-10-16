@@ -1,4 +1,4 @@
-// Copyright 2006 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,22 @@
 // limitations under the License.
 //
 
-//
+/*
+ * Copyright 2017 The Abseil Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 // Moved into its own module by sanjay@google.com (Sanjay Ghemawat)
 //
 // Thread-safe logging routines that do not allocate any memory or
@@ -47,15 +62,23 @@
 #if !defined(STRIP_LOG) || STRIP_LOG == 0
 #define ABSL_RAW_LOG(severity, ...)                                            \
   do {                                                                         \
+    constexpr const char* absl_raw_logging_internal_basename =                 \
+        ::absl::raw_logging_internal::Basename(__FILE__,                       \
+                                               sizeof(__FILE__) - 1);          \
     ::absl::raw_logging_internal::RawLog(ABSL_RAW_LOGGING_INTERNAL_##severity, \
-                                         __FILE__, __LINE__, __VA_ARGS__);     \
+                                         absl_raw_logging_internal_basename,   \
+                                         __LINE__, __VA_ARGS__);               \
   } while (0)
 #else
-#define ABSL_RAW_LOG(severity, ...)                                          \
-  do {                                                                       \
-    if (ABSL_RAW_LOGGING_INTERNAL_##severity == ::absl::LogSeverity::kFatal) \
-      ::absl::raw_logging_internal::RawLog(::absl::LogSeverity::kFatal,      \
-                                           __FILE__, __LINE__, __VA_ARGS__); \
+#define ABSL_RAW_LOG(severity, ...)                                            \
+  do {                                                                         \
+    constexpr const char* absl_raw_logging_internal_basename =                 \
+        ::absl::raw_logging_internal::Basename(__FILE__,                       \
+                                               sizeof(__FILE__) - 1);          \
+    if (ABSL_RAW_LOGGING_INTERNAL_##severity == ::absl::LogSeverity::kFatal)   \
+      ::absl::raw_logging_internal::RawLog(::absl::LogSeverity::kFatal,        \
+                                           absl_raw_logging_internal_basename, \
+                                           __LINE__, __VA_ARGS__);             \
   } while (0)
 #endif
 
@@ -104,8 +127,17 @@ namespace raw_logging_internal {
 // This does not allocate memory or acquire locks.
 void RawLog(absl::LogSeverity severity, const char* file, int line,
             const char* format, ...) ABSL_PRINTF_ATTRIBUTE(4, 5);
-void RawLog(base_logging::LogSeverity severity, const char* file, int line,
-            const char* format, ...) ABSL_PRINTF_ATTRIBUTE(4, 5);
+void RawLog(int severity, const char* file, int line, const char* format, ...)
+    ABSL_PRINTF_ATTRIBUTE(4, 5);
+
+// compile-time function to get the "base" filename, that is, the part of
+// a filename after the last "/" or "\" path separator.  The search starts at
+// the end of the string; the second parameter is the length of the string.
+constexpr const char* Basename(const char* fname, int offset) {
+  return offset == 0 || fname[offset - 1] == '/' || fname[offset - 1] == '\\'
+             ? fname + offset
+             : Basename(fname, offset - 1);
+}
 
 // For testing only.
 // Returns true if raw logging is fully supported. When it is not
@@ -151,12 +183,11 @@ using AbortHook = void (*)(const char* file, int line, const char* buf_start,
 }  // namespace raw_logging_internal
 }  // namespace absl
 
-// TODO(b/62299050): macros below should be cleaned up and copybara-scrubbed.
+
+// TODO(b/62299050): These will be removed in post-launch cleanup
 #define RAW_LOG ABSL_RAW_LOG
 #define RAW_CHECK ABSL_RAW_CHECK
 
-// Since raw_logging is internal in absl, the below functions won't need to be
-// shipped yet.
 namespace base_raw_logging {
 
 
@@ -164,8 +195,11 @@ ABSL_DEPRECATED("Use absl::raw_logging_internal::RawLog instead.")
 void RawLog(absl::LogSeverity severity, const char* file, int line,
             const char* format, ...) ABSL_PRINTF_ATTRIBUTE(4, 5);
 ABSL_DEPRECATED("Use absl::raw_logging_internal::RawLog instead.")
-void RawLog(base_logging::LogSeverity severity, const char* file, int line,
-            const char* format, ...) ABSL_PRINTF_ATTRIBUTE(4, 5);
+void RawLog(int severity, const char* file, int line, const char* format, ...)
+    ABSL_PRINTF_ATTRIBUTE(4, 5);
+
+// Since raw_logging is internal in absl, the below functions and types
+// won't need to be shipped yet.
 
 using LogPrefixHook = absl::raw_logging_internal::LogPrefixHook;
 using AbortHook = absl::raw_logging_internal::AbortHook;

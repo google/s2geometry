@@ -20,6 +20,8 @@
 #include "s2/base/stringprintf.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/types/span.h"
+#include "s2/s2contains_point_query.h"
+#include "s2/s2contains_vertex_query.h"
 #include "s2/s2crossingedgequery.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2error.h"
@@ -28,6 +30,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
+#include "s2/s2shapeutil_contains_brute_force.h"
 #include "s2/s2wedge_relations.h"
 
 using absl::Span;
@@ -36,6 +39,7 @@ using std::pair;
 using std::unique_ptr;
 using std::vector;
 using ChainPosition = S2Shape::ChainPosition;
+using ReferencePoint = S2Shape::ReferencePoint;;
 
 namespace s2shapeutil {
 
@@ -80,10 +84,10 @@ S2Shape::Edge LaxLoop::chain_edge(int i, int j) const {
   return Edge(vertices_[j], vertices_[k]);
 }
 
-bool LaxLoop::contains_origin() const {
-  // IsOriginOnLeft interprets a loop with no vertices as "full".
-  if (num_vertices() == 0) return false;
-  return IsOriginOnLeft(*this);
+S2Shape::ReferencePoint LaxLoop::GetReferencePoint() const {
+  // GetReferencePoint interprets a loop with no vertices as "full".
+  if (num_vertices() == 0) return ReferencePoint::Contained(false);
+  return s2shapeutil::GetReferencePoint(*this);
 }
 
 ClosedLaxPolyline::ClosedLaxPolyline(std::vector<S2Point> const& vertices) {
@@ -201,8 +205,8 @@ S2Shape::Edge LaxPolygon::edge(int e0) const {
   return Edge(vertices_[e0], vertices_[e1]);
 }
 
-bool LaxPolygon::contains_origin() const {
-  return IsOriginOnLeft(*this);
+S2Shape::ReferencePoint LaxPolygon::GetReferencePoint() const {
+  return s2shapeutil::GetReferencePoint(*this);
 }
 
 S2Shape::Chain LaxPolygon::chain(int i) const {
@@ -320,70 +324,46 @@ S2Shape::Edge VertexIdLaxLoop::chain_edge(int i, int j) const {
   return Edge(vertex(j), vertex(k));
 }
 
-bool VertexIdLaxLoop::contains_origin() const {
-  // IsOriginOnLeft interprets a loop with no vertices as "full".
-  if (num_vertices() == 0) return false;
-  return IsOriginOnLeft(*this);
+S2Shape::ReferencePoint VertexIdLaxLoop::GetReferencePoint() const {
+  // GetReferencePoint interprets a loop with no vertices as "full".
+  if (num_vertices() == 0) return ReferencePoint::Contained(false);
+  return s2shapeutil::GetReferencePoint(*this);
 }
 
-// This is a helper function for IsOriginOnLeft(), defined below.
+// This is a helper function for GetReferencePoint() below.
 //
 // If the given vertex "vtest" is unbalanced (see definition below), sets
-// "result" to indicate whether "shape" contains S2::Origin() and returns
-// true.  Otherwise returns false.
-static bool IsOriginOnLeftAtVertex(S2Shape const& shape,
-                                   S2Point const& vtest, bool* result) {
+// "result" to a ReferencePoint indicating whther "vtest" is contained and
+// returns true.  Otherwise returns false.
+static bool GetReferencePointAtVertex(
+    S2Shape const& shape, S2Point const& vtest, ReferencePoint* result) {
   // Let P be an unbalanced vertex.  Vertex P is defined to be inside the
   // region if the region contains a particular direction vector starting from
-  // P, namely the direction S2::Ortho(P).  Since the interior is defined as
-  // the region to the left of all loops, this means we need to find the
-  // unmatched edge incident to P that is immediately clockwise from
-  // S2::Ortho(P).  P is contained by the region if and only if this edge is
-  // outgoing.
-  //
-  // To convert this into a contains_origin() value, we count the number of
-  // edges crossed between P and S2::Origin(), and invert the result for
-  // every crossing.
-  S2CopyingEdgeCrosser crosser(S2::Origin(), vtest);
-  bool crossing_parity = false;
-  util::btree::btree_map<S2Point, int> edge_map;
+  // P, namely the direction S2::Ortho(P).  This can be calculated using
+  // S2ContainsVertexQuery.
+  S2ContainsVertexQuery contains_query(vtest);
   int n = shape.num_edges();
   for (int e = 0; e < n; ++e) {
     auto edge = shape.edge(e);
-    if (edge.v0 == edge.v1) continue;
-
-    // Check whether this edge crosses the edge between P and S2::Origin().
-    crossing_parity ^= crosser.EdgeOrVertexCrossing(edge.v0, edge.v1);
-
-    // Keep track of (outgoing edges) - (incoming edges) for each vertex that
-    // is adjacent to "vtest".
-    if (edge.v0 == vtest) ++edge_map[edge.v1];
-    if (edge.v1 == vtest) --edge_map[edge.v0];
+    if (edge.v0 == vtest) contains_query.AddEdge(edge.v1, 1);
+    if (edge.v1 == vtest) contains_query.AddEdge(edge.v0, -1);
   }
-  // Find the unmatched edge that is immediately clockwise from S2::Ortho(P).
-  S2Point reference_dir = S2::Ortho(vtest);
-  pair<S2Point, int> best(reference_dir, 0);
-  for (auto const& e : edge_map) {
-    if (e.second == 0) continue;  // This is a "matched" edge.
-    if (s2pred::OrderedCCW(reference_dir, best.first, e.first, vtest)) {
-      best = e;
-    }
-  }
-  if (best.second == 0) {
+  int contains_sign = contains_query.ContainsSign();
+  if (contains_sign == 0) {
     return false;  // There are no unmatched edges incident to this vertex.
   }
-  // Point P is contained by the shape if the edge immediately clockwise from
-  // S2::Ortho(P) is an outgoing edge.  We then invert this result if the
-  // number of crossings between P and S2::Origin() was odd.
-  *result = crossing_parity != (best.second > 0);
+  result->point = vtest;
+  result->contained = contains_sign > 0;
   return true;
 }
 
 // See documentation in header file.
-bool IsOriginOnLeft(S2Shape const& shape) {
+S2Shape::ReferencePoint GetReferencePoint(S2Shape const& shape) {
+  DCHECK(shape.has_interior());
   if (shape.num_edges() == 0) {
-    // The shape is defined to be "full" if it contains an empty loop.
-    return shape.num_chains() > 0;
+    // A shape with no edges is defined to be "full" if and only if it
+    // contains an empty loop.
+    return ReferencePoint::Contained(shape.num_chains() > 0);
   }
   // Define a "matched" edge as one that can be paired with a corresponding
   // reversed edge.  Define a vertex as "balanced" if all of its edges are
@@ -391,8 +371,8 @@ bool IsOriginOnLeft(S2Shape const& shape) {
   // vertex.  Often every vertex is unbalanced, so we start by trying an
   // arbitrary vertex.
   auto edge = shape.edge(0);
-  bool result = false;
-  if (IsOriginOnLeftAtVertex(shape, edge.v0, &result)) {
+  ReferencePoint result;
+  if (GetReferencePointAtVertex(shape, edge.v0, &result)) {
     return result;
   }
   // That didn't work, so now we do some extra work to find an unbalanced
@@ -400,32 +380,30 @@ bool IsOriginOnLeft(S2Shape const& shape) {
   // reversed edges, and then sort them.  The first edge that appears in one
   // list but not the other is guaranteed to be unmatched.
   int n = shape.num_edges();
-  vector<S2Shape::Edge> edges, rev_edges;
-  edges.reserve(n);
-  rev_edges.reserve(n);
+  vector<S2Shape::Edge> edges(n), rev_edges(n);
   for (int i = 0; i < n; ++i) {
     auto edge = shape.edge(i);
-    edges.push_back(edge);
-    rev_edges.push_back(S2Shape::Edge(edge.v1, edge.v0));
+    edges[i] = edge;
+    rev_edges[i] = S2Shape::Edge(edge.v1, edge.v0);
   }
   std::sort(edges.begin(), edges.end());
   std::sort(rev_edges.begin(), rev_edges.end());
   for (int i = 0; i < n; ++i) {
     if (edges[i] < rev_edges[i]) {  // edges[i] is unmatched
-      CHECK(IsOriginOnLeftAtVertex(shape, edges[i].v0, &result));
+      CHECK(GetReferencePointAtVertex(shape, edges[i].v0, &result));
       return result;
     }
     if (rev_edges[i] < edges[i]) {  // rev_edges[i] is unmatched
-      CHECK(IsOriginOnLeftAtVertex(shape, rev_edges[i].v0, &result));
+      CHECK(GetReferencePointAtVertex(shape, rev_edges[i].v0, &result));
       return result;
     }
   }
   // All vertices are balanced, so this polygon is either empty or full.  By
   // convention it is defined to be "full" if it contains any empty loop.
   for (int i = 0; i < shape.num_chains(); ++i) {
-    if (shape.chain(i).length == 0) return true;
+    if (shape.chain(i).length == 0) return ReferencePoint::Contained(true);
   }
-  return false;
+  return ReferencePoint::Contained(false);
 }
 
 std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
@@ -763,7 +741,8 @@ void ResolveComponents(vector<vector<S2Shape*>> const& components,
   for (int i = 0; i < components.size(); ++i) {
     auto const& component = components[i];
     for (S2Shape* loop : component) {
-      if (component.size() > 1 && !loop->contains_origin()) {
+      if (component.size() > 1 &&
+          !s2shapeutil::ContainsBruteForce(*loop, S2::Origin())) {
         // Ownership is transferred back at the end of this function.
         index.Add(WrapUnique(loop));
         component_ids.push_back(i);
@@ -776,10 +755,11 @@ void ResolveComponents(vector<vector<S2Shape*>> const& components,
   }
   // Find the loops containing each component.
   vector<vector<S2Shape*>> ancestors(components.size());
+  auto contains_query = MakeS2ContainsPointQuery(&index);
   for (int i = 0; i < outer_loops.size(); ++i) {
     auto loop = outer_loops[i];
     DCHECK_GT(loop->num_edges(), 0);
-    index.GetContainingShapes(loop->edge(0).v0, &ancestors[i]);
+    ancestors[i] = contains_query.GetContainingShapes(loop->edge(0).v0);
   }
   // Assign each outer loop to the component whose depth is one less.
   // Components at depth 0 become a single face.

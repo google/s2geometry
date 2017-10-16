@@ -47,6 +47,7 @@ file(GLOB S2FilesGlob
      src/s2/s2cellunion.cc
      src/s2/s2centroids.cc
      src/s2/s2closestedgequery.cc
+     src/s2/s2contains_vertex_query.cc
      src/s2/s2convexhullquery.cc
      src/s2/s2coords.cc
      src/s2/s2crossingedgequery.cc
@@ -79,7 +80,9 @@ file(GLOB S2FilesGlob
      src/s2/s2regionintersection.cc
      src/s2/s2regionunion.cc
      src/s2/s2shapeindex.cc
+     src/s2/s2shapeindex_buffered_region.cc
      src/s2/s2shapeutil.cc
+     src/s2/s2shapeutil_contains_brute_force.cc
      src/s2/s2shapeutil_edge_iterator.cc
      src/s2/s2textformat.cc
      src/s2/s2wedge_relations.cc
@@ -125,6 +128,7 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/integral_types.h
               src/s2/third_party/absl/base/macros.h
               src/s2/third_party/absl/base/optimization.h
+              src/s2/third_party/absl/base/policy_checks.h
               src/s2/third_party/absl/base/port.h
         DESTINATION include/s2/third_party/absl/base)
 install(FILES src/s2/third_party/absl/base/internal/identity.h

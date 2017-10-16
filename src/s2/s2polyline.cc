@@ -488,6 +488,10 @@ bool S2Polyline::ApproxEquals(S2Polyline const& b, S1Angle max_error) const {
   return true;
 }
 
+size_t S2Polyline::SpaceUsed() const {
+  return sizeof(*this) + num_vertices() * sizeof(S2Point);
+}
+
 namespace {
 // Return the first i > "index" such that the ith vertex of "pline" is not at
 // the same point as the "index"th vertex.  Returns pline.num_vertices() if

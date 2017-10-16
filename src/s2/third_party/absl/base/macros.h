@@ -13,6 +13,22 @@
 // limitations under the License.
 //
 
+//
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 // -----------------------------------------------------------------------------
 // File: macros.h
 // -----------------------------------------------------------------------------
@@ -45,20 +61,28 @@
 // Note: this template function declaration is used in defining arraysize.
 // Note that the function doesn't need an implementation, as we only
 // use its type.
+namespace absl {
+namespace macros_internal {
+template <typename T, size_t N>
+char (&ArraySizeHelper(T (&array)[N]))[N];
+}  // namepsace macros_internal
+}  // namespace absl
+#define ABSL_ARRAYSIZE(array) \
+  (sizeof(::absl::macros_internal::ArraySizeHelper(array)))
+
+// TODO(b/62370839): Replace arraysize() with ABSL_ARRAYSIZE().
 template <typename T, size_t N>
 char (&ArraySizeHelper(T (&array)[N]))[N];
 
-// TODO(b/62370839): Replace arraysize() with ABSL_ARRAYSIZE().
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
-#define ABSL_ARRAYSIZE(array) (sizeof(ArraySizeHelper(array)))
 
-// LINKER_INITIALIZED
+// kLinkerInitialized
 //
 // An enum used only as a constructor argument to indicate that a variable has
 // static storage duration, and that the constructor should do nothing to its
 // state. Use of this macro indicates to the reader that it is legal to
 // declare a static instance of the class, provided the constructor is given
-// the absl::LINKER_INITIALIZED argument.
+// the absl::base_internal::kLinkerInitialized argument.
 //
 // Normally, it is unsafe to declare a static variable that has a constructor or
 // a destructor because invocation order is undefined. However, if the type can
@@ -68,13 +92,23 @@ char (&ArraySizeHelper(T (&array)[N]))[N];
 //
 // Example:
 //       // Declaration
-//       explicit MyClass(base::LinkerInitialized x) {}
+//       explicit MyClass(absl::base_internal:LinkerInitialized x) {}
 //
 //       // Invocation
-//       static MyClass my_variable_name(base::LINKER_INITIALIZED);
+//       static MyClass my_global(absl::base_internal::kLinkerInitialized);
+namespace absl {
+namespace base_internal {
+enum LinkerInitialized {
+  kLinkerInitialized = 0,
+  LINKER_INITIALIZED = 0,
+};
+}  // namespace base_internal
+}  // namespace absl
+
 namespace base {
-enum LinkerInitialized { LINKER_INITIALIZED };
-}
+using absl::base_internal::LinkerInitialized;
+using absl::base_internal::LINKER_INITIALIZED;
+}  // namespace base
 
 // ABSL_FALLTHROUGH_INTENDED
 //
@@ -115,6 +149,8 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 #if __has_feature(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
 #define FALLTHROUGH_INTENDED [[clang::fallthrough]]  // NOLINT
 #endif
+#elif defined(__GNUC__) && __GNUC__ >= 7
+#define FALLTHROUGH_INTENDED [[gnu::fallthrough]]
 #endif
 
 #ifndef FALLTHROUGH_INTENDED
@@ -124,10 +160,13 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 #error "ABSL_FALLTHROUGH_INTENDED should not be defined."
 #endif
 
+// TODO(user): Use c++17 standard [[fallthrough]] macro, when supported.
 #if defined(__clang__) && defined(__has_warning)
 #if __has_feature(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
 #define ABSL_FALLTHROUGH_INTENDED [[clang::fallthrough]]  // NOLINT
 #endif
+#elif defined(__GNUC__) && __GNUC__ >= 7
+#define ABSL_FALLTHROUGH_INTENDED [[gnu::fallthrough]]
 #endif
 
 #ifndef ABSL_FALLTHROUGH_INTENDED

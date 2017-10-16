@@ -26,12 +26,17 @@
 using std::max;
 using std::min;
 
+// Old versions of GCC have nextafter() but not std::nextafter().
+// using std::nextafter;
+
+static constexpr double kMaxLength2 = 4.0;
+
 S1ChordAngle::S1ChordAngle(S2Point const& x, S2Point const& y) {
   DCHECK(S2::IsUnitLength(x));
   DCHECK(S2::IsUnitLength(y));
-  // The distance may slightly exceed 4.0 due to roundoff errors.
+  // The distance may slightly exceed kMaxLength2 due to roundoff errors.
   // The maximum error in the result is 2 * DBL_EPSILON * length2_.
-  length2_ = min(4.0, (x - y).Norm2());
+  length2_ = min(kMaxLength2, (x - y).Norm2());
   DCHECK(is_valid());
 }
 
@@ -55,14 +60,26 @@ S1Angle S1ChordAngle::ToAngle() const {
 }
 
 bool S1ChordAngle::is_valid() const {
-  return (length2_ >= 0 && length2_ <= 4) || is_special();
+  return (length2_ >= 0 && length2_ <= kMaxLength2) || is_special();
+}
+
+S1ChordAngle S1ChordAngle::Successor() const {
+  if (length2_ >= kMaxLength2) return Infinity();
+  if (length2_ < 0.0) return Zero();
+  return S1ChordAngle(nextafter(length2_, 10.0));
+}
+
+S1ChordAngle S1ChordAngle::Predecessor() const {
+  if (length2_ <= 0.0) return Negative();
+  if (length2_ > kMaxLength2) return Straight();
+  return S1ChordAngle(nextafter(length2_, -10.0));
 }
 
 S1ChordAngle S1ChordAngle::PlusError(double error) const {
   // If angle is Negative() or Infinity(), don't change it.
   // Otherwise clamp it to the valid range.
   if (is_special()) return *this;
-  return S1ChordAngle(max(0.0, min(4.0, length2_ + error)));
+  return S1ChordAngle(max(0.0, min(kMaxLength2, length2_ + error)));
 }
 
 double S1ChordAngle::GetS2PointConstructorMaxError() const {
@@ -92,7 +109,7 @@ S1ChordAngle operator+(S1ChordAngle a, S1ChordAngle b) {
   if (b2 == 0) return a;
 
   // Clamp the angle sum to at most 180 degrees.
-  if (a2 + b2 >= 4) return S1ChordAngle::Straight();
+  if (a2 + b2 >= kMaxLength2) return S1ChordAngle::Straight();
 
   // Let "a" and "b" be the (non-squared) chord lengths, and let c = a+b.
   // Let A, B, and C be the corresponding half-angles (a = 2*sin(A), etc).
@@ -102,7 +119,7 @@ S1ChordAngle operator+(S1ChordAngle a, S1ChordAngle b) {
 
   double x = a2 * (1 - 0.25 * b2);  // is_valid() => non-negative
   double y = b2 * (1 - 0.25 * a2);  // is_valid() => non-negative
-  return S1ChordAngle(min(4.0, x + y + 2 * sqrt(x * y)));
+  return S1ChordAngle(min(kMaxLength2, x + y + 2 * sqrt(x * y)));
 }
 
 S1ChordAngle operator-(S1ChordAngle a, S1ChordAngle b) {

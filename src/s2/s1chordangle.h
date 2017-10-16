@@ -63,11 +63,13 @@ class S1ChordAngle {
   static S1ChordAngle Straight();
 
   // Return a chord angle larger than any finite chord angle.  The only valid
-  // operations on Infinity() are comparisons and S1Angle conversions.
+  // operations on Infinity() are comparisons, S1Angle conversions, and
+  // Successor() / Predecessor().
   static S1ChordAngle Infinity();
 
   // Return a chord angle smaller than Zero().  The only valid operations on
-  // Negative() are comparisons and S1Angle conversions.
+  // Negative() are comparisons, S1Angle conversions, and Successor() /
+  // Predecessor().
   static S1ChordAngle Negative();
 
   // Conversion from an S1Angle.  Angles outside the range [0, Pi] are handled
@@ -80,6 +82,14 @@ class S1ChordAngle {
   // input arguments are converted to S1ChordAngles at the beginning of your
   // algorithm, and results are converted back to S1Angles only at the end.
   explicit S1ChordAngle(S1Angle angle);
+
+  // Convenience functions that convert the corresponding S1Angle to an
+  // S1ChordAngle.
+  static S1ChordAngle Radians(double radians);
+  static S1ChordAngle Degrees(double degrees);
+  static S1ChordAngle E5(int32 e5);
+  static S1ChordAngle E6(int32 e6);
+  static S1ChordAngle E7(int32 e7);
 
   // Construct an S1ChordAngle that is an upper bound on the given S1Angle,
   // i.e. such that FastUpperBoundFrom(x).ToAngle() >= x.  Unlike the S1Angle
@@ -136,6 +146,31 @@ class S1ChordAngle {
 
   // The squared length of the chord.  (Most clients will not need this.)
   double length2() const { return length2_; }
+
+  // Returns the smallest representable S1ChordAngle larger than this object.
+  // This can be used to convert a "<" comparsion to a "<=" comparson.  For
+  // example:
+  //
+  //   S2ClosestEdgeQuery query(...);
+  //   S1ChordAngle limit = ...;
+  //   if (query.IsDistanceLess(target, limit.Successor())) {
+  //     // Distance to "target" is less than or equal to "limit".
+  //   }
+  //
+  // Note the following special cases:
+  //   Negative().Successor() == Zero()
+  //   Straight().Successor() == Infinity()
+  //   Infinity().Successor() == Infinity()
+  S1ChordAngle Successor() const;
+
+  // Like Successor(), but returns the largest representable S1ChordAngle less
+  // than this object.
+  //
+  // Note the following special cases:
+  //   Infinity().Predecessor() == Straight()
+  //   Zero().Predecessor() == Negative()
+  //   Negative().Predecessor() == Negative()
+  S1ChordAngle Predecessor() const;
 
   // Returns a new S1ChordAngle that has been adjusted by the given error
   // bound (which can be positive or negative).  "error" should be the value
@@ -198,6 +233,26 @@ inline S1ChordAngle S1ChordAngle::Infinity() {
 
 inline S1ChordAngle S1ChordAngle::Negative() {
   return S1ChordAngle(-1);
+}
+
+inline S1ChordAngle S1ChordAngle::Radians(double radians) {
+  return S1ChordAngle(S1Angle::Radians(radians));
+}
+
+inline S1ChordAngle S1ChordAngle::Degrees(double degrees) {
+  return S1ChordAngle(S1Angle::Degrees(degrees));
+}
+
+inline S1ChordAngle S1ChordAngle::E5(int32 e5) {
+  return S1ChordAngle(S1Angle::E5(e5));
+}
+
+inline S1ChordAngle S1ChordAngle::E6(int32 e6) {
+  return S1ChordAngle(S1Angle::E6(e6));
+}
+
+inline S1ChordAngle S1ChordAngle::E7(int32 e7) {
+  return S1ChordAngle(S1Angle::E7(e7));
 }
 
 inline S1ChordAngle S1ChordAngle::FastUpperBoundFrom(S1Angle angle) {

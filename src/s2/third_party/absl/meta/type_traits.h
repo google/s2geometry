@@ -22,6 +22,7 @@
 //
 // WARNING: use of many of the constructs in this header will count as "complex
 // template metaprogramming", so before proceeding, please carefully consider
+// https://google.github.io/styleguide/cppguide.html#Template_metaprogramming
 //
 // WARNING: using template metaprogramming to detect or depend on API
 // features is brittle and not guaranteed. Neither the standard library nor

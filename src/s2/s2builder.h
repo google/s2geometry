@@ -379,13 +379,15 @@ class S2Builder {
   // a polygon has no edges, does it represent the empty polygon (containing
   // no points) or the full polygon (containing all points)?  This ambiguity
   // also occurs for polygons that consist only of degeneracies, e.g. a
-  // degenerate loop with only two edges, or a single edge from a vertex to
-  // itself.
+  // degenerate loop with only two edges could be either a degenerate shell in
+  // the empty polygon or a degenerate hole in the full polygon.
   //
   // To resolve this ambiguity, an IsFullPolygonPredicate may be specified for
   // each input layer (see AddIsFullPolygonPredicate below).  If the layer
   // consists only of polygon degeneracies, the layer implementation may call
-  // this method to determine whether the polygon is empty or full.
+  // this method to determine whether the polygon is empty or full except for
+  // the given degeneracies.  (Note that under the semi-open boundary model,
+  // degeneracies do not affect point containment.)
   //
   // This predicate is only required for layers that will be assembled into
   // polygons.  It is not used by other layer types.
@@ -457,9 +459,8 @@ class S2Builder {
 
   // For layers that will be assembled into polygons, this method specifies a
   // predicate that will be called to determine whether the polygon is empty
-  // (contains no points) or full (contains all points) in the case where the
-  // layer is discovered to consist entirely of degeneracies.  See also
-  // IsFullPolygonPredicate above.
+  // or full except for the given degeneracies.  (See IsFullPolygonPredicate
+  // above.)
   //
   // This method should be called at most once per layer; additional calls
   // simply overwrite the previous value for the current layer.

@@ -594,7 +594,7 @@ TEST(S2Cell, GetDistanceToEdge) {
     S2Point a, b;
     ChooseEdgeNearCell(cell, &a, &b);
     S1Angle expected = GetDistanceToEdgeBruteForce(cell, a, b).ToAngle();
-    S1Angle actual = cell.GetDistanceToEdge(a, b).ToAngle();
+    S1Angle actual = cell.GetDistance(a, b).ToAngle();
     // The error has a peak near Pi/2 for edge distance, and another peak near
     // Pi for vertex distance.
     EXPECT_NEAR(expected.radians(), actual.radians(), 1e-12);

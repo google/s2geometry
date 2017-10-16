@@ -1339,7 +1339,7 @@ TEST(S2LoopShape, Basic) {
   EXPECT_EQ("0:0", s2textformat::ToString(edge2.v1));
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
-  EXPECT_FALSE(shape.contains_origin());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 TEST(S2LoopShape, EmptyLoop) {
