@@ -35,8 +35,8 @@ using std::unique_ptr;
 
 namespace s2builderutil {
 
-int const IntLatLngSnapFunction::kMinExponent;
-int const IntLatLngSnapFunction::kMaxExponent;
+const int IntLatLngSnapFunction::kMinExponent;
+const int IntLatLngSnapFunction::kMaxExponent;
 
 IdentitySnapFunction::IdentitySnapFunction()
     : snap_radius_(S1Angle::Zero()) {
@@ -67,7 +67,7 @@ S1Angle IdentitySnapFunction::min_edge_vertex_separation() const {
   return 0.5 * snap_radius_;
 }
 
-S2Point IdentitySnapFunction::SnapPoint(S2Point const& point) const {
+S2Point IdentitySnapFunction::SnapPoint(const S2Point& point) const {
   return point;
 }
 
@@ -198,7 +198,7 @@ S1Angle S2CellIdSnapFunction::min_edge_vertex_separation() const {
                  0.5 * (vertex_sep / snap_radius_) * vertex_sep));
 }
 
-S2Point S2CellIdSnapFunction::SnapPoint(S2Point const& point) const {
+S2Point S2CellIdSnapFunction::SnapPoint(const S2Point& point) const {
   return S2CellId(point).parent(level_).ToPoint();
 }
 
@@ -339,7 +339,7 @@ S1Angle IntLatLngSnapFunction::min_edge_vertex_separation() const {
                  0.5 * (vertex_sep / snap_radius_) * vertex_sep));
 }
 
-S2Point IntLatLngSnapFunction::SnapPoint(S2Point const& point) const {
+S2Point IntLatLngSnapFunction::SnapPoint(const S2Point& point) const {
   DCHECK_GE(exponent_, 0);  // Make sure the snap function was initialized.
   S2LatLng input(point);
   int64 lat = MathUtil::FastInt64Round(input.lat().degrees() * from_degrees_);

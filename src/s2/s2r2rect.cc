@@ -28,7 +28,7 @@
 #include "s2/s2coords.h"
 #include "s2/s2latlngrect.h"
 
-S2R2Rect S2R2Rect::FromCell(S2Cell const& cell) {
+S2R2Rect S2R2Rect::FromCell(const S2Cell& cell) {
   // S2Cells have a more efficient GetSizeST() method than S2CellIds.
   double size = cell.GetSizeST();
   return FromCenterSize(cell.id().GetCenterST(), R2Point(size, size));
@@ -43,7 +43,7 @@ S2R2Rect* S2R2Rect::Clone() const {
   return new S2R2Rect(*this);
 }
 
-S2Point S2R2Rect::ToS2Point(R2Point const& p) {
+S2Point S2R2Rect::ToS2Point(const R2Point& p) {
   return S2::FaceUVtoXYZ(0, S2::STtoUV(p.x()), S2::STtoUV(p.y())).Normalize();
 }
 
@@ -67,23 +67,23 @@ S2LatLngRect S2R2Rect::GetRectBound() const {
   return GetCapBound().GetRectBound();
 }
 
-bool S2R2Rect::Contains(S2Point const& p) const {
+bool S2R2Rect::Contains(const S2Point& p) const {
   if (S2::GetFace(p) != 0) return false;
   double u, v;
   S2::ValidFaceXYZtoUV(0, p, &u, &v);
   return Contains(R2Point(S2::UVtoST(u), S2::UVtoST(v)));
 }
 
-bool S2R2Rect::Contains(S2Cell const& cell) const {
+bool S2R2Rect::Contains(const S2Cell& cell) const {
   if (cell.face() != 0) return false;
   return Contains(S2R2Rect::FromCell(cell));
 }
 
-bool S2R2Rect::MayIntersect(S2Cell const& cell) const {
+bool S2R2Rect::MayIntersect(const S2Cell& cell) const {
   if (cell.face() != 0) return false;
   return Intersects(S2R2Rect::FromCell(cell));
 }
 
-std::ostream& operator<<(std::ostream& os, S2R2Rect const& r) {
+std::ostream& operator<<(std::ostream& os, const S2R2Rect& r) {
   return os << "[Lo" << r.lo() << ", Hi" << r.hi() << "]";
 }

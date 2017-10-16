@@ -34,7 +34,7 @@ TEST(S2ConvexHullQueryTest, NoPoints) {
   EXPECT_TRUE(result->is_empty());
 }
 
-static bool LoopHasVertex(S2Loop const& loop, S2Point const& p) {
+static bool LoopHasVertex(const S2Loop& loop, const S2Point& p) {
   for (int i = 0; i < loop.num_vertices(); ++i) {
     if (loop.vertex(i) == p) return true;
   }
@@ -161,7 +161,7 @@ TEST(S2ConvexHullQueryTest, PointsInsideHull) {
   // Repeatedly build the convex hull of a set of points, then add more points
   // inside that loop and build the convex hull again.  The result should
   // always be the same.
-  int const kIters = 1000;
+  const int kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
     S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
 
@@ -190,7 +190,7 @@ TEST(S2ConvexHullQueryTest, PointsInsideHull) {
     if (hull->GetCapBound().height() >= 1) continue;
 
     // Otherwise, add more points inside the convex hull.
-    int const num_points2 = 1000;
+    const int num_points2 = 1000;
     for (int i = 0; i < num_points2; ++i) {
       S2Point p = S2Testing::SamplePoint(cap);
       if (hull->Contains(p)) {

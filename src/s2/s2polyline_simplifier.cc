@@ -22,7 +22,7 @@
 #include "s2/s1chordangle.h"
 #include "s2/s1interval.h"
 
-void S2PolylineSimplifier::Init(S2Point const& src) {
+void S2PolylineSimplifier::Init(const S2Point& src) {
   src_ = src;
   window_ = S1Interval::Full();
 
@@ -53,7 +53,7 @@ void S2PolylineSimplifier::Init(S2Point const& src) {
   x_dir_[k] = -src[k] * src[i];
 }
 
-bool S2PolylineSimplifier::Extend(S2Point const& dst) const {
+bool S2PolylineSimplifier::Extend(const S2Point& dst) const {
   // We limit the maximum edge length to 90 degrees in order to simplify the
   // error bounds.  (The error gets arbitrarily large as the edge length
   // approaches 180 degrees.)
@@ -63,7 +63,7 @@ bool S2PolylineSimplifier::Extend(S2Point const& dst) const {
   return window_.Contains(GetAngle(dst));
 }
 
-bool S2PolylineSimplifier::TargetDisc(S2Point const& p, S1ChordAngle r) {
+bool S2PolylineSimplifier::TargetDisc(const S2Point& p, S1ChordAngle r) {
   // Shrink the target interval by the maximum error from all sources.  This
   // guarantees that the output edge will intersect the given disc.
   double semiwidth = GetSemiwidth(p, r, -1 /*round down*/);
@@ -83,7 +83,7 @@ bool S2PolylineSimplifier::TargetDisc(S2Point const& p, S1ChordAngle r) {
   return !window_.is_empty();
 }
 
-bool S2PolylineSimplifier::AvoidDisc(S2Point const& p, S1ChordAngle r,
+bool S2PolylineSimplifier::AvoidDisc(const S2Point& p, S1ChordAngle r,
                                      bool disc_on_left) {
   // Expand the interval by the maximum error from all sources.  This
   // guarantees that the final output edge will avoid the given disc.
@@ -101,11 +101,11 @@ bool S2PolylineSimplifier::AvoidDisc(S2Point const& p, S1ChordAngle r,
   return !window_.is_empty();
 }
 
-double S2PolylineSimplifier::GetAngle(S2Point const& p) const {
+double S2PolylineSimplifier::GetAngle(const S2Point& p) const {
   return atan2(p.DotProd(y_dir_), p.DotProd(x_dir_));
 }
 
-double S2PolylineSimplifier::GetSemiwidth(S2Point const& p, S1ChordAngle r,
+double S2PolylineSimplifier::GetSemiwidth(const S2Point& p, S1ChordAngle r,
                                           int round_direction) const {
   double constexpr DBL_ERR = 0.5 * DBL_EPSILON;
 

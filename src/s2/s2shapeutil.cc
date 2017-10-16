@@ -31,6 +31,7 @@
 #include "s2/s2predicates.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
+#include "s2/s2shapeutil_get_reference_point.h"
 #include "s2/s2wedge_relations.h"
 
 using absl::Span;
@@ -39,372 +40,9 @@ using std::pair;
 using std::unique_ptr;
 using std::vector;
 using ChainPosition = S2Shape::ChainPosition;
-using ReferencePoint = S2Shape::ReferencePoint;;
+using ReferencePoint = S2Shape::ReferencePoint;
 
 namespace s2shapeutil {
-
-LaxLoop::LaxLoop(vector<S2Point> const& vertices) {
-  Init(vertices);
-}
-
-LaxLoop::LaxLoop(S2Loop const& loop) {
-  Init(loop);
-}
-
-void LaxLoop::Init(vector<S2Point> const& vertices) {
-  num_vertices_ = vertices.size();
-  vertices_.reset(new S2Point[num_vertices_]);
-  std::copy(vertices.begin(), vertices.end(), vertices_.get());
-}
-
-void LaxLoop::Init(S2Loop const& loop) {
-  DCHECK(!loop.is_full()) << "Full loops not currently supported";
-  if (loop.is_empty()) {
-    num_vertices_ = 0;
-    vertices_ = nullptr;
-  } else {
-    num_vertices_ = loop.num_vertices();
-    vertices_.reset(new S2Point[num_vertices_]);
-    std::copy(&loop.vertex(0), &loop.vertex(0) + num_vertices_,
-              vertices_.get());
-  }
-}
-
-S2Shape::Edge LaxLoop::edge(int e0) const {
-  DCHECK_LT(e0, num_edges());
-  int e1 = e0 + 1;
-  if (e1 == num_vertices()) e1 = 0;
-  return Edge(vertices_[e0], vertices_[e1]);
-}
-
-S2Shape::Edge LaxLoop::chain_edge(int i, int j) const {
-  DCHECK_EQ(i, 0);
-  DCHECK_LT(j, num_edges());
-  int k = (j + 1 == num_vertices()) ? 0 : j + 1;
-  return Edge(vertices_[j], vertices_[k]);
-}
-
-S2Shape::ReferencePoint LaxLoop::GetReferencePoint() const {
-  // GetReferencePoint interprets a loop with no vertices as "full".
-  if (num_vertices() == 0) return ReferencePoint::Contained(false);
-  return s2shapeutil::GetReferencePoint(*this);
-}
-
-ClosedLaxPolyline::ClosedLaxPolyline(std::vector<S2Point> const& vertices) {
-  Init(vertices);
-}
-
-ClosedLaxPolyline::ClosedLaxPolyline(S2Loop const& loop) {
-  Init(loop);
-}
-
-LaxPolygon::LaxPolygon(vector<LaxPolygon::Loop> const& loops) {
-  Init(loops);
-}
-
-LaxPolygon::LaxPolygon(S2Polygon const& polygon) {
-  Init(polygon);
-}
-
-void LaxPolygon::Init(vector<LaxPolygon::Loop> const& loops) {
-  vector<Span<S2Point const>> spans;
-  for (LaxPolygon::Loop const& loop : loops) {
-    spans.emplace_back(loop);
-  }
-  Init(spans);
-}
-
-void LaxPolygon::Init(S2Polygon const& polygon) {
-  vector<Span<S2Point const>> spans;
-  for (int i = 0; i < polygon.num_loops(); ++i) {
-    S2Loop const* loop = polygon.loop(i);
-    if (loop->is_full()) {
-      spans.emplace_back();  // Empty span.
-    } else {
-      spans.emplace_back(&loop->vertex(0), loop->num_vertices());
-    }
-  }
-  Init(spans);
-}
-
-void LaxPolygon::Init(vector<Span<S2Point const>> const& loops) {
-  num_loops_ = loops.size();
-  if (num_loops_ == 0) {
-    num_vertices_ = 0;
-    vertices_ = nullptr;
-  } else if (num_loops_ == 1) {
-    num_vertices_ = loops[0].size();
-    vertices_.reset(new S2Point[num_vertices_]);
-    std::copy(loops[0].begin(), loops[0].end(), vertices_.get());
-  } else {
-    cumulative_vertices_ = new int32[num_loops_ + 1];
-    int32 num_vertices = 0;
-    for (int i = 0; i < num_loops_; ++i) {
-      cumulative_vertices_[i] = num_vertices;
-      num_vertices += loops[i].size();
-    }
-    cumulative_vertices_[num_loops_] = num_vertices;
-    vertices_.reset(new S2Point[num_vertices]);
-    for (int i = 0; i < num_loops_; ++i) {
-      std::copy(loops[i].begin(), loops[i].end(),
-                vertices_.get() + cumulative_vertices_[i]);
-    }
-  }
-}
-
-LaxPolygon::~LaxPolygon() {
-  if (num_loops() > 1) {
-    delete[] cumulative_vertices_;
-  }
-}
-
-int LaxPolygon::num_vertices() const {
-  if (num_loops() <= 1) {
-    return num_vertices_;
-  } else {
-    return cumulative_vertices_[num_loops()];
-  }
-}
-
-int LaxPolygon::num_loop_vertices(int i) const {
-  DCHECK_LT(i, num_loops());
-  if (num_loops() == 1) {
-    return num_vertices_;
-  } else {
-    return cumulative_vertices_[i + 1] - cumulative_vertices_[i];
-  }
-}
-
-S2Point const& LaxPolygon::loop_vertex(int i, int j) const {
-  DCHECK_LT(i, num_loops());
-  DCHECK_LT(j, num_loop_vertices(i));
-  if (num_loops() == 1) {
-    return vertices_[j];
-  } else {
-    return vertices_[cumulative_vertices_[i] + j];
-  }
-}
-
-S2Shape::Edge LaxPolygon::edge(int e0) const {
-  DCHECK_LT(e0, num_edges());
-  int e1 = e0 + 1;
-  if (num_loops() == 1) {
-    if (e1 == num_vertices_) { e1 = 0; }
-  } else {
-    // Find the index of the first vertex of the loop following this one.
-    int const kMaxLinearSearchLoops = 12;  // From benchmarks.
-    int* next = cumulative_vertices_ + 1;
-    if (num_loops() <= kMaxLinearSearchLoops) {
-      while (*next <= e0) ++next;
-    } else {
-      next = std::upper_bound(next, next + num_loops(), e0);
-    }
-    // Wrap around to the first vertex of the loop if necessary.
-    if (e1 == *next) { e1 = next[-1]; }
-  }
-  return Edge(vertices_[e0], vertices_[e1]);
-}
-
-S2Shape::ReferencePoint LaxPolygon::GetReferencePoint() const {
-  return s2shapeutil::GetReferencePoint(*this);
-}
-
-S2Shape::Chain LaxPolygon::chain(int i) const {
-  DCHECK_LT(i, num_loops());
-  if (num_loops() == 1) {
-    return Chain(0, num_vertices_);
-  } else {
-    int start = cumulative_vertices_[i];
-    return Chain(start, cumulative_vertices_[i + 1] - start);
-  }
-}
-
-S2Shape::Edge LaxPolygon::chain_edge(int i, int j) const {
-  DCHECK_LT(i, num_loops());
-  DCHECK_LT(j, num_loop_vertices(i));
-  int n = num_loop_vertices(i);
-  int k = (j + 1 == n) ? 0 : j + 1;
-  if (num_loops() == 1) {
-    return Edge(vertices_[j], vertices_[k]);
-  } else {
-    int base = cumulative_vertices_[i];
-    return Edge(vertices_[base + j], vertices_[base + k]);
-  }
-}
-
-S2Shape::ChainPosition LaxPolygon::chain_position(int e) const {
-  DCHECK_LT(e, num_edges());
-  int const kMaxLinearSearchLoops = 12;  // From benchmarks.
-  if (num_loops() == 1) {
-    return ChainPosition(0, e);
-  } else {
-    // Find the index of the first vertex of the loop following this one.
-    int* next = cumulative_vertices_ + 1;
-    if (num_loops() <= kMaxLinearSearchLoops) {
-      while (*next <= e) ++next;
-    } else {
-      next = std::upper_bound(next, next + num_loops(), e);
-    }
-    return ChainPosition(next - (cumulative_vertices_ + 1), e - next[-1]);
-  }
-}
-
-LaxPolyline::LaxPolyline(vector<S2Point> const& vertices) {
-  Init(vertices);
-}
-
-LaxPolyline::LaxPolyline(S2Polyline const& polyline) {
-  Init(polyline);
-}
-
-void LaxPolyline::Init(vector<S2Point> const& vertices) {
-  num_vertices_ = vertices.size();
-  LOG_IF(WARNING, num_vertices_ == 1)
-      << "s2shapeutil::LaxPolyline with one vertex has no edges";
-  vertices_.reset(new S2Point[num_vertices_]);
-  std::copy(vertices.begin(), vertices.end(), vertices_.get());
-}
-
-void LaxPolyline::Init(S2Polyline const& polyline) {
-  num_vertices_ = polyline.num_vertices();
-  LOG_IF(WARNING, num_vertices_ == 1)
-      << "s2shapeutil::LaxPolyline with one vertex has no edges";
-  vertices_.reset(new S2Point[num_vertices_]);
-  std::copy(&polyline.vertex(0), &polyline.vertex(0) + num_vertices_,
-            vertices_.get());
-}
-
-S2Shape::Edge LaxPolyline::edge(int e) const {
-  DCHECK_LT(e, num_edges());
-  return Edge(vertices_[e], vertices_[e + 1]);
-}
-
-int LaxPolyline::num_chains() const {
-  return std::min(1, LaxPolyline::num_edges());  // Avoid virtual call.
-}
-
-S2Shape::Chain LaxPolyline::chain(int i) const {
-  return Chain(0, LaxPolyline::num_edges());  // Avoid virtual call.
-}
-
-S2Shape::Edge LaxPolyline::chain_edge(int i, int j) const {
-  DCHECK_EQ(i, 0);
-  DCHECK_LT(j, num_edges());
-  return Edge(vertices_[j], vertices_[j + 1]);
-}
-
-S2Shape::ChainPosition LaxPolyline::chain_position(int e) const {
-  return ChainPosition(0, e);
-}
-
-VertexIdLaxLoop::VertexIdLaxLoop(std::vector<int32> const& vertex_ids,
-                                 S2Point const* vertex_array) {
-  Init(vertex_ids, vertex_array);
-}
-
-void VertexIdLaxLoop::Init(std::vector<int32> const& vertex_ids,
-                           S2Point const* vertex_array) {
-  num_vertices_ = vertex_ids.size();
-  vertex_ids_.reset(new int32[num_vertices_]);
-  std::copy(vertex_ids.begin(), vertex_ids.end(), vertex_ids_.get());
-  vertex_array_ = vertex_array;
-}
-
-S2Shape::Edge VertexIdLaxLoop::edge(int e0) const {
-  DCHECK_LT(e0, num_edges());
-  int e1 = e0 + 1;
-  if (e1 == num_vertices()) e1 = 0;
-  return Edge(vertex(e0), vertex(e1));
-}
-
-S2Shape::Edge VertexIdLaxLoop::chain_edge(int i, int j) const {
-  DCHECK_EQ(i, 0);
-  DCHECK_LT(j, num_edges());
-  int k = (j + 1 == num_vertices()) ? 0 : j + 1;
-  return Edge(vertex(j), vertex(k));
-}
-
-S2Shape::ReferencePoint VertexIdLaxLoop::GetReferencePoint() const {
-  // GetReferencePoint interprets a loop with no vertices as "full".
-  if (num_vertices() == 0) return ReferencePoint::Contained(false);
-  return s2shapeutil::GetReferencePoint(*this);
-}
-
-// This is a helper function for GetReferencePoint() below.
-//
-// If the given vertex "vtest" is unbalanced (see definition below), sets
-// "result" to a ReferencePoint indicating whther "vtest" is contained and
-// returns true.  Otherwise returns false.
-static bool GetReferencePointAtVertex(
-    S2Shape const& shape, S2Point const& vtest, ReferencePoint* result) {
-  // Let P be an unbalanced vertex.  Vertex P is defined to be inside the
-  // region if the region contains a particular direction vector starting from
-  // P, namely the direction S2::Ortho(P).  This can be calculated using
-  // S2ContainsVertexQuery.
-  S2ContainsVertexQuery contains_query(vtest);
-  int n = shape.num_edges();
-  for (int e = 0; e < n; ++e) {
-    auto edge = shape.edge(e);
-    if (edge.v0 == vtest) contains_query.AddEdge(edge.v1, 1);
-    if (edge.v1 == vtest) contains_query.AddEdge(edge.v0, -1);
-  }
-  int contains_sign = contains_query.ContainsSign();
-  if (contains_sign == 0) {
-    return false;  // There are no unmatched edges incident to this vertex.
-  }
-  result->point = vtest;
-  result->contained = contains_sign > 0;
-  return true;
-}
-
-// See documentation in header file.
-S2Shape::ReferencePoint GetReferencePoint(S2Shape const& shape) {
-  DCHECK(shape.has_interior());
-  if (shape.num_edges() == 0) {
-    // A shape with no edges is defined to be "full" if and only if it
-    // contains an empty loop.
-    return ReferencePoint::Contained(shape.num_chains() > 0);
-  }
-  // Define a "matched" edge as one that can be paired with a corresponding
-  // reversed edge.  Define a vertex as "balanced" if all of its edges are
-  // matched. In order to determine containment, we must find an unbalanced
-  // vertex.  Often every vertex is unbalanced, so we start by trying an
-  // arbitrary vertex.
-  auto edge = shape.edge(0);
-  ReferencePoint result;
-  if (GetReferencePointAtVertex(shape, edge.v0, &result)) {
-    return result;
-  }
-  // That didn't work, so now we do some extra work to find an unbalanced
-  // vertex (if any).  Essentially we gather a list of edges and a list of
-  // reversed edges, and then sort them.  The first edge that appears in one
-  // list but not the other is guaranteed to be unmatched.
-  int n = shape.num_edges();
-  vector<S2Shape::Edge> edges(n), rev_edges(n);
-  for (int i = 0; i < n; ++i) {
-    auto edge = shape.edge(i);
-    edges[i] = edge;
-    rev_edges[i] = S2Shape::Edge(edge.v1, edge.v0);
-  }
-  std::sort(edges.begin(), edges.end());
-  std::sort(rev_edges.begin(), rev_edges.end());
-  for (int i = 0; i < n; ++i) {
-    if (edges[i] < rev_edges[i]) {  // edges[i] is unmatched
-      CHECK(GetReferencePointAtVertex(shape, edges[i].v0, &result));
-      return result;
-    }
-    if (rev_edges[i] < edges[i]) {  // rev_edges[i] is unmatched
-      CHECK(GetReferencePointAtVertex(shape, rev_edges[i].v0, &result));
-      return result;
-    }
-  }
-  // All vertices are balanced, so this polygon is either empty or full.  By
-  // convention it is defined to be "full" if it contains any empty loop.
-  for (int i = 0; i < shape.num_chains(); ++i) {
-    if (shape.chain(i).length == 0) return ReferencePoint::Contained(true);
-  }
-  return ReferencePoint::Contained(false);
-}
 
 std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
   return os << id.shape_id << ":" << id.edge_id;
@@ -414,16 +52,13 @@ std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
 // edges in an S2ShapeIndex cell (which by default have about 10 edges).
 using ShapeEdgeVector = absl::InlinedVector<ShapeEdge, 16>;
 
-// Returns a vector containing all edges in the given S2ShapeIndexCell.
-// (The result is returned as an output parameter so that the same storage can
-// be reused, rather than allocating a new temporary vector each time.)
-static void GetShapeEdges(S2ShapeIndexBase const& index,
-                          S2ShapeIndexCell const& cell,
-                          ShapeEdgeVector* shape_edges) {
-  shape_edges->clear();
+// Appends all edges in the given S2ShapeIndexCell to the given vector.
+static void AppendShapeEdges(const S2ShapeIndexBase& index,
+                             const S2ShapeIndexCell& cell,
+                             ShapeEdgeVector* shape_edges) {
   for (int s = 0; s < cell.num_clipped(); ++s) {
-    S2ClippedShape const& clipped = cell.clipped(s);
-    S2Shape const& shape = *index.shape(clipped.shape_id());
+    const S2ClippedShape& clipped = cell.clipped(s);
+    const S2Shape& shape = *index.shape(clipped.shape_id());
     int num_edges = clipped.num_edges();
     for (int i = 0; i < num_edges; ++i) {
       shape_edges->push_back(ShapeEdge(shape, clipped.edge(i)));
@@ -431,14 +66,36 @@ static void GetShapeEdges(S2ShapeIndexBase const& index,
   }
 }
 
+// Returns a vector containing all edges in the given S2ShapeIndexCell.
+// (The result is returned as an output parameter so that the same storage can
+// be reused, rather than allocating a new temporary vector each time.)
+inline static void GetShapeEdges(const S2ShapeIndexBase& index,
+                                 const S2ShapeIndexCell& cell,
+                                 ShapeEdgeVector* shape_edges) {
+  shape_edges->clear();
+  AppendShapeEdges(index, cell, shape_edges);
+}
+
+// Returns a vector containing all edges in the given S2ShapeIndexCell vector.
+// (The result is returned as an output parameter so that the same storage can
+// be reused, rather than allocating a new temporary vector each time.)
+inline static void GetShapeEdges(const S2ShapeIndexBase& index,
+                                 const vector<const S2ShapeIndexCell*>& cells,
+                                 ShapeEdgeVector* shape_edges) {
+  shape_edges->clear();
+  for (int c = 0; c < cells.size(); ++c) {
+    AppendShapeEdges(index, *cells[c], shape_edges);
+  }
+}
+
 // Given a vector of edges within an S2ShapeIndexCell, visit all pairs of
 // crossing edges (of the given CrossingType).
-static bool VisitCrossings(ShapeEdgeVector const& shape_edges,
-                           CrossingType type, EdgePairVisitor const& visitor) {
+static bool VisitCrossings(const ShapeEdgeVector& shape_edges,
+                           CrossingType type, const EdgePairVisitor& visitor) {
   int min_crossing_sign = (type == CrossingType::INTERIOR) ? 1 : 0;
   int num_edges = shape_edges.size();
   for (int i = 0; i + 1 < num_edges; ++i) {
-    ShapeEdge const& a = shape_edges[i];
+    const ShapeEdge& a = shape_edges[i];
     int j = i + 1;
     // A common situation is that an edge AB is followed by an edge BC.  We
     // only need to visit such crossings if CrossingType::ALL is specified
@@ -448,8 +105,11 @@ static bool VisitCrossings(ShapeEdgeVector const& shape_edges,
     }
     S2EdgeCrosser crosser(&a.v0(), &a.v1());
     for (; j < num_edges; ++j) {
-      ShapeEdge const& b = shape_edges[j];
-      int sign = crosser.CrossingSign(&b.v0(), &b.v1());
+      const ShapeEdge& b = shape_edges[j];
+      if (crosser.c() == nullptr || *crosser.c() != b.v0()) {
+        crosser.RestartAt(&b.v0());
+      }
+      int sign = crosser.CrossingSign(&b.v1());
       if (sign >= min_crossing_sign) {
         if (!visitor(a, b, sign == 1)) return false;
       }
@@ -458,8 +118,8 @@ static bool VisitCrossings(ShapeEdgeVector const& shape_edges,
   return true;
 }
 
-bool VisitCrossings(S2ShapeIndexBase const& index, CrossingType type,
-                    EdgePairVisitor const& visitor) {
+bool VisitCrossings(const S2ShapeIndexBase& index, CrossingType type,
+                    const EdgePairVisitor& visitor) {
   // TODO(ericv): Use brute force if the total number of edges is small enough
   // (using a larger threshold if the S2ShapeIndex is not constructed yet).
   ShapeEdgeVector shape_edges;
@@ -473,7 +133,7 @@ bool VisitCrossings(S2ShapeIndexBase const& index, CrossingType type,
 
 //////////////////////////////////////////////////////////////////////
 
-RangeIterator::RangeIterator(S2ShapeIndexBase const& index)
+RangeIterator::RangeIterator(const S2ShapeIndexBase& index)
     : it_(&index, S2ShapeIndex::BEGIN) {
   Refresh();
 }
@@ -483,7 +143,7 @@ void RangeIterator::Next() {
   Refresh();
 }
 
-void RangeIterator::SeekTo(RangeIterator const& target) {
+void RangeIterator::SeekTo(const RangeIterator& target) {
   it_.Seek(target.range_min());
   // If the current cell does not overlap "target", it is possible that the
   // previous cell is the one we are looking for.  This can only happen when
@@ -494,7 +154,7 @@ void RangeIterator::SeekTo(RangeIterator const& target) {
   Refresh();
 }
 
-void RangeIterator::SeekBeyond(RangeIterator const& target) {
+void RangeIterator::SeekBeyond(const RangeIterator& target) {
   it_.Seek(target.range_max().next());
   if (!it_.done() && it_.id().range_min() <= target.range_max()) {
     it_.Next();
@@ -518,52 +178,55 @@ class IndexCrosser {
   // If "swapped" is true, the loops A and B have been swapped.  This affects
   // how arguments are passed to the given loop relation, since for example
   // A.Contains(B) is not the same as B.Contains(A).
-  IndexCrosser(S2ShapeIndexBase const& a_index, S2ShapeIndexBase const& b_index,
-               CrossingType type, EdgePairVisitor const& visitor, bool swapped)
+  IndexCrosser(const S2ShapeIndexBase& a_index, const S2ShapeIndexBase& b_index,
+               CrossingType type, const EdgePairVisitor& visitor, bool swapped)
       : a_index_(a_index), b_index_(b_index), visitor_(visitor),
         min_crossing_sign_(type == CrossingType::INTERIOR ? 1 : 0),
         swapped_(swapped), b_query_(&b_index_) {
   }
 
   // Given two iterators positioned such that ai->id().Contains(bi->id()),
-  // visit all crossings between edges of A and B that intersect a->id().
+  // visits all crossings between edges of A and B that intersect a->id().
   // Terminates early and returns false if visitor_ returns false.
   // Advances both iterators past ai->id().
   bool VisitCrossings(RangeIterator* ai, RangeIterator* bi);
 
-  // Given two index cells, visit all crossings between edges of those cells.
+  // Given two index cells, visits all crossings between edges of those cells.
   // Terminates early and returns false if visitor_ returns false.
-  bool VisitCellCellCrossings(S2ShapeIndexCell const& a_cell,
-                              S2ShapeIndexCell const& b_cell);
+  bool VisitCellCellCrossings(const S2ShapeIndexCell& a_cell,
+                              const S2ShapeIndexCell& b_cell);
 
  private:
-  bool VisitEdgePair(ShapeEdge const& a, ShapeEdge const& b, bool is_interior);
+  bool VisitEdgePair(const ShapeEdge& a, const ShapeEdge& b, bool is_interior);
 
-  // Visit all crossings of the current edge with all edges of the given index
+  // Visits all crossings of the current edge with all edges of the given index
   // cell of B.  Terminates early and returns false if visitor_ returns false.
-  bool VisitEdgeCellCrossings(ShapeEdge const& a,
-                              S2ShapeIndexCell const& b_cell);
+  bool VisitEdgeCellCrossings(const ShapeEdge& a,
+                              const S2ShapeIndexCell& b_cell);
 
-  // Visit all crossings of any edge in "a_cell" with any index cell of B that
+  // Visits all crossings of any edge in "a_cell" with any index cell of B that
   // is a descendant of "b_id".  Terminates early and returns false if
   // visitor_ returns false.
-  bool VisitSubcellCrossings(S2ShapeIndexCell const& a_cell, S2CellId b_id);
+  bool VisitSubcellCrossings(const S2ShapeIndexCell& a_cell, S2CellId b_id);
 
-  S2ShapeIndexBase const& a_index_;
-  S2ShapeIndexBase const& b_index_;
-  EdgePairVisitor const& visitor_;
-  int const min_crossing_sign_;
-  bool const swapped_;
+  // Visits all crossings of any edge in "a_edges" with any edge in "b_edges".
+  bool VisitEdgesEdgesCrossings(const ShapeEdgeVector& a_edges,
+                                const ShapeEdgeVector& b_edges);
+
+  const S2ShapeIndexBase& a_index_;
+  const S2ShapeIndexBase& b_index_;
+  const EdgePairVisitor& visitor_;
+  const int min_crossing_sign_;
+  const bool swapped_;
 
   // Temporary data declared here to avoid repeated memory allocations.
   S2CrossingEdgeQuery b_query_;
-  S2EdgeCrosser crosser_;
-  vector<S2ShapeIndexCell const*> b_cells_;
+  vector<const S2ShapeIndexCell*> b_cells_;
   ShapeEdgeVector a_shape_edges_;
   ShapeEdgeVector b_shape_edges_;
 };
 
-inline bool IndexCrosser::VisitEdgePair(ShapeEdge const& a, ShapeEdge const& b,
+inline bool IndexCrosser::VisitEdgePair(const ShapeEdge& a, const ShapeEdge& b,
                                         bool is_interior) {
   if (swapped_) {
     return visitor_(b, a, is_interior);
@@ -572,13 +235,20 @@ inline bool IndexCrosser::VisitEdgePair(ShapeEdge const& a, ShapeEdge const& b,
   }
 }
 
-bool IndexCrosser::VisitEdgeCellCrossings(ShapeEdge const& a,
-                                          S2ShapeIndexCell const& b_cell) {
+bool IndexCrosser::VisitEdgeCellCrossings(const ShapeEdge& a,
+                                          const S2ShapeIndexCell& b_cell) {
   // Test the current edge of A against all edges of "b_cell".
+
+  // Note that we need to use a new S2EdgeCrosser (or call Init) whenever we
+  // replace the contents of b_shape_edges_, since S2EdgeCrosser requires that
+  // its S2Point arguments point to values that persist between Init() calls.
   GetShapeEdges(b_index_, b_cell, &b_shape_edges_);
-  for (int j = 0; j < b_shape_edges_.size(); ++j) {
-    ShapeEdge const& b = b_shape_edges_[j];
-    int sign = crosser_.CrossingSign(&b.v0(), &b.v1());
+  S2EdgeCrosser crosser(&a.v0(), &a.v1());
+  for (const ShapeEdge& b : b_shape_edges_) {
+    if (crosser.c() == nullptr || *crosser.c() != b.v0()) {
+      crosser.RestartAt(&b.v0());
+    }
+    int sign = crosser.CrossingSign(&b.v1());
     if (sign >= min_crossing_sign_) {
       if (!VisitEdgePair(a, b, sign == 1)) return false;
     }
@@ -586,18 +256,16 @@ bool IndexCrosser::VisitEdgeCellCrossings(ShapeEdge const& a,
   return true;
 }
 
-bool IndexCrosser::VisitSubcellCrossings(S2ShapeIndexCell const& a_cell,
+bool IndexCrosser::VisitSubcellCrossings(const S2ShapeIndexCell& a_cell,
                                          S2CellId b_id) {
   // Test all edges of "a_cell" against the edges contained in B index cells
   // that are descendants of "b_id".
   GetShapeEdges(a_index_, a_cell, &a_shape_edges_);
   S2PaddedCell b_root(b_id, 0);
-  for (int i = 0; i < a_shape_edges_.size(); ++i) {
+  for (const ShapeEdge& a : a_shape_edges_) {
     // Use an S2CrossingEdgeQuery starting at "b_root" to find the index cells
     // of B that might contain crossing edges.
-    ShapeEdge const& a = a_shape_edges_[i];
     if (b_query_.GetCells(a.v0(), a.v1(), b_root, &b_cells_)) {
-      crosser_.Init(&a.v0(), &a.v1());
       for (int c = 0; c < b_cells_.size(); ++c) {
         if (!VisitEdgeCellCrossings(a, *b_cells_[c])) return false;
       }
@@ -606,26 +274,30 @@ bool IndexCrosser::VisitSubcellCrossings(S2ShapeIndexCell const& a_cell,
   return true;
 }
 
-bool IndexCrosser::VisitCellCellCrossings(S2ShapeIndexCell const& a_cell,
-                                          S2ShapeIndexCell const& b_cell) {
-  // Test all edges of "a_shape_edges_" against all edges of "b_cell".
-  // TODO(ericv): Refactor this so that we don't need to gather the edges of
-  // "a_cell" every time when testing against multiple B cells.
-  // TODO(ericv): Process the cell with fewer edges in the outer loop.
-  GetShapeEdges(a_index_, a_cell, &a_shape_edges_);
-  GetShapeEdges(b_index_, b_cell, &b_shape_edges_);
-  for (int i = 0; i < a_shape_edges_.size(); ++i) {
-    ShapeEdge const& a = a_shape_edges_[i];
-    crosser_.Init(&a.v0(), &a.v1());
-    for (int j = 0; j < b_shape_edges_.size(); ++j) {
-      ShapeEdge const& b = b_shape_edges_[j];
-      int sign = crosser_.CrossingSign(&b.v0(), &b.v1());
+bool IndexCrosser::VisitEdgesEdgesCrossings(const ShapeEdgeVector& a_edges,
+                                            const ShapeEdgeVector& b_edges) {
+  // Test all edges of "a_edges" against all edges of "b_edges".
+  for (const ShapeEdge& a : a_edges) {
+    S2EdgeCrosser crosser(&a.v0(), &a.v1());
+    for (const ShapeEdge& b : b_edges) {
+      if (crosser.c() == nullptr || *crosser.c() != b.v0()) {
+        crosser.RestartAt(&b.v0());
+      }
+      int sign = crosser.CrossingSign(&b.v1());
       if (sign >= min_crossing_sign_) {
         if (!VisitEdgePair(a, b, sign == 1)) return false;
       }
     }
   }
   return true;
+}
+
+inline bool IndexCrosser::VisitCellCellCrossings(
+    const S2ShapeIndexCell& a_cell, const S2ShapeIndexCell& b_cell) {
+  // Test all edges of "a_cell" against all edges of "b_cell".
+  GetShapeEdges(a_index_, a_cell, &a_shape_edges_);
+  GetShapeEdges(b_index_, b_cell, &b_shape_edges_);
+  return VisitEdgesEdgesCrossings(a_shape_edges_, b_shape_edges_);
 }
 
 bool IndexCrosser::VisitCrossings(RangeIterator* ai, RangeIterator* bi) {
@@ -639,7 +311,7 @@ bool IndexCrosser::VisitCrossings(RangeIterator* ai, RangeIterator* bi) {
     // intersects only a few edges, it is faster to check all the crossings
     // directly.  We handle this by advancing "bi" and keeping track of how
     // many edges we would need to test.
-    static int const kEdgeQueryMinEdges = 20;  // TODO: Tune using benchmarks.
+    static const int kEdgeQueryMinEdges = 23;
     int b_edges = 0;
     b_cells_.clear();
     do {
@@ -656,10 +328,11 @@ bool IndexCrosser::VisitCrossings(RangeIterator* ai, RangeIterator* bi) {
       }
       bi->Next();
     } while (bi->id() <= ai->range_max());
-
-    // Test all the edge crossings directly.
-    for (int c = 0; c < b_cells_.size(); ++c) {
-      if (!VisitCellCellCrossings(ai->cell(), *b_cells_[c])) {
+    if (!b_cells_.empty()) {
+      // Test all the edge crossings directly.
+      GetShapeEdges(a_index_, ai->cell(), &a_shape_edges_);
+      GetShapeEdges(b_index_, b_cells_, &b_shape_edges_);
+      if (!VisitEdgesEdgesCrossings(a_shape_edges_, b_shape_edges_)) {
         return false;
       }
     }
@@ -670,22 +343,18 @@ bool IndexCrosser::VisitCrossings(RangeIterator* ai, RangeIterator* bi) {
 
 //////////////////////////////////////////////////////////////////////
 
-bool VisitCrossings(S2ShapeIndexBase const& a_index,
-                    S2ShapeIndexBase const& b_index,
-                    CrossingType type, EdgePairVisitor const& visitor) {
+bool VisitCrossings(const S2ShapeIndexBase& a_index,
+                    const S2ShapeIndexBase& b_index,
+                    CrossingType type, const EdgePairVisitor& visitor) {
   DCHECK(type != CrossingType::NON_ADJACENT);
   // We look for S2CellId ranges where the indexes of A and B overlap, and
   // then test those edges for crossings.
-  //
+
   // TODO(ericv): Use brute force if the total number of edges is small enough
   // (using a larger threshold if the S2ShapeIndex is not constructed yet).
-  //
-  // TODO(ericv): Consider using one crosser and passing "a_index", "b_index",
-  // and "swapped" as parameters.  This would allow cell-cell intersections to
-  // be optimized by processing the index with fewer edges in the outer loop.
   RangeIterator ai(a_index), bi(b_index);
-  IndexCrosser ab(a_index, b_index, type, visitor, false); // Tests A against B
-  IndexCrosser ba(b_index, a_index, type, visitor, true);  // Tests B against A
+  IndexCrosser ab(a_index, b_index, type, visitor, false);  // Tests A against B
+  IndexCrosser ba(b_index, a_index, type, visitor, true);   // Tests B against A
   while (!ai.done() || !bi.done()) {
     if (ai.range_max() < bi.range_min()) {
       // The A and B cells don't overlap, and A precedes B.
@@ -715,90 +384,9 @@ bool VisitCrossings(S2ShapeIndexBase const& a_index,
   return true;
 }
 
-void ResolveComponents(vector<vector<S2Shape*>> const& components,
-                       vector<vector<S2Shape*>>* faces) {
-  faces->clear();
-  if (components.empty()) return;
-
-  // Since the loops do not overlap, any point on the sphere determines a loop
-  // nesting hierarchy.  We choose to build a hierarchy around S2::Origin().
-  // The hierarchy then determines the face structure.  Here are the details:
-  //
-  // 1. Build an S2ShapeIndex of all loops that do not contain S2::Origin().
-  //    This leaves at most one unindexed loop per connected component
-  //    (the "outer loop").
-  // 2. For each component, choose a representative vertex and determine
-  //    which indexed loops contain it.  The "depth" of this component is
-  //    defined as the number of such loops.
-  // 3. Assign the outer loop of each component to the containing loop whose
-  //    depth is one less.  This generates a set of multi-loop faces.
-  // 4. The output loops of all components at depth 0 become a single face.
-
-  S2ShapeIndex index;
-  // A map from shape.id() to the corresponding component number.
-  vector<int> component_ids;
-  vector<S2Shape*> outer_loops;
-  for (int i = 0; i < components.size(); ++i) {
-    auto const& component = components[i];
-    for (S2Shape* loop : component) {
-      if (component.size() > 1 &&
-          !s2shapeutil::ContainsBruteForce(*loop, S2::Origin())) {
-        // Ownership is transferred back at the end of this function.
-        index.Add(WrapUnique(loop));
-        component_ids.push_back(i);
-      } else {
-        outer_loops.push_back(loop);
-      }
-    }
-    // Check that there is exactly one outer loop in each component.
-    DCHECK_EQ(i + 1, outer_loops.size()) << "Component is not a subdivision";
-  }
-  // Find the loops containing each component.
-  vector<vector<S2Shape*>> ancestors(components.size());
-  auto contains_query = MakeS2ContainsPointQuery(&index);
-  for (int i = 0; i < outer_loops.size(); ++i) {
-    auto loop = outer_loops[i];
-    DCHECK_GT(loop->num_edges(), 0);
-    ancestors[i] = contains_query.GetContainingShapes(loop->edge(0).v0);
-  }
-  // Assign each outer loop to the component whose depth is one less.
-  // Components at depth 0 become a single face.
-  util::btree::btree_map<S2Shape*, vector<S2Shape*>> children;
-  for (int i = 0; i < outer_loops.size(); ++i) {
-    S2Shape* ancestor = nullptr;
-    int depth = ancestors[i].size();
-    if (depth > 0) {
-      for (auto candidate : ancestors[i]) {
-        if (ancestors[component_ids[candidate->id()]].size() == depth - 1) {
-          DCHECK(ancestor == nullptr);
-          ancestor = candidate;
-        }
-      }
-      DCHECK(ancestor != nullptr);
-    }
-    children[ancestor].push_back(outer_loops[i]);
-  }
-  // There is one face per loop that is not an outer loop, plus one for the
-  // outer loops of components at depth 0.
-  faces->resize(index.num_shape_ids() + 1);
-  for (int i = 0; i < index.num_shape_ids(); ++i) {
-    auto face = &(*faces)[i];
-    auto loop = index.shape(i);
-    auto itr = children.find(loop);
-    if (itr != children.end()) {
-      *face = itr->second;
-    }
-    face->push_back(loop);
-  }
-  faces->back() = children[nullptr];
-
-  // Explicitly release the shapes from the index so they are not deleted.
-  for (auto& ptr : index.ReleaseAll()) ptr.release();
-}
-
 // Helper function that formats a loop error message.  If the loop belongs to
 // a multi-loop polygon, adds a prefix indicating which loop is affected.
-static void InitLoopError(S2Error::Code code, char const* format,
+static void InitLoopError(S2Error::Code code, const char* format,
                           ChainPosition ap, ChainPosition bp,
                           bool is_polygon, S2Error* error) {
   error->Init(code, format, ap.offset, bp.offset);
@@ -809,8 +397,8 @@ static void InitLoopError(S2Error::Code code, char const* format,
 
 // Given two loop edges that cross (including at a shared vertex), return true
 // if there is a crossing error and set "error" to a human-readable message.
-static bool FindCrossingError(S2Shape const& shape,
-                              ShapeEdge const& a, ShapeEdge const& b,
+static bool FindCrossingError(const S2Shape& shape,
+                              const ShapeEdge& a, const ShapeEdge& b,
                               bool is_interior, S2Error* error) {
   bool is_polygon = shape.num_chains() > 1;
   S2Shape::ChainPosition ap = shape.chain_position(a.id().edge_id);
@@ -869,13 +457,13 @@ static bool FindCrossingError(S2Shape const& shape,
   return false;
 }
 
-bool FindAnyCrossing(S2ShapeIndexBase const& index, S2Error* error) {
+bool FindAnyCrossing(const S2ShapeIndexBase& index, S2Error* error) {
   if (index.num_shape_ids() == 0) return false;
   DCHECK_EQ(1, index.num_shape_ids());
-  S2Shape const& shape = *index.shape(0);
+  const S2Shape& shape = *index.shape(0);
   return !VisitCrossings(
       index, CrossingType::NON_ADJACENT,
-      [&](ShapeEdge const& a, ShapeEdge const& b, bool is_interior) {
+      [&](const ShapeEdge& a, const ShapeEdge& b, bool is_interior) {
         return !FindCrossingError(shape, a, b, is_interior, error);
       });
 }

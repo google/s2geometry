@@ -243,7 +243,7 @@ class S2Builder {
     //
     // The only requirement is that SnapPoint(x) must return a point whose
     // distance from "x" is no greater than "snap_radius".
-    virtual S2Point SnapPoint(S2Point const& point) const = 0;
+    virtual S2Point SnapPoint(const S2Point& point) const = 0;
 
     // Returns a deep copy of this SnapFunction.
     virtual std::unique_ptr<SnapFunction> Clone() const = 0;
@@ -254,7 +254,7 @@ class S2Builder {
     Options();
 
     // Convenience constructor that calls set_snap_function().
-    explicit Options(SnapFunction const& snap_function);
+    explicit Options(const SnapFunction& snap_function);
 
     // Sets the desired snap function.  The snap function is copied
     // internally, so you can safely pass a temporary object.
@@ -268,8 +268,8 @@ class S2Builder {
     //
     // DEFAULT: s2builderutil::IdentitySnapFunction(S1Angle::Zero())
     // [This does no snapping and preserves all input vertices exactly.]
-    SnapFunction const& snap_function() const;
-    void set_snap_function(SnapFunction const& snap_function);
+    const SnapFunction& snap_function() const;
+    void set_snap_function(const SnapFunction& snap_function);
 
     // If true, then detect all pairs of crossing edges and eliminate them by
     // adding a new vertex at their intersection point.
@@ -360,8 +360,8 @@ class S2Builder {
     void set_idempotent(bool idempotent);
 
     // Options may be assigned and copied.
-    Options(Options const& options);
-    Options& operator=(Options const& options);
+    Options(const Options& options);
+    Options& operator=(const Options& options);
 
    private:
     std::unique_ptr<SnapFunction> snap_function_;
@@ -392,7 +392,7 @@ class S2Builder {
   // This predicate is only required for layers that will be assembled into
   // polygons.  It is not used by other layer types.
   using IsFullPolygonPredicate =
-      std::function<bool (Graph const& g, S2Error* error)>;
+      std::function<bool (const Graph& g, S2Error* error)>;
 
   // Default constructor; requires Init() to be called.
   S2Builder();
@@ -401,11 +401,11 @@ class S2Builder {
   // options, C++ syntax requires an extra layer of parentheses:
   //
   //   S2Builder builder((S2Builder::Options()));
-  explicit S2Builder(Options const& options);
+  explicit S2Builder(const Options& options);
 
   // Initializes an S2Builder with the given options.
-  void Init(Options const& options);
-  Options const& options() const { return options_; }
+  void Init(const Options& options);
+  const Options& options() const { return options_; }
 
   // Starts a new output layer.  This method must be called before adding any
   // edges to the S2Builder.  You may call this method multiple times to build
@@ -435,27 +435,27 @@ class S2Builder {
   void StartLayer(std::unique_ptr<Layer> layer);
 
   // Adds a degenerate edge (representing a point) to the current layer.
-  void AddPoint(S2Point const& v);
+  void AddPoint(const S2Point& v);
 
   // Adds the given edge to the current layer.
-  void AddEdge(S2Point const& v0, S2Point const& v1);
+  void AddEdge(const S2Point& v0, const S2Point& v1);
 
   // Adds the edges in the given polyline.  (Note that if the polyline
   // consists of 0 or 1 vertices, this method does nothing.)
-  void AddPolyline(S2Polyline const& polyline);
+  void AddPolyline(const S2Polyline& polyline);
 
   // Adds the edges in the given loop.  If the sign() of the loop is negative
   // (i.e. this loop represents a hole within a polygon), the edge directions
   // are automatically reversed to ensure that the polygon interior is always
   // to the left of every edge.
-  void AddLoop(S2Loop const& loop);
+  void AddLoop(const S2Loop& loop);
 
   // Adds the loops in the given polygon.  Loops representing holes have their
   // edge directions automatically reversed as described for AddLoop().  Note
   // that this method does not distinguish between the empty and full
   // polygons, i.e. adding a full polygon has the same effect as adding an
   // empty one.
-  void AddPolygon(S2Polygon const& polygon);
+  void AddPolygon(const S2Polygon& polygon);
 
   // For layers that will be assembled into polygons, this method specifies a
   // predicate that will be called to determine whether the polygon is empty
@@ -480,7 +480,7 @@ class S2Builder {
   //
   // Caveat: Since this method can place vertices arbitrarily close together,
   // S2Builder makes no minimum separation guaranteees with forced vertices.
-  void ForceVertex(S2Point const& vertex);
+  void ForceVertex(const S2Point& vertex);
 
   // Every edge can have a set of non-negative integer labels attached to it.
   // When used with an appropriate layer type, you can then retrieve the
@@ -569,37 +569,37 @@ class S2Builder {
 
   class EdgeChainSimplifier;
 
-  InputVertexId AddVertex(S2Point const& v);
+  InputVertexId AddVertex(const S2Point& v);
   void ChooseSites();
   void CopyInputEdges();
   std::vector<InputVertexKey> SortInputVertices();
-  void AddEdgeCrossings(S2ShapeIndex const& input_edge_index);
+  void AddEdgeCrossings(const S2ShapeIndex& input_edge_index);
   void AddForcedSites(S2PointIndex<SiteId>* site_index);
   bool is_forced(SiteId v) const;
   void ChooseInitialSites(
       S2PointIndex<SiteId>* site_index,
       S2PointIndex<InputVertexId>* rejected_vertex_index);
-  S2Point SnapSite(S2Point const& point) const;
+  S2Point SnapSite(const S2Point& point) const;
   void CollectSiteEdges(
-      S2PointIndex<SiteId> const& site_index,
-      S2PointIndex<InputVertexId> const& rejected_vertex_index);
-  void SortSitesByDistance(S2Point const& x,
+      const S2PointIndex<SiteId>& site_index,
+      const S2PointIndex<InputVertexId>& rejected_vertex_index);
+  void SortSitesByDistance(const S2Point& x,
                            compact_array<SiteId>* sites) const;
-  void AddExtraSites(S2ShapeIndex const& input_edge_index);
+  void AddExtraSites(const S2ShapeIndex& input_edge_index);
   void MaybeAddExtraSites(InputEdgeId edge_id,
                           InputEdgeId max_edge_id,
-                          std::vector<SiteId> const& chain,
-                          S2ShapeIndex const& input_edge_index,
+                          const std::vector<SiteId>& chain,
+                          const S2ShapeIndex& input_edge_index,
                           std::vector<InputEdgeId>* snap_queue);
-  void AddExtraSite(S2Point const& new_site,
+  void AddExtraSite(const S2Point& new_site,
                     InputEdgeId max_edge_id,
-                    S2ShapeIndex const& input_edge_index,
+                    const S2ShapeIndex& input_edge_index,
                     std::vector<InputEdgeId>* snap_queue);
-  S2Point GetSeparationSite(S2Point const& site_to_avoid,
-                            S2Point const& v0, S2Point const& v1,
+  S2Point GetSeparationSite(const S2Point& site_to_avoid,
+                            const S2Point& v0, const S2Point& v1,
                             InputEdgeId input_edge_id) const;
-  S2Point GetCoverageEndpoint(S2Point const& p, S2Point const& x,
-                              S2Point const& y, S2Point const& n) const;
+  S2Point GetCoverageEndpoint(const S2Point& p, const S2Point& x,
+                              const S2Point& y, const S2Point& n) const;
   void SnapEdge(InputEdgeId e, std::vector<SiteId>* chain) const;
 
   void BuildLayers();
@@ -608,7 +608,7 @@ class S2Builder {
       std::vector<std::vector<InputEdgeIdSetId>>* layer_input_edge_ids,
       IdSetLexicon* input_edge_id_set_lexicon);
   void AddSnappedEdges(
-      InputEdgeId begin, InputEdgeId end, GraphOptions const& options,
+      InputEdgeId begin, InputEdgeId end, const GraphOptions& options,
       std::vector<Edge>* edges, std::vector<InputEdgeIdSetId>* input_edge_ids,
       IdSetLexicon* input_edge_id_set_lexicon,
       std::vector<compact_array<InputVertexId>>* site_vertices) const;
@@ -619,27 +619,23 @@ class S2Builder {
                       EdgeType edge_type, std::vector<Edge>* edges,
                       std::vector<InputEdgeIdSetId>* input_edge_ids) const;
   void SimplifyEdgeChains(
-      std::vector<compact_array<InputVertexId>> const& site_vertices,
+      const std::vector<compact_array<InputVertexId>>& site_vertices,
       std::vector<std::vector<Edge>>* layer_edges,
       std::vector<std::vector<InputEdgeIdSetId>>* layer_input_edge_ids,
       IdSetLexicon* input_edge_id_set_lexicon) const;
   void MergeLayerEdges(
-      std::vector<std::vector<Edge>> const& layer_edges,
-      std::vector<std::vector<InputEdgeIdSetId>> const& layer_input_edge_ids,
+      const std::vector<std::vector<Edge>>& layer_edges,
+      const std::vector<std::vector<InputEdgeIdSetId>>& layer_input_edge_ids,
       std::vector<Edge>* edges,
       std::vector<InputEdgeIdSetId>* input_edge_ids,
       std::vector<int>* edge_layers) const;
-  static bool StableLessThan(Edge const& a, Edge const& b,
-                             LayerEdgeId const& ai, LayerEdgeId const& bi);
+  static bool StableLessThan(const Edge& a, const Edge& b,
+                             const LayerEdgeId& ai, const LayerEdgeId& bi);
 
   //////////// Parameters /////////////
 
   // S2Builder options.
   Options options_;
-
-  // The maximum allowed edge length when a snap function is being used.
-  // Edges longer than this are automatically split into pieces.
-  S1ChordAngle max_edge_length_before_snapping_ca_;
 
   // Cached value of options_.snap_function().snap_radius().
   S1Angle snap_radius_;
@@ -737,8 +733,8 @@ class S2Builder {
   // the "sites to avoid" (needed for simplification).
   std::vector<compact_array<SiteId>> edge_sites_;
 
-  S2Builder(S2Builder const&) = delete;
-  S2Builder& operator=(S2Builder const&) = delete;
+  S2Builder(const S2Builder&) = delete;
+  S2Builder& operator=(const S2Builder&) = delete;
 };
 
 // This class is only needed by S2Builder::Layer implementations.  A layer is
@@ -826,13 +822,13 @@ class S2Builder::GraphOptions {
   //
   // DISCARD_EXCESS: Like DISCARD, except that a single sibling pair is kept
   //                 if the result would otherwise be empty.  This is useful
-  //                 for modeling polygons with degeneracies (LaxPolygon), and
+  //                 for polygons with degeneracies (S2LaxPolygonShape), and
   //                 for simplifying polylines while ensuring that they are
   //                 not split into multiple disconnected pieces.
   //
   // KEEP: Keeps sibling pairs.  This can be used to create polylines that
   //       double back on themselves, or degenerate loops (with a layer type
-  //       such as s2shapeutil::LaxPolygon).
+  //       such as S2LaxPolygonShape).
   //
   // REQUIRE: Requires that all edges have a sibling (and returns an error
   //          otherwise).  This is useful with layer types that create a
@@ -907,8 +903,8 @@ class S2Builder::GraphOptions {
   bool allow_vertex_filtering_;
 };
 
-bool operator==(S2Builder::GraphOptions const& x,
-                S2Builder::GraphOptions const& y);
+bool operator==(const S2Builder::GraphOptions& x,
+                const S2Builder::GraphOptions& y);
 
 
 //////////////////   Implementation details follow   ////////////////////
@@ -923,13 +919,13 @@ inline S1Angle S2Builder::SnapFunction::kMaxSnapRadius() {
   return S1Angle::Degrees(70);
 }
 
-inline S2Builder::SnapFunction const& S2Builder::Options::snap_function()
+inline const S2Builder::SnapFunction& S2Builder::Options::snap_function()
     const {
   return *snap_function_;
 }
 
 inline void S2Builder::Options::set_snap_function(
-    SnapFunction const& snap_function) {
+    const SnapFunction& snap_function) {
   snap_function_ = snap_function.Clone();
 }
 
@@ -1018,7 +1014,7 @@ inline bool S2Builder::is_forced(SiteId v) const {
   return v < num_forced_sites_;
 }
 
-inline void S2Builder::AddPoint(S2Point const& v) {
+inline void S2Builder::AddPoint(const S2Point& v) {
   AddEdge(v, v);
 }
 

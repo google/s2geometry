@@ -33,12 +33,12 @@ class S2PointIndexTest : public ::testing::Test {
   Contents contents_;
 
  public:
-  void Add(S2Point const& point, int data) {
+  void Add(const S2Point& point, int data) {
     index_.Add(point, data);
     contents_.insert(PointData(point, data));
   }
 
-  void Remove(S2Point const& point, int data) {
+  void Remove(const S2Point& point, int data) {
     index_.Remove(point, data);
     // If there are multiple copies, remove only one.
     contents_.erase(contents_.find(PointData(point, data)));
@@ -46,7 +46,7 @@ class S2PointIndexTest : public ::testing::Test {
 
   void Verify() {
     Contents remaining = contents_;
-    for (Index::Iterator it(index_); !it.done(); it.Next()) {
+    for (Index::Iterator it(&index_); !it.done(); it.Next()) {
       Contents::iterator element = remaining.find(it.point_data());
       EXPECT_TRUE(element != remaining.end());
       remaining.erase(element);
@@ -55,7 +55,7 @@ class S2PointIndexTest : public ::testing::Test {
   }
 
   void TestIteratorMethods() {
-    Index::Iterator it(index_);
+    Index::Iterator it(&index_);
     EXPECT_FALSE(it.Prev());
     it.Finish();
     EXPECT_TRUE(it.done());
@@ -63,11 +63,11 @@ class S2PointIndexTest : public ::testing::Test {
     // Iterate through all the cells in the index.
     S2CellId prev_cellid = S2CellId::None();
     S2CellId min_cellid = S2CellId::Begin(S2CellId::kMaxLevel);
-    for (it.Reset(); !it.done(); it.Next()) {
+    for (it.Begin(); !it.done(); it.Next()) {
       S2CellId cellid = it.id();
       EXPECT_EQ(cellid, S2CellId(it.point()));
 
-      typename Index::Iterator it2(index_);
+      typename Index::Iterator it2(&index_);
       if (cellid == prev_cellid) {
         it2.Seek(cellid);
       }
@@ -81,7 +81,7 @@ class S2PointIndexTest : public ::testing::Test {
         it2.Seek(skipped.cell_id(i));
         EXPECT_EQ(cellid, it2.id());
       }
-      // Test Prev(), Next(), Seek(), and SeekForward().
+      // Test Prev(), Next(), and Seek().
       if (prev_cellid.is_valid()) {
         it2 = it;
         EXPECT_TRUE(it2.Prev());
@@ -90,10 +90,6 @@ class S2PointIndexTest : public ::testing::Test {
         EXPECT_EQ(cellid, it2.id());
         it2.Seek(prev_cellid);
         EXPECT_EQ(prev_cellid, it2.id());
-        it2.SeekForward(cellid);
-        EXPECT_EQ(cellid, it2.id());
-        it2.SeekForward(prev_cellid);
-        EXPECT_EQ(cellid, it2.id());
       }
       prev_cellid = cellid;
       min_cellid = cellid.range_max().next();

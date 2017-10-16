@@ -13,23 +13,19 @@
 // limitations under the License.
 //
 
-/*
- * Copyright 2017 The Abseil Authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-// Moved into its own module by sanjay@google.com (Sanjay Ghemawat)
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 // Thread-safe logging routines that do not allocate any memory or
 // acquire any locks, and can therefore be used by low-level memory
@@ -39,11 +35,11 @@
 //
 // IWYU pragma: private, include "base/raw_logging.h"
 
+#ifndef S2_THIRD_PARTY_ABSL_BASE_INTERNAL_RAW_LOGGING_H_
+#define S2_THIRD_PARTY_ABSL_BASE_INTERNAL_RAW_LOGGING_H_
 
-#ifndef S2_THIRD_PARTY_ABSL_BASE_RAW_LOGGING_H_
-#define S2_THIRD_PARTY_ABSL_BASE_RAW_LOGGING_H_
-
-#include "s2/third_party/absl/base/log_severity.h"
+#include "s2/third_party/absl/base/attributes.h"
+#include "s2/third_party/absl/base/internal/log_severity.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 
@@ -94,8 +90,6 @@
     }                                                                  \
   } while (0)
 
-// TODO(b/62299050): scrub DLOG/DCHECK from release. Depends on cl/164302737.
-// Debug versions of ABSL_RAW_LOG and ABSL_RAW_CHECK
 #ifndef NDEBUG
 
 #define RAW_DLOG(severity, ...) ABSL_RAW_LOG(severity, __VA_ARGS__)
@@ -216,4 +210,4 @@ void RegisterAbortHook(AbortHook fn);
 }  // namespace base_raw_logging
 
 
-#endif  // S2_THIRD_PARTY_ABSL_BASE_RAW_LOGGING_H_
+#endif  // S2_THIRD_PARTY_ABSL_BASE_INTERNAL_RAW_LOGGING_H_

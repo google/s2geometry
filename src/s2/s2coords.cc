@@ -28,7 +28,7 @@ namespace internal {
 static_assert(kSwapMask == 0x01 && kInvertMask == 0x02, "masks changed");
 
 // kIJtoPos[orientation][ij] -> pos
-int const kIJtoPos[4][4] = {
+const int kIJtoPos[4][4] = {
   // (0,0) (0,1) (1,0) (1,1)
   {     0,    1,    3,    2  },  // canonical order
   {     0,    3,    1,    2  },  // axes swapped
@@ -37,7 +37,7 @@ int const kIJtoPos[4][4] = {
 };
 
 // kPosToIJ[orientation][pos] -> ij
-int const kPosToIJ[4][4] = {
+const int kPosToIJ[4][4] = {
   // 0  1  2  3
   {  0, 1, 3, 2 },    // canonical order:    (0,0), (0,1), (1,1), (1,0)
   {  0, 2, 3, 1 },    // axes swapped:       (0,0), (1,0), (1,1), (0,1)
@@ -46,14 +46,14 @@ int const kPosToIJ[4][4] = {
 };
 
 // kPosToOrientation[pos] -> orientation_modifier
-int const kPosToOrientation[4] = {
+const int kPosToOrientation[4] = {
   kSwapMask,
   0,
   0,
   kInvertMask + kSwapMask,
 };
 
-int const kFaceUVWFaces[6][3][2] = {
+const int kFaceUVWFaces[6][3][2] = {
   { { 4, 1 }, { 5, 2 }, { 3, 0 } },
   { { 0, 3 }, { 5, 2 }, { 4, 1 } },
   { { 0, 3 }, { 1, 4 }, { 5, 2 } },
@@ -62,7 +62,7 @@ int const kFaceUVWFaces[6][3][2] = {
   { { 4, 1 }, { 3, 0 }, { 2, 5 } }
 };
 
-double const kFaceUVWAxes[6][3][3] = {
+const double kFaceUVWAxes[6][3][3] = {
   {
     { 0,  1,  0 },
     { 0,  0,  1 },
@@ -99,7 +99,7 @@ double const kFaceUVWAxes[6][3][3] = {
 
 
 
-S2Point FaceXYZtoUVW(int face, S2Point const& p) {
+S2Point FaceXYZtoUVW(int face, const S2Point& p) {
   // The result coordinates are simply the dot products of P with the (u,v,w)
   // axes for the given face (see kFaceUVWAxes).
   switch (face) {
@@ -112,7 +112,7 @@ S2Point FaceXYZtoUVW(int face, S2Point const& p) {
   }
 }
 
-int XYZtoFaceSiTi(S2Point const& p, int* face, unsigned int* si,
+int XYZtoFaceSiTi(const S2Point& p, int* face, unsigned int* si,
                   unsigned int* ti) {
   double u, v;
   *face = XYZtoFaceUV(p, &u, &v);

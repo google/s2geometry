@@ -34,7 +34,7 @@ namespace s2shapeutil {
 //
 // CAVEAT: Typically this method is only used internally.  Its running time is
 //         linear in the number of shape edges.
-bool ContainsBruteForce(S2Shape const& shape, S2Point const& point);
+bool ContainsBruteForce(const S2Shape& shape, const S2Point& point);
 
 }  // namespace s2shapeutil
 

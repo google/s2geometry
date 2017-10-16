@@ -36,14 +36,14 @@ class S2PaddedCell {
   // Construct the child of "parent" with the given (i,j) index.  The four
   // child cells have indices of (0,0), (0,1), (1,0), (1,1), where the i and j
   // indices correspond to increasing u- and v-values respectively.
-  S2PaddedCell(S2PaddedCell const& parent, int i, int j);
+  S2PaddedCell(const S2PaddedCell& parent, int i, int j);
 
   S2CellId id() const { return id_; }
   double padding() const { return padding_; }
   int level() const { return level_; }
 
   // Return the bound for this cell (including padding).
-  R2Rect const& bound() const { return bound_; }
+  const R2Rect& bound() const { return bound_; }
 
   // Return the "middle" of the padded cell, defined as the rectangle that
   // belongs to all four children.
@@ -51,7 +51,7 @@ class S2PaddedCell {
   // Note that this method is *not* thread-safe, because the return value is
   // computed on demand and cached.  (It is expected that this class will be
   // mainly useful in the context of single-threaded recursive algorithms.)
-  R2Rect const& middle() const;
+  const R2Rect& middle() const;
 
   // Return the (i,j) coordinates for the child cell at the given traversal
   // position.  The traversal position corresponds to the order in which child
@@ -70,7 +70,7 @@ class S2PaddedCell {
   // possible that a neighboring child also intersects "rect".
   //
   // REQUIRES: bound().Intersects(rect)
-  S2CellId ShrinkToFit(R2Rect const& rect) const;
+  S2CellId ShrinkToFit(const R2Rect& rect) const;
 
   // Return the center of this cell.
   S2Point GetCenter() const;

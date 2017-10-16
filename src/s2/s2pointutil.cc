@@ -21,7 +21,7 @@
 
 namespace S2 {
 
-bool IsUnitLength(S2Point const& p) {
+bool IsUnitLength(const S2Point& p) {
   // Normalize() is guaranteed to return a vector whose L2-norm differs from 1
   // by less than 2 * DBL_EPSILON.  Thus the squared L2-norm differs by less
   // than 4 * DBL_EPSILON.  The actual calculated Norm2() can have up to 1.5 *
@@ -31,11 +31,11 @@ bool IsUnitLength(S2Point const& p) {
   return fabs(p.Norm2() - 1) <= 5 * DBL_EPSILON;  // About 1.11e-15
 }
 
-bool ApproxEquals(S2Point const& a, S2Point const& b, S1Angle max_error) {
+bool ApproxEquals(const S2Point& a, const S2Point& b, S1Angle max_error) {
   return S1Angle(a, b) <= max_error;
 }
 
-S2Point Ortho(S2Point const& a) {
+S2Point Ortho(const S2Point& a) {
 #ifdef S2_TEST_DEGENERACIES
   // Vector3::Ortho() always returns a point on the X-Y, Y-Z, or X-Z planes.
   // This leads to many more degenerate cases in polygon operations.
@@ -49,7 +49,7 @@ S2Point Ortho(S2Point const& a) {
 #endif
 }
 
-Vector3_d RobustCrossProd(S2Point const& a, S2Point const& b) {
+Vector3_d RobustCrossProd(const S2Point& a, const S2Point& b) {
   // The direction of a.CrossProd(b) becomes unstable as (a + b) or (a - b)
   // approaches zero.  This leads to situations where a.CrossProd(b) is not
   // very orthogonal to "a" and/or "b".  We could fix this using Gram-Schmidt,
@@ -72,7 +72,7 @@ Vector3_d RobustCrossProd(S2Point const& a, S2Point const& b) {
   return Ortho(a);
 }
 
-S2Point Rotate(S2Point const& p, S2Point const& axis, S1Angle angle) {
+S2Point Rotate(const S2Point& p, const S2Point& axis, S1Angle angle) {
   DCHECK(IsUnitLength(p));
   DCHECK(IsUnitLength(axis));
   // Let M be the plane through P that is perpendicular to "axis", and let
@@ -88,29 +88,29 @@ S2Point Rotate(S2Point const& p, S2Point const& axis, S1Angle angle) {
   return (cos(angle) * dx + sin(angle) * dy + center).Normalize();
 }
 
-Matrix3x3_d GetFrame(S2Point const& z) {
+Matrix3x3_d GetFrame(const S2Point& z) {
   Matrix3x3_d m;
   GetFrame(z, &m);
   return m;
 }
 
-void GetFrame(S2Point const& z, Matrix3x3_d* m) {
+void GetFrame(const S2Point& z, Matrix3x3_d* m) {
   DCHECK(IsUnitLength(z));
   m->SetCol(2, z);
   m->SetCol(1, Ortho(z));
   m->SetCol(0, m->Col(1).CrossProd(z));  // Already unit-length.
 }
 
-S2Point ToFrame(Matrix3x3_d const& m, S2Point const& p) {
+S2Point ToFrame(const Matrix3x3_d& m, const S2Point& p) {
   // The inverse of an orthonormal matrix is its transpose.
   return m.Transpose() * p;
 }
 
-S2Point FromFrame(Matrix3x3_d const& m, S2Point const& q) {
+S2Point FromFrame(const Matrix3x3_d& m, const S2Point& q) {
   return m * q;
 }
 
-bool SimpleCCW(S2Point const& a, S2Point const& b, S2Point const& c) {
+bool SimpleCCW(const S2Point& a, const S2Point& b, const S2Point& c) {
   // We compute the signed volume of the parallelepiped ABC.  The usual
   // formula for this is (AxB).C, but we compute it here using (CxA).B
   // in order to ensure that ABC and CBA are not both CCW.  This follows

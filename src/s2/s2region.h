@@ -38,7 +38,7 @@ class S2LatLngRect;
 // is restricted to methods that are useful for computing approximations.
 class S2Region {
  public:
-  virtual ~S2Region();
+  virtual ~S2Region() {}
 
   // Returns a deep copy of the region.
   //
@@ -75,7 +75,7 @@ class S2Region {
 
   // Returns true if the region completely contains the given cell, otherwise
   // returns false.
-  virtual bool Contains(S2Cell const& cell) const = 0;
+  virtual bool Contains(const S2Cell& cell) const = 0;
 
   // If this method returns false, the region does not intersect the given
   // cell.  Otherwise, either region intersects the cell, or the intersection
@@ -85,12 +85,12 @@ class S2Region {
   // (S2LatLngRect::MayIntersect) that takes advantage of the semantics above
   // to be more efficient.  For all other S2Region subtypes, this method
   // returns true if the region intersect the cell and false otherwise.
-  virtual bool MayIntersect(S2Cell const& cell) const = 0;
+  virtual bool MayIntersect(const S2Cell& cell) const = 0;
 
   // Returns true if and only if the given point is contained by the region.
   // The point 'p' is generally required to be unit length, although some
   // subtypes may relax this restriction.
-  virtual bool Contains(S2Point const& p) const = 0;
+  virtual bool Contains(const S2Point& p) const = 0;
 
   //////////////////////////////////////////////////////////////////////////
   // Many S2Region subtypes also define the following non-virtual methods.

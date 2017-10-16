@@ -45,11 +45,11 @@ DEFINE_double(s2pointcompression_bm_radius_km, 1000.0,
 
 namespace {
 
-S2Point SnapPointToLevel(S2Point const& point, int level) {
+S2Point SnapPointToLevel(const S2Point& point, int level) {
   return S2CellId(point).parent(level).ToPoint();
 }
 
-vector<S2Point> SnapPointsToLevel(vector<S2Point> const& points,
+vector<S2Point> SnapPointsToLevel(const vector<S2Point>& points,
                                   int level) {
   vector<S2Point> snapped_points(points.size());
   for (int i = 0; i < points.size(); ++i) {
@@ -63,16 +63,16 @@ vector<S2Point> SnapPointsToLevel(vector<S2Point> const& points,
 vector<S2Point> MakeRegularPoints(int num_vertices,
                                   double radius_km,
                                   int level) {
-  S2Point const center = S2Point(1.0, 1.0, 1.0).Normalize();
-  S1Angle const radius_angle = S2Testing::KmToAngle(radius_km);
+  const S2Point center = S2Point(1.0, 1.0, 1.0).Normalize();
+  const S1Angle radius_angle = S2Testing::KmToAngle(radius_km);
 
-  vector<S2Point> const unsnapped_points =
+  const vector<S2Point> unsnapped_points =
       S2Testing::MakeRegularPoints(center, radius_angle, num_vertices);
 
   return SnapPointsToLevel(unsnapped_points, level);
 }
 
-void MakeXYZFaceSiTiPoints(Span<S2Point const> points,
+void MakeXYZFaceSiTiPoints(Span<const S2Point> points,
                            Span<S2XYZFaceSiTi> result) {
   CHECK_EQ(points.size(), result.size());
   for (int i = 0; i < points.size(); ++i) {
@@ -87,8 +87,8 @@ class S2PointCompressionTest : public ::testing::Test {
   void SetUp() override {
     loop_4_ = MakeRegularPoints(4, 0.1, S2::kMaxCellLevel);
 
-    S2Point const center = S2Point(1.0, 1.0, 1.0).Normalize();
-    S1Angle const radius = S2Testing::KmToAngle(0.1);
+    const S2Point center = S2Point(1.0, 1.0, 1.0).Normalize();
+    const S1Angle radius = S2Testing::KmToAngle(0.1);
     loop_4_unsnapped_ = S2Testing::MakeRegularPoints(center, radius, 4);
 
     // Radius is 100m, so points are about 141 meters apart.
@@ -126,16 +126,16 @@ class S2PointCompressionTest : public ::testing::Test {
 
     vector<S2Point> line_points(100);
     for (int i = 0; i < line_points.size(); ++i) {
-      double const s = 0.01 + 0.005 * i;
-      double const t = 0.01 + 0.009 * i;
-      double const u = S2::STtoUV(s);
-      double const v = S2::STtoUV(t);
+      const double s = 0.01 + 0.005 * i;
+      const double t = 0.01 + 0.009 * i;
+      const double u = S2::STtoUV(s);
+      const double v = S2::STtoUV(t);
       line_points[i] = S2::FaceUVtoXYZ(0, u, v).Normalize();
     }
     line_ = SnapPointsToLevel(line_points, S2::kMaxCellLevel);
   }
 
-  void Encode(Span<S2Point const> points, int level) {
+  void Encode(Span<const S2Point> points, int level) {
     FixedArray<S2XYZFaceSiTi> pts(points.size());
     MakeXYZFaceSiTiPoints(points, MakeSpan(pts));
     S2EncodePointsCompressed(pts, level, &encoder_);
@@ -209,12 +209,12 @@ TEST_F(S2PointCompressionTest, FourVertexLoopSize) {
 }
 
 TEST_F(S2PointCompressionTest, RoundtripsFourVertexLevel14Loop) {
-  int const level = 14;
+  const int level = 14;
   Roundtrip(loop_4_level_14_, level);
 }
 
 TEST_F(S2PointCompressionTest, FourVertexLevel14LoopSize) {
-  int const level = 14;
+  const int level = 14;
   Encode(loop_4_level_14_, level);
   // It would take 4 bytes per vertex without compression.
   EXPECT_EQ(23, encoder_.length());
@@ -249,7 +249,7 @@ TEST_F(S2PointCompressionTest, OneHundredVertexLoopUnsnappedSize) {
 }
 
 TEST_F(S2PointCompressionTest, Roundtrips100VertexLevel22Loop) {
-  int const level = 22;
+  const int level = 22;
   Roundtrip(loop_100_level_22_, level);
 }
 

@@ -32,6 +32,11 @@
 // - Performance optimization (alignment, prefetch)
 // - Obsolete
 
+#include <cassert>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
+
 #include "s2/third_party/absl/base/config.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/port.h"  // IWYU pragma: export
@@ -47,7 +52,7 @@
 #ifdef _MSC_VER /* if Visual C++ */
 
 #include <winsock2.h>  // Must come before <windows.h>
-#include <cassert>
+#include <intrin.h>
 #include <process.h>  // _getpid()
 #include <windows.h>
 #undef ERROR
@@ -199,6 +204,29 @@
 #define GOOGLE_OBSCURE_SIGNAL SIGPWR
 #endif
 
+// ABSL_FUNC_PTR_TO_CHAR_PTR
+// On some platforms, a "function pointer" points to a function descriptor
+// rather than directly to the function itself.
+// Use ABSL_FUNC_PTR_TO_CHAR_PTR(func) to get a char-pointer to the first
+// instruction of the function func.
+// TODO(b/30407660): Move this macro into Abseil when symbolizer is released in
+// Abseil.
+#if defined(__cplusplus)
+#if (defined(__powerpc__) && !(_CALL_ELF > 1)) || defined(__ia64)
+// use opd section for function descriptors on these platforms, the function
+// address is the first word of the descriptor
+namespace absl {
+enum { kPlatformUsesOPDSections = 1 };
+}  // namespace absl
+#define ABSL_FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char **>(func)[0])
+#else  // not PPC or IA64
+namespace absl {
+enum { kPlatformUsesOPDSections = 0 };
+}  // namespace absl
+#define ABSL_FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char *>(func))
+#endif  // PPC or IA64
+#endif  // __cplusplus
+
 // -----------------------------------------------------------------------------
 // Utility Functions
 // -----------------------------------------------------------------------------
@@ -215,6 +243,15 @@ inline void sized_delete(void *ptr, size_t size) {
   (void)size;
   ::operator delete(ptr);
 #endif  // GOOGLE_HAVE_SIZED_DELETE
+}
+
+inline void sized_delete_array(void *ptr, size_t size) {
+#ifdef GOOGLE_HAVE_SIZED_DELETEARRAY
+  ::operator delete[](ptr, size);
+#else
+  (void) size;
+  ::operator delete[](ptr);
+#endif
 }
 }  // namespace base
 #endif  // __cplusplus
@@ -385,6 +422,16 @@ typedef unsigned int uint;
 #endif  // !HAVE_UINT
 #endif  // _MSC_VER
 
+#ifdef _MSC_VER
+// uid_t
+// MSVC doesn't have uid_t
+typedef int uid_t;
+
+// pid_t
+// Defined all over the place.
+typedef int pid_t;
+#endif  // _MSC_VER
+
 // mode_t
 #ifdef _MSC_VER
 // From stat.h
@@ -457,13 +504,6 @@ std::ostream &operator<<(std::ostream &out, const pthread_t &thread_id);
 // Predefined System/Language Macros
 // -----------------------------------------------------------------------------
 
-// O_BINARY
-// Windows has O_BINARY as a flag to open() (like "b" for fopen).
-// Linux doesn't need make this distinction.
-#if defined OS_LINUX && !defined O_BINARY
-#define O_BINARY 0
-#endif
-
 // EXFULL
 #if defined(__APPLE__)
 // Linux has this in <linux/errno.h>
@@ -500,6 +540,21 @@ std::ostream &operator<<(std::ostream &out, const pthread_t &thread_id);
 #define HUGE_VALF (static_cast<float>(HUGE_VAL))
 #endif
 #endif  // _MSC_VER
+
+// MAP_ANONYMOUS
+#if defined(__APPLE__)
+// For mmap, Linux defines both MAP_ANONYMOUS and MAP_ANON and says MAP_ANON is
+// deprecated. In Darwin, MAP_ANON is all there is.
+#if !defined MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif  // !MAP_ANONYMOUS
+#endif  // __APPLE__
+
+// PATH_MAX
+// You say tomato, I say atotom
+#ifdef _MSC_VER
+#define PATH_MAX MAX_PATH
+#endif
 
 // -----------------------------------------------------------------------------
 // Predefined System/Language Functions

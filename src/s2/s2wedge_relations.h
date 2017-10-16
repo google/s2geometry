@@ -44,20 +44,20 @@ enum WedgeRelation {
 // Returns the relation from wedge A to B.
 // REQUIRES: A and B are non-empty.
 WedgeRelation GetWedgeRelation(
-    S2Point const& a0, S2Point const& ab1, S2Point const& a2,
-    S2Point const& b0, S2Point const& b2);
+    const S2Point& a0, const S2Point& ab1, const S2Point& a2,
+    const S2Point& b0, const S2Point& b2);
 
 // Returns true if wedge A contains wedge B.  Equivalent to but faster than
 // GetWedgeRelation() == WEDGE_PROPERLY_CONTAINS || WEDGE_EQUALS.
 // REQUIRES: A and B are non-empty.
-bool WedgeContains(S2Point const& a0, S2Point const& ab1, S2Point const& a2,
-                   S2Point const& b0, S2Point const& b2);
+bool WedgeContains(const S2Point& a0, const S2Point& ab1, const S2Point& a2,
+                   const S2Point& b0, const S2Point& b2);
 
 // Returns true if wedge A intersects wedge B.  Equivalent to but faster
 // than GetWedgeRelation() != WEDGE_IS_DISJOINT.
 // REQUIRES: A and B are non-empty.
-bool WedgeIntersects(S2Point const& a0, S2Point const& ab1, S2Point const& a2,
-                     S2Point const& b0, S2Point const& b2);
+bool WedgeIntersects(const S2Point& a0, const S2Point& ab1, const S2Point& a2,
+                     const S2Point& b0, const S2Point& b2);
 
 }  // namespace S2
 

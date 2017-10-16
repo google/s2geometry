@@ -66,7 +66,7 @@ struct S2XYZFaceSiTi {
 // Encode the points in the encoder, using an optimized compressed format for
 // points at the center of a cell at 'level', plus 3 double values for the
 // others.
-void S2EncodePointsCompressed(absl::Span<S2XYZFaceSiTi const> points,
+void S2EncodePointsCompressed(absl::Span<const S2XYZFaceSiTi> points,
                               int level, Encoder* encoder);
 
 // Decode points encoded with S2EncodePointsCompressed. Requires that the

@@ -26,7 +26,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
-S2LatLngRect GetEdgeBound(S2Point const& a, S2Point const& b) {
+S2LatLngRect GetEdgeBound(const S2Point& a, const S2Point& b) {
   S2LatLngRectBounder bounder;
   bounder.AddPoint(a);
   bounder.AddPoint(b);
@@ -39,11 +39,11 @@ S2LatLngRect GetEdgeBound(double x1, double y1, double z1,
                       S2Point(x2, y2, z2).Normalize());
 }
 
-S2LatLng const kRectError = S2LatLngRectBounder::MaxErrorForTests();
+const S2LatLng kRectError = S2LatLngRectBounder::MaxErrorForTests();
 
 TEST(RectBounder, MaxLatitudeSimple) {
   // Check cases where the min/max latitude is attained at a vertex.
-  static double const kCubeLat = asin(1 / sqrt(3));  // 35.26 degrees
+  static const double kCubeLat = asin(1 / sqrt(3));  // 35.26 degrees
   EXPECT_TRUE(GetEdgeBound(1,1,1, 1,-1,-1).ApproxEquals(  // NOLINT
       S2LatLngRect(R1Interval(-kCubeLat, kCubeLat),
                    S1Interval(-M_PI_4, M_PI_4)), kRectError));
@@ -108,7 +108,7 @@ TEST(RectBounder, MaxLatitudeRandom) {
   }
 }
 
-S2Point PerturbATowardsB(S2Point const& a, S2Point const& b) {
+S2Point PerturbATowardsB(const S2Point& a, const S2Point& b) {
   S2Testing::Random* rnd = &S2Testing::rnd;
   double choice = rnd->RandDouble();
   if (choice < 0.1) {

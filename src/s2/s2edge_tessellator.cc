@@ -29,7 +29,7 @@ S1Angle S2EdgeTessellator::kMinTolerance() {
   return S1Angle::Radians(1e-13);
 }
 
-S2EdgeTessellator::S2EdgeTessellator(S2::Projection const* projection,
+S2EdgeTessellator::S2EdgeTessellator(const S2::Projection* projection,
                                      S1Angle tolerance)
     : proj_(*projection),
       tolerance_(std::max(tolerance, kMinTolerance())),
@@ -38,7 +38,7 @@ S2EdgeTessellator::S2EdgeTessellator(S2::Projection const* projection,
 }
 
 void S2EdgeTessellator::AppendProjected(
-    S2Point const& a, S2Point const& b, vector<R2Point>* vertices) const {
+    const S2Point& a, const S2Point& b, vector<R2Point>* vertices) const {
   R2Point pa = proj_.Project(a);
   R2Point pb = WrapDestination(pa, proj_.Project(b));
   if (vertices->empty()) {
@@ -54,8 +54,8 @@ void S2EdgeTessellator::AppendProjected(
 //
 // The maximum recursion depth is (M_PI / kMinTolerance()) < 45, and the
 // frame size is small so stack overflow should not be an issue.
-void S2EdgeTessellator::AppendProjected(R2Point const& pa, S2Point const& a,
-                                        R2Point const& pb, S2Point const& b,
+void S2EdgeTessellator::AppendProjected(const R2Point& pa, const S2Point& a,
+                                        const R2Point& pb, const S2Point& b,
                                         vector<R2Point>* vertices) const {
   // It's impossible to robustly test whether a projected edge is close enough
   // to a geodesic edge without knowing the details of the projection
@@ -89,7 +89,7 @@ void S2EdgeTessellator::AppendProjected(R2Point const& pa, S2Point const& a,
 }
 
 void S2EdgeTessellator::AppendUnprojected(
-    R2Point const& pa, R2Point const& pb_in, vector<S2Point>* vertices) const {
+    const R2Point& pa, const R2Point& pb_in, vector<S2Point>* vertices) const {
   R2Point pb = WrapDestination(pa, pb_in);
   S2Point a = proj_.Unproject(pa);
   S2Point b = proj_.Unproject(pb);
@@ -105,8 +105,8 @@ void S2EdgeTessellator::AppendUnprojected(
 
 // Like AppendProjected, but interpolates a projected edge and appends the
 // corresponding points on the sphere.
-void S2EdgeTessellator::AppendUnprojected(R2Point const& pa, S2Point const& a,
-                                          R2Point const& pb, S2Point const& b,
+void S2EdgeTessellator::AppendUnprojected(const R2Point& pa, const S2Point& a,
+                                          const R2Point& pb, const S2Point& b,
                                           vector<S2Point>* vertices) const {
   // See notes above regarding measuring the interpolation error.
   R2Point pmid = proj_.Interpolate(0.5, pa, pb);
@@ -122,8 +122,8 @@ void S2EdgeTessellator::AppendUnprojected(R2Point const& pa, S2Point const& a,
 
 // Wraps the coordinates of the edge destination if necessary to obtain the
 // shortest edge.
-R2Point S2EdgeTessellator::WrapDestination(R2Point const& pa,
-                                           R2Point const& pb) const {
+R2Point S2EdgeTessellator::WrapDestination(const R2Point& pa,
+                                           const R2Point& pb) const {
   double x = pb.x(), y = pb.y();
   if (wrap_distance_.x() > 0) {
     x = pa.x() + remainder(x - pa.x(), wrap_distance_.x());

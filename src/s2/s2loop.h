@@ -86,7 +86,7 @@ class S2Loop final : public S2Region {
   S2Loop();
 
   // Convenience constructor that calls Init() with the given vertices.
-  explicit S2Loop(std::vector<S2Point> const& vertices);
+  explicit S2Loop(const std::vector<S2Point>& vertices);
 
   // Convenience constructor to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
@@ -101,13 +101,13 @@ class S2Loop final : public S2Region {
   //
   // The main reason to use this constructor is if you intend to call
   // IsValid() explicitly.  See set_s2debug_override() for details.
-  S2Loop(std::vector<S2Point> const& vertices, S2Debug override);
+  S2Loop(const std::vector<S2Point>& vertices, S2Debug override);
 
   // Initialize a loop with given vertices.  The last vertex is implicitly
   // connected to the first.  All points should be unit length.  Loops must
   // have at least 3 vertices (except for the "empty" and "full" loops, see
   // kEmpty and kFull).  This method may be called multiple times.
-  void Init(std::vector<S2Point> const& vertices);
+  void Init(const std::vector<S2Point>& vertices);
 
   // A special vertex chain of length 1 that creates an empty loop (i.e., a
   // loop with no edges that contains no points).  Example usage:
@@ -132,7 +132,7 @@ class S2Loop final : public S2Region {
   // coverings of "cell" and "S2Loop(cell)" will be different, because the
   // loop contains points on its boundary that actually belong to other cells
   // (i.e., the covering will include a layer of neighboring cells).
-  explicit S2Loop(S2Cell const& cell);
+  explicit S2Loop(const S2Cell& cell);
 
   ~S2Loop() override;
 
@@ -170,7 +170,7 @@ class S2Loop final : public S2Region {
   // vertex(n..2*n-1) is mapped to vertex(0..n-1), where n == num_vertices().
   //
   // REQUIRES: 0 <= i < 2 * num_vertices()
-  S2Point const& vertex(int i) const {
+  const S2Point& vertex(int i) const {
     DCHECK_GE(i, 0);
     DCHECK_LT(i, 2 * num_vertices());
     int j = i - num_vertices();
@@ -184,7 +184,7 @@ class S2Loop final : public S2Region {
   // vertex chain.
   //
   // REQUIRES: 0 <= i < 2 * num_vertices()
-  S2Point const& oriented_vertex(int i) const {
+  const S2Point& oriented_vertex(int i) const {
     DCHECK_GE(i, 0);
     DCHECK_LT(i, 2 * num_vertices());
     int j = i - num_vertices();
@@ -268,47 +268,47 @@ class S2Loop final : public S2Region {
 
   // Return the distance from the given point to the loop interior.  If the
   // loop is empty, return S1Angle::Infinity().  "x" should be unit length.
-  S1Angle GetDistance(S2Point const& x) const;
+  S1Angle GetDistance(const S2Point& x) const;
 
   // Return the distance from the given point to the loop boundary.  If the
   // loop is empty or full, return S1Angle::Infinity() (since the loop has no
   // boundary).  "x" should be unit length.
-  S1Angle GetDistanceToBoundary(S2Point const& x) const;
+  S1Angle GetDistanceToBoundary(const S2Point& x) const;
 
   // If the given point is contained by the loop, return it.  Otherwise return
   // the closest point on the loop boundary.  If the loop is empty, return the
   // input argument.  Note that the result may or may not be contained by the
   // loop.  "x" should be unit length.
-  S2Point Project(S2Point const& x) const;
+  S2Point Project(const S2Point& x) const;
 
   // Return the closest point on the loop boundary to the given point.  If the
   // loop is empty or full, return the input argument (since the loop has no
   // boundary).  "x" should be unit length.
-  S2Point ProjectToBoundary(S2Point const& x) const;
+  S2Point ProjectToBoundary(const S2Point& x) const;
 
   // Return true if the region contained by this loop is a superset of the
   // region contained by the given other loop.
-  bool Contains(S2Loop const* b) const;
+  bool Contains(const S2Loop* b) const;
 
   // Return true if the region contained by this loop intersects the region
   // contained by the given other loop.
-  bool Intersects(S2Loop const* b) const;
+  bool Intersects(const S2Loop* b) const;
 
   // Return true if two loops have the same vertices in the same linear order
   // (i.e., cyclic rotations are not allowed).
-  bool Equals(S2Loop const* b) const;
+  bool Equals(const S2Loop* b) const;
 
   // Return true if two loops have the same boundary.  This is true if and
   // only if the loops have the same vertices in the same cyclic order (i.e.,
   // the vertices may be cyclically rotated).  The empty and full loops are
   // considered to have different boundaries.
-  bool BoundaryEquals(S2Loop const* b) const;
+  bool BoundaryEquals(const S2Loop* b) const;
 
   // Return true if two loops have the same boundary except for vertex
   // perturbations.  More precisely, the vertices in the two loops must be in
   // the same cyclic order, and corresponding vertex pairs must be separated
   // by no more than "max_error".
-  bool BoundaryApproxEquals(S2Loop const& b,
+  bool BoundaryApproxEquals(const S2Loop& b,
                             S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   // Return true if the two loop boundaries are within "max_error" of each
@@ -319,7 +319,7 @@ class S2Loop final : public S2Region {
   // testing whether it is possible to drive two cars all the way around the
   // two loops such that no car ever goes backward and the cars are always
   // within "max_error" of each other.
-  bool BoundaryNear(S2Loop const& b,
+  bool BoundaryNear(const S2Loop& b,
                     S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   // This method computes the oriented surface integral of some quantity f(x)
@@ -347,13 +347,13 @@ class S2Loop final : public S2Region {
   // Also requires that the default constructor for T must initialize the
   // value to zero.  (This is true for built-in types such as "double".)
   template <class T>
-  T GetSurfaceIntegral(T f_tri(S2Point const&, S2Point const&, S2Point const&))
+  T GetSurfaceIntegral(T f_tri(const S2Point&, const S2Point&, const S2Point&))
       const;
 
   // Constructs a regular polygon with the given number of vertices, all
   // located on a circle of the specified radius around "center".  The radius
   // is the actual distance from "center" to each vertex.
-  static std::unique_ptr<S2Loop> MakeRegularLoop(S2Point const& center,
+  static std::unique_ptr<S2Loop> MakeRegularLoop(const S2Point& center,
                                                  S1Angle radius,
                                                  int num_vertices);
 
@@ -361,7 +361,7 @@ class S2Loop final : public S2Region {
   // around the z-axis of the given coordinate frame, with the first vertex in
   // the direction of the positive x-axis.  (This allows the loop to be
   // rotated for testing purposes.)
-  static std::unique_ptr<S2Loop> MakeRegularLoop(Matrix3x3_d const& frame,
+  static std::unique_ptr<S2Loop> MakeRegularLoop(const Matrix3x3_d& frame,
                                                  S1Angle radius,
                                                  int num_vertices);
 
@@ -379,11 +379,11 @@ class S2Loop final : public S2Region {
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override { return bound_; }
 
-  bool Contains(S2Cell const& cell) const override;
-  bool MayIntersect(S2Cell const& cell) const override;
+  bool Contains(const S2Cell& cell) const override;
+  bool MayIntersect(const S2Cell& cell) const override;
 
   // The point 'p' does not need to be normalized.
-  bool Contains(S2Point const& p) const override;
+  bool Contains(const S2Point& p) const override;
 
   // Appends a serialized representation of the S2Loop to "encoder".
   //
@@ -416,7 +416,7 @@ class S2Loop final : public S2Region {
   // The loops must meet all the S2Polygon requirements; for example this
   // implies that their boundaries may not cross or have any shared edges
   // (although they may have shared vertices).
-  bool ContainsNested(S2Loop const* b) const;
+  bool ContainsNested(const S2Loop* b) const;
 
   // Return +1 if A contains the boundary of B, -1 if A excludes the boundary
   // of B, and 0 if the boundaries of A and B cross.  Shared edges are handled
@@ -433,7 +433,7 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: neither loop is empty.
   // REQUIRES: if b->is_full(), then !b->is_hole().
-  int CompareBoundary(S2Loop const* b) const;
+  int CompareBoundary(const S2Loop* b) const;
 
   // Given two loops whose boundaries do not cross (see CompareBoundary),
   // return true if A contains the boundary of B.  If "reverse_b" is true, the
@@ -443,7 +443,7 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: neither loop is empty.
   // REQUIRES: if b->is_full(), then reverse_b == false.
-  bool ContainsNonCrossingBoundary(S2Loop const* b, bool reverse_b) const;
+  bool ContainsNonCrossingBoundary(const S2Loop* b, bool reverse_b) const;
 
   // Wrapper class for indexing a loop (see S2ShapeIndex).  Once this object
   // is inserted into an S2ShapeIndex it is owned by that index, and will be
@@ -457,10 +457,10 @@ class S2Loop final : public S2Region {
     Shape() : loop_(nullptr) {}  // Must call Init().
 
     // Initialize the shape.  Does not take ownership of "loop".
-    explicit Shape(S2Loop const* loop) { Init(loop); }
-    void Init(S2Loop const* loop) { loop_ = loop; }
+    explicit Shape(const S2Loop* loop) { Init(loop); }
+    void Init(const S2Loop* loop) { loop_ = loop; }
 
-    S2Loop const* loop() const { return loop_; }
+    const S2Loop* loop() const { return loop_; }
 
     // S2Shape interface:
     int num_edges() const final {
@@ -484,7 +484,7 @@ class S2Loop final : public S2Region {
     }
 
    private:
-    S2Loop const* loop_;
+    const S2Loop* loop_;
   };
 
   // Like Shape, except that the S2Loop is automatically deleted when this
@@ -493,16 +493,15 @@ class S2Loop final : public S2Region {
   class OwningShape : public Shape {
    public:
     OwningShape() {}  // Must call Init().
-    explicit OwningShape(std::unique_ptr<S2Loop const> loop)
+    explicit OwningShape(std::unique_ptr<const S2Loop> loop)
         : Shape(loop.release()) {
     }
-    void Init(std::unique_ptr<S2Loop const> loop) {
+    void Init(std::unique_ptr<const S2Loop> loop) {
       Shape::Init(loop.release());
     }
     ~OwningShape() override { delete loop(); }
   };
 #endif  // SWIG
-
 
  private:
   // All of the following need access to contains_origin().  Possibly this
@@ -516,7 +515,7 @@ class S2Loop final : public S2Region {
 
   // Internal copy constructor used only by Clone() that makes a deep copy of
   // its argument.
-  S2Loop(S2Loop const& src);
+  S2Loop(const S2Loop& src);
 
   // Return true if this loop contains S2::Origin().
   bool contains_origin() const { return origin_inside_; }
@@ -533,7 +532,7 @@ class S2Loop final : public S2Region {
 
   // A version of Contains(S2Point) that does not use the S2ShapeIndex.
   // Used by the S2Polygon implementation.
-  bool BruteForceContains(S2Point const& p) const;
+  bool BruteForceContains(const S2Point& p) const;
 
   // Like FindValidationError(), but skips any checks that would require
   // building the S2ShapeIndex (i.e., self-intersection tests).  This is used
@@ -560,7 +559,7 @@ class S2Loop final : public S2Region {
   // GetXYZFaceSiTiVertices.
   //
   // REQUIRES: the loop is initialized and valid.
-  void EncodeCompressed(Encoder* encoder, S2XYZFaceSiTi const* vertices,
+  void EncodeCompressed(Encoder* encoder, const S2XYZFaceSiTi* vertices,
                         int snap_level) const;
 
   // Decode a loop encoded with EncodeCompressed. The parameters must be the
@@ -574,7 +573,7 @@ class S2Loop final : public S2Region {
 
   // Given an iterator that is already positioned at the S2ShapeIndexCell
   // containing "p", returns Contains(p).
-  bool Contains(S2ShapeIndex::Iterator const& it, S2Point const& p) const;
+  bool Contains(const S2ShapeIndex::Iterator& it, const S2Point& p) const;
 
   // Return true if the loop boundary intersects "target".  It may also
   // return true when the loop boundary does not intersect "target" but
@@ -582,8 +581,8 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: it.id().contains(target.id())
   // [This condition is true whenever it.Locate(target) returns INDEXED.]
-  bool BoundaryApproxIntersects(S2ShapeIndex::Iterator const& it,
-                                S2Cell const& target) const;
+  bool BoundaryApproxIntersects(const S2ShapeIndex::Iterator& it,
+                                const S2Cell& target) const;
 
   // Return an index "first" and a direction "dir" (either +1 or -1) such that
   // the vertex sequence (first, first+dir, ..., first+(n-1)*dir) does not
@@ -595,7 +594,7 @@ class S2Loop final : public S2Region {
 
   // Return the index of a vertex at point "p", or -1 if not found.
   // The return value is in the range 1..num_vertices_ if found.
-  int FindVertex(S2Point const& p) const;
+  int FindVertex(const S2Point& p) const;
 
   // This method checks all edges of loop A for intersection against all edges
   // of loop B.  If there is any shared vertex, the wedges centered at this
@@ -611,12 +610,12 @@ class S2Loop final : public S2Region {
   //
   // See Contains(), Intersects() and CompareBoundary() for the three uses of
   // this function.
-  static bool HasCrossingRelation(S2Loop const& a, S2Loop const& b,
+  static bool HasCrossingRelation(const S2Loop& a, const S2Loop& b,
                                   LoopRelation* relation);
 
   // When the loop is modified (Invert(), or Init() called again) then the
-  // indexing structures need to be deleted as they become invalid.
-  void ResetIndex();
+  // indexing structures need to be cleared since they become invalid.
+  void ClearIndex();
 
   // The nesting depth, if this field belongs to an S2Polygon.  We define it
   // here to optimize field packing.
@@ -657,7 +656,7 @@ class S2Loop final : public S2Region {
 
   // SWIG doesn't understand "= delete".
 #ifndef SWIG
-  void operator=(S2Loop const&) = delete;
+  void operator=(const S2Loop&) = delete;
 #endif  // SWIG
 };
 
@@ -695,8 +694,8 @@ inline bool S2Loop::is_empty_or_full() const {
 // in the .h file.
 
 template <class T>
-T S2Loop::GetSurfaceIntegral(T f_tri(S2Point const&, S2Point const&,
-                                     S2Point const&)) const {
+T S2Loop::GetSurfaceIntegral(T f_tri(const S2Point&, const S2Point&,
+                                     const S2Point&)) const {
   // We sum "f_tri" over a collection T of oriented triangles, possibly
   // overlapping.  Let the sign of a triangle be +1 if it is CCW and -1
   // otherwise, and let the sign of a point "x" be the sum of the signs of the
@@ -727,7 +726,7 @@ T S2Loop::GetSurfaceIntegral(T f_tri(S2Point const&, S2Point const&,
   // The exact value is fairly arbitrary since it depends on the stability of
   // the "f_tri" function.  The value below is quite conservative but could be
   // reduced further if desired.
-  static double const kMaxLength = M_PI - 1e-5;
+  static const double kMaxLength = M_PI - 1e-5;
 
   // The default constructor for T must initialize the value to zero.
   // (This is true for built-in types such as "double".)

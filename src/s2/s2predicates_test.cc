@@ -126,22 +126,22 @@ class SignTest : public testing::Test {
   // ordering (starting at an arbitrary fixed direction).
   class LessCCW {
    public:
-    LessCCW(S2Point const& origin, S2Point const& start)
+    LessCCW(const S2Point& origin, const S2Point& start)
         : origin_(origin), start_(start) {
     }
-    bool operator()(S2Point const& a, S2Point const& b) const {
+    bool operator()(const S2Point& a, const S2Point& b) const {
       // OrderedCCW() acts like "<=", so we need to invert the comparison.
       return !s2pred::OrderedCCW(start_, b, a, origin_);
     }
    private:
-    S2Point const origin_;
-    S2Point const start_;
+    const S2Point origin_;
+    const S2Point start_;
   };
 
   // Given a set of points with no duplicates, first remove "origin" from
   // "points" (if it exists) and then sort the remaining points in CCW order
   // around "origin" putting the result in "sorted".
-  static void SortCCW(vector<S2Point> const& points, S2Point const& origin,
+  static void SortCCW(const vector<S2Point>& points, const S2Point& origin,
                       vector<S2Point>* sorted) {
     // Make a copy of the points with "origin" removed.
     sorted->clear();
@@ -157,11 +157,11 @@ class SignTest : public testing::Test {
   // index "start" of a point A, count the number of CCW triangles OAB over
   // all sorted points B not equal to A.  Also check that the results of the
   // CCW tests are consistent with the hypothesis that the points are sorted.
-  static int CountCCW(vector<S2Point> const& sorted, S2Point const& origin,
+  static int CountCCW(const vector<S2Point>& sorted, const S2Point& origin,
                       int start) {
     int num_ccw = 0;
     int last_sign = 1;
-    int const n = sorted.size();
+    const int n = sorted.size();
     for (int j = 1; j < n; ++j) {
       int sign = Sign(origin, sorted[start], sorted[(start + j) % n]);
       EXPECT_NE(0, sign);
@@ -178,9 +178,9 @@ class SignTest : public testing::Test {
 
   // Test exhaustively whether the points in "sorted" are sorted circularly
   // CCW around "origin".
-  static void TestCCW(vector<S2Point> const& sorted,
-                      S2Point const& origin) {
-    int const n = sorted.size();
+  static void TestCCW(const vector<S2Point>& sorted,
+                      const S2Point& origin) {
+    const int n = sorted.size();
     int total_num_ccw = 0;
     int last_num_ccw = CountCCW(sorted, origin, n - 1);
     for (int start = 0; start < n; ++start) {
@@ -196,14 +196,14 @@ class SignTest : public testing::Test {
     EXPECT_EQ(n * (n-1) / 2, total_num_ccw);
   }
 
-  static void AddNormalized(S2Point const& a, vector<S2Point>* points) {
+  static void AddNormalized(const S2Point& a, vector<S2Point>* points) {
     points->push_back(a.Normalize());
   }
 
   // Add two points A1 and A2 that are slightly offset from A along the
   // tangent toward B, and such that A, A1, and A2 are exactly collinear
   // (i.e. even with infinite-precision arithmetic).
-  static void AddTangentPoints(S2Point const& a, S2Point const& b,
+  static void AddTangentPoints(const S2Point& a, const S2Point& b,
                                vector<S2Point>* points) {
     Vector3_d dir = S2::RobustCrossProd(a, b).CrossProd(a).Normalize();
     if (dir == S2Point(0, 0, 0)) return;
@@ -277,8 +277,8 @@ class SignTest : public testing::Test {
 
   // Sort the points around the given origin, and then do some consistency
   // checks to verify that they are actually sorted.
-  static void SortAndTest(vector<S2Point> const& points,
-                          S2Point const& origin) {
+  static void SortAndTest(const vector<S2Point>& points,
+                          const S2Point& origin) {
     vector<S2Point> sorted;
     SortCCW(points, origin, &sorted);
     TestCCW(sorted, origin);
@@ -313,7 +313,7 @@ class SignTest : public testing::Test {
 
 TEST_F(SignTest, StressTest) {
   // The run time of this test is *cubic* in the parameter below.
-  static int const kNumPointsPerCircle = 20;
+  static const int kNumPointsPerCircle = 20;
 
   // This test is randomized, so it is beneficial to run it several times.
   for (int iter = 0; iter < 3; ++iter) {
@@ -343,7 +343,7 @@ class StableSignTest : public testing::Test {
   // the determinant sign of a triangle A, B, C consisting of three points
   // that are as collinear as possible and spaced the given distance apart.
   double GetFailureRate(double km) {
-    int const kIters = 1000;
+    const int kIters = 1000;
     int failure_count = 0;
     double m = tan(S2Testing::KmToAngle(km).radians());
     for (int iter = 0; iter < kIters; ++iter) {
@@ -384,8 +384,8 @@ TEST_F(StableSignTest, FailureRate) {
 //
 // This method is intended specifically for checking the cases where
 // symbolic perturbations are needed to break ties.
-static void CheckSymbolicSign(int expected, S2Point const& a,
-                              S2Point const& b, S2Point const& c) {
+static void CheckSymbolicSign(int expected, const S2Point& a,
+                              const S2Point& b, const S2Point& c) {
   CHECK_LT(a, b);
   CHECK_LT(b, c);
   CHECK_EQ(0, a.DotProd(b.CrossProd(c)));
@@ -463,7 +463,7 @@ TEST(Sign, SymbolicPerturbationCodeCoverage) {
 
 enum Precision { DOUBLE, LONG_DOUBLE, EXACT, SYMBOLIC, NUM_PRECISIONS };
 
-static char const* kPrecisionNames[] = {
+static const char* kPrecisionNames[] = {
   "double", "long double", "exact", "symbolic"
 };
 
@@ -512,8 +512,8 @@ static S2Point ChoosePoint() {
 class Sin2Distances {
  public:
   template <class T>
-  static int Triage(Vector3<T> const& x,
-                    Vector3<T> const& a, Vector3<T> const& b) {
+  static int Triage(const Vector3<T>& x,
+                    const Vector3<T>& a, const Vector3<T>& b) {
     return TriageCompareSin2Distances(x, a, b);
   }
 };
@@ -521,8 +521,8 @@ class Sin2Distances {
 class CosDistances {
  public:
   template <class T>
-  static int Triage(Vector3<T> const& x,
-                    Vector3<T> const& a, Vector3<T> const& b) {
+  static int Triage(const Vector3<T>& x,
+                    const Vector3<T>& a, const Vector3<T>& b) {
     return TriageCompareCosDistances(x, a, b);
   }
 };
@@ -531,8 +531,8 @@ class CosDistances {
 class MinusSin2Distances {
  public:
   template <class T>
-  static int Triage(Vector3<T> const& x,
-                    Vector3<T> const& a, Vector3<T> const& b) {
+  static int Triage(const Vector3<T>& x,
+                    const Vector3<T>& a, const Vector3<T>& b) {
     return -TriageCompareSin2Distances(-x, a, b);
   }
 };
@@ -639,8 +639,8 @@ TEST(CompareDistances, Coverage) {
 // result at the next higher level of precision.  Returns the minimum
 // precision that yielded a non-zero result.
 template <class CompareDistancesWrapper>
-Precision TestCompareDistancesConsistency(S2Point const& x, S2Point const& a,
-                                          S2Point const& b) {
+Precision TestCompareDistancesConsistency(const S2Point& x, const S2Point& a,
+                                          const S2Point& b) {
   int dbl_sign = CompareDistancesWrapper::Triage(x, a, b);
   int ld_sign = CompareDistancesWrapper::Triage(ToLD(x), ToLD(a), ToLD(b));
   int exact_sign = ExactCompareDistances(ToExact(x), ToExact(a), ToExact(b));
@@ -715,7 +715,7 @@ TEST(CompareDistances, Consistency) {
 class Sin2Distance {
  public:
   template <class T>
-  static int Triage(Vector3<T> const& x, Vector3<T> const& y, S1ChordAngle r) {
+  static int Triage(const Vector3<T>& x, const Vector3<T>& y, S1ChordAngle r) {
     return TriageCompareSin2Distance(x, y, implicit_cast<T>(r.length2()));
   }
 };
@@ -723,7 +723,7 @@ class Sin2Distance {
 class CosDistance {
  public:
   template <class T>
-  static int Triage(Vector3<T> const& x, Vector3<T> const& y, S1ChordAngle r) {
+  static int Triage(const Vector3<T>& x, const Vector3<T>& y, S1ChordAngle r) {
     return TriageCompareCosDistance(x, y, implicit_cast<T>(r.length2()));
   }
 };
@@ -808,7 +808,7 @@ TEST(CompareDistance, Coverage) {
 // result at the next higher level of precision.  Returns the minimum
 // precision that yielded a non-zero result.
 template <class CompareDistanceWrapper>
-Precision TestCompareDistanceConsistency(S2Point const& x, S2Point const& y,
+Precision TestCompareDistanceConsistency(const S2Point& x, const S2Point& y,
                                          S1ChordAngle r) {
   int dbl_sign = CompareDistanceWrapper::Triage(x, y, r);
   int ld_sign = CompareDistanceWrapper::Triage(ToLD(x), ToLD(y), r);
@@ -926,7 +926,7 @@ TEST(CompareEdgeDistance, Coverage) {
 // result at the next higher level of precision.  Returns the minimum
 // precision that yielded a non-zero result.
 Precision TestCompareEdgeDistanceConsistency(
-    S2Point const& x, S2Point const& a0, S2Point const& a1, S1ChordAngle r) {
+    const S2Point& x, const S2Point& a0, const S2Point& a1, S1ChordAngle r) {
   int dbl_sign = TriageCompareEdgeDistance(x, a0, a1, r.length2());
   int ld_sign = TriageCompareEdgeDistance(ToLD(x), ToLD(a0), ToLD(a1),
                                           ToLD(r.length2()));
@@ -1036,8 +1036,8 @@ TEST(CompareEdgeDirections, Coverage) {
 // result at the next higher level of precision.  Returns the minimum
 // precision that yielded a non-zero result.
 Precision TestCompareEdgeDirectionsConsistency(
-    S2Point const& a0, S2Point const& a1,
-    S2Point const& b0, S2Point const& b1) {
+    const S2Point& a0, const S2Point& a1,
+    const S2Point& b0, const S2Point& b1) {
   int dbl_sign = TriageCompareEdgeDirections(a0, a1, b0, b1);
   int ld_sign = TriageCompareEdgeDirections(ToLD(a0), ToLD(a1),
                                             ToLD(b0), ToLD(b1));
@@ -1172,8 +1172,8 @@ TEST(EdgeCircumcenterSign, Coverage) {
 // result at the next higher level of precision.  Returns the minimum
 // precision that yielded a non-zero result.
 Precision TestEdgeCircumcenterSignConsistency(
-    S2Point const& x0, S2Point const& x1,
-    S2Point const& a, S2Point const& b, S2Point const& c) {
+    const S2Point& x0, const S2Point& x1,
+    const S2Point& a, const S2Point& b, const S2Point& c) {
   int abc_sign = Sign(a, b, c);
   int dbl_sign = TriageEdgeCircumcenterSign(x0, x1, a, b, c, abc_sign);
   int ld_sign = TriageEdgeCircumcenterSign(
@@ -1359,7 +1359,7 @@ TEST(VoronoiSiteExclusion, Coverage) {
 // result at the next higher level of precision.  Returns the minimum
 // precision that yielded a non-zero result.
 Precision TestVoronoiSiteExclusionConsistency(
-    S2Point const& a, S2Point const& b, S2Point const& x0, S2Point const& x1,
+    const S2Point& a, const S2Point& b, const S2Point& x0, const S2Point& x1,
     S1ChordAngle r) {
   constexpr Excluded UNCERTAIN = Excluded::UNCERTAIN;
 

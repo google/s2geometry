@@ -31,8 +31,8 @@ using std::min;
 
 namespace S2 {
 
-double GetDistanceFraction(S2Point const& x,
-                             S2Point const& a0, S2Point const& a1) {
+double GetDistanceFraction(const S2Point& x,
+                             const S2Point& a0, const S2Point& a1) {
   DCHECK_NE(a0, a1);
   double d0 = x.Angle(a0);
   double d1 = x.Angle(a1);
@@ -40,7 +40,7 @@ double GetDistanceFraction(S2Point const& x,
 }
 
 S2Point InterpolateAtDistance(S1Angle ax_angle,
-                              S2Point const& a, S2Point const& b) {
+                              const S2Point& a, const S2Point& b) {
   double ax = ax_angle.radians();
 
   DCHECK(S2::IsUnitLength(a));
@@ -61,7 +61,7 @@ S2Point InterpolateAtDistance(S1Angle ax_angle,
   return (cos(ax) * a + (sin(ax) / tangent.Norm()) * tangent).Normalize();
 }
 
-S2Point Interpolate(double t, S2Point const& a, S2Point const& b) {
+S2Point Interpolate(double t, const S2Point& a, const S2Point& b) {
   if (t == 0) return a;
   if (t == 1) return b;
   S1Angle ab(a, b);
@@ -80,7 +80,7 @@ S2Point Interpolate(double t, S2Point const& a, S2Point const& b) {
 // duplication.
 template <bool always_update>
 inline bool AlwaysUpdateMinInteriorDistance(
-    S2Point const& x, S2Point const& a, S2Point const& b,
+    const S2Point& x, const S2Point& a, const S2Point& b,
     double xa2, double xb2, S1ChordAngle* min_dist) {
   DCHECK(S2::IsUnitLength(x) && S2::IsUnitLength(a) && S2::IsUnitLength(b));
   DCHECK_EQ(xa2, (x-a).Norm2());
@@ -158,8 +158,8 @@ inline bool AlwaysUpdateMinInteriorDistance(
 // AlwaysUpdateMinDistance<false> does not.  This optimization increases the
 // speed of GetDistance() by about 10% without creating code duplication.
 template <bool always_update>
-inline bool AlwaysUpdateMinDistance(S2Point const& x,
-                                    S2Point const& a, S2Point const& b,
+inline bool AlwaysUpdateMinDistance(const S2Point& x,
+                                    const S2Point& a, const S2Point& b,
                                     S1ChordAngle* min_dist) {
   DCHECK(S2::IsUnitLength(x) && S2::IsUnitLength(a) && S2::IsUnitLength(b));
 
@@ -177,19 +177,19 @@ inline bool AlwaysUpdateMinDistance(S2Point const& x,
   return true;
 }
 
-S1Angle GetDistance(S2Point const& x, S2Point const& a, S2Point const& b) {
+S1Angle GetDistance(const S2Point& x, const S2Point& a, const S2Point& b) {
   S1ChordAngle min_dist;
   AlwaysUpdateMinDistance<true>(x, a, b, &min_dist);
   return min_dist.ToAngle();
 }
 
-bool UpdateMinDistance(S2Point const& x, S2Point const& a, S2Point const& b,
+bool UpdateMinDistance(const S2Point& x, const S2Point& a, const S2Point& b,
                        S1ChordAngle* min_dist) {
   return AlwaysUpdateMinDistance<false>(x, a, b, min_dist);
 }
 
-bool UpdateMinInteriorDistance(S2Point const& x,
-                               S2Point const& a, S2Point const& b,
+bool UpdateMinInteriorDistance(const S2Point& x,
+                               const S2Point& a, const S2Point& b,
                                S1ChordAngle* min_dist) {
   double xa2 = (x-a).Norm2(), xb2 = (x-b).Norm2();
   return AlwaysUpdateMinInteriorDistance<false>(x, a, b, xa2, xb2, min_dist);
@@ -223,8 +223,8 @@ double GetUpdateMinDistanceMaxError(S1ChordAngle dist) {
              dist.GetS2PointConstructorMaxError());
 }
 
-S2Point Project(S2Point const& x, S2Point const& a, S2Point const& b,
-                Vector3_d const& a_cross_b) {
+S2Point Project(const S2Point& x, const S2Point& a, const S2Point& b,
+                const Vector3_d& a_cross_b) {
   DCHECK(S2::IsUnitLength(a));
   DCHECK(S2::IsUnitLength(b));
   DCHECK(S2::IsUnitLength(x));
@@ -240,13 +240,13 @@ S2Point Project(S2Point const& x, S2Point const& a, S2Point const& b,
   return ((x - a).Norm2() <= (x - b).Norm2()) ? a : b;
 }
 
-S2Point Project(S2Point const& x, S2Point const& a, S2Point const& b) {
+S2Point Project(const S2Point& x, const S2Point& a, const S2Point& b) {
   return Project(x, a, b, S2::RobustCrossProd(a, b));
 }
 
 bool UpdateEdgePairMinDistance(
-    S2Point const& a0, S2Point const& a1,
-    S2Point const& b0, S2Point const& b1,
+    const S2Point& a0, const S2Point& a1,
+    const S2Point& b0, const S2Point& b1,
     S1ChordAngle* min_dist) {
   if (*min_dist == S1ChordAngle::Zero()) {
     return false;
@@ -268,8 +268,8 @@ bool UpdateEdgePairMinDistance(
 }
 
 std::pair<S2Point, S2Point> GetEdgePairClosestPoints(
-      S2Point const& a0, S2Point const& a1,
-      S2Point const& b0, S2Point const& b1) {
+      const S2Point& a0, const S2Point& a1,
+      const S2Point& b0, const S2Point& b1) {
   if (S2::CrossingSign(a0, a1, b0, b1) > 0) {
     S2Point x = S2::GetIntersection(a0, a1, b0, b1);
     return std::make_pair(x, x);
@@ -291,8 +291,8 @@ std::pair<S2Point, S2Point> GetEdgePairClosestPoints(
   }
 }
 
-bool IsEdgeBNearEdgeA(S2Point const& a0, S2Point const& a1,
-                      S2Point const& b0, S2Point const& b1,
+bool IsEdgeBNearEdgeA(const S2Point& a0, const S2Point& a1,
+                      const S2Point& b0, const S2Point& b1,
                       S1Angle tolerance) {
   DCHECK_LT(tolerance.radians(), M_PI / 2);
   DCHECK_GT(tolerance.radians(), 0);
@@ -304,8 +304,8 @@ bool IsEdgeBNearEdgeA(S2Point const& a0, S2Point const& a1,
   // containing them.
 
   Vector3_d a_ortho = S2::RobustCrossProd(a0, a1).Normalize();
-  S2Point const a_nearest_b0 = Project(b0, a0, a1, a_ortho);
-  S2Point const a_nearest_b1 = Project(b1, a0, a1, a_ortho);
+  const S2Point a_nearest_b0 = Project(b0, a0, a1, a_ortho);
+  const S2Point a_nearest_b1 = Project(b1, a0, a1, a_ortho);
   // If a_nearest_b0 and a_nearest_b1 have opposite orientation from a0 and a1,
   // we invert a_ortho so that it points in the same direction as a_nearest_b0 x
   // a_nearest_b1.  This helps us handle the case where A and B are oppositely
@@ -316,8 +316,8 @@ bool IsEdgeBNearEdgeA(S2Point const& a0, S2Point const& a1,
 
   // To check if all points on B are within tolerance of A, we first check to
   // see if the endpoints of B are near A.  If they are not, B is not near A.
-  S1Angle const b0_distance(b0, a_nearest_b0);
-  S1Angle const b1_distance(b1, a_nearest_b1);
+  const S1Angle b0_distance(b0, a_nearest_b0);
+  const S1Angle b1_distance(b1, a_nearest_b1);
   if (b0_distance > tolerance || b1_distance > tolerance)
     return false;
 
@@ -327,8 +327,8 @@ bool IsEdgeBNearEdgeA(S2Point const& a0, S2Point const& a1,
   // already know that b0 and b1 are close to A, and S2Edges are all shorter
   // than 180 degrees).  The angle between the planes containing circ(A) and
   // circ(B) is the angle between their normal vectors.
-  Vector3_d const b_ortho = S2::RobustCrossProd(b0, b1).Normalize();
-  S1Angle const planar_angle(a_ortho, b_ortho);
+  const Vector3_d b_ortho = S2::RobustCrossProd(b0, b1).Normalize();
+  const S1Angle planar_angle(a_ortho, b_ortho);
   if (planar_angle <= tolerance)
     return true;
 

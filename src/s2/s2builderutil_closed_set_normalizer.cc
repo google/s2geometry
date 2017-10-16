@@ -42,7 +42,7 @@ using VertexId = Graph::VertexId;
 namespace s2builderutil {
 
 ClosedSetNormalizer::ClosedSetNormalizer(
-    Options const& options, vector<GraphOptions> const& graph_options_out)
+    const Options& options, const vector<GraphOptions>& graph_options_out)
     : options_(options),
       graph_options_out_(graph_options_out),
       graph_options_in_(graph_options_out_),
@@ -69,8 +69,8 @@ ClosedSetNormalizer::ClosedSetNormalizer(
   graph_options_in_[2].set_sibling_pairs(SiblingPairs::DISCARD_EXCESS);
 }
 
-vector<Graph> const& ClosedSetNormalizer::Run(
-    vector<Graph> const& g, S2Error* error) {
+const vector<Graph>& ClosedSetNormalizer::Run(
+    const vector<Graph>& g, S2Error* error) {
   // Ensure that the input graphs were built with our requested options.
   for (int dim = 0; dim < 3; ++dim) {
     DCHECK(g[dim].options() == graph_options_in_[dim]);
@@ -137,19 +137,19 @@ vector<Graph> const& ClosedSetNormalizer::Run(
 
 // Helper function that advances to the next edge in the given graph,
 // returning a sentinel value once all edges are exhausted.
-inline Edge ClosedSetNormalizer::Advance(Graph const& g, EdgeId* e) const {
+inline Edge ClosedSetNormalizer::Advance(const Graph& g, EdgeId* e) const {
   return (++*e == g.num_edges()) ? sentinel_ : g.edge(*e);
 }
 
 // Helper function that advances to the next incoming edge in the given graph,
 // returning a sentinel value once all edges are exhausted.
 inline Edge ClosedSetNormalizer::AdvanceIncoming(
-    Graph const& g, vector<EdgeId> const& in_edges, int* i) const {
+    const Graph& g, const vector<EdgeId>& in_edges, int* i) const {
   return ((++*i == in_edges.size()) ? sentinel_ :
           Graph::reverse(g.edge(in_edges[*i])));
   }
 
-void ClosedSetNormalizer::NormalizeEdges(vector<Graph> const& g,
+void ClosedSetNormalizer::NormalizeEdges(const vector<Graph>& g,
                                          S2Error* error) {
   // Find the degenerate polygon edges and sibling pairs, and classify each
   // edge as belonging to either a shell or a hole.
@@ -214,7 +214,7 @@ void ClosedSetNormalizer::NormalizeEdges(vector<Graph> const& g,
   }
 }
 
-inline void ClosedSetNormalizer::AddEdge(int new_dim, Graph const& g,
+inline void ClosedSetNormalizer::AddEdge(int new_dim, const Graph& g,
                                          EdgeId e) {
   new_edges_[new_dim].push_back(g.edge(e));
   new_input_edge_ids_[new_dim].push_back(g.input_edge_id_set_id(e));
@@ -230,7 +230,7 @@ inline bool ClosedSetNormalizer::is_suppressed(VertexId v) const {
 // the process works:
 //
 //  - The returned layers are passed to a class (such as S2Builder or
-//    S2BoundaryOperation) that calls their Build methods.  We call these the
+//    S2BooleanOperation) that calls their Build methods.  We call these the
 //    "input layers" because they provide the input to ClosedSetNormalizer.
 //
 //  - When Build() is called on the first two layers, pointers to the
@@ -244,7 +244,7 @@ inline bool ClosedSetNormalizer::is_suppressed(VertexId v) const {
 class NormalizeClosedSetImpl {
  public:
   static LayerVector Create(LayerVector output_layers,
-                            ClosedSetNormalizer::Options const& options) {
+                            const ClosedSetNormalizer::Options& options) {
     using Impl = NormalizeClosedSetImpl;
     shared_ptr<Impl> impl(new Impl(std::move(output_layers), options));
     LayerVector result;
@@ -257,7 +257,7 @@ class NormalizeClosedSetImpl {
 
  private:
   NormalizeClosedSetImpl(LayerVector output_layers,
-                         ClosedSetNormalizer::Options const& options)
+                         const ClosedSetNormalizer::Options& options)
       : output_layers_(std::move(output_layers)),
         normalizer_(options, vector<GraphOptions>{
             output_layers_[0]->graph_options(),
@@ -269,14 +269,14 @@ class NormalizeClosedSetImpl {
 
   class DimensionLayer : public S2Builder::Layer {
    public:
-    DimensionLayer(int dimension, GraphOptions const& graph_options,
+    DimensionLayer(int dimension, const GraphOptions& graph_options,
                    shared_ptr<NormalizeClosedSetImpl> impl)
         : dimension_(dimension), graph_options_(graph_options),
           impl_(std::move(impl)) {}
 
     GraphOptions graph_options() const override { return graph_options_; }
 
-    void Build(Graph const& g, S2Error* error) override {
+    void Build(const Graph& g, S2Error* error) override {
       impl_->Build(dimension_, g, error);
     }
 
@@ -286,7 +286,7 @@ class NormalizeClosedSetImpl {
     shared_ptr<NormalizeClosedSetImpl> impl_;
   };
 
-  void Build(int dimension, Graph const& g, S2Error* error) {
+  void Build(int dimension, const Graph& g, S2Error* error) {
     // Errors are reported only on the last layer built.
     graphs_[dimension] = g;
     if (--graphs_left_ > 0) return;
@@ -305,7 +305,7 @@ class NormalizeClosedSetImpl {
 };
 
 LayerVector NormalizeClosedSet(LayerVector output_layers,
-                               ClosedSetNormalizer::Options const& options) {
+                               const ClosedSetNormalizer::Options& options) {
   return NormalizeClosedSetImpl::Create(std::move(output_layers), options);
 }
 

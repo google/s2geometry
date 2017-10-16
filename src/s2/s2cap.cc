@@ -66,23 +66,23 @@ S2Cap S2Cap::Complement() const {
   return S2Cap(-center_, S1ChordAngle::FromLength2(4 - radius_.length2()));
 }
 
-bool S2Cap::Contains(S2Cap const& other) const {
+bool S2Cap::Contains(const S2Cap& other) const {
   if (is_full() || other.is_empty()) return true;
   return radius_ >= S1ChordAngle(center_, other.center_) + other.radius_;
 }
 
-bool S2Cap::Intersects(S2Cap const& other) const {
+bool S2Cap::Intersects(const S2Cap& other) const {
   if (is_empty() || other.is_empty()) return false;
   return radius_ + other.radius_ >= S1ChordAngle(center_, other.center_);
 }
 
-bool S2Cap::InteriorIntersects(S2Cap const& other) const {
+bool S2Cap::InteriorIntersects(const S2Cap& other) const {
   // Make sure this cap has an interior and the other cap is non-empty.
   if (radius_.length2() <= 0 || other.is_empty()) return false;
   return radius_ + other.radius_ > S1ChordAngle(center_, other.center_);
 }
 
-void S2Cap::AddPoint(S2Point const& p) {
+void S2Cap::AddPoint(const S2Point& p) {
   // Compute the squared chord length, then convert it into a height.
   DCHECK(S2::IsUnitLength(p));
   if (is_empty()) {
@@ -96,7 +96,7 @@ void S2Cap::AddPoint(S2Point const& p) {
   }
 }
 
-void S2Cap::AddCap(S2Cap const& other) {
+void S2Cap::AddCap(const S2Cap& other) {
   if (is_empty()) {
     *this = other;
   } else {
@@ -113,7 +113,7 @@ S2Cap S2Cap::Expanded(S1Angle distance) const {
   return S2Cap(center_, radius_ + S1ChordAngle(distance));
 }
 
-S2Cap S2Cap::Union(S2Cap const& other) const {
+S2Cap S2Cap::Union(const S2Cap& other) const {
   if (radius_ < other.radius_) {
     return other.Union(*this);
   }
@@ -218,7 +218,7 @@ void S2Cap::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
   }
 }
 
-bool S2Cap::Intersects(S2Cell const& cell, S2Point const* vertices) const {
+bool S2Cap::Intersects(const S2Cell& cell, const S2Point* vertices) const {
   // Return true if this cap intersects any point of 'cell' excluding its
   // vertices (which are assumed to already have been checked).
 
@@ -263,7 +263,7 @@ bool S2Cap::Intersects(S2Cell const& cell, S2Point const* vertices) const {
   return false;
 }
 
-bool S2Cap::Contains(S2Cell const& cell) const {
+bool S2Cap::Contains(const S2Cell& cell) const {
   // If the cap does not contain all cell vertices, return false.
   // We check the vertices before taking the Complement() because we can't
   // accurately represent the complement of a very small cap (a height
@@ -279,7 +279,7 @@ bool S2Cap::Contains(S2Cell const& cell) const {
   return !Complement().Intersects(cell, vertices);
 }
 
-bool S2Cap::MayIntersect(S2Cell const& cell) const {
+bool S2Cap::MayIntersect(const S2Cell& cell) const {
   // If the cap contains any cell vertex, return true.
   S2Point vertices[4];
   for (int k = 0; k < 4; ++k) {
@@ -289,23 +289,23 @@ bool S2Cap::MayIntersect(S2Cell const& cell) const {
   return Intersects(cell, vertices);
 }
 
-bool S2Cap::Contains(S2Point const& p) const {
+bool S2Cap::Contains(const S2Point& p) const {
   DCHECK(S2::IsUnitLength(p));
   return S1ChordAngle(center_, p) <= radius_;
 }
 
-bool S2Cap::InteriorContains(S2Point const& p) const {
+bool S2Cap::InteriorContains(const S2Point& p) const {
   DCHECK(S2::IsUnitLength(p));
   return is_full() || S1ChordAngle(center_, p) < radius_;
 }
 
-bool S2Cap::operator==(S2Cap const& other) const {
+bool S2Cap::operator==(const S2Cap& other) const {
   return (center_ == other.center_ && radius_ == other.radius_) ||
          (is_empty() && other.is_empty()) ||
          (is_full() && other.is_full());
 }
 
-bool S2Cap::ApproxEquals(S2Cap const& other, S1Angle max_error_angle) const {
+bool S2Cap::ApproxEquals(const S2Cap& other, S1Angle max_error_angle) const {
   const double max_error = max_error_angle.radians();
   const double r2 = radius_.length2();
   const double other_r2 = other.radius_.length2();
@@ -317,7 +317,7 @@ bool S2Cap::ApproxEquals(S2Cap const& other, S1Angle max_error_angle) const {
          (other.is_full() && r2 >= 2 - max_error);
 }
 
-std::ostream& operator<<(std::ostream& os, S2Cap const& cap) {
+std::ostream& operator<<(std::ostream& os, const S2Cap& cap) {
   return os << "[Center=" << cap.center()
             << ", Radius=" << cap.GetRadius() << "]";
 }

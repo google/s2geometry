@@ -51,8 +51,8 @@ using PolylineType = S2PolylineVectorLayer::Options::PolylineType;
 
 namespace {
 
-void TestS2Polygon(vector<char const*> const& input_strs,
-                   char const* expected_str, EdgeType edge_type) {
+void TestS2Polygon(const vector<const char*>& input_strs,
+                   const char* expected_str, EdgeType edge_type) {
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder((S2Builder::Options()));
   S2Polygon output;
@@ -70,14 +70,14 @@ void TestS2Polygon(vector<char const*> const& input_strs,
             s2textformat::ToString(output));
 }
 
-void TestS2Polygon(vector<char const*> const& input_strs,
-                   char const* expected_str) {
+void TestS2Polygon(const vector<const char*>& input_strs,
+                   const char* expected_str) {
   TestS2Polygon(input_strs, expected_str, EdgeType::DIRECTED);
   TestS2Polygon(input_strs, expected_str, EdgeType::UNDIRECTED);
 }
 
-void TestS2PolygonUnchanged(char const* input_str) {
-  TestS2Polygon(vector<char const*>{input_str}, input_str);
+void TestS2PolygonUnchanged(const char* input_str) {
+  TestS2Polygon(vector<const char*>{input_str}, input_str);
 }
 
 TEST(S2PolygonLayer, NoLoops) {
@@ -142,7 +142,7 @@ TEST(S2PolygonLayer, DuplicateInputEdges) {
 // unchanged when the endpoints of an edge are swapped.
 using EdgeLabelMap = map<S2Point, set<int32>>;
 
-void AddPolylineWithLabels(S2Polyline const& polyline, EdgeType edge_type,
+void AddPolylineWithLabels(const S2Polyline& polyline, EdgeType edge_type,
                            int32 label_begin, S2Builder* builder,
                            EdgeLabelMap *edge_label_map) {
   for (int i = 0; i + 1 < polyline.num_vertices(); ++i) {
@@ -179,7 +179,7 @@ static void TestEdgeLabels(EdgeType edge_type) {
     ASSERT_EQ(expected_loop_sizes[i], label_set_ids[i].size());
     for (int j = 0; j < label_set_ids[i].size(); ++j) {
       S2Point key = output.loop(i)->vertex(j) + output.loop(i)->vertex(j + 1);
-      set<int32> const& expected_labels = edge_label_map[key];
+      const set<int32>& expected_labels = edge_label_map[key];
       ASSERT_EQ(expected_labels.size(),
                 label_set_lexicon.id_set(label_set_ids[i][j]).size());
       EXPECT_TRUE(std::equal(
@@ -279,20 +279,31 @@ TEST(IndexedS2PolygonLayer, AddsShape) {
   S2Builder builder((S2Builder::Options()));
   S2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolygonLayer>(&index));
-  string const& polygon_str = "0:0, 0:10, 10:0";
+  const string& polygon_str = "0:0, 0:10, 10:0";
   builder.AddPolygon(*s2textformat::MakePolygon(polygon_str));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   EXPECT_EQ(1, index.num_shape_ids());
-  S2Polygon const* polygon = down_cast<S2Polygon::Shape const*>(
+  const S2Polygon* polygon = down_cast<const S2Polygon::Shape*>(
       index.shape(0))->polygon();
   EXPECT_EQ(polygon_str, s2textformat::ToString(*polygon));
 }
 
+TEST(IndexedS2PolygonLayer, AddsEmptyShape) {
+  S2Builder builder((S2Builder::Options()));
+  S2ShapeIndex index;
+  builder.StartLayer(make_unique<IndexedS2PolygonLayer>(&index));
+  S2Polygon polygon;
+  builder.AddPolygon(polygon);
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  EXPECT_EQ(0, index.num_shape_ids());
+}
+
 void TestS2Polyline(
-    vector<char const*> const& input_strs,
-    char const* expected_str, EdgeType edge_type,
-    S2Builder::Options const& options = S2Builder::Options()) {
+    const vector<const char*>& input_strs,
+    const char* expected_str, EdgeType edge_type,
+    const S2Builder::Options& options = S2Builder::Options()) {
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder(options);
   S2Polyline output;
@@ -308,14 +319,14 @@ void TestS2Polyline(
 
 // Convenience function that tests both directed and undirected edges.
 void TestS2Polyline(
-    vector<char const*> const& input_strs, char const* expected_str,
-    S2Builder::Options const& options = S2Builder::Options()) {
+    const vector<const char*>& input_strs, const char* expected_str,
+    const S2Builder::Options& options = S2Builder::Options()) {
   TestS2Polyline(input_strs, expected_str, EdgeType::DIRECTED, options);
   TestS2Polyline(input_strs, expected_str, EdgeType::UNDIRECTED, options);
 }
 
-void TestS2PolylineUnchanged(char const* input_str) {
-  TestS2Polyline(vector<char const*>{input_str}, input_str);
+void TestS2PolylineUnchanged(const char* input_str) {
+  TestS2Polyline(vector<const char*>{input_str}, input_str);
 }
 
 TEST(S2PolylineLayer, NoEdges) {
@@ -448,23 +459,34 @@ TEST(IndexedS2PolylineLayer, AddsShape) {
   S2Builder builder((S2Builder::Options()));
   S2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolylineLayer>(&index));
-  string const& polyline_str = "0:0, 0:10";
+  const string& polyline_str = "0:0, 0:10";
   builder.AddPolyline(*s2textformat::MakePolyline(polyline_str));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   EXPECT_EQ(1, index.num_shape_ids());
-  S2Polyline const* polyline = down_cast<S2Polyline::Shape const*>(
+  const S2Polyline* polyline = down_cast<const S2Polyline::Shape*>(
       index.shape(0))->polyline();
   EXPECT_EQ(polyline_str, s2textformat::ToString(*polyline));
 }
 
+TEST(IndexedS2PolylineLayer, AddsEmptyShape) {
+  S2Builder builder((S2Builder::Options()));
+  S2ShapeIndex index;
+  builder.StartLayer(make_unique<IndexedS2PolylineLayer>(&index));
+  S2Polyline line;
+  builder.AddPolyline(line);
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  EXPECT_EQ(0, index.num_shape_ids());
+}
+
 void TestS2PolylineVector(
-    vector<char const*> const& input_strs,
-    vector<char const*> const& expected_strs,
+    const vector<const char*>& input_strs,
+    const vector<const char*>& expected_strs,
     EdgeType edge_type,
     S2PolylineVectorLayer::Options layer_options =  // by value
     S2PolylineVectorLayer::Options(),
-    S2Builder::Options const& builder_options = S2Builder::Options()) {
+    const S2Builder::Options& builder_options = S2Builder::Options()) {
   layer_options.set_edge_type(edge_type);
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder(builder_options);
@@ -477,7 +499,7 @@ void TestS2PolylineVector(
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   vector<string> output_strs;
-  for (auto const& polyline : output) {
+  for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
   EXPECT_EQ(strings::Join(expected_strs, "; "),
@@ -486,18 +508,18 @@ void TestS2PolylineVector(
 
 // Convenience function that tests both directed and undirected edges.
 void TestS2PolylineVector(
-    vector<char const*> const& input_strs,
-    vector<char const*> const& expected_strs,
-    S2PolylineVectorLayer::Options const& layer_options =
+    const vector<const char*>& input_strs,
+    const vector<const char*>& expected_strs,
+    const S2PolylineVectorLayer::Options& layer_options =
     S2PolylineVectorLayer::Options(),
-    S2Builder::Options const& builder_options = S2Builder::Options()) {
+    const S2Builder::Options& builder_options = S2Builder::Options()) {
   TestS2PolylineVector(input_strs, expected_strs, EdgeType::DIRECTED,
                        layer_options, builder_options);
   TestS2PolylineVector(input_strs, expected_strs, EdgeType::UNDIRECTED,
                        layer_options, builder_options);
 }
 
-void TestS2PolylineVectorUnchanged(vector<char const*> const& input_strs) {
+void TestS2PolylineVectorUnchanged(const vector<const char*>& input_strs) {
   TestS2PolylineVector(input_strs, input_strs);
 }
 
@@ -545,7 +567,7 @@ TEST(S2PolylineVectorLayer, MultipleIntersectingWalks) {
   // happens to pass for undirected edges as well.
   S2PolylineVectorLayer::Options layer_options;
   layer_options.set_polyline_type(PolylineType::WALK);
-  vector<char const*> input = {
+  vector<const char*> input = {
     "5:5, 5:6, 6:5, 5:5, 5:4, 5:3",
     "4:4, 5:5, 6:5, 5:6, 5:5, 5:6, 6:5, 5:5, 4:5",
     "3:5, 5:5, 5:6, 6:5, 5:5, 5:6, 6:6, 7:7",
@@ -559,7 +581,7 @@ TEST(S2PolylineVectorLayer, EarlyWalkTermination) {
   // building non-maximal polylines.
   S2PolylineVectorLayer::Options layer_options;
   layer_options.set_polyline_type(PolylineType::WALK);
-  vector<char const*> input = {
+  vector<const char*> input = {
     "0:1, 1:1",
     "1:0, 1:1, 1:2",
     "0:2, 1:2, 2:2",
@@ -577,7 +599,7 @@ TEST(S2PolylineVectorLayer, InputEdgeStartsMultipleLoops) {
       S2PolylineVectorLayer::Options::SiblingPairs::DISCARD);
   S2Builder::Options builder_options;
   builder_options.set_snap_function(s2builderutil::IntLatLngSnapFunction(7));
-  vector<char const*> input = {
+  vector<const char*> input = {
     "0:10, 0:0",
     "0:6, 1:6, 1:7, 0:7, 0:8",
     "0:8, 1:8, 1:9, 0:9, 0:10",
@@ -585,7 +607,7 @@ TEST(S2PolylineVectorLayer, InputEdgeStartsMultipleLoops) {
     "0:0, 1:0, 1:1, 0:1, 0:2",
     "0:4, 1:4, 1:5, 0:5, 0:6",
   };
-  vector<char const*> expected = {
+  vector<const char*> expected = {
     "0:1, 0:0, 1:0, 1:1, 0:1",
     "0:3, 0:2, 1:2, 1:3, 0:3",
     "0:5, 0:4, 1:4, 1:5, 0:5",
@@ -640,19 +662,19 @@ TEST(IndexedS2PolylineVectorLayer, AddsShapes) {
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   EXPECT_EQ(2, index.num_shape_ids());
-  S2Polyline const* polyline0 = down_cast<S2Polyline::Shape const*>(
+  const S2Polyline* polyline0 = down_cast<const S2Polyline::Shape*>(
       index.shape(0))->polyline();
-  S2Polyline const* polyline1 = down_cast<S2Polyline::Shape const*>(
+  const S2Polyline* polyline1 = down_cast<const S2Polyline::Shape*>(
       index.shape(1))->polyline();
   EXPECT_EQ(polyline0_str, s2textformat::ToString(*polyline0));
   EXPECT_EQ(polyline1_str, s2textformat::ToString(*polyline1));
 }
 
 void VerifyS2PointVectorLayerResults(
-    S2PointVectorLayer::LabelSetIds const& label_set_ids,
-    IdSetLexicon const& label_set_lexicon, vector<S2Point> const& output,
-    string const& str_expected_points,
-    vector<vector<int32>> const& expected_labels) {
+    const S2PointVectorLayer::LabelSetIds& label_set_ids,
+    const IdSetLexicon& label_set_lexicon, const vector<S2Point>& output,
+    const string& str_expected_points,
+    const vector<vector<int32>>& expected_labels) {
   vector<S2Point> expected_points =
       s2textformat::ParsePoints(str_expected_points);
 
@@ -761,10 +783,19 @@ TEST(IndexedS2PointVectorLayer, AddsShapes) {
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   EXPECT_EQ(1, index.num_shape_ids());
-  auto shape = down_cast<s2shapeutil::PointVectorShape*>(index.shape(0));
+  auto shape = down_cast<S2PointVectorShape*>(index.shape(0));
   EXPECT_EQ(2, shape->num_points());
   EXPECT_EQ(point0_str, s2textformat::ToString(shape->point(0)));
   EXPECT_EQ(point1_str, s2textformat::ToString(shape->point(1)));
+}
+
+TEST(IndexedS2PointVectorLayer, AddsEmptyShape) {
+  S2Builder builder((S2Builder::Options()));
+  S2ShapeIndex index;
+  builder.StartLayer(make_unique<IndexedS2PointVectorLayer>(&index));
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  EXPECT_EQ(0, index.num_shape_ids());
 }
 
 #if 0
@@ -783,7 +814,7 @@ TEST(LaxPolygonVectorLayer, RoadNetwork) {
   builder.StartLayer(make_unique<LaxPolygonVectorLayer>(
       &polygons, &label_set_ids, &label_set_lexicon, layer_options));
   ValueLexicon<FeatureId> feature_id_lexicon;
-  for (auto const& feature : features) {
+  for (const auto& feature : features) {
     builder.set_label(feature_id_lexicon.Add(segment.feature_id()));
     unique_ptr<S2Polyline> polyline(ToS2Polyline(feature.polyline(0)));
     builder.AddPolyline(*polyline);

@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "s2/third_party/absl/memory/memory.h"
-#include "s2/s2boundary_operation.h"
+#include "s2/s2boolean_operation.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
@@ -68,22 +68,22 @@ class NormalizeTest : public testing::Test {
                      DuplicateEdges::KEEP, SiblingPairs::KEEP));
   }
 
-  void Run(string const& input_str, string const& expected_str);
+  void Run(const string& input_str, const string& expected_str);
 
  protected:
   bool suppress_lower_dimensions_;
   vector<GraphOptions> graph_options_out_;
 
  private:
-  static string ToString(Graph const& g);
-  void AddLayers(string const& str, vector<GraphOptions> const& graph_options,
+  static string ToString(const Graph& g);
+  void AddLayers(const string& str, const vector<GraphOptions>& graph_options,
                  vector<Graph>* graphs_out, S2Builder* builder);
 
   vector<unique_ptr<GraphClone>> graph_clones_;
 };
 
-void NormalizeTest::Run(string const& input_str,
-                        string const& expected_str) {
+void NormalizeTest::Run(const string& input_str,
+                        const string& expected_str) {
   ClosedSetNormalizer::Options options;
   options.set_suppress_lower_dimensions(suppress_lower_dimensions_);
   ClosedSetNormalizer normalizer(options, graph_options_out_);
@@ -96,7 +96,7 @@ void NormalizeTest::Run(string const& input_str,
   // Populate the "input" and "expected" vectors.
   EXPECT_TRUE(builder.Build(&error)) << error.text();
 
-  vector<Graph> const& actual = normalizer.Run(input, &error);
+  const vector<Graph>& actual = normalizer.Run(input, &error);
   for (int dim = 0; dim < 3; ++dim) {
     EXPECT_TRUE(expected[dim].options() == actual[dim].options());
     EXPECT_EQ(ToString(expected[dim]), ToString(actual[dim])) << "dim=" << dim;
@@ -104,7 +104,7 @@ void NormalizeTest::Run(string const& input_str,
 }
 
 void NormalizeTest::AddLayers(
-    string const& str, vector<GraphOptions> const& graph_options,
+    const string& str, const vector<GraphOptions>& graph_options,
     vector<Graph>* graphs_out, S2Builder* builder) {
   auto index = s2textformat::MakeIndex(str);
   for (int dim = 0; dim < 3; ++dim) {
@@ -122,9 +122,9 @@ void NormalizeTest::AddLayers(
   }
 }
 
-string NormalizeTest::ToString(Graph const& g) {
+string NormalizeTest::ToString(const Graph& g) {
   string msg;
-  for (auto const& edge : g.edges()) {
+  for (const auto& edge : g.edges()) {
     vector<S2Point> vertices = { g.vertex(edge.first),
                                  g.vertex(edge.second) };
     msg += s2textformat::ToString(vertices);
@@ -216,7 +216,7 @@ TEST_F(NormalizeTest, DuplicateEdgeMerging) {
 }
 
 // If this code changes, please update the header file comments to match.
-bool ComputeUnion(S2ShapeIndex const& a, S2ShapeIndex const& b,
+bool ComputeUnion(const S2ShapeIndex& a, const S2ShapeIndex& b,
                   S2ShapeIndex* index, S2Error* error) {
   IndexedS2PolylineVectorLayer::Options polyline_options;
   polyline_options.set_edge_type(EdgeType::UNDIRECTED);
@@ -227,8 +227,8 @@ bool ComputeUnion(S2ShapeIndex const& a, S2ShapeIndex const& b,
   layers[1] = make_unique<IndexedS2PolylineVectorLayer>(
       index, polyline_options);
   layers[2] = make_unique<IndexedS2PolygonLayer>(index);
-  S2BoundaryOperation op(S2BoundaryOperation::OpType::UNION,
-                         NormalizeClosedSet(std::move(layers)));
+  S2BooleanOperation op(S2BooleanOperation::OpType::UNION,
+                        NormalizeClosedSet(std::move(layers)));
   return op.Build(a, b, error);
 }
 

@@ -21,7 +21,7 @@
 
 #include <gtest/gtest.h>
 
-static void TestIntervalOps(R1Interval const& x, R1Interval const& y,
+static void TestIntervalOps(const R1Interval& x, const R1Interval& y,
                             const char* expected) {
   // Test all of the interval operations on the given pair of intervals.
   // "expected" is a sequence of "T" and "F" characters corresponding to

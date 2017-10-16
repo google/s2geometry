@@ -59,7 +59,7 @@ using std::vector;
 DEFINE_int32(s2_random_seed, 1,
              "Seed value that can be passed to S2Testing::rnd.Reset()");
 
-double const S2Testing::kEarthRadiusKm = 6371.01;
+const double S2Testing::kEarthRadiusKm = 6371.01;
 
 S2Testing::Random::Random() {
   // Unfortunately we can't use FLAGS_s2_random_seed here, because the default
@@ -90,7 +90,7 @@ inline uint64 GetBits(int num_bits) {
   // of the ISO rand() interface.  At least as of glibc-2.21, rand() is
   // simply an alias for random().  On other systems, rand() may differ,
   // but random() should always adhere to the behavior specified in BSD.
-  static int const RAND_BITS = 31;
+  static const int RAND_BITS = 31;
 
   uint64 result = 0;
   for (int bits = 0; bits < num_bits; bits += RAND_BITS) {
@@ -111,7 +111,7 @@ uint32 S2Testing::Random::Rand32() {
 }
 
 double S2Testing::Random::RandDouble() {
-  int const NUM_BITS = 53;
+  const int NUM_BITS = 53;
   return ldexp(GetBits(NUM_BITS), -NUM_BITS);
 }
 
@@ -136,15 +136,15 @@ int32 S2Testing::Random::Skewed(int max_log) {
 
 S2Testing::Random S2Testing::rnd;
 
-void S2Testing::AppendLoopVertices(S2Loop const& loop,
+void S2Testing::AppendLoopVertices(const S2Loop& loop,
                                    vector<S2Point>* vertices) {
   int n = loop.num_vertices();
-  S2Point const* base = &loop.vertex(0);
+  const S2Point* base = &loop.vertex(0);
   DCHECK_EQ(&loop.vertex(n - 1), base + n - 1);
   vertices->insert(vertices->end(), base, base + n);
 }
 
-vector<S2Point> S2Testing::MakeRegularPoints(S2Point const& center,
+vector<S2Point> S2Testing::MakeRegularPoints(const S2Point& center,
                                              S1Angle radius,
                                              int num_vertices) {
   unique_ptr<S2Loop> loop(
@@ -173,19 +173,19 @@ double S2Testing::AreaToKm2(double steradians) {
 }
 
 // The overloaded Dump() function is for use within a debugger.
-void Dump(S2Point const& p) {
+void Dump(const S2Point& p) {
   std::cout << "S2Point: " << s2textformat::ToString(p) << std::endl;
 }
 
-void Dump(S2Loop const& loop) {
+void Dump(const S2Loop& loop) {
   std::cout << "S2Polygon: " << s2textformat::ToString(loop) << std::endl;
 }
 
-void Dump(S2Polyline const& polyline) {
+void Dump(const S2Polyline& polyline) {
   std::cout << "S2Polyline: " << s2textformat::ToString(polyline) << std::endl;
 }
 
-void Dump(S2Polygon const& polygon) {
+void Dump(const S2Polygon& polygon) {
   std::cout << "S2Polygon: " << s2textformat::ToString(polygon) << std::endl;
 }
 
@@ -208,12 +208,12 @@ Matrix3x3_d S2Testing::GetRandomFrame() {
   return GetRandomFrameAt(RandomPoint());
 }
 
-void S2Testing::GetRandomFrameAt(S2Point const& z, S2Point* x, S2Point *y) {
+void S2Testing::GetRandomFrameAt(const S2Point& z, S2Point* x, S2Point *y) {
   *x = z.CrossProd(RandomPoint()).Normalize();
   *y = z.CrossProd(*x).Normalize();
 }
 
-Matrix3x3_d S2Testing::GetRandomFrameAt(S2Point const& z) {
+Matrix3x3_d S2Testing::GetRandomFrameAt(const S2Point& z) {
   S2Point x, y;
   GetRandomFrameAt(z, &x, &y);
   return Matrix3x3_d::FromCols(x, y, z);
@@ -238,7 +238,7 @@ S2Cap S2Testing::GetRandomCap(double min_area, double max_area) {
   return S2Cap::FromCenterArea(RandomPoint(), cap_area);
 }
 
-void S2Testing::ConcentricLoopsPolygon(S2Point const& center,
+void S2Testing::ConcentricLoopsPolygon(const S2Point& center,
                                        int num_loops,
                                        int num_vertices_per_loop,
                                        S2Polygon* polygon) {
@@ -259,7 +259,7 @@ void S2Testing::ConcentricLoopsPolygon(S2Point const& center,
   polygon->InitNested(std::move(loops));
 }
 
-S2Point S2Testing::SamplePoint(S2Cap const& cap) {
+S2Point S2Testing::SamplePoint(const S2Cap& cap) {
   // We consider the cap axis to be the "z" axis.  We choose two other axes to
   // complete the coordinate frame.
 
@@ -280,7 +280,7 @@ S2Point S2Testing::SamplePoint(S2Cap const& cap) {
          .Normalize();
 }
 
-S2Point S2Testing::SamplePoint(S2LatLngRect const& rect) {
+S2Point S2Testing::SamplePoint(const S2LatLngRect& rect) {
   // First choose a latitude uniformly with respect to area on the sphere.
   double sin_lo = sin(rect.lat().lo());
   double sin_hi = sin(rect.lat().hi());
@@ -291,8 +291,8 @@ S2Point S2Testing::SamplePoint(S2LatLngRect const& rect) {
   return S2LatLng::FromRadians(lat, lng).Normalized().ToPoint();
 }
 
-void S2Testing::CheckCovering(S2Region const& region,
-                              S2CellUnion const& covering,
+void S2Testing::CheckCovering(const S2Region& region,
+                              const S2CellUnion& covering,
                               bool check_tight, S2CellId id) {
   if (!id.is_valid()) {
     for (int face = 0; face < 6; ++face) {
@@ -389,7 +389,7 @@ double S2Testing::Fractal::min_radius_factor() const {
   // This method is slightly conservative because it is computed using planar
   // rather than spherical geometry.  The value below is equal to
   // -log(4)/log((2 + cbrt(2) - cbrt(4))/6).
-  double const kMinDimensionForMinRadiusAtLevel1 = 1.0852230903040407;
+  const double kMinDimensionForMinRadiusAtLevel1 = 1.0852230903040407;
   if (dimension_ >= kMinDimensionForMinRadiusAtLevel1) {
     return sqrt(1 + 3 * edge_fraction_ * (edge_fraction_ - 1));
   }
@@ -416,8 +416,8 @@ void S2Testing::Fractal::GetR2Vertices(vector<R2Point>* vertices) const {
 // Given the two endpoints (v0,v4) of an edge, recursively subdivide the edge
 // to the desired level, and insert all vertices of the resulting curve up to
 // but not including the endpoint "v4".
-void S2Testing::Fractal::GetR2VerticesHelper(R2Point const& v0,
-                                             R2Point const& v4, int level,
+void S2Testing::Fractal::GetR2VerticesHelper(const R2Point& v0,
+                                             const R2Point& v4, int level,
                                              vector<R2Point>* vertices) const {
   if (level >= min_level_ && S2Testing::rnd.OneIn(max_level_ - level + 1)) {
     // Stop subdivision at this level.
@@ -438,13 +438,13 @@ void S2Testing::Fractal::GetR2VerticesHelper(R2Point const& v0,
 }
 
 std::unique_ptr<S2Loop> S2Testing::Fractal::MakeLoop(
-    Matrix3x3_d const& frame,
+    const Matrix3x3_d& frame,
     S1Angle nominal_radius) const {
   vector<R2Point> r2vertices;
   GetR2Vertices(&r2vertices);
   vector<S2Point> vertices;
   double r = nominal_radius.radians();
-  for (R2Point const& v : r2vertices) {
+  for (const R2Point& v : r2vertices) {
     S2Point p(v[0] * r, v[1] * r, 1);
     vertices.push_back(S2::FromFrame(frame, p).Normalize());
   }

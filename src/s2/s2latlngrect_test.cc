@@ -177,10 +177,10 @@ TEST(S2LatLngRect, Contains) {
   EXPECT_FALSE(r1.Contains(S2Point(0.5, 0.2, 0.1)));
 }
 
-static void TestIntervalOps(S2LatLngRect const& x, S2LatLngRect const& y,
+static void TestIntervalOps(const S2LatLngRect& x, const S2LatLngRect& y,
                             const char* expected_relation,
-                            S2LatLngRect const& expected_union,
-                            S2LatLngRect const& expected_intersection) {
+                            const S2LatLngRect& expected_union,
+                            const S2LatLngRect& expected_intersection) {
   // Test all of the interval operations on the given pair of intervals.
   // "expected_relation" is a sequence of "T" and "F" characters corresponding
   // to the expected results of Contains(), InteriorContains(), Intersects(),
@@ -431,7 +431,7 @@ TEST(S2LatLngRect, GetCapBound) {
               ApproxEquals(S2Cap(S2Point(0, 0, -1), S1Angle::Degrees(80))));
 }
 
-static void TestCellOps(S2LatLngRect const& r, S2Cell const& cell,
+static void TestCellOps(const S2LatLngRect& r, const S2Cell& cell,
                         int level) {
   // Test the relationship between the given rectangle and cell:
   // 0 == no intersection, 1 == MayIntersect, 2 == Intersects,
@@ -522,7 +522,7 @@ TEST(S2LatLngRect, Area) {
 
 // Recursively verify that when a rectangle is split into two pieces, the
 // centroids of the children sum to give the centroid of the parent.
-static void TestCentroidSplitting(S2LatLngRect const& r, int splits_left) {
+static void TestCentroidSplitting(const S2LatLngRect& r, int splits_left) {
   S2LatLngRect child0, child1;
   if (S2Testing::rnd.OneIn(2)) {
     double lat = S2Testing::rnd.UniformDouble(r.lat().lo(), r.lat().hi());

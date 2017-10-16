@@ -101,9 +101,9 @@ TEST(S2ContainsPointQuery, VertexModelClosed) {
 
 TEST(S2ContainsPointQuery, GetContainingShapes) {
   // Also tests ShapeContains().
-  int const kNumVerticesPerLoop = 10;
-  S1Angle const kMaxLoopRadius = S2Testing::KmToAngle(10);
-  S2Cap const center_cap(S2Testing::RandomPoint(), kMaxLoopRadius);
+  const int kNumVerticesPerLoop = 10;
+  const S1Angle kMaxLoopRadius = S2Testing::KmToAngle(10);
+  const S2Cap center_cap(S2Testing::RandomPoint(), kMaxLoopRadius);
   S2ShapeIndex index;
   for (int i = 0; i < 100; ++i) {
     std::unique_ptr<S2Loop> loop = S2Loop::MakeRegularLoop(
@@ -117,7 +117,7 @@ TEST(S2ContainsPointQuery, GetContainingShapes) {
     vector<S2Shape*> expected;
     for (int j = 0; j < index.num_shape_ids(); ++j) {
       S2Shape* shape = index.shape(j);
-      S2Loop const* loop = down_cast<S2Loop::Shape const*>(shape)->loop();
+      const S2Loop* loop = down_cast<const S2Loop::Shape*>(shape)->loop();
       if (loop->Contains(p)) {
         EXPECT_TRUE(query.ShapeContains(*shape, p));
         expected.push_back(shape);
@@ -132,12 +132,12 @@ TEST(S2ContainsPointQuery, GetContainingShapes) {
 
 using EdgeIdVector = vector<ShapeEdgeId>;
 
-void ExpectIncidentEdgeIds(EdgeIdVector const& expected,
-                           S2ShapeIndex const& index, S2Point const& p) {
+void ExpectIncidentEdgeIds(const EdgeIdVector& expected,
+                           const S2ShapeIndex& index, const S2Point& p) {
   EdgeIdVector actual;
   auto q = MakeS2ContainsPointQuery(&index);
   EXPECT_TRUE(
-      q.VisitIncidentEdges(p, [&actual](s2shapeutil::ShapeEdge const& e) {
+      q.VisitIncidentEdges(p, [&actual](const s2shapeutil::ShapeEdge& e) {
           actual.push_back(e.id());
           return true;
         }));

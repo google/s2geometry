@@ -39,7 +39,7 @@ class S2LatLngRectBounder {
 
   // This method is called to add each vertex to the chain.  Requires that 'b'
   // has unit length.  Repeated vertices are ignored.
-  void AddPoint(S2Point const& b);
+  void AddPoint(const S2Point& b);
 
   // Returns the bounding rectangle of the edge chain that connects the
   // vertices defined so far.  This bound satisfies the guarantee made
@@ -61,7 +61,7 @@ class S2LatLngRectBounder {
   // is a loop such that L.Contains(S), then
   //
   //   ExpandForSubregions(RectBound(L)).Contains(RectBound(S)).
-  static S2LatLngRect ExpandForSubregions(S2LatLngRect const& bound);
+  static S2LatLngRect ExpandForSubregions(const S2LatLngRect& bound);
 
   // Returns the maximum error in GetBound() provided that the result does
   // not include either pole.  It is only to be used for testing purposes
@@ -73,8 +73,8 @@ class S2LatLngRectBounder {
   S2LatLng a_latlng_;     // The corresponding latitude-longitude.
   S2LatLngRect bound_;    // The current bounding rectangle.
 
-  S2LatLngRectBounder(S2LatLngRectBounder const&) = delete;
-  void operator=(S2LatLngRectBounder const&) = delete;
+  S2LatLngRectBounder(const S2LatLngRectBounder&) = delete;
+  void operator=(const S2LatLngRectBounder&) = delete;
 };
 
 #endif  // S2_S2LATLNGRECT_BOUNDER_H_

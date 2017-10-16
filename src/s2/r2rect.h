@@ -34,11 +34,11 @@
 class R2Rect {
  public:
   // Construct a rectangle from the given lower-left and upper-right points.
-  R2Rect(R2Point const& lo, R2Point const& hi);
+  R2Rect(const R2Point& lo, const R2Point& hi);
 
   // Construct a rectangle from the given intervals in x and y.  The two
   // intervals must either be both empty or both non-empty.
-  R2Rect(R1Interval const& x, R1Interval const& y);
+  R2Rect(const R1Interval& x, const R1Interval& y);
 
   // The default constructor creates an empty R2Rect.
   R2Rect();
@@ -50,26 +50,26 @@ class R2Rect {
   // Construct a rectangle from a center point and size in each dimension.
   // Both components of size should be non-negative, i.e. this method cannot
   // be used to create an empty rectangle.
-  static R2Rect FromCenterSize(R2Point const& center, R2Point const& size);
+  static R2Rect FromCenterSize(const R2Point& center, const R2Point& size);
 
   // Convenience method to construct a rectangle containing a single point.
-  static R2Rect FromPoint(R2Point const& p);
+  static R2Rect FromPoint(const R2Point& p);
 
   // Convenience method to construct the minimal bounding rectangle containing
   // the two given points.  This is equivalent to starting with an empty
   // rectangle and calling AddPoint() twice.  Note that it is different than
   // the R2Rect(lo, hi) constructor, where the first point is always
   // used as the lower-left corner of the resulting rectangle.
-  static R2Rect FromPointPair(R2Point const& p1, R2Point const& p2);
+  static R2Rect FromPointPair(const R2Point& p1, const R2Point& p2);
 
   // Accessor methods.
-  R1Interval const& x() const { return bounds_[0]; }
-  R1Interval const& y() const { return bounds_[1]; }
+  const R1Interval& x() const { return bounds_[0]; }
+  const R1Interval& y() const { return bounds_[1]; }
   R2Point lo() const { return R2Point(x().lo(), y().lo()); }
   R2Point hi() const { return R2Point(x().hi(), y().hi()); }
 
   // Methods that allow the R2Rect to be accessed as a vector.
-  R1Interval const& operator[](int i) const { return bounds_[i]; }
+  const R1Interval& operator[](int i) const { return bounds_[i]; }
   R1Interval& operator[](int i) { return bounds_[i]; }
 
   // Return true if the rectangle is valid, which essentially just means
@@ -99,75 +99,75 @@ class R2Rect {
 
   // Return true if the rectangle contains the given point.  Note that
   // rectangles are closed regions, i.e. they contain their boundary.
-  bool Contains(R2Point const& p) const;
+  bool Contains(const R2Point& p) const;
 
   // Return true if and only if the given point is contained in the interior
   // of the region (i.e. the region excluding its boundary).
-  bool InteriorContains(R2Point const& p) const;
+  bool InteriorContains(const R2Point& p) const;
 
   // Return true if and only if the rectangle contains the given other
   // rectangle.
-  bool Contains(R2Rect const& other) const;
+  bool Contains(const R2Rect& other) const;
 
   // Return true if and only if the interior of this rectangle contains all
   // points of the given other rectangle (including its boundary).
-  bool InteriorContains(R2Rect const& other) const;
+  bool InteriorContains(const R2Rect& other) const;
 
   // Return true if this rectangle and the given other rectangle have any
   // points in common.
-  bool Intersects(R2Rect const& other) const;
+  bool Intersects(const R2Rect& other) const;
 
   // Return true if and only if the interior of this rectangle intersects
   // any point (including the boundary) of the given other rectangle.
-  bool InteriorIntersects(R2Rect const& other) const;
+  bool InteriorIntersects(const R2Rect& other) const;
 
   // Expand the rectangle to include the given point.  The rectangle is
   // expanded by the minimum amount possible.
-  void AddPoint(R2Point const& p);
+  void AddPoint(const R2Point& p);
 
   // Expand the rectangle to include the given other rectangle.  This is the
   // same as replacing the rectangle by the union of the two rectangles, but
   // is somewhat more efficient.
-  void AddRect(R2Rect const& other);
+  void AddRect(const R2Rect& other);
 
   // Return the closest point in the rectangle to the given point "p".
   // The rectangle must be non-empty.
-  R2Point Project(R2Point const& p) const;
+  R2Point Project(const R2Point& p) const;
 
   // Return a rectangle that has been expanded on each side in the x-direction
   // by margin.x(), and on each side in the y-direction by margin.y().  If
   // either margin is empty, then shrink the interval on the corresponding
   // sides instead.  The resulting rectangle may be empty.  Any expansion of
   // an empty rectangle remains empty.
-  R2Rect Expanded(R2Point const& margin) const;
+  R2Rect Expanded(const R2Point& margin) const;
   R2Rect Expanded(double margin) const;
 
   // Return the smallest rectangle containing the union of this rectangle and
   // the given rectangle.
-  R2Rect Union(R2Rect const& other) const;
+  R2Rect Union(const R2Rect& other) const;
 
   // Return the smallest rectangle containing the intersection of this
   // rectangle and the given rectangle.
-  R2Rect Intersection(R2Rect const& other) const;
+  R2Rect Intersection(const R2Rect& other) const;
 
   // Return true if two rectangles contains the same set of points.
-  bool operator==(R2Rect const& other) const;
+  bool operator==(const R2Rect& other) const;
 
   // Return true if the x- and y-intervals of the two rectangles are the same
   // up to the given tolerance (see r1interval.h for details).
-  bool ApproxEquals(R2Rect const& other, double max_error = 1e-15) const;
+  bool ApproxEquals(const R2Rect& other, double max_error = 1e-15) const;
 
  private:
   R1Interval bounds_[2];
 };
 
-inline R2Rect::R2Rect(R2Point const& lo, R2Point const& hi) {
+inline R2Rect::R2Rect(const R2Point& lo, const R2Point& hi) {
   bounds_[0] = R1Interval(lo.x(), hi.x());
   bounds_[1] = R1Interval(lo.y(), hi.y());
   DCHECK(is_valid());
 }
 
-inline R2Rect::R2Rect(R1Interval const& x, R1Interval const& y) {
+inline R2Rect::R2Rect(const R1Interval& x, const R1Interval& y) {
   bounds_[0] = x;
   bounds_[1] = y;
   DCHECK(is_valid());
@@ -191,7 +191,7 @@ inline bool R2Rect::is_empty() const {
   return x().is_empty();
 }
 
-inline R2Rect R2Rect::FromPoint(R2Point const& p) {
+inline R2Rect R2Rect::FromPoint(const R2Point& p) {
   return R2Rect(p, p);
 }
 
@@ -214,11 +214,11 @@ inline R2Point R2Rect::GetSize() const {
   return R2Point(x().GetLength(), y().GetLength());
 }
 
-inline bool R2Rect::Contains(R2Point const& p) const {
+inline bool R2Rect::Contains(const R2Point& p) const {
   return x().Contains(p.x()) && y().Contains(p.y());
 }
 
-inline bool R2Rect::InteriorContains(R2Point const& p) const {
+inline bool R2Rect::InteriorContains(const R2Point& p) const {
   return x().InteriorContains(p.x()) && y().InteriorContains(p.y());
 }
 
@@ -226,10 +226,10 @@ inline R2Rect R2Rect::Expanded(double margin) const {
   return Expanded(R2Point(margin, margin));
 }
 
-inline bool R2Rect::operator==(R2Rect const& other) const {
+inline bool R2Rect::operator==(const R2Rect& other) const {
   return x() == other.x() && y() == other.y();
 }
 
-std::ostream& operator<<(std::ostream& os, R2Rect const& r);
+std::ostream& operator<<(std::ostream& os, const R2Rect& r);
 
 #endif  // S2_R2RECT_H_

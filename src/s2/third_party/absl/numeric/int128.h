@@ -28,7 +28,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
 // -----------------------------------------------------------------------------
 // File: int128.h
 // -----------------------------------------------------------------------------
@@ -40,6 +39,7 @@
 #ifndef S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_
 #define S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_
 
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -62,7 +62,7 @@ namespace absl {
 // that occurs, existing uses of `uint128` will continue to work using that new
 // type.
 //
-// Note: code written with this type will continue to compile once `unint128_t`
+// Note: code written with this type will continue to compile once `uint128_t`
 // is introduced, provided the replacement helper functions
 // `Uint128(Low|High)64()` and `MakeUint128()` are made.
 //
@@ -98,6 +98,9 @@ namespace absl {
 // should take care to avoid depending on the current 8 byte alignment.
 // TODO(user) Remove alignment note above once alignof(uint128) becomes 16.
 class uint128 {
+/* absl:oss-replace-with
+class alignas(16) uint128 {
+absl:oss-replace-end */
  public:
   uint128() = default;
 
@@ -159,19 +162,19 @@ class uint128 {
   // Trivial copy constructor, assignment operator and destructor.
 
   // Arithmetic operators.
-  uint128& operator+=(const uint128& b);
-  uint128& operator-=(const uint128& b);
-  uint128& operator*=(const uint128& b);
+  uint128& operator+=(const uint128& other);
+  uint128& operator-=(const uint128& other);
+  uint128& operator*=(const uint128& other);
   // Long division/modulo for uint128.
-  uint128& operator/=(const uint128& b);
-  uint128& operator%=(const uint128& b);
+  uint128& operator/=(const uint128& other);
+  uint128& operator%=(const uint128& other);
   uint128 operator++(int);
   uint128 operator--(int);
   uint128& operator<<=(int);
   uint128& operator>>=(int);
-  uint128& operator&=(const uint128& b);
-  uint128& operator|=(const uint128& b);
-  uint128& operator^=(const uint128& b);
+  uint128& operator&=(const uint128& other);
+  uint128& operator|=(const uint128& other);
+  uint128& operator^=(const uint128& other);
   uint128& operator++();
   uint128& operator--();
 
@@ -225,7 +228,7 @@ extern std::ostream& operator<<(std::ostream& o, const uint128& b);
 uint64 Uint128Low64(const uint128& v);
 uint64 Uint128High64(const uint128& v);
 
-// TODO(b/31950287): Implement signed 128-bit type
+// TODO(absl-team): Implement signed 128-bit type
 
 // --------------------------------------------------------------------------
 //                      Implementation details follow
@@ -591,39 +594,38 @@ inline uint128& uint128::operator>>=(int amount) {
   return *this;
 }
 
-inline uint128& uint128::operator+=(const uint128& b) {
-  hi_ += b.hi_;
-  uint64_t lolo = lo_ + b.lo_;
+inline uint128& uint128::operator+=(const uint128& other) {
+  hi_ += other.hi_;
+  uint64_t lolo = lo_ + other.lo_;
   if (lolo < lo_)
     ++hi_;
   lo_ = lolo;
   return *this;
 }
 
-inline uint128& uint128::operator-=(const uint128& b) {
-  hi_ -= b.hi_;
-  if (b.lo_ > lo_)
-    --hi_;
-  lo_ -= b.lo_;
+inline uint128& uint128::operator-=(const uint128& other) {
+  hi_ -= other.hi_;
+  if (other.lo_ > lo_) --hi_;
+  lo_ -= other.lo_;
   return *this;
 }
 
-inline uint128& uint128::operator*=(const uint128& b) {
+inline uint128& uint128::operator*=(const uint128& other) {
 #if defined(ABSL_HAVE_INTRINSIC_INT128)
   // TODO(user) Remove once alignment issues are resolved and unsigned __int128
   // can be used for uint128 storage.
-  *this =
-      static_cast<unsigned __int128>(*this) * static_cast<unsigned __int128>(b);
+  *this = static_cast<unsigned __int128>(*this) *
+          static_cast<unsigned __int128>(other);
   return *this;
 #else   // ABSL_HAVE_INTRINSIC128
   uint64_t a96 = hi_ >> 32;
   uint64_t a64 = hi_ & 0xffffffff;
   uint64_t a32 = lo_ >> 32;
   uint64_t a00 = lo_ & 0xffffffff;
-  uint64_t b96 = b.hi_ >> 32;
-  uint64_t b64 = b.hi_ & 0xffffffff;
-  uint64_t b32 = b.lo_ >> 32;
-  uint64_t b00 = b.lo_ & 0xffffffff;
+  uint64_t b96 = other.hi_ >> 32;
+  uint64_t b64 = other.hi_ & 0xffffffff;
+  uint64_t b32 = other.lo_ >> 32;
+  uint64_t b00 = other.lo_ & 0xffffffff;
   // multiply [a96 .. a00] x [b96 .. b00]
   // terms higher than c96 disappear off the high side
   // terms c96 and c64 are safe to ignore carry bit
@@ -666,9 +668,9 @@ inline uint128& uint128::operator--() {
 }  // namespace absl
 
 
-using ::absl::Uint128High64;  // NOLINT
-using ::absl::Uint128Low64;   // NOLINT
-using ::absl::uint128;        // NOLINT
+using absl::Uint128High64;  // NOLINT(readability/namespace)
+using absl::Uint128Low64;   // NOLINT(readability/namespace)
+using absl::uint128;        // NOLINT(readability/namespace)
 extern const uint128 kuint128max;
 
 

@@ -28,7 +28,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
 // -----------------------------------------------------------------------------
 // File: macros.h
 // -----------------------------------------------------------------------------
@@ -65,7 +64,7 @@ namespace absl {
 namespace macros_internal {
 template <typename T, size_t N>
 char (&ArraySizeHelper(T (&array)[N]))[N];
-}  // namepsace macros_internal
+}  // namespace macros_internal
 }  // namespace absl
 #define ABSL_ARRAYSIZE(array) \
   (sizeof(::absl::macros_internal::ArraySizeHelper(array)))
@@ -147,7 +146,7 @@ using absl::base_internal::LINKER_INITIALIZED;
 // ABSL_FALLTHROUGH_INTENDED.
 #if defined(__clang__) && defined(__has_warning)
 #if __has_feature(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
-#define FALLTHROUGH_INTENDED [[clang::fallthrough]]  // NOLINT
+#define FALLTHROUGH_INTENDED [[clang::fallthrough]]
 #endif
 #elif defined(__GNUC__) && __GNUC__ >= 7
 #define FALLTHROUGH_INTENDED [[gnu::fallthrough]]
@@ -163,7 +162,7 @@ using absl::base_internal::LINKER_INITIALIZED;
 // TODO(user): Use c++17 standard [[fallthrough]] macro, when supported.
 #if defined(__clang__) && defined(__has_warning)
 #if __has_feature(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
-#define ABSL_FALLTHROUGH_INTENDED [[clang::fallthrough]]  // NOLINT
+#define ABSL_FALLTHROUGH_INTENDED [[clang::fallthrough]]
 #endif
 #elif defined(__GNUC__) && __GNUC__ >= 7
 #define ABSL_FALLTHROUGH_INTENDED [[gnu::fallthrough]]
@@ -188,9 +187,9 @@ using absl::base_internal::LINKER_INITIALIZED;
 //
 // Every usage of a deprecated entity will trigger a warning when compiled with
 // clang's `-Wdeprecated-declarations` option. This option is turned off by
-// default, but the warnings will be reported by go/clang-tidy.
+// default, but the warnings will be reported by clang-tidy.
 #if defined(__clang__) && __cplusplus >= 201103L && defined(__has_warning)
-#define ABSL_DEPRECATED(message) __attribute__((deprecated(message)))  // NOLINT
+#define ABSL_DEPRECATED(message) __attribute__((deprecated(message)))
 #endif
 
 #ifndef ABSL_DEPRECATED
@@ -238,9 +237,8 @@ using absl::base_internal::LINKER_INITIALIZED;
 #if defined(NDEBUG)
 #define ABSL_ASSERT(expr) (false ? (void)(expr) : (void)0)
 #else
-#define ABSL_ASSERT(expr)              \
-  (ABSL_PREDICT_TRUE((expr)) ? (void)0 \
-                             : [] { assert(false && #expr); }())  // NOLINT
+#define ABSL_ASSERT(expr) \
+  (ABSL_PREDICT_TRUE((expr)) ? (void)0 : [] { assert(false && #expr); }())
 #endif
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_MACROS_H_

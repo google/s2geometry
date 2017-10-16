@@ -59,7 +59,7 @@ class S2RegionUnion final : public S2Region {
 
   // Accessor methods.
   int num_regions() const { return regions_.size(); }
-  S2Region const* region(int i) const { return regions_[i].get(); }
+  const S2Region* region(int i) const { return regions_[i].get(); }
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -67,18 +67,18 @@ class S2RegionUnion final : public S2Region {
   S2RegionUnion* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
-  bool Contains(S2Point const& p) const override;
-  bool Contains(S2Cell const& cell) const override;
-  bool MayIntersect(S2Cell const& cell) const override;
+  bool Contains(const S2Point& p) const override;
+  bool Contains(const S2Cell& cell) const override;
+  bool MayIntersect(const S2Cell& cell) const override;
 
  private:
   // Internal copy constructor used only by Clone() that makes a deep copy of
   // its argument.
-  S2RegionUnion(S2RegionUnion const& src);
+  S2RegionUnion(const S2RegionUnion& src);
 
   std::vector<std::unique_ptr<S2Region>> regions_;
 
-  void operator=(S2RegionUnion const&) = delete;
+  void operator=(const S2RegionUnion&) = delete;
 };
 
 #endif  // S2_S2REGIONUNION_H_

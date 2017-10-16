@@ -27,8 +27,8 @@
 using absl::make_unique;
 
 template <class T>
-void ExpectSequence(std::vector<T> const& expected,
-                    typename SequenceLexicon<T>::Sequence const& actual) {
+void ExpectSequence(const std::vector<T>& expected,
+                    const typename SequenceLexicon<T>::Sequence& actual) {
   EXPECT_EQ(expected.size(), actual.size());
   EXPECT_TRUE(std::equal(expected.begin(), expected.end(), actual.begin()));
 }

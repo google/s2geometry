@@ -44,7 +44,7 @@ S2LatLngRect S2PointRegion::GetRectBound() const {
   return S2LatLngRect(ll, ll);
 }
 
-bool S2PointRegion::MayIntersect(S2Cell const& cell) const {
+bool S2PointRegion::MayIntersect(const S2Cell& cell) const {
   return cell.Contains(point_);
 }
 

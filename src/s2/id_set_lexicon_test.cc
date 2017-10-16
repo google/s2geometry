@@ -19,8 +19,8 @@
 
 #include <gtest/gtest.h>
 
-void ExpectIdSet(std::vector<int32> const& expected,
-                 IdSetLexicon::IdSet const& actual) {
+void ExpectIdSet(const std::vector<int32>& expected,
+                 const IdSetLexicon::IdSet& actual) {
   EXPECT_EQ(expected.size(), actual.size());
   EXPECT_TRUE(std::equal(expected.begin(), expected.end(), actual.begin()));
 }

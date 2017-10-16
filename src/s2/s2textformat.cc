@@ -61,7 +61,7 @@ vector<S2LatLng> ParseLatLngsOrDie(string_view str) {
 bool ParseLatLngs(string_view str, vector<S2LatLng>* latlngs) {
   vector<pair<string, string>> ps;
   if (!DictionaryParse(str, &ps)) return false;
-  for (auto const& p : ps) {
+  for (const auto& p : ps) {
     double lat;
     if (!ParseDouble(p.first, &lat)) return false;
     double lng;
@@ -80,7 +80,7 @@ vector<S2Point> ParsePointsOrDie(string_view str) {
 bool ParsePoints(string_view str, vector<S2Point>* vertices) {
   vector<S2LatLng> latlngs;
   if (!ParseLatLngs(str, &latlngs)) return false;
-  for (auto const& latlng : latlngs) {
+  for (const auto& latlng : latlngs) {
     vertices->push_back(latlng.ToPoint());
   }
   return true;
@@ -157,33 +157,34 @@ std::unique_ptr<S2Polyline> MakePolyline(absl::string_view str) {
   return MakePolylineOrDie(str);
 }
 
-unique_ptr<s2shapeutil::LaxPolyline> MakeLaxPolylineOrDie(string_view str) {
-  unique_ptr<s2shapeutil::LaxPolyline> lax_polyline;
+unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(string_view str) {
+  unique_ptr<S2LaxPolylineShape> lax_polyline;
   CHECK(MakeLaxPolyline(str, &lax_polyline)) << ": str == \"" << str << "\"";
   return lax_polyline;
 }
 
 bool MakeLaxPolyline(string_view str,
-                     unique_ptr<s2shapeutil::LaxPolyline>* lax_polyline) {
+                     unique_ptr<S2LaxPolylineShape>* lax_polyline) {
   vector<S2Point> vertices;
   if (!ParsePoints(str, &vertices)) return false;
-  *lax_polyline = make_unique<s2shapeutil::LaxPolyline>(vertices);
+  *lax_polyline = make_unique<S2LaxPolylineShape>(vertices);
   return true;
 }
 
-std::unique_ptr<s2shapeutil::LaxPolyline> MakeLaxPolyline(
-    absl::string_view str) {
+std::unique_ptr<S2LaxPolylineShape> MakeLaxPolyline(absl::string_view str) {
   return MakeLaxPolylineOrDie(str);
 }
 
 static bool InternalMakePolygon(string_view str, bool normalize_loops,
                                 unique_ptr<S2Polygon>* polygon) {
+  if (str == "empty") str = "";
   vector<string_view> loop_strs = SplitString(str, ';');
   vector<unique_ptr<S2Loop>> loops;
-  for (auto const& loop_str : loop_strs) {
+  for (const auto& loop_str : loop_strs) {
     std::unique_ptr<S2Loop> loop;
     if (!MakeLoop(loop_str, &loop)) return false;
-    if (normalize_loops) loop->Normalize();
+    // Don't normalize loops that were explicitly specified as "full".
+    if (normalize_loops && !loop->is_full()) loop->Normalize();
     loops.push_back(std::move(loop));
   }
   *polygon = make_unique<S2Polygon>(std::move(loops));
@@ -218,30 +219,30 @@ std::unique_ptr<S2Polygon> MakeVerbatimPolygon(absl::string_view str) {
   return MakeVerbatimPolygonOrDie(str);
 }
 
-unique_ptr<s2shapeutil::LaxPolygon> MakeLaxPolygonOrDie(string_view str) {
-  unique_ptr<s2shapeutil::LaxPolygon> lax_polygon;
+unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(string_view str) {
+  unique_ptr<S2LaxPolygonShape> lax_polygon;
   CHECK(MakeLaxPolygon(str, &lax_polygon)) << ": str == \"" << str << "\"";
   return lax_polygon;
 }
 
 bool MakeLaxPolygon(string_view str,
-                    unique_ptr<s2shapeutil::LaxPolygon>* lax_polygon) {
+                    unique_ptr<S2LaxPolygonShape>* lax_polygon) {
   vector<string_view> loop_strs = SplitString(str, ';');
   vector<vector<S2Point>> loops;
-  for (auto const& loop_str : loop_strs) {
+  for (const auto& loop_str : loop_strs) {
     if (loop_str == "full") {
       loops.push_back(vector<S2Point>());
-    } else {
+    } else if (loop_str != "empty") {
       vector<S2Point> points;
       if (!ParsePoints(loop_str, &points)) return false;
       loops.push_back(points);
     }
   }
-  *lax_polygon = make_unique<s2shapeutil::LaxPolygon>(loops);
+  *lax_polygon = make_unique<S2LaxPolygonShape>(loops);
   return true;
 }
 
-std::unique_ptr<s2shapeutil::LaxPolygon> MakeLaxPolygon(absl::string_view str) {
+std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygon(absl::string_view str) {
   return MakeLaxPolygonOrDie(str);
 }
 
@@ -256,21 +257,21 @@ bool MakeIndex(string_view str, std::unique_ptr<S2ShapeIndex>* index) {
   DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
 
   vector<S2Point> points;
-  for (auto const& point_str : SplitString(strs[0], '|')) {
+  for (const auto& point_str : SplitString(strs[0], '|')) {
     S2Point point;
     if (!MakePoint(point_str, &point)) return false;
     points.push_back(point);
   }
   if (!points.empty()) {
-    (*index)->Add(make_unique<s2shapeutil::PointVectorShape>(&points));
+    (*index)->Add(make_unique<S2PointVectorShape>(&points));
   }
-  for (auto const& line_str : SplitString(strs[1], '|')) {
-    std::unique_ptr<s2shapeutil::LaxPolyline> lax_polyline;
+  for (const auto& line_str : SplitString(strs[1], '|')) {
+    std::unique_ptr<S2LaxPolylineShape> lax_polyline;
     if (!MakeLaxPolyline(line_str, &lax_polyline)) return false;
     (*index)->Add(unique_ptr<S2Shape>(lax_polyline.release()));
   }
-  for (auto const& polygon_str : SplitString(strs[2], '|')) {
-    std::unique_ptr<s2shapeutil::LaxPolygon> lax_polygon;
+  for (const auto& polygon_str : SplitString(strs[2], '|')) {
+    std::unique_ptr<S2LaxPolygonShape> lax_polygon;
     if (!MakeLaxPolygon(polygon_str, &lax_polygon)) return false;
     (*index)->Add(unique_ptr<S2Shape>(lax_polygon.release()));
   }
@@ -281,25 +282,25 @@ std::unique_ptr<S2ShapeIndex> MakeIndex(absl::string_view str) {
   return MakeIndexOrDie(str);
 }
 
-static void AppendVertex(S2Point const& p, string* out) {
+static void AppendVertex(const S2Point& p, string* out) {
   S2LatLng ll(p);
   StringAppendF(out, "%.15g:%.15g", ll.lat().degrees(), ll.lng().degrees());
 }
 
-static void AppendVertices(S2Point const* v, int n, string* out) {
+static void AppendVertices(const S2Point* v, int n, string* out) {
   for (int i = 0; i < n; ++i) {
     if (i > 0) *out += ", ";
     AppendVertex(v[i], out);
   }
 }
 
-string ToString(S2Point const& point) {
+string ToString(const S2Point& point) {
   string out;
   AppendVertex(point, &out);
   return out;
 }
 
-string ToString(S2LatLngRect const& rect) {
+string ToString(const S2LatLngRect& rect) {
   string out;
   AppendVertex(rect.lo().ToPoint(), &out);
   out += ", ";
@@ -307,7 +308,12 @@ string ToString(S2LatLngRect const& rect) {
   return out;
 }
 
-string ToString(S2Loop const& loop) {
+string ToString(const S2Loop& loop) {
+  if (loop.is_empty()) {
+    return "empty";
+  } else if (loop.is_full()) {
+    return "full";
+  }
   string out;
   if (loop.num_vertices() > 0) {
     AppendVertices(&loop.vertex(0), loop.num_vertices(), &out);
@@ -315,7 +321,7 @@ string ToString(S2Loop const& loop) {
   return out;
 }
 
-string ToString(S2Polyline const& polyline) {
+string ToString(const S2Polyline& polyline) {
   string out;
   if (polyline.num_vertices() > 0) {
     AppendVertices(&polyline.vertex(0), polyline.num_vertices(), &out);
@@ -323,23 +329,28 @@ string ToString(S2Polyline const& polyline) {
   return out;
 }
 
-string ToString(S2Polygon const& polygon) {
+string ToString(const S2Polygon& polygon) {
+  if (polygon.is_empty()) {
+    return "empty";
+  } else if (polygon.is_full()) {
+    return "full";
+  }
   string out;
   for (int i = 0; i < polygon.num_loops(); ++i) {
     if (i > 0) out += ";\n";
-    S2Loop const& loop = *polygon.loop(i);
+    const S2Loop& loop = *polygon.loop(i);
     AppendVertices(&loop.vertex(0), loop.num_vertices(), &out);
   }
   return out;
 }
 
-string ToString(vector<S2Point> const& points) {
+string ToString(const vector<S2Point>& points) {
   string out;
   AppendVertices(points.data(), points.size(), &out);
   return out;
 }
 
-string ToString(vector<S2LatLng> const& latlngs) {
+string ToString(const vector<S2LatLng>& latlngs) {
   string out;
   for (int i = 0; i < latlngs.size(); ++i) {
     if (i > 0) out += ", ";
@@ -348,7 +359,7 @@ string ToString(vector<S2LatLng> const& latlngs) {
   return out;
 }
 
-string ToString(s2shapeutil::LaxPolyline const& polyline) {
+string ToString(const S2LaxPolylineShape& polyline) {
   string out;
   if (polyline.num_vertices() > 0) {
     AppendVertices(&polyline.vertex(0), polyline.num_vertices(), &out);
@@ -356,7 +367,7 @@ string ToString(s2shapeutil::LaxPolyline const& polyline) {
   return out;
 }
 
-string ToString(s2shapeutil::LaxPolygon const& polygon) {
+string ToString(const S2LaxPolygonShape& polygon) {
   string out;
   for (int i = 0; i < polygon.num_loops(); ++i) {
     if (i > 0) out += ";\n";
@@ -366,7 +377,7 @@ string ToString(s2shapeutil::LaxPolygon const& polygon) {
   return out;
 }
 
-string ToString(S2ShapeIndexBase const& index) {
+string ToString(const S2ShapeIndexBase& index) {
   string out;
   for (int dim = 0; dim < 3; ++dim) {
     if (dim > 0) out += "#";

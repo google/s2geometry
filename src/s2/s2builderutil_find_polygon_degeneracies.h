@@ -67,7 +67,7 @@ struct PolygonDegeneracy {
 //
 // If the graph edges cannot be assembled into loops, the result is undefined.
 std::vector<PolygonDegeneracy> FindPolygonDegeneracies(
-    S2Builder::Graph const& graph, S2Error* error);
+    const S2Builder::Graph& graph, S2Error* error);
 
 }  // namespace s2builderutil
 

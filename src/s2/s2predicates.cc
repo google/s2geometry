@@ -40,9 +40,9 @@ constexpr double DBL_ERR = rounding_epsilon<double>();
 constexpr long double LD_ERR = rounding_epsilon<long double>();
 
 // A predefined S1ChordAngle representing (approximately) 45 degrees.
-static S1ChordAngle const k45Degrees = S1ChordAngle::FromLength2(2 - M_SQRT2);
+static const S1ChordAngle k45Degrees = S1ChordAngle::FromLength2(2 - M_SQRT2);
 
-int Sign(S2Point const& a, S2Point const& b, S2Point const& c) {
+int Sign(const S2Point& a, const S2Point& b, const S2Point& c) {
   // We don't need RobustCrossProd() here because Sign() does its own
   // error estimation and calls ExpensiveSign() if there is any uncertainty
   // about the result.
@@ -62,7 +62,7 @@ int Sign(S2Point const& a, S2Point const& b, S2Point const& c) {
 // in fact an earlier version of this code did exactly that), but antipodal
 // points are rare in practice so it seems better to simply fall back to
 // exact arithmetic in that case.
-int StableSign(S2Point const& a, S2Point const& b, S2Point const& c) {
+int StableSign(const S2Point& a, const S2Point& b, const S2Point& c) {
   Vector3_d ab = b - a;
   Vector3_d bc = c - b;
   Vector3_d ca = a - c;
@@ -80,7 +80,7 @@ int StableSign(S2Point const& a, S2Point const& b, S2Point const& c) {
   //
   // where e = 0.5 * DBL_EPSILON.  If the determinant magnitude is larger than
   // this value then we know its sign with certainty.
-  double const kDetErrorMultiplier = 3.2321 * DBL_EPSILON;  // see above
+  const double kDetErrorMultiplier = 3.2321 * DBL_EPSILON;  // see above
   double det, max_error;
   if (ab2 >= bc2 && ab2 >= ca2) {
     // AB is the longest edge, so compute (A-C)x(B-C).C.
@@ -126,8 +126,8 @@ int StableSign(S2Point const& a, S2Point const& b, S2Point const& c) {
 //   Graphics, 1990).
 //
 int SymbolicallyPerturbedSign(
-    Vector3_xf const& a, Vector3_xf const& b,
-    Vector3_xf const& c, Vector3_xf const& b_cross_c) {
+    const Vector3_xf& a, const Vector3_xf& b,
+    const Vector3_xf& c, const Vector3_xf& b_cross_c) {
   // This method requires that the points are sorted in lexicographically
   // increasing order.  This is because every possible S2Point has its own
   // symbolic perturbation such that if A < B then the symbolic perturbation
@@ -220,7 +220,7 @@ int SymbolicallyPerturbedSign(
 
 // Compute the determinant using exact arithmetic and/or symbolic
 // permutations.  Requires that the three points are distinct.
-int ExactSign(S2Point const& a, S2Point const& b, S2Point const& c,
+int ExactSign(const S2Point& a, const S2Point& b, const S2Point& c,
               bool perturb) {
   DCHECK(a != b && b != c && c != a);
 
@@ -271,7 +271,7 @@ int ExactSign(S2Point const& a, S2Point const& b, S2Point const& c,
 
 using Vector3_xf = Vector3<ExactFloat>;
 
-int ExpensiveSign(S2Point const& a, S2Point const& b, S2Point const& c,
+int ExpensiveSign(const S2Point& a, const S2Point& b, const S2Point& c,
                   bool perturb) {
   // Return zero if and only if two points are the same.  This ensures (1).
   if (a == b || b == c || c == a) return 0;
@@ -295,8 +295,8 @@ int ExpensiveSign(S2Point const& a, S2Point const& b, S2Point const& c,
   return ExactSign(a, b, c, perturb);
 }
 
-bool OrderedCCW(S2Point const& a, S2Point const& b, S2Point const& c,
-                S2Point const& o) {
+bool OrderedCCW(const S2Point& a, const S2Point& b, const S2Point& c,
+                const S2Point& o) {
   // The last inequality below is ">" rather than ">=" so that we return true
   // if A == B or B == C, and otherwise false if A == C.  Recall that
   // Sign(x,y,z) == -Sign(z,y,x) for all x,y,z.
@@ -310,7 +310,7 @@ bool OrderedCCW(S2Point const& a, S2Point const& b, S2Point const& c,
 
 // Returns cos(XY), and sets "error" to the maximum error in the result.
 // REQUIRES: "x" and "y" satisfy S2::IsNormalized().
-inline double GetCosDistance(S2Point const& x, S2Point const& y,
+inline double GetCosDistance(const S2Point& x, const S2Point& y,
                              double* error) {
   double c = x.DotProd(y);
   *error = 9.5 * DBL_ERR * fabs(c) + 1.5 * DBL_ERR;
@@ -318,7 +318,7 @@ inline double GetCosDistance(S2Point const& x, S2Point const& y,
 }
 
 // A high precision "long double" version of the function above.
-inline long double GetCosDistance(Vector3_ld const& x, Vector3_ld const& y,
+inline long double GetCosDistance(const Vector3_ld& x, const Vector3_ld& y,
                                   long double* error) {
   // With "long double" precision it is worthwhile to compensate for length
   // errors in "x" and "y", since they are only unit length to within the
@@ -333,7 +333,7 @@ inline long double GetCosDistance(Vector3_ld const& x, Vector3_ld const& y,
 // to the maximum error in the result.
 //
 // REQUIRES: "x" and "y" satisfy S2::IsNormalized().
-inline double GetSin2Distance(S2Point const& x, S2Point const& y,
+inline double GetSin2Distance(const S2Point& x, const S2Point& y,
                               double* error) {
   // The (x-y).CrossProd(x+y) trick eliminates almost all of error due to "x"
   // and "y" being not quite unit length.  This method is extremely accurate
@@ -348,7 +348,7 @@ inline double GetSin2Distance(S2Point const& x, S2Point const& y,
 }
 
 // A high precision "long double" version of the function above.
-inline long double GetSin2Distance(Vector3_ld const& x, Vector3_ld const& y,
+inline long double GetSin2Distance(const Vector3_ld& x, const Vector3_ld& y,
                                    long double* error) {
   // In "long double" precision it is worthwhile to compensate for length
   // errors in "x" and "y", since they are only unit length to within the
@@ -366,8 +366,8 @@ inline long double GetSin2Distance(Vector3_ld const& x, Vector3_ld const& y,
 }
 
 template <class T>
-int TriageCompareCosDistances(Vector3<T> const& x,
-                              Vector3<T> const& a, Vector3<T> const& b) {
+int TriageCompareCosDistances(const Vector3<T>& x,
+                              const Vector3<T>& a, const Vector3<T>& b) {
   T cos_ax_error, cos_bx_error;
   T cos_ax = GetCosDistance(a, x, &cos_ax_error);
   T cos_bx = GetCosDistance(b, x, &cos_bx_error);
@@ -377,8 +377,8 @@ int TriageCompareCosDistances(Vector3<T> const& x,
 }
 
 template <class T>
-int TriageCompareSin2Distances(Vector3<T> const& x,
-                               Vector3<T> const& a, Vector3<T> const& b) {
+int TriageCompareSin2Distances(const Vector3<T>& x,
+                               const Vector3<T>& a, const Vector3<T>& b) {
   T sin2_ax_error, sin2_bx_error;
   T sin2_ax = GetSin2Distance(a, x, &sin2_ax_error);
   T sin2_bx = GetSin2Distance(b, x, &sin2_bx_error);
@@ -387,8 +387,8 @@ int TriageCompareSin2Distances(Vector3<T> const& x,
   return (diff > error) ? 1 : (diff < -error) ? -1 : 0;
 }
 
-int ExactCompareDistances(Vector3_xf const& x,
-                          Vector3_xf const& a, Vector3_xf const& b) {
+int ExactCompareDistances(const Vector3_xf& x,
+                          const Vector3_xf& a, const Vector3_xf& b) {
   // This code produces the same result as though all points were reprojected
   // to lie exactly on the surface of the unit sphere.  It is based on testing
   // whether x.DotProd(a.Normalize()) < x.DotProd(b.Normalize()), reformulated
@@ -408,8 +408,8 @@ int ExactCompareDistances(Vector3_xf const& x,
 // Given three points such that AX == BX (exactly), returns -1, 0, or +1
 // according whether AX < BX, AX == BX, or AX > BX after symbolic
 // perturbations are taken into account.
-int SymbolicCompareDistances(S2Point const& x,
-                             S2Point const& a, S2Point const& b) {
+int SymbolicCompareDistances(const S2Point& x,
+                             const S2Point& a, const S2Point& b) {
   // Our symbolic perturbation strategy is based on the following model.
   // Similar to "simulation of simplicity", we assign a perturbation to every
   // point such that if A < B, then the symbolic perturbation for A is much,
@@ -430,14 +430,14 @@ int SymbolicCompareDistances(S2Point const& x,
   return (a < b) ? 1 : (a > b) ? -1 : 0;
 }
 
-static int CompareSin2Distances(S2Point const& x,
-                                S2Point const& a, S2Point const& b) {
+static int CompareSin2Distances(const S2Point& x,
+                                const S2Point& a, const S2Point& b) {
   int sign = TriageCompareSin2Distances(x, a, b);
   if (sign != 0) return sign;
   return TriageCompareSin2Distances(ToLD(x), ToLD(a), ToLD(b));
 }
 
-int CompareDistances(S2Point const& x, S2Point const& a, S2Point const& b) {
+int CompareDistances(const S2Point& x, const S2Point& a, const S2Point& b) {
   // We start by comparing distances using dot products (i.e., cosine of the
   // angle), because (1) this is the cheapest technique, and (2) it is valid
   // over the entire range of possible angles.  (We can only use the sin^2
@@ -472,7 +472,7 @@ int CompareDistances(S2Point const& x, S2Point const& a, S2Point const& b) {
 }
 
 template <class T>
-int TriageCompareCosDistance(Vector3<T> const& x, Vector3<T> const& y, T r2) {
+int TriageCompareCosDistance(const Vector3<T>& x, const Vector3<T>& y, T r2) {
   constexpr T T_ERR = rounding_epsilon<T>();
   T cos_xy_error;
   T cos_xy = GetCosDistance(x, y, &cos_xy_error);
@@ -484,7 +484,7 @@ int TriageCompareCosDistance(Vector3<T> const& x, Vector3<T> const& y, T r2) {
 }
 
 template <class T>
-int TriageCompareSin2Distance(Vector3<T> const& x, Vector3<T> const& y, T r2) {
+int TriageCompareSin2Distance(const Vector3<T>& x, const Vector3<T>& y, T r2) {
   DCHECK_LT(r2, 2.0);  // Only valid for distance limits < 90 degrees.
 
   constexpr T T_ERR = rounding_epsilon<T>();
@@ -497,8 +497,8 @@ int TriageCompareSin2Distance(Vector3<T> const& x, Vector3<T> const& y, T r2) {
   return (diff > error) ? 1 : (diff < -error) ? -1 : 0;
 }
 
-int ExactCompareDistance(Vector3_xf const& x, Vector3_xf const& y,
-                         ExactFloat const& r2) {
+int ExactCompareDistance(const Vector3_xf& x, const Vector3_xf& y,
+                         const ExactFloat& r2) {
   // This code produces the same result as though all points were reprojected
   // to lie exactly on the surface of the unit sphere.  It is based on
   // comparing the cosine of the angle XY (when both points are projected to
@@ -515,7 +515,7 @@ int ExactCompareDistance(Vector3_xf const& x, Vector3_xf const& y,
   return xy_sign * cmp.sgn();
 }
 
-int CompareDistance(S2Point const& x, S2Point const& y, S1ChordAngle r) {
+int CompareDistance(const S2Point& x, const S2Point& y, S1ChordAngle r) {
   // As with CompareDistances(), we start by comparing dot products because
   // the sin^2 method is only valid when the distance XY and the limit "r" are
   // both less than 90 degrees.
@@ -540,7 +540,7 @@ int CompareDistance(S2Point const& x, S2Point const& y, S1ChordAngle r) {
 // Helper function that compares the distance XY against the squared chord
 // distance "r2" using the given precision "T".
 template <class T>
-int TriageCompareDistance(Vector3<T> const& x, Vector3<T> const& y, T r2) {
+int TriageCompareDistance(const Vector3<T>& x, const Vector3<T>& y, T r2) {
   // The Sin2 method is much more accurate for small distances, but it is only
   // valid when the actual distance and the distance limit are both less than
   // 90 degrees.  So we always start with the Cos method.
@@ -554,8 +554,8 @@ int TriageCompareDistance(Vector3<T> const& x, Vector3<T> const& y, T r2) {
 // Helper function that returns "a0" or "a1", whichever is closer to "x".
 // Also returns the squared distance from the returned point to "x" in "ax2".
 template <class T>
-inline Vector3<T> GetClosestVertex(Vector3<T> const& x, Vector3<T> const& a0,
-                                   Vector3<T> const& a1, T* ax2) {
+inline Vector3<T> GetClosestVertex(const Vector3<T>& x, const Vector3<T>& a0,
+                                   const Vector3<T>& a1, T* ax2) {
   T a0x2 = (a0 - x).Norm2();
   T a1x2 = (a1 - x).Norm2();
   if (a0x2 < a1x2 || (a0x2 == a1x2 && a0 < a1)) {
@@ -577,9 +577,9 @@ inline Vector3<T> GetClosestVertex(Vector3<T> const& x, Vector3<T> const& a0,
 // because they have already been computed: n = (a0 - a1) x (a0 + a1),
 // n1 = n.Norm(), and n2 = n.Norm2().
 template <class T>
-int TriageCompareLineSin2Distance(Vector3<T> const& x, Vector3<T> const& a0,
-                                  Vector3<T> const& a1, T r2,
-                                  Vector3<T> const& n, T n1, T n2) {
+int TriageCompareLineSin2Distance(const Vector3<T>& x, const Vector3<T>& a0,
+                                  const Vector3<T>& a1, T r2,
+                                  const Vector3<T>& n, T n1, T n2) {
   constexpr T T_ERR = rounding_epsilon<T>();
 
   // The minimum distance is to a point on the edge interior.  Since the true
@@ -615,9 +615,9 @@ int TriageCompareLineSin2Distance(Vector3<T> const& x, Vector3<T> const& a0,
 // cosines of the distances involved.  It is more accurate when the distances
 // are large (greater than 45 degrees).
 template <class T>
-int TriageCompareLineCos2Distance(Vector3<T> const& x, Vector3<T> const& a0,
-                                  Vector3<T> const& a1, T r2,
-                                  Vector3<T> const& n, T n1, T n2) {
+int TriageCompareLineCos2Distance(const Vector3<T>& x, const Vector3<T>& a0,
+                                  const Vector3<T>& a1, T r2,
+                                  const Vector3<T>& n, T n1, T n2) {
   constexpr T T_ERR = rounding_epsilon<T>();
 
   // The minimum distance is to a point on the edge interior.  Since the true
@@ -651,9 +651,9 @@ int TriageCompareLineCos2Distance(Vector3<T> const& x, Vector3<T> const& a0,
 }
 
 template <class T>
-inline int TriageCompareLineDistance(Vector3<T> const& x, Vector3<T> const& a0,
-                                     Vector3<T> const& a1, T r2,
-                                     Vector3<T> const& n, T n1, T n2) {
+inline int TriageCompareLineDistance(const Vector3<T>& x, const Vector3<T>& a0,
+                                     const Vector3<T>& a1, T r2,
+                                     const Vector3<T>& n, T n1, T n2) {
   if (r2 < k45Degrees.length2()) {
     return TriageCompareLineSin2Distance(x, a0, a1, r2, n, n1, n2);
   } else {
@@ -662,8 +662,8 @@ inline int TriageCompareLineDistance(Vector3<T> const& x, Vector3<T> const& a0,
 }
 
 template <class T>
-int TriageCompareEdgeDistance(Vector3<T> const& x, Vector3<T> const& a0,
-                              Vector3<T> const& a1, T r2) {
+int TriageCompareEdgeDistance(const Vector3<T>& x, const Vector3<T>& a0,
+                              const Vector3<T>& a1, T r2) {
   constexpr T T_ERR = rounding_epsilon<T>();
 
   // First we need to decide whether the closest point is an edge endpoint or
@@ -707,8 +707,8 @@ int TriageCompareEdgeDistance(Vector3<T> const& x, Vector3<T> const& a0,
 }
 
 // REQUIRES: the closest point to "x" is in the interior of edge (a0, a1).
-int ExactCompareLineDistance(Vector3_xf const& x, Vector3_xf const& a0,
-                             Vector3_xf const& a1, ExactFloat const& r2) {
+int ExactCompareLineDistance(const Vector3_xf& x, const Vector3_xf& a0,
+                             const Vector3_xf& a1, const ExactFloat& r2) {
   // Since we are given that the closest point is in the edge interior, the
   // true distance is always less than 90 degrees (which corresponds to a
   // squared chord length of 2.0).
@@ -722,8 +722,8 @@ int ExactCompareLineDistance(Vector3_xf const& x, Vector3_xf const& a0,
   return cmp.sgn();
 }
 
-int ExactCompareEdgeDistance(S2Point const& x, S2Point const& a0,
-                             S2Point const& a1, S1ChordAngle r) {
+int ExactCompareEdgeDistance(const S2Point& x, const S2Point& a0,
+                             const S2Point& a1, S1ChordAngle r) {
   // Even if previous calculations were uncertain, we might not need to do
   // *all* the calculations in exact arithmetic here.  For example it may be
   // easy to determine whether "x" is closer to an endpoint or the edge
@@ -744,7 +744,7 @@ int ExactCompareEdgeDistance(S2Point const& x, S2Point const& a0,
   }
 }
 
-int CompareEdgeDistance(S2Point const& x, S2Point const& a0, S2Point const& a1,
+int CompareEdgeDistance(const S2Point& x, const S2Point& a0, const S2Point& a1,
                         S1ChordAngle r) {
   // Check that the edge does not consist of antipodal points.  (This catches
   // the most common case -- the full test is in ExactCompareEdgeDistance.)
@@ -764,8 +764,8 @@ int CompareEdgeDistance(S2Point const& x, S2Point const& a0, S2Point const& a1,
 
 template <class T>
 int TriageCompareEdgeDirections(
-    Vector3<T> const& a0, Vector3<T> const& a1,
-    Vector3<T> const& b0, Vector3<T> const& b1) {
+    const Vector3<T>& a0, const Vector3<T>& a1,
+    const Vector3<T>& b0, const Vector3<T>& b1) {
   constexpr T T_ERR = rounding_epsilon<T>();
   Vector3<T> na = (a0 - a1).CrossProd(a0 + a1);
   Vector3<T> nb = (b0 - b1).CrossProd(b0 + b1);
@@ -776,24 +776,24 @@ int TriageCompareEdgeDirections(
   return (cos_ab > cos_ab_error) ? 1 : (cos_ab < -cos_ab_error) ? -1 : 0;
 }
 
-bool ArePointsLinearlyDependent(Vector3_xf const& x, Vector3_xf const& y) {
+bool ArePointsLinearlyDependent(const Vector3_xf& x, const Vector3_xf& y) {
   Vector3_xf n = x.CrossProd(y);
   return n[0].sgn() == 0 && n[1].sgn() == 0 && n[2].sgn() == 0;
 }
 
-bool ArePointsAntipodal(Vector3_xf const& x, Vector3_xf const& y) {
+bool ArePointsAntipodal(const Vector3_xf& x, const Vector3_xf& y) {
   return ArePointsLinearlyDependent(x, y) && x.DotProd(y).sgn() < 0;
 }
 
-int ExactCompareEdgeDirections(Vector3_xf const& a0, Vector3_xf const& a1,
-                               Vector3_xf const& b0, Vector3_xf const& b1) {
+int ExactCompareEdgeDirections(const Vector3_xf& a0, const Vector3_xf& a1,
+                               const Vector3_xf& b0, const Vector3_xf& b1) {
   DCHECK(!ArePointsAntipodal(a0, a1));
   DCHECK(!ArePointsAntipodal(b0, b1));
   return a0.CrossProd(a1).DotProd(b0.CrossProd(b1)).sgn();
 }
 
-int CompareEdgeDirections(S2Point const& a0, S2Point const& a1,
-                          S2Point const& b0, S2Point const& b1) {
+int CompareEdgeDirections(const S2Point& a0, const S2Point& a1,
+                          const S2Point& b0, const S2Point& b1) {
   // Check that no edge consists of antipodal points.  (This catches the most
   // common case -- the full test is in ExactCompareEdgeDirections.)
   DCHECK_NE(a0, -a1);
@@ -814,8 +814,8 @@ int CompareEdgeDirections(S2Point const& a0, S2Point const& a1,
 // If triangle ABC has positive sign, returns its circumcenter.  If ABC has
 // negative sign, returns the negated circumcenter.
 template <class T>
-Vector3<T> GetCircumcenter(Vector3<T> const& a, Vector3<T> const& b,
-                           Vector3<T> const& c, T* error) {
+Vector3<T> GetCircumcenter(const Vector3<T>& a, const Vector3<T>& b,
+                           const Vector3<T>& c, T* error) {
   constexpr T T_ERR = rounding_epsilon<T>();
 
   // We compute the circumcenter using the intersection of the perpendicular
@@ -844,9 +844,9 @@ Vector3<T> GetCircumcenter(Vector3<T> const& a, Vector3<T> const& b,
 }
 
 template <class T>
-int TriageEdgeCircumcenterSign(Vector3<T> const& x0, Vector3<T> const& x1,
-                               Vector3<T> const& a, Vector3<T> const& b,
-                               Vector3<T> const& c, int abc_sign) {
+int TriageEdgeCircumcenterSign(const Vector3<T>& x0, const Vector3<T>& x1,
+                               const Vector3<T>& a, const Vector3<T>& b,
+                               const Vector3<T>& c, int abc_sign) {
   constexpr T T_ERR = rounding_epsilon<T>();
 
   // Compute the circumcenter Z of triangle ABC, and then test which side of
@@ -865,9 +865,9 @@ int TriageEdgeCircumcenterSign(Vector3<T> const& x0, Vector3<T> const& x1,
   return (result > result_error) ? 1 : (result < -result_error) ? -1 : 0;
 }
 
-int ExactEdgeCircumcenterSign(Vector3_xf const& x0, Vector3_xf const& x1,
-                              Vector3_xf const& a, Vector3_xf const& b,
-                              Vector3_xf const& c, int abc_sign) {
+int ExactEdgeCircumcenterSign(const Vector3_xf& x0, const Vector3_xf& x1,
+                              const Vector3_xf& a, const Vector3_xf& b,
+                              const Vector3_xf& c, int abc_sign) {
   // Return zero if the edge X is degenerate.  (Also see the comments in
   // SymbolicEdgeCircumcenterSign.)
   if (ArePointsLinearlyDependent(x0, x1)) {
@@ -976,7 +976,7 @@ int ExactEdgeCircumcenterSign(Vector3_xf const& x0, Vector3_xf const& x1,
 // dependent).  Clients should never use this method, but it is useful here in
 // order to implement the combined pedestal/axis-aligned perturbation scheme
 // used by some methods (such as EdgeCircumcenterSign).
-int UnperturbedSign(S2Point const& a, S2Point const& b, S2Point const& c) {
+int UnperturbedSign(const S2Point& a, const S2Point& b, const S2Point& c) {
   int sign = TriageSign(a, b, c, a.CrossProd(b));
   if (sign == 0) sign = ExpensiveSign(a, b, c, false /*perturb*/);
   return sign;
@@ -988,8 +988,8 @@ int UnperturbedSign(S2Point const& a, S2Point const& b, S2Point const& c) {
 // result is zero only if X0 == X1, A == B, B == C, or C == A.  (It is nonzero
 // if these pairs are exactly proportional to each other but not equal.)
 int SymbolicEdgeCircumcenterSign(
-    S2Point const& x0, S2Point const& x1,
-    S2Point const& a_arg, S2Point const& b_arg, S2Point const& c_arg) {
+    const S2Point& x0, const S2Point& x1,
+    const S2Point& a_arg, const S2Point& b_arg, const S2Point& c_arg) {
   // We use the same perturbation strategy as SymbolicCompareDistances.  Note
   // that pedestal perturbations of X0 and X1 do not affect the result,
   // because Sign(X0, X1, Z) does not change when its arguments are scaled
@@ -1054,9 +1054,9 @@ int SymbolicEdgeCircumcenterSign(
   return UnperturbedSign(x0, x1, *c);
 }
 
-int EdgeCircumcenterSign(S2Point const& x0, S2Point const& x1,
-                         S2Point const& a, S2Point const& b,
-                         S2Point const& c) {
+int EdgeCircumcenterSign(const S2Point& x0, const S2Point& x1,
+                         const S2Point& a, const S2Point& b,
+                         const S2Point& c) {
   // Check that the edge does not consist of antipodal points.  (This catches
   // the most common case -- the full test is in ExactEdgeCircumcenterSign.)
   DCHECK_NE(x0, -x1);
@@ -1082,8 +1082,8 @@ int EdgeCircumcenterSign(S2Point const& x0, S2Point const& x1,
 }
 
 template <class T>
-Excluded TriageVoronoiSiteExclusion(Vector3<T> const& a, Vector3<T> const& b,
-                                    Vector3<T> const& x0, Vector3<T> const& x1,
+Excluded TriageVoronoiSiteExclusion(const Vector3<T>& a, const Vector3<T>& b,
+                                    const Vector3<T>& x0, const Vector3<T>& x1,
                                     T r2) {
   constexpr T T_ERR = rounding_epsilon<T>();
 
@@ -1269,9 +1269,9 @@ Excluded TriageVoronoiSiteExclusion(Vector3<T> const& a, Vector3<T> const& b,
   return (lhs3 > 0) ? Excluded::FIRST : Excluded::SECOND;
 }
 
-Excluded ExactVoronoiSiteExclusion(Vector3_xf const& a, Vector3_xf const& b,
-                                   Vector3_xf const& x0, Vector3_xf const& x1,
-                                   ExactFloat const& r2) {
+Excluded ExactVoronoiSiteExclusion(const Vector3_xf& a, const Vector3_xf& b,
+                                   const Vector3_xf& x0, const Vector3_xf& x1,
+                                   const ExactFloat& r2) {
   DCHECK(!ArePointsAntipodal(x0, x1));
 
   // Recall that one site excludes the other if
@@ -1381,8 +1381,8 @@ Excluded ExactVoronoiSiteExclusion(Vector3_xf const& a, Vector3_xf const& b,
   return (lhs2_sgn > 0) ? Excluded::FIRST : Excluded::SECOND;
 }
 
-Excluded GetVoronoiSiteExclusion(S2Point const& a, S2Point const& b,
-                                 S2Point const& x0, S2Point const& x1,
+Excluded GetVoronoiSiteExclusion(const S2Point& a, const S2Point& b,
+                                 const S2Point& x0, const S2Point& x1,
                                  S1ChordAngle r) {
   DCHECK_LT(r, S1ChordAngle::Right());
   DCHECK_LT(s2pred::CompareDistances(x0, a, b), 0);  // (implies a != b)
@@ -1428,59 +1428,59 @@ std::ostream& operator<<(std::ostream& os, Excluded excluded) {
 // tests can use them without putting all the definitions in a header file.
 
 template int TriageCompareCosDistances<double>(
-    S2Point const&, S2Point const&, S2Point const&);
+    const S2Point&, const S2Point&, const S2Point&);
 
 template int TriageCompareCosDistances<long double>(
-    Vector3_ld const&, Vector3_ld const&, Vector3_ld const&);
+    const Vector3_ld&, const Vector3_ld&, const Vector3_ld&);
 
 template int TriageCompareSin2Distances<double>(
-    S2Point const&, S2Point const&, S2Point const&);
+    const S2Point&, const S2Point&, const S2Point&);
 
 template int TriageCompareSin2Distances<long double>(
-    Vector3_ld const&, Vector3_ld const&, Vector3_ld const&);
+    const Vector3_ld&, const Vector3_ld&, const Vector3_ld&);
 
 template int TriageCompareCosDistance<double>(
-    S2Point const&, S2Point const&, double r2);
+    const S2Point&, const S2Point&, double r2);
 
 template int TriageCompareCosDistance<long double>(
-    Vector3_ld const&, Vector3_ld const&, long double r2);
+    const Vector3_ld&, const Vector3_ld&, long double r2);
 
 template int TriageCompareSin2Distance<double>(
-    S2Point const&, S2Point const&, double r2);
+    const S2Point&, const S2Point&, double r2);
 
 template int TriageCompareSin2Distance<long double>(
-    Vector3_ld const&, Vector3_ld const&, long double r2);
+    const Vector3_ld&, const Vector3_ld&, long double r2);
 
 template int TriageCompareEdgeDistance<double>(
-    S2Point const& x, S2Point const& a0, S2Point const& a1, double r2);
+    const S2Point& x, const S2Point& a0, const S2Point& a1, double r2);
 
 template int TriageCompareEdgeDistance<long double>(
-    Vector3_ld const& x, Vector3_ld const& a0, Vector3_ld const& a1,
+    const Vector3_ld& x, const Vector3_ld& a0, const Vector3_ld& a1,
     long double r2);
 
 template int TriageCompareEdgeDirections<double>(
-    S2Point const& a0, S2Point const& a1,
-    S2Point const& b0, S2Point const& b1);
+    const S2Point& a0, const S2Point& a1,
+    const S2Point& b0, const S2Point& b1);
 
 template int TriageCompareEdgeDirections<long double>(
-    Vector3_ld const& a0, Vector3_ld const& a1,
-    Vector3_ld const& b0, Vector3_ld const& b1);
+    const Vector3_ld& a0, const Vector3_ld& a1,
+    const Vector3_ld& b0, const Vector3_ld& b1);
 
 template int TriageEdgeCircumcenterSign<double>(
-    S2Point const& x0, S2Point const& x1,
-    S2Point const& a, S2Point const& b, S2Point const& c, int abc_sign);
+    const S2Point& x0, const S2Point& x1,
+    const S2Point& a, const S2Point& b, const S2Point& c, int abc_sign);
 
 template int TriageEdgeCircumcenterSign<long double>(
-    Vector3_ld const& x0, Vector3_ld const& x1,
-    Vector3_ld const& a, Vector3_ld const& b, Vector3_ld const& c,
+    const Vector3_ld& x0, const Vector3_ld& x1,
+    const Vector3_ld& a, const Vector3_ld& b, const Vector3_ld& c,
     int abc_sign);
 
 template Excluded TriageVoronoiSiteExclusion(
-    S2Point const& a, S2Point const& b,
-    S2Point const& x0, S2Point const& x1, double r2);
+    const S2Point& a, const S2Point& b,
+    const S2Point& x0, const S2Point& x1, double r2);
 
 template Excluded TriageVoronoiSiteExclusion(
-    Vector3_ld const& a, Vector3_ld const& b,
-    Vector3_ld const& x0, Vector3_ld const& x1, long double r2);
+    const Vector3_ld& a, const Vector3_ld& b,
+    const Vector3_ld& x0, const Vector3_ld& x1, long double r2);
 
 }  // namespace s2pred

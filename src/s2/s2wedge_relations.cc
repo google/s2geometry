@@ -22,8 +22,8 @@
 namespace S2 {
 
 bool WedgeContains(
-    S2Point const& a0, S2Point const& ab1, S2Point const& a2,
-    S2Point const& b0, S2Point const& b2) {
+    const S2Point& a0, const S2Point& ab1, const S2Point& a2,
+    const S2Point& b0, const S2Point& b2) {
   // For A to contain B (where each loop interior is defined to be its left
   // side), the CCW edge order around ab1 must be a2 b2 b0 a0.  We split
   // this test into two parts that test three vertices each.
@@ -32,8 +32,8 @@ bool WedgeContains(
 }
 
 bool WedgeIntersects(
-    S2Point const& a0, S2Point const& ab1, S2Point const& a2,
-    S2Point const& b0, S2Point const& b2) {
+    const S2Point& a0, const S2Point& ab1, const S2Point& a2,
+    const S2Point& b0, const S2Point& b2) {
   // For A not to intersect B (where each loop interior is defined to be
   // its left side), the CCW edge order around ab1 must be a0 b2 b0 a2.
   // Note that it's important to write these conditions as negatives
@@ -44,8 +44,8 @@ bool WedgeIntersects(
 }
 
 WedgeRelation GetWedgeRelation(
-    S2Point const& a0, S2Point const& ab1, S2Point const& a2,
-    S2Point const& b0, S2Point const& b2) {
+    const S2Point& a0, const S2Point& ab1, const S2Point& a2,
+    const S2Point& b0, const S2Point& b2) {
   // There are 6 possible edge orderings at a shared vertex (all
   // of these orderings are circular, i.e. abcd == bcda):
   //

@@ -23,10 +23,10 @@
 #include <gtest/gtest.h>
 #include "s2/r2.h"
 
-static void TestIntervalOps(R2Rect const& x, R2Rect const& y,
+static void TestIntervalOps(const R2Rect& x, const R2Rect& y,
                             const char* expected_rexion,
-                            R2Rect const& expected_union,
-                            R2Rect const& expected_intersection) {
+                            const R2Rect& expected_union,
+                            const R2Rect& expected_intersection) {
   // Test all of the interval operations on the given pair of intervals.
   // "expected_rexion" is a sequence of "T" and "F" characters corresponding
   // to the expected results of Contains(), InteriorContains(), Intersects(),

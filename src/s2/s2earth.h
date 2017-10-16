@@ -47,6 +47,7 @@ class S2Earth {
   inline static double RadiansToKm(double radians);
   inline static double MetersToRadians(double meters);
   inline static double RadiansToMeters(double radians);
+  inline static double SteradiansToSquareMeters(double steradians);
 
   static double ToLongitudeRadians(util::units::Meters const& distance,
                                    double latitude_radians);
@@ -154,6 +155,10 @@ inline double S2Earth::MetersToRadians(double meters) {
 
 inline double S2Earth::RadiansToMeters(double radians) {
   return radians * RadiusMeters();
+}
+
+inline double S2Earth::SteradiansToSquareMeters(double steradians) {
+  return steradians * RadiusMeters() * RadiusMeters();
 }
 
 inline util::units::Meters S2Earth::GetDistance(S2Point const& a,

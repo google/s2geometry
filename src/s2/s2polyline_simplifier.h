@@ -21,6 +21,10 @@
 // the edge is guaranteed to intersect or avoid the specified discs using
 // exact arithmetic (see s2predicates.h).
 //
+// Note that S2Builder can also simplify polylines and supports more features
+// (e.g., snapping to S2CellId centers), so it is only recommended to use this
+// class if S2Builder does not meet your needs.
+//
 // Here is a simple example showing how to simplify a polyline into a sequence
 // of edges that stay within "max_error" of the original edges:
 //
@@ -62,7 +66,7 @@ class S2PolylineSimplifier {
   S2PolylineSimplifier() {}
 
   // Starts a new simplified edge at "src".
-  void Init(S2Point const& src);
+  void Init(const S2Point& src);
 
   // Returns the source vertex of the output edge.
   S2Point src() const;
@@ -70,10 +74,10 @@ class S2PolylineSimplifier {
   // Returns true if the edge (src, dst) satisfies all of the targeting
   // requirements so far.  Returns false if the edge would be longer than
   // 90 degrees (such edges are not supported).
-  bool Extend(S2Point const& dst) const;
+  bool Extend(const S2Point& dst) const;
 
   // Requires that the output edge must pass through the given disc.
-  bool TargetDisc(S2Point const& point, S1ChordAngle radius);
+  bool TargetDisc(const S2Point& point, S1ChordAngle radius);
 
   // Requires that the output edge must avoid the given disc.  "disc_on_left"
   // specifies whether the disc must be to the left or right of the edge.
@@ -89,12 +93,12 @@ class S2PolylineSimplifier {
   // relevant yet).  Now X_i is to the left of the polyline if and only if
   // s2pred::OrderedCCW(A, D, X, C) (in other words, if X_i is to the left of
   // the angle wedge ACD).
-  bool AvoidDisc(S2Point const& point, S1ChordAngle radius,
+  bool AvoidDisc(const S2Point& point, S1ChordAngle radius,
                  bool disc_on_left);
 
  private:
-  double GetAngle(S2Point const& p) const;
-  double GetSemiwidth(S2Point const& p, S1ChordAngle r,
+  double GetAngle(const S2Point& p) const;
+  double GetSemiwidth(const S2Point& p, S1ChordAngle r,
                       int round_direction) const;
 
   S2Point src_;

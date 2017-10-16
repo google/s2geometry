@@ -31,7 +31,7 @@ void S2RegionIntersection::Init(vector<std::unique_ptr<S2Region>> regions) {
   regions_ = std::move(regions);
 }
 
-S2RegionIntersection::S2RegionIntersection(S2RegionIntersection const& src)
+S2RegionIntersection::S2RegionIntersection(const S2RegionIntersection& src)
   : regions_(src.num_regions()) {
   for (int i = 0; i < num_regions(); ++i) {
     regions_[i].reset(src.region(i)->Clone());
@@ -62,21 +62,21 @@ S2LatLngRect S2RegionIntersection::GetRectBound() const {
   return result;
 }
 
-bool S2RegionIntersection::Contains(S2Cell const& cell) const {
+bool S2RegionIntersection::Contains(const S2Cell& cell) const {
   for (int i = 0; i < num_regions(); ++i) {
     if (!region(i)->Contains(cell)) return false;
   }
   return true;
 }
 
-bool S2RegionIntersection::Contains(S2Point const& p) const {
+bool S2RegionIntersection::Contains(const S2Point& p) const {
   for (int i = 0; i < num_regions(); ++i) {
     if (!region(i)->Contains(p)) return false;
   }
   return true;
 }
 
-bool S2RegionIntersection::MayIntersect(S2Cell const& cell) const {
+bool S2RegionIntersection::MayIntersect(const S2Cell& cell) const {
   for (int i = 0; i < num_regions(); ++i) {
     if (!region(i)->MayIntersect(cell)) return false;
   }

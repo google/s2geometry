@@ -38,20 +38,20 @@ using std::min;
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
-S2LatLngRect S2LatLngRect::FromCenterSize(S2LatLng const& center,
-                                          S2LatLng const& size) {
+S2LatLngRect S2LatLngRect::FromCenterSize(const S2LatLng& center,
+                                          const S2LatLng& size) {
   return FromPoint(center).Expanded(0.5 * size);
 }
 
-S2LatLngRect S2LatLngRect::FromPoint(S2LatLng const& p) {
+S2LatLngRect S2LatLngRect::FromPoint(const S2LatLng& p) {
   DLOG_IF(ERROR, !p.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::GetDistance: " << p;
 
   return S2LatLngRect(p, p);
 }
 
-S2LatLngRect S2LatLngRect::FromPointPair(S2LatLng const& p1,
-                                         S2LatLng const& p2) {
+S2LatLngRect S2LatLngRect::FromPointPair(const S2LatLng& p1,
+                                         const S2LatLng& p2) {
   DLOG_IF(ERROR, !p1.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::FromPointPair: " << p1;
 
@@ -140,7 +140,7 @@ S2Point S2LatLngRect::GetCentroid() const {
   return S2Point(r * cos(lng), r * sin(lng), z);
 }
 
-bool S2LatLngRect::Contains(S2LatLng const& ll) const {
+bool S2LatLngRect::Contains(const S2LatLng& ll) const {
   DLOG_IF(ERROR, !ll.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::Contains: " << ll;
 
@@ -148,11 +148,11 @@ bool S2LatLngRect::Contains(S2LatLng const& ll) const {
           lng_.Contains(ll.lng().radians()));
 }
 
-bool S2LatLngRect::InteriorContains(S2Point const& p) const {
+bool S2LatLngRect::InteriorContains(const S2Point& p) const {
   return InteriorContains(S2LatLng(p));
 }
 
-bool S2LatLngRect::InteriorContains(S2LatLng const& ll) const {
+bool S2LatLngRect::InteriorContains(const S2LatLng& ll) const {
   DLOG_IF(ERROR, !ll.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::InteriorContains: " << ll;
 
@@ -160,29 +160,29 @@ bool S2LatLngRect::InteriorContains(S2LatLng const& ll) const {
           lng_.InteriorContains(ll.lng().radians()));
 }
 
-bool S2LatLngRect::Contains(S2LatLngRect const& other) const {
+bool S2LatLngRect::Contains(const S2LatLngRect& other) const {
   return lat_.Contains(other.lat_) && lng_.Contains(other.lng_);
 }
 
-bool S2LatLngRect::InteriorContains(S2LatLngRect const& other) const {
+bool S2LatLngRect::InteriorContains(const S2LatLngRect& other) const {
   return (lat_.InteriorContains(other.lat_) &&
           lng_.InteriorContains(other.lng_));
 }
 
-bool S2LatLngRect::Intersects(S2LatLngRect const& other) const {
+bool S2LatLngRect::Intersects(const S2LatLngRect& other) const {
   return lat_.Intersects(other.lat_) && lng_.Intersects(other.lng_);
 }
 
-bool S2LatLngRect::InteriorIntersects(S2LatLngRect const& other) const {
+bool S2LatLngRect::InteriorIntersects(const S2LatLngRect& other) const {
   return (lat_.InteriorIntersects(other.lat_) &&
           lng_.InteriorIntersects(other.lng_));
 }
 
-void S2LatLngRect::AddPoint(S2Point const& p) {
+void S2LatLngRect::AddPoint(const S2Point& p) {
   AddPoint(S2LatLng(p));
 }
 
-void S2LatLngRect::AddPoint(S2LatLng const& ll) {
+void S2LatLngRect::AddPoint(const S2LatLng& ll) {
   DLOG_IF(ERROR, !ll.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::AddPoint: " << ll;
 
@@ -190,7 +190,7 @@ void S2LatLngRect::AddPoint(S2LatLng const& ll) {
   lng_.AddPoint(ll.lng().radians());
 }
 
-S2LatLngRect S2LatLngRect::Expanded(S2LatLng const& margin) const {
+S2LatLngRect S2LatLngRect::Expanded(const S2LatLng& margin) const {
   R1Interval lat = lat_.Expanded(margin.lat().radians());
   S1Interval lng = lng_.Expanded(margin.lng().radians());
   if (lat.is_empty() || lng.is_empty()) return Empty();
@@ -204,12 +204,12 @@ S2LatLngRect S2LatLngRect::PolarClosure() const {
   return *this;
 }
 
-S2LatLngRect S2LatLngRect::Union(S2LatLngRect const& other) const {
+S2LatLngRect S2LatLngRect::Union(const S2LatLngRect& other) const {
   return S2LatLngRect(lat_.Union(other.lat_),
                       lng_.Union(other.lng_));
 }
 
-S2LatLngRect S2LatLngRect::Intersection(S2LatLngRect const& other) const {
+S2LatLngRect S2LatLngRect::Intersection(const S2LatLngRect& other) const {
   R1Interval lat = lat_.Intersection(other.lat_);
   S1Interval lng = lng_.Intersection(other.lng_);
   if (lat.is_empty() || lng.is_empty()) {
@@ -304,7 +304,7 @@ S2LatLngRect S2LatLngRect::GetRectBound() const {
   return *this;
 }
 
-bool S2LatLngRect::Contains(S2Cell const& cell) const {
+bool S2LatLngRect::Contains(const S2Cell& cell) const {
   // A latitude-longitude rectangle contains a cell if and only if it contains
   // the cell's bounding rectangle.  This test is exact from a mathematical
   // point of view, assuming that the bounds returned by S2Cell::GetRectBound()
@@ -317,7 +317,7 @@ bool S2LatLngRect::Contains(S2Cell const& cell) const {
   return Contains(cell.GetRectBound());
 }
 
-bool S2LatLngRect::MayIntersect(S2Cell const& cell) const {
+bool S2LatLngRect::MayIntersect(const S2Cell& cell) const {
   // This test is cheap but is NOT exact (see s2latlngrect.h).
   return Intersects(cell.GetRectBound());
 }
@@ -356,8 +356,8 @@ bool S2LatLngRect::Decode(Decoder* decoder) {
   return true;
 }
 
-bool S2LatLngRect::IntersectsLngEdge(S2Point const& a, S2Point const& b,
-                                     R1Interval const& lat, double lng) {
+bool S2LatLngRect::IntersectsLngEdge(const S2Point& a, const S2Point& b,
+                                     const R1Interval& lat, double lng) {
   // Return true if the segment AB intersects the given edge of constant
   // longitude.  The nice thing about edges of constant longitude is that
   // they are straight lines on the sphere (geodesics).
@@ -367,8 +367,8 @@ bool S2LatLngRect::IntersectsLngEdge(S2Point const& a, S2Point const& b,
       S2LatLng::FromRadians(lat.hi(), lng).ToPoint());
 }
 
-bool S2LatLngRect::IntersectsLatEdge(S2Point const& a, S2Point const& b,
-                                     double lat, S1Interval const& lng) {
+bool S2LatLngRect::IntersectsLatEdge(const S2Point& a, const S2Point& b,
+                                     double lat, const S1Interval& lng) {
   // Return true if the segment AB intersects the given edge of constant
   // latitude.  Unfortunately, lines of constant latitude are curves on
   // the sphere.  They can intersect a straight edge in 0, 1, or 2 points.
@@ -420,7 +420,7 @@ bool S2LatLngRect::IntersectsLatEdge(S2Point const& a, S2Point const& b,
   return false;
 }
 
-bool S2LatLngRect::Intersects(S2Cell const& cell) const {
+bool S2LatLngRect::Intersects(const S2Cell& cell) const {
   // First we eliminate the cases where one region completely contains the
   // other.  Once these are disposed of, then the regions will intersect
   // if and only if their boundaries intersect.
@@ -454,8 +454,8 @@ bool S2LatLngRect::Intersects(S2Cell const& cell) const {
         cell_ll[i].lng().radians(), cell_ll[(i+1)&3].lng().radians());
     if (!lng_.Intersects(edge_lng)) continue;
 
-    S2Point const& a = cell_v[i];
-    S2Point const& b = cell_v[(i+1)&3];
+    const S2Point& a = cell_v[i];
+    const S2Point& b = cell_v[(i+1)&3];
     if (edge_lng.Contains(lng_.lo())) {
       if (IntersectsLngEdge(a, b, lat_, lng_.lo())) return true;
     }
@@ -468,9 +468,9 @@ bool S2LatLngRect::Intersects(S2Cell const& cell) const {
   return false;
 }
 
-S1Angle S2LatLngRect::GetDistance(S2LatLngRect const& other) const {
-  S2LatLngRect const& a = *this;
-  S2LatLngRect const& b = other;
+S1Angle S2LatLngRect::GetDistance(const S2LatLngRect& other) const {
+  const S2LatLngRect& a = *this;
+  const S2LatLngRect& b = other;
   DCHECK(!a.is_empty());
   DCHECK(!b.is_empty());
 
@@ -523,10 +523,10 @@ S1Angle S2LatLngRect::GetDistance(S2LatLngRect const& other) const {
              S2::GetDistance(b_hi, a_lo, a_hi))));
 }
 
-S1Angle S2LatLngRect::GetDistance(S2LatLng const& p) const {
+S1Angle S2LatLngRect::GetDistance(const S2LatLng& p) const {
   // The algorithm here is the same as in GetDistance(S2LatLngRect), only
   // with simplified calculations.
-  S2LatLngRect const& a = *this;
+  const S2LatLngRect& a = *this;
   DLOG_IF(ERROR, a.is_empty())
       << "Empty S2LatLngRect in S2LatLngRect::GetDistance: " << a;
 
@@ -550,13 +550,13 @@ S1Angle S2LatLngRect::GetDistance(S2LatLng const& p) const {
   return S2::GetDistance(p.ToPoint(), lo, hi);
 }
 
-S1Angle S2LatLngRect::GetHausdorffDistance(S2LatLngRect const& other) const {
+S1Angle S2LatLngRect::GetHausdorffDistance(const S2LatLngRect& other) const {
   return max(GetDirectedHausdorffDistance(other),
              other.GetDirectedHausdorffDistance(*this));
 }
 
 S1Angle S2LatLngRect::GetDirectedHausdorffDistance(
-    S2LatLngRect const& other) const {
+    const S2LatLngRect& other) const {
   if (is_empty()) {
     return S1Angle::Radians(0);
   }
@@ -573,7 +573,7 @@ S1Angle S2LatLngRect::GetDirectedHausdorffDistance(
 // latitude range 'a_lat' to the other longitudinal edge spanning latitude
 // range 'b_lat', with their longitudinal difference given by 'lng_diff'.
 S1Angle S2LatLngRect::GetDirectedHausdorffDistance(
-    double lng_diff, R1Interval const& a, R1Interval const& b) {
+    double lng_diff, const R1Interval& a, const R1Interval& b) {
   // By symmetry, we can assume a's longtitude is 0 and b's longtitude is
   // lng_diff. Call b's two endpoints b_lo and b_hi. Let H be the hemisphere
   // containing a and delimited by the longitude line of b. The Voronoi diagram
@@ -654,7 +654,7 @@ S1Angle S2LatLngRect::GetDirectedHausdorffDistance(
 
 // Return the intersection of longitude 0 with the bisector of an edge
 // on longitude 'lng' and spanning latitude range 'lat'.
-S2Point S2LatLngRect::GetBisectorIntersection(R1Interval const& lat,
+S2Point S2LatLngRect::GetBisectorIntersection(const R1Interval& lat,
                                               double lng) {
   lng = fabs(lng);
   double lat_center = lat.GetCenter();
@@ -673,8 +673,8 @@ S2Point S2LatLngRect::GetBisectorIntersection(R1Interval const& lat,
 // Return max distance from a point b to the segment spanning latitude range
 // a_lat on longitude 0, if the max occurs in the interior of a_lat. Otherwise
 // return -1.
-S1Angle S2LatLngRect::GetInteriorMaxDistance(R1Interval const& a_lat,
-                                             S2Point const& b) {
+S1Angle S2LatLngRect::GetInteriorMaxDistance(const R1Interval& a_lat,
+                                             const S2Point& b) {
   // Longitude 0 is in the y=0 plane. b.x() >= 0 implies that the maximum
   // does not occur in the interior of a_lat.
   if (a_lat.is_empty() || b.x() >= 0) return S1Angle::Radians(-1);
@@ -691,22 +691,22 @@ S1Angle S2LatLngRect::GetInteriorMaxDistance(R1Interval const& a_lat,
   }
 }
 
-bool S2LatLngRect::Contains(S2Point const& p) const {
+bool S2LatLngRect::Contains(const S2Point& p) const {
   return Contains(S2LatLng(p));
 }
 
-bool S2LatLngRect::ApproxEquals(S2LatLngRect const& other,
+bool S2LatLngRect::ApproxEquals(const S2LatLngRect& other,
                                 S1Angle max_error) const {
   return (lat_.ApproxEquals(other.lat_, max_error.radians()) &&
           lng_.ApproxEquals(other.lng_, max_error.radians()));
 }
 
-bool S2LatLngRect::ApproxEquals(S2LatLngRect const& other,
-                                S2LatLng const& max_error) const {
+bool S2LatLngRect::ApproxEquals(const S2LatLngRect& other,
+                                const S2LatLng& max_error) const {
   return (lat_.ApproxEquals(other.lat_, max_error.lat().radians()) &&
           lng_.ApproxEquals(other.lng_, max_error.lng().radians()));
 }
 
-std::ostream& operator<<(std::ostream& os, S2LatLngRect const& r) {
+std::ostream& operator<<(std::ostream& os, const S2LatLngRect& r) {
   return os << "[Lo" << r.lo() << ", Hi" << r.hi() << "]";
 }

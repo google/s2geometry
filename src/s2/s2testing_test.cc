@@ -47,8 +47,8 @@ void TestFractal(int min_level, int max_level, double dimension) {
   // the area bounded by the fractal is more or less constant.
 
   // The radius needs to be fairly small to avoid spherical distortions.
-  double const nominal_radius = 0.001;  // radians, or about 6km
-  double const kDistortionError = 1e-5;
+  const double nominal_radius = 0.001;  // radians, or about 6km
+  const double kDistortionError = 1e-5;
 
   S2Testing::Fractal fractal;
   fractal.set_min_level(min_level);
@@ -112,7 +112,7 @@ void TestFractal(int min_level, int max_level, double dimension) {
   }
   // kVertexError is an approximate bound on the error when computing vertex
   // positions of the fractal (due to S2::FromFrame, trig calculations, etc).
-  double const kVertexError = 1e-14;
+  const double kVertexError = 1e-14;
 
   // Although min_radius_factor() is only a lower bound in general, it happens
   // to be exact (to within numerical errors) unless the dimension is in the

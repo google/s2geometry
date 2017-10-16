@@ -221,7 +221,7 @@ S2LatLngRect S2Cell::GetRectBound() const {
   // midpoints of their top and bottom edges.  The two cells covering the
   // poles extend down to +/-35.26 degrees at their vertices.  The maximum
   // error in this calculation is 0.5 * DBL_EPSILON.
-  static double const kPoleMinLat = asin(sqrt(1./3)) - 0.5 * DBL_EPSILON;
+  static const double kPoleMinLat = asin(sqrt(1./3)) - 0.5 * DBL_EPSILON;
 
   // The face centers are the +X, +Y, +Z, -X, -Y, -Z axes in that order.
   DCHECK_EQ(((face_ < 3) ? 1 : -1), S2::GetNorm(face_)[face_ % 3]);
@@ -263,15 +263,15 @@ S2LatLngRect S2Cell::GetRectBound() const {
   return bound.Expanded(S2LatLng::FromRadians(DBL_EPSILON, 0));
 }
 
-bool S2Cell::MayIntersect(S2Cell const& cell) const {
+bool S2Cell::MayIntersect(const S2Cell& cell) const {
   return id_.intersects(cell.id_);
 }
 
-bool S2Cell::Contains(S2Cell const& cell) const {
+bool S2Cell::Contains(const S2Cell& cell) const {
   return id_.contains(cell.id_);
 }
 
-bool S2Cell::Contains(S2Point const& p) const {
+bool S2Cell::Contains(const S2Point& p) const {
   // We can't just call XYZtoFaceUV, because for points that lie on the
   // boundary between two faces (i.e. u or v is +1/-1) we need to return
   // true for both adjacent cells.
@@ -301,7 +301,7 @@ bool S2Cell::Decode(Decoder* const decoder) {
 }
 
 // Return the squared chord distance from point P to corner vertex (i,j).
-inline double S2Cell::VertexChordDist2(S2Point const& p, int i, int j) const {
+inline double S2Cell::VertexChordDist2(const S2Point& p, int i, int j) const {
   S2Point vertex = S2Point(uv_[0][i], uv_[1][j], 1).Normalize();
   return (p - vertex).Norm2();
 }
@@ -309,7 +309,7 @@ inline double S2Cell::VertexChordDist2(S2Point const& p, int i, int j) const {
 // Given a point P and either the lower or upper edge of the S2Cell (specified
 // by setting "v_end" to 0 or 1 respectively), return true if P is closer to
 // the interior of that edge than it is to either endpoint.
-bool S2Cell::UEdgeIsClosest(S2Point const& p, int v_end) const {
+bool S2Cell::UEdgeIsClosest(const S2Point& p, int v_end) const {
   double u0 = uv_[0][0], u1 = uv_[0][1], v = uv_[1][v_end];
   // These are the normals to the planes that are perpendicular to the edge
   // and pass through one of its two endpoints.
@@ -321,7 +321,7 @@ bool S2Cell::UEdgeIsClosest(S2Point const& p, int v_end) const {
 // Given a point P and either the left or right edge of the S2Cell (specified
 // by setting "u_end" to 0 or 1 respectively), return true if P is closer to
 // the interior of that edge than it is to either endpoint.
-bool S2Cell::VEdgeIsClosest(S2Point const& p, int u_end) const {
+bool S2Cell::VEdgeIsClosest(const S2Point& p, int u_end) const {
   double v0 = uv_[1][0], v1 = uv_[1][1], u = uv_[0][u_end];
   // See comments above.
   S2Point dir0(-u * v0, u * u + 1, -v0);
@@ -347,7 +347,7 @@ inline static S1ChordAngle EdgeDistance(double dirIJ, double uv) {
   return S1ChordAngle::FromLength2(pq2 + qr * qr);
 }
 
-S1ChordAngle S2Cell::GetDistanceInternal(S2Point const& target_xyz,
+S1ChordAngle S2Cell::GetDistanceInternal(const S2Point& target_xyz,
                                          bool to_interior) const {
   // All calculations are done in the (u,v,w) coordinates of this cell's face.
   S2Point target = S2::FaceXYZtoUVW(face_, target_xyz);
@@ -400,15 +400,15 @@ S1ChordAngle S2Cell::GetDistanceInternal(S2Point const& target_xyz,
   return S1ChordAngle::FromLength2(chord_dist2);
 }
 
-S1ChordAngle S2Cell::GetDistance(S2Point const& target) const {
+S1ChordAngle S2Cell::GetDistance(const S2Point& target) const {
   return GetDistanceInternal(target, true /*to_interior*/);
 }
 
-S1ChordAngle S2Cell::GetBoundaryDistance(S2Point const& target) const {
+S1ChordAngle S2Cell::GetBoundaryDistance(const S2Point& target) const {
   return GetDistanceInternal(target, false /*to_interior*/);
 }
 
-S1ChordAngle S2Cell::GetDistance(S2Point const& a, S2Point const& b) const {
+S1ChordAngle S2Cell::GetDistance(const S2Point& a, const S2Point& b) const {
   // Possible optimizations:
   //  - Currently the (cell vertex, edge endpoint) distances are computed
   //    twice each, and the length of AB is computed 4 times.
@@ -449,7 +449,7 @@ S1ChordAngle S2Cell::GetDistance(S2Point const& a, S2Point const& b) const {
   return min_dist;
 }
 
-S1ChordAngle S2Cell::GetDistance(S2Cell const& target) const {
+S1ChordAngle S2Cell::GetDistance(const S2Cell& target) const {
   // If the cells intersect, the distance is zero.  We use the (u,v) ranges
   // rather S2CellId::intersects() so that cells that share a partial edge or
   // corner are considered to intersect.

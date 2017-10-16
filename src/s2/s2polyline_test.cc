@@ -44,7 +44,7 @@ using std::vector;
 namespace {
 
 // Wraps s2textformat::MakePolyline in order to test Encode/Decode.
-unique_ptr<S2Polyline> MakePolyline(string const& str) {
+unique_ptr<S2Polyline> MakePolyline(const string& str) {
   unique_ptr<S2Polyline> polyline(s2textformat::MakePolyline(str));
   Encoder encoder;
   polyline->Encode(&encoder);
@@ -294,8 +294,8 @@ static string JoinInts(const vector<int>& ints) {
   return result;
 }
 
-void CheckSubsample(char const* polyline_str, double tolerance_degrees,
-                    char const* expected_str) {
+void CheckSubsample(const char* polyline_str, double tolerance_degrees,
+                    const char* expected_str) {
   SCOPED_TRACE(StringPrintf("\"%s\", tolerance %f",
                             polyline_str, tolerance_degrees));
   unique_ptr<S2Polyline> polyline(MakePolyline(polyline_str));
@@ -330,7 +330,7 @@ TEST(S2Polyline, SubsampleVerticesTrivialInputs) {
 }
 
 TEST(S2Polyline, SubsampleVerticesSimpleExample) {
-  char const* poly_str("0:0, 0:1, -1:2, 0:3, 0:4, 1:4, 2:4.5, 3:4, 3.5:4, 4:4");
+  const char* poly_str("0:0, 0:1, -1:2, 0:3, 0:4, 1:4, 2:4.5, 3:4, 3.5:4, 4:4");
   CheckSubsample(poly_str, 3.0, "0,9");
   CheckSubsample(poly_str, 2.0, "0,6,9");
   CheckSubsample(poly_str, 0.9, "0,2,6,9");
@@ -360,8 +360,8 @@ TEST(S2Polyline, SubsampleVerticesGuarantees) {
 }
 
 
-static bool TestEquals(char const* a_str,
-                       char const* b_str,
+static bool TestEquals(const char* a_str,
+                       const char* b_str,
                        S1Angle max_error) {
   unique_ptr<S2Polyline> a(MakePolyline(a_str));
   unique_ptr<S2Polyline> b(MakePolyline(b_str));
@@ -428,7 +428,7 @@ TEST(S2PolylineOwningShape, Ownership) {
   S2Polyline::OwningShape shape(std::move(polyline));
 }
 
-void TestNearlyCovers(string const& a_str, string const& b_str,
+void TestNearlyCovers(const string& a_str, const string& b_str,
                       double max_error_degrees, bool expect_b_covers_a,
                       bool expect_a_covers_b) {
   SCOPED_TRACE(StringPrintf("a=\"%s\", b=\"%s\", max error=%f",
@@ -471,8 +471,8 @@ TEST(S2PolylineCoveringTest, PartialOverlapOnly) {
 TEST(S2PolylineCoveringTest, ShortBacktracking) {
   // Two lines that backtrack a bit (less than 1.5 degrees) on different edges.
   // A simple greedy matching algorithm would fail on this example.
-  string const& t1 = "0:0, 0:2, 0:1, 0:4, 0:5";
-  string const& t2 = "0:0, 0:2, 0:4, 0:3, 0:5";
+  const string& t1 = "0:0, 0:2, 0:1, 0:4, 0:5";
+  const string& t2 = "0:0, 0:2, 0:4, 0:3, 0:5";
   TestNearlyCovers(t1, t2, 1.5, true, true);
   TestNearlyCovers(t1, t2, 0.5, false, false);
 }

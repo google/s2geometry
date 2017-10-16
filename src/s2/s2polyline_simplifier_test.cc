@@ -26,18 +26,18 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
-void CheckSimplify(char const* src, char const* dst,
-                   char const* target, char const* avoid,
-                   std::vector<bool> const& disc_on_left,
+void CheckSimplify(const char* src, const char* dst,
+                   const char* target, const char* avoid,
+                   const std::vector<bool>& disc_on_left,
                    double radius_degrees, bool expected_result) {
   S1ChordAngle radius(S1Angle::Degrees(radius_degrees));
   S2PolylineSimplifier s;
   s.Init(s2textformat::MakePoint(src));
-  for (S2Point const& p : s2textformat::ParsePoints(target)) {
+  for (const S2Point& p : s2textformat::ParsePoints(target)) {
     s.TargetDisc(p, radius);
   }
   int i = 0;
-  for (S2Point const& p : s2textformat::ParsePoints(avoid)) {
+  for (const S2Point& p : s2textformat::ParsePoints(avoid)) {
     s.AvoidDisc(p, radius, disc_on_left[i++]);
   }
   EXPECT_EQ(expected_result, s.Extend(s2textformat::MakePoint(dst)))
@@ -119,13 +119,13 @@ TEST(S2PolylineSimplifier, Precision) {
   // locations (i.e., S2::InterpolateAtDistance, etc), and also on the
   // padding that S2PolylineSimplifier uses to ensure that its results are
   // conservative (i.e., the error calculated by GetSemiwidth).
-  S1Angle const kMaxError = S1Angle::Radians(25 * DBL_EPSILON);
+  const S1Angle kMaxError = S1Angle::Radians(25 * DBL_EPSILON);
 
   // We repeatedly generate a random edge.  We then target several discs that
   // barely overlap the edge, and avoid several discs that barely miss the
   // edge.  About half the time, we choose one disc and make it slightly too
   // large or too small so that targeting fails.
-  int const kIters = 1000;  // Passes with 1 million iterations.
+  const int kIters = 1000;  // Passes with 1 million iterations.
   S2PolylineSimplifier simplifier;
   for (int iter = 0; iter < kIters; ++iter) {
     S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
@@ -137,7 +137,7 @@ TEST(S2PolylineSimplifier, Precision) {
     S2Point n = S2::RobustCrossProd(src, dst).Normalize();
 
     // If bad_disc >= 0, then we make targeting fail for that disc.
-    int const kNumDiscs = 5;
+    const int kNumDiscs = 5;
     int bad_disc = S2Testing::rnd.Uniform(2 * kNumDiscs) - kNumDiscs;
     for (int i = 0; i < kNumDiscs; ++i) {
       double f = S2Testing::rnd.RandDouble();

@@ -33,13 +33,13 @@ using std::tan;
 
 namespace S2 {
 
-double Angle(S2Point const& a, S2Point const& b, S2Point const& c) {
+double Angle(const S2Point& a, const S2Point& b, const S2Point& c) {
   // RobustCrossProd() is necessary to get good accuracy when two of the input
   // points are very close together.
   return RobustCrossProd(a, b).Angle(RobustCrossProd(c, b));
 }
 
-double TurnAngle(S2Point const& a, S2Point const& b, S2Point const& c) {
+double TurnAngle(const S2Point& a, const S2Point& b, const S2Point& c) {
   // We use RobustCrossProd() to get good accuracy when two points are very
   // close together, and Sign() to ensure that the sign is correct for
   // turns that are close to 180 degrees.
@@ -53,7 +53,7 @@ double TurnAngle(S2Point const& a, S2Point const& b, S2Point const& c) {
   return (s2pred::Sign(a, b, c) > 0) ? angle : -angle;
 }
 
-double Area(S2Point const& a, S2Point const& b, S2Point const& c) {
+double Area(const S2Point& a, const S2Point& b, const S2Point& c) {
   DCHECK(IsUnitLength(a));
   DCHECK(IsUnitLength(b));
   DCHECK(IsUnitLength(c));
@@ -110,7 +110,7 @@ double Area(S2Point const& a, S2Point const& b, S2Point const& c) {
                            tan(0.5 * (s - sb)) * tan(0.5 * (s - sc)))));
 }
 
-double GirardArea(S2Point const& a, S2Point const& b, S2Point const& c) {
+double GirardArea(const S2Point& a, const S2Point& b, const S2Point& c) {
   // This is equivalent to the usual Girard's formula but is slightly more
   // accurate, faster to compute, and handles a == b == c without a special
   // case.  RobustCrossProd() is necessary to get good accuracy when two of
@@ -122,7 +122,7 @@ double GirardArea(S2Point const& a, S2Point const& b, S2Point const& c) {
   return max(0.0, ab.Angle(ac) - ab.Angle(bc) + bc.Angle(ac));
 }
 
-double SignedArea(S2Point const& a, S2Point const& b, S2Point const& c) {
+double SignedArea(const S2Point& a, const S2Point& b, const S2Point& c) {
   return s2pred::Sign(a, b, c) * Area(a, b, c);
 }
 

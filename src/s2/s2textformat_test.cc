@@ -28,19 +28,17 @@
 using std::unique_ptr;
 using std::vector;
 
-using LaxPolygon = s2shapeutil::LaxPolygon;
-
 namespace {
 
-static int const kIters = 10000;
+static const int kIters = 10000;
 
 // Verify that s2textformat::ToString() formats the given lat/lng with at most
 // "max_digits" after the decimal point and has no trailing zeros.
-void ExpectMaxDigits(S2LatLng const& ll, int max_digits) {
+void ExpectMaxDigits(const S2LatLng& ll, int max_digits) {
   string result = s2textformat::ToString(ll.ToPoint());
   vector<string> values = strings::Split(result, ':', strings::SkipEmpty());
   EXPECT_EQ(2, values.size()) << result;
-  for (auto const& value : values) {
+  for (const auto& value : values) {
     int num_digits = 0;
     if (value.find('.') != string::npos) {
       num_digits = value.size() - value.find('.') - 1;
@@ -50,7 +48,7 @@ void ExpectMaxDigits(S2LatLng const& ll, int max_digits) {
   }
 }
 
-void ExpectString(string const& expected, S2LatLng const& ll) {
+void ExpectString(const string& expected, const S2LatLng& ll) {
   EXPECT_EQ(expected, s2textformat::ToString(ll.ToPoint()));
 }
 
@@ -101,9 +99,19 @@ TEST(ToString, MinimalDigitsDoubleConstants) {
   }
 }
 
-TEST(ToString, EmptyLoop) {
+TEST(ToString, UninitializedLoop) {
   S2Loop loop;
   EXPECT_EQ("", s2textformat::ToString(loop));
+}
+
+TEST(ToString, EmptyLoop) {
+  S2Loop empty(S2Loop::kEmpty());
+  EXPECT_EQ("empty", s2textformat::ToString(empty));
+}
+
+TEST(ToString, FullLoop) {
+  S2Loop full(S2Loop::kFull());
+  EXPECT_EQ("full", s2textformat::ToString(full));
 }
 
 TEST(ToString, EmptyPolyline) {
@@ -116,26 +124,39 @@ TEST(ToString, EmptyPointVector) {
   EXPECT_EQ("", s2textformat::ToString(points));
 }
 
+TEST(ToString, EmptyPolygon) {
+  S2Polygon empty;
+  EXPECT_EQ("empty", s2textformat::ToString(empty));
+}
+
+TEST(ToString, FullPolygon) {
+  S2Polygon full(absl::make_unique<S2Loop>(S2Loop::kFull()));
+  EXPECT_EQ("full", s2textformat::ToString(full));
+}
+
 TEST(MakeLaxPolygon, Empty) {
-  unique_ptr<LaxPolygon> shape(s2textformat::MakeLaxPolygonOrDie(""));
+  // Verify that "" and "empty" both create empty polygons.
+  auto shape = s2textformat::MakeLaxPolygonOrDie("");
+  EXPECT_EQ(0, shape->num_loops());
+  shape = s2textformat::MakeLaxPolygonOrDie("empty");
   EXPECT_EQ(0, shape->num_loops());
 }
 
 TEST(MakeLaxPolygon, Full) {
-  unique_ptr<LaxPolygon> shape(s2textformat::MakeLaxPolygonOrDie("full"));
+  auto shape = s2textformat::MakeLaxPolygonOrDie("full");
   EXPECT_EQ(1, shape->num_loops());
   EXPECT_EQ(0, shape->num_loop_vertices(0));
 }
 
 TEST(MakeLaxPolygon, FullWithHole) {
-  unique_ptr<LaxPolygon> shape(s2textformat::MakeLaxPolygonOrDie("full; 0:0"));
+  auto shape = s2textformat::MakeLaxPolygonOrDie("full; 0:0");
   EXPECT_EQ(2, shape->num_loops());
   EXPECT_EQ(0, shape->num_loop_vertices(0));
   EXPECT_EQ(1, shape->num_loop_vertices(1));
   EXPECT_EQ(1, shape->num_edges());
 }
 
-void TestS2ShapeIndex(string const& str) {
+void TestS2ShapeIndex(const string& str) {
   EXPECT_EQ(str, s2textformat::ToString(*s2textformat::MakeIndexOrDie(str)));
 }
 
@@ -235,7 +256,7 @@ TEST(SafeMakePolyline, InvalidInput) {
 }
 
 TEST(SafeMakeLaxPolyline, ValidInput) {
-  std::unique_ptr<s2shapeutil::LaxPolyline> lax_polyline;
+  std::unique_ptr<S2LaxPolylineShape> lax_polyline;
   EXPECT_TRUE(s2textformat::MakeLaxPolyline("-20:150, -20:151, -19:150",
                                             &lax_polyline));
   // No easy equality check for LaxPolylines; check vertices instead.
@@ -249,7 +270,7 @@ TEST(SafeMakeLaxPolyline, ValidInput) {
 }
 
 TEST(SafeMakeLaxPolyline, InvalidInput) {
-  std::unique_ptr<s2shapeutil::LaxPolyline> lax_polyline;
+  std::unique_ptr<S2LaxPolylineShape> lax_polyline;
   EXPECT_FALSE(s2textformat::MakeLaxPolyline("blah", &lax_polyline));
 }
 
@@ -266,6 +287,22 @@ TEST(SafeMakePolygon, ValidInput) {
 TEST(SafeMakePolygon, InvalidInput) {
   std::unique_ptr<S2Polygon> polygon;
   EXPECT_FALSE(s2textformat::MakePolygon("blah", &polygon));
+}
+
+TEST(SafeMakePolygon, Empty) {
+  // Verify that "" and "empty" both create empty polygons.
+  std::unique_ptr<S2Polygon> polygon;
+  EXPECT_TRUE(s2textformat::MakePolygon("", &polygon));
+  EXPECT_TRUE(polygon->is_empty());
+  EXPECT_TRUE(s2textformat::MakePolygon("empty", &polygon));
+  EXPECT_TRUE(polygon->is_empty());
+}
+
+TEST(SafeMakePolygon, Full) {
+  // Verify that "full" creates the full polygon.
+  std::unique_ptr<S2Polygon> polygon;
+  EXPECT_TRUE(s2textformat::MakePolygon("full", &polygon));
+  EXPECT_TRUE(polygon->is_full());
 }
 
 TEST(SafeMakeVerbatimPolygon, ValidInput) {
@@ -285,7 +322,7 @@ TEST(SafeMakeVerbatimPolygon, InvalidInput) {
 }
 
 TEST(SafeMakeLaxPolygon, ValidInput) {
-  std::unique_ptr<s2shapeutil::LaxPolygon> lax_polygon;
+  std::unique_ptr<S2LaxPolygonShape> lax_polygon;
   EXPECT_TRUE(
       s2textformat::MakeLaxPolygon("-20:150, -20:151, -19:150", &lax_polygon));
   // No easy equality check for LaxPolygons; check vertices instead.
@@ -300,7 +337,7 @@ TEST(SafeMakeLaxPolygon, ValidInput) {
 }
 
 TEST(SafeMakeLaxPolygon, InvalidInput) {
-  std::unique_ptr<s2shapeutil::LaxPolygon> lax_polygon;
+  std::unique_ptr<S2LaxPolygonShape> lax_polygon;
   EXPECT_FALSE(s2textformat::MakeLaxPolygon("blah", &lax_polygon));
 }
 

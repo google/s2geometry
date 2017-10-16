@@ -71,10 +71,10 @@ template <int dim> class Metric {
   int GetLevelForMinValue(double value) const;
 
  private:
-  double const deriv_;
+  const double deriv_;
 
-  Metric(Metric const&) = delete;
-  void operator=(Metric const&) = delete;
+  Metric(const Metric&) = delete;
+  void operator=(const Metric&) = delete;
 };
 using LengthMetric = Metric<1>;
 using AreaMetric = Metric<2>;
@@ -86,9 +86,9 @@ using AreaMetric = Metric<2>;
 // example, the maximum angle between opposite bounding planes for a cell at
 // level k is kMaxAngleSpan.GetValue(k), and the average angle span for all
 // cells at level k is approximately kAvgAngleSpan.GetValue(k).
-extern LengthMetric const kMinAngleSpan;
-extern LengthMetric const kMaxAngleSpan;
-extern LengthMetric const kAvgAngleSpan;
+extern const LengthMetric kMinAngleSpan;
+extern const LengthMetric kMaxAngleSpan;
+extern const LengthMetric kAvgAngleSpan;
 
 // The width of geometric figure is defined as the distance between two
 // parallel bounding lines in a given direction.  For cells, the minimum
@@ -112,9 +112,9 @@ extern LengthMetric const kAvgAngleSpan;
 // Note that because S2Cells are not usually rectangles, the minimum width of
 // a cell is generally smaller than its minimum edge length.  (The interior
 // angles of an S2Cell range from 60 to 120 degrees.)
-extern LengthMetric const kMinWidth;
-extern LengthMetric const kMaxWidth;
-extern LengthMetric const kAvgWidth;
+extern const LengthMetric kMinWidth;
+extern const LengthMetric kMaxWidth;
+extern const LengthMetric kAvgWidth;
 
 // The minimum edge length of any cell at level k is at least
 // kMinEdge.GetValue(k), and the maximum is at most kMaxEdge.GetValue(k).
@@ -125,9 +125,9 @@ extern LengthMetric const kAvgWidth;
 // its edge neighbors.  In particular, it can be used to bound the distance
 // between adjacent cell centers along the space-filling Hilbert curve for
 // cells at any given level.
-extern LengthMetric const kMinEdge;
-extern LengthMetric const kMaxEdge;
-extern LengthMetric const kAvgEdge;
+extern const LengthMetric kMinEdge;
+extern const LengthMetric kMaxEdge;
+extern const LengthMetric kAvgEdge;
 
 // The minimum diagonal length of any cell at level k is at least
 // kMinDiag.GetValue(k), and the maximum is at most kMaxDiag.GetValue(k).
@@ -137,26 +137,26 @@ extern LengthMetric const kAvgEdge;
 // and also the maximum geometric width (see the discussion above).  So for
 // example, the distance from an arbitrary point to the closest cell center
 // at a given level is at most half the maximum diagonal length.
-extern LengthMetric const kMinDiag;
-extern LengthMetric const kMaxDiag;
-extern LengthMetric const kAvgDiag;
+extern const LengthMetric kMinDiag;
+extern const LengthMetric kMaxDiag;
+extern const LengthMetric kAvgDiag;
 
 // The minimum area of any cell at level k is at least kMinArea.GetValue(k),
 // and the maximum is at most kMaxArea.GetValue(k).  The average area of all
 // cells at level k is exactly kAvgArea.GetValue(k).
-extern AreaMetric const kMinArea;
-extern AreaMetric const kMaxArea;
-extern AreaMetric const kAvgArea;
+extern const AreaMetric kMinArea;
+extern const AreaMetric kMaxArea;
+extern const AreaMetric kAvgArea;
 
 // This is the maximum edge aspect ratio over all cells at any level, where
 // the edge aspect ratio of a cell is defined as the ratio of its longest
 // edge length to its shortest edge length.
-extern double const kMaxEdgeAspect;
+extern const double kMaxEdgeAspect;
 
 // This is the maximum diagonal aspect ratio over all cells at any level,
 // where the diagonal aspect ratio of a cell is defined as the ratio of its
 // longest diagonal length to its shortest diagonal length.
-extern double const kMaxDiagAspect;
+extern const double kMaxDiagAspect;
 
 
 //////////////////   Implementation details follow   ////////////////////

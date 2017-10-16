@@ -65,13 +65,13 @@ class S2LatLngRect final : public S2Region {
   // line. Both points must be normalized, with lo.lat() <= hi.lat().
   // The rectangle contains all the points p such that 'lo' <= p <= 'hi',
   // where '<=' is defined in the obvious way.
-  S2LatLngRect(S2LatLng const& lo, S2LatLng const& hi);
+  S2LatLngRect(const S2LatLng& lo, const S2LatLng& hi);
 
   // Construct a rectangle from latitude and longitude intervals.  The two
   // intervals must either be both empty or both non-empty, and the latitude
   // interval must not extend outside [-90, +90] degrees.
   // Note that both intervals (and hence the rectangle) are closed.
-  S2LatLngRect(R1Interval const& lat, S1Interval const& lng);
+  S2LatLngRect(const R1Interval& lat, const S1Interval& lng);
 
   // The default constructor creates an empty S2LatLngRect.
   S2LatLngRect();
@@ -85,26 +85,26 @@ class S2LatLngRect final : public S2Region {
   //   center=(80,170),  size=(40,60)   -> lat=[60,90],   lng=[140,-160]
   //   center=(10,40),   size=(210,400) -> lat=[-90,90],  lng=[-180,180]
   //   center=(-90,180), size=(20,50)   -> lat=[-90,-80], lng=[155,-155]
-  static S2LatLngRect FromCenterSize(S2LatLng const& center,
-                                     S2LatLng const& size);
+  static S2LatLngRect FromCenterSize(const S2LatLng& center,
+                                     const S2LatLng& size);
 
   // Construct a rectangle containing a single (normalized) point.
-  static S2LatLngRect FromPoint(S2LatLng const& p);
+  static S2LatLngRect FromPoint(const S2LatLng& p);
 
   // Construct the minimal bounding rectangle containing the two given
   // normalized points.  This is equivalent to starting with an empty
   // rectangle and calling AddPoint() twice.  Note that it is different than
   // the S2LatLngRect(lo, hi) constructor, where the first point is always
   // used as the lower-left corner of the resulting rectangle.
-  static S2LatLngRect FromPointPair(S2LatLng const& p1, S2LatLng const& p2);
+  static S2LatLngRect FromPointPair(const S2LatLng& p1, const S2LatLng& p2);
 
   // Accessor methods.
   S1Angle lat_lo() const { return S1Angle::Radians(lat_.lo()); }
   S1Angle lat_hi() const { return S1Angle::Radians(lat_.hi()); }
   S1Angle lng_lo() const { return S1Angle::Radians(lng_.lo()); }
   S1Angle lng_hi() const { return S1Angle::Radians(lng_.hi()); }
-  R1Interval const& lat() const { return lat_; }
-  S1Interval const& lng() const { return lng_; }
+  const R1Interval& lat() const { return lat_; }
+  const S1Interval& lng() const { return lng_; }
   R1Interval *mutable_lat() { return &lat_; }
   S1Interval *mutable_lng() { return &lng_; }
   S2LatLng lo() const { return S2LatLng(lat_lo(), lng_lo()); }
@@ -172,42 +172,42 @@ class S2LatLngRect final : public S2Region {
 
   // More efficient version of Contains() that accepts a S2LatLng rather than
   // an S2Point.  The argument must be normalized.
-  bool Contains(S2LatLng const& ll) const;
+  bool Contains(const S2LatLng& ll) const;
 
   // Return true if and only if the given point is contained in the interior
   // of the region (i.e. the region excluding its boundary).  The point 'p'
   // does not need to be normalized.
-  bool InteriorContains(S2Point const& p) const;
+  bool InteriorContains(const S2Point& p) const;
 
   // More efficient version of InteriorContains() that accepts a S2LatLng
   // rather than an S2Point.  The argument must be normalized.
-  bool InteriorContains(S2LatLng const& ll) const;
+  bool InteriorContains(const S2LatLng& ll) const;
 
   // Return true if and only if the rectangle contains the given other
   // rectangle.
-  bool Contains(S2LatLngRect const& other) const;
+  bool Contains(const S2LatLngRect& other) const;
 
   // Return true if and only if the interior of this rectangle contains all
   // points of the given other rectangle (including its boundary).
-  bool InteriorContains(S2LatLngRect const& other) const;
+  bool InteriorContains(const S2LatLngRect& other) const;
 
   // Return true if this rectangle and the given other rectangle have any
   // points in common.
-  bool Intersects(S2LatLngRect const& other) const;
+  bool Intersects(const S2LatLngRect& other) const;
 
   // Returns true if this rectangle intersects the given cell.  (This is an
   // exact test and may be fairly expensive, see also MayIntersect below.)
-  bool Intersects(S2Cell const& cell) const;
+  bool Intersects(const S2Cell& cell) const;
 
   // Return true if and only if the interior of this rectangle intersects
   // any point (including the boundary) of the given other rectangle.
-  bool InteriorIntersects(S2LatLngRect const& other) const;
+  bool InteriorIntersects(const S2LatLngRect& other) const;
 
   // Increase the size of the bounding rectangle to include the given point.
   // The rectangle is expanded by the minimum amount possible.  The S2LatLng
   // argument must be normalized.
-  void AddPoint(S2Point const& p);
-  void AddPoint(S2LatLng const& ll);
+  void AddPoint(const S2Point& p);
+  void AddPoint(const S2LatLng& ll);
 
   // Return a rectangle that has been expanded by margin.lat() on each side in
   // the latitude direction, and by margin.lng() on each side in the longitude
@@ -231,7 +231,7 @@ class S2LatLngRect final : public S2Region {
   //
   // If you are trying to grow a rectangle by a certain *distance* on the
   // sphere (e.g. 5km), use the ExpandedByDistance() method instead.
-  S2LatLngRect Expanded(S2LatLng const& margin) const;
+  S2LatLngRect Expanded(const S2LatLng& margin) const;
 
   // If the rectangle does not include either pole, return it unmodified.
   // Otherwise expand the longitude range to Full() so that the rectangle
@@ -240,13 +240,13 @@ class S2LatLngRect final : public S2Region {
 
   // Return the smallest rectangle containing the union of this rectangle and
   // the given rectangle.
-  S2LatLngRect Union(S2LatLngRect const& other) const;
+  S2LatLngRect Union(const S2LatLngRect& other) const;
 
   // Return the smallest rectangle containing the intersection of this
   // rectangle and the given rectangle.  Note that the region of intersection
   // may consist of two disjoint rectangles, in which case a single rectangle
   // spanning both of them is returned.
-  S2LatLngRect Intersection(S2LatLngRect const& other) const;
+  S2LatLngRect Intersection(const S2LatLngRect& other) const;
 
   // Expand this rectangle so that it contains all points within the given
   // distance of the boundary, and return the smallest such rectangle.  If the
@@ -288,12 +288,12 @@ class S2LatLngRect final : public S2Region {
 
   // Returns the minimum distance (measured along the surface of the sphere) to
   // the given S2LatLngRect. Both S2LatLngRects must be non-empty.
-  S1Angle GetDistance(S2LatLngRect const& other) const;
+  S1Angle GetDistance(const S2LatLngRect& other) const;
 
   // Returns the minimum distance (measured along the surface of the sphere)
   // from a given point to the rectangle (both its boundary and its interior).
   // The latlng must be valid.
-  S1Angle GetDistance(S2LatLng const& p) const;
+  S1Angle GetDistance(const S2LatLng& p) const;
 
   // Returns the (directed or undirected) Hausdorff distance (measured along the
   // surface of the sphere) to the given S2LatLngRect. The directed Hausdorff
@@ -301,23 +301,23 @@ class S2LatLngRect final : public S2Region {
   //     h(A, B) = max_{p in A} min_{q in B} d(p, q).
   // The Hausdorff distance between rectangle A and rectangle B is given by
   //     H(A, B) = max{h(A, B), h(B, A)}.
-  S1Angle GetDirectedHausdorffDistance(S2LatLngRect const& other) const;
-  S1Angle GetHausdorffDistance(S2LatLngRect const& other) const;
+  S1Angle GetDirectedHausdorffDistance(const S2LatLngRect& other) const;
+  S1Angle GetHausdorffDistance(const S2LatLngRect& other) const;
 
   // Return true if two rectangles contains the same set of points.
-  bool operator==(S2LatLngRect const& other) const;
+  bool operator==(const S2LatLngRect& other) const;
 
   // Return the opposite of what operator == returns.
-  bool operator!=(S2LatLngRect const& other) const;
+  bool operator!=(const S2LatLngRect& other) const;
 
   // Return true if the latitude and longitude intervals of the two rectangles
   // are the same up to the given tolerance (see r1interval.h and s1interval.h
   // for details).
-  bool ApproxEquals(S2LatLngRect const& other,
+  bool ApproxEquals(const S2LatLngRect& other,
                     S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   // ApproxEquals() with separate tolerances for latitude and longitude.
-  bool ApproxEquals(S2LatLngRect const& other, S2LatLng const& max_error) const;
+  bool ApproxEquals(const S2LatLngRect& other, const S2LatLng& max_error) const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -325,17 +325,17 @@ class S2LatLngRect final : public S2Region {
   S2LatLngRect* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
-  bool Contains(S2Cell const& cell) const override;
+  bool Contains(const S2Cell& cell) const override;
 
   // This test is cheap but is NOT exact.  Use Intersects() if you want a more
   // accurate and more expensive test.  Note that when this method is used by
   // an S2RegionCoverer, the accuracy isn't all that important since if a cell
   // may intersect the region then it is subdivided, and the accuracy of this
   // method goes up as the cells get smaller.
-  bool MayIntersect(S2Cell const& cell) const override;
+  bool MayIntersect(const S2Cell& cell) const override;
 
   // The point 'p' does not need to be normalized.
-  bool Contains(S2Point const& p) const override;
+  bool Contains(const S2Point& p) const override;
 
   // Appends a serialized representation of the S2LatLngRect to "encoder".
   //
@@ -348,39 +348,39 @@ class S2LatLngRect final : public S2Region {
 
   // Return true if the edge AB intersects the given edge of constant
   // longitude.
-  static bool IntersectsLngEdge(S2Point const& a, S2Point const& b,
-                                R1Interval const& lat, double lng);
+  static bool IntersectsLngEdge(const S2Point& a, const S2Point& b,
+                                const R1Interval& lat, double lng);
 
   // Return true if the edge AB intersects the given edge of constant
   // latitude.  Requires the vectors to have unit length.
-  static bool IntersectsLatEdge(S2Point const& a, S2Point const& b,
-                                double lat, S1Interval const& lng);
+  static bool IntersectsLatEdge(const S2Point& a, const S2Point& b,
+                                double lat, const S1Interval& lng);
 
  private:
   // Helper function. See .cc for description.
   static S1Angle GetDirectedHausdorffDistance(double lng_diff,
-                                              R1Interval const& a_lat,
-                                              R1Interval const& b_lat);
+                                              const R1Interval& a_lat,
+                                              const R1Interval& b_lat);
 
   // Helper function. See .cc for description.
-  static S1Angle GetInteriorMaxDistance(R1Interval const& a_lat,
-                                        S2Point const& b);
+  static S1Angle GetInteriorMaxDistance(const R1Interval& a_lat,
+                                        const S2Point& b);
 
   // Helper function. See .cc for description.
-  static S2Point GetBisectorIntersection(R1Interval const& lat, double lng);
+  static S2Point GetBisectorIntersection(const R1Interval& lat, double lng);
 
   R1Interval lat_;
   S1Interval lng_;
 };
 
-inline S2LatLngRect::S2LatLngRect(S2LatLng const& lo, S2LatLng const& hi)
+inline S2LatLngRect::S2LatLngRect(const S2LatLng& lo, const S2LatLng& hi)
   : lat_(lo.lat().radians(), hi.lat().radians()),
     lng_(lo.lng().radians(), hi.lng().radians()) {
   DLOG_IF(ERROR, !is_valid())
       << "Invalid rect: " << lo << ", " << hi;
 }
 
-inline S2LatLngRect::S2LatLngRect(R1Interval const& lat, S1Interval const& lng)
+inline S2LatLngRect::S2LatLngRect(const R1Interval& lat, const S1Interval& lng)
   : lat_(lat), lng_(lng) {
   DLOG_IF(ERROR, !is_valid())
       << "Invalid rect: " << lat << ", " << lng;
@@ -418,14 +418,14 @@ inline bool S2LatLngRect::is_point() const {
   return lat_.lo() == lat_.hi() && lng_.lo() == lng_.hi();
 }
 
-inline bool S2LatLngRect::operator==(S2LatLngRect const& other) const {
+inline bool S2LatLngRect::operator==(const S2LatLngRect& other) const {
   return lat() == other.lat() && lng() == other.lng();
 }
 
-inline bool S2LatLngRect::operator!=(S2LatLngRect const& other) const {
+inline bool S2LatLngRect::operator!=(const S2LatLngRect& other) const {
   return !operator==(other);
 }
 
-std::ostream& operator<<(std::ostream& os, S2LatLngRect const& r);
+std::ostream& operator<<(std::ostream& os, const S2LatLngRect& r);
 
 #endif  // S2_S2LATLNGRECT_H_

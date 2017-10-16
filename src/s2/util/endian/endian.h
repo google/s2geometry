@@ -231,6 +231,28 @@ class LittleEndian {
     UNALIGNED_STORE16(p, FromHost16(v));
   }
 
+  static uint32 Load24(const void* p) {
+#ifdef IS_LITTLE_ENDIAN
+    uint32 result = 0;
+    memcpy(&result, p, 3);
+    return result;
+#else
+    const uint8* data = reinterpret_cast<const uint8*>(p);
+    return Load16(data) + (data[2] << 16);
+#endif
+  }
+
+  static void Store24(void* p, uint32 v) {
+#ifdef IS_LITTLE_ENDIAN
+    memcpy(p, &v, 3);
+#else
+    uint8* data = reinterpret_cast<uint8*>(p);
+    data[0] = v & 0xFF;
+    data[1] = (v >> 8) & 0xFF;
+    data[2] = (v >> 16) & 0xFF;
+#endif
+  }
+
   static uint32 Load32(const void *p) {
     return ToHost32(UNALIGNED_LOAD32(p));
   }
@@ -402,6 +424,17 @@ class BigEndian {
 
   static void Store16(void *p, uint16 v) {
     UNALIGNED_STORE16(p, FromHost16(v));
+  }
+
+  static uint32 Load24(const void* p) {
+    const uint8* data = reinterpret_cast<const uint8*>(p);
+    return (data[0] << 16) + Load16(data + 1);
+  }
+
+  static void Store24(void* p, uint32 v) {
+    uint8* data = reinterpret_cast<uint8*>(p);
+    Store16(data + 1, static_cast<uint16>(v));
+    *data = static_cast<uint8>(v >> 16);
   }
 
   static uint32 Load32(const void *p) {

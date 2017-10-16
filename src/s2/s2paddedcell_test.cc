@@ -30,7 +30,7 @@ using std::min;
 
 namespace {
 
-void CompareS2CellToPadded(S2Cell const& cell, S2PaddedCell const& pcell,
+void CompareS2CellToPadded(const S2Cell& cell, const S2PaddedCell& pcell,
                            double padding) {
   EXPECT_EQ(cell.id(), pcell.id());
   EXPECT_EQ(cell.level(), pcell.level());
@@ -43,7 +43,7 @@ void CompareS2CellToPadded(S2Cell const& cell, S2PaddedCell const& pcell,
 
 TEST(S2PaddedCell, S2CellMethods) {
   // Test the S2PaddedCell methods that have approximate S2Cell equivalents.
-  int const kIters = 1000;
+  const int kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
     S2CellId id = S2Testing::GetRandomCellId();
     double padding = pow(1e-15, S2Testing::rnd.RandDouble());
@@ -64,7 +64,7 @@ TEST(S2PaddedCell, S2CellMethods) {
 }
 
 TEST(S2PaddedCell, GetEntryExitVertices) {
-  int const kIters = 1000;
+  const int kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
     S2CellId id = S2Testing::GetRandomCellId();
     // Check that entry/exit vertices do not depend on padding.
@@ -90,12 +90,12 @@ TEST(S2PaddedCell, GetEntryExitVertices) {
   }
 }
 
-static double SampleInterval(R1Interval const& x) {
+static double SampleInterval(const R1Interval& x) {
   return S2Testing::rnd.UniformDouble(x.lo(), x.hi());
 }
 
 TEST(S2PaddedCell, ShrinkToFit) {
-  int const kIters = 1000;
+  const int kIters = 1000;
   S2Testing::Random* rnd = &S2Testing::rnd;
   for (int iter = 0; iter < kIters; ++iter) {
     // Start with the desired result and work backwards.

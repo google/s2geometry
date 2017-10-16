@@ -45,11 +45,11 @@ namespace s2pred {
 // crossings.  (Usually you will want to use S2EdgeCrosser, which
 // implements them much more efficiently.)
 //
-// int CrossingSign(S2Point const& a0, S2Point const& a1,
-//                  S2Point const& b0, S2Point const& b1);
+// int CrossingSign(const S2Point& a0, const S2Point& a1,
+//                  const S2Point& b0, const S2Point& b1);
 //
-// bool EdgeOrVertexCrossing(S2Point const& a0, S2Point const& a1,
-//                           S2Point const& b0, S2Point const& b1);
+// bool EdgeOrVertexCrossing(const S2Point& a0, const S2Point& a1,
+//                           const S2Point& b0, const S2Point& b1);
 
 // Returns +1 if the points A, B, C are counterclockwise, -1 if the points
 // are clockwise, and 0 if any two points are the same.  This function is
@@ -73,7 +73,7 @@ namespace s2pred {
 // On the other hand, note that it is not true in general that
 // Sign(-a,b,c) == -Sign(a,b,c), or any similar identities
 // involving antipodal points.
-int Sign(S2Point const& a, S2Point const& b, S2Point const& c);
+int Sign(const S2Point& a, const S2Point& b, const S2Point& c);
 
 // Given 4 points on the unit sphere, return true if the edges OA, OB, and
 // OC are encountered in that order while sweeping CCW around the point O.
@@ -87,8 +87,8 @@ int Sign(S2Point const& a, S2Point const& b, S2Point const& c);
 //  (3) If OrderedCCW(a,b,c,o) && OrderedCCW(c,b,a,o), then a == b == c
 //  (4) If a == b or b == c, then OrderedCCW(a,b,c,o) is true
 //  (5) Otherwise if a == c, then OrderedCCW(a,b,c,o) is false
-bool OrderedCCW(S2Point const& a, S2Point const& b, S2Point const& c,
-                S2Point const& o);
+bool OrderedCCW(const S2Point& a, const S2Point& b, const S2Point& c,
+                const S2Point& o);
 
 // Returns -1, 0, or +1 according to whether AX < BX, A == B, or AX > BX
 // respectively.  Distances are measured with respect to the positions of X,
@@ -98,13 +98,13 @@ bool OrderedCCW(S2Point const& a, S2Point const& b, S2Point const& c,
 // exactly, or even when A and B project to the same point on the sphere.
 // Such results are guaranteed to be self-consistent, i.e. if AB < BC and
 // BC < AC, then AB < AC.
-int CompareDistances(S2Point const& x, S2Point const& a, S2Point const& b);
+int CompareDistances(const S2Point& x, const S2Point& a, const S2Point& b);
 
 // Returns -1, 0, or +1 according to whether the distance XY is less than,
 // equal to, or greater than "r" respectively.  Distances are measured with
 // respect the positions of all points as though they are projected to lie
 // exactly on the surface of the unit sphere.
-int CompareDistance(S2Point const& x, S2Point const& y, S1ChordAngle r);
+int CompareDistance(const S2Point& x, const S2Point& y, S1ChordAngle r);
 
 // Returns -1, 0, or +1 according to whether the distance from the point X to
 // the edge A is less than, equal to, or greater than "r" respectively.
@@ -118,7 +118,7 @@ int CompareDistance(S2Point const& x, S2Point const& y, S1ChordAngle r);
 // edges consisting of antipodal points by implementing additional symbolic
 // perturbation logic (similar to Sign) in order to rigorously define the
 // direction of such edges.
-int CompareEdgeDistance(S2Point const& x, S2Point const& a0, S2Point const& a1,
+int CompareEdgeDistance(const S2Point& x, const S2Point& a0, const S2Point& a1,
                         S1ChordAngle r);
 
 // Returns -1, 0, or +1 according to whether the normal of edge A has
@@ -137,8 +137,8 @@ int CompareEdgeDistance(S2Point const& x, S2Point const& a0, S2Point const& a1,
 //
 // REQUIRES: Neither edge can consist of antipodal points (e.g., A0 == -A1)
 //           (see comments in CompareEdgeDistance).
-int CompareEdgeDirections(S2Point const& a0, S2Point const& a1,
-                          S2Point const& b0, S2Point const& b1);
+int CompareEdgeDirections(const S2Point& a0, const S2Point& a1,
+                          const S2Point& b0, const S2Point& b1);
 
 // Returns Sign(X0, X1, Z) where Z is the circumcenter of triangle ABC.
 // The return value is -1 if Z is to the left of edge X, and +1 if Z is to the
@@ -153,8 +153,8 @@ int CompareEdgeDirections(S2Point const& a0, S2Point const& a1,
 //
 // REQUIRES: X0 and X1 do not project to antipodal points (e.g., X0 == -X1)
 //           (see comments in CompareEdgeDistance).
-int EdgeCircumcenterSign(S2Point const& x0, S2Point const& x1,
-                         S2Point const& a, S2Point const& b, S2Point const& c);
+int EdgeCircumcenterSign(const S2Point& x0, const S2Point& x1,
+                         const S2Point& a, const S2Point& b, const S2Point& c);
 
 // This is a specialized method that is used to compute the intersection of an
 // edge X with the Voronoi diagram of a set of points, where each Voronoi
@@ -188,8 +188,8 @@ int EdgeCircumcenterSign(S2Point const& x0, S2Point const& x1,
 //           (see comments in CompareEdgeDistance).
 enum class Excluded { FIRST, SECOND, NEITHER, UNCERTAIN };
 std::ostream& operator<<(std::ostream& os, Excluded excluded);
-Excluded GetVoronoiSiteExclusion(S2Point const& a, S2Point const& b,
-                                 S2Point const& x0, S2Point const& x1,
+Excluded GetVoronoiSiteExclusion(const S2Point& a, const S2Point& b,
+                                 const S2Point& x0, const S2Point& x1,
                                  S1ChordAngle r);
 
 /////////////////////////// Low-Level Methods ////////////////////////////
@@ -201,8 +201,8 @@ Excluded GetVoronoiSiteExclusion(S2Point const& a, S2Point const& b,
 // A more efficient version of Sign that allows the precomputed
 // cross-product of A and B to be specified.  (Unlike the 3 argument
 // version this method is also inlined.)
-inline int Sign(S2Point const& a, S2Point const& b, S2Point const& c,
-                Vector3_d const& a_cross_b);
+inline int Sign(const S2Point& a, const S2Point& b, const S2Point& c,
+                const Vector3_d& a_cross_b);
 
 // This version of Sign returns +1 if the points are definitely CCW, -1 if
 // they are definitely CW, and 0 if two points are identical or the result
@@ -211,8 +211,8 @@ inline int Sign(S2Point const& a, S2Point const& b, S2Point const& c,
 //
 // The purpose of this method is to allow additional cheap tests to be done,
 // where possible, in order to avoid calling ExpensiveSign unnecessarily.
-inline int TriageSign(S2Point const& a, S2Point const& b,
-                      S2Point const& c, Vector3_d const& a_cross_b);
+inline int TriageSign(const S2Point& a, const S2Point& b,
+                      const S2Point& c, const Vector3_d& a_cross_b);
 
 // This function is invoked by Sign() if the sign of the determinant is
 // uncertain.  It always returns a non-zero result unless two of the input
@@ -229,20 +229,20 @@ inline int TriageSign(S2Point const& a, S2Point const& b,
 //
 // Unlike Sign(), this method does not require the input points to be
 // normalized.
-int ExpensiveSign(S2Point const& a, S2Point const& b,
-                  S2Point const& c, bool perturb = true);
+int ExpensiveSign(const S2Point& a, const S2Point& b,
+                  const S2Point& c, bool perturb = true);
 
 //////////////////   Implementation details follow   ////////////////////
 
-inline int Sign(S2Point const& a, S2Point const& b, S2Point const& c,
-                Vector3_d const& a_cross_b) {
+inline int Sign(const S2Point& a, const S2Point& b, const S2Point& c,
+                const Vector3_d& a_cross_b) {
   int sign = TriageSign(a, b, c, a_cross_b);
   if (sign == 0) sign = ExpensiveSign(a, b, c);
   return sign;
 }
 
-inline int TriageSign(S2Point const& a, S2Point const& b,
-                      S2Point const& c, Vector3_d const& a_cross_b) {
+inline int TriageSign(const S2Point& a, const S2Point& b,
+                      const S2Point& c, const Vector3_d& a_cross_b) {
   // kMaxDetError is the maximum error in computing (AxB).C where all vectors
   // are unit length.  Using standard inequalities, it can be shown that
   //
@@ -260,7 +260,7 @@ inline int TriageSign(S2Point const& a, S2Point const& b,
   //  fl((AxB).C) = (AxB).C + d where |d| <= (2.5 + 2/sqrt(3)) * e
   //
   // which is about 3.6548 * e, or 1.8274 * DBL_EPSILON.
-  double const kMaxDetError = 1.8274 * DBL_EPSILON;
+  const double kMaxDetError = 1.8274 * DBL_EPSILON;
   DCHECK(S2::IsUnitLength(a));
   DCHECK(S2::IsUnitLength(b));
   DCHECK(S2::IsUnitLength(c));

@@ -76,8 +76,8 @@ class GetIntersectionStats {
 // This returns the true intersection point of two line segments (a0,a1) and
 // (b0,b1), with a relative error of at most DBL_EPSILON in each coordinate
 // (i.e., one ulp, or twice the double precision rounding error).
-static S2Point GetIntersectionExact(S2Point const& a0, S2Point const& a1,
-                                    S2Point const& b0, S2Point const& b1) {
+static S2Point GetIntersectionExact(const S2Point& a0, const S2Point& a1,
+                                    const S2Point& b0, const S2Point& b1) {
   S2Point x = S2::internal::GetIntersectionExact(a0, a1, b0, b1);
   if (x.DotProd((a0 + a1) + (b0 + b1)) < 0) x = -x;
   return x;
@@ -165,7 +165,7 @@ TEST(S2EdgeUtil, IntersectionError) {
 // (to avoid choosing too many duplicate points) and by at most Pi/2 - 1e-3
 // (to avoid nearly-diametric edges, since the test below is not sophisticated
 // enough to test such edges).
-static S2Point ChooseSemicirclePoint(S2Point const& x, S2Point const& y) {
+static S2Point ChooseSemicirclePoint(const S2Point& x, const S2Point& y) {
   S2Testing::Random* rnd = &S2Testing::rnd;
   double sign = (2 * rnd->Uniform(2)) - 1;
   return (x + sign * 1e3 * pow(1e-18, rnd->RandDouble()) * y).Normalize();

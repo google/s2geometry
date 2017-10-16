@@ -413,7 +413,7 @@ TEST(S2CellId, Containment) {
   }
 }
 
-static int const kMaxWalkLevel = 8;
+static const int kMaxWalkLevel = 8;
 
 TEST(S2CellId, Continuity) {
   // Make sure that sequentially increasing cell ids form a continuous
@@ -432,7 +432,7 @@ TEST(S2CellId, Continuity) {
     // in (s,t) coordinates.
     double u, v;
     S2::XYZtoFaceUV(id.ToPointRaw(), &u, &v);
-    static double const kCellSize = 1.0 / (1 << kMaxWalkLevel);
+    static const double kCellSize = 1.0 / (1 << kMaxWalkLevel);
     EXPECT_NEAR(remainder(S2::UVtoST(u), 0.5 * kCellSize), 0.0, 1e-15);
     EXPECT_NEAR(remainder(S2::UVtoST(v), 0.5 * kCellSize), 0.0, 1e-15);
   }
@@ -489,7 +489,7 @@ TEST(S2CellId, Neighbors) {
 
   // Check the edge neighbors of the corner cells at all levels.  This case is
   // trickier because it requires projecting onto adjacent faces.
-  static int const kMaxIJ = S2CellId::kMaxSize - 1;
+  static const int kMaxIJ = S2CellId::kMaxSize - 1;
   for (int level = 1; level <= S2CellId::kMaxLevel; ++level) {
     S2CellId id = S2CellId::FromFaceIJ(1, 0, 0).parent(level);
     S2CellId nbrs[4];
@@ -539,7 +539,7 @@ TEST(S2CellId, Neighbors) {
 }
 
 // Returns a random point on the boundary of the given rectangle.
-static R2Point SampleBoundary(R2Rect const& rect) {
+static R2Point SampleBoundary(const R2Rect& rect) {
   R2Point uv;
   int d = S2Testing::rnd.Uniform(2);
   uv[d] = S2Testing::rnd.UniformDouble(rect[d][0], rect[d][1]);
@@ -548,7 +548,7 @@ static R2Point SampleBoundary(R2Rect const& rect) {
 }
 
 // Returns the closest point to "uv" on the boundary of "rect".
-static R2Point ProjectToBoundary(R2Point const& uv, R2Rect const& rect) {
+static R2Point ProjectToBoundary(const R2Point& uv, const R2Rect& rect) {
   double du0 = std::abs(uv[0] - rect[0][0]);
   double du1 = std::abs(uv[0] - rect[0][1]);
   double dv0 = std::abs(uv[1] - rect[1][0]);

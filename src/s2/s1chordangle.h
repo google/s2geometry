@@ -50,7 +50,7 @@ class S1ChordAngle {
 
   // Construct the S1ChordAngle corresponding to the distance between the two
   // given points.  The points must be unit length.
-  S1ChordAngle(S2Point const& x, S2Point const& y);
+  S1ChordAngle(const S2Point& x, const S2Point& y);
 
   // Return the zero chord angle.
   static S1ChordAngle Zero();
@@ -83,8 +83,7 @@ class S1ChordAngle {
   // algorithm, and results are converted back to S1Angles only at the end.
   explicit S1ChordAngle(S1Angle angle);
 
-  // Convenience functions that convert the corresponding S1Angle to an
-  // S1ChordAngle.
+  // Convenience methods implemented by converting from an S1Angle.
   static S1ChordAngle Radians(double radians);
   static S1ChordAngle Degrees(double degrees);
   static S1ChordAngle E5(int32 e5);
@@ -102,10 +101,30 @@ class S1ChordAngle {
   // roundoff errors.  The argument must be non-negative.
   static S1ChordAngle FromLength2(double length2);
 
-  // Convert the chord angle to an S1Angle.  Infinity() is converted to
-  // S1Angle::Infinity(), and Negative() is converted to a negative S1Angle.
-  // This operation is relatively expensive.
+  // Converts to an S1Angle.  Can be used just like an S1Angle constructor:
+  //
+  //   S1ChordAngle x = ...;
+  //   return S1Angle(x);
+  //
+  // Infinity() is converted to S1Angle::Infinity(), and Negative() is
+  // converted to an unspecified negative S1Angle.
+  //
+  // Note that the conversion uses trigonometric functions and therefore
+  // should be avoided in inner loops.
+  explicit operator S1Angle() const;
+
+  // Converts to an S1Angle (equivalent to the operator above).
   S1Angle ToAngle() const;
+
+  // Convenience methods implemented by calling ToAngle() first.  Note that
+  // because of the S1Angle conversion these methods are relatively expensive
+  // (despite their lowercase names), so the results should be cached if they
+  // are needed inside loops.
+  double radians() const;
+  double degrees() const;
+  int32 e5() const;
+  int32 e6() const;
+  int32 e7() const;
 
   // All operators and functions are declared here so that we can put them all
   // in one place.  (The compound assignment operators must be put here.)
@@ -259,6 +278,30 @@ inline S1ChordAngle S1ChordAngle::FastUpperBoundFrom(S1Angle angle) {
   // This method uses the distance along the surface of the sphere as an upper
   // bound on the distance through the sphere's interior.
   return S1ChordAngle::FromLength2(angle.radians() * angle.radians());
+}
+
+inline S1ChordAngle::operator S1Angle() const {
+  return ToAngle();
+}
+
+inline double S1ChordAngle::radians() const {
+  return ToAngle().radians();
+}
+
+inline double S1ChordAngle::degrees() const {
+  return ToAngle().degrees();
+}
+
+inline int32 S1ChordAngle::e5() const {
+  return ToAngle().e5();
+}
+
+inline int32 S1ChordAngle::e6() const {
+  return ToAngle().e6();
+}
+
+inline int32 S1ChordAngle::e7() const {
+  return ToAngle().e7();
 }
 
 inline bool S1ChordAngle::is_zero() const {

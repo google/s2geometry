@@ -50,7 +50,6 @@
 
 using absl::WrapUnique;
 using absl::make_unique;
-using s2shapeutil::EdgeVectorShape;
 using s2textformat::MakePolyline;
 using std::unique_ptr;
 using std::vector;
@@ -68,12 +67,12 @@ class S2ShapeIndexTest : public ::testing::Test {
 
   // Given an edge and a cell id, determine whether or not the edge should be
   // present in that cell and verify that this matches "index_has_edge".
-  void ValidateEdge(S2Point const& a, S2Point const& b,
+  void ValidateEdge(const S2Point& a, const S2Point& b,
                     S2CellId id, bool index_has_edge);
 
   // Given a shape and a cell id, determine whether or not the shape contains
   // the cell center and verify that this matches "index_contains_center".
-  void ValidateInterior(S2Shape const* shape, S2CellId id,
+  void ValidateInterior(const S2Shape* shape, S2CellId id,
                         bool index_contains_center);
 };
 
@@ -102,8 +101,8 @@ void S2ShapeIndexTest::QuadraticValidate() {
     // index cell and all the skipped cells.
     int short_edges = 0;  // number of edges counted toward subdivision
     for (int id = 0; id < index_.num_shape_ids(); ++id) {
-      S2Shape const* shape = index_.shape(id);
-      S2ClippedShape const* clipped = nullptr;
+      const S2Shape* shape = index_.shape(id);
+      const S2ClippedShape* clipped = nullptr;
       if (!it.done()) clipped = it.cell().find_clipped(id);
 
       // First check that contains_center() is set correctly.
@@ -142,7 +141,7 @@ void S2ShapeIndexTest::QuadraticValidate() {
 
 // Verify that "index_has_edge" is true if and only if the edge AB intersects
 // the given cell id.
-void S2ShapeIndexTest::ValidateEdge(S2Point const& a, S2Point const& b,
+void S2ShapeIndexTest::ValidateEdge(const S2Point& a, const S2Point& b,
                                     S2CellId id, bool index_has_edge) {
   // Expand or shrink the padding slightly to account for errors in the
   // function we use to test for intersection (IntersectsRect).
@@ -155,7 +154,7 @@ void S2ShapeIndexTest::ValidateEdge(S2Point const& a, S2Point const& b,
             index_has_edge);
 }
 
-void S2ShapeIndexTest::ValidateInterior(S2Shape const* shape, S2CellId id,
+void S2ShapeIndexTest::ValidateInterior(const S2Shape* shape, S2CellId id,
                                         bool index_contains_center) {
   if (shape == nullptr) {
     EXPECT_FALSE(index_contains_center);
@@ -167,7 +166,7 @@ void S2ShapeIndexTest::ValidateInterior(S2Shape const* shape, S2CellId id,
 
 namespace {
 
-void TestIteratorMethods(S2ShapeIndex const& index) {
+void TestIteratorMethods(const S2ShapeIndex& index) {
   S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
   EXPECT_FALSE(it.Prev());
   it.Finish();
@@ -221,7 +220,8 @@ void TestIteratorMethods(S2ShapeIndex const& index) {
 }
 
 TEST_F(S2ShapeIndexTest, SpaceUsed) {
-  index_.Add(make_unique<EdgeVectorShape>(S2Point(1, 0, 0), S2Point(0, 1, 0)));
+  index_.Add(make_unique<S2EdgeVectorShape>(S2Point(1, 0, 0),
+                                            S2Point(0, 1, 0)));
   EXPECT_FALSE(index_.is_fresh());
   size_t size_before = index_.SpaceUsed();
   EXPECT_FALSE(index_.is_fresh());
@@ -240,8 +240,8 @@ TEST_F(S2ShapeIndexTest, NoEdges) {
 }
 
 TEST_F(S2ShapeIndexTest, OneEdge) {
-  EXPECT_EQ(0, index_.Add(make_unique<EdgeVectorShape>(S2Point(1, 0, 0),
-                                                       S2Point(0, 1, 0))));
+  EXPECT_EQ(0, index_.Add(make_unique<S2EdgeVectorShape>(S2Point(1, 0, 0),
+                                                         S2Point(0, 1, 0))));
   QuadraticValidate();
   TestIteratorMethods(index_);
 }
@@ -261,7 +261,7 @@ TEST_F(S2ShapeIndexTest, ShrinkToFitOptimization) {
 
 TEST_F(S2ShapeIndexTest, LoopsSpanningThreeFaces) {
   S2Polygon polygon;
-  int const kNumEdges = 100;  // Validation is quadratic
+  const int kNumEdges = 100;  // Validation is quadratic
   // Construct two loops consisting of kNumEdges vertices each, centered
   // around the cube vertex at the start of the Hilbert curve.
   S2Testing::ConcentricLoopsPolygon(S2Point(1, -1, -1).Normalize(), 2,
@@ -275,11 +275,11 @@ TEST_F(S2ShapeIndexTest, LoopsSpanningThreeFaces) {
 }
 
 TEST_F(S2ShapeIndexTest, ManyIdenticalEdges) {
-  int const kNumEdges = 100;  // Validation is quadratic
+  const int kNumEdges = 100;  // Validation is quadratic
   S2Point a = S2Point(0.99, 0.99, 1).Normalize();
   S2Point b = S2Point(-0.99, -0.99, 1).Normalize();
   for (int i = 0; i < kNumEdges; ++i) {
-    EXPECT_EQ(i, index_.Add(make_unique<EdgeVectorShape>(a, b)));
+    EXPECT_EQ(i, index_.Add(make_unique<S2EdgeVectorShape>(a, b)));
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
@@ -295,7 +295,7 @@ TEST_F(S2ShapeIndexTest, DegenerateEdge) {
   // This test verifies that degenerate edges are supported.  The following
   // point is a cube face vertex, and so it should be indexed in 3 cells.
   S2Point a = S2Point(1, 1, 1).Normalize();
-  auto shape = make_unique<EdgeVectorShape>();
+  auto shape = make_unique<S2EdgeVectorShape>();
   shape->Add(a, a);
   index_.Add(std::move(shape));
   QuadraticValidate();
@@ -313,11 +313,11 @@ TEST_F(S2ShapeIndexTest, DegenerateEdge) {
 TEST_F(S2ShapeIndexTest, ManyTinyEdges) {
   // This test adds many edges to a single leaf cell, to check that
   // subdivision stops when no further subdivision is possible.
-  int const kNumEdges = 100;  // Validation is quadratic
+  const int kNumEdges = 100;  // Validation is quadratic
   // Construct two points in the same leaf cell.
   S2Point a = S2CellId(S2Point(1, 0, 0)).ToPoint();
   S2Point b = (a + S2Point(0, 1e-12, 0)).Normalize();
-  auto shape = make_unique<EdgeVectorShape>();
+  auto shape = make_unique<S2EdgeVectorShape>();
   for (int i = 0; i < kNumEdges; ++i) {
     shape->Add(a, b);
   }
@@ -417,7 +417,7 @@ TEST_F(S2ShapeIndexTest, RandomUpdates) {
 // Return true if any loop crosses any other loop (including vertex crossings
 // and duplicate edges), or any loop has a self-intersection (including
 // duplicate vertices).
-static bool HasAnyCrossing(S2ShapeIndex const& index) {
+static bool HasAnyCrossing(const S2ShapeIndex& index) {
   S2Error error;
   if (s2shapeutil::FindAnyCrossing(index, &error)) {
     VLOG(1) << error;
@@ -532,18 +532,18 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
 
   // The number of readers should be large enough so that it is likely that
   // several readers will be running at once (with a multiple-core CPU).
-  int const kNumReaders = 8;
+  const int kNumReaders = 8;
   std::thread threads[kNumReaders];
   for (int i = 0; i < kNumReaders; ++i) {
     threads[i] = std::thread(&LazyUpdatesTest::ReaderThread, this);
   }
   lock_.Lock();
-  int const kIters = 100;
+  const int kIters = 100;
   for (int iter = 0; iter < kIters; ++iter) {
     // Loop invariant: lock_ is held and num_readers_left_ == 0.
     DCHECK_EQ(0, num_readers_left_);
     // Since there are no readers, it is safe to modify the index.
-    index_.Reset();
+    index_.Clear();
     int num_vertices = 4 * S2Testing::rnd.Skewed(10);  // Up to 4K vertices
     unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(
         S2Testing::RandomPoint(), S2Testing::KmToAngle(5), num_vertices));
@@ -587,12 +587,12 @@ TEST(S2Shape, user_data) {
     int x, y;
     MyData(int _x, int _y) : x(_x), y(_y) {}
   };
-  class MyEdgeVectorShape : public EdgeVectorShape {
+  class MyEdgeVectorShape : public S2EdgeVectorShape {
    public:
-    explicit MyEdgeVectorShape(MyData const& data)
-        : EdgeVectorShape(), data_(data) {
+    explicit MyEdgeVectorShape(const MyData& data)
+        : S2EdgeVectorShape(), data_(data) {
     }
-    void const* user_data() const override { return &data_; }
+    const void* user_data() const override { return &data_; }
     void* mutable_user_data() override { return &data_; }
 
    private:
@@ -602,7 +602,7 @@ TEST(S2Shape, user_data) {
   MyData* data = static_cast<MyData*>(shape.mutable_user_data());
   DCHECK_EQ(3, data->x);
   data->y = 10;
-  DCHECK_EQ(10, static_cast<MyData const*>(shape.user_data())->y);
+  DCHECK_EQ(10, static_cast<const MyData*>(shape.user_data())->y);
 }
 
 }  // namespace

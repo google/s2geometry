@@ -32,26 +32,26 @@ template<int dim>
 class MetricBundle {
  public:
   using Metric = S2::Metric<dim>;
-  MetricBundle(Metric const& min, Metric const& max, Metric const& avg) :
+  MetricBundle(const Metric& min, const Metric& max, const Metric& avg) :
     min_(min), max_(max), avg_(avg) {}
-  Metric const& min_;
-  Metric const& max_;
-  Metric const& avg_;
+  const Metric& min_;
+  const Metric& max_;
+  const Metric& avg_;
 
  private:
-  MetricBundle(MetricBundle const&) = delete;
-  void operator=(MetricBundle const&) = delete;
+  MetricBundle(const MetricBundle&) = delete;
+  void operator=(const MetricBundle&) = delete;
 };
 
 template<int dim>
-static void CheckMinMaxAvg(MetricBundle<dim> const& bundle) {
+static void CheckMinMaxAvg(const MetricBundle<dim>& bundle) {
   EXPECT_LE(bundle.min_.deriv(), bundle.avg_.deriv());
   EXPECT_LE(bundle.avg_.deriv(), bundle.max_.deriv());
 }
 
 template<int dim>
-static void CheckLessOrEqual(MetricBundle<dim> const& a,
-                             MetricBundle<dim> const& b) {
+static void CheckLessOrEqual(const MetricBundle<dim>& a,
+                             const MetricBundle<dim>& b) {
   EXPECT_LE(a.min_.deriv(), b.min_.deriv());
   EXPECT_LE(a.max_.deriv(), b.max_.deriv());
   EXPECT_LE(a.avg_.deriv(), b.avg_.deriv());

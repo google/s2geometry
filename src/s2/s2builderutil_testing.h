@@ -30,9 +30,9 @@ namespace s2builderutil {
 class GraphClone {
  public:
   GraphClone() {}  // Must call Init().
-  explicit GraphClone(S2Builder::Graph const& g) { Init(g); }
-  void Init(S2Builder::Graph const& g);
-  S2Builder::Graph const& graph() { return g_; }
+  explicit GraphClone(const S2Builder::Graph& g) { Init(g); }
+  void Init(const S2Builder::Graph& g);
+  const S2Builder::Graph& graph() { return g_; }
 
  private:
   S2Builder::GraphOptions options_;
@@ -50,7 +50,7 @@ class GraphClone {
 // (which owns the underlying data, unlike S2Builder::Graph itself).
 class GraphCloningLayer : public S2Builder::Layer {
  public:
-  GraphCloningLayer(S2Builder::GraphOptions const& graph_options,
+  GraphCloningLayer(const S2Builder::GraphOptions& graph_options,
                     GraphClone* gc)
       : graph_options_(graph_options), gc_(gc) {}
 
@@ -73,7 +73,7 @@ class GraphCloningLayer : public S2Builder::Layer {
 class GraphAppendingLayer : public S2Builder::Layer {
  public:
   GraphAppendingLayer(
-      S2Builder::GraphOptions const& graph_options,
+      const S2Builder::GraphOptions& graph_options,
       std::vector<S2Builder::Graph>* graphs,
       std::vector<std::unique_ptr<GraphClone>>* clones)
       : graph_options_(graph_options), graphs_(graphs), clones_(clones) {}

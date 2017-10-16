@@ -25,7 +25,7 @@ int S2ContainsVertexQuery::ContainsSign() {
   // Find the unmatched edge that is immediately clockwise from S2::Ortho(P).
   S2Point reference_dir = S2::Ortho(target_);
   std::pair<S2Point, int> best(reference_dir, 0);
-  for (auto const& e : edge_map_) {
+  for (const auto& e : edge_map_) {
     DCHECK_LE(std::abs(e.second), 1);
     if (e.second == 0) continue;  // This is a "matched" edge.
     if (s2pred::OrderedCCW(reference_dir, best.first, e.first, target_)) {

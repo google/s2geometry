@@ -166,7 +166,7 @@ TEST(S2CellUnion, Normalize) {
   // statistics for normalization (to see if they agree with the
   // analysis above).
   double in_sum = 0, out_sum = 0;
-  static int const kIters = 2000;
+  static const int kIters = 2000;
   for (int i = 0; i < kIters; ++i) {
     vector<S2CellId> input, expected;
     AddCells(S2CellId::None(), false, &input, &expected);
@@ -283,7 +283,7 @@ TEST(S2CellUnion, Normalize) {
 
 // Return the maximum geodesic distance from "axis" to any point of
 // "covering".
-static double GetRadius(S2CellUnion const& covering, S2Point const& axis) {
+static double GetRadius(const S2CellUnion& covering, const S2Point& axis) {
   double max_dist = 0;
   for (int i = 0; i < covering.num_cells(); ++i) {
     S2Cell cell(covering.cell_id(i));
@@ -388,7 +388,7 @@ TEST(S2CellUnion, EncodeDecodeEmpty) {
 
 static void TestFromMinMax(S2CellId min_id, S2CellId max_id) {
   auto cell_union = S2CellUnion::FromMinMax(min_id, max_id);
-  vector<S2CellId> const& cell_ids = cell_union.cell_ids();
+  const vector<S2CellId>& cell_ids = cell_union.cell_ids();
 
   EXPECT_GT(cell_ids.size(), 0);
   EXPECT_EQ(min_id, cell_ids.front().range_min());
@@ -488,6 +488,20 @@ TEST(S2CellUnion, Empty) {
   EXPECT_EQ(0, empty_cell_union.num_cells());
   empty_cell_union.Expand(10);
   EXPECT_EQ(0, empty_cell_union.num_cells());
+}
+
+TEST(S2CellUnion, Clear) {
+  S2CellId face1_id = S2CellId::FromFace(1);
+  S2CellUnion face1_union({face1_id});
+
+  ASSERT_EQ(1, face1_union.num_cells());
+  EXPECT_EQ(1, face1_union.cell_ids().size());
+  EXPECT_LE(1, face1_union.cell_ids().capacity());
+
+  face1_union.Clear();
+  ASSERT_EQ(0, face1_union.num_cells());
+  EXPECT_EQ(0, face1_union.cell_ids().size());
+  EXPECT_EQ(0, face1_union.cell_ids().capacity());
 }
 
 TEST(S2CellUnion, Release) {

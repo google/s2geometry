@@ -30,18 +30,18 @@
 //         [S2PolygonMeshLayer]
 //
 // Notice that there are two supported output types for polygons: S2Polygon
-// and LaxPolygon. Use S2Polygon if you need the full range of operations
-// that S2Polygon implements.  Use LaxPolygon if you want to represent
-// polygons with zero-area degenerate regions, or if you need a type that has
-// low memory overhead and fast initialization.  However, be aware that to
-// convert from a LaxPolygon to an S2Polygon you will need to use S2Builder
-// again.
+// and S2LaxPolygonShape. Use S2Polygon if you need the full range of
+// operations that S2Polygon implements.  Use S2LaxPolygonShape if you want to
+// represent polygons with zero-area degenerate regions, or if you need a type
+// that has low memory overhead and fast initialization.  However, be aware
+// that to convert from a S2LaxPolygonShape to an S2Polygon you will need to
+// use S2Builder again.
 //
 // Similarly, there are two supported output formats for polygon meshes:
-// LaxPolygonVector and S2PolygonMesh.  Use S2PolygonMesh if you need to be
-// able to determine which polygons are adjacent to each edge or vertex;
-// otherwise use LaxPolygonVector, which uses less memory and is faster to
-// construct.
+// S2LaxPolygonShapeVector and S2PolygonMesh.  Use S2PolygonMesh if you need
+// to be able to determine which polygons are adjacent to each edge or vertex;
+// otherwise use S2LaxPolygonShapeVector, which uses less memory and is faster
+// to construct.
 
 #ifndef S2_S2BUILDERUTIL_LAYERS_H_
 #define S2_S2BUILDERUTIL_LAYERS_H_
@@ -129,7 +129,7 @@ class S2PolygonLayer : public S2Builder::Layer {
 
   // Specifies that a polygon should be constructed using the given options.
   explicit S2PolygonLayer(S2Polygon* polygon,
-                          Options const& options = Options());
+                          const Options& options = Options());
 
   // Specifies that a polygon should be constructed using the given options,
   // and that any labels attached to the input edges should be returned in
@@ -142,24 +142,24 @@ class S2PolygonLayer : public S2Builder::Layer {
   using LabelSetIds = std::vector<std::vector<LabelSetId>>;
   S2PolygonLayer(S2Polygon* polygon, LabelSetIds* label_set_ids,
                  IdSetLexicon* label_set_lexicon,
-                 Options const& options = Options());
+                 const Options& options = Options());
 
   // Layer interface:
   GraphOptions graph_options() const override;
-  void Build(Graph const& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* error) override;
 
  private:
   void Init(S2Polygon* polygon, LabelSetIds* label_set_ids,
-            IdSetLexicon* label_set_lexicon, Options const& options);
-  void AppendS2Loops(Graph const& g,
-                     std::vector<Graph::EdgeLoop> const& edge_loops,
+            IdSetLexicon* label_set_lexicon, const Options& options);
+  void AppendS2Loops(const Graph& g,
+                     const std::vector<Graph::EdgeLoop>& edge_loops,
                      std::vector<std::unique_ptr<S2Loop>>* loops) const;
-  void AppendEdgeLabels(Graph const& g,
-                        std::vector<Graph::EdgeLoop> const& edge_loops);
+  void AppendEdgeLabels(const Graph& g,
+                        const std::vector<Graph::EdgeLoop>& edge_loops);
   using LoopMap = util::btree::btree_map<S2Loop*, std::pair<int, bool>>;
-  void InitLoopMap(std::vector<std::unique_ptr<S2Loop>> const& loops,
+  void InitLoopMap(const std::vector<std::unique_ptr<S2Loop>>& loops,
                    LoopMap* loop_map) const;
-  void ReorderEdgeLabels(LoopMap const& loop_map);
+  void ReorderEdgeLabels(const LoopMap& loop_map);
 
   S2Polygon* polygon_;
   LabelSetIds* label_set_ids_;
@@ -167,12 +167,13 @@ class S2PolygonLayer : public S2Builder::Layer {
   Options options_;
 };
 
-// Like S2PolygonLayer, but adds the polygon to an S2ShapeIndex.
+// Like S2PolygonLayer, but adds the polygon to an S2ShapeIndex (if the polygon
+// is non-empty).
 class IndexedS2PolygonLayer : public S2Builder::Layer {
  public:
   using Options = S2PolygonLayer::Options;
   explicit IndexedS2PolygonLayer(S2ShapeIndex* index,
-                                 Options const& options = Options())
+                                 const Options& options = Options())
       : index_(index), polygon_(new S2Polygon),
         layer_(polygon_.get(), options) {}
 
@@ -180,9 +181,9 @@ class IndexedS2PolygonLayer : public S2Builder::Layer {
     return layer_.graph_options();
   }
 
-  void Build(Graph const& g, S2Error* error) override {
+  void Build(const Graph& g, S2Error* error) override {
     layer_.Build(g, error);
-    if (error->ok()) {
+    if (error->ok() && !polygon_->is_empty()) {
       index_->Add(
           absl::make_unique<S2Polygon::OwningShape>(std::move(polygon_)));
     }
@@ -245,7 +246,7 @@ class S2PolylineLayer : public S2Builder::Layer {
 
   // Specifies that a polyline should be constructed using the given options.
   explicit S2PolylineLayer(S2Polyline* polyline,
-                           Options const& options = Options());
+                           const Options& options = Options());
 
   // Specifies that a polyline should be constructed using the given options,
   // and that any labels attached to the input edges should be returned in
@@ -258,15 +259,15 @@ class S2PolylineLayer : public S2Builder::Layer {
   using LabelSetIds = std::vector<LabelSetId>;
   S2PolylineLayer(S2Polyline* polyline, LabelSetIds* label_set_ids,
                  IdSetLexicon* label_set_lexicon,
-                 Options const& options = Options());
+                 const Options& options = Options());
 
   // Layer interface:
   GraphOptions graph_options() const override;
-  void Build(Graph const& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* error) override;
 
  private:
   void Init(S2Polyline* polyline, LabelSetIds* label_set_ids,
-            IdSetLexicon* label_set_lexicon, Options const& options);
+            IdSetLexicon* label_set_lexicon, const Options& options);
 
   S2Polyline* polyline_;
   LabelSetIds* label_set_ids_;
@@ -274,12 +275,13 @@ class S2PolylineLayer : public S2Builder::Layer {
   Options options_;
 };
 
-// Like S2PolylineLayer, but adds the polyline to an S2ShapeIndex.
+// Like S2PolylineLayer, but adds the polyline to an S2ShapeIndex (if the
+// polyline is non-empty).
 class IndexedS2PolylineLayer : public S2Builder::Layer {
  public:
   using Options = S2PolylineLayer::Options;
   explicit IndexedS2PolylineLayer(S2ShapeIndex* index,
-                                 Options const& options = Options())
+                                 const Options& options = Options())
       : index_(index), polyline_(new S2Polyline),
         layer_(polyline_.get(), options) {}
 
@@ -287,9 +289,9 @@ class IndexedS2PolylineLayer : public S2Builder::Layer {
     return layer_.graph_options();
   }
 
-  void Build(Graph const& g, S2Error* error) override {
+  void Build(const Graph& g, S2Error* error) override {
     layer_.Build(g, error);
-    if (error->ok()) {
+    if (error->ok() && polyline_->num_vertices() > 0) {
       index_->Add(
           absl::make_unique<S2Polyline::OwningShape>(std::move(polyline_)));
     }
@@ -415,7 +417,7 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
   // given options.
   explicit S2PolylineVectorLayer(
       std::vector<std::unique_ptr<S2Polyline>>* polylines,
-      Options const& options = Options());
+      const Options& options = Options());
 
   // Specifies that a vector of polylines should be constructed using the
   // given options, and that any labels attached to the input edges should be
@@ -429,16 +431,16 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
   S2PolylineVectorLayer(std::vector<std::unique_ptr<S2Polyline>>* polylines,
                         LabelSetIds* label_set_ids,
                         IdSetLexicon* label_set_lexicon,
-                        Options const& options = Options());
+                        const Options& options = Options());
 
   // Layer interface:
   GraphOptions graph_options() const override;
-  void Build(Graph const& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* error) override;
 
  private:
   void Init(std::vector<std::unique_ptr<S2Polyline>>* polylines,
             LabelSetIds* label_set_ids, IdSetLexicon* label_set_lexicon,
-            Options const& options);
+            const Options& options);
 
   std::vector<std::unique_ptr<S2Polyline>>* polylines_;
   LabelSetIds* label_set_ids_;
@@ -451,14 +453,14 @@ class IndexedS2PolylineVectorLayer : public S2Builder::Layer {
  public:
   using Options = S2PolylineVectorLayer::Options;
   explicit IndexedS2PolylineVectorLayer(S2ShapeIndex* index,
-                                        Options const& options = Options())
+                                        const Options& options = Options())
       : index_(index), layer_(&polylines_, options) {}
 
   GraphOptions graph_options() const override {
     return layer_.graph_options();
   }
 
-  void Build(Graph const& g, S2Error* error) override {
+  void Build(const Graph& g, S2Error* error) override {
     layer_.Build(g, error);
     if (error->ok()) {
       for (auto& polyline : polylines_) {
@@ -495,16 +497,16 @@ class S2PointVectorLayer : public S2Builder::Layer {
   };
 
   explicit S2PointVectorLayer(std::vector<S2Point>* points,
-                              Options const& options = Options());
+                              const Options& options = Options());
 
   using LabelSetIds = std::vector<LabelSetId>;
   S2PointVectorLayer(std::vector<S2Point>* points, LabelSetIds* label_set_ids,
                      IdSetLexicon* label_set_lexicon,
-                     Options const& options = Options());
+                     const Options& options = Options());
 
   // Layer interface:
   GraphOptions graph_options() const override;
-  void Build(Graph const& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* error) override;
 
  private:
   std::vector<S2Point>* points_;
@@ -513,22 +515,23 @@ class S2PointVectorLayer : public S2Builder::Layer {
   Options options_;
 };
 
-// Like S2PointVectorLayer, but adds the points to an S2ShapeIndex.
+// Like S2PointVectorLayer, but adds the points to an S2ShapeIndex (if the point
+// vector is non-empty).
 class IndexedS2PointVectorLayer : public S2Builder::Layer {
  public:
   using Options = S2PointVectorLayer::Options;
   explicit IndexedS2PointVectorLayer(S2ShapeIndex* index,
-                                     Options const& options = Options())
+                                     const Options& options = Options())
       : index_(index), layer_(&points_, options) {}
 
   GraphOptions graph_options() const override {
     return layer_.graph_options();
   }
 
-  void Build(Graph const& g, S2Error* error) override {
+  void Build(const Graph& g, S2Error* error) override {
     layer_.Build(g, error);
-    if (error->ok()) {
-      index_->Add(absl::make_unique<s2shapeutil::PointVectorShape>(&points_));
+    if (error->ok() && !points_.empty()) {
+      index_->Add(absl::make_unique<S2PointVectorShape>(&points_));
     }
   }
 
@@ -557,13 +560,13 @@ class IndexedS2PointVectorLayer : public S2Builder::Layer {
 class S2MeshLayer;
 
 // Similar to S2PolygonMeshLayer, except that the polygons are returned as a
-// vector of s2shapeutil::LaxPolygon rather than an S2Mesh.  LaxPolygon is
+// vector of S2LaxPolygonShape rather than an S2Mesh.  S2LaxPolygonShape is
 // similar to S2Polygon except that it has more relaxed rules about duplicate
 // vertices and edges (which is why it is being used here).
 //
 // This has the same effect as building an S2Mesh and extracting the faces,
 // but it is faster and uses less memory.
-using LaxPolygonVector = std::vector<std::unique_ptr<s2shapeutil::LaxPolygon>>;
+using LaxPolygonVector = std::vector<std::unique_ptr<S2LaxPolygonShape>>;
 class LaxPolygonVectorLayer;
 #endif
 

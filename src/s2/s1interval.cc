@@ -86,7 +86,7 @@ bool S1Interval::InteriorContains(double p) const {
   }
 }
 
-bool S1Interval::Contains(S1Interval const& y) const {
+bool S1Interval::Contains(const S1Interval& y) const {
   // It might be helpful to compare the structure of these tests to
   // the simpler Contains(double) method above.
 
@@ -99,7 +99,7 @@ bool S1Interval::Contains(S1Interval const& y) const {
   }
 }
 
-bool S1Interval::InteriorContains(S1Interval const& y) const {
+bool S1Interval::InteriorContains(const S1Interval& y) const {
   if (is_inverted()) {
     if (!y.is_inverted()) return y.lo() > lo() || y.hi() < hi();
     return (y.lo() > lo() && y.hi() < hi()) || y.is_empty();
@@ -109,7 +109,7 @@ bool S1Interval::InteriorContains(S1Interval const& y) const {
   }
 }
 
-bool S1Interval::Intersects(S1Interval const& y) const {
+bool S1Interval::Intersects(const S1Interval& y) const {
   if (is_empty() || y.is_empty()) return false;
   if (is_inverted()) {
     // Every non-empty inverted interval contains Pi.
@@ -120,7 +120,7 @@ bool S1Interval::Intersects(S1Interval const& y) const {
   }
 }
 
-bool S1Interval::InteriorIntersects(S1Interval const& y) const {
+bool S1Interval::InteriorIntersects(const S1Interval& y) const {
   if (is_empty() || y.is_empty() || lo() == hi()) return false;
   if (is_inverted()) {
     return y.is_inverted() || y.lo() < hi() || y.hi() > lo();
@@ -142,7 +142,7 @@ inline static double PositiveDistance(double a, double b) {
   return (b + M_PI) - (a - M_PI);
 }
 
-double S1Interval::GetDirectedHausdorffDistance(S1Interval const& y) const {
+double S1Interval::GetDirectedHausdorffDistance(const S1Interval& y) const {
   if (y.Contains(*this)) return 0.0;  // this includes the case *this is empty
   if (y.is_empty()) return M_PI;  // maximum possible distance on S1
 
@@ -223,7 +223,7 @@ S1Interval S1Interval::Expanded(double margin) const {
   return result;
 }
 
-S1Interval S1Interval::Union(S1Interval const& y) const {
+S1Interval S1Interval::Union(const S1Interval& y) const {
   // The y.is_full() case is handled correctly in all cases by the code
   // below, but can follow three separate code paths depending on whether
   // this interval is inverted, is non-inverted but contains Pi, or neither.
@@ -254,7 +254,7 @@ S1Interval S1Interval::Union(S1Interval const& y) const {
   }
 }
 
-S1Interval S1Interval::Intersection(S1Interval const& y) const {
+S1Interval S1Interval::Intersection(const S1Interval& y) const {
   // The y.is_full() case is handled correctly in all cases by the code
   // below, but can follow three separate code paths depending on whether
   // this interval is inverted, is non-inverted but contains Pi, or neither.
@@ -280,7 +280,7 @@ S1Interval S1Interval::Intersection(S1Interval const& y) const {
   return Empty();
 }
 
-bool S1Interval::ApproxEquals(S1Interval const& y, double max_error) const {
+bool S1Interval::ApproxEquals(const S1Interval& y, double max_error) const {
   // Full and empty intervals require special cases because the "endpoints"
   // are considered to be positioned arbitrarily.
   if (is_empty()) return y.GetLength() <= 2 * max_error;

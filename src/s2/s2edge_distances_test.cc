@@ -151,7 +151,7 @@ TEST(S2EdgeUtil, Interpolate) {
   // Test that interpolation is accurate on a long edge (but not so long that
   // the definition of the edge itself becomes too unstable).
   {
-    double const kLng = M_PI - 1e-2;
+    const double kLng = M_PI - 1e-2;
     S2Point a = S2LatLng::FromRadians(0, 0).ToPoint();
     S2Point b = S2LatLng::FromRadians(0, kLng).ToPoint();
     for (double f = 0.4; f > 1e-15; f *= 0.1) {
@@ -232,9 +232,9 @@ void CheckEdgePairDistance(S2Point a0, S2Point a1, S2Point b0, S2Point b1,
   b1 = b1.Normalize();
   expected_a = expected_a.Normalize();
   expected_b = expected_b.Normalize();
-  auto const& closest = S2::GetEdgePairClosestPoints(a0, a1, b0, b1);
-  S2Point const& actual_a = closest.first;
-  S2Point const& actual_b = closest.second;
+  const auto& closest = S2::GetEdgePairClosestPoints(a0, a1, b0, b1);
+  const S2Point& actual_a = closest.first;
+  const S2Point& actual_b = closest.second;
   if (expected_a == S2Point(0, 0, 0)) {
     // This special value says that the result should be a0 or a1.
     EXPECT_TRUE(actual_a == a0 || actual_a == a1);
@@ -315,7 +315,7 @@ TEST(S2EdgeUtil, EdgePairDistance) {
                         acos(-0.5), S2Point(0, 0, 0), S2Point(0, 0, 0));
 }
 
-bool IsEdgeBNearEdgeA(string const& a_str, const string& b_str,
+bool IsEdgeBNearEdgeA(const string& a_str, const string& b_str,
                       double max_error_degrees) {
   unique_ptr<S2Polyline> a(s2textformat::MakePolyline(a_str));
   EXPECT_EQ(2, a->num_vertices());

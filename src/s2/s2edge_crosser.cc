@@ -21,7 +21,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 
-int S2EdgeCrosser::CrossingSignInternal(S2Point const* d) {
+int S2EdgeCrosser::CrossingSignInternal(const S2Point* d) {
   // Compute the actual result, and then save the current vertex D as the next
   // vertex C, and save the orientation of the next triangle ACB (which is
   // opposite to the current triangle BDA).
@@ -31,7 +31,7 @@ int S2EdgeCrosser::CrossingSignInternal(S2Point const* d) {
   return result;
 }
 
-inline int S2EdgeCrosser::CrossingSignInternal2(S2Point const& d) {
+inline int S2EdgeCrosser::CrossingSignInternal2(const S2Point& d) {
   // At this point, a very common situation is that A,B,C,D are four points on
   // a line such that AB does not overlap CD.  (For example, this happens when
   // a line or curve is sampled finely, or when geometry is constructed by

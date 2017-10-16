@@ -56,7 +56,7 @@ TEST(S2, AreaMethods) {
 
   // Make sure that Area() has good *relative* accuracy even for
   // very small areas.
-  static double const eps = 1e-10;
+  static const double eps = 1e-10;
   S2Point pepsx = S2Point(eps, 0, 1).Normalize();
   S2Point pepsy = S2Point(0, eps, 1).Normalize();
   double expected1 = 0.5 * eps * eps;
@@ -92,7 +92,7 @@ TEST(S2, AreaMethods) {
   EXPECT_NEAR(S2::Area(p000, p045eps, p090), expected2, 1e-9 * expected2);
 
   // Triangles with near-180 degree edges that sum to a quarter-sphere.
-  static double const eps2 = 1e-14;
+  static const double eps2 = 1e-14;
   S2Point p000eps2 = S2Point(1, 0.1*eps2, eps2).Normalize();
   double quarter_area1 = S2::Area(p000eps2, p000, p045) +
                          S2::Area(p000eps2, p045, p180) +

@@ -52,11 +52,11 @@ struct TestEdge {
 
 namespace {
 
-std::ostream& operator<<(std::ostream& os, Edge const& edge) {
+std::ostream& operator<<(std::ostream& os, const Edge& edge) {
   return os << "(" << edge.first << ", " << edge.second << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, vector<InputEdgeId> const& v) {
+std::ostream& operator<<(std::ostream& os, const vector<InputEdgeId>& v) {
   os << "{";
   for (int i = 0; i < v.size(); ++i) {
     if (i > 0) os << ", ";
@@ -65,14 +65,14 @@ std::ostream& operator<<(std::ostream& os, vector<InputEdgeId> const& v) {
   return os << "}";
 }
 
-void TestProcessEdges(vector<TestEdge> const& input,
-                      vector<TestEdge> const& expected,
+void TestProcessEdges(const vector<TestEdge>& input,
+                      const vector<TestEdge>& expected,
                       GraphOptions* options,
                       S2Error::Code expected_code = S2Error::OK) {
   vector<Edge> edges;
   vector<InputEdgeIdSetId> input_id_set_ids;
   IdSetLexicon id_set_lexicon;
-  for (auto const& e : input) {
+  for (const auto& e : input) {
     edges.push_back(Edge(e.first, e.second));
     input_id_set_ids.push_back(id_set_lexicon.Add(e.input_ids));
   }
@@ -82,7 +82,7 @@ void TestProcessEdges(vector<TestEdge> const& input,
   EXPECT_EQ(expected_code, error.code());
   EXPECT_EQ(edges.size(), input_id_set_ids.size());
   for (int i = 0; i < expected.size(); ++i) {
-    auto const& e = expected[i];
+    const auto& e = expected[i];
     ASSERT_LT(i, edges.size()) << "Not enough output edges";
     ASSERT_EQ(Edge(e.first, e.second), edges[i]) << "(edge " << i << ")";
     auto id_set = id_set_lexicon.id_set(input_id_set_ids[i]);

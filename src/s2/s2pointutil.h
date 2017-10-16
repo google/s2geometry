@@ -39,11 +39,11 @@ inline S2Point Origin();
 
 // Return true if the given point is approximately unit length
 // (this is mainly useful for assertions).
-bool IsUnitLength(S2Point const& p);
+bool IsUnitLength(const S2Point& p);
 
 // Return true if two points are within the given distance of each other
 // (this is mainly useful for testing).
-bool ApproxEquals(S2Point const& a, S2Point const& b,
+bool ApproxEquals(const S2Point& a, const S2Point& b,
                   S1Angle max_error = S1Angle::Radians(1e-15));
 
 // Return a unit-length vector that is orthogonal to "a".  Satisfies
@@ -53,7 +53,7 @@ bool ApproxEquals(S2Point const& a, S2Point const& b,
 // preferred for use in S2 code because it explicitly tries to avoid result
 // result coordinates that are zero.  (This is a performance optimization that
 // reduces the amount of time spent in functions which handle degeneracies.)
-S2Point Ortho(S2Point const& a);
+S2Point Ortho(const S2Point& a);
 
 // Return a vector "c" that is orthogonal to the given unit-length vectors
 // "a" and "b".  This function is similar to a.CrossProd(b) except that it
@@ -68,30 +68,30 @@ S2Point Ortho(S2Point const& a);
 //   (4) RCP(a,-b) == -RCP(a,b) unless a == b or a == -b
 //
 // The result is not guaranteed to be unit length.
-S2Point RobustCrossProd(S2Point const& a, S2Point const& b);
+S2Point RobustCrossProd(const S2Point& a, const S2Point& b);
 
 // Rotate the given point about the given axis by the given angle.  "p" and
 // "axis" must be unit length; "angle" has no restrictions (e.g., it can be
 // positive, negative, greater than 360 degrees, etc).
-S2Point Rotate(S2Point const& p, S2Point const& axis, S1Angle angle);
+S2Point Rotate(const S2Point& p, const S2Point& axis, S1Angle angle);
 
 // Extend the given point "z" on the unit sphere into a right-handed
 // coordinate frame of unit-length column vectors m = (x,y,z).  Note that the
 // vectors (x,y) are an orthonormal frame for the tangent space at "z", while
 // "z" itself is an orthonormal frame for the normal space at "z".
-Matrix3x3_d GetFrame(S2Point const& z);
-void GetFrame(S2Point const& z, Matrix3x3_d* m);
+Matrix3x3_d GetFrame(const S2Point& z);
+void GetFrame(const S2Point& z, Matrix3x3_d* m);
 
 // Given an orthonormal basis "m" of column vectors and a point "p", return
 // the coordinates of "p" with respect to the basis "m".  The resulting
 // point "q" satisfies the identity (m * q == p).
-S2Point ToFrame(Matrix3x3_d const& m, S2Point const& p);
+S2Point ToFrame(const Matrix3x3_d& m, const S2Point& p);
 
 // Given an orthonormal basis "m" of column vectors and a point "q" with
 // respect to that basis, return the equivalent point "p" with respect to
 // the standard axis-aligned basis.  The result satisfies (p == m * q).
-Matrix3x3_d GetFrame(S2Point const& z);
-S2Point FromFrame(Matrix3x3_d const& m, S2Point const& q);
+Matrix3x3_d GetFrame(const S2Point& z);
+S2Point FromFrame(const Matrix3x3_d& m, const S2Point& q);
 
 // Return true if the points A, B, C are strictly counterclockwise.  Return
 // false if the points are clockwise or collinear (i.e. if they are all
@@ -103,7 +103,7 @@ S2Point FromFrame(Matrix3x3_d const& m, S2Point const& q);
 //
 //   If SimpleCCW(a,b,c), then !SimpleCCW(c,b,a) for all a,b,c.
 ABSL_DEPRECATED("Use s2pred::Sign instead.")
-bool SimpleCCW(S2Point const& a, S2Point const& b, S2Point const& c);
+bool SimpleCCW(const S2Point& a, const S2Point& b, const S2Point& c);
 
 
 //////////////////   Implementation details follow   ////////////////////

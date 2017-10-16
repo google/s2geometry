@@ -13,12 +13,31 @@
 // limitations under the License.
 //
 
-// This file contains local extensions to the standard <type_traits> header,
-// including extensions which are in existing or upcoming standards, but aren't
 //
-// Utilities should be added to this header only if they are clearly on
-// track for standardization (e.g. if they've been voted into the working
-// paper), or otherwise well-baked and unlikely to change substantially.
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// -----------------------------------------------------------------------------
+// type_traits.h
+// -----------------------------------------------------------------------------
+//
+// This file contains C++11-compatible versions of standard <type_traits> API
+// functions for determining the characteristics of types. Such traits can
+// support type inference, classification, and transformation, as well as
+// make it easier to write templates based on generic type behavior.
+//
+// See http://en.cppreference.com/w/cpp/header/type_traits
 //
 // WARNING: use of many of the constructs in this header will count as "complex
 // template metaprogramming", so before proceeding, please carefully consider
@@ -26,19 +45,19 @@
 //
 // WARNING: using template metaprogramming to detect or depend on API
 // features is brittle and not guaranteed. Neither the standard library nor
-// Abseil provides any guarantee that APIs are stable in the face of TMP.
-// Use with caution.
-
+// Abseil provides any guarantee that APIs are stable in the face of template
+// metaprogramming. Use with caution.
 #ifndef S2_THIRD_PARTY_ABSL_META_TYPE_TRAITS_H_
 #define S2_THIRD_PARTY_ABSL_META_TYPE_TRAITS_H_
 
+#include <cstddef>
 #include <type_traits>
 
 #include "s2/third_party/absl/base/config.h"
 
 namespace absl {
 
-namespace internal_type_traits {
+namespace type_traits_internal {
 template <typename... Ts>
 struct VoidTImpl {
   using type = void;
@@ -47,36 +66,41 @@ struct VoidTImpl {
 // This trick to retrieve a default alignment is necessary for our
 // implementation of aligned_storage_t to be consistent with any implementation
 // of std::aligned_storage.
-template <std::size_t Len, class T = std::aligned_storage<Len>>
+template <size_t Len, typename T = std::aligned_storage<Len>>
 struct default_alignment_of_aligned_storage;
 
-template <std::size_t Len, std::size_t Align>
+template <size_t Len, size_t Align>
 struct default_alignment_of_aligned_storage<Len,
                                             std::aligned_storage<Len, Align>> {
-  static constexpr std::size_t value = Align;
+  static constexpr size_t value = Align;
 };
 
-}  // namespace internal_type_traits
+}  // namespace type_traits_internal
 
-// This is like C++17's std::void_t
-// (http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3911.pdf).
-// It's a dummy metafunction that ignores its arguments and returns `void`.
+// void_t()
 //
-// We do not use the standard-specified implementation in order to preserve
-// compatibility with gcc < 5.1. Unfortunately, our workaround provides
-// slightly different behavior in some circumstances, such as when ordering
-// partial specializations.
+// Ignores the type of any its arguments and returns `void`. In general, this
+// metafunction allows you to create a general case that maps to `void` while
+// allowing specializations that map to specific types.
+//
+// This metafunction is designed to be a drop-in replacement for the C++17
+// `std::void_t` metafunction.
+//
+// NOTE: `absl::void_t` does not use the standard-specified implementation so
+// that it can remain compatibile with gcc < 5.1. This can introduce slightly
+// different behavior, such as when ordering partial specializations.
 template <typename... Ts>
-using void_t = typename internal_type_traits::VoidTImpl<Ts...>::type;
+using void_t = typename type_traits_internal::VoidTImpl<Ts...>::type;
 
-// conjunction, disjunction, and negation are equivalent to the constructs with
-// the same names in C++17
-// (http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0013r1.html).
-// They implement logical AND, OR, and NOT operations as compile-time
-// metafunctions. Their template arguments must have `value` members that
-// are convertible to bool. However, conjunction and disjunction have
-// short-circuiting behavior: argument evaluation stops once the result is
-// known, so the following arguments need not have the `value` member.
+// conjunction
+//
+// Performs a compile-time logical AND operation on the passed types (which
+// must have  `::value` members convertible to `bool`. Short-circuits if it
+// encounters any `false` members (and does not compare the `::value` members
+// of any remaining arguments).
+//
+// This metafunction is designed to be a drop-in replacement for the C++17
+// `std::conjunction` metafunction.
 template <typename... Ts>
 struct conjunction;
 
@@ -90,6 +114,15 @@ struct conjunction<T> : T {};
 template <>
 struct conjunction<> : std::true_type {};
 
+// disjunction
+//
+// Performs a compile-time logical OR operation on the passed types (which
+// must have  `::value` members convertible to `bool`. Short-circuits if it
+// encounters any `true` members (and does not compare the `::value` members
+// of any remaining arguments).
+//
+// This metafunction is designed to be a drop-in replacement for the C++17
+// `std::disjunction` metafunction.
 template <typename... Ts>
 struct disjunction;
 
@@ -103,18 +136,30 @@ struct disjunction<T> : T {};
 template <>
 struct disjunction<> : std::false_type {};
 
+// negation
+//
+// Performs a compile-time logical NOT operation on the passed type (which
+// must have  `::value` members convertible to `bool`.
+//
+// This metafunction is designed to be a drop-in replacement for the C++17
+// `std::negation` metafunction.
 template <typename T>
 struct negation : std::integral_constant<bool, !T::value> {};
 
-// The following is_trivially traits are defined because they are not fully
-// supported in libstdc++ 4.x.
-// The extensions (__has_trivial_xxx) are implemented in gcc (version >= 4.3)
-// and clang. Since we are supporting libstdc++ > 4.7, they should always be
-// present.
-// The extensions are documented at
+// is_trivially_destructible()
+//
+// Determines whether the passed type `T` is trivially destructable.
+//
+// This metafunction is designed to be a drop-in replacement for the C++11
+// `std::is_trivially_destructible()` metafunction for platforms that have
+// incomplete C++11 support (such as libstdc++ 4.x). On any platforms that do
+// fully support C++11, we check whether this yields the same result as the std
+// implementation.
+//
+// NOTE: the extensions (__has_trivial_xxx) are implemented in gcc (version >=
+// 4.3) and clang. Since we are supporting libstdc++ > 4.7, they should always
+// be present. These  extensions are documented at
 // https://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html#Type-Traits.
-// We add static assertion to detect any incompliance with std:: traits (if
-// they are implemented by compiler and standard library).
 template <typename T>
 struct is_trivially_destructible
     : std::integral_constant<bool, __has_trivial_destructor(T) &&
@@ -126,8 +171,18 @@ struct is_trivially_destructible
 #endif  // ABSL_HAVE_STD_IS_TRIVIALLY_DESTRUCTIBLE
 };
 
-// According to C++ standard, Section: 20.15.4.3 [meta.unary.prop]
-// The predicate condition for a template specialization is_constructible<T,
+// is_trivially_default_constructible()
+//
+// Determines whether the passed type `T` is trivially default constructible.
+//
+// This metafunction is designed to be a drop-in replacement for the C++11
+// `std::is_trivially_default_constructible()` metafunction for platforms that
+// have incomplete C++11 support (such as libstdc++ 4.x). On any platforms that
+// do fully support C++11, we check whether this yields the same result as the
+// std implementation.
+//
+// NOTE: according to the C++ standard, Section: 20.15.4.3 [meta.unary.prop]
+// "The predicate condition for a template specialization is_constructible<T,
 // Args...> shall be satisfied if and only if the following variable
 // definition would be well-formed for some invented variable t:
 //
@@ -136,7 +191,7 @@ struct is_trivially_destructible
 // is_trivially_constructible<T, Args...> additionally requires that the
 // variable definition does not call any operation that is not trivial.
 // For the purposes of this check, the call to std::declval is considered
-// trivial.
+// trivial."
 //
 // Notes from http://en.cppreference.com/w/cpp/types/is_constructible:
 // In many implementations, is_nothrow_constructible also checks if the
@@ -145,7 +200,7 @@ struct is_trivially_destructible
 // requires that the destructor is trivial.
 // GCC bug 51452: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=51452
 // LWG issue 2116: http://cplusplus.github.io/LWG/lwg-active.html#2116.
-
+//
 // "T obj();" need to be well-formed and not call any non-trivial operation.
 // Nontrivally destructible types will cause the expression to be nontrivial.
 template <typename T>
@@ -161,9 +216,19 @@ struct is_trivially_default_constructible
 #endif  // ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
 };
 
-// "T obj(declval<const T&>());" need to be well-formed and not call any
-// nontrivial operation.
-// Nontrivally destructible types will cause the expression to be nontrivial.
+// is_trivially_copy_constructible()
+//
+// Determines whether the passed type `T` is trivially copy constructible.
+//
+// This metafunction is designed to be a drop-in replacement for the C++11
+// `std::is_trivially_copy_constructible()` metafunction for platforms that have
+// incomplete C++11 support (such as libstdc++ 4.x). On any platforms that do
+// fully support C++11, we check whether this yields the same result as the std
+// implementation.
+//
+// NOTE: `T obj(declval<const T&>());` needs to be well-formed and not call any
+// nontrivial operation.  Nontrivally destructible types will cause the
+// expression to be nontrivial.
 template <typename T>
 struct is_trivially_copy_constructible
     : std::integral_constant<bool, __has_trivial_copy(T) &&
@@ -176,11 +241,21 @@ struct is_trivially_copy_constructible
 #endif  // ABSL_HAVE_STD_IS_TRIVIALLY_CONSTRUCTIBLE
 };
 
-// is_assignable<T, U>::value is true if the expression "declval<T>() =
-// declval<U>()" is well-formed when treated as an unevaluated operand.
-// is_trivially_assignable<T, U> requires the assignment to call no operation
-// that is not trivial.
-// is_trivially_copy_assignable<T> is just is_trivially_assignable<T, const T&>.
+// is_trivially_copy_assignable()
+//
+// Determines whether the passed type `T` is trivially copy assignable.
+//
+// This metafunction is designed to be a drop-in replacement for the C++11
+// `std::is_trivially_copy_assignable()` metafunction for platforms that have
+// incomplete C++11 support (such as libstdc++ 4.x). On any platforms that do
+// fully support C++11, we check whether this yields the same result as the std
+// implementation.
+//
+// NOTE: `is_assignable<T, U>::value` is `true` if the expression
+// `declval<T>() = declval<U>()` is well-formed when treated as an unevaluated
+// operand. `is_trivially_assignable<T, U>` requires the assignment to call no
+// operation that is not trivial. `is_trivially_copy_assignable<T>` is simply
+// `is_trivially_assignable<T, const T&>`.
 template <typename T>
 struct is_trivially_copy_assignable
     : std::integral_constant<bool, __has_trivial_assign(T) &&
@@ -192,75 +267,75 @@ struct is_trivially_copy_assignable
 #endif  // ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
 };
 
-///////////////////////////////////
-// _t forms of traits from C++14 //
-///////////////////////////////////
+// -----------------------------------------------------------------------------
+// C++14 "_t" trait aliases
+// -----------------------------------------------------------------------------
 
-template <class T>
+template <typename T>
 using remove_cv_t = typename std::remove_cv<T>::type;
 
-template <class T>
+template <typename T>
 using remove_const_t = typename std::remove_const<T>::type;
 
-template <class T>
+template <typename T>
 using remove_volatile_t = typename std::remove_volatile<T>::type;
 
-template <class T>
+template <typename T>
 using add_cv_t = typename std::add_cv<T>::type;
 
-template <class T>
+template <typename T>
 using add_const_t = typename std::add_const<T>::type;
 
-template <class T>
+template <typename T>
 using add_volatile_t = typename std::add_volatile<T>::type;
 
-template <class T>
+template <typename T>
 using remove_reference_t = typename std::remove_reference<T>::type;
 
-template <class T>
+template <typename T>
 using add_lvalue_reference_t = typename std::add_lvalue_reference<T>::type;
 
-template <class T>
+template <typename T>
 using add_rvalue_reference_t = typename std::add_rvalue_reference<T>::type;
 
-template <class T>
+template <typename T>
 using remove_pointer_t = typename std::remove_pointer<T>::type;
 
-template <class T>
+template <typename T>
 using add_pointer_t = typename std::add_pointer<T>::type;
 
-template <class T>
+template <typename T>
 using make_signed_t = typename std::make_signed<T>::type;
 
-template <class T>
+template <typename T>
 using make_unsigned_t = typename std::make_unsigned<T>::type;
 
-template <class T>
+template <typename T>
 using remove_extent_t = typename std::remove_extent<T>::type;
 
-template <class T>
+template <typename T>
 using remove_all_extents_t = typename std::remove_all_extents<T>::type;
 
-template <std::size_t Len, std::size_t Align = internal_type_traits::
-                               default_alignment_of_aligned_storage<Len>::value>
+template <size_t Len, size_t Align = type_traits_internal::
+                          default_alignment_of_aligned_storage<Len>::value>
 using aligned_storage_t = typename std::aligned_storage<Len, Align>::type;
 
-template <class T>
+template <typename T>
 using decay_t = typename std::decay<T>::type;
 
-template <bool B, class T = void>
+template <bool B, typename T = void>
 using enable_if_t = typename std::enable_if<B, T>::type;
 
-template <bool B, class T, class F>
+template <bool B, typename T, typename F>
 using conditional_t = typename std::conditional<B, T, F>::type;
 
-template <class... T>
+template <typename... T>
 using common_type_t = typename std::common_type<T...>::type;
 
-template <class T>
+template <typename T>
 using underlying_type_t = typename std::underlying_type<T>::type;
 
-template <class T>
+template <typename T>
 using result_of_t = typename std::result_of<T>::type;
 
 }  // namespace absl

@@ -29,11 +29,11 @@ namespace internal {
 
 // Returns the intersection point of two edges computed using exact arithmetic
 // and rounded to the nearest representable S2Point.
-S2Point GetIntersectionExact(S2Point const& a0, S2Point const& a1,
-                             S2Point const& b0, S2Point const& b1);
+S2Point GetIntersectionExact(const S2Point& a0, const S2Point& a1,
+                             const S2Point& b0, const S2Point& b1);
 
 // The maximum error in the method above.
-extern S1Angle const kIntersectionExactError;
+extern const S1Angle kIntersectionExactError;
 
 // The following field is used exclusively by S2EdgeUtilTesting in order to
 // measure how often each intersection method is used by GetIntersection().
@@ -51,7 +51,7 @@ enum class IntersectionMethod {
   EXACT,
   NUM_METHODS
 };
-char const* GetIntersectionMethodName(IntersectionMethod method);
+const char* GetIntersectionMethodName(IntersectionMethod method);
 
 }  // namespace internal
 }  // namespace S2

@@ -558,9 +558,5 @@ typedef Matrix3x3<int>    Matrix3x3_i;
 typedef Matrix3x3<float>  Matrix3x3_f;
 typedef Matrix3x3<double> Matrix3x3_d;
 
-// TODO(user): Matrix3x3<T> does not actually satisfy the definition of a
-// POD type even when T is a POD. Pretending that Matrix3x3<T> is a POD
-// probably won't cause immediate problems, but eventually this should be fixed.
-
 
 #endif  // UTIL_MATH_MATRIX3X3_H__
