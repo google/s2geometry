@@ -72,7 +72,7 @@ namespace s2builderutil {
 // Finally, note that although this class may be necessary in some situations
 // (e.g., to implement the OGC Simple Features Access spec), in general the
 // recommended approach to degeneracies is simply to keep them (by using a
-// representation such as s2shapeutil::LaxPolygon or s2shapeutil::LaxPolyline).
+// representation such as S2LaxPolygonShape or S2LaxPolylineShape).
 // Keeping degeneracies has many advantages, such as not needing to deal with
 // geometry of multiple dimensions, and being able to preserve polygon
 // boundaries accurately (including degenerate holes).
@@ -102,15 +102,15 @@ class ClosedSetNormalizer {
   // REQUIRES: graph_options_out[1].sibling_pairs() != {CREATE, REQUIRE}
   // REQUIRES: graph_options_out[2].edge_type() == DIRECTED
   ClosedSetNormalizer(
-      Options const& options,
-      std::vector<S2Builder::GraphOptions> const& graph_options_out);
+      const Options& options,
+      const std::vector<S2Builder::GraphOptions>& graph_options_out);
 
   // Returns the ClosedSetNormalizer options.
-  Options const& options() const { return options_; }
+  const Options& options() const { return options_; }
 
   // Returns the GraphOptions that should be used to construct the input
   // S2Builder::Graph of each dimension.
-  inline std::vector<S2Builder::GraphOptions> const& graph_options() const;
+  inline const std::vector<S2Builder::GraphOptions>& graph_options() const;
 
   // Normalizes the input graphs and returns a new set of graphs where
   // degeneracies have been discarded or converted to objects of lower
@@ -119,17 +119,17 @@ class ClosedSetNormalizer {
   // Note that the input graphs, their contents, and the ClosedSetNormalizer
   // itself must persist until the output of this class is no longer needed.
   // (To emphasize this requirement, a const reference is returned.)
-  std::vector<S2Builder::Graph> const& Run(
-      std::vector<S2Builder::Graph> const& input, S2Error* error);
+  const std::vector<S2Builder::Graph>& Run(
+      const std::vector<S2Builder::Graph>& input, S2Error* error);
 
  private:
   S2Builder::Graph::Edge Advance(
-      S2Builder::Graph const& g, S2Builder::Graph::EdgeId* id) const;
+      const S2Builder::Graph& g, S2Builder::Graph::EdgeId* id) const;
   S2Builder::Graph::Edge AdvanceIncoming(
-      S2Builder::Graph const& g,
-      std::vector<S2Builder::Graph::EdgeId> const& in_edges, int* i) const;
-  void NormalizeEdges(std::vector<S2Builder::Graph> const& g, S2Error* error);
-  void AddEdge(int new_dim, S2Builder::Graph const& g,
+      const S2Builder::Graph& g,
+      const std::vector<S2Builder::Graph::EdgeId>& in_edges, int* i) const;
+  void NormalizeEdges(const std::vector<S2Builder::Graph>& g, S2Error* error);
+  void AddEdge(int new_dim, const S2Builder::Graph& g,
                S2Builder::Graph::EdgeId e);
   bool is_suppressed(S2Builder::Graph::VertexId v) const;
 
@@ -142,7 +142,7 @@ class ClosedSetNormalizer {
   std::vector<S2Builder::GraphOptions> graph_options_in_;
 
   // A sentinel value that compares larger than any valid edge.
-  S2Builder::Graph::Edge const sentinel_;
+  const S2Builder::Graph::Edge sentinel_;
 
   // is_suppressed_[i] is true if vertex[i] belongs to a non-degenerate edge,
   // and therefore should be suppressed from the output graph for points.
@@ -177,7 +177,7 @@ using LayerVector = std::vector<std::unique_ptr<S2Builder::Layer>>;
 // degeneracies have been normalized to objects of lower dimension, and
 // maximal polylines are constructed from undirected edges):
 //
-// bool ComputeUnion(S2ShapeIndex const& a, S2ShapeIndex const& b,
+// bool ComputeUnion(const S2ShapeIndex& a, const S2ShapeIndex& b,
 //                   S2ShapeIndex* index, S2Error* error) {
 //   IndexedS2PolylineVectorLayer::Options polyline_options;
 //   polyline_options.set_edge_type(EdgeType::UNDIRECTED);
@@ -188,18 +188,19 @@ using LayerVector = std::vector<std::unique_ptr<S2Builder::Layer>>;
 //   layers[1] = absl::make_unique<IndexedS2PolylineVectorLayer>(
 //       index, polyline_options);
 //   layers[2] = absl::make_unique<IndexedS2PolygonLayer>(index);
-//   S2BoundaryOperation op(S2BoundaryOperation::OpType::UNION,
-//                          NormalizeClosedSet(std::move(layers)));
+//   S2BooleanOperation op(S2BooleanOperation::OpType::UNION,
+//                         NormalizeClosedSet(std::move(layers)));
 //   return op.Build(a, b, error);
 // }
 LayerVector NormalizeClosedSet(LayerVector output_layers,
-                               ClosedSetNormalizer::Options const& options =
+                               const ClosedSetNormalizer::Options& options =
                                ClosedSetNormalizer::Options());
 
 
 //////////////////   Implementation details follow   ////////////////////
 
-ClosedSetNormalizer::Options::Options() : suppress_lower_dimensions_(true) {}
+inline ClosedSetNormalizer::Options::Options()
+    : suppress_lower_dimensions_(true) {}
 
 inline bool ClosedSetNormalizer::Options::suppress_lower_dimensions() const {
   return suppress_lower_dimensions_;
@@ -210,7 +211,7 @@ inline void ClosedSetNormalizer::Options::set_suppress_lower_dimensions(
   suppress_lower_dimensions_ = suppress_lower_dimensions;
 }
 
-inline std::vector<S2Builder::GraphOptions> const&
+inline const std::vector<S2Builder::GraphOptions>&
 ClosedSetNormalizer::graph_options() const {
   return graph_options_in_;
 }

@@ -27,17 +27,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <atomic>
-#include <cassert>
+#include "s2/third_party/absl/base/internal/raw_logging.h"
+
+#include <cstddef>
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #include "s2/third_party/absl/base/config.h"
 #include "s2/third_party/absl/base/internal/atomic_hook.h"
-#include "s2/third_party/absl/base/log_severity.h"
-#include "s2/third_party/absl/base/port.h"
-#include "s2/third_party/absl/base/raw_logging.h"
+#include "s2/third_party/absl/base/internal/log_severity.h"
 
 // We know how to perform low-level writes to stderr in POSIX and Windows.  For
 // these platforms, we define the token ABSL_LOW_LEVEL_WRITE_SUPPORTED.
@@ -51,7 +51,12 @@
 // this, consider moving both to config.h instead.
 #if defined(__linux__) || defined(__APPLE__) || defined(__Fuchsia__) || \
     defined(__GENCLAVE__)
+/* absl:oss-replace-with
+#if defined(__linux__) || defined(__APPLE__) || defined(__Fuchsia__)
+   absl:oss-replace-end */
 #include <unistd.h>
+
+
 #define ABSL_HAVE_POSIX_WRITE 1
 #define ABSL_LOW_LEVEL_WRITE_SUPPORTED 1
 #else
@@ -71,6 +76,7 @@
 
 #ifdef _WIN32
 #include <io.h>
+
 #define ABSL_HAVE_RAW_IO 1
 #define ABSL_LOW_LEVEL_WRITE_SUPPORTED 1
 #else
@@ -125,6 +131,7 @@ namespace {
 // that invoke malloc() and getenv() that might acquire some locks.
 // If this becomes a problem we should reimplement a subset of vsnprintf
 // that does not need locks and malloc.
+// E.g. //third_party/clearsilver/core/util/snprintf.c
 // looks like such a reimplementation.
 
 // Helper for RawLog below.

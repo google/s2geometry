@@ -48,19 +48,19 @@ using VertexId = Graph::VertexId;
 
 namespace s2builderutil {
 
-S2PolygonLayer::S2PolygonLayer(S2Polygon* polygon, Options const& options) {
+S2PolygonLayer::S2PolygonLayer(S2Polygon* polygon, const Options& options) {
   Init(polygon, nullptr, nullptr, options);
 }
 
 S2PolygonLayer::S2PolygonLayer(
     S2Polygon* polygon, LabelSetIds* label_set_ids,
-    IdSetLexicon* label_set_lexicon, Options const& options) {
+    IdSetLexicon* label_set_lexicon, const Options& options) {
   Init(polygon, label_set_ids, label_set_lexicon, options);
 }
 
 void S2PolygonLayer::Init(
     S2Polygon* polygon, LabelSetIds* label_set_ids,
-    IdSetLexicon* label_set_lexicon, Options const& options) {
+    IdSetLexicon* label_set_lexicon, const Options& options) {
   DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
   polygon_ = polygon;
   label_set_ids_ = label_set_ids;
@@ -80,11 +80,11 @@ GraphOptions S2PolygonLayer::graph_options() const {
                       DuplicateEdges::KEEP, SiblingPairs::DISCARD);
 }
 
-void S2PolygonLayer::AppendS2Loops(Graph const& g,
-                                   vector<Graph::EdgeLoop> const& edge_loops,
+void S2PolygonLayer::AppendS2Loops(const Graph& g,
+                                   const vector<Graph::EdgeLoop>& edge_loops,
                                    vector<unique_ptr<S2Loop>>* loops) const {
   vector<S2Point> vertices;
-  for (auto const& edge_loop : edge_loops) {
+  for (const auto& edge_loop : edge_loops) {
     vertices.reserve(edge_loop.size());
     for (auto edge_id : edge_loop) {
       vertices.push_back(g.vertex(g.edge(edge_id).first));
@@ -96,13 +96,13 @@ void S2PolygonLayer::AppendS2Loops(Graph const& g,
 }
 
 void S2PolygonLayer::AppendEdgeLabels(
-    Graph const& g,
-    vector<Graph::EdgeLoop> const& edge_loops) {
+    const Graph& g,
+    const vector<Graph::EdgeLoop>& edge_loops) {
   if (!label_set_ids_) return;
 
   vector<Label> labels;  // Temporary storage for labels.
   Graph::LabelFetcher fetcher(g, options_.edge_type());
-  for (auto const& edge_loop : edge_loops) {
+  for (const auto& edge_loop : edge_loops) {
     vector<LabelSetId> loop_label_set_ids;
     loop_label_set_ids.reserve(edge_loop.size());
     for (auto edge_id : edge_loop) {
@@ -113,21 +113,21 @@ void S2PolygonLayer::AppendEdgeLabels(
   }
 }
 
-void S2PolygonLayer::InitLoopMap(vector<unique_ptr<S2Loop>> const& loops,
+void S2PolygonLayer::InitLoopMap(const vector<unique_ptr<S2Loop>>& loops,
                                  LoopMap* loop_map) const {
   if (!label_set_ids_) return;
-  for (auto const& loop : loops) {
+  for (const auto& loop : loops) {
     (*loop_map)[&*loop] =
         make_pair(&loop - &loops[0], loop->contains_origin());
   }
 }
 
-void S2PolygonLayer::ReorderEdgeLabels(LoopMap const& loop_map) {
+void S2PolygonLayer::ReorderEdgeLabels(const LoopMap& loop_map) {
   if (!label_set_ids_) return;
   LabelSetIds new_ids(label_set_ids_->size());
   for (int i = 0; i < polygon_->num_loops(); ++i) {
     S2Loop* loop = polygon_->loop(i);
-    pair<int, bool> const& old = loop_map.find(loop)->second;
+    const pair<int, bool>& old = loop_map.find(loop)->second;
     new_ids[i].swap((*label_set_ids_)[old.first]);
     if (loop->contains_origin() != old.second) {
       // S2Loop::Invert() reverses the order of the vertices, which leaves
@@ -139,7 +139,7 @@ void S2PolygonLayer::ReorderEdgeLabels(LoopMap const& loop_map) {
   label_set_ids_->swap(new_ids);
 }
 
-void S2PolygonLayer::Build(Graph const& g, S2Error* error) {
+void S2PolygonLayer::Build(const Graph& g, S2Error* error) {
   if (label_set_ids_) label_set_ids_->clear();
 
   // It's tricky to compute the edge labels for S2Polygons because the
@@ -171,13 +171,13 @@ void S2PolygonLayer::Build(Graph const& g, S2Error* error) {
     // structure of the input loops.  GetUndirectedComponents() tries to
     // ensure that this is always component 0.
     vector<unique_ptr<S2Loop>> loops;
-    for (auto const& component : components) {
+    for (const auto& component : components) {
       AppendS2Loops(g, component[0], &loops);
       AppendEdgeLabels(g, component[0]);
     }
     vector<Graph::UndirectedComponent>().swap(components);  // Release memory
     InitLoopMap(loops, &loop_map);
-    for (auto const& loop : loops) loop->Normalize();
+    for (const auto& loop : loops) loop->Normalize();
     polygon_->InitNested(std::move(loops));
   }
   ReorderEdgeLabels(loop_map);
@@ -187,19 +187,19 @@ void S2PolygonLayer::Build(Graph const& g, S2Error* error) {
 }
 
 S2PolylineLayer::S2PolylineLayer(S2Polyline* polyline,
-                                 S2PolylineLayer::Options const& options) {
+                                 const S2PolylineLayer::Options& options) {
   Init(polyline, nullptr, nullptr, options);
 }
 
 S2PolylineLayer::S2PolylineLayer(
     S2Polyline* polyline, LabelSetIds* label_set_ids,
-    IdSetLexicon* label_set_lexicon, Options const& options) {
+    IdSetLexicon* label_set_lexicon, const Options& options) {
   Init(polyline, label_set_ids, label_set_lexicon, options);
 }
 
 void S2PolylineLayer::Init(S2Polyline* polyline, LabelSetIds* label_set_ids,
                            IdSetLexicon* label_set_lexicon,
-                           Options const& options) {
+                           const Options& options) {
   DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
   polyline_ = polyline;
   label_set_ids_ = label_set_ids;
@@ -219,7 +219,7 @@ GraphOptions S2PolylineLayer::graph_options() const {
                       DuplicateEdges::KEEP, SiblingPairs::KEEP);
 }
 
-void S2PolylineLayer::Build(Graph const& g, S2Error* error) {
+void S2PolylineLayer::Build(const Graph& g, S2Error* error) {
   if (g.num_edges() == 0) {
     polyline_->Init(vector<S2Point>{});
     return;
@@ -231,7 +231,7 @@ void S2PolylineLayer::Build(Graph const& g, S2Error* error) {
                 "Input edges cannot be assembled into polyline");
     return;
   }
-  Graph::EdgePolyline const& edge_polyline = edge_polylines[0];
+  const Graph::EdgePolyline& edge_polyline = edge_polylines[0];
   vector<S2Point> vertices;  // Temporary storage for vertices.
   vertices.reserve(edge_polyline.size());
   vertices.push_back(g.vertex(g.edge(edge_polyline[0]).first));
@@ -255,20 +255,20 @@ void S2PolylineLayer::Build(Graph const& g, S2Error* error) {
 
 S2PolylineVectorLayer::S2PolylineVectorLayer(
     vector<unique_ptr<S2Polyline>>* polylines,
-    S2PolylineVectorLayer::Options const& options) {
+    const S2PolylineVectorLayer::Options& options) {
   Init(polylines, nullptr, nullptr, options);
 }
 
 S2PolylineVectorLayer::S2PolylineVectorLayer(
     vector<unique_ptr<S2Polyline>>* polylines, LabelSetIds* label_set_ids,
-    IdSetLexicon* label_set_lexicon, Options const& options) {
+    IdSetLexicon* label_set_lexicon, const Options& options) {
   Init(polylines, label_set_ids, label_set_lexicon, options);
 }
 
 void S2PolylineVectorLayer::Init(vector<unique_ptr<S2Polyline>>* polylines,
                                  LabelSetIds* label_set_ids,
                                  IdSetLexicon* label_set_lexicon,
-                                 Options const& options) {
+                                 const Options& options) {
   DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
   polylines_ = polylines;
   label_set_ids_ = label_set_ids;
@@ -281,14 +281,14 @@ GraphOptions S2PolylineVectorLayer::graph_options() const {
                       options_.duplicate_edges(), options_.sibling_pairs());
 }
 
-void S2PolylineVectorLayer::Build(Graph const& g, S2Error* error) {
+void S2PolylineVectorLayer::Build(const Graph& g, S2Error* error) {
   vector<Graph::EdgePolyline> edge_polylines = g.GetPolylines(
       options_.polyline_type());
   polylines_->reserve(edge_polylines.size());
   if (label_set_ids_) label_set_ids_->reserve(edge_polylines.size());
   vector<S2Point> vertices;  // Temporary storage for vertices.
   vector<Label> labels;  // Temporary storage for labels.
-  for (auto const& edge_polyline : edge_polylines) {
+  for (const auto& edge_polyline : edge_polylines) {
     vertices.push_back(g.vertex(g.edge(edge_polyline[0]).first));
     for (EdgeId e : edge_polyline) {
       vertices.push_back(g.vertex(g.edge(e).second));
@@ -314,19 +314,19 @@ void S2PolylineVectorLayer::Build(Graph const& g, S2Error* error) {
 }
 
 S2PointVectorLayer::S2PointVectorLayer(std::vector<S2Point>* points,
-                                       Options const& options)
+                                       const Options& options)
     : S2PointVectorLayer(points, nullptr, nullptr, options) {}
 
 S2PointVectorLayer::S2PointVectorLayer(std::vector<S2Point>* points,
                                        LabelSetIds* label_set_ids,
                                        IdSetLexicon* label_set_lexicon,
-                                       Options const& options)
+                                       const Options& options)
     : points_(points),
       label_set_ids_(label_set_ids),
       label_set_lexicon_(label_set_lexicon),
       options_(options) {}
 
-void S2PointVectorLayer::Build(Graph const& g, S2Error* error) {
+void S2PointVectorLayer::Build(const Graph& g, S2Error* error) {
   Graph::LabelFetcher fetcher(g, EdgeType::DIRECTED);
 
   vector<Label> labels;  // Temporary storage for labels.

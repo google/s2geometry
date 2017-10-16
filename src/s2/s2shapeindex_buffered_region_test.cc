@@ -109,7 +109,7 @@ TEST(S2ShapeIndexBufferedRegion, BufferedPointVsCap) {
 //
 // The "radius" parameter is an S1Angle for convenience.
 // TODO(ericv): Add Degrees, Radians, etc, methods to S1ChordAngle?
-void TestBufferIndex(string const& index_str, S1Angle radius_angle,
+void TestBufferIndex(const string& index_str, S1Angle radius_angle,
                      S2RegionCoverer* coverer) {
   auto index = MakeIndexOrDie(index_str);
   S1ChordAngle radius(radius_angle);
@@ -132,11 +132,7 @@ void TestBufferIndex(string const& index_str, S1Angle radius_angle,
   covering_index.Add(make_unique<S2Polygon::Shape>(&covering_polygon));
 
   // (a) Check that the covering contains the original index.
-  bool non_empty;
-  S2BoundaryOperation op(S2BoundaryOperation::OpType::DIFFERENCE, &non_empty);
-  S2Error error;
-  ASSERT_TRUE(op.Build(*index, covering_index, &error)) << error.text();
-  EXPECT_FALSE(non_empty);  // The difference should be empty.
+  EXPECT_TRUE(S2BooleanOperation::Contains(covering_index, *index));
 
   // (b) Check that the distance between the boundary of the covering and the
   // the original indexed geometry is at least "radius".

@@ -31,7 +31,7 @@ namespace S2 {
 // The angle is undefined if A or C is diametrically opposite from B, and
 // becomes numerically unstable as the length of edge AB or BC approaches
 // 180 degrees.
-double Angle(S2Point const& a, S2Point const& b, S2Point const& c);
+double Angle(const S2Point& a, const S2Point& b, const S2Point& c);
 
 // Return the exterior angle at vertex B in the triangle ABC.  The return
 // value is positive if ABC is counterclockwise and negative otherwise.  If
@@ -42,7 +42,7 @@ double Angle(S2Point const& a, S2Point const& b, S2Point const& c);
 // Ensures that TurnAngle(a,b,c) == -TurnAngle(c,b,a) for all distinct
 // a,b,c. The result is undefined if (a == b || b == c), but is either
 // -Pi or Pi if (a == c).  All points should be normalized.
-double TurnAngle(S2Point const& a, S2Point const& b, S2Point const& c);
+double TurnAngle(const S2Point& a, const S2Point& b, const S2Point& c);
 
 // Return the area of triangle ABC.  This method combines two different
 // algorithms to get accurate results for both large and small triangles.
@@ -54,7 +54,7 @@ double TurnAngle(S2Point const& a, S2Point const& b, S2Point const& c);
 //
 // All points should be unit length, and no two points should be antipodal.
 // The area is always positive.
-double Area(S2Point const& a, S2Point const& b, S2Point const& c);
+double Area(const S2Point& a, const S2Point& b, const S2Point& c);
 
 // Return the area of the triangle computed using Girard's formula.  All
 // points should be unit length, and no two points should be antipodal.
@@ -66,11 +66,11 @@ double Area(S2Point const& a, S2Point const& b, S2Point const& c);
 // edge length of the triangle approaches 180 degrees.  But note that for
 // such triangles, tiny perturbations of the input points can change the
 // true mathematical area dramatically.
-double GirardArea(S2Point const& a, S2Point const& b, S2Point const& c);
+double GirardArea(const S2Point& a, const S2Point& b, const S2Point& c);
 
 // Like Area(), but returns a positive value for counterclockwise triangles
 // and a negative value otherwise.
-double SignedArea(S2Point const& a, S2Point const& b, S2Point const& c);
+double SignedArea(const S2Point& a, const S2Point& b, const S2Point& c);
 
 }  // namespace S2
 

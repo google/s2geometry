@@ -38,8 +38,8 @@ class S2Shape;
 // an edge.  Here is an example showing how to index a set of polylines,
 // and then find the polylines that are crossed by a given edge AB:
 //
-// void Test(vector<S2Polyline*> const& polylines,
-//           S2Point const& a0, S2Point const &a1) {
+// void Test(const vector<S2Polyline*>& polylines,
+//           const S2Point& a0, const S2Point &a1) {
 //   S2ShapeIndex index;
 //   for (S2Polyline* polyline : polylines) {
 //     index.Add(absl::make_unique<S2Polyline::Shape>(polyline));
@@ -49,13 +49,13 @@ class S2Shape;
 //   if (!query.GetCrossings(a, b, s2shapeutil::CrossingType::ALL, &edge_map)) {
 //     return;
 //   }
-//   for (auto const& it : edge_map) {
-//     S2Shape const* shape = it.first;
+//   for (const auto& it : edge_map) {
+//     const S2Shape* shape = it.first;
 //     S2Polyline* polyline = polylines[shape->id()];
-//     vector<int> const& edges = it.second;
+//     const vector<int>& edges = it.second;
 //     for (int edge : edges) {
-//       S2Point const& b0 = polyline->vertex(edge);
-//       S2Point const& b1 = polyline->vertex(edge) + 1);
+//       const S2Point& b0 = polyline->vertex(edge);
+//       const S2Point& b1 = polyline->vertex(edge) + 1);
 //       CHECK_GE(S2::CrossingSign(a0, a1, b0, b1), 0);
 //     }
 //   }
@@ -73,7 +73,7 @@ class S2Shape;
 class S2CrossingEdgeQuery {
  public:
   // An EdgeMap stores a sorted set of edge ids for each shape.  Its type
-  // may change, but can be treated as "map<S2Shape const*, vector<int>>"
+  // may change, but can be treated as "map<const S2Shape*, vector<int>>"
   // except that the shapes are sorted by shape id rather than pointer (to
   // ensure repeatable behavior).
   //
@@ -81,21 +81,21 @@ class S2CrossingEdgeQuery {
   // linear rather than binary search within btree nodes.
   struct CompareBtreeLinearSearch {
     using goog_btree_prefer_linear_node_search = std::true_type;
-    bool operator()(S2Shape const* x, S2Shape const* y) const {
+    bool operator()(const S2Shape* x, const S2Shape* y) const {
       return x->id() < y->id();
     }
   };
-  using EdgeMap = util::btree::btree_map<S2Shape const*, std::vector<int>,
+  using EdgeMap = util::btree::btree_map<const S2Shape*, std::vector<int>,
                                          CompareBtreeLinearSearch>;
 
   // Convenience constructor that calls Init().
-  explicit S2CrossingEdgeQuery(S2ShapeIndexBase const* index);
+  explicit S2CrossingEdgeQuery(const S2ShapeIndexBase* index);
 
   // Default constructor; requires Init() to be called.
   S2CrossingEdgeQuery();
 
   // REQUIRES: "index" is not modified after this method is called.
-  void Init(S2ShapeIndexBase const* index);
+  void Init(const S2ShapeIndexBase* index);
 
   // Given a query edge AB and a shape S, return all the edges of S that
   // intersect AB.  If "type" is CrossingType::INTERIOR, then only
@@ -103,8 +103,8 @@ class S2CrossingEdgeQuery {
   // "type" is CrossingType::ALL then edges that share a vertex are also
   // reported.  Returns false if no edges cross AB.
   using CrossingType = s2shapeutil::CrossingType;
-  bool GetCrossings(S2Point const& a, S2Point const& b,
-                    S2Shape const* shape, CrossingType type,
+  bool GetCrossings(const S2Point& a, const S2Point& b,
+                    const S2Shape* shape, CrossingType type,
                     std::vector<int>* edges);
 
   // Given a query edge AB, return all the edges that intersect AB.  If "type"
@@ -115,7 +115,7 @@ class S2CrossingEdgeQuery {
   // The edges are returned as a map from shapes to the edges of that shape
   // that intersect AB.  Every returned shape has at least one crossing edge.
   // Returns false if no edges intersect AB.
-  bool GetCrossings(S2Point const& a, S2Point const& b, CrossingType type,
+  bool GetCrossings(const S2Point& a, const S2Point& b, CrossingType type,
                     EdgeMap* edge_map);
 
   /////////////////////////// Low-Level Methods ////////////////////////////
@@ -126,7 +126,7 @@ class S2CrossingEdgeQuery {
 
   // Given a query edge AB and a shape S, return a superset of the edges of
   // S that intersect AB.  Returns false if "edges" is empty.
-  bool GetCandidates(S2Point const& a, S2Point const& b, S2Shape const* shape,
+  bool GetCandidates(const S2Point& a, const S2Point& b, const S2Shape* shape,
                      std::vector<int>* edges);
 
   // Given a query edge AB, return a map from shapes to a superset of the
@@ -136,27 +136,27 @@ class S2CrossingEdgeQuery {
   // CAVEAT: This method may return shapes that have an empty set of candidate
   // edges, i.e. (*edge_map)[shape].size() == 0.  However the return value is
   // true only if at least one shape has a candidate edge.
-  bool GetCandidates(S2Point const& a, S2Point const& b, EdgeMap* edge_map);
+  bool GetCandidates(const S2Point& a, const S2Point& b, EdgeMap* edge_map);
 
   // Given a query edge AB and a cell "root", return all S2ShapeIndex cells
   // within "root" that might contain edges intersecting AB.
-  bool GetCells(S2Point const& a, S2Point const& b, S2PaddedCell const& root,
-                std::vector<S2ShapeIndexCell const*>* cells);
+  bool GetCells(const S2Point& a, const S2Point& b, const S2PaddedCell& root,
+                std::vector<const S2ShapeIndexCell*>* cells);
 
  private:
   // Internal methods are documented with their definitions.
-  void GetCells(S2Point const& a, S2Point const& b);
-  void GetCells(S2PaddedCell const& pcell, R2Rect const& bound);
-  void ClipVAxis(R2Rect const& edge_bound, double center, int i,
-                 S2PaddedCell const& pcell);
-  void SplitUBound(R2Rect const& edge_bound, double u,
+  void GetCells(const S2Point& a, const S2Point& b);
+  void GetCells(const S2PaddedCell& pcell, const R2Rect& bound);
+  void ClipVAxis(const R2Rect& edge_bound, double center, int i,
+                 const S2PaddedCell& pcell);
+  void SplitUBound(const R2Rect& edge_bound, double u,
                    R2Rect child_bounds[2]) const;
-  void SplitVBound(R2Rect const& edge_bound, double v,
+  void SplitVBound(const R2Rect& edge_bound, double v,
                    R2Rect child_bounds[2]) const;
-  static void SplitBound(R2Rect const& edge_bound, int u_end, double u,
+  static void SplitBound(const R2Rect& edge_bound, int u_end, double u,
                          int v_end, double v, R2Rect child_bounds[2]);
 
-  S2ShapeIndexBase const* index_;
+  const S2ShapeIndexBase* index_;
 
   // Temporary storage used while processing a query.
   R2Point a_;
@@ -165,19 +165,19 @@ class S2CrossingEdgeQuery {
 
   // This is a private field rather than a local variable to reduce memory
   // allocation when a single S2CrossingEdgeQuery object is queried many times.
-  absl::InlinedVector<S2ShapeIndexCell const*, 8> cells_;
+  absl::InlinedVector<const S2ShapeIndexCell*, 8> cells_;
 
-  S2CrossingEdgeQuery(S2CrossingEdgeQuery const&) = delete;
-  void operator=(S2CrossingEdgeQuery const&) = delete;
+  S2CrossingEdgeQuery(const S2CrossingEdgeQuery&) = delete;
+  void operator=(const S2CrossingEdgeQuery&) = delete;
 };
 
 //////////////////   Implementation details follow   ////////////////////
 
 inline S2CrossingEdgeQuery::S2CrossingEdgeQuery() : index_(nullptr) {}
-inline S2CrossingEdgeQuery::S2CrossingEdgeQuery(S2ShapeIndexBase const* index) {
+inline S2CrossingEdgeQuery::S2CrossingEdgeQuery(const S2ShapeIndexBase* index) {
   Init(index);
 }
-inline void S2CrossingEdgeQuery::Init(S2ShapeIndexBase const* index) {
+inline void S2CrossingEdgeQuery::Init(const S2ShapeIndexBase* index) {
   index_ = index;
   iter_.Init(index);
 }

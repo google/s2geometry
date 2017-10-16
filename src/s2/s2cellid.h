@@ -72,11 +72,11 @@ class S2CellId {
   // The extra position bit (61 rather than 60) let us encode each cell as its
   // Hilbert curve position at the cell center (which is halfway along the
   // portion of the Hilbert curve that fills that cell).
-  static int const kFaceBits = 3;
-  static int const kNumFaces = 6;
-  static int const kMaxLevel = S2::kMaxCellLevel;  // Valid levels: 0..kMaxLevel
-  static int const kPosBits = 2 * kMaxLevel + 1;
-  static int const kMaxSize = 1 << kMaxLevel;
+  static const int kFaceBits = 3;
+  static const int kNumFaces = 6;
+  static const int kMaxLevel = S2::kMaxCellLevel;  // Valid levels: 0..kMaxLevel
+  static const int kPosBits = 2 * kMaxLevel + 1;
+  static const int kMaxSize = 1 << kMaxLevel;
 
   explicit constexpr S2CellId(uint64 id) : id_(id) {}
 
@@ -89,10 +89,10 @@ class S2CellId {
   //   S2Cell(S2CellId(p)).Contains(p)
   //
   // is always true.  The point "p" does not need to be normalized.
-  explicit S2CellId(S2Point const& p);
+  explicit S2CellId(const S2Point& p);
 
   // Construct a leaf cell containing the given normalized S2LatLng.
-  explicit S2CellId(S2LatLng const& ll);
+  explicit S2CellId(const S2LatLng& ll);
 
   // The default constructor returns an invalid cell id.
   constexpr S2CellId() : id_(0) {}
@@ -169,7 +169,7 @@ class S2CellId {
   //  - The implementation is not exact for negative distances.  The resulting
   //    rectangle will exclude all points within the given distance of the
   //    boundary but may be slightly smaller than necessary.
-  static R2Rect ExpandedByDistanceUV(R2Rect const& uv, S1Angle distance);
+  static R2Rect ExpandedByDistanceUV(const R2Rect& uv, S1Angle distance);
 
   // Return the (face, si, ti) coordinates of the center of the cell.  Note
   // that although (si,ti) coordinates span the range [0,2**31] in general,
@@ -349,7 +349,7 @@ class S2CellId {
   // FromToken() returns S2CellId::None() for malformed inputs.
   string ToToken() const;
   static S2CellId FromToken(const char* token, size_t length);
-  static S2CellId FromToken(string const& token);
+  static S2CellId FromToken(const string& token);
 
   // Use encoder to generate a serialized representation of this cell id.
   // Can also encode an invalid cell.
@@ -373,7 +373,7 @@ class S2CellId {
   //
   // The method name includes "Debug" in order to avoid possible confusion
   // with FromToken() above.
-  static S2CellId FromDebugString(string const& str);
+  static S2CellId FromDebugString(const string& str);
 
   // Return the four cells that are adjacent across the cell's four edges.
   // Neighbors are returned in the order defined by S2Cell::GetEdge.  All
@@ -435,7 +435,7 @@ class S2CellId {
  private:
   // This is the offset required to wrap around from the beginning of the
   // Hilbert curve to the end or vice versa; see next_wrap() and prev_wrap().
-  static uint64 const kWrapOffset = uint64(kNumFaces) << kPosBits;
+  static const uint64 kWrapOffset = uint64(kNumFaces) << kPosBits;
 
   // Given a face and a point (i,j) where either i or j is outside the valid
   // range [0..kMaxSize-1], this function first determines which neighboring

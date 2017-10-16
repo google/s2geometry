@@ -45,17 +45,17 @@ static constexpr double DBL_ERR = s2pred::rounding_epsilon<double>();
 // radians.  However, using a larger error tolerance makes the algorithm more
 // efficient because it reduces the number of cases where exact arithmetic is
 // needed.
-S1Angle const kIntersectionError = S1Angle::Radians(8 * DBL_ERR);
+const S1Angle kIntersectionError = S1Angle::Radians(8 * DBL_ERR);
 
-S1Angle const kIntersectionMergeRadius = 2 * kIntersectionError;
+const S1Angle kIntersectionMergeRadius = 2 * kIntersectionError;
 
 namespace internal {
 
-S1Angle const kIntersectionExactError = S1Angle::Radians(2 * DBL_ERR);
+const S1Angle kIntersectionExactError = S1Angle::Radians(2 * DBL_ERR);
 
 int* intersection_method_tally_ = nullptr;
 
-char const* GetIntersectionMethodName(IntersectionMethod method) {
+const char* GetIntersectionMethodName(IntersectionMethod method) {
   switch (method) {
     case IntersectionMethod::SIMPLE:    return "Simple";
     case IntersectionMethod::SIMPLE_LD: return "Simple_ld";
@@ -68,14 +68,14 @@ char const* GetIntersectionMethodName(IntersectionMethod method) {
 
 }  // namespace internal
 
-int CrossingSign(S2Point const& a, S2Point const& b,
-                 S2Point const& c, S2Point const& d) {
+int CrossingSign(const S2Point& a, const S2Point& b,
+                 const S2Point& c, const S2Point& d) {
   S2EdgeCrosser crosser(&a, &b, &c);
   return crosser.CrossingSign(&d);
 }
 
-bool VertexCrossing(S2Point const& a, S2Point const& b,
-                    S2Point const& c, S2Point const& d) {
+bool VertexCrossing(const S2Point& a, const S2Point& b,
+                    const S2Point& c, const S2Point& d) {
   // If A == B or C == D there is no intersection.  We need to check this
   // case first in case 3 or more input points are identical.
   if (a == b || c == d) return false;
@@ -84,17 +84,20 @@ bool VertexCrossing(S2Point const& a, S2Point const& b,
   // if OrderedCCW() indicates that the edge AB is further CCW around the
   // shared vertex O (either A or B) than the edge CD, starting from an
   // arbitrary fixed reference point.
-  if (a == d) return s2pred::OrderedCCW(S2::Ortho(a), c, b, a);
-  if (b == c) return s2pred::OrderedCCW(S2::Ortho(b), d, a, b);
-  if (a == c) return s2pred::OrderedCCW(S2::Ortho(a), d, b, a);
+  //
+  // Optimization: if AB=CD or AB=DC, we can avoid most of the calculations.
+  if (a == c) return (b == d) || s2pred::OrderedCCW(S2::Ortho(a), d, b, a);
   if (b == d) return s2pred::OrderedCCW(S2::Ortho(b), c, a, b);
+
+  if (a == d) return (b == c) || s2pred::OrderedCCW(S2::Ortho(a), c, b, a);
+  if (b == c) return s2pred::OrderedCCW(S2::Ortho(b), d, a, b);
 
   LOG(DFATAL) << "VertexCrossing called with 4 distinct vertices";
   return false;
 }
 
-bool EdgeOrVertexCrossing(S2Point const& a, S2Point const& b,
-                          S2Point const& c, S2Point const& d) {
+bool EdgeOrVertexCrossing(const S2Point& a, const S2Point& b,
+                          const S2Point& c, const S2Point& d) {
   int crossing = CrossingSign(a, b, c, d);
   if (crossing < 0) return false;
   if (crossing > 0) return true;
@@ -110,7 +113,7 @@ using Vector3_xf = Vector3<ExactFloat>;
 // error in the result.  For numerical stability, "x" and "y" should both be
 // approximately unit length.
 template <class T>
-static T RobustNormalWithLength(Vector3<T> const& x, Vector3<T> const& y,
+static T RobustNormalWithLength(const Vector3<T>& x, const Vector3<T>& y,
                                 Vector3<T>* result) {
   // This computes 2 * (x.CrossProd(y)), but has much better numerical
   // stability when "x" and "y" are unit length.
@@ -129,8 +132,8 @@ static T RobustNormalWithLength(Vector3<T> const& x, Vector3<T> const& y,
 // The intersection point is not guaranteed to have the correct sign
 // (i.e., it may be either "result" or "-result").
 template <class T>
-static bool GetIntersectionSimple(Vector3<T> const& a0, Vector3<T> const& a1,
-                                  Vector3<T> const& b0, Vector3<T> const& b1,
+static bool GetIntersectionSimple(const Vector3<T>& a0, const Vector3<T>& a1,
+                                  const Vector3<T>& b0, const Vector3<T>& b1,
                                   Vector3<T>* result) {
   // The code below computes the intersection point as
   //
@@ -182,8 +185,8 @@ static bool GetIntersectionSimple(Vector3<T> const& a0, Vector3<T> const& a1,
   return false;
 }
 
-static bool GetIntersectionSimpleLD(S2Point const& a0, S2Point const& a1,
-                                    S2Point const& b0, S2Point const& b1,
+static bool GetIntersectionSimpleLD(const S2Point& a0, const S2Point& a1,
+                                    const S2Point& b0, const S2Point& b1,
                                     S2Point* result) {
   Vector3_ld result_ld;
   if (GetIntersectionSimple(Vector3_ld::Cast(a0), Vector3_ld::Cast(a1),
@@ -201,9 +204,9 @@ static bool GetIntersectionSimpleLD(S2Point const& a0, S2Point const& a1,
 // accurately and efficiently.  They include the length of "a_norm"
 // ("a_norm_len") and the edge endpoints "a0" and "a1".
 template <class T>
-static T GetProjection(Vector3<T> const& x,
-                       Vector3<T> const& a_norm, T a_norm_len,
-                       Vector3<T> const& a0, Vector3<T> const& a1,
+static T GetProjection(const Vector3<T>& x,
+                       const Vector3<T>& a_norm, T a_norm_len,
+                       const Vector3<T>& a0, const Vector3<T>& a1,
                        T* error) {
   // The error in the dot product is proportional to the lengths of the input
   // vectors, so rather than using "x" itself (a unit-length vector) we use
@@ -244,8 +247,8 @@ static T GetProjection(Vector3<T> const& x,
 // (a0,a1) and (b0,b1) have been sorted so that the first edge is longer.
 template <class T>
 static bool GetIntersectionStableSorted(
-    Vector3<T> const& a0, Vector3<T> const& a1,
-    Vector3<T> const& b0, Vector3<T> const& b1, Vector3<T>* result) {
+    const Vector3<T>& a0, const Vector3<T>& a1,
+    const Vector3<T>& b0, const Vector3<T>& b1, Vector3<T>* result) {
   DCHECK_GE((a1 - a0).Norm2(), (b1 - b0).Norm2());
 
   // Compute the normal of the plane through (a0, a1) in a stable way.
@@ -285,7 +288,7 @@ static bool GetIntersectionStableSorted(
   // Finally we normalize the result, compute the corresponding error, and
   // check whether the total error is acceptable.
   T x_len = x.Norm();
-  T const kMaxError = kIntersectionError.radians();
+  const T kMaxError = kIntersectionError.radians();
   if (error > (kMaxError - T_ERR) * x_len) {
     return false;
   }
@@ -296,10 +299,10 @@ static bool GetIntersectionStableSorted(
 // Returns whether (a0,a1) is less than (b0,b1) with respect to a total
 // ordering on edges that is invariant under edge reversals.
 template <class T>
-static bool CompareEdges(Vector3<T> const& a0, Vector3<T> const& a1,
-                         Vector3<T> const& b0, Vector3<T> const& b1) {
-  Vector3<T> const *pa0 = &a0, *pa1 = &a1;
-  Vector3<T> const *pb0 = &b0, *pb1 = &b1;
+static bool CompareEdges(const Vector3<T>& a0, const Vector3<T>& a1,
+                         const Vector3<T>& b0, const Vector3<T>& b1) {
+  const Vector3<T> *pa0 = &a0, *pa1 = &a1;
+  const Vector3<T> *pb0 = &b0, *pb1 = &b1;
   if (*pa0 >= *pa1) std::swap(pa0, pa1);
   if (*pb0 >= *pb1) std::swap(pb0, pb1);
   return *pa0 < *pb0 || (*pa0 == *pb0 && *pb0 < *pb1);
@@ -312,8 +315,8 @@ static bool CompareEdges(Vector3<T> const& a0, Vector3<T> const& a1,
 // The intersection point is not guaranteed to have the correct sign
 // (i.e., it may be either "result" or "-result").
 template <class T>
-static bool GetIntersectionStable(Vector3<T> const& a0, Vector3<T> const& a1,
-                                  Vector3<T> const& b0, Vector3<T> const& b1,
+static bool GetIntersectionStable(const Vector3<T>& a0, const Vector3<T>& a1,
+                                  const Vector3<T>& b0, const Vector3<T>& b1,
                                   Vector3<T>* result) {
   // Sort the two edges so that (a0,a1) is longer, breaking ties in a
   // deterministic way that does not depend on the ordering of the endpoints.
@@ -331,8 +334,8 @@ static bool GetIntersectionStable(Vector3<T> const& a0, Vector3<T> const& a1,
   }
 }
 
-static bool GetIntersectionStableLD(S2Point const& a0, S2Point const& a1,
-                                    S2Point const& b0, S2Point const& b1,
+static bool GetIntersectionStableLD(const S2Point& a0, const S2Point& a1,
+                                    const S2Point& b0, const S2Point& b1,
                                     S2Point* result) {
   Vector3_ld result_ld;
   if (GetIntersectionStable(Vector3_ld::Cast(a0), Vector3_ld::Cast(a1),
@@ -344,7 +347,7 @@ static bool GetIntersectionStableLD(S2Point const& a0, S2Point const& a1,
   return false;
 }
 
-static S2Point S2PointFromExact(Vector3_xf const& x) {
+static S2Point S2PointFromExact(const Vector3_xf& x) {
   // TODO(ericv): In theory, this function may return S2Point(0, 0, 0) even
   // though "x" is non-zero.  This happens when all components of "x" have
   // absolute value less than about 1e-154, since in that case x.Norm2() is
@@ -359,8 +362,8 @@ namespace internal {
 // arithmetic.  Note that the result is not exact because it is rounded to
 // double precision.  Also, the intersection point is not guaranteed to have
 // the correct sign (i.e., the return value may need to be negated).
-S2Point GetIntersectionExact(S2Point const& a0, S2Point const& a1,
-                             S2Point const& b0, S2Point const& b1) {
+S2Point GetIntersectionExact(const S2Point& a0, const S2Point& a1,
+                             const S2Point& b0, const S2Point& b1) {
   // Since we are using exact arithmetic, we don't need to worry about
   // numerical stability.
   Vector3_xf a0_xf = Vector3_xf::Cast(a0);
@@ -400,15 +403,15 @@ S2Point GetIntersectionExact(S2Point const& a0, S2Point const& a1,
 // More precisely, either "x" must be within "tolerance" of "a" or "b", or
 // when "x" is projected onto the great circle through "a" and "b" it must lie
 // along the edge (a,b) (i.e., the shortest path from "a" to "b").
-static bool ApproximatelyOrdered(S2Point const& a, S2Point const& x,
-                                 S2Point const& b, double tolerance) {
+static bool ApproximatelyOrdered(const S2Point& a, const S2Point& x,
+                                 const S2Point& b, double tolerance) {
   if ((x - a).Norm2() <= tolerance * tolerance) return true;
   if ((x - b).Norm2() <= tolerance * tolerance) return true;
   return s2pred::OrderedCCW(a, x, b, S2::RobustCrossProd(a, b).Normalize());
 }
 
-S2Point GetIntersection(S2Point const& a0, S2Point const& a1,
-                        S2Point const& b0, S2Point const& b1) {
+S2Point GetIntersection(const S2Point& a0, const S2Point& a1,
+                        const S2Point& b0, const S2Point& b1) {
   DCHECK_GT(CrossingSign(a0, a1, b0, b1), 0);
 
   // It is difficult to compute the intersection point of two edges accurately
@@ -445,8 +448,8 @@ S2Point GetIntersection(S2Point const& a0, S2Point const& a1,
   // then we try again in "long double"; if that doesn't work then we fall
   // back to exact arithmetic.
 
-  static bool const kUseSimpleMethod = false;
-  static bool const kHasLongDouble = (s2pred::rounding_epsilon<long double>() <
+  static const bool kUseSimpleMethod = false;
+  static const bool kHasLongDouble = (s2pred::rounding_epsilon<long double>() <
                                       s2pred::rounding_epsilon<double>());
   S2Point result;
   IntersectionMethod method;
@@ -482,8 +485,8 @@ S2Point GetIntersection(S2Point const& a0, S2Point const& a1,
   return result;
 }
 
-bool SimpleCrossing(S2Point const& a, S2Point const& b,
-                    S2Point const& c, S2Point const& d) {
+bool SimpleCrossing(const S2Point& a, const S2Point& b,
+                    const S2Point& c, const S2Point& d) {
   // We compute SimpleCCW() for triangles ACB, CBD, BDA, and DAC.  All
   // of these triangles need to have the same orientation (CW or CCW)
   // for an intersection to exist.  Note that this is slightly more

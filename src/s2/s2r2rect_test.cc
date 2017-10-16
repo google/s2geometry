@@ -33,10 +33,10 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
-static void TestIntervalOps(S2R2Rect const& x, S2R2Rect const& y,
+static void TestIntervalOps(const S2R2Rect& x, const S2R2Rect& y,
                             const char* expected_rexion,
-                            S2R2Rect const& expected_union,
-                            S2R2Rect const& expected_intersection) {
+                            const S2R2Rect& expected_union,
+                            const S2R2Rect& expected_intersection) {
   // Test all of the interval operations on the given pair of intervals.
   // "expected_rexion" is a sequence of "T" and "F" characters corresponding
   // to the expected results of Contains(), InteriorContains(), Intersects(),
@@ -60,7 +60,7 @@ static void TestIntervalOps(S2R2Rect const& x, S2R2Rect const& y,
   }
 }
 
-static void TestCellOps(S2R2Rect const& r, S2Cell const& cell, int level) {
+static void TestCellOps(const S2R2Rect& r, const S2Cell& cell, int level) {
   // Test the relationship between the given rectangle and cell:
   // 0 == no intersection, 2 == Intersects,
   // 3 == Intersects and one region contains a vertex of the other,

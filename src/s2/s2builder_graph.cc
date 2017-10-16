@@ -41,13 +41,13 @@ using DegenerateEdges = GraphOptions::DegenerateEdges;
 using DuplicateEdges = GraphOptions::DuplicateEdges;
 using SiblingPairs = GraphOptions::SiblingPairs;
 
-Graph::Graph(GraphOptions const& options,
-             vector<S2Point> const* vertices,
-             vector<Edge> const* edges,
-             vector<InputEdgeIdSetId> const* input_edge_id_set_ids,
-             IdSetLexicon const* input_edge_id_set_lexicon,
-             vector<LabelSetId> const* label_set_ids,
-             IdSetLexicon const* label_set_lexicon,
+Graph::Graph(const GraphOptions& options,
+             const vector<S2Point>* vertices,
+             const vector<Edge>* edges,
+             const vector<InputEdgeIdSetId>* input_edge_id_set_ids,
+             const IdSetLexicon* input_edge_id_set_lexicon,
+             const vector<LabelSetId>* label_set_ids,
+             const IdSetLexicon* label_set_lexicon,
              IsFullPolygonPredicate is_full_polygon_predicate)
     : options_(options), num_vertices_(vertices->size()), vertices_(vertices),
       edges_(edges), input_edge_id_set_ids_(input_edge_id_set_ids),
@@ -79,7 +79,7 @@ vector<Graph::EdgeId> Graph::GetSiblingMap() const {
   return in_edge_ids;
 }
 
-Graph::VertexOutMap::VertexOutMap(Graph const& g)
+Graph::VertexOutMap::VertexOutMap(const Graph& g)
     : edges_(g.edges()), edge_begins_(g.num_vertices() + 1) {
   EdgeId e = 0;
   for (VertexId v = 0; v <= g.num_vertices(); ++v) {
@@ -88,7 +88,7 @@ Graph::VertexOutMap::VertexOutMap(Graph const& g)
   }
 }
 
-Graph::VertexInMap::VertexInMap(Graph const& g)
+Graph::VertexInMap::VertexInMap(const Graph& g)
     : in_edge_ids_(g.GetInEdgeIds()),
       in_edge_begins_(g.num_vertices() + 1) {
   EdgeId e = 0;
@@ -98,7 +98,7 @@ Graph::VertexInMap::VertexInMap(Graph const& g)
   }
 }
 
-Graph::LabelFetcher::LabelFetcher(Graph const& g, EdgeType edge_type)
+Graph::LabelFetcher::LabelFetcher(const Graph& g, EdgeType edge_type)
     : g_(g), edge_type_(edge_type) {
   if (edge_type == EdgeType::UNDIRECTED) sibling_map_ = g.GetSiblingMap();
 }
@@ -137,7 +137,7 @@ vector<S2Builder::InputEdgeId> Graph::GetMinInputEdgeIds() const {
 }
 
 vector<Graph::EdgeId> Graph::GetInputEdgeOrder(
-    vector<InputEdgeId> const& input_ids) const {
+    const vector<InputEdgeId>& input_ids) const {
   vector<EdgeId> order(input_ids.size());
   std::iota(order.begin(), order.end(), 0);
   std::sort(order.begin(), order.end(), [&input_ids](EdgeId a, EdgeId b) {
@@ -199,7 +199,7 @@ static void AddVertexEdges(Graph::EdgeId out_begin, Graph::EdgeId out_end,
   }
 }
 
-bool Graph::GetLeftTurnMap(vector<EdgeId> const& in_edge_ids,
+bool Graph::GetLeftTurnMap(const vector<EdgeId>& in_edge_ids,
                            vector<EdgeId>* left_turn_map,
                            S2Error* error) const {
   left_turn_map->assign(num_edges(), -1);
@@ -214,8 +214,8 @@ bool Graph::GetLeftTurnMap(vector<EdgeId> const& in_edge_ids,
   // and add an entry to the left turn map from each incoming edge to the
   // immediately following outgoing edge in clockwise order.
   int out = 0, in = 0;
-  Edge const* out_edge = &edge(out);
-  Edge const* in_edge = &edge(in_edge_ids[in]);
+  const Edge* out_edge = &edge(out);
+  const Edge* in_edge = &edge(in_edge_ids[in]);
   Edge sentinel(num_vertices(), num_vertices());
   Edge min_edge = min(*out_edge, reverse(*in_edge));
   while (min_edge != sentinel) {
@@ -241,8 +241,8 @@ bool Graph::GetLeftTurnMap(vector<EdgeId> const& in_edge_ids,
     // Sort the edges in clockwise order around "v0".
     VertexId min_endpoint = v0_edges.front().endpoint;
     std::sort(v0_edges.begin() + 1, v0_edges.end(),
-              [v0, min_endpoint, this](VertexEdge const& a,
-                                       VertexEdge const& b) {
+              [v0, min_endpoint, this](const VertexEdge& a,
+                                       const VertexEdge& b) {
         if (a.endpoint == b.endpoint) return a.rank < b.rank;
         if (a.endpoint == min_endpoint) return true;
         if (b.endpoint == min_endpoint) return false;
@@ -253,7 +253,7 @@ bool Graph::GetLeftTurnMap(vector<EdgeId> const& in_edge_ids,
     // unmatched incoming edges.  We also keep a stack of outgoing edges with
     // no previous incoming edge, and match these at the end by wrapping
     // around circularly to the start of the edge ordering.
-    for (VertexEdge const& e : v0_edges) {
+    for (const VertexEdge& e : v0_edges) {
       if (e.incoming) {
         e_in.push_back(in_edge_ids[e.index]);
       } else if (!e_in.empty()) {
@@ -281,7 +281,7 @@ bool Graph::GetLeftTurnMap(vector<EdgeId> const& in_edge_ids,
   return error->ok();
 }
 
-void Graph::CanonicalizeLoopOrder(vector<InputEdgeId> const& min_input_ids,
+void Graph::CanonicalizeLoopOrder(const vector<InputEdgeId>& min_input_ids,
                                   vector<EdgeId>* loop) {
   if (loop->empty()) return;
   // Find the position of the element with the highest input edge id.  If
@@ -315,10 +315,10 @@ void Graph::CanonicalizeLoopOrder(vector<InputEdgeId> const& min_input_ids,
   std::rotate(loop->begin(), loop->begin() + pos, loop->end());
 }
 
-void Graph::CanonicalizeVectorOrder(vector<InputEdgeId> const& min_input_ids,
+void Graph::CanonicalizeVectorOrder(const vector<InputEdgeId>& min_input_ids,
                                     vector<vector<EdgeId>>* chains) {
   std::sort(chains->begin(), chains->end(),
-    [&min_input_ids](vector<EdgeId> const& a, vector<EdgeId> const& b) {
+    [&min_input_ids](const vector<EdgeId>& a, const vector<EdgeId>& b) {
       return min_input_ids[a[0]] < min_input_ids[b[0]];
     });
 }
@@ -454,8 +454,8 @@ bool Graph::GetDirectedComponents(
   }
   // Sort the components to correspond to the input edge ordering.
   std::sort(components->begin(), components->end(),
-            [&min_input_ids](DirectedComponent const& a,
-                             DirectedComponent const& b) {
+            [&min_input_ids](const DirectedComponent& a,
+                             const DirectedComponent& b) {
       return min_input_ids[a[0][0]] < min_input_ids[b[0][0]];
     });
   return true;
@@ -541,8 +541,8 @@ bool Graph::GetUndirectedComponents(LoopType loop_type,
   }
   // Sort the components to correspond to the input edge ordering.
   std::sort(components->begin(), components->end(),
-       [&min_input_ids](UndirectedComponent const& a,
-                        UndirectedComponent const& b) {
+       [&min_input_ids](const UndirectedComponent& a,
+                        const UndirectedComponent& b) {
       return min_input_ids[a[0][0][0]] < min_input_ids[b[0][0][0]];
     });
   return true;
@@ -550,7 +550,7 @@ bool Graph::GetUndirectedComponents(LoopType loop_type,
 
 class Graph::PolylineBuilder {
  public:
-  explicit PolylineBuilder(Graph const& g);
+  explicit PolylineBuilder(const Graph& g);
   vector<EdgePolyline> BuildPaths();
   vector<EdgePolyline> BuildWalks();
 
@@ -561,7 +561,7 @@ class Graph::PolylineBuilder {
   EdgePolyline BuildWalk(VertexId v);
   void MaximizeWalk(EdgePolyline* polyline);
 
-  Graph const& g_;
+  const Graph& g_;
   Graph::VertexInMap in_;
   Graph::VertexOutMap out_;
   vector<InputEdgeId> min_input_ids_;
@@ -586,7 +586,7 @@ vector<Graph::EdgePolyline> Graph::GetPolylines(
   }
 }
 
-Graph::PolylineBuilder::PolylineBuilder(Graph const& g)
+Graph::PolylineBuilder::PolylineBuilder(const Graph& g)
     : g_(g), in_(g), out_(g),
       min_input_ids_(g.GetMinInputEdgeIds()),
       directed_(g_.options().edge_type() == EdgeType::DIRECTED),
@@ -788,15 +788,15 @@ void Graph::PolylineBuilder::MaximizeWalk(EdgePolyline* polyline) {
 
 class Graph::EdgeProcessor {
  public:
-  EdgeProcessor(GraphOptions const& options,
+  EdgeProcessor(const GraphOptions& options,
                 vector<Edge>* edges,
                 vector<InputEdgeIdSetId>* input_ids,
                 IdSetLexicon* id_set_lexicon);
   void Run(S2Error* error);
 
  private:
-  void AddEdge(Edge const& edge, InputEdgeIdSetId input_edge_id_set_id);
-  void AddEdges(int num_edges, Edge const& edge,
+  void AddEdge(const Edge& edge, InputEdgeIdSetId input_edge_id_set_id);
+  void AddEdges(int num_edges, const Edge& edge,
                 InputEdgeIdSetId input_edge_id_set_id);
   void CopyEdges(int out_begin, int out_end);
   InputEdgeIdSetId MergeInputIds(int out_begin, int out_end);
@@ -828,7 +828,7 @@ void Graph::ProcessEdges(
   }
 }
 
-Graph::EdgeProcessor::EdgeProcessor(GraphOptions const& options,
+Graph::EdgeProcessor::EdgeProcessor(const GraphOptions& options,
                                     vector<Edge>* edges,
                                     vector<InputEdgeIdSetId>* input_ids,
                                     IdSetLexicon* id_set_lexicon)
@@ -851,12 +851,12 @@ Graph::EdgeProcessor::EdgeProcessor(GraphOptions const& options,
 }
 
 inline void Graph::EdgeProcessor::AddEdge(
-    Edge const& edge, InputEdgeIdSetId input_edge_id_set_id) {
+    const Edge& edge, InputEdgeIdSetId input_edge_id_set_id) {
   new_edges_.push_back(edge);
   new_input_ids_.push_back(input_edge_id_set_id);
 }
 
-void Graph::EdgeProcessor::AddEdges(int num_edges, Edge const& edge,
+void Graph::EdgeProcessor::AddEdges(int num_edges, const Edge& edge,
                                     InputEdgeIdSetId input_edge_id_set_id) {
   for (int i = 0; i < num_edges; ++i) {
     AddEdge(edge, input_edge_id_set_id);
@@ -892,8 +892,8 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
   // (outgoing and incoming).  Then decide what to do based on "options_" and
   // how many copies of the edge there are in each direction.
   int out = 0, in = 0;
-  Edge const* out_edge = &edges_[out_edges_[out]];
-  Edge const* in_edge = &edges_[in_edges_[in]];
+  const Edge* out_edge = &edges_[out_edges_[out]];
+  const Edge* in_edge = &edges_[in_edges_[in]];
   Edge sentinel(std::numeric_limits<VertexId>::max(),
                 std::numeric_limits<VertexId>::max());
   for (;;) {
@@ -1000,13 +1000,13 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
   input_ids_.shrink_to_fit();
 }
 
-vector<S2Point> Graph::FilterVertices(vector<S2Point> const& vertices,
+vector<S2Point> Graph::FilterVertices(const vector<S2Point>& vertices,
                                       std::vector<Edge>* edges,
                                       vector<VertexId>* tmp) {
   // Gather the vertices that are actually used.
   vector<VertexId> used;
   used.reserve(2 * edges->size());
-  for (Edge const& e : *edges) {
+  for (const Edge& e : *edges) {
     used.push_back(e.first);
     used.push_back(e.second);
   }

@@ -13,22 +13,20 @@
 // limitations under the License.
 //
 
-/*
- * Copyright 2017 The Abseil Authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 // Fast memory copying and comparison routines.
 //   strings::fastmemcmp_inlined() replaces memcmp()
 //   strings::memcpy_inlined() replaces memcpy()
@@ -42,6 +40,7 @@
 //   strings::fastmemcmp_inlined
 //     Analysis: memcmp, fastmemcmp_inlined, fastmemcmp
 //     2012-01-30
+
 #ifndef S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_FASTMEM_H_
 #define S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_FASTMEM_H_
 
@@ -53,7 +52,6 @@
 #include <cstdio>
 #include <cstring>
 
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/internal/unaligned_access.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
@@ -68,7 +66,8 @@ namespace strings_internal {
 // moderately-sized inputs, or inputs that share a common prefix and differ
 // somewhere in their last 8 bytes. Further optimizations can be added later
 // if it makes sense to do so.  Alternatively, if the compiler & runtime improve
-// to eliminate the need for this, we can remove it.  Please keep this in sync
+// to eliminate the need for this, we can remove it.
+// Please keep this in sync
 // with google_internal::gg_memeq() in //third_party/stl/gcc3/string.
 inline bool memeq(const char* a, const char* b, size_t n) {
   size_t n_rounded_down = n & ~static_cast<size_t>(7);

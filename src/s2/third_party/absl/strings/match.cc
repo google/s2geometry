@@ -38,15 +38,15 @@ namespace {
 // some point.
 bool CaseEqual(absl::string_view piece1, absl::string_view piece2) {
   return (piece1.size() == piece2.size() &&
-          0 == absl::strings_internal::memcasecmp(piece1.data(), piece2.data(),
-                                                  piece1.size()));
+          0 == strings_internal::memcasecmp(piece1.data(), piece2.data(),
+                                            piece1.size()));
   // memcasecmp uses ascii_tolower().
 }
 }  // namespace
 
-bool StartsWithIgnoreCase(absl::string_view text, absl::string_view preffix) {
-  return (text.size() >= preffix.size()) &&
-         CaseEqual(text.substr(0, preffix.size()), preffix);
+bool StartsWithIgnoreCase(absl::string_view text, absl::string_view prefix) {
+  return (text.size() >= prefix.size()) &&
+         CaseEqual(text.substr(0, prefix.size()), prefix);
 }
 
 bool EndsWithIgnoreCase(absl::string_view text, absl::string_view suffix) {

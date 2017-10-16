@@ -32,91 +32,91 @@
 
 namespace S2 {
 
-LengthMetric const kMinAngleSpan(
+const LengthMetric kMinAngleSpan(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? 1.0 :                      // 1.000
     S2_PROJECTION == S2_TAN_PROJECTION ? M_PI / 2 :                    // 1.571
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 4. / 3 :                // 1.333
     0);
 
-LengthMetric const kMaxAngleSpan(
+const LengthMetric kMaxAngleSpan(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? 2 :                        // 2.000
     S2_PROJECTION == S2_TAN_PROJECTION ? M_PI / 2 :                    // 1.571
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 1.704897179199218452 :  // 1.705
     0);
 
-LengthMetric const kAvgAngleSpan(M_PI / 2);                    // 1.571
+const LengthMetric kAvgAngleSpan(M_PI / 2);                    // 1.571
 // This is true for all projections.
 
-LengthMetric const kMinWidth(
+const LengthMetric kMinWidth(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? sqrt(2. / 3) :             // 0.816
     S2_PROJECTION == S2_TAN_PROJECTION ? M_PI / (2 * sqrt(2)) :        // 1.111
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 2 * sqrt(2) / 3 :       // 0.943
     0);
 
-LengthMetric const kMaxWidth(kMaxAngleSpan.deriv());
+const LengthMetric kMaxWidth(kMaxAngleSpan.deriv());
 // This is true for all projections.
 
-LengthMetric const kAvgWidth(
+const LengthMetric kAvgWidth(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? 1.411459345844456965 :     // 1.411
     S2_PROJECTION == S2_TAN_PROJECTION ? 1.437318638925160885 :        // 1.437
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 1.434523672886099389 :  // 1.435
     0);
 
-LengthMetric const kMinEdge(
+const LengthMetric kMinEdge(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? 2 * sqrt(2) / 3 :          // 0.943
     S2_PROJECTION == S2_TAN_PROJECTION ? M_PI / (2 * sqrt(2)) :        // 1.111
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 2 * sqrt(2) / 3 :       // 0.943
     0);
 
-LengthMetric const kMaxEdge(kMaxAngleSpan.deriv());
+const LengthMetric kMaxEdge(kMaxAngleSpan.deriv());
 // This is true for all projections.
 
-LengthMetric const kAvgEdge(
+const LengthMetric kAvgEdge(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? 1.440034192955603643 :     // 1.440
     S2_PROJECTION == S2_TAN_PROJECTION ? 1.461667032546739266 :        // 1.462
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 1.459213746386106062 :  // 1.459
     0);
 
-LengthMetric const kMinDiag(
+const LengthMetric kMinDiag(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? 2 * sqrt(2) / 3 :          // 0.943
     S2_PROJECTION == S2_TAN_PROJECTION ? M_PI * sqrt(2) / 3 :          // 1.481
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 8 * sqrt(2) / 9 :       // 1.257
     0);
 
-LengthMetric const kMaxDiag(
+const LengthMetric kMaxDiag(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? 2 * sqrt(2) :              // 2.828
     S2_PROJECTION == S2_TAN_PROJECTION ? M_PI * sqrt(2. / 3) :         // 2.565
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 2.438654594434021032 :  // 2.439
     0);
 
-LengthMetric const kAvgDiag(
+const LengthMetric kAvgDiag(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? 2.031817866418812674 :     // 2.032
     S2_PROJECTION == S2_TAN_PROJECTION ? 2.063623197195635753 :        // 2.064
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 2.060422738998471683 :  // 2.060
     0);
 
-AreaMetric const kMinArea(
+const AreaMetric kMinArea(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? 4 / (3 * sqrt(3)) :        // 0.770
     S2_PROJECTION == S2_TAN_PROJECTION ? (M_PI*M_PI) / (4*sqrt(2)) :   // 1.745
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 8 * sqrt(2) / 9 :       // 1.257
     0);
 
-AreaMetric const kMaxArea(
+const AreaMetric kMaxArea(
     S2_PROJECTION == S2_LINEAR_PROJECTION ? 4 :                        // 4.000
     S2_PROJECTION == S2_TAN_PROJECTION ? M_PI * M_PI / 4 :             // 2.467
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 2.635799256963161491 :  // 2.636
     0);
 
-AreaMetric const kAvgArea(4 * M_PI / 6);                       // 2.094
+const AreaMetric kAvgArea(4 * M_PI / 6);                       // 2.094
 // This is true for all projections.
 
-double const kMaxEdgeAspect = (
+const double kMaxEdgeAspect = (
     S2_PROJECTION == S2_LINEAR_PROJECTION ? sqrt(2) :                  // 1.414
     S2_PROJECTION == S2_TAN_PROJECTION ?  sqrt(2) :                    // 1.414
     S2_PROJECTION == S2_QUADRATIC_PROJECTION ? 1.442615274452682920 :  // 1.443
     0);
 
-double const kMaxDiagAspect = sqrt(3);                             // 1.732
+const double kMaxDiagAspect = sqrt(3);                             // 1.732
 // This is true for all projections.
 
 }  // namespace S2

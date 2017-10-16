@@ -62,16 +62,16 @@ class S2ConvexHullQuery {
   S2ConvexHullQuery();
 
   // Add a point to the input geometry.
-  void AddPoint(S2Point const& point);
+  void AddPoint(const S2Point& point);
 
   // Add a polyline to the input geometry.
-  void AddPolyline(S2Polyline const& polyline);
+  void AddPolyline(const S2Polyline& polyline);
 
   // Add a loop to the input geometry.
-  void AddLoop(S2Loop const& loop);
+  void AddLoop(const S2Loop& loop);
 
   // Add a polygon to the input geometry.
-  void AddPolygon(S2Polygon const& polygon);
+  void AddPolygon(const S2Polygon& polygon);
 
   // Compute a bounding cap for the input geometry provided.
   //
@@ -97,14 +97,14 @@ class S2ConvexHullQuery {
 
  private:
   void GetMonotoneChain(std::vector<S2Point>* output);
-  std::unique_ptr<S2Loop> GetSinglePointLoop(S2Point const& p);
-  std::unique_ptr<S2Loop> GetSingleEdgeLoop(S2Point const& a, S2Point const& b);
+  std::unique_ptr<S2Loop> GetSinglePointLoop(const S2Point& p);
+  std::unique_ptr<S2Loop> GetSingleEdgeLoop(const S2Point& a, const S2Point& b);
 
   S2LatLngRect bound_;
   std::vector<S2Point> points_;
 
-  S2ConvexHullQuery(S2ConvexHullQuery const&) = delete;
-  void operator=(S2ConvexHullQuery const&) = delete;
+  S2ConvexHullQuery(const S2ConvexHullQuery&) = delete;
+  void operator=(const S2ConvexHullQuery&) = delete;
 };
 
 #endif  // S2_S2CONVEXHULLQUERY_H_

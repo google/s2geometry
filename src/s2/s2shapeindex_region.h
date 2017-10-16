@@ -46,7 +46,7 @@
 //
 // Example usage:
 //
-// S2CellUnion GetCovering(S2ShapeIndex const& index) {
+// S2CellUnion GetCovering(const S2ShapeIndex& index) {
 //   S2RegionCoverer coverer;
 //   coverer.set_max_cells(20);
 //   S2CellUnion covering;
@@ -64,9 +64,9 @@ class S2ShapeIndexRegion final : public S2Region {
   // MakeS2ShapeIndexRegion(&index) instead.  For example:
   //
   //   coverer.GetCovering(MakeS2ShapeIndexRegion(&index), &covering);
-  explicit S2ShapeIndexRegion(IndexType const* index);
+  explicit S2ShapeIndexRegion(const IndexType* index);
 
-  IndexType const& index() const;
+  const IndexType& index() const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -88,20 +88,20 @@ class S2ShapeIndexRegion final : public S2Region {
   // The implementation is conservative but not exact; if a shape just barely
   // contains the given cell then it may return false.  The maximum error is
   // less than 10 * DBL_EPSILON radians (or about 15 nanometers).
-  bool Contains(S2Cell const& target) const override;
+  bool Contains(const S2Cell& target) const override;
 
   // Returns true if any shape intersects "target".
   //
   // The implementation is conservative but not exact; if a shape is just
   // barely disjoint from the given cell then it may return true.  The maximum
   // error is less than 10 * DBL_EPSILON radians (or about 15 nanometers).
-  bool MayIntersect(S2Cell const& target) const override;
+  bool MayIntersect(const S2Cell& target) const override;
 
   // Returns true if the given point is contained by any two-dimensional shape
   // (i.e., polygon).  Boundaries are treated as being semi-open (i.e., the
   // same rules as S2Polygon).  Zero and one-dimensional shapes are ignored by
-  // this method (if you need more flexibility, see S2BoundaryOperation).
-  bool Contains(S2Point const& p) const override;
+  // this method (if you need more flexibility, see S2BooleanOperation).
+  bool Contains(const S2Point& p) const override;
 
  private:
   using Iterator = typename IndexType::Iterator;
@@ -113,15 +113,15 @@ class S2ShapeIndexRegion final : public S2Region {
   // contains the point "p".
   //
   // REQUIRES: id.contains(S2CellId(p))
-  bool Contains(S2CellId id, S2ClippedShape const& clipped,
-                S2Point const& p) const;
+  bool Contains(S2CellId id, const S2ClippedShape& clipped,
+                const S2Point& p) const;
 
   // Returns true if any edge of the indexed shape "clipped" intersects the
   // cell "target".  It may also return true if an edge is very close to
   // "target"; the maximum error is less than 10 * DBL_EPSILON radians (about
   // 15 nanometers).
-  bool AnyEdgeIntersects(S2ClippedShape const& clipped,
-                         S2Cell const& target) const;
+  bool AnyEdgeIntersects(const S2ClippedShape& clipped,
+                         const S2Cell& target) const;
 
   // This class is not thread-safe!
   mutable S2ContainsPointQuery<IndexType> contains_query_;
@@ -136,19 +136,19 @@ class S2ShapeIndexRegion final : public S2Region {
 // Returns an S2ShapeIndexRegion that wraps the given S2ShapeIndex.  Note that
 // it is efficient to return S2ShapeIndexRegion objects by value.
 template <class IndexType>
-S2ShapeIndexRegion<IndexType> MakeS2ShapeIndexRegion(IndexType const* index);
+S2ShapeIndexRegion<IndexType> MakeS2ShapeIndexRegion(const IndexType* index);
 
 
 //////////////////   Implementation details follow   ////////////////////
 
 
 template <class IndexType>
-S2ShapeIndexRegion<IndexType>::S2ShapeIndexRegion(IndexType const* index)
+S2ShapeIndexRegion<IndexType>::S2ShapeIndexRegion(const IndexType* index)
     : contains_query_(index) {
 }
 
 template <class IndexType>
-inline IndexType const& S2ShapeIndexRegion<IndexType>::index() const {
+inline const IndexType& S2ShapeIndexRegion<IndexType>::index() const {
   return contains_query_.index();
 }
 
@@ -201,7 +201,7 @@ void S2ShapeIndexRegion<IndexType>::GetCellUnionBound(
   // Find the last S2CellId in the index.
   iter_.Finish();
   if (!iter_.Prev()) return;  // Empty index.
-  S2CellId const last_index_id = iter_.id();
+  const S2CellId last_index_id = iter_.id();
   iter_.Begin();
   if (iter_.id() != last_index_id) {
     // The index has at least two cells.  Choose an S2CellId level such that
@@ -211,7 +211,7 @@ void S2ShapeIndexRegion<IndexType>::GetCellUnionBound(
 
     // For each cell C at the chosen level, we compute the smallest S2Cell
     // that covers the S2ShapeIndex cells within C.
-    S2CellId const last_id = last_index_id.parent(level);
+    const S2CellId last_id = last_index_id.parent(level);
     for (auto id = iter_.id().parent(level); id != last_id; id = id.next()) {
       // If the cell C does not contain any index cells, then skip it.
       if (id.range_max() < iter_.id()) continue;
@@ -247,7 +247,7 @@ inline void S2ShapeIndexRegion<IndexType>::CoverRange(
 }
 
 template <class IndexType>
-bool S2ShapeIndexRegion<IndexType>::Contains(S2Cell const& target) const {
+bool S2ShapeIndexRegion<IndexType>::Contains(const S2Cell& target) const {
   S2ShapeIndex::CellRelation relation = iter_.Locate(target.id());
 
   // If the relation is DISJOINT, then "target" is not contained.  Similarly if
@@ -258,9 +258,9 @@ bool S2ShapeIndexRegion<IndexType>::Contains(S2Cell const& target) const {
   // Otherwise, the iterator points to an index cell containing "target".
   // If any shape contains the target cell, we return true.
   DCHECK(iter_.id().contains(target.id()));
-  S2ShapeIndexCell const& cell = iter_.cell();
+  const S2ShapeIndexCell& cell = iter_.cell();
   for (int s = 0; s < cell.num_clipped(); ++s) {
-    S2ClippedShape const& clipped = cell.clipped(s);
+    const S2ClippedShape& clipped = cell.clipped(s);
     // The shape contains the target cell iff the shape contains the cell
     // center and none of its edges intersects the (padded) cell interior.
     if (iter_.id() == target.id()) {
@@ -278,7 +278,7 @@ bool S2ShapeIndexRegion<IndexType>::Contains(S2Cell const& target) const {
 }
 
 template <class IndexType>
-bool S2ShapeIndexRegion<IndexType>::MayIntersect(S2Cell const& target) const {
+bool S2ShapeIndexRegion<IndexType>::MayIntersect(const S2Cell& target) const {
   S2ShapeIndex::CellRelation relation = iter_.Locate(target.id());
 
   // If "target" does not overlap any index cell, there is no intersection.
@@ -297,9 +297,9 @@ bool S2ShapeIndexRegion<IndexType>::MayIntersect(S2Cell const& target) const {
   if (iter_.id() == target.id()) return true;
 
   // Test whether any shape intersects the target cell or contains its center.
-  S2ShapeIndexCell const& cell = iter_.cell();
+  const S2ShapeIndexCell& cell = iter_.cell();
   for (int s = 0; s < cell.num_clipped(); ++s) {
-    S2ClippedShape const& clipped = cell.clipped(s);
+    const S2ClippedShape& clipped = cell.clipped(s);
     if (AnyEdgeIntersects(clipped, target)) return true;
     if (contains_query_.ShapeContains(iter_, clipped, target.GetCenter())) {
       return true;
@@ -309,9 +309,9 @@ bool S2ShapeIndexRegion<IndexType>::MayIntersect(S2Cell const& target) const {
 }
 
 template <class IndexType>
-bool S2ShapeIndexRegion<IndexType>::Contains(S2Point const& p) const {
+bool S2ShapeIndexRegion<IndexType>::Contains(const S2Point& p) const {
   if (iter_.Locate(p)) {
-    S2ShapeIndexCell const& cell = iter_.cell();
+    const S2ShapeIndexCell& cell = iter_.cell();
     for (int s = 0; s < cell.num_clipped(); ++s) {
       if (contains_query_.ShapeContains(iter_, cell.clipped(s), p)) {
         return true;
@@ -323,15 +323,15 @@ bool S2ShapeIndexRegion<IndexType>::Contains(S2Point const& p) const {
 
 template <class IndexType>
 bool S2ShapeIndexRegion<IndexType>::AnyEdgeIntersects(
-    S2ClippedShape const& clipped, S2Cell const& target) const {
+    const S2ClippedShape& clipped, const S2Cell& target) const {
   static const double kMaxError = (S2::kFaceClipErrorUVCoord +
                                    S2::kIntersectsRectErrorUVDist);
-  R2Rect const bound = target.GetBoundUV().Expanded(kMaxError);
-  int const face = target.face();
-  S2Shape const& shape = *index().shape(clipped.shape_id());
-  int const num_edges = clipped.num_edges();
+  const R2Rect bound = target.GetBoundUV().Expanded(kMaxError);
+  const int face = target.face();
+  const S2Shape& shape = *index().shape(clipped.shape_id());
+  const int num_edges = clipped.num_edges();
   for (int i = 0; i < num_edges; ++i) {
-    auto const edge = shape.edge(clipped.edge(i));
+    const auto edge = shape.edge(clipped.edge(i));
     R2Point p0, p1;
     if (S2::ClipToPaddedFace(edge.v0, edge.v1, face, kMaxError, &p0, &p1) &&
         S2::IntersectsRect(p0, p1, bound)) {
@@ -343,7 +343,7 @@ bool S2ShapeIndexRegion<IndexType>::AnyEdgeIntersects(
 
 template <class IndexType>
 inline S2ShapeIndexRegion<IndexType> MakeS2ShapeIndexRegion(
-    IndexType const* index) {
+    const IndexType* index) {
   return S2ShapeIndexRegion<IndexType>(index);
 }
 

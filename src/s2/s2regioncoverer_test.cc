@@ -69,9 +69,9 @@ TEST(S2RegionCoverer, RandomCells) {
   }
 }
 
-static void CheckCovering(S2RegionCoverer const& coverer,
-                          S2Region const& region,
-                          vector<S2CellId> const& covering,
+static void CheckCovering(const S2RegionCoverer& coverer,
+                          const S2Region& region,
+                          const vector<S2CellId>& covering,
                           bool interior) {
   // Keep track of how many cells have the same coverer.min_level() ancestor.
   unordered_map<S2CellId, int, S2CellIdHash> min_level_cells;
@@ -102,7 +102,7 @@ static void CheckCovering(S2RegionCoverer const& coverer,
 }
 
 TEST(S2RegionCoverer, RandomCaps) {
-  static int const kMaxLevel = S2CellId::kMaxLevel;
+  static const int kMaxLevel = S2CellId::kMaxLevel;
   S2RegionCoverer coverer;
   for (int i = 0; i < 1000; ++i) {
     do {
@@ -138,7 +138,7 @@ TEST(S2RegionCoverer, RandomCaps) {
 }
 
 TEST(S2RegionCoverer, SimpleCoverings) {
-  static int const kMaxLevel = S2CellId::kMaxLevel;
+  static const int kMaxLevel = S2CellId::kMaxLevel;
   S2RegionCoverer coverer;
   coverer.set_max_cells(kint32max);
   for (int i = 0; i < 1000; ++i) {
@@ -160,14 +160,14 @@ struct WorstCap {
   double ratio;
   S2Cap cap;
   int num_cells;
-  bool operator<(WorstCap const& o) const { return ratio > o.ratio; }
+  bool operator<(const WorstCap& o) const { return ratio > o.ratio; }
   WorstCap(double r, const S2Cap& c, int n) : ratio(r), cap(c), num_cells(n) {}
 };
 
 static void TestAccuracy(int max_cells) {
   SCOPED_TRACE(StringPrintf("%d cells", max_cells));
 
-  static int const kNumMethods = 1;
+  static const int kNumMethods = 1;
   // This code is designed to evaluate several approximation algorithms and
   // figure out which one works better.  The way to do this is to hack the
   // S2RegionCoverer interface to add a global variable to control which
@@ -186,7 +186,7 @@ static void TestAccuracy(int max_cells) {
   int cell_total[kNumMethods] = {0};
   int area_winner_tally[kNumMethods] = {0};
   int cell_winner_tally[kNumMethods] = {0};
-  static int const kMaxWorstCaps = 10;
+  static const int kMaxWorstCaps = 10;
   priority_queue<WorstCap> worst_caps[kNumMethods];
 
   for (int method = 0; method < kNumMethods; ++method) {
@@ -196,7 +196,7 @@ static void TestAccuracy(int max_cells) {
     // Choose the log of the cap area to be uniformly distributed over
     // the allowable range.  Don't try to approximate regions that are so
     // small they can't use the given maximum number of cells efficiently.
-    double const min_cap_area = S2Cell::AverageArea(S2CellId::kMaxLevel)
+    const double min_cap_area = S2Cell::AverageArea(S2CellId::kMaxLevel)
                                 * max_cells * max_cells;
     // Coverings for huge caps are not interesting, so limit the max area too.
     S2Cap cap = S2Testing::GetRandomCap(min_cap_area, 0.1 * M_PI);
@@ -257,7 +257,7 @@ static void TestAccuracy(int max_cells) {
     }
     printf("  Caps with the worst approximation ratios:\n");
     for (; !worst_caps[method].empty(); worst_caps[method].pop()) {
-      WorstCap const& w = worst_caps[method].top();
+      const WorstCap& w = worst_caps[method].top();
       S2LatLng ll(w.cap.center());
       printf("    Ratio %.4f, Cells %d, "
              "Center (%.8f, %.8f), Km %.6f\n",

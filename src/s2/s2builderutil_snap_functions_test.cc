@@ -125,7 +125,7 @@ TEST(IntLatLngSnapFunction, SnapPoint) {
 static S2CellId kSearchRootId = S2CellId::FromFace(0);
 static S2CellId kSearchFocusId = S2CellId::FromFace(0).child(3);
 
-static S1Angle GetMaxVertexDistance(S2Point const& p, S2CellId id) {
+static S1Angle GetMaxVertexDistance(const S2Point& p, S2CellId id) {
   S2Cell cell(id);
   return max(max(S1Angle(p, cell.GetVertex(0)),
                  S1Angle(p, cell.GetVertex(1))),
@@ -179,7 +179,7 @@ static double GetS2CellIdMinVertexSeparation(int level,
   best_cells->clear();
   int num_to_keep = 300;
   int num_to_print = 1;
-  for (auto const& entry : scores) {
+  for (const auto& entry : scores) {
     S2CellId id = entry.second;
     if (--num_to_print >= 0) {
       R2Point uv = id.GetCenterUV();
@@ -222,8 +222,8 @@ TEST(S2CellIdSnapFunction, MinVertexSeparationSnapRadiusRatio) {
   printf("min_vertex_sep / snap_radius ratio: %.15f\n", best_score);
 }
 
-static S1Angle GetCircumRadius(S2Point const& a, S2Point const& b,
-                               S2Point const& c) {
+static S1Angle GetCircumRadius(const S2Point& a, const S2Point& b,
+                               const S2Point& c) {
   // We return this value is the circumradius is very large.
   S1Angle kTooBig = S1Angle::Radians(M_PI);
   double turn_angle = S2::TurnAngle(a, b, c);
@@ -241,7 +241,7 @@ static S1Angle GetCircumRadius(S2Point const& a, S2Point const& b,
 }
 
 static vector<S2CellId> GetNeighbors(S2CellId id) {
-  int const kNumLayers = 2;
+  const int kNumLayers = 2;
   vector<S2CellId> nbrs;
   nbrs.push_back(id);
   for (int layer = 0; layer < kNumLayers; ++layer) {
@@ -275,7 +275,7 @@ typedef double S2CellIdMinEdgeSeparationFunction(int level, S1Angle edge_sep,
 // nearby vertices that are designed to minimize the edge-vertex separation
 // when an edge is snapped.
 static double GetS2CellIdMinEdgeSeparation(
-    char const* label, S2CellIdMinEdgeSeparationFunction objective,
+    const char* label, S2CellIdMinEdgeSeparationFunction objective,
     int level, set<S2CellId>* best_cells) {
   // To find minimum edge separations, we choose a cell ("id0") and two nearby
   // cells ("id1" and "id2"), where "nearby" is defined by GetNeighbors().
@@ -352,17 +352,17 @@ static double GetS2CellIdMinEdgeSeparation(
   int num_to_keep = google::DEBUG_MODE ? 20 : 100;
   int num_to_print = 3;
   vector<pair<double, S2CellId>> sorted;
-  for (auto const& entry: best_scores) {
+  for (const auto& entry: best_scores) {
     sorted.push_back(make_pair(entry.second, entry.first));
   }
   std::sort(sorted.begin(), sorted.end());
   best_cells->clear();
   printf("Level %d:\n", level);
-  for (auto const& entry : sorted) {
+  for (const auto& entry : sorted) {
     S2CellId id = entry.second;
     if (--num_to_print >= 0) {
       R2Point uv = id.GetCenterUV();
-      pair<S2CellId, S2CellId> const& nbrs = best_configs.find(id)->second;
+      const pair<S2CellId, S2CellId>& nbrs = best_configs.find(id)->second;
       printf("  %s = %.15f u=%7.4f v=%7.4f %s %s %s\n",
              label, entry.first, uv[0], uv[1], id.ToToken().c_str(),
              nbrs.first.ToToken().c_str(), nbrs.second.ToToken().c_str());
@@ -384,7 +384,7 @@ static double GetS2CellIdMinEdgeSeparation(
 }
 
 static double GetS2CellIdMinEdgeSeparation(
-    char const* label, S2CellIdMinEdgeSeparationFunction objective) {
+    const char* label, S2CellIdMinEdgeSeparationFunction objective) {
   double best_score = 1e10;
   set<S2CellId> best_cells;
   best_cells.insert(kSearchRootId);
@@ -438,36 +438,36 @@ TEST(S2CellIdSnapFunction, MinEdgeVertexSeparationSnapRadiusRatio) {
 // except that the scale is variable (see LatLngConfig below).
 using IntLatLng = Vector2<int64>;
 
-static bool IsValid(IntLatLng const& ll, int64 scale) {
+static bool IsValid(const IntLatLng& ll, int64 scale) {
   // A coordinate value of "scale" corresponds to 180 degrees.
   return (std::abs(ll[0]) <= scale / 2 && std::abs(ll[1]) <= scale);
 }
 
-static bool HasValidVertices(IntLatLng const& ll, int64 scale) {
+static bool HasValidVertices(const IntLatLng& ll, int64 scale) {
   // Like IsValid, but excludes latitudes of 90 and longitudes of 180.
   // A coordinate value of "scale" corresponds to 180 degrees.
   return (std::abs(ll[0]) < scale / 2 && std::abs(ll[1]) < scale);
 }
 
-static IntLatLng Rescale(IntLatLng const&ll, double scale_factor) {
+static IntLatLng Rescale(const IntLatLng&ll, double scale_factor) {
   return IntLatLng(MathUtil::FastInt64Round(scale_factor * ll[0]),
                    MathUtil::FastInt64Round(scale_factor * ll[1]));
 }
 
-static S2Point ToPoint(IntLatLng const& ll, int64 scale) {
+static S2Point ToPoint(const IntLatLng& ll, int64 scale) {
   return S2LatLng::FromRadians(ll[0] * (M_PI / scale),
                                ll[1] * (M_PI / scale)).ToPoint();
 }
 
-static S2Point GetVertex(IntLatLng const& ll, int64 scale, int i) {
+static S2Point GetVertex(const IntLatLng& ll, int64 scale, int i) {
   // Return the points in CCW order starting from the lower left.
   int dlat = (i == 0 || i == 3) ? -1 : 1;
   int dlng = (i == 0 || i == 1) ? -1 : 1;
   return ToPoint(2 * ll + IntLatLng(dlat, dlng), 2 * scale);
 }
 
-static S1Angle GetMaxVertexDistance(S2Point const& p,
-                                    IntLatLng const& ll, int64 scale) {
+static S1Angle GetMaxVertexDistance(const S2Point& p,
+                                    const IntLatLng& ll, int64 scale) {
   return max(max(S1Angle(p, GetVertex(ll, scale, 0)),
                  S1Angle(p, GetVertex(ll, scale, 1))),
              max(S1Angle(p, GetVertex(ll, scale, 2)),
@@ -487,7 +487,7 @@ static double GetLatLngMinVertexSeparation(int64 old_scale, int64 scale,
   S1Angle min_snap_radius_at_scale = S1Angle::Radians(M_SQRT1_2 * M_PI / scale);
   vector<pair<double, IntLatLng>> scores;
   double scale_factor = static_cast<double>(scale) / old_scale;
-  for (IntLatLng const& parent : *best_configs) {
+  for (const IntLatLng& parent : *best_configs) {
     IntLatLng new_parent = Rescale(parent, scale_factor);
     for (int dlat0 = -7; dlat0 <= 7; ++dlat0) {
       IntLatLng ll0 = new_parent + IntLatLng(dlat0, 0);
@@ -514,7 +514,7 @@ static double GetLatLngMinVertexSeparation(int64 old_scale, int64 scale,
   best_configs->clear();
   int num_to_keep = 100;
   int num_to_print = 1;
-  for (auto const& entry : scores) {
+  for (const auto& entry : scores) {
     if (--num_to_print >= 0) {
       printf("Scale %14lld: min_vertex_sep_ratio = %.15f, %s\n",
              scale, entry.first,
@@ -546,16 +546,16 @@ struct LatLngConfig {
   int64 scale;
   IntLatLng ll0, ll1, ll2;
 
-  LatLngConfig(int64 _scale, IntLatLng const& _ll0,
-               IntLatLng const& _ll1, IntLatLng const& _ll2) :
+  LatLngConfig(int64 _scale, const IntLatLng& _ll0,
+               const IntLatLng& _ll1, const IntLatLng& _ll2) :
       scale(_scale), ll0(_ll0), ll1(_ll1), ll2(_ll2) {
   }
-  bool operator<(LatLngConfig const& other) const {
+  bool operator<(const LatLngConfig& other) const {
     DCHECK_EQ(scale, other.scale);
     return (make_pair(ll0, make_pair(ll1, ll2)) <
             make_pair(other.ll0, make_pair(other.ll1, other.ll2)));
   }
-  bool operator==(LatLngConfig const& other) const {
+  bool operator==(const LatLngConfig& other) const {
     return (ll0 == other.ll0 && ll1 == other.ll1 && ll2 == other.ll2);
   }
 };
@@ -564,7 +564,7 @@ typedef double LatLngMinEdgeSeparationFunction(int64 scale, S1Angle edge_sep,
                                                S1Angle max_snap_radius);
 
 static double GetLatLngMinEdgeSeparation(
-    char const* label, LatLngMinEdgeSeparationFunction objective,
+    const char* label, LatLngMinEdgeSeparationFunction objective,
     int64 scale, vector<LatLngConfig>* best_configs) {
   S1Angle min_snap_radius_at_scale = S1Angle::Radians(M_SQRT1_2 * M_PI / scale);
   vector<pair<double, LatLngConfig>> scores;
@@ -633,8 +633,8 @@ static double GetLatLngMinEdgeSeparation(
   int num_to_keep = google::DEBUG_MODE ? 50 : 200;
   int num_to_print = 3;
   printf("Scale %lld:\n", scale);
-  for (auto const& entry : scores) {
-    LatLngConfig const& config = entry.second;
+  for (const auto& entry : scores) {
+    const LatLngConfig& config = entry.second;
     int64 scale = config.scale;
     if (--num_to_print >= 0) {
       printf("  %s = %.15f %s %s %s\n",
@@ -652,7 +652,7 @@ static double GetLatLngMinEdgeSeparation(
 }
 
 static double GetLatLngMinEdgeSeparation(
-    char const* label, LatLngMinEdgeSeparationFunction objective) {
+    const char* label, LatLngMinEdgeSeparationFunction objective) {
   double best_score = 1e10;
   vector<LatLngConfig> best_configs;
   int64 scale = 6;  // Initially points are 30 degrees apart.

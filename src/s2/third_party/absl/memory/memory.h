@@ -13,6 +13,20 @@
 // limitations under the License.
 //
 
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 // -----------------------------------------------------------------------------
 // File: memory.h
 // -----------------------------------------------------------------------------
@@ -27,6 +41,7 @@
 #include <cstddef>
 #include <limits>
 #include <memory>
+#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -38,8 +53,8 @@ namespace absl {
 // Function Template: WrapUnique()
 // -----------------------------------------------------------------------------
 //
-// Transfers ownership of a raw pointer to a `std::unique_ptr`. The returned
-// value is a `std::unique_ptr` of deduced type.
+//  Adopts ownership from a raw pointer and transfers it to the returned
+//  `std::unique_ptr`, whose type is deduced.
 //
 // Example:
 //   X* NewX(int, int);
@@ -63,7 +78,7 @@ std::unique_ptr<T> WrapUnique(T* ptr) {
   return std::unique_ptr<T>(ptr);
 }
 
-namespace internal {
+namespace memory_internal {
 
 // Traits to select proper overload and return type for `absl::make_unique<>`.
 template <typename T>
@@ -79,7 +94,7 @@ struct MakeUniqueResult<T[N]> {
   using invalid = void;
 };
 
-}  // namespace internal
+}  // namespace memory_internal
 
 // -----------------------------------------------------------------------------
 // Function Template: make_unique<T>()
@@ -144,14 +159,9 @@ struct MakeUniqueResult<T[N]> {
 //         auto my_array = absl::make_unique<int[]>(10);
 
 // `absl::make_unique` overload for non-array types.
-// TODO(b/64762346): remove this workaround once the issue is resolved.
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wover-aligned"
-#endif
 template <typename T, typename... Args>
-typename internal::MakeUniqueResult<T>::scalar
-make_unique(Args&&... args) {
+typename memory_internal::MakeUniqueResult<T>::scalar make_unique(
+    Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
@@ -160,16 +170,15 @@ make_unique(Args&&... args) {
 // element constructor arguments. The `std::unique_ptr` will manage destructing
 // these array elements.
 template <typename T>
-typename internal::MakeUniqueResult<T>::array
-make_unique(size_t n) {
+typename memory_internal::MakeUniqueResult<T>::array make_unique(size_t n) {
   return std::unique_ptr<T>(new typename absl::remove_extent_t<T>[n]());
 }
 
 // `absl::make_unique` overload for an array T[N] of known bounds.
 // This construction will be rejected.
 template <typename T, typename... Args>
-typename internal::MakeUniqueResult<T>::invalid
-make_unique(Args&&... /* args */) = delete;
+typename memory_internal::MakeUniqueResult<T>::invalid make_unique(
+    Args&&... /* args */) = delete;
 
 
 // NOTE TO GOOGLERS:
@@ -178,8 +187,8 @@ make_unique(Args&&... /* args */) = delete;
 
 // `absl::MakeUnique` overload for non-array types.
 template <typename T, typename... Args>
-typename internal::MakeUniqueResult<T>::scalar
-MakeUnique(Args&&... args) {
+typename memory_internal::MakeUniqueResult<T>::scalar MakeUnique(
+    Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
@@ -188,30 +197,25 @@ MakeUnique(Args&&... args) {
 // element constructor arguments. The `std::unique_ptr` will manage destructing
 // these array elements.
 template <typename T>
-typename internal::MakeUniqueResult<T>::array
-MakeUnique(size_t n) {
+typename memory_internal::MakeUniqueResult<T>::array MakeUnique(size_t n) {
   return std::unique_ptr<T>(new typename absl::remove_extent_t<T>[n]());
 }
-// TODO(b/64762346): remove this workaround once the issue is resolved.
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 // `absl::MakeUnique` overload for an array T[N] of known bounds.
 // This construction will be rejected.
 template <typename T, typename... Args>
-typename internal::MakeUniqueResult<T>::invalid
-MakeUnique(Args&&... /* args */) = delete;
+typename memory_internal::MakeUniqueResult<T>::invalid MakeUnique(
+    Args&&... /* args */) = delete;
 
 // -----------------------------------------------------------------------------
 // Function Template: RawPtr()
 // -----------------------------------------------------------------------------
 //
-// Extracts the raw pointer from a pointer-like 'ptr'. `absl::RawPtr` is useful
-// within templates that need to handle a complement of raw pointers,
+// Extracts the raw pointer from a pointer-like value `ptr`. `absl::RawPtr` is
+// useful within templates that need to handle a complement of raw pointers,
 // `std::nullptr_t`, and smart pointers.
 template <typename T>
-auto RawPtr(T&& ptr) -> decltype(&*ptr) {  // NOLINT
+auto RawPtr(T&& ptr) -> decltype(&*ptr) {
   // ptr is a forwarding reference to support Ts with non-const operators.
   return (ptr != nullptr) ? &*ptr : nullptr;
 }
@@ -221,9 +225,9 @@ inline std::nullptr_t RawPtr(std::nullptr_t) { return nullptr; }
 // Function Template: ShareUniquePtr()
 // -----------------------------------------------------------------------------
 //
-// Transforms a `std::unique_ptr` rvalue into a `std::shared_ptr`. The returned
-// value is a `std::shared_ptr` of deduced type and ownership is transferred to
-// the shared pointer.
+// Adopts a `std::unique_ptr` rvalue and returns a `std::shared_ptr` of deduced
+// type. Ownership (if any) of the held value is transferred to the returned
+// shared pointer.
 //
 // Example:
 //
@@ -232,13 +236,16 @@ inline std::nullptr_t RawPtr(std::nullptr_t) { return nullptr; }
 //     CHECK_EQ(*sp, 10);
 //     CHECK(up == nullptr);
 //
-// Note that this conversion is correct even when T is an array type, although
-// the resulting shared pointer may not be very useful.
+// Note that this conversion is correct even when T is an array type, and more
+// generally it works for *any* deleter of the `unique_ptr` (single-object
+// deleter, array deleter, or any custom deleter), since the deleter is adopted
+// by the shared pointer as well. The deleter is copied (unless it is a
+// reference).
 //
 // Implements the resolution of [LWG 2415](http://wg21.link/lwg2415), by which a
 // null shared pointer does not attempt to call the deleter.
 template <typename T, typename D>
-std::shared_ptr<T> ShareUniquePtr(std::unique_ptr<T, D>&& ptr) {  // NOLINT
+std::shared_ptr<T> ShareUniquePtr(std::unique_ptr<T, D>&& ptr) {
   return ptr ? std::shared_ptr<T>(std::move(ptr)) : std::shared_ptr<T>();
 }
 
@@ -395,7 +402,7 @@ struct pointer_traits {
 
   // pointer_to:
   // Calls Ptr::pointer_to(r)
-  static pointer pointer_to(element_type& r) {  // NOLINT
+  static pointer pointer_to(element_type& r) {  // NOLINT(runtime/references)
     return Ptr::pointer_to(r);
   }
 };
@@ -412,7 +419,8 @@ struct pointer_traits<T*> {
 
   // pointer_to:
   // Calls std::addressof(r)
-  static pointer pointer_to(element_type& r) noexcept {  // NOLINT
+  static pointer pointer_to(
+      element_type& r) noexcept {  // NOLINT(runtime/references)
     return std::addressof(r);
   }
 };
@@ -511,21 +519,23 @@ struct allocator_traits {
 
   // allocate(Alloc& a, size_type n):
   // Calls a.allocate(n)
-  static pointer allocate(Alloc& a, size_type n) {  // NOLINT
+  static pointer allocate(Alloc& a,  // NOLINT(runtime/references)
+                          size_type n) {
     return a.allocate(n);
   }
 
   // allocate(Alloc& a, size_type n, const_void_pointer hint):
   // Calls a.allocate(n, hint) if possible.
   // If not possible, calls a.allocate(n)
-  static pointer allocate(Alloc& a, size_type n,  // NOLINT
+  static pointer allocate(Alloc& a, size_type n,  // NOLINT(runtime/references)
                           const_void_pointer hint) {
     return allocate_impl(0, a, n, hint);
   }
 
   // deallocate(Alloc& a, pointer p, size_type n):
   // Calls a.deallocate(p, n)
-  static void deallocate(Alloc& a, pointer p, size_type n) {  // NOLINT
+  static void deallocate(Alloc& a, pointer p,  // NOLINT(runtime/references)
+                         size_type n) {
     a.deallocate(p, n);
   }
 
@@ -534,14 +544,15 @@ struct allocator_traits {
   // If not possible, calls
   //   ::new (static_cast<void*>(p)) T(std::forward<Args>(args)...)
   template <typename T, typename... Args>
-  static void construct(Alloc& a, T* p, Args&&... args) {  // NOLINT
+  static void construct(Alloc& a, T* p,  // NOLINT(runtime/references)
+                        Args&&... args) {
     construct_impl(0, a, p, std::forward<Args>(args)...);
   }
 
   // destroy(Alloc& a, T* p):
   // Calls a.destroy(p) if possible. If not possible, calls p->~T().
   template <typename T>
-  static void destroy(Alloc& a, T* p) {  // NOLINT
+  static void destroy(Alloc& a, T* p) {  // NOLINT(runtime/references)
     destroy_impl(0, a, p);
   }
 
@@ -559,34 +570,35 @@ struct allocator_traits {
 
  private:
   template <typename A>
-  static auto allocate_impl(int, A& a, size_type n,  // NOLINT
-                            const_void_pointer hint)
+  static auto allocate_impl(int, A& a,  // NOLINT(runtime/references)
+                            size_type n, const_void_pointer hint)
       -> decltype(a.allocate(n, hint)) {
     return a.allocate(n, hint);
   }
-  static pointer allocate_impl(char, Alloc& a, size_type n,  // NOLINT
-                               const_void_pointer) {
+  static pointer allocate_impl(char, Alloc& a,  // NOLINT(runtime/references)
+                               size_type n, const_void_pointer) {
     return a.allocate(n);
   }
 
-  template <typename A, class... Args>
-  static auto construct_impl(int, A& a, Args&&... args)  // NOLINT
+  template <typename A, typename... Args>
+  static auto construct_impl(int, A& a,  // NOLINT(runtime/references)
+                             Args&&... args)
       -> decltype(a.construct(std::forward<Args>(args)...)) {
     a.construct(std::forward<Args>(args)...);
   }
 
-  template <class T, class... Args>
-  static void construct_impl(char, Alloc&, T* p, Args&&... args) {  // NOLINT
+  template <typename T, typename... Args>
+  static void construct_impl(char, Alloc&, T* p, Args&&... args) {
     ::new (static_cast<void*>(p)) T(std::forward<Args>(args)...);
   }
 
   template <typename A, typename T>
-  static auto destroy_impl(int, A& a, T* p)  // NOLINT
-      -> decltype(a.destroy(p)) {
+  static auto destroy_impl(int, A& a,  // NOLINT(runtime/references)
+                           T* p) -> decltype(a.destroy(p)) {
     a.destroy(p);
   }
   template <typename T>
-  static void destroy_impl(char, Alloc&, T* p) {  // NOLINT
+  static void destroy_impl(char, Alloc&, T* p) {
     p->~T();
   }
 

@@ -77,10 +77,10 @@ class Bits {
   static int CountOnes(uint32 n) {
 #if defined(__powerpc64__) && defined(__GNUC__)
     // Use popcount builtin if we know it is inlined and fast.
-    return PopcountWithBuiltin<uint32>(n);
+    return PopcountWithBuiltin(n);
 #elif (defined(__i386__) || defined(__x86_64__)) && defined(__POPCNT__) && \
     defined(__GNUC__)
-    return PopcountWithBuiltin<uint32>(n);
+    return PopcountWithBuiltin(n);
 #else
     n -= ((n >> 1) & 0x55555555);
     n = ((n >> 2) & 0x33333333) + (n & 0x33333333);
@@ -91,9 +91,9 @@ class Bits {
   // Count bits using sideways addition [WWG'57]. See Knuth TAOCP v4 7.1.3(59)
   static inline int CountOnes64(uint64 n) {
 #if defined(__powerpc64__) && defined(__GNUC__)
-    return PopcountWithBuiltin<uint64>(n);
+    return PopcountWithBuiltin(n);
 #elif defined(__x86_64__) && defined(__POPCNT__) && defined(__GNUC__)
-    return PopcountWithBuiltin<uint64>(n);
+    return PopcountWithBuiltin(n);
 #elif defined(_LP64)
     n -= (n >> 1) & 0x5555555555555555ULL;
     n = ((n >> 2) & 0x3333333333333333ULL) + (n & 0x3333333333333333ULL);
@@ -157,7 +157,7 @@ class Bits {
     asm("cntlzw %0,%1" : "=r"(count) : "r"(n));
     return count;
 #elif defined(__GNUC__)
-    return CountLeadingZerosWithBuiltin<uint32>(n);
+    return CountLeadingZerosWithBuiltin(n);
 #else
     return CountLeadingZeros32_Portable(n);
 #endif
@@ -171,7 +171,7 @@ class Bits {
 #elif defined(__powerpc64__) && defined(__GNUC__)
     int64 count;
     asm("cntlzd %0,%1" : "=r"(count) : "r"(n));
-    return count;
+    return static_cast<int>(count);
 #elif (defined(__i386__) || defined(__x86_64__)) && defined(__LZCNT__) && \
     defined(__GNUC__)
     return __lzcnt64(n);
@@ -184,7 +184,7 @@ class Bits {
          : "cc");              // bsr writes Z flag
     return static_cast<int>(63 ^ idx);
 #elif defined(__GNUC__)
-    return CountLeadingZerosWithBuiltin<uint64>(n);
+    return CountLeadingZerosWithBuiltin(n);
 #else
     return CountLeadingZeros64_Portable(n);
 #endif
@@ -338,10 +338,14 @@ class Bits {
   static inline UnsignedT GetLowBitsImpl(const UnsignedT n, const int index);
 
 #ifdef __GNUC__
-  template<typename UnsignedT>
-  static inline int CountLeadingZerosWithBuiltin(UnsignedT n);
-  template<typename UnsignedT>
-  static inline int PopcountWithBuiltin(UnsignedT n);
+  static int CountLeadingZerosWithBuiltin(unsigned n);
+  // NOLINTNEXTLINE(runtime/int)
+  static int CountLeadingZerosWithBuiltin(unsigned long n);
+  // NOLINTNEXTLINE(runtime/int)
+  static int CountLeadingZerosWithBuiltin(unsigned long long n);
+  static int PopcountWithBuiltin(unsigned n);
+  static int PopcountWithBuiltin(unsigned long n);       // NOLINT(runtime/int)
+  static int PopcountWithBuiltin(unsigned long long n);  // NOLINT(runtime/int)
 #if defined(__BMI__) && (defined(__i386__) || defined(__x86_64__))
   static inline uint32 GetBitsImpl(const uint32 src,
                                    const int offset,
@@ -532,6 +536,14 @@ inline uint8 Bits::ReverseBits8(unsigned char n) {
   const uint32 n_shifted = static_cast<uint32>(n) << 24;
   asm("rbit %w0, %w1" : "=r"(result) : "r"(n_shifted));
   return static_cast<uint8>(result);
+#elif defined (__powerpc64__)
+  uint64 temp = n;
+  // bpermd selects a byte's worth of bits from its second input. Grab one byte
+  // at a time, in reversed order. 0x3f is the lowest order bit of a 64-bit int.
+  // Bits 0x0 through 0x37 will all be zero, and bits 0x38 through 0x3f will
+  // hold the 8 bits from `n`.
+  uint64 result = __builtin_bpermd(0x3f3e3d3c3b3a3938, temp);
+  return static_cast<unsigned char>(result);
 #else
   n = static_cast<unsigned char>(((n >> 1) & 0x55) | ((n & 0x55) << 1));
   n = static_cast<unsigned char>(((n >> 2) & 0x33) | ((n & 0x33) << 2));
@@ -544,6 +556,13 @@ inline uint32 Bits::ReverseBits32(uint32 n) {
   uint32 result;
   asm("rbit %w0, %w1" : "=r"(result) : "r"(n));
   return result;
+#elif defined(__powerpc64__)
+  uint64 temp = n;
+  uint64 result_0 = __builtin_bpermd(0x3f3e3d3c3b3a3938, temp) << 24;
+  uint64 result_1 = __builtin_bpermd(0x3736353433323130, temp) << 16;
+  uint64 result_2 = __builtin_bpermd(0x2f2e2d2c2b2a2928, temp) << 8;
+  uint64 result_3 = __builtin_bpermd(0x2726252423222120, temp);
+  return static_cast<uint32>(result_0 | result_1 | result_2 | result_3);
 #else
   n = ((n >> 1) & 0x55555555) | ((n & 0x55555555) << 1);
   n = ((n >> 2) & 0x33333333) | ((n & 0x33333333) << 2);
@@ -557,6 +576,17 @@ inline uint64 Bits::ReverseBits64(uint64 n) {
   uint64 result;
   asm("rbit %0, %1" : "=r"(result) : "r"(n));
   return result;
+#elif defined(__powerpc64__)
+  uint64 result_lo0 = __builtin_bpermd(0x3f3e3d3c3b3a3938, n) << 56;
+  uint64 result_lo1 = __builtin_bpermd(0x3736353433323130, n) << 48;
+  uint64 result_lo2 = __builtin_bpermd(0x2f2e2d2c2b2a2928, n) << 40;
+  uint64 result_lo3 = __builtin_bpermd(0x2726252423222120, n) << 32;
+  uint64 result_hi0 = __builtin_bpermd(0x1f1e1d1c1b1a1918, n) << 24;
+  uint64 result_hi1 = __builtin_bpermd(0x1716151413121110, n) << 16;
+  uint64 result_hi2 = __builtin_bpermd(0x0f0e0d0c0b0a0908, n) << 8;
+  uint64 result_hi3 = __builtin_bpermd(0x0706050403020100, n);
+  return (result_lo0 | result_lo1 | result_lo2 | result_lo3 |
+          result_hi0 | result_hi1 | result_hi2 | result_hi3);
 #elif defined(_LP64)
   n = ((n >> 1) & 0x5555555555555555ULL) | ((n & 0x5555555555555555ULL) << 1);
   n = ((n >> 2) & 0x3333333333333333ULL) | ((n & 0x3333333333333333ULL) << 2);
@@ -672,40 +702,37 @@ struct Bits::UnsignedTypeBySize<16> {
 };
 
 #ifdef __GNUC__
-// Select a correct gcc/llvm builtin for clz based on size.
-template<typename UnsignedT>
-int Bits::CountLeadingZerosWithBuiltin(UnsignedT n) {
-  if (n == 0)   // __builtin_clz(0) is officially undefined.
-    return sizeof(n) * 8;
-  constexpr size_t size = sizeof(n);
-  static_assert(size == sizeof(unsigned)
-                || size == sizeof(unsigned long)        // NOLINT(runtime/int)
-                || size == sizeof(unsigned long long),  // NOLINT(runtime/int)
-                "No __builtin_clz for this size");
-  if (size == sizeof(unsigned)) {
-    return __builtin_clz(n);
-  } else if (size == sizeof(unsigned long)) {           // NOLINT(runtime/int)
-    return __builtin_clzl(n);
-  } else {
-    return __builtin_clzll(n);
+inline int Bits::CountLeadingZerosWithBuiltin(unsigned n) {
+  if (n == 0) {
+    return sizeof(n) * 8;  // __builtin_clz(0) is undefined.
   }
+  return __builtin_clz(n);
+}
+// NOLINTNEXTLINE(runtime/int)
+inline int Bits::CountLeadingZerosWithBuiltin(unsigned long n) {
+  if (n == 0) {
+    return sizeof(n) * 8;  // __builtin_clzl(0) is undefined.
+  }
+  return __builtin_clzl(n);
+}
+// NOLINTNEXTLINE(runtime/int)
+inline int Bits::CountLeadingZerosWithBuiltin(unsigned long long n) {
+  if (n == 0) {
+    return sizeof(n) * 8;  // __builtin_clzll(0) is undefined.
+  }
+  return __builtin_clzll(n);
 }
 
-// Select a correct gcc/llvm builtin for popcount based on size.
-template<typename UnsignedT>
-int Bits::PopcountWithBuiltin(UnsignedT n) {
-  constexpr size_t size = sizeof(n);
-  static_assert(size == sizeof(unsigned)
-                || size == sizeof(unsigned long)        // NOLINT(runtime/int)
-                || size == sizeof(unsigned long long),  // NOLINT(runtime/int)
-                "No __builtin_popcount for this size");
-  if (size == sizeof(unsigned)) {
-    return __builtin_popcount(n);
-  } else if (size == sizeof(unsigned long)) {           // NOLINT(runtime/int)
-    return __builtin_popcountl(n);
-  } else {
-    return __builtin_popcountll(n);
-  }
+inline int Bits::PopcountWithBuiltin(unsigned n) {
+  return __builtin_popcount(n);
+}
+// NOLINTNEXTLINE(runtime/int)
+inline int Bits::PopcountWithBuiltin(unsigned long n) {
+  return __builtin_popcountl(n);
+}
+// NOLINTNEXTLINE(runtime/int)
+inline int Bits::PopcountWithBuiltin(unsigned long long n) {
+  return __builtin_popcountll(n);
 }
 
 #if defined(__BMI__) && (defined(__i386__) || defined(__x86_64__))

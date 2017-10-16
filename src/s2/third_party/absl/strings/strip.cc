@@ -33,7 +33,6 @@
 #include "s2/third_party/absl/strings/strip.h"
 
 #include <algorithm>
-#include <cassert>
 #include <cstring>
 #include <string>
 

@@ -28,7 +28,7 @@ using std::vector;
 S2ShapeIndexBufferedRegion::S2ShapeIndexBufferedRegion() {
 }
 
-void S2ShapeIndexBufferedRegion::Init(S2ShapeIndexBase const* index,
+void S2ShapeIndexBufferedRegion::Init(const S2ShapeIndexBase* index,
                                       S1ChordAngle radius) {
   radius_ = radius;
   radius_successor_ = radius.Successor();
@@ -76,7 +76,7 @@ void S2ShapeIndexBufferedRegion::GetCellUnionBound(vector<S2CellId> *cellids)
   }
 }
 
-bool S2ShapeIndexBufferedRegion::Contains(S2Cell const& cell) const {
+bool S2ShapeIndexBufferedRegion::Contains(const S2Cell& cell) const {
   // To implement this method perfectly would require computing the directed
   // Hausdorff distance, which is expensive (and not currently implemented).
   // However the following heuristic is almost as good in practice and much
@@ -100,13 +100,13 @@ bool S2ShapeIndexBufferedRegion::Contains(S2Cell const& cell) const {
   return query_.IsDistanceLess(&target, radius_successor_ - cap.radius());
 }
 
-bool S2ShapeIndexBufferedRegion::MayIntersect(S2Cell const& cell) const {
+bool S2ShapeIndexBufferedRegion::MayIntersect(const S2Cell& cell) const {
   // Return true if the distance is less than or equal to "radius_".
   S2ClosestEdgeQuery::CellTarget target(cell);
   return query_.IsDistanceLess(&target, radius_successor_);
 }
 
-bool S2ShapeIndexBufferedRegion::Contains(S2Point const& p) const {
+bool S2ShapeIndexBufferedRegion::Contains(const S2Point& p) const {
   S2ClosestEdgeQuery::PointTarget target(p);
   // Return true if the distance is less than or equal to "radius_".
   return query_.IsDistanceLess(&target, radius_successor_);

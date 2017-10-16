@@ -65,45 +65,45 @@ using std::vector;
 class S2LoopTestBase : public testing::Test {
  protected:
   // The set of all loops declared below.
-  vector<S2Loop const*> all_loops;
+  vector<const S2Loop*> all_loops;
 
   // Some standard loops to use in the tests (see descriptions below).
-  unique_ptr<S2Loop const> const empty_;
-  unique_ptr<S2Loop const> const full_;
-  unique_ptr<S2Loop const> const north_hemi_;
-  unique_ptr<S2Loop const> const north_hemi3_;
-  unique_ptr<S2Loop const> const south_hemi_;
-  unique_ptr<S2Loop const> const west_hemi_;
-  unique_ptr<S2Loop const> const east_hemi_;
-  unique_ptr<S2Loop const> const near_hemi_;
-  unique_ptr<S2Loop const> const far_hemi_;
-  unique_ptr<S2Loop const> const candy_cane_;
-  unique_ptr<S2Loop const> const small_ne_cw_;
-  unique_ptr<S2Loop const> const arctic_80_;
-  unique_ptr<S2Loop const> const antarctic_80_;
-  unique_ptr<S2Loop const> const line_triangle_;
-  unique_ptr<S2Loop const> const skinny_chevron_;
-  unique_ptr<S2Loop const> const loop_a_;
-  unique_ptr<S2Loop const> const loop_b_;
-  unique_ptr<S2Loop const> const a_intersect_b_;
-  unique_ptr<S2Loop const> const a_union_b_;
-  unique_ptr<S2Loop const> const a_minus_b_;
-  unique_ptr<S2Loop const> const b_minus_a_;
-  unique_ptr<S2Loop const> const loop_c_;
-  unique_ptr<S2Loop const> const loop_d_;
-  unique_ptr<S2Loop const> const loop_e_;
-  unique_ptr<S2Loop const> const loop_f_;
-  unique_ptr<S2Loop const> const loop_g_;
-  unique_ptr<S2Loop const> const loop_h_;
-  unique_ptr<S2Loop const> const loop_i_;
-  unique_ptr<S2Loop const> snapped_loop_a_;
+  const unique_ptr<const S2Loop> empty_;
+  const unique_ptr<const S2Loop> full_;
+  const unique_ptr<const S2Loop> north_hemi_;
+  const unique_ptr<const S2Loop> north_hemi3_;
+  const unique_ptr<const S2Loop> south_hemi_;
+  const unique_ptr<const S2Loop> west_hemi_;
+  const unique_ptr<const S2Loop> east_hemi_;
+  const unique_ptr<const S2Loop> near_hemi_;
+  const unique_ptr<const S2Loop> far_hemi_;
+  const unique_ptr<const S2Loop> candy_cane_;
+  const unique_ptr<const S2Loop> small_ne_cw_;
+  const unique_ptr<const S2Loop> arctic_80_;
+  const unique_ptr<const S2Loop> antarctic_80_;
+  const unique_ptr<const S2Loop> line_triangle_;
+  const unique_ptr<const S2Loop> skinny_chevron_;
+  const unique_ptr<const S2Loop> loop_a_;
+  const unique_ptr<const S2Loop> loop_b_;
+  const unique_ptr<const S2Loop> a_intersect_b_;
+  const unique_ptr<const S2Loop> a_union_b_;
+  const unique_ptr<const S2Loop> a_minus_b_;
+  const unique_ptr<const S2Loop> b_minus_a_;
+  const unique_ptr<const S2Loop> loop_c_;
+  const unique_ptr<const S2Loop> loop_d_;
+  const unique_ptr<const S2Loop> loop_e_;
+  const unique_ptr<const S2Loop> loop_f_;
+  const unique_ptr<const S2Loop> loop_g_;
+  const unique_ptr<const S2Loop> loop_h_;
+  const unique_ptr<const S2Loop> loop_i_;
+  unique_ptr<const S2Loop> snapped_loop_a_;
 
  private:
-  unique_ptr<S2Loop const> AddLoop(string const& str) {
+  unique_ptr<const S2Loop> AddLoop(const string& str) {
     return AddLoop(s2textformat::MakeLoop(str));
   }
 
-  unique_ptr<S2Loop const> AddLoop(std::unique_ptr<S2Loop const> loop) {
+  unique_ptr<const S2Loop> AddLoop(std::unique_ptr<const S2Loop> loop) {
     all_loops.push_back(&*loop);
     return loop;
   }
@@ -225,7 +225,7 @@ class S2LoopTestBase : public testing::Test {
 
   // Wrapper function that encodes "loop" into "encoder" using the private
   // EncodeCompressed() method.
-  void TestEncodeCompressed(S2Loop const& loop, int level, Encoder* encoder) {
+  void TestEncodeCompressed(const S2Loop& loop, int level, Encoder* encoder) {
     absl::FixedArray<S2XYZFaceSiTi> points(loop.num_vertices());
     loop.GetXYZFaceSiTiVertices(points.data());
     loop.EncodeCompressed(encoder, points.data(), level);
@@ -233,13 +233,13 @@ class S2LoopTestBase : public testing::Test {
 
   // Wrapper function that decodes the contents of "encoder" into "loop" using
   // the private DecodeCompressed() method.
-  void TestDecodeCompressed(Encoder const& encoder, int level, S2Loop* loop) {
+  void TestDecodeCompressed(const Encoder& encoder, int level, S2Loop* loop) {
     Decoder decoder(encoder.base(), encoder.length());
     ASSERT_TRUE(loop->DecodeCompressed(&decoder, level));
   }
 };
 
-static S2LatLng const kRectError = S2LatLngRectBounder::MaxErrorForTests();
+static const S2LatLng kRectError = S2LatLngRectBounder::MaxErrorForTests();
 
 TEST_F(S2LoopTestBase, GetRectBound) {
   EXPECT_TRUE(empty_->GetRectBound().is_empty());
@@ -282,7 +282,7 @@ TEST_F(S2LoopTestBase, AreaConsistentWithTurningAngle) {
   // turning angle of the loop computed using GetTurnAngle().  According to
   // the Gauss-Bonnet theorem, the area of the loop should be equal to 2*Pi
   // minus its turning angle.
-  for (S2Loop const* loop : all_loops) {
+  for (const S2Loop* loop : all_loops) {
     double area = loop->GetArea();
     double gauss_area = 2 * M_PI - loop->GetTurningAngle();
     // TODO(ericv): The error bound below is much larger than it should be.
@@ -299,7 +299,7 @@ TEST_F(S2LoopTestBase, GetAreaConsistentWithSign) {
   // contain almost all points.
 
   S2Testing::Random* rnd = &S2Testing::rnd;
-  static int const kMaxVertices = 6;
+  static const int kMaxVertices = 6;
   for (int i = 0; i < 50; ++i) {
     int num_vertices = 3 + rnd->Uniform(kMaxVertices - 3 + 1);
     // Repeatedly choose N vertices that are exactly on the equator until we
@@ -357,7 +357,7 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
     // We want to position the vertices close enough together so that their
     // maximum distance from the boundary of the spherical cap is kMaxDist.
     // Thus we want fabs(atan(tan(phi) / cos(dtheta/2)) - phi) <= kMaxDist.
-    static double const kMaxDist = 1e-6;
+    static const double kMaxDist = 1e-6;
     double height = 2 * S2Testing::rnd.RandDouble();
     double phi = asin(1 - height);
     double max_dtheta = 2 * acos(tan(fabs(phi)) / tan(fabs(phi) + kMaxDist));
@@ -382,7 +382,7 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
 
 // Check that the turning angle is *identical* when the vertex order is
 // rotated, and that the sign is inverted when the vertices are reversed.
-static void CheckTurningAngleInvariants(S2Loop const& loop) {
+static void CheckTurningAngleInvariants(const S2Loop& loop) {
   double expected = loop.GetTurningAngle();
   unique_ptr<S2Loop> loop_copy(loop.Clone());
   for (int i = 0; i < loop.num_vertices(); ++i) {
@@ -418,8 +418,8 @@ TEST_F(S2LoopTestBase, GetTurningAngle) {
   // to test that the error in GetTurningAngle is linear in the number of
   // vertices even when the partial sum of the turning angles gets very large.
   // The spiral consists of two "arms" defining opposite sides of the loop.
-  int const kArmPoints = 10000;    // Number of vertices in each "arm"
-  double const kArmRadius = 0.01;  // Radius of spiral.
+  const int kArmPoints = 10000;    // Number of vertices in each "arm"
+  const double kArmRadius = 0.01;  // Radius of spiral.
   vector<S2Point> vertices(2 * kArmPoints);
   vertices[kArmPoints] = S2Point(0, 0, 1);
   for (int i = 0; i < kArmPoints; ++i) {
@@ -447,7 +447,7 @@ TEST_F(S2LoopTestBase, GetTurningAngle) {
 
 // Checks that if a loop is normalized, it doesn't contain a
 // point outside of it, and vice versa.
-static void CheckNormalizeAndContains(S2Loop const& loop) {
+static void CheckNormalizeAndContains(const S2Loop& loop) {
   S2Point p = s2textformat::MakePoint("40:40");
 
   unique_ptr<S2Loop> flip(loop.Clone());
@@ -511,9 +511,9 @@ TEST_F(S2LoopTestBase, Contains) {
       loops.push_back(make_unique<S2Loop>(loop_vertices));
       loop_vertices.clear();
     }
-    for (S2Point const& point : points) {
+    for (const S2Point& point : points) {
       int count = 0;
-      for (auto const& loop : loops) {
+      for (const auto& loop : loops) {
         if (loop->Contains(point)) ++count;
       }
       EXPECT_EQ(count, 1);
@@ -523,7 +523,7 @@ TEST_F(S2LoopTestBase, Contains) {
 
 TEST(S2Loop, ContainsMatchesCrossingSign) {
   // This test demonstrates a former incompatibility between CrossingSign()
-  // and Contains(S2Point const&).  It constructs an S2Cell-based loop L and
+  // and Contains(const S2Point&).  It constructs an S2Cell-based loop L and
   // an edge E from Origin to a0 that crosses exactly one edge of L.  Yet
   // previously, Contains() returned false for both endpoints of E.
   //
@@ -532,7 +532,7 @@ TEST(S2Loop, ContainsMatchesCrossingSign) {
   // be inside the bound of L.
 
   // Start with a cell that ends up producing the problem.
-  S2CellId const cell_id = S2CellId(S2Point(1, 1, 1)).parent(21);
+  const S2CellId cell_id = S2CellId(S2Point(1, 1, 1)).parent(21);
 
   S2Cell children[4];
   S2Cell(cell_id).Subdivide(children);
@@ -545,7 +545,7 @@ TEST(S2Loop, ContainsMatchesCrossingSign) {
     points[i] = children[i].GetCenter().Normalize();
   }
 
-  S2Loop const loop(points);
+  const S2Loop loop(points);
 
   // Get a vertex from a grandchild cell.
   // +---------------+---------------+
@@ -565,8 +565,8 @@ TEST(S2Loop, ContainsMatchesCrossingSign) {
   // | points[0]/a0  |     points[1] |
   // |               |               |
   // +---------------+---------------+
-  S2Cell const grandchild_cell(cell_id.child(0).child(2));
-  S2Point const a0 = grandchild_cell.GetVertex(0);
+  const S2Cell grandchild_cell(cell_id.child(0).child(2));
+  const S2Point a0 = grandchild_cell.GetVertex(0);
 
   // If this doesn't hold, the rest of the test is pointless.
   ASSERT_NE(points[0], a0)
@@ -590,12 +590,12 @@ TEST(S2Loop, ContainsMatchesCrossingSign) {
   EXPECT_TRUE(loop.Contains(a0));
 
   // Since a0 is inside the loop, it should be inside the bound.
-  S2LatLngRect const& bound = loop.GetRectBound();
+  const S2LatLngRect& bound = loop.GetRectBound();
   EXPECT_TRUE(bound.Contains(a0));
 }
 
 // Given a pair of loops where A contains B, check various identities.
-static void TestOneNestedPair(S2Loop const& a, S2Loop const& b) {
+static void TestOneNestedPair(const S2Loop& a, const S2Loop& b) {
   EXPECT_TRUE(a.Contains(&b));
   EXPECT_EQ(a.BoundaryEquals(&b), b.Contains(&a));
   EXPECT_EQ(!b.is_empty(), a.Intersects(&b));
@@ -603,7 +603,7 @@ static void TestOneNestedPair(S2Loop const& a, S2Loop const& b) {
 }
 
 // Given a pair of disjoint loops A and B, check various identities.
-static void TestOneDisjointPair(S2Loop const& a, S2Loop const& b) {
+static void TestOneDisjointPair(const S2Loop& a, const S2Loop& b) {
   EXPECT_FALSE(a.Intersects(&b));
   EXPECT_FALSE(b.Intersects(&a));
   EXPECT_EQ(b.is_empty(), a.Contains(&b));
@@ -611,7 +611,7 @@ static void TestOneDisjointPair(S2Loop const& a, S2Loop const& b) {
 }
 
 // Given loops A and B whose union covers the sphere, check various identities.
-static void TestOneCoveringPair(S2Loop const& a, S2Loop const& b) {
+static void TestOneCoveringPair(const S2Loop& a, const S2Loop& b) {
   EXPECT_EQ(a.is_full(), a.Contains(&b));
   EXPECT_EQ(b.is_full(), b.Contains(&a));
   unique_ptr<S2Loop> a1(a.Clone());
@@ -623,7 +623,7 @@ static void TestOneCoveringPair(S2Loop const& a, S2Loop const& b) {
 
 // Given loops A and B such that both A and its complement intersect both B
 // and its complement, check various identities.
-static void TestOneOverlappingPair(S2Loop const& a, S2Loop const& b) {
+static void TestOneOverlappingPair(const S2Loop& a, const S2Loop& b) {
   EXPECT_FALSE(a.Contains(&b));
   EXPECT_FALSE(b.Contains(&a));
   EXPECT_TRUE(a.Intersects(&b));
@@ -632,7 +632,7 @@ static void TestOneOverlappingPair(S2Loop const& a, S2Loop const& b) {
 
 // Given a pair of loops where A contains B, test various identities
 // involving A, B, and their complements.
-static void TestNestedPair(S2Loop const& a, S2Loop const& b) {
+static void TestNestedPair(const S2Loop& a, const S2Loop& b) {
   unique_ptr<S2Loop> a1(a.Clone());
   unique_ptr<S2Loop> b1(b.Clone());
   a1->Invert();
@@ -645,7 +645,7 @@ static void TestNestedPair(S2Loop const& a, S2Loop const& b) {
 
 // Given a pair of disjoint loops A and B, test various identities
 // involving A, B, and their complements.
-static void TestDisjointPair(S2Loop const& a, S2Loop const& b) {
+static void TestDisjointPair(const S2Loop& a, const S2Loop& b) {
   unique_ptr<S2Loop> a1(a.Clone());
   a1->Invert();
   TestNestedPair(*a1, b);
@@ -653,7 +653,7 @@ static void TestDisjointPair(S2Loop const& a, S2Loop const& b) {
 
 // Given loops A and B whose union covers the sphere, test various identities
 // involving A, B, and their complements.
-static void TestCoveringPair(S2Loop const& a, S2Loop const& b) {
+static void TestCoveringPair(const S2Loop& a, const S2Loop& b) {
   unique_ptr<S2Loop> b1(b.Clone());
   b1->Invert();
   TestNestedPair(a, *b1);
@@ -661,7 +661,7 @@ static void TestCoveringPair(S2Loop const& a, S2Loop const& b) {
 
 // Given loops A and B such that both A and its complement intersect both B
 // and its complement, test various identities involving these four loops.
-static void TestOverlappingPair(S2Loop const& a, S2Loop const& b) {
+static void TestOverlappingPair(const S2Loop& a, const S2Loop& b) {
   unique_ptr<S2Loop> a1(a.Clone());
   unique_ptr<S2Loop> b1(b.Clone());
   a1->Invert();
@@ -682,7 +682,7 @@ enum RelationFlags {
 // Verify the relationship between two loops A and B.  "flags" is the set of
 // RelationFlags that apply.  "shared_edge" means that the loops share at
 // least one edge (possibly reversed).
-static void TestRelationWithDesc(S2Loop const& a, S2Loop const& b,
+static void TestRelationWithDesc(const S2Loop& a, const S2Loop& b,
                                  int flags, bool shared_edge,
                                  const char* test_description) {
   SCOPED_TRACE(test_description);
@@ -938,7 +938,7 @@ TEST(S2Loop, BoundsForLoopContainment) {
   }
 }
 
-void DebugDumpCrossings(S2Loop const& loop) {
+void DebugDumpCrossings(const S2Loop& loop) {
   // This function is useful for debugging.
 
   LOG(INFO) << "Ortho(v1): " << S2::Ortho(loop.vertex(1));
@@ -987,7 +987,7 @@ void DebugDumpCrossings(S2Loop const& loop) {
   }
 }
 
-static void TestNear(char const* a_str, char const* b_str,
+static void TestNear(const char* a_str, const char* b_str,
                      S1Angle max_error, bool expected) {
   unique_ptr<S2Loop> a(s2textformat::MakeLoop(a_str));
   unique_ptr<S2Loop> b(s2textformat::MakeLoop(b_str));
@@ -1014,13 +1014,13 @@ TEST(S2Loop, BoundaryNear) {
   // greedy matching algorithm would fail on this example.
   const char* t1 = "0.1:0, 0.1:1, 0.1:2, 0.1:3, 0.1:4, 1:4, 2:4, 3:4, "
                    "2:4.1, 1:4.1, 2:4.2, 3:4.2, 4:4.2, 5:4.2";
-  char const* t2 = "0:0, 0:1, 0:2, 0:3, 0.1:2, 0.1:1, 0.2:2, 0.2:3, "
+  const char* t2 = "0:0, 0:1, 0:2, 0:3, 0.1:2, 0.1:1, 0.2:2, 0.2:3, "
                    "0.2:4, 1:4.1, 2:4, 3:4, 4:4, 5:4";
   TestNear(t1, t2, 1.5 * degree, true);
   TestNear(t1, t2, 0.5 * degree, false);
 }
 
-static void CheckIdentical(S2Loop const& loop, S2Loop const& loop2) {
+static void CheckIdentical(const S2Loop& loop, const S2Loop& loop2) {
   EXPECT_EQ(loop.depth(), loop2.depth());
   EXPECT_EQ(loop.num_vertices(), loop2.num_vertices());
   for (int i = 0; i < loop.num_vertices(); ++i) {
@@ -1034,7 +1034,7 @@ static void CheckIdentical(S2Loop const& loop, S2Loop const& loop2) {
   EXPECT_EQ(loop.GetRectBound(), loop2.GetRectBound());
 }
 
-static void TestEncodeDecode(S2Loop const& loop) {
+static void TestEncodeDecode(const S2Loop& loop) {
   Encoder encoder;
   loop.Encode(&encoder);
   Decoder decoder(encoder.base(), encoder.length());
@@ -1058,7 +1058,7 @@ TEST(S2Loop, EncodeDecode) {
   TestEncodeDecode(uninitialized);
 }
 
-static void TestEmptyFullSnapped(S2Loop const& loop, int level) {
+static void TestEmptyFullSnapped(const S2Loop& loop, int level) {
   CHECK(loop.is_empty_or_full());
   S2CellId cellid = S2CellId(loop.vertex(0)).parent(level);
   vector<S2Point> vertices = {cellid.ToPoint()};
@@ -1070,7 +1070,7 @@ static void TestEmptyFullSnapped(S2Loop const& loop, int level) {
 
 // Test converting the empty/full loops to S2LatLng representations.  (We
 // don't bother testing E5/E6/E7 because that test is less demanding.)
-static void TestEmptyFullLatLng(S2Loop const& loop) {
+static void TestEmptyFullLatLng(const S2Loop& loop) {
   CHECK(loop.is_empty_or_full());
   vector<S2Point> vertices = {S2LatLng(loop.vertex(0)).ToPoint()};
   S2Loop loop2(vertices);
@@ -1079,7 +1079,7 @@ static void TestEmptyFullLatLng(S2Loop const& loop) {
   EXPECT_TRUE(loop.BoundaryNear(loop2));
 }
 
-static void TestEmptyFullConversions(S2Loop const& loop) {
+static void TestEmptyFullConversions(const S2Loop& loop) {
   TestEmptyFullSnapped(loop, S2CellId::kMaxLevel);
   TestEmptyFullSnapped(loop, 1);  // Worst case for approximation
   TestEmptyFullSnapped(loop, 0);
@@ -1228,10 +1228,10 @@ TEST(S2Loop, IsValidDetectsInvalidLoops) {
 // Helper function for testing the distance methods.  "boundary_x" is the
 // expected result of projecting "x" onto the loop boundary.  For convenience
 // it can be set to S2Point() to indicate that (boundary_x == x).
-static void TestDistanceMethods(S2Loop const& loop, S2Point const& x,
+static void TestDistanceMethods(const S2Loop& loop, const S2Point& x,
                                 S2Point boundary_x) {
   // This error is not guaranteed by the implementation but is okay for tests.
-  S1Angle const kMaxError = S1Angle::Radians(1e-15);
+  const S1Angle kMaxError = S1Angle::Radians(1e-15);
 
   if (boundary_x == S2Point()) boundary_x = x;
   EXPECT_LE(S1Angle(boundary_x, loop.ProjectToBoundary(x)), kMaxError);

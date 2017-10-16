@@ -80,10 +80,10 @@ TEST(S2Cell, TestFaces) {
     }
   }
   // Check that edges have multiplicity 2 and vertices have multiplicity 3.
-  for (auto const& p : edge_counts) {
+  for (const auto& p : edge_counts) {
     EXPECT_EQ(2, p.second);
   }
-  for (auto const& p : vertex_counts) {
+  for (const auto& p : vertex_counts) {
     EXPECT_EQ(3, p.second);
   }
 }
@@ -106,7 +106,7 @@ struct LevelStats {
 };
 static vector<LevelStats> level_stats(S2CellId::kMaxLevel+1);
 
-static void GatherStats(S2Cell const& cell) {
+static void GatherStats(const S2Cell& cell) {
   LevelStats* s = &level_stats[cell.level()];
   double exact_area = cell.ExactArea();
   double approx_area = cell.ApproxArea();
@@ -155,7 +155,7 @@ static void GatherStats(S2Cell const& cell) {
   s->max_approx_ratio = max(approx_ratio, s->max_approx_ratio);
 }
 
-static void TestSubdivide(S2Cell const& cell) {
+static void TestSubdivide(const S2Cell& cell) {
   GatherStats(cell);
   if (cell.is_leaf()) return;
 
@@ -241,8 +241,8 @@ static void TestSubdivide(S2Cell const& cell) {
     // that we have a better chance of sampling the minimum and maximum metric
     // values.  kMaxSizeUV is the absolute value of the u- and v-coordinate
     // where the cell size at a given level is maximal.
-    double const kMaxSizeUV = 0.3964182625366691;
-    R2Point const special_uv[] = {
+    const double kMaxSizeUV = 0.3964182625366691;
+    const R2Point special_uv[] = {
       R2Point(DBL_EPSILON, DBL_EPSILON),  // Face center
       R2Point(DBL_EPSILON, 1),            // Edge midpoint
       R2Point(1, 1),                      // Face corner
@@ -250,7 +250,7 @@ static void TestSubdivide(S2Cell const& cell) {
       R2Point(DBL_EPSILON, kMaxSizeUV),   // Longest edge/diagonal
     };
     bool force_subdivide = false;
-    for (R2Point const& uv : special_uv) {
+    for (const R2Point& uv : special_uv) {
       if (children[i].GetBoundUV().Contains(uv))
         force_subdivide = true;
     }
@@ -279,11 +279,11 @@ static void TestSubdivide(S2Cell const& cell) {
 
 template <int dim>
 static void CheckMinMaxAvg(
-    char const* label, int level, double count, double abs_error,
+    const char* label, int level, double count, double abs_error,
     double min_value, double max_value, double avg_value,
-    S2::Metric<dim> const& min_metric,
-    S2::Metric<dim> const& max_metric,
-    S2::Metric<dim> const& avg_metric) {
+    const S2::Metric<dim>& min_metric,
+    const S2::Metric<dim>& max_metric,
+    const S2::Metric<dim>& avg_metric) {
 
   // All metrics are minimums, maximums, or averages of differential
   // quantities, and therefore will not be exact for cells at any finite
@@ -363,7 +363,7 @@ TEST(S2Cell, TestSubdivide) {
 
   // Now check the validity of the S2 length and area metrics.
   for (int i = 0; i <= S2CellId::kMaxLevel; ++i) {
-    LevelStats const* s = &level_stats[i];
+    const LevelStats* s = &level_stats[i];
     if (s->count == 0) continue;
 
     printf("Level %2d - metric value (error/actual : error/tolerance)\n", i);
@@ -395,9 +395,9 @@ TEST(S2Cell, TestSubdivide) {
   }
 }
 
-static int const kMaxLevel = google::DEBUG_MODE ? 6 : 11;
+static const int kMaxLevel = google::DEBUG_MODE ? 6 : 11;
 
-static void ExpandChildren1(S2Cell const& cell) {
+static void ExpandChildren1(const S2Cell& cell) {
   S2Cell children[4];
   CHECK(cell.Subdivide(children));
   if (children[0].level() < kMaxLevel) {
@@ -407,7 +407,7 @@ static void ExpandChildren1(S2Cell const& cell) {
   }
 }
 
-static void ExpandChildren2(S2Cell const& cell) {
+static void ExpandChildren2(const S2Cell& cell) {
   S2CellId id = cell.id().child_begin();
   for (int pos = 0; pos < 4; ++pos, id = id.next()) {
     S2Cell child(id);
@@ -507,8 +507,8 @@ TEST(S2CellId, AmbiguousContainsPoint) {
   EXPECT_TRUE(cell.Contains(p));
 }
 
-static S1ChordAngle GetDistanceToPointBruteForce(S2Cell const& cell,
-                                                 S2Point const& target) {
+static S1ChordAngle GetDistanceToPointBruteForce(const S2Cell& cell,
+                                                 const S2Point& target) {
   S1ChordAngle min_distance = S1ChordAngle::Infinity();
   for (int i = 0; i < 4; ++i) {
     S2::UpdateMinDistance(target, cell.GetVertex(i),
@@ -544,7 +544,7 @@ TEST(S2Cell, GetDistanceToPoint) {
   }
 }
 
-static void ChooseEdgeNearCell(S2Cell const& cell, S2Point* a, S2Point* b) {
+static void ChooseEdgeNearCell(const S2Cell& cell, S2Point* a, S2Point* b) {
   S2Cap cap = cell.GetCapBound();
   if (S2Testing::rnd.OneIn(5)) {
     // Choose a point anywhere on the sphere.
@@ -561,7 +561,7 @@ static void ChooseEdgeNearCell(S2Cell const& cell, S2Point* a, S2Point* b) {
 }
 
 static S1ChordAngle GetDistanceToEdgeBruteForce(
-    S2Cell const& cell, S2Point const& a, S2Point const& b) {
+    const S2Cell& cell, const S2Point& a, const S2Point& b) {
   if (cell.Contains(a) || cell.Contains(b)) {
     return S1ChordAngle::Zero();
   }

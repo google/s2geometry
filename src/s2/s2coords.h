@@ -116,15 +116,15 @@ namespace S2 {
 // constant is defined here so that the S2::Metric class and the conversion
 // functions below can be implemented without including s2cellid.h.  Please
 // see s2cellid.h for other useful constants and conversion functions.
-int const kMaxCellLevel = 30;
+const int kMaxCellLevel = 30;
 
 // The maximum index of a valid leaf cell plus one.  The range of valid leaf
 // cell indices is [0..kLimitIJ-1].
-int const kLimitIJ = 1 << kMaxCellLevel;  // == S2CellId::kMaxSize
+const int kLimitIJ = 1 << kMaxCellLevel;  // == S2CellId::kMaxSize
 
 // The maximum value of an si- or ti-coordinate.  The range of valid (si,ti)
 // values is [0..kMaxSiTi].
-unsigned int const kMaxSiTi = 1U << (kMaxCellLevel + 1);
+unsigned const int kMaxSiTi = 1U << (kMaxCellLevel + 1);
 
 // Convert an s- or t-value to the corresponding u- or v-value.  This is
 // a non-linear transformation from [-1,1] to [-1,1] that attempts to
@@ -157,39 +157,39 @@ unsigned int STtoSiTi(double s);
 // Convert (face, u, v) coordinates to a direction vector (not
 // necessarily unit length).
 S2Point FaceUVtoXYZ(int face, double u, double v);
-S2Point FaceUVtoXYZ(int face, R2Point const& uv);
+S2Point FaceUVtoXYZ(int face, const R2Point& uv);
 
 // If the dot product of p with the given face normal is positive,
 // set the corresponding u and v values (which may lie outside the range
 // [-1,1]) and return true.  Otherwise return false.
-bool FaceXYZtoUV(int face, S2Point const& p,
+bool FaceXYZtoUV(int face, const S2Point& p,
                         double* pu, double* pv);
-bool FaceXYZtoUV(int face, S2Point const& p, R2Point* puv);
+bool FaceXYZtoUV(int face, const S2Point& p, R2Point* puv);
 
 // Given a *valid* face for the given point p (meaning that dot product
 // of p with the face normal is positive), return the corresponding
 // u and v values (which may lie outside the range [-1,1]).
-void ValidFaceXYZtoUV(int face, S2Point const& p,
+void ValidFaceXYZtoUV(int face, const S2Point& p,
                              double* pu, double* pv);
-void ValidFaceXYZtoUV(int face, S2Point const& p, R2Point* puv);
+void ValidFaceXYZtoUV(int face, const S2Point& p, R2Point* puv);
 
 // Transform the given point P to the (u,v,w) coordinate frame of the given
 // face (where the w-axis represents the face normal).
-S2Point FaceXYZtoUVW(int face, S2Point const& p);
+S2Point FaceXYZtoUVW(int face, const S2Point& p);
 
 // Return the face containing the given direction vector.  (For points on
 // the boundary between faces, the result is arbitrary but repeatable.)
-int GetFace(S2Point const& p);
+int GetFace(const S2Point& p);
 
 // Convert a direction vector (not necessarily unit length) to
 // (face, u, v) coordinates.
-int XYZtoFaceUV(S2Point const& p, double* pu, double* pv);
-int XYZtoFaceUV(S2Point const& p, R2Point* puv);
+int XYZtoFaceUV(const S2Point& p, double* pu, double* pv);
+int XYZtoFaceUV(const S2Point& p, R2Point* puv);
 
 // Convert a direction vector (not necessarily unit length) to
 // (face, si, ti) coordinates and, if p is exactly equal to the center of a
 // cell, return the level of this cell (-1 otherwise).
-int XYZtoFaceSiTi(S2Point const& p, int* face,
+int XYZtoFaceSiTi(const S2Point& p, int* face,
                   unsigned int* si, unsigned int* ti);
 
 // Convert (face, si, ti) coordinates to a direction vector (not necessarily
@@ -355,11 +355,11 @@ inline S2Point FaceUVtoXYZ(int face, double u, double v) {
   }
 }
 
-inline S2Point FaceUVtoXYZ(int face, R2Point const& uv) {
+inline S2Point FaceUVtoXYZ(int face, const R2Point& uv) {
   return FaceUVtoXYZ(face, uv[0], uv[1]);
 }
 
-inline void ValidFaceXYZtoUV(int face, S2Point const& p,
+inline void ValidFaceXYZtoUV(int face, const S2Point& p,
                              double* pu, double* pv) {
   DCHECK_GT(p.DotProd(GetNorm(face)), 0);
   switch (face) {
@@ -372,27 +372,27 @@ inline void ValidFaceXYZtoUV(int face, S2Point const& p,
   }
 }
 
-inline void ValidFaceXYZtoUV(int face, S2Point const& p, R2Point* puv) {
+inline void ValidFaceXYZtoUV(int face, const S2Point& p, R2Point* puv) {
   ValidFaceXYZtoUV(face, p, &(*puv)[0], &(*puv)[1]);
 }
 
-inline int GetFace(S2Point const& p) {
+inline int GetFace(const S2Point& p) {
   int face = p.LargestAbsComponent();
   if (p[face] < 0) face += 3;
   return face;
 }
 
-inline int XYZtoFaceUV(S2Point const& p, double* pu, double* pv) {
+inline int XYZtoFaceUV(const S2Point& p, double* pu, double* pv) {
   int face = GetFace(p);
   ValidFaceXYZtoUV(face, p, pu, pv);
   return face;
 }
 
-inline int XYZtoFaceUV(S2Point const& p, R2Point* puv) {
+inline int XYZtoFaceUV(const S2Point& p, R2Point* puv) {
   return XYZtoFaceUV(p, &(*puv)[0], &(*puv)[1]);
 }
 
-inline bool FaceXYZtoUV(int face, S2Point const& p,
+inline bool FaceXYZtoUV(int face, const S2Point& p,
                         double* pu, double* pv) {
   if (face < 3) {
     if (p[face] <= 0) return false;
@@ -403,7 +403,7 @@ inline bool FaceXYZtoUV(int face, S2Point const& p,
   return true;
 }
 
-inline bool FaceXYZtoUV(int face, S2Point const& p, R2Point* puv) {
+inline bool FaceXYZtoUV(int face, const S2Point& p, R2Point* puv) {
   return FaceXYZtoUV(face, p, &(*puv)[0], &(*puv)[1]);
 }
 
@@ -442,7 +442,7 @@ inline S2Point GetVAxis(int face) {
 }
 
 inline S2Point GetUVWAxis(int face, int axis) {
-  double const* p = internal::kFaceUVWAxes[face][axis];
+  const double* p = internal::kFaceUVWAxes[face][axis];
   return S2Point(p[0], p[1], p[2]);
 }
 

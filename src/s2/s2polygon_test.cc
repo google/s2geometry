@@ -73,49 +73,49 @@ using std::vector;
 
 // A set of nested loops around the point 0:0 (lat:lng).
 // Every vertex of kNear0 is a vertex of kNear1.
-char const kNearPoint[] = "0:0";
-string const kNear0 = "-1:0, 0:1, 1:0, 0:-1;";
-string const kNear1 = "-1:-1, -1:0, -1:1, 0:1, 1:1, 1:0, 1:-1, 0:-1;";
-string const kNear2 = "-1:-2, -2:5, 5:-2;";
-string const kNear3 = "-2:-2, -3:6, 6:-3;";
-string const kNearHemi = "0:-90, -90:0, 0:90, 90:0;";
+const char kNearPoint[] = "0:0";
+const string kNear0 = "-1:0, 0:1, 1:0, 0:-1;";
+const string kNear1 = "-1:-1, -1:0, -1:1, 0:1, 1:1, 1:0, 1:-1, 0:-1;";
+const string kNear2 = "-1:-2, -2:5, 5:-2;";
+const string kNear3 = "-2:-2, -3:6, 6:-3;";
+const string kNearHemi = "0:-90, -90:0, 0:90, 90:0;";
 
 // A set of nested loops around the point 0:180 (lat:lng).
 // Every vertex of kFar0 and kFar2 belongs to kFar1, and all
 // the loops except kFar2 are non-convex.
-string const kFar0 = "0:179, 1:180, 0:-179, 2:-180;";
-string const kFar1 =
+const string kFar0 = "0:179, 1:180, 0:-179, 2:-180;";
+const string kFar1 =
   "0:179, -1:179, 1:180, -1:-179, 0:-179, 3:-178, 2:-180, 3:178;";
-string const kFar2 = "3:-178, 3:178, -1:179, -1:-179;";
-string const kFar3 = "-3:-178, 4:-177, 4:177, -3:178, -2:179;";
-string const kFarHemi = "0:-90, 60:90, -60:90;";
+const string kFar2 = "3:-178, 3:178, -1:179, -1:-179;";
+const string kFar3 = "-3:-178, 4:-177, 4:177, -3:178, -2:179;";
+const string kFarHemi = "0:-90, 60:90, -60:90;";
 
 // A set of nested loops around the point -90:0 (lat:lng).
-string const kSouthPoint = "-89.9999:0.001";
-string const kSouth0a = "-90:0, -89.99:0.01, -89.99:0;";
-string const kSouth0b = "-90:0, -89.99:0.03, -89.99:0.02;";
-string const kSouth0c = "-90:0, -89.99:0.05, -89.99:0.04;";
-string const kSouth1 = "-90:0, -89.9:0.1, -89.9:-0.1;";
-string const kSouth2 = "-90:0, -89.8:0.2, -89.8:-0.2;";
-string const kSouthHemi = "0:-180, 0:60, 0:-60;";
+const string kSouthPoint = "-89.9999:0.001";
+const string kSouth0a = "-90:0, -89.99:0.01, -89.99:0;";
+const string kSouth0b = "-90:0, -89.99:0.03, -89.99:0.02;";
+const string kSouth0c = "-90:0, -89.99:0.05, -89.99:0.04;";
+const string kSouth1 = "-90:0, -89.9:0.1, -89.9:-0.1;";
+const string kSouth2 = "-90:0, -89.8:0.2, -89.8:-0.2;";
+const string kSouthHemi = "0:-180, 0:60, 0:-60;";
 
 // Two different loops that surround all the Near and Far loops except
 // for the hemispheres.
-string const kNearFar1 = "-1:-9, -9:-9, -9:9, 9:9, 9:-9, 1:-9, "
+const string kNearFar1 = "-1:-9, -9:-9, -9:9, 9:9, 9:-9, 1:-9, "
                          "1:-175, 9:-175, 9:175, -9:175, -9:-175, -1:-175;";
-string const kNearFar2 = "-2:15, -2:170, -8:-175, 8:-175, "
+const string kNearFar2 = "-2:15, -2:170, -8:-175, 8:-175, "
                          "2:170, 2:15, 8:-4, -8:-4;";
 
 // Loops that result from intersection of other loops.
-string const kFarHSouthH = "0:-180, 0:90, -60:90, 0:-90;";
+const string kFarHSouthH = "0:-180, 0:90, -60:90, 0:-90;";
 
 // Rectangles that form a cross, with only shared vertices, no crossing edges.
 // Optional holes outside the intersecting region.
-string const kCross1 = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1;";
-string const kCross1SideHole = "-1.5:0.5, -1.2:0.5, -1.2:-0.5, -1.5:-0.5;";
-string const kCross2 = "1:-2, 1:-1, 1:1, 1:2, -1:2, -1:1, -1:-1, -1:-2;";
-string const kCross2SideHole = "0.5:-1.5, 0.5:-1.2, -0.5:-1.2, -0.5:-1.5;";
-string const kCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;";
+const string kCross1 = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1;";
+const string kCross1SideHole = "-1.5:0.5, -1.2:0.5, -1.2:-0.5, -1.5:-0.5;";
+const string kCross2 = "1:-2, 1:-1, 1:1, 1:2, -1:2, -1:1, -1:-1, -1:-2;";
+const string kCross2SideHole = "0.5:-1.5, 0.5:-1.2, -0.5:-1.2, -0.5:-1.5;";
+const string kCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;";
 
 // Two rectangles that intersect, but no edges cross and there's always
 // local containment (rather than crossing) at each shared vertex.
@@ -123,18 +123,18 @@ string const kCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;";
 //      +---+---+---+
 //      | A | B | C |
 //      +---+---+---+
-string const kOverlap1 = "0:1, 1:1, 2:1, 2:0, 1:0, 0:0;";
-string const kOverlap1SideHole = "0.2:0.8, 0.8:0.8, 0.8:0.2, 0.2:0.2;";
-string const kOverlap2 = "1:1, 2:1, 3:1, 3:0, 2:0, 1:0;";
-string const kOverlap2SideHole = "2.2:0.8, 2.8:0.8, 2.8:0.2, 2.2:0.2;";
-string const kOverlapCenterHole = "1.2:0.8, 1.8:0.8, 1.8:0.2, 1.2:0.2;";
+const string kOverlap1 = "0:1, 1:1, 2:1, 2:0, 1:0, 0:0;";
+const string kOverlap1SideHole = "0.2:0.8, 0.8:0.8, 0.8:0.2, 0.2:0.2;";
+const string kOverlap2 = "1:1, 2:1, 3:1, 3:0, 2:0, 1:0;";
+const string kOverlap2SideHole = "2.2:0.8, 2.8:0.8, 2.8:0.2, 2.2:0.2;";
+const string kOverlapCenterHole = "1.2:0.8, 1.8:0.8, 1.8:0.2, 1.2:0.2;";
 
 // An empty polygon.
-string const kEmpty = "";
+const string kEmpty = "";
 // By symmetry, the intersection of the two polygons has almost half the area
 // of either polygon.
-string const kOverlap3 = "-10:10, 0:10, 0:-10, -10:-10, -10:0";
-string const kOverlap4 = "-10:0, 10:0, 10:-10, -10:-10";
+const string kOverlap3 = "-10:10, 0:10, 0:-10, -10:-10, -10:0";
+const string kOverlap4 = "-10:0, 10:0, 10:-10, -10:-10";
 
 class S2PolygonTestBase : public testing::Test {
  public:
@@ -142,51 +142,51 @@ class S2PolygonTestBase : public testing::Test {
 
  protected:
   // Some standard polygons to use in the tests.
-  unique_ptr<S2Polygon const> const empty_;
-  unique_ptr<S2Polygon const> const full_;
-  unique_ptr<S2Polygon const> const near_0_;
-  unique_ptr<S2Polygon const> const near_10_;
-  unique_ptr<S2Polygon const> const near_30_;
-  unique_ptr<S2Polygon const> const near_32_;
-  unique_ptr<S2Polygon const> const near_3210_;
-  unique_ptr<S2Polygon const> const near_H3210_;
+  const unique_ptr<const S2Polygon> empty_;
+  const unique_ptr<const S2Polygon> full_;
+  const unique_ptr<const S2Polygon> near_0_;
+  const unique_ptr<const S2Polygon> near_10_;
+  const unique_ptr<const S2Polygon> near_30_;
+  const unique_ptr<const S2Polygon> near_32_;
+  const unique_ptr<const S2Polygon> near_3210_;
+  const unique_ptr<const S2Polygon> near_H3210_;
 
-  unique_ptr<S2Polygon const> const far_10_;
-  unique_ptr<S2Polygon const> const far_21_;
-  unique_ptr<S2Polygon const> const far_321_;
-  unique_ptr<S2Polygon const> const far_H20_;
-  unique_ptr<S2Polygon const> const far_H3210_;
+  const unique_ptr<const S2Polygon> far_10_;
+  const unique_ptr<const S2Polygon> far_21_;
+  const unique_ptr<const S2Polygon> far_321_;
+  const unique_ptr<const S2Polygon> far_H20_;
+  const unique_ptr<const S2Polygon> far_H3210_;
 
-  unique_ptr<S2Polygon const> const south_0ab_;
-  unique_ptr<S2Polygon const> const south_2_;
-  unique_ptr<S2Polygon const> const south_210b_;
-  unique_ptr<S2Polygon const> const south_H21_;
-  unique_ptr<S2Polygon const> const south_H20abc_;
+  const unique_ptr<const S2Polygon> south_0ab_;
+  const unique_ptr<const S2Polygon> south_2_;
+  const unique_ptr<const S2Polygon> south_210b_;
+  const unique_ptr<const S2Polygon> south_H21_;
+  const unique_ptr<const S2Polygon> south_H20abc_;
 
-  unique_ptr<S2Polygon const> const nf1_n10_f2_s10abc_;
+  const unique_ptr<const S2Polygon> nf1_n10_f2_s10abc_;
 
-  unique_ptr<S2Polygon const> const nf2_n2_f210_s210ab_;
+  const unique_ptr<const S2Polygon> nf2_n2_f210_s210ab_;
 
-  unique_ptr<S2Polygon const> const f32_n0_;
-  unique_ptr<S2Polygon const> const n32_s0b_;
+  const unique_ptr<const S2Polygon> f32_n0_;
+  const unique_ptr<const S2Polygon> n32_s0b_;
 
-  unique_ptr<S2Polygon const> const cross1_;
-  unique_ptr<S2Polygon const> const cross1_side_hole_;
-  unique_ptr<S2Polygon const> const cross1_center_hole_;
-  unique_ptr<S2Polygon const> const cross2_;
-  unique_ptr<S2Polygon const> const cross2_side_hole_;
-  unique_ptr<S2Polygon const> const cross2_center_hole_;
+  const unique_ptr<const S2Polygon> cross1_;
+  const unique_ptr<const S2Polygon> cross1_side_hole_;
+  const unique_ptr<const S2Polygon> cross1_center_hole_;
+  const unique_ptr<const S2Polygon> cross2_;
+  const unique_ptr<const S2Polygon> cross2_side_hole_;
+  const unique_ptr<const S2Polygon> cross2_center_hole_;
 
-  unique_ptr<S2Polygon const> const overlap1_;
-  unique_ptr<S2Polygon const> const overlap1_side_hole_;
-  unique_ptr<S2Polygon const> const overlap1_center_hole_;
-  unique_ptr<S2Polygon const> const overlap2_;
-  unique_ptr<S2Polygon const> const overlap2_side_hole_;
-  unique_ptr<S2Polygon const> const overlap2_center_hole_;
+  const unique_ptr<const S2Polygon> overlap1_;
+  const unique_ptr<const S2Polygon> overlap1_side_hole_;
+  const unique_ptr<const S2Polygon> overlap1_center_hole_;
+  const unique_ptr<const S2Polygon> overlap2_;
+  const unique_ptr<const S2Polygon> overlap2_side_hole_;
+  const unique_ptr<const S2Polygon> overlap2_center_hole_;
 
-  unique_ptr<S2Polygon const> const far_H_;
-  unique_ptr<S2Polygon const> const south_H_;
-  unique_ptr<S2Polygon const> const far_H_south_H_;
+  const unique_ptr<const S2Polygon> far_H_;
+  const unique_ptr<const S2Polygon> south_H_;
+  const unique_ptr<const S2Polygon> far_H_south_H_;
 };
 
 static bool TestEncodeDecode(const S2Polygon* src) {
@@ -198,7 +198,7 @@ static bool TestEncodeDecode(const S2Polygon* src) {
   return src->Equals(&dst);
 }
 
-static unique_ptr<S2Polygon> MakePolygon(string const& str) {
+static unique_ptr<S2Polygon> MakePolygon(const string& str) {
   unique_ptr<S2Polygon> polygon(s2textformat::MakeVerbatimPolygon(str));
 
   // Check that InitToSnapped() is idempotent.
@@ -212,7 +212,7 @@ static unique_ptr<S2Polygon> MakePolygon(string const& str) {
   return polygon;
 }
 
-static void CheckContains(string const& a_str, string const& b_str) {
+static void CheckContains(const string& a_str, const string& b_str) {
   unique_ptr<S2Polygon> a = MakePolygon(a_str);
   unique_ptr<S2Polygon> b = MakePolygon(b_str);
   EXPECT_TRUE(a->Contains(b.get()));
@@ -220,7 +220,7 @@ static void CheckContains(string const& a_str, string const& b_str) {
   EXPECT_FALSE(a->ApproxDisjoint(b.get(), S1Angle::Radians(1e-15)));
 }
 
-static void CheckContainsPoint(string const& a_str, string const& b_str) {
+static void CheckContainsPoint(const string& a_str, const string& b_str) {
   unique_ptr<S2Polygon> a(s2textformat::MakePolygon(a_str));
   EXPECT_TRUE(a->Contains(s2textformat::MakePoint(b_str)))
     << " " << a_str << " did not contain " << b_str;
@@ -333,7 +333,7 @@ S2PolygonTestBase::S2PolygonTestBase()
     far_H_south_H_(MakePolygon(kFarHSouthH)) {
 }
 
-static void CheckEqual(S2Polygon const& a, S2Polygon const& b,
+static void CheckEqual(const S2Polygon& a, const S2Polygon& b,
                        S1Angle max_error = S1Angle::Zero()) {
   if (a.BoundaryApproxEquals(b, max_error)) return;
   S2Builder builder((S2Builder::Options()));
@@ -352,7 +352,7 @@ static void CheckEqual(S2Polygon const& a, S2Polygon const& b,
       << "\nb2: " << s2textformat::ToString(b2);
 }
 
-static void CheckComplementary(S2Polygon const& a, S2Polygon const& b) {
+static void CheckComplementary(const S2Polygon& a, const S2Polygon& b) {
   S2Polygon b1;
   b1.InitToComplement(&b);
   CheckEqual(a, b1);
@@ -368,7 +368,7 @@ TEST(S2Polygon, TestApproxContainsAndDisjoint) {
   //
   // We repeat the test many times and expect that some fraction of the exact
   // tests should fail, while all of the approximate test should succeed.
-  int const kIters = 1000;
+  const int kIters = 1000;
   int exact_contains = 0, exact_disjoint = 0;
   S2Testing::rnd.Reset(FLAGS_s2_random_seed);
   for (int iter = 0; iter < kIters; ++iter) {
@@ -424,7 +424,7 @@ TEST(S2Polygon, TestApproxContainsAndDisjoint) {
 
 // Given a pair of polygons where A contains B, check that various identities
 // involving union, intersection, and difference operations hold true.
-static void TestOneNestedPair(S2Polygon const& a, S2Polygon const& b) {
+static void TestOneNestedPair(const S2Polygon& a, const S2Polygon& b) {
   EXPECT_TRUE(a.Contains(&b));
   EXPECT_EQ(!b.is_empty(), a.Intersects(&b));
   EXPECT_EQ(!b.is_empty(), b.Intersects(&a));
@@ -446,7 +446,7 @@ static void TestOneNestedPair(S2Polygon const& a, S2Polygon const& b) {
 
 // Given a pair of disjoint polygons A and B, check that various identities
 // involving union, intersection, and difference operations hold true.
-static void TestOneDisjointPair(S2Polygon const& a, S2Polygon const& b) {
+static void TestOneDisjointPair(const S2Polygon& a, const S2Polygon& b) {
   EXPECT_FALSE(a.Intersects(&b));
   EXPECT_FALSE(b.Intersects(&a));
   EXPECT_EQ(b.is_empty(), a.Contains(&b));
@@ -478,7 +478,7 @@ static void TestOneDisjointPair(S2Polygon const& a, S2Polygon const& b) {
 
 // Given polygons A and B whose union covers the sphere, check that various
 // identities involving union, intersection, and difference hold true.
-static void TestOneCoveringPair(S2Polygon const& a, S2Polygon const& b) {
+static void TestOneCoveringPair(const S2Polygon& a, const S2Polygon& b) {
   EXPECT_EQ(a.is_full(), a.Contains(&b));
   EXPECT_EQ(b.is_full(), b.Contains(&a));
 
@@ -490,7 +490,7 @@ static void TestOneCoveringPair(S2Polygon const& a, S2Polygon const& b) {
 // Given polygons A and B such that both A and its complement intersect both B
 // and its complement, check that various identities involving union,
 // intersection, and difference hold true.
-static void TestOneOverlappingPair(S2Polygon const& a, S2Polygon const& b) {
+static void TestOneOverlappingPair(const S2Polygon& a, const S2Polygon& b) {
   EXPECT_FALSE(a.Contains(&b));
   EXPECT_FALSE(b.Contains(&a));
   EXPECT_TRUE(a.Intersects(&b));
@@ -513,7 +513,7 @@ static void TestOneOverlappingPair(S2Polygon const& a, S2Polygon const& b) {
 
 // Given a pair of polygons where A contains B, test various identities
 // involving A, B, and their complements.
-static void TestNestedPair(S2Polygon const& a, S2Polygon const& b) {
+static void TestNestedPair(const S2Polygon& a, const S2Polygon& b) {
   S2Polygon a1, b1;
   a1.InitToComplement(&a);
   b1.InitToComplement(&b);
@@ -526,7 +526,7 @@ static void TestNestedPair(S2Polygon const& a, S2Polygon const& b) {
 
 // Given a pair of disjoint polygons A and B, test various identities
 // involving A, B, and their complements.
-static void TestDisjointPair(S2Polygon const& a, S2Polygon const& b) {
+static void TestDisjointPair(const S2Polygon& a, const S2Polygon& b) {
   S2Polygon a1, b1;
   a1.InitToComplement(&a);
   b1.InitToComplement(&b);
@@ -539,7 +539,7 @@ static void TestDisjointPair(S2Polygon const& a, S2Polygon const& b) {
 
 // Given polygons A and B such that both A and its complement intersect both B
 // and its complement, test various identities involving these four polygons.
-static void TestOverlappingPair(S2Polygon const& a, S2Polygon const& b) {
+static void TestOverlappingPair(const S2Polygon& a, const S2Polygon& b) {
   S2Polygon a1, b1;
   a1.InitToComplement(&a);
   b1.InitToComplement(&b);
@@ -551,8 +551,8 @@ static void TestOverlappingPair(S2Polygon const& a, S2Polygon const& b) {
 }
 
 // "a1" is the complement of "a", and "b1" is the complement of "b".
-static void TestOneComplementPair(S2Polygon const& a, S2Polygon const& a1,
-                                  S2Polygon const& b, S2Polygon const& b1) {
+static void TestOneComplementPair(const S2Polygon& a, const S2Polygon& a1,
+                                  const S2Polygon& b, const S2Polygon& b1) {
   // Check DeMorgan's Law and that subtraction is the same as intersection
   // with the complement.  This function is called multiple times in order to
   // test the various combinations of complements.
@@ -568,7 +568,7 @@ static void TestOneComplementPair(S2Polygon const& a, S2Polygon const& a1,
 
 // Test identities that should hold for any pair of polygons A, B and their
 // complements.
-static void TestComplements(S2Polygon const& a, S2Polygon const& b) {
+static void TestComplements(const S2Polygon& a, const S2Polygon& b) {
   S2Polygon a1, b1;
   a1.InitToComplement(&a);
   b1.InitToComplement(&b);
@@ -586,7 +586,7 @@ static void TestComplements(S2Polygon const& a, S2Polygon const& b) {
   CheckEqual(a_xor_b1, a1_xor_b);
 }
 
-static void TestDestructiveUnion(S2Polygon const& a, S2Polygon const& b) {
+static void TestDestructiveUnion(const S2Polygon& a, const S2Polygon& b) {
   S2Polygon c;
   c.InitToUnion(&a, &b);
   vector<unique_ptr<S2Polygon>> polygons;
@@ -597,7 +597,7 @@ static void TestDestructiveUnion(S2Polygon const& a, S2Polygon const& b) {
   CheckEqual(c, *c_destructive);
 }
 
-static void TestRelationWithDesc(S2Polygon const& a, S2Polygon const& b,
+static void TestRelationWithDesc(const S2Polygon& a, const S2Polygon& b,
                                  bool contains, bool contained,
                                  bool intersects, const char* description) {
   SCOPED_TRACE(description);
@@ -706,12 +706,12 @@ TEST_F(S2PolygonTestBase, EmptyAndFull) {
 }
 
 struct TestCase {
-  char const* a;
-  char const* b;
-  char const* a_and_b;
-  char const* a_or_b;
-  char const* a_minus_b;
-  char const* a_xor_b;
+  const char* a;
+  const char* b;
+  const char* a_and_b;
+  const char* a_or_b;
+  const char* a_minus_b;
+  const char* a_xor_b;
 };
 
 TestCase test_cases[] = {
@@ -819,7 +819,7 @@ TEST_F(S2PolygonTestBase, Operations) {
   CheckEqual(far_south, *far_H_south_H_, S1Angle::Radians(1e-15));
 
   int i = 0;
-  for (TestCase const& test : test_cases) {
+  for (const TestCase& test : test_cases) {
     SCOPED_TRACE(StringPrintf("Polygon operation test case %d", i++));
     unique_ptr<S2Polygon> a(MakePolygon(test.a));
     unique_ptr<S2Polygon> b(MakePolygon(test.b));
@@ -841,7 +841,7 @@ TEST_F(S2PolygonTestBase, Operations) {
     // If "p" and "t" are converted to degrees, the following error bound is
     // valid as long as (p * t^2 < 150).
 
-    static S1Angle const kMaxError = S1Angle::Radians(1e-4);
+    static const S1Angle kMaxError = S1Angle::Radians(1e-4);
 
     S2Polygon a_and_b, a_or_b, a_minus_b, a_xor_b;
     a_and_b.InitToIntersection(a.get(), b.get());
@@ -887,7 +887,7 @@ TEST(S2Polygon, LoopPointers) {
   loops.emplace_back(s2textformat::MakeLoop("-1:-1, -9:-1, -9:-9, -1:-9"));
   loops.emplace_back(s2textformat::MakeLoop("-5:-5, -6:-5, -6:-6, -5:-6"));
 
-  std::set<S2Loop const*> loops_raw_ptrs;
+  std::set<const S2Loop*> loops_raw_ptrs;
   for (auto& loop : loops) {
     loops_raw_ptrs.insert(loop.get());
   }
@@ -901,9 +901,9 @@ TEST(S2Polygon, LoopPointers) {
 }
 
 static vector<unique_ptr<S2Loop>> MakeLoops(
-    vector<vector<S2Point>> const& loop_vertices) {
+    const vector<vector<S2Point>>& loop_vertices) {
   vector<unique_ptr<S2Loop>> result;
-  for (auto const& vertices : loop_vertices) {
+  for (const auto& vertices : loop_vertices) {
     result.emplace_back(new S2Loop(vertices));
     S2Error error;
     EXPECT_FALSE(result.back()->FindValidationError(&error))
@@ -1576,7 +1576,7 @@ TEST(S2Polygon, Bug14) {
       << "\nS2Polygon: " << s2textformat::ToString(b);
 }
 
-static void PolylineIntersectionSharedEdgeTest(S2Polygon const& p,
+static void PolylineIntersectionSharedEdgeTest(const S2Polygon& p,
                                                int start_vertex,
                                                int direction) {
   SCOPED_TRACE(StringPrintf("Polyline intersection shared edge test "
@@ -1621,7 +1621,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
   }
 
   // See comments in TestOperations about the vlue of this constant.
-  static S1Angle const kMaxError = S1Angle::Radians(1e-4);
+  static const S1Angle kMaxError = S1Angle::Radians(1e-4);
 
   // This duplicates some of the tests in TestOperations by
   // converting the outline of polygon A to a polyline then intersecting
@@ -1629,7 +1629,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
   // it with A. It then feeds all of the results into a polygon builder and
   // tests that the output is equal to doing an intersection between A and B.
   int i = 0;
-  for (TestCase const& test : test_cases) {
+  for (const TestCase& test : test_cases) {
     SCOPED_TRACE(StringPrintf("Polyline intersection test case %d", i++));
     unique_ptr<S2Polygon> a(MakePolygon(test.a));
     unique_ptr<S2Polygon> b(MakePolygon(test.b));
@@ -1663,7 +1663,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
     S2Builder builder((S2Builder::Options()));
     S2Polygon a_and_b;
     builder.StartLayer(make_unique<s2builderutil::S2PolygonLayer>(&a_and_b));
-    for (auto const& polyline : polylines) {
+    for (const auto& polyline : polylines) {
       builder.AddPolyline(*polyline);
     }
 
@@ -1673,8 +1673,8 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
   }
 }
 
-static void CheckCoveringIsConservative(S2Polygon const& polygon,
-                                        vector<S2CellId> const& cells) {
+static void CheckCoveringIsConservative(const S2Polygon& polygon,
+                                        const vector<S2CellId>& cells) {
   // Check that Contains(S2Cell) and MayIntersect(S2Cell) are implemented
   // conservatively, by comparing against the Contains/Intersect result with
   // the "cell polygon" defined by the four cell vertices.  Please note that
@@ -1710,7 +1710,7 @@ static unique_ptr<S2Polygon> ChoosePiece(
   return result;
 }
 
-static void SplitAndAssemble(S2Polygon const& polygon) {
+static void SplitAndAssemble(const S2Polygon& polygon) {
   // Normalize the polygon's loop structure by rebuilding it with S2Builder.
   S2Builder builder((S2Builder::Options()));
   S2Polygon expected;
@@ -1720,7 +1720,7 @@ static void SplitAndAssemble(S2Polygon const& polygon) {
   S2Error error;
   ASSERT_TRUE(builder.Build(&error)) << error.text();
 
-  for (int iter = 0; iter < (google::DEBUG_MODE ? 3 : 20); ++iter) {
+  for (int iter = 0; iter < (google::DEBUG_MODE ? 3 : 10); ++iter) {
     S2RegionCoverer coverer;
     // Compute the minimum level such that the polygon's bounding
     // cap is guaranteed to be cut.
@@ -2137,10 +2137,10 @@ TEST(S2PolygonTest, Project) {
 // Helper function for testing the distance methods.  "boundary_x" is the
 // expected result of projecting "x" onto the polygon boundary.  For
 // convenience it can be set to S2Point() to indicate that (boundary_x == x).
-static void TestDistanceMethods(S2Polygon const& polygon, S2Point const& x,
+static void TestDistanceMethods(const S2Polygon& polygon, const S2Point& x,
                                 S2Point boundary_x) {
   // This error is not guaranteed by the implementation but is okay for tests.
-  S1Angle const kMaxError = S1Angle::Radians(1e-15);
+  const S1Angle kMaxError = S1Angle::Radians(1e-15);
 
   if (boundary_x == S2Point()) boundary_x = x;
   EXPECT_LE(S1Angle(boundary_x, polygon.ProjectToBoundary(x)), kMaxError);
@@ -2177,7 +2177,7 @@ TEST_F(S2PolygonTestBase, GetDistance) {
 
   // All points on the boundary of the polygon should be at distance zero.
   for (int i = 0; i < nested->num_loops(); i++) {
-    S2Loop const* loop = nested->loop(i);
+    const S2Loop* loop = nested->loop(i);
     for (int j = 0; j < loop->num_vertices(); j++) {
       // A vertex.
       TestDistanceMethods(*nested, loop->vertex(j), S2Point());
@@ -2249,7 +2249,7 @@ class IsValidTest : public testing::Test {
     vloops_.clear();
   }
 
-  void CheckInvalid(string const& snippet) {
+  void CheckInvalid(const string& snippet) {
     vector<unique_ptr<S2Loop>> loops;
     for (vector<S2Point>* vloop : vloops_) {
       loops.push_back(make_unique<S2Loop>(*vloop, S2Debug::DISABLE));
@@ -2271,7 +2271,7 @@ class IsValidTest : public testing::Test {
   }
 
  protected:
-  static int const kIters = 100;
+  static const int kIters = 100;
 
   bool init_oriented_;
   void (*modify_polygon_hook_)(S2Polygon*);
@@ -2489,7 +2489,7 @@ TEST_F(IsValidTest, FuzzTest) {
 
 // Returns the diameter of a loop (maximum distance between any two
 // points in the loop).
-S1Angle LoopDiameter(S2Loop const& loop) {
+S1Angle LoopDiameter(const S2Loop& loop) {
   S1Angle diameter;
   for (int i = 0; i < loop.num_vertices(); ++i) {
     S2Point test_point = loop.vertex(i);
@@ -2508,13 +2508,13 @@ S1Angle LoopDiameter(S2Loop const& loop) {
 //
 // Doesn't consider loops from poly_a that have diameter less than min_diameter
 // in degrees.
-double MaximumDistanceInDegrees(S2Polygon const& poly_a,
-                                S2Polygon const& poly_b,
+double MaximumDistanceInDegrees(const S2Polygon& poly_a,
+                                const S2Polygon& poly_b,
                                 double min_diameter_in_degrees) {
   double min_distance = 360;
   bool has_big_loops = false;
   for (int l = 0; l < poly_a.num_loops(); ++l) {
-    S2Loop const* a_loop = poly_a.loop(l);
+    const S2Loop* a_loop = poly_a.loop(l);
     if (LoopDiameter(*a_loop).degrees() <= min_diameter_in_degrees) {
       continue;
     }
@@ -2544,7 +2544,7 @@ class S2PolygonSimplifierTest : public ::testing::Test {
                                      S1Angle::Degrees(tolerance_in_degrees)));
   }
 
-  void SetInput(string const& poly, double tolerance_in_degrees) {
+  void SetInput(const string& poly, double tolerance_in_degrees) {
     SetInput(s2textformat::MakePolygon(poly), tolerance_in_degrees);
   }
 
@@ -2624,13 +2624,13 @@ TEST_F(S2PolygonSimplifierTest, EdgesOverlap) {
 // coordinates relative to a cell. The loop "0:0, 1:0, 1:1, 0:1" is
 // counter-clockwise.
 unique_ptr<S2Polygon> MakeCellPolygon(
-    const S2Cell& cell, vector<const char *> const& strs) {
+    const S2Cell& cell, const vector<const char *>& strs) {
   vector<unique_ptr<S2Loop>> loops;
   for (auto str : strs) {
     vector<S2LatLng> points = s2textformat::ParseLatLngs(str);
     vector<S2Point> loop_vertices;
     R2Rect uv = cell.GetBoundUV();
-    for (S2LatLng const& p : points) {
+    for (const S2LatLng& p : points) {
       double u = p.lat().degrees(), v = p.lng().degrees();
       loop_vertices.push_back(
           S2::FaceUVtoXYZ(cell.face(),
@@ -2887,14 +2887,14 @@ TEST_F(S2PolygonTestBase, EmptyPolygonShape) {
   EXPECT_EQ(0, shape.num_chains());
 }
 
-void TestPolygonShape(S2Polygon const& polygon) {
+void TestPolygonShape(const S2Polygon& polygon) {
   DCHECK(!polygon.is_full());
   S2Polygon::Shape shape(&polygon);
   EXPECT_EQ(&polygon, shape.polygon());
   EXPECT_EQ(polygon.num_vertices(), shape.num_edges());
   EXPECT_EQ(polygon.num_loops(), shape.num_chains());
   for (int e = 0, i = 0; i < polygon.num_loops(); ++i) {
-    S2Loop const* loop_i = polygon.loop(i);
+    const S2Loop* loop_i = polygon.loop(i);
     EXPECT_EQ(e, shape.chain(i).start);
     EXPECT_EQ(loop_i->num_vertices(), shape.chain(i).length);
     for (int j = 0; j < loop_i->num_vertices(); ++j, ++e) {
@@ -2918,8 +2918,8 @@ TEST_F(S2PolygonTestBase, SeveralLoopPolygonShape) {
 }
 
 TEST(S2Polygon, ManyLoopPolygonShape) {
-  int const kNumLoops = 100;
-  int const kNumVerticesPerLoop = 6;
+  const int kNumLoops = 100;
+  const int kNumVerticesPerLoop = 6;
   S2Polygon polygon;
   S2Testing::ConcentricLoopsPolygon(S2Point(1, 0, 0), kNumLoops,
                                     kNumVerticesPerLoop, &polygon);

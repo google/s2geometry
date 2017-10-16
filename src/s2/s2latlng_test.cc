@@ -125,7 +125,7 @@ TEST(S2LatLng, TestToString) {
     {-100, -710, -90, 10},
   };
   int i = 0;
-  for (auto const& v : values) {
+  for (const auto& v : values) {
     SCOPED_TRACE(StringPrintf("Iteration %d", i++));
     S2LatLng p = S2LatLng::FromDegrees(v.lat, v.lng);
     string output;

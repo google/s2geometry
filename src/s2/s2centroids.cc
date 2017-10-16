@@ -23,13 +23,13 @@
 
 namespace S2 {
 
-S2Point PlanarCentroid(S2Point const& a, S2Point const& b,
-                       S2Point const& c) {
+S2Point PlanarCentroid(const S2Point& a, const S2Point& b,
+                       const S2Point& c) {
   return (1./3) * (a + b + c);
 }
 
-S2Point TrueCentroid(S2Point const& a, S2Point const& b,
-                     S2Point const& c) {
+S2Point TrueCentroid(const S2Point& a, const S2Point& b,
+                     const S2Point& c) {
   DCHECK(IsUnitLength(a));
   DCHECK(IsUnitLength(b));
   DCHECK(IsUnitLength(c));

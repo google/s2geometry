@@ -15,27 +15,15 @@
 
 // Author: ericv@google.com (Eric Veach)
 //
-// This file contains various subclasses of S2Shape:
-//
-//  - LaxLoop: like S2Loop::Shape but allows duplicate vertices & edges,
-//             more compact representation, faster to initialize.
-//  - LaxPolygon: like S2Polygon::Shape but allows duplicate vertices & edges,
-//                more compact representation, faster to initialize.
-//  - LaxPolyline: like S2Polyline::Shape but slightly more compact.
-//  - ClosedLaxPolyline: like LaxPolyline but joins last vertex to first.
-//  - VertexIdLaxLoop: like LaxLoop, but vertices are specified as indices
-//                     into a vertex array.
-//  - EdgeVectorShape: represents an arbitrary collection of edges.
-//
-// It also contains miscellaneous S2ShapeIndex utility functions and classes:
+// This file contains miscellaneous S2ShapeIndex utility functions and classes:
 //
 //  - RangeIterator: useful for merging two or more S2ShapeIndexes.
+//  - ShapeEdgeId: represents a (shape_id, edge_id) pair.
+//  - ShapeEdge: represents a ShapeEdgeId plus the actual edge vertices.
 //  - VisitCrossings: finds all edge intersections between S2ShapeIndexes.
-//  - GetReferencePoint: helper for implementing S2Shape::GetReferencePoint.
 //
 // And functions that are mainly useful internally in the S2 library:
 //
-//  - ResolveComponents: computes containment relationships among loops.
 //  - FindAnyCrossing: helper function for S2Loop and S2Polygon validation.
 
 #ifndef S2_S2SHAPEUTIL_H_
@@ -48,7 +36,12 @@
 
 #include "s2/third_party/absl/types/span.h"
 #include "s2/_fpcontractoff.h"
+#include "s2/s2edge_vector_shape.h"
+#include "s2/s2lax_loop_shape.h"
+#include "s2/s2lax_polygon_shape.h"
+#include "s2/s2lax_polyline_shape.h"
 #include "s2/s2loop.h"
+#include "s2/s2point_vector_shape.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2shapeindex.h"
@@ -61,331 +54,26 @@ namespace s2shapeutil {
 /////////////////////////////////////////////////////////////////////////////
 ///////////////////////////  Utility Shape Types  ///////////////////////////
 
-// LaxLoop represents a closed loop of edges surrounding an interior
-// region.  It is similar to S2Loop::Shape except that this class allows
-// duplicate vertices and edges.  Loops may have any number of vertices,
-// including 0, 1, or 2.  (A one-vertex loop defines a degenerate edge
-// consisting of a single point.)
-//
-// Note that LaxLoop is faster to initialize and more compact than
-// S2Loop::Shape, but does not support the same operations as S2Loop.
-class LaxLoop : public S2Shape {
- public:
-  LaxLoop() {}  // Must call Init().
-  explicit LaxLoop(std::vector<S2Point> const& vertices);
-  explicit LaxLoop(S2Loop const& loop);  // Copies the loop data.
+using EdgeVectorShape = S2EdgeVectorShape
+    ABSL_DEPRECATED("Use S2EdgeVectorShape");
 
-  // Initialize the shape.
-  void Init(std::vector<S2Point> const& vertices);
+using ClosedLaxPolyline = S2LaxClosedPolylineShape
+    ABSL_DEPRECATED("Use S2LaxClosedPolylineShape");
 
-  // Initialize from an S2Loop (by copying its data).
-  // REQUIRES: !loop->is_full()
-  void Init(S2Loop const& loop);
+using LaxLoop = S2LaxLoopShape
+    ABSL_DEPRECATED("Use S2LaxLoopShape");
 
-  int num_vertices() const { return num_vertices_; }
-  S2Point const& vertex(int i) const { return vertices_[i]; }
+using LaxPolygon = S2LaxPolygonShape
+    ABSL_DEPRECATED("Use S2LaxPolygonShape");
 
-  // S2Shape interface:
-  int num_edges() const final { return num_vertices(); }
-  Edge edge(int e) const final;
-  // Not final; overridden by ClosedLaxPolyline.
-  int dimension() const override { return 2; }
-  // Not final; overridden by ClosedLaxPolyline.
-  ReferencePoint GetReferencePoint() const override;
-  int num_chains() const final { return std::min(1, num_vertices_); }
-  Chain chain(int i) const final { return Chain(0, num_vertices_); }
-  Edge chain_edge(int i, int j) const final;
-  ChainPosition chain_position(int e) const final {
-    return ChainPosition(0, e);
-  }
+using LaxPolyline = S2LaxPolylineShape
+    ABSL_DEPRECATED("Use S2LaxPolylineShape");
 
- private:
-  // For clients that have many small loops, we save some memory by
-  // representing the vertices as an array rather than using std::vector.
-  int32 num_vertices_;
-  std::unique_ptr<S2Point[]> vertices_;
-};
+using PointVectorShape = S2PointVectorShape
+    ABSL_DEPRECATED("Use S2PointVectorShape");
 
-// LaxPolygon represents a region defined by a collection of zero or more
-// closed loops.  The interior is the region to the left of all loops.  This
-// is similar to S2Polygon::Shape except that this class supports polygons
-// with degeneracies.  Degeneracies are of two types: degenerate edges (from a
-// vertex to itself) and sibling edge pairs (consisting of two oppositely
-// oriented edges).  Degeneracies can represent either "shells" or "holes"
-// depending on the loop they are contained by.  For example, a degenerate
-// edge or sibling pair contained by a "shell" would be interpreted as a
-// degenerate hole.  Such edges form part of the boundary of the polygon.
-//
-// Loops with fewer than three vertices are interpreted as follows:
-//  - A loop with two vertices defines two edges (in opposite directions).
-//  - A loop with one vertex defines a single degenerate edge.
-//  - A loop with no vertices is interpreted as the "full loop" containing
-//    all points on the sphere.  If this loop is present, then all other loops
-//    must form degeneracies (i.e., degenerate edges or sibling pairs).  For
-//    example, two loops {} and {X} would be interpreted as the full polygon
-//    with a degenerate single-point hole at X.
-//
-// LaxPolygon does not have any error checking, and it is perfectly fine to
-// create LaxPolygon objects that do not meet the requirements below (e.g., in
-// order to analyze or fix those problems).  However, LaxPolygons must satisfy
-// some additional conditions in order to perform certain operations:
-//
-//  - In order to be valid for point containment tests, the polygon must
-//    satisfy the "interior is on the left" rule.  This means that there must
-//    not be any crossing edges, and if there are duplicate edges then all but
-//    at most one of thm must belong to a sibling pair (i.e., the number of
-//    edges in opposite directions must differ by at most one).
-//
-//  - To be valid for polygon operations (S2BoundaryOperation), degenerate
-//    edges and sibling pairs cannot coincide with any other edges.  For
-//    example, the following situations are not allowed:
-//
-//      {AA, AA}      // degenerate edge coincides with another edge
-//      {AA, AB}      // degenerate edge coincides with another edge
-//      {AB, BA, AB}  // sibling pair coincides with another edge
-//
-// Note that LaxPolygon is must faster to initialize and is more compact than
-// S2Polygon, but unlike S2Polygon it does not have any built-in operations.
-// Instead you should use S2ShapeIndex operations (S2BoundaryOperation,
-// S2ClosestEdgeQuery, etc).
-class LaxPolygon : public S2Shape {
- public:
-  LaxPolygon() {}  // Must call Init().
-  using Loop = std::vector<S2Point>;
-  explicit LaxPolygon(std::vector<Loop> const& loops);
-  explicit LaxPolygon(S2Polygon const& polygon);  // Copies the polygon data.
-  ~LaxPolygon() override;
-
-  // Initialize the shape.
-  void Init(std::vector<Loop> const& loops);
-
-  // Initialize from an S2Polygon (by copying its data).
-  // REQUIRES: !polygon->is_full()
-  void Init(S2Polygon const& polygon);
-
-  // Return the number of loops.
-  int num_loops() const { return num_loops_; }
-
-  // Return the total number of vertices in all loops.
-  int num_vertices() const;
-
-  // Return the number of vertices in the given loop.
-  int num_loop_vertices(int i) const;
-
-  // Return the vertex from loop "i" at index "j".
-  // REQUIRES: 0 <= i < num_loops()
-  // REQUIRES: 0 <= j < num_loop_vertices(i)
-  S2Point const& loop_vertex(int i, int j) const;
-
-  // S2Shape interface:
-  int num_edges() const final { return num_vertices(); }
-  Edge edge(int e) const final;
-  int dimension() const final { return 2; }
-  ReferencePoint GetReferencePoint() const final;
-  int num_chains() const final { return num_loops(); }
-  Chain chain(int i) const final;
-  Edge chain_edge(int i, int j) const final;
-  ChainPosition chain_position(int e) const final;
-
- private:
-  void Init(std::vector<absl::Span<S2Point const>> const& loops);
-
-  int32 num_loops_;
-  std::unique_ptr<S2Point[]> vertices_;
-  // If num_loops_ <= 1, this union stores the number of vertices.
-  // Otherwise it points to an array of size (num_loops + 1) where element "i"
-  // is the total number of vertices in loops 0..i-1.
-  union {
-    int32 num_vertices_;
-    int32* cumulative_vertices_;  // Don't use unique_ptr in unions.
-  };
-};
-
-// LaxPolyline represents a polyline.  It is similar to S2Polyline::Shape
-// except that duplicate vertices are allowed, and the representation is
-// slightly more compact.  Polylines may have any number of vertices, but note
-// that polylines with fewer than 2 vertices do not define any edges.
-// (To create a polyline consisting of a single degenerate edge, either repeat
-// the same vertex twice or use s2shapeutil::ClosedLaxPolyline.)
-class LaxPolyline : public S2Shape {
- public:
-  LaxPolyline() {}  // Must call Init().
-  explicit LaxPolyline(std::vector<S2Point> const& vertices);
-  explicit LaxPolyline(S2Polyline const& polyline);  // Copies the data.
-
-  // Initialize the shape.
-  void Init(std::vector<S2Point> const& vertices);
-
-  // Initialize from an S2Polyline (by copying its data).
-  void Init(S2Polyline const& polyline);
-
-  int num_vertices() const { return num_vertices_; }
-  S2Point const& vertex(int i) const { return vertices_[i]; }
-
-  // S2Shape interface:
-  int num_edges() const final { return std::max(0, num_vertices() - 1); }
-  Edge edge(int e) const final;
-  int dimension() const final { return 1; }
-  ReferencePoint GetReferencePoint() const final {
-    return ReferencePoint::Contained(false);
-  }
-  int num_chains() const final;
-  Chain chain(int i) const final;
-  Edge chain_edge(int i, int j) const final;
-  ChainPosition chain_position(int e) const final;
-
- private:
-  // For clients that have many small polylines, we save some memory by
-  // representing the vertices as an array rather than using std::vector.
-  int32 num_vertices_;
-  std::unique_ptr<S2Point[]> vertices_;
-};
-
-// ClosedLaxPolyline is like LaxPolyline except that the last vertex is
-// implicitly joined to the first.  It is also like LaxLoop except that it
-// does not have an interior (which makes it more efficient to index).
-class ClosedLaxPolyline : public LaxLoop {
- public:
-  ClosedLaxPolyline() {}  // Must call Init().
-  explicit ClosedLaxPolyline(std::vector<S2Point> const& vertices);
-  explicit ClosedLaxPolyline(S2Loop const& loop);  // Copies the loop data.
-  int dimension() const final { return 1; }
-  ReferencePoint GetReferencePoint() const final {
-    return ReferencePoint::Contained(false);
-  }
-};
-
-// EdgeVectorShape is an S2Shape representing an arbitrary set of edges.  It
-// is mainly used for testing, but it can also be useful if you have, say, a
-// collection of polylines and don't care about memory efficiency (since this
-// class would store most of the vertices twice).
-//
-// Note that if you already have data stored in an S2Loop, S2Polyline, or
-// S2Polygon, then you would be better off using the "Shape" class defined
-// within those classes (e.g., S2Loop::Shape).  Similarly, if the vertex data
-// is stored in your own data structures, you can easily write your own
-// subclass of S2Shape that points to the existing vertex data rather than
-// copying it.
-class EdgeVectorShape : public S2Shape {
- public:
-  EdgeVectorShape() {}
-  // Convenience constructor for creating a vector of length 1.
-  EdgeVectorShape(S2Point const& a, S2Point const& b) {
-    edges_.push_back(std::make_pair(a, b));
-  }
-  // Add an edge to the vector.  IMPORTANT: This method should only be called
-  // *before* adding the EdgeVectorShape to an S2ShapeIndex.  S2Shapes can
-  // only be modified by removing them from the index, making changes, and
-  // then adding them back again.
-  void Add(S2Point const& a, S2Point const& b) {
-    edges_.push_back(std::make_pair(a, b));
-  }
-
-  // S2Shape interface:
-  int num_edges() const final { return edges_.size(); }
-  Edge edge(int e) const final {
-    return Edge(edges_[e].first, edges_[e].second);
-  }
-  int dimension() const final { return 1; }
-  ReferencePoint GetReferencePoint() const final {
-    return ReferencePoint::Contained(false);
-  }
-  int num_chains() const final { return edges_.size(); }
-  Chain chain(int i) const final { return Chain(i, 1); }
-  Edge chain_edge(int i, int j) const final {
-    DCHECK_EQ(j, 0);
-    return Edge(edges_[i].first, edges_[i].second);
-  }
-  ChainPosition chain_position(int e) const final {
-    return ChainPosition(e, 0);
-  }
-
- private:
-  std::vector<std::pair<S2Point, S2Point>> edges_;
-};
-
-// PointVectorShape is an S2Shape representing a set of S2Points. Each point
-// is reprsented as a degenerate edge with the same starting and ending
-// vertices.
-//
-// This class is useful for adding a collection of points to an S2ShapeIndex.
-class PointVectorShape : public S2Shape {
- public:
-  PointVectorShape() {}  // Must call Init().
-  explicit PointVectorShape(std::vector<S2Point>* points) { Init(points); }
-  ~PointVectorShape() override = default;
-
-  // Transfers the contents of "points" to this class and leaves "points" empty.
-  //
-  // TODO(user): Change the signature to Init(std::vector<S2Point> &&)
-  // once we get an exception to the C++ style rules.
-  void Init(std::vector<S2Point>* points) { points_.swap(*points); }
-
-  int num_points() const { return points_.size(); }
-  S2Point const& point(int i) const { return points_[i]; }
-
-  // S2Shape interface:
-  int num_edges() const final { return points_.size(); }
-  Edge edge(int e) const final {
-    return Edge(points_[e], points_[e]);
-  }
-  int dimension() const final { return 0; }
-  ReferencePoint GetReferencePoint() const final {
-    return ReferencePoint::Contained(false);
-  }
-  int num_chains() const final { return points_.size(); }
-  Chain chain(int i) const final { return Chain(i, 1); }
-  Edge chain_edge(int i, int j) const final {
-    DCHECK_EQ(j, 0);
-    return Edge(points_[i], points_[i]);
-  }
-  ChainPosition chain_position(int e) const final {
-    return ChainPosition(e, 0);
-  }
-
- private:
-  std::vector<S2Point> points_;
-
-  PointVectorShape(const PointVectorShape&) = delete;
-  PointVectorShape& operator=(const PointVectorShape&) = delete;
-};
-
-// VertexIdLaxLoop is just like LaxLoop, except that vertices are
-// specified as indices into a vertex array.  This representation can be more
-// compact when many loops are arranged in a mesh structure.
-class VertexIdLaxLoop : public S2Shape {
- public:
-  VertexIdLaxLoop() {}  // Must call Init().
-  explicit VertexIdLaxLoop(std::vector<int32> const& vertex_ids,
-                           S2Point const* vertex_array);
-
-  // Initialize the shape.  "vertex_ids" is a vector of indices into
-  // "vertex_array".
-  void Init(std::vector<int32> const& vertex_ids,
-            S2Point const* vertex_array);
-
-  // Returns the number of vertices in the loop.
-  int num_vertices() const { return num_vertices_; }
-  int32 vertex_id(int i) const { return vertex_ids_[i]; }
-  S2Point const& vertex(int i) const { return vertex_array_[vertex_id(i)]; }
-
-  // S2Shape interface:
-  int num_edges() const final { return num_vertices(); }
-  Edge edge(int e) const final;
-  int dimension() const final { return 2; }
-  ReferencePoint GetReferencePoint() const final;
-  int num_chains() const final { return 1; }
-  Chain chain(int i) const final { return Chain(0, num_vertices_); }
-  Edge chain_edge(int i, int j) const final;
-  ChainPosition chain_position(int e) const final {
-    return ChainPosition(0, e);
-  }
-
- private:
-  int32 num_vertices_;
-  std::unique_ptr<int32[]> vertex_ids_;
-  S2Point const* vertex_array_;
-};
+using VertexIdLaxLoop = S2VertexIdLaxLoopShape
+    ABSL_DEPRECATED("Use S2VertexIdLaxLoopShape");
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -396,11 +84,11 @@ class VertexIdLaxLoop : public S2Shape {
 class RangeIterator {
  public:
   // Construct a new RangeIterator positioned at the first cell of the index.
-  explicit RangeIterator(S2ShapeIndexBase const& index);
+  explicit RangeIterator(const S2ShapeIndexBase& index);
 
   // The current S2CellId and cell contents.
   S2CellId id() const { return it_.id(); }
-  S2ShapeIndexCell const& cell() const { return it_.cell(); }
+  const S2ShapeIndexCell& cell() const { return it_.cell(); }
 
   // The min and max leaf cell ids covered by the current cell.  If done() is
   // true, these methods return a value larger than any valid cell id.
@@ -412,11 +100,11 @@ class RangeIterator {
 
   // Position the iterator at the first cell that overlaps or follows
   // "target", i.e. such that range_max() >= target.range_min().
-  void SeekTo(RangeIterator const& target);
+  void SeekTo(const RangeIterator& target);
 
   // Position the iterator at the first cell that follows "target", i.e. the
   // first cell such that range_min() > target.range_max().
-  void SeekBeyond(RangeIterator const& target);
+  void SeekBeyond(const RangeIterator& target);
 
  private:
   // Updates internal state after the iterator has been repositioned.
@@ -471,11 +159,11 @@ struct ShapeEdgeIdHash {
 struct ShapeEdge {
  public:
   ShapeEdge() {}
-  ShapeEdge(S2Shape const& shape, int32 edge_id);
-  ShapeEdge(S2Shape const& shape, int32 edge_id, S2Shape::Edge const& edge);
+  ShapeEdge(const S2Shape& shape, int32 edge_id);
+  ShapeEdge(int32 shape_id, int32 edge_id, const S2Shape::Edge& edge);
   ShapeEdgeId id() const { return id_; }
-  S2Point const& v0() const { return edge_.v0; }
-  S2Point const& v1() const { return edge_.v1; }
+  const S2Point& v0() const { return edge_.v0; }
+  const S2Point& v1() const { return edge_.v1; }
 
  private:
   ShapeEdgeId id_;
@@ -490,7 +178,7 @@ struct ShapeEdge {
 // edges (i.e., not at a vertex).  (The calling function already has this
 // information and it is moderately expensive to recompute.)
 using EdgePairVisitor = std::function<
-  bool (ShapeEdge const& a, ShapeEdge const& b, bool is_interior)>;
+  bool (const ShapeEdge& a, const ShapeEdge& b, bool is_interior)>;
 
 // Visits all pairs of crossing edges in the given S2ShapeIndex, terminating
 // early if the given EdgePairVisitor function returns false (in which case
@@ -498,81 +186,25 @@ using EdgePairVisitor = std::function<
 // crossings should be visited, or only interior crossings.
 //
 // CAVEAT: Crossings may be visited more than once.
-bool VisitCrossings(S2ShapeIndexBase const& index, CrossingType type,
-                    EdgePairVisitor const& visitor);
+bool VisitCrossings(const S2ShapeIndexBase& index, CrossingType type,
+                    const EdgePairVisitor& visitor);
 
 // Like the above, but visits all pairs of crossing edges where one edge comes
 // from each S2ShapeIndex.
 //
 // REQUIRES: type != CrossingType::NON_ADJACENT (not supported)
-bool VisitCrossings(S2ShapeIndexBase const& a, S2ShapeIndexBase const& b,
-                    CrossingType type, EdgePairVisitor const& visitor);
-
-// This is a helper function for implementing S2Shape::GetReferencePoint().
-//
-// Given a shape consisting of closed polygonal loops, the interior of the
-// shape is defined as the region to the left of all edges (which must be
-// oriented consistently).  This function then chooses an arbitrary point and
-// returns true if that point is contained by the shape.
-//
-// Unlike S2Loop and S2Polygon, this method allows duplicate vertices and
-// edges, which requires some extra care with definitions.  The rule that we
-// apply is that an edge and its reverse edge "cancel" each other: the result
-// is the same as if that edge pair were not present.  Therefore shapes that
-// consist only of degenerate loop(s) are either empty or full; by convention,
-// the shape is considered full if and only if it contains an empty loop (see
-// LaxPolygon for details).
-//
-// Determining whether a loop on the sphere contains a point is harder than
-// the corresponding problem in 2D plane geometry.  It cannot be implemented
-// just by counting edge crossings because there is no such thing as a "point
-// at infinity" that is guaranteed to be outside the loop.
-S2Shape::ReferencePoint GetReferencePoint(S2Shape const& shape);
+bool VisitCrossings(const S2ShapeIndexBase& a, const S2ShapeIndexBase& b,
+                    CrossingType type, const EdgePairVisitor& visitor);
 
 // Returns the total number of edges in all indexed shapes.  This method
 // takes time linear in the number of shapes.
 template <class S2ShapeIndexType>
-int GetNumEdges(S2ShapeIndexType const& index);
+int GetNumEdges(const S2ShapeIndexType& index);
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///////////////// Methods used internally by the S2 library /////////////////
 
-
-// The purpose of this function is to construct polygons consisting of
-// multiple loops.  It takes as input a collection of loops whose boundaries
-// do not cross, and groups them into polygons whose interiors do not
-// intersect (where the boundary of each polygon may consist of multiple
-// loops).
-//
-// some of those islands have lakes, then the input to this function would
-// islands, and their lakes.  Each loop would actually be present twice, once
-// in each direction (see below).  The output would consist of one polygon
-// representing each lake, one polygon representing each island not including
-// islands or their lakes, and one polygon representing the rest of the world
-//
-// This method is intended for internal use; external clients should use
-// S2Builder, which has more convenient interface.
-//
-// The input consists of a set of connected components, where each component
-// consists of one or more loops that satisfy the following properties:
-//
-//  - The loops in each component must form a subdivision of the sphere (i.e.,
-//    they must cover the entire sphere without overlap), except that a
-//    component may consist of a single loop if and only if that loop is
-//    degenerate (i.e., its interior is empty).
-//
-//  - The boundaries of different connected components must be disjoint
-//    (i.e. no crossing edges or shared vertices).
-//
-//  - No component should be empty, and no loop should have zero edges.
-//
-// The output consists of a set of polygons, where each polygon is defined by
-// the collection of loops that form its boundary.  This function does not
-// actually construct any S2Shapes; it simply identifies the loops that belong
-// to each polygon.
-void ResolveComponents(
-    std::vector<std::vector<S2Shape*>> const& components,
-    std::vector<std::vector<S2Shape*>>* polygons);
 
 // Given an S2ShapeIndex containing a single polygonal shape (e.g., an
 // S2Polygon or S2Loop), return true if any loop has a self-intersection
@@ -583,9 +215,9 @@ void ResolveComponents(
 // This method is used to implement the FindValidationError methods of S2Loop
 // and S2Polygon.
 //
-// TODO(ericv): Add an option to support LaxPolygon rules (i.e., duplicate
-// vertices and edges are allowed, but loop crossings are not).
-bool FindAnyCrossing(S2ShapeIndexBase const& index, S2Error* error);
+// TODO(ericv): Add an option to support S2LaxPolygonShape rules (i.e.,
+// duplicate vertices and edges are allowed, but loop crossings are not).
+bool FindAnyCrossing(const S2ShapeIndexBase& index, S2Error* error);
 
 
 //////////////////   Implementation details follow   ////////////////////
@@ -621,17 +253,17 @@ inline bool ShapeEdgeId::operator>=(ShapeEdgeId other) const {
   return !(*this < other);
 }
 
-inline ShapeEdge::ShapeEdge(S2Shape const& shape, int32 edge_id)
-    : ShapeEdge(shape, edge_id, shape.edge(edge_id)) {
+inline ShapeEdge::ShapeEdge(const S2Shape& shape, int32 edge_id)
+    : ShapeEdge(shape.id(), edge_id, shape.edge(edge_id)) {
 }
 
-inline ShapeEdge::ShapeEdge(S2Shape const& shape, int32 edge_id,
-                            S2Shape::Edge const& edge)
-    : id_(shape.id(), edge_id), edge_(edge) {
+inline ShapeEdge::ShapeEdge(int32 shape_id, int32 edge_id,
+                            const S2Shape::Edge& edge)
+    : id_(shape_id, edge_id), edge_(edge) {
 }
 
 template <class S2ShapeIndexType>
-int GetNumEdges(S2ShapeIndexType const& index) {
+int GetNumEdges(const S2ShapeIndexType& index) {
   // There is no need to apply updates before counting edges, since shapes are
   // added or removed from the "shapes_" vector immediately.
   int num_edges = 0;

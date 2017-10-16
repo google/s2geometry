@@ -9,6 +9,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
 find_package(GFlags REQUIRED)
 find_package(Glog REQUIRED)
 find_package(OpenSSL REQUIRED)
+# pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
 find_package(SWIG)
 find_package(PythonInterp)
@@ -26,6 +27,7 @@ include_directories(src)
 
 # Explicitly list S2 files until we move test files to test dir.
 # TODO: Move test files to another dir.
+
 file(GLOB S2FilesGlob
      src/s2/base/*.cc
      src/s2/id_set_lexicon.cc
@@ -33,7 +35,7 @@ file(GLOB S2FilesGlob
      src/s2/s1angle.cc
      src/s2/s1chordangle.cc
      src/s2/s1interval.cc
-     src/s2/s2boundary_operation.cc
+     src/s2/s2boolean_operation.cc
      src/s2/s2builder.cc
      src/s2/s2builder_graph.cc
      src/s2/s2builderutil_closed_set_normalizer.cc
@@ -62,6 +64,9 @@ file(GLOB S2FilesGlob
      src/s2/s2latlng.cc
      src/s2/s2latlngrect.cc
      src/s2/s2latlngrect_bounder.cc
+     src/s2/s2lax_loop_shape.cc
+     src/s2/s2lax_polygon_shape.cc
+     src/s2/s2lax_polyline_shape.cc
      src/s2/s2loop.cc
      src/s2/s2measures.cc
      src/s2/s2metrics.cc
@@ -82,8 +87,10 @@ file(GLOB S2FilesGlob
      src/s2/s2shapeindex.cc
      src/s2/s2shapeindex_buffered_region.cc
      src/s2/s2shapeutil.cc
+     src/s2/s2shapeutil_build_polygon_boundaries.cc
      src/s2/s2shapeutil_contains_brute_force.cc
      src/s2/s2shapeutil_edge_iterator.cc
+     src/s2/s2shapeutil_get_reference_point.cc
      src/s2/s2textformat.cc
      src/s2/s2wedge_relations.cc
      src/s2/sequence_lexicon.cc

@@ -22,7 +22,7 @@ Requirements for End Users
 * [OpenSSL](https://github.com/openssl/openssl) (for its bignums)
 * [googletest testing framework](https://github.com/google/googletest)
   (to build tests, optional)
-* A POSIX system (for pthreads and getrusage).
+* A POSIX system (for getrusage).
 
 On Ubuntu, all of these can be installed via apt-get.  Otherwise, you may need
 to install some from source.

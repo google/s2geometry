@@ -25,7 +25,7 @@ namespace S2 {
 // Default implementation, suitable for any projection where edges are defined
 // as straight lines in the 2D projected space.
 R2Point Projection::Interpolate(double f,
-                                R2Point const& a, R2Point const& b) const {
+                                const R2Point& a, const R2Point& b) const {
   return (1 - f) * a + f * b;
 }
 
@@ -35,16 +35,16 @@ PlateCarreeProjection::PlateCarreeProjection(double x_scale)
       from_radians_(x_scale / M_PI) {
 }
 
-R2Point PlateCarreeProjection::Project(S2Point const& p) const {
+R2Point PlateCarreeProjection::Project(const S2Point& p) const {
   return FromLatLng(S2LatLng(p));
 }
 
-R2Point PlateCarreeProjection::FromLatLng(S2LatLng const& ll) const {
+R2Point PlateCarreeProjection::FromLatLng(const S2LatLng& ll) const {
   return R2Point(from_radians_ * ll.lng().radians(),
                  from_radians_ * ll.lat().radians());
 }
 
-S2Point PlateCarreeProjection::Unproject(R2Point const& p) const {
+S2Point PlateCarreeProjection::Unproject(const R2Point& p) const {
   return ToLatLng(p).ToPoint();
 }
 
@@ -63,11 +63,11 @@ MercatorProjection::MercatorProjection(double max_x)
       from_radians_(max_x / M_PI) {
 }
 
-R2Point MercatorProjection::Project(S2Point const& p) const {
+R2Point MercatorProjection::Project(const S2Point& p) const {
   return FromLatLng(S2LatLng(p));
 }
 
-R2Point MercatorProjection::FromLatLng(S2LatLng const& ll) const {
+R2Point MercatorProjection::FromLatLng(const S2LatLng& ll) const {
   // This formula is more accurate near zero than the log(tan()) version.
   // Note that latitudes of +/- 90 degrees yield "y" values of +/- infinity.
   double sin_phi = sin(ll.lat());
@@ -75,7 +75,7 @@ R2Point MercatorProjection::FromLatLng(S2LatLng const& ll) const {
   return R2Point(from_radians_ * ll.lng().radians(), from_radians_ * y);
 }
 
-S2Point MercatorProjection::Unproject(R2Point const& p) const {
+S2Point MercatorProjection::Unproject(const R2Point& p) const {
   return ToLatLng(p).ToPoint();
 }
 

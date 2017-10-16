@@ -50,12 +50,12 @@ template <class T,
           class KeyEqual = std::equal_to<T>>
 class ValueLexicon {
  public:
-  explicit ValueLexicon(Hasher const& hasher = Hasher(),
-                        KeyEqual const& key_equal = KeyEqual());
+  explicit ValueLexicon(const Hasher& hasher = Hasher(),
+                        const KeyEqual& key_equal = KeyEqual());
 
   // ValueLexicon is movable and copyable.
-  ValueLexicon(ValueLexicon const&);
-  ValueLexicon& operator=(ValueLexicon const&);
+  ValueLexicon(const ValueLexicon&);
+  ValueLexicon& operator=(const ValueLexicon&);
   ValueLexicon(ValueLexicon&&);
   ValueLexicon& operator=(ValueLexicon&&);
 
@@ -64,36 +64,36 @@ class ValueLexicon {
 
   // Add the given value to the lexicon if it is not already present, and
   // return its integer id.  Ids are assigned sequentially starting from zero.
-  uint32 Add(T const& value);
+  uint32 Add(const T& value);
 
   // Return the number of values in the lexicon.
   uint32 size() const;
 
   // Return the value with the given id.
-  T const& value(uint32 id) const;
+  const T& value(uint32 id) const;
 
  private:
   friend class IdKeyEqual;
   // Choose kEmptyKey to be the last key that will ever be generated.
-  static uint32 const kEmptyKey = std::numeric_limits<uint32>::max();
+  static const uint32 kEmptyKey = std::numeric_limits<uint32>::max();
 
   class IdHasher {
    public:
-    IdHasher(Hasher const& hasher, ValueLexicon const* lexicon);
-    Hasher const& hasher() const;
+    IdHasher(const Hasher& hasher, const ValueLexicon* lexicon);
+    const Hasher& hasher() const;
     size_t operator()(uint32 id) const;
    private:
     Hasher hasher_;
-    ValueLexicon const* lexicon_;
+    const ValueLexicon* lexicon_;
   };
 
   class IdKeyEqual {
    public:
-    IdKeyEqual(KeyEqual const& key_equal, ValueLexicon const* lexicon);
+    IdKeyEqual(const KeyEqual& key_equal, const ValueLexicon* lexicon);
     bool operator()(uint32 id1, uint32 id2) const;
    private:
     KeyEqual key_equal_;
-    ValueLexicon const* lexicon_;
+    const ValueLexicon* lexicon_;
   };
 
   using IdSet =
@@ -109,16 +109,16 @@ class ValueLexicon {
 
 
 template <class T, class Hasher, class KeyEqual>
-uint32 const ValueLexicon<T, Hasher, KeyEqual>::kEmptyKey;
+const uint32 ValueLexicon<T, Hasher, KeyEqual>::kEmptyKey;
 
 template <class T, class Hasher, class KeyEqual>
 ValueLexicon<T, Hasher, KeyEqual>::IdHasher::IdHasher(
-    Hasher const& hasher, ValueLexicon const* lexicon)
+    const Hasher& hasher, const ValueLexicon* lexicon)
     : hasher_(hasher), lexicon_(lexicon) {
 }
 
 template <class T, class Hasher, class KeyEqual>
-Hasher const& ValueLexicon<T, Hasher, KeyEqual>::IdHasher::hasher() const {
+const Hasher& ValueLexicon<T, Hasher, KeyEqual>::IdHasher::hasher() const {
   return hasher_;
 }
 
@@ -130,7 +130,7 @@ inline size_t ValueLexicon<T, Hasher, KeyEqual>::IdHasher::operator()(
 
 template <class T, class Hasher, class KeyEqual>
 ValueLexicon<T, Hasher, KeyEqual>::IdKeyEqual::IdKeyEqual(
-    KeyEqual const& key_equal, ValueLexicon const* lexicon)
+    const KeyEqual& key_equal, const ValueLexicon* lexicon)
     : key_equal_(key_equal), lexicon_(lexicon) {
 }
 
@@ -145,8 +145,8 @@ inline bool ValueLexicon<T, Hasher, KeyEqual>::IdKeyEqual::operator()(
 }
 
 template <class T, class Hasher, class KeyEqual>
-ValueLexicon<T, Hasher, KeyEqual>::ValueLexicon(Hasher const& hasher,
-                                                KeyEqual const& key_equal)
+ValueLexicon<T, Hasher, KeyEqual>::ValueLexicon(const Hasher& hasher,
+                                                const KeyEqual& key_equal)
     : key_equal_(key_equal),
       id_set_(0, IdHasher(hasher, this),
                  IdKeyEqual(key_equal, this)) {
@@ -154,7 +154,7 @@ ValueLexicon<T, Hasher, KeyEqual>::ValueLexicon(Hasher const& hasher,
 }
 
 template <class T, class Hasher, class KeyEqual>
-ValueLexicon<T, Hasher, KeyEqual>::ValueLexicon(ValueLexicon const& x)
+ValueLexicon<T, Hasher, KeyEqual>::ValueLexicon(const ValueLexicon& x)
     : key_equal_(x.key_equal_), values_(x.values_),
       // Unfortunately we can't copy "id_set_" because we need to change the
       // "this" pointers associated with hasher() and key_equal().
@@ -175,7 +175,7 @@ ValueLexicon<T, Hasher, KeyEqual>::ValueLexicon(ValueLexicon&& x)
 
 template <class T, class Hasher, class KeyEqual>
 ValueLexicon<T, Hasher, KeyEqual>&
-ValueLexicon<T, Hasher, KeyEqual>::operator=(ValueLexicon const& x) {
+ValueLexicon<T, Hasher, KeyEqual>::operator=(const ValueLexicon& x) {
   // Note that self-assignment is handled correctly by this code.
   key_equal_ = x.key_equal_;
   values_ = x.values_;
@@ -208,7 +208,7 @@ void ValueLexicon<T, Hasher, KeyEqual>::Clear() {
 }
 
 template <class T, class Hasher, class KeyEqual>
-uint32 ValueLexicon<T, Hasher, KeyEqual>::Add(T const& value) {
+uint32 ValueLexicon<T, Hasher, KeyEqual>::Add(const T& value) {
   if (!values_.empty() && key_equal_(value, values_.back())) {
     return values_.size() - 1;
   }
@@ -228,7 +228,7 @@ inline uint32 ValueLexicon<T, Hasher, KeyEqual>::size() const {
 }
 
 template <class T, class Hasher, class KeyEqual>
-inline T const& ValueLexicon<T, Hasher, KeyEqual>::value(uint32 id) const {
+inline const T& ValueLexicon<T, Hasher, KeyEqual>::value(uint32 id) const {
   return values_[id];
 }
 

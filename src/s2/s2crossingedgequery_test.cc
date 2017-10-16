@@ -38,7 +38,6 @@
 #include "s2/s2textformat.h"
 
 using absl::make_unique;
-using s2shapeutil::EdgeVectorShape;
 using s2textformat::MakePoint;
 using s2textformat::MakePolyline;
 using std::is_sorted;
@@ -51,8 +50,8 @@ namespace {
 using TestEdge = pair<S2Point, S2Point>;
 using CrossingType = s2shapeutil::CrossingType;
 
-S2Point PerturbAtDistance(S1Angle distance, S2Point const& a0,
-                          S2Point const& b0) {
+S2Point PerturbAtDistance(S1Angle distance, const S2Point& a0,
+                          const S2Point& b0) {
   S2Point x = S2::InterpolateAtDistance(distance, a0, b0);
   if (S2Testing::rnd.OneIn(2)) {
     for (int i = 0; i < 3; ++i) {
@@ -83,7 +82,7 @@ void GetPerturbedSubEdges(S2Point a0, S2Point b0, int count,
 
 // Generate edges whose center is randomly chosen from the given S2Cap, and
 // whose length is randomly chosen up to "max_length".
-void GetCapEdges(S2Cap const& center_cap, S1Angle max_length, int count,
+void GetCapEdges(const S2Cap& center_cap, S1Angle max_length, int count,
                  vector<TestEdge>* edges) {
   edges->clear();
   for (int i = 0; i < count; ++i) {
@@ -96,9 +95,9 @@ void GetCapEdges(S2Cap const& center_cap, S1Angle max_length, int count,
   }
 }
 
-void TestAllCrossings(vector<TestEdge> const& edges) {
-  auto shape = new EdgeVectorShape;  // raw pointer since "shape" is used below
-  for (TestEdge const& edge : edges) {
+void TestAllCrossings(const vector<TestEdge>& edges) {
+  auto shape = new S2EdgeVectorShape;  // raw pointer since "shape" used below
+  for (const TestEdge& edge : edges) {
     shape->Add(edge.first, edge.second);
   }
   // Force more subdivision than usual to make the test more challenging.
@@ -111,10 +110,10 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
   // either intersect or are very close to intersecting.
   int num_candidates = 0, num_nearby_pairs = 0;
   int i = 0;
-  for (TestEdge const& edge : edges) {
+  for (const TestEdge& edge : edges) {
     SCOPED_TRACE(StringPrintf("Iteration %d", i++));
-    S2Point const& a = edge.first;
-    S2Point const& b = edge.second;
+    const S2Point& a = edge.first;
+    const S2Point& b = edge.second;
     vector<int> candidates;
     S2CrossingEdgeQuery query(&index);
     query.GetCandidates(a, b, shape, &candidates);
@@ -136,8 +135,8 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
     vector<int> expected_crossings, expected_interior_crossings;
     for (int i = 0; i < shape->num_edges(); ++i) {
       auto edge = shape->edge(i);
-      S2Point const& c = edge.v0;
-      S2Point const& d = edge.v1;
+      const S2Point& c = edge.v0;
+      const S2Point& d = edge.v1;
       int sign = S2::CrossingSign(a, b, c, d);
       if (sign >= 0) {
         expected_crossings.push_back(i);
@@ -149,7 +148,7 @@ void TestAllCrossings(vector<TestEdge> const& edges) {
           StringAppendF(&missing_candidates, " %d", i);
         }
       } else {
-        double const kMaxDist = S2::kMaxDiag.GetValue(S2::kMaxCellLevel);
+        const double kMaxDist = S2::kMaxDiag.GetValue(S2::kMaxCellLevel);
         if (S2::GetDistance(a, c, d).radians() < kMaxDist ||
             S2::GetDistance(b, c, d).radians() < kMaxDist ||
             S2::GetDistance(c, a, b).radians() < kMaxDist ||
@@ -258,28 +257,28 @@ TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
 }
 
 // This is the example from the header file, with a few extras.
-void TestPolylineCrossings(S2ShapeIndex const& index,
-                           S2Point const& a0, S2Point const& a1) {
+void TestPolylineCrossings(const S2ShapeIndex& index,
+                           const S2Point& a0, const S2Point& a1) {
   S2CrossingEdgeQuery query(&index);
   S2CrossingEdgeQuery::EdgeMap edge_map;
   if (!query.GetCrossings(a0, a1, CrossingType::ALL, &edge_map)) return;
-  for (auto const& p : edge_map) {
-    auto shape = down_cast<S2Polyline::Shape const*>(p.first);
-    S2Polyline const* polyline = shape->polyline();
-    vector<int> const& edges = p.second;
+  for (const auto& p : edge_map) {
+    auto shape = down_cast<const S2Polyline::Shape*>(p.first);
+    const S2Polyline* polyline = shape->polyline();
+    const vector<int>& edges = p.second;
     // Shapes with no crossings should be filtered out by this method.
     EXPECT_FALSE(edges.empty());
     for (int edge : edges) {
-      S2Point const& b0 = polyline->vertex(edge);
-      S2Point const& b1 = polyline->vertex(edge + 1);
+      const S2Point& b0 = polyline->vertex(edge);
+      const S2Point& b1 = polyline->vertex(edge + 1);
       CHECK_GE(S2::CrossingSign(a0, a1, b0, b1), 0);
     }
   }
   // Also test that no edges are missing.
   for (int i = 0; i < index.num_shape_ids(); ++i) {
     auto shape = down_cast<S2Polyline::Shape*>(index.shape(i));
-    vector<int> const& edges = edge_map[shape];
-    S2Polyline const* polyline = shape->polyline();
+    const vector<int>& edges = edge_map[shape];
+    const S2Polyline* polyline = shape->polyline();
     for (int e = 0; e < polyline->num_vertices() - 1; ++e) {
       if (S2::CrossingSign(a0, a1, polyline->vertex(e),
                                    polyline->vertex(e + 1)) >= 0) {

@@ -35,7 +35,7 @@
 using std::fabs;
 using std::max;
 
-void TestFaceClipping(S2Point const& a_raw, S2Point const& b_raw) {
+void TestFaceClipping(const S2Point& a_raw, const S2Point& b_raw) {
   S2Point a = a_raw.Normalize();
   S2Point b = b_raw.Normalize();
   // TODO(ericv): Remove the following line once S2::RobustCrossProd is
@@ -52,13 +52,13 @@ void TestFaceClipping(S2Point const& a_raw, S2Point const& b_raw) {
   msg << "\nA=" << a_raw << "\nB=" << b_raw;
   msg << "\nN=" << S2::RobustCrossProd(a, b) << "\nSegments:\n";
   int i = 0;
-  for (S2::FaceSegment const& s : segments) {
+  for (const S2::FaceSegment& s : segments) {
     msg << i++ << ": face=" << s.face << ", a=" << s.a << ", b=" << s.b << "\n";
   }
   SCOPED_TRACE(msg);
 
   R2Rect biunit(R1Interval(-1, 1), R1Interval(-1, 1));
-  double const kErrorRadians = S2::kFaceClipErrorRadians;
+  const double kErrorRadians = S2::kFaceClipErrorRadians;
 
   // The first and last vertices should approximately equal A and B.
   EXPECT_LE(a.Angle(S2::FaceUVtoXYZ(segments[0].face, segments[0].a)),
@@ -128,7 +128,7 @@ void TestFaceClipping(S2Point const& a_raw, S2Point const& b_raw) {
   EXPECT_TRUE(actual_angles.Expanded(kErrorRadians).Contains(expected_angles));
 }
 
-void TestFaceClippingEdgePair(S2Point const& a, S2Point const& b) {
+void TestFaceClippingEdgePair(const S2Point& a, const S2Point& b) {
   TestFaceClipping(a, b);
   TestFaceClipping(b, a);
 }
@@ -138,7 +138,7 @@ void TestFaceClippingEdgePair(S2Point const& a, S2Point const& b) {
 // it returns either an edge midpoint, face midpoint, or corner vertex that is
 // in the plane of PQ and that has been perturbed slightly.  It also sometimes
 // returns a random point from anywhere on the sphere.
-S2Point PerturbedCornerOrMidpoint(S2Point const& p, S2Point const& q) {
+S2Point PerturbedCornerOrMidpoint(const S2Point& p, const S2Point& q) {
   S2Testing::Random* rnd = &S2Testing::rnd;
   S2Point a = (rnd->Uniform(3) - 1) * p + (rnd->Uniform(3) - 1) * q;
   if (rnd->OneIn(10)) {
@@ -198,7 +198,7 @@ TEST(S2EdgeUtil, FaceClipping) {
 
 // Choose a random point in the rectangle defined by points A and B, sometimes
 // returning a point on the edge AB or the points A and B themselves.
-R2Point ChooseRectPoint(R2Point const& a, R2Point const& b) {
+R2Point ChooseRectPoint(const R2Point& a, const R2Point& b) {
   S2Testing::Random* rnd = &S2Testing::rnd;
   if (rnd->OneIn(5)) {
     return rnd->OneIn(2) ? a : b;
@@ -212,10 +212,10 @@ R2Point ChooseRectPoint(R2Point const& a, R2Point const& b) {
 
 // Given a point X on the line AB (which is checked), return the fraction "t"
 // such that x = (1-t)*a + t*b.  Return 0 if A = B.
-double GetFraction(R2Point const& x, R2Point const& a, R2Point const& b) {
+double GetFraction(const R2Point& x, const R2Point& a, const R2Point& b) {
   // A bound for the error in edge clipping plus the error in the calculation
   // below (which is similar to IntersectsRect).
-  double const kError = (S2::kEdgeClipErrorUVDist +
+  const double kError = (S2::kEdgeClipErrorUVDist +
                          S2::kIntersectsRectErrorUVDist);
   if (a == b) return 0.0;
   R2Point dir = (b - a).Normalize();
@@ -226,8 +226,8 @@ double GetFraction(R2Point const& x, R2Point const& a, R2Point const& b) {
 // Given a point P representing a possibly clipped endpoint A of an edge AB,
 // verify that "clip" contains P, and that if clipping occurred (i.e., P != A)
 // then P is on the boundary of "clip".
-void CheckPointOnBoundary(R2Point const& p, R2Point const& a,
-                          R2Rect const& clip) {
+void CheckPointOnBoundary(const R2Point& p, const R2Point& a,
+                          const R2Rect& clip) {
   EXPECT_TRUE(clip.Contains(p));
   if (p != a) {
     EXPECT_FALSE(clip.Contains(R2Point(nextafter(p[0], a[0]),
@@ -237,10 +237,10 @@ void CheckPointOnBoundary(R2Point const& p, R2Point const& a,
 
 // Given an edge AB and a rectangle "clip", verify that IntersectsRect(),
 // ClipEdge(), and ClipEdgeBound() produce consistent results.
-void TestClipEdge(R2Point const& a, R2Point const& b, R2Rect const& clip) {
+void TestClipEdge(const R2Point& a, const R2Point& b, const R2Rect& clip) {
   // A bound for the error in edge clipping plus the error in the
   // IntersectsRect calculation below.
-  double const kError = (S2::kEdgeClipErrorUVDist +
+  const double kError = (S2::kEdgeClipErrorUVDist +
                          S2::kIntersectsRectErrorUVDist);
   R2Point a_clipped, b_clipped;
   if (!S2::ClipEdge(a, b, clip, &a_clipped, &b_clipped)) {
@@ -274,7 +274,7 @@ void TestClipEdge(R2Point const& a, R2Point const& b, R2Rect const& clip) {
 // Given an interval "clip", randomly choose either a value in the interval, a
 // value outside the interval, or one of the two interval endpoints, ensuring
 // that all cases have reasonable probability for any interval "clip".
-double ChooseEndpoint(R1Interval const& clip) {
+double ChooseEndpoint(const R1Interval& clip) {
   S2Testing::Random* rnd = &S2Testing::rnd;
   if (rnd->OneIn(5)) {
     return rnd->OneIn(2) ? clip.lo() : clip.hi();
@@ -293,7 +293,7 @@ double ChooseEndpoint(R1Interval const& clip) {
 // Also sometimes return points that are exactly on one of the extended
 // diagonals of "clip".  All cases are reasonably likely to occur for any
 // given rectangle "clip".
-R2Point ChooseEndpoint(R2Rect const& clip) {
+R2Point ChooseEndpoint(const R2Rect& clip) {
   if (S2Testing::rnd.OneIn(10)) {
     // Return a point on one of the two extended diagonals.
     int diag = S2Testing::rnd.Uniform(2);
@@ -306,7 +306,7 @@ R2Point ChooseEndpoint(R2Rect const& clip) {
 
 // Given a rectangle "clip", test the S2EdgeUtil edge clipping methods using
 // many edges that are randomly constructed to trigger special cases.
-void TestEdgeClipping(R2Rect const& clip) {
+void TestEdgeClipping(const R2Rect& clip) {
   const int kIters = 1000;  // Test passes with 1e6 iterations
   for (int iter = 0; iter < kIters; ++iter) {
     SCOPED_TRACE(StringPrintf("Iteration %d", iter));

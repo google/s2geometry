@@ -13,22 +13,21 @@
 // limitations under the License.
 //
 
-/*
- * Copyright 2017 The Abseil Authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+//
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 // -----------------------------------------------------------------------------
 // File: ascii.h
 // -----------------------------------------------------------------------------
@@ -71,6 +70,7 @@
 #include <algorithm>
 #include <string>
 
+#include "s2/third_party/absl/base/attributes.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
 namespace absl {
@@ -91,14 +91,14 @@ extern const char kToLower[256];
 //
 // Determines whether the given character is an alphabetic character.
 inline bool ascii_isalpha(unsigned char c) {
-  return (absl::ascii_internal::kPropertyBits[c] & 0x01) != 0;
+  return (ascii_internal::kPropertyBits[c] & 0x01) != 0;
 }
 
 // ascii_isalnum()
 //
 // Determines whether the given character is an alphanumeric character.
 inline bool ascii_isalnum(unsigned char c) {
-  return (absl::ascii_internal::kPropertyBits[c] & 0x04) != 0;
+  return (ascii_internal::kPropertyBits[c] & 0x04) != 0;
 }
 
 // ascii_isspace()
@@ -106,28 +106,28 @@ inline bool ascii_isalnum(unsigned char c) {
 // Determines whether the given character is a whitespace character (space,
 // tab, vertical tab, formfeed, linefeed, or carriage return).
 inline bool ascii_isspace(unsigned char c) {
-  return (absl::ascii_internal::kPropertyBits[c] & 0x08) != 0;
+  return (ascii_internal::kPropertyBits[c] & 0x08) != 0;
 }
 
 // ascii_ispunct()
 //
 // Determines whether the given character is a punctuation character.
 inline bool ascii_ispunct(unsigned char c) {
-  return (absl::ascii_internal::kPropertyBits[c] & 0x10) != 0;
+  return (ascii_internal::kPropertyBits[c] & 0x10) != 0;
 }
 
 // ascii_isblank()
 //
 // Determines whether the given character is a blank character (tab or space).
 inline bool ascii_isblank(unsigned char c) {
-  return (absl::ascii_internal::kPropertyBits[c] & 0x20) != 0;
+  return (ascii_internal::kPropertyBits[c] & 0x20) != 0;
 }
 
 // ascii_iscntrl()
 //
 // Determines whether the given character is a control character.
 inline bool ascii_iscntrl(unsigned char c) {
-  return (absl::ascii_internal::kPropertyBits[c] & 0x40) != 0;
+  return (ascii_internal::kPropertyBits[c] & 0x40) != 0;
 }
 
 // ascii_isxdigit()
@@ -135,7 +135,7 @@ inline bool ascii_iscntrl(unsigned char c) {
 // Determines whether the given character can be represented as a hexadecimal
 // digit character (i.e. {0-9} or {A-F}).
 inline bool ascii_isxdigit(unsigned char c) {
-  return (absl::ascii_internal::kPropertyBits[c] & 0x80) != 0;
+  return (ascii_internal::kPropertyBits[c] & 0x80) != 0;
 }
 
 // ascii_isdigit()
@@ -174,7 +174,7 @@ inline bool ascii_isascii(unsigned char c) { return c < 128; }
 // Returns an ASCII character, converting to lowercase if uppercase is
 // passed. Note that character values > 127 are simply returned.
 inline char ascii_tolower(unsigned char c) {
-  return absl::ascii_internal::kToLower[c];
+  return ascii_internal::kToLower[c];
 }
 
 // Converts the characters in `s` to lowercase, changing the contents of `s`.
@@ -192,7 +192,7 @@ ABSL_MUST_USE_RESULT inline string AsciiStrToLower(absl::string_view s) {
 // Returns the ASCII character, converting to upper-case if lower-case is
 // passed. Note that characters values > 127 are simply returned.
 inline char ascii_toupper(unsigned char c) {
-  return absl::ascii_internal::kToUpper[c];
+  return ascii_internal::kToUpper[c];
 }
 
 // Converts the characters in `s` to uppercase, changing the contents of `s`.

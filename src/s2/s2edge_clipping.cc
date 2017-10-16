@@ -33,12 +33,12 @@ using std::max;
 using std::min;
 
 // Error constant definitions.  See the header file for details.
-double const kFaceClipErrorRadians = 3 * DBL_EPSILON;
-double const kFaceClipErrorUVDist = 9 * DBL_EPSILON;
-double const kFaceClipErrorUVCoord = 9 * M_SQRT1_2 * DBL_EPSILON;
-double const kIntersectsRectErrorUVDist = 3 * M_SQRT2 * DBL_EPSILON;
-double const kEdgeClipErrorUVCoord = 2.25 * DBL_EPSILON;
-double const kEdgeClipErrorUVDist = 2.25 * DBL_EPSILON;
+const double kFaceClipErrorRadians = 3 * DBL_EPSILON;
+const double kFaceClipErrorUVDist = 9 * DBL_EPSILON;
+const double kFaceClipErrorUVCoord = 9 * M_SQRT1_2 * DBL_EPSILON;
+const double kIntersectsRectErrorUVDist = 3 * M_SQRT2 * DBL_EPSILON;
+const double kEdgeClipErrorUVCoord = 2.25 * DBL_EPSILON;
+const double kEdgeClipErrorUVDist = 2.25 * DBL_EPSILON;
 
 // S2PointUVW is used to document that a given S2Point is expressed in the
 // (u,v,w) coordinates of some cube face.
@@ -72,7 +72,7 @@ inline static bool SumEquals(double u, double v, double w) {
 
 // Return true if a given directed line L intersects the cube face F.  The
 // line L is defined by its normal N in the (u,v,w) coordinates of F.
-inline static bool IntersectsFace(S2PointUVW const& n) {
+inline static bool IntersectsFace(const S2PointUVW& n) {
   // L intersects the [-1,1]x[-1,1] square in (u,v) if and only if the dot
   // products of N with the four corner vertices (-1,-1,1), (1,-1,1), (1,1,1),
   // and (-1,1,1) do not all have the same sign.  This is true exactly when
@@ -89,7 +89,7 @@ inline static bool IntersectsFace(S2PointUVW const& n) {
 // intersects two opposite edges of F (including the case where L passes
 // exactly through a corner vertex of F).  The line L is defined by its
 // normal N in the (u,v,w) coordinates of F.
-inline static bool IntersectsOppositeEdges(S2PointUVW const& n) {
+inline static bool IntersectsOppositeEdges(const S2PointUVW& n) {
   // The line L intersects opposite edges of the [-1,1]x[-1,1] (u,v) square if
   // and only exactly two of the corner vertices lie on each side of L.  This
   // is true exactly when ||Nu| - |Nv|| >= |Nw|.  The code below evaluates this
@@ -107,7 +107,7 @@ inline static bool IntersectsOppositeEdges(S2PointUVW const& n) {
 // L exits the face: return 0 if L exits through the u=-1 or u=+1 edge, and 1
 // if L exits through the v=-1 or v=+1 edge.  Either result is acceptable if L
 // exits exactly through a corner vertex of the cube face.
-static int GetExitAxis(S2PointUVW const& n) {
+static int GetExitAxis(const S2PointUVW& n) {
   DCHECK(IntersectsFace(n));
   if (IntersectsOppositeEdges(n)) {
     // The line passes through through opposite edges of the face.
@@ -128,7 +128,7 @@ static int GetExitAxis(S2PointUVW const& n) {
 // Given a cube face F, a directed line L (represented by its CCW normal N in
 // the (u,v,w) coordinates of F), and result of GetExitAxis(N), return the
 // (u,v) coordinates of the point where L exits the cube face.
-static R2Point GetExitPoint(S2PointUVW const& n, int axis) {
+static R2Point GetExitPoint(const S2PointUVW& n, int axis) {
   if (axis == 0) {
     double u = (n[1] > 0) ? 1.0 : -1.0;
     return R2Point(u, (-u * n[0] - n[2]) / n[1]);
@@ -148,11 +148,11 @@ static R2Point GetExitPoint(S2PointUVW const& n, int axis) {
 // we reproject A onto the adjacent face where the line AB approaches A most
 // closely.  This moves the origin by a small amount, but never more than the
 // error tolerances documented in the header file.
-static int MoveOriginToValidFace(int face, S2Point const& a,
-                                 S2Point const& ab, R2Point* a_uv) {
+static int MoveOriginToValidFace(int face, const S2Point& a,
+                                 const S2Point& ab, R2Point* a_uv) {
   // Fast path: if the origin is sufficiently far inside the face, it is
   // always safe to use it.
-  double const kMaxSafeUVCoord = 1 - kFaceClipErrorUVCoord;
+  const double kMaxSafeUVCoord = 1 - kFaceClipErrorUVCoord;
   if (max(fabs((*a_uv)[0]), fabs((*a_uv)[1])) <= kMaxSafeUVCoord) {
     return face;
   }
@@ -186,8 +186,8 @@ static int MoveOriginToValidFace(int face, S2Point const& a,
 // by its normal N in the (u,v,w) coordinates of that face).  The other
 // arguments include the point where AB exits "face", the corresponding
 // exit axis, and the "target face" containing the destination point B.
-static int GetNextFace(int face, R2Point const& exit, int axis,
-                       S2PointUVW const& n, int target_face) {
+static int GetNextFace(int face, const R2Point& exit, int axis,
+                       const S2PointUVW& n, int target_face) {
   // We return the face that is adjacent to the exit point along the given
   // axis.  If line AB exits *exactly* through a corner of the face, there are
   // two possible next faces.  If one is the "target face" containing B, then
@@ -207,7 +207,7 @@ static int GetNextFace(int face, R2Point const& exit, int axis,
   return S2::GetUVWFace(face, axis, exit[axis] > 0);
 }
 
-void GetFaceSegments(S2Point const& a, S2Point const& b,
+void GetFaceSegments(const S2Point& a, const S2Point& b,
                      FaceSegmentVector* segments) {
   DCHECK(S2::IsUnitLength(a));
   DCHECK(S2::IsUnitLength(b));
@@ -273,13 +273,13 @@ void GetFaceSegments(S2Point const& a, S2Point const& b,
 // intersect this face.  See the calling function for the meaning of the
 // various parameters.
 static int ClipDestination(
-    S2PointUVW const& a, S2PointUVW const& b, S2PointUVW const& scaled_n,
-    S2PointUVW const& a_tangent, S2PointUVW const& b_tangent, double scale_uv,
+    const S2PointUVW& a, const S2PointUVW& b, const S2PointUVW& scaled_n,
+    const S2PointUVW& a_tangent, const S2PointUVW& b_tangent, double scale_uv,
     R2Point* uv) {
   DCHECK(IntersectsFace(scaled_n));
 
   // Optimization: if B is within the safe region of the face, use it.
-  double const kMaxSafeUVCoord = 1 - kFaceClipErrorUVCoord;
+  const double kMaxSafeUVCoord = 1 - kFaceClipErrorUVCoord;
   if (b[2] > 0) {
     *uv = R2Point(b[0] / b[2], b[1] / b[2]);
     if (max(fabs((*uv)[0]), fabs((*uv)[1])) <= kMaxSafeUVCoord)
@@ -324,7 +324,7 @@ static int ClipDestination(
   return score;
 }
 
-bool ClipToPaddedFace(S2Point const& a_xyz, S2Point const& b_xyz, int face,
+bool ClipToPaddedFace(const S2Point& a_xyz, const S2Point& b_xyz, int face,
                       double padding, R2Point* a_uv, R2Point* b_uv) {
   DCHECK_GE(padding, 0);
   // Fast path: both endpoints are on the given face.
@@ -349,7 +349,7 @@ bool ClipToPaddedFace(S2Point const& a_xyz, S2Point const& b_xyz, int face,
   // compute the dot product with the scaled vertex (-R,-R,1).  This allows
   // methods such as IntersectsFace(), GetExitAxis(), etc, to handle padding
   // with no further modifications.
-  double const scale_uv = 1 + padding;
+  const double scale_uv = 1 + padding;
   S2PointUVW scaled_n(scale_uv * n[0], scale_uv * n[1], n[2]);
   if (!IntersectsFace(scaled_n)) return false;
 
@@ -371,7 +371,7 @@ bool ClipToPaddedFace(S2Point const& a_xyz, S2Point const& b_xyz, int face,
   return a_score + b_score < 3;
 }
 
-bool IntersectsRect(R2Point const& a, R2Point const& b, R2Rect const& rect) {
+bool IntersectsRect(const R2Point& a, const R2Point& b, const R2Rect& rect) {
   // First check whether the bound of AB intersects "rect".
   R2Rect bound = R2Rect::FromPointPair(a, b);
   if (!rect.Intersects(bound)) return false;
@@ -407,7 +407,7 @@ inline static bool UpdateEndpoint(R1Interval* bound, int end, double value) {
 // it is 0 if AB has positive slope, and 1 if AB has negative slope.
 inline static bool ClipBoundAxis(double a0, double b0, R1Interval* bound0,
                                  double a1, double b1, R1Interval* bound1,
-                                 int diag, R1Interval const& clip0) {
+                                 int diag, const R1Interval& clip0) {
   if (bound0->lo() < clip0.lo()) {
     if (bound0->hi() < clip0.lo()) return false;
     (*bound0)[0] = clip0.lo();
@@ -425,14 +425,14 @@ inline static bool ClipBoundAxis(double a0, double b0, R1Interval* bound0,
   return true;
 }
 
-R2Rect GetClippedEdgeBound(R2Point const& a, R2Point const& b,
-                           R2Rect const& clip) {
+R2Rect GetClippedEdgeBound(const R2Point& a, const R2Point& b,
+                           const R2Rect& clip) {
   R2Rect bound = R2Rect::FromPointPair(a, b);
   if (ClipEdgeBound(a, b, clip, &bound)) return bound;
   return R2Rect::Empty();
 }
 
-bool ClipEdgeBound(R2Point const& a, R2Point const& b, R2Rect const& clip,
+bool ClipEdgeBound(const R2Point& a, const R2Point& b, const R2Rect& clip,
                    R2Rect* bound) {
   // "diag" indicates which diagonal of the bounding box is spanned by AB: it
   // is 0 if AB has positive slope, and 1 if AB has negative slope.  This is
@@ -445,7 +445,7 @@ bool ClipEdgeBound(R2Point const& a, R2Point const& b, R2Rect const& clip,
                         diag, clip[1]));
 }
 
-bool ClipEdge(R2Point const& a, R2Point const& b, R2Rect const& clip,
+bool ClipEdge(const R2Point& a, const R2Point& b, const R2Rect& clip,
               R2Point* a_clipped, R2Point* b_clipped) {
   // Compute the bounding rectangle of AB, clip it, and then extract the new
   // endpoints from the clipped bound.

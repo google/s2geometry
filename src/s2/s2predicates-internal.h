@@ -50,7 +50,7 @@ template <typename T> constexpr T rounding_epsilon() {
 using Vector3_ld = Vector3<long double>;
 using Vector3_xf = Vector3<ExactFloat>;
 
-inline static Vector3_ld ToLD(S2Point const& x) {
+inline static Vector3_ld ToLD(const S2Point& x) {
   return Vector3_ld::Cast(x);
 }
 
@@ -58,78 +58,78 @@ inline static long double ToLD(double x) {
   return implicit_cast<long double>(x);
 }
 
-inline static Vector3_xf ToExact(S2Point const& x) {
+inline static Vector3_xf ToExact(const S2Point& x) {
   return Vector3_xf::Cast(x);
 }
 
-int StableSign(S2Point const& a, S2Point const& b, S2Point const& c);
+int StableSign(const S2Point& a, const S2Point& b, const S2Point& c);
 
-int ExactSign(S2Point const& a, S2Point const& b, S2Point const& c,
+int ExactSign(const S2Point& a, const S2Point& b, const S2Point& c,
               bool perturb);
 
 int SymbolicallyPerturbedSign(
-    Vector3_xf const& a, Vector3_xf const& b,
-    Vector3_xf const& c, Vector3_xf const& b_cross_c);
+    const Vector3_xf& a, const Vector3_xf& b,
+    const Vector3_xf& c, const Vector3_xf& b_cross_c);
 
 template <class T>
-int TriageCompareCosDistances(Vector3<T> const& x,
-                              Vector3<T> const& a, Vector3<T> const& b);
+int TriageCompareCosDistances(const Vector3<T>& x,
+                              const Vector3<T>& a, const Vector3<T>& b);
 
 template <class T>
-int TriageCompareSin2Distances(Vector3<T> const& x,
-                               Vector3<T> const& a, Vector3<T> const& b);
+int TriageCompareSin2Distances(const Vector3<T>& x,
+                               const Vector3<T>& a, const Vector3<T>& b);
 
-int ExactCompareDistances(Vector3_xf const& x,
-                          Vector3_xf const& a, Vector3_xf const& b);
+int ExactCompareDistances(const Vector3_xf& x,
+                          const Vector3_xf& a, const Vector3_xf& b);
 
-int SymbolicCompareDistances(S2Point const& x,
-                             S2Point const& a, S2Point const& b);
-
-template <class T>
-int TriageCompareSin2Distance(Vector3<T> const& x, Vector3<T> const& y, T r2);
+int SymbolicCompareDistances(const S2Point& x,
+                             const S2Point& a, const S2Point& b);
 
 template <class T>
-int TriageCompareCosDistance(Vector3<T> const& x, Vector3<T> const& y, T r2);
-
-int ExactCompareDistance(Vector3_xf const& x, Vector3_xf const& y,
-                         ExactFloat const& r2);
+int TriageCompareSin2Distance(const Vector3<T>& x, const Vector3<T>& y, T r2);
 
 template <class T>
-int TriageCompareEdgeDistance(Vector3<T> const& x, Vector3<T> const& a0,
-                              Vector3<T> const& a1, T r2);
+int TriageCompareCosDistance(const Vector3<T>& x, const Vector3<T>& y, T r2);
 
-int ExactCompareEdgeDistance(S2Point const& x, S2Point const& a0,
-                             S2Point const& a1, S1ChordAngle r);
+int ExactCompareDistance(const Vector3_xf& x, const Vector3_xf& y,
+                         const ExactFloat& r2);
+
+template <class T>
+int TriageCompareEdgeDistance(const Vector3<T>& x, const Vector3<T>& a0,
+                              const Vector3<T>& a1, T r2);
+
+int ExactCompareEdgeDistance(const S2Point& x, const S2Point& a0,
+                             const S2Point& a1, S1ChordAngle r);
 
 template <class T>
 int TriageCompareEdgeDirections(
-    Vector3<T> const& a0, Vector3<T> const& a1,
-    Vector3<T> const& b0, Vector3<T> const& b1);
+    const Vector3<T>& a0, const Vector3<T>& a1,
+    const Vector3<T>& b0, const Vector3<T>& b1);
 
-int ExactCompareEdgeDirections(Vector3_xf const& a0, Vector3_xf const& a1,
-                               Vector3_xf const& b0, Vector3_xf const& b1);
+int ExactCompareEdgeDirections(const Vector3_xf& a0, const Vector3_xf& a1,
+                               const Vector3_xf& b0, const Vector3_xf& b1);
 
 template <class T>
-int TriageEdgeCircumcenterSign(Vector3<T> const& x0, Vector3<T> const& x1,
-                               Vector3<T> const& a, Vector3<T> const& b,
-                               Vector3<T> const& c, int abc_sign);
+int TriageEdgeCircumcenterSign(const Vector3<T>& x0, const Vector3<T>& x1,
+                               const Vector3<T>& a, const Vector3<T>& b,
+                               const Vector3<T>& c, int abc_sign);
 
-int ExactEdgeCircumcenterSign(Vector3_xf const& x0, Vector3_xf const& x1,
-                              Vector3_xf const& a, Vector3_xf const& b,
-                              Vector3_xf const& c, int abc_sign);
+int ExactEdgeCircumcenterSign(const Vector3_xf& x0, const Vector3_xf& x1,
+                              const Vector3_xf& a, const Vector3_xf& b,
+                              const Vector3_xf& c, int abc_sign);
 
 int SymbolicEdgeCircumcenterSign(
-    S2Point const& x0, S2Point const& x1,
-    S2Point const& a_arg, S2Point const& b_arg, S2Point const& c_arg);
+    const S2Point& x0, const S2Point& x1,
+    const S2Point& a_arg, const S2Point& b_arg, const S2Point& c_arg);
 
 template <class T>
-Excluded TriageVoronoiSiteExclusion(Vector3<T> const& a, Vector3<T> const& b,
-                                    Vector3<T> const& x0, Vector3<T> const& x1,
+Excluded TriageVoronoiSiteExclusion(const Vector3<T>& a, const Vector3<T>& b,
+                                    const Vector3<T>& x0, const Vector3<T>& x1,
                                     T r2);
 
-Excluded ExactVoronoiSiteExclusion(Vector3_xf const& a, Vector3_xf const& b,
-                                   Vector3_xf const& x0, Vector3_xf const& x1,
-                                   ExactFloat const& r2);
+Excluded ExactVoronoiSiteExclusion(const Vector3_xf& a, const Vector3_xf& b,
+                                   const Vector3_xf& x0, const Vector3_xf& x1,
+                                   const ExactFloat& r2);
 }  // namespace s2pred
 
 #endif  // S2_S2PREDICATES_INTERNAL_H_

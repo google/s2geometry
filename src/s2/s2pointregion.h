@@ -39,11 +39,11 @@ class S2LatLngRect;
 class S2PointRegion final : public S2Region {
  public:
   // Create a region containing the given point, which must be unit length.
-  explicit S2PointRegion(S2Point const& point);
+  explicit S2PointRegion(const S2Point& point);
 
   ~S2PointRegion() override;
 
-  S2Point const& point() const { return point_; }
+  const S2Point& point() const { return point_; }
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -51,9 +51,9 @@ class S2PointRegion final : public S2Region {
   S2PointRegion* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
-  bool Contains(S2Cell const& cell) const override { return false; }
-  bool MayIntersect(S2Cell const& cell) const override;
-  bool Contains(S2Point const& p) const override { return (point_ == p); }
+  bool Contains(const S2Cell& cell) const override { return false; }
+  bool MayIntersect(const S2Cell& cell) const override;
+  bool Contains(const S2Point& p) const override { return (point_ == p); }
 
   // Appends a serialized representation of the S2Point to "encoder".
   //
@@ -69,7 +69,7 @@ class S2PointRegion final : public S2Region {
   S2Point point_;
 };
 
-inline S2PointRegion::S2PointRegion(S2Point const& point) : point_(point) {
+inline S2PointRegion::S2PointRegion(const S2Point& point) : point_(point) {
   DCHECK(S2::IsUnitLength(point));
 }
 

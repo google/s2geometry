@@ -28,7 +28,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
 // -----------------------------------------------------------------------------
 // File: casts.h
 // -----------------------------------------------------------------------------
@@ -68,7 +67,7 @@ namespace absl {
 //
 // An `implicit_cast()` may also be used to annotate numeric type conversions
 // that, although safe, may produce compiler warnings (such as `long` to `int`).
-// Additionally, an `implict_cast()` is also useful within return statements to
+// Additionally, an `implicit_cast()` is also useful within return statements to
 // indicate a specific implicit conversion is being undertaken.
 //
 // Example:
@@ -117,7 +116,7 @@ inline To implicit_cast(typename absl::internal::identity_t<To> to) {
 //    * Managing the individual bits of a type within mathematical operations
 //      that are not normally accessible through that type
 //    * Casting non-pointer types to pointer types (casting the other way is
-//      allowed by `reinterept_cast()` but round-trips cannot occur the other
+//      allowed by `reinterpret_cast()` but round-trips cannot occur the other
 //      way).
 //
 // Example:
@@ -144,7 +143,7 @@ inline To implicit_cast(typename absl::internal::identity_t<To> to) {
 // and reading its bits back using a different type. A `bit_cast()` avoids this
 // issue by implementating its casts using `memcpy()`, which avoids introducing
 // this undefined behavior.
-template <class Dest, class Source>
+template <typename Dest, typename Source>
 inline Dest bit_cast(const Source& source) {
   static_assert(sizeof(Dest) == sizeof(Source),
                 "Source and destination types should have equal sizes.");

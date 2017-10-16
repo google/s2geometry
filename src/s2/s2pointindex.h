@@ -31,7 +31,7 @@
 // You can use this class in conjuction with S2ClosestPointQuery to find the
 // closest index points to a given query point.  For example:
 //
-// void Test(vector<S2Point> const& points, S2Point const& target) {
+// void Test(const vector<S2Point>& points, const S2Point& target) {
 //   // The template argument allows auxiliary data to be attached to each
 //   // point (in this case, the array index).
 //   S2PointIndex<int> index;
@@ -52,18 +52,18 @@
 // interface.  For example, here is how to iterate through all the points in a
 // given S2CellId "target_id":
 //
-//   S2PointIndex<int>::Iterator it(index);
+//   S2PointIndex<int>::Iterator it(&index);
 //   it.Seek(target_id.range_min());
 //   for (; !it.done() && it.id() <= target_id.range_max(); it.Next()) {
 //     DoSomething(it.id(), it.point(), it.data());
 //   }
 //
 // Points can be added or removed from the index at any time by calling Add()
-// or Remove().  However when the index is modified, you must call Reset() on
+// or Remove().  However when the index is modified, you must call Init() on
 // each iterator before using it again (or simply create a new iterator).
 //
 //   index.Add(new_point, 123456);
-//   it.Reset();
+//   it.Init(&index);
 //   it.Seek(target.range_min());
 //
 // TODO(ericv): Make this a subtype of S2Region, so that it can also be used
@@ -79,16 +79,16 @@ class S2PointIndex {
   class PointData {
    public:
     PointData() {}  // Needed by STL
-    PointData(S2Point const& point, Data const& data)
+    PointData(const S2Point& point, const Data& data)
         : point_(point), data_(data) {
     }
-    S2Point const& point() const { return point_; }
-    Data const& data() const { return data_; }
-    bool operator==(PointData const& other) const {
+    const S2Point& point() const { return point_; }
+    const Data& data() const { return data_; }
+    bool operator==(const PointData& other) const {
       return point_ == other.point_ && data_ == other.data_;
     }
     // Not required by S2PointIndex but useful for tests.
-    bool operator<(PointData const& other) const {
+    bool operator<(const PointData& other) const {
       return point_ < other.point_ || (point_ == other.point_ &&
                                        data_ < other.data_);
     }
@@ -103,21 +103,21 @@ class S2PointIndex {
   // Returns the number of points in the index.
   int num_points() const;
 
-  // Adds the given point to the index.  Invalidates all iterators; each
-  // iterator's Reset() method must be called before it is used again.
-  void Add(S2Point const& point, Data const& data);
-  void Add(PointData const& point_data);
+  // Adds the given point to the index.  Invalidates all iterators.
+  void Add(const S2Point& point, const Data& data);
+  void Add(const PointData& point_data);
 
   // Removes the given point from the index.  Both the "point" and "data"
   // fields must match the point to be removed.  Returns false if the given
-  // point was not present.  Invalidates all iterators; each iterator's
-  // Reset() method must be called before it is used again.
-  bool Remove(S2Point const& point, Data const& data);
-  bool Remove(PointData const& point_data);
+  // point was not present.  Invalidates all iterators.
+  bool Remove(const S2Point& point, const Data& data);
+  bool Remove(const PointData& point_data);
 
-  // Resets the index to its original empty state.  Invalidates all iterators;
-  // each iterator's Reset() method must be called before it is used again.
-  void Reset();
+  // Resets the index to its original empty state.  Invalidates all iterators.
+  void Clear();
+
+  ABSL_DEPRECATED("Use Clear()")
+  void Reset() { Clear(); }
 
  private:
   // Defined here because the Iterator class below uses it.
@@ -130,16 +130,14 @@ class S2PointIndex {
     Iterator();
 
     // Convenience constructor that calls Init().
-    explicit Iterator(S2PointIndex const& index);
+    explicit Iterator(const S2PointIndex* index);
 
-    // Initialize an iterator for the given S2PointIndex.  If the index is
+    // Initializes an iterator for the given S2PointIndex.  If the index is
     // non-empty, the iterator is positioned at the first cell.
-    void Init(S2PointIndex const& index);
-
-    // Reset the iterator to its original state (positioned at the first point
-    // in the index).  This method must be called after the index is modified
-    // to restore the iterator to a valid state.
-    void Reset();
+    //
+    // This method may be called multiple times, e.g. to make an iterator
+    // valid again after the index is modified.
+    void Init(const S2PointIndex* index);
 
     // The S2CellId for the current index entry.
     // REQUIRES: !done()
@@ -147,16 +145,25 @@ class S2PointIndex {
 
     // The point associated with the current index entry.
     // REQUIRES: !done()
-    S2Point const& point() const;
+    const S2Point& point() const;
 
     // The client-supplied data associated with the current index entry.
     // REQUIRES: !done()
-    Data const& data() const;
+    const Data& data() const;
 
     // The (S2Point, data) pair associated with the current index entry.
-    PointData const& point_data() const;
+    const PointData& point_data() const;
 
-    // Advance the iterator to the next index entry.
+    // Returns true if the iterator is positioned past the last index entry.
+    bool done() const;
+
+    // Positions the iterator at the first index entry (if any).
+    void Begin();
+
+    // Positions the iterator so that done() is true.
+    void Finish();
+
+    // Advances the iterator to the next index entry.
     // REQUIRES: !done()
     void Next();
 
@@ -164,22 +171,20 @@ class S2PointIndex {
     // Otherwise positions the iterator at the previous entry and returns true.
     bool Prev();
 
-    // Return true if the iterator is positioned past the last index entry.
-    bool done() const;
-
-    // Position the iterator at the first entry with id() >= target, or at the
+    // Positions the iterator at the first entry with id() >= target, or at the
     // end of the index if no such entry exists.
     void Seek(S2CellId target);
 
-    // Advance the iterator to the next entry with id() >= target.  If the
-    // iterator is done() or already satisfies id() >= target, do nothing.
-    void SeekForward(S2CellId target);
+    ABSL_DEPRECATED("Use pointer version")
+    explicit Iterator(const S2PointIndex& index) : Iterator(&index) {}
 
-    // Position the iterator so that done() is true.
-    void Finish();
+    ABSL_DEPRECATED("Use pointer version")
+    void Init(const S2PointIndex& index) {
+      Init(&index);
+    }
 
    private:
-    Map const* map_;
+    const Map* map_;
     typename Map::const_iterator iter_, end_;
   };
 
@@ -187,8 +192,8 @@ class S2PointIndex {
   friend class Iterator;
   Map map_;
 
-  S2PointIndex(S2PointIndex const&) = delete;
-  void operator=(S2PointIndex const&) = delete;
+  S2PointIndex(const S2PointIndex&) = delete;
+  void operator=(const S2PointIndex&) = delete;
 };
 
 
@@ -205,18 +210,18 @@ inline int S2PointIndex<Data>::num_points() const {
 }
 
 template <class Data>
-void S2PointIndex<Data>::Add(PointData const& point_data) {
+void S2PointIndex<Data>::Add(const PointData& point_data) {
   S2CellId id(point_data.point());
   map_.insert(std::make_pair(id, point_data));
 }
 
 template <class Data>
-void S2PointIndex<Data>::Add(S2Point const& point, Data const& data) {
+void S2PointIndex<Data>::Add(const S2Point& point, const Data& data) {
   Add(PointData(point, data));
 }
 
 template <class Data>
-bool S2PointIndex<Data>::Remove(PointData const& point_data) {
+bool S2PointIndex<Data>::Remove(const PointData& point_data) {
   S2CellId id(point_data.point());
   for (typename Map::iterator it = map_.lower_bound(id), end = map_.end();
        it != end && it->first == id; ++it) {
@@ -229,12 +234,12 @@ bool S2PointIndex<Data>::Remove(PointData const& point_data) {
 }
 
 template <class Data>
-bool S2PointIndex<Data>::Remove(S2Point const& point, Data const& data) {
+bool S2PointIndex<Data>::Remove(const S2Point& point, const Data& data) {
   return Remove(PointData(point, data));
 }
 
 template <class Data>
-void S2PointIndex<Data>::Reset() {
+void S2PointIndex<Data>::Clear() {
   map_.clear();
 }
 
@@ -244,19 +249,14 @@ inline S2PointIndex<Data>::Iterator::Iterator() : map_(nullptr) {
 
 template <class Data>
 inline S2PointIndex<Data>::Iterator::Iterator(
-    S2PointIndex<Data> const& index) {
+    const S2PointIndex<Data>* index) {
   Init(index);
 }
 
 template <class Data>
 inline void S2PointIndex<Data>::Iterator::Init(
-    S2PointIndex<Data> const& index) {
-  map_ = &index.map_;
-  Reset();
-}
-
-template <class Data>
-inline void S2PointIndex<Data>::Iterator::Reset() {
+    const S2PointIndex<Data>* index) {
+  map_ = &index->map_;
   iter_ = map_->begin();
   end_ = map_->end();
 }
@@ -268,22 +268,37 @@ inline S2CellId S2PointIndex<Data>::Iterator::id() const {
 }
 
 template <class Data>
-inline S2Point const& S2PointIndex<Data>::Iterator::point() const {
+inline const S2Point& S2PointIndex<Data>::Iterator::point() const {
   DCHECK(!done());
   return iter_->second.point();
 }
 
 template <class Data>
-inline Data const& S2PointIndex<Data>::Iterator::data() const {
+inline const Data& S2PointIndex<Data>::Iterator::data() const {
   DCHECK(!done());
   return iter_->second.data();
 }
 
 template <class Data>
-inline typename S2PointIndex<Data>::PointData const&
+inline const typename S2PointIndex<Data>::PointData&
 S2PointIndex<Data>::Iterator::point_data() const {
   DCHECK(!done());
   return iter_->second;
+}
+
+template <class Data>
+inline bool S2PointIndex<Data>::Iterator::done() const {
+  return iter_ == end_;
+}
+
+template <class Data>
+inline void S2PointIndex<Data>::Iterator::Begin() {
+  iter_ = map_->begin();
+}
+
+template <class Data>
+inline void S2PointIndex<Data>::Iterator::Finish() {
+  iter_ = end_;
 }
 
 template <class Data>
@@ -300,24 +315,8 @@ inline bool S2PointIndex<Data>::Iterator::Prev() {
 }
 
 template <class Data>
-inline bool S2PointIndex<Data>::Iterator::done() const {
-  return iter_ == end_;
-}
-
-template <class Data>
 inline void S2PointIndex<Data>::Iterator::Seek(S2CellId target) {
   iter_ = map_->lower_bound(target);
-}
-
-template <class Data>
-inline void S2PointIndex<Data>::Iterator::SeekForward(
-    S2CellId target) {
-  if (!done() && id() < target) Seek(target);
-}
-
-template <class Data>
-inline void S2PointIndex<Data>::Iterator::Finish() {
-  iter_ = end_;
 }
 
 #endif  // S2_S2POINTINDEX_H_

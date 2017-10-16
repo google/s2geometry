@@ -38,14 +38,14 @@ using std::vector;
 // the same as the last vertex of the previous edged when deciding whether or
 // not to call Restart).
 
-void TestCrossingSignInvalid(S2Point const& point, int expected) {
+void TestCrossingSignInvalid(const S2Point& point, int expected) {
   S2EdgeCrosser crosser(&point, &point);
   EXPECT_EQ(expected, crosser.CrossingSign(&point, &point));
   S2CopyingEdgeCrosser crosser2(point, point);
   EXPECT_EQ(expected, crosser2.CrossingSign(point, point));
 }
 
-void TestEdgeOrVertexCrossingInvalid(S2Point const& point, bool expected) {
+void TestEdgeOrVertexCrossingInvalid(const S2Point& point, bool expected) {
   S2EdgeCrosser crosser(&point, &point);
   EXPECT_EQ(expected, crosser.EdgeOrVertexCrossing(&point, &point));
   S2CopyingEdgeCrosser crosser2(point, point);
@@ -61,7 +61,7 @@ TEST(S2EdgeUtil, InvalidDefaultPoints) {
 
 TEST(S2EdgeUtil, InvalidNanPoints) {
   // Check that NaN S2Point arguments don't cause crashes.
-  double const nan = std::numeric_limits<double>::quiet_NaN();
+  const double nan = std::numeric_limits<double>::quiet_NaN();
   S2Point point(nan, nan, nan);
   TestCrossingSignInvalid(point, -1);
   TestEdgeOrVertexCrossingInvalid(point, false);
@@ -69,8 +69,8 @@ TEST(S2EdgeUtil, InvalidNanPoints) {
 
 #endif
 
-void TestCrossing(S2Point const& a, S2Point const& b,
-                  S2Point const& c, S2Point const& d,
+void TestCrossing(const S2Point& a, const S2Point& b,
+                  const S2Point& c, const S2Point& d,
                   int robust, bool edge_or_vertex, bool simple) {
   // Modify the expected result if two vertices from different edges match.
   if (a == c || a == d || b == c || b == d) robust = 0;

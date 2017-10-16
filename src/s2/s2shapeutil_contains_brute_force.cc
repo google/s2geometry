@@ -22,7 +22,7 @@
 
 namespace s2shapeutil {
 
-bool ContainsBruteForce(S2Shape const& shape, S2Point const& point) {
+bool ContainsBruteForce(const S2Shape& shape, const S2Point& point) {
   if (!shape.has_interior()) return false;
 
   S2Shape::ReferencePoint ref_point = shape.GetReferencePoint();

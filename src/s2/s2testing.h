@@ -63,12 +63,12 @@ class S2Testing {
   //
   // If you want to construct a regular polygon, try this:
   //   S2Polygon polygon(S2Loop::MakeRegularLoop(center, radius, num_vertices));
-  static std::vector<S2Point> MakeRegularPoints(S2Point const& center,
+  static std::vector<S2Point> MakeRegularPoints(const S2Point& center,
                                            S1Angle radius,
                                            int num_vertices);
 
   // Append the vertices of "loop" to "vertices".
-  static void AppendLoopVertices(S2Loop const& loop,
+  static void AppendLoopVertices(const S2Loop& loop,
                                  std::vector<S2Point>* vertices);
 
   // A simple class that generates "Koch snowflake" fractals (see Wikipedia
@@ -142,14 +142,14 @@ class S2Testing {
     // (touching at the fractal's center point) and then projecting the edges
     // onto the sphere.  This has the side effect of shrinking the fractal
     // slightly compared to its nominal radius.
-    std::unique_ptr<S2Loop> MakeLoop(Matrix3x3_d const& frame,
+    std::unique_ptr<S2Loop> MakeLoop(const Matrix3x3_d& frame,
                                      S1Angle nominal_radius) const;
 
    private:
     void ComputeMinLevel();
     void ComputeOffsets();
     void GetR2Vertices(std::vector<R2Point>* vertices) const;
-    void GetR2VerticesHelper(R2Point const& v0, R2Point const& v4, int level,
+    void GetR2VerticesHelper(const R2Point& v0, const R2Point& v4, int level,
                              std::vector<R2Point>* vertices) const;
 
     int max_level_;
@@ -165,8 +165,8 @@ class S2Testing {
     // subdivision step, as a fraction of the original edge length.
     double offset_fraction_;
 
-    Fractal(Fractal const&) = delete;
-    void operator=(Fractal const&) = delete;
+    Fractal(const Fractal&) = delete;
+    void operator=(const Fractal&) = delete;
   };
 
   // Convert a distance on the Earth's surface to an angle.
@@ -180,7 +180,7 @@ class S2Testing {
   static double AreaToKm2(double steradians);
 
   // The Earth's mean radius in kilometers (according to NASA).
-  static double const kEarthRadiusKm;
+  static const double kEarthRadiusKm;
 
   // A deterministically-seeded random number generator.
   class Random;
@@ -196,8 +196,8 @@ class S2Testing {
 
   // Given a unit-length z-axis, compute x- and y-axes such that (x,y,z) is a
   // right-handed coordinate frame (three orthonormal vectors).
-  static void GetRandomFrameAt(S2Point const& z, S2Point* x, S2Point *y);
-  static Matrix3x3_d GetRandomFrameAt(S2Point const& z);
+  static void GetRandomFrameAt(const S2Point& z, S2Point* x, S2Point *y);
+  static Matrix3x3_d GetRandomFrameAt(const S2Point& z);
 
   // Return a cap with a random axis such that the log of its area is
   // uniformly distributed between the logs of the two given values.
@@ -206,11 +206,11 @@ class S2Testing {
 
   // Return a point chosen uniformly at random (with respect to area)
   // from the given cap.
-  static S2Point SamplePoint(S2Cap const& cap);
+  static S2Point SamplePoint(const S2Cap& cap);
 
   // Return a point chosen uniformly at random (with respect to area on the
   // sphere) from the given latitude-longitude rectangle.
-  static S2Point SamplePoint(S2LatLngRect const& rect);
+  static S2Point SamplePoint(const S2LatLngRect& rect);
 
   // Return a random cell id at the given level or at a randomly chosen
   // level.  The distribution is uniform over the space of cell ids,
@@ -220,7 +220,7 @@ class S2Testing {
 
   // Return a polygon with the specified center, number of concentric loops
   // and vertices per loop.
-  static void ConcentricLoopsPolygon(S2Point const& center,
+  static void ConcentricLoopsPolygon(const S2Point& center,
                                      int num_loops,
                                      int num_vertices_per_loop,
                                      S2Polygon* polygon);
@@ -228,8 +228,8 @@ class S2Testing {
   // Checks that "covering" completely covers the given region.  If
   // "check_tight" is true, also checks that it does not contain any cells
   // that do not intersect the given region.  ("id" is only used internally.)
-  static void CheckCovering(S2Region const& region,
-                            S2CellUnion const& covering,
+  static void CheckCovering(const S2Region& region,
+                            const S2CellUnion& covering,
                             bool check_tight,
                             S2CellId id = S2CellId());
 
@@ -239,8 +239,8 @@ class S2Testing {
  private:
   // Contains static methods
   S2Testing() = delete;
-  S2Testing(S2Testing const&) = delete;
-  void operator=(S2Testing const&) = delete;
+  S2Testing(const S2Testing&) = delete;
+  void operator=(const S2Testing&) = delete;
 };
 
 // Functions in this class return random numbers that are as good as random()
@@ -288,8 +288,8 @@ class S2Testing::Random {
  private:
   // Currently this class is based on random(), therefore it makes no sense to
   // make a copy.
-  Random(Random const&) = delete;
-  void operator=(Random const&) = delete;
+  Random(const Random&) = delete;
+  void operator=(const Random&) = delete;
 };
 
 // Compare two sets of "closest" items, where "expected" is computed via brute
@@ -300,8 +300,8 @@ class S2Testing::Random {
 // closest (see S2ClosestEdgeQuery::Options::max_error).
 template <typename Id>
 bool CheckDistanceResults(
-    std::vector<std::pair<S1Angle, Id>> const& expected,
-    std::vector<std::pair<S1Angle, Id>> const& actual,
+    const std::vector<std::pair<S1Angle, Id>>& expected,
+    const std::vector<std::pair<S1Angle, Id>>& actual,
     int max_size, S1Angle max_distance, S1Angle max_error);
 
 
@@ -314,14 +314,14 @@ namespace internal {
 // Check that result set "x" contains all the expected results from "y", and
 // does not include any duplicate results.
 template <typename Id>
-bool CheckResultSet(std::vector<std::pair<S1Angle, Id>> const& x,
-                    std::vector<std::pair<S1Angle, Id>> const& y,
+bool CheckResultSet(const std::vector<std::pair<S1Angle, Id>>& x,
+                    const std::vector<std::pair<S1Angle, Id>>& y,
                     int max_size, S1Angle max_distance, S1Angle max_error,
-                    S1Angle max_pruning_error, string const& label) {
+                    S1Angle max_pruning_error, const string& label) {
   using Result = std::pair<S1Angle, Id>;
   // Results should be sorted by distance, but not necessarily then by Id.
   EXPECT_TRUE(std::is_sorted(x.begin(), x.end(),
-                             [](Result const& x, Result const& y) {
+                             [](const Result& x, const Result& y) {
                                return x.first < y.first;
                              }));
 
@@ -340,9 +340,9 @@ bool CheckResultSet(std::vector<std::pair<S1Angle, Id>> const& x,
     limit = x.back().first - max_error - max_pruning_error;
   }
   bool result = true;
-  for (auto const& yp : y) {
+  for (const auto& yp : y) {
     // Note that this test also catches duplicate values.
-    int count = std::count_if(x.begin(), x.end(), [&yp](Result const& xp) {
+    int count = std::count_if(x.begin(), x.end(), [&yp](const Result& xp) {
         return xp.second == yp.second;
       });
     if (yp.first < limit && count != 1) {
@@ -359,13 +359,13 @@ bool CheckResultSet(std::vector<std::pair<S1Angle, Id>> const& x,
 
 template <typename Id>
 bool CheckDistanceResults(
-    std::vector<std::pair<S1Angle, Id>> const& expected,
-    std::vector<std::pair<S1Angle, Id>> const& actual,
+    const std::vector<std::pair<S1Angle, Id>>& expected,
+    const std::vector<std::pair<S1Angle, Id>>& actual,
     int max_size, S1Angle max_distance, S1Angle max_error) {
   // This is a conservative bound on the error in computing the distance from
   // the target geometry to an S2Cell.  Such errors can cause candidates to be
   // pruned from the result set even though they may be slightly closer.
-  static S1Angle const kMaxPruningError = S1Angle::Radians(1e-15);
+  static const S1Angle kMaxPruningError = S1Angle::Radians(1e-15);
   return (S2::internal::CheckResultSet(
               actual, expected, max_size, max_distance, max_error,
               kMaxPruningError, "Missing") & /*not &&*/

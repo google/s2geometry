@@ -66,7 +66,7 @@ class S2CellUnion final : public S2Region {
 
   // Convenience constructor that accepts a vector of uint64.  Note that
   // unlike the constructor above, this one makes a copy of "cell_ids".
-  explicit S2CellUnion(std::vector<uint64> const& cell_ids);
+  explicit S2CellUnion(const std::vector<uint64>& cell_ids);
 
   // Constructs a cell union from S2CellIds have already been normalized
   // (typically because they were extracted from another S2CellUnion).
@@ -107,9 +107,12 @@ class S2CellUnion final : public S2Region {
   // TODO(ericv): Consider deprecating these methods in favor of using the
   // constructors and move assignment operator.
   void Init(std::vector<S2CellId> cell_ids);
-  void Init(std::vector<uint64> const& cell_ids);
+  void Init(const std::vector<uint64>& cell_ids);
   void InitFromMinMax(S2CellId min_id, S2CellId max_id);
   void InitFromBeginEnd(S2CellId begin, S2CellId end);
+
+  // Clears the contents of the cell union and minimizes memory usage.
+  void Clear();
 
   // Gives ownership of the vector data to the client without copying, and
   // clears the content of the cell union.  The original data in cell_ids
@@ -118,7 +121,7 @@ class S2CellUnion final : public S2Region {
 
   // Convenience methods for accessing the individual cell ids.
   int num_cells() const { return cell_ids_.size(); }
-  S2CellId const cell_id(int i) const { return cell_ids_[i]; }
+  const S2CellId cell_id(int i) const { return cell_ids_[i]; }
 
   // Standard begin/end methods, to allow range-based for loops:
   //
@@ -127,7 +130,7 @@ class S2CellUnion final : public S2Region {
   std::vector<S2CellId>::const_iterator end() const;
 
   // Direct access to the underlying vector for STL algorithms.
-  std::vector<S2CellId> const& cell_ids() const { return cell_ids_; }
+  const std::vector<S2CellId>& cell_ids() const { return cell_ids_; }
 
   // Returns true if the cell union is valid, meaning that the S2CellIds are
   // valid, non-overlapping, and sorted in increasing order.
@@ -187,16 +190,16 @@ class S2CellUnion final : public S2Region {
   // FromVerbatim, note that groups of 4 child cells are *not* considered to
   // contain their parent cell.  To get this behavior you must use one of the
   // other constructors or call Normalize() explicitly.
-  bool Contains(S2CellUnion const& y) const;
+  bool Contains(const S2CellUnion& y) const;
 
   // Returns true if this cell union intersects the given other cell union.
-  bool Intersects(S2CellUnion const& y) const;
+  bool Intersects(const S2CellUnion& y) const;
 
   // Returns the union of the two given cell unions.
-  S2CellUnion Union(S2CellUnion const& y) const;
+  S2CellUnion Union(const S2CellUnion& y) const;
 
   // Returns the intersection of the two given cell unions.
-  S2CellUnion Intersection(S2CellUnion const& y) const;
+  S2CellUnion Intersection(const S2CellUnion& y) const;
 
   // Specialized version of GetIntersection() that returns the intersection of
   // a cell union with an S2CellId.  This can be useful for splitting a cell
@@ -204,7 +207,7 @@ class S2CellUnion final : public S2Region {
   S2CellUnion Intersection(S2CellId id) const;
 
   // Returns the difference of the two given cell unions.
-  S2CellUnion Difference(S2CellUnion const& y) const;
+  S2CellUnion Difference(const S2CellUnion& y) const;
 
   // Expands the cell union by adding a buffer of cells at "expand_level"
   // around the union boundary.
@@ -259,10 +262,10 @@ class S2CellUnion final : public S2Region {
   double ExactArea() const;
 
   // Return true if two cell unions are identical.
-  friend bool operator==(S2CellUnion const& x, S2CellUnion const& y);
+  friend bool operator==(const S2CellUnion& x, const S2CellUnion& y);
 
   // Return true if two cell unions are different.
-  friend bool operator!=(S2CellUnion const& x, S2CellUnion const& y);
+  friend bool operator!=(const S2CellUnion& x, const S2CellUnion& y);
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -272,14 +275,14 @@ class S2CellUnion final : public S2Region {
   S2LatLngRect GetRectBound() const override;
 
   // This is a fast operation (logarithmic in the size of the cell union).
-  bool Contains(S2Cell const& cell) const override;
+  bool Contains(const S2Cell& cell) const override;
 
   // This is a fast operation (logarithmic in the size of the cell union).
-  bool MayIntersect(S2Cell const& cell) const override;
+  bool MayIntersect(const S2Cell& cell) const override;
 
   // The point 'p' does not need to be normalized.
   // This is a fast operation (logarithmic in the size of the cell union).
-  bool Contains(S2Point const& p) const override;
+  bool Contains(const S2Point& p) const override;
 
   // Appends a serialized representation of the S2CellUnion to "encoder".
   //
@@ -308,49 +311,9 @@ class S2CellUnion final : public S2Region {
   // requirements: the input vectors may contain groups of 4 child cells that
   // all have the same parent.  (In a normalized S2CellUnion, such groups are
   // always replaced by the parent cell.)
-  static void GetIntersection(std::vector<S2CellId> const& x,
-                              std::vector<S2CellId> const& y,
+  static void GetIntersection(const std::vector<S2CellId>& x,
+                              const std::vector<S2CellId>& y,
                               std::vector<S2CellId>* out);
-
-  ABSL_DEPRECATED("Use S2CellUnion::FromNormalized()")
-  void InitRaw(std::vector<S2CellId> cell_ids) {
-    cell_ids_ = std::move(cell_ids);
-  }
-
-  ABSL_DEPRECATED("Use S2CellUnion::FromNormalized()")
-  void InitRaw(std::vector<uint64> const& cell_ids) {
-    cell_ids_ = ToS2CellIds(cell_ids);
-  }
-
-  ABSL_DEPRECATED("Use Contains(S2CellUnion const&)")
-  bool Contains(S2CellUnion const* y) const {
-    return Contains(*y);
-  }
-
-  ABSL_DEPRECATED("Use Intersects(S2CellUnion const&)")
-  bool Intersects(S2CellUnion const* y) const {
-    return Intersects(*y);
-  }
-
-  ABSL_DEPRECATED("Use Union(S2CellUnion const&)")
-  void GetUnion(S2CellUnion const* x, S2CellUnion const* y) {
-    *this = x->Union(*y);
-  }
-
-  ABSL_DEPRECATED("Use Intersection(S2CellUnion const&)")
-  void GetIntersection(S2CellUnion const* x, S2CellUnion const* y) {
-    *this = x->Intersection(*y);
-  }
-
-  ABSL_DEPRECATED("Use Difference(S2CellUnion const&)")
-  void GetDifference(S2CellUnion const* x, S2CellUnion const* y) {
-    *this = x->Difference(*y);
-  }
-
-  ABSL_DEPRECATED("Use Intersection(S2CellId)")
-  void GetIntersection(S2CellUnion const* x, S2CellId id) {
-    *this = x->Intersection(id);
-  }
 
  private:
   friend class S2CellUnionTestPeer;  // For creating invalid S2CellUnions.
@@ -361,7 +324,7 @@ class S2CellUnion final : public S2Region {
       : cell_ids_(std::move(cell_ids)) {}
 
   // Converts a vector of uint64 to a vector of S2CellIds.
-  static std::vector<S2CellId> ToS2CellIds(std::vector<uint64> const& ids);
+  static std::vector<S2CellId> ToS2CellIds(const std::vector<uint64>& ids);
 
   std::vector<S2CellId> cell_ids_;
 };
@@ -390,6 +353,12 @@ inline S2CellUnion S2CellUnion::FromVerbatim(std::vector<S2CellId> cell_ids) {
 inline void S2CellUnion::Init(std::vector<S2CellId> cell_ids) {
   cell_ids_ = std::move(cell_ids);
   Normalize();
+}
+
+inline void S2CellUnion::Clear() {
+  // swap() guarantees to reduce the RHS vector's size and capacity
+  // to zero (as opposed to clear(), shrink_to_fit() sequence).
+  std::vector<S2CellId>().swap(cell_ids_);
 }
 
 inline std::vector<S2CellId> S2CellUnion::Release() {

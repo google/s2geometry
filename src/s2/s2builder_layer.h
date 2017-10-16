@@ -38,7 +38,13 @@ class S2Builder::Layer {
 
   // Assembles a graph of snapped edges into the geometry type implemented by
   // this layer.  If an error is encountered, sets "error" appropriately.
-  virtual void Build(Graph const& g, S2Error* error) = 0;
+  //
+  // Note that when there are multiple layers, the Graph objects passed to all
+  // layers are guaranteed to be valid until the last Build() method returns.
+  // This makes it easier to write algorithms that gather the output graphs
+  // from several layers and process them all at once (such as
+  // s2builderutil::ClosedSetNormalizer).
+  virtual void Build(const Graph& g, S2Error* error) = 0;
 };
 
 #endif  // S2_S2BUILDER_LAYER_H_

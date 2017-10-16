@@ -37,19 +37,19 @@ S2ConvexHullQuery::S2ConvexHullQuery()
     : bound_(S2LatLngRect::Empty()), points_() {
 }
 
-void S2ConvexHullQuery::AddPoint(S2Point const& point) {
+void S2ConvexHullQuery::AddPoint(const S2Point& point) {
   bound_.AddPoint(point);
   points_.push_back(point);
 }
 
-void S2ConvexHullQuery::AddPolyline(S2Polyline const& polyline) {
+void S2ConvexHullQuery::AddPolyline(const S2Polyline& polyline) {
   bound_ = bound_.Union(polyline.GetRectBound());
   for (int i = 0; i < polyline.num_vertices(); ++i) {
     points_.push_back(polyline.vertex(i));
   }
 }
 
-void S2ConvexHullQuery::AddLoop(S2Loop const& loop) {
+void S2ConvexHullQuery::AddLoop(const S2Loop& loop) {
   bound_ = bound_.Union(loop.GetRectBound());
   if (loop.is_empty_or_full()) {
     // The empty and full loops consist of a single fake "vertex" that should
@@ -61,9 +61,9 @@ void S2ConvexHullQuery::AddLoop(S2Loop const& loop) {
   }
 }
 
-void S2ConvexHullQuery::AddPolygon(S2Polygon const& polygon) {
+void S2ConvexHullQuery::AddPolygon(const S2Polygon& polygon) {
   for (int i = 0; i < polygon.num_loops(); ++i) {
-    S2Loop const& loop = *polygon.loop(i);
+    const S2Loop& loop = *polygon.loop(i);
     // Only loops at depth 0 can contribute to the convex hull.
     if (loop.depth() == 0) {
       AddLoop(loop);
@@ -91,8 +91,8 @@ S2Cap S2ConvexHullQuery::GetCapBound() {
 // A comparator for sorting points in CCW around a central point "center".
 class OrderedCcwAround {
  public:
-  explicit OrderedCcwAround(S2Point const& center) : center_(center) {}
-  bool operator()(S2Point const& x, S2Point const& y) const {
+  explicit OrderedCcwAround(const S2Point& center) : center_(center) {}
+  bool operator()(const S2Point& x, const S2Point& y) const {
     // If X and Y are equal, this will return false (as desired).
     return s2pred::Sign(center_, x, y) > 0;
   }
@@ -160,7 +160,7 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetConvexHull() {
 // such that the edge chain makes only left (CCW) turns.
 void S2ConvexHullQuery::GetMonotoneChain(vector<S2Point>* output) {
   DCHECK(output->empty());
-  for (S2Point const& p : points_) {
+  for (const S2Point& p : points_) {
     // Remove any points that would cause the chain to make a clockwise turn.
     while (output->size() >= 2 &&
            s2pred::Sign(output->end()[-2], output->back(), p) <= 0) {
@@ -170,11 +170,11 @@ void S2ConvexHullQuery::GetMonotoneChain(vector<S2Point>* output) {
   }
 }
 
-unique_ptr<S2Loop> S2ConvexHullQuery::GetSinglePointLoop(S2Point const& p) {
+unique_ptr<S2Loop> S2ConvexHullQuery::GetSinglePointLoop(const S2Point& p) {
   // Construct a 3-vertex polygon consisting of "p" and two nearby vertices.
   // Note that Contains(p) may be false for the resulting loop (see comments
   // in header file).
-  static double const kOffset = 1e-15;
+  static const double kOffset = 1e-15;
   S2Point d0 = S2::Ortho(p);
   S2Point d1 = p.CrossProd(d0);
   vector<S2Point> vertices;
@@ -184,8 +184,8 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetSinglePointLoop(S2Point const& p) {
   return make_unique<S2Loop>(vertices);
 }
 
-unique_ptr<S2Loop> S2ConvexHullQuery::GetSingleEdgeLoop(S2Point const& a,
-                                                        S2Point const& b) {
+unique_ptr<S2Loop> S2ConvexHullQuery::GetSingleEdgeLoop(const S2Point& a,
+                                                        const S2Point& b) {
   // Construct a loop consisting of the two vertices and their midpoint.
   vector<S2Point> vertices;
   vertices.push_back(a);

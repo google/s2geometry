@@ -50,12 +50,12 @@ class DistStats {
   int count_;
 };
 
-S1Angle GetMaxDistance(S2::Projection const& proj,
-                       R2Point const& px, S2Point const& x,
-                       R2Point const& py, S2Point const& y) {
+S1Angle GetMaxDistance(const S2::Projection& proj,
+                       const R2Point& px, const S2Point& x,
+                       const R2Point& py, const S2Point& y) {
   // Step along the projected edge at a fine resolution and keep track of the
   // maximum distance of any point to the current geodesic edge.
-  int const kNumSteps = 100;
+  const int kNumSteps = 100;
   S1ChordAngle max_dist = S1ChordAngle::Zero();
   for (double f = 0.5 / kNumSteps; f < 1.0; f += 1.0 / kNumSteps) {
     S1ChordAngle dist = S1ChordAngle::Infinity();
@@ -66,8 +66,8 @@ S1Angle GetMaxDistance(S2::Projection const& proj,
   return max_dist.ToAngle();
 }
 
-DistStats TestUnprojected(S2::Projection const& proj, S1Angle tolerance,
-                          R2Point const& pa, R2Point const& pb) {
+DistStats TestUnprojected(const S2::Projection& proj, S1Angle tolerance,
+                          const R2Point& pa, const R2Point& pb) {
   S2EdgeTessellator tess(&proj, tolerance);
   vector<S2Point> vertices;
   tess.AppendUnprojected(pa, pb, &vertices);
@@ -98,8 +98,8 @@ DistStats TestUnprojected(S2::Projection const& proj, S1Angle tolerance,
   return stats;
 }
 
-DistStats TestProjected(S2::Projection const& proj, S1Angle tolerance,
-                        S2Point const& a, S2Point const& b) {
+DistStats TestProjected(const S2::Projection& proj, S1Angle tolerance,
+                        const S2Point& a, const S2Point& b) {
   S2EdgeTessellator tess(&proj, tolerance);
   vector<R2Point> vertices;
   tess.AppendProjected(a, b, &vertices);
@@ -153,7 +153,7 @@ TEST(S2EdgeTessellator, WrapUnprojected) {
   S2EdgeTessellator tess(&proj, S1Angle::Degrees(0.01));
   vector<S2Point> vertices;
   tess.AppendUnprojected(R2Point(-170, 0), R2Point(170, 80), &vertices);
-  for (auto const& v : vertices) {
+  for (const auto& v : vertices) {
     EXPECT_GE(fabs(S2LatLng::Longitude(v).degrees()), 170);
   }
 }
@@ -168,7 +168,7 @@ TEST(S2EdgeTessellator, ProjectedWrapping) {
   vector<R2Point> vertices;
   tess.AppendProjected(S2LatLng::FromDegrees(0, -170).ToPoint(),
                        S2LatLng::FromDegrees(0, 170).ToPoint(), &vertices);
-  for (auto const& v : vertices) {
+  for (const auto& v : vertices) {
     EXPECT_LE(v.x(), -170);
   }
 }

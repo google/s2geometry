@@ -44,7 +44,7 @@ TEST(S2, Frames) {
   EXPECT_TRUE(S2::ApproxEquals(S2::FromFrame(m, S2Point(0, 0, 1)), m.Col(2)));
 }
 
-static void TestRotate(S2Point const& p, S2Point const& axis, S1Angle angle) {
+static void TestRotate(const S2Point& p, const S2Point& axis, S1Angle angle) {
   S2Point result = S2::Rotate(p, axis, angle);
 
   // "result" should be unit length.
@@ -93,7 +93,7 @@ TEST(S2, Rotate) {
 // parent of P is nearly collinear with S2::Origin().  This is the minimum
 // level for which Sign() may need to resort to expensive calculations in
 // order to determine which side of an edge the origin lies on.
-static int GetMinExpensiveLevel(S2Point const& p) {
+static int GetMinExpensiveLevel(const S2Point& p) {
   S2CellId id(p);
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
     S2Cell cell(id.parent(level));

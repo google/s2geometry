@@ -54,7 +54,7 @@ class S2RegionIntersection final : public S2Region {
 
   // Accessor methods.
   int num_regions() const { return regions_.size(); }
-  S2Region const* region(int i) const { return regions_[i].get(); }
+  const S2Region* region(int i) const { return regions_[i].get(); }
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -62,18 +62,18 @@ class S2RegionIntersection final : public S2Region {
   S2RegionIntersection* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
-  bool Contains(S2Point const& p) const override;
-  bool Contains(S2Cell const& cell) const override;
-  bool MayIntersect(S2Cell const& cell) const override;
+  bool Contains(const S2Point& p) const override;
+  bool Contains(const S2Cell& cell) const override;
+  bool MayIntersect(const S2Cell& cell) const override;
 
  private:
   // Internal copy constructor used only by Clone() that makes a deep copy of
   // its argument.
-  S2RegionIntersection(S2RegionIntersection const& src);
+  S2RegionIntersection(const S2RegionIntersection& src);
 
   std::vector<std::unique_ptr<S2Region>> regions_;
 
-  void operator=(S2RegionIntersection const&) = delete;
+  void operator=(const S2RegionIntersection&) = delete;
 };
 
 #endif  // S2_S2REGIONINTERSECTION_H_

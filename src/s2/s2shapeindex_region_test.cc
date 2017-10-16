@@ -23,12 +23,12 @@ using std::vector;
 
 namespace {
 
-S2CellId MakeCellId(string const& str) {
+S2CellId MakeCellId(const string& str) {
   return S2CellId::FromDebugString(str);
 }
 
 // Pad by at least twice the maximum error for reliable results.
-static double const kPadding = 2 * (S2::kFaceClipErrorUVCoord +
+static const double kPadding = 2 * (S2::kFaceClipErrorUVCoord +
                                     S2::kIntersectsRectErrorUVDist);
 
 std::unique_ptr<S2Shape> NewPaddedCell(S2CellId id, double padding_uv) {
@@ -39,7 +39,7 @@ std::unique_ptr<S2Shape> NewPaddedCell(S2CellId id, double padding_uv) {
   for (int i = 0; i < 4; ++i) {
     vertices[i] = S2::FaceUVtoXYZ(face, uv.GetVertex(i)).Normalize();
   }
-  return absl::make_unique<s2shapeutil::LaxLoop>(vertices);
+  return absl::make_unique<S2LaxLoopShape>(vertices);
 }
 
 TEST(S2ShapeIndexRegion, GetCapBound) {

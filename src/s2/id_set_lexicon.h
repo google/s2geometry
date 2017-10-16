@@ -49,9 +49,9 @@
 //   ValueLexicon<string> labels_;
 //   IdSetLexicon label_sets_;
 //
-//   int32 GetLabelSet(vector<string> const& label_strings) {
+//   int32 GetLabelSet(const vector<string>& label_strings) {
 //     vector<int32> label_ids;
-//     for (auto const& str: label_strings) {
+//     for (const auto& str: label_strings) {
 //       label_ids.push_back(labels_.Add(str));
 //     }
 //     return label_sets_.Add(label_ids);
@@ -74,8 +74,8 @@ class IdSetLexicon {
   ~IdSetLexicon();
 
   // IdSetLexicon is movable and copyable.
-  IdSetLexicon(IdSetLexicon const&);
-  IdSetLexicon& operator=(IdSetLexicon const&);
+  IdSetLexicon(const IdSetLexicon&);
+  IdSetLexicon& operator=(const IdSetLexicon&);
   IdSetLexicon(IdSetLexicon&&);
   IdSetLexicon& operator=(IdSetLexicon&&);
 
@@ -96,7 +96,7 @@ class IdSetLexicon {
   // present, and return the unique id for this set.  This is a convenience
   // method equivalent to Add(std::begin(container), std::end(container)).
   template <class Container>
-  int32 Add(Container const& container);
+  int32 Add(const Container& container);
 
   // Convenience method that returns the unique id for a singleton set.
   // Note that because singleton sets take up no space, this method is
@@ -109,7 +109,7 @@ class IdSetLexicon {
   static int32 EmptySetId();
 
   // Iterator type; please treat this as an opaque forward iterator.
-  using Iterator = int32 const*;
+  using Iterator = const int32*;
 
   // This class represents a set of integers stored in the IdSetLexicon.
   class IdSet {
@@ -132,7 +132,7 @@ class IdSetLexicon {
  private:
   // Choose kEmptySetId to be the last id that will ever be generated.
   // (Non-negative ids are reserved for singleton sets.)
-  static int32 const kEmptySetId = std::numeric_limits<int32>::min();
+  static const int32 kEmptySetId = std::numeric_limits<int32>::min();
   int32 AddInternal(std::vector<int32>* ids);
 
   SequenceLexicon<int32> id_sets_;
@@ -192,7 +192,7 @@ int32 IdSetLexicon::Add(FwdIterator begin, FwdIterator end) {
 }
 
 template <class Container>
-int32 IdSetLexicon::Add(Container const& container) {
+int32 IdSetLexicon::Add(const Container& container) {
   return Add(std::begin(container), std::end(container));
 }
 

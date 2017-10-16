@@ -32,6 +32,7 @@
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_layers.h"
 #include "s2/s2builderutil_snap_functions.h"
+#include "s2/s2builderutil_testing.h"
 #include "s2/s2cap.h"
 #include "s2/s2cellid.h"
 #include "s2/s2debug.h"
@@ -53,9 +54,10 @@ using std::min;
 using std::pair;
 using std::unique_ptr;
 using std::vector;
+using s2builderutil::GraphClone;
 using s2builderutil::IdentitySnapFunction;
-using s2builderutil::S2CellIdSnapFunction;
 using s2builderutil::IntLatLngSnapFunction;
+using s2builderutil::S2CellIdSnapFunction;
 using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
 using s2builderutil::S2PolylineVectorLayer;
@@ -71,15 +73,15 @@ DEFINE_int32(iteration_multiplier, 1,
 
 namespace {
 
-void ExpectPolygonsEqual(S2Polygon const& expected,
-                         S2Polygon const& actual) {
+void ExpectPolygonsEqual(const S2Polygon& expected,
+                         const S2Polygon& actual) {
   EXPECT_TRUE(expected.Equals(&actual))
       << "\nExpected:\n" << s2textformat::ToString(expected)
       << "\nActual:\n" << s2textformat::ToString(actual);
 }
 
-void ExpectPolygonsApproxEqual(S2Polygon const& expected,
-                               S2Polygon const& actual,
+void ExpectPolygonsApproxEqual(const S2Polygon& expected,
+                               const S2Polygon& actual,
                                S1Angle tolerance) {
   EXPECT_TRUE(expected.BoundaryApproxEquals(actual, tolerance))
       << "\nExpected:  " << s2textformat::ToString(expected)
@@ -87,8 +89,8 @@ void ExpectPolygonsApproxEqual(S2Polygon const& expected,
       << "\nTolerance: " << tolerance.degrees();
 }
 
-void ExpectPolylinesEqual(S2Polyline const& expected,
-                          S2Polyline const& actual) {
+void ExpectPolylinesEqual(const S2Polyline& expected,
+                          const S2Polyline& actual) {
   EXPECT_TRUE(expected.Equals(&actual))
       << "\nExpected:\n" << s2textformat::ToString(expected)
       << "\nActual:\n" << s2textformat::ToString(actual);
@@ -127,7 +129,7 @@ TEST(S2Builder, SimpleS2CellIdSnapping) {
   S2Error error;
   ASSERT_TRUE(builder.Build(&error)) << error.text();
   ASSERT_EQ(1, output.num_loops());
-  S2Loop const* loop = output.loop(0);
+  const S2Loop* loop = output.loop(0);
   for (int i = 0; i < loop->num_vertices(); ++i) {
     EXPECT_EQ(S2CellId(loop->vertex(i)).parent(level).ToPoint(),
               loop->vertex(i));
@@ -428,11 +430,68 @@ TEST(S2Builder, TieBreakingIsConsistent) {
   }
 }
 
+// Verifies that two graphs have the same vertices and edges.
+void ExpectGraphsEqual(const S2Builder::Graph& expected,
+                       const S2Builder::Graph& actual) {
+  ASSERT_EQ(expected.vertices(), actual.vertices());
+  ASSERT_EQ(expected.edges(), actual.edges());
+  ASSERT_EQ(expected.input_edge_id_set_ids(),
+            actual.input_edge_id_set_ids());
+}
+
+// This layer makes both a shallow and a deep copy of the Graph object passed
+// to its Build() method and appends them to two vectors.  Furthermore, it
+// verifies that the shallow and deep copies of any graphs previously appended
+// to those vectors are still identical.
+class GraphPersistenceLayer : public S2Builder::Layer {
+ public:
+  GraphPersistenceLayer(
+      const S2Builder::GraphOptions& graph_options,
+      std::vector<S2Builder::Graph>* graphs,
+      std::vector<std::unique_ptr<GraphClone>>* clones)
+      : graph_options_(graph_options), graphs_(graphs), clones_(clones) {}
+
+  S2Builder::GraphOptions graph_options() const override {
+    return graph_options_;
+  }
+
+  void Build(const S2Builder::Graph& g, S2Error* error) override {
+    // Verify that all graphs built so far are unchanged.
+    for (int i = 0; i < graphs_->size(); ++i) {
+      ExpectGraphsEqual((*clones_)[i]->graph(), (*graphs_)[i]);
+    }
+    graphs_->push_back(g);
+    clones_->push_back(absl::make_unique<GraphClone>(g));
+  }
+
+ private:
+  GraphOptions graph_options_;
+  std::vector<S2Builder::Graph>* graphs_;             // Shallow copies.
+  std::vector<std::unique_ptr<GraphClone>>* clones_;  // Deep copies.
+};
+
+TEST(S2Builder, GraphPersistence) {
+  // Ensure that the Graph objects passed to S2Builder::Layer::Build() methods
+  // remain valid until all layers have been built.
+  vector<Graph> graphs;
+  vector<unique_ptr<GraphClone>> clones;
+  S2Builder builder((S2Builder::Options()));
+  for (int i = 0; i < 20; ++i) {
+    builder.StartLayer(make_unique<GraphPersistenceLayer>(
+        GraphOptions(), &graphs, &clones));
+    for (int n = S2Testing::rnd.Uniform(10); n > 0; --n) {
+      builder.AddEdge(S2Testing::RandomPoint(), S2Testing::RandomPoint());
+    }
+  }
+  S2Error error;
+  EXPECT_TRUE(builder.Build(&error));
+}
+
 void TestPolylineLayers(
-    vector<char const*> const& input_strs,
-    vector<char const*> const& expected_strs,
-    S2PolylineLayer::Options const& layer_options,
-    S2Builder::Options const& builder_options = S2Builder::Options()) {
+    const vector<const char*>& input_strs,
+    const vector<const char*>& expected_strs,
+    const S2PolylineLayer::Options& layer_options,
+    const S2Builder::Options& builder_options = S2Builder::Options()) {
   SCOPED_TRACE(layer_options.edge_type() == EdgeType::DIRECTED ?
                "DIRECTED" : "UNDIRECTED");
   S2Builder builder(builder_options);
@@ -446,7 +505,7 @@ void TestPolylineLayers(
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   vector<string> output_strs;
-  for (auto const& polyline : output) {
+  for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
   EXPECT_EQ(strings::Join(expected_strs, "; "),
@@ -454,10 +513,10 @@ void TestPolylineLayers(
 }
 
 void TestPolylineVector(
-    vector<char const*> const& input_strs,
-    vector<char const*> const& expected_strs,
-    S2PolylineVectorLayer::Options const& layer_options,
-    S2Builder::Options const& builder_options = S2Builder::Options()) {
+    const vector<const char*>& input_strs,
+    const vector<const char*>& expected_strs,
+    const S2PolylineVectorLayer::Options& layer_options,
+    const S2Builder::Options& builder_options = S2Builder::Options()) {
   S2Builder builder(builder_options);
   vector<unique_ptr<S2Polyline>> output;
   builder.StartLayer(
@@ -468,7 +527,7 @@ void TestPolylineVector(
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   vector<string> output_strs;
-  for (auto const& polyline : output) {
+  for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
   EXPECT_EQ(strings::Join(expected_strs, "; "),
@@ -476,10 +535,10 @@ void TestPolylineVector(
 }
 
 void TestPolylineLayersBothEdgeTypes(
-    vector<char const*> const& input_strs,
-    vector<char const*> const& expected_strs,
+    const vector<const char*>& input_strs,
+    const vector<const char*>& expected_strs,
     S2PolylineLayer::Options layer_options,  // by value
-    S2Builder::Options const& builder_options = S2Builder::Options()) {
+    const S2Builder::Options& builder_options = S2Builder::Options()) {
   layer_options.set_edge_type(EdgeType::DIRECTED);
   TestPolylineLayers(input_strs, expected_strs, layer_options, builder_options);
   layer_options.set_edge_type(EdgeType::UNDIRECTED);
@@ -607,10 +666,10 @@ TEST(S2Builder, SimplifyPreservesTopology) {
   // Crate several nested concentric loops, and verify that the loops are
   // still nested after simplification.
 
-  int const kNumLoops = 20;
-  int const kNumVerticesPerLoop = 1000;
-  S1Angle const kBaseRadius = S1Angle::Degrees(5);
-  S1Angle const kSnapRadius = S1Angle::Degrees(0.1);
+  const int kNumLoops = 20;
+  const int kNumVerticesPerLoop = 1000;
+  const S1Angle kBaseRadius = S1Angle::Degrees(5);
+  const S1Angle kSnapRadius = S1Angle::Degrees(0.1);
   S2Builder::Options options((IdentitySnapFunction(kSnapRadius)));
   options.set_simplify_edge_chains(true);
   S2Builder builder(options);
@@ -677,15 +736,15 @@ S2Error::Code INPUT_EDGE_ID_MISMATCH = S2Error::USER_DEFINED_START;
 
 class InputEdgeIdCheckingLayer : public S2Builder::Layer {
  public:
-  InputEdgeIdCheckingLayer(EdgeInputEdgeIds const& expected,
-                           GraphOptions const& graph_options)
+  InputEdgeIdCheckingLayer(const EdgeInputEdgeIds& expected,
+                           const GraphOptions& graph_options)
       : expected_(expected), graph_options_(graph_options) {
   }
   GraphOptions graph_options() const override { return graph_options_; }
-  void Build(Graph const& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* error) override;
 
  private:
-  string ToString(pair<string, vector<int>> const& p) {
+  string ToString(const pair<string, vector<int>>& p) {
     string r = StringPrintf("  (%s)={", p.first.c_str());
     if (!p.second.empty()) {
       for (int id : p.second) {
@@ -701,7 +760,7 @@ class InputEdgeIdCheckingLayer : public S2Builder::Layer {
   GraphOptions graph_options_;
 };
 
-void InputEdgeIdCheckingLayer::Build(Graph const& g, S2Error* error) {
+void InputEdgeIdCheckingLayer::Build(const Graph& g, S2Error* error) {
   EdgeInputEdgeIds actual;
   vector<S2Point> vertices;
   for (Graph::EdgeId e = 0; e < g.num_edges(); ++e) {
@@ -717,11 +776,11 @@ void InputEdgeIdCheckingLayer::Build(Graph const& g, S2Error* error) {
   }
   // This comparison doesn't consider multiplicity, but that's fine.
   string missing, extra;
-  for (auto const& p : expected_) {
+  for (const auto& p : expected_) {
     if (std::count(actual.begin(), actual.end(), p) > 0) continue;
     missing += ToString(p);
   }
-  for (auto const& p : actual) {
+  for (const auto& p : actual) {
     if (std::count(expected_.begin(), expected_.end(), p) > 0) continue;
     extra += ToString(p);
   }
@@ -732,8 +791,8 @@ void InputEdgeIdCheckingLayer::Build(Graph const& g, S2Error* error) {
 }
 
 void TestInputEdgeIds(
-    vector<char const*> const& input_strs, EdgeInputEdgeIds const& expected,
-    GraphOptions const& graph_options, S2Builder::Options const& options) {
+    const vector<const char*>& input_strs, const EdgeInputEdgeIds& expected,
+    const GraphOptions& graph_options, const S2Builder::Options& options) {
   S2Builder builder(options);
   builder.StartLayer(make_unique<InputEdgeIdCheckingLayer>(expected,
                                                           graph_options));
@@ -820,7 +879,7 @@ TEST(S2Builder, SimplifyDegenerateEdgeMergingHard) {
   GraphOptions graph_options;  // Default options keep everything.
   S2Builder::Options options(IntLatLngSnapFunction(0));
   options.set_simplify_edge_chains(true);
-  vector<char const*> input {
+  vector<const char*> input {
     "0:1, 0:1.1", "0:0, 0:1, 0:2",  // Degenerate edge defined before chain
     "0:0, 0:0.9, 0:1, 0:1.1, 0:2",  // Degenerate edge defined in chain
     "0:2, 0:1, 0:0.9, 0:0",         // Defined in chain, chain reversed
@@ -853,7 +912,7 @@ TEST(S2Builder, SimplifyDegenerateEdgeMergingMultipleLayers) {
   // Note below that the edge chains in different layers have different vertex
   // locations, different number of interior vertices, different degenerate
   // edges, etc, and yet they can all be simplified together.
-  vector<vector<char const*>> input { {
+  vector<vector<const char*>> input { {
       "0.1:5, 0:5.2", "0.1:0, 0:9.9",   // Defined before chain
       "0:10.1, 0:0.1", "0:3.1, 0:2.9",  // Defined after chain
     }, {
@@ -935,7 +994,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
 
   auto& rnd = S2Testing::rnd;
   int non_degenerate = 0;
-  int const kIters = 8000 * FLAGS_iteration_multiplier;
+  const int kIters = 8000 * FLAGS_iteration_multiplier;
   for (int iter = 0; iter < kIters; ++iter) {
     // TODO(ericv): This test fails with a random seed of 96.  Change this
     // back to "iter + 1" once all the exact predicates are implemented.
@@ -1000,7 +1059,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
 }
 
 TEST(S2Builder, SelfIntersectionStressTest) {
-  int const kIters = 50 * FLAGS_iteration_multiplier;
+  const int kIters = 50 * FLAGS_iteration_multiplier;
   for (int iter = 0; iter < kIters; ++iter) {
     S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
     CycleTimer timer;
@@ -1051,7 +1110,7 @@ TEST(S2Builder, SelfIntersectionStressTest) {
 }
 
 TEST(S2Builder, FractalStressTest) {
-  int const kIters = (google::DEBUG_MODE ? 100 : 1000) * FLAGS_iteration_multiplier;
+  const int kIters = (google::DEBUG_MODE ? 100 : 1000) * FLAGS_iteration_multiplier;
   for (int iter = 0; iter < kIters; ++iter) {
     S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
     S2Testing::Fractal fractal;
@@ -1089,13 +1148,13 @@ TEST(S2Builder, FractalStressTest) {
   }
 }
 
-void TestSnappingWithForcedVertices(char const* input_str,
+void TestSnappingWithForcedVertices(const char* input_str,
                                     S1Angle snap_radius,
-                                    char const* vertices_str,
-                                    char const* expected_str) {
+                                    const char* vertices_str,
+                                    const char* expected_str) {
   S2Builder builder((S2Builder::Options(IdentitySnapFunction(snap_radius))));
   vector<S2Point> vertices = s2textformat::ParsePoints(vertices_str);
-  for (auto const& vertex : vertices) {
+  for (const auto& vertex : vertices) {
     builder.ForceVertex(vertex);
   }
   S2Polyline output;

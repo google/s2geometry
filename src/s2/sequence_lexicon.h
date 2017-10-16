@@ -47,7 +47,7 @@
 //   uint32 pets_id = lexicon.Add(pets);
 //   CHECK_EQ(pets_id, lexicon.Add(pets));
 //   string values;
-//   for (auto const& pet : lexicon.sequence(pets_id)) {
+//   for (const auto& pet : lexicon.sequence(pets_id)) {
 //     values += pet;
 //   }
 //   CHECK_EQ("catdogparrot", values);
@@ -57,12 +57,12 @@ template <class T,
           class KeyEqual = std::equal_to<T>>
 class SequenceLexicon {
  public:
-  explicit SequenceLexicon(Hasher const& hasher = Hasher(),
-                           KeyEqual const& key_equal = KeyEqual());
+  explicit SequenceLexicon(const Hasher& hasher = Hasher(),
+                           const KeyEqual& key_equal = KeyEqual());
 
   // SequenceLexicon is movable and copyable.
-  SequenceLexicon(SequenceLexicon const&);
-  SequenceLexicon& operator=(SequenceLexicon const&);
+  SequenceLexicon(const SequenceLexicon&);
+  SequenceLexicon& operator=(const SequenceLexicon&);
   SequenceLexicon(SequenceLexicon&&);
   SequenceLexicon& operator=(SequenceLexicon&&);
 
@@ -81,7 +81,7 @@ class SequenceLexicon {
   // starting from zero.  This is a convenience method equivalent to
   // Add(std::begin(container), std::end(container)).
   template <class Container>
-  uint32 Add(Container const& container);
+  uint32 Add(const Container& container);
 
   // Return the number of value sequences in the lexicon.
   uint32 size() const;
@@ -103,32 +103,32 @@ class SequenceLexicon {
   };
   // Return the value sequence with the given id.  This method can be used
   // with range-based for loops as follows:
-  //   for (auto const& value : lexicon.sequence(id)) { ... }
+  //   for (const auto& value : lexicon.sequence(id)) { ... }
   Sequence sequence(uint32 id) const;
 
  private:
   friend class IdKeyEqual;
   // Choose kEmptyKey to be the last key that will ever be generated.
-  static uint32 const kEmptyKey = std::numeric_limits<uint32>::max();
+  static const uint32 kEmptyKey = std::numeric_limits<uint32>::max();
 
   class IdHasher {
    public:
-    IdHasher(Hasher const& hasher, SequenceLexicon const* lexicon);
-    Hasher const& hasher() const;
+    IdHasher(const Hasher& hasher, const SequenceLexicon* lexicon);
+    const Hasher& hasher() const;
     size_t operator()(uint32 id) const;
    private:
     Hasher hasher_;
-    SequenceLexicon const* lexicon_;
+    const SequenceLexicon* lexicon_;
   };
 
   class IdKeyEqual {
    public:
-    IdKeyEqual(KeyEqual const& key_equal, SequenceLexicon const* lexicon);
-    KeyEqual const& key_equal() const;
+    IdKeyEqual(const KeyEqual& key_equal, const SequenceLexicon* lexicon);
+    const KeyEqual& key_equal() const;
     bool operator()(uint32 id1, uint32 id2) const;
    private:
     KeyEqual key_equal_;
-    SequenceLexicon const* lexicon_;
+    const SequenceLexicon* lexicon_;
   };
 
   using IdSet =
@@ -144,16 +144,16 @@ class SequenceLexicon {
 
 
 template <class T, class Hasher, class KeyEqual>
-uint32 const SequenceLexicon<T, Hasher, KeyEqual>::kEmptyKey;
+const uint32 SequenceLexicon<T, Hasher, KeyEqual>::kEmptyKey;
 
 template <class T, class Hasher, class KeyEqual>
 SequenceLexicon<T, Hasher, KeyEqual>::IdHasher::IdHasher(
-    Hasher const& hasher, SequenceLexicon const* lexicon)
+    const Hasher& hasher, const SequenceLexicon* lexicon)
     : hasher_(hasher), lexicon_(lexicon) {
 }
 
 template <class T, class Hasher, class KeyEqual>
-Hasher const& SequenceLexicon<T, Hasher, KeyEqual>::IdHasher::hasher() const {
+const Hasher& SequenceLexicon<T, Hasher, KeyEqual>::IdHasher::hasher() const {
   return hasher_;
 }
 
@@ -161,7 +161,7 @@ template <class T, class Hasher, class KeyEqual>
 size_t SequenceLexicon<T, Hasher, KeyEqual>::IdHasher::operator()(
     uint32 id) const {
   HashMix mix;
-  for (auto const& value : lexicon_->sequence(id)) {
+  for (const auto& value : lexicon_->sequence(id)) {
     mix.Mix(hasher_(value));
   }
   return mix.get();
@@ -169,12 +169,12 @@ size_t SequenceLexicon<T, Hasher, KeyEqual>::IdHasher::operator()(
 
 template <class T, class Hasher, class KeyEqual>
 SequenceLexicon<T, Hasher, KeyEqual>::IdKeyEqual::IdKeyEqual(
-    KeyEqual const& key_equal, SequenceLexicon const* lexicon)
+    const KeyEqual& key_equal, const SequenceLexicon* lexicon)
     : key_equal_(key_equal), lexicon_(lexicon) {
 }
 
 template <class T, class Hasher, class KeyEqual>
-KeyEqual const& SequenceLexicon<T, Hasher, KeyEqual>::IdKeyEqual::key_equal()
+const KeyEqual& SequenceLexicon<T, Hasher, KeyEqual>::IdKeyEqual::key_equal()
     const {
   return key_equal_;
 }
@@ -193,8 +193,8 @@ bool SequenceLexicon<T, Hasher, KeyEqual>::IdKeyEqual::operator()(
 }
 
 template <class T, class Hasher, class KeyEqual>
-SequenceLexicon<T, Hasher, KeyEqual>::SequenceLexicon(Hasher const& hasher,
-                                                      KeyEqual const& key_equal)
+SequenceLexicon<T, Hasher, KeyEqual>::SequenceLexicon(const Hasher& hasher,
+                                                      const KeyEqual& key_equal)
     : id_set_(0, IdHasher(hasher, this),
               IdKeyEqual(key_equal, this)) {
   id_set_.set_empty_key(kEmptyKey);
@@ -202,7 +202,7 @@ SequenceLexicon<T, Hasher, KeyEqual>::SequenceLexicon(Hasher const& hasher,
 }
 
 template <class T, class Hasher, class KeyEqual>
-SequenceLexicon<T, Hasher, KeyEqual>::SequenceLexicon(SequenceLexicon const& x)
+SequenceLexicon<T, Hasher, KeyEqual>::SequenceLexicon(const SequenceLexicon& x)
     : values_(x.values_), begins_(x.begins_),
       // Unfortunately we can't copy "id_set_" because we need to change the
       // "this" pointers associated with hasher() and key_equal().
@@ -223,7 +223,7 @@ SequenceLexicon<T, Hasher, KeyEqual>::SequenceLexicon(SequenceLexicon&& x)
 
 template <class T, class Hasher, class KeyEqual>
 SequenceLexicon<T, Hasher, KeyEqual>&
-SequenceLexicon<T, Hasher, KeyEqual>::operator=(SequenceLexicon const& x) {
+SequenceLexicon<T, Hasher, KeyEqual>::operator=(const SequenceLexicon& x) {
   // Note that self-assignment is handled correctly by this code.
   values_ = x.values_;
   begins_ = x.begins_;
@@ -278,7 +278,7 @@ uint32 SequenceLexicon<T, Hasher, KeyEqual>::Add(FwdIterator begin,
 
 template <class T, class Hasher, class KeyEqual>
 template <class Container>
-uint32 SequenceLexicon<T, Hasher, KeyEqual>::Add(Container const& container) {
+uint32 SequenceLexicon<T, Hasher, KeyEqual>::Add(const Container& container) {
   return Add(std::begin(container), std::end(container));
 }
 

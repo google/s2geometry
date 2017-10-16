@@ -31,7 +31,7 @@ void S2RegionUnion::Init(vector<std::unique_ptr<S2Region>> regions) {
   regions_ = std::move(regions);
 }
 
-S2RegionUnion::S2RegionUnion(S2RegionUnion const& src)
+S2RegionUnion::S2RegionUnion(const S2RegionUnion& src)
   : regions_(src.num_regions()) {
   for (int i = 0; i < num_regions(); ++i) {
     regions_[i].reset(src.region(i)->Clone());
@@ -66,7 +66,7 @@ S2LatLngRect S2RegionUnion::GetRectBound() const {
   return result;
 }
 
-bool S2RegionUnion::Contains(S2Cell const& cell) const {
+bool S2RegionUnion::Contains(const S2Cell& cell) const {
   // Note that this method is allowed to return false even if the cell
   // is contained by the region.
   for (int i = 0; i < num_regions(); ++i) {
@@ -75,14 +75,14 @@ bool S2RegionUnion::Contains(S2Cell const& cell) const {
   return false;
 }
 
-bool S2RegionUnion::Contains(S2Point const& p) const {
+bool S2RegionUnion::Contains(const S2Point& p) const {
   for (int i = 0; i < num_regions(); ++i) {
     if (region(i)->Contains(p)) return true;
   }
   return false;
 }
 
-bool S2RegionUnion::MayIntersect(S2Cell const& cell) const {
+bool S2RegionUnion::MayIntersect(const S2Cell& cell) const {
   for (int i = 0; i < num_regions(); ++i) {
     if (region(i)->MayIntersect(cell)) return true;
   }

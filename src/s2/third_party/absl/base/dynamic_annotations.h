@@ -13,6 +13,21 @@
 // limitations under the License.
 //
 
+/*
+ *  Copyright 2017 The Abseil Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 /* This file defines dynamic annotations for use with dynamic analysis
    tool such as valgrind, PIN, etc.
 
@@ -159,6 +174,10 @@
   #define ANNOTATE_MEMORY_IS_UNINITIALIZED(address, size) /* empty */
 #endif  /* DYNAMIC_ANNOTATIONS_ENABLED || MEMORY_SANITIZER */
 
+#ifdef SWIG
+  #define ATTRIBUTE_IGNORE_READS_BEGIN  /* empty */
+  #define ATTRIBUTE_IGNORE_READS_END  /* empty */
+#else  // SWIG
 /* TODO(user) -- Replace __CLANG_SUPPORT_DYN_ANNOTATION__ with the
    appropriate feature ID. */
 #if defined(__clang__) && (!defined(SWIG)) \
@@ -177,7 +196,8 @@
 #else
   #define ATTRIBUTE_IGNORE_READS_BEGIN  /* empty */
   #define ATTRIBUTE_IGNORE_READS_END  /* empty */
-#endif  /* defined(__clang__) && (!defined(SWIG)) && ... */
+#endif  /* defined(__clang__) && ... */
+#endif
 
 #if (DYNAMIC_ANNOTATIONS_ENABLED != 0) || defined(ANNOTALYSIS_ENABLED)
   #define ANNOTATIONS_ENABLED
@@ -299,7 +319,7 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
    while still letting the compiler elide the functions from the final build.
 
    TODO(user) -- The exclusive lock here ignores writes as well, but
-   allows INGORE_READS_AND_WRITES to work properly. */
+   allows IGNORE_READS_AND_WRITES to work properly. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 static inline void StaticAnnotateIgnoreReadsBegin(const char *file, int line)
@@ -356,12 +376,12 @@ double ValgrindSlowdown(void);
      one can use
         ... = ANNOTATE_UNPROTECTED_READ(x); */
 #if defined(__cplusplus) && defined(ANNOTATIONS_ENABLED)
-  template <class T>
-  inline T ANNOTATE_UNPROTECTED_READ(const volatile T &x) {  /* NOLINT */
-    ANNOTATE_IGNORE_READS_BEGIN();
-    T res = x;
-    ANNOTATE_IGNORE_READS_END();
-    return res;
+template <typename T>
+inline T ANNOTATE_UNPROTECTED_READ(const volatile T &x) { /* NOLINT */
+  ANNOTATE_IGNORE_READS_BEGIN();
+  T res = x;
+  ANNOTATE_IGNORE_READS_END();
+  return res;
   }
 #else
   #define ANNOTATE_UNPROTECTED_READ(x) (x)

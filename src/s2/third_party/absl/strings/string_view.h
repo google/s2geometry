@@ -28,114 +28,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
-// A string_view points to part or all of a string, Cord, double-quoted string
-// literal, or other string-like object.  A string_view does *not* own the
-// string to which it points.  A string_view is not null-terminated.
+// -----------------------------------------------------------------------------
+// File: string_view.h
+// -----------------------------------------------------------------------------
 //
-// You can use string_view as a function or method parameter.  A string_view
-// parameter can receive a double-quoted string literal argument, a
-// "const char*" argument, a string argument, or a string_view argument with no
-// data copying.  Systematic use of string_view for arguments reduces data
-// copies and strlen() calls.
+// This file contains the definition of the `absl::string_view` class. A
+// `string_view` points to a contiguous span of characters, often part or all of
+// another `std::string`, double-quoted string literal, character array, or even
+// another `string_view`.
 //
-// Prefer passing string_view by value:
-//   void MyFunction(string_view arg);
-// If circumstances require, you may also pass by const reference:
-//   void MyFunction(const string_view& arg);  // not preferred
-// Both of these have the same lifetime semantics.  Passing by value generates
-// slightly smaller code.
-// For more discussion, see the thread go/stringpiecebyvalue on c-users.
-//
-// string_view is also suitable for local variables if you know that the
-// lifetime of the underlying object is longer than the lifetime of your
-// string_view variable.
-//
-// Beware of binding a string_view to a temporary:
-//   string_view sv = obj.ReturnAString();  // BAD: lifetime problem
-//
-// This code is okay:
-//   string str = obj.ReturnAString();  // str owns its contents
-//   string_view sv(str);               // GOOD, because str outlives sv
-//
-// string_view is sometimes a poor choice for a return value and usually a poor
-// choice for a data member.  If you do use a string_view this way, it is your
-// responsibility to ensure that the object pointed to by the string_view
-// outlives the string_view.
-//
-// A string_view may represent just part of a string.  For example, when
-// splitting a string, std::vector<string_view> is a natural data type for the
-// output.  For another example, a Cord is a non-contiguous, potentially very
-// long string-like object.  The Cord class has an interface that iteratively
-// provides string_view objects that point to the successive pieces of a Cord
-// object.
-//
-// A string_view is not null-terminated.  If you write code that scans a
-// string_view, you must check its length before reading any characters. Common
-// idioms that work on null-terminated strings do not work on string_view
-// objects.
-//
-// There are several ways to create a null string_view:
-//   string_view()
-//   string_view(nullptr, 0)
-// For all of the above, sv.data() == nullptr, sv.length() == 0, and
-// sv.empty() == true.  Also, if you create a string_view with a non-null
-// pointer then sv.data() != nullptr.
-//
-// Thus, you can use string_view() to signal an out-of-band value that
-// is different from other string_view values.  This is similar to the way that
-// const char* p1 = nullptr; is different from const char* p2 = "";.
-//
-// There are many ways to create an empty string_view:
-//   const char* nullcp = nullptr;
-//   string_view()
-//   string_view(nullcp, 0)
-//   string_view("")
-//   string_view("", 0)
-//   string_view("abcdef", 0)
-//   string_view("abcdef"+6, 0)
-// For all of the above, size will be 0.
-//
-// Be careful not to confuse the string_view nullity with emptiness. The set of
-// empty string_views properly includes the null string_view. That is, the null
-// string_view is an empty string_view, but some non-null string_views are empty
-// string_views too.
-//
-// All empty string_views whether null or not, are equal.
-// string_view:
-//   string_view() == string_view("", 0)
-//   string_view(nullptr, 0) == string_view("abcdef"+6, 0)
-//
-// Look carefully at this example:
-//   string_view("") == nullptr
-// True or false?  TRUE, because string_view::operator== converts the right-hand
-// side from nullptr to string_view(nullptr), and then compares two zero-length
-// spans of characters. However, we are working to make this example produce a
-// compile error.
-//
-// Suppose you want to write:
-//   bool TestUnclear(string_view sv) { return sv == nullptr; }  // BAD
-// Do not do that.  Write one of these instead:
-//   bool TestNull(string_view sv) { return sv.data() == nullptr; }
-//   bool TestEmpty(string_view sv) { return sv.empty(); }
-// The intent of TestUnclear is unclear.  Did you mean TestNull or TestEmpty?
-// Right now, TestUnclear behaves likes TestEmpty.
-// We are working to make TestUnclear produce a compile error.
-// TestNull is good to test for an out-of-band signal.
-// TestEmpty is good to test for an empty string_view.
-//
-// Caveats (again):
-// (1) The lifetime of the pointed-to string (or piece of a string)
-//     must be longer than the lifetime of the string_view.
-// (2) There may or may not be a '\0' character after the end of
-//     string_view data.
-// (3) A null string_view is empty.
-//     An empty string_view may or may not be a null string_view.
-
+// This `absl::string_view` abstraction is designed to be a drop-in
+// replacement for the C++17 `std::string_view` abstraction.
 #ifndef S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_H_
 #define S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_H_
 
 #include <algorithm>
+#include "s2/third_party/absl/base/config.h"
+
+#ifdef ABSL_HAVE_STD_STRING_VIEW
+
+#include <string_view>
+
+namespace absl {
+using std::string_view;
+};
+
+#else  // ABSL_HAVE_STD_STRING_VIEW
+
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -144,7 +63,6 @@
 #include <limits>
 #include <string>
 
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/internal/throw_delegate.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
@@ -164,7 +82,99 @@ typedef string::difference_type stringpiece_ssize_type;
 
 namespace absl {
 
-// Please use absl::string_view in place of StringPiece in new code.
+// absl::string_view
+//
+// A `string_view` provides a lightweight view into the string data provided by
+// a `std::string`, double-quoted string literal, character array, or even
+// another `string_view`. A `string_view` does *not* own the string to which it
+// points, and that data cannot be modified through the view.
+//
+// You can use `string_view` as a function or method parameter anywhere a
+// parameter can receive a double-quoted string literal, `const char*`,
+// `std::string`, or another `absl::string_view` argument with no need to copy
+// the string data. Systematic use of `string_view` within function arguments
+// reduces data copies and `strlen()` calls.
+//
+// Because of its small size, prefer passing `string_view` by value:
+//
+//   void MyFunction(absl::string_view arg);
+//
+// If circumstances require, you may also pass one by const reference:
+//
+//   void MyFunction(const absl::string_view& arg);  // not preferred
+//
+// Passing by value generates slightly smaller code for many architectures.
+//
+// In either case, the source data of the `string_view` must outlive the
+// `string_view` itself.
+// For more discussion, see the thread go/stringpiecebyvalue on c-users.
+//
+// A `string_view` is also suitable for local variables if you know that the
+// lifetime of the underlying object is longer than the lifetime of your
+// `string_view` variable. However, beware of binding a `string_view` to a
+// temporary value:
+//
+//   // BAD use of string_view: lifetime problem
+//   absl::string_view sv = obj.ReturnAString();
+//
+//   // GOOD use of string_view: str outlives sv
+//   std::string str = obj.ReturnAString();
+//   absl::string_view sv = str;
+//
+// Due to lifetime issues, a `string_view` is sometimes a poor choice for a
+// return value and usually a poor choice for a data member. If you do use a
+// `string_view` this way, it is your responsibility to ensure that the object
+// pointed to by the `string_view` outlives the `string_view`.
+//
+// A `string_view` may represent a whole string or just part of a string. For
+// example, when splitting a string, `std::vector<absl::string_view>` is a
+// natural data type for the output.
+//
+// For another example, a Cord is a non-contiguous, potentially very
+// long string-like object.  The Cord class has an interface that iteratively
+// provides string_view objects that point to the successive pieces of a Cord
+// object.
+//
+// When constructed from a source which is nul-terminated, the `string_view`
+// itself will not include the nul-terminator unless a specific size (including
+// the nul) is passed to the constructor. As a result, common idioms that work
+// on nul-terminated strings do not work on `string_view` objects. If you write
+// code that scans a `string_view`, you must check its length rather than test
+// for nul, for example. Note, however, that nuls may still be embedded within
+// a `string_view` explicitly.
+//
+// You may create a null `string_view` in two ways:
+//
+//   absl::string_view sv();
+//   absl::string_view sv(nullptr, 0);
+//
+// For the above, `sv.data() == nullptr`, `sv.length() == 0`, and
+// `sv.empty() == true`. Also, if you create a `string_view` with a non-null
+// pointer then `sv.data() != nullptr`. Thus, you can use `string_view()` to
+// signal an undefined value that is different from other `string_view` values
+// in a similar fashion to how `const char* p1 = nullptr;` is different from
+// `const char* p2 = "";`. However, in practice, it is not recommended to rely
+// on this behavior.
+//
+// Be careful not to confuse a null `string_view` with an empty one. A null
+// `string_view` is an empty `string_view`, but some empty `string_view`s are
+// not null. Prefer checking for emptiness over checking for null.
+//
+// There are many ways to create an empty string_view:
+//
+//   const char* nullcp = nullptr;
+//   // string_view.size() will return 0 in all cases.
+//   absl::string_view();
+//   absl::string_view(nullcp, 0);
+//   absl::string_view("");
+//   absl::string_view("", 0);
+//   absl::string_view("abcdef", 0);
+//   absl::string_view("abcdef" + 6, 0);
+//
+// All empty `string_view` objects whether null or not, are equal:
+//
+//   absl::string_view() == absl::string_view("", 0)
+//   absl::string_view(nullptr, 0) == absl:: string_view("abcdef"+6, 0)
 class string_view {
  public:
   using traits_type = std::char_traits<char>;
@@ -177,92 +187,173 @@ class string_view {
   using iterator = const_iterator;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   using reverse_iterator = const_reverse_iterator;
-  using size_type = std::size_t;
+  using size_type = size_t;
   using difference_type = std::ptrdiff_t;
 
   static constexpr size_type npos = static_cast<size_type>(-1);
 
-  // [string.view.cons]
-  // We provide implicit conversion constructors so users can pass
-  // in a "const char*" or a "string" wherever a "string_view" is
-  // expected.
-  // Style waiver: go/style-guide-exception-20978288
+  // Null `string_view` constructor
   constexpr string_view() noexcept : ptr_(nullptr), length_(0) {}
 
-  template <class Allocator>
+  // Implicit constructors
+
+  template <typename Allocator>
   string_view(  // NOLINT(runtime/explicit)
       const std::basic_string<char, std::char_traits<char>, Allocator>&
           str) noexcept
       : ptr_(str.data()), length_(str.size()) {}
 #if defined(HAS_GLOBAL_STRING)
-  template <class Allocator>
+  template <typename Allocator>
   string_view(  // NOLINT(runtime/explicit)
       const basic_string<char, std::char_traits<char>, Allocator>& str) noexcept
       : ptr_(str.data()), length_(str.size()) {}
 #endif
 
-  // Implicit conversion from null-terminated `str`. Argument can be
-  // null-valued for now, but std::string_view will not accept null-valued
-  // `str`. Please use `absl::NullSafeStringView(str)` (below) when accepting
-  // a possibly-null pointer.
+  // Implicit constructor of a `string_view` from nul-terminated `str`. When
+  // accepting possibly null strings, use `absl::NullSafeStringView(str)`
+  // instead (see below).
   constexpr string_view(const char* str)  // NOLINT(runtime/explicit)
       : ptr_(str), length_(StrLenInternal(str)) {}
 
+  // Implicit constructor of a `string_view` from a `const char*` and length.
   constexpr string_view(const char* data, size_type len)
       : ptr_(data), length_(CheckLengthInternal(len)) {}
 
-  // TODO(b/36227513): harmlessly omitted to work around gdb bug.
-  // constexpr string_view(const string_view&) noexcept = default;
-  // string_view& operator=(const string_view&) noexcept = default;
+  // NOTE: Harmlessly omitted to work around gdb bug.
+  //   constexpr string_view(const string_view&) noexcept = default;
+  //   string_view& operator=(const string_view&) noexcept = default;
 
-  // [string.view.iterators]
+  // Iterators
+
+  // string_view::begin()
+  //
+  // Returns an iterator pointing to the first character at the beginning of the
+  // `string_view`, or `end()` if the `string_view` is empty.
   constexpr const_iterator begin() const noexcept { return ptr_; }
+
+  // string_view::end()
+  //
+  // Returns an iterator pointing just beyond the last character at the end of
+  // the `string_view`. This iterator acts as a placeholder; attempting to
+  // access it results in undefined behavior.
   constexpr const_iterator end() const noexcept { return ptr_ + length_; }
+
+  // string_view::cbegin()
+  //
+  // Returns a const iterator pointing to the first character at the beginning
+  // of the `string_view`, or `end()` if the `string_view` is empty.
   constexpr const_iterator cbegin() const noexcept { return begin(); }
+
+  // string_view::cend()
+  //
+  // Returns a const iterator pointing just beyond the last character at the end
+  // of the `string_view`. This pointer acts as a placeholder; attempting to
+  // access its element results in undefined behavior.
   constexpr const_iterator cend() const noexcept { return end(); }
+
+  // string_view::rbegin()
+  //
+  // Returns a reverse iterator pointing to the last character at the end of the
+  // `string_view`, or `rend()` if the `string_view` is empty.
   const_reverse_iterator rbegin() const noexcept {
     return const_reverse_iterator(end());
   }
+
+  // string_view::rend()
+  //
+  // Returns a reverse iterator pointing just before the first character at the
+  // beginning of the `string_view`. This pointer acts as a placeholder;
+  // attempting to access its element results in undefined behavior.
   const_reverse_iterator rend() const noexcept {
     return const_reverse_iterator(begin());
   }
+
+  // string_view::crbegin()
+  //
+  // Returns a const reverse iterator pointing to the last character at the end
+  // of the `string_view`, or `crend()` if the `string_view` is empty.
   const_reverse_iterator crbegin() const noexcept { return rbegin(); }
+
+  // string_view::crend()
+  //
+  // Returns a const reverse iterator pointing just before the first character
+  // at the beginning of the `string_view`. This pointer acts as a placeholder;
+  // attempting to access its element results in undefined behavior.
   const_reverse_iterator crend() const noexcept { return rend(); }
 
-  // [string.view.capacity]
+  // Capacity Utilities
+
+  // string_view::size()
+  //
+  // Returns the number of characters in the `string_view`.
   constexpr size_type size() const noexcept {
     return length_;
   }
+
+  // string_view::length()
+  //
+  // Returns the number of characters in the `string_view`. Alias for `size()`.
   constexpr size_type length() const noexcept { return size(); }
+
+  // string_view::max_size()
+  //
+  // Returns the maximum number of characters the `string_view` can hold.
   constexpr size_type max_size() const noexcept { return kMaxSize; }
+
+  // string_view::empty()
+  //
+  // Checks if the `string_view` is empty (refers to no characters).
   constexpr bool empty() const noexcept { return length_ == 0; }
 
-  // [string.view.access]
+  // string:view::operator[]
+  //
+  // Returns the ith element of an `string_view` using the array operator.
+  // Note that this operator does not perform any bounds checking.
   constexpr const_reference operator[](size_type i) const { return ptr_[i]; }
 
+  // string_view::front()
+  //
+  // Returns the first element of a `string_view`.
   constexpr const_reference front() const { return ptr_[0]; }
 
+  // string_view::back()
+  //
+  // Returns the last element of a `string_view`.
   constexpr const_reference back() const { return ptr_[size() - 1]; }
 
-  // data() may return a pointer to a buffer with embedded null characters, and
-  // the returned buffer may or may not be null terminated.  Therefore it is
-  // typically a mistake to pass data() to a routine that expects a null
-  // terminated string.
+  // string_view::data()
+  //
+  // Returns a pointer to the underlying character array (which is of course
+  // stored elsewhere). Note that `string_view::data()` may contain embedded nul
+  // characters, but the returned buffer may or may not be nul-terminated;
+  // therefore, do not pass `data()` to a routine that expects a nul-terminated
+  // string.
   constexpr const_pointer data() const noexcept { return ptr_; }
 
-  // [string.view.modifiers]
+  // Modifiers
 
+  // string_view::remove_prefix()
+  //
+  // Removes the first `n` characters from the `string_view`. Note that the
+  // underlying string is not changed, only the view.
   void remove_prefix(size_type n) {
     assert(n <= length_);
     ptr_ += n;
     length_ -= n;
   }
 
+  // string_view::remove_suffix()
+  //
+  // Removes the last `n` characters from the `string_view`. Note that the
+  // underlying string is not changed, only the view.
   void remove_suffix(size_type n) {
     assert(n <= length_);
     length_ -= n;
   }
 
+  // string_view::swap()
+  //
+  // Swaps this `string_view` with another `string_view`.
   void swap(string_view& s) noexcept {
     auto t = *this;
     *this = s;
@@ -278,39 +369,39 @@ class string_view {
   ABSL_DEPRECATED("Use absl::ConsumeSuffix")
   bool ConsumeFromEnd(string_view x);
 
-  // [string.view.ops]
-  // Explicit string conversion operator. Supports conversion to both
-  // std::basic_string and ::basic_string where available.
-  template <class A>
+  // Explicit conversion operators
+
+  // Converts to `std::basic_string`.
+  template <typename A>
   explicit operator std::basic_string<char, traits_type, A>() const {
     if (!data()) return {};
     return std::basic_string<char, traits_type, A>(data(), size());
   }
 #ifdef HAS_GLOBAL_STRING
-  template <class A>
+  template <typename A>
   explicit operator ::basic_string<char, traits_type, A>() const {
     if (!data()) return {};
     return ::basic_string<char, traits_type, A>(data(), size());
   }
 #endif  // HAS_GLOBAL_STRING
 
-// Note that std::string_view::to_string returns std::basic_string.
-// But string_view::to_string returns a ::basic_string whenever
-// that template is available.
+  // Note that `std::string_view::to_string()` returns `std::basic_string`.
+  // But `absl::string_view::to_string()` returns a `::basic_string` whenever
+  // that template is available.
 #ifdef HAS_GLOBAL_STRING
-  template <class A = std::allocator<char>>
-  ABSL_DEPRECATED("Use string(sp)")
-  ::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
+  template <typename A = std::allocator<char>>
+  ABSL_DEPRECATED("Use string(sp)")::basic_string<
+      char, traits_type, A> to_string(const A& a = A()) const {
     if (!data()) return ::basic_string<char, traits_type, A>(a);
     return ::basic_string<char, traits_type, A>(data(), size(), a);
   }
 #else   // !HAS_GLOBAL_STRING
 
-template <class A = std::allocator<char>>
-ABSL_DEPRECATED("Use std::string(sp)")
-std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
-  if (!data()) return std::basic_string<char, traits_type, A>(a);
-  return std::basic_string<char, traits_type, A>(data(), size(), a);
+  template <typename A = std::allocator<char> >
+  ABSL_DEPRECATED("Use std::string(sp)")
+  std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
+    if (!data()) return std::basic_string<char, traits_type, A>(a);
+    return std::basic_string<char, traits_type, A>(data(), size(), a);
   }
 #endif  // HAS_GLOBAL_STRING
 
@@ -325,19 +416,33 @@ std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
     return string(data(), size());
   }
 
+  // string_view::copy()
+  //
+  // Copies the contents of the `string_view` at offset `pos` and length `n`
+  // into `buf`.
   size_type copy(char* buf, size_type n, size_type pos = 0) const;
 
-  // substr throws if `pos > size'
+  // string_view::substr()
+  //
+  // Returns a "substring" of the `string_view` (at offset `pos` and length
+  // `n`) as another string_view. This function throws `std::out_of_bounds` if
+  // `pos > size'.
   // Use absl::ClippedSubstr if you need a truncating substr operation.
   string_view substr(size_type pos, size_type n = npos) const {
-    if (PREDICT_FALSE(pos > length_))
-      absl::ThrowStdOutOfRange("absl::string_view::substr");
+    if (ABSL_PREDICT_FALSE(pos > length_))
+      base_internal::ThrowStdOutOfRange("absl::string_view::substr");
     n = std::min(n, length_ - pos);
     return string_view(ptr_ + pos, n);
   }
 
-  // returns {-1, 0, 1}
-  // See http://en.cppreference.com/w/cpp/string/basic_string_view/compare
+  // string_view::compare()
+  //
+  // Performs a lexicographical comparison between the `string_view` and
+  // another `absl::string_view), returning -1 if `this` is less than, 0 if
+  // `this` is equal to, and 1 if `this` is greater than the passed string
+  // view. Note that in the case of data equality, a further comparison is made
+  // on the respective sizes of the two `string_view`s to determine which is
+  // smaller, equal, or greater.
   int compare(string_view x) const noexcept {
     auto min_length = std::min(length_, x.length_);
     if (min_length > 0) {
@@ -349,18 +454,32 @@ std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
     if (length_ > x.length_) return 1;
     return 0;
   }
-  // Substring variants of `compare`.
+
+  // Overload of `string_view::compare()` for comparing a substring of the
+  // 'string_view` and another `absl::string_view`.
   int compare(size_type pos1, size_type count1, string_view v) const {
     return substr(pos1, count1).compare(v);
   }
+
+  // Overload of `string_view::compare()` for comparing a substring of the
+  // `string_view` and a substring of another `absl::string_view`.
   int compare(size_type pos1, size_type count1, string_view v, size_type pos2,
               size_type count2) const {
     return substr(pos1, count1).compare(v.substr(pos2, count2));
   }
+
+  // Overload of `string_view::compare()` for comparing a `string_view` and a
+  // a different  C-style string `s`.
   int compare(const char* s) const { return compare(string_view(s)); }
+
+  // Overload of `string_view::compare()` for comparing a substring of the
+  // `string_view` and a different string C-style string `s`.
   int compare(size_type pos1, size_type count1, const char* s) const {
     return substr(pos1, count1).compare(string_view(s));
   }
+
+  // Overload of `string_view::compare()` for comparing a substring of the
+  // `string_view` and a substring of a different C-style string `s`.
   int compare(size_type pos1, size_type count1, const char* s,
               size_type count2) const {
     return substr(pos1, count1).compare(string_view(s, count2));
@@ -370,50 +489,96 @@ std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
   ABSL_DEPRECATED("Use absl::StartsWith")
   bool starts_with(string_view x) const {
     return length_ >= x.length_ &&
-           absl::strings_internal::memeq(ptr_, x.ptr_, x.length_);
+           strings_internal::memeq(ptr_, x.ptr_, x.length_);
   }
 
   // Returns whether this ends with x.
   ABSL_DEPRECATED("Use absl::EndsWith")
   bool ends_with(string_view x) const {
     return length_ >= x.length_ &&
-           absl::strings_internal::memeq(ptr_ + (length_ - x.length_), x.ptr_,
+           strings_internal::memeq(ptr_ + (length_ - x.length_), x.ptr_,
                                          x.length_);
   }
 
   ABSL_DEPRECATED("Use absl::StrContains")
   bool contains(string_view s) const;
 
-  // [string.view.find]
+  // Find Utilities
 
+  // string_view::find()
+  //
+  // Finds the first occurrence of the substring `s` within the `string_view`,
+  // returning the position of the first character's match, or `npos` if no
+  // match was found.
   size_type find(string_view s, size_type pos = 0) const noexcept;
+
+  // Overload of `string_view::find()` for finding the given character `c`
+  // within the `string_view`.
   size_type find(char c, size_type pos = 0) const noexcept;
 
+  // string_view::rfind()
+  //
+  // Finds the last occurrence of a substring `s` within the `string_view`,
+  // returning the position of the first character's match, or `npos` if no
+  // match was found.
   size_type rfind(string_view s, size_type pos = npos) const
       noexcept;
+
+  // Overload of `string_view::rfind()` for finding the given character `c`
+  // within the `string_view`.
   size_type rfind(char c, size_type pos = npos) const noexcept;
 
+  // string_view::find_first_of()
+  //
+  // Finds the first occurrence of any of the characters in `s` within the
+  // `string_view`, returning the start position of the match, or `npos` if no
+  // match was found.
   size_type find_first_of(string_view s, size_type pos = 0) const
       noexcept;
+
+  // Overload of `string_view::find_first_of()` for finding a character `c`
+  // within the `string_view`.
   size_type find_first_of(char c, size_type pos = 0) const
       noexcept {
     return find(c, pos);
   }
 
+  // string_view::find_last_of()
+  //
+  // Finds the last occurrence of any of the characters in `s` within the
+  // `string_view`, returning the start position of the match, or `npos` if no
+  // match was found.
   size_type find_last_of(string_view s, size_type pos = npos) const
       noexcept;
+
+  // Overload of `string_view::find_last_of()` for finding a character `c`
+  // within the `string_view`.
   size_type find_last_of(char c, size_type pos = npos) const
       noexcept {
     return rfind(c, pos);
   }
 
-  size_type find_first_not_of(string_view s,
-                                           size_type pos = 0) const noexcept;
-  size_type find_first_not_of(char c, size_type pos = 0) const
-      noexcept;
+  // string_view::find_first_not_of()
+  //
+  // Finds the first occurrence of any of the characters not in `s` within the
+  // `string_view`, returning the start position of the first non-match, or
+  // `npos` if no non-match was found.
+  size_type find_first_not_of(string_view s, size_type pos = 0) const noexcept;
 
+  // Overload of `string_view::find_first_not_of()` for finding a character
+  // that is not `c` within the `string_view`.
+  size_type find_first_not_of(char c, size_type pos = 0) const noexcept;
+
+  // string_view::find_last_not_of()
+  //
+  // Finds the last occurrence of any of the characters not in `s` within the
+  // `string_view`, returning the start position of the last non-match, or
+  // `npos` if no non-match was found.
   size_type find_last_not_of(string_view s,
                                           size_type pos = npos) const noexcept;
+
+  // Overload of `string_view::find_last_not_of()` for finding a character
+  // that is not `c` within the `string_view`.
   size_type find_last_not_of(char c, size_type pos = npos) const
       noexcept;
 
@@ -475,21 +640,21 @@ std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
   static constexpr size_type kMaxSize =
       std::numeric_limits<size_type>::max() / 2 + 1;
 
-  static constexpr size_type StrLenInternal(const char* str) {
-    return str ?
-// check whether __builtin_strlen is provided by the compiler.
-// GCC doesn't have __has_builtin()
-// (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66970),
-// but has __builtin_strlen according to
-// https://gcc.gnu.org/onlinedocs/gcc-4.7.0/gcc/Other-Builtins.html.
+  // check whether __builtin_strlen is provided by the compiler.
+  // GCC doesn't have __has_builtin()
+  // (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66970),
+  // but has __builtin_strlen according to
+  // https://gcc.gnu.org/onlinedocs/gcc-4.7.0/gcc/Other-Builtins.html.
 #if ABSL_HAVE_BUILTIN(__builtin_strlen) || \
     (defined(__GNUC__) && !defined(__clang__))
-               __builtin_strlen(str)
-#else
-               strlen(str)
-#endif
-               : 0;
+  static constexpr size_type StrLenInternal(const char* str) {
+    return str ? __builtin_strlen(str) : 0;
   }
+#else
+  static constexpr size_type StrLenInternal(const char* str) {
+    return str ? strlen(str) : 0;
+  }
+#endif
 
   static constexpr size_type CheckLengthInternal(size_type len) {
     return ABSL_ASSERT(len <= kMaxSize), len;
@@ -509,7 +674,7 @@ inline bool operator==(string_view x, string_view y) noexcept {
   }
 
   return x.data() == y.data() || len <= 0 ||
-         absl::strings_internal::memeq(x.data(), y.data(), len);
+         strings_internal::memeq(x.data(), y.data(), len);
   /* absl:oss-replace-with
   return x.data() == y.data() || len <= 0 ||
          memcmp(x.data(), y.data(), len) == 0;
@@ -536,20 +701,31 @@ inline bool operator>=(string_view x, string_view y) noexcept {
   return !(x < y);
 }
 
-// [string.view.io]
+// IO Insertion Operator
 std::ostream& operator<<(std::ostream& o, string_view piece);
 
+}  // namespace absl
+
+
+#endif  // ABSL_HAVE_STD_STRING_VIEW
+
+namespace absl {
+
+// ClippedSubstr()
+//
 // Like `s.substr(pos, n)`, but clips `pos` to an upper bound of `s.size()`.
-// Provided because std::string_view::substr throws if `pos > size()`,
-// to support b/37991613.
+// Provided because std::string_view::substr throws if `pos > size()`
 inline string_view ClippedSubstr(string_view s, size_t pos,
                                  size_t n = string_view::npos) {
   pos = std::min(pos, static_cast<size_t>(s.size()));
   return s.substr(pos, n);
 }
 
-// Create an absl::string_view from a `p` even if it's null-valued. Should be
-// used where a absl::string_view must be created from a possibly-null pointer.
+// NullSafeStringView()
+//
+// Creates an `absl::string_view` from a pointer `p` even if it's null-valued.
+// This function should be used where an `absl::string_view` can be created from
+// a possibly-null pointer.
 // Our absl::string_view has historically been constructible from a null-valued
 // pointer, but the same null value isn't valid for std::string_view.
 inline string_view NullSafeStringView(const char* p) {
@@ -557,6 +733,5 @@ inline string_view NullSafeStringView(const char* p) {
 }
 
 }  // namespace absl
-
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_H_

@@ -43,7 +43,7 @@
 //
 // Example usage:
 //
-// S2CellUnion GetBufferedCovering(S2ShapeIndex const& index, S1Angle radius) {
+// S2CellUnion GetBufferedCovering(const S2ShapeIndex& index, S1Angle radius) {
 //   S2RegionCoverer coverer;
 //   coverer.set_max_cells(20);
 //   S2CellUnion covering;
@@ -61,18 +61,18 @@ class S2ShapeIndexBufferedRegion final : public S2Region {
 
   // Constructs a region representing all points within the given radius of
   // any point in the given S2ShapeIndex.
-  S2ShapeIndexBufferedRegion(S2ShapeIndexBase const* index,
+  S2ShapeIndexBufferedRegion(const S2ShapeIndexBase* index,
                              S1ChordAngle radius);
 
   // Convenience constructor that accepts an S1Angle for the radius.
   // REQUIRES: radius >= S1Angle::Zero()
-  S2ShapeIndexBufferedRegion(S2ShapeIndexBase const* index, S1Angle radius)
+  S2ShapeIndexBufferedRegion(const S2ShapeIndexBase* index, S1Angle radius)
       : S2ShapeIndexBufferedRegion(index, S1ChordAngle(radius)) {}
 
   // Equivalent to the constructor above.
-  void Init(S2ShapeIndexBase const* index, S1ChordAngle radius);
+  void Init(const S2ShapeIndexBase* index, S1ChordAngle radius);
 
-  S2ShapeIndexBase const& index() const;
+  const S2ShapeIndexBase& index() const;
   S1ChordAngle radius() const;
 
   ////////////////////////////////////////////////////////////////////////
@@ -93,15 +93,15 @@ class S2ShapeIndexBufferedRegion final : public S2Region {
   // The implementation is approximate but conservative; it always returns
   // "false" if the cell is not contained by the buffered region, but it may
   // also return false in some cases where "cell" is in fact contained.
-  bool Contains(S2Cell const& cell) const override;
+  bool Contains(const S2Cell& cell) const override;
 
   // Returns true if any buffered shape intersects "cell" (to within a very
   // small error margin).
-  bool MayIntersect(S2Cell const& cell) const override;
+  bool MayIntersect(const S2Cell& cell) const override;
 
   // Returns true if the given point is contained by the buffered region,
   // i.e. if it is within the given radius of any original shape.
-  bool Contains(S2Point const& p) const override;
+  bool Contains(const S2Point& p) const override;
 
  private:
   S1ChordAngle radius_;
@@ -119,12 +119,12 @@ class S2ShapeIndexBufferedRegion final : public S2Region {
 
 
 inline S2ShapeIndexBufferedRegion::S2ShapeIndexBufferedRegion(
-    S2ShapeIndexBase const* index, S1ChordAngle radius)
+    const S2ShapeIndexBase* index, S1ChordAngle radius)
     : radius_(radius), radius_successor_(radius.Successor()), query_(index) {
   query_.mutable_options()->set_include_interiors(true);
 }
 
-inline S2ShapeIndexBase const& S2ShapeIndexBufferedRegion::index() const {
+inline const S2ShapeIndexBase& S2ShapeIndexBufferedRegion::index() const {
   return query_.index();
 }
 

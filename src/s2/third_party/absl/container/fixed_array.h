@@ -13,22 +13,20 @@
 // limitations under the License.
 //
 
-/*
- * Copyright 2017 The Abseil Authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 // -----------------------------------------------------------------------------
 // File: fixed_array.h
 // -----------------------------------------------------------------------------
@@ -61,12 +59,14 @@
 #include "s2/third_party/absl/algorithm/algorithm.h"
 #include "s2/third_party/absl/base/dynamic_annotations.h"
 #include "s2/third_party/absl/base/gdb_scripting.h"
+#include "s2/third_party/absl/base/internal/throw_delegate.h"
 #include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/base/optimization.h"
 #include "s2/third_party/absl/base/port.h"
 
 namespace absl {
 
-constexpr static auto kFixedArrayUseDefault = static_cast<std::size_t>(-1);
+constexpr static auto kFixedArrayUseDefault = static_cast<size_t>(-1);
 
 // -----------------------------------------------------------------------------
 // FixedArray
@@ -91,9 +91,9 @@ constexpr static auto kFixedArrayUseDefault = static_cast<std::size_t>(-1);
 // heap allocation, it will do so with global `::operator new[]()` and
 // `::operator delete[]()`, even if T provides class-scope overrides for these
 // operators.
-template <typename T, std::size_t inlined = kFixedArrayUseDefault>
+template <typename T, size_t inlined = kFixedArrayUseDefault>
 class FixedArray {
-  static constexpr std::size_t kInlineBytesDefault = 256;
+  static constexpr size_t kInlineBytesDefault = 256;
 
   // std::iterator_traits isn't guaranteed to be SFINAE-friendly until C++17,
   // but this seems to be mostly pedantic.
@@ -138,7 +138,7 @@ class FixedArray {
   template <typename Iter, EnableIfForwardIterator<Iter> = 0>
   FixedArray(Iter first, Iter last) : rep_(first, last) {}
 
-  // Create the array from an initializer_list.
+  // Creates the array from an initializer_list.
   FixedArray(std::initializer_list<T> init_list)
       : FixedArray(init_list.begin(), init_list.end()) {}
 
@@ -205,6 +205,26 @@ class FixedArray {
   // REQUIRES: 0 <= i < size()
   const_reference operator[](size_type i) const {
     assert(i < size());
+    return data()[i];
+  }
+
+  // FixedArray::at
+  //
+  // Bounds-checked access.  Returns a reference to the ith element of the
+  // fiexed array, or throws std::out_of_range
+  reference at(size_type i) {
+    if (ABSL_PREDICT_FALSE(i >= size())) {
+      base_internal::ThrowStdOutOfRange("FixedArray::at failed bounds check");
+    }
+    return data()[i];
+  }
+
+  // Overload of FixedArray::at() to return a const reference to the ith element
+  // of the fixed array.
+  const_reference at(size_type i) const {
+    if (i >= size()) {
+      base_internal::ThrowStdOutOfRange("FixedArray::at failed bounds check");
+    }
     return data()[i];
   }
 
@@ -488,10 +508,10 @@ class FixedArray {
 };
 
 template <typename T, size_t N>
-constexpr std::size_t FixedArray<T, N>::inline_elements;
+constexpr size_t FixedArray<T, N>::inline_elements;
 
 template <typename T, size_t N>
-constexpr std::size_t FixedArray<T, N>::kInlineBytesDefault;
+constexpr size_t FixedArray<T, N>::kInlineBytesDefault;
 
 }  // namespace absl
 

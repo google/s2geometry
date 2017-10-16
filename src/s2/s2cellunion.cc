@@ -37,14 +37,14 @@ using std::vector;
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
-vector<S2CellId> S2CellUnion::ToS2CellIds(vector<uint64> const& ids) {
+vector<S2CellId> S2CellUnion::ToS2CellIds(const vector<uint64>& ids) {
   vector<S2CellId> cell_ids;
   cell_ids.reserve(ids.size());
   for (auto id : ids) cell_ids.push_back(S2CellId(id));
   return cell_ids;
 }
 
-S2CellUnion::S2CellUnion(vector<uint64> const& cell_ids)
+S2CellUnion::S2CellUnion(const vector<uint64>& cell_ids)
     : cell_ids_(ToS2CellIds(cell_ids)) {
   Normalize();
 }
@@ -61,7 +61,7 @@ S2CellUnion S2CellUnion::FromBeginEnd(S2CellId begin, S2CellId end) {
   return result;
 }
 
-void S2CellUnion::Init(vector<uint64> const& cell_ids) {
+void S2CellUnion::Init(const vector<uint64>& cell_ids) {
   cell_ids_ = ToS2CellIds(cell_ids);
   Normalize();
 }
@@ -256,7 +256,7 @@ bool S2CellUnion::Intersects(S2CellId id) const {
   return i != cell_ids_.begin() && (--i)->range_max() >= id.range_min();
 }
 
-bool S2CellUnion::Contains(S2CellUnion const& y) const {
+bool S2CellUnion::Contains(const S2CellUnion& y) const {
   // TODO(ericv): A divide-and-conquer or alternating-skip-search
   // approach may be sigificantly faster in both the average and worst case.
 
@@ -266,7 +266,7 @@ bool S2CellUnion::Contains(S2CellUnion const& y) const {
   return true;
 }
 
-bool S2CellUnion::Intersects(S2CellUnion const& y) const {
+bool S2CellUnion::Intersects(const S2CellUnion& y) const {
   // TODO(ericv): A divide-and-conquer or alternating-skip-search
   // approach may be sigificantly faster in both the average and worst case.
 
@@ -276,7 +276,7 @@ bool S2CellUnion::Intersects(S2CellUnion const& y) const {
   return false;
 }
 
-S2CellUnion S2CellUnion::Union(S2CellUnion const& y) const {
+S2CellUnion S2CellUnion::Union(const S2CellUnion& y) const {
   vector<S2CellId> cell_ids;
   cell_ids.reserve(num_cells() + y.num_cells());
   cell_ids = cell_ids_;
@@ -299,7 +299,7 @@ S2CellUnion S2CellUnion::Intersection(S2CellId id) const {
   return result;
 }
 
-S2CellUnion S2CellUnion::Intersection(S2CellUnion const& y) const {
+S2CellUnion S2CellUnion::Intersection(const S2CellUnion& y) const {
   S2CellUnion result;
   GetIntersection(cell_ids_, y.cell_ids_, &result.cell_ids_);
   // The output is normalized as long as at least one input is normalized.
@@ -307,8 +307,8 @@ S2CellUnion S2CellUnion::Intersection(S2CellUnion const& y) const {
   return result;
 }
 
-/*static*/ void S2CellUnion::GetIntersection(vector<S2CellId> const& x,
-                                             vector<S2CellId> const& y,
+/*static*/ void S2CellUnion::GetIntersection(const vector<S2CellId>& x,
+                                             const vector<S2CellId>& y,
                                              vector<S2CellId>* out) {
   DCHECK_NE(out, &x);
   DCHECK_NE(out, &y);
@@ -356,7 +356,7 @@ S2CellUnion S2CellUnion::Intersection(S2CellUnion const& y) const {
 }
 
 static void GetDifferenceInternal(S2CellId cell,
-                                  S2CellUnion const& y,
+                                  const S2CellUnion& y,
                                   vector<S2CellId>* cell_ids) {
   // Add the difference between cell and y to cell_ids.
   // If they intersect but the difference is non-empty, divide and conquer.
@@ -372,7 +372,7 @@ static void GetDifferenceInternal(S2CellId cell,
   }
 }
 
-S2CellUnion S2CellUnion::Difference(S2CellUnion const& y) const {
+S2CellUnion S2CellUnion::Difference(const S2CellUnion& y) const {
   // TODO(ericv): this is approximately O(N*log(N)), but could probably
   // use similar techniques as GetIntersection() to be more efficient.
 
@@ -446,19 +446,19 @@ double S2CellUnion::ExactArea() const {
   return area;
 }
 
-bool operator==(S2CellUnion const& x, S2CellUnion const& y) {
+bool operator==(const S2CellUnion& x, const S2CellUnion& y) {
   return x.cell_ids() == y.cell_ids();
 }
 
-bool operator!=(S2CellUnion const& x, S2CellUnion const& y) {
+bool operator!=(const S2CellUnion& x, const S2CellUnion& y) {
   return x.cell_ids() != y.cell_ids();
 }
 
-bool S2CellUnion::Contains(S2Cell const& cell) const {
+bool S2CellUnion::Contains(const S2Cell& cell) const {
   return Contains(cell.id());
 }
 
-bool S2CellUnion::MayIntersect(S2Cell const& cell) const {
+bool S2CellUnion::MayIntersect(const S2Cell& cell) const {
   return Intersects(cell.id());
 }
 
@@ -490,6 +490,6 @@ bool S2CellUnion::Decode(Decoder* const decoder) {
   return true;
 }
 
-bool S2CellUnion::Contains(S2Point const& p) const {
+bool S2CellUnion::Contains(const S2Point& p) const {
   return Contains(S2CellId(p));
 }

@@ -29,11 +29,12 @@
 
 #include "s2/third_party/absl/numeric/int128.h"
 
+#include <cstddef>
 #include <cassert>
-#include <cstdlib>
 #include <iomanip>
 #include <iostream>  // NOLINT(readability/streams)
 #include <sstream>
+#include <string>
 
 namespace absl {
 
@@ -116,9 +117,7 @@ void DivModImpl(uint128 dividend, uint128 divisor, uint128* quotient_ret,
   *quotient_ret = quotient;
   *remainder_ret = dividend;
 }
-}  // namespace
 
-namespace {
 template <typename T>
 uint128 Initialize128FromFloat(T v) {
   // Rounding behavior is towards zero, same as for built-in types.

@@ -69,10 +69,10 @@ struct HashAndLessOperator : PortableHashBase {
   Hash hasher_;
 };
 
-template <class Key,
-          class Hash>
-class hash_set : public NATIVE_HASH_NAMESPACE
-      ::hash_set<Key, HashAndLessOperator<Key, Hash> > {
+template <typename Key, typename Hash>
+class hash_set
+    : public NATIVE_HASH_NAMESPACE ::hash_set<Key,
+                                              HashAndLessOperator<Key, Hash> > {
  public:
   hash_set() {}
   explicit hash_set(int buckets) {}
@@ -82,10 +82,10 @@ class hash_set : public NATIVE_HASH_NAMESPACE
   }
 };
 
-template <class Key, class Val,
-          class Hash>
-class hash_map : public NATIVE_HASH_NAMESPACE
-      ::hash_map<Key, Val, HashAndLessOperator<Key, Hash> > {
+template <typename Key, typename Val, typename Hash>
+class hash_map
+    : public NATIVE_HASH_NAMESPACE ::hash_map<Key, Val,
+                                              HashAndLessOperator<Key, Hash> > {
  public:
   hash_map() {}
   explicit hash_map(int buckets) {}
@@ -95,10 +95,9 @@ class hash_map : public NATIVE_HASH_NAMESPACE
   }
 };
 
-template <class Key,
-          class Hash>
-class hash_multiset : public NATIVE_HASH_NAMESPACE
-      ::hash_multiset<Key, HashAndLessOperator<Key, Hash> > {
+template <typename Key, typename Hash>
+class hash_multiset : public NATIVE_HASH_NAMESPACE ::hash_multiset<
+                          Key, HashAndLessOperator<Key, Hash> > {
  public:
   hash_multiset() {}
   explicit hash_multiset(int buckets) {}
@@ -108,10 +107,9 @@ class hash_multiset : public NATIVE_HASH_NAMESPACE
   }
 };
 
-template <class Key, class Val,
-          class Hash>
-class hash_multimap : public NATIVE_HASH_NAMESPACE
-      ::hash_multimap<Key, Val, HashAndLessOperator<Key, Hash> > {
+template <typename Key, typename Val, typename Hash>
+class hash_multimap : public NATIVE_HASH_NAMESPACE ::hash_multimap<
+                          Key, Val, HashAndLessOperator<Key, Hash> > {
  public:
   hash_multimap() {}
   explicit hash_multimap(int buckets) {}

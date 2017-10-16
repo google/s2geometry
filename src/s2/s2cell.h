@@ -51,8 +51,8 @@ class S2Cell final : public S2Region {
   explicit S2Cell(S2CellId id);
 
   // Convenience constructors.  The S2LatLng must be normalized.
-  explicit S2Cell(S2Point const& p) : S2Cell(S2CellId(p)) {}
-  explicit S2Cell(S2LatLng const& ll) : S2Cell(S2CellId(ll)) {}
+  explicit S2Cell(const S2Point& p) : S2Cell(S2CellId(p)) {}
+  explicit S2Cell(const S2LatLng& ll) : S2Cell(S2CellId(ll)) {}
 
   // Return the cell corresponding to the given S2 cube face.
   static S2Cell FromFace(int face) {
@@ -136,18 +136,18 @@ class S2Cell final : public S2Region {
 
   // Return the distance from the cell to the given point.  Returns zero if
   // the point is inside the cell.
-  S1ChordAngle GetDistance(S2Point const& target) const;
+  S1ChordAngle GetDistance(const S2Point& target) const;
 
   // Return the distance from the cell boundary to the given point.
-  S1ChordAngle GetBoundaryDistance(S2Point const& target) const;
+  S1ChordAngle GetBoundaryDistance(const S2Point& target) const;
 
   // Return the minimum distance from the cell to the given edge AB.  Returns
   // zero if the edge intersects the cell interior.
-  S1ChordAngle GetDistance(S2Point const& a, S2Point const& b) const;
+  S1ChordAngle GetDistance(const S2Point& a, const S2Point& b) const;
 
   // Return the distance from the cell to the given cell.  Returns zero if
   // one cell contains the other.
-  S1ChordAngle GetDistance(S2Cell const& target) const;
+  S1ChordAngle GetDistance(const S2Cell& target) const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -155,8 +155,8 @@ class S2Cell final : public S2Region {
   S2Cell* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
-  bool Contains(S2Cell const& cell) const override;
-  bool MayIntersect(S2Cell const& cell) const override;
+  bool Contains(const S2Cell& cell) const override;
+  bool MayIntersect(const S2Cell& cell) const override;
 
   // Return true if the cell contains the given point "p".  Note that unlike
   // S2Loop/S2Polygon, S2Cells are considered to be closed sets.  This means
@@ -168,7 +168,7 @@ class S2Cell final : public S2Region {
   // containment this way).
   //
   // The point "p" does not need to be normalized.
-  bool Contains(S2Point const& p) const override;
+  bool Contains(const S2Point& p) const override;
 
   // Appends a serialized representation of the S2Cell to "encoder".
   //
@@ -185,13 +185,13 @@ class S2Cell final : public S2Region {
   double GetLatitude(int i, int j) const;
   double GetLongitude(int i, int j) const;
 
-  double VertexChordDist2(S2Point const& target, int i, int j) const;
-  bool UEdgeIsClosest(S2Point const& target, int v_end) const;
-  bool VEdgeIsClosest(S2Point const& target, int u_end) const;
+  double VertexChordDist2(const S2Point& target, int i, int j) const;
+  bool UEdgeIsClosest(const S2Point& target, int v_end) const;
+  bool VEdgeIsClosest(const S2Point& target, int u_end) const;
 
   // Returns the distance from the given point to the interior of the cell if
   // "to_interior" is true, and to the boundary of the cell otherwise.
-  S1ChordAngle GetDistanceInternal(S2Point const& target_xyz,
+  S1ChordAngle GetDistanceInternal(const S2Point& target_xyz,
                                    bool to_interior) const;
 
   // This structure occupies 44 bytes plus one pointer for the vtable.

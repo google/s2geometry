@@ -56,16 +56,16 @@ namespace S2 {
 // spherical triangle, i.e. the intersection of the three medians.  However,
 // note that for large spherical triangles the surface centroid may be
 // nowhere near the intuitive "center" (see example above).
-S2Point PlanarCentroid(S2Point const& a, S2Point const& b,
-                       S2Point const& c);
+S2Point PlanarCentroid(const S2Point& a, const S2Point& b,
+                       const S2Point& c);
 
 // Returns the true centroid of the spherical triangle ABC multiplied by the
 // signed area of spherical triangle ABC.  The reasons for multiplying by
 // the signed area are (1) this is the quantity that needs to be summed to
 // compute the centroid of a union or difference of triangles, and (2) it's
 // actually easier to calculate this way.  All points must have unit length.
-S2Point TrueCentroid(S2Point const& a, S2Point const& b,
-                     S2Point const& c);
+S2Point TrueCentroid(const S2Point& a, const S2Point& b,
+                     const S2Point& c);
 
 }  // namespace S2
 

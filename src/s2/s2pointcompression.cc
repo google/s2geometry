@@ -39,7 +39,7 @@ using std::vector;
 
 namespace {
 
-int const kDerivativeEncodingOrder = 2;
+const int kDerivativeEncodingOrder = 2;
 
 // Pair of face number and count for run-length encoding.
 struct FaceRun {
@@ -66,10 +66,11 @@ struct FaceRun {
     if (!decoder->get_varint64(&face_and_count)) return false;
 
     face = face_and_count % S2CellId::kNumFaces;
-    count = face_and_count / S2CellId::kNumFaces;
-    if (count == 0) return false;
+    // Make sure large counts don't wrap on malicious or random input.
+    const uint64 count64 = face_and_count / S2CellId::kNumFaces;
+    count = count64;
 
-    return true;
+    return count > 0 && count == count64;
   }
 
   int face;
@@ -81,14 +82,14 @@ class Faces {
  public:
   class Iterator {
    public:
-    explicit Iterator(Faces const& faces);
+    explicit Iterator(const Faces& faces);
 
     // Return the next face.
     int Next();
 
    private:
     // The faces_ vector of the Faces object for which this is an iterator.
-    vector<FaceRun> const& faces_;
+    const vector<FaceRun>& faces_;
 
     // The index that the next face will come from.
     int face_index_;
@@ -118,8 +119,8 @@ class Faces {
   // Run-length encoded list of faces.
   vector<FaceRun> faces_;
 
-  Faces(Faces const&) = delete;
-  void operator=(Faces const&) = delete;
+  Faces(const Faces&) = delete;
+  void operator=(const Faces&) = delete;
 };
 
 void Faces::AddFace(int face) {
@@ -131,7 +132,7 @@ void Faces::AddFace(int face) {
 }
 
 void Faces::Encode(Encoder* encoder) const {
-  for (FaceRun const& face_run : faces_)
+  for (const FaceRun& face_run : faces_)
     face_run.Encode(encoder);
 }
 
@@ -147,7 +148,7 @@ bool Faces::Decode(int num_vertices, Decoder* decoder) {
   return true;
 }
 
-Faces::Iterator::Iterator(Faces const& faces)
+Faces::Iterator::Iterator(const Faces& faces)
     : faces_(faces.faces_), face_index_(0),
       num_faces_used_for_index_(0) {
 }
@@ -203,40 +204,40 @@ S2Point FacePiQitoXYZ(int face, int pi, int qi, int level) {
                          S2::STtoUV(PiQitoST(qi, level))).Normalize();
 }
 
-void EncodeFirstPointFixedLength(pair<int, int> const& vertex_pi_qi,
+void EncodeFirstPointFixedLength(const pair<int, int>& vertex_pi_qi,
                                  int level,
                                  NthDerivativeCoder* pi_coder,
                                  NthDerivativeCoder* qi_coder,
                                  Encoder* encoder) {
   // Do not ZigZagEncode the first point, since it cannot be negative.
-  uint32 const pi = pi_coder->Encode(vertex_pi_qi.first);
-  uint32 const qi = qi_coder->Encode(vertex_pi_qi.second);
+  const uint32 pi = pi_coder->Encode(vertex_pi_qi.first);
+  const uint32 qi = qi_coder->Encode(vertex_pi_qi.second);
   // Interleave to reduce overhead from two partial bytes to one.
-  uint64 const interleaved_pi_qi = util_bits::InterleaveUint32(pi, qi);
+  const uint64 interleaved_pi_qi = util_bits::InterleaveUint32(pi, qi);
 
   // Convert to little endian for architecture independence.
-  uint64 const little_endian_interleaved_pi_qi =
+  const uint64 little_endian_interleaved_pi_qi =
       LittleEndian::FromHost64(interleaved_pi_qi);
 
-  int const bytes_required = (level + 7) / 8 * 2;
+  const int bytes_required = (level + 7) / 8 * 2;
   encoder->Ensure(bytes_required);
   encoder->putn(&little_endian_interleaved_pi_qi, bytes_required);
   DCHECK_GE(encoder->avail(), 0);
 }
 
-void EncodePointCompressed(pair<int, int> const& vertex_pi_qi,
+void EncodePointCompressed(const pair<int, int>& vertex_pi_qi,
                            int level,
                            NthDerivativeCoder* pi_coder,
                            NthDerivativeCoder* qi_coder,
                            Encoder* encoder) {
   // ZigZagEncode, as varint requires the maximum number of bytes for
   // negative numbers.
-  uint32 const zig_zag_encoded_deriv_pi =
+  const uint32 zig_zag_encoded_deriv_pi =
       ZigZagEncode(pi_coder->Encode(vertex_pi_qi.first));
-  uint32 const zig_zag_encoded_deriv_qi =
+  const uint32 zig_zag_encoded_deriv_qi =
       ZigZagEncode(qi_coder->Encode(vertex_pi_qi.second));
   // Interleave to reduce overhead from two partial bytes to one.
-  uint64 const interleaved_zig_zag_encoded_derivs =
+  const uint64 interleaved_zig_zag_encoded_derivs =
       util_bits::InterleaveUint32(zig_zag_encoded_deriv_pi,
                                   zig_zag_encoded_deriv_qi);
 
@@ -245,7 +246,7 @@ void EncodePointCompressed(pair<int, int> const& vertex_pi_qi,
   DCHECK_GE(encoder->avail(), 0);
 }
 
-void EncodePointsCompressed(Span<pair<int, int> const> vertices_pi_qi,
+void EncodePointsCompressed(Span<const pair<int, int>> vertices_pi_qi,
                             int level, Encoder* encoder) {
   NthDerivativeCoder pi_coder(kDerivativeEncodingOrder);
   NthDerivativeCoder qi_coder(kDerivativeEncodingOrder);
@@ -271,12 +272,12 @@ bool DecodeFirstPointFixedLength(Decoder* decoder,
                                  NthDerivativeCoder* pi_coder,
                                  NthDerivativeCoder* qi_coder,
                                  pair<int, int>* vertex_pi_qi) {
-  int const bytes_required = (level + 7) / 8 * 2;
+  const int bytes_required = (level + 7) / 8 * 2;
   if (decoder->avail() < bytes_required) return false;
   uint64 little_endian_interleaved_pi_qi = 0;
   decoder->getn(&little_endian_interleaved_pi_qi, bytes_required);
 
-  uint64 const interleaved_pi_qi =
+  const uint64 interleaved_pi_qi =
       LittleEndian::ToHost64(little_endian_interleaved_pi_qi);
 
   uint32 pi, qi;
@@ -313,7 +314,7 @@ bool DecodePointCompressed(Decoder* decoder,
 
 }  // namespace
 
-void S2EncodePointsCompressed(Span<S2XYZFaceSiTi const> points,
+void S2EncodePointsCompressed(Span<const S2XYZFaceSiTi> points,
                               int level,
                               Encoder* encoder) {
   absl::FixedArray<pair<int, int>> vertices_pi_qi(points.size());

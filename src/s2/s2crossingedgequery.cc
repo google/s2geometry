@@ -30,8 +30,8 @@
 
 using std::vector;
 
-bool S2CrossingEdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
-                                       S2Shape const* shape, CrossingType type,
+bool S2CrossingEdgeQuery::GetCrossings(const S2Point& a0, const S2Point& a1,
+                                       const S2Shape* shape, CrossingType type,
                                        vector<int>* edges) {
   if (!GetCandidates(a0, a1, shape, edges)) return false;
   int min_crossing_value = (type == CrossingType::ALL) ? 0 : 1;
@@ -51,13 +51,13 @@ bool S2CrossingEdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
   return true;
 }
 
-bool S2CrossingEdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
+bool S2CrossingEdgeQuery::GetCrossings(const S2Point& a0, const S2Point& a1,
                                        CrossingType type, EdgeMap* edge_map) {
   if (!GetCandidates(a0, a1, edge_map)) return false;
   int min_crossing_value = (type == CrossingType::ALL) ? 0 : 1;
   S2CopyingEdgeCrosser crosser(a0, a1);
   for (EdgeMap::iterator it = edge_map->begin(); it != edge_map->end(); ) {
-    S2Shape const* shape = it->first;
+    const S2Shape* shape = it->first;
     vector<int>* edges = &it->second;
     int out = 0, n = edges->size();
     for (int in = 0; in < n; ++in) {
@@ -76,12 +76,12 @@ bool S2CrossingEdgeQuery::GetCrossings(S2Point const& a0, S2Point const& a1,
   return !edge_map->empty();
 }
 
-bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
-                                        S2Shape const* shape,
+bool S2CrossingEdgeQuery::GetCandidates(const S2Point& a, const S2Point& b,
+                                        const S2Shape* shape,
                                         vector<int>* edges) {
   // For small loops it is faster to use brute force.  The threshold below was
   // determined using the benchmarks in the unit test.
-  static int const kMaxBruteForceEdges = 27;
+  static const int kMaxBruteForceEdges = 27;
   edges->clear();
   int max_edges = shape->num_edges();
   if (max_edges <= kMaxBruteForceEdges) {
@@ -95,8 +95,8 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
 
   // Gather all the edges that intersect those cells and sort them.
   int shape_id = shape->id();
-  for (S2ShapeIndexCell const* cell : cells_) {
-    S2ClippedShape const* clipped = cell->find_clipped(shape_id);
+  for (const S2ShapeIndexCell* cell : cells_) {
+    const S2ClippedShape* clipped = cell->find_clipped(shape_id);
     if (clipped == nullptr) continue;
     for (int j = 0; j < clipped->num_edges(); ++j) {
       edges->push_back(clipped->edge(j));
@@ -109,7 +109,7 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
   return !edges->empty();
 }
 
-bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
+bool S2CrossingEdgeQuery::GetCandidates(const S2Point& a, const S2Point& b,
                                         EdgeMap* edge_map) {
   // If there are only a few edges then it's faster to use brute force.  We
   // only bother with this optimization when there is a single shape, since
@@ -118,7 +118,7 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
     // Typically this method is called many times, so it is worth checking
     // whether the EdgeMap is empty or already consists of a single entry for
     // this shape, and skip clearing "edge_map" in that case.
-    S2Shape const* shape = index_->shape(0);
+    const S2Shape* shape = index_->shape(0);
     vector<int>* edges = &(*edge_map)[shape];
     if (edge_map->size() != 1) {
       // "edge_map" must have been used to query some other S2ShapeIndex, so
@@ -137,9 +137,9 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
   if (cells_.empty()) return false;
 
   // Gather all the edges that intersect those cells and sort them.
-  for (S2ShapeIndexCell const* cell : cells_) {
+  for (const S2ShapeIndexCell* cell : cells_) {
     for (int s = 0; s < cell->num_clipped(); ++s) {
-      S2ClippedShape const& clipped = cell->clipped(s);
+      const S2ClippedShape& clipped = cell->clipped(s);
       vector<int>* edges = &(*edge_map)[index_->shape(clipped.shape_id())];
       for (int j = 0; j < clipped.num_edges(); ++j) {
         edges->push_back(clipped.edge(j));
@@ -157,11 +157,11 @@ bool S2CrossingEdgeQuery::GetCandidates(S2Point const& a, S2Point const& b,
 }
 
 // Set cells_ to the set of index cells intersected by an edge AB.
-void S2CrossingEdgeQuery::GetCells(S2Point const& a, S2Point const& b) {
+void S2CrossingEdgeQuery::GetCells(const S2Point& a, const S2Point& b) {
   cells_.clear();
   S2::FaceSegmentVector segments;
   S2::GetFaceSegments(a, b, &segments);
-  for (auto const& segment : segments) {
+  for (const auto& segment : segments) {
     a_ = segment.a;
     b_ = segment.b;
 
@@ -196,9 +196,9 @@ void S2CrossingEdgeQuery::GetCells(S2Point const& a, S2Point const& b) {
   }
 }
 
-bool S2CrossingEdgeQuery::GetCells(S2Point const& a, S2Point const& b,
-                                   S2PaddedCell const& root,
-                                   vector<S2ShapeIndexCell const*>* cells) {
+bool S2CrossingEdgeQuery::GetCells(const S2Point& a, const S2Point& b,
+                                   const S2PaddedCell& root,
+                                   vector<const S2ShapeIndexCell*>* cells) {
   cells_.clear();
   if (S2::ClipToFace(a, b, root.id().face(), &a_, &b_)) {
     R2Rect edge_bound = R2Rect::FromPointPair(a_, b_);
@@ -218,8 +218,8 @@ bool S2CrossingEdgeQuery::GetCells(S2Point const& a, S2Point const& b,
 // size is about 2K in versions of GCC prior to 4.7 due to poor overlapping
 // of storage for temporaries.  This is fixed in GCC 4.7, reducing the frame
 // size to about 350 bytes (i.e., worst-case total stack usage of about 10K).
-void S2CrossingEdgeQuery::GetCells(S2PaddedCell const& pcell,
-                                   R2Rect const& edge_bound) {
+void S2CrossingEdgeQuery::GetCells(const S2PaddedCell& pcell,
+                                   const R2Rect& edge_bound) {
   iter_.Seek(pcell.id().range_min());
   if (iter_.done() || iter_.id() > pcell.id().range_max()) {
     // The index does not contain "pcell" or any of its descendants.
@@ -263,9 +263,9 @@ void S2CrossingEdgeQuery::GetCells(S2PaddedCell const& pcell,
 // determine whether the current edge intersects the lower child, upper child,
 // or both children, and call GetCells() recursively on those children.
 // "center" is the v-coordinate at the center of "pcell".
-inline void S2CrossingEdgeQuery::ClipVAxis(R2Rect const& edge_bound,
+inline void S2CrossingEdgeQuery::ClipVAxis(const R2Rect& edge_bound,
                                            double center, int i,
-                                           S2PaddedCell const& pcell) {
+                                           const S2PaddedCell& pcell) {
   if (edge_bound[1].hi() < center) {
     // Edge is entirely contained in the lower child.
     GetCells(S2PaddedCell(pcell, i, 0), edge_bound);
@@ -283,7 +283,7 @@ inline void S2CrossingEdgeQuery::ClipVAxis(R2Rect const& edge_bound,
 
 // Split the current edge into two child edges at the given u-value "u" and
 // return the bound for each child.
-void S2CrossingEdgeQuery::SplitUBound(R2Rect const& edge_bound, double u,
+void S2CrossingEdgeQuery::SplitUBound(const R2Rect& edge_bound, double u,
                                       R2Rect child_bounds[2]) const {
   // See comments in S2ShapeIndex::ClipUBound.
   double v = edge_bound[1].Project(
@@ -297,7 +297,7 @@ void S2CrossingEdgeQuery::SplitUBound(R2Rect const& edge_bound, double u,
 
 // Split the current edge into two child edges at the given v-value "v" and
 // return the bound for each child.
-void S2CrossingEdgeQuery::SplitVBound(R2Rect const& edge_bound, double v,
+void S2CrossingEdgeQuery::SplitVBound(const R2Rect& edge_bound, double v,
                                       R2Rect child_bounds[2]) const {
   double u = edge_bound[0].Project(
       S2::InterpolateDouble(v, a_[1], b_[1], a_[0], b_[0]));
@@ -308,7 +308,7 @@ void S2CrossingEdgeQuery::SplitVBound(R2Rect const& edge_bound, double v,
 // Split the current edge into two child edges at the given point (u,v) and
 // return the bound for each child.  "u_end" and "v_end" indicate which bound
 // endpoints of child 1 will be updated.
-inline void S2CrossingEdgeQuery::SplitBound(R2Rect const& edge_bound, int u_end,
+inline void S2CrossingEdgeQuery::SplitBound(const R2Rect& edge_bound, int u_end,
                                             double u, int v_end, double v,
                                             R2Rect child_bounds[2]) {
   child_bounds[0] = edge_bound;

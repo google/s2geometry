@@ -26,7 +26,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+//
 // -----------------------------------------------------------------------------
 // File: policy_checks.h
 // -----------------------------------------------------------------------------
@@ -88,9 +88,11 @@
 // Enforce C++11 as the minimum.  Note that Visual Studio has not
 // advanced __cplusplus despite being good enough for our purposes, so
 // so we exempt it from the check.
-#if defined(__cplusplus) && !defined(_MSC_VER) && !defined(SWIG)
+#if !defined(SWIG)
+#if defined(__cplusplus) && !defined(_MSC_VER)
 #if __cplusplus < 201103L
 #error "C++ versions less than C++11 are not supported."
+#endif
 #endif
 #endif
 

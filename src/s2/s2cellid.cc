@@ -62,13 +62,13 @@ using std::vector;
 // supplied in the declaration, we don't need the values here. Failing to
 // define storage causes link errors for any code that tries to take the
 // address of one of these values.
-int const S2CellId::kFaceBits;
-int const S2CellId::kNumFaces;
-int const S2CellId::kMaxLevel;
-int const S2CellId::kPosBits;
-int const S2CellId::kMaxSize;
+const int S2CellId::kFaceBits;
+const int S2CellId::kNumFaces;
+const int S2CellId::kMaxLevel;
+const int S2CellId::kPosBits;
+const int S2CellId::kMaxSize;
 
-static int const kLookupBits = 4;
+static const int kLookupBits = 4;
 static uint16 lookup_pos[1 << (2 * kLookupBits + 2)];
 static uint16 lookup_ij[1 << (2 * kLookupBits + 2)];
 
@@ -83,7 +83,7 @@ static void InitLookupCell(int level, int i, int j, int orig_orientation,
     i <<= 1;
     j <<= 1;
     pos <<= 2;
-    int const* r = kPosToIJ[orientation];
+    const int* r = kPosToIJ[orientation];
     InitLookupCell(level, i + (r[0] >> 1), j + (r[0] & 1), orig_orientation,
                    pos, orientation ^ kPosToOrientation[0]);
     InitLookupCell(level, i + (r[1] >> 1), j + (r[1] & 1), orig_orientation,
@@ -154,7 +154,7 @@ S2CellId S2CellId::advance_wrap(int64 steps) const {
   return S2CellId(id_ + (static_cast<uint64>(steps) << step_shift));
 }
 
-S2CellId S2CellId::maximum_tile(S2CellId const limit) const {
+S2CellId S2CellId::maximum_tile(const S2CellId limit) const {
   S2CellId id = *this;
   S2CellId start = id.range_min();
   if (start >= limit.range_min()) return limit;
@@ -210,7 +210,7 @@ string S2CellId::ToToken() const {
   // "0" with trailing 0s stripped is the empty string, which is not a
   // reasonable token.  Encode as "X".
   if (id_ == 0) return "X";
-  size_t const num_zero_digits = Bits::FindLSBSetNonZero64(id_) / 4;
+  const size_t num_zero_digits = Bits::FindLSBSetNonZero64(id_) / 4;
   return HexFormatString(id_ >> (4 * num_zero_digits), 16 - num_zero_digits);
 }
 
@@ -233,7 +233,7 @@ S2CellId S2CellId::FromToken(const char* token, size_t length) {
   return S2CellId(id);
 }
 
-S2CellId S2CellId::FromToken(string const& token) {
+S2CellId S2CellId::FromToken(const string& token) {
   return FromToken(token.data(), token.size());
 }
 
@@ -271,7 +271,7 @@ S2CellId S2CellId::FromFaceIJ(int face, int i, int j) {
   // letters [ijpo] denote bits of "i", "j", Hilbert curve position, and
   // Hilbert curve orientation respectively.
 #define GET_BITS(k) do { \
-    int const mask = (1 << kLookupBits) - 1; \
+    const int mask = (1 << kLookupBits) - 1; \
     bits += ((i >> (k * kLookupBits)) & mask) << (kLookupBits + 2); \
     bits += ((j >> (k * kLookupBits)) & mask) << 2; \
     bits = lookup_pos[bits]; \
@@ -292,7 +292,7 @@ S2CellId S2CellId::FromFaceIJ(int face, int i, int j) {
   return S2CellId(n * 2 + 1);
 }
 
-S2CellId::S2CellId(S2Point const& p) {
+S2CellId::S2CellId(const S2Point& p) {
   double u, v;
   int face = S2::XYZtoFaceUV(p, &u, &v);
   int i = S2::STtoIJ(S2::UVtoST(u));
@@ -300,7 +300,7 @@ S2CellId::S2CellId(S2Point const& p) {
   id_ = FromFaceIJ(face, i, j).id();
 }
 
-S2CellId::S2CellId(S2LatLng const& ll)
+S2CellId::S2CellId(const S2LatLng& ll)
   : S2CellId(ll.ToPoint()) {
 }
 
@@ -321,7 +321,7 @@ int S2CellId::ToFaceIJOrientation(int* pi, int* pj, int* orientation) const {
   // On the first iteration we need to be careful to clear out the bits
   // representing the cube face.
 #define GET_BITS(k) do { \
-    int const nbits = (k == 7) ? (kMaxLevel - 7 * kLookupBits) : kLookupBits; \
+    const int nbits = (k == 7) ? (kMaxLevel - 7 * kLookupBits) : kLookupBits; \
     bits += (static_cast<int>(id_ >> (k * 2 * kLookupBits + 1)) \
              & ((1 << (2 * nbits)) - 1)) << 2; \
     bits = lookup_ij[bits]; \
@@ -424,7 +424,7 @@ static double ExpandEndpoint(double u, double max_v, double sin_dist) {
 }
 
 /* static */
-R2Rect S2CellId::ExpandedByDistanceUV(R2Rect const& uv, S1Angle distance) {
+R2Rect S2CellId::ExpandedByDistanceUV(const R2Rect& uv, S1Angle distance) {
   // Expand each of the four sides of the rectangle just enough to include all
   // points within the given distance of that side.  (The rectangle may be
   // expanded by a different amount in (u,v)-space on each side.)
@@ -597,7 +597,7 @@ std::ostream& operator<<(std::ostream& os, S2CellId id) {
   return os << id.ToString();
 }
 
-S2CellId S2CellId::FromDebugString(string const& str) {
+S2CellId S2CellId::FromDebugString(const string& str) {
   // This function is reasonably efficient, but is only intended for use in
   // tests.
   int level = str.size() - 2;

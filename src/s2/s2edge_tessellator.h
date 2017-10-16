@@ -41,7 +41,7 @@ class S2EdgeTessellator {
   // ------------------|------------------------|-----------------------
   // AppendProjected   | S2 geodesics           | Planar projected edges
   // AppendUnprojected | Planar projected edges | S2 geodesics
-  S2EdgeTessellator(S2::Projection const* projection, S1Angle tolerance);
+  S2EdgeTessellator(const S2::Projection* projection, S1Angle tolerance);
 
   // Converts the spherical geodesic edge AB to a chain of planar edges in the
   // given projection and appends the corresponding vertices to "vertices".
@@ -56,7 +56,7 @@ class S2EdgeTessellator {
   // vertex's coordinates.  Note that this may yield vertices whose
   // coordinates are outside the usual range.  For example, tessellating the
   // edge (0:170, 0:-170) (in lat:lng notation) yields (0:170, 0:190).
-  void AppendProjected(S2Point const& a, S2Point const& b,
+  void AppendProjected(const S2Point& a, const S2Point& b,
                        std::vector<R2Point>* vertices) const;
 
   // Converts the planar edge AB in the given projection to a chain of
@@ -69,7 +69,7 @@ class S2EdgeTessellator {
   //
   // Note that to construct an S2Loop, you must call vertices->pop_back() at
   // the very end to eliminate the duplicate first and last vertex.
-  void AppendUnprojected(R2Point const& a, R2Point const& b,
+  void AppendUnprojected(const R2Point& a, const R2Point& b,
                          std::vector<S2Point>* vertices) const;
 
   // Returns the minimum supported tolerance (which corresponds to a distance
@@ -77,17 +77,17 @@ class S2EdgeTessellator {
   static S1Angle kMinTolerance();
 
  private:
-  void AppendUnprojected(R2Point const& pa, S2Point const& a,
-                         R2Point const& pb, S2Point const& b,
+  void AppendUnprojected(const R2Point& pa, const S2Point& a,
+                         const R2Point& pb, const S2Point& b,
                          std::vector<S2Point>* vertices) const;
 
-  void AppendProjected(R2Point const& pa, S2Point const& a,
-                       R2Point const& pb, S2Point const& b,
+  void AppendProjected(const R2Point& pa, const S2Point& a,
+                       const R2Point& pb, const S2Point& b,
                        std::vector<R2Point>* vertices) const;
 
-  R2Point WrapDestination(R2Point const& pa, R2Point const& pb) const;
+  R2Point WrapDestination(const R2Point& pa, const R2Point& pb) const;
 
-  S2::Projection const& proj_;
+  const S2::Projection& proj_;
   S1ChordAngle tolerance_;
   R2Point wrap_distance_;  // Local copy
 };

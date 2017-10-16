@@ -55,7 +55,7 @@ class IdentitySnapFunction : public S2Builder::SnapFunction {
   // vertices by at least 0.5 * snap_radius().
   S1Angle min_edge_vertex_separation() const override;
 
-  S2Point SnapPoint(S2Point const& point) const override;
+  S2Point SnapPoint(const S2Point& point) const override;
 
   std::unique_ptr<SnapFunction> Clone() const override;
 
@@ -132,7 +132,7 @@ class S2CellIdSnapFunction : public S2Builder::SnapFunction {
   // or more.
   S1Angle min_edge_vertex_separation() const override;
 
-  S2Point SnapPoint(S2Point const& point) const override;
+  S2Point SnapPoint(const S2Point& point) const override;
 
   std::unique_ptr<SnapFunction> Clone() const override;
 
@@ -184,10 +184,10 @@ class IntLatLngSnapFunction : public S2Builder::SnapFunction {
   int exponent() const;
 
   // The minum exponent supported for snapping.
-  static int const kMinExponent = 0;
+  static const int kMinExponent = 0;
 
   // The maximum exponent supported for snapping.
-  static int const kMaxExponent = 10;
+  static const int kMaxExponent = 10;
 
   // Defines the snap radius to be used (see s2builder.h).  The snap radius
   // must be at least the minimum value for the current exponent(), but larger
@@ -224,7 +224,7 @@ class IntLatLngSnapFunction : public S2Builder::SnapFunction {
   // be as low as 0.222 * snap_radius(), but is typically 0.39 * snap_radius()
   // or more.
   S1Angle min_edge_vertex_separation() const override;
-  S2Point SnapPoint(S2Point const& point) const override;
+  S2Point SnapPoint(const S2Point& point) const override;
   std::unique_ptr<SnapFunction> Clone() const override;
 
  private:

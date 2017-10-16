@@ -89,10 +89,7 @@ class ManualConstructor {
   void Init() { new (&space_) Type; }
 
   // Init() constructs the Type instance using the given arguments
-  // (which are forwarded to Type's constructor). In C++11, Init() can
-  // take any number of arguments of any type, and forwards them perfectly.
-  // On pre-C++11 platforms, it can take up to 11 arguments, and may not be
-  // able to forward certain kinds of arguments.
+  // (which are forwarded to Type's constructor).
   //
   // Note that Init() with no arguments performs default-initialization,
   // not zero-initialization (i.e it behaves the same as "new Type;", not

@@ -84,7 +84,7 @@ using FurthestEdgeQuery = S2ClosestEdgeQueryBase<MaxDistance>;
 
 class FurthestPointTarget final : public FurthestEdgeQuery::Target {
  public:
-  explicit FurthestPointTarget(S2Point const& point) : point_(point) {}
+  explicit FurthestPointTarget(const S2Point& point) : point_(point) {}
 
   int max_brute_force_edges() const override { return 100; }
 
@@ -92,7 +92,7 @@ class FurthestPointTarget final : public FurthestEdgeQuery::Target {
     return S2Cap(-point_, S1ChordAngle::Zero());
   }
 
-  bool UpdateMinDistance(S2Point const& v0, S2Point const& v1,
+  bool UpdateMinDistance(const S2Point& v0, const S2Point& v1,
                          MaxDistance* min_dist) const override {
     S1ChordAngle dist180 =
         S1ChordAngle(*min_dist).is_negative() ? S1ChordAngle::Infinity() :
@@ -102,7 +102,7 @@ class FurthestPointTarget final : public FurthestEdgeQuery::Target {
     return true;
   }
 
-  bool UpdateMinDistance(S2Cell const& cell,
+  bool UpdateMinDistance(const S2Cell& cell,
                          MaxDistance* min_dist) const override {
     MaxDistance dist(S1ChordAngle::Straight() - cell.GetDistance(-point_));
     if (*min_dist < dist) return false;
@@ -110,7 +110,7 @@ class FurthestPointTarget final : public FurthestEdgeQuery::Target {
     return true;
   }
 
-  vector<int> GetContainingShapes(S2ShapeIndexBase const& index,
+  vector<int> GetContainingShapes(const S2ShapeIndexBase& index,
                                   int max_shapes) const override {
     // For furthest points, we return the polygons whose interior contains the
     // antipode of the target point.  (These are the polygons whose

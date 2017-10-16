@@ -67,7 +67,7 @@ struct Component {
 // The actual implementation of FindPolygonDegeneracies.
 class DegeneracyFinder {
  public:
-  explicit DegeneracyFinder(S2Builder::Graph const* g)
+  explicit DegeneracyFinder(const S2Builder::Graph* g)
       : g_(*g), in_(g_), out_(g_) {
   }
   vector<PolygonDegeneracy> Run(S2Error* error);
@@ -85,9 +85,9 @@ class DegeneracyFinder {
   void ComputeUnknownSignsIndexed(VertexId known_vertex, int known_vertex_sign,
                                   vector<Component>* components) const;
   vector<PolygonDegeneracy> MergeDegeneracies(
-      vector<Component> const& components) const;
+      const vector<Component>& components) const;
 
-  Graph const& g_;
+  const Graph& g_;
   Graph::VertexInMap in_;
   Graph::VertexOutMap out_;
   vector<bool> is_vertex_used_;        // Has vertex been visited?
@@ -153,7 +153,7 @@ vector<PolygonDegeneracy> DegeneracyFinder::Run(S2Error* error) {
       known_vertex = FindUnbalancedVertex();
       known_vertex_sign = ContainsVertexSign(known_vertex);
     }
-    int const kMaxUnindexedContainsCalls = 20;  // Tuned using benchmarks.
+    const int kMaxUnindexedContainsCalls = 20;  // Tuned using benchmarks.
     if (num_unknown_signs <= kMaxUnindexedContainsCalls) {
       ComputeUnknownSignsBruteForce(known_vertex, known_vertex_sign,
                                     &components);
@@ -172,7 +172,7 @@ int DegeneracyFinder::ComputeDegeneracies() {
   is_edge_degeneracy_.resize(g_.num_edges());
   is_vertex_unbalanced_.resize(g_.num_vertices());
   int num_degeneracies = 0;
-  vector<EdgeId> const& in_edge_ids = in_.in_edge_ids();
+  const vector<EdgeId>& in_edge_ids = in_.in_edge_ids();
   int n = g_.num_edges();
   for (int in = 0, out = 0; out < n; ++out) {
     Edge out_edge = g_.edge(out);
@@ -250,7 +250,7 @@ bool DegeneracyFinder::CrossingParity(VertexId v0, VertexId v1,
   S2Point p0 = g_.vertex(v0);
   S2Point p1 = g_.vertex(v1);
   S2Point p0_ref = S2::Ortho(p0);
-  for (Edge const& edge : out_.edges(v0)) {
+  for (const Edge& edge : out_.edges(v0)) {
     if (edge.second == v1) {
       if (include_same) ++crossings;
     } else if (s2pred::OrderedCCW(p0_ref, g_.vertex(edge.second), p1, p0)) {
@@ -278,7 +278,7 @@ VertexId DegeneracyFinder::FindUnbalancedVertex() const {
 
 int DegeneracyFinder::ContainsVertexSign(VertexId v0) const {
   S2ContainsVertexQuery query(g_.vertex(v0));
-  for (Edge const& edge : out_.edges(v0)) {
+  for (const Edge& edge : out_.edges(v0)) {
     query.AddEdge(g_.vertex(edge.second), 1);
   }
   for (EdgeId e : in_.edge_ids(v0)) {
@@ -300,7 +300,7 @@ void DegeneracyFinder::ComputeUnknownSignsBruteForce(
     crosser.Init(&g_.vertex(known_vertex), &g_.vertex(component.root));
     for (EdgeId e = 0; e < g_.num_edges(); ++e) {
       if (is_edge_degeneracy_[e]) continue;
-      Edge const& edge = g_.edge(e);
+      const Edge& edge = g_.edge(e);
       inside ^= crosser.EdgeOrVertexCrossing(&g_.vertex(edge.first),
                                              &g_.vertex(edge.second));
     }
@@ -311,7 +311,7 @@ void DegeneracyFinder::ComputeUnknownSignsBruteForce(
 // An S2Shape representing the edges in an S2Builder::Graph.
 class GraphShape : public S2Shape {
  public:
-  explicit GraphShape(Graph const* g) : g_(*g) {}
+  explicit GraphShape(const Graph* g) : g_(*g) {}
   int num_edges() const final { return g_.num_edges(); }
   Edge edge(int e) const final {
     Graph::Edge g_edge = g_.edge(e);
@@ -329,7 +329,7 @@ class GraphShape : public S2Shape {
   }
 
  private:
-  Graph const& g_;
+  const Graph& g_;
 };
 
 // Like ComputeUnknownSignsBruteForce, except that this method uses an index
@@ -361,12 +361,12 @@ void DegeneracyFinder::ComputeUnknownSignsIndexed(
 // final "is_hole" status of each edge (since up to this point, the "is_hole"
 // value has been expressed relative to the root vertex of each component).
 vector<PolygonDegeneracy> DegeneracyFinder::MergeDegeneracies(
-    vector<Component> const& components) const {
+    const vector<Component>& components) const {
   vector<PolygonDegeneracy> result;
-  for (Component const& component : components) {
+  for (const Component& component : components) {
     DCHECK_NE(component.root_sign, 0);
     bool invert = component.root_sign < 0;
-    for (auto const& d : component.degeneracies) {
+    for (const auto& d : component.degeneracies) {
       result.push_back(PolygonDegeneracy(d.edge_id, d.is_hole ^ invert));
     }
   }
@@ -376,7 +376,7 @@ vector<PolygonDegeneracy> DegeneracyFinder::MergeDegeneracies(
 
 }  // namespace
 
-vector<PolygonDegeneracy> FindPolygonDegeneracies(Graph const& graph,
+vector<PolygonDegeneracy> FindPolygonDegeneracies(const Graph& graph,
                                                   S2Error* error) {
   using DegenerateEdges = GraphOptions::DegenerateEdges;
   using SiblingPairs = GraphOptions::SiblingPairs;

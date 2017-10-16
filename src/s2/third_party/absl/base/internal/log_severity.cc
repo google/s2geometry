@@ -27,7 +27,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "s2/third_party/absl/base/log_severity.h"
+#include "s2/third_party/absl/base/internal/log_severity.h"
 
 namespace absl {
 #ifdef NDEBUG

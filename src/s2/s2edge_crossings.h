@@ -72,8 +72,8 @@ namespace S2 {
 //
 // Note that if you want to check an edge against a collection of other edges,
 // it is much more efficient to use an S2EdgeCrosser (see s2edge_crosser.h).
-int CrossingSign(S2Point const& a, S2Point const& b,
-                 S2Point const& c, S2Point const& d);
+int CrossingSign(const S2Point& a, const S2Point& b,
+                 const S2Point& c, const S2Point& d);
 
 // Given two edges AB and CD where at least two vertices are identical
 // (i.e. CrossingSign(a,b,c,d) == 0), this function defines whether the
@@ -98,16 +98,16 @@ int CrossingSign(S2Point const& a, S2Point const& b,
 //      VC(a,b,c,d) and VC(c,d,a,b) is true
 //
 // It is an error to call this method with 4 distinct vertices.
-bool VertexCrossing(S2Point const& a, S2Point const& b,
-                    S2Point const& c, S2Point const& d);
+bool VertexCrossing(const S2Point& a, const S2Point& b,
+                    const S2Point& c, const S2Point& d);
 
 // A convenience function that calls CrossingSign() to handle cases
 // where all four vertices are distinct, and VertexCrossing() to handle
 // cases where two or more vertices are the same.  This defines a crossing
 // function such that point-in-polygon containment tests can be implemented
 // by simply counting edge crossings.
-bool EdgeOrVertexCrossing(S2Point const& a, S2Point const& b,
-                          S2Point const& c, S2Point const& d);
+bool EdgeOrVertexCrossing(const S2Point& a, const S2Point& b,
+                          const S2Point& c, const S2Point& d);
 
 // Given two edges AB and CD such that CrossingSign(A, B, C, D) > 0, returns
 // their intersection point.  Useful properties of GetIntersection (GI):
@@ -118,12 +118,12 @@ bool EdgeOrVertexCrossing(S2Point const& a, S2Point const& b,
 // The returned intersection point X is guaranteed to be very close to the
 // true intersection point of AB and CD, even if the edges intersect at a
 // very small angle.  See "kIntersectionError" below for details.
-S2Point GetIntersection(S2Point const& a, S2Point const& b,
-                        S2Point const& c, S2Point const& d);
+S2Point GetIntersection(const S2Point& a, const S2Point& b,
+                        const S2Point& c, const S2Point& d);
 
 // kIntersectionError is an upper bound on the distance from the intersection
 // point returned by GetIntersection() to the true intersection point.
-extern S1Angle const kIntersectionError;
+extern const S1Angle kIntersectionError;
 
 // This value can be used as the S2Builder snap_radius() to ensure that edges
 // that have been displaced by up to kIntersectionError are merged back
@@ -131,7 +131,7 @@ extern S1Angle const kIntersectionError;
 // with a set of tiles and then unioned.  It is equal to twice the
 // intersection error because input edges might have been displaced in
 // opposite directions.
-extern S1Angle const kIntersectionMergeRadius;  // 2 * kIntersectionError
+extern const S1Angle kIntersectionMergeRadius;  // 2 * kIntersectionError
 
 // Returns true if edge AB crosses CD at a point that is interior to both
 // edges, using a naive non-robust algorithm.  Most applications should use
@@ -141,8 +141,8 @@ extern S1Angle const kIntersectionMergeRadius;  // 2 * kIntersectionError
 //  (1) SimpleCrossing(b,a,c,d) == SimpleCrossing(a,b,c,d)
 //  (2) SimpleCrossing(c,d,a,b) == SimpleCrossing(a,b,c,d)
 ABSL_DEPRECATED("Use CrossingSign() > 0 instead.")
-bool SimpleCrossing(S2Point const& a, S2Point const& b,
-                    S2Point const& c, S2Point const& d);
+bool SimpleCrossing(const S2Point& a, const S2Point& b,
+                    const S2Point& c, const S2Point& d);
 
 }  // namespace S2
 

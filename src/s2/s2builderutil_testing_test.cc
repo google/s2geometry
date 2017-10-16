@@ -49,7 +49,7 @@ TEST(GraphCloningLayer, MakeIndependentCopy) {
   builder.AddEdge(v0, v1);
   S2Error error;
   EXPECT_TRUE(builder.Build(&error));
-  Graph const& g = gc.graph();
+  const Graph& g = gc.graph();
   EXPECT_TRUE(graph_options == g.options());
   EXPECT_EQ((vector<S2Point>{v0, v1}), g.vertices());
   EXPECT_EQ((vector<Graph::Edge>{{0, 1}}), g.edges());

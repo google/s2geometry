@@ -23,71 +23,71 @@
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 
-R2Rect R2Rect::FromCenterSize(R2Point const& center, R2Point const& size) {
+R2Rect R2Rect::FromCenterSize(const R2Point& center, const R2Point& size) {
   return R2Rect(R1Interval(center.x() - 0.5 * size.x(),
                            center.x() + 0.5 * size.x()),
                 R1Interval(center.y() - 0.5 * size.y(),
                            center.y() + 0.5 * size.y()));
 }
 
-R2Rect R2Rect::FromPointPair(R2Point const& p1, R2Point const& p2) {
+R2Rect R2Rect::FromPointPair(const R2Point& p1, const R2Point& p2) {
   return R2Rect(R1Interval::FromPointPair(p1.x(), p2.x()),
                 R1Interval::FromPointPair(p1.y(), p2.y()));
 }
 
-bool R2Rect::Contains(R2Rect const& other) const {
+bool R2Rect::Contains(const R2Rect& other) const {
   return x().Contains(other.x()) && y().Contains(other.y());
 }
 
-bool R2Rect::InteriorContains(R2Rect const& other) const {
+bool R2Rect::InteriorContains(const R2Rect& other) const {
   return x().InteriorContains(other.x()) && y().InteriorContains(other.y());
 }
 
-bool R2Rect::Intersects(R2Rect const& other) const {
+bool R2Rect::Intersects(const R2Rect& other) const {
   return x().Intersects(other.x()) && y().Intersects(other.y());
 }
 
-bool R2Rect::InteriorIntersects(R2Rect const& other) const {
+bool R2Rect::InteriorIntersects(const R2Rect& other) const {
   return x().InteriorIntersects(other.x()) && y().InteriorIntersects(other.y());
 }
 
-void R2Rect::AddPoint(R2Point const& p) {
+void R2Rect::AddPoint(const R2Point& p) {
   bounds_[0].AddPoint(p[0]);
   bounds_[1].AddPoint(p[1]);
 }
 
-void R2Rect::AddRect(R2Rect const& other) {
+void R2Rect::AddRect(const R2Rect& other) {
   bounds_[0].AddInterval(other[0]);
   bounds_[1].AddInterval(other[1]);
 }
 
-R2Point R2Rect::Project(R2Point const& p) const {
+R2Point R2Rect::Project(const R2Point& p) const {
   return R2Point(x().Project(p.x()), y().Project(p.y()));
 }
 
-R2Rect R2Rect::Expanded(R2Point const& margin) const {
+R2Rect R2Rect::Expanded(const R2Point& margin) const {
   R1Interval xx = x().Expanded(margin.x());
   R1Interval yy = y().Expanded(margin.y());
   if (xx.is_empty() || yy.is_empty()) return Empty();
   return R2Rect(xx, yy);
 }
 
-R2Rect R2Rect::Union(R2Rect const& other) const {
+R2Rect R2Rect::Union(const R2Rect& other) const {
   return R2Rect(x().Union(other.x()), y().Union(other.y()));
 }
 
-R2Rect R2Rect::Intersection(R2Rect const& other) const {
+R2Rect R2Rect::Intersection(const R2Rect& other) const {
   R1Interval xx = x().Intersection(other.x());
   R1Interval yy = y().Intersection(other.y());
   if (xx.is_empty() || yy.is_empty()) return Empty();
   return R2Rect(xx, yy);
 }
 
-bool R2Rect::ApproxEquals(R2Rect const& other, double max_error) const {
+bool R2Rect::ApproxEquals(const R2Rect& other, double max_error) const {
   return (x().ApproxEquals(other.x(), max_error) &&
           y().ApproxEquals(other.y(), max_error));
 }
 
-std::ostream& operator<<(std::ostream& os, R2Rect const& r) {
+std::ostream& operator<<(std::ostream& os, const R2Rect& r) {
   return os << "[Lo" << r.lo() << ", Hi" << r.hi() << "]";
 }

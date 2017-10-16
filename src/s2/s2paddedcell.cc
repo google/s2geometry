@@ -53,7 +53,7 @@ S2PaddedCell::S2PaddedCell(S2CellId id, double padding)
   }
 }
 
-S2PaddedCell::S2PaddedCell(S2PaddedCell const& parent, int i, int j)
+S2PaddedCell::S2PaddedCell(const S2PaddedCell& parent, int i, int j)
     : padding_(parent.padding_),
       bound_(parent.bound_),
       level_(parent.level_ + 1) {
@@ -67,12 +67,12 @@ S2PaddedCell::S2PaddedCell(S2PaddedCell const& parent, int i, int j)
   orientation_ = parent.orientation_ ^ kPosToOrientation[pos];
   // For each child, one corner of the bound is taken directly from the parent
   // while the diagonally opposite corner is taken from middle().
-  R2Rect const& middle = parent.middle();
+  const R2Rect& middle = parent.middle();
   bound_[0][1-i] = middle[0][1-i];
   bound_[1][1-j] = middle[1][1-j];
 }
 
-R2Rect const& S2PaddedCell::middle() const {
+const R2Rect& S2PaddedCell::middle() const {
   // We compute this field lazily because it is not needed the majority of the
   // time (i.e., for cells where the recursion terminates).
   if (middle_.is_empty()) {
@@ -119,7 +119,7 @@ S2Point S2PaddedCell::GetExitVertex() const {
   return S2::FaceSiTitoXYZ(id_.face(), 2 * i, 2 * j).Normalize();
 }
 
-S2CellId S2PaddedCell::ShrinkToFit(R2Rect const& rect) const {
+S2CellId S2PaddedCell::ShrinkToFit(const R2Rect& rect) const {
   DCHECK(bound().Intersects(rect));
 
   // Quick rejection test: if "rect" contains the center of this cell along

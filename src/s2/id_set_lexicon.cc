@@ -30,13 +30,13 @@ IdSetLexicon::~IdSetLexicon() {
 // We define the copy/move constructors and assignment operators explicitly
 // in order to avoid copying/moving the temporary storage vector "tmp_".
 
-IdSetLexicon::IdSetLexicon(IdSetLexicon const& x) : id_sets_(x.id_sets_) {
+IdSetLexicon::IdSetLexicon(const IdSetLexicon& x) : id_sets_(x.id_sets_) {
 }
 
 IdSetLexicon::IdSetLexicon(IdSetLexicon&& x) : id_sets_(std::move(x.id_sets_)) {
 }
 
-IdSetLexicon& IdSetLexicon::operator=(IdSetLexicon const& x) {
+IdSetLexicon& IdSetLexicon::operator=(const IdSetLexicon& x) {
   id_sets_ = x.id_sets_;
   return *this;
 }

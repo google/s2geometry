@@ -56,7 +56,7 @@ class priority_queue_sequence
   }
 
   // Returns the underlying sequence.
-  Sequence const& rep() const { return this->c; }
+  const Sequence& rep() const { return this->c; }
 
   // Allows the underlying sequence to be modified.  If you do this, you must
   // call make_heap() before calling any of the other priority queue methods

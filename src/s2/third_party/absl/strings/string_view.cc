@@ -29,11 +29,12 @@
 
 #include "s2/third_party/absl/strings/string_view.h"
 
+#ifndef ABSL_HAVE_STD_STRING_VIEW
+
 #include <algorithm>
 #include <climits>
 #include <cstring>
 #include <ostream>
-#include <string>
 
 #include "s2/third_party/absl/strings/internal/memutil.h"
 #include "s2/third_party/absl/strings/internal/resize_uninitialized.h"
@@ -130,8 +131,8 @@ string_view::size_type string_view::find(string_view s, size_type pos) const
     if (empty() && pos == 0 && s.empty()) return 0;
     return npos;
   }
-  const char* result = absl::strings_internal::memmatch(
-      ptr_ + pos, length_ - pos, s.ptr_, s.length_);
+  const char* result =
+      strings_internal::memmatch(ptr_ + pos, length_ - pos, s.ptr_, s.length_);
   return result ? result - ptr_ : npos;
 }
 
@@ -276,3 +277,5 @@ ABSL_STRING_VIEW_SELECTANY
 constexpr string_view::size_type string_view::kMaxSize;
 
 }  // namespace absl
+
+#endif  // ABSL_HAVE_STD_STRING_VIEW

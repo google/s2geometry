@@ -23,11 +23,11 @@
 
 #include "s2/s2latlng.h"
 
-S1Angle::S1Angle(S2Point const& x, S2Point const& y)
+S1Angle::S1Angle(const S2Point& x, const S2Point& y)
     : radians_(x.Angle(y)) {
 }
 
-S1Angle::S1Angle(S2LatLng const& x, S2LatLng const& y)
+S1Angle::S1Angle(const S2LatLng& x, const S2LatLng& y)
     : radians_(x.GetDistance(y).radians()) {
 }
 

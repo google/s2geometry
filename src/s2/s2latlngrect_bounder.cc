@@ -30,7 +30,7 @@ using std::fabs;
 using std::max;
 using std::min;
 
-void S2LatLngRectBounder::AddPoint(S2Point const& b) {
+void S2LatLngRectBounder::AddPoint(const S2Point& b) {
   DCHECK(S2::IsUnitLength(b));
   S2LatLng b_latlng(b);
   if (bound_.is_empty()) {
@@ -187,7 +187,7 @@ S2LatLngRect S2LatLngRectBounder::GetBound() const {
 }
 
 S2LatLngRect S2LatLngRectBounder::ExpandForSubregions(
-    S2LatLngRect const& bound) {
+    const S2LatLngRect& bound) {
   // Empty bounds don't need expansion.
   if (bound.is_empty()) return bound;
 

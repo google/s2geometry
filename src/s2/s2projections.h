@@ -36,21 +36,21 @@ class Projection {
   virtual ~Projection() {}
 
   // Converts a point on the sphere to a projected 2D point.
-  virtual R2Point Project(S2Point const& p) const = 0;
+  virtual R2Point Project(const S2Point& p) const = 0;
 
   // Converts a projected 2D point to a point on the sphere.
   //
   // If wrapping is defined for a given axis (see below), then this method
   // should accept any real number for the corresponding coordinate.
-  virtual S2Point Unproject(R2Point const& p) const = 0;
+  virtual S2Point Unproject(const R2Point& p) const = 0;
 
   // Convenience function equivalent to Project(ll.ToPoint()), but the
   // implementation may be more efficient.
-  virtual R2Point FromLatLng(S2LatLng const& ll) const = 0;
+  virtual R2Point FromLatLng(const S2LatLng& ll) const = 0;
 
   // Convenience function equivalent to S2LatLng(Unproject(p)), but the
   // implementation may be more efficient.
-  virtual S2LatLng ToLatLng(R2Point const& p) const = 0;
+  virtual S2LatLng ToLatLng(const R2Point& p) const = 0;
 
   // Returns the point obtained by interpolating the given fraction of the
   // distance along the line from A to B.  Almost all projections should
@@ -66,7 +66,7 @@ class Projection {
   //
   // Also note that there is no reason to define a projection where edges are
   // geodesics over the sphere, because this is the native S2 interpretation.
-  virtual R2Point Interpolate(double f, R2Point const& a, R2Point const& b)
+  virtual R2Point Interpolate(double f, const R2Point& a, const R2Point& b)
       const;
 
   // Defines the coordinate wrapping distance along each axis.  If this value
@@ -103,10 +103,10 @@ class PlateCarreeProjection final : public Projection {
   // [-Pi, Pi] and the y range is [-Pi/2, Pi/2].
   explicit PlateCarreeProjection(double x_scale = M_PI);
 
-  R2Point Project(S2Point const& p) const override;
-  S2Point Unproject(R2Point const& p) const override;
-  R2Point FromLatLng(S2LatLng const& ll) const override;
-  S2LatLng ToLatLng(R2Point const& p) const override;
+  R2Point Project(const S2Point& p) const override;
+  S2Point Unproject(const R2Point& p) const override;
+  R2Point FromLatLng(const S2LatLng& ll) const override;
+  S2LatLng ToLatLng(const R2Point& p) const override;
   R2Point wrap_distance() const override;
 
  private:
@@ -136,10 +136,10 @@ class MercatorProjection final : public Projection {
   // any real number.  The horizontal and vertical scales are equal locally.
   explicit MercatorProjection(double max_x);
 
-  R2Point Project(S2Point const& p) const override;
-  S2Point Unproject(R2Point const& p) const override;
-  R2Point FromLatLng(S2LatLng const& ll) const override;
-  S2LatLng ToLatLng(R2Point const& p) const override;
+  R2Point Project(const S2Point& p) const override;
+  S2Point Unproject(const R2Point& p) const override;
+  R2Point FromLatLng(const S2LatLng& ll) const override;
+  S2LatLng ToLatLng(const R2Point& p) const override;
   R2Point wrap_distance() const override;
 
  private:

@@ -68,7 +68,7 @@ class S2RegionCoverer {
   // By default, the covering uses at most 8 cells at any level.  This gives
   // a reasonable tradeoff between the number of cells used and the accuracy
   // of the approximation (see table below).
-  static int const kDefaultMaxCells = 8;
+  static const int kDefaultMaxCells = 8;
 
   S2RegionCoverer();
   ~S2RegionCoverer();
@@ -152,8 +152,8 @@ class S2RegionCoverer {
   // Return a vector of cell ids that covers (GetCovering) or is contained
   // within (GetInteriorCovering) the given region and satisfies the various
   // restrictions specified above.
-  void GetCovering(S2Region const& region, std::vector<S2CellId>* covering);
-  void GetInteriorCovering(S2Region const& region,
+  void GetCovering(const S2Region& region, std::vector<S2CellId>* covering);
+  void GetInteriorCovering(const S2Region& region,
                            std::vector<S2CellId>* interior);
 
   // Return a normalized cell union that covers (GetCellUnion) or is contained
@@ -163,8 +163,8 @@ class S2RegionCoverer {
   // automatically normalized by replacing four child cells with their parent
   // whenever possible.  (Note that the list of cell ids passed to the cell
   // union constructor does in fact satisfy all the given restrictions.)
-  void GetCellUnion(S2Region const& region, S2CellUnion* covering);
-  void GetInteriorCellUnion(S2Region const& region, S2CellUnion* interior);
+  void GetCellUnion(const S2Region& region, S2CellUnion* covering);
+  void GetInteriorCellUnion(const S2Region& region, S2CellUnion* interior);
 
   // Like GetCovering(), except that this method is much faster and the
   // coverings are not as tight.  All of the usual parameters are respected
@@ -174,7 +174,7 @@ class S2RegionCoverer {
   //
   // This function is useful as a starting point for algorithms that
   // recursively subdivide cells.
-  void GetFastCovering(S2Region const& region, std::vector<S2CellId>* covering);
+  void GetFastCovering(const S2Region& region, std::vector<S2CellId>* covering);
 
   // Given a connected region and a starting point, return a set of cells at
   // the given level that cover the region.
@@ -185,8 +185,14 @@ class S2RegionCoverer {
   // Currently it can be faster at generating coverings of long narrow regions
   // such as polylines, but this may change in the future, in which case this
   // method will most likely be removed.
-  static void GetSimpleCovering(S2Region const& region, S2Point const& start,
+  static void GetSimpleCovering(const S2Region& region, const S2Point& start,
                                 int level, std::vector<S2CellId>* output);
+
+  // Given a region and a starting cell, returns the set of all the
+  // edge-connected cells at the same level that intersect "region".
+  // The output cells are returned in arbitrary order.
+  static void FloodFill(const S2Region& region, S2CellId start,
+                        std::vector<S2CellId>* output);
 
  private:
   struct Candidate {
@@ -199,7 +205,7 @@ class S2RegionCoverer {
   // If the cell intersects the given region, return a new candidate with no
   // children, otherwise return nullptr.  Also marks the candidate as "terminal"
   // if it should not be expanded further.
-  Candidate* NewCandidate(S2Cell const& cell);
+  Candidate* NewCandidate(const S2Cell& cell);
 
   // Return the log base 2 of the maximum number of children of a candidate.
   int max_children_shift() const { return 2 * level_mod_; }
@@ -215,13 +221,13 @@ class S2RegionCoverer {
   // Populate the children of "candidate" by expanding the given number of
   // levels from the given cell.  Returns the number of children that were
   // marked "terminal".
-  int ExpandChildren(Candidate* candidate, S2Cell const& cell, int num_levels);
+  int ExpandChildren(Candidate* candidate, const S2Cell& cell, int num_levels);
 
   // Computes a set of initial candidates that cover the given region.
   void GetInitialCandidates();
 
   // Generates a covering and stores it in result_.
-  void GetCoveringInternal(S2Region const& region);
+  void GetCoveringInternal(const S2Region& region);
 
   // If level > min_level(), then reduce "level" if necessary so that it also
   // satisfies level_mod().  Levels smaller than min_level() are not affected
@@ -238,12 +244,6 @@ class S2RegionCoverer {
   // parameters (max_cells, min_level, max_level, and level_mod).
   void NormalizeCovering(std::vector<S2CellId>* covering);
 
-  // Given a region and a starting cell, return the set of all the
-  // edge-connected cells at the same level that intersect "region".
-  // The output cells are returned in arbitrary order.
-  static void FloodFill(S2Region const& region, S2CellId start,
-                        std::vector<S2CellId>* output);
-
   int min_level_;
   int max_level_;
   int level_mod_;
@@ -252,7 +252,7 @@ class S2RegionCoverer {
   // We save a temporary copy of the pointer passed to GetCovering() in order
   // to avoid passing this parameter around internally.  It is only used (and
   // only valid) for the duration of a single GetCovering() call.
-  S2Region const* region_;
+  const S2Region* region_;
 
   // A temporary variable used by GetCovering() that holds the cell ids that
   // have been added to the covering so far.
@@ -267,7 +267,7 @@ class S2RegionCoverer {
 
   typedef std::pair<int, Candidate*> QueueEntry;
   struct CompareQueueEntries {
-    bool operator()(QueueEntry const& x, QueueEntry const& y) const {
+    bool operator()(const QueueEntry& x, const QueueEntry& y) const {
       return x.first < y.first;
     }
   };

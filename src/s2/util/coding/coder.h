@@ -27,6 +27,7 @@
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/base/port.h"
+#include "s2/third_party/absl/meta/type_traits.h"
 #include "s2/util/coding/varint.h"
 #include "s2/util/endian/endian.h"
 
@@ -83,13 +84,6 @@ class Encoder {
   // dec->get_varint64(&val).
   bool put_varint64_from_decoder(Decoder* dec);
 
-  // DEPRECATED
-  //
-  // For new code use put_varint32(ZigZagEncode(signed_value));
-  // ZigZag coding is defined in utils/coding/transforms.h
-  void put_varsigned32(int32 v);
-
-
   // Return number of bytes encoded so far
   size_t length() const;
 
@@ -128,6 +122,12 @@ class Encoder {
  private:
   void EnsureSlowPath(size_t N);
 
+  // Puts varint64 from decoder for varint64 sizes from 3 ~ 10. This is less
+  // common cases compared to 1 - 2 byte varint64. Returns false if either the
+  // encoder or the decoder fails the boundary check, or varint64 size exceeds
+  // the maximum size (kVarintMax64).
+  bool PutVarint64FromDecoderLessCommonSizes(Decoder* dec);
+
   // buf_ points into the orig_ buffer, just past the last encoded byte.
   unsigned char* buf_ = nullptr;
 
@@ -160,7 +160,8 @@ class Decoder {
   // NOTE: for efficiency reasons, this is not virtual.  so don't add
   // any members that really need to be destructed, and be careful about
   // inheritance.
-  ~Decoder() { }
+  // The defaulted destructor is not explicitly written to avoid confusing SWIG.
+  // ~Decoder() = default;
 
   // Initialize decoder to decode from "buf"
   Decoder(const void* buf, size_t maxn);
@@ -186,15 +187,6 @@ class Decoder {
   bool get_varint32(uint32* v);
   bool get_varint64(uint64* v);
 
-  // DEPRECATED
-  //
-  // For new code use
-  //   get_varint32(&unsigned_temp);
-  //   signed_value = ZigZagDecode(unsigned_temp);
-  // ZigZag coding is defined in utils/coding/transforms.h
-  bool get_varsigned32(int32* v);
-
-
   size_t pos() const;
   // Return number of bytes decoded so far
 
@@ -202,14 +194,24 @@ class Decoder {
   // Return number of available bytes to read
 
  private:
+  friend class Encoder;
   friend class IndexBlockDecoder;
-  friend bool Encoder::put_varint64_from_decoder(Decoder* dec);
   const unsigned char* orig_;
   const unsigned char* buf_;
   const unsigned char* limit_;
 };
 #ifndef SWIG
 #endif                 // SWIG
+
+// TODO(user): Remove when LLVM detects and optimizes this case.
+class DecoderExtensions {
+ private:
+  friend class Untranspose;  // In net/proto/transpose.cc.
+  friend void TestFillArray();
+  // Fills an array of num_decoders decoders with Decoder(nullptr, 0) instances.
+  // This is much more efficient than using the stl.
+  static void FillArray(Decoder* array, int num_decoders);
+};
 
 /***** Implementation details.  Clients should ignore them. *****/
 
@@ -292,42 +294,41 @@ inline void Encoder::put_varint64(uint64 v) {
 //     return false;
 //   enc->put_varint64(val);
 //   return true;
-// BM_getvarfrom* in corder_unittest.cc are the benchmarks that measure the
+// BM_getvarfrom* in coder_unittest.cc are the benchmarks that measure the
 // performance of different implementations.
+//
+// Handles varint64 with one to two bytes separately as a common case.
+// PutVarint64FromDecoderLessCommonSizes handles the remaining sizes. To avoid
+// over-inlining, PutVarint64FromDecoderLessCommonSizes is defined in coder.cc.
+// As Untranspose::DecodeMessage is the only caller, compiler should be able to
+// inline all if necessary.
 inline bool Encoder::put_varint64_from_decoder(Decoder* dec) {
-  unsigned char c;
   unsigned char* enc_ptr = buf_;
   const unsigned char* dec_ptr = dec->buf_;
-  // The loop executes at most kVarintMax64 (10) iterations. We must be
-  // careful about the cost of moving any computation out of the loop.
-  // Xref cl/133546957 for more details of various implementations we explored.
-  do {
-    if (dec_ptr >= dec->limit_)
-      return false;
-    if (enc_ptr >= limit_)
-      return false;
-    c = *dec_ptr;
-    *enc_ptr = c;
-    ++dec_ptr;
-    ++enc_ptr;
-  } while (c >= 128);
-  if (dec_ptr - dec->buf_ > kVarintMax64)
-    return false;
-  dec->buf_ = dec_ptr;
-  buf_ = enc_ptr;
-  return true;
-}
 
-// DEPRECATED
-//
-// For new code use put_varint32(ZigZagEncode(signed_value));
-// ZigZag coding is defined in utils/coding/transforms.h
-inline void Encoder::put_varsigned32(int32 n) {
-  // Encode sign in low-bit
-  int sign = (n < 0) ? 1 : 0;
-  // Cast to unsigned to avoid overflow negating n when n == INT_MIN.
-  uint32 mag = (n < 0) ? -static_cast<uint32>(n) : n;
-  put_varint32((mag << 1) | sign);
+  // Common cases to handle varint64 with one to two bytes.
+  if (dec_ptr < dec->limit_ && dec_ptr[0] < 128) {
+    if (enc_ptr >= limit_) {
+      return false;
+    }
+    *enc_ptr = *dec_ptr;
+    dec->buf_++;
+    buf_++;
+    return true;
+  }
+
+  if (dec_ptr < dec->limit_ - 1 && dec_ptr[1] < 128) {
+    if (enc_ptr >= limit_ - 1) {
+      return false;
+    }
+    UNALIGNED_STORE16(enc_ptr, UNALIGNED_LOAD16(dec_ptr));
+    dec->buf_ += 2;
+    buf_ += 2;
+    return true;
+  }
+
+  // For less common sizes in [3, kVarintMax64].
+  return PutVarint64FromDecoderLessCommonSizes(dec);
 }
 
 inline Decoder::Decoder(const void* b, size_t maxn) {
@@ -382,28 +383,17 @@ inline unsigned char const* Decoder::ptr() const {
   return buf_;
 }
 
-
-// DEPRECATED
-//
-// For new code use
-//   get_varint32(&unsigned_temp);
-//   signed_value = ZigZagDecode(unsigned_temp);
-// ZigZag coding is defined in utils/coding/transforms.h
-inline bool Decoder::get_varsigned32(int32* v) {
-  uint32 coding;
-  if (get_varint32(&coding)) {
-    int sign = coding & 1;
-    int32 mag = coding >> 1;
-    if (sign) {
-      // Special handling for encoding of kint32min
-      *v = (mag == 0) ? kint32min : -mag;
-    } else {
-      *v = mag;
-    }
-    return true;
-  } else {
-    return false;
-  }
+inline void DecoderExtensions::FillArray(Decoder* array, int num_decoders) {
+  // This is an optimization based on the fact that Decoder(nullptr, 0) sets all
+  // structure bytes to 0. This is valid because Decoder is TriviallyCopyable
+  // (http://en.cppreference.com/w/cpp/concept/TriviallyCopyable).
+  static_assert(absl::is_trivially_copy_constructible<Decoder>::value,
+                "Decoder must be trivially copy-constructible");
+  static_assert(absl::is_trivially_copy_assignable<Decoder>::value,
+                "Decoder must be trivially copy-assignable");
+  static_assert(absl::is_trivially_destructible<Decoder>::value,
+                "Decoder must be trivially destructible");
+  std::memset(array, 0, num_decoders * sizeof(Decoder));
 }
 
 inline void Encoder::put8(unsigned char v) {
@@ -438,7 +428,6 @@ inline void Encoder::putword(uword_t v) {
 #endif /* _LP64 */
   buf_ += sizeof(v);
 }
-
 
 inline void Encoder::putfloat(float f) {
   uint32 v;
@@ -491,7 +480,6 @@ inline uword_t Decoder::getword() {
   buf_ += sizeof(v);
   return v;
 }
-
 
 inline float Decoder::getfloat() {
   uint32 v = get32();

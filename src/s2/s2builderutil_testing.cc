@@ -19,7 +19,7 @@
 
 namespace s2builderutil {
 
-void GraphClone::Init(S2Builder::Graph const& g) {
+void GraphClone::Init(const S2Builder::Graph& g) {
   options_ = g.options();
   vertices_ = g.vertices();
   edges_ = g.edges();

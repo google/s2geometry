@@ -86,7 +86,7 @@ class S1Interval {
   // Only const versions of these methods are provided, since S1Interval
   // has invariants that must be maintained after each update.
   double operator[](int i) const { return bounds_[i]; }
-  Vector2_d const& bounds() const { return bounds_; }
+  const Vector2_d& bounds() const { return bounds_; }
 
   // An interval is valid if neither bound exceeds Pi in absolute value,
   // and the value -Pi appears only in the Empty() and Full() intervals.
@@ -129,29 +129,29 @@ class S1Interval {
 
   // Return true if the interval contains the given interval 'y'.
   // Works for empty, full, and singleton intervals.
-  bool Contains(S1Interval const& y) const;
+  bool Contains(const S1Interval& y) const;
 
   // Returns true if the interior of this interval contains the entire
   // interval 'y'.  Note that x.InteriorContains(x) is true only when
   // x is the empty or full interval, and x.InteriorContains(S1Interval(p,p))
   // is equivalent to x.InteriorContains(p).
-  bool InteriorContains(S1Interval const& y) const;
+  bool InteriorContains(const S1Interval& y) const;
 
   // Return true if the two intervals contain any points in common.
   // Note that the point +/-Pi has two representations, so the intervals
   // [-Pi,-3] and [2,Pi] intersect, for example.
-  bool Intersects(S1Interval const& y) const;
+  bool Intersects(const S1Interval& y) const;
 
   // Return true if the interior of this interval contains any point of the
   // interval 'y' (including its boundary).  Works for empty, full, and
   // singleton intervals.
-  bool InteriorIntersects(S1Interval const& y) const;
+  bool InteriorIntersects(const S1Interval& y) const;
 
   // Return the Hausdorff distance to the given interval 'y'. For two
   // S1Intervals x and y, this distance is defined by
   //     h(x, y) = max_{p in x} min_{q in y} d(p, q),
   // where d(.,.) is measured along S1.
-  double GetDirectedHausdorffDistance(S1Interval const& y) const;
+  double GetDirectedHausdorffDistance(const S1Interval& y) const;
 
   // Expand the interval by the minimum amount necessary so that it
   // contains the given point "p" (an angle in the range [-Pi, Pi]).
@@ -170,15 +170,15 @@ class S1Interval {
 
   // Return the smallest interval that contains this interval and the
   // given interval "y".
-  S1Interval Union(S1Interval const& y) const;
+  S1Interval Union(const S1Interval& y) const;
 
   // Return the smallest interval that contains the intersection of this
   // interval with "y".  Note that the region of intersection may
   // consist of two disjoint intervals.
-  S1Interval Intersection(S1Interval const& y) const;
+  S1Interval Intersection(const S1Interval& y) const;
 
   // Return true if two intervals contains the same set of points.
-  bool operator==(S1Interval const& y) const;
+  bool operator==(const S1Interval& y) const;
 
   // Return true if this interval can be transformed into the given interval by
   // moving each endpoint by at most "max_error" (and without the endpoints
@@ -186,7 +186,7 @@ class S1Interval {
   // considered to start at an arbitrary point on the unit circle, thus any
   // interval with (length <= 2*max_error) matches the empty interval, and any
   // interval with (length >= 2*Pi - 2*max_error) matches the full interval.
-  bool ApproxEquals(S1Interval const& y, double max_error = 1e-15) const;
+  bool ApproxEquals(const S1Interval& y, double max_error = 1e-15) const;
 
   // Low-level methods to modify one endpoint of an existing S1Interval.
   // These methods should really be private because setting just one endpoint
@@ -245,7 +245,7 @@ inline bool S1Interval::is_valid() const {
           !(hi() == -M_PI && lo() != M_PI));
 }
 
-inline bool S1Interval::operator==(S1Interval const& y) const {
+inline bool S1Interval::operator==(const S1Interval& y) const {
   return lo() == y.lo() && hi() == y.hi();
 }
 
@@ -259,7 +259,7 @@ inline void S1Interval::set_hi(double p) {
   DCHECK(is_valid());
 }
 
-inline std::ostream& operator<<(std::ostream& os, S1Interval const& x) {
+inline std::ostream& operator<<(std::ostream& os, const S1Interval& x) {
   return os << "[" << x.lo() << ", " << x.hi() << "]";
 }
 

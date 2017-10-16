@@ -36,11 +36,11 @@
 class S2ContainsVertexQuery {
  public:
   // "target" is the vertex whose containment will be determined.
-  explicit S2ContainsVertexQuery(S2Point const& target);
+  explicit S2ContainsVertexQuery(const S2Point& target);
 
   // Indicates that the polygon has an edge between "target" and "v" in the
   // given direction (+1 = outgoing, -1 = incoming, 0 = degenerate).
-  void AddEdge(S2Point const& v, int direction);
+  void AddEdge(const S2Point& v, int direction);
 
   // Returns +1 if the vertex is contained, -1 if it is not contained, and 0
   // if the incident edges consisted of matched sibling pairs.
@@ -55,11 +55,11 @@ class S2ContainsVertexQuery {
 //////////////////   Implementation details follow   ////////////////////
 
 
-inline S2ContainsVertexQuery::S2ContainsVertexQuery(S2Point const& target)
+inline S2ContainsVertexQuery::S2ContainsVertexQuery(const S2Point& target)
     : target_(target) {
 }
 
-inline void S2ContainsVertexQuery::AddEdge(S2Point const& v, int direction) {
+inline void S2ContainsVertexQuery::AddEdge(const S2Point& v, int direction) {
   edge_map_[v] += direction;
 }
 

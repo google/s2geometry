@@ -114,7 +114,7 @@ TEST_F(S1IntervalTestBase, AlmostEmptyOrFull) {
   // Test that rounding errors don't cause intervals that are almost empty or
   // full to be considered empty or full.  The following value is the greatest
   // representable value less than Pi.
-  double const kAlmostPi = M_PI - 2 * DBL_EPSILON;
+  const double kAlmostPi = M_PI - 2 * DBL_EPSILON;
   EXPECT_FALSE(S1Interval(-kAlmostPi, M_PI).is_full());
   EXPECT_FALSE(S1Interval(-M_PI, kAlmostPi).is_full());
   EXPECT_FALSE(S1Interval(M_PI, -kAlmostPi).is_empty());
@@ -179,10 +179,10 @@ TEST_F(S1IntervalTestBase, Contains) {
   EXPECT_TRUE(zero.Contains(0) && !zero.InteriorContains(0));
 }
 
-static void TestIntervalOps(S1Interval const& x, S1Interval const& y,
+static void TestIntervalOps(const S1Interval& x, const S1Interval& y,
                             const char* expected_relation,
-                            S1Interval const& expected_union,
-                            S1Interval const& expected_intersection) {
+                            const S1Interval& expected_union,
+                            const S1Interval& expected_intersection) {
   // Test all of the interval operations on the given pair of intervals.
   // "expected_relation" is a sequence of "T" and "F" characters corresponding
   // to the expected results of Contains(), InteriorContains(), Intersects(),

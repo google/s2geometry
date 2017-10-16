@@ -48,8 +48,8 @@ class S2Polyline final : public S2Region {
   S2Polyline();
 
   // Convenience constructors that call Init() with the given vertices.
-  explicit S2Polyline(std::vector<S2Point> const& vertices);
-  explicit S2Polyline(std::vector<S2LatLng> const& vertices);
+  explicit S2Polyline(const std::vector<S2Point>& vertices);
+  explicit S2Polyline(const std::vector<S2LatLng>& vertices);
 
   // Convenience constructors to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
@@ -64,17 +64,17 @@ class S2Polyline final : public S2Region {
   //
   // The main reason to use this constructors is if you intend to call
   // IsValid() explicitly.  See set_s2debug_override() for details.
-  S2Polyline(std::vector<S2Point> const& vertices, S2Debug override);
-  S2Polyline(std::vector<S2LatLng> const& vertices, S2Debug override);
+  S2Polyline(const std::vector<S2Point>& vertices, S2Debug override);
+  S2Polyline(const std::vector<S2LatLng>& vertices, S2Debug override);
 
   // Initialize a polyline that connects the given vertices. Empty polylines are
   // allowed.  Adjacent vertices should not be identical or antipodal.  All
   // vertices should be unit length.
-  void Init(std::vector<S2Point> const& vertices);
+  void Init(const std::vector<S2Point>& vertices);
 
   // Convenience initialization function that accepts latitude-longitude
   // coordinates rather than S2Points.
-  void Init(std::vector<S2LatLng> const& vertices);
+  void Init(const std::vector<S2LatLng>& vertices);
 
   ~S2Polyline() override;
 
@@ -103,7 +103,7 @@ class S2Polyline final : public S2Region {
   bool FindValidationError(S2Error* error) const;
 
   int num_vertices() const { return num_vertices_; }
-  S2Point const& vertex(int k) const {
+  const S2Point& vertex(int k) const {
     DCHECK_GE(k, 0);
     DCHECK_LT(k, num_vertices_);
     return vertices_[k];
@@ -153,7 +153,7 @@ class S2Polyline final : public S2Region {
   //
   // The polyline should not be empty.  If it has fewer than 2 vertices, the
   // return value is zero.
-  double UnInterpolate(S2Point const& point, int next_vertex) const;
+  double UnInterpolate(const S2Point& point, int next_vertex) const;
 
   // Given a point, returns a point on the polyline that is closest to the given
   // point.  See GetSuffix() for the meaning of "next_vertex", which is chosen
@@ -161,7 +161,7 @@ class S2Polyline final : public S2Region {
   // GetSuffix().
   //
   // The polyline must be non-empty.
-  S2Point Project(S2Point const& point, int* next_vertex) const;
+  S2Point Project(const S2Point& point, int* next_vertex) const;
 
   // Returns true if the point given is on the right hand side of the polyline,
   // using a naive definition of "right-hand-sideness" where the point is on
@@ -169,15 +169,17 @@ class S2Polyline final : public S2Region {
   // the polyline which it is closest to.
   //
   // The polyline must have at least 2 vertices.
-  bool IsOnRight(S2Point const& point) const;
+  bool IsOnRight(const S2Point& point) const;
 
   // Return true if this polyline intersects the given polyline. If the
   // polylines share a vertex they are considered to be intersecting. When a
   // polyline endpoint is the only intersection with the other polyline, the
   // function may return true or false arbitrarily.
   //
-  // The running time is quadratic in the number of vertices.
-  bool Intersects(S2Polyline const* line) const;
+  // The running time is quadratic in the number of vertices.  (To intersect
+  // polylines more efficiently, or compute the actual intersection geometry,
+  // use S2BooleanOperation.)
+  bool Intersects(const S2Polyline* line) const;
 
   // Reverse the order of the polyline vertices.
   void Reverse();
@@ -202,17 +204,22 @@ class S2Polyline final : public S2Region {
   //    within the given tolerance.  For example, if a polyline backtracks on
   //    itself and then proceeds onwards, the backtracking will be preserved
   //    (to within the given tolerance).  This is different than the
-  //    Douglas-Peucker algorithm used in maps/util/geoutil-inl.h, which only
-  //    guarantees geometric equivalence.
+  //    Douglas-Peucker algorithm, which only guarantees geometric equivalence.
+  //
+  // See also S2PolylineSimplifier, which uses the same algorithm but is more
+  // efficient and supports more features, and also S2Builder, which can
+  // simplify polylines and polygons, supports snapping (e.g. to E7 lat/lng
+  // coordinates or S2CellId centers), and can split polylines at intersection
+  // points.
   void SubsampleVertices(S1Angle tolerance, std::vector<int>* indices) const;
 
   // Return true if two polylines are exactly the same.
-  bool Equals(S2Polyline const* b) const;
+  bool Equals(const S2Polyline* b) const;
 
   // Return true if two polylines have the same number of vertices, and
   // corresponding vertex pairs are separated by no more than "max_error".
   // (For testing purposes.)
-  bool ApproxEquals(S2Polyline const& b,
+  bool ApproxEquals(const S2Polyline& b,
                     S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
   // Return true if "covered" is within "max_error" of a contiguous subpath of
@@ -229,7 +236,7 @@ class S2Polyline final : public S2Region {
   // This function is well-defined for empty polylines:
   //    anything.covers(empty) = true
   //    empty.covers(nonempty) = false
-  bool NearlyCovers(S2Polyline const& covered, S1Angle max_error) const;
+  bool NearlyCovers(const S2Polyline& covered, S1Angle max_error) const;
 
   // Returns the total number of bytes used by the polyline.
   size_t SpaceUsed() const;
@@ -240,12 +247,12 @@ class S2Polyline final : public S2Region {
   S2Polyline* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
-  bool Contains(S2Cell const& cell) const override { return false; }
-  bool MayIntersect(S2Cell const& cell) const override;
+  bool Contains(const S2Cell& cell) const override { return false; }
+  bool MayIntersect(const S2Cell& cell) const override;
 
   // Always return false, because "containment" is not numerically
   // well-defined except at the polyline vertices.
-  bool Contains(S2Point const& p) const override { return false; }
+  bool Contains(const S2Point& p) const override { return false; }
 
   // Appends a serialized representation of the S2Polyline to "encoder".
   //
@@ -270,12 +277,12 @@ class S2Polyline final : public S2Region {
     // Initialization.  Does not take ownership of "polyline".
     //
     // Note that a polyline with one vertex is defined to have no edges.  Use
-    // s2shapeutil::LaxPolyline or s2shapeutil::ClosedLaxPolyline if you want
-    // to define a polyline consisting of a single degenerate edge.
-    explicit Shape(S2Polyline const* polyline) { Init(polyline); }
-    void Init(S2Polyline const* polyline);
+    // S2LaxPolylineShape or S2LaxClosedPolylineShape if you want to define a
+    // polyline consisting of a single degenerate edge.
+    explicit Shape(const S2Polyline* polyline) { Init(polyline); }
+    void Init(const S2Polyline* polyline);
 
-    S2Polyline const* polyline() const { return polyline_; }
+    const S2Polyline* polyline() const { return polyline_; }
 
     // S2Shape interface:
 
@@ -300,7 +307,7 @@ class S2Polyline final : public S2Region {
     }
 
    private:
-    S2Polyline const* polyline_;
+    const S2Polyline* polyline_;
   };
 
   // Like Shape, except that the S2Polyline is automatically deleted when this
@@ -309,10 +316,10 @@ class S2Polyline final : public S2Region {
   class OwningShape : public Shape {
    public:
     OwningShape() {}  // Must call Init().
-    explicit OwningShape(std::unique_ptr<S2Polyline const> polyline)
+    explicit OwningShape(std::unique_ptr<const S2Polyline> polyline)
         : Shape(polyline.release()) {
     }
-    void Init(std::unique_ptr<S2Polyline const> polyline) {
+    void Init(std::unique_ptr<const S2Polyline> polyline) {
       Shape::Init(polyline.release());
     }
     ~OwningShape() override { delete polyline(); }
@@ -322,7 +329,7 @@ class S2Polyline final : public S2Region {
  private:
   // Internal copy constructor used only by Clone() that makes a deep copy of
   // its argument.
-  S2Polyline(S2Polyline const& src);
+  S2Polyline(const S2Polyline& src);
 
   // Allows overriding the automatic validity checking controlled by the
   // --s2debug flag.
@@ -335,7 +342,7 @@ class S2Polyline final : public S2Region {
   std::unique_ptr<S2Point[]> vertices_;
 
 #ifndef SWIG
-  void operator=(S2Polyline const&) = delete;
+  void operator=(const S2Polyline&) = delete;
 #endif  // SWIG
 };
 

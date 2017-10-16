@@ -31,7 +31,7 @@ namespace s2shapeutil {
 // }
 class EdgeIterator {
  public:
-  explicit EdgeIterator(S2ShapeIndex const* index);
+  explicit EdgeIterator(const S2ShapeIndex* index);
 
   // Returns the current shape id.
   int32 shape_id() const { return shape_id_; }
@@ -51,17 +51,17 @@ class EdgeIterator {
   // Advances to the next edge.
   void Next();
 
-  bool operator==(EdgeIterator const& other) const {
+  bool operator==(const EdgeIterator& other) const {
     return index_ == other.index_ && shape_id_ == other.shape_id_ &&
            edge_id_ == other.edge_id_;
   }
 
-  bool operator!=(EdgeIterator const& other) const { return !(*this == other); }
+  bool operator!=(const EdgeIterator& other) const { return !(*this == other); }
 
   string DebugString() const;
 
  private:
-  S2ShapeIndex const* index_;
+  const S2ShapeIndex* index_;
   int32 shape_id_;
   int32 num_edges_;
   int32 edge_id_;

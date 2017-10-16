@@ -35,17 +35,18 @@
 #include <string>
 
 namespace absl {
+namespace base_internal {
 
 // Helper functions that allow throwing exceptions consistently from anywhere.
 // The main use case is for header-based libraries (eg templates), as they will
 // be built by many different targets with their own compiler options.
 // In particular, this will allow a safe way to throw exceptions even if the
-// This is intended for implementing things like map<>::at(), which the standard
-// documents as throwing an exception on error.
+// caller is compiled with -fno-exceptions.  This is intended for implementing
+// things like map<>::at(), which the standard documents as throwing an
+// exception on error.
 //
 // Using other techniques like #if tricks could lead to ODR violations.
 //
-// support for exceptions and callers won't usually be able to catch them.
 // You shouldn't use it unless you're writing code that you know will be built
 // both with and without exceptions and you need to conform to an interface
 // that uses exceptions.
@@ -79,6 +80,7 @@ namespace absl {
 // libcxx (as of 3.2) and msvc (as of 2015) both have it.
 // [[noreturn]] void ThrowStdBadArrayNewLength();
 
+}  // namespace base_internal
 }  // namespace absl
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_INTERNAL_THROW_DELEGATE_H_

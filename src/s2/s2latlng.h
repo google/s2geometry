@@ -49,7 +49,7 @@ class S2LatLng {
   S2LatLng();
 
   // Convert a direction vector (not necessarily unit length) to an S2LatLng.
-  explicit S2LatLng(S2Point const& p);
+  explicit S2LatLng(const S2Point& p);
 
   // Returns an S2LatLng for which is_valid() will return false.
   static S2LatLng Invalid();
@@ -69,13 +69,13 @@ class S2LatLng {
   static S2LatLng FromUnsignedE7(uint32 lat_e7, uint32 lng_e7);
 
   // Methods to compute the latitude and longitude of a point separately.
-  static S1Angle Latitude(S2Point const& p);
-  static S1Angle Longitude(S2Point const& p);
+  static S1Angle Latitude(const S2Point& p);
+  static S1Angle Longitude(const S2Point& p);
 
   // Accessor methods.
   S1Angle lat() const { return S1Angle::Radians(coords_[0]); }
   S1Angle lng() const { return S1Angle::Radians(coords_[1]); }
-  R2Point const& coords() const { return coords_; }
+  const R2Point& coords() const { return coords_; }
 
   // Return true if the latitude is between -90 and 90 degrees inclusive
   // and the longitude is between -180 and 180 degrees inclusive.
@@ -98,23 +98,23 @@ class S2LatLng {
   //
   // but this implementation is slightly more efficient.  Both S2LatLngs
   // must be normalized.
-  S1Angle GetDistance(S2LatLng const& o) const;
+  S1Angle GetDistance(const S2LatLng& o) const;
 
   // Simple arithmetic operations for manipulating latitude-longitude pairs.
   // The results are not normalized (see Normalized()).
-  friend S2LatLng operator+(S2LatLng const& a, S2LatLng const& b);
-  friend S2LatLng operator-(S2LatLng const& a, S2LatLng const& b);
-  friend S2LatLng operator*(double m, S2LatLng const& a);
-  friend S2LatLng operator*(S2LatLng const& a, double m);
+  friend S2LatLng operator+(const S2LatLng& a, const S2LatLng& b);
+  friend S2LatLng operator-(const S2LatLng& a, const S2LatLng& b);
+  friend S2LatLng operator*(double m, const S2LatLng& a);
+  friend S2LatLng operator*(const S2LatLng& a, double m);
 
-  bool operator==(S2LatLng const& o) const { return coords_ == o.coords_; }
-  bool operator!=(S2LatLng const& o) const { return coords_ != o.coords_; }
-  bool operator<(S2LatLng const& o) const { return coords_ < o.coords_; }
-  bool operator>(S2LatLng const& o) const { return coords_ > o.coords_; }
-  bool operator<=(S2LatLng const& o) const { return coords_ <= o.coords_; }
-  bool operator>=(S2LatLng const& o) const { return coords_ >= o.coords_; }
+  bool operator==(const S2LatLng& o) const { return coords_ == o.coords_; }
+  bool operator!=(const S2LatLng& o) const { return coords_ != o.coords_; }
+  bool operator<(const S2LatLng& o) const { return coords_ < o.coords_; }
+  bool operator>(const S2LatLng& o) const { return coords_ > o.coords_; }
+  bool operator<=(const S2LatLng& o) const { return coords_ <= o.coords_; }
+  bool operator>=(const S2LatLng& o) const { return coords_ >= o.coords_; }
 
-  bool ApproxEquals(S2LatLng const& o,
+  bool ApproxEquals(const S2LatLng& o,
                     S1Angle max_error = S1Angle::Radians(1e-15)) const {
     return coords_.aequal(o.coords_, max_error.radians());
   }
@@ -126,7 +126,7 @@ class S2LatLng {
 
  private:
   // Internal constructor.
-  explicit S2LatLng(R2Point const& coords) : coords_(coords) {}
+  explicit S2LatLng(const R2Point& coords) : coords_(coords) {}
 
   // This is internal to avoid ambiguity about which units are expected.
   S2LatLng(double lat_radians, double lng_radians)
@@ -173,13 +173,13 @@ inline S2LatLng S2LatLng::Invalid() {
   return S2LatLng(M_PI, 2 * M_PI);
 }
 
-inline S1Angle S2LatLng::Latitude(S2Point const& p) {
+inline S1Angle S2LatLng::Latitude(const S2Point& p) {
   // We use atan2 rather than asin because the input vector is not necessarily
   // unit length, and atan2 is much more accurate than asin near the poles.
   return S1Angle::Radians(atan2(p[2], sqrt(p[0]*p[0] + p[1]*p[1])));
 }
 
-inline S1Angle S2LatLng::Longitude(S2Point const& p) {
+inline S1Angle S2LatLng::Longitude(const S2Point& p) {
   // Note that atan2(0, 0) is defined to be zero.
   return S1Angle::Radians(atan2(p[1], p[0]));
 }
@@ -189,22 +189,22 @@ inline bool S2LatLng::is_valid() const {
           std::fabs(lng().radians()) <= M_PI);
 }
 
-inline S2LatLng operator+(S2LatLng const& a, S2LatLng const& b) {
+inline S2LatLng operator+(const S2LatLng& a, const S2LatLng& b) {
   return S2LatLng(a.coords_ + b.coords_);
 }
 
-inline S2LatLng operator-(S2LatLng const& a, S2LatLng const& b) {
+inline S2LatLng operator-(const S2LatLng& a, const S2LatLng& b) {
   return S2LatLng(a.coords_ - b.coords_);
 }
 
-inline S2LatLng operator*(double m, S2LatLng const& a) {
+inline S2LatLng operator*(double m, const S2LatLng& a) {
   return S2LatLng(m * a.coords_);
 }
 
-inline S2LatLng operator*(S2LatLng const& a, double m) {
+inline S2LatLng operator*(const S2LatLng& a, double m) {
   return S2LatLng(m * a.coords_);
 }
 
-std::ostream& operator<<(std::ostream& os, S2LatLng const& ll);
+std::ostream& operator<<(std::ostream& os, const S2LatLng& ll);
 
 #endif  // S2_S2LATLNG_H_

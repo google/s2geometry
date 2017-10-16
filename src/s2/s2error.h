@@ -135,7 +135,7 @@ class S2Error {
 //////////////////   Implementation details follow   ////////////////////
 
 
-inline std::ostream& operator<<(std::ostream& os, S2Error const& error) {
+inline std::ostream& operator<<(std::ostream& os, const S2Error& error) {
   return os << error.text();
 }
 

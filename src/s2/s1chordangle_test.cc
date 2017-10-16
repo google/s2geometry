@@ -34,38 +34,38 @@ TEST(S1ChordAngle, TwoPointConstructor) {
   for (int iter = 0; iter < 100; ++iter) {
     S2Point x, y, z;
     S2Testing::GetRandomFrame(&x, &y, &z);
-    EXPECT_EQ(S1Angle::Zero(), S1ChordAngle(z, z).ToAngle());
-    EXPECT_NEAR(M_PI, S1ChordAngle(-z, z).ToAngle().radians(), 1e-7);
-    EXPECT_DOUBLE_EQ(M_PI_2, S1ChordAngle(x, z).ToAngle().radians());
+    EXPECT_EQ(S1Angle::Zero(), S1Angle(S1ChordAngle(z, z)));
+    EXPECT_NEAR(M_PI, S1ChordAngle(-z, z).radians(), 1e-7);
+    EXPECT_DOUBLE_EQ(M_PI_2, S1ChordAngle(x, z).radians());
     S2Point w = (y + z).Normalize();
-    EXPECT_DOUBLE_EQ(M_PI_4, S1ChordAngle(w, z).ToAngle().radians());
+    EXPECT_DOUBLE_EQ(M_PI_4, S1ChordAngle(w, z).radians());
   }
 }
 
 TEST(S1ChordAngle, FromLength2) {
-  EXPECT_EQ(0, S1ChordAngle::FromLength2(0).ToAngle().degrees());
-  EXPECT_DOUBLE_EQ(60, S1ChordAngle::FromLength2(1).ToAngle().degrees());
-  EXPECT_DOUBLE_EQ(90, S1ChordAngle::FromLength2(2).ToAngle().degrees());
-  EXPECT_EQ(180, S1ChordAngle::FromLength2(4).ToAngle().degrees());
-  EXPECT_EQ(180, S1ChordAngle::FromLength2(5).ToAngle().degrees());
+  EXPECT_EQ(0, S1ChordAngle::FromLength2(0).degrees());
+  EXPECT_DOUBLE_EQ(60, S1ChordAngle::FromLength2(1).degrees());
+  EXPECT_DOUBLE_EQ(90, S1ChordAngle::FromLength2(2).degrees());
+  EXPECT_EQ(180, S1ChordAngle::FromLength2(4).degrees());
+  EXPECT_EQ(180, S1ChordAngle::FromLength2(5).degrees());
 }
 
 TEST(S1ChordAngle, Zero) {
-  EXPECT_EQ(S1Angle::Zero(), S1ChordAngle::Zero().ToAngle());
+  EXPECT_EQ(S1Angle::Zero(), S1Angle(S1ChordAngle::Zero()));
 }
 
 TEST(S1ChordAngle, Right) {
-  EXPECT_DOUBLE_EQ(90, S1ChordAngle::Right().ToAngle().degrees());
+  EXPECT_DOUBLE_EQ(90, S1ChordAngle::Right().degrees());
 }
 
 TEST(S1ChordAngle, Straight) {
-  EXPECT_EQ(S1Angle::Degrees(180), S1ChordAngle::Straight().ToAngle());
+  EXPECT_EQ(S1Angle::Degrees(180), S1Angle(S1ChordAngle::Straight()));
 }
 
 TEST(S1ChordAngle, Infinity) {
   EXPECT_LT(S1ChordAngle::Straight(), S1ChordAngle::Infinity());
   EXPECT_EQ(S1ChordAngle::Infinity(), S1ChordAngle::Infinity());
-  EXPECT_EQ(S1Angle::Infinity(), S1ChordAngle::Infinity().ToAngle());
+  EXPECT_EQ(S1Angle::Infinity(), S1Angle(S1ChordAngle::Infinity()));
 }
 
 TEST(S1ChordAngle, Negative) {
@@ -86,13 +86,13 @@ TEST(S1ChordAngle, Predicates) {
 }
 
 TEST(S1ChordAngle, ToFromS1Angle) {
-  EXPECT_EQ(0, S1ChordAngle(S1Angle::Zero()).ToAngle().radians());
+  EXPECT_EQ(0, S1ChordAngle(S1Angle::Zero()).radians());
   EXPECT_EQ(4, S1ChordAngle(S1Angle::Radians(M_PI)).length2());
-  EXPECT_EQ(M_PI, S1ChordAngle(S1Angle::Radians(M_PI)).ToAngle().radians());
-  EXPECT_EQ(S1Angle::Infinity(), S1ChordAngle(S1Angle::Infinity()).ToAngle());
-  EXPECT_LT(S1ChordAngle(S1Angle::Radians(-1)).ToAngle().radians(), 0);
+  EXPECT_EQ(M_PI, S1ChordAngle(S1Angle::Radians(M_PI)).radians());
+  EXPECT_EQ(S1Angle::Infinity(), S1Angle(S1ChordAngle(S1Angle::Infinity())));
+  EXPECT_LT(S1ChordAngle(S1Angle::Radians(-1)).radians(), 0);
   EXPECT_DOUBLE_EQ(1.0,
-                   S1ChordAngle(S1Angle::Radians(1.0)).ToAngle().radians());
+                   S1ChordAngle(S1Angle::Radians(1.0)).radians());
 }
 
 TEST(S1ChordAngle, Successor) {
@@ -124,30 +124,30 @@ TEST(S1ChordAngle, Arithmetic) {
   S1ChordAngle degree90 = S1ChordAngle::Degrees(90);
   S1ChordAngle degree120 = S1ChordAngle::Degrees(120);
   S1ChordAngle degree180 = S1ChordAngle::Straight();
-  EXPECT_EQ(0, (zero + zero).ToAngle().degrees());
-  EXPECT_EQ(0, (zero - zero).ToAngle().degrees());
-  EXPECT_EQ(0, (degree60 - degree60).ToAngle().degrees());
-  EXPECT_EQ(0, (degree180 - degree180).ToAngle().degrees());
-  EXPECT_EQ(0, (zero - degree60).ToAngle().degrees());
-  EXPECT_EQ(0, (degree30 - degree90).ToAngle().degrees());
-  EXPECT_DOUBLE_EQ(60, (degree60 + zero).ToAngle().degrees());
-  EXPECT_DOUBLE_EQ(60, (degree60 - zero).ToAngle().degrees());
-  EXPECT_DOUBLE_EQ(60, (zero + degree60).ToAngle().degrees());
-  EXPECT_DOUBLE_EQ(90, (degree30 + degree60).ToAngle().degrees());
-  EXPECT_DOUBLE_EQ(90, (degree60 + degree30).ToAngle().degrees());
-  EXPECT_DOUBLE_EQ(60, (degree90 - degree30).ToAngle().degrees());
-  EXPECT_DOUBLE_EQ(30, (degree90 - degree60).ToAngle().degrees());
-  EXPECT_EQ(180, (degree180 + zero).ToAngle().degrees());
-  EXPECT_EQ(180, (degree180 - zero).ToAngle().degrees());
-  EXPECT_EQ(180, (degree90 + degree90).ToAngle().degrees());
-  EXPECT_EQ(180, (degree120 + degree90).ToAngle().degrees());
-  EXPECT_EQ(180, (degree120 + degree120).ToAngle().degrees());
-  EXPECT_EQ(180, (degree30 + degree180).ToAngle().degrees());
-  EXPECT_EQ(180, (degree180 + degree180).ToAngle().degrees());
+  EXPECT_EQ(0, (zero + zero).degrees());
+  EXPECT_EQ(0, (zero - zero).degrees());
+  EXPECT_EQ(0, (degree60 - degree60).degrees());
+  EXPECT_EQ(0, (degree180 - degree180).degrees());
+  EXPECT_EQ(0, (zero - degree60).degrees());
+  EXPECT_EQ(0, (degree30 - degree90).degrees());
+  EXPECT_DOUBLE_EQ(60, (degree60 + zero).degrees());
+  EXPECT_DOUBLE_EQ(60, (degree60 - zero).degrees());
+  EXPECT_DOUBLE_EQ(60, (zero + degree60).degrees());
+  EXPECT_DOUBLE_EQ(90, (degree30 + degree60).degrees());
+  EXPECT_DOUBLE_EQ(90, (degree60 + degree30).degrees());
+  EXPECT_DOUBLE_EQ(60, (degree90 - degree30).degrees());
+  EXPECT_DOUBLE_EQ(30, (degree90 - degree60).degrees());
+  EXPECT_EQ(180, (degree180 + zero).degrees());
+  EXPECT_EQ(180, (degree180 - zero).degrees());
+  EXPECT_EQ(180, (degree90 + degree90).degrees());
+  EXPECT_EQ(180, (degree120 + degree90).degrees());
+  EXPECT_EQ(180, (degree120 + degree120).degrees());
+  EXPECT_EQ(180, (degree30 + degree180).degrees());
+  EXPECT_EQ(180, (degree180 + degree180).degrees());
 }
 
 TEST(S1ChordAngle, Trigonometry) {
-  static int const kIters = 20;
+  static const int kIters = 20;
   for (int iter = 0; iter <= kIters; ++iter) {
     double radians = M_PI * iter / kIters;
     S1ChordAngle angle(S1Angle::Radians(radians));
@@ -184,7 +184,7 @@ TEST(S1ChordAngle, PlusError) {
 TEST(S1ChordAngle, S1AngleConsistency) {
   // This test checks that the error bounds in the S1ChordAngle constructors
   // are consistent with the maximum error in S1Angle(x, y).
-  double const kMaxS1AngleError = 3.25 * DBL_EPSILON;
+  const double kMaxS1AngleError = 3.25 * DBL_EPSILON;
   S2Testing::rnd.Reset(FLAGS_s2_random_seed);
   for (int iter = 0; iter < 10000; ++iter) {
     S2Point x = S2Testing::RandomPoint();

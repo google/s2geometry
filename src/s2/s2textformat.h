@@ -37,9 +37,8 @@ class S2Polygon;
 class S2Polyline;
 class S2ShapeIndex;
 class S2ShapeIndexBase;
-namespace s2shapeutil { class LaxPolygon; }
-namespace s2shapeutil { class LaxPolyline; }
-namespace s2shapeutil { class LaxPolyline; }
+class S2LaxPolygonShape;
+class S2LaxPolylineShape;
 
 namespace s2textformat {
 
@@ -126,18 +125,18 @@ ABSL_MUST_USE_RESULT bool MakePolyline(absl::string_view str,
 ABSL_DEPRECATED("Use MakePolylineOrDie.")
 std::unique_ptr<S2Polyline> MakePolyline(absl::string_view str);
 
-// Like MakePolyline, but returns an s2shapeutil::LaxPolyline instead.
-std::unique_ptr<s2shapeutil::LaxPolyline> MakeLaxPolylineOrDie(
+// Like MakePolyline, but returns an S2LaxPolylineShape instead.
+std::unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(
     absl::string_view str);
 
 // As above, but does not CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeLaxPolyline(
     absl::string_view str,
-    std::unique_ptr<s2shapeutil::LaxPolyline>* lax_polyline);
+    std::unique_ptr<S2LaxPolylineShape>* lax_polyline);
 
 ABSL_DEPRECATED("Use MakeLaxPolylineOrDie.")
-std::unique_ptr<s2shapeutil::LaxPolyline> MakeLaxPolyline(
+std::unique_ptr<S2LaxPolylineShape> MakeLaxPolyline(
     absl::string_view str);
 
 // Given a sequence of loops separated by semicolons, returns a newly
@@ -151,8 +150,8 @@ std::unique_ptr<s2shapeutil::LaxPolyline> MakeLaxPolyline(
 //     "10:20, 90:0, 20:30"                                  // one loop
 //     "10:20, 90:0, 20:30; 5.5:6.5, -90:-180, -15.2:20.3"   // two loops
 //     ""       // the empty polygon (consisting of no loops)
-//     "full"   // the full polygon (consisting of one full loop)
-//     "empty"  // **INVALID** (a polygon consisting of one empty loop)
+//     "empty"  // the empty polygon (consisting of no loops)
+//     "full"   // the full polygon (consisting of one full loop).
 std::unique_ptr<S2Polygon> MakePolygonOrDie(absl::string_view str);
 
 // As above, but does not CHECK-fail on invalid input. Returns true if
@@ -178,20 +177,19 @@ std::unique_ptr<S2Polygon> MakeVerbatimPolygon(absl::string_view str);
 
 // Parses a string in the same format as MakePolygon, except that loops must
 // be oriented so that the interior of the loop is always on the left, and
-// polygons with degeneracies are supported.  As with MakePolygon, "full"
-// denotes the full polygon and "empty" is not allowed (instead, create a
-// polygon with no loops).
-std::unique_ptr<s2shapeutil::LaxPolygon> MakeLaxPolygonOrDie(
+// polygons with degeneracies are supported.  As with MakePolygon, "full" and
+// denotes the full polygon and "" or "empty" denote the empty polygon.
+std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(
     absl::string_view str);
 
 // As above, but does not CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeLaxPolygon(
     absl::string_view str,
-    std::unique_ptr<s2shapeutil::LaxPolygon>* lax_polygon);
+    std::unique_ptr<S2LaxPolygonShape>* lax_polygon);
 
 ABSL_DEPRECATED("Use MakeLaxPolygonOrDie.")
-std::unique_ptr<s2shapeutil::LaxPolygon> MakeLaxPolygon(absl::string_view str);
+std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygon(absl::string_view str);
 
 // Returns an S2ShapeIndex containing the points, polylines, and loops (in the
 // form of a single polygon) described by the following format:
@@ -203,9 +201,14 @@ std::unique_ptr<s2shapeutil::LaxPolygon> MakeLaxPolygon(absl::string_view str);
 //   # 0:0, 1:1, 2:2 | 3:3, 4:4 #      // Two polylines
 //   # # 0:0, 0:3, 3:0; 1:1, 2:1, 1:2  // Two nested loops (one polygon)
 //   5:5 # 6:6, 7:7 # 0:0, 0:1, 1:0    // One of each
+//   # # empty                         // One empty polygon
+//   # # empty | full                  // One empty polygon, one full polygon
 //
 // Loops should be directed so that the region's interior is on the left.
 // Loops can be degenerate (they do not need to meet S2Loop requirements).
+//
+// CAVEAT: Because whitespace is ignored, empty polygons must be specified
+//         as the string "empty" rather than as the empty string ("").
 std::unique_ptr<S2ShapeIndex> MakeIndexOrDie(absl::string_view str);
 
 // As above, but does not CHECK-fail on invalid input. Returns true if
@@ -218,21 +221,21 @@ std::unique_ptr<S2ShapeIndex> MakeIndex(absl::string_view str);
 
 // Convert a point, lat-lng rect, loop, polyline, or polygon to the string
 // format above.
-string ToString(S2Point const& point);
-string ToString(S2LatLngRect const& rect);
-string ToString(S2Loop const& loop);
-string ToString(S2Polyline const& polyline);
-string ToString(S2Polygon const& polygon);
-string ToString(std::vector<S2Point> const& points);
-string ToString(std::vector<S2LatLng> const& points);
-string ToString(s2shapeutil::LaxPolyline const& polyline);
-string ToString(s2shapeutil::LaxPolygon const& polygon);
+string ToString(const S2Point& point);
+string ToString(const S2LatLngRect& rect);
+string ToString(const S2Loop& loop);
+string ToString(const S2Polyline& polyline);
+string ToString(const S2Polygon& polygon);
+string ToString(const std::vector<S2Point>& points);
+string ToString(const std::vector<S2LatLng>& points);
+string ToString(const S2LaxPolylineShape& polyline);
+string ToString(const S2LaxPolygonShape& polygon);
 
 // Convert the contents of an S2ShapeIndex to the format above.  The index may
 // contain S2Shapes of any type.  Shapes are reordered if necessary so that
 // all point geometry (shapes of dimension 0) are first, followed by all
 // polyline geometry, followed by all polygon geometry.
-string ToString(S2ShapeIndexBase const& index);
+string ToString(const S2ShapeIndexBase& index);
 
 }  // namespace s2textformat
 

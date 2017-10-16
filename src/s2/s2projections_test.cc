@@ -41,8 +41,8 @@ TEST(PlateCarreeProjection, Interpolate) {
   EXPECT_EQ(b, proj.Interpolate(1, a, b));
 }
 
-void TestProjectUnproject(Projection const& projection,
-                          R2Point const& px, S2Point const& x) {
+void TestProjectUnproject(const Projection& projection,
+                          const R2Point& px, const S2Point& x) {
   // The arguments are chosen such that projection is exact, but
   // unprojection may not be.
   EXPECT_EQ(px, projection.Project(x)) << projection.Project(x);

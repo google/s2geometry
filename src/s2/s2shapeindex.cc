@@ -102,7 +102,7 @@ DEFINE_double(
 // Finally, since we encounter the same errors when clipping query edges, we
 // double the total error so that we only need to pad edges during indexing
 // and not at query time.
-double const S2ShapeIndex::kCellPadding = 2 *
+const double S2ShapeIndex::kCellPadding = 2 *
     (S2::kFaceClipErrorUVCoord + S2::kEdgeClipErrorUVCoord);
 
 bool S2ClippedShape::ContainsEdge(int id) const {
@@ -155,12 +155,12 @@ S2ShapeIndexCell::~S2ShapeIndexCell() {
   shapes_.clear();
 }
 
-S2ClippedShape const*
+const S2ClippedShape*
 S2ShapeIndexCell::find_clipped(int shape_id) const {
   // Linear search is fine because the number of shapes per cell is typically
   // very small (most often 1), and is large only for pathological inputs
   // (e.g. very deeply nested loops).
-  for (auto const& s : shapes_) {
+  for (const auto& s : shapes_) {
     if (s.shape_id() == shape_id) return &s;
   }
   return nullptr;
@@ -185,7 +185,7 @@ void S2ShapeIndex::Options::set_max_edges_per_cell(
   max_edges_per_cell_ = max_edges_per_cell;
 }
 
-bool S2ShapeIndex::Iterator::Locate(S2Point const& target) {
+bool S2ShapeIndex::Iterator::Locate(const S2Point& target) {
   return LocateImpl(target, this);
 }
 
@@ -193,7 +193,7 @@ S2ShapeIndex::CellRelation S2ShapeIndex::Iterator::Locate(S2CellId target) {
   return LocateImpl(target, this);
 }
 
-S2ShapeIndexCell const* S2ShapeIndex::Iterator::GetCell() const {
+const S2ShapeIndexCell* S2ShapeIndex::Iterator::GetCell() const {
   LOG(DFATAL) << "Should never be called";
   return nullptr;
 }
@@ -202,8 +202,8 @@ unique_ptr<S2ShapeIndex::IteratorBase> S2ShapeIndex::Iterator::Clone() const {
   return absl::make_unique<Iterator>(*this);
 }
 
-void S2ShapeIndex::Iterator::Copy(IteratorBase const& other)  {
-  *this = *down_cast<Iterator const*>(&other);
+void S2ShapeIndex::Iterator::Copy(const IteratorBase& other)  {
+  *this = *down_cast<const Iterator*>(&other);
 }
 
 // Defines the initial focus point of S2ShapeIndex::InteriorTracker (the start
@@ -218,18 +218,18 @@ S2ShapeIndex::S2ShapeIndex()
     : index_status_(FRESH) {
 }
 
-S2ShapeIndex::S2ShapeIndex(Options const& options)
+S2ShapeIndex::S2ShapeIndex(const Options& options)
     : options_(options),
       index_status_(FRESH) {
 }
 
-void S2ShapeIndex::Init(Options const& options) {
+void S2ShapeIndex::Init(const Options& options) {
   DCHECK(shapes_.empty());
   options_ = options;
 }
 
 S2ShapeIndex::~S2ShapeIndex() {
-  Reset();
+  Clear();
 }
 
 void S2ShapeIndex::Minimize() {
@@ -239,7 +239,7 @@ void S2ShapeIndex::Minimize() {
 
 int S2ShapeIndex::Add(unique_ptr<S2Shape> shape) {
   // Additions are processed lazily by ApplyUpdates().
-  int const id = shapes_.size();
+  const int id = shapes_.size();
   shape->id_ = id;
   shapes_.push_back(std::move(shape));
   index_status_.store(STALE, std::memory_order_relaxed);
@@ -294,7 +294,7 @@ vector<unique_ptr<S2Shape>> S2ShapeIndex::ReleaseAll() {
   return result;
 }
 
-void S2ShapeIndex::Reset() {
+void S2ShapeIndex::Clear() {
   ReleaseAll();
 }
 
@@ -326,7 +326,7 @@ struct S2ShapeIndex::FaceEdge {
 };
 
 struct S2ShapeIndex::ClippedEdge {
-  FaceEdge const* face_edge;  // The original unclipped edge
+  const FaceEdge* face_edge;  // The original unclipped edge
   R2Rect bound;               // Bounding box for the clipped portion
 };
 
@@ -360,7 +360,7 @@ class S2ShapeIndex::InteriorTracker {
   static S2Point Origin();
 
   // Returns the current focus point (see above).
-  S2Point const& focus() { return b_; }
+  const S2Point& focus() { return b_; }
 
   // Returns true if any shapes are being tracked.
   bool is_active() const { return is_active_; }
@@ -378,20 +378,20 @@ class S2ShapeIndex::InteriorTracker {
   // Moves the focus to the given point.  This method should only be used when
   // it is known that there are no edge crossings between the old and new
   // focus locations; otherwise use DrawTo().
-  void MoveTo(S2Point const& b) { b_ = b; }
+  void MoveTo(const S2Point& b) { b_ = b; }
 
   // Moves the focus to the given point.  After this method is called,
   // TestEdge() should be called with all edges that may cross the line
   // segment between the old and new focus locations.
-  void DrawTo(S2Point const& b);
+  void DrawTo(const S2Point& b);
 
   // Indicates that the given edge of the given shape may cross the line
   // segment between the old and new focus locations (see DrawTo).
   // REQUIRES: shape->has_interior()
-  inline void TestEdge(int32 shape_id, S2Shape::Edge const& edge);
+  inline void TestEdge(int32 shape_id, const S2Shape::Edge& edge);
 
   // The set of shape ids that contain the current focus.
-  ShapeIdSet const& shape_ids() const { return shape_ids_; }
+  const ShapeIdSet& shape_ids() const { return shape_ids_; }
 
   // Indicates that the last argument to MoveTo() or DrawTo() was the entry
   // vertex of the given S2CellId, i.e. the tracker is positioned at the start
@@ -482,14 +482,14 @@ void S2ShapeIndex::InteriorTracker::ToggleShape(int shape_id) {
   }
 }
 
-void S2ShapeIndex::InteriorTracker::DrawTo(S2Point const& b) {
+void S2ShapeIndex::InteriorTracker::DrawTo(const S2Point& b) {
   a_ = b_;
   b_ = b;
   crosser_.Init(&a_, &b_);
 }
 
 inline void S2ShapeIndex::InteriorTracker::TestEdge(
-    int32 shape_id, S2Shape::Edge const& edge) {
+    int32 shape_id, const S2Shape::Edge& edge) {
   if (crosser_.EdgeOrVertexCrossing(&edge.v0, &edge.v1)) {
     ToggleShape(shape_id);
   }
@@ -613,7 +613,7 @@ void S2ShapeIndex::ApplyUpdatesInternal() {
   vector<BatchDescriptor> batches;
   GetUpdateBatches(&batches);
   int i = 0;
-  for (BatchDescriptor const& batch : batches) {
+  for (const BatchDescriptor& batch : batches) {
     vector<FaceEdge> all_edges[6];
     VLOG(1) << "Batch " << i++ << ": shape_limit=" << batch.additions_end
                << ", edges=" << batch.num_edges;
@@ -622,7 +622,7 @@ void S2ShapeIndex::ApplyUpdatesInternal() {
     InteriorTracker tracker;
     if (pending_removals_) {
       // The first batch implicitly includes all shapes being removed.
-      for (auto const& pending_removal : *pending_removals_) {
+      for (const auto& pending_removal : *pending_removals_) {
         RemoveShape(pending_removal, all_edges, &tracker);
       }
       pending_removals_.reset(nullptr);
@@ -647,13 +647,13 @@ void S2ShapeIndex::GetUpdateBatches(vector<BatchDescriptor>* batches) const {
   // Count the edges being removed and added.
   int num_edges_removed = 0;
   if (pending_removals_) {
-    for (auto const& pending_removal : *pending_removals_) {
+    for (const auto& pending_removal : *pending_removals_) {
       num_edges_removed += pending_removal.edges.size();
     }
   }
   int num_edges_added = 0;
   for (int id = pending_additions_begin_; id < shapes_.size(); ++id) {
-    S2Shape const* shape = this->shape(id);
+    const S2Shape* shape = this->shape(id);
     if (shape == nullptr) continue;
     num_edges_added += shape->num_edges();
   }
@@ -673,15 +673,15 @@ void S2ShapeIndex::GetUpdateBatches(vector<BatchDescriptor>* batches) const {
   // The temporary memory consists mainly of the FaceEdge and ClippedEdge
   // structures plus a ClippedEdge pointer for every level of recursive
   // subdivision.  For very large indexes this can be 200 bytes per edge.
-  size_t const kFinalBytesPerEdge = 8;
-  size_t const kTmpBytesPerEdge = 200;
-  size_t const kTmpMemoryBudgetBytes =
+  const size_t kFinalBytesPerEdge = 8;
+  const size_t kTmpBytesPerEdge = 200;
+  const size_t kTmpMemoryBudgetBytes =
       static_cast<size_t>(FLAGS_s2shapeindex_tmp_memory_budget_mb) << 20;
 
   // We arbitrarily limit the number of batches just as a safety measure.
   // With the current default memory budget of 100 MB, this limit is not
   // reached even when building an index of 350 million edges.
-  int const kMaxUpdateBatches = 100;
+  const int kMaxUpdateBatches = 100;
 
   if (num_edges * kTmpBytesPerEdge <= kTmpMemoryBudgetBytes) {
     // We can update all edges at once without exceeding kTmpMemoryBudgetBytes.
@@ -713,7 +713,7 @@ void S2ShapeIndex::GetUpdateBatches(vector<BatchDescriptor>* batches) const {
   // Keep adding shapes to each batch until the recommended number of edges
   // for that batch is reached, then move on to the next batch.
   for (int id = pending_additions_begin_; id < shapes_.size(); ++id) {
-    S2Shape const* shape = this->shape(id);
+    const S2Shape* shape = this->shape(id);
     if (shape == nullptr) continue;
     num_edges += shape->num_edges();
     if (num_edges >= batch_sizes[batches->size()]) {
@@ -778,7 +778,7 @@ void S2ShapeIndex::GetBatchSizes(int num_items, int max_batches,
 // needed during index construction.  Furthermore, if the arrays are grown via
 // push_back() then up to 10% of the total run time consists of copying data
 // as these arrays grow, so it is worthwhile to preallocate space for them.
-void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
+void S2ShapeIndex::ReserveSpace(const BatchDescriptor& batch,
                                 vector<FaceEdge> all_edges[6]) const {
   // If the number of edges is relatively small, then the fastest approach is
   // to simply reserve space on every face for the maximum possible number of
@@ -786,8 +786,8 @@ void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
   // deciding when to break updates into batches, because the cost/benefit
   // ratio is different.  (Here the only extra expense is that we need to
   // sample the edges to estimate how many edges per face there are.)
-  size_t const kMaxCheapBytes = 30 << 20;  // 30 MB
-  int const kMaxCheapEdges = kMaxCheapBytes / (6 * sizeof(FaceEdge));
+  const size_t kMaxCheapBytes = 30 << 20;  // 30 MB
+  const int kMaxCheapEdges = kMaxCheapBytes / (6 * sizeof(FaceEdge));
   if (batch.num_edges <= kMaxCheapEdges) {
     for (int face = 0; face < 6; ++face) {
       all_edges[face].reserve(batch.num_edges);
@@ -804,17 +804,17 @@ void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
   // Given a desired sample size, we choose equally spaced edges from
   // throughout the entire data set.  We use a Bresenham-type algorithm to
   // choose the samples.
-  int const kDesiredSampleSize = 10000;
-  int const sample_interval = max(1, batch.num_edges / kDesiredSampleSize);
+  const int kDesiredSampleSize = 10000;
+  const int sample_interval = max(1, batch.num_edges / kDesiredSampleSize);
 
   // Initialize "edge_id" to be midway through the first sample interval.
   // Because samples are equally spaced the actual sample size may differ
   // slightly from the desired sample size.
   int edge_id = sample_interval / 2;
-  int const actual_sample_size = (batch.num_edges + edge_id) / sample_interval;
+  const int actual_sample_size = (batch.num_edges + edge_id) / sample_interval;
   int face_count[6] = { 0, 0, 0, 0, 0, 0 };
   if (pending_removals_) {
-    for (RemovedShape const& removed : *pending_removals_) {
+    for (const RemovedShape& removed : *pending_removals_) {
       edge_id += removed.edges.size();
       while (edge_id >= sample_interval) {
         edge_id -= sample_interval;
@@ -823,7 +823,7 @@ void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
     }
   }
   for (int id = pending_additions_begin_; id < batch.additions_end; ++id) {
-    S2Shape const* shape = this->shape(id);
+    const S2Shape* shape = this->shape(id);
     if (shape == nullptr) continue;
     edge_id += shape->num_edges();
     while (edge_id >= sample_interval) {
@@ -851,8 +851,8 @@ void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
 
   // kMaxSemiWidth is the maximum semi-width over all probabilities p of a
   // 4-sigma binomial confidence interval with a sample size of 10,000.
-  double const kMaxSemiWidth = 0.02;
-  double const sample_ratio = 1.0 / actual_sample_size;
+  const double kMaxSemiWidth = 0.02;
+  const double sample_ratio = 1.0 / actual_sample_size;
   for (int face = 0; face < 6; ++face) {
     if (face_count[face] == 0) continue;
     double fraction = sample_ratio * face_count[face] + kMaxSemiWidth;
@@ -864,7 +864,7 @@ void S2ShapeIndex::ReserveSpace(BatchDescriptor const& batch,
 // edges to "all_edges", and start tracking its interior if necessary.
 void S2ShapeIndex::AddShape(int id, vector<FaceEdge> all_edges[6],
                             InteriorTracker* tracker) const {
-  S2Shape const* shape = this->shape(id);
+  const S2Shape* shape = this->shape(id);
   if (shape == nullptr) {
     return;  // This shape has already been removed.
   }
@@ -885,7 +885,7 @@ void S2ShapeIndex::AddShape(int id, vector<FaceEdge> all_edges[6],
   }
 }
 
-void S2ShapeIndex::RemoveShape(RemovedShape const& removed,
+void S2ShapeIndex::RemoveShape(const RemovedShape& removed,
                                vector<FaceEdge> all_edges[6],
                                InteriorTracker* tracker) const {
   FaceEdge edge;
@@ -895,7 +895,7 @@ void S2ShapeIndex::RemoveShape(RemovedShape const& removed,
   if (edge.has_interior) {
     tracker->AddShape(edge.shape_id, removed.contains_tracker_origin);
   }
-  for (auto const& removed_edge : removed.edges) {
+  for (const auto& removed_edge : removed.edges) {
     edge.edge = removed_edge;
     edge.max_level = GetEdgeMaxLevel(edge.edge);
     AddFaceEdge(&edge, all_edges);
@@ -910,7 +910,7 @@ inline void S2ShapeIndex::AddFaceEdge(FaceEdge* edge,
   if (a_face == S2::GetFace(edge->edge.v1)) {
     S2::ValidFaceXYZtoUV(a_face, edge->edge.v0, &edge->a);
     S2::ValidFaceXYZtoUV(a_face, edge->edge.v1, &edge->b);
-    double const kMaxUV = 1 - kCellPadding;
+    const double kMaxUV = 1 - kCellPadding;
     if (fabs(edge->a[0]) <= kMaxUV && fabs(edge->a[1]) <= kMaxUV &&
         fabs(edge->b[0]) <= kMaxUV && fabs(edge->b[1]) <= kMaxUV) {
       all_edges[a_face].push_back(*edge);
@@ -928,7 +928,7 @@ inline void S2ShapeIndex::AddFaceEdge(FaceEdge* edge,
 
 // Return the first level at which the edge will *not* contribute towards
 // the decision to subdivide.
-int S2ShapeIndex::GetEdgeMaxLevel(S2Shape::Edge const& edge) const {
+int S2ShapeIndex::GetEdgeMaxLevel(const S2Shape::Edge& edge) const {
   // Compute the maximum cell size for which this edge is considered "long".
   // The calculation does not need to be perfectly accurate, so we use Norm()
   // rather than Angle() for speed.
@@ -979,15 +979,15 @@ class S2ShapeIndex::EdgeAllocator {
   // absorb an existing index cell).
   vector<FaceEdge> face_edges_;
 
-  EdgeAllocator(EdgeAllocator const&) = delete;
-  void operator=(EdgeAllocator const&) = delete;
+  EdgeAllocator(const EdgeAllocator&) = delete;
+  void operator=(const EdgeAllocator&) = delete;
 };
 
 // Given a face and a vector of edges that intersect that face, add or remove
 // all the edges from the index.  (An edge is added if shapes_[id] is not
 // nullptr, and removed otherwise.)
 void S2ShapeIndex::UpdateFaceEdges(int face,
-                                   vector<FaceEdge> const& face_edges,
+                                   const vector<FaceEdge>& face_edges,
                                    InteriorTracker* tracker) {
   int num_edges = face_edges.size();
   if (num_edges == 0 && tracker->shape_ids().empty()) return;
@@ -998,7 +998,7 @@ void S2ShapeIndex::UpdateFaceEdges(int face,
   // to those edges, so that during the recursion we only need to copy
   // pointers in order to propagate an edge to the correct child.
   vector<ClippedEdge> clipped_edge_storage;
-  vector<ClippedEdge const*> clipped_edges;
+  vector<const ClippedEdge*> clipped_edges;
   clipped_edge_storage.reserve(num_edges);
   clipped_edges.reserve(num_edges);
   R2Rect bound = R2Rect::Empty();
@@ -1039,8 +1039,8 @@ void S2ShapeIndex::UpdateFaceEdges(int face,
   UpdateEdges(pcell, &clipped_edges, tracker, &alloc, disjoint_from_index);
 }
 
-inline S2CellId S2ShapeIndex::ShrinkToFit(S2PaddedCell const& pcell,
-                                          R2Rect const& bound) const {
+inline S2CellId S2ShapeIndex::ShrinkToFit(const S2PaddedCell& pcell,
+                                          const R2Rect& bound) const {
   S2CellId shrunk_id = pcell.ShrinkToFit(bound);
   if (!is_first_update() && shrunk_id != pcell.id()) {
     // Don't shrink any smaller than the existing index cells, since we need
@@ -1068,7 +1068,7 @@ void S2ShapeIndex::SkipCellRange(S2CellId begin, S2CellId end,
   S2CellUnion skipped;
   skipped.InitFromBeginEnd(begin, end);
   for (int i = 0; i < skipped.num_cells(); ++i) {
-    vector<ClippedEdge const*> clipped_edges;
+    vector<const ClippedEdge*> clipped_edges;
     UpdateEdges(S2PaddedCell(skipped.cell_id(i), kCellPadding),
                 &clipped_edges, tracker, alloc, disjoint_from_index);
   }
@@ -1079,8 +1079,8 @@ void S2ShapeIndex::SkipCellRange(S2CellId begin, S2CellId end,
 // edges that need to be subdivided is allocated from the given EdgeAllocator.
 // "disjoint_from_index" is an optimization hint indicating that cell_map_
 // does not contain any entries that overlap the given cell.
-void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
-                               vector<ClippedEdge const*>* edges,
+void S2ShapeIndex::UpdateEdges(const S2PaddedCell& pcell,
+                               vector<const ClippedEdge*>* edges,
                                InteriorTracker* tracker,
                                EdgeAllocator* alloc,
                                bool disjoint_from_index) {
@@ -1140,7 +1140,7 @@ void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
     // important since otherwise the running time is dominated by the time
     // required to grow the vectors.  The amount of memory involved is
     // relatively small, so we simply reserve the maximum space for every child.
-    vector<ClippedEdge const*> child_edges[2][2];  // [i][j]
+    vector<const ClippedEdge*> child_edges[2][2];  // [i][j]
     int num_edges = edges->size();
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
@@ -1156,7 +1156,7 @@ void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
     // (u,v)-space that belongs to all four (padded) children.  By comparing
     // against the four boundaries of "middle" we can determine which children
     // each edge needs to be propagated to.
-    R2Rect const& middle = pcell.middle();
+    const R2Rect& middle = pcell.middle();
 
     // Build up a vector edges to be passed to each child cell.  The (i,j)
     // directions are left (i=0), right (i=1), lower (j=0), and upper (j=1).
@@ -1164,7 +1164,7 @@ void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
     // This case is very fast, consisting of between 2 and 4 floating-point
     // comparisons and copying one pointer.  (ClipVAxis is inline.)
     for (int e = 0; e < num_edges; ++e) {
-      ClippedEdge const* edge = (*edges)[e];
+      const ClippedEdge* edge = (*edges)[e];
       if (edge->bound[0].hi() <= middle[0].lo()) {
         // Edge is entirely contained in the two left children.
         ClipVAxis(edge, middle[1], child_edges[0], alloc);
@@ -1182,9 +1182,9 @@ void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
       } else {
         // The edge bound spans all four children.  The edge itself intersects
         // either three or four (padded) children.
-        ClippedEdge const* left = ClipUBound(edge, 1, middle[0].hi(), alloc);
+        const ClippedEdge* left = ClipUBound(edge, 1, middle[0].hi(), alloc);
         ClipVAxis(left, middle[1], child_edges[0], alloc);
-        ClippedEdge const* right = ClipUBound(edge, 0, middle[0].lo(), alloc);
+        const ClippedEdge* right = ClipUBound(edge, 0, middle[0].lo(), alloc);
         ClipVAxis(right, middle[1], child_edges[1], alloc);
       }
     }
@@ -1194,7 +1194,7 @@ void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
         if (child_edges[i][j].empty()) {
-          vector<ClippedEdge const*>().swap(child_edges[i][j]);
+          vector<const ClippedEdge*>().swap(child_edges[i][j]);
         }
       }
     }
@@ -1222,9 +1222,9 @@ void S2ShapeIndex::UpdateEdges(S2PaddedCell const& pcell,
 // against the boundaries of "middle" and add the edge to the corresponding
 // children.
 /* static */
-inline void S2ShapeIndex::ClipVAxis(ClippedEdge const* edge,
-                                    R1Interval const& middle,
-                                    vector<ClippedEdge const*> child_edges[2],
+inline void S2ShapeIndex::ClipVAxis(const ClippedEdge* edge,
+                                    const R1Interval& middle,
+                                    vector<const ClippedEdge*> child_edges[2],
                                     EdgeAllocator* alloc) {
   if (edge->bound[1].hi() <= middle.lo()) {
     // Edge is entirely contained in the lower child.
@@ -1242,8 +1242,8 @@ inline void S2ShapeIndex::ClipVAxis(ClippedEdge const* edge,
 // Given an edge, clip the given endpoint (lo=0, hi=1) of the u-axis so that
 // it does not extend past the given value.
 /* static */
-S2ShapeIndex::ClippedEdge const*
-S2ShapeIndex::ClipUBound(ClippedEdge const* edge, int u_end, double u,
+const S2ShapeIndex::ClippedEdge*
+S2ShapeIndex::ClipUBound(const ClippedEdge* edge, int u_end, double u,
                          EdgeAllocator* alloc) {
   // First check whether the edge actually requires any clipping.  (Sometimes
   // this method is called when clipping is not necessary, e.g. when one edge
@@ -1258,7 +1258,7 @@ S2ShapeIndex::ClipUBound(ClippedEdge const* edge, int u_end, double u,
   // at all, just their bounding box; and (2) it avoids the accumulation of
   // roundoff errors due to repeated interpolations.  The result needs to be
   // clamped to ensure that it is in the appropriate range.
-  FaceEdge const& e = *edge->face_edge;
+  const FaceEdge& e = *edge->face_edge;
   double v = edge->bound[1].Project(
       S2::InterpolateDouble(u, e.a[0], e.b[0], e.a[1], e.b[1]));
 
@@ -1272,8 +1272,8 @@ S2ShapeIndex::ClipUBound(ClippedEdge const* edge, int u_end, double u,
 // Given an edge, clip the given endpoint (lo=0, hi=1) of the v-axis so that
 // it does not extend past the given value.
 /* static */
-S2ShapeIndex::ClippedEdge const*
-S2ShapeIndex::ClipVBound(ClippedEdge const* edge, int v_end, double v,
+const S2ShapeIndex::ClippedEdge*
+S2ShapeIndex::ClipVBound(const ClippedEdge* edge, int v_end, double v,
                          EdgeAllocator* alloc) {
   // See comments in ClipUBound.
   if (v_end == 0) {
@@ -1281,7 +1281,7 @@ S2ShapeIndex::ClipVBound(ClippedEdge const* edge, int v_end, double v,
   } else {
     if (edge->bound[1].hi() <= v) return edge;
   }
-  FaceEdge const& e = *edge->face_edge;
+  const FaceEdge& e = *edge->face_edge;
   double u = edge->bound[0].Project(
       S2::InterpolateDouble(v, e.a[1], e.b[1], e.a[0], e.b[0]));
   int u_end = v_end ^ ((e.a[0] > e.b[0]) != (e.a[1] > e.b[1]));
@@ -1291,8 +1291,8 @@ S2ShapeIndex::ClipVBound(ClippedEdge const* edge, int v_end, double v,
 // Given an edge and two bound endpoints that need to be updated, allocate and
 // return a new edge with the updated bound.
 /* static */
-inline S2ShapeIndex::ClippedEdge const*
-S2ShapeIndex::UpdateBound(ClippedEdge const* edge, int u_end, double u,
+inline const S2ShapeIndex::ClippedEdge*
+S2ShapeIndex::UpdateBound(const ClippedEdge* edge, int u_end, double u,
                           int v_end, double v, EdgeAllocator* alloc) {
   ClippedEdge* clipped = alloc->NewClippedEdge();
   clipped->face_edge = edge->face_edge;
@@ -1312,9 +1312,9 @@ S2ShapeIndex::UpdateBound(ClippedEdge const* edge, int u_end, double u,
 // saves the InteriorTracker state by calling SaveAndClearStateBefore().  It
 // is the caller's responsibility to restore this state by calling
 // RestoreStateBefore() when processing of this cell is finished.
-void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
-                                   Iterator const& iter,
-                                   vector<ClippedEdge const*>* edges,
+void S2ShapeIndex::AbsorbIndexCell(const S2PaddedCell& pcell,
+                                   const Iterator& iter,
+                                   vector<const ClippedEdge*>* edges,
                                    InteriorTracker* tracker,
                                    EdgeAllocator* alloc) {
   DCHECK_EQ(pcell.id(), iter.id());
@@ -1339,8 +1339,8 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
     }
     tracker->DrawTo(pcell.GetExitVertex());
     tracker->set_next_cellid(pcell.id().next());
-    for (ClippedEdge const* edge : *edges) {
-      FaceEdge const* face_edge = edge->face_edge;
+    for (const ClippedEdge* edge : *edges) {
+      const FaceEdge* face_edge = edge->face_edge;
       if (!is_shape_being_removed(face_edge->shape_id)) {
         break;  // All shapes being removed come first.
       }
@@ -1360,11 +1360,11 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
   vector<FaceEdge>* face_edges = alloc->mutable_face_edges();
   face_edges->clear();
   bool tracker_moved = false;
-  S2ShapeIndexCell const& cell = iter.cell();
+  const S2ShapeIndexCell& cell = iter.cell();
   for (int s = 0; s < cell.num_clipped(); ++s) {
-    S2ClippedShape const& clipped = cell.clipped(s);
+    const S2ClippedShape& clipped = cell.clipped(s);
     int shape_id = clipped.shape_id();
-    S2Shape const* shape = this->shape(shape_id);
+    const S2Shape* shape = this->shape(shape_id);
     if (shape == nullptr) continue;  // This shape is being removed.
     int num_edges = clipped.num_edges();
 
@@ -1403,8 +1403,8 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
     }
   }
   // Now create a ClippedEdge for each FaceEdge, and put them in "new_edges".
-  vector<ClippedEdge const*> new_edges;
-  for (FaceEdge const& face_edge : *face_edges) {
+  vector<const ClippedEdge*> new_edges;
+  for (const FaceEdge& face_edge : *face_edges) {
     ClippedEdge* clipped = alloc->NewClippedEdge();
     clipped->face_edge = &face_edge;
     clipped->bound = S2::GetClippedEdgeBound(face_edge.a, face_edge.b,
@@ -1414,7 +1414,7 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
   // Discard any edges from "edges" that are being removed, and append the
   // remainder to "new_edges".  (This keeps the edges sorted by shape id.)
   for (int i = 0; i < edges->size(); ++i) {
-    ClippedEdge const* clipped = (*edges)[i];
+    const ClippedEdge* clipped = (*edges)[i];
     if (!is_shape_being_removed(clipped->face_edge->shape_id)) {
       new_edges.insert(new_edges.end(), edges->begin() + i, edges->end());
       break;
@@ -1428,8 +1428,8 @@ void S2ShapeIndex::AbsorbIndexCell(S2PaddedCell const& pcell,
 
 // Attempt to build an index cell containing the given edges, and return true
 // if successful.  (Otherwise the edges should be subdivided further.)
-bool S2ShapeIndex::MakeIndexCell(S2PaddedCell const& pcell,
-                                 vector<ClippedEdge const*> const& edges,
+bool S2ShapeIndex::MakeIndexCell(const S2PaddedCell& pcell,
+                                 const vector<const ClippedEdge*>& edges,
                                  InteriorTracker* tracker) {
   if (edges.empty() && tracker->shape_ids().empty()) {
     // No index cell is needed.  (In most cases this situation is detected
@@ -1441,7 +1441,7 @@ bool S2ShapeIndex::MakeIndexCell(S2PaddedCell const& pcell,
   // Count the number of edges that have not reached their maximum level yet.
   // Return false if there are too many such edges.
   int count = 0;
-  for (ClippedEdge const* edge : edges) {
+  for (const ClippedEdge* edge : edges) {
     count += (pcell.level() < edge->face_edge->max_level);
     if (count > options_.max_edges_per_cell())
       return false;
@@ -1480,7 +1480,7 @@ bool S2ShapeIndex::MakeIndexCell(S2PaddedCell const& pcell,
   // Allocate and fill a new index cell.  To get the total number of shapes we
   // need to merge the shapes associated with the intersecting edges together
   // with the shapes that happen to contain the cell center.
-  ShapeIdSet const& cshape_ids = tracker->shape_ids();
+  const ShapeIdSet& cshape_ids = tracker->shape_ids();
   int num_shapes = CountShapes(edges, cshape_ids);
   S2ShapeIndexCell* cell = new S2ShapeIndexCell;
   S2ClippedShape* base = cell->add_shapes(num_shapes);
@@ -1541,10 +1541,10 @@ bool S2ShapeIndex::MakeIndexCell(S2PaddedCell const& pcell,
 
 // Call tracker->TestEdge() on all edges from shapes that have interiors.
 /* static */
-void S2ShapeIndex::TestAllEdges(vector<ClippedEdge const*> const& edges,
+void S2ShapeIndex::TestAllEdges(const vector<const ClippedEdge*>& edges,
                                 InteriorTracker* tracker) {
-  for (ClippedEdge const* edge : edges) {
-    FaceEdge const* face_edge = edge->face_edge;
+  for (const ClippedEdge* edge : edges) {
+    const FaceEdge* face_edge = edge->face_edge;
     if (face_edge->has_interior) {
       tracker->TestEdge(face_edge->shape_id, face_edge->edge);
     }
@@ -1554,12 +1554,12 @@ void S2ShapeIndex::TestAllEdges(vector<ClippedEdge const*> const& edges,
 // Return the number of distinct shapes that are either associated with the
 // given edges, or that are currently stored in the InteriorTracker.
 /* static */
-int S2ShapeIndex::CountShapes(vector<ClippedEdge const*> const& edges,
-                              ShapeIdSet const& cshape_ids) {
+int S2ShapeIndex::CountShapes(const vector<const ClippedEdge*>& edges,
+                              const ShapeIdSet& cshape_ids) {
   int count = 0;
   int last_shape_id = -1;
   ShapeIdSet::const_iterator cnext = cshape_ids.begin();  // Next shape
-  for (ClippedEdge const* edge : edges) {
+  for (const ClippedEdge* edge : edges) {
     if (edge->face_edge->shape_id != last_shape_id) {
       ++count;
       last_shape_id = edge->face_edge->shape_id;
@@ -1584,10 +1584,10 @@ size_t S2ShapeIndex::SpaceUsed() const {
   size += cell_map_.size() * sizeof(S2ShapeIndexCell);
   Iterator it;
   for (it.InitStale(this, S2ShapeIndex::BEGIN); !it.done(); it.Next()) {
-    S2ShapeIndexCell const& cell = it.cell();
+    const S2ShapeIndexCell& cell = it.cell();
     size += cell.shapes_.capacity() * sizeof(S2ClippedShape);
     for (int s = 0; s < cell.num_clipped(); ++s) {
-      S2ClippedShape const& clipped = cell.clipped(s);
+      const S2ClippedShape& clipped = cell.clipped(s);
       if (!clipped.is_inline()) {
         size += clipped.num_edges() * sizeof(int32);
       }

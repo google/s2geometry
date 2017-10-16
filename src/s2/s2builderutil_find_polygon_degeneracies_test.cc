@@ -44,8 +44,6 @@ using DegenerateEdges = GraphOptions::DegenerateEdges;
 using DuplicateEdges = GraphOptions::DuplicateEdges;
 using SiblingPairs = GraphOptions::SiblingPairs;
 
-using LaxPolygon = s2shapeutil::LaxPolygon;
-
 namespace s2builderutil {
 
 struct TestDegeneracy {
@@ -56,44 +54,44 @@ struct TestDegeneracy {
   }
 };
 
-bool operator<(TestDegeneracy const& x, TestDegeneracy const& y) {
+bool operator<(const TestDegeneracy& x, const TestDegeneracy& y) {
   if (x.edge_str < y.edge_str) return true;
   if (y.edge_str < x.edge_str) return false;
   return x.is_hole < y.is_hole;
 }
 
-bool operator==(TestDegeneracy const& x, TestDegeneracy const& y) {
+bool operator==(const TestDegeneracy& x, const TestDegeneracy& y) {
   return x.edge_str == y.edge_str && x.is_hole == y.is_hole;
 }
 
 class DegeneracyCheckingLayer : public S2Builder::Layer {
  public:
-  explicit DegeneracyCheckingLayer(vector<TestDegeneracy> const& expected)
+  explicit DegeneracyCheckingLayer(const vector<TestDegeneracy>& expected)
       : expected_(expected) {
   }
   GraphOptions graph_options() const override {
     return GraphOptions(EdgeType::DIRECTED, DegenerateEdges::DISCARD_EXCESS,
                         DuplicateEdges::KEEP, SiblingPairs::DISCARD_EXCESS);
   }
-  void Build(Graph const& g, S2Error* error) override;
+  void Build(const Graph& g, S2Error* error) override;
 
  private:
   vector<TestDegeneracy> expected_;
 };
 
-std::ostream& operator<<(std::ostream& os, vector<TestDegeneracy> const& v) {
-  for (auto const& degeneracy : v) {
+std::ostream& operator<<(std::ostream& os, const vector<TestDegeneracy>& v) {
+  for (const auto& degeneracy : v) {
     os << (degeneracy.is_hole ? "Hole(" : "Shell(");
     os << degeneracy.edge_str + ") ";
   }
   return os;
 }
 
-void DegeneracyCheckingLayer::Build(Graph const& g, S2Error* error) {
+void DegeneracyCheckingLayer::Build(const Graph& g, S2Error* error) {
   auto degeneracies = FindPolygonDegeneracies(g, error);
   // Convert the output into a human-readable format.
   vector<TestDegeneracy> actual;
-  for (auto const& degeneracy : degeneracies) {
+  for (const auto& degeneracy : degeneracies) {
     Graph::Edge edge = g.edge(degeneracy.edge_id);
     vector<S2Point> points { g.vertex(edge.first), g.vertex(edge.second) };
     actual.push_back(TestDegeneracy(s2textformat::ToString(points),
@@ -105,13 +103,13 @@ void DegeneracyCheckingLayer::Build(Graph const& g, S2Error* error) {
                                    << "\nActual: " << actual;
 }
 
-void ExpectDegeneracies(string const& polygon_str,
-                        vector<TestDegeneracy> const& expected) {
+void ExpectDegeneracies(const string& polygon_str,
+                        const vector<TestDegeneracy>& expected) {
   S2Builder builder((S2Builder::Options()));
   builder.StartLayer(make_unique<DegeneracyCheckingLayer>(expected));
-  unique_ptr<LaxPolygon> polygon(s2textformat::MakeLaxPolygon(polygon_str));
+  auto polygon = s2textformat::MakeLaxPolygonOrDie(polygon_str);
   builder.AddIsFullPolygonPredicate(
-      [&polygon](Graph const& graph, S2Error* error) {
+      [&polygon](const Graph& graph, S2Error* error) {
         return polygon->GetReferencePoint().contained;
       });
   for (int i = 0; i < polygon->num_edges(); ++i) {

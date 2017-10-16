@@ -50,19 +50,19 @@ static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 S2Polyline::S2Polyline()
   : s2debug_override_(S2Debug::ALLOW) {}
 
-S2Polyline::S2Polyline(vector<S2Point> const& vertices)
+S2Polyline::S2Polyline(const vector<S2Point>& vertices)
   : S2Polyline(vertices, S2Debug::ALLOW) {}
 
-S2Polyline::S2Polyline(vector<S2LatLng> const& vertices)
+S2Polyline::S2Polyline(const vector<S2LatLng>& vertices)
   : S2Polyline(vertices, S2Debug::ALLOW) {}
 
-S2Polyline::S2Polyline(vector<S2Point> const& vertices,
+S2Polyline::S2Polyline(const vector<S2Point>& vertices,
                        S2Debug override)
   : s2debug_override_(override) {
   Init(vertices);
 }
 
-S2Polyline::S2Polyline(vector<S2LatLng> const& vertices,
+S2Polyline::S2Polyline(const vector<S2LatLng>& vertices,
                        S2Debug override)
   : s2debug_override_(override) {
   Init(vertices);
@@ -79,7 +79,7 @@ S2Debug S2Polyline::s2debug_override() const {
   return s2debug_override_;
 }
 
-void S2Polyline::Init(vector<S2Point> const& vertices) {
+void S2Polyline::Init(const vector<S2Point>& vertices) {
   num_vertices_ = vertices.size();
   vertices_.reset(new S2Point[num_vertices_]);
   std::copy(vertices.begin(), vertices.end(), &vertices_[0]);
@@ -88,7 +88,7 @@ void S2Polyline::Init(vector<S2Point> const& vertices) {
   }
 }
 
-void S2Polyline::Init(vector<S2LatLng> const& vertices) {
+void S2Polyline::Init(const vector<S2LatLng>& vertices) {
   num_vertices_ = vertices.size();
   vertices_.reset(new S2Point[num_vertices_]);
   for (int i = 0; i < num_vertices_; ++i) {
@@ -132,7 +132,7 @@ bool S2Polyline::FindValidationError(S2Error* error) const {
   return false;
 }
 
-S2Polyline::S2Polyline(S2Polyline const& src)
+S2Polyline::S2Polyline(const S2Polyline& src)
   : num_vertices_(src.num_vertices_),
     vertices_(new S2Point[num_vertices_]) {
   std::copy(&src.vertices_[0], &src.vertices_[num_vertices_], &vertices_[0]);
@@ -202,7 +202,7 @@ S2Point S2Polyline::Interpolate(double fraction) const {
   return GetSuffix(fraction, &next_vertex);
 }
 
-double S2Polyline::UnInterpolate(S2Point const& point, int next_vertex) const {
+double S2Polyline::UnInterpolate(const S2Point& point, int next_vertex) const {
   DCHECK_GT(num_vertices(), 0);
   if (num_vertices() < 2) {
     return 0;
@@ -220,7 +220,7 @@ double S2Polyline::UnInterpolate(S2Point const& point, int next_vertex) const {
   return min(1.0, length_to_point / length_sum);
 }
 
-S2Point S2Polyline::Project(S2Point const& point, int* next_vertex) const {
+S2Point S2Polyline::Project(const S2Point& point, int* next_vertex) const {
   DCHECK_GT(num_vertices(), 0);
 
   if (num_vertices() == 1) {
@@ -252,7 +252,7 @@ S2Point S2Polyline::Project(S2Point const& point, int* next_vertex) const {
   return closest_point;
 }
 
-bool S2Polyline::IsOnRight(S2Point const& point) const {
+bool S2Polyline::IsOnRight(const S2Point& point) const {
   DCHECK_GE(num_vertices(), 2);
 
   int next_vertex;
@@ -280,7 +280,7 @@ bool S2Polyline::IsOnRight(S2Point const& point) const {
   return s2pred::Sign(point, vertex(next_vertex), vertex(next_vertex - 1)) > 0;
 }
 
-bool S2Polyline::Intersects(S2Polyline const* line) const {
+bool S2Polyline::Intersects(const S2Polyline* line) const {
   if (num_vertices() <= 0 || line->num_vertices() <= 0) {
     return false;
   }
@@ -318,7 +318,7 @@ S2Cap S2Polyline::GetCapBound() const {
   return GetRectBound().GetCapBound();
 }
 
-bool S2Polyline::MayIntersect(S2Cell const& cell) const {
+bool S2Polyline::MayIntersect(const S2Cell& cell) const {
   if (num_vertices() == 0) return false;
 
   // We only need to check whether the cell contains vertex 0 for correctness,
@@ -375,7 +375,7 @@ namespace {
 // Given a polyline, a tolerance distance, and a start index, this function
 // returns the maximal end index such that the line segment between these two
 // vertices passes within "tolerance" of all interior vertices, in order.
-int FindEndVertex(S2Polyline const& polyline,
+int FindEndVertex(const S2Polyline& polyline,
                   S1Angle tolerance, int index) {
   DCHECK_GE(tolerance.radians(), 0);
   DCHECK_LT((index + 1), polyline.num_vertices());
@@ -396,7 +396,7 @@ int FindEndVertex(S2Polyline const& polyline,
   // 1D interval.  Since the interval wraps around, we represent it as an
   // S1Interval, i.e. an interval on the unit circle.
   Matrix3x3_d frame;
-  S2Point const& origin = polyline.vertex(index);
+  const S2Point& origin = polyline.vertex(index);
   S2::GetFrame(origin, &frame);
 
   // As we go along, we keep track of the current wedge of angles and the
@@ -405,7 +405,7 @@ int FindEndVertex(S2Polyline const& polyline,
   double last_distance = 0;
 
   for (++index; index < polyline.num_vertices(); ++index) {
-    S2Point const& candidate = polyline.vertex(index);
+    const S2Point& candidate = polyline.vertex(index);
     double distance = origin.Angle(candidate);
 
     // We don't allow simplification to create edges longer than 90 degrees,
@@ -469,7 +469,7 @@ void S2Polyline::SubsampleVertices(S1Angle tolerance,
   }
 }
 
-bool S2Polyline::Equals(S2Polyline const* b) const {
+bool S2Polyline::Equals(const S2Polyline* b) const {
   if (num_vertices() != b->num_vertices()) return false;
   for (int offset = 0; offset < num_vertices(); ++offset) {
     if (vertex(offset) != b->vertex(offset)) return false;
@@ -477,7 +477,7 @@ bool S2Polyline::Equals(S2Polyline const* b) const {
   return true;
 }
 
-bool S2Polyline::ApproxEquals(S2Polyline const& b, S1Angle max_error) const {
+bool S2Polyline::ApproxEquals(const S2Polyline& b, S1Angle max_error) const {
   if (num_vertices() != b.num_vertices()) return false;
   for (int offset = 0; offset < num_vertices(); ++offset) {
     if (!S2::ApproxEquals(vertex(offset), b.vertex(offset), max_error)) {
@@ -495,8 +495,8 @@ namespace {
 // Return the first i > "index" such that the ith vertex of "pline" is not at
 // the same point as the "index"th vertex.  Returns pline.num_vertices() if
 // there is no such value of i.
-inline int NextDistinctVertex(S2Polyline const& pline, int index) {
-  S2Point const& initial = pline.vertex(index);
+inline int NextDistinctVertex(const S2Polyline& pline, int index) {
+  const S2Point& initial = pline.vertex(index);
   do {
     ++index;
   } while (index < pline.num_vertices() && pline.vertex(index) == initial);
@@ -517,7 +517,7 @@ struct SearchState {
 // This operator is needed for storing SearchStates in a set.  The ordering
 // chosen has no special meaning.
 struct SearchStateKeyCompare {
-  bool operator() (SearchState const& a, SearchState const& b) const {
+  bool operator() (const SearchState& a, const SearchState& b) const {
     if (a.i != b.i) return a.i < b.i;
     if (a.j != b.j) return a.j < b.j;
     return a.i_in_progress < b.i_in_progress;
@@ -526,7 +526,7 @@ struct SearchStateKeyCompare {
 
 }  // namespace
 
-bool S2Polyline::NearlyCovers(S2Polyline const& covered,
+bool S2Polyline::NearlyCovers(const S2Polyline& covered,
                               S1Angle max_error) const {
   // NOTE: This algorithm is described assuming that adjacent vertices in a
   // polyline are never at the same point.  That is, the ith and i+1th vertices
@@ -591,12 +591,12 @@ bool S2Polyline::NearlyCovers(S2Polyline const& covered,
   }
 
   while (!pending.empty()) {
-    SearchState const state = pending.back();
+    const SearchState state = pending.back();
     pending.pop_back();
     if (!done.insert(state).second) continue;
 
-    int const next_i = NextDistinctVertex(*this, state.i);
-    int const next_j = NextDistinctVertex(covered, state.j);
+    const int next_i = NextDistinctVertex(*this, state.i);
+    const int next_j = NextDistinctVertex(covered, state.j);
     if (next_j == covered.num_vertices()) {
       return true;
     } else if (next_i == this->num_vertices()) {
@@ -628,7 +628,7 @@ bool S2Polyline::NearlyCovers(S2Polyline const& covered,
   return false;
 }
 
-void S2Polyline::Shape::Init(S2Polyline const* polyline) {
+void S2Polyline::Shape::Init(const S2Polyline* polyline) {
   LOG_IF(WARNING, polyline->num_vertices() == 1)
       << "S2Polyline::Shape with one vertex has no edges";
   polyline_ = polyline;

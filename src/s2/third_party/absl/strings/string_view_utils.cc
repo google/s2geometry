@@ -30,8 +30,6 @@
 #include "s2/third_party/absl/strings/string_view_utils.h"
 
 #include <algorithm>
-#include <string>
-#include <vector>
 
 #include "s2/third_party/absl/strings/ascii.h"
 #include "s2/third_party/absl/strings/internal/memutil.h"

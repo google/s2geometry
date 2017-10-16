@@ -25,13 +25,17 @@
 
 using std::max;
 using std::min;
-
-// Old versions of GCC have nextafter() but not std::nextafter().
-// using std::nextafter;
+// Android with gnustl has ::nextafter but not std::nextafter.
+// https://github.com/android-ndk/ndk/issues/82
+// Check for gnustl with _GLIBCXX_CMATH, which is its cmath include
+// guard.
+#if !defined(__ANDROID__) || !defined(_GLIBCXX_CMATH)
+using std::nextafter;
+#endif
 
 static constexpr double kMaxLength2 = 4.0;
 
-S1ChordAngle::S1ChordAngle(S2Point const& x, S2Point const& y) {
+S1ChordAngle::S1ChordAngle(const S2Point& x, const S2Point& y) {
   DCHECK(S2::IsUnitLength(x));
   DCHECK(S2::IsUnitLength(y));
   // The distance may slightly exceed kMaxLength2 due to roundoff errors.

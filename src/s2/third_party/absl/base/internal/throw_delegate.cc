@@ -29,15 +29,18 @@
 
 #include "s2/third_party/absl/base/internal/throw_delegate.h"
 
+#include <cstdlib>
 #include <functional>
 #include <new>
 #include <stdexcept>
 #include "s2/third_party/absl/base/config.h"
-#include "s2/third_party/absl/base/raw_logging.h"
+#include "s2/third_party/absl/base/internal/raw_logging.h"
 
 namespace absl {
+namespace base_internal {
+
 namespace {
-template <class T>
+template <typename T>
 [[noreturn]] void Throw(const T& error) {
 #ifdef ABSL_HAVE_EXCEPTIONS
   throw error;
@@ -114,4 +117,5 @@ void ThrowStdBadFunctionCall() { Throw(std::bad_function_call()); }
 
 void ThrowStdBadAlloc() { Throw(std::bad_alloc()); }
 
+}  // namespace base_internal
 }  // namespace absl

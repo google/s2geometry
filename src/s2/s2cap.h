@@ -63,26 +63,26 @@ class S2Cap final : public S2Region {
   // Constructs a cap with the given center and radius.  A negative radius
   // yields an empty cap; a radius of 180 degrees or more yields a full cap
   // (containing the entire sphere).  "center" should be unit length.
-  S2Cap(S2Point const& center, S1Angle radius);
+  S2Cap(const S2Point& center, S1Angle radius);
 
   // Constructs a cap where the angle is expressed as an S1ChordAngle.  This
   // constructor is more efficient than the one above.
-  S2Cap(S2Point const& center, S1ChordAngle radius);
+  S2Cap(const S2Point& center, S1ChordAngle radius);
 
   // Convenience function that creates a cap containing a single point.  This
   // method is more efficient that the S2Cap(center, radius) constructor.
-  static S2Cap FromPoint(S2Point const& center);
+  static S2Cap FromPoint(const S2Point& center);
 
   // Returns a cap with the given center and height (see comments above).  A
   // negative height yields an empty cap; a height of 2 or more yields a full
   // cap.  "center" should be unit length.
-  static S2Cap FromCenterHeight(S2Point const& center, double height);
+  static S2Cap FromCenterHeight(const S2Point& center, double height);
 
   // Return a cap with the given center and surface area.  Note that the area
   // can also be interpreted as the solid angle subtended by the cap (because
   // the sphere has unit radius).  A negative area yields an empty cap; an
   // area of 4*Pi or more yields a full cap.  "center" should be unit length.
-  static S2Cap FromCenterArea(S2Point const& center, double area);
+  static S2Cap FromCenterArea(const S2Point& center, double area);
 
   // Return an empty cap, i.e. a cap that contains no points.
   static S2Cap Empty();
@@ -93,7 +93,7 @@ class S2Cap final : public S2Region {
   ~S2Cap() override {}
 
   // Accessor methods.
-  S2Point const& center() const { return center_; }
+  const S2Point& center() const { return center_; }
   S1ChordAngle radius() const { return radius_; }
 
   // Returns the height of the cap, i.e. the distance from the center point to
@@ -143,37 +143,37 @@ class S2Cap final : public S2Region {
 
   // Return true if and only if this cap contains the given other cap
   // (in a set containment sense, e.g. every cap contains the empty cap).
-  bool Contains(S2Cap const& other) const;
+  bool Contains(const S2Cap& other) const;
 
   // Return true if and only if this cap intersects the given other cap,
   // i.e. whether they have any points in common.
-  bool Intersects(S2Cap const& other) const;
+  bool Intersects(const S2Cap& other) const;
 
   // Return true if and only if the interior of this cap intersects the
   // given other cap.  (This relationship is not symmetric, since only
   // the interior of this cap is used.)
-  bool InteriorIntersects(S2Cap const& other) const;
+  bool InteriorIntersects(const S2Cap& other) const;
 
   // Return true if and only if the given point is contained in the interior
   // of the cap (i.e. the cap excluding its boundary).  "p" should be be a
   // unit-length vector.
-  bool InteriorContains(S2Point const& p) const;
+  bool InteriorContains(const S2Point& p) const;
 
   // Increase the cap height if necessary to include the given point.  If the
   // cap is empty then the center is set to the given point, but otherwise the
   // center is not changed.  "p" should be a unit-length vector.
-  void AddPoint(S2Point const& p);
+  void AddPoint(const S2Point& p);
 
   // Increase the cap height if necessary to include "other".  If the current
   // cap is empty it is set to the given other cap.
-  void AddCap(S2Cap const& other);
+  void AddCap(const S2Cap& other);
 
   // Return a cap that contains all points within a given distance of this
   // cap.  Note that any expansion of the empty cap is still empty.
   S2Cap Expanded(S1Angle distance) const;
 
   // Return the smallest cap which encloses this cap and "other".
-  S2Cap Union(S2Cap const& other) const;
+  S2Cap Union(const S2Cap& other) const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
@@ -182,11 +182,11 @@ class S2Cap final : public S2Region {
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
   void GetCellUnionBound(std::vector<S2CellId> *cell_ids) const override;
-  bool Contains(S2Cell const& cell) const override;
-  bool MayIntersect(S2Cell const& cell) const override;
+  bool Contains(const S2Cell& cell) const override;
+  bool MayIntersect(const S2Cell& cell) const override;
 
   // The point "p" should be a unit-length vector.
-  bool Contains(S2Point const& p) const override;
+  bool Contains(const S2Point& p) const override;
 
   // Appends a serialized representation of the S2Cap to "encoder".
   //
@@ -202,11 +202,11 @@ class S2Cap final : public S2Region {
   // and testing purposes only.
 
   // Return true if two caps are identical.
-  bool operator==(S2Cap const& other) const;
+  bool operator==(const S2Cap& other) const;
 
   // Return true if the cap center and height differ by at most "max_error"
   // from the given cap "other".
-  bool ApproxEquals(S2Cap const& other,
+  bool ApproxEquals(const S2Cap& other,
                     S1Angle max_error = S1Angle::Radians(1e-14)) const;
 
  private:
@@ -221,38 +221,38 @@ class S2Cap final : public S2Region {
 
   // Return true if the cap intersects "cell", given that the cap does contain
   // any of the cell vertices (supplied in "vertices", an array of length 4).
-  bool Intersects(S2Cell const& cell, S2Point const* vertices) const;
+  bool Intersects(const S2Cell& cell, const S2Point* vertices) const;
 
   S2Point center_;
   S1ChordAngle radius_;
 };
 
-std::ostream& operator<<(std::ostream& os, S2Cap const& cap);
+std::ostream& operator<<(std::ostream& os, const S2Cap& cap);
 
 
 //////////////////   Implementation details follow   ////////////////////
 
 
-inline S2Cap::S2Cap(S2Point const& center, S1Angle radius)
+inline S2Cap::S2Cap(const S2Point& center, S1Angle radius)
     : center_(center), radius_(std::min(radius, S1Angle::Radians(M_PI))) {
   // The "min" calculation above is necessary to handle S1Angle::Infinity().
   DCHECK(is_valid());
 }
 
-inline S2Cap::S2Cap(S2Point const& center, S1ChordAngle radius)
+inline S2Cap::S2Cap(const S2Point& center, S1ChordAngle radius)
     : center_(center), radius_(radius) {
   DCHECK(is_valid());
 }
 
-inline S2Cap S2Cap::FromPoint(S2Point const& center) {
+inline S2Cap S2Cap::FromPoint(const S2Point& center) {
   return S2Cap(center, S1ChordAngle::Zero());
 }
 
-inline S2Cap S2Cap::FromCenterHeight(S2Point const& center, double height) {
+inline S2Cap S2Cap::FromCenterHeight(const S2Point& center, double height) {
   return S2Cap(center, S1ChordAngle::FromLength2(2 * height));
 }
 
-inline S2Cap S2Cap::FromCenterArea(S2Point const& center, double area) {
+inline S2Cap S2Cap::FromCenterArea(const S2Point& center, double area) {
   return S2Cap(center, S1ChordAngle::FromLength2(area / M_PI));
 }
 
