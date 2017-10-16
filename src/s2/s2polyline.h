@@ -113,8 +113,8 @@ class S2Polyline final : public S2Region {
   S1Angle GetLength() const;
 
   // Return the true centroid of the polyline multiplied by the length of the
-  // polyline (see s2.h for details on centroids).  The result is not unit
-  // length, so you may want to normalize it.
+  // polyline (see s2centroids.h for details on centroids).  The result is not
+  // unit length, so you may want to normalize it.
   //
   // Prescaling by the polyline length makes it easy to compute the centroid
   // of several polylines (by simply adding up their centroids).

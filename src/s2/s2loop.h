@@ -238,9 +238,9 @@ class S2Loop final : public S2Region {
   double GetArea() const;
 
   // Return the true centroid of the loop multiplied by the area of the loop
-  // (see s2.h for details on centroids).  The result is not unit length, so
-  // you may want to normalize it.  Also note that in general, the centroid
-  // may not be contained by the loop.
+  // (see s2centroids.h for details on centroids).  The result is not unit
+  // length, so you may want to normalize it.  Also note that in general, the
+  // centroid may not be contained by the loop.
   //
   // We prescale by the loop area for two reasons: (1) it is cheaper to
   // compute this way, and (2) it makes it easier to compute the centroid of

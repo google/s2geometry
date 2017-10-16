@@ -16,7 +16,7 @@
 //
 // Given a sequence of S2Points assumed to be the center of level-k cells,
 // compresses it into a stream using the following method:
-// - decompose the points into (face, si, ti) tuples (see s2.h)
+// - decompose the points into (face, si, ti) tuples (see s2coords.h)
 // - run-length encode the faces, combining face number and count into a
 //     varint32.  See the Faces class in s2pointcompression.cc.
 // - right shift the (si, ti) to remove the part that's constant for all cells

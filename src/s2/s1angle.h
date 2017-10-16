@@ -25,13 +25,11 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/_fpcontractoff.h"
+#include "s2/s2point.h"
 #include "s2/util/math/mathutil.h"
 #include "s2/util/math/vector.h"
 
 class S2LatLng;
-// Avoid circular include of s2.h.
-// This must be a typedef rather than a type alias declaration because of SWIG.
-typedef Vector3_d S2Point;
 
 // This class represents a one-dimensional angle (as opposed to a
 // two-dimensional solid angle).  It has methods for converting angles to

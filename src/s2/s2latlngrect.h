@@ -156,12 +156,12 @@ class S2LatLngRect final : public S2Region {
   double Area() const;
 
   // Return the true centroid of the rectangle multiplied by its surface area
-  // (see s2.h for details on centroids).  The result is not unit length, so
-  // you may want to normalize it.  Note that in general the centroid is
-  // *not* at the center of the rectangle, and in fact it may not even be
-  // contained by the rectangle.  (It is the "center of mass" of the rectangle
-  // viewed as subset of the unit sphere, i.e. it is the point in space about
-  // which this curved shape would rotate.)
+  // (see s2centroids.h for details on centroids).  The result is not unit
+  // length, so you may want to normalize it.  Note that in general the
+  // centroid is *not* at the center of the rectangle, and in fact it may not
+  // even be contained by the rectangle.  (It is the "center of mass" of the
+  // rectangle viewed as subset of the unit sphere, i.e. it is the point in
+  // space about which this curved shape would rotate.)
   //
   // The reason for multiplying the result by the rectangle area is to make it
   // easier to compute the centroid of more complicated shapes.  The centroid
