@@ -40,46 +40,40 @@ using std::min;
 using std::unordered_set;
 using std::vector;
 
-// Define storage for header file constants (the values are not needed here).
-const int S2RegionCoverer::kDefaultMaxCells;
-
-S2RegionCoverer::S2RegionCoverer() :
-  min_level_(0),
-  max_level_(S2CellId::kMaxLevel),
-  level_mod_(1),
-  max_cells_(kDefaultMaxCells),
-  region_(nullptr) {
+S2RegionCoverer::S2RegionCoverer(S2RegionCoverer::Options const& options) :
+  options_(options) {
 }
 
 // Defaulted in the implementation to prevent inline bloat.
+S2RegionCoverer::S2RegionCoverer() = default;
 S2RegionCoverer::~S2RegionCoverer() = default;
 S2RegionCoverer::S2RegionCoverer(S2RegionCoverer&&) = default;
 S2RegionCoverer& S2RegionCoverer::operator=(S2RegionCoverer&&) = default;
 
-void S2RegionCoverer::set_min_level(int min_level) {
+void S2RegionCoverer::Options::set_min_level(int min_level) {
   DCHECK_GE(min_level, 0);
   DCHECK_LE(min_level, S2CellId::kMaxLevel);
   min_level_ = max(0, min(S2CellId::kMaxLevel, min_level));
 }
 
-void S2RegionCoverer::set_max_level(int max_level) {
+void S2RegionCoverer::Options::set_max_level(int max_level) {
   DCHECK_GE(max_level, 0);
   DCHECK_LE(max_level, S2CellId::kMaxLevel);
   max_level_ = max(0, min(S2CellId::kMaxLevel, max_level));
 }
 
-void S2RegionCoverer::set_fixed_level(int level) {
+void S2RegionCoverer::Options::set_fixed_level(int level) {
   set_min_level(level);
   set_max_level(level);
 }
 
-void S2RegionCoverer::set_level_mod(int level_mod) {
+void S2RegionCoverer::Options::set_level_mod(int level_mod) {
   DCHECK_GE(level_mod, 1);
   DCHECK_LE(level_mod, 3);
   level_mod_ = max(1, min(3, level_mod));
 }
 
-void S2RegionCoverer::set_max_cells(int max_cells) {
+void S2RegionCoverer::Options::set_max_cells(int max_cells) {
   max_cells_ = max_cells;
 }
 
@@ -87,15 +81,16 @@ S2RegionCoverer::Candidate* S2RegionCoverer::NewCandidate(const S2Cell& cell) {
   if (!region_->MayIntersect(cell)) return nullptr;
 
   bool is_terminal = false;
-  if (cell.level() >= min_level_) {
+  if (cell.level() >= options_.min_level()) {
     if (interior_covering_) {
       if (region_->Contains(cell)) {
         is_terminal = true;
-      } else if (cell.level() + level_mod_ > max_level_) {
+      } else if (cell.level() + options_.level_mod() > options_.max_level()) {
         return nullptr;
       }
     } else {
-      if (cell.level() + level_mod_ > max_level_ || region_->Contains(cell)) {
+      if (cell.level() + options_.level_mod() > options_.max_level() ||
+          region_->Contains(cell)) {
         is_terminal = true;
       }
     }
@@ -158,9 +153,10 @@ void S2RegionCoverer::AddCandidate(Candidate* candidate) {
   }
   DCHECK_EQ(0, candidate->num_children);
 
-  // Expand one level at a time until we hit min_level_ to ensure that
-  // we don't skip over it.
-  int num_levels = (candidate->cell.level() < min_level_) ? 1 : level_mod_;
+  // Expand one level at a time until we hit min_level() to ensure that we
+  // don't skip over it.
+  int num_levels = ((candidate->cell.level() < options_.min_level()) ?
+                    1 : options_.level_mod());
   int num_terminals = ExpandChildren(candidate, candidate->cell, num_levels);
 
   if (candidate->num_children == 0) {
@@ -168,7 +164,7 @@ void S2RegionCoverer::AddCandidate(Candidate* candidate) {
 
   } else if (!interior_covering_ &&
              num_terminals == 1 << max_children_shift() &&
-             candidate->cell.level() >= min_level_) {
+             candidate->cell.level() >= options_.min_level()) {
     // Optimization: add the parent cell rather than all of its children.
     // We can't do this for interior coverings, since the children just
     // intersect the region, but may not be contained by it - we need to
@@ -192,15 +188,15 @@ void S2RegionCoverer::AddCandidate(Candidate* candidate) {
 }
 
 inline int S2RegionCoverer::AdjustLevel(int level) const {
-  if (level_mod() > 1 && level > min_level()) {
-    level -= (level - min_level()) % level_mod();
+  if (options_.level_mod() > 1 && level > options_.min_level()) {
+    level -= (level - options_.min_level()) % options_.level_mod();
   }
   return level;
 }
 
 void S2RegionCoverer::AdjustCellLevels(vector<S2CellId>* cells) const {
   DCHECK(is_sorted(cells->begin(), cells->end()));
-  if (level_mod() == 1) return;
+  if (options_.level_mod() == 1) return;
 
   int out = 0;
   for (S2CellId id : *cells) {
@@ -218,8 +214,8 @@ void S2RegionCoverer::GetInitialCandidates() {
   // Optimization: start with a small (usually 4 cell) covering of the
   // region's bounding cap.
   S2RegionCoverer tmp_coverer;
-  tmp_coverer.set_max_cells(min(4, max_cells()));
-  tmp_coverer.set_max_level(max_level());
+  tmp_coverer.mutable_options()->set_max_cells(min(4, options_.max_cells()));
+  tmp_coverer.mutable_options()->set_max_level(options_.max_level());
   vector<S2CellId> cells;
   tmp_coverer.GetFastCovering(*region_, &cells);
   AdjustCellLevels(&cells);
@@ -250,25 +246,26 @@ void S2RegionCoverer::GetCoveringInternal(const S2Region& region) {
 
   GetInitialCandidates();
   while (!pq_.empty() &&
-         (!interior_covering_ || result_.size() < max_cells_)) {
+         (!interior_covering_ || result_.size() < options_.max_cells())) {
     Candidate* candidate = pq_.top().second;
     pq_.pop();
     VLOG(2) << "Pop: " << candidate->cell.id();
     // For interior coverings we keep subdividing no matter how many children
-    // the candidate has.  If we reach max_cells_ before expanding all
+    // the candidate has.  If we reach max_cells() before expanding all
     // children, we will just use some of them.  For exterior coverings we
     // cannot do this, because the result has to cover the whole region, so
     // all children have to be used.  The (candidate->num_children == 1) case
-    // takes care of the situation when we already have more than max_cells_
+    // takes care of the situation when we already have more than max_cells()
     // in results (min_level is too high).  Subdividing the candidate with one
     // child does no harm in this case.
     if (interior_covering_ ||
-        candidate->cell.level() < min_level_ ||
+        candidate->cell.level() < options_.min_level() ||
         candidate->num_children == 1 ||
-        result_.size() + pq_.size() + candidate->num_children <= max_cells_) {
+        (result_.size() + pq_.size() + candidate->num_children <=
+         options_.max_cells())) {
       // Expand this candidate into its children.
       for (int i = 0; i < candidate->num_children; ++i) {
-        if (interior_covering_ && result_.size() >= max_cells_) {
+        if (interior_covering_ && result_.size() >= options_.max_cells()) {
           DeleteCandidate(candidate->children[i], true);
         } else {
           AddCandidate(candidate->children[i]);
@@ -288,42 +285,45 @@ void S2RegionCoverer::GetCoveringInternal(const S2Region& region) {
     pq_.pop();
   }
   region_ = nullptr;
+
+  // Rather than just returning the raw list of cell ids, we construct a cell
+  // union and then denormalize it.  This has the effect of replacing four
+  // child cells with their parent whenever this does not violate the covering
+  // parameters specified (min_level, level_mod, etc).  This significantly
+  // reduces the number of cells returned in many cases, and it is cheap
+  // compared to computing the covering in the first place.
+  S2CellUnion::Normalize(&result_);
+  if (options_.min_level() > 0 || options_.level_mod() > 1) {
+    auto result_copy = result_;
+    S2CellUnion::Denormalize(result_copy, options_.min_level(),
+                             options_.level_mod(), &result_);
+  }
 }
 
 void S2RegionCoverer::GetCovering(const S2Region& region,
                                   vector<S2CellId>* covering) {
-  // Rather than just returning the raw list of cell ids generated by
-  // GetCoveringInternal(), we construct a cell union and then denormalize it.
-  // This has the effect of replacing four child cells with their parent
-  // whenever this does not violate the covering parameters specified
-  // (min_level, level_mod, etc).  This strategy significantly reduces the
-  // number of cells returned in many cases, and it is cheap compared to
-  // computing the covering in the first place.
-
-  S2CellUnion tmp;
-  GetCellUnion(region, &tmp);
-  tmp.Denormalize(min_level(), level_mod(), covering);
+  interior_covering_ = false;
+  GetCoveringInternal(region);
+  *covering = std::move(result_);
 }
 
 void S2RegionCoverer::GetInteriorCovering(const S2Region& region,
                                           vector<S2CellId>* interior) {
-  S2CellUnion tmp;
-  GetInteriorCellUnion(region, &tmp);
-  tmp.Denormalize(min_level(), level_mod(), interior);
-}
-
-void S2RegionCoverer::GetCellUnion(const S2Region& region,
-                                   S2CellUnion* covering) {
-  interior_covering_ = false;
-  GetCoveringInternal(region);
-  covering->Init(std::move(result_));
-}
-
-void S2RegionCoverer::GetInteriorCellUnion(const S2Region& region,
-                                           S2CellUnion* interior) {
   interior_covering_ = true;
   GetCoveringInternal(region);
-  interior->Init(std::move(result_));
+  *interior = std::move(result_);
+}
+
+S2CellUnion S2RegionCoverer::GetCovering(const S2Region& region) {
+  interior_covering_ = false;
+  GetCoveringInternal(region);
+  return S2CellUnion::FromVerbatim(std::move(result_));
+}
+
+S2CellUnion S2RegionCoverer::GetInteriorCovering(const S2Region& region) {
+  interior_covering_ = true;
+  GetCoveringInternal(region);
+  return S2CellUnion::FromVerbatim(std::move(result_));
 }
 
 void S2RegionCoverer::GetFastCovering(const S2Region& region,
@@ -342,11 +342,11 @@ void S2RegionCoverer::NormalizeCovering(vector<S2CellId>* covering) {
 
   // If any cells are too small, or don't satisfy level_mod(), then replace
   // them with ancestors.
-  if (max_level() < S2CellId::kMaxLevel || level_mod() > 1) {
+  if (options_.max_level() < S2CellId::kMaxLevel || options_.level_mod() > 1) {
     for (int i = 0; i < covering->size(); ++i) {
       S2CellId id = (*covering)[i];
       int level = id.level();
-      int new_level = AdjustLevel(min(level, max_level()));
+      int new_level = AdjustLevel(min(level, options_.max_level()));
       if (new_level != level) {
         (*covering)[i] = id.parent(new_level);
       }
@@ -357,7 +357,7 @@ void S2RegionCoverer::NormalizeCovering(vector<S2CellId>* covering) {
 
   // If there are still too many cells, then repeatedly replace two adjacent
   // cells in S2CellId order by their lowest common ancestor.
-  while (covering->size() > max_cells()) {
+  while (covering->size() > options_.max_cells()) {
     int best_index = -1, best_level = -1;
     for (int i = 0; i + 1 < covering->size(); ++i) {
       int level = (*covering)[i].GetCommonAncestorLevel((*covering)[i+1]);
@@ -367,15 +367,16 @@ void S2RegionCoverer::NormalizeCovering(vector<S2CellId>* covering) {
         best_index = i;
       }
     }
-    if (best_level < min_level()) break;
+    if (best_level < options_.min_level()) break;
     (*covering)[best_index] = (*covering)[best_index].parent(best_level);
     S2CellUnion::Normalize(covering);
   }
   // Make sure that the covering satisfies min_level() and level_mod(),
   // possibly at the expense of satisfying max_cells().
-  if (min_level() > 0 || level_mod() > 1) {
-    S2CellUnion result = S2CellUnion::FromNormalized(std::move(*covering));
-    result.Denormalize(min_level(), level_mod(), covering);
+  if (options_.min_level() > 0 || options_.level_mod() > 1) {
+    S2CellUnion::Denormalize(*covering, options_.min_level(),
+                             options_.level_mod(), &result_);
+    *covering = result_;
   }
 }
 

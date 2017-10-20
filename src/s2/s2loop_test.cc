@@ -1187,12 +1187,19 @@ TEST(S2Loop, S2CellConstructorAndContains) {
 }
 
 // Construct a loop using s2textformat::MakeLoop(str) and check that it
-// produces
-// a validation error that includes "snippet".
+// produces a validation error that includes "snippet".
 static void CheckLoopIsInvalid(const string& str, const string& snippet) {
   unique_ptr<S2Loop> loop(s2textformat::MakeLoop(str));
   S2Error error;
   EXPECT_TRUE(loop->FindValidationError(&error));
+  EXPECT_NE(string::npos, error.text().find(snippet));
+}
+
+static void CheckLoopIsInvalid(const vector<S2Point>& points,
+                               const string& snippet) {
+  S2Loop l(points);
+  S2Error error;
+  EXPECT_TRUE(l.FindValidationError(&error));
   EXPECT_NE(string::npos, error.text().find(snippet));
 }
 
@@ -1215,15 +1222,15 @@ TEST(S2Loop, IsValidDetectsInvalidLoops) {
   // Some edges cross
   CheckLoopIsInvalid("20:20, 21:21, 21:20.5, 21:20, 20:21", "crosses");
 
-  // We can't test non-unit length vertices in debug mode, because loop
-  // construction will CHECK-fail in s2pred::Sign.
-  if (!google::DEBUG_MODE) {
-    S2Point v4[] = { S2Point(2, 0, 0), S2Point(0, 1, 0), S2Point(0, 0, 1) };
-    S2Loop l4(vector<S2Point>(v4, v4 + 3));
-    S2Error error;
-    EXPECT_TRUE(l4.FindValidationError(&error));
-    EXPECT_NE(string::npos, error.text().find("unit length"));
-  }
+  // Points with non-unit length (triggers DCHECK failure in debug)
+  EXPECT_DEBUG_DEATH(
+      CheckLoopIsInvalid({S2Point(2, 0, 0), S2Point(0, 1, 0), S2Point(0, 0, 1)},
+                         "unit length"),
+      "IsUnitLength");
+
+  // Adjacent antipodal vertices
+  CheckLoopIsInvalid({S2Point(1, 0, 0), S2Point(-1, 0, 0), S2Point(0, 0, 1)},
+                    "antipodal");
 }
 
 // Helper function for testing the distance methods.  "boundary_x" is the

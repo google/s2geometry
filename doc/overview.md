@@ -10,7 +10,7 @@ geometry libraries.
 
 Let's break down the elements of this goal.  First, why spherical
 geometry?  (By the way, the name "S2" is derived from the mathematical
-    notation for the unit sphere, *S<sup>2</sup>*.)
+notation for the unit sphere, *S²*.)
 
 Traditional cartography is based on *map projections*, which are simply
 functions that map points on the Earth's surface to points on a planar

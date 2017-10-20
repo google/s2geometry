@@ -289,7 +289,7 @@ class S2Point {
 %unignore S2CellUnion::Clone;
 %unignore S2CellUnion::Contains;
 %unignore S2CellUnion::Decode;
-%unignore S2CellUnion::Denormalize;
+%unignore S2CellUnion::Denormalize(int, int, std::vector<S2CellId>*) const;
 %unignore S2CellUnion::Encode;
 %unignore S2CellUnion::ExactArea;
 %unignore S2CellUnion::GetDifference;
@@ -430,8 +430,9 @@ class S2Point {
 %unignore S2RegionCoverer;
 %unignore S2RegionCoverer::S2RegionCoverer;
 %unignore S2RegionCoverer::~S2RegionCoverer;
-%unignore S2RegionCoverer::GetCovering;
-%unignore S2RegionCoverer::GetInteriorCovering;
+%unignore S2RegionCoverer::GetCovering(const S2Region&, std::vector<S2CellId>*);
+%unignore S2RegionCoverer::GetInteriorCovering(const S2Region&,
+                                               std::vector<S2CellId>*);
 %unignore S2RegionCoverer::max_cells;
 %unignore S2RegionCoverer::max_level;
 %unignore S2RegionCoverer::min_level;

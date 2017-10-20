@@ -20,7 +20,7 @@
 
 #include <memory>
 #include "s2/s2polyline.h"
-#include "s2/s2shapeindex.h"
+#include "s2/s2shape.h"
 
 // S2LaxPolylineShape represents a polyline.  It is similar to
 // S2Polyline::Shape except that duplicate vertices are allowed, and the

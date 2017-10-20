@@ -179,6 +179,12 @@ bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
                   "Edge %d is degenerate (duplicate vertex)", i);
       return true;
     }
+    if (vertex(i) == -vertex(i + 1)) {
+      error->Init(S2Error::ANTIPODAL_VERTICES,
+                  "Vertices %d and %d are antipodal", i,
+                  (i + 1) % num_vertices());
+      return true;
+    }
   }
   return false;
 }
