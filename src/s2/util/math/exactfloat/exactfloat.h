@@ -167,9 +167,10 @@ class ExactFloat {
 
   // Construct an ExactFloat from an "int".  Note that in general, ints are
   // automatically converted to doubles and so would be handled by the
-  // constructor above.  However, the particular argument (0) is ambiguous; the
-  // compiler doesn't know whether to treat it as a "double" or "nullptr"
-  // (invoking the const char* constructor below).
+  // constructor above.  However, the particular argument (0) would be
+  // ambiguous; the compiler wouldn't know whether to treat it as a "double" or
+  // "const char*" (since 0 is a valid null pointer constant).  Adding an "int"
+  // constructor solves this problem.
   //
   // We do not provide constructors for "unsigned", "long", "unsigned long",
   // "long long", or "unsigned long long", since these types are not typically

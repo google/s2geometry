@@ -110,10 +110,7 @@ class Bits {
            Bits::CountOnes64(Uint128Low64(n));
   }
 
-  // Count bits using popcnt instruction (available on argo machines).
-  // Doesn't check if the instruction exists.
-  // Please use TestCPUFeature(POPCNT) from base/cpuid/cpuid.h before using
-  // this.
+  // Count bits using popcnt instruction.
   static inline int CountOnes64withPopcount(uint64 n) {
     // POPCNT has a false data dependency on its output register.
     // gcc / clang will optimize the intrinsic, but not inline asm.

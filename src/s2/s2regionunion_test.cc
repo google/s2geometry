@@ -79,7 +79,7 @@ TEST(S2RegionUnionTest, Basic) {
   EXPECT_TRUE(three_points->Contains(S2LatLng::FromDegrees(10, 10).ToPoint()));
 
   S2RegionCoverer coverer;
-  coverer.set_max_cells(1);
+  coverer.mutable_options()->set_max_cells(1);
   vector<S2CellId> covering;
   coverer.GetCovering(*two_points, &covering);
   EXPECT_EQ(1, covering.size());

@@ -649,9 +649,6 @@ class S2ShapeIndex final : public S2ShapeIndexBase {
   // MaybeApplyUpdates).
   bool is_fresh() const;
 
-  ABSL_DEPRECATED("Use Clear()")
-  void Reset() { Clear(); }
-
  protected:
   std::unique_ptr<IteratorBase> NewIterator(InitialPosition pos) const override;
 

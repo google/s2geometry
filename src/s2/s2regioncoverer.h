@@ -207,56 +207,6 @@ class S2RegionCoverer {
   static void FloodFill(const S2Region& region, S2CellId start,
                         std::vector<S2CellId>* output);
 
-  ABSL_DEPRECATED("Use S2RegionCoverer::Options::kDefaultMaxCells")
-  static constexpr int kDefaultMaxCells = Options::kDefaultMaxCells;
-
-  ABSL_DEPRECATED("Use options().max_cells()")
-  int max_cells() const { return options().max_cells(); }
-
-  ABSL_DEPRECATED("Use S2RegionCoverer(Options) or mutable_options()")
-  void set_max_cells(int max_cells) {
-    mutable_options()->set_max_cells(max_cells);
-  }
-
-  ABSL_DEPRECATED("Use options().min_level()")
-  int min_level() const { return options().min_level(); }
-
-  ABSL_DEPRECATED("Use S2RegionCoverer(Options) or mutable_options()")
-  void set_min_level(int min_level) {
-    mutable_options()->set_min_level(min_level);
-  }
-
-  ABSL_DEPRECATED("Use options().max_level()")
-  int max_level() const { return options().max_level(); }
-
-  ABSL_DEPRECATED("Use S2RegionCoverer(Options) or mutable_options()")
-  void set_max_level(int max_level) {
-    mutable_options()->set_max_level(max_level);
-  }
-
-  ABSL_DEPRECATED("Use S2RegionCoverer(Options) or mutable_options()")
-  void set_fixed_level(int fixed_level) {
-    mutable_options()->set_fixed_level(fixed_level);
-  }
-
-  ABSL_DEPRECATED("Use options().level_mod()")
-  int level_mod() const { return options().level_mod(); }
-
-  ABSL_DEPRECATED("Use S2RegionCoverer(Options) or mutable_options()")
-  void set_level_mod(int level_mod) {
-    mutable_options()->set_level_mod(level_mod);
-  }
-
-  ABSL_DEPRECATED("Use *covering = GetCovering(region)")
-  void GetCellUnion(const S2Region& region, S2CellUnion* covering) {
-    *covering = GetCovering(region);
-  }
-
-  ABSL_DEPRECATED("Use *interior = GetCovering(region)")
-  void GetInteriorCellUnion(const S2Region& region, S2CellUnion* interior) {
-    *interior = GetInteriorCovering(region);
-  }
-
  private:
   struct Candidate {
     S2Cell cell;

@@ -374,9 +374,6 @@ class S2ClosestEdgeQuery {
   // Returns the point on given result edge that is closest to "point".
   S2Point Project(const S2Point& point, const Result& result) const;
 
-  ABSL_DEPRECATED("Use ReInit()")
-  void Reset() { ReInit(); }
-
  private:
   Options options_;
   Base base_;

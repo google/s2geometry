@@ -52,31 +52,6 @@ class S2Error;
 namespace s2shapeutil {
 
 /////////////////////////////////////////////////////////////////////////////
-///////////////////////////  Utility Shape Types  ///////////////////////////
-
-using EdgeVectorShape = S2EdgeVectorShape
-    ABSL_DEPRECATED("Use S2EdgeVectorShape");
-
-using ClosedLaxPolyline = S2LaxClosedPolylineShape
-    ABSL_DEPRECATED("Use S2LaxClosedPolylineShape");
-
-using LaxLoop = S2LaxLoopShape
-    ABSL_DEPRECATED("Use S2LaxLoopShape");
-
-using LaxPolygon = S2LaxPolygonShape
-    ABSL_DEPRECATED("Use S2LaxPolygonShape");
-
-using LaxPolyline = S2LaxPolylineShape
-    ABSL_DEPRECATED("Use S2LaxPolylineShape");
-
-using PointVectorShape = S2PointVectorShape
-    ABSL_DEPRECATED("Use S2PointVectorShape");
-
-using VertexIdLaxLoop = S2VertexIdLaxLoopShape
-    ABSL_DEPRECATED("Use S2VertexIdLaxLoopShape");
-
-
-/////////////////////////////////////////////////////////////////////////////
 ////////////////////// Utility Functions and Classes ////////////////////////
 
 // RangeIterator is a wrapper over S2ShapeIndex::Iterator with extra methods

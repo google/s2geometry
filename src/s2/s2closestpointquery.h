@@ -170,9 +170,6 @@ class S2ClosestPointQuery {
   // The client data associated with the result point at the given index.
   const Data& data(int i) const;
 
-  ABSL_DEPRECATED("Use ReInit()")
-  void Reset() { ReInit(); }
-
  private:
   using PointData = typename Index::PointData;
   using Iterator = typename Index::Iterator;
@@ -593,7 +590,7 @@ void S2ClosestPointQuery<Data>::InitQueue(const Target& target) {
   const std::vector<S2CellId>* initial_cells = &index_covering_;
   if (region_) {
     S2RegionCoverer coverer;
-    coverer.set_max_cells(4);
+    coverer.mutable_options()->set_max_cells(4);
     coverer.GetCovering(*region_, &region_covering_);
     S2CellUnion::GetIntersection(index_covering_, region_covering_,
                                  &intersection_with_region_);
@@ -601,7 +598,7 @@ void S2ClosestPointQuery<Data>::InitQueue(const Target& target) {
   }
   if (max_distance_limit_ < S1ChordAngle::Infinity()) {
     S2RegionCoverer coverer;
-    coverer.set_max_cells(4);
+    coverer.mutable_options()->set_max_cells(4);
     S2Cap search_cap(target.center(),
                      target.radius() + max_distance_limit_.ToAngle());
     coverer.GetFastCovering(search_cap, &max_distance_covering_);

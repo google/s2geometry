@@ -116,9 +116,6 @@ class S2PointIndex {
   // Resets the index to its original empty state.  Invalidates all iterators.
   void Clear();
 
-  ABSL_DEPRECATED("Use Clear()")
-  void Reset() { Clear(); }
-
  private:
   // Defined here because the Iterator class below uses it.
   using Map = util::btree::btree_multimap<S2CellId, PointData>;
@@ -174,14 +171,6 @@ class S2PointIndex {
     // Positions the iterator at the first entry with id() >= target, or at the
     // end of the index if no such entry exists.
     void Seek(S2CellId target);
-
-    ABSL_DEPRECATED("Use pointer version")
-    explicit Iterator(const S2PointIndex& index) : Iterator(&index) {}
-
-    ABSL_DEPRECATED("Use pointer version")
-    void Init(const S2PointIndex& index) {
-      Init(&index);
-    }
 
    private:
     const Map* map_;

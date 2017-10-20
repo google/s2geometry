@@ -69,20 +69,20 @@ TEST(S2RegionCoverer, RandomCells) {
   }
 }
 
-static void CheckCovering(const S2RegionCoverer& coverer,
+static void CheckCovering(const S2RegionCoverer::Options& options,
                           const S2Region& region,
                           const vector<S2CellId>& covering,
                           bool interior) {
-  // Keep track of how many cells have the same coverer.min_level() ancestor.
+  // Keep track of how many cells have the same options.min_level() ancestor.
   unordered_map<S2CellId, int, S2CellIdHash> min_level_cells;
   for (S2CellId cell_id : covering) {
     int level = cell_id.level();
-    EXPECT_GE(level, coverer.min_level());
-    EXPECT_LE(level, coverer.max_level());
-    EXPECT_EQ((level - coverer.min_level()) % coverer.level_mod(), 0);
-    min_level_cells[cell_id.parent(coverer.min_level())] += 1;
+    EXPECT_GE(level, options.min_level());
+    EXPECT_LE(level, options.max_level());
+    EXPECT_EQ((level - options.min_level()) % options.level_mod(), 0);
+    min_level_cells[cell_id.parent(options.min_level())] += 1;
   }
-  if (covering.size() > coverer.max_cells()) {
+  if (covering.size() > options.max_cells()) {
     // If the covering has more than the requested number of cells, then check
     // that the cell count cannot be reduced by using the parent of some cell.
     for (unordered_map<S2CellId, int, S2CellIdHash>::const_iterator i =
@@ -103,23 +103,24 @@ static void CheckCovering(const S2RegionCoverer& coverer,
 
 TEST(S2RegionCoverer, RandomCaps) {
   static const int kMaxLevel = S2CellId::kMaxLevel;
-  S2RegionCoverer coverer;
+  S2RegionCoverer::Options options;
   for (int i = 0; i < 1000; ++i) {
     do {
-      coverer.set_min_level(S2Testing::rnd.Uniform(kMaxLevel + 1));
-      coverer.set_max_level(S2Testing::rnd.Uniform(kMaxLevel + 1));
-    } while (coverer.min_level() > coverer.max_level());
-    coverer.set_max_cells(S2Testing::rnd.Skewed(10));
-    coverer.set_level_mod(1 + S2Testing::rnd.Uniform(3));
-    double max_area =  min(4 * M_PI, (3 * coverer.max_cells() + 1) *
-                           S2Cell::AverageArea(coverer.min_level()));
+      options.set_min_level(S2Testing::rnd.Uniform(kMaxLevel + 1));
+      options.set_max_level(S2Testing::rnd.Uniform(kMaxLevel + 1));
+    } while (options.min_level() > options.max_level());
+    options.set_max_cells(S2Testing::rnd.Skewed(10));
+    options.set_level_mod(1 + S2Testing::rnd.Uniform(3));
+    double max_area =  min(4 * M_PI, (3 * options.max_cells() + 1) *
+                           S2Cell::AverageArea(options.min_level()));
     S2Cap cap = S2Testing::GetRandomCap(0.1 * S2Cell::AverageArea(kMaxLevel),
                                         max_area);
+    S2RegionCoverer coverer(options);
     vector<S2CellId> covering, interior;
     coverer.GetCovering(cap, &covering);
-    CheckCovering(coverer, cap, covering, false);
+    CheckCovering(options, cap, covering, false);
     coverer.GetInteriorCovering(cap, &interior);
-    CheckCovering(coverer, cap, interior, true);
+    CheckCovering(options, cap, interior, true);
 
     // Check that GetCovering is deterministic.
     vector<S2CellId> covering2;
@@ -132,25 +133,25 @@ TEST(S2RegionCoverer, RandomCaps) {
     // children of the same parent.
     S2CellUnion cells(covering);
     vector<S2CellId> denormalized;
-    cells.Denormalize(coverer.min_level(), coverer.level_mod(), &denormalized);
-    CheckCovering(coverer, cap, denormalized, false);
+    cells.Denormalize(options.min_level(), options.level_mod(), &denormalized);
+    CheckCovering(options, cap, denormalized, false);
   }
 }
 
 TEST(S2RegionCoverer, SimpleCoverings) {
   static const int kMaxLevel = S2CellId::kMaxLevel;
-  S2RegionCoverer coverer;
-  coverer.set_max_cells(kint32max);
+  S2RegionCoverer::Options options;
+  options.set_max_cells(kint32max);
   for (int i = 0; i < 1000; ++i) {
     int level = S2Testing::rnd.Uniform(kMaxLevel + 1);
-    coverer.set_min_level(level);
-    coverer.set_max_level(level);
+    options.set_min_level(level);
+    options.set_max_level(level);
     double max_area =  min(4 * M_PI, 1000 * S2Cell::AverageArea(level));
     S2Cap cap = S2Testing::GetRandomCap(0.1 * S2Cell::AverageArea(kMaxLevel),
                                         max_area);
     vector<S2CellId> covering;
     S2RegionCoverer::GetSimpleCovering(cap, cap.center(), level, &covering);
-    CheckCovering(coverer, cap, covering, false);
+    CheckCovering(options, cap, covering, false);
   }
 }
 
@@ -177,7 +178,7 @@ static void TestAccuracy(int max_cells) {
   // terms of cell count and approximation area.
 
   S2RegionCoverer coverer;
-  coverer.set_max_cells(max_cells);
+  coverer.mutable_options()->set_max_cells(max_cells);
 
   double ratio_total[kNumMethods] = {0};
   double min_ratio[kNumMethods];  // initialized in loop below
@@ -290,10 +291,11 @@ TEST(S2RegionCoverer, InteriorCovering) {
   S2CellId large_cell = small_cell.parent(level);
   S2CellUnion diff =
       S2CellUnion({large_cell}).Difference(S2CellUnion({small_cell}));
-  S2RegionCoverer coverer;
-  coverer.set_max_cells(3);
-  coverer.set_max_level(level + 3);
-  coverer.set_min_level(level);
+  S2RegionCoverer::Options options;
+  options.set_max_cells(3);
+  options.set_max_level(level + 3);
+  options.set_min_level(level);
+  S2RegionCoverer coverer(options);
   vector<S2CellId> interior;
   coverer.GetInteriorCovering(diff, &interior);
   ASSERT_EQ(interior.size(), 3);
