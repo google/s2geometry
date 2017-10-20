@@ -698,7 +698,7 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
     // Compute a covering of the search disc and intersect it with the
     // precomputed index covering.
     S2RegionCoverer coverer;
-    coverer.set_max_cells(4);
+    coverer.mutable_options()->set_max_cells(4);
     S1Angle radius = cap.GetRadius() + Distance::GetAngleBound(distance_limit_);
     S2Cap search_cap(cap.center(), radius);
     coverer.GetFastCovering(search_cap, &max_distance_covering_);

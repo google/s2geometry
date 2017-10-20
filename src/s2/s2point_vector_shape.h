@@ -60,12 +60,6 @@ class S2PointVectorShape : public S2Shape {
     return ChainPosition(e, 0);
   }
 
-  ABSL_DEPRECATED("Use value constructor with std::move")
-  explicit S2PointVectorShape(std::vector<S2Point>* points) { Init(points); }
-
-  ABSL_DEPRECATED("Use value constructor with std::move and copy assignment")
-  void Init(std::vector<S2Point>* points) { points_.swap(*points); }
-
  private:
   std::vector<S2Point> points_;
 };

@@ -263,7 +263,7 @@ bool MakeIndex(string_view str, std::unique_ptr<S2ShapeIndex>* index) {
     points.push_back(point);
   }
   if (!points.empty()) {
-    (*index)->Add(make_unique<S2PointVectorShape>(&points));
+    (*index)->Add(make_unique<S2PointVectorShape>(std::move(points)));
   }
   for (const auto& line_str : SplitString(strs[1], '|')) {
     std::unique_ptr<S2LaxPolylineShape> lax_polyline;

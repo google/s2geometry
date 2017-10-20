@@ -429,7 +429,7 @@ class PointCloudShapeIndexFactory : public ShapeIndexFactory {
     for (int i = 0; i < num_edges; ++i) {
       points.push_back(S2Testing::SamplePoint(index_cap));
     }
-    index->Add(make_unique<S2PointVectorShape>(&points));
+    index->Add(make_unique<S2PointVectorShape>(std::move(points)));
   }
 };
 

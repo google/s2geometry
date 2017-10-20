@@ -1730,9 +1730,9 @@ static void SplitAndAssemble(const S2Polygon& polygon) {
 
     // Now choose a level that has up to 500 cells in the covering.
     int level = min_level + S2Testing::rnd.Uniform(google::DEBUG_MODE ? 4 : 6);
-    coverer.set_min_level(min_level);
-    coverer.set_max_level(level);
-    coverer.set_max_cells(500);
+    coverer.mutable_options()->set_min_level(min_level);
+    coverer.mutable_options()->set_max_level(level);
+    coverer.mutable_options()->set_max_cells(500);
 
     vector<S2CellId> cells;
     coverer.GetCovering(polygon, &cells);

@@ -332,9 +332,8 @@ TEST(S2CellUnion, Expand) {
 
     // Generate a covering for the original cap, and measure the maximum
     // distance from the cap center to any point in the covering.
-    S2CellUnion covering;
-    coverer.set_max_cells(1 + rnd.Skewed(10));
-    coverer.GetCellUnion(cap, &covering);
+    coverer.mutable_options()->set_max_cells(1 + rnd.Skewed(10));
+    S2CellUnion covering = coverer.GetCovering(cap);
     S2Testing::CheckCovering(cap, covering, true);
     double covering_radius = GetRadius(covering, cap.center());
 

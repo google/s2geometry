@@ -39,8 +39,7 @@ TEST(S2ShapeIndexBufferedRegion, EmptyIndex) {
   S1ChordAngle radius(S1Angle::Degrees(2));
   S2ShapeIndexBufferedRegion region(&index, radius);
   S2RegionCoverer coverer;
-  S2CellUnion covering;
-  coverer.GetCellUnion(region, &covering);
+  S2CellUnion covering = coverer.GetCovering(region);
   EXPECT_EQ(0, covering.num_cells());
 }
 
@@ -50,8 +49,7 @@ TEST(S2ShapeIndexBufferedRegion, FullPolygon) {
   S1ChordAngle radius(S1Angle::Degrees(2));
   S2ShapeIndexBufferedRegion region(index.get(), radius);
   S2RegionCoverer coverer;
-  S2CellUnion covering;
-  coverer.GetCellUnion(region, &covering);
+  S2CellUnion covering = coverer.GetCovering(region);
   ASSERT_EQ(6, covering.num_cells());
   for (S2CellId id : covering) {
     EXPECT_TRUE(id.is_face());
@@ -64,9 +62,8 @@ TEST(S2ShapeIndexBufferedRegion, FullAfterBuffering) {
   S1ChordAngle radius(S1Angle::Degrees(60));
   S2ShapeIndexBufferedRegion region(index.get(), radius);
   S2RegionCoverer coverer;
-  coverer.set_max_cells(1000);
-  S2CellUnion covering;
-  coverer.GetCellUnion(region, &covering);
+  coverer.mutable_options()->set_max_cells(1000);
+  S2CellUnion covering = coverer.GetCovering(region);
   ASSERT_EQ(6, covering.num_cells());
   for (S2CellId id : covering) {
     EXPECT_TRUE(id.is_face());
@@ -79,8 +76,7 @@ TEST(S2ShapeIndexBufferedRegion, PointZeroRadius) {
   auto index = MakeIndexOrDie("34:25 # #");
   S2ShapeIndexBufferedRegion region(index.get(), S1ChordAngle::Zero());
   S2RegionCoverer coverer;
-  S2CellUnion covering;
-  coverer.GetCellUnion(region, &covering);
+  S2CellUnion covering = coverer.GetCovering(region);
   EXPECT_EQ(1, covering.num_cells());
   for (S2CellId id : covering) {
     EXPECT_TRUE(id.is_leaf());
@@ -95,9 +91,8 @@ TEST(S2ShapeIndexBufferedRegion, BufferedPointVsCap) {
   S1ChordAngle radius(S1Angle::Degrees(2));
   S2ShapeIndexBufferedRegion region(index.get(), radius);
   S2RegionCoverer coverer;
-  coverer.set_max_cells(50);
-  S2CellUnion covering;
-  coverer.GetCellUnion(region, &covering);
+  coverer.mutable_options()->set_max_cells(50);
+  S2CellUnion covering = coverer.GetCovering(region);
   S2Cap equivalent_cap(point, radius);
   S2Testing::CheckCovering(equivalent_cap, covering, true);
 }
@@ -114,10 +109,9 @@ void TestBufferIndex(const string& index_str, S1Angle radius_angle,
   auto index = MakeIndexOrDie(index_str);
   S1ChordAngle radius(radius_angle);
   S2ShapeIndexBufferedRegion region(index.get(), radius);
-  S2CellUnion covering;
-  coverer->GetCellUnion(region, &covering);
+  S2CellUnion covering = coverer->GetCovering(region);
   LOG(INFO) << "Covering uses " << covering.num_cells()
-            << " cells vs. max of " << coverer->max_cells();
+            << " cells vs. max of " << coverer->options().max_cells();
   if (VLOG_IS_ON(2)) {
     // Output the cells in the covering for visualization purposes.
     for (S2CellId id : covering) {
@@ -145,14 +139,14 @@ void TestBufferIndex(const string& index_str, S1Angle radius_angle,
 TEST(S2ShapeIndexBufferedRegion, PointSet) {
   // Test buffering a set of points.
   S2RegionCoverer coverer;
-  coverer.set_max_cells(100);
+  coverer.mutable_options()->set_max_cells(100);
   TestBufferIndex("10:20 | 10:23 | 10:26 # #", S1Angle::Degrees(5), &coverer);
 }
 
 TEST(S2ShapeIndexBufferedRegion, Polyline) {
   // Test buffering a polyline.
   S2RegionCoverer coverer;
-  coverer.set_max_cells(100);
+  coverer.mutable_options()->set_max_cells(100);
   TestBufferIndex("# 10:5, 20:30, -10:60, -60:100 #",
                   S1Angle::Degrees(2), &coverer);
 }
@@ -160,7 +154,7 @@ TEST(S2ShapeIndexBufferedRegion, Polyline) {
 TEST(S2ShapeIndexBufferedRegion, PolygonWithHole) {
   // Test buffering a polygon with a hole.
   S2RegionCoverer coverer;
-  coverer.set_max_cells(100);
+  coverer.mutable_options()->set_max_cells(100);
   TestBufferIndex("# # 10:10, 10:100, 70:0; 11:11, 69:0, 11:99",
                   S1Angle::Degrees(2), &coverer);
 }
