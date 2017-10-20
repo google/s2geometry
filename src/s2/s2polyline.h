@@ -29,7 +29,7 @@
 #include "s2/s2error.h"
 #include "s2/s2latlngrect.h"
 #include "s2/s2region.h"
-#include "s2/s2shapeindex.h"
+#include "s2/s2shape.h"
 
 class Decoder;
 class Encoder;

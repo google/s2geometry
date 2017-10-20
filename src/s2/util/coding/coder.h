@@ -200,8 +200,6 @@ class Decoder {
   const unsigned char* buf_;
   const unsigned char* limit_;
 };
-#ifndef SWIG
-#endif                 // SWIG
 
 // TODO(user): Remove when LLVM detects and optimizes this case.
 class DecoderExtensions {
@@ -288,6 +286,75 @@ inline void Encoder::put_varint64(uint64 v) {
          (Varint::Encode64(reinterpret_cast<char*>(buf_), v));
 }
 
+// Copies N bytes from *src to *dst then advances both pointers by N bytes.
+// Template parameter N specifies the number of bytes to copy. Passing
+// constant size results in optimized code from memcpy for the size.
+template <size_t N>
+void CopyAndAdvance(const uint8** src, uint8** dst) {
+  memcpy(*dst, *src, N);
+  *dst += N;
+  *src += N;
+}
+
+// Tries a fast path if both the decoder and the encoder have enough room for
+// max varint64 (10 bytes). With enough room, we don't need boundary checks at
+// every iterations. Also, memcpy with known size is faster than copying a byte
+// at a time (e.g. one movq vs. eight movb's).
+//
+// If either the decoder or the encoder doesn't have enough room, it falls back
+// to previous example where copy and boundary check happen at every byte.
+inline bool Encoder::PutVarint64FromDecoderLessCommonSizes(Decoder* dec) {
+  const unsigned char* dec_ptr = dec->buf_;
+  const unsigned char* dec_limit = dec->limit_;
+
+  // Check once if both the encoder and the decoder have enough room for
+  // maximum varint64 (kVarintMax64) instead of checking at every bytes.
+  if (ABSL_PREDICT_TRUE(dec_ptr <= dec_limit - kVarintMax64 &&
+                        buf_ <= limit_ - kVarintMax64)) {
+    if (dec_ptr[2] < 128) {
+      CopyAndAdvance<3>(&dec->buf_, &buf_);
+    } else if (dec_ptr[3] < 128) {
+      CopyAndAdvance<4>(&dec->buf_, &buf_);
+    } else if (dec_ptr[4] < 128) {
+      CopyAndAdvance<5>(&dec->buf_, &buf_);
+    } else if (dec_ptr[5] < 128) {
+      CopyAndAdvance<6>(&dec->buf_, &buf_);
+    } else if (dec_ptr[6] < 128) {
+      CopyAndAdvance<7>(&dec->buf_, &buf_);
+    } else if (dec_ptr[7] < 128) {
+      CopyAndAdvance<8>(&dec->buf_, &buf_);
+    } else if (dec_ptr[8] < 128) {
+      CopyAndAdvance<9>(&dec->buf_, &buf_);
+    } else if (dec_ptr[9] < 2) {
+      // 10th byte stores at most 1 bit for varint64.
+      CopyAndAdvance<10>(&dec->buf_, &buf_);
+    } else {
+      return false;
+    }
+    return true;
+  }
+
+  unsigned char c;
+  unsigned char* enc_ptr = buf_;
+
+  // The loop executes at most (kVarintMax64 - 1) iterations because either the
+  // decoder or the encoder has less availability than kVarintMax64. We must be
+  // careful about the cost of moving any computation out of the loop.
+  // Xref cl/133546957 for more details of various implementations we explored.
+  do {
+    if (dec_ptr >= dec_limit) return false;
+    if (enc_ptr >= limit_) return false;
+    c = *dec_ptr;
+    *enc_ptr = c;
+    ++dec_ptr;
+    ++enc_ptr;
+  } while (c >= 128);
+
+  dec->buf_ = dec_ptr;
+  buf_ = enc_ptr;
+  return true;
+}
+
 // The fast implementation of the code below with boundary checks.
 //   uint64 val;
 //   if (!dec->get_varint64(&val))
@@ -302,13 +369,14 @@ inline void Encoder::put_varint64(uint64 v) {
 // over-inlining, PutVarint64FromDecoderLessCommonSizes is defined in coder.cc.
 // As Untranspose::DecodeMessage is the only caller, compiler should be able to
 // inline all if necessary.
-inline bool Encoder::put_varint64_from_decoder(Decoder* dec) {
+ABSL_ATTRIBUTE_ALWAYS_INLINE inline bool Encoder::put_varint64_from_decoder(
+    Decoder* dec) {
   unsigned char* enc_ptr = buf_;
   const unsigned char* dec_ptr = dec->buf_;
 
   // Common cases to handle varint64 with one to two bytes.
-  if (dec_ptr < dec->limit_ && dec_ptr[0] < 128) {
-    if (enc_ptr >= limit_) {
+  if (ABSL_PREDICT_TRUE(dec_ptr < dec->limit_ && dec_ptr[0] < 128)) {
+    if (ABSL_PREDICT_FALSE(enc_ptr >= limit_)) {
       return false;
     }
     *enc_ptr = *dec_ptr;
@@ -318,7 +386,7 @@ inline bool Encoder::put_varint64_from_decoder(Decoder* dec) {
   }
 
   if (dec_ptr < dec->limit_ - 1 && dec_ptr[1] < 128) {
-    if (enc_ptr >= limit_ - 1) {
+    if (ABSL_PREDICT_FALSE(enc_ptr >= limit_ - 1)) {
       return false;
     }
     UNALIGNED_STORE16(enc_ptr, UNALIGNED_LOAD16(dec_ptr));

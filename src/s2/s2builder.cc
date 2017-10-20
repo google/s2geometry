@@ -793,6 +793,11 @@ void S2Builder::SortSitesByDistance(const S2Point& x,
 // Voronoi sites and then testing each edge in the chain.  If a site needs to
 // be added, we mark all nearby edges for re-snapping.
 void S2Builder::AddExtraSites(const S2ShapeIndex& input_edge_index) {
+  // When options_.split_crossing_edges() is true, this function may be called
+  // even when snap_radius_ == 0 (because edge_snap_radius_ > 0).  However
+  // neither of the conditions above apply in that case.
+  if (snap_radius_ == S1Angle::Zero()) return;
+
   vector<SiteId> chain;  // Temporary
   vector<InputEdgeId> snap_queue;
   for (InputEdgeId max_e = 0; max_e < input_edges_.size(); ++max_e) {
@@ -1143,7 +1148,7 @@ void S2Builder::BuildLayerEdges(
   // If so, we build a map from each site to the set of input vertices that
   // snapped to that site.
   vector<compact_array<InputVertexId>> site_vertices;
-  bool simplify = snapping_needed_ && options().simplify_edge_chains();
+  bool simplify = snapping_needed_ && options_.simplify_edge_chains();
   if (simplify) site_vertices.resize(sites_.size());
 
   layer_edges->resize(layers_.size());

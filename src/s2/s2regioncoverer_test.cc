@@ -54,18 +54,18 @@ DEFINE_int32(iters, google::DEBUG_MODE ? 1000 : 100000,
              "Number of random caps to try for each max_cells value");
 
 TEST(S2RegionCoverer, RandomCells) {
-  S2RegionCoverer coverer;
-  coverer.set_max_cells(1);
+  S2RegionCoverer::Options options;
+  options.set_max_cells(1);
+  S2RegionCoverer coverer(options);
 
   // Test random cell ids at all levels.
   for (int i = 0; i < 10000; ++i) {
     S2CellId id = S2Testing::GetRandomCellId();
     SCOPED_TRACE(StringPrintf("Iteration %d, cell ID token %s",
                               i, id.ToToken().c_str()));
-    vector<S2CellId> covering;
-    coverer.GetCovering(S2Cell(id), &covering);
-    EXPECT_EQ(covering.size(), 1);
-    EXPECT_EQ(covering[0], id);
+    vector<S2CellId> covering = coverer.GetCovering(S2Cell(id)).Release();
+    EXPECT_EQ(1, covering.size());
+    EXPECT_EQ(id, covering[0]);
   }
 }
 

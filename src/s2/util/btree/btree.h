@@ -1454,7 +1454,9 @@ class btree : public Params::key_compare {
 
   // The leftmost node is stored as the parent of the root node.
   node_type* leftmost() { return root() ? root()->parent() : nullptr; }
-  const node_type* leftmost() const { return root() ? root()->parent() : nullptr; }
+  const node_type* leftmost() const {
+    return root() ? root()->parent() : nullptr;
+  }
 
   // The size of the tree is stored in the root node.
   size_type* mutable_size() { return root()->mutable_size(); }

@@ -297,10 +297,16 @@ class S2CellUnion final : public S2Region {
   // Static methods intended for high-performance clients that prefer to
   // manage their own storage.
 
-  // Like Normalize(), but works directly with a vector of S2CellIds.
+  // Like Normalize(), but works with a vector of S2CellIds.
   // Equivalent to:
   //   *cell_ids = S2CellUnion(std::move(*cell_ids)).Release();
   static bool Normalize(std::vector<S2CellId>* cell_ids);
+
+  // Like Denormalize(), but works with a vector of S2CellIds.
+  // REQUIRES: out != &in
+  static void Denormalize(const std::vector<S2CellId>& in,
+                          int min_level, int level_mod,
+                          std::vector<S2CellId>* out);
 
   // Like GetIntersection(), but works directly with vectors of S2CellIds,
   // Equivalent to:

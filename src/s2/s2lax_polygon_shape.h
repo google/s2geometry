@@ -23,7 +23,7 @@
 
 #include "s2/third_party/absl/types/span.h"
 #include "s2/s2polygon.h"
-#include "s2/s2shapeindex.h"
+#include "s2/s2shape.h"
 
 // S2LaxPolygonShape represents a region defined by a collection of zero or
 // more closed loops.  The interior is the region to the left of all loops.

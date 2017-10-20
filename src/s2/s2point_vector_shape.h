@@ -19,7 +19,7 @@
 #define S2_S2POINT_VECTOR_SHAPE_H_
 
 #include <vector>
-#include "s2/s2shapeindex.h"
+#include "s2/s2shape.h"
 
 // S2PointVectorShape is an S2Shape representing a set of S2Points. Each point
 // is reprsented as a degenerate edge with the same starting and ending

@@ -171,15 +171,22 @@ bool S2CellUnion::Normalize() {
 }
 
 void S2CellUnion::Denormalize(int min_level, int level_mod,
-                              vector<S2CellId>* output) const {
+                              vector<S2CellId>* out) const {
+  Denormalize(cell_ids_, min_level, level_mod, out);
+}
+
+void S2CellUnion::Denormalize(const vector<S2CellId>& in,
+                              int min_level, int level_mod,
+                              vector<S2CellId>* out) {
   DCHECK_GE(min_level, 0);
   DCHECK_LE(min_level, S2CellId::kMaxLevel);
   DCHECK_GE(level_mod, 1);
   DCHECK_LE(level_mod, 3);
+  DCHECK_NE(out, &in);
 
-  output->clear();
-  output->reserve(num_cells());
-  for (S2CellId id : *this) {
+  out->clear();
+  out->reserve(in.size());
+  for (S2CellId id : in) {
     int level = id.level();
     int new_level = max(min_level, level);
     if (level_mod > 1) {
@@ -189,11 +196,11 @@ void S2CellUnion::Denormalize(int min_level, int level_mod,
       new_level = min(S2CellId::kMaxLevel, new_level);
     }
     if (new_level == level) {
-      output->push_back(id);
+      out->push_back(id);
     } else {
       S2CellId end = id.child_end(new_level);
       for (id = id.child_begin(new_level); id != end; id = id.next()) {
-        output->push_back(id);
+        out->push_back(id);
       }
     }
   }
