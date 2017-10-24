@@ -94,6 +94,9 @@ class S2RegionCoverer {
     //   median ratio:  5.33   3.32  2.73  2.34  1.98  1.66  1.42  1.11   1.01
     //   worst case:  215518  14.41  9.72  5.26  3.91  2.75  1.92  1.20   1.02
     //
+    // The default value of 8 gives a reasonable tradeoff between the number
+    // of cells used and the accuracy of the approximation.
+    //
     // DEFAULT: kDefaultMaxCells
     static constexpr int kDefaultMaxCells = 8;
     int max_cells() const { return max_cells_; }

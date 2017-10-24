@@ -78,7 +78,7 @@ TEST(RangeIterator, EmptyIndex) {
 // A set of edge pairs within an S2ShapeIndex.
 using EdgePairVector = std::vector<std::pair<ShapeEdgeId, ShapeEdgeId>>;
 
-EdgePairVector GetCrossings(const S2ShapeIndex& index, CrossingType type) {
+EdgePairVector GetCrossings(const S2ShapeIndexBase& index, CrossingType type) {
   EdgePairVector edge_pairs;
   VisitCrossings(index, type,
                  [&edge_pairs](const ShapeEdge& a, const ShapeEdge& b, bool) {
@@ -93,7 +93,7 @@ EdgePairVector GetCrossings(const S2ShapeIndex& index, CrossingType type) {
   return edge_pairs;
 }
 
-EdgePairVector GetCrossingEdgePairsBruteForce(const S2ShapeIndex& index,
+EdgePairVector GetCrossingEdgePairsBruteForce(const S2ShapeIndexBase& index,
                                               CrossingType type) {
   EdgePairVector result;
   int min_sign = (type == CrossingType::ALL) ? 0 : 1;
@@ -116,7 +116,8 @@ std::ostream& operator<<(std::ostream& os,
   return os << "(" << pair.first << "," << pair.second << ")";
 }
 
-void TestGetCrossingEdgePairs(const S2ShapeIndex& index, CrossingType type) {
+void TestGetCrossingEdgePairs(const S2ShapeIndexBase& index,
+                              CrossingType type) {
   EdgePairVector expected = GetCrossingEdgePairsBruteForce(index, type);
   EdgePairVector actual = GetCrossings(index, type);
   if (actual != expected) {
@@ -137,14 +138,14 @@ void TestGetCrossingEdgePairs(const S2ShapeIndex& index, CrossingType type) {
 }
 
 TEST(GetCrossingEdgePairs, NoIntersections) {
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   TestGetCrossingEdgePairs(index, CrossingType::ALL);
   TestGetCrossingEdgePairs(index, CrossingType::INTERIOR);
 }
 
 TEST(GetCrossingEdgePairs, EdgeGrid) {
   const int kGridSize = 10;  // (kGridSize + 1) * (kGridSize + 1) crossings
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   auto shape = make_unique<S2EdgeVectorShape>();
   for (int i = 0; i <= kGridSize; ++i) {
     shape->Add(S2LatLng::FromDegrees(0, i).ToPoint(),

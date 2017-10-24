@@ -40,7 +40,7 @@ class S2Shape;
 //
 // void Test(const vector<S2Polyline*>& polylines,
 //           const S2Point& a0, const S2Point &a1) {
-//   S2ShapeIndex index;
+//   MutableS2ShapeIndex index;
 //   for (S2Polyline* polyline : polylines) {
 //     index.Add(absl::make_unique<S2Polyline::Shape>(polyline));
 //   }

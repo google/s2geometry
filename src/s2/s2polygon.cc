@@ -301,7 +301,7 @@ void S2Polygon::InitIndex() {
   DCHECK_EQ(0, index_.num_shape_ids());
   index_.Add(make_unique<Shape>(this));
   if (!FLAGS_s2polygon_lazy_indexing) {
-    index_.ForceApplyUpdates();  // Force index construction now.
+    index_.ForceBuild();
   }
   if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
     // Note that FLAGS_s2debug is false in optimized builds (by default).
@@ -1217,7 +1217,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::OperationWithPolyline(
   S2BooleanOperation op(
       op_type, make_unique<S2PolylineVectorLayer>(&result, layer_options),
       options);
-  S2ShapeIndex a_index;
+  MutableS2ShapeIndex a_index;
   a_index.Add(make_unique<S2Polyline::Shape>(&a));
   S2Error error;
   if (!op.Build(a_index, index_, &error)) {
@@ -1332,9 +1332,8 @@ void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
   S2Builder builder((S2Builder::Options(
       IdentitySnapFunction(S1Angle::Radians(snap_radius)))));
   builder.StartLayer(make_unique<S2PolygonLayer>(this));
-  for (int i = 0; i < cells.num_cells(); ++i) {
-    S2Loop cell_loop(S2Cell(cells.cell_id(i)));
-    builder.AddLoop(cell_loop);
+  for (S2CellId id : cells) {
+    builder.AddLoop(S2Loop{S2Cell{id}});
   }
   S2Error error;
   if (!builder.Build(&error)) {
@@ -1344,7 +1343,7 @@ void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
   // polygon rather than the empty one.  There are only two ways that this can
   // happen: either the cell union is empty, or it consists of all six faces.
   if (num_loops() == 0) {
-    if (cells.num_cells() == 0) return;
+    if (cells.empty()) return;
     DCHECK_EQ(static_cast<uint64>(6) << (2 * S2CellId::kMaxLevel),
               cells.LeafCellsCovered());
     Invert();

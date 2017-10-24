@@ -574,7 +574,8 @@ class S2Loop final : public S2Region {
 
   // Given an iterator that is already positioned at the S2ShapeIndexCell
   // containing "p", returns Contains(p).
-  bool Contains(const S2ShapeIndex::Iterator& it, const S2Point& p) const;
+  bool Contains(const MutableS2ShapeIndex::Iterator& it,
+                const S2Point& p) const;
 
   // Return true if the loop boundary intersects "target".  It may also
   // return true when the loop boundary does not intersect "target" but
@@ -582,7 +583,7 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: it.id().contains(target.id())
   // [This condition is true whenever it.Locate(target) returns INDEXED.]
-  bool BoundaryApproxIntersects(const S2ShapeIndex::Iterator& it,
+  bool BoundaryApproxIntersects(const MutableS2ShapeIndex::Iterator& it,
                                 const S2Cell& target) const;
 
   // Return an index "first" and a direction "dir" (either +1 or -1) such that
@@ -653,7 +654,7 @@ class S2Loop final : public S2Region {
   S2LatLngRect subregion_bound_;
 
   // Spatial index for this loop.
-  S2ShapeIndex index_;
+  MutableS2ShapeIndex index_;
 
   // SWIG doesn't understand "= delete".
 #ifndef SWIG

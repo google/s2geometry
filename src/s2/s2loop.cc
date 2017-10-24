@@ -280,7 +280,7 @@ void S2Loop::InitBound() {
 void S2Loop::InitIndex() {
   index_.Add(make_unique<Shape>(this));
   if (!FLAGS_s2loop_lazy_indexing) {
-    index_.ForceApplyUpdates();  // Force index construction now.
+    index_.ForceBuild();
   }
   if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
     // Note that FLAGS_s2debug is false in optimized builds (by default).
@@ -333,7 +333,7 @@ int S2Loop::FindVertex(const S2Point& p) const {
     }
     return -1;
   }
-  S2ShapeIndex::Iterator it(&index_);
+  MutableS2ShapeIndex::Iterator it(&index_);
   if (!it.Locate(p)) return -1;
 
   const S2ClippedShape& a_clipped = it.cell().clipped(0);
@@ -590,7 +590,7 @@ S2Cap S2Loop::GetCapBound() const {
 }
 
 bool S2Loop::Contains(const S2Cell& target) const {
-  S2ShapeIndex::Iterator it(&index_);
+  MutableS2ShapeIndex::Iterator it(&index_);
   S2ShapeIndex::CellRelation relation = it.Locate(target.id());
 
   // If "target" is disjoint from all index cells, it is not contained.
@@ -609,7 +609,7 @@ bool S2Loop::Contains(const S2Cell& target) const {
 }
 
 bool S2Loop::MayIntersect(const S2Cell& target) const {
-  S2ShapeIndex::Iterator it(&index_);
+  MutableS2ShapeIndex::Iterator it(&index_);
   S2ShapeIndex::CellRelation relation = it.Locate(target.id());
 
   // If "target" does not overlap any index cell, there is no intersection.
@@ -631,7 +631,7 @@ bool S2Loop::MayIntersect(const S2Cell& target) const {
   return Contains(it, target.GetCenter());
 }
 
-bool S2Loop::BoundaryApproxIntersects(const S2ShapeIndex::Iterator& it,
+bool S2Loop::BoundaryApproxIntersects(const MutableS2ShapeIndex::Iterator& it,
                                       const S2Cell& target) const {
   DCHECK(it.id().contains(target.id()));
   const S2ClippedShape& a_clipped = it.cell().clipped(0);
@@ -694,7 +694,7 @@ bool S2Loop::Contains(const S2Point& p) const {
   }
   // Otherwise we look up the S2ShapeIndex cell containing this point.  Note
   // the index is built automatically the first time an iterator is created.
-  S2ShapeIndex::Iterator it(&index_);
+  MutableS2ShapeIndex::Iterator it(&index_);
   if (!it.Locate(p)) return false;
   return Contains(it, p);
 }
@@ -713,7 +713,7 @@ bool S2Loop::BruteForceContains(const S2Point& p) const {
   return inside;
 }
 
-bool S2Loop::Contains(const S2ShapeIndex::Iterator& it,
+bool S2Loop::Contains(const MutableS2ShapeIndex::Iterator& it,
                       const S2Point& p) const {
   // Test containment by drawing a line segment from the cell center to the
   // given point and counting edge crossings.
@@ -858,12 +858,13 @@ class LoopRelation {
                            const S2Point& b2) = 0;
 };
 
-// RangeIterator is a wrapper over S2ShapeIndex::Iterator with extra methods
-// that are useful for merging the contents of two or more S2ShapeIndexes.
+// RangeIterator is a wrapper over MutableS2ShapeIndex::Iterator with extra
+// methods that are useful for merging the contents of two or more
+// S2ShapeIndexes.
 class RangeIterator {
  public:
   // Construct a new RangeIterator positioned at the first cell of the index.
-  explicit RangeIterator(const S2ShapeIndex* index)
+  explicit RangeIterator(const MutableS2ShapeIndex* index)
       : it_(index, S2ShapeIndex::BEGIN) {
     Refresh();
   }
@@ -916,7 +917,7 @@ class RangeIterator {
     range_max_ = id().range_max();
   }
 
-  S2ShapeIndex::Iterator it_;
+  MutableS2ShapeIndex::Iterator it_;
   S2CellId range_min_, range_max_;
   const S2ClippedShape* clipped_;
 };

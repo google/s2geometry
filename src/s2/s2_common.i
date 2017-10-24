@@ -283,6 +283,7 @@ class S2Point {
 %unignore S2CellId::range_max;
 %unignore S2CellId::range_min;
 %unignore S2CellUnion;
+%ignore S2CellUnion::operator[];  // Silence the SWIG warning.
 %unignore S2CellUnion::S2CellUnion;
 %unignore S2CellUnion::~S2CellUnion;
 %unignore S2CellUnion::ApproxArea;

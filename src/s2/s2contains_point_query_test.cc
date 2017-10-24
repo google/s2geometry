@@ -47,7 +47,7 @@ TEST(S2ContainsPointQuery, VertexModelOpen) {
   EXPECT_FALSE(q.Contains(MakePoint("10:10")));
 
   // Test the last few cases using the Init() method instead.
-  S2ContainsPointQuery<S2ShapeIndex> q2;
+  S2ContainsPointQuery<MutableS2ShapeIndex> q2;
   q2.Init(index.get(), options);
   EXPECT_FALSE(q2.ShapeContains(*index->shape(1), MakePoint("1:6")));
   EXPECT_TRUE(q2.ShapeContains(*index->shape(2), MakePoint("1:6")));
@@ -69,7 +69,7 @@ TEST(S2ContainsPointQuery, VertexModelSemiOpen) {
   EXPECT_FALSE(q.Contains(MakePoint("10:10")));
 
   // Test the last few cases using the Init() method instead.
-  S2ContainsPointQuery<S2ShapeIndex> q2;
+  S2ContainsPointQuery<MutableS2ShapeIndex> q2;
   q2.Init(index.get(), options);
   EXPECT_FALSE(q2.ShapeContains(*index->shape(1), MakePoint("1:6")));
   EXPECT_TRUE(q2.ShapeContains(*index->shape(2), MakePoint("1:6")));
@@ -91,7 +91,7 @@ TEST(S2ContainsPointQuery, VertexModelClosed) {
   EXPECT_FALSE(q.Contains(MakePoint("10:10")));
 
   // Test the last few cases using the Init() method instead.
-  S2ContainsPointQuery<S2ShapeIndex> q2;
+  S2ContainsPointQuery<MutableS2ShapeIndex> q2;
   q2.Init(index.get(), options);
   EXPECT_FALSE(q2.ShapeContains(*index->shape(1), MakePoint("1:6")));
   EXPECT_TRUE(q2.ShapeContains(*index->shape(2), MakePoint("1:6")));
@@ -104,7 +104,7 @@ TEST(S2ContainsPointQuery, GetContainingShapes) {
   const int kNumVerticesPerLoop = 10;
   const S1Angle kMaxLoopRadius = S2Testing::KmToAngle(10);
   const S2Cap center_cap(S2Testing::RandomPoint(), kMaxLoopRadius);
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   for (int i = 0; i < 100; ++i) {
     std::unique_ptr<S2Loop> loop = S2Loop::MakeRegularLoop(
         S2Testing::SamplePoint(center_cap),
@@ -133,7 +133,7 @@ TEST(S2ContainsPointQuery, GetContainingShapes) {
 using EdgeIdVector = vector<ShapeEdgeId>;
 
 void ExpectIncidentEdgeIds(const EdgeIdVector& expected,
-                           const S2ShapeIndex& index, const S2Point& p) {
+                           const MutableS2ShapeIndex& index, const S2Point& p) {
   EdgeIdVector actual;
   auto q = MakeS2ContainsPointQuery(&index);
   EXPECT_TRUE(

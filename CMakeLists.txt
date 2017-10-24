@@ -29,6 +29,7 @@ add_library(s2 SHARED
             src/s2/base/stringprintf.cc
             src/s2/base/strtoint.cc
             src/s2/id_set_lexicon.cc
+            src/s2/mutable_s2shapeindex.cc
             src/s2/r2rect.cc
             src/s2/s1angle.cc
             src/s2/s1chordangle.cc
@@ -120,6 +121,7 @@ target_link_libraries(
 # transitively included by s2 headers we are exporting.
 install(FILES src/s2/_fpcontractoff.h
               src/s2/id_set_lexicon.h
+              src/s2/mutable_s2shapeindex.h
               src/s2/priority_queue_sequence.h
               src/s2/r1interval.h
               src/s2/r2.h
@@ -279,6 +281,7 @@ if (GTEST_ROOT)
 
   set(S2TestFiles
       src/s2/id_set_lexicon_test.cc
+      src/s2/mutable_s2shapeindex_test.cc
       src/s2/priority_queue_sequence_test.cc
       src/s2/r1interval_test.cc
       src/s2/r2rect_test.cc

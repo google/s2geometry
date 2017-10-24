@@ -46,7 +46,7 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
   //    depth is one less.  This generates a set of multi-loop polygons.
   // 4. The output loops of all components at depth 0 become a single face.
 
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   // A map from shape.id() to the corresponding component number.
   vector<int> component_ids;
   vector<S2Shape*> outer_loops;

@@ -337,7 +337,7 @@ class GraphShape : public S2Shape {
 void DegeneracyFinder::ComputeUnknownSignsIndexed(
     VertexId known_vertex, int known_vertex_sign,
     vector<Component>* components) const {
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   index.Add(make_unique<GraphShape>(&g_));
   S2CrossingEdgeQuery query(&index);
   vector<EdgeId> crossing_edges;

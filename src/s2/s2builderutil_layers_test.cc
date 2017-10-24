@@ -277,7 +277,7 @@ TEST(S2PolygonLayer, SevenDiamondsTouchingAtOnePointPerPair) {
 
 TEST(IndexedS2PolygonLayer, AddsShape) {
   S2Builder builder((S2Builder::Options()));
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolygonLayer>(&index));
   const string& polygon_str = "0:0, 0:10, 10:0";
   builder.AddPolygon(*s2textformat::MakePolygon(polygon_str));
@@ -291,7 +291,7 @@ TEST(IndexedS2PolygonLayer, AddsShape) {
 
 TEST(IndexedS2PolygonLayer, AddsEmptyShape) {
   S2Builder builder((S2Builder::Options()));
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolygonLayer>(&index));
   S2Polygon polygon;
   builder.AddPolygon(polygon);
@@ -457,7 +457,7 @@ TEST(S2PolylineLayer, InvalidPolyline) {
 
 TEST(IndexedS2PolylineLayer, AddsShape) {
   S2Builder builder((S2Builder::Options()));
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolylineLayer>(&index));
   const string& polyline_str = "0:0, 0:10";
   builder.AddPolyline(*s2textformat::MakePolyline(polyline_str));
@@ -471,7 +471,7 @@ TEST(IndexedS2PolylineLayer, AddsShape) {
 
 TEST(IndexedS2PolylineLayer, AddsEmptyShape) {
   S2Builder builder((S2Builder::Options()));
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolylineLayer>(&index));
   S2Polyline line;
   builder.AddPolyline(line);
@@ -653,7 +653,7 @@ TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
 
 TEST(IndexedS2PolylineVectorLayer, AddsShapes) {
   S2Builder builder((S2Builder::Options()));
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolylineVectorLayer>(&index));
   string polyline0_str = "0:0, 1:1";
   string polyline1_str = "2:2, 3:3";
@@ -774,7 +774,7 @@ TEST(S2PointVectorLayer, Error) {
 
 TEST(IndexedS2PointVectorLayer, AddsShapes) {
   S2Builder builder((S2Builder::Options()));
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PointVectorLayer>(&index));
   string point0_str = "0:0";
   string point1_str = "2:2";
@@ -791,7 +791,7 @@ TEST(IndexedS2PointVectorLayer, AddsShapes) {
 
 TEST(IndexedS2PointVectorLayer, AddsEmptyShape) {
   S2Builder builder((S2Builder::Options()));
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PointVectorLayer>(&index));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));

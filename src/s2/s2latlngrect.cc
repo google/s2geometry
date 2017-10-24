@@ -362,9 +362,9 @@ bool S2LatLngRect::IntersectsLngEdge(const S2Point& a, const S2Point& b,
   // longitude.  The nice thing about edges of constant longitude is that
   // they are straight lines on the sphere (geodesics).
 
-  return S2::SimpleCrossing(
+  return S2::CrossingSign(
       a, b, S2LatLng::FromRadians(lat.lo(), lng).ToPoint(),
-      S2LatLng::FromRadians(lat.hi(), lng).ToPoint());
+      S2LatLng::FromRadians(lat.hi(), lng).ToPoint()) > 0;
 }
 
 bool S2LatLngRect::IntersectsLatEdge(const S2Point& a, const S2Point& b,

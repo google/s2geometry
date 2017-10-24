@@ -35,10 +35,10 @@
 // have a nested "Shape" class (e.g., S2Polygon::Shape).  It is easy for
 // clients to implement their own subtypes, since the interface is minimal.
 //
-// S2Shape operations are typically defined on S2ShapeIndexes rather than
-// individual shapes.  An S2ShapeIndex is simply a collection of S2Shapes,
-// possibly of different dimensions (e.g. 10 points and 3 polygons), organized
-// into a data structure for efficient edge access.
+// S2Shape operations are typically defined on S2ShapeIndex objects rather
+// than individual shapes.  An S2ShapeIndex is simply a collection of
+// S2Shapes, possibly of different dimensions (e.g. 10 points and 3 polygons),
+// organized into a data structure for efficient edge access.
 //
 // The edges of an S2Shape are identified by a contiguous range of "edge ids"
 // starting at 0.  The edges are further subdivided into "chains", where each
@@ -227,8 +227,8 @@ class S2Shape {
   virtual void* mutable_user_data() { return nullptr; }
 
  private:
-  friend class S2ShapeIndex;
-  int id_;  // Assigned by S2ShapeIndex when the shape is added.
+  friend class MutableS2ShapeIndex;
+  int id_;  // Assigned by MutableS2ShapeIndex when the shape is added.
 
   S2Shape(const S2Shape&) = delete;
   void operator=(const S2Shape&) = delete;

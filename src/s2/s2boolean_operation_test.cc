@@ -51,8 +51,8 @@ S2Error::Code INDEXES_DO_NOT_MATCH = S2Error::USER_DEFINED_START;
 
 class IndexMatchingLayer : public S2Builder::Layer {
  public:
-  explicit IndexMatchingLayer(const S2ShapeIndex& index, int dimension)
-      : index_(index), dimension_(dimension) {
+  explicit IndexMatchingLayer(const S2ShapeIndexBase* index, int dimension)
+      : index_(*index), dimension_(dimension) {
   }
   GraphOptions graph_options() const override {
     return GraphOptions(EdgeType::DIRECTED, DegenerateEdges::KEEP,
@@ -65,7 +65,7 @@ class IndexMatchingLayer : public S2Builder::Layer {
   using EdgeVector = vector<S2Shape::Edge>;
   static string ToString(const EdgeVector& edges);
 
-  const S2ShapeIndex& index_;
+  const S2ShapeIndexBase& index_;
   int dimension_;
 };
 
@@ -130,7 +130,7 @@ void ExpectResult(S2BooleanOperation::OpType op_type,
   auto expected = s2textformat::MakeIndex(expected_str);
   vector<unique_ptr<S2Builder::Layer>> layers;
   for (int dim = 0; dim < 3; ++dim) {
-    layers.push_back(make_unique<IndexMatchingLayer>(*expected, dim));
+    layers.push_back(make_unique<IndexMatchingLayer>(expected.get(), dim));
   }
   S2BooleanOperation op(op_type, std::move(layers), options);
   S2Error error;

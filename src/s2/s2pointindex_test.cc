@@ -75,10 +75,9 @@ class S2PointIndexTest : public ::testing::Test {
       // Generate a cellunion that covers the range of empty leaf cells between
       // the last cell and this one.  Then make sure that seeking to any of
       // those cells takes us to the immediately following cell.
-      S2CellUnion skipped;
-      skipped.InitFromBeginEnd(min_cellid, cellid.range_min());
-      for (int i = 0; i < skipped.num_cells(); ++i) {
-        it2.Seek(skipped.cell_id(i));
+      auto skipped = S2CellUnion::FromBeginEnd(min_cellid, cellid.range_min());
+      for (S2CellId skipped_id : skipped) {
+        it2.Seek(skipped_id);
         EXPECT_EQ(cellid, it2.id());
       }
       // Test Prev(), Next(), and Seek().

@@ -102,9 +102,9 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
     shape->Add(edge.first, edge.second);
   }
   // Force more subdivision than usual to make the test more challenging.
-  S2ShapeIndex::Options options;
+  MutableS2ShapeIndex::Options options;
   options.set_max_edges_per_cell(1);
-  S2ShapeIndex index(options);
+  MutableS2ShapeIndex index(options);
   index.Add(absl::WrapUnique(shape));
   // To check that candidates are being filtered reasonably, we count the
   // total number of candidates that the total number of edge pairs that
@@ -184,9 +184,9 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
 // may lie on the boundary between two cube faces, or pass through a cube
 // vertex, or follow a 45 diagonal across a cube face toward its center.
 //
-// This test is sufficient to demonstrate that padding the cell boundaries
-// is necessary for correctness.  (It fails if S2ShapeIndex::kCellPadding is
-// set to zero.)
+// This test is sufficient to demonstrate that padding the cell boundaries is
+// necessary for correctness.  (It fails if MutableS2ShapeIndex::kCellPadding
+// is set to zero.)
 TEST(GetCrossingCandidates, PerturbedCubeEdges) {
   S2Testing::Random* rnd = &S2Testing::rnd;
   vector<TestEdge> edges;
@@ -258,7 +258,7 @@ TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
 }
 
 // This is the example from the header file, with a few extras.
-void TestPolylineCrossings(const S2ShapeIndex& index,
+void TestPolylineCrossings(const S2ShapeIndexBase& index,
                            const S2Point& a0, const S2Point& a1) {
   S2CrossingEdgeQuery query(&index);
   S2CrossingEdgeQuery::EdgeMap edge_map;
@@ -290,7 +290,7 @@ void TestPolylineCrossings(const S2ShapeIndex& index,
 }
 
 TEST(GetCrossings, PolylineCrossings) {
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   // Three zig-zag lines near the equator.
   index.Add(make_unique<S2Polyline::OwningShape>(
       MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6")));

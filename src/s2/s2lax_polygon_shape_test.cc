@@ -151,7 +151,7 @@ TEST(S2LaxPolygonShape, InvertedLoops) {
 }
 
 void CompareS2LoopToShape(const S2Loop& loop, unique_ptr<S2Shape> shape) {
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   index.Add(std::move(shape));
   S2Cap cap = loop.GetCapBound();
   auto query = MakeS2ContainsPointQuery(&index);

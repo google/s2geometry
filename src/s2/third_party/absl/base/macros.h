@@ -32,6 +32,7 @@
 #ifndef S2_THIRD_PARTY_ABSL_BASE_MACROS_H_
 #define S2_THIRD_PARTY_ABSL_BASE_MACROS_H_
 
+#include <cassert>
 #include <cstddef>
 
 #include "s2/third_party/absl/base/port.h"
