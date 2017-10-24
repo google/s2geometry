@@ -490,7 +490,7 @@ void S2Builder::Reset() {
 void S2Builder::ChooseSites() {
   if (input_vertices_.empty()) return;
 
-  S2ShapeIndex input_edge_index;
+  MutableS2ShapeIndex input_edge_index;
   input_edge_index.Add(make_unique<VertexIdEdgeVectorShape>(
       input_edges_, input_vertices_));
   if (options_.split_crossing_edges()) {
@@ -608,7 +608,7 @@ vector<S2Builder::InputVertexKey> S2Builder::SortInputVertices() {
 // Check all edge pairs for crossings, and add the corresponding intersection
 // points to input_vertices_.  (The intersection points will be snapped and
 // merged with the other vertices during site selection.)
-void S2Builder::AddEdgeCrossings(const S2ShapeIndex& input_edge_index) {
+void S2Builder::AddEdgeCrossings(const MutableS2ShapeIndex& input_edge_index) {
   // We need to build a list of intersections and add them afterwards so that
   // we don't reallocate vertices_ during the VisitCrossings() call.
   vector<S2Point> new_vertices;
@@ -792,7 +792,7 @@ void S2Builder::SortSitesByDistance(const S2Point& x,
 // We check these conditions by snapping all the input edges to a chain of
 // Voronoi sites and then testing each edge in the chain.  If a site needs to
 // be added, we mark all nearby edges for re-snapping.
-void S2Builder::AddExtraSites(const S2ShapeIndex& input_edge_index) {
+void S2Builder::AddExtraSites(const MutableS2ShapeIndex& input_edge_index) {
   // When options_.split_crossing_edges() is true, this function may be called
   // even when snap_radius_ == 0 (because edge_snap_radius_ > 0).  However
   // neither of the conditions above apply in that case.
@@ -817,7 +817,7 @@ void S2Builder::AddExtraSites(const S2ShapeIndex& input_edge_index) {
 void S2Builder::MaybeAddExtraSites(InputEdgeId edge_id,
                                    InputEdgeId max_edge_id,
                                    const vector<SiteId>& chain,
-                                   const S2ShapeIndex& input_edge_index,
+                                   const MutableS2ShapeIndex& input_edge_index,
                                    vector<InputEdgeId>* snap_queue) {
   // The snapped chain is always a *subsequence* of the nearby sites
   // (edge_sites_), so we walk through the two arrays in parallel looking for
@@ -884,7 +884,7 @@ void S2Builder::MaybeAddExtraSites(InputEdgeId edge_id,
 // "max_edge_id", since those edges have not been snapped the first time yet).
 void S2Builder::AddExtraSite(const S2Point& new_site,
                              InputEdgeId max_edge_id,
-                             const S2ShapeIndex& input_edge_index,
+                             const MutableS2ShapeIndex& input_edge_index,
                              vector<InputEdgeId>* snap_queue) {
   SiteId new_site_id = sites_.size();
   sites_.push_back(new_site);

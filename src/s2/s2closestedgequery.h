@@ -42,7 +42,7 @@
 // to a query point:
 //
 // void Test(const vector<S2Polyline*>& polylines, const S2Point& point) {
-//   S2ShapeIndex index;
+//   MutableS2ShapeIndex index;
 //   for (S2Polyline* polyline : polylines) {
 //     index.Add(new S2Polyline::Shape(polyline));
 //   }

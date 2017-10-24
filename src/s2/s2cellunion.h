@@ -121,7 +121,12 @@ class S2CellUnion final : public S2Region {
 
   // Convenience methods for accessing the individual cell ids.
   int num_cells() const { return cell_ids_.size(); }
-  const S2CellId cell_id(int i) const { return cell_ids_[i]; }
+  S2CellId cell_id(int i) const { return cell_ids_[i]; }
+
+  // Vector-like methods for accessing the individual cell ids.
+  size_t size() const { return cell_ids_.size(); }
+  bool empty() const { return cell_ids_.empty(); }
+  S2CellId operator[](int i) const { return cell_ids_[i]; }
 
   // Standard begin/end methods, to allow range-based for loops:
   //

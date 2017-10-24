@@ -566,7 +566,7 @@ static S1ChordAngle GetDistanceToEdgeBruteForce(
     return S1ChordAngle::Zero();
   }
   S2Loop loop(cell);
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   index.Add(make_unique<S2Loop::Shape>(&loop));
   S2CrossingEdgeQuery query(&index);
   vector<int> edges;

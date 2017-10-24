@@ -285,7 +285,7 @@ inline void S2CrossingEdgeQuery::ClipVAxis(const R2Rect& edge_bound,
 // return the bound for each child.
 void S2CrossingEdgeQuery::SplitUBound(const R2Rect& edge_bound, double u,
                                       R2Rect child_bounds[2]) const {
-  // See comments in S2ShapeIndex::ClipUBound.
+  // See comments in MutableS2ShapeIndex::ClipUBound.
   double v = edge_bound[1].Project(
       S2::InterpolateDouble(u, a_[0], b_[0], a_[1], b_[1]));
 

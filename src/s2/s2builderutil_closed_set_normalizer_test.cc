@@ -216,8 +216,8 @@ TEST_F(NormalizeTest, DuplicateEdgeMerging) {
 }
 
 // If this code changes, please update the header file comments to match.
-bool ComputeUnion(const S2ShapeIndex& a, const S2ShapeIndex& b,
-                  S2ShapeIndex* index, S2Error* error) {
+bool ComputeUnion(const S2ShapeIndexBase& a, const S2ShapeIndexBase& b,
+                  MutableS2ShapeIndex* index, S2Error* error) {
   IndexedS2PolylineVectorLayer::Options polyline_options;
   polyline_options.set_edge_type(EdgeType::UNDIRECTED);
   polyline_options.set_polyline_type(Graph::PolylineType::WALK);
@@ -247,7 +247,7 @@ TEST(ComputeUnion, MixedGeometry) {
       "0:10 | 10:0 | 3:3 | 16:16 # "
       "10:10, 0:10 | 10:10, 10:0 | 5:5, 6:6 # "
       "19:19, 19:21, 21:21, 21:19");
-  S2ShapeIndex result;
+  MutableS2ShapeIndex result;
   S2Error error;
   ASSERT_TRUE(ComputeUnion(*a, *b, &result, &error));
   EXPECT_EQ("12:12 # "

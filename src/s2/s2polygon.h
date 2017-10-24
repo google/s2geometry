@@ -853,7 +853,7 @@ class S2Polygon final : public S2Region {
   S2LatLngRect subregion_bound_;
 
   // Spatial index containing this polygon.
-  S2ShapeIndex index_;
+  MutableS2ShapeIndex index_;
 
 #ifndef SWIG
   S2Polygon(const S2Polygon&) = delete;

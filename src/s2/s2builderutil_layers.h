@@ -167,12 +167,12 @@ class S2PolygonLayer : public S2Builder::Layer {
   Options options_;
 };
 
-// Like S2PolygonLayer, but adds the polygon to an S2ShapeIndex (if the polygon
-// is non-empty).
+// Like S2PolygonLayer, but adds the polygon to a MutableS2ShapeIndex (if the
+// polygon is non-empty).
 class IndexedS2PolygonLayer : public S2Builder::Layer {
  public:
   using Options = S2PolygonLayer::Options;
-  explicit IndexedS2PolygonLayer(S2ShapeIndex* index,
+  explicit IndexedS2PolygonLayer(MutableS2ShapeIndex* index,
                                  const Options& options = Options())
       : index_(index), polygon_(new S2Polygon),
         layer_(polygon_.get(), options) {}
@@ -190,7 +190,7 @@ class IndexedS2PolygonLayer : public S2Builder::Layer {
   }
 
  private:
-  S2ShapeIndex* index_;
+  MutableS2ShapeIndex* index_;
   std::unique_ptr<S2Polygon> polygon_;
   S2PolygonLayer layer_;
 };
@@ -275,12 +275,12 @@ class S2PolylineLayer : public S2Builder::Layer {
   Options options_;
 };
 
-// Like S2PolylineLayer, but adds the polyline to an S2ShapeIndex (if the
+// Like S2PolylineLayer, but adds the polyline to a MutableS2ShapeIndex (if the
 // polyline is non-empty).
 class IndexedS2PolylineLayer : public S2Builder::Layer {
  public:
   using Options = S2PolylineLayer::Options;
-  explicit IndexedS2PolylineLayer(S2ShapeIndex* index,
+  explicit IndexedS2PolylineLayer(MutableS2ShapeIndex* index,
                                  const Options& options = Options())
       : index_(index), polyline_(new S2Polyline),
         layer_(polyline_.get(), options) {}
@@ -298,7 +298,7 @@ class IndexedS2PolylineLayer : public S2Builder::Layer {
   }
 
  private:
-  S2ShapeIndex* index_;
+  MutableS2ShapeIndex* index_;
   std::unique_ptr<S2Polyline> polyline_;
   S2PolylineLayer layer_;
 };
@@ -448,11 +448,11 @@ class S2PolylineVectorLayer : public S2Builder::Layer {
   Options options_;
 };
 
-// Like S2PolylineVectorLayer, but adds the polylines to an S2ShapeIndex.
+// Like S2PolylineVectorLayer, but adds the polylines to a MutableS2ShapeIndex.
 class IndexedS2PolylineVectorLayer : public S2Builder::Layer {
  public:
   using Options = S2PolylineVectorLayer::Options;
-  explicit IndexedS2PolylineVectorLayer(S2ShapeIndex* index,
+  explicit IndexedS2PolylineVectorLayer(MutableS2ShapeIndex* index,
                                         const Options& options = Options())
       : index_(index), layer_(&polylines_, options) {}
 
@@ -471,7 +471,7 @@ class IndexedS2PolylineVectorLayer : public S2Builder::Layer {
   }
 
  private:
-  S2ShapeIndex* index_;
+  MutableS2ShapeIndex* index_;
   std::vector<std::unique_ptr<S2Polyline>> polylines_;
   S2PolylineVectorLayer layer_;
 };
@@ -515,12 +515,12 @@ class S2PointVectorLayer : public S2Builder::Layer {
   Options options_;
 };
 
-// Like S2PointVectorLayer, but adds the points to an S2ShapeIndex (if the point
-// vector is non-empty).
+// Like S2PointVectorLayer, but adds the points to a MutableS2ShapeIndex (if
+// the point vector is non-empty).
 class IndexedS2PointVectorLayer : public S2Builder::Layer {
  public:
   using Options = S2PointVectorLayer::Options;
-  explicit IndexedS2PointVectorLayer(S2ShapeIndex* index,
+  explicit IndexedS2PointVectorLayer(MutableS2ShapeIndex* index,
                                      const Options& options = Options())
       : index_(index), layer_(&points_, options) {}
 
@@ -536,7 +536,7 @@ class IndexedS2PointVectorLayer : public S2Builder::Layer {
   }
 
  private:
-  S2ShapeIndex* index_;
+  MutableS2ShapeIndex* index_;
   std::vector<S2Point> points_;
   S2PointVectorLayer layer_;
 };

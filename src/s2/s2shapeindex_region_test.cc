@@ -46,7 +46,7 @@ TEST(S2ShapeIndexRegion, GetCapBound) {
   auto id = S2CellId::FromDebugString("3/0123012301230123012301230123");
 
   // Add a polygon that is slightly smaller than the cell being tested.
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   index.Add(NewPaddedCell(id, -kPadding));
   S2Cap cell_bound = S2Cell(id).GetCapBound();
   S2Cap index_bound = MakeS2ShapeIndexRegion(&index).GetCapBound();
@@ -61,7 +61,7 @@ TEST(S2ShapeIndexRegion, GetRectBound) {
   auto id = S2CellId::FromDebugString("3/0123012301230123012301230123");
 
   // Add a polygon that is slightly smaller than the cell being tested.
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   index.Add(NewPaddedCell(id, -kPadding));
   S2LatLngRect cell_bound = S2Cell(id).GetRectBound();
   S2LatLngRect index_bound = MakeS2ShapeIndexRegion(&index).GetRectBound();
@@ -70,7 +70,7 @@ TEST(S2ShapeIndexRegion, GetRectBound) {
 
 TEST(S2ShapeIndexRegion, GetCellUnionBoundMultipleFaces) {
   vector<S2CellId> ids = { MakeCellId("3/00123"), MakeCellId("2/11200013") };
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   for (auto id : ids) index.Add(NewPaddedCell(id, -kPadding));
   vector<S2CellId> covering;
   MakeS2ShapeIndexRegion(&index).GetCellUnionBound(&covering);
@@ -91,7 +91,7 @@ TEST(S2ShapeIndexRegion, GetCellUnionBoundOneFace) {
   vector<S2CellId> expected = {
     MakeCellId("5/0"), MakeCellId("5/110230"), MakeCellId("5/3110200")
   };
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   for (auto id : input) {
     // Add each shape 3 times to ensure that the S2ShapeIndex subdivides.
     for (int copy = 0; copy < 3; ++copy) {
@@ -107,7 +107,7 @@ TEST(S2ShapeIndexRegion, ContainsCellMultipleShapes) {
   auto id = S2CellId::FromDebugString("3/0123012301230123012301230123");
 
   // Add a polygon that is slightly smaller than the cell being tested.
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   index.Add(NewPaddedCell(id, -kPadding));
   EXPECT_FALSE(MakeS2ShapeIndexRegion(&index).Contains(S2Cell(id)));
 
@@ -127,7 +127,7 @@ TEST(S2ShapeIndexRegion, IntersectsShrunkenCell) {
   auto target = S2CellId::FromDebugString("3/0123012301230123012301230123");
 
   // Add a polygon that is slightly smaller than the cell being tested.
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   index.Add(NewPaddedCell(target, -kPadding));
   auto region = MakeS2ShapeIndexRegion(&index);
 
@@ -145,7 +145,7 @@ TEST(S2ShapeIndexRegion, IntersectsExactCell) {
   auto target = S2CellId::FromDebugString("3/0123012301230123012301230123");
 
   // Adds a polygon that exactly follows a cell boundary.
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   index.Add(NewPaddedCell(target, 0.0));
   auto region = MakeS2ShapeIndexRegion(&index);
 

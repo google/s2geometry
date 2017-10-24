@@ -246,13 +246,13 @@ std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygon(absl::string_view str) {
   return MakeLaxPolygonOrDie(str);
 }
 
-unique_ptr<S2ShapeIndex> MakeIndexOrDie(string_view str) {
-  auto index = make_unique<S2ShapeIndex>();
+unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(string_view str) {
+  auto index = make_unique<MutableS2ShapeIndex>();
   CHECK(MakeIndex(str, &index)) << ": str == \"" << str << "\"";
   return index;
 }
 
-bool MakeIndex(string_view str, std::unique_ptr<S2ShapeIndex>* index) {
+bool MakeIndex(string_view str, std::unique_ptr<MutableS2ShapeIndex>* index) {
   vector<string_view> strs = strings::Split(str, '#');
   DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
 
@@ -278,7 +278,7 @@ bool MakeIndex(string_view str, std::unique_ptr<S2ShapeIndex>* index) {
   return true;
 }
 
-std::unique_ptr<S2ShapeIndex> MakeIndex(absl::string_view str) {
+std::unique_ptr<MutableS2ShapeIndex> MakeIndex(absl::string_view str) {
   return MakeIndexOrDie(str);
 }
 

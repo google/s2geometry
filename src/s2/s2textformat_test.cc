@@ -342,13 +342,13 @@ TEST(SafeMakeLaxPolygon, InvalidInput) {
 }
 
 TEST(SafeMakeIndex, ValidInput) {
-  auto index = absl::MakeUnique<S2ShapeIndex>();
+  auto index = absl::MakeUnique<MutableS2ShapeIndex>();
   EXPECT_TRUE(s2textformat::MakeIndex("# 0:0, 0:0 | 1:0, 2:0 #", &index));
   EXPECT_EQ("# 0:0, 0:0 | 1:0, 2:0 #", s2textformat::ToString(*index));
 }
 
 TEST(SafeMakeIndex, InvalidInput) {
-  auto index = absl::MakeUnique<S2ShapeIndex>();
+  auto index = absl::MakeUnique<MutableS2ShapeIndex>();
   EXPECT_FALSE(s2textformat::MakeIndex("# blah #", &index));
 }
 

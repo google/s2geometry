@@ -2946,7 +2946,7 @@ TEST(S2Polygon, Sizes) {
   LOG(INFO) << "sizeof(S2Loop): " << sizeof(S2Loop);
   LOG(INFO) << "sizeof(S2Polygon): " << sizeof(S2Polygon);
   LOG(INFO) << "sizeof(S2Polyline): " << sizeof(S2Polyline);
-  LOG(INFO) << "sizeof(S2ShapeIndex): " << sizeof(S2ShapeIndex);
+  LOG(INFO) << "sizeof(MutableS2ShapeIndex): " << sizeof(MutableS2ShapeIndex);
   LOG(INFO) << "sizeof(S2Polygon::Shape): " << sizeof(S2Polygon::Shape);
   LOG(INFO) << "sizeof(S2Cell): " << sizeof(S2Cell);
   LOG(INFO) << "sizeof(S2PaddedCell): " << sizeof(S2PaddedCell);

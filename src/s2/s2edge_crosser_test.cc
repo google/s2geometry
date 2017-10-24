@@ -75,9 +75,6 @@ void TestCrossing(const S2Point& a, const S2Point& b,
   // Modify the expected result if two vertices from different edges match.
   if (a == c || a == d || b == c || b == d) robust = 0;
   EXPECT_EQ(robust, S2::CrossingSign(a, b, c, d));
-  if (simple) {
-    EXPECT_EQ(robust > 0, S2::SimpleCrossing(a, b, c, d));
-  }
   S2EdgeCrosser crosser(&a, &b, &c);
   EXPECT_EQ(robust, crosser.CrossingSign(&d));
   EXPECT_EQ(robust, crosser.CrossingSign(&c));

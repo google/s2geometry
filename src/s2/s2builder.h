@@ -573,7 +573,7 @@ class S2Builder {
   void ChooseSites();
   void CopyInputEdges();
   std::vector<InputVertexKey> SortInputVertices();
-  void AddEdgeCrossings(const S2ShapeIndex& input_edge_index);
+  void AddEdgeCrossings(const MutableS2ShapeIndex& input_edge_index);
   void AddForcedSites(S2PointIndex<SiteId>* site_index);
   bool is_forced(SiteId v) const;
   void ChooseInitialSites(
@@ -585,15 +585,15 @@ class S2Builder {
       const S2PointIndex<InputVertexId>& rejected_vertex_index);
   void SortSitesByDistance(const S2Point& x,
                            compact_array<SiteId>* sites) const;
-  void AddExtraSites(const S2ShapeIndex& input_edge_index);
+  void AddExtraSites(const MutableS2ShapeIndex& input_edge_index);
   void MaybeAddExtraSites(InputEdgeId edge_id,
                           InputEdgeId max_edge_id,
                           const std::vector<SiteId>& chain,
-                          const S2ShapeIndex& input_edge_index,
+                          const MutableS2ShapeIndex& input_edge_index,
                           std::vector<InputEdgeId>* snap_queue);
   void AddExtraSite(const S2Point& new_site,
                     InputEdgeId max_edge_id,
-                    const S2ShapeIndex& input_edge_index,
+                    const MutableS2ShapeIndex& input_edge_index,
                     std::vector<InputEdgeId>* snap_queue);
   S2Point GetSeparationSite(const S2Point& site_to_avoid,
                             const S2Point& v0, const S2Point& v1,

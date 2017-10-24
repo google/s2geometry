@@ -39,6 +39,9 @@ using std::min;
 using std::unordered_set;
 using std::vector;
 
+// Define storage for header file constants (the values are not needed here).
+constexpr int S2RegionCoverer::Options::kDefaultMaxCells;
+
 S2RegionCoverer::S2RegionCoverer(S2RegionCoverer::Options const& options) :
   options_(options) {
 }

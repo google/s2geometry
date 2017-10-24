@@ -51,7 +51,7 @@ class S2CellUnionTestPeer {
 TEST(S2CellUnion, DefaultConstructor) {
   vector<S2CellId> ids;
   S2CellUnion empty(ids);
-  EXPECT_EQ(0, empty.num_cells());
+  EXPECT_TRUE(empty.empty());
 }
 
 TEST(S2CellUnion, S2CellIdConstructor) {
@@ -172,15 +172,15 @@ TEST(S2CellUnion, Normalize) {
     in_sum += input.size();
     out_sum += expected.size();
     S2CellUnion cellunion(input);
-    EXPECT_EQ(expected.size(), cellunion.num_cells());
+    EXPECT_EQ(expected.size(), cellunion.size());
     for (int i = 0; i < expected.size(); ++i) {
-      EXPECT_EQ(expected[i], cellunion.cell_id(i));
+      EXPECT_EQ(expected[i], cellunion[i]);
     }
 
     // Test GetCapBound().
     S2Cap cap = cellunion.GetCapBound();
-    for (int i = 0; i < cellunion.num_cells(); ++i) {
-      EXPECT_TRUE(cap.Contains(S2Cell(cellunion.cell_id(i))));
+    for (S2CellId id : cellunion) {
+      EXPECT_TRUE(cap.Contains(S2Cell(id)));
     }
 
     // Test Contains(S2CellId) and Intersects(S2CellId).
@@ -232,22 +232,20 @@ TEST(S2CellUnion, Normalize) {
     // Compute the intersection of "x" with each cell of "y",
     // check that this intersection is correct, and append the
     // results to x_and_y_expected.
-    for (int j = 0; j < ycells.num_cells(); ++j) {
-      S2CellId yid = ycells.cell_id(j);
-      S2CellUnion u = xcells.Intersection(yid);
-      for (int k = 0; k < xcells.num_cells(); ++k) {
-        S2CellId xid = xcells.cell_id(k);
+    for (S2CellId yid : ycells) {
+      S2CellUnion ucells = xcells.Intersection(yid);
+      for (S2CellId xid : xcells) {
         if (xid.contains(yid)) {
-          EXPECT_TRUE(u.num_cells() == 1 && u.cell_id(0) == yid);
+          EXPECT_TRUE(ucells.size() == 1 && ucells[0] == yid);
         } else if (yid.contains(xid)) {
-          EXPECT_TRUE(u.Contains(xid));
+          EXPECT_TRUE(ucells.Contains(xid));
         }
       }
-      for (int k = 0; k < u.num_cells(); ++k) {
-        EXPECT_TRUE(xcells.Contains(u.cell_id(k)));
-        EXPECT_TRUE(yid.contains(u.cell_id(k)));
+      for (S2CellId uid : ucells) {
+        EXPECT_TRUE(xcells.Contains(uid));
+        EXPECT_TRUE(yid.contains(uid));
       }
-      x_and_y.insert(x_and_y.end(), u.cell_ids().begin(), u.cell_ids().end());
+      x_and_y.insert(x_and_y.end(), ucells.begin(), ucells.end());
     }
     S2CellUnion x_and_y_expected(std::move(x_and_y));
     S2CellUnion x_and_y_cells = xcells.Intersection(ycells);
@@ -284,8 +282,8 @@ TEST(S2CellUnion, Normalize) {
 // "covering".
 static double GetRadius(const S2CellUnion& covering, const S2Point& axis) {
   double max_dist = 0;
-  for (int i = 0; i < covering.num_cells(); ++i) {
-    S2Cell cell(covering.cell_id(i));
+  for (S2CellId id : covering) {
+    S2Cell cell(id);
     for (int j = 0; j < 4; ++j) {
       S2Point a = cell.GetVertex(j);
       S2Point b = cell.GetVertex(j + 1);
@@ -339,8 +337,8 @@ TEST(S2CellUnion, Expand) {
     // This code duplicates the logic in Expand(min_radius, max_level_diff)
     // that figures out an appropriate cell level to use for the expansion.
     int min_level = S2CellId::kMaxLevel;
-    for (int i = 0; i < covering.num_cells(); ++i) {
-      min_level = min(min_level, covering.cell_id(i).level());
+    for (S2CellId id : covering) {
+      min_level = min(min_level, id.level());
     }
     int expand_level = min(min_level + max_level_diff,
                            S2::kMinWidth.GetLevelForMinValue(radius));
@@ -427,19 +425,19 @@ TEST(S2CellUnion, FromBeginEnd) {
   S2CellUnion cell_union({initial_id});
   S2CellId id_begin = S2CellId::Begin(S2CellId::kMaxLevel);
   cell_union.InitFromBeginEnd(id_begin, id_begin);
-  EXPECT_EQ(0, cell_union.num_cells());
+  EXPECT_TRUE(cell_union.empty());
 
   // Test an empty range after the maximum S2CellId.
   cell_union.Init({initial_id});
   S2CellId id_end = S2CellId::End(S2CellId::kMaxLevel);
   cell_union.InitFromBeginEnd(id_end, id_end);
-  EXPECT_EQ(0, cell_union.num_cells());
+  EXPECT_TRUE(cell_union.empty());
 
   // Test the full sphere.
   cell_union = S2CellUnion::FromBeginEnd(id_begin, id_end);
   EXPECT_EQ(6, cell_union.num_cells());
-  for (int i = 0; i < cell_union.num_cells(); ++i) {
-    EXPECT_TRUE(cell_union.cell_id(i).is_face());
+  for (S2CellId id : cell_union) {
+    EXPECT_TRUE(id.is_face());
   }
 }
 
@@ -449,12 +447,12 @@ TEST(S2CellUnion, Empty) {
 
   // Normalize()
   empty_cell_union.Normalize();
-  EXPECT_EQ(0, empty_cell_union.num_cells());
+  EXPECT_TRUE(empty_cell_union.empty());
 
   // Denormalize(...)
   vector<S2CellId> output;
   empty_cell_union.Denormalize(0, 2, &output);
-  EXPECT_EQ(0, empty_cell_union.num_cells());
+  EXPECT_TRUE(empty_cell_union.empty());
 
   // Pack(...)
   empty_cell_union.Pack();
@@ -469,13 +467,13 @@ TEST(S2CellUnion, Empty) {
 
   // Union(...)
   S2CellUnion cell_union = empty_cell_union.Union(empty_cell_union);
-  EXPECT_EQ(0, cell_union.num_cells());
+  EXPECT_TRUE(cell_union.empty());
 
   // Intersection(...)
   S2CellUnion intersection = empty_cell_union.Intersection(face1_id);
-  EXPECT_EQ(0, intersection.num_cells());
+  EXPECT_TRUE(intersection.empty());
   intersection = empty_cell_union.Intersection(empty_cell_union);
-  EXPECT_EQ(0, intersection.num_cells());
+  EXPECT_TRUE(intersection.empty());
 
   // Difference(...)
   S2CellUnion difference = empty_cell_union.Difference(empty_cell_union);
@@ -483,9 +481,9 @@ TEST(S2CellUnion, Empty) {
 
   // Expand(...)
   empty_cell_union.Expand(S1Angle::Radians(1), 20);
-  EXPECT_EQ(0, empty_cell_union.num_cells());
+  EXPECT_TRUE(empty_cell_union.empty());
   empty_cell_union.Expand(10);
-  EXPECT_EQ(0, empty_cell_union.num_cells());
+  EXPECT_TRUE(empty_cell_union.empty());
 }
 
 TEST(S2CellUnion, Clear) {

@@ -35,12 +35,12 @@ using std::cout;
 
 TEST(S2ShapeIndexBufferedRegion, EmptyIndex) {
   // Test buffering an empty S2ShapeIndex.
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   S1ChordAngle radius(S1Angle::Degrees(2));
   S2ShapeIndexBufferedRegion region(&index, radius);
   S2RegionCoverer coverer;
   S2CellUnion covering = coverer.GetCovering(region);
-  EXPECT_EQ(0, covering.num_cells());
+  EXPECT_TRUE(covering.empty());
 }
 
 TEST(S2ShapeIndexBufferedRegion, FullPolygon) {
@@ -122,7 +122,7 @@ void TestBufferIndex(const string& index_str, S1Angle radius_angle,
   // Compute an S2Polygon representing the union of the cells in the covering.
   S2Polygon covering_polygon;
   covering_polygon.InitToCellUnionBorder(covering);
-  S2ShapeIndex covering_index;
+  MutableS2ShapeIndex covering_index;
   covering_index.Add(make_unique<S2Polygon::Shape>(&covering_polygon));
 
   // (a) Check that the covering contains the original index.

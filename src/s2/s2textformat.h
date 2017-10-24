@@ -35,7 +35,7 @@ class S2LatLng;
 class S2Loop;
 class S2Polygon;
 class S2Polyline;
-class S2ShapeIndex;
+class MutableS2ShapeIndex;
 class S2ShapeIndexBase;
 class S2LaxPolygonShape;
 class S2LaxPolylineShape;
@@ -191,8 +191,8 @@ ABSL_MUST_USE_RESULT bool MakeLaxPolygon(
 ABSL_DEPRECATED("Use MakeLaxPolygonOrDie.")
 std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygon(absl::string_view str);
 
-// Returns an S2ShapeIndex containing the points, polylines, and loops (in the
-// form of a single polygon) described by the following format:
+// Returns a MutableS2ShapeIndex containing the points, polylines, and loops
+// (in the form of a single polygon) described by the following format:
 //
 //   point1|point2|... # line1|line2|... # polygon1|polygon2|...
 //
@@ -209,15 +209,15 @@ std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygon(absl::string_view str);
 //
 // CAVEAT: Because whitespace is ignored, empty polygons must be specified
 //         as the string "empty" rather than as the empty string ("").
-std::unique_ptr<S2ShapeIndex> MakeIndexOrDie(absl::string_view str);
+std::unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(absl::string_view str);
 
 // As above, but does not CHECK-fail on invalid input. Returns true if
 // conversion is successful.
-ABSL_MUST_USE_RESULT bool MakeIndex(absl::string_view str,
-                                    std::unique_ptr<S2ShapeIndex>* index);
+ABSL_MUST_USE_RESULT bool MakeIndex(
+    absl::string_view str, std::unique_ptr<MutableS2ShapeIndex>* index);
 
 ABSL_DEPRECATED("Use MakeIndexOrDie.")
-std::unique_ptr<S2ShapeIndex> MakeIndex(absl::string_view str);
+std::unique_ptr<MutableS2ShapeIndex> MakeIndex(absl::string_view str);
 
 // Convert a point, lat-lng rect, loop, polyline, or polygon to the string
 // format above.

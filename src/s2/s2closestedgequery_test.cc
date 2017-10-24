@@ -205,7 +205,7 @@ TEST(ShapeIndexTarget, GetContainingShapesEmptyAndFull) {
 }
 
 TEST(S2ClosestEdgeQuery, NoEdges) {
-  S2ShapeIndex index;
+  MutableS2ShapeIndex index;
   S2ClosestEdgeQuery query(&index);
   S2ClosestEdgeQuery::PointTarget target(S2Point(1, 0, 0));
   const auto edge = query.FindClosestEdge(&target);
@@ -365,7 +365,7 @@ TEST(S2ClosestEdgeQuery, IsConservativeDistanceLess) {
     S2Point y = S2::InterpolateAtDistance(r, x, dir);
     S1ChordAngle limit(r);
     if (s2pred::CompareDistance(x, y, limit) < 0) {
-      S2ShapeIndex index;
+      MutableS2ShapeIndex index;
       index.Add(make_unique<S2PointVectorShape>(vector<S2Point>({x})));
       S2ClosestEdgeQuery query(&index);
       S2ClosestEdgeQuery::PointTarget target(y);
@@ -382,7 +382,7 @@ TEST(S2ClosestEdgeQuery, IsConservativeDistanceLess) {
   EXPECT_GE(num_conservative_needed, 25);
 }
 
-// An abstract class that adds edges to an S2ShapeIndex for benchmarking.
+// An abstract class that adds edges to a MutableS2ShapeIndex for benchmarking.
 class ShapeIndexFactory {
  public:
   virtual ~ShapeIndexFactory() {}
@@ -390,7 +390,7 @@ class ShapeIndexFactory {
   // Requests that approximately "num_edges" edges located within the given
   // S2Cap bound should be added to "index".
   virtual void AddEdges(const S2Cap& index_cap, int num_edges,
-                        S2ShapeIndex* index) const = 0;
+                        MutableS2ShapeIndex* index) const = 0;
 };
 
 // Generates a regular loop that approximately fills the given S2Cap.
@@ -401,7 +401,7 @@ class ShapeIndexFactory {
 class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
   void AddEdges(const S2Cap& index_cap, int num_edges,
-                S2ShapeIndex* index) const override {
+                MutableS2ShapeIndex* index) const override {
     index->Add(make_unique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
         index_cap.center(), index_cap.GetRadius(), num_edges)));
   }
@@ -411,7 +411,7 @@ class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
 class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
   void AddEdges(const S2Cap& index_cap, int num_edges,
-                S2ShapeIndex* index) const override {
+                MutableS2ShapeIndex* index) const override {
     S2Testing::Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(num_edges);
     index->Add(make_unique<S2Loop::OwningShape>(
@@ -424,7 +424,7 @@ class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
 class PointCloudShapeIndexFactory : public ShapeIndexFactory {
  public:
   void AddEdges(const S2Cap& index_cap, int num_edges,
-                S2ShapeIndex* index) const override {
+                MutableS2ShapeIndex* index) const override {
     vector<S2Point> points;
     for (int i = 0; i < num_edges; ++i) {
       points.push_back(S2Testing::SamplePoint(index_cap));
@@ -522,13 +522,13 @@ static S2ClosestEdgeQuery::Result TestFindClosestEdges(
 static void TestWithIndexFactory(const ShapeIndexFactory& factory,
                                  int num_indexes, int num_edges,
                                  int num_queries) {
-  // Build a set of S2ShapeIndexes containing the desired geometry.
+  // Build a set of MutableS2ShapeIndexes containing the desired geometry.
   vector<S2Cap> index_caps;
-  vector<unique_ptr<S2ShapeIndex>> indexes;
+  vector<unique_ptr<MutableS2ShapeIndex>> indexes;
   for (int i = 0; i < num_indexes; ++i) {
     S2Testing::rnd.Reset(FLAGS_s2_random_seed + i);
     index_caps.push_back(S2Cap(S2Testing::RandomPoint(), kRadius));
-    indexes.emplace_back(new S2ShapeIndex);
+    indexes.emplace_back(new MutableS2ShapeIndex);
     factory.AddEdges(index_caps.back(), num_edges, indexes.back().get());
   }
   for (int i = 0; i < num_queries; ++i) {

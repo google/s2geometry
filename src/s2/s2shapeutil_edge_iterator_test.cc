@@ -24,7 +24,7 @@ namespace {
 
 // Returns the full list of edges in g.
 // The edges are collected from points, lines, and polygons in that order.
-std::vector<S2Shape::Edge> GetEdges(const S2ShapeIndex* index) {
+std::vector<S2Shape::Edge> GetEdges(const S2ShapeIndexBase* index) {
   std::vector<S2Shape::Edge> result;
   for (int i = 0; i < index->num_shape_ids(); i++) {
     if (index->shape(i) == nullptr) {
@@ -38,7 +38,7 @@ std::vector<S2Shape::Edge> GetEdges(const S2ShapeIndex* index) {
 }
 
 // Verifies that the edges produced by an EdgeIterator matches GetEdges.
-void Verify(const S2ShapeIndex* index) {
+void Verify(const S2ShapeIndexBase* index) {
   std::vector<S2Shape::Edge> expected = GetEdges(index);
 
   int i = 0;
@@ -51,36 +51,35 @@ void Verify(const S2ShapeIndex* index) {
 }  // namespace
 
 TEST(S2ShapeutilEdgeIteratorTest, Empty) {
-  std::unique_ptr<S2ShapeIndex> index = s2textformat::MakeIndex("##");
+  auto index = s2textformat::MakeIndex("##");
   Verify(index.get());
 }
 
 TEST(S2ShapeutilEdgeIteratorTest, Points) {
-  std::unique_ptr<S2ShapeIndex> index = s2textformat::MakeIndex("0:0|1:1##");
+  auto index = s2textformat::MakeIndex("0:0|1:1##");
   Verify(index.get());
 }
 
 TEST(S2ShapeutilEdgeIteratorTest, Lines) {
-  std::unique_ptr<S2ShapeIndex> index =
-      s2textformat::MakeIndex("#0:0,10:10|5:5,5:10|1:2,2:1#");
+  auto index = s2textformat::MakeIndex("#0:0,10:10|5:5,5:10|1:2,2:1#");
   Verify(index.get());
 }
 
 TEST(S2ShapeutilEdgeIteratorTest, Polygons) {
-  std::unique_ptr<S2ShapeIndex> index =
+  auto index =
       s2textformat::MakeIndex("##10:10,10:0,0:0|-10:-10,-10:0,0:0,0:-10");
   Verify(index.get());
 }
 
 TEST(S2ShapeutilEdgeIteratorTest, Collection) {
-  std::unique_ptr<S2ShapeIndex> index = s2textformat::MakeIndex(
+  auto index = s2textformat::MakeIndex(
       "1:1|7:2#1:1,2:2,3:3|2:2,1:7#"
       "10:10,10:0,0:0;20:20,20:10,10:10|15:15,15:0,0:0");
   Verify(index.get());
 }
 
 TEST(S2ShapeutilEdgeIteratorTest, Remove) {
-  std::unique_ptr<S2ShapeIndex> index = s2textformat::MakeIndex(
+  auto index = s2textformat::MakeIndex(
       "1:1|7:2#1:1,2:2,3:3|2:2,1:7#"
       "10:10,10:0,0:0;20:20,20:10,10:10|15:15,15:0,0:0");
   index->Release(0);
@@ -89,11 +88,11 @@ TEST(S2ShapeutilEdgeIteratorTest, Remove) {
 }
 
 TEST(S2ShapeutilEdgeIteratorTest, AssignmentAndEquality) {
-  std::unique_ptr<S2ShapeIndex> index1 = s2textformat::MakeIndex(
+  auto index1 = s2textformat::MakeIndex(
       "1:1|7:2#1:1,2:2,3:3|2:2,1:7#"
       "10:10,10:0,0:0;20:20,20:10,10:10|15:15,15:0,0:0");
 
-  std::unique_ptr<S2ShapeIndex> index2 = s2textformat::MakeIndex(
+  auto index2 = s2textformat::MakeIndex(
       "1:1|7:2#1:1,2:2,3:3|2:2,1:7#"
       "10:10,10:0,0:0;20:20,20:10,10:10|15:15,15:0,0:0");
 
