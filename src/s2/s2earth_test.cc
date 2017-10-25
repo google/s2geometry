@@ -17,6 +17,8 @@
 
 #include "s2/s2earth.h"
 
+#include <cmath>
+
 #include <gtest/gtest.h>
 #include "s2/util/units/physical-units.h"
 
@@ -36,6 +38,20 @@ TEST(S2EarthTest, TestAngleConversion) {
   ASSERT_DOUBLE_EQ(S2Earth::MetersToRadians(S2Earth::RadiansToKm(0.3) * 1000),
                    0.3);
   ASSERT_DOUBLE_EQ(S2Earth::RadiansToMeters(S2Earth::KmToRadians(2.5)), 2500);
+}
+
+TEST(S2EarthTest, TestSolidAngleConversion) {
+  ASSERT_DOUBLE_EQ(1,
+                   S2Earth::SquareKmToSteradians(
+                       std::pow(S2Earth::RadiusMeters() / 1000, 2)));
+  ASSERT_DOUBLE_EQ(std::pow(0.5 * S2Earth::RadiusKm(), 2),
+                   S2Earth::SteradiansToSquareKm(std::pow(0.5, 2)));
+  ASSERT_DOUBLE_EQ(std::pow(0.3, 2),
+                   S2Earth::SquareMetersToSteradians(
+                       std::pow(S2Earth::RadiansToKm(0.3) * 1000, 2)));
+  ASSERT_DOUBLE_EQ(std::pow(2500, 2),
+                   S2Earth::SteradiansToSquareMeters(
+                       std::pow(S2Earth::KmToRadians(2.5), 2)));
 }
 
 TEST(S2EarthTest, TestToLongitudeRadians) {

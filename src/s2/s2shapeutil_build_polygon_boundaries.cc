@@ -18,6 +18,7 @@
 #include "s2/s2shapeutil_build_polygon_boundaries.h"
 
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s2contains_point_query.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil_contains_brute_force.h"

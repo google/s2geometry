@@ -36,6 +36,10 @@
 //
 //  - In the CLOSED model, all shapes contain their vertices (including points
 //    and polylines).
+//
+// Note that points other than vertices are never contained by polylines.
+// If you want need this behavior, use S2ClosestEdgeQuery::IsDistanceLess()
+// with a suitable distance threshold instead.
 enum class S2VertexModel { OPEN, SEMI_OPEN, CLOSED };
 
 // This class defines the options supported by S2ContainsPointQuery.

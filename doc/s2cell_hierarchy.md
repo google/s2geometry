@@ -533,30 +533,100 @@ between the accuracy of the approximation and how many cells are used. Unlike
 polygons, cells have a fixed hierarchical structure. This makes them more
 suitable for spatial indexing.
 
+An `S2CellUnion` is represented as a vector of sorted, non-overlapping
+`S2CellIds`.  By default the vector is also "normalized", meaning that groups
+of 4 child cells have been replaced by their parent cell whenever possible.
+S2CellUnions are not required to be normalized, but certain operations will
+return different results if they are not (e.g., `Contains(S2CellUnion)`.)
+
 Here is the interface:
 
 ```c++
 class S2CellUnion final : public S2Region {
  public:
-  // The default constructor does nothing.  The cell union cannot be used
-  // until one of the Init() methods is called.
-  S2CellUnion();
+  // Creates an empty cell union.
+  S2CellUnion() {}
 
-  // Populates a cell union with the given S2CellIds, and then calls
-  // Normalize().  This method may be called multiple times.
-  void Init(const vector<S2CellId>& cell_ids);
+  // Constructs a cell union with the given S2CellIds, then calls Normalize()
+  // to sort them, remove duplicates, and merge cells when possible.  (See
+  // FromNormalized if your vector is already normalized.)
+  //
+  // The argument is passed by value, so if you are passing a named variable
+  // and have no further use for it, consider using std::move().
+  //
+  // A cell union containing a single S2CellId may be constructed like this:
+  //
+  //     S2CellUnion example({cell_id});
+  explicit S2CellUnion(std::vector<S2CellId> cell_ids);
+
+  // Convenience constructor that accepts a vector of uint64.  Note that
+  // unlike the constructor above, this one makes a copy of "cell_ids".
+  explicit S2CellUnion(const std::vector<uint64>& cell_ids);
+
+  // Constructs a cell union from S2CellIds that have already been normalized
+  // (typically because they were extracted from another S2CellUnion).
+  //
+  // The argument is passed by value, so if you are passing a named variable
+  // and have no further use for it, consider using std::move().
+  //
+  // REQUIRES: "cell_ids" satisfies the requirements of IsNormalized().
+  static S2CellUnion FromNormalized(std::vector<S2CellId> cell_ids);
+
+  // Constructs a cell union from a vector of sorted, non-overlapping
+  // S2CellIds.  Unlike the other constructors, FromVerbatim does not require
+  // that groups of 4 child cells have been replaced by their parent cell.  In
+  // other words, "cell_ids" must satisfy the requirements of IsValid() but
+  // not necessarily IsNormalized().
+  //
+  // Note that if the cell union is not normalized, certain operations may
+  // return different results (e.g., Contains(S2CellUnion)).
+  //
+  // REQUIRES: "cell_ids" satisfies the requirements of IsValid().
+  static S2CellUnion FromVerbatim(std::vector<S2CellId> cell_ids);
+
+  // Constructs a cell union that corresponds to a continuous range of cell
+  // ids.  The output is a normalized collection of cell ids that covers the
+  // leaf cells between "min_id" and "max_id" inclusive.
+  //
+  // REQUIRES: min_id.is_leaf(), max_id.is_leaf(), min_id <= max_id.
+  static S2CellUnion FromMinMax(S2CellId min_id, S2CellId max_id);
+
+  // Like FromMinMax() except that the union covers the range of leaf cells
+  // from "begin" (inclusive) to "end" (exclusive), as with Python ranges or
+  // STL iterator ranges.  If (begin == end) the result is empty.
+  //
+  // REQUIRES: begin.is_leaf(), end.is_leaf(), begin <= end.
+  static S2CellUnion FromBeginEnd(S2CellId begin, S2CellId end);
+
+  // Clears the contents of the cell union and minimizes memory usage.
+  void Clear();
 
   // Gives ownership of the vector data to the client without copying, and
   // clears the content of the cell union.  The original data in cell_ids
   // is lost if there was any.
-  void Detach(std::vector<S2CellId>* cell_ids);
+  std::vector<S2CellId> Release();
 
   // Convenience methods for accessing the individual cell ids.
   int num_cells() const;
-  const S2CellId& cell_id(int i) const;
+  S2CellId cell_id(int i) const;
+
+  // Vector-like methods for accessing the individual cell ids.
+  size_t size() const;
+  bool empty() const;
+  S2CellId operator[](int i) const;
 
   // Direct access to the underlying vector for STL algorithms.
   const std::vector<S2CellId>& cell_ids() const;
+
+  // Returns true if the cell union is valid, meaning that the S2CellIds are
+  // valid, non-overlapping, and sorted in increasing order.
+  bool IsValid() const;
+
+  // Returns true if the cell union is normalized, meaning that it is
+  // satisfies IsValid() and that no four cells have a common parent.
+  // Certain operations such as Contains(S2CellUnion) will return a different
+  // result if the cell union is not normalized.
+  bool IsNormalized() const;
 
   // Normalizes the cell union by discarding cells that are contained by other
   // cells, replacing groups of 4 child cells by their parent cell whenever
@@ -595,20 +665,22 @@ class S2CellUnion final : public S2Region {
 
   // Return true if this cell union contain/intersects the given other cell
   // union.
-  bool Contains(const S2CellUnion* y) const;
-  bool Intersects(const S2CellUnion* y) const;
+  bool Contains(const S2CellUnion& y) const;
+  bool Intersects(const S2CellUnion& y) const;
 
-  // Initialize this cell union to the union, intersection, or
-  // difference (x - y) of the two given cell unions.
-  // Requires: x != this and y != this.
-  void GetUnion(const S2CellUnion* x, const S2CellUnion* y);
-  void GetIntersection(const S2CellUnion* x, const S2CellUnion* y);
-  void GetDifference(const S2CellUnion* x, const S2CellUnion* y);
+  // Returns the union of the two given cell unions.
+  S2CellUnion Union(const S2CellUnion& y) const;
 
-  // Specialized version of GetIntersection() that gets the intersection of a
-  // cell union with the given cell id.  This can be useful for "splitting" a
-  // cell union into chunks.
-  void GetIntersection(const S2CellUnion* x, S2CellId id);
+  // Returns the intersection of the two given cell unions.
+  S2CellUnion Intersection(const S2CellUnion& y) const;
+
+  // Specialized version of GetIntersection() that returns the intersection of
+  // a cell union with an S2CellId.  This can be useful for splitting a cell
+  // union into pieces.
+  S2CellUnion Intersection(S2CellId id) const;
+
+  // Returns the difference of the two given cell unions.
+  S2CellUnion Difference(const S2CellUnion& y) const;
 
   // Expands the cell union by adding a "rim" of cells on expand_level
   // around the union boundary.
@@ -639,13 +711,14 @@ class S2CellUnion final : public S2Region {
   // number of cells in the input.
   void Expand(S1Angle min_radius, int max_level_diff);
 
+  // The number of leaf cells covered by the union.
+  // This will be no more than 6*2^60 for the whole sphere.
+  uint64 LeafCellsCovered() const;
+
   // Approximate this cell union's area by summing the average area of
   // each contained cell's average area, using the AverageArea method
   // from the S2Cell class.
-  // This is equivalent to the number of leaves covered, multiplied by
-  // the average area of a leaf.
-  // Note that AverageArea does not take into account distortion of cell, and
-  // thus may be off by up to a factor of 1.7.
+  //
   // NOTE: Since this is proportional to LeafCellsCovered(), it is
   // always better to use the other function if all you care about is
   // the relative average area between objects.
@@ -659,6 +732,12 @@ class S2CellUnion final : public S2Region {
   // contained cell, using the Exact method from the S2Cell class.
   double ExactArea() const;
 
+  // Return true if two cell unions are identical.
+  friend bool operator==(const S2CellUnion& x, const S2CellUnion& y);
+
+  // Return true if two cell unions are different.
+  friend bool operator!=(const S2CellUnion& x, const S2CellUnion& y);
+
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
@@ -671,6 +750,13 @@ class S2CellUnion final : public S2Region {
   // The point 'p' does not need to be normalized.
   // This is a fast operation (logarithmic in the size of the cell union).
   bool Contains(const S2Point& p) const override;
+
+  // Appends a serialized representation of the S2CellUnion to "encoder".
+  void Encode(Encoder* const encoder) const;
+
+  // Decodes an S2CellUnion encoded with Encode().  Returns true on success.
+  bool Decode(Decoder* const decoder);
+
 };
 ```
 
@@ -682,11 +768,11 @@ sorts of search and precomputation operations.
 
 Typical usage:
 
-    S2RegionCoverer coverer;
-    coverer.set_max_cells(5);
-    S2Cap cap = S2Cap::FromAxisAngle(...);
-    S2CellUnion covering;
-    coverer.GetCellUnion(cap, &covering);
+    S2RegionCoverer::Options options;
+    options.set_max_cells(5);
+    S2RegionCoverer coverer(options);
+    S2Cap cap(center, radius);
+    S2CellUnion covering = coverer.GetCovering(cap);
 
 The result is a cell union of at most 5 cells that is guaranteed to cover the
 given cap (a disc-shaped region on the sphere).
@@ -707,78 +793,86 @@ Here is the interface of `S2RegionCoverer`:
 ```c++
 class S2RegionCoverer {
  public:
-  // By default, the covering uses at most 8 cells at any level.  This gives
-  // a reasonable tradeoff between the number of cells used and the accuracy
-  // of the approximation (see table below).
-  static const int kDefaultMaxCells = 8;
+  class Options {
+   public:
+    // Sets the desired maximum number of cells in the approximation.  Note
+    // that min_level() takes priority over max_cells(), i.e. cells below the
+    // given level will never be used even if this causes a large number of
+    // cells to be returned.
+    //
+    // Accuracy is measured by dividing the area of the covering by the area
+    // of the original region.  The following table shows the median and worst
+    // case values for this area ratio on a test case consisting of 100,000
+    // spherical caps of random size (generated using s2regioncoverer_test):
+    //
+    //   max_cells:        3      4     5     6     8    12    20   100   1000
+    //   median ratio:  5.33   3.32  2.73  2.34  1.98  1.66  1.42  1.11   1.01
+    //   worst case:  215518  14.41  9.72  5.26  3.91  2.75  1.92  1.20   1.02
+    //
+    // The default value of 8 gives a reasonable tradeoff between the number
+    // of cells used and the accuracy of the approximation.
+    //
+    // DEFAULT: kDefaultMaxCells
+    static constexpr int kDefaultMaxCells = 8;
+    int max_cells() const;
+    void set_max_cells(int max_cells);
 
+    // Sets the minimum and maximum cell levels to be used.  The default is to
+    // use all cell levels.
+    //
+    // To find the cell level corresponding to a given physical distance, use
+    // the S2Cell metrics defined in s2metrics.h.  For example, to find the
+    // cell level that corresponds to an average edge length of 10km, use:
+    //
+    //   int level =
+    //       S2::kAvgEdge.GetClosestLevel(S2Earth::KmToRadians(length_km));
+    //
+    // Note that min_level() takes priority over max_cells(), i.e. cells below
+    // the given level will never be used even if this causes a large number
+    // of cells to be returned.
+    //
+    // REQUIRES: max_level() >= min_level()
+    // DEFAULT: 0
+    int min_level() const;
+    void set_min_level(int min_level);
+
+    // DEFAULT: S2CellId::kMaxLevel
+    int max_level() const;
+    void set_max_level(int max_level);
+
+    // Convenience function that sets both the maximum and minimum cell levels.
+    void set_fixed_level(int level);
+
+    // If specified, then only cells where (level - min_level) is a multiple
+    // of "level_mod" will be used (default 1).  This effectively allows the
+    // branching factor of the S2CellId hierarchy to be increased.  Currently
+    // the only parameter values allowed are 1, 2, or 3, corresponding to
+    // branching factors of 4, 16, and 64 respectively.
+    //
+    // DEFAULT: 1
+    int level_mod() const;
+    void set_level_mod(int level_mod);
+  };
+
+  // Constructs an S2RegionCoverer with the given options.
+  explicit S2RegionCoverer(const Options& options);
+
+  // Default constructor.  Options can be set using mutable_options().
   S2RegionCoverer();
   ~S2RegionCoverer();
 
-  // Set the minimum and maximum cell level to be used.  The default is to use
-  // all cell levels.  Requires: max_level() >= min_level().
-  //
-  // To find the cell level corresponding to a given physical distance, use
-  // the S2Cell metrics defined in s2.h.  For example, to find the cell
-  // level that corresponds to an average edge length of 10km, use:
-  //
-  //     int level = S2::kAvgEdge.GetClosestLevel(
-  //                 geostore::S2Earth::KmToRadians(length_km));
-  //
-  // Note: min_level() takes priority over max_cells(), i.e. cells below the
-  // given level will never be used even if this causes a large number of
-  // cells to be returned.
-  void set_min_level(int min_level);
-  void set_max_level(int max_level);
-  int min_level() const;
-  int max_level() const;
+  // Returns the current options.  Options can be modifed between calls.
+  const Options& options() const;
+  Options* mutable_options();
 
-  // Convenience function that sets both the maximum and minimum cell levels.
-  // Note that since min_level() takes priority over max_cells(), an arbitrary
-  // number of cells may be returned even if max_cells() is small.
-  void set_fixed_level(int level);
-
-  // If specified, then only cells where (level - min_level) is a multiple of
-  // "level_mod" will be used (default 1).  This effectively allows the
-  // branching factor of the S2CellId hierarchy to be increased.  Currently
-  // the only parameter values allowed are 1, 2, or 3, corresponding to
-  // branching factors of 4, 16, and 64 respectively.
-  void set_level_mod(int level_mod);
-  int level_mod() const;
-
-  // Sets the maximum desired number of cells in the approximation (defaults
-  // to kDefaultMaxCells).  Note the following:
+  // Returns an S2CellUnion that covers (GetCovering) or is contained within
+  // (GetInteriorCovering) the given region and satisfies the current options.
   //
-  //  - For any setting of max_cells(), up to 6 cells may be returned if that
-  //    is the minimum number of cells required (e.g. if the region intersects
-  //    all six face cells).  Up to 3 cells may be returned even for very tiny
-  //    convex regions if they happen to be located at the intersection of
-  //    three cube faces.
-  //
-  //  - For any setting of max_cells(), an arbitrary number of cells may be
-  //    returned if min_level() is too high for the region being approximated.
-  //
-  //  - If max_cells() is less than 4, the area of the covering may be
-  //    arbitrarily large compared to the area of the original region even if
-  //    the region is convex (e.g. an S2Cap or S2LatLngRect).
-  //
-  // Accuracy is measured by dividing the area of the covering by the area of
-  // the original region.  The following table shows the median and worst case
-  // values for this area ratio on a test case consisting of 100,000 spherical
-  // caps of random size (generated using s2regioncoverer_test):
-  //
-  //   max_cells:        3      4     5     6     8    12    20   100   1000
-  //   median ratio:  5.33   3.32  2.73  2.34  1.98  1.66  1.42  1.11   1.01
-  //   worst case:  215518  14.41  9.72  5.26  3.91  2.75  1.92  1.20   1.02
-  void set_max_cells(int max_cells);
-  int max_cells() const;
-
-  // Return a vector of cell ids that covers (GetCovering) or is contained
-  // within (GetInteriorCovering) the given region and satisfies the various
-  // restrictions specified above.
-  void GetCovering(const S2Region& region, std::vector<S2CellId>* covering);
-  void GetInteriorCovering(const S2Region& region,
-                           std::vector<S2CellId>* interior);
+  // Note that if options().min_level() > 0 or options().level_mod() > 1, the
+  // by definition the S2CellUnion may not be normalized, i.e. there may be
+  // groups of four child cells that can be replaced by their parent cell.
+  S2CellUnion GetCovering(const S2Region& region);
+  S2CellUnion GetInteriorCovering(const S2Region& region);
 };
 ```
 

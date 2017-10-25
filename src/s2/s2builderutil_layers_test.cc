@@ -26,6 +26,7 @@
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/str_join.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2debug.h"
 #include "s2/s2textformat.h"

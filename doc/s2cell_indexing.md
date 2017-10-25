@@ -29,19 +29,15 @@ Here is some example code:
 
 ```c++
 vector<S2CellId> index;
-for (int i = 0; i < points.size(); ++i) {
-  index.push_back(S2CellId::FromPoint(points[i]));
+for (const S2Point& point : points) {
+  index.push_back(S2CellId(point));
 }
-sort(index.begin(), index.end());
-S2Cap cap = S2Cap::FromAxisAngle(center, radius);
+std::sort(index.begin(), index.end());
 S2RegionCoverer coverer;
-coverer.set_max_cells(12);  // Default is 8.
-S2CellUnion covering;
-coverer.GetCellUnion(cap, &covering);
-const vector<S2CellId>& cell_ids = covering.cell_ids();
-for (int i = 0; i < cell_ids.size(); ++i) {
-  int lo = lower_bound(index.begin(), index.end(), cell_ids[i].range_min());
-  int hi = upper_bound(index.begin(), index.end(), cell_ids[i].range_max());
+coverer.mutable_options()->set_max_cells(12);  // Default is 8.
+for (S2CellId id : coverer.GetCellUnion(S2Cap(center, radius))) {
+  int lo = lower_bound(index.begin(), index.end(), id.range_min());
+  int hi = upper_bound(index.begin(), index.end(), id.range_max());
   for (int j = lo; j < hi; ++j) {
     if (cap.Contains(index[j].ToPoint())) {
       LOG(INFO) << "Cap contains point " << index[j].ToPoint();
@@ -238,19 +234,17 @@ that level that intersect the original, non-expanded query region. Here is some
 example code:
 
 ```c++
-typedef map<pair<int, S2CellId>, MyRegion*> MyIndex;
+typedef btree_map<pair<int, S2CellId>, MyRegion*> MyIndex;
 static MyIndex index;
 static const int kNumBuckets = GetKey(S2Cap::Full()).first + 1;
 
 void FindMatches(const S2LatLngRect& query, vector<MyRegion *> *result) {
   S2RegionCoverer coverer;
-  S2CellUnion covering;
   for (int bucket = 0; bucket < kNumBuckets; ++bucket) {
     double radius = min(2 * M_PI, kMinRadius * exp(kLogRatio * bucket));
-    coverer.GetCellUnion(query.ExpandedByDistance(S1Angle::Radians(radius)),
-                         &covering);
-    for (int j = 0; j < covering.num_cells(); ++j) {
-      S2CellId id = covering.cell_id(j);
+    S2CellUnion covering = coverer.GetCellUnion(
+        query.ExpandedByDistance(S1Angle::Radians(radius)));
+    for (S2CellId id : covering) {
       MyIndex::const_iterator
         lo = index.lower_bound(make_pair(bucket, id.range_min())),
         hi = index.lower_bound(make_pair(bucket, id.range_max()));

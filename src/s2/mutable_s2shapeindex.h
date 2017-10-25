@@ -170,7 +170,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndexBase {
   // removed.  (Shape ids are not reused.)
   int num_shape_ids() const override { return shapes_.size(); }
 
-  // Return a pointer to the shape with the given id, or nullptr if the shape
+  // Returns a pointer to the shape with the given id, or nullptr if the shape
   // has been removed from the index.
   S2Shape* shape(int id) const override { return shapes_[id].get(); }
 
@@ -243,7 +243,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndexBase {
   // are added.  Invalidates all iterators and their associated data.
   int Add(std::unique_ptr<S2Shape> shape);
 
-  // Remove the given shape from the index and return ownership to the caller.
+  // Removes the given shape from the index and return ownership to the caller.
   // Invalidates all iterators and their associated data.
   std::unique_ptr<S2Shape> Release(int shape_id);
 
@@ -259,7 +259,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndexBase {
   // Returns the number of bytes currently occupied by the index (including any
   // unused space at the end of vectors, etc). It has the same thread safety
   // as the other "const" methods (see introduction).
-  size_t SpaceUsed() const;
+  size_t SpaceUsed() const override;
 
   // Calls to Add() and Release() are normally queued and processed on the
   // first subsequent query (in a thread-safe way).  This has many advantages,
@@ -271,7 +271,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndexBase {
   // exclude the cost of building the index from benchmark results.)
   void ForceBuild();
 
-  // Return true if there are no pending updates that need to be applied.
+  // Returns true if there are no pending updates that need to be applied.
   // This can be useful to avoid building the index unnecessarily, or for
   // choosing between two different algorithms depending on whether the index
   // is available.
@@ -455,21 +455,6 @@ class MutableS2ShapeIndex final : public S2ShapeIndexBase {
   void operator=(const MutableS2ShapeIndex&) = delete;
 };
 
-// TODO(ericv/jrosenstock): Remove this once all clients have been changed to
-// use MutableS2ShapeIndex.
-//
-// This alias is not marked ABSL_DEPRECATED because S2ShapeIndexBase will be
-// renamed to S2ShapeIndex.  Code that only needs read-only ("const") access
-// to an index should continue to use S2ShapeIndex, just as before, since this
-// will soon refer to the base class.  For example:
-//
-// void DoSomething(const S2ShapeIndex& index) {
-//   ... works with MutableS2ShapeIndex or EncodedS2ShapeIndex ...
-// }
-//
-// Code that needs to build or modify an index should use the renamed
-// MutableS2ShapeIndex type.
-using S2ShapeIndex = MutableS2ShapeIndex;
 
 //////////////////   Implementation details follow   ////////////////////
 

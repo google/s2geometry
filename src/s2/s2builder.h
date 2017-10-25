@@ -28,6 +28,7 @@
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/_fpcontractoff.h"
 #include "s2/id_set_lexicon.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
 #include "s2/s2cellid.h"
@@ -61,14 +62,17 @@ class S2Polyline;
 // The implementation is based on the framework of "snap rounding".  Unlike
 // most snap rounding implementations, S2Builder defines edges as geodesics on
 // the sphere (straight lines) and uses the topology of the sphere (i.e.,
-// there are no "seams" at the poles or 180th meridian).  It offers the
+// there are no "seams" at the poles or 180th meridian).  The algorithm is
+// designed to be 100% robust for arbitrary input geometry.  It offers the
 // following properties:
 //
 //   - Guaranteed bounds on how far input vertices and edges can move during
 //     the snapping process (i.e., at most the given "snap_radius").
 //
 //   - Guaranteed minimum separation between edges and vertices other than
-//     their endpoints (similar to the goals of Iterated Snap Rounding).
+//     their endpoints (similar to the goals of Iterated Snap Rounding).  In
+//     other words, edges that do not intersect in the output are guaranteed
+//     to have a minimum separation between them.
 //
 //   - Idempotency (similar to the goals of Stable Snap Rounding), i.e. if the
 //     input already meets the output criteria then it will not be modified.

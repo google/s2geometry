@@ -80,6 +80,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/bits/bits.h"
 #include "s2/id_set_lexicon.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
 #include "s2/s2builder_graph.h"
@@ -97,7 +98,6 @@
 #include "s2/s2polyline.h"
 #include "s2/s2polyline_simplifier.h"
 #include "s2/s2predicates.h"
-#include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil.h"
 #include "s2/s2textformat.h"
 

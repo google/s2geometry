@@ -34,6 +34,7 @@
 #include "s2/base/stringprintf.h"
 #include "s2/strings/serialize.h"
 #include "s2/util/coding/coder.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"

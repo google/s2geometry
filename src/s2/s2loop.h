@@ -28,6 +28,7 @@
 #include <glog/logging.h>
 
 #include "s2/_fpcontractoff.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s1angle.h"
 #include "s2/s2debug.h"
 #include "s2/s2latlngrect.h"

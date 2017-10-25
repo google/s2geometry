@@ -30,6 +30,7 @@
 #include <glog/logging.h>
 
 #include "s2/base/stringprintf.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
