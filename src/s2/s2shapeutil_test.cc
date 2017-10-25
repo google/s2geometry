@@ -22,6 +22,7 @@
 
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s2cap.h"
 #include "s2/s2contains_point_query.h"
 #include "s2/s2edge_crossings.h"

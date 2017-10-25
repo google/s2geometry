@@ -485,24 +485,4 @@ S2Point GetIntersection(const S2Point& a0, const S2Point& a1,
   return result;
 }
 
-bool SimpleCrossing(const S2Point& a, const S2Point& b,
-                    const S2Point& c, const S2Point& d) {
-  // We compute SimpleCCW() for triangles ACB, CBD, BDA, and DAC.  All
-  // of these triangles need to have the same orientation (CW or CCW)
-  // for an intersection to exist.  Note that this is slightly more
-  // restrictive than the corresponding definition for planar edges,
-  // since we need to exclude pairs of line segments that would
-  // otherwise "intersect" by crossing two antipodal points.
-
-  Vector3_d ab = a.CrossProd(b);
-  double acb = -(ab.DotProd(c));
-  double bda = ab.DotProd(d);
-  if (acb * bda <= 0) return false;
-
-  Vector3_d cd = c.CrossProd(d);
-  double cbd = -(cd.DotProd(b));
-  double dac = cd.DotProd(a);
-  return (acb * cbd > 0) && (acb * dac > 0);
-}
-
 }  // namespace S2

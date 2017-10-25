@@ -59,20 +59,20 @@ class S2ClippedShape {
   // The shape id of the clipped shape.
   int shape_id() const;
 
-  // Return true if the center of the S2CellId is inside the shape.  Returns
+  // Returns true if the center of the S2CellId is inside the shape.  Returns
   // false for shapes that do not have an interior.
   bool contains_center() const;
 
   // The number of edges that intersect the S2CellId.
   int num_edges() const;
 
-  // Return the edge id of the given edge in this clipped shape.  Edges are
+  // Returns the edge id of the given edge in this clipped shape.  Edges are
   // sorted in increasing order of edge id.
   //
   // REQUIRES: 0 <= i < num_edges()
   int edge(int i) const;
 
-  // Return true if the clipped shape contains the given edge id.
+  // Returns true if the clipped shape contains the given edge id.
   bool ContainsEdge(int id) const;
 
  private:
@@ -109,16 +109,16 @@ class S2ClippedShape {
 // It consists of a set of clipped shapes.
 class S2ShapeIndexCell {
  public:
-  // Return the number of clipped shapes in this cell.
+  // Returns the number of clipped shapes in this cell.
   int num_clipped() const { return shapes_.size(); }
 
-  // Return the clipped shape at the given index.  Shapes are kept sorted in
+  // Returns the clipped shape at the given index.  Shapes are kept sorted in
   // increasing order of shape id.
   //
   // REQUIRES: 0 <= i < num_clipped()
   const S2ClippedShape& clipped(int i) const { return shapes_[i]; }
 
-  // Return a pointer to the clipped shape corresponding to the given shape,
+  // Returns a pointer to the clipped shape corresponding to the given shape,
   // or nullptr if the shape does not intersect this cell.
   const S2ClippedShape* find_clipped(const S2Shape* shape) const;
   const S2ClippedShape* find_clipped(int shape_id) const;
@@ -149,14 +149,13 @@ class S2ShapeIndexCell {
 // it very fast to answer queries such as finding nearby shapes, measuring
 // distances, testing for intersection and containment, etc.
 //
-// Each object in the index implements the S2Shape interface.  An S2Shape
-// represents a collection of edges that optionally defines an interior.  The
-// edges do not need to be connected, so for example an S2Shape can represent
-// a polygon with multiple shells and/or holes, or a set of polylines, or a
-// set of points.  All geometry within a single S2Shape must have the same
-// dimension, so for example if you want create an S2ShapeIndex containing a
-// polyline and 10 points, then you will need at least two different S2Shape
-// objects.
+// Each object in the index implements the S2Shape interface.  An S2Shape is a
+// collection of edges that optionally defines an interior.  The edges do not
+// need to be connected, so for example an S2Shape can represent a polygon
+// with multiple shells and/or holes, or a set of polylines, or a set of
+// points.  All geometry within a single S2Shape must have the same dimension,
+// so for example if you want to create an S2ShapeIndex containing a polyline
+// and 10 points, then you will need at least two different S2Shape objects.
 //
 // The most important type of S2ShapeIndex is MutableS2ShapeIndex, which
 // allows you to build an index incrementally by adding or removing shapes.
@@ -190,20 +189,21 @@ class S2ShapeIndexCell {
 // - S2ShapeIndexBufferedRegion: computes approximations that have been
 //                               expanded by a given radius.
 //
-// For example, to index a set of polygons and then determine which polygons
-// contain various query points:
+// Here is an example showing how to index a set of polygons and then
+// determine which polygon(s) contain each of a set of query points:
 //
-//   void Test(const vector<S2Polygon*>& polygons,
-//             const vector<S2Point>& points) {
+//   void TestContainment(const vector<S2Point>& points,
+//                        const vector<S2Polygon*>& polygons) {
 //     MutableS2ShapeIndex index;
 //     for (auto polygon : polygons) {
 //       index.Add(absl::make_unique<S2Polygon::Shape>(polygon));
 //     }
+//     auto query = MakeS2ContainsPointQuery(&index);
 //     for (const auto& point: points) {
-//       MakeS2ContainsPointQuery(&index).VisitContainingShapes(
-//           point, [](S2Shape* shape) {
-//             Output(point, down_cast<S2Polygon::Shape*>(shape)->polygon());
-//           });
+//       for (S2Shape* shape : query.GetContainingShapes(point)) {
+//         S2Polygon* polygon = polygons[shape->id()];
+//         ... do something with (point, polygon) ...
+//       }
 //     }
 //   }
 //
@@ -246,6 +246,10 @@ class S2ShapeIndexBase {
   // Returns a pointer to the shape with the given id, or nullptr if the shape
   // has been removed from the index.
   virtual S2Shape* shape(int id) const = 0;
+
+  // Returns the number of bytes currently occupied by the index (including any
+  // unused space at the end of vectors, etc).
+  virtual size_t SpaceUsed() const = 0;
 
   // Minimizes memory usage by requesting that any data structures that can be
   // rebuilt should be discarded.  This method invalidates all iterators.
@@ -493,6 +497,8 @@ class S2ShapeIndexBase {
   virtual std::unique_ptr<IteratorBase> NewIterator(InitialPosition pos)
       const = 0;
 };
+// TODO(ericv/jrosenstock): Remove when class has been renamed.
+using S2ShapeIndex = S2ShapeIndexBase;
 
 
 //////////////////   Implementation details follow   ////////////////////

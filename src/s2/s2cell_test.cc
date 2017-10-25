@@ -30,6 +30,7 @@
 #include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -44,7 +45,6 @@
 #include "s2/s2loop.h"
 #include "s2/s2metrics.h"
 #include "s2/s2pointutil.h"
-#include "s2/s2shapeindex.h"
 #include "s2/s2testing.h"
 
 using absl::make_unique;

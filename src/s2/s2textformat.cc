@@ -25,6 +25,7 @@
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/third_party/absl/strings/string_view.h"
 #include "s2/third_party/absl/strings/strip.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s2latlng.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"
@@ -41,7 +42,7 @@ namespace s2textformat {
 
 static vector<string_view> SplitString(string_view str, char separator) {
   vector<string_view> result =
-      strings::Split(str, separator, strings::SkipWhitespace());
+      absl::StrSplit(str, separator, absl::SkipWhitespace());
   strings::StripWhitespaceInCollection(&result);
   return result;
 }
@@ -253,7 +254,7 @@ unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(string_view str) {
 }
 
 bool MakeIndex(string_view str, std::unique_ptr<MutableS2ShapeIndex>* index) {
-  vector<string_view> strs = strings::Split(str, '#');
+  vector<string_view> strs = absl::StrSplit(str, '#');
   DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
 
   vector<S2Point> points;

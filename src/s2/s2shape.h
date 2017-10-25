@@ -107,11 +107,11 @@ class S2Shape {
   S2Shape() : id_(-1) {}
   virtual ~S2Shape() {}
 
-  // Return the number of edges in this shape.  Edges have ids ranging from 0
+  // Returns the number of edges in this shape.  Edges have ids ranging from 0
   // to num_edges() - 1.
   virtual int num_edges() const = 0;
 
-  // Return the endpoints of the given edge id.
+  // Returns the endpoints of the given edge id.
   //
   // REQUIRES: 0 <= id < num_edges()
   virtual Edge edge(int edge_id) const = 0;

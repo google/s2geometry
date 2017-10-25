@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s2boolean_operation.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"

@@ -21,13 +21,13 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <gflags/gflags.h>
 #include "s2/base/mutex.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
-#include <thread>
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -171,7 +171,7 @@ void TestIteratorMethods(const MutableS2ShapeIndex& index) {
   it.Finish();
   EXPECT_TRUE(it.done());
   vector<S2CellId> ids;
-  S2ShapeIndex::Iterator it2(&index);
+  MutableS2ShapeIndex::Iterator it2(&index);
   S2CellId min_cellid = S2CellId::Begin(S2CellId::kMaxLevel);
   for (it.Begin(); !it.done(); it.Next()) {
     S2CellId cellid = it.id();
@@ -489,6 +489,24 @@ class LazyUpdatesTest : public ::testing::Test {
   void ReaderThread();
 
  protected:
+  class ReaderThreadPool {
+   public:
+    ReaderThreadPool(LazyUpdatesTest* test, int num_threads)
+        : threads_(make_unique<std::thread[]>(num_threads)),
+          num_threads_(num_threads) {
+      for (int i = 0; i < num_threads_; ++i) {
+        threads_[i] = std::thread(&LazyUpdatesTest::ReaderThread, test);
+      }
+    }
+    ~ReaderThreadPool() {
+      for (int i = 0; i < num_threads_; ++i) threads_[i].join();
+    }
+
+   private:
+    unique_ptr<std::thread[]> threads_;
+    int num_threads_;
+  };
+
   MutableS2ShapeIndex index_;
   // The following fields are guarded by lock_.
   Mutex lock_;
@@ -533,10 +551,7 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
   // The number of readers should be large enough so that it is likely that
   // several readers will be running at once (with a multiple-core CPU).
   const int kNumReaders = 8;
-  std::thread threads[kNumReaders];
-  for (int i = 0; i < kNumReaders; ++i) {
-    threads[i] = std::thread(&LazyUpdatesTest::ReaderThread, this);
-  }
+  ReaderThreadPool pool(this, kNumReaders);
   lock_.Lock();
   const int kIters = 100;
   for (int iter = 0; iter < kIters; ++iter) {
@@ -559,7 +574,7 @@ TEST_F(LazyUpdatesTest, ConstMethodsThreadSafe) {
   num_updates_ = -1;
   update_ready_.SignalAll();
   lock_.Unlock();
-  for (auto& t : threads) t.join();
+  // ReaderThreadPool destructor waits for all threads to complete.
 }
 
 TEST(MutableS2ShapeIndex, MixedGeometry) {

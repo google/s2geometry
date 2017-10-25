@@ -18,6 +18,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/strings/str_split.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s1angle.h"
 #include "s2/s2latlng.h"
 #include "s2/s2loop.h"
@@ -36,7 +37,7 @@ static const int kIters = 10000;
 // "max_digits" after the decimal point and has no trailing zeros.
 void ExpectMaxDigits(const S2LatLng& ll, int max_digits) {
   string result = s2textformat::ToString(ll.ToPoint());
-  vector<string> values = strings::Split(result, ':', strings::SkipEmpty());
+  vector<string> values = absl::StrSplit(result, ':', absl::SkipEmpty());
   EXPECT_EQ(2, values.size()) << result;
   for (const auto& value : values) {
     int num_digits = 0;
@@ -342,13 +343,13 @@ TEST(SafeMakeLaxPolygon, InvalidInput) {
 }
 
 TEST(SafeMakeIndex, ValidInput) {
-  auto index = absl::MakeUnique<MutableS2ShapeIndex>();
+  auto index = absl::make_unique<MutableS2ShapeIndex>();
   EXPECT_TRUE(s2textformat::MakeIndex("# 0:0, 0:0 | 1:0, 2:0 #", &index));
   EXPECT_EQ("# 0:0, 0:0 | 1:0, 2:0 #", s2textformat::ToString(*index));
 }
 
 TEST(SafeMakeIndex, InvalidInput) {
-  auto index = absl::MakeUnique<MutableS2ShapeIndex>();
+  auto index = absl::make_unique<MutableS2ShapeIndex>();
   EXPECT_FALSE(s2textformat::MakeIndex("# blah #", &index));
 }
 

@@ -11,11 +11,11 @@ using std::function;
 using std::string;
 using std::vector;
 
-namespace strings {
+namespace absl {
 
 template <typename String>
-vector<String> Split(String const& text, char const delim,
-                     function<bool(string_view)> predicate) {
+vector<String> StrSplit(String const& text, char const delim,
+                        function<bool(string_view)> predicate) {
   vector<String> elems;
   typename String::size_type begin = 0;
   typename String::size_type end;
@@ -31,16 +31,17 @@ vector<String> Split(String const& text, char const delim,
     elems.emplace_back(view);
   return elems;
 }
-template vector<string> Split(string const& text, char const delim,
-                              function<bool(string_view)> predicate);
-template vector<string_view> Split(string_view const& text, char const delim,
-                                   function<bool(string_view)> predicate);
+template vector<string> StrSplit(string const& text, char const delim,
+                                 function<bool(string_view)> predicate);
+template vector<string_view> StrSplit(string_view const& text, char const delim,
+                                      function<bool(string_view)> predicate);
 
 template <typename String>
-vector<String> Split(String const& text, char const delim) {
-  return Split(text, delim, [](string_view) { return true; });
+vector<String> StrSplit(String const& text, char const delim) {
+  return StrSplit(text, delim, [](string_view) { return true; });
 }
-template vector<string> Split(string const& text, char const delim);
-template vector<string_view> Split(string_view const& text, char const delim);
+template vector<string> StrSplit(string const& text, char const delim);
+template vector<string_view> StrSplit(string_view const& text,
+                                      char const delim);
 
-}  // namespace strings
+}  // namespace absl

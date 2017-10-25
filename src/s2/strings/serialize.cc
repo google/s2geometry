@@ -21,6 +21,7 @@
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
+using absl::StrSplit;
 using absl::string_view;
 using std::pair;
 using std::string;
@@ -30,9 +31,9 @@ bool DictionaryParse(string_view encoded_str,
                      vector<pair<string, string>>* items) {
   if (encoded_str.empty())
     return true;
-  vector<string_view> const entries = strings::Split(encoded_str, ',');
+  vector<string_view> const entries = StrSplit(encoded_str, ',');
   for (int i = 0; i < entries.size(); ++i) {
-    vector<string_view> const fields = strings::Split(entries[i], ':');
+    vector<string_view> const fields = StrSplit(entries[i], ':');
     if (fields.size() != 2)  // parsing error
       return false;
     items->push_back(std::make_pair(string(fields[0]), string(fields[1])));

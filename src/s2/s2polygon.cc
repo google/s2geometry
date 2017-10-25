@@ -33,6 +33,7 @@
 #include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/coding/coder.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2boolean_operation.h"

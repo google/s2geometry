@@ -68,7 +68,7 @@ class S2CellUnion final : public S2Region {
   // unlike the constructor above, this one makes a copy of "cell_ids".
   explicit S2CellUnion(const std::vector<uint64>& cell_ids);
 
-  // Constructs a cell union from S2CellIds have already been normalized
+  // Constructs a cell union from S2CellIds that have already been normalized
   // (typically because they were extracted from another S2CellUnion).
   //
   // The argument is passed by value, so if you are passing a named variable

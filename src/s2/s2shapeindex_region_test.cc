@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <gtest/gtest.h>
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s2shapeutil.h"
 
 using std::vector;

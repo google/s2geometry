@@ -20,9 +20,9 @@
 #include <memory>
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s2cap.h"
 #include "s2/s2loop.h"
-#include "s2/s2shapeindex.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 

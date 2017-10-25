@@ -24,6 +24,7 @@
 #include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"

@@ -33,6 +33,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/types/span.h"
 #include "s2/util/coding/coder.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"

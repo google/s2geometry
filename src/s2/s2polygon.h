@@ -26,6 +26,7 @@
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/_fpcontractoff.h"
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s1angle.h"
 #include "s2/s2boolean_operation.h"
 #include "s2/s2builder.h"

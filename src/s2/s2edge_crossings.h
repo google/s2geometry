@@ -133,17 +133,6 @@ extern const S1Angle kIntersectionError;
 // opposite directions.
 extern const S1Angle kIntersectionMergeRadius;  // 2 * kIntersectionError
 
-// Returns true if edge AB crosses CD at a point that is interior to both
-// edges, using a naive non-robust algorithm.  Most applications should use
-// the robust CrossingSign() function or an S2EdgeCrosser instead.
-// Properties:
-//
-//  (1) SimpleCrossing(b,a,c,d) == SimpleCrossing(a,b,c,d)
-//  (2) SimpleCrossing(c,d,a,b) == SimpleCrossing(a,b,c,d)
-ABSL_DEPRECATED("Use CrossingSign() > 0 instead.")
-bool SimpleCrossing(const S2Point& a, const S2Point& b,
-                    const S2Point& c, const S2Point& d);
-
 }  // namespace S2
 
 #endif  // S2_S2EDGE_CROSSINGS_H_

@@ -31,10 +31,12 @@ class S2Earth {
  public:
   inline static S1Angle ToAngle(util::units::Meters const& distance);
   inline static util::units::Meters ToDistance(S1Angle const& angle);
-  // Functions that convert between angles and distances on the Earth's
-  // surface.  This is possible only because the Earth is modeled as a sphere;
-  // otherwise a given angle would correspond to a range of distances
-  // depending on where the corresponding line segment was located.
+  // These functions convert between distances on the unit sphere
+  // (expressed as angles subtended from the sphere's center) and
+  // distances on the Earth's surface.  This is possible only because
+  // the Earth is modeled as a sphere; otherwise a given angle would
+  // correspond to a range of distances depending on where the
+  // corresponding line segment was located.
   //
   // Note that you will lose precision if you use the ToDistance() method,
   // since Meters is a single-precision type.  If you need more precision,
@@ -47,7 +49,15 @@ class S2Earth {
   inline static double RadiansToKm(double radians);
   inline static double MetersToRadians(double meters);
   inline static double RadiansToMeters(double radians);
+
+  inline static double SquareKmToSteradians(double km2);
+  inline static double SquareMetersToSteradians(double m2);
+  inline static double SteradiansToSquareKm(double steradians);
   inline static double SteradiansToSquareMeters(double steradians);
+  // These functions convert between areas on the unit sphere
+  // (as returned by the S2 library) and areas on the Earth's surface.
+  // Note that the area of a region on the unit sphere is equal to the
+  // solid angle it subtends from the sphere's center (measured in steradians).
 
   static double ToLongitudeRadians(util::units::Meters const& distance,
                                    double latitude_radians);
@@ -155,6 +165,18 @@ inline double S2Earth::MetersToRadians(double meters) {
 
 inline double S2Earth::RadiansToMeters(double radians) {
   return radians * RadiusMeters();
+}
+
+inline double S2Earth::SquareKmToSteradians(double km2) {
+  return km2 / (RadiusKm() * RadiusKm());
+}
+
+inline double S2Earth::SquareMetersToSteradians(double m2) {
+  return m2 / (RadiusMeters() * RadiusMeters());
+}
+
+inline double S2Earth::SteradiansToSquareKm(double steradians) {
+  return steradians * RadiusKm() * RadiusKm();
 }
 
 inline double S2Earth::SteradiansToSquareMeters(double steradians) {
