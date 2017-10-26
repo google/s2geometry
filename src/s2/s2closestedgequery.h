@@ -168,7 +168,7 @@ class S2ClosestEdgeQuery {
                            Distance* min_dist) const override;
     bool UpdateMinDistance(const S2Cell& cell,
                            Distance* min_dist) const override;
-    std::vector<int> GetContainingShapes(const S2ShapeIndexBase& index,
+    std::vector<int> GetContainingShapes(const S2ShapeIndex& index,
                                          int max_shapes) const override;
 
    private:
@@ -185,7 +185,7 @@ class S2ClosestEdgeQuery {
                            Distance* min_dist) const override;
     bool UpdateMinDistance(const S2Cell& cell,
                            Distance* min_dist) const override;
-    std::vector<int> GetContainingShapes(const S2ShapeIndexBase& index,
+    std::vector<int> GetContainingShapes(const S2ShapeIndex& index,
                                          int max_shapes) const override;
 
    private:
@@ -203,7 +203,7 @@ class S2ClosestEdgeQuery {
                            Distance* min_dist) const override;
     bool UpdateMinDistance(const S2Cell& cell,
                            Distance* min_dist) const override;
-    std::vector<int> GetContainingShapes(const S2ShapeIndexBase& index,
+    std::vector<int> GetContainingShapes(const S2ShapeIndex& index,
                                          int max_shapes) const override;
 
    private:
@@ -254,7 +254,7 @@ class S2ClosestEdgeQuery {
   //    in order to implement the Target API.
   class ShapeIndexTarget final : public Target {
    public:
-    explicit ShapeIndexTarget(const S2ShapeIndexBase* index);
+    explicit ShapeIndexTarget(const S2ShapeIndex* index);
 
     // Specifies that distance will be measured to the boundary and interior
     // of polygons in the S2ShapeIndex rather than to polygon boundaries only.
@@ -277,17 +277,17 @@ class S2ClosestEdgeQuery {
                            Distance* min_dist) const override;
     bool UpdateMinDistance(const S2Cell& cell,
                            Distance* min_dist) const override;
-    std::vector<int> GetContainingShapes(const S2ShapeIndexBase& query_index,
+    std::vector<int> GetContainingShapes(const S2ShapeIndex& query_index,
                                          int max_shapes) const override;
 
    private:
-    const S2ShapeIndexBase* index_;
+    const S2ShapeIndex* index_;
     std::unique_ptr<S2ClosestEdgeQuery> query_;
   };
 
   // Convenience constructor that calls Init().  Options may be specified here
   // or changed at any time using the mutable_options() accessor method.
-  explicit S2ClosestEdgeQuery(const S2ShapeIndexBase* index,
+  explicit S2ClosestEdgeQuery(const S2ShapeIndex* index,
                               const Options& options = Options());
 
   // Default constructor; requires Init() to be called.
@@ -299,14 +299,14 @@ class S2ClosestEdgeQuery {
   //
   // REQUIRES: ReInit() must be called if "index" is modified.
   // REQUIRES: "index" must persist for the lifetime of this object.
-  void Init(const S2ShapeIndexBase* index, const Options& options = Options());
+  void Init(const S2ShapeIndex* index, const Options& options = Options());
 
   // Reinitialize the query.  This method must be called whenever the
   // underlying S2ShapeIndex is modified.
   void ReInit();
 
   // Return a reference to the underlying S2ShapeIndex.
-  const S2ShapeIndexBase& index() const;
+  const S2ShapeIndex& index() const;
 
   // Returns the query options.  Options can be modifed between queries.
   const Options& options() const;
@@ -430,12 +430,12 @@ inline void S2ClosestEdgeQuery::ShapeIndexTarget::set_use_brute_force(
   query_->mutable_options()->set_use_brute_force(use_brute_force);
 }
 
-inline S2ClosestEdgeQuery::S2ClosestEdgeQuery(const S2ShapeIndexBase* index,
+inline S2ClosestEdgeQuery::S2ClosestEdgeQuery(const S2ShapeIndex* index,
                                               const Options& options) {
   Init(index, options);
 }
 
-inline void S2ClosestEdgeQuery::Init(const S2ShapeIndexBase* index,
+inline void S2ClosestEdgeQuery::Init(const S2ShapeIndex* index,
                                      const Options& options) {
   options_ = options;
   base_.Init(index);
@@ -445,7 +445,7 @@ inline void S2ClosestEdgeQuery::ReInit() {
   base_.ReInit();
 }
 
-inline const S2ShapeIndexBase& S2ClosestEdgeQuery::index() const {
+inline const S2ShapeIndex& S2ClosestEdgeQuery::index() const {
   return base_.index();
 }
 

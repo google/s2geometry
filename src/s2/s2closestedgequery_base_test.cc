@@ -110,7 +110,7 @@ class FurthestPointTarget final : public FurthestEdgeQuery::Target {
     return true;
   }
 
-  vector<int> GetContainingShapes(const S2ShapeIndexBase& index,
+  vector<int> GetContainingShapes(const S2ShapeIndex& index,
                                   int max_shapes) const override {
     // For furthest points, we return the polygons whose interior contains the
     // antipode of the target point.  (These are the polygons whose

@@ -28,7 +28,7 @@ using std::vector;
 S2ShapeIndexBufferedRegion::S2ShapeIndexBufferedRegion() {
 }
 
-void S2ShapeIndexBufferedRegion::Init(const S2ShapeIndexBase* index,
+void S2ShapeIndexBufferedRegion::Init(const S2ShapeIndex* index,
                                       S1ChordAngle radius) {
   radius_ = radius;
   radius_successor_ = radius.Successor();

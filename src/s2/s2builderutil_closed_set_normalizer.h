@@ -177,7 +177,7 @@ using LayerVector = std::vector<std::unique_ptr<S2Builder::Layer>>;
 // degeneracies have been normalized to objects of lower dimension, and
 // maximal polylines are constructed from undirected edges):
 //
-// bool ComputeUnion(const S2ShapeIndexBase& a, const S2ShapeIndexBase& b,
+// bool ComputeUnion(const S2ShapeIndex& a, const S2ShapeIndex& b,
 //                   MutableS2ShapeIndex* index, S2Error* error) {
 //   IndexedS2PolylineVectorLayer::Options polyline_options;
 //   polyline_options.set_edge_type(EdgeType::UNDIRECTED);

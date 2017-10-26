@@ -258,7 +258,7 @@ TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
 }
 
 // This is the example from the header file, with a few extras.
-void TestPolylineCrossings(const S2ShapeIndexBase& index,
+void TestPolylineCrossings(const S2ShapeIndex& index,
                            const S2Point& a0, const S2Point& a1) {
   S2CrossingEdgeQuery query(&index);
   S2CrossingEdgeQuery::EdgeMap edge_map;

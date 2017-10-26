@@ -378,7 +378,7 @@ string ToString(const S2LaxPolygonShape& polygon) {
   return out;
 }
 
-string ToString(const S2ShapeIndexBase& index) {
+string ToString(const S2ShapeIndex& index) {
   string out;
   for (int dim = 0; dim < 3; ++dim) {
     if (dim > 0) out += "#";

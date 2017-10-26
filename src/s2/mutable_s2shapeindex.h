@@ -114,7 +114,7 @@
 // Data is decoded only when an operation needs it.  For example, to determine
 // which shapes(s) contain a given query point only requires decoding the data
 // in the S2ShapeIndexCell that contains that point.
-class MutableS2ShapeIndex final : public S2ShapeIndexBase {
+class MutableS2ShapeIndex final : public S2ShapeIndex {
  private:
   using CellMap = util::btree::btree_map<S2CellId, S2ShapeIndexCell*>;
 

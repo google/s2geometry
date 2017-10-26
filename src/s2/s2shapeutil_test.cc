@@ -79,7 +79,7 @@ TEST(RangeIterator, EmptyIndex) {
 // A set of edge pairs within an S2ShapeIndex.
 using EdgePairVector = std::vector<std::pair<ShapeEdgeId, ShapeEdgeId>>;
 
-EdgePairVector GetCrossings(const S2ShapeIndexBase& index, CrossingType type) {
+EdgePairVector GetCrossings(const S2ShapeIndex& index, CrossingType type) {
   EdgePairVector edge_pairs;
   VisitCrossings(index, type,
                  [&edge_pairs](const ShapeEdge& a, const ShapeEdge& b, bool) {
@@ -94,7 +94,7 @@ EdgePairVector GetCrossings(const S2ShapeIndexBase& index, CrossingType type) {
   return edge_pairs;
 }
 
-EdgePairVector GetCrossingEdgePairsBruteForce(const S2ShapeIndexBase& index,
+EdgePairVector GetCrossingEdgePairsBruteForce(const S2ShapeIndex& index,
                                               CrossingType type) {
   EdgePairVector result;
   int min_sign = (type == CrossingType::ALL) ? 0 : 1;
@@ -117,7 +117,7 @@ std::ostream& operator<<(std::ostream& os,
   return os << "(" << pair.first << "," << pair.second << ")";
 }
 
-void TestGetCrossingEdgePairs(const S2ShapeIndexBase& index,
+void TestGetCrossingEdgePairs(const S2ShapeIndex& index,
                               CrossingType type) {
   EdgePairVector expected = GetCrossingEdgePairsBruteForce(index, type);
   EdgePairVector actual = GetCrossings(index, type);

@@ -369,9 +369,9 @@ class S2Builder {
 
    private:
     std::unique_ptr<SnapFunction> snap_function_;
-    bool split_crossing_edges_;
-    bool simplify_edge_chains_;
-    bool idempotent_;
+    bool split_crossing_edges_ = false;
+    bool simplify_edge_chains_ = false;
+    bool idempotent_ = true;
   };
 
   // The following classes are only needed by Layer implementations.
@@ -580,13 +580,9 @@ class S2Builder {
   void AddEdgeCrossings(const MutableS2ShapeIndex& input_edge_index);
   void AddForcedSites(S2PointIndex<SiteId>* site_index);
   bool is_forced(SiteId v) const;
-  void ChooseInitialSites(
-      S2PointIndex<SiteId>* site_index,
-      S2PointIndex<InputVertexId>* rejected_vertex_index);
+  void ChooseInitialSites(S2PointIndex<SiteId>* site_index);
   S2Point SnapSite(const S2Point& point) const;
-  void CollectSiteEdges(
-      const S2PointIndex<SiteId>& site_index,
-      const S2PointIndex<InputVertexId>& rejected_vertex_index);
+  void CollectSiteEdges(const S2PointIndex<SiteId>& site_index);
   void SortSitesByDistance(const S2Point& x,
                            compact_array<SiteId>* sites) const;
   void AddExtraSites(const MutableS2ShapeIndex& input_edge_index);
@@ -641,17 +637,13 @@ class S2Builder {
   // S2Builder options.
   Options options_;
 
-  // Cached value of options_.snap_function().snap_radius().
-  S1Angle snap_radius_;
-
-  // The maximum distance that a vertex can move when snapping to a snap site.
-  // It is slightly larger than options.snap_radius() to account for numerical
-  // errors is measuring and converting distances.
+  // The maximum distance (inclusive) that a vertex can move when snapped,
+  // equal to S1ChordAngle(options_.snap_function().snap_radius()).
   S1ChordAngle site_snap_radius_ca_;
 
-  // The maximum distance that an edge can move when snapping to a snap site.
-  // It can be slightly larger than the site snap radius when edges are being
-  // split at crossings.
+  // The maximum distance (inclusive) that an edge can move when snapping to a
+  // snap site.  It can be slightly larger than the site snap radius when
+  // edges are being split at crossings.
   S1ChordAngle edge_snap_radius_ca_;
 
   S1Angle max_edge_deviation_;
@@ -660,9 +652,6 @@ class S2Builder {
 
   S1Angle min_site_separation_;
   S1ChordAngle min_site_separation_ca_;
-  S1ChordAngle min_site_separation_ca_limit_;
-
-  S1Angle min_edge_site_separation_;
   S1ChordAngle min_edge_site_separation_ca_;
   S1ChordAngle min_edge_site_separation_ca_limit_;
 
@@ -670,8 +659,8 @@ class S2Builder {
 
   // The squared sine of the edge snap radius.  This is equivalent to the snap
   // radius (squared) for distances measured through the interior of the
-  // sphere to the plane containing an edge.  All of the "definitive" snapping
-  // calculations use this value only.
+  // sphere to the plane containing an edge.  This value is used only when
+  // interpolating new points along edges (see GetSeparationSite).
   double edge_snap_radius_sin2_;
 
   // A copy of the argument to Build().

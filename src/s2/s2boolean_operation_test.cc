@@ -51,7 +51,7 @@ S2Error::Code INDEXES_DO_NOT_MATCH = S2Error::USER_DEFINED_START;
 
 class IndexMatchingLayer : public S2Builder::Layer {
  public:
-  explicit IndexMatchingLayer(const S2ShapeIndexBase* index, int dimension)
+  explicit IndexMatchingLayer(const S2ShapeIndex* index, int dimension)
       : index_(*index), dimension_(dimension) {
   }
   GraphOptions graph_options() const override {
@@ -65,7 +65,7 @@ class IndexMatchingLayer : public S2Builder::Layer {
   using EdgeVector = vector<S2Shape::Edge>;
   static string ToString(const EdgeVector& edges);
 
-  const S2ShapeIndexBase& index_;
+  const S2ShapeIndex& index_;
   int dimension_;
 };
 

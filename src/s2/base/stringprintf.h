@@ -17,7 +17,7 @@
 //
 // As of 2017q4, most use of these routines is considered legacy: use
 // of absl::StrCat, absl::Substitute, or
-// util::format::StringF/absl::StrFormat is preferred for performance
+// util::format::StringF is preferred for performance
 // and safety reasons.
 
 #ifndef S2_BASE_STRINGPRINTF_H_

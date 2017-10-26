@@ -53,7 +53,7 @@ std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
 using ShapeEdgeVector = absl::InlinedVector<ShapeEdge, 16>;
 
 // Appends all edges in the given S2ShapeIndexCell to the given vector.
-static void AppendShapeEdges(const S2ShapeIndexBase& index,
+static void AppendShapeEdges(const S2ShapeIndex& index,
                              const S2ShapeIndexCell& cell,
                              ShapeEdgeVector* shape_edges) {
   for (int s = 0; s < cell.num_clipped(); ++s) {
@@ -69,7 +69,7 @@ static void AppendShapeEdges(const S2ShapeIndexBase& index,
 // Returns a vector containing all edges in the given S2ShapeIndexCell.
 // (The result is returned as an output parameter so that the same storage can
 // be reused, rather than allocating a new temporary vector each time.)
-inline static void GetShapeEdges(const S2ShapeIndexBase& index,
+inline static void GetShapeEdges(const S2ShapeIndex& index,
                                  const S2ShapeIndexCell& cell,
                                  ShapeEdgeVector* shape_edges) {
   shape_edges->clear();
@@ -79,7 +79,7 @@ inline static void GetShapeEdges(const S2ShapeIndexBase& index,
 // Returns a vector containing all edges in the given S2ShapeIndexCell vector.
 // (The result is returned as an output parameter so that the same storage can
 // be reused, rather than allocating a new temporary vector each time.)
-inline static void GetShapeEdges(const S2ShapeIndexBase& index,
+inline static void GetShapeEdges(const S2ShapeIndex& index,
                                  const vector<const S2ShapeIndexCell*>& cells,
                                  ShapeEdgeVector* shape_edges) {
   shape_edges->clear();
@@ -118,12 +118,12 @@ static bool VisitCrossings(const ShapeEdgeVector& shape_edges,
   return true;
 }
 
-bool VisitCrossings(const S2ShapeIndexBase& index, CrossingType type,
+bool VisitCrossings(const S2ShapeIndex& index, CrossingType type,
                     const EdgePairVisitor& visitor) {
   // TODO(ericv): Use brute force if the total number of edges is small enough
   // (using a larger threshold if the S2ShapeIndex is not constructed yet).
   ShapeEdgeVector shape_edges;
-  for (S2ShapeIndexBase::Iterator it(&index, S2ShapeIndex::BEGIN);
+  for (S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
        !it.done(); it.Next()) {
     GetShapeEdges(index, it.cell(), &shape_edges);
     if (!VisitCrossings(shape_edges, type, visitor)) return false;
@@ -133,7 +133,7 @@ bool VisitCrossings(const S2ShapeIndexBase& index, CrossingType type,
 
 //////////////////////////////////////////////////////////////////////
 
-RangeIterator::RangeIterator(const S2ShapeIndexBase& index)
+RangeIterator::RangeIterator(const S2ShapeIndex& index)
     : it_(&index, S2ShapeIndex::BEGIN) {
   Refresh();
 }
@@ -178,7 +178,7 @@ class IndexCrosser {
   // If "swapped" is true, the loops A and B have been swapped.  This affects
   // how arguments are passed to the given loop relation, since for example
   // A.Contains(B) is not the same as B.Contains(A).
-  IndexCrosser(const S2ShapeIndexBase& a_index, const S2ShapeIndexBase& b_index,
+  IndexCrosser(const S2ShapeIndex& a_index, const S2ShapeIndex& b_index,
                CrossingType type, const EdgePairVisitor& visitor, bool swapped)
       : a_index_(a_index), b_index_(b_index), visitor_(visitor),
         min_crossing_sign_(type == CrossingType::INTERIOR ? 1 : 0),
@@ -213,8 +213,8 @@ class IndexCrosser {
   bool VisitEdgesEdgesCrossings(const ShapeEdgeVector& a_edges,
                                 const ShapeEdgeVector& b_edges);
 
-  const S2ShapeIndexBase& a_index_;
-  const S2ShapeIndexBase& b_index_;
+  const S2ShapeIndex& a_index_;
+  const S2ShapeIndex& b_index_;
   const EdgePairVisitor& visitor_;
   const int min_crossing_sign_;
   const bool swapped_;
@@ -343,8 +343,8 @@ bool IndexCrosser::VisitCrossings(RangeIterator* ai, RangeIterator* bi) {
 
 //////////////////////////////////////////////////////////////////////
 
-bool VisitCrossings(const S2ShapeIndexBase& a_index,
-                    const S2ShapeIndexBase& b_index,
+bool VisitCrossings(const S2ShapeIndex& a_index,
+                    const S2ShapeIndex& b_index,
                     CrossingType type, const EdgePairVisitor& visitor) {
   DCHECK(type != CrossingType::NON_ADJACENT);
   // We look for S2CellId ranges where the indexes of A and B overlap, and
@@ -457,7 +457,7 @@ static bool FindCrossingError(const S2Shape& shape,
   return false;
 }
 
-bool FindAnyCrossing(const S2ShapeIndexBase& index, S2Error* error) {
+bool FindAnyCrossing(const S2ShapeIndex& index, S2Error* error) {
   if (index.num_shape_ids() == 0) return false;
   DCHECK_EQ(1, index.num_shape_ids());
   const S2Shape& shape = *index.shape(0);

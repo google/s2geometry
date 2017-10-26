@@ -141,26 +141,6 @@ inline void ReplaceCharacter(char* str, size_t len, char remove,
   }
 }
 
-ABSL_DEPRECATED("Use ReplaceCharacters()")
-inline void StripString(char* str, absl::string_view remove,
-                        char replace_with) {
-  ReplaceCharacters(str, strlen(str), remove, replace_with);
-}
-ABSL_DEPRECATED("Use ReplaceCharacters()")
-inline void StripString(char* str, size_t len, absl::string_view remove,
-                        char replace_with) {
-  ReplaceCharacters(str, len, remove, replace_with);
-}
-ABSL_DEPRECATED("Use ReplaceCharacters()")
-inline void StripString(string* s, absl::string_view remove,
-                        char replace_with) {
-  ReplaceCharacters(s, remove, replace_with);
-}
-ABSL_DEPRECATED("Use ReplaceCharacter()")
-inline void StripString(char* str, char remove, char replace_with) {
-  ReplaceCharacter(str, strlen(str), remove, replace_with);
-}
-
 // Replaces runs of one or more 'dup_char' with a single occurrence, and returns
 // the number of characters that were removed.
 //

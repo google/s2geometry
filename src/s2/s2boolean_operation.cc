@@ -843,9 +843,9 @@ class S2BooleanOperation::Impl {
                       bool invert_result, CrossingProcessor* cp,
                       vector<ShapeEdgeId>* chain_starts);
   bool ProcessIncidentEdges(const ShapeEdge& a,
-                            S2ContainsPointQuery<S2ShapeIndexBase>* query,
+                            S2ContainsPointQuery<S2ShapeIndex>* query,
                             CrossingProcessor* cp);
-  static bool HasInterior(const S2ShapeIndexBase& index);
+  static bool HasInterior(const S2ShapeIndex& index);
   static bool AddIndexCrossing(const ShapeEdge& a, const ShapeEdge& b,
                                bool is_interior, IndexCrossings* crossings);
   bool GetIndexCrossings(int region_id);
@@ -903,7 +903,7 @@ class S2BooleanOperation::Impl::CrossingIterator {
   // Creates an iterator over crossing edge pairs (a, b) where "b" is an edge
   // from "b_index".  "crossings_complete" indicates that "crossings" contains
   // all edge crossings between the two regions (rather than a subset).
-  CrossingIterator(const S2ShapeIndexBase* b_index,
+  CrossingIterator(const S2ShapeIndex* b_index,
                    const IndexCrossings* crossings, bool crossings_complete)
       : b_index_(*b_index), it_(crossings->begin()), b_shape_id_(-1),
         crossings_complete_(crossings_complete) {
@@ -930,7 +930,7 @@ class S2BooleanOperation::Impl::CrossingIterator {
 
   ShapeEdgeId a_id() const { return it_->a; }
   ShapeEdgeId b_id() const { return it_->b; }
-  const S2ShapeIndexBase& b_index() const { return b_index_; }
+  const S2ShapeIndex& b_index() const { return b_index_; }
   const S2Shape& b_shape() const { return *b_shape_; }
   int b_dimension() const { return b_dimension_; }
   int b_shape_id() const { return b_shape_id_; }
@@ -968,7 +968,7 @@ class S2BooleanOperation::Impl::CrossingIterator {
     }
   }
 
-  const S2ShapeIndexBase& b_index_;
+  const S2ShapeIndex& b_index_;
   IndexCrossings::const_iterator it_;
   const S2Shape* b_shape_;
   int b_shape_id_;
@@ -1674,8 +1674,8 @@ void S2BooleanOperation::Impl::CrossingProcessor::DoneBoundaryPair() {
 bool S2BooleanOperation::Impl::AddBoundary(
     int a_region_id, bool invert_a, bool invert_b, bool invert_result,
     const vector<ShapeEdgeId>& a_chain_starts, CrossingProcessor* cp) {
-  const S2ShapeIndexBase& a_index = *op_->regions_[a_region_id];
-  const S2ShapeIndexBase& b_index = *op_->regions_[1 - a_region_id];
+  const S2ShapeIndex& a_index = *op_->regions_[a_region_id];
+  const S2ShapeIndex& b_index = *op_->regions_[1 - a_region_id];
   if (!GetIndexCrossings(a_region_id)) return false;
   cp->StartBoundary(a_region_id, invert_a, invert_b, invert_result);
 
@@ -1734,8 +1734,8 @@ bool S2BooleanOperation::Impl::AddBoundary(
 bool S2BooleanOperation::Impl::GetChainStarts(
     int a_region_id, bool invert_a, bool invert_b, bool invert_result,
     CrossingProcessor* cp, vector<ShapeEdgeId>* chain_starts) {
-  const S2ShapeIndexBase& a_index = *op_->regions_[a_region_id];
-  const S2ShapeIndexBase& b_index = *op_->regions_[1 - a_region_id];
+  const S2ShapeIndex& a_index = *op_->regions_[a_region_id];
+  const S2ShapeIndex& b_index = *op_->regions_[1 - a_region_id];
 
   if (is_boolean_output()) {
     // If boolean output is requested, then we use the CrossingProcessor to
@@ -1785,7 +1785,7 @@ bool S2BooleanOperation::Impl::GetChainStarts(
 }
 
 bool S2BooleanOperation::Impl::ProcessIncidentEdges(
-    const ShapeEdge& a, S2ContainsPointQuery<S2ShapeIndexBase>* query,
+    const ShapeEdge& a, S2ContainsPointQuery<S2ShapeIndex>* query,
     CrossingProcessor* cp) {
   tmp_crossings_.clear();
   query->VisitIncidentEdges(a.v0(), [&a, this](const ShapeEdge& b) {
@@ -1810,7 +1810,7 @@ bool S2BooleanOperation::Impl::ProcessIncidentEdges(
   return cp->ProcessEdge(a.id(),  &next_crossing);
 }
 
-bool S2BooleanOperation::Impl::HasInterior(const S2ShapeIndexBase& index) {
+bool S2BooleanOperation::Impl::HasInterior(const S2ShapeIndex& index) {
   for (int s = index.num_shape_ids(); --s >= 0; ) {
     S2Shape* shape = index.shape(s);
     if (shape && shape->has_interior()) return true;
@@ -1955,8 +1955,8 @@ static bool IsFullPolygonNever(const S2Builder::Graph& g, S2Error* error) {
 }
 
 bool S2BooleanOperation::Impl::AreRegionsIdentical() const {
-  const S2ShapeIndexBase* a = op_->regions_[0];
-  const S2ShapeIndexBase* b = op_->regions_[1];
+  const S2ShapeIndex* a = op_->regions_[0];
+  const S2ShapeIndex* b = op_->regions_[1];
   if (a == b) return true;
   int num_shape_ids = a->num_shape_ids();
   if (num_shape_ids != b->num_shape_ids()) return false;
@@ -2080,12 +2080,12 @@ const char* S2BooleanOperation::OpTypeToString(OpType op_type) {
 }
 
 S2BooleanOperation::S2BooleanOperation(OpType op_type,
-                                         const Options& options)
+                                       const Options& options)
     : op_type_(op_type), options_(options), result_empty_(nullptr) {
 }
 
 S2BooleanOperation::S2BooleanOperation(OpType op_type, bool* result_empty,
-                                         const Options& options)
+                                       const Options& options)
     : op_type_(op_type), options_(options),
       result_empty_(result_empty) {
 }
@@ -2103,16 +2103,16 @@ S2BooleanOperation::S2BooleanOperation(
       result_empty_(nullptr) {
 }
 
-bool S2BooleanOperation::Build(const S2ShapeIndexBase& a,
-                                const S2ShapeIndexBase& b,
-                                S2Error* error) {
+bool S2BooleanOperation::Build(const S2ShapeIndex& a,
+                               const S2ShapeIndex& b,
+                               S2Error* error) {
   regions_[0] = &a;
   regions_[1] = &b;
   return Impl(this).Build(error);
 }
 
 bool S2BooleanOperation::IsEmpty(
-    OpType op_type, const S2ShapeIndexBase& a, const S2ShapeIndexBase& b,
+    OpType op_type, const S2ShapeIndex& a, const S2ShapeIndex& b,
     const Options& options) {
   bool result_empty;
   S2BooleanOperation op(op_type, &result_empty, options);

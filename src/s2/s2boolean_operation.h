@@ -381,24 +381,24 @@ class S2BooleanOperation {
   // Executes the given operation.  Returns true on success, and otherwise
   // sets "error" appropriately.  (This class does not generate any errors
   // itself, but the S2Builder::Layer might.)
-  bool Build(const S2ShapeIndexBase& a, const S2ShapeIndexBase& b,
+  bool Build(const S2ShapeIndex& a, const S2ShapeIndex& b,
              S2Error* error);
 
   // Convenience method that returns true if the result of the given operation
   // is empty.
   static bool IsEmpty(OpType op_type,
-                      const S2ShapeIndexBase& a, const S2ShapeIndexBase& b,
+                      const S2ShapeIndex& a, const S2ShapeIndex& b,
                       const Options& options = Options());
 
   // Convenience method that returns true if A intersects B.
-  static bool Intersects(const S2ShapeIndexBase& a, const S2ShapeIndexBase& b,
+  static bool Intersects(const S2ShapeIndex& a, const S2ShapeIndex& b,
                          const Options& options = Options()) {
     return !IsEmpty(OpType::INTERSECTION, b, a, options);
   }
 
   // Convenience method that returns true if A contains B, i.e., if the
   // difference (B - A) is empty.
-  static bool Contains(const S2ShapeIndexBase& a, const S2ShapeIndexBase& b,
+  static bool Contains(const S2ShapeIndex& a, const S2ShapeIndex& b,
                        const Options& options = Options()) {
     return IsEmpty(OpType::DIFFERENCE, b, a, options);
   }
@@ -406,7 +406,7 @@ class S2BooleanOperation {
   // Convenience method that returns true if the symmetric difference of A and
   // B is empty.  (Note that A and B may still not be identical, e.g. A may
   // contain two copies of a polyline while B contains one.)
-  static bool Equals(const S2ShapeIndexBase& a, const S2ShapeIndexBase& b,
+  static bool Equals(const S2ShapeIndex& a, const S2ShapeIndex& b,
                      const Options& options = Options()) {
     return IsEmpty(OpType::SYMMETRIC_DIFFERENCE, b, a, options);
   }
@@ -427,7 +427,7 @@ class S2BooleanOperation {
   Options options_;
 
   // The input regions.
-  const S2ShapeIndexBase* regions_[2];
+  const S2ShapeIndex* regions_[2];
 
   // The output consists either of zero layers, one layer, or three layers.
   std::vector<std::unique_ptr<S2Builder::Layer>> layers_;

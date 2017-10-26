@@ -41,7 +41,7 @@
 //  - Implementing these methods efficiently requires an S2ShapeIndex iterator,
 //    and this design allows a single iterator to be allocated and reused.
 //
-//  - S2Region::Clone() is not a good fit for the S2ShapeIndexBase API because
+//  - S2Region::Clone() is not a good fit for the S2ShapeIndex API because
 //    it can't be implemented for some subtypes (e.g., EncodedS2ShapeIndex).
 //
 // Example usage:
