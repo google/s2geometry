@@ -233,7 +233,7 @@ class S2ClosestEdgeQueryBase {
     // the include_interiors() option efficiently.  Its API is unlikely to be
     // useful for other purposes.
     virtual std::vector<int> GetContainingShapes(
-        const S2ShapeIndexBase& query_index, int max_shapes) const = 0;
+        const S2ShapeIndex& query_index, int max_shapes) const = 0;
   };
 
   // Each "Result" object represents a closest edge.  Note the following
@@ -276,7 +276,7 @@ class S2ClosestEdgeQueryBase {
   };
 
   // Convenience constructor that calls Init().
-  explicit S2ClosestEdgeQueryBase(const S2ShapeIndexBase* index);
+  explicit S2ClosestEdgeQueryBase(const S2ShapeIndex* index);
 
   // Default constructor; requires Init() to be called.
   S2ClosestEdgeQueryBase();
@@ -284,14 +284,14 @@ class S2ClosestEdgeQueryBase {
 
   // Initialize the query.
   // REQUIRES: ReInit() must be called if "index" is modified.
-  void Init(const S2ShapeIndexBase* index);
+  void Init(const S2ShapeIndex* index);
 
   // Reinitialize the query.  This method must be called whenever the
   // underlying index is modified.
   void ReInit();
 
   // Returns a reference to the underlying S2ShapeIndex.
-  const S2ShapeIndexBase& index() const;
+  const S2ShapeIndex& index() const;
 
   // Returns the closest edges to the given target that satisfy the given
   // options.  This method may be called multiple times.
@@ -325,8 +325,8 @@ class S2ClosestEdgeQueryBase {
   void FindClosestEdgesOptimized();
   void InitQueue();
   void InitCovering();
-  void AddInitialRange(const S2ShapeIndexBase::Iterator& first,
-                       const S2ShapeIndexBase::Iterator& last);
+  void AddInitialRange(const S2ShapeIndex::Iterator& first,
+                       const S2ShapeIndex::Iterator& last);
   void MaybeAddResult(const S2Shape& shape, int edge_id);
   void AddResult(const Result& result);
   void ProcessEdges(const QueueEntry& entry);
@@ -334,7 +334,7 @@ class S2ClosestEdgeQueryBase {
   void EnqueueCurrentCell(S2CellId id);
   const Options& options() const { return *options_; }
 
-  const S2ShapeIndexBase* index_;
+  const S2ShapeIndex* index_;
   const Options* options_;
   Target* target_;
 
@@ -426,7 +426,7 @@ class S2ClosestEdgeQueryBase {
 
   // Temporaries, defined here to avoid multiple allocations / initializations.
 
-  S2ShapeIndexBase::Iterator iter_;
+  S2ShapeIndex::Iterator iter_;
   std::vector<S2CellId> max_distance_covering_;
   std::vector<S2CellId> initial_cells_;
 
@@ -513,12 +513,12 @@ S2ClosestEdgeQueryBase<Distance>::~S2ClosestEdgeQueryBase() {
 
 template <class Distance>
 inline S2ClosestEdgeQueryBase<Distance>::S2ClosestEdgeQueryBase(
-    const S2ShapeIndexBase* index) : S2ClosestEdgeQueryBase() {
+    const S2ShapeIndex* index) : S2ClosestEdgeQueryBase() {
   Init(index);
 }
 
 template <class Distance>
-void S2ClosestEdgeQueryBase<Distance>::Init(const S2ShapeIndexBase* index) {
+void S2ClosestEdgeQueryBase<Distance>::Init(const S2ShapeIndex* index) {
   index_ = index;
   ReInit();
 }
@@ -531,7 +531,7 @@ void S2ClosestEdgeQueryBase<Distance>::ReInit() {
 }
 
 template <class Distance>
-inline const S2ShapeIndexBase& S2ClosestEdgeQueryBase<Distance>::index() const {
+inline const S2ShapeIndex& S2ClosestEdgeQueryBase<Distance>::index() const {
   return *index_;
 }
 
@@ -760,8 +760,8 @@ void S2ClosestEdgeQueryBase<Distance>::InitCovering() {
 
   index_covering_.reserve(6);
   // Don't need to reserve index_cells_ since it is an InlinedVector.
-  S2ShapeIndexBase::Iterator next(index_, S2ShapeIndex::BEGIN);
-  S2ShapeIndexBase::Iterator last(index_, S2ShapeIndex::END);
+  S2ShapeIndex::Iterator next(index_, S2ShapeIndex::BEGIN);
+  S2ShapeIndex::Iterator last(index_, S2ShapeIndex::END);
   last.Prev();
   if (next.id() != last.id()) {
     // The index has at least two cells.  Choose a level such that the entire
@@ -777,9 +777,9 @@ void S2ClosestEdgeQueryBase<Distance>::InitCovering() {
 
       // Find the range of index cells contained by this top-level cell and
       // then shrink the cell if necessary so that it just covers them.
-      S2ShapeIndexBase::Iterator cell_first = next;
+      S2ShapeIndex::Iterator cell_first = next;
       next.Seek(id.range_max().next());
-      S2ShapeIndexBase::Iterator cell_last = next;
+      S2ShapeIndex::Iterator cell_last = next;
       cell_last.Prev();
       AddInitialRange(cell_first, cell_last);
     }
@@ -793,8 +793,8 @@ void S2ClosestEdgeQueryBase<Distance>::InitCovering() {
 // REQUIRES: "first" and "last" have a common ancestor.
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::AddInitialRange(
-    const S2ShapeIndexBase::Iterator& first,
-    const S2ShapeIndexBase::Iterator& last) {
+    const S2ShapeIndex::Iterator& first,
+    const S2ShapeIndex::Iterator& last) {
   if (first.id() == last.id()) {
     // The range consists of a single index cell.
     index_covering_.push_back(first.id());

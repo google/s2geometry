@@ -89,13 +89,13 @@ class S2CrossingEdgeQuery {
                                          CompareBtreeLinearSearch>;
 
   // Convenience constructor that calls Init().
-  explicit S2CrossingEdgeQuery(const S2ShapeIndexBase* index);
+  explicit S2CrossingEdgeQuery(const S2ShapeIndex* index);
 
   // Default constructor; requires Init() to be called.
   S2CrossingEdgeQuery();
 
   // REQUIRES: "index" is not modified after this method is called.
-  void Init(const S2ShapeIndexBase* index);
+  void Init(const S2ShapeIndex* index);
 
   // Given a query edge AB and a shape S, return all the edges of S that
   // intersect AB.  If "type" is CrossingType::INTERIOR, then only
@@ -156,12 +156,12 @@ class S2CrossingEdgeQuery {
   static void SplitBound(const R2Rect& edge_bound, int u_end, double u,
                          int v_end, double v, R2Rect child_bounds[2]);
 
-  const S2ShapeIndexBase* index_;
+  const S2ShapeIndex* index_;
 
   // Temporary storage used while processing a query.
   R2Point a_;
   R2Point b_;
-  S2ShapeIndexBase::Iterator iter_;
+  S2ShapeIndex::Iterator iter_;
 
   // This is a private field rather than a local variable to reduce memory
   // allocation when a single S2CrossingEdgeQuery object is queried many times.
@@ -174,10 +174,10 @@ class S2CrossingEdgeQuery {
 //////////////////   Implementation details follow   ////////////////////
 
 inline S2CrossingEdgeQuery::S2CrossingEdgeQuery() : index_(nullptr) {}
-inline S2CrossingEdgeQuery::S2CrossingEdgeQuery(const S2ShapeIndexBase* index) {
+inline S2CrossingEdgeQuery::S2CrossingEdgeQuery(const S2ShapeIndex* index) {
   Init(index);
 }
-inline void S2CrossingEdgeQuery::Init(const S2ShapeIndexBase* index) {
+inline void S2CrossingEdgeQuery::Init(const S2ShapeIndex* index) {
   index_ = index;
   iter_.Init(index);
 }

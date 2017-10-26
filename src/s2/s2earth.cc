@@ -31,7 +31,7 @@ double Haversine(const double radians) {
 
 }  // namespace
 
-double S2Earth::ToLongitudeRadians(util::units::Meters const& distance,
+double S2Earth::ToLongitudeRadians(const util::units::Meters& distance,
                                    double latitude_radians) {
   double scalar = cos(latitude_radians);
   if (scalar == 0) return M_PI * 2;
@@ -39,7 +39,7 @@ double S2Earth::ToLongitudeRadians(util::units::Meters const& distance,
 }
 
 // Sourced from http://www.movable-type.co.uk/scripts/latlong.html.
-S1Angle S2Earth::GetInitialBearing(S2LatLng const& a, S2LatLng const& b) {
+S1Angle S2Earth::GetInitialBearing(const S2LatLng& a, const S2LatLng& b) {
   const double lat1 = a.lat().radians();
   const double cosLat2 = cos(b.lat().radians());
   const double lat_diff = b.lat().radians() - a.lat().radians();

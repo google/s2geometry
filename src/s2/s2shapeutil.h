@@ -59,7 +59,7 @@ namespace s2shapeutil {
 class RangeIterator {
  public:
   // Construct a new RangeIterator positioned at the first cell of the index.
-  explicit RangeIterator(const S2ShapeIndexBase& index);
+  explicit RangeIterator(const S2ShapeIndex& index);
 
   // The current S2CellId and cell contents.
   S2CellId id() const { return it_.id(); }
@@ -84,7 +84,7 @@ class RangeIterator {
  private:
   // Updates internal state after the iterator has been repositioned.
   void Refresh();
-  S2ShapeIndexBase::Iterator it_;
+  S2ShapeIndex::Iterator it_;
   S2CellId range_min_, range_max_;
 };
 
@@ -161,14 +161,14 @@ using EdgePairVisitor = std::function<
 // crossings should be visited, or only interior crossings.
 //
 // CAVEAT: Crossings may be visited more than once.
-bool VisitCrossings(const S2ShapeIndexBase& index, CrossingType type,
+bool VisitCrossings(const S2ShapeIndex& index, CrossingType type,
                     const EdgePairVisitor& visitor);
 
 // Like the above, but visits all pairs of crossing edges where one edge comes
 // from each S2ShapeIndex.
 //
 // REQUIRES: type != CrossingType::NON_ADJACENT (not supported)
-bool VisitCrossings(const S2ShapeIndexBase& a, const S2ShapeIndexBase& b,
+bool VisitCrossings(const S2ShapeIndex& a, const S2ShapeIndex& b,
                     CrossingType type, const EdgePairVisitor& visitor);
 
 // Returns the total number of edges in all indexed shapes.  This method
@@ -192,7 +192,7 @@ int GetNumEdges(const S2ShapeIndexType& index);
 //
 // TODO(ericv): Add an option to support S2LaxPolygonShape rules (i.e.,
 // duplicate vertices and edges are allowed, but loop crossings are not).
-bool FindAnyCrossing(const S2ShapeIndexBase& index, S2Error* error);
+bool FindAnyCrossing(const S2ShapeIndex& index, S2Error* error);
 
 
 //////////////////   Implementation details follow   ////////////////////

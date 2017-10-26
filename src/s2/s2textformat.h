@@ -36,7 +36,7 @@ class S2Loop;
 class S2Polygon;
 class S2Polyline;
 class MutableS2ShapeIndex;
-class S2ShapeIndexBase;
+class S2ShapeIndex;
 class S2LaxPolygonShape;
 class S2LaxPolylineShape;
 
@@ -235,7 +235,7 @@ string ToString(const S2LaxPolygonShape& polygon);
 // contain S2Shapes of any type.  Shapes are reordered if necessary so that
 // all point geometry (shapes of dimension 0) are first, followed by all
 // polyline geometry, followed by all polygon geometry.
-string ToString(const S2ShapeIndexBase& index);
+string ToString(const S2ShapeIndex& index);
 
 }  // namespace s2textformat
 

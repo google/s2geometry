@@ -231,13 +231,12 @@ class S2ShapeIndexCell {
 //     }
 //   }
 //
-// TODO(ericv/jrosenstock): Rename this class to S2ShapeIndex.
-class S2ShapeIndexBase {
+class S2ShapeIndex {
  protected:
   class IteratorBase;
 
  public:
-  virtual ~S2ShapeIndexBase() {}
+  virtual ~S2ShapeIndex() {}
 
   // Returns the number of distinct shape ids in the index.  This is the same
   // as the number of shapes provided that no shapes have ever been removed.
@@ -289,9 +288,9 @@ class S2ShapeIndexBase {
     // If you want to position the iterator at the beginning, e.g. in order to
     // loop through the entire index, do this instead:
     //
-    //   for (S2ShapeIndexBase::Iterator it(&index, S2ShapeIndex::BEGIN);
+    //   for (S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
     //        !it.done(); it.Next()) { ... }
-    explicit Iterator(const S2ShapeIndexBase* index,
+    explicit Iterator(const S2ShapeIndex* index,
                       InitialPosition pos = UNPOSITIONED)
         : iter_(index->NewIterator(pos)) {}
 
@@ -300,7 +299,7 @@ class S2ShapeIndexBase {
     // the underlying index has been updated (although it is usually easier
     // just to declare a new iterator whenever required, since iterator
     // construction is cheap).
-    void Init(const S2ShapeIndexBase* index,
+    void Init(const S2ShapeIndex* index,
               InitialPosition pos = UNPOSITIONED) {
       iter_ = index->NewIterator(pos);
     }
@@ -363,15 +362,15 @@ class S2ShapeIndexBase {
     }
 
    private:
-    // Although S2ShapeIndexBase::Iterator can be used to iterate over any
+    // Although S2ShapeIndex::Iterator can be used to iterate over any
     // index subtype, it is more efficient to use the subtype's iterator when
     // the subtype is known at compile time.  For example, MutableS2ShapeIndex
     // should use a MutableS2ShapeIndex::Iterator.
     //
     // The following declarations prevent accidental use of
-    // S2ShapeIndexBase::Iterator when the actual subtype is known.  (If you
+    // S2ShapeIndex::Iterator when the actual subtype is known.  (If you
     // really want to do this, you can down_cast the index argument to
-    // S2ShapeIndexBase.)
+    // S2ShapeIndex.)
     template <class T>
     explicit Iterator(const T* index, InitialPosition pos = UNPOSITIONED) {}
 
@@ -382,7 +381,7 @@ class S2ShapeIndexBase {
   };
 
  protected:
-  // Each subtype of S2ShapeIndexBase should define an Iterator type derived
+  // Each subtype of S2ShapeIndex should define an Iterator type derived
   // from the following base class.
   class IteratorBase {
    public:
@@ -498,9 +497,6 @@ class S2ShapeIndexBase {
   virtual std::unique_ptr<IteratorBase> NewIterator(InitialPosition pos)
       const = 0;
 };
-// TODO(ericv/jrosenstock): Remove when class has been renamed.
-using S2ShapeIndex = S2ShapeIndexBase;
-
 
 //////////////////   Implementation details follow   ////////////////////
 
@@ -571,22 +567,22 @@ inline int S2ShapeIndexCell::num_edges() const {
   return n;
 }
 
-inline S2ShapeIndexBase::IteratorBase::IteratorBase(const IteratorBase& other)
+inline S2ShapeIndex::IteratorBase::IteratorBase(const IteratorBase& other)
     : id_(other.id_), cell_(other.raw_cell()) {
 }
 
-inline S2ShapeIndexBase::IteratorBase&
-S2ShapeIndexBase::IteratorBase::operator=(const IteratorBase& other) {
+inline S2ShapeIndex::IteratorBase&
+S2ShapeIndex::IteratorBase::operator=(const IteratorBase& other) {
   id_ = other.id_;
   set_cell(other.raw_cell());
   return *this;
 }
 
-inline S2CellId S2ShapeIndexBase::IteratorBase::id() const {
+inline S2CellId S2ShapeIndex::IteratorBase::id() const {
   return id_;
 }
 
-inline const S2ShapeIndexCell& S2ShapeIndexBase::IteratorBase::cell() const {
+inline const S2ShapeIndexCell& S2ShapeIndex::IteratorBase::cell() const {
   DCHECK(!done());
   auto cell = raw_cell();
   if (cell == nullptr) {
@@ -596,38 +592,38 @@ inline const S2ShapeIndexCell& S2ShapeIndexBase::IteratorBase::cell() const {
   return *cell;
 }
 
-inline bool S2ShapeIndexBase::IteratorBase::done() const {
+inline bool S2ShapeIndex::IteratorBase::done() const {
   return id_ == S2CellId::Sentinel();
 }
 
-inline S2Point S2ShapeIndexBase::IteratorBase::center() const {
+inline S2Point S2ShapeIndex::IteratorBase::center() const {
   DCHECK(!done());
   return id().ToPoint();
 }
 
-inline void S2ShapeIndexBase::IteratorBase::set_state(
+inline void S2ShapeIndex::IteratorBase::set_state(
     S2CellId id, const S2ShapeIndexCell* cell) {
   id_ = id;
   set_cell(cell);
 }
 
-inline void S2ShapeIndexBase::IteratorBase::set_finished() {
+inline void S2ShapeIndex::IteratorBase::set_finished() {
   id_ = S2CellId::Sentinel();
   set_cell(nullptr);
 }
 
-inline const S2ShapeIndexCell* S2ShapeIndexBase::IteratorBase::raw_cell()
+inline const S2ShapeIndexCell* S2ShapeIndex::IteratorBase::raw_cell()
     const {
   return cell_.load(std::memory_order_relaxed);
 }
 
-inline void S2ShapeIndexBase::IteratorBase::set_cell(
+inline void S2ShapeIndex::IteratorBase::set_cell(
     const S2ShapeIndexCell* cell) const {
   cell_.store(cell, std::memory_order_relaxed);
 }
 
 template <class Iter>
-inline bool S2ShapeIndexBase::IteratorBase::LocateImpl(
+inline bool S2ShapeIndex::IteratorBase::LocateImpl(
     const S2Point& target_point, Iter* it) {
   // Let I = cell_map_->lower_bound(T), where T is the leaf cell containing
   // "target_point".  Then if T is contained by an index cell, then the
@@ -642,8 +638,8 @@ inline bool S2ShapeIndexBase::IteratorBase::LocateImpl(
 }
 
 template <class Iter>
-inline S2ShapeIndexBase::CellRelation
-S2ShapeIndexBase::IteratorBase::LocateImpl(S2CellId target, Iter* it) {
+inline S2ShapeIndex::CellRelation
+S2ShapeIndex::IteratorBase::LocateImpl(S2CellId target, Iter* it) {
   // Let T be the target, let I = cell_map_->lower_bound(T.range_min()), and
   // let I' be the predecessor of I.  If T contains any index cells, then T
   // contains I.  Similarly, if T is contained by an index cell, then the
@@ -659,28 +655,24 @@ S2ShapeIndexBase::IteratorBase::LocateImpl(S2CellId target, Iter* it) {
   return DISJOINT;
 }
 
-inline S2ShapeIndexBase::Iterator::Iterator(const Iterator& other)
+inline S2ShapeIndex::Iterator::Iterator(const Iterator& other)
     : iter_(other.iter_->Clone()) {
 }
 
-inline S2ShapeIndexBase::Iterator& S2ShapeIndexBase::Iterator::operator=(
+inline S2ShapeIndex::Iterator& S2ShapeIndex::Iterator::operator=(
     const Iterator& other) {
   iter_->Copy(*other.iter_);
   return *this;
 }
 
-inline S2ShapeIndexBase::Iterator::Iterator(Iterator&& other)
+inline S2ShapeIndex::Iterator::Iterator(Iterator&& other)
     : iter_(std::move(other.iter_)) {
 }
 
-inline S2ShapeIndexBase::Iterator& S2ShapeIndexBase::Iterator::operator=(
+inline S2ShapeIndex::Iterator& S2ShapeIndex::Iterator::operator=(
     Iterator&& other) {
   iter_ = std::move(other.iter_);
   return *this;
 }
-
-// TODO(ericv/jrosenstock): Once all clients are updated to include the file
-// below directly, this can be removed.
-#include "s2/mutable_s2shapeindex.h"
 
 #endif  // S2_S2SHAPEINDEX_H_

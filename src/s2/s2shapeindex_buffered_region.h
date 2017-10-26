@@ -61,18 +61,18 @@ class S2ShapeIndexBufferedRegion final : public S2Region {
 
   // Constructs a region representing all points within the given radius of
   // any point in the given S2ShapeIndex.
-  S2ShapeIndexBufferedRegion(const S2ShapeIndexBase* index,
+  S2ShapeIndexBufferedRegion(const S2ShapeIndex* index,
                              S1ChordAngle radius);
 
   // Convenience constructor that accepts an S1Angle for the radius.
   // REQUIRES: radius >= S1Angle::Zero()
-  S2ShapeIndexBufferedRegion(const S2ShapeIndexBase* index, S1Angle radius)
+  S2ShapeIndexBufferedRegion(const S2ShapeIndex* index, S1Angle radius)
       : S2ShapeIndexBufferedRegion(index, S1ChordAngle(radius)) {}
 
   // Equivalent to the constructor above.
-  void Init(const S2ShapeIndexBase* index, S1ChordAngle radius);
+  void Init(const S2ShapeIndex* index, S1ChordAngle radius);
 
-  const S2ShapeIndexBase& index() const;
+  const S2ShapeIndex& index() const;
   S1ChordAngle radius() const;
 
   ////////////////////////////////////////////////////////////////////////
@@ -119,12 +119,12 @@ class S2ShapeIndexBufferedRegion final : public S2Region {
 
 
 inline S2ShapeIndexBufferedRegion::S2ShapeIndexBufferedRegion(
-    const S2ShapeIndexBase* index, S1ChordAngle radius)
+    const S2ShapeIndex* index, S1ChordAngle radius)
     : radius_(radius), radius_successor_(radius.Successor()), query_(index) {
   query_.mutable_options()->set_include_interiors(true);
 }
 
-inline const S2ShapeIndexBase& S2ShapeIndexBufferedRegion::index() const {
+inline const S2ShapeIndex& S2ShapeIndexBufferedRegion::index() const {
   return query_.index();
 }
 

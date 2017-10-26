@@ -29,8 +29,6 @@
 
 class S2Earth {
  public:
-  inline static S1Angle ToAngle(util::units::Meters const& distance);
-  inline static util::units::Meters ToDistance(S1Angle const& angle);
   // These functions convert between distances on the unit sphere
   // (expressed as angles subtended from the sphere's center) and
   // distances on the Earth's surface.  This is possible only because
@@ -41,26 +39,28 @@ class S2Earth {
   // Note that you will lose precision if you use the ToDistance() method,
   // since Meters is a single-precision type.  If you need more precision,
   // use one of the direct conversion methods below.
+  inline static S1Angle ToAngle(const util::units::Meters& distance);
+  inline static util::units::Meters ToDistance(const S1Angle& angle);
 
-  inline static double ToRadians(util::units::Meters const& distance);
-  inline static double ToMeters(S1Angle const& angle);
-  inline static double ToKm(S1Angle const& angle);
+  // Convenience functions.  These methods also return a double-precision
+  // result, unlike the generic ToDistance() method.
+  inline static double ToRadians(const util::units::Meters& distance);
+  inline static double ToMeters(const S1Angle& angle);
+  inline static double ToKm(const S1Angle& angle);
   inline static double KmToRadians(double km);
   inline static double RadiansToKm(double radians);
   inline static double MetersToRadians(double meters);
   inline static double RadiansToMeters(double radians);
 
-  inline static double SquareKmToSteradians(double km2);
-  inline static double SquareMetersToSteradians(double m2);
-  inline static double SteradiansToSquareKm(double steradians);
-  inline static double SteradiansToSquareMeters(double steradians);
   // These functions convert between areas on the unit sphere
   // (as returned by the S2 library) and areas on the Earth's surface.
   // Note that the area of a region on the unit sphere is equal to the
   // solid angle it subtends from the sphere's center (measured in steradians).
+  inline static double SquareKmToSteradians(double km2);
+  inline static double SquareMetersToSteradians(double m2);
+  inline static double SteradiansToSquareKm(double steradians);
+  inline static double SteradiansToSquareMeters(double steradians);
 
-  static double ToLongitudeRadians(util::units::Meters const& distance,
-                                   double latitude_radians);
   // Convenience function for the frequent case where you need to call
   // ToRadians in order to convert an east-west distance on the globe to
   // radians. The output is a function of how close to the poles you are
@@ -68,37 +68,35 @@ class S2Earth {
   // much farther distance). The function will never return more than 2*PI
   // radians, even if you're trying to go 100 million miles west at the north
   // pole.
+  static double ToLongitudeRadians(const util::units::Meters& distance,
+                                   double latitude_radians);
 
-  static S1Angle GetInitialBearing(S2LatLng const& a, S2LatLng const& b);
   // Computes the initial bearing from a to b. This is the bearing an observer
   // at point a has when facing point b. A bearing of 0 degrees is north, and it
   // increases clockwise (90 degrees is east, etc).
   // If a == b, a == -b, or a is one of the Earths' poles, the return value is
   // undefined.
+  static S1Angle GetInitialBearing(const S2LatLng& a, const S2LatLng& b);
 
-  // Convenience functions.  These methods also return a double-precision
-  // result, unlike the generic ToDistance() method.
-
-  inline static util::units::Meters GetDistance(S2Point const& a,
-                                                S2Point const& b);
-  inline static util::units::Meters GetDistance(S2LatLng const& a,
-                                                S2LatLng const& b);
-  // Return the distance between two points.  Example:
+  // Returns the distance between two points.  Example:
   // double miles = Miles(geostore::S2Earth::GetDistance(a, b)).value();
   //
   // Note that these methods only have single-precision accuracy, since
   // Meters is a single-precision type.  If you ned more precision, use one
   // of the methods below.
+  inline static util::units::Meters GetDistance(const S2Point& a,
+                                                const S2Point& b);
+  inline static util::units::Meters GetDistance(const S2LatLng& a,
+                                                const S2LatLng& b);
 
-  inline static double GetDistanceKm(S2Point const& a, S2Point const& b);
-  inline static double GetDistanceKm(S2LatLng const& a, S2LatLng const& b);
-  inline static double GetDistanceMeters(S2Point const& a, S2Point const& b);
-  inline static double GetDistanceMeters(S2LatLng const& a, S2LatLng const& b);
   // Convenience functions.  These methods also return a double-precision
   // result, unlike the generic GetDistance() method.
+  inline static double GetDistanceKm(const S2Point& a, const S2Point& b);
+  inline static double GetDistanceKm(const S2LatLng& a, const S2LatLng& b);
+  inline static double GetDistanceMeters(const S2Point& a, const S2Point& b);
+  inline static double GetDistanceMeters(const S2LatLng& a, const S2LatLng& b);
 
-  inline static util::units::Meters Radius();
-  // Return the Earth's mean radius, which is the radius of the equivalent
+  // Returns the Earth's mean radius, which is the radius of the equivalent
   // sphere with the same surface area.  According to NASA, this value is
   // 6371.01 +/- 0.02 km.  The equatorial radius is 6378.136 km, and the polar
   // radius is 6356.752 km.  They differ by one part in 298.257.
@@ -107,47 +105,48 @@ class S2Earth {
   // Yoder, C.F. 1995. "Astrometric and Geodetic Properties of Earth and the
   // Solar System" in Global Earth Physics, A Handbook of Physical Constants,
   // AGU Reference Shelf 1, American Geophysical Union, Table 2.
+  inline static util::units::Meters Radius();
 
+  // Convenience functions.
   inline static double RadiusKm();
   inline static double RadiusMeters();
-  // Convenience functions.
 
-  inline static util::units::Meters LowestAltitude();
-  // Return the altitude of the lowest known point on Earth. The lowest known
+  // Returns the altitude of the lowest known point on Earth. The lowest known
   // point on Earth is the Challenger Deep with an altitude of -10898 meters
   // above the surface of the spherical earth.
+  inline static util::units::Meters LowestAltitude();
 
+  // Convenience functions.
   inline static double LowestAltitudeKm();
   inline static double LowestAltitudeMeters();
-  // Convenience functions.
 
+  // Returns the altitude of the highest known point on Earth. The highest
+  // known point on Earth is Mount Everest with an altitude of 8846 meters
+  // above the surface of the spherical earth.
   inline static util::units::Meters HighestAltitude();
-  // Return the altitude of the highest known point on Earth. The highest known
-  // point on Earth is Mount Everest with an altitude of 8846 meters above the
-  // surface of the spherical earth.
 
+  // Convenience functions.
   inline static double HighestAltitudeKm();
   inline static double HighestAltitudeMeters();
-  // Convenience functions.
 };
 
-inline S1Angle S2Earth::ToAngle(util::units::Meters const& distance) {
+inline S1Angle S2Earth::ToAngle(const util::units::Meters& distance) {
   return S1Angle::Radians(ToRadians(distance));
 }
 
-inline util::units::Meters S2Earth::ToDistance(S1Angle const& angle) {
+inline util::units::Meters S2Earth::ToDistance(const S1Angle& angle) {
   return util::units::Meters(ToMeters(angle));
 }
 
-inline double S2Earth::ToRadians(util::units::Meters const& distance) {
+inline double S2Earth::ToRadians(const util::units::Meters& distance) {
   return distance.value() / RadiusMeters();
 }
 
-inline double S2Earth::ToMeters(S1Angle const& angle) {
+inline double S2Earth::ToMeters(const S1Angle& angle) {
   return angle.radians() * RadiusMeters();
 }
 
-inline double S2Earth::ToKm(S1Angle const& angle) {
+inline double S2Earth::ToKm(const S1Angle& angle) {
   return angle.radians() * RadiusKm();
 }
 
@@ -183,29 +182,29 @@ inline double S2Earth::SteradiansToSquareMeters(double steradians) {
   return steradians * RadiusMeters() * RadiusMeters();
 }
 
-inline util::units::Meters S2Earth::GetDistance(S2Point const& a,
-                                                S2Point const& b) {
+inline util::units::Meters S2Earth::GetDistance(const S2Point& a,
+                                                const S2Point& b) {
   return ToDistance(S1Angle(a, b));
 }
 
-inline util::units::Meters S2Earth::GetDistance(S2LatLng const& a,
-                                                S2LatLng const& b) {
+inline util::units::Meters S2Earth::GetDistance(const S2LatLng& a,
+                                                const S2LatLng& b) {
   return ToDistance(a.GetDistance(b));
 }
 
-inline double S2Earth::GetDistanceKm(S2Point const& a, S2Point const& b) {
+inline double S2Earth::GetDistanceKm(const S2Point& a, const S2Point& b) {
   return RadiansToKm(a.Angle(b));
 }
 
-inline double S2Earth::GetDistanceKm(S2LatLng const& a, S2LatLng const& b) {
+inline double S2Earth::GetDistanceKm(const S2LatLng& a, const S2LatLng& b) {
   return ToKm(a.GetDistance(b));
 }
 
-inline double S2Earth::GetDistanceMeters(S2Point const& a, S2Point const& b) {
+inline double S2Earth::GetDistanceMeters(const S2Point& a, const S2Point& b) {
   return RadiansToMeters(a.Angle(b));
 }
 
-inline double S2Earth::GetDistanceMeters(S2LatLng const& a, S2LatLng const& b) {
+inline double S2Earth::GetDistanceMeters(const S2LatLng& a, const S2LatLng& b) {
   return ToMeters(a.GetDistance(b));
 }
 

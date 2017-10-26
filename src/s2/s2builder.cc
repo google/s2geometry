@@ -134,17 +134,11 @@ S1Angle S2Builder::SnapFunction::max_edge_deviation() const {
 
 S2Builder::Options::Options()
     : snap_function_(
-          make_unique<s2builderutil::IdentitySnapFunction>(S1Angle::Zero())),
-      split_crossing_edges_(false),
-      simplify_edge_chains_(false),
-      idempotent_(true) {
+          make_unique<s2builderutil::IdentitySnapFunction>(S1Angle::Zero())) {
 }
 
 S2Builder::Options::Options(const SnapFunction& snap_function)
-    : snap_function_(snap_function.Clone()),
-      split_crossing_edges_(false),
-      simplify_edge_chains_(false),
-      idempotent_(true) {
+    : snap_function_(snap_function.Clone()) {
 }
 
 S2Builder::Options::Options(const Options& options)
@@ -178,11 +172,6 @@ static S1ChordAngle RoundUp(S1Angle a) {
   return ca.PlusError(ca.GetS1AngleConstructorMaxError());
 }
 
-static S1ChordAngle RoundDown(S1Angle a) {
-  S1ChordAngle ca(a);
-  return ca.PlusError(-ca.GetS1AngleConstructorMaxError());
-}
-
 static S1ChordAngle AddPointToPointError(S1ChordAngle ca) {
   return ca.PlusError(ca.GetS2PointConstructorMaxError());
 }
@@ -201,12 +190,12 @@ S2Builder::S2Builder(const Options& options) {
 void S2Builder::Init(const Options& options) {
   options_ = options;
   const SnapFunction& snap_function = options.snap_function();
-  snap_radius_ = snap_function.snap_radius();
-  DCHECK_LE(snap_radius_, SnapFunction::kMaxSnapRadius());
+  S1Angle snap_radius = snap_function.snap_radius();
+  DCHECK_LE(snap_radius, SnapFunction::kMaxSnapRadius());
 
   // Convert the snap radius to an S1ChordAngle.  This is the "true snap
   // radius" used when evaluating exact predicates (s2predicates.h).
-  site_snap_radius_ca_ = S1ChordAngle(snap_radius_);
+  site_snap_radius_ca_ = S1ChordAngle(snap_radius);
 
   // When split_crossing_edges() is true, we need to use a larger snap radius
   // for edges than for vertices to ensure that both edges are snapped to the
@@ -216,7 +205,7 @@ void S2Builder::Init(const Options& options) {
   // other vertex up to snap_radius away.  So to ensure that both edges are
   // snapped to a common vertex, we need to increase the snap radius for edges
   // to at least the sum of these two values (calculated conservatively).
-  S1Angle edge_snap_radius = snap_radius_;
+  S1Angle edge_snap_radius = snap_radius;
   if (!options.split_crossing_edges()) {
     edge_snap_radius_ca_ = site_snap_radius_ca_;
   } else {
@@ -236,7 +225,7 @@ void S2Builder::Init(const Options& options) {
   // will still move by less than max_edge_deviation().  This saves us a lot
   // of work since then we don't need to check the actual deviation.
   min_edge_length_to_split_ca_ = S1ChordAngle::Radians(
-      2 * acos(sin(snap_radius_) / sin(max_edge_deviation_)));
+      2 * acos(sin(snap_radius) / sin(max_edge_deviation_)));
 
   // If the condition below is violated, then AddExtraSites() needs to be
   // modified to check that snapped edges pass on the same side of each "site
@@ -256,17 +245,14 @@ void S2Builder::Init(const Options& options) {
   // possibly be the output of a previous S2Builder invocation.  This involves
   // testing whether any site/site or edge/site pairs are too close together.
   // This is done using exact predicates, which require converting the minimum
-  // separation values to an S1ChordAngle (rounding down).  However we use
-  // S2ClosestPointQuery and S2ClosestEdgeQuery to find candidate pairs, and
-  // those classes compute distances approximately, so we also compute a
-  // "limit" defined as the maximum distance that those classes might compute
-  // for a pair that is too close together.
+  // separation values to an S1ChordAngle.
   min_site_separation_ = snap_function.min_vertex_separation();
-  min_site_separation_ca_ = RoundDown(min_site_separation_);
-  min_site_separation_ca_limit_ = AddPointToPointError(min_site_separation_ca_);
+  min_site_separation_ca_ = S1ChordAngle(min_site_separation_);
+  min_edge_site_separation_ca_ =
+      S1ChordAngle(snap_function.min_edge_vertex_separation());
 
-  min_edge_site_separation_ = snap_function.min_edge_vertex_separation();
-  min_edge_site_separation_ca_ = RoundDown(min_edge_site_separation_);
+  // This is an upper bound on the distance computed by S2ClosestPointQuery
+  // where the true distance might be less than min_edge_site_separation_ca_.
   min_edge_site_separation_ca_limit_ =
       AddPointToEdgeError(min_edge_site_separation_ca_);
 
@@ -499,13 +485,8 @@ void S2Builder::ChooseSites() {
   if (snapping_requested_) {
     S2PointIndex<SiteId> site_index;
     AddForcedSites(&site_index);
-    // "rejected_vertex_index" contains the input vertices that were not
-    // selected as sites.  It is only needed to implement idempotency; it is
-    // not maintained or used once we determine that the input needs to be
-    // snapped (snapping_needed_ is set to true).
-    S2PointIndex<InputVertexId> rejected_vertex_index;
-    ChooseInitialSites(&site_index, &rejected_vertex_index);
-    CollectSiteEdges(site_index, rejected_vertex_index);
+    ChooseInitialSites(&site_index);
+    CollectSiteEdges(site_index);
   }
   if (snapping_needed_) {
     AddExtraSites(input_edge_index);
@@ -637,70 +618,52 @@ void S2Builder::AddForcedSites(S2PointIndex<SiteId>* site_index) {
   num_forced_sites_ = sites_.size();
 }
 
-void S2Builder::ChooseInitialSites(
-    S2PointIndex<SiteId>* site_index,
-    S2PointIndex<InputVertexId>* rejected_vertex_index) {
+void S2Builder::ChooseInitialSites(S2PointIndex<SiteId>* site_index) {
   S2ClosestPointQuery<SiteId> site_query(site_index);
-  site_query.set_max_distance(snap_radius_);
-  S2ClosestPointQuery<InputVertexId> vertex_query(rejected_vertex_index);
-  vertex_query.set_max_distance(min_site_separation_);
+  site_query.set_max_distance(min_site_separation_);
 
-  // For each input vertex, check whether all existing sites are further away
-  // than "snap_radius".  If so, then add the vertex as a new site.
+  // Apply the snap_function() to each input vertex, then check whether any
+  // existing site is closer than min_vertex_separation().  If not, then add a
+  // new site.
+  //
+  // NOTE(ericv): There are actually two reasonable algorithms, which we call
+  // "snap first" (the one above) and "snap last".  The latter checks for each
+  // input vertex whether any existing site is closer than snap_radius(), and
+  // only then applies the snap_function() and adds a new site.  "Snap last"
+  // can yield slightly fewer sites in some cases, but it is also more
+  // expensive and can produce surprising results.  For example, if you snap
+  // the polyline "0:0, 0:0.7" using IntLatLngSnapFunction(0), the result is
+  // "0:0, 0:0" rather than the expected "0:0, 0:1", because the snap radius
+  // is approximately sqrt(2) degrees and therefore it is legal to snap both
+  // input points to "0:0".  "Snap first" produces "0:0, 0:1" as expected.
   vector<InputVertexKey> sorted = SortInputVertices();
   for (int i = 0; i < sorted.size(); ++i) {
     const S2Point& vertex = input_vertices_[sorted[i].second];
-    site_query.FindClosestPoints(vertex);
+    S2Point site = SnapSite(vertex);
+    // If any vertex moves when snapped, the output cannot be idempotent.
+    snapping_needed_ = snapping_needed_ || site != vertex;
+
+    // FindClosestPoints() measures distances conservatively, so we need to
+    // recheck the distances using exact predicates.
+    //
+    // NOTE(ericv): When the snap radius is large compared to the average
+    // vertex spacing, we could possibly avoid the call the FindClosestPoints
+    // by checking whether sites_.back() is close enough.
+    site_query.FindClosestPoints(site);
     bool add_site = true;
     for (int j = 0; j < site_query.num_points(); ++j) {
-      add_site &= s2pred::CompareDistance(vertex, site_query.point(j),
-                                          site_snap_radius_ca_) > 0;
+      if (s2pred::CompareDistance(site, site_query.point(j),
+                                  min_site_separation_ca_) <= 0) {
+        add_site = false;
+        // This pair of sites is too close.  If the sites are distinct, then
+        // the output cannot be idempotent.
+        snapping_needed_ = snapping_needed_ || site != site_query.point(j);
+      }
     }
     if (add_site) {
-      S2Point site = SnapSite(vertex);
-      if (site != vertex) snapping_needed_ = true;
       site_index->Add(site, sites_.size());
       sites_.push_back(site);
       site_query.ReInit();
-    } else if (!snapping_needed_) {
-      // Idempotency was requested and the input so far appears to be already
-      // snapped.  Check whether this vertex also appears to be snapped.
-      if (SnapSite(vertex) != vertex) {
-        snapping_needed_ = true;
-      } else {
-        // Check whether this vertex is too close to any other input vertex
-        // (including input vertices that were not selected as Voronoi sites).
-        //
-        // A tiny amount of work could be saved by short-circuiting the code
-        // below if snapping_needed_ becomes true, but it's not worthwhile.
-        bool add_rejected = true;
-        for (int j = 0; j < site_query.num_points(); ++j) {
-          if (site_query.distance_ca(j) < min_site_separation_ca_limit_) {
-            // Note that there can be duplicate input vertices.
-            if (site_query.point(j) == vertex) {
-              add_rejected = false;
-            } else {
-              snapping_needed_ |= s2pred::CompareDistance(
-                  vertex, site_query.point(j), min_site_separation_ca_) < 0;
-            }
-          }
-        }
-        vertex_query.FindClosestPoints(vertex);
-        for (int j = 0; j < vertex_query.num_points(); ++j) {
-          if (vertex_query.distance_ca(j) < min_site_separation_ca_limit_) {
-            if (vertex_query.point(j) == vertex) {
-              add_rejected = false;
-            } else {
-              snapping_needed_ |= s2pred::CompareDistance(
-                  vertex, vertex_query.point(j), min_site_separation_ca_) < 0;
-            }
-          }
-        }
-        if (add_rejected && !snapping_needed_) {
-          rejected_vertex_index->Add(vertex, sorted[i].second);
-          vertex_query.ReInit();
-        }
-      }
     }
   }
 }
@@ -708,13 +671,14 @@ void S2Builder::ChooseInitialSites(
 S2Point S2Builder::SnapSite(const S2Point& point) const {
   if (!snapping_requested_) return point;
   S2Point site = options_.snap_function().SnapPoint(point);
-  S1ChordAngle dist_moved(site, point);
+S1ChordAngle dist_moved(site, point);
   if (dist_moved > site_snap_radius_ca_) {
     error_->Init(S2Error::BUILDER_SNAP_RADIUS_TOO_SMALL,
                  "Snap function moved vertex (%.15g, %.15g, %.15g) "
                  "by %.15g, which is more than the specified snap "
                  "radius of %.15g", point.x(), point.y(), point.z(),
-                 dist_moved.ToAngle().radians(), snap_radius_.radians());
+                 dist_moved.ToAngle().radians(),
+                 site_snap_radius_ca_.ToAngle().radians());
   }
   return site;
 }
@@ -723,14 +687,10 @@ S2Point S2Builder::SnapSite(const S2Point& point) const {
 // them in edge_sites_.  Also, to implement idempotency this method also
 // checks whether the input vertices and edges may already satisfy the output
 // criteria.  If any problems are found then snapping_needed_ is set to true.
-void S2Builder::CollectSiteEdges(
-    const S2PointIndex<SiteId>& site_index,
-    const S2PointIndex<InputVertexId>& rejected_vertex_index) {
+void S2Builder::CollectSiteEdges(const S2PointIndex<SiteId>& site_index) {
   edge_sites_.resize(input_edges_.size());
   S2ClosestPointQuery<SiteId> site_query(&site_index);
   site_query.set_max_distance(edge_site_query_radius_);
-  S2ClosestPointQuery<InputVertexId> vertex_query(&rejected_vertex_index);
-  vertex_query.set_max_distance(min_edge_site_separation_);
   for (InputEdgeId e = 0; e < input_edges_.size(); ++e) {
     const InputEdge& edge = input_edges_[e];
     const S2Point& v0 = input_vertices_[edge.first];
@@ -750,16 +710,6 @@ void S2Builder::CollectSiteEdges(
           s2pred::CompareEdgeDistance(site_query.point(j), v0, v1,
                                       min_edge_site_separation_ca_) < 0) {
         snapping_needed_ = true;
-      }
-    }
-    if (!snapping_needed_) {
-      vertex_query.FindClosestPointsToEdge(v0, v1);
-      for (int j = 0; j < vertex_query.num_points(); ++j) {
-        if (vertex_query.point(j) != v0 && vertex_query.point(j) != v1 &&
-            s2pred::CompareEdgeDistance(vertex_query.point(j), v0, v1,
-                                        min_edge_site_separation_ca_) < 0) {
-          snapping_needed_ = true;
-        }
       }
     }
     SortSitesByDistance(v0, sites);
@@ -794,9 +744,9 @@ void S2Builder::SortSitesByDistance(const S2Point& x,
 // be added, we mark all nearby edges for re-snapping.
 void S2Builder::AddExtraSites(const MutableS2ShapeIndex& input_edge_index) {
   // When options_.split_crossing_edges() is true, this function may be called
-  // even when snap_radius_ == 0 (because edge_snap_radius_ > 0).  However
-  // neither of the conditions above apply in that case.
-  if (snap_radius_ == S1Angle::Zero()) return;
+  // even when site_snap_radius_ca_ == 0 (because edge_snap_radius_ca_ > 0).
+  // However neither of the conditions above apply in that case.
+  if (site_snap_radius_ca_ == S1ChordAngle::Zero()) return;
 
   vector<SiteId> chain;  // Temporary
   vector<InputEdgeId> snap_queue;

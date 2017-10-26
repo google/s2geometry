@@ -57,7 +57,7 @@ bool S2ClosestEdgeQuery::PointTarget::UpdateMinDistance(
 }
 
 vector<int> S2ClosestEdgeQuery::PointTarget::GetContainingShapes(
-    const S2ShapeIndexBase& index, int max_shapes) const {
+    const S2ShapeIndex& index, int max_shapes) const {
   vector<int> results;
   MakeS2ContainsPointQuery(&index).VisitContainingShapes(
       point_, [&results, max_shapes](S2Shape* shape) {
@@ -93,7 +93,7 @@ bool S2ClosestEdgeQuery::EdgeTarget::UpdateMinDistance(
 }
 
 vector<int> S2ClosestEdgeQuery::EdgeTarget::GetContainingShapes(
-    const S2ShapeIndexBase& index, int max_shapes) const {
+    const S2ShapeIndex& index, int max_shapes) const {
   // We test the center of the edge in order to ensure that edge targets AB
   // and BA yield identical results (which is not guaranteed by the API but
   // users might expect).  Other options would be to test both endpoints, or
@@ -128,14 +128,14 @@ bool S2ClosestEdgeQuery::CellTarget::UpdateMinDistance(
 }
 
 vector<int> S2ClosestEdgeQuery::CellTarget::GetContainingShapes(
-    const S2ShapeIndexBase& index, int max_shapes) const {
+    const S2ShapeIndex& index, int max_shapes) const {
   // We are required to return all polygons that contain the cell, and
   // optionally we can return any polygon that intersects the cell (to within
   // a small error margin).  There are many possible algorithms to do this;
   // the simplest is just to return the polygons that contain the cell center.
   // However the following is less work and returns more shapes in the case
   // where the target cell is large.
-  S2ShapeIndexBase::Iterator it(&index);
+  S2ShapeIndex::Iterator it(&index);
   S2Point center = cell_.GetCenter();
   if (!it.Locate(center)) return vector<int>();
 
@@ -159,7 +159,7 @@ vector<int> S2ClosestEdgeQuery::CellTarget::GetContainingShapes(
 }
 
 S2ClosestEdgeQuery::ShapeIndexTarget::ShapeIndexTarget(
-    const S2ShapeIndexBase* index)
+    const S2ShapeIndex* index)
     : index_(index), query_(absl::make_unique<S2ClosestEdgeQuery>(index)) {
 }
 
@@ -202,7 +202,7 @@ bool S2ClosestEdgeQuery::ShapeIndexTarget::UpdateMinDistance(
 }
 
 vector<int> S2ClosestEdgeQuery::ShapeIndexTarget::GetContainingShapes(
-    const S2ShapeIndexBase& query_index, int max_shapes) const {
+    const S2ShapeIndex& query_index, int max_shapes) const {
   // It is sufficient to find the set of chain starts in the target index
   // (i.e., one vertex per connected component of edges) that are contained by
   // the query index, except for one special case to handle full polygons.
@@ -213,7 +213,7 @@ vector<int> S2ClosestEdgeQuery::ShapeIndexTarget::GetContainingShapes(
   // Helper method that adds an S2Shape to the result, returning false when
   // enough shapes have been found.
   util::btree::btree_set<int> results;
-  S2ContainsPointQuery<S2ShapeIndexBase>::ShapeVisitor AddShape =
+  S2ContainsPointQuery<S2ShapeIndex>::ShapeVisitor AddShape =
       [&results, &max_shapes](S2Shape* shape) {
     if (results.insert(shape->id()).second) --max_shapes;
     return max_shapes > 0;
