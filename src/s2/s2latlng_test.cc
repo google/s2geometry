@@ -75,22 +75,22 @@ TEST(S2LatLng, TestBasic) {
 TEST(S2LatLng, TestConversion) {
   // Test special cases: poles, "date line"
   EXPECT_DOUBLE_EQ(90.0,
-                   S2LatLng(S2LatLng::FromDegrees(90.0, 65.0).ToPoint())
+                   S2LatLng(S2Point(S2LatLng::FromDegrees(90.0, 65.0)))
                    .lat().degrees());
   EXPECT_EQ(-M_PI_2,
-            S2LatLng(S2LatLng::FromRadians(-M_PI_2, 1).ToPoint())
+            S2LatLng(S2Point(S2LatLng::FromRadians(-M_PI_2, 1)))
             .lat().radians());
   EXPECT_DOUBLE_EQ(180.0,
-                   fabs(S2LatLng(S2LatLng::FromDegrees(12.2, 180.0).ToPoint())
+                   fabs(S2LatLng(S2Point(S2LatLng::FromDegrees(12.2, 180.0)))
                         .lng().degrees()));
   EXPECT_EQ(M_PI,
-            fabs(S2LatLng(S2LatLng::FromRadians(0.1, -M_PI).ToPoint())
+            fabs(S2LatLng(S2Point(S2LatLng::FromRadians(0.1, -M_PI)))
                  .lng().radians()));
 
   // Test a bunch of random points.
   for (int i = 0; i < 100000; ++i) {
     S2Point p = S2Testing::RandomPoint();
-    EXPECT_TRUE(S2::ApproxEquals(p, S2LatLng(p).ToPoint())) << p;
+    EXPECT_TRUE(S2::ApproxEquals(p, S2Point(S2LatLng(p)))) << p;
   }
 }
 

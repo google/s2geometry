@@ -83,7 +83,7 @@
 //       index.Add(absl::make_unique<S2Polygon::Shape>(polygon));
 //     }
 //     auto query = MakeS2ContainsPointQuery(&index);
-//     for (const auto& point: points) {
+//     for (const auto& point : points) {
 //       for (S2Shape* shape : query.GetContainingShapes(point)) {
 //         S2Polygon* polygon = polygons[shape->id()];
 //         ... do something with (point, polygon) ...

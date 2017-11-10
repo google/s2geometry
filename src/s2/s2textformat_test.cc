@@ -227,6 +227,17 @@ TEST(SafeMakeLatLngRect, InvalidInput) {
   EXPECT_FALSE(s2textformat::MakeLatLngRect("blah", &rect));
 }
 
+TEST(SafeMakeLatLng, ValidInput) {
+  S2LatLng latlng;
+  EXPECT_TRUE(s2textformat::MakeLatLng("-12.3:45.6", &latlng));
+  EXPECT_EQ(latlng, S2LatLng(S2LatLng::FromDegrees(-12.3, 45.6)));
+}
+
+TEST(SafeMakeLatLng, InvalidInput) {
+  S2LatLng latlng;
+  EXPECT_FALSE(s2textformat::MakeLatLng("blah", &latlng));
+}
+
 TEST(SafeMakeLoop, ValidInput) {
   std::unique_ptr<S2Loop> loop;
   EXPECT_TRUE(s2textformat::MakeLoop("-20:150, -20:151, -19:150", &loop));

@@ -100,6 +100,19 @@ bool MakePoint(string_view str, S2Point* point) {
   return true;
 }
 
+bool MakeLatLng(string_view str, S2LatLng* latlng) {
+  std::vector<S2LatLng> latlngs;
+  if (!ParseLatLngs(str, &latlngs) || latlngs.size() != 1) return false;
+  *latlng = latlngs[0];
+  return true;
+}
+
+S2LatLng MakeLatLngOrDie(string_view str) {
+  S2LatLng latlng;
+  CHECK(MakeLatLng(str, &latlng)) << ": str == \"" << str << "\"";
+  return latlng;
+}
+
 S2LatLngRect MakeLatLngRectOrDie(string_view str) {
   S2LatLngRect rect;
   CHECK(MakeLatLngRect(str, &rect)) << ": str == \"" << str << "\"";
@@ -283,9 +296,13 @@ std::unique_ptr<MutableS2ShapeIndex> MakeIndex(absl::string_view str) {
   return MakeIndexOrDie(str);
 }
 
+static void AppendVertex(const S2LatLng& ll, string* out) {
+  StringAppendF(out, "%.15g:%.15g", ll.lat().degrees(), ll.lng().degrees());
+}
+
 static void AppendVertex(const S2Point& p, string* out) {
   S2LatLng ll(p);
-  StringAppendF(out, "%.15g:%.15g", ll.lat().degrees(), ll.lng().degrees());
+  return AppendVertex(ll, out);
 }
 
 static void AppendVertices(const S2Point* v, int n, string* out) {
@@ -301,11 +318,17 @@ string ToString(const S2Point& point) {
   return out;
 }
 
+string ToString(const S2LatLng& latlng) {
+  string out;
+  AppendVertex(latlng, &out);
+  return out;
+}
+
 string ToString(const S2LatLngRect& rect) {
   string out;
-  AppendVertex(rect.lo().ToPoint(), &out);
+  AppendVertex(rect.lo(), &out);
   out += ", ";
-  AppendVertex(rect.hi().ToPoint(), &out);
+  AppendVertex(rect.hi(), &out);
   return out;
 }
 
@@ -355,7 +378,7 @@ string ToString(const vector<S2LatLng>& latlngs) {
   string out;
   for (int i = 0; i < latlngs.size(); ++i) {
     if (i > 0) out += ", ";
-    AppendVertex(latlngs[i].ToPoint(), &out);
+    AppendVertex(latlngs[i], &out);
   }
   return out;
 }

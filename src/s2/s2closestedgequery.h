@@ -19,6 +19,7 @@
 #define S2_S2CLOSESTEDGEQUERY_H_
 
 #include <memory>
+#include <queue>
 #include <type_traits>
 #include <vector>
 
@@ -27,13 +28,13 @@
 #include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/util/btree/btree_set.h"
 #include "s2/_fpcontractoff.h"
-#include "s2/priority_queue_sequence.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 #include "s2/s2closestedgequery_base.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2min_distance_targets.h"
 #include "s2/s2shapeindex.h"
 
 // S2ClosestEdgeQuery is a helper class for finding the closest edge(s) to a
@@ -104,185 +105,112 @@ class S2ClosestEdgeQuery {
  public:
   // See S2ClosestEdgeQueryBase for full documentation.
 
-  // A thin wrapper around S1ChordAngle that implements the Distance concept
-  // required by S2ClosestEdgeQueryBase.
-  class Distance : public S1ChordAngle {
-   public:
-    Distance() : S1ChordAngle() {}
-    explicit Distance(S1Angle x) : S1ChordAngle(x) {}
-    explicit Distance(S1ChordAngle x) : S1ChordAngle(x) {}
-    static Distance Zero() { return Distance(S1ChordAngle::Zero()); }
-    static Distance Infinity() { return Distance(S1ChordAngle::Infinity()); }
-    static Distance Negative() { return Distance(S1ChordAngle::Negative()); }
-    friend Distance operator-(Distance x, Distance y) {
-      return Distance(S1ChordAngle(x) - y);
-    }
-    static S1Angle GetAngleBound(Distance x) {
-      return x.PlusError(x.GetS1AngleConstructorMaxError()).ToAngle();
-    }
-    // If (dist < *this), updates *this and returns true.
-    bool UpdateMin(const Distance& dist);
-  };
+  // S2MinDistance is a thin wrapper around S1ChordAngle that implements the
+  // Distance concept required by S2ClosestPointQueryBase.
+  using Distance = S2MinDistance;
   using Base = S2ClosestEdgeQueryBase<Distance>;
+
+  // Each "Result" object represents a closest edge.  It has the following
+  // fields:
+  //
+  //   S1ChordAngle distance;  // The distance from the target to this edge.
+  //   int32 shape_id;         // Identifies an indexed shape.
+  //   int32 edge_id;          // Identifies an edge within the shape.
   using Result = Base::Result;
 
-  // See S2ClosestEdgeQueryBase for full documentation of the available options.
+  // Options that control the set of edges returned.  Note that by default
+  // *all* edges are returned, so you will always want to set either the
+  // max_edges() option or the max_distance() option (or both).
   class Options : public Base::Options {
    public:
-    // Versions of set_max_distance() that accept S1ChordAngle / S1Angle.
+    // See S2ClosestEdgeQueryBase::Options for the full set of options.
+
+    // Specifies that only edges whose distance to the target is less than
+    // "max_distance" should be returned.
     //
-    // Note that only edges whose distance is *less than* "max_distance" are
-    // returned.  Normally this doesn't matter, because distances are not
+    // Note that edges whose distance is exactly equal to "max_distance" are
+    // not returned.  Normally this doesn't matter, because distances are not
     // computed exactly in the first place, but if such edges are needed then
-    // you can retrieve them by specifying max_distance.Successor() instead.
+    // see set_inclusive_max_distance() below.
+    //
+    // DEFAULT: Distance::Infinity()
     void set_max_distance(S1ChordAngle max_distance);
-    void set_max_distance(S1Angle max_distance);
 
-    // Versions of set_max_error() that accept S1ChordAngle / S1Angle.
-    void set_max_error(S1ChordAngle max_error);
-    void set_max_error(S1Angle max_error);
+    // Like set_max_distance(), except that edges whose distance is exactly
+    // equal to "max_distance" are also returned.  Equivalent to calling
+    // set_max_distance(max_distance.Successor()).
+    void set_inclusive_max_distance(S1ChordAngle max_distance);
 
-    // Like set_max_distance(), except that "max_distance" is increased by the
-    // maximum error in the distance calculation.  This ensures that all edges
-    // whose true distance is less than "max_distance" will be returned (along
-    // with some edges whose true distance is slightly greater).
+    // Like set_inclusive_max_distance(), except that "max_distance" is also
+    // increased by the maximum error in the distance calculation.  This
+    // ensures that all edges whose true distance is less than or equal to
+    // "max_distance" will be returned (along with some edges whose true
+    // distance is slightly greater).
     //
     // Algorithms that need to do exact distance comparisons can use this
     // option to find a set of candidate edges that can then be filtered
-    // further (e.g., using s2pred::CompareEdgeDistance).
+    // further (e.g., using s2pred::CompareDistance).
     void set_conservative_max_distance(S1ChordAngle max_distance);
+
+    // Versions of set_max_distance that take an S1Angle argument.  (Note that
+    // these functions require a conversion, and that the S1ChordAngle versions
+    // are preferred.)
+    void set_max_distance(S1Angle max_distance);
+    void set_inclusive_max_distance(S1Angle max_distance);
+    void set_conservative_max_distance(S1Angle max_distance);
+
+    // Versions of set_max_error() that accept S1ChordAngle / S1Angle.
+    // (See S2ClosestEdgeQueryBaseOptions for details.)
+    void set_max_error(S1ChordAngle max_error);
+    void set_max_error(S1Angle max_error);
+
+    // Inherited options (see s2closestedgequery_base.h for details):
+    using Base::Options::set_max_edges;
+    using Base::Options::set_include_interiors;
+    using Base::Options::set_use_brute_force;
   };
 
-  // "Target" represents the geometry that the distance is measured to.  There
-  // are subtypes for measuring the distance to a point, an edge, an S2Cell,
-  // or an S2ShapeIndex representing an arbitrary collection of geometry.
-  using Target = Base::Target;
+  // "Target" represents the geometry to which the distance is measured.
+  // There are subtypes for measuring the distance to a point, an edge, an
+  // S2Cell, or an S2ShapeIndex (an arbitrary collection of geometry).
+  using Target = S2MinDistanceTarget;
 
   // Target subtype that computes the closest distance to a point.
-  class PointTarget final : public Target {
+  class PointTarget final : public S2MinDistancePointTarget {
    public:
     explicit PointTarget(const S2Point& point);
-    int max_brute_force_edges() const override;
-    S2Cap GetCapBound() const override;
-    bool UpdateMinDistance(const S2Point& v0, const S2Point& v1,
-                           Distance* min_dist) const override;
-    bool UpdateMinDistance(const S2Cell& cell,
-                           Distance* min_dist) const override;
-    std::vector<int> GetContainingShapes(const S2ShapeIndex& index,
-                                         int max_shapes) const override;
-
-   private:
-    S2Point point_;
+    int max_brute_force_index_size() const override;
   };
 
   // Target subtype that computes the closest distance to an edge.
-  class EdgeTarget final : public Target {
+  class EdgeTarget final : public S2MinDistanceEdgeTarget {
    public:
-    EdgeTarget(const S2Point& a, const S2Point& b);
-    int max_brute_force_edges() const override;
-    S2Cap GetCapBound() const override;
-    bool UpdateMinDistance(const S2Point& v0, const S2Point& v1,
-                           Distance* min_dist) const override;
-    bool UpdateMinDistance(const S2Cell& cell,
-                           Distance* min_dist) const override;
-    std::vector<int> GetContainingShapes(const S2ShapeIndex& index,
-                                         int max_shapes) const override;
-
-   private:
-    S2Point a_, b_;
+    explicit EdgeTarget(const S2Point& a, const S2Point& b);
+    int max_brute_force_index_size() const override;
   };
 
   // Target subtype that computes the closest distance to an S2Cell
   // (including the interior of the cell).
-  class CellTarget final : public Target {
+  class CellTarget final : public S2MinDistanceCellTarget {
    public:
     explicit CellTarget(const S2Cell& cell);
-    int max_brute_force_edges() const override;
-    S2Cap GetCapBound() const override;
-    bool UpdateMinDistance(const S2Point& v0, const S2Point& v1,
-                           Distance* min_dist) const override;
-    bool UpdateMinDistance(const S2Cell& cell,
-                           Distance* min_dist) const override;
-    std::vector<int> GetContainingShapes(const S2ShapeIndex& index,
-                                         int max_shapes) const override;
-
-   private:
-    S2Cell cell_;
+    int max_brute_force_index_size() const override;
   };
 
   // Target subtype that computes the closest distance to an S2ShapeIndex
   // (an arbitrary collection of points, polylines, and/or polygons).
   //
-  // Note that ShapeIndexTarget has its own options:
+  // By default, distances are measured to the boundary and interior of
+  // polygons in the S2ShapeIndex rather than to polygon boundaries only.
+  // If you wish to change this behavior, you may call
   //
-  //   include_interiors()
-  //     - specifies that distances are measured to the boundary and interior
-  //       of polygons in the S2ShapeIndex.  (If set to false, distance is
-  //       measured to the polygon boundary only.)
-  //       DEFAULT: true.
+  //   target.set_include_interiors(false);
   //
-  //   brute_force()
-  //     - specifies that the distances should be computed by examining every
-  //       edge in the S2ShapeIndex (for testing and debugging purposes).
-  //       DEFAULT: false.
-  //
-  // These options are specified independently of the corresponding
-  // S2ClosestEdgeQuery options.  For example, if include_interiors is true
-  // for a ShapeIndexTarget but false for the S2ClosestEdgeQuery where the
-  // target is used, then distances will be measured from the boundary of one
-  // S2ShapeIndex to the boundary and interior of the other.
-  //
-  // The remaining S2ClosestEdgeQuery::Options are instead handled as follows:
-  //
-  //  - max_error() is copied from the current S2ClosestEdgeQuery, i.e. if you
-  //    set query.options().max_error() then this value is automatically
-  //    propagated to the ShapeIndexTarget.
-  //
-  //    Note that unlike the other Target subtypes, this option can affect the
-  //    "distance" field of the results.  Suppose that max_edges() == 1 and
-  //    max_error() == 0.01, and let the result edge be E with "distance"
-  //    field d.  Then the implementation guarantees that the true distance
-  //    from E to the target S2ShapeIndex is at least (d - 0.01), and
-  //    furthermore no other edge E' of the query S2ShapeIndex is closer to
-  //    the target S2ShapeIndex than (d - 0.01).
-  //
-  //    As always, this option does not affect max_distance().  Continuing the
-  //    example above, if max_distance() == M then the "distance" field of the
-  //    result edge satisfies (d < M) no matter how max_error() is set.
-  //
-  //  - max_edges() and max_distance() are set internally on every method call
-  //    in order to implement the Target API.
-  class ShapeIndexTarget final : public Target {
+  // (see S2MinDistanceShapeIndexTarget for details).
+  class ShapeIndexTarget final : public S2MinDistanceShapeIndexTarget {
    public:
     explicit ShapeIndexTarget(const S2ShapeIndex* index);
-
-    // Specifies that distance will be measured to the boundary and interior
-    // of polygons in the S2ShapeIndex rather than to polygon boundaries only.
-    //
-    // DEFAULT: true
-    bool include_interiors() const;
-    void set_include_interiors(bool include_interiors);
-
-    // Specifies that the distances should be computed by examining every edge
-    // in the S2ShapeIndex (for testing and debugging purposes).
-    //
-    // DEFAULT: false
-    bool use_brute_force() const;
-    void set_use_brute_force(bool use_brute_force);
-
-    bool set_max_error(const Distance& max_error) override;
-    int max_brute_force_edges() const override;
-    S2Cap GetCapBound() const override;
-    bool UpdateMinDistance(const S2Point& v0, const S2Point& v1,
-                           Distance* min_dist) const override;
-    bool UpdateMinDistance(const S2Cell& cell,
-                           Distance* min_dist) const override;
-    std::vector<int> GetContainingShapes(const S2ShapeIndex& query_index,
-                                         int max_shapes) const override;
-
-   private:
-    const S2ShapeIndex* index_;
-    std::unique_ptr<S2ClosestEdgeQuery> query_;
+    int max_brute_force_index_size() const override;
   };
 
   // Convenience constructor that calls Init().  Options may be specified here
@@ -297,15 +225,15 @@ class S2ClosestEdgeQuery {
   // Initializes the query.  Options may be specified here or changed at any
   // time using the mutable_options() accessor method.
   //
-  // REQUIRES: ReInit() must be called if "index" is modified.
   // REQUIRES: "index" must persist for the lifetime of this object.
+  // REQUIRES: ReInit() must be called if "index" is modified.
   void Init(const S2ShapeIndex* index, const Options& options = Options());
 
-  // Reinitialize the query.  This method must be called whenever the
+  // Reinitializes the query.  This method must be called whenever the
   // underlying S2ShapeIndex is modified.
   void ReInit();
 
-  // Return a reference to the underlying S2ShapeIndex.
+  // Returns a reference to the underlying S2ShapeIndex.
   const S2ShapeIndex& index() const;
 
   // Returns the query options.  Options can be modifed between queries.
@@ -337,21 +265,26 @@ class S2ClosestEdgeQuery {
 
   // Returns the minimum distance to the target.  If the index or target is
   // empty, returns S1ChordAngle::Infinity().
+  //
+  // Use IsDistanceLess() if you only want to compare the distance against a
+  // threshold value, since it is often much faster.
   S1ChordAngle GetDistance(Target* target);
 
-  // Returns true if the distance to the target is less than "limit".
+  // Returns true if the distance to "target" is less than "limit".
   //
-  // This method is usually *much* faster than calling GetDistance(), since it
-  // is much less work to determine whether the minimum distance is above or
-  // below a threshold than it is to calculate the actual minimum distance.
-  //
-  // You can test whether the distance is less than or equal to "limit" by
-  // testing whether IsDistanceLess(target, limit.Successor()).
+  // This method is usually much faster than GetDistance(), since it is much
+  // less work to determine whether the minimum distance is above or below a
+  // threshold than it is to calculate the actual minimum distance.
   bool IsDistanceLess(Target* target, S1ChordAngle limit);
 
-  // Like IsDistanceLess(), except that "limit" is increased by the maximum
-  // error in the distance calculation.  This ensures that this function
-  // returns true whenever the true, exact distance is less than "limit".
+  // Like IsDistanceLess(), but also returns true if the distance to "target"
+  // is exactly equal to "limit".
+  bool IsDistanceLessOrEqual(Target* target, S1ChordAngle limit);
+
+  // Like IsDistanceLessOrEqual(), except that "limit" is increased by the
+  // maximum error in the distance calculation.  This ensures that this
+  // function returns true whenever the true, exact distance is less than
+  // or equal to "limit".
   //
   // For example, suppose that we want to test whether two geometries might
   // intersect each other after they are snapped together using S2Builder
@@ -360,7 +293,7 @@ class S2ClosestEdgeQuery {
   // measure the distance between the two geometries conservatively.  If the
   // distance is definitely greater than "snap_radius", then the geometries
   // are guaranteed to not intersect after snapping.
-  bool IsConservativeDistanceLess(Target* target, S1ChordAngle limit);
+  bool IsConservativeDistanceLessOrEqual(Target* target, S1ChordAngle limit);
 
   // Returns the endpoints of the given result edge.
   //
@@ -386,14 +319,6 @@ class S2ClosestEdgeQuery {
 //////////////////   Implementation details follow   ////////////////////
 
 
-inline bool S2ClosestEdgeQuery::Distance::UpdateMin(const Distance& dist) {
-  if (dist < *this) {
-    *this = dist;
-    return true;
-  }
-  return false;
-}
-
 inline void S2ClosestEdgeQuery::Options::set_max_distance(
     S1ChordAngle max_distance) {
   Base::Options::set_max_distance(Distance(max_distance));
@@ -404,6 +329,16 @@ inline void S2ClosestEdgeQuery::Options::set_max_distance(
   Base::Options::set_max_distance(Distance(max_distance));
 }
 
+inline void S2ClosestEdgeQuery::Options::set_inclusive_max_distance(
+    S1ChordAngle max_distance) {
+  set_max_distance(max_distance.Successor());
+}
+
+inline void S2ClosestEdgeQuery::Options::set_inclusive_max_distance(
+    S1Angle max_distance) {
+  set_inclusive_max_distance(S1ChordAngle(max_distance));
+}
+
 inline void S2ClosestEdgeQuery::Options::set_max_error(S1ChordAngle max_error) {
   Base::Options::set_max_error(Distance(max_error));
 }
@@ -412,22 +347,22 @@ inline void S2ClosestEdgeQuery::Options::set_max_error(S1Angle max_error) {
   Base::Options::set_max_error(Distance(max_error));
 }
 
-inline bool S2ClosestEdgeQuery::ShapeIndexTarget::include_interiors() const {
-  return query_->options().include_interiors();
+inline S2ClosestEdgeQuery::PointTarget::PointTarget(const S2Point& point)
+    : S2MinDistancePointTarget(point) {
 }
 
-inline void S2ClosestEdgeQuery::ShapeIndexTarget::set_include_interiors(
-    bool include_interiors) {
-  query_->mutable_options()->set_include_interiors(include_interiors);
+inline S2ClosestEdgeQuery::EdgeTarget::EdgeTarget(const S2Point& a,
+                                                  const S2Point& b)
+    : S2MinDistanceEdgeTarget(a, b) {
 }
 
-inline bool S2ClosestEdgeQuery::ShapeIndexTarget::use_brute_force() const {
-  return query_->options().use_brute_force();
+inline S2ClosestEdgeQuery::CellTarget::CellTarget(const S2Cell& cell)
+    : S2MinDistanceCellTarget(cell) {
 }
 
-inline void S2ClosestEdgeQuery::ShapeIndexTarget::set_use_brute_force(
-    bool use_brute_force) {
-  query_->mutable_options()->set_use_brute_force(use_brute_force);
+inline S2ClosestEdgeQuery::ShapeIndexTarget::ShapeIndexTarget(
+    const S2ShapeIndex* index)
+    : S2MinDistanceShapeIndexTarget(index) {
 }
 
 inline S2ClosestEdgeQuery::S2ClosestEdgeQuery(const S2ShapeIndex* index,
@@ -469,7 +404,7 @@ inline void S2ClosestEdgeQuery::FindClosestEdges(Target* target,
 
 inline S2ClosestEdgeQuery::Result S2ClosestEdgeQuery::FindClosestEdge(
     Target* target) {
-  static_assert(sizeof(Options) <= 24, "Consider not copying Options here");
+  static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
   Options tmp_options = options_;
   tmp_options.set_max_edges(1);
   return base_.FindClosestEdge(target, tmp_options);

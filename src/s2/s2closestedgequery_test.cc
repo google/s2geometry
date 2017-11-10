@@ -49,162 +49,6 @@ using std::pair;
 using std::unique_ptr;
 using std::vector;
 
-TEST(PointTarget, UpdateMinDistanceToEdgeWhenEqual) {
-  // Verifies that UpdateMinDistance only returns true when the new distance
-  // is less than the old distance (not less than or equal to).
-  S2ClosestEdgeQuery::PointTarget target(MakePointOrDie("1:0"));
-  S2ClosestEdgeQuery::Distance dist(S1ChordAngle::Infinity());
-  auto edge = ParsePointsOrDie("0:-1, 0:1");
-  EXPECT_TRUE(target.UpdateMinDistance(edge[0], edge[1], &dist));
-  EXPECT_FALSE(target.UpdateMinDistance(edge[0], edge[1], &dist));
-}
-
-TEST(PointTarget, UpdateMinDistanceToCellWhenEqual) {
-  // Verifies that UpdateMinDistance only returns true when the new distance
-  // is less than the old distance (not less than or equal to).
-  S2ClosestEdgeQuery::PointTarget target(MakePointOrDie("1:0"));
-  S2ClosestEdgeQuery::Distance dist(S1ChordAngle::Infinity());
-  S2Cell cell{S2CellId(MakePointOrDie("0:0"))};
-  EXPECT_TRUE(target.UpdateMinDistance(cell, &dist));
-  EXPECT_FALSE(target.UpdateMinDistance(cell, &dist));
-}
-
-TEST(EdgeTarget, UpdateMinDistanceToEdgeWhenEqual) {
-  S2ClosestEdgeQuery::EdgeTarget target(MakePointOrDie("1:0"),
-                                        MakePointOrDie("1:1"));
-  S2ClosestEdgeQuery::Distance dist(S1ChordAngle::Infinity());
-  auto edge = ParsePointsOrDie("0:-1, 0:1");
-  EXPECT_TRUE(target.UpdateMinDistance(edge[0], edge[1], &dist));
-  EXPECT_FALSE(target.UpdateMinDistance(edge[0], edge[1], &dist));
-}
-
-TEST(EdgeTarget, UpdateMinDistanceToCellWhenEqual) {
-  S2ClosestEdgeQuery::EdgeTarget target(MakePointOrDie("1:0"),
-                                        MakePointOrDie("1:1"));
-  S2ClosestEdgeQuery::Distance dist(S1ChordAngle::Infinity());
-  S2Cell cell{S2CellId(MakePointOrDie("0:0"))};
-  EXPECT_TRUE(target.UpdateMinDistance(cell, &dist));
-  EXPECT_FALSE(target.UpdateMinDistance(cell, &dist));
-}
-
-TEST(CellTarget, UpdateMinDistanceToEdgeWhenEqual) {
-  S2ClosestEdgeQuery::CellTarget
-      target{S2Cell{S2CellId{MakePointOrDie("0:1")}}};
-  S2ClosestEdgeQuery::Distance dist(S1ChordAngle::Infinity());
-  auto edge = ParsePointsOrDie("0:-1, 0:1");
-  EXPECT_TRUE(target.UpdateMinDistance(edge[0], edge[1], &dist));
-  EXPECT_FALSE(target.UpdateMinDistance(edge[0], edge[1], &dist));
-}
-
-TEST(CellTarget, UpdateMinDistanceToCellWhenEqual) {
-  S2ClosestEdgeQuery::CellTarget
-      target{S2Cell{S2CellId{MakePointOrDie("0:1")}}};
-  S2ClosestEdgeQuery::Distance dist(S1ChordAngle::Infinity());
-  S2Cell cell{S2CellId(MakePointOrDie("0:0"))};
-  EXPECT_TRUE(target.UpdateMinDistance(cell, &dist));
-  EXPECT_FALSE(target.UpdateMinDistance(cell, &dist));
-}
-
-TEST(ShapeIndexTarget, UpdateMinDistanceToEdgeWhenEqual) {
-  auto target_index = MakeIndexOrDie("1:0 # #");
-  S2ClosestEdgeQuery::ShapeIndexTarget target(target_index.get());
-  S2ClosestEdgeQuery::Distance dist(S1ChordAngle::Infinity());
-  auto edge = ParsePointsOrDie("0:-1, 0:1");
-  EXPECT_TRUE(target.UpdateMinDistance(edge[0], edge[1], &dist));
-  EXPECT_FALSE(target.UpdateMinDistance(edge[0], edge[1], &dist));
-}
-
-TEST(ShapeIndexTarget, UpdateMinDistanceToCellWhenEqual) {
-  auto target_index = MakeIndexOrDie("1:0 # #");
-  S2ClosestEdgeQuery::ShapeIndexTarget target(target_index.get());
-  S2ClosestEdgeQuery::Distance dist(S1ChordAngle::Infinity());
-  S2Cell cell{S2CellId(MakePointOrDie("0:0"))};
-  EXPECT_TRUE(target.UpdateMinDistance(cell, &dist));
-  EXPECT_FALSE(target.UpdateMinDistance(cell, &dist));
-}
-
-TEST(PointTarget, GetContainingShapes) {
-  // Only shapes 2 and 4 should contain the target point.
-  auto index = MakeIndexOrDie(
-      "1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | 0:0, 0:4, 4:0");
-  S2ClosestEdgeQuery::PointTarget target(MakePointOrDie("1:1"));
-  EXPECT_EQ((vector<int>{2}), target.GetContainingShapes(*index, 1));
-  EXPECT_EQ((vector<int>{2, 4}), target.GetContainingShapes(*index, 5));
-}
-
-TEST(EdgeTarget, GetContainingShapes) {
-  // Only shapes 2 and 4 should contain the target point.
-  auto index = MakeIndexOrDie(
-      "1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | 0:0, 0:4, 4:0");
-  S2ClosestEdgeQuery::EdgeTarget target(MakePointOrDie("1:2"),
-                                        MakePointOrDie("2:1"));
-  EXPECT_EQ((vector<int>{2}), target.GetContainingShapes(*index, 1));
-  EXPECT_EQ((vector<int>{2, 4}), target.GetContainingShapes(*index, 5));
-}
-
-TEST(CellTarget, GetContainingShapes) {
-  auto index = MakeIndexOrDie(
-      "1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | -1:-1, -1:5, 5:-1");
-  // Only shapes 2 and 4 should contain a very small cell near 1:1.
-  S2CellId cellid1(MakePointOrDie("1:1"));
-  S2ClosestEdgeQuery::CellTarget target1{S2Cell(cellid1)};
-  EXPECT_EQ((vector<int>{2}), target1.GetContainingShapes(*index, 1));
-  EXPECT_EQ((vector<int>{2, 4}), target1.GetContainingShapes(*index, 5));
-
-  // For a larger cell that properly contains one or more index cells, all
-  // shapes that intersect the first such cell in S2CellId order are returned.
-  // In the test below, this happens to again be the 1st and 3rd polygons
-  // (whose shape_ids are 2 and 4).
-  S2CellId cellid2 = cellid1.parent(5);
-  S2ClosestEdgeQuery::CellTarget target2{S2Cell(cellid2)};
-  EXPECT_EQ((vector<int>{2, 4}), target2.GetContainingShapes(*index, 5));
-}
-
-TEST(ShapeIndexTarget, GetContainingShapes) {
-  // Create an index containing a repeated grouping of one point, one
-  // polyline, and one polygon.
-  auto index = MakeIndexOrDie(
-      "1:1 | 4:4 | 7:7 | 10:10 # "
-      "1:1, 1:2 | 4:4, 4:5 | 7:7, 7:8 | 10:10, 10:11 # "
-      "0:0, 0:3, 3:0 | 3:3, 3:6, 6:3 | 6:6, 6:9, 9:6 | 9:9, 9:12, 12:9");
-
-  // Construct a target consisting of one point, one polyline, and one polygon
-  // with two loops where only the second loop is contained by a polygon in
-  // the index above.
-  auto target_index = MakeIndexOrDie(
-      "1:1 # 4:5, 5:4 # 20:20, 20:21, 21:20; 10:10, 10:11, 11:10");
-
-  S2ClosestEdgeQuery::ShapeIndexTarget target(target_index.get());
-  // These are the shape_ids of the 1st, 2nd, and 4th polygons of "index"
-  // (noting that the 4 points are represented by one S2PointVectorShape).
-  EXPECT_EQ((vector<int>{5, 6, 8}), target.GetContainingShapes(*index, 5));
-}
-
-TEST(ShapeIndexTarget, GetContainingShapesEmptyAndFull) {
-  // Verify that GetContainingShapes never returns empty polygons and always
-  // returns full polygons (i.e., those containing the entire sphere).
-
-  // Creating an index containing one empty and one full polygon.
-  auto index = MakeIndexOrDie("# # empty | full");
-
-  // Check only the full polygon is returned for a point target.
-  auto point_index = MakeIndexOrDie("1:1 # #");
-  S2ClosestEdgeQuery::ShapeIndexTarget point_target(point_index.get());
-  EXPECT_EQ((vector<int>{1}), point_target.GetContainingShapes(*index, 5));
-
-  // Check only the full polygon is returned for a full polygon target.
-  auto full_polygon_index = MakeIndexOrDie("# # full");
-  S2ClosestEdgeQuery::ShapeIndexTarget full_target(full_polygon_index.get());
-  EXPECT_EQ((vector<int>{1}), full_target.GetContainingShapes(*index, 5));
-
-  // Check that nothing is returned for an empty polygon target.  (An empty
-  // polygon has no connected components and does not intersect anything, so
-  // according to the API of GetContainingShapes nothing should be returned.)
-  auto empty_polygon_index = MakeIndexOrDie("# # empty");
-  S2ClosestEdgeQuery::ShapeIndexTarget empty_target(empty_polygon_index.get());
-  EXPECT_EQ((vector<int>{}), empty_target.GetContainingShapes(*index, 5));
-}
-
 TEST(S2ClosestEdgeQuery, NoEdges) {
   MutableS2ShapeIndex index;
   S2ClosestEdgeQuery query(&index);
@@ -235,6 +79,55 @@ TEST(S2ClosestEdgeQuery, OptionsNotModified) {
   EXPECT_EQ(options.max_edges(), query.options().max_edges());
   EXPECT_EQ(options.max_distance(), query.options().max_distance());
   EXPECT_EQ(options.max_error(), query.options().max_error());
+}
+
+TEST(S2ClosestEdgeQuery, DistanceEqualToLimit) {
+  // Tests the behavior of IsDistanceLess, IsDistanceLessOrEqual, and
+  // IsConservativeDistanceLessOrEqual (and the corresponding Options) when
+  // the distance to the target exactly equals the chosen limit.
+  S2Point p0(MakePointOrDie("23:12")), p1(MakePointOrDie("47:11"));
+  vector<S2Point> index_points{p0};
+  MutableS2ShapeIndex index;
+  index.Add(make_unique<S2PointVectorShape>(index_points));
+  S2ClosestEdgeQuery query(&index);
+
+  // Start with two identical points and a zero distance.
+  S2ClosestEdgeQuery::PointTarget target0(p0);
+  S1ChordAngle dist0 = S1ChordAngle::Zero();
+  EXPECT_FALSE(query.IsDistanceLess(&target0, dist0));
+  EXPECT_TRUE(query.IsDistanceLessOrEqual(&target0, dist0));
+  EXPECT_TRUE(query.IsConservativeDistanceLessOrEqual(&target0, dist0));
+
+  // Now try two points separated by a non-zero distance.
+  S2ClosestEdgeQuery::PointTarget target1(p1);
+  S1ChordAngle dist1(p0, p1);
+  EXPECT_FALSE(query.IsDistanceLess(&target1, dist1));
+  EXPECT_TRUE(query.IsDistanceLessOrEqual(&target1, dist1));
+  EXPECT_TRUE(query.IsConservativeDistanceLessOrEqual(&target1, dist1));
+}
+
+TEST(S2ClosestEdgeQuery, TrueDistanceLessThanS1ChordAngleDistance) {
+  // Tests that IsConservativeDistanceLessOrEqual returns points where the
+  // true distance is slightly less than the one computed by S1ChordAngle.
+  //
+  // The points below had the worst error from among 100,000 random pairs.
+  S2Point p0(0.78516762584829192, -0.50200400690845970, -0.36263449417782678);
+  S2Point p1(0.78563011732429433, -0.50187655940493503, -0.36180828883938054);
+
+  // The S1ChordAngle distance is ~4 ulps greater than the true distance.
+  S1ChordAngle dist1(p0, p1);
+  auto limit = dist1.Predecessor().Predecessor().Predecessor().Predecessor();
+  ASSERT_LT(s2pred::CompareDistance(p0, p1, limit), 0);
+
+  // Verify that IsConservativeDistanceLessOrEqual() still returns "p1".
+  vector<S2Point> index_points{p0};
+  MutableS2ShapeIndex index;
+  index.Add(make_unique<S2PointVectorShape>(index_points));
+  S2ClosestEdgeQuery query(&index);
+  S2ClosestEdgeQuery::PointTarget target1(p1);
+  EXPECT_FALSE(query.IsDistanceLess(&target1, limit));
+  EXPECT_FALSE(query.IsDistanceLessOrEqual(&target1, limit));
+  EXPECT_TRUE(query.IsConservativeDistanceLessOrEqual(&target1, limit));
 }
 
 TEST(S2ClosestEdgeQuery, TargetPointInsideIndexedPolygon) {
@@ -353,7 +246,7 @@ TEST(S2ClosestEdgeQuery, FullS2PolygonTarget) {
   EXPECT_EQ(S1ChordAngle::Zero(), full_query.GetDistance(&target));
 }
 
-TEST(S2ClosestEdgeQuery, IsConservativeDistanceLess) {
+TEST(S2ClosestEdgeQuery, IsConservativeDistanceLessOrEqual) {
   // Test
   int num_tested = 0;
   int num_conservative_needed = 0;
@@ -365,12 +258,12 @@ TEST(S2ClosestEdgeQuery, IsConservativeDistanceLess) {
     S1Angle r = S1Angle::Radians(M_PI * pow(1e-30, rnd.RandDouble()));
     S2Point y = S2::InterpolateAtDistance(r, x, dir);
     S1ChordAngle limit(r);
-    if (s2pred::CompareDistance(x, y, limit) < 0) {
+    if (s2pred::CompareDistance(x, y, limit) <= 0) {
       MutableS2ShapeIndex index;
       index.Add(make_unique<S2PointVectorShape>(vector<S2Point>({x})));
       S2ClosestEdgeQuery query(&index);
       S2ClosestEdgeQuery::PointTarget target(y);
-      EXPECT_TRUE(query.IsConservativeDistanceLess(&target, limit));
+      EXPECT_TRUE(query.IsConservativeDistanceLessOrEqual(&target, limit));
       ++num_tested;
       if (!query.IsDistanceLess(&target, limit)) ++num_conservative_needed;
     }

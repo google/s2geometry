@@ -303,3 +303,163 @@ TEST(S2RegionCoverer, InteriorCovering) {
     EXPECT_EQ(interior[i].level(), level + 1);
   }
 }
+
+bool IsCanonical(const vector<string>& input_str,
+                 const S2RegionCoverer::Options& options) {
+  vector<S2CellId> input;
+  for (const auto& str : input_str) {
+    input.push_back(S2CellId::FromDebugString(str));
+  }
+  S2RegionCoverer coverer(options);
+  return coverer.IsCanonical(input);
+}
+
+TEST(IsCanonical, InvalidS2CellId) {
+  EXPECT_TRUE(IsCanonical({"1/"}, S2RegionCoverer::Options()));
+  EXPECT_FALSE(IsCanonical({"invalid"}, S2RegionCoverer::Options()));
+}
+
+TEST(IsCanonical, Unsorted) {
+  EXPECT_TRUE(IsCanonical({"1/1", "1/3"}, S2RegionCoverer::Options()));
+  EXPECT_FALSE(IsCanonical({"1/3", "1/1"}, S2RegionCoverer::Options()));
+}
+
+TEST(IsCanonical, Overlapping) {
+  EXPECT_TRUE(IsCanonical({"1/2", "1/33"}, S2RegionCoverer::Options()));
+  EXPECT_FALSE(IsCanonical({"1/3", "1/33"}, S2RegionCoverer::Options()));
+}
+
+TEST(IsCanonical, MinLevel) {
+  S2RegionCoverer::Options options;
+  options.set_min_level(2);
+  EXPECT_TRUE(IsCanonical({"1/31"}, options));
+  EXPECT_FALSE(IsCanonical({"1/3"}, options));
+}
+
+TEST(IsCanonical, MaxLevel) {
+  S2RegionCoverer::Options options;
+  options.set_max_level(2);
+  EXPECT_TRUE(IsCanonical({"1/31"}, options));
+  EXPECT_FALSE(IsCanonical({"1/312"}, options));
+}
+
+TEST(IsCanonical, LevelMod) {
+  S2RegionCoverer::Options options;
+  options.set_level_mod(2);
+  EXPECT_TRUE(IsCanonical({"1/31"}, options));
+  EXPECT_FALSE(IsCanonical({"1/312"}, options));
+}
+
+TEST(IsCanonical, MaxCells) {
+  S2RegionCoverer::Options options;
+  options.set_max_cells(2);
+  EXPECT_TRUE(IsCanonical({"1/1", "1/3"}, options));
+  EXPECT_FALSE(IsCanonical({"1/1", "1/3", "2/"}, options));
+  EXPECT_TRUE(IsCanonical({"1/123", "2/1", "3/0122"}, options));
+}
+
+TEST(IsCanonical, Normalized) {
+  // Test that no sequence of cells could be replaced by an ancestor.
+  S2RegionCoverer::Options options;
+  EXPECT_TRUE(IsCanonical({"1/01", "1/02", "1/03", "1/10", "1/11"}, options));
+  EXPECT_FALSE(IsCanonical({"1/00", "1/01", "1/02", "1/03", "1/10"}, options));
+
+  EXPECT_TRUE(IsCanonical({"0/22", "1/01", "1/02", "1/03", "1/10"}, options));
+  EXPECT_FALSE(IsCanonical({"0/22", "1/00", "1/01", "1/02", "1/03"}, options));
+
+  options.set_max_cells(20);
+  options.set_level_mod(2);
+  EXPECT_TRUE(IsCanonical(
+      {"1/1101", "1/1102", "1/1103", "1/1110",
+       "1/1111", "1/1112", "1/1113", "1/1120",
+       "1/1121", "1/1122", "1/1123", "1/1130",
+       "1/1131", "1/1132", "1/1133", "1/1200"}, options));
+  EXPECT_FALSE(IsCanonical(
+      {"1/1100", "1/1101", "1/1102", "1/1103",
+       "1/1110", "1/1111", "1/1112", "1/1113",
+       "1/1120", "1/1121", "1/1122", "1/1123",
+       "1/1130", "1/1131", "1/1132", "1/1133"}, options));
+}
+
+void TestCanonicalizeCovering(
+    const vector<string>& input_str,
+    const vector<string>& expected_str,
+    const S2RegionCoverer::Options& options) {
+  vector<S2CellId> actual, expected;
+  for (const auto& str : input_str) {
+    actual.push_back(S2CellId::FromDebugString(str));
+  }
+  for (const auto& str : expected_str) {
+    expected.push_back(S2CellId::FromDebugString(str));
+  }
+  S2RegionCoverer coverer(options);
+  EXPECT_FALSE(coverer.IsCanonical(actual));
+  coverer.CanonicalizeCovering(&actual);
+  EXPECT_TRUE(coverer.IsCanonical(actual));
+  vector<string> actual_str;
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(CanonicalizeCovering, UnsortedDuplicateCells) {
+  S2RegionCoverer::Options options;
+  TestCanonicalizeCovering({"1/200", "1/13122", "1/20", "1/131", "1/13100"},
+                           {"1/131", "1/20"}, options);
+}
+
+TEST(CanonicalizeCovering, MaxLevelExceeded) {
+  S2RegionCoverer::Options options;
+  options.set_max_level(2);
+  TestCanonicalizeCovering({"0/3001", "0/3002", "4/012301230123"},
+                           {"0/30", "4/01"}, options);
+}
+
+TEST(CanonicalizeCovering, WrongLevelMod) {
+  S2RegionCoverer::Options options;
+  options.set_min_level(1);
+  options.set_level_mod(3);
+  TestCanonicalizeCovering({"0/0", "1/11", "2/222", "3/3333"},
+                           {"0/0", "1/1", "2/2", "3/3333"}, options);
+}
+
+TEST(CanonicalizeCovering, ReplacedByParent) {
+  // Test that 16 children are replaced by their parent when level_mod == 2.
+  S2RegionCoverer::Options options;
+  options.set_level_mod(2);
+  TestCanonicalizeCovering(
+      {"0/00", "0/01", "0/02", "0/03", "0/10", "0/11", "0/12", "0/13",
+       "0/20", "0/21", "0/22", "0/23", "0/30", "0/31", "0/32", "0/33"},
+      {"0/"}, options);
+}
+
+TEST(CanonicalizeCovering, DenormalizedCellUnion) {
+  // Test that all 4 children of a cell may be used when this is necessary to
+  // satisfy min_level() or level_mod();
+  S2RegionCoverer::Options options;
+  options.set_min_level(1);
+  options.set_level_mod(2);
+  TestCanonicalizeCovering(
+      {"0/", "1/130", "1/131", "1/132", "1/133"},
+      {"0/0", "0/1", "0/2", "0/3", "1/130", "1/131", "1/132", "1/133"},
+      options);
+}
+
+TEST(CanonicalizeCovering, MaxCellsMergesSmallest) {
+  // When there are too many cells, the smallest cells should be merged first.
+  S2RegionCoverer::Options options;
+  options.set_max_cells(3);
+  TestCanonicalizeCovering(
+      {"0/", "1/0", "1/1", "2/01300", "2/0131313"},
+      {"0/", "1/", "2/013"}, options);
+}
+
+TEST(CanonicalizeCovering, MaxCellsMergesRepeatedly) {
+  // Check that when merging creates a cell when all 4 children are present,
+  // those cells are merged into their parent (repeatedly if necessary).
+  S2RegionCoverer::Options options;
+  options.set_max_cells(8);
+  TestCanonicalizeCovering(
+      {"0/0121", "0/0123", "1/0", "1/1", "1/2", "1/30", "1/32", "1/33",
+       "1/311", "1/312", "1/313", "1/3100", "1/3101", "1/3103",
+       "1/31021", "1/31023"},
+      {"0/0121", "0/0123", "1/"}, options);
+}

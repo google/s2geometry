@@ -222,6 +222,12 @@ class S2Builder {
     virtual ~SnapFunction() {}
 
     // The maximum distance that vertices can move when snapped.
+    //
+    // If the snap radius is zero, then vertices are snapped together only if
+    // they are identical.  Edges will not be snapped to any vertices other
+    // than their endpoints, even if there are vertices whose distance to the
+    // edge is zero, unless split_crossing_edges() is true.
+    //
     // REQUIRES: snap_radius() <= kMaxSnapRadius
     virtual S1Angle snap_radius() const = 0;
 
@@ -647,7 +653,7 @@ class S2Builder {
   S1ChordAngle edge_snap_radius_ca_;
 
   S1Angle max_edge_deviation_;
-  S1Angle edge_site_query_radius_;
+  S1ChordAngle edge_site_query_radius_ca_;
   S1ChordAngle min_edge_length_to_split_ca_;
 
   S1Angle min_site_separation_;

@@ -167,7 +167,7 @@ class S1ChordAngle {
   double length2() const { return length2_; }
 
   // Returns the smallest representable S1ChordAngle larger than this object.
-  // This can be used to convert a "<" comparsion to a "<=" comparson.  For
+  // This can be used to convert a "<" comparison to a "<=" comparison.  For
   // example:
   //
   //   S2ClosestEdgeQuery query(...);

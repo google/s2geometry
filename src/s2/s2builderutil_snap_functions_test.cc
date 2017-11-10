@@ -352,7 +352,7 @@ static double GetS2CellIdMinEdgeSeparation(
   int num_to_keep = google::DEBUG_MODE ? 20 : 100;
   int num_to_print = 3;
   vector<pair<double, S2CellId>> sorted;
-  for (const auto& entry: best_scores) {
+  for (const auto& entry : best_scores) {
     sorted.push_back(make_pair(entry.second, entry.first));
   }
   std::sort(sorted.begin(), sorted.end());

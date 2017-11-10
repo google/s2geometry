@@ -207,10 +207,9 @@ static double GetUpdateMinInteriorDistanceMaxError(S1ChordAngle dist) {
   // This bound includes all source of error, assuming that the input points
   // are normalized to within the bounds guaranteed to S2Point::Normalize().
   // "a" and "b" are components of chord length that are perpendicular and
-  // parallel to plane containing the edge respectively.
-  double x = dist.length2();
-  double b = 0.5 * x * x;
-  double a = x * sqrt(1 - 0.5 * b);
+  // parallel to the plane containing the edge respectively.
+  double b = min(1.0, 0.5 * dist.length2());
+  double a = sqrt(b * (2 - b));
   return ((2.5 + 2 * sqrt(3) + 8.5 * a) * a +
           (2 + 2 * sqrt(3) / 3 + 6.5 * (1 - b)) * b +
           (23 + 16 / sqrt(3)) * DBL_EPSILON) * DBL_EPSILON;

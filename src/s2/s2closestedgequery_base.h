@@ -31,6 +31,7 @@
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
 #include "s2/s2cellunion.h"
+#include "s2/s2distance_target.h"
 #include "s2/s2regioncoverer.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil.h"
@@ -85,11 +86,11 @@
 //   // Subtraction operator (needed to implement Options::max_error):
 //   friend Distance operator-(Distance x, Distance y);
 //
-//   // Method that returns an upper bound on the S1Angle corresponding to the
-//   // given Distance (needed to efficiently implement Options::max_distance).
-//   // For example, if Distance measures WGS84 ellipsoid distance then the
-//   // corresponding S1Angle would need to be 0.56% larger.
-//   static S1Angle GetAngleBound(Distance x);
+//   // Method that returns an upper bound on the S1ChordAngle corresponding
+//   // to this Distance (needed to implement Options::max_distance
+//   // efficiently).  For example, if Distance measures WGS84 ellipsoid
+//   // distance then the corresponding angle needs to be 0.56% larger.
+//   S1ChordAngle GetChordAngleBound() const;
 // };
 template <class Distance>
 class S2ClosestEdgeQueryBase {
@@ -182,59 +183,7 @@ class S2ClosestEdgeQueryBase {
   //
   // Implementations do *not* need to be thread-safe.  They may cache data or
   // allocate temporary data structures in order to improve performance.
-  class Target {
-   public:
-    virtual ~Target() {}
-
-    // Specifies the maximum error allowed when computing distances in the
-    // UpdateMinDistance() methods.  This method must return "true" if the
-    // Target subtype takes advantage of this parameter.  (Most Target types
-    // can use the default implementation which simply returns false.)
-    virtual bool set_max_error(const Distance& max_error) { return false; }
-
-    // Specifies the maximum number of edges for which distances should be
-    // computed by examining every edge rather than using the S2ShapeIndex.
-    // This can be estimated for a particular Target type using benchmarks.
-    virtual int max_brute_force_edges() const = 0;
-
-    // Returns an S2Cap that bounds the set of points whose distance to the
-    // target is Distance::Zero().
-    virtual S2Cap GetCapBound() const = 0;
-
-    // If the distance to the edge (v0, v1) is less than "min_dist", then
-    // updates "min_dist" and returns true.  Otherwise returns false.
-    virtual bool UpdateMinDistance(const S2Point& v0, const S2Point& v1,
-                                   Distance* min_dist) const = 0;
-
-    // If the distance to the given S2Cell (including its interior) is less
-    // than "min_dist", then updates "min_dist" and returns true.  Otherwise
-    // returns false.
-    virtual bool UpdateMinDistance(const S2Cell& cell,
-                                   Distance* min_dist) const = 0;
-
-    // Returns the shape_ids of all polygons in "query_index" (but not more
-    // than "max_shapes") that contain any connected component of the target.
-    // (For example, a polygon with two nested loops consist of one connected
-    // component, but a polygon with two shells consists of two connected
-    // components.)  Optionally, any polygon that intersects the target to
-    // within a small error margin (e.g., a small multiple of DBL_EPSILON) may
-    // also be returned.  In other words, this method is guaranteed to return
-    // all polygons that contain any connected component of the target, along
-    // with an arbitrary subset of the polygons that intersect the target.
-    //
-    // For example, suppose that "query_index" contains two abutting polygons
-    // A and B.  If the target consisted of two points "a" contained by A and
-    // "b" contained by B, then both A and B would be returned.  But if the
-    // target consisted of the edge "ab", then any subset of {A, B} could be
-    // returned (because both polygons intersect the target but neither one
-    // contains the edge "ab").
-    //
-    // NOTE(ericv): This method exists only for the purpose of implementing
-    // the include_interiors() option efficiently.  Its API is unlikely to be
-    // useful for other purposes.
-    virtual std::vector<int> GetContainingShapes(
-        const S2ShapeIndex& query_index, int max_shapes) const = 0;
-  };
+  using Target = S2DistanceTarget<Distance>;
 
   // Each "Result" object represents a closest edge.  Note the following
   // special cases:
@@ -244,6 +193,8 @@ class S2ClosestEdgeQueryBase {
   //
   //  - (shape_id < 0) && (edge_id < 0) is returned by `FindClosestEdge` to
   //    indicate that no edge satisfies the requested query options.
+  //
+  // TODO(ericv): Convert to a class with accessor methods.
   struct Result {
     Distance distance;  // The distance from the target to this edge.
     int32 shape_id;     // Identifies an indexed shape.
@@ -255,6 +206,7 @@ class S2ClosestEdgeQueryBase {
     Result(Distance _distance, int32 _shape_id, int32 _edge_id)
         : distance(_distance), shape_id(_shape_id), edge_id(_edge_id) {}
 
+    // Returns true if two Result objects are identical.
     friend bool operator==(const Result& x, const Result& y) {
       return (x.distance == y.distance &&
               x.shape_id == y.shape_id &&
@@ -275,18 +227,22 @@ class S2ClosestEdgeQueryBase {
     using goog_btree_prefer_linear_node_search = std::true_type;
   };
 
-  // Convenience constructor that calls Init().
-  explicit S2ClosestEdgeQueryBase(const S2ShapeIndex* index);
-
   // Default constructor; requires Init() to be called.
   S2ClosestEdgeQueryBase();
   ~S2ClosestEdgeQueryBase();
 
-  // Initialize the query.
+  // Convenience constructor that calls Init().
+  explicit S2ClosestEdgeQueryBase(const S2ShapeIndex* index);
+
+  // S2ClosestEdgeQueryBase is not copyable.
+  S2ClosestEdgeQueryBase(const S2ClosestEdgeQueryBase&) = delete;
+  void operator=(const S2ClosestEdgeQueryBase&) = delete;
+
+  // Initializes the query.
   // REQUIRES: ReInit() must be called if "index" is modified.
   void Init(const S2ShapeIndex* index);
 
-  // Reinitialize the query.  This method must be called whenever the
+  // Reinitializes the query.  This method must be called whenever the
   // underlying index is modified.
   void ReInit();
 
@@ -320,6 +276,7 @@ class S2ClosestEdgeQueryBase {
  private:
   class QueueEntry;
 
+  const Options& options() const { return *options_; }
   void FindClosestEdgesInternal(Target* target, const Options& options);
   void FindClosestEdgesBruteForce();
   void FindClosestEdgesOptimized();
@@ -332,7 +289,6 @@ class S2ClosestEdgeQueryBase {
   void ProcessEdges(const QueueEntry& entry);
   void EnqueueCell(S2CellId id, const S2ShapeIndexCell* index_cell);
   void EnqueueCurrentCell(S2CellId id);
-  const Options& options() const { return *options_; }
 
   const S2ShapeIndex* index_;
   const Options* options_;
@@ -393,9 +349,8 @@ class S2ClosestEdgeQueryBase {
   google::dense_hash_set<
     ShapeEdgeId, s2shapeutil::ShapeEdgeIdHash> tested_edges_;
 
-  // The algorithm maintains a priority queue of S2CellIds that contain at
-  // least one S2ShapeIndexCell, sorted in increasing order of distance from
-  // the target point.
+  // The algorithm maintains a priority queue of unprocessed S2CellIds, sorted
+  // in increasing order of distance from the target point.
   struct QueueEntry {
     // A lower bound on the distance from the target point to any edge point
     // within "id".  This is the key of the priority queue.
@@ -429,9 +384,6 @@ class S2ClosestEdgeQueryBase {
   S2ShapeIndex::Iterator iter_;
   std::vector<S2CellId> max_distance_covering_;
   std::vector<S2CellId> initial_cells_;
-
-  S2ClosestEdgeQueryBase(const S2ClosestEdgeQueryBase&) = delete;
-  void operator=(const S2ClosestEdgeQueryBase&) = delete;
 };
 
 
@@ -525,9 +477,12 @@ void S2ClosestEdgeQueryBase<Distance>::Init(const S2ShapeIndex* index) {
 
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::ReInit() {
+  // TODO(ericv): Add CountEdgesUpTo() and use it here.
   index_num_edges_ = s2shapeutil::GetNumEdges(*index_);
   index_covering_.clear();
   index_cells_.clear();
+  // We don't initialize iter_ here to make queries on small indexes a bit
+  // faster (i.e., where brute force is used).
 }
 
 template <class Distance>
@@ -579,35 +534,42 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
     Target* target, const Options& options) {
   target_ = target;
   options_ = &options;
+
   distance_limit_ = options.max_distance();
   result_singleton_ = Result();
   DCHECK(result_vector_.empty());
   DCHECK(result_set_.empty());
+  DCHECK(target->max_brute_force_index_size() >= 0);
   if (distance_limit_ == Distance::Zero()) return;
 
   if (options.max_edges() == Options::kMaxMaxEdges &&
       options.max_distance() == Distance::Infinity()) {
-    LOG(WARNING) << "Returning all edges (max_edges/max_distance not provided)";
+    LOG(WARNING) << "Returning all edges (max_edges/max_distance not set)";
   }
 
   if (options.include_interiors()) {
-    auto shape_ids = target->GetContainingShapes(*index_, options.max_edges());
-    DCHECK_LE(shape_ids.size(), options.max_edges());
+    util::btree::btree_set<int32> shape_ids;
+    (void) target->VisitContainingShapes(
+        *index_, [&shape_ids, &options](S2Shape* containing_shape,
+                                        const S2Point& target_point) {
+          shape_ids.insert(containing_shape->id());
+          return shape_ids.size() < options.max_edges();
+        });
     for (int shape_id : shape_ids) {
       AddResult(Result(Distance::Zero(), shape_id, -1));
     }
     if (distance_limit_ == Distance::Zero()) return;
   }
 
-  // If max_error() was specified and the target takes advantage of this
-  // in its UpdateMinDistance() methods, then we need to avoid duplicate edges
-  // in the results explicitly.  (Otherwise it happens automatically.)
+  // If max_error() was specified and the target takes advantage of this in
+  // its UpdateMinDistance() methods, then we need to avoid duplicate edges in
+  // the results explicitly.  (Otherwise it happens automatically.)
   avoid_duplicates_ = (Distance::Zero() < options.max_error() &&
                        target_->set_max_error(options.max_error()) &&
                        options.max_edges() > 1 && !options.use_brute_force());
 
   if (options.use_brute_force() ||
-      index_num_edges_ <= target_->max_brute_force_edges()) {
+      index_num_edges_ <= target_->max_brute_force_index_size()) {
     FindClosestEdgesBruteForce();
   } else {
     FindClosestEdgesOptimized();
@@ -674,7 +636,11 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesOptimized() {
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
   DCHECK(queue_.empty());
-  iter_.Init(index_, S2ShapeIndex::UNPOSITIONED);
+  if (index_covering_.empty()) {
+    // We delay iterator initialization until now to make queries on very
+    // small indexes a bit faster (i.e., where brute force is used).
+    iter_.Init(index_, S2ShapeIndex::UNPOSITIONED);
+  }
 
   // Optimization: if the user is searching for just the closest edge, and the
   // target happens to intersect an index cell, then we try to limit the search
@@ -699,7 +665,7 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
     // precomputed index covering.
     S2RegionCoverer coverer;
     coverer.mutable_options()->set_max_cells(4);
-    S1Angle radius = cap.GetRadius() + Distance::GetAngleBound(distance_limit_);
+    S1ChordAngle radius = cap.radius() + distance_limit_.GetChordAngleBound();
     S2Cap search_cap(cap.center(), radius);
     coverer.GetFastCovering(search_cap, &max_distance_covering_);
     S2CellUnion::GetIntersection(index_covering_, max_distance_covering_,
@@ -758,8 +724,11 @@ void S2ClosestEdgeQueryBase<Distance>::InitCovering() {
   // split, except that we take the time to prune the children further since
   // this will save work on every subsequent query.
 
-  index_covering_.reserve(6);
   // Don't need to reserve index_cells_ since it is an InlinedVector.
+  index_covering_.reserve(6);
+
+  // TODO(ericv): Use a single iterator (iter_) below and save position
+  // information using pair<S2CellId, const S2ShapeIndexCell*> type.
   S2ShapeIndex::Iterator next(index_, S2ShapeIndex::BEGIN);
   S2ShapeIndex::Iterator last(index_, S2ShapeIndex::END);
   last.Prev();

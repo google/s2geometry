@@ -347,13 +347,24 @@ static bool GetIntersectionStableLD(const S2Point& a0, const S2Point& a1,
   return false;
 }
 
-static S2Point S2PointFromExact(const Vector3_xf& x) {
-  // TODO(ericv): In theory, this function may return S2Point(0, 0, 0) even
-  // though "x" is non-zero.  This happens when all components of "x" have
-  // absolute value less than about 1e-154, since in that case x.Norm2() is
-  // zero in double precision.  This could be fixed by scaling "x" by an
-  // appropriate power of 2 before the conversion.
-  return S2Point(x[0].ToDouble(), x[1].ToDouble(), x[2].ToDouble()).Normalize();
+static S2Point S2PointFromExact(const Vector3_xf& xf) {
+  // If all components of "x" have absolute value less than about 1e-154,
+  // then x.Norm2() is zero in double precision due to underflow.  Therefore
+  // we need to scale "x" by an appropriate power of 2 before the conversion.
+  S2Point x(xf[0].ToDouble(), xf[1].ToDouble(), xf[2].ToDouble());
+  if (x.Norm2() > 0) return x.Normalize();
+
+  // Scale so that the largest component magnitude is in the range [0.5, 1).
+  int exp = ExactFloat::kMinExp - 1;
+  for (int i = 0; i < 3; ++i) {
+    if (xf[i].is_normal()) exp = std::max(exp, xf[i].exp());
+  }
+  if (exp < ExactFloat::kMinExp) {
+    return S2Point(0, 0, 0);
+  }
+  return S2Point(ldexp(xf[0], -exp).ToDouble(),
+                 ldexp(xf[1], -exp).ToDouble(),
+                 ldexp(xf[2], -exp).ToDouble()).Normalize();
 }
 
 namespace internal {
@@ -387,6 +398,13 @@ S2Point GetIntersectionExact(const S2Point& a0, const S2Point& a1,
     x = S2Point(10, 10, 10);  // Greater than any valid S2Point
     S2Point a_norm = S2PointFromExact(a_norm_xf);
     S2Point b_norm = S2PointFromExact(b_norm_xf);
+    if (a_norm == S2Point(0, 0, 0) || b_norm == S2Point(0, 0, 0)) {
+      // TODO(ericv): To support antipodal edges properly, we would need to
+      // add an s2pred::CrossProd() function that computes the cross product
+      // using simulation of simplicity and rounds the result to the nearest
+      // floating-point representation.
+      LOG(DFATAL) << "Exactly antipodal edges not supported by GetIntersection";
+    }
     if (s2pred::OrderedCCW(b0, a0, b1, b_norm) && a0 < x) x = a0;
     if (s2pred::OrderedCCW(b0, a1, b1, b_norm) && a1 < x) x = a1;
     if (s2pred::OrderedCCW(a0, b0, a1, a_norm) && b0 < x) x = b0;
