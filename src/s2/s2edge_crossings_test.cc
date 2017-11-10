@@ -205,6 +205,15 @@ TEST(S2EdgeUtil, GrazingIntersections) {
   stats.Print();
 }
 
+TEST(S2EdgeUtil, ExactIntersectionUnderflow) {
+  // Tests that a correct intersection is computed even when two edges are
+  // exactly collinear and the normals of both edges underflow in double
+  // precision when normalized (see S2PointFromExact function for details).
+  S2Point a0(1, 0, 0), a1(1, 2e-300, 0);
+  S2Point b0(1, 1e-300, 0), b1(1, 3e-300, 0);
+  EXPECT_EQ(S2Point(1, 1e-300, 0), S2::GetIntersection(a0, a1, b0, b1));
+}
+
 TEST(S2EdgeUtil, GetIntersectionInvariants) {
   // Test that the result of GetIntersection does not change when the edges
   // are swapped and/or reversed.  The number of iterations is high because it

@@ -51,7 +51,7 @@
 //
 //   int32 GetLabelSet(const vector<string>& label_strings) {
 //     vector<int32> label_ids;
-//     for (const auto& str: label_strings) {
+//     for (const auto& str : label_strings) {
 //       label_ids.push_back(labels_.Add(str));
 //     }
 //     return label_sets_.Add(label_ids);

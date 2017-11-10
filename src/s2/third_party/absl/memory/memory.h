@@ -30,6 +30,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/meta/type_traits.h"
 
 namespace absl {
@@ -176,8 +177,9 @@ typename memory_internal::MakeUniqueResult<T>::invalid make_unique(
 
 // `absl::MakeUnique` overload for non-array types.
 template <typename T, typename... Args>
-typename memory_internal::MakeUniqueResult<T>::scalar MakeUnique(
-    Args&&... args) {
+ABSL_DEPRECATED("Use absl::make_unique in third_party/absl/memory/memory.h")
+typename memory_internal::MakeUniqueResult<T>::scalar
+    MakeUnique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
@@ -186,6 +188,7 @@ typename memory_internal::MakeUniqueResult<T>::scalar MakeUnique(
 // element constructor arguments. The `std::unique_ptr` will manage destructing
 // these array elements.
 template <typename T>
+ABSL_DEPRECATED("Use absl::make_unique in third_party/absl/memory/memory.h")
 typename memory_internal::MakeUniqueResult<T>::array MakeUnique(size_t n) {
   return std::unique_ptr<T>(new typename absl::remove_extent_t<T>[n]());
 }
@@ -193,8 +196,9 @@ typename memory_internal::MakeUniqueResult<T>::array MakeUnique(size_t n) {
 // `absl::MakeUnique` overload for an array T[N] of known bounds.
 // This construction will be rejected.
 template <typename T, typename... Args>
-typename memory_internal::MakeUniqueResult<T>::invalid MakeUnique(
-    Args&&... /* args */) = delete;
+ABSL_DEPRECATED("Use absl::make_unique in third_party/absl/memory/memory.h")
+typename memory_internal::MakeUniqueResult<T>::invalid
+    MakeUnique(Args&&... /* args */) = delete;
 
 // -----------------------------------------------------------------------------
 // Function Template: RawPtr()
@@ -657,6 +661,7 @@ struct default_allocator_is_nothrow : std::false_type {};
 namespace gtl {
 
 template <typename T>
+ABSL_DEPRECATED("Prefer absl::WrapUnique in third_party/absl/memory/memory.h")
 std::unique_ptr<T> WrapUnique(T* ptr) {
   return absl::WrapUnique(ptr);
 }

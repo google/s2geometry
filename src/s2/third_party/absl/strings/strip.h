@@ -227,11 +227,6 @@ inline void StripTrailingWhitespace(string* s) {
 // a newline was found and removed.
 bool StripTrailingNewline(string* s);
 
-// Removes leading, trailing, and duplicate internal whitespace.
-inline void RemoveExtraWhitespace(string* s) {
-  absl::RemoveExtraAsciiWhitespace(s);
-}
-
 // Returns a pointer to the first non-whitespace character in 'str'. Never
 // returns nullptr. 'str' must be NUL-terminated.
 inline const char* SkipLeadingWhitespace(const char* str) {

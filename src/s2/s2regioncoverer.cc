@@ -53,6 +53,10 @@ S2RegionCoverer::~S2RegionCoverer() = default;
 S2RegionCoverer::S2RegionCoverer(S2RegionCoverer&&) = default;
 S2RegionCoverer& S2RegionCoverer::operator=(S2RegionCoverer&&) = default;
 
+void S2RegionCoverer::Options::set_max_cells(int max_cells) {
+  max_cells_ = max_cells;
+}
+
 void S2RegionCoverer::Options::set_min_level(int min_level) {
   DCHECK_GE(min_level, 0);
   DCHECK_LE(min_level, S2CellId::kMaxLevel);
@@ -76,8 +80,9 @@ void S2RegionCoverer::Options::set_level_mod(int level_mod) {
   level_mod_ = max(1, min(3, level_mod));
 }
 
-void S2RegionCoverer::Options::set_max_cells(int max_cells) {
-  max_cells_ = max_cells;
+int S2RegionCoverer::Options::true_max_level() const {
+  if (level_mod_ == 1) return max_level_;
+  return max_level_ - (max_level_ - min_level_) % level_mod_;
 }
 
 S2RegionCoverer::Candidate* S2RegionCoverer::NewCandidate(const S2Cell& cell) {
@@ -301,6 +306,7 @@ void S2RegionCoverer::GetCoveringInternal(const S2Region& region) {
     S2CellUnion::Denormalize(result_copy, options_.min_level(),
                              options_.level_mod(), &result_);
   }
+  DCHECK(IsCanonical(result_));
 }
 
 void S2RegionCoverer::GetCovering(const S2Region& region,
@@ -332,14 +338,84 @@ S2CellUnion S2RegionCoverer::GetInteriorCovering(const S2Region& region) {
 void S2RegionCoverer::GetFastCovering(const S2Region& region,
                                       vector<S2CellId>* covering) {
   region.GetCellUnionBound(covering);
-  NormalizeCovering(covering);
+  CanonicalizeCovering(covering);
 }
 
-void S2RegionCoverer::NormalizeCovering(vector<S2CellId>* covering) {
-  // This method makes no attempt to be optimal.  In particular, if
-  // min_level() > 0 or level_mod() > 1 then it may return more than the
-  // desired number of cells even when this isn't necessary.
-  //
+bool S2RegionCoverer::IsCanonical(const S2CellUnion& covering) const {
+  return IsCanonical(covering.cell_ids());
+}
+
+bool S2RegionCoverer::IsCanonical(const vector<S2CellId>& covering) const {
+  const int min_level = options_.min_level();
+  const int max_level = options_.true_max_level();
+  const int level_mod = options_.level_mod();
+  const bool too_many_cells = covering.size() > options_.max_cells();
+  int same_parent_count = 1;
+  S2CellId prev_id = S2CellId::None();
+  for (const S2CellId id : covering) {
+    if (!id.is_valid()) return false;
+
+    // Check that the S2CellId level is acceptable.
+    const int level = id.level();
+    if (level < min_level || level > max_level) return false;
+    if (level_mod > 1 && (level - min_level) % level_mod != 0) return false;
+
+    if (prev_id != S2CellId::None()) {
+      // Check that cells are sorted and non-overlapping.
+      if (prev_id.range_max() >= id.range_min()) return false;
+
+      // If there are too many cells, check that no pair of adjacent cells
+      // could be replaced by an ancestor.
+      if (too_many_cells && id.GetCommonAncestorLevel(prev_id) >= min_level) {
+        return false;
+      }
+
+      // Check that there are no sequences of (4 ** level_mod) cells that all
+      // have the same parent (considering only multiples of "level_mod").
+      int plevel = level - level_mod;
+      if (plevel < min_level || level != prev_id.level() ||
+          id.parent(plevel) != prev_id.parent(plevel)) {
+        same_parent_count = 1;
+      } else if (++same_parent_count == (1 << (2 * level_mod))) {
+        return false;
+      }
+    }
+    prev_id = id;
+  }
+  return true;
+}
+
+bool S2RegionCoverer::ContainsAllChildren(const vector<S2CellId>& covering,
+                                          S2CellId id) const {
+  auto it = std::lower_bound(covering.begin(), covering.end(), id.range_min());
+  int level = id.level() + options_.level_mod();
+  for (S2CellId child = id.child_begin(level);
+       child != id.child_end(level); ++it, child = child.next()) {
+    if (it == covering.end() || *it != child) return false;
+  }
+  return true;
+}
+
+// Replaces all descendants of "id" in "covering" with "id".
+// REQUIRES: "covering" contains at least one descendant of "id".
+void S2RegionCoverer::ReplaceCellsWithAncestor(vector<S2CellId>* covering,
+                                               S2CellId id) const {
+  auto begin = std::lower_bound(covering->begin(), covering->end(),
+                                id.range_min());
+  auto end = std::upper_bound(covering->begin(), covering->end(),
+                              id.range_max());
+  DCHECK(begin != end);
+  covering->erase(begin + 1, end);
+  *begin = id;
+}
+
+S2CellUnion S2RegionCoverer::CanonicalizeCovering(const S2CellUnion& covering) {
+  vector<S2CellId> ids = covering.cell_ids();
+  CanonicalizeCovering(&ids);
+  return S2CellUnion(std::move(ids));
+}
+
+void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
   // Note that when the covering parameters have their default values, almost
   // all of the code in this function is skipped.
 
@@ -355,25 +431,10 @@ void S2RegionCoverer::NormalizeCovering(vector<S2CellId>* covering) {
       }
     }
   }
+
   // Sort the cells and simplify them.
   S2CellUnion::Normalize(covering);
 
-  // If there are still too many cells, then repeatedly replace two adjacent
-  // cells in S2CellId order by their lowest common ancestor.
-  while (covering->size() > options_.max_cells()) {
-    int best_index = -1, best_level = -1;
-    for (int i = 0; i + 1 < covering->size(); ++i) {
-      int level = (*covering)[i].GetCommonAncestorLevel((*covering)[i+1]);
-      level = AdjustLevel(level);
-      if (level > best_level) {
-        best_level = level;
-        best_index = i;
-      }
-    }
-    if (best_level < options_.min_level()) break;
-    (*covering)[best_index] = (*covering)[best_index].parent(best_level);
-    S2CellUnion::Normalize(covering);
-  }
   // Make sure that the covering satisfies min_level() and level_mod(),
   // possibly at the expense of satisfying max_cells().
   if (options_.min_level() > 0 || options_.level_mod() > 1) {
@@ -381,6 +442,44 @@ void S2RegionCoverer::NormalizeCovering(vector<S2CellId>* covering) {
                              options_.level_mod(), &result_);
     *covering = result_;
   }
+
+  // If there are too many cells and the covering is very large, use the
+  // S2RegionCoverer to compute a new covering.  (This avoids possible O(n^2)
+  // behavior of the simpler algorithm below.)
+  int64 excess = covering->size() - options_.max_cells();
+  if (excess <= 0) return;
+  if (excess * covering->size() > 10000) {
+    GetCovering(S2CellUnion(std::move(*covering)), covering);
+  } else {
+    // Repeatedly replace two adjacent cells in S2CellId order by their lowest
+    // common ancestor until the number of cells is acceptable.
+    while (covering->size() > options_.max_cells()) {
+      int best_index = -1, best_level = -1;
+      for (int i = 0; i + 1 < covering->size(); ++i) {
+        int level = (*covering)[i].GetCommonAncestorLevel((*covering)[i+1]);
+        level = AdjustLevel(level);
+        if (level > best_level) {
+          best_level = level;
+          best_index = i;
+        }
+      }
+      if (best_level < options_.min_level()) break;
+
+      // Replace all cells contained by the new ancestor cell.
+      S2CellId id = (*covering)[best_index].parent(best_level);
+      ReplaceCellsWithAncestor(covering, id);
+
+      // Now repeatedly check whether all children of the parent cell are
+      // present, in which case we can replace those cells with their parent.
+      while (best_level > options_.min_level()) {
+        best_level -= options_.level_mod();
+        id = id.parent(best_level);
+        if (!ContainsAllChildren(*covering, id)) break;
+        ReplaceCellsWithAncestor(covering, id);
+      }
+    }
+  }
+  DCHECK(IsCanonical(*covering));
 }
 
 void S2RegionCoverer::FloodFill(const S2Region& region, S2CellId start,

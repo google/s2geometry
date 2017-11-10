@@ -20,6 +20,8 @@
 
 #include <gtest/gtest.h>
 #include "s2/s1angle.h"
+#include "s2/s2edge_distances.h"
+#include "s2/s2predicates.h"
 #include "s2/s2testing.h"
 
 using std::numeric_limits;
@@ -181,20 +183,25 @@ TEST(S1ChordAngle, PlusError) {
             S1ChordAngle::FromLength2(1).PlusError(-0.25));
 }
 
-TEST(S1ChordAngle, S1AngleConsistency) {
-  // This test checks that the error bounds in the S1ChordAngle constructors
-  // are consistent with the maximum error in S1Angle(x, y).
-  const double kMaxS1AngleError = 3.25 * DBL_EPSILON;
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
-  for (int iter = 0; iter < 10000; ++iter) {
+TEST(S1ChordAngle, GetS2PointConstructorMaxError) {
+  // Check that the error bound returned by GetS2PointConstructorMaxError() is
+  // large enough.
+  auto& rnd = S2Testing::rnd;
+  for (int iter = 0; iter < 100000; ++iter) {
+    rnd.Reset(iter);  // Easier to reproduce a specific case.
     S2Point x = S2Testing::RandomPoint();
     S2Point y = S2Testing::RandomPoint();
-    S1ChordAngle dist1 = S1ChordAngle(S1Angle(x, y));
-    S1ChordAngle dist2(x, y);
-    double max_error = (kMaxS1AngleError +
-                        dist1.GetS1AngleConstructorMaxError() +
-                        dist2.GetS2PointConstructorMaxError());
-    EXPECT_LE(dist1, dist2.PlusError(max_error));
-    EXPECT_GE(dist1, dist2.PlusError(-max_error));
+    if (rnd.OneIn(10)) {
+      // Occasionally test a point pair that is nearly identical or antipodal.
+      S1Angle r = S1Angle::Radians(1e-15 * rnd.RandDouble());
+      y = S2::InterpolateAtDistance(r, x, y);
+      if (rnd.OneIn(2)) y = -y;
+    }
+    S1ChordAngle dist = S1ChordAngle(x, y);
+    double error = dist.GetS2PointConstructorMaxError();
+    EXPECT_LE(s2pred::CompareDistance(x, y, dist.PlusError(error)), 0)
+        << "angle=" << S1Angle(dist) << ", iter=" << iter;
+    EXPECT_GE(s2pred::CompareDistance(x, y, dist.PlusError(-error)), 0)
+        << "angle=" << S1Angle(dist) << ", iter=" << iter;
   }
 }

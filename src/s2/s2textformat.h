@@ -86,6 +86,11 @@ inline std::vector<S2Point> ParsePoints(absl::string_view str) {
   return ParsePointsOrDie(str);
 }
 
+ABSL_MUST_USE_RESULT bool MakeLatLng(absl::string_view str, S2LatLng* latlng);
+
+// Given a string in the same format as ParseLatLngs, returns a single S2LatLng
+S2LatLng MakeLatLngOrDie(absl::string_view str);
+
 // Given a string in the same format as ParseLatLngs, returns the minimal
 // bounding S2LatLngRect that contains the coordinates.
 S2LatLngRect MakeLatLngRectOrDie(absl::string_view str);
@@ -126,18 +131,15 @@ ABSL_DEPRECATED("Use MakePolylineOrDie.")
 std::unique_ptr<S2Polyline> MakePolyline(absl::string_view str);
 
 // Like MakePolyline, but returns an S2LaxPolylineShape instead.
-std::unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(
-    absl::string_view str);
+std::unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(absl::string_view str);
 
 // As above, but does not CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeLaxPolyline(
-    absl::string_view str,
-    std::unique_ptr<S2LaxPolylineShape>* lax_polyline);
+    absl::string_view str, std::unique_ptr<S2LaxPolylineShape>* lax_polyline);
 
 ABSL_DEPRECATED("Use MakeLaxPolylineOrDie.")
-std::unique_ptr<S2LaxPolylineShape> MakeLaxPolyline(
-    absl::string_view str);
+std::unique_ptr<S2LaxPolylineShape> MakeLaxPolyline(absl::string_view str);
 
 // Given a sequence of loops separated by semicolons, returns a newly
 // allocated polygon.  Loops are automatically normalized by inverting them
@@ -169,8 +171,7 @@ std::unique_ptr<S2Polygon> MakeVerbatimPolygonOrDie(absl::string_view str);
 // As above, but does not CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeVerbatimPolygon(
-    absl::string_view str,
-    std::unique_ptr<S2Polygon>* polygon);
+    absl::string_view str, std::unique_ptr<S2Polygon>* polygon);
 
 ABSL_DEPRECATED("Use MakeVerbatimPolygonOrDie.")
 std::unique_ptr<S2Polygon> MakeVerbatimPolygon(absl::string_view str);
@@ -179,14 +180,12 @@ std::unique_ptr<S2Polygon> MakeVerbatimPolygon(absl::string_view str);
 // be oriented so that the interior of the loop is always on the left, and
 // polygons with degeneracies are supported.  As with MakePolygon, "full" and
 // denotes the full polygon and "" or "empty" denote the empty polygon.
-std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(
-    absl::string_view str);
+std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(absl::string_view str);
 
 // As above, but does not CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeLaxPolygon(
-    absl::string_view str,
-    std::unique_ptr<S2LaxPolygonShape>* lax_polygon);
+    absl::string_view str, std::unique_ptr<S2LaxPolygonShape>* lax_polygon);
 
 ABSL_DEPRECATED("Use MakeLaxPolygonOrDie.")
 std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygon(absl::string_view str);
@@ -223,6 +222,7 @@ std::unique_ptr<MutableS2ShapeIndex> MakeIndex(absl::string_view str);
 // format above.
 string ToString(const S2Point& point);
 string ToString(const S2LatLngRect& rect);
+string ToString(const S2LatLng& latlng);
 string ToString(const S2Loop& loop);
 string ToString(const S2Polyline& polyline);
 string ToString(const S2Polygon& polygon);

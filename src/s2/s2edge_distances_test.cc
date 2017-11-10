@@ -24,6 +24,7 @@
 #include "s2/s1chordangle.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polyline.h"
+#include "s2/s2predicates.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
@@ -65,20 +66,51 @@ void CheckUpdateMinDistanceMaxError(double actual, double max_error) {
   EXPECT_LE(bound.radians() - actual,  max_error) << actual;
 }
 
-TEST(S2EdgeUtil, GetUpdateMinDistanceMaxError) {
+TEST(S2, GetUpdateMinDistanceMaxError) {
   // Verify that the error is "reasonable" for a sampling of distances.
   CheckUpdateMinDistanceMaxError(0, 1.5e-15);
-  CheckUpdateMinDistanceMaxError(1e-8, 1e-22);
-  CheckUpdateMinDistanceMaxError(1e-5, 1e-20);
-  CheckUpdateMinDistanceMaxError(0.05, 1e-16);
-  CheckUpdateMinDistanceMaxError(M_PI_2 - 1e-8, 1e-15);
-  CheckUpdateMinDistanceMaxError(M_PI_2, 1e-15);
-  CheckUpdateMinDistanceMaxError(M_PI_2 + 1e-8, 1e-15);
-  CheckUpdateMinDistanceMaxError(M_PI - 1e-5, 1e-10);
+  CheckUpdateMinDistanceMaxError(1e-8, 1e-15);
+  CheckUpdateMinDistanceMaxError(1e-5, 1e-15);
+  CheckUpdateMinDistanceMaxError(0.05, 1e-15);
+  CheckUpdateMinDistanceMaxError(M_PI_2 - 1e-8, 2e-15);
+  CheckUpdateMinDistanceMaxError(M_PI_2, 2e-15);
+  CheckUpdateMinDistanceMaxError(M_PI_2 + 1e-8, 2e-15);
+  CheckUpdateMinDistanceMaxError(M_PI - 1e-5, 2e-10);
   CheckUpdateMinDistanceMaxError(M_PI, 0);
 }
 
-TEST(S2EdgeUtil, Distance) {
+TEST(S2, GetUpdateMinInteriorDistanceMaxError) {
+  // Check that the error bound returned by
+  // GetUpdateMinInteriorDistanceMaxError() is large enough.
+  auto& rnd = S2Testing::rnd;
+  for (int iter = 0; iter < 10000; ++iter) {
+    S2Point a0 = S2Testing::RandomPoint();
+    S1Angle len = S1Angle::Radians(M_PI * pow(1e-20, rnd.RandDouble()));
+    S2Point a1 = S2::InterpolateAtDistance(len, a0, S2Testing::RandomPoint());
+    // TODO(ericv): If s2pred::RobustCrossProd() is implemented, then we can
+    // also test nearly-antipodal points here.  In theory the error bound can
+    // be exceeded when the edge endpoints are antipodal to within 0.8e-13
+    // radians, but the only examples found in testing require the endpoints
+    // to be nearly-antipodal to within 1e-16 radians.
+    S2Point n = S2::RobustCrossProd(a0, a1).Normalize();
+    double f = pow(1e-20, rnd.RandDouble());
+    S2Point a = ((1 - f) * a0 + f * a1).Normalize();
+    S1Angle r = S1Angle::Radians(M_PI_2 * pow(1e-20, rnd.RandDouble()));
+    if (rnd.OneIn(2)) r = S1Angle::Radians(M_PI_2) - r;
+    S2Point x = S2::InterpolateAtDistance(r, a, n);
+    S1ChordAngle min_dist = S1ChordAngle::Infinity();
+    if (!S2::UpdateMinInteriorDistance(x, a0, a1, &min_dist)) {
+      --iter; continue;
+    }
+    double error = S2::GetUpdateMinDistanceMaxError(min_dist);
+    EXPECT_LE(s2pred::CompareEdgeDistance(x, a0, a1,
+                                          min_dist.PlusError(error)), 0);
+    EXPECT_GE(s2pred::CompareEdgeDistance(x, a0, a1,
+                                          min_dist.PlusError(-error)), 0);
+  }
+}
+
+TEST(S2, Distance) {
   CheckDistance(S2Point(1, 0, 0), S2Point(1, 0, 0), S2Point(0, 1, 0),
                 0, S2Point(1, 0, 0));
   CheckDistance(S2Point(0, 1, 0), S2Point(1, 0, 0), S2Point(0, 1, 0),
@@ -127,7 +159,7 @@ void CheckInterpolate(double t, S2Point a, S2Point b, S2Point expected) {
       << "Expected: " << expected << ", actual: " << actual;
 }
 
-TEST(S2EdgeUtil, Interpolate) {
+TEST(S2, Interpolate) {
   // Choose test points designed to expose floating-point errors.
   S2Point p1 = S2Point(0.1, 1e-30, 0.3).Normalize();
   S2Point p2 = S2Point(-0.7, -0.55, -1e30).Normalize();
@@ -170,7 +202,7 @@ TEST(S2EdgeUtil, Interpolate) {
   }
 }
 
-TEST(S2EdgeUtil, InterpolateCanExtrapolate) {
+TEST(S2, InterpolateCanExtrapolate) {
   const S2Point i(1, 0, 0);
   const S2Point j(0, 1, 0);
   // Initial vectors at 90 degrees.
@@ -202,7 +234,7 @@ TEST(S2EdgeUtil, InterpolateCanExtrapolate) {
 }
 
 
-TEST(S2EdgeUtil, RepeatedInterpolation) {
+TEST(S2, RepeatedInterpolation) {
   // Check that points do not drift away from unit length when repeated
   // interpolations are done.
   for (int i = 0; i < 100; ++i) {
@@ -254,7 +286,7 @@ void CheckEdgePairDistance(S2Point a0, S2Point a1, S2Point b0, S2Point b1,
   EXPECT_NEAR(distance_radians, min_distance.ToAngle().radians(), 1e-15);
 }
 
-TEST(S2EdgeUtil, EdgePairDistance) {
+TEST(S2, EdgePairDistance) {
   // One edge is degenerate.
   CheckEdgePairDistance(S2Point(1, 0, 1), S2Point(1, 0, 1),
                         S2Point(1, -1, 0), S2Point(1, 1, 0),
@@ -326,7 +358,7 @@ bool IsEdgeBNearEdgeA(const string& a_str, const string& b_str,
                               S1Angle::Degrees(max_error_degrees));
 }
 
-TEST(S2EdgeUtil, EdgeBNearEdgeA) {
+TEST(S2, EdgeBNearEdgeA) {
   // Edge is near itself.
   EXPECT_TRUE(IsEdgeBNearEdgeA("5:5, 10:-5", "5:5, 10:-5", 1e-6));
 

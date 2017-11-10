@@ -14,43 +14,156 @@
 //
 
 // Author: ericv@google.com (Eric Veach)
+//
+// See S2ClosestPointQuery (defined below) for an overview.
 
 #ifndef S2_S2CLOSESTPOINTQUERY_H_
 #define S2_S2CLOSESTPOINTQUERY_H_
 
-#include <vector>
-
 #include <glog/logging.h>
-#include "s2/third_party/absl/container/inlined_vector.h"
-#include "s2/priority_queue_sequence.h"
 #include "s2/s1angle.h"
 #include "s2/s1chordangle.h"
-#include "s2/s2cap.h"
-#include "s2/s2cellid.h"
-#include "s2/s2cellunion.h"
-#include "s2/s2edge_distances.h"
+#include "s2/s2closestpointquery_base.h"
+#include "s2/s2min_distance_targets.h"
 #include "s2/s2pointindex.h"
-#include "s2/s2regioncoverer.h"
+
+// Options that control the set of points returned.  Note that by default
+// *all* points are returned, so you will always want to set either the
+// max_points() option or the max_distance() option (or both).
+//
+// This class is also available as S2ClosestPointQuery<Data>::Options.
+// (It is defined here to avoid depending on the "Data" template argument.)
+class S2ClosestPointQueryOptions :
+    public S2ClosestPointQueryBaseOptions<S2MinDistance> {
+ public:
+  using Distance = S2MinDistance;
+  using Base = S2ClosestPointQueryBaseOptions<Distance>;
+
+  // See S2ClosestPointQueryBaseOptions for the full set of options.
+
+  // Specifies that only points whose distance to the target is less than
+  // "max_distance" should be returned.
+  //
+  // Note that points whose distance is exactly equal to "max_distance" are
+  // not returned.  Normally this doesn't matter, because distances are not
+  // computed exactly in the first place, but if such points are needed then
+  // see set_inclusive_max_distance() below.
+  //
+  // DEFAULT: Distance::Infinity()
+  void set_max_distance(S1ChordAngle max_distance);
+
+  // Like set_max_distance(), except that points whose distance is exactly
+  // equal to "max_distance" are also returned.  Equivalent to calling
+  // set_max_distance(max_distance.Successor()).
+  void set_inclusive_max_distance(S1ChordAngle max_distance);
+
+  // Like set_inclusive_max_distance(), except that "max_distance" is also
+  // increased by the maximum error in the distance calculation.  This ensures
+  // that all points whose true distance is less than or equal to
+  // "max_distance" will be returned (along with some points whose true
+  // distance is slightly greater).
+  //
+  // Algorithms that need to do exact distance comparisons can use this
+  // option to find a set of candidate points that can then be filtered
+  // further (e.g., using s2pred::CompareDistance).
+  void set_conservative_max_distance(S1ChordAngle max_distance);
+
+  // Versions of set_max_distance that take an S1Angle argument.  (Note that
+  // these functions require a conversion, and that the S1ChordAngle versions
+  // are preferred.)
+  void set_max_distance(S1Angle max_distance);
+  void set_inclusive_max_distance(S1Angle max_distance);
+  void set_conservative_max_distance(S1Angle max_distance);
+
+  // Versions of set_max_error() that accept S1ChordAngle / S1Angle.
+  // (See S2ClosestPointQueryBaseOptions for details.)
+  void set_max_error(S1ChordAngle max_error);
+  void set_max_error(S1Angle max_error);
+
+  // Inherited options (see s2closestedgequery_base.h for details):
+  using Base::set_max_points;
+  using Base::set_region;
+  using Base::set_use_brute_force;
+};
+
+// S2ClosestPointQueryTarget represents the geometry to which the distance is
+// measured.  There are subtypes for measuring the distance to a point, an
+// edge, an S2Cell, or an S2ShapeIndex (an arbitrary collection of geometry).
+using S2ClosestPointQueryTarget = S2MinDistanceTarget;
+
+// Target subtype that computes the closest distance to a point.
+//
+// This class is also available as S2ClosestPointQuery<Data>::PointTarget.
+// (It is defined here to avoid depending on the "Data" template argument.)
+class S2ClosestPointQueryPointTarget final : public S2MinDistancePointTarget {
+ public:
+  explicit S2ClosestPointQueryPointTarget(const S2Point& point);
+  int max_brute_force_index_size() const override;
+};
+
+// Target subtype that computes the closest distance to an edge.
+//
+// This class is also available as S2ClosestPointQuery<Data>::EdgeTarget.
+// (It is defined here to avoid depending on the "Data" template argument.)
+class S2ClosestPointQueryEdgeTarget final : public S2MinDistanceEdgeTarget {
+ public:
+  explicit S2ClosestPointQueryEdgeTarget(const S2Point& a, const S2Point& b);
+  int max_brute_force_index_size() const override;
+};
+
+// Target subtype that computes the closest distance to an S2Cell
+// (including the interior of the cell).
+//
+// This class is also available as S2ClosestPointQuery<Data>::CellTarget.
+// (It is defined here to avoid depending on the "Data" template argument.)
+class S2ClosestPointQueryCellTarget final : public S2MinDistanceCellTarget {
+ public:
+  explicit S2ClosestPointQueryCellTarget(const S2Cell& cell);
+  int max_brute_force_index_size() const override;
+};
+
+// Target subtype that computes the closest distance to an S2ShapeIndex
+// (an arbitrary collection of points, polylines, and/or polygons).
+//
+// By default, distances are measured to the boundary and interior of
+// polygons in the S2ShapeIndex rather than to polygon boundaries only.
+// If you wish to change this behavior, you may call
+//
+//   target.set_include_interiors(false);
+//
+// (see S2MinDistanceShapeIndexTarget for details).
+//
+// This class is also available as S2ClosestPointQuery<Data>::ShapeIndexTarget.
+// (It is defined here to avoid depending on the "Data" template argument.)
+class S2ClosestPointQueryShapeIndexTarget final :
+    public S2MinDistanceShapeIndexTarget {
+ public:
+  explicit S2ClosestPointQueryShapeIndexTarget(const S2ShapeIndex* index);
+  int max_brute_force_index_size() const override;
+};
 
 // Given a set of points stored in an S2PointIndex, S2ClosestPointQuery
 // provides methods that find the closest point(s) to a given query point
 // or query edge.  Example usage:
 //
-// void Test(const vector<S2Point>& points, const vector<S2Point>& targets) {
+// void Test(const vector<S2Point>& index_points,
+//           const vector<S2Point>& target_points) {
 //   // The template argument allows auxiliary data to be attached to each
 //   // point (in this case, the array index).
 //   S2PointIndex<int> index;
-//   for (const S2Point& point : points) {
+//   for (const S2Point& point : index_points) {
 //     index.Add(point, i);
 //   }
 //   S2ClosestPointQuery<int> query(&index);
-//   query.set_max_points(15);
-//   for (const S2Point& target : targets) {
-//     query.FindClosestPoints(target);
-//     for (int j = 0; j < query.num_points(); ++j) {
-//       // query.data(j) is the auxiliary data (the "points" array index).
-//       // query.distance(j) is the distance to the target point.
-//       DoSomething(target, query.point(j), query.data(j), query.distance(j));
+//   query.mutable_options()->set_max_points(5);
+//   for (const S2Point& target_point : target_points) {
+//     S2ClosestPointQueryPointTarget target(target_point);
+//     for (const auto& result : query.FindClosestPoints(&target)) {
+//       // The Result class contains the following methods:
+//       //   distance() is the distance to the target.
+//       //   point() is the indexed point.
+//       //   data() is the auxiliary data.
+//       DoSomething(target_point, result);
 //     }
 //   }
 // }
@@ -59,325 +172,381 @@
 // radius, or both (i.e., the k closest points up to a given maximum radius).
 // E.g. to find all the points within 5 kilometers, call
 //
-//   query.set_max_distance(S2Earth::ToAngle(util::units::Kilometers(5)));
+//   query.mutable_options()->set_max_distance(
+//       S2Earth::ToAngle(util::units::Kilometers(5)));
 //
-// You can also restrict the results to an arbitrary S2Region, e.g.
+// By default *all* edges are returned, so you should always specify either
+// max_edges() or max_distance() or both.  There is also a FindClosestEdge()
+// convenience method that automatically sets max_edges() == 1 and returns
+// only the closest edge.
+//
+// You can restrict the results to an arbitrary S2Region, for example:
 //
 //   S2LatLngRect rect(...);
 //   query.set_region(&rect);  // Does *not* take ownership.
 //
 // To find the closest points to a query edge rather than a point, use:
 //
-//   query.FindClosestPointsToEdge(v0, v1);
+//   S2ClosestPointQueryEdgeTarget target(v0, v1);
+//   query.FindClosestPoints(&target);
 //
-// The implementation is designed to be very fast for both small and large
+// The implementation is designed to be fast for both small and large
 // point sets.
-
 template <class Data>
 class S2ClosestPointQuery {
  public:
-  using Index = S2PointIndex<Data>;
+  // See S2ClosestPointQueryBase for full documentation.
 
-  // Convenience constructor that calls Init().
-  explicit S2ClosestPointQuery(const Index* index);
+  using Index = S2PointIndex<Data>;
+  using PointData = typename Index::PointData;
+
+  // S2MinDistance is a thin wrapper around S1ChordAngle that implements the
+  // Distance concept required by S2ClosestPointQueryBase.
+  using Distance = S2MinDistance;
+  using Base = S2ClosestPointQueryBase<Distance, Data>;
+
+  // Each "Result" object represents a closest point.  Here are its main
+  // methods (see S2ClosestPointQueryBase::Result for details):
+  //
+  //   // The istance from the target to this point.
+  //   S1ChordAngle distance() const;
+  //
+  //   // The point itself.
+  //   const S2Point& point() const;
+  //
+  //   // The client-specified data associated with this point.
+  //   const Data& data() const;
+  using Result = typename Base::Result;
+
+  using Options = S2ClosestPointQueryOptions;
+
+  // The available target types (see definitions above).
+  using Target = S2ClosestPointQueryTarget;
+  using PointTarget = S2ClosestPointQueryPointTarget;
+  using EdgeTarget = S2ClosestPointQueryEdgeTarget;
+  using CellTarget = S2ClosestPointQueryCellTarget;
+  using ShapeIndexTarget = S2ClosestPointQueryShapeIndexTarget;
+
+  // Convenience constructor that calls Init().  Options may be specified here
+  // or changed at any time using the mutable_options() accessor method.
+  explicit S2ClosestPointQuery(const Index* index,
+                               const Options& options = Options());
 
   // Default constructor; requires Init() to be called.
-  S2ClosestPointQuery() {}
+  S2ClosestPointQuery();
   ~S2ClosestPointQuery();
 
-  // Initialize the query.
+  // Initializes the query.  Options may be specified here or changed at any
+  // time using the mutable_options() accessor method.
+  //
+  // REQUIRES: "index" must persist for the lifetime of this object.
   // REQUIRES: ReInit() must be called if "index" is modified.
-  void Init(const Index* index);
+  void Init(const Index* index, const Options& options = Options());
 
-  // Reinitialize the query.  This method must be called whenever the
+  // Reinitializes the query.  This method must be called whenever the
   // underlying index is modified.
   void ReInit();
 
-  // Return a reference to the underlying S2PointIndex.
+  // Returns a reference to the underlying S2PointIndex.
   const Index& index() const;
 
-  // Only find the "max_points" closest points.
-  // This value may be changed between calls to FindClosestPoints().
-  //
-  // DEFAULT: numeric_limits<int>::max()
-  // REQUIRES: max_points >= 1
-  int max_points() const;
-  void set_max_points(int max_points);
+  // Returns the query options.  Options can be modifed between queries.
+  Options const& options() const;
+  Options* mutable_options();
 
-  // Only find points whose distance to the target is less than "max_distance".
-  // This value may be changed between calls to FindClosestPoints().
-  //
-  // DEFAULT: S1Angle::Infinity()
-  S1Angle max_distance() const;
-  void set_max_distance(S1Angle max_distance);
+  // Returns the closest points to the given target that satisfy the given
+  // options.  This method may be called multiple times.
+  std::vector<Result> FindClosestPoints(Target* target);
 
-  // Only find points in the given S2Region.  "region" is owned by the caller
-  // and must persist during any subsequent call(s) to FindClosestPoints.
-  // This value may be changed between calls to FindClosestPoints(), or reset
-  // by calling set_region(nullptr).
-  //
-  // Note that if you want to set the region to a disc around the target
-  // point, it is faster to use set_max_distance() instead.  You can also call
-  // both methods, e.g. if you want to limit the maximum distance to the
-  // target and also require that points lie within a given rectangle.
-  const S2Region* region() const;
-  void set_region(const S2Region* region);
+  // This version can be more efficient when this method is called many times,
+  // since it does not require allocating a new vector on each call.
+  void FindClosestPoints(Target* target, std::vector<Result>* results);
 
-  // Find the closest points to "target" that satisfy the given max_distance()
-  // and/or max_points() and/or region() criteria.  If none of these is set,
-  // then all points are returned.
+  //////////////////////// Convenience Methods ////////////////////////
+
+  // Returns the closest point to the target.  If no point satisfies the search
+  // criteria, then a Result object with distance() == Infinity() and
+  // is_empty() == true is returned.
+  Result FindClosestPoint(Target* target);
+
+  // Returns the minimum distance to the target.  If the index or target is
+  // empty, returns S1ChordAngle::Infinity().
+  //
+  // Use IsDistanceLess() if you only want to compare the distance against a
+  // threshold value, since it is often much faster.
+  S1ChordAngle GetDistance(Target* target);
+
+  // Returns true if the distance to "target" is less than "limit".
+  //
+  // This method is usually much faster than GetDistance(), since it is much
+  // less work to determine whether the minimum distance is above or below a
+  // threshold than it is to calculate the actual minimum distance.
+  bool IsDistanceLess(Target* target, S1ChordAngle limit);
+
+  // Like IsDistanceLess(), but also returns true if the distance to "target"
+  // is exactly equal to "limit".
+  bool IsDistanceLessOrEqual(Target* target, S1ChordAngle limit);
+
+  // Like IsDistanceLessOrEqual(), except that "limit" is increased by the
+  // maximum error in the distance calculation.  This ensures that this
+  // function returns true whenever the true, exact distance is less than
+  // or equal to "limit".
+  //
+  // For example, suppose that we want to test whether two geometries might
+  // intersect each other after they are snapped together using S2Builder
+  // (using the IdentitySnapFunction with a given "snap_radius").  Since
+  // S2Builder uses exact distance predicates (s2predicates.h), we need to
+  // measure the distance between the two geometries conservatively.  If the
+  // distance is definitely greater than "snap_radius", then the geometries
+  // are guaranteed to not intersect after snapping.
+  bool IsConservativeDistanceLessOrEqual(Target* target, S1ChordAngle limit);
+
+  ///////////////////////// Deprecated Methods //////////////////////////
+
+  ABSL_DEPRECATED("Use options().max_points()")
+  int max_points() const { return options().max_points(); }
+
+  ABSL_DEPRECATED("Use mutable_option()->set_max_points()")
+  void set_max_points(int max_points) {
+    mutable_options()->set_max_points(max_points);
+  }
+
+  ABSL_DEPRECATED("Use options().max_distance().ToAngle()")
+  S1Angle max_distance() const { return options().max_distance().ToAngle(); }
+
+  ABSL_DEPRECATED("Use options().set_max_distance()")
+  void set_max_distance(S1Angle max_distance) {
+    // The previous API always treated "max_distance" conservatively.
+    mutable_options()->set_conservative_max_distance(max_distance);
+  }
+
+  ABSL_DEPRECATED("Use options().region()")
+  const S2Region* region() const { return options().region(); }
+
+  ABSL_DEPRECATED("Use options().set_region()")
+  void set_region(const S2Region* region) {
+    mutable_options()->set_region(region);
+  }
+
+  ABSL_DEPRECATED("Use S2ClosestPointQueryPointTarget instead.")
   void FindClosestPoints(const S2Point& target);
 
-  // Convenience method that finds the closest point to the given target
-  // point.  The result consists of either zero or one points, accessible
-  // using the iterator interface below.  This method is equivalent to:
-  //
-  //   query.set_max_points(1);
-  //   query.FindClosestPoints();
-  //
-  // Note that set_max_distance() will still limit the search radius.
+  ABSL_DEPRECATED("Use S2ClosestPointQueryPointTarget instead.")
   void FindClosestPoint(const S2Point& target);
 
-  // Find the closest points to the given edge AB.  Otherwise similar to
-  // FindClosestPoints().
+  ABSL_DEPRECATED("Use S2ClosestPointQueryEdgeTarget instead.")
   void FindClosestPointsToEdge(const S2Point& a, const S2Point& b);
 
-  // Manually specify whether distances are computed using "brute force"
-  // (i.e., by examining every point) rather than using the S2PointIndex.
-  // This is useful for testing, benchmarking, and debugging.
-  //
-  // REQUIRES: Init() has been called.
-  void UseBruteForce(bool use_brute_force);
-
-  ////////////////////// Result Interface ////////////////////////
+  ////////////////////// Result Interface (DEPRECATED) /////////////////////
   //
   // The result of a query consists of a set of points which may be obtained
   // using the interface below.  Points are sorted in order of increasing
   // distance.
 
   // The number of result points.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   int num_points() const;
 
   // The result point at the given index.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   const S2Point& point(int i) const;
 
   // The distance to the result point at the given index.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   S1Angle distance(int i) const;
 
   // Like distance(i), but expressed as an S1ChordAngle.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   S1ChordAngle distance_ca(int i) const;
 
   // The client data associated with the result point at the given index.
+  ABSL_DEPRECATED("Use std::vector<Result> methods")
   const Data& data(int i) const;
 
+  ABSL_DEPRECATED("Use ReInit()")
+  void Reset() { ReInit(); }
+
  private:
-  using PointData = typename Index::PointData;
-  using Iterator = typename Index::Iterator;
+  Options options_;
+  Base base_;
 
-  class PointTarget {
-   public:
-    explicit PointTarget(const S2Point& point) : point_(point) {}
-    S2Point center() const { return point_; }
-    S1Angle radius() const { return S1Angle::Zero(); }
-    bool UpdateMinDistance(const S2Point& x, S1ChordAngle* min_dist) const {
-      S1ChordAngle distance(x, point_);
-      // Only return true if the new distance is smaller.
-      if (distance >= *min_dist) return false;
-      *min_dist = distance;
-      return true;
-    }
-    S1ChordAngle GetDistance(const S2Cell& cell) const {
-      return cell.GetDistance(point_);
-    }
-   private:
-    S2Point point_;
-  };
-
-  class EdgeTarget {
-   public:
-    EdgeTarget(const S2Point& a, const S2Point& b) : a_(a), b_(b) {}
-    S2Point center() const { return (a_ + b_).Normalize(); }
-    S1Angle radius() const { return 0.5 * S1Angle(a_, b_); }
-    bool UpdateMinDistance(const S2Point& x, S1ChordAngle* min_dist) const {
-      return S2::UpdateMinDistance(x, a_, b_, min_dist);
-    }
-    S1ChordAngle GetDistance(const S2Cell& cell) const {
-      return cell.GetDistance(a_, b_);
-    }
-   private:
-    S2Point a_, b_;
-  };
-
-  void InitIndexCovering();
-  void CoverRange(const Iterator& first, const Iterator& last);
-
-  // Using templates rather than virtual functions speeds up the benchmarks
-  // by 15-25% when the brute force algorithm is used (< 150 points).
-
-  template <class Target>
-  void FindClosestPointsToTarget(const Target& target);
-
-  template <class Target>
-  void FindClosestPointsBruteForce(const Target& target);
-
-  template <class Target>
-  void FindClosestPointsOptimized(const Target& target);
-
-  template <class Target>
-  void MaybeAddResult(const PointData& point_data, const Target& target);
-
-  template <class Target>
-  void InitQueue(const Target& target);
-
-  template <class Target>
-  bool AddCell(S2CellId id, Iterator* iter, bool seek, const Target& target);
-
-  //////////// Constants (tuned using the benchmarks) ////////////
-
-  // The maximum number of points to process by brute force.
-  static const int kMaxBruteForcePoints = 150;
-
-  // The maximum number of points to process without subdividing further.
-  static const int kMaxLeafPoints = 12;
-
-  //////////// Parameters ////////////
-
-  S1Angle max_distance_;
-  const S2Region* region_;
-  int max_points_;
-
-  //////////// Fields that are constant during a query ////////////
-
-  // If the index has few edges, it is cheaper to use a brute force algorithm.
-  bool use_brute_force_;
-
-  const Index* index_;
-
-  // A small precomputed S2CellId covering of the indexed points.
-  std::vector<S2CellId> index_covering_;
-
-  //////////// Fields that are updated during a query ////////////
-
-  // The result points gathered so far are kept in a priority queue.  Once
-  // all points have been found, the underlying vector is sorted by distance
-  // so that we can iterate through them sequentially.
-  struct Result {
-    S1ChordAngle distance;
-    const PointData* point_data;
-    Result(S1ChordAngle _distance, const PointData* _point_data)
-        : distance(_distance), point_data(_point_data) {
-    }
-    bool operator<(const Result& other) const {
-      // The algorithm works by replacing the result whose distance is largest
-      // when a better candidate is found, so we keep the entries sorted such
-      // that the largest distance is at the top of the heap.
-      return distance < other.distance;
-    }
-  };
-  using ResultHeap = priority_queue_sequence<Result>;
-  ResultHeap results_;
-
-  // The distance beyond which we can safely ignore further candidate points.
-  // (Candidates that are exactly at the limit are ignored; this makes things
-  // easier in the case of S2ClosestEdgeQuery and should not affect clients
-  // since distance measurements have a small amount of error anyway.)
-  //
-  // Initially this is the same as the maximum distance specified by the user,
-  // but it can also be updated by the algorithm (see MaybeAddResult).
-  S1ChordAngle max_distance_limit_;
-
-  // We also keep a priority queue of unprocessed S2Cells.
-  struct QueueEntry {
-    S1ChordAngle distance;  // Distance from target to any point in the cell.
-    S2CellId id;
-    QueueEntry(S1ChordAngle _distance, S2CellId _id)
-      : distance(_distance), id(_id) {
-    }
-    bool operator<(const QueueEntry& other) const {
-      // Sort the queue entries so that smaller distances are returned first.
-      return distance > other.distance;
-    }
-  };
-  using CellQueue =
-      std::priority_queue<QueueEntry, absl::InlinedVector<QueueEntry, 16>>;
-  CellQueue queue_;
-
-  // Temporaries, defined here to avoid multiple allocations / initializations.
-  Iterator iter_;
-  std::vector<S2CellId> region_covering_;
-  std::vector<S2CellId> max_distance_covering_;
-  std::vector<S2CellId> intersection_with_region_;
-  std::vector<S2CellId> intersection_with_max_distance_;
-
-  const PointData* tmp_point_data_[kMaxLeafPoints];
-
-  S2ClosestPointQuery(const S2ClosestPointQuery&) = delete;
-  void operator=(const S2ClosestPointQuery&) = delete;
+  // Deprecated methods that return results using the result interface require
+  // keeping a copy of the result vector.
+  std::vector<Result> results_;
 };
 
 
 //////////////////   Implementation details follow   ////////////////////
 
 
+inline void S2ClosestPointQueryOptions::set_max_distance(
+    S1ChordAngle max_distance) {
+  Base::set_max_distance(Distance(max_distance));
+}
+
+inline void S2ClosestPointQueryOptions::set_max_distance(S1Angle max_distance) {
+  Base::set_max_distance(Distance(max_distance));
+}
+
+inline void S2ClosestPointQueryOptions::set_inclusive_max_distance(
+    S1ChordAngle max_distance) {
+  set_max_distance(max_distance.Successor());
+}
+
+inline void S2ClosestPointQueryOptions::set_inclusive_max_distance(
+    S1Angle max_distance) {
+  set_inclusive_max_distance(S1ChordAngle(max_distance));
+}
+
+inline void S2ClosestPointQueryOptions::set_max_error(S1ChordAngle max_error) {
+  Base::set_max_error(Distance(max_error));
+}
+
+inline void S2ClosestPointQueryOptions::set_max_error(S1Angle max_error) {
+  Base::set_max_error(Distance(max_error));
+}
+
+inline S2ClosestPointQueryPointTarget::S2ClosestPointQueryPointTarget(
+    const S2Point& point)
+    : S2MinDistancePointTarget(point) {
+}
+
+inline S2ClosestPointQueryEdgeTarget::S2ClosestPointQueryEdgeTarget(
+    const S2Point& a, const S2Point& b)
+    : S2MinDistanceEdgeTarget(a, b) {
+}
+
+inline S2ClosestPointQueryCellTarget::S2ClosestPointQueryCellTarget(
+    const S2Cell& cell)
+    : S2MinDistanceCellTarget(cell) {
+}
+
+inline S2ClosestPointQueryShapeIndexTarget::S2ClosestPointQueryShapeIndexTarget(
+    const S2ShapeIndex* index)
+    : S2MinDistanceShapeIndexTarget(index) {
+}
+
+template <class Data>
+inline S2ClosestPointQuery<Data>::S2ClosestPointQuery(const Index* index,
+                                                      const Options& options) {
+  Init(index, options);
+}
+
+template <class Data>
+S2ClosestPointQuery<Data>::S2ClosestPointQuery() {
+  // Prevent inline constructor bloat by defining here.
+}
+
 template <class Data>
 S2ClosestPointQuery<Data>::~S2ClosestPointQuery() {
+  // Prevent inline destructor bloat by defining here.
 }
 
 template <class Data>
-S2ClosestPointQuery<Data>::S2ClosestPointQuery(const Index* index) {
-  Init(index);
+void S2ClosestPointQuery<Data>::Init(const Index* index,
+                                     const Options& options) {
+  options_ = options;
+  base_.Init(index);
 }
 
 template <class Data>
-void S2ClosestPointQuery<Data>::Init(const Index* index) {
-  index_ = index;
-  max_points_ = std::numeric_limits<int>::max();
-  max_distance_ = S1Angle::Infinity();
-  region_ = nullptr;
-  ReInit();
+inline void S2ClosestPointQuery<Data>::ReInit() {
+  base_.ReInit();
 }
 
 template <class Data>
-void S2ClosestPointQuery<Data>::ReInit() {
-  results_.mutable_rep()->clear();
-  iter_.Init(index_);
-  UseBruteForce(index_->num_points() <= kMaxBruteForcePoints);
+inline const S2PointIndex<Data>& S2ClosestPointQuery<Data>::index() const {
+  return base_.index();
 }
 
 template <class Data>
-const S2PointIndex<Data>& S2ClosestPointQuery<Data>::index() const {
-  return *index_;
+inline const S2ClosestPointQueryOptions& S2ClosestPointQuery<Data>::options()
+    const {
+  return options_;
 }
 
 template <class Data>
-int S2ClosestPointQuery<Data>::max_points() const {
-  return max_points_;
+inline S2ClosestPointQueryOptions*
+S2ClosestPointQuery<Data>::mutable_options() {
+  return &options_;
 }
 
 template <class Data>
-void S2ClosestPointQuery<Data>::set_max_points(int max_points) {
-  DCHECK_GE(max_points, 1);
-  max_points_ = max_points;
+inline std::vector<typename S2ClosestPointQuery<Data>::Result>
+S2ClosestPointQuery<Data>::FindClosestPoints(Target* target) {
+  return base_.FindClosestPoints(target, options_);
 }
 
 template <class Data>
-S1Angle S2ClosestPointQuery<Data>:: max_distance() const {
-  return max_distance_;
+inline void S2ClosestPointQuery<Data>::FindClosestPoints(
+    Target* target, std::vector<Result>* results) {
+  base_.FindClosestPoints(target, options_, results);
 }
 
 template <class Data>
-void S2ClosestPointQuery<Data>::set_max_distance(S1Angle max_distance) {
-  max_distance_ = max_distance;
+inline typename S2ClosestPointQuery<Data>::Result
+S2ClosestPointQuery<Data>::FindClosestPoint(Target* target) {
+  static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
+  Options tmp_options = options_;
+  tmp_options.set_max_points(1);
+  return base_.FindClosestPoint(target, tmp_options);
 }
 
 template <class Data>
-const S2Region* S2ClosestPointQuery<Data>::region() const {
-  return region_;
+inline S1ChordAngle S2ClosestPointQuery<Data>::GetDistance(Target* target) {
+  return FindClosestPoint(target).distance;
 }
 
 template <class Data>
-void S2ClosestPointQuery<Data>::set_region(const S2Region* region) {
-  region_ = region;
+bool S2ClosestPointQuery<Data>::IsDistanceLess(
+    Target* target, S1ChordAngle limit) {
+  static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
+  Options tmp_options = options_;
+  tmp_options.set_max_points(1);
+  tmp_options.set_max_distance(limit);
+  tmp_options.set_max_error(limit);
+  return !base_.FindClosestPoint(target, tmp_options).is_empty();
+}
+
+template <class Data>
+bool S2ClosestPointQuery<Data>::IsDistanceLessOrEqual(
+    Target* target, S1ChordAngle limit) {
+  static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
+  Options tmp_options = options_;
+  tmp_options.set_max_points(1);
+  tmp_options.set_inclusive_max_distance(limit);
+  tmp_options.set_max_error(tmp_options.max_distance());
+  return !base_.FindClosestPoint(target, tmp_options).is_empty();
+}
+
+template <class Data>
+bool S2ClosestPointQuery<Data>::IsConservativeDistanceLessOrEqual(
+    Target* target, S1ChordAngle limit) {
+  static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
+  Options tmp_options = options_;
+  tmp_options.set_max_points(1);
+  tmp_options.set_conservative_max_distance(limit);
+  tmp_options.set_max_error(tmp_options.max_distance());
+  return !base_.FindClosestPoint(target, tmp_options).is_empty();
+}
+
+template <class Data>
+void S2ClosestPointQuery<Data>::FindClosestPoints(S2Point const& point) {
+  PointTarget target(point);
+  FindClosestPoints(&target, &results_);
+}
+
+template <class Data>
+void S2ClosestPointQuery<Data>::FindClosestPointsToEdge(S2Point const& a,
+                                                        S2Point const& b) {
+  EdgeTarget target(a, b);
+  FindClosestPoints(&target, &results_);
+}
+
+template <class Data>
+void S2ClosestPointQuery<Data>::FindClosestPoint(S2Point const& point) {
+  set_max_points(1);
+  FindClosestPoints(point);
 }
 
 template <class Data>
@@ -387,12 +556,12 @@ int S2ClosestPointQuery<Data>::num_points() const {
 
 template <class Data>
 const S2Point& S2ClosestPointQuery<Data>::point(int i) const {
-  return results_.rep()[i].point_data->point();
+  return results_[i].point();
 }
 
 template <class Data>
 S1ChordAngle S2ClosestPointQuery<Data>::distance_ca(int i) const {
-  return results_.rep()[i].distance;
+  return results_[i].distance();
 }
 
 template <class Data>
@@ -402,258 +571,7 @@ S1Angle S2ClosestPointQuery<Data>::distance(int i) const {
 
 template <class Data>
 const Data& S2ClosestPointQuery<Data>::data(int i) const {
-  return results_.rep()[i].point_data->data();
-}
-
-template <class Data>
-void S2ClosestPointQuery<Data>::UseBruteForce(bool use_brute_force) {
-  use_brute_force_ = use_brute_force;
-  if (!use_brute_force) InitIndexCovering();
-}
-
-template <class Data>
-void S2ClosestPointQuery<Data>::InitIndexCovering() {
-  // Compute the "index covering", which is a small number of S2CellIds that
-  // cover the indexed points.  There are two cases:
-  //
-  //  - If the index spans more than one face, then there is one covering cell
-  // per spanned face, just big enough to cover the index cells on that face.
-  //
-  //  - If the index spans only one face, then we find the smallest cell "C"
-  // that covers the index cells on that face (just like the case above).
-  // Then for each of the 4 children of "C", if the child contains any index
-  // cells then we create a covering cell that is big enough to just fit
-  // those index cells (i.e., shrinking the child as much as possible to fit
-  // its contents).  This essentially replicates what would happen if we
-  // started with "C" as the covering cell, since "C" would immediately be
-  // split, except that we take the time to prune the children further since
-  // this will save work on every subsequent query.
-  index_covering_.clear();
-  iter_.Begin();
-  if (iter_.done()) return;  // Empty index.
-
-  Iterator next = iter_, last = iter_;
-  last.Finish();
-  last.Prev();
-  if (next.id() != last.id()) {
-    // The index has at least two cells.  Choose a level such that the entire
-    // index can be spanned with at most 6 cells (if the index spans multiple
-    // faces) or 4 cells (it the index spans a single face).
-    int level = next.id().GetCommonAncestorLevel(last.id()) + 1;
-
-    // Visit each potential covering cell except the last (handled below).
-    S2CellId last_id = last.id().parent(level);
-    for (S2CellId id = next.id().parent(level); id != last_id; id = id.next()) {
-      // Skip any covering cells that don't contain any index cells.
-      if (id.range_max() < next.id()) continue;
-
-      // Find the range of index cells contained by this covering cell and
-      // then shrink the cell if necessary so that it just covers them.
-      Iterator cell_first = next;
-      next.Seek(id.range_max().next());
-      Iterator cell_last = next;
-      cell_last.Prev();
-      CoverRange(cell_first, cell_last);
-    }
-  }
-  CoverRange(next, last);
-}
-
-// Adds a cell to index_covering_ that covers the given inclusive range.
-// REQUIRES: "first" and "last" have a common ancestor.
-template <class Data>
-void S2ClosestPointQuery<Data>::CoverRange(const Iterator& first,
-                                           const Iterator& last) {
-  // Add the lowest common ancestor of the given range.
-  int level = first.id().GetCommonAncestorLevel(last.id());
-  DCHECK_GE(level, 0);
-  index_covering_.push_back(first.id().parent(level));
-}
-
-template <class Data>
-void S2ClosestPointQuery<Data>::FindClosestPoint(const S2Point& target) {
-  set_max_points(1);
-  FindClosestPoints(target);
-}
-
-template <class Data>
-void S2ClosestPointQuery<Data>::FindClosestPoints(const S2Point& point) {
-  PointTarget target(point);
-  FindClosestPointsToTarget(target);
-}
-
-template <class Data>
-void S2ClosestPointQuery<Data>::FindClosestPointsToEdge(
-    const S2Point& a, const S2Point& b) {
-  EdgeTarget target(a, b);
-  FindClosestPointsToTarget(target);
-}
-
-template <class Data> template <class Target>
-void S2ClosestPointQuery<Data>::FindClosestPointsToTarget(
-    const Target& target) {
-  max_distance_limit_ = S1ChordAngle(max_distance_);
-  max_distance_limit_ = max_distance_limit_.PlusError(
-      max_distance_limit_.GetS1AngleConstructorMaxError() +
-      max_distance_limit_.GetS2PointConstructorMaxError());
-  results_.mutable_rep()->clear();
-  if (use_brute_force_) {
-    FindClosestPointsBruteForce(target);
-  } else {
-    FindClosestPointsOptimized(target);
-  }
-  std::sort(results_.mutable_rep()->begin(), results_.mutable_rep()->end());
-}
-
-template <class Data> template <class Target>
-void S2ClosestPointQuery<Data>::FindClosestPointsBruteForce(
-    const Target& target) {
-  for (iter_.Begin(); !iter_.done(); iter_.Next()) {
-    MaybeAddResult(iter_.point_data(), target);
-  }
-}
-
-template <class Data> template <class Target>
-void S2ClosestPointQuery<Data>::FindClosestPointsOptimized(
-    const Target& target) {
-  InitQueue(target);
-  while (!queue_.empty()) {
-    // We need to copy the top entry before removing it, and we need to remove
-    // it before adding any new entries to the queue.
-    QueueEntry entry = queue_.top();
-    queue_.pop();
-    if (entry.distance >= max_distance_limit_) {
-      queue_ = CellQueue();  // Clear any remaining entries.
-      break;
-    }
-    S2CellId child = entry.id.child_begin();
-    // We already know that it has too many points, so process its children.
-    // Each child may either be processed directly or enqueued again.  The
-    // loop is optimized so that we don't seek unnecessarily.
-    bool seek = true;
-    for (int i = 0; i < 4; ++i, child = child.next()) {
-      seek = AddCell(child, &iter_, seek, target);
-    }
-  }
-}
-
-template <class Data> template <class Target>
-void S2ClosestPointQuery<Data>::MaybeAddResult(
-    const PointData& point_data, const Target& target) {
-  S1ChordAngle distance = max_distance_limit_;
-  if (!target.UpdateMinDistance(point_data.point(), &distance)) return;
-  if (region_ && !region_->Contains(point_data.point())) return;
-
-  // Add this point to results_.
-  if (results_.size() >= max_points_) {
-    results_.pop();  // Replace the furthest result point.
-  }
-  results_.push(Result(distance, &point_data));
-  if (results_.size() >= max_points_) {
-    max_distance_limit_ = results_.top().distance;
-  }
-}
-
-template <class Data> template <class Target>
-void S2ClosestPointQuery<Data>::InitQueue(const Target& target) {
-  DCHECK(queue_.empty());
-
-  // Optimization: rather than starting with the entire index, see if we can
-  // limit the search region to a small disc.  Then we can find a covering for
-  // that disc and intersect it with the covering for the index.  This can
-  // save a lot of work when the search region is small.
-
-  if (max_points_ == 1) {
-    // If the user is searching for just the closest point, we can compute an
-    // upper bound on search radius by seeking to the target point in the
-    // index and looking at the adjacent index points (in S2CellId order).
-    // The minimum distance to either of these points is an upper bound on the
-    // search radius.
-    //
-    // TODO(ericv): The same strategy would also work for small values of
-    // max_points() > 1, e.g. max_points() == 20, except that we would need to
-    // examine more neighbors (at least 20, and preferably 20 in each
-    // direction).  It's not clear whether this is a common case, though, and
-    // also this would require extending MaybeAddResult() so that it can
-    // remove duplicate entries.  (The points added here may be re-added by
-    // AddCell(), but this is okay when max_points() == 1.)
-    iter_.Seek(S2CellId(target.center()));
-    if (!iter_.done()) {
-      MaybeAddResult(iter_.point_data(), target);
-    }
-    if (iter_.Prev()) {
-      MaybeAddResult(iter_.point_data(), target);
-    }
-  }
-  // We start with a covering of the set of indexed points, then intersect it
-  // with the given region (if any) and maximum search radius disc (if any).
-  const std::vector<S2CellId>* initial_cells = &index_covering_;
-  if (region_) {
-    S2RegionCoverer coverer;
-    coverer.mutable_options()->set_max_cells(4);
-    coverer.GetCovering(*region_, &region_covering_);
-    S2CellUnion::GetIntersection(index_covering_, region_covering_,
-                                 &intersection_with_region_);
-    initial_cells = &intersection_with_region_;
-  }
-  if (max_distance_limit_ < S1ChordAngle::Infinity()) {
-    S2RegionCoverer coverer;
-    coverer.mutable_options()->set_max_cells(4);
-    S2Cap search_cap(target.center(),
-                     target.radius() + max_distance_limit_.ToAngle());
-    coverer.GetFastCovering(search_cap, &max_distance_covering_);
-    S2CellUnion::GetIntersection(*initial_cells, max_distance_covering_,
-                                 &intersection_with_max_distance_);
-    initial_cells = &intersection_with_max_distance_;
-  }
-  iter_.Begin();
-  for (int i = 0; i < initial_cells->size() && !iter_.done(); ++i) {
-    S2CellId id = (*initial_cells)[i];
-    AddCell(id, &iter_, id.range_min() > iter_.id() /*seek*/, target);
-  }
-}
-
-// Either process the contents of the given cell immediately, or add it to the
-// queue to be subdivided.  If "seek" is false, then "iter" must already be
-// positioned at the first indexed point within this cell.
-//
-// Returns "true" if the cell was added to the queue, and "false" if it was
-// processed immediately, in which case "iter" is left positioned at the next
-// cell in S2CellId order.
-template <class Data> template <class Target>
-bool S2ClosestPointQuery<Data>::AddCell(S2CellId id, Iterator* iter,
-                                        bool seek, const Target& target) {
-  if (seek) iter->Seek(id.range_min());
-  if (id.is_leaf()) {
-    // Leaf cells can't be subdivided.
-    for (; !iter->done() && iter->id() == id; iter->Next()) {
-      MaybeAddResult(iter->point_data(), target);
-    }
-    return false;  // No need to seek to next child.
-  }
-  S2CellId last = id.range_max();
-  int num_points = 0;
-  for (; !iter->done() && iter->id() <= last; iter->Next()) {
-    if (num_points == kMaxLeafPoints) {
-      // This child cell has too many points, so enqueue it.
-      S2Cell cell(id);
-      S1ChordAngle distance = target.GetDistance(cell);
-      if (distance < max_distance_limit_) {
-        // We delay checking "region_" as long as possible because it may be
-        // relatively expensive.
-        if (region_ == nullptr || region_->MayIntersect(cell)) {
-          queue_.push(QueueEntry(distance, id));
-        }
-      }
-      return true;  // Seek to next child.
-    }
-    tmp_point_data_[num_points++] = &iter->point_data();
-  }
-  // There were few enough points that we might as well process them now.
-  for (int i = 0; i < num_points; ++i) {
-    MaybeAddResult(*tmp_point_data_[i], target);
-  }
-  return false;  // No need to seek to next child.
+  return results_[i].data();
 }
 
 #endif  // S2_S2CLOSESTPOINTQUERY_H_

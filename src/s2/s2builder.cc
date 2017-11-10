@@ -217,8 +217,8 @@ void S2Builder::Init(const Options& options) {
   // Compute the maximum distance that a vertex can be separated from an
   // edge while still affecting how that edge is snapped.
   max_edge_deviation_ = snap_function.max_edge_deviation();
-  edge_site_query_radius_ = (max_edge_deviation_ +
-                             snap_function.min_edge_vertex_separation());
+  edge_site_query_radius_ca_ = S1ChordAngle(
+      max_edge_deviation_ + snap_function.min_edge_vertex_separation());
 
   // Compute the maximum edge length such that even if both endpoints move by
   // the maximum distance allowed (i.e., snap_radius), the center of the edge
@@ -619,8 +619,10 @@ void S2Builder::AddForcedSites(S2PointIndex<SiteId>* site_index) {
 }
 
 void S2Builder::ChooseInitialSites(S2PointIndex<SiteId>* site_index) {
-  S2ClosestPointQuery<SiteId> site_query(site_index);
-  site_query.set_max_distance(min_site_separation_);
+  // Find all points whose distance is <= min_site_separation_ca_.
+  S2ClosestPointQueryOptions options;
+  options.set_conservative_max_distance(min_site_separation_ca_);
+  S2ClosestPointQuery<SiteId> site_query(site_index, options);
 
   // Apply the snap_function() to each input vertex, then check whether any
   // existing site is closer than min_vertex_separation().  If not, then add a
@@ -683,14 +685,16 @@ S1ChordAngle dist_moved(site, point);
   return site;
 }
 
-// For each edge, find all sites within min_edge_site_query_radius_ and store
-// them in edge_sites_.  Also, to implement idempotency this method also
+// For each edge, find all sites within min_edge_site_query_radius_ca_ and
+// store them in edge_sites_.  Also, to implement idempotency this method also
 // checks whether the input vertices and edges may already satisfy the output
 // criteria.  If any problems are found then snapping_needed_ is set to true.
 void S2Builder::CollectSiteEdges(const S2PointIndex<SiteId>& site_index) {
+  // Find all points whose distance is <= edge_site_query_radius_ca_.
+  S2ClosestPointQueryOptions options;
+  options.set_conservative_max_distance(edge_site_query_radius_ca_);
+  S2ClosestPointQuery<SiteId> site_query(&site_index, options);
   edge_sites_.resize(input_edges_.size());
-  S2ClosestPointQuery<SiteId> site_query(&site_index);
-  site_query.set_max_distance(edge_site_query_radius_);
   for (InputEdgeId e = 0; e < input_edges_.size(); ++e) {
     const InputEdge& edge = input_edges_[e];
     const S2Point& v0 = input_vertices_[edge.first];
@@ -838,8 +842,9 @@ void S2Builder::AddExtraSite(const S2Point& new_site,
                              vector<InputEdgeId>* snap_queue) {
   SiteId new_site_id = sites_.size();
   sites_.push_back(new_site);
+  // Find all edges whose distance is <= edge_site_query_radius_ca_.
   S2ClosestEdgeQuery::Options options;
-  options.set_max_distance(edge_site_query_radius_);
+  options.set_conservative_max_distance(edge_site_query_radius_ca_);
   options.set_include_interiors(false);
   S2ClosestEdgeQuery query(&input_edge_index, options);
   S2ClosestEdgeQuery::PointTarget target(new_site);

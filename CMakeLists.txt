@@ -48,6 +48,7 @@ add_library(s2 SHARED
             src/s2/s2cellunion.cc
             src/s2/s2centroids.cc
             src/s2/s2closestedgequery.cc
+            src/s2/s2closestpointquery.cc
             src/s2/s2contains_vertex_query.cc
             src/s2/s2convexhullquery.cc
             src/s2/s2coords.cc
@@ -69,6 +70,7 @@ add_library(s2 SHARED
             src/s2/s2loop.cc
             src/s2/s2measures.cc
             src/s2/s2metrics.cc
+            src/s2/s2min_distance_targets.cc
             src/s2/s2paddedcell.cc
             src/s2/s2pointcompression.cc
             src/s2/s2pointregion.cc
@@ -122,7 +124,6 @@ target_link_libraries(
 install(FILES src/s2/_fpcontractoff.h
               src/s2/id_set_lexicon.h
               src/s2/mutable_s2shapeindex.h
-              src/s2/priority_queue_sequence.h
               src/s2/r1interval.h
               src/s2/r2.h
               src/s2/r2rect.h
@@ -146,6 +147,7 @@ install(FILES src/s2/_fpcontractoff.h
               src/s2/s2closestedgequery.h
               src/s2/s2closestedgequery_base.h
               src/s2/s2closestpointquery.h
+              src/s2/s2closestpointquery_base.h
               src/s2/s2contains_point_query.h
               src/s2/s2contains_vertex_query.h
               src/s2/s2convexhullquery.h
@@ -153,6 +155,7 @@ install(FILES src/s2/_fpcontractoff.h
               src/s2/s2coords.h
               src/s2/s2crossingedgequery.h
               src/s2/s2debug.h
+              src/s2/s2distance_target.h
               src/s2/s2earth.h
               src/s2/s2edge_clipping.h
               src/s2/s2edge_crosser.h
@@ -171,6 +174,7 @@ install(FILES src/s2/_fpcontractoff.h
               src/s2/s2loop.h
               src/s2/s2measures.h
               src/s2/s2metrics.h
+              src/s2/s2min_distance_targets.h
               src/s2/s2paddedcell.h
               src/s2/s2point.h
               src/s2/s2point_vector_shape.h
@@ -235,6 +239,7 @@ install(FILES src/s2/third_party/absl/memory/memory.h
 install(FILES src/s2/third_party/absl/meta/type_traits.h
         DESTINATION include/s2/third_party/absl/meta)
 install(FILES src/s2/third_party/absl/numeric/int128.h
+              src/s2/third_party/absl/numeric/int128_have_intrinsic.inc
         DESTINATION include/s2/third_party/absl/numeric)
 install(FILES src/s2/third_party/absl/strings/string_view.h
         DESTINATION include/s2/third_party/absl/strings)
@@ -282,7 +287,6 @@ if (GTEST_ROOT)
   set(S2TestFiles
       src/s2/id_set_lexicon_test.cc
       src/s2/mutable_s2shapeindex_test.cc
-      src/s2/priority_queue_sequence_test.cc
       src/s2/r1interval_test.cc
       src/s2/r2rect_test.cc
       src/s2/s1angle_test.cc
@@ -303,6 +307,7 @@ if (GTEST_ROOT)
       src/s2/s2centroids_test.cc
       src/s2/s2closestedgequery_base_test.cc
       src/s2/s2closestedgequery_test.cc
+      src/s2/s2closestpointquery_base_test.cc
       src/s2/s2closestpointquery_test.cc
       src/s2/s2contains_point_query_test.cc
       src/s2/s2contains_vertex_query_test.cc
@@ -327,6 +332,7 @@ if (GTEST_ROOT)
       src/s2/s2loop_test.cc
       src/s2/s2measures_test.cc
       src/s2/s2metrics_test.cc
+      src/s2/s2min_distance_targets_test.cc
       src/s2/s2paddedcell_test.cc
       src/s2/s2point_test.cc
       src/s2/s2point_vector_shape_test.cc

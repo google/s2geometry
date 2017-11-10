@@ -86,18 +86,27 @@ class S2LatLng {
   // the range [-180, 180].
   S2LatLng Normalized() const;
 
-  // Convert a normalized S2LatLng to the equivalent unit-length vector.
+  // Converts a normalized S2LatLng to the equivalent unit-length vector.
   // The maximum error in the result is 1.5 * DBL_EPSILON.  (This does not
   // include the error of converting degrees, E5, E6, or E7 to radians.)
+  //
+  // Can be used just like an S2Point constructor.  For example:
+  //   S2Cap cap;
+  //   cap.AddPoint(S2Point(latlng));
+  explicit operator S2Point() const;
+
+  // Converts to an S2Point (equivalent to the operator above).
   S2Point ToPoint() const;
 
-  // Return the distance (measured along the surface of the sphere) to the
-  // given S2LatLng.  This is mathematically equivalent to:
+  // Returns the distance (measured along the surface of the sphere) to the
+  // given S2LatLng, implemented using the Haversine formula.  This is
+  // equivalent to
   //
   //   S1Angle(ToPoint(), o.ToPoint())
   //
-  // but this implementation is slightly more efficient.  Both S2LatLngs
-  // must be normalized.
+  // except that this function is slightly faster, and is also somewhat less
+  // accurate for distances approaching 180 degrees (see s1angle.h for
+  // details).  Both S2LatLngs must be normalized.
   S1Angle GetDistance(const S2LatLng& o) const;
 
   // Simple arithmetic operations for manipulating latitude-longitude pairs.
@@ -119,7 +128,7 @@ class S2LatLng {
     return coords_.aequal(o.coords_, max_error.radians());
   }
 
-  // Export the latitude and longitude in degrees, separated by a comma.
+  // Exports the latitude and longitude in degrees, separated by a comma.
   // e.g. "94.518000,150.300000"
   string ToStringInDegrees() const;
   void ToStringInDegrees(string* s) const;
@@ -134,6 +143,10 @@ class S2LatLng {
 
   R2Point coords_;
 };
+
+
+//////////////////   Implementation details follow   ////////////////////
+
 
 inline S2LatLng::S2LatLng(S1Angle lat, S1Angle lng)
     : coords_(lat.radians(), lng.radians()) {}
@@ -187,6 +200,10 @@ inline S1Angle S2LatLng::Longitude(const S2Point& p) {
 inline bool S2LatLng::is_valid() const {
   return (std::fabs(lat().radians()) <= M_PI_2 &&
           std::fabs(lng().radians()) <= M_PI);
+}
+
+inline S2LatLng::operator S2Point() const {
+  return ToPoint();
 }
 
 inline S2LatLng operator+(const S2LatLng& a, const S2LatLng& b) {

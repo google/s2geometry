@@ -77,6 +77,11 @@ bool UpdateMinDistance(const S2Point& x, const S2Point& a, const S2Point& b,
 // this error drops rapidly as the points move away from antipodality
 // (approximately 1 millimeter for points that are 50 meters from antipodal,
 // and 1 micrometer for points that are 50km from antipodal).
+//
+// TODO(ericv): Currently the error bound does not hold for edges whose
+// endpoints are antipodal to within about 1e-15 radians (less than 1 micron).
+// This could be fixed by extending S2::RobustCrossProd to use higher
+// precision when necessary.
 double GetUpdateMinDistanceMaxError(S1ChordAngle dist);
 
 // Returns true if the minimum distance from X to the edge AB is attained at

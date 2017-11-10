@@ -141,7 +141,14 @@ class S2RegionCoverer {
     int level_mod() const { return level_mod_; }
     void set_level_mod(int level_mod);
 
-   private:
+    // Convenience function that returns the maximum level such that
+    //
+    //   (level <= max_level()) && (level - min_level()) % level_mod() == 0.
+    //
+    // This is the maximum level that will actually be used in coverings.
+    int true_max_level() const;
+
+   protected:
     int max_cells_ = kDefaultMaxCells;
     int min_level_ = 0;
     int max_level_ = S2CellId::kMaxLevel;
@@ -151,7 +158,7 @@ class S2RegionCoverer {
   // Constructs an S2RegionCoverer with the given options.
   explicit S2RegionCoverer(const Options& options);
 
-  // S2RegionCoverer is moveable but not copyable.
+  // S2RegionCoverer is movable but not copyable.
   S2RegionCoverer(const S2RegionCoverer&) = delete;
   S2RegionCoverer& operator=(const S2RegionCoverer&) = delete;
   S2RegionCoverer(S2RegionCoverer&&);
@@ -210,6 +217,30 @@ class S2RegionCoverer {
   static void FloodFill(const S2Region& region, S2CellId start,
                         std::vector<S2CellId>* output);
 
+  // Returns true if the given S2CellId vector represents a valid covering
+  // that conforms to the current covering parameters.  In particular:
+  //
+  //  - All S2CellIds must be valid.
+  //
+  //  - S2CellIds must be sorted and non-overlapping.
+  //
+  //  - S2CellId levels must satisfy min_level(), max_level(), and level_mod().
+  //
+  //  - If covering.size() > max_cells(), there must be no two cells with
+  //    a common ancestor at min_level() or higher.
+  //
+  //  - There must be no sequence of cells that could be replaced by an
+  //    ancestor (i.e. with level_mod() == 1, the 4 child cells of a parent).
+  bool IsCanonical(const S2CellUnion& covering) const;
+  bool IsCanonical(const std::vector<S2CellId>& covering) const;
+
+  // Modify "covering" if necessary so that it conforms to the current
+  // covering parameters (max_cells, min_level, max_level, and level_mod).
+  // There are no restrictions on the input S2CellIds (they may be unsorted,
+  // overlapping, etc).
+  S2CellUnion CanonicalizeCovering(const S2CellUnion& covering);
+  void CanonicalizeCovering(std::vector<S2CellId>* covering);
+
  private:
   struct Candidate {
     S2Cell cell;
@@ -256,9 +287,15 @@ class S2RegionCoverer {
   // then normalized to ensure that no redundant cells are present.
   void AdjustCellLevels(std::vector<S2CellId>* cells) const;
 
-  // Normalize "covering" so that it conforms to the current covering
-  // parameters (max_cells, min_level, max_level, and level_mod).
-  void NormalizeCovering(std::vector<S2CellId>* covering);
+  // Returns true if "covering" contains all children of "id" at level
+  // (id.level() + options_.level_mod()).
+  bool ContainsAllChildren(const std::vector<S2CellId>& covering,
+                           S2CellId id) const;
+
+  // Replaces all descendants of "id" in "covering" with "id".
+  // REQUIRES: "covering" contains at least one descendant of "id".
+  void ReplaceCellsWithAncestor(std::vector<S2CellId>* covering,
+                                S2CellId id) const;
 
   Options options_;
 

@@ -88,10 +88,11 @@ S1ChordAngle S1ChordAngle::PlusError(double error) const {
 
 double S1ChordAngle::GetS2PointConstructorMaxError() const {
   // There is a relative error of 2.5 * DBL_EPSILON when computing the squared
-  // distance, plus an absolute error of (16 * DBL_EPSILON**2) because the
-  // lengths of the input points may differ from 1 by up to (2 * DBL_EPSILON)
-  // each.  (This is the maximum length error in S2Point::Normalize.)
-  return 2.5 * DBL_EPSILON * length2_ + 16 * DBL_EPSILON * DBL_EPSILON;
+  // distance, plus a relative error of 2 * DBL_EPSILON and an absolute error
+  // of (16 * DBL_EPSILON**2) because the lengths of the input points may
+  // differ from 1 by up to (2 * DBL_EPSILON) each.  (This is the maximum
+  // length error in S2Point::Normalize.)
+  return 4.5 * DBL_EPSILON * length2_ + 16 * DBL_EPSILON * DBL_EPSILON;
 }
 
 double S1ChordAngle::GetS1AngleConstructorMaxError() const {

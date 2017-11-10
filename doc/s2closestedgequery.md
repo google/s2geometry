@@ -77,9 +77,9 @@ returns true if the distance to the target is less than a given limit:
     bool IsDistanceLess(Target* target, S1ChordAngle limit);
 
 If you want to test whether the distance is less than or equal to "limit"
-instead, you can do this using `S1ChordAngle::Successor`:
+instead, you can use `IsDistanceLessOrEqual` instead:
 
-    if (query.IsDistanceLess(&target, limit.Successor())) { ... }
+    if (query.IsDistanceLessOrEqual(&target, limit)) { ... }
 
 To compute the actual distance, you can use the `GetDistance` method:
 
@@ -171,11 +171,20 @@ The most important options are the following:
     // Specifies that only edges whose distance to the target is less than
     // "max_distance" should be returned.
     //
+    // Note that edges whose distance is exactly equal to "max_distance" are
+    // not returned.  Normally this doesn't matter, because distances are not
+    // computed exactly in the first place, but if such edges are needed then
+    // see set_inclusive_max_distance() below.
+    //
     // DEFAULT: Distance::Infinity()
-    Distance max_distance() const;
-    void set_max_distance(Distance max_distance);
+    void set_max_distance(S1ChordAngle max_distance);
 
-Note that you will always want to set one of these two options before
+    // Like set_max_distance(), except that edges whose distance is exactly
+    // equal to "max_distance" are also returned.  Equivalent to calling
+    // set_max_distance(max_distance.Successor()).
+    void set_inclusive_max_distance(S1ChordAngle max_distance);
+
+Note that you will always want to set one of these options before
 calling `FindClosestEdges`, because otherwise all the edges in the
 entire `S2ShapeIndex` will be returned.  (This is not necessary
 when calling `FindClosestEdge`, `GetDistance`, or `IsDistanceLess`,
@@ -300,7 +309,7 @@ following:
     } else {
       // Find the point on the result edge that is closest to the target.
       S2Point closest_point = query.Project(target_point, result);
-      meters = EllipsoidalDistance(target_point, closest_point);
+      meters = GeoidDistance(target_point, closest_point);
     }
 
 The same technique can be used for more complex targets (`ShapeIndexTarget`) by
@@ -327,7 +336,7 @@ calculating the ellipsoidal distance between those points:
       // Find the closest point pair on edge1 and edge2.
       auto closest = S2::GetEdgePairClosestPoints(edge1.v0, edge1.v1,
                                                   edge2.v0, edge2.v1);
-      meters = EllipsoidalDistance(closest.first, closest.second);
+      meters = GeoidDistance(closest.first, closest.second);
     }
 
 ## Numerical Accuracy
@@ -345,17 +354,17 @@ bounds, you can use the following option:
     options.set_conservative_max_distance(limit);
 
 This will automatically increase `limit` by the maximum error in the distance
-calculation, ensuring that all edges whose true, exact distance is less than
-`limit` are returned (along with some edges whose true distance is slightly
-greater).
+calculation, ensuring that all edges whose true, exact distance is less than or
+equal to `limit` are returned (along with some edges whose true distance is
+slightly greater).
 
 Algorithms that need to do exact distance comparisons can use this option to
 compute a set of candidate edges that can then be filtered further using exact
 predicates (such as `s2pred::CompareEdgeDistance`).
 
-There is also a conservative version of the `IsDistanceLess` predicate,
+There is also a conservative version of the `IsDistanceLessOrEqual` predicate,
 
-    bool IsConservativeDistanceLess(Target* target, S1ChordAngle limit);
+    bool IsConservativeDistanceLessOrEqual(Target* target, S1ChordAngle limit);
 
 which automatically increases the given limit by the maximum error in the
 distance calculation.

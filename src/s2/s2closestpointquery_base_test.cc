@@ -1,4 +1,4 @@
-// Copyright 2013 Google Inc. All Rights Reserved.
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 // Author: ericv@google.com (Eric Veach)
 //
 // This file contains some basic tests of the templating support.  Testing of
-// the actual algorithms is in s2closestedgequery_test.cc.
+// the actual algorithms is in s2closestpointquery_test.cc.
 
-#include "s2/s2closestedgequery_base.h"
+#include "s2/s2closestpointquery_base.h"
 
 #include <vector>
 #include <gtest/gtest.h>
@@ -32,7 +32,7 @@ using std::vector;
 
 namespace {
 
-// This is a proof-of-concept prototype of a possible S2FurthestEdgeQuery
+// This is a proof-of-concept prototype of a possible S2FurthestPointQuery
 // class.  The purpose of this test is just to make sure that the code
 // compiles and does something reasonable.  (A real implementation would need
 // to be more careful about error bounds, it would implement a greater range
@@ -89,11 +89,11 @@ class MaxDistance {
   S1ChordAngle distance_;
 };
 
-using FurthestEdgeQuery = S2ClosestEdgeQueryBase<MaxDistance>;
+using FurthestPointQueryOptions = S2ClosestPointQueryBaseOptions<MaxDistance>;
 
-class FurthestPointTarget final : public FurthestEdgeQuery::Target {
+class FurthestPointQueryTarget final : public S2DistanceTarget<MaxDistance> {
  public:
-  explicit FurthestPointTarget(const S2Point& point) : point_(point) {}
+  explicit FurthestPointQueryTarget(const S2Point& point) : point_(point) {}
 
   int max_brute_force_index_size() const override { return 100; }
 
@@ -107,12 +107,8 @@ class FurthestPointTarget final : public FurthestEdgeQuery::Target {
 
   bool UpdateMinDistance(const S2Point& v0, const S2Point& v1,
                          MaxDistance* min_dist) override {
-    S1ChordAngle dist180 =
-        S1ChordAngle(*min_dist).is_negative() ? S1ChordAngle::Infinity() :
-        S1ChordAngle::Straight() - S1ChordAngle(*min_dist);
-    if (!S2::UpdateMinDistance(-point_, v0, v1, &dist180)) return false;
-    *min_dist = MaxDistance(S1ChordAngle::Straight() - dist180);
-    return true;
+    LOG(FATAL) << "Unimplemented";
+    return false;
   }
 
   bool UpdateMinDistance(const S2Cell& cell,
@@ -123,37 +119,33 @@ class FurthestPointTarget final : public FurthestEdgeQuery::Target {
 
   bool VisitContainingShapes(const S2ShapeIndex& index,
                              const ShapeVisitor& visitor) override {
-    // For furthest points, we return the polygons whose interior contains the
-    // antipode of the target point.  (These are the polygons whose
-    // MaxDistance() to the target is MaxDistance::Zero().)
-    //
-    // For target types consisting of multiple connected components (such as
-    // FurthestPointQuery::ShapeIndexTarget), this method should return the
-    // polygons containing the antipodal reflection of any connected
-    // component.  (It is sufficient to test containment of one vertex per
-    // connected component, since the API allows us to also return any polygon
-    // whose boundary has MaxDistance::Zero() to the target.)
-    return MakeS2ContainsPointQuery(&index).VisitContainingShapes(
-        -point_, [this, &visitor](S2Shape* shape) {
-          return visitor(shape, point_);
-        });
+    LOG(FATAL) << "Unimplemented";
+    return false;
   }
 
  private:
   S2Point point_;
 };
 
-TEST(S2ClosestEdgeQueryBase, MaxDistance) {
-  auto index = s2textformat::MakeIndex("0:0 | 1:0 | 2:0 | 3:0 # #");
-  FurthestEdgeQuery query(index.get());
-  FurthestPointTarget target(s2textformat::MakePoint("4:0"));
-  FurthestEdgeQuery::Options options;
-  options.set_max_edges(1);
-  auto results = query.FindClosestEdges(&target, options);
+template <class Data>
+using FurthestPointQuery = S2ClosestPointQueryBase<MaxDistance, Data>;
+
+TEST(S2ClosestPointQueryBase, MaxDistance) {
+  S2PointIndex<int> index;
+  auto points = s2textformat::ParsePointsOrDie("0:0, 1:0, 2:0, 3:0");
+  for (int i = 0; i < points.size(); ++i) {
+    index.Add(points[i], i);
+  }
+  FurthestPointQuery<int> query(&index);
+  FurthestPointQueryTarget target(s2textformat::MakePoint("4:0"));
+  FurthestPointQueryOptions options;
+  options.set_max_points(1);
+  auto results = query.FindClosestPoints(&target, options);
   ASSERT_EQ(1, results.size());
-  EXPECT_EQ(0, results[0].shape_id);
-  EXPECT_EQ(0, results[0].edge_id);
-  EXPECT_NEAR(4, S1ChordAngle(results[0].distance).ToAngle().degrees(), 1e-13);
+  EXPECT_EQ(points[0], results[0].point());
+  EXPECT_EQ(0, results[0].data());
+  EXPECT_NEAR(4, S1ChordAngle(results[0].distance()).ToAngle().degrees(),
+              1e-13);
 }
 
 }  // namespace

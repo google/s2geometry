@@ -104,12 +104,14 @@ class S1Angle {
 
   // Return the angle between two points, which is also equal to the distance
   // between these points on the unit sphere.  The points do not need to be
-  // normalized.
+  // normalized.  This function has a maximum error of 3.25 * DBL_EPSILON (or
+  // 2.5 * DBL_EPSILON for angles up to 1 radian).
   S1Angle(const S2Point& x, const S2Point& y);
 
-  // Like the constructor above, but return the angle (i.e., distance)
-  // between two S2LatLng points.  The result has a maximum error of
-  // 3.25 * DBL_EPSILON (or 2.5 * DBL_EPSILON for angles up to 1 radian).
+  // Like the constructor above, but return the angle (i.e., distance) between
+  // two S2LatLng points.  This function has about 15 digits of accuracy for
+  // small distances but only about 8 digits of accuracy as the distance
+  // approaches 180 degrees (i.e., nearly-antipodal points).
   S1Angle(const S2LatLng& x, const S2LatLng& y);
 
   constexpr double radians() const;

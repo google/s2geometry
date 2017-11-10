@@ -18,10 +18,10 @@
 #include "s2/s2closestpointquery.h"
 
 #include <memory>
-#include <set>
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cellid.h"
@@ -30,9 +30,11 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
+using absl::make_unique;
 using std::make_pair;
 using std::pair;
 using std::unique_ptr;
+using std::vector;
 
 using TestIndex = S2PointIndex<int>;
 using TestQuery = S2ClosestPointQuery<int>;
@@ -62,13 +64,13 @@ struct PointIndexFactory {
   virtual ~PointIndexFactory() {}
 
   // Given an index that will be queried using random points from "query_cap",
-  // add approximately "num_vertices" points to "index".  (Typically the
+  // adds approximately "num_points" points to "index".  (Typically the
   // indexed points will occupy some fraction of this cap.)
-  virtual void AddPoints(const S2Cap& query_cap, int num_vertices,
+  virtual void AddPoints(const S2Cap& query_cap, int num_points,
                          TestIndex* index) const = 0;
 };
 
-// Generate points that are regularly spaced along a circle.  The circle is
+// Generates points that are regularly spaced along a circle.  The circle is
 // centered within the query cap and occupies 25% of its area, so that random
 // query points have a 25% chance of being inside the circle.
 //
@@ -76,10 +78,10 @@ struct PointIndexFactory {
 // since many points are nearly equidistant from any query point that is not
 // immediately adjacent to the circle.
 struct CirclePointIndexFactory : public PointIndexFactory {
-  void AddPoints(const S2Cap& query_cap, int num_vertices,
+  void AddPoints(const S2Cap& query_cap, int num_points,
                  TestIndex* index) const override {
     std::vector<S2Point> points = S2Testing::MakeRegularPoints(
-        query_cap.center(), 0.5 * query_cap.GetRadius(), num_vertices);
+        query_cap.center(), 0.5 * query_cap.GetRadius(), num_points);
     for (int i = 0; i < points.size(); ++i) {
       index->Add(points[i], i);
     }
@@ -89,10 +91,10 @@ struct CirclePointIndexFactory : public PointIndexFactory {
 // Generate the vertices of a fractal whose convex hull approximately
 // matches the query cap.
 struct FractalPointIndexFactory : public PointIndexFactory {
-  void AddPoints(const S2Cap& query_cap, int num_vertices,
+  void AddPoints(const S2Cap& query_cap, int num_points,
                  TestIndex* index) const override {
     S2Testing::Fractal fractal;
-    fractal.SetLevelForApproxMaxEdges(num_vertices);
+    fractal.SetLevelForApproxMaxEdges(num_points);
     fractal.set_fractal_dimension(1.5);
     unique_ptr<S2Loop> loop(
         fractal.MakeLoop(S2Testing::GetRandomFrameAt(query_cap.center()),
@@ -105,9 +107,9 @@ struct FractalPointIndexFactory : public PointIndexFactory {
 
 // Generate vertices on a square grid that includes the entire query cap.
 struct GridPointIndexFactory : public PointIndexFactory {
-  void AddPoints(const S2Cap& query_cap, int num_vertices,
+  void AddPoints(const S2Cap& query_cap, int num_points,
                  TestIndex* index) const override {
-    int sqrt_num_points = ceil(sqrt(num_vertices));
+    int sqrt_num_points = ceil(sqrt(num_points));
     Matrix3x3_d frame = S2Testing::GetRandomFrameAt(query_cap.center());
     double radius = query_cap.GetRadius().radians();
     double spacing = 2 * radius / sqrt_num_points;
@@ -190,9 +192,9 @@ static void GetClosestPoints(const Target& target, TestQuery* query,
 template <class Target>
 static void TestFindClosestPoints(const Target& target, TestQuery *query) {
   std::vector<Result> expected, actual;
-  query->UseBruteForce(true);
+  query->mutable_options()->set_use_brute_force(true);
   GetClosestPoints(target, query, &expected);
-  query->UseBruteForce(false);
+  query->mutable_options()->set_use_brute_force(false);
   GetClosestPoints(target, query, &actual);
   EXPECT_TRUE(CheckDistanceResults(expected, actual, query->max_points(),
                                    query->max_distance(), S1Angle::Zero()))
@@ -201,16 +203,16 @@ static void TestFindClosestPoints(const Target& target, TestQuery *query) {
 }
 
 // The running time of this test is proportional to
-//    num_indexes * num_vertices * num_queries.
+//    num_indexes * num_points * num_queries.
 static void TestWithIndexFactory(const PointIndexFactory& factory,
-                                 int num_indexes, int num_vertices,
+                                 int num_indexes, int num_points,
                                  int num_queries) {
   TestIndex index;
   for (int i_index = 0; i_index < num_indexes; ++i_index) {
     // Generate a point set and index it.
     S2Cap query_cap = S2Cap(S2Testing::RandomPoint(), kRadius);
     index.Clear();
-    factory.AddPoints(query_cap, num_vertices, &index);
+    factory.AddPoints(query_cap, num_points, &index);
     for (int i_query = 0; i_query < num_queries; ++i_query) {
       // Use a new query each time to avoid resetting default parameters.
       TestQuery query(&index);
