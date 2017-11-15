@@ -82,6 +82,7 @@ add_library(s2 SHARED
             src/s2/s2projections.cc
             src/s2/s2r2rect.cc
             src/s2/s2region.cc
+            src/s2/s2region_term_indexer.cc
             src/s2/s2regioncoverer.cc
             src/s2/s2regionintersection.cc
             src/s2/s2regionunion.cc
@@ -102,6 +103,8 @@ add_library(s2 SHARED
             src/s2/third_party/absl/numeric/int128.cc
             src/s2/third_party/absl/strings/ascii.cc
             src/s2/third_party/absl/strings/match.cc
+            src/s2/third_party/absl/strings/numbers.cc
+            src/s2/third_party/absl/strings/str_cat.cc
             src/s2/third_party/absl/strings/str_split.cc
             src/s2/third_party/absl/strings/string_view.cc
             src/s2/third_party/absl/strings/string_view_utils.cc
@@ -190,6 +193,7 @@ install(FILES src/s2/_fpcontractoff.h
               src/s2/s2projections.h
               src/s2/s2r2rect.h
               src/s2/s2region.h
+              src/s2/s2region_term_indexer.h
               src/s2/s2regioncoverer.h
               src/s2/s2regionintersection.h
               src/s2/s2regionunion.h
@@ -240,6 +244,7 @@ install(FILES src/s2/third_party/absl/meta/type_traits.h
         DESTINATION include/s2/third_party/absl/meta)
 install(FILES src/s2/third_party/absl/numeric/int128.h
               src/s2/third_party/absl/numeric/int128_have_intrinsic.inc
+              src/s2/third_party/absl/numeric/int128_no_intrinsic.inc
         DESTINATION include/s2/third_party/absl/numeric)
 install(FILES src/s2/third_party/absl/strings/string_view.h
         DESTINATION include/s2/third_party/absl/strings)
@@ -347,6 +352,7 @@ if (GTEST_ROOT)
       src/s2/s2projections_test.cc
       src/s2/s2r2rect_test.cc
       src/s2/s2region_test.cc
+      src/s2/s2region_term_indexer_test.cc
       src/s2/s2regioncoverer_test.cc
       src/s2/s2regionunion_test.cc
       src/s2/s2shapeindex_buffered_region_test.cc
@@ -375,17 +381,8 @@ if (GTEST_ROOT)
   endforeach()
 endif()
 
+add_subdirectory("doc/examples" examples)
+
 if (${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
-  include(${SWIG_USE_FILE})
-  include_directories(${PYTHON_INCLUDE_PATH})
-  set(CMAKE_SWIG_FLAGS "")
-  set_property(SOURCE src/s2/s2.i PROPERTY SWIG_FLAGS "-module" "pywraps2")
-  set_property(SOURCE src/s2/s2.i PROPERTY CPLUSPLUS ON)
-  swig_add_module(pywraps2 python src/s2/s2.i)
-  swig_link_libraries(pywraps2 ${PYTHON_LIBRARIES} s2)
-  enable_testing()
-  add_test(NAME pywraps2_test COMMAND
-           ${PYTHON_EXECUTABLE} "${PROJECT_SOURCE_DIR}/src/s2/pywraps2_test.py")
-  set_property(TEST pywraps2_test PROPERTY ENVIRONMENT
-               "PYTHONPATH=$ENV{PYTHONPATH}:${PROJECT_BINARY_DIR}")
+  add_subdirectory("src/python" python)
 endif()

@@ -14,24 +14,24 @@ notation for the unit sphere, *S²*.)
 
 Traditional cartography is based on *map projections*, which are simply
 functions that map points on the Earth's surface to points on a planar
-map.  Map projections necessarily create distortions, due to the fact
-that the shape of the Earth is not very close to the shape of a plane.
-For example, the well-known Mercator projection is discontinuous along
-the 180 degree meridian, has large scale distortions at high latitudes,
-and cannot represent the north and south poles at all.  Other
-projections make different compromises, but no planar projection does a
-good job of representing the entire surface of the Earth.
+map.  Map projections create distortions, due to the fact that the shape
+of the Earth is not very close to the shape of a plane.  For example,
+the well-known Mercator projection is discontinuous along the 180 degree
+meridian, has large scale distortions at high latitudes, and cannot
+represent the north and south poles at all.  Other projections make
+different compromises, but no planar projection does a good job of
+representing the entire surface of the Earth.
 
 S2 approaches this problem by working exclusively with *spherical
 projections*.  As the name implies, spherical projections map points on
 the Earth's surface to a perfect mathematical sphere.  Such mappings
-still involve some distortion, of course, because the Earth is not
-quite spherical--but as it turns out, the Earth is much closer to being
-a sphere than a plane.  With spherical projections, it is possible to
+still create some distortion, of course, because the Earth is not quite
+spherical--but as it turns out, the Earth is much closer to being a
+sphere than a plane.  With spherical projections, it is possible to
 approximate the entire Earth's surface with a maximum distortion of
-approximately 0.3%.  Perhaps more importantly, spherical projections
-preserve the correct topology of the Earth -- there are no
-singularities or discontinuities to deal with.
+0.56%.  Perhaps more importantly, spherical projections preserve the
+correct topology of the Earth -- there are no singularities or
+discontinuities to deal with.
 
 Why not project onto an ellipsoid?  (The Earth isn't quite ellipsoidal
 either, but it is even closer to being an ellipsoid than a sphere.)
@@ -285,7 +285,7 @@ datasets use geodetic coordinates exclusively.)
 
 ## Authors
 
-The S2 library was primarily written by Eric Veach.  Other significant
+The S2 library was written primarily by Eric Veach.  Other significant
 contributors include Jesse Rosenstock, Eric Engle (Java version lead),
 Robert Snedegar (Go version lead), and Julien Basch.
 

@@ -623,6 +623,7 @@ void S2Builder::ChooseInitialSites(S2PointIndex<SiteId>* site_index) {
   S2ClosestPointQueryOptions options;
   options.set_conservative_max_distance(min_site_separation_ca_);
   S2ClosestPointQuery<SiteId> site_query(site_index, options);
+  vector<S2ClosestPointQuery<SiteId>::Result> results;
 
   // Apply the snap_function() to each input vertex, then check whether any
   // existing site is closer than min_vertex_separation().  If not, then add a
@@ -651,15 +652,16 @@ void S2Builder::ChooseInitialSites(S2PointIndex<SiteId>* site_index) {
     // NOTE(ericv): When the snap radius is large compared to the average
     // vertex spacing, we could possibly avoid the call the FindClosestPoints
     // by checking whether sites_.back() is close enough.
-    site_query.FindClosestPoints(site);
+    S2ClosestPointQueryPointTarget target(site);
+    site_query.FindClosestPoints(&target, &results);
     bool add_site = true;
-    for (int j = 0; j < site_query.num_points(); ++j) {
-      if (s2pred::CompareDistance(site, site_query.point(j),
+    for (const auto& result : results) {
+      if (s2pred::CompareDistance(site, result.point(),
                                   min_site_separation_ca_) <= 0) {
         add_site = false;
         // This pair of sites is too close.  If the sites are distinct, then
         // the output cannot be idempotent.
-        snapping_needed_ = snapping_needed_ || site != site_query.point(j);
+        snapping_needed_ = snapping_needed_ || site != result.point();
       }
     }
     if (add_site) {
@@ -694,6 +696,7 @@ void S2Builder::CollectSiteEdges(const S2PointIndex<SiteId>& site_index) {
   S2ClosestPointQueryOptions options;
   options.set_conservative_max_distance(edge_site_query_radius_ca_);
   S2ClosestPointQuery<SiteId> site_query(&site_index, options);
+  vector<S2ClosestPointQuery<SiteId>::Result> results;
   edge_sites_.resize(input_edges_.size());
   for (InputEdgeId e = 0; e < input_edges_.size(); ++e) {
     const InputEdge& edge = input_edges_[e];
@@ -703,15 +706,16 @@ void S2Builder::CollectSiteEdges(const S2PointIndex<SiteId>& site_index) {
       std::cout << "S2Polyline: " << s2textformat::ToString(v0)
                 << ", " << s2textformat::ToString(v1) << "\n";
     }
-    site_query.FindClosestPointsToEdge(v0, v1);
+    S2ClosestPointQueryEdgeTarget target(v0, v1);
+    site_query.FindClosestPoints(&target, &results);
     auto* sites = &edge_sites_[e];
-    sites->reserve(site_query.num_points());
-    for (int j = 0; j < site_query.num_points(); ++j) {
-      sites->push_back(site_query.data(j));
+    sites->reserve(results.size());
+    for (const auto& result : results) {
+      sites->push_back(result.data());
       if (!snapping_needed_ &&
-          site_query.distance_ca(j) < min_edge_site_separation_ca_limit_ &&
-          site_query.point(j) != v0 && site_query.point(j) != v1 &&
-          s2pred::CompareEdgeDistance(site_query.point(j), v0, v1,
+          result.distance() < min_edge_site_separation_ca_limit_ &&
+          result.point() != v0 && result.point() != v1 &&
+          s2pred::CompareEdgeDistance(result.point(), v0, v1,
                                       min_edge_site_separation_ca_) < 0) {
         snapping_needed_ = true;
       }
