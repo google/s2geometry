@@ -75,12 +75,14 @@
 #include "s2/s2region_term_indexer.h"
 
 #include <cctype>
+
 #include <glog/logging.h>
-#include "s2/third_party/absl/strings/str_cat.h"
+
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cellid.h"
 #include "s2/s2region.h"
+#include "s2/third_party/absl/strings/str_cat.h"
 
 using absl::string_view;
 using std::vector;

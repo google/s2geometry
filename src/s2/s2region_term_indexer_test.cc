@@ -26,6 +26,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cellid.h"
