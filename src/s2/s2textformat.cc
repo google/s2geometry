@@ -43,7 +43,9 @@ namespace s2textformat {
 static vector<string_view> SplitString(string_view str, char separator) {
   vector<string_view> result =
       absl::StrSplit(str, separator, absl::SkipWhitespace());
-  strings::StripWhitespaceInCollection(&result);
+  for (auto& e : result) {
+    StripWhitespace(&e);
+  }
   return result;
 }
 

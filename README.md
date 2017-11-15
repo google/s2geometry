@@ -24,8 +24,12 @@ Requirements for End Users
   (to build tests, optional)
 * A POSIX system (for getrusage).
 
-On Ubuntu, all of these can be installed via apt-get.  Otherwise, you may need
-to install some from source.
+On Ubuntu, all of these can be installed via apt-get:
+```
+sudo apt-get install cmake libgflags-dev libgoogle-glog-dev libgtest-dev openssl
+```
+Otherwise, you may need to install some from source.  On OS X, use
+[MacPorts](http://www.macports.org/) or [Homebrew](http://brew.sh/).
 
 Thorough testing has only been done on Ubuntu 14.04.3.
 
@@ -33,7 +37,9 @@ Build and Install
 -----------------
 
 ```
-cd $S2_DIR
+mkdir s2-geometry-library
+cd s2-geometry-library
+tar zxvf $PATH_TO_DOWNLOADED_TGZ
 mkdir build
 cd build
 cmake -DGTEST_ROOT=/usr/src/gtest ..  # Omit -DGTEST_ROOT to skip tests.

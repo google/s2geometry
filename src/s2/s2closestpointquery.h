@@ -80,7 +80,7 @@ class S2ClosestPointQueryOptions :
   void set_max_error(S1ChordAngle max_error);
   void set_max_error(S1Angle max_error);
 
-  // Inherited options (see s2closestedgequery_base.h for details):
+  // Inherited options (see s2closestpointquery_base.h for details):
   using Base::set_max_points;
   using Base::set_region;
   using Base::set_use_brute_force;
@@ -175,10 +175,9 @@ class S2ClosestPointQueryShapeIndexTarget final :
 //   query.mutable_options()->set_max_distance(
 //       S2Earth::ToAngle(util::units::Kilometers(5)));
 //
-// By default *all* edges are returned, so you should always specify either
-// max_edges() or max_distance() or both.  There is also a FindClosestEdge()
-// convenience method that automatically sets max_edges() == 1 and returns
-// only the closest edge.
+// By default *all* points are returned, so you should always specify either
+// max_points() or max_distance() or both.  There is also a FindClosestPoint()
+// convenience method that returns only the closest point.
 //
 // You can restrict the results to an arbitrary S2Region, for example:
 //
@@ -302,69 +301,6 @@ class S2ClosestPointQuery {
   bool IsConservativeDistanceLessOrEqual(Target* target, S1ChordAngle limit);
 
   ///////////////////////// Deprecated Methods //////////////////////////
-
-  ABSL_DEPRECATED("Use options().max_points()")
-  int max_points() const { return options().max_points(); }
-
-  ABSL_DEPRECATED("Use mutable_option()->set_max_points()")
-  void set_max_points(int max_points) {
-    mutable_options()->set_max_points(max_points);
-  }
-
-  ABSL_DEPRECATED("Use options().max_distance().ToAngle()")
-  S1Angle max_distance() const { return options().max_distance().ToAngle(); }
-
-  ABSL_DEPRECATED("Use options().set_max_distance()")
-  void set_max_distance(S1Angle max_distance) {
-    // The previous API always treated "max_distance" conservatively.
-    mutable_options()->set_conservative_max_distance(max_distance);
-  }
-
-  ABSL_DEPRECATED("Use options().region()")
-  const S2Region* region() const { return options().region(); }
-
-  ABSL_DEPRECATED("Use options().set_region()")
-  void set_region(const S2Region* region) {
-    mutable_options()->set_region(region);
-  }
-
-  ABSL_DEPRECATED("Use S2ClosestPointQueryPointTarget instead.")
-  void FindClosestPoints(const S2Point& target);
-
-  ABSL_DEPRECATED("Use S2ClosestPointQueryPointTarget instead.")
-  void FindClosestPoint(const S2Point& target);
-
-  ABSL_DEPRECATED("Use S2ClosestPointQueryEdgeTarget instead.")
-  void FindClosestPointsToEdge(const S2Point& a, const S2Point& b);
-
-  ////////////////////// Result Interface (DEPRECATED) /////////////////////
-  //
-  // The result of a query consists of a set of points which may be obtained
-  // using the interface below.  Points are sorted in order of increasing
-  // distance.
-
-  // The number of result points.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  int num_points() const;
-
-  // The result point at the given index.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  const S2Point& point(int i) const;
-
-  // The distance to the result point at the given index.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  S1Angle distance(int i) const;
-
-  // Like distance(i), but expressed as an S1ChordAngle.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  S1ChordAngle distance_ca(int i) const;
-
-  // The client data associated with the result point at the given index.
-  ABSL_DEPRECATED("Use std::vector<Result> methods")
-  const Data& data(int i) const;
-
-  ABSL_DEPRECATED("Use ReInit()")
-  void Reset() { ReInit(); }
 
  private:
   Options options_;
@@ -528,50 +464,6 @@ bool S2ClosestPointQuery<Data>::IsConservativeDistanceLessOrEqual(
   tmp_options.set_conservative_max_distance(limit);
   tmp_options.set_max_error(tmp_options.max_distance());
   return !base_.FindClosestPoint(target, tmp_options).is_empty();
-}
-
-template <class Data>
-void S2ClosestPointQuery<Data>::FindClosestPoints(S2Point const& point) {
-  PointTarget target(point);
-  FindClosestPoints(&target, &results_);
-}
-
-template <class Data>
-void S2ClosestPointQuery<Data>::FindClosestPointsToEdge(S2Point const& a,
-                                                        S2Point const& b) {
-  EdgeTarget target(a, b);
-  FindClosestPoints(&target, &results_);
-}
-
-template <class Data>
-void S2ClosestPointQuery<Data>::FindClosestPoint(S2Point const& point) {
-  set_max_points(1);
-  FindClosestPoints(point);
-}
-
-template <class Data>
-int S2ClosestPointQuery<Data>::num_points() const {
-  return results_.size();
-}
-
-template <class Data>
-const S2Point& S2ClosestPointQuery<Data>::point(int i) const {
-  return results_[i].point();
-}
-
-template <class Data>
-S1ChordAngle S2ClosestPointQuery<Data>::distance_ca(int i) const {
-  return results_[i].distance();
-}
-
-template <class Data>
-S1Angle S2ClosestPointQuery<Data>::distance(int i) const {
-  return distance_ca(i).ToAngle();
-}
-
-template <class Data>
-const Data& S2ClosestPointQuery<Data>::data(int i) const {
-  return results_[i].data();
 }
 
 #endif  // S2_S2CLOSESTPOINTQUERY_H_

@@ -76,8 +76,7 @@
 //
 // By default *all* edges are returned, so you should always specify either
 // max_edges() or max_distance() or both.  There is also a FindClosestEdge()
-// convenience method that automatically sets max_edges() == 1 and returns
-// only the closest edge.
+// convenience method that returns only the closest edge.
 //
 // Note that by default, distances are measured to the boundary and interior
 // of polygons.  For example, if a point is inside a polygon then its distance

@@ -304,6 +304,17 @@ TEST(S2RegionCoverer, InteriorCovering) {
   }
 }
 
+TEST(GetFastCovering, HugeFixedLevelCovering) {
+  // Test a "fast covering" with a huge number of cells due to min_level().
+  S2RegionCoverer::Options options;
+  options.set_min_level(10);
+  S2RegionCoverer coverer(options);
+  vector<S2CellId> covering;
+  S2Cell region(S2CellId::FromDebugString("1/23"));
+  coverer.GetFastCovering(region, &covering);
+  EXPECT_GE(covering.size(), 1 << 16);
+}
+
 bool IsCanonical(const vector<string>& input_str,
                  const S2RegionCoverer::Options& options) {
   vector<S2CellId> input;

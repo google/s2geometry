@@ -42,8 +42,9 @@ using TestQuery = S2ClosestPointQuery<int>;
 TEST(S2ClosestPointQuery, NoPoints) {
   TestIndex index;
   TestQuery query(&index);
-  query.FindClosestPoint(S2Point(1, 0, 0));
-  EXPECT_EQ(0, query.num_points());
+  S2ClosestPointQueryPointTarget target(S2Point(1, 0, 0));
+  const auto results = query.FindClosestPoints(&target);
+  EXPECT_EQ(0, results.size());
 }
 
 TEST(S2ClosestPointQuery, ManyDuplicatePoints) {
@@ -54,8 +55,9 @@ TEST(S2ClosestPointQuery, ManyDuplicatePoints) {
     index.Add(kTestPoint, i);
   }
   TestQuery query(&index);
-  query.FindClosestPoints(kTestPoint);
-  EXPECT_EQ(kNumPoints, query.num_points());
+  S2ClosestPointQueryPointTarget target(kTestPoint);
+  const auto results = query.FindClosestPoints(&target);
+  EXPECT_EQ(kNumPoints, results.size());
 }
 
 // An abstract class that adds points to an S2PointIndex for benchmarking.
@@ -131,75 +133,59 @@ static const S1Angle kRadius = S2Testing::KmToAngle(10);
 // distances (say, less than Pi/2) due to using S1ChordAngle.
 static double kChordAngleError = 1e-15;
 
+// TODO(user): Remove Result and use TestQuery::Result.
 using Result = pair<S1Angle, int>;
 
-class PointTarget {
- public:
-  explicit PointTarget(const S2Point& point) : point_(point) {}
-  S1Angle GetDistance(const S2Point& x) const {
-    return S1Angle(x, point_);
-  }
-  void FindClosestPoints(TestQuery* query) const {
-    query->FindClosestPoints(point_);
-  }
- private:
-  S2Point point_;
-};
-
-class EdgeTarget {
- public:
-  EdgeTarget(const S2Point& a, const S2Point& b) : a_(a), b_(b) {}
-  S1Angle GetDistance(const S2Point& x) const {
-    return S2::GetDistance(x, a_, b_);
-  }
-  void FindClosestPoints(TestQuery* query) const {
-    query->FindClosestPointsToEdge(a_, b_);
-  }
- private:
-  S2Point a_, b_;
-};
+static S1Angle GetDistance(TestQuery::Target* target,
+                           const S2Point& point) {
+  TestQuery::Distance distance = TestQuery::Distance::Infinity();
+  target->UpdateMinDistance(point, &distance);
+  return distance.ToAngle();
+}
 
 // Use "query" to find the closest point(s) to the given target, and extract
 // the query results into the given vector.  Also verify that the results
 // satisfy the search criteria.
-template <class Target>
-static void GetClosestPoints(const Target& target, TestQuery* query,
+static void GetClosestPoints(TestQuery::Target* target, TestQuery* query,
                              std::vector<Result>* results) {
-  target.FindClosestPoints(query);
-  EXPECT_LE(query->num_points(), query->max_points());
-  if (!query->region() && query->max_distance() == S1Angle::Infinity()) {
+  const auto query_results = query->FindClosestPoints(target);
+  EXPECT_LE(query_results.size(), query->options().max_points());
+  if (!query->options().region() &&
+      query->options().max_distance() == S1ChordAngle::Infinity()) {
     // We can predict exactly how many points should be returned.
-    EXPECT_EQ(std::min(query->max_points(), query->index().num_points()),
-              query->num_points());
+    EXPECT_EQ(std::min(query->options().max_points(),
+                       query->index().num_points()),
+              query_results.size());
   }
-  for (int i = 0; i < query->num_points(); ++i) {
+  for (const auto& result : query_results) {
     // Check that query->distance() is approximately equal to the
     // S1Angle(point, target) distance.  They may be slightly different
     // because query->distance() is computed using S1ChordAngle.  Note that
     // the error gets considerably larger (1e-7) as the angle approaches Pi.
-    EXPECT_NEAR(target.GetDistance(query->point(i)).radians(),
-                query->distance(i).radians(), kChordAngleError);
+    EXPECT_NEAR(GetDistance(target, result.point()).radians(),
+                result.distance().radians(), kChordAngleError);
     // Check that the point satisfies the region() condition.
-    if (query->region()) {
-      EXPECT_TRUE(query->region()->Contains(query->point(i)));
+    if (query->options().region()) {
+      EXPECT_TRUE(query->options().region()->Contains(result.point()));
     }
     // Check that it satisfies the max_distance() condition.
-    EXPECT_LE(query->distance(i), query->max_distance());
-    results->push_back(make_pair(query->distance(i), query->data(i)));
+    EXPECT_LE(result.distance(), query->options().max_distance());
+    results->push_back(make_pair(result.distance().ToAngle(), result.data()));
   }
 }
 
-template <class Target>
-static void TestFindClosestPoints(const Target& target, TestQuery *query) {
+static void TestFindClosestPoints(TestQuery::Target* target, TestQuery *query) {
   std::vector<Result> expected, actual;
   query->mutable_options()->set_use_brute_force(true);
   GetClosestPoints(target, query, &expected);
   query->mutable_options()->set_use_brute_force(false);
   GetClosestPoints(target, query, &actual);
-  EXPECT_TRUE(CheckDistanceResults(expected, actual, query->max_points(),
-                                   query->max_distance(), S1Angle::Zero()))
-      << "max_points=" << query->max_points()
-      << ", max_distance=" << query->max_distance();
+  EXPECT_TRUE(
+      CheckDistanceResults(expected, actual, query->options().max_points(),
+                           query->options().max_distance().ToAngle(),
+                           S1Angle::Zero()))
+      << "max_points=" << query->options().max_points()
+      << ", max_distance=" << query->options().max_distance();
 }
 
 // The running time of this test is proportional to
@@ -215,26 +201,30 @@ static void TestWithIndexFactory(const PointIndexFactory& factory,
     factory.AddPoints(query_cap, num_points, &index);
     for (int i_query = 0; i_query < num_queries; ++i_query) {
       // Use a new query each time to avoid resetting default parameters.
-      TestQuery query(&index);
-      query.set_max_points(1 + S2Testing::rnd.Uniform(100));
+      TestQuery::Options options;
+      options.set_max_points(1 + S2Testing::rnd.Uniform(100));
       if (S2Testing::rnd.OneIn(2)) {
-        query.set_max_distance(S2Testing::rnd.RandDouble() * kRadius);
+        options.set_max_distance(S2Testing::rnd.RandDouble() * kRadius);
       }
       S2LatLngRect rect = S2LatLngRect::FromCenterSize(
           S2LatLng(S2Testing::SamplePoint(query_cap)),
           S2LatLng(S2Testing::rnd.RandDouble() * kRadius,
                    S2Testing::rnd.RandDouble() * kRadius));
       if (S2Testing::rnd.OneIn(5)) {
-        query.set_region(&rect);
+        options.set_region(&rect);
       }
+
+      TestQuery query(&index, options);
       if (S2Testing::rnd.OneIn(2)) {
-        PointTarget target(S2Testing::SamplePoint(query_cap));
-        TestFindClosestPoints(target, &query);
+        S2ClosestPointQueryPointTarget target(
+            S2Testing::SamplePoint(query_cap));
+        TestFindClosestPoints(&target, &query);
       } else {
         S2Point a = S2Testing::SamplePoint(query_cap);
         S2Point b = S2Testing::SamplePoint(
             S2Cap(a, pow(1e-4, S2Testing::rnd.RandDouble()) * kRadius));
-        TestFindClosestPoints(EdgeTarget(a, b), &query);
+        S2ClosestPointQueryEdgeTarget target(a, b);
+        TestFindClosestPoints(&target, &query);
       }
     }
   }

@@ -441,9 +441,15 @@ class S2Point {
 %unignore S2RegionCoverer::set_max_level;
 %unignore S2RegionCoverer::set_min_level;
 
-// SWIG <3.0 does not understand constexpr (unsure of exact version).
+// TODO(user): Move these to another file.
+%define ABSL_DEPRECATED(msg)
+%enddef
+
+// SWIG <3.0 does not understand these C++11 keywords (unsure of exact version).
 #if SWIG_VERSION < 0x030000
 %define constexpr %enddef
+%define final %enddef
+%define override %enddef
 #endif
 
 %include "s2/r1interval.h"

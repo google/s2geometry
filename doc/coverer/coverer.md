@@ -12,7 +12,7 @@ with a 5 km radius cap. When you try to cover that cap with just one
 cell, you often end up with a large amount of extra space. Notice the
 large cell compared to the circle.
 
-![](kirkland_1.gif)\
+![](kirkland_1.gif)
 
 Same configuration, except we allow the use of 2 cells.
 
@@ -58,7 +58,7 @@ cap size of about 500 km and limit of 4 cells. The ratio of "area
 covered by the cells" to "area covered by the cap" is about 10, which is
 about the worst case value when you have at least 4 cells. (The ratio
 can be quite large, on the order of 10\^15, if you limit the covering to
-fewer than 4 cells.)\
+fewer than 4 cells.)
 
 ![](edge_4.gif)
 
@@ -135,3 +135,16 @@ date line.
 Same configuration, except we allow the use of 500 cells.
 
 ![](polar_500.gif)
+
+Finally, here are some examples of geographic coverings.  This is a covering of
+Hawaii using 25 cells.
+
+![](hawaii.gif)
+
+Here is a covering of Florida using 22 cells.
+
+![](florida1.gif)
+
+And Florida using 152 cells.
+
+![](florida2.gif)

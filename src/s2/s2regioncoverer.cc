@@ -439,14 +439,16 @@ void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
   if (options_.min_level() > 0 || options_.level_mod() > 1) {
     S2CellUnion::Denormalize(*covering, options_.min_level(),
                              options_.level_mod(), &result_);
-    *covering = result_;
+    *covering = std::move(result_);
   }
 
   // If there are too many cells and the covering is very large, use the
   // S2RegionCoverer to compute a new covering.  (This avoids possible O(n^2)
   // behavior of the simpler algorithm below.)
   int64 excess = covering->size() - options_.max_cells();
-  if (excess <= 0) return;
+  if (excess <= 0 || IsCanonical(*covering)) {
+    return;
+  }
   if (excess * covering->size() > 10000) {
     GetCovering(S2CellUnion(std::move(*covering)), covering);
   } else {
