@@ -257,6 +257,8 @@ class S2Point {
 %unignore S2CellId;
 %unignore S2CellId::S2CellId;
 %unignore S2CellId::~S2CellId;
+%unignore S2CellId::Begin;
+%unignore S2CellId::End;
 %unignore S2CellId::FromLatLng;
 %unignore S2CellId::FromPoint;
 %unignore S2CellId::FromToken;
