@@ -11,3 +11,6 @@ add_test(NAME pywraps2_test COMMAND
 	 "${PROJECT_SOURCE_DIR}/src/python/pywraps2_test.py")
 set_property(TEST pywraps2_test PROPERTY ENVIRONMENT
              "PYTHONPATH=$ENV{PYTHONPATH}:${PROJECT_BINARY_DIR}/python")
+install(TARGETS _pywraps2 DESTINATION share/python)
+install(FILES "${PROJECT_BINARY_DIR}/python/pywraps2.py"
+	DESTINATION share/python)

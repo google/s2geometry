@@ -454,17 +454,8 @@ using absl::ZERO_PAD_16;
 
 namespace abcl {
 
-using absl::AlphaNum;
-using absl::Hex;
 using absl::StrAppend;
 using absl::StrCat;
-
-using absl::ZERO_PAD_2;
-using absl::ZERO_PAD_4;
-using absl::ZERO_PAD_8;
-using absl::ZERO_PAD_9;
-using absl::ZERO_PAD_10;
-using absl::ZERO_PAD_16;
 
 }  // namespace abcl
 
