@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <iomanip>
 
 #include <glog/logging.h>
 
@@ -39,6 +40,7 @@
 using S2::internal::kPosToIJ;
 using S2::internal::kPosToOrientation;
 using std::min;
+using std::max;
 
 // Since S2Cells are copied by value, the following assertion is a reminder
 // not to add fields unnecessarily.  An S2Cell currently consists of 43 data
@@ -301,9 +303,10 @@ bool S2Cell::Decode(Decoder* const decoder) {
 }
 
 // Return the squared chord distance from point P to corner vertex (i,j).
-inline double S2Cell::VertexChordDist2(const S2Point& p, int i, int j) const {
+inline S1ChordAngle S2Cell::VertexChordDist(
+    const S2Point& p, int i, int j) const {
   S2Point vertex = S2Point(uv_[0][i], uv_[1][j], 1).Normalize();
-  return (p - vertex).Norm2();
+  return S1ChordAngle(p, vertex);
 }
 
 // Given a point P and either the lower or upper edge of the S2Cell (specified
@@ -393,11 +396,10 @@ S1ChordAngle S2Cell::GetDistanceInternal(const S2Point& target_xyz,
   // tests above, because (1) the edges don't meet at right angles and (2)
   // there are points on the far side of the sphere that are both above *and*
   // below the cell, etc.
-  double chord_dist2 =  min(min(VertexChordDist2(target, 0, 0),
-                                VertexChordDist2(target, 1, 0)),
-                            min(VertexChordDist2(target, 0, 1),
-                                VertexChordDist2(target, 1, 1)));
-  return S1ChordAngle::FromLength2(chord_dist2);
+  return min(min(VertexChordDist(target, 0, 0),
+                 VertexChordDist(target, 1, 0)),
+             min(VertexChordDist(target, 0, 1),
+                 VertexChordDist(target, 1, 1)));
 }
 
 S1ChordAngle S2Cell::GetDistance(const S2Point& target) const {
@@ -406,6 +408,24 @@ S1ChordAngle S2Cell::GetDistance(const S2Point& target) const {
 
 S1ChordAngle S2Cell::GetBoundaryDistance(const S2Point& target) const {
   return GetDistanceInternal(target, false /*to_interior*/);
+}
+
+S1ChordAngle S2Cell::GetMaxDistance(const S2Point& target) const {
+  // First check the 4 cell vertices.  If all are within the hemisphere
+  // centered around target, the max distance will be to one of these vertices.
+  S2Point target_uvw = S2::FaceXYZtoUVW(face_, target);
+  S1ChordAngle max_dist = max(max(VertexChordDist(target_uvw, 0, 0),
+                                         VertexChordDist(target_uvw, 1, 0)),
+                                     max(VertexChordDist(target_uvw, 0, 1),
+                                         VertexChordDist(target_uvw, 1, 1)));
+
+  if (max_dist <= S1ChordAngle::Right()) {
+    return max_dist;
+  }
+
+  // Otherwise, find the minimum distance d_min to the antipodal point and the
+  // maximum distance will be Pi - d_min.
+  return S1ChordAngle::Straight() - GetDistance(-target);
 }
 
 S1ChordAngle S2Cell::GetDistance(const S2Point& a, const S2Point& b) const {
@@ -447,6 +467,18 @@ S1ChordAngle S2Cell::GetDistance(const S2Point& a, const S2Point& b) const {
     S2::UpdateMinDistance(v[i], a, b, &min_dist);
   }
   return min_dist;
+}
+
+S1ChordAngle S2Cell::GetMaxDistance(const S2Point& a, const S2Point& b) const {
+  // If the maximum distance from both endpoints to the cell is less than Pi/2
+  // then the maximum distance from the edge to the cell is the maximum of the
+  // two endpoint distances.
+  S1ChordAngle max_dist = max(GetMaxDistance(a), GetMaxDistance(b));
+  if (max_dist <= S1ChordAngle::Right()) {
+    return max_dist;
+  }
+
+  return S1ChordAngle::Straight() - GetDistance(-a, -b);
 }
 
 S1ChordAngle S2Cell::GetDistance(const S2Cell& target) const {

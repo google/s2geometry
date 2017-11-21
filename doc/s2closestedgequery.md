@@ -1,3 +1,5 @@
+[TOC]
+
 # S2ClosestEdgeQuery
 
 ## Overview

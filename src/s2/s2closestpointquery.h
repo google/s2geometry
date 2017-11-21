@@ -207,7 +207,7 @@ class S2ClosestPointQuery {
   // Each "Result" object represents a closest point.  Here are its main
   // methods (see S2ClosestPointQueryBase::Result for details):
   //
-  //   // The istance from the target to this point.
+  //   // The distance from the target to this point.
   //   S1ChordAngle distance() const;
   //
   //   // The point itself.

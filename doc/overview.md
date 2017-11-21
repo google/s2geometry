@@ -14,7 +14,7 @@ notation for the unit sphere, *S²*.)
 
 Traditional cartography is based on *map projections*, which are simply
 functions that map points on the Earth's surface to points on a planar
-map.  Map projections create distortions, due to the fact that the shape
+map.  Map projections create distortions due to the fact that the shape
 of the Earth is not very close to the shape of a plane.  For example,
 the well-known Mercator projection is discontinuous along the 180 degree
 meridian, has large scale distortions at high latitudes, and cannot
@@ -119,9 +119,9 @@ The S2 library provides the following:
 *   A collection of efficient yet exact mathematical predicates for
     testing relationships among geometric objects.
 
-*   Low-level support for spatial indexing, including the ability to
-    approximate regions as collections of discrete "S2 cells".  This
-    concept makes it easy to build large distributed spatial indexes.
+*   Support for spatial indexing, including the ability to approximate regions
+    as collections of discrete "S2 cells".  This feature makes it easy to
+    build large distributed spatial indexes.
 
 On the other hand, the following are outside the scope of S2:
 
@@ -286,6 +286,6 @@ datasets use geodetic coordinates exclusively.)
 ## Authors
 
 The S2 library was written primarily by Eric Veach.  Other significant
-contributors include Jesse Rosenstock, Eric Engle (Java version lead),
-Robert Snedegar (Go version lead), and Julien Basch.
+contributors include Jesse Rosenstock, Eric Engle (Java port lead), Robert
+Snedegar (Go port lead), and Julien Basch.
 

@@ -37,6 +37,7 @@
 #include "s2/s1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2crossingedgequery.h"
+#include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlngrect.h"
@@ -518,6 +519,19 @@ static S1ChordAngle GetDistanceToPointBruteForce(const S2Cell& cell,
   return min_distance;
 }
 
+static S1ChordAngle GetMaxDistanceToPointBruteForce(const S2Cell& cell,
+                                                    const S2Point& target) {
+  if (cell.Contains(-target)) {
+    return S1ChordAngle::Straight();
+  }
+  S1ChordAngle max_distance = S1ChordAngle::Negative();
+  for (int i = 0; i < 4; ++i) {
+    S2::UpdateMaxDistance(target, cell.GetVertex(i),
+                                  cell.GetVertex(i + 1), &max_distance);
+  }
+  return max_distance;
+}
+
 TEST(S2Cell, GetDistanceToPoint) {
   S2Testing::rnd.Reset(FLAGS_s2_random_seed);
   for (int iter = 0; iter < 1000; ++iter) {
@@ -528,19 +542,27 @@ TEST(S2Cell, GetDistanceToPoint) {
         GetDistanceToPointBruteForce(cell, target).ToAngle();
     S1Angle expected_to_interior =
         cell.Contains(target) ? S1Angle::Zero() : expected_to_boundary;
+    S1Angle expected_max =
+        GetMaxDistanceToPointBruteForce(cell, target).ToAngle();
     S1Angle actual_to_boundary = cell.GetBoundaryDistance(target).ToAngle();
     S1Angle actual_to_interior = cell.GetDistance(target).ToAngle();
+    S1Angle actual_max = cell.GetMaxDistance(target).ToAngle();
     // The error has a peak near Pi/2 for edge distance, and another peak near
     // Pi for vertex distance.
     EXPECT_NEAR(expected_to_boundary.radians(),
                 actual_to_boundary.radians(), 1e-12);
     EXPECT_NEAR(expected_to_interior.radians(),
                 actual_to_interior.radians(), 1e-12);
+    EXPECT_NEAR(expected_max.radians(),
+                actual_max.radians(), 1e-12);
     if (expected_to_boundary.radians() <= M_PI / 3) {
       EXPECT_NEAR(expected_to_boundary.radians(),
                   actual_to_boundary.radians(), 1e-15);
       EXPECT_NEAR(expected_to_interior.radians(),
                   actual_to_interior.radians(), 1e-15);
+    }
+    if (expected_max.radians() <= M_PI / 3) {
+      EXPECT_NEAR(expected_max.radians(), actual_max.radians(), 1e-15);
     }
   }
 }
@@ -559,6 +581,12 @@ static void ChooseEdgeNearCell(const S2Cell& cell, S2Point* a, S2Point* b) {
   double max_length = min(100 * pow(1e-4, S2Testing::rnd.RandDouble()) *
                           cap.GetRadius().radians(), M_PI_2);
   *b = S2Testing::SamplePoint(S2Cap(*a, S1Angle::Radians(max_length)));
+
+  if (S2Testing::rnd.OneIn(20)) {
+    // Occasionally replace edge with antipodal edge.
+    *a = -*a;
+    *b = -*b;
+  }
 }
 
 static S1ChordAngle GetDistanceToEdgeBruteForce(
@@ -566,24 +594,42 @@ static S1ChordAngle GetDistanceToEdgeBruteForce(
   if (cell.Contains(a) || cell.Contains(b)) {
     return S1ChordAngle::Zero();
   }
-  S2Loop loop(cell);
-  MutableS2ShapeIndex index;
-  index.Add(make_unique<S2Loop::Shape>(&loop));
-  S2CrossingEdgeQuery query(&index);
-  vector<int> edges;
-  if (query.GetCrossings(a, b, index.shape(0), s2shapeutil::CrossingType::ALL,
-                         &edges)) {
-    return S1ChordAngle::Zero();
-  }
+
   S1ChordAngle min_dist = S1ChordAngle::Infinity();
   for (int i = 0; i < 4; ++i) {
     S2Point v0 = cell.GetVertex(i);
     S2Point v1 = cell.GetVertex(i + 1);
+    // If the edge crosses through the cell, max distance is 0.
+    if (S2::CrossingSign(a, b, v0, v1) >= 0) {
+      return S1ChordAngle::Zero();
+    }
     S2::UpdateMinDistance(a, v0, v1, &min_dist);
     S2::UpdateMinDistance(b, v0, v1, &min_dist);
     S2::UpdateMinDistance(v0, a, b, &min_dist);
   }
   return min_dist;
+}
+
+static S1ChordAngle GetMaxDistanceToEdgeBruteForce(
+    const S2Cell& cell, const S2Point& a, const S2Point& b) {
+  // If any antipodal endpoint is within the cell, the max distance is Pi.
+  if (cell.Contains(-a) || cell.Contains(-b)) {
+    return S1ChordAngle::Straight();
+  }
+
+  S1ChordAngle max_dist = S1ChordAngle::Negative();
+  for (int i = 0; i < 4; ++i) {
+    S2Point v0 = cell.GetVertex(i);
+    S2Point v1 = cell.GetVertex(i + 1);
+    // If the antipodal edge crosses through the cell, max distance is Pi.
+    if (S2::CrossingSign(-a, -b, v0, v1) >= 0) {
+      return S1ChordAngle::Straight();
+    }
+    S2::UpdateMaxDistance(a, v0, v1, &max_dist);
+    S2::UpdateMaxDistance(b, v0, v1, &max_dist);
+    S2::UpdateMaxDistance(v0, a, b, &max_dist);
+  }
+  return max_dist;
 }
 
 TEST(S2Cell, GetDistanceToEdge) {
@@ -593,15 +639,41 @@ TEST(S2Cell, GetDistanceToEdge) {
     S2Cell cell(S2Testing::GetRandomCellId());
     S2Point a, b;
     ChooseEdgeNearCell(cell, &a, &b);
-    S1Angle expected = GetDistanceToEdgeBruteForce(cell, a, b).ToAngle();
-    S1Angle actual = cell.GetDistance(a, b).ToAngle();
+    S1Angle expected_min = GetDistanceToEdgeBruteForce(cell, a, b).ToAngle();
+    S1Angle expected_max =
+        GetMaxDistanceToEdgeBruteForce(cell, a, b).ToAngle();
+    S1Angle actual_min = cell.GetDistance(a, b).ToAngle();
+    S1Angle actual_max = cell.GetMaxDistance(a, b).ToAngle();
     // The error has a peak near Pi/2 for edge distance, and another peak near
     // Pi for vertex distance.
-    EXPECT_NEAR(expected.radians(), actual.radians(), 1e-12);
-    if (expected.radians() <= M_PI / 3) {
-      EXPECT_NEAR(expected.radians(), actual.radians(), 1e-15);
+    if (expected_min.radians() > M_PI/2) {
+      // Max error for S1ChordAngle as it approaches Pi is about 2e-8.
+      EXPECT_NEAR(expected_min.radians(), actual_min.radians(), 2e-8);
+    } else if (expected_min.radians() <= M_PI / 3) {
+      EXPECT_NEAR(expected_min.radians(), actual_min.radians(), 1e-15);
+    } else {
+      EXPECT_NEAR(expected_min.radians(), actual_min.radians(), 1e-12);
+    }
+
+    EXPECT_NEAR(expected_max.radians(), actual_max.radians(), 1e-12);
+    if (expected_max.radians() <= M_PI / 3) {
+      EXPECT_NEAR(expected_max.radians(), actual_max.radians(), 1e-15);
     }
   }
+}
+
+TEST(S2Cell, GetMaxDistanceToEdge) {
+  // Test an edge for which its antipode crosses the cell. Validates both the
+  // standard and brute force implementations for this case.
+  S2Cell cell = S2Cell::FromFacePosLevel(0, 0, 20);
+  S2Point a = -S2::Interpolate(2.0, cell.GetCenter(), cell.GetVertex(0));
+  S2Point b = -S2::Interpolate(2.0, cell.GetCenter(), cell.GetVertex(2));
+
+  S1ChordAngle actual = cell.GetMaxDistance(a, b);
+  S1ChordAngle expected = GetMaxDistanceToEdgeBruteForce(cell, a, b);
+
+  EXPECT_NEAR(expected.radians(), S1ChordAngle::Straight().radians(), 1e-15);
+  EXPECT_NEAR(actual.radians(), S1ChordAngle::Straight().radians(), 1e-15);
 }
 
 TEST(S2Cell, EncodeDecode) {

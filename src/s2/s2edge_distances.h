@@ -52,7 +52,7 @@ S1Angle GetDistance(const S2Point& x, const S2Point& a, const S2Point& b);
 bool IsDistanceLess(const S2Point& x, const S2Point& a, const S2Point& b,
                     S1ChordAngle limit);
 
-// If the distance from X to the edge AB is less then "min_dist", this
+// If the distance from X to the edge AB is less than "min_dist", this
 // method updates "min_dist" and returns true.  Otherwise it returns false.
 // The case A == B is handled correctly.
 //
@@ -63,6 +63,12 @@ bool IsDistanceLess(const S2Point& x, const S2Point& a, const S2Point& b,
 // obviously larger than the current minimum.
 bool UpdateMinDistance(const S2Point& x, const S2Point& a, const S2Point& b,
                        S1ChordAngle* min_dist);
+
+// If the distance from X to the edge AB is greater than "max_dist", this
+// method updates "max_dist" and returns true.  Otherwise it returns false.
+// The case A == B is handled correctly.
+bool UpdateMaxDistance(const S2Point& x, const S2Point& a, const S2Point& b,
+                       S1ChordAngle* max_dist);
 
 // Returns the maximum error in the result of UpdateMinDistance (and
 // associated functions such as UpdateMinInteriorDistance, IsDistanceLess,

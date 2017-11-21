@@ -30,29 +30,6 @@
 
 using std::unique_ptr;
 
-// Given a point X and an edge AB, check that the distance from X to AB is
-// "distance_radians" and the closest point on AB is "expected_closest".
-void CheckDistance(S2Point x, S2Point a, S2Point b,
-                   double distance_radians, S2Point expected_closest) {
-  x = x.Normalize();
-  a = a.Normalize();
-  b = b.Normalize();
-  expected_closest = expected_closest.Normalize();
-  EXPECT_NEAR(distance_radians, S2::GetDistance(x, a, b).radians(), 1e-15);
-  S2Point closest = S2::Project(x, a, b);
-  if (expected_closest == S2Point(0, 0, 0)) {
-    // This special value says that the result should be A or B.
-    EXPECT_TRUE(closest == a || closest == b);
-  } else {
-    EXPECT_TRUE(S2::ApproxEquals(closest, expected_closest));
-  }
-  S1ChordAngle min_distance = S1ChordAngle::Zero();
-  EXPECT_FALSE(S2::UpdateMinDistance(x, a, b, &min_distance));
-  min_distance = S1ChordAngle::Infinity();
-  EXPECT_TRUE(S2::UpdateMinDistance(x, a, b, &min_distance));
-  EXPECT_NEAR(distance_radians, min_distance.ToAngle().radians(), 1e-15);
-}
-
 // Checks that the error returned by S2::GetUpdateMinDistanceMaxError() for
 // the distance "input" (measured in radians) corresponds to a distance error
 // of less than "max_error" (measured in radians).
@@ -110,6 +87,29 @@ TEST(S2, GetUpdateMinInteriorDistanceMaxError) {
   }
 }
 
+// Given a point X and an edge AB, check that the distance from X to AB is
+// "distance_radians" and the closest point on AB is "expected_closest".
+void CheckDistance(S2Point x, S2Point a, S2Point b,
+                   double distance_radians, S2Point expected_closest) {
+  x = x.Normalize();
+  a = a.Normalize();
+  b = b.Normalize();
+  expected_closest = expected_closest.Normalize();
+  EXPECT_NEAR(distance_radians, S2::GetDistance(x, a, b).radians(), 1e-15);
+  S2Point closest = S2::Project(x, a, b);
+  if (expected_closest == S2Point(0, 0, 0)) {
+    // This special value says that the result should be A or B.
+    EXPECT_TRUE(closest == a || closest == b);
+  } else {
+    EXPECT_TRUE(S2::ApproxEquals(closest, expected_closest));
+  }
+  S1ChordAngle min_distance = S1ChordAngle::Zero();
+  EXPECT_FALSE(S2::UpdateMinDistance(x, a, b, &min_distance));
+  min_distance = S1ChordAngle::Infinity();
+  EXPECT_TRUE(S2::UpdateMinDistance(x, a, b, &min_distance));
+  EXPECT_NEAR(distance_radians, min_distance.ToAngle().radians(), 1e-15);
+}
+
 TEST(S2, Distance) {
   CheckDistance(S2Point(1, 0, 0), S2Point(1, 0, 0), S2Point(0, 1, 0),
                 0, S2Point(1, 0, 0));
@@ -145,6 +145,51 @@ TEST(S2, Distance) {
                 M_PI_2, S2Point(1, 1, 0));
   CheckDistance(S2Point(-1, 0, 0), S2Point(1, 0, 0), S2Point(1, 0, 0),
                 M_PI, S2Point(1, 0, 0));
+}
+
+void CheckMaxDistance(S2Point x, S2Point a, S2Point b,
+                      double distance_radians) {
+  x = x.Normalize();
+  a = a.Normalize();
+  b = b.Normalize();
+
+  S1ChordAngle max_distance = S1ChordAngle::Straight();
+  EXPECT_FALSE(S2::UpdateMaxDistance(x, a, b, &max_distance));
+  max_distance = S1ChordAngle::Negative();
+  EXPECT_TRUE(S2::UpdateMaxDistance(x, a, b, &max_distance));
+
+  EXPECT_NEAR(distance_radians, max_distance.radians(), 1e-15);
+}
+
+TEST(S2, MaxDistance) {
+  CheckMaxDistance(S2Point(1, 0, 1), S2Point(1, 0, 0), S2Point(0, 1, 0),
+                   M_PI_2);
+  CheckMaxDistance(S2Point(1, 0, -1), S2Point(1, 0, 0), S2Point(0, 1, 0),
+                   M_PI_2);
+  CheckMaxDistance(S2Point(0, 1, 1), S2Point(1, 0, 0), S2Point(0, 1, 0),
+                   M_PI_2);
+  CheckMaxDistance(S2Point(0, 1, -1), S2Point(1, 0, 0), S2Point(0, 1, 0),
+                   M_PI_2);
+
+  CheckMaxDistance(S2Point(1, 1, 1), S2Point(1, 0, 0), S2Point(0, 1, 0),
+                   asin(sqrt(2./3)));
+  CheckMaxDistance(S2Point(1, 1, -1), S2Point(1, 0, 0), S2Point(0, 1, 0),
+                   asin(sqrt(2./3)));
+
+  CheckMaxDistance(S2Point(1, 0, 0), S2Point(1, 1, 0), S2Point(1, -1, 0),
+                   M_PI_4);
+  CheckMaxDistance(S2Point(0, 1, 0), S2Point(1, 1, 0), S2Point(-1, 1, 0),
+                   M_PI_4);
+  CheckMaxDistance(S2Point(0, 0, 1), S2Point(0, 1, 1), S2Point(0, -1, 1),
+                   M_PI_4);
+
+  CheckMaxDistance(S2Point(0, 0, 1), S2Point(1, 0, 0), S2Point(1, 0, -1),
+                   3 * M_PI_4);
+  CheckMaxDistance(S2Point(0, 0, 1), S2Point(1, 0, 0), S2Point(1, 1, -M_SQRT2),
+                   3 * M_PI_4);
+
+  CheckMaxDistance(S2Point(0, 0, 1), S2Point(0, 0, -1), S2Point(0, 0, -1),
+                   M_PI);
 }
 
 void CheckInterpolate(double t, S2Point a, S2Point b, S2Point expected) {

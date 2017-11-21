@@ -2,192 +2,293 @@
 
 # S2 Cell Hierarchy
 
-The library provides methods for subdividing the sphere into a hierarchical
-collection of "cells". The cells have a space-filling curve structure that makes
-them useful for spatial indexing. There are methods for approximating arbitrary
-regions as a collection of cells.
+The S2 library defines a framework for decomposing the unit sphere into a
+hierarchy of *cells*.  Each cell is a quadrilateral bounded by four geodesics.
+The top level of the hierarchy is obtained by projecting the six faces of a
+cube onto the unit sphere, and lower levels are obtained by subdividing each
+cell into four children recursively.  For example, the following image shows
+two of the six *face cells*, one of which has been subdivided several times:
 
-The S2 cell structure is defined as follows. There are six top-level *face
-cells*, obtained by projecting the six faces of a cube -- (face, u, v)
-coordinates below -- onto the unit sphere -- (x, y, z) coordinates below. We
-call this cube the uv-cube.
+![](s2hierarchy.gif)
 
-Each face is then subdivided recursively into four cells in a quadtree-like
-fashion. On the uv-cube, a cell is a rectangle whose edges are aligned with the
-sides of its face. On the sphere, it is a spherical quadrilateral bounded by
-four geodesics (great circle segments).
+Notice that the cell edges appear to be curved; this is because they are
+*spherical geodesics*, i.e., straight lines on the sphere (similar to the
+routes that airplanes fly).
 
-There are a total of 30 levels of subdivision defined (i.e. 6 * 4<sup>30</sup>
-leaf cells), which gives a resolution of about 1cm everywhere on a sphere the
-size of the earth. Details on the cell areas at each level appear on the [S2
-Cell Statistics page](cell_statistics.md). Each cell is uniquely identified by a
-64-bit *cell id*.
+Each cell in the hierarchy has a *level*, defined as the number of times the
+cell has been subdivided (starting with a face cell).  Cells levels range from
+0 to 30.  The smallest cells at level 30 are called *leaf cells*; there are
+6 * 4<sup>30</sup> of them in total, each about 1cm across on the Earth's
+surface.  (Details on the cell sizes at each level can be found on the [S2
+Cell Statistics page](s2cell_statistics.md).)
 
-## Coordinate Systems
+The S2 hierarchy is useful for spatial indexing and for approximating regions
+as a collection of cells.  Cells can be used to represent both points and
+regions: points are generally represented as leaf cells, while regions are
+represented as collections of cells at any level(s).  For example, here
+is an approximation of Hawaii as a collection of 22 cells:
 
---------------------------------------------------------------------------------
+![](coverer/hawaii.gif)
 
-In order for cells to be roughly the same size on the sphere, they are not the
-same size on the uv-cube. We introduce another cube -- the st-cube. On this cube
-the cells are perfectly square and divided through their center. The st-cube is
-projected on the uv-cube so that cells at the periphery of an st-face are larger
-than cells at their center. In a 2-d projection, it looks like this:
+## S2CellId Numbering
 
-<a href="xyz_to_uv_to_st.png">
-<img src="xyz_to_uv_to_st.png" alt="xyz_to_uv_to_st.png"  width="320" height="240"  />
-</a>
+Each cell is uniquely identified by a 64-bit [`S2CellId`](#s2cellid).
+The S2 cells are numbered in a special way in order to maximize
+[locality of
+reference](https://en.wikipedia.org/wiki/Locality_of_reference) when
+they are used for spatial indexing (compared to other methods of
+numbering the cells).
 
-There are a few more coordinate systems worth introducing:
+In particular, the S2 cells are ordered sequentially along a
+[space-filling
+curve](https://en.wikipedia.org/wiki/Space-filling_curve) (a type of
+[fractal](https://en.wikipedia.org/wiki/Fractal)).  The particular
+curve used by S2 is called the *S2 space-filling curve*, and consists
+of six Hilbert curves linked together to form a single continuous loop
+over the entire sphere.  Here is an illustration of the S2 curve after
+5 levels of subdivision:
 
-*   (id)<br> Cell id.  A 64-bit encoding of a face and a
-    Hilbert curve position on that face, as discussed below.  The Hilbert
-    curve position implicitly encodes both the position of a cell and its
-    subdivision level.
+[![](s2curve-small.gif)](s2curve-large.gif)
 
-*   (face, i, j)<br> Leaf-cell coordinates.  "i" and "j" are integers in
-    the range [0,(2^30)-1] that identify a particular leaf cell on a
-    given face.  The (i, j) coordinate system is right-handed on every
-    face, and the faces are oriented such that Hilbert curves connect
+The yellow curve is an approximation of the S2 space-filling curve.  It
+is a single continuous loop with a fractal structure such that it
+passes near every point on the sphere.  (If you were to cut along the
+yellow line, it would separate the sphere into two equal halves.)  The
+green lines show the boundaries of the S2 cells at levels 0, 1, 2, 3,
+4, and 5, drawn as lines of different widths.  (You can click on the
+image to see a larger version.)
 
-*   (face, s, t)<br> Cell-space coordinates.  "s" and "t" are real numbers
-    in the range [0,1] that identify a point on the given face.  For
-    example, the point (s, t) = (0.5, 0.5) corresponds to the center of the
-    top-level face cell.  This point is also a vertex of exactly four
-    cells at each subdivision level greater than zero.
+The cells at level 5 are numbered in increasing order along this curve.
+This leads to the property that *if the `S2CellIds` of two cells are
+close together, then the cells are also close together*.  This property
+significantly improves locality of reference when the cells are used
+for indexing.
 
-*   (face, si, ti)<br> Discrete cell-space coordinates.  These are
-    obtained by multiplying "s" and "t" by 2^31 and rounding to the
-    nearest integer.  Discrete coordinates lie in the range
-    [0,2^31].  This coordinate system can represent the edge and
-    center positions of all cells with no loss of precision (including
-    non-leaf cells).
+The remainder of this section gives further details about how the S2 cell
+hierarchy is organized.  (You don't need to understand this background
+information in order to use the library -- you can [skip forward](#s2cellid) if
+desired.)
 
-*   (face, u, v)<br> Cube-space coordinates.  To make the cells at each
-    level more uniform in size after they are projected onto the sphere,
-    we apply a nonlinear transformation of the form u=f(s), v=f(t), where
-    f(s) = (4 s^2 - 1) / 3 if s >= 1/2 and (1 - 4 (1 - s)^2) / 3 if s < 1/2.
-    The (u, v) coordinates after this transformation give the actual
-    coordinates of a point on the cube face (modulo some 90 degree
-    rotations) before it is projected onto the unit sphere.
+### Hilbert Curve
 
-*   (x, y, z)<br> Direction vector (`S2Point`).  Direction vectors are not
-    necessarily unit length, and are often chosen to be points on the
-    biunit cube [-1,+1]x[-1,+1]x[-1,+1].  They can be be normalized
-    to obtain the corresponding point on the unit sphere.
+The S2 curve is based on the Hilbert curve.  The Hilbert curve is a function
+from the unit interval [0,1] to the unit square [0,1]&times;[0,1] that is
+*space-filling*, meaning that it visits every point in the unit square.  The
+Hilbert curve is continuous but not differentiable, and can be considered to
+have infinite length.
 
-*   (lat, lng)<br> Latitude and longitude (`S2LatLng`).  Latitudes must be
-    between -90 and 90 degrees inclusive, and longitudes must be between
-    -180 and 180 degrees inclusive.
+It is most easily defined as the limit of an iterative process that builds a
+more detailed approximation of the curve at each step.  Here is a part of the
+first page of [Hilbert's 1891 paper defining his
+curve](http://www.digizeitschriften.de/dms/img/?PPN=PPN235181684_0038&amp;DMDID=dmdlog40)
+(cf. [Mark McClure](https://math.stackexchange.com/users/21361/mark-mcclure)):
 
-Note that the (i, j), (s, t), (si, ti), and (u, v) coordinate systems are
-right-handed on all six faces.
+![Figures from Hilbert's 1891 paper](hilbert-figure.gif)
 
-Conversion between coordinate systems can lead to precision problems.
+As you can see, the first iteration divides the unit square into 4
+smaller squares.  The curve visits those squares in a particular order
+that looks like an inverted "U" (figure 1).  The second iteration takes
+each square from the first iteration and divides it into 4 smaller
+subsquares.  The curve again visits those subsquares in a U-shaped
+order, except that some of the U-shapes have been rotated and/or
+reflected in order to link the curves together seamlessly (figure 2).
+(The rotation/reflection rules are simple but we will not describe them
+here.)  Figure 3 shows the result after three iterations.
 
-## Cell Ids
+How does this process define a mapping from the unit interval to the unit
+square?  Let
 
-Cell ids are a convenient representation for both points and regions on the unit
-sphere. Points are generally represented as leaf cells, while regions are
-represented as collections of cells at any level.
+> H : [0,1] &rarr; [0,1] &times; [0,1]
 
-An `S2CellId` is a 64-bit unsigned integer that uniquely identifies a cell in
-the S2 cell decomposition. It has the following format:
+be the Hilbert curve, and suppose that we want to evaluate H(s) for
+the real number s = 0.5.  We start by writing out the binary expansion of
+s = 0.5:
 
-```
-   id = [face][face_pos]
-```
+> s = 0.100000000...
 
-where "face" is a 3-bit number (range 0..5) encoding the cube face, and
-"face_pos" is a 61-bit number encoding the position of the center of this cell
-along a space-filling curve over this face (see below).
+To find the corresponding point H(s) on the Hilbert curve, we group the
+digits of "s" into pairs:
 
-In particular, the id of a cell at level "k" consists of a 3-bit face number,
-followed by k pairs of bits that recursively select one of the four children of
-each cell. The remainder consists of a single 1-bit followed by zeros (this is
-the Hilbert curve position corresponding to the center of the cell as discussed
-above). For example:
+> [10, 00, 00, 00, ...]
 
-    01010000...0   The top-level cell of face 2.  (The Hilbert curve
-                   position 0.10* corresponds to the center of the cell.)
-    00110100...0   Subcell 10 of the top-level cell of face 1.
+Each pair of binary digits corresponds to a decimal number between 0 and 3,
+and indicates which of the 4 subsquares to choose at each step of the
+construction process.  Note that unlike Hilbert's paper, we number the
+subsquares of each square from 0 to 3 (in the order they are visited by the
+curve) rather than 1 to 4.  For example, in the case of s = 0.5, the first
+group of digits "10" corresponds to the decimal number 2, which means that we
+choose subsquare 2 during the first iteration (i.e., square 3 in Hilbert's
+figure 1).  The next group of digits is "00", meaning that we choose subsquare
+0 during the second iteration (corresponding to square 9 in Hilbert's figure
+2).  Continuing in this way, for s = 0.5 the result looks something like this:
 
-Cell ids have the following convenient properties:
+![](hilbert-cell-center.gif)
 
-*   The level of a cell id can be determined by looking at the position of its
-    lowest-numbered 1-bit. For a cell at level k, the lowest-numbered 1-bit is
-    at position 2*(kMaxLevel-k).
+In the limit, this process converges to a point that is exactly at the
+center of the square (the green dot in the figure).  This implies that
 
-*   The id of a parent cell is at the midpoint of the range of ids spanned by
-    its children (or by its descendants at any level).
+> H(0.5) = (0.5, 0.5)
 
-## Cell Id to ST Coordinates
+i.e., the midpoint of the Hilbert curve is at the exact center of unit
+square.[^cell-center-parameters] The value of H(s) for any real number "s" can
+be evaluated using a similar process.
 
-Each cell is a spherical quadrilateral bounded by four geodesics (great circle
-segments). The level 0 subdivision (the top level) consists of six face cells.
-The children of each face cell are numbered according to their traversal order
-along a Hilbert curve.
+### S2 Space-Filling Curve
 
-The canonical Hilbert curve on a cell visits its children in the following (i,j)
-order: (0,0), (0,1), (1,1), (1,0). Graphically, the traversal order looks like
-an inverted U:
+The S2 space-filling curve is a function
 
-             (0,1) ^----> (1,1)
-                   |    |
-                   |    |
-             (0,0) x    v (1,0)
+> S : [0,6] &rarr; S²
 
-The traversal order in each subcell is obtained by applying the following
-transformations to the ordering in its parent cell:
+i.e., from the interval [0,6] to the unit sphere.  It is constructed by
+mapping 6 copies of the Hilbert curve to the 6 faces of a unit cube,
+reflecting and rotating the curves as necessary so that that they link
+together seamlessly into a continuous loop.  The cube is then mapped to
+the unit sphere using a transformation that minimizes distortion.
 
-          (0,0):   (i,j) -> (j,i)       [axes swapped]
-          (0,1):   (i,j) -> (i,j)
-          (1,1):   (i,j) -> (i,j)
-          (1,0):   (i,j) -> (1-j,1-i)   [axes swapped and inverted]
+We can view the S2 curve parameter "s" as having the format:
 
-For example, the traversal order in the four subcells of cell (0,0) is (0,0),
-(1,0), (1,1), (0,1) (the i- and j-axes have been swapped). After one level of
-expansion according to these rules, the curve looks like this:
+> s = [face].[face_pos]
 
-              ^-->  ^-->
-              |  |  |  |
-              ^  v-->  v (*)
-              |        |
-              <--^  <--v
-                 |  |
-              x-->  v-->
+where "face" is a number in the range [0..5] that selects one of the
+six cube faces, and "face_pos" is the Hilbert curve parameter on that
+face.  This mapping is defined such that the end of the curve on face i
+exactly matches the start of the curve on face i+1 (including the
+transition from face 5 to face 0).
 
-Each leaf cell can be assigned a label according to its position in the
-traversal order. For example, the traversal above has 16 positions ranging from
-0000 to 1111 in binary notation. The cell marked (*) has the label 1011. Notice
-that we can obtain the traversal position of the parent of any cell (within its
-own traversal order) by stripping the last two bits from its label.
+Here is an illustration (not fully accurate, but conceptually correct)
+of the S2 curve on the unit cube (before projecting it to the sphere).
+The cube has been unfolded and flattened, and shows the first 4 levels
+of the S2 curve subdivision:
 
-We typically think of the Hilbert curve position as a real number between 0 and
-1, by prefixing "0." to the binary number above. For example, position 0.1000 in
-binary (0.5 in decimal) is at the beginning of curve in subcell 10 of the root
-cell, which turns out to be the middle of the top-level face. Note that it is
-true in general that the Hilbert curve position at the middle of any cell is the
-average of the positions at the points where the curve enters and exits that
-cell.
+![](earthcube/s2cell_global.jpg)
 
-A particular cell can be uniquely identified by the Hilbert curve position at
-the center of that cell. Note that no two cells have the same center position.
-For example, the Hilbert curve position at the center of the top-level face cell
-is 0.10* in binary notation (where 0* denotes infinitely many zeroes). The
-position at the center of subcell (0,0) of the top-level face cell is 0.0010*.
-Note that a Hilbert curve position specifies both the position **and** the
-subdivision level of a particular cell.
+([Larger images of the individual faces can be found
+here.](earthcube/earthcube.md)) Note that the traversal order of the
+odd-numbered faces is the mirror image of the even-numbered faces.
 
-[Images of the Earth projected onto S2 cells can be found
-here.](earthcube/earthcube.md)
+When the cube is mapped onto the unit sphere, the result is the curve
+shown earlier:
 
-## `S2CellId` Class
+![](s2curve-tiny.gif)
 
-The `S2CellId` class is a thin wrapper over a 64-bit cell id that provides
-methods for navigating the cell hierarchy (finding parents, children,
-containment tests, etc). Since leaf cells are often used to represent points on
-the unit sphere, the `S2CellId` class also provides methods for converting
-directly to and from an `S2Point`. Here are its methods:
+### S2CellId Numbering (again)
+
+We now return to the question of how the S2 cells are numbered.  Recall
+that there are 31 levels of subdivision, ranging from 0 to 30.  It
+turns out that the cell numbering system at all levels follows a very
+simple rule, namely:
+
+> The S2CellId of cell C is the S2 curve parameter at the center of C
+> (scaled to obtain an integer).
+
+For example, consider the level 0 cell for cube face 2.  The center of
+this cell has the S2 curve parameter (in binary):
+
+>    s = 010.100000000...
+
+where "010" is the binary representation of face 2 and ".1000..."  is
+the binary representation of 0.5 (i.e., the Hilbert curve parameter at
+the center of this face, as discussed above).  Scaling this by a factor
+of 2<sup>61</sup>, we obtain 0101000... in binary (where there are 60
+trailing zeros), or 0x5000000000000000 in hexadecimal.  This is the
+`S2CellId` for the level 0 cell on face 2.
+
+It turns out that all `S2CellIds` up to level 30 can be represented in this
+way, i.e. the S2 curve parameters of the corresponding cell centers can be
+represented exactly in 64 bits.  Note that no two cells (even at different
+levels) have the same center position, and therefore all the `S2CellIds` are
+distinct.  The cell center is sufficient to specify both the position **and**
+the subdivision level of each cell.
+
+We can also look at this from a more practical point of view.  The
+`S2CellId` for a cell at level k always has the following structure:
+
+>    s = [face] [child]<sup>k</sup> 1 0<sup>60-2k</sup>
+
+where "face" is a 3-bit number (range 0..5) that selects a cube face,
+and each of the k "child" values is a 2-bit number that selects one of
+the 4 children during the subdivision process.  The bit that follows
+the last child is always 1, and all other bits are zero.  For example:
+
+    010 10000...0         Face cell 2.
+    001 10 100...0        Subcell 2 of face cell 1.
+    100 11 01 1000...0    Subcell 1 of subcell 3 of face 4.
+
+This representation has the convenient property that the subdivision
+level of a cell can easily be determined from the position of its
+lowest-numbered 1 bit.
+
+### Coordinate Systems
+
+The process of mapping an `S2CellId` to a point on the unit sphere involves
+several steps, each with its own coordinate system.
+
+*   (cellid)<br>
+    Cell id: A 64-bit encoding of a face and a Hilbert curve parameter on that
+    face, as discussed above.  The Hilbert curve parameter implicitly encodes
+    both the position of a cell and its subdivision level.
+
+*   (face, i, j)\
+    Leaf-cell coordinates: The leaf cells are the subsquares that result after
+    30 levels of Hilbert curve subdivision, consisting of a 2<sup>30</sup>
+    &times; 2<sup>30</sup> array on each face.  "i" and "j" are integers in
+    the range [0, 2<sup>30</sup>-1] that identify a particular leaf cell.  The
+    (i, j) coordinate system is right-handed on every face, and the faces are
+    oriented such that Hilbert curves connect continuously from one face to
+    the next.
+
+*   (face, s, t)\
+    Cell-space coordinates: "s" and "t" are real numbers in the range [0,1]
+    that identify a point on the given face.  For example, the point (s, t) =
+    (0.5, 0.5) corresponds to the center of the cell at level 0.  Cells in
+    (s, t)-coordinates are perfectly square and subdivided around their center
+    point, just like the Hilbert curve construction.
+
+*   (face, u, v)\
+    Cube-space coordinates: To make the cells at each level more uniform in
+    size after they are projected onto the sphere, we apply a nonlinear
+    transformation of the form u=f(s), v=f(t) before projecting points onto
+    the sphere.  This function also scales the (u,v)-coordinates so that each
+    face covers the *biunit square* [-1,1]&times;[-1,1].  Cells in
+    (u,v)-coordinates are rectangular, and are not necessarily subdivided
+    around their center point (because of the nonlinear transformation "f").
+
+*   (x, y, z)\
+    Spherical point: The final `S2Point` is obtained by projecting the (face,
+    u, v) coordinates onto the unit sphere.  Cells in (x,y,z)-coordinates are
+    quadrilaterals bounded by four spherical geodesic edges.
+
+The purpose of the nonlinear (face, s, t) &rarr; (face, u, v) transformation
+is to make the cells roughly the same size on the sphere.  This can be
+visualized as follows:
+
+[![](xyz_to_uv_to_st.gif){height="400"}](xyz_to_uv_to_st.gif)
+
+This diagram shows a one-dimensional slice of cube face.  Starting from the
+right-hand size, an s- or t-coordinate in the range [0,1] is transformed
+non-linearly into a u- or v-coordinate in the range [-1,1].  This point is
+then projected onto the unit sphere.
+
+The purpose of the (face, s, t)&rarr;(face, u, v) transformation is
+illustrated by the two angles marked in red.  Although both angles are the
+same size, and therefore correspond to the same distance on the unit sphere,
+they have very different sizes when projected back to (u,v)-coordinates (i.e.,
+the top interval on the middle (u,v)-slice is much larger).  The non-linear
+transformation between (s,t) and (u,v) coordinates helps to correct this
+situation (i.e., the intervals on the right-hand (s,t)-slice are closer in
+size).
+
+Note that the (i, j), (s, t), and (u, v) coordinate systems are right-handed
+on all six faces.
+
+## S2CellId
+
+The `S2CellId` class is a thin wrapper over [the 64-bit S2CellId
+number](#s2cellid-number) that provides methods for navigating the cell
+hierarchy (finding parents, children, containment tests, etc).  Since leaf
+cells are often used to represent points on the unit sphere, the `S2CellId`
+class also provides methods for converting directly to and from an `S2Point`.
+Here are its methods:
 
 ```c++
 class S2CellId {
@@ -399,7 +500,7 @@ class S2CellId {
 
 See `s2cellid.h` for additional methods.
 
-## `S2Cell` Class
+## S2Cell
 
 An `S2Cell` is an `S2Region` object that represents a cell. Unlike `S2CellId`,
 it views a cell as a representing a spherical quadrilateral rather than a point,
@@ -525,7 +626,7 @@ class S2Cell final : public S2Region {
 
 See `s2cell.h` for additional methods.
 
-## Cell Unions
+## S2CellUnion
 
 An `S2CellUnion` is an `S2Region` consisting of cells of various sizes. A cell
 union is typically used to approximate some other shape. There is a tradeoff
@@ -902,14 +1003,14 @@ Triangular Mesh (http://skyserver.org/HTM) framework:
 *   A linear scan of a set of S2CellIds follows a space-filling curve, which
     maximizes locality of reference. For example, if each cell id is looked up
     in a spatial index of some sort, a space-filling curve minimizes the number
-    of times that we switch from one index element to the next. In theory this
-    should help cache performance (including non-local caches such as BigTable).
-    A linear scan through HTM triangles also has fairly good locality of
-    reference due to the hierarchical structure, but it does not define a
-    space-filling curve (due to the triangle ordering chosen by its inventors)
-    and therefore the locality of reference is not quite as good. (At any given
-    level, the HTM path is about 2.2 times longer than the corresonding S2CellId
-    path.)
+    of times that we switch from one index element to the next.  This helps
+    cache performance (including non-local caches such as
+    [BigTable](https://cloud.google.com/bigtable)).  A linear scan through HTM
+    triangles also has fairly good locality of reference due to the hierarchical
+    structure, but it does not define a space-filling curve (due to the triangle
+    ordering chosen by its inventors) and therefore the locality of reference is
+    not as good. (At any given level, the HTM path is about 2.2 times longer
+    than the corresonding S2CellId path.)
 
 Another alternative is HEALPix
 [http://www.eso.org/science/healpix](http://www.eso.org/science/healpix). The
@@ -924,3 +1025,12 @@ projecting the six faces of a cube onto the unit sphere, and subdivides each
 face in a quadtree fashion. However, it does not use a space-filling curve
 scheme for labelling the cells, the cell edges are not geodesics, and it uses a
 much more complicated projection scheme designed to minimize distortion.
+
+[^cell-center-parameters]: There are actually 3 different Hilbert curve
+    parameters for the point (0.5, 0.5), corresponding to the fact that the
+    Hilbert curve visits this point 3 times.  The three parameters are
+    0.1000..., 0.00101010..., and 0.11101010... (note that there is another
+    expansion 0.0111... which also visits this point, but it is numerically
+    equal to 0.1000...).  This is similar to the fact that there are two
+    decimal expansions of the number 1 (1.000... and 0.999...).  In any case,
+    the S2 library only uses the 0.1000... parameter for the cell center.
