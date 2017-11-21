@@ -1,3 +1,5 @@
+[TOC]
+
 # Quick Start
 
 Suppose that we have a few terabytes (or petabytes) of geographic data, and we

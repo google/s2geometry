@@ -188,6 +188,22 @@ bool UpdateMinDistance(const S2Point& x, const S2Point& a, const S2Point& b,
   return AlwaysUpdateMinDistance<false>(x, a, b, min_dist);
 }
 
+bool UpdateMaxDistance(const S2Point& x, const S2Point& a, const S2Point& b,
+                       S1ChordAngle* max_dist) {
+  auto dist = max(S1ChordAngle(x, a), S1ChordAngle(x, b));
+  if (dist > S1ChordAngle::Right()) {
+    AlwaysUpdateMinDistance<true>(-x, a, b, &dist);
+    dist = S1ChordAngle::Straight() - dist;
+  }
+  if (*max_dist < dist) {
+    *max_dist = dist;
+    return true;
+  }
+
+  return false;
+}
+
+
 bool UpdateMinInteriorDistance(const S2Point& x,
                                const S2Point& a, const S2Point& b,
                                S1ChordAngle* min_dist) {

@@ -17,7 +17,6 @@
 
 #include "s2/s2shapeutil.h"
 
-#include "s2/base/stringprintf.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/types/span.h"
 #include "s2/s2contains_point_query.h"

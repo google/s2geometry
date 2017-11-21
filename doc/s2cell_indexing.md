@@ -2,7 +2,14 @@
 
 # Spatial Indexing
 
-There are several reasonable approaches to using cells for spatial indexing,
+The [Quick Start](quickstart.md) document gives an introduction to spatial
+indexing using the S2 library.  The most important classes for this purposes are
+`S2PointIndex`, [`S2ShapeIndex`](s2shapeindex.md), and `S2RegionTermIndexer`.
+All of these classes use the `S2Cell` hierarchy to accelerate
+
+This
+For indexing geometry in memory, the best approach 
+There are many approaches to using the `S2Cell` hierarchy for spatial indexing,
 depending on what you want to index (points vs. regions), what operations your
 indexing data structure support (range queries vs. key lookups only), and what
 sort of queries you want to make (point location vs. region queries). Let's go

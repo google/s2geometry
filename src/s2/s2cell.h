@@ -54,12 +54,12 @@ class S2Cell final : public S2Region {
   explicit S2Cell(const S2Point& p) : S2Cell(S2CellId(p)) {}
   explicit S2Cell(const S2LatLng& ll) : S2Cell(S2CellId(ll)) {}
 
-  // Return the cell corresponding to the given S2 cube face.
+  // Returns the cell corresponding to the given S2 cube face.
   static S2Cell FromFace(int face) {
     return S2Cell(S2CellId::FromFace(face));
   }
 
-  // Return a cell given its face (range 0..5), Hilbert curve position within
+  // Returns a cell given its face (range 0..5), Hilbert curve position within
   // that face (an unsigned integer with S2CellId::kPosBits bits), and level
   // (range 0..kMaxLevel).  The given position will be modified to correspond
   // to the Hilbert curve position at the center of the returned cell.  This
@@ -80,21 +80,21 @@ class S2Cell final : public S2Region {
   int GetSizeIJ() const;
   double GetSizeST() const;
 
-  // Return the k-th vertex of the cell (k = 0,1,2,3).  Vertices are returned
+  // Returns the k-th vertex of the cell (k = 0,1,2,3).  Vertices are returned
   // in CCW order (lower left, lower right, upper right, upper left in the UV
   // plane).  The points returned by GetVertexRaw are not normalized.
   // For convenience, the argument is reduced modulo 4 to the range [0..3].
   S2Point GetVertex(int k) const { return GetVertexRaw(k).Normalize(); }
   S2Point GetVertexRaw(int k) const;
 
-  // Return the inward-facing normal of the great circle passing through the
+  // Returns the inward-facing normal of the great circle passing through the
   // edge from vertex k to vertex k+1 (mod 4).  The normals returned by
   // GetEdgeRaw are not necessarily unit length.  For convenience, the
   // argument is reduced modulo 4 to the range [0..3].
   S2Point GetEdge(int k) const { return GetEdgeRaw(k).Normalize(); }
   S2Point GetEdgeRaw(int k) const;
 
-  // If this is not a leaf cell, set children[0..3] to the four children of
+  // If this is not a leaf cell, sets children[0..3] to the four children of
   // this cell (in traversal order) and return true.  Otherwise returns false.
   // This method is equivalent to the following:
   //
@@ -104,7 +104,7 @@ class S2Cell final : public S2Region {
   // except that it is more than two times faster.
   bool Subdivide(S2Cell children[4]) const;
 
-  // Return the direction vector corresponding to the center in (s,t)-space of
+  // Returns the direction vector corresponding to the center in (s,t)-space of
   // the given cell.  This is the point at which the cell is divided into four
   // subcells; it is not necessarily the centroid of the cell in (u,v)-space
   // or (x,y,z)-space.  The point returned by GetCenterRaw is not necessarily
@@ -112,40 +112,48 @@ class S2Cell final : public S2Region {
   S2Point GetCenter() const { return GetCenterRaw().Normalize(); }
   S2Point GetCenterRaw() const;
 
-  // Return the average area for cells at the given level.
+  // Returns the average area for cells at the given level.
   static double AverageArea(int level);
 
-  // Return the average area of cells at this level.  This is accurate to
+  // Returns the average area of cells at this level.  This is accurate to
   // within a factor of 1.7 (for S2_QUADRATIC_PROJECTION) and is extremely
   // cheap to compute.
   double AverageArea() const { return AverageArea(level_); }
 
-  // Return the approximate area of this cell.  This method is accurate to
+  // Returns the approximate area of this cell.  This method is accurate to
   // within 3% percent for all cell sizes and accurate to within 0.1% for
   // cells at level 5 or higher (i.e. squares 350km to a side or smaller
   // on the Earth's surface).  It is moderately cheap to compute.
   double ApproxArea() const;
 
-  // Return the area of this cell as accurately as possible.  This method is
+  // Returns the area of this cell as accurately as possible.  This method is
   // more expensive but it is accurate to 6 digits of precision even for leaf
   // cells (whose area is approximately 1e-18).
   double ExactArea() const;
 
-  // Return the bounds of this cell in (u,v)-space.
+  // Returns the bounds of this cell in (u,v)-space.
   R2Rect GetBoundUV() const { return uv_; }
 
-  // Return the distance from the cell to the given point.  Returns zero if
+  // Returns the distance from the cell to the given point.  Returns zero if
   // the point is inside the cell.
   S1ChordAngle GetDistance(const S2Point& target) const;
 
   // Return the distance from the cell boundary to the given point.
   S1ChordAngle GetBoundaryDistance(const S2Point& target) const;
 
-  // Return the minimum distance from the cell to the given edge AB.  Returns
+  // Returns the maximum distance from the cell (including its interior) to the
+  // given point.
+  S1ChordAngle GetMaxDistance(const S2Point& target) const;
+
+  // Returns the minimum distance from the cell to the given edge AB.  Returns
   // zero if the edge intersects the cell interior.
   S1ChordAngle GetDistance(const S2Point& a, const S2Point& b) const;
 
-  // Return the distance from the cell to the given cell.  Returns zero if
+  // Returns the maximum distance from the cell (including its interior) to the
+  // given edge AB.
+  S1ChordAngle GetMaxDistance(const S2Point& a, const S2Point& b) const;
+
+  // Returns the distance from the cell to the given cell.  Returns zero if
   // one cell contains the other.
   S1ChordAngle GetDistance(const S2Cell& target) const;
 
@@ -158,7 +166,7 @@ class S2Cell final : public S2Region {
   bool Contains(const S2Cell& cell) const override;
   bool MayIntersect(const S2Cell& cell) const override;
 
-  // Return true if the cell contains the given point "p".  Note that unlike
+  // Returns true if the cell contains the given point "p".  Note that unlike
   // S2Loop/S2Polygon, S2Cells are considered to be closed sets.  This means
   // that points along an S2Cell edge (or at a vertex) belong to the adjacent
   // cell(s) as well.
@@ -180,12 +188,12 @@ class S2Cell final : public S2Region {
   bool Decode(Decoder* const decoder);
 
  private:
-  // Return the latitude or longitude of the cell vertex given by (i,j),
+  // Returns the latitude or longitude of the cell vertex given by (i,j),
   // where "i" and "j" are either 0 or 1.
   double GetLatitude(int i, int j) const;
   double GetLongitude(int i, int j) const;
 
-  double VertexChordDist2(const S2Point& target, int i, int j) const;
+  S1ChordAngle VertexChordDist(const S2Point& p, int i, int j) const;
   bool UEdgeIsClosest(const S2Point& target, int v_end) const;
   bool VEdgeIsClosest(const S2Point& target, int u_end) const;
 
