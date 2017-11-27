@@ -123,6 +123,10 @@ The S2 library provides the following:
     as collections of discrete "S2 cells".  This feature makes it easy to
     build large distributed spatial indexes.
 
+*   Extensive testing on Google's vast collection of geographic data.
+
+*   Flexible Apache 2.0 license.
+
 On the other hand, the following are outside the scope of S2:
 
 *   Planar geometry.  (There are many fine existing planar geometry
@@ -130,6 +134,27 @@ On the other hand, the following are outside the scope of S2:
 
 *   Conversions to/from common GIS formats.  (To read such formats, use
     an external library such as [OGR](http://gdal.org/1.11/ogr/).)
+
+### Language Support
+
+The [reference implementation of the S2
+library](https://github.com/google/s2geometry) is written in C++.  Versions in
+other languages are ported from the C++ code, and may not have the same
+robustness, performance, or features as the C++ version.  As of November 2017,
+the "official" ports are as follows:
+
+*   [S2 library in Go](https://github.com/golang/geo).  This project is being
+    actively developed and aims to have full equivalence with the C++ version.
+
+*   [S2 library in Java](https://github.com/google/s2-geometry-library-java).
+    Be aware that this port is based on the 2011 release of the S2 library, and
+    does not have the same robustness, performance, or features as the current
+    C++ implementation.
+
+*   [S2 library in Python](https://github.com/google/s2geometry/src/python).  A
+    subset of the library has been ported to Python using SWIG, and is included
+    in the `python` directory of the C++ repository.  The supported feature set
+    includes polylines, polygons, discs, rectangles, and `S2Cell` coverings.
 
 ## Layered Design
 
@@ -287,5 +312,4 @@ datasets use geodetic coordinates exclusively.)
 
 The S2 library was written primarily by Eric Veach.  Other significant
 contributors include Jesse Rosenstock, Eric Engle (Java port lead), Robert
-Snedegar (Go port lead), and Julien Basch.
-
+Snedegar (Go port lead), Julien Basch, and Tom Manshreck.

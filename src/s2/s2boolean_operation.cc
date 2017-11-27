@@ -79,6 +79,7 @@
 #include "s2/s2edge_crossings.h"
 #include "s2/s2measures.h"
 #include "s2/s2predicates.h"
+#include "s2/s2shapeutil.h"
 
 // TODO(ericv): Remove this debugging output at some point.
 extern bool s2builder_verbose;

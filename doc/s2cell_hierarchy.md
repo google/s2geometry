@@ -58,11 +58,11 @@ green lines show the boundaries of the S2 cells at levels 0, 1, 2, 3,
 4, and 5, drawn as lines of different widths.  (You can click on the
 image to see a larger version.)
 
-The cells at level 5 are numbered in increasing order along this curve.
-This leads to the property that *if the `S2CellIds` of two cells are
-close together, then the cells are also close together*.  This property
-significantly improves locality of reference when the cells are used
-for indexing.
+The cells at level 5 are numbered in increasing order along this curve.  This
+leads to the property that *if the `S2CellIds` of two cells are close together,
+then the cells are also close together*.[^s2cell-locality]  This property
+significantly improves locality of reference when the cells are used for
+indexing.
 
 The remainder of this section gives further details about how the S2 cell
 hierarchy is organized.  (You don't need to understand this background
@@ -982,23 +982,19 @@ class S2RegionCoverer {
 The S2 subdivision scheme has a number of advantages over the Hierarchical
 Triangular Mesh (http://skyserver.org/HTM) framework:
 
-*   Converting from a cell id to a point or vice versa is about 100 times faster
-    than the corresponding HTM operation. For example, a unit vector can be
-    converted to an S2CellId in about 0.15 microseconds, while converting a unit
-    vector to an HTM triangle id takes about 25 microseconds. Similarly,
-    converting an S2CellId to a vector takes about 0.04 microseconds, while the
-    same HTM operation takes about 19 microseconds. (If full resolution is not
-    needed, the HTM times can be improved by using fewer levels -- e.g. by using
-    15 levels rather than 30, conversions are about twice as fast, but the
-    maximum resolution is reduced from 1cm to about 300 meters. The S2 library
-    is still about 100 times faster, though.)
+*   Converting from a cell id to a point or vice versa is about 100 times
+    faster than the corresponding HTM operation.  (If full resolution is not
+    needed, the HTM times can be improved by using fewer levels -- e.g. by
+    using 15 levels rather than 30, conversions are about twice as fast, but
+    the maximum resolution is reduced from 1cm to about 300 meters. The S2
+    library is still about 100 times faster, though.)
 
 *   The S2 library has no storage requirements. In contrast, the HTM library
     precomputes the upper levels of the mesh during initialization to get even
     the performance numbers mentioned above. Computing the first 6 levels (the
-    default) takes about 2MB of memory and 5 milliseconds. It is not practical
-    to precompute much more than this because memory requirements increase by a
-    factor of 4 for each additional level.
+    default) takes about 2MB of memory; it is not practical to precompute much
+    more than this because memory requirements increase by a factor of 4 for
+    each additional level.
 
 *   A linear scan of a set of S2CellIds follows a space-filling curve, which
     maximizes locality of reference. For example, if each cell id is looked up
@@ -1010,7 +1006,7 @@ Triangular Mesh (http://skyserver.org/HTM) framework:
     structure, but it does not define a space-filling curve (due to the triangle
     ordering chosen by its inventors) and therefore the locality of reference is
     not as good. (At any given level, the HTM path is about 2.2 times longer
-    than the corresonding S2CellId path.)
+    than the corresponding S2CellId path.)
 
 Another alternative is HEALPix
 [http://www.eso.org/science/healpix](http://www.eso.org/science/healpix). The
@@ -1026,11 +1022,15 @@ face in a quadtree fashion. However, it does not use a space-filling curve
 scheme for labelling the cells, the cell edges are not geodesics, and it uses a
 much more complicated projection scheme designed to minimize distortion.
 
+[^s2cell-locality]: Ideally the converse property would also be true (i.e., if
+    two cells are close together then their `S2CellIds` are also close
+    together), but unfortunately this turns out not to be possible.
+
 [^cell-center-parameters]: There are actually 3 different Hilbert curve
     parameters for the point (0.5, 0.5), corresponding to the fact that the
     Hilbert curve visits this point 3 times.  The three parameters are
     0.1000..., 0.00101010..., and 0.11101010... (note that there is another
     expansion 0.0111... which also visits this point, but it is numerically
-    equal to 0.1000...).  This is similar to the fact that there are two
-    decimal expansions of the number 1 (1.000... and 0.999...).  In any case,
-    the S2 library only uses the 0.1000... parameter for the cell center.
+    equal to 0.1000...).  This is similar to the fact that there are two decimal
+    expansions of the number 1 (1.000... and 0.999...).  In any case, the S2
+    library only uses the 0.1000... parameter for the cell center.

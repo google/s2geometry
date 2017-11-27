@@ -31,9 +31,6 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "s2/base/stringprintf.h"
-#include "s2/strings/serialize.h"
-#include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shapeindex.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
@@ -58,11 +55,15 @@
 #include "s2/s2regioncoverer.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
+#include "s2/strings/serialize.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/strings/str_cat.h"
+#include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
+using absl::StrCat;
 using absl::make_unique;
 using s2builderutil::IntLatLngSnapFunction;
 using s2builderutil::S2PolygonLayer;
@@ -822,7 +823,7 @@ TEST_F(S2PolygonTestBase, Operations) {
 
   int i = 0;
   for (const TestCase& test : test_cases) {
-    SCOPED_TRACE(StringPrintf("Polygon operation test case %d", i++));
+    SCOPED_TRACE(StrCat("Polygon operation test case ", i++));
     unique_ptr<S2Polygon> a(MakePolygon(test.a));
     unique_ptr<S2Polygon> b(MakePolygon(test.b));
     unique_ptr<S2Polygon> expected_a_and_b(MakePolygon(test.a_and_b));
@@ -1581,9 +1582,9 @@ TEST(S2Polygon, Bug14) {
 static void PolylineIntersectionSharedEdgeTest(const S2Polygon& p,
                                                int start_vertex,
                                                int direction) {
-  SCOPED_TRACE(StringPrintf("Polyline intersection shared edge test "
-                            " start=%d direction=%d",
-                            start_vertex, direction));
+  SCOPED_TRACE(StrCat("Polyline intersection shared edge test"
+                      " start=", start_vertex,
+                      " direction=", direction));
   vector<S2Point> points = {p.loop(0)->vertex(start_vertex),
                             p.loop(0)->vertex(start_vertex + direction)};
   S2Polyline polyline(points);
@@ -1632,7 +1633,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
   // tests that the output is equal to doing an intersection between A and B.
   int i = 0;
   for (const TestCase& test : test_cases) {
-    SCOPED_TRACE(StringPrintf("Polyline intersection test case %d", i++));
+    SCOPED_TRACE(StrCat("Polyline intersection test case ", i++));
     unique_ptr<S2Polygon> a(MakePolygon(test.a));
     unique_ptr<S2Polygon> b(MakePolygon(test.b));
     unique_ptr<S2Polygon> expected_a_and_b(MakePolygon(test.a_and_b));
@@ -1815,7 +1816,7 @@ TEST(S2Polygon, InitToCellUnionBorder) {
   // merged correctly.  To do this we generate two random adjacent cells,
   // convert to polygon, and make sure the polygon only has a single loop.
   for (int iter = 0; iter < 200; ++iter) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", iter));
+    SCOPED_TRACE(StrCat("Iteration ", iter));
 
     // Choose a random non-leaf cell.
     S2CellId big_cell =

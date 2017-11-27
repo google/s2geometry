@@ -28,7 +28,6 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "s2/base/stringprintf.h"
 #include "s2/mutable_s2shapeindex.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -48,7 +47,9 @@
 #include "s2/s2testing.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/strings/str_cat.h"
 
+using absl::StrCat;
 using absl::make_unique;
 using S2::internal::kSwapMask;
 using std::fabs;
@@ -535,7 +536,7 @@ static S1ChordAngle GetMaxDistanceToPointBruteForce(const S2Cell& cell,
 TEST(S2Cell, GetDistanceToPoint) {
   S2Testing::rnd.Reset(FLAGS_s2_random_seed);
   for (int iter = 0; iter < 1000; ++iter) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", iter));
+    SCOPED_TRACE(StrCat("Iteration ", iter));
     S2Cell cell(S2Testing::GetRandomCellId());
     S2Point target = S2Testing::RandomPoint();
     S1Angle expected_to_boundary =
@@ -635,7 +636,7 @@ static S1ChordAngle GetMaxDistanceToEdgeBruteForce(
 TEST(S2Cell, GetDistanceToEdge) {
   S2Testing::rnd.Reset(FLAGS_s2_random_seed);
   for (int iter = 0; iter < 1000; ++iter) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", iter));
+    SCOPED_TRACE(StrCat("Iteration ", iter));
     S2Cell cell(S2Testing::GetRandomCellId());
     S2Point a, b;
     ChooseEdgeNearCell(cell, &a, &b);

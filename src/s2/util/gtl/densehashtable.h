@@ -164,8 +164,8 @@ namespace google {
 //      to search for a Value in the table (find() takes a Key).
 // HashFcn: Takes a Key and returns an integer, the more unique the better.
 // ExtractKey: given a Value, returns the unique Key associated with it.
-//             Must inherit from unary_function, or at least have a
-//             result_type enum indicating the return type of operator().
+//             Must have a result_type enum indicating the return type of
+//             operator().
 // SetKey: given a Value* and a Key, modifies the value such that
 //         ExtractKey(value) == key.  We guarantee this is only called
 //         with key == deleted_key or key == empty_key.

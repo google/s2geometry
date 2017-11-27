@@ -4,12 +4,14 @@ S2 Geometry Library
 Overview
 --------
 
-This is a package for manipulating geometric shapes.  It is rather
-heavily weighted towards spherical geometry because currently it is
-mainly used for geographic data.  Other types of geometric primitives
-will be added as necessary.
+This is a package for manipulating geometric shapes. Unlike many geometry
+libraries, S2 is primarily designed to work with _spherical geometry_, i.e.,
+shapes drawn on a sphere rather than on a planar 2D map. This makes it
+especially suitable for working with geographic data.
 
-Please see [the documentation](doc/intro.md) for more information and examples.
+If you want to learn more about the library, start by reading the
+[overview](doc/overview.md) and [quick start document](doc/quickstart.md),
+then read the introduction to the [basic types](doc/basic_types.md)
 
 Requirements for End Users
 --------------------------
@@ -28,10 +30,16 @@ On Ubuntu, all of these can be installed via apt-get:
 ```
 sudo apt-get install cmake libgflags-dev libgoogle-glog-dev libgtest-dev openssl
 ```
-Otherwise, you may need to install some from source.  On OS X, use
-[MacPorts](http://www.macports.org/) or [Homebrew](http://brew.sh/).
+Otherwise, you may need to install some from source.
 
-Thorough testing has only been done on Ubuntu 14.04.3.
+On macOS, use [MacPorts](http://www.macports.org/) or
+[Homebrew](http://brew.sh/).  For MacPorts:
+`sudo port install cmake gflags google-glog openssl`.  Do not install
+`gtest` from MacPorts; instead download [release
+1.8.0](https://github.com/google/googletest/releases/tag/release-1.8.0), unpack,
+and run `cmake` with `-DGTEST_ROOT=.../googletest-release-1.8.0/googletest`.
+
+Thorough testing has only been done on Ubuntu 14.04.3 and macOS 10.12.
 
 Build and Install
 -----------------

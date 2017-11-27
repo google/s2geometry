@@ -40,8 +40,10 @@
 #include "s2/s2region.h"
 #include "s2/s2testing.h"
 #include "s2/third_party/absl/base/integral_types.h"
+#include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/third_party/absl/strings/str_split.h"
 
+using absl::StrCat;
 using std::max;
 using std::min;
 using std::priority_queue;
@@ -62,8 +64,7 @@ TEST(S2RegionCoverer, RandomCells) {
   // Test random cell ids at all levels.
   for (int i = 0; i < 10000; ++i) {
     S2CellId id = S2Testing::GetRandomCellId();
-    SCOPED_TRACE(StringPrintf("Iteration %d, cell ID token %s",
-                              i, id.ToToken().c_str()));
+    SCOPED_TRACE(StrCat("Iteration ", i, ", cell ID token ", id.ToToken()));
     vector<S2CellId> covering = coverer.GetCovering(S2Cell(id)).Release();
     EXPECT_EQ(1, covering.size());
     EXPECT_EQ(id, covering[0]);
@@ -167,7 +168,7 @@ struct WorstCap {
 };
 
 static void TestAccuracy(int max_cells) {
-  SCOPED_TRACE(StringPrintf("%d cells", max_cells));
+  SCOPED_TRACE(StrCat(max_cells, " cells"));
 
   static const int kNumMethods = 1;
   // This code is designed to evaluate several approximation algorithms and

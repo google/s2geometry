@@ -17,9 +17,6 @@
 //
 // This file contains miscellaneous S2ShapeIndex utility functions and classes:
 //
-//  - RangeIterator: useful for merging two or more S2ShapeIndexes.
-//  - ShapeEdgeId: represents a (shape_id, edge_id) pair.
-//  - ShapeEdge: represents a ShapeEdgeId plus the actual edge vertices.
 //  - VisitCrossings: finds all edge intersections between S2ShapeIndexes.
 //
 // And functions that are mainly useful internally in the S2 library:
@@ -45,48 +42,14 @@
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2shapeindex.h"
+#include "s2/s2shapeutil_shape_edge.h"
 
-class S2Loop;
 class S2Error;
 
 namespace s2shapeutil {
 
 /////////////////////////////////////////////////////////////////////////////
 ////////////////////// Utility Functions and Classes ////////////////////////
-
-// RangeIterator is a wrapper over S2ShapeIndex::Iterator with extra methods
-// that are useful for merging the contents of two or more S2ShapeIndexes.
-class RangeIterator {
- public:
-  // Construct a new RangeIterator positioned at the first cell of the index.
-  explicit RangeIterator(const S2ShapeIndex& index);
-
-  // The current S2CellId and cell contents.
-  S2CellId id() const { return it_.id(); }
-  const S2ShapeIndexCell& cell() const { return it_.cell(); }
-
-  // The min and max leaf cell ids covered by the current cell.  If done() is
-  // true, these methods return a value larger than any valid cell id.
-  S2CellId range_min() const { return range_min_; }
-  S2CellId range_max() const { return range_max_; }
-
-  void Next();
-  bool done() { return it_.done(); }
-
-  // Position the iterator at the first cell that overlaps or follows
-  // "target", i.e. such that range_max() >= target.range_min().
-  void SeekTo(const RangeIterator& target);
-
-  // Position the iterator at the first cell that follows "target", i.e. the
-  // first cell such that range_min() > target.range_max().
-  void SeekBeyond(const RangeIterator& target);
-
- private:
-  // Updates internal state after the iterator has been repositioned.
-  void Refresh();
-  S2ShapeIndex::Iterator it_;
-  S2CellId range_min_, range_max_;
-};
 
 // A parameter that controls the reporting of edge intersections.
 //
@@ -100,50 +63,6 @@ class RangeIterator {
 //    the form (AB, BC) where both edges are from the same S2ShapeIndex.
 //    (This is an optimization for checking polygon validity.)
 enum class CrossingType { INTERIOR, ALL, NON_ADJACENT };
-
-// ShapeEdgeId is a unique identifier for an edge within an S2ShapeIndex,
-// consisting of a (shape_id, edge_id) pair.  It is similar to
-// std::pair<int32, int32> except that it has named fields.
-// It should be passed and returned by value.
-struct ShapeEdgeId {
- public:
-  int32 shape_id, edge_id;
-  ShapeEdgeId() : shape_id(-1), edge_id(-1) {}
-  ShapeEdgeId(int32 _shape_id, int32 _edge_id);
-  bool operator==(ShapeEdgeId other) const;
-  bool operator!=(ShapeEdgeId other) const;
-  bool operator<(ShapeEdgeId other) const;
-  bool operator>(ShapeEdgeId other) const;
-  bool operator<=(ShapeEdgeId other) const;
-  bool operator>=(ShapeEdgeId other) const;
-};
-std::ostream& operator<<(std::ostream& os, ShapeEdgeId id);
-
-// Hasher for ShapeEdgeId.
-// Example use: std::unordered_set<ShapeEdgeId, ShapeEdgeIdHash>.
-struct ShapeEdgeIdHash {
-  size_t operator()(ShapeEdgeId id) const {
-    // The following preserves all bits even when edge_id < 0.
-    return std::hash<uint64>()((static_cast<uint64>(id.shape_id) << 32) |
-                               static_cast<uint32>(id.edge_id));
-  }
-};
-
-// A class representing a ShapeEdgeId together with the two endpoints of that
-// edge.  It should be passed by reference.
-struct ShapeEdge {
- public:
-  ShapeEdge() {}
-  ShapeEdge(const S2Shape& shape, int32 edge_id);
-  ShapeEdge(int32 shape_id, int32 edge_id, const S2Shape::Edge& edge);
-  ShapeEdgeId id() const { return id_; }
-  const S2Point& v0() const { return edge_.v0; }
-  const S2Point& v1() const { return edge_.v1; }
-
- private:
-  ShapeEdgeId id_;
-  S2Shape::Edge edge_;
-};
 
 // A function that is called with pairs of crossing edges.  The function may
 // return false in order to request that the algorithm should be terminated,
@@ -171,11 +90,6 @@ bool VisitCrossings(const S2ShapeIndex& index, CrossingType type,
 bool VisitCrossings(const S2ShapeIndex& a, const S2ShapeIndex& b,
                     CrossingType type, const EdgePairVisitor& visitor);
 
-// Returns the total number of edges in all indexed shapes.  This method
-// takes time linear in the number of shapes.
-template <class S2ShapeIndexType>
-int GetNumEdges(const S2ShapeIndexType& index);
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///////////////// Methods used internally by the S2 library /////////////////
@@ -194,61 +108,6 @@ int GetNumEdges(const S2ShapeIndexType& index);
 // duplicate vertices and edges are allowed, but loop crossings are not).
 bool FindAnyCrossing(const S2ShapeIndex& index, S2Error* error);
 
-
-//////////////////   Implementation details follow   ////////////////////
-
-
-inline ShapeEdgeId::ShapeEdgeId(int32 _shape_id, int32 _edge_id)
-    : shape_id(_shape_id), edge_id(_edge_id) {
-}
-
-inline bool ShapeEdgeId::operator==(ShapeEdgeId other) const {
-  return shape_id == other.shape_id && edge_id == other.edge_id;
-}
-
-inline bool ShapeEdgeId::operator!=(ShapeEdgeId other) const {
-  return !(*this == other);
-}
-
-inline bool ShapeEdgeId::operator<(ShapeEdgeId other) const {
-  if (shape_id < other.shape_id) return true;
-  if (other.shape_id < shape_id) return false;
-  return edge_id < other.edge_id;
-}
-
-inline bool ShapeEdgeId::operator>(ShapeEdgeId other) const {
-  return other < *this;
-}
-
-inline bool ShapeEdgeId::operator<=(ShapeEdgeId other) const {
-  return !(other < *this);
-}
-
-inline bool ShapeEdgeId::operator>=(ShapeEdgeId other) const {
-  return !(*this < other);
-}
-
-inline ShapeEdge::ShapeEdge(const S2Shape& shape, int32 edge_id)
-    : ShapeEdge(shape.id(), edge_id, shape.edge(edge_id)) {
-}
-
-inline ShapeEdge::ShapeEdge(int32 shape_id, int32 edge_id,
-                            const S2Shape::Edge& edge)
-    : id_(shape_id, edge_id), edge_(edge) {
-}
-
-template <class S2ShapeIndexType>
-int GetNumEdges(const S2ShapeIndexType& index) {
-  // There is no need to apply updates before counting edges, since shapes are
-  // added or removed from the "shapes_" vector immediately.
-  int num_edges = 0;
-  for (int s = index.num_shape_ids(); --s >= 0; ) {
-    S2Shape* shape = index.shape(s);
-    if (shape == nullptr) continue;
-    num_edges += shape->num_edges();
-  }
-  return num_edges;
-}
 
 }  // namespace s2shapeutil
 

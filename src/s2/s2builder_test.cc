@@ -24,10 +24,10 @@
 #include <string>
 #include <gflags/gflags.h>
 #include <glog/log_severity.h>
-#include "s2/base/stringprintf.h"
 #include "s2/base/timer.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/third_party/absl/strings/str_join.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_layers.h"
@@ -46,6 +46,8 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
+using absl::StrAppend;
+using absl::StrCat;
 using absl::make_unique;
 using std::cout;
 using std::endl;
@@ -810,10 +812,10 @@ class InputEdgeIdCheckingLayer : public S2Builder::Layer {
 
  private:
   string ToString(const pair<string, vector<int>>& p) {
-    string r = StringPrintf("  (%s)={", p.first.c_str());
+    string r = StrCat("  (", p.first, ")={");
     if (!p.second.empty()) {
       for (int id : p.second) {
-        StringAppendF(&r, "%d, ", id);
+        StrAppend(&r, id, ", ");
       }
       r.erase(r.size() - 2, 2);
     }

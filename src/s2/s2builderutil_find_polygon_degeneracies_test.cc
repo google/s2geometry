@@ -25,8 +25,8 @@
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2cap.h"
+#include "s2/s2lax_polygon_shape.h"
 #include "s2/s2pointutil.h"
-#include "s2/s2shapeutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 #include <gtest/gtest.h>
