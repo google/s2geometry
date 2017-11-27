@@ -26,12 +26,13 @@
 #include "s2/base/casts.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
-#include "s2/base/stringprintf.h"
 #include <mutex>
+#include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/r1interval.h"
 #include "s2/s2coords.h"
 #include "s2/s2latlng.h"
 
+using absl::StrCat;
 using S2::internal::kSwapMask;
 using S2::internal::kInvertMask;
 using S2::internal::kPosToIJ;
@@ -582,11 +583,11 @@ void S2CellId::AppendAllNeighbors(int nbr_level,
 
 string S2CellId::ToString() const {
   if (!is_valid()) {
-    return StringPrintf("Invalid: %016llx", id());
+    return StrCat("Invalid: ", absl::Hex(id(), absl::kZeroPad16));
   }
-  string out = StringPrintf("%d/", face());
+  string out = StrCat(face(), "/");
   for (int current_level = 1; current_level <= level(); ++current_level) {
-    // Avoid dependencies of SimpleItoA, and slowness of StringAppendF &
+    // Avoid dependencies of SimpleItoA, and slowness of StrAppend &
     // std::to_string.
     out += "0123"[child_position(current_level)];
   }

@@ -31,6 +31,7 @@
 #include "s2/s2shapeindex.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
 #include "s2/s2shapeutil_get_reference_point.h"
+#include "s2/s2shapeutil_range_iterator.h"
 #include "s2/s2wedge_relations.h"
 
 using absl::Span;
@@ -42,10 +43,6 @@ using ChainPosition = S2Shape::ChainPosition;
 using ReferencePoint = S2Shape::ReferencePoint;
 
 namespace s2shapeutil {
-
-std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
-  return os << id.shape_id << ":" << id.edge_id;
-}
 
 // Ensure that we don't usually need to allocate memory when collecting the
 // edges in an S2ShapeIndex cell (which by default have about 10 edges).
@@ -131,42 +128,6 @@ bool VisitCrossings(const S2ShapeIndex& index, CrossingType type,
 }
 
 //////////////////////////////////////////////////////////////////////
-
-RangeIterator::RangeIterator(const S2ShapeIndex& index)
-    : it_(&index, S2ShapeIndex::BEGIN) {
-  Refresh();
-}
-
-void RangeIterator::Next() {
-  it_.Next();
-  Refresh();
-}
-
-void RangeIterator::SeekTo(const RangeIterator& target) {
-  it_.Seek(target.range_min());
-  // If the current cell does not overlap "target", it is possible that the
-  // previous cell is the one we are looking for.  This can only happen when
-  // the previous cell contains "target" but has a smaller S2CellId.
-  if (it_.done() || it_.id().range_min() > target.range_max()) {
-    if (it_.Prev() && it_.id().range_max() < target.id()) it_.Next();
-  }
-  Refresh();
-}
-
-void RangeIterator::SeekBeyond(const RangeIterator& target) {
-  it_.Seek(target.range_max().next());
-  if (!it_.done() && it_.id().range_min() <= target.range_max()) {
-    it_.Next();
-  }
-  Refresh();
-}
-
-// This method is inline, but is only called by non-inline methods defined in
-// this file.  Putting the definition here enforces this requirement.
-inline void RangeIterator::Refresh() {
-  range_min_ = id().range_min();
-  range_max_ = id().range_max();
-}
 
 // IndexCrosser is a helper class for finding the edge crossings between a
 // pair of S2ShapeIndexes.  It is instantiated twice, once for the index pair

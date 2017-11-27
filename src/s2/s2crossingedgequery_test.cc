@@ -21,9 +21,9 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/mutable_s2shapeindex.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -38,6 +38,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
+using absl::StrCat;
 using absl::make_unique;
 using s2textformat::MakePoint;
 using s2textformat::MakePolyline;
@@ -112,7 +113,7 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
   int num_candidates = 0, num_nearby_pairs = 0;
   int i = 0;
   for (const TestEdge& edge : edges) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", i++));
+    SCOPED_TRACE(StrCat("Iteration ", i++));
     const S2Point& a = edge.first;
     const S2Point& b = edge.second;
     vector<int> candidates;
@@ -146,7 +147,7 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
         }
         ++num_nearby_pairs;
         if (!std::binary_search(candidates.begin(), candidates.end(), i)) {
-          StringAppendF(&missing_candidates, " %d", i);
+          StrAppend(&missing_candidates, " ", i);
         }
       } else {
         const double kMaxDist = S2::kMaxDiag.GetValue(S2::kMaxCellLevel);

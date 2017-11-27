@@ -141,13 +141,6 @@ inline void ReplaceCharacter(char* str, size_t len, char remove,
   }
 }
 
-// Replaces runs of one or more 'dup_char' with a single occurrence, and returns
-// the number of characters that were removed.
-//
-// Example:
-//       StripDupCharacters("a//b/c//d", '/', 0) => "a/b/c/d"
-ptrdiff_t StripDupCharacters(string* s, char dup_char, ptrdiff_t start_pos);
-
 // Removes whitespace from both ends of the given string. This function has
 // various overloads for passing the input string as a C-string + length,
 // string, or absl::string_view. If the caller is using NUL-terminated strings,
@@ -192,40 +185,10 @@ inline void StripWhitespaceInCollection(Collection* collection) {
 
 }  // namespace strings
 
-// Removes whitespace from the beginning of the given string. The version that
-// takes a string modifies the given input string.
-//
-// The versions that take C-strings return a pointer to the first non-whitespace
-// character if one is present or nullptr otherwise. 'line' must be
-// NUL-terminated.
-inline void StripLeadingWhitespace(string* str) {
-  absl::StripLeadingAsciiWhitespace(str);
-}
-
-inline const char* StripLeadingWhitespace(const char* line) {
-  auto stripped = absl::StripLeadingAsciiWhitespace(line);
-
-  if (stripped.empty()) return nullptr;
-
-  return stripped.begin();
-}
-// StripLeadingWhitespace for non-const strings.
-inline char* StripLeadingWhitespace(char* line) {
-  auto stripped = absl::StripLeadingAsciiWhitespace(line);
-
-  if (stripped.empty()) return nullptr;
-
-  return const_cast<char*>(stripped.begin());
-}
-
 // Removes whitespace from the end of the given string.
 inline void StripTrailingWhitespace(string* s) {
   absl::StripTrailingAsciiWhitespace(s);
 }
-
-// Removes the trailing '\n' or '\r\n' from 's', if one exists. Returns true if
-// a newline was found and removed.
-bool StripTrailingNewline(string* s);
 
 // Returns a pointer to the first non-whitespace character in 'str'. Never
 // returns nullptr. 'str' must be NUL-terminated.
@@ -237,68 +200,6 @@ inline char* SkipLeadingWhitespace(char* str) {
   while (absl::ascii_isspace(*str)) ++str;
   return str;
 }
-
-// Strips everything enclosed in pairs of curly braces ('{' and '}') and the
-// curly braces themselves. Doesn't touch open braces without a closing brace.
-// Does not handle nesting.
-void StripCurlyBraces(string* s);
-
-// Performs the same operation as StripCurlyBraces, but allows the caller to
-// specify different left and right bracket characters, such as '(' and ')'.
-void StripBrackets(char left, char right, string* s);
-
-// Strips everything between a right angle bracket ('<') and left angle bracket
-// ('>') including the brackets themselves, e.g.
-// "the quick <b>brown</b> fox" --> "the quick brown fox".
-//
-// This does not understand HTML nor does it know anything about HTML tags or
-// comments. This is simply a text processing function that removes text between
-// pairs of angle brackets. Note that in the example above the word "brown" is
-// not removed because it is not between pairs of angle brackets.
-//
-// This is NOT safe for security and this will NOT prevent against XSS.
-//
-// For a more full-featured HTML parser, see //webutil/pageutil/pageutil.h.
-void StripMarkupTags(string* s);
-string OutputWithMarkupTagsStripped(const string& s);
-
-// Removes any occurrences of the characters in 'remove' from the:
-//
-//   - start of the string "Left"
-//   - end of the string "Right"
-//   - both ends of the string
-//
-// Returns the number of chars removed.
-ptrdiff_t TrimStringLeft(string* s, absl::string_view remove);
-ptrdiff_t TrimStringRight(string* s, absl::string_view remove);
-inline ptrdiff_t TrimString(string* s, absl::string_view remove) {
-  return TrimStringRight(s, remove) + TrimStringLeft(s, remove);
-}
-ptrdiff_t TrimStringLeft(absl::string_view* s, absl::string_view remove);
-ptrdiff_t TrimStringRight(absl::string_view* s, absl::string_view remove);
-inline ptrdiff_t TrimString(absl::string_view* s, absl::string_view remove) {
-  return TrimStringRight(s, remove) + TrimStringLeft(s, remove);
-}
-
-// Removes leading and trailing runs, and collapses middle runs of a set of
-// characters into a single character (the first one specified in 'remove').
-// E.g.: TrimRunsInString(&s, " :,()") removes leading and trailing delimiter
-// chars and collapses and converts internal runs of delimiters to single ' '
-// characters, so, for example, "  a:(b):c  " -> "a b c".
-void TrimRunsInString(string* s, absl::string_view remove);
-
-// Removes all internal '\0' characters from the string.
-void RemoveNullsInString(string* s);
-
-// Removes all occurrences of the given character from the given string. Returns
-// the new length.
-ptrdiff_t strrm(char* str, char c);
-ptrdiff_t memrm(char* str, ptrdiff_t strlen, char c);
-
-// Removes all occurrences of any character from 'chars' from the given string.
-// Returns the new length.
-ptrdiff_t strrmm(char* str, const char* chars);
-ptrdiff_t strrmm(string* str, const string& chars);
 
 template <typename T>
 ABSL_DEPRECATED("stop passing int*")

@@ -26,7 +26,7 @@
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
-#include "s2/s2shapeutil.h"
+#include "s2/s2polygon.h"
 #include "s2/s2textformat.h"
 
 namespace {

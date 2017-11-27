@@ -15,6 +15,11 @@ find_package(SWIG)
 find_package(PythonInterp)
 find_package(PythonLibs)
 
+# Avoid "Policy CMP0042 is not set" warning on macOS.
+if (APPLE)
+    set(CMAKE_MACOSX_RPATH TRUE)
+endif()
+
 add_definitions(-Wno-deprecated-declarations -std=c++11)
 
 # If OpenSSL is installed in a non-standard location, configure with
@@ -93,6 +98,7 @@ add_library(s2 SHARED
             src/s2/s2shapeutil_contains_brute_force.cc
             src/s2/s2shapeutil_edge_iterator.cc
             src/s2/s2shapeutil_get_reference_point.cc
+            src/s2/s2shapeutil_range_iterator.cc
             src/s2/s2textformat.cc
             src/s2/s2wedge_relations.cc
             src/s2/strings/serialize.cc
@@ -204,8 +210,12 @@ install(FILES src/s2/_fpcontractoff.h
               src/s2/s2shapeutil.h
               src/s2/s2shapeutil_build_polygon_boundaries.h
               src/s2/s2shapeutil_contains_brute_force.h
+              src/s2/s2shapeutil_count_edges.h
               src/s2/s2shapeutil_edge_iterator.h
               src/s2/s2shapeutil_get_reference_point.h
+              src/s2/s2shapeutil_range_iterator.h
+              src/s2/s2shapeutil_shape_edge.h
+              src/s2/s2shapeutil_shape_edge_id.h
               src/s2/s2testing.h
               src/s2/s2textformat.h
               src/s2/s2wedge_relations.h
@@ -360,8 +370,10 @@ if (GTEST_ROOT)
       src/s2/s2shapeindex_test.cc
       src/s2/s2shapeutil_build_polygon_boundaries_test.cc
       src/s2/s2shapeutil_contains_brute_force_test.cc
+      src/s2/s2shapeutil_count_edges_test.cc
       src/s2/s2shapeutil_edge_iterator_test.cc
       src/s2/s2shapeutil_get_reference_point_test.cc
+      src/s2/s2shapeutil_range_iterator_test.cc
       src/s2/s2shapeutil_test.cc
       src/s2/s2testing_test.cc
       src/s2/s2textformat_test.cc

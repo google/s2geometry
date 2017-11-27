@@ -17,7 +17,7 @@
 // A btree_map<> implements the STL unique sorted associative container
 // interface and the pair associative container interface (a.k.a map<>) using a
 // btree. A btree_multimap<> implements the STL multiple sorted associative
-// container interface and the pair associtive container interface (a.k.a
+// container interface and the pair associative container interface (a.k.a
 // multimap<>) using a btree. See btree.h for details of the btree
 // implementation and caveats.
 //

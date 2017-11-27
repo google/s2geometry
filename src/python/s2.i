@@ -18,4 +18,15 @@
 %define %unignore %rename("%s") %enddef
 %define %unignoreall %rename("%s") ""; %enddef
 
+%define ABSL_DEPRECATED(msg)
+%enddef
+
+// SWIG <3.0 does not understand these C++11 keywords (unsure of exact version).
+#if SWIG_VERSION < 0x030000
+%define override %enddef
+#endif
+
+// Still not supported by SWIG 3.0.12.
+%define final %enddef
+
 %include "s2_common.i"

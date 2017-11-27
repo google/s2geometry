@@ -16,6 +16,7 @@
 #include "s2/s2shapeutil_edge_iterator.h"
 
 #include <gtest/gtest.h>
+#include "s2/mutable_s2shapeindex.h"
 #include "s2/s2textformat.h"
 
 namespace s2shapeutil {

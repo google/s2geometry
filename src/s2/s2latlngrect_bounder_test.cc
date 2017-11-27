@@ -20,11 +20,13 @@
 #include <cfloat>
 #include <string>
 
-#include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
+
+using absl::StrCat;
 
 S2LatLngRect GetEdgeBound(const S2Point& a, const S2Point& b) {
   S2LatLngRectBounder bounder;
@@ -164,7 +166,7 @@ TEST(RectBounder, NearlyIdenticalOrAntipodalPoints) {
   S2Testing::Random* rnd = &S2Testing::rnd;
   const int kIters = 10000;
   for (int iter = 0; iter < kIters; ++iter) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", iter));
+    SCOPED_TRACE(StrCat("Iteration ", iter));
     S2Point a, b;
     switch (rnd->Uniform(5)) {
       case 0:

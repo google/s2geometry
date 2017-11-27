@@ -24,8 +24,8 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
-#include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -36,6 +36,7 @@
 #include "s2/s2regioncoverer.h"
 #include "s2/s2testing.h"
 
+using absl::StrCat;
 using std::max;
 using std::min;
 using std::vector;
@@ -315,7 +316,7 @@ TEST(S2CellUnion, Expand) {
 
   S2RegionCoverer coverer;
   for (int i = 0; i < 1000; ++i) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", i));
+    SCOPED_TRACE(StrCat("Iteration ", i));
     S2Cap cap = S2Testing::GetRandomCap(
         S2Cell::AverageArea(S2CellId::kMaxLevel), 4 * M_PI);
 

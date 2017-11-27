@@ -71,7 +71,7 @@ TEST(S2EdgeUtil, InvalidNanPoints) {
 
 void TestCrossing(const S2Point& a, const S2Point& b,
                   const S2Point& c, const S2Point& d,
-                  int robust, bool edge_or_vertex, bool simple) {
+                  int robust, bool edge_or_vertex) {
   // Modify the expected result if two vertices from different edges match.
   if (a == c || a == d || b == c || b == d) robust = 0;
   EXPECT_EQ(robust, S2::CrossingSign(a, b, c, d));
@@ -116,20 +116,20 @@ void TestCrossing(const S2Point& a, const S2Point& b,
 }
 
 void TestCrossings(S2Point a, S2Point b, S2Point c, S2Point d,
-                   int robust, bool edge_or_vertex, bool simple) {
+                   int robust, bool edge_or_vertex) {
   a = a.Normalize();
   b = b.Normalize();
   c = c.Normalize();
   d = d.Normalize();
-  TestCrossing(a, b, c, d, robust, edge_or_vertex, simple);
-  TestCrossing(b, a, c, d, robust, edge_or_vertex, simple);
-  TestCrossing(a, b, d, c, robust, edge_or_vertex, simple);
-  TestCrossing(b, a, d, c, robust, edge_or_vertex, simple);
-  TestCrossing(a, a, c, d, -1, 0, false);
-  TestCrossing(a, b, c, c, -1, 0, false);
-  TestCrossing(a, a, c, c, -1, 0, false);
-  TestCrossing(a, b, a, b, 0, 1, false);
-  TestCrossing(c, d, a, b, robust, edge_or_vertex ^ (robust == 0), simple);
+  TestCrossing(a, b, c, d, robust, edge_or_vertex);
+  TestCrossing(b, a, c, d, robust, edge_or_vertex);
+  TestCrossing(a, b, d, c, robust, edge_or_vertex);
+  TestCrossing(b, a, d, c, robust, edge_or_vertex);
+  TestCrossing(a, a, c, d, -1, false);
+  TestCrossing(a, b, c, c, -1, false);
+  TestCrossing(a, a, c, c, -1, false);
+  TestCrossing(a, b, a, b, 0, true);
+  TestCrossing(c, d, a, b, robust, edge_or_vertex != (robust == 0));
 }
 
 TEST(S2EdgeUtil, Crossings) {
@@ -138,61 +138,61 @@ TEST(S2EdgeUtil, Crossings) {
 
   // Two regular edges that cross.
   TestCrossings(S2Point(1, 2, 1), S2Point(1, -3, 0.5),
-                S2Point(1, -0.5, -3), S2Point(0.1, 0.5, 3), 1, true, true);
+                S2Point(1, -0.5, -3), S2Point(0.1, 0.5, 3), 1, true);
 
   // Two regular edges that intersect antipodal points.
   TestCrossings(S2Point(1, 2, 1), S2Point(1, -3, 0.5),
-                S2Point(-1, 0.5, 3), S2Point(-0.1, -0.5, -3), -1, false, true);
+                S2Point(-1, 0.5, 3), S2Point(-0.1, -0.5, -3), -1, false);
 
   // Two edges on the same great circle that start at antipodal points.
   TestCrossings(S2Point(0, 0, -1), S2Point(0, 1, 0),
-                S2Point(0, 0, 1), S2Point(0, 1, 1), -1, false, true);
+                S2Point(0, 0, 1), S2Point(0, 1, 1), -1, false);
 
   // Two edges that cross where one vertex is S2::Origin().
   TestCrossings(S2Point(1, 0, 0), S2::Origin(),
-                S2Point(1, -0.1, 1), S2Point(1, 1, -0.1), 1, true, true);
+                S2Point(1, -0.1, 1), S2Point(1, 1, -0.1), 1, true);
 
   // Two edges that intersect antipodal points where one vertex is
   // S2::Origin().
   TestCrossings(S2Point(1, 0, 0), S2::Origin(),
-                S2Point(-1, 0.1, -1), S2Point(-1, -1, 0.1), -1, false, true);
+                S2Point(-1, 0.1, -1), S2Point(-1, -1, 0.1), -1, false);
 
   // Two edges that share an endpoint.  The Ortho() direction is (-4,0,2),
   // and edge CD is further CCW around (2,3,4) than AB.
   TestCrossings(S2Point(2, 3, 4), S2Point(-1, 2, 5),
-                S2Point(7, -2, 3), S2Point(2, 3, 4), 0, false, true);
+                S2Point(7, -2, 3), S2Point(2, 3, 4), 0, false);
 
   // Two edges that barely cross each other near the middle of one edge.  The
   // edge AB is approximately in the x=y plane, while CD is approximately
   // perpendicular to it and ends exactly at the x=y plane.
   TestCrossings(S2Point(1, 1, 1), S2Point(1, nextafter(1, 0), -1),
-                S2Point(11, -12, -1), S2Point(10, 10, 1), 1, true, false);
+                S2Point(11, -12, -1), S2Point(10, 10, 1), 1, true);
 
   // In this version, the edges are separated by a distance of about 1e-15.
   TestCrossings(S2Point(1, 1, 1), S2Point(1, nextafter(1, 2), -1),
-                S2Point(1, -1, 0), S2Point(1, 1, 0), -1, false, false);
+                S2Point(1, -1, 0), S2Point(1, 1, 0), -1, false);
 
   // Two edges that barely cross each other near the end of both edges.  This
   // example cannot be handled using regular double-precision arithmetic due
   // to floating-point underflow.
   TestCrossings(S2Point(0, 0, 1), S2Point(2, -1e-323, 1),
-                S2Point(1, -1, 1), S2Point(1e-323, 0, 1), 1, true, false);
+                S2Point(1, -1, 1), S2Point(1e-323, 0, 1), 1, true);
 
   // In this version, the edges are separated by a distance of about 1e-640.
   TestCrossings(S2Point(0, 0, 1), S2Point(2, 1e-323, 1),
-                S2Point(1, -1, 1), S2Point(1e-323, 0, 1), -1, false, false);
+                S2Point(1, -1, 1), S2Point(1e-323, 0, 1), -1, false);
 
   // Two edges that barely cross each other near the middle of one edge.
   // Computing the exact determinant of some of the triangles in this test
   // requires more than 2000 bits of precision.
   TestCrossings(S2Point(1, -1e-323, -1e-323), S2Point(1e-323, 1, 1e-323),
                 S2Point(1, -1, 1e-323), S2Point(1, 1, 0),
-                1, true, false);
+                1, true);
 
   // In this version, the edges are separated by a distance of about 1e-640.
   TestCrossings(S2Point(1, 1e-323, -1e-323), S2Point(-1e-323, 1, 1e-323),
                 S2Point(1, -1, 1e-323), S2Point(1, 1, 0),
-                -1, false, false);
+                -1, false);
 }
 
 TEST(S2EdgeUtil, CollinearEdgesThatDontTouch) {

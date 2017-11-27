@@ -31,8 +31,10 @@
 #include "s2/s2edge_distances.h"
 #include "s2/s2loop.h"
 #include "s2/s2metrics.h"
+#include "s2/s2edge_vector_shape.h"
+#include "s2/s2point_vector_shape.h"
+#include "s2/s2polygon.h"
 #include "s2/s2predicates.h"
-#include "s2/s2shapeutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
@@ -359,7 +361,7 @@ static void GetClosestEdges(S2ClosestEdgeQuery::Target* target,
   if (query->options().max_distance() ==
       S2ClosestEdgeQuery::Distance::Infinity()) {
     int min_expected = min(query->options().max_edges(),
-                           s2shapeutil::GetNumEdges(query->index()));
+                           s2shapeutil::CountEdges(query->index()));
     if (!query->options().include_interiors()) {
       // We can predict exactly how many edges should be returned.
       EXPECT_EQ(min_expected, edges->size());

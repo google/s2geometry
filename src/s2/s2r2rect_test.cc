@@ -21,8 +21,8 @@
 #include "s2/s2r2rect.h"
 
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/r1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -32,6 +32,8 @@
 #include "s2/s2latlngrect.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
+
+using absl::StrCat;
 
 static void TestIntervalOps(const S2R2Rect& x, const S2R2Rect& y,
                             const char* expected_rexion,
@@ -149,7 +151,7 @@ TEST(S2R2Rect, SimplePredicates) {
 
   // Make sure that GetVertex() returns vertices in CCW order.
   for (int k = 0; k < 4; ++k) {
-    SCOPED_TRACE(StringPrintf("k=%d", k));
+    SCOPED_TRACE(StrCat("k=", k));
     EXPECT_TRUE(S2::SimpleCCW(S2R2Rect::ToS2Point(r1.GetVertex(k - 1)),
                               S2R2Rect::ToS2Point(r1.GetVertex(k)),
                               S2R2Rect::ToS2Point(r1.GetVertex(k + 1))));
@@ -258,7 +260,7 @@ TEST(S2R2Rect, Bounds) {
             S2R2Rect(R2Point(0.5, 0.5), R2Point(0.5, 0.5)).GetRectBound());
 
   for (int i = 0; i < 10; ++i) {
-    SCOPED_TRACE(StringPrintf("i=%d", i));
+    SCOPED_TRACE(StrCat("i=", i));
     S2R2Rect rect = S2R2Rect::FromCellId(S2Testing::GetRandomCellId());
     S2Cap cap = rect.GetCapBound();
     S2LatLngRect llrect = rect.GetRectBound();

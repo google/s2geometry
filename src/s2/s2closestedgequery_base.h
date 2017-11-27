@@ -34,7 +34,8 @@
 #include "s2/s2distance_target.h"
 #include "s2/s2regioncoverer.h"
 #include "s2/s2shapeindex.h"
-#include "s2/s2shapeutil.h"
+#include "s2/s2shapeutil_count_edges.h"
+#include "s2/s2shapeutil_shape_edge_id.h"
 #include "s2/util/gtl/dense_hash_set.h"
 
 // S2ClosestEdgeQueryBase is a templatized class for finding the closest
@@ -302,9 +303,16 @@ class S2ClosestEdgeQueryBase {
   //
   // The covering needs to be stored in a std::vector so that we can use
   // S2CellUnion::GetIntersection().
-  int index_num_edges_;
   std::vector<S2CellId> index_covering_;
   absl::InlinedVector<const S2ShapeIndexCell*, 6> index_cells_;
+
+  // The decision about whether to use the brute force algorithm is based on
+  // counting the total number of edges in the index.  However if the index
+  // contains a large number of shapes, this in itself might take too long.
+  // So instead we only count edges up to (max_brute_force_index_size() + 1)
+  // for the current target type (stored as index_num_edges_limit_).
+  int index_num_edges_;
+  int index_num_edges_limit_;
 
   // The distance beyond which we can safely ignore further candidate edges.
   // (Candidates that are exactly at the limit are ignored; this is more
@@ -477,8 +485,8 @@ void S2ClosestEdgeQueryBase<Distance>::Init(const S2ShapeIndex* index) {
 
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::ReInit() {
-  // TODO(ericv): Add CountEdgesUpTo() and use it here.
-  index_num_edges_ = s2shapeutil::GetNumEdges(*index_);
+  index_num_edges_ = 0;
+  index_num_edges_limit_ = 0;
   index_covering_.clear();
   index_cells_.clear();
   // We don't initialize iter_ here to make queries on small indexes a bit
@@ -568,8 +576,18 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
                        target_->set_max_error(options.max_error()) &&
                        options.max_edges() > 1 && !options.use_brute_force());
 
-  if (options.use_brute_force() ||
-      index_num_edges_ <= target_->max_brute_force_index_size()) {
+  // Use the brute force algorithm if the index is small enough.  To avoid
+  // spending too much time counting edges when there are many shapes, we stop
+  // counting once there are too many edges.  We may need to recount the edges
+  // if we later see a target with a larger brute force edge threshold.
+  int min_optimized_edges = target_->max_brute_force_index_size() + 1;
+  if (min_optimized_edges > index_num_edges_limit_ &&
+      index_num_edges_ >= index_num_edges_limit_) {
+    index_num_edges_ = s2shapeutil::CountEdgesUpTo(*index_,
+                                                   min_optimized_edges);
+    index_num_edges_limit_ = min_optimized_edges;
+  }
+  if (options.use_brute_force() || index_num_edges_ < min_optimized_edges) {
     FindClosestEdgesBruteForce();
   } else {
     FindClosestEdgesOptimized();

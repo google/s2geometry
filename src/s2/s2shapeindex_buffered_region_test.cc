@@ -24,6 +24,7 @@
 #include "s2/mutable_s2shapeindex.h"
 #include "s2/s2cap.h"
 #include "s2/s2cellunion.h"
+#include "s2/s2polygon.h"
 #include "s2/s2regioncoverer.h"
 #include "s2/s2shapeindex.h"
 #include "s2/s2testing.h"

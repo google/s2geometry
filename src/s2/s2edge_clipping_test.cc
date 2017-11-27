@@ -22,8 +22,8 @@
 #include <string>
 
 #include <glog/logging.h>
-#include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/r1interval.h"
 #include "s2/r2rect.h"
 #include "s2/s1chordangle.h"
@@ -32,6 +32,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
+using absl::StrCat;
 using std::fabs;
 using std::max;
 
@@ -180,7 +181,7 @@ TEST(S2EdgeUtil, FaceClipping) {
   R2Rect biunit(R1Interval(-1, 1), R1Interval(-1, 1));
   const int kIters = 1000;  // Test passes with 1e6 iterations
   for (int iter = 0; iter < kIters; ++iter) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", iter));
+    SCOPED_TRACE(StrCat("Iteration ", iter));
     // Choose two adjacent cube corners P and Q.
     int face = rnd->Uniform(6);
     int i = rnd->Uniform(4);
@@ -309,7 +310,7 @@ R2Point ChooseEndpoint(const R2Rect& clip) {
 void TestEdgeClipping(const R2Rect& clip) {
   const int kIters = 1000;  // Test passes with 1e6 iterations
   for (int iter = 0; iter < kIters; ++iter) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", iter));
+    SCOPED_TRACE(StrCat("Iteration ", iter));
     TestClipEdge(ChooseEndpoint(clip), ChooseEndpoint(clip), clip);
   }
 }

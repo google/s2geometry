@@ -23,9 +23,9 @@
 #include <vector>
 
 #include <gflags/gflags.h>
-#include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell.h"
@@ -35,6 +35,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2textformat.h"
 
+using absl::StrCat;
 using absl::make_unique;
 using std::fabs;
 using std::unique_ptr;
@@ -285,18 +286,18 @@ static string JoinInts(const vector<int>& ints) {
   string result;
   int n = ints.size();
   for (int i = 0; i + 1 < n; ++i) {
-    StringAppendF(&result, "%d,", ints[i]);
+    StrAppend(&result, ints[i], ",");
   }
   if (n > 0) {
-    StringAppendF(&result, "%d", ints[n - 1]);
+    StrAppend(&result, ints[n - 1]);
   }
   return result;
 }
 
 void CheckSubsample(const char* polyline_str, double tolerance_degrees,
                     const char* expected_str) {
-  SCOPED_TRACE(StringPrintf("\"%s\", tolerance %f",
-                            polyline_str, tolerance_degrees));
+  SCOPED_TRACE(StrCat("\"", polyline_str, "\", tolerance ",
+                      tolerance_degrees));
   unique_ptr<S2Polyline> polyline(MakePolyline(polyline_str));
   vector<int> indices;
   polyline->SubsampleVertices(S1Angle::Degrees(tolerance_degrees), &indices);
@@ -430,8 +431,8 @@ TEST(S2PolylineOwningShape, Ownership) {
 void TestNearlyCovers(const string& a_str, const string& b_str,
                       double max_error_degrees, bool expect_b_covers_a,
                       bool expect_a_covers_b) {
-  SCOPED_TRACE(StringPrintf("a=\"%s\", b=\"%s\", max error=%f",
-                            a_str.c_str(), b_str.c_str(), max_error_degrees));
+  SCOPED_TRACE(StrCat("a=\"", a_str, "\", b=\"", b_str, "\", max error=",
+                      max_error_degrees));
   unique_ptr<S2Polyline> a(MakePolyline(a_str));
   unique_ptr<S2Polyline> b(MakePolyline(b_str));
   S1Angle max_error = S1Angle::Degrees(max_error_degrees);

@@ -22,11 +22,12 @@
 
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
+using absl::StrCat;
 using std::fabs;
 
 TEST(S2LatLng, TestBasic) {
@@ -126,7 +127,7 @@ TEST(S2LatLng, TestToString) {
   };
   int i = 0;
   for (const auto& v : values) {
-    SCOPED_TRACE(StringPrintf("Iteration %d", i++));
+    SCOPED_TRACE(StrCat("Iteration ", i++));
     S2LatLng p = S2LatLng::FromDegrees(v.lat, v.lng);
     string output;
     p.ToStringInDegrees(&output);

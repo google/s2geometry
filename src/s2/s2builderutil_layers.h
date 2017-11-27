@@ -61,9 +61,9 @@
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
+#include "s2/s2point_vector_shape.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
-#include "s2/s2shapeutil.h"
 
 namespace s2builderutil {
 
