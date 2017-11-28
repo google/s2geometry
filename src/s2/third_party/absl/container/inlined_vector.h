@@ -47,13 +47,11 @@
 #include <utility>
 
 #include "s2/third_party/absl/algorithm/algorithm.h"
-#include "s2/third_party/absl/base/gdb_scripting.h"
 #include "s2/third_party/absl/base/internal/throw_delegate.h"
 #include "s2/third_party/absl/base/optimization.h"
 #include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/absl/memory/memory.h"
 
-DEFINE_GDB_AUTO_SCRIPT("devtools/gdb/component/core/inlined_vector.py")
 
 namespace absl {
 

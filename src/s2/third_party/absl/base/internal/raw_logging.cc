@@ -36,9 +36,6 @@
 // this, consider moving both to config.h instead.
 #if defined(__linux__) || defined(__APPLE__) || defined(__Fuchsia__) || \
     defined(__GENCLAVE__)
-/* absl:oss-replace-with
-#if defined(__linux__) || defined(__APPLE__) || defined(__Fuchsia__)
-   absl:oss-replace-end */
 #include <unistd.h>
 
 

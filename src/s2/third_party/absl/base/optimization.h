@@ -69,9 +69,6 @@
 // See http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0154r1.html
 // for more information.
 #if defined(__GNUC__) && !defined(SWIG)
-/* absl:oss-replace-with
-#if defined(__GNUC__)
-absl:oss-replace-end */
 // Cache line alignment
 #if defined(__i386__) || defined(__x86_64__)
 #define ABSL_CACHELINE_SIZE 64
@@ -160,10 +157,6 @@ absl:oss-replace-end */
 #if (ABSL_HAVE_BUILTIN(__builtin_expect) ||         \
      (defined(__GNUC__) && !defined(__clang__))) && \
     !defined(SWIG)
-/* absl:oss-replace-with
-#if ABSL_HAVE_BUILTIN(__builtin_expect) || \
-    (defined(__GNUC__) && !defined(__clang__))
-absl:oss-replace-end */
 #define ABSL_PREDICT_FALSE(x) (__builtin_expect(x, 0))
 #define ABSL_PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
 #else

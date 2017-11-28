@@ -113,7 +113,6 @@ add_library(s2 SHARED
             src/s2/third_party/absl/strings/str_cat.cc
             src/s2/third_party/absl/strings/str_split.cc
             src/s2/third_party/absl/strings/string_view.cc
-            src/s2/third_party/absl/strings/string_view_utils.cc
             src/s2/third_party/absl/strings/strip.cc
             src/s2/third_party/absl/strings/internal/memutil.cc
             src/s2/util/bits/bit-interleave.cc
@@ -233,7 +232,6 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/casts.h
               src/s2/third_party/absl/base/config.h
               src/s2/third_party/absl/base/dynamic_annotations.h
-              src/s2/third_party/absl/base/gdb_scripting.h
               src/s2/third_party/absl/base/integral_types.h
               src/s2/third_party/absl/base/macros.h
               src/s2/third_party/absl/base/optimization.h
@@ -242,7 +240,6 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/thread_annotations.h
         DESTINATION include/s2/third_party/absl/base)
 install(FILES src/s2/third_party/absl/base/internal/identity.h
-              src/s2/third_party/absl/base/internal/port_hash.inc
               src/s2/third_party/absl/base/internal/throw_delegate.h
               src/s2/third_party/absl/base/internal/unaligned_access.h
         DESTINATION include/s2/third_party/absl/base/internal)
@@ -258,8 +255,6 @@ install(FILES src/s2/third_party/absl/numeric/int128.h
         DESTINATION include/s2/third_party/absl/numeric)
 install(FILES src/s2/third_party/absl/strings/string_view.h
         DESTINATION include/s2/third_party/absl/strings)
-install(FILES src/s2/third_party/absl/strings/internal/fastmem.h
-        DESTINATION include/s2/third_party/absl/strings/internal)
 install(FILES src/s2/third_party/absl/types/span.h
         DESTINATION include/s2/third_party/absl/types)
 install(FILES src/s2/util/bits/bits.h

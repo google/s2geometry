@@ -36,6 +36,9 @@ using std::max;
 using std::min;
 using std::vector;
 
+DEFINE_int32(s2cellunion_decode_max_num_cells, 1000000,
+             "The maximum number of cells allowed by S2CellUnion::Decode");
+
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
 vector<S2CellId> S2CellUnion::ToS2CellIds(const vector<uint64>& ids) {
@@ -490,6 +493,10 @@ bool S2CellUnion::Decode(Decoder* const decoder) {
   if (version > kCurrentLosslessEncodingVersionNumber) return false;
 
   uint64 num_cells = decoder->get64();
+  if (num_cells > FLAGS_s2cellunion_decode_max_num_cells) {
+    return false;
+  }
+
   vector<S2CellId> temp_cell_ids(num_cells);
   for (int i = 0; i < num_cells; ++i) {
     if (!temp_cell_ids[i].Decode(decoder)) return false;

@@ -91,6 +91,10 @@ class S2CellId {
   //   S2Cell(S2CellId(p)).Contains(p)
   //
   // is always true.  The point "p" does not need to be normalized.
+  //
+  // If instead you want every point to be contained by exactly one S2Cell,
+  // you will need to convert the S2CellIds to S2Loops (which implement point
+  // containment this way).
   explicit S2CellId(const S2Point& p);
 
   // Construct a leaf cell containing the given normalized S2LatLng.

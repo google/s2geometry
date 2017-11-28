@@ -65,7 +65,6 @@
 #include <utility>
 
 #include "s2/third_party/absl/algorithm/algorithm.h"
-#include "s2/third_party/absl/base/gdb_scripting.h"
 #include "s2/third_party/absl/base/internal/throw_delegate.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/optimization.h"
@@ -869,6 +868,4 @@ MutableArraySlice<T> MakeMutableArraySlice(T* begin, T* end) {
 
 }  // namespace gtl
 
-// Link the pretty printer for gdb.  Only affects debug builds.
-DEFINE_GDB_AUTO_SCRIPT("devtools/gdb/component/core/array_slice.py")
 #endif  // S2_THIRD_PARTY_ABSL_TYPES_SPAN_H_
