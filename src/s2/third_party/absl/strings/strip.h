@@ -166,25 +166,6 @@ inline void StripWhitespace(absl::string_view* str) {
   *str = absl::StripAsciiWhitespace(*str);
 }
 
-namespace strings {
-
-// Calls StripWhitespace() on each element in the given collection.
-//
-// Note: this implementation is conceptually similar to
-//
-//   std::for_each(c.begin(), c.end(), StripWhitespace);
-//
-// except that StripWhitespace requires a *pointer* to the element, so the above
-// std::for_each solution wouldn't work.
-template <typename Collection>
-inline void StripWhitespaceInCollection(Collection* collection) {
-  for (typename Collection::iterator it = collection->begin();
-       it != collection->end(); ++it)
-    StripWhitespace(&(*it));
-}
-
-}  // namespace strings
-
 // Removes whitespace from the end of the given string.
 inline void StripTrailingWhitespace(string* s) {
   absl::StripTrailingAsciiWhitespace(s);

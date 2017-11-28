@@ -43,7 +43,6 @@
 
 #include "s2/third_party/absl/algorithm/algorithm.h"
 #include "s2/third_party/absl/base/dynamic_annotations.h"
-#include "s2/third_party/absl/base/gdb_scripting.h"
 #include "s2/third_party/absl/base/internal/throw_delegate.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/optimization.h"
@@ -502,6 +501,4 @@ constexpr size_t FixedArray<T, N>::kInlineBytesDefault;
 
 using absl::FixedArray;
 
-// Tell gdb to load the pretty-printer.
-DEFINE_GDB_AUTO_SCRIPT("devtools/gdb/component/core/fixedarray.py")
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_FIXED_ARRAY_H_

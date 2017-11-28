@@ -35,7 +35,6 @@
 
 #include <cstring>
 
-#include "s2/third_party/absl/strings/internal/fastmem.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
 namespace absl {
@@ -54,10 +53,7 @@ inline bool StrContains(absl::string_view haystack, absl::string_view needle) {
 inline bool StartsWith(absl::string_view text, absl::string_view prefix) {
   return prefix.empty() ||
          (text.size() >= prefix.size() &&
-          strings_internal::memeq(text.data(), prefix.data(), prefix.size()));
-  /* absl:oss-replace-with
-          memcmp(text.data(), prefix.data(), prefix.size()) == 0);
-  absl:oss-replace-end */
+          0 == std::memcmp(text.data(), prefix.data(), prefix.size()));
 }
 
 // EndsWith()
@@ -66,12 +62,8 @@ inline bool StartsWith(absl::string_view text, absl::string_view prefix) {
 inline bool EndsWith(absl::string_view text, absl::string_view suffix) {
   return suffix.empty() ||
          (text.size() >= suffix.size() &&
-          strings_internal::memeq(text.data() + (text.size() - suffix.size()),
+          0 == std::memcmp(text.data() + (text.size() - suffix.size()),
                                   suffix.data(), suffix.size())
-  /* absl:oss-replace-with
-          memcmp(text.data() + (text.size() - suffix.size()), suffix.data(),
-                 suffix.size()) == 0
-  absl:oss-replace-end */
          );
 }
 

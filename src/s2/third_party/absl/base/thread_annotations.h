@@ -48,9 +48,6 @@
 #define S2_THIRD_PARTY_ABSL_BASE_THREAD_ANNOTATIONS_H_
 
 #if defined(__clang__) && (!defined(SWIG))
-/* absl:oss-replace-with
-#if defined(__clang__)
-   absl:oss-replace-end */
 #define THREAD_ANNOTATION_ATTRIBUTE__(x)   __attribute__((x))
 #else
 #define THREAD_ANNOTATION_ATTRIBUTE__(x)   // no-op

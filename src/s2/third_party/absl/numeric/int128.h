@@ -79,13 +79,7 @@ namespace absl {
 //     absl::uint64_t i = v;                         // Error
 //     absl::uint64_t i = static_cast<uint64_t>(v);  // OK
 //
-// NOTE: the alignment requirement of `uint128` is due to change, so users
-// should take care to avoid depending on the current 8 byte alignment.
-// TODO(user) Remove alignment note above once alignof(uint128) becomes 16.
-class uint128 {
-/* absl:oss-replace-with
 class alignas(16) uint128 {
-absl:oss-replace-end */
  public:
   uint128() = default;
 

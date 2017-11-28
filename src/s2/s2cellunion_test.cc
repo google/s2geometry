@@ -501,6 +501,21 @@ TEST(S2CellUnion, Clear) {
   EXPECT_EQ(0, face1_union.cell_ids().capacity());
 }
 
+TEST(S2CellUnion, RefuseToDecode) {
+  std::vector<S2CellId> cellids;
+  S2CellId id = S2CellId::Begin(S2CellId::kMaxLevel);
+  for (int i = 0; i <= FLAGS_s2cellunion_decode_max_num_cells; ++i) {
+    cellids.push_back(id);
+    id = id.next();
+  }
+  S2CellUnion cell_union = S2CellUnion::FromVerbatim(cellids);
+  Encoder encoder;
+  cell_union.Encode(&encoder);
+  Decoder decoder(encoder.base(), encoder.length());
+  S2CellUnion decoded_cell_union;
+  EXPECT_FALSE(decoded_cell_union.Decode(&decoder));
+}
+
 TEST(S2CellUnion, Release) {
   S2CellId face1_id = S2CellId::FromFace(1);
   S2CellUnion face1_union({face1_id});

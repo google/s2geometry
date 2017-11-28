@@ -51,7 +51,6 @@ using std::string_view;
 #include "s2/third_party/absl/base/internal/throw_delegate.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
-#include "s2/third_party/absl/strings/internal/fastmem.h"
 
 // string_view has *two* size types.
 // string_view::size_type
@@ -474,14 +473,14 @@ class string_view {
   ABSL_DEPRECATED("Use absl::StartsWith")
   bool starts_with(string_view x) const {
     return length_ >= x.length_ &&
-           strings_internal::memeq(ptr_, x.ptr_, x.length_);
+           0 == std::memcmp(ptr_, x.ptr_, x.length_);
   }
 
   // Returns whether this ends with x.
   ABSL_DEPRECATED("Use absl::EndsWith")
   bool ends_with(string_view x) const {
     return length_ >= x.length_ &&
-           strings_internal::memeq(ptr_ + (length_ - x.length_), x.ptr_,
+           0 == std::memcmp(ptr_ + (length_ - x.length_), x.ptr_,
                                          x.length_);
   }
 
@@ -659,11 +658,7 @@ inline bool operator==(string_view x, string_view y) noexcept {
   }
 
   return x.data() == y.data() || len <= 0 ||
-         strings_internal::memeq(x.data(), y.data(), len);
-  /* absl:oss-replace-with
-  return x.data() == y.data() || len <= 0 ||
-         memcmp(x.data(), y.data(), len) == 0;
-  absl:oss-replace-end */
+         0 == std::memcmp(x.data(), y.data(), len);
 }
 
 inline bool operator!=(string_view x, string_view y) noexcept {

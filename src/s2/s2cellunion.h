@@ -20,6 +20,7 @@
 
 #include <vector>
 
+#include <gflags/gflags.h>
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
@@ -33,6 +34,8 @@ class S1Angle;
 class S2Cap;
 class S2Cell;
 class S2LatLngRect;
+
+DECLARE_int32(s2cellunion_decode_max_num_cells);
 
 // An S2CellUnion is a region consisting of cells of various sizes.  Typically
 // a cell union is used to approximate some other shape.  There is a tradeoff
