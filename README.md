@@ -44,10 +44,8 @@ Thorough testing has only been done on Ubuntu 14.04.3 and macOS 10.12.
 Build and Install
 -----------------
 
+From your cloned repository directory:
 ```
-mkdir s2-geometry-library
-cd s2-geometry-library
-tar zxvf $PATH_TO_DOWNLOADED_TGZ
 mkdir build
 cd build
 cmake -DGTEST_ROOT=/usr/src/gtest ..  # Omit -DGTEST_ROOT to skip tests.
