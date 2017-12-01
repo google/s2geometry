@@ -15,6 +15,15 @@ find_package(SWIG)
 find_package(PythonInterp)
 find_package(PythonLibs)
 
+# FindGFlags.cmake and FindGlog.cmake do not seem to implement REQUIRED;
+# check manually.
+if (NOT ${GFLAGS_FOUND})
+    message(FATAL_ERROR "GFLags required but not found")
+endif()
+if (NOT ${GLOG_FOUND})
+    message(FATAL_ERROR "Glog required but not found")
+endif()
+
 # Avoid "Policy CMP0042 is not set" warning on macOS.
 if (APPLE)
     set(CMAKE_MACOSX_RPATH TRUE)
@@ -44,7 +53,10 @@ add_library(s2 SHARED
             src/s2/s2builder_graph.cc
             src/s2/s2builderutil_closed_set_normalizer.cc
             src/s2/s2builderutil_find_polygon_degeneracies.cc
-            src/s2/s2builderutil_layers.cc
+            src/s2/s2builderutil_s2point_vector_layer.cc
+            src/s2/s2builderutil_s2polygon_layer.cc
+            src/s2/s2builderutil_s2polyline_layer.cc
+            src/s2/s2builderutil_s2polyline_vector_layer.cc
             src/s2/s2builderutil_snap_functions.cc
             src/s2/s2builderutil_testing.cc
             src/s2/s2cap.cc
@@ -144,7 +156,10 @@ install(FILES src/s2/_fpcontractoff.h
               src/s2/s2builder_layer.h
               src/s2/s2builderutil_closed_set_normalizer.h
               src/s2/s2builderutil_find_polygon_degeneracies.h
-              src/s2/s2builderutil_layers.h
+              src/s2/s2builderutil_s2point_vector_layer.h
+              src/s2/s2builderutil_s2polygon_layer.h
+              src/s2/s2builderutil_s2polyline_layer.h
+              src/s2/s2builderutil_s2polyline_vector_layer.h
               src/s2/s2builderutil_snap_functions.h
               src/s2/s2builderutil_testing.h
               src/s2/s2cap.h
@@ -307,7 +322,10 @@ if (GTEST_ROOT)
       src/s2/s2builder_test.cc
       src/s2/s2builderutil_closed_set_normalizer_test.cc
       src/s2/s2builderutil_find_polygon_degeneracies_test.cc
-      src/s2/s2builderutil_layers_test.cc
+      src/s2/s2builderutil_s2point_vector_layer_test.cc
+      src/s2/s2builderutil_s2polygon_layer_test.cc
+      src/s2/s2builderutil_s2polyline_layer_test.cc
+      src/s2/s2builderutil_s2polyline_vector_layer_test.cc
       src/s2/s2builderutil_snap_functions_test.cc
       src/s2/s2builderutil_testing_test.cc
       src/s2/s2cap_test.cc

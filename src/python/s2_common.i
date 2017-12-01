@@ -445,7 +445,7 @@ class S2Point {
 
 // SWIG <3.0 does not understand these C++11 keywords (unsure of exact version).
 #if SWIG_VERSION < 0x030000
-%define constexpr %enddef
+%define constexpr const %enddef
 #endif
 
 %include "s2/r1interval.h"

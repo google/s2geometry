@@ -23,6 +23,7 @@
 
 // SWIG <3.0 does not understand these C++11 keywords (unsure of exact version).
 #if SWIG_VERSION < 0x030000
+%define constexpr const %enddef
 %define override %enddef
 #endif
 

@@ -31,6 +31,12 @@
 
 class S2LatLng;
 
+#ifndef SWIG
+#define IFNDEF_SWIG(x) x
+#else
+#define IFNDEF_SWIG(x)
+#endif
+
 // This class represents a one-dimensional angle (as opposed to a
 // two-dimensional solid angle).  It has methods for converting angles to
 // or from radians, degrees, and the E5/E6/E7 representations (i.e. degrees
@@ -94,7 +100,7 @@ class S1Angle {
 
   // The default constructor yields a zero angle.  This is useful for STL
   // containers and class methods with output arguments.
-  constexpr S1Angle() : radians_(0) {}
+  IFNDEF_SWIG(constexpr) S1Angle() : radians_(0) {}
 
   // Return an angle larger than any finite angle.
   static constexpr S1Angle Infinity();
@@ -322,5 +328,7 @@ inline constexpr S1Angle S1Angle::UnsignedE7(uint32 e7) {
 // Writes the angle in degrees with 7 digits of precision after the
 // decimal point, e.g. "17.3745904".
 std::ostream& operator<<(std::ostream& os, S1Angle a);
+
+#undef IFNDEF_SWIG
 
 #endif  // S2_S1ANGLE_H_
