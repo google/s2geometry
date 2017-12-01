@@ -15,15 +15,12 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#include "s2/s2builderutil_layers.h"
+#include "s2/s2builderutil_s2polygon_layer.h"
 
 #include <algorithm>
-#include <array>
 #include <memory>
 #include "s2/third_party/absl/memory/memory.h"
-#include "s2/s2builder_graph.h"
 #include "s2/s2debug.h"
-#include "s2/s2polygon.h"
 
 using absl::make_unique;
 using std::make_pair;
@@ -40,11 +37,7 @@ using DegenerateEdges = GraphOptions::DegenerateEdges;
 using DuplicateEdges = GraphOptions::DuplicateEdges;
 using SiblingPairs = GraphOptions::SiblingPairs;
 
-using EdgeId = Graph::EdgeId;
-using InputEdgeId = Graph::InputEdgeId;
 using LoopType = Graph::LoopType;
-using PolylineType = Graph::PolylineType;
-using VertexId = Graph::VertexId;
 
 namespace s2builderutil {
 
@@ -184,170 +177,6 @@ void S2PolygonLayer::Build(const Graph& g, S2Error* error) {
   if (options_.validate()) {
     polygon_->FindValidationError(error);
   }
-}
-
-S2PolylineLayer::S2PolylineLayer(S2Polyline* polyline,
-                                 const S2PolylineLayer::Options& options) {
-  Init(polyline, nullptr, nullptr, options);
-}
-
-S2PolylineLayer::S2PolylineLayer(
-    S2Polyline* polyline, LabelSetIds* label_set_ids,
-    IdSetLexicon* label_set_lexicon, const Options& options) {
-  Init(polyline, label_set_ids, label_set_lexicon, options);
-}
-
-void S2PolylineLayer::Init(S2Polyline* polyline, LabelSetIds* label_set_ids,
-                           IdSetLexicon* label_set_lexicon,
-                           const Options& options) {
-  DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
-  polyline_ = polyline;
-  label_set_ids_ = label_set_ids;
-  label_set_lexicon_ = label_set_lexicon;
-  options_ = options;
-
-  if (options_.validate()) {
-    polyline_->set_s2debug_override(S2Debug::DISABLE);
-  }
-}
-
-GraphOptions S2PolylineLayer::graph_options() const {
-  // Remove edges that collapse to a single vertex, but keep duplicate and
-  // sibling edges, since merging duplicates or discarding siblings can make
-  // it impossible to assemble the edges into a single polyline.
-  return GraphOptions(options_.edge_type(), DegenerateEdges::DISCARD,
-                      DuplicateEdges::KEEP, SiblingPairs::KEEP);
-}
-
-void S2PolylineLayer::Build(const Graph& g, S2Error* error) {
-  if (g.num_edges() == 0) {
-    polyline_->Init(vector<S2Point>{});
-    return;
-  }
-  vector<Graph::EdgePolyline> edge_polylines =
-      g.GetPolylines(PolylineType::WALK);
-  if (edge_polylines.size() != 1) {
-    error->Init(S2Error::BUILDER_EDGES_DO_NOT_FORM_POLYLINE,
-                "Input edges cannot be assembled into polyline");
-    return;
-  }
-  const Graph::EdgePolyline& edge_polyline = edge_polylines[0];
-  vector<S2Point> vertices;  // Temporary storage for vertices.
-  vertices.reserve(edge_polyline.size());
-  vertices.push_back(g.vertex(g.edge(edge_polyline[0]).first));
-  for (EdgeId e : edge_polyline) {
-    vertices.push_back(g.vertex(g.edge(e).second));
-  }
-  if (label_set_ids_) {
-    Graph::LabelFetcher fetcher(g, options_.edge_type());
-    vector<Label> labels;  // Temporary storage for labels.
-    label_set_ids_->reserve(edge_polyline.size());
-    for (EdgeId e : edge_polyline) {
-      fetcher.Fetch(e, &labels);
-      label_set_ids_->push_back(label_set_lexicon_->Add(labels));
-    }
-  }
-  polyline_->Init(vertices);
-  if (options_.validate()) {
-    polyline_->FindValidationError(error);
-  }
-}
-
-S2PolylineVectorLayer::S2PolylineVectorLayer(
-    vector<unique_ptr<S2Polyline>>* polylines,
-    const S2PolylineVectorLayer::Options& options) {
-  Init(polylines, nullptr, nullptr, options);
-}
-
-S2PolylineVectorLayer::S2PolylineVectorLayer(
-    vector<unique_ptr<S2Polyline>>* polylines, LabelSetIds* label_set_ids,
-    IdSetLexicon* label_set_lexicon, const Options& options) {
-  Init(polylines, label_set_ids, label_set_lexicon, options);
-}
-
-void S2PolylineVectorLayer::Init(vector<unique_ptr<S2Polyline>>* polylines,
-                                 LabelSetIds* label_set_ids,
-                                 IdSetLexicon* label_set_lexicon,
-                                 const Options& options) {
-  DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
-  polylines_ = polylines;
-  label_set_ids_ = label_set_ids;
-  label_set_lexicon_ = label_set_lexicon;
-  options_ = options;
-}
-
-GraphOptions S2PolylineVectorLayer::graph_options() const {
-  return GraphOptions(options_.edge_type(), DegenerateEdges::DISCARD,
-                      options_.duplicate_edges(), options_.sibling_pairs());
-}
-
-void S2PolylineVectorLayer::Build(const Graph& g, S2Error* error) {
-  vector<Graph::EdgePolyline> edge_polylines = g.GetPolylines(
-      options_.polyline_type());
-  polylines_->reserve(edge_polylines.size());
-  if (label_set_ids_) label_set_ids_->reserve(edge_polylines.size());
-  vector<S2Point> vertices;  // Temporary storage for vertices.
-  vector<Label> labels;  // Temporary storage for labels.
-  for (const auto& edge_polyline : edge_polylines) {
-    vertices.push_back(g.vertex(g.edge(edge_polyline[0]).first));
-    for (EdgeId e : edge_polyline) {
-      vertices.push_back(g.vertex(g.edge(e).second));
-    }
-    S2Polyline* polyline = new S2Polyline(vertices,
-                                          options_.s2debug_override());
-    vertices.clear();
-    if (options_.validate()) {
-      polyline->FindValidationError(error);
-    }
-    polylines_->emplace_back(polyline);
-    if (label_set_ids_) {
-      Graph::LabelFetcher fetcher(g, options_.edge_type());
-      vector<LabelSetId> polyline_labels;
-      polyline_labels.reserve(edge_polyline.size());
-      for (EdgeId e : edge_polyline) {
-        fetcher.Fetch(e, &labels);
-        polyline_labels.push_back(label_set_lexicon_->Add(labels));
-      }
-      label_set_ids_->push_back(std::move(polyline_labels));
-    }
-  }
-}
-
-S2PointVectorLayer::S2PointVectorLayer(std::vector<S2Point>* points,
-                                       const Options& options)
-    : S2PointVectorLayer(points, nullptr, nullptr, options) {}
-
-S2PointVectorLayer::S2PointVectorLayer(std::vector<S2Point>* points,
-                                       LabelSetIds* label_set_ids,
-                                       IdSetLexicon* label_set_lexicon,
-                                       const Options& options)
-    : points_(points),
-      label_set_ids_(label_set_ids),
-      label_set_lexicon_(label_set_lexicon),
-      options_(options) {}
-
-void S2PointVectorLayer::Build(const Graph& g, S2Error* error) {
-  Graph::LabelFetcher fetcher(g, EdgeType::DIRECTED);
-
-  vector<Label> labels;  // Temporary storage for labels.
-  for (EdgeId edge_id = 0; edge_id < g.edges().size(); edge_id++) {
-    auto& edge = g.edge(edge_id);
-    if (edge.first != edge.second) {
-      error->Init(S2Error::INVALID_ARGUMENT, "Found non-degenerate edges");
-      continue;
-    }
-    points_->push_back(g.vertex(edge.first));
-    if (label_set_ids_) {
-      fetcher.Fetch(edge_id, &labels);
-      int set_id = label_set_lexicon_->Add(labels);
-      label_set_ids_->push_back(set_id);
-    }
-  }
-}
-
-GraphOptions S2PointVectorLayer::graph_options() const {
-  return GraphOptions(EdgeType::DIRECTED, DegenerateEdges::KEEP,
-                      options_.duplicate_edges(), SiblingPairs::KEEP);
 }
 
 }  // namespace s2builderutil

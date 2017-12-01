@@ -284,8 +284,8 @@ class Matrix3x3 {
   // Matrix inversion
   inline Matrix3x3 Inverse(void) const {
     VType det = Det();
-    CHECK_NE(det, 0) << " Can't inverse. Determinant = 0.";
-    return (1/det) * ComatrixTransposed();
+    CHECK_NE(det, VType(0)) << " Can't inverse. Determinant = 0.";
+    return (VType(1) / det) * ComatrixTransposed();
   }
 
   // Return the vector 3D at row i
@@ -355,9 +355,9 @@ class Matrix3x3 {
   // Return the identity matrix
   static inline Matrix3x3 Identity(void) {
     Matrix3x3 temp;
-    temp.Set(1, 0, 0,
-             0, 1, 0,
-             0, 0, 1);
+    temp.Set(VType(1), VType(0), VType(0),  //
+             VType(0), VType(1), VType(0),  //
+             VType(0), VType(0), VType(1));
     return temp;
   }
 

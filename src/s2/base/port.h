@@ -974,88 +974,11 @@ struct AlignType { typedef char result[Size]; };
 #if (defined(__GNUC__) || defined(__APPLE__)) && \
     !defined(SWIG)
 #ifdef __cplusplus
-#if defined(__GNUC__) || defined(__llvm__)
-// Defined behavior on some of the uarchs:
-// PREFETCH_HINT_T0:
-//   prefetch to all levels of the hierarchy (except on p4: prefetch to L2)
-// PREFETCH_HINT_NTA:
-//   p4: fetch to L2, but limit to 1 way (out of the 8 ways)
-//   core: skip L2, go directly to L1
-//   k8 rev E and later: skip L2, can go to either of the 2-ways in L1
-enum PrefetchHint {
-  PREFETCH_HINT_T0 = 3,  // More temporal locality
-  PREFETCH_HINT_T1 = 2,
-  PREFETCH_HINT_T2 = 1,  // Less temporal locality
-  PREFETCH_HINT_NTA = 0  // No temporal locality
-};
-#else
-// prefetch is a no-op for this target. Feel free to add more sections above.
-#endif
-
-// The default behavior of prefetch is to speculatively load for read only. This
-// is safe for all currently supported platforms. However, prefetch for store
-// may have problems depending on the target platform (x86, PPC, arm). Check
-// with the platforms team (platforms-servers@) before introducing any changes
-// to this function to identify potential impact on current and future servers.
-extern inline void prefetch(const void *x, int hint) {
-#if defined(__llvm__)
-  // In the gcc version of prefetch(), hint is only a constant _after_ inlining
-  // (assumed to have been successful).  llvm views things differently, and
-  // checks constant-ness _before_ inlining.  This leads to compilation errors
-  // with using the other version of this code with llvm.
-  //
-  // One way round this is to use a switch statement to explicitly match
-  // prefetch hint enumerations, and invoke __builtin_prefetch for each valid
-  // value.  llvm's optimization removes the switch and unused case statements
-  // after inlining, so that this boils down in the end to the same as for gcc;
-  // that is, a single inlined prefetchX instruction.
-  //
-  // Note that this version of prefetch() cannot verify constant-ness of hint.
-  // If client code calls prefetch() with a variable value for hint, it will
-  // receive the full expansion of the switch below, perhaps also not inlined.
-  // This should however not be a problem in the general case of well behaved
-  // caller code that uses the supplied prefetch hint enumerations.
-  switch (hint) {
-    case PREFETCH_HINT_T0:
-      __builtin_prefetch(x, 0, PREFETCH_HINT_T0);
-      break;
-    case PREFETCH_HINT_T1:
-      __builtin_prefetch(x, 0, PREFETCH_HINT_T1);
-      break;
-    case PREFETCH_HINT_T2:
-      __builtin_prefetch(x, 0, PREFETCH_HINT_T2);
-      break;
-    case PREFETCH_HINT_NTA:
-      __builtin_prefetch(x, 0, PREFETCH_HINT_NTA);
-      break;
-    default:
-      __builtin_prefetch(x);
-      break;
-  }
-#elif defined(__GNUC__)
-#if !defined(ARCH_PIII) || defined(__SSE__)
-  if (__builtin_constant_p(hint)) {
-    __builtin_prefetch(x, 0, hint);
-  } else {
-    // Defaults to PREFETCH_HINT_T0
-    __builtin_prefetch(x);
-  }
-#else
-  // We want a __builtin_prefetch, but we build with the default -march=i386
-  // where __builtin_prefetch quietly turns into nothing.
-  // Once we crank up to -march=pentium3 or higher the __SSE__
-  // clause above will kick in with the builtin.
-  // -- mec 2006-06-06
-  if (hint == PREFETCH_HINT_NTA)
-    __asm__ __volatile__("prefetchnta (%0)" : : "r"(x));
-#endif
-#else
-// You get no effect.  Feel free to add more sections above.
-#endif
-}
-
-// prefetch intrinsic (bring data to L1 without polluting L2 cache)
-extern inline void prefetch(const void *x) { return prefetch(x, 0); }
+// prefetch() is deprecated.  Prefer base::PrefetchNta() from base/prefetch.h,
+// which is identical.  Current callers will be updated in a go/lsc, so there
+// is no need to proactively change your code now.
+// More information: go/lsc-prefetch
+extern inline void prefetch(const void *x) { __builtin_prefetch(x, 0, 0); }
 #endif  // ifdef __cplusplus
 #else   // not GCC
 #if defined(__cplusplus)

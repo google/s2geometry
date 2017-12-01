@@ -38,6 +38,12 @@
 
 class S2LatLng;
 
+#ifndef SWIG
+#define IFNDEF_SWIG(x) x
+#else
+#define IFNDEF_SWIG(x)
+#endif
+
 // An S2CellId is a 64-bit unsigned integer that uniquely identifies a
 // cell in the S2 cell decomposition.  It has the following format:
 //
@@ -80,7 +86,7 @@ class S2CellId {
   static const int kPosBits = 2 * kMaxLevel + 1;
   static const int kMaxSize = 1 << kMaxLevel;
 
-  explicit constexpr S2CellId(uint64 id) : id_(id) {}
+  explicit IFNDEF_SWIG(constexpr) S2CellId(uint64 id) : id_(id) {}
 
   // Construct a leaf cell containing the given point "p".  Usually there is
   // is exactly one such cell, but for points along the edge of a cell, any
@@ -101,7 +107,7 @@ class S2CellId {
   explicit S2CellId(const S2LatLng& ll);
 
   // The default constructor returns an invalid cell id.
-  constexpr S2CellId() : id_(0) {}
+  IFNDEF_SWIG(constexpr) S2CellId() : id_(0) {}
   static constexpr S2CellId None() { return S2CellId(); }
 
   // Returns an invalid cell id guaranteed to be larger than any
@@ -684,5 +690,7 @@ struct S2CellIdHash {
     return std::hash<uint64>()(id.id());
   }
 };
+
+#undef IFNDEF_SWIG
 
 #endif  // S2_S2CELLID_H_

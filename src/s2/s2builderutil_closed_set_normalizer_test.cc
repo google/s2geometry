@@ -26,7 +26,9 @@
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
-#include "s2/s2builderutil_layers.h"
+#include "s2/s2builderutil_s2point_vector_layer.h"
+#include "s2/s2builderutil_s2polygon_layer.h"
+#include "s2/s2builderutil_s2polyline_vector_layer.h"
 #include "s2/s2builderutil_testing.h"
 #include "s2/s2textformat.h"
 #include <gtest/gtest.h>

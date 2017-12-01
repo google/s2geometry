@@ -35,7 +35,7 @@
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
-#include "s2/s2builderutil_layers.h"
+#include "s2/s2builderutil_s2polygon_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
