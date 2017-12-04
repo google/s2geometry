@@ -23,7 +23,7 @@ namespace S2 {
 
 namespace internal {
 
-// Define the "extern" constants in s2coords-internal.h.
+// Define the "extern" constants in s2coords_internal.h.
 
 static_assert(kSwapMask == 0x01 && kInvertMask == 0x02, "masks changed");
 

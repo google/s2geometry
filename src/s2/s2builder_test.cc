@@ -564,8 +564,8 @@ void TestPolylineLayers(
   for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
-  EXPECT_EQ(strings::Join(expected_strs, "; "),
-            strings::Join(output_strs, "; "));
+  EXPECT_EQ(absl::StrJoin(expected_strs, "; "),
+            absl::StrJoin(output_strs, "; "));
 }
 
 void TestPolylineVector(
@@ -586,8 +586,8 @@ void TestPolylineVector(
   for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
-  EXPECT_EQ(strings::Join(expected_strs, "; "),
-            strings::Join(output_strs, "; "));
+  EXPECT_EQ(absl::StrJoin(expected_strs, "; "),
+            absl::StrJoin(output_strs, "; "));
 }
 
 void TestPolylineLayersBothEdgeTypes(

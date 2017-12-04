@@ -102,7 +102,7 @@
 
 #include <glog/logging.h>
 #include "s2/r2.h"
-#include "s2/s2coords-internal.h"
+#include "s2/s2coords_internal.h"
 #include "s2/s2point.h"
 #include "s2/util/math/mathutil.h"
 

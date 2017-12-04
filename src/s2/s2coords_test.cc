@@ -19,7 +19,7 @@
 
 #include <gtest/gtest.h>
 #include "s2/s2cellid.h"
-#include "s2/s2coords-internal.h"
+#include "s2/s2coords_internal.h"
 #include "s2/s2testing.h"
 
 using S2::internal::kSwapMask;

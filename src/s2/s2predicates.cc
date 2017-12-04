@@ -16,7 +16,7 @@
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2/s2predicates.h"
-#include "s2/s2predicates-internal.h"
+#include "s2/s2predicates_internal.h"
 
 #include <algorithm>
 #include <cfloat>
