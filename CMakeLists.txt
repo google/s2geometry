@@ -134,6 +134,7 @@ add_library(s2 SHARED
             src/s2/util/math/exactfloat/exactfloat.cc
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
+add_library(s2testing STATIC src/s2/s2testing.cc)
 target_link_libraries(
     s2
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
@@ -174,7 +175,7 @@ install(FILES src/s2/_fpcontractoff.h
               src/s2/s2contains_point_query.h
               src/s2/s2contains_vertex_query.h
               src/s2/s2convexhullquery.h
-              src/s2/s2coords-internal.h
+              src/s2/s2coords_internal.h
               src/s2/s2coords.h
               src/s2/s2crossingedgequery.h
               src/s2/s2debug.h
@@ -182,7 +183,7 @@ install(FILES src/s2/_fpcontractoff.h
               src/s2/s2earth.h
               src/s2/s2edge_clipping.h
               src/s2/s2edge_crosser.h
-              src/s2/s2edge_crossings-internal.h
+              src/s2/s2edge_crossings_internal.h
               src/s2/s2edge_crossings.h
               src/s2/s2edge_distances.h
               src/s2/s2edge_tessellator.h
@@ -208,7 +209,7 @@ install(FILES src/s2/_fpcontractoff.h
               src/s2/s2polygon.h
               src/s2/s2polyline.h
               src/s2/s2polyline_simplifier.h
-              src/s2/s2predicates-internal.h
+              src/s2/s2predicates_internal.h
               src/s2/s2predicates.h
               src/s2/s2projections.h
               src/s2/s2r2rect.h
@@ -307,7 +308,6 @@ install(TARGETS s2 DESTINATION lib)
 message("GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
   add_subdirectory(${GTEST_ROOT} build_gtest)
-  add_library(s2testing STATIC src/s2/s2testing.cc)
 
   set(S2TestFiles
       src/s2/id_set_lexicon_test.cc

@@ -3,10 +3,10 @@
 
 #include <string>
 
-namespace strings {
+namespace absl {
 
 template <typename Range>
-std::string Join(const Range& strs, const char* delim) {
+std::string StrJoin(const Range& strs, const char* delim) {
   std::string joined;
   bool first = true;
   for (const auto& s : strs) {
@@ -17,6 +17,6 @@ std::string Join(const Range& strs, const char* delim) {
   return joined;
 }
 
-}  // namespace strings
+}  // namespace absl
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STR_JOIN_H_

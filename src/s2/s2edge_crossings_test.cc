@@ -16,7 +16,7 @@
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2/s2edge_crossings.h"
-#include "s2/s2edge_crossings-internal.h"
+#include "s2/s2edge_crossings_internal.h"
 
 #include <vector>
 

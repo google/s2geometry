@@ -61,8 +61,8 @@ void TestS2PolylineVector(
   for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
-  EXPECT_EQ(strings::Join(expected_strs, "; "),
-            strings::Join(output_strs, "; "));
+  EXPECT_EQ(absl::StrJoin(expected_strs, "; "),
+            absl::StrJoin(output_strs, "; "));
 }
 
 // Convenience function that tests both directed and undirected edges.
