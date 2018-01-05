@@ -167,7 +167,9 @@ bool S2CrossingEdgeQuery::VisitRawCandidates(
       for (int s = 0; s < cell.num_clipped(); ++s) {
         const S2ClippedShape& clipped = cell.clipped(s);
         for (int j = 0; j < clipped.num_edges(); ++j) {
-          if (!visitor(ShapeEdgeId(s, clipped.edge(j)))) return false;
+          if (!visitor(ShapeEdgeId(clipped.shape_id(), clipped.edge(j)))) {
+            return false;
+          }
         }
       }
       return true;

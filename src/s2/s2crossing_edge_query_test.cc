@@ -303,4 +303,17 @@ TEST(GetCrossings, PolylineCrossings) {
   TestPolylineCrossings(index, MakePoint("5:5"), MakePoint("6:6"));
 }
 
+TEST(GetCrossings, ShapeIdsAreCorrect) {
+  // This tests that when some index cells contain only one shape, the
+  // intersecting edges are returned with the correct shape id.
+  MutableS2ShapeIndex index;
+  index.Add(make_unique<S2Polyline::OwningShape>(
+      make_unique<S2Polyline>(S2Testing::MakeRegularPoints(
+          MakePoint("0:0"), S1Angle::Degrees(5), 100))));
+  index.Add(make_unique<S2Polyline::OwningShape>(
+      make_unique<S2Polyline>(S2Testing::MakeRegularPoints(
+          MakePoint("0:20"), S1Angle::Degrees(5), 100))));
+  TestPolylineCrossings(index, MakePoint("1:-10"), MakePoint("1:30"));
+}
+
 }  // namespace
