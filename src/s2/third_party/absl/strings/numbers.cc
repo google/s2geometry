@@ -1,3 +1,17 @@
+// Copyright 2017 The Abseil Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // This file contains string processing functions related to
 // numeric values.
 
@@ -135,16 +149,12 @@ bool SimpleAtob(absl::string_view str, bool* value) {
 }
 
 // ----------------------------------------------------------------------
-// FastInt32ToBuffer()
-// FastUInt32ToBuffer()
-// FastInt64ToBuffer()
-// FastUInt64ToBuffer()
+// FastIntToBuffer() overloads
 //
 // Like the Fast*ToBuffer() functions above, these are intended for speed.
 // Unlike the Fast*ToBuffer() functions, however, these functions write
-// their output to the beginning of the buffer (hence the name, as the
-// output is left-aligned).  The caller is responsible for ensuring that
-// the buffer has enough space to hold the output.
+// their output to the beginning of the buffer.  The caller is responsible
+// for ensuring that the buffer has enough space to hold the output.
 //
 // Returns a pointer to the end of the string (i.e. the null character
 // terminating the string).
@@ -160,7 +170,7 @@ const char one_ASCII_final_digits[10][2] {
 
 }  // namespace
 
-char* numbers_internal::FastUInt32ToBuffer(uint32_t i, char* buffer) {
+char* numbers_internal::FastIntToBuffer(uint32_t i, char* buffer) {
   uint32_t digits;
   // The idea of this implementation is to trim the number of divides to as few
   // as possible, and also reducing memory stores and branches, by going in
@@ -230,7 +240,7 @@ char* numbers_internal::FastUInt32ToBuffer(uint32_t i, char* buffer) {
   goto lt100_000_000;
 }
 
-char* numbers_internal::FastInt32ToBuffer(int32_t i, char* buffer) {
+char* numbers_internal::FastIntToBuffer(int32_t i, char* buffer) {
   uint32_t u = i;
   if (i < 0) {
     *buffer++ = '-';
@@ -239,12 +249,12 @@ char* numbers_internal::FastInt32ToBuffer(int32_t i, char* buffer) {
     // we write the equivalent expression "0 - u" instead.
     u = 0 - u;
   }
-  return numbers_internal::FastUInt32ToBuffer(u, buffer);
+  return numbers_internal::FastIntToBuffer(u, buffer);
 }
 
-char* numbers_internal::FastUInt64ToBuffer(uint64_t i, char* buffer) {
+char* numbers_internal::FastIntToBuffer(uint64_t i, char* buffer) {
   uint32_t u32 = static_cast<uint32_t>(i);
-  if (u32 == i) return numbers_internal::FastUInt32ToBuffer(u32, buffer);
+  if (u32 == i) return numbers_internal::FastIntToBuffer(u32, buffer);
 
   // Here we know i has at least 10 decimal digits.
   uint64_t top_1to11 = i / 1000000000;
@@ -252,12 +262,12 @@ char* numbers_internal::FastUInt64ToBuffer(uint64_t i, char* buffer) {
   uint32_t top_1to11_32 = static_cast<uint32_t>(top_1to11);
 
   if (top_1to11_32 == top_1to11) {
-    buffer = numbers_internal::FastUInt32ToBuffer(top_1to11_32, buffer);
+    buffer = numbers_internal::FastIntToBuffer(top_1to11_32, buffer);
   } else {
     // top_1to11 has more than 32 bits too; print it in two steps.
     uint32_t top_8to9 = static_cast<uint32_t>(top_1to11 / 100);
     uint32_t mid_2 = static_cast<uint32_t>(top_1to11 - top_8to9 * 100);
-    buffer = numbers_internal::FastUInt32ToBuffer(top_8to9, buffer);
+    buffer = numbers_internal::FastIntToBuffer(top_8to9, buffer);
     PutTwoDigits(mid_2, buffer);
     buffer += 2;
   }
@@ -283,13 +293,13 @@ char* numbers_internal::FastUInt64ToBuffer(uint64_t i, char* buffer) {
   return buffer + 1;
 }
 
-char* numbers_internal::FastInt64ToBuffer(int64_t i, char* buffer) {
+char* numbers_internal::FastIntToBuffer(int64_t i, char* buffer) {
   uint64_t u = i;
   if (i < 0) {
     *buffer++ = '-';
     u = 0 - u;
   }
-  return numbers_internal::FastUInt64ToBuffer(u, buffer);
+  return numbers_internal::FastIntToBuffer(u, buffer);
 }
 
 // Although DBL_DIG is typically 15, DBL_MAX is normally represented with 17
@@ -631,7 +641,7 @@ char* numbers_internal::RoundTripFloatToBuffer(float f, char* buffer) {
     // but instead of 0.0 / 0.00 / 0.000, the prefix is simply the truncated
     // integer part of f.
     int32_t as_int = f;
-    out = numbers_internal::FastUInt32ToBuffer(as_int, out);
+    out = numbers_internal::FastIntToBuffer(as_int, out);
     // Easy: if the integer part is within (lower_bound, upper_bound), then we
     // are already done.
     if (as_int > lower_bound && as_int < upper_bound) {

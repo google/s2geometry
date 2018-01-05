@@ -349,9 +349,6 @@ class string_view {
   // followed by remove_prefix.
   ABSL_DEPRECATED("Use absl::ConsumePrefix")
   bool Consume(string_view x);
-  // Like above but for the end of the string.
-  ABSL_DEPRECATED("Use absl::ConsumeSuffix")
-  bool ConsumeFromEnd(string_view x);
 
   // Explicit conversion operators
 
@@ -508,7 +505,7 @@ class string_view {
   size_type rfind(string_view s, size_type pos = npos) const
       noexcept;
 
-  // Overload of `string_view::rfind()` for finding the given character `c`
+  // Overload of `string_view::rfind()` for finding the last given character `c`
   // within the `string_view`.
   size_type rfind(char c, size_type pos = npos) const noexcept;
 

@@ -28,7 +28,7 @@
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
 

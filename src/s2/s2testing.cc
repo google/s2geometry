@@ -38,15 +38,15 @@
 #include "s2/s1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
-#include "s2/s2cellunion.h"
+#include "s2/s2cell_union.h"
 #include "s2/s2latlng.h"
-#include "s2/s2latlngrect.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2region.h"
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 #include "s2/util/math/matrix3x3.h"
 
 using absl::make_unique;

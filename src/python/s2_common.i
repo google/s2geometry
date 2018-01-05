@@ -6,20 +6,20 @@
 %{
 #include <strstream>
 
-#include "s2/s2cellid.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2region.h"
 #include "s2/s2cap.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2latlng.h"
-#include "s2/s2latlngrect.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"
 #include "s2/s2measures.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
-#include "s2/s2regioncoverer.h"
+#include "s2/s2region_coverer.h"
 #include "s2/s2cell.h"
-#include "s2/s2cellunion.h"
+#include "s2/s2cell_union.h"
 %}
 
 %inline %{
@@ -443,29 +443,24 @@ class S2Point {
 %unignore S2RegionCoverer::set_max_level;
 %unignore S2RegionCoverer::set_min_level;
 
-// SWIG <3.0 does not understand these C++11 keywords (unsure of exact version).
-#if SWIG_VERSION < 0x030000
-%define constexpr const %enddef
-#endif
-
 %include "s2/r1interval.h"
 %include "s2/s1angle.h"
-%include "s2/s1chordangle.h"
+%include "s2/s1chord_angle.h"
 %include "s2/s1interval.h"
-%include "s2/s2cellid.h"
+%include "s2/s2cell_id.h"
 %include "s2/s2edge_crossings.h"
 %include "s2/s2region.h"
 %include "s2/s2cap.h"
 %include "s2/s2latlng.h"
-%include "s2/s2latlngrect.h"
+%include "s2/s2latlng_rect.h"
 %include "s2/s2loop.h"
 %include "s2/s2measures.h"
 %include "s2/s2pointutil.h"
 %include "s2/s2polygon.h"
 %include "s2/s2polyline.h"
-%include "s2/s2regioncoverer.h"
+%include "s2/s2region_coverer.h"
 %include "s2/s2cell.h"
-%include "s2/s2cellunion.h"
+%include "s2/s2cell_union.h"
 
 %unignoreall
 

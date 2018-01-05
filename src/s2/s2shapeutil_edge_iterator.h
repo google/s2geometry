@@ -1,4 +1,4 @@
-// Copyright 2017 Google Inc. All Rights Reserved.
+// Copyright 2018 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 #ifndef S2_S2SHAPEUTIL_EDGE_ITERATOR_H_
 #define S2_S2SHAPEUTIL_EDGE_ITERATOR_H_
 
-#include "s2/s2shapeindex.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
 
 namespace s2shapeutil {

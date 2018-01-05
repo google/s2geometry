@@ -35,7 +35,7 @@
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
-#include "s2/s2latlngrect_bounder.h"
+#include "s2/s2latlng_rect_bounder.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/util/math/matrix3x3.h"

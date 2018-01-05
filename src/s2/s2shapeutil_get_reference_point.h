@@ -18,7 +18,7 @@
 #ifndef S2_S2SHAPEUTIL_GET_REFERENCE_POINT_H_
 #define S2_S2SHAPEUTIL_GET_REFERENCE_POINT_H_
 
-#include "s2/s2shapeindex.h"
+#include "s2/s2shape_index.h"
 
 namespace s2shapeutil {
 

@@ -36,7 +36,7 @@
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2builderutil_testing.h"
 #include "s2/s2cap.h"
-#include "s2/s2cellid.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2debug.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
@@ -46,7 +46,7 @@
 #include "s2/s2polyline.h"
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 
 using absl::StrAppend;
 using absl::StrCat;

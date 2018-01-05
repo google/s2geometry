@@ -24,7 +24,7 @@
 #include <utility>
 
 #include "s2/s1angle.h"
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2point.h"
 
 namespace S2 {

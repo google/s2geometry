@@ -18,8 +18,8 @@
 #include "s2/s2shapeutil_count_edges.h"
 
 #include <gtest/gtest.h>
-#include "s2/mutable_s2shapeindex.h"
-#include "s2/s2textformat.h"
+#include "s2/mutable_s2shape_index.h"
+#include "s2/s2text_format.h"
 
 namespace {
 

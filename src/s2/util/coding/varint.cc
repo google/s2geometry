@@ -277,21 +277,15 @@ const char* Varint::Skip64BackwardSlow(const char* p, const char* b) {
 }
 
 void Varint::Append32Slow(string* s, uint32 value) {
-  size_t start = s->size();
-  s->resize(start + Varint::kMax32);
-  char* base = &((*s)[start]);
-  const char* p = Varint::Encode32(base, value);
-  const size_t extra = Varint::kMax32 - (p - base);
-  s->erase(s->size() - extra, extra);
+  const size_t start = s->size();
+  s->resize(start + Varint::Length32(value));
+  Varint::Encode32(&((*s)[start]), value);
 }
 
 void Varint::Append64Slow(string* s, uint64 value) {
-  size_t start = s->size();
-  s->resize(start + Varint::kMax64);
-  char* base = &((*s)[start]);
-  const char* p = Varint::Encode64(base, value);
-  const size_t extra = Varint::kMax64 - (p - base);
-  s->erase(s->size() - extra, extra);
+  const size_t start = s->size();
+  s->resize(start + Varint::Length64(value));
+  Varint::Encode64(&((*s)[start]), value);
 }
 
 void Varint::EncodeTwo32Values(string* s, uint32 a, uint32 b) {

@@ -38,13 +38,13 @@
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell.h"
-#include "s2/s2cellid.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
 #include "s2/s2measures.h"
 #include "s2/s2metrics.h"
 #include "s2/s2testing.h"
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 #include "s2/util/math/mathutil.h"
 
 using std::make_pair;

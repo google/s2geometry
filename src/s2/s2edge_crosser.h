@@ -19,7 +19,7 @@
 #define S2_S2EDGE_CROSSER_H_
 
 #include <glog/logging.h>
-#include "s2/_fpcontractoff.h"
+#include "s2/_fp_contract_off.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"

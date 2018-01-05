@@ -19,7 +19,7 @@
 
 #include <cfloat>
 
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
 
 void S2PolylineSimplifier::Init(const S2Point& src) {

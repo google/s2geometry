@@ -25,14 +25,14 @@
 #include <glog/logging.h>
 #include "s2/r1interval.h"
 #include "s2/r2.h"
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2coords.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
-#include "s2/s2latlngrect.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2measures.h"
 #include "s2/s2metrics.h"
 
@@ -509,3 +509,44 @@ S1ChordAngle S2Cell::GetDistance(const S2Cell& target) const {
   }
   return min_dist;
 }
+
+inline static int OppositeFace(int face) {
+  return face >= 3 ? face - 3 : face + 3;
+}
+
+// The antipodal UV is the transpose of the original UV, interpreted within
+// the opposite face.
+inline static R2Rect OppositeUV(const R2Rect& uv) {
+  return R2Rect(uv[1], uv[0]);
+}
+
+S1ChordAngle S2Cell::GetMaxDistance(const S2Cell& target) const {
+  // Need to check the antipodal target for intersection with the cell. If it
+  // intersects, the distance is S1ChordAngle::Straight().
+  if (face_ == OppositeFace(target.face_) &&
+      uv_.Intersects(OppositeUV(target.uv_))) {
+    return S1ChordAngle::Straight();
+  }
+
+  // Otherwise, the maximum distance always occurs between a vertex of one
+  // cell and an edge of the other cell (including the edge endpoints).  This
+  // represents a total of 32 possible (vertex, edge) pairs.
+  //
+  // TODO(user): When the maximum distance is at most Pi/2, the maximum is
+  // always attained between a pair of vertices, and this could be made much
+  // faster by testing each vertex pair once rather than the current 4 times.
+  S2Point va[4], vb[4];
+  for (int i = 0; i < 4; ++i) {
+    va[i] = GetVertex(i);
+    vb[i] = target.GetVertex(i);
+  }
+  S1ChordAngle max_dist = S1ChordAngle::Negative();
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      S2::UpdateMaxDistance(va[i], vb[j], vb[(j + 1) & 3], &max_dist);
+      S2::UpdateMaxDistance(vb[i], va[j], va[(j + 1) & 3], &max_dist);
+    }
+  }
+  return max_dist;
+}
+

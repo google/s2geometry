@@ -23,9 +23,9 @@
 #include "s2/r1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
-#include "s2/s2cellid.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
-#include "s2/s2latlngrect.h"
+#include "s2/s2latlng_rect.h"
 
 S2R2Rect S2R2Rect::FromCell(const S2Cell& cell) {
   // S2Cells have a more efficient GetSizeST() method than S2CellIds.

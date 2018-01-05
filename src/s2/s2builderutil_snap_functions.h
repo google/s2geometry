@@ -21,7 +21,7 @@
 #include <memory>
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
-#include "s2/s2cellid.h"
+#include "s2/s2cell_id.h"
 
 namespace s2builderutil {
 

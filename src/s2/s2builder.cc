@@ -80,26 +80,26 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/bits/bits.h"
 #include "s2/id_set_lexicon.h"
-#include "s2/mutable_s2shapeindex.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
-#include "s2/s2closestedgequery.h"
-#include "s2/s2closestpointquery.h"
+#include "s2/s2closest_edge_query.h"
+#include "s2/s2closest_point_query.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
-#include "s2/s2pointindex.h"
+#include "s2/s2point_index.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2polyline_simplifier.h"
 #include "s2/s2predicates.h"
-#include "s2/s2shapeutil.h"
-#include "s2/s2textformat.h"
+#include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
+#include "s2/s2text_format.h"
 
 using absl::make_unique;
 using std::max;
@@ -593,7 +593,7 @@ void S2Builder::AddEdgeCrossings(const MutableS2ShapeIndex& input_edge_index) {
   // We need to build a list of intersections and add them afterwards so that
   // we don't reallocate vertices_ during the VisitCrossings() call.
   vector<S2Point> new_vertices;
-  s2shapeutil::VisitCrossings(
+  s2shapeutil::VisitCrossingEdgePairs(
       input_edge_index, s2shapeutil::CrossingType::INTERIOR,
       [&new_vertices](const s2shapeutil::ShapeEdge& a,
                       const s2shapeutil::ShapeEdge& b, bool) {

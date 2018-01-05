@@ -24,7 +24,7 @@
 #include "s2/s2polygon.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
 #include "s2/s2testing.h"
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 
 using std::vector;
 

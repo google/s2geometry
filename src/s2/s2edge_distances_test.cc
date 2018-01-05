@@ -21,12 +21,12 @@
 #include <string>
 
 #include <gtest/gtest.h>
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polyline.h"
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 
 using std::unique_ptr;
 

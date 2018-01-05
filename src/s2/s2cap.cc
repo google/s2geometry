@@ -30,7 +30,7 @@
 #include "s2/s2debug.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
-#include "s2/s2latlngrect.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2metrics.h"
 #include "s2/s2pointutil.h"
 #include "s2/util/math/vector.h"

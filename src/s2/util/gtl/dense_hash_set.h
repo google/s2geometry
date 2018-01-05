@@ -335,16 +335,7 @@ class dense_hash_set {
   // value to identify deleted and empty buckets.  You can change the
   // deleted key as time goes on, or get rid of it entirely to be insert-only.
   void set_empty_key(const key_type& key)     { rep.set_empty_key(key); }
-  ABSL_DEPRECATED(
-      "This method is slated for removal.  Please migrate to "
-      "gtl::flat_hash_set.")
-  key_type empty_key() const                  { return rep.empty_key(); }
-
   void set_deleted_key(const key_type& key)   { rep.set_deleted_key(key); }
-  ABSL_DEPRECATED(
-      "This method is slated for removal.  Please migrate to "
-      "gtl::flat_hash_set.")
-  key_type deleted_key() const                { return rep.deleted_key(); }
 
   // These are standard
   size_type erase(const key_type& key)               { return rep.erase(key); }

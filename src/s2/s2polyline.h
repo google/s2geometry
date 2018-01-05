@@ -23,11 +23,11 @@
 
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/_fpcontractoff.h"
+#include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
 #include "s2/s2debug.h"
 #include "s2/s2error.h"
-#include "s2/s2latlngrect.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2region.h"
 #include "s2/s2shape.h"
 

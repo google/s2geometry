@@ -88,14 +88,6 @@ bool string_view::Consume(string_view x) {
   return false;
 }
 
-bool string_view::ConsumeFromEnd(string_view x) {
-  if (absl::EndsWith(*this, x)) {
-    length_ -= x.length_;
-    return true;
-  }
-  return false;
-}
-
 string_view::size_type string_view::copy(char* buf, size_type n,
                                          size_type pos) const {
   size_type ulen = length_;

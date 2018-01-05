@@ -21,14 +21,14 @@
 
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
-#include "s2/mutable_s2shapeindex.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s2cap.h"
 #include "s2/s2contains_point_query.h"
 #include "s2/s2lax_loop_shape.h"
 #include "s2/s2polygon.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
 #include "s2/s2testing.h"
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 
 using absl::make_unique;
 using std::unique_ptr;
@@ -130,6 +130,36 @@ TEST(S2LaxPolygonShape, MultiLoopPolygon) {
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
+}
+
+TEST(S2LaxPolygonShape, ManyLoopPolygon) {
+  // Test a polygon enough loops so that cumulative_vertices_ is used.
+  vector<vector<S2Point>> loops;
+  for (int i = 0; i < 100; ++i) {
+    S2Point center(S2LatLng::FromDegrees(0, i));
+    loops.push_back(
+        S2Testing::MakeRegularPoints(center, S1Angle::Degrees(0.1),
+                                     S2Testing::rnd.Uniform(3)));
+  }
+  S2LaxPolygonShape shape(loops);
+
+  EXPECT_EQ(loops.size(), shape.num_loops());
+  int num_vertices = 0;
+  EXPECT_EQ(loops.size(), shape.num_chains());
+  for (int i = 0; i < loops.size(); ++i) {
+    EXPECT_EQ(loops[i].size(), shape.num_loop_vertices(i));
+    EXPECT_EQ(num_vertices, shape.chain(i).start);
+    EXPECT_EQ(loops[i].size(), shape.chain(i).length);
+    for (int j = 0; j < loops[i].size(); ++j) {
+      EXPECT_EQ(loops[i][j], shape.loop_vertex(i, j));
+      auto edge = shape.edge(num_vertices + j);
+      EXPECT_EQ(loops[i][j], edge.v0);
+      EXPECT_EQ(loops[i][(j + 1) % loops[i].size()], edge.v1);
+    }
+    num_vertices += loops[i].size();
+  }
+  EXPECT_EQ(num_vertices, shape.num_vertices());
+  EXPECT_EQ(num_vertices, shape.num_edges());
 }
 
 TEST(S2LaxPolygonShape, DegenerateLoops) {

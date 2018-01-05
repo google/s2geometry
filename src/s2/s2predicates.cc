@@ -22,7 +22,7 @@
 #include <cfloat>
 #include <cmath>
 #include <ostream>
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 #include "s2/util/math/vector.h"
 

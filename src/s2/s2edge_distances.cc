@@ -21,7 +21,7 @@
 #include <cmath>
 
 #include <glog/logging.h>
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"

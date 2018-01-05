@@ -164,14 +164,4 @@
 #define ABSL_PREDICT_TRUE(x) x
 #endif
 
-#if (ABSL_HAVE_BUILTIN(__builtin_expect) ||         \
-     (defined(__GNUC__) && !defined(__clang__))) && \
-    !defined(SWIG)
-#define PREDICT_FALSE(x) (__builtin_expect(x, 0))
-#define PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
-#else
-#define PREDICT_FALSE(x) x
-#define PREDICT_TRUE(x) x
-#endif
-
 #endif  // S2_THIRD_PARTY_ABSL_BASE_OPTIMIZATION_H_

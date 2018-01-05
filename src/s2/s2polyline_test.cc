@@ -33,7 +33,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 
 using absl::StrCat;
 using absl::make_unique;

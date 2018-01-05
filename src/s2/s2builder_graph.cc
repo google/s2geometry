@@ -23,11 +23,11 @@
 #include <numeric>
 #include <vector>
 #include <glog/logging.h>
-#include "s2/util/btree/btree_map.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
 #include "s2/s2predicates.h"
+#include "s2/util/gtl/btree_map.h"
 
 using std::make_pair;
 using std::max;
@@ -569,7 +569,7 @@ class Graph::PolylineBuilder {
   int edges_left_;
   vector<bool> used_;
   // A map of (outdegree(v) - indegree(v)) considering used edges only.
-  util::btree::btree_map<VertexId, int> excess_used_;
+  gtl::btree_map<VertexId, int> excess_used_;
 };
 
 vector<Graph::EdgePolyline> Graph::GetPolylines(

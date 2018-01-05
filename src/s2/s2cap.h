@@ -23,9 +23,9 @@
 #include <iosfwd>
 
 #include <glog/logging.h>
-#include "s2/_fpcontractoff.h"
+#include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2region.h"
 

@@ -24,7 +24,7 @@
 #include <type_traits>
 
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/_fpcontractoff.h"
+#include "s2/_fp_contract_off.h"
 #include "s2/s2point.h"
 #include "s2/util/math/mathutil.h"
 #include "s2/util/math/vector.h"

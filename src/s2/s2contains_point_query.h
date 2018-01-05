@@ -19,7 +19,7 @@
 #define S2_S2CONTAINS_POINT_QUERY_H_
 
 #include "s2/s2edge_crosser.h"
-#include "s2/s2shapeindex.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_shape_edge.h"
 
 // Defines whether shapes are considered to contain their vertices.  Note that
@@ -68,8 +68,8 @@ class S2ContainsPointQueryOptions {
 // whether or not shapes are considered to contain their vertices).
 //
 // Example usage:
-//   S2ContainsPointQueryOptions options(S2VertexModel::CLOSED);
-//   return MakeS2ContainsPointQuery(&index, options).Contains(point);
+//   auto query = MakeS2ContainsPointQuery(&index, S2VertexModel::CLOSED);
+//   return query.Contains(point);
 //
 // This class is not thread-safe.  To use it in parallel, each thread should
 // construct its own instance (this is not expensive).
@@ -94,6 +94,9 @@ class S2ContainsPointQuery {
   using Options = S2ContainsPointQueryOptions;
   explicit S2ContainsPointQuery(const IndexType* index,
                                 const Options& options = Options());
+
+  // Convenience constructor that accepts the S2VertexModel directly.
+  S2ContainsPointQuery(const IndexType* index, S2VertexModel vertex_model);
 
   const IndexType& index() const { return *index_; }
   const Options& options() const { return options_; }
@@ -188,6 +191,12 @@ template <class IndexType>
 inline S2ContainsPointQuery<IndexType>::S2ContainsPointQuery(
     const IndexType* index, const Options& options)
     : index_(index), options_(options), it_(index_) {
+}
+
+template <class IndexType>
+inline S2ContainsPointQuery<IndexType>::S2ContainsPointQuery(
+    const IndexType* index, S2VertexModel vertex_model)
+    : S2ContainsPointQuery(index, Options(vertex_model)) {
 }
 
 template <class IndexType>

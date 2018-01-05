@@ -65,8 +65,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "s2/base/port.h"
-
 namespace google {
 
 template <typename Type>

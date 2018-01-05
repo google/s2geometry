@@ -25,13 +25,13 @@
 
 #include <memory>
 
-#include "s2/_fpcontractoff.h"
+#include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
 #include "s2/s2distance_target.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2shapeindex.h"
+#include "s2/s2shape_index.h"
 
 class S2ClosestEdgeQuery;
 

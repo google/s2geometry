@@ -20,10 +20,10 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
-#include "s2/_fpcontractoff.h"
+#include "s2/_fp_contract_off.h"
 #include "s2/r2rect.h"
-#include "s2/s1chordangle.h"
-#include "s2/s2cellid.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2region.h"
 #include "s2/util/math/vector.h"
 
@@ -156,6 +156,10 @@ class S2Cell final : public S2Region {
   // Returns the distance from the cell to the given cell.  Returns zero if
   // one cell contains the other.
   S1ChordAngle GetDistance(const S2Cell& target) const;
+
+  // Returns the maximum distance from the cell (including its interior) to the
+  // given target cell.
+  S1ChordAngle GetMaxDistance(const S2Cell& target) const;
 
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):

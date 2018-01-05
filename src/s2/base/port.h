@@ -1,4 +1,4 @@
-// Copyright 2017 Google Inc. All Rights Reserved.
+// Copyright 2018 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -321,7 +321,7 @@ inline void sized_delete_array(void *ptr, size_t size) {
 #define bswap_32(x) OSSwapInt32(x)
 #define bswap_64(x) OSSwapInt64(x)
 
-#elif defined(__GLIBC__) || defined(__GENCLAVE__)
+#elif defined(__GLIBC__) || defined(__BIONIC__) || defined(__GENCLAVE__)
 #include <byteswap.h>  // IWYU pragma: export
 
 #else
@@ -974,10 +974,10 @@ struct AlignType { typedef char result[Size]; };
 #if (defined(__GNUC__) || defined(__APPLE__)) && \
     !defined(SWIG)
 #ifdef __cplusplus
-// prefetch() is deprecated.  Prefer base::PrefetchNta() from base/prefetch.h,
-// which is identical.  Current callers will be updated in a go/lsc, so there
-// is no need to proactively change your code now.
-// More information: go/lsc-prefetch
+// prefetch() is deprecated.  Prefer compiler::PrefetchNta() from
+// util/compiler/prefetch.h, which is identical.  Current callers will
+// be updated in a go/lsc, so there is no need to proactively change
+// your code now.  More information: go/lsc-prefetch
 extern inline void prefetch(const void *x) { __builtin_prefetch(x, 0, 0); }
 #endif  // ifdef __cplusplus
 #else   // not GCC
@@ -1018,13 +1018,5 @@ extern inline void prefetch(const void *, int) {}
 #define STREAM_SET(s, bit) (s).set(std::ios::bit)
 #define STREAM_SETF(s, flag) (s).setf(std::ios::flag)
 #endif
-
-// CompileAssert
-#ifdef __cplusplus
-// CompileAssert<T> is deprecated.  Use static_assert instead.
-template <bool>
-struct CompileAssert {
-};
-#endif  // __cplusplus
 
 #endif  // S2_BASE_PORT_H_

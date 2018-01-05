@@ -249,4 +249,5 @@ struct sh_is_transparent {
   enum { value = sizeof(Test<T>(nullptr)) == sizeof(Yes) };
 };
 
+
 #endif  // S2_UTIL_GTL_HASHTABLE_COMMON_H_

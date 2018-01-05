@@ -20,7 +20,7 @@
 
 #include <vector>
 
-#include "s2/s2shapeindex.h"
+#include "s2/s2shape_index.h"
 
 namespace s2shapeutil {
 

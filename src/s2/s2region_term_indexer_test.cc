@@ -28,8 +28,8 @@
 #include <gtest/gtest.h>
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
-#include "s2/s2cellid.h"
-#include "s2/s2cellunion.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2cell_union.h"
 #include "s2/s2testing.h"
 
 using std::vector;

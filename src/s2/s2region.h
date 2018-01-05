@@ -18,7 +18,7 @@
 #ifndef S2_S2REGION_H_
 #define S2_S2REGION_H_
 
-#include "s2/_fpcontractoff.h"
+#include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
 
 class Decoder;
