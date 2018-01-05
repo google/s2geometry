@@ -25,18 +25,18 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/_fpcontractoff.h"
-#include "s2/mutable_s2shapeindex.h"
+#include "s2/_fp_contract_off.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2boolean_operation.h"
 #include "s2/s2builder.h"
-#include "s2/s2cellid.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2debug.h"
-#include "s2/s2latlngrect.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"
 #include "s2/s2polyline.h"
 #include "s2/s2region.h"
-#include "s2/s2shapeindex.h"
+#include "s2/s2shape_index.h"
 
 class Decoder;
 class Encoder;

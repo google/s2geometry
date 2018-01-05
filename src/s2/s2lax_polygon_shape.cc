@@ -123,7 +123,7 @@ S2Shape::Edge S2LaxPolygonShape::edge(int e0) const {
     if (num_loops() <= kMaxLinearSearchLoops) {
       while (*next <= e0) ++next;
     } else {
-      next = std::upper_bound(next, next + num_loops(), e0);
+      next = std::lower_bound(next, next + num_loops(), e1);
     }
     // Wrap around to the first vertex of the loop if necessary.
     if (e1 == *next) { e1 = next[-1]; }

@@ -29,9 +29,9 @@
 
 #include <glog/logging.h>
 
-#include "s2/base/port.h"
 #include "s2/third_party/absl/base/casts.h"
 #include "s2/third_party/absl/base/integral_types.h"
+#include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/absl/numeric/int128.h"
 
 // Use compiler byte-swapping intrinsics if they are available.  32-bit
@@ -82,8 +82,8 @@ inline uint16 gbswap_16(uint16 host_int) {
 #endif  // intrinics available
 
 inline uint128 gbswap_128(uint128 host_int) {
-  return absl::MakeUint128(gbswap_64(Uint128Low64(host_int)),
-                           gbswap_64(Uint128High64(host_int)));
+  return absl::MakeUint128(gbswap_64(absl::Uint128Low64(host_int)),
+                           gbswap_64(absl::Uint128High64(host_int)));
 }
 
 #ifdef IS_LITTLE_ENDIAN
@@ -306,9 +306,9 @@ class LittleEndian {
   }
 
   static void Store128(void *p, const uint128 v) {
-    UNALIGNED_STORE64(p, FromHost64(Uint128Low64(v)));
-    UNALIGNED_STORE64(reinterpret_cast<uint64 *>(p) + 1,
-                      FromHost64(Uint128High64(v)));
+    UNALIGNED_STORE64(p, FromHost64(absl::Uint128Low64(v)));
+    UNALIGNED_STORE64(reinterpret_cast<uint64*>(p) + 1,
+                      FromHost64(absl::Uint128High64(v)));
   }
 
   // Build a uint128 from 1-16 bytes.
@@ -490,9 +490,9 @@ class BigEndian {
   }
 
   static void Store128(void *p, const uint128 v) {
-    UNALIGNED_STORE64(p, FromHost64(Uint128High64(v)));
-    UNALIGNED_STORE64(reinterpret_cast<uint64 *>(p) + 1,
-                      FromHost64(Uint128Low64(v)));
+    UNALIGNED_STORE64(p, FromHost64(absl::Uint128High64(v)));
+    UNALIGNED_STORE64(reinterpret_cast<uint64*>(p) + 1,
+                      FromHost64(absl::Uint128Low64(v)));
   }
 
   // Build a uint128 from 1-16 bytes.

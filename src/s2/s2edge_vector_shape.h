@@ -18,8 +18,8 @@
 #ifndef S2_S2EDGE_VECTOR_SHAPE_H_
 #define S2_S2EDGE_VECTOR_SHAPE_H_
 
-#include <vector>
 #include <utility>
+#include <vector>
 #include "s2/s2shape.h"
 
 // S2EdgeVectorShape is an S2Shape representing an arbitrary set of edges.  It

@@ -20,7 +20,7 @@
 #include <gtest/gtest.h>
 #include "s2/s2loop.h"
 #include "s2/s2pointutil.h"
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 
 using s2textformat::MakePoint;
 

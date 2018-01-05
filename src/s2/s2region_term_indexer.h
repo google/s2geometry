@@ -100,15 +100,15 @@
 #include <string>
 #include <vector>
 
-#include "s2/s2cellunion.h"
+#include "s2/s2cell_union.h"
 #include "s2/s2region.h"
-#include "s2/s2regioncoverer.h"
+#include "s2/s2region_coverer.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
 class S2RegionTermIndexer {
  public:
   // The following parameters control the tradeoffs between index size, query
-  // size, and accuracy (see s2regioncoverer.h for details).
+  // size, and accuracy (see s2region_coverer.h for details).
   //
   // IMPORTANT: You must use the same values for min_level(), max_level(), and
   // level_mod() for both indexing and queries, otherwise queries will return
@@ -128,7 +128,7 @@ class S2RegionTermIndexer {
     //
     // Increasing this value during indexing will make indexes more accurate
     // but larger.  Increasing this value for queries will make queries more
-    // accurate but slower.  (See s2regioncoverer.h for details on how this
+    // accurate but slower.  (See s2region_coverer.h for details on how this
     // parameter affects accuracy.)  For example, if you don't mind large
     // indexes but want fast serving, it might be reasonable to set
     // max_cells() == 100 during indexing and max_cells() == 8 for queries.

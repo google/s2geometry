@@ -18,7 +18,7 @@
 #include "s2/s2lax_polyline_shape.h"
 
 #include <gtest/gtest.h>
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 
 using std::vector;
 

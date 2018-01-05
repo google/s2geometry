@@ -37,15 +37,15 @@
 #include <vector>
 #include <glog/logging.h>
 #include "s2/third_party/absl/memory/memory.h"
-#include "s2/util/btree/btree_map.h"
 #include "s2/id_set_lexicon.h"
-#include "s2/mutable_s2shapeindex.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2error.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"
+#include "s2/util/gtl/btree_map.h"
 
 namespace s2builderutil {
 
@@ -139,7 +139,7 @@ class S2PolygonLayer : public S2Builder::Layer {
                      std::vector<std::unique_ptr<S2Loop>>* loops) const;
   void AppendEdgeLabels(const Graph& g,
                         const std::vector<Graph::EdgeLoop>& edge_loops);
-  using LoopMap = util::btree::btree_map<S2Loop*, std::pair<int, bool>>;
+  using LoopMap = gtl::btree_map<S2Loop*, std::pair<int, bool>>;
   void InitLoopMap(const std::vector<std::unique_ptr<S2Loop>>& loops,
                    LoopMap* loop_map) const;
   void ReorderEdgeLabels(const LoopMap& loop_map);

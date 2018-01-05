@@ -28,23 +28,24 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "s2/mutable_s2shapeindex.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2cap.h"
-#include "s2/s2crossingedgequery.h"
+#include "s2/s2crossing_edge_query.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
-#include "s2/s2latlngrect.h"
-#include "s2/s2latlngrect_bounder.h"
+#include "s2/s2latlng_rect.h"
+#include "s2/s2latlng_rect_bounder.h"
 #include "s2/s2loop.h"
 #include "s2/s2metrics.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
+#include "s2/s2text_format.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/str_cat.h"
@@ -52,6 +53,7 @@
 using absl::StrCat;
 using absl::make_unique;
 using S2::internal::kSwapMask;
+using s2textformat::MakePointOrDie;
 using std::fabs;
 using std::map;
 using std::max;
@@ -675,6 +677,28 @@ TEST(S2Cell, GetMaxDistanceToEdge) {
 
   EXPECT_NEAR(expected.radians(), S1ChordAngle::Straight().radians(), 1e-15);
   EXPECT_NEAR(actual.radians(), S1ChordAngle::Straight().radians(), 1e-15);
+}
+
+TEST(S2Cell, GetMaxDistanceToCellAntipodal) {
+  S2Point p = MakePointOrDie("0:0");
+  S2Cell cell(p);
+  S2Cell antipodal_cell(-p);
+  S1ChordAngle dist = cell.GetMaxDistance(antipodal_cell);
+  EXPECT_EQ(S1ChordAngle::Straight(), dist);
+}
+
+TEST(S2Cell, GetMaxDistanceToCell) {
+  for (int i = 0; i < 1000; i++) {
+    S2Cell cell(S2Testing::GetRandomCellId());
+    S2Cell test_cell(S2Testing::GetRandomCellId());
+    S2CellId antipodal_leaf_id(-test_cell.GetCenter());
+    S2Cell antipodal_test_cell(antipodal_leaf_id.parent(test_cell.level()));
+
+    S1ChordAngle dist_from_min = S1ChordAngle::Straight() -
+        cell.GetDistance(antipodal_test_cell);
+    S1ChordAngle dist_from_max = cell.GetMaxDistance(test_cell);
+    EXPECT_NEAR(dist_from_min.radians(), dist_from_max.radians(), 1e-8);
+  }
 }
 
 TEST(S2Cell, EncodeDecode) {

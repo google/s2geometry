@@ -45,6 +45,7 @@
 // Bits) containing a few bit patterns (which vary based on value of template
 // parameter).
 
+#include "s2/third_party/absl/numeric/int128.h"
 #if defined(__i386__) || defined(__x86_64__)
 #include <x86intrin.h>
 #endif
@@ -107,8 +108,8 @@ class Bits {
 
   // Count bits in uint128
   static inline int CountOnes128(uint128 n) {
-    return Bits::CountOnes64(Uint128High64(n)) +
-           Bits::CountOnes64(Uint128Low64(n));
+    return Bits::CountOnes64(absl::Uint128High64(n)) +
+           Bits::CountOnes64(absl::Uint128Low64(n));
   }
 
   // Count bits using popcnt instruction.
@@ -134,7 +135,7 @@ class Bits {
     // assembly because we want to handle n == 0.  If we used __builtin_clz(),
     // we would need to use something like "n ? __builtin_clz(n) : 32".  The
     // check is not necessary on POWER and aarch64 but we cannot depend on
-    // that becasue __builtin_clz(0) is documented to be undefined.
+    // that because __builtin_clz(0) is documented to be undefined.
 #if defined(__aarch64__) && defined(__GNUC__)
     int32 count;
     asm("clz %w0,%w1" : "=r"(count) : "r"(n));
@@ -189,9 +190,9 @@ class Bits {
   }
 
   static inline int CountLeadingZeros128(uint128 n) {
-    if (uint64 hi = Uint128High64(n))
+    if (uint64 hi = absl::Uint128High64(n))
       return Bits::CountLeadingZeros64(hi);
-    return Bits::CountLeadingZeros64(Uint128Low64(n)) + 64;
+    return Bits::CountLeadingZeros64(absl::Uint128Low64(n)) + 64;
   }
 
   // Reverse the bits in the given integer.
@@ -506,21 +507,18 @@ inline int Bits::FindLSBSetNonZero64(uint64 n) {
 #endif
 
 inline int Bits::Log2Floor128(uint128 n) {
-  if (uint64 hi = Uint128High64(n))
-    return 64 + Log2FloorNonZero64(hi);
-  return Log2Floor64(Uint128Low64(n));
+  if (uint64 hi = absl::Uint128High64(n)) return 64 + Log2FloorNonZero64(hi);
+  return Log2Floor64(absl::Uint128Low64(n));
 }
 
 inline int Bits::Log2FloorNonZero128(uint128 n) {
-  if (uint64 hi = Uint128High64(n))
-    return 64 + Log2FloorNonZero64(hi);
-  return Log2FloorNonZero64(Uint128Low64(n));
+  if (uint64 hi = absl::Uint128High64(n)) return 64 + Log2FloorNonZero64(hi);
+  return Log2FloorNonZero64(absl::Uint128Low64(n));
 }
 
 inline int Bits::FindLSBSetNonZero128(uint128 n) {
-  if (uint64 lo = Uint128Low64(n))
-    return Bits::FindLSBSetNonZero64(lo);
-  return 64 + Bits::FindLSBSetNonZero64(Uint128High64(n));
+  if (uint64 lo = absl::Uint128Low64(n)) return Bits::FindLSBSetNonZero64(lo);
+  return 64 + Bits::FindLSBSetNonZero64(absl::Uint128High64(n));
 }
 
 inline int Bits::CountOnesInByte(unsigned char n) {
@@ -597,8 +595,8 @@ inline uint64 Bits::ReverseBits64(uint64 n) {
 }
 
 inline uint128 Bits::ReverseBits128(uint128 n) {
-  return absl::MakeUint128(ReverseBits64(Uint128Low64(n)),
-                           ReverseBits64(Uint128High64(n)));
+  return absl::MakeUint128(ReverseBits64(absl::Uint128Low64(n)),
+                           ReverseBits64(absl::Uint128High64(n)));
 }
 
 inline int Bits::Log2FloorNonZero_Portable(uint32 n) {

@@ -38,7 +38,7 @@
 //  (id)
 //    An S2CellId is a 64-bit encoding of a face and a Hilbert curve position
 //    on that face.  The Hilbert curve position implicitly encodes both the
-//    position of a cell and its subdivision level (see s2cellid.h).
+//    position of a cell and its subdivision level (see s2cell_id.h).
 //
 //  (face, i, j)
 //    Leaf-cell coordinates.  "i" and "j" are integers in the range
@@ -114,8 +114,8 @@ namespace S2 {
 
 // This is the number of levels needed to specify a leaf cell.  This
 // constant is defined here so that the S2::Metric class and the conversion
-// functions below can be implemented without including s2cellid.h.  Please
-// see s2cellid.h for other useful constants and conversion functions.
+// functions below can be implemented without including s2cell_id.h.  Please
+// see s2cell_id.h for other useful constants and conversion functions.
 const int kMaxCellLevel = 30;
 
 // The maximum index of a valid leaf cell plus one.  The range of valid leaf
@@ -269,7 +269,7 @@ int GetUVWFace(int face, int axis, int direction);
 // within the same cell is about 1.4 and the maximum ratio of the diagonals
 // within the same cell is about 1.7.
 //
-// This data was produced using s2cell_test and s2cellid_test.
+// This data was produced using s2cell_test and s2cell_id_test.
 
 #define S2_LINEAR_PROJECTION    0
 #define S2_TAN_PROJECTION       1

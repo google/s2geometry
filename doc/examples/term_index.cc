@@ -14,10 +14,11 @@
 #include <set>
 #include <unordered_map>
 #include <vector>
+
 #include <gflags/gflags.h>
 #include "s2/s2earth.h"
 #include "s2/s2cap.h"
-#include "s2/s2pointindex.h"
+#include "s2/s2point_index.h"
 #include "s2/s2region_term_indexer.h"
 #include "s2/s2testing.h"
 

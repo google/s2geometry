@@ -16,7 +16,7 @@
 // Author: ericv@google.com (Eric Veach)
 //
 // The following are various constants that describe the shapes and sizes of
-// S2Cells (see s2coords.h and s2cellid.h).  They are useful for deciding
+// S2Cells (see s2coords.h and s2cell_id.h).  They are useful for deciding
 // which cell level to use in order to satisfy a given condition (e.g. that
 // cell vertices must be no further than "x" apart).  All of the raw constants
 // are differential quantities; you can use the GetValue(level) method to

@@ -29,31 +29,29 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/types/span.h"
-#include "s2/mutable_s2shapeindex.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2centroids.h"
-#include "s2/s2closestedgequery.h"
+#include "s2/s2closest_edge_query.h"
 #include "s2/s2coords.h"
-#include "s2/s2crossingedgequery.h"
+#include "s2/s2crossing_edge_query.h"
 #include "s2/s2debug.h"
 #include "s2/s2edge_clipping.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
-#include "s2/s2latlngrect_bounder.h"
+#include "s2/s2latlng_rect_bounder.h"
 #include "s2/s2measures.h"
-#include "s2/s2paddedcell.h"
-#include "s2/s2pointcompression.h"
+#include "s2/s2padded_cell.h"
+#include "s2/s2point_compression.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
-#include "s2/s2shapeindex.h"
-#include "s2/s2shapeutil.h"
+#include "s2/s2shape_index.h"
+#include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2wedge_relations.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/memory/memory.h"
@@ -141,7 +139,7 @@ bool S2Loop::IsValid() const {
 
 bool S2Loop::FindValidationError(S2Error* error) const {
   return (FindValidationErrorNoIndex(error) ||
-          s2shapeutil::FindAnyCrossing(index_, error));
+          s2shapeutil::FindSelfIntersection(index_, error));
 }
 
 bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
@@ -1048,9 +1046,8 @@ bool LoopCrosser::CellCrossesAnySubcell(const S2ClippedShape& a_clipped,
     int aj = a_clipped.edge(i);
     // Use an S2CrossingEdgeQuery starting at "b_root" to find the index cells
     // of B that might contain crossing edges.
-    if (!b_query_.GetCells(a_.vertex(aj), a_.vertex(aj+1), b_root, &b_cells_)) {
-      continue;
-    }
+    b_query_.GetCells(a_.vertex(aj), a_.vertex(aj+1), b_root, &b_cells_);
+    if (b_cells_.empty()) continue;
     StartEdge(aj);
     for (int c = 0; c < b_cells_.size(); ++c) {
       if (EdgeCrossesCell(b_cells_[c]->clipped(0))) return true;

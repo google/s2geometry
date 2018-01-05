@@ -23,7 +23,7 @@
 #include <glog/logging.h>
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/id_set_lexicon.h"
-#include "s2/mutable_s2shapeindex.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"

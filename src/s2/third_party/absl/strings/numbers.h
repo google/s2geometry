@@ -83,14 +83,6 @@ bool safe_strto64_base(absl::string_view text, int64_t* value, int base);
 bool safe_strtou32_base(absl::string_view text, uint32_t* value, int base);
 bool safe_strtou64_base(absl::string_view text, uint64_t* value, int base);
 
-// These functions are intended for speed. All functions take an output buffer
-// as an argument and return a pointer to the last byte they wrote, which is the
-// terminating '\0'. At most `kFastToBufferSize` bytes are written.
-char* FastInt32ToBuffer(int32_t i, char* buffer);
-char* FastUInt32ToBuffer(uint32_t i, char* buffer);
-char* FastInt64ToBuffer(int64_t i, char* buffer);
-char* FastUInt64ToBuffer(uint64_t i, char* buffer);
-
 static const int kFastToBufferSize = 32;
 static const int kSixDigitsToBufferSize = 16;
 
@@ -105,6 +97,16 @@ char* RoundTripFloatToBuffer(float f, char* buffer);
 // Required buffer size is `kSixDigitsToBufferSize`.
 size_t SixDigitsToBuffer(double d, char* buffer);
 
+// These functions are intended for speed. All functions take an output buffer
+// as an argument and return a pointer to the last byte they wrote, which is the
+// terminating '\0'. At most `kFastToBufferSize` bytes are written.
+char* FastIntToBuffer(int32_t, char*);
+char* FastIntToBuffer(uint32_t, char*);
+char* FastIntToBuffer(int64_t, char*);
+char* FastIntToBuffer(uint64_t, char*);
+
+// For enums and integer types that are not an exact match for the types above,
+// use templates to call the appropriate one of the four overloads above.
 template <typename int_type>
 char* FastIntToBuffer(int_type i, char* buffer) {
   static_assert(sizeof(i) <= 64 / 8,
@@ -114,15 +116,15 @@ char* FastIntToBuffer(int_type i, char* buffer) {
   // If one day something like std::is_signed<enum E> works, switch to it.
   if (static_cast<int_type>(1) - 2 < 0) {  // Signed
     if (sizeof(i) > 32 / 8) {           // 33-bit to 64-bit
-      return numbers_internal::FastInt64ToBuffer(i, buffer);
+      return FastIntToBuffer(static_cast<int64_t>(i), buffer);
     } else {  // 32-bit or less
-      return numbers_internal::FastInt32ToBuffer(i, buffer);
+      return FastIntToBuffer(static_cast<int32_t>(i), buffer);
     }
   } else {                     // Unsigned
     if (sizeof(i) > 32 / 8) {  // 33-bit to 64-bit
-      return numbers_internal::FastUInt64ToBuffer(i, buffer);
+      return FastIntToBuffer(static_cast<uint64_t>(i), buffer);
     } else {  // 32-bit or less
-      return numbers_internal::FastUInt32ToBuffer(i, buffer);
+      return FastIntToBuffer(static_cast<uint32_t>(i), buffer);
     }
   }
 }
@@ -190,32 +192,32 @@ using absl::numbers_internal::  // NOLINT(readability/namespace)
     kSixDigitsToBufferSize;
 
 inline char* FastInt32ToBufferLeft(int32_t i, char* buffer) {
-  return absl::numbers_internal::FastInt32ToBuffer(i, buffer);
+  return absl::numbers_internal::FastIntToBuffer(i, buffer);
 }
 inline char* FastUInt32ToBufferLeft(uint32_t i, char* buffer) {
-  return absl::numbers_internal::FastUInt32ToBuffer(i, buffer);
+  return absl::numbers_internal::FastIntToBuffer(i, buffer);
 }
 inline char* FastInt64ToBufferLeft(int64 i, char* buffer) {
-  return absl::numbers_internal::FastInt64ToBuffer(i, buffer);
+  return absl::numbers_internal::FastIntToBuffer(i, buffer);
 }
 inline char* FastUInt64ToBufferLeft(uint64 i, char* buffer) {
-  return absl::numbers_internal::FastUInt64ToBuffer(i, buffer);
+  return absl::numbers_internal::FastIntToBuffer(i, buffer);
 }
 
 inline char* FastInt32ToBuffer(int32_t i, char* buffer) {
-  absl::numbers_internal::FastInt32ToBuffer(i, buffer);
+  absl::numbers_internal::FastIntToBuffer(i, buffer);
   return buffer;
 }
 inline char* FastUInt32ToBuffer(uint32_t i, char* buffer) {
-  absl::numbers_internal::FastUInt32ToBuffer(i, buffer);
+  absl::numbers_internal::FastIntToBuffer(i, buffer);
   return buffer;
 }
 inline char* FastInt64ToBuffer(int64 i, char* buffer) {
-  absl::numbers_internal::FastInt64ToBuffer(i, buffer);
+  absl::numbers_internal::FastIntToBuffer(i, buffer);
   return buffer;
 }
 inline char* FastUInt64ToBuffer(uint64 i, char* buffer) {
-  absl::numbers_internal::FastUInt64ToBuffer(i, buffer);
+  absl::numbers_internal::FastIntToBuffer(i, buffer);
   return buffer;
 }
 
@@ -348,12 +350,7 @@ size_t u64tostr_base36(uint64_t number, size_t buf_size, char* buffer);
 uint64 atoi_kmgt(const char* s);
 inline uint64 atoi_kmgt(const string& s) { return atoi_kmgt(s.c_str()); }
 
-// These functions are intended for speed. `FastTimeToBuffer()` puts the output
-// into RFC822 format.
-//
-// `FastIntToBuffer()` uses at most 22 bytes; `FastTimeToBuffer()` uses exactly
-// 30 bytes. They all return a pointer to the beginning of the output, which is
-// the same as the beginning of the input buffer.
+// `FastTimeToBuffer()`, intended for speed, puts the output into RFC822 format.
 //
 // NOTE: In 64-bit land, `sizeof(time_t)` is 8, so it is possible to pass to
 // `FastTimeToBuffer()` a time whose year cannot be represented in 4 digits. In
@@ -363,16 +360,7 @@ inline uint64 atoi_kmgt(const string& s) { return atoi_kmgt(s.c_str()); }
 // WARNING: This "0" behavior is deprecated.  Please pass `time(nullptr)`
 //          if you want a string from the current time.
 //
-// Previously documented minimums -- the buffers provided must be at least this
-// long, though these numbers are subject to change:
-//
-//     Int32, UInt32:                   12 bytes
-//     Int64, UInt64, Int, Uint:        22 bytes
-//     Time:                            30 bytes
-//
-// Use `kFastToBufferSize` rather than hardcoding constants.
-char* FastUInt32ToBuffer(uint32_t i, char* buffer);
-char* FastUInt64ToBuffer(uint64 i, char* buffer);
+// The buffer size should be at least `kFastToBufferSize` bytes.
 
 ABSL_DEPRECATED("Use FastFormatRFC1123GMT() from util/time/time.h")
 char* FastTimeToBuffer(time_t t, char* buffer);

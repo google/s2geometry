@@ -366,13 +366,14 @@ class InlinedVector {
   // InlinedVector::emplace_back()
   //
   // Constructs and appends an object to the inlined vector.
+  //
+  // Returns a reference to the inserted element.
   template <typename... Args>
-  void emplace_back(Args&&... args) {
+  value_type& emplace_back(Args&&... args) {
     size_type s = size();
     assert(s <= capacity());
     if (ABSL_PREDICT_FALSE(s == capacity())) {
-      GrowAndEmplaceBack(std::forward<Args>(args)...);
-      return;
+      return GrowAndEmplaceBack(std::forward<Args>(args)...);
     }
     assert(s < capacity());
 
@@ -384,7 +385,7 @@ class InlinedVector {
       tag().set_inline_size(s + 1);
       space = inlined_space();
     }
-    Construct(space + s, std::forward<Args>(args)...);
+    return Construct(space + s, std::forward<Args>(args)...);
   }
 
   // InlinedVector::push_back()
@@ -704,26 +705,30 @@ class InlinedVector {
   }
 
   template <typename... Args>
-  void GrowAndEmplaceBack(Args&&... args) {
+  value_type& GrowAndEmplaceBack(Args&&... args) {
     assert(size() == capacity());
     const size_type s = size();
 
     Allocation new_allocation(allocator(), 2 * capacity());
 
-    Construct(new_allocation.buffer() + s, std::forward<Args>(args)...);
+    value_type& new_element =
+        Construct(new_allocation.buffer() + s, std::forward<Args>(args)...);
     UninitializedCopy(std::make_move_iterator(data()),
                       std::make_move_iterator(data() + s),
                       new_allocation.buffer());
 
     ResetAllocation(new_allocation, s + 1);
+
+    return new_element;
   }
 
   void InitAssign(size_type n);
   void InitAssign(size_type n, const value_type& t);
 
   template <typename... Args>
-  void Construct(pointer p, Args&&... args) {
+  value_type& Construct(pointer p, Args&&... args) {
     AllocatorTraits::construct(allocator(), p, std::forward<Args>(args)...);
+    return *p;
   }
 
   template <typename Iter>

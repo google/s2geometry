@@ -22,9 +22,9 @@
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
-#include "s2/s2closestedgequery.h"
+#include "s2/s2closest_edge_query.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2shapeindex_region.h"
+#include "s2/s2shape_index_region.h"
 
 S2Cap S2MinDistancePointTarget::GetCapBound() {
   return S2Cap(point_, S1ChordAngle::Zero());

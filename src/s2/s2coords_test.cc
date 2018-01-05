@@ -18,7 +18,7 @@
 #include "s2/s2coords.h"
 
 #include <gtest/gtest.h>
-#include "s2/s2cellid.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2coords_internal.h"
 #include "s2/s2testing.h"
 

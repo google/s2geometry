@@ -97,24 +97,7 @@
 
 // To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
 // TODO(user): delete macros
-#define PRINTF_ATTRIBUTE(string_index, first_to_check)
-#define SCANF_ATTRIBUTE(string_index, first_to_check)
-#define ATTRIBUTE_ALWAYS_INLINE
-#define ATTRIBUTE_NOINLINE
-#define ATTRIBUTE_NO_TAIL_CALL
-#define HAVE_ATTRIBUTE_NO_TAIL_CALL 0
-#define ATTRIBUTE_WEAK
-#define HAVE_ATTRIBUTE_WEAK 0
-#define ATTRIBUTE_NONNULL(...)
-#define ATTRIBUTE_NORETURN
-#define ATTRIBUTE_SECTION(name)
-#define ATTRIBUTE_SECTION_VARIABLE(name)
-#define INIT_ATTRIBUTE_SECTION_VARS(name)
-#define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void *>(0))
-#define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void *>(0))
 #define MUST_USE_RESULT
-#define ATTRIBUTE_UNUSED
-#define ATTRIBUTE_PACKED
 
 #else  // SWIG
 
@@ -174,17 +157,6 @@
 #define ABSL_PRINTF_ATTRIBUTE(string_index, first_to_check)
 #define ABSL_SCANF_ATTRIBUTE(string_index, first_to_check)
 #endif
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(format) || (defined(__GNUC__) && !defined(__clang__))
-#define PRINTF_ATTRIBUTE(string_index, first_to_check) \
-    __attribute__((__format__ (__printf__, string_index, first_to_check)))
-#define SCANF_ATTRIBUTE(string_index, first_to_check) \
-    __attribute__((__format__ (__scanf__, string_index, first_to_check)))
-#else
-#define PRINTF_ATTRIBUTE(string_index, first_to_check)
-#define SCANF_ATTRIBUTE(string_index, first_to_check)
-#endif
 
 // ABSL_ATTRIBUTE_ALWAYS_INLINE
 // ABSL_ATTRIBUTE_NOINLINE
@@ -205,23 +177,6 @@
 #define ABSL_ATTRIBUTE_NOINLINE
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(always_inline) || \
-    (defined(__GNUC__) && !defined(__clang__))
-#define ATTRIBUTE_ALWAYS_INLINE  __attribute__ ((always_inline))
-#define HAVE_ATTRIBUTE_ALWAYS_INLINE 1
-#else
-#define ATTRIBUTE_ALWAYS_INLINE
-#endif
-
-#if ABSL_HAVE_ATTRIBUTE(noinline) || (defined(__GNUC__) && !defined(__clang__))
-#define ATTRIBUTE_NOINLINE __attribute__ ((noinline))
-#define HAVE_ATTRIBUTE_NOINLINE 1
-#else
-#define ATTRIBUTE_NOINLINE
-#endif
-
 // ABSL_ATTRIBUTE_NO_TAIL_CALL
 //
 // Prevents the compiler from optimizing away stack frames for functions which
@@ -238,20 +193,6 @@
 #define ABSL_HAVE_ATTRIBUTE_NO_TAIL_CALL 0
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(disable_tail_calls)
-#define HAVE_ATTRIBUTE_NO_TAIL_CALL 1
-#define ATTRIBUTE_NO_TAIL_CALL __attribute__((disable_tail_calls))
-#elif defined(__GNUC__) && !defined(__clang__)
-#define HAVE_ATTRIBUTE_NO_TAIL_CALL 1
-#define ATTRIBUTE_NO_TAIL_CALL \
-  __attribute__((optimize("no-optimize-sibling-calls")))
-#else
-#define ATTRIBUTE_NO_TAIL_CALL
-#define HAVE_ATTRIBUTE_NO_TAIL_CALL 0
-#endif
-
 // ABSL_ATTRIBUTE_WEAK
 //
 // Tags a function as weak for the purposes of compilation and linking.
@@ -262,17 +203,6 @@
 #else
 #define ABSL_ATTRIBUTE_WEAK
 #define ABSL_HAVE_ATTRIBUTE_WEAK 0
-#endif
-
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(weak) || (defined(__GNUC__) && !defined(__clang__))
-#undef ATTRIBUTE_WEAK
-#define ATTRIBUTE_WEAK __attribute__ ((weak))
-#define HAVE_ATTRIBUTE_WEAK 1
-#else
-#define ATTRIBUTE_WEAK
-#define HAVE_ATTRIBUTE_WEAK 0
 #endif
 
 // ABSL_ATTRIBUTE_NONNULL
@@ -319,14 +249,6 @@
 #define ABSL_ATTRIBUTE_NONNULL(...)
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(nonnull) || (defined(__GNUC__) && !defined(__clang__))
-#define ATTRIBUTE_NONNULL(arg_index) __attribute__((nonnull(arg_index)))
-#else
-#define ATTRIBUTE_NONNULL(...)
-#endif
-
 // ABSL_ATTRIBUTE_NORETURN
 //
 // Tells the compiler that a given function never returns.
@@ -336,16 +258,6 @@
 #define ABSL_ATTRIBUTE_NORETURN __declspec(noreturn)
 #else
 #define ABSL_ATTRIBUTE_NORETURN
-#endif
-
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(noreturn) || (defined(__GNUC__) && !defined(__clang__))
-#define ATTRIBUTE_NORETURN __attribute__((noreturn))
-#elif defined(_MSC_VER)
-#define ATTRIBUTE_NORETURN __declspec(noreturn)
-#else
-#define ATTRIBUTE_NORETURN
 #endif
 
 // ABSL_ATTRIBUTE_NO_SANITIZE_ADDRESS
@@ -436,12 +348,6 @@
   __attribute__((section(#name))) __attribute__((noinline))
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#ifndef ATTRIBUTE_SECTION
-#define ATTRIBUTE_SECTION(name) \
-  __attribute__ ((section (#name))) __attribute__ ((noinline))
-#endif
 
 // ABSL_ATTRIBUTE_SECTION_VARIABLE
 //
@@ -450,13 +356,6 @@
 // This functionality is supported by GNU linker.
 #ifndef ABSL_ATTRIBUTE_SECTION_VARIABLE
 #define ABSL_ATTRIBUTE_SECTION_VARIABLE(name) __attribute__((section(#name)))
-#endif
-
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#ifndef ATTRIBUTE_SECTION_VARIABLE
-#define ATTRIBUTE_SECTION_VARIABLE(name) \
-  __attribute__ ((section (#name)))
 #endif
 
 // ABSL_DECLARE_ATTRIBUTE_SECTION_VARS
@@ -490,10 +389,6 @@
 #define ABSL_ATTRIBUTE_SECTION_STOP(name) \
   (reinterpret_cast<void *>(__stop_##name))
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void*>(__start_##name))
-#define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void*>(__stop_##name))
 #else  // !ABSL_HAVE_ATTRIBUTE_SECTION
 
 #define ABSL_HAVE_ATTRIBUTE_SECTION 0
@@ -506,14 +401,6 @@
 #define ABSL_DECLARE_ATTRIBUTE_SECTION_VARS(name)
 #define ABSL_ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void *>(0))
 #define ABSL_ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void *>(0))
-
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#define ATTRIBUTE_SECTION(name)
-#define ATTRIBUTE_SECTION_VARIABLE(name)
-#define INIT_ATTRIBUTE_SECTION_VARS(name)
-#define ATTRIBUTE_SECTION_START(name) (reinterpret_cast<void *>(0))
-#define ATTRIBUTE_SECTION_STOP(name) (reinterpret_cast<void *>(0))
 
 #endif  // ABSL_ATTRIBUTE_SECTION
 
@@ -661,15 +548,6 @@
 #define ABSL_ATTRIBUTE_UNUSED
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(unused) || (defined(__GNUC__) && !defined(__clang__))
-#undef ATTRIBUTE_UNUSED
-#define ATTRIBUTE_UNUSED __attribute__ ((__unused__))
-#else
-#define ATTRIBUTE_UNUSED
-#endif
-
 // ABSL_ATTRIBUTE_INITIAL_EXEC
 //
 // Tells the compiler to use "initial-exec" mode for a thread-local variable.
@@ -687,14 +565,6 @@
 #define ABSL_ATTRIBUTE_PACKED __attribute__((__packed__))
 #else
 #define ABSL_ATTRIBUTE_PACKED
-#endif
-
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(packed) || (defined(__GNUC__) && !defined(__clang__))
-#define ATTRIBUTE_PACKED __attribute__((__packed__))
-#else
-#define ATTRIBUTE_PACKED
 #endif
 
 #endif  // SWIG

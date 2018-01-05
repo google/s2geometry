@@ -68,8 +68,8 @@ inline bool ConsumeSuffix(absl::string_view* str, absl::string_view expected) {
 // Returns a view into the input string 'str' with the given 'prefix' removed,
 // but leaving the original string intact. If the prefix does not match at the
 // start of the string, returns the original string instead.
-inline absl::string_view StripPrefix(absl::string_view str,
-                                     absl::string_view prefix) {
+ABSL_MUST_USE_RESULT inline absl::string_view StripPrefix(
+    absl::string_view str, absl::string_view prefix) {
   if (absl::StartsWith(str, prefix)) str.remove_prefix(prefix.size());
   return str;
 }
@@ -79,8 +79,8 @@ inline absl::string_view StripPrefix(absl::string_view str,
 // Returns a view into the input string 'str' with the given 'suffix' removed,
 // but leaving the original string intact. If the suffix does not match at the
 // end of the string, returns the original string instead.
-inline absl::string_view StripSuffix(absl::string_view str,
-                                     absl::string_view suffix) {
+ABSL_MUST_USE_RESULT inline absl::string_view StripSuffix(
+    absl::string_view str, absl::string_view suffix) {
   if (absl::EndsWith(str, suffix)) str.remove_suffix(suffix.size());
   return str;
 }
@@ -141,23 +141,6 @@ inline void ReplaceCharacter(char* str, size_t len, char remove,
   }
 }
 
-// Removes whitespace from both ends of the given string. This function has
-// various overloads for passing the input string as a C-string + length,
-// string, or absl::string_view. If the caller is using NUL-terminated strings,
-// it is the caller's responsibility to insert the NUL character at the end of
-// the substring.
-ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
-inline void StripWhitespace(const char** str, ptrdiff_t* len) {
-  auto stripped = absl::StripAsciiWhitespace(absl::string_view(*str, *len));
-  *len = stripped.size();
-  if (*len) *str = &*stripped.begin();
-}
-ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
-inline void StripWhitespace(char** str, ptrdiff_t* len) {
-  auto stripped = absl::StripAsciiWhitespace(absl::string_view(*str, *len));
-  *len = stripped.size();
-  if (*len) *str = const_cast<char*>(&*stripped.begin());
-}
 ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
 inline void StripWhitespace(string* str) { absl::StripAsciiWhitespace(str); }
 
@@ -180,23 +163,6 @@ inline const char* SkipLeadingWhitespace(const char* str) {
 inline char* SkipLeadingWhitespace(char* str) {
   while (absl::ascii_isspace(*str)) ++str;
   return str;
-}
-
-template <typename T>
-ABSL_DEPRECATED("stop passing int*")
-inline typename std::enable_if<std::is_same<T, int>::value, void>::type
-StripWhitespace(const char** str, T* len) {
-  ptrdiff_t pdt = *len;
-  StripWhitespace(str, &pdt);
-  *len = static_cast<int>(pdt);
-}
-template <typename T>
-ABSL_DEPRECATED("stop passing int*")
-inline typename std::enable_if<std::is_same<T, int>::value, void>::type
-StripWhitespace(char** str, T* len) {
-  ptrdiff_t pdt = *len;
-  StripWhitespace(str, &pdt);
-  *len = static_cast<int>(pdt);
 }
 
 

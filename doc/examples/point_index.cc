@@ -7,9 +7,9 @@
 #include <cstdio>
 #include <gflags/gflags.h>
 #include "s2/s2earth.h"
-#include "s2/s1chordangle.h"
-#include "s2/s2closestpointquery.h"
-#include "s2/s2pointindex.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s2closest_point_query.h"
+#include "s2/s2point_index.h"
 #include "s2/s2testing.h"
 
 DEFINE_int32(num_index_points, 10000, "Number of points to index");

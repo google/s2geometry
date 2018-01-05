@@ -20,11 +20,11 @@
 #include <cfloat>
 #include <gtest/gtest.h>
 #include "s2/s1angle.h"
-#include "s2/s1chordangle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
-#include "s2/s2textformat.h"
+#include "s2/s2text_format.h"
 
 void CheckSimplify(const char* src, const char* dst,
                    const char* target, const char* avoid,

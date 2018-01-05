@@ -22,11 +22,10 @@
 #include <vector>
 
 #include "s2/third_party/absl/memory/memory.h"
-#include "s2/util/btree/btree_map.h"
-#include "s2/mutable_s2shapeindex.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2contains_vertex_query.h"
-#include "s2/s2crossingedgequery.h"
+#include "s2/s2crossing_edge_query.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
@@ -42,6 +41,8 @@ using GraphOptions = S2Builder::GraphOptions;
 using Edge = Graph::Edge;
 using EdgeId = Graph::EdgeId;
 using VertexId = Graph::VertexId;
+
+using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
 
 namespace s2builderutil {
 
@@ -341,15 +342,16 @@ void DegeneracyFinder::ComputeUnknownSignsIndexed(
   MutableS2ShapeIndex index;
   index.Add(make_unique<GraphShape>(&g_));
   S2CrossingEdgeQuery query(&index);
-  vector<EdgeId> crossing_edges;
+  vector<ShapeEdgeId> crossing_edges;
   S2EdgeCrosser crosser;
   for (Component& component : *components) {
     if (component.root_sign != 0) continue;
-    query.GetCandidates(g_.vertex(known_vertex), g_.vertex(component.root),
-                       index.shape(0), &crossing_edges);
     bool inside = known_vertex_sign > 0;
     crosser.Init(&g_.vertex(known_vertex), &g_.vertex(component.root));
-    for (EdgeId e : crossing_edges) {
+    query.GetCandidates(g_.vertex(known_vertex), g_.vertex(component.root),
+                       *index.shape(0), &crossing_edges);
+    for (ShapeEdgeId id : crossing_edges) {
+      int e = id.edge_id;
       if (is_edge_degeneracy_[e]) continue;
       inside ^= crosser.EdgeOrVertexCrossing(&g_.vertex(g_.edge(e).first),
                                              &g_.vertex(g_.edge(e).second));

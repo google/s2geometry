@@ -30,7 +30,7 @@
 #include <glog/logging.h>
 
 #include "s2/base/casts.h"
-#include "s2/mutable_s2shapeindex.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2boolean_operation.h"
@@ -41,29 +41,29 @@
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
-#include "s2/s2cellid.h"
-#include "s2/s2cellunion.h"
-#include "s2/s2closestedgequery.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2cell_union.h"
+#include "s2/s2closest_edge_query.h"
 #include "s2/s2contains_point_query.h"
 #include "s2/s2coords.h"
-#include "s2/s2crossingedgequery.h"
+#include "s2/s2crossing_edge_query.h"
 #include "s2/s2debug.h"
 #include "s2/s2edge_clipping.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2error.h"
 #include "s2/s2latlng.h"
-#include "s2/s2latlngrect.h"
-#include "s2/s2latlngrect_bounder.h"
+#include "s2/s2latlng_rect.h"
+#include "s2/s2latlng_rect_bounder.h"
 #include "s2/s2loop.h"
 #include "s2/s2measures.h"
 #include "s2/s2metrics.h"
-#include "s2/s2pointcompression.h"
+#include "s2/s2point_compression.h"
 #include "s2/s2polyline.h"
 #include "s2/s2predicates.h"
-#include "s2/s2shapeindex.h"
-#include "s2/s2shapeindex_region.h"
-#include "s2/s2shapeutil.h"
+#include "s2/s2shape_index.h"
+#include "s2/s2shape_index_region.h"
+#include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/third_party/absl/memory/memory.h"
@@ -207,7 +207,7 @@ bool S2Polygon::FindValidationError(S2Error* error) const {
 
   // Check for loop self-intersections and loop pairs that cross
   // (including duplicate edges and vertices).
-  if (s2shapeutil::FindAnyCrossing(index_, error)) return true;
+  if (s2shapeutil::FindSelfIntersection(index_, error)) return true;
 
   // Check whether InitOriented detected inconsistent loop orientations.
   if (error_inconsistent_loop_orientations_) {

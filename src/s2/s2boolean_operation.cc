@@ -74,12 +74,13 @@
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2contains_point_query.h"
-#include "s2/s2crossingedgequery.h"
+#include "s2/s2crossing_edge_query.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2measures.h"
 #include "s2/s2predicates.h"
-#include "s2/s2shapeutil.h"
+#include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
+#include "s2/util/gtl/btree_map.h"
 
 // TODO(ericv): Remove this debugging output at some point.
 extern bool s2builder_verbose;
@@ -1186,7 +1187,7 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // A map that translates from SourceId (the (region_id, shape_id,
   // edge_id) triple that identifies an S2ShapeIndex edge) to InputEdgeId (the
   // sequentially increasing numbers assigned to input edges by S2Builder).
-  using SourceIdMap = util::btree::btree_map<SourceId, InputEdgeId>;
+  using SourceIdMap = gtl::btree_map<SourceId, InputEdgeId>;
   SourceIdMap source_id_map_;
 
   // Indicates whether the point being processed along the current edge chain
@@ -1849,7 +1850,7 @@ bool S2BooleanOperation::Impl::GetIndexCrossings(int region_id) {
   if (region_id == index_crossings_first_region_id_) return true;
   if (index_crossings_first_region_id_ < 0) {
     DCHECK_EQ(region_id, 0);  // For efficiency, not correctness.
-    if (!s2shapeutil::VisitCrossings(
+    if (!s2shapeutil::VisitCrossingEdgePairs(
             *op_->regions_[0], *op_->regions_[1],
             s2shapeutil::CrossingType::ALL,
             [this](const ShapeEdge& a, const ShapeEdge& b, bool is_interior) {
