@@ -77,6 +77,7 @@ cd s2geometry
 
 From the appropriate directory depending on how you got the source:
 
+From your cloned repository directory:
 ```
 mkdir build
 cd build
