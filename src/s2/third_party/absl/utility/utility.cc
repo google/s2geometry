@@ -12,12 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "s2/third_party/absl/base/internal/log_severity.h"
+// -----------------------------------------------------------------------------
+// File: ascii.h
+// -----------------------------------------------------------------------------
+//
+#include "s2/third_party/absl/utility/utility.h"
 
 namespace absl {
-#ifdef NDEBUG
-const absl::LogSeverity kLogDebugFatal = absl::LogSeverity::kError;
-#else
-const absl::LogSeverity kLogDebugFatal = absl::LogSeverity::kFatal;
+
+#ifndef ABSL_HAVE_STD_OPTIONAL
+const in_place_t in_place{};
 #endif
+
 }  // namespace absl

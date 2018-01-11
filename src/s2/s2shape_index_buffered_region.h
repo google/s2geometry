@@ -45,7 +45,7 @@
 //
 // S2CellUnion GetBufferedCovering(const S2ShapeIndex& index, S1Angle radius) {
 //   S2RegionCoverer coverer;
-//   coverer.set_max_cells(20);
+//   coverer.mutable_options()->set_max_cells(20);
 //   S2CellUnion covering;
 //   S2ShapeIndexBufferedRegion region(&index, radius);
 //   coverer.GetCovering(region, &covering);

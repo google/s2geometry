@@ -115,7 +115,6 @@ add_library(s2 SHARED
             src/s2/s2wedge_relations.cc
             src/s2/strings/serialize.cc
             src/s2/third_party/absl/base/dynamic_annotations.cc
-            src/s2/third_party/absl/base/internal/log_severity.cc
             src/s2/third_party/absl/base/internal/raw_logging.cc
             src/s2/third_party/absl/base/internal/throw_delegate.cc
             src/s2/third_party/absl/numeric/int128.cc
@@ -127,6 +126,7 @@ add_library(s2 SHARED
             src/s2/third_party/absl/strings/string_view.cc
             src/s2/third_party/absl/strings/strip.cc
             src/s2/third_party/absl/strings/internal/memutil.cc
+            src/s2/third_party/absl/utility/utility.cc
             src/s2/util/bits/bit-interleave.cc
             src/s2/util/bits/bits.cc
             src/s2/util/coding/coder.cc
@@ -273,6 +273,8 @@ install(FILES src/s2/third_party/absl/strings/string_view.h
         DESTINATION include/s2/third_party/absl/strings)
 install(FILES src/s2/third_party/absl/types/span.h
         DESTINATION include/s2/third_party/absl/types)
+install(FILES src/s2/third_party/absl/utility/utility.h
+        DESTINATION include/s2/third_party/absl/utility)
 install(FILES src/s2/util/bits/bits.h
         DESTINATION include/s2/util/bits)
 install(FILES src/s2/util/coding/coder.h
@@ -290,7 +292,6 @@ install(FILES src/s2/util/gtl/btree.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
               src/s2/util/gtl/libc_allocator_with_realloc.h
-              src/s2/util/gtl/manual_constructor.h
         DESTINATION include/s2/util/gtl)
 install(FILES src/s2/util/hash/mix.h
         DESTINATION include/s2/util/hash)

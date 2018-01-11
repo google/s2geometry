@@ -543,6 +543,7 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
   target_ = target;
   options_ = &options;
 
+  tested_edges_.clear();
   distance_limit_ = options.max_distance();
   result_singleton_ = Result();
   DCHECK(result_vector_.empty());

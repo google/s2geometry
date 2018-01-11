@@ -149,11 +149,6 @@ inline void StripWhitespace(absl::string_view* str) {
   *str = absl::StripAsciiWhitespace(*str);
 }
 
-// Removes whitespace from the end of the given string.
-inline void StripTrailingWhitespace(string* s) {
-  absl::StripTrailingAsciiWhitespace(s);
-}
-
 // Returns a pointer to the first non-whitespace character in 'str'. Never
 // returns nullptr. 'str' must be NUL-terminated.
 inline const char* SkipLeadingWhitespace(const char* str) {

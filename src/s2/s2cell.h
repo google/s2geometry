@@ -116,15 +116,15 @@ class S2Cell final : public S2Region {
   // Returns the average area for cells at the given level.
   static double AverageArea(int level);
 
-  // Returns the average area of cells at this level.  This is accurate to
-  // within a factor of 1.7 (for S2_QUADRATIC_PROJECTION) and is extremely
-  // cheap to compute.
+  // Returns the average area of cells at this level in steradians.  This is
+  // accurate to within a factor of 1.7 (for S2_QUADRATIC_PROJECTION) and is
+  // extremely cheap to compute.
   double AverageArea() const { return AverageArea(level_); }
 
-  // Returns the approximate area of this cell.  This method is accurate to
-  // within 3% percent for all cell sizes and accurate to within 0.1% for
-  // cells at level 5 or higher (i.e. squares 350km to a side or smaller
-  // on the Earth's surface).  It is moderately cheap to compute.
+  // Returns the approximate area of this cell in steradians.  This method is
+  // accurate to within 3% percent for all cell sizes and accurate to within
+  // 0.1% for cells at level 5 or higher (i.e. squares 350km to a side or
+  // smaller on the Earth's surface).  It is moderately cheap to compute.
   double ApproxArea() const;
 
   // Returns the area of this cell as accurately as possible.  This method is

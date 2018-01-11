@@ -132,6 +132,19 @@ TEST(S2ClosestEdgeQuery, TrueDistanceLessThanS1ChordAngleDistance) {
   EXPECT_TRUE(query.IsConservativeDistanceLessOrEqual(&target1, limit));
 }
 
+TEST(S2ClosestEdgeQuery, TestReuseOfQuery) {
+  // Tests that between queries, the internal mechanism for de-duplicating
+  // results is re-set. See b/71646017.
+  auto index = MakeIndexOrDie("2:2 # #");
+  S2ClosestEdgeQuery query(index.get());
+  query.mutable_options()->set_max_error(S1Angle::Degrees(1));
+  auto target_index = MakeIndexOrDie("## 0:0, 0:5, 5:5, 5:0");
+  S2ClosestEdgeQuery::ShapeIndexTarget target(target_index.get());
+  auto results1 = query.FindClosestEdges(&target);
+  auto results2 = query.FindClosestEdges(&target);
+  EXPECT_EQ(results1.size(), results2.size());
+}
+
 TEST(S2ClosestEdgeQuery, TargetPointInsideIndexedPolygon) {
   // Tests a target point in the interior of an indexed polygon.
   // (The index also includes a polyline loop with no interior.)

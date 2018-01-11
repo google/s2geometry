@@ -18,6 +18,7 @@
 #ifndef UTIL_GTL_BTREE_CONTAINER_H__
 #define UTIL_GTL_BTREE_CONTAINER_H__
 
+#include <initializer_list>
 #include <iosfwd>
 #include <utility>
 
@@ -192,6 +193,12 @@ class btree_unique_container : public btree_container<Tree> {
     insert(b, e);
   }
 
+  // Initializer list constructor.
+  btree_unique_container(std::initializer_list<value_type> init,
+                         const key_compare &comp = key_compare(),
+                         const allocator_type &alloc = allocator_type())
+      : btree_unique_container(init.begin(), init.end(), comp, alloc) {}
+
   // Constructor/assignments.
   btree_unique_container(const self_type &x) = default;
   btree_unique_container(self_type &&x) = default;
@@ -232,6 +239,9 @@ class btree_unique_container : public btree_container<Tree> {
   template <typename InputIterator>
   void insert(InputIterator b, InputIterator e) {
     this->tree_.insert_iterator_unique(b, e);
+  }
+  void insert(std::initializer_list<value_type> init) {
+    this->tree_.insert_iterator_unique(init.begin(), init.end());
   }
 
   // Deletion routines.
@@ -309,6 +319,12 @@ class btree_map_container : public btree_unique_container<Tree> {
       : super_type(b, e, comp, alloc) {
   }
 
+  // Initializer list constructor.
+  btree_map_container(std::initializer_list<value_type> init,
+                      const key_compare &comp = key_compare(),
+                      const allocator_type &alloc = allocator_type())
+      : btree_map_container(init.begin(), init.end(), comp, alloc) {}
+
   // Constructor/assignments.
   btree_map_container(const self_type &x) = default;
   btree_map_container(self_type &&x) = default;
@@ -363,6 +379,12 @@ class btree_multi_container : public btree_container<Tree> {
     insert(b, e);
   }
 
+  // Initializer list constructor.
+  btree_multi_container(std::initializer_list<value_type> init,
+                        const key_compare &comp = key_compare(),
+                        const allocator_type &alloc = allocator_type())
+      : btree_multi_container(init.begin(), init.end(), comp, alloc) {}
+
   // Constructor/assignments.
   btree_multi_container(const self_type &x) = default;
   btree_multi_container(self_type &&x) = default;
@@ -393,6 +415,9 @@ class btree_multi_container : public btree_container<Tree> {
   template <typename InputIterator>
   void insert(InputIterator b, InputIterator e) {
     this->tree_.insert_iterator_multi(b, e);
+  }
+  void insert(std::initializer_list<value_type> init) {
+    this->tree_.insert_iterator_multi(init.begin(), init.end());
   }
 
   // Deletion routines.

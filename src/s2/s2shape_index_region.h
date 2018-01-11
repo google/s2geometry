@@ -48,7 +48,7 @@
 //
 // S2CellUnion GetCovering(const S2ShapeIndex& index) {
 //   S2RegionCoverer coverer;
-//   coverer.set_max_cells(20);
+//   coverer.mutable_options()->set_max_cells(20);
 //   S2CellUnion covering;
 //   coverer.GetCovering(MakeS2ShapeIndexRegion(&index), &covering);
 //   return covering;

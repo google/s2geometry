@@ -563,60 +563,6 @@ class string_view {
   size_type find_last_not_of(char c, size_type pos = npos) const
       noexcept;
 
-  // Legacy variants of the size and find family returning their old signed
-  // type.
-  // Will eventually be removed by go/lsc-stringpiece-size as call sites are
-  // migrated to safely accept the size_type return type.
-  constexpr stringpiece_ssize_type ssize() const noexcept { return size(); }
-  constexpr stringpiece_ssize_type slength() const noexcept { return length(); }
-  stringpiece_ssize_type sfind(string_view s, size_type pos = 0) const
-      noexcept {
-    return find(s, pos);
-  }
-  stringpiece_ssize_type sfind(char c, size_type pos = 0) const noexcept {
-    return find(c, pos);
-  }
-  stringpiece_ssize_type srfind(string_view s, size_type pos = npos) const
-      noexcept {
-    return rfind(s, pos);
-  }
-  stringpiece_ssize_type srfind(char c, size_type pos = npos) const noexcept {
-    return rfind(c, pos);
-  }
-  stringpiece_ssize_type sfind_first_of(string_view s, size_type pos = 0) const
-      noexcept {
-    return find_first_of(s, pos);
-  }
-  stringpiece_ssize_type sfind_first_of(char c, size_type pos = 0) const
-      noexcept {
-    return find_first_of(c, pos);
-  }
-  stringpiece_ssize_type sfind_last_of(string_view s,
-                                       size_type pos = npos) const noexcept {
-    return find_last_of(s, pos);
-  }
-  stringpiece_ssize_type sfind_last_of(char c, size_type pos = npos) const
-      noexcept {
-    return find_last_of(c, pos);
-  }
-  stringpiece_ssize_type sfind_first_not_of(string_view s,
-                                            size_type pos = 0) const noexcept {
-    return find_first_not_of(s, pos);
-  }
-  stringpiece_ssize_type sfind_first_not_of(char c, size_type pos = 0) const
-      noexcept {
-    return find_first_not_of(c, pos);
-  }
-  stringpiece_ssize_type sfind_last_not_of(string_view s,
-                                           size_type pos = npos) const
-      noexcept {
-    return find_last_not_of(s, pos);
-  }
-  stringpiece_ssize_type sfind_last_not_of(char c, size_type pos = npos) const
-      noexcept {
-    return find_last_not_of(c, pos);
-  }
-
  private:
   static constexpr size_type kMaxSize =
       std::numeric_limits<size_type>::max() / 2 + 1;
