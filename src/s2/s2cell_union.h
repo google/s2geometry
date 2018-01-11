@@ -249,9 +249,9 @@ class S2CellUnion final : public S2Region {
   // This will be no more than 6*2^60 for the whole sphere.
   uint64 LeafCellsCovered() const;
 
-  // Approximates this cell union's area by summing the average area of each
-  // contained cell's average area, using the AverageArea method from the
-  // S2Cell class.  This is equivalent to the number of leaves covered,
+  // Approximates this cell union's area in steradians by summing the average
+  // area of each contained cell's average area, using the AverageArea method
+  // from the S2Cell class.  This is equivalent to the number of leaves covered,
   // multiplied by the average area of a leaf.  Note that AverageArea does not
   // take into account distortion of cell, and thus may be off by up to a
   // factor of up to 1.7.
@@ -261,12 +261,13 @@ class S2CellUnion final : public S2Region {
   // the relative average area between objects.
   double AverageBasedArea() const;
 
-  // Calculates this cell union's area by summing the approximate area for each
-  // contained cell, using the ApproxArea method from the S2Cell class.
+  // Calculates this cell union's area in steradians by summing the approximate
+  // area for each contained cell, using the ApproxArea method from the S2Cell
+  // class.
   double ApproxArea() const;
 
-  // Calculates this cell union's area by summing the exact area for each
-  // contained cell, using the Exact method from the S2Cell class.
+  // Calculates this cell union's area in steradians by summing the exact area
+  // for each contained cell, using the Exact method from the S2Cell class.
   double ExactArea() const;
 
   // Return true if two cell unions are identical.

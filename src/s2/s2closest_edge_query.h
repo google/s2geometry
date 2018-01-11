@@ -35,7 +35,6 @@
 #include "s2/s2edge_distances.h"
 #include "s2/s2min_distance_targets.h"
 #include "s2/s2shape_index.h"
-#include "s2/util/gtl/btree_set.h"  // TODO(user): Remove, unused.
 
 // S2ClosestEdgeQuery is a helper class for finding the closest edge(s) to a
 // given point, edge, S2Cell, or geometry collection.  For example, given a

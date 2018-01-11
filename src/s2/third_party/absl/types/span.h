@@ -480,11 +480,6 @@ class Span {
     len_ -= n;
   }
 
-  ABSL_DEPRECATED("Use remove_suffix(1) instead.")
-  void pop_back() { remove_suffix(1); }
-  ABSL_DEPRECATED("Use remove_prefix(1) instead.")
-  void pop_front() { remove_prefix(1); }
-
   // Span::subspan()
   //
   // Returns a `Span` starting at element `pos` and of length `len`, with

@@ -31,6 +31,7 @@
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/utility/utility.h"
 
 template <typename T> class Vector2;
 template <typename T> class Vector3;
@@ -39,16 +40,6 @@ template <typename T> class Vector4;
 namespace util {
 namespace math {
 namespace internal_vector {
-
-// See http://en.cppreference.com/w/cpp/utility/integer_sequence
-// Implemented here to avoid a dependency.
-// TODO(user): Reuse std::index_sequence or gtl::IndexSequence.
-template <std::size_t... Is>
-struct IdxSeq {};
-template <std::size_t M, std::size_t... Is>
-struct MkIdxSeq : MkIdxSeq<M-1, M-1, Is...> {};
-template <std::size_t... Is>
-struct MkIdxSeq<0, Is...> { using type = IdxSeq<Is...>; };
 
 // CRTP base class for all Vector templates.
 template <template <typename> class VecTemplate, typename T, std::size_t N>
@@ -62,7 +53,7 @@ class BasicVector {
   typedef typename std::conditional<std::is_integral<T>::value,
                                     double, T>::type FloatType;
 
-  using IdxSeqN = typename MkIdxSeq<N>::type;
+  using IdxSeqN = typename absl::make_index_sequence<N>;
 
   template <std::size_t I, typename F, typename... As>
   static auto Reduce(F f, As*... as)
@@ -71,7 +62,7 @@ class BasicVector {
   }
 
   template <typename R = D, std::size_t... Is, typename F, typename... As>
-  static R GenerateEach(IdxSeq<Is...>, F f, As*... as) {
+  static R GenerateEach(absl::index_sequence<Is...>, F f, As*... as) {
     return R(Reduce<Is>(f, as...)...);
   }
 
@@ -117,22 +108,22 @@ class BasicVector {
   bool operator>=(const D& b) const { return !(AsD() < b); }
 
   D& operator+=(const D& b) {
-    Idx::PlusEq(static_cast<D&>(*this).Data(), b.Data(), IdxSeqN{});
+    PlusEq(static_cast<D&>(*this).Data(), b.Data(), IdxSeqN{});
     return static_cast<D&>(*this);
   }
 
   D& operator-=(const D& b) {
-    Idx::MinusEq(static_cast<D&>(*this).Data(), b.Data(), IdxSeqN{});
+    MinusEq(static_cast<D&>(*this).Data(), b.Data(), IdxSeqN{});
     return static_cast<D&>(*this);
   }
 
   D& operator*=(T k) {
-    Idx::MulEq(static_cast<D&>(*this).Data(), k, IdxSeqN{});
+    MulEq(static_cast<D&>(*this).Data(), k, IdxSeqN{});
     return static_cast<D&>(*this);
   }
 
   D& operator/=(T k) {
-    Idx::DivEq(static_cast<D&>(*this).Data(), k, IdxSeqN{});
+    DivEq(static_cast<D&>(*this).Data(), k, IdxSeqN{});
     return static_cast<D&>(*this);
   }
 
@@ -175,8 +166,8 @@ class BasicVector {
   }
 
   T DotProd(const D& b) const {
-    return Idx::Dot(static_cast<T>(0), static_cast<const D&>(*this).Data(),
-                    b.Data(), IdxSeqN{});
+    return Dot(static_cast<T>(0), static_cast<const D&>(*this).Data(), b.Data(),
+               IdxSeqN{});
   }
 
   // Squared Euclidean norm (the dot product with itself).
@@ -273,43 +264,34 @@ class BasicVector {
   static void Print(std::ostream& out, const U& v) { out << v; }
   static void Print(std::ostream& out, uint8 v) { out << static_cast<int>(v); }
 
-  // For loops can be force-unrolled with indexed recursion.
-  // The helpers to facilitate this are grouped here.
-  struct Idx {
-    static T Dot(T sum, const T* a, const T* b, IdxSeq<>) { return sum; }
-    template <std::size_t I, std::size_t...Is>
-    static T Dot(T sum, const T* a, const T* b, IdxSeq<I, Is...>) {
-      return Dot(sum + a[I] * b[I], a, b, IdxSeq<Is...>{});
-    }
+  // Ignores its arguments so that side-effects of variadic unpacking can occur.
+  static void Ignore(std::initializer_list<bool>) {}
 
-    static void PlusEq(T* a, const T* b, IdxSeq<>) {}
-    template <std::size_t I, std::size_t... Is>
-    static void PlusEq(T* a, const T* b, IdxSeq<I, Is...>) {
-      a[I] += b[I];
-      PlusEq(a, b, IdxSeq<Is...>{});
-    }
+  template <std::size_t... Is>
+  static T Dot(T sum, const T* a, const T* b, absl::index_sequence<Is...>) {
+    Ignore({(sum += a[Is] * b[Is], true)...});
+    return sum;
+  }
 
-    static void MinusEq(T* a, const T* b, IdxSeq<>) {}
-    template <std::size_t I, std::size_t... Is>
-    static void MinusEq(T* a, const T* b, IdxSeq<I, Is...>) {
-      a[I] -= b[I];
-      MinusEq(a, b, IdxSeq<Is...>{});
-    }
+  template <std::size_t... Is>
+  static void PlusEq(T* a, const T* b, absl::index_sequence<Is...>) {
+    Ignore({(a[Is] += b[Is], true)...});
+  }
 
-    static void MulEq(T* a, T b, IdxSeq<>) {}
-    template <std::size_t I, std::size_t... Is>
-    static void MulEq(T* a, T b, IdxSeq<I, Is...>) {
-      a[I] *= b;
-      MulEq(a, b, IdxSeq<Is...>{});
-    }
+  template <std::size_t... Is>
+  static void MinusEq(T* a, const T* b, absl::index_sequence<Is...>) {
+    Ignore({(a[Is] -= b[Is], true)...});
+  }
 
-    static void DivEq(T* a, T b, IdxSeq<>) {}
-    template <std::size_t I, std::size_t... Is>
-    static void DivEq(T* a, T b, IdxSeq<I, Is...>) {
-      a[I] /= b;
-      DivEq(a, b, IdxSeq<Is...>{});
-    }
-  };
+  template <std::size_t... Is>
+  static void MulEq(T* a, T b, absl::index_sequence<Is...>) {
+    Ignore({(a[Is] *= b, true)...});
+  }
+
+  template <std::size_t... Is>
+  static void DivEq(T* a, T b, absl::index_sequence<Is...>) {
+    Ignore({(a[Is] /= b, true)...});
+  }
 };
 
 // These templates must be defined outside of BasicVector so that the

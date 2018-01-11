@@ -302,15 +302,25 @@ void Varint::EncodeTwo32Values(string* s, uint32 a, uint32 b) {
 }
 
 namespace {
+
 // Skip the least signficant "offset" bits and extract the next "bits" bits.
 uint32 GetBits(uint32 byte, uint32 offset, uint32 bits) {
   return (byte >> offset) & ((1u << bits) - 1);
 }
-}  // namespace
 
-const char* Varint::DecodeTwo32ValuesSlow(const char* p, uint32* a, uint32* b) {
-  const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
-  assert(*ptr >= 128);
+template <bool RespectLimit>
+const char* DecodeTwo32ValuesInternal(const char* ptr, const char* limit,
+                                      uint32* a, uint32* b) {
+  const uint8* uptr = reinterpret_cast<const uint8*>(ptr);
+  const uint8* ulimit = reinterpret_cast<const uint8*>(limit);
+
+  // Assert that an optimized path is used in DecodeTwo32Values before
+  // DecodeTwo32ValuesSlow is invoked. This optimization does not exist for
+  // DecodeTwo32ValuesWithLimit (the same way Parse64WithLimit does not have
+  // this optimization).
+  if (!RespectLimit) {
+    assert(*uptr >= 128);
+  }
 
 // Extract portions of bits for *a and *b from a byte that is formatted
 // as follows (least significant bits first):
@@ -319,7 +329,8 @@ const char* Varint::DecodeTwo32ValuesSlow(const char* p, uint32* a, uint32* b) {
 //  3-shift bits for b
 //  varint termination bit
 #define PARSE_BITS_DECODE_TWO(shift, a, a_shift, b, b_shift)     \
-  byte = *(ptr++);                                               \
+  if (RespectLimit && uptr >= ulimit) return nullptr;            \
+  byte = *(uptr++);                                              \
   b |= GetBits(byte, 0, shift) << b_shift;                       \
   a |= GetBits(byte, shift, 4) << a_shift;                       \
   b |= GetBits(byte, shift + 4, 3 - shift) << (b_shift + shift); \
@@ -347,7 +358,7 @@ const char* Varint::DecodeTwo32ValuesSlow(const char* p, uint32* a, uint32* b) {
 
 #undef PARSE_BITS_DECODE_TWO
 
-  byte = *(ptr++);
+  byte = *(uptr++);
   // 10th byte has at most one bit set.
   if (byte > 1) {
     return nullptr;  // Value is too long to be two encoded values.
@@ -357,5 +368,20 @@ const char* Varint::DecodeTwo32ValuesSlow(const char* p, uint32* a, uint32* b) {
 done:
   *a = res1;
   *b = res2;
-  return reinterpret_cast<const char*>(ptr);
+  return reinterpret_cast<const char*>(uptr);
+}
+
+}  // namespace
+
+const char* Varint::DecodeTwo32ValuesSlow(const char* p, uint32* a, uint32* b) {
+  return DecodeTwo32ValuesInternal<false>(p, nullptr, a, b);
+}
+
+const char* Varint::DecodeTwo32ValuesWithLimit(const char* ptr,
+                                               const char* limit, uint32* a,
+                                               uint32* b) {
+  if (ptr + kMax64 <= limit) {
+    return DecodeTwo32Values(ptr, a, b);
+  }
+  return DecodeTwo32ValuesInternal<true>(ptr, limit, a, b);
 }

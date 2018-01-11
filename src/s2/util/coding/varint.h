@@ -129,6 +129,9 @@ class Varint {
   //            encoded in a single byte.
   static void EncodeTwo32Values(string* s, uint32 a, uint32 b);
   static const char* DecodeTwo32Values(const char* ptr, uint32* a, uint32* b);
+  static const char* DecodeTwo32ValuesWithLimit(const char* ptr,
+                                                const char* limit, uint32* a,
+                                                uint32* b);
 
   // Decode and sum up a sequence of deltas until the sum >= goal.
   // It is significantly faster than calling ParseXXInline in a loop.

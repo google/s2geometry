@@ -63,7 +63,7 @@ namespace absl {
 // However, a `uint128` differs from intrinsic integral types in the following
 // ways:
 //
-//   * Errors on implicit conversions that does not preserve value (such as
+//   * Errors on implicit conversions that do not preserve value (such as
 //     loss of precision when converting to float values).
 //   * Requires explicit construction from and conversion to floating point
 //     types.
@@ -176,10 +176,10 @@ class alignas(16) uint128 {
   // Example:
   //
   //   absl::uint128 big = absl::MakeUint128(1, 0);
-  friend constexpr uint128 MakeUint128(uint64_t top, uint64_t bottom);
+  friend constexpr uint128 MakeUint128(uint64_t high, uint64_t low);
 
  private:
-  constexpr uint128(uint64_t top, uint64_t bottom);
+  constexpr uint128(uint64_t high, uint64_t low);
 
   // TODO(user) Update implementation to use __int128 once all users of
   // uint128 are fixed to not depend on alignof(uint128) == 8. Also add
@@ -199,18 +199,19 @@ class alignas(16) uint128 {
 extern const uint128 kuint128max;
 
 // allow uint128 to be logged
-extern std::ostream& operator<<(std::ostream& o, uint128 b);
+extern std::ostream& operator<<(std::ostream& os, uint128 v);
 
 // TODO(user) add operator>>(std::istream&, uint128)
 
 // TODO(absl-team): Implement signed 128-bit type
 
+
 // --------------------------------------------------------------------------
 //                      Implementation details follow
 // --------------------------------------------------------------------------
 
-constexpr uint128 MakeUint128(uint64_t top, uint64_t bottom) {
-  return uint128(top, bottom);
+constexpr uint128 MakeUint128(uint64_t high, uint64_t low) {
+  return uint128(high, low);
 }
 
 // Assignment from integer types.
@@ -288,8 +289,8 @@ constexpr uint64 Uint128High64(uint128 v) { return v.hi_; }
 
 #if defined(ABSL_IS_LITTLE_ENDIAN)
 
-constexpr uint128::uint128(uint64_t top, uint64_t bottom)
-    : lo_(bottom), hi_(top) {}
+constexpr uint128::uint128(uint64_t high, uint64_t low)
+    : lo_(low), hi_(high) {}
 
 constexpr uint128::uint128(int v)
     : lo_(v), hi_(v < 0 ? std::numeric_limits<uint64_t>::max() : 0) {}
@@ -315,8 +316,8 @@ constexpr uint128::uint128(unsigned __int128 v)
 
 #elif defined(ABSL_IS_BIG_ENDIAN)
 
-constexpr uint128::uint128(uint64_t top, uint64_t bottom)
-    : hi_(top), lo_(bottom) {}
+constexpr uint128::uint128(uint64_t high, uint64_t low)
+    : hi_(high), lo_(low) {}
 
 constexpr uint128::uint128(int v)
     : hi_(v < 0 ? std::numeric_limits<uint64_t>::max() : 0), lo_(v) {}
@@ -461,13 +462,10 @@ inline bool operator>=(uint128 lhs, uint128 rhs) {
 // Unary operators.
 
 inline uint128 operator-(uint128 val) {
-  const uint64_t hi_flip = ~Uint128High64(val);
-  const uint64_t lo_flip = ~Uint128Low64(val);
-  const uint64_t lo_add = lo_flip + 1;
-  if (lo_add < lo_flip) {
-    return MakeUint128(hi_flip + 1, lo_add);
-  }
-  return MakeUint128(hi_flip, lo_add);
+  uint64_t hi = ~Uint128High64(val);
+  uint64_t lo = ~Uint128Low64(val) + 1;
+  if (lo == 0) ++hi;  // carry
+  return MakeUint128(hi, lo);
 }
 
 inline bool operator!(uint128 val) {
@@ -621,6 +619,9 @@ inline uint128& uint128::operator--() {
   *this -= 1;
   return *this;
 }
+
+
+
 
 #if defined(ABSL_HAVE_INTRINSIC_INT128)
 #include "s2/third_party/absl/numeric/int128_have_intrinsic.inc"
