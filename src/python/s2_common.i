@@ -183,6 +183,34 @@ class S2Point {
   }
 }
 
+// Expose Options functions on S2RegionCoverer until we figure out
+// nested classes in SWIG.
+%extend S2RegionCoverer {
+  int max_cells() const { return $self->options().max_cells(); }
+  void set_max_cells(int max_cells) {
+    $self->mutable_options()->set_max_cells(max_cells);
+  }
+
+  int min_level() const { return $self->options().min_level(); }
+  void set_min_level(int min_level) {
+    $self->mutable_options()->set_min_level(min_level);
+  }
+
+  int max_level() const { return $self->options().max_level(); }
+  void set_max_level(int max_level) {
+    $self->mutable_options()->set_max_level(max_level);
+  }
+
+  void set_fixed_level(int fixed_level) {
+    $self->mutable_options()->set_fixed_level(fixed_level);
+  }
+
+  int level_mod() const { return $self->options().level_mod(); }
+  void set_level_mod(int level_mod) {
+    $self->mutable_options()->set_level_mod(level_mod);
+  }
+}
+
 %ignoreall
 
 %unignore R1Interval;
@@ -436,12 +464,6 @@ class S2Point {
 %unignore S2RegionCoverer::GetCovering(const S2Region&, std::vector<S2CellId>*);
 %unignore S2RegionCoverer::GetInteriorCovering(const S2Region&,
                                                std::vector<S2CellId>*);
-%unignore S2RegionCoverer::max_cells;
-%unignore S2RegionCoverer::max_level;
-%unignore S2RegionCoverer::min_level;
-%unignore S2RegionCoverer::set_max_cells;
-%unignore S2RegionCoverer::set_max_level;
-%unignore S2RegionCoverer::set_min_level;
 
 %include "s2/r1interval.h"
 %include "s2/s1angle.h"

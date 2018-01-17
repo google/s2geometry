@@ -2731,6 +2731,26 @@ TEST(InitToSimplifiedInCell, PolylineAssemblyBug) {
   EXPECT_FALSE(simplified_in_cell.is_empty());
 }
 
+TEST(InitToSimplifiedInCell, InteriorEdgesSnappedToBoundary) {
+  auto polygon = s2textformat::MakePolygonOrDie(
+      "37.8011672:-122.3247322, 37.8011648:-122.3247399, "
+      "37.8011647:-122.3247403, 37.8011646:-122.3247408, "
+      "37.8011645:-122.3247411, 37.8011633:-122.3247449, "
+      "37.8011621:-122.3247334");
+  S2Cell cell(S2CellId::FromDebugString("4/001013300"));
+  S1Angle snap_radius = S2Testing::MetersToAngle(1.0);
+  S1Angle boundary_tolerance =
+      S1Angle::Radians(0.5 * S2::kMaxWidth.GetValue(S2CellId::kMaxLevel - 1)) +
+      s2builderutil::IntLatLngSnapFunction::MinSnapRadiusForExponent(7);
+  S2Polygon simplified_polygon;
+  simplified_polygon.set_s2debug_override(S2Debug::DISABLE);
+  simplified_polygon.InitToSimplifiedInCell(polygon.get(), cell, snap_radius,
+                                            boundary_tolerance);
+  S2Error error;
+  EXPECT_FALSE(simplified_polygon.FindValidationError(&error)) << error.text();
+}
+
+
 unique_ptr<S2Polygon> MakeRegularPolygon(
     const string& center, int num_points, double radius_in_degrees) {
   S1Angle radius = S1Angle::Degrees(radius_in_degrees);

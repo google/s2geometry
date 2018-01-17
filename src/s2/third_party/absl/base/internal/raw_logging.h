@@ -24,7 +24,7 @@
 #define S2_THIRD_PARTY_ABSL_BASE_INTERNAL_RAW_LOGGING_H_
 
 #include "s2/third_party/absl/base/attributes.h"
-#include "s2/third_party/absl/base/internal/log_severity.h"
+#include "s2/third_party/absl/base/log_severity.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 
