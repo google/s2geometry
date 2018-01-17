@@ -22,7 +22,7 @@
 
 #include "s2/third_party/absl/base/config.h"
 #include "s2/third_party/absl/base/internal/atomic_hook.h"
-#include "s2/third_party/absl/base/internal/log_severity.h"
+#include "s2/third_party/absl/base/log_severity.h"
 
 // We know how to perform low-level writes to stderr in POSIX and Windows.  For
 // these platforms, we define the token ABSL_LOW_LEVEL_WRITE_SUPPORTED.

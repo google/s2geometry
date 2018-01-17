@@ -295,6 +295,12 @@ class S2ClosestEdgeQueryBase {
   const Options* options_;
   Target* target_;
 
+  // True if max_error() must be subtracted from S2ShapeIndex cell distances
+  // in order to ensure that such distances are measured conservatively.  This
+  // is true only if the target takes advantage of max_error() in order to
+  // return faster results, and 0 < max_error() < distance_limit_.
+  bool use_conservative_cell_distance_;
+
   // For the optimized algorihm we precompute the top-level S2CellIds that
   // will be added to the priority queue.  There can be at most 6 of these
   // cells.  Essentially this is just a covering of the indexed edges, except
@@ -573,9 +579,17 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
   // If max_error() was specified and the target takes advantage of this in
   // its UpdateMinDistance() methods, then we need to avoid duplicate edges in
   // the results explicitly.  (Otherwise it happens automatically.)
-  avoid_duplicates_ = (Distance::Zero() < options.max_error() &&
-                       target_->set_max_error(options.max_error()) &&
-                       options.max_edges() > 1 && !options.use_brute_force());
+  bool target_uses_max_error = (Distance::Zero() < options.max_error() &&
+                                target_->set_max_error(options.max_error()));
+  avoid_duplicates_ = (target_uses_max_error && options.max_edges() > 1 &&
+                       !options.use_brute_force());
+
+  // Furthermore, if the target takes advantage of max_error() and
+  // 0 < max_error() < distance_limit_, then we also need to ensure that the
+  // distances to S2ShapeIndex cells are always a lower bound on the true
+  // distance, since otherwise such cells might be incorrectly discarded.
+  use_conservative_cell_distance_ = (target_uses_max_error &&
+                                     options.max_error() < distance_limit_);
 
   // Use the brute force algorithm if the index is small enough.  To avoid
   // spending too much time counting edges when there are many shapes, we stop
@@ -890,6 +904,10 @@ void S2ClosestEdgeQueryBase<Distance>::EnqueueCell(
   S2Cell cell(id);
   Distance distance = distance_limit_;
   if (!target_->UpdateMinDistance(cell, &distance)) return;
+  if (use_conservative_cell_distance_) {
+    // Ensure that "distance" is a lower bound on the true distance to the cell.
+    distance = distance - options().max_error();  // operator-=() not defined.
+  }
   queue_.push(QueueEntry(distance, id, index_cell));
 }
 

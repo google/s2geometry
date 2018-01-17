@@ -72,7 +72,10 @@ class PyWrapS2TestCase(unittest.TestCase):
     e14lj = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(51.5213527, -0.0476026),
                             s2.S2LatLng.FromDegrees(51.5213527, -0.0476026))
     coverer = s2.S2RegionCoverer()
+    coverer.set_max_cells(6)
+    self.assertEqual(6, coverer.max_cells())
     covering = coverer.GetCovering(e14lj)
+    self.assertLessEqual(len(covering), 6)
     for cellid in covering:
       self.assertTrue(london.Contains(s2.S2Cell(cellid)))
     interior = coverer.GetInteriorCovering(e14lj)

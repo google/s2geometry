@@ -1174,8 +1174,11 @@ vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
       if ((mask0 & mask1) != 0) {
         // This is an edge along the cell boundary.  Such edges do not get
         // simplified; we add them directly to the output.  (We create a
-        // separate polyline for each edge to keep things simple.)
+        // separate polyline for each edge to keep things simple.)  We call
+        // ForceVertex on all boundary vertices to ensure that they don't
+        // move, and so that nearby interior edges are snapped to them.
         DCHECK(!in_interior);
+        builder.ForceVertex(*v1);
         polylines.emplace_back(new S2Polyline(vector<S2Point>{*v0, *v1}));
       } else {
         // This is an interior edge.  If this is the first edge of an interior
@@ -1186,7 +1189,6 @@ vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
           S2Polyline* polyline = new S2Polyline;
           builder.StartLayer(make_unique<S2PolylineLayer>(polyline));
           polylines.emplace_back(polyline);
-          if (mask0 != 0) builder.ForceVertex(*v0);
           in_interior = true;
         }
         builder.AddEdge(*v0, *v1);

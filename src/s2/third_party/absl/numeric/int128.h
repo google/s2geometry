@@ -72,8 +72,8 @@ namespace absl {
 //
 // Example:
 //
-//     float y = absl::kuint128max;  // Error. uint128 cannot be implicitly
-//                                   // converted to float.
+//     float y = absl::Uint128Max();  // Error. uint128 cannot be implicitly
+//                                    // converted to float.
 //
 //     absl::uint128 v;
 //     absl::uint64_t i = v;                         // Error
@@ -178,6 +178,11 @@ class alignas(16) uint128 {
   //   absl::uint128 big = absl::MakeUint128(1, 0);
   friend constexpr uint128 MakeUint128(uint64_t high, uint64_t low);
 
+  // Uint128Max()
+  //
+  // Returns the highest value for a 128-bit unsigned integer.
+  friend constexpr uint128 Uint128Max();
+
  private:
   constexpr uint128(uint64_t high, uint64_t low);
 
@@ -196,7 +201,9 @@ class alignas(16) uint128 {
 #endif  // byte order
 };
 
-extern const uint128 kuint128max;
+// Prefer to use the constexpr `Uint128Max()`.
+//
+// TODO(absl-team) deprecate kuint128max once migration tool is released.
 
 // allow uint128 to be logged
 extern std::ostream& operator<<(std::ostream& os, uint128 v);
@@ -206,12 +213,19 @@ extern std::ostream& operator<<(std::ostream& os, uint128 v);
 // TODO(absl-team): Implement signed 128-bit type
 
 
+// TODO(absl-team) add operator>>(std::istream&, int128)
+
 // --------------------------------------------------------------------------
 //                      Implementation details follow
 // --------------------------------------------------------------------------
 
 constexpr uint128 MakeUint128(uint64_t high, uint64_t low) {
   return uint128(high, low);
+}
+
+constexpr uint128 Uint128Max() {
+  return uint128(std::numeric_limits<uint64_t>::max(),
+                 std::numeric_limits<uint64_t>::max());
 }
 
 // Assignment from integer types.
@@ -253,33 +267,19 @@ inline uint128& uint128::operator=(unsigned __int128 v) {
 
 // Shift and arithmetic operators.
 
-inline uint128 operator<<(uint128 lhs, int amount) {
-  return uint128(lhs) <<= amount;
-}
+inline uint128 operator<<(uint128 lhs, int amount) { return lhs <<= amount; }
 
-inline uint128 operator>>(uint128 lhs, int amount) {
-  return uint128(lhs) >>= amount;
-}
+inline uint128 operator>>(uint128 lhs, int amount) { return lhs >>= amount; }
 
-inline uint128 operator+(uint128 lhs, uint128 rhs) {
-  return uint128(lhs) += rhs;
-}
+inline uint128 operator+(uint128 lhs, uint128 rhs) { return lhs += rhs; }
 
-inline uint128 operator-(uint128 lhs, uint128 rhs) {
-  return uint128(lhs) -= rhs;
-}
+inline uint128 operator-(uint128 lhs, uint128 rhs) { return lhs -= rhs; }
 
-inline uint128 operator*(uint128 lhs, uint128 rhs) {
-  return uint128(lhs) *= rhs;
-}
+inline uint128 operator*(uint128 lhs, uint128 rhs) { return lhs *= rhs; }
 
-inline uint128 operator/(uint128 lhs, uint128 rhs) {
-  return uint128(lhs) /= rhs;
-}
+inline uint128 operator/(uint128 lhs, uint128 rhs) { return lhs /= rhs; }
 
-inline uint128 operator%(uint128 lhs, uint128 rhs) {
-  return uint128(lhs) %= rhs;
-}
+inline uint128 operator%(uint128 lhs, uint128 rhs) { return lhs %= rhs; }
 
 constexpr uint64 Uint128Low64(uint128 v) { return v.lo_; }
 
@@ -514,8 +514,8 @@ inline uint128& uint128::operator^=(uint128 other) {
 // Shift and arithmetic assign operators.
 
 inline uint128& uint128::operator<<=(int amount) {
-  // Shifts of >= 128 are undefined.
-  assert(amount < 128);
+  assert(amount >= 0);   // Negative shifts are undefined.
+  assert(amount < 128);  // Shifts of >= 128 are undefined.
 
   // uint64_t shifts of >= 64 are undefined, so we will need some
   // special-casing.
@@ -532,8 +532,8 @@ inline uint128& uint128::operator<<=(int amount) {
 }
 
 inline uint128& uint128::operator>>=(int amount) {
-  // Shifts of >= 128 are undefined.
-  assert(amount < 128);
+  assert(amount >= 0);   // Negative shifts are undefined.
+  assert(amount < 128);  // Shifts of >= 128 are undefined.
 
   // uint64_t shifts of >= 64 are undefined, so we will need some
   // special-casing.
@@ -635,7 +635,6 @@ inline uint128& uint128::operator--() {
 using absl::Uint128High64;  // NOLINT(readability/namespace)
 using absl::Uint128Low64;   // NOLINT(readability/namespace)
 using absl::uint128;        // NOLINT(readability/namespace)
-extern const uint128 kuint128max;
 
 
 #endif  // S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_

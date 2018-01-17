@@ -527,3 +527,12 @@ TEST(S2ClosestEdgeQuery, PointCloudEdges) {
                        kNumIndexes, kNumEdges, kNumQueries);
 }
 
+TEST(S2ClosestEdgeQuery, ConservativeCellDistanceIsUsed) {
+  // These specific test cases happen to fail if max_error() is not properly
+  // taken into account when measuring distances to S2ShapeIndex cells.
+  for (int seed : {42, 681, 894, 1018, 1750, 1759, 2401}) {
+    FLAGS_s2_random_seed = seed;  // Automatically restored.
+    TestWithIndexFactory(FractalLoopShapeIndexFactory(), 5, 100, 10);
+  }
+}
+

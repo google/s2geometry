@@ -16,9 +16,8 @@
 // NOTE: See third_party/absl/strings for more options.
 //
 // As of 2017q4, most use of these routines is considered legacy: use
-// of absl::StrCat, absl::Substitute, or
-// util::format::StringF is preferred for performance
-// and safety reasons.
+// of absl::StrCat, absl::Substitute, or absl::StrFormat is preferred for
+// performance and safety reasons.
 
 #ifndef S2_BASE_STRINGPRINTF_H_
 #define S2_BASE_STRINGPRINTF_H_
