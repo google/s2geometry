@@ -107,7 +107,7 @@ class Bits {
   }
 
   // Count bits in uint128
-  static inline int CountOnes128(uint128 n) {
+  static inline int CountOnes128(absl::uint128 n) {
     return Bits::CountOnes64(absl::Uint128High64(n)) +
            Bits::CountOnes64(absl::Uint128Low64(n));
   }
@@ -189,7 +189,7 @@ class Bits {
 #endif
   }
 
-  static inline int CountLeadingZeros128(uint128 n) {
+  static inline int CountLeadingZeros128(absl::uint128 n) {
     if (uint64 hi = absl::Uint128High64(n))
       return Bits::CountLeadingZeros64(hi);
     return Bits::CountLeadingZeros64(absl::Uint128Low64(n)) + 64;
@@ -199,7 +199,7 @@ class Bits {
   static uint8 ReverseBits8(uint8 n);
   static uint32 ReverseBits32(uint32 n);
   static uint64 ReverseBits64(uint64 n);
-  static uint128 ReverseBits128(uint128 n);
+  static absl::uint128 ReverseBits128(absl::uint128 n);
 
   // Return the number of one bits in the byte sequence.
   static int Count(const void *m, int num_bytes);
@@ -218,18 +218,18 @@ class Bits {
   // Return floor(log2(n)) for positive integer n.  Returns -1 iff n == 0.
   static int Log2Floor(uint32 n);
   static int Log2Floor64(uint64 n);
-  static int Log2Floor128(uint128 n);
+  static int Log2Floor128(absl::uint128 n);
 
   // Potentially faster version of Log2Floor() that returns an
   // undefined value if n == 0
   static int Log2FloorNonZero(uint32 n);
   static int Log2FloorNonZero64(uint64 n);
-  static int Log2FloorNonZero128(uint128 n);
+  static int Log2FloorNonZero128(absl::uint128 n);
 
   // Return ceiling(log2(n)) for positive integer n.  Returns -1 iff n == 0.
   static int Log2Ceiling(uint32 n);
   static int Log2Ceiling64(uint64 n);
-  static int Log2Ceiling128(uint128 n);
+  static int Log2Ceiling128(absl::uint128 n);
 
   // Return the first set least / most significant bit, 0-indexed.  Returns an
   // undefined value if n == 0.  FindLSBSetNonZero() is similar to ffs() except
@@ -237,10 +237,10 @@ class Bits {
   // Log2FloorNonZero().
   static int FindLSBSetNonZero(uint32 n);
   static int FindLSBSetNonZero64(uint64 n);
-  static int FindLSBSetNonZero128(uint128 n);
+  static int FindLSBSetNonZero128(absl::uint128 n);
   static int FindMSBSetNonZero(uint32 n) { return Log2FloorNonZero(n); }
   static int FindMSBSetNonZero64(uint64 n) { return Log2FloorNonZero64(n); }
-  static int FindMSBSetNonZero128(uint128 n) {
+  static int FindMSBSetNonZero128(absl::uint128 n) {
     return Log2FloorNonZero128(n);
   }
 
@@ -506,17 +506,17 @@ inline int Bits::FindLSBSetNonZero64(uint64 n) {
 
 #endif
 
-inline int Bits::Log2Floor128(uint128 n) {
+inline int Bits::Log2Floor128(absl::uint128 n) {
   if (uint64 hi = absl::Uint128High64(n)) return 64 + Log2FloorNonZero64(hi);
   return Log2Floor64(absl::Uint128Low64(n));
 }
 
-inline int Bits::Log2FloorNonZero128(uint128 n) {
+inline int Bits::Log2FloorNonZero128(absl::uint128 n) {
   if (uint64 hi = absl::Uint128High64(n)) return 64 + Log2FloorNonZero64(hi);
   return Log2FloorNonZero64(absl::Uint128Low64(n));
 }
 
-inline int Bits::FindLSBSetNonZero128(uint128 n) {
+inline int Bits::FindLSBSetNonZero128(absl::uint128 n) {
   if (uint64 lo = absl::Uint128Low64(n)) return Bits::FindLSBSetNonZero64(lo);
   return 64 + Bits::FindLSBSetNonZero64(absl::Uint128High64(n));
 }
@@ -594,7 +594,7 @@ inline uint64 Bits::ReverseBits64(uint64 n) {
 #endif
 }
 
-inline uint128 Bits::ReverseBits128(uint128 n) {
+inline absl::uint128 Bits::ReverseBits128(absl::uint128 n) {
   return absl::MakeUint128(ReverseBits64(absl::Uint128Low64(n)),
                            ReverseBits64(absl::Uint128High64(n)));
 }
@@ -694,7 +694,7 @@ struct Bits::UnsignedTypeBySize<8> {
 
 template<>
 struct Bits::UnsignedTypeBySize<16> {
-  typedef uint128 Type;
+  typedef absl::uint128 Type;
 };
 
 #ifdef __GNUC__

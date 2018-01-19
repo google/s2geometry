@@ -128,7 +128,7 @@ class S2Polyline;
 //  builder.AddPolygon(input);
 //  S2Error error;
 //  if (!builder.Build(&error)) {
-//    LOG(ERROR) << error.text();
+//    LOG(ERROR) << error;
 //    ...
 //  }
 class S2Builder {
@@ -440,7 +440,7 @@ class S2Builder {
   // builder.StartLayer(make_unique<s2builderutil::S2PolylineLayer>(&line2)));
   // ... Add edges using builder.AddEdge(), etc ...
   // S2Error error;
-  // CHECK(builder.Build(&error)) << error.text();  // Builds "line1" & "line2"
+  // CHECK(builder.Build(&error)) << error;  // Builds "line1" & "line2"
   class Layer;
   void StartLayer(std::unique_ptr<Layer> layer);
 
@@ -590,7 +590,7 @@ class S2Builder {
   S2Point SnapSite(const S2Point& point) const;
   void CollectSiteEdges(const S2PointIndex<SiteId>& site_index);
   void SortSitesByDistance(const S2Point& x,
-                           compact_array<SiteId>* sites) const;
+                           gtl::compact_array<SiteId>* sites) const;
   void AddExtraSites(const MutableS2ShapeIndex& input_edge_index);
   void MaybeAddExtraSites(InputEdgeId edge_id,
                           InputEdgeId max_edge_id,
@@ -617,15 +617,15 @@ class S2Builder {
       InputEdgeId begin, InputEdgeId end, const GraphOptions& options,
       std::vector<Edge>* edges, std::vector<InputEdgeIdSetId>* input_edge_ids,
       IdSetLexicon* input_edge_id_set_lexicon,
-      std::vector<compact_array<InputVertexId>>* site_vertices) const;
+      std::vector<gtl::compact_array<InputVertexId>>* site_vertices) const;
   void MaybeAddInputVertex(
       InputVertexId v, SiteId id,
-      std::vector<compact_array<InputVertexId>>* site_vertices) const;
+      std::vector<gtl::compact_array<InputVertexId>>* site_vertices) const;
   void AddSnappedEdge(SiteId src, SiteId dst, InputEdgeIdSetId id,
                       EdgeType edge_type, std::vector<Edge>* edges,
                       std::vector<InputEdgeIdSetId>* input_edge_ids) const;
   void SimplifyEdgeChains(
-      const std::vector<compact_array<InputVertexId>>& site_vertices,
+      const std::vector<gtl::compact_array<InputVertexId>>& site_vertices,
       std::vector<std::vector<Edge>>* layer_edges,
       std::vector<std::vector<InputEdgeIdSetId>>* layer_input_edge_ids,
       IdSetLexicon* input_edge_id_set_lexicon) const;
@@ -730,7 +730,7 @@ class S2Builder {
   // simplification was requested, in which case instead the sites are
   // filtered by removing the ones that each edge was snapped to, leaving only
   // the "sites to avoid" (needed for simplification).
-  std::vector<compact_array<SiteId>> edge_sites_;
+  std::vector<gtl::compact_array<SiteId>> edge_sites_;
 
   S2Builder(const S2Builder&) = delete;
   S2Builder& operator=(const S2Builder&) = delete;

@@ -65,7 +65,7 @@ vector<S2LatLng> ParseLatLngsOrDie(string_view str) {
 
 bool ParseLatLngs(string_view str, vector<S2LatLng>* latlngs) {
   vector<pair<string, string>> ps;
-  if (!DictionaryParse(str, &ps)) return false;
+  if (!strings::DictionaryParse(str, &ps)) return false;
   for (const auto& p : ps) {
     double lat;
     if (!ParseDouble(p.first, &lat)) return false;

@@ -21,6 +21,8 @@
 
 #include "s2/third_party/absl/strings/string_view.h"
 
+namespace strings {
+
 // -------------------------------------------------------------------------
 // DictionaryParse
 //   This routine parses a common dictionary format (key and value separated
@@ -32,5 +34,7 @@
 // -------------------------------------------------------------------------
 bool DictionaryParse(absl::string_view encoded_str,
                      std::vector<std::pair<std::string, std::string>>* items);
+
+}  // namespace strings
 
 #endif  // S2_STRINGS_SERIALIZE_H_

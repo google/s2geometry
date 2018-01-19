@@ -136,8 +136,7 @@ void ExpectResult(S2BooleanOperation::OpType op_type,
   S2Error error;
   EXPECT_TRUE(op.Build(*a, *b, &error))
       << S2BooleanOperation::OpTypeToString(op_type) << " failed:\n"
-      << "Expected result: " << expected_str << "\n"
-      << error.text();
+      << "Expected result: " << expected_str << "\n" << error;
 
   // Now try the same thing with boolean output.
   EXPECT_EQ(expected->num_shape_ids() == 0,

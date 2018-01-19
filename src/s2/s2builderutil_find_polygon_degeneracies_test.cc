@@ -117,7 +117,7 @@ void ExpectDegeneracies(const string& polygon_str,
     builder.AddEdge(edge.v0, edge.v1);
   }
   S2Error error;
-  EXPECT_TRUE(builder.Build(&error)) << error.text();
+  EXPECT_TRUE(builder.Build(&error)) << error;
 }
 
 TEST(FindPolygonDegeneracies, EmptyPolygon) {

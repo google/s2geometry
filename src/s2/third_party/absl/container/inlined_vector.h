@@ -1384,8 +1384,5 @@ auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
 }  // namespace absl
 
 // TODO(user): Delete temporary aliases after namespace update.
-namespace gtl {
-using absl::InlinedVector;
-}  // namespace gtl
 
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_

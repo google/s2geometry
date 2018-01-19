@@ -23,6 +23,7 @@
 //   * make_integer_sequence<T, N>   == std::make_integer_sequence<T, N>
 //   * make_index_sequence<N>        == std::make_index_sequence<N>
 //   * index_sequence_for<Ts...>     == std::index_sequence_for<Ts...>
+//   * apply<Functor, Tuple>         == std::apply<Functor, Tuple>
 //
 // This header file also provides the tag types `in_place_t`, `in_place_type_t`,
 // and `in_place_index_t`, as well as the constant `in_place`, and
@@ -31,34 +32,20 @@
 // References:
 //
 //  http://en.cppreference.com/w/cpp/utility/integer_sequence
+//  http://en.cppreference.com/w/cpp/utility/apply
 //  http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3658.html
 //
-//
-// Example:
-//   // Unpack a tuple for use as a function call's argument list.
-//
-//   template <typename F, typename Tup, size_t... Is>
-//   auto Impl(F f, const Tup& tup, absl::index_sequence<Is...>)
-//       -> decltype(f(std::get<Is>(tup) ...)) {
-//     return f(std::get<Is>(tup) ...);
-//   }
-//
-//   template <typename Tup>
-//   using TupIdxSeq = absl::make_index_sequence<std::tuple_size<Tup>::value>;
-//
-//   template <typename F, typename Tup>
-//   auto ApplyFromTuple(F f, const Tup& tup)
-//       -> decltype(Impl(f, tup, TupIdxSeq<Tup>{})) {
-//     return Impl(f, tup, TupIdxSeq<Tup>{});
-//   }
+
 #ifndef S2_THIRD_PARTY_ABSL_UTILITY_UTILITY_H_
 #define S2_THIRD_PARTY_ABSL_UTILITY_UTILITY_H_
 
 #include <cstddef>
 #include <cstdlib>
+#include <tuple>
 #include <utility>
 
 #include "s2/third_party/absl/base/config.h"
+#include "s2/third_party/absl/base/internal/invoke.h"
 #include "s2/third_party/absl/meta/type_traits.h"
 
 namespace absl {
@@ -214,30 +201,65 @@ constexpr T&& forward(
   return static_cast<T&&>(t);
 }
 
+namespace utility_internal {
+// Helper method for expanding tuple into a called method.
+template <typename Functor, typename Tuple, std::size_t... Indexes>
+auto apply_helper(Functor&& functor, Tuple&& t, index_sequence<Indexes...>)
+    -> decltype(absl::base_internal::Invoke(
+        absl::forward<Functor>(functor),
+        std::get<Indexes>(absl::forward<Tuple>(t))...)) {
+  return absl::base_internal::Invoke(
+      absl::forward<Functor>(functor),
+      std::get<Indexes>(absl::forward<Tuple>(t))...);
+}
+
+}  // namespace utility_internal
+
+// apply
+//
+// Invokes a Callable using elements of a tuple as its arguments.
+// Each element of the tuple corresponds to an argument of the call (in order).
+// Both the Callable argument and the tuple argument are perfect-forwarded.
+// For member-function Callables, the first tuple element acts as the `this`
+// pointer. `absl::apply` is designed to be a drop-in replacement for C++17's
+// `std::apply`. Unlike C++17's `std::apply`, this is not currently `constexpr`.
+//
+// Example:
+//
+//   class Foo{void Bar(int);};
+//   void user_function(int, string);
+//   void user_function(std::unique_ptr<Foo>);
+//
+//   int main()
+//   {
+//       std::tuple<int, string> tuple1(42, "bar");
+//       // Invokes the user function overload on int, string.
+//       absl::apply(&user_function, tuple1);
+//
+//       auto foo = absl::make_unique<Foo>();
+//       std::tuple<Foo*, int> tuple2(foo.get(), 42);
+//       // Invokes the method Bar on foo with one argument 42.
+//       absl::apply(&Foo::Bar, foo.get(), 42);
+//
+//       std::tuple<std::unique_ptr<Foo>> tuple3(absl::make_unique<Foo>());
+//       // Invokes the user function that takes ownership of the unique
+//       // pointer.
+//       absl::apply(&user_function, std::move(tuple));
+//   }
+template <typename Functor, typename Tuple>
+auto apply(Functor&& functor, Tuple&& t)
+    -> decltype(utility_internal::apply_helper(
+        absl::forward<Functor>(functor), absl::forward<Tuple>(t),
+        absl::make_index_sequence<std::tuple_size<
+            typename std::remove_reference<Tuple>::type>::value>{})) {
+  return utility_internal::apply_helper(
+      absl::forward<Functor>(functor), absl::forward<Tuple>(t),
+      absl::make_index_sequence<std::tuple_size<
+          typename std::remove_reference<Tuple>::type>::value>{});
+}
 }  // namespace absl
 
 
-namespace gtl {
-// Redefine these types in the same way they're defined in absl to avoid
-// template parameter type deduction problems
-template <size_t... Ints>
-using IndexSequence = absl::integer_sequence<size_t, Ints...>;
-
-template <typename... Ts>
-using IndexSequenceFor = absl::make_index_sequence<sizeof...(Ts)>;
-
-template <typename T, T... Ints>
-using IntegerSequence = absl::integer_sequence<T, Ints...>;
-
-template <size_t N>
-using MakeIndexSequence = absl::make_integer_sequence<size_t, N>;
-
-template <typename T, T N>
-using MakeIntegerSequence = typename absl::utility_internal::Gen<T, N>::type;
-
-template <typename T>
-using in_place_type_t = absl::in_place_type_t<T>;
-}  // namespace gtl
 
 
 #endif  // S2_THIRD_PARTY_ABSL_UTILITY_UTILITY_H_

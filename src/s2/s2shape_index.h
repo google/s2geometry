@@ -136,7 +136,7 @@ class S2ShapeIndexCell {
   ~S2ShapeIndexCell();
   S2ClippedShape* add_shapes(int n);
 
-  using S2ClippedShapeSet = compact_array<S2ClippedShape>;
+  using S2ClippedShapeSet = gtl::compact_array<S2ClippedShape>;
   S2ClippedShapeSet shapes_;
 
   S2ShapeIndexCell(const S2ShapeIndexCell&) = delete;
@@ -230,6 +230,10 @@ class S2ShapeIndexCell {
 //     }
 //   }
 //
+// Subtypes provided by the S2 library have the same thread-safety properties
+// as std::vector.  That is, const methods may be called concurrently from
+// multiple threads, and non-const methods require exclusive access to the
+// S2ShapeIndex.
 class S2ShapeIndex {
  protected:
   class IteratorBase;

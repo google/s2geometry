@@ -102,6 +102,7 @@
 #include "s2/s2text_format.h"
 
 using absl::make_unique;
+using gtl::compact_array;
 using std::max;
 using std::pair;
 using std::unique_ptr;

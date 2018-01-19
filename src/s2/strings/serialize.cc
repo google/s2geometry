@@ -27,6 +27,8 @@ using std::pair;
 using std::string;
 using std::vector;
 
+namespace strings {
+
 bool DictionaryParse(string_view encoded_str,
                      vector<pair<string, string>>* items) {
   if (encoded_str.empty())
@@ -40,3 +42,5 @@ bool DictionaryParse(string_view encoded_str,
   }
   return true;
 }
+
+}  // namespace strings

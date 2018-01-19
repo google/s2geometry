@@ -142,6 +142,7 @@
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/meta/type_traits.h"
+#include "s2/third_party/absl/strings/string_view.h"
 
 namespace gtl {
 
@@ -235,7 +236,8 @@ struct btree_is_key_compare_to
 // A helper class to convert a boolean comparison into a three-way "compare-to"
 // comparison that returns a negative value to indicate less-than, zero to
 // indicate equality and a positive value to indicate greater-than. This helper
-// class is specialized for less<string> and greater<string>. The
+// class is specialized for less<string>, greater<string>, less<string_view>,
+// and greater<string_view>. The
 // btree_key_compare_to_adapter class is provided so that btree users
 // automatically get the more efficient compare-to code when using common
 // google string types with common comparison functors.
@@ -261,6 +263,26 @@ struct btree_key_compare_to_adapter<std::greater<std::string> >
   btree_key_compare_to_adapter() = default;
   btree_key_compare_to_adapter(const std::greater<std::string>&) {}
   int operator()(const std::string &a, const std::string &b) const {
+    return b.compare(a);
+  }
+};
+
+template <>
+struct btree_key_compare_to_adapter<std::less<absl::string_view> >
+    : public btree_key_compare_to_tag {
+  btree_key_compare_to_adapter() = default;
+  btree_key_compare_to_adapter(const std::less<absl::string_view>&) {}
+  int operator()(const absl::string_view a, const absl::string_view b) const {
+    return a.compare(b);
+  }
+};
+
+template <>
+struct btree_key_compare_to_adapter<std::greater<absl::string_view> >
+    : public btree_key_compare_to_tag {
+  btree_key_compare_to_adapter() = default;
+  btree_key_compare_to_adapter(const std::greater<absl::string_view>&) {}
+  int operator()(const absl::string_view a, const absl::string_view b) const {
     return b.compare(a);
   }
 };
@@ -1567,7 +1589,7 @@ class btree : public Params::key_compare {
   // key was found in the tree) or -kExactMatch (if it wasn't) in the second
   // field of the pair. The compare_to specialization allows the caller to
   // avoid a subsequent comparison to determine if an exact match was made,
-  // speeding up string, cord and StringPiece keys.
+  // speeding up string, cord and string_view keys.
   template <typename K, typename IterType>
   std::pair<IterType, int> internal_locate(
       const K &key, IterType iter) const;
