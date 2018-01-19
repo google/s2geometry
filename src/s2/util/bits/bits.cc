@@ -20,6 +20,8 @@
 
 #include <cassert>
 
+using absl::uint128;
+
 // this array gives the number of bits for any number from 0 to 255
 // (We could make these ints.  The tradeoff is size (eg does it overwhelm
 // the cache?) vs efficiency in referencing sub-word-sized array elements)

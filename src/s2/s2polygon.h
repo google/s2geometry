@@ -737,6 +737,20 @@ class S2Polygon final : public S2Region {
   };
 #endif  // SWIG
 
+  // Returns the built-in S2ShapeIndex associated with every S2Polygon.  This
+  // can be used in conjunction with the various S2ShapeIndex query classes
+  // (S2ClosestEdgeQuery, S2BooleanOperation, etc) to do things beyond what is
+  // possible with S2Polygon built-in convenience methods.
+  //
+  // For example, to measure the distance from one S2Polygon to another, you
+  // can write:
+  //   S2ClosestEdgeQuery query(&polygon1.index());
+  //   S2ClosestEdgeQuery::ShapeIndexTarget target(&polygon2.index());
+  //   S1ChordAngle distance = query.GetDistance(&target);
+  //
+  // The index contains a single S2Polygon::Shape object.
+  const MutableS2ShapeIndex& index() const { return index_; }
+
  private:
   friend class S2Stats;
   friend class PolygonOperation;

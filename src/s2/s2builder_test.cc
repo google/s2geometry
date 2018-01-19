@@ -114,7 +114,7 @@ TEST(S2Builder, SimpleVertexMerging) {
       "0:0, 0.2:0.2, 0.1:0.2, 0.1:0.9, 0:1, 0.1:1.1, 0.9:1, 1:1, 1:0.9");
   builder.AddPolygon(*input);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   unique_ptr<S2Polygon> expected = MakePolygonOrDie("0:0, 0:1, 1:0.9");
   ExpectPolygonsApproxEqual(*expected, output, snap_radius);
 }
@@ -132,7 +132,7 @@ TEST(S2Builder, SimpleS2CellIdSnapping) {
       "2:2, 3:4, 2:6, 4:5, 6:6, 5:4, 6:2, 4:3");
   builder.AddPolygon(*input);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   ASSERT_EQ(1, output.num_loops());
   const S2Loop* loop = output.loop(0);
   for (int i = 0; i < loop->num_vertices(); ++i) {
@@ -153,7 +153,7 @@ TEST(S2Builder, SimpleIntLatLngSnapping) {
       "2:2, 3:4, 2:6, 4:5, 6:6, 5:4, 6:2, 4:3");
   builder.AddPolygon(*input);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   ASSERT_EQ(1, output.num_loops());
   ExpectPolygonsEqual(*expected, output);
 }
@@ -173,7 +173,7 @@ TEST(S2Builder, VerticesMoveLessThanSnapRadius) {
       S2Loop::MakeRegularLoop(S2Point(1, 0, 0), S1Angle::Degrees(20), 1000));
   builder.AddPolygon(input);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   ASSERT_EQ(1, output.num_loops());
   EXPECT_GE(output.loop(0)->num_vertices(), 90);
   EXPECT_LE(output.loop(0)->num_vertices(), 100);
@@ -204,7 +204,7 @@ TEST(S2Builder, MinEdgeVertexSeparation) {
   builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   builder.AddPolygon(*input);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   ExpectPolygonsApproxEqual(*expected, output, S1Angle::Radians(1e-15));
 }
 
@@ -218,7 +218,7 @@ TEST(S2Builder, IdempotencySnapsInadequatelySeparatedVertices) {
   builder.StartLayer(make_unique<S2PolylineLayer>(&output));
   builder.AddPolyline(*MakePolylineOrDie("0:0, 0:0.9, 0:2"));
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   const char* expected = "0:0, 0:2";
   EXPECT_EQ(expected, s2textformat::ToString(output));
 }
@@ -234,7 +234,7 @@ TEST(S2Builder, IdempotencySnapsIdenticalVerticesWithZeroSnapRadius) {
   builder.AddEdge(MakePointOrDie("0:1"), MakePointOrDie("0:1"));
   builder.AddPolyline(*MakePolylineOrDie("1:0, 0:0"));
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   const char* expected = "0:0, 0:1, 1:0";
   EXPECT_EQ(expected, s2textformat::ToString(output));
 }
@@ -253,7 +253,7 @@ TEST(S2Builder,
   builder.AddEdge(MakePointOrDie("0:1"), MakePointOrDie("0:1"));
   builder.AddPolyline(*MakePolylineOrDie("1:0, 0:0"));
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   const char* expected = "0:0, 0:1, 1:0";
   EXPECT_EQ(expected, s2textformat::ToString(output));
 }
@@ -300,7 +300,7 @@ TEST(S2Builder, IdempotencySnapsUnsnappedVertices) {
   S2Polyline input2(vector<S2Point>{c, d}), output2;
   builder.StartLayer(make_unique<S2PolylineLayer>(&output2));
   builder.AddPolyline(input2);
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   EXPECT_EQ("0:0, 0:1", s2textformat::ToString(output2));
 }
 
@@ -350,12 +350,12 @@ TEST(S2Builder, IdempotencyDoesNotSnapAdequatelySeparatedEdges) {
   builder.StartLayer(make_unique<S2PolygonLayer>(&output1));
   builder.AddPolygon(*MakePolygonOrDie("1.49:0, 0:2, 0.49:3"));
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   const char* expected = "1:0, 0:2, 0:3";
   EXPECT_EQ(expected, s2textformat::ToString(output1));
   builder.StartLayer(make_unique<S2PolygonLayer>(&output2));
   builder.AddPolygon(output1);
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   EXPECT_EQ(expected, s2textformat::ToString(output2));
 }
 
@@ -375,7 +375,7 @@ TEST(S2Builder, S2CellIdSnappingAtAllLevels) {
     builder.StartLayer(make_unique<S2PolygonLayer>(&output));
     builder.AddPolygon(*input);
     S2Error error;
-    ASSERT_TRUE(builder.Build(&error)) << error.text();
+    ASSERT_TRUE(builder.Build(&error)) << error;
     EXPECT_TRUE(output.IsValid());
     // The ApproxContains calls below are not guaranteed to succeed in general
     // because ApproxContains works by snapping both polygons together using
@@ -408,7 +408,7 @@ TEST(S2Builder, SnappingDoesNotRotateVertices) {
   builder.StartLayer(make_unique<S2PolygonLayer>(&output1));
   builder.AddPolygon(*input);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   // This checks that the vertices are in the same cyclic order, and that
   // vertices have not moved by more than "snap_radius".
   ExpectPolygonsApproxEqual(*input, output1,
@@ -418,7 +418,7 @@ TEST(S2Builder, SnappingDoesNotRotateVertices) {
   // verifies that S2Builder can be used again after Build() is called.
   builder.StartLayer(make_unique<S2PolygonLayer>(&output2));
   builder.AddPolygon(output1);
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   ExpectPolygonsEqual(output1, output2);
 }
 
@@ -438,7 +438,7 @@ TEST(S2Builder, SelfIntersectingPolyline) {
       MakePolylineOrDie("3:1, 2:2, 1:3, 1:1, 2:2, 3:3");
   builder.AddPolyline(*input);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   ExpectPolylinesEqual(*expected, output);
 }
 
@@ -459,7 +459,7 @@ TEST(S2Builder, SelfIntersectingPolygon) {
   unique_ptr<S2Polygon> expected = MakePolygonOrDie("1:1, 1:3, 2:2; 3:3, 3:1, 2:2");
   builder.AddPolyline(*input);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   ExpectPolygonsEqual(*expected, output);
 }
 
@@ -478,7 +478,7 @@ TEST(S2Builder, TieBreakingIsConsistent) {
   builder.StartLayer(make_unique<S2PolylineLayer>(&output2));
   builder.AddPolyline(*MakePolylineOrDie("0:5, 0:-5"));
   S2Error error;
-  EXPECT_TRUE(builder.Build(&error)) << error.text();
+  EXPECT_TRUE(builder.Build(&error)) << error;
   EXPECT_EQ(3, output1.num_vertices());
   EXPECT_EQ(3, output2.num_vertices());
   for (int i = 0; i < 3; ++i) {
@@ -647,7 +647,7 @@ TEST(S2Builder, SimplifyOneLoop) {
         S2Loop::MakeRegularLoop(S2Point(1, 0, 0), S1Angle::Degrees(20), 1000));
     builder.AddPolygon(input);
     S2Error error;
-    ASSERT_TRUE(builder.Build(&error)) << error.text();
+    ASSERT_TRUE(builder.Build(&error)) << error;
     ASSERT_EQ(1, output.num_loops());
     EXPECT_GE(output.loop(0)->num_vertices(), 10);
     EXPECT_LE(output.loop(0)->num_vertices(), 12);
@@ -740,7 +740,7 @@ TEST(S2Builder, SimplifyPreservesTopology) {
     builder.AddPolygon(*input.back());
   }
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   for (int j = 0; j < kNumLoops; ++j) {
     EXPECT_TRUE(output[j]->BoundaryNear(*input[j], kSnapRadius));
     if (j > 0) EXPECT_TRUE(output[j]->Contains(output[j - 1].get()));
@@ -869,7 +869,7 @@ void TestInputEdgeIds(
     builder.AddPolyline(*MakePolylineOrDie(input_str));
   }
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
 }
 
 TEST(S2Builder, InputEdgeIdAssignment) {
@@ -1009,7 +1009,7 @@ TEST(S2Builder, SimplifyDegenerateEdgeMergingMultipleLayers) {
     }
   }
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
 }
 
 TEST(S2Builder, HighPrecisionPredicates) {
@@ -1032,7 +1032,7 @@ TEST(S2Builder, HighPrecisionPredicates) {
       -0.10531192039134191, -0.80522217309705857, 0.58354661457019719));
   builder.AddPolyline(input);
   S2Error error;
-  EXPECT_TRUE(builder.Build(&error)) << error.text();
+  EXPECT_TRUE(builder.Build(&error)) << error;
 }
 
 // Chooses a random S2Point that is often near the intersection of one of the
@@ -1164,8 +1164,8 @@ TEST(S2Builder, SelfIntersectionStressTest) {
     S2Polyline input(vertices);
     builder.AddPolyline(input);
     S2Error error;
-    EXPECT_TRUE(builder.Build(&error)) << error.text();
-    EXPECT_FALSE(output.FindValidationError(&error)) << error.text();
+    EXPECT_TRUE(builder.Build(&error)) << error;
+    EXPECT_FALSE(output.FindValidationError(&error)) << error;
     if (iter == -1) {
       cout << "S2Polyline: " << s2textformat::ToString(input) << endl;
       cout << "S2Polygon: " << s2textformat::ToString(output) << endl;
@@ -1204,8 +1204,8 @@ TEST(S2Builder, FractalStressTest) {
     builder.StartLayer(make_unique<S2PolygonLayer>(&output));
     builder.AddPolygon(input);
     S2Error error;
-    EXPECT_TRUE(builder.Build(&error)) << error.text();
-    EXPECT_FALSE(output.FindValidationError(&error)) << error.text();
+    EXPECT_TRUE(builder.Build(&error)) << error;
+    EXPECT_FALSE(output.FindValidationError(&error)) << error;
     if (iter == -1) {
       cout << "S2Polygon: " << s2textformat::ToString(input) << endl;
       cout << "S2Polygon: " << s2textformat::ToString(output) << endl;
@@ -1230,7 +1230,7 @@ void TestSnappingWithForcedVertices(const char* input_str,
   builder.StartLayer(make_unique<S2PolylineLayer>(&output));
   builder.AddPolyline(*MakePolylineOrDie(input_str));
   S2Error error;
-  EXPECT_TRUE(builder.Build(&error)) << error.text();
+  EXPECT_TRUE(builder.Build(&error)) << error;
   EXPECT_EQ(expected_str, s2textformat::ToString(output));
 }
 
@@ -1301,7 +1301,7 @@ TEST(S2Builder, OldS2PolygonBuilderBug) {
   builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   builder.AddPolygon(*input);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   EXPECT_TRUE(output.IsValid());
   unique_ptr<S2Polygon> expected = MakePolygonOrDie(
       "32.2991552:72.3429416, 32.2991881:72.3433077, 32.2996075:72.3436269; "

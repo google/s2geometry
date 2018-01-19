@@ -168,7 +168,7 @@
 //                         options);
 //   S2Error error;
 //   if (!op.Build(a, b, &error)) {
-//     LOG(ERROR) << error.text();
+//     LOG(ERROR) << error;
 //     ...
 //   }
 //

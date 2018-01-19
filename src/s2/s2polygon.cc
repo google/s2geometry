@@ -871,7 +871,7 @@ bool S2Polygon::InitToOperation(S2BooleanOperation::OpType op_type,
   S2Error error;
   if (!op.Build(a.index_, b.index_, &error)) {
     LOG(DFATAL) << S2BooleanOperation::OpTypeToString(op_type)
-                << " operation failed: " << error.text();
+                << " operation failed: " << error;
     return false;
   }
   return true;
@@ -1033,7 +1033,7 @@ void S2Polygon::InitFromBuilder(const S2Polygon& a, S2Builder* builder) {
   builder->AddPolygon(a);
   S2Error error;
   if (!builder->Build(&error)) {
-    LOG(DFATAL) << "Could not build polygon: " << error.text();
+    LOG(DFATAL) << "Could not build polygon: " << error;
   }
   // If there are no loops, check whether the result should be the full
   // polygon rather than the empty one.  (See InitToApproxIntersection.)
@@ -1142,7 +1142,7 @@ void S2Polygon::InitToSimplifiedInCell(
   }
   S2Error error;
   if (!builder.Build(&error)) {
-    LOG(DFATAL) << "Could not build polygon: " << error.text();
+    LOG(DFATAL) << "Could not build polygon: " << error;
     return;
   }
   // If there are no loops, check whether the result should be the full
@@ -1203,7 +1203,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
   }
   S2Error error;
   if (!builder.Build(&error)) {
-    LOG(DFATAL) << "InitToSimplifiedInCell failed: " << error.text();
+    LOG(DFATAL) << "InitToSimplifiedInCell failed: " << error;
   }
   return polylines;
 }
@@ -1226,7 +1226,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::OperationWithPolyline(
   S2Error error;
   if (!op.Build(a_index, index_, &error)) {
     LOG(DFATAL) << "Polyline " << S2BooleanOperation::OpTypeToString(op_type)
-                << " operation failed: " << error.text();
+                << " operation failed: " << error;
   }
   return result;
 }
@@ -1341,7 +1341,7 @@ void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
   }
   S2Error error;
   if (!builder.Build(&error)) {
-    LOG(DFATAL) << "InitToCellUnionBorder failed: " << error.text();
+    LOG(DFATAL) << "InitToCellUnionBorder failed: " << error;
   }
   // If there are no loops, check whether the result should be the full
   // polygon rather than the empty one.  There are only two ways that this can

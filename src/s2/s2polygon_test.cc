@@ -46,6 +46,7 @@
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
+#include "s2/s2closest_edge_query.h"
 #include "s2/s2coords.h"
 #include "s2/s2debug.h"
 #include "s2/s2edge_crossings.h"
@@ -343,10 +344,10 @@ static void CheckEqual(const S2Polygon& a, const S2Polygon& b,
   builder.StartLayer(make_unique<S2PolygonLayer>(&a2));
   builder.AddPolygon(a);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   builder.StartLayer(make_unique<S2PolygonLayer>(&b2));
   builder.AddPolygon(b);
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
   EXPECT_TRUE(a2.BoundaryApproxEquals(b2, max_error))
       << "\na: " << s2textformat::ToString(a)
       << "\nb: " << s2textformat::ToString(b)
@@ -460,7 +461,7 @@ static void TestOneDisjointPair(const S2Polygon& a, const S2Polygon& b) {
   builder.AddPolygon(a);
   builder.AddPolygon(b);
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
 
   c.InitToUnion(&a, &b);
   CheckEqual(c, ab);
@@ -909,7 +910,7 @@ static vector<unique_ptr<S2Loop>> MakeLoops(
     result.emplace_back(new S2Loop(vertices));
     S2Error error;
     EXPECT_FALSE(result.back()->FindValidationError(&error))
-        << "Loop " << result.size() - 1 << ": " << error.text();
+        << "Loop " << result.size() - 1 << ": " << error;
   }
   return result;
 }
@@ -1670,7 +1671,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
     }
 
     S2Error error;
-    ASSERT_TRUE(builder.Build(&error)) << error.text();
+    ASSERT_TRUE(builder.Build(&error)) << error;
     CheckEqual(a_and_b, *expected_a_and_b, kMaxError);
   }
 }
@@ -1720,7 +1721,7 @@ static void SplitAndAssemble(const S2Polygon& polygon) {
   builder.AddPolygon(polygon);
 
   S2Error error;
-  ASSERT_TRUE(builder.Build(&error)) << error.text();
+  ASSERT_TRUE(builder.Build(&error)) << error;
 
   for (int iter = 0; iter < (google::DEBUG_MODE ? 3 : 10); ++iter) {
     S2RegionCoverer coverer;
@@ -2746,7 +2747,7 @@ TEST(InitToSimplifiedInCell, InteriorEdgesSnappedToBoundary) {
   simplified_polygon.InitToSimplifiedInCell(polygon.get(), cell, snap_radius,
                                             boundary_tolerance);
   S2Error error;
-  EXPECT_FALSE(simplified_polygon.FindValidationError(&error)) << error.text();
+  EXPECT_FALSE(simplified_polygon.FindValidationError(&error)) << error;
 }
 
 
@@ -2972,5 +2973,22 @@ TEST(S2Polygon, Sizes) {
   LOG(INFO) << "sizeof(S2Polygon::Shape): " << sizeof(S2Polygon::Shape);
   LOG(INFO) << "sizeof(S2Cell): " << sizeof(S2Cell);
   LOG(INFO) << "sizeof(S2PaddedCell): " << sizeof(S2PaddedCell);
+}
+
+TEST_F(S2PolygonTestBase, IndexContainsOnePolygonShape) {
+  const MutableS2ShapeIndex& index = near_0_->index();
+  ASSERT_EQ(1, index.num_shape_ids());
+  S2Polygon::Shape* shape = down_cast<S2Polygon::Shape*>(index.shape(0));
+  EXPECT_EQ(near_0_.get(), shape->polygon());
+}
+
+TEST_F(S2PolygonTestBase, PolygonPolygonDistance) {
+  // Verify that the example code for S2Polygon::index() actually works.
+  S2Polygon const& polygon1 = *near_0_;
+  S2Polygon const& polygon2 = *far_10_;
+  S2ClosestEdgeQuery query(&polygon1.index());
+  S2ClosestEdgeQuery::ShapeIndexTarget target(&polygon2.index());
+  S1ChordAngle distance = query.GetDistance(&target);
+  EXPECT_GT(distance, S1ChordAngle(S1Angle::Degrees(175)));
 }
 

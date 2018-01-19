@@ -194,6 +194,9 @@ class S2CellId {
   uint64 id() const { return id_; }
 
   // Return true if id() represents a valid cell.
+  //
+  // All methods require is_valid() to be true unless otherwise specified
+  // (although not all methods enforce this).
   bool is_valid() const;
 
   // Which cube face this cell belongs to, in the range 0..5.
@@ -535,8 +538,13 @@ inline uint64 S2CellId::pos() const {
 }
 
 inline int S2CellId::level() const {
+  // We can't just DCHECK(is_valid()) because we want level() to be to be
+  // defined for end-iterators, i.e. S2CellId::End(kLevel).  However there is
+  // no good way to define S2CellId::None().level(), so we do prohibit that.
+  DCHECK(id_ != 0);
+
   // A special case for leaf cells is not worthwhile.
-  return kMaxLevel - (id_ ? (Bits::FindLSBSetNonZero64(id_) >> 1) : 0);
+  return kMaxLevel - (Bits::FindLSBSetNonZero64(id_) >> 1);
 }
 
 inline int S2CellId::GetSizeIJ() const {

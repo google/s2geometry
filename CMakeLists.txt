@@ -256,6 +256,7 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/thread_annotations.h
         DESTINATION include/s2/third_party/absl/base)
 install(FILES src/s2/third_party/absl/base/internal/identity.h
+              src/s2/third_party/absl/base/internal/invoke.h
               src/s2/third_party/absl/base/internal/throw_delegate.h
               src/s2/third_party/absl/base/internal/unaligned_access.h
         DESTINATION include/s2/third_party/absl/base/internal)

@@ -97,7 +97,7 @@ void NormalizeTest::Run(const string& input_str,
   AddLayers(expected_str, graph_options_out_, &expected, &builder);
   S2Error error;
   // Populate the "input" and "expected" vectors.
-  EXPECT_TRUE(builder.Build(&error)) << error.text();
+  EXPECT_TRUE(builder.Build(&error)) << error;
 
   const vector<Graph>& actual = normalizer.Run(input, &error);
   for (int dim = 0; dim < 3; ++dim) {

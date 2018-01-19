@@ -668,16 +668,5 @@ struct default_allocator_is_nothrow : std::false_type {};
 }  // namespace absl
 
 // TODO(user): Delete temporary aliases after namespace update.
-namespace gtl {
-
-template <typename T>
-ABSL_DEPRECATED("Prefer absl::WrapUnique in third_party/absl/memory/memory.h")
-std::unique_ptr<T> WrapUnique(T* ptr) {
-  return absl::WrapUnique(ptr);
-}
-
-using absl::MakeUnique;
-
-}  // namespace gtl
 
 #endif  // S2_THIRD_PARTY_ABSL_MEMORY_MEMORY_H_

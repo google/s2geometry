@@ -348,13 +348,4 @@ using result_of_t = typename std::result_of<T>::type;
 }  // namespace absl
 
 // TODO(user): Delete temporary aliases after namespace update.
-namespace gtl {
-template <typename... Ts>
-using void_t = typename absl::void_t<Ts...>;
-
-using absl::conjunction;
-using absl::disjunction;
-using absl::negation;
-
-}  // namespace gtl
 #endif  // S2_THIRD_PARTY_ABSL_META_TYPE_TRAITS_H_
