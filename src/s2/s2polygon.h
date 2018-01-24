@@ -225,7 +225,7 @@ class S2Polygon final : public S2Region {
   bool is_full() const { return num_loops() == 1 && loop(0)->is_full(); }
 
   // Return the number of loops in this polygon.
-  int num_loops() const { return loops_.size(); }
+  int num_loops() const { return static_cast<int>(loops_.size()); }
 
   // Total number of vertices in all loops.
   int num_vertices() const { return num_vertices_; }

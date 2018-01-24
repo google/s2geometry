@@ -38,11 +38,11 @@ class S2PointVectorShape : public S2Shape {
 
   ~S2PointVectorShape() override = default;
 
-  int num_points() const { return points_.size(); }
+  int num_points() const { return static_cast<int>(points_.size()); }
   const S2Point& point(int i) const { return points_[i]; }
 
   // S2Shape interface:
-  int num_edges() const final { return points_.size(); }
+  int num_edges() const final { return static_cast<int>(points_.size()); }
   Edge edge(int e) const final {
     return Edge(points_[e], points_[e]);
   }
@@ -50,7 +50,7 @@ class S2PointVectorShape : public S2Shape {
   ReferencePoint GetReferencePoint() const final {
     return ReferencePoint::Contained(false);
   }
-  int num_chains() const final { return points_.size(); }
+  int num_chains() const final { return static_cast<int>(points_.size()); }
   Chain chain(int i) const final { return Chain(i, 1); }
   Edge chain_edge(int i, int j) const final {
     DCHECK_EQ(j, 0);

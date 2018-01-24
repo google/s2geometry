@@ -10,6 +10,8 @@
 // This example shows how to convert spatial data into index terms, which can
 // then be indexed along with the other document information.
 
+#include <cinttypes>
+#include <cstdint>
 #include <cstdio>
 #include <set>
 #include <unordered_map>
@@ -65,7 +67,7 @@ int main(int argc, char **argv) {
       S1Angle::Radians(S2Earth::KmToRadians(FLAGS_query_radius_km));
 
   // Count the number of documents (points) found in all queries.
-  int64 num_found = 0;
+  int64_t num_found = 0;
   for (int i = 0; i < FLAGS_num_queries; ++i) {
     // Choose a random center for query.
     S2Cap query_region(S2Testing::RandomPoint(), radius);
@@ -90,7 +92,7 @@ int main(int argc, char **argv) {
     // Now do something with the results (in this example we just count them).
     num_found += result.size();
   }
-  std::printf("Found %lld points in %d queries\n",
+  std::printf("Found %" PRId64 " points in %d queries\n",
               num_found, FLAGS_num_queries);
   return  0;
 }

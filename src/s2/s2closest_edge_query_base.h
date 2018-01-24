@@ -576,18 +576,12 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
     if (distance_limit_ == Distance::Zero()) return;
   }
 
-  // If max_error() was specified and the target takes advantage of this in
-  // its UpdateMinDistance() methods, then we need to avoid duplicate edges in
-  // the results explicitly.  (Otherwise it happens automatically.)
+  // If the target takes advantage of max_error() and 0 < max_error() <
+  // distance_limit_, then we need to ensure that the distances to
+  // S2ShapeIndex cells are always a lower bound on the true distance, since
+  // otherwise such cells might be incorrectly discarded.
   bool target_uses_max_error = (Distance::Zero() < options.max_error() &&
                                 target_->set_max_error(options.max_error()));
-  avoid_duplicates_ = (target_uses_max_error && options.max_edges() > 1 &&
-                       !options.use_brute_force());
-
-  // Furthermore, if the target takes advantage of max_error() and
-  // 0 < max_error() < distance_limit_, then we also need to ensure that the
-  // distances to S2ShapeIndex cells are always a lower bound on the true
-  // distance, since otherwise such cells might be incorrectly discarded.
   use_conservative_cell_distance_ = (target_uses_max_error &&
                                      options.max_error() < distance_limit_);
 
@@ -602,9 +596,15 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
                                                    min_optimized_edges);
     index_num_edges_limit_ = min_optimized_edges;
   }
+
   if (options.use_brute_force() || index_num_edges_ < min_optimized_edges) {
+    // The brute force algorithm considers each edge exactly once.
+    avoid_duplicates_ = false;
     FindClosestEdgesBruteForce();
   } else {
+    // If the target takes advantage of max_error() then we need to avoid
+    // duplicate edges explicitly.  (Otherwise it happens automatically.)
+    avoid_duplicates_ = (target_uses_max_error && options.max_edges() > 1);
     FindClosestEdgesOptimized();
   }
 }

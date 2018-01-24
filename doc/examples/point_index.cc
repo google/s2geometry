@@ -4,6 +4,8 @@
 // This example shows how to build and query an in-memory index of points
 // using S2PointIndex.
 
+#include <cinttypes>
+#include <cstdint>
 #include <cstdio>
 #include <gflags/gflags.h>
 #include "s2/s2earth.h"
@@ -30,13 +32,13 @@ int main(int argc, char **argv) {
 
   // Repeatedly choose a random target point, and count how many index points
   // are within the given radius of that point.
-  int64 num_found = 0;
+  int64_t num_found = 0;
   for (int i = 0; i < FLAGS_num_queries; ++i) {
     S2ClosestPointQuery<int>::PointTarget target(S2Testing::RandomPoint());
     num_found += query.FindClosestPoints(&target).size();
   }
 
-  std::printf("Found %lld points in %d queries\n",
+  std::printf("Found %" PRId64 " points in %d queries\n",
               num_found, FLAGS_num_queries);
   return  0;
 }
