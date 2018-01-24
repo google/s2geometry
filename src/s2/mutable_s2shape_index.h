@@ -38,7 +38,6 @@
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/util/gtl/btree_map.h"
-#include "s2/util/gtl/compact_array.h"
 
 // MutableS2ShapeIndex is a class for in-memory indexing of polygonal geometry.
 // The objects in the index are known as "shapes", and may consist of points,
@@ -167,7 +166,9 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   // The number of distinct shape ids that have been assigned.  This equals
   // the number of shapes in the index provided that no shapes have ever been
   // removed.  (Shape ids are not reused.)
-  int num_shape_ids() const override { return shapes_.size(); }
+  int num_shape_ids() const override {
+    return static_cast<int>(shapes_.size());
+  }
 
   // Returns a pointer to the shape with the given id, or nullptr if the shape
   // has been removed from the index.

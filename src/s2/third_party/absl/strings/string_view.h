@@ -344,12 +344,6 @@ class string_view {
     s = t;
   }
 
-  // Checks whether string_view starts with x and if so advances the beginning
-  // of it to past the match.  It's basically a shortcut for starts_with
-  // followed by remove_prefix.
-  ABSL_DEPRECATED("Use absl::ConsumePrefix")
-  bool Consume(string_view x);
-
   // Explicit conversion operators
 
   // Converts to `std::basic_string`.

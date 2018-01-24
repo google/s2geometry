@@ -79,15 +79,6 @@ std::ostream& operator<<(std::ostream& o, string_view piece) {
   return o;
 }
 
-bool string_view::Consume(string_view x) {
-  if (absl::StartsWith(*this, x)) {
-    ptr_ += x.length_;
-    length_ -= x.length_;
-    return true;
-  }
-  return false;
-}
-
 string_view::size_type string_view::copy(char* buf, size_type n,
                                          size_type pos) const {
   size_type ulen = length_;

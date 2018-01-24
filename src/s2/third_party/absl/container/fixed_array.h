@@ -178,11 +178,6 @@ class FixedArray {
   // elements.
   pointer data() { return AsValue(rep_.begin()); }
 
-  // An older name for the more standard-friendly .data().
-  ABSL_DEPRECATED("Use data() instead")
-  const_pointer get() const { return data(); }
-  ABSL_DEPRECATED("Use data() instead")
-  pointer get() { return data(); }
   // FixedArray::operator[]
   //
   // Returns a reference the ith element of the fixed array.

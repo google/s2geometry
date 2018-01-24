@@ -611,6 +611,22 @@ inline uint128& uint128::operator--() {
 
 
 
+namespace int128_internal {
+
+// Casts from unsigned to signed while preserving the underlying binary
+// representation.
+constexpr int64_t BitCastToSigned(uint64_t v) {
+  // Casting an unsigned integer to a signed integer of the same
+  // width is implementation defined behavior if the source value would not fit
+  // in the destination type. We step around it with a roundtrip bitwise not
+  // operation to make sure this function remains constexpr. Clang, GCC, and
+  // MSVC optimize this to a no-op on x86-64.
+  return v & (uint64_t{1} << 63) ? ~static_cast<int64_t>(~v)
+                                 : static_cast<int64_t>(v);
+}
+
+}  // namespace int128_internal
+
 
 #if defined(ABSL_HAVE_INTRINSIC_INT128)
 #include "s2/third_party/absl/numeric/int128_have_intrinsic.inc"
@@ -621,7 +637,6 @@ inline uint128& uint128::operator--() {
 }  // namespace absl
 
 
-using absl::uint128;        // NOLINT(readability/namespace)
 
 
 #endif  // S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_

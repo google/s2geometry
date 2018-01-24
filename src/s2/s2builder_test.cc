@@ -18,7 +18,9 @@
 #include "s2/s2builder.h"
 
 #include <algorithm>
+#include <cinttypes>
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -1171,9 +1173,10 @@ TEST(S2Builder, SelfIntersectionStressTest) {
       cout << "S2Polygon: " << s2textformat::ToString(output) << endl;
     }
     if (iter < 50) {
-      printf("iter=%4d: ms=%4lld, radius=%8.3g, loops=%d, vertices=%d\n",
-             iter, timer.GetInMs(), cap.GetRadius().radians(),
-             output.num_loops(), output.num_vertices());
+      printf("iter=%4d: ms=%4" PRId64 ", radius=%8.3g, loops=%d, vertices=%d\n",
+             iter, static_cast<int64_t>(timer.GetInMs()),
+             cap.GetRadius().radians(), output.num_loops(),
+             output.num_vertices());
     }
   }
 }

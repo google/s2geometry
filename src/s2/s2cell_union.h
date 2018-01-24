@@ -123,7 +123,7 @@ class S2CellUnion final : public S2Region {
   std::vector<S2CellId> Release();
 
   // Convenience methods for accessing the individual cell ids.
-  int num_cells() const { return cell_ids_.size(); }
+  int num_cells() const { return static_cast<int>(cell_ids_.size()); }
   S2CellId cell_id(int i) const { return cell_ids_[i]; }
 
   // Vector-like methods for accessing the individual cell ids.

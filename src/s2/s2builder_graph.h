@@ -647,7 +647,7 @@ inline const std::vector<S2Point>& S2Builder::Graph::vertices() const {
 }
 
 inline S2Builder::Graph::EdgeId S2Builder::Graph::num_edges() const {
-  return edges().size();
+  return static_cast<S2Builder::Graph::EdgeId>(edges().size());
 }
 
 inline const S2Builder::Graph::Edge& S2Builder::Graph::edge(EdgeId e) const {
@@ -697,12 +697,13 @@ S2Builder::Graph::VertexOutMap::edge_ids(VertexId v0, VertexId v1) const {
   auto range = std::equal_range(edges_.data() + edge_begins_[v0],
                                 edges_.data() + edge_begins_[v0 + 1],
                                 Edge(v0, v1));
-  return VertexOutEdgeIds(range.first - edges_.data(),
-                          range.second - edges_.data());
+  return VertexOutEdgeIds(
+      static_cast<S2Builder::Graph::EdgeId>(range.first - edges_.data()),
+      static_cast<S2Builder::Graph::EdgeId>(range.second - edges_.data()));
 }
 
 inline int S2Builder::Graph::VertexOutMap::degree(VertexId v) const {
-  return edge_ids(v).size();
+  return static_cast<int>(edge_ids(v).size());
 }
 
 inline S2Builder::Graph::VertexInEdgeIds::VertexInEdgeIds(const EdgeId* begin,
@@ -717,7 +718,7 @@ S2Builder::Graph::VertexInMap::edge_ids(VertexId v) const {
 }
 
 inline int S2Builder::Graph::VertexInMap::degree(VertexId v) const {
-  return edge_ids(v).size();
+  return static_cast<int>(edge_ids(v).size());
 }
 
 inline IdSetLexicon::IdSet S2Builder::Graph::input_edge_ids(EdgeId e) const {

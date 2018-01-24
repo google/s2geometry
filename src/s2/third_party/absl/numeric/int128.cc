@@ -213,5 +213,4 @@ std::ostream& operator<<(std::ostream& os, uint128 v) {
 }  // namespace absl
 
 
-const uint128 kuint128max = absl::kuint128max;
 
