@@ -126,7 +126,6 @@ add_library(s2 SHARED
             src/s2/third_party/absl/strings/string_view.cc
             src/s2/third_party/absl/strings/strip.cc
             src/s2/third_party/absl/strings/internal/memutil.cc
-            src/s2/third_party/absl/utility/utility.cc
             src/s2/util/bits/bit-interleave.cc
             src/s2/util/bits/bits.cc
             src/s2/util/coding/coder.cc
@@ -256,6 +255,7 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/thread_annotations.h
         DESTINATION include/s2/third_party/absl/base)
 install(FILES src/s2/third_party/absl/base/internal/identity.h
+              src/s2/third_party/absl/base/internal/inline_variable.h
               src/s2/third_party/absl/base/internal/invoke.h
               src/s2/third_party/absl/base/internal/throw_delegate.h
               src/s2/third_party/absl/base/internal/unaligned_access.h

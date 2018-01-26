@@ -579,12 +579,16 @@ bool S2Polyline::NearlyCovers(const S2Polyline& covered,
   set<SearchState, SearchStateKeyCompare> done;
 
   // Find all possible starting states.
-  for (int i = 0, next_i = NextDistinctVertex(*this, 0);
-       next_i < this->num_vertices();
-       i = next_i, next_i = NextDistinctVertex(*this, next_i)) {
+  for (int i = 0, next_i = NextDistinctVertex(*this, 0), next_next_i;
+       next_i < this->num_vertices(); i = next_i, next_i = next_next_i) {
+    next_next_i = NextDistinctVertex(*this, next_i);
     S2Point closest_point = S2::Project(
         covered.vertex(0), this->vertex(i), this->vertex(next_i));
-    if (closest_point != this->vertex(next_i) &&
+
+    // In order to avoid duplicate starting states, we exclude the end vertex
+    // of each edge *except* for the last non-degenerate edge.
+    if ((next_next_i == this->num_vertices() ||
+         closest_point != this->vertex(next_i)) &&
         S1Angle(closest_point, covered.vertex(0)) <= max_error) {
       pending.push_back(SearchState(i, 0, true));
     }
@@ -615,13 +619,11 @@ bool S2Polyline::NearlyCovers(const S2Polyline& covered,
     }
 
     if (S2::IsEdgeBNearEdgeA(j_begin, covered.vertex(next_j),
-                                     i_begin, this->vertex(next_i),
-                                     max_error)) {
+                             i_begin, this->vertex(next_i), max_error)) {
       pending.push_back(SearchState(next_i, state.j, false));
     }
     if (S2::IsEdgeBNearEdgeA(i_begin, this->vertex(next_i),
-                                     j_begin, covered.vertex(next_j),
-                                     max_error)) {
+                             j_begin, covered.vertex(next_j), max_error)) {
       pending.push_back(SearchState(state.i, next_j, true));
     }
   }

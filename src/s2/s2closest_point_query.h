@@ -440,7 +440,7 @@ bool S2ClosestPointQuery<Data>::IsDistanceLess(
   Options tmp_options = options_;
   tmp_options.set_max_points(1);
   tmp_options.set_max_distance(limit);
-  tmp_options.set_max_error(limit);
+  tmp_options.set_max_error(S1ChordAngle::Straight());
   return !base_.FindClosestPoint(target, tmp_options).is_empty();
 }
 
@@ -451,7 +451,7 @@ bool S2ClosestPointQuery<Data>::IsDistanceLessOrEqual(
   Options tmp_options = options_;
   tmp_options.set_max_points(1);
   tmp_options.set_inclusive_max_distance(limit);
-  tmp_options.set_max_error(tmp_options.max_distance());
+  tmp_options.set_max_error(S1ChordAngle::Straight());
   return !base_.FindClosestPoint(target, tmp_options).is_empty();
 }
 
@@ -462,7 +462,7 @@ bool S2ClosestPointQuery<Data>::IsConservativeDistanceLessOrEqual(
   Options tmp_options = options_;
   tmp_options.set_max_points(1);
   tmp_options.set_conservative_max_distance(limit);
-  tmp_options.set_max_error(tmp_options.max_distance());
+  tmp_options.set_max_error(S1ChordAngle::Straight());
   return !base_.FindClosestPoint(target, tmp_options).is_empty();
 }
 

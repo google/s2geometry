@@ -151,6 +151,12 @@ bool UpdateEdgePairMinDistance(const S2Point& a0, const S2Point& a1,
                                const S2Point& b0, const S2Point& b1,
                                S1ChordAngle* min_dist);
 
+// As above, but for maximum distances. If one edge crosses the antipodal
+// reflection of the other, the distance is Pi.
+bool UpdateEdgePairMaxDistance(const S2Point& a0, const S2Point& a1,
+                               const S2Point& b0, const S2Point& b1,
+                               S1ChordAngle* max_dist);
+
 // Returns the pair of points (a, b) that achieves the minimum distance
 // between edges a0a1 and b0b1, where "a" is a point on a0a1 and "b" is a
 // point on b0b1.  If the two edges intersect, "a" and "b" are both equal to
