@@ -145,38 +145,6 @@
 #include "s2/third_party/absl/strings/string_view.h"
 
 namespace gtl {
-
-// A helper type used to indicate that the comparator provided is transparent.
-// A transparent comparator will see lookup keys with any type (lookup_type)
-// passed by the user to any of the lookup methods. The comparator then has a
-// chance to do the comparison without first converting the lookup key to a
-// key_type.
-//
-// For example:
-//
-//  struct MyStringComparer
-//      : public util::btree::btree_comparator_is_transparent {
-//    bool operator()(const string &a, const string &b) const {
-//      return a < b;
-//    }
-//    bool operator()(const string &a, const char* b) const {
-//      return strcmp(a.c_str(), b) < 0;
-//    }
-//    bool operator()(const char* a, const string& b) const {
-//      return strcmp(a, b.c_str()) < 0;
-//    }
-//  };
-//
-// Note that we need to declare operator() for both combinations of key_type and
-// lookup_type.
-struct ABSL_DEPRECATED(
-    "Inheriting from btree_comparator_is_transparent is deprecated due to not "
-    "conforming with C++14 standards. Instead, create a custom struct with "
-    "is_transparent defined as a member (using typedef or aliases).")
-    btree_comparator_is_transparent {
-  using is_transparent = void;
-};
-
 // A helper class used to indicates if the comparator provided is transparent
 // and thus supports heterogeneous lookups. This is only used internally to
 // check if the Compare parameter has a valid is_transparent member.

@@ -8,8 +8,11 @@ shapes drawn on a sphere rather than on a planar 2D map. This makes it
 especially suitable for working with geographic data.
 
 If you want to learn more about the library, start by reading the
-[overview](doc/overview.md) and [quick start document](doc/quickstart.md),
-then read the introduction to the [basic types](doc/basic_types.md).
+[overview](http://s2geometry.io/about/overview) and [quick start
+document](http://s2geometry.io/devguide/cpp/quickstart), then read the
+introduction to the [basic types](http://s2geometry.io/devguide/basic_types).
+
+S2 documentation can be found on [s2geometry.io](http://s2geometry.io).
 
 ## Requirements for End Users
 

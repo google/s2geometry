@@ -296,13 +296,13 @@ TEST(S2, RepeatedInterpolation) {
 // is "distance_radians", and that GetEdgePairClosestPoints() returns
 // "expected_a" and "expected_b" as the points that achieve this distance.
 // S2Point(0, 0, 0) may be passed for "expected_a" or "expected_b" to indicate
-// that both endpoints of the corresponding edge are equally distance, and
+// that both endpoints of the corresponding edge are equally distant, and
 // therefore either one might be returned.
 //
 // Parameters are passed by value so that this function can normalize them.
-void CheckEdgePairDistance(S2Point a0, S2Point a1, S2Point b0, S2Point b1,
-                           double distance_radians,
-                           S2Point expected_a, S2Point expected_b) {
+void CheckEdgePairMinDistance(S2Point a0, S2Point a1, S2Point b0, S2Point b1,
+                              double distance_radians,
+                              S2Point expected_a, S2Point expected_b) {
   a0 = a0.Normalize();
   a1 = a1.Normalize();
   b0 = b0.Normalize();
@@ -328,68 +328,131 @@ void CheckEdgePairDistance(S2Point a0, S2Point a1, S2Point b0, S2Point b1,
   EXPECT_FALSE(S2::UpdateEdgePairMinDistance(a0, a1, b0, b1, &min_distance));
   min_distance = S1ChordAngle::Infinity();
   EXPECT_TRUE(S2::UpdateEdgePairMinDistance(a0, a1, b0, b1, &min_distance));
-  EXPECT_NEAR(distance_radians, min_distance.ToAngle().radians(), 1e-15);
+  EXPECT_NEAR(distance_radians, min_distance.radians(), 1e-15);
 }
 
-TEST(S2, EdgePairDistance) {
+TEST(S2, EdgePairMinDistance) {
   // One edge is degenerate.
-  CheckEdgePairDistance(S2Point(1, 0, 1), S2Point(1, 0, 1),
-                        S2Point(1, -1, 0), S2Point(1, 1, 0),
-                        M_PI_4, S2Point(1, 0, 1), S2Point(1, 0, 0));
-  CheckEdgePairDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
-                        S2Point(1, 0, 1), S2Point(1, 0, 1),
-                        M_PI_4, S2Point(1, 0, 0), S2Point(1, 0, 1));
+  CheckEdgePairMinDistance(S2Point(1, 0, 1), S2Point(1, 0, 1),
+                           S2Point(1, -1, 0), S2Point(1, 1, 0),
+                           M_PI_4, S2Point(1, 0, 1), S2Point(1, 0, 0));
+  CheckEdgePairMinDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
+                           S2Point(1, 0, 1), S2Point(1, 0, 1),
+                           M_PI_4, S2Point(1, 0, 0), S2Point(1, 0, 1));
 
   // Both edges are degenerate.
-  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
-                        S2Point(0, 1, 0), S2Point(0, 1, 0),
-                        M_PI_2, S2Point(1, 0, 0), S2Point(0, 1, 0));
+  CheckEdgePairMinDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                           S2Point(0, 1, 0), S2Point(0, 1, 0),
+                           M_PI_2, S2Point(1, 0, 0), S2Point(0, 1, 0));
 
   // Both edges are degenerate and antipodal.
-  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
-                        S2Point(-1, 0, 0), S2Point(-1, 0, 0),
-                        M_PI, S2Point(1, 0, 0), S2Point(-1, 0, 0));
+  CheckEdgePairMinDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                           S2Point(-1, 0, 0), S2Point(-1, 0, 0),
+                           M_PI, S2Point(1, 0, 0), S2Point(-1, 0, 0));
 
   // Two identical edges.
-  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
-                        S2Point(1, 0, 0), S2Point(0, 1, 0),
-                        0, S2Point(0, 0, 0), S2Point(0, 0, 0));
+  CheckEdgePairMinDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
+                           S2Point(1, 0, 0), S2Point(0, 1, 0),
+                           0, S2Point(0, 0, 0), S2Point(0, 0, 0));
 
   // Both edges are degenerate and identical.
-  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
-                        S2Point(1, 0, 0), S2Point(1, 0, 0),
-                        0, S2Point(1, 0, 0), S2Point(1, 0, 0));
+  CheckEdgePairMinDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                           S2Point(1, 0, 0), S2Point(1, 0, 0),
+                           0, S2Point(1, 0, 0), S2Point(1, 0, 0));
 
   // Edges that share exactly one vertex (all 4 possibilities).
-  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
-                        S2Point(0, 1, 0), S2Point(0, 1, 1),
-                        0, S2Point(0, 1, 0), S2Point(0, 1, 0));
-  CheckEdgePairDistance(S2Point(0, 1, 0), S2Point(1, 0, 0),
-                        S2Point(0, 1, 0), S2Point(0, 1, 1),
-                        0, S2Point(0, 1, 0), S2Point(0, 1, 0));
-  CheckEdgePairDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
-                        S2Point(0, 1, 1), S2Point(0, 1, 0),
-                        0, S2Point(0, 1, 0), S2Point(0, 1, 0));
-  CheckEdgePairDistance(S2Point(0, 1, 0), S2Point(1, 0, 0),
-                        S2Point(0, 1, 1), S2Point(0, 1, 0),
-                        0, S2Point(0, 1, 0), S2Point(0, 1, 0));
+  CheckEdgePairMinDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
+                           S2Point(0, 1, 0), S2Point(0, 1, 1),
+                           0, S2Point(0, 1, 0), S2Point(0, 1, 0));
+  CheckEdgePairMinDistance(S2Point(0, 1, 0), S2Point(1, 0, 0),
+                           S2Point(0, 1, 0), S2Point(0, 1, 1),
+                           0, S2Point(0, 1, 0), S2Point(0, 1, 0));
+  CheckEdgePairMinDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
+                           S2Point(0, 1, 1), S2Point(0, 1, 0),
+                           0, S2Point(0, 1, 0), S2Point(0, 1, 0));
+  CheckEdgePairMinDistance(S2Point(0, 1, 0), S2Point(1, 0, 0),
+                           S2Point(0, 1, 1), S2Point(0, 1, 0),
+                           0, S2Point(0, 1, 0), S2Point(0, 1, 0));
 
   // Two edges whose interiors cross.
-  CheckEdgePairDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
-                        S2Point(1, 0, -1), S2Point(1, 0, 1),
-                        0, S2Point(1, 0, 0), S2Point(1, 0, 0));
+  CheckEdgePairMinDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
+                           S2Point(1, 0, -1), S2Point(1, 0, 1),
+                           0, S2Point(1, 0, 0), S2Point(1, 0, 0));
 
   // The closest distance occurs between two edge endpoints, but more than one
   // endpoint pair is equally distant.
-  CheckEdgePairDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
-                        S2Point(-1, 0, 0), S2Point(-1, 0, 1),
-                        acos(-0.5), S2Point(0, 0, 0), S2Point(-1, 0, 1));
-  CheckEdgePairDistance(S2Point(-1, 0, 0), S2Point(-1, 0, 1),
-                        S2Point(1, -1, 0), S2Point(1, 1, 0),
-                        acos(-0.5), S2Point(-1, 0, 1), S2Point(0, 0, 0));
-  CheckEdgePairDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
-                        S2Point(-1, 0, -1), S2Point(-1, 0, 1),
-                        acos(-0.5), S2Point(0, 0, 0), S2Point(0, 0, 0));
+  CheckEdgePairMinDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
+                           S2Point(-1, 0, 0), S2Point(-1, 0, 1),
+                           acos(-0.5), S2Point(0, 0, 0), S2Point(-1, 0, 1));
+  CheckEdgePairMinDistance(S2Point(-1, 0, 0), S2Point(-1, 0, 1),
+                           S2Point(1, -1, 0), S2Point(1, 1, 0),
+                           acos(-0.5), S2Point(-1, 0, 1), S2Point(0, 0, 0));
+  CheckEdgePairMinDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
+                           S2Point(-1, 0, -1), S2Point(-1, 0, 1),
+                           acos(-0.5), S2Point(0, 0, 0), S2Point(0, 0, 0));
+}
+
+// Given two edges a0a1 and b0b1, check that the maximum distance between them
+// is "distance_radians".  Parameters are passed by value so that this
+// function can normalize them.
+void CheckEdgePairMaxDistance(S2Point a0, S2Point a1, S2Point b0, S2Point b1,
+                              double distance_radians) {
+  a0 = a0.Normalize();
+  a1 = a1.Normalize();
+  b0 = b0.Normalize();
+  b1 = b1.Normalize();
+
+  S1ChordAngle max_distance = S1ChordAngle::Straight();
+  EXPECT_FALSE(S2::UpdateEdgePairMaxDistance(a0, a1, b0, b1, &max_distance));
+  max_distance = S1ChordAngle::Negative();
+  EXPECT_TRUE(S2::UpdateEdgePairMaxDistance(a0, a1, b0, b1, &max_distance));
+  EXPECT_NEAR(distance_radians, max_distance.radians(), 1e-15);
+}
+
+TEST(S2, EdgePairMaxDistance) {
+  // Standard situation. Same hemisphere, not degenerate.
+  CheckEdgePairMaxDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
+                           S2Point(1, 1, 0), S2Point(1, 1, 1),
+                           acos(1/sqrt(3)));
+
+  // One edge is degenerate.
+  CheckEdgePairMaxDistance(S2Point(1, 0, 1), S2Point(1, 0, 1),
+                           S2Point(1, -1, 0), S2Point(1, 1, 0),
+                           acos(0.5));
+  CheckEdgePairMaxDistance(S2Point(1, -1, 0), S2Point(1, 1, 0),
+                           S2Point(1, 0, 1), S2Point(1, 0, 1),
+                           acos(0.5));
+
+  // Both edges are degenerate.
+  CheckEdgePairMaxDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                           S2Point(0, 1, 0), S2Point(0, 1, 0),
+                           M_PI_2);
+
+  // Both edges are degenerate and antipodal.
+  CheckEdgePairMaxDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                           S2Point(-1, 0, 0), S2Point(-1, 0, 0),
+                           M_PI);
+
+  // Two identical edges.
+  CheckEdgePairMaxDistance(S2Point(1, 0, 0), S2Point(0, 1, 0),
+                           S2Point(1, 0, 0), S2Point(0, 1, 0),
+                           M_PI_2);
+
+  // Both edges are degenerate and identical.
+  CheckEdgePairMaxDistance(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                           S2Point(1, 0, 0), S2Point(1, 0, 0),
+                           0);
+
+  // Antipodal reflection of one edge crosses the other edge.
+  CheckEdgePairMaxDistance(S2Point(1, 0, 1), S2Point(1, 0, -1),
+                           S2Point(-1, -1, 0), S2Point(-1, 1, 0),
+                           M_PI);
+
+  // One vertex of one edge touches the interior of the antipodal reflection
+  // of the other edge.
+  CheckEdgePairMaxDistance(S2Point(1, 0, 1), S2Point(1, 0, 0),
+                           S2Point(-1, -1, 0), S2Point(-1, 1, 0),
+                           M_PI);
 }
 
 bool IsEdgeBNearEdgeA(const string& a_str, const string& b_str,

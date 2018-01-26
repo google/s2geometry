@@ -325,7 +325,7 @@ TEST(S2Polyline, SubsampleVerticesTrivialInputs) {
 
   // And finally, verify that we still do something reasonable if the client
   // passes in an invalid polyline with two or more adjacent vertices.
-  google::FlagSaver flag_saver;
+  google::FlagSaver flag_saver;  // Needed for opensource gtest.
   FLAGS_s2debug = false;
   CheckSubsample("0:1, 0:1, 0:1, 0:2", 0.0, "0,3");
 }
@@ -489,7 +489,7 @@ TEST(S2PolylineCoveringTest, IsResilientToDuplicatePoints) {
   // S2Polyines are not generally supposed to contain adjacent, identical
   // points, but it happens in practice.  When --s2debug=true, debug-mode
   // binaries abort on such polylines, so we also set --s2debug=false.
-  google::FlagSaver flag_saver;
+  google::FlagSaver flag_saver;  // Needed for opensource gtest.
   FLAGS_s2debug = false;
   TestNearlyCovers("0:1, 0:2, 0:2, 0:3", "0:1, 0:1, 0:1, 0:3",
                    1e-10, true, true);
@@ -509,6 +509,21 @@ TEST(S2PolylineCoveringTest, StraightAndWigglyPolylinesCoverEachOther) {
                    "39.9:0.9, 40:1.1, 30:1.15, 29:0.95, 28:1.1, 27:1.15, "
                    "26:1.05, 25:0.85, 24:1.1, 23:0.9, 20:0.99",
                    0.2, true, true);
+}
+
+TEST(S2PolylineCoveringTest, MatchStartsAtLastVertex) {
+  // The first polyline covers the second, but the matching segment starts at
+  // the last vertex of the first polyline.
+  TestNearlyCovers(
+      "0:0, 0:2", "0:2, 0:3", 1.5, false, true);
+}
+
+TEST(S2PolylineCoveringTest, MatchStartsAtDuplicatedLastVertex) {
+  // Like the above, except that the last vertex is duplicated.
+  google::FlagSaver flag_saver;  // Needed for opensource gtest.
+  FLAGS_s2debug = false;
+  TestNearlyCovers(
+      "0:0, 0:2, 0:2, 0:2", "0:2, 0:3", 1.5, false, true);
 }
 
 TEST(S2PolylineCoveringTest, EmptyPolylines) {

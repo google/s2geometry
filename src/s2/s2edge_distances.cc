@@ -282,6 +282,29 @@ bool UpdateEdgePairMinDistance(
           UpdateMinDistance(b1, a0, a1, min_dist));
 }
 
+bool UpdateEdgePairMaxDistance(
+    const S2Point& a0, const S2Point& a1,
+    const S2Point& b0, const S2Point& b1,
+    S1ChordAngle* max_dist) {
+  if (*max_dist == S1ChordAngle::Straight()) {
+    return false;
+  }
+  if (S2::CrossingSign(a0, a1, -b0, -b1) > 0) {
+    *max_dist = S1ChordAngle::Straight();
+    return true;
+  }
+  // Otherwise, the maximum distance is achieved at an endpoint of at least
+  // one of the two edges.  We use "|" rather than "||" below to ensure that
+  // all four possibilities are always checked.
+  //
+  // The calculation below computes each of the six vertex-vertex distances
+  // twice (this could be optimized).
+  return (UpdateMaxDistance(a0, b0, b1, max_dist) |
+          UpdateMaxDistance(a1, b0, b1, max_dist) |
+          UpdateMaxDistance(b0, a0, a1, max_dist) |
+          UpdateMaxDistance(b1, a0, a1, max_dist));
+}
+
 std::pair<S2Point, S2Point> GetEdgePairClosestPoints(
       const S2Point& a0, const S2Point& a1,
       const S2Point& b0, const S2Point& b1) {

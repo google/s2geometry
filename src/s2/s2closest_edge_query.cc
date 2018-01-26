@@ -81,7 +81,7 @@ bool S2ClosestEdgeQuery::IsDistanceLess(Target* target, S1ChordAngle limit) {
   Options tmp_options = options_;
   tmp_options.set_max_edges(1);
   tmp_options.set_max_distance(limit);
-  tmp_options.set_max_error(limit);
+  tmp_options.set_max_error(S1ChordAngle::Straight());
   return base_.FindClosestEdge(target, tmp_options).shape_id >= 0;
 }
 
@@ -91,7 +91,7 @@ bool S2ClosestEdgeQuery::IsDistanceLessOrEqual(Target* target,
   Options tmp_options = options_;
   tmp_options.set_max_edges(1);
   tmp_options.set_inclusive_max_distance(limit);
-  tmp_options.set_max_error(tmp_options.max_distance());
+  tmp_options.set_max_error(S1ChordAngle::Straight());
   return base_.FindClosestEdge(target, tmp_options).shape_id >= 0;
 }
 
@@ -101,6 +101,6 @@ bool S2ClosestEdgeQuery::IsConservativeDistanceLessOrEqual(
   Options tmp_options = options_;
   tmp_options.set_max_edges(1);
   tmp_options.set_conservative_max_distance(limit);
-  tmp_options.set_max_error(tmp_options.max_distance());
+  tmp_options.set_max_error(S1ChordAngle::Straight());
   return base_.FindClosestEdge(target, tmp_options).shape_id >= 0;
 }
