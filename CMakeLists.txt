@@ -139,6 +139,12 @@ target_link_libraries(
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT})
 
+# Allow other CMake projects to use this one with:
+# list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_folder>/third_party/cmake")
+# add_subdirectory(<path_to_s2geometry_folder> s2geometry)
+# target_link_libraries(<target_name> s2)
+target_include_directories(s2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 # We don't need to install all headers, only those
 # transitively included by s2 headers we are exporting.
 install(FILES src/s2/_fp_contract_off.h
