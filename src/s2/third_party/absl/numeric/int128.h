@@ -201,12 +201,9 @@ class alignas(16) uint128 {
 #endif  // byte order
 };
 
-// Prefer to use the constexpr `Uint128Max()`.
-//
-// TODO(absl-team) deprecate kuint128max once migration tool is released.
 
 // allow uint128 to be logged
-extern std::ostream& operator<<(std::ostream& os, uint128 v);
+std::ostream& operator<<(std::ostream& os, uint128 v);
 
 // TODO(user) add operator>>(std::istream&, uint128)
 
@@ -290,55 +287,61 @@ constexpr uint64 Uint128High64(uint128 v) { return v.hi_; }
 #if defined(ABSL_IS_LITTLE_ENDIAN)
 
 constexpr uint128::uint128(uint64_t high, uint64_t low)
-    : lo_(low), hi_(high) {}
+    : lo_{low}, hi_{high} {}
 
 constexpr uint128::uint128(int v)
-    : lo_(v), hi_(v < 0 ? std::numeric_limits<uint64_t>::max() : 0) {}
+    : lo_{static_cast<uint64_t>(v)},
+      hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0} {}
 constexpr uint128::uint128(long v)  // NOLINT(runtime/int)
-    : lo_(v), hi_(v < 0 ? std::numeric_limits<uint64_t>::max() : 0) {}
+    : lo_{static_cast<uint64_t>(v)},
+      hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0} {}
 constexpr uint128::uint128(long long v)  // NOLINT(runtime/int)
-    : lo_(v), hi_(v < 0 ? std::numeric_limits<uint64_t>::max() : 0) {}
+    : lo_{static_cast<uint64_t>(v)},
+      hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0} {}
 
-constexpr uint128::uint128(unsigned int v) : lo_(v), hi_(0) {}
+constexpr uint128::uint128(unsigned int v) : lo_{v}, hi_{0} {}
 // NOLINTNEXTLINE(runtime/int)
-constexpr uint128::uint128(unsigned long v) : lo_(v), hi_(0) {}
+constexpr uint128::uint128(unsigned long v) : lo_{v}, hi_{0} {}
 // NOLINTNEXTLINE(runtime/int)
-constexpr uint128::uint128(unsigned long long v) : lo_(v), hi_(0) {}
+constexpr uint128::uint128(unsigned long long v) : lo_{v}, hi_{0} {}
 
 #ifdef ABSL_HAVE_INTRINSIC_INT128
 constexpr uint128::uint128(__int128 v)
-    : lo_(static_cast<uint64_t>(v & ~uint64_t{0})),
-      hi_(static_cast<uint64_t>(static_cast<unsigned __int128>(v) >> 64)) {}
+    : lo_{static_cast<uint64_t>(v & ~uint64_t{0})},
+      hi_{static_cast<uint64_t>(static_cast<unsigned __int128>(v) >> 64)} {}
 constexpr uint128::uint128(unsigned __int128 v)
-    : lo_(static_cast<uint64_t>(v & ~uint64_t{0})),
-      hi_(static_cast<uint64_t>(v >> 64)) {}
+    : lo_{static_cast<uint64_t>(v & ~uint64_t{0})},
+      hi_{static_cast<uint64_t>(v >> 64)} {}
 #endif  // ABSL_HAVE_INTRINSIC_INT128
 
 #elif defined(ABSL_IS_BIG_ENDIAN)
 
 constexpr uint128::uint128(uint64_t high, uint64_t low)
-    : hi_(high), lo_(low) {}
+    : hi_{high}, lo_{low} {}
 
 constexpr uint128::uint128(int v)
-    : hi_(v < 0 ? std::numeric_limits<uint64_t>::max() : 0), lo_(v) {}
+    : hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0},
+      lo_{static_cast<uint64_t>(v)} {}
 constexpr uint128::uint128(long v)  // NOLINT(runtime/int)
-    : hi_(v < 0 ? std::numeric_limits<uint64_t>::max() : 0), lo_(v) {}
+    : hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0},
+      lo_{static_cast<uint64_t>(v)} {}
 constexpr uint128::uint128(long long v)  // NOLINT(runtime/int)
-    : hi_(v < 0 ? std::numeric_limits<uint64_t>::max() : 0), lo_(v) {}
+    : hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0},
+      lo_{static_cast<uint64_t>(v)} {}
 
-constexpr uint128::uint128(unsigned int v) : hi_(0), lo_(v) {}
+constexpr uint128::uint128(unsigned int v) : hi_{0}, lo_{v} {}
 // NOLINTNEXTLINE(runtime/int)
-constexpr uint128::uint128(unsigned long v) : hi_(0), lo_(v) {}
+constexpr uint128::uint128(unsigned long v) : hi_{0}, lo_{v} {}
 // NOLINTNEXTLINE(runtime/int)
-constexpr uint128::uint128(unsigned long long v) : hi_(0), lo_(v) {}
+constexpr uint128::uint128(unsigned long long v) : hi_{0}, lo_{v} {}
 
 #ifdef ABSL_HAVE_INTRINSIC_INT128
 constexpr uint128::uint128(__int128 v)
-    : hi_(static_cast<uint64_t>(static_cast<unsigned __int128>(v) >> 64)),
-      lo_(static_cast<uint64_t>(v & ~uint64_t{0})) {}
+    : hi_{static_cast<uint64_t>(static_cast<unsigned __int128>(v) >> 64)},
+      lo_{static_cast<uint64_t>(v & ~uint64_t{0})} {}
 constexpr uint128::uint128(unsigned __int128 v)
-    : hi_(static_cast<uint64_t>(v >> 64)),
-      lo_(static_cast<uint64_t>(v & ~uint64_t{0})) {}
+    : hi_{static_cast<uint64_t>(v >> 64)},
+      lo_{static_cast<uint64_t>(v & ~uint64_t{0})} {}
 #endif  // ABSL_HAVE_INTRINSIC_INT128
 
 #else  // byte order
@@ -610,22 +613,6 @@ inline uint128& uint128::operator--() {
 }
 
 
-
-namespace int128_internal {
-
-// Casts from unsigned to signed while preserving the underlying binary
-// representation.
-constexpr int64_t BitCastToSigned(uint64_t v) {
-  // Casting an unsigned integer to a signed integer of the same
-  // width is implementation defined behavior if the source value would not fit
-  // in the destination type. We step around it with a roundtrip bitwise not
-  // operation to make sure this function remains constexpr. Clang, GCC, and
-  // MSVC optimize this to a no-op on x86-64.
-  return v & (uint64_t{1} << 63) ? ~static_cast<int64_t>(~v)
-                                 : static_cast<int64_t>(v);
-}
-
-}  // namespace int128_internal
 
 
 #if defined(ABSL_HAVE_INTRINSIC_INT128)

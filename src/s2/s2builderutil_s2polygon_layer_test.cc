@@ -61,6 +61,29 @@ void TestS2Polygon(const vector<const char*>& input_strs,
             s2textformat::ToString(output));
 }
 
+// Unlike the methods above, the input consists of a set of *polylines*.
+void TestS2PolygonError(const vector<const char*>& input_strs,
+                        S2Error::Code expected_error, EdgeType edge_type) {
+  SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
+  S2Builder builder((S2Builder::Options()));
+  S2Polygon output;
+  S2PolygonLayer::Options options(edge_type);
+  options.set_validate(true);
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output, options));
+  for (auto input_str : input_strs) {
+    builder.AddPolyline(*s2textformat::MakePolyline(input_str));
+  }
+  S2Error error;
+  ASSERT_FALSE(builder.Build(&error));
+  EXPECT_EQ(expected_error, error.code());
+}
+
+void TestS2PolygonError(const vector<const char*>& input_strs,
+                        S2Error::Code expected_error) {
+  TestS2PolygonError(input_strs, expected_error, EdgeType::DIRECTED);
+  TestS2PolygonError(input_strs, expected_error, EdgeType::UNDIRECTED);
+}
+
 void TestS2Polygon(const vector<const char*>& input_strs,
                    const char* expected_str) {
   TestS2Polygon(input_strs, expected_str, EdgeType::DIRECTED);
@@ -87,26 +110,13 @@ TEST(S2PolygonLayer, ThreeLoops) {
 }
 
 TEST(S2PolygonLayer, PartialLoop) {
-  S2Builder builder((S2Builder::Options()));
-  S2Polygon output;
-  builder.StartLayer(make_unique<S2PolygonLayer>(&output));
-  builder.AddPolyline(*MakePolylineOrDie("0:1, 2:3, 4:5"));
-  S2Error error;
-  EXPECT_FALSE(builder.Build(&error));
-  EXPECT_EQ(S2Error::BUILDER_EDGES_DO_NOT_FORM_LOOPS, error.code());
-  EXPECT_TRUE(output.is_empty());
+  TestS2PolygonError({"0:1, 2:3, 4:5"},
+                     S2Error::BUILDER_EDGES_DO_NOT_FORM_LOOPS);
 }
 
 TEST(S2PolygonLayer, InvalidPolygon) {
-  S2Builder builder((S2Builder::Options()));
-  S2Polygon output;
-  S2PolygonLayer::Options options;
-  options.set_validate(true);
-  builder.StartLayer(make_unique<S2PolygonLayer>(&output, options));
-  builder.AddPolyline(*MakePolylineOrDie("0:0, 0:10, 10:0, 10:10, 0:0"));
-  S2Error error;
-  EXPECT_FALSE(builder.Build(&error));
-  EXPECT_EQ(S2Error::LOOP_SELF_INTERSECTION, error.code());
+  TestS2PolygonError({"0:0, 0:10, 10:0, 10:10, 0:0"},
+                     S2Error::LOOP_SELF_INTERSECTION);
 }
 
 TEST(S2PolygonLayer, DuplicateInputEdges) {

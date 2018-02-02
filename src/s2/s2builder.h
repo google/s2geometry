@@ -462,10 +462,12 @@ class S2Builder {
 
   // Adds the loops in the given polygon.  Loops representing holes have their
   // edge directions automatically reversed as described for AddLoop().  Note
-  // that this method does not distinguish between the empty and full
-  // polygons, i.e. adding a full polygon has the same effect as adding an
-  // empty one.
+  // that this method does not distinguish between the empty and full polygons,
+  // i.e. adding a full polygon has the same effect as adding an empty one.
   void AddPolygon(const S2Polygon& polygon);
+
+  // Adds the edges of the given shape to the current layer.
+  void AddShape(const S2Shape& shape);
 
   // For layers that will be assembled into polygons, this method specifies a
   // predicate that will be called to determine whether the polygon is empty

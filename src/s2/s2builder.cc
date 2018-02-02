@@ -393,6 +393,13 @@ void S2Builder::AddPolygon(const S2Polygon& polygon) {
   }
 }
 
+void S2Builder::AddShape(const S2Shape& shape) {
+  for (int e = 0, n = shape.num_edges(); e < n; ++e) {
+    S2Shape::Edge edge = shape.edge(e);
+    AddEdge(edge.v0, edge.v1);
+  }
+}
+
 void S2Builder::AddIsFullPolygonPredicate(IsFullPolygonPredicate predicate) {
   layer_is_full_polygon_predicates_.back() = std::move(predicate);
 }
