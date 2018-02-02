@@ -157,10 +157,9 @@ class S2ClosestEdgeQuery {
     void set_inclusive_max_distance(S1Angle max_distance);
     void set_conservative_max_distance(S1Angle max_distance);
 
-    // Versions of set_max_error() that accept S1ChordAngle / S1Angle.
-    // (See S2ClosestEdgeQueryBaseOptions for details.)
-    void set_max_error(S1ChordAngle max_error);
-    void set_max_error(S1Angle max_error);
+    // See S2ClosestEdgeQueryBase::Options for documentation.
+    using Base::Options::set_max_error;     // S1Chordangle version
+    void set_max_error(S1Angle max_error);  // S1Angle version
 
     // Inherited options (see s2closest_edge_query_base.h for details):
     using Base::Options::set_max_edges;
@@ -337,12 +336,8 @@ inline void S2ClosestEdgeQuery::Options::set_inclusive_max_distance(
   set_inclusive_max_distance(S1ChordAngle(max_distance));
 }
 
-inline void S2ClosestEdgeQuery::Options::set_max_error(S1ChordAngle max_error) {
-  Base::Options::set_max_error(Distance(max_error));
-}
-
 inline void S2ClosestEdgeQuery::Options::set_max_error(S1Angle max_error) {
-  Base::Options::set_max_error(Distance(max_error));
+  Base::Options::set_max_error(S1ChordAngle(max_error));
 }
 
 inline S2ClosestEdgeQuery::PointTarget::PointTarget(const S2Point& point)

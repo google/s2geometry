@@ -30,24 +30,24 @@ namespace gtl {
 // btree_multimap.
 template <typename Tree>
 class btree_container {
-  typedef btree_container<Tree> self_type;
+  using self_type = btree_container<Tree>;
 
  public:
-  typedef typename Tree::params_type params_type;
-  typedef typename Tree::key_type key_type;
-  typedef typename Tree::value_type value_type;
-  typedef typename Tree::key_compare key_compare;
-  typedef typename Tree::allocator_type allocator_type;
-  typedef typename Tree::pointer pointer;
-  typedef typename Tree::const_pointer const_pointer;
-  typedef typename Tree::reference reference;
-  typedef typename Tree::const_reference const_reference;
-  typedef typename Tree::size_type size_type;
-  typedef typename Tree::difference_type difference_type;
-  typedef typename Tree::iterator iterator;
-  typedef typename Tree::const_iterator const_iterator;
-  typedef typename Tree::reverse_iterator reverse_iterator;
-  typedef typename Tree::const_reverse_iterator const_reverse_iterator;
+  using params_type = typename Tree::params_type;
+  using key_type = typename Tree::key_type;
+  using value_type = typename Tree::value_type;
+  using key_compare = typename Tree::key_compare;
+  using allocator_type = typename Tree::allocator_type;
+  using pointer = typename Tree::pointer;
+  using const_pointer = typename Tree::const_pointer;
+  using reference = typename Tree::reference;
+  using const_reference = typename Tree::const_reference;
+  using size_type = typename Tree::size_type;
+  using difference_type = typename Tree::difference_type;
+  using iterator = typename Tree::iterator;
+  using const_iterator = typename Tree::const_iterator;
+  using reverse_iterator = typename Tree::reverse_iterator;
+  using const_reverse_iterator = typename Tree::const_reverse_iterator;
 
  public:
   // Default constructor.
@@ -163,20 +163,20 @@ inline std::ostream& operator<<(std::ostream &os, const btree_container<T> &b) {
 // Base class for btree_set.
 template <typename Tree>
 class btree_unique_container : public btree_container<Tree> {
-  typedef btree_unique_container<Tree> self_type;
-  typedef btree_container<Tree> super_type;
+  using self_type = btree_unique_container<Tree>;
+  using super_type = btree_container<Tree>;
 
  public:
-  typedef typename Tree::key_type key_type;
-  typedef typename Tree::data_type data_type;
-  typedef typename Tree::value_type value_type;
-  typedef typename Tree::mutable_value_type mutable_value_type;
-  typedef typename Tree::mapped_type mapped_type;
-  typedef typename Tree::size_type size_type;
-  typedef typename Tree::key_compare key_compare;
-  typedef typename Tree::allocator_type allocator_type;
-  typedef typename Tree::iterator iterator;
-  typedef typename Tree::const_iterator const_iterator;
+  using key_type = typename Tree::key_type;
+  using data_type = typename Tree::data_type;
+  using value_type = typename Tree::value_type;
+  using mutable_value_type = typename Tree::mutable_value_type;
+  using mapped_type = typename Tree::mapped_type;
+  using size_type = typename Tree::size_type;
+  using key_compare = typename Tree::key_compare;
+  using allocator_type = typename Tree::allocator_type;
+  using iterator = typename Tree::iterator;
+  using const_iterator = typename Tree::const_iterator;
 
  public:
   // Default constructor.
@@ -270,17 +270,17 @@ inline void swap(btree_unique_container<Tree> &x,
 // Base class for btree_map.
 template <typename Tree>
 class btree_map_container : public btree_unique_container<Tree> {
-  typedef btree_map_container<Tree> self_type;
-  typedef btree_unique_container<Tree> super_type;
+  using self_type = btree_map_container<Tree>;
+  using super_type = btree_unique_container<Tree>;
 
  public:
-  typedef typename Tree::key_type key_type;
-  typedef typename Tree::data_type data_type;
-  typedef typename Tree::value_type value_type;
-  typedef typename Tree::mutable_value_type mutable_value_type;
-  typedef typename Tree::mapped_type mapped_type;
-  typedef typename Tree::key_compare key_compare;
-  typedef typename Tree::allocator_type allocator_type;
+  using key_type = typename Tree::key_type;
+  using data_type = typename Tree::data_type;
+  using value_type = typename Tree::value_type;
+  using mutable_value_type = typename Tree::mutable_value_type;
+  using mapped_type = typename Tree::mapped_type;
+  using key_compare = typename Tree::key_compare;
+  using allocator_type = typename Tree::allocator_type;
 
  private:
   // A pointer-like object which only generates its value when
@@ -350,18 +350,18 @@ inline void swap(btree_map_container<Tree> &x, btree_map_container<Tree> &y) {
 // A common base class for btree_multiset and btree_multimap.
 template <typename Tree>
 class btree_multi_container : public btree_container<Tree> {
-  typedef btree_multi_container<Tree> self_type;
-  typedef btree_container<Tree> super_type;
+  using self_type = btree_multi_container<Tree>;
+  using super_type = btree_container<Tree>;
 
  public:
-  typedef typename Tree::key_type key_type;
-  typedef typename Tree::value_type value_type;
-  typedef typename Tree::mapped_type mapped_type;
-  typedef typename Tree::size_type size_type;
-  typedef typename Tree::key_compare key_compare;
-  typedef typename Tree::allocator_type allocator_type;
-  typedef typename Tree::iterator iterator;
-  typedef typename Tree::const_iterator const_iterator;
+  using key_type = typename Tree::key_type;
+  using value_type = typename Tree::value_type;
+  using mapped_type = typename Tree::mapped_type;
+  using size_type = typename Tree::size_type;
+  using key_compare = typename Tree::key_compare;
+  using allocator_type = typename Tree::allocator_type;
+  using iterator = typename Tree::iterator;
+  using const_iterator = typename Tree::const_iterator;
 
  public:
   // Default constructor.

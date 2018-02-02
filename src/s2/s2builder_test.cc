@@ -103,6 +103,17 @@ void ExpectPolylinesEqual(const S2Polyline& expected,
       << "\nActual:\n" << s2textformat::ToString(actual);
 }
 
+TEST(S2Builder, AddShape) {
+  S2Builder builder{S2Builder::Options()};
+  S2Polygon output;
+  builder.StartLayer(make_unique<S2PolygonLayer>(&output));
+  auto input = MakePolygonOrDie("0:0, 0:5, 5:5, 5:0; 1:1, 1:4, 4:4, 4:1");
+  builder.AddShape(*input->index().shape(0));
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error)) << error;
+  ExpectPolygonsEqual(*input, output);
+}
+
 TEST(S2Builder, SimpleVertexMerging) {
   // When IdentitySnapFunction is used (i.e., no special requirements on
   // vertex locations), check that vertices closer together than the snap
