@@ -31,6 +31,7 @@
 #include "s2/_fp_contract_off.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2debug.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2pointutil.h"
@@ -728,7 +729,7 @@ T S2Loop::GetSurfaceIntegral(T f_tri(const S2Point&, const S2Point&,
   // The exact value is fairly arbitrary since it depends on the stability of
   // the "f_tri" function.  The value below is quite conservative but could be
   // reduced further if desired.
-  static const double kMaxLength = M_PI - 1e-5;
+  const auto kMaxLength = S1ChordAngle::Radians(M_PI - 1e-5);
 
   // The default constructor for T must initialize the value to zero.
   // (This is true for built-in types such as "double".)
@@ -745,10 +746,10 @@ T S2Loop::GetSurfaceIntegral(T f_tri(const S2Point&, const S2Point&,
     //  2. Either O == V_0, or O is approximately perpendicular to V_0.
     //  3. "sum" is the oriented integral of f over the area defined by
     //     (O, V_0, V_1, ..., V_i).
-    DCHECK(i == 1 || origin.Angle(vertex(i)) < kMaxLength);
+    DCHECK(i == 1 || S1ChordAngle(origin, vertex(i)) < kMaxLength);
     DCHECK(origin == vertex(0) || std::fabs(origin.DotProd(vertex(0))) < 1e-15);
 
-    if (vertex(i+1).Angle(origin) > kMaxLength) {
+    if (S1ChordAngle(vertex(i + 1), origin) > kMaxLength) {
       // We are about to create an unstable edge, so choose a new origin O'
       // for the triangle fan.
       S2Point old_origin = origin;
@@ -756,7 +757,7 @@ T S2Loop::GetSurfaceIntegral(T f_tri(const S2Point&, const S2Point&,
         // The following point is well-separated from V_i and V_0 (and
         // therefore V_i+1 as well).
         origin = S2::RobustCrossProd(vertex(0), vertex(i)).Normalize();
-      } else if (vertex(i).Angle(vertex(0)) < kMaxLength) {
+      } else if (S1ChordAngle(vertex(i), vertex(0)) < kMaxLength) {
         // All edges of the triangle (O, V_0, V_i) are stable, so we can
         // revert to using V_0 as the origin.
         origin = vertex(0);
