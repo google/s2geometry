@@ -120,7 +120,7 @@ TEST(S2Builder, SimpleVertexMerging) {
   // radius are merged together.
 
   S1Angle snap_radius = S1Angle::Degrees(0.5);
-  S2Builder builder((S2Builder::Options(IdentitySnapFunction(snap_radius))));
+  S2Builder builder{S2Builder::Options(IdentitySnapFunction(snap_radius))};
   S2Polygon output;
   builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   unique_ptr<S2Polygon> input = MakePolygonOrDie(
@@ -138,7 +138,7 @@ TEST(S2Builder, SimpleS2CellIdSnapping) {
 
   int level = S2CellIdSnapFunction::LevelForMaxSnapRadius(S1Angle::Degrees(1));
   S2CellIdSnapFunction snap_function(level);
-  S2Builder builder((S2Builder::Options(snap_function)));
+  S2Builder builder{S2Builder::Options(snap_function)};
   S2Polygon output;
   builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   unique_ptr<S2Polygon> input = MakePolygonOrDie(
@@ -288,7 +288,7 @@ TEST(S2Builder, IdempotencySnapsUnsnappedVertices) {
   IntLatLngSnapFunction snap_function(0);
   EXPECT_GE(snap_function.snap_radius(), S1Angle::Degrees(0.7));
   EXPECT_LE(snap_function.min_vertex_separation(), S1Angle::Degrees(0.35));
-  S2Builder builder((S2Builder::Options(snap_function)));
+  S2Builder builder{S2Builder::Options(snap_function)};
 
   // In this example, the snapped vertex (0, 0) is processed first and is
   // selected as a Voronoi site (i.e., output vertex).  The second vertex is
@@ -383,7 +383,7 @@ TEST(S2Builder, S2CellIdSnappingAtAllLevels) {
       "0:0, 0:2, 2:0; 0:0, 0:-2, -2:-2, -2:0");
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
     S2CellIdSnapFunction snap_function(level);
-    S2Builder builder((S2Builder::Options(snap_function)));
+    S2Builder builder{S2Builder::Options(snap_function)};
     S2Polygon output;
     builder.StartLayer(make_unique<S2PolygonLayer>(&output));
     builder.AddPolygon(*input);
@@ -544,7 +544,7 @@ TEST(S2Builder, GraphPersistence) {
   // remain valid until all layers have been built.
   vector<Graph> graphs;
   vector<unique_ptr<GraphClone>> clones;
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   for (int i = 0; i < 20; ++i) {
     builder.StartLayer(make_unique<GraphPersistenceLayer>(
         GraphOptions(), &graphs, &clones));
@@ -1310,7 +1310,7 @@ TEST(S2Builder, OldS2PolygonBuilderBug) {
   ASSERT_TRUE(input->IsValid());
 
   S1Angle snap_radius = S2Testing::MetersToAngle(20/0.866);
-  S2Builder builder((S2Builder::Options(IdentitySnapFunction(snap_radius))));
+  S2Builder builder{S2Builder::Options(IdentitySnapFunction(snap_radius))};
   S2Polygon output;
   builder.StartLayer(make_unique<S2PolygonLayer>(&output));
   builder.AddPolygon(*input);

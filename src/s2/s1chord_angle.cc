@@ -35,15 +35,6 @@ using std::nextafter;
 
 static constexpr double kMaxLength2 = 4.0;
 
-S1ChordAngle::S1ChordAngle(const S2Point& x, const S2Point& y) {
-  DCHECK(S2::IsUnitLength(x));
-  DCHECK(S2::IsUnitLength(y));
-  // The distance may slightly exceed kMaxLength2 due to roundoff errors.
-  // The maximum error in the result is 2 * DBL_EPSILON * length2_.
-  length2_ = min(kMaxLength2, (x - y).Norm2());
-  DCHECK(is_valid());
-}
-
 S1ChordAngle::S1ChordAngle(S1Angle angle) {
   if (angle.radians() < 0) {
     *this = Negative();

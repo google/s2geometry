@@ -25,6 +25,7 @@
 
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
+#include "s2/s2pointutil.h"
 
 // S1ChordAngle represents the angle subtended by a chord (i.e., the straight
 // line segment connecting two points on the sphere).  Its representation
@@ -229,6 +230,15 @@ class S1ChordAngle {
 
 //////////////////   Implementation details follow   ////////////////////
 
+
+inline S1ChordAngle::S1ChordAngle(const S2Point& x, const S2Point& y) {
+  DCHECK(S2::IsUnitLength(x));
+  DCHECK(S2::IsUnitLength(y));
+  // The squared distance may slightly exceed 4.0 due to roundoff errors.
+  // The maximum error in the result is 2 * DBL_EPSILON * length2_.
+  length2_ = std::min(4.0, (x - y).Norm2());
+  DCHECK(is_valid());
+}
 
 inline S1ChordAngle S1ChordAngle::FromLength2(double length2) {
   return S1ChordAngle(std::min(4.0, length2));

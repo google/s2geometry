@@ -144,6 +144,13 @@ class S2LatLng {
   R2Point coords_;
 };
 
+// Hasher for S2LatLng.
+// Example use: std::unordered_map<S2LatLng, int, S2LatLngHash>.
+struct S2LatLngHash {
+  size_t operator()(const S2LatLng& lat_lng) const {
+    return GoodFastHash<R2Point>()(lat_lng.coords());
+  }
+};
 
 //////////////////   Implementation details follow   ////////////////////
 

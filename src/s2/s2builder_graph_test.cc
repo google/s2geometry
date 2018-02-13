@@ -60,7 +60,7 @@ namespace s2builder {
 
 TEST(GetDirectedLoops, DegenerateEdges) {
   GraphClone gc;
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   GraphOptions graph_options(
       EdgeType::DIRECTED, DegenerateEdges::DISCARD_EXCESS,
       DuplicateEdges::KEEP, SiblingPairs::KEEP);
@@ -81,7 +81,7 @@ TEST(GetDirectedLoops, DegenerateEdges) {
 
 TEST(GetDirectedComponents, DegenerateEdges) {
   GraphClone gc;
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   GraphOptions graph_options(
       EdgeType::DIRECTED, DegenerateEdges::DISCARD_EXCESS,
       DuplicateEdges::MERGE, SiblingPairs::CREATE);
@@ -104,7 +104,7 @@ TEST(GetDirectedComponents, DegenerateEdges) {
 
 TEST(GetUndirectedComponents, DegenerateEdges) {
   GraphClone gc;
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   GraphOptions graph_options(
       EdgeType::UNDIRECTED, DegenerateEdges::DISCARD_EXCESS,
       DuplicateEdges::KEEP, SiblingPairs::DISCARD_EXCESS);
@@ -134,7 +134,7 @@ TEST(GetUndirectedComponents, DegenerateEdges) {
 
 TEST(GetPolylines, UndirectedDegeneratePaths) {
   GraphClone gc;
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   GraphOptions graph_options(
       EdgeType::UNDIRECTED, DegenerateEdges::KEEP,
       DuplicateEdges::KEEP, SiblingPairs::KEEP);
@@ -151,7 +151,7 @@ TEST(GetPolylines, UndirectedDegeneratePaths) {
 
 TEST(GetPolylines, UndirectedDegenerateWalks) {
   GraphClone gc;
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   GraphOptions graph_options(
       EdgeType::UNDIRECTED, DegenerateEdges::KEEP,
       DuplicateEdges::KEEP, SiblingPairs::KEEP);
