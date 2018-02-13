@@ -1043,7 +1043,7 @@ void S2Polygon::InitFromBuilder(const S2Polygon& a, S2Builder* builder) {
 }
 
 void S2Polygon::InitToSnapped(const S2Polygon* a, int snap_level) {
-  S2Builder builder((S2Builder::Options(S2CellIdSnapFunction(snap_level))));
+  S2Builder builder{S2Builder::Options(S2CellIdSnapFunction(snap_level))};
   InitFromBuilder(*a, &builder);
 }
 
@@ -1333,8 +1333,8 @@ void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
   // that distance, then we should always merge shared edges without merging
   // different edges.
   double snap_radius = 0.5 * S2::kMinWidth.GetValue(S2CellId::kMaxLevel);
-  S2Builder builder((S2Builder::Options(
-      IdentitySnapFunction(S1Angle::Radians(snap_radius)))));
+  S2Builder builder{S2Builder::Options(
+      IdentitySnapFunction(S1Angle::Radians(snap_radius)))};
   builder.StartLayer(make_unique<S2PolygonLayer>(this));
   for (S2CellId id : cells) {
     builder.AddLoop(S2Loop{S2Cell{id}});

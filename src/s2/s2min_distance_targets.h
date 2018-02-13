@@ -137,7 +137,7 @@ class S2MinDistanceCellTarget : public S2MinDistanceTarget {
 //
 // These options are specified independently of the corresponding
 // S2ClosestEdgeQuery options.  For example, if include_interiors is true for
-// an ShapeIndexTarget but false for the S2ClosestEdgeQuery where the target
+// a ShapeIndexTarget but false for the S2ClosestEdgeQuery where the target
 // is used, then distances will be measured from the boundary of one
 // S2ShapeIndex to the boundary and interior of the other.
 //

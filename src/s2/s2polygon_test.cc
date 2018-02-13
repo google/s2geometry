@@ -61,6 +61,7 @@
 #include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
+#include "s2/util/gtl/legacy_random_shuffle.h"
 #include "s2/util/math/matrix3x3.h"
 
 using absl::StrCat;
@@ -339,7 +340,7 @@ S2PolygonTestBase::S2PolygonTestBase()
 static void CheckEqual(const S2Polygon& a, const S2Polygon& b,
                        S1Angle max_error = S1Angle::Zero()) {
   if (a.BoundaryApproxEquals(b, max_error)) return;
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   S2Polygon a2, b2;
   builder.StartLayer(make_unique<S2PolygonLayer>(&a2));
   builder.AddPolygon(a);
@@ -456,7 +457,7 @@ static void TestOneDisjointPair(const S2Polygon& a, const S2Polygon& b) {
   EXPECT_EQ(a.is_empty(), b.Contains(&a));
 
   S2Polygon ab, c, d, e, f, g;
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   builder.StartLayer(make_unique<S2PolygonLayer>(&ab));
   builder.AddPolygon(a);
   builder.AddPolygon(b);
@@ -1663,7 +1664,7 @@ TEST_F(S2PolygonTestBase, PolylineIntersection) {
       }
     }
 
-    S2Builder builder((S2Builder::Options()));
+    S2Builder builder{S2Builder::Options()};
     S2Polygon a_and_b;
     builder.StartLayer(make_unique<s2builderutil::S2PolygonLayer>(&a_and_b));
     for (const auto& polyline : polylines) {
@@ -1715,7 +1716,7 @@ static unique_ptr<S2Polygon> ChoosePiece(
 
 static void SplitAndAssemble(const S2Polygon& polygon) {
   // Normalize the polygon's loop structure by rebuilding it with S2Builder.
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   S2Polygon expected;
   builder.StartLayer(make_unique<s2builderutil::S2PolygonLayer>(&expected));
   builder.AddPolygon(polygon);
@@ -2257,7 +2258,11 @@ class IsValidTest : public testing::Test {
     for (vector<S2Point>* vloop : vloops_) {
       loops.push_back(make_unique<S2Loop>(*vloop, S2Debug::DISABLE));
     }
-    std::random_shuffle(loops.begin(), loops.end(), *rnd_);
+    // Cannot replace with std::shuffle (b/65670707) since this uses an
+    // incompatible random source which is also used as a source of randomness
+    // in the surrounding code.
+    // NOLINTNEXTLINE
+    gtl::legacy_random_shuffle(loops.begin(), loops.end(), *rnd_);
     S2Polygon polygon;
     polygon.set_s2debug_override(S2Debug::DISABLE);
     if (init_oriented_) {

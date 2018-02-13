@@ -145,7 +145,7 @@ TEST(S2PolylineLayer, SplitEdges) {
 }
 
 TEST(S2PolylineLayer, SimpleEdgeLabels) {
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   S2Polyline output;
   S2PolylineLayer::LabelSetIds label_set_ids;
   IdSetLexicon label_set_lexicon;
@@ -175,7 +175,7 @@ TEST(S2PolylineLayer, SimpleEdgeLabels) {
 }
 
 TEST(S2PolylineLayer, InvalidPolyline) {
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   S2Polyline output;
   S2PolylineLayer::Options options;
   options.set_validate(true);
@@ -192,7 +192,7 @@ TEST(S2PolylineLayer, InvalidPolyline) {
 
 
 TEST(IndexedS2PolylineLayer, AddsShape) {
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolylineLayer>(&index));
   const string& polyline_str = "0:0, 0:10";
@@ -206,7 +206,7 @@ TEST(IndexedS2PolylineLayer, AddsShape) {
 }
 
 TEST(IndexedS2PolylineLayer, AddsEmptyShape) {
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolylineLayer>(&index));
   S2Polyline line;

@@ -410,7 +410,7 @@ class S2Builder {
   // Convenience constructor that calls Init().  Note that to use the default
   // options, C++ syntax requires an extra layer of parentheses:
   //
-  //   S2Builder builder((S2Builder::Options()));
+  //   S2Builder builder{S2Builder::Options()};
   explicit S2Builder(const Options& options);
 
   // Initializes an S2Builder with the given options.

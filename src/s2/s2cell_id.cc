@@ -23,10 +23,10 @@
 #include <iosfwd>
 #include <vector>
 
-#include "s2/base/casts.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include <mutex>
+#include "s2/third_party/absl/base/casts.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/r1interval.h"
 #include "s2/s2coords.h"
@@ -261,7 +261,7 @@ S2CellId S2CellId::FromFaceIJ(int face, int i, int j) {
 
   // Note that this value gets shifted one bit to the left at the end
   // of the function.
-  uint64 n = implicit_cast<uint64>(face) << (kPosBits - 1);
+  uint64 n = absl::implicit_cast<uint64>(face) << (kPosBits - 1);
 
   // Alternating faces have opposite Hilbert curve orientations; this
   // is necessary in order for all faces to have a right-handed

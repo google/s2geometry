@@ -45,7 +45,7 @@ namespace {
 void TestS2Polygon(const vector<const char*>& input_strs,
                    const char* expected_str, EdgeType edge_type) {
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   S2Polygon output;
   builder.StartLayer(make_unique<S2PolygonLayer>(
       &output, S2PolygonLayer::Options(edge_type)));
@@ -65,7 +65,7 @@ void TestS2Polygon(const vector<const char*>& input_strs,
 void TestS2PolygonError(const vector<const char*>& input_strs,
                         S2Error::Code expected_error, EdgeType edge_type) {
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   S2Polygon output;
   S2PolygonLayer::Options options(edge_type);
   options.set_validate(true);
@@ -122,7 +122,7 @@ TEST(S2PolygonLayer, InvalidPolygon) {
 TEST(S2PolygonLayer, DuplicateInputEdges) {
   // Check that S2PolygonLayer can assemble polygons even when there are
   // duplicate edges (after sibling pairs are removed).
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   S2Polygon output;
   S2PolygonLayer::Options options;
   options.set_validate(true);
@@ -159,7 +159,7 @@ void AddPolylineWithLabels(const S2Polyline& polyline, EdgeType edge_type,
 }
 
 static void TestEdgeLabels(EdgeType edge_type) {
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   S2Polygon output;
   S2PolygonLayer::LabelSetIds label_set_ids;
   IdSetLexicon label_set_lexicon;
@@ -278,7 +278,7 @@ TEST(S2PolygonLayer, SevenDiamondsTouchingAtOnePointPerPair) {
 }
 
 TEST(IndexedS2PolygonLayer, AddsShape) {
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolygonLayer>(&index));
   const string& polygon_str = "0:0, 0:10, 10:0";
@@ -292,7 +292,7 @@ TEST(IndexedS2PolygonLayer, AddsShape) {
 }
 
 TEST(IndexedS2PolygonLayer, AddsEmptyShape) {
-  S2Builder builder((S2Builder::Options()));
+  S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolygonLayer>(&index));
   S2Polygon polygon;

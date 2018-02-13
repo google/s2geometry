@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "s2/third_party/absl/base/attributes.h"
 #include "s2/third_party/absl/base/config.h"
 #include "s2/third_party/absl/base/internal/atomic_hook.h"
 #include "s2/third_party/absl/base/log_severity.h"
@@ -81,6 +82,8 @@ static const char kTruncated[] = " ... (message truncated)\n";
 // consumed bytes, and return whether the message fit without truncation.  If
 // truncation occurred, if possible leave room in the buffer for the message
 // kTruncated[].
+inline static bool VADoRawLog(char** buf, int* size, const char* format,
+                              va_list ap) ABSL_PRINTF_ATTRIBUTE(3, 0);
 inline static bool VADoRawLog(char** buf, int* size,
                               const char* format, va_list ap) {
   int n = vsnprintf(*buf, *size, format, ap);
@@ -132,6 +135,8 @@ bool DoRawLog(char** buf, int* size, const char* format, ...) {
   return true;
 }
 
+void RawLogVA(absl::LogSeverity severity, const char* file, int line,
+              const char* format, va_list ap) ABSL_PRINTF_ATTRIBUTE(4, 0);
 void RawLogVA(absl::LogSeverity severity, const char* file, int line,
               const char* format, va_list ap) {
   char buffer[kLogBufSize];
@@ -207,6 +212,8 @@ void SafeWriteToStderr(const char *s, size_t len) {
 #endif
 }
 
+void RawLog(absl::LogSeverity severity, const char* file, int line,
+            const char* format, ...) ABSL_PRINTF_ATTRIBUTE(4, 5);
 void RawLog(absl::LogSeverity severity, const char* file, int line,
             const char* format, ...) {
   va_list ap;

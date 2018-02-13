@@ -17,9 +17,10 @@
 // File: int128.h
 // -----------------------------------------------------------------------------
 //
-// This header file defines 128-bit integer types. Currently, this file defines
-// `uint128`, an unsigned 128-bit integer; a signed 128-bit integer is
-// forthcoming.
+// This header file defines 128-bit integer types.
+//
+//
+//
 
 #ifndef S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_
 #define S2_THIRD_PARTY_ABSL_NUMERIC_INT128_H_
@@ -37,6 +38,7 @@
 #include "s2/third_party/absl/base/port.h"
 
 namespace absl {
+
 
 // uint128
 //
@@ -207,10 +209,6 @@ std::ostream& operator<<(std::ostream& os, uint128 v);
 
 // TODO(user) add operator>>(std::istream&, uint128)
 
-// TODO(absl-team): Implement signed 128-bit type
-
-
-// TODO(absl-team) add operator>>(std::istream&, int128)
 
 // --------------------------------------------------------------------------
 //                      Implementation details follow
@@ -262,21 +260,51 @@ inline uint128& uint128::operator=(unsigned __int128 v) {
 }
 #endif  // ABSL_HAVE_INTRINSIC_INT128
 
-// Shift and arithmetic operators.
 
-inline uint128 operator<<(uint128 lhs, int amount) { return lhs <<= amount; }
+// Arithmetic operators.
 
-inline uint128 operator>>(uint128 lhs, int amount) { return lhs >>= amount; }
+uint128 operator<<(uint128 lhs, int amount);
+uint128 operator>>(uint128 lhs, int amount);
+uint128 operator+(uint128 lhs, uint128 rhs);
+uint128 operator-(uint128 lhs, uint128 rhs);
+uint128 operator*(uint128 lhs, uint128 rhs);
+uint128 operator/(uint128 lhs, uint128 rhs);
+uint128 operator%(uint128 lhs, uint128 rhs);
 
-inline uint128 operator+(uint128 lhs, uint128 rhs) { return lhs += rhs; }
+inline uint128& uint128::operator<<=(int amount) {
+  *this = *this << amount;
+  return *this;
+}
 
-inline uint128 operator-(uint128 lhs, uint128 rhs) { return lhs -= rhs; }
+inline uint128& uint128::operator>>=(int amount) {
+  *this = *this >> amount;
+  return *this;
+}
 
-inline uint128 operator*(uint128 lhs, uint128 rhs) { return lhs *= rhs; }
+inline uint128& uint128::operator+=(uint128 other) {
+  *this = *this + other;
+  return *this;
+}
 
-inline uint128 operator/(uint128 lhs, uint128 rhs) { return lhs /= rhs; }
+inline uint128& uint128::operator-=(uint128 other) {
+  *this = *this - other;
+  return *this;
+}
 
-inline uint128 operator%(uint128 lhs, uint128 rhs) { return lhs %= rhs; }
+inline uint128& uint128::operator*=(uint128 other) {
+  *this = *this * other;
+  return *this;
+}
+
+inline uint128& uint128::operator/=(uint128 other) {
+  *this = *this / other;
+  return *this;
+}
+
+inline uint128& uint128::operator%=(uint128 other) {
+  *this = *this % other;
+  return *this;
+}
 
 constexpr uint64 Uint128Low64(uint128 v) { return v.lo_; }
 
@@ -314,6 +342,7 @@ constexpr uint128::uint128(unsigned __int128 v)
       hi_{static_cast<uint64_t>(v >> 64)} {}
 #endif  // ABSL_HAVE_INTRINSIC_INT128
 
+
 #elif defined(ABSL_IS_BIG_ENDIAN)
 
 constexpr uint128::uint128(uint64_t high, uint64_t low)
@@ -343,6 +372,7 @@ constexpr uint128::uint128(unsigned __int128 v)
     : hi_{static_cast<uint64_t>(v >> 64)},
       lo_{static_cast<uint64_t>(v & ~uint64_t{0})} {}
 #endif  // ABSL_HAVE_INTRINSIC_INT128
+
 
 #else  // byte order
 #error "Unsupported byte order: must be little-endian or big-endian."
@@ -514,77 +544,72 @@ inline uint128& uint128::operator^=(uint128 other) {
   return *this;
 }
 
-// Shift and arithmetic assign operators.
+// Arithmetic operators.
 
-inline uint128& uint128::operator<<=(int amount) {
-  assert(amount >= 0);   // Negative shifts are undefined.
-  assert(amount < 128);  // Shifts of >= 128 are undefined.
-
+inline uint128 operator<<(uint128 lhs, int amount) {
   // uint64_t shifts of >= 64 are undefined, so we will need some
   // special-casing.
   if (amount < 64) {
     if (amount != 0) {
-      hi_ = (hi_ << amount) | (lo_ >> (64 - amount));
-      lo_ = lo_ << amount;
+      return MakeUint128(
+          (Uint128High64(lhs) << amount) | (Uint128Low64(lhs) >> (64 - amount)),
+          Uint128Low64(lhs) << amount);
     }
-  } else {
-    hi_ = lo_ << (amount - 64);
-    lo_ = 0;
+    return lhs;
   }
-  return *this;
+  return MakeUint128(Uint128Low64(lhs) << (amount - 64), 0);
 }
 
-inline uint128& uint128::operator>>=(int amount) {
-  assert(amount >= 0);   // Negative shifts are undefined.
-  assert(amount < 128);  // Shifts of >= 128 are undefined.
-
+inline uint128 operator>>(uint128 lhs, int amount) {
   // uint64_t shifts of >= 64 are undefined, so we will need some
   // special-casing.
   if (amount < 64) {
     if (amount != 0) {
-      lo_ = (lo_ >> amount) | (hi_ << (64 - amount));
-      hi_ = hi_ >> amount;
+      return MakeUint128(Uint128High64(lhs) >> amount,
+                         (Uint128Low64(lhs) >> amount) |
+                             (Uint128High64(lhs) << (64 - amount)));
     }
-  } else {
-    lo_ = hi_ >> (amount - 64);
-    hi_ = 0;
+    return lhs;
   }
-  return *this;
+  return MakeUint128(0, Uint128High64(lhs) >> (amount - 64));
 }
 
-inline uint128& uint128::operator+=(uint128 other) {
-  hi_ += other.hi_;
-  uint64_t lolo = lo_ + other.lo_;
-  if (lolo < lo_)
-    ++hi_;
-  lo_ = lolo;
-  return *this;
+inline uint128 operator+(uint128 lhs, uint128 rhs) {
+  uint128 result = MakeUint128(Uint128High64(lhs) + Uint128High64(rhs),
+                               Uint128Low64(lhs) + Uint128Low64(rhs));
+  if (Uint128Low64(result) < Uint128Low64(lhs)) {  // check for carry
+    return MakeUint128(Uint128High64(result) + 1, Uint128Low64(result));
+  }
+  return result;
 }
 
-inline uint128& uint128::operator-=(uint128 other) {
-  hi_ -= other.hi_;
-  if (other.lo_ > lo_) --hi_;
-  lo_ -= other.lo_;
-  return *this;
+inline uint128 operator-(uint128 lhs, uint128 rhs) {
+  uint128 result = MakeUint128(Uint128High64(lhs) - Uint128High64(rhs),
+                               Uint128Low64(lhs) - Uint128Low64(rhs));
+  if (Uint128Low64(lhs) < Uint128Low64(rhs)) {  // check for carry
+    return MakeUint128(Uint128High64(result) - 1, Uint128Low64(result));
+  }
+  return result;
 }
 
-inline uint128& uint128::operator*=(uint128 other) {
+inline uint128 operator*(uint128 lhs, uint128 rhs) {
 #if defined(ABSL_HAVE_INTRINSIC_INT128)
   // TODO(user) Remove once alignment issues are resolved and unsigned __int128
   // can be used for uint128 storage.
-  *this = static_cast<unsigned __int128>(*this) *
-          static_cast<unsigned __int128>(other);
-  return *this;
+  return static_cast<unsigned __int128>(lhs) *
+         static_cast<unsigned __int128>(rhs);
 #else   // ABSL_HAVE_INTRINSIC128
-  uint64_t a32 = lo_ >> 32;
-  uint64_t a00 = lo_ & 0xffffffff;
-  uint64_t b32 = other.lo_ >> 32;
-  uint64_t b00 = other.lo_ & 0xffffffff;
-  hi_ = hi_ * other.lo_ + lo_ * other.hi_ + a32 * b32;
-  lo_ = a00 * b00;
-  *this += uint128(a32 * b00) << 32;
-  *this += uint128(a00 * b32) << 32;
-  return *this;
+  uint64_t a32 = Uint128Low64(lhs) >> 32;
+  uint64_t a00 = Uint128Low64(lhs) & 0xffffffff;
+  uint64_t b32 = Uint128Low64(rhs) >> 32;
+  uint64_t b00 = Uint128Low64(rhs) & 0xffffffff;
+  uint128 result =
+      MakeUint128(Uint128High64(lhs) * Uint128Low64(rhs) +
+                      Uint128Low64(lhs) * Uint128High64(rhs) + a32 * b32,
+                  a00 * b00);
+  result += uint128(a32 * b00) << 32;
+  result += uint128(a00 * b32) << 32;
+  return result;
 #endif  // ABSL_HAVE_INTRINSIC128
 }
 

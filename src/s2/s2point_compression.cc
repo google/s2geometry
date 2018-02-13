@@ -19,10 +19,10 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/casts.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
 #include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/base/casts.h"
 #include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/third_party/absl/types/span.h"
 #include "s2/util/bits/bit-interleave.h"
@@ -57,7 +57,7 @@ struct FaceRun {
     // but since this would only help if there were more than 21 faces, it will
     // be a small overall savings, much smaller than the bound encoding.
     encoder->put_varint64(
-        S2CellId::kNumFaces * implicit_cast<int64>(count) + face);
+        S2CellId::kNumFaces * absl::implicit_cast<int64>(count) + face);
     DCHECK_GE(encoder->avail(), 0);
   }
 

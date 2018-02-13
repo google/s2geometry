@@ -78,6 +78,7 @@ add_library(s2 SHARED
             src/s2/s2edge_distances.cc
             src/s2/s2edge_tessellator.cc
             src/s2/s2error.cc
+            src/s2/s2furthest_edge_query.cc
             src/s2/s2latlng.cc
             src/s2/s2latlng_rect.cc
             src/s2/s2latlng_rect_bounder.cc
@@ -87,6 +88,7 @@ add_library(s2 SHARED
             src/s2/s2loop.cc
             src/s2/s2measures.cc
             src/s2/s2metrics.cc
+            src/s2/s2max_distance_targets.cc
             src/s2/s2min_distance_targets.cc
             src/s2/s2padded_cell.cc
             src/s2/s2point_compression.cc
@@ -140,8 +142,8 @@ target_link_libraries(
     ${CMAKE_THREAD_LIBS_INIT})
 
 # Allow other CMake projects to use this one with:
-# list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_folder>/third_party/cmake")
-# add_subdirectory(<path_to_s2geometry_folder> s2geometry)
+# list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
+# add_subdirectory(<path_to_s2geometry_dir> s2geometry)
 # target_link_libraries(<target_name> s2)
 target_include_directories(s2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
@@ -194,6 +196,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2edge_tessellator.h
               src/s2/s2edge_vector_shape.h
               src/s2/s2error.h
+              src/s2/s2furthest_edge_query.h
               src/s2/s2latlng.h
               src/s2/s2latlng_rect.h
               src/s2/s2latlng_rect_bounder.h
@@ -203,6 +206,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2loop.h
               src/s2/s2measures.h
               src/s2/s2metrics.h
+              src/s2/s2max_distance_targets.h
               src/s2/s2min_distance_targets.h
               src/s2/s2padded_cell.h
               src/s2/s2point.h
@@ -358,6 +362,7 @@ if (GTEST_ROOT)
       src/s2/s2edge_tessellator_test.cc
       src/s2/s2edge_vector_shape_test.cc
       src/s2/s2error_test.cc
+      src/s2/s2furthest_edge_query_test.cc
       src/s2/s2latlng_test.cc
       src/s2/s2latlng_rect_bounder_test.cc
       src/s2/s2latlng_rect_test.cc
@@ -367,6 +372,7 @@ if (GTEST_ROOT)
       src/s2/s2loop_test.cc
       src/s2/s2measures_test.cc
       src/s2/s2metrics_test.cc
+      src/s2/s2max_distance_targets_test.cc
       src/s2/s2min_distance_targets_test.cc
       src/s2/s2padded_cell_test.cc
       src/s2/s2point_test.cc

@@ -27,6 +27,7 @@
 #include <vector>
 
 #include <glog/logging.h>
+#include "s2/third_party/absl/base/casts.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_union.h"
@@ -113,7 +114,7 @@ S2RegionCoverer::Candidate* S2RegionCoverer::NewCandidate(const S2Cell& cell) {
   candidate->num_children = 0;
   if (!is_terminal) {
     std::fill_n(&candidate->children[0], 1 << max_children_shift(),
-                implicit_cast<Candidate*>(nullptr));
+                absl::implicit_cast<Candidate*>(nullptr));
   }
   ++candidates_created_counter_;
   return candidate;
