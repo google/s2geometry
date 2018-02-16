@@ -4,7 +4,7 @@
 // open source releases of s2.
 
 %{
-#include <strstream>
+#include <sstream>
 
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"
@@ -489,7 +489,7 @@ class S2Point {
 %define USE_STREAM_INSERTOR_FOR_STR(type)
   %extend type {
     string __str__() {
-      std::ostrstream output;
+      std::ostringstream output;
       output << *self << std::ends;
       return output.str();
     }

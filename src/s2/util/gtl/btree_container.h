@@ -19,7 +19,6 @@
 #define UTIL_GTL_BTREE_CONTAINER_H__
 
 #include <initializer_list>
-#include <iosfwd>
 #include <utility>
 
 #include "s2/util/gtl/btree.h"  // IWYU pragma: export
@@ -49,17 +48,14 @@ class btree_container {
   using reverse_iterator = typename Tree::reverse_iterator;
   using const_reverse_iterator = typename Tree::const_reverse_iterator;
 
- public:
-  // Default constructor.
+  // Constructors/assignments.
   btree_container(const key_compare &comp, const allocator_type &alloc)
       : tree_(comp, alloc) {
   }
-
-  // Constructor/assignments.
   btree_container(const self_type &x) = default;
-  btree_container(self_type &&x) = default;
-  self_type &operator=(const self_type &x) = default;
-  self_type &operator=(self_type &&x) = default;
+  btree_container(self_type &&x) noexcept = default;
+  btree_container &operator=(const self_type &x) = default;
+  btree_container &operator=(self_type &&x) = default;
 
   // Iterator routines.
   iterator begin() { return tree_.begin(); }
@@ -103,9 +99,6 @@ class btree_container {
   }
   void swap(self_type &x) {
     tree_.swap(x.tree_);
-  }
-  void dump(std::ostream &os) const {
-    tree_.dump(os);
   }
   void verify() const {
     tree_.verify();
@@ -154,23 +147,17 @@ class btree_container {
   Tree tree_;
 };
 
-template <typename T>
-inline std::ostream& operator<<(std::ostream &os, const btree_container<T> &b) {
-  b.dump(os);
-  return os;
-}
-
 // Base class for btree_set.
 template <typename Tree>
 class btree_unique_container : public btree_container<Tree> {
   using self_type = btree_unique_container<Tree>;
   using super_type = btree_container<Tree>;
+  using mutable_value_type = typename Tree::mutable_value_type;
 
  public:
   using key_type = typename Tree::key_type;
   using data_type = typename Tree::data_type;
   using value_type = typename Tree::value_type;
-  using mutable_value_type = typename Tree::mutable_value_type;
   using mapped_type = typename Tree::mapped_type;
   using size_type = typename Tree::size_type;
   using key_compare = typename Tree::key_compare;
@@ -180,8 +167,9 @@ class btree_unique_container : public btree_container<Tree> {
 
  public:
   // Default constructor.
-  btree_unique_container(const key_compare &comp = key_compare(),
-                         const allocator_type &alloc = allocator_type())
+  btree_unique_container() : super_type(key_compare(), allocator_type()) {}
+  explicit btree_unique_container(
+      const key_compare &comp, const allocator_type &alloc = allocator_type())
       : super_type(comp, alloc) {}
 
   // Range constructor.
@@ -201,9 +189,9 @@ class btree_unique_container : public btree_container<Tree> {
 
   // Constructor/assignments.
   btree_unique_container(const self_type &x) = default;
-  btree_unique_container(self_type &&x) = default;
-  self_type &operator=(const self_type &x) = default;
-  self_type &operator=(self_type &&x) = default;
+  btree_unique_container(self_type &&x) noexcept = default;
+  btree_unique_container &operator=(const self_type &x) = default;
+  btree_unique_container &operator=(self_type &&x) = default;
 
   // Lookup routines.
   template <typename K>
@@ -223,17 +211,24 @@ class btree_unique_container : public btree_container<Tree> {
   std::pair<iterator, bool> insert(const value_type &x) {
     return this->tree_.insert_unique(x);
   }
+  std::pair<iterator, bool> insert(value_type &&x) {
+    return this->tree_.insert_unique(mutable_value_type(std::move(x)));
+  }
   template <typename... Args>
   std::pair<iterator, bool> emplace(Args &&... args) {
-    mutable_value_type v(std::move(args)...);
+    mutable_value_type v(std::forward<Args>(args)...);
     return this->tree_.insert_unique(std::move(v));
   }
   iterator insert(iterator position, const value_type &x) {
     return this->tree_.insert_hint_unique(position, x);
   }
+  iterator insert(iterator position, value_type &&x) {
+    return this->tree_.insert_hint_unique(position,
+                                          mutable_value_type(std::move(x)));
+  }
   template <typename... Args>
   iterator emplace_hint(iterator position, Args &&... args) {
-    mutable_value_type v(std::move(args)...);
+    mutable_value_type v(std::forward<Args>(args)...);
     return this->tree_.insert_hint_unique(position, std::move(v));
   }
   template <typename InputIterator>
@@ -262,8 +257,7 @@ class btree_unique_container : public btree_container<Tree> {
 
 // Provide swap reachable by ADL for btree_unique_container.
 template <typename Tree>
-inline void swap(btree_unique_container<Tree> &x,
-                 btree_unique_container<Tree> &y) {
+void swap(btree_unique_container<Tree> &x, btree_unique_container<Tree> &y) {
   x.swap(y);
 }
 
@@ -272,12 +266,12 @@ template <typename Tree>
 class btree_map_container : public btree_unique_container<Tree> {
   using self_type = btree_map_container<Tree>;
   using super_type = btree_unique_container<Tree>;
+  using mutable_value_type = typename Tree::mutable_value_type;
 
  public:
   using key_type = typename Tree::key_type;
   using data_type = typename Tree::data_type;
   using value_type = typename Tree::value_type;
-  using mutable_value_type = typename Tree::mutable_value_type;
   using mapped_type = typename Tree::mapped_type;
   using key_compare = typename Tree::key_compare;
   using allocator_type = typename Tree::allocator_type;
@@ -289,7 +283,11 @@ class btree_map_container : public btree_unique_container<Tree> {
   struct generate_value {
     explicit generate_value(const key_type &k) : key(k) {}
     mutable_value_type operator*() const {
-      return std::make_pair(key, data_type());
+      // We can avoid some copies/moves by using piecewise_construct instead of
+      // std::make_pair.
+      return mutable_value_type(std::piecewise_construct,
+                                std::forward_as_tuple(key),
+                                std::forward_as_tuple());
     }
     const key_type &key;
   };
@@ -299,7 +297,9 @@ class btree_map_container : public btree_unique_container<Tree> {
   struct generate_movable_value {
     explicit generate_movable_value(key_type *k) : key(k) {}
     mutable_value_type operator*() const {
-      return std::make_pair(std::move(*key), data_type());
+      return mutable_value_type(std::piecewise_construct,
+                                std::forward_as_tuple(std::move(*key)),
+                                std::forward_as_tuple());
     }
     key_type *key;
   };
@@ -327,12 +327,12 @@ class btree_map_container : public btree_unique_container<Tree> {
 
   // Constructor/assignments.
   btree_map_container(const self_type &x) = default;
-  btree_map_container(self_type &&x) = default;
-  self_type &operator=(const self_type &x) = default;
-  self_type &operator=(self_type &&x) = default;
+  btree_map_container(self_type &&x) noexcept = default;
+  btree_map_container &operator=(const self_type &x) = default;
+  btree_map_container &operator=(self_type &&x) = default;
 
   // Insertion routines.
-  data_type& operator[](const key_type &key) {
+  data_type &operator[](const key_type &key) {
     return this->tree_.insert_unique(key, generate_value(key)).first->second;
   }
   data_type &operator[](key_type &&key) {
@@ -387,9 +387,9 @@ class btree_multi_container : public btree_container<Tree> {
 
   // Constructor/assignments.
   btree_multi_container(const self_type &x) = default;
-  btree_multi_container(self_type &&x) = default;
-  self_type &operator=(const self_type &x) = default;
-  self_type &operator=(self_type &&x) = default;
+  btree_multi_container(self_type &&x) noexcept = default;
+  btree_multi_container &operator=(const self_type &x) = default;
+  btree_multi_container &operator=(self_type &&x) = default;
 
   // Lookup routines.
   template <typename K>
@@ -409,8 +409,14 @@ class btree_multi_container : public btree_container<Tree> {
   iterator insert(const value_type &x) {
     return this->tree_.insert_multi(x);
   }
+  iterator insert(value_type &&x) {
+    return this->tree_.insert_multi(std::move(x));
+  }
   iterator insert(iterator position, const value_type &x) {
     return this->tree_.insert_hint_multi(position, x);
+  }
+  iterator insert(iterator position, value_type &&x) {
+    return this->tree_.insert_hint_multi(position, std::move(x));
   }
   template <typename InputIterator>
   void insert(InputIterator b, InputIterator e) {

@@ -531,8 +531,8 @@ TEST(S2CellId, Neighbors) {
 
     // TestAllNeighbors computes approximately 2**(2*(diff+1)) cell ids,
     // so it's not reasonable to use large values of "diff".
-    int max_diff = min(6, S2CellId::kMaxLevel - id.level() - 1);
-    int level = id.level() + S2Testing::rnd.Uniform(max_diff);
+    int max_diff = min(5, S2CellId::kMaxLevel - id.level() - 1);
+    int level = id.level() + S2Testing::rnd.Uniform(max_diff + 1);
     TestAllNeighbors(id, level);
   }
 }

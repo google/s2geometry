@@ -114,10 +114,12 @@ double S2Testing::Random::RandDouble() {
 }
 
 int32 S2Testing::Random::Uniform(int32 n) {
+  DCHECK_GT(n, 0);
   return static_cast<uint32>(RandDouble() * n);
 }
 
 double S2Testing::Random::UniformDouble(double min, double limit) {
+  DCHECK_LT(min, limit);
   return min + RandDouble() * (limit - min);
 }
 
