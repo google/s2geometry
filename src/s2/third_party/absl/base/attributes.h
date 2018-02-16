@@ -95,6 +95,7 @@
 #define ABSL_ATTRIBUTE_UNUSED
 #define ABSL_ATTRIBUTE_INITIAL_EXEC
 #define ABSL_ATTRIBUTE_PACKED
+#define ABSL_ATTRIBUTE_FUNC_ALIGN(bytes)
 
 // To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
 // TODO(user): delete macros
@@ -578,6 +579,16 @@
 #define ABSL_ATTRIBUTE_PACKED __attribute__((__packed__))
 #else
 #define ABSL_ATTRIBUTE_PACKED
+#endif
+
+// ABSL_ATTRIBUTE_FUNC_ALIGN
+//
+// Tells the compiler to align the function start at least to certain
+// alignment boundary
+#if ABSL_HAVE_ATTRIBUTE(aligned) || (defined(__GNUC__) && !defined(__clang__))
+#define ABSL_ATTRIBUTE_FUNC_ALIGN(bytes) __attribute__((aligned(bytes)))
+#else
+#define ABSL_ATTRIBUTE_FUNC_ALIGN(bytes)
 #endif
 
 #endif  // SWIG

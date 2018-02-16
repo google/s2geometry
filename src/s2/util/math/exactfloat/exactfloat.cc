@@ -53,9 +53,33 @@ static_assert(
     ExactFloat::kMinExp - ExactFloat::kMaxPrec >= INT_MIN / 2,
     "exactfloat exponent might overflow");
 
-// We define a few simple extensions to the BIGNUM interface.  In some cases
-// these depend on BIGNUM internal fields, so they might require tweaking if
-// the BIGNUM implementation changes significantly.
+// We define a few simple extensions to the OpenSSL's BIGNUM interface.
+// In some cases these depend on BIGNUM internal fields, so they might
+// require tweaking if the BIGNUM implementation changes significantly.
+// These are just thin wrappers for BoringSSL.
+
+#ifdef OPENSSL_IS_BORINGSSL
+
+inline static void BN_ext_set_uint64(BIGNUM* bn, uint64 v) {
+  CHECK(BN_set_u64(bn, v));
+}
+
+// Return the absolute value of a BIGNUM as a 64-bit unsigned integer.
+// Requires that BIGNUM fits into 64 bits.
+inline static uint64 BN_ext_get_uint64(const BIGNUM* bn) {
+  uint64_t u64;
+  if (!BN_get_u64(bn, &u64)) {
+    DCHECK(false) << "BN has " << BN_num_bits(bn) << " bits";
+    return 0;
+  }
+  return u64;
+}
+
+static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
+  return BN_count_low_zero_bits(bn);
+}
+
+#else  // !defined(OPENSSL_IS_BORINGSSL)
 
 // Set a BIGNUM to the given unsigned 64-bit value.
 inline static void BN_ext_set_uint64(BIGNUM* bn, uint64 v) {
@@ -101,6 +125,8 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
   }
   return count;
 }
+
+#endif  // !defined(OPENSSL_IS_BORINGSSL)
 
 ExactFloat::ExactFloat(double v) {
   BN_init(&bn_);

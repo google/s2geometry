@@ -57,6 +57,18 @@
 #include <windows.h>
 #undef ERROR
 #undef DELETE
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+#define S_IRUSR 00400
+#define S_IWUSR 00200
+#define S_IXUSR 00100
+#define S_IRGRP 00040
+#define S_IWGRP 00020
+#define S_IXGRP 00010
+#define S_IROTH 00004
+#define S_IWOTH 00002
+#define S_IXOTH 00001
 
 // This compiler flag can be easily overlooked on MSVC.
 // _CHAR_UNSIGNED gets set with the /J flag.
@@ -76,6 +88,7 @@
 //   const long stop_time = os::GetMilliseconds() + kWaitTimeoutMillis;
 //   while (os::GetMilliseconds() <= stop_time) { ... }
 #pragma warning(disable : 4018)  // level 3
+#pragma warning(disable : 4267)  // level 3
 
 // Don't warn about unused local variables.
 //
