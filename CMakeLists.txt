@@ -96,6 +96,7 @@ add_library(s2 SHARED
             src/s2/s2pointutil.cc
             src/s2/s2polygon.cc
             src/s2/s2polyline.cc
+            src/s2/s2polyline_alignment.cc
             src/s2/s2polyline_simplifier.cc
             src/s2/s2predicates.cc
             src/s2/s2projections.cc
@@ -217,6 +218,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2pointutil.h
               src/s2/s2polygon.h
               src/s2/s2polyline.h
+              src/s2/s2polyline_alignment.h
               src/s2/s2polyline_simplifier.h
               src/s2/s2predicates_internal.h
               src/s2/s2predicates.h
@@ -382,6 +384,7 @@ if (GTEST_ROOT)
       src/s2/s2point_region_test.cc
       src/s2/s2pointutil_test.cc
       src/s2/s2polygon_test.cc
+      src/s2/s2polyline_alignment_test.cc
       src/s2/s2polyline_simplifier_test.cc
       src/s2/s2polyline_test.cc
       src/s2/s2predicates_test.cc

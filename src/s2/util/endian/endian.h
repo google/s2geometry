@@ -640,11 +640,11 @@ class GeneralFormatConverter<EndianClass, float> {
  public:
   static typename tofromhost_value_type_traits<float>::int_type FromHost(
       float v) {
-    return EndianClass::FromHost32(bit_cast<uint32>(v));
+    return EndianClass::FromHost32(absl::bit_cast<uint32>(v));
   }
   static typename tofromhost_value_type_traits<float>::int_type ToHost(
       float v) {
-    return bit_cast<float>(EndianClass::ToHost32(bit_cast<uint32>(v)));
+    return bit_cast<float>(EndianClass::ToHost32(absl::bit_cast<uint32>(v)));
   }
 };
 
@@ -655,11 +655,11 @@ class GeneralFormatConverter<EndianClass, double> {
  public:
   static typename tofromhost_value_type_traits<double>::int_type FromHost(
       double v) {
-    return EndianClass::FromHost64(bit_cast<uint64>(v));
+    return EndianClass::FromHost64(absl::bit_cast<uint64>(v));
   }
   static typename tofromhost_value_type_traits<double>::int_type ToHost(
       double v) {
-    return bit_cast<double>(EndianClass::ToHost64(bit_cast<uint64>(v)));
+    return bit_cast<double>(EndianClass::ToHost64(absl::bit_cast<uint64>(v)));
   }
 };
 
@@ -720,22 +720,22 @@ inline void StoreInteger(T value, char* p) {
 
 template<typename EndianClass>
 inline float LoadFloat(const char* p) {
-  return bit_cast<float>(EndianClass::ToHost32(UNALIGNED_LOAD32(p)));
+  return absl::bit_cast<float>(EndianClass::ToHost32(UNALIGNED_LOAD32(p)));
 }
 
 template<typename EndianClass>
 inline void StoreFloat(float value, char* p) {
-  UNALIGNED_STORE32(p, EndianClass::FromHost32(bit_cast<uint32>(value)));
+  UNALIGNED_STORE32(p, EndianClass::FromHost32(absl::bit_cast<uint32>(value)));
 }
 
 template<typename EndianClass>
 inline double LoadDouble(const char* p) {
-  return bit_cast<double>(EndianClass::ToHost64(UNALIGNED_LOAD64(p)));
+  return absl::bit_cast<double>(EndianClass::ToHost64(UNALIGNED_LOAD64(p)));
 }
 
 template<typename EndianClass>
 inline void StoreDouble(double value, char* p) {
-  UNALIGNED_STORE64(p, EndianClass::FromHost64(bit_cast<uint64>(value)));
+  UNALIGNED_STORE64(p, EndianClass::FromHost64(absl::bit_cast<uint64>(value)));
 }
 
 }  // namespace endian_internal

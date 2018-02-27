@@ -21,6 +21,7 @@
 #include <atomic>
 #include <cmath>
 
+#include "s2/base/casts.h"
 #include <gflags/gflags.h>
 #include "s2/base/spinlock.h"
 #include "s2/r1interval.h"

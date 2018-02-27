@@ -45,6 +45,7 @@
 // Bits) containing a few bit patterns (which vary based on value of template
 // parameter).
 
+#include "s2/third_party/absl/base/casts.h"
 #include "s2/third_party/absl/numeric/int128.h"
 #if defined(__i386__) || defined(__x86_64__)
 #include <x86intrin.h>
@@ -52,7 +53,6 @@
 
 #include <type_traits>
 
-#include "s2/base/casts.h"
 #include "s2/third_party/absl/numeric/int128.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include <glog/logging.h>
@@ -264,7 +264,7 @@ class Bits {
                                                 const int offset,
                                                 const int nbits) {
     typedef typename UnsignedType<T>::Type UnsignedT;
-    const UnsignedT unsigned_src = bit_cast<UnsignedT>(src);
+    const UnsignedT unsigned_src = absl::bit_cast<UnsignedT>(src);
     DCHECK_GT(sizeof(UnsignedT) * 8, offset);
     DCHECK_GE(sizeof(UnsignedT) * 8, offset + nbits);
     return GetBitsImpl(unsigned_src, offset, nbits);
@@ -279,13 +279,13 @@ class Bits {
                       const int nbits,
                       T* const dest) {
     typedef typename UnsignedType<T>::Type UnsignedT;
-    const UnsignedT unsigned_dest = bit_cast<UnsignedT>(*dest);
+    const UnsignedT unsigned_dest = absl::bit_cast<UnsignedT>(*dest);
     DCHECK_GT(sizeof(UnsignedT) * 8, offset);
     DCHECK_GE(sizeof(UnsignedT) * 8, offset + nbits);
     const UnsignedT mask = NBitsFromLSB<UnsignedT>(nbits);
     const UnsignedT unsigned_result =
         (unsigned_dest & ~(mask << offset)) | ((value & mask) << offset);
-    *dest = bit_cast<T>(unsigned_result);
+    *dest = absl::bit_cast<T>(unsigned_result);
   }
 
   // Combine SetBits and GetBits for convenience.  This is meant to be a
@@ -314,7 +314,7 @@ class Bits {
   static typename UnsignedType<T>::Type GetLowBits(const T value,
                                                    const int index) {
     typedef typename UnsignedType<T>::Type UnsignedT;
-    const UnsignedT unsigned_value = bit_cast<UnsignedT>(value);
+    const UnsignedT unsigned_value = absl::bit_cast<UnsignedT>(value);
     DCHECK_GT(sizeof(UnsignedT) * 8, index);
     return GetLowBitsImpl(unsigned_value, index);
   }

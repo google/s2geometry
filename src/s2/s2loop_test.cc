@@ -1203,7 +1203,7 @@ static void CheckLoopIsInvalid(const vector<S2Point>& points,
 }
 
 TEST(S2Loop, IsValidDetectsInvalidLoops) {
-  google::FlagSaver flag_saver;
+  google::FlagSaver flag_saver;  // Needed for opensource gtest.
   FLAGS_s2debug = false;
 
   // Not enough vertices.  Note that all single-vertex loops are valid; they
