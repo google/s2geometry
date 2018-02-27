@@ -457,7 +457,7 @@ void TestHasCrossingPermutations(vector<unique_ptr<S2Loop>>* loops, int i,
 // HasSelfIntersection returns the expected result for all possible cyclic
 // permutations of the loop vertices.
 void TestHasCrossing(const string& polygon_str, bool has_crossing) {
-  google::FlagSaver flag_saver;
+  google::FlagSaver flag_saver;  // Needed for opensource gtest.
   FLAGS_s2debug = false;  // Allow invalid polygons (restored by gUnit)
   unique_ptr<S2Polygon> polygon(s2textformat::MakePolygon(polygon_str));
   vector<unique_ptr<S2Loop>> loops = polygon->Release();

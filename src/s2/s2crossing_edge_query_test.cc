@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "s2/base/casts.h"
 #include <gtest/gtest.h>
 
 #include "s2/mutable_s2shape_index.h"

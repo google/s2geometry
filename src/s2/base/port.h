@@ -385,8 +385,10 @@ struct PortableHashBase {};
 // -----------------------------------------------------------------------------
 
 // PATH_SEPARATOR
-// DEPRECATED: use absl::PathSeparator() instead.
 // Define the OS's path separator
+//
+// NOTE: Assuming the path separator at compile time is discouraged.
+// Prefer instead to be tolerant of both possible separators whenever possible.
 #ifdef __cplusplus  // C won't merge duplicate const variables at link time
 // Some headers provide a macro for this (GCC's system.h), remove it so that we
 // can use our own.

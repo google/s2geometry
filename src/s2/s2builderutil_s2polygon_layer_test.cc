@@ -22,6 +22,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include "s2/base/casts.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"

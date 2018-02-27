@@ -646,6 +646,7 @@ class btree_node {
   }
 
   // Swap value i in this node with value j in node x.
+  // This should only be used on valid (constructed) values.
   void value_swap(int i, btree_node *x, int j) {
     std::iter_swap(mutable_value(i), x->mutable_value(j));
   }
@@ -812,8 +813,20 @@ class btree_node {
     ::new (static_cast<void *>(&fields_.values[i]))
         mutable_value_type(std::forward<Args>(args)...);
   }
-  void value_destroy(int i) {
+  void value_destroy(size_type i) {
     fields_.values[i].~mutable_value_type();
+  }
+
+  // Constructs value i in this node by moving from value j in node x.
+  // This should be used instead of value_init() when moving existing values
+  // around instead of inserting a new value, thus removing the need for the
+  // value type to be default constructible.
+  //
+  // Note that this does not destroy value j at node x (rather leaving it in
+  // some valid but otherwise indeterminate state). This is to allow calls to
+  // value_swap() to reuse value j to avoid unnecessary destruction.
+  void value_init_move_from(size_type i, btree_node *x, size_type j) {
+    value_init(i, std::move(*x->mutable_value(j)));
   }
 
  private:
@@ -1129,49 +1142,30 @@ class btree : public Params::key_compare {
   }
 
   // Inserts a value into the btree only if it does not already exist. The
-  // boolean return value indicates whether insertion succeeded or failed. The
-  // ValuePointer type is used to avoid instantiating the value unless the key
-  // is being inserted. Value is not dereferenced if the key already exists in
-  // the btree. See btree_map_container::operator[].
-  template <typename ValuePointer>
-  std::pair<iterator, bool> insert_unique(const key_type &key,
-                                          ValuePointer value);
-  std::pair<iterator, bool> insert_unique(const key_type &key,
-                                          mutable_value_type &&value);
-
-  // Inserts a value into the btree only if it does not already exist. The
   // boolean return value indicates whether insertion succeeded or failed.
-  std::pair<iterator, bool> insert_unique(const value_type &v) {
-    return insert_unique(params_type::key(v), &v);
-  }
-  std::pair<iterator, bool> insert_unique(mutable_value_type &&v) {
-    return insert_unique(params_type::key(v), std::move(v));
-  }
+  template <typename... Args>
+  std::pair<iterator, bool> insert_unique(const key_type &key, Args &&... args);
 
   // Insert with hint. Check to see if the value should be placed immediately
   // before position in the tree. If it does, then the insertion will take
   // amortized constant time. If not, the insertion will take amortized
   // logarithmic time as if a call to insert_unique(v) were made.
-  iterator insert_hint_unique(iterator position, const value_type &v);
-  iterator insert_hint_unique(iterator position, mutable_value_type &&v);
+  template <typename... Args>
+  iterator insert_hint_unique(iterator position, const key_type &key,
+                              Args &&... args);
 
   // Insert a range of values into the btree.
   template <typename InputIterator>
   void insert_iterator_unique(InputIterator b, InputIterator e);
 
-  // Inserts a value into the btree. The ValuePointer type is used to avoid
-  // instantiating the value unless the key is being inserted. Value is not
-  // dereferenced if the key already exists in the btree. See
-  // btree_map_container::operator[].
-  template <typename ValuePointer>
-  iterator insert_multi(const key_type &key, ValuePointer value);
+  // Inserts a value into the btree.
+  template <typename ValueType>
+  iterator insert_multi(const key_type &key, ValueType &&v);
 
   // Inserts a value into the btree.
-  iterator insert_multi(const value_type &v) {
-    return insert_multi(params_type::key(v), &v);
-  }
-  iterator insert_multi(value_type &&v) {
-    return insert_multi(params_type::key(v), std::make_move_iterator(&v));
+  template <typename ValueType>
+  iterator insert_multi(ValueType &&v) {
+    return insert_multi(params_type::key(v), std::forward<ValueType>(v));
   }
 
   // Insert with hint. Check to see if the value should be placed immediately
@@ -1449,11 +1443,6 @@ class btree : public Params::key_compare {
   template <typename... Args>
   iterator internal_emplace(iterator iter, Args &&... args);
 
-  // Shared code for the two overloads of insert_unique() that does the
-  // non-value-related part of the insertion.  Both overloads call this and then
-  // insert_internal() the value.
-  std::pair<iterator, bool> insert_unique_preamble(const key_type &key);
-
   // Returns an iterator pointing to the first value >= the value "iter" is
   // pointing at. Note that "iter" might be pointing to an invalid location as
   // iter.position == iter.node->count(). This routine simply moves iter up in
@@ -1597,20 +1586,17 @@ void btree_node<P>::rebalance_right_to_left(btree_node *src, int to_move) {
   assert(to_move >= 1);
   assert(to_move <= src->count());
 
-  // Make room in the left node for the new values.
-  for (int i = 0; i < to_move; ++i) {
-    value_init(i + count());
+  // Move the delimiting value in the parent to the left node.
+  value_init_move_from(count(), parent(), position());
+
+  // Move the other (to_move - 1) values from the right node to the left node.
+  for (int i = 1; i < to_move; ++i) {
+    value_init_move_from(count() + i, src, i - 1);
   }
 
-  // Move the delimiting value to the left node and the new delimiting value
-  // from the right node.
-  value_swap(count(), parent(), position());
+  // Move the new delimiting value to the parent from the right node.
   parent()->value_swap(position(), src, to_move - 1);
 
-  // Move the values from the right to the left node.
-  for (int i = 1; i < to_move; ++i) {
-    value_swap(count() + i, src, i - 1);
-  }
   // Shift the values in the right node to their correct position.
   for (int i = to_move; i < src->count(); ++i) {
     src->value_swap(i - to_move, src, i);
@@ -1644,25 +1630,41 @@ void btree_node<P>::rebalance_left_to_right(btree_node *dest, int to_move) {
   assert(to_move >= 1);
   assert(to_move <= count());
 
-  // Make room in the right node for the new values.
-  for (int i = 0; i < to_move; ++i) {
-    dest->value_init(i + dest->count());
-  }
+  // Values in the right node are shifted to the right to make room for the
+  // new to_move values. Then, the delimiting value in the parent and the
+  // other (to_move - 1) values in the left node are moved into the right node.
+  // Lastly, a new delimiting value is moved from the left node into the
+  // parent, and the remaining empty left node entries are destroyed.
+
+  // Shift existing values in the right node to their correct positions.
   for (int i = dest->count() - 1; i >= 0; --i) {
-    dest->value_swap(i, dest, i + to_move);
+    if (i + to_move >= dest->count()) {
+      dest->value_init_move_from(i + to_move, dest, i);
+    } else {
+      dest->value_swap(i + to_move, dest, i);
+    }
   }
 
-  // Move the delimiting value to the right node and the new delimiting value
-  // from the left node.
-  dest->value_swap(to_move - 1, parent(), position());
-  parent()->value_swap(position(), this, count() - to_move);
-  value_destroy(count() - to_move);
+  // Move the delimiting value in the parent to the right node.
+  if (to_move - 1 >= dest->count()) {
+    dest->value_init_move_from(to_move - 1, parent(), position());
+  } else {
+    dest->value_swap(to_move - 1, parent(), position());
+  }
 
-  // Move the values from the left to the right node.
-  for (int i = 1; i < to_move; ++i) {
-    value_swap(count() - to_move + i, dest, i - 1);
+  // Move the (to_move - 1) values from the left node to the right node.
+  for (int i = to_move - 1; i >= 1; --i) {
+    if (i - 1 >= dest->count()) {
+      dest->value_init_move_from(i - 1, this, count() - to_move + i);
+    } else {
+      dest->value_swap(i - 1, this, count() - to_move + i);
+    }
     value_destroy(count() - to_move + i);
   }
+
+  // Move the new delimiting value to the parent from the left node.
+  parent()->value_swap(position(), this, count() - to_move);
+  value_destroy(count() - to_move);
 
   if (!leaf()) {
     // Move the child pointers from the left to the right node.
@@ -1701,15 +1703,13 @@ void btree_node<P>::split(btree_node *dest, int insert_position) {
 
   // Move values from the left sibling to the right sibling.
   for (int i = 0; i < dest->count(); ++i) {
-    dest->value_init(i);
-    value_swap(count() + i, dest, i);
+    dest->value_init_move_from(i, this, count() + i);
     value_destroy(count() + i);
   }
 
   // The split key is the largest value in the left sibling.
   set_count(count() - 1);
-  parent()->emplace_value(position());
-  value_swap(count(), parent(), position());
+  parent()->emplace_value(position(), std::move(*mutable_value(count())));
   value_destroy(count());
   parent()->set_child(position() + 1, dest);
 
@@ -1728,13 +1728,11 @@ void btree_node<P>::merge(btree_node *src) {
   assert(position() + 1 == src->position());
 
   // Move the delimiting value to the left node.
-  value_init(count());
-  value_swap(count(), parent(), position());
+  value_init_move_from(count(), parent(), position());
 
   // Move the values from the right to the left node.
   for (int i = 0; i < src->count(); ++i) {
-    value_init(1 + count() + i);
-    value_swap(1 + count() + i, src, i);
+    value_init_move_from(1 + count() + i, src, i);
     src->value_destroy(i);
   }
 
@@ -1760,25 +1758,22 @@ void btree_node<P>::swap(btree_node *x) {
   assert(leaf() == x->leaf());
 
   // Swap the values.
-  for (int i = count(); i < x->count(); ++i) {
-    value_init(i);
-  }
-  for (int i = x->count(); i < count(); ++i) {
-    x->value_init(i);
-  }
-  int n = std::max(count(), x->count());
-  for (int i = 0; i < n; ++i) {
+  const int m = std::min(count(), x->count());
+  for (int i = 0; i < m; ++i) {
     value_swap(i, x, i);
   }
   for (int i = count(); i < x->count(); ++i) {
+    value_init_move_from(i, x, i);
     x->value_destroy(i);
   }
   for (int i = x->count(); i < count(); ++i) {
+    x->value_init_move_from(i, this, i);
     value_destroy(i);
   }
 
   if (!leaf()) {
     // Swap the child pointers.
+    const int n = std::max(count(), x->count());
     for (int i = 0; i <= n; ++i) {
       swap(*mutable_child(i), *x->mutable_child(i));
     }
@@ -1875,7 +1870,8 @@ btree<P>::btree(const self_type &x)
 }
 
 template <typename P>
-auto btree<P>::insert_unique_preamble(const key_type &key)
+template <typename... Args>
+auto btree<P>::insert_unique(const key_type &key, Args &&... args)
     -> std::pair<iterator, bool> {
   if (empty()) {
     *mutable_root() = new_leaf_root_node(1);
@@ -1893,92 +1889,48 @@ auto btree<P>::insert_unique_preamble(const key_type &key)
       return std::make_pair(last, false);
     }
   }
-  return std::make_pair(iter, true);
+
+  return std::make_pair(internal_emplace(iter, std::forward<Args>(args)...),
+                        true);
 }
 
 template <typename P>
-template <typename ValuePointer>
-auto btree<P>::insert_unique(const key_type &key, ValuePointer value)
-    -> std::pair<iterator, bool> {
-  std::pair<iterator, bool> rv = insert_unique_preamble(key);
-  if (!rv.second) return rv;
-
-  return std::make_pair(internal_emplace(rv.first, *value), true);
-}
-
-template <typename P>
-auto btree<P>::insert_unique(const key_type &key, mutable_value_type &&value)
-    -> std::pair<iterator, bool> {
-  std::pair<iterator, bool> rv = insert_unique_preamble(key);
-  if (!rv.second) return rv;
-
-  return std::make_pair(internal_emplace(rv.first, std::move(value)), true);
-}
-
-template <typename P>
-inline auto btree<P>::insert_hint_unique(iterator position, const value_type &v)
-    -> iterator {
+template <typename... Args>
+inline auto btree<P>::insert_hint_unique(iterator position, const key_type &key,
+                                         Args &&... args) -> iterator {
   if (!empty()) {
-    const key_type &key = params_type::key(v);
     if (position == end() || compare_keys(key, position.key())) {
       iterator prev = position;
       if (position == begin() || compare_keys((--prev).key(), key)) {
         // prev.key() < key < position.key()
-        return internal_emplace(position, v);
+        return internal_emplace(position, std::forward<Args>(args)...);
       }
     } else if (compare_keys(position.key(), key)) {
       iterator next = position;
       ++next;
       if (next == end() || compare_keys(key, next.key())) {
         // position.key() < key < next.key()
-        return internal_emplace(next, v);
+        return internal_emplace(next, std::forward<Args>(args)...);
       }
     } else {
       // position.key() == key
       return position;
     }
   }
-  return insert_unique(v).first;
-}
-
-template <typename P>
-inline auto btree<P>::insert_hint_unique(iterator position,
-                                         mutable_value_type &&v) -> iterator {
-  if (!empty()) {
-    const key_type &key = params_type::key(v);
-    if (position == end() || compare_keys(key, position.key())) {
-      iterator prev = position;
-      if (position == begin() || compare_keys((--prev).key(), key)) {
-        // prev.key() < key < position.key()
-        return internal_emplace(position, std::move(v));
-      }
-    } else if (compare_keys(position.key(), key)) {
-      iterator next = position;
-      ++next;
-      if (next == end() || compare_keys(key, next.key())) {
-        // position.key() < key < next.key()
-        return internal_emplace(next, std::move(v));
-      }
-    } else {
-      // position.key() == key
-      return position;
-    }
-  }
-  return insert_unique(std::move(v)).first;
+  return insert_unique(key, std::forward<Args>(args)...).first;
 }
 
 template <typename P>
 template <typename InputIterator>
 void btree<P>::insert_iterator_unique(InputIterator b, InputIterator e) {
   for (; b != e; ++b) {
-    insert_hint_unique(end(), *b);
+    insert_hint_unique(end(), params_type::key(*b), *b);
   }
 }
 
 template <typename P>
-template <typename ValuePointer>
-auto btree<P>::insert_multi(const key_type &key, ValuePointer value)
-    -> iterator {
+template <typename ValueType>
+auto btree<P>::insert_multi(const key_type &key, ValueType &&v) -> iterator {
   if (empty()) {
     *mutable_root() = new_leaf_root_node(1);
   }
@@ -1987,7 +1939,7 @@ auto btree<P>::insert_multi(const key_type &key, ValuePointer value)
   if (!iter.node) {
     iter = end();
   }
-  return internal_emplace(iter, *value);
+  return internal_emplace(iter, std::forward<ValueType>(v));
 }
 
 template <typename P>
@@ -2379,10 +2331,6 @@ inline IterType btree<P>::internal_last(IterType iter) {
   return iter;
 }
 
-// TODO(user): internal_emplace default constructs a node in the correct position
-// and then overwrites it with the correct value. We should instead insert the
-// value in the correct position. Only operator[] in maps should require a
-// default constructor.
 template <typename P>
 template <typename... Args>
 inline auto btree<P>::internal_emplace(iterator iter, Args &&... args)
