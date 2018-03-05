@@ -1,4 +1,4 @@
-// Copyright 2005 Google Inc. All Rights Reserved.
+// Copyright 2018 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,11 +13,28 @@
 // limitations under the License.
 //
 
-// Author: ericv@google.com (Eric Veach)
+#ifndef S2_BASE_LOG_SEVERITY_H_
+#define S2_BASE_LOG_SEVERITY_H_
 
-#include "s2/s2debug.h"
+#ifdef S2_USE_GLOG
 
-#include "s2/base/logging.h"
+#include <glog/log_severity.h>
 
-DEFINE_bool(s2debug, !!google::DEBUG_MODE,
-            "Enable automatic validity checking in S2 code");
+#else  // !defined(S2_USE_GLOG)
+
+#include "s2/third_party/absl/base/log_severity.h"
+
+// Stay compatible with glog.
+namespace google {
+
+#ifdef NDEBUG
+constexpr bool DEBUG_MODE = false;
+#else
+constexpr bool DEBUG_MODE = true;
+#endif
+
+}  // namespace google
+
+#endif  // !defined(S2_USE_GLOG)
+
+#endif  // S2_BASE_LOG_SEVERITY_H_

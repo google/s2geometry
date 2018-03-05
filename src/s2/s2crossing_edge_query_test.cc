@@ -274,7 +274,7 @@ void TestPolylineCrossings(const S2ShapeIndex& index,
     for (int edge : edges) {
       const S2Point& b0 = polyline->vertex(edge);
       const S2Point& b1 = polyline->vertex(edge + 1);
-      CHECK_GE(S2::CrossingSign(a0, a1, b0, b1), 0);
+      S2_CHECK_GE(S2::CrossingSign(a0, a1, b0, b1), 0);
     }
   }
   // Also test that no edges are missing.

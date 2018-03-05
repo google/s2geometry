@@ -222,7 +222,7 @@ class S1ChordAngle {
   // S1ChordAngles are represented by the squared chord length, which can
   // range from 0 to 4.  Infinity() uses an infinite squared length.
   explicit S1ChordAngle(double length2) : length2_(length2) {
-    DCHECK(is_valid());
+    S2_DCHECK(is_valid());
   }
   double length2_;
 };
@@ -232,12 +232,12 @@ class S1ChordAngle {
 
 
 inline S1ChordAngle::S1ChordAngle(const S2Point& x, const S2Point& y) {
-  DCHECK(S2::IsUnitLength(x));
-  DCHECK(S2::IsUnitLength(y));
+  S2_DCHECK(S2::IsUnitLength(x));
+  S2_DCHECK(S2::IsUnitLength(y));
   // The squared distance may slightly exceed 4.0 due to roundoff errors.
   // The maximum error in the result is 2 * DBL_EPSILON * length2_.
   length2_ = std::min(4.0, (x - y).Norm2());
-  DCHECK(is_valid());
+  S2_DCHECK(is_valid());
 }
 
 inline S1ChordAngle S1ChordAngle::FromLength2(double length2) {

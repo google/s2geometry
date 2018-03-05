@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
@@ -164,7 +164,7 @@ static void TestSubdivide(const S2Cell& cell) {
   if (cell.is_leaf()) return;
 
   S2Cell children[4];
-  CHECK(cell.Subdivide(children));
+  S2_CHECK(cell.Subdivide(children));
   S2CellId child_id = cell.id().child_begin();
   double exact_area = 0;
   double approx_area = 0;
@@ -403,7 +403,7 @@ static const int kMaxLevel = google::DEBUG_MODE ? 6 : 11;
 
 static void ExpandChildren1(const S2Cell& cell) {
   S2Cell children[4];
-  CHECK(cell.Subdivide(children));
+  S2_CHECK(cell.Subdivide(children));
   if (children[0].level() < kMaxLevel) {
     for (int pos = 0; pos < 4; ++pos) {
       ExpandChildren1(children[pos]);

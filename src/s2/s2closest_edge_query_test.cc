@@ -446,7 +446,7 @@ static void TestWithIndexFactory(const s2testing::ShapeIndexFactory& factory,
       S2ClosestEdgeQuery::CellTarget target(cell);
       TestFindClosestEdges(&target, &query);
     } else {
-      DCHECK_EQ(3, target_type);
+      S2_DCHECK_EQ(3, target_type);
       // Use another one of the pre-built indexes as the target.
       int j_index = S2Testing::rnd.Uniform(num_indexes);
       S2ClosestEdgeQuery::ShapeIndexTarget target(indexes[j_index].get());
@@ -476,7 +476,8 @@ TEST(S2ClosestEdgeQuery, PointCloudEdges) {
 }
 
 TEST(S2ClosestEdgeQuery, ConservativeCellDistanceIsUsed) {
-  google::FlagSaver flag_saver;  // Needed for opensource gtest.
+  // Don't use google::FlagSaver, so it works in opensource without gflags.
+  const int saved_seed = FLAGS_s2_random_seed;
   // These specific test cases happen to fail if max_error() is not properly
   // taken into account when measuring distances to S2ShapeIndex cells.
   for (int seed : {42, 681, 894, 1018, 1750, 1759, 2401}) {
@@ -484,5 +485,6 @@ TEST(S2ClosestEdgeQuery, ConservativeCellDistanceIsUsed) {
     TestWithIndexFactory(s2testing::FractalLoopShapeIndexFactory(),
                          5, 100, 10);
   }
+  FLAGS_s2_random_seed = saved_seed;
 }
 

@@ -28,8 +28,8 @@
 #include <vector>
 
 #include "s2/base/casts.h"
-#include <gflags/gflags.h>
-#include <glog/logging.h>
+#include "s2/base/commandlineflags.h"
+#include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/strings/serialize.h"
 #include <gtest/gtest.h>
@@ -1237,12 +1237,12 @@ TEST(S2Polygon, Bug8) {
   };
   S2Polygon a(MakeLoops(a_vertices));
   S2Polygon b(MakeLoops(b_vertices));
-  VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(a);
-  VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(b);
+  S2_VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(a);
+  S2_VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(b);
   S2Polygon c;
   c.InitToUnion(&a, &b);
   //  Loop 1: Edge 1 crosses edge 3
-  VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(c);
+  S2_VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(c);
 }
 
 TEST(S2Polygon, Bug9) {
@@ -1386,12 +1386,12 @@ TEST(S2Polygon, Bug10) {
   };
   S2Polygon a(MakeLoops(a_vertices));
   S2Polygon b(MakeLoops(b_vertices));
-  VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(a);
-  VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(b);
+  S2_VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(a);
+  S2_VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(b);
   S2Polygon c;
   c.InitToUnion(&a, &b);
   // Inconsistent loop orientations detected
-  VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(c);
+  S2_VLOG(1) << "\nS2Polygon: " << s2textformat::ToString(c);
 }
 
 TEST(S2Polygon, Bug11) {
@@ -1744,7 +1744,7 @@ static void SplitAndAssemble(const S2Polygon& polygon) {
     covering.Init(cells);
     S2Testing::CheckCovering(polygon, covering, false);
     CheckCoveringIsConservative(polygon, cells);
-    VLOG(2) << cells.size() << " cells in covering";
+    S2_VLOG(2) << cells.size() << " cells in covering";
     vector<unique_ptr<S2Polygon>> pieces;
     int i = 0;
     for (S2CellId cell_id : cells) {
@@ -1752,7 +1752,7 @@ static void SplitAndAssemble(const S2Polygon& polygon) {
       S2Polygon window(cell);
       auto piece = make_unique<S2Polygon>();
       piece->InitToIntersection(&polygon, &window);
-      VLOG(4) << "\nPiece " << i++ << ":\n  Window: "
+      S2_VLOG(4) << "\nPiece " << i++ << ":\n  Window: "
               << s2textformat::ToString(window)
               << "\n  Piece: " << s2textformat::ToString(*piece);
       pieces.push_back(std::move(piece));
@@ -1771,7 +1771,7 @@ static void SplitAndAssemble(const S2Polygon& polygon) {
       unique_ptr<S2Polygon> b(ChoosePiece(&pieces));
       auto c = make_unique<S2Polygon>();
       c->InitToUnion(a.get(), b.get());
-      VLOG(4) << "\nJoining piece a: " << s2textformat::ToString(*a)
+      S2_VLOG(4) << "\nJoining piece a: " << s2textformat::ToString(*a)
               << "\n  With piece b: " << s2textformat::ToString(*b)
               << "\n  To get piece c: " << s2textformat::ToString(*c);
       pieces.push_back(std::move(c));
@@ -1839,10 +1839,10 @@ TEST(S2Polygon, InitToCellUnionBorder) {
         diagonal = false;
       }
     }
-    VLOG(3) << iter << ": big_cell " << big_cell <<
+    S2_VLOG(3) << iter << ": big_cell " << big_cell <<
         " small_cell " << small_cell;
     if (diagonal) {
-      VLOG(3) << "  diagonal - bailing out!";
+      S2_VLOG(3) << "  diagonal - bailing out!";
       continue;
     }
 
@@ -1928,12 +1928,12 @@ TEST(S2Polygon, InitToSnappedIsValid_A) {
       "53.1328020478452:6.39444903453293, 53.1328019:6.394449, "
       "53.1327091:6.3961766, 53.1313753:6.3958652, 53.1312825:6.3975924, "
       "53.132616:6.3979042, 53.1326161348736:6.39790423150577"));
-  LOG(INFO) << "\nInput: " << s2textformat::ToString(*poly);
+  S2_LOG(INFO) << "\nInput: " << s2textformat::ToString(*poly);
   EXPECT_TRUE(poly->IsValid());
   S2Polygon poly_snapped;
   poly_snapped.set_s2debug_override(S2Debug::DISABLE);
   poly_snapped.InitToSnapped(poly.get());
-  LOG(INFO) << "\nSnapped: " << s2textformat::ToString(poly_snapped);
+  S2_LOG(INFO) << "\nSnapped: " << s2textformat::ToString(poly_snapped);
   S2Error error;
   EXPECT_FALSE(poly_snapped.FindValidationError(&error)) << error;
 }
@@ -1953,12 +1953,12 @@ TEST(S2Polygon, InitToSnappedIsValid_B) {
       "51.6615946694783:4.99923124520759, 51.6616389353165:4.99819106536521, "
       "51.6616852:4.9971, 51.6617538:4.995487, "
       "51.661753964726:4.99548702962593"));
-  LOG(INFO) << "\nInput: " << s2textformat::ToString(*poly);
+  S2_LOG(INFO) << "\nInput: " << s2textformat::ToString(*poly);
   EXPECT_TRUE(poly->IsValid());
   S2Polygon poly_snapped;
   poly_snapped.set_s2debug_override(S2Debug::DISABLE);
   poly_snapped.InitToSnapped(poly.get());
-  LOG(INFO) << "\nSnapped: " << s2textformat::ToString(poly_snapped);
+  S2_LOG(INFO) << "\nSnapped: " << s2textformat::ToString(poly_snapped);
   S2Error error;
   EXPECT_FALSE(poly_snapped.FindValidationError(&error)) << error;
 }
@@ -1972,12 +1972,12 @@ TEST(S2Polygon, InitToSnappedIsValid_C) {
       "53.5925176:19.6317308, 53.5928526:19.6297652, 53.6015949:19.6362943, "
       "53.6015950436033:19.6362944072725, 53.6015950814439:19.6362941852262, "
       "53.5616342380536:19.6064737764314"));
-  LOG(INFO) << "\nInput: " << s2textformat::ToString(*poly);
+  S2_LOG(INFO) << "\nInput: " << s2textformat::ToString(*poly);
   EXPECT_TRUE(poly->IsValid());
   S2Polygon poly_snapped;
   poly_snapped.set_s2debug_override(S2Debug::DISABLE);
   poly_snapped.InitToSnapped(poly.get());
-  LOG(INFO) << "\nSnapped: " << s2textformat::ToString(poly_snapped);
+  S2_LOG(INFO) << "\nSnapped: " << s2textformat::ToString(poly_snapped);
   S2Error error;
   EXPECT_FALSE(poly_snapped.FindValidationError(&error)) << error;
 }
@@ -1987,12 +1987,12 @@ TEST(S2Polygon, InitToSnappedIsValid_D) {
       "52.0909316:4.8673826, 52.0909317627574:4.86738262858533, "
       "52.0911338452911:4.86248482549567, 52.0911337:4.8624848, "
       "52.0910665:4.8641176, 52.090999:4.8657502"));
-  LOG(INFO) << "\nInput: " << s2textformat::ToString(*poly);
+  S2_LOG(INFO) << "\nInput: " << s2textformat::ToString(*poly);
   EXPECT_TRUE(poly->IsValid());
   S2Polygon poly_snapped;
   poly_snapped.set_s2debug_override(S2Debug::DISABLE);
   poly_snapped.InitToSnapped(poly.get());
-  LOG(INFO) << "\nSnapped: " << s2textformat::ToString(poly_snapped);
+  S2_LOG(INFO) << "\nSnapped: " << s2textformat::ToString(poly_snapped);
   S2Error error;
   EXPECT_FALSE(poly_snapped.FindValidationError(&error)) << error;
 }
@@ -2238,7 +2238,7 @@ class IsValidTest : public testing::Test {
   // exponentially in order to prevent accidental loop crossings when one of
   // the loops is modified.
   void AddConcentricLoops(int num_loops, int min_vertices) {
-    DCHECK_LE(num_loops, 10);  // Because radii decrease exponentially.
+    S2_DCHECK_LE(num_loops, 10);  // Because radii decrease exponentially.
     S2Point center = S2Testing::RandomPoint();
     int num_vertices = min_vertices + rnd_->Uniform(10);
     for (int i = 0; i < num_loops; ++i) {
@@ -2290,7 +2290,7 @@ class IsValidTest : public testing::Test {
 
 TEST_F(IsValidTest, UnitLength) {
   // This test can only be run in optimized builds because there are
-  // DCHECK(IsUnitLength()) calls scattered throughout the S2 code.
+  // S2_DCHECK(IsUnitLength()) calls scattered throughout the S2 code.
   if (google::DEBUG_MODE) return;
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(1 + rnd_->Uniform(6), 3 /*min_vertices*/);
@@ -2865,7 +2865,7 @@ class S2PolygonDecodeTest : public ::testing::Test {
 };
 
 TEST_F(S2PolygonDecodeTest, FuzzLosslessEncoding) {
-  // Some parts of the S2 library DCHECK on invalid data, even if we set
+  // Some parts of the S2 library S2_DCHECK on invalid data, even if we set
   // FLAGS_s2debug to false or use S2Polygon::set_s2debug_override. So we
   // only run this test in opt mode.
 #ifdef NDEBUG
@@ -2877,7 +2877,7 @@ TEST_F(S2PolygonDecodeTest, FuzzLosslessEncoding) {
 }
 
 TEST_F(S2PolygonDecodeTest, FuzzCompressedEncoding) {
-  // Some parts of the S2 library DCHECK on invalid data, even if we set
+  // Some parts of the S2 library S2_DCHECK on invalid data, even if we set
   // FLAGS_s2debug to false or use S2Polygon::set_s2debug_override. So we
   // only run this test in opt mode.
 #ifdef NDEBUG
@@ -2889,7 +2889,7 @@ TEST_F(S2PolygonDecodeTest, FuzzCompressedEncoding) {
 }
 
 TEST_F(S2PolygonDecodeTest, FuzzEverything) {
-  // Some parts of the S2 library DCHECK on invalid data, even if we set
+  // Some parts of the S2 library S2_DCHECK on invalid data, even if we set
   // FLAGS_s2debug to false or use S2Polygon::set_s2debug_override. So we
   // only run this test in opt mode.
 #ifdef NDEBUG
@@ -2917,7 +2917,7 @@ TEST_F(S2PolygonTestBase, EmptyPolygonShape) {
 }
 
 void TestPolygonShape(const S2Polygon& polygon) {
-  DCHECK(!polygon.is_full());
+  S2_DCHECK(!polygon.is_full());
   S2Polygon::Shape shape(&polygon);
   EXPECT_EQ(&polygon, shape.polygon());
   EXPECT_EQ(polygon.num_vertices(), shape.num_edges());
@@ -2972,13 +2972,13 @@ TEST(S2Polygon, PointInBigLoop) {
 
 TEST(S2Polygon, Sizes) {
   // This isn't really a test.  It just prints the sizes of various classes.
-  LOG(INFO) << "sizeof(S2Loop): " << sizeof(S2Loop);
-  LOG(INFO) << "sizeof(S2Polygon): " << sizeof(S2Polygon);
-  LOG(INFO) << "sizeof(S2Polyline): " << sizeof(S2Polyline);
-  LOG(INFO) << "sizeof(MutableS2ShapeIndex): " << sizeof(MutableS2ShapeIndex);
-  LOG(INFO) << "sizeof(S2Polygon::Shape): " << sizeof(S2Polygon::Shape);
-  LOG(INFO) << "sizeof(S2Cell): " << sizeof(S2Cell);
-  LOG(INFO) << "sizeof(S2PaddedCell): " << sizeof(S2PaddedCell);
+  S2_LOG(INFO) << "sizeof(S2Loop): " << sizeof(S2Loop);
+  S2_LOG(INFO) << "sizeof(S2Polygon): " << sizeof(S2Polygon);
+  S2_LOG(INFO) << "sizeof(S2Polyline): " << sizeof(S2Polyline);
+  S2_LOG(INFO) << "sizeof(MutableS2ShapeIndex): " << sizeof(MutableS2ShapeIndex);
+  S2_LOG(INFO) << "sizeof(S2Polygon::Shape): " << sizeof(S2Polygon::Shape);
+  S2_LOG(INFO) << "sizeof(S2Cell): " << sizeof(S2Cell);
+  S2_LOG(INFO) << "sizeof(S2PaddedCell): " << sizeof(S2PaddedCell);
 }
 
 TEST_F(S2PolygonTestBase, IndexContainsOnePolygonShape) {

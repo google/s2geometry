@@ -32,15 +32,18 @@
 
 namespace gtl {
 
+// TODO(user): use inheritance rather than aliases here to make compiler
+// messages neater.
 template <typename Key, typename Compare = std::less<Key>,
           typename Alloc = std::allocator<Key>, int TargetNodeSize = 256>
-using btree_set = btree_unique_container<
-    btree<btree_set_params<Key, Compare, Alloc, TargetNodeSize>>>;
+using btree_set = internal_btree::btree_unique_container<internal_btree::btree<
+    internal_btree::set_params<Key, Compare, Alloc, TargetNodeSize>>>;
 
 template <typename Key, typename Compare = std::less<Key>,
           typename Alloc = std::allocator<Key>, int TargetNodeSize = 256>
-using btree_multiset = btree_multi_container<
-    btree<btree_set_params<Key, Compare, Alloc, TargetNodeSize>>>;
+using btree_multiset =
+    internal_btree::btree_multi_container<internal_btree::btree<
+        internal_btree::set_params<Key, Compare, Alloc, TargetNodeSize>>>;
 
 }  // namespace gtl
 

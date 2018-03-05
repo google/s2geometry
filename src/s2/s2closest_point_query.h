@@ -20,7 +20,7 @@
 #ifndef S2_S2CLOSEST_POINT_QUERY_H_
 #define S2_S2CLOSEST_POINT_QUERY_H_
 
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2closest_point_query_base.h"

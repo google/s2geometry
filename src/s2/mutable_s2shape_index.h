@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "s2/third_party/absl/base/integral_types.h"
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/base/mutex.h"
 #include "s2/base/spinlock.h"
@@ -441,7 +441,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
     }
 
     ~UpdateState() {
-      DCHECK_EQ(0, num_waiting);
+      S2_DCHECK_EQ(0, num_waiting);
     }
   };
   std::unique_ptr<UpdateState> update_state_;
@@ -501,7 +501,7 @@ inline void MutableS2ShapeIndex::Iterator::Refresh() {
 
 inline void MutableS2ShapeIndex::Iterator::Begin() {
   // Make sure that the index has not been modified since Init() was called.
-  DCHECK(index_->is_fresh());
+  S2_DCHECK(index_->is_fresh());
   iter_ = index_->cell_map_.begin();
   end_ = index_->cell_map_.end();
   Refresh();
@@ -513,7 +513,7 @@ inline void MutableS2ShapeIndex::Iterator::Finish() {
 }
 
 inline void MutableS2ShapeIndex::Iterator::Next() {
-  DCHECK(!done());
+  S2_DCHECK(!done());
   ++iter_;
   Refresh();
 }

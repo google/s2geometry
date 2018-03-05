@@ -109,7 +109,7 @@ class FurthestPointQueryTarget final : public S2DistanceTarget<MaxDistance> {
 
   bool UpdateMinDistance(const S2Point& v0, const S2Point& v1,
                          MaxDistance* min_dist) override {
-    LOG(FATAL) << "Unimplemented";
+    S2_LOG(FATAL) << "Unimplemented";
     return false;
   }
 
@@ -121,7 +121,7 @@ class FurthestPointQueryTarget final : public S2DistanceTarget<MaxDistance> {
 
   bool VisitContainingShapes(const S2ShapeIndex& index,
                              const ShapeVisitor& visitor) override {
-    LOG(FATAL) << "Unimplemented";
+    S2_LOG(FATAL) << "Unimplemented";
     return false;
   }
 

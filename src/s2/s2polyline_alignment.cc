@@ -17,30 +17,31 @@
 #include "s2/s2polyline_alignment.h"
 #include "s2/s2polyline_alignment_internal.h"
 
+#include <sstream>
 #include <vector>
 
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/math/mathutil.h"
 
 namespace s2polyline_alignment {
 
 Window::Window(const std::vector<ColumnStride>& strides) {
-  DCHECK(!strides.empty()) << "Cannot construct empty window.";
-  DCHECK(strides[0].start == 0) << "First element of start_cols is non-zero.";
+  S2_DCHECK(!strides.empty()) << "Cannot construct empty window.";
+  S2_DCHECK(strides[0].start == 0) << "First element of start_cols is non-zero.";
   strides_ = strides;
   rows_ = strides.size();
   cols_ = strides.back().end;
-  DCHECK(this->IsValid()) << "Constructor validity check fail.";
+  S2_DCHECK(this->IsValid()) << "Constructor validity check fail.";
 }
 
 Window::Window(const WarpPath& warp_path) {
-  DCHECK(!warp_path.empty()) << "Cannot construct window from empty warp path.";
-  DCHECK(warp_path.front() == std::make_pair(0, 0)) << "Must start at (0, 0).";
+  S2_DCHECK(!warp_path.empty()) << "Cannot construct window from empty warp path.";
+  S2_DCHECK(warp_path.front() == std::make_pair(0, 0)) << "Must start at (0, 0).";
   rows_ = warp_path.back().first + 1;
-  DCHECK(rows_ > 0) << "Must have at least one row.";
+  S2_DCHECK(rows_ > 0) << "Must have at least one row.";
   cols_ = warp_path.back().second + 1;
-  DCHECK(cols_ > 0) << "Must have at least one column.";
+  S2_DCHECK(cols_ > 0) << "Must have at least one column.";
   strides_.resize(rows_);
 
   int prev_row = 0;
@@ -56,14 +57,14 @@ Window::Window(const WarpPath& warp_path) {
     }
     stride_stop = pair.second + 1;
   }
-  DCHECK_EQ(curr_row, rows_ - 1);
+  S2_DCHECK_EQ(curr_row, rows_ - 1);
   strides_[rows_ - 1] = {stride_start, stride_stop};
-  DCHECK(this->IsValid()) << "Constructor validity check fail.";
+  S2_DCHECK(this->IsValid()) << "Constructor validity check fail.";
 }
 
 Window Window::Upsample(const int new_rows, const int new_cols) const {
-  DCHECK(new_rows >= rows_) << "Upsampling: New_rows < current_rows";
-  DCHECK(new_cols >= cols_) << "Upsampling: New_cols < current_cols";
+  S2_DCHECK(new_rows >= rows_) << "Upsampling: New_rows < current_rows";
+  S2_DCHECK(new_cols >= cols_) << "Upsampling: New_cols < current_cols";
   const double row_scale = static_cast<double>(new_rows) / rows_;
   const double col_scale = static_cast<double>(new_cols) / cols_;
   std::vector<ColumnStride> new_strides(new_rows);
@@ -84,7 +85,7 @@ Window Window::Upsample(const int new_rows, const int new_cols) const {
 // straightforward to do so. This method generally isn't very expensive so it
 // feels unnecessary to combine them.
 Window Window::Dilate(const int radius) const {
-  DCHECK(radius >= 0) << "Negative dilation radius.";
+  S2_DCHECK(radius >= 0) << "Negative dilation radius.";
   std::vector<ColumnStride> new_strides(rows_);
   int prev_row, next_row;
   for (int row = 0; row < rows_; ++row) {
@@ -242,8 +243,8 @@ std::unique_ptr<S2Polyline> HalfResolution(const S2Polyline& in) {
 double GetExactVertexAlignmentCost(const S2Polyline& a, const S2Polyline& b) {
   const int a_n = a.num_vertices();
   const int b_n = b.num_vertices();
-  CHECK(a_n > 0) << "A is empty polyline.";
-  CHECK(b_n > 0) << "B is empty polyline.";
+  S2_CHECK(a_n > 0) << "A is empty polyline.";
+  S2_CHECK(b_n > 0) << "B is empty polyline.";
   std::vector<double> cost(b_n, DOUBLE_MAX);
   double left_diag_min_cost = 0;
   for (int row = 0; row < a_n; ++row) {
@@ -262,8 +263,8 @@ VertexAlignment GetExactVertexAlignment(const S2Polyline& a,
                                         const S2Polyline& b) {
   const int a_n = a.num_vertices();
   const int b_n = b.num_vertices();
-  CHECK(a_n > 0) << "A is empty polyline.";
-  CHECK(b_n > 0) << "B is empty polyline.";
+  S2_CHECK(a_n > 0) << "A is empty polyline.";
+  S2_CHECK(b_n > 0) << "B is empty polyline.";
   const auto w = Window(std::vector<ColumnStride>(a_n, {0, b_n}));
   return DynamicTimewarp(a, b, w);
 }
@@ -278,9 +279,9 @@ VertexAlignment GetApproxVertexAlignment(const S2Polyline& a,
   const double kDensitySwitchover = 0.85;
   const int a_n = a.num_vertices();
   const int b_n = b.num_vertices();
-  CHECK(a_n > 0) << "A is empty polyline.";
-  CHECK(b_n > 0) << "B is empty polyline.";
-  CHECK(radius >= 0) << "Radius is negative.";
+  S2_CHECK(a_n > 0) << "A is empty polyline.";
+  S2_CHECK(b_n > 0) << "B is empty polyline.";
+  S2_CHECK(radius >= 0) << "Radius is negative.";
 
   // If we've hit the point where doing a full, direct solve is guaranteed to
   // be faster, then terminate the recursion and do that.

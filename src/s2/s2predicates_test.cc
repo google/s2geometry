@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
-#include <gflags/gflags.h>
+#include "s2/base/commandlineflags.h"
 #include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/base/casts.h"
@@ -360,7 +360,7 @@ class StableSignTest : public testing::Test {
       }
     }
     double rate = static_cast<double>(failure_count) / kIters;
-    LOG(INFO) << "StableSign failure rate for " << km << " km = " << rate;
+    S2_LOG(INFO) << "StableSign failure rate for " << km << " km = " << rate;
     return rate;
   }
 };
@@ -387,9 +387,9 @@ TEST_F(StableSignTest, FailureRate) {
 // symbolic perturbations are needed to break ties.
 static void CheckSymbolicSign(int expected, const S2Point& a,
                               const S2Point& b, const S2Point& c) {
-  CHECK_LT(a, b);
-  CHECK_LT(b, c);
-  CHECK_EQ(0, a.DotProd(b.CrossProd(c)));
+  S2_CHECK_LT(a, b);
+  S2_CHECK_LT(b, c);
+  S2_CHECK_EQ(0, a.DotProd(b.CrossProd(c)));
 
   // Use ASSERT rather than EXPECT to suppress spurious error messages.
   ASSERT_EQ(expected, ExpensiveSign(a, b, c));
@@ -707,7 +707,7 @@ TEST(CompareDistances, Consistency) {
       if (r.degrees() > 135) minus_sin2_stats.Tally(prec);
     }
   }
-  LOG(ERROR) << "\nsin2:  " << sin2_stats.ToString()
+  S2_LOG(ERROR) << "\nsin2:  " << sin2_stats.ToString()
              << "\ncos:   " << cos_stats.ToString()
              << "\n-sin2: " << minus_sin2_stats.ToString();
 }
@@ -845,7 +845,7 @@ TEST(CompareDistance, Consistency) {
       if (r.degrees() < 45) sin2_stats.Tally(prec);
     }
   }
-  LOG(ERROR) << "\nsin2:  " << sin2_stats.ToString()
+  S2_LOG(ERROR) << "\nsin2:  " << sin2_stats.ToString()
              << "\ncos:   " << cos_stats.ToString();
 }
 
@@ -971,7 +971,7 @@ TEST(CompareEdgeDistance, Consistency) {
                                                         S1ChordAngle(r));
     stats.Tally(prec);
   }
-  LOG(ERROR) << stats.ToString();
+  S2_LOG(ERROR) << stats.ToString();
 }
 
 // Verifies that CompareEdgeDirections(a0, a1, b0, b1) == expected_sign, and
@@ -1075,7 +1075,7 @@ TEST(CompareEdgeDirections, Consistency) {
       stats.Tally(prec);
     }
   }
-  LOG(ERROR) << stats.ToString();
+  S2_LOG(ERROR) << stats.ToString();
 }
 
 // Verifies that EdgeCircumcenterSign(x0, x1, a, b, c) == expected_sign, and
@@ -1226,7 +1226,7 @@ TEST(EdgeCircumcenterSign, Consistency) {
       stats.Tally(prec);
     }
   }
-  LOG(ERROR) << stats.ToString();
+  S2_LOG(ERROR) << stats.ToString();
 }
 
 // Verifies that VoronoiSiteExclusion(a, b, x0, x1, r) == expected_result, and
@@ -1421,7 +1421,7 @@ TEST(VoronoiSiteExclusion, Consistency) {
       stats.Tally(prec);
     }
   }
-  LOG(ERROR) << stats.ToString();
+  S2_LOG(ERROR) << stats.ToString();
 }
 
 }  // namespace s2pred

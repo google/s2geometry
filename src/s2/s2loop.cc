@@ -26,9 +26,9 @@
 #include <utility>
 #include <vector>
 
-#include <gflags/gflags.h>
+#include "s2/base/commandlineflags.h"
 #include "s2/third_party/absl/base/integral_types.h"
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/types/span.h"
 #include "s2/util/coding/coder.h"
@@ -130,7 +130,7 @@ void S2Loop::Init(const vector<S2Point>& vertices) {
 bool S2Loop::IsValid() const {
   S2Error error;
   if (FindValidationError(&error)) {
-    LOG_IF(ERROR, FLAGS_s2debug) << error;
+    S2_LOG_IF(ERROR, FLAGS_s2debug) << error;
     return false;
   }
   return true;
@@ -144,7 +144,7 @@ bool S2Loop::FindValidationError(S2Error* error) const {
 bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
   // subregion_bound_ must be at least as large as bound_.  (This is an
   // internal consistency check rather than a test of client data.)
-  DCHECK(subregion_bound_.Contains(bound_));
+  S2_DCHECK(subregion_bound_.Contains(bound_));
 
   // All vertices must be unit length.  (Unfortunately this check happens too
   // late in debug mode, because S2Loop construction calls s2pred::Sign which
@@ -283,7 +283,7 @@ void S2Loop::InitIndex() {
   }
   if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
     // Note that FLAGS_s2debug is false in optimized builds (by default).
-    CHECK(IsValid());
+    S2_CHECK(IsValid());
   }
 }
 
@@ -358,13 +358,13 @@ bool S2Loop::IsNormalized() const {
 }
 
 void S2Loop::Normalize() {
-  CHECK(owns_vertices_);
+  S2_CHECK(owns_vertices_);
   if (!IsNormalized()) Invert();
-  DCHECK(IsNormalized());
+  S2_DCHECK(IsNormalized());
 }
 
 void S2Loop::Invert() {
-  CHECK(owns_vertices_);
+  S2_CHECK(owns_vertices_);
   ClearIndex();
   if (is_empty_or_full()) {
     vertices_[0] = is_full() ? kEmptyVertex() : kFullVertex();
@@ -463,7 +463,7 @@ double S2Loop::GetArea() const {
   double max_error = GetTurningAngleMaxError();
 
   // The signed area should be between approximately -4*Pi and 4*Pi.
-  DCHECK_LE(fabs(area), 4 * M_PI + max_error);
+  S2_DCHECK_LE(fabs(area), 4 * M_PI + max_error);
   if (area < 0) {
     // We have computed the negative of the area of the loop exterior.
     area += 4 * M_PI;
@@ -632,7 +632,7 @@ bool S2Loop::MayIntersect(const S2Cell& target) const {
 
 bool S2Loop::BoundaryApproxIntersects(const MutableS2ShapeIndex::Iterator& it,
                                       const S2Cell& target) const {
-  DCHECK(it.id().contains(target.id()));
+  S2_DCHECK(it.id().contains(target.id()));
   const S2ClippedShape& a_clipped = it.cell().clipped(0);
   int a_num_edges = a_clipped.num_edges();
 
@@ -741,7 +741,7 @@ void S2Loop::Encode(Encoder* const encoder) const {
   encoder->putn(vertices_, sizeof(*vertices_) * num_vertices_);
   encoder->put8(origin_inside_);
   encoder->put32(depth_);
-  DCHECK_GE(encoder->avail(), 0);
+  S2_DCHECK_GE(encoder->avail(), 0);
 
   bound_.Encode(encoder);
 }
@@ -1056,7 +1056,7 @@ bool LoopCrosser::CellCrossesAnySubcell(const S2ClippedShape& a_clipped,
 }
 
 bool LoopCrosser::HasCrossing(RangeIterator* ai, RangeIterator* bi) {
-  DCHECK(ai->id().contains(bi->id()));
+  S2_DCHECK(ai->id().contains(bi->id()));
   // If ai->id() intersects many edges of B, then it is faster to use
   // S2CrossingEdgeQuery to narrow down the candidates.  But if it intersects
   // only a few edges, it is faster to check all the crossings directly.
@@ -1091,7 +1091,7 @@ bool LoopCrosser::HasCrossing(RangeIterator* ai, RangeIterator* bi) {
 }
 
 bool LoopCrosser::HasCrossingRelation(RangeIterator* ai, RangeIterator* bi) {
-  DCHECK(ai->id().contains(bi->id()));
+  S2_DCHECK(ai->id().contains(bi->id()));
   if (ai->num_edges() == 0) {
     if (ai->contains_center() == a_crossing_target_) {
       // All points within ai->id() satisfy the crossing target for A, so it's
@@ -1337,8 +1337,8 @@ class CompareBoundaryRelation : public LoopRelation {
 };
 
 int S2Loop::CompareBoundary(const S2Loop* b) const {
-  DCHECK(!is_empty() && !b->is_empty());
-  DCHECK(!b->is_full() || !b->is_hole());
+  S2_DCHECK(!is_empty() && !b->is_empty());
+  S2_DCHECK(!b->is_full() || !b->is_hole());
 
   // The bounds must intersect for containment or crossing.
   if (!bound_.Intersects(b->bound_)) return -1;
@@ -1362,8 +1362,8 @@ int S2Loop::CompareBoundary(const S2Loop* b) const {
 
 bool S2Loop::ContainsNonCrossingBoundary(const S2Loop* b, bool reverse_b)
     const {
-  DCHECK(!is_empty() && !b->is_empty());
-  DCHECK(!b->is_full() || !reverse_b);
+  S2_DCHECK(!is_empty() && !b->is_empty());
+  S2_DCHECK(!b->is_full() || !reverse_b);
 
   // The bounds must intersect for containment.
   if (!bound_.Intersects(b->bound_)) return false;
@@ -1542,7 +1542,7 @@ void S2Loop::EncodeCompressed(Encoder* encoder, const S2XYZFaceSiTi* vertices,
   if (properties.test(kBoundEncoded)) {
     bound_.Encode(encoder);
   }
-  DCHECK_GE(encoder->avail(), 0);
+  S2_DCHECK_GE(encoder->avail(), 0);
 }
 
 bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
@@ -1653,6 +1653,6 @@ int S2Loop::Shape::num_chains() const {
 }
 
 S2Shape::Chain S2Loop::Shape::chain(int i) const {
-  DCHECK_EQ(i, 0);
+  S2_DCHECK_EQ(i, 0);
   return Chain(0, Shape::num_edges());  // Avoid virtual call.
 }

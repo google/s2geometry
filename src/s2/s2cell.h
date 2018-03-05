@@ -19,7 +19,7 @@
 #define S2_S2CELL_H_
 
 #include "s2/third_party/absl/base/integral_types.h"
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2rect.h"
 #include "s2/s1chord_angle.h"

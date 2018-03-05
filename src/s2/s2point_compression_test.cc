@@ -20,8 +20,8 @@
 #include <string>
 #include <vector>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
+#include "s2/base/commandlineflags.h"
+#include "s2/base/logging.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/third_party/absl/types/span.h"
@@ -73,7 +73,7 @@ vector<S2Point> MakeRegularPoints(int num_vertices,
 
 void MakeXYZFaceSiTiPoints(Span<const S2Point> points,
                            Span<S2XYZFaceSiTi> result) {
-  CHECK_EQ(points.size(), result.size());
+  S2_CHECK_EQ(points.size(), result.size());
   for (int i = 0; i < points.size(); ++i) {
     result[i].xyz = points[i];
     result[i].cell_level = S2::XYZtoFaceSiTi(points[i], &result[i].face,
@@ -297,8 +297,8 @@ TEST_F(S2PointCompressionTest, FirstPointOnFaceEdge) {
   Decoder decoder(encoder.base(), encoder.length());
   S2Point result[2];
   S2DecodePointsCompressed(&decoder, 8, result);
-  CHECK(result[0] == points[0].xyz);
-  CHECK(result[1] == points[1].xyz);
+  S2_CHECK(result[0] == points[0].xyz);
+  S2_CHECK(result[1] == points[1].xyz);
 }
 
 }  // namespace

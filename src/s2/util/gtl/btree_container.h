@@ -24,6 +24,7 @@
 #include "s2/util/gtl/btree.h"  // IWYU pragma: export
 
 namespace gtl {
+namespace internal_btree {
 
 // A common base class for btree_set, btree_map, btree_multiset and
 // btree_multimap.
@@ -431,6 +432,7 @@ inline void swap(btree_multi_container<Tree> &x,
   x.swap(y);
 }
 
+}  // namespace internal_btree
 }  // namespace gtl
 
 #endif  // UTIL_GTL_BTREE_CONTAINER_H__

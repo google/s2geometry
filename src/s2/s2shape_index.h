@@ -30,7 +30,7 @@
 #include <vector>
 
 #include "s2/third_party/absl/base/integral_types.h"
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/base/mutex.h"
 #include "s2/base/spinlock.h"
@@ -585,7 +585,7 @@ inline S2CellId S2ShapeIndex::IteratorBase::id() const {
 }
 
 inline const S2ShapeIndexCell& S2ShapeIndex::IteratorBase::cell() const {
-  DCHECK(!done());
+  S2_DCHECK(!done());
   auto cell = raw_cell();
   if (cell == nullptr) {
     cell = GetCell();
@@ -599,7 +599,7 @@ inline bool S2ShapeIndex::IteratorBase::done() const {
 }
 
 inline S2Point S2ShapeIndex::IteratorBase::center() const {
-  DCHECK(!done());
+  S2_DCHECK(!done());
   return id().ToPoint();
 }
 

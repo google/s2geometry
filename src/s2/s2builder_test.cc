@@ -24,8 +24,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <gflags/gflags.h>
-#include <glog/log_severity.h>
+#include "s2/base/commandlineflags.h"
+#include "s2/base/log_severity.h"
 #include "s2/base/timer.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
@@ -1124,7 +1124,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
     builder.AddEdge(v2, v0);
     S2Error error;
     if (!builder.Build(&error)) {
-      LOG(ERROR) << "d0=" << d0 << ", d2=" << d2 << ", d3=" << d3;
+      S2_LOG(ERROR) << "d0=" << d0 << ", d2=" << d2 << ", d3=" << d3;
     }
     if (error.ok() && !output.is_empty()) {
       EXPECT_EQ(1, output.num_loops());
@@ -1136,7 +1136,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
       }
     }
   }
-  LOG(INFO) << non_degenerate << " non-degenerate out of " << kIters;
+  S2_LOG(INFO) << non_degenerate << " non-degenerate out of " << kIters;
   EXPECT_GE(non_degenerate, kIters / 10);
 }
 

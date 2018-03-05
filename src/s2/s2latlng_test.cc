@@ -21,7 +21,7 @@
 #include <cstdio>
 #include <unordered_map>
 
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/strings/str_cat.h"

@@ -22,7 +22,7 @@
 #include <cmath>
 #include <string>
 
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/r1interval.h"

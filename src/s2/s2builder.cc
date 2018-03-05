@@ -76,7 +76,7 @@
 #include <numeric>
 #include <string>
 #include "s2/base/casts.h"
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/bits/bits.h"
 #include "s2/id_set_lexicon.h"
@@ -128,7 +128,7 @@ S1Angle S2Builder::SnapFunction::max_edge_deviation() const {
   // actual edge deviation exceeds the limit; in practice, splitting is rare
   // even with long edges.)  Note that it is always possible to split edges
   // when max_edge_deviation() is exceeded; see MaybeAddExtraSites().
-  DCHECK_LE(snap_radius(), kMaxSnapRadius());
+  S2_DCHECK_LE(snap_radius(), kMaxSnapRadius());
   const double kMaxEdgeDeviationRatio = 1.1;
   return kMaxEdgeDeviationRatio * snap_radius();
 }
@@ -192,7 +192,7 @@ void S2Builder::Init(const Options& options) {
   options_ = options;
   const SnapFunction& snap_function = options.snap_function();
   S1Angle snap_radius = snap_function.snap_radius();
-  DCHECK_LE(snap_radius, SnapFunction::kMaxSnapRadius());
+  S2_DCHECK_LE(snap_radius, SnapFunction::kMaxSnapRadius());
 
   // Convert the snap radius to an S1ChordAngle.  This is the "true snap
   // radius" used when evaluating exact predicates (s2predicates.h).
@@ -238,7 +238,7 @@ void S2Builder::Init(const Options& options) {
   // Currently max_edge_deviation() is at most 1.1 * snap_radius(), whereas
   // min_edge_vertex_separation() is at least 0.219 * snap_radius() (based on
   // S2CellIdSnapFunction, which is currently the worst case).
-  DCHECK_LE(snap_function.max_edge_deviation(),
+  S2_DCHECK_LE(snap_function.max_edge_deviation(),
             snap_function.snap_radius() +
             snap_function.min_edge_vertex_separation());
 
@@ -289,7 +289,7 @@ void S2Builder::clear_labels() {
 }
 
 void S2Builder::push_label(Label label) {
-  DCHECK_GE(label, 0);
+  S2_DCHECK_GE(label, 0);
   label_set_.push_back(label);
   label_set_modified_ = true;
 }
@@ -300,7 +300,7 @@ void S2Builder::pop_label() {
 }
 
 void S2Builder::set_label(Label label) {
-  DCHECK_GE(label, 0);
+  S2_DCHECK_GE(label, 0);
   label_set_.resize(1);
   label_set_[0] = label;
   label_set_modified_ = true;
@@ -338,7 +338,7 @@ S2Builder::InputVertexId S2Builder::AddVertex(const S2Point& v) {
 }
 
 void S2Builder::AddEdge(const S2Point& v0, const S2Point& v1) {
-  DCHECK(!layers_.empty()) << "Call StartLayer before adding any edges";
+  S2_DCHECK(!layers_.empty()) << "Call StartLayer before adding any edges";
 
   if (v0 == v1 && (layer_options_.back().degenerate_edges() ==
                    GraphOptions::DegenerateEdges::DISCARD)) {
@@ -445,11 +445,11 @@ class VertexIdEdgeVectorShape : public S2Shape {
 };
 
 bool S2Builder::Build(S2Error* error) {
-  // CHECK rather than DCHECK because this is friendlier than crashing on the
+  // S2_CHECK rather than S2_DCHECK because this is friendlier than crashing on the
   // "error->ok()" call below.  It would be easy to allow (error == nullptr)
   // by declaring a local "tmp_error", but it seems better to make clients
   // think about error handling.
-  CHECK(error != nullptr);
+  S2_CHECK(error != nullptr);
   error->Clear();
   error_ = error;
 
@@ -837,7 +837,7 @@ void S2Builder::MaybeAddExtraSites(InputEdgeId edge_id,
         // we find all the edges near the new site (including this one) and
         // add them to the snap queue.
         S2Point new_site = GetSeparationSite(site_to_avoid, v0, v1, edge_id);
-        DCHECK_NE(site_to_avoid, new_site);
+        S2_DCHECK_NE(site_to_avoid, new_site);
         AddExtraSite(new_site, max_edge_id, input_edge_index, snap_queue);
         return;
       }
@@ -902,8 +902,8 @@ S2Point S2Builder::GetSeparationSite(const S2Point& site_to_avoid,
     new_site = gap_max;
   }
   new_site = SnapSite(new_site);
-  DCHECK_NE(v0, new_site);
-  DCHECK_NE(v1, new_site);
+  S2_DCHECK_NE(v0, new_site);
+  S2_DCHECK_NE(v1, new_site);
   return new_site;
 }
 
@@ -994,7 +994,7 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
         add_site_c = false;  // Site C is excluded by B.
         break;
       }
-      DCHECK_EQ(s2pred::Excluded::NEITHER, result);
+      S2_DCHECK_EQ(s2pred::Excluded::NEITHER, result);
 
       // Otherwise check whether the previous site A is close enough to B and
       // C that it might further clip the Voronoi region of B.
@@ -1021,12 +1021,12 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
       chain->push_back(candidates[i]);
     }
   }
-  DCHECK(!chain->empty());
+  S2_DCHECK(!chain->empty());
   if (google::DEBUG_MODE) {
     for (int i = 0; i < candidates.size(); ++i) {
       if (s2pred::CompareDistances(y, sites_[chain->back()],
                                    sites_[candidates[i]]) > 0) {
-        LOG(ERROR) << "Snapping invariant broken!";
+        S2_LOG(ERROR) << "Snapping invariant broken!";
       }
     }
   }
@@ -1435,7 +1435,7 @@ inline int S2Builder::EdgeChainSimplifier::graph_edge_layer(EdgeId e) const {
 int S2Builder::EdgeChainSimplifier::input_edge_layer(InputEdgeId id) const {
   // NOTE(ericv): If this method shows up in profiling, the result could be
   // stored with each edge (i.e., edge_layers_ and new_edge_layers_).
-  DCHECK_GE(id, 0);
+  S2_DCHECK_GE(id, 0);
   return (std::upper_bound(layer_begins_.begin(), layer_begins_.end(), id) -
           (layer_begins_.begin() + 1));
 }
@@ -1583,12 +1583,12 @@ void S2Builder::EdgeChainSimplifier::SimplifyChain(VertexId v0, VertexId v1) {
 // next vertex in the edge chain.
 S2Builder::Graph::VertexId S2Builder::EdgeChainSimplifier::FollowChain(
     VertexId v0, VertexId v1) const {
-  DCHECK(is_interior_[v1]);
+  S2_DCHECK(is_interior_[v1]);
   for (EdgeId e : out_.edge_ids(v1)) {
     VertexId v = g_.edge(e).second;
     if (v != v0 && v != v1) return v;
   }
-  LOG(FATAL) << "Could not find next edge in edge chain";
+  S2_LOG(FATAL) << "Could not find next edge in edge chain";
 }
 
 // Copies all input edges between v0 and v1 (in both directions) to the output.
@@ -1655,7 +1655,7 @@ bool S2Builder::EdgeChainSimplifier::AvoidSites(
         best = id;
     }
   }
-  DCHECK_GE(best, 0);  // Because there is at least one outgoing edge.
+  S2_DCHECK_GE(best, 0);  // Because there is at least one outgoing edge.
 
   for (VertexId v : edge_sites[best]) {
     // This test is optional since these sites are excluded below anyway.
@@ -1712,7 +1712,7 @@ void S2Builder::EdgeChainSimplifier::MergeChain(
       // associated with degenerate edges.  Each input edge ids will be
       // assigned to one of the output edges later.  (Normally there are no
       // degenerate edges at all since most layer types don't want them.)
-      DCHECK(is_interior_[v0]);
+      S2_DCHECK(is_interior_[v0]);
       for (EdgeId e : out_.edge_ids(v0, v0)) {
         for (InputEdgeId id : g_.input_edge_ids(e)) {
           degenerate_ids.push_back(id);
@@ -1738,7 +1738,7 @@ void S2Builder::EdgeChainSimplifier::MergeChain(
       used_[e] = true;
       ++j;
     }
-    DCHECK_EQ(merged_input_ids.size(), j);
+    S2_DCHECK_EQ(merged_input_ids.size(), j);
   }
   if (!degenerate_ids.empty()) {
     std::sort(degenerate_ids.begin(), degenerate_ids.end());
@@ -1813,7 +1813,7 @@ void S2Builder::EdgeChainSimplifier::AssignDegenerateEdges(
     if (it != order.begin()) {
       if ((*merged_ids)[it[-1]][0] >= layer_begins_[layer]) --it;
     }
-    DCHECK_EQ(layer, input_edge_layer((*merged_ids)[it[0]][0]));
+    S2_DCHECK_EQ(layer, input_edge_layer((*merged_ids)[it[0]][0]));
     (*merged_ids)[it[0]].push_back(degenerate_id);
   }
 }
