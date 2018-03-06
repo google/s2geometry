@@ -159,14 +159,14 @@
 #endif  // defined(__APPLE__)
 
 // __GLIBC_PREREQ
-#if defined OS_LINUX
+#if defined __linux__
 // GLIBC-related macros.
 #include <features.h>
 
 #ifndef __GLIBC_PREREQ
 #define __GLIBC_PREREQ(a, b) 0  // not a GLIBC system
 #endif
-#endif  // OS_LINUX
+#endif  // __linux__
 
 // STATIC_ANALYSIS
 // Klocwork static analysis tool's C/C++ complier kwcc
@@ -274,7 +274,7 @@ inline void sized_delete_array(void *ptr, size_t size) {
 // -----------------------------------------------------------------------------
 
 // IS_LITTLE_ENDIAN, IS_BIG_ENDIAN
-#if defined OS_LINUX || defined OS_ANDROID || defined(__ANDROID__)
+#if defined __linux__ || defined OS_ANDROID || defined(__ANDROID__)
 // _BIG_ENDIAN
 #include <endian.h>
 
@@ -405,7 +405,7 @@ const char PATH_SEPARATOR = '/';
 // -----------------------------------------------------------------------------
 
 // uint, ushort, ulong
-#if defined OS_LINUX
+#if defined __linux__
 // The uint mess:
 // mysql.h sets _GNU_SOURCE which sets __USE_MISC in <features.h>
 // sys/types.h typedefs uint if __USE_MISC
@@ -427,7 +427,7 @@ typedef unsigned long ulong;  // NOLINT
 #endif  // !HAVE_ULONG
 #endif  // !__USE_MISC
 
-#endif  // OS_LINUX
+#endif  // __linux__
 
 #ifdef _MSC_VER /* if Visual C++ */
 // VC++ doesn't understand "uint"
@@ -623,7 +623,7 @@ inline void bzero(void *s, int n) { memset(s, 0, n); }
 #endif  // _MSC_VER
 
 // gethostbyname
-#if defined(OS_WINDOWS) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__)
 // gethostbyname() *is* thread-safe for Windows native threads. It is also
 // safe on Mac OS X and iOS, where it uses thread-local storage, even though the
 // manpages claim otherwise. For details, see
