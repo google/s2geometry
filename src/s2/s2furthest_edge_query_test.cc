@@ -456,7 +456,7 @@ static void TestWithIndexFactory(const s2testing::ShapeIndexFactory& factory,
       S2FurthestEdgeQuery::CellTarget target(cell);
       TestFindFurthestEdges(&target, &query);
     } else {
-      DCHECK_EQ(3, target_type);
+      S2_DCHECK_EQ(3, target_type);
       // Use another one of the pre-built indexes as the target.
       int j_index = S2Testing::rnd.Uniform(num_indexes);
       S2FurthestEdgeQuery::ShapeIndexTarget target(indexes[j_index].get());

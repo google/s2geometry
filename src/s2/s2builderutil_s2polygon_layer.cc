@@ -54,7 +54,7 @@ S2PolygonLayer::S2PolygonLayer(
 void S2PolygonLayer::Init(
     S2Polygon* polygon, LabelSetIds* label_set_ids,
     IdSetLexicon* label_set_lexicon, const Options& options) {
-  DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
+  S2_DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
   polygon_ = polygon;
   label_set_ids_ = label_set_ids;
   label_set_lexicon_ = label_set_lexicon;

@@ -25,8 +25,7 @@
 #include <map>
 #include <vector>
 
-#include <glog/logging.h>
-
+#include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -174,8 +173,8 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: 0 <= i < 2 * num_vertices()
   const S2Point& vertex(int i) const {
-    DCHECK_GE(i, 0);
-    DCHECK_LT(i, 2 * num_vertices());
+    S2_DCHECK_GE(i, 0);
+    S2_DCHECK_LT(i, 2 * num_vertices());
     int j = i - num_vertices();
     return vertices_[j < 0 ? i : j];
   }
@@ -188,8 +187,8 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: 0 <= i < 2 * num_vertices()
   const S2Point& oriented_vertex(int i) const {
-    DCHECK_GE(i, 0);
-    DCHECK_LT(i, 2 * num_vertices());
+    S2_DCHECK_GE(i, 0);
+    S2_DCHECK_LT(i, 2 * num_vertices());
     int j = i - num_vertices();
     if (j < 0) j = i;
     if (is_hole()) j = num_vertices() - 1 - j;
@@ -479,7 +478,7 @@ class S2Loop final : public S2Region {
     int num_chains() const final;
     Chain chain(int i) const final;
     Edge chain_edge(int i, int j) const final {
-      DCHECK_EQ(i, 0);
+      S2_DCHECK_EQ(i, 0);
       return Edge(loop_->vertex(j), loop_->vertex(j + 1));
     }
     ChainPosition chain_position(int e) const final {
@@ -747,8 +746,8 @@ T S2Loop::GetSurfaceIntegral(T f_tri(const S2Point&, const S2Point&,
     //  2. Either O == V_0, or O is approximately perpendicular to V_0.
     //  3. "sum" is the oriented integral of f over the area defined by
     //     (O, V_0, V_1, ..., V_i).
-    DCHECK(i == 1 || S1ChordAngle(origin, vertex(i)) < kMaxLength);
-    DCHECK(origin == vertex(0) || std::fabs(origin.DotProd(vertex(0))) < 1e-15);
+    S2_DCHECK(i == 1 || S1ChordAngle(origin, vertex(i)) < kMaxLength);
+    S2_DCHECK(origin == vertex(0) || std::fabs(origin.DotProd(vertex(0))) < 1e-15);
 
     if (S1ChordAngle(vertex(i + 1), origin) > kMaxLength) {
       // We are about to create an unstable edge, so choose a new origin O'

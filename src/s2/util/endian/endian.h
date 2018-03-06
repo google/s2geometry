@@ -27,8 +27,7 @@
 #include <cassert>
 #include <type_traits>
 
-#include <glog/logging.h>
-
+#include "s2/base/logging.h"
 #include "s2/third_party/absl/base/casts.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/port.h"
@@ -604,7 +603,7 @@ GeneralFormatConverter<EndianClass, ValueType>::FromHost(ValueType v) {
       return EndianClass::FromHost64(static_cast<uint64>(v));
       break;
     default:
-      LOG(FATAL) << "Unexpected value size: " << sizeof(ValueType);
+      S2_LOG(FATAL) << "Unexpected value size: " << sizeof(ValueType);
   }
 }
 
@@ -629,7 +628,7 @@ GeneralFormatConverter<EndianClass, ValueType>::ToHost(ValueType v) {
       return EndianClass::ToHost64(static_cast<uint64>(v));
       break;
     default:
-      LOG(FATAL) << "Unexpected value size: " << sizeof(ValueType);
+      S2_LOG(FATAL) << "Unexpected value size: " << sizeof(ValueType);
   }
 }
 
@@ -693,7 +692,7 @@ inline T LoadInteger(const char* p) {
     case 4: return EndianClass::ToHost32(UNALIGNED_LOAD32(p));
     case 8: return EndianClass::ToHost64(UNALIGNED_LOAD64(p));
     default: {
-      LOG(FATAL) << "Not reached!";
+      S2_LOG(FATAL) << "Not reached!";
       return 0;
     }
   }
@@ -711,7 +710,7 @@ inline void StoreInteger(T value, char* p) {
     case 4: UNALIGNED_STORE32(p, EndianClass::FromHost32(value)); break;
     case 8: UNALIGNED_STORE64(p, EndianClass::FromHost64(value)); break;
     default: {
-      LOG(FATAL) << "Not reached!";
+      S2_LOG(FATAL) << "Not reached!";
     }
   }
 }

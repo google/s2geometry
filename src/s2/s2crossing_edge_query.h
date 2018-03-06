@@ -55,7 +55,7 @@ enum class CrossingType { INTERIOR, ALL };
 //   }
 //   S2CrossingEdgeQuery query(&index);
 //   for (const auto& edge : query.GetCrossingEdges(a, b, CrossingType::ALL)) {
-//     CHECK_GE(S2::CrossingSign(a0, a1, edge.v0(), edge.v1()), 0);
+//     S2_CHECK_GE(S2::CrossingSign(a0, a1, edge.v0(), edge.v1()), 0);
 //   }
 // }
 //

@@ -175,7 +175,7 @@ class S2Point {
                              std::vector<S2Polyline*>* out) const {
     std::vector<std::unique_ptr<S2Polyline>> polylines =
         $self->IntersectWithPolyline(*in);
-    DCHECK(out->empty());
+    S2_DCHECK(out->empty());
     out->reserve(polylines.size());
     for (auto& polyline : polylines) {
       out->push_back(polyline.release());

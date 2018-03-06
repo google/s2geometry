@@ -128,7 +128,7 @@ class S2Polyline;
 //  builder.AddPolygon(input);
 //  S2Error error;
 //  if (!builder.Build(&error)) {
-//    LOG(ERROR) << error;
+//    S2_LOG(ERROR) << error;
 //    ...
 //  }
 class S2Builder {
@@ -440,7 +440,7 @@ class S2Builder {
   // builder.StartLayer(make_unique<s2builderutil::S2PolylineLayer>(&line2)));
   // ... Add edges using builder.AddEdge(), etc ...
   // S2Error error;
-  // CHECK(builder.Build(&error)) << error;  // Builds "line1" & "line2"
+  // S2_CHECK(builder.Build(&error)) << error;  // Builds "line1" & "line2"
   class Layer;
   void StartLayer(std::unique_ptr<Layer> layer);
 

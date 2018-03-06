@@ -22,7 +22,7 @@
 #include <memory>
 #include <numeric>
 #include <vector>
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
@@ -55,7 +55,7 @@ Graph::Graph(const GraphOptions& options,
       label_set_ids_(label_set_ids),
       label_set_lexicon_(label_set_lexicon),
       is_full_polygon_predicate_(std::move(is_full_polygon_predicate)) {
-  DCHECK(std::is_sorted(edges->begin(), edges->end()));
+  S2_DCHECK(std::is_sorted(edges->begin(), edges->end()));
 }
 
 vector<Graph::EdgeId> Graph::GetInEdgeIds() const {
@@ -75,11 +75,11 @@ vector<Graph::EdgeId> Graph::GetSiblingMap() const {
 }
 
 void Graph::MakeSiblingMap(vector<Graph::EdgeId>* in_edge_ids) const {
-  DCHECK(options_.sibling_pairs() == SiblingPairs::REQUIRE ||
+  S2_DCHECK(options_.sibling_pairs() == SiblingPairs::REQUIRE ||
          options_.sibling_pairs() == SiblingPairs::CREATE ||
          options_.edge_type() == EdgeType::UNDIRECTED);
   for (EdgeId e = 0; e < num_edges(); ++e) {
-    DCHECK(edge(e) == reverse(edge((*in_edge_ids)[e])));
+    S2_DCHECK(edge(e) == reverse(edge((*in_edge_ids)[e])));
   }
   if (options_.edge_type() == EdgeType::DIRECTED) return;
   if (options_.degenerate_edges() == DegenerateEdges::DISCARD) return;
@@ -87,11 +87,11 @@ void Graph::MakeSiblingMap(vector<Graph::EdgeId>* in_edge_ids) const {
   for (EdgeId e = 0; e < num_edges(); ++e) {
     VertexId v = edge(e).first;
     if (edge(e).second == v) {
-      DCHECK_LT(e + 1, num_edges());
-      DCHECK_EQ(edge(e + 1).first, v);
-      DCHECK_EQ(edge(e + 1).second, v);
-      DCHECK_EQ((*in_edge_ids)[e], e);
-      DCHECK_EQ((*in_edge_ids)[e + 1], e + 1);
+      S2_DCHECK_LT(e + 1, num_edges());
+      S2_DCHECK_EQ(edge(e + 1).first, v);
+      S2_DCHECK_EQ(edge(e + 1).second, v);
+      S2_DCHECK_EQ((*in_edge_ids)[e], e);
+      S2_DCHECK_EQ((*in_edge_ids)[e + 1], e + 1);
       (*in_edge_ids)[e] = e + 1;
       (*in_edge_ids)[e + 1] = e;
       ++e;
@@ -349,9 +349,9 @@ void Graph::CanonicalizeVectorOrder(const vector<InputEdgeId>& min_input_ids,
 
 bool Graph::GetDirectedLoops(LoopType loop_type, vector<EdgeLoop>* loops,
                              S2Error* error) const {
-  DCHECK(options_.degenerate_edges() == DegenerateEdges::DISCARD ||
+  S2_DCHECK(options_.degenerate_edges() == DegenerateEdges::DISCARD ||
          options_.degenerate_edges() == DegenerateEdges::DISCARD_EXCESS);
-  DCHECK(options_.edge_type() == EdgeType::DIRECTED);
+  S2_DCHECK(options_.edge_type() == EdgeType::DIRECTED);
 
   vector<EdgeId> left_turn_map;
   if (!GetLeftTurnMap(GetInEdgeIds(), &left_turn_map, error)) return false;
@@ -390,7 +390,7 @@ bool Graph::GetDirectedLoops(LoopType loop_type, vector<EdgeLoop>* loops,
       }
     }
     if (loop_type == LoopType::SIMPLE) {
-      DCHECK(path.empty());  // Invariant.
+      S2_DCHECK(path.empty());  // Invariant.
     } else {
       CanonicalizeLoopOrder(min_input_ids, &path);
       loops->push_back(std::move(path));
@@ -404,12 +404,12 @@ bool Graph::GetDirectedLoops(LoopType loop_type, vector<EdgeLoop>* loops,
 bool Graph::GetDirectedComponents(
     DegenerateBoundaries degenerate_boundaries,
     vector<DirectedComponent>* components, S2Error* error) const {
-  DCHECK(options_.degenerate_edges() == DegenerateEdges::DISCARD ||
+  S2_DCHECK(options_.degenerate_edges() == DegenerateEdges::DISCARD ||
          (options_.degenerate_edges() == DegenerateEdges::DISCARD_EXCESS &&
           degenerate_boundaries == DegenerateBoundaries::KEEP));
-  DCHECK(options_.sibling_pairs() == SiblingPairs::REQUIRE ||
+  S2_DCHECK(options_.sibling_pairs() == SiblingPairs::REQUIRE ||
          options_.sibling_pairs() == SiblingPairs::CREATE);
-  DCHECK(options_.edge_type() == EdgeType::DIRECTED);  // Implied by above.
+  S2_DCHECK(options_.edge_type() == EdgeType::DIRECTED);  // Implied by above.
 
   vector<EdgeId> sibling_map = GetInEdgeIds();
   vector<EdgeId> left_turn_map;
@@ -498,9 +498,9 @@ inline static Graph::EdgeId MarkEdgeUsed(int slot) { return -1 - slot; }
 bool Graph::GetUndirectedComponents(LoopType loop_type,
                                     vector<UndirectedComponent>* components,
                                     S2Error* error) const {
-  DCHECK(options_.degenerate_edges() == DegenerateEdges::DISCARD ||
+  S2_DCHECK(options_.degenerate_edges() == DegenerateEdges::DISCARD ||
          options_.degenerate_edges() == DegenerateEdges::DISCARD_EXCESS);
-  DCHECK(options_.edge_type() == EdgeType::UNDIRECTED);
+  S2_DCHECK(options_.edge_type() == EdgeType::UNDIRECTED);
 
   vector<EdgeId> sibling_map = GetInEdgeIds();
   vector<EdgeId> left_turn_map;
@@ -565,7 +565,7 @@ bool Graph::GetUndirectedComponents(LoopType loop_type,
         }
       }
       if (loop_type == LoopType::SIMPLE) {
-        DCHECK(path.empty());  // Invariant.
+        S2_DCHECK(path.empty());  // Invariant.
       } else {
         CanonicalizeLoopOrder(min_input_ids, &path);
         component[slot].push_back(std::move(path));
@@ -618,7 +618,7 @@ class Graph::PolylineBuilder {
 
 vector<Graph::EdgePolyline> Graph::GetPolylines(
     PolylineType polyline_type) const {
-  DCHECK(options_.sibling_pairs() == SiblingPairs::DISCARD ||
+  S2_DCHECK(options_.sibling_pairs() == SiblingPairs::DISCARD ||
          options_.sibling_pairs() == SiblingPairs::DISCARD_EXCESS ||
          options_.sibling_pairs() == SiblingPairs::KEEP);
   PolylineBuilder builder(*this);
@@ -682,7 +682,7 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildPaths() {
     CanonicalizeLoopOrder(min_input_ids_, &polyline);
     polylines.push_back(std::move(polyline));
   }
-  DCHECK_EQ(0, edges_left_);
+  S2_DCHECK_EQ(0, edges_left_);
 
   // Sort the polylines to correspond to the input order (if possible).
   CanonicalizeVectorOrder(min_input_ids_, &polylines);
@@ -697,17 +697,17 @@ Graph::EdgePolyline Graph::PolylineBuilder::BuildPath(EdgeId e) {
   VertexId start = g_.edge(e).first;
   for (;;) {
     polyline.push_back(e);
-    DCHECK(!used_[e]);
+    S2_DCHECK(!used_[e]);
     used_[e] = true;
     if (!directed_) used_[sibling_map_[e]] = true;
     --edges_left_;
     VertexId v = g_.edge(e).second;
     if (!is_interior(v) || v == start) break;
     if (directed_) {
-      DCHECK_EQ(1, out_.degree(v));
+      S2_DCHECK_EQ(1, out_.degree(v));
       e = *out_.edge_ids(v).begin();
     } else {
-      DCHECK_EQ(2, out_.degree(v));
+      S2_DCHECK_EQ(2, out_.degree(v));
       for (EdgeId e2 : out_.edge_ids(v)) if (!used_[e2]) e = e2;
     }
   }
@@ -775,7 +775,7 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildWalks() {
       polylines.push_back(std::move(polyline));
     }
   }
-  DCHECK_EQ(0, edges_left_);
+  S2_DCHECK_EQ(0, edges_left_);
 
   // Sort the polylines to correspond to the input order (if possible).
   CanonicalizeVectorOrder(min_input_ids_, &polylines);
@@ -825,9 +825,9 @@ void Graph::PolylineBuilder::MaximizeWalk(EdgePolyline* polyline) {
     for (EdgeId e : out_.edge_ids(v)) {
       if (!used_[e]) {
         EdgePolyline loop = BuildWalk(v);
-        DCHECK_EQ(v, g_.edge(loop.back()).second);
+        S2_DCHECK_EQ(v, g_.edge(loop.back()).second);
         polyline->insert(polyline->begin() + i, loop.begin(), loop.end());
-        DCHECK(used_[e]);  // All outgoing edges from "v" are now used.
+        S2_DCHECK(used_[e]);  // All outgoing edges from "v" are now used.
         break;
       }
     }
@@ -958,7 +958,7 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
     int n_out = out - out_begin;
     int n_in = in - in_begin;
     if (edge.first == edge.second) {
-      DCHECK_EQ(n_out, n_in);
+      S2_DCHECK_EQ(n_out, n_in);
       if (options_.degenerate_edges() == DegenerateEdges::DISCARD) {
         continue;
       }
@@ -976,7 +976,7 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
            options_.sibling_pairs() == SiblingPairs::CREATE)) {
         // When we have undirected edges and are guaranteed to have siblings,
         // we cut the number of edges in half (see s2builder.h).
-        DCHECK_EQ(0, n_out & 1);  // Number of edges is always even.
+        S2_DCHECK_EQ(0, n_out & 1);  // Number of edges is always even.
         AddEdges(options_.duplicate_edges() == DuplicateEdges::MERGE ?
                  1 : (n_out / 2), edge, MergeInputIds(out_begin, out));
       } else if (options_.duplicate_edges() == DuplicateEdges::MERGE) {
@@ -1021,7 +1021,7 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
         AddEdges((n_out & 1) ? 1 : 2, edge, MergeInputIds(out_begin, out));
       }
     } else {
-      DCHECK(options_.sibling_pairs() == SiblingPairs::REQUIRE ||
+      S2_DCHECK(options_.sibling_pairs() == SiblingPairs::REQUIRE ||
              options_.sibling_pairs() == SiblingPairs::CREATE);
       if (error->ok() && options_.sibling_pairs() == SiblingPairs::REQUIRE &&
           (options_.edge_type() == EdgeType::DIRECTED ? (n_out != n_in)

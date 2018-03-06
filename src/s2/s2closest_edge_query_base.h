@@ -21,7 +21,7 @@
 #include <memory>
 #include <vector>
 
-#include <glog/logging.h>
+#include "s2/base/logging.h"
 #include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
@@ -432,7 +432,7 @@ inline int S2ClosestEdgeQueryBase<Distance>::Options::max_edges() const {
 template <class Distance>
 inline void S2ClosestEdgeQueryBase<Distance>::Options::set_max_edges(
     int max_edges) {
-  DCHECK_GE(max_edges, 1);
+  S2_DCHECK_GE(max_edges, 1);
   max_edges_ = max_edges;
 }
 
@@ -534,7 +534,7 @@ template <class Distance>
 typename S2ClosestEdgeQueryBase<Distance>::Result
 S2ClosestEdgeQueryBase<Distance>::FindClosestEdge(Target* target,
                                                   const Options& options) {
-  DCHECK_EQ(options.max_edges(), 1);
+  S2_DCHECK_EQ(options.max_edges(), 1);
   FindClosestEdgesInternal(target, options);
   return result_singleton_;
 }
@@ -569,14 +569,14 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
   tested_edges_.clear();
   distance_limit_ = options.max_distance();
   result_singleton_ = Result();
-  DCHECK(result_vector_.empty());
-  DCHECK(result_set_.empty());
-  DCHECK(target->max_brute_force_index_size() >= 0);
+  S2_DCHECK(result_vector_.empty());
+  S2_DCHECK(result_set_.empty());
+  S2_DCHECK(target->max_brute_force_index_size() >= 0);
   if (distance_limit_ == Distance::Zero()) return;
 
   if (options.max_edges() == Options::kMaxMaxEdges &&
       options.max_distance() == Distance::Infinity()) {
-    LOG(WARNING) << "Returning all edges (max_edges/max_distance not set)";
+    S2_LOG(WARNING) << "Returning all edges (max_edges/max_distance not set)";
   }
 
   if (options.include_interiors()) {
@@ -706,7 +706,7 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesOptimized() {
 
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
-  DCHECK(queue_.empty());
+  S2_DCHECK(queue_.empty());
   if (index_covering_.empty()) {
     // We delay iterator initialization until now to make queries on very
     // small indexes a bit faster (i.e., where brute force is used).
@@ -842,7 +842,7 @@ void S2ClosestEdgeQueryBase<Distance>::AddInitialRange(
   } else {
     // Add the lowest common ancestor of the given range.
     int level = first.id().GetCommonAncestorLevel(last.id());
-    DCHECK_GE(level, 0);
+    S2_DCHECK_GE(level, 0);
     index_covering_.push_back(first.id().parent(level));
     index_cells_.push_back(nullptr);
   }
@@ -911,7 +911,7 @@ void S2ClosestEdgeQueryBase<Distance>::ProcessEdges(const QueueEntry& entry) {
 // REQUIRES: iter_ is positioned at a cell contained by "id".
 template <class Distance>
 inline void S2ClosestEdgeQueryBase<Distance>::EnqueueCurrentCell(S2CellId id) {
-  DCHECK(id.contains(iter_.id()));
+  S2_DCHECK(id.contains(iter_.id()));
   if (iter_.id() == id) {
     EnqueueCell(id, &iter_.cell());
   } else {

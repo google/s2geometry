@@ -1,28 +1,51 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(s2-geometry)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
+include(FeatureSummary)
 include(FindPackageHandleStandardArgs)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
 
-find_package(GFlags REQUIRED)
-find_package(Glog REQUIRED)
+option(WITH_GFLAGS "Use gflags to change command line flags." OFF)
+add_feature_info(GFLAGS WITH_GFLAGS
+                 "allows changing command line flags.")
+
+# glog option can only be turned on if gflags is on.
+cmake_dependent_option(WITH_GLOG "Use glog for logging." ON
+                       "WITH_GFLAGS" OFF)
+add_feature_info(GLOG WITH_GLOG "provides logging configurability.")
+
+feature_summary(WHAT ALL)
+
+if (WITH_GLOG)
+    find_package(Glog REQUIRED)
+    # FindGFlags.cmake and FindGlog.cmake do not seem to implement REQUIRED;
+    # check manually.
+    if (NOT ${GLOG_FOUND})
+        message(FATAL_ERROR "Glog requested but not found")
+    endif()
+    add_definitions(-DS2_USE_GLOG)
+else()
+    # Don't output anything for LOG(INFO).
+    add_definitions(-DABSL_MIN_LOG_LEVEL=1)
+endif()
+
+if (WITH_GFLAGS)
+    find_package(GFlags REQUIRED)
+    if (NOT ${GFLAGS_FOUND})
+        message(FATAL_ERROR "GFlags requested but not found")
+    endif()
+    add_definitions(-DS2_USE_GFLAGS)
+endif()
+
 find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
 find_package(SWIG)
 find_package(PythonInterp)
 find_package(PythonLibs)
-
-# FindGFlags.cmake and FindGlog.cmake do not seem to implement REQUIRED;
-# check manually.
-if (NOT ${GFLAGS_FOUND})
-    message(FATAL_ERROR "GFLags required but not found")
-endif()
-if (NOT ${GLOG_FOUND})
-    message(FATAL_ERROR "Glog required but not found")
-endif()
 
 # Avoid "Policy CMP0042 is not set" warning on macOS.
 if (APPLE)
@@ -249,6 +272,9 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/value_lexicon.h
         DESTINATION include/s2)
 install(FILES src/s2/base/casts.h
+              src/s2/base/commandlineflags.h
+              src/s2/base/log_severity.h
+              src/s2/base/logging.h
               src/s2/base/mutex.h
               src/s2/base/port.h
               src/s2/base/spinlock.h
@@ -306,6 +332,8 @@ install(FILES src/s2/util/gtl/btree.h
               src/s2/util/gtl/hashtable_common.h
               src/s2/util/gtl/libc_allocator_with_realloc.h
         DESTINATION include/s2/util/gtl)
+install(FILES src/s2/util/gtl/subtle/compressed_tuple.h
+        DESTINATION include/s2/util/gtl/subtle)
 install(FILES src/s2/util/hash/mix.h
         DESTINATION include/s2/util/hash)
 install(FILES src/s2/util/math/mathutil.h
@@ -355,7 +383,6 @@ if (GTEST_ROOT)
       src/s2/s2convex_hull_query_test.cc
       src/s2/s2coords_test.cc
       src/s2/s2crossing_edge_query_test.cc
-      src/s2/s2debug_test.cc
       src/s2/s2earth_test.cc
       src/s2/s2edge_clipping_test.cc
       src/s2/s2edge_crosser_test.cc

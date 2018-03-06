@@ -20,9 +20,8 @@
 
 #include <vector>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-
+#include "s2/base/commandlineflags.h"
+#include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"
@@ -356,13 +355,13 @@ inline S2CellUnion::S2CellUnion(std::vector<S2CellId> cell_ids)
 
 inline S2CellUnion S2CellUnion::FromNormalized(std::vector<S2CellId> cell_ids) {
   S2CellUnion result(std::move(cell_ids), VERBATIM);
-  DCHECK(result.IsNormalized());
+  S2_DCHECK(result.IsNormalized());
   return result;
 }
 
 inline S2CellUnion S2CellUnion::FromVerbatim(std::vector<S2CellId> cell_ids) {
   S2CellUnion result(std::move(cell_ids), VERBATIM);
-  DCHECK(result.IsValid());
+  S2_DCHECK(result.IsValid());
   return result;
 }
 

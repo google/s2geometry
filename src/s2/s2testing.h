@@ -24,8 +24,7 @@
 #include <utility>
 #include <vector>
 
-#include <gflags/gflags.h>
-
+#include "s2/base/commandlineflags.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
