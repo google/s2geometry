@@ -575,17 +575,6 @@ std::ostream &operator<<(std::ostream &out, const pthread_t &thread_id);
 // Predefined System/Language Functions
 // -----------------------------------------------------------------------------
 
-// strnlen
-#if defined(__APPLE__)
-// Darwin doesn't have strnlen. No comment.
-inline size_t strnlen(const char *s, size_t maxlen) {
-  const char* end = (const char *)memchr(s, '\0', maxlen);
-  if (end)
-    return end - s;
-  return maxlen;
-}
-#endif
-
 // strtoq, strtouq, atoll
 #ifdef _MSC_VER
 #define strtoq _strtoi64

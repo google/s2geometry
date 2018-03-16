@@ -361,48 +361,6 @@ inline void S2CrossingEdgeQuery::SplitBound(const R2Rect& edge_bound, int u_end,
   S2_DCHECK(edge_bound.Contains(child_bounds[1]));
 }
 
-bool S2CrossingEdgeQuery::GetCrossings(const S2Point& a0, const S2Point& a1,
-                                       const S2Shape* shape, CrossingType type,
-                                       vector<int>* edges) {
-  edges->clear();
-  for (const ShapeEdge& edge : GetCrossingEdges(a0, a1, *shape, type)) {
-    edges->push_back(edge.id().edge_id);
-  }
-  return !edges->empty();
-}
-
-bool S2CrossingEdgeQuery::GetCrossings(const S2Point& a0, const S2Point& a1,
-                                       CrossingType type, EdgeMap* edge_map) {
-  // Since this API is obsolete, don't worry about reserving vectors, etc.
-  edge_map->clear();
-  for (const ShapeEdge& edge : GetCrossingEdges(a0, a1, type)) {
-    const S2Shape* shape = index_->shape(edge.id().shape_id);
-    (*edge_map)[shape].push_back(edge.id().edge_id);
-  }
-  return !edge_map->empty();
-}
-
-bool S2CrossingEdgeQuery::GetCandidates(const S2Point& a0, const S2Point& a1,
-                                        const S2Shape* shape,
-                                        vector<int>* edges) {
-  edges->clear();
-  for (const ShapeEdgeId& edge : GetCandidates(a0, a1, *shape)) {
-    edges->push_back(edge.edge_id);
-  }
-  return !edges->empty();
-}
-
-bool S2CrossingEdgeQuery::GetCandidates(const S2Point& a0, const S2Point& a1,
-                                        EdgeMap* edge_map) {
-  // Since this API is obsolete, don't worry about reserving vectors, etc.
-  edge_map->clear();
-  for (const ShapeEdgeId& edge : GetCandidates(a0, a1)) {
-    const S2Shape* shape = index_->shape(edge.shape_id);
-    (*edge_map)[shape].push_back(edge.edge_id);
-  }
-  return !edge_map->empty();
-}
-
 void S2CrossingEdgeQuery::GetCells(const S2Point& a0, const S2Point& a1,
                                    const S2PaddedCell& root,
                                    vector<const S2ShapeIndexCell*>* cells) {

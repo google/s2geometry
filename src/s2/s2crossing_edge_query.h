@@ -30,7 +30,6 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_shape_edge.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
-#include "s2/util/gtl/btree_map.h"
 
 // A parameter that controls the reporting of edge intersections.
 //
@@ -178,33 +177,6 @@ class S2CrossingEdgeQuery {
   // within "root" that might contain edges intersecting AB.
   void GetCells(const S2Point& a0, const S2Point& a1, const S2PaddedCell& root,
                 std::vector<const S2ShapeIndexCell*>* cells);
-
-  ///////////////////// DEPRECATED METHODS //////////////////////////////
-
-  struct CompareBtreeLinearSearch {
-    using goog_btree_prefer_linear_node_search = std::true_type;
-    bool operator()(const S2Shape* x, const S2Shape* y) const {
-      return x->id() < y->id();
-    }
-  };
-  using EdgeMap = gtl::btree_map<const S2Shape*, std::vector<int>,
-                                 CompareBtreeLinearSearch>;
-
-  ABSL_DEPRECATED("Use GetCrossingEdges")
-  bool GetCrossings(const S2Point& a0, const S2Point& a1,
-                    const S2Shape* shape, CrossingType type,
-                    std::vector<int>* edges);
-
-  ABSL_DEPRECATED("Use GetCrossingEdges")
-  bool GetCrossings(const S2Point& a0, const S2Point& a1, CrossingType type,
-                    EdgeMap* edge_map);
-
-  ABSL_DEPRECATED("Use method returning std::vector")
-  bool GetCandidates(const S2Point& a0, const S2Point& a1, const S2Shape* shape,
-                     std::vector<int>* edges);
-
-  ABSL_DEPRECATED("Use method returning std::vector")
-  bool GetCandidates(const S2Point& a0, const S2Point& a1, EdgeMap* edge_map);
 
  private:
   // Internal methods are documented with their definitions.
