@@ -119,8 +119,7 @@ struct S2LogMessageVoidify {
 #ifndef NDEBUG
 #define S2_LOG_DFATAL S2_LOG_FATAL
 #else
-#define S2_LOG_DFATAL \
-    S2_LOG_MESSAGE_(S2LogMessage, absl::LogSeverity::kError)
+#define S2_LOG_DFATAL S2_LOG_ERROR
 #endif
 
 #define S2_LOG(severity) S2_LOG_##severity.stream()
