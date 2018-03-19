@@ -286,6 +286,7 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/config.h
               src/s2/third_party/absl/base/dynamic_annotations.h
               src/s2/third_party/absl/base/integral_types.h
+              src/s2/third_party/absl/base/log_severity.h
               src/s2/third_party/absl/base/macros.h
               src/s2/third_party/absl/base/optimization.h
               src/s2/third_party/absl/base/policy_checks.h
