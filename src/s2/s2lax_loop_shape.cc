@@ -17,6 +17,8 @@
 
 #include "s2/s2lax_loop_shape.h"
 
+#include <vector>
+
 #include "s2/s2loop.h"
 #include "s2/s2shapeutil_get_reference_point.h"
 

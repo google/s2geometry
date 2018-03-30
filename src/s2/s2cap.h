@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iosfwd>
+#include <vector>
 
 #include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"

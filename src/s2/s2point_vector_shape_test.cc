@@ -17,6 +17,8 @@
 
 #include "s2/s2point_vector_shape.h"
 
+#include <vector>
+
 #include <gtest/gtest.h>
 #include "s2/s2testing.h"
 

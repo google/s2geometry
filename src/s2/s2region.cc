@@ -17,6 +17,8 @@
 
 #include "s2/s2region.h"
 
+#include <vector>
+
 #include "s2/s2cap.h"
 
 void S2Region::GetCellUnionBound(std::vector<S2CellId> *cell_ids) const {
