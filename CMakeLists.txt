@@ -156,6 +156,7 @@ add_library(s2 ${LIBRARY_TYPE}
             src/s2/s2shapeutil_visit_crossing_edge_pairs.cc
             src/s2/s2text_format.cc
             src/s2/s2wedge_relations.cc
+            src/s2/strings/ostringstream.cc
             src/s2/strings/serialize.cc
             src/s2/third_party/absl/base/dynamic_annotations.cc
             src/s2/third_party/absl/base/internal/raw_logging.cc
@@ -296,6 +297,8 @@ install(FILES src/s2/base/casts.h
               src/s2/base/port.h
               src/s2/base/spinlock.h
         DESTINATION include/s2/base)
+install(FILES src/s2/strings/ostringstream.h
+        DESTINATION include/s2/strings)
 install(FILES src/s2/third_party/absl/algorithm/algorithm.h
         DESTINATION include/s2/third_party/absl/algorithm)
 install(FILES src/s2/third_party/absl/base/attributes.h
