@@ -17,6 +17,10 @@ cmake_dependent_option(WITH_GLOG "Use glog for logging." ON
                        "WITH_GFLAGS" OFF)
 add_feature_info(GLOG WITH_GLOG "provides logging configurability.")
 
+option(STATIC_LIB "Build static library instead of shared." OFF)
+add_feature_info(STATIC_LIBRARY STATIC_LIB
+                 "builds static library instead of shared.")
+
 feature_summary(WHAT ALL)
 
 if (WITH_GLOG)
@@ -40,6 +44,12 @@ if (WITH_GFLAGS)
     add_definitions(-DS2_USE_GFLAGS)
 endif()
 
+if (STATIC_LIB)
+  set(LIBRARY_TYPE "STATIC")
+else()
+  set(LIBRARY_TYPE "SHARED")
+endif()
+
 find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
@@ -52,7 +62,14 @@ if (APPLE)
     set(CMAKE_MACOSX_RPATH TRUE)
 endif()
 
-add_definitions(-Wno-deprecated-declarations -std=c++11)
+add_definitions(-std=c++11)
+
+if(WIN32)
+    add_definitions(-J -D_USE_MATH_DEFINES -DNOMINMAX -DNEED_ALT_SSIZE)
+else()
+    add_definitions(-Wno-deprecated-declarations)
+endif()
+
 
 # If OpenSSL is installed in a non-standard location, configure with
 # something like:
@@ -62,7 +79,7 @@ include_directories(
     ${PYTHON_INCLUDE_DIRS})
 include_directories(src)
 
-add_library(s2 SHARED
+add_library(s2 ${LIBRARY_TYPE}
             src/s2/base/stringprintf.cc
             src/s2/base/strtoint.cc
             src/s2/id_set_lexicon.cc
