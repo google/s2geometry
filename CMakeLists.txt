@@ -17,9 +17,9 @@ cmake_dependent_option(WITH_GLOG "Use glog for logging." ON
                        "WITH_GFLAGS" OFF)
 add_feature_info(GLOG WITH_GLOG "provides logging configurability.")
 
-option(STATIC_LIB "Build static library instead of shared." OFF)
-add_feature_info(STATIC_LIBRARY STATIC_LIB
-                 "builds static library instead of shared.")
+option(BUILD_SHARED_LIBS "Build shared libraries instead of static." ON)
+add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
+                 "builds shared libraries instead of static.")
 
 feature_summary(WHAT ALL)
 
@@ -42,12 +42,6 @@ if (WITH_GFLAGS)
         message(FATAL_ERROR "GFlags requested but not found")
     endif()
     add_definitions(-DS2_USE_GFLAGS)
-endif()
-
-if (STATIC_LIB)
-  set(LIBRARY_TYPE "STATIC")
-else()
-  set(LIBRARY_TYPE "SHARED")
 endif()
 
 find_package(OpenSSL REQUIRED)
@@ -79,7 +73,7 @@ include_directories(
     ${PYTHON_INCLUDE_DIRS})
 include_directories(src)
 
-add_library(s2 ${LIBRARY_TYPE}
+add_library(s2
             src/s2/base/stringprintf.cc
             src/s2/base/strtoint.cc
             src/s2/id_set_lexicon.cc
