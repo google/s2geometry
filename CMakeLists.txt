@@ -17,6 +17,10 @@ cmake_dependent_option(WITH_GLOG "Use glog for logging." ON
                        "WITH_GFLAGS" OFF)
 add_feature_info(GLOG WITH_GLOG "provides logging configurability.")
 
+option(BUILD_SHARED_LIBS "Build shared libraries instead of static." ON)
+add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
+                 "builds shared libraries instead of static.")
+
 feature_summary(WHAT ALL)
 
 if (WITH_GLOG)
@@ -62,7 +66,7 @@ include_directories(
     ${PYTHON_INCLUDE_DIRS})
 include_directories(src)
 
-add_library(s2 SHARED
+add_library(s2
             src/s2/base/stringprintf.cc
             src/s2/base/strtoint.cc
             src/s2/id_set_lexicon.cc
