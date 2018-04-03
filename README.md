@@ -29,7 +29,7 @@ S2 documentation can be found on [s2geometry.io](http://s2geometry.io).
 On Ubuntu, all of these can be installed via apt-get:
 
 ```
-sudo apt-get install cmake libgflags-dev libgoogle-glog-dev libgtest-dev openssl
+sudo apt-get install cmake libgflags-dev libgoogle-glog-dev libgtest-dev libssl-dev
 ```
 
 Otherwise, you may need to install some from source.
