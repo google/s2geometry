@@ -248,7 +248,7 @@ struct common_params {
 
   using allocator_type = Alloc;
   using key_type = Key;
-  using size_type = ssize_t;
+  using size_type = std::make_signed<size_t>::type;
   using difference_type = ptrdiff_t;
 
   enum {
@@ -815,7 +815,7 @@ class btree {
   };
 
   struct node_stats {
-    node_stats(ssize_t l, ssize_t i)
+    node_stats(typename Params::size_type l, typename Params::size_type i)
         : leaf_nodes(l),
           internal_nodes(i) {
     }
@@ -826,8 +826,8 @@ class btree {
       return *this;
     }
 
-    ssize_t leaf_nodes;
-    ssize_t internal_nodes;
+    typename Params::size_type leaf_nodes;
+    typename Params::size_type internal_nodes;
   };
 
  public:
