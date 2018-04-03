@@ -2075,8 +2075,8 @@ const char* S2BooleanOperation::OpTypeToString(OpType op_type) {
   switch (op_type) {
     case OpType::UNION:                return "UNION";
     case OpType::INTERSECTION:         return "INTERSECTION";
-    case OpType::SET_DIFFERENCE:           return "SET_DIFFERENCE";
-    case OpType::SYMMETRIC_DIFFERENCE: return "SYMMETRIC SET_DIFFERENCE";
+    case OpType::SET_DIFFERENCE:       return "SET_DIFFERENCE";
+    case OpType::SYMMETRIC_DIFFERENCE: return "SYMMETRIC_DIFFERENCE";
     default:                           return "Unknown OpType";
   }
 }
