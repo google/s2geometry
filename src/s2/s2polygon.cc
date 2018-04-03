@@ -971,7 +971,7 @@ void S2Polygon::InitToApproxDifference(const S2Polygon* a, const S2Polygon* b,
 void S2Polygon::InitToDifference(
     const S2Polygon& a, const S2Polygon& b,
     const S2Builder::SnapFunction& snap_function) {
-  InitToOperation(S2BooleanOperation::OpType::DIFFERENCE, snap_function, a, b);
+  InitToOperation(S2BooleanOperation::OpType::RELATIVE_COMPLEMENT, snap_function, a, b);
   if (num_loops() == 0) {
     // See comments in InitToApproxIntersection().  In this case, the
     // difference area satisfies:
@@ -1004,7 +1004,7 @@ void S2Polygon::InitToApproxSymmetricDifference(const S2Polygon* a,
 void S2Polygon::InitToSymmetricDifference(
     const S2Polygon& a, const S2Polygon& b,
     const S2Builder::SnapFunction& snap_function) {
-  InitToOperation(S2BooleanOperation::OpType::SYMMETRIC_DIFFERENCE,
+  InitToOperation(S2BooleanOperation::OpType::DISJUNCTIVE_UNION,
                   snap_function, a, b);
   if (num_loops() == 0) {
     // See comments in InitToApproxIntersection().  In this case, the
@@ -1260,7 +1260,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::ApproxSubtractFromPolyline(
 
 vector<unique_ptr<S2Polyline>> S2Polygon::SubtractFromPolyline(
     const S2Polyline& a, const S2Builder::SnapFunction& snap_function) const {
-  return OperationWithPolyline(S2BooleanOperation::OpType::DIFFERENCE,
+  return OperationWithPolyline(S2BooleanOperation::OpType::RELATIVE_COMPLEMENT,
                                snap_function, a);
 }
 

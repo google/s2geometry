@@ -233,9 +233,9 @@ TEST(S2BooleanOperation, PointPoint) {
                "0:0 | 0:0 | 1:0 | 2:0 # #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "0:0 | 0:0 # #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "1:0 # #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "1:0 | 2:0 # #");
 }
 
@@ -254,9 +254,9 @@ TEST(S2BooleanOperation, PointOpenPolyline) {
                "0:0 | 2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "1:0 # #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "0:0 | 2:0 | 3:0 # #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "0:0 | 2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
 }
 
@@ -272,9 +272,9 @@ TEST(S2BooleanOperation, PointSemiOpenPolyline) {
                "2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "0:0 | 1:0 # #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "2:0 | 3:0 # #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
 }
 
@@ -292,9 +292,9 @@ TEST(S2BooleanOperation, PointClosedPolyline) {
                "# 0:0, 1:0, 2:0 | 3:0, 3:0 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "0:0 | 1:0 | 2:0 | 3:0 # #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# 0:0, 1:0, 2:0 | 3:0, 3:0 #");
 }
 
@@ -307,9 +307,9 @@ TEST(S2BooleanOperation, PointPolygonInterior) {
                "4:4 # # 0:0, 0:3, 3:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "1:1 # #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "4:4 # #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "4:4 # # 0:0, 0:3, 3:0");
 }
 
@@ -323,9 +323,9 @@ TEST(S2BooleanOperation, PointOpenPolygonVertex) {
                "0:1 | 1:0 # # 0:0, 0:1, 1:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "0:1 | 1:0 # #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "0:1 | 1:0 # # 0:0, 0:1, 1:0");
 }
 
@@ -344,9 +344,9 @@ TEST(S2BooleanOperation, PointSemiOpenPolygonVertex) {
                "1:0 # # 0:0, 0:1, 1:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "0:1 # #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "1:0 # #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "1:0 # # 0:0, 0:1, 1:0");
 }
 
@@ -360,9 +360,9 @@ TEST(S2BooleanOperation, PointClosedPolygonVertex) {
                "# # 0:0, 0:1, 1:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "0:1 | 1:0 # #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 0:0, 0:1, 1:0");
 }
 
@@ -386,9 +386,9 @@ TEST(S2BooleanOperation, PolylineVertexOpenPolylineVertex) {
   // Note that all operations are defined such that subtracting a
   // lower-dimensional subset of an object has no effect.  In this case,
   // subtracting the middle vertex of a polyline has no effect.
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# 0:0, 0:1, 0:2 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
 }
 
@@ -401,9 +401,9 @@ TEST(S2BooleanOperation, PolylineVertexSemiOpenPolylineVertex) {
                "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 0:0, 0:0 | 0:0, 0:0 | 0:1, 0:1 | 0:1, 0:1 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# 0:0, 0:1, 0:2 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
 }
 
@@ -417,9 +417,9 @@ TEST(S2BooleanOperation, PolylineVertexClosedPolylineVertex) {
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 0:0, 0:0 | 0:0, 0:0 | 0:1, 0:1 | 0:1, 0:1 "
                "| 0:2, 0:2 | 0:2, 0:2 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# 0:0, 0:1, 0:2 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
 }
 
@@ -465,8 +465,8 @@ TEST(S2BooleanOperation, PolylineVertexOpenPolygonVertex) {
                kDifferenceResult + kVertexTestPolygonStr());
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 1:1, 0:1 | 0:2, 1:2 | 4:3, 5:3 | 5:4, 4:4 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b, kDifferenceResult);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b, kDifferenceResult);
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                kDifferenceResult + kVertexTestPolygonStr());
 }
 
@@ -495,8 +495,8 @@ TEST(S2BooleanOperation, PolylineVertexOpenPolygonClosedPolylineVertex) {
                "| 5:1, 5:1 | 5:2, 5:2 | 4:3, 5:3 | 5:4, 4:4"
                "| 0:1, 0:1 | 0:2, 0:2 | 0:3, 0:3 | 0:4, 0:4"
                "| 5:1, 5:1 | 5:2, 5:2 | 5:3, 5:3 | 5:4, 5:4 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b, kDifferencePrefix + " #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b, kDifferencePrefix + " #");
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                kDifferencePrefix + " | " + kTestGeometrySuffix);
 }
 
@@ -519,8 +519,8 @@ TEST(S2BooleanOperation, PolylineVertexSemiOpenPolygonVertex) {
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 1:1, 0:1 | 0:2, 1:2 | 0:3, 0:3 | 0:4, 0:4 "
                "| 4:3, 5:3 | 5:4, 4:4 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b, kDifferenceResult);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b, kDifferenceResult);
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                kDifferenceResult + kVertexTestPolygonStr());
 }
 
@@ -540,8 +540,8 @@ TEST(S2BooleanOperation, PolylineVertexClosedPolygonVertex) {
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 1:1, 0:1 | 0:2, 1:2 | 0:3, 0:3 | 0:4, 0:4"
                "| 5:1, 5:1 | 5:2, 5:2 | 4:3, 5:3 | 5:4, 4:4 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b, kDifferenceResult);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b, kDifferenceResult);
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                kDifferenceResult + kVertexTestPolygonStr());
 }
 
@@ -554,9 +554,9 @@ TEST(S2BooleanOperation, PolylineEdgePolylineEdgeCrossing) {
                "# 0:0, 1:1, 2:2 | 2:0, 1:1, 0:2 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 1:1, 1:1 | 1:1, 1:1 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# 0:0, 2:2 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# 0:0, 1:1, 2:2 | 2:0, 1:1, 0:2 #");
 }
 
@@ -577,9 +577,9 @@ TEST(S2BooleanOperation, PolylineEdgePolylineEdgeOverlap) {
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 0:0, 1:0, 2:0 | 0:0, 1:0, 2:0 | 3:0, 3:0 | 3:0, 3:0 "
                "| 5:0, 4:0 | 4:0, 5:0 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# 2:0, 2:5 | 6:0, 5:0 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# 2:0, 2:5 | 6:0, 5:0 #");
 }
 
@@ -594,9 +594,9 @@ TEST(S2BooleanOperation, PolylineEdgeOpenPolygonEdgeOverlap) {
                "# 1:1, 1:3, 3:3 | 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# 1:1, 1:3, 3:3 | 3:3, 1:3 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# 1:1, 1:3, 3:3 | 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
 }
 
@@ -614,9 +614,9 @@ TEST(S2BooleanOperation, PolylineEdgeSemiOpenPolygonEdgeOverlap) {
                "# 1:1, 1:1 | 3:3, 3:3 | 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 1:3, 1:3 | 1:1, 1:3, 3:3 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# 1:1, 1:1 | 3:3, 3:3 | 3:3, 1:3 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# 1:1, 1:1 | 3:3, 3:3 | 3:3, 1:3 # 1:1, 1:3, 3:3, 3:1");
 }
 
@@ -629,9 +629,9 @@ TEST(S2BooleanOperation, PolylineEdgeClosedPolygonEdgeOverlap) {
                "# # 1:1, 1:3, 3:3, 3:1");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 1:1, 1:3, 3:3 | 3:3, 1:3 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 1:1, 1:3, 3:3, 3:1");
 }
 
@@ -658,9 +658,9 @@ TEST(S2BooleanOperation, PolylineEdgePolygonInterior) {
                "# 6:6, 7:7 | 8:8, 8:8 # 0:0, 0:5, 5:5, 5:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 1:1, 2:2 | 3:3, 3:3 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# 6:6, 7:7 | 8:8, 8:8 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# 6:6, 7:7 | 8:8, 8:8 # 0:0, 0:5, 5:5, 5:0");
 }
 
@@ -673,9 +673,9 @@ TEST(S2BooleanOperation, PolygonVertexOpenPolygonVertex) {
                "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
 }
 
@@ -688,9 +688,9 @@ TEST(S2BooleanOperation, PolygonVertexSemiOpenPolygonVertex) {
                "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
 }
 
@@ -703,11 +703,11 @@ TEST(S2BooleanOperation, PolygonVertexClosedPolygonVertex) {
                "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# # 0:0");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5");
-  ExpectResult(OpType::DIFFERENCE, options, b, a,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, b, a,
                "# # 0:0, 5:3, 5:2");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 0:0, 0:5, 1:5, 0:0, 2:5, 3:5, 0:0, 5:3, 5:2");
 }
 
@@ -720,9 +720,9 @@ TEST(S2BooleanOperation, PolygonEdgePolygonEdgeCrossing) {
                "# # 0:0, 0:2, 1:2, 1:3, 3:3, 3:1, 2:1, 2:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# # 1:1, 1:2, 2:2, 2:1");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# # 0:0, 0:2, 1:2, 1:1, 2:1, 2:0");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 0:0, 0:2, 1:2, 1:1, 2:1, 2:0; "
                "1:2, 1:3, 3:3, 3:1, 2:1, 2:2");
 }
@@ -740,9 +740,9 @@ TEST(S2BooleanOperation, PolygonEdgeOpenPolygonEdgeOverlap) {
                "# # 0:0, 0:4, 2:4, 2:0; 0:4, 1:5, 2:4");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# # 0:0, 1:1, 2:0");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# # 0:0, 0:4, 2:4, 2:0, 1:1");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 0:0, 0:4, 2:4, 2:0, 1:1; 0:4, 1:5, 2:4");
 }
 
@@ -755,12 +755,12 @@ TEST(S2BooleanOperation, PolygonEdgeSemiOpenPolygonEdgeOverlap) {
                "# # 0:0, 0:4, 1:5, 2:4, 2:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# # 0:0, 1:1, 2:0");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# # 0:0, 0:4, 2:4, 2:0, 1:1");
-  // Note that SYMMETRIC_DIFFERENCE does not guarantee that results are
+  // Note that DISJUNCTIVE_UNION does not guarantee that results are
   // normalized, i.e. the output could contain siblings pairs (which can be
   // discarded using S2Builder::GraphOptions).
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 0:0, 0:4, 2:4, 2:0, 1:1; 0:4, 1:5, 2:4");
 }
 
@@ -773,11 +773,11 @@ TEST(S2BooleanOperation, PolygonEdgeClosedPolygonEdgeOverlap) {
                "# # 0:0, 0:4, 1:5, 2:4, 2:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# # 0:0, 1:1, 2:0; 0:4, 2:4");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# # 0:0, 0:4, 2:4, 2:0, 1:1");
-  // Note that SYMMETRIC_DIFFERENCE does not guarantee that results are
+  // Note that DISJUNCTIVE_UNION does not guarantee that results are
   // normalized, i.e. the output could contain siblings pairs.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 0:0, 0:4, 2:4, 2:0, 1:1; 0:4, 1:5, 2:4");
 }
 
@@ -790,9 +790,9 @@ TEST(S2BooleanOperation, PolygonPolygonInterior) {
                "# # 0:0, 0:4, 4:4, 4:0; 5:5, 5:6, 6:6, 6:5");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# # 1:1, 1:2, 2:2, 2:1");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# # 0:0, 0:4, 4:4, 4:0; 2:1, 2:2, 1:2, 1:1");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 0:0, 0:4, 4:4, 4:0; 2:1, 2:2, 1:2, 1:1; "
                "5:5, 5:6, 6:6, 6:5");
 }
@@ -810,9 +810,9 @@ TEST(S2BooleanOperation, PolygonEdgesDegenerateAfterSnapping) {
                "-1:0, -1:0, 0:0, 1:0, 1:0, 0:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# # 0:0, 0:0, 0:0, 0:0");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
                "# # 0:-1, 0:-1, 0:0, 0:1, 0:1, 0:0 | 0:0, 0:0");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
                "# # 0:-1, 0:-1, 0:0, 0:1, 0:1, 0:0 | "
                "-1:0, -1:0, 0:0, 1:0, 1:0, 0:0 | 0:0, 0:0, 0:0, 0:0");
 }
@@ -834,10 +834,10 @@ TEST(S2BooleanOperation, ThreeOverlappingBars) {
       "# # 0:0, 0:2, 1:2, 1:3, 0:3, 0:5, 3:5, 3:3, 2:3, 2:2, 3:2, 3:0");
   ExpectResult(OpType::INTERSECTION, options, a, b,
       "# # 1:1, 1:2, 2:2, 2:1; 1:3, 1:4, 2:4, 2:3");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
       "# # 0:0, 0:2, 1:2, 1:1, 2:1, 2:2, 3:2, 3:0; "
       "0:3, 0:5, 3:5, 3:3, 2:3, 2:4, 1:4, 1:3");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
       "# # 0:0, 0:2, 1:2, 1:1, 2:1, 2:2, 3:2, 3:0; "
       "0:3, 0:5, 3:5, 3:3, 2:3, 2:4, 1:4, 1:3; "
       "1:2, 1:3, 2:3, 2:2");
@@ -859,11 +859,11 @@ TEST(S2BooleanOperation, FourOverlappingBars) {
   ExpectResult(OpType::INTERSECTION, options, a, b,
       "# # 1:89, 1:90, 2:90, 2:89; 1:91, 1:92, 2:92, 2:91; "
       "-1:89, -1:90, 0:90, 0:89; -1:91, -1:92, 0:92, 0:91");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
       "# # 1:88, 1:89, 2:89, 2:88; 1:90, 1:91, 2:91, 2:90; "
       "1:92, 1:93, 2:93, 2:92; -1:88, -1:89, 0:89, 0:88; "
       "-1:90, -1:91, 0:91, 0:90; -1:92, -1:93, 0:93, 0:92");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
       "# # 1:88, 1:89, 2:89, 2:88; -1:88, -1:89, 0:89, 0:88; "
       "1:90, 1:91, 2:91, 2:90; -1:90, -1:91, 0:91, 0:90; "
       "1:92, 1:93, 2:93, 2:92; -1:92, -1:93, 0:93, 0:92; "
@@ -890,11 +890,11 @@ TEST(S2BooleanOperation, OverlappingDoughnuts) {
   ExpectResult(OpType::INTERSECTION, options, a, b,
       "# # -1:-91, -1:-90, 0:-90, 0:-91; "
       "0:-90, 0:-89, 1:-89, 1:-90");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
       "# # -1:-93, -1:-91, 0:-91, 0:-92, 2:-92, "
       "2:-90, 1:-90, 1:-89, 3:-89, 3:-93; "
       "-1:-90, -1:-89, 0:-89, 0:-90");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
       "# # -1:-93, -1:-91, 0:-91, 0:-92, 2:-92, "
       "2:-90, 1:-90, 1:-89, 3:-89, 3:-93; "
       "-3:-91, -3:-87, 1:-87, 1:-89, 0:-89, 0:-88,-2:-88,-2:-90,-1:-90,-1:-91; "
@@ -911,9 +911,9 @@ TEST(S2BooleanOperation, PolylineEnteringRectangle) {
       "# 0:0, 1:1 # 1:1, 1:3, 3:3, 3:1");
   ExpectResult(OpType::INTERSECTION, options, a, b,
       "# 1:1, 2:2 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
       "# 0:0, 1:1 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
       "# 0:0, 1:1 # 1:1, 1:3, 3:3, 3:1");
 }
 
@@ -929,9 +929,9 @@ TEST(S2BooleanOperation, PolylineCrossingRectangleTwice) {
       "# 1:1, 1:0, 1:-1, 0:-1, -1:-1, -1:0, -1:1, 0:1");
   ExpectResult(OpType::INTERSECTION, options, a, b,
       "# 0:-1, 0:0, 0:1 | 1:0, 0:0, -1:0 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
+  ExpectResult(OpType::RELATIVE_COMPLEMENT, options, a, b,
       "# 0:-5, 0:-1 | 0:1, 0:5, 5:0, 1:0 | -1:0, -5:0 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+  ExpectResult(OpType::DISJUNCTIVE_UNION, options, a, b,
       "# 0:-5, 0:-1 | 0:1, 0:5, 5:0, 1:0 | -1:0, -5:0 "
       "# 1:1, 1:0, 1:-1, 0:-1, -1:-1, -1:0, -1:1, 0:1");
 }
