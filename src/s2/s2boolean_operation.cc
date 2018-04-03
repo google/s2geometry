@@ -1027,7 +1027,7 @@ class S2BooleanOperation::Impl::CrossingProcessor {
 
   // This method should be called after each pair of calls to StartBoundary.
   // (The only operation that processes more than one pair of boundaries is
-  // DISJUNCTIVE_UNION, which computes the union of A-B and B-A.)
+  // SYMMETRIC_DIFFERENCE, which computes the union of A-B and B-A.)
   //
   // Resets the state of the CrossingProcessor.
   void DoneBoundaryPair();
@@ -1889,7 +1889,7 @@ bool S2BooleanOperation::Impl::GetIndexCrossings(int region_id) {
 // as soon as the result is known to be non-empty.
 bool S2BooleanOperation::Impl::AddBoundaryPair(
     bool invert_a, bool invert_b, bool invert_result, CrossingProcessor* cp) {
-  // Optimization: if the operation is RELATIVE_COMPLEMENT or DISJUNCTIVE_UNION,
+  // Optimization: if the operation is SET_DIFFERENCE or SYMMETRIC_DIFFERENCE,
   // it is worthwhile checking whether the two regions are identical (in which
   // case the output is empty).
   //
@@ -1897,7 +1897,7 @@ bool S2BooleanOperation::Impl::AddBoundaryPair(
   // checks that could be done here, such as checking whether a full cell from
   // one S2ShapeIndex intersects a non-empty cell of the other S2ShapeIndex.
   auto type = op_->op_type();
-  if (type == OpType::RELATIVE_COMPLEMENT || type == OpType::DISJUNCTIVE_UNION) {
+  if (type == OpType::SET_DIFFERENCE || type == OpType::SYMMETRIC_DIFFERENCE) {
     if (AreRegionsIdentical()) return true;
   } else if (!is_boolean_output()) {
   }
@@ -1928,11 +1928,11 @@ bool S2BooleanOperation::Impl::BuildOpType(OpType op_type) {
       // A & B
       return AddBoundaryPair(false, false, false, &cp);
 
-    case OpType::RELATIVE_COMPLEMENT:
+    case OpType::SET_DIFFERENCE:
       // A - B = A & ~B
       return AddBoundaryPair(false, true, false, &cp);
 
-    case OpType::DISJUNCTIVE_UNION:
+    case OpType::SYMMETRIC_DIFFERENCE:
       // Compute the union of (A - B) and (B - A).
       return (AddBoundaryPair(false, true, false, &cp) &&
               AddBoundaryPair(true, false, false, &cp));
@@ -2075,8 +2075,8 @@ const char* S2BooleanOperation::OpTypeToString(OpType op_type) {
   switch (op_type) {
     case OpType::UNION:                return "UNION";
     case OpType::INTERSECTION:         return "INTERSECTION";
-    case OpType::RELATIVE_COMPLEMENT:           return "RELATIVE_COMPLEMENT";
-    case OpType::DISJUNCTIVE_UNION: return "SYMMETRIC RELATIVE_COMPLEMENT";
+    case OpType::SET_DIFFERENCE:           return "SET_DIFFERENCE";
+    case OpType::SYMMETRIC_DIFFERENCE: return "SYMMETRIC SET_DIFFERENCE";
     default:                           return "Unknown OpType";
   }
 }
