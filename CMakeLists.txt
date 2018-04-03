@@ -55,7 +55,14 @@ endif()
 add_definitions(-std=c++11)
 
 if(WIN32)
-    add_definitions(-J -D_USE_MATH_DEFINES -DNOMINMAX -DNEED_ALT_SSIZE)
+    # Use unsigned characters
+    add_definitions(-J)
+    # Make sure cmath header defines things like M_PI
+    add_definitions(-D_USE_MATH_DEFINES)
+    # Make sure Windows doesn't define min/max macros that interfere with STL
+    add_definitions(-DNOMINMAX)
+    # Add a flag to define ssize_t for btree implementation
+    add_definitions(-DNEED_ALT_SSIZE)
 else()
     add_definitions(-Wno-deprecated-declarations)
 endif()
