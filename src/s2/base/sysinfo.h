@@ -16,15 +16,15 @@
 #ifndef S2_BASE_SYSINFO_H_
 #define S2_BASE_SYSINFO_H_
 
-#if defined(_WIN32) || defined(_WIN64)
-#include <Windows.h>
+#ifdef _MSC_VER /* if Visual C++ */
+#include <windows.h>
 #else
 #include <sys/resource.h>   // for rusage, RUSAGE_SELF
 #include <sys/time.h>
 #endif
 
 double GetCpuTime() {
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _MSC_VER /* if Visual C++ */
   FILETIME creation, exit, kernel, user;
   int res = GetProcessTimes(GetCurrentProcess(), &creation,
                             &exit, &kernel, &user);
