@@ -54,7 +54,7 @@ endif()
 
 add_definitions(-std=c++11)
 
-if(WIN32)
+if (WIN32)
     # Use unsigned characters
     add_definitions(-J)
     # Make sure cmath header defines things like M_PI
