@@ -122,7 +122,7 @@
 //    the intersection of a closed polygon A with a point B that coincides
 //    with a vertex of A consists only of the point B.
 //
-//  - For SET_DIFFERENCE, higher-dimensional shapes are not affected by
+//  - For DIFFERENCE, higher-dimensional shapes are not affected by
 //    subtracting lower-dimensional shapes.  For example, subtracting a point
 //    or polyline from a polygon A yields the original polygon A.  This rule
 //    exists because in general, it is impossible to represent the output
@@ -190,8 +190,8 @@ class S2BooleanOperation {
   enum class OpType {
     UNION,                // Contained by either region.
     INTERSECTION,         // Contained by both regions.
-    SET_DIFFERENCE,  // Contained by the first region but not the second.
-    SYMMETRIC_DIFFERENCE     // Contained by one region but not the other.
+    DIFFERENCE,           // Contained by the first region but not the second.
+    SYMMETRIC_DIFFERENCE  // Contained by one region but not the other.
   };
   // Translates OpType to one of the strings above.
   static const char* OpTypeToString(OpType op_type);
@@ -298,7 +298,7 @@ class S2BooleanOperation {
     //   empty intersection under PolylineModel::OPEN.
     //
     // - If the model is CLOSED, the result is as closed as possible.  In the
-    //   case of the SET_DIFFERENCE operation, this is equivalent to evaluating
+    //   case of the DIFFERENCE operation, this is equivalent to evaluating
     //   A - B as Closure(A) - Interior(B).  For other operations, it affects
     //   only the handling of degeneracies.  For example, the union of two
     //   identical degenerate holes is empty under PolygonModel::CLOSED
@@ -399,7 +399,7 @@ class S2BooleanOperation {
   // difference (B - A) is empty.
   static bool Contains(const S2ShapeIndex& a, const S2ShapeIndex& b,
                        const Options& options = Options()) {
-    return IsEmpty(OpType::SET_DIFFERENCE, b, a, options);
+    return IsEmpty(OpType::DIFFERENCE, b, a, options);
   }
 
   // Convenience method that returns true if the symmetric difference of A and
