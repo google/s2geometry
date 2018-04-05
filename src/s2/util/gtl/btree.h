@@ -55,7 +55,6 @@
 
 #include <cstddef>
 #include <cstring>
-#include <sys/types.h>
 #include <algorithm>
 #include <cassert>
 #include <functional>
@@ -248,7 +247,7 @@ struct common_params {
 
   using allocator_type = Alloc;
   using key_type = Key;
-  using size_type = ssize_t;
+  using size_type = std::make_signed<size_t>::type;
   using difference_type = ptrdiff_t;
 
   enum {
@@ -814,8 +813,12 @@ class btree {
     kMatchMask = node_type::kMatchMask,
   };
 
+ public:
+  using size_type = typename Params::size_type;
+
+ private:
   struct node_stats {
-    node_stats(ssize_t l, ssize_t i)
+    node_stats(size_type l, size_type i)
         : leaf_nodes(l),
           internal_nodes(i) {
     }
@@ -826,8 +829,8 @@ class btree {
       return *this;
     }
 
-    ssize_t leaf_nodes;
-    ssize_t internal_nodes;
+    size_type leaf_nodes;
+    size_type internal_nodes;
   };
 
  public:
@@ -838,7 +841,6 @@ class btree {
   using const_pointer = typename Params::const_pointer;
   using reference = typename Params::reference;
   using const_reference = typename Params::const_reference;
-  using size_type = typename Params::size_type;
   using difference_type = typename Params::difference_type;
   using iterator = btree_iterator<node_type, reference, pointer>;
   using const_iterator = typename iterator::const_iterator;
