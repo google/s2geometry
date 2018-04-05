@@ -55,7 +55,6 @@
 
 #include <cstddef>
 #include <cstring>
-#include <sys/types.h>
 #include <algorithm>
 #include <cassert>
 #include <functional>
