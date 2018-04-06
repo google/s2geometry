@@ -99,7 +99,7 @@ using btree_is_key_compare_to =
     std::is_convertible<Compare, btree_key_compare_to_tag>;
 
 namespace internal_btree {
-// A helper class used to indicates if the comparator provided is transparent
+// A helper class used to indicate if the comparator provided is transparent
 // and thus supports heterogeneous lookups. This is only used internally to
 // check if the Compare parameter has a valid is_transparent member.
 // A transparent comparator will see lookup keys with any type (lookup_type)
@@ -233,7 +233,7 @@ struct prefers_linear_node_search<
     : T::goog_btree_prefer_linear_node_search {};
 
 template <typename Key, typename Compare, typename Alloc, int TargetNodeSize,
-          int ValueSize>
+          int ValueSize, bool Multi>
 struct common_params {
   // If Compare is derived from btree_key_compare_to_tag then use it as the
   // key_compare type. Otherwise, use key_compare_to_adapter<> which will
@@ -249,6 +249,9 @@ struct common_params {
   using key_type = Key;
   using size_type = std::make_signed<size_t>::type;
   using difference_type = ptrdiff_t;
+
+  // True if this is a multiset or multimap.
+  using is_multi_container = std::integral_constant<bool, Multi>;
 
   enum {
     kTargetNodeSize = TargetNodeSize,
@@ -267,9 +270,9 @@ struct common_params {
 // A parameters structure for holding the type parameters for a btree_map.
 // Compare and Alloc should be nothrow copy-constructible.
 template <typename Key, typename Data, typename Compare, typename Alloc,
-          int TargetNodeSize>
+          int TargetNodeSize, bool Multi>
 struct map_params : common_params<Key, Compare, Alloc, TargetNodeSize,
-                                  sizeof(std::pair<const Key, Data>)> {
+                                  sizeof(std::pair<const Key, Data>), Multi> {
   using data_type = Data;
   using mapped_type = Data;
   using value_type = std::pair<const Key, data_type>;
@@ -287,9 +290,10 @@ struct map_params : common_params<Key, Compare, Alloc, TargetNodeSize,
 
 // A parameters structure for holding the type parameters for a btree_set.
 // Compare and Alloc should be nothrow copy-constructible.
-template <typename Key, typename Compare, typename Alloc, int TargetNodeSize>
+template <typename Key, typename Compare, typename Alloc, int TargetNodeSize,
+          bool Multi>
 struct set_params
-    : common_params<Key, Compare, Alloc, TargetNodeSize, sizeof(Key)> {
+    : common_params<Key, Compare, Alloc, TargetNodeSize, sizeof(Key), Multi> {
   using data_type = void;
   using mapped_type = void;
   using value_type = Key;
@@ -323,6 +327,7 @@ struct upper_bound_adapter {
 template <typename Params>
 class btree_node {
   using is_key_compare_to = typename Params::is_key_compare_to;
+  using is_multi_container = typename Params::is_multi_container;
 
  public:
   using params_type = Params;
@@ -506,8 +511,8 @@ class btree_node {
   // Returns the position of the first value whose key is not less than k using
   // linear search performed using plain compare.
   template <typename K, typename Compare>
-  int linear_search_plain_compare(
-      const K &k, int s, int e, const Compare &comp) const {
+  int linear_search_plain_compare(const K &k, int s, const int e,
+                                  const Compare &comp) const {
     while (s < e) {
       if (!bool_compare_keys(comp, key(s), k)) {
         break;
@@ -520,10 +525,10 @@ class btree_node {
   // Returns the position of the first value whose key is not less than k using
   // linear search performed using compare-to.
   template <typename K, typename Compare>
-  int linear_search_compare_to(
-      const K &k, int s, int e, const Compare &comp) const {
+  int linear_search_compare_to(const K &k, int s, const int e,
+                               const Compare &comp) const {
     while (s < e) {
-      int c = comp(key(s), k);
+      const int c = comp(key(s), k);
       if (c == 0) {
         return s | kExactMatch;
       } else if (c > 0) {
@@ -537,10 +542,10 @@ class btree_node {
   // Returns the position of the first value whose key is not less than k using
   // binary search performed using plain compare.
   template <typename K, typename Compare>
-  int binary_search_plain_compare(
-      const K &k, int s, int e, const Compare &comp) const {
+  int binary_search_plain_compare(const K &k, int s, int e,
+                                  const Compare &comp) const {
     while (s != e) {
-      int mid = (s + e) >> 1;
+      const int mid = (s + e) >> 1;
       if (bool_compare_keys(comp, key(mid), k)) {
         s = mid + 1;
       } else {
@@ -555,23 +560,38 @@ class btree_node {
   template <typename K, typename CompareTo>
   int binary_search_compare_to(
       const K &k, int s, int e, const CompareTo &comp) const {
-    while (s != e) {
-      int mid = (s + e) >> 1;
-      int c = comp(key(mid), k);
-      if (c < 0) {
-        s = mid + 1;
-      } else if (c > 0) {
-        e = mid;
-      } else {
-        // Need to return the first value whose key is not less than k, which
-        // requires continuing the binary search. Note that we are guaranteed
-        // that the result is an exact match because if "key(mid-1) < k" the
-        // call to binary_search_compare_to() will return "mid".
-        s = binary_search_compare_to(k, s, mid, comp);
-        return s | kExactMatch;
+    if (is_multi_container::value) {
+      int exact_match = 0;
+      while (s != e) {
+        const int mid = (s + e) >> 1;
+        const int c = comp(key(mid), k);
+        if (c < 0) {
+          s = mid + 1;
+        } else {
+          e = mid;
+          if (c == 0) {
+            // Need to return the first value whose key is not less than k,
+            // which requires continuing the binary search if this is a
+            // multi-container.
+            exact_match = kExactMatch;
+          }
+        }
       }
+      return s | exact_match;
+    } else {  // Not a multi-container.
+      while (s != e) {
+        const int mid = (s + e) >> 1;
+        const int c = comp(key(mid), k);
+        if (c < 0) {
+          s = mid + 1;
+        } else if (c > 0) {
+          e = mid;
+        } else {
+          return mid | kExactMatch;
+        }
+      }
+      return s;
     }
-    return s;
   }
 
   // Emplaces a value at position i, shifting all existing values and
