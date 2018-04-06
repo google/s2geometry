@@ -47,6 +47,10 @@ class S2Polyline final : public S2Region {
   // or Decode().
   S2Polyline();
 
+  // S2Polyline is movable, but only privately copyable.
+  S2Polyline(S2Polyline&&);
+  S2Polyline& operator=(S2Polyline&&);
+
   // Convenience constructors that call Init() with the given vertices.
   explicit S2Polyline(const std::vector<S2Point>& vertices);
   explicit S2Polyline(const std::vector<S2LatLng>& vertices);

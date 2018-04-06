@@ -50,6 +50,21 @@ static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 S2Polyline::S2Polyline()
   : s2debug_override_(S2Debug::ALLOW) {}
 
+S2Polyline::S2Polyline(S2Polyline&& other)
+  : s2debug_override_(other.s2debug_override_),
+    num_vertices_(other.num_vertices_),
+    vertices_(std::move(other.vertices_)) {
+  other.num_vertices_ = 0;
+}
+
+S2Polyline& S2Polyline::operator=(S2Polyline&& other) {
+  s2debug_override_ = other.s2debug_override_;
+  num_vertices_ = other.num_vertices_;
+  vertices_ = std::move(other.vertices_);
+  other.num_vertices_ = 0;
+  return *this;
+}
+
 S2Polyline::S2Polyline(const vector<S2Point>& vertices)
   : S2Polyline(vertices, S2Debug::ALLOW) {}
 

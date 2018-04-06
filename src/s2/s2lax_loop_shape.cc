@@ -67,8 +67,6 @@ S2Shape::Edge S2LaxLoopShape::chain_edge(int i, int j) const {
 }
 
 S2Shape::ReferencePoint S2LaxLoopShape::GetReferencePoint() const {
-  // GetReferencePoint interprets a loop with no vertices as "full".
-  if (num_vertices() == 0) return ReferencePoint::Contained(false);
   return s2shapeutil::GetReferencePoint(*this);
 }
 

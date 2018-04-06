@@ -318,6 +318,12 @@ void S2Testing::CheckCovering(const S2Region& region,
   }
 }
 
+double S2Testing::GetCpuTime() {
+  absl::Duration usage = base::CPUUsage();
+  S2_CHECK(usage != absl::ZeroDuration());  // Indicates error.
+  return ToDoubleSeconds(usage);
+}
+
 S2Testing::Fractal::Fractal()
     : max_level_(-1), min_level_arg_(-1), min_level_(-1),
       dimension_(log(4)/log(3)), /* standard Koch curve */

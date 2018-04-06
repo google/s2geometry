@@ -16,27 +16,36 @@
 #ifndef S2_BASE_SYSINFO_H_
 #define S2_BASE_SYSINFO_H_
 
-#ifdef _MSC_VER /* if Visual C++ */
-#include <windows.h>
-#else
-#include <sys/resource.h>   // for rusage, RUSAGE_SELF
-#include <sys/time.h>
-#endif
+// TODO(user): Remove this hacky Duration implementation
+// when we use the absl one.
+namespace absl {
 
-double GetCpuTime() {
-#ifdef _MSC_VER /* if Visual C++ */
-  FILETIME creation, exit, kernel, user;
-  int res = GetProcessTimes(GetCurrentProcess(), &creation,
-                            &exit, &kernel, &user);
-  S2_CHECK_EQ(res, 0);
-  // high and low combine to 64-bit int, time uses 100-nanosecond intervals
-  return static_cast<double>((static_cast<uint64_t>(user.dwHighDateTime) << 32)
-                            + static_cast<uint64_t>(user.dwLowDateTime)) / 1e7;
-#else
-  struct rusage ru;
-  S2_CHECK_EQ(getrusage(RUSAGE_SELF, &ru), 0);
-  return ru.ru_utime.tv_sec + ru.ru_utime.tv_usec / 1e6;
-#endif
+// Don't use any Duration functions outside of sysinfo.h/cc.
+class Duration {
+ public:
+  explicit Duration(double seconds) : seconds_(seconds) {}
+
+  double seconds() const { return seconds_; }
+
+ private:
+  double seconds_;
+};
+
+bool operator!=(Duration lhs, Duration rhs) {
+  return lhs.seconds() != rhs.seconds();
 }
+
+double ToDoubleSeconds(Duration d) { return d.seconds(); }
+
+Duration ZeroDuration() { return Duration(0.0); }
+
+}  // namespace absl
+
+namespace base {
+
+// Return the total CPU time used by all threads in the current process.
+absl::Duration CPUUsage();
+
+}  // namespace base
 
 #endif  // S2_BASE_SYSINFO_H_
