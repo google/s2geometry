@@ -75,6 +75,21 @@ TEST(S2Polyline, Basic) {
   EXPECT_EQ(S2Point(1, 0, 0), semi_equator.vertex(2));
 }
 
+TEST(S2Polyline, MoveConstruct) {
+  unique_ptr<S2Polyline> line = MakePolyline("1:1, 4:4");
+  S2Polyline moved(std::move(*line));
+  ASSERT_EQ(0, line->num_vertices());
+  ASSERT_EQ(2, moved.num_vertices());
+}
+
+TEST(S2Polyline, MoveAssign) {
+  unique_ptr<S2Polyline> line = MakePolyline("1:1, 4:4");
+  S2Polyline copied;
+  copied = std::move(*line);
+  ASSERT_EQ(0, line->num_vertices());
+  ASSERT_EQ(2, copied.num_vertices());
+}
+
 TEST(S2Polyline, GetLengthAndCentroid) {
   // Construct random great circles and divide them randomly into segments.
   // Then make sure that the length and centroid are correct.  Note that
