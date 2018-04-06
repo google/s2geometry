@@ -65,6 +65,7 @@ include_directories(src)
 add_library(s2 SHARED
             src/s2/base/stringprintf.cc
             src/s2/base/strtoint.cc
+            src/s2/base/sysinfo.cc
             src/s2/id_set_lexicon.cc
             src/s2/mutable_s2shape_index.cc
             src/s2/r2rect.cc
