@@ -28,10 +28,10 @@
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/base/mutex.h"
 #include "s2/base/spinlock.h"
 #include "s2/third_party/absl/base/thread_annotations.h"
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/base/mutex.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2pointutil.h"
@@ -429,7 +429,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
     // This mutex is used as a condition variable.  It is locked by the
     // updating thread for the entire duration of the update; other threads
     // lock it in order to wait until the update is finished.
-    Mutex wait_mutex;
+    absl::Mutex wait_mutex;
 
     // The number of threads currently waiting on "wait_mutex_".  The
     // UpdateState can only be freed when this number reaches zero.

@@ -25,9 +25,9 @@
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/mutex.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
+#include "s2/base/mutex.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -449,14 +449,14 @@ class LazyUpdatesTest : public ::testing::Test {
 
   MutableS2ShapeIndex index_;
   // The following fields are guarded by lock_.
-  Mutex lock_;
+  absl::Mutex lock_;
   int num_updates_;
   int num_readers_left_;
 
   // Signalled when a new update is ready to be processed.
-  CondVar update_ready_;
+  absl::CondVar update_ready_;
   // Signalled when all readers have processed the latest update.
-  CondVar all_readers_done_;
+  absl::CondVar all_readers_done_;
 };
 
 void LazyUpdatesTest::ReaderThread() {

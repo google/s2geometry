@@ -55,7 +55,6 @@
 
 #include <cstddef>
 #include <cstring>
-#include <sys/types.h>
 #include <algorithm>
 #include <cassert>
 #include <functional>
@@ -248,7 +247,7 @@ struct common_params {
 
   using allocator_type = Alloc;
   using key_type = Key;
-  using size_type = ssize_t;
+  using size_type = std::make_signed<size_t>::type;
   using difference_type = ptrdiff_t;
 
   // True if this is a multiset or multimap.
@@ -835,7 +834,9 @@ class btree {
   };
 
   struct node_stats {
-    node_stats(ssize_t l, ssize_t i)
+    using size_type = typename Params::size_type;
+
+    node_stats(size_type l, size_type i)
         : leaf_nodes(l),
           internal_nodes(i) {
     }
@@ -846,8 +847,8 @@ class btree {
       return *this;
     }
 
-    ssize_t leaf_nodes;
-    ssize_t internal_nodes;
+    size_type leaf_nodes;
+    size_type internal_nodes;
   };
 
  public:
