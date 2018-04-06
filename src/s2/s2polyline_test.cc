@@ -290,10 +290,10 @@ static string JoinInts(const vector<int>& ints) {
   string result;
   int n = ints.size();
   for (int i = 0; i + 1 < n; ++i) {
-    StrAppend(&result, ints[i], ",");
+    absl::StrAppend(&result, ints[i], ",");
   }
   if (n > 0) {
-    StrAppend(&result, ints[n - 1]);
+    absl::StrAppend(&result, ints[n - 1]);
   }
   return result;
 }

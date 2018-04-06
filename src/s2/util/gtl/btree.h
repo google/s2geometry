@@ -833,11 +833,9 @@ class btree {
     kMatchMask = node_type::kMatchMask,
   };
 
- public:
-  using size_type = typename Params::size_type;
-
- private:
   struct node_stats {
+    using size_type = typename Params::size_type;
+
     node_stats(size_type l, size_type i)
         : leaf_nodes(l),
           internal_nodes(i) {
@@ -861,6 +859,7 @@ class btree {
   using const_pointer = typename Params::const_pointer;
   using reference = typename Params::reference;
   using const_reference = typename Params::const_reference;
+  using size_type = typename Params::size_type;
   using difference_type = typename Params::difference_type;
   using iterator = btree_iterator<node_type, reference, pointer>;
   using const_iterator = typename iterator::const_iterator;
