@@ -17,8 +17,6 @@
 
 #include "s2/s2testing.h"
 
-#include <sys/resource.h>   // for rusage, RUSAGE_SELF
-#include <sys/time.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -29,6 +27,7 @@
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
+#include "s2/base/sysinfo.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -320,9 +319,9 @@ void S2Testing::CheckCovering(const S2Region& region,
 }
 
 double S2Testing::GetCpuTime() {
-  struct rusage ru;
-  S2_CHECK_EQ(getrusage(RUSAGE_SELF, &ru), 0);
-  return ru.ru_utime.tv_sec + ru.ru_utime.tv_usec / 1e6;
+  absl::Duration usage = base::CPUUsage();
+  S2_CHECK(usage != absl::ZeroDuration());  // Indicates error.
+  return ToDoubleSeconds(usage);
 }
 
 S2Testing::Fractal::Fractal()
