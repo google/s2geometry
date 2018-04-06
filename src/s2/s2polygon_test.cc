@@ -2906,16 +2906,22 @@ TEST_F(S2PolygonTestBase, FullPolygonShape) {
   S2Polygon::Shape shape(full_.get());
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(2, shape.dimension());
+  EXPECT_FALSE(shape.is_empty());
+  EXPECT_TRUE(shape.is_full());
+  EXPECT_EQ(1, shape.num_chains());
+  EXPECT_EQ(0, shape.chain(0).start);
+  EXPECT_EQ(0, shape.chain(0).length);
   EXPECT_TRUE(shape.GetReferencePoint().contained);
-  EXPECT_EQ(0, shape.num_chains());
 }
 
 TEST_F(S2PolygonTestBase, EmptyPolygonShape) {
   S2Polygon::Shape shape(empty_.get());
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_FALSE(shape.GetReferencePoint().contained);
+  EXPECT_TRUE(shape.is_empty());
+  EXPECT_FALSE(shape.is_full());
   EXPECT_EQ(0, shape.num_chains());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 void TestPolygonShape(const S2Polygon& polygon) {
@@ -2936,6 +2942,8 @@ void TestPolygonShape(const S2Polygon& polygon) {
   }
   EXPECT_EQ(2, shape.dimension());
   EXPECT_TRUE(shape.has_interior());
+  EXPECT_FALSE(shape.is_empty());
+  EXPECT_FALSE(shape.is_full());
   EXPECT_EQ(polygon.Contains(S2::Origin()),
             shape.GetReferencePoint().contained);
 }

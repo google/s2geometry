@@ -413,6 +413,8 @@ TEST(S2PolylineShape, Basic) {
   EXPECT_EQ(S2LatLng::FromDegrees(1, 1).ToPoint(), edge2.v0);
   EXPECT_EQ(S2LatLng::FromDegrees(2, 1).ToPoint(), edge2.v1);
   EXPECT_EQ(1, shape.dimension());
+  EXPECT_FALSE(shape.is_empty());
+  EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(shape.has_interior());
   EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
@@ -422,6 +424,9 @@ TEST(S2PolylineShape, EmptyPolyline) {
   S2Polyline::Shape shape(&polyline);
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(0, shape.num_chains());
+  EXPECT_TRUE(shape.is_empty());
+  EXPECT_FALSE(shape.is_full());
+  EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 
 TEST(S2PolylineOwningShape, Ownership) {
