@@ -2210,6 +2210,24 @@ TEST_F(S2PolygonTestBase, GetDistance) {
                       S2LatLng::FromDegrees(0, 1).ToPoint());
 }
 
+TEST_F(S2PolygonTestBase, Area) {
+  EXPECT_DOUBLE_EQ(0.0, empty_->GetArea());
+  EXPECT_DOUBLE_EQ(4 * M_PI, full_->GetArea());
+  EXPECT_DOUBLE_EQ(2 * M_PI, south_H_->GetArea());
+  EXPECT_DOUBLE_EQ(M_PI, far_H_south_H_->GetArea());
+
+  unique_ptr<S2Polygon> two_shells(
+      MakePolygon(kCross1SideHole + kCrossCenterHole));
+  EXPECT_DOUBLE_EQ(
+      two_shells->loop(0)->GetArea() + two_shells->loop(1)->GetArea(),
+      two_shells->GetArea());
+
+  unique_ptr<S2Polygon> holey_shell(MakePolygon(kCross1 + kCrossCenterHole));
+  EXPECT_DOUBLE_EQ(
+      holey_shell->loop(0)->GetArea() - holey_shell->loop(1)->GetArea(),
+      holey_shell->GetArea());
+}
+
 TEST(S2Polygon, UninitializedIsValid) {
   S2Polygon polygon;
   EXPECT_TRUE(polygon.IsValid());
