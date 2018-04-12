@@ -29,10 +29,13 @@ absl::Duration CPUUsage() {
   FILETIME creation, exit, kernel, user;
   int res = GetProcessTimes(GetCurrentProcess(), &creation,
                             &exit, &kernel, &user);
-  S2_CHECK_EQ(res, 0);
-  // high and low combine to 64-bit int, time uses 100-nanosecond intervals
-  return static_cast<double>((static_cast<uint64_t>(user.dwHighDateTime) << 32)
-                            + static_cast<uint64_t>(user.dwLowDateTime)) / 1e7;
+  if (res != 0) return absl::ZeroDuration();
+  // high and low combine to 64-bit int
+  ULARGE_INTEGER conv;
+  conv.LowPart = user.dwLowDateTime;
+  conv.HighPart = user.dwHighDateTime;
+  // time uses 100-nanosecond intervals
+  return absl::Duration(conv.QuadPart / 1e7);
 #else
   struct rusage ru;
   if (getrusage(RUSAGE_SELF, &ru) != 0) return absl::ZeroDuration();
