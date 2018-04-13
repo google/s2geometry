@@ -16,7 +16,7 @@ S2 documentation can be found on [s2geometry.io](http://s2geometry.io).
 
 ## Requirements for End Users
 
-* A POSIX system (for getrusage).
+* A POSIX system (for getrusage) or Windows.
 * [CMake](http://www.cmake.org/)
 * A C++ compiler with C++11 support, such as [g++](https://gcc.gnu.org/)
   \>= 4.7.

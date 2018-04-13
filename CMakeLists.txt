@@ -56,7 +56,19 @@ if (APPLE)
     set(CMAKE_MACOSX_RPATH TRUE)
 endif()
 
-add_definitions(-Wno-deprecated-declarations -std=c++11)
+add_definitions(-std=c++11)
+
+if (WIN32)
+    # Use unsigned characters
+    add_definitions(-J)
+    # Make sure cmath header defines things like M_PI
+    add_definitions(-D_USE_MATH_DEFINES)
+    # Make sure Windows doesn't define min/max macros that interfere with STL
+    add_definitions(-DNOMINMAX)
+else()
+    add_definitions(-Wno-deprecated-declarations)
+endif()
+
 
 # If OpenSSL is installed in a non-standard location, configure with
 # something like:
