@@ -15,7 +15,7 @@
 
 #include "s2/base/sysinfo.h"
 
-#ifdef _MSC_VER /* if Visual C++ */
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <sys/resource.h>   // for rusage, RUSAGE_SELF
@@ -25,7 +25,7 @@
 namespace base {
 
 absl::Duration CPUUsage() {
-#ifdef _MSC_VER /* if Visual C++ */
+#ifdef _WIN32
   FILETIME creation, exit, kernel, user;
   int res = GetProcessTimes(GetCurrentProcess(), &creation,
                             &exit, &kernel, &user);
