@@ -21,6 +21,8 @@ option(BUILD_SHARED_LIBS "Build shared libraries instead of static." ON)
 add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
                  "builds shared libraries instead of static.")
 
+option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
+
 feature_summary(WHAT ALL)
 
 if (WITH_GLOG)
@@ -470,7 +472,9 @@ if (GTEST_ROOT)
   endforeach()
 endif()
 
-add_subdirectory("doc/examples" examples)
+if (BUILD_EXAMPLES)
+  add_subdirectory("doc/examples" examples)
+endif()
 
 if (${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
   add_subdirectory("src/python" python)
