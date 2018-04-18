@@ -71,9 +71,12 @@
 // or closed.  Polyline boundaries are controlled by the PolylineModel class,
 // whose options are as follows:
 //
-//  - In the OPEN model, polylines do not contain their first or last vertex.
+//  - In the OPEN model, polylines do not contain their first or last vertex
+//    except for one special case: namely, if the polyline forms a loop and
+//    the polyline_loops_have_boundaries() option is set to false, then the
+//    first/last vertex is contained.
 //
-//  - In the SEMI_OPEN model, polylines contain vertices except the last.
+//  - In the SEMI_OPEN model, polylines contain all vertices except the last.
 //    Therefore if one polyline starts where another polyline stops, the two
 //    polylines do not intersect.
 //
@@ -265,17 +268,45 @@ class S2BooleanOperation {
     void set_snap_function(const S2Builder::SnapFunction& snap_function);
 
     // Defines whether polygons are considered to contain their vertices
-    // and/or edges.
+    // and/or edges (see comments above).
     //
     // DEFAULT: PolygonModel::SEMI_OPEN
     PolygonModel polygon_model() const;
     void set_polygon_model(PolygonModel model);
 
-    // Defines whether polylines are considered to contain their vertices.
+    // Defines whether polylines are considered to contain their vertices (see
+    // comments above).
     //
     // DEFAULT: PolylineModel::CLOSED
     PolylineModel polyline_model() const;
     void set_polyline_model(PolylineModel model);
+
+    // Specifies whether a polyline loop is considered to have a non-empty
+    // boundary.  By default this option is true, meaning that even if the
+    // first and last vertices of a polyline are the same, the polyline is
+    // considered to have a well-defined "start" and "end".  For example, if
+    // the polyline boundary model is OPEN then the polyline loop would not
+    // include the start/end vertices.  These are the best semantics for most
+    // applications, such as GPS tracks or road network segments.
+    //
+    // If the polyline forms a loop and this option is set to false, then
+    // instead the first and last vertices are considered to represent a
+    // single vertex in the interior of the polyline.  In this case the
+    // boundary of the polyline is empty, meaning that the first/last vertex
+    // will be contained by the polyline even if the boundary model is OPEN.
+    // (Note that this option also has a small effect on the CLOSED boundary
+    // model, because the first/last vertices of a polyline loop are
+    // considered to represent one vertex rather than two.)
+    //
+    // The main reason for this option is to implement the "mod 2 union"
+    // boundary semantics of the OpenGIS Simple Features spec.  This can be
+    // achieved by making sure that all polylines are constructed using
+    // S2Builder::Graph::PolylineType::WALK (which ensures that all polylines
+    // are as long as possible), and then setting this option to false.
+    //
+    // DEFAULT: true
+    bool polyline_loops_have_boundaries() const;
+    void set_polyline_loops_have_boundaries(bool value);
 
     // Specifies whether the operation should use the exact input geometry
     // (Precision::EXACT), or whether the two input regions should be snapped
@@ -342,11 +373,12 @@ class S2BooleanOperation {
 
    private:
     std::unique_ptr<S2Builder::SnapFunction> snap_function_;
-    PolygonModel polygon_model_;
-    PolylineModel polyline_model_;
-    Precision precision_;
-    bool conservative_;
-    ValueLexicon<SourceId>* source_id_lexicon_;
+    PolygonModel polygon_model_ = PolygonModel::SEMI_OPEN;;
+    PolylineModel polyline_model_ = PolylineModel::CLOSED;
+    bool polyline_loops_have_boundaries_ = true;
+    Precision precision_ = Precision::EXACT;
+    bool conservative_output_ = false;
+    ValueLexicon<SourceId>* source_id_lexicon_ = nullptr;
   };
 
   S2BooleanOperation(OpType op_type,

@@ -111,6 +111,7 @@ using InputEdgeIdSetId = Graph::InputEdgeIdSetId;
 
 using PolygonModel = S2BooleanOperation::PolygonModel;
 using PolylineModel = S2BooleanOperation::PolylineModel;
+using Precision = S2BooleanOperation::Precision;
 
 // A collection of special InputEdgeIds that allow the GraphEdgeClipper state
 // modifications to be inserted into the list of edge crossings.
@@ -994,10 +995,12 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // be nullptr.
   CrossingProcessor(const PolygonModel& polygon_model,
                     const PolylineModel& polyline_model,
+                    bool polyline_loops_have_boundaries,
                     S2Builder* builder,
                     vector<int8>* input_dimensions,
                     InputEdgeCrossings *input_crossings)
       : polygon_model_(polygon_model), polyline_model_(polyline_model),
+        polyline_loops_have_boundaries_(polyline_loops_have_boundaries),
         builder_(builder), input_dimensions_(input_dimensions),
         input_crossings_(input_crossings), prev_inside_(false) {
   }
@@ -1135,6 +1138,7 @@ class S2BooleanOperation::Impl::CrossingProcessor {
 
   PolygonModel polygon_model_;
   PolylineModel polyline_model_;
+  bool polyline_loops_have_boundaries_;
 
   // The output of the CrossingProcessor consists of a subset of the input
   // edges that are emitted to "builder_", and some auxiliary information
@@ -1394,8 +1398,14 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge1(
 
   // If neither edge adjacent to v0 was emitted, and this polyline contains
   // v0, and the other region contains v0, then emit an isolated vertex.
-  if (is_v0_isolated(a_id) &&
-      polyline_contains_v0(a_id.edge_id, chain_start_) && a0_inside) {
+  if (!polyline_loops_have_boundaries_ && a_id.edge_id == chain_start_ &&
+      a.v0 == a_shape_->chain_edge(chain_id_,
+                                   chain_limit_ - chain_start_ - 1).v1) {
+    // This is the first vertex of a polyline loop, so we can't decide if it
+    // is isolated until we process the last polyline edge.
+    chain_v0_emitted_ = inside_;
+  } else if (is_v0_isolated(a_id) &&
+             polyline_contains_v0(a_id.edge_id, chain_start_) && a0_inside) {
     if (!AddPointEdge(a.v0, 1)) return false;
   }
 
@@ -1419,8 +1429,10 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge1(
 
   // Special case to test whether the last vertex of a polyline should be
   // emitted as an isolated vertex.
-  if (polyline_model_ == PolylineModel::CLOSED && it->crossings_complete() &&
-      is_chain_last_vertex_isolated(a_id) &&
+  if (it->crossings_complete() && is_chain_last_vertex_isolated(a_id) &&
+      (polyline_model_ == PolylineModel::CLOSED ||
+       (!polyline_loops_have_boundaries_ &&
+        a.v1 == a_shape_->chain_edge(chain_id_, chain_start_).v0)) &&
       IsPolylineVertexInside(r.a1_matches_polyline, r.a1_matches_polygon)) {
     if (!AddPointEdge(a.v1, 1)) return false;
   }
@@ -1541,7 +1553,7 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge2(
   // Special case to test whether the last vertex of a loop should be emitted
   // as an isolated degenerate vertex.
   if (emit_shared && emit_degenerate && r.a1_matches_polygon &&
-      is_chain_last_vertex_isolated(a_id)) {
+      it->crossings_complete() && is_chain_last_vertex_isolated(a_id)) {
     if (!AddPointEdge(a.v1, 2)) return false;
   }
   return true;
@@ -1627,14 +1639,25 @@ bool S2BooleanOperation::Impl::CrossingProcessor::PolylineEdgeContainsVertex(
   // Closed polylines contain all their vertices.
   if (polyline_model_ == PolylineModel::CLOSED) return true;
 
-  // All interior polyline vertices are contained.
-  // The last polyline vertex is contained iff the model is CLOSED.
-  // The first polyline vertex is contained iff the model is not OPEN.
-  // The test below is written such that usually b_edge() is not needed.
+  // Note that the code below is structured so that it.b_edge() is not usually
+  // needed (since accessing the edge can be relatively expensive).
   const auto& b_chain = it.b_chain_info();
   int b_edge_id = it.b_edge_id();
-  return (b_edge_id < b_chain.limit - 1 || it.b_edge().v1 != v) &&
-      (polyline_contains_v0(b_edge_id, b_chain.start) || it.b_edge().v0 != v);
+
+  // The last polyline vertex is never contained.  (For polyline loops, it is
+  // sufficient to treat the first vertex as begin contained.)  This case also
+  // handles degenerate polylines (polylines with one edge where v0 == v1),
+  // which do not contain any points.
+  if (b_edge_id == b_chain.limit - 1 && v == it.b_edge().v1) return false;
+
+  // Otherwise all interior vertices are contained.  The first polyline
+  // vertex is contained if either the polyline model is not OPEN, or the
+  // polyline forms a loop and polyline_loops_have_boundaries_ is false.
+  if (polyline_contains_v0(b_edge_id, b_chain.start)) return true;
+  if (v != it.b_edge().v0) return true;
+  if (polyline_loops_have_boundaries_) return false;
+  return v == it.b_shape().chain_edge(b_chain.chain_id,
+                                      b_chain.limit - b_chain.start - 1).v1;
 }
 
 // Translates the temporary representation of crossing edges (SourceId) into
@@ -1918,6 +1941,7 @@ bool S2BooleanOperation::Impl::BuildOpType(OpType op_type) {
   // CrossingProcessor does the real work of emitting the output edges.
   CrossingProcessor cp(op_->options_.polygon_model(),
                        op_->options_.polyline_model(),
+                       op_->options_.polyline_loops_have_boundaries(),
                        builder_.get(), &input_dimensions_, &input_crossings_);
   switch (op_type) {
     case OpType::UNION:
@@ -2023,19 +2047,22 @@ bool S2BooleanOperation::Impl::Build(S2Error* error) {
 }
 
 S2BooleanOperation::Options::Options()
-    : Options(s2builderutil::IdentitySnapFunction(S1Angle::Zero())) {
+    : snap_function_(make_unique<s2builderutil::IdentitySnapFunction>(
+          S1Angle::Zero())) {
 }
 
 S2BooleanOperation::Options::Options(const SnapFunction& snap_function)
-    : snap_function_(snap_function.Clone()),
-      polygon_model_(PolygonModel::SEMI_OPEN),
-      polyline_model_(PolylineModel::CLOSED) {
+    : snap_function_(snap_function.Clone()) {
 }
 
 S2BooleanOperation::Options::Options(const Options& options)
     :  snap_function_(options.snap_function_->Clone()),
        polygon_model_(options.polygon_model_),
-       polyline_model_(options.polyline_model_) {
+       polyline_model_(options.polyline_model_),
+       polyline_loops_have_boundaries_(options.polyline_loops_have_boundaries_),
+       precision_(options.precision_),
+       conservative_output_(options.conservative_output_),
+       source_id_lexicon_(options.source_id_lexicon_) {
 }
 
 S2BooleanOperation::Options& S2BooleanOperation::Options::operator=(
@@ -2043,6 +2070,10 @@ S2BooleanOperation::Options& S2BooleanOperation::Options::operator=(
   snap_function_ = options.snap_function_->Clone();
   polygon_model_ = options.polygon_model_;
   polyline_model_ = options.polyline_model_;
+  polyline_loops_have_boundaries_ = options.polyline_loops_have_boundaries_;
+  precision_ = options.precision_;
+  conservative_output_ = options.conservative_output_;
+  source_id_lexicon_ = options.source_id_lexicon_;
   return *this;
 }
 
@@ -2069,6 +2100,28 @@ PolylineModel S2BooleanOperation::Options::polyline_model() const {
 
 void S2BooleanOperation::Options::set_polyline_model(PolylineModel model) {
   polyline_model_ = model;
+}
+
+bool S2BooleanOperation::Options::polyline_loops_have_boundaries() const {
+  return polyline_loops_have_boundaries_;
+}
+
+void S2BooleanOperation::Options::set_polyline_loops_have_boundaries(
+    bool value) {
+  polyline_loops_have_boundaries_ = value;
+}
+
+Precision S2BooleanOperation::Options::precision() const {
+  return precision_;
+}
+
+bool S2BooleanOperation::Options::conservative_output() const {
+  return conservative_output_;
+}
+
+ValueLexicon<S2BooleanOperation::SourceId>*
+S2BooleanOperation::Options::source_id_lexicon() const {
+  return source_id_lexicon_;
 }
 
 const char* S2BooleanOperation::OpTypeToString(OpType op_type) {
