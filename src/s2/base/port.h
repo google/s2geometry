@@ -507,7 +507,7 @@ using std::hash;
 
 #define GPRIuPTHREAD "lu"
 #define GPRIxPTHREAD "lx"
-#define PRINTABLE_PTHREAD(pthreadt) pthreadt
+#define PRINTABLE_PTHREAD(pthreadt) reinterpret_cast<uintptr_t>(pthreadt)
 
 #ifdef PTHREADS_REDHAT_WIN32
 #include <pthread.h>  // NOLINT(build/include)

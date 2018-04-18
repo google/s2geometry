@@ -644,7 +644,8 @@ class GeneralFormatConverter<EndianClass, float> {
   }
   static typename tofromhost_value_type_traits<float>::int_type ToHost(
       float v) {
-    return bit_cast<float>(EndianClass::ToHost32(absl::bit_cast<uint32>(v)));
+    return absl::bit_cast<float>(
+        EndianClass::ToHost32(absl::bit_cast<uint32>(v)));
   }
 };
 
@@ -659,7 +660,8 @@ class GeneralFormatConverter<EndianClass, double> {
   }
   static typename tofromhost_value_type_traits<double>::int_type ToHost(
       double v) {
-    return bit_cast<double>(EndianClass::ToHost64(absl::bit_cast<uint64>(v)));
+    return absl::bit_cast<double>(
+        EndianClass::ToHost64(absl::bit_cast<uint64>(v)));
   }
 };
 
