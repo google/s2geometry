@@ -507,7 +507,11 @@ using std::hash;
 
 #define GPRIuPTHREAD "lu"
 #define GPRIxPTHREAD "lx"
+#if defined(__APPLE__)
 #define PRINTABLE_PTHREAD(pthreadt) reinterpret_cast<uintptr_t>(pthreadt)
+#else
+#define PRINTABLE_PTHREAD(pthreadt) pthreadt
+#endif
 
 #ifdef PTHREADS_REDHAT_WIN32
 #include <pthread.h>  // NOLINT(build/include)
