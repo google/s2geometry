@@ -131,8 +131,7 @@ class SequenceLexicon {
     const SequenceLexicon* lexicon_;
   };
 
-  using IdSet =
-      google::dense_hash_set<uint32, IdHasher, IdKeyEqual>;
+  using IdSet = gtl::dense_hash_set<uint32, IdHasher, IdKeyEqual>;
 
   std::vector<T> values_;
   std::vector<uint32> begins_;

@@ -96,8 +96,7 @@ class ValueLexicon {
     const ValueLexicon* lexicon_;
   };
 
-  using IdSet =
-      google::dense_hash_set<uint32, IdHasher, IdKeyEqual>;
+  using IdSet = gtl::dense_hash_set<uint32, IdHasher, IdKeyEqual>;
 
   KeyEqual key_equal_;
   std::vector<T> values_;
