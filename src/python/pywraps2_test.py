@@ -259,6 +259,160 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertEqual(decoded_polygon.num_loops(), 1)
     self.assertTrue(decoded_polygon.Equals(polygon))
 
+  def testS2CapRegion(self):
+    center = s2.S2LatLng.FromDegrees(2.0, 3.0).ToPoint()
+    cap = s2.S2Cap(center, s2.S1Angle.Degrees(1.0))
+
+    inside = s2.S2LatLng.FromDegrees(2.1, 2.9).ToPoint()
+    outside = s2.S2LatLng.FromDegrees(0.0, 0.0).ToPoint()
+    self.assertTrue(cap.Contains(inside))
+    self.assertFalse(cap.Contains(outside))
+    self.assertTrue(cap.Contains(s2.S2Cell(inside)))
+    self.assertFalse(cap.Contains(s2.S2Cell(outside)))
+    self.assertTrue(cap.MayIntersect(s2.S2Cell(inside)))
+    self.assertFalse(cap.MayIntersect(s2.S2Cell(outside)))
+
+    self.assertTrue(cap.ApproxEquals(cap.GetCapBound()))
+
+    rect_bound = cap.GetRectBound()
+    self.assertTrue(rect_bound.Contains(inside))
+    self.assertFalse(rect_bound.Contains(outside))
+
+  def testS2LatLngRectRegion(self):
+    rect = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(1.0, 2.0),
+                           s2.S2LatLng.FromDegrees(3.0, 4.0))
+
+    inside = s2.S2LatLng.FromDegrees(2.0, 3.0).ToPoint()
+    outside = s2.S2LatLng.FromDegrees(0.0, 0.0).ToPoint()
+
+    self.assertTrue(rect.Contains(inside))
+    self.assertFalse(rect.Contains(outside))
+    self.assertTrue(rect.Contains(s2.S2Cell(inside)))
+    self.assertFalse(rect.Contains(s2.S2Cell(outside)))
+    self.assertTrue(rect.MayIntersect(s2.S2Cell(inside)))
+    self.assertFalse(rect.MayIntersect(s2.S2Cell(outside)))
+
+    cap_bound = rect.GetCapBound()
+    self.assertTrue(cap_bound.Contains(inside))
+    self.assertFalse(cap_bound.Contains(outside))
+
+    self.assertTrue(rect.ApproxEquals(rect.GetRectBound()))
+
+  def testS2CellRegion(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+
+    inside = s2.S2LatLng.FromDegrees(3.0, 4.0).ToPoint()
+    outside = s2.S2LatLng.FromDegrees(30.0, 40.0).ToPoint()
+
+    self.assertTrue(cell.Contains(inside))
+    self.assertFalse(cell.Contains(outside))
+    self.assertTrue(cell.Contains(s2.S2Cell(inside)))
+    self.assertFalse(cell.Contains(s2.S2Cell(outside)))
+    self.assertTrue(cell.MayIntersect(s2.S2Cell(inside)))
+    self.assertFalse(cell.MayIntersect(s2.S2Cell(outside)))
+
+    cap_bound = cell.GetCapBound()
+    self.assertTrue(cap_bound.Contains(inside))
+    self.assertFalse(cap_bound.Contains(outside))
+
+    rect_bound = cell.GetRectBound()
+    self.assertTrue(rect_bound.Contains(inside))
+    self.assertFalse(rect_bound.Contains(outside))
+
+  def testS2CellUnionRegion(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8)
+    cell_union = s2.S2CellUnion()
+    cell_union.Init([cell_id.id()])
+
+    inside = s2.S2LatLng.FromDegrees(3.0, 4.0).ToPoint()
+    outside = s2.S2LatLng.FromDegrees(30.0, 40.0).ToPoint()
+
+    self.assertTrue(cell_union.Contains(inside))
+    self.assertFalse(cell_union.Contains(outside))
+    self.assertTrue(cell_union.Contains(s2.S2Cell(inside)))
+    self.assertFalse(cell_union.Contains(s2.S2Cell(outside)))
+    self.assertTrue(cell_union.MayIntersect(s2.S2Cell(inside)))
+    self.assertFalse(cell_union.MayIntersect(s2.S2Cell(outside)))
+
+    cap_bound = cell_union.GetCapBound()
+    self.assertTrue(cap_bound.Contains(inside))
+    self.assertFalse(cap_bound.Contains(outside))
+
+    rect_bound = cell_union.GetRectBound()
+    self.assertTrue(rect_bound.Contains(inside))
+    self.assertFalse(rect_bound.Contains(outside))
+
+  def testS2LoopRegion(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    loop = s2.S2Loop(cell)
+
+    inside = s2.S2LatLng.FromDegrees(3.0, 4.0).ToPoint()
+    outside = s2.S2LatLng.FromDegrees(30.0, 40.0).ToPoint()
+
+    self.assertTrue(loop.Contains(inside))
+    self.assertFalse(loop.Contains(outside))
+    self.assertTrue(loop.Contains(s2.S2Cell(inside)))
+    self.assertFalse(loop.Contains(s2.S2Cell(outside)))
+    self.assertTrue(loop.MayIntersect(s2.S2Cell(inside)))
+    self.assertFalse(loop.MayIntersect(s2.S2Cell(outside)))
+
+    cap_bound = loop.GetCapBound()
+    self.assertTrue(cap_bound.Contains(inside))
+    self.assertFalse(cap_bound.Contains(outside))
+
+    rect_bound = loop.GetRectBound()
+    self.assertTrue(rect_bound.Contains(inside))
+    self.assertFalse(rect_bound.Contains(outside))
+
+  def testS2PolygonRegion(self):
+    cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    polygon = s2.S2Polygon(cell)
+
+    inside = s2.S2LatLng.FromDegrees(3.0, 4.0).ToPoint()
+    outside = s2.S2LatLng.FromDegrees(30.0, 40.0).ToPoint()
+
+    self.assertTrue(polygon.Contains(inside))
+    self.assertFalse(polygon.Contains(outside))
+    self.assertTrue(polygon.Contains(s2.S2Cell(inside)))
+    self.assertFalse(polygon.Contains(s2.S2Cell(outside)))
+    self.assertTrue(polygon.MayIntersect(s2.S2Cell(inside)))
+    self.assertFalse(polygon.MayIntersect(s2.S2Cell(outside)))
+
+    cap_bound = polygon.GetCapBound()
+    self.assertTrue(cap_bound.Contains(inside))
+    self.assertFalse(cap_bound.Contains(outside))
+
+    rect_bound = polygon.GetRectBound()
+    self.assertTrue(rect_bound.Contains(inside))
+    self.assertFalse(rect_bound.Contains(outside))
+
+  def testS2PolylineRegion(self):
+    polyline = s2.S2Polyline()
+    polyline.InitFromS2LatLngs([s2.S2LatLng.FromDegrees(0.0, 0.0),
+                                s2.S2LatLng.FromDegrees(1.0, 1.0)])
+
+    # Contains(S2Point) always return false.
+    self.assertFalse(
+        polyline.Contains(s2.S2LatLng.FromDegrees(0.0, 0.0).ToPoint()))
+    self.assertFalse(
+        polyline.Contains(s2.S2Cell(s2.S2LatLng.FromDegrees(0.0, 0.0))))
+
+    self.assertTrue(
+        polyline.MayIntersect(s2.S2Cell(s2.S2LatLng.FromDegrees(0.0, 0.0))))
+    self.assertFalse(
+        polyline.MayIntersect(s2.S2Cell(s2.S2LatLng.FromDegrees(3.0, 4.0))))
+
+    cap_bound = polyline.GetCapBound()
+    self.assertTrue(
+        cap_bound.Contains(s2.S2LatLng.FromDegrees(0.0, 0.0).ToPoint()))
+    self.assertFalse(
+        cap_bound.Contains(s2.S2LatLng.FromDegrees(2.0, 2.0).ToPoint()))
+
+    rect_bound = polyline.GetRectBound()
+    self.assertTrue(
+        rect_bound.Contains(s2.S2LatLng.FromDegrees(0.0, 0.0).ToPoint()))
+    self.assertFalse(
+        rect_bound.Contains(s2.S2LatLng.FromDegrees(2.0, 2.0).ToPoint()))
 
 if __name__ == "__main__":
   unittest.main()

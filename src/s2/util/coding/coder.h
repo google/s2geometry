@@ -21,9 +21,9 @@
 #define UTIL_CODING_CODER_H__
 
 #include <cstring>
-#include <type_traits>
 
 // Avoid adding expensive includes here.
+#include "s2/base/casts.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
 #include "s2/third_party/absl/base/integral_types.h"
@@ -51,7 +51,6 @@ class Encoder {
   void put16(uint16 v);
   void put32(uint32 v);
   void put64(uint64 v);
-  void putword(uword_t v);
   void putn(const void* mem, size_t n);
 
   // Put no more than n bytes, stopping when c is put.
@@ -173,7 +172,6 @@ class Decoder {
   uint16 get16();
   uint32 get32();
   uint64 get64();
-  uword_t getword();
   float  getfloat();
   double getdouble();
   void   getn(void* mem, size_t n);
@@ -489,31 +487,12 @@ inline void Encoder::put64(uint64 v) {
   buf_ += sizeof(v);
 }
 
-inline void Encoder::putword(uword_t v) {
-#ifdef _LP64
-  LittleEndian::Store64(buf_, v);
-#else
-  LittleEndian::Store32(buf_, v);
-#endif /* _LP64 */
-  buf_ += sizeof(v);
-}
-
 inline void Encoder::putfloat(float f) {
-  uint32 v;
-  typedef char VerifySizesAreEqual[sizeof(f) == sizeof(v)
-                                       ? 1
-                                       : -1] ABSL_ATTRIBUTE_UNUSED;
-  memcpy(&v, &f, sizeof(f));
-  put32(v);
+  put32(absl::bit_cast<uint32>(f));
 }
 
 inline void Encoder::putdouble(double d) {
-  uint64 v;
-  typedef char VerifySizesAreEqual[sizeof(d) == sizeof(v)
-                                       ? 1
-                                       : -1] ABSL_ATTRIBUTE_UNUSED;
-  memcpy(&v, &d, sizeof(d));
-  put64(v);
+  put64(absl::bit_cast<uint64>(d));
 }
 
 inline unsigned char Decoder::get8() {
@@ -540,34 +519,12 @@ inline uint64 Decoder::get64() {
   return v;
 }
 
-inline uword_t Decoder::getword() {
-#ifdef _LP64
-  const uword_t v = LittleEndian::Load64(buf_);
-#else
-  const uword_t v = LittleEndian::Load32(buf_);
-#endif /* _LP64 */
-  buf_ += sizeof(v);
-  return v;
-}
-
 inline float Decoder::getfloat() {
-  uint32 v = get32();
-  float f;
-  typedef char VerifySizesAreEqual[sizeof(f) == sizeof(v)
-                                       ? 1
-                                       : -1] ABSL_ATTRIBUTE_UNUSED;
-  memcpy(&f, &v, sizeof(f));
-  return f;
+  return absl::bit_cast<float>(get32());
 }
 
 inline double Decoder::getdouble() {
-  uint64 v = get64();
-  double d;
-  typedef char VerifySizesAreEqual[sizeof(d) == sizeof(v)
-                                       ? 1
-                                       : -1] ABSL_ATTRIBUTE_UNUSED;
-  memcpy(&d, &v, sizeof(d));
-  return d;
+  return absl::bit_cast<double>(get64());
 }
 
 inline bool Decoder::get_varint32(uint32* v) {

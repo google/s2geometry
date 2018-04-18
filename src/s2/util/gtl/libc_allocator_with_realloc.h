@@ -51,7 +51,7 @@
 #include <cstddef>           // for ptrdiff_t
 #include <new>                // for placement new
 
-namespace google {
+namespace gtl {
 
 template<class T>
 class libc_allocator_with_realloc {

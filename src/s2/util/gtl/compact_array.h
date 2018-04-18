@@ -59,7 +59,7 @@
 
 template <typename T,
           typename A =
-              google::libc_allocator_with_realloc<T> >
+              gtl::libc_allocator_with_realloc<T> >
 class compact_array_base {
  private:
   // The number of bits for the variable size_ and capacity_
@@ -161,9 +161,9 @@ class compact_array_base {
   // libc_allocator_with_realloc that supports reallocate.
   template <class V, class Alloc>
   class alloc_impl<V,
-                   google::
+                   gtl::
                    libc_allocator_with_realloc<Alloc> >
-      : public google::
+      : public gtl::
                libc_allocator_with_realloc<Alloc> {
    public:
     V* do_realloc(V* ptr, size_t old_size, size_t new_size) {
@@ -539,7 +539,7 @@ template <typename T, typename A>
 //  constructors and destructor.
 
 template <class T,
-          class A = google::
+          class A = gtl::
                     libc_allocator_with_realloc<T> >
 class compact_array : public compact_array_base<T, A> {
  private:

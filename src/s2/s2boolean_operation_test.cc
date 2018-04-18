@@ -246,36 +246,66 @@ TEST(S2BooleanOperation, PointOpenPolyline) {
   // no points (since polyline_model() is OPEN).  Since S2BooleanOperation
   // preserves degeneracies, this means that the union includes *both* the
   // point 3:0 and the degenerate polyline 3:0, since they do not intersect.
+  //
+  // This test uses Options::polyline_loops_have_boundaries() == true, which
+  // means that the loop "4:0, 5:0, 4:0" does not contain the vertex "4:0".
   S2BooleanOperation::Options options;
   options.set_polyline_model(PolylineModel::OPEN);
-  auto a = "0:0 | 1:0 | 2:0 | 3:0 # #";
-  auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 #";
+  auto a = "0:0 | 1:0 | 2:0 | 3:0 | 4:0 | 5:0 # #";
+  auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #";
   ExpectResult(OpType::UNION, options, a, b,
-               "0:0 | 2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
+               "0:0 | 2:0 | 3:0 | 4:0 "
+               "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #");
   ExpectResult(OpType::INTERSECTION, options, a, b,
-               "1:0 # #");
+               "1:0 | 5:0 # #");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "0:0 | 2:0 | 3:0 | 4:0 # #");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "0:0 | 2:0 | 3:0 | 4:0"
+               "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #");
+}
+
+TEST(S2BooleanOperation, PointOpenPolylineLoopBoundariesFalse) {
+  // With Options::polyline_loops_have_boundaries() == false, the loop
+  // "4:0, 5:0, 4:0" has two vertices, both of which are contained.
+  S2BooleanOperation::Options options;
+  options.set_polyline_model(PolylineModel::OPEN);
+  options.set_polyline_loops_have_boundaries(false);
+  auto a = "0:0 | 1:0 | 2:0 | 3:0 | 4:0 | 5:0 # #";
+  auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #";
+  ExpectResult(OpType::UNION, options, a, b,
+               "0:0 | 2:0 | 3:0 "
+               "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #");
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "1:0 | 4:0 | 5:0 # #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
                "0:0 | 2:0 | 3:0 # #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "0:0 | 2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
+               "0:0 | 2:0 | 3:0 "
+               "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #");
 }
 
 TEST(S2BooleanOperation, PointSemiOpenPolyline) {
   // Degenerate polylines are defined not contain any points under the
   // SEMI_OPEN model either, so again the point 3:0 and the degenerate
   // polyline "3:0, 3:0" do not intersect.
+  //
+  // The result does not depend on Options::polyline_loops_have_boundaries().
   S2BooleanOperation::Options options;
   options.set_polyline_model(PolylineModel::SEMI_OPEN);
-  auto a = "0:0 | 1:0 | 2:0 | 3:0 # #";
-  auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 #";
-  ExpectResult(OpType::UNION, options, a, b,
-               "2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
-  ExpectResult(OpType::INTERSECTION, options, a, b,
-               "0:0 | 1:0 # #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "2:0 | 3:0 # #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 #");
+  for (int bool_value = 0; bool_value < 2; ++bool_value) {
+    options.set_polyline_loops_have_boundaries(static_cast<bool>(bool_value));
+    auto a = "0:0 | 1:0 | 2:0 | 3:0 | 4:0 | 5:0 # #";
+    auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #";
+    ExpectResult(OpType::UNION, options, a, b,
+                 "2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #");
+    ExpectResult(OpType::INTERSECTION, options, a, b,
+                 "0:0 | 1:0 | 4:0 | 5:0 # #");
+    ExpectResult(OpType::DIFFERENCE, options, a, b,
+                 "2:0 | 3:0 # #");
+    ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+                 "2:0 | 3:0 # 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #");
+  }
 }
 
 TEST(S2BooleanOperation, PointClosedPolyline) {
@@ -284,18 +314,23 @@ TEST(S2BooleanOperation, PointClosedPolyline) {
   // point 3:0 and the polyline 3:0 is the polyline only.  Similarly, since
   // subtracting a point from a polyline has no effect, the symmetric
   // difference includes only the polyline objects.
+  //
+  // The result does not depend on Options::polyline_loops_have_boundaries().
   S2BooleanOperation::Options options;
   options.set_polyline_model(PolylineModel::CLOSED);
-  auto a = "0:0 | 1:0 | 2:0 | 3:0 # #";
-  auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 #";
-  ExpectResult(OpType::UNION, options, a, b,
-               "# 0:0, 1:0, 2:0 | 3:0, 3:0 #");
-  ExpectResult(OpType::INTERSECTION, options, a, b,
-               "0:0 | 1:0 | 2:0 | 3:0 # #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "# #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "# 0:0, 1:0, 2:0 | 3:0, 3:0 #");
+  for (int bool_value = 0; bool_value < 2; ++bool_value) {
+    options.set_polyline_loops_have_boundaries(static_cast<bool>(bool_value));
+    auto a = "0:0 | 1:0 | 2:0 | 3:0 | 4:0 | 5:0 # #";
+    auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #";
+    ExpectResult(OpType::UNION, options, a, b,
+                 "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #");
+    ExpectResult(OpType::INTERSECTION, options, a, b,
+                 "0:0 | 1:0 | 2:0 | 3:0 | 4:0 | 5:0 # #");
+    ExpectResult(OpType::DIFFERENCE, options, a, b,
+                 "# #");
+    ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+                 "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #");
+  }
 }
 
 TEST(S2BooleanOperation, PointPolygonInterior) {
@@ -367,14 +402,18 @@ TEST(S2BooleanOperation, PointClosedPolygonVertex) {
 }
 
 TEST(S2BooleanOperation, PolylineVertexOpenPolylineVertex) {
-  // Test starting, ending, and middle vertices of both polylines.  Degenerate
-  // polylines are tested in PolylineEdgePolylineEdgeOverlap below.
+  // Test first, last, and middle vertices of both polylines.  Also test
+  // first/last and middle vertices of two polyline loops.
+  //
+  // Degenerate polylines are tested in PolylineEdgePolylineEdgeOverlap below.
   S2BooleanOperation::Options options;
   options.set_polyline_model(PolylineModel::OPEN);
-  auto a = "# 0:0, 0:1, 0:2 #";
-  auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #";
+  auto a = "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #";
+  auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+           "| 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #";
   ExpectResult(OpType::UNION, options, a, b,
-               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+               "| 0:3, 0:4, 0:3 | 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #");
 
   // The output consists of the portion of each input polyline that intersects
   // the opposite region, so the intersection vertex is present twice.  This
@@ -387,40 +426,111 @@ TEST(S2BooleanOperation, PolylineVertexOpenPolylineVertex) {
   // lower-dimensional subset of an object has no effect.  In this case,
   // subtracting the middle vertex of a polyline has no effect.
   ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "# 0:0, 0:1, 0:2 #");
+               "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+               "| 0:3, 0:4, 0:3 | 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #");
+}
+
+TEST(S2BooleanOperation, PolylineVertexOpenPolylineVertexLoopBoundariesFalse) {
+  // With Options::polyline_loops_have_boundaries() == false, the 3 polyline
+  // loops each have two vertices, both of which are contained.
+  S2BooleanOperation::Options options;
+  options.set_polyline_model(PolylineModel::OPEN);
+  options.set_polyline_loops_have_boundaries(false);
+  auto a = "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #";
+  auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+           "| 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+               "| 0:3, 0:4, 0:3 | 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #");
+
+  // Note that the polyline "0:3, 0:4, 0:3" only has two vertices, not three.
+  // This means that 0:3 is emitted only once for that polyline, plus once for
+  // the other polyline, for a total of twice.
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# 0:1, 0:1 | 0:1, 0:1 "
+               "| 0:3, 0:3 | 0:3, 0:3 | 0:4, 0:4 | 0:4, 0:4 #");
+
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+               "| 0:3, 0:4, 0:3 | 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #");
 }
 
 TEST(S2BooleanOperation, PolylineVertexSemiOpenPolylineVertex) {
+  // The result does not depend on Options::polyline_loops_have_boundaries().
   S2BooleanOperation::Options options;
   options.set_polyline_model(PolylineModel::SEMI_OPEN);
-  auto a = "# 0:0, 0:1, 0:2 #";
-  auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #";
-  ExpectResult(OpType::UNION, options, a, b,
-               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
-  ExpectResult(OpType::INTERSECTION, options, a, b,
-               "# 0:0, 0:0 | 0:0, 0:0 | 0:1, 0:1 | 0:1, 0:1 #");
-  ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "# 0:0, 0:1, 0:2 #");
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
+  for (int bool_value = 0; bool_value < 2; ++bool_value) {
+    options.set_polyline_loops_have_boundaries(static_cast<bool>(bool_value));
+    auto a = "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #";
+    auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+             "| 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #";
+    ExpectResult(OpType::UNION, options, a, b,
+                 "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+                 "| 0:3, 0:4, 0:3 | 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #");
+    ExpectResult(OpType::INTERSECTION, options, a, b,
+                 "# 0:0, 0:0 | 0:0, 0:0 | 0:1, 0:1 | 0:1, 0:1 "
+                 "| 0:3, 0:3 | 0:3, 0:3 | 0:4, 0:4 | 0:4, 0:4 #");
+    ExpectResult(OpType::DIFFERENCE, options, a, b,
+                 "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #");
+    ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+                 "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+                 "| 0:3, 0:4, 0:3 | 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #");
+  }
 }
 
 TEST(S2BooleanOperation, PolylineVertexClosedPolylineVertex) {
   S2BooleanOperation::Options options;
   options.set_polyline_model(PolylineModel::CLOSED);
-  auto a = "# 0:0, 0:1, 0:2 #";
-  auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #";
+  auto a = "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #";
+  auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+           "| 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #";
   ExpectResult(OpType::UNION, options, a, b,
-               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+               "| 0:3, 0:4, 0:3 | 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #");
+
+  // Since Options::polyline_loops_have_boundaries() == true, the polyline
+  // "0:3, 0:4, 0:3" has three vertices.  Therefore 0:3 is emitted twice for
+  // that polyline, plus once for the other polyline, for a total of thrice.
   ExpectResult(OpType::INTERSECTION, options, a, b,
                "# 0:0, 0:0 | 0:0, 0:0 | 0:1, 0:1 | 0:1, 0:1 "
-               "| 0:2, 0:2 | 0:2, 0:2 #");
+               "| 0:2, 0:2 | 0:2, 0:2 "
+               "| 0:3, 0:3 | 0:3, 0:3 | 0:3, 0:3 "
+               "| 0:4, 0:4 | 0:4, 0:4 | 0:4, 0:4 #");
   ExpectResult(OpType::DIFFERENCE, options, a, b,
-               "# 0:0, 0:1, 0:2 #");
+               "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #");
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
-               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 #");
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+               "| 0:3, 0:4, 0:3 | 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #");
+}
+
+TEST(S2BooleanOperation,
+     PolylineVertexClosedPolylineVertexLoopBoundariesFalse) {
+  S2BooleanOperation::Options options;
+  options.set_polyline_model(PolylineModel::CLOSED);
+  options.set_polyline_loops_have_boundaries(false);
+  auto a = "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #";
+  auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+           "| 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #";
+  ExpectResult(OpType::UNION, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+               "| 0:3, 0:4, 0:3 | 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #");
+
+  // Since Options::polyline_loops_have_boundaries() == false, the polyline
+  // "0:3, 0:4, 0:3" has two vertices.  Therefore 0:3 is emitted once for
+  // that polyline, plus once for the other polyline, for a total of twice.
+  ExpectResult(OpType::INTERSECTION, options, a, b,
+               "# 0:0, 0:0 | 0:0, 0:0 | 0:1, 0:1 | 0:1, 0:1 "
+               "| 0:2, 0:2 | 0:2, 0:2 "
+               "| 0:3, 0:3 | 0:3, 0:3 | 0:4, 0:4 | 0:4, 0:4 #");
+  ExpectResult(OpType::DIFFERENCE, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #");
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
+               "# 0:0, 0:1, 0:2 | 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
+               "| 0:3, 0:4, 0:3 | 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #");
 }
 
 // The polygon used in the polyline/polygon vertex tests below.

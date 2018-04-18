@@ -131,7 +131,7 @@
 // Some files test for this symbol.
 #define S2__DENSE_HASH_SET_H_
 
-namespace google {
+namespace gtl {
 
 template <class Value,
           class HashFcn = std::hash<Value>,

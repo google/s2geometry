@@ -376,8 +376,7 @@ class S2ClosestEdgeQueryBase {
   // distance to it.
   bool avoid_duplicates_;
   using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
-  google::dense_hash_set<
-    ShapeEdgeId, s2shapeutil::ShapeEdgeIdHash> tested_edges_;
+  gtl::dense_hash_set<ShapeEdgeId, s2shapeutil::ShapeEdgeIdHash> tested_edges_;
 
   // The algorithm maintains a priority queue of unprocessed S2CellIds, sorted
   // in increasing order of distance from the target point.

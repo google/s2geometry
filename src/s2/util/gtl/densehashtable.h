@@ -125,7 +125,7 @@
 #include "s2/base/port.h"
 #include <stdexcept>                 // For length_error
 
-namespace google {
+namespace gtl {
 
 
 // Some files test for this symbol.
