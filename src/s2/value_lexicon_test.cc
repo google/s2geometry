@@ -100,7 +100,7 @@ TEST(ValueLexicon, CopyAssignmentOperator) {
   EXPECT_EQ(1, lex.Add(15));
   lex = *original;
   original.reset(nullptr);
-  lex = lex;  // Tests self-assignment.
+  lex = *&lex;  // Tests self-assignment.
   EXPECT_EQ(1, lex.Add(20));
   EXPECT_EQ(5, lex.value(0));
   EXPECT_EQ(20, lex.value(1));

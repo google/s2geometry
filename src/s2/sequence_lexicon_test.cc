@@ -92,7 +92,7 @@ TEST(SequenceLexicon, CopyAssignmentOperator) {
   EXPECT_EQ(1, lex.Add(Seq{5, 6}));
   lex = *original;
   original.reset(nullptr);
-  lex = lex;  // Tests self-assignment.
+  lex = *&lex;  // Tests self-assignment.
   EXPECT_EQ(1, lex.Add(Seq{7, 8}));
   ExpectSequence(Seq{1, 2}, lex.sequence(0));
   ExpectSequence(Seq{7, 8}, lex.sequence(1));
