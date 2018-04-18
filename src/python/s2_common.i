@@ -255,9 +255,11 @@ class S2Point {
 %unignore S2Cap::Expanded;
 %unignore S2Cap::FromPoint;
 %unignore S2Cap::Full;
+%unignore S2Cap::GetCapBound() const;
 %unignore S2Cap::GetCentroid;
 %unignore S2Cap::GetRectBound;
 %unignore S2Cap::Intersects;
+%unignore S2Cap::MayIntersect(const S2Cell&) const;
 %unignore S2Cap::Union;
 %unignore S2Cap::center;
 %unignore S2Cap::height;
@@ -273,12 +275,14 @@ class S2Point {
 %unignore S2Cell::Encode;
 %unignore S2Cell::ExactArea;
 %unignore S2Cell::GetBoundaryDistance;
+%unignore S2Cell::GetCapBound() const;
 %unignore S2Cell::GetCenter;
 %unignore S2Cell::GetDistance;
 %unignore S2Cell::GetRectBound;
 %unignore S2Cell::GetS2LatLngEdge;
 %unignore S2Cell::GetS2LatLngVertex;
 %unignore S2Cell::GetVertex;
+%unignore S2Cell::MayIntersect(const S2Cell&) const;
 %unignore S2Cell::face;
 %unignore S2Cell::id;
 %unignore S2Cell::level;
@@ -323,10 +327,12 @@ class S2Point {
 %unignore S2CellUnion::Denormalize(int, int, std::vector<S2CellId>*) const;
 %unignore S2CellUnion::Encode;
 %unignore S2CellUnion::ExactArea;
+%unignore S2CellUnion::GetCapBound() const;
 %unignore S2CellUnion::GetDifference;
 %unignore S2CellUnion::GetRectBound;
 %unignore S2CellUnion::Init(std::vector<uint64> const &);
 %unignore S2CellUnion::Intersects;
+%unignore S2CellUnion::MayIntersect(const S2Cell&) const;
 %unignore S2CellUnion::Normalize;
 %unignore S2CellUnion::cell_id;
 %unignore S2CellUnion::cell_ids;
@@ -365,7 +371,7 @@ class S2Point {
 %unignore S2LatLngRect::FromPoint;
 %unignore S2LatLngRect::FromPointPair;
 %unignore S2LatLngRect::Full;
-%unignore S2LatLngRect::GetCapBound;
+%unignore S2LatLngRect::GetCapBound() const;
 %unignore S2LatLngRect::GetCenter;
 %unignore S2LatLngRect::GetCentroid;
 %unignore S2LatLngRect::GetDistance;
@@ -374,6 +380,7 @@ class S2Point {
 %unignore S2LatLngRect::GetVertex;
 %unignore S2LatLngRect::Intersection;
 %unignore S2LatLngRect::Intersects;
+%unignore S2LatLngRect::MayIntersect(const S2Cell&) const;
 %unignore S2LatLngRect::Union;
 %unignore S2LatLngRect::hi;
 %unignore S2LatLngRect::is_empty;
@@ -394,6 +401,7 @@ class S2Point {
 %unignore S2Loop::Decode;
 %unignore S2Loop::Encode;
 %unignore S2Loop::Equals;
+%unignore S2Loop::GetCapBound() const;
 %unignore S2Loop::GetCentroid;
 %unignore S2Loop::GetDistance;
 %unignore S2Loop::GetRectBound;
@@ -401,6 +409,7 @@ class S2Point {
 %unignore S2Loop::Init;
 %unignore S2Loop::Intersects;
 %unignore S2Loop::IsValid;
+%unignore S2Loop::MayIntersect(const S2Cell&) const;
 %unignore S2Loop::Normalize;
 %unignore S2Loop::Project;
 %unignore S2Loop::depth;
@@ -419,6 +428,7 @@ class S2Point {
 %unignore S2Polygon::Encode;
 %unignore S2Polygon::Equals;
 %unignore S2Polygon::GetArea;
+%unignore S2Polygon::GetCapBound() const;
 %unignore S2Polygon::GetCentroid;
 %unignore S2Polygon::GetDistance;
 %unignore S2Polygon::GetRectBound;
@@ -427,6 +437,7 @@ class S2Point {
 %unignore S2Polygon::Intersects;
 %unignore S2Polygon::IntersectWithPolyline;
 %unignore S2Polygon::IsValid;
+%unignore S2Polygon::MayIntersect(const S2Cell&) const;
 %unignore S2Polygon::Project;
 %unignore S2Polygon::is_empty;
 %unignore S2Polygon::loop;
@@ -443,6 +454,7 @@ class S2Point {
 %unignore S2Polyline::Contains;
 %unignore S2Polyline::Decode;
 %unignore S2Polyline::Encode;
+%unignore S2Polyline::GetCapBound() const;
 %unignore S2Polyline::GetCentroid;
 %unignore S2Polyline::GetLength;
 %unignore S2Polyline::GetRectBound;
@@ -453,6 +465,7 @@ class S2Point {
 %unignore S2Polyline::Intersects;
 %unignore S2Polyline::IsOnRight;
 %unignore S2Polyline::IsValid;
+%unignore S2Polyline::MayIntersect(const S2Cell&) const;
 %unignore S2Polyline::Project;
 %unignore S2Polyline::Reverse;
 %unignore S2Polyline::UnInterpolate;
