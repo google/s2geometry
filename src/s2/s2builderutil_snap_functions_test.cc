@@ -519,7 +519,7 @@ static double GetLatLngMinVertexSeparation(int64 old_scale, int64 scale,
   for (const auto& entry : scores) {
     if (--num_to_print >= 0) {
       printf("Scale %14" PRId64 ": min_vertex_sep_ratio = %.15f, %s\n",
-             static_cast<int64_t>(scale), entry.first,
+             int64_t{scale}, entry.first,
              s2textformat::ToString(ToPoint(entry.second, scale)).c_str());
     }
     if (best_configs->insert(entry.second).second && --num_to_keep <= 0) break;
@@ -634,7 +634,7 @@ static double GetLatLngMinEdgeSeparation(
   best_configs->clear();
   int num_to_keep = google::DEBUG_MODE ? 50 : 200;
   int num_to_print = 3;
-  printf("Scale %" PRId64 ":\n", static_cast<int64_t>(scale));
+  printf("Scale %" PRId64 ":\n", int64_t{scale});
   for (const auto& entry : scores) {
     const LatLngConfig& config = entry.second;
     int64 scale = config.scale;

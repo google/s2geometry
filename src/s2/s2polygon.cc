@@ -1348,7 +1348,7 @@ void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
   // happen: either the cell union is empty, or it consists of all six faces.
   if (num_loops() == 0) {
     if (cells.empty()) return;
-    S2_DCHECK_EQ(static_cast<uint64>(6) << (2 * S2CellId::kMaxLevel),
+    S2_DCHECK_EQ(uint64{6} << (2 * S2CellId::kMaxLevel),
               cells.LeafCellsCovered());
     Invert();
   }
