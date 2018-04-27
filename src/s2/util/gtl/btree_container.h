@@ -30,8 +30,6 @@ namespace internal_btree {
 // btree_multimap.
 template <typename Tree>
 class btree_container {
-  using self_type = btree_container<Tree>;
-
  public:
   using params_type = typename Tree::params_type;
   using key_type = typename Tree::key_type;
@@ -53,10 +51,10 @@ class btree_container {
   btree_container(const key_compare &comp, const allocator_type &alloc)
       : tree_(comp, alloc) {
   }
-  btree_container(const self_type &x) = default;
-  btree_container(self_type &&x) noexcept = default;
-  btree_container &operator=(const self_type &x) = default;
-  btree_container &operator=(self_type &&x) noexcept(
+  btree_container(const btree_container &x) = default;
+  btree_container(btree_container &&x) noexcept = default;
+  btree_container &operator=(const btree_container &x) = default;
+  btree_container &operator=(btree_container &&x) noexcept(
       std::is_nothrow_move_assignable<Tree>::value) = default;
 
   // Iterator routines.
@@ -99,7 +97,7 @@ class btree_container {
   void clear() {
     tree_.clear();
   }
-  void swap(self_type &x) {
+  void swap(btree_container &x) {
     tree_.swap(x.tree_);
   }
   void verify() const {
@@ -122,13 +120,13 @@ class btree_container {
   double overhead() const { return tree_.overhead(); }
 
   friend
-  bool operator==(const self_type& x, const self_type& y) {
+  bool operator==(const btree_container& x, const btree_container& y) {
     if (x.size() != y.size()) return false;
     return std::equal(x.begin(), x.end(), y.begin());
   }
 
   friend
-  bool operator!=(const self_type& x, const self_type& y) {
+  bool operator!=(const btree_container& x, const btree_container& y) {
     return !(x == y);
   }
 
@@ -152,7 +150,6 @@ class btree_container {
 // Base class for btree_set.
 template <typename Tree>
 class btree_unique_container : public btree_container<Tree> {
-  using self_type = btree_unique_container<Tree>;
   using super_type = btree_container<Tree>;
   using mutable_value_type = typename Tree::mutable_value_type;
   using params_type = typename Tree::params_type;
@@ -191,10 +188,10 @@ class btree_unique_container : public btree_container<Tree> {
       : btree_unique_container(init.begin(), init.end(), comp, alloc) {}
 
   // Constructor/assignments.
-  btree_unique_container(const self_type &x) = default;
-  btree_unique_container(self_type &&x) noexcept = default;
-  btree_unique_container &operator=(const self_type &x) = default;
-  btree_unique_container &operator=(self_type &&x) noexcept(
+  btree_unique_container(const btree_unique_container &x) = default;
+  btree_unique_container(btree_unique_container &&x) noexcept = default;
+  btree_unique_container &operator=(const btree_unique_container &x) = default;
+  btree_unique_container &operator=(btree_unique_container &&x) noexcept(
       std::is_nothrow_move_assignable<Tree>::value) = default;
 
   // Lookup routines.
@@ -269,7 +266,6 @@ void swap(btree_unique_container<Tree> &x, btree_unique_container<Tree> &y) {
 // Base class for btree_map.
 template <typename Tree>
 class btree_map_container : public btree_unique_container<Tree> {
-  using self_type = btree_map_container<Tree>;
   using super_type = btree_unique_container<Tree>;
 
  public:
@@ -301,10 +297,10 @@ class btree_map_container : public btree_unique_container<Tree> {
       : btree_map_container(init.begin(), init.end(), comp, alloc) {}
 
   // Constructor/assignments.
-  btree_map_container(const self_type &x) = default;
-  btree_map_container(self_type &&x) noexcept = default;
-  btree_map_container &operator=(const self_type &x) = default;
-  btree_map_container &operator=(self_type &&x) noexcept(
+  btree_map_container(const btree_map_container &x) = default;
+  btree_map_container(btree_map_container &&x) noexcept = default;
+  btree_map_container &operator=(const btree_map_container &x) = default;
+  btree_map_container &operator=(btree_map_container &&x) noexcept(
       std::is_nothrow_move_assignable<Tree>::value) = default;
 
   // Insertion routines.
@@ -332,7 +328,6 @@ inline void swap(btree_map_container<Tree> &x, btree_map_container<Tree> &y) {
 // A common base class for btree_multiset and btree_multimap.
 template <typename Tree>
 class btree_multi_container : public btree_container<Tree> {
-  using self_type = btree_multi_container<Tree>;
   using super_type = btree_container<Tree>;
 
  public:
@@ -368,10 +363,10 @@ class btree_multi_container : public btree_container<Tree> {
       : btree_multi_container(init.begin(), init.end(), comp, alloc) {}
 
   // Constructor/assignments.
-  btree_multi_container(const self_type &x) = default;
-  btree_multi_container(self_type &&x) noexcept = default;
-  btree_multi_container &operator=(const self_type &x) = default;
-  btree_multi_container &operator=(self_type &&x) noexcept(
+  btree_multi_container(const btree_multi_container &x) = default;
+  btree_multi_container(btree_multi_container &&x) noexcept = default;
+  btree_multi_container &operator=(const btree_multi_container &x) = default;
+  btree_multi_container &operator=(btree_multi_container &&x) noexcept(
       std::is_nothrow_move_assignable<Tree>::value) = default;
 
   // Lookup routines.

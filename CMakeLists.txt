@@ -335,9 +335,11 @@ install(FILES src/s2/util/gtl/btree.h
               src/s2/util/gtl/dense_hash_set.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
+              src/s2/util/gtl/layout.h
               src/s2/util/gtl/libc_allocator_with_realloc.h
         DESTINATION include/s2/util/gtl)
 install(FILES src/s2/util/gtl/subtle/compressed_tuple.h
+              src/s2/util/gtl/subtle/container_memory.h
         DESTINATION include/s2/util/gtl/subtle)
 install(FILES src/s2/util/hash/mix.h
         DESTINATION include/s2/util/hash)
