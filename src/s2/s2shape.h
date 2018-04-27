@@ -76,6 +76,10 @@ class S2Shape {
     int32 start, length;
     Chain() = default;
     Chain(int32 _start, int32 _length) : start(_start), length(_length) {}
+
+    friend bool operator==(const Chain& x, const Chain& y) {
+      return x.start == y.start && x.length == y.length;
+    }
   };
 
   // The position of an edge within a given edge chain, specified as a
@@ -86,6 +90,10 @@ class S2Shape {
     ChainPosition() = default;
     ChainPosition(int32 _chain_id, int32 _offset)
         : chain_id(_chain_id), offset(_offset) {}
+
+    friend bool operator==(const ChainPosition& x, const ChainPosition& y) {
+       return x.chain_id == y.chain_id && x.offset == y.offset;
+    }
   };
 
   // A ReferencePoint consists of a point P and a boolean indicating whether P
@@ -102,7 +110,25 @@ class S2Shape {
     static ReferencePoint Contained(bool _contained) {
       return ReferencePoint(S2::Origin(), _contained);
     }
+
+    friend bool operator==(const ReferencePoint& x, const ReferencePoint& y) {
+      return x.point == y.point && x.contained == y.contained;
+    }
   };
+
+  // A 32-bit tag that can be used to identify the type of an encoded S2Shape.
+  // All encodable types have a non-zero type tag.  The tag associated with a
+  // given shape type can be accessed as Shape::kTypeTag, while the tag
+  // associated with a given object can be accessed as shape.type_tag().
+  //
+  // Type tags in the range 0..8191 are reserved for use by the S2 library.
+  using TypeTag = uint32;
+
+  // Indicates that a given S2Shape type cannot be encoded.
+  static constexpr TypeTag kNoTypeTag = 0;
+
+  // The minimum allowable tag for user-defined S2Shape types.
+  static constexpr TypeTag kMinUserTypeTag = 8192;
 
   S2Shape() : id_(-1) {}
   virtual ~S2Shape() {}
@@ -198,7 +224,13 @@ class S2Shape {
 
   // A unique id assigned to this shape by S2ShapeIndex.  Shape ids are
   // assigned sequentially starting from 0 in the order shapes are added.
+  //
+  // TODO(ericv): Consider eliminating this method.
   int id() const { return id_; }
+
+  // Returns an integer that can be used to identify the type of an encoded
+  // S2Shape (see TypeTag above).
+  virtual TypeTag type_tag() const { return kNoTypeTag; }
 
   // Virtual methods that return pointers of your choice.  These methods are
   // intended to help with the problem of attaching additional data to S2Shape
@@ -240,8 +272,12 @@ class S2Shape {
   virtual void* mutable_user_data() { return nullptr; }
 
  private:
+  // Next available type tag available for use within the S2 library: 6.
+
+  friend class EncodedS2ShapeIndex;
   friend class MutableS2ShapeIndex;
-  int id_;  // Assigned by MutableS2ShapeIndex when the shape is added.
+
+  int id_;  // Assigned by S2ShapeIndex when the shape is added.
 
   S2Shape(const S2Shape&) = delete;
   void operator=(const S2Shape&) = delete;

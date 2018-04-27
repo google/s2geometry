@@ -98,7 +98,7 @@ DEFINE_int32(
 
 // When adding a new encoding, be aware that old binaries will not
 // be able to decode it.
-static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
+static const unsigned char kCurrentUncompressedEncodingVersionNumber = 1;
 static const unsigned char kCurrentCompressedEncodingVersionNumber = 4;
 
 S2Polygon::S2Polygon()
@@ -702,13 +702,13 @@ void S2Polygon::Encode(Encoder* const encoder) const {
   if (compressed_size < lossless_size) {
     EncodeCompressed(encoder, all_vertices.data(), snap_level);
   } else {
-    EncodeLossless(encoder);
+    EncodeUncompressed(encoder);
   }
 }
 
-void S2Polygon::EncodeLossless(Encoder* const encoder) const {
+void S2Polygon::EncodeUncompressed(Encoder* const encoder) const {
   encoder->Ensure(10);  // Sufficient
-  encoder->put8(kCurrentLosslessEncodingVersionNumber);
+  encoder->put8(kCurrentUncompressedEncodingVersionNumber);
   // This code used to write "owns_loops_", so write "true" for compatibility.
   encoder->put8(true);
   // Encode obsolete "has_holes_" field for backwards compatibility.
@@ -730,8 +730,8 @@ bool S2Polygon::Decode(Decoder* const decoder) {
   if (decoder->avail() < sizeof(unsigned char)) return false;
   unsigned char version = decoder->get8();
   switch (version) {
-    case kCurrentLosslessEncodingVersionNumber:
-      return DecodeLossless(decoder, false);
+    case kCurrentUncompressedEncodingVersionNumber:
+      return DecodeUncompressed(decoder, false);
     case kCurrentCompressedEncodingVersionNumber:
       return DecodeCompressed(decoder);
   }
@@ -742,15 +742,15 @@ bool S2Polygon::DecodeWithinScope(Decoder* const decoder) {
   if (decoder->avail() < sizeof(unsigned char)) return false;
   unsigned char version = decoder->get8();
   switch (version) {
-    case kCurrentLosslessEncodingVersionNumber:
-      return DecodeLossless(decoder, true);
+    case kCurrentUncompressedEncodingVersionNumber:
+      return DecodeUncompressed(decoder, true);
     case kCurrentCompressedEncodingVersionNumber:
       return DecodeCompressed(decoder);
   }
   return false;
 }
 
-bool S2Polygon::DecodeLossless(Decoder* const decoder, bool within_scope) {
+bool S2Polygon::DecodeUncompressed(Decoder* const decoder, bool within_scope) {
   if (decoder->avail() < 2 * sizeof(uint8) + sizeof(uint32)) return false;
   ClearLoops();
   decoder->get8();  // Ignore irrelevant serialized owns_loops_ value.

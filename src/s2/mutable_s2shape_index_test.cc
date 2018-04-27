@@ -43,7 +43,9 @@
 #include "s2/s2loop.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
+#include "s2/s2shapeutil_coding.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
+#include "s2/s2shapeutil_testing.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
@@ -74,6 +76,9 @@ class MutableS2ShapeIndexTest : public ::testing::Test {
   // the cell center and verify that this matches "index_contains_center".
   void ValidateInterior(const S2Shape* shape, S2CellId id,
                         bool index_contains_center);
+
+  // Verifies that the index can be encoded and decoded without change.
+  void TestEncodeDecode();
 };
 
 void MutableS2ShapeIndexTest::QuadraticValidate() {
@@ -164,6 +169,15 @@ void MutableS2ShapeIndexTest::ValidateInterior(
   }
 }
 
+void MutableS2ShapeIndexTest::TestEncodeDecode() {
+  Encoder encoder;
+  index_.Encode(&encoder);
+  Decoder decoder(encoder.base(), encoder.length());
+  MutableS2ShapeIndex index2;
+  ASSERT_TRUE(index2.Init(&decoder, s2shapeutil::WrappedShapeFactory(&index_)));
+  s2testing::ExpectEqual(index_, index2);
+}
+
 namespace {
 
 void TestIteratorMethods(const MutableS2ShapeIndex& index) {
@@ -237,6 +251,7 @@ TEST_F(MutableS2ShapeIndexTest, NoEdges) {
   MutableS2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN);
   EXPECT_TRUE(it.done());
   TestIteratorMethods(index_);
+  TestEncodeDecode();
 }
 
 TEST_F(MutableS2ShapeIndexTest, OneEdge) {
@@ -244,6 +259,7 @@ TEST_F(MutableS2ShapeIndexTest, OneEdge) {
                                                          S2Point(0, 1, 0))));
   QuadraticValidate();
   TestIteratorMethods(index_);
+  TestEncodeDecode();
 }
 
 TEST_F(MutableS2ShapeIndexTest, ShrinkToFitOptimization) {
@@ -257,6 +273,7 @@ TEST_F(MutableS2ShapeIndexTest, ShrinkToFitOptimization) {
       S2Point(1, 0.5, 0.5).Normalize(), S1Angle::Degrees(89), 100));
   index_.Add(make_unique<S2Loop::Shape>(loop.get()));
   QuadraticValidate();
+  TestEncodeDecode();
 }
 
 TEST_F(MutableS2ShapeIndexTest, LoopsSpanningThreeFaces) {
@@ -272,6 +289,7 @@ TEST_F(MutableS2ShapeIndexTest, LoopsSpanningThreeFaces) {
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
+  TestEncodeDecode();
 }
 
 TEST_F(MutableS2ShapeIndexTest, ManyIdenticalEdges) {
@@ -283,6 +301,7 @@ TEST_F(MutableS2ShapeIndexTest, ManyIdenticalEdges) {
   }
   QuadraticValidate();
   TestIteratorMethods(index_);
+  TestEncodeDecode();
   // Since all edges span the diagonal of a face, no subdivision should
   // have occurred (with the default index options).
   for (MutableS2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN);
@@ -299,6 +318,7 @@ TEST_F(MutableS2ShapeIndexTest, DegenerateEdge) {
   shape->Add(a, a);
   index_.Add(std::move(shape));
   QuadraticValidate();
+  TestEncodeDecode();
   // Check that exactly 3 index cells contain the degenerate edge.
   int count = 0;
   for (MutableS2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN);
@@ -323,6 +343,7 @@ TEST_F(MutableS2ShapeIndexTest, ManyTinyEdges) {
   }
   index_.Add(std::move(shape));
   QuadraticValidate();
+  TestEncodeDecode();
   // Check that there is exactly one index cell and that it is a leaf cell.
   MutableS2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN);
   ASSERT_TRUE(!it.done());
@@ -343,6 +364,7 @@ TEST_F(MutableS2ShapeIndexTest, SimpleUpdates) {
   for (int id = 0; id < polygon.num_loops(); ++id) {
     index_.Release(id);
     QuadraticValidate();
+    TestEncodeDecode();
   }
 }
 
@@ -388,6 +410,7 @@ TEST_F(MutableS2ShapeIndexTest, RandomUpdates) {
   vector<int> added(index_.num_shape_ids());
   std::iota(added.begin(), added.end(), 0);
   QuadraticValidate();
+  TestEncodeDecode();
   for (int iter = 0; iter < 100; ++iter) {
     S2_VLOG(1) << "Iteration: " << iter;
     // Choose some shapes to add and release.
@@ -410,6 +433,7 @@ TEST_F(MutableS2ShapeIndexTest, RandomUpdates) {
       }
     }
     QuadraticValidate();
+    TestEncodeDecode();
   }
 }
 

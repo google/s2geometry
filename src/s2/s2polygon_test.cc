@@ -2825,7 +2825,7 @@ class S2PolygonDecodeTest : public ::testing::Test {
     AppendRandomData(random_.Uniform(kMaxBytes));
   }
 
-  void AppendFakeLosslessEncodingData() {
+  void AppendFakeUncompressedEncodingData() {
     AppendByte(1);                      // polygon number
     AppendByte(0);                      // unused
     AppendByte(0);                      // "has holes" flag
@@ -2883,13 +2883,13 @@ class S2PolygonDecodeTest : public ::testing::Test {
   Decoder decoder_;
 };
 
-TEST_F(S2PolygonDecodeTest, FuzzLosslessEncoding) {
+TEST_F(S2PolygonDecodeTest, FuzzUncompressedEncoding) {
   // Some parts of the S2 library S2_DCHECK on invalid data, even if we set
   // FLAGS_s2debug to false or use S2Polygon::set_s2debug_override. So we
   // only run this test in opt mode.
 #ifdef NDEBUG
   for (int i = 0; i < 100000; ++i) {
-    AppendFakeLosslessEncodingData();
+    AppendFakeUncompressedEncodingData();
     Test();
   }
 #endif

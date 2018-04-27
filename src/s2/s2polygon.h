@@ -657,6 +657,13 @@ class S2Polygon final : public S2Region {
   //           can be enlarged as necessary by calling Ensure(int).
   void Encode(Encoder* const encoder) const;
 
+  // Encodes the polygon's S2Points directly as three doubles using
+  // (40 + 43 * num_loops + 24 * num_vertices) bytes.
+  //
+  // REQUIRES: "encoder" uses the default constructor, so that its buffer
+  //           can be enlarged as necessary by calling Ensure(int).
+  void EncodeUncompressed(Encoder* encoder) const;
+
   // Decodes a polygon encoded with Encode().  Returns true on success.
   bool Decode(Decoder* const decoder);
 
@@ -682,6 +689,8 @@ class S2Polygon final : public S2Region {
   // such that the polygon interior is always on the left.
   class Shape : public S2Shape {
    public:
+    static constexpr TypeTag kTypeTag = 1;
+
     Shape() : polygon_(nullptr), cumulative_edges_(nullptr) {}
     ~Shape() override;
 
@@ -693,6 +702,18 @@ class S2Polygon final : public S2Region {
 
     const S2Polygon* polygon() const { return polygon_; }
 
+    // Encodes the polygon using S2Polygon::Encode().
+    void Encode(Encoder* encoder) const {
+      polygon_->Encode(encoder);
+    }
+
+    // Encodes the polygon using S2Polygon::EncodeUncompressed().
+    void EncodeUncompressed(Encoder* encoder) const {
+      polygon_->EncodeUncompressed(encoder);
+    }
+
+    // Decoding is defined only for S2Polyline::OwningShape below.
+
     // S2Shape interface:
     int num_edges() const final { return num_edges_; }
     Edge edge(int e) const final;
@@ -702,6 +723,7 @@ class S2Polygon final : public S2Region {
     Chain chain(int i) const final;
     Edge chain_edge(int i, int j) const final;
     ChainPosition chain_position(int e) const final;
+    TypeTag type_tag() const override { return kTypeTag; }
 
    private:
     // The total number of edges in the polygon.  This is the same as
@@ -727,12 +749,22 @@ class S2Polygon final : public S2Region {
   class OwningShape : public Shape {
    public:
     OwningShape() {}  // Must call Init().
+
     explicit OwningShape(std::unique_ptr<const S2Polygon> polygon)
         : Shape(polygon.release()) {
     }
+
     void Init(std::unique_ptr<const S2Polygon> polygon) {
       Shape::Init(polygon.release());
     }
+
+    bool Init(Decoder* decoder) {
+      auto polygon = absl::make_unique<S2Polygon>();
+      if (!polygon->Decode(decoder)) return false;
+      Shape::Init(polygon.release());
+      return true;
+    }
+
     ~OwningShape() override { delete polygon(); }
   };
 #endif  // SWIG
@@ -799,14 +831,10 @@ class S2Polygon final : public S2Region {
       const S2Builder::SnapFunction& snap_function,
       const S2Polyline& a) const;
 
-  // Encode the polygon's S2Points directly as three doubles using
-  // (40 + 43 * num_loops + 24 * num_vertices) bytes.
-  void EncodeLossless(Encoder* encoder) const;
-
-  // Decode a polygon encoded with EncodeLossless().  Used by the Decode and
-  // DecodeWithinScope methods above.  The within_scope parameter specifies
-  // whether to call DecodeWithinScope on the loops.
-  bool DecodeLossless(Decoder* const decoder, bool within_scope);
+  // Decode a polygon encoded with EncodeUncompressed().  Used by the Decode
+  // and DecodeWithinScope methods above.  The within_scope parameter
+  // specifies whether to call DecodeWithinScope on the loops.
+  bool DecodeUncompressed(Decoder* const decoder, bool within_scope);
 
   // Encode the polygon's vertices using about 4 bytes / vertex plus 24 bytes /
   // unsnapped vertex. All the loop vertices must be converted first to the

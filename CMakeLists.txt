@@ -66,6 +66,10 @@ add_library(s2 SHARED
             src/s2/base/stringprintf.cc
             src/s2/base/strtoint.cc
             src/s2/base/sysinfo.cc
+            src/s2/encoded_s2cell_id_vector.cc
+            src/s2/encoded_s2point_vector.cc
+            src/s2/encoded_s2shape_index.cc
+            src/s2/encoded_string_vector.cc
             src/s2/id_set_lexicon.cc
             src/s2/mutable_s2shape_index.cc
             src/s2/r2rect.cc
@@ -82,7 +86,6 @@ add_library(s2 SHARED
             src/s2/s2builderutil_s2polyline_layer.cc
             src/s2/s2builderutil_s2polyline_vector_layer.cc
             src/s2/s2builderutil_snap_functions.cc
-            src/s2/s2builderutil_testing.cc
             src/s2/s2cap.cc
             src/s2/s2cell.cc
             src/s2/s2cell_id.cc
@@ -133,6 +136,7 @@ add_library(s2 SHARED
             src/s2/s2shape_index.cc
             src/s2/s2shape_index_buffered_region.cc
             src/s2/s2shapeutil_build_polygon_boundaries.cc
+            src/s2/s2shapeutil_coding.cc
             src/s2/s2shapeutil_contains_brute_force.cc
             src/s2/s2shapeutil_edge_iterator.cc
             src/s2/s2shapeutil_get_reference_point.cc
@@ -161,7 +165,10 @@ add_library(s2 SHARED
             src/s2/util/math/exactfloat/exactfloat.cc
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
-add_library(s2testing STATIC src/s2/s2testing.cc)
+add_library(s2testing STATIC
+            src/s2/s2builderutil_testing.cc
+            src/s2/s2shapeutil_testing.cc
+            src/s2/s2testing.cc)
 target_link_libraries(
     s2
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
@@ -176,6 +183,11 @@ target_include_directories(s2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # We don't need to install all headers, only those
 # transitively included by s2 headers we are exporting.
 install(FILES src/s2/_fp_contract_off.h
+              src/s2/encoded_s2cell_id_vector.h
+              src/s2/encoded_s2point_vector.h
+              src/s2/encoded_s2shape_index.h
+              src/s2/encoded_string_vector.h
+              src/s2/encoded_uint_vector.h
               src/s2/id_set_lexicon.h
               src/s2/mutable_s2shape_index.h
               src/s2/r1interval.h
@@ -259,6 +271,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2shape_index_buffered_region.h
               src/s2/s2shape_index_region.h
               src/s2/s2shapeutil_build_polygon_boundaries.h
+              src/s2/s2shapeutil_coding.h
               src/s2/s2shapeutil_contains_brute_force.h
               src/s2/s2shapeutil_count_edges.h
               src/s2/s2shapeutil_edge_iterator.h
@@ -266,6 +279,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2shapeutil_range_iterator.h
               src/s2/s2shapeutil_shape_edge.h
               src/s2/s2shapeutil_shape_edge_id.h
+              src/s2/s2shapeutil_testing.h
               src/s2/s2shapeutil_visit_crossing_edge_pairs.h
               src/s2/s2testing.h
               src/s2/s2text_format.h
@@ -358,6 +372,11 @@ if (GTEST_ROOT)
   add_subdirectory(${GTEST_ROOT} build_gtest)
 
   set(S2TestFiles
+      src/s2/encoded_s2cell_id_vector_test.cc
+      src/s2/encoded_s2point_vector_test.cc
+      src/s2/encoded_s2shape_index_test.cc
+      src/s2/encoded_string_vector_test.cc
+      src/s2/encoded_uint_vector_test.cc
       src/s2/id_set_lexicon_test.cc
       src/s2/mutable_s2shape_index_test.cc
       src/s2/r1interval_test.cc
@@ -432,6 +451,7 @@ if (GTEST_ROOT)
       src/s2/s2shape_index_region_test.cc
       src/s2/s2shape_index_test.cc
       src/s2/s2shapeutil_build_polygon_boundaries_test.cc
+      src/s2/s2shapeutil_coding_test.cc
       src/s2/s2shapeutil_contains_brute_force_test.cc
       src/s2/s2shapeutil_count_edges_test.cc
       src/s2/s2shapeutil_edge_iterator_test.cc

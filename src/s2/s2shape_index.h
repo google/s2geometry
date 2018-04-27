@@ -99,7 +99,7 @@ class S2ClippedShape {
   // If there are more than two edges, this field holds a pointer.
   // Otherwise it holds an array of edge ids.
   union {
-    int32* edges_;           // This pointer is owned by the containing Cell.
+    int32* edges_;  // Owned by the containing S2ShapeIndexCell.
     std::array<int32, 2> inline_edges_;
   };
 };
@@ -108,6 +108,9 @@ class S2ClippedShape {
 // It consists of a set of clipped shapes.
 class S2ShapeIndexCell {
  public:
+  S2ShapeIndexCell() {}
+  ~S2ShapeIndexCell();
+
   // Returns the number of clipped shapes in this cell.
   int num_clipped() const { return shapes_.size(); }
 
@@ -126,14 +129,28 @@ class S2ShapeIndexCell {
   // shapes.
   int num_edges() const;
 
+  // Appends an encoded representation of the S2ShapeIndexCell to "encoder".
+  // "num_shape_ids" should be set to index.num_shape_ids(); this information
+  // allows the encoding to be more compact in some cases.
+  //
+  // REQUIRES: "encoder" uses the default constructor, so that its buffer
+  //           can be enlarged as necessary by calling Ensure(int).
+  void Encode(int num_shape_ids, Encoder* encoder) const;
+
+  // Decodes an S2ShapeIndexCell, returning true on success.
+  // "num_shape_ids" should be set to index.num_shape_ids().
+  bool Decode(int num_shape_ids, Decoder* decoder);
+
  private:
-  friend class MutableS2ShapeIndex;  // shapes_ write access
+  friend class MutableS2ShapeIndex;
+  friend class EncodedS2ShapeIndex;
   friend class S2Stats;
 
   // Internal methods are documented with their definitions.
-  S2ShapeIndexCell() {}
-  ~S2ShapeIndexCell();
   S2ClippedShape* add_shapes(int n);
+  static void EncodeEdges(const S2ClippedShape& clipped, Encoder* encoder);
+  static bool DecodeEdges(int num_edges, S2ClippedShape* clipped,
+                          Decoder* decoder);
 
   using S2ClippedShapeSet = gtl::compact_array<S2ClippedShape>;
   S2ClippedShapeSet shapes_;
@@ -382,6 +399,25 @@ class S2ShapeIndex {
     std::unique_ptr<IteratorBase> iter_;
   };
 
+  // ShapeFactory is an interface for decoding vectors of S2Shapes.  It allows
+  // random access to the shapes in order to support lazy decoding.  See
+  // s2shapeutil_coding.h for useful subtypes.
+  class ShapeFactory {
+   public:
+    virtual ~ShapeFactory() {}
+
+    // Returns the number of S2Shapes in the vector.
+    virtual int size() const = 0;
+
+    // Returns the S2Shape object corresponding to the given "shape_id".
+    // Returns nullptr if a shape cannot be decoded or a shape is missing
+    // (e.g., because MutableS2ShapeIndex::Release() was called).
+    virtual std::unique_ptr<S2Shape> operator[](int shape_id) const = 0;
+
+    // Returns a deep copy of this ShapeFactory.
+    virtual std::unique_ptr<ShapeFactory> Clone() const = 0;
+  };
+
  protected:
   // Each subtype of S2ShapeIndex should define an Iterator type derived
   // from the following base class.
@@ -585,6 +621,8 @@ inline S2CellId S2ShapeIndex::IteratorBase::id() const {
 }
 
 inline const S2ShapeIndexCell& S2ShapeIndex::IteratorBase::cell() const {
+  // Like other const methods, this method is thread-safe provided that it
+  // does not overlap with calls to non-const methods.
   S2_DCHECK(!done());
   auto cell = raw_cell();
   if (cell == nullptr) {

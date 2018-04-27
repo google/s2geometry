@@ -22,6 +22,8 @@
 #include <vector>
 
 #include "s2/third_party/absl/types/span.h"
+#include "s2/encoded_uint_vector.h"
+#include "s2/encoded_s2point_vector.h"
 #include "s2/s2polygon.h"
 #include "s2/s2shape.h"
 
@@ -70,6 +72,8 @@
 // (S2BooleanOperation, S2ClosestEdgeQuery, etc).
 class S2LaxPolygonShape : public S2Shape {
  public:
+  static constexpr TypeTag kTypeTag = 5;
+
   // Constructs an empty polygon.
   S2LaxPolygonShape() : num_loops_(0), num_vertices_(0) {}
 
@@ -104,6 +108,17 @@ class S2LaxPolygonShape : public S2Shape {
   // REQUIRES: 0 <= j < num_loop_vertices(i)
   const S2Point& loop_vertex(int i, int j) const;
 
+  // Appends an encoded representation of the S2LaxPolygonShape to "encoder".
+  //
+  // REQUIRES: "encoder" uses the default constructor, so that its buffer
+  //           can be enlarged as necessary by calling Ensure(int).
+  void Encode(Encoder* encoder,
+              s2coding::CodingHint hint = s2coding::CodingHint::COMPACT) const;
+
+  // Decodes an S2LaxPolygonShape, returning true on success.  (The method
+  // name is chosen for compatibility with EncodedS2LaxPolygonShape below.)
+  bool Init(Decoder* decoder);
+
   // S2Shape interface:
   int num_edges() const final { return num_vertices(); }
   Edge edge(int e) const final;
@@ -113,6 +128,7 @@ class S2LaxPolygonShape : public S2Shape {
   Chain chain(int i) const final;
   Edge chain_edge(int i, int j) const final;
   ChainPosition chain_position(int e) const final;
+  TypeTag type_tag() const override { return kTypeTag; }
 
  private:
   void Init(const std::vector<absl::Span<const S2Point>>& loops);
@@ -124,8 +140,44 @@ class S2LaxPolygonShape : public S2Shape {
   // is the total number of vertices in loops 0..i-1.
   union {
     int32 num_vertices_;
-    int32* cumulative_vertices_;  // Don't use unique_ptr in unions.
+    uint32* cumulative_vertices_;  // Don't use unique_ptr in unions.
   };
+};
+
+// Exactly like S2LaxPolygonShape, except that the vertices are kept in an
+// encoded form and are decoded only as they are accessed.  This allows for
+// very fast initialization and no additional memory use beyond the encoded
+// data.  The encoded data is not owned by this class; typically it points
+// into a large contiguous buffer that contains other encoded data as well.
+class EncodedS2LaxPolygonShape : public S2Shape {
+ public:
+  // Constructs an uninitialized object; requires Init() to be called.
+  EncodedS2LaxPolygonShape() {}
+
+  // Initializes an EncodedS2LaxPolygonShape.
+  //
+  // REQUIRES: The Decoder data buffer must outlive this object.
+  bool Init(Decoder* decoder);
+
+  int num_loops() const { return num_loops_; }
+  int num_vertices() const;
+  int num_loop_vertices(int i) const;
+  S2Point loop_vertex(int i, int j) const;
+
+  // S2Shape interface:
+  int num_edges() const final { return num_vertices(); }
+  Edge edge(int e) const final;
+  int dimension() const final { return 2; }
+  ReferencePoint GetReferencePoint() const final;
+  int num_chains() const final { return num_loops(); }
+  Chain chain(int i) const final;
+  Edge chain_edge(int i, int j) const final;
+  ChainPosition chain_position(int e) const final;
+
+ private:
+  int32 num_loops_;
+  s2coding::EncodedS2PointVector vertices_;
+  s2coding::EncodedUintVector<uint32> cumulative_vertices_;
 };
 
 #endif  // S2_S2LAX_POLYGON_SHAPE_H_

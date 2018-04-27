@@ -23,6 +23,7 @@
 
 #include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
 #include "s2/s2debug.h"
@@ -278,6 +279,8 @@ class S2Polyline final : public S2Region {
   // data (see S2Shape for details).
   class Shape : public S2Shape {
    public:
+    static constexpr TypeTag kTypeTag = 2;
+
     Shape() : polyline_(nullptr) {}  // Must call Init().
 
     // Initialization.  Does not take ownership of "polyline".
@@ -289,6 +292,14 @@ class S2Polyline final : public S2Region {
     void Init(const S2Polyline* polyline);
 
     const S2Polyline* polyline() const { return polyline_; }
+
+    // Encodes the polyline using S2Polyline::Encode().
+    void Encode(Encoder* encoder) const {
+      // TODO(geometry-library): Support compressed encodings.
+      polyline_->Encode(encoder);
+    }
+
+    // Decoding is defined only for S2Polyline::OwningShape below.
 
     // S2Shape interface:
 
@@ -311,6 +322,7 @@ class S2Polyline final : public S2Region {
     ChainPosition chain_position(int e) const final {
       return ChainPosition(0, e);
     }
+    TypeTag type_tag() const override { return kTypeTag; }
 
    private:
     const S2Polyline* polyline_;
@@ -322,12 +334,22 @@ class S2Polyline final : public S2Region {
   class OwningShape : public Shape {
    public:
     OwningShape() {}  // Must call Init().
+
     explicit OwningShape(std::unique_ptr<const S2Polyline> polyline)
         : Shape(polyline.release()) {
     }
+
     void Init(std::unique_ptr<const S2Polyline> polyline) {
       Shape::Init(polyline.release());
     }
+
+    bool Init(Decoder* decoder) {
+      auto polyline = absl::make_unique<S2Polyline>();
+      if (!polyline->Decode(decoder)) return false;
+      Shape::Init(polyline.release());
+      return true;
+    }
+
     ~OwningShape() override { delete polyline(); }
   };
 #endif  // SWIG
