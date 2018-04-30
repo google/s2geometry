@@ -108,15 +108,10 @@ bool EncodedS2ShapeIndex::Init(Decoder* decoder,
   }
   options_.set_max_edges_per_cell(max_edges_version >> 2);
 
-  // Note that the shapes_ elements are initialized twice, first to "nullptr"
-  // (default constructor) and then to kUndecodedShape().  This could be
-  // avoided by defining a wrapper type around (S2Shape *) with a different
-  // default constructor, but this is probably not worthwhile.
-  uint32 num_shapes = shape_factory.size();
-  shapes_ = std::vector<std::atomic<S2Shape*>>(num_shapes);
-  for (auto& shape : shapes_) {
-    std::atomic_init(&shape, kUndecodedShape());
-  }
+  // AtomicShape is a subtype of std::atomic<S2Shape*> that changes the
+  // default constructor value to kUndecodedShape().  This saves the effort of
+  // initializing all the elements twice.
+  shapes_ = std::vector<AtomicShape>(shape_factory.size());
   shape_factory_ = shape_factory.Clone();
   if (!cell_ids_.Init(decoder)) return false;
 

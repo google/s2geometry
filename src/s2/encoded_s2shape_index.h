@@ -124,6 +124,13 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
   inline static S2Shape* kUndecodedShape() {
     return reinterpret_cast<S2Shape*>(1);
   }
+
+  // Like std::atomic<S2Shape*>, but defaults to kUndecodedShape().
+  class AtomicShape : public std::atomic<S2Shape*> {
+   public:
+    AtomicShape() : std::atomic<S2Shape*>(kUndecodedShape()) {}
+  };
+
   S2Shape* GetShape(int id) const;
   const S2ShapeIndexCell* GetCell(int i) const;
 
@@ -133,9 +140,9 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
   Options options_;
 
   // A vector containing all shapes in the index.  Initially all shapes are
-  // "nullptr"; shapes are created on demand and added to the vector using
-  // std::atomic::compare_exchange_strong.
-  mutable std::vector<std::atomic<S2Shape*>> shapes_;
+  // set to kUndecodedShape(); as shapes are decoded, they are added to the
+  // vector using std::atomic::compare_exchange_strong.
+  mutable std::vector<AtomicShape> shapes_;
 
   // A vector containing the S2CellIds of each cell in the index.
   s2coding::EncodedS2CellIdVector cell_ids_;
@@ -144,7 +151,7 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
   s2coding::EncodedStringVector encoded_cells_;
 
   // A vector containing the decoded contents of each cell in the index.
-  // Initially all values are "nullptr"; cells are decoded on demand and added
+  // Initially all values are nullptr; cells are decoded on demand and added
   // to the vector using std::atomic::compare_exchange_strong.
   mutable std::vector<std::atomic<S2ShapeIndexCell*>> cells_;
 
