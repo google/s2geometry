@@ -365,7 +365,7 @@ class string_view {
   // that template is available.
 #ifdef HAS_GLOBAL_STRING
   template <typename A = std::allocator<char>>
-  ABSL_DEPRECATED("Use string(sp)")::basic_string<
+  ABSL_DEPRECATED("Use string(sv)")::basic_string<
       char, traits_type, A> to_string(const A& a = A()) const {
     if (!data()) return ::basic_string<char, traits_type, A>(a);
     return ::basic_string<char, traits_type, A>(data(), size(), a);
@@ -373,19 +373,19 @@ class string_view {
 #else   // !HAS_GLOBAL_STRING
 
   template <typename A = std::allocator<char> >
-  ABSL_DEPRECATED("Use std::string(sp)")
+  ABSL_DEPRECATED("Use std::string(sv)")
   std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
     if (!data()) return std::basic_string<char, traits_type, A>(a);
     return std::basic_string<char, traits_type, A>(data(), size(), a);
   }
 #endif  // HAS_GLOBAL_STRING
 
-  ABSL_DEPRECATED("Use string(sp)")
+  ABSL_DEPRECATED("Use string(sv)")
   string as_string() const {
     if (!data()) return {};
     return string(data(), size());
   }
-  ABSL_DEPRECATED("Use string(sp)")
+  ABSL_DEPRECATED("Use string(sv)")
   string ToString() const {
     if (!data()) return {};
     return string(data(), size());

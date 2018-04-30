@@ -86,8 +86,7 @@ void IndexMatchingLayer::Build(const Graph& g, S2Error* error) {
     actual.push_back(S2Shape::Edge(g.vertex(edge.first),
                                    g.vertex(edge.second)));
   }
-  for (int s = 0; s < index_.num_shape_ids(); ++s) {
-    S2Shape* shape = index_.shape(s);
+  for (S2Shape* shape : index_) {
     if (shape == nullptr || shape->dimension() != dimension_) {
       continue;
     }
@@ -293,8 +292,8 @@ TEST(S2BooleanOperation, PointSemiOpenPolyline) {
   // The result does not depend on Options::polyline_loops_have_boundaries().
   S2BooleanOperation::Options options;
   options.set_polyline_model(PolylineModel::SEMI_OPEN);
-  for (int bool_value = 0; bool_value < 2; ++bool_value) {
-    options.set_polyline_loops_have_boundaries(static_cast<bool>(bool_value));
+  for (bool bool_value : {false, true}) {
+    options.set_polyline_loops_have_boundaries(bool_value);
     auto a = "0:0 | 1:0 | 2:0 | 3:0 | 4:0 | 5:0 # #";
     auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #";
     ExpectResult(OpType::UNION, options, a, b,
@@ -318,8 +317,8 @@ TEST(S2BooleanOperation, PointClosedPolyline) {
   // The result does not depend on Options::polyline_loops_have_boundaries().
   S2BooleanOperation::Options options;
   options.set_polyline_model(PolylineModel::CLOSED);
-  for (int bool_value = 0; bool_value < 2; ++bool_value) {
-    options.set_polyline_loops_have_boundaries(static_cast<bool>(bool_value));
+  for (bool bool_value : {false, true}) {
+    options.set_polyline_loops_have_boundaries(bool_value);
     auto a = "0:0 | 1:0 | 2:0 | 3:0 | 4:0 | 5:0 # #";
     auto b = "# 0:0, 1:0, 2:0 | 3:0, 3:0 | 4:0, 5:0, 4:0 #";
     ExpectResult(OpType::UNION, options, a, b,
@@ -463,8 +462,8 @@ TEST(S2BooleanOperation, PolylineVertexSemiOpenPolylineVertex) {
   // The result does not depend on Options::polyline_loops_have_boundaries().
   S2BooleanOperation::Options options;
   options.set_polyline_model(PolylineModel::SEMI_OPEN);
-  for (int bool_value = 0; bool_value < 2; ++bool_value) {
-    options.set_polyline_loops_have_boundaries(static_cast<bool>(bool_value));
+  for (bool bool_value : {false, true}) {
+    options.set_polyline_loops_have_boundaries(bool_value);
     auto a = "# 0:0, 0:1, 0:2 | 0:3, 0:4, 0:3 #";
     auto b = "# 0:0, 1:0 | -1:1, 0:1, 1:1 | -1:2, 0:2 "
              "| 1:3, 0:3, 1:3 | 0:4, 1:4, 0:4 #";

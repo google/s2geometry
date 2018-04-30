@@ -23,6 +23,7 @@
 #define S2_S2EARTH_H_
 
 #include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2latlng.h"
 #include "s2/s2point.h"
 #include "s2/util/units/length-units.h"
@@ -40,13 +41,17 @@ class S2Earth {
   // since Meters is a single-precision type.  If you need more precision,
   // use one of the direct conversion methods below.
   inline static S1Angle ToAngle(const util::units::Meters& distance);
+  inline static S1ChordAngle ToChordAngle(const util::units::Meters& distance);
   inline static util::units::Meters ToDistance(const S1Angle& angle);
+  inline static util::units::Meters ToDistance(const S1ChordAngle& cangle);
 
   // Convenience functions.  These methods also return a double-precision
   // result, unlike the generic ToDistance() method.
   inline static double ToRadians(const util::units::Meters& distance);
   inline static double ToMeters(const S1Angle& angle);
+  inline static double ToMeters(const S1ChordAngle& cangle);
   inline static double ToKm(const S1Angle& angle);
+  inline static double ToKm(const S1ChordAngle& cangle);
   inline static double KmToRadians(double km);
   inline static double RadiansToKm(double radians);
   inline static double MetersToRadians(double meters);
@@ -134,8 +139,16 @@ inline S1Angle S2Earth::ToAngle(const util::units::Meters& distance) {
   return S1Angle::Radians(ToRadians(distance));
 }
 
+inline S1ChordAngle S2Earth::ToChordAngle(const util::units::Meters& distance) {
+  return S1ChordAngle(ToAngle(distance));
+}
+
 inline util::units::Meters S2Earth::ToDistance(const S1Angle& angle) {
   return util::units::Meters(ToMeters(angle));
+}
+
+inline util::units::Meters S2Earth::ToDistance(const S1ChordAngle& cangle) {
+  return util::units::Meters(ToMeters(cangle));
 }
 
 inline double S2Earth::ToRadians(const util::units::Meters& distance) {
@@ -148,6 +161,14 @@ inline double S2Earth::ToMeters(const S1Angle& angle) {
 
 inline double S2Earth::ToKm(const S1Angle& angle) {
   return angle.radians() * RadiusKm();
+}
+
+inline double S2Earth::ToMeters(const S1ChordAngle& cangle) {
+  return ToMeters(cangle.ToAngle());
+}
+
+inline double S2Earth::ToKm(const S1ChordAngle& cangle) {
+  return ToKm(cangle.ToAngle());
 }
 
 inline double S2Earth::KmToRadians(double km) {

@@ -237,9 +237,7 @@ bool S2MaxDistanceShapeIndexTarget::VisitContainingShapes(
   //
   // TODO(ericv): Do this by merge-joining the two S2ShapeIndexes, and share
   // the code with S2BooleanOperation.
-  int num_shape_ids = index_->num_shape_ids();
-  for (int s = 0; s < num_shape_ids; ++s) {
-    S2Shape* shape = index_->shape(s);
+  for (S2Shape* shape : *index_) {
     if (shape == nullptr) continue;
     int num_chains = shape->num_chains();
     // Shapes that don't have any edges require a special case (below).

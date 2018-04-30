@@ -458,4 +458,153 @@ TEST(S2PolylineAlignmentTest, FuzzedWithBruteForce) {
     }
   }
 }
+
+// TESTS FOR TRAJECTORY CONSENSUS ALGORITHMS
+
+// Tests for GetMedoidPolyline
+TEST(S2PolylineAlignmentTest, MedoidPolylineNoPolylines) {
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  const MedoidOptions default_opts;
+  EXPECT_DEATH(GetMedoidPolyline(polylines, default_opts), "");
+}
+
+TEST(S2PolylineAlignmentTest, MedoidPolylineOnePolyline) {
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("5:0, 5:1, 5:2"));
+  const MedoidOptions default_opts;
+  const auto medoid = GetMedoidPolyline(polylines, default_opts);
+  EXPECT_EQ(medoid, 0);
+}
+
+TEST(S2PolylineAlignmentTest, MedoidPolylineTwoPolylines) {
+  // Tie-breaking is contractually done by choosing the smallest tied index.
+  // These inputs (really, any collection of two polylines) yield a tie.
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("5:0, 5:1, 5:2"));
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("1:0, 1:1, 1:2"));
+
+  const MedoidOptions default_opts;
+  const auto medoid = GetMedoidPolyline(polylines, default_opts);
+  EXPECT_EQ(medoid, 0);
+}
+
+TEST(S2PolylineAlignmentTest, MedoidPolylineFewSmallPolylines) {
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("5:0, 5:1, 5:2"));
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("3:0, 3:1, 3:2"));
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("1:0, 1:1, 1:2"));
+
+  const MedoidOptions default_opts;
+  const auto medoid = GetMedoidPolyline(polylines, default_opts);
+  EXPECT_EQ(medoid, 1);
+}
+
+TEST(S2PolylineAlignmentTest, MedoidPolylineOverlappingPolylines) {
+  // Given two identical polylines as input, break the tie with smallest index.
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("1:0, 1:1, 1:2"));
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("1:0, 1:1, 1:2"));
+
+  const MedoidOptions default_opts;
+  const auto medoid = GetMedoidPolyline(polylines, default_opts);
+  EXPECT_EQ(medoid, 0);
+}
+
+TEST(S2PolylineAlignmentTest, MedoidPolylineDifferentLengthPolylines) {
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("5:0, 5:1, 5:2"));
+  polylines.emplace_back(
+      s2textformat::MakePolylineOrDie("3:0, 3:0.5, 3:1, 3:2"));
+  polylines.emplace_back(
+      s2textformat::MakePolylineOrDie("1:0, 1:0.5, 1:1, 1:1.5, 1:2"));
+
+  const MedoidOptions default_opts;
+  const auto medoid = GetMedoidPolyline(polylines, default_opts);
+  EXPECT_EQ(medoid, 1);
+}
+
+TEST(S2PolylineAlignmentTest, MedoidPolylineFewLargePolylines) {
+  // We pick num_vertices to be large so that the approx and exact vertex
+  // alignment computations are likely to give different results.
+  const int num_polylines = 3;
+  const int num_vertices = 1024;
+  const double perturb = 0.9;
+  const auto polylines = GenPolylines(num_polylines, num_vertices, perturb);
+
+  // clang-format off
+  const std::vector<double> exact_costs = {
+      GetExactVertexAlignmentCost(*polylines[0], *polylines[1]) +
+      GetExactVertexAlignmentCost(*polylines[0], *polylines[2]),
+      GetExactVertexAlignmentCost(*polylines[1], *polylines[0]) +
+      GetExactVertexAlignmentCost(*polylines[1], *polylines[2]),
+      GetExactVertexAlignmentCost(*polylines[2], *polylines[0]) +
+      GetExactVertexAlignmentCost(*polylines[2], *polylines[1])
+  };
+  const std::vector<double> approx_costs = {
+      GetApproxVertexAlignment(*polylines[0], *polylines[1]).alignment_cost +
+      GetApproxVertexAlignment(*polylines[0], *polylines[2]).alignment_cost,
+      GetApproxVertexAlignment(*polylines[1], *polylines[0]).alignment_cost +
+      GetApproxVertexAlignment(*polylines[1], *polylines[2]).alignment_cost,
+      GetApproxVertexAlignment(*polylines[2], *polylines[0]).alignment_cost +
+      GetApproxVertexAlignment(*polylines[2], *polylines[1]).alignment_cost
+  };
+  // clang-format on
+
+  const int exact_medoid_index =
+      std::min_element(exact_costs.begin(), exact_costs.end()) -
+      exact_costs.begin();
+
+  const int approx_medoid_index =
+      std::min_element(approx_costs.begin(), approx_costs.end()) -
+      approx_costs.begin();
+
+  MedoidOptions options;
+  options.set_approx(false);
+  const auto exact_medoid = GetMedoidPolyline(polylines, options);
+  EXPECT_EQ(exact_medoid, exact_medoid_index);
+
+  options.set_approx(true);
+  const auto approx_medoid = GetMedoidPolyline(polylines, options);
+  EXPECT_EQ(approx_medoid, approx_medoid_index);
+}
+
+// Tests for GetConsensusPolyline
+TEST(S2PolylineAlignmentTest, ConsensusPolylineNoPolylines) {
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  const ConsensusOptions default_opts;
+  EXPECT_DEATH(GetConsensusPolyline(polylines, default_opts), "");
+}
+
+TEST(S2PolylineAlignmentTest, ConsensusPolylineOnePolyline) {
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("3:0, 3:1, 3:2"));
+
+  const ConsensusOptions default_opts;
+  const auto result = GetConsensusPolyline(polylines, default_opts);
+  const auto expected = s2textformat::MakePolylineOrDie("3:0, 3:1, 3:2");
+  EXPECT_TRUE(result->ApproxEquals(*expected));
+}
+
+TEST(S2PolylineAlignmentTest, ConsensusPolylineTwoPolylines) {
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("3:0, 3:1, 3:2"));
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("1:0, 1:1, 1:2"));
+
+  const ConsensusOptions default_opts;
+  const auto result = GetConsensusPolyline(polylines, default_opts);
+  const auto expected = s2textformat::MakePolylineOrDie("2:0, 2:1, 2:2");
+  EXPECT_TRUE(result->ApproxEquals(*expected));
+}
+
+TEST(S2PolylineAlignmentTest, ConsensusPolylineOverlappingPolylines) {
+  std::vector<std::unique_ptr<S2Polyline>> polylines;
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("1:0, 1:1, 1:2"));
+  polylines.emplace_back(s2textformat::MakePolylineOrDie("1:0, 1:1, 1:2"));
+
+  const ConsensusOptions default_opts;
+  const auto result = GetConsensusPolyline(polylines, default_opts);
+  const auto expected = s2textformat::MakePolylineOrDie("1:0, 1:1, 1:2");
+  EXPECT_TRUE(result->ApproxEquals(*expected));
+}
+
 }  // namespace s2polyline_alignment

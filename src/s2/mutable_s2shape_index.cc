@@ -24,6 +24,8 @@
 #include "s2/base/casts.h"
 #include "s2/base/commandlineflags.h"
 #include "s2/base/spinlock.h"
+#include "s2/encoded_s2cell_id_vector.h"
+#include "s2/encoded_string_vector.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -1531,4 +1533,54 @@ size_t MutableS2ShapeIndex::SpaceUsed() const {
   }
 
   return size;
+}
+
+void MutableS2ShapeIndex::Encode(Encoder* encoder) const {
+  // The version number is encoded in 2 bits, under the assumption that by the
+  // time we need 5 versions the first version can be permanently retired.
+  // This only saves 1 byte, but that's significant for very small indexes.
+  encoder->Ensure(Varint::kMax64);
+  uint64 max_edges = options_.max_edges_per_cell();
+  encoder->put_varint64(max_edges << 2 | kCurrentEncodingVersionNumber);
+
+  vector<S2CellId> cell_ids;
+  cell_ids.reserve(cell_map_.size());
+  s2coding::StringVectorEncoder encoded_cells;
+  for (Iterator it(this, S2ShapeIndex::BEGIN); !it.done(); it.Next()) {
+    cell_ids.push_back(it.id());
+    it.cell().Encode(num_shape_ids(), encoded_cells.AddViaEncoder());
+  }
+  s2coding::EncodeS2CellIdVector(cell_ids, encoder);
+  encoded_cells.Encode(encoder);
+}
+
+bool MutableS2ShapeIndex::Init(Decoder* decoder,
+                               const ShapeFactory& shape_factory) {
+  Clear();
+  uint64 max_edges_version;
+  if (!decoder->get_varint64(&max_edges_version)) return false;
+  int version = max_edges_version & 3;
+  if (version != kCurrentEncodingVersionNumber) return false;
+  options_.set_max_edges_per_cell(max_edges_version >> 2);
+  uint32 num_shapes = shape_factory.size();
+  shapes_.reserve(num_shapes);
+  for (int shape_id = 0; shape_id < num_shapes; ++shape_id) {
+    auto shape = shape_factory[shape_id];
+    if (shape) shape->id_ = shape_id;
+    shapes_.push_back(std::move(shape));
+  }
+
+  s2coding::EncodedS2CellIdVector cell_ids;
+  s2coding::EncodedStringVector encoded_cells;
+  if (!cell_ids.Init(decoder)) return false;
+  if (!encoded_cells.Init(decoder)) return false;
+
+  for (int i = 0; i < cell_ids.size(); ++i) {
+    S2CellId id = cell_ids[i];
+    S2ShapeIndexCell* cell = new S2ShapeIndexCell;
+    Decoder decoder = encoded_cells.GetDecoder(i);
+    if (!cell->Decode(num_shapes, &decoder)) return false;
+    cell_map_.insert(cell_map_.end(), std::make_pair(id, cell));
+  }
+  return true;
 }

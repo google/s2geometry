@@ -2826,7 +2826,7 @@ class S2PolygonDecodeTest : public ::testing::Test {
     AppendRandomData(random_.Uniform(kMaxBytes));
   }
 
-  void AppendFakeLosslessEncodingData() {
+  void AppendFakeUncompressedEncodingData() {
     AppendByte(1);                      // polygon number
     AppendByte(0);                      // unused
     AppendByte(0);                      // "has holes" flag
@@ -2884,13 +2884,13 @@ class S2PolygonDecodeTest : public ::testing::Test {
   Decoder decoder_;
 };
 
-TEST_F(S2PolygonDecodeTest, FuzzLosslessEncoding) {
+TEST_F(S2PolygonDecodeTest, FuzzUncompressedEncoding) {
   // Some parts of the S2 library S2_DCHECK on invalid data, even if we set
   // FLAGS_s2debug to false or use S2Polygon::set_s2debug_override. So we
   // only run this test in opt mode.
 #ifdef NDEBUG
   for (int i = 0; i < 100000; ++i) {
-    AppendFakeLosslessEncodingData();
+    AppendFakeUncompressedEncodingData();
     Test();
   }
 #endif
@@ -3018,8 +3018,8 @@ TEST_F(S2PolygonTestBase, IndexContainsOnePolygonShape) {
 
 TEST_F(S2PolygonTestBase, PolygonPolygonDistance) {
   // Verify that the example code for S2Polygon::index() actually works.
-  S2Polygon const& polygon1 = *near_0_;
-  S2Polygon const& polygon2 = *far_10_;
+  const S2Polygon& polygon1 = *near_0_;
+  const S2Polygon& polygon2 = *far_10_;
   S2ClosestEdgeQuery query(&polygon1.index());
   S2ClosestEdgeQuery::ShapeIndexTarget target(&polygon2.index());
   S1ChordAngle distance = query.GetDistance(&target);

@@ -17,6 +17,7 @@
 #ifndef S2_S2POLYLINE_ALIGNMENT_H_
 #define S2_S2POLYLINE_ALIGNMENT_H_
 
+#include <memory>
 #include <vector>
 
 #include "s2/s2polyline.h"
@@ -72,6 +73,21 @@
 // backwards to the upper left corner  to recover the reverse of the warp path:
 // (3, 2) -> (2, 1) -> (1, 1) -> (0, 0). The VertexAlignment produced containing
 // this has alignment_cost = 7 and warp_path = {(0, 0), (1, 1), (2, 1), (3, 2)}.
+//
+// We also provide methods for performing alignment of multiple sequences. These
+// methods return a single, representative polyline from a non-empty collection
+// of polylines, for various definitions of "representative."
+//
+// GetMedoidPolyline() returns a new polyline (point-for-point-equal to some
+// existing polyline from the collection) that minimizes the summed vertex
+// alignment cost to all other polylines in the collection.
+//
+// GetConsensusPolyline() returns a new polyline (unlikely to be present in the
+// input collection) that represents a "weighted consensus" polyline. This
+// polyline is constructed iteratively using the Dynamic Timewarp Barycenter
+// Averaging algorithm of F. Petitjean, A. Ketterlin, and P. Gancarski, which
+// can be found here:
+// https://pdfs.semanticscholar.org/a596/8ca9488199291ffe5473643142862293d69d.pdf
 
 namespace s2polyline_alignment {
 
@@ -140,5 +156,90 @@ VertexAlignment GetApproxVertexAlignment(const S2Polyline& a,
 VertexAlignment GetApproxVertexAlignment(const S2Polyline& a,
                                          const S2Polyline& b);
 
+// GetMedoidPolyline returns the index `p` of a "medoid" polyline from a
+// non-empty collection of `polylines` such that
+//
+// sum_{all j in `polylines`} VertexAlignmentCost(p, j) is minimized.
+//
+// In the case of a tie for minimal summed alignment cost, we return the lowest
+// index - this tie is guaranteed to happen in the two-polyline-input case.
+//
+// ASYMPTOTIC BEHAVIOR:
+// Computation may require up to (N^2 - N) / 2 alignment cost function
+// evaluations, for N input polylines. For polylines of length U, V, the
+// alignment cost function evaluation is O(U+V) if options.approx = true and
+// O(U*V) if options.approx = false.
+
+class MedoidOptions {
+ public:
+  // If options.approx = false, we compute vertex alignment costs exactly.
+  // If options.approx = true, we use approximate vertex alignment
+  // computation, called with the default radius parameter.
+  bool approx() const { return approx_; }
+  void set_approx(bool approx) { approx_ = approx; }
+
+ private:
+  bool approx_ = true;
+};
+
+int GetMedoidPolyline(const std::vector<std::unique_ptr<S2Polyline>>& polylines,
+                      const MedoidOptions options);
+
+// GetConsensusPolyline allocates and returns a new "consensus" polyline from a
+// non-empty collection of polylines. We iteratively apply Dynamic Timewarp
+// Barycenter Averaging to an initial `seed` polyline, which improves the
+// consensus alignment quality each iteration. For implementation details, see
+//
+// https://pdfs.semanticscholar.org/a596/8ca9488199291ffe5473643142862293d69d.pdf
+//
+// The returned polyline from this method is unlikely to be point-for-point
+// equal to an input polyline, whereas a polyline returned from
+// GetMedoidPolyline() is guaranteed to match an input polyline point-for-point.
+// NOTE: the number of points in our returned consensus polyline is always equal
+// to the number of points in the initial seed, which is implementation-defined.
+// If the collection of polylines has a large resolution distribution, it might
+// be a good idea to reinterpolate them to have about the same number of points.
+// In practice, this doesn't seem to matter, but is probably worth noting.
+//
+// ASYMPTOTIC BEHAVIOR:
+// Seeding this algorithm requires O(1) vertex alignments if seed_medoid =
+// false, and O(N^2) vertex alignments if seed_medoid = true. Once the seed
+// polyline is chosen, computing the consensus polyline requires at most
+// (iteration_cap)*N vertex alignments. For polylines of length U, V, the
+// alignment cost function evaluation is O(U+V) if options.approx = true, and
+// O(U*V) if options.approx = false.
+
+class ConsensusOptions {
+ public:
+  // If options.approx = false, vertex alignments are computed with
+  // GetExactVertexAlignment. If options.approx = true, vertex alignments are
+  // computed with GetApproxVertexAlignment, called with default radius
+  // parameter.
+  bool approx() const { return approx_; }
+  void set_approx(bool approx) { approx_ = approx; }
+
+  // If options.seed_medoid = true, we seed the consensus polyline with the
+  // medoid of the collection. This is a more expensive approach, but may result
+  // in higher quality consensus sequences by avoiding bad arbitrary initial
+  // seeds. Seeding with the medoid will incur up to (N^2 - N) / 2 evaluations
+  // of the vertex alignment function. If options.seed_medoid = false, we seed
+  // the consensus polyline by taking an arbitrary element from the collection.
+  bool seed_medoid() const { return seed_medoid_; }
+  void set_seed_medoid(bool seed_medoid) { seed_medoid_ = seed_medoid; }
+
+  // options.iteration_cap controls the maximum number of DBA refining steps we
+  // apply to the initial seed.
+  int iteration_cap() const { return iteration_cap_; }
+  void set_iteration_cap(int iteration_cap) { iteration_cap_ = iteration_cap; }
+
+ private:
+  bool approx_ = true;
+  bool seed_medoid_ = false;
+  int iteration_cap_ = 5;
+};
+
+std::unique_ptr<S2Polyline> GetConsensusPolyline(
+    const std::vector<std::unique_ptr<S2Polyline>>& polylines,
+    const ConsensusOptions options);
 }  // namespace s2polyline_alignment
 #endif  // S2_S2POLYLINE_ALIGNMENT_H_

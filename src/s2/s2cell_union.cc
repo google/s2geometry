@@ -479,7 +479,7 @@ void S2CellUnion::Encode(Encoder* const encoder) const {
                   sizeof(uint64) * (1 + cell_ids_.size()));
 
   encoder->put8(kCurrentLosslessEncodingVersionNumber);
-  encoder->put64(static_cast<uint64>(cell_ids_.size()));
+  encoder->put64(uint64{cell_ids_.size()});
   for (const S2CellId& cell_id : cell_ids_) {
     cell_id.Encode(encoder);
   }

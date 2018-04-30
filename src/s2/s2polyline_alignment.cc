@@ -17,7 +17,11 @@
 #include "s2/s2polyline_alignment.h"
 #include "s2/s2polyline_alignment_internal.h"
 
+#include <algorithm>
+#include <numeric>
 #include <sstream>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "s2/base/logging.h"
@@ -236,6 +240,19 @@ std::unique_ptr<S2Polyline> HalfResolution(const S2Polyline& in) {
   return absl::make_unique<S2Polyline>(vertices);
 }
 
+// Helper methods for GetMedoidPolyline and GetConsensusPolyline to auto-select
+// appropriate cost function / alignment functions.
+double CostFn(const S2Polyline& a, const S2Polyline& b, bool approx) {
+  return approx ? GetApproxVertexAlignment(a, b).alignment_cost
+                : GetExactVertexAlignmentCost(a, b);
+}
+
+VertexAlignment AlignmentFn(const S2Polyline& a, const S2Polyline& b,
+                            bool approx) {
+  return approx ? GetApproxVertexAlignment(a, b)
+                : GetExactVertexAlignment(a, b);
+}
+
 // PUBLIC API IMPLEMENTATION DETAILS
 
 // This is the constant-space implementation of Dynamic Timewarp that can
@@ -311,5 +328,87 @@ VertexAlignment GetApproxVertexAlignment(const S2Polyline& a,
   const int max_length = std::max(a.num_vertices(), b.num_vertices());
   const int radius = static_cast<int>(std::pow(max_length, 0.25));
   return GetApproxVertexAlignment(a, b, radius);
+}
+
+// We use some of the symmetry of our metric to avoid computing all N^2
+// alignments. Specifically, because cost_fn(a, b) = cost_fn(b, a), and
+// cost_fn(a, a) = 0, we can compute only the lower triangle of cost matrix
+// and then mirror it across the diagonal to save on cost_fn invocations.
+int GetMedoidPolyline(const std::vector<std::unique_ptr<S2Polyline>>& polylines,
+                      const MedoidOptions options) {
+  const int num_polylines = polylines.size();
+  const bool approx = options.approx();
+  S2_CHECK_GT(num_polylines, 0);
+
+  // costs[i] stores total cost of aligning [i] with all other polylines.
+  std::vector<double> costs(num_polylines, 0.0);
+  for (int i = 0; i < num_polylines; ++i) {
+    for (int j = i + 1; j < num_polylines; ++j) {
+      double cost = CostFn(*polylines[i], *polylines[j], approx);
+      costs[i] += cost;
+      costs[j] += cost;
+    }
+  }
+  return std::min_element(costs.begin(), costs.end()) - costs.begin();
+}
+
+// Implements Iterative Dynamic Timewarp Barycenter Averaging algorithm from
+//
+// https://pdfs.semanticscholar.org/a596/8ca9488199291ffe5473643142862293d69d.pdf
+//
+// Algorithm:
+// Initialize consensus sequence with either the medoid or an arbitrary
+// element (chosen here to be the first element in the input collection).
+// While the consensus polyline `consensus` hasn't converged and we haven't
+// exceeded our iteration cap:
+//   For each polyline `p` in the input,
+//     Compute vertex alignment from the current consensus to `p`.
+//     For each (c_index, p_index) pair in the warp path,
+//       Add the S2Point pts->vertex(p_index) to S2Point consensus[c_index]
+//   Normalize (compute centroid) of each consensus point.
+//   Determine if consensus is converging; if no vertex has moved or we've hit
+//   the iteration cap, halt.
+//
+//  This algorithm takes O(iteration_cap * num_polylines) pairwise alignments.
+
+std::unique_ptr<S2Polyline> GetConsensusPolyline(
+    const std::vector<std::unique_ptr<S2Polyline>>& polylines,
+    const ConsensusOptions options) {
+  const int num_polylines = polylines.size();
+  S2_CHECK_GT(num_polylines, 0);
+  const bool approx = options.approx();
+
+  // Seed a consensus polyline, either arbitrarily with first element, or with
+  // the medoid. If seeding with medoid, inherit approx parameter from options.
+  int seed_index = 0;
+  if (options.seed_medoid()) {
+    MedoidOptions medoid_options;
+    medoid_options.set_approx(approx);
+    seed_index = GetMedoidPolyline(polylines, medoid_options);
+  }
+  auto consensus = std::unique_ptr<S2Polyline>(polylines[seed_index]->Clone());
+  const int num_consensus_vertices = consensus->num_vertices();
+  S2_DCHECK_GT(num_consensus_vertices, 1);
+
+  bool converged = false;
+  int iterations = 0;
+  while (!converged && iterations < options.iteration_cap()) {
+    std::vector<S2Point> points(num_consensus_vertices, S2Point());
+    for (const auto& polyline : polylines) {
+      const auto alignment = AlignmentFn(*consensus, *polyline, approx);
+      for (const auto& pair : alignment.warp_path) {
+        points[pair.first] += polyline->vertex(pair.second);
+      }
+    }
+    for (S2Point& p : points) {
+      p = p.Normalize();
+    }
+
+    ++iterations;
+    auto new_consensus = absl::make_unique<S2Polyline>(points);
+    converged = new_consensus->ApproxEquals(*consensus);
+    consensus = std::move(new_consensus);
+  }
+  return consensus;
 }
 }  // namespace s2polyline_alignment

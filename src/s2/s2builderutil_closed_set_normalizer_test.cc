@@ -113,8 +113,7 @@ void NormalizeTest::AddLayers(
   for (int dim = 0; dim < 3; ++dim) {
     builder->StartLayer(make_unique<GraphAppendingLayer>(
         graph_options[dim], graphs_out, &graph_clones_));
-    for (int s = 0; s < index->num_shape_ids(); ++s) {
-      S2Shape* shape = index->shape(s);
+    for (S2Shape* shape : *index) {
       if (shape->dimension() != dim) continue;
       int n = shape->num_edges();
       for (int e = 0; e < n; ++e) {

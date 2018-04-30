@@ -181,6 +181,30 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   // Like all non-const methods, this method is not thread-safe.
   void Minimize() override;
 
+  // Appends an encoded representation of the S2ShapeIndex to "encoder".
+  //
+  // This method does not encode the S2Shapes in the index; it is the client's
+  // responsibility to encode them separately.  For example:
+  //
+  //   s2shapeutil::CompactEncodeTaggedShapes(index, encoder);
+  //   index.Encode(encoder);
+  //
+  // REQUIRES: "encoder" uses the default constructor, so that its buffer
+  //           can be enlarged as necessary by calling Ensure(int).
+  void Encode(Encoder* encoder) const;
+
+  // Decodes an S2ShapeIndex, returning true on success.
+  //
+  // This method does not decode the S2Shape objects in the index; this is
+  // the responsibility of the client-provided function "shape_factory"
+  // (see s2shapeutil_coding.h).  Example usage:
+  //
+  //   index.Init(decoder, s2shapeutil::LazyDecodeShapeFactory(decoder));
+  //
+  // Note that the S2Shape vector must be encoded *before* the S2ShapeIndex in
+  // this example.
+  bool Init(Decoder* decoder, const ShapeFactory& shape_factory);
+
   class Iterator final : public IteratorBase {
    public:
     // Default constructor; must be followed by a call to Init().
@@ -287,7 +311,8 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   std::unique_ptr<IteratorBase> NewIterator(InitialPosition pos) const override;
 
  private:
-  friend class Iterator;           // cell_map_
+  friend class EncodedS2ShapeIndex;
+  friend class Iterator;
   friend class MutableS2ShapeIndexTest;
   friend class S2Stats;
 
@@ -299,6 +324,10 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   struct RemovedShape;
 
   using ShapeIdSet = std::vector<int>;
+
+  // When adding a new encoding, be aware that old binaries will not be able
+  // to decode it.
+  static const unsigned char kCurrentEncodingVersionNumber = 0;
 
   // Internal methods are documented with their definitions.
   bool is_first_update() const;
@@ -504,7 +533,6 @@ inline void MutableS2ShapeIndex::Iterator::Begin() {
   // Make sure that the index has not been modified since Init() was called.
   S2_DCHECK(index_->is_fresh());
   iter_ = index_->cell_map_.begin();
-  end_ = index_->cell_map_.end();
   Refresh();
 }
 

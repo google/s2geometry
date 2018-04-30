@@ -112,7 +112,7 @@ class S2CellId {
 
   // Returns an invalid cell id guaranteed to be larger than any
   // valid cell id.  Useful for creating indexes.
-  static constexpr S2CellId Sentinel() { return S2CellId(~uint64(0)); }
+  static constexpr S2CellId Sentinel() { return S2CellId(~uint64{0}); }
 
   // Return the cell corresponding to a given S2 cube face.
   static S2CellId FromFace(int face);
@@ -428,14 +428,14 @@ class S2CellId {
   int ToFaceIJOrientation(int* pi, int* pj, int* orientation) const;
 
   // Return the lowest-numbered bit that is on for this cell id, which is
-  // equal to (uint64(1) << (2 * (kMaxLevel - level))).  So for example,
+  // equal to (uint64{1} << (2 * (kMaxLevel - level))).  So for example,
   // a.lsb() <= b.lsb() if and only if a.level() >= b.level(), but the
   // first test is more efficient.
   uint64 lsb() const { return id_ & (~id_ + 1); }
 
   // Return the lowest-numbered bit that is on for cells at the given level.
   static uint64 lsb_for_level(int level) {
-    return uint64(1) << (2 * (kMaxLevel - level));
+    return uint64{1} << (2 * (kMaxLevel - level));
   }
 
   // Return the bound in (u,v)-space for the cell at the given level containing
@@ -450,7 +450,8 @@ class S2CellId {
  private:
   // This is the offset required to wrap around from the beginning of the
   // Hilbert curve to the end or vice versa; see next_wrap() and prev_wrap().
-  static const uint64 kWrapOffset = uint64(kNumFaces) << kPosBits;
+  // SWIG doesn't understand uint64{}, so use static_cast.
+  static const uint64 kWrapOffset = static_cast<uint64>(kNumFaces) << kPosBits;
 
   // Given a face and a point (i,j) where either i or j is outside the valid
   // range [0..kMaxSize-1], this function first determines which neighboring
@@ -536,7 +537,7 @@ inline int S2CellId::face() const {
 }
 
 inline uint64 S2CellId::pos() const {
-  return id_ & (~uint64(0) >> kFaceBits);
+  return id_ & (~uint64{0} >> kFaceBits);
 }
 
 inline int S2CellId::level() const {

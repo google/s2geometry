@@ -648,9 +648,7 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
 
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesBruteForce() {
-  int num_shape_ids = index_->num_shape_ids();
-  for (int id = 0; id < num_shape_ids; ++id) {
-    const S2Shape* shape = index_->shape(id);
+  for (S2Shape* shape : *index_) {
     if (shape == nullptr) continue;
     int num_edges = shape->num_edges();
     for (int e = 0; e < num_edges; ++e) {

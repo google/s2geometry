@@ -251,7 +251,7 @@ class S2ClosestPointQuery {
   const Index& index() const;
 
   // Returns the query options.  Options can be modifed between queries.
-  Options const& options() const;
+  const Options& options() const;
   Options* mutable_options();
 
   // Returns the closest points to the given target that satisfy the given

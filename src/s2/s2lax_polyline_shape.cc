@@ -21,6 +21,8 @@
 #include "s2/base/logging.h"
 #include "s2/s2polyline.h"
 
+using absl::make_unique;
+using absl::MakeSpan;
 using std::vector;
 
 S2LaxPolylineShape::S2LaxPolylineShape(const vector<S2Point>& vertices) {
@@ -48,9 +50,26 @@ void S2LaxPolylineShape::Init(const S2Polyline& polyline) {
             vertices_.get());
 }
 
+void S2LaxPolylineShape::Encode(Encoder* encoder,
+                                s2coding::CodingHint hint) const {
+  s2coding::EncodeS2PointVector(MakeSpan(vertices_.get(), num_vertices_),
+                                hint, encoder);
+}
+
+bool S2LaxPolylineShape::Init(Decoder* decoder) {
+  s2coding::EncodedS2PointVector vertices;
+  if (!vertices.Init(decoder)) return false;
+  num_vertices_ = vertices.size();
+  vertices_ = make_unique<S2Point[]>(vertices.size());
+  for (int i = 0; i < num_vertices_; ++i) {
+    vertices_[i] = vertices[i];
+  }
+  return true;
+}
+
 S2Shape::Edge S2LaxPolylineShape::edge(int e) const {
   S2_DCHECK_LT(e, num_edges());
-  return Edge(vertices_[e], vertices_[e + 1]);
+  return Edge(vertex(e), vertex(e + 1));
 }
 
 int S2LaxPolylineShape::num_chains() const {
@@ -64,9 +83,36 @@ S2Shape::Chain S2LaxPolylineShape::chain(int i) const {
 S2Shape::Edge S2LaxPolylineShape::chain_edge(int i, int j) const {
   S2_DCHECK_EQ(i, 0);
   S2_DCHECK_LT(j, num_edges());
-  return Edge(vertices_[j], vertices_[j + 1]);
+  return Edge(vertex(j), vertex(j + 1));
 }
 
 S2Shape::ChainPosition S2LaxPolylineShape::chain_position(int e) const {
+  return S2Shape::ChainPosition(0, e);
+}
+
+bool EncodedS2LaxPolylineShape::Init(Decoder* decoder) {
+  return vertices_.Init(decoder);
+}
+
+S2Shape::Edge EncodedS2LaxPolylineShape::edge(int e) const {
+  S2_DCHECK_LT(e, num_edges());
+  return Edge(vertex(e), vertex(e + 1));
+}
+
+int EncodedS2LaxPolylineShape::num_chains() const {
+  return std::min(1, EncodedS2LaxPolylineShape::num_edges());
+}
+
+S2Shape::Chain EncodedS2LaxPolylineShape::chain(int i) const {
+  return Chain(0, EncodedS2LaxPolylineShape::num_edges());
+}
+
+S2Shape::Edge EncodedS2LaxPolylineShape::chain_edge(int i, int j) const {
+  S2_DCHECK_EQ(i, 0);
+  S2_DCHECK_LT(j, num_edges());
+  return Edge(vertex(j), vertex(j + 1));
+}
+
+S2Shape::ChainPosition EncodedS2LaxPolylineShape::chain_position(int e) const {
   return S2Shape::ChainPosition(0, e);
 }

@@ -36,6 +36,7 @@
 #define S2_THIRD_PARTY_ABSL_META_TYPE_TRAITS_H_
 
 #include <cstddef>
+#include <functional>
 #include <type_traits>
 
 #include "s2/third_party/absl/base/config.h"
@@ -72,7 +73,7 @@ struct default_alignment_of_aligned_storage<Len,
 // `std::void_t` metafunction.
 //
 // NOTE: `absl::void_t` does not use the standard-specified implementation so
-// that it can remain compatibile with gcc < 5.1. This can introduce slightly
+// that it can remain compatible with gcc < 5.1. This can introduce slightly
 // different behavior, such as when ordering partial specializations.
 template <typename... Ts>
 using void_t = typename type_traits_internal::VoidTImpl<Ts...>::type;
@@ -193,7 +194,7 @@ struct is_trivially_destructible
 // LWG issue 2116: http://cplusplus.github.io/LWG/lwg-active.html#2116.
 //
 // "T obj();" need to be well-formed and not call any nontrivial operation.
-// Nontrivally destructible types will cause the expression to be nontrivial.
+// Nontrivially destructible types will cause the expression to be nontrivial.
 template <typename T>
 struct is_trivially_default_constructible
     : std::integral_constant<bool, __has_trivial_constructor(T) &&
@@ -224,7 +225,7 @@ struct is_trivially_default_constructible
 // implementation.
 //
 // NOTE: `T obj(declval<const T&>());` needs to be well-formed and not call any
-// nontrivial operation.  Nontrivally destructible types will cause the
+// nontrivial operation.  Nontrivially destructible types will cause the
 // expression to be nontrivial.
 template <typename T>
 struct is_trivially_copy_constructible
@@ -348,6 +349,24 @@ using underlying_type_t = typename std::underlying_type<T>::type;
 
 template <typename T>
 using result_of_t = typename std::result_of<T>::type;
+
+namespace type_traits_internal {
+template <typename Key, typename = size_t>
+struct IsHashable : std::false_type {};
+
+template <typename Key>
+struct IsHashable<Key,
+                  decltype(std::declval<std::hash<Key>>()(std::declval<Key>()))>
+    : std::true_type {};
+
+template <typename Key>
+struct IsHashEnabled
+    : absl::conjunction<std::is_default_constructible<std::hash<Key>>,
+                        std::is_copy_constructible<std::hash<Key>>,
+                        std::is_destructible<std::hash<Key>>,
+                        std::is_copy_assignable<std::hash<Key>>,
+                        IsHashable<Key>> {};
+}  // namespace type_traits_internal
 
 }  // namespace absl
 
