@@ -24,14 +24,23 @@
 
 TEST(S2EarthTest, TestAngleConversion) {
   ASSERT_DOUBLE_EQ(S2Earth::ToAngle(S2Earth::Radius()).radians(), 1);
+  ASSERT_DOUBLE_EQ(S2Earth::ToChordAngle(S2Earth::Radius()).radians(), 1);
   ASSERT_FLOAT_EQ(
       util::units::Meters(S2Earth::ToDistance(S1Angle::Radians(2))).value(),
+      2 * S2Earth::RadiusMeters());
+  ASSERT_FLOAT_EQ(
+      util::units::Meters(S2Earth::ToDistance(S1ChordAngle::Radians(2)))
+          .value(),
       2 * S2Earth::RadiusMeters());
   ASSERT_DOUBLE_EQ(
       S2Earth::ToRadians(util::units::Meters(S2Earth::RadiusMeters())), 1);
   ASSERT_DOUBLE_EQ(S2Earth::ToMeters(S1Angle::Degrees(180)),
                    S2Earth::RadiusMeters() * M_PI);
+  ASSERT_DOUBLE_EQ(S2Earth::ToMeters(S1ChordAngle::Degrees(180)),
+                   S2Earth::RadiusMeters() * M_PI);
   ASSERT_DOUBLE_EQ(S2Earth::ToKm(S1Angle::Radians(0.5)),
+                   0.5 * S2Earth::RadiusKm());
+  ASSERT_DOUBLE_EQ(S2Earth::ToKm(S1ChordAngle::Radians(0.5)),
                    0.5 * S2Earth::RadiusKm());
   ASSERT_DOUBLE_EQ(S2Earth::KmToRadians(S2Earth::RadiusMeters() / 1000), 1);
   ASSERT_DOUBLE_EQ(S2Earth::RadiansToKm(0.5), 0.5 * S2Earth::RadiusKm());
