@@ -29,12 +29,10 @@ namespace {
 // The edges are collected from points, lines, and polygons in that order.
 std::vector<S2Shape::Edge> GetEdges(const S2ShapeIndex* index) {
   std::vector<S2Shape::Edge> result;
-  for (int i = 0; i < index->num_shape_ids(); i++) {
-    if (index->shape(i) == nullptr) {
-      continue;
-    }
-    for (int j = 0; j < index->shape(i)->num_edges(); j++) {
-      result.push_back(index->shape(i)->edge(j));
+  for (S2Shape* shape : *index) {
+    if (shape == nullptr) continue;
+    for (int j = 0; j < shape->num_edges(); ++j) {
+      result.push_back(shape->edge(j));
     }
   }
   return result;

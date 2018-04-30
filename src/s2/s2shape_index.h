@@ -25,6 +25,7 @@
 #include <array>
 #include <atomic>
 #include <cstddef>
+#include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -265,6 +266,36 @@ class S2ShapeIndex {
   // Returns a pointer to the shape with the given id, or nullptr if the shape
   // has been removed from the index.
   virtual S2Shape* shape(int id) const = 0;
+
+  // Allows iterating over the indexed shapes using range-based for loops:
+  //
+  //   for (S2Shape* shape : index) { ... }
+  //
+  // CAVEAT: Returns nullptr for shapes that have been removed from the index.
+  class ShapeIterator
+      : public std::iterator<std::forward_iterator_tag, S2Shape*> {
+   public:
+    ShapeIterator() = default;
+    S2Shape* operator*() const;
+    ShapeIterator& operator++();
+    ShapeIterator operator++(int);
+
+    // REQUIRES: "it" and *this must reference the same S2ShapeIndex.
+    bool operator==(ShapeIterator it) const;
+
+    // REQUIRES: "it" and *this must reference the same S2ShapeIndex.
+    bool operator!=(ShapeIterator it) const;
+
+   private:
+    friend class S2ShapeIndex;
+    ShapeIterator(const S2ShapeIndex* index, int shape_id)
+        : index_(index), shape_id_(shape_id) {}
+
+    const S2ShapeIndex* index_ = nullptr;
+    int shape_id_ = 0;
+  };
+  ShapeIterator begin() const;
+  ShapeIterator end() const;
 
   // Returns the number of bytes currently occupied by the index (including any
   // unused space at the end of vectors, etc).
@@ -603,6 +634,38 @@ inline int S2ShapeIndexCell::num_edges() const {
   int n = 0;
   for (int i = 0; i < num_clipped(); ++i) n += clipped(i).num_edges();
   return n;
+}
+
+inline S2Shape* S2ShapeIndex::ShapeIterator::operator*() const {
+  return index_->shape(shape_id_);
+}
+
+inline S2ShapeIndex::ShapeIterator& S2ShapeIndex::ShapeIterator::operator++() {
+  ++shape_id_;
+  return *this;
+}
+
+inline S2ShapeIndex::ShapeIterator S2ShapeIndex::ShapeIterator::operator++(
+    int) {
+  return ShapeIterator(index_, shape_id_++);
+}
+
+inline bool S2ShapeIndex::ShapeIterator::operator==(ShapeIterator it) const {
+  S2_DCHECK_EQ(index_, it.index_);
+  return shape_id_ == it.shape_id_;
+}
+
+inline bool S2ShapeIndex::ShapeIterator::operator!=(ShapeIterator it) const {
+  S2_DCHECK_EQ(index_, it.index_);
+  return shape_id_ != it.shape_id_;
+}
+
+inline S2ShapeIndex::ShapeIterator S2ShapeIndex::begin() const {
+  return ShapeIterator(this, 0);
+}
+
+inline S2ShapeIndex::ShapeIterator S2ShapeIndex::end() const {
+  return ShapeIterator(this, num_shape_ids());
 }
 
 inline S2ShapeIndex::IteratorBase::IteratorBase(const IteratorBase& other)

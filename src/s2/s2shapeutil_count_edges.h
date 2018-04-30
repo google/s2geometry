@@ -43,10 +43,8 @@ inline int CountEdges(const S2ShapeIndexType& index) {
 
 template <class S2ShapeIndexType>
 int CountEdgesUpTo(const S2ShapeIndexType& index, int max_edges) {
-  const int num_shape_ids = index.num_shape_ids();  // Might be virtual.
   int num_edges = 0;
-  for (int s = 0; s < num_shape_ids; ++s) {
-    S2Shape* shape = index.shape(s);
+  for (S2Shape* shape : index) {
     if (shape == nullptr) continue;
     num_edges += shape->num_edges();
     if (num_edges >= max_edges) break;

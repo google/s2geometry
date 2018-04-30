@@ -120,8 +120,7 @@ TEST(S2ContainsPointQuery, GetContainingShapes) {
   for (int i = 0; i < 100; ++i) {
     S2Point p = S2Testing::SamplePoint(center_cap);
     vector<S2Shape*> expected;
-    for (int j = 0; j < index.num_shape_ids(); ++j) {
-      S2Shape* shape = index.shape(j);
+    for (S2Shape* shape : index) {
       const S2Loop* loop = down_cast<const S2Loop::Shape*>(shape)->loop();
       if (loop->Contains(p)) {
         EXPECT_TRUE(query.ShapeContains(*shape, p));

@@ -159,9 +159,8 @@ bool EncodeTaggedShapes(const S2ShapeIndex& index,
                         const ShapeEncoder& shape_encoder,
                         Encoder* encoder) {
   s2coding::StringVectorEncoder shape_vector;
-  for (int i = 0; i < index.num_shape_ids(); ++i) {
+  for (S2Shape* shape : index) {
     Encoder* sub_encoder = shape_vector.AddViaEncoder();
-    S2Shape* shape = index.shape(i);
     if (shape == nullptr) continue;  // Encode as zero bytes.
 
     uint32 tag = shape->type_tag();

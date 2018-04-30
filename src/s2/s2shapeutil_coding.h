@@ -257,10 +257,9 @@ class HomogeneousShapeFactory : public S2ShapeIndex::ShapeFactory {
 template <class Shape>
 void EncodeHomogeneousShapes(const S2ShapeIndex& index, Encoder* encoder) {
   s2coding::StringVectorEncoder shape_vector;
-  for (int i = 0; i < index.num_shape_ids(); ++i) {
-    Shape* shape = down_cast<Shape*>(index.shape(i));
+  for (S2Shape* shape : index) {
     S2_DCHECK(shape != nullptr);
-    shape->Encode(shape_vector.AddViaEncoder());
+    down_cast<Shape*>(shape)->Encode(shape_vector.AddViaEncoder());
   }
   shape_vector.Encode(encoder);
 }

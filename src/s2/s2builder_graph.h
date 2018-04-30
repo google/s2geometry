@@ -20,6 +20,7 @@
 
 #include <array>
 #include <cstddef>
+#include <iterator>
 #include <utility>
 #include <vector>
 #include "s2/third_party/absl/base/integral_types.h"
@@ -179,7 +180,8 @@ class S2Builder::Graph {
 
   // A helper class for VertexOutMap that represents the outgoing edge *ids*
   // from a given vertex.
-  class VertexOutEdgeIds {
+  class VertexOutEdgeIds
+      : public std::iterator<std::forward_iterator_tag, EdgeId> {
    public:
     // An iterator over a range of edge ids (like boost::counting_iterator).
     class Iterator {

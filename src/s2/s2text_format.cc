@@ -422,8 +422,7 @@ string ToString(const S2ShapeIndex& index) {
   for (int dim = 0; dim < 3; ++dim) {
     if (dim > 0) out += "#";
     int count = 0;
-    for (int s = 0; s < index.num_shape_ids(); ++s) {
-      S2Shape* shape = index.shape(s);
+    for (S2Shape* shape : index) {
       if (shape == nullptr || shape->dimension() != dim) continue;
       out += (count > 0) ? " | " : (dim > 0) ? " " : "";
       for (int i = 0; i < shape->num_chains(); ++i, ++count) {
