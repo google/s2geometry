@@ -301,7 +301,7 @@
 // family of functions as standardized in POSIX.1-2001.
 //
 // Note: While Apple provides <semaphore.h> for both iOS and macOS, it is
-// explicity deprecated and will cause build failures if enabled for those
+// explicitly deprecated and will cause build failures if enabled for those
 // platforms.  We side-step the issue by not defining it here for Apple
 // platforms.
 #ifdef ABSL_HAVE_SEMAPHORE_H
@@ -386,7 +386,7 @@
 
 // ABSL_HAVE_STD_VARIANT
 //
-// Checks whether C++17 std::optional is available.
+// Checks whether C++17 std::variant is available.
 #ifdef ABSL_HAVE_STD_VARIANT
 #error "ABSL_HAVE_STD_VARIANT cannot be directly set."
 #endif
