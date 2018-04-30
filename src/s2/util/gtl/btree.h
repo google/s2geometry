@@ -569,12 +569,6 @@ class btree_node {
   }
   mutable_value_type *mutable_value(int i) { return internal_value(i); }
 
-  // Swap value i in this node with value j in node x.
-  // This should only be used on valid (constructed) values.
-  void value_swap(int i, btree_node *x, int j) {
-    std::iter_swap(mutable_value(i), x->mutable_value(j));
-  }
-
   // Getters/setter for the child at position i in the node.
   btree_node *child(int i) const { return GetField<4>()[i]; }
   btree_node *&mutable_child(int i) { return GetField<4>()[i]; }
@@ -1503,9 +1497,8 @@ inline void btree_node<P>::emplace_value(size_type i, allocator_type *alloc,
                                          Args &&... args) {
   assert(i <= count());
   value_init(count(), alloc, std::forward<Args>(args)...);
-  for (int j = count(); j > i; --j) {
-    value_swap(j, this, j - 1);
-  }
+  std::rotate(mutable_value(i), mutable_value(count()),
+              mutable_value(count() + 1));
   set_count(count() + 1);
 
   if (!leaf()) {
