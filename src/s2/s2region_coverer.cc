@@ -43,7 +43,7 @@ using std::vector;
 // Define storage for header file constants (the values are not needed here).
 constexpr int S2RegionCoverer::Options::kDefaultMaxCells;
 
-S2RegionCoverer::S2RegionCoverer(S2RegionCoverer::Options const& options) :
+S2RegionCoverer::S2RegionCoverer(const S2RegionCoverer::Options& options) :
   options_(options) {
 }
 

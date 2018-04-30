@@ -42,7 +42,7 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
   //
   // Note that the encoded shape vector must *precede* the encoded S2ShapeIndex
   // in the Decoder's data buffer in this example.
-  bool Init(Decoder* decoder, ShapeFactory const& shape_factory);
+  bool Init(Decoder* decoder, const ShapeFactory& shape_factory);
 
   const Options& options() const { return options_; }
 

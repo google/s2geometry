@@ -3017,8 +3017,8 @@ TEST_F(S2PolygonTestBase, IndexContainsOnePolygonShape) {
 
 TEST_F(S2PolygonTestBase, PolygonPolygonDistance) {
   // Verify that the example code for S2Polygon::index() actually works.
-  S2Polygon const& polygon1 = *near_0_;
-  S2Polygon const& polygon2 = *far_10_;
+  const S2Polygon& polygon1 = *near_0_;
+  const S2Polygon& polygon2 = *far_10_;
   S2ClosestEdgeQuery query(&polygon1.index());
   S2ClosestEdgeQuery::ShapeIndexTarget target(&polygon2.index());
   S1ChordAngle distance = query.GetDistance(&target);

@@ -98,7 +98,7 @@ EncodedS2ShapeIndex::~EncodedS2ShapeIndex() {
 }
 
 bool EncodedS2ShapeIndex::Init(Decoder* decoder,
-                               ShapeFactory const& shape_factory) {
+                               const ShapeFactory& shape_factory) {
   Minimize();
   uint64 max_edges_version;
   if (!decoder->get_varint64(&max_edges_version)) return false;
