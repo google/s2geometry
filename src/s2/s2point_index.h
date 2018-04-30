@@ -18,12 +18,14 @@
 #ifndef S2_S2POINT_INDEX_H_
 #define S2_S2POINT_INDEX_H_
 
+#include <tuple>
+#include <type_traits>
 #include "s2/s2cell_id.h"
 #include "s2/util/gtl/btree_map.h"
 
 // S2PointIndex maintains an index of points sorted by leaf S2CellId.  Each
-// point has some associated client-supplied data, such as an integer or
-// pointer.  This can be used to map results back to client data structures.
+// point can optionally store auxiliary data such as an integer or pointer.
+// This can be used to map results back to client data structures.
 //
 // The class supports adding or removing points dynamically, and provides a
 // seekable iterator interface for navigating the index.
@@ -48,15 +50,12 @@
 //   }
 // }
 //
-// Alternatively, you can access the index directly using the iterator
-// interface.  For example, here is how to iterate through all the points in a
-// given S2CellId "target_id":
+// The Data argument defaults to an empty class, which uses no additional
+// space beyond the S2Point itself.  In this case the Data argument is
+// required.  For example:
 //
-//   S2PointIndex<int>::Iterator it(&index);
-//   it.Seek(target_id.range_min());
-//   for (; !it.done() && it.id() <= target_id.range_max(); it.Next()) {
-//     DoSomething(it.id(), it.point(), it.data());
-//   }
+//   S2PointIndex<> index;
+//   index.Add(point);
 //
 // Points can be added or removed from the index at any time by calling Add()
 // or Remove().  However when the index is modified, you must call Init() on
@@ -66,35 +65,47 @@
 //   it.Init(&index);
 //   it.Seek(target.range_min());
 //
-// TODO(ericv): Make this a subtype of S2Region, so that it can also be used
-// to efficiently compute coverings of a collection of S2Points.
+// You can also access the index directly using the iterator interface.  For
+// example, here is how to iterate through all the points in a given S2CellId
+// "target_id":
+//
+//   S2PointIndex<int>::Iterator it(&index);
+//   it.Seek(target_id.range_min());
+//   for (; !it.done() && it.id() <= target_id.range_max(); it.Next()) {
+//     DoSomething(it.id(), it.point(), it.data());
+//   }
+//
+// TODO(ericv): Consider adding an S2PointIndexRegion class, which could be
+// used to efficiently compute coverings of a collection of S2Points.
 //
 // REQUIRES: "Data" has default and copy constructors.
 // REQUIRES: "Data" has operator== and operator<.
-template <class Data>
+template <class Data = std::tuple<> /*empty class*/>
 class S2PointIndex {
  public:
   // PointData is essentially std::pair with named fields.  It stores an
-  // S2Point and its associated client data.
+  // S2Point and its associated data, taking advantage of the "empty base
+  // optimization" to ensure that no extra space is used when Data is empty.
   class PointData {
    public:
     PointData() {}  // Needed by STL
-    PointData(const S2Point& point, const Data& data)
-        : point_(point), data_(data) {
+    PointData(const S2Point& point, const Data& data) : tuple_(point, data) {}
+
+    const S2Point& point() const { return std::get<0>(tuple_); }
+    const Data& data() const { return std::get<1>(tuple_); }
+
+    friend bool operator==(const PointData& x, const PointData& y) {
+      return x.tuple_ == y.tuple_;
     }
-    const S2Point& point() const { return point_; }
-    const Data& data() const { return data_; }
-    bool operator==(const PointData& other) const {
-      return point_ == other.point_ && data_ == other.data_;
+    friend bool operator<(const PointData& x, const PointData& y) {
+      return x.tuple_ < y.tuple_;
     }
-    // Not required by S2PointIndex but useful for tests.
-    bool operator<(const PointData& other) const {
-      return point_ < other.point_ || (point_ == other.point_ &&
-                                       data_ < other.data_);
-    }
+
    private:
-    S2Point point_;
-    Data data_;
+    // Note that std::tuple has special template magic to ensure that Data
+    // doesn't take up any space when it is empty.  (This is not true if you
+    // simply declare a member of type Data.)
+    std::tuple<S2Point, Data> tuple_;
   };
 
   // Default constructor.
@@ -107,11 +118,17 @@ class S2PointIndex {
   void Add(const S2Point& point, const Data& data);
   void Add(const PointData& point_data);
 
+  // Convenience function for the case when Data is an empty class.
+  void Add(const S2Point& point);
+
   // Removes the given point from the index.  Both the "point" and "data"
   // fields must match the point to be removed.  Returns false if the given
   // point was not present.  Invalidates all iterators.
   bool Remove(const S2Point& point, const Data& data);
   bool Remove(const PointData& point_data);
+
+  // Convenience function for the case when Data is an empty class.
+  void Remove(const S2Point& point);
 
   // Resets the index to its original empty state.  Invalidates all iterators.
   void Clear();
@@ -210,6 +227,12 @@ void S2PointIndex<Data>::Add(const S2Point& point, const Data& data) {
 }
 
 template <class Data>
+void S2PointIndex<Data>::Add(const S2Point& point) {
+  static_assert(std::is_empty<Data>::value, "Data must be empty");
+  Add(point, {});
+}
+
+template <class Data>
 bool S2PointIndex<Data>::Remove(const PointData& point_data) {
   S2CellId id(point_data.point());
   for (typename Map::iterator it = map_.lower_bound(id), end = map_.end();
@@ -225,6 +248,12 @@ bool S2PointIndex<Data>::Remove(const PointData& point_data) {
 template <class Data>
 bool S2PointIndex<Data>::Remove(const S2Point& point, const Data& data) {
   return Remove(PointData(point, data));
+}
+
+template <class Data>
+void S2PointIndex<Data>::Remove(const S2Point& point) {
+  static_assert(std::is_empty<Data>::value, "Data must be empty");
+  Remove(point, {});
 }
 
 template <class Data>

@@ -25,7 +25,7 @@
 #include "s2/s2testing.h"
 
 class S2PointIndexTest : public ::testing::Test {
- private:
+ protected:
   using Index = S2PointIndex<int>;
   using PointData = Index::PointData;
   using Contents = std::multiset<PointData>;
@@ -39,12 +39,17 @@ class S2PointIndexTest : public ::testing::Test {
   }
 
   void Remove(const S2Point& point, int data) {
-    index_.Remove(point, data);
     // If there are multiple copies, remove only one.
     contents_.erase(contents_.find(PointData(point, data)));
+    index_.Remove(point, data);  // Invalidates "point".
   }
 
   void Verify() {
+    VerifyContents();
+    VerifyIteratorMethods();
+  }
+
+  void VerifyContents() {
     Contents remaining = contents_;
     for (Index::Iterator it(&index_); !it.done(); it.Next()) {
       Contents::iterator element = remaining.find(it.point_data());
@@ -54,7 +59,7 @@ class S2PointIndexTest : public ::testing::Test {
     EXPECT_TRUE(remaining.empty());
   }
 
-  void TestIteratorMethods() {
+  void VerifyIteratorMethods() {
     Index::Iterator it(&index_);
     EXPECT_FALSE(it.Prev());
     it.Finish();
@@ -66,6 +71,7 @@ class S2PointIndexTest : public ::testing::Test {
     for (it.Begin(); !it.done(); it.Next()) {
       S2CellId cellid = it.id();
       EXPECT_EQ(cellid, S2CellId(it.point()));
+      EXPECT_GE(cellid, prev_cellid);
 
       typename Index::Iterator it2(&index_);
       if (cellid == prev_cellid) {
@@ -75,10 +81,11 @@ class S2PointIndexTest : public ::testing::Test {
       // Generate a cellunion that covers the range of empty leaf cells between
       // the last cell and this one.  Then make sure that seeking to any of
       // those cells takes us to the immediately following cell.
-      auto skipped = S2CellUnion::FromBeginEnd(min_cellid, cellid.range_min());
-      for (S2CellId skipped_id : skipped) {
-        it2.Seek(skipped_id);
-        EXPECT_EQ(cellid, it2.id());
+      if (cellid > prev_cellid) {
+        for (S2CellId skipped : S2CellUnion::FromBeginEnd(min_cellid, cellid)) {
+          it2.Seek(skipped);
+          EXPECT_EQ(cellid, it2.id());
+        }
       }
       // Test Prev(), Next(), and Seek().
       if (prev_cellid.is_valid()) {
@@ -91,19 +98,50 @@ class S2PointIndexTest : public ::testing::Test {
         EXPECT_EQ(prev_cellid, it2.id());
       }
       prev_cellid = cellid;
-      min_cellid = cellid.range_max().next();
+      min_cellid = cellid.next();
     }
   }
 };
 
 TEST_F(S2PointIndexTest, NoPoints) {
-  TestIteratorMethods();
+  Verify();
+}
+
+TEST_F(S2PointIndexTest, DuplicatePoints) {
+  for (int i = 0; i < 10; ++i) {
+    Add(S2Point(1, 0, 0), 123);  // All points have same Data argument.
+  }
+  Verify();
+  // Now remove half of the points.
+  for (int i = 0; i < 5; ++i) {
+    Remove(S2Point(1, 0, 0), 123);
+  }
+  Verify();
 }
 
 TEST_F(S2PointIndexTest, RandomPoints) {
-  for (int i = 0; i < 1000; ++i) {
+  for (int i = 0; i < 100; ++i) {
     Add(S2Testing::RandomPoint(), S2Testing::rnd.Uniform(100));
   }
   Verify();
-  TestIteratorMethods();
+  // Now remove some of the points.
+  for (int i = 0; i < 10; ++i) {
+    S2PointIndex<int>::Iterator it(&index_);
+    do {
+      it.Seek(S2Testing::GetRandomCellId(S2CellId::kMaxLevel));
+    } while (it.done());
+    Remove(it.point(), it.data());
+    Verify();
+  }
+}
+
+TEST(S2PointIndex, EmptyData) {
+  // Verify that when Data is an empty class, no space is used.
+  EXPECT_EQ(sizeof(S2Point), sizeof(S2PointIndex<>::PointData));
+
+  // Verify that points can be added and removed with an empty Data class.
+  S2PointIndex<> index;
+  index.Add(S2Point(1, 0, 0));
+  index.Remove(S2Point(1, 0, 0));
+  EXPECT_EQ(0, index.num_points());
 }
