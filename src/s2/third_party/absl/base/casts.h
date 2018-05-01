@@ -137,7 +137,4 @@ inline Dest bit_cast(const Source& source) {
 
 }  // namespace absl
 
-using absl::bit_cast;
-using absl::implicit_cast;
-
 #endif  // S2_THIRD_PARTY_ABSL_BASE_CASTS_H_
