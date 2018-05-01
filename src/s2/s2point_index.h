@@ -33,20 +33,25 @@
 // You can use this class in conjuction with S2ClosestPointQuery to find the
 // closest index points to a given query point.  For example:
 //
-// void Test(const vector<S2Point>& points, const S2Point& target) {
+// void Test(const vector<S2Point>& index_points,
+//           const vector<S2Point>& target_points) {
 //   // The template argument allows auxiliary data to be attached to each
 //   // point (in this case, the array index).
 //   S2PointIndex<int> index;
-//   for (int i = 0; i < points.size(); ++i) {
-//     index.Add(points[i], i);
+//   for (int i = 0; i < index_points.size(); ++i) {
+//     index.Add(index_points[i], i);
 //   }
 //   S2ClosestPointQuery<int> query(&index);
-//   query.FindClosestPoint(target);
-//   if (query.num_points() > 0) {
-//     // query.point(0) is the closest point (result 0).
-//     // query.distance(0) is the distance to the target.
-//     // query.data(0) is the auxiliary data (the array index set above).
-//     DoSomething(query.point(0), query.data(0), query.distance(0));
+//   query.mutable_options()->set_max_points(5);
+//   for (const S2Point& target_point : target_points) {
+//     S2ClosestPointQueryPointTarget target(target_point);
+//     for (const auto& result : query.FindClosestPoints(&target)) {
+//       // The Result class contains the following methods:
+//       //   distance() is the distance to the target.
+//       //   point() is the indexed point.
+//       //   data() is the auxiliary data.
+//       DoSomething(target_point, result);
+//     }
 //   }
 // }
 //

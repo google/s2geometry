@@ -152,8 +152,8 @@ class S2ClosestPointQueryShapeIndexTarget final :
 //   // The template argument allows auxiliary data to be attached to each
 //   // point (in this case, the array index).
 //   S2PointIndex<int> index;
-//   for (const S2Point& point : index_points) {
-//     index.Add(point, i);
+//   for (int i = 0; i < index_points.size(); ++i) {
+//     index.Add(index_points[i], i);
 //   }
 //   S2ClosestPointQuery<int> query(&index);
 //   query.mutable_options()->set_max_points(5);
