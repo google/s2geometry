@@ -31,6 +31,7 @@
 #include "s2/third_party/absl/strings/string_view.h"
 #include "s2/s2debug.h"
 #include "s2/s2latlng_rect.h"
+#include "s2/s2point_span.h"
 
 class S2LatLng;
 class S2Loop;
@@ -237,6 +238,7 @@ string ToString(const S2Point& point);
 string ToString(const S2LatLngRect& rect);
 string ToString(const S2LatLng& latlng);
 string ToString(const S2Loop& loop);
+string ToString(S2PointLoopSpan loop);
 string ToString(const S2Polyline& polyline);
 string ToString(const S2Polygon& polygon);
 string ToString(const std::vector<S2Point>& points);

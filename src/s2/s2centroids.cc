@@ -23,13 +23,11 @@
 
 namespace S2 {
 
-S2Point PlanarCentroid(const S2Point& a, const S2Point& b,
-                       const S2Point& c) {
+S2Point PlanarCentroid(const S2Point& a, const S2Point& b, const S2Point& c) {
   return (1./3) * (a + b + c);
 }
 
-S2Point TrueCentroid(const S2Point& a, const S2Point& b,
-                     const S2Point& c) {
+S2Point TrueCentroid(const S2Point& a, const S2Point& b, const S2Point& c) {
   S2_DCHECK(IsUnitLength(a));
   S2_DCHECK(IsUnitLength(b));
   S2_DCHECK(IsUnitLength(c));
@@ -56,6 +54,9 @@ S2Point TrueCentroid(const S2Point& a, const S2Point& b,
   // other two rows; this reduces the cancellation error when A, B, and C are
   // very close together.  Then we solve it using Cramer's rule.
   //
+  // The result is the true centroid of the triangle multiplied by the
+  // triangle's area.
+  //
   // TODO(ericv): This code still isn't as numerically stable as it could be.
   // The biggest potential improvement is to compute B-A and C-A more
   // accurately so that (B-A)x(C-A) is always inside triangle ABC.
@@ -66,6 +67,18 @@ S2Point TrueCentroid(const S2Point& a, const S2Point& b,
   return 0.5 * S2Point(y.CrossProd(z).DotProd(r),
                        z.CrossProd(x).DotProd(r),
                        x.CrossProd(y).DotProd(r));
+}
+
+S2Point TrueCentroid(const S2Point& a, const S2Point& b) {
+  // The centroid (multiplied by length) is a vector toward the midpoint
+  // of the edge, whose length is twice the sine of half the angle between
+  // the two vertices.  Defining theta to be this angle, we have:
+  S2Point vdiff = a - b;  // Length == 2*sin(theta)
+  S2Point vsum = a + b;   // Length == 2*cos(theta)
+  double sin2 = vdiff.Norm2();
+  double cos2 = vsum.Norm2();
+  if (cos2 == 0) return S2Point();  // Ignore antipodal edges.
+  return sqrt(sin2 / cos2) * vsum;  // Length == 2*sin(theta)
 }
 
 }  // namespace S2

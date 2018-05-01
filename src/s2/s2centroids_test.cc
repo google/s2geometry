@@ -20,10 +20,12 @@
 #include <gtest/gtest.h>
 #include "s2/s2testing.h"
 
-TEST(S2, TrueCentroid) {
+namespace {
+
+TEST(TriangleTrueCentroid, SmallTriangles) {
   // Test TrueCentroid() with very small triangles.  This test assumes that
   // the triangle is small enough so that it is nearly planar.
-  for (int i = 0; i < 100; ++i) {
+  for (int iter = 0; iter < 100; ++iter) {
     Vector3_d p, x, y;
     S2Testing::GetRandomFrame(&p, &x, &y);
     double d = 1e-4 * pow(1e-4, S2Testing::rnd.RandDouble());
@@ -38,3 +40,43 @@ TEST(S2, TrueCentroid) {
     EXPECT_LE(centroid.Angle(expected_centroid), 2e-8);
   }
 }
+
+TEST(EdgeTrueCentroid, SemiEquator) {
+  // Test the centroid of polyline ABC that follows the equator and consists
+  // of two 90 degree edges (i.e., C = -A).  The centroid (multiplied by
+  // length) should point toward B and have a norm of 2.0.  (The centroid
+  // itself has a norm of 2/Pi, and the total edge length is Pi.)
+  S2Point a(0, -1, 0), b(1, 0, 0), c(0, 1, 0);
+  S2Point centroid = S2::TrueCentroid(a, b) + S2::TrueCentroid(b, c);
+  EXPECT_TRUE(S2::ApproxEquals(b, centroid.Normalize()));
+  EXPECT_DOUBLE_EQ(2.0, centroid.Norm());
+}
+
+TEST(EdgeTrueCentroid, GreatCircles) {
+  // Construct random great circles and divide them randomly into segments.
+  // Then make sure that the centroid is approximately at the center of the
+  // sphere.  Note that because of the way the centroid is computed, it does
+  // not matter how we split the great circle into segments.
+  //
+  // Note that this is a direct test of the properties that the centroid
+  // should have, rather than a test that it matches a particular formula.
+
+  for (int iter = 0; iter < 100; ++iter) {
+    // Choose a coordinate frame for the great circle.
+    S2Point x, y, z, centroid;
+    S2Testing::GetRandomFrame(&x, &y, &z);
+
+    S2Point v0 = x;
+    for (double theta = 0; theta < 2 * M_PI;
+         theta += pow(S2Testing::rnd.RandDouble(), 10)) {
+      S2Point v1 = cos(theta) * x + sin(theta) * y;
+      centroid += S2::TrueCentroid(v0, v1);
+      v0 = v1;
+    }
+    // Close the circle.
+    centroid += S2::TrueCentroid(v0, x);
+    EXPECT_LE(centroid.Norm(), 2e-14);
+  }
+}
+
+}  // namespace

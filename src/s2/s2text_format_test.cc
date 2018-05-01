@@ -117,6 +117,11 @@ TEST(ToString, FullLoop) {
   EXPECT_EQ("full", s2textformat::ToString(full));
 }
 
+TEST(ToString, FullLoopSpan) {
+  vector<S2Point> points;
+  EXPECT_EQ("full", s2textformat::ToString(S2PointLoopSpan(points)));
+}
+
 TEST(ToString, EmptyPolyline) {
   S2Polyline polyline;
   EXPECT_EQ("", s2textformat::ToString(polyline));

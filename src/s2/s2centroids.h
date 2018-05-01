@@ -51,21 +51,36 @@
 
 namespace S2 {
 
-// Return the centroid of the planar triangle ABC.  This can be normalized
-// to unit length to obtain the "surface centroid" of the corresponding
-// spherical triangle, i.e. the intersection of the three medians.  However,
-// note that for large spherical triangles the surface centroid may be
-// nowhere near the intuitive "center" (see example above).
-S2Point PlanarCentroid(const S2Point& a, const S2Point& b,
-                       const S2Point& c);
+// Returns the centroid of the planar triangle ABC.  This can be normalized to
+// unit length to obtain the "surface centroid" of the corresponding spherical
+// triangle, i.e. the intersection of the three medians.  However, note that
+// for large spherical triangles the surface centroid may be nowhere near the
+// intuitive "center" (see example above).
+S2Point PlanarCentroid(const S2Point& a, const S2Point& b, const S2Point& c);
 
 // Returns the true centroid of the spherical triangle ABC multiplied by the
-// signed area of spherical triangle ABC.  The reasons for multiplying by
-// the signed area are (1) this is the quantity that needs to be summed to
-// compute the centroid of a union or difference of triangles, and (2) it's
-// actually easier to calculate this way.  All points must have unit length.
-S2Point TrueCentroid(const S2Point& a, const S2Point& b,
-                     const S2Point& c);
+// signed area of spherical triangle ABC.  The reasons for multiplying by the
+// signed area are (1) this is the quantity that needs to be summed to compute
+// the centroid of a union or difference of triangles, and (2) it's actually
+// easier to calculate this way.  All points must have unit length.
+//
+// Note that the result of this function is defined to be S2Point(0, 0, 0) if
+// the triangle is degenerate (and that this is intended behavior).
+S2Point TrueCentroid(const S2Point& a, const S2Point& b, const S2Point& c);
+
+// Returns the true centroid of the spherical geodesic edge AB multiplied by
+// the length of the edge AB.  As with triangles, the true centroid of a
+// collection of edges may be computed simply by summing the result of this
+// method for each edge.
+//
+// Note that the planar centroid of a geodesic edge simply 0.5 * (a + b),
+// while the surface centroid is (a + b).Normalize().  However neither of
+// these values is appropriate for computing the centroid of a collection of
+// edges (such as a polyline).
+//
+// Also note that the result of this function is defined to be S2Point(0, 0, 0)
+// if the edge is degenerate (and that this is intended behavior).
+S2Point TrueCentroid(const S2Point& a, const S2Point& b);
 
 }  // namespace S2
 

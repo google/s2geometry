@@ -113,6 +113,7 @@ add_library(s2 SHARED
             src/s2/s2lax_polygon_shape.cc
             src/s2/s2lax_polyline_shape.cc
             src/s2/s2loop.cc
+            src/s2/s2loop_measures.cc
             src/s2/s2measures.cc
             src/s2/s2metrics.cc
             src/s2/s2max_distance_targets.cc
@@ -124,6 +125,7 @@ add_library(s2 SHARED
             src/s2/s2polygon.cc
             src/s2/s2polyline.cc
             src/s2/s2polyline_alignment.cc
+            src/s2/s2polyline_measures.cc
             src/s2/s2polyline_simplifier.cc
             src/s2/s2predicates.cc
             src/s2/s2projections.cc
@@ -135,6 +137,8 @@ add_library(s2 SHARED
             src/s2/s2region_union.cc
             src/s2/s2shape_index.cc
             src/s2/s2shape_index_buffered_region.cc
+            src/s2/s2shape_index_measures.cc
+            src/s2/s2shape_measures.cc
             src/s2/s2shapeutil_build_polygon_boundaries.cc
             src/s2/s2shapeutil_coding.cc
             src/s2/s2shapeutil_contains_brute_force.cc
@@ -242,6 +246,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2lax_polygon_shape.h
               src/s2/s2lax_polyline_shape.h
               src/s2/s2loop.h
+              src/s2/s2loop_measures.h
               src/s2/s2measures.h
               src/s2/s2metrics.h
               src/s2/s2max_distance_targets.h
@@ -252,10 +257,12 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2point_compression.h
               src/s2/s2point_index.h
               src/s2/s2point_region.h
+              src/s2/s2point_span.h
               src/s2/s2pointutil.h
               src/s2/s2polygon.h
               src/s2/s2polyline.h
               src/s2/s2polyline_alignment.h
+              src/s2/s2polyline_measures.h
               src/s2/s2polyline_simplifier.h
               src/s2/s2predicates_internal.h
               src/s2/s2predicates.h
@@ -270,6 +277,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2shape_index.h
               src/s2/s2shape_index_buffered_region.h
               src/s2/s2shape_index_region.h
+              src/s2/s2shape_measures.h
               src/s2/s2shapeutil_build_polygon_boundaries.h
               src/s2/s2shapeutil_coding.h
               src/s2/s2shapeutil_contains_brute_force.h
@@ -424,6 +432,7 @@ if (GTEST_ROOT)
       src/s2/s2lax_loop_shape_test.cc
       src/s2/s2lax_polygon_shape_test.cc
       src/s2/s2lax_polyline_shape_test.cc
+      src/s2/s2loop_measures_test.cc
       src/s2/s2loop_test.cc
       src/s2/s2measures_test.cc
       src/s2/s2metrics_test.cc
@@ -439,6 +448,7 @@ if (GTEST_ROOT)
       src/s2/s2polygon_test.cc
       src/s2/s2polyline_alignment_test.cc
       src/s2/s2polyline_simplifier_test.cc
+      src/s2/s2polyline_measures_test.cc
       src/s2/s2polyline_test.cc
       src/s2/s2predicates_test.cc
       src/s2/s2projections_test.cc
@@ -448,8 +458,10 @@ if (GTEST_ROOT)
       src/s2/s2region_coverer_test.cc
       src/s2/s2region_union_test.cc
       src/s2/s2shape_index_buffered_region_test.cc
+      src/s2/s2shape_index_measures_test.cc
       src/s2/s2shape_index_region_test.cc
       src/s2/s2shape_index_test.cc
+      src/s2/s2shape_measures_test.cc
       src/s2/s2shapeutil_build_polygon_boundaries_test.cc
       src/s2/s2shapeutil_coding_test.cc
       src/s2/s2shapeutil_contains_brute_force_test.cc

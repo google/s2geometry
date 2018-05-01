@@ -361,6 +361,17 @@ string ToString(const S2Loop& loop) {
   return out;
 }
 
+string ToString(S2PointLoopSpan loop) {
+  // S2Shape represents the full loop as a loop with no vertices.
+  // There is no representation of the empty loop.
+  if (loop.empty()) {
+    return "full";
+  }
+  string out;
+  AppendVertices(loop.data(), loop.size(), &out);
+  return out;
+}
+
 string ToString(const S2Polyline& polyline) {
   string out;
   if (polyline.num_vertices() > 0) {
