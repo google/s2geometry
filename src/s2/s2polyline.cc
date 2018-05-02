@@ -26,6 +26,7 @@
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
+#include "s2/third_party/absl/utility/utility.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -53,16 +54,14 @@ S2Polyline::S2Polyline()
 
 S2Polyline::S2Polyline(S2Polyline&& other)
   : s2debug_override_(other.s2debug_override_),
-    num_vertices_(other.num_vertices_),
+    num_vertices_(absl::exchange(other.num_vertices_, 0)),
     vertices_(std::move(other.vertices_)) {
-  other.num_vertices_ = 0;
 }
 
 S2Polyline& S2Polyline::operator=(S2Polyline&& other) {
   s2debug_override_ = other.s2debug_override_;
-  num_vertices_ = other.num_vertices_;
+  num_vertices_ = absl::exchange(other.num_vertices_, 0);
   vertices_ = std::move(other.vertices_);
-  other.num_vertices_ = 0;
   return *this;
 }
 
