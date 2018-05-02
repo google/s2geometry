@@ -34,6 +34,7 @@
 #include "s2/s1chord_angle.h"
 #include "s2/s2debug.h"
 #include "s2/s2latlng_rect.h"
+#include "s2/s2loop_measures.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2region.h"
 #include "s2/s2shape_index.h"
@@ -195,13 +196,13 @@ class S2Loop final : public S2Region {
     return vertices_[j];
   }
 
-  // Return true if this is the special empty loop that contains no points.
+  // Returns true if this is the special empty loop that contains no points.
   bool is_empty() const;
 
-  // Return true if this is the special full loop that contains all points.
+  // Returns true if this is the special full loop that contains all points.
   bool is_full() const;
 
-  // Return true if this loop is either empty or full.
+  // Returns true if this loop is either empty or full.
   bool is_empty_or_full() const;
 
   // The depth of a loop is defined as its nesting level within its containing
@@ -211,14 +212,14 @@ class S2Loop final : public S2Region {
   int depth() const { return depth_; }
   void set_depth(int depth) { depth_ = depth; }
 
-  // Return true if this loop represents a hole in its containing polygon.
+  // Returns true if this loop represents a hole in its containing polygon.
   bool is_hole() const { return (depth_ & 1) != 0; }
 
   // The sign of a loop is -1 if the loop represents a hole in its containing
   // polygon, and +1 otherwise.
   int sign() const { return is_hole() ? -1 : 1; }
 
-  // Return true if the loop area is at most 2*Pi.  Degenerate loops are
+  // Returns true if the loop area is at most 2*Pi.  Degenerate loops are
   // handled consistently with s2pred::Sign(), i.e., if a loop can be
   // expressed as the union of degenerate or nearly-degenerate CCW triangles,
   // then it will always be considered normalized.
@@ -235,12 +236,12 @@ class S2Loop final : public S2Region {
   // direction has been reversed.
   void Invert();
 
-  // Return the area of the loop interior, i.e. the region on the left side of
+  // Returns the area of the loop interior, i.e. the region on the left side of
   // the loop.  The return value is between 0 and 4*Pi.  (Note that the return
   // value is not affected by whether this loop is a "hole" or a "shell".)
   double GetArea() const;
 
-  // Return the true centroid of the loop multiplied by the area of the loop
+  // Returns the true centroid of the loop multiplied by the area of the loop
   // (see s2centroids.h for details on centroids).  The result is not unit
   // length, so you may want to normalize it.  Also note that in general, the
   // centroid may not be contained by the loop.
@@ -254,25 +255,26 @@ class S2Loop final : public S2Region {
   // "hole" or a "shell".
   S2Point GetCentroid() const;
 
-  // Return the sum of the turning angles at each vertex.  The return value is
-  // positive if the loop is counter-clockwise, negative if the loop is
-  // clockwise, and zero if the loop is a great circle.  Degenerate and
-  // nearly-degenerate loops are handled consistently with s2pred::Sign().
-  // So for example, if a loop has zero area (i.e., it is a very small CCW
-  // loop) then the turning angle will always be negative.
+  // Returns the geodesic curvature of the loop, defined as the sum of the turn
+  // angles at each vertex (see S2::TurnAngle).  The result is positive if the
+  // loop is counter-clockwise, negative if the loop is clockwise, and zero if
+  // the loop is a great circle.  The geodesic curvature is equal to 2*Pi minus
+  // the area of the loop.
   //
-  // This quantity is also called the "geodesic curvature" of the loop.
-  double GetTurningAngle() const;
+  // Degenerate and nearly-degenerate loops are handled consistently with
+  // s2pred::Sign().  So for example, if a loop has zero area (i.e., it is a
+  // very small CCW loop) then its geodesic curvature will always be positive.
+  double GetCurvature() const;
 
-  // Return the maximum error in GetTurningAngle().  The return value is not
+  // Returns the maximum error in GetCurvature().  The return value is not
   // constant; it depends on the loop.
-  double GetTurningAngleMaxError() const;
+  double GetCurvatureMaxError() const;
 
-  // Return the distance from the given point to the loop interior.  If the
+  // Returns the distance from the given point to the loop interior.  If the
   // loop is empty, return S1Angle::Infinity().  "x" should be unit length.
   S1Angle GetDistance(const S2Point& x) const;
 
-  // Return the distance from the given point to the loop boundary.  If the
+  // Returns the distance from the given point to the loop boundary.  If the
   // loop is empty or full, return S1Angle::Infinity() (since the loop has no
   // boundary).  "x" should be unit length.
   S1Angle GetDistanceToBoundary(const S2Point& x) const;
@@ -283,37 +285,37 @@ class S2Loop final : public S2Region {
   // loop.  "x" should be unit length.
   S2Point Project(const S2Point& x) const;
 
-  // Return the closest point on the loop boundary to the given point.  If the
+  // Returns the closest point on the loop boundary to the given point.  If the
   // loop is empty or full, return the input argument (since the loop has no
   // boundary).  "x" should be unit length.
   S2Point ProjectToBoundary(const S2Point& x) const;
 
-  // Return true if the region contained by this loop is a superset of the
+  // Returns true if the region contained by this loop is a superset of the
   // region contained by the given other loop.
   bool Contains(const S2Loop* b) const;
 
-  // Return true if the region contained by this loop intersects the region
+  // Returns true if the region contained by this loop intersects the region
   // contained by the given other loop.
   bool Intersects(const S2Loop* b) const;
 
-  // Return true if two loops have the same vertices in the same linear order
+  // Returns true if two loops have the same vertices in the same linear order
   // (i.e., cyclic rotations are not allowed).
   bool Equals(const S2Loop* b) const;
 
-  // Return true if two loops have the same boundary.  This is true if and
+  // Returns true if two loops have the same boundary.  This is true if and
   // only if the loops have the same vertices in the same cyclic order (i.e.,
   // the vertices may be cyclically rotated).  The empty and full loops are
   // considered to have different boundaries.
   bool BoundaryEquals(const S2Loop* b) const;
 
-  // Return true if two loops have the same boundary except for vertex
+  // Returns true if two loops have the same boundary except for vertex
   // perturbations.  More precisely, the vertices in the two loops must be in
   // the same cyclic order, and corresponding vertex pairs must be separated
   // by no more than "max_error".
   bool BoundaryApproxEquals(const S2Loop& b,
                             S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
-  // Return true if the two loop boundaries are within "max_error" of each
+  // Returns true if the two loop boundaries are within "max_error" of each
   // other along their entire lengths.  The two loops may have different
   // numbers of vertices.  More precisely, this method returns true if the two
   // loops have parameterizations a:[0,1] -> S^2, b:[0,1] -> S^2 such that
@@ -367,7 +369,7 @@ class S2Loop final : public S2Region {
                                                  S1Angle radius,
                                                  int num_vertices);
 
-  // Returns the total number of bytes used by the loop.
+  // Returnss the total number of bytes used by the loop.
   size_t SpaceUsed() const;
 
   ////////////////////////////////////////////////////////////////////////
@@ -420,7 +422,7 @@ class S2Loop final : public S2Region {
   // (although they may have shared vertices).
   bool ContainsNested(const S2Loop* b) const;
 
-  // Return +1 if A contains the boundary of B, -1 if A excludes the boundary
+  // Returns +1 if A contains the boundary of B, -1 if A excludes the boundary
   // of B, and 0 if the boundaries of A and B cross.  Shared edges are handled
   // as follows: If XY is a shared edge, define Reversed(XY) to be true if XY
   // appears in opposite directions in A and B.  Then A contains XY if and
@@ -519,7 +521,13 @@ class S2Loop final : public S2Region {
   // its argument.
   S2Loop(const S2Loop& src);
 
-  // Return true if this loop contains S2::Origin().
+  // Returns an S2PointLoopSpan containing the loop vertices, for use with the
+  // functions defined in s2loop_measures.h.
+  S2PointLoopSpan vertices_span() const {
+    return S2PointLoopSpan(vertices_, num_vertices());
+  }
+
+  // Returns true if this loop contains S2::Origin().
   bool contains_origin() const { return origin_inside_; }
 
   // The single vertex in the "empty loop" vertex chain.
@@ -578,7 +586,7 @@ class S2Loop final : public S2Region {
   bool Contains(const MutableS2ShapeIndex::Iterator& it,
                 const S2Point& p) const;
 
-  // Return true if the loop boundary intersects "target".  It may also
+  // Returns true if the loop boundary intersects "target".  It may also
   // return true when the loop boundary does not intersect "target" but
   // some edge comes within the worst-case error tolerance.
   //
@@ -587,15 +595,13 @@ class S2Loop final : public S2Region {
   bool BoundaryApproxIntersects(const MutableS2ShapeIndex::Iterator& it,
                                 const S2Cell& target) const;
 
-  // Return an index "first" and a direction "dir" (either +1 or -1) such that
-  // the vertex sequence (first, first+dir, ..., first+(n-1)*dir) does not
-  // change when the loop vertex order is rotated or inverted.  This allows
-  // the loop vertices to be traversed in a canonical order.  The return
-  // values are chosen such that (first, ..., first+n*dir) are in the range
-  // [0, 2*n-1] as expected by the vertex() method.
-  int GetCanonicalFirstVertex(int* dir) const;
+  // Returns an index "first" and a direction "dir" such that the vertex
+  // sequence (first, first + dir, ..., first + (n - 1) * dir) does not change
+  // when the loop vertex order is rotated or reversed.  This allows the loop
+  // vertices to be traversed in a canonical order.
+  S2::LoopOrder GetCanonicalLoopOrder() const;
 
-  // Return the index of a vertex at point "p", or -1 if not found.
+  // Returns the index of a vertex at point "p", or -1 if not found.
   // The return value is in the range 1..num_vertices_ if found.
   int FindVertex(const S2Point& p) const;
 
@@ -699,90 +705,7 @@ inline bool S2Loop::is_empty_or_full() const {
 template <class T>
 T S2Loop::GetSurfaceIntegral(T f_tri(const S2Point&, const S2Point&,
                                      const S2Point&)) const {
-  // We sum "f_tri" over a collection T of oriented triangles, possibly
-  // overlapping.  Let the sign of a triangle be +1 if it is CCW and -1
-  // otherwise, and let the sign of a point "x" be the sum of the signs of the
-  // triangles containing "x".  Then the collection of triangles T is chosen
-  // such that either:
-  //
-  //  (1) Each point in the loop interior has sign +1, and sign 0 otherwise; or
-  //  (2) Each point in the loop exterior has sign -1, and sign 0 otherwise.
-  //
-  // The triangles basically consist of a "fan" from vertex 0 to every loop
-  // edge that does not include vertex 0.  These triangles will always satisfy
-  // either (1) or (2).  However, what makes this a bit tricky is that
-  // spherical edges become numerically unstable as their length approaches
-  // 180 degrees.  Of course there is not much we can do if the loop itself
-  // contains such edges, but we would like to make sure that all the triangle
-  // edges under our control (i.e., the non-loop edges) are stable.  For
-  // example, consider a loop around the equator consisting of four equally
-  // spaced points.  This is a well-defined loop, but we cannot just split it
-  // into two triangles by connecting vertex 0 to vertex 2.
-  //
-  // We handle this type of situation by moving the origin of the triangle fan
-  // whenever we are about to create an unstable edge.  We choose a new
-  // location for the origin such that all relevant edges are stable.  We also
-  // create extra triangles with the appropriate orientation so that the sum
-  // of the triangle signs is still correct at every point.
-
-  // The maximum length of an edge for it to be considered numerically stable.
-  // The exact value is fairly arbitrary since it depends on the stability of
-  // the "f_tri" function.  The value below is quite conservative but could be
-  // reduced further if desired.
-  const auto kMaxLength = S1ChordAngle::Radians(M_PI - 1e-5);
-
-  // The default constructor for T must initialize the value to zero.
-  // (This is true for built-in types such as "double".)
-  T sum = T();
-  S2Point origin = vertex(0);
-  for (int i = 1; i + 1 < num_vertices(); ++i) {
-    // Let V_i be vertex(i), let O be the current origin, and let length(A,B)
-    // be the length of edge (A,B).  At the start of each loop iteration, the
-    // "leading edge" of the triangle fan is (O,V_i), and we want to extend
-    // the triangle fan so that the leading edge is (O,V_i+1).
-    //
-    // Invariants:
-    //  1. length(O,V_i) < kMaxLength for all (i > 1).
-    //  2. Either O == V_0, or O is approximately perpendicular to V_0.
-    //  3. "sum" is the oriented integral of f over the area defined by
-    //     (O, V_0, V_1, ..., V_i).
-    S2_DCHECK(i == 1 || S1ChordAngle(origin, vertex(i)) < kMaxLength);
-    S2_DCHECK(origin == vertex(0) || std::fabs(origin.DotProd(vertex(0))) < 1e-15);
-
-    if (S1ChordAngle(vertex(i + 1), origin) > kMaxLength) {
-      // We are about to create an unstable edge, so choose a new origin O'
-      // for the triangle fan.
-      S2Point old_origin = origin;
-      if (origin == vertex(0)) {
-        // The following point is well-separated from V_i and V_0 (and
-        // therefore V_i+1 as well).
-        origin = S2::RobustCrossProd(vertex(0), vertex(i)).Normalize();
-      } else if (S1ChordAngle(vertex(i), vertex(0)) < kMaxLength) {
-        // All edges of the triangle (O, V_0, V_i) are stable, so we can
-        // revert to using V_0 as the origin.
-        origin = vertex(0);
-      } else {
-        // (O, V_i+1) and (V_0, V_i) are antipodal pairs, and O and V_0 are
-        // perpendicular.  Therefore V_0.CrossProd(O) is approximately
-        // perpendicular to all of {O, V_0, V_i, V_i+1}, and we can choose
-        // this point O' as the new origin.
-        origin = vertex(0).CrossProd(old_origin);
-
-        // Advance the edge (V_0,O) to (V_0,O').
-        sum += f_tri(vertex(0), old_origin, origin);
-      }
-      // Advance the edge (O,V_i) to (O',V_i).
-      sum += f_tri(old_origin, vertex(i), origin);
-    }
-    // Advance the edge (O,V_i) to (O,V_i+1).
-    sum += f_tri(origin, vertex(i), vertex(i+1));
-  }
-  // If the origin is not V_0, we need to sum one more triangle.
-  if (origin != vertex(0)) {
-    // Advance the edge (O,V_n-1) to (O,V_0).
-    sum += f_tri(origin, vertex(num_vertices() - 1), vertex(0));
-  }
-  return sum;
+  return S2::GetSurfaceIntegral(vertices_span(), f_tri);
 }
 
 #endif  // S2_S2LOOP_H_

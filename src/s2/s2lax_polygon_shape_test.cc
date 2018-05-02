@@ -31,6 +31,7 @@
 #include "s2/s2text_format.h"
 
 using absl::make_unique;
+using s2textformat::MakePolygonOrDie;
 using std::unique_ptr;
 using std::vector;
 
@@ -142,8 +143,22 @@ TEST(S2LaxPolygonShape, MultiLoopPolygon) {
   EXPECT_FALSE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
 }
 
+TEST(S2LaxPolygonShape, MultiLoopS2Polygon) {
+  // Verify that the orientation of loops representing holes is reversed when
+  // converting from an S2Polygon to an S2LaxPolygonShape.
+  auto polygon = MakePolygonOrDie("0:0, 0:3, 3:3; 1:1, 1:2, 2:2");
+  S2LaxPolygonShape shape(*polygon);
+  for (int i = 0; i < polygon->num_loops(); ++i) {
+    S2Loop* loop = polygon->loop(i);
+    for (int j = 0; j < loop->num_vertices(); ++j) {
+      EXPECT_EQ(loop->oriented_vertex(j),
+                shape.loop_vertex(i, j));
+    }
+  }
+}
+
 TEST(S2LaxPolygonShape, ManyLoopPolygon) {
-  // Test a polygon enough loops so that cumulative_vertices_ is used.
+  // Test a polygon with enough loops so that cumulative_vertices_ is used.
   vector<vector<S2Point>> loops;
   for (int i = 0; i < 100; ++i) {
     S2Point center(S2LatLng::FromDegrees(0, i));

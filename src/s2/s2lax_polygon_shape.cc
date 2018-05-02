@@ -57,6 +57,15 @@ void S2LaxPolygonShape::Init(const S2Polygon& polygon) {
     }
   }
   Init(spans);
+
+  // S2Polygon and S2LaxPolygonShape holes are oriented oppositely, so we need
+  // to reverse the orientation of any loops representing holes.
+  for (int i = 0; i < polygon.num_loops(); ++i) {
+    if (polygon.loop(i)->is_hole()) {
+      S2Point* v0 = &vertices_[cumulative_vertices_[i]];
+      std::reverse(v0, v0 + num_loop_vertices(i));
+    }
+  }
 }
 
 void S2LaxPolygonShape::Init(const vector<Span<const S2Point>>& loops) {

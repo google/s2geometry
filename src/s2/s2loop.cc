@@ -350,11 +350,7 @@ bool S2Loop::IsNormalized() const {
   // loop covers less than half the sphere and is therefore normalized.
   if (bound_.lng().GetLength() < M_PI) return true;
 
-  // We allow some error so that hemispheres are always considered normalized.
-  // TODO(ericv): This is no longer required by the S2Polygon implementation,
-  // so alternatively we could create the invariant that a loop is normalized
-  // if and only if its complement is not normalized.
-  return GetTurningAngle() >= -GetTurningAngleMaxError();
+  return S2::IsNormalized(vertices_span());
 }
 
 void S2Loop::Normalize() {
@@ -383,128 +379,20 @@ void S2Loop::Invert() {
 }
 
 double S2Loop::GetArea() const {
-  // It is suprisingly difficult to compute the area of a loop robustly.  The
-  // main issues are (1) whether degenerate loops are considered to be CCW or
-  // not (i.e., whether their area is close to 0 or 4*Pi), and (2) computing
-  // the areas of small loops with good relative accuracy.
-  //
-  // With respect to degeneracies, we would like GetArea() to be consistent
-  // with S2Loop::Contains(S2Point) in that loops that contain many points
-  // should have large areas, and loops that contain few points should have
-  // small areas.  For example, if a degenerate triangle is considered CCW
-  // according to s2pred::Sign(), then it will contain very few points and
-  // its area should be approximately zero.  On the other hand if it is
-  // considered clockwise, then it will contain virtually all points and so
-  // its area should be approximately 4*Pi.
-
-  // More precisely, let U be the set of S2Points for which S2::IsUnitLength()
-  // is true, let P(U) be the projection of those points onto the mathematical
-  // unit sphere, and let V(P(U)) be the Voronoi diagram of the projected
-  // points.  Then for every loop x, we would like GetArea() to approximately
-  // equal the sum of the areas of the Voronoi regions of the points p for
-  // which x.Contains(p) is true.
-  //
-  // The second issue is that we want to compute the area of small loops
-  // accurately.  This requires having good relative precision rather than
-  // good absolute precision.  For example, if the area of a loop is 1e-12 and
-  // the error is 1e-15, then the area only has 3 digits of accuracy.  (For
-  // reference, 1e-12 is about 40 square meters on the surface of the earth.)
-  // We would like to have good relative accuracy even for small loops.
-  //
-  // To achieve these goals, we combine two different methods of computing the
-  // area.  This first method is based on the Gauss-Bonnet theorem, which says
-  // that the area enclosed by the loop equals 2*Pi minus the total geodesic
-  // curvature of the loop (i.e., the sum of the "turning angles" at all the
-  // loop vertices).  The big advantage of this method is that as long as we
-  // use s2pred::Sign() to compute the turning angle at each vertex, then
-  // degeneracies are always handled correctly.  In other words, if a
-  // degenerate loop is CCW according to the symbolic perturbations used by
-  // s2pred::Sign(), then its turning angle will be approximately 2*Pi.
-  //
-  // The disadvantage of the Gauss-Bonnet method is that its absolute error is
-  // about 2e-15 times the number of vertices (see GetTurningAngleMaxError).
-  // So, it cannot compute the area of small loops accurately.
-  //
-  // The second method is based on splitting the loop into triangles and
-  // summing the area of each triangle.  To avoid the difficulty and expense
-  // of decomposing the loop into a union of non-overlapping triangles,
-  // instead we compute a signed sum over triangles that may overlap (see the
-  // comments for S2Loop::GetSurfaceIntegral).  The advantage of this method
-  // is that the area of each triangle can be computed with much better
-  // relative accuracy (using l'Huilier's theorem).  The disadvantage is that
-  // the result is a signed area: CCW loops may yield a small positive value,
-  // while CW loops may yield a small negative value (which is converted to a
-  // positive area by adding 4*Pi).  This means that small errors in computing
-  // the signed area may translate into a very large error in the result (if
-  // the sign of the sum is incorrect).
-  //
-  // So, our strategy is to combine these two methods as follows.  First we
-  // compute the area using the "signed sum over triangles" approach (since it
-  // is generally more accurate).  We also estimate the maximum error in this
-  // result.  If the signed area is too close to zero (i.e., zero is within
-  // the error bounds), then we double-check the sign of the result using the
-  // Gauss-Bonnet method.  (In fact we just call IsNormalized(), which is
-  // based on this method.)  If the two methods disagree, we return either 0
-  // or 4*Pi based on the result of IsNormalized().  Otherwise we return the
-  // area that we computed originally.
-
+  // S2Loop has its own convention for empty and full loops.
   if (is_empty_or_full()) {
     return contains_origin() ? (4 * M_PI) : 0;
   }
-  double area = GetSurfaceIntegral(S2::SignedArea);
-
-  // TODO(ericv): This error estimate is very approximate.  There are two
-  // issues: (1) SignedArea needs some improvements to ensure that its error
-  // is actually never higher than GirardArea, and (2) although the number of
-  // triangles in the sum is typically N-2, in theory it could be as high as
-  // 2*N for pathological inputs.  But in other respects this error bound is
-  // very conservative since it assumes that the maximum error is achieved on
-  // every triangle.
-  double max_error = GetTurningAngleMaxError();
-
-  // The signed area should be between approximately -4*Pi and 4*Pi.
-  S2_DCHECK_LE(fabs(area), 4 * M_PI + max_error);
-  if (area < 0) {
-    // We have computed the negative of the area of the loop exterior.
-    area += 4 * M_PI;
-  }
-  area = max(0.0, min(4 * M_PI, area));
-
-  // If the area is close enough to zero or 4*Pi so that the loop orientation
-  // is ambiguous, then we compute the loop orientation explicitly.
-  if (area < max_error && !IsNormalized()) {
-    return 4 * M_PI;
-  } else if (area > (4 * M_PI - max_error) && IsNormalized()) {
-    return 0.0;
-  } else {
-    return area;
-  }
+  return S2::GetArea(vertices_span());
 }
 
 S2Point S2Loop::GetCentroid() const {
-  // GetSurfaceIntegral() returns either the integral of position over loop
-  // interior, or the negative of the integral of position over the loop
-  // exterior.  But these two values are the same (!), because the integral of
-  // position over the entire sphere is (0, 0, 0).
-  return GetSurfaceIntegral(S2::TrueCentroid);
+  // Empty and full loops are handled correctly.
+  return S2::GetCentroid(vertices_span());
 }
 
-// Return (first, dir) such that first..first+n*dir are valid indices.
-int S2Loop::GetCanonicalFirstVertex(int* dir) const {
-  int first = 0;
-  int n = num_vertices();
-  for (int i = 1; i < n; ++i) {
-    if (vertex(i) < vertex(first)) first = i;
-  }
-  if (vertex(first + 1) < vertex(first + n - 1)) {
-    *dir = 1;
-    // 0 <= first <= n-1, so (first+n*dir) <= 2*n-1.
-  } else {
-    *dir = -1;
-    first += n;
-    // n <= first <= 2*n-1, so (first+n*dir) >= 0.
-  }
-  return first;
+S2::LoopOrder S2Loop::GetCanonicalLoopOrder() const {
+  return S2::GetCanonicalLoopOrder(vertices_span());
 }
 
 S1Angle S2Loop::GetDistance(const S2Point& x) const {
@@ -535,53 +423,17 @@ S2Point S2Loop::ProjectToBoundary(const S2Point& x) const {
   return q.Project(x, edge);
 }
 
-double S2Loop::GetTurningAngle() const {
-  // For empty and full loops, we return the limit value as the loop area
-  // approaches 0 or 4*Pi respectively.
+double S2Loop::GetCurvature() const {
+  // S2Loop has its own convention for empty and full loops.  For such loops,
+  // we return the limit value as the area approaches 0 or 4*Pi respectively.
   if (is_empty_or_full()) {
     return contains_origin() ? (-2 * M_PI) : (2 * M_PI);
   }
-  // Don't crash even if the loop is not well-defined.
-  if (num_vertices() < 3) return 0;
-
-  // To ensure that we get the same result when the vertex order is rotated,
-  // and that the result is negated when the vertex order is reversed, we need
-  // to add up the individual turn angles in a consistent order.  (In general,
-  // adding up a set of numbers in a different order can change the sum due to
-  // rounding errors.)
-  //
-  // Furthermore, if we just accumulate an ordinary sum then the worst-case
-  // error is quadratic in the number of vertices.  (This can happen with
-  // spiral shapes, where the partial sum of the turning angles can be linear
-  // in the number of vertices.)  To avoid this we use the Kahan summation
-  // algorithm (http://en.wikipedia.org/wiki/Kahan_summation_algorithm).
-
-  int n = num_vertices();
-  int dir, i = GetCanonicalFirstVertex(&dir);
-  double sum = S2::TurnAngle(vertex((i + n - dir) % n), vertex(i),
-                             vertex((i + dir) % n));
-  double compensation = 0;  // Kahan summation algorithm
-  while (--n > 0) {
-    i += dir;
-    double angle = S2::TurnAngle(vertex(i - dir), vertex(i), vertex(i + dir));
-    double old_sum = sum;
-    angle += compensation;
-    sum += angle;
-    compensation = (old_sum - sum) + angle;
-  }
-  return dir * (sum + compensation);
+  return S2::GetCurvature(vertices_span());
 }
 
-double S2Loop::GetTurningAngleMaxError() const {
-  // The maximum error can be bounded as follows:
-  //   2.24 * DBL_EPSILON    for RobustCrossProd(b, a)
-  //   2.24 * DBL_EPSILON    for RobustCrossProd(c, b)
-  //   3.25 * DBL_EPSILON    for Angle()
-  //   2.00 * DBL_EPSILON    for each addition in the Kahan summation
-  //   ------------------
-  //   9.73 * DBL_EPSILON
-  const double kMaxErrorPerVertex = 9.73 * DBL_EPSILON;
-  return kMaxErrorPerVertex * num_vertices();
+double S2Loop::GetCurvatureMaxError() const {
+  return S2::GetCurvatureMaxError(vertices_span());
 }
 
 S2Cap S2Loop::GetCapBound() const {

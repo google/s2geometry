@@ -301,8 +301,6 @@ class S2ClosestPointQuery {
   // are guaranteed to not intersect after snapping.
   bool IsConservativeDistanceLessOrEqual(Target* target, S1ChordAngle limit);
 
-  ///////////////////////// Deprecated Methods //////////////////////////
-
  private:
   Options options_;
   Base base_;

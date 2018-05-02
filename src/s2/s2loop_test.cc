@@ -277,14 +277,14 @@ static void Rotate(unique_ptr<S2Loop>* ptr) {
   ptr->reset(new S2Loop(vertices));
 }
 
-TEST_F(S2LoopTestBase, AreaConsistentWithTurningAngle) {
+TEST_F(S2LoopTestBase, AreaConsistentWithCurvature) {
   // Check that the area computed using GetArea() is consistent with the
-  // turning angle of the loop computed using GetTurnAngle().  According to
+  // curvature of the loop computed using GetTurnAngle().  According to
   // the Gauss-Bonnet theorem, the area of the loop should be equal to 2*Pi
-  // minus its turning angle.
+  // minus its curvature.
   for (const S2Loop* loop : all_loops) {
     double area = loop->GetArea();
-    double gauss_area = 2 * M_PI - loop->GetTurningAngle();
+    double gauss_area = 2 * M_PI - loop->GetCurvature();
     // TODO(ericv): The error bound below is much larger than it should be.
     // Need to improve the error minimization analysis in S2::Area().
     EXPECT_LE(fabs(area - gauss_area), 1e-9)
@@ -380,43 +380,43 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
   }
 }
 
-// Check that the turning angle is *identical* when the vertex order is
+// Check that the curvature is *identical* when the vertex order is
 // rotated, and that the sign is inverted when the vertices are reversed.
-static void CheckTurningAngleInvariants(const S2Loop& loop) {
-  double expected = loop.GetTurningAngle();
+static void CheckCurvatureInvariants(const S2Loop& loop) {
+  double expected = loop.GetCurvature();
   unique_ptr<S2Loop> loop_copy(loop.Clone());
   for (int i = 0; i < loop.num_vertices(); ++i) {
     loop_copy->Invert();
-    EXPECT_EQ(-expected, loop_copy->GetTurningAngle());
+    EXPECT_EQ(-expected, loop_copy->GetCurvature());
     loop_copy->Invert();
     Rotate(&loop_copy);
-    EXPECT_EQ(expected, loop_copy->GetTurningAngle());
+    EXPECT_EQ(expected, loop_copy->GetCurvature());
   }
 }
 
-TEST_F(S2LoopTestBase, GetTurningAngle) {
-  EXPECT_EQ(2 * M_PI, empty_->GetTurningAngle());
-  EXPECT_EQ(-2 * M_PI, full_->GetTurningAngle());
+TEST_F(S2LoopTestBase, GetCurvature) {
+  EXPECT_EQ(2 * M_PI, empty_->GetCurvature());
+  EXPECT_EQ(-2 * M_PI, full_->GetCurvature());
 
-  EXPECT_NEAR(0, north_hemi3_->GetTurningAngle(), 1e-15);
-  CheckTurningAngleInvariants(*north_hemi3_);
+  EXPECT_NEAR(0, north_hemi3_->GetCurvature(), 1e-15);
+  CheckCurvatureInvariants(*north_hemi3_);
 
-  EXPECT_NEAR(0, west_hemi_->GetTurningAngle(), 1e-15);
-  CheckTurningAngleInvariants(*west_hemi_);
+  EXPECT_NEAR(0, west_hemi_->GetCurvature(), 1e-15);
+  CheckCurvatureInvariants(*west_hemi_);
 
-  // We don't have an easy way to estimate the turning angle of this loop, but
+  // We don't have an easy way to estimate the curvature of this loop, but
   // we can still check that the expected invariants hold.
-  CheckTurningAngleInvariants(*candy_cane_);
+  CheckCurvatureInvariants(*candy_cane_);
 
-  EXPECT_DOUBLE_EQ(2 * M_PI, line_triangle_->GetTurningAngle());
-  CheckTurningAngleInvariants(*line_triangle_);
+  EXPECT_DOUBLE_EQ(2 * M_PI, line_triangle_->GetCurvature());
+  CheckCurvatureInvariants(*line_triangle_);
 
-  EXPECT_DOUBLE_EQ(2 * M_PI, skinny_chevron_->GetTurningAngle());
-  CheckTurningAngleInvariants(*skinny_chevron_);
+  EXPECT_DOUBLE_EQ(2 * M_PI, skinny_chevron_->GetCurvature());
+  CheckCurvatureInvariants(*skinny_chevron_);
 
   // Build a narrow spiral loop starting at the north pole.  This is designed
-  // to test that the error in GetTurningAngle is linear in the number of
-  // vertices even when the partial sum of the turning angles gets very large.
+  // to test that the error in GetCurvature is linear in the number of
+  // vertices even when the partial sum of the curvatures gets very large.
   // The spiral consists of two "arms" defining opposite sides of the loop.
   const int kArmPoints = 10000;    // Number of vertices in each "arm"
   const double kArmRadius = 0.01;  // Radius of spiral.
@@ -435,14 +435,14 @@ TEST_F(S2LoopTestBase, GetTurningAngle) {
   // takes tens of seconds to validate in debug mode.
   S2Loop spiral(vertices, S2Debug::DISABLE);
 
-  // Check that GetTurningAngle() is consistent with GetArea() to within the
+  // Check that GetCurvature() is consistent with GetArea() to within the
   // error bound of the former.  We actually use a tiny fraction of the
   // worst-case error bound, since the worst case only happens when all the
   // roundoff errors happen in the same direction and this test is not
   // designed to achieve that.  The error in GetArea() can be ignored for the
   // purposes of this test since it is generally much smaller.
-  EXPECT_NEAR(2 * M_PI - spiral.GetArea(), spiral.GetTurningAngle(),
-              0.01 * spiral.GetTurningAngleMaxError());
+  EXPECT_NEAR(2 * M_PI - spiral.GetArea(), spiral.GetCurvature(),
+              0.01 * spiral.GetCurvatureMaxError());
 }
 
 // Checks that if a loop is normalized, it doesn't contain a

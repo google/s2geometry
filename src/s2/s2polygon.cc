@@ -375,8 +375,8 @@ void S2Polygon::InitOriented(vector<unique_ptr<S2Loop>> loops) {
   //    we will fix that problem later.
   //
   //    We make the loops nestable by first normalizing all the loops (i.e.,
-  //    inverting any loops whose turning angle is negative).  This handles
-  //    all loops except those whose turning angle is very close to zero
+  //    inverting any loops whose curvature is negative).  This handles
+  //    all loops except those whose curvature is very close to zero
   //    (within the maximum error tolerance).  Any such loops are inverted if
   //    and only if they contain S2::Origin().  (In theory this step is only
   //    necessary if there are at least two such loops.)  The resulting set of
@@ -396,7 +396,7 @@ void S2Polygon::InitOriented(vector<unique_ptr<S2Loop>> loops) {
   //
   // 5. If (L originally contained origin) != (polygon contains origin), we
   //    invert the polygon.  This is done by inverting a top-level shell whose
-  //    turning angle is minimal and then fixing the nesting hierarchy.  Note
+  //    curvature is minimal and then fixing the nesting hierarchy.  Note
   //    that because we normalized all the loops initially, this step is only
   //    necessary if the polygon requires at least one non-normalized loop to
   //    represent it.
@@ -407,8 +407,8 @@ void S2Polygon::InitOriented(vector<unique_ptr<S2Loop>> loops) {
     if (loop->contains_origin()) {
       contained_origin.insert(loop);
     }
-    double angle = loop->GetTurningAngle();
-    if (fabs(angle) > loop->GetTurningAngleMaxError()) {
+    double angle = loop->GetCurvature();
+    if (fabs(angle) > loop->GetCurvatureMaxError()) {
       // Normalize the loop.
       if (angle < 0) loop->Invert();
     } else {
@@ -784,10 +784,11 @@ int S2Polygon::CompareLoops(const S2Loop* a, const S2Loop* b) {
   if (a->num_vertices() != b->num_vertices()) {
     return a->num_vertices() - b->num_vertices();
   }
-  int a_dir, ai = a->GetCanonicalFirstVertex(&a_dir);
-  int b_dir, bi = b->GetCanonicalFirstVertex(&b_dir);
-  if (a_dir != b_dir) return a_dir - b_dir;
-  for (int n = a->num_vertices(); --n >= 0; ai += a_dir, bi += b_dir) {
+  S2::LoopOrder ao = a->GetCanonicalLoopOrder();
+  S2::LoopOrder bo = b->GetCanonicalLoopOrder();
+  if (ao.dir != bo.dir) return ao.dir - bo.dir;
+  for (int n = a->num_vertices(), ai = ao.first, bi = bo.first;
+       --n >= 0; ai += ao.dir, bi += bo.dir) {
     if (a->vertex(ai) < b->vertex(bi)) return -1;
     if (a->vertex(ai) > b->vertex(bi)) return 1;
   }
@@ -807,19 +808,19 @@ void S2Polygon::Invert() {
   } else if (is_full()) {
     ClearLoops();
   } else {
-    // Find the loop whose area is largest (i.e., whose turning angle is
-    // smallest), minimizing calls to GetTurningAngle().  In particular, for
+    // Find the loop whose area is largest (i.e., whose curvature is
+    // smallest), minimizing calls to GetCurvature().  In particular, for
     // polygons with a single shell at level 0 there is not need to call
-    // GetTurningAngle() at all.  (This method is relatively expensive.)
+    // GetCurvature() at all.  (This method is relatively expensive.)
     int best = 0;
     const double kNone = 10.0;  // Flag that means "not computed yet"
     double best_angle = kNone;
     for (int i = 1; i < num_loops(); ++i) {
       if (loop(i)->depth() == 0) {
-        // We defer computing the turning angle of loop 0 until we discover
+        // We defer computing the curvature of loop 0 until we discover
         // that the polygon has another top-level shell.
-        if (best_angle == kNone) best_angle = loop(best)->GetTurningAngle();
-        double angle = loop(i)->GetTurningAngle();
+        if (best_angle == kNone) best_angle = loop(best)->GetCurvature();
+        double angle = loop(i)->GetCurvature();
         // We break ties deterministically in order to avoid having the output
         // depend on the input order of the loops.
         if (angle < best_angle ||
