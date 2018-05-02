@@ -140,7 +140,7 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
   for (int i = 0; i < size; ++i) {
     if (bin[i] != 0) {
       int bits = 0;
-      for (char w = bin[i]; (w & 1) == 0; w >>= 1) {
+      for (unsigned char w = bin[i]; (w & 1) == 0; w >>= 1) {
         ++bits;
       }
       return i * 8 + bits;
