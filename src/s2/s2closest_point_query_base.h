@@ -633,7 +633,7 @@ void S2ClosestPointQueryBase<Distance, Data>::InitQueue() {
     initial_cells = &intersection_with_max_distance_;
   }
   iter_.Begin();
-  for (int i = 0; i < initial_cells->size() && !iter_.done(); ++i) {
+  for (unsigned i = 0; i < initial_cells->size() && !iter_.done(); ++i) {
     S2CellId id = (*initial_cells)[i];
     EnqueueCell(id, &iter_, id.range_min() > iter_.id() /*seek*/);
   }

@@ -324,9 +324,9 @@ void Graph::CanonicalizeLoopOrder(const vector<InputEdgeId>& min_input_ids,
   // This has the advantage that if an undirected loop is assembled with the
   // wrong orientation and later inverted (e.g. by S2Polygon::InitOriented),
   // we still end up preserving the original cyclic vertex order.
-  int pos = 0;
+  unsigned  pos = 0;
   bool saw_gap = false;
-  for (int i = 1; i < loop->size(); ++i) {
+  for (unsigned  i = 1; i < loop->size(); ++i) {
     int cmp = min_input_ids[(*loop)[i]] - min_input_ids[(*loop)[pos]];
     if (cmp < 0) {
       saw_gap = true;
@@ -663,7 +663,7 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildPaths() {
   // is labeled with an input edge id.)
   vector<EdgePolyline> polylines;
   vector<EdgeId> edges = g_.GetInputEdgeOrder(min_input_ids_);
-  for (int i = 0; i < edges.size(); ++i) {
+  for (unsigned i = 0; i < edges.size(); ++i) {
     EdgeId e = edges[i];
     if (!used_[e] && !is_interior(g_.edge(e).first)) {
       polylines.push_back(BuildPath(e));
@@ -675,7 +675,7 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildPaths() {
   // direction of undirected loops.  Even so, we still need to canonicalize
   // the edge order to ensure that when an input edge is split into an edge
   // chain, the loop does not start in the middle of such a chain.
-  for (int i = 0; i < edges.size() && edges_left_ > 0; ++i) {
+  for (unsigned i = 0; i < edges.size() && edges_left_ > 0; ++i) {
     EdgeId e = edges[i];
     if (used_[e]) continue;
     EdgePolyline polyline = BuildPath(e);
@@ -751,7 +751,7 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildWalks() {
   // start from the edge with minimum input edge id.  If the minimal input
   // edge was split into several edges, then we start from the first edge of
   // the chain.
-  for (int i = 0; i < edges.size() && edges_left_ > 0; ++i) {
+  for (unsigned i = 0; i < edges.size() && edges_left_ > 0; ++i) {
     EdgeId e = edges[i];
     if (used_[e]) continue;
 
@@ -762,7 +762,7 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildWalks() {
     VertexId v = g_.edge(e).first;
     InputEdgeId id = min_input_ids_[e];
     int excess = 0;
-    for (int j = i; j < edges.size() && min_input_ids_[edges[j]] == id; ++j) {
+    for (unsigned j = i; j < edges.size() && min_input_ids_[edges[j]] == id; ++j) {
       EdgeId e2 = edges[j];
       if (used_[e2]) continue;
       if (g_.edge(e2).first == v) ++excess;
@@ -1067,7 +1067,7 @@ vector<S2Point> Graph::FilterVertices(const vector<S2Point>& vertices,
   vector<VertexId>& vmap = *tmp;
   vmap.resize(vertices.size());
   vector<S2Point> new_vertices(used.size());
-  for (int i = 0; i < used.size(); ++i) {
+  for (unsigned i = 0; i < used.size(); ++i) {
     new_vertices[i] = vertices[used[i]];
     vmap[used[i]] = i;
   }

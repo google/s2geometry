@@ -1490,7 +1490,7 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   if (!decoder->get_varint32(&num_loops)) return false;
   if (num_loops > FLAGS_s2polygon_decode_max_num_loops) return false;
   loops_.reserve(num_loops);
-  for (int i = 0; i < num_loops; ++i) {
+  for (unsigned i = 0; i < num_loops; ++i) {
     auto loop = make_unique<S2Loop>();
     loop->set_s2debug_override(s2debug_override());
     if (!loop->DecodeCompressed(decoder, snap_level)) {

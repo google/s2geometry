@@ -725,7 +725,7 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
   if (index_covering_.empty()) InitCovering();
   if (distance_limit_ == Distance::Infinity()) {
     // Start with the precomputed index covering.
-    for (int i = 0; i < index_covering_.size(); ++i) {
+    for (unsigned i = 0; i < index_covering_.size(); ++i) {
       EnqueueCell(index_covering_[i], index_cells_[i]);
     }
   } else {
@@ -742,7 +742,7 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
     // Now we need to clean up the initial cells to ensure that they all
     // contain at least one cell of the S2ShapeIndex.  (Some may not intersect
     // the index at all, while other may be descendants of an index cell.)
-    for (int i = 0, j = 0; i < initial_cells_.size(); ) {
+    for (unsigned i = 0, j = 0; i < initial_cells_.size(); ) {
       S2CellId id_i = initial_cells_[i];
       // Find the top-level cell that contains this initial cell.
       while (index_covering_[j].range_max() < id_i) ++j;

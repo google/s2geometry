@@ -352,7 +352,7 @@ bool S2DecodePointsCompressed(Decoder* decoder, int level,
   NthDerivativeCoder pi_coder(kDerivativeEncodingOrder);
   NthDerivativeCoder qi_coder(kDerivativeEncodingOrder);
   Faces::Iterator faces_iterator = faces.GetIterator();
-  for (int i = 0; i < points.size(); ++i) {
+  for (unsigned i = 0; i < points.size(); ++i) {
     pair<int, int> vertex_pi_qi;
     if (i == 0) {
       if (!DecodeFirstPointFixedLength(decoder, level, &pi_coder, &qi_coder,
