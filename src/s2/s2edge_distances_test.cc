@@ -147,6 +147,18 @@ TEST(S2, Distance) {
                 M_PI, S2Point(1, 0, 0));
 }
 
+TEST(S2, DistanceOptimizationIsConservative) {
+  // Verifies that AlwaysUpdateMinInteriorDistance() computes the lower bound
+  // on the true distance conservatively.  (This test used to fail.)
+  S2Point x(-0.017952729194524016, -0.30232422079175203, 0.95303607751077712);
+  S2Point a(-0.017894725505830295, -0.30229974986194175, 0.95304493075220664);
+  S2Point b(-0.017986591360900289, -0.30233851195954353, 0.95303090543659963);
+  S1ChordAngle min_distance = S1ChordAngle::Infinity();
+  EXPECT_TRUE(S2::UpdateMinDistance(x, a, b, &min_distance));
+  min_distance = min_distance.Successor();
+  EXPECT_TRUE(S2::UpdateMinDistance(x, a, b, &min_distance));
+}
+
 void CheckMaxDistance(S2Point x, S2Point a, S2Point b,
                       double distance_radians) {
   x = x.Normalize();

@@ -124,8 +124,11 @@ inline bool AlwaysUpdateMinInteriorDistance(
   double c2 = c.Norm2();
   double x_dot_c = x.DotProd(c);
   double x_dot_c2 = x_dot_c * x_dot_c;
-  if (!always_update && x_dot_c2 >= c2 * min_dist->length2()) {
-    // The closest point on the great circle AB is too far away.
+  if (!always_update && x_dot_c2 > c2 * min_dist->length2()) {
+    // The closest point on the great circle AB is too far away.  We need to
+    // test this using ">" rather than ">=" because the actual minimum bound
+    // on the distance is (x_dot_c2 / c2), which can be rounded differently
+    // than the (more efficient) multiplicative test above.
     return false;
   }
   // Otherwise we do the exact, more expensive test for the interior case.
