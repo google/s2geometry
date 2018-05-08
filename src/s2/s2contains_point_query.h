@@ -293,7 +293,7 @@ bool S2ContainsPointQuery<IndexType>::ShapeContains(
   const int num_edges = clipped.num_edges();
   if (num_edges > 0) {
     const S2Shape& shape = *index_->shape(clipped.shape_id());
-    if (!shape.has_interior()) {
+    if (shape.dimension() < 2) {
       // Points and polylines can be ignored unless the vertex model is CLOSED.
       if (options_.vertex_model() != S2VertexModel::CLOSED) return false;
 

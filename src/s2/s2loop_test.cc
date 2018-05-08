@@ -1343,7 +1343,6 @@ TEST(S2LoopShape, Basic) {
   EXPECT_EQ(2, shape.dimension());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 

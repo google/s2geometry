@@ -56,7 +56,7 @@ static bool GetReferencePointAtVertex(
 
 // See documentation in header file.
 S2Shape::ReferencePoint GetReferencePoint(const S2Shape& shape) {
-  S2_DCHECK(shape.has_interior());
+  S2_DCHECK_EQ(shape.dimension(), 2);
   if (shape.num_edges() == 0) {
     // A shape with no edges is defined to be full if and only if it
     // contains at least one chain.

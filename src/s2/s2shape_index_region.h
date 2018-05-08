@@ -267,7 +267,7 @@ bool S2ShapeIndexRegion<IndexType>::Contains(const S2Cell& target) const {
       if (clipped.num_edges() == 0 && clipped.contains_center()) return true;
     } else {
       // It is faster to call AnyEdgeIntersects() before Contains().
-      if (index().shape(clipped.shape_id())->has_interior() &&
+      if (index().shape(clipped.shape_id())->dimension() == 2 &&
           !AnyEdgeIntersects(clipped, target) &&
           contains_query_.ShapeContains(iter_, clipped, target.GetCenter())) {
         return true;

@@ -200,7 +200,7 @@ unique_ptr<S2Shape> MutableS2ShapeIndex::Release(int shape_id) {
     pending_removals_->push_back(RemovedShape());
     RemovedShape* removed = &pending_removals_->back();
     removed->shape_id = shape->id();
-    removed->has_interior = shape->has_interior();
+    removed->has_interior = (shape->dimension() == 2);
     removed->contains_tracker_origin =
         s2shapeutil::ContainsBruteForce(*shape, kInteriorTrackerOrigin());
     int num_edges = shape->num_edges();
@@ -254,7 +254,7 @@ struct MutableS2ShapeIndex::FaceEdge {
   int32 shape_id;      // The shape that this edge belongs to
   int32 edge_id;       // Edge id within that shape
   int32 max_level;     // Not desirable to subdivide this edge beyond this level
-  bool has_interior;   // Belongs to a shape that has an interior
+  bool has_interior;   // Belongs to a shape of dimension 2.
   R2Point a, b;        // The edge endpoints, clipped to a given face
   S2Shape::Edge edge;  // The edge endpoints
 };
@@ -306,7 +306,7 @@ class MutableS2ShapeIndex::InteriorTracker {
   // for every edge of the shape that might cross the current DrawTo() line.
   // This updates the state to correspond to the new focus point.
   //
-  // REQUIRES: shape->has_interior()
+  // REQUIRES: shape->dimension() == 2
   void AddShape(int32 shape_id, bool is_inside);
 
   // Moves the focus to the given point.  This method should only be used when
@@ -321,7 +321,7 @@ class MutableS2ShapeIndex::InteriorTracker {
 
   // Indicates that the given edge of the given shape may cross the line
   // segment between the old and new focus locations (see DrawTo).
-  // REQUIRES: shape->has_interior()
+  // REQUIRES: shape->dimension() == 2
   inline void TestEdge(int32 shape_id, const S2Shape::Edge& edge);
 
   // The set of shape ids that contain the current focus.
@@ -807,7 +807,7 @@ void MutableS2ShapeIndex::AddShape(int id, vector<FaceEdge> all_edges[6],
   // Construct a template for the edges to be added.
   FaceEdge edge;
   edge.shape_id = id;
-  edge.has_interior = shape->has_interior();
+  edge.has_interior = (shape->dimension() == 2);
   if (edge.has_interior) {
     tracker->AddShape(id, s2shapeutil::ContainsBruteForce(*shape,
                                                           tracker->focus()));
@@ -1310,7 +1310,7 @@ void MutableS2ShapeIndex::AbsorbIndexCell(const S2PaddedCell& pcell,
     // line segment from the cell center to the entry vertex.
     FaceEdge edge;
     edge.shape_id = shape->id();
-    edge.has_interior = shape->has_interior();
+    edge.has_interior = (shape->dimension() == 2);
     if (edge.has_interior) {
       tracker->AddShape(shape_id, clipped.contains_center());
       // There might not be any edges in this entire cell (i.e., it might be

@@ -2956,7 +2956,6 @@ void TestPolygonShape(const S2Polygon& polygon) {
     }
   }
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_EQ(polygon.Contains(S2::Origin()),

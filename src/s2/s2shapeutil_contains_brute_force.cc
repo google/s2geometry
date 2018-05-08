@@ -23,7 +23,7 @@
 namespace s2shapeutil {
 
 bool ContainsBruteForce(const S2Shape& shape, const S2Point& point) {
-  if (!shape.has_interior()) return false;
+  if (shape.dimension() < 2) return false;
 
   S2Shape::ReferencePoint ref_point = shape.GetReferencePoint();
   if (ref_point.point == point) return ref_point.contained;

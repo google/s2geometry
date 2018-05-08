@@ -42,7 +42,6 @@ TEST(S2LaxPolygonShape, EmptyPolygon) {
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(0, shape.num_chains());
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_TRUE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(shape.GetReferencePoint().contained);
@@ -55,7 +54,6 @@ TEST(S2LaxPolygonShape, FullPolygon) {
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(1, shape.num_chains());
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_TRUE(shape.is_full());
   EXPECT_TRUE(shape.GetReferencePoint().contained);
@@ -78,7 +76,6 @@ TEST(S2LaxPolygonShape, SingleVertexPolygon) {
   EXPECT_EQ(loops[0][0], edge.v1);
   EXPECT_TRUE(edge == shape.chain_edge(0, 0));
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(shape.GetReferencePoint().contained);
@@ -104,7 +101,6 @@ TEST(S2LaxPolygonShape, SingleLoopPolygon) {
     EXPECT_EQ(edge.v1, shape.chain_edge(0, i).v1);
   }
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
@@ -137,7 +133,6 @@ TEST(S2LaxPolygonShape, MultiLoopPolygon) {
   EXPECT_EQ(num_vertices, shape.num_vertices());
   EXPECT_EQ(num_vertices, shape.num_edges());
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));

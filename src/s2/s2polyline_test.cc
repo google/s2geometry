@@ -429,7 +429,6 @@ TEST(S2PolylineShape, Basic) {
   EXPECT_EQ(1, shape.dimension());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
-  EXPECT_FALSE(shape.has_interior());
   EXPECT_FALSE(shape.GetReferencePoint().contained);
 }
 

@@ -1838,7 +1838,7 @@ bool S2BooleanOperation::Impl::ProcessIncidentEdges(
 bool S2BooleanOperation::Impl::HasInterior(const S2ShapeIndex& index) {
   for (int s = index.num_shape_ids(); --s >= 0; ) {
     S2Shape* shape = index.shape(s);
-    if (shape && shape->has_interior()) return true;
+    if (shape && shape->dimension() == 2) return true;
   }
   return false;
 }
