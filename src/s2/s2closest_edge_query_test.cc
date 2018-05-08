@@ -33,7 +33,6 @@
 #include "s2/s2edge_distances.h"
 #include "s2/s2loop.h"
 #include "s2/s2metrics.h"
-#include "s2/s2edge_vector_shape.h"
 #include "s2/s2point_vector_shape.h"
 #include "s2/s2polygon.h"
 #include "s2/s2predicates.h"
@@ -60,8 +59,9 @@ TEST(S2ClosestEdgeQuery, NoEdges) {
   S2ClosestEdgeQuery::PointTarget target(S2Point(1, 0, 0));
   const auto edge = query.FindClosestEdge(&target);
   EXPECT_EQ(S1ChordAngle::Infinity(), edge.distance);
-  EXPECT_EQ(-1, edge.edge_id);
   EXPECT_EQ(-1, edge.shape_id);
+  EXPECT_EQ(-1, edge.edge_id);
+  EXPECT_TRUE(edge.is_empty());
   EXPECT_EQ(S1ChordAngle::Infinity(), query.GetDistance(&target));
 }
 
@@ -301,17 +301,18 @@ static const S1Angle kTestCapRadius = S2Testing::KmToAngle(10);
 // distances (say, less than Pi/2) due to using S1ChordAngle.
 static const double kTestChordAngleError = 1e-15;
 
-using Result = pair<S2MinDistance, s2shapeutil::ShapeEdgeId>;
+using TestingResult = pair<S2MinDistance, s2shapeutil::ShapeEdgeId>;
 
-// Converts to the format required by CheckDistanceResults() in s2testing.h
-vector<Result> ConvertResults(const vector<S2ClosestEdgeQuery::Result>& edges) {
-  vector<Result> results;
-  for (const auto& edge : edges) {
-    results.push_back(
-        make_pair(edge.distance,
-                  s2shapeutil::ShapeEdgeId(edge.shape_id, edge.edge_id)));
+// Converts to the format required by CheckDistanceResults() in s2testing.h.
+vector<TestingResult> ConvertResults(
+    const vector<S2ClosestEdgeQuery::Result>& results) {
+  vector<TestingResult> testing_results;
+  for (const auto& result : results) {
+    testing_results.push_back(
+        make_pair(result.distance,
+                  s2shapeutil::ShapeEdgeId(result.shape_id, result.edge_id)));
   }
-  return results;
+  return testing_results;
 }
 
 // Use "query" to find the closest edge(s) to the given target.  Verify that
@@ -335,7 +336,7 @@ static void GetClosestEdges(S2ClosestEdgeQuery::Target* target,
   }
   for (const auto& edge : *edges) {
     // Check that the edge satisfies the max_distance() condition.
-    EXPECT_LE(edge.distance, query->options().max_distance());
+    EXPECT_LT(edge.distance, query->options().max_distance());
   }
 }
 

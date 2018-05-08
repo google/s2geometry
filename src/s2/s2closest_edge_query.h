@@ -237,7 +237,7 @@ class S2ClosestEdgeQuery {
   const Options& options() const;
   Options* mutable_options();
 
-  // Returns the closest edges to the given target that satisfy the given
+  // Returns the closest edges to the given target that satisfy the current
   // options.  This method may be called multiple times.
   //
   // Note that if options().include_interiors() is true, the result vector may
@@ -252,8 +252,8 @@ class S2ClosestEdgeQuery {
   //////////////////////// Convenience Methods ////////////////////////
 
   // Returns the closest edge to the target.  If no edge satisfies the search
-  // criteria, then the Result object will have distance == Infinity() and
-  // shape_id == edge_id == -1.
+  // criteria, then the Result object will have distance == Infinity(),
+  // is_empty() == true, and shape_id == edge_id == -1.
   //
   // Note that if options.include_interiors() is true, edge_id == -1 is also
   // used to indicate that the target intersects an indexed polygon (but in

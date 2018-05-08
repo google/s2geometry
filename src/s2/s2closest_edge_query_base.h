@@ -223,6 +223,12 @@ class S2ClosestEdgeQueryBase {
     Result(Distance _distance, int32 _shape_id, int32 _edge_id)
         : distance(_distance), shape_id(_shape_id), edge_id(_edge_id) {}
 
+    // Returns true if this Result object does not refer to any edge.
+    // (The only case where an empty Result is returned is when the
+    // FindClosestEdge() method does not find any edges that meet the
+    // specified criteria.)
+    bool is_empty() const { return shape_id < 0 && edge_id < 0; }
+
     // Returns true if two Result objects are identical.
     friend bool operator==(const Result& x, const Result& y) {
       return (x.distance == y.distance &&
@@ -311,7 +317,7 @@ class S2ClosestEdgeQueryBase {
   const Options* options_;
   Target* target_;
 
-  // True if max_error() must be subtracted from S2ShapeIndex cell distances
+  // True if max_error() must be subtracted from priority queue cell distances
   // in order to ensure that such distances are measured conservatively.  This
   // is true only if the target takes advantage of max_error() in order to
   // return faster results, and 0 < max_error() < distance_limit_.
@@ -356,6 +362,9 @@ class S2ClosestEdgeQueryBase {
   //    reduce the distance limit once max_edges() results have been found.
   //    (A priority queue is not sufficient because we need to be able to
   //    check whether a candidate edge is already in the result set.)
+  //
+  // TODO(ericv): Check whether it would be faster to use avoid_duplicates_
+  // when result_set_ is used so that we could use a priority queue instead.
   Result result_singleton_;
   std::vector<Result> result_vector_;
   gtl::btree_set<Result> result_set_;
@@ -374,15 +383,18 @@ class S2ClosestEdgeQueryBase {
   // is achieved by maintaining a separate set keyed by (shape_id, edge_id)
   // only, and checking whether each edge is in that set before computing the
   // distance to it.
+  //
+  // TODO(ericv): Check whether it is faster to avoid duplicates by default
+  // (even when Options::max_edges() == 1), rather than just when we need to.
   bool avoid_duplicates_;
   using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
   gtl::dense_hash_set<ShapeEdgeId, s2shapeutil::ShapeEdgeIdHash> tested_edges_;
 
   // The algorithm maintains a priority queue of unprocessed S2CellIds, sorted
-  // in increasing order of distance from the target point.
+  // in increasing order of distance from the target.
   struct QueueEntry {
-    // A lower bound on the distance from the target point to any edge point
-    // within "id".  This is the key of the priority queue.
+    // A lower bound on the distance from the target to "id".  This is the key
+    // of the priority queue.
     Distance distance;
 
     // The cell being queued.
@@ -593,14 +605,14 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
   }
 
   // If max_error() > 0 and the target takes advantage of this, then we may
-  // need to adjust the distance estimates to S2ShapeIndex cells to ensure
-  // that they are always a lower bound on the true distance.  For example,
-  // suppose max_distance == 100, max_error == 30, and we compute the distance
-  // to the target from some cell C0 as d(C0) == 80.  Then because the target
-  // takes advantage of max_error(), the true distance could be as low as 50.
-  // In order not to miss edges contained by such cells, we need to subtract
-  // max_error() from the distance estimates.  This behavior is controlled by
-  // the use_conservative_cell_distance_ flag.
+  // need to adjust the distance estimates to the priority queue cells to
+  // ensure that they are always a lower bound on the true distance.  For
+  // example, suppose max_distance == 100, max_error == 30, and we compute the
+  // distance to the target from some cell C0 as d(C0) == 80.  Then because
+  // the target takes advantage of max_error(), the true distance could be as
+  // low as 50.  In order not to miss edges contained by such cells, we need
+  // to subtract max_error() from the distance estimates.  This behavior is
+  // controlled by the use_conservative_cell_distance_ flag.
   //
   // However there is one important case where this adjustment is not
   // necessary, namely when max_distance() < max_error().  This is because
@@ -711,11 +723,16 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
   }
 
   // Optimization: if the user is searching for just the closest edge, and the
-  // target happens to intersect an index cell, then we try to limit the search
-  // region to a small disc by first processing the edges in that cell.  This
-  // sets distance_limit_ based on the closest edge in that cell, which we can
-  // then use to limit the search area.  This means that the cell containing
-  // "target" will be processed twice, but in general this is still faster.
+  // center of the target's bounding cap happens to intersect an index cell,
+  // then we try to limit the search region to a small disc by first
+  // processing the edges in that cell.  This sets distance_limit_ based on
+  // the closest edge in that cell, which we can then use to limit the search
+  // area.  This means that the cell containing "target" will be processed
+  // twice, but in general this is still faster.
+  //
+  // TODO(ericv): Even if the cap center is not contained, we could still
+  // process one or both of the adjacent index cells in S2CellId order,
+  // provided that those cells are closer than distance_limit_.
   S2Cap cap = target_->GetCapBound();
   if (options().max_edges() == 1 && iter_.Locate(cap.center())) {
     ProcessEdges(QueueEntry(Distance::Zero(), iter_.id(), &iter_.cell()));
