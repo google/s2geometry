@@ -133,6 +133,34 @@ bool MakeLatLngRect(string_view str, S2LatLngRect* rect) {
   return rect;
 }
 
+bool MakeCellId(string_view str, S2CellId* cell_id) {
+  *cell_id = S2CellId::FromDebugString(str);
+  return *cell_id != S2CellId::None();
+}
+
+S2CellId MakeCellIdOrDie(string_view str) {
+  S2CellId cell_id;
+  S2_CHECK(MakeCellId(str, &cell_id)) << ": str == \"" << str << "\"";
+  return cell_id;
+}
+
+bool MakeCellUnion(string_view str, S2CellUnion* cell_union) {
+  vector<S2CellId> cell_ids;
+  for (const auto& cell_str : SplitString(str, ',')) {
+    S2CellId cell_id;
+    if (!MakeCellId(cell_str, &cell_id)) return false;
+    cell_ids.push_back(cell_id);
+  }
+  *cell_union = S2CellUnion(std::move(cell_ids));
+  return true;
+}
+
+S2CellUnion MakeCellUnionOrDie(string_view str) {
+  S2CellUnion cell_union;
+  S2_CHECK(MakeCellUnion(str, &cell_union)) << ": str == \"" << str << "\"";
+  return cell_union;
+}
+
 unique_ptr<S2Loop> MakeLoopOrDie(string_view str, S2Debug debug_override) {
   unique_ptr<S2Loop> loop;
   S2_CHECK(MakeLoop(str, &loop, debug_override)) << ": str == \"" << str << "\"";
@@ -345,6 +373,19 @@ string ToString(const S2LatLngRect& rect) {
   AppendVertex(rect.lo(), &out);
   out += ", ";
   AppendVertex(rect.hi(), &out);
+  return out;
+}
+
+string ToString(const S2CellId& cell_id) {
+  return cell_id.ToString();
+}
+
+string ToString(const S2CellUnion& cell_union) {
+  string out;
+  for (S2CellId cell_id : cell_union) {
+    if (!out.empty()) out += ", ";
+    out += cell_id.ToString();
+  }
   return out;
 }
 

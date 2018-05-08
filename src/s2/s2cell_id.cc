@@ -600,7 +600,7 @@ std::ostream& operator<<(std::ostream& os, S2CellId id) {
   return os << id.ToString();
 }
 
-S2CellId S2CellId::FromDebugString(const string& str) {
+S2CellId S2CellId::FromDebugString(absl::string_view str) {
   // This function is reasonably efficient, but is only intended for use in
   // tests.
   int level = static_cast<int>(str.size() - 2);

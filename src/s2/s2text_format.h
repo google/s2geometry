@@ -29,18 +29,19 @@
 
 #include "s2/third_party/absl/base/attributes.h"
 #include "s2/third_party/absl/strings/string_view.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2cell_union.h"
 #include "s2/s2debug.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point_span.h"
 
-class S2LatLng;
+class MutableS2ShapeIndex;
+class S2LaxPolygonShape;
+class S2LaxPolylineShape;
 class S2Loop;
 class S2Polygon;
 class S2Polyline;
-class MutableS2ShapeIndex;
 class S2ShapeIndex;
-class S2LaxPolygonShape;
-class S2LaxPolylineShape;
 
 namespace s2textformat {
 
@@ -88,10 +89,12 @@ inline std::vector<S2Point> ParsePoints(absl::string_view str) {
   return ParsePointsOrDie(str);
 }
 
-ABSL_MUST_USE_RESULT bool MakeLatLng(absl::string_view str, S2LatLng* latlng);
-
-// Given a string in the same format as ParseLatLngs, returns a single S2LatLng
+// Given a string in the same format as ParseLatLngs, returns a single S2LatLng.
 S2LatLng MakeLatLngOrDie(absl::string_view str);
+
+// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// conversion is successful.
+ABSL_MUST_USE_RESULT bool MakeLatLng(absl::string_view str, S2LatLng* latlng);
 
 // Given a string in the same format as ParseLatLngs, returns the minimal
 // bounding S2LatLngRect that contains the coordinates.
@@ -106,6 +109,32 @@ ABSL_DEPRECATED("Use MakeLatLngRectOrDie.")
 inline S2LatLngRect MakeLatLngRect(absl::string_view str) {
   return MakeLatLngRectOrDie(str);
 }
+
+// Parses an S2CellId in the format "f/dd..d" where "f" is a digit in the
+// range [0-5] representing the S2CellId face, and "dd..d" is a string of
+// digits in the range [0-3] representing each child's position with respect
+// to its parent.  (Note that the latter string may be empty.)
+//
+// For example "4/" represents S2CellId::FromFace(4), and "3/02" represents
+// S2CellId::FromFace(3).child(0).child(2).
+//
+// This function is a wrapper for S2CellId::FromDebugString().
+S2CellId MakeCellIdOrDie(absl::string_view str);
+
+// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// conversion is successful.
+ABSL_MUST_USE_RESULT bool MakeCellId(absl::string_view str, S2CellId* cell_id);
+
+// Parses a comma-separated list of S2CellIds in the format above, and returns
+// the corresponding S2CellUnion.  (Note that S2CellUnions are automatically
+// normalized by sorting, removing duplicates, and replacing groups of 4 child
+// cells by their parent cell.)
+S2CellUnion MakeCellUnionOrDie(absl::string_view str);
+
+// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// conversion is successful.
+ABSL_MUST_USE_RESULT bool MakeCellUnion(absl::string_view str,
+                                        S2CellUnion* cell_union);
 
 // Given a string of latitude-longitude coordinates in degrees,
 // returns a newly allocated loop.  Example of the input format:
@@ -232,11 +261,13 @@ ABSL_MUST_USE_RESULT bool MakeIndex(
 ABSL_DEPRECATED("Use MakeIndexOrDie.")
 std::unique_ptr<MutableS2ShapeIndex> MakeIndex(absl::string_view str);
 
-// Convert a point, lat-lng rect, loop, polyline, or polygon to the string
-// format above.
+// Convert an S2Point, S2LatLng, S2LatLngRect, S2CellId, S2CellUnion, loop,
+// polyline, or polygon to the string format above.
 string ToString(const S2Point& point);
-string ToString(const S2LatLngRect& rect);
 string ToString(const S2LatLng& latlng);
+string ToString(const S2LatLngRect& rect);
+string ToString(const S2CellId& cell_id);
+string ToString(const S2CellUnion& cell_union);
 string ToString(const S2Loop& loop);
 string ToString(S2PointLoopSpan loop);
 string ToString(const S2Polyline& polyline);

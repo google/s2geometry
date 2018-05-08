@@ -26,6 +26,7 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/base/logging.h"
+#include "s2/third_party/absl/strings/string_view.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
@@ -386,7 +387,7 @@ class S2CellId {
   //
   // The method name includes "Debug" in order to avoid possible confusion
   // with FromToken() above.
-  static S2CellId FromDebugString(const string& str);
+  static S2CellId FromDebugString(absl::string_view str);
 
   // Return the four cells that are adjacent across the cell's four edges.
   // Neighbors are returned in the order defined by S2Cell::GetEdge.  All
