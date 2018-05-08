@@ -18,6 +18,14 @@
 #ifndef S2_UTIL_GTL_SUBTLE_CONTAINER_MEMORY_H_
 #define S2_UTIL_GTL_SUBTLE_CONTAINER_MEMORY_H_
 
+#ifdef ADDRESS_SANITIZER
+#include <sanitizer/asan_interface.h>
+#endif
+
+#ifdef MEMORY_SANITIZER
+#include <sanitizer/msan_interface.h>
+#endif
+
 #include <cassert>
 #include <cstddef>
 #include <memory>
@@ -202,6 +210,35 @@ decltype(std::declval<F>()(std::declval<const Arg&>(), std::declval<Arg>()))
 DecomposeValue(F&& f, Arg&& arg) {
   const auto& key = arg;
   return std::forward<F>(f)(key, std::forward<Arg>(arg));
+}
+
+// Helper functions for asan and msan.
+inline void SanitizerPoisonMemoryRegion(const void* m, size_t s) {
+#ifdef ADDRESS_SANITIZER
+  ASAN_POISON_MEMORY_REGION(m, s);
+#endif
+#ifdef MEMORY_SANITIZER
+  __msan_poison(m, s);
+#endif
+}
+
+inline void SanitizerUnpoisonMemoryRegion(const void* m, size_t s) {
+#ifdef ADDRESS_SANITIZER
+  ASAN_UNPOISON_MEMORY_REGION(m, s);
+#endif
+#ifdef MEMORY_SANITIZER
+  __msan_unpoison(m, s);
+#endif
+}
+
+template <typename T>
+inline void SanitizerPoisonObject(const T* object) {
+  SanitizerPoisonMemoryRegion(object, sizeof(T));
+}
+
+template <typename T>
+inline void SanitizerUnpoisonObject(const T* object) {
+  SanitizerUnpoisonMemoryRegion(object, sizeof(T));
 }
 
 }  // namespace subtle

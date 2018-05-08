@@ -22,8 +22,8 @@
 // 64-bit mode. This btree implementation stores multiple values on fixed
 // size nodes (usually 256 bytes) and doesn't store child pointers for leaf
 // nodes. The result is that a btree_set<int32> may use much less memory per
-// stored value. For the random insertion benchmark in btree_test.cc, a
-// btree_set<int32> with node-size of 256 uses 5.2 bytes per stored value.
+// stored value. For the random insertion benchmark in btree_bench.cc, a
+// btree_set<int32> with node-size of 256 uses 5.1 bytes per stored value.
 //
 // The packing of multiple values on to each node of a btree has another effect
 // besides better space utilization: better cache locality due to fewer cache
@@ -47,7 +47,7 @@
 // PERFORMANCE
 //
 // See the latest benchmark results at:
-// https://paste.googleplex.com/5768552816574464
+// https://paste.googleplex.com/5876428872613888
 //
 
 #ifndef UTIL_GTL_BTREE_H__
@@ -71,6 +71,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/meta/type_traits.h"
 #include "s2/third_party/absl/strings/string_view.h"
+#include "s2/third_party/absl/utility/utility.h"
 #include "s2/util/gtl/layout.h"
 #include "s2/util/gtl/subtle/compressed_tuple.h"
 #include "s2/util/gtl/subtle/container_memory.h"
@@ -398,11 +399,6 @@ class btree_node {
   //   // There are always count + 1 children. Invalid for leaf nodes.
   //   btree_node *children[kNodeValues + 1];
   //
-  //   // The following two fields are only valid for root nodes.
-  //   // TODO(user): move these fields into the btree class to avoid branching.
-  //   btree_node *rightmost;
-  //   size_type size;
-  //
   // This class is never constructed or deleted. Instead, pointers to the layout
   // above are allocated, cast to btree_node*, and de-allocated within the btree
   // implementation.
@@ -417,18 +413,15 @@ class btree_node {
   enum NodeType : int8 {
     kLeaf,
     kInternal,
-    kRoot,
   };
 
-  using layout_type =
-      Layout<btree_node *, field_type, NodeType, mutable_value_type,
-             btree_node *, btree_node *, size_type>;
+  using layout_type = Layout<btree_node *, field_type, NodeType,
+                             mutable_value_type, btree_node *>;
   constexpr static size_type SizeWithNValues(size_type n) {
     return layout_type(/*parent*/ 1,
                        /*position, count, max_count*/ 3, /*type*/ 1,
                        /*values*/ n,
-                       /*children*/ 0,
-                       /*rightmost*/ 0, /*size*/ 0)
+                       /*children*/ 0)
         .AllocSize();
   }
   // A lower bound for the overhead of fields other than values in a leaf node.
@@ -464,22 +457,13 @@ class btree_node {
     return layout_type(/*parent*/ 1,
                        /*position, count, max_count*/ 3, /*type*/ 1,
                        /*values*/ max_values,
-                       /*children*/ 0,
-                       /*rightmost*/ 0, /*size*/ 0);
+                       /*children*/ 0);
   }
   constexpr static layout_type InternalLayout() {
     return layout_type(/*parent*/ 1,
                        /*position, count, max_count*/ 3, /*type*/ 1,
                        /*values*/ kNodeValues,
-                       /*children*/ kNodeValues + 1,
-                       /*rightmost*/ 0, /*size*/ 0);
-  }
-  constexpr static layout_type RootLayout() {
-    return layout_type(/*parent*/ 1,
-                       /*position, count, max_count*/ 3, /*type*/ 1,
-                       /*values*/ kNodeValues,
-                       /*children*/ kNodeValues + 1,
-                       /*rightmost*/ 1, /*size*/ 1);
+                       /*children*/ kNodeValues + 1);
   }
   constexpr static size_type LeafSize(const int max_values = kNodeValues) {
     return LeafLayout(max_values).AllocSize();
@@ -487,13 +471,10 @@ class btree_node {
   constexpr static size_type InternalSize() {
     return InternalLayout().AllocSize();
   }
-  constexpr static size_type RootSize() { return RootLayout().AllocSize(); }
   constexpr static size_type Alignment() {
-    static_assert(LeafLayout(1).Alignment() == RootLayout().Alignment(),
+    static_assert(LeafLayout(1).Alignment() == InternalLayout().Alignment(),
                   "Alignment of all nodes must be equal.");
-    static_assert(InternalLayout().Alignment() == RootLayout().Alignment(),
-                  "Alignment of all nodes must be equal.");
-    return RootLayout().Alignment();
+    return InternalLayout().Alignment();
   }
 
   // N is the index of the type in the Layout definition.
@@ -502,14 +483,12 @@ class btree_node {
   inline typename layout_type::template ElementType<N> *GetField() {
     // We assert that we don't read from values that aren't there.
     assert(N < 4 || !leaf());
-    assert(N < 5 || type() == NodeType::kRoot);
-    return RootLayout().template Pointer<N>(reinterpret_cast<char *>(this));
+    return InternalLayout().template Pointer<N>(reinterpret_cast<char *>(this));
   }
   template <size_type N>
   inline const typename layout_type::template ElementType<N> *GetField() const {
     assert(N < 4 || !leaf());
-    assert(N < 5 || type() == NodeType::kRoot);
-    return RootLayout().template Pointer<N>(
+    return InternalLayout().template Pointer<N>(
         reinterpret_cast<const char *>(this));
   }
   NodeType type() const { return *GetField<2>(); }
@@ -541,21 +520,12 @@ class btree_node {
   btree_node *parent() const { return *GetField<0>(); }
   // Getter for whether the node is the root of the tree. The parent of the
   // root of the tree is the leftmost node in the tree which is guaranteed to
-  // be a leaf. Note that this can be different from `type() == NodeType::kRoot`
-  // if this is a root leaf node.
+  // be a leaf.
   bool is_root() const { return parent()->leaf(); }
   void make_root() {
     assert(parent()->is_root());
     set_parent(parent()->parent());
   }
-
-  // Getter for the rightmost root node field. Only valid on the root node.
-  btree_node *rightmost() const { return *GetField<5>(); }
-  btree_node *&mutable_rightmost() { return *GetField<5>(); }
-
-  // Getter for the size root node field. Only valid on the root node.
-  size_type size() const { return *GetField<6>(); }
-  size_type *mutable_size() { return GetField<6>(); }
 
   // Getters for the key/value at position i in the node.
   const key_type &key(int i) const {
@@ -572,10 +542,15 @@ class btree_node {
   // Getters/setter for the child at position i in the node.
   btree_node *child(int i) const { return GetField<4>()[i]; }
   btree_node *&mutable_child(int i) { return GetField<4>()[i]; }
+  void clear_child(int i) { subtle::SanitizerPoisonObject(&mutable_child(i)); }
   void set_child(int i, btree_node *c) {
+    subtle::SanitizerUnpoisonObject(&mutable_child(i));
     mutable_child(i) = c;
-    c->set_parent(this);
     c->set_position(i);
+  }
+  void init_child(int i, btree_node *c) {
+    set_child(i, c);
+    c->set_parent(this);
   }
 
   // Returns the position of the first value whose key is not less than k.
@@ -725,28 +700,15 @@ class btree_node {
     n->set_max_count(max_count);
     n->set_count(0);
     n->set_type(NodeType::kLeaf);
-    // TODO(user): use sanitizer hooks to poison the regions of unused memory.
-    if (google::DEBUG_MODE) {
-      // Zeroing out n->values here is correct, even if mutable_value_type has a
-      // vtable as objects are constructed via placement new later.
-      memset(static_cast<void *>(n->mutable_value(0)), 0,
-             max_count * sizeof(value_type));
-    }
+    subtle::SanitizerPoisonMemoryRegion(n->mutable_value(0),
+                                        max_count * sizeof(mutable_value_type));
     return n;
   }
   static btree_node *init_internal(btree_node *n, btree_node *parent) {
     init_leaf(n, parent, kNodeValues);
     n->set_type(NodeType::kInternal);
-    if (google::DEBUG_MODE) {
-      memset(&n->mutable_child(0), 0, (kNodeValues + 1) * sizeof(btree_node *));
-    }
-    return n;
-  }
-  static btree_node *init_root(btree_node *n, btree_node *parent) {
-    init_internal(n, parent);
-    n->set_type(NodeType::kRoot);
-    n->mutable_rightmost() = parent;
-    *n->mutable_size() = parent->count();
+    subtle::SanitizerPoisonMemoryRegion(
+        &n->mutable_child(0), (kNodeValues + 1) * sizeof(btree_node *));
     return n;
   }
   void destroy(allocator_type *alloc) {
@@ -764,11 +726,13 @@ class btree_node {
  private:
   template <typename... Args>
   void value_init(const size_type i, allocator_type *alloc, Args &&... args) {
+    subtle::SanitizerUnpoisonObject(internal_value(i));
     absl::allocator_traits<allocator_type>::construct(
         *alloc, internal_value(i), std::forward<Args>(args)...);
   }
   void value_destroy(const size_type i, allocator_type *alloc) {
     absl::allocator_traits<allocator_type>::destroy(*alloc, internal_value(i));
+    subtle::SanitizerPoisonObject(internal_value(i));
   }
 
   // Move n values starting at value i in this node into the values starting at
@@ -776,6 +740,8 @@ class btree_node {
   void uninitialized_move_n(const size_type n, const size_type i,
                             const size_type j, btree_node *x,
                             allocator_type *alloc) {
+    subtle::SanitizerUnpoisonMemoryRegion(x->internal_value(j),
+                                          n * sizeof(mutable_value_type));
     for (auto *src = internal_value(i), *end = src + n,
               *dest = x->internal_value(j);
          src != end; ++src, ++dest) {
@@ -991,7 +957,10 @@ class btree {
   btree(const key_compare &comp, const allocator_type &alloc);
 
   btree(const btree &x);
-  btree(btree &&x) noexcept : root_(std::move(x.root_)) {
+  btree(btree &&x) noexcept
+      : root_(std::move(x.root_)),
+        rightmost_(absl::exchange(x.rightmost_, nullptr)),
+        size_(absl::exchange(x.size_, 0)) {
     x.mutable_root() = nullptr;
   }
 
@@ -1022,16 +991,16 @@ class btree {
   }
   const_iterator cbegin() const { return const_iterator(leftmost(), 0); }
   iterator end() {
-    auto* r = rightmost();
-    return iterator(r, r ? r->count() : 0);
+    return iterator(rightmost_,
+                    rightmost_ != nullptr ? rightmost_->count() : 0);
   }
   const_iterator end() const {
-    auto* r = rightmost();
-    return const_iterator(r, r ? r->count() : 0);
+    return const_iterator(rightmost_,
+                          rightmost_ != nullptr ? rightmost_->count() : 0);
   }
   const_iterator cend() const {
-    auto *r = rightmost();
-    return const_iterator(r, r ? r->count() : 0);
+    return const_iterator(rightmost_,
+                          rightmost_ != nullptr ? rightmost_->count() : 0);
   }
   reverse_iterator rbegin() {
     return reverse_iterator(end());
@@ -1204,14 +1173,10 @@ class btree {
   // Verifies the structure of the btree.
   void verify() const;
 
-  // Size routines. Note that empty() is slightly faster than doing size()==0.
-  size_type size() const {
-    if (empty()) return 0;
-    if (root()->leaf()) return root()->count();
-    return root()->size();
-  }
+  // Size routines.
+  size_type size() const { return size_; }
   size_type max_size() const { return std::numeric_limits<size_type>::max(); }
-  bool empty() const { return root() == nullptr; }
+  bool empty() const { return size_ == 0; }
 
   // The height of the btree. An empty tree will have height 0.
   size_type height() const {
@@ -1249,8 +1214,7 @@ class btree {
       return sizeof(*this) +
              node_type::LeafSize(root()->max_count());
     } else {
-      return sizeof(*this) + node_type::RootSize() -
-             node_type::InternalSize() +
+      return sizeof(*this) +
              stats.leaf_nodes * node_type::LeafSize() +
              stats.internal_nodes * node_type::InternalSize();
     }
@@ -1294,23 +1258,11 @@ class btree {
   node_type *&mutable_root() noexcept { return root_.template get<2>(); }
   key_compare *mutable_key_comp() noexcept { return &root_.template get<0>(); }
 
-  // The rightmost node is stored in the root node.
-  node_type *rightmost() {
-    return (!root() || root()->leaf()) ? root() : root()->rightmost();
-  }
-  const node_type *rightmost() const {
-    return (!root() || root()->leaf()) ? root() : root()->rightmost();
-  }
-  node_type *&mutable_rightmost() { return root()->mutable_rightmost(); }
-
   // The leftmost node is stored as the parent of the root node.
   node_type *leftmost() { return root() ? root()->parent() : nullptr; }
   const node_type *leftmost() const {
     return root() ? root()->parent() : nullptr;
   }
-
-  // The size of the tree is stored in the root node.
-  size_type *mutable_size() { return root()->mutable_size(); }
 
   // Allocator routines.
   allocator_type *mutable_allocator() noexcept {
@@ -1332,11 +1284,6 @@ class btree {
     node_type *p = allocate(node_type::InternalSize());
     return node_type::init_internal(p, parent);
   }
-  node_type* new_internal_root_node() {
-    node_type *p = allocate(node_type::RootSize());
-    return node_type::init_root(p, root()->parent());
-  }
-
   node_type* new_leaf_node(node_type *parent) {
     node_type *p = allocate(node_type::LeafSize());
     return node_type::init_leaf(p, parent, kNodeValues);
@@ -1353,12 +1300,7 @@ class btree {
 
   void delete_internal_node(node_type *node) {
     node->destroy(mutable_allocator());
-    assert(node != root());
     deallocate(node_type::InternalSize(), node);
-  }
-  void delete_internal_root_node() {
-    root()->destroy(mutable_allocator());
-    deallocate(node_type::RootSize(), root());
   }
   void delete_leaf_node(node_type *node) {
     node->destroy(mutable_allocator());
@@ -1471,6 +1413,13 @@ class btree {
   // allocator_type are usually empty.
   subtle::CompressedTuple<key_compare, allocator_type, node_type *> root_;
 
+  // A pointer to the rightmost node. Note that the leftmost node is stored as
+  // the root's parent.
+  node_type *rightmost_;
+
+  // Number of values.
+  size_type size_;
+
   // Verify that key_compare returns an int or bool, as appropriate
   // depending on the value of is_key_compare_to.
   static_assert(std::is_same<absl::result_of_t<key_compare(key_type, key_type)>,
@@ -1493,7 +1442,8 @@ class btree {
 // btree_node methods
 template <typename P>
 template <typename... Args>
-inline void btree_node<P>::emplace_value(size_type i, allocator_type *alloc,
+inline void btree_node<P>::emplace_value(const size_type i,
+                                         allocator_type *alloc,
                                          Args &&... args) {
   assert(i <= count());
   value_init(count(), alloc, std::forward<Args>(args)...);
@@ -1501,25 +1451,22 @@ inline void btree_node<P>::emplace_value(size_type i, allocator_type *alloc,
               mutable_value(count() + 1));
   set_count(count() + 1);
 
-  if (!leaf()) {
-    ++i;
-    for (int j = count(); j > i; --j) {
-      mutable_child(j) = child(j - 1);
-      child(j)->set_position(j);
+  if (!leaf() && count() > i + 1) {
+    for (int j = count(); j > i + 1; --j) {
+      set_child(j, child(j - 1));
     }
-    mutable_child(i) = nullptr;
+    clear_child(i + 1);
   }
 }
 
 template <typename P>
 inline void btree_node<P>::remove_value(const int i, allocator_type *alloc) {
-  if (!leaf()) {
+  if (!leaf() && count() > i + 1) {
     assert(child(i + 1)->count() == 0);
     for (size_type j = i + 1; j < count(); ++j) {
-      mutable_child(j) = child(j + 1);
-      child(j)->set_position(j);
+      set_child(j, child(j + 1));
     }
-    mutable_child(count()) = nullptr;
+    clear_child(count());
   }
 
   std::move(mutable_value(i + 1), mutable_value(count()), mutable_value(i));
@@ -1557,12 +1504,12 @@ void btree_node<P>::rebalance_right_to_left(const int to_move,
   if (!leaf()) {
     // Move the child pointers from the right to the left node.
     for (int i = 0; i < to_move; ++i) {
-      set_child(1 + count() + i, right->child(i));
+      init_child(count() + i + 1, right->child(i));
     }
     for (int i = 0; i <= right->count() - to_move; ++i) {
       assert(i + to_move <= right->max_count());
-      right->set_child(i, right->child(i + to_move));
-      right->mutable_child(i + to_move) = nullptr;
+      right->init_child(i, right->child(i + to_move));
+      right->clear_child(i + to_move);
     }
   }
 
@@ -1636,12 +1583,12 @@ void btree_node<P>::rebalance_left_to_right(const int to_move,
   if (!leaf()) {
     // Move the child pointers from the left to the right node.
     for (int i = right->count(); i >= 0; --i) {
-      right->set_child(i + to_move, right->child(i));
-      right->mutable_child(i) = nullptr;
+      right->init_child(i + to_move, right->child(i));
+      right->clear_child(i);
     }
     for (int i = 1; i <= to_move; ++i) {
-      right->set_child(i - 1, child(count() - to_move + i));
-      mutable_child(count() - to_move + i) = nullptr;
+      right->init_child(i - 1, child(count() - to_move + i));
+      clear_child(count() - to_move + i);
     }
   }
 
@@ -1680,13 +1627,13 @@ void btree_node<P>::split(const int insert_position, btree_node *dest,
   parent()->emplace_value(position(), alloc,
                           std::move(*mutable_value(count())));
   value_destroy(count(), alloc);
-  parent()->set_child(position() + 1, dest);
+  parent()->init_child(position() + 1, dest);
 
   if (!leaf()) {
     for (int i = 0; i <= dest->count(); ++i) {
       assert(child(count() + i + 1) != nullptr);
-      dest->set_child(i, child(count() + i + 1));
-      mutable_child(count() + i + 1) = nullptr;
+      dest->init_child(i, child(count() + i + 1));
+      clear_child(count() + i + 1);
     }
   }
 }
@@ -1708,8 +1655,8 @@ void btree_node<P>::merge(btree_node *src, allocator_type *alloc) {
   if (!leaf()) {
     // Move the child pointers from the right to the left node.
     for (int i = 0; i <= src->count(); ++i) {
-      set_child(1 + count() + i, src->child(i));
-      src->mutable_child(i) = nullptr;
+      init_child(count() + i + 1, src->child(i));
+      src->clear_child(i);
     }
   }
 
@@ -1746,13 +1693,18 @@ void btree_node<P>::swap(btree_node *x, allocator_type *alloc) {
   if (!leaf()) {
     // Swap the child pointers.
     std::swap_ranges(&smaller->mutable_child(0),
-                     &smaller->mutable_child(larger->count() + 1),
+                     &smaller->mutable_child(smaller->count() + 1),
                      &larger->mutable_child(0));
-    for (int i = 0; i <= count(); ++i) {
-      x->child(i)->set_parent(x);
+    // Update swapped children's parent pointers.
+    int i = 0;
+    for (; i <= smaller->count(); ++i) {
+      smaller->child(i)->set_parent(smaller);
+      larger->child(i)->set_parent(larger);
     }
-    for (int i = 0; i <= x->count(); ++i) {
-      child(i)->set_parent(this);
+    // Move the child pointers that couldn't be swapped.
+    for (; i <= larger->count(); ++i) {
+      smaller->init_child(i, larger->child(i));
+      larger->clear_child(i);
     }
   }
 
@@ -1829,11 +1781,10 @@ void btree<P>::copy_values_in_order(const btree &x) {
 
 template <typename P>
 btree<P>::btree(const key_compare &comp, const allocator_type &alloc)
-    : root_(comp, alloc, nullptr) {}
+    : root_(comp, alloc, nullptr), rightmost_(nullptr), size_(0) {}
 
 template <typename P>
-btree<P>::btree(const btree &x)
-    : root_(x.key_comp(), x.allocator(), nullptr) {
+btree<P>::btree(const btree &x) : btree(x.key_comp(), x.allocator()) {
   copy_values_in_order(x);
 }
 
@@ -1842,7 +1793,7 @@ template <typename... Args>
 auto btree<P>::insert_unique(const key_type &key, Args &&... args)
     -> std::pair<iterator, bool> {
   if (empty()) {
-    mutable_root() = new_leaf_root_node(1);
+    mutable_root() = rightmost_ = new_leaf_root_node(1);
   }
 
   std::pair<iterator, int> res = internal_locate(key, iterator(root(), 0));
@@ -1900,7 +1851,7 @@ template <typename P>
 template <typename ValueType>
 auto btree<P>::insert_multi(const key_type &key, ValueType &&v) -> iterator {
   if (empty()) {
-    mutable_root() = new_leaf_root_node(1);
+    mutable_root() = rightmost_ = new_leaf_root_node(1);
   }
 
   iterator iter = internal_upper_bound(key, iterator(root(), 0));
@@ -1969,13 +1920,11 @@ auto btree<P>::erase(iterator iter) -> iterator {
     *internal_iter.node->mutable_value(internal_iter.position) =
         std::move(*iter.node->mutable_value(iter.position));
     internal_delete = true;
-    --*mutable_size();
-  } else if (!root()->leaf()) {
-    --*mutable_size();
   }
 
   // Delete the key from the leaf.
   iter.node->remove_value(iter.position, mutable_allocator());
+  --size_;
 
   // We want to return the next value after the one we just erased. If we
   // erased from an internal node (internal_delete == true), then the next
@@ -2059,12 +2008,16 @@ void btree<P>::clear() {
     internal_clear(root());
   }
   mutable_root() = nullptr;
+  rightmost_ = nullptr;
+  size_ = 0;
 }
 
 template <typename P>
 void btree<P>::swap(btree &x) {
   using std::swap;
   swap(root_, x.root_);
+  swap(rightmost_, x.rightmost_);
+  swap(size_, x.size_);
 }
 
 template <typename P>
@@ -2072,13 +2025,13 @@ void btree<P>::verify() const {
   if (root() != nullptr) {
     S2_CHECK_EQ(size(), internal_verify(root(), nullptr, nullptr));
     S2_CHECK_EQ(leftmost(), (++const_iterator(root(), -1)).node);
-    S2_CHECK_EQ(rightmost(), (--const_iterator(root(), root()->count())).node);
+    S2_CHECK_EQ(rightmost_, (--const_iterator(root(), root()->count())).node);
     S2_CHECK(leftmost()->leaf());
-    S2_CHECK(rightmost()->leaf());
+    S2_CHECK(rightmost_->leaf());
   } else {
     S2_CHECK_EQ(size(), 0);
     S2_CHECK(leftmost() == nullptr);
-    S2_CHECK(rightmost() == nullptr);
+    S2_CHECK(rightmost_ == nullptr);
   }
 }
 
@@ -2153,23 +2106,13 @@ void btree<P>::rebalance_or_split(iterator *iter) {
     }
   } else {
     // Rebalancing not possible because this is the root node.
-    if (root()->leaf()) {
-      // The root node is currently a leaf node: create a new root node and set
-      // the current root node as the child of the new root.
-      parent = new_internal_root_node();
-      parent->set_child(0, root());
-      mutable_root() = parent;
-      assert(rightmost() == parent->child(0));
-    } else {
-      // The root node is an internal node. We do not want to create a new root
-      // node because the root node is special and holds the size of the tree
-      // and a pointer to the rightmost node. So we create a new internal node
-      // and move all of the items on the current root into the new node.
-      parent = new_internal_node(parent);
-      parent->set_child(0, parent);
-      parent->swap(root(), mutable_allocator());
-      node = parent;
-    }
+    // Create a new root node and set the current root node as the child of the
+    // new root.
+    parent = new_internal_node(parent);
+    parent->init_child(0, root());
+    mutable_root() = parent;
+    // If the former root was a leaf node, then it's now the rightmost node.
+    assert(!parent->child(0)->leaf() || parent->child(0) == rightmost_);
   }
 
   // Split the node.
@@ -2177,9 +2120,7 @@ void btree<P>::rebalance_or_split(iterator *iter) {
   if (node->leaf()) {
     split_node = new_leaf_node(parent);
     node->split(insert_position, split_node, mutable_allocator());
-    if (rightmost() == node) {
-      mutable_rightmost() = split_node;
-    }
+    if (rightmost_ == node) rightmost_ = split_node;
   } else {
     split_node = new_internal_node(parent);
     node->split(insert_position, split_node, mutable_allocator());
@@ -2195,9 +2136,7 @@ template <typename P>
 void btree<P>::merge_nodes(node_type *left, node_type *right) {
   left->merge(right, mutable_allocator());
   if (right->leaf()) {
-    if (rightmost() == right) {
-      mutable_rightmost() = left;
-    }
+    if (rightmost_ == right) rightmost_ = left;
     delete_leaf_node(right);
   } else {
     delete_internal_node(right);
@@ -2266,20 +2205,12 @@ void btree<P>::try_shrink() {
     assert(size() == 0);
     delete_leaf_node(root());
     mutable_root() = nullptr;
+    rightmost_ = nullptr;
   } else {
     node_type *child = root()->child(0);
-    if (child->leaf()) {
-      // The child is a leaf node so simply make it the root node in the tree.
-      child->make_root();
-      delete_internal_root_node();
-      mutable_root() = child;
-    } else {
-      // The child is an internal node. We want to keep the existing root node
-      // so we move all of the values from the child node into the existing
-      // (empty) root node.
-      child->swap(root(), mutable_allocator());
-      delete_internal_node(child);
-    }
+    child->make_root();
+    delete_internal_node(root());
+    mutable_root() = child;
   }
 }
 
@@ -2316,15 +2247,14 @@ inline auto btree<P>::internal_emplace(iterator iter, Args &&... args)
       iter.node->swap(root(), mutable_allocator());
       delete_leaf_node(root());
       mutable_root() = iter.node;
+      rightmost_ = iter.node;
     } else {
       rebalance_or_split(&iter);
-      ++*mutable_size();
     }
-  } else if (!root()->leaf()) {
-    ++*mutable_size();
   }
   iter.node->emplace_value(iter.position, mutable_allocator(),
                            std::forward<Args>(args)...);
+  ++size_;
   return iter;
 }
 
@@ -2441,11 +2371,7 @@ void btree<P>::internal_clear(node_type *node) {
     for (int i = 0; i <= node->count(); ++i) {
       internal_clear(node->child(i));
     }
-    if (node == root()) {
-      delete_internal_root_node();
-    } else {
-      delete_internal_node(node);
-    }
+    delete_internal_node(node);
   } else {
     delete_leaf_node(node);
   }
