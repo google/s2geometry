@@ -316,13 +316,15 @@ struct set_params
 };
 
 // An adapter class that converts a lower-bound compare into an upper-bound
-// compare.
-// TODO(user): see if we can use key-compare-to with upper_bound_adapter.
+// compare. Note: there is no need to make a version of this adapter specialized
+// for key-compare-to functors because the upper-bound (the first value greater
+// than the input) is never an exact match.
 template <typename Compare>
 struct upper_bound_adapter {
   explicit upper_bound_adapter(const Compare &c) : comp(c) {}
   template <typename K, typename LK>
   bool operator()(const K &a, const LK &b) const {
+    // Returns true when a is not greater than b.
     return !bool_compare_keys(comp, b, a);
   }
 
@@ -587,7 +589,7 @@ class btree_node {
   int linear_search_plain_compare(const K &k, int s, const int e,
                                   const Compare &comp) const {
     while (s < e) {
-      if (!bool_compare_keys(comp, key(s), k)) {
+      if (!comp(key(s), k)) {
         break;
       }
       ++s;
@@ -619,7 +621,7 @@ class btree_node {
                                   const Compare &comp) const {
     while (s != e) {
       const int mid = (s + e) >> 1;
-      if (bool_compare_keys(comp, key(mid), k)) {
+      if (comp(key(mid), k)) {
         s = mid + 1;
       } else {
         e = mid;
