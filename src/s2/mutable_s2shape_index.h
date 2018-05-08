@@ -315,10 +315,10 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   friend class MutableS2ShapeIndexTest;
   friend class S2Stats;
 
-  class BatchDescriptor;
-  class ClippedEdge;
+  struct BatchDescriptor;
+  struct ClippedEdge;
   class EdgeAllocator;
-  class FaceEdge;
+  struct FaceEdge;
   class InteriorTracker;
   struct RemovedShape;
 
