@@ -89,6 +89,7 @@ add_library(s2 SHARED
             src/s2/s2cap.cc
             src/s2/s2cell.cc
             src/s2/s2cell_id.cc
+            src/s2/s2cell_index.cc
             src/s2/s2cell_union.cc
             src/s2/s2centroids.cc
             src/s2/s2closest_edge_query.cc
@@ -215,6 +216,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2cap.h
               src/s2/s2cell.h
               src/s2/s2cell_id.h
+              src/s2/s2cell_index.h
               src/s2/s2cell_union.h
               src/s2/s2centroids.h
               src/s2/s2closest_edge_query.h
@@ -406,6 +408,7 @@ if (GTEST_ROOT)
       src/s2/s2cap_test.cc
       src/s2/s2cell_test.cc
       src/s2/s2cell_id_test.cc
+      src/s2/s2cell_index_test.cc
       src/s2/s2cell_union_test.cc
       src/s2/s2centroids_test.cc
       src/s2/s2closest_edge_query_base_test.cc
