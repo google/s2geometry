@@ -183,12 +183,17 @@ class S2ClosestPointQueryShapeIndexTarget final :
 // You can restrict the results to an arbitrary S2Region, for example:
 //
 //   S2LatLngRect rect(...);
-//   query.set_region(&rect);  // Does *not* take ownership.
+//   query.mutable_options()->set_region(&rect);  // Does *not* take ownership.
 //
 // To find the closest points to a query edge rather than a point, use:
 //
 //   S2ClosestPointQueryEdgeTarget target(v0, v1);
 //   query.FindClosestPoints(&target);
+//
+// Similarly you can find the closest points to an S2Cell by using an
+// S2ClosestPointQuery::CellTarget, and you can find the closest points to an
+// arbitrary collection of points, polylines, and polygons by using an
+// S2ClosestPointQuery::ShapeIndexTarget.
 //
 // The implementation is designed to be fast for both small and large
 // point sets.
@@ -254,7 +259,7 @@ class S2ClosestPointQuery {
   const Options& options() const;
   Options* mutable_options();
 
-  // Returns the closest points to the given target that satisfy the given
+  // Returns the closest points to the given target that satisfy the current
   // options.  This method may be called multiple times.
   std::vector<Result> FindClosestPoints(Target* target);
 
@@ -425,7 +430,7 @@ S2ClosestPointQuery<Data>::FindClosestPoint(Target* target) {
 
 template <class Data>
 inline S1ChordAngle S2ClosestPointQuery<Data>::GetDistance(Target* target) {
-  return FindClosestPoint(target).distance;
+  return FindClosestPoint(target).distance();
 }
 
 template <class Data>

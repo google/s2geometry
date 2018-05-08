@@ -96,10 +96,10 @@ class S2ClosestPointQueryBaseOptions {
   // object.  The value may be changed between calls to FindClosestPoints(),
   // or reset by calling set_region(nullptr).
   //
-  // Note that if you want to set the region to a disc around the target
-  // point, it is faster to use set_max_distance() instead.  You can also call
-  // both methods, e.g. to set a maximum distance and also require that points
-  // lie within a given rectangle.
+  // Note that if you want to set the region to a disc around a target point,
+  // it is faster to use a PointTarget with set_max_distance() instead.  You
+  // can also call both methods, e.g. to set a maximum distance and also
+  // require that points lie within a given rectangle.
   const S2Region* region() const;
   void set_region(const S2Region* region);
 
@@ -298,12 +298,15 @@ class S2ClosestPointQueryBase {
   void MaybeAddResult(const PointData* point_data);
   bool EnqueueCell(S2CellId id, Iterator* iter, bool seek);
 
-  // The maximum number of points to process without subdividing further.
-  static const int kMaxLeafPoints = 12;
-
   const Index* index_;
   const Options* options_;
   Target* target_;
+
+  // True if max_error() must be subtracted from priority queue cell distances
+  // in order to ensure that such distances are measured conservatively.  This
+  // is true only if the target takes advantage of max_error() in order to
+  // return faster results, and 0 < max_error() < distance_limit_.
+  bool use_conservative_cell_distance_;
 
   // For the optimized algorihm we precompute the top-level S2CellIds that
   // will be added to the priority queue.  There can be at most 6 of these
@@ -334,10 +337,10 @@ class S2ClosestPointQueryBase {
   std::priority_queue<Result, absl::InlinedVector<Result, 16>> result_set_;
 
   // The algorithm maintains a priority queue of unprocessed S2CellIds, sorted
-  // in increasing order of distance from the target point.
+  // in increasing order of distance from the target.
   struct QueueEntry {
-    // A lower bound on the distance from the target point to any point
-    // within "id".  This is the key of the priority queue.
+    // A lower bound on the distance from the target to "id".  This is the key
+    // of the priority queue.
     Distance distance;
 
     // The cell being queued.
@@ -530,12 +533,39 @@ void S2ClosestPointQueryBase<Distance, Data>::FindClosestPointsInternal(
                     "(max_points/max_distance/region not set)";
   }
 
+  // If max_error() > 0 and the target takes advantage of this, then we may
+  // need to adjust the distance estimates to the priority queue cells to
+  // ensure that they are always a lower bound on the true distance.  For
+  // example, suppose max_distance == 100, max_error == 30, and we compute the
+  // distance to the target from some cell C0 as d(C0) == 80.  Then because
+  // the target takes advantage of max_error(), the true distance could be as
+  // low as 50.  In order not to miss edges contained by such cells, we need
+  // to subtract max_error() from the distance estimates.  This behavior is
+  // controlled by the use_conservative_cell_distance_ flag.
+  //
+  // However there is one important case where this adjustment is not
+  // necessary, namely when max_distance() < max_error().  This is because
+  // max_error() only affects the algorithm once at least max_edges() edges
+  // have been found that satisfy the given distance limit.  At that point,
+  // max_error() is subtracted from distance_limit_ in order to ensure that
+  // any further matches are closer by at least that amount.  But when
+  // max_distance() < max_error(), this reduces the distance limit to 0,
+  // i.e. all remaining candidate cells and edges can safely be discarded.
+  // (Note that this is how IsDistanceLess() and friends are implemented.)
+  //
+  // Note that Distance::Delta only supports operator==.
+  bool target_uses_max_error = (!(options.max_error() == Delta::Zero()) &&
+                                target_->set_max_error(options.max_error()));
+
+  // Note that we can't compare max_error() and distance_limit_ directly
+  // because one is a Delta and one is a Distance.  Instead we subtract them.
+  use_conservative_cell_distance_ = target_uses_max_error &&
+      (distance_limit_ == Distance::Infinity() ||
+       Distance::Zero() < distance_limit_ - options.max_error());
+
   // Note that given point is processed only once (unlike S2ClosestEdgeQuery),
   // and therefore we don't need to worry about the possibility of having
   // duplicate points in the results.
-  if (!(options.max_error() == Delta::Zero())) {
-    target_->set_max_error(options.max_error());
-  }
   if (options.use_brute_force() ||
       index_->num_points() <= target_->max_brute_force_index_size()) {
     FindClosestPointsBruteForce();
@@ -588,10 +618,10 @@ void S2ClosestPointQueryBase<Distance, Data>::InitQueue() {
   S2Cap cap = target_->GetCapBound();
   if (options().max_points() == 1) {
     // If the user is searching for just the closest point, we can compute an
-    // upper bound on search radius by seeking to the target point in the
-    // index and looking at the adjacent index points (in S2CellId order).
-    // The minimum distance to either of these points is an upper bound on the
-    // search radius.
+    // upper bound on search radius by seeking to the center of the target's
+    // bounding cap and looking at the adjacent index points (in S2CellId
+    // order).  The minimum distance to either of these points is an upper
+    // bound on the search radius.
     //
     // TODO(ericv): The same strategy would also work for small values of
     // max_points() > 1, e.g. max_points() == 20, except that we would need to
@@ -758,6 +788,10 @@ bool S2ClosestPointQueryBase<Distance, Data>::EnqueueCell(
       // We check "region_" second because it may be relatively expensive.
       if (target_->UpdateMinDistance(cell, &distance) &&
           (!options().region() || options().region()->MayIntersect(cell))) {
+        if (use_conservative_cell_distance_) {
+          // Ensure that "distance" is a lower bound on distance to the cell.
+          distance = distance - options().max_error();
+        }
         queue_.push(QueueEntry(distance, id));
       }
       return true;  // Seek to next child.
