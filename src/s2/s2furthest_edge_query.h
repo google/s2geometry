@@ -227,8 +227,8 @@ class S2FurthestEdgeQuery {
     S1ChordAngle distance() const { return distance_; }
 
     // The edge identifiers.
-    const int32 shape_id() const { return shape_id_; }
-    const int32 edge_id() const { return edge_id_; }
+    int32 shape_id() const { return shape_id_; }
+    int32 edge_id() const { return edge_id_; }
 
     // Returns true if two Result objects are identical.
     friend bool operator==(const Result& x, const Result& y) {
