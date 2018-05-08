@@ -98,15 +98,16 @@ void S2RegionTermIndexer::Options::set_marker_character(char ch) {
   marker_ = string(1, ch);
 }
 
-S2RegionTermIndexer::S2RegionTermIndexer() {
-}
-
-S2RegionTermIndexer::~S2RegionTermIndexer() {
-}
-
 S2RegionTermIndexer::S2RegionTermIndexer(const Options& options)
     : options_(options) {
 }
+
+// Defaulted in the implementation to prevent inline bloat.
+S2RegionTermIndexer::S2RegionTermIndexer() = default;
+S2RegionTermIndexer::~S2RegionTermIndexer() = default;
+S2RegionTermIndexer::S2RegionTermIndexer(S2RegionTermIndexer&&) = default;
+S2RegionTermIndexer& S2RegionTermIndexer::operator=(S2RegionTermIndexer&&) =
+                                                   default;
 
 string S2RegionTermIndexer::GetTerm(TermType term_type, const S2CellId& id,
                                     string_view prefix) const {

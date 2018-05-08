@@ -189,4 +189,20 @@ TEST(S2RegionTermIndexer, MaxLevelSetLoosely) {
             indexer2.GetQueryTerms(cap, ""));
 }
 
+TEST(S2RegionTermIndexer, MoveConstructor) {
+  S2RegionTermIndexer x;
+  x.mutable_options()->set_max_cells(12345);
+  S2RegionTermIndexer y = std::move(x);
+  EXPECT_EQ(12345, y.options().max_cells());
+}
+
+TEST(S2RegionTermIndexer, MoveAssignmentOperator) {
+  S2RegionTermIndexer x;
+  x.mutable_options()->set_max_cells(12345);
+  S2RegionTermIndexer y;
+  y.mutable_options()->set_max_cells(0);
+  y = std::move(x);
+  EXPECT_EQ(12345, y.options().max_cells());
+}
+
 }  // namespace
