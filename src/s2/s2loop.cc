@@ -899,8 +899,8 @@ bool LoopCrosser::CellCrossesAnySubcell(const S2ClippedShape& a_clipped,
     b_query_.GetCells(a_.vertex(aj), a_.vertex(aj+1), b_root, &b_cells_);
     if (b_cells_.empty()) continue;
     StartEdge(aj);
-    for (int c = 0; c < b_cells_.size(); ++c) {
-      if (EdgeCrossesCell(b_cells_[c]->clipped(0))) return true;
+    for (const S2ShapeIndexCell* b_cell : b_cells_) {
+      if (EdgeCrossesCell(b_cell->clipped(0))) return true;
     }
   }
   return false;
@@ -933,8 +933,8 @@ bool LoopCrosser::HasCrossing(RangeIterator* ai, RangeIterator* bi) {
   } while (bi->id() <= ai->range_max());
 
   // Test all the edge crossings directly.
-  for (int c = 0; c < b_cells_.size(); ++c) {
-    if (CellCrossesCell(ai->clipped(), b_cells_[c]->clipped(0))) {
+  for (const S2ShapeIndexCell* b_cell : b_cells_) {
+    if (CellCrossesCell(ai->clipped(), b_cell->clipped(0))) {
       return true;
     }
   }

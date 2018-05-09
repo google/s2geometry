@@ -306,8 +306,8 @@ class SignTest : public testing::Test {
 
     SortAndTest(points, a);
     SortAndTest(points, b);
-    for (int k = 0; k < points.size(); ++k) {
-      SortAndTest(points, points[k]);
+    for (const S2Point& origin : points) {
+      SortAndTest(points, origin);
     }
   }
 };

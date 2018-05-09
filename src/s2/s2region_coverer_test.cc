@@ -270,10 +270,9 @@ static void TestAccuracy(int max_cells) {
 }
 
 TEST(S2RegionCoverer, Accuracy) {
-  vector<string> max_cells =
-      absl::StrSplit(FLAGS_max_cells, ',', absl::SkipEmpty());
-  for (int i = 0; i < max_cells.size(); ++i) {
-    TestAccuracy(atoi32(max_cells[i].c_str()));
+  for (auto max_cells :
+           absl::StrSplit(FLAGS_max_cells, ',', absl::SkipEmpty())) {
+    TestAccuracy(atoi32(string(max_cells).c_str()));
   }
 }
 

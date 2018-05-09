@@ -663,8 +663,7 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildPaths() {
   // is labeled with an input edge id.)
   vector<EdgePolyline> polylines;
   vector<EdgeId> edges = g_.GetInputEdgeOrder(min_input_ids_);
-  for (int i = 0; i < edges.size(); ++i) {
-    EdgeId e = edges[i];
+  for (EdgeId e : edges) {
     if (!used_[e] && !is_interior(g_.edge(e).first)) {
       polylines.push_back(BuildPath(e));
     }
@@ -675,8 +674,8 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildPaths() {
   // direction of undirected loops.  Even so, we still need to canonicalize
   // the edge order to ensure that when an input edge is split into an edge
   // chain, the loop does not start in the middle of such a chain.
-  for (int i = 0; i < edges.size() && edges_left_ > 0; ++i) {
-    EdgeId e = edges[i];
+  for (EdgeId e : edges) {
+    if (edges_left_ == 0) break;
     if (used_[e]) continue;
     EdgePolyline polyline = BuildPath(e);
     CanonicalizeLoopOrder(min_input_ids_, &polyline);
@@ -725,8 +724,7 @@ vector<Graph::EdgePolyline> Graph::PolylineBuilder::BuildWalks() {
   // case where multiple input polylines share vertices or edges.
   vector<EdgePolyline> polylines;
   vector<EdgeId> edges = g_.GetInputEdgeOrder(min_input_ids_);
-  for (int i = 0; i < edges.size(); ++i) {
-    EdgeId e = edges[i];
+  for (EdgeId e : edges) {
     if (used_[e]) continue;
     VertexId v = g_.edge(e).first;
     int excess = excess_degree(v);

@@ -288,9 +288,9 @@ LoopOrder GetCanonicalLoopOrder(S2PointLoopSpan loop) {
     }
   }
   LoopOrder min_order(min_indices[0], 1);
-  for (int i = 0; i < min_indices.size(); ++i) {
-    LoopOrder order1(min_indices[i], 1);
-    LoopOrder order2(min_indices[i] + n, -1);
+  for (int min_index : min_indices) {
+    LoopOrder order1(min_index, 1);
+    LoopOrder order2(min_index + n, -1);
     if (IsOrderLess(order1, min_order, loop)) min_order = order1;
     if (IsOrderLess(order2, min_order, loop)) min_order = order2;
   }

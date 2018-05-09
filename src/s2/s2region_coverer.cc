@@ -422,12 +422,11 @@ void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
   // If any cells are too small, or don't satisfy level_mod(), then replace
   // them with ancestors.
   if (options_.max_level() < S2CellId::kMaxLevel || options_.level_mod() > 1) {
-    for (int i = 0; i < covering->size(); ++i) {
-      S2CellId id = (*covering)[i];
+    for (S2CellId& id : *covering) {
       int level = id.level();
       int new_level = AdjustLevel(min(level, options_.max_level()));
       if (new_level != level) {
-        (*covering)[i] = id.parent(new_level);
+        id = id.parent(new_level);
       }
     }
   }
