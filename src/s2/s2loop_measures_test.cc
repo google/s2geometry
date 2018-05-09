@@ -132,6 +132,7 @@ class LoopTestBase : public testing::Test {
   vector<S2Point> line_triangle_;
   vector<S2Point> skinny_chevron_;
   vector<S2Point> three_leaf_clover_;
+  vector<S2Point> tessellated_loop_;
 
  public:
   LoopTestBase() :
@@ -168,7 +169,11 @@ class LoopTestBase : public testing::Test {
 
       // A loop where the same vertex appears three times.
       three_leaf_clover_(ParsePointsOrDie(
-          "0:0, -3:3, 3:3, 0:0, 3:0, 3:-3, 0:0, -3:-3, -3:0")) {
+          "0:0, -3:3, 3:3, 0:0, 3:0, 3:-3, 0:0, -3:-3, -3:0")),
+
+      // A loop with groups of 3 or more vertices in a straight line.
+      tessellated_loop_(ParsePointsOrDie(
+          "10:34, 5:34, 0:34, -10:34, -10:36, -5:36, 0:36, 10:36")) {
   }
 };
 
@@ -178,9 +183,8 @@ static void TestAreaConsistentWithCurvature(const vector<S2Point>& loop) {
   // equals 2*Pi minus its curvature.
   double area = S2::GetArea(loop);
   double gauss_area = 2 * M_PI - S2::GetCurvature(loop);
-  // TODO(ericv): The error bound below is much larger than it should be.
-  // Need to improve the error minimization analysis in S2::Area().
-  EXPECT_LE(fabs(area - gauss_area), 1e-9)
+  // The error bound below is sufficient for current tests but not guaranteed.
+  EXPECT_LE(fabs(area - gauss_area), 1e-14)
       << "Failed loop: " << s2textformat::ToString(loop)
       << "\nArea = " << area << ", Gauss Area = " << gauss_area;
 }
@@ -195,6 +199,7 @@ TEST_F(LoopTestBase, GetAreaConsistentWithCurvature) {
   TestAreaConsistentWithCurvature(line_triangle_);
   TestAreaConsistentWithCurvature(skinny_chevron_);
   TestAreaConsistentWithCurvature(three_leaf_clover_);
+  TestAreaConsistentWithCurvature(tessellated_loop_);
 }
 
 TEST_F(LoopTestBase, GetAreaConsistentWithOrientation) {
@@ -219,9 +224,8 @@ TEST_F(LoopTestBase, GetAreaConsistentWithOrientation) {
       }
     } while (!S2Loop(loop, S2Debug::DISABLE).IsValid());
     bool ccw = S2::IsNormalized(loop);
-    // TODO(ericv): The error bound below is much larger than it should be.
-    // Need to improve the error minimization analysis in S2::Area().
-    EXPECT_NEAR(ccw ? 0 : 4 * M_PI, S2::GetArea(loop), 1e-8)
+    // The error bound is sufficient for current tests but not guaranteed.
+    EXPECT_NEAR(ccw ? 0 : 4 * M_PI, S2::GetArea(loop), 1e-14)
         << "Failed loop " << i << ": " << s2textformat::ToString(loop);
     EXPECT_EQ(!ccw, S2Loop(loop).Contains(S2Point(0, 0, 1)));
   }

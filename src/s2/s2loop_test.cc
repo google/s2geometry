@@ -285,9 +285,8 @@ TEST_F(S2LoopTestBase, AreaConsistentWithCurvature) {
   for (const S2Loop* loop : all_loops) {
     double area = loop->GetArea();
     double gauss_area = 2 * M_PI - loop->GetCurvature();
-    // TODO(ericv): The error bound below is much larger than it should be.
-    // Need to improve the error minimization analysis in S2::Area().
-    EXPECT_LE(fabs(area - gauss_area), 1e-9)
+    // The error bound is sufficient for current tests but not guaranteed.
+    EXPECT_LE(fabs(area - gauss_area), 1e-14)
         << "Failed loop: " << s2textformat::ToString(*loop)
         << "\nArea = " << area << ", Gauss Area = " << gauss_area;
   }
@@ -317,9 +316,7 @@ TEST_F(S2LoopTestBase, GetAreaConsistentWithSign) {
       loop.Init(vertices);
     } while (!loop.IsValid());
     bool ccw = loop.IsNormalized();
-    // TODO(ericv): The error bound below is much larger than it should be.
-    // Need to improve the error minimization analysis in S2::Area().
-    EXPECT_NEAR(ccw ? 0 : 4 * M_PI, loop.GetArea(), 1e-8)
+    EXPECT_NEAR(ccw ? 0 : 4 * M_PI, loop.GetArea(), 1e-15)
         << "Failed loop " << i << ": " << s2textformat::ToString(loop);
     EXPECT_EQ(!ccw, loop.Contains(S2Point(0, 0, 1)));
   }
@@ -337,8 +334,7 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
   EXPECT_EQ(S2Point(0, 0, 0), full_->GetCentroid());
 
   EXPECT_DOUBLE_EQ(north_hemi_->GetArea(), 2 * M_PI);
-  EXPECT_LE(east_hemi_->GetArea(), 2 * M_PI + 1e-12);
-  EXPECT_GE(east_hemi_->GetArea(), 2 * M_PI - 1e-12);
+  EXPECT_NEAR(east_hemi_->GetArea(), 2 * M_PI, 1e-15);
 
   // Construct spherical caps of random height, and approximate their boundary
   // with closely spaces vertices.  Then check that the area and centroid are
