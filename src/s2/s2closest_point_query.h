@@ -309,10 +309,6 @@ class S2ClosestPointQuery {
  private:
   Options options_;
   Base base_;
-
-  // Deprecated methods that return results using the result interface require
-  // keeping a copy of the result vector.
-  std::vector<Result> results_;
 };
 
 
