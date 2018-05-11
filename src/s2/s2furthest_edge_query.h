@@ -142,7 +142,7 @@ class S2FurthestEdgeQuery {
     void set_max_error(S1Angle max_error);
 
     // Inherited options (see s2closestedgequerybase.h for details):
-    using Base::Options::set_max_edges;
+    using Base::Options::set_max_results;
     using Base::Options::set_include_interiors;
     using Base::Options::set_use_brute_force;
 
@@ -211,7 +211,8 @@ class S2FurthestEdgeQuery {
 
     // Construct a Result from a Base::Result.
     explicit Result(const Base::Result& base)
-        : Result(S1ChordAngle(base.distance), base.shape_id, base.edge_id) {}
+        : Result(S1ChordAngle(base.distance()), base.shape_id(),
+                 base.edge_id()) {}
 
     // Constructs a Result object for the given edge with the given distance.
     Result(S1ChordAngle distance, int32 _shape_id, int32 _edge_id)

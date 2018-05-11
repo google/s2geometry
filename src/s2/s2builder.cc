@@ -861,7 +861,7 @@ void S2Builder::AddExtraSite(const S2Point& new_site,
   S2ClosestEdgeQuery query(&input_edge_index, options);
   S2ClosestEdgeQuery::PointTarget target(new_site);
   for (const auto& result : query.FindClosestEdges(&target)) {
-    InputEdgeId e = result.edge_id;
+    InputEdgeId e = result.edge_id();
     auto* site_ids = &edge_sites_[e];
     site_ids->push_back(new_site_id);
     SortSitesByDistance(input_vertices_[input_edges_[e].first], site_ids);

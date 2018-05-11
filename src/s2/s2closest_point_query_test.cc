@@ -134,11 +134,11 @@ using TestingResult = pair<S2MinDistance, int>;
 static void GetClosestPoints(TestQuery::Target* target, TestQuery* query,
                              vector<TestingResult>* results) {
   const auto query_results = query->FindClosestPoints(target);
-  EXPECT_LE(query_results.size(), query->options().max_points());
+  EXPECT_LE(query_results.size(), query->options().max_results());
   if (!query->options().region() &&
       query->options().max_distance() == S1ChordAngle::Infinity()) {
     // We can predict exactly how many points should be returned.
-    EXPECT_EQ(std::min(query->options().max_points(),
+    EXPECT_EQ(std::min(query->options().max_results(),
                        query->index().num_points()),
               query_results.size());
   }
@@ -160,10 +160,10 @@ static void TestFindClosestPoints(TestQuery::Target* target, TestQuery *query) {
   query->mutable_options()->set_use_brute_force(false);
   GetClosestPoints(target, query, &actual);
   EXPECT_TRUE(CheckDistanceResults(expected, actual,
-                                   query->options().max_points(),
+                                   query->options().max_results(),
                                    query->options().max_distance(),
                                    query->options().max_error()))
-      << "max_points=" << query->options().max_points()
+      << "max_results=" << query->options().max_results()
       << ", max_distance=" << query->options().max_distance()
       << ", max_error=" << query->options().max_error();
 
@@ -211,7 +211,7 @@ static void TestWithIndexFactory(const PointIndexFactory& factory,
     // Occasionally we don't set any limit on the number of result points.
     // (This may return all points if we also don't set a distance limit.)
     if (!S2Testing::rnd.OneIn(5)) {
-      query.mutable_options()->set_max_points(1 + S2Testing::rnd.Uniform(10));
+      query.mutable_options()->set_max_results(1 + S2Testing::rnd.Uniform(10));
     }
     // We set a distance limit 2/3 of the time.
     if (!S2Testing::rnd.OneIn(3)) {

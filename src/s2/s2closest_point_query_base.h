@@ -35,7 +35,7 @@
 
 // Options that control the set of points returned.  Note that by default
 // *all* points are returned, so you will always want to set either the
-// max_points() option or the max_distance() option (or both).
+// max_results() option or the max_distance() option (or both).
 //
 // This class is also available as S2ClosestPointQueryBase<Data>::Options.
 // (It is defined here to avoid depending on the "Data" template argument.)
@@ -48,13 +48,13 @@ class S2ClosestPointQueryBaseOptions {
 
   S2ClosestPointQueryBaseOptions();
 
-  // Specifies that at most "max_points" points should be returned.
+  // Specifies that at most "max_results" points should be returned.
   //
-  // REQUIRES: max_points >= 1
+  // REQUIRES: max_results >= 1
   // DEFAULT: numeric_limits<int>::max()
-  int max_points() const;
-  void set_max_points(int max_points);
-  static constexpr int kMaxMaxPoints = std::numeric_limits<int>::max();
+  int max_results() const;
+  void set_max_results(int max_results);
+  static constexpr int kMaxMaxResults = std::numeric_limits<int>::max();
 
   // Specifies that only points whose distance to the target is less than
   // "max_distance" should be returned.
@@ -73,7 +73,7 @@ class S2ClosestPointQueryBaseOptions {
   // Specifies that points up to max_error() further away than the true
   // closest points may be substituted in the result set, as long as such
   // points satisfy all the remaining search criteria (such as max_distance).
-  // This option only has an effect if max_points() is also specified;
+  // This option only has an effect if max_results() is also specified;
   // otherwise all points closer than max_distance() will always be returned.
   //
   // Note that this does not affect how the distance between points is
@@ -82,7 +82,7 @@ class S2ClosestPointQueryBaseOptions {
   //
   // This can be used to implement distance predicates efficiently.  For
   // example, to determine whether the minimum distance is less than D, the
-  // IsDistanceLess() method sets max_points() == 1 and max_distance() ==
+  // IsDistanceLess() method sets max_results() == 1 and max_distance() ==
   // max_error() == D.  This causes the algorithm to terminate as soon as it
   // finds any point whose distance is less than D, rather than continuing to
   // search for a point that is even closer.
@@ -115,7 +115,7 @@ class S2ClosestPointQueryBaseOptions {
   Distance max_distance_ = Distance::Infinity();
   Delta max_error_ = Delta::Zero();
   const S2Region* region_ = nullptr;
-  int max_points_ = kMaxMaxPoints;
+  int max_results_ = kMaxMaxResults;
   bool use_brute_force_ = false;
 };
 
@@ -282,7 +282,7 @@ class S2ClosestPointQueryBase {
   // the given search criteria, then a Result with distance() == Infinity()
   // and is_empty() == true is returned.
   //
-  // REQUIRES: options.max_points() == 1
+  // REQUIRES: options.max_results() == 1
   Result FindClosestPoint(Target* target, const Options& options);
 
  private:
@@ -324,14 +324,14 @@ class S2ClosestPointQueryBase {
 
   // The current result set is stored in one of three ways:
   //
-  //  - If max_points() == 1, the best result is kept in result_singleton_.
+  //  - If max_results() == 1, the best result is kept in result_singleton_.
   //
-  //  - If max_points() == "infinity", results are appended to result_vector_
+  //  - If max_results() == "infinity", results are appended to result_vector_
   //    and sorted/uniqued at the end.
   //
   //  - Otherwise results are kept in a priority queue so that we can
-  //    progressively reduce the distance limit once max_points() results have
-  //    been found.
+  //    progressively reduce the distance limit once max_results() results
+  //    have been found.
   Result result_singleton_;
   std::vector<Result> result_vector_;
   std::priority_queue<Result, absl::InlinedVector<Result, 16>> result_set_;
@@ -378,15 +378,15 @@ S2ClosestPointQueryBaseOptions<Distance>::S2ClosestPointQueryBaseOptions() {
 }
 
 template <class Distance>
-inline int S2ClosestPointQueryBaseOptions<Distance>::max_points() const {
-  return max_points_;
+inline int S2ClosestPointQueryBaseOptions<Distance>::max_results() const {
+  return max_results_;
 }
 
 template <class Distance>
-inline void S2ClosestPointQueryBaseOptions<Distance>::set_max_points(
-    int max_points) {
-  S2_DCHECK_GE(max_points, 1);
-  max_points_ = max_points;
+inline void S2ClosestPointQueryBaseOptions<Distance>::set_max_results(
+    int max_results) {
+  S2_DCHECK_GE(max_results, 1);
+  max_results_ = max_results;
 }
 
 template <class Distance>
@@ -483,7 +483,7 @@ template <class Distance, class Data>
 typename S2ClosestPointQueryBase<Distance, Data>::Result
 S2ClosestPointQueryBase<Distance, Data>::FindClosestPoint(
     Target* target, const Options& options) {
-  S2_DCHECK_EQ(options.max_points(), 1);
+  S2_DCHECK_EQ(options.max_results(), 1);
   FindClosestPointsInternal(target, options);
   return result_singleton_;
 }
@@ -493,11 +493,11 @@ void S2ClosestPointQueryBase<Distance, Data>::FindClosestPoints(
     Target* target, const Options& options, std::vector<Result>* results) {
   FindClosestPointsInternal(target, options);
   results->clear();
-  if (options.max_points() == 1) {
+  if (options.max_results() == 1) {
     if (!result_singleton_.is_empty()) {
       results->push_back(result_singleton_);
     }
-  } else if (options.max_points() == Options::kMaxMaxPoints) {
+  } else if (options.max_results() == Options::kMaxMaxResults) {
     std::sort(result_vector_.begin(), result_vector_.end());
     std::unique_copy(result_vector_.begin(), result_vector_.end(),
                      std::back_inserter(*results));
@@ -526,11 +526,11 @@ void S2ClosestPointQueryBase<Distance, Data>::FindClosestPointsInternal(
   S2_DCHECK(target->max_brute_force_index_size() >= 0);
   if (distance_limit_ == Distance::Zero()) return;
 
-  if (options.max_points() == Options::kMaxMaxPoints &&
+  if (options.max_results() == Options::kMaxMaxResults &&
       options.max_distance() == Distance::Infinity() &&
       options.region() == nullptr) {
     S2_LOG(WARNING) << "Returning all points "
-                    "(max_points/max_distance/region not set)";
+                    "(max_results/max_distance/region not set)";
   }
 
   // If max_error() > 0 and the target takes advantage of this, then we may
@@ -616,7 +616,7 @@ void S2ClosestPointQueryBase<Distance, Data>::InitQueue() {
   // that disc and intersect it with the covering for the index.  This can
   // save a lot of work when the search region is small.
   S2Cap cap = target_->GetCapBound();
-  if (options().max_points() == 1) {
+  if (options().max_results() == 1) {
     // If the user is searching for just the closest point, we can compute an
     // upper bound on search radius by seeking to the center of the target's
     // bounding cap and looking at the adjacent index points (in S2CellId
@@ -624,12 +624,12 @@ void S2ClosestPointQueryBase<Distance, Data>::InitQueue() {
     // bound on the search radius.
     //
     // TODO(ericv): The same strategy would also work for small values of
-    // max_points() > 1, e.g. max_points() == 20, except that we would need to
+    // max_results() > 1, e.g. max_results() == 20, except that we would need to
     // examine more neighbors (at least 20, and preferably 20 in each
     // direction).  It's not clear whether this is a common case, though, and
     // also this would require extending MaybeAddResult() so that it can
     // remove duplicate entries.  (The points added here may be re-added by
-    // EnqueueCell(), but this is okay when max_points() == 1.)
+    // EnqueueCell(), but this is okay when max_results() == 1.)
     iter_.Seek(S2CellId(cap.center()));
     if (!iter_.done()) {
       MaybeAddResult(&iter_.point_data());
@@ -739,22 +739,22 @@ void S2ClosestPointQueryBase<Distance, Data>::MaybeAddResult(
   if (region && !region->Contains(point_data->point())) return;
 
   Result result(distance, point_data);
-  if (options().max_points() == 1) {
+  if (options().max_results() == 1) {
     // Optimization for the common case where only the closest point is wanted.
     result_singleton_ = result;
     distance_limit_ = result.distance() - options().max_error();
-  } else if (options().max_points() == Options::kMaxMaxPoints) {
+  } else if (options().max_results() == Options::kMaxMaxResults) {
     result_vector_.push_back(result);  // Sort/unique at end.
   } else {
     // Add this point to result_set_.  Note that with the current algorithm
     // each candidate point is considered at most once (except for one special
-    // case where max_points() == 1, see InitQueue for details), so we don't
+    // case where max_results() == 1, see InitQueue for details), so we don't
     // need to worry about possibly adding a duplicate entry here.
-    if (result_set_.size() >= options().max_points()) {
+    if (result_set_.size() >= options().max_results()) {
       result_set_.pop();  // Replace the furthest result point.
     }
     result_set_.push(result);
-    if (result_set_.size() >= options().max_points()) {
+    if (result_set_.size() >= options().max_results()) {
       distance_limit_ = result_set_.top().distance() - options().max_error();
     }
   }

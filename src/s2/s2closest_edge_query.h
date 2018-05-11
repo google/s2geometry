@@ -47,7 +47,7 @@
 //     index.Add(new S2Polyline::Shape(polyline));
 //   }
 //   S2ClosestEdgeQuery query(&index);
-//   query.mutable_options()->set_max_edges(5);
+//   query.mutable_options()->set_max_results(5);
 //   S2ClosestEdgeQuery::PointTarget target(point);
 //   for (const auto& result : query.FindClosestEdges(&target)) {
 //     // The Result struct contains the following fields:
@@ -74,7 +74,7 @@
 //       S2Earth::ToAngle(util::units::Kilometers(5)));
 //
 // By default *all* edges are returned, so you should always specify either
-// max_edges() or max_distance() or both.  There is also a FindClosestEdge()
+// max_results() or max_distance() or both.  There is also a FindClosestEdge()
 // convenience method that returns only the closest edge.
 //
 // Note that by default, distances are measured to the boundary and interior
@@ -118,7 +118,7 @@ class S2ClosestEdgeQuery {
 
   // Options that control the set of edges returned.  Note that by default
   // *all* edges are returned, so you will always want to set either the
-  // max_edges() option or the max_distance() option (or both).
+  // max_results() option or the max_distance() option (or both).
   class Options : public Base::Options {
    public:
     // See S2ClosestEdgeQueryBase::Options for the full set of options.
@@ -162,7 +162,7 @@ class S2ClosestEdgeQuery {
     void set_max_error(S1Angle max_error);  // S1Angle version
 
     // Inherited options (see s2closest_edge_query_base.h for details):
-    using Base::Options::set_max_edges;
+    using Base::Options::set_max_results;
     using Base::Options::set_include_interiors;
     using Base::Options::set_use_brute_force;
   };
@@ -399,21 +399,21 @@ inline S2ClosestEdgeQuery::Result S2ClosestEdgeQuery::FindClosestEdge(
     Target* target) {
   static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
   Options tmp_options = options_;
-  tmp_options.set_max_edges(1);
+  tmp_options.set_max_results(1);
   return base_.FindClosestEdge(target, tmp_options);
 }
 
 inline S1ChordAngle S2ClosestEdgeQuery::GetDistance(Target* target) {
-  return FindClosestEdge(target).distance;
+  return FindClosestEdge(target).distance();
 }
 
 inline S2Shape::Edge S2ClosestEdgeQuery::GetEdge(const Result& result) const {
-  return index().shape(result.shape_id)->edge(result.edge_id);
+  return index().shape(result.shape_id())->edge(result.edge_id());
 }
 
 inline S2Point S2ClosestEdgeQuery::Project(const S2Point& point,
                                            const Result& result) const {
-  if (result.edge_id < 0) return point;
+  if (result.edge_id() < 0) return point;
   auto edge = GetEdge(result);
   return S2::Project(point, edge.v0, edge.v1);
 }
