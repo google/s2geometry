@@ -309,11 +309,12 @@ class Span {
   // arguments, when T==char. The appropriate ctor is selected using SFINAE.
   template <typename V, typename = EnableIfConvertibleFrom<V>,
             typename = EnableIfMutableView<V>>
-  ABSL_DEPRECATED("Use the explicit mutable ref conversion ctor")
+  ABSL_DEPRECATED("Use the explicit mutable ref conversion ctor or MakeSpan()")
   Span(V* v)  // NOLINT(runtime/explicit)
       : Span(span_internal::GetData(*v), v->size()) {}
 
-  // Explicit reference constructor for a mutable `Span<T>` type
+  // Explicit reference constructor for a mutable `Span<T>` type. Can be
+  // replaced with MakeSpan() to infer the type parameter.
   template <typename V, typename = EnableIfConvertibleFrom<V>,
             typename = EnableIfMutableView<V>>
   explicit Span(V& v) noexcept  // NOLINT(runtime/references)

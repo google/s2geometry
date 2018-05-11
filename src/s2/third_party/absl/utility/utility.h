@@ -288,7 +288,4 @@ T exchange(T& obj, U&& new_value) {
 
 }  // namespace absl
 
-
-
-
 #endif  // S2_THIRD_PARTY_ABSL_UTILITY_UTILITY_H_
