@@ -27,6 +27,7 @@
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/container/fixed_array.h"
 #include <openssl/bn.h>
 #include <openssl/crypto.h>  // for OPENSSL_free
 
@@ -106,6 +107,8 @@ inline static uint64 BN_ext_get_uint64(const BIGNUM* bn) {
 #endif
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+
 // Count the number of low-order zero bits in the given BIGNUM (ignoring its
 // sign).  Returns 0 if the argument is zero.
 static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
@@ -123,6 +126,32 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
   }
   return count;
 }
+
+#else  // OPENSSL_VERSION_NUMBER >= 0x10100000L
+
+static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
+  // In OpenSSL >= 1.1, BIGNUM is an opaque type, so d and top
+  // cannot be accessed.  The bytes must be copied out at a ~25%
+  // performance penalty.
+  absl::FixedArray<unsigned char> bytes(BN_num_bytes(bn));
+  // "le" indicates little endian.
+  S2_DCHECK_EQ(BN_bn2lebinpad(bn, bytes.data(), bytes.size()), bytes.size());
+
+  int count = 0;
+  for (unsigned char c : bytes) {
+    if (c == 0) {
+      count += 8;
+    } else {
+      for (; (c & 1) == 0; c >>= 1) {
+        ++count;
+      }
+      break;
+    }
+  }
+  return count;
+}
+
+#endif  // OPENSSL_VERSION_NUMBER >= 0x10100000L
 
 #endif  // !defined(OPENSSL_IS_BORINGSSL)
 
