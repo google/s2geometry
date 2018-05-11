@@ -281,7 +281,7 @@ constexpr size_t Max(size_t a, size_t b, Ts... rest) {
 template <class T>
 string TypeName() {
 #if !defined(__GNUC__) || defined(__GXX_RTTI)
-  return StrCat("<", typeid(T).name(), ">");
+  return absl::StrCat("<", typeid(T).name(), ">");
 #else
   return "";
 #endif
@@ -617,12 +617,13 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
     const auto offsets = Offsets();
     const size_t sizes[] = {SizeOf<ElementType<OffsetSeq>>()...};
     const string types[] = {adl_barrier::TypeName<ElementType<OffsetSeq>>()...};
-    string res = StrCat("@0", types[0], "(", sizes[0], ")");
+    string res = absl::StrCat("@0", types[0], "(", sizes[0], ")");
     for (size_t i = 0; i != NumOffsets - 1; ++i) {
-      StrAppend(&res, "[", size_[i], "]; @", offsets[i + 1], types[i + 1], "(",
-                sizes[i + 1], ")");
+      absl::StrAppend(&res, "[", size_[i], "]; @", offsets[i + 1], types[i + 1],
+                      "(", sizes[i + 1], ")");
     }
-    if (NumTypes == NumSizes) StrAppend(&res, "[", size_[NumSizes - 1], "]");
+    if (NumTypes == NumSizes)
+      absl::StrAppend(&res, "[", size_[NumSizes - 1], "]");
     return res;
   }
 

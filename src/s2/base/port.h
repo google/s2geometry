@@ -335,7 +335,7 @@ inline void sized_delete_array(void *ptr, size_t size) {
 #define bswap_32(x) OSSwapInt32(x)
 #define bswap_64(x) OSSwapInt64(x)
 
-#elif defined(__GLIBC__) || defined(__BIONIC__) || defined(__GENCLAVE__)
+#elif defined(__GLIBC__) || defined(__BIONIC__) || defined(__ASYLO__)
 #include <byteswap.h>  // IWYU pragma: export
 
 #else
@@ -859,22 +859,22 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 #endif  // defined(__cplusplus), end of unaligned API
 
 // aligned_malloc, aligned_free
-#if defined(__ANDROID__) || defined(__GENCLAVE__)
+#if defined(__ANDROID__) || defined(__ASYLO__)
 #include <malloc.h>  // for memalign()
 #endif
 
-// __GENCLAVE__ platform uses newlib without an underlying OS, which provides
+// __ASYLO__ platform uses newlib without an underlying OS, which provides
 // memalign, but not posix_memalign.
 #if defined(__cplusplus) &&                                               \
     (((defined(__GNUC__) || defined(__APPLE__) || \
        defined(__NVCC__)) &&                                              \
       !defined(SWIG)) ||                                                  \
      ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)) ||   \
-     defined(__GENCLAVE__))
+     defined(__ASYLO__))
 inline void *aligned_malloc(size_t size, int minimum_alignment) {
-#if defined(__ANDROID__) || defined(OS_ANDROID) || defined(__GENCLAVE__)
+#if defined(__ANDROID__) || defined(OS_ANDROID) || defined(__ASYLO__)
   return memalign(minimum_alignment, size);
-#else  // !__ANDROID__ && !OS_ANDROID && !__GENCLAVE__
+#else  // !__ANDROID__ && !OS_ANDROID && !__ASYLO__
   void *ptr = nullptr;
   // posix_memalign requires that the requested alignment be at least
   // sizeof(void*). In this case, fall back on malloc which should return memory
