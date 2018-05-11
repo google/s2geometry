@@ -120,14 +120,7 @@ auto TupleRef(T&& t) -> decltype(
           std::tuple_size<typename std::decay<T>::type>::value>());
 }
 
-template <class ContainerKey, class Hash, class Eq, class PassedKey>
-using RequireUsableKey = std::pair<
-    decltype(std::declval<const Hash&>()(std::declval<const PassedKey&>())),
-    decltype(std::declval<const Eq&>()(std::declval<const ContainerKey&>(),
-                                       std::declval<const PassedKey&>()))>;
-
-template <class Key, class Hash, class Eq, class F, class K, class V,
-          class = RequireUsableKey<Key, Hash, Eq, K>>
+template <class F, class K, class V>
 decltype(std::declval<F>()(std::declval<const K&>(), std::piecewise_construct,
                            std::declval<std::tuple<K>>(), std::declval<V>()))
 DecomposePairImpl(F&& f, std::pair<std::tuple<K>, V> p) {
@@ -195,17 +188,16 @@ auto PairArgs(std::piecewise_construct_t, F&& f, S&& s)
 }
 
 // A helper function for implementing apply() in map policies.
-template <class Key, class Hash, class Eq, class F, class... Args>
+template <class F, class... Args>
 auto DecomposePair(F&& f, Args&&... args)
-    -> decltype(internal_memory::DecomposePairImpl<Key, Hash, Eq>(
+    -> decltype(internal_memory::DecomposePairImpl(
         std::forward<F>(f), PairArgs(std::forward<Args>(args)...))) {
-  return internal_memory::DecomposePairImpl<Key, Hash, Eq>(
+  return internal_memory::DecomposePairImpl(
       std::forward<F>(f), PairArgs(std::forward<Args>(args)...));
 }
 
 // A helper function for implementing apply() in set policies.
-template <class Key, class Hash, class Eq, class F, class Arg,
-          class = internal_memory::RequireUsableKey<Key, Hash, Eq, Arg>>
+template <class F, class Arg>
 decltype(std::declval<F>()(std::declval<const Arg&>(), std::declval<Arg>()))
 DecomposeValue(F&& f, Arg&& arg) {
   const auto& key = arg;
