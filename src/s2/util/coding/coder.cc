@@ -32,6 +32,7 @@ Encoder::Encoder()
 }
 
 Encoder::~Encoder() {
+  S2_CHECK_LE(buf_, limit_);  // Catch the buffer overflow.
   if (underlying_buffer_ != &kEmptyBuffer) {
     std::allocator<unsigned char>().deallocate(
         underlying_buffer_, limit_ - orig_);
