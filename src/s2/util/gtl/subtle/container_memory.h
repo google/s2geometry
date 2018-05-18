@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-
+// Author: alkis@google.com (Alkis Evlogimenos)
 
 #ifndef S2_UTIL_GTL_SUBTLE_CONTAINER_MEMORY_H_
 #define S2_UTIL_GTL_SUBTLE_CONTAINER_MEMORY_H_

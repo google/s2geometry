@@ -149,7 +149,9 @@
 
 // OS_IOS
 #if defined(__APPLE__)
+// Currently, blaze supports iOS yet doesn't define a flag. Mac users have
 // traditionally defined OS_IOS themselves via other build systems, since mac
+// hasn't been supported by blaze.
 // TODO(user): Remove this when all toolchains make the proper defines.
 #include <TargetConditionals.h>
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
@@ -276,6 +278,7 @@ inline void sized_delete_array(void *ptr, size_t size) {
 
 // IS_LITTLE_ENDIAN, IS_BIG_ENDIAN
 #if defined __linux__ || defined OS_ANDROID || defined(__ANDROID__)
+// TODO(user): http://b/21460321; use one of OS_ANDROID or __ANDROID__.
 // _BIG_ENDIAN
 #include <endian.h>
 

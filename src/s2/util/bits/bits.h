@@ -378,6 +378,7 @@ class Bits {
   // Originally, I wanted to depend on //testing/production_stub/public
   // so that I would be able to
   // #include "testing/production_stub/public/gunit_prod.h", which provides
+  // FRIEND_MACRO. But that broke iOS: http://b/22806226 . I then noticed that
   // the previously mentioned header file says to instead
   // #include "testing/base/gunit_prod.h". I cannot find a library that a)
   // provides the alternative header file b) is visisble. Thus, I have thrown
