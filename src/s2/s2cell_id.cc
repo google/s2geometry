@@ -220,7 +220,7 @@ string S2CellId::ToToken() const {
 S2CellId S2CellId::FromToken(const char* token, size_t length) {
   if (length > 16) return S2CellId::None();
   uint64 id = 0;
-  for (int i = 0, pos = 60; i < length; ++i, pos -= 4) {
+  for (unsigned i = 0, pos = 60; i < length; ++i, pos -= 4) {
     uint64 d;
     if ('0' <= token[i] && token[i] <= '9') {
       d = token[i] - '0';

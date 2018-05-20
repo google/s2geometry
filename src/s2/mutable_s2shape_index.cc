@@ -1348,7 +1348,7 @@ void MutableS2ShapeIndex::AbsorbIndexCell(const S2PaddedCell& pcell,
   }
   // Discard any edges from "edges" that are being removed, and append the
   // remainder to "new_edges".  (This keeps the edges sorted by shape id.)
-  for (int i = 0; i < edges->size(); ++i) {
+  for (unsigned i = 0; i < edges->size(); ++i) {
     const ClippedEdge* clipped = (*edges)[i];
     if (!is_shape_being_removed(clipped->face_edge->shape_id)) {
       new_edges.insert(new_edges.end(), edges->begin() + i, edges->end());

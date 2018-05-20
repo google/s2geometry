@@ -414,7 +414,7 @@ void GraphEdgeClipper::Run() {
     a_num_crossings.resize(a_vertices.size());
     a_isolated.clear();
     a_isolated.resize(a_vertices.size());
-    for (int bi = 0; bi < b_input_edges.size(); ++bi) {
+    for (unsigned bi = 0; bi < b_input_edges.size(); ++bi) {
       bool left_to_right = b_input_edges[bi].left_to_right();
       int a_index = GetCrossedVertexIndex(a_vertices, b_edges[bi],
                                           left_to_right);

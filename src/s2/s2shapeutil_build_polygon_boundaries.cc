@@ -52,7 +52,7 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
   // A map from shape.id() to the corresponding component number.
   vector<int> component_ids;
   vector<S2Shape*> outer_loops;
-  for (int i = 0; i < components.size(); ++i) {
+  for (unsigned i = 0; i < components.size(); ++i) {
     const auto& component = components[i];
     for (S2Shape* loop : component) {
       if (component.size() > 1 &&
@@ -70,7 +70,7 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
   // Find the loops containing each component.
   vector<vector<S2Shape*>> ancestors(components.size());
   auto contains_query = MakeS2ContainsPointQuery(&index);
-  for (int i = 0; i < outer_loops.size(); ++i) {
+  for (unsigned i = 0; i < outer_loops.size(); ++i) {
     auto loop = outer_loops[i];
     S2_DCHECK_GT(loop->num_edges(), 0);
     ancestors[i] = contains_query.GetContainingShapes(loop->edge(0).v0);
@@ -78,7 +78,7 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
   // Assign each outer loop to the component whose depth is one less.
   // Components at depth 0 become a single face.
   gtl::btree_map<S2Shape*, vector<S2Shape*>> children;
-  for (int i = 0; i < outer_loops.size(); ++i) {
+  for (unsigned i = 0; i < outer_loops.size(); ++i) {
     S2Shape* ancestor = nullptr;
     int depth = ancestors[i].size();
     if (depth > 0) {

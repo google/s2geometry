@@ -146,7 +146,7 @@ bool S2LaxPolygonShape::Init(Decoder* decoder) {
     vertices_ = nullptr;
   } else {
     vertices_ = make_unique<S2Point[]>(vertices.size());
-    for (int i = 0; i < vertices.size(); ++i) {
+    for (unsigned i = 0; i < vertices.size(); ++i) {
       vertices_[i] = vertices[i];
     }
     if (num_loops_ == 1) {
@@ -155,7 +155,7 @@ bool S2LaxPolygonShape::Init(Decoder* decoder) {
       s2coding::EncodedUintVector<uint32> cumulative_vertices;
       if (!cumulative_vertices.Init(decoder)) return false;
       cumulative_vertices_ = new uint32[cumulative_vertices.size()];
-      for (int i = 0; i < cumulative_vertices.size(); ++i) {
+      for (unsigned i = 0; i < cumulative_vertices.size(); ++i) {
         cumulative_vertices_[i] = cumulative_vertices[i];
       }
     }

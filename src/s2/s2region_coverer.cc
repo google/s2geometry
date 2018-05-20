@@ -422,7 +422,7 @@ void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
   // If any cells are too small, or don't satisfy level_mod(), then replace
   // them with ancestors.
   if (options_.max_level() < S2CellId::kMaxLevel || options_.level_mod() > 1) {
-    for (int i = 0; i < covering->size(); ++i) {
+    for (unsigned i = 0; i < covering->size(); ++i) {
       S2CellId id = (*covering)[i];
       int level = id.level();
       int new_level = AdjustLevel(min(level, options_.max_level()));
@@ -457,7 +457,7 @@ void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
     // common ancestor until the number of cells is acceptable.
     while (covering->size() > options_.max_cells()) {
       int best_index = -1, best_level = -1;
-      for (int i = 0; i + 1 < covering->size(); ++i) {
+      for (unsigned i = 0; i + 1 < covering->size(); ++i) {
         int level = (*covering)[i].GetCommonAncestorLevel((*covering)[i+1]);
         level = AdjustLevel(level);
         if (level > best_level) {

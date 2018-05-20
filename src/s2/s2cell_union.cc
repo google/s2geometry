@@ -497,7 +497,7 @@ bool S2CellUnion::Decode(Decoder* const decoder) {
   }
 
   vector<S2CellId> temp_cell_ids(num_cells);
-  for (int i = 0; i < num_cells; ++i) {
+  for (unsigned i = 0; i < num_cells; ++i) {
     if (!temp_cell_ids[i].Decode(decoder)) return false;
   }
   cell_ids_.swap(temp_cell_ids);
