@@ -135,8 +135,8 @@ static void GetClosestPoints(TestQuery::Target* target, TestQuery* query,
                              vector<TestingResult>* results) {
   const auto query_results = query->FindClosestPoints(target);
   EXPECT_LE(query_results.size(), query->options().max_results());
-  if (!query->options().region() &&
-      query->options().max_distance() == S1ChordAngle::Infinity()) {
+  const S2Region* region = query->options().region();
+  if (!region && query->options().max_distance() == S1ChordAngle::Infinity()) {
     // We can predict exactly how many points should be returned.
     EXPECT_EQ(std::min(query->options().max_results(),
                        query->index().num_points()),
@@ -144,9 +144,8 @@ static void GetClosestPoints(TestQuery::Target* target, TestQuery* query,
   }
   for (const auto& result : query_results) {
     // Check that the point satisfies the region() condition.
-    if (query->options().region()) {
-      EXPECT_TRUE(query->options().region()->Contains(result.point()));
-    }
+    if (region) EXPECT_TRUE(region->Contains(result.point()));
+
     // Check that it satisfies the max_distance() condition.
     EXPECT_LT(result.distance(), query->options().max_distance());
     results->push_back(TestingResult(result.distance(), result.data()));
@@ -194,7 +193,7 @@ static void TestWithIndexFactory(const PointIndexFactory& factory,
   for (int i = 0; i < num_indexes; ++i) {
     S2Testing::rnd.Reset(FLAGS_s2_random_seed + i);
     index_caps.push_back(S2Cap(S2Testing::RandomPoint(), kTestCapRadius));
-    indexes.emplace_back(new TestIndex);
+    indexes.push_back(make_unique<TestIndex>());
     factory.AddPoints(index_caps.back(), num_points, indexes.back().get());
   }
   for (int i = 0; i < num_queries; ++i) {

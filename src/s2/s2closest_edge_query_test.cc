@@ -18,7 +18,6 @@
 #include "s2/s2closest_edge_query.h"
 
 #include <memory>
-#include <set>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -46,10 +45,7 @@ using s2textformat::MakeIndexOrDie;
 using s2textformat::MakePointOrDie;
 using s2textformat::MakePolygonOrDie;
 using s2textformat::ParsePointsOrDie;
-using std::fabs;
-using std::make_pair;
 using std::min;
-using std::ostream;
 using std::pair;
 using std::unique_ptr;
 using std::vector;
@@ -313,8 +309,8 @@ vector<TestingResult> ConvertResults(
   vector<TestingResult> testing_results;
   for (const auto& result : results) {
     testing_results.push_back(
-        make_pair(result.distance(),
-                  ShapeEdgeId(result.shape_id(), result.edge_id())));
+        TestingResult(result.distance(),
+                      ShapeEdgeId(result.shape_id(), result.edge_id())));
   }
   return testing_results;
 }
@@ -392,7 +388,7 @@ static void TestWithIndexFactory(const s2testing::ShapeIndexFactory& factory,
   for (int i = 0; i < num_indexes; ++i) {
     S2Testing::rnd.Reset(FLAGS_s2_random_seed + i);
     index_caps.push_back(S2Cap(S2Testing::RandomPoint(), kTestCapRadius));
-    indexes.emplace_back(new MutableS2ShapeIndex);
+    indexes.push_back(make_unique<MutableS2ShapeIndex>());
     factory.AddEdges(index_caps.back(), num_edges, indexes.back().get());
   }
   for (int i = 0; i < num_queries; ++i) {

@@ -86,6 +86,24 @@ TEST(CellTarget, UpdateMinDistanceToCellWhenEqual) {
   EXPECT_FALSE(target.UpdateMinDistance(cell, &dist));
 }
 
+TEST(CellUnionTarget, UpdateMinDistanceToEdgeWhenEqual) {
+  S2MinDistanceCellUnionTarget
+      target{S2CellUnion({S2CellId{MakePointOrDie("0:1")}})};
+  S2MinDistance dist(S1ChordAngle::Infinity());
+  auto edge = ParsePointsOrDie("0:-1, 0:1");
+  EXPECT_TRUE(target.UpdateMinDistance(edge[0], edge[1], &dist));
+  EXPECT_FALSE(target.UpdateMinDistance(edge[0], edge[1], &dist));
+}
+
+TEST(CellUnionTarget, UpdateMinDistanceToCellWhenEqual) {
+  S2MinDistanceCellUnionTarget
+      target{S2CellUnion({S2CellId{MakePointOrDie("0:1")}})};
+  S2MinDistance dist(S1ChordAngle::Infinity());
+  S2Cell cell{S2CellId(MakePointOrDie("0:0"))};
+  EXPECT_TRUE(target.UpdateMinDistance(cell, &dist));
+  EXPECT_FALSE(target.UpdateMinDistance(cell, &dist));
+}
+
 TEST(ShapeIndexTarget, UpdateMinDistanceToEdgeWhenEqual) {
   auto target_index = MakeIndexOrDie("1:0 # #");
   S2MinDistanceShapeIndexTarget target(target_index.get());
@@ -116,12 +134,21 @@ vector<int> GetContainingShapes(S2MinDistanceTarget* target,
   return vector<int>(shape_ids.begin(), shape_ids.end());
 }
 
+// Given two sorted vectors "x" and "y", returns true if x is a subset of y
+// and x.size() == x_size.
+bool IsSubsetOfSize(const vector<int>& x, const vector<int>& y,
+                    int x_size) {
+  if (x.size() != x_size) return false;
+  return std::includes(y.begin(), y.end(), x.begin(), x.end());
+}
+
 TEST(PointTarget, VisitContainingShapes) {
   // Only shapes 2 and 4 should contain the target point.
   auto index = MakeIndexOrDie(
       "1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | 0:0, 0:4, 4:0");
   S2MinDistancePointTarget target(MakePointOrDie("1:1"));
-  EXPECT_EQ((vector<int>{2}), GetContainingShapes(&target, *index, 1));
+  EXPECT_TRUE(IsSubsetOfSize(GetContainingShapes(&target, *index, 1),
+                             vector<int>{2, 4}, 1));
   EXPECT_EQ((vector<int>{2, 4}), GetContainingShapes(&target, *index, 5));
 }
 
@@ -130,7 +157,8 @@ TEST(EdgeTarget, VisitContainingShapes) {
   auto index = MakeIndexOrDie(
       "1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | 0:0, 0:4, 4:0");
   S2MinDistanceEdgeTarget target(MakePointOrDie("1:2"), MakePointOrDie("2:1"));
-  EXPECT_EQ((vector<int>{2}), GetContainingShapes(&target, *index, 1));
+  EXPECT_TRUE(IsSubsetOfSize(GetContainingShapes(&target, *index, 1),
+                             vector<int>{2, 4}, 1));
   EXPECT_EQ((vector<int>{2, 4}), GetContainingShapes(&target, *index, 5));
 }
 
@@ -140,7 +168,8 @@ TEST(CellTarget, VisitContainingShapes) {
   // Only shapes 2 and 4 should contain a very small cell near 1:1.
   S2CellId cellid1(MakePointOrDie("1:1"));
   S2MinDistanceCellTarget target1{S2Cell(cellid1)};
-  EXPECT_EQ((vector<int>{2}), GetContainingShapes(&target1, *index, 1));
+  EXPECT_TRUE(IsSubsetOfSize(GetContainingShapes(&target1, *index, 1),
+                             vector<int>{2, 4}, 1));
   EXPECT_EQ((vector<int>{2, 4}), GetContainingShapes(&target1, *index, 5));
 
   // For a larger cell that properly contains one or more index cells, all
@@ -150,6 +179,18 @@ TEST(CellTarget, VisitContainingShapes) {
   S2CellId cellid2 = cellid1.parent(5);
   S2MinDistanceCellTarget target2{S2Cell(cellid2)};
   EXPECT_EQ((vector<int>{2, 4}), GetContainingShapes(&target2, *index, 5));
+}
+
+TEST(CellUnionTarget, VisitContainingShapes) {
+  auto index = MakeIndexOrDie(
+      "1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | -1:-1, -1:5, 5:-1");
+  // Shapes 2 and 4 contain the leaf cell near 1:1, while shape 3 contains the
+  // leaf cell near 7:7.
+  S2CellId cellid1(MakePointOrDie("1:1")), cellid2(MakePointOrDie("7:7"));
+  S2MinDistanceCellUnionTarget target1{S2CellUnion({cellid1, cellid2})};
+  EXPECT_TRUE(IsSubsetOfSize(GetContainingShapes(&target1, *index, 1),
+                             vector<int>{2, 3, 4}, 1));
+  EXPECT_EQ((vector<int>{2, 3, 4}), GetContainingShapes(&target1, *index, 5));
 }
 
 TEST(ShapeIndexTarget, VisitContainingShapes) {

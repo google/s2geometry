@@ -36,7 +36,7 @@ using LabelledCell = S2CellIndex::LabelledCell;
 namespace {
 
 class S2CellIndexTest : public ::testing::Test {
- protected:
+ public:
   // Adds the (cell_id, label) pair to index_ and also contents_ (which is
   // used for independent validation).
   void Add(S2CellId cell_id, Label label) {
@@ -55,6 +55,8 @@ class S2CellIndexTest : public ::testing::Test {
     }
   }
 
+  void Build() { index_.Build(); }
+
   void QuadraticValidate();
   void VerifyCellIterator() const;
   void VerifyRangeIterators() const;
@@ -64,6 +66,7 @@ class S2CellIndexTest : public ::testing::Test {
                       S2CellIndex::ContentsIterator* contents,
                       const vector<pair<string, Label>>& expected_strs) const;
 
+ protected:
   S2CellIndex index_;
   vector<LabelledCell> contents_;
 };
@@ -72,7 +75,7 @@ class S2CellIndexTest : public ::testing::Test {
 // for every possible leaf cell.  The running time of this function is
 // quadratic in the size of the index.
 void S2CellIndexTest::QuadraticValidate() {
-  index_.Build();
+  Build();
   VerifyCellIterator();
   VerifyIndexContents();
   VerifyRangeIterators();
@@ -365,7 +368,7 @@ TEST_F(S2CellIndexTest, IntersectionOptimization) {
   Add("1/333", 2);
   Add("2/00", 3);
   Add("2/0232", 4);
-  index_.Build();
+  Build();
   TestIntersection(MakeCellUnion({"1/010", "1/3"}));
   TestIntersection(MakeCellUnion({"2/010", "2/011", "2/02"}));
 }
@@ -377,7 +380,7 @@ TEST_F(S2CellIndexTest, IntersectionRandomUnions) {
   for (int i = 0; i < 100; ++i) {
     Add(GetRandomCellUnion(), i);
   }
-  index_.Build();
+  Build();
   // Now repeatedly query a cell union constructed in the same way.
   for (int i = 0; i < 200; ++i) {
     TestIntersection(GetRandomCellUnion());
@@ -387,7 +390,7 @@ TEST_F(S2CellIndexTest, IntersectionRandomUnions) {
 TEST_F(S2CellIndexTest, IntersectionSemiRandomUnions) {
   // This test also uses random S2CellUnions, but the unions are specially
   // constructed so that interesting cases are more likely to arise.
-  for (int iter = 0; iter < 500; ++iter) {
+  for (int iter = 0; iter < 200; ++iter) {
     index_.Clear();
     S2CellId id = S2CellId::FromDebugString("1/0123012301230123");
     vector<S2CellId> target;
@@ -398,7 +401,7 @@ TEST_F(S2CellIndexTest, IntersectionSemiRandomUnions) {
       if (S2Testing::rnd.OneIn(6) && !id.is_face()) id = id.parent();
       if (S2Testing::rnd.OneIn(6) && !id.is_leaf()) id = id.child_begin();
     }
-    index_.Build();
+    Build();
     TestIntersection(S2CellUnion(std::move(target)));
   }
 }

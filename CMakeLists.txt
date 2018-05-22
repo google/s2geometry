@@ -92,6 +92,7 @@ add_library(s2 SHARED
             src/s2/s2cell_index.cc
             src/s2/s2cell_union.cc
             src/s2/s2centroids.cc
+            src/s2/s2closest_cell_query.cc
             src/s2/s2closest_edge_query.cc
             src/s2/s2closest_point_query.cc
             src/s2/s2contains_vertex_query.cc
@@ -219,6 +220,8 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2cell_index.h
               src/s2/s2cell_union.h
               src/s2/s2centroids.h
+              src/s2/s2closest_cell_query.h
+              src/s2/s2closest_cell_query_base.h
               src/s2/s2closest_edge_query.h
               src/s2/s2closest_edge_query_base.h
               src/s2/s2closest_point_query.h
@@ -411,6 +414,8 @@ if (GTEST_ROOT)
       src/s2/s2cell_index_test.cc
       src/s2/s2cell_union_test.cc
       src/s2/s2centroids_test.cc
+      src/s2/s2closest_cell_query_base_test.cc
+      src/s2/s2closest_cell_query_test.cc
       src/s2/s2closest_edge_query_base_test.cc
       src/s2/s2closest_edge_query_test.cc
       src/s2/s2closest_point_query_base_test.cc

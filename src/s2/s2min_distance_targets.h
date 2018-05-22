@@ -18,7 +18,7 @@
 // This file defines a collection of classes that are useful for computing
 // minimum distances on the sphere.  Their purpose is to allow code to be
 // shared among the various query classes that find nearby geometry, such as
-// S2ClosestPointQuery and S2ClosestEdgeQuery.
+// S2ClosestEdgeQuery, S2ClosestPointQuery, and S2ClosestCellQuery.
 
 #ifndef S2_S2MIN_DISTANCE_TARGETS_H_
 #define S2_S2MIN_DISTANCE_TARGETS_H_
@@ -27,21 +27,23 @@
 
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
+#include "s2/s2cell_index.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
 #include "s2/s2distance_target.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2shape_index.h"
 
+// Forward references because these classes depend on the types defined here.
+class S2ClosestCellQuery;
 class S2ClosestEdgeQuery;
 
 // S2MinDistance is a thin wrapper around S1ChordAngle that is used by classes
 // such as S2ClosestEdgeQuery to compute minimum distances on the sphere (as
 // opposed to maximum distances, ellipsoidal distances, etc).
 //
-// It implements the Distance concept defined by S2DistanceTarget, which is
-// used by query classes such as S2ClosestPointQuery and S2ClosestEdgeQuery.
-// (See s2distance_target.h for details.)
+// It implements the Distance concept defined by S2DistanceTarget (see
+// s2distance_target.h for details).
 class S2MinDistance : public S1ChordAngle {
  public:
   using Delta = S1ChordAngle;
@@ -120,6 +122,41 @@ class S2MinDistanceCellTarget : public S2MinDistanceTarget {
 };
 
 // An S2DistanceTarget subtype for computing the minimum distance to an
+// S2CellUnion (including the interior of all cells).
+class S2MinDistanceCellUnionTarget : public S2MinDistanceTarget {
+ public:
+  explicit S2MinDistanceCellUnionTarget(S2CellUnion cell_union);
+  ~S2MinDistanceCellUnionTarget() override;
+
+  // Specifies that the distances should be computed by examining every cell
+  // in the S2CellIndex (for testing and debugging purposes).
+  //
+  // DEFAULT: false
+  bool use_brute_force() const;
+  void set_use_brute_force(bool use_brute_force);
+
+  // Note that set_max_error() should not be called directly by clients; it is
+  // used internally by the S2Closest*Query implementations.
+  bool set_max_error(const S1ChordAngle& max_error) override;
+
+  S2Cap GetCapBound() final;
+  bool UpdateMinDistance(const S2Point& p, S2MinDistance* min_dist) final;
+  bool UpdateMinDistance(const S2Point& v0, const S2Point& v1,
+                         S2MinDistance* min_dist) final;
+  bool UpdateMinDistance(const S2Cell& cell,
+                         S2MinDistance* min_dist) final;
+  bool VisitContainingShapes(const S2ShapeIndex& query_index,
+                             const ShapeVisitor& visitor) final;
+
+ private:
+  bool UpdateMinDistance(S2MinDistanceTarget* target, S2MinDistance* min_dist);
+
+  S2CellUnion cell_union_;
+  S2CellIndex index_;
+  std::unique_ptr<S2ClosestCellQuery> query_;
+};
+
+// An S2DistanceTarget subtype for computing the minimum distance to an
 // S2ShapeIndex (a collection of points, polylines, and/or polygons).
 //
 // Note that ShapeIndexTarget has its own options:
@@ -172,7 +209,10 @@ class S2MinDistanceShapeIndexTarget : public S2MinDistanceTarget {
   bool use_brute_force() const;
   void set_use_brute_force(bool use_brute_force);
 
+  // Note that set_max_error() should not be called directly by clients; it is
+  // used internally by the S2Closest*Query implementations.
   bool set_max_error(const S1ChordAngle& max_error) override;
+
   S2Cap GetCapBound() final;
   bool UpdateMinDistance(const S2Point& p, S2MinDistance* min_dist) final;
   bool UpdateMinDistance(const S2Point& v0, const S2Point& v1,
@@ -183,6 +223,8 @@ class S2MinDistanceShapeIndexTarget : public S2MinDistanceTarget {
                              const ShapeVisitor& visitor) final;
 
  private:
+  bool UpdateMinDistance(S2MinDistanceTarget* target, S2MinDistance* min_dist);
+
   const S2ShapeIndex* index_;
   std::unique_ptr<S2ClosestEdgeQuery> query_;
 };

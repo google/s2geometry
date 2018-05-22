@@ -27,7 +27,7 @@
 // point, an edge, or to an S2ShapeIndex (an arbitrary collection of
 // geometry).  S2DistanceTarget objects are provided for the benefit of
 // classes that measure distances and/or find nearby geometry, such as
-// S2ClosestEdgeQuery and S2ClosestPointQuery.
+// S2ClosestEdgeQuery, S2ClosestPointQuery, and S2ClosestCellQuery.
 //
 // Implementations do *not* need to be thread-safe.  They may cache data or
 // allocate temporary data structures in order to improve performance.  For
@@ -38,7 +38,8 @@
 // this type is a thin wrapper around S1ChordAngle, but another distance type
 // may be substituted as long as it implements the API below.  This can be
 // used to change the comparison function (e.g., to find the furthest edges
-// from the target), or to get more accuracy if desired.
+// from the target), to get more accuracy, or to measure non-spheroidal
+// distances (e.g., using the WGS84 ellipsoid).
 //
 // The Distance concept is as follows:
 //
@@ -150,12 +151,12 @@ class S2DistanceTarget {
 
   // The following method is provided as a convenience for classes that
   // compute distances to a collection of indexed geometry, such as
-  // S2ClosestEdgeQuery and S2ClosestPointQuery.  It returns the maximum
-  // number of indexed objects for which it is faster to compute the distance
-  // by brute force (e.g., by testing every edge) rather than by using an
-  // index.  (The appropriate value is different for each index type and can
-  // be estimated for a given (distance target, index type) pair by running
-  // benchmarks.)
+  // S2ClosestPointQuery, S2ClosestEdgeQuery, and S2ClosestCellQuery.  It
+  // returns the maximum number of indexed objects for which it is faster to
+  // compute the distance by brute force (e.g., by testing every edge) rather
+  // than by using an index.  (The appropriate value is different for each
+  // index type and can be estimated for a given (distance target, index type)
+  // pair by running benchmarks.)
   //
   // By default this method returns -1, indicating that it is not implemented.
   virtual int max_brute_force_index_size() const { return -1; }

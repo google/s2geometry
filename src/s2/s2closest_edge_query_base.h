@@ -60,53 +60,11 @@
 // disjoint; they may overlap or intersect arbitrarily.  The implementation is
 // designed to be fast for both simple and complex geometries.
 //
-// The Distance template argument is used to represent distances.  Usually
-// this type is a thin wrapper around S1ChordAngle, but another distance type
-// may be substituted as long as it implements the API below.  This can be
-// used to change the comparison function (e.g., to find the furthest edges
-// from the target), or to get more accuracy if desired.
-//
-// The Distance concept is as follows:
-//
-// class Distance {
-//  public:
-//   // Default and copy constructors, assignment operator:
-//   Distance();
-//   Distance(const Distance&);
-//   Distance& operator=(const Distance&);
-//
-//   // Factory methods:
-//   static Distance Zero();      // Returns a zero distance.
-//   static Distance Infinity();  // Larger than any valid distance.
-//   static Distance Negative();  // Smaller than any valid distance.
-//
-//   // Comparison operators:
-//   friend bool operator==(Distance x, Distance y);
-//   friend bool operator<(Distance x, Distance y);
-//
-//   // Delta represents the positive difference between two distances.
-//   // It is used together with operator-() to implement Options::max_error().
-//   // Typically Distance::Delta is simply S1ChordAngle.
-//   class Delta {
-//    public:
-//     Delta();
-//     Delta(const Delta&);
-//     Delta& operator=(const Delta&);
-//     friend bool operator==(Delta x, Delta y);
-//     static Delta Zero();
-//   };
-//
-//   // Subtraction operator.  Note that the second argument represents a
-//   // delta between two distances.  This distinction is important for
-//   // classes that compute maximum distances (e.g., S2FurthestEdgeQuery).
-//   friend Distance operator-(Distance x, Delta delta);
-//
-//   // Method that returns an upper bound on the S1ChordAngle corresponding
-//   // to this Distance (needed to implement Options::max_distance
-//   // efficiently).  For example, if Distance measures WGS84 ellipsoid
-//   // distance then the corresponding angle needs to be 0.56% larger.
-//   S1ChordAngle GetChordAngleBound() const;
-// };
+// The Distance template argument is used to represent distances.  Usually it
+// is a thin wrapper around S1ChordAngle, but another distance type may be
+// used as long as it implements the Distance concept described in
+// s2distance_targets.h.  For example this can be used to measure maximum
+// distances, to get more accuracy, or to measure non-spheroidal distances.
 template <class Distance>
 class S2ClosestEdgeQueryBase {
  public:
@@ -239,7 +197,7 @@ class S2ClosestEdgeQueryBase {
     // given query options.  (This result is only returned in one special
     // case, namely when FindClosestEdge() does not find any suitable edges.
     // It is never returned by methods that return a vector of results.)
-    bool is_empty() const { return shape_id_ < 0 && edge_id_ < 0; }
+    bool is_empty() const { return shape_id_ < 0; }
 
     // Returns true if two Result objects are identical.
     friend bool operator==(const Result& x, const Result& y) {
@@ -327,8 +285,8 @@ class S2ClosestEdgeQueryBase {
   void MaybeAddResult(const S2Shape& shape, int edge_id);
   void AddResult(const Result& result);
   void ProcessEdges(const QueueEntry& entry);
-  void EnqueueCell(S2CellId id, const S2ShapeIndexCell* index_cell);
-  void EnqueueCurrentCell(S2CellId id);
+  void ProcessOrEnqueue(S2CellId id);
+  void ProcessOrEnqueue(S2CellId id, const S2ShapeIndexCell* index_cell);
 
   const S2ShapeIndex* index_;
   const Options* options_;
@@ -599,7 +557,7 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
   result_singleton_ = Result();
   S2_DCHECK(result_vector_.empty());
   S2_DCHECK(result_set_.empty());
-  S2_DCHECK(target->max_brute_force_index_size() >= 0);
+  S2_DCHECK_GE(target->max_brute_force_index_size(), 0);
   if (distance_limit_ == Distance::Zero()) return;
 
   if (options.max_results() == Options::kMaxMaxResults &&
@@ -715,17 +673,17 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesOptimized() {
     S2CellId id = entry.id;
     iter_.Seek(id.child(1).range_min());
     if (!iter_.done() && iter_.id() <= id.child(1).range_max()) {
-      EnqueueCurrentCell(id.child(1));
+      ProcessOrEnqueue(id.child(1));
     }
     if (iter_.Prev() && iter_.id() >= id.range_min()) {
-      EnqueueCurrentCell(id.child(0));
+      ProcessOrEnqueue(id.child(0));
     }
     iter_.Seek(id.child(3).range_min());
     if (!iter_.done() && iter_.id() <= id.range_max()) {
-      EnqueueCurrentCell(id.child(3));
+      ProcessOrEnqueue(id.child(3));
     }
     if (iter_.Prev() && iter_.id() >= id.child(2).range_min()) {
-      EnqueueCurrentCell(id.child(2));
+      ProcessOrEnqueue(id.child(2));
     }
   }
 }
@@ -760,7 +718,7 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
   if (distance_limit_ == Distance::Infinity()) {
     // Start with the precomputed index covering.
     for (int i = 0; i < index_covering_.size(); ++i) {
-      EnqueueCell(index_covering_[i], index_cells_[i]);
+      ProcessOrEnqueue(index_covering_[i], index_cells_[i]);
     }
   } else {
     // Compute a covering of the search disc and intersect it with the
@@ -784,7 +742,7 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
       if (id_i == id_j) {
         // This initial cell is one of the top-level cells.  Use the
         // precomputed S2ShapeIndexCell pointer to avoid an index seek.
-        EnqueueCell(id_j, index_cells_[j]);
+        ProcessOrEnqueue(id_j, index_cells_[j]);
         ++i, ++j;
       } else {
         // This initial cell is a proper descendant of a top-level cell.
@@ -793,13 +751,13 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
         if (r == S2ShapeIndex::INDEXED) {
           // This cell is a descendant of an index cell.  Enqueue it and skip
           // any other initial cells that are also descendants of this cell.
-          EnqueueCell(iter_.id(), &iter_.cell());
+          ProcessOrEnqueue(iter_.id(), &iter_.cell());
           const S2CellId last_id = iter_.id().range_max();
           while (++i < initial_cells_.size() && initial_cells_[i] <= last_id)
             continue;
         } else {
           // Enqueue the cell only if it contains at least one index cell.
-          if (r == S2ShapeIndex::SUBDIVIDED) EnqueueCell(id_i, nullptr);
+          if (r == S2ShapeIndex::SUBDIVIDED) ProcessOrEnqueue(id_i, nullptr);
           ++i;
         }
       }
@@ -942,19 +900,22 @@ void S2ClosestEdgeQueryBase<Distance>::ProcessEdges(const QueueEntry& entry) {
 // Enqueue the given cell id.
 // REQUIRES: iter_ is positioned at a cell contained by "id".
 template <class Distance>
-inline void S2ClosestEdgeQueryBase<Distance>::EnqueueCurrentCell(S2CellId id) {
+inline void S2ClosestEdgeQueryBase<Distance>::ProcessOrEnqueue(
+    S2CellId id) {
   S2_DCHECK(id.contains(iter_.id()));
   if (iter_.id() == id) {
-    EnqueueCell(id, &iter_.cell());
+    ProcessOrEnqueue(id, &iter_.cell());
   } else {
-    EnqueueCell(id, nullptr);
+    ProcessOrEnqueue(id, nullptr);
   }
 }
 
 // Add the given cell id to the queue.  "index_cell" is the corresponding
 // S2ShapeIndexCell, or nullptr if "id" is not an index cell.
+//
+// This version is called directly only by InitQueue().
 template <class Distance>
-void S2ClosestEdgeQueryBase<Distance>::EnqueueCell(
+void S2ClosestEdgeQueryBase<Distance>::ProcessOrEnqueue(
     S2CellId id, const S2ShapeIndexCell* index_cell) {
   if (index_cell) {
     // If this index cell has only a few edges, then it is faster to check

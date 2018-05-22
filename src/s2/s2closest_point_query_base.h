@@ -136,53 +136,11 @@ class S2ClosestPointQueryBaseOptions {
 // There are predefined targets for points, edges, S2Cells, and S2ShapeIndexes
 // (arbitrary collctions of points, polylines, and polygons).
 //
-// The Distance template argument is used to represent distances.  Usually
-// this type is a thin wrapper around S1ChordAngle, but another distance type
-// may be substituted as long as it implements the API below.  This can be
-// used to change the comparison function (e.g., to find the furthest edges
-// from the target), or to get more accuracy if desired.
-//
-// The Distance concept is as follows:
-//
-// class Distance {
-//  public:
-//   // Default and copy constructors, assignment operator:
-//   Distance();
-//   Distance(const Distance&);
-//   Distance& operator=(const Distance&);
-//
-//   // Factory methods:
-//   static Distance Zero();      // Returns a zero distance.
-//   static Distance Infinity();  // Larger than any valid distance.
-//   static Distance Negative();  // Smaller than any valid distance.
-//
-//   // Comparison operators:
-//   friend bool operator==(Distance x, Distance y);
-//   friend bool operator<(Distance x, Distance y);
-//
-//   // Delta represents the positive difference between two distances.
-//   // It is used together with operator-() to implement Options::max_error().
-//   // Typically Distance::Delta is simply S1ChordAngle.
-//   class Delta {
-//    public:
-//     Delta();
-//     Delta(const Delta&);
-//     Delta& operator=(const Delta&);
-//     friend bool operator==(Delta x, Delta y);
-//     static Delta Zero();
-//   };
-//
-//   // Subtraction operator.  Note that the second argument represents a
-//   // delta between two distances.  This distinction is important for
-//   // classes that compute maximum distances (e.g., S2FurthestEdgeQuery).
-//   friend Distance operator-(Distance x, Delta delta);
-//
-//   // Method that returns an upper bound on the S1ChordAngle corresponding
-//   // to this Distance (needed to implement Options::max_distance
-//   // efficiently).  For example, if Distance measures WGS84 ellipsoid
-//   // distance then the corresponding angle needs to be 0.56% larger.
-//   S1ChordAngle GetChordAngleBound() const;
-// };
+// The Distance template argument is used to represent distances.  Usually it
+// is a thin wrapper around S1ChordAngle, but another distance type may be
+// used as long as it implements the Distance concept described in
+// s2distance_targets.h.  For example this can be used to measure maximum
+// distances, to get more accuracy, or to measure non-spheroidal distances.
 template <class Distance, class Data>
 class S2ClosestPointQueryBase {
  public:
@@ -296,7 +254,7 @@ class S2ClosestPointQueryBase {
   void InitCovering();
   void AddInitialRange(S2CellId first_id, S2CellId last_id);
   void MaybeAddResult(const PointData* point_data);
-  bool EnqueueCell(S2CellId id, Iterator* iter, bool seek);
+  bool ProcessOrEnqueue(S2CellId id, Iterator* iter, bool seek);
 
   const Index* index_;
   const Options* options_;
@@ -523,7 +481,7 @@ void S2ClosestPointQueryBase<Distance, Data>::FindClosestPointsInternal(
   result_singleton_ = Result();
   S2_DCHECK(result_vector_.empty());
   S2_DCHECK(result_set_.empty());
-  S2_DCHECK(target->max_brute_force_index_size() >= 0);
+  S2_DCHECK_GE(target->max_brute_force_index_size(), 0);
   if (distance_limit_ == Distance::Zero()) return;
 
   if (options.max_results() == Options::kMaxMaxResults &&
@@ -602,7 +560,7 @@ void S2ClosestPointQueryBase<Distance, Data>::FindClosestPointsOptimized() {
     // loop is optimized so that we don't seek unnecessarily.
     bool seek = true;
     for (int i = 0; i < 4; ++i, child = child.next()) {
-      seek = EnqueueCell(child, &iter_, seek);
+      seek = ProcessOrEnqueue(child, &iter_, seek);
     }
   }
 }
@@ -629,7 +587,7 @@ void S2ClosestPointQueryBase<Distance, Data>::InitQueue() {
     // direction).  It's not clear whether this is a common case, though, and
     // also this would require extending MaybeAddResult() so that it can
     // remove duplicate entries.  (The points added here may be re-added by
-    // EnqueueCell(), but this is okay when max_results() == 1.)
+    // ProcessOrEnqueue(), but this is okay when max_results() == 1.)
     iter_.Seek(S2CellId(cap.center()));
     if (!iter_.done()) {
       MaybeAddResult(&iter_.point_data());
@@ -665,7 +623,7 @@ void S2ClosestPointQueryBase<Distance, Data>::InitQueue() {
   iter_.Begin();
   for (int i = 0; i < initial_cells->size() && !iter_.done(); ++i) {
     S2CellId id = (*initial_cells)[i];
-    EnqueueCell(id, &iter_, id.range_min() > iter_.id() /*seek*/);
+    ProcessOrEnqueue(id, &iter_, id.range_min() > iter_.id() /*seek*/);
   }
 }
 
@@ -762,13 +720,13 @@ void S2ClosestPointQueryBase<Distance, Data>::MaybeAddResult(
 
 // Either process the contents of the given cell immediately, or add it to the
 // queue to be subdivided.  If "seek" is false, then "iter" must already be
-// positioned at the first indexed point within this cell.
+// positioned at the first indexed point within or after this cell.
 //
 // Returns "true" if the cell was added to the queue, and "false" if it was
 // processed immediately, in which case "iter" is left positioned at the next
 // cell in S2CellId order.
 template <class Distance, class Data>
-bool S2ClosestPointQueryBase<Distance, Data>::EnqueueCell(
+bool S2ClosestPointQueryBase<Distance, Data>::ProcessOrEnqueue(
     S2CellId id, Iterator* iter, bool seek) {
   if (seek) iter->Seek(id.range_min());
   if (id.is_leaf()) {
