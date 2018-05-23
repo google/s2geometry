@@ -503,7 +503,7 @@ void S2ClosestPointQueryBase<Distance, Data>::FindClosestPointsInternal(
   //
   // However there is one important case where this adjustment is not
   // necessary, namely when max_distance() < max_error().  This is because
-  // max_error() only affects the algorithm once at least max_edges() edges
+  // max_error() only affects the algorithm once at least max_results() edges
   // have been found that satisfy the given distance limit.  At that point,
   // max_error() is subtracted from distance_limit_ in order to ensure that
   // any further matches are closer by at least that amount.  But when

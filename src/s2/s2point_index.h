@@ -42,7 +42,7 @@
 //     index.Add(index_points[i], i);
 //   }
 //   S2ClosestPointQuery<int> query(&index);
-//   query.mutable_options()->set_max_points(5);
+//   query.mutable_options()->set_max_results(5);
 //   for (const S2Point& target_point : target_points) {
 //     S2ClosestPointQueryPointTarget target(target_point);
 //     for (const auto& result : query.FindClosestPoints(&target)) {

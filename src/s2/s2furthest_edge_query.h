@@ -48,7 +48,7 @@
 //     index.Add(new S2Polyline::Shape(polyline));
 //   }
 //   S2FurthestEdgeQuery query(&index);
-//   query.mutable_options()->set_max_edges(5);
+//   query.mutable_options()->set_max_results(5);
 //   S2FurthestEdgeQuery::PointTarget target(point);
 //   for (const auto& result : query.FindFurthestEdges(&target)) {
 //     // The Result struct contains the following accessors:
@@ -73,8 +73,8 @@
 //       S2Earth::ToAngle(util::units::Kilometers(5)));
 //
 // By default *all* edges are returned, so you should always specify either
-// max_edges() or min_distance() or both.  Setting min distance may not be very
-// restrictive, so strongly consider using max_edges().  There is also a
+// max_results() or min_distance() or both.  Setting min distance may not be
+// very restrictive, so strongly consider using max_results().  There is also a
 // FindFurthestEdge() convenience method that returns only the single furthest
 // edge.
 //
@@ -117,7 +117,7 @@ class S2FurthestEdgeQuery {
  public:
   // Options that control the set of edges returned.  Note that by default
   // *all* edges are returned, so you will always want to set either the
-  // max_edges() option or the min_distance() option (or both).
+  // max_results() option or the min_distance() option (or both).
   class Options : public Base::Options {
    public:
     // See S2ClosestEdgeQueryBase::Options for the full set of options.

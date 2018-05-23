@@ -170,7 +170,7 @@ static void TestFindClosestPoints(TestQuery::Target* target, TestQuery *query) {
 
   // Note that when options.max_error() > 0, expected[0].distance may not be
   // the minimum distance.  It is never larger by more than max_error(), but
-  // the actual value also depends on max_edges().
+  // the actual value also depends on max_results().
   //
   // Here we verify that GetDistance() and IsDistanceLess() return results
   // that are consistent with the max_error() setting.
