@@ -525,6 +525,8 @@ inline bool S2CellIndex::NonEmptyRangeIterator::Prev() {
   while (RangeIterator::Prev()) {
     if (!is_empty()) return true;
   }
+  // Return the iterator to its original position.
+  if (is_empty() && !done()) Next();
   return false;
 }
 

@@ -139,6 +139,7 @@ void S2CellIndexTest::VerifyRangeIterators() const {
       it2.Next();
       EXPECT_EQ(start, it2.start_id());
     } else {
+      EXPECT_EQ(start, it2.start_id());
       EXPECT_EQ(S2CellId::None(), prev_start);
     }
 
@@ -148,6 +149,7 @@ void S2CellIndexTest::VerifyRangeIterators() const {
       non_empty2.Next();
       EXPECT_EQ(non_empty_start, non_empty2.start_id());
     } else {
+      EXPECT_EQ(non_empty_start, non_empty2.start_id());
       EXPECT_EQ(S2CellId::None(), non_empty_prev_start);
     }
 
