@@ -92,6 +92,8 @@ sudo make install
 
 Enable gflags and glog with `cmake -DWITH_GFLAGS=ON -DWITH_GLOG=ON ...`.
 
+Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
+
 ## Python
 
 If you want the Python interface, you will also need:
