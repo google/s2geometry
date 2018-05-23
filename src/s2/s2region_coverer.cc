@@ -45,6 +45,7 @@ constexpr int S2RegionCoverer::Options::kDefaultMaxCells;
 
 S2RegionCoverer::S2RegionCoverer(const S2RegionCoverer::Options& options) :
   options_(options) {
+  S2_DCHECK_LE(options.min_level(), options.max_level());
 }
 
 // Defaulted in the implementation to prevent inline bloat.
@@ -60,12 +61,14 @@ void S2RegionCoverer::Options::set_max_cells(int max_cells) {
 void S2RegionCoverer::Options::set_min_level(int min_level) {
   S2_DCHECK_GE(min_level, 0);
   S2_DCHECK_LE(min_level, S2CellId::kMaxLevel);
+  // min_level() <= max_level() is checked by S2RegionCoverer.
   min_level_ = max(0, min(S2CellId::kMaxLevel, min_level));
 }
 
 void S2RegionCoverer::Options::set_max_level(int max_level) {
   S2_DCHECK_GE(max_level, 0);
   S2_DCHECK_LE(max_level, S2CellId::kMaxLevel);
+  // min_level() <= max_level() is checked by S2RegionCoverer.
   max_level_ = max(0, min(S2CellId::kMaxLevel, max_level));
 }
 
@@ -233,6 +236,9 @@ void S2RegionCoverer::GetInitialCandidates() {
 }
 
 void S2RegionCoverer::GetCoveringInternal(const S2Region& region) {
+  // We check this on each call because of mutable_options().
+  S2_DCHECK_LE(options_.min_level(), options_.max_level());
+
   // Strategy: Start with the 6 faces of the cube.  Discard any
   // that do not intersect the shape.  Then repeatedly choose the
   // largest cell that intersects the shape and subdivide it.
@@ -346,6 +352,9 @@ bool S2RegionCoverer::IsCanonical(const S2CellUnion& covering) const {
 }
 
 bool S2RegionCoverer::IsCanonical(const vector<S2CellId>& covering) const {
+  // We check this on each call because of mutable_options().
+  S2_DCHECK_LE(options_.min_level(), options_.max_level());
+
   const int min_level = options_.min_level();
   const int max_level = options_.true_max_level();
   const int level_mod = options_.level_mod();
@@ -416,6 +425,9 @@ S2CellUnion S2RegionCoverer::CanonicalizeCovering(const S2CellUnion& covering) {
 }
 
 void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
+  // We check this on each call because of mutable_options().
+  S2_DCHECK_LE(options_.min_level(), options_.max_level());
+
   // Note that when the covering parameters have their default values, almost
   // all of the code in this function is skipped.
 
