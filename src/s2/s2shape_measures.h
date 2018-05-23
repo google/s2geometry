@@ -22,6 +22,8 @@
 #ifndef S2_S2SHAPE_MEASURES_H_
 #define S2_S2SHAPE_MEASURES_H_
 
+#include <vector>
+
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 #include "s2/s2shape.h"

@@ -26,6 +26,10 @@
 #ifndef S2_S2LOOP_MEASURES_H_
 #define S2_S2LOOP_MEASURES_H_
 
+#include <cmath>
+#include <ostream>
+#include <vector>
+
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 #include "s2/s2point_span.h"
