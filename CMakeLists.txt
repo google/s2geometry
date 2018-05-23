@@ -246,7 +246,6 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2earth.h
               src/s2/s2edge_clipping.h
               src/s2/s2edge_crosser.h
-              src/s2/s2edge_crossings_internal.h
               src/s2/s2edge_crossings.h
               src/s2/s2edge_distances.h
               src/s2/s2edge_tessellator.h
@@ -275,7 +274,6 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2polyline.h
               src/s2/s2polyline_alignment.h
               src/s2/s2polyline_simplifier.h
-              src/s2/s2predicates_internal.h
               src/s2/s2predicates.h
               src/s2/s2projections.h
               src/s2/s2r2rect.h
@@ -345,7 +343,11 @@ install(FILES src/s2/third_party/absl/numeric/int128.h
               src/s2/third_party/absl/numeric/int128_have_intrinsic.inc
               src/s2/third_party/absl/numeric/int128_no_intrinsic.inc
         DESTINATION include/s2/third_party/absl/numeric)
-install(FILES src/s2/third_party/absl/strings/string_view.h
+install(FILES src/s2/third_party/absl/strings/ascii.h
+              src/s2/third_party/absl/strings/ascii_ctype.h
+              src/s2/third_party/absl/strings/numbers.h
+              src/s2/third_party/absl/strings/str_cat.h
+              src/s2/third_party/absl/strings/string_view.h
         DESTINATION include/s2/third_party/absl/strings)
 install(FILES src/s2/third_party/absl/types/span.h
         DESTINATION include/s2/third_party/absl/types)
