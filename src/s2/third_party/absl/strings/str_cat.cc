@@ -182,27 +182,6 @@ void AppendPieces(string* dest,
   assert(out == begin + dest->size());
 }
 
-#if defined(HAS_GLOBAL_STRING)
-void AppendPieces(std::string* dest,
-                  std::initializer_list<absl::string_view> pieces) {
-  size_t old_size = dest->size();
-  size_t total_size = old_size;
-  for (const absl::string_view piece : pieces) {
-    ASSERT_NO_OVERLAP(*dest, piece);
-    total_size += piece.size();
-  }
-  strings_internal::STLStringResizeUninitialized(dest, total_size);
-
-  char* const begin = &*dest->begin();
-  char* out = begin + old_size;
-  for (const absl::string_view piece : pieces) {
-    const size_t this_size = piece.size();
-    memcpy(out, piece.data(), this_size);
-    out += this_size;
-  }
-  assert(out == begin + dest->size());
-}
-#endif
 
 }  // namespace strings_internal
 

@@ -38,23 +38,15 @@
 // result.
 //
 // Bools convert to "0" or "1".
-// (Use SimpleBtoa if you want true/false)
 //
 // Floating point numbers are formatted with six-digit precision, which is
 // the default for "std::cout <<" or printf "%g" (the same as "%.6g").
 //
-// Floating point values can also be converted to a string which, if passed to
-// `strtod()`, would produce the exact same original double (except in case of
-// NaN; all NaNs are considered the same value) by passing the number to
-// absl::LegacyPrecision. LegacyPrecision tries to keep the string short but
-// it's not guaranteed to be as short as possible.
 //
 // You can convert to hexadecimal output rather than decimal output using the
 // `Hex` type contained here. To do so, pass `Hex(my_int)` as a parameter to
 // `StrCat()` or `StrAppend()`. You may specify a minimum hex field width using
 // a `PadSpec` enum.
-// The equivalent of `StringPrintf("%04x", my_int)` is
-// `absl::StrCat(absl::Hex(my_int, absl::kZeroPad4))`.
 //
 // -----------------------------------------------------------------------------
 
@@ -121,22 +113,6 @@ enum PadSpec : uint8_t {
   kSpacePad14,
   kSpacePad15,
   kSpacePad16,
-  NO_PAD = kNoPad,
-  ZERO_PAD_2 = kZeroPad2,
-  ZERO_PAD_3 = kZeroPad3,
-  ZERO_PAD_4 = kZeroPad4,
-  ZERO_PAD_5 = kZeroPad5,
-  ZERO_PAD_6 = kZeroPad6,
-  ZERO_PAD_7 = kZeroPad7,
-  ZERO_PAD_8 = kZeroPad8,
-  ZERO_PAD_9 = kZeroPad9,
-  ZERO_PAD_10 = kZeroPad10,
-  ZERO_PAD_11 = kZeroPad11,
-  ZERO_PAD_12 = kZeroPad12,
-  ZERO_PAD_13 = kZeroPad13,
-  ZERO_PAD_14 = kZeroPad14,
-  ZERO_PAD_15 = kZeroPad15,
-  ZERO_PAD_16 = kZeroPad16,
 };
 
 // -----------------------------------------------------------------------------
@@ -262,12 +238,6 @@ class AlphaNum {
   AlphaNum(const char* c_str) : piece_(c_str) {}  // NOLINT(runtime/explicit)
   AlphaNum(absl::string_view pc) : piece_(pc) {}  // NOLINT(runtime/explicit)
 
-#if defined(HAS_GLOBAL_STRING)
-  template <typename Allocator>
-  AlphaNum(  // NOLINT(runtime/explicit)
-      const basic_string<char, std::char_traits<char>, Allocator>& str)
-      : piece_(str) {}
-#endif
   template <typename Allocator>
   AlphaNum(  // NOLINT(runtime/explicit)
       const std::basic_string<char, std::char_traits<char>, Allocator>& str)
@@ -329,10 +299,6 @@ namespace strings_internal {
 string CatPieces(std::initializer_list<absl::string_view> pieces);
 void AppendPieces(string* dest,
                   std::initializer_list<absl::string_view> pieces);
-#if defined(HAS_GLOBAL_STRING)
-void AppendPieces(std::string* dest,
-                  std::initializer_list<absl::string_view> pieces);
-#endif
 
 }  // namespace strings_internal
 
@@ -404,15 +370,6 @@ inline void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b,
              static_cast<const AlphaNum&>(args).Piece()...});
 }
 
-#if defined(HAS_GLOBAL_STRING)
-// This is slightly less efficient for 0- and 1-argument cases, but rare
-// enough not to worry about it for now.
-template <typename... AV>
-inline void StrAppend(std::string* dest, const AV&... args) {
-  strings_internal::AppendPieces(
-      dest, {static_cast<const AlphaNum&>(args).Piece()...});
-}
-#endif
 
 // Helper function for the future StrCat default floating-point format, %.6g
 // This is fast.
@@ -426,62 +383,10 @@ SixDigits(double d) {
 }
 
 
-// Helper function for legacy google formatting
-template <typename T>
-const T& LegacyPrecision(const T& t) {
-  return t;
-}
-
-// Have to use overloads rather than specialization because specialization can't
-// change the function return type.
-
-// Helper function for the old StrCat default "float" format, which was
-// either %.6g, %.7g, %.8g, or %.9g, basically the smallest string that would
-// round-trip back to the original float.  This is fast.
-inline strings_internal::AlphaNumBuffer<numbers_internal::kFastToBufferSize>
-LegacyPrecision(float f) {
-  strings_internal::AlphaNumBuffer<numbers_internal::kFastToBufferSize> result;
-  result.size =
-      strlen(numbers_internal::RoundTripFloatToBuffer(f, &result.data[0]));
-  return result;
-}
-
-// Helper function for the old StrCat default "double" format, which was
-// either %.15g or %.17g, depending on whether the %.15g format would round-trip
-// back to the original double.  This is approx. 20-30x slower than the others.
-inline strings_internal::AlphaNumBuffer<numbers_internal::kFastToBufferSize>
-LegacyPrecision(double d) {
-  strings_internal::AlphaNumBuffer<numbers_internal::kFastToBufferSize> result;
-  result.size =
-      strlen(numbers_internal::RoundTripDoubleToBuffer(d, &result.data[0]));
-  return result;
-}
 
 
 }  // namespace absl
 
-// Temporary aliases to the old symbol names.
-// TODO(user): eliminate all references to these aliases.
-using absl::AlphaNum;   // NOLINT(readability/namespace)
-using absl::StrAppend;  // NOLINT(readability/namespace)
-using absl::StrCat;     // NOLINT(readability/namespace)
-
-namespace strings {
-
-using absl::AlphaNum;
-using absl::Hex;
-using absl::PadSpec;
-
-using absl::NO_PAD;
-using absl::ZERO_PAD_2;
-using absl::ZERO_PAD_4;
-using absl::ZERO_PAD_6;
-using absl::ZERO_PAD_8;
-using absl::ZERO_PAD_9;
-using absl::ZERO_PAD_14;
-using absl::ZERO_PAD_16;
-
-}  // namespace strings
 
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STR_CAT_H_

@@ -35,8 +35,6 @@
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/absl/numeric/int128.h"
-#include "s2/third_party/absl/strings/ascii.h"
-#include "s2/third_party/absl/strings/ascii_ctype.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
 namespace absl {
@@ -86,8 +84,6 @@ bool safe_strtou64_base(absl::string_view text, uint64_t* value, int base);
 static const int kFastToBufferSize = 32;
 static const int kSixDigitsToBufferSize = 16;
 
-char* RoundTripDoubleToBuffer(double d, char* buffer);
-char* RoundTripFloatToBuffer(float f, char* buffer);
 
 // Helper function for fast formatting of floating-point values.
 // The result is the same as printf's "%g", a.k.a. "%.6g"; that is, six
