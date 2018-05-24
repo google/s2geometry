@@ -360,9 +360,7 @@ install(FILES src/s2/third_party/absl/numeric/int128.h
               src/s2/third_party/absl/numeric/int128_have_intrinsic.inc
               src/s2/third_party/absl/numeric/int128_no_intrinsic.inc
         DESTINATION include/s2/third_party/absl/numeric)
-install(FILES src/s2/third_party/absl/strings/ascii.h
-              src/s2/third_party/absl/strings/ascii_ctype.h
-              src/s2/third_party/absl/strings/numbers.h
+install(FILES src/s2/third_party/absl/strings/numbers.h
               src/s2/third_party/absl/strings/str_cat.h
               src/s2/third_party/absl/strings/string_view.h
         DESTINATION include/s2/third_party/absl/strings)
