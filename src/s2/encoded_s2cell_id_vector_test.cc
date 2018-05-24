@@ -27,6 +27,7 @@
 #include "s2/s2text_format.h"
 
 using absl::make_unique;
+using s2textformat::MakeCellIdOrDie;
 using std::vector;
 
 namespace s2coding {
@@ -76,6 +77,12 @@ TEST(EncodedS2CellIdVector, NoneNone) {
 
 TEST(EncodedS2CellIdVector, Sentinel) {
   TestEncodedS2CellIdVector({S2CellId::Sentinel()}, 10);
+}
+
+TEST(EncodedS2CellIdVector, MaximumShiftCell) {
+  // Tests the encoding of a single cell at level 2, which corresponds the
+  // maximum encodable shift value (56).
+  TestEncodedS2CellIdVector({MakeCellIdOrDie("0/00")}, 3);
 }
 
 TEST(EncodedS2CellIdVector, SentinelSentinel) {
@@ -142,7 +149,7 @@ TEST(EncodedS2CellIdVector, SixFaceCells) {
 
 TEST(EncodedS2CellIdVector, FourLevel10Children) {
   vector<S2CellId> ids;
-  S2CellId parent = S2CellId::FromDebugString("3/012301230");
+  S2CellId parent = MakeCellIdOrDie("3/012301230");
   for (S2CellId id = parent.child_begin();
        id != parent.child_end(); id = id.next()) {
     ids.push_back(id);
