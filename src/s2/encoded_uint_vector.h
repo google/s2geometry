@@ -207,7 +207,7 @@ void EncodeUintVector(absl::Span<const T> v, Encoder* encoder) {
 
   // Note that the multiplication is optimized into a bit shift.
   encoder->Ensure(Varint::kMax64 + v.size() * len);
-  uint64 size_len = (static_cast<uint64>(v.size()) * sizeof(T)) | (len - 1);
+  uint64 size_len = (uint64{v.size()} * sizeof(T)) | (len - 1);
   encoder->put_varint64(size_len);
   for (auto x : v) {
     EncodeUintWithLength(x, len, encoder);

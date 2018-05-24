@@ -86,23 +86,22 @@ double Area(const S2Point& a, const S2Point& b, const S2Point& c) {
   // k3 is about 0.1.  Since the best case error using Girard's formula
   // is about 1e-15, this means that we shouldn't even consider it unless
   // s >= 3e-4 or so.
-
-  // We use volatile doubles to force the compiler to truncate all of these
-  // quantities to 64 bits.  Otherwise it may compute a value of dmin > 0
-  // simply because it chose to spill one of the intermediate values to
-  // memory but not one of the others.
-  volatile double sa = b.Angle(c);
-  volatile double sb = c.Angle(a);
-  volatile double sc = a.Angle(b);
-  volatile double s = 0.5 * (sa + sb + sc);
+  //
+  // TODO(ericv): Implement rigorous error bounds (analysis already done).
+  double sa = b.Angle(c);
+  double sb = c.Angle(a);
+  double sc = a.Angle(b);
+  double s = 0.5 * (sa + sb + sc);
   if (s >= 3e-4) {
     // Consider whether Girard's formula might be more accurate.
     double s2 = s * s;
     double dmin = s - max(sa, max(sb, sc));
     if (dmin < 1e-2 * s * s2 * s2) {
-      // This triangle is skinny enough to consider Girard's formula.
+      // This triangle is skinny enough to consider using Girard's formula.
+      // We increase the area by the approximate maximum error in the Girard
+      // calculation in order to ensure that this test is conservative.
       double area = GirardArea(a, b, c);
-      if (dmin < s * (0.1 * area)) return area;
+      if (dmin < s * (0.1 * (area + 5e-15))) return area;
     }
   }
   // Use l'Huilier's formula.

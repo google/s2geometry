@@ -522,8 +522,7 @@ void S2Builder::CopyInputEdges() {
     sites_.push_back(site);
   }
   input_vertices_ = sites_;
-  for (int i = 0; i < input_edges_.size(); ++i) {
-    InputEdge& e = input_edges_[i];
+  for (InputEdge& e : input_edges_) {
     e.first = vmap[e.first];
     e.second = vmap[e.second];
   }
@@ -649,9 +648,8 @@ void S2Builder::ChooseInitialSites(S2PointIndex<SiteId>* site_index) {
   // "0:0, 0:0" rather than the expected "0:0, 0:1", because the snap radius
   // is approximately sqrt(2) degrees and therefore it is legal to snap both
   // input points to "0:0".  "Snap first" produces "0:0, 0:1" as expected.
-  vector<InputVertexKey> sorted = SortInputVertices();
-  for (int i = 0; i < sorted.size(); ++i) {
-    const S2Point& vertex = input_vertices_[sorted[i].second];
+  for (const InputVertexKey& key : SortInputVertices()) {
+    const S2Point& vertex = input_vertices_[key.second];
     S2Point site = SnapSite(vertex);
     // If any vertex moves when snapped, the output cannot be idempotent.
     snapping_needed_ = snapping_needed_ || site != vertex;
@@ -863,7 +861,7 @@ void S2Builder::AddExtraSite(const S2Point& new_site,
   S2ClosestEdgeQuery query(&input_edge_index, options);
   S2ClosestEdgeQuery::PointTarget target(new_site);
   for (const auto& result : query.FindClosestEdges(&target)) {
-    InputEdgeId e = result.edge_id;
+    InputEdgeId e = result.edge_id();
     auto* site_ids = &edge_sites_[e];
     site_ids->push_back(new_site_id);
     SortSitesByDistance(input_vertices_[input_edges_[e].first], site_ids);
@@ -963,8 +961,8 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
   // Now iterate through the sites.  We keep track of the sequence of sites
   // that are visited.
   const auto& candidates = edge_sites_[e];
-  for (int i = 0; i < candidates.size(); ++i) {
-    const S2Point& c = sites_[candidates[i]];
+  for (SiteId site_id : candidates) {
+    const S2Point& c = sites_[site_id];
     // Skip any sites that are too far away.  (There will be some of these,
     // because we also keep track of "sites to avoid".)  Note that some sites
     // may be close enough to the line containing the edge, but not to the
@@ -1020,14 +1018,14 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
       if (s2pred::EdgeCircumcenterSign(x, y, a, b, c) != xyb) break;
     }
     if (add_site_c) {
-      chain->push_back(candidates[i]);
+      chain->push_back(site_id);
     }
   }
   S2_DCHECK(!chain->empty());
   if (google::DEBUG_MODE) {
-    for (int i = 0; i < candidates.size(); ++i) {
+    for (SiteId site_id : candidates) {
       if (s2pred::CompareDistances(y, sites_[chain->back()],
-                                   sites_[candidates[i]]) > 0) {
+                                   sites_[site_id]) > 0) {
         S2_LOG(ERROR) << "Snapping invariant broken!";
       }
     }
@@ -1329,8 +1327,7 @@ void S2Builder::MergeLayerEdges(
   edges->reserve(order.size());
   input_edge_ids->reserve(order.size());
   edge_layers->reserve(order.size());
-  for (int i = 0; i < order.size(); ++i) {
-    const LayerEdgeId& id = order[i];
+  for (const LayerEdgeId& id : order) {
     edges->push_back(layer_edges[id.first][id.second]);
     input_edge_ids->push_back(layer_input_edge_ids[id.first][id.second]);
     edge_layers->push_back(id.first);
@@ -1801,8 +1798,7 @@ void S2Builder::EdgeChainSimplifier::AssignDegenerateEdges(
     });
 
   // Now determine where each degenerate edge should be assigned.
-  for (int i = 0; i < degenerate_ids.size(); ++i) {
-    InputEdgeId degenerate_id = degenerate_ids[i];
+  for (InputEdgeId degenerate_id : degenerate_ids) {
     int layer = input_edge_layer(degenerate_id);
 
     // Find the first output edge whose range of input edge ids starts after

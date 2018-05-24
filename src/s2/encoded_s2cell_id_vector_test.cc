@@ -31,17 +31,28 @@ using std::vector;
 
 namespace s2coding {
 
+// Encodes the given vector and returns the corresponding
+// EncodedS2CellIdVector (which points into the Encoder's data buffer).
+EncodedS2CellIdVector MakeEncodedS2CellIdVector(const vector<S2CellId>& input,
+                                                Encoder* encoder) {
+  EncodeS2CellIdVector(input, encoder);
+  Decoder decoder(encoder->base(), encoder->length());
+  EncodedS2CellIdVector cell_ids;
+  EXPECT_TRUE(cell_ids.Init(&decoder));
+  return cell_ids;
+}
+
+// Encodes the given vector and checks that it has the expected size and
+// contents.
 void TestEncodedS2CellIdVector(const vector<S2CellId>& expected,
                                size_t expected_bytes) {
   Encoder encoder;
-  EncodeS2CellIdVector(expected, &encoder);
+  EncodedS2CellIdVector actual = MakeEncodedS2CellIdVector(expected, &encoder);
   EXPECT_EQ(expected_bytes, encoder.length());
-  Decoder decoder(encoder.base(), encoder.length());
-  EncodedS2CellIdVector actual;
-  ASSERT_TRUE(actual.Init(&decoder));
   EXPECT_EQ(actual.Decode(), expected);
 }
 
+// Like the above, but accepts a vector<uint64> rather than a vector<S2CellId>.
 void TestEncodedS2CellIdVector(const vector<uint64>& raw_expected,
                                size_t expected_bytes) {
   vector<S2CellId> expected;
@@ -51,60 +62,60 @@ void TestEncodedS2CellIdVector(const vector<uint64>& raw_expected,
   TestEncodedS2CellIdVector(expected, expected_bytes);
 }
 
-TEST(EncodedS2CellIdVectorTest, Empty) {
+TEST(EncodedS2CellIdVector, Empty) {
   TestEncodedS2CellIdVector(vector<S2CellId>{}, 2);
 }
 
-TEST(EncodedS2CellIdVectorTest, None) {
+TEST(EncodedS2CellIdVector, None) {
   TestEncodedS2CellIdVector({S2CellId::None()}, 3);
 }
 
-TEST(EncodedS2CellIdVectorTest, NoneNone) {
+TEST(EncodedS2CellIdVector, NoneNone) {
   TestEncodedS2CellIdVector({S2CellId::None(), S2CellId::None()}, 4);
 }
 
-TEST(EncodedS2CellIdVectorTest, Sentinel) {
+TEST(EncodedS2CellIdVector, Sentinel) {
   TestEncodedS2CellIdVector({S2CellId::Sentinel()}, 10);
 }
 
-TEST(EncodedS2CellIdVectorTest, SentinelSentinel) {
+TEST(EncodedS2CellIdVector, SentinelSentinel) {
   TestEncodedS2CellIdVector({S2CellId::Sentinel(), S2CellId::Sentinel()}, 11);
 }
 
-TEST(EncodedS2CellIdVectorTest, NoneSentinelNone) {
+TEST(EncodedS2CellIdVector, NoneSentinelNone) {
   TestEncodedS2CellIdVector(
       {S2CellId::None(), S2CellId::Sentinel(), S2CellId::None()}, 26);
 }
 
-TEST(EncodedS2CellIdVectorTest, InvalidCells) {
+TEST(EncodedS2CellIdVector, InvalidCells) {
   // Tests that cells with an invalid LSB can be encoded.
   TestEncodedS2CellIdVector({0x6, 0xe, 0x7e}, 5);
 }
 
-TEST(EncodedS2CellIdVectorTest, OneByteLeafCells) {
+TEST(EncodedS2CellIdVector, OneByteLeafCells) {
   // Tests that (1) if all cells are leaf cells, the low bit is not encoded,
   // and (2) this can be indicated using the standard 1-byte header.
   TestEncodedS2CellIdVector({0x3, 0x7, 0x177}, 5);
 }
 
-TEST(EncodedS2CellIdVectorTest, OneByteLevel29Cells) {
+TEST(EncodedS2CellIdVector, OneByteLevel29Cells) {
   // Tests that (1) if all cells are at level 29, the low bit is not encoded,
   // and (2) this can be indicated using the standard 1-byte header.
   TestEncodedS2CellIdVector({0xc, 0x1c, 0x47c}, 5);
 }
 
-TEST(EncodedS2CellIdVectorTest, OneByteLevel28Cells) {
+TEST(EncodedS2CellIdVector, OneByteLevel28Cells) {
   // Tests that (1) if all cells are at level 28, the low bit is not encoded,
   // and (2) this can be indicated using the extended 2-byte header.
   TestEncodedS2CellIdVector({0x30, 0x70, 0x1770}, 6);
 }
 
-TEST(EncodedS2CellIdVectorTest, OneByteMixedCellLevels) {
+TEST(EncodedS2CellIdVector, OneByteMixedCellLevels) {
   // Tests that cells at mixed levels can be encoded in one byte.
   TestEncodedS2CellIdVector({0x300, 0x1c00, 0x7000, 0xff00}, 6);
 }
 
-TEST(EncodedS2CellIdVectorTest, OneByteMixedCellLevelsWithPrefix) {
+TEST(EncodedS2CellIdVector, OneByteMixedCellLevelsWithPrefix) {
   // Tests that cells at mixed levels can be encoded in one byte even when
   // they share a multi-byte prefix.
   TestEncodedS2CellIdVector({
@@ -112,7 +123,7 @@ TEST(EncodedS2CellIdVectorTest, OneByteMixedCellLevelsWithPrefix) {
       0x1234567800007000, 0x123456780000ff00}, 10);
 }
 
-TEST(EncodedS2CellIdVectorTest, OneByteRangeWithBaseValue) {
+TEST(EncodedS2CellIdVector, OneByteRangeWithBaseValue) {
   // Tests that cells can be encoded in one byte by choosing a base value
   // whose bit range overlaps the delta values.
   // 1 byte header, 3 bytes base, 1 byte size, 4 bytes deltas
@@ -121,7 +132,7 @@ TEST(EncodedS2CellIdVectorTest, OneByteRangeWithBaseValue) {
       0x0100500000000000, 0x0100330000000000}, 9);
 }
 
-TEST(EncodedS2CellIdVectorTest, SixFaceCells) {
+TEST(EncodedS2CellIdVector, SixFaceCells) {
   vector<S2CellId> ids;
   for (int face = 0; face < 6; ++face) {
     ids.push_back(S2CellId::FromFace(face));
@@ -129,7 +140,7 @@ TEST(EncodedS2CellIdVectorTest, SixFaceCells) {
   TestEncodedS2CellIdVector(ids, 8);
 }
 
-TEST(EncodedS2CellIdVectorTest, FourLevel10Children) {
+TEST(EncodedS2CellIdVector, FourLevel10Children) {
   vector<S2CellId> ids;
   S2CellId parent = S2CellId::FromDebugString("3/012301230");
   for (S2CellId id = parent.child_begin();
@@ -139,7 +150,7 @@ TEST(EncodedS2CellIdVectorTest, FourLevel10Children) {
   TestEncodedS2CellIdVector(ids, 8);
 }
 
-TEST(EncodedS2CellIdVectorTest, FractalS2ShapeIndexCells) {
+TEST(EncodedS2CellIdVector, FractalS2ShapeIndexCells) {
   S2Testing::Fractal fractal;
   fractal.SetLevelForApproxMaxEdges(3 * 1024);
   S2Point center = s2textformat::MakePointOrDie("47.677:-122.206");
@@ -155,7 +166,7 @@ TEST(EncodedS2CellIdVectorTest, FractalS2ShapeIndexCells) {
   TestEncodedS2CellIdVector(ids, 2902);
 }
 
-TEST(EncodedS2CellIdVectorTest, CoveringCells) {
+TEST(EncodedS2CellIdVector, CoveringCells) {
   vector<uint64> ids {
     0x414a617f00000000, 0x414a61c000000000, 0x414a624000000000,
     0x414a63c000000000, 0x414a647000000000, 0x414a64c000000000,
@@ -193,6 +204,22 @@ TEST(EncodedS2CellIdVectorTest, CoveringCells) {
   };
   EXPECT_EQ(97, ids.size());
   TestEncodedS2CellIdVector(ids, 488);
+}
+
+TEST(EncodedS2CellIdVector, LowerBoundLimits) {
+  // Test seeking before the beginning and past the end of the vector.
+  S2CellId first = S2CellId::Begin(S2CellId::kMaxLevel);
+  S2CellId last = S2CellId::End(S2CellId::kMaxLevel).prev();
+  Encoder encoder;
+  EncodedS2CellIdVector cell_ids = MakeEncodedS2CellIdVector(
+      {first, last}, &encoder);
+  EXPECT_EQ(0, cell_ids.lower_bound(S2CellId::None()));
+  EXPECT_EQ(0, cell_ids.lower_bound(first));
+  EXPECT_EQ(1, cell_ids.lower_bound(first.next()));
+  EXPECT_EQ(1, cell_ids.lower_bound(last.prev()));
+  EXPECT_EQ(1, cell_ids.lower_bound(last));
+  EXPECT_EQ(2, cell_ids.lower_bound(last.next()));
+  EXPECT_EQ(2, cell_ids.lower_bound(S2CellId::Sentinel()));
 }
 
 }  // namespace s2coding

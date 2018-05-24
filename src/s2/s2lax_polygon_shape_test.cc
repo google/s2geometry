@@ -31,6 +31,7 @@
 #include "s2/s2text_format.h"
 
 using absl::make_unique;
+using s2textformat::MakePolygonOrDie;
 using std::unique_ptr;
 using std::vector;
 
@@ -41,7 +42,6 @@ TEST(S2LaxPolygonShape, EmptyPolygon) {
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(0, shape.num_chains());
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_TRUE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(shape.GetReferencePoint().contained);
@@ -54,7 +54,6 @@ TEST(S2LaxPolygonShape, FullPolygon) {
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(1, shape.num_chains());
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_TRUE(shape.is_full());
   EXPECT_TRUE(shape.GetReferencePoint().contained);
@@ -77,7 +76,6 @@ TEST(S2LaxPolygonShape, SingleVertexPolygon) {
   EXPECT_EQ(loops[0][0], edge.v1);
   EXPECT_TRUE(edge == shape.chain_edge(0, 0));
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(shape.GetReferencePoint().contained);
@@ -103,7 +101,6 @@ TEST(S2LaxPolygonShape, SingleLoopPolygon) {
     EXPECT_EQ(edge.v1, shape.chain_edge(0, i).v1);
   }
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
@@ -136,14 +133,27 @@ TEST(S2LaxPolygonShape, MultiLoopPolygon) {
   EXPECT_EQ(num_vertices, shape.num_vertices());
   EXPECT_EQ(num_vertices, shape.num_edges());
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_FALSE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
 }
 
+TEST(S2LaxPolygonShape, MultiLoopS2Polygon) {
+  // Verify that the orientation of loops representing holes is reversed when
+  // converting from an S2Polygon to an S2LaxPolygonShape.
+  auto polygon = MakePolygonOrDie("0:0, 0:3, 3:3; 1:1, 1:2, 2:2");
+  S2LaxPolygonShape shape(*polygon);
+  for (int i = 0; i < polygon->num_loops(); ++i) {
+    S2Loop* loop = polygon->loop(i);
+    for (int j = 0; j < loop->num_vertices(); ++j) {
+      EXPECT_EQ(loop->oriented_vertex(j),
+                shape.loop_vertex(i, j));
+    }
+  }
+}
+
 TEST(S2LaxPolygonShape, ManyLoopPolygon) {
-  // Test a polygon enough loops so that cumulative_vertices_ is used.
+  // Test a polygon with enough loops so that cumulative_vertices_ is used.
   vector<vector<S2Point>> loops;
   for (int i = 0; i < 100; ++i) {
     S2Point center(S2LatLng::FromDegrees(0, i));

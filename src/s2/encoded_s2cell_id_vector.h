@@ -97,8 +97,10 @@ inline size_t EncodedS2CellIdVector::lower_bound(S2CellId target) const {
   // value and then searching directly in the deltas_ vector.
   //
   // To invert operator[], we essentially compute ((target - base_) >> shift_)
-  // except that we also need to round up when shifting.
+  // except that we also need to round up when shifting.  The first two cases
+  // ensure that "target" doesn't wrap around past zero when we do this.
   if (target.id() <= base_) return 0;
+  if (target >= S2CellId::End(S2CellId::kMaxLevel)) return size();
   return deltas_.lower_bound(
       (target.id() - base_ + (1ULL << shift_) - 1) >> shift_);
 }

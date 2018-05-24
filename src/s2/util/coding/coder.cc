@@ -32,8 +32,10 @@ Encoder::Encoder()
 }
 
 Encoder::~Encoder() {
+  S2_CHECK_LE(buf_, limit_);  // Catch the buffer overflow.
   if (underlying_buffer_ != &kEmptyBuffer) {
-    delete[] underlying_buffer_;
+    std::allocator<unsigned char>().deallocate(
+        underlying_buffer_, limit_ - orig_);
   }
 }
 
@@ -54,10 +56,12 @@ void Encoder::EnsureSlowPath(size_t N) {
   const size_t current_len = length();
   const size_t new_capacity = std::max(current_len + N, 2 * current_len);
 
-  unsigned char* new_buffer = new unsigned char[new_capacity];
+  unsigned char* new_buffer = std::allocator<unsigned char>().allocate(
+      new_capacity);
   memcpy(new_buffer, underlying_buffer_, current_len);
   if (underlying_buffer_ != &kEmptyBuffer) {
-    delete[] underlying_buffer_;
+    std::allocator<unsigned char>().deallocate(
+        underlying_buffer_, limit_ - orig_);
   }
   underlying_buffer_ = new_buffer;
 

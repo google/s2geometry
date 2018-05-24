@@ -21,6 +21,7 @@
 #include <initializer_list>
 #include <utility>
 
+#include "s2/third_party/absl/base/internal/throw_delegate.h"
 #include "s2/util/gtl/btree.h"  // IWYU pragma: export
 
 namespace gtl {
@@ -316,6 +317,19 @@ class btree_map_container : public btree_unique_container<Tree> {
                        std::forward_as_tuple(std::move(key)),
                        std::forward_as_tuple())
         .first->second;
+  }
+
+  data_type &at(const key_type &key) {
+    auto it = this->find(key);
+    if (it == this->end())
+      absl::base_internal::ThrowStdOutOfRange("btree_map::at");
+    return it->second;
+  }
+  const data_type &at(const key_type &key) const {
+    auto it = this->find(key);
+    if (it == this->end())
+      absl::base_internal::ThrowStdOutOfRange("btree_map::at");
+    return it->second;
   }
 };
 

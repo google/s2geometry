@@ -60,53 +60,11 @@
 // disjoint; they may overlap or intersect arbitrarily.  The implementation is
 // designed to be fast for both simple and complex geometries.
 //
-// The Distance template argument is used to represent distances.  Usually
-// this type is a thin wrapper around S1ChordAngle, but another distance type
-// may be substituted as long as it implements the API below.  This can be
-// used to change the comparison function (e.g., to find the furthest edges
-// from the target), or to get more accuracy if desired.
-//
-// The Distance concept is as follows:
-//
-// class Distance {
-//  public:
-//   // Default and copy constructors, assignment operator:
-//   Distance();
-//   Distance(const Distance&);
-//   Distance& operator=(const Distance&);
-//
-//   // Factory methods:
-//   static Distance Zero();      // Returns a zero distance.
-//   static Distance Infinity();  // Larger than any valid distance.
-//   static Distance Negative();  // Smaller than any valid distance.
-//
-//   // Comparison operators:
-//   friend bool operator==(Distance x, Distance y);
-//   friend bool operator<(Distance x, Distance y);
-//
-//   // Delta represents the positive difference between two distances.
-//   // It is used together with operator-() to implement Options::max_error().
-//   // Typically Distance::Delta is simply S1ChordAngle.
-//   class Delta {
-//    public:
-//     Delta();
-//     Delta(const Delta&);
-//     Delta& operator=(const Delta&);
-//     friend bool operator==(Delta x, Delta y);
-//     static Delta Zero();
-//   };
-//
-//   // Subtraction operator.  Note that the second argument represents a
-//   // delta between two distances.  This distinction is important for
-//   // classes that compute maximum distances (e.g., S2FurthestEdgeQuery).
-//   friend Distance operator-(Distance x, Delta delta);
-//
-//   // Method that returns an upper bound on the S1ChordAngle corresponding
-//   // to this Distance (needed to implement Options::max_distance
-//   // efficiently).  For example, if Distance measures WGS84 ellipsoid
-//   // distance then the corresponding angle needs to be 0.56% larger.
-//   S1ChordAngle GetChordAngleBound() const;
-// };
+// The Distance template argument is used to represent distances.  Usually it
+// is a thin wrapper around S1ChordAngle, but another distance type may be
+// used as long as it implements the Distance concept described in
+// s2distance_targets.h.  For example this can be used to measure maximum
+// distances, to get more accuracy, or to measure non-spheroidal distances.
 template <class Distance>
 class S2ClosestEdgeQueryBase {
  public:
@@ -114,18 +72,18 @@ class S2ClosestEdgeQueryBase {
 
   // Options that control the set of edges returned.  Note that by default
   // *all* edges are returned, so you will always want to set either the
-  // max_edges() option or the max_distance() option (or both).
+  // max_results() option or the max_distance() option (or both).
   class Options {
    public:
     Options();
 
-    // Specifies that at most "max_edges" edges should be returned.
+    // Specifies that at most "max_results" edges should be returned.
     //
-    // REQUIRES: max_edges >= 1
-    // DEFAULT: numeric_limits<int>::max()
-    int max_edges() const;
-    void set_max_edges(int max_edges);
-    static constexpr int kMaxMaxEdges = std::numeric_limits<int>::max();
+    // REQUIRES: max_results >= 1
+    // DEFAULT: kMaxMaxResults
+    int max_results() const;
+    void set_max_results(int max_results);
+    static constexpr int kMaxMaxResults = std::numeric_limits<int>::max();
 
     // Specifies that only edges whose distance to the target is less than
     // "max_distance" should be returned.
@@ -144,7 +102,7 @@ class S2ClosestEdgeQueryBase {
     // Specifies that edges up to max_error() further away than the true
     // closest edges may be substituted in the result set, as long as such
     // edges satisfy all the remaining search criteria (such as max_distance).
-    // This option only has an effect if max_edges() is also specified;
+    // This option only has an effect if max_results() is also specified;
     // otherwise all edges closer than max_distance() will always be returned.
     //
     // Note that this does not affect how the distance between edges is
@@ -153,7 +111,7 @@ class S2ClosestEdgeQueryBase {
     //
     // This can be used to implement distance predicates efficiently.  For
     // example, to determine whether the minimum distance is less than D, set
-    // max_edges() == 1 and max_distance() == max_error() == D.  This causes
+    // max_results() == 1 and max_distance() == max_error() == D.  This causes
     // the algorithm to terminate as soon as it finds any edge whose distance
     // is less than D, rather than continuing to search for an edge that is
     // even closer.
@@ -188,7 +146,7 @@ class S2ClosestEdgeQueryBase {
    private:
     Distance max_distance_ = Distance::Infinity();
     Delta max_error_ = Delta::Zero();
-    int max_edges_ = kMaxMaxEdges;
+    int max_results_ = kMaxMaxResults;
     bool include_interiors_ = true;
     bool use_brute_force_ = false;
   };
@@ -205,43 +163,66 @@ class S2ClosestEdgeQueryBase {
   // Each "Result" object represents a closest edge.  Note the following
   // special cases:
   //
-  //  - (shape_id >= 0) && (edge_id < 0) represents the interior of a shape.
+  //  - (shape_id() >= 0) && (edge_id() < 0) represents the interior of a shape.
   //    Such results may be returned when options.include_interiors() is true.
+  //    Such results can be identified using the is_interior() method.
   //
-  //  - (shape_id < 0) && (edge_id < 0) is returned by `FindClosestEdge` to
-  //    indicate that no edge satisfies the requested query options.
-  //
-  // TODO(ericv): Convert to a class with accessor methods.
-  struct Result {
-    Distance distance;  // The distance from the target to this edge.
-    int32 shape_id;     // Identifies an indexed shape.
-    int32 edge_id;      // Identifies an edge within the shape.
+  //  - (shape_id() < 0) && (edge_id() < 0) is returned by `FindClosestEdge`
+  //    to indicate that no edge satisfies the given query options.  Such
+  //    results can be identified using is_empty() method.
+  class Result {
+   public:
+    // The default constructor yields an empty result, with a distance() of
+    // Infinity() and shape_id == edge_id == -1.
+    Result() : distance_(Distance::Infinity()), shape_id_(-1), edge_id_(-1) {}
 
-    // The default constructor yields an invalid result.
-    Result() : distance(Distance::Infinity()), shape_id(-1), edge_id(-1) {}
+    // Constructs a Result object for the given arguments.
+    Result(Distance distance, int32 shape_id, int32 edge_id)
+        : distance_(distance), shape_id_(shape_id), edge_id_(edge_id) {}
 
-    Result(Distance _distance, int32 _shape_id, int32 _edge_id)
-        : distance(_distance), shape_id(_shape_id), edge_id(_edge_id) {}
+    // The distance from the target to this edge.
+    Distance distance() const { return distance_; }
+
+    // Identifies an indexed shape.
+    int32 shape_id() const { return shape_id_; }
+
+    // Identifies an edge within the shape.
+    int32 edge_id() const { return edge_id_; }
+
+    // Returns true if this Result object represents the interior of a shape.
+    // (Such results may be returned when options.include_interiors() is true.)
+    bool is_interior() const { return shape_id_ >= 0 && edge_id_ < 0; }
+
+    // Returns true if this Result object indicates that no edge satisfies the
+    // given query options.  (This result is only returned in one special
+    // case, namely when FindClosestEdge() does not find any suitable edges.
+    // It is never returned by methods that return a vector of results.)
+    bool is_empty() const { return shape_id_ < 0; }
 
     // Returns true if two Result objects are identical.
     friend bool operator==(const Result& x, const Result& y) {
-      return (x.distance == y.distance &&
-              x.shape_id == y.shape_id &&
-              x.edge_id == y.edge_id);
+      return (x.distance_ == y.distance_ &&
+              x.shape_id_ == y.shape_id_ &&
+              x.edge_id_ == y.edge_id_);
     }
 
     // Compares edges first by distance, then by (shape_id, edge_id).
     friend bool operator<(const Result& x, const Result& y) {
-      if (x.distance < y.distance) return true;
-      if (y.distance < x.distance) return false;
-      if (x.shape_id < y.shape_id) return true;
-      if (y.shape_id < x.shape_id) return false;
-      return x.edge_id < y.edge_id;
+      if (x.distance_ < y.distance_) return true;
+      if (y.distance_ < x.distance_) return false;
+      if (x.shape_id_ < y.shape_id_) return true;
+      if (y.shape_id_ < x.shape_id_) return false;
+      return x.edge_id_ < y.edge_id_;
     }
 
     // Indicates that linear rather than binary search should be used when this
     // type is used as the key in gtl::btree data structures.
     using goog_btree_prefer_linear_node_search = std::true_type;
+
+   private:
+    Distance distance_;  // The distance from the target to this edge.
+    int32 shape_id_;     // Identifies an indexed shape.
+    int32 edge_id_;      // Identifies an edge within the shape.
   };
 
   // Default constructor; requires Init() to be called.
@@ -287,7 +268,7 @@ class S2ClosestEdgeQueryBase {
   // used to indicate that the target intersects an indexed polygon (but in
   // that case distance == Zero() and shape_id >= 0).
   //
-  // REQUIRES: options.max_edges() == 1
+  // REQUIRES: options.max_results() == 1
   Result FindClosestEdge(Target* target, const Options& options);
 
  private:
@@ -304,14 +285,14 @@ class S2ClosestEdgeQueryBase {
   void MaybeAddResult(const S2Shape& shape, int edge_id);
   void AddResult(const Result& result);
   void ProcessEdges(const QueueEntry& entry);
-  void EnqueueCell(S2CellId id, const S2ShapeIndexCell* index_cell);
-  void EnqueueCurrentCell(S2CellId id);
+  void ProcessOrEnqueue(S2CellId id);
+  void ProcessOrEnqueue(S2CellId id, const S2ShapeIndexCell* index_cell);
 
   const S2ShapeIndex* index_;
   const Options* options_;
   Target* target_;
 
-  // True if max_error() must be subtracted from S2ShapeIndex cell distances
+  // True if max_error() must be subtracted from priority queue cell distances
   // in order to ensure that such distances are measured conservatively.  This
   // is true only if the target takes advantage of max_error() in order to
   // return faster results, and 0 < max_error() < distance_limit_.
@@ -347,15 +328,18 @@ class S2ClosestEdgeQueryBase {
 
   // The current result set is stored in one of three ways:
   //
-  //  - If max_edges() == 1, the best result is kept in result_singleton_.
+  //  - If max_results() == 1, the best result is kept in result_singleton_.
   //
-  //  - If max_edges() == "infinity", results are appended to result_vector_
+  //  - If max_results() == "infinity", results are appended to result_vector_
   //    and sorted/uniqued at the end.
   //
   //  - Otherwise results are kept in a btree_set so that we can progressively
-  //    reduce the distance limit once max_edges() results have been found.
+  //    reduce the distance limit once max_results() results have been found.
   //    (A priority queue is not sufficient because we need to be able to
   //    check whether a candidate edge is already in the result set.)
+  //
+  // TODO(ericv): Check whether it would be faster to use avoid_duplicates_
+  // when result_set_ is used so that we could use a priority queue instead.
   Result result_singleton_;
   std::vector<Result> result_vector_;
   gtl::btree_set<Result> result_set_;
@@ -374,15 +358,18 @@ class S2ClosestEdgeQueryBase {
   // is achieved by maintaining a separate set keyed by (shape_id, edge_id)
   // only, and checking whether each edge is in that set before computing the
   // distance to it.
+  //
+  // TODO(ericv): Check whether it is faster to avoid duplicates by default
+  // (even when Options::max_results() == 1), rather than just when we need to.
   bool avoid_duplicates_;
   using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
   gtl::dense_hash_set<ShapeEdgeId, s2shapeutil::ShapeEdgeIdHash> tested_edges_;
 
   // The algorithm maintains a priority queue of unprocessed S2CellIds, sorted
-  // in increasing order of distance from the target point.
+  // in increasing order of distance from the target.
   struct QueueEntry {
-    // A lower bound on the distance from the target point to any edge point
-    // within "id".  This is the key of the priority queue.
+    // A lower bound on the distance from the target to "id".  This is the key
+    // of the priority queue.
     Distance distance;
 
     // The cell being queued.
@@ -424,15 +411,15 @@ inline S2ClosestEdgeQueryBase<Distance>::Options::Options() {
 }
 
 template <class Distance>
-inline int S2ClosestEdgeQueryBase<Distance>::Options::max_edges() const {
-  return max_edges_;
+inline int S2ClosestEdgeQueryBase<Distance>::Options::max_results() const {
+  return max_results_;
 }
 
 template <class Distance>
-inline void S2ClosestEdgeQueryBase<Distance>::Options::set_max_edges(
-    int max_edges) {
-  S2_DCHECK_GE(max_edges, 1);
-  max_edges_ = max_edges;
+inline void S2ClosestEdgeQueryBase<Distance>::Options::set_max_results(
+    int max_results) {
+  S2_DCHECK_GE(max_results, 1);
+  max_results_ = max_results;
 }
 
 template <class Distance>
@@ -533,7 +520,7 @@ template <class Distance>
 typename S2ClosestEdgeQueryBase<Distance>::Result
 S2ClosestEdgeQueryBase<Distance>::FindClosestEdge(Target* target,
                                                   const Options& options) {
-  S2_DCHECK_EQ(options.max_edges(), 1);
+  S2_DCHECK_EQ(options.max_results(), 1);
   FindClosestEdgesInternal(target, options);
   return result_singleton_;
 }
@@ -544,11 +531,11 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdges(
     std::vector<Result>* results) {
   FindClosestEdgesInternal(target, options);
   results->clear();
-  if (options.max_edges() == 1) {
-    if (result_singleton_.shape_id >= 0) {
+  if (options.max_results() == 1) {
+    if (result_singleton_.shape_id() >= 0) {
       results->push_back(result_singleton_);
     }
-  } else if (options.max_edges() == Options::kMaxMaxEdges) {
+  } else if (options.max_results() == Options::kMaxMaxResults) {
     std::sort(result_vector_.begin(), result_vector_.end());
     std::unique_copy(result_vector_.begin(), result_vector_.end(),
                      std::back_inserter(*results));
@@ -570,12 +557,12 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
   result_singleton_ = Result();
   S2_DCHECK(result_vector_.empty());
   S2_DCHECK(result_set_.empty());
-  S2_DCHECK(target->max_brute_force_index_size() >= 0);
+  S2_DCHECK_GE(target->max_brute_force_index_size(), 0);
   if (distance_limit_ == Distance::Zero()) return;
 
-  if (options.max_edges() == Options::kMaxMaxEdges &&
+  if (options.max_results() == Options::kMaxMaxResults &&
       options.max_distance() == Distance::Infinity()) {
-    S2_LOG(WARNING) << "Returning all edges (max_edges/max_distance not set)";
+    S2_LOG(WARNING) << "Returning all edges (max_results/max_distance not set)";
   }
 
   if (options.include_interiors()) {
@@ -584,7 +571,7 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
         *index_, [&shape_ids, &options](S2Shape* containing_shape,
                                         const S2Point& target_point) {
           shape_ids.insert(containing_shape->id());
-          return shape_ids.size() < options.max_edges();
+          return shape_ids.size() < options.max_results();
         });
     for (int shape_id : shape_ids) {
       AddResult(Result(Distance::Zero(), shape_id, -1));
@@ -593,18 +580,18 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
   }
 
   // If max_error() > 0 and the target takes advantage of this, then we may
-  // need to adjust the distance estimates to S2ShapeIndex cells to ensure
-  // that they are always a lower bound on the true distance.  For example,
-  // suppose max_distance == 100, max_error == 30, and we compute the distance
-  // to the target from some cell C0 as d(C0) == 80.  Then because the target
-  // takes advantage of max_error(), the true distance could be as low as 50.
-  // In order not to miss edges contained by such cells, we need to subtract
-  // max_error() from the distance estimates.  This behavior is controlled by
-  // the use_conservative_cell_distance_ flag.
+  // need to adjust the distance estimates to the priority queue cells to
+  // ensure that they are always a lower bound on the true distance.  For
+  // example, suppose max_distance == 100, max_error == 30, and we compute the
+  // distance to the target from some cell C0 as d(C0) == 80.  Then because
+  // the target takes advantage of max_error(), the true distance could be as
+  // low as 50.  In order not to miss edges contained by such cells, we need
+  // to subtract max_error() from the distance estimates.  This behavior is
+  // controlled by the use_conservative_cell_distance_ flag.
   //
   // However there is one important case where this adjustment is not
   // necessary, namely when max_distance() < max_error().  This is because
-  // max_error() only affects the algorithm once at least max_edges() edges
+  // max_error() only affects the algorithm once at least max_results() edges
   // have been found that satisfy the given distance limit.  At that point,
   // max_error() is subtracted from distance_limit_ in order to ensure that
   // any further matches are closer by at least that amount.  But when
@@ -641,7 +628,7 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
   } else {
     // If the target takes advantage of max_error() then we need to avoid
     // duplicate edges explicitly.  (Otherwise it happens automatically.)
-    avoid_duplicates_ = (target_uses_max_error && options.max_edges() > 1);
+    avoid_duplicates_ = (target_uses_max_error && options.max_results() > 1);
     FindClosestEdgesOptimized();
   }
 }
@@ -686,17 +673,17 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesOptimized() {
     S2CellId id = entry.id;
     iter_.Seek(id.child(1).range_min());
     if (!iter_.done() && iter_.id() <= id.child(1).range_max()) {
-      EnqueueCurrentCell(id.child(1));
+      ProcessOrEnqueue(id.child(1));
     }
     if (iter_.Prev() && iter_.id() >= id.range_min()) {
-      EnqueueCurrentCell(id.child(0));
+      ProcessOrEnqueue(id.child(0));
     }
     iter_.Seek(id.child(3).range_min());
     if (!iter_.done() && iter_.id() <= id.range_max()) {
-      EnqueueCurrentCell(id.child(3));
+      ProcessOrEnqueue(id.child(3));
     }
     if (iter_.Prev() && iter_.id() >= id.child(2).range_min()) {
-      EnqueueCurrentCell(id.child(2));
+      ProcessOrEnqueue(id.child(2));
     }
   }
 }
@@ -711,13 +698,18 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
   }
 
   // Optimization: if the user is searching for just the closest edge, and the
-  // target happens to intersect an index cell, then we try to limit the search
-  // region to a small disc by first processing the edges in that cell.  This
-  // sets distance_limit_ based on the closest edge in that cell, which we can
-  // then use to limit the search area.  This means that the cell containing
-  // "target" will be processed twice, but in general this is still faster.
+  // center of the target's bounding cap happens to intersect an index cell,
+  // then we try to limit the search region to a small disc by first
+  // processing the edges in that cell.  This sets distance_limit_ based on
+  // the closest edge in that cell, which we can then use to limit the search
+  // area.  This means that the cell containing "target" will be processed
+  // twice, but in general this is still faster.
+  //
+  // TODO(ericv): Even if the cap center is not contained, we could still
+  // process one or both of the adjacent index cells in S2CellId order,
+  // provided that those cells are closer than distance_limit_.
   S2Cap cap = target_->GetCapBound();
-  if (options().max_edges() == 1 && iter_.Locate(cap.center())) {
+  if (options().max_results() == 1 && iter_.Locate(cap.center())) {
     ProcessEdges(QueueEntry(Distance::Zero(), iter_.id(), &iter_.cell()));
     // Skip the rest of the algorithm if we found an intersecting edge.
     if (distance_limit_ == Distance::Zero()) return;
@@ -726,7 +718,7 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
   if (distance_limit_ == Distance::Infinity()) {
     // Start with the precomputed index covering.
     for (int i = 0; i < index_covering_.size(); ++i) {
-      EnqueueCell(index_covering_[i], index_cells_[i]);
+      ProcessOrEnqueue(index_covering_[i], index_cells_[i]);
     }
   } else {
     // Compute a covering of the search disc and intersect it with the
@@ -750,7 +742,7 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
       if (id_i == id_j) {
         // This initial cell is one of the top-level cells.  Use the
         // precomputed S2ShapeIndexCell pointer to avoid an index seek.
-        EnqueueCell(id_j, index_cells_[j]);
+        ProcessOrEnqueue(id_j, index_cells_[j]);
         ++i, ++j;
       } else {
         // This initial cell is a proper descendant of a top-level cell.
@@ -759,13 +751,13 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
         if (r == S2ShapeIndex::INDEXED) {
           // This cell is a descendant of an index cell.  Enqueue it and skip
           // any other initial cells that are also descendants of this cell.
-          EnqueueCell(iter_.id(), &iter_.cell());
+          ProcessOrEnqueue(iter_.id(), &iter_.cell());
           const S2CellId last_id = iter_.id().range_max();
           while (++i < initial_cells_.size() && initial_cells_[i] <= last_id)
             continue;
         } else {
           // Enqueue the cell only if it contains at least one index cell.
-          if (r == S2ShapeIndex::SUBDIVIDED) EnqueueCell(id_i, nullptr);
+          if (r == S2ShapeIndex::SUBDIVIDED) ProcessOrEnqueue(id_i, nullptr);
           ++i;
         }
       }
@@ -861,11 +853,11 @@ void S2ClosestEdgeQueryBase<Distance>::MaybeAddResult(
 
 template <class Distance>
 void S2ClosestEdgeQueryBase<Distance>::AddResult(const Result& result) {
-  if (options().max_edges() == 1) {
+  if (options().max_results() == 1) {
     // Optimization for the common case where only the closest edge is wanted.
     result_singleton_ = result;
-    distance_limit_ = result.distance - options().max_error();
-  } else if (options().max_edges() == Options::kMaxMaxEdges) {
+    distance_limit_ = result.distance() - options().max_error();
+  } else if (options().max_results() == Options::kMaxMaxResults) {
     result_vector_.push_back(result);  // Sort/unique at end.
   } else {
     // Add this edge to result_set_.  Note that even if we already have enough
@@ -873,11 +865,12 @@ void S2ClosestEdgeQueryBase<Distance>::AddResult(const Result& result) {
     // edge might in fact be a duplicate.
     result_set_.insert(result);
     int size = result_set_.size();
-    if (size >= options().max_edges()) {
-      if (size > options().max_edges()) {
+    if (size >= options().max_results()) {
+      if (size > options().max_results()) {
         result_set_.erase(--result_set_.end());
       }
-      distance_limit_ = (--result_set_.end())->distance - options().max_error();
+      distance_limit_ = (--result_set_.end())->distance() -
+                        options().max_error();
     }
   }
 }
@@ -907,19 +900,22 @@ void S2ClosestEdgeQueryBase<Distance>::ProcessEdges(const QueueEntry& entry) {
 // Enqueue the given cell id.
 // REQUIRES: iter_ is positioned at a cell contained by "id".
 template <class Distance>
-inline void S2ClosestEdgeQueryBase<Distance>::EnqueueCurrentCell(S2CellId id) {
+inline void S2ClosestEdgeQueryBase<Distance>::ProcessOrEnqueue(
+    S2CellId id) {
   S2_DCHECK(id.contains(iter_.id()));
   if (iter_.id() == id) {
-    EnqueueCell(id, &iter_.cell());
+    ProcessOrEnqueue(id, &iter_.cell());
   } else {
-    EnqueueCell(id, nullptr);
+    ProcessOrEnqueue(id, nullptr);
   }
 }
 
 // Add the given cell id to the queue.  "index_cell" is the corresponding
 // S2ShapeIndexCell, or nullptr if "id" is not an index cell.
+//
+// This version is called directly only by InitQueue().
 template <class Distance>
-void S2ClosestEdgeQueryBase<Distance>::EnqueueCell(
+void S2ClosestEdgeQueryBase<Distance>::ProcessOrEnqueue(
     S2CellId id, const S2ShapeIndexCell* index_cell) {
   if (index_cell) {
     // If this index cell has only a few edges, then it is faster to check

@@ -240,6 +240,7 @@ inline void Encoder::Ensure(size_t N) {
 
 inline size_t Encoder::length() const {
   S2_DCHECK_GE(buf_, orig_);
+  S2_CHECK_LE(buf_, limit_);  // Catch the buffer overflow.
   return buf_ - orig_;
 }
 

@@ -22,6 +22,7 @@
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2closest_cell_query.h"
 #include "s2/s2closest_edge_query.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2shape_index_region.h"
@@ -123,6 +124,76 @@ bool S2MinDistanceCellTarget::VisitContainingShapes(
   return target.VisitContainingShapes(index, visitor);
 }
 
+S2MinDistanceCellUnionTarget::S2MinDistanceCellUnionTarget(
+    S2CellUnion cell_union)
+    : cell_union_(std::move(cell_union)),
+      query_(absl::make_unique<S2ClosestCellQuery>(&index_)) {
+  for (S2CellId cell_id : cell_union_) {
+    index_.Add(cell_id, 0);
+  }
+  index_.Build();
+}
+
+S2MinDistanceCellUnionTarget::~S2MinDistanceCellUnionTarget() {
+}
+
+bool S2MinDistanceCellUnionTarget::use_brute_force() const {
+  return query_->options().use_brute_force();
+}
+
+void S2MinDistanceCellUnionTarget::set_use_brute_force(
+    bool use_brute_force) {
+  query_->mutable_options()->set_use_brute_force(use_brute_force);
+}
+
+bool S2MinDistanceCellUnionTarget::set_max_error(
+    const S1ChordAngle& max_error) {
+  query_->mutable_options()->set_max_error(max_error);
+  return true;  // Indicates that we may return suboptimal results.
+}
+
+S2Cap S2MinDistanceCellUnionTarget::GetCapBound() {
+  return cell_union_.GetCapBound();
+}
+
+inline bool S2MinDistanceCellUnionTarget::UpdateMinDistance(
+    S2MinDistanceTarget* target, S2MinDistance* min_dist) {
+  query_->mutable_options()->set_max_distance(*min_dist);
+  S2ClosestCellQuery::Result r = query_->FindClosestCell(target);
+  if (r.is_empty()) return false;
+  *min_dist = r.distance();
+  return true;
+}
+
+bool S2MinDistanceCellUnionTarget::UpdateMinDistance(
+    const S2Point& p, S2MinDistance* min_dist) {
+  S2ClosestCellQuery::PointTarget target(p);
+  return UpdateMinDistance(&target, min_dist);
+}
+
+bool S2MinDistanceCellUnionTarget::UpdateMinDistance(
+    const S2Point& v0, const S2Point& v1, S2MinDistance* min_dist) {
+  S2ClosestCellQuery::EdgeTarget target(v0, v1);
+  return UpdateMinDistance(&target, min_dist);
+}
+
+bool S2MinDistanceCellUnionTarget::UpdateMinDistance(
+    const S2Cell& cell, S2MinDistance* min_dist) {
+  S2ClosestCellQuery::CellTarget target(cell);
+  return UpdateMinDistance(&target, min_dist);
+}
+
+bool S2MinDistanceCellUnionTarget::VisitContainingShapes(
+    const S2ShapeIndex& query_index, const ShapeVisitor& visitor) {
+  for (S2CellId cell_id : cell_union_) {
+    S2MinDistancePointTarget target(cell_id.ToPoint());
+    if (!target.VisitContainingShapes(query_index, visitor)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 S2MinDistanceShapeIndexTarget::S2MinDistanceShapeIndexTarget(
     const S2ShapeIndex* index)
     : index_(index), query_(absl::make_unique<S2ClosestEdgeQuery>(index)) {
@@ -159,34 +230,31 @@ S2Cap S2MinDistanceShapeIndexTarget::GetCapBound() {
   return MakeS2ShapeIndexRegion(index_).GetCapBound();
 }
 
-bool S2MinDistanceShapeIndexTarget::UpdateMinDistance(const S2Point& p,
-                                                      S2MinDistance* min_dist) {
+inline bool S2MinDistanceShapeIndexTarget::UpdateMinDistance(
+    S2MinDistanceTarget* target, S2MinDistance* min_dist) {
   query_->mutable_options()->set_max_distance(*min_dist);
-  S2ClosestEdgeQuery::PointTarget target(p);
-  S2ClosestEdgeQuery::Result r = query_->FindClosestEdge(&target);
-  if (r.shape_id < 0) return false;
-  *min_dist = r.distance;
+  S2ClosestEdgeQuery::Result r = query_->FindClosestEdge(target);
+  if (r.is_empty()) return false;
+  *min_dist = r.distance();
   return true;
+}
+
+bool S2MinDistanceShapeIndexTarget::UpdateMinDistance(
+    const S2Point& p, S2MinDistance* min_dist) {
+  S2ClosestEdgeQuery::PointTarget target(p);
+  return UpdateMinDistance(&target, min_dist);
 }
 
 bool S2MinDistanceShapeIndexTarget::UpdateMinDistance(
     const S2Point& v0, const S2Point& v1, S2MinDistance* min_dist) {
-  query_->mutable_options()->set_max_distance(*min_dist);
   S2ClosestEdgeQuery::EdgeTarget target(v0, v1);
-  S2ClosestEdgeQuery::Result r = query_->FindClosestEdge(&target);
-  if (r.shape_id < 0) return false;
-  *min_dist = r.distance;
-  return true;
+  return UpdateMinDistance(&target, min_dist);
 }
 
 bool S2MinDistanceShapeIndexTarget::UpdateMinDistance(
     const S2Cell& cell, S2MinDistance* min_dist) {
-  query_->mutable_options()->set_max_distance(*min_dist);
   S2ClosestEdgeQuery::CellTarget target(cell);
-  S2ClosestEdgeQuery::Result r = query_->FindClosestEdge(&target);
-  if (r.shape_id < 0) return false;
-  *min_dist = r.distance;
-  return true;
+  return UpdateMinDistance(&target, min_dist);
 }
 
 bool S2MinDistanceShapeIndexTarget::VisitContainingShapes(

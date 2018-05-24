@@ -62,7 +62,7 @@ TEST(S2FurthestEdgeQuery, OptionsNotModified) {
   // not modify query.options(), even though all of these methods have their
   // own specific options requirements.
   S2FurthestEdgeQuery::Options options;
-  options.set_max_edges(3);
+  options.set_max_results(3);
   options.set_min_distance(S1ChordAngle::Degrees(1));
   options.set_max_error(S1ChordAngle::Degrees(0.001));
   auto index = MakeIndexOrDie("0:1 | 0:2 | 0:3 # #");
@@ -73,7 +73,7 @@ TEST(S2FurthestEdgeQuery, OptionsNotModified) {
   EXPECT_TRUE(query.IsDistanceGreater(&target, S1ChordAngle::Degrees(1.5)));
 
   // Verify that none of the options above were modified.
-  EXPECT_EQ(options.max_edges(), query.options().max_edges());
+  EXPECT_EQ(options.max_results(), query.options().max_results());
   EXPECT_EQ(options.min_distance(), query.options().min_distance());
   EXPECT_EQ(options.max_error(), query.options().max_error());
 }
@@ -193,7 +193,7 @@ TEST(S2FurthestEdgeQuery, TargetPolygonContainingIndexedPoints) {
   target.set_include_interiors(true);
   target.set_use_brute_force(true);
   auto results1 = query.FindFurthestEdges(&target);
-  // All points should be returned since we did not specify max_edges.
+  // All points should be returned since we did not specify max_results.
   ASSERT_EQ(4, results1.size());
   EXPECT_NE(S1ChordAngle::Zero(), results1[0].distance());
   EXPECT_EQ(0, results1[0].shape_id());
@@ -328,9 +328,9 @@ static void GetFurthestEdges(S2FurthestEdgeQuery::Target* target,
                             S2FurthestEdgeQuery *query,
                             vector<S2FurthestEdgeQuery::Result>* edges) {
   query->FindFurthestEdges(target, edges);
-  EXPECT_LE(edges->size(), query->options().max_edges());
+  EXPECT_LE(edges->size(), query->options().max_results());
   if (query->options().min_distance() == S1ChordAngle::Negative()) {
-    int min_expected = min(query->options().max_edges(),
+    int min_expected = min(query->options().max_results(),
                            s2shapeutil::CountEdges(query->index()));
     if (!query->options().include_interiors()) {
       // We can predict exactly how many edges should be returned.
@@ -359,10 +359,10 @@ static void TestFindFurthestEdges(
   EXPECT_TRUE(CheckDistanceResults(
       ConvertResults(expected),
       ConvertResults(actual),
-      query->options().max_edges(),
+      query->options().max_results(),
       S2MaxDistance(min_distance),
       max_error))
-      << "max_edges=" << query->options().max_edges()
+      << "max_results=" << query->options().max_results()
       << ", max_distance=" << S1ChordAngle(min_distance)
       << ", max_error=" << max_error;
 
@@ -372,7 +372,7 @@ static void TestFindFurthestEdges(
 
   // Note that when options.max_error() > 0, expected[0].distance may not be
   // the maximum distance.  It is never smaller by more than max_error(), but
-  // the actual value also depends on max_edges().
+  // the actual value also depends on max_results().
   //
   // Here we verify that GetDistance() and IsDistanceGreater() return results
   // that are consistent with the max_error() setting.
@@ -419,7 +419,7 @@ static void TestWithIndexFactory(const s2testing::ShapeIndexFactory& factory,
     // Occasionally we don't set any limit on the number of result edges.
     // (This may return all edges if we also don't set a distance limit.)
     if (!S2Testing::rnd.OneIn(5)) {
-      query.mutable_options()->set_max_edges(1 + S2Testing::rnd.Uniform(10));
+      query.mutable_options()->set_max_results(1 + S2Testing::rnd.Uniform(10));
     }
     // We set a distance limit 2/3 of the time.
     if (!S2Testing::rnd.OneIn(3)) {
@@ -484,7 +484,4 @@ TEST(S2FurthestEdgeQuery, PointCloudEdges) {
   TestWithIndexFactory(s2testing::PointCloudShapeIndexFactory(),
                        kNumIndexes, kNumEdges, kNumQueries);
 }
-
-
-
 

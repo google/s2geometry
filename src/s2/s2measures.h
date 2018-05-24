@@ -15,7 +15,8 @@
 
 // Author: ericv@google.com (Eric Veach)
 //
-// Defines various angle and area measures on the sphere.
+// Defines various angle and area measures on the sphere.  Also see
+// s2edge_distances.h, s2loop_measures.h, and s2polyline_measures.h.
 
 #ifndef S2_S2MEASURES_H_
 #define S2_S2MEASURES_H_

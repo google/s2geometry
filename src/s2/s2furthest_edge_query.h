@@ -48,7 +48,7 @@
 //     index.Add(new S2Polyline::Shape(polyline));
 //   }
 //   S2FurthestEdgeQuery query(&index);
-//   query.mutable_options()->set_max_edges(5);
+//   query.mutable_options()->set_max_results(5);
 //   S2FurthestEdgeQuery::PointTarget target(point);
 //   for (const auto& result : query.FindFurthestEdges(&target)) {
 //     // The Result struct contains the following accessors:
@@ -73,8 +73,8 @@
 //       S2Earth::ToAngle(util::units::Kilometers(5)));
 //
 // By default *all* edges are returned, so you should always specify either
-// max_edges() or min_distance() or both.  Setting min distance may not be very
-// restrictive, so strongly consider using max_edges().  There is also a
+// max_results() or min_distance() or both.  Setting min distance may not be
+// very restrictive, so strongly consider using max_results().  There is also a
 // FindFurthestEdge() convenience method that returns only the single furthest
 // edge.
 //
@@ -117,7 +117,7 @@ class S2FurthestEdgeQuery {
  public:
   // Options that control the set of edges returned.  Note that by default
   // *all* edges are returned, so you will always want to set either the
-  // max_edges() option or the min_distance() option (or both).
+  // max_results() option or the min_distance() option (or both).
   class Options : public Base::Options {
    public:
     // See S2ClosestEdgeQueryBase::Options for the full set of options.
@@ -142,7 +142,7 @@ class S2FurthestEdgeQuery {
     void set_max_error(S1Angle max_error);
 
     // Inherited options (see s2closestedgequerybase.h for details):
-    using Base::Options::set_max_edges;
+    using Base::Options::set_max_results;
     using Base::Options::set_include_interiors;
     using Base::Options::set_use_brute_force;
 
@@ -211,7 +211,8 @@ class S2FurthestEdgeQuery {
 
     // Construct a Result from a Base::Result.
     explicit Result(const Base::Result& base)
-        : Result(S1ChordAngle(base.distance), base.shape_id, base.edge_id) {}
+        : Result(S1ChordAngle(base.distance()), base.shape_id(),
+                 base.edge_id()) {}
 
     // Constructs a Result object for the given edge with the given distance.
     Result(S1ChordAngle distance, int32 _shape_id, int32 _edge_id)
@@ -227,8 +228,8 @@ class S2FurthestEdgeQuery {
     S1ChordAngle distance() const { return distance_; }
 
     // The edge identifiers.
-    const int32 shape_id() const { return shape_id_; }
-    const int32 edge_id() const { return edge_id_; }
+    int32 shape_id() const { return shape_id_; }
+    int32 edge_id() const { return edge_id_; }
 
     // Returns true if two Result objects are identical.
     friend bool operator==(const Result& x, const Result& y) {

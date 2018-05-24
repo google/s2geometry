@@ -31,7 +31,7 @@
 
 // Options that control the set of points returned.  Note that by default
 // *all* points are returned, so you will always want to set either the
-// max_points() option or the max_distance() option (or both).
+// max_results() option or the max_distance() option (or both).
 //
 // This class is also available as S2ClosestPointQuery<Data>::Options.
 // (It is defined here to avoid depending on the "Data" template argument.)
@@ -82,7 +82,7 @@ class S2ClosestPointQueryOptions :
   void set_max_error(S1Angle max_error);  // S1Angle version
 
   // Inherited options (see s2closest_point_query_base.h for details):
-  using Base::set_max_points;
+  using Base::set_max_results;
   using Base::set_region;
   using Base::set_use_brute_force;
 };
@@ -152,11 +152,11 @@ class S2ClosestPointQueryShapeIndexTarget final :
 //   // The template argument allows auxiliary data to be attached to each
 //   // point (in this case, the array index).
 //   S2PointIndex<int> index;
-//   for (const S2Point& point : index_points) {
-//     index.Add(point, i);
+//   for (int i = 0; i < index_points.size(); ++i) {
+//     index.Add(index_points[i], i);
 //   }
 //   S2ClosestPointQuery<int> query(&index);
-//   query.mutable_options()->set_max_points(5);
+//   query.mutable_options()->set_max_results(5);
 //   for (const S2Point& target_point : target_points) {
 //     S2ClosestPointQueryPointTarget target(target_point);
 //     for (const auto& result : query.FindClosestPoints(&target)) {
@@ -177,18 +177,23 @@ class S2ClosestPointQueryShapeIndexTarget final :
 //       S2Earth::ToAngle(util::units::Kilometers(5)));
 //
 // By default *all* points are returned, so you should always specify either
-// max_points() or max_distance() or both.  There is also a FindClosestPoint()
+// max_results() or max_distance() or both.  There is also a FindClosestPoint()
 // convenience method that returns only the closest point.
 //
 // You can restrict the results to an arbitrary S2Region, for example:
 //
 //   S2LatLngRect rect(...);
-//   query.set_region(&rect);  // Does *not* take ownership.
+//   query.mutable_options()->set_region(&rect);  // Does *not* take ownership.
 //
 // To find the closest points to a query edge rather than a point, use:
 //
 //   S2ClosestPointQueryEdgeTarget target(v0, v1);
 //   query.FindClosestPoints(&target);
+//
+// Similarly you can find the closest points to an S2Cell by using an
+// S2ClosestPointQuery::CellTarget, and you can find the closest points to an
+// arbitrary collection of points, polylines, and polygons by using an
+// S2ClosestPointQuery::ShapeIndexTarget.
 //
 // The implementation is designed to be fast for both small and large
 // point sets.
@@ -254,7 +259,7 @@ class S2ClosestPointQuery {
   const Options& options() const;
   Options* mutable_options();
 
-  // Returns the closest points to the given target that satisfy the given
+  // Returns the closest points to the given target that satisfy the current
   // options.  This method may be called multiple times.
   std::vector<Result> FindClosestPoints(Target* target);
 
@@ -301,15 +306,9 @@ class S2ClosestPointQuery {
   // are guaranteed to not intersect after snapping.
   bool IsConservativeDistanceLessOrEqual(Target* target, S1ChordAngle limit);
 
-  ///////////////////////// Deprecated Methods //////////////////////////
-
  private:
   Options options_;
   Base base_;
-
-  // Deprecated methods that return results using the result interface require
-  // keeping a copy of the result vector.
-  std::vector<Result> results_;
 };
 
 
@@ -421,13 +420,13 @@ inline typename S2ClosestPointQuery<Data>::Result
 S2ClosestPointQuery<Data>::FindClosestPoint(Target* target) {
   static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
   Options tmp_options = options_;
-  tmp_options.set_max_points(1);
+  tmp_options.set_max_results(1);
   return base_.FindClosestPoint(target, tmp_options);
 }
 
 template <class Data>
 inline S1ChordAngle S2ClosestPointQuery<Data>::GetDistance(Target* target) {
-  return FindClosestPoint(target).distance;
+  return FindClosestPoint(target).distance();
 }
 
 template <class Data>
@@ -435,7 +434,7 @@ bool S2ClosestPointQuery<Data>::IsDistanceLess(
     Target* target, S1ChordAngle limit) {
   static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
   Options tmp_options = options_;
-  tmp_options.set_max_points(1);
+  tmp_options.set_max_results(1);
   tmp_options.set_max_distance(limit);
   tmp_options.set_max_error(S1ChordAngle::Straight());
   return !base_.FindClosestPoint(target, tmp_options).is_empty();
@@ -446,7 +445,7 @@ bool S2ClosestPointQuery<Data>::IsDistanceLessOrEqual(
     Target* target, S1ChordAngle limit) {
   static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
   Options tmp_options = options_;
-  tmp_options.set_max_points(1);
+  tmp_options.set_max_results(1);
   tmp_options.set_inclusive_max_distance(limit);
   tmp_options.set_max_error(S1ChordAngle::Straight());
   return !base_.FindClosestPoint(target, tmp_options).is_empty();
@@ -457,7 +456,7 @@ bool S2ClosestPointQuery<Data>::IsConservativeDistanceLessOrEqual(
     Target* target, S1ChordAngle limit) {
   static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
   Options tmp_options = options_;
-  tmp_options.set_max_points(1);
+  tmp_options.set_max_results(1);
   tmp_options.set_conservative_max_distance(limit);
   tmp_options.set_max_error(S1ChordAngle::Straight());
   return !base_.FindClosestPoint(target, tmp_options).is_empty();

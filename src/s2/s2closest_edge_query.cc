@@ -79,28 +79,28 @@ S2ClosestEdgeQuery::~S2ClosestEdgeQuery() {
 bool S2ClosestEdgeQuery::IsDistanceLess(Target* target, S1ChordAngle limit) {
   static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
   Options tmp_options = options_;
-  tmp_options.set_max_edges(1);
+  tmp_options.set_max_results(1);
   tmp_options.set_max_distance(limit);
   tmp_options.set_max_error(S1ChordAngle::Straight());
-  return base_.FindClosestEdge(target, tmp_options).shape_id >= 0;
+  return !base_.FindClosestEdge(target, tmp_options).is_empty();
 }
 
 bool S2ClosestEdgeQuery::IsDistanceLessOrEqual(Target* target,
                                                S1ChordAngle limit) {
   static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
   Options tmp_options = options_;
-  tmp_options.set_max_edges(1);
+  tmp_options.set_max_results(1);
   tmp_options.set_inclusive_max_distance(limit);
   tmp_options.set_max_error(S1ChordAngle::Straight());
-  return base_.FindClosestEdge(target, tmp_options).shape_id >= 0;
+  return !base_.FindClosestEdge(target, tmp_options).is_empty();
 }
 
 bool S2ClosestEdgeQuery::IsConservativeDistanceLessOrEqual(
     Target* target, S1ChordAngle limit) {
   static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
   Options tmp_options = options_;
-  tmp_options.set_max_edges(1);
+  tmp_options.set_max_results(1);
   tmp_options.set_conservative_max_distance(limit);
   tmp_options.set_max_error(S1ChordAngle::Straight());
-  return base_.FindClosestEdge(target, tmp_options).shape_id >= 0;
+  return !base_.FindClosestEdge(target, tmp_options).is_empty();
 }

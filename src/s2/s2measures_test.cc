@@ -122,4 +122,10 @@ TEST(S2, AreaMethods) {
                    S2::Area(p0, p3, p4) + S2::Area(p0, p4, p1));
     EXPECT_NEAR(area, 2 * M_PI, 2e-15);
   }
+
+  // This tests a case where the triangle has zero area, but S2::Area()
+  // computes (dmin > 0) due to rounding errors.
+  EXPECT_EQ(0.0, S2::Area(S2LatLng::FromDegrees(-45, -170).ToPoint(),
+                          S2LatLng::FromDegrees(45, -170).ToPoint(),
+                          S2LatLng::FromDegrees(0, -170).ToPoint()));
 }

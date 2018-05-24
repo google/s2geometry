@@ -117,6 +117,11 @@ TEST(ToString, FullLoop) {
   EXPECT_EQ("full", s2textformat::ToString(full));
 }
 
+TEST(ToString, FullLoopSpan) {
+  vector<S2Point> points;
+  EXPECT_EQ("full", s2textformat::ToString(S2PointLoopSpan(points)));
+}
+
 TEST(ToString, EmptyPolyline) {
   S2Polyline polyline;
   EXPECT_EQ("", s2textformat::ToString(polyline));
@@ -238,6 +243,32 @@ TEST(SafeMakeLatLng, ValidInput) {
 TEST(SafeMakeLatLng, InvalidInput) {
   S2LatLng latlng;
   EXPECT_FALSE(s2textformat::MakeLatLng("blah", &latlng));
+}
+
+TEST(SafeMakeCellId, ValidInput) {
+  S2CellId cell_id;
+  EXPECT_TRUE(s2textformat::MakeCellId("3/", &cell_id));
+  EXPECT_EQ(cell_id, S2CellId::FromFace(3));
+}
+
+TEST(SafeMakeCellId, InvalidInput) {
+  S2CellId cell_id;
+  EXPECT_FALSE(s2textformat::MakeCellId("blah", &cell_id));
+  EXPECT_FALSE(s2textformat::MakeCellId("6/0", &cell_id));
+  EXPECT_FALSE(s2textformat::MakeCellId("3/04", &cell_id));
+}
+
+TEST(SafeMakeCellUnion, ValidInput) {
+  S2CellUnion cell_union;
+  EXPECT_TRUE(s2textformat::MakeCellUnion("1/3, 4/", &cell_union));
+  S2CellUnion expected({S2CellId::FromFace(1).child(3), S2CellId::FromFace(4)});
+  EXPECT_EQ(cell_union, expected);
+}
+
+TEST(SafeMakeCellUnion, InvalidInput) {
+  S2CellUnion cell_union;
+  EXPECT_FALSE(s2textformat::MakeCellUnion("abc", &cell_union));
+  EXPECT_FALSE(s2textformat::MakeCellUnion("3/1 4/1", &cell_union));
 }
 
 TEST(SafeMakeLoop, ValidInput) {

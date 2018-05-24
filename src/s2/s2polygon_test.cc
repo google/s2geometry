@@ -2246,9 +2246,8 @@ class IsValidTest : public testing::Test {
   ~IsValidTest() override { Reset(); }
 
   vector<S2Point>* AddLoop() {
-    vector<S2Point>* vloop = new vector<S2Point>;
-    vloops_.push_back(vloop);
-    return vloop;
+    vloops_.push_back(make_unique<vector<S2Point>>());
+    return vloops_.back().get();
   }
 
   // Create "num_loops" nested regular loops around a common center point.
@@ -2268,15 +2267,12 @@ class IsValidTest : public testing::Test {
   }
 
   void Reset() {
-    for (int i = 0; i < vloops_.size(); ++i) {
-      delete vloops_[i];
-    }
     vloops_.clear();
   }
 
   void CheckInvalid(const string& snippet) {
     vector<unique_ptr<S2Loop>> loops;
-    for (vector<S2Point>* vloop : vloops_) {
+    for (const auto& vloop : vloops_) {
       loops.push_back(make_unique<S2Loop>(*vloop, S2Debug::DISABLE));
     }
     // Cannot replace with std::shuffle (b/65670707) since this uses an
@@ -2305,7 +2301,7 @@ class IsValidTest : public testing::Test {
   bool init_oriented_;
   void (*modify_polygon_hook_)(S2Polygon*);
   S2Testing::Random* rnd_;
-  vector<vector<S2Point>*> vloops_;
+  vector<unique_ptr<vector<S2Point>>> vloops_;
 };
 
 TEST_F(IsValidTest, UnitLength) {
@@ -2314,7 +2310,7 @@ TEST_F(IsValidTest, UnitLength) {
   if (google::DEBUG_MODE) return;
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(1 + rnd_->Uniform(6), 3 /*min_vertices*/);
-    vector<S2Point>* vloop = vloops_[rnd_->Uniform(vloops_.size())];
+    vector<S2Point>* vloop = vloops_[rnd_->Uniform(vloops_.size())].get();
     S2Point* p = &(*vloop)[rnd_->Uniform(vloop->size())];
     switch (rnd_->Uniform(3)) {
       case 0: *p = S2Point(0, 0, 0); break;
@@ -2339,7 +2335,7 @@ TEST_F(IsValidTest, VertexCount) {
 TEST_F(IsValidTest, DuplicateVertex) {
   for (int iter = 0; iter < kIters; ++iter) {
     AddConcentricLoops(1, 3 /*min_vertices*/);
-    vector<S2Point>* vloop = vloops_[0];
+    vector<S2Point>* vloop = vloops_[0].get();
     int n = vloop->size();
     int i = rnd_->Uniform(n);
     int j = rnd_->Uniform(n - 1);
@@ -2354,7 +2350,7 @@ TEST_F(IsValidTest, SelfIntersection) {
     // at least 5 vertices so that the modified edges don't intersect any
     // nested loops.
     AddConcentricLoops(1 + rnd_->Uniform(6), 5 /*min_vertices*/);
-    vector<S2Point>* vloop = vloops_[rnd_->Uniform(vloops_.size())];
+    vector<S2Point>* vloop = vloops_[rnd_->Uniform(vloops_.size())].get();
     int n = vloop->size();
     int i = rnd_->Uniform(n);
     swap((*vloop)[i], (*vloop)[(i+1) % n]);
@@ -2461,7 +2457,9 @@ TEST_F(IsValidTest, LoopNestingInvalid) {
     // outer loop encompasses almost the entire sphere.  This tests different
     // code paths because bounding box checks are not as useful.
     if (rnd_->OneIn(2)) {
-      for (auto loop : vloops_) std::reverse(loop->begin(), loop->end());
+      for (const auto& loop : vloops_) {
+        std::reverse(loop->begin(), loop->end());
+      }
     }
     CheckInvalid("Invalid nesting");
   }
@@ -2496,7 +2494,7 @@ TEST_F(IsValidTest, FuzzTest) {
           vloop->push_back((*vloop)[rnd_->Uniform(vloop->size())]);
         } else if (rnd_->OneIn(10) && vloop->size() + 2 <= num_vertices) {
           // Try to copy an edge from a random loop.
-          vector<S2Point>* other = vloops_[rnd_->Uniform(vloops_.size())];
+          vector<S2Point>* other = vloops_[rnd_->Uniform(vloops_.size())].get();
           int n = other->size();
           if (n >= 2) {
             int k0 = rnd_->Uniform(n);
@@ -2959,7 +2957,6 @@ void TestPolygonShape(const S2Polygon& polygon) {
     }
   }
   EXPECT_EQ(2, shape.dimension());
-  EXPECT_TRUE(shape.has_interior());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
   EXPECT_EQ(polygon.Contains(S2::Origin()),

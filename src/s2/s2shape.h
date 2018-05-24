@@ -164,17 +164,14 @@ class S2Shape {
   // polyline or polygon that has been simplified to a single point.
   virtual int dimension() const = 0;
 
-  // Returns true if this shape type may have an interior.
-  bool has_interior() const { return dimension() == 2; }
-
   // Returns true if the shape contains no points.  (Note that the full
   // polygon is represented as a chain with zero edges.)
   bool is_empty() const {
-    return num_edges() == 0 && (!has_interior() || num_chains() == 0);
+    return num_edges() == 0 && (dimension() < 2 || num_chains() == 0);
   }
   // Returns true if the shape contains all points on the sphere.
   bool is_full() const {
-    return num_edges() == 0 && has_interior() && num_chains() > 0;
+    return num_edges() == 0 && dimension() == 2 && num_chains() > 0;
   }
 
   // Returns an arbitrary point P along with a boolean indicating whether P is

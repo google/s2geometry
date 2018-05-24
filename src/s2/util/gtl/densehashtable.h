@@ -88,7 +88,6 @@
 // via JUMP_ below if you really want to.
 //
 // From
-// http://goto/csc210_hash
 // L = N / M,
 // where N is the number of data items in the table and M is the table size.
 // NUMBER OF PROBES / LOOKUP       Successful            Unsuccessful

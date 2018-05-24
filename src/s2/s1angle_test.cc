@@ -90,6 +90,7 @@ TEST(S1Angle, E6E7RepresentationsUnsigned) {
 
 TEST(S1Angle, NormalizeCorrectlyCanonicalizesAngles) {
   EXPECT_DOUBLE_EQ(0.0, S1Angle::Degrees(360.0).Normalized().degrees());
+  EXPECT_DOUBLE_EQ(-90.0, S1Angle::Degrees(-90.0).Normalized().degrees());
   EXPECT_DOUBLE_EQ(180.0, S1Angle::Degrees(-180.0).Normalized().degrees());
   EXPECT_DOUBLE_EQ(180.0, S1Angle::Degrees(180.0).Normalized().degrees());
   EXPECT_DOUBLE_EQ(180.0, S1Angle::Degrees(540.0).Normalized().degrees());

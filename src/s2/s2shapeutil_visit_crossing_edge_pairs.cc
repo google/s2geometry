@@ -63,8 +63,8 @@ inline static void GetShapeEdges(const S2ShapeIndex& index,
                                  const vector<const S2ShapeIndexCell*>& cells,
                                  ShapeEdgeVector* shape_edges) {
   shape_edges->clear();
-  for (int c = 0; c < cells.size(); ++c) {
-    AppendShapeEdges(index, *cells[c], shape_edges);
+  for (auto cell : cells) {
+    AppendShapeEdges(index, *cell, shape_edges);
   }
 }
 

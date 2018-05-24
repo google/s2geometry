@@ -107,8 +107,10 @@ add_library(s2
             src/s2/s2cap.cc
             src/s2/s2cell.cc
             src/s2/s2cell_id.cc
+            src/s2/s2cell_index.cc
             src/s2/s2cell_union.cc
             src/s2/s2centroids.cc
+            src/s2/s2closest_cell_query.cc
             src/s2/s2closest_edge_query.cc
             src/s2/s2closest_point_query.cc
             src/s2/s2contains_vertex_query.cc
@@ -131,6 +133,7 @@ add_library(s2
             src/s2/s2lax_polygon_shape.cc
             src/s2/s2lax_polyline_shape.cc
             src/s2/s2loop.cc
+            src/s2/s2loop_measures.cc
             src/s2/s2measures.cc
             src/s2/s2metrics.cc
             src/s2/s2max_distance_targets.cc
@@ -142,6 +145,7 @@ add_library(s2
             src/s2/s2polygon.cc
             src/s2/s2polyline.cc
             src/s2/s2polyline_alignment.cc
+            src/s2/s2polyline_measures.cc
             src/s2/s2polyline_simplifier.cc
             src/s2/s2predicates.cc
             src/s2/s2projections.cc
@@ -153,6 +157,8 @@ add_library(s2
             src/s2/s2region_union.cc
             src/s2/s2shape_index.cc
             src/s2/s2shape_index_buffered_region.cc
+            src/s2/s2shape_index_measures.cc
+            src/s2/s2shape_measures.cc
             src/s2/s2shapeutil_build_polygon_boundaries.cc
             src/s2/s2shapeutil_coding.cc
             src/s2/s2shapeutil_contains_brute_force.cc
@@ -229,8 +235,11 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2cap.h
               src/s2/s2cell.h
               src/s2/s2cell_id.h
+              src/s2/s2cell_index.h
               src/s2/s2cell_union.h
               src/s2/s2centroids.h
+              src/s2/s2closest_cell_query.h
+              src/s2/s2closest_cell_query_base.h
               src/s2/s2closest_edge_query.h
               src/s2/s2closest_edge_query_base.h
               src/s2/s2closest_point_query.h
@@ -259,6 +268,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2lax_polygon_shape.h
               src/s2/s2lax_polyline_shape.h
               src/s2/s2loop.h
+              src/s2/s2loop_measures.h
               src/s2/s2measures.h
               src/s2/s2metrics.h
               src/s2/s2max_distance_targets.h
@@ -269,10 +279,12 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2point_compression.h
               src/s2/s2point_index.h
               src/s2/s2point_region.h
+              src/s2/s2point_span.h
               src/s2/s2pointutil.h
               src/s2/s2polygon.h
               src/s2/s2polyline.h
               src/s2/s2polyline_alignment.h
+              src/s2/s2polyline_measures.h
               src/s2/s2polyline_simplifier.h
               src/s2/s2predicates.h
               src/s2/s2projections.h
@@ -286,6 +298,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2shape_index.h
               src/s2/s2shape_index_buffered_region.h
               src/s2/s2shape_index_region.h
+              src/s2/s2shape_measures.h
               src/s2/s2shapeutil_build_polygon_boundaries.h
               src/s2/s2shapeutil_coding.h
               src/s2/s2shapeutil_contains_brute_force.h
@@ -335,6 +348,10 @@ install(FILES src/s2/third_party/absl/base/internal/identity.h
         DESTINATION include/s2/third_party/absl/base/internal)
 install(FILES src/s2/third_party/absl/container/inlined_vector.h
         DESTINATION include/s2/third_party/absl/container)
+install(FILES src/s2/third_party/absl/container/internal/compressed_tuple.h
+              src/s2/third_party/absl/container/internal/container_memory.h
+              src/s2/third_party/absl/container/internal/layout.h
+        DESTINATION include/s2/third_party/absl/container/internal)
 install(FILES src/s2/third_party/absl/memory/memory.h
         DESTINATION include/s2/third_party/absl/memory)
 install(FILES src/s2/third_party/absl/meta/type_traits.h
@@ -418,8 +435,11 @@ if (GTEST_ROOT)
       src/s2/s2cap_test.cc
       src/s2/s2cell_test.cc
       src/s2/s2cell_id_test.cc
+      src/s2/s2cell_index_test.cc
       src/s2/s2cell_union_test.cc
       src/s2/s2centroids_test.cc
+      src/s2/s2closest_cell_query_base_test.cc
+      src/s2/s2closest_cell_query_test.cc
       src/s2/s2closest_edge_query_base_test.cc
       src/s2/s2closest_edge_query_test.cc
       src/s2/s2closest_point_query_base_test.cc
@@ -444,6 +464,7 @@ if (GTEST_ROOT)
       src/s2/s2lax_loop_shape_test.cc
       src/s2/s2lax_polygon_shape_test.cc
       src/s2/s2lax_polyline_shape_test.cc
+      src/s2/s2loop_measures_test.cc
       src/s2/s2loop_test.cc
       src/s2/s2measures_test.cc
       src/s2/s2metrics_test.cc
@@ -459,6 +480,7 @@ if (GTEST_ROOT)
       src/s2/s2polygon_test.cc
       src/s2/s2polyline_alignment_test.cc
       src/s2/s2polyline_simplifier_test.cc
+      src/s2/s2polyline_measures_test.cc
       src/s2/s2polyline_test.cc
       src/s2/s2predicates_test.cc
       src/s2/s2projections_test.cc
@@ -468,8 +490,10 @@ if (GTEST_ROOT)
       src/s2/s2region_coverer_test.cc
       src/s2/s2region_union_test.cc
       src/s2/s2shape_index_buffered_region_test.cc
+      src/s2/s2shape_index_measures_test.cc
       src/s2/s2shape_index_region_test.cc
       src/s2/s2shape_index_test.cc
+      src/s2/s2shape_measures_test.cc
       src/s2/s2shapeutil_build_polygon_boundaries_test.cc
       src/s2/s2shapeutil_coding_test.cc
       src/s2/s2shapeutil_contains_brute_force_test.cc

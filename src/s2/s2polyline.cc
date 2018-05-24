@@ -26,6 +26,7 @@
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
+#include "s2/third_party/absl/utility/utility.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -37,6 +38,7 @@
 #include "s2/s2error.h"
 #include "s2/s2latlng_rect_bounder.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2polyline_measures.h"
 #include "s2/s2predicates.h"
 #include "s2/util/math/matrix3x3.h"
 
@@ -52,16 +54,14 @@ S2Polyline::S2Polyline()
 
 S2Polyline::S2Polyline(S2Polyline&& other)
   : s2debug_override_(other.s2debug_override_),
-    num_vertices_(other.num_vertices_),
+    num_vertices_(absl::exchange(other.num_vertices_, 0)),
     vertices_(std::move(other.vertices_)) {
-  other.num_vertices_ = 0;
 }
 
 S2Polyline& S2Polyline::operator=(S2Polyline&& other) {
   s2debug_override_ = other.s2debug_override_;
-  num_vertices_ = other.num_vertices_;
+  num_vertices_ = absl::exchange(other.num_vertices_, 0);
   vertices_ = std::move(other.vertices_);
-  other.num_vertices_ = 0;
   return *this;
 }
 
@@ -158,27 +158,11 @@ S2Polyline* S2Polyline::Clone() const {
 }
 
 S1Angle S2Polyline::GetLength() const {
-  S1Angle length;
-  for (int i = 1; i < num_vertices(); ++i) {
-    length += S1Angle(vertex(i-1), vertex(i));
-  }
-  return length;
+  return S2::GetLength(S2PointSpan(&vertices_[0], num_vertices_));
 }
 
 S2Point S2Polyline::GetCentroid() const {
-  S2Point centroid;
-  for (int i = 1; i < num_vertices(); ++i) {
-    // The centroid (multiplied by length) is a vector toward the midpoint
-    // of the edge, whose length is twice the sin of half the angle between
-    // the two vertices.  Defining theta to be this angle, we have:
-    S2Point vsum = vertex(i-1) + vertex(i);    // Length == 2*cos(theta)
-    S2Point vdiff = vertex(i-1) - vertex(i);   // Length == 2*sin(theta)
-    double cos2 = vsum.Norm2();
-    double sin2 = vdiff.Norm2();
-    S2_DCHECK_GT(cos2, 0);  // Otherwise edge is undefined, and result is NaN.
-    centroid += sqrt(sin2 / cos2) * vsum;  // Length == 2*sin(theta)
-  }
-  return centroid;
+  return S2::GetCentroid(S2PointSpan(&vertices_[0], num_vertices_));
 }
 
 S2Point S2Polyline::GetSuffix(double fraction, int* next_vertex) const {

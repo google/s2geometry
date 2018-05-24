@@ -119,11 +119,12 @@ class S2RegionCoverer {
     // is simply a set of cells that covers as much of the interior as
     // possible while satisfying the given restrictions.)
     //
-    // REQUIRES: max_level() >= min_level()
+    // REQUIRES: min_level() <= max_level()
     // DEFAULT: 0
     int min_level() const { return min_level_; }
     void set_min_level(int min_level);
 
+    // REQUIRES: min_level() <= max_level()
     // DEFAULT: S2CellId::kMaxLevel
     int max_level() const { return max_level_; }
     void set_max_level(int max_level);
@@ -199,8 +200,9 @@ class S2RegionCoverer {
   // recursively subdivide cells.
   void GetFastCovering(const S2Region& region, std::vector<S2CellId>* covering);
 
-  // Given a connected region and a starting point, return a set of cells at
-  // the given level that cover the region.
+  // Given a connected region and a starting point on the boundary or inside the
+  // region, returns a set of cells at the given level that cover the region.
+  // The output cells are returned in arbitrary order.
   //
   // Note that this method is *not* faster than the regular GetCovering()
   // method for most region types, such as S2Cap or S2Polygon, and in fact it
@@ -211,9 +213,9 @@ class S2RegionCoverer {
   static void GetSimpleCovering(const S2Region& region, const S2Point& start,
                                 int level, std::vector<S2CellId>* output);
 
-  // Given a region and a starting cell, returns the set of all the
-  // edge-connected cells at the same level that intersect "region".
-  // The output cells are returned in arbitrary order.
+  // Like GetSimpleCovering(), but accepts a starting S2CellId rather than a
+  // starting point and cell level.  Returns all edge-connected cells at the
+  // same level as "start" that intersect "region", in arbitrary order.
   static void FloodFill(const S2Region& region, S2CellId start,
                         std::vector<S2CellId>* output);
 
@@ -254,18 +256,18 @@ class S2RegionCoverer {
   // if it should not be expanded further.
   Candidate* NewCandidate(const S2Cell& cell);
 
-  // Return the log base 2 of the maximum number of children of a candidate.
+  // Returns the log base 2 of the maximum number of children of a candidate.
   int max_children_shift() const { return 2 * options().level_mod(); }
 
-  // Free the memory associated with a candidate.
+  // Frees the memory associated with a candidate.
   static void DeleteCandidate(Candidate* candidate, bool delete_children);
 
-  // Process a candidate by either adding it to the result_ vector or
+  // Processes a candidate by either adding it to the result_ vector or
   // expanding its children and inserting it into the priority queue.
   // Passing an argument of nullptr does nothing.
   void AddCandidate(Candidate* candidate);
 
-  // Populate the children of "candidate" by expanding the given number of
+  // Populates the children of "candidate" by expanding the given number of
   // levels from the given cell.  Returns the number of children that were
   // marked "terminal".
   int ExpandChildren(Candidate* candidate, const S2Cell& cell, int num_levels);
@@ -276,12 +278,12 @@ class S2RegionCoverer {
   // Generates a covering and stores it in result_.
   void GetCoveringInternal(const S2Region& region);
 
-  // If level > min_level(), then reduce "level" if necessary so that it also
+  // If level > min_level(), then reduces "level" if necessary so that it also
   // satisfies level_mod().  Levels smaller than min_level() are not affected
   // (since cells at these levels are eventually expanded).
   int AdjustLevel(int level) const;
 
-  // Ensure that all cells with level > min_level() also satisfy level_mod(),
+  // Ensures that all cells with level > min_level() also satisfy level_mod(),
   // by replacing them with an ancestor if necessary.  Cell levels smaller
   // than min_level() are not modified (see AdjustLevel).  The output is
   // then normalized to ensure that no redundant cells are present.
