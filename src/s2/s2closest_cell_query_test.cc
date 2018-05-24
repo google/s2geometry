@@ -271,7 +271,7 @@ static void TestFindClosestCells(S2ClosestCellQuery::Target* target,
 
   // Test IsDistanceLess().
   EXPECT_FALSE(query->IsDistanceLess(target, min_distance - max_error));
-  EXPECT_TRUE(query->IsDistanceLess(target, min_distance.Successor()));
+  EXPECT_TRUE(query->IsConservativeDistanceLessOrEqual(target, min_distance));
 }
 
 // The running time of this test is proportional to

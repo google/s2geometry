@@ -180,7 +180,7 @@ static void TestFindClosestPoints(TestQuery::Target* target, TestQuery *query) {
 
   // Test IsDistanceLess().
   EXPECT_FALSE(query->IsDistanceLess(target, min_distance - max_error));
-  EXPECT_TRUE(query->IsDistanceLess(target, min_distance.Successor()));
+  EXPECT_TRUE(query->IsConservativeDistanceLessOrEqual(target, min_distance));
 }
 
 // (Note that every query is checked using the brute force algorithm.)

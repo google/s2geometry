@@ -367,9 +367,7 @@ class S2ClosestCellQueryBase {
 
   // Temporaries, defined here to avoid multiple allocations / initializations.
 
-  std::vector<S2CellId> region_covering_;
   std::vector<S2CellId> max_distance_covering_;
-  std::vector<S2CellId> intersection_with_region_;
   std::vector<S2CellId> intersection_with_max_distance_;
   const LabelledCell* tmp_range_data_[kMinRangesToEnqueue - 1];
 };
@@ -649,17 +647,22 @@ void S2ClosestCellQueryBase<Distance>::InitQueue() {
   }
 
   // We start with a covering of the set of indexed cells, then intersect it
-  // with the given region (if any) and maximum search radius disc (if any).
+  // with the maximum search radius disc (if any).
+  //
+  // Note that unlike S2ClosestPointQuery, we can't also intersect with the
+  // given region (if any).  This is because the index cells in the result are
+  // only required to intersect the region.  This means that an index cell that
+  // intersects the region's covering may be much closer to the target than the
+  // covering itself, which means that we cannot use the region's covering to
+  // restrict the search.
+  //
+  // TODO(ericv): If this feature becomes important, this could be fixed by
+  // (1) computing a covering of the region, (2) looking up any index cells
+  // that contain each covering cell by seeking to covering_cell.range_min(),
+  // (3) replacing each covering cell by the largest such cell (if any), and
+  // (4) normalizing the result.
   if (index_covering_.empty()) InitCovering();
   const std::vector<S2CellId>* initial_cells = &index_covering_;
-  if (options().region()) {
-    S2RegionCoverer coverer;
-    coverer.mutable_options()->set_max_cells(4);
-    coverer.GetCovering(*options().region(), &region_covering_);
-    S2CellUnion::GetIntersection(index_covering_, region_covering_,
-                                 &intersection_with_region_);
-    initial_cells = &intersection_with_region_;
-  }
   if (distance_limit_ < Distance::Infinity()) {
     S2RegionCoverer coverer;
     coverer.mutable_options()->set_max_cells(4);

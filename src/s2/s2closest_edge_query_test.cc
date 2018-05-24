@@ -370,7 +370,7 @@ static S2ClosestEdgeQuery::Result TestFindClosestEdges(
 
   // Test IsDistanceLess().
   EXPECT_FALSE(query->IsDistanceLess(target, min_distance - max_error));
-  EXPECT_TRUE(query->IsDistanceLess(target, min_distance.Successor()));
+  EXPECT_TRUE(query->IsConservativeDistanceLessOrEqual(target, min_distance));
 
   // Return the closest edge result so that we can also test Project.
   return expected[0];
