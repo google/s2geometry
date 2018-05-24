@@ -246,7 +246,6 @@ inline size_t Encoder::length() const {
 
 inline size_t Encoder::avail() const {
   S2_DCHECK_GE(limit_, buf_);
-  S2_CHECK_LE(buf_, limit_);  // Catch the buffer overflow.
   return limit_ - buf_;
 }
 
