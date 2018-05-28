@@ -1,4 +1,9 @@
-cmake_minimum_required(VERSION 2.8.12)
+#TODO
+# - fix / modernize cmake
+# - lower cmake version a bit ~3.7 to support older systems
+# - fix abseil warnings or try to use SYSTEM / -isystem includes
+
+cmake_minimum_required(VERSION 3.10)
 project(s2-geometry)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(CMakeDependentOption)
@@ -49,17 +54,17 @@ endif()
 find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
-find_package(SWIG)
-find_package(PythonInterp)
-find_package(PythonLibs)
 
 # Avoid "Policy CMP0042 is not set" warning on macOS.
 if (APPLE)
     set(CMAKE_MACOSX_RPATH TRUE)
 endif()
 
-add_definitions(-std=c++11)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+#TODO flags should be part of the compile interface - warnings should be only set on the project (example below)
+# target_compile_options(s2 PRIVATE $<$<CONFIG:Debug>:${-Wno-deprecated-declarations})>)
 if (WIN32)
     # Use unsigned characters
     add_definitions(-J)
@@ -75,134 +80,147 @@ endif()
 # If OpenSSL is installed in a non-standard location, configure with
 # something like:
 # OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
-include_directories(
-    ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR}
-    ${PYTHON_INCLUDE_DIRS})
-include_directories(src)
 
 add_library(s2
-            src/s2/base/stringprintf.cc
-            src/s2/base/strtoint.cc
-            src/s2/base/sysinfo.cc
-            src/s2/encoded_s2cell_id_vector.cc
-            src/s2/encoded_s2point_vector.cc
-            src/s2/encoded_s2shape_index.cc
-            src/s2/encoded_string_vector.cc
-            src/s2/id_set_lexicon.cc
-            src/s2/mutable_s2shape_index.cc
-            src/s2/r2rect.cc
-            src/s2/s1angle.cc
-            src/s2/s1chord_angle.cc
-            src/s2/s1interval.cc
-            src/s2/s2boolean_operation.cc
-            src/s2/s2builder.cc
-            src/s2/s2builder_graph.cc
-            src/s2/s2builderutil_closed_set_normalizer.cc
-            src/s2/s2builderutil_find_polygon_degeneracies.cc
-            src/s2/s2builderutil_s2point_vector_layer.cc
-            src/s2/s2builderutil_s2polygon_layer.cc
-            src/s2/s2builderutil_s2polyline_layer.cc
-            src/s2/s2builderutil_s2polyline_vector_layer.cc
-            src/s2/s2builderutil_snap_functions.cc
-            src/s2/s2cap.cc
-            src/s2/s2cell.cc
-            src/s2/s2cell_id.cc
-            src/s2/s2cell_index.cc
-            src/s2/s2cell_union.cc
-            src/s2/s2centroids.cc
-            src/s2/s2closest_cell_query.cc
-            src/s2/s2closest_edge_query.cc
-            src/s2/s2closest_point_query.cc
-            src/s2/s2contains_vertex_query.cc
-            src/s2/s2convex_hull_query.cc
-            src/s2/s2coords.cc
-            src/s2/s2crossing_edge_query.cc
-            src/s2/s2debug.cc
-            src/s2/s2earth.cc
-            src/s2/s2edge_clipping.cc
-            src/s2/s2edge_crosser.cc
-            src/s2/s2edge_crossings.cc
-            src/s2/s2edge_distances.cc
-            src/s2/s2edge_tessellator.cc
-            src/s2/s2error.cc
-            src/s2/s2furthest_edge_query.cc
-            src/s2/s2latlng.cc
-            src/s2/s2latlng_rect.cc
-            src/s2/s2latlng_rect_bounder.cc
-            src/s2/s2lax_loop_shape.cc
-            src/s2/s2lax_polygon_shape.cc
-            src/s2/s2lax_polyline_shape.cc
-            src/s2/s2loop.cc
-            src/s2/s2loop_measures.cc
-            src/s2/s2measures.cc
-            src/s2/s2metrics.cc
-            src/s2/s2max_distance_targets.cc
-            src/s2/s2min_distance_targets.cc
-            src/s2/s2padded_cell.cc
-            src/s2/s2point_compression.cc
-            src/s2/s2point_region.cc
-            src/s2/s2pointutil.cc
-            src/s2/s2polygon.cc
-            src/s2/s2polyline.cc
-            src/s2/s2polyline_alignment.cc
-            src/s2/s2polyline_measures.cc
-            src/s2/s2polyline_simplifier.cc
-            src/s2/s2predicates.cc
-            src/s2/s2projections.cc
-            src/s2/s2r2rect.cc
-            src/s2/s2region.cc
-            src/s2/s2region_term_indexer.cc
-            src/s2/s2region_coverer.cc
-            src/s2/s2region_intersection.cc
-            src/s2/s2region_union.cc
-            src/s2/s2shape_index.cc
-            src/s2/s2shape_index_buffered_region.cc
-            src/s2/s2shape_index_measures.cc
-            src/s2/s2shape_measures.cc
-            src/s2/s2shapeutil_build_polygon_boundaries.cc
-            src/s2/s2shapeutil_coding.cc
-            src/s2/s2shapeutil_contains_brute_force.cc
-            src/s2/s2shapeutil_edge_iterator.cc
-            src/s2/s2shapeutil_get_reference_point.cc
-            src/s2/s2shapeutil_range_iterator.cc
-            src/s2/s2shapeutil_visit_crossing_edge_pairs.cc
-            src/s2/s2text_format.cc
-            src/s2/s2wedge_relations.cc
-            src/s2/strings/ostringstream.cc
-            src/s2/strings/serialize.cc
-            src/s2/third_party/absl/base/dynamic_annotations.cc
-            src/s2/third_party/absl/base/internal/raw_logging.cc
-            src/s2/third_party/absl/base/internal/throw_delegate.cc
-            src/s2/third_party/absl/numeric/int128.cc
-            src/s2/third_party/absl/strings/ascii.cc
-            src/s2/third_party/absl/strings/match.cc
-            src/s2/third_party/absl/strings/numbers.cc
-            src/s2/third_party/absl/strings/str_cat.cc
-            src/s2/third_party/absl/strings/str_split.cc
-            src/s2/third_party/absl/strings/string_view.cc
-            src/s2/third_party/absl/strings/strip.cc
-            src/s2/third_party/absl/strings/internal/memutil.cc
-            src/s2/util/bits/bit-interleave.cc
-            src/s2/util/bits/bits.cc
-            src/s2/util/coding/coder.cc
-            src/s2/util/coding/varint.cc
-            src/s2/util/math/exactfloat/exactfloat.cc
-            src/s2/util/math/mathutil.cc
-            src/s2/util/units/length-units.cc)
-add_library(s2testing STATIC
-            src/s2/s2builderutil_testing.cc
-            src/s2/s2shapeutil_testing.cc
-            src/s2/s2testing.cc)
-target_link_libraries(
-    s2
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT})
+    src/s2/base/stringprintf.cc
+    src/s2/base/strtoint.cc
+    src/s2/base/sysinfo.cc
+    src/s2/encoded_s2cell_id_vector.cc
+    src/s2/encoded_s2point_vector.cc
+    src/s2/encoded_s2shape_index.cc
+    src/s2/encoded_string_vector.cc
+    src/s2/id_set_lexicon.cc
+    src/s2/mutable_s2shape_index.cc
+    src/s2/r2rect.cc
+    src/s2/s1angle.cc
+    src/s2/s1chord_angle.cc
+    src/s2/s1interval.cc
+    src/s2/s2boolean_operation.cc
+    src/s2/s2builder.cc
+    src/s2/s2builder_graph.cc
+    src/s2/s2builderutil_closed_set_normalizer.cc
+    src/s2/s2builderutil_find_polygon_degeneracies.cc
+    src/s2/s2builderutil_s2point_vector_layer.cc
+    src/s2/s2builderutil_s2polygon_layer.cc
+    src/s2/s2builderutil_s2polyline_layer.cc
+    src/s2/s2builderutil_s2polyline_vector_layer.cc
+    src/s2/s2builderutil_snap_functions.cc
+    src/s2/s2cap.cc
+    src/s2/s2cell.cc
+    src/s2/s2cell_id.cc
+    src/s2/s2cell_index.cc
+    src/s2/s2cell_union.cc
+    src/s2/s2centroids.cc
+    src/s2/s2closest_cell_query.cc
+    src/s2/s2closest_edge_query.cc
+    src/s2/s2closest_point_query.cc
+    src/s2/s2contains_vertex_query.cc
+    src/s2/s2convex_hull_query.cc
+    src/s2/s2coords.cc
+    src/s2/s2crossing_edge_query.cc
+    src/s2/s2debug.cc
+    src/s2/s2earth.cc
+    src/s2/s2edge_clipping.cc
+    src/s2/s2edge_crosser.cc
+    src/s2/s2edge_crossings.cc
+    src/s2/s2edge_distances.cc
+    src/s2/s2edge_tessellator.cc
+    src/s2/s2error.cc
+    src/s2/s2furthest_edge_query.cc
+    src/s2/s2latlng.cc
+    src/s2/s2latlng_rect.cc
+    src/s2/s2latlng_rect_bounder.cc
+    src/s2/s2lax_loop_shape.cc
+    src/s2/s2lax_polygon_shape.cc
+    src/s2/s2lax_polyline_shape.cc
+    src/s2/s2loop.cc
+    src/s2/s2loop_measures.cc
+    src/s2/s2measures.cc
+    src/s2/s2metrics.cc
+    src/s2/s2max_distance_targets.cc
+    src/s2/s2min_distance_targets.cc
+    src/s2/s2padded_cell.cc
+    src/s2/s2point_compression.cc
+    src/s2/s2point_region.cc
+    src/s2/s2pointutil.cc
+    src/s2/s2polygon.cc
+    src/s2/s2polyline.cc
+    src/s2/s2polyline_alignment.cc
+    src/s2/s2polyline_measures.cc
+    src/s2/s2polyline_simplifier.cc
+    src/s2/s2predicates.cc
+    src/s2/s2projections.cc
+    src/s2/s2r2rect.cc
+    src/s2/s2region.cc
+    src/s2/s2region_term_indexer.cc
+    src/s2/s2region_coverer.cc
+    src/s2/s2region_intersection.cc
+    src/s2/s2region_union.cc
+    src/s2/s2shape_index.cc
+    src/s2/s2shape_index_buffered_region.cc
+    src/s2/s2shape_index_measures.cc
+    src/s2/s2shape_measures.cc
+    src/s2/s2shapeutil_build_polygon_boundaries.cc
+    src/s2/s2shapeutil_coding.cc
+    src/s2/s2shapeutil_contains_brute_force.cc
+    src/s2/s2shapeutil_edge_iterator.cc
+    src/s2/s2shapeutil_get_reference_point.cc
+    src/s2/s2shapeutil_range_iterator.cc
+    src/s2/s2shapeutil_visit_crossing_edge_pairs.cc
+    src/s2/s2text_format.cc
+    src/s2/s2wedge_relations.cc
+    src/s2/strings/ostringstream.cc
+    src/s2/strings/serialize.cc
+    src/s2/third_party/absl/base/dynamic_annotations.cc
+    src/s2/third_party/absl/base/internal/raw_logging.cc
+    src/s2/third_party/absl/base/internal/throw_delegate.cc
+    src/s2/third_party/absl/numeric/int128.cc
+    src/s2/third_party/absl/strings/ascii.cc
+    src/s2/third_party/absl/strings/match.cc
+    src/s2/third_party/absl/strings/numbers.cc
+    src/s2/third_party/absl/strings/str_cat.cc
+    src/s2/third_party/absl/strings/str_split.cc
+    src/s2/third_party/absl/strings/string_view.cc
+    src/s2/third_party/absl/strings/strip.cc
+    src/s2/third_party/absl/strings/internal/memutil.cc
+    src/s2/util/bits/bit-interleave.cc
+    src/s2/util/bits/bits.cc
+    src/s2/util/coding/coder.cc
+    src/s2/util/coding/varint.cc
+    src/s2/util/math/exactfloat/exactfloat.cc
+    src/s2/util/math/mathutil.cc
+    src/s2/util/units/length-units.cc
+)
+
+target_include_directories(s2 PRIVATE
+    ${GFLAGS_INCLUDE_DIRS}
+    ${GLOG_INCLUDE_DIRS}
+    ${OPENSSL_INCLUDE_DIR}
+    ${PYTHON_INCLUDE_DIRS}
+)
 
 # Allow other CMake projects to use this one with:
 # list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
 # add_subdirectory(<path_to_s2geometry_dir> s2geometry)
 # target_link_libraries(<target_name> s2)
-target_include_directories(s2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(s2 PUBLIC src)
+
+target_link_libraries(s2
+    ${GFLAGS_LIBRARIES}
+    ${GLOG_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
+)
+
+add_library(s2testing STATIC EXCLUDE_FROM_ALL
+    src/s2/s2builderutil_testing.cc
+    src/s2/s2shapeutil_testing.cc
+    src/s2/s2testing.cc
+)
+target_link_libraries(s2testing PRIVATE s2)
+
+
+#TODO cpack
 
 # We don't need to install all headers, only those
 # transitively included by s2 headers we are exporting.
@@ -402,6 +420,9 @@ install(FILES src/s2/util/units/length-units.h
         DESTINATION include/s2/util/units)
 install(TARGETS s2 DESTINATION lib)
 
+
+#TODO TEST THIS -- figure out how this is used exactly -- maybe adopt style
+# gtest include path seems to be added globally - maybe this can be fixed
 message("GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
   add_subdirectory(${GTEST_ROOT} build_gtest)
@@ -506,22 +527,27 @@ if (GTEST_ROOT)
       src/s2/sequence_lexicon_test.cc
       src/s2/value_lexicon_test.cc)
 
-  enable_testing()
 
+  # LOOKS LIKE EVERY TU gets its own binary
+  # WHY? Parallel tests? how long do they run?
+  enable_testing()
   foreach (test_cc ${S2TestFiles})
     get_filename_component(test ${test_cc} NAME_WE)
     add_executable(${test} ${test_cc})
     target_link_libraries(
         ${test}
-        s2testing s2 gtest_main)
+        s2testing s2 gtest_main) # does gtest_main support targets? / it did not in the past
     add_test(${test} ${test})
   endforeach()
 endif()
 
+# TODO Set EXCLUDE_FROM_ALL FOR EXAMPLES and show how to use it:
+# add_subdirectory(path/to/s2 EXCLUDE_FROM_ALL)
+# will only build required targets and not tests and documenation
+# if they are excluded form default targets.
 if (BUILD_EXAMPLES)
   add_subdirectory("doc/examples" examples)
 endif()
 
-if (${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
-  add_subdirectory("src/python" python)
-endif()
+
+add_subdirectory("src/python" python)

@@ -120,6 +120,6 @@
 %unignore Encoder::putfloat(float);
 %unignore Encoder::reset(void *, size_t);
 
-%include "s2/util/coding/coder.h"
+%include <s2/util/coding/coder.h>
 
 %unignoreall
