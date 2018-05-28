@@ -3,32 +3,36 @@
 # - lower cmake version a bit ~3.7 to support older systems
 # - fix abseil warnings or try to use SYSTEM / -isystem includes
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.8)
 project(s2-geometry)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-include(CMakeDependentOption)
-include(CheckCXXCompilerFlag)
-include(FeatureSummary)
-include(FindPackageHandleStandardArgs)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
+#produces compile_command.json
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+#not used?
+#list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
+#include(CheckCXXCompilerFlag)
+#include(FindPackageHandleStandardArgs)
+
+## set options
+include(CMakeDependentOption)
+include(FeatureSummary)
 
 option(WITH_GFLAGS "Use gflags to change command line flags." OFF)
-add_feature_info(GFLAGS WITH_GFLAGS
-                 "allows changing command line flags.")
+add_feature_info(GFLAGS WITH_GFLAGS "allows changing command line flags.")
 
 # glog option can only be turned on if gflags is on.
-cmake_dependent_option(WITH_GLOG "Use glog for logging." ON
-                       "WITH_GFLAGS" OFF)
+cmake_dependent_option(WITH_GLOG "Use glog for logging." ON "WITH_GFLAGS" OFF)
 add_feature_info(GLOG WITH_GLOG "provides logging configurability.")
 
 option(BUILD_SHARED_LIBS "Build shared libraries instead of static." ON)
-add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
-                 "builds shared libraries instead of static.")
+add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS "builds shared libraries instead of static.")
 
 option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
 
 feature_summary(WHAT ALL)
+## set options - end
+
 
 if (WITH_GLOG)
     find_package(Glog REQUIRED)
@@ -56,31 +60,19 @@ find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 
 # Avoid "Policy CMP0042 is not set" warning on macOS.
-if (APPLE)
-    set(CMAKE_MACOSX_RPATH TRUE)
-endif()
+# NOTE -- does not harm on other platforms
+set(CMAKE_MACOSX_RPATH TRUE)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-#TODO flags should be part of the compile interface - warnings should be only set on the project (example below)
-# target_compile_options(s2 PRIVATE $<$<CONFIG:Debug>:${-Wno-deprecated-declarations})>)
-if (WIN32)
-    # Use unsigned characters
-    add_definitions(-J)
-    # Make sure cmath header defines things like M_PI
-    add_definitions(-D_USE_MATH_DEFINES)
-    # Make sure Windows doesn't define min/max macros that interfere with STL
-    add_definitions(-DNOMINMAX)
-else()
-    add_definitions(-Wno-deprecated-declarations)
-endif()
 
 
 # If OpenSSL is installed in a non-standard location, configure with
 # something like:
 # OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
 
+## s2 definition
 add_library(s2
     src/s2/base/stringprintf.cc
     src/s2/base/strtoint.cc
@@ -192,18 +184,17 @@ add_library(s2
     src/s2/util/units/length-units.cc
 )
 
+# the target system allows for easier inclusion in other projects
+# add_subdirectory(<path_to_s2geometry_dir>)
+# target_link_libraries(<target_name> PRIVATE s2)
+
+target_include_directories(s2 PUBLIC src)
 target_include_directories(s2 PRIVATE
     ${GFLAGS_INCLUDE_DIRS}
     ${GLOG_INCLUDE_DIRS}
     ${OPENSSL_INCLUDE_DIR}
     ${PYTHON_INCLUDE_DIRS}
 )
-
-# Allow other CMake projects to use this one with:
-# list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
-# add_subdirectory(<path_to_s2geometry_dir> s2geometry)
-# target_link_libraries(<target_name> s2)
-target_include_directories(s2 PUBLIC src)
 
 target_link_libraries(s2
     ${GFLAGS_LIBRARIES}
@@ -212,6 +203,18 @@ target_link_libraries(s2
     ${CMAKE_THREAD_LIBS_INIT}
 )
 
+if (WIN32)
+    # Use unsigned characters
+    target_compile_options(s2 PUBLIC -J)
+    # Make sure cmath header defines things like M_PI
+    target_compile_definitions(s2 PUBLIC -D_USE_MATH_DEFINES)
+    # Make sure Windows doesn't define min/max macros that interfere with STL
+    target_compile_definitions(s2 PUBLIC -DNOMINMAX)
+else()
+    target_compile_options(s2 PRIVATE $<$<CONFIG:Debug>:${-Wno-deprecated-declarations}>)
+endif()
+
+## s2testing definition
 add_library(s2testing STATIC EXCLUDE_FROM_ALL
     src/s2/s2builderutil_testing.cc
     src/s2/s2shapeutil_testing.cc
@@ -220,10 +223,15 @@ add_library(s2testing STATIC EXCLUDE_FROM_ALL
 target_link_libraries(s2testing PRIVATE s2)
 
 
-#TODO cpack
-
+include(CPack)
 # We don't need to install all headers, only those
 # transitively included by s2 headers we are exporting.
+
+# TODO
+# - exported headers should be in a different directory than the rest
+#     Maintaining the lists looks tedious.
+# - move lists to different file first 
+#     Dependencies should use sane CMake as well to make this nice!
 install(FILES src/s2/_fp_contract_off.h
               src/s2/encoded_s2cell_id_vector.h
               src/s2/encoded_s2point_vector.h
@@ -421,8 +429,6 @@ install(FILES src/s2/util/units/length-units.h
 install(TARGETS s2 DESTINATION lib)
 
 
-#TODO TEST THIS -- figure out how this is used exactly -- maybe adopt style
-# gtest include path seems to be added globally - maybe this can be fixed
 message("GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
   add_subdirectory(${GTEST_ROOT} build_gtest)
@@ -536,7 +542,10 @@ if (GTEST_ROOT)
     add_executable(${test} ${test_cc})
     target_link_libraries(
         ${test}
-        s2testing s2 gtest_main) # does gtest_main support targets? / it did not in the past
+        s2testing
+        s2
+        gtest_main
+    ) # does gtest_main support targets? / it did not in the past
     add_test(${test} ${test})
   endforeach()
 endif()
@@ -545,9 +554,6 @@ endif()
 # add_subdirectory(path/to/s2 EXCLUDE_FROM_ALL)
 # will only build required targets and not tests and documenation
 # if they are excluded form default targets.
-if (BUILD_EXAMPLES)
-  add_subdirectory("doc/examples" examples)
-endif()
 
-
+add_subdirectory("doc/examples" examples)
 add_subdirectory("src/python" python)
