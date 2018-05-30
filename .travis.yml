@@ -24,10 +24,10 @@ matrix:
         apt:
           sources:
             - llvm-toolchain-trusty-5.0
+            - ubuntu-toolchain-r-test
           packages:
             - clang-5.0
-            - libc++-dev
-            - libc++abi-dev
+            - g++-7
             - libgflags-dev
             - libgoogle-glog-dev
             - libgtest-dev
