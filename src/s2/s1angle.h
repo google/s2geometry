@@ -168,7 +168,7 @@ class S1Angle {
   typedef std::true_type goog_btree_prefer_linear_node_search;
 
  private:
-  explicit constexpr S1Angle(double radians) : radians_(radians) {}
+  explicit IFNDEF_SWIG(constexpr) S1Angle(double radians) : radians_(radians) {}
   double radians_;
 };
 
