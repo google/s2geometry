@@ -175,8 +175,7 @@ class BasicVector {
 
   // Euclidean norm. For integer T, correct only if Norm2 does not overflow.
   FloatType Norm() const {
-    using std::sqrt;
-    return sqrt(Norm2());
+    return std::sqrt(Norm2());
   }
 
   // Normalized vector if the norm is nonzero. Not for integer types.
@@ -192,8 +191,7 @@ class BasicVector {
   // Compose a vector from the sqrt of each component.
   D Sqrt() const {
     return Generate([](const T& x) {
-      using std::sqrt;
-      return sqrt(x);
+      return std::sqrt(x);
     }, AsD());
   }
 
@@ -342,8 +340,8 @@ class Vector2
   T y() const { return c_[1]; }
 
   bool aequal(const Vector2 &vb, FloatType margin) const {
-    using std::fabs;
-    return (fabs(c_[0]-vb.c_[0]) < margin) && (fabs(c_[1]-vb.c_[1]) < margin);
+    return (std::fabs(c_[0]-vb.c_[0]) < margin) &&
+           (std::fabs(c_[1]-vb.c_[1]) < margin);
   }
 
   void Set(T x, T y) { *this = Vector2(x, y); }
@@ -356,8 +354,7 @@ class Vector2
 
   // return the angle between "this" and v in radians
   FloatType Angle(const Vector2 &v) const {
-    using std::atan2;
-    return atan2(CrossProd(v), this->DotProd(v));
+    return std::atan2(CrossProd(v), this->DotProd(v));
   }
 
   // return a vector orthogonal to the current one
@@ -366,8 +363,7 @@ class Vector2
 
   // TODO(user): unify Fabs/Abs between all Vector classes.
   Vector2 Fabs() const {
-    using std::fabs;
-    return Vector2(fabs(c_[0]), fabs(c_[1]));
+    return Vector2(std::fabs(c_[0]), std::fabs(c_[1]));
   }
   Vector2 Abs() const {
     static_assert(std::is_integral<VType>::value, "use Fabs for float_types");
@@ -412,10 +408,9 @@ class Vector3
   T z() const { return c_[2]; }
 
   bool aequal(const Vector3 &vb, FloatType margin) const {
-    using std::abs;
-    return (abs(c_[0] - vb.c_[0]) < margin)
-        && (abs(c_[1] - vb.c_[1]) < margin)
-        && (abs(c_[2] - vb.c_[2]) < margin);
+    return (std::abs(c_[0] - vb.c_[0]) < margin)
+        && (std::abs(c_[1] - vb.c_[1]) < margin)
+        && (std::abs(c_[2] - vb.c_[2]) < margin);
   }
 
   void Set(T x, T y, T z) { *this = Vector3(x, y, z); }
@@ -439,8 +434,7 @@ class Vector3
 
   // return the angle between two vectors in radians
   FloatType Angle(const Vector3 &va) const {
-    using std::atan2;
-    return atan2(CrossProd(va).Norm(), this->DotProd(va));
+    return std::atan2(CrossProd(va).Norm(), this->DotProd(va));
   }
 
   Vector3 Fabs() const {
@@ -451,8 +445,7 @@ class Vector3
     static_assert(
         !std::is_integral<VType>::value || static_cast<VType>(-1) == -1,
         "type must be signed");
-    using std::abs;
-    return Vector3(abs(c_[0]), abs(c_[1]), abs(c_[2]));
+    return Vector3(std::abs(c_[0]), std::abs(c_[1]), std::abs(c_[2]));
   }
 
   // return the index of the largest component (fabs)
@@ -465,11 +458,10 @@ class Vector3
 
   // return the index of the smallest, median ,largest component of the vector
   Vector3<int> ComponentOrder() const {
-    using std::swap;
     Vector3<int> temp(0, 1, 2);
-    if (c_[temp[0]] > c_[temp[1]]) swap(temp[0], temp[1]);
-    if (c_[temp[1]] > c_[temp[2]]) swap(temp[1], temp[2]);
-    if (c_[temp[0]] > c_[temp[1]]) swap(temp[0], temp[1]);
+    if (c_[temp[0]] > c_[temp[1]]) std::swap(temp[0], temp[1]);
+    if (c_[temp[1]] > c_[temp[2]]) std::swap(temp[1], temp[2]);
+    if (c_[temp[0]] > c_[temp[1]]) std::swap(temp[0], temp[1]);
     return temp;
   }
 
@@ -508,11 +500,10 @@ class Vector4
   const T* Data() const { return c_; }
 
   bool aequal(const Vector4 &vb, FloatType margin) const {
-    using std::fabs;
-    return (fabs(c_[0] - vb.c_[0]) < margin)
-        && (fabs(c_[1] - vb.c_[1]) < margin)
-        && (fabs(c_[2] - vb.c_[2]) < margin)
-        && (fabs(c_[3] - vb.c_[3]) < margin);
+    return (std::fabs(c_[0] - vb.c_[0]) < margin)
+        && (std::fabs(c_[1] - vb.c_[1]) < margin)
+        && (std::fabs(c_[2] - vb.c_[2]) < margin)
+        && (std::fabs(c_[3] - vb.c_[3]) < margin);
   }
 
   void x(const T &v) { c_[0] = v; }
@@ -527,8 +518,8 @@ class Vector4
   void Set(T x, T y, T z, T w) { *this = Vector4(x, y, z, w); }
 
   Vector4 Fabs() const {
-    using std::fabs;
-    return Vector4(fabs(c_[0]), fabs(c_[1]), fabs(c_[2]), fabs(c_[3]));
+    return Vector4(std::fabs(c_[0]), std::fabs(c_[1]),
+                   std::fabs(c_[2]), std::fabs(c_[3]));
   }
 
   Vector4 Abs() const {
