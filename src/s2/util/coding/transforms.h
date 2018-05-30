@@ -17,8 +17,8 @@
 //
 // Data transforms that can help code more efficiently.
 
-#ifndef UTIL_CODING_TRANSFORMS_H__
-#define UTIL_CODING_TRANSFORMS_H__
+#ifndef S2_UTIL_CODING_TRANSFORMS_H_
+#define S2_UTIL_CODING_TRANSFORMS_H_
 
 #include "s2/third_party/absl/base/integral_types.h"
 
@@ -59,4 +59,4 @@ static inline int64 ZigZagDecode64(uint64 n) {
   return (n >> 1) ^ (0u - (n & 1));
 }
 
-#endif  // UTIL_CODING_TRANSFORMS_H__
+#endif  // S2_UTIL_CODING_TRANSFORMS_H_
