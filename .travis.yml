@@ -1,22 +1,41 @@
-os:
-  - linux
-
 dist: trusty
 
 language: cpp
 
-compiler:
-  - clang
-  - gcc
+matrix:
+  include:
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+            - libgflags-dev
+            - libgoogle-glog-dev
+            - libgtest-dev
+            - libssl-dev
+            - swig3.0
+      env:
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
-addons:
-  apt:
-    packages:
-      - libgflags-dev
-      - libgoogle-glog-dev
-      - libgtest-dev
-      - libssl-dev
-      - swig3.0
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - clang-5.0
+            - libgflags-dev
+            - libgoogle-glog-dev
+            - libgtest-dev
+            - libssl-dev
+            - swig3.0
+      env:
+        - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+
+before_install:
+  - eval "${MATRIX_EVAL}"
 
 script:
   - mkdir build
