@@ -26,6 +26,8 @@ matrix:
             - llvm-toolchain-trusty-5.0
           packages:
             - clang-5.0
+            - libc++-dev
+            - libc++abi-dev
             - libgflags-dev
             - libgoogle-glog-dev
             - libgtest-dev
