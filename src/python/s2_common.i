@@ -66,6 +66,11 @@
 %rename(InitFromS2Points) S2Polyline::Init(std::vector<S2Point> const& vertices);
 
 %apply int *OUTPUT {int *next_vertex};
+%apply int *OUTPUT {int *psi};
+%apply int *OUTPUT {int *pti};
+%apply int *OUTPUT {int *pi};
+%apply int *OUTPUT {int *pj};
+%apply int *OUTPUT {int *orientation};
 %apply SWIGTYPE *DISOWN {S2Loop *loop_disown};
 
 %typemap(in) std::vector<S2Loop *> * (std::vector<S2Loop *> loops){
@@ -291,10 +296,14 @@ class S2Point {
 %unignore S2CellId::~S2CellId;
 %unignore S2CellId::Begin;
 %unignore S2CellId::End;
+%unignore S2CellId::FromFaceIJ(int, int, int);
+%unignore S2CellId::FromFacePosLevel(int, uint64, int);
 %unignore S2CellId::FromLatLng;
 %unignore S2CellId::FromPoint;
 %unignore S2CellId::FromToken;
+%unignore S2CellId::GetCenterSiTi(int*, int*) const;
 %unignore S2CellId::GetEdgeNeighbors;
+%unignore S2CellId::ToFaceIJOrientation(int*, int*, int*) const;
 %unignore S2CellId::ToLatLng;
 %unignore S2CellId::ToPoint;
 %unignore S2CellId::ToString;
