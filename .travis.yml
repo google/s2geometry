@@ -1,0 +1,26 @@
+os:
+  - linux
+
+dist: trusty
+
+language: cpp
+
+compiler:
+  - clang
+  - gcc
+
+addons:
+  apt:
+    packages:
+      - libgflags-dev
+      - libgoogle-glog-dev
+      - libgtest-dev
+      - libssl-dev
+      - swig
+
+script:
+  - mkdir build
+  - cd build
+  - cmake -DGTEST_ROOT=/usr/src/gtest -DWITH_GFLAGS=ON -DWITH_GLOG=ON ..
+  - make
+  - make test
