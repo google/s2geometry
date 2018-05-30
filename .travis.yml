@@ -16,11 +16,10 @@ addons:
       - libgoogle-glog-dev
       - libgtest-dev
       - libssl-dev
-      - swig
+      - swig3.0
 
 script:
   - mkdir build
   - cd build
   - cmake -DGTEST_ROOT=/usr/src/gtest -DWITH_GFLAGS=ON -DWITH_GLOG=ON ..
-  - make
-  - make test
+  - make && make test
