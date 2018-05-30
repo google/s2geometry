@@ -68,6 +68,7 @@ if (WIN32)
     # Make sure Windows doesn't define min/max macros that interfere with STL
     add_definitions(-DNOMINMAX)
 else()
+    add_definitions(-Wno-attributes)
     add_definitions(-Wno-deprecated-declarations)
 endif()
 
