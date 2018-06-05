@@ -15,8 +15,8 @@
 
 //
 
-#ifndef UTIL_GTL_BTREE_CONTAINER_H__
-#define UTIL_GTL_BTREE_CONTAINER_H__
+#ifndef S2_UTIL_GTL_BTREE_CONTAINER_H_
+#define S2_UTIL_GTL_BTREE_CONTAINER_H_
 
 #include <initializer_list>
 #include <utility>
@@ -381,4 +381,4 @@ class btree_multimap_container : public btree_multiset_container<Tree> {
 }  // namespace internal_btree
 }  // namespace gtl
 
-#endif  // UTIL_GTL_BTREE_CONTAINER_H__
+#endif  // S2_UTIL_GTL_BTREE_CONTAINER_H_

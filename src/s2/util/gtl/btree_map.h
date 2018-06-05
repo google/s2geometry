@@ -22,8 +22,8 @@
 // implementation and caveats.
 //
 
-#ifndef UTIL_GTL_BTREE_MAP_H__
-#define UTIL_GTL_BTREE_MAP_H__
+#ifndef S2_UTIL_GTL_BTREE_MAP_H_
+#define S2_UTIL_GTL_BTREE_MAP_H_
 
 #include <algorithm>
 #include <functional>
@@ -76,4 +76,4 @@ void swap(btree_multimap<K, V, C, A, T> &x, btree_multimap<K, V, C, A, T> &y) {
 
 }  // namespace gtl
 
-#endif  // UTIL_GTL_BTREE_MAP_H__
+#endif  // S2_UTIL_GTL_BTREE_MAP_H_

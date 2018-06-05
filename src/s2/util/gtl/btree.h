@@ -50,8 +50,8 @@
 // https://paste.googleplex.com/5876428872613888
 //
 
-#ifndef UTIL_GTL_BTREE_H__
-#define UTIL_GTL_BTREE_H__
+#ifndef S2_UTIL_GTL_BTREE_H_
+#define S2_UTIL_GTL_BTREE_H_
 
 #include <cstddef>
 #include <cstring>
@@ -2407,4 +2407,4 @@ int btree<P>::internal_verify(
 }  // namespace gtl
 
 
-#endif  // UTIL_GTL_BTREE_H__
+#endif  // S2_UTIL_GTL_BTREE_H_

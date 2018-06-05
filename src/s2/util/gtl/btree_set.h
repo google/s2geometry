@@ -20,8 +20,8 @@
 // btree. See btree.h for details of the btree implementation and caveats.
 //
 
-#ifndef UTIL_GTL_BTREE_SET_H__
-#define UTIL_GTL_BTREE_SET_H__
+#ifndef S2_UTIL_GTL_BTREE_SET_H_
+#define S2_UTIL_GTL_BTREE_SET_H_
 
 #include <functional>
 #include <memory>
@@ -70,4 +70,4 @@ void swap(btree_multiset<K, C, A, T> &x, btree_multiset<K, C, A, T> &y) {
 
 }  // namespace gtl
 
-#endif  // UTIL_GTL_BTREE_SET_H__
+#endif  // S2_UTIL_GTL_BTREE_SET_H_
