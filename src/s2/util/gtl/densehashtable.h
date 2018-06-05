@@ -1542,5 +1542,4 @@ const int dense_hashtable<V, K, HF, ExK, SetK, EqK, A>::HT_EMPTY_PCT =
 
 }
 
-
 #endif  // S2_UTIL_GTL_DENSEHASHTABLE_H_
