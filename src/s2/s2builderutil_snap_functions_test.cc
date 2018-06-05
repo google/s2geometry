@@ -49,6 +49,8 @@
 #include "s2/s2text_format.h"
 #include "s2/util/math/mathutil.h"
 
+using std::abs;
+using std::fabs;
 using std::make_pair;
 using std::map;
 using std::min;
@@ -229,7 +231,7 @@ static S1Angle GetCircumRadius(const S2Point& a, const S2Point& b,
   // We return this value is the circumradius is very large.
   S1Angle kTooBig = S1Angle::Radians(M_PI);
   double turn_angle = S2::TurnAngle(a, b, c);
-  if (std::abs(remainder(turn_angle, M_PI)) < 1e-2) return kTooBig;
+  if (fabs(remainder(turn_angle, M_PI)) < 1e-2) return kTooBig;
 
   long double a2 = (b - c).Norm2();
   long double b2 = (c - a).Norm2();
@@ -442,13 +444,13 @@ using IntLatLng = Vector2<int64>;
 
 static bool IsValid(const IntLatLng& ll, int64 scale) {
   // A coordinate value of "scale" corresponds to 180 degrees.
-  return (std::abs(ll[0]) <= scale / 2 && std::abs(ll[1]) <= scale);
+  return (abs(ll[0]) <= scale / 2 && abs(ll[1]) <= scale);
 }
 
 static bool HasValidVertices(const IntLatLng& ll, int64 scale) {
   // Like IsValid, but excludes latitudes of 90 and longitudes of 180.
   // A coordinate value of "scale" corresponds to 180 degrees.
-  return (std::abs(ll[0]) < scale / 2 && std::abs(ll[1]) < scale);
+  return (abs(ll[0]) < scale / 2 && abs(ll[1]) < scale);
 }
 
 static IntLatLng Rescale(const IntLatLng&ll, double scale_factor) {
@@ -587,7 +589,7 @@ static double GetLatLngMinEdgeSeparation(
           IntLatLng ll1 = parent.ll1 + IntLatLng(dlat0 + dlat1, dlng1);
           if (ll1 == ll0 || !HasValidVertices(ll1, scale)) continue;
           // Only consider neighbors within 2 latitude units of site0.
-          if (std::abs(ll1[0] - ll0[0]) > 2) continue;
+          if (abs(ll1[0] - ll0[0]) > 2) continue;
 
           S2Point site1 = ToPoint(ll1, scale);
           S1Angle max_v1 = GetMaxVertexDistance(site0, ll1, scale);
@@ -596,7 +598,7 @@ static double GetLatLngMinEdgeSeparation(
               IntLatLng ll2 = parent.ll2 + IntLatLng(dlat0 + dlat2, dlng2);
               if (!HasValidVertices(ll2, scale)) continue;
               // Only consider neighbors within 2 latitude units of site0.
-              if (std::abs(ll2[0] - ll0[0]) > 2) continue;
+              if (abs(ll2[0] - ll0[0]) > 2) continue;
               // To reduce duplicates, we require ll1 < ll2 lexicographically
               // and site2.longitude >= 0.  (It's *not* okay to
               // require site1.longitude >= 0, because then some configurations

@@ -38,6 +38,7 @@
 #include "s2/s2testing.h"
 
 using S2::internal::kPosToOrientation;
+using std::fabs;
 using std::min;
 using std::unordered_map;
 using std::vector;
@@ -546,10 +547,10 @@ static R2Point SampleBoundary(const R2Rect& rect) {
 
 // Returns the closest point to "uv" on the boundary of "rect".
 static R2Point ProjectToBoundary(const R2Point& uv, const R2Rect& rect) {
-  double du0 = std::abs(uv[0] - rect[0][0]);
-  double du1 = std::abs(uv[0] - rect[0][1]);
-  double dv0 = std::abs(uv[1] - rect[1][0]);
-  double dv1 = std::abs(uv[1] - rect[1][1]);
+  double du0 = fabs(uv[0] - rect[0][0]);
+  double du1 = fabs(uv[0] - rect[0][1]);
+  double dv0 = fabs(uv[1] - rect[1][0]);
+  double dv1 = fabs(uv[1] - rect[1][1]);
   double dmin = min(min(du0, du1), min(dv0, dv1));
   if (du0 == dmin) return R2Point(rect[0][0], rect[1].Project(uv[1]));
   if (du1 == dmin) return R2Point(rect[0][1], rect[1].Project(uv[1]));

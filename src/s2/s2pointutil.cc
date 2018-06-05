@@ -18,6 +18,9 @@
 #include "s2/s2pointutil.h"
 
 #include <cfloat>
+#include <cmath>
+
+using std::fabs;
 
 namespace S2 {
 

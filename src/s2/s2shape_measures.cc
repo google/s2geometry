@@ -17,10 +17,12 @@
 
 #include "s2/s2shape_measures.h"
 
+#include <cmath>
 #include <vector>
 #include "s2/s2loop_measures.h"
 #include "s2/s2polyline_measures.h"
 
+using std::fabs;
 using std::vector;
 
 namespace S2 {

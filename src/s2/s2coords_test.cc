@@ -17,11 +17,14 @@
 
 #include "s2/s2coords.h"
 
+#include <cmath>
+
 #include <gtest/gtest.h>
 #include "s2/s2cell_id.h"
 #include "s2/s2coords_internal.h"
 #include "s2/s2testing.h"
 
+using std::fabs;
 using S2::internal::kSwapMask;
 using S2::internal::kInvertMask;
 using S2::internal::kIJtoPos;

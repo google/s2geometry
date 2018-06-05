@@ -17,9 +17,13 @@
 
 #include "s2/s2measures.h"
 
+#include <cmath>
+
 #include <gtest/gtest.h>
 #include "s2/s2latlng.h"
 #include "s2/s2testing.h"
+
+using std::fabs;
 
 TEST(S2, AngleMethods) {
   S2Point pz(0, 0, 1);

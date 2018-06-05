@@ -33,6 +33,7 @@ namespace S2 {
 using internal::GetIntersectionExact;
 using internal::IntersectionMethod;
 using internal::intersection_method_tally_;
+using std::fabs;
 
 // All error bounds in this file are expressed in terms of the maximum
 // rounding error for a floating-point type.  The rounding error is half of
@@ -239,7 +240,7 @@ static T GetProjection(const Vector3<T>& x,
   // ||(X-Y)'-(X-Y)|| <= ||X-Y|| * T_ERR
   constexpr T T_ERR = s2pred::rounding_epsilon<T>();
   *error = (((3.5 + 2 * sqrt(3)) * a_norm_len + 32 * sqrt(3) * DBL_ERR)
-            * dist + 1.5 * std::abs(result)) * T_ERR;
+            * dist + 1.5 * fabs(result)) * T_ERR;
   return result;
 }
 
@@ -275,14 +276,14 @@ static bool GetIntersectionStableSorted(
   //
   // We save ourselves some work by scaling the result and the error bound by
   // "dist_sum", since the result is normalized to be unit length anyway.
-  T dist_sum = std::abs(b0_dist - b1_dist);
+  T dist_sum = fabs(b0_dist - b1_dist);
   T error_sum = b0_error + b1_error;
   if (dist_sum <= error_sum) {
     return false;  // Error is unbounded in this case.
   }
   Vector3<T> x = b0_dist * b1 - b1_dist * b0;
   constexpr T T_ERR = s2pred::rounding_epsilon<T>();
-  T error = b_len * std::abs(b0_dist * b1_error - b1_dist * b0_error) /
+  T error = b_len * fabs(b0_dist * b1_error - b1_dist * b0_error) /
       (dist_sum - error_sum) + 2 * T_ERR * dist_sum;
 
   // Finally we normalize the result, compute the corresponding error, and
