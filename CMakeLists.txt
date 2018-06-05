@@ -74,7 +74,6 @@ include_directories(src)
 add_library(s2
             src/s2/base/stringprintf.cc
             src/s2/base/strtoint.cc
-            src/s2/base/sysinfo.cc
             src/s2/encoded_s2cell_id_vector.cc
             src/s2/encoded_s2point_vector.cc
             src/s2/encoded_s2shape_index.cc

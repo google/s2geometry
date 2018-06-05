@@ -234,9 +234,6 @@ class S2Testing {
                             bool check_tight,
                             S2CellId id = S2CellId());
 
-  // Returns the user time consumed by this process, in seconds.
-  static double GetCpuTime();
-
  private:
   // Contains static methods
   S2Testing() = delete;

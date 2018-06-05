@@ -28,7 +28,6 @@
 #include "s2/base/commandlineflags.h"
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "s2/base/sysinfo.h"
 #include "s2/strings/serialize.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/str_split.h"
@@ -316,12 +315,6 @@ void S2Testing::CheckCovering(const S2Region& region,
       CheckCovering(region, covering, check_tight, child);
     }
   }
-}
-
-double S2Testing::GetCpuTime() {
-  absl::Duration usage = base::CPUUsage();
-  S2_CHECK(usage != absl::ZeroDuration());  // Indicates error.
-  return ToDoubleSeconds(usage);
 }
 
 S2Testing::Fractal::Fractal()
