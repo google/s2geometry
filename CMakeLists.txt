@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.1)
 project(s2-geometry)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(CMakeDependentOption)
@@ -56,12 +56,17 @@ if (APPLE)
     set(CMAKE_MACOSX_RPATH TRUE)
 endif()
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # Avoid megabytes of warnings like:
 # util/math/vector.h:178:16: warning: optimization attribute on
 # ‘double sqrt(double)’ follows definition but the attribute doesn’t
 # match [-Wattributes]
 add_definitions(-Wno-attributes)
-add_definitions(-Wno-deprecated-declarations -std=c++11)
+add_definitions(-Wno-deprecated-declarations)
 
 # If OpenSSL is installed in a non-standard location, configure with
 # something like:
