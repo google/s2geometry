@@ -3,7 +3,13 @@ include_directories(${PYTHON_INCLUDE_PATH})
 set(CMAKE_SWIG_FLAGS "")
 set_property(SOURCE s2.i PROPERTY SWIG_FLAGS "-module" "pywraps2")
 set_property(SOURCE s2.i PROPERTY CPLUSPLUS ON)
-swig_add_module(pywraps2 python s2.i)
+
+if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
+    swig_add_module(pywraps2 python s2.i)
+else()
+    swig_add_library(pywraps2 LANGUAGE python SOURCES s2.i)
+endif()
+
 swig_link_libraries(pywraps2 ${PYTHON_LIBRARIES} s2)
 enable_testing()
 add_test(NAME pywraps2_test COMMAND
