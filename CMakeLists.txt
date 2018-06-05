@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.1)
 project(s2-geometry)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(CMakeDependentOption)
@@ -58,7 +58,10 @@ if (APPLE)
     set(CMAKE_MACOSX_RPATH TRUE)
 endif()
 
-add_definitions(-std=c++11)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 if (WIN32)
     # Use unsigned characters
@@ -75,7 +78,6 @@ else()
     add_definitions(-Wno-attributes)
     add_definitions(-Wno-deprecated-declarations)
 endif()
-
 
 # If OpenSSL is installed in a non-standard location, configure with
 # something like:

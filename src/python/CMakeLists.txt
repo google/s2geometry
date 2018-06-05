@@ -8,9 +8,7 @@ set_property(SOURCE s2.i PROPERTY CPLUSPLUS ON)
 if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
     swig_add_module(pywraps2 python s2.i)
 else()
-    swig_add_library(pywraps2
-                     LANGUAGE python
-                     SOURCES s2.i)
+    swig_add_library(pywraps2 LANGUAGE python SOURCES s2.i)
 endif()
 
 swig_link_libraries(pywraps2 ${PYTHON_LIBRARIES} s2)
