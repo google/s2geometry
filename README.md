@@ -115,6 +115,12 @@ sudo port install swig
 ```
 Expect to see some warnings if you build with swig 2.0.
 
+## Other S2 implementations
+
+* [Go](https://github.com/golang/geo) (Approximately 40% complete.)
+* [Java](https://github.com/google/s2-geometry-library-java) (Older version;
+  last updated in 2011.)
+
 ## Disclaimer
 
 This is not an official Google product.
