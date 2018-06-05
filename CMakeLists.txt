@@ -68,6 +68,10 @@ if (WIN32)
     # Make sure Windows doesn't define min/max macros that interfere with STL
     add_definitions(-DNOMINMAX)
 else()
+    # Avoid megabytes of warnings like:
+    # util/math/vector.h:178:16: warning: optimization attribute on
+    # ‘double sqrt(double)’ follows definition but the attribute doesn’t
+    # match [-Wattributes]
     add_definitions(-Wno-attributes)
     add_definitions(-Wno-deprecated-declarations)
 endif()
@@ -84,7 +88,6 @@ include_directories(src)
 add_library(s2
             src/s2/base/stringprintf.cc
             src/s2/base/strtoint.cc
-            src/s2/base/sysinfo.cc
             src/s2/encoded_s2cell_id_vector.cc
             src/s2/encoded_s2point_vector.cc
             src/s2/encoded_s2shape_index.cc

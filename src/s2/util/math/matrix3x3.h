@@ -28,8 +28,8 @@
 // This feature is necessary to use the class in a more general framework with
 // VType != plain old data type.
 
-#ifndef UTIL_MATH_MATRIX3X3_H__
-#define UTIL_MATH_MATRIX3X3_H__
+#ifndef S2_UTIL_MATH_MATRIX3X3_H_
+#define S2_UTIL_MATH_MATRIX3X3_H_
 
 #include <cmath>
 #include <iosfwd>
@@ -558,4 +558,4 @@ typedef Matrix3x3<float>  Matrix3x3_f;
 typedef Matrix3x3<double> Matrix3x3_d;
 
 
-#endif  // UTIL_MATH_MATRIX3X3_H__
+#endif  // S2_UTIL_MATH_MATRIX3X3_H_

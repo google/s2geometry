@@ -50,8 +50,8 @@
 // https://paste.googleplex.com/5876428872613888
 //
 
-#ifndef UTIL_GTL_BTREE_H__
-#define UTIL_GTL_BTREE_H__
+#ifndef S2_UTIL_GTL_BTREE_H_
+#define S2_UTIL_GTL_BTREE_H_
 
 #include <cstddef>
 #include <cstring>
@@ -282,16 +282,28 @@ template <typename Key, typename Data, typename Compare, typename Alloc,
           int TargetNodeSize, bool Multi>
 struct map_params : common_params<Key, Compare, Alloc, TargetNodeSize,
                                   sizeof(std::pair<const Key, Data>), Multi> {
-  using data_type = Data;
   using mapped_type = Data;
-  using value_type = std::pair<const Key, data_type>;
+  using value_type = std::pair<const Key, mapped_type>;
   // TODO(user): Stop supporting move-only keys and get rid of
   // mutable_value_type.
-  using mutable_value_type = std::pair<Key, data_type>;
+  using mutable_value_type = std::pair<Key, mapped_type>;
   using pointer = value_type *;
   using const_pointer = const value_type *;
   using reference = value_type &;
   using const_reference = const value_type &;
+
+  using key_compare = typename map_params::common_params::key_compare;
+  // Inherit from key_compare for empty base class optimization.
+  struct value_compare : private key_compare {
+    value_compare() = default;
+    explicit value_compare(const key_compare &cmp) : key_compare(cmp) {}
+
+    template <typename T, typename U>
+    absl::conditional_t<btree_is_key_compare_to<key_compare>::value, int, bool>
+    operator()(const T &left, const U &right) const {
+      return key_compare::operator()(left.first, right.first);
+    }
+  };
 
   static const Key& key(const value_type &x) { return x.first; }
   static const Key& key(const mutable_value_type &x) { return x.first; }
@@ -303,7 +315,6 @@ template <typename Key, typename Compare, typename Alloc, int TargetNodeSize,
           bool Multi>
 struct set_params
     : common_params<Key, Compare, Alloc, TargetNodeSize, sizeof(Key), Multi> {
-  using data_type = void;
   using mapped_type = void;
   using value_type = Key;
   using mutable_value_type = value_type;
@@ -311,6 +322,7 @@ struct set_params
   using const_pointer = const value_type *;
   using reference = value_type &;
   using const_reference = const value_type &;
+  using value_compare = typename set_params::common_params::key_compare;
 
   static const Key& key(const value_type &x) { return x; }
 };
@@ -345,7 +357,6 @@ class btree_node {
  public:
   using params_type = Params;
   using key_type = typename Params::key_type;
-  using data_type = typename Params::data_type;
   using value_type = typename Params::value_type;
   using mutable_value_type = typename Params::mutable_value_type;
   using pointer = typename Params::pointer;
@@ -922,34 +933,27 @@ class btree {
 
  public:
   using key_type = typename Params::key_type;
+  using mapped_type = typename Params::mapped_type;
   using value_type = typename Params::value_type;
-  using key_compare = typename Params::key_compare;
-  using pointer = typename Params::pointer;
-  using const_pointer = typename Params::const_pointer;
-  using reference = typename Params::reference;
-  using const_reference = typename Params::const_reference;
   using size_type = typename Params::size_type;
   using difference_type = typename Params::difference_type;
+  using key_compare = typename Params::key_compare;
+  using value_compare = typename Params::value_compare;
+  using allocator_type = typename Params::allocator_type;
+  using reference = typename Params::reference;
+  using const_reference = typename Params::const_reference;
+  using pointer = typename Params::pointer;
+  using const_pointer = typename Params::const_pointer;
   using iterator = btree_iterator<node_type, reference, pointer>;
   using const_iterator = typename iterator::const_iterator;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-  using allocator_type = typename Params::allocator_type;
 
- private:
-  template <typename Tree>
-  friend class btree_container;
-  template <typename Tree>
-  friend class btree_unique_container;
-  template <typename Tree>
-  friend class btree_map_container;
-  template <typename Tree>
-  friend class btree_multi_container;
+  // Internal types made public for use by btree_container types.
   using params_type = Params;
-  using data_type = typename Params::data_type;
-  using mapped_type = typename Params::mapped_type;
   using mutable_value_type = typename Params::mutable_value_type;
 
+ private:
   // Copies the values in x into this btree in their order in x.
   // This btree must be empty before this method is called.
   // This method is used in copy construction and copy assignment.
@@ -991,16 +995,11 @@ class btree {
   const_iterator begin() const {
     return const_iterator(leftmost(), 0);
   }
-  const_iterator cbegin() const { return const_iterator(leftmost(), 0); }
   iterator end() {
     return iterator(rightmost_,
                     rightmost_ != nullptr ? rightmost_->count() : 0);
   }
   const_iterator end() const {
-    return const_iterator(rightmost_,
-                          rightmost_ != nullptr ? rightmost_->count() : 0);
-  }
-  const_iterator cend() const {
     return const_iterator(rightmost_,
                           rightmost_ != nullptr ? rightmost_->count() : 0);
   }
@@ -1010,17 +1009,11 @@ class btree {
   const_reverse_iterator rbegin() const {
     return const_reverse_iterator(end());
   }
-  const_reverse_iterator crbegin() const {
-    return const_reverse_iterator(cend());
-  }
   reverse_iterator rend() {
     return reverse_iterator(begin());
   }
   const_reverse_iterator rend() const {
     return const_reverse_iterator(begin());
-  }
-  const_reverse_iterator crend() const {
-    return const_reverse_iterator(cbegin());
   }
 
   // Finds the first element whose key is not less than key.
@@ -1171,6 +1164,8 @@ class btree {
   bool compare_keys(const K &x, const LK &y) const {
     return bool_compare_keys(key_comp(), x, y);
   }
+
+  value_compare value_comp() const { return value_compare(key_comp()); }
 
   // Verifies the structure of the btree.
   void verify() const;
@@ -2412,4 +2407,4 @@ int btree<P>::internal_verify(
 }  // namespace gtl
 
 
-#endif  // UTIL_GTL_BTREE_H__
+#endif  // S2_UTIL_GTL_BTREE_H_

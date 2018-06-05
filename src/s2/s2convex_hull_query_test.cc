@@ -17,12 +17,14 @@
 
 #include "s2/s2convex_hull_query.h"
 
+#include <cmath>
 #include <memory>
 
 #include <gtest/gtest.h>
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using std::fabs;
 using std::unique_ptr;
 using std::vector;
 
@@ -129,7 +131,7 @@ TEST(S2ConvexHullQueryTest, SimplePolyline) {
 void TestNorthPoleLoop(S1Angle radius, int num_vertices) {
   // If the radius is very close to 90, then it's hard to predict whether the
   // result will be the full loop or not.
-  S2_DCHECK_GE(std::abs(radius.radians() - M_PI_2), 1e-15);
+  S2_DCHECK_GE(fabs(radius.radians() - M_PI_2), 1e-15);
 
   S2ConvexHullQuery query;
   unique_ptr<S2Loop> loop(

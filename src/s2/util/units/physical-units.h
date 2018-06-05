@@ -81,8 +81,8 @@
 //   }
 //
 
-#ifndef UTIL_UNITS_PHYSICAL_UNITS_H__
-#define UTIL_UNITS_PHYSICAL_UNITS_H__
+#ifndef S2_UTIL_UNITS_PHYSICAL_UNITS_H_
+#define S2_UTIL_UNITS_PHYSICAL_UNITS_H_
 
 #include <cmath>
 #include <iosfwd>
@@ -310,4 +310,4 @@ std::ostream& operator<<(std::ostream& os,
 
 } // end namespace util
 
-#endif  // UTIL_UNITS_PHYSICAL_UNITS_H__
+#endif  // S2_UTIL_UNITS_PHYSICAL_UNITS_H_

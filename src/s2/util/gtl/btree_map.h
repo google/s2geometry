@@ -22,8 +22,8 @@
 // implementation and caveats.
 //
 
-#ifndef UTIL_GTL_BTREE_MAP_H__
-#define UTIL_GTL_BTREE_MAP_H__
+#ifndef S2_UTIL_GTL_BTREE_MAP_H_
+#define S2_UTIL_GTL_BTREE_MAP_H_
 
 #include <algorithm>
 #include <functional>
@@ -50,20 +50,30 @@ class btree_map
   using Base::Base;
 };
 
+template <typename K, typename V, typename C, typename A, int T>
+void swap(btree_map<K, V, C, A, T> &x, btree_map<K, V, C, A, T> &y) {
+  return x.swap(y);
+}
+
 template <typename Key, typename Value, typename Compare = std::less<Key>,
           typename Alloc = std::allocator<std::pair<const Key, Value>>,
           int TargetNodeSize = 256>
 class btree_multimap
-    : public internal_btree::btree_multi_container<
+    : public internal_btree::btree_multimap_container<
           internal_btree::btree<internal_btree::map_params<
               Key, Value, Compare, Alloc, TargetNodeSize, /*Multi=*/true>>> {
-  using Base = typename btree_multimap::btree_multi_container;
+  using Base = typename btree_multimap::btree_multimap_container;
 
  public:
   btree_multimap() {}
   using Base::Base;
 };
 
+template <typename K, typename V, typename C, typename A, int T>
+void swap(btree_multimap<K, V, C, A, T> &x, btree_multimap<K, V, C, A, T> &y) {
+  return x.swap(y);
+}
+
 }  // namespace gtl
 
-#endif  // UTIL_GTL_BTREE_MAP_H__
+#endif  // S2_UTIL_GTL_BTREE_MAP_H_

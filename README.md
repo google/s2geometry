@@ -1,5 +1,7 @@
 # S2 Geometry Library
 
+[![Build Status](https://travis-ci.org/google/s2geometry.svg?branch=master)](https://travis-ci.org/google/s2geometry)
+
 ## Overview
 
 This is a package for manipulating geometric shapes. Unlike many geometry
@@ -16,7 +18,6 @@ S2 documentation can be found on [s2geometry.io](http://s2geometry.io).
 
 ## Requirements for End Users
 
-* A POSIX system (for getrusage) or Windows.
 * [CMake](http://www.cmake.org/)
 * A C++ compiler with C++11 support, such as [g++](https://gcc.gnu.org/)
   \>= 4.7.
@@ -112,6 +113,12 @@ or on macOS:
 sudo port install swig
 ```
 Expect to see some warnings if you build with swig 2.0.
+
+## Other S2 implementations
+
+* [Go](https://github.com/golang/geo) (Approximately 40% complete.)
+* [Java](https://github.com/google/s2-geometry-library-java) (Older version;
+  last updated in 2011.)
 
 ## Disclaimer
 

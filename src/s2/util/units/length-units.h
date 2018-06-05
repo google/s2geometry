@@ -22,8 +22,8 @@
 // float.  Also update the physical units unittest to check the conversion
 // ratio.
 
-#ifndef UTIL_UNITS_LENGTH_UNITS_H__
-#define UTIL_UNITS_LENGTH_UNITS_H__
+#ifndef S2_UTIL_UNITS_LENGTH_UNITS_H_
+#define S2_UTIL_UNITS_LENGTH_UNITS_H_
 
 #include "s2/util/units/physical-units.h"
 
@@ -132,4 +132,4 @@ inline ValueType GetYards(const PhysicalUnit<ValueType, LengthBase, Unit> u) {
 
 }  // end namespace util
 
-#endif  // UTIL_UNITS_LENGTH_UNITS_H__
+#endif  // S2_UTIL_UNITS_LENGTH_UNITS_H_

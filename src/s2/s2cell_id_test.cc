@@ -27,7 +27,6 @@
 
 #include <gtest/gtest.h>
 
-#include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -39,12 +38,10 @@
 #include "s2/third_party/absl/base/macros.h"
 
 using S2::internal::kPosToOrientation;
+using std::fabs;
 using std::min;
 using std::unordered_map;
 using std::vector;
-
-DEFINE_int32(iters, 20000000,
-             "Number of iterations for timing tests with optimized build");
 
 static S2CellId GetCellId(double lat_degrees, double lng_degrees) {
   S2CellId id(S2LatLng::FromDegrees(lat_degrees, lng_degrees));
@@ -547,10 +544,10 @@ static R2Point SampleBoundary(const R2Rect& rect) {
 
 // Returns the closest point to "uv" on the boundary of "rect".
 static R2Point ProjectToBoundary(const R2Point& uv, const R2Rect& rect) {
-  double du0 = std::abs(uv[0] - rect[0][0]);
-  double du1 = std::abs(uv[0] - rect[0][1]);
-  double dv0 = std::abs(uv[1] - rect[1][0]);
-  double dv1 = std::abs(uv[1] - rect[1][1]);
+  double du0 = fabs(uv[0] - rect[0][0]);
+  double du1 = fabs(uv[0] - rect[0][1]);
+  double dv0 = fabs(uv[1] - rect[1][0]);
+  double dv1 = fabs(uv[1] - rect[1][1]);
   double dmin = min(min(du0, du1), min(dv0, dv1));
   if (du0 == dmin) return R2Point(rect[0][0], rect[1].Project(uv[1]));
   if (du1 == dmin) return R2Point(rect[0][1], rect[1].Project(uv[1]));
@@ -632,87 +629,5 @@ TEST(S2CellId, OutputOperator) {
   std::ostringstream s;
   s << cell;
   EXPECT_EQ("5/31200", s.str());
-}
-
-TEST(S2CellId, ToPointBenchmark) {
-  // This "test" is really a benchmark, so skip it unless we're optimized.
-  if (google::DEBUG_MODE) return;
-
-  // Test speed of conversions from points to leaf cells.
-  double control_start = S2Testing::GetCpuTime();
-  S2CellId begin = S2CellId::Begin(S2CellId::kMaxLevel);
-  S2CellId end = S2CellId::End(S2CellId::kMaxLevel);
-  uint64 delta = (end.id() - begin.id()) / FLAGS_iters;
-  delta &= ~1ULL;  // Make sure all ids are leaf cells.
-
-  S2CellId id = begin;
-  double sum = 0;
-  for (int i = FLAGS_iters; i > 0; --i) {
-    sum += static_cast<double>(id.id());
-    id = S2CellId(id.id() + delta);
-  }
-  double control_time = S2Testing::GetCpuTime() - control_start;
-  printf("\tControl:    %8.3f usecs\n", 1e6 * control_time / FLAGS_iters);
-  EXPECT_NE(sum, 0);  // Don't let the loop get optimized away.
-
-  double test_start = S2Testing::GetCpuTime();
-  sum = 0;
-  id = begin;
-  for (int i = FLAGS_iters; i > 0; --i) {
-    sum += id.ToPointRaw()[0];
-    id = S2CellId(id.id() + delta);
-  }
-  double test_time = S2Testing::GetCpuTime() - test_start - control_time;
-  printf("\tToPointRaw: %8.3f usecs\n", 1e6 * test_time / FLAGS_iters);
-  EXPECT_NE(sum, 0);  // Don't let the loop get optimized away.
-
-  test_start = S2Testing::GetCpuTime();
-  sum = 0;
-  id = begin;
-  for (int i = FLAGS_iters; i > 0; --i) {
-    sum += id.ToPoint()[0];
-    id = S2CellId(id.id() + delta);
-  }
-  test_time = S2Testing::GetCpuTime() - test_start - control_time;
-  printf("\tToPoint:    %8.3f usecs\n", 1e6 * test_time / FLAGS_iters);
-  EXPECT_NE(sum, 0);  // Don't let the loop get optimized away.
-}
-
-TEST(S2CellId, FromPointBenchmark) {
-  // This "test" is really a benchmark, so skip it unless we're optimized.
-  if (google::DEBUG_MODE) return;
-
-  // The sample points follow a spiral curve that completes one revolution
-  // around the z-axis every 1/dt samples.  The z-coordinate increases
-  // from -4 to +4 over FLAGS_iters samples.
-
-  S2Point start(1, 0, -4);
-  double dz = (-2 * start.z()) / FLAGS_iters;
-  double dt = 1.37482937133e-4;
-
-  // Test speed of conversions from leaf cells to points.
-  double control_start = S2Testing::GetCpuTime();
-  uint64 isum = 0;
-  S2Point p = start;
-  for (int i = FLAGS_iters; i > 0; --i) {
-    // Cheap rotation around the z-axis (spirals inward slightly
-    // each revolution).
-    p += S2Point(-dt * p.y(), dt * p.x(), dz);
-    isum += MathUtil::FastIntRound(p[0] + p[1] + p[2]);
-  }
-  double control_time = S2Testing::GetCpuTime() - control_start;
-  printf("\tControl:    %8.3f usecs\n", 1e6 * control_time / FLAGS_iters);
-  EXPECT_NE(isum, 0);  // Don't let the loop get optimized away.
-
-  double test_start = S2Testing::GetCpuTime();
-  isum = 0;
-  p = start;
-  for (int i = FLAGS_iters; i > 0; --i) {
-    p += S2Point(-dt * p.y(), dt * p.x(), dz);
-    isum += S2CellId(p).id();
-  }
-  double test_time = S2Testing::GetCpuTime() - test_start - control_time;
-  printf("\tFromPoint:  %8.3f usecs\n", 1e6 * test_time / FLAGS_iters);
-  EXPECT_NE(isum, 0);  // Don't let the loop get optimized away.
 }
 

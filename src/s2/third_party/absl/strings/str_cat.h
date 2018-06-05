@@ -388,5 +388,4 @@ SixDigits(double d) {
 }  // namespace absl
 
 
-
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STR_CAT_H_

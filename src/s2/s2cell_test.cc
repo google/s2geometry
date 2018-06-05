@@ -59,6 +59,7 @@ using std::map;
 using std::max;
 using std::min;
 using std::pair;
+using std::pow;
 using std::vector;
 
 TEST(S2Cell, TestFaces) {
@@ -398,38 +399,6 @@ TEST(S2Cell, TestSubdivide) {
     EXPECT_LE(s->max_edge_aspect, S2::kMaxEdgeAspect + 1e-15 * (1 << i));
     EXPECT_LE(s->max_diag_aspect, S2::kMaxDiagAspect + 1e-15 * (1 << i));
   }
-}
-
-static const int kMaxLevel = google::DEBUG_MODE ? 6 : 11;
-
-static void ExpandChildren1(const S2Cell& cell) {
-  S2Cell children[4];
-  S2_CHECK(cell.Subdivide(children));
-  if (children[0].level() < kMaxLevel) {
-    for (int pos = 0; pos < 4; ++pos) {
-      ExpandChildren1(children[pos]);
-    }
-  }
-}
-
-static void ExpandChildren2(const S2Cell& cell) {
-  S2CellId id = cell.id().child_begin();
-  for (int pos = 0; pos < 4; ++pos, id = id.next()) {
-    S2Cell child(id);
-    if (child.level() < kMaxLevel) ExpandChildren2(child);
-  }
-}
-
-TEST(S2Cell, TestPerformance) {
-  double subdivide_start = S2Testing::GetCpuTime();
-  ExpandChildren1(S2Cell::FromFace(0));
-  double subdivide_time = S2Testing::GetCpuTime() - subdivide_start;
-  fprintf(stderr, "Subdivide: %.3f seconds\n", subdivide_time);
-
-  double constructor_start = S2Testing::GetCpuTime();
-  ExpandChildren2(S2Cell::FromFace(0));
-  double constructor_time = S2Testing::GetCpuTime() - constructor_start;
-  fprintf(stderr, "Constructor: %.3f seconds\n", constructor_time);
 }
 
 TEST(S2Cell, CellVsLoopRectBound) {

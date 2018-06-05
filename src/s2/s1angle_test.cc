@@ -19,15 +19,10 @@
 
 #include <gtest/gtest.h>
 
-#include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
 #include "s2/s2latlng.h"
 #include "s2/s2testing.h"
 #include "s2/third_party/absl/base/integral_types.h"
-
-DEFINE_int32(iters,
-             (google::DEBUG_MODE ? 100 : 1000) * (1000 * 1000),
-             "Run timing tests with this many iterations");
 
 TEST(S1Angle, DefaultConstructor) {
   // Check that the default constructor returns an angle of 0.
@@ -141,66 +136,6 @@ TEST(S1Angle, TestFormatting) {
   std::ostringstream ss;
   ss << S1Angle::Degrees(180.0);
   EXPECT_EQ("180.0000000", ss.str());
-}
-
-TEST(S1Angle, TestPerformance) {
-  // Verify that the conversion to E5/E6/E7 is not much slower than the
-  // conversion from E5/E6/E7.  (Float-to-integer conversions can be quite
-  // slow on some platforms.)  We only check the times for E6; the times for
-  // E5/E7 should be similar.
-
-  // To reduce the impact of loop overhead, we do kOpsPerLoop ops per loop.
-  static const int kOpsPerLoop = 8;
-
-  // Time conversion from E6 to radians.
-  double rad_sum = 0;
-  const double from_e6_start = S2Testing::GetCpuTime();
-  for (int i = FLAGS_iters; i > 0; i -= kOpsPerLoop) {
-    // We structure both loops so that all the conversions can be done in
-    // parallel.  Otherwise on some platforms the optimizer happens to do a
-    // much better job of parallelizing one loop than the other.
-    double r0 = S1Angle::E6(i-0).radians();
-    double r1 = S1Angle::E6(i-1).radians();
-    double r2 = S1Angle::E6(i-2).radians();
-    double r3 = S1Angle::E6(i-3).radians();
-    double r4 = S1Angle::E6(i-4).radians();
-    double r5 = S1Angle::E6(i-5).radians();
-    double r6 = S1Angle::E6(i-6).radians();
-    double r7 = S1Angle::E6(i-7).radians();
-    rad_sum += ((r0 + r1) + (r2 + r3)) + ((r4 + r5) + (r6 + r7));
-  }
-  const double from_e6_time = S2Testing::GetCpuTime() - from_e6_start;
-  EXPECT_NE(rad_sum, 0);  // Don't let the sum get optimized away.
-  S2_LOG(INFO) << "From E6: "
-            << (FLAGS_iters / from_e6_time)
-            << " values per second";
-
-  // Time conversion from radians to E6.
-  const double delta = (2 * M_PI) / (FLAGS_iters - 1);
-  double angle = -M_PI;
-  int64 e6_sum = 0;
-  const double to_e6_start = S2Testing::GetCpuTime();
-  for (int i = FLAGS_iters; i > 0; i -= kOpsPerLoop) {
-    int64 r0 = S1Angle::Radians(angle).e6(); angle += delta;
-    int64 r1 = S1Angle::Radians(angle).e6(); angle += delta;
-    int64 r2 = S1Angle::Radians(angle).e6(); angle += delta;
-    int64 r3 = S1Angle::Radians(angle).e6(); angle += delta;
-    int64 r4 = S1Angle::Radians(angle).e6(); angle += delta;
-    int64 r5 = S1Angle::Radians(angle).e6(); angle += delta;
-    int64 r6 = S1Angle::Radians(angle).e6(); angle += delta;
-    int64 r7 = S1Angle::Radians(angle).e6(); angle += delta;
-    e6_sum += ((r0 + r1) + (r2 + r3)) + ((r4 + r5) + (r6 + r7));
-  }
-  const double to_e6_time = S2Testing::GetCpuTime() - to_e6_start;
-  EXPECT_NE(e6_sum + angle, 0);  // Don't let them get optimized away.
-  S2_LOG(INFO) << "  To E6: "
-            << (FLAGS_iters / to_e6_time)
-            << " values per second";
-
-  // Make sure that the To/From E6 times are not much different.
-  // The difference factor slightly less than 2 on an x86_64.
-  EXPECT_LE(from_e6_time / to_e6_time, 3);
-  EXPECT_LE(to_e6_time / from_e6_time, 3);
 }
 
 // The current implementation guarantees exact conversions between

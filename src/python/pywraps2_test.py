@@ -414,5 +414,54 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertFalse(
         rect_bound.Contains(s2.S2LatLng.FromDegrees(2.0, 2.0).ToPoint()))
 
+  def testS2CellIdCenterSiTi(self):
+    cell = s2.S2CellId.FromFacePosLevel(3, 0x12345678, s2.S2CellId.kMaxLevel)
+
+    # Check that the (si, ti) coordinates of the center end in a
+    # 1 followed by (30 - level) 0s.
+
+    # Leaf level, 30.
+    face, si, ti = cell.GetCenterSiTi()
+    self.assertEqual(3, face)
+    self.assertEqual(1 << 0, si & 1)
+    self.assertEqual(1 << 0, ti & 1)
+
+    # Level 29.
+    face, si, ti = cell.parent(s2.S2CellId.kMaxLevel - 1).GetCenterSiTi()
+    self.assertEqual(3, face)
+    self.assertEqual(1 << 1, si & 3)
+    self.assertEqual(1 << 1, ti & 3)
+
+    # Level 28.
+    face, si, ti = cell.parent(s2.S2CellId.kMaxLevel - 2).GetCenterSiTi()
+    self.assertEqual(3, face)
+    self.assertEqual(1 << 2, si & 7)
+    self.assertEqual(1 << 2, ti & 7)
+
+    # Level 20.
+    face, si, ti = cell.parent(s2.S2CellId.kMaxLevel - 10).GetCenterSiTi()
+    self.assertEqual(3, face)
+    self.assertEqual(1 << 10, si & ((1 << 11) - 1))
+    self.assertEqual(1 << 10, ti & ((1 << 11) - 1))
+
+    # Level 10.
+    face, si, ti = cell.parent(s2.S2CellId.kMaxLevel - 20).GetCenterSiTi()
+    self.assertEqual(3, face)
+    self.assertEqual(1 << 20, si & ((1 << 21) - 1))
+    self.assertEqual(1 << 20, ti & ((1 << 21) - 1))
+
+    # Level 0.
+    face, si, ti = cell.parent(0).GetCenterSiTi()
+    self.assertEqual(3, face)
+    self.assertEqual(1 << 30, si & ((1 << 31) - 1))
+    self.assertEqual(1 << 30, ti & ((1 << 31) - 1))
+
+  def testS2CellIdToFromFaceIJ(self):
+    cell = s2.S2CellId.FromFaceIJ(3, 1234, 5678)
+    face, i, j, _ = cell.ToFaceIJOrientation()
+    self.assertEqual(3, face)
+    self.assertEqual(1234, i)
+    self.assertEqual(5678, j)
+
 if __name__ == "__main__":
   unittest.main()

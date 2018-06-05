@@ -17,8 +17,8 @@
 //
 // This holds the encoding/decoding routines that used to live in netutil
 
-#ifndef UTIL_CODING_CODER_H__
-#define UTIL_CODING_CODER_H__
+#ifndef S2_UTIL_CODING_CODER_H_
+#define S2_UTIL_CODING_CODER_H_
 
 #include <cstring>
 
@@ -550,4 +550,4 @@ inline bool Decoder::get_varint64(uint64* v) {
   return true;
 }
 
-#endif  // UTIL_CODING_CODER_H__
+#endif  // S2_UTIL_CODING_CODER_H_

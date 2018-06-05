@@ -503,8 +503,8 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   //   // int[3], 4 bytes of padding, double[4].
   //   Layout<int, double> x(3, 4);
   //   unsigned char* p = new unsigned char[x.AllocSize()];
-  //   MutableArraySlice<int> ints = x.Slice<0>(p);
-  //   MutableArraySlice<double> doubles = x.Slice<1>(p);
+  //   Span<int> ints = x.Slice<0>(p);
+  //   Span<double> doubles = x.Slice<1>(p);
   //
   // Requires: `N < NumSizes`.
   // Requires: `p` is aligned to `Alignment()`.
@@ -521,8 +521,8 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   //   // int[3], 4 bytes of padding, double[4].
   //   Layout<int, double> x(3, 4);
   //   unsigned char* p = new unsigned char[x.AllocSize()];
-  //   MutableArraySlice<int> ints = x.Slice<int>(p);
-  //   MutableArraySlice<double> doubles = x.Slice<double>(p);
+  //   Span<int> ints = x.Slice<int>(p);
+  //   Span<double> doubles = x.Slice<double>(p);
   //
   // Requires: `p` is aligned to `Alignment()`.
   template <class T, class Char>
@@ -538,8 +538,8 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   //   Layout<int, double> x(3, 4);
   //   unsigned char* p = new unsigned char[x.AllocSize()];
   //
-  //   MutableArraySlice<int> ints;
-  //   MutableArraySlice<double> doubles;
+  //   Span<int> ints;
+  //   Span<double> doubles;
   //   std::tie(ints, doubles) = x.Slices(p);
   //
   // Requires: `p` is aligned to `Alignment()`.
@@ -618,14 +618,15 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
       absl::StrAppend(&res, "[", size_[i], "]; @", offsets[i + 1], types[i + 1],
                       "(", sizes[i + 1], ")");
     }
-    if (NumTypes == NumSizes)
+    if (NumTypes == NumSizes && NumSizes > 0) {
       absl::StrAppend(&res, "[", size_[NumSizes - 1], "]");
+    }
     return res;
   }
 
  private:
   // Arguments of `Layout::Partial()` or `Layout::Layout()`.
-  size_t size_[NumSizes];
+  size_t size_[NumSizes > 0 ? NumSizes : 1];
 };
 
 template <size_t NumSizes, class... Ts>

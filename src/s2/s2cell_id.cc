@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <cmath>
 #include <cstring>
 #include <iosfwd>
 #include <mutex>
@@ -37,6 +38,7 @@ using S2::internal::kSwapMask;
 using S2::internal::kInvertMask;
 using S2::internal::kPosToIJ;
 using S2::internal::kPosToOrientation;
+using std::fabs;
 using std::max;
 using std::min;
 using std::vector;
@@ -432,8 +434,8 @@ R2Rect S2CellId::ExpandedByDistanceUV(const R2Rect& uv, S1Angle distance) {
   // points within the given distance of that side.  (The rectangle may be
   // expanded by a different amount in (u,v)-space on each side.)
   double u0 = uv[0][0], u1 = uv[0][1], v0 = uv[1][0], v1 = uv[1][1];
-  double max_u = std::max(std::abs(u0), std::abs(u1));
-  double max_v = std::max(std::abs(v0), std::abs(v1));
+  double max_u = std::max(fabs(u0), fabs(u1));
+  double max_v = std::max(fabs(v0), fabs(v1));
   double sin_dist = sin(distance);
   return R2Rect(R1Interval(ExpandEndpoint(u0, max_v, -sin_dist),
                            ExpandEndpoint(u1, max_v, sin_dist)),

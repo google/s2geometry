@@ -57,6 +57,8 @@
 #include "s2/util/gtl/container_logging.h"
 #include "s2/util/gtl/libc_allocator_with_realloc.h"
 
+namespace gtl {
+
 template <typename T,
           typename A =
               gtl::libc_allocator_with_realloc<T> >
@@ -673,10 +675,6 @@ std::ostream& operator<<(std::ostream& out, const compact_array<T, A>& array) {
   return out;
 }
 
-// New names for go/global-namespace-lsc:
-namespace gtl {
-using ::compact_array;
-using ::compact_array_base;
 }  // namespace gtl
 
 #endif  // S2_UTIL_GTL_COMPACT_ARRAY_H_

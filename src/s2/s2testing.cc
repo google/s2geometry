@@ -27,7 +27,6 @@
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
-#include "s2/base/sysinfo.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -316,12 +315,6 @@ void S2Testing::CheckCovering(const S2Region& region,
       CheckCovering(region, covering, check_tight, child);
     }
   }
-}
-
-double S2Testing::GetCpuTime() {
-  absl::Duration usage = base::CPUUsage();
-  S2_CHECK(usage != absl::ZeroDuration());  // Indicates error.
-  return ToDoubleSeconds(usage);
 }
 
 S2Testing::Fractal::Fractal()
