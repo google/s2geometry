@@ -1,5 +1,7 @@
 # S2 Geometry Library
 
+[![Build Status](https://travis-ci.org/google/s2geometry.svg?branch=master)](https://travis-ci.org/google/s2geometry)
+
 ## Overview
 
 This is a package for manipulating geometric shapes. Unlike many geometry
