@@ -56,6 +56,11 @@ if (APPLE)
     set(CMAKE_MACOSX_RPATH TRUE)
 endif()
 
+# Avoid megabytes of warnings like:
+# util/math/vector.h:178:16: warning: optimization attribute on
+# ‘double sqrt(double)’ follows definition but the attribute doesn’t
+# match [-Wattributes]
+add_definitions(-Wno-attributes)
 add_definitions(-Wno-deprecated-declarations -std=c++11)
 
 # If OpenSSL is installed in a non-standard location, configure with
