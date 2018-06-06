@@ -82,9 +82,9 @@ before_install:
   - ${CXX} --version
 
 install:
-  - [[ "$TRAVIS_OS_NAME" == osx ]] && brew install gflags glog
-  - [[ "$TRAVIS_OS_NAME" == osx ]] && wget https://github.com/google/googletest/archive/release-1.8.0.tar.gz
-  - [[ "$TRAVIS_OS_NAME" == osx ]] && tar zxvf release-1.8.0.tar.gz
+  - if [[ "$TRAVIS_OS_NAME" == osx ]]; then brew install gflags glog; fi
+  - if [[ "$TRAVIS_OS_NAME" == osx ]]; then wget https://github.com/google/googletest/archive/release-1.8.0.tar.gz; fi
+  - if [[ "$TRAVIS_OS_NAME" == osx ]]; then tar zxvf release-1.8.0.tar.gz; fi
 
 script:
   - mkdir build
