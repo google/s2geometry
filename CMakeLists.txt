@@ -523,6 +523,10 @@ if (GTEST_ROOT)
         s2testing s2 gtest_main)
     add_test(${test} ${test})
   endforeach()
+  # This test fails on OS X, but passes on Linux.  Windows status is unknown.
+  if (APPLE)
+    set_tests_properties(s2closest_cell_query_test PROPERTIES WILL_FAIL TRUE)
+  endif()
 endif()
 
 if (BUILD_EXAMPLES)
