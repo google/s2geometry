@@ -4,6 +4,7 @@ set(CMAKE_SWIG_FLAGS "")
 set_property(SOURCE s2.i PROPERTY SWIG_FLAGS "-module" "pywraps2")
 set_property(SOURCE s2.i PROPERTY CPLUSPLUS ON)
 
+# Starting in 3.8, swig_add_module is deprecated in favor of swig_add_library.
 if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
     swig_add_module(pywraps2 python s2.i)
 else()
