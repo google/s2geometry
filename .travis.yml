@@ -81,7 +81,6 @@ before_install:
   - eval "${MATRIX_EVAL}"
   - ${CC} --version
   - ${CXX} --version
-  - echo GTEST_ROOT "${GTEST_ROOT}"
 
 install:
   - if [[ "$TRAVIS_OS_NAME" == osx ]]; then brew install gflags glog; fi
