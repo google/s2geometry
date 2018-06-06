@@ -75,6 +75,7 @@ matrix:
       env:
         - MATRIX_EVAL=""
         - GTEST_ROOT=../googletest-release-1.8.0/googletest
+        - OPENSSL_ROOT_DIR=/usr/local/opt/openssl
 
 before_install:
   - eval "${MATRIX_EVAL}"
@@ -82,7 +83,7 @@ before_install:
   - ${CXX} --version
 
 install:
-  - if [[ "$TRAVIS_OS_NAME" == osx ]]; then brew install gflags glog openssl; fi
+  - if [[ "$TRAVIS_OS_NAME" == osx ]]; then brew install gflags glog; fi
   - if [[ "$TRAVIS_OS_NAME" == osx ]]; then wget https://github.com/google/googletest/archive/release-1.8.0.tar.gz; fi
   - if [[ "$TRAVIS_OS_NAME" == osx ]]; then tar zxvf release-1.8.0.tar.gz; fi
 
