@@ -411,6 +411,7 @@ install(TARGETS s2 DESTINATION lib)
 message("GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
   add_subdirectory(${GTEST_ROOT} build_gtest)
+  include_directories(${GTEST_ROOT}/include)
 
   set(S2TestFiles
       src/s2/encoded_s2cell_id_vector_test.cc
