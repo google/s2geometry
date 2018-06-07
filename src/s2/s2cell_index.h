@@ -476,6 +476,8 @@ inline S2CellId S2CellIndex::RangeIterator::limit_id() const {
 }
 
 inline bool S2CellIndex::RangeIterator::done() const {
+  S2_DCHECK(it_ != decltype(it_)()) << "Call Begin() or Seek() first.";
+
   // Note that the last element of range_nodes_ is a sentinel value.
   return it_ >= range_nodes_->end() - 1;
 }

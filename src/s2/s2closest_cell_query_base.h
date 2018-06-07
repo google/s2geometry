@@ -674,10 +674,11 @@ void S2ClosestCellQueryBase<Distance>::InitQueue() {
     initial_cells = &intersection_with_max_distance_;
   }
   NonEmptyRangeIterator range(index_);
-  for (int i = 0; i < initial_cells->size() && !range.done(); ++i) {
+  for (int i = 0; i < initial_cells->size(); ++i) {
     S2CellId id = (*initial_cells)[i];
     bool seek = (i == 0) || id.range_min() >= range.limit_id();
     ProcessOrEnqueue(id, &range, seek);
+    if (range.done()) break;
   }
 }
 
