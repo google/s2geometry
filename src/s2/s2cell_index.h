@@ -286,6 +286,14 @@ class S2CellIndex {
     bool Advance(int n);
 
    private:
+    // A special value used to indicate that the RangeIterator has not yet
+    // been initialized by calling Begin() or Seek().
+    std::vector<RangeNode>::const_iterator kUninitialized() const {
+      // Note that since the last element of range_nodes_ is a sentinel value,
+      // it_ will never legitimately be positioned at range_nodes_->end().
+      return range_nodes_->end();
+    }
+
     friend class ContentsIterator;
     const std::vector<RangeNode>* range_nodes_;
     std::vector<RangeNode>::const_iterator it_;
@@ -420,6 +428,8 @@ class S2CellIndex {
       return x < y.start_id;
     }
   };
+  // The last element of range_nodes_ is a sentinel value, which is necessary
+  // in order to represent the range covered by the previous element.
   std::vector<RangeNode> range_nodes_;
 
   S2CellIndex(const S2CellIndex&) = delete;
@@ -464,6 +474,7 @@ inline void S2CellIndex::CellIterator::Next() {
 inline S2CellIndex::RangeIterator::RangeIterator(const S2CellIndex* index)
     : range_nodes_(&index->range_nodes_), it_() {
   S2_DCHECK(!range_nodes_->empty()) << "Call Build() first.";
+  if (google::DEBUG_MODE) it_ = kUninitialized();  // See done().
 }
 
 inline S2CellId S2CellIndex::RangeIterator::start_id() const {
@@ -476,7 +487,7 @@ inline S2CellId S2CellIndex::RangeIterator::limit_id() const {
 }
 
 inline bool S2CellIndex::RangeIterator::done() const {
-  S2_DCHECK(it_ != decltype(it_)()) << "Call Begin() or Seek() first.";
+  S2_DCHECK(it_ != kUninitialized()) << "Call Begin() or Seek() first.";
 
   // Note that the last element of range_nodes_ is a sentinel value.
   return it_ >= range_nodes_->end() - 1;
