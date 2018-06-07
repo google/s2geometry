@@ -91,4 +91,4 @@ script:
   - mkdir build
   - cd build
   - cmake -DGTEST_ROOT=$GTEST_ROOT -DWITH_GFLAGS=ON -DWITH_GLOG=ON ..
-  - make && make test
+  - make && make CTEST_OUTPUT_ON_FAILURE=1 test
