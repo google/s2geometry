@@ -32,7 +32,6 @@ using Graph = S2Builder::Graph;
 using GraphOptions = S2Builder::GraphOptions;
 
 using DegenerateEdges = GraphOptions::DegenerateEdges;
-using DuplicateEdges = GraphOptions::DuplicateEdges;
 using SiblingPairs = GraphOptions::SiblingPairs;
 
 using Edge = Graph::Edge;
