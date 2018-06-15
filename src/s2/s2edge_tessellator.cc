@@ -40,12 +40,13 @@ S2EdgeTessellator::S2EdgeTessellator(const S2::Projection* projection,
 void S2EdgeTessellator::AppendProjected(
     const S2Point& a, const S2Point& b, vector<R2Point>* vertices) const {
   R2Point pa = proj_.Project(a);
-  R2Point pb = WrapDestination(pa, proj_.Project(b));
   if (vertices->empty()) {
     vertices->push_back(pa);
   } else {
+    pa = WrapDestination(vertices->back(), pa);
     S2_DCHECK_EQ(vertices->back(), pa) << "Appended edges must form a chain";
   }
+  R2Point pb = WrapDestination(pa, proj_.Project(b));
   AppendProjected(pa, a, pb, b, vertices);
 }
 

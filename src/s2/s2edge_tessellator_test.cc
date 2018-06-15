@@ -19,11 +19,16 @@
 
 #include <gtest/gtest.h>
 #include "s2/s2edge_distances.h"
+#include "s2/s2loop.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2projections.h"
 #include "s2/s2testing.h"
+#include "s2/s2text_format.h"
 
+using s2textformat::ParsePointsOrDie;
 using std::fabs;
+using std::min;
+using std::max;
 using std::vector;
 
 namespace {
@@ -188,6 +193,32 @@ TEST(S2EdgeTessellator, AppendProjected) {
   S2Point b = S2LatLng::FromDegrees(50, 100).ToPoint();
   DistStats stats = TestProjected(proj, tolerance, a, b);
   EXPECT_LT(stats.max_dist(), tolerance);
+}
+
+TEST(S2EdgeTessellator, AppendProjectedLoopAcrossAntimeridian) {
+  // Verify that projecting a chain of edges will generate longitudes outside
+  // the range [-180, 180] if necessary to maintain continuity.
+  //
+  // The following loop crosses the antimeridian four times (twice in each
+  // direction).
+  auto loop = ParsePointsOrDie("0:160, 0:-40, 0:120, 0:-80, 10:120, "
+                               "10:-40, 0:160");
+  S2::PlateCarreeProjection proj(180);
+  S1Angle tolerance(S1Angle::E7(1));
+  S2EdgeTessellator tess(&proj, tolerance);
+  vector<R2Point> vertices;
+  for (int i = 0; i + 1 < loop.size(); ++i) {
+    tess.AppendProjected(loop[i], loop[i + 1], &vertices);
+  }
+  // Note that the R2Point coordinates are in (lng, lat) order.
+  double min_lng = vertices[0].x();
+  double max_lng = vertices[0].x();
+  for (const R2Point& v : vertices) {
+    min_lng = min(min_lng, v.x());
+    max_lng = max(max_lng, v.x());
+  }
+  EXPECT_EQ(160, min_lng);
+  EXPECT_EQ(640, max_lng);
 }
 
 TEST(S2EdgeTessellator, SeattleToNewYork) {
