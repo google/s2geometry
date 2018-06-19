@@ -40,15 +40,16 @@ namespace s2shapeutil {
 // S2Builder, which has more convenient interface.
 //
 // The input consists of a set of connected components, where each component
-// consists of one or more loops that satisfy the following properties:
+// consists of one or more loops.  The components must satisfy the following
+// properties:
 //
 //  - The loops in each component must form a subdivision of the sphere (i.e.,
 //    they must cover the entire sphere without overlap), except that a
 //    component may consist of a single loop if and only if that loop is
 //    degenerate (i.e., its interior is empty).
 //
-//  - The boundaries of different connected components must be disjoint
-//    (i.e. no crossing edges or shared vertices).
+//  - The boundaries of different components must be disjoint (i.e. no
+//    crossing edges or shared vertices).
 //
 //  - No component should be empty, and no loop should have zero edges.
 //
