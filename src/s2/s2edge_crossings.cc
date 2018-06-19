@@ -34,6 +34,7 @@ using internal::GetIntersectionExact;
 using internal::IntersectionMethod;
 using internal::intersection_method_tally_;
 using std::fabs;
+using std::sqrt;
 
 // All error bounds in this file are expressed in terms of the maximum
 // rounding error for a floating-point type.  The rounding error is half of
@@ -288,7 +289,14 @@ static bool GetIntersectionStableSorted(
 
   // Finally we normalize the result, compute the corresponding error, and
   // check whether the total error is acceptable.
-  T x_len = x.Norm();
+  T x_len2 = x.Norm2();
+  if (x_len2 < std::numeric_limits<T>::min()) {
+    // If x.Norm2() is less than the minimum normalized value of T, x_len might
+    // lose precision and the result might fail to satisfy S2::IsUnitLength().
+    // TODO(ericv): Implement S2::RobustNormalize().
+    return false;
+  }
+  T x_len = sqrt(x_len2);
   const T kMaxError = kIntersectionError.radians();
   if (error > (kMaxError - T_ERR) * x_len) {
     return false;
