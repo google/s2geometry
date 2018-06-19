@@ -66,11 +66,10 @@ namespace s2builderutil {
 // polygon and is not modified, then the output has the same cyclic ordering
 // of loop vertices and the same loop ordering as the input polygon.
 //
-// CAVEAT: Because polygons are constructed from their boundaries, this method
-// cannot distinguish between the empty and full polygons.  An empty boundary
-// always yields an empty polygon.  If the result should sometimes be the full
-// polygon, such logic must be implemented outside of this class (and will
-// need to consider factors other than the polygon's boundary).
+// If the polygon has no edges, then the graph's IsFullPolygonPredicate is
+// called to determine whether the output polygon should be empty (containing
+// no points) or full (containing all points).  This predicate can be
+// specified as part of the S2Builder input geometry.
 class S2PolygonLayer : public S2Builder::Layer {
  public:
   class Options {

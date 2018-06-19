@@ -68,13 +68,13 @@
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/container/internal/compressed_tuple.h"
+#include "s2/third_party/absl/container/internal/container_memory.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/meta/type_traits.h"
 #include "s2/third_party/absl/strings/string_view.h"
 #include "s2/third_party/absl/utility/utility.h"
 #include "s2/util/gtl/layout.h"
-#include "s2/util/gtl/subtle/compressed_tuple.h"
-#include "s2/util/gtl/subtle/container_memory.h"
 
 namespace gtl {
 
@@ -283,10 +283,11 @@ template <typename Key, typename Data, typename Compare, typename Alloc,
 struct map_params : common_params<Key, Compare, Alloc, TargetNodeSize,
                                   sizeof(std::pair<const Key, Data>), Multi> {
   using mapped_type = Data;
-  using value_type = std::pair<const Key, mapped_type>;
-  // TODO(user): Stop supporting move-only keys and get rid of
-  // mutable_value_type.
-  using mutable_value_type = std::pair<Key, mapped_type>;
+  // This type allows us to move keys when it is safe to do so. It is safe
+  // for maps in which value_type and mutable_value_type are layout compatible.
+  using slot_type = absl::container_internal::slot_type<Key, mapped_type>;
+  using value_type = typename slot_type::value_type;
+  using mutable_value_type = typename slot_type::mutable_value_type;
   using pointer = value_type *;
   using const_pointer = const value_type *;
   using reference = value_type &;
@@ -317,7 +318,42 @@ struct set_params
     : common_params<Key, Compare, Alloc, TargetNodeSize, sizeof(Key), Multi> {
   using mapped_type = void;
   using value_type = Key;
-  using mutable_value_type = value_type;
+  using mutable_value_type = Key;
+  // This type implements the necessary functions from the subtle::slot_type
+  // interface.
+  struct slot_type {
+    value_type value;
+
+    template <class... Args>
+    static void construct(Alloc *alloc, slot_type *slot, Args &&... args) {
+      absl::allocator_traits<Alloc>::construct(*alloc, &slot->value,
+                                               std::forward<Args>(args)...);
+    }
+
+    static void construct(Alloc *alloc, slot_type *slot, slot_type *other) {
+      absl::allocator_traits<Alloc>::construct(*alloc, &slot->value,
+                                               std::move(other->value));
+    }
+
+    static void destroy(Alloc *alloc, slot_type *slot) {
+      absl::allocator_traits<Alloc>::destroy(*alloc, &slot->value);
+    }
+
+    static void swap(Alloc * /*alloc*/, slot_type *a, slot_type *b) {
+      using std::swap;
+      swap(a->value, b->value);
+    }
+
+    static void move(Alloc * /*alloc*/, slot_type *src, slot_type *dest) {
+      dest->value = std::move(src->value);
+    }
+
+    static void move(Alloc *alloc, slot_type *first, slot_type *last,
+                     slot_type *result) {
+      for (slot_type *src = first, *dest = result; src != last; ++src, ++dest)
+        move(alloc, src, dest);
+    }
+  };
   using pointer = value_type *;
   using const_pointer = const value_type *;
   using reference = value_type &;
@@ -353,6 +389,7 @@ class btree_node {
   using is_multi_container = typename Params::is_multi_container;
   using field_type = typename Params::node_count_type;
   using allocator_type = typename Params::allocator_type;
+  using slot_type = typename Params::slot_type;
 
  public:
   using params_type = Params;
@@ -405,7 +442,7 @@ class btree_node {
   //
   //   // The array of values. Only the first `count` of these values have been
   //   // constructed and are valid.
-  //   mutable_value_type values[kNodeValues];
+  //   slot_type values[kNodeValues];
   //
   //   // The array of child pointers. The keys in children[i] are all less
   //   // than key(i). The keys in children[i + 1] are all greater than key(i).
@@ -428,8 +465,8 @@ class btree_node {
     kInternal,
   };
 
-  using layout_type = Layout<btree_node *, field_type, NodeType,
-                             mutable_value_type, btree_node *>;
+  using layout_type =
+      Layout<btree_node *, field_type, NodeType, slot_type, btree_node *>;
   constexpr static size_type SizeWithNValues(size_type n) {
     return layout_type(/*parent*/ 1,
                        /*position, count, max_count*/ 3, /*type*/ 1,
@@ -509,10 +546,8 @@ class btree_node {
   void set_type(NodeType type) { *GetField<2>() = type; }
   void set_parent(btree_node *p) { *GetField<0>() = p; }
   field_type &mutable_count() { return GetField<1>()[1]; }
-  mutable_value_type *internal_value(int i) { return &GetField<3>()[i]; }
-  const mutable_value_type *internal_value(int i) const {
-    return &GetField<3>()[i];
-  }
+  slot_type *slot(int i) { return &GetField<3>()[i]; }
+  const slot_type *slot(int i) const { return &GetField<3>()[i]; }
   void set_position(field_type v) { GetField<1>()[0] = v; }
   void set_count(field_type v) { GetField<1>()[1] = v; }
   void set_max_count(field_type v) { GetField<1>()[2] = v; }
@@ -541,16 +576,9 @@ class btree_node {
   }
 
   // Getters for the key/value at position i in the node.
-  const key_type &key(int i) const {
-    return params_type::key(*internal_value(i));
-  }
-  reference value(int i) {
-    return reinterpret_cast<reference>(*internal_value(i));
-  }
-  const_reference value(int i) const {
-    return reinterpret_cast<const_reference>(*internal_value(i));
-  }
-  mutable_value_type *mutable_value(int i) { return internal_value(i); }
+  const key_type &key(int i) const { return params_type::key(slot(i)->value); }
+  reference value(int i) { return slot(i)->value; }
+  const_reference value(int i) const { return slot(i)->value; }
 
   // Getters/setter for the child at position i in the node.
   btree_node *child(int i) const { return GetField<4>()[i]; }
@@ -713,8 +741,8 @@ class btree_node {
     n->set_max_count(max_count);
     n->set_count(0);
     n->set_type(NodeType::kLeaf);
-    subtle::SanitizerPoisonMemoryRegion(n->mutable_value(0),
-                                        max_count * sizeof(mutable_value_type));
+    subtle::SanitizerPoisonMemoryRegion(n->slot(0),
+                                        max_count * sizeof(slot_type));
     return n;
   }
   static btree_node *init_internal(btree_node *n, btree_node *parent) {
@@ -739,13 +767,12 @@ class btree_node {
  private:
   template <typename... Args>
   void value_init(const size_type i, allocator_type *alloc, Args &&... args) {
-    subtle::SanitizerUnpoisonObject(internal_value(i));
-    absl::allocator_traits<allocator_type>::construct(
-        *alloc, internal_value(i), std::forward<Args>(args)...);
+    subtle::SanitizerUnpoisonObject(slot(i));
+    slot_type::construct(alloc, slot(i), std::forward<Args>(args)...);
   }
   void value_destroy(const size_type i, allocator_type *alloc) {
-    absl::allocator_traits<allocator_type>::destroy(*alloc, internal_value(i));
-    subtle::SanitizerPoisonObject(internal_value(i));
+    slot_type::destroy(alloc, slot(i));
+    subtle::SanitizerPoisonObject(slot(i));
   }
 
   // Move n values starting at value i in this node into the values starting at
@@ -753,13 +780,10 @@ class btree_node {
   void uninitialized_move_n(const size_type n, const size_type i,
                             const size_type j, btree_node *x,
                             allocator_type *alloc) {
-    subtle::SanitizerUnpoisonMemoryRegion(x->internal_value(j),
-                                          n * sizeof(mutable_value_type));
-    for (auto *src = internal_value(i), *end = src + n,
-              *dest = x->internal_value(j);
+    subtle::SanitizerUnpoisonMemoryRegion(x->slot(j), n * sizeof(slot_type));
+    for (slot_type *src = slot(i), *end = src + n, *dest = x->slot(j);
          src != end; ++src, ++dest) {
-      absl::allocator_traits<allocator_type>::construct(*alloc, dest,
-                                                        std::move(*src));
+      slot_type::construct(alloc, dest, src);
     }
   }
 
@@ -952,6 +976,7 @@ class btree {
   // Internal types made public for use by btree_container types.
   using params_type = Params;
   using mutable_value_type = typename Params::mutable_value_type;
+  using slot_type = typename Params::slot_type;
 
  private:
   // Copies the values in x into this btree in their order in x.
@@ -1408,7 +1433,9 @@ class btree {
  private:
   // We use compressed tuple in order to save space because key_compare and
   // allocator_type are usually empty.
-  subtle::CompressedTuple<key_compare, allocator_type, node_type *> root_;
+  absl::container_internal::CompressedTuple<key_compare, allocator_type,
+                                            node_type *>
+      root_;
 
   // A pointer to the rightmost node. Note that the leftmost node is stored as
   // the root's parent.
@@ -1443,9 +1470,15 @@ inline void btree_node<P>::emplace_value(const size_type i,
                                          allocator_type *alloc,
                                          Args &&... args) {
   assert(i <= count());
-  value_init(count(), alloc, std::forward<Args>(args)...);
-  std::rotate(mutable_value(i), mutable_value(count()),
-              mutable_value(count() + 1));
+  // Shift old values to create space for new value and then construct it in
+  // place.
+  if (i < count()) {
+    value_init(count(), alloc, slot(count() - 1));
+    for (size_type j = count() - 1; j > i; --j)
+      slot_type::move(alloc, slot(j - 1), slot(j));
+    value_destroy(i, alloc);
+  }
+  value_init(i, alloc, std::forward<Args>(args)...);
   set_count(count() + 1);
 
   if (!leaf() && count() > i + 1) {
@@ -1466,7 +1499,7 @@ inline void btree_node<P>::remove_value(const int i, allocator_type *alloc) {
     clear_child(count());
   }
 
-  std::move(mutable_value(i + 1), mutable_value(count()), mutable_value(i));
+  slot_type::move(alloc, slot(i + 1), slot(count()), slot(i));
   value_destroy(count() - 1, alloc);
   set_count(count() - 1);
 }
@@ -1482,18 +1515,17 @@ void btree_node<P>::rebalance_right_to_left(const int to_move,
   assert(to_move <= right->count());
 
   // 1) Move the delimiting value in the parent to the left node.
-  value_init(count(), alloc, std::move(*parent()->mutable_value(position())));
+  value_init(count(), alloc, parent()->slot(position()));
 
   // 2) Move the (to_move - 1) values from the right node to the left node.
   right->uninitialized_move_n(to_move - 1, 0, count() + 1, this, alloc);
 
   // 3) Move the new delimiting value to the parent from the right node.
-  *parent()->mutable_value(position()) =
-      std::move(*right->mutable_value(to_move - 1));
+  slot_type::move(alloc, right->slot(to_move - 1), parent()->slot(position()));
 
   // 4) Shift the values in the right node to their correct position.
-  std::move(right->mutable_value(to_move), right->mutable_value(right->count()),
-            right->mutable_value(0));
+  slot_type::move(alloc, right->slot(to_move), right->slot(right->count()),
+                  right->slot(0));
 
   // 5) Destroy the now-empty to_move entries in the right node.
   right->value_destroy_n(right->count() - to_move, to_move, alloc);
@@ -1538,17 +1570,20 @@ void btree_node<P>::rebalance_left_to_right(const int to_move,
     // 1) Shift existing values in the right node to their correct positions.
     right->uninitialized_move_n(to_move, right->count() - to_move,
                                 right->count(), right, alloc);
-    std::move_backward(right->mutable_value(0),
-                       right->mutable_value(right->count() - to_move),
-                       right->mutable_value(right->count()));
+    for (slot_type *src = right->slot(right->count() - to_move - 1),
+                   *dest = right->slot(right->count() - 1),
+                   *end = right->slot(0);
+         src >= end; --src, --dest) {
+      slot_type::move(alloc, src, dest);
+    }
 
     // 2) Move the delimiting value in the parent to the right node.
-    *right->mutable_value(to_move - 1) =
-        std::move(*parent()->mutable_value(position()));
+    slot_type::move(alloc, parent()->slot(position()),
+                    right->slot(to_move - 1));
 
     // 3) Move the (to_move - 1) values from the left node to the right node.
-    std::move(mutable_value(count() - (to_move - 1)), mutable_value(count()),
-              right->mutable_value(0));
+    slot_type::move(alloc, slot(count() - (to_move - 1)), slot(count()),
+                    right->slot(0));
   } else {
     // The right node does not have enough initialized space to hold the new
     // to_move entries, so part of them will move to uninitialized space.
@@ -1557,22 +1592,19 @@ void btree_node<P>::rebalance_left_to_right(const int to_move,
     right->uninitialized_move_n(right->count(), 0, to_move, right, alloc);
 
     // 2) Move the delimiting value in the parent to the right node.
-    right->value_init(to_move - 1, alloc,
-                      std::move(*parent()->mutable_value(position())));
+    right->value_init(to_move - 1, alloc, parent()->slot(position()));
 
     // 3) Move the (to_move - 1) values from the left node to the right node.
     const size_type uninitialized_remaining = to_move - right->count() - 1;
     uninitialized_move_n(uninitialized_remaining,
                          count() - uninitialized_remaining, right->count(),
                          right, alloc);
-    std::move(mutable_value(count() - (to_move - 1)),
-              mutable_value(count() - uninitialized_remaining),
-              right->mutable_value(0));
+    slot_type::move(alloc, slot(count() - (to_move - 1)),
+                    slot(count() - uninitialized_remaining), right->slot(0));
   }
 
   // 4) Move the new delimiting value to the parent from the left node.
-  *parent()->mutable_value(position()) =
-      std::move(*mutable_value(count() - to_move));
+  slot_type::move(alloc, slot(count() - to_move), parent()->slot(position()));
 
   // 5) Destroy the now-empty to_move entries in the left node.
   value_destroy_n(count() - to_move, to_move, alloc);
@@ -1621,8 +1653,7 @@ void btree_node<P>::split(const int insert_position, btree_node *dest,
 
   // The split key is the largest value in the left sibling.
   set_count(count() - 1);
-  parent()->emplace_value(position(), alloc,
-                          std::move(*mutable_value(count())));
+  parent()->emplace_value(position(), alloc, slot(count()));
   value_destroy(count(), alloc);
   parent()->init_child(position() + 1, dest);
 
@@ -1641,7 +1672,7 @@ void btree_node<P>::merge(btree_node *src, allocator_type *alloc) {
   assert(position() + 1 == src->position());
 
   // Move the delimiting value to the left node.
-  value_init(count(), alloc, std::move(*parent()->mutable_value(position())));
+  value_init(count(), alloc, parent()->slot(position()));
 
   // Move the values from the right to the left node.
   src->uninitialized_move_n(src->count(), 0, count() + 1, this, alloc);
@@ -1677,9 +1708,11 @@ void btree_node<P>::swap(btree_node *x, allocator_type *alloc) {
   }
 
   // Swap the values.
-  std::swap_ranges(
-      smaller->mutable_value(0), smaller->mutable_value(smaller->count()),
-      larger->mutable_value(0));
+  for (slot_type *a = smaller->slot(0), *b = larger->slot(0),
+                 *end = a + smaller->count();
+       a != end; ++a, ++b) {
+    slot_type::swap(alloc, a, b);
+  }
 
   // Move values that can't be swapped.
   const size_type to_move = larger->count() - smaller->count();
@@ -1914,8 +1947,8 @@ auto btree<P>::erase(iterator iter) -> iterator {
     --iter;
     assert(iter.node->leaf());
     assert(!compare_keys(internal_iter.key(), iter.key()));
-    *internal_iter.node->mutable_value(internal_iter.position) =
-        std::move(*iter.node->mutable_value(iter.position));
+    slot_type::move(mutable_allocator(), iter.node->slot(iter.position),
+                    internal_iter.node->slot(internal_iter.position));
     internal_delete = true;
   }
 

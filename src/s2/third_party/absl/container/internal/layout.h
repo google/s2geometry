@@ -180,7 +180,8 @@
 #include "s2/third_party/absl/types/span.h"
 #include "s2/third_party/absl/utility/utility.h"
 
-namespace gtl {
+namespace absl {
+namespace container_internal {
 
 // A type wrapper that instructs `Layout` to use the specific alignment for the
 // array. `Layout<..., Aligned<T, N>, ...>` has exactly the same API
@@ -698,6 +699,7 @@ class Layout : public internal_layout::LayoutType<sizeof...(Ts), Ts...> {
       : internal_layout::LayoutType<sizeof...(Ts), Ts...>(sizes...) {}
 };
 
-}  // namespace gtl
+}  // namespace container_internal
+}  // namespace absl
 
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INTERNAL_LAYOUT_H_

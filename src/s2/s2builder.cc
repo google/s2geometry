@@ -308,8 +308,8 @@ void S2Builder::set_label(Label label) {
   label_set_modified_ = true;
 }
 
-static bool IsFullPolygonUnspecified(const S2Builder::Graph& g,
-                                     S2Error* error) {
+bool S2Builder::IsFullPolygonUnspecified(const S2Builder::Graph& g,
+                                         S2Error* error) {
   error->Init(S2Error::BUILDER_IS_FULL_PREDICATE_NOT_SPECIFIED,
               "A degenerate polygon was found, but no predicate was specified "
               "to determine whether the polygon is empty or full.  Call "
@@ -317,10 +317,16 @@ static bool IsFullPolygonUnspecified(const S2Builder::Graph& g,
   return false;  // Assumes the polygon is empty.
 }
 
+S2Builder::IsFullPolygonPredicate S2Builder::IsFullPolygon(bool is_full) {
+  return [is_full](const S2Builder::Graph& g, S2Error* error) {
+      return is_full;
+    };
+}
+
 void S2Builder::StartLayer(unique_ptr<Layer> layer) {
   layer_options_.push_back(layer->graph_options());
   layer_begins_.push_back(input_edges_.size());
-  layer_is_full_polygon_predicates_.push_back(IsFullPolygonUnspecified);
+  layer_is_full_polygon_predicates_.push_back(IsFullPolygon(false));
   layers_.push_back(std::move(layer));
 }
 
@@ -412,7 +418,8 @@ void S2Builder::ForceVertex(const S2Point& vertex) {
 
 // An S2Shape used to represent the entire collection of S2Builder input edges.
 // Vertices are specified as indices into a vertex vector to save space.
-class VertexIdEdgeVectorShape : public S2Shape {
+namespace {
+class VertexIdEdgeVectorShape final : public S2Shape {
  public:
   // Requires that "edges" is constant for the lifetime of this object.
   VertexIdEdgeVectorShape(const vector<pair<int32, int32>>& edges,
@@ -424,18 +431,18 @@ class VertexIdEdgeVectorShape : public S2Shape {
   const S2Point& vertex1(int e) const { return vertex(edges_[e].second); }
 
   // S2Shape interface:
-  int num_edges() const final { return edges_.size(); }
-  Edge edge(int e) const final {
+  int num_edges() const override { return edges_.size(); }
+  Edge edge(int e) const override {
     return Edge(vertices_[edges_[e].first], vertices_[edges_[e].second]);
   }
-  int dimension() const final { return 1; }
-  ReferencePoint GetReferencePoint() const final {
+  int dimension() const override { return 1; }
+  ReferencePoint GetReferencePoint() const override {
     return ReferencePoint::Contained(false);
   }
-  int num_chains() const final { return edges_.size(); }
-  Chain chain(int i) const final { return Chain(i, 1); }
-  Edge chain_edge(int i, int j) const final { return edge(i); }
-  ChainPosition chain_position(int e) const final {
+  int num_chains() const override { return edges_.size(); }
+  Chain chain(int i) const override { return Chain(i, 1); }
+  Edge chain_edge(int i, int j) const override { return edge(i); }
+  ChainPosition chain_position(int e) const override {
     return ChainPosition(e, 0);
   }
 
@@ -445,6 +452,7 @@ class VertexIdEdgeVectorShape : public S2Shape {
   const vector<std::pair<int32, int32>>& edges_;
   const vector<S2Point>& vertices_;
 };
+}  // namespace
 
 bool S2Builder::Build(S2Error* error) {
   // S2_CHECK rather than S2_DCHECK because this is friendlier than crashing on the

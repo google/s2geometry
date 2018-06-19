@@ -32,7 +32,6 @@ using Graph = S2Builder::Graph;
 using GraphOptions = S2Builder::GraphOptions;
 
 using DegenerateEdges = GraphOptions::DegenerateEdges;
-using DuplicateEdges = GraphOptions::DuplicateEdges;
 using SiblingPairs = GraphOptions::SiblingPairs;
 
 using Edge = Graph::Edge;
@@ -59,8 +58,10 @@ ClosedSetNormalizer::ClosedSetNormalizer(
   S2_DCHECK(graph_options_out_[1].sibling_pairs() != SiblingPairs::REQUIRE);
 
   // Set the GraphOptions for the input graphs to ensure that (1) they share a
-  // common set of vertices, and (2) to ensure that redundant degeneracies are
-  // reduced to a single copy each.
+  // common set of vertices, (2) degenerate edges are kept only if they are
+  // isolated, and (3) multiple copies of siblings pairs are discarded.  (Note
+  // that there may be multiple copies of isolated degenerate edges; clients
+  // can eliminate them if desired using DuplicateEdges::MERGE.)
   for (int dim = 0; dim < 3; ++dim) {
     graph_options_in_[dim].set_allow_vertex_filtering(false);
   }

@@ -222,8 +222,9 @@ using absl::base_internal::LINKER_INITIALIZED;
 #if defined(NDEBUG)
 #define ABSL_ASSERT(expr) (false ? (void)(expr) : (void)0)
 #else
-#define ABSL_ASSERT(expr) \
-  (ABSL_PREDICT_TRUE((expr)) ? (void)0 : [] { assert(false && #expr); }())
+#define ABSL_ASSERT(expr)              \
+  (ABSL_PREDICT_TRUE((expr)) ? (void)0 \
+                             : [] { assert(false && #expr); }())  // NOLINT
 #endif
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_MACROS_H_

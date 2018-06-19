@@ -142,6 +142,22 @@ TEST(ToString, FullPolygon) {
   EXPECT_EQ("full", s2textformat::ToString(full));
 }
 
+TEST(ToString, S2PolygonLoopSeparator) {
+  const string kLoop1 = "0:0, 0:5, 5:0";
+  const string kLoop2 = "1:1, 1:4, 4:1";  // Shells and holes same direction.
+  auto polygon = s2textformat::MakePolygonOrDie(kLoop1 + "; " + kLoop2);
+  EXPECT_EQ(kLoop1 + ";\n" + kLoop2, s2textformat::ToString(*polygon));
+  EXPECT_EQ(kLoop1 + "; " + kLoop2, s2textformat::ToString(*polygon, "; "));
+}
+
+TEST(ToString, LaxPolygonLoopSeparator) {
+  const string kLoop1 = "0:0, 0:5, 5:0";
+  const string kLoop2 = "1:1, 4:1, 1:4";  // Interior on left of all loops.
+  auto polygon = s2textformat::MakeLaxPolygonOrDie(kLoop1 + "; " + kLoop2);
+  EXPECT_EQ(kLoop1 + ";\n" + kLoop2, s2textformat::ToString(*polygon));
+  EXPECT_EQ(kLoop1 + "; " + kLoop2, s2textformat::ToString(*polygon, "; "));
+}
+
 TEST(MakeLaxPolygon, Empty) {
   // Verify that "" and "empty" both create empty polygons.
   auto shape = s2textformat::MakeLaxPolygonOrDie("");

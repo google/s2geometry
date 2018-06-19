@@ -271,11 +271,12 @@ string ToString(const S2CellUnion& cell_union);
 string ToString(const S2Loop& loop);
 string ToString(S2PointLoopSpan loop);
 string ToString(const S2Polyline& polyline);
-string ToString(const S2Polygon& polygon);
+string ToString(const S2Polygon& polygon, const char* loop_separator = ";\n");
 string ToString(const std::vector<S2Point>& points);
 string ToString(const std::vector<S2LatLng>& points);
 string ToString(const S2LaxPolylineShape& polyline);
-string ToString(const S2LaxPolygonShape& polygon);
+string ToString(const S2LaxPolygonShape& polygon,
+                const char* loop_separator = ";\n");
 
 // Convert the contents of an S2ShapeIndex to the format above.  The index may
 // contain S2Shapes of any type.  Shapes are reordered if necessary so that

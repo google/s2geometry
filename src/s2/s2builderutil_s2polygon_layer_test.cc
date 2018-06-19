@@ -50,9 +50,12 @@ void TestS2Polygon(const vector<const char*>& input_strs,
   S2Polygon output;
   builder.StartLayer(make_unique<S2PolygonLayer>(
       &output, S2PolygonLayer::Options(edge_type)));
+  bool is_full = false;
   for (auto input_str : input_strs) {
-    builder.AddPolygon(*s2textformat::MakeVerbatimPolygon(input_str));
+    if (string(input_str) == "full") is_full = true;
+    builder.AddPolygon(*s2textformat::MakeVerbatimPolygonOrDie(input_str));
   }
+  builder.AddIsFullPolygonPredicate(S2Builder::IsFullPolygon(is_full));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   // The input strings in tests may not be in normalized form, so we build an
@@ -60,6 +63,16 @@ void TestS2Polygon(const vector<const char*>& input_strs,
   unique_ptr<S2Polygon> expected(s2textformat::MakePolygon(expected_str));
   EXPECT_EQ(s2textformat::ToString(*expected),
             s2textformat::ToString(output));
+}
+
+void TestS2Polygon(const vector<const char*>& input_strs,
+                   const char* expected_str) {
+  TestS2Polygon(input_strs, expected_str, EdgeType::DIRECTED);
+  TestS2Polygon(input_strs, expected_str, EdgeType::UNDIRECTED);
+}
+
+void TestS2PolygonUnchanged(const char* input_str) {
+  TestS2Polygon(vector<const char*>{input_str}, input_str);
 }
 
 // Unlike the methods above, the input consists of a set of *polylines*.
@@ -85,18 +98,12 @@ void TestS2PolygonError(const vector<const char*>& input_strs,
   TestS2PolygonError(input_strs, expected_error, EdgeType::UNDIRECTED);
 }
 
-void TestS2Polygon(const vector<const char*>& input_strs,
-                   const char* expected_str) {
-  TestS2Polygon(input_strs, expected_str, EdgeType::DIRECTED);
-  TestS2Polygon(input_strs, expected_str, EdgeType::UNDIRECTED);
-}
-
-void TestS2PolygonUnchanged(const char* input_str) {
-  TestS2Polygon(vector<const char*>{input_str}, input_str);
-}
-
-TEST(S2PolygonLayer, NoLoops) {
+TEST(S2PolygonLayer, Empty) {
   TestS2PolygonUnchanged("");
+}
+
+TEST(S2PolygonLayer, Full) {
+  TestS2PolygonUnchanged("full");
 }
 
 TEST(S2PolygonLayer, SmallLoop) {
@@ -122,7 +129,8 @@ TEST(S2PolygonLayer, InvalidPolygon) {
 
 TEST(S2PolygonLayer, DuplicateInputEdges) {
   // Check that S2PolygonLayer can assemble polygons even when there are
-  // duplicate edges (after sibling pairs are removed).
+  // duplicate edges (after sibling pairs are removed), and then report the
+  // duplicate edges as an error.
   S2Builder builder{S2Builder::Options()};
   S2Polygon output;
   S2PolygonLayer::Options options;
@@ -292,12 +300,10 @@ TEST(IndexedS2PolygonLayer, AddsShape) {
   EXPECT_EQ(polygon_str, s2textformat::ToString(*polygon));
 }
 
-TEST(IndexedS2PolygonLayer, AddsEmptyShape) {
+TEST(IndexedS2PolygonLayer, IgnoresEmptyShape) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolygonLayer>(&index));
-  S2Polygon polygon;
-  builder.AddPolygon(polygon);
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   EXPECT_EQ(0, index.num_shape_ids());

@@ -40,12 +40,13 @@ S2EdgeTessellator::S2EdgeTessellator(const S2::Projection* projection,
 void S2EdgeTessellator::AppendProjected(
     const S2Point& a, const S2Point& b, vector<R2Point>* vertices) const {
   R2Point pa = proj_.Project(a);
-  R2Point pb = WrapDestination(pa, proj_.Project(b));
   if (vertices->empty()) {
     vertices->push_back(pa);
   } else {
+    pa = WrapDestination(vertices->back(), pa);
     S2_DCHECK_EQ(vertices->back(), pa) << "Appended edges must form a chain";
   }
+  R2Point pb = WrapDestination(pa, proj_.Project(b));
   AppendProjected(pa, a, pb, b, vertices);
 }
 
@@ -96,7 +97,11 @@ void S2EdgeTessellator::AppendUnprojected(
   if (vertices->empty()) {
     vertices->push_back(a);
   } else {
-    // Note that coordinate wrapping can create a small amount of error.
+    // Note that coordinate wrapping can create a small amount of error.  For
+    // example in the edge chain "0:-175, 0:179, 0:-177", the first edge is
+    // transformed into "0:-175, 0:-181" while the second is transformed into
+    // "0:179, 0:183".  The two coordinate pairs for the middle vertex
+    // ("0:-181" and "0:179") may not yield exactly the same S2Point.
     S2_DCHECK(S2::ApproxEquals(vertices->back(), a))
         << "Appended edges must form a chain";
   }
@@ -125,10 +130,11 @@ void S2EdgeTessellator::AppendUnprojected(const R2Point& pa, const S2Point& a,
 R2Point S2EdgeTessellator::WrapDestination(const R2Point& pa,
                                            const R2Point& pb) const {
   double x = pb.x(), y = pb.y();
-  if (wrap_distance_.x() > 0) {
+  // The code below ensures that "pb" is unmodified unless wrapping is required.
+  if (wrap_distance_.x() > 0 && fabs(x - pa.x()) > 0.5 * wrap_distance_.x()) {
     x = pa.x() + remainder(x - pa.x(), wrap_distance_.x());
   }
-  if (wrap_distance_.y() > 0) {
+  if (wrap_distance_.y() > 0 && fabs(y - pa.y()) > 0.5 * wrap_distance_.y()) {
     y = pa.y() + remainder(y - pa.y(), wrap_distance_.y());
   }
   return R2Point(x, y);

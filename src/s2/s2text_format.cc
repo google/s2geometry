@@ -183,8 +183,7 @@ bool MakeLoop(string_view str, unique_ptr<S2Loop>* loop,
   return true;
 }
 
-std::unique_ptr<S2Loop> MakeLoop(absl::string_view str,
-                                 S2Debug debug_override) {
+std::unique_ptr<S2Loop> MakeLoop(string_view str, S2Debug debug_override) {
   return MakeLoopOrDie(str, debug_override);
 }
 
@@ -204,7 +203,7 @@ bool MakePolyline(string_view str, unique_ptr<S2Polyline>* polyline,
   return true;
 }
 
-std::unique_ptr<S2Polyline> MakePolyline(absl::string_view str,
+std::unique_ptr<S2Polyline> MakePolyline(string_view str,
                                          S2Debug debug_override) {
   return MakePolylineOrDie(str, debug_override);
 }
@@ -223,7 +222,7 @@ bool MakeLaxPolyline(string_view str,
   return true;
 }
 
-std::unique_ptr<S2LaxPolylineShape> MakeLaxPolyline(absl::string_view str) {
+std::unique_ptr<S2LaxPolylineShape> MakeLaxPolyline(string_view str) {
   return MakeLaxPolylineOrDie(str);
 }
 
@@ -258,7 +257,7 @@ bool MakePolygon(string_view str, unique_ptr<S2Polygon>* polygon,
   return InternalMakePolygon(str, debug_override, true, polygon);
 }
 
-std::unique_ptr<S2Polygon> MakePolygon(absl::string_view str,
+std::unique_ptr<S2Polygon> MakePolygon(string_view str,
                                        S2Debug debug_override) {
   return MakePolygonOrDie(str, debug_override);
 }
@@ -273,7 +272,7 @@ bool MakeVerbatimPolygon(string_view str, unique_ptr<S2Polygon>* polygon) {
   return InternalMakePolygon(str, S2Debug::ALLOW, false, polygon);
 }
 
-std::unique_ptr<S2Polygon> MakeVerbatimPolygon(absl::string_view str) {
+std::unique_ptr<S2Polygon> MakeVerbatimPolygon(string_view str) {
   return MakeVerbatimPolygonOrDie(str);
 }
 
@@ -300,7 +299,7 @@ bool MakeLaxPolygon(string_view str,
   return true;
 }
 
-std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygon(absl::string_view str) {
+std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygon(string_view str) {
   return MakeLaxPolygonOrDie(str);
 }
 
@@ -336,7 +335,7 @@ bool MakeIndex(string_view str, std::unique_ptr<MutableS2ShapeIndex>* index) {
   return true;
 }
 
-std::unique_ptr<MutableS2ShapeIndex> MakeIndex(absl::string_view str) {
+std::unique_ptr<MutableS2ShapeIndex> MakeIndex(string_view str) {
   return MakeIndexOrDie(str);
 }
 
@@ -421,7 +420,7 @@ string ToString(const S2Polyline& polyline) {
   return out;
 }
 
-string ToString(const S2Polygon& polygon) {
+string ToString(const S2Polygon& polygon, const char* loop_separator) {
   if (polygon.is_empty()) {
     return "empty";
   } else if (polygon.is_full()) {
@@ -429,7 +428,7 @@ string ToString(const S2Polygon& polygon) {
   }
   string out;
   for (int i = 0; i < polygon.num_loops(); ++i) {
-    if (i > 0) out += ";\n";
+    if (i > 0) out += loop_separator;
     const S2Loop& loop = *polygon.loop(i);
     AppendVertices(&loop.vertex(0), loop.num_vertices(), &out);
   }
@@ -459,12 +458,16 @@ string ToString(const S2LaxPolylineShape& polyline) {
   return out;
 }
 
-string ToString(const S2LaxPolygonShape& polygon) {
+string ToString(const S2LaxPolygonShape& polygon, const char* loop_separator) {
   string out;
   for (int i = 0; i < polygon.num_loops(); ++i) {
-    if (i > 0) out += ";\n";
+    if (i > 0) out += loop_separator;
     int n = polygon.num_loop_vertices(i);
-    if (n > 0) AppendVertices(&polygon.loop_vertex(i, 0), n, &out);
+    if (n == 0) {
+      out += "full";
+    } else {
+      AppendVertices(&polygon.loop_vertex(i, 0), n, &out);
+    }
   }
   return out;
 }

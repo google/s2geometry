@@ -61,13 +61,13 @@ struct PolygonDegeneracy {
 // REQUIRES: graph.options().sibling_pairs() == DISCARD_EXCESS (or DISCARD)
 // REQUIRES: graph.options().degenerate_edges() == DISCARD_EXCESS (or DISCARD)
 //
-// Usually callers will want to specify SiblingPairs::DISCARD_EXCESS,
-// DegenerateEdges::DISCARD_EXCESS, and DuplicateEdges::MERGE in order to
-// remove all redundant degeneracies.  DISCARD is also allowed for the first
-// two options in case you want to keep only one type of degeneracy (i.e.,
-// degenerate edges or sibling pairs).
+// Usually callers will want to specify SiblingPairs::DISCARD_EXCESS and
+// DegenerateEdges::DISCARD_EXCESS in order to remove all redundant
+// degeneracies.  DISCARD is also allowed in case you want to keep only one
+// type of degeneracy (i.e., degenerate edges or sibling pairs).
 //
 // If the graph edges cannot be assembled into loops, the result is undefined.
+// (An error may or may not be returned.)
 std::vector<PolygonDegeneracy> FindPolygonDegeneracies(
     const S2Builder::Graph& graph, S2Error* error);
 

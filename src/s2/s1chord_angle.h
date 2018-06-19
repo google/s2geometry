@@ -38,7 +38,7 @@
 // Specifically, the representation of (Pi - x) radians has an error of about
 // (1e-15 / x), with a maximum error of about 2e-8 radians (about 13cm on the
 // Earth's surface).  For comparison, for angles up to 90 degrees (10000km)
-// the worst-case representation error is about 2e-16 radians (1 nanonmeter),
+// the worst-case representation error is about 2e-16 radians (1 nanometer),
 // which is about the same as S1Angle.
 //
 // This class is intended to be copied by value as desired.  It uses

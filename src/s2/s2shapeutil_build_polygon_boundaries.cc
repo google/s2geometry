@@ -34,19 +34,26 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
   polygons->clear();
   if (components.empty()) return;
 
-  // Since the loops do not overlap, any point on the sphere determines a loop
-  // nesting hierarchy.  We choose to build a hierarchy around S2::Origin().
-  // The hierarchy then determines the face structure.  Here are the details:
+  // Since the loop boundaries do not cross, a loop nesting hierarchy can be
+  // defined by choosing any point on the sphere as the "point at infinity".
+  // Loop A then contains loop B if (1) A contains the boundary of B and (2)
+  // loop A does not contain the point at infinity.
+  //
+  // We choose S2::Origin() for this purpose.  The loop nesting hierarchy then
+  // determines the face structure.  Here are the details:
   //
   // 1. Build an S2ShapeIndex of all loops that do not contain S2::Origin().
   //    This leaves at most one unindexed loop per connected component
   //    (the "outer loop").
+  //
   // 2. For each component, choose a representative vertex and determine
   //    which indexed loops contain it.  The "depth" of this component is
   //    defined as the number of such loops.
+  //
   // 3. Assign the outer loop of each component to the containing loop whose
   //    depth is one less.  This generates a set of multi-loop polygons.
-  // 4. The output loops of all components at depth 0 become a single face.
+  //
+  // 4. The outer loops of all components at depth 0 become a single face.
 
   MutableS2ShapeIndex index;
   // A map from shape.id() to the corresponding component number.
