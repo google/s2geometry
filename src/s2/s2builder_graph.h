@@ -109,9 +109,7 @@ class S2Builder::Graph {
         const IdSetLexicon* input_edge_id_set_lexicon,
         const std::vector<LabelSetId>* label_set_ids,
         const IdSetLexicon* label_set_lexicon,
-        // TODO(ericv/hagzonal): Fix st_lib and remove default parameter.
-        IsFullPolygonPredicate is_full_polygon_predicate =
-        IsFullPolygonPredicate());
+        IsFullPolygonPredicate is_full_polygon_predicate);
 
   const GraphOptions& options() const;
 
