@@ -62,6 +62,16 @@ void TestS2Polygon(const vector<const char*>& input_strs,
             s2textformat::ToString(output));
 }
 
+void TestS2Polygon(const vector<const char*>& input_strs,
+                   const char* expected_str) {
+  TestS2Polygon(input_strs, expected_str, EdgeType::DIRECTED);
+  TestS2Polygon(input_strs, expected_str, EdgeType::UNDIRECTED);
+}
+
+void TestS2PolygonUnchanged(const char* input_str) {
+  TestS2Polygon(vector<const char*>{input_str}, input_str);
+}
+
 // Unlike the methods above, the input consists of a set of *polylines*.
 void TestS2PolygonError(const vector<const char*>& input_strs,
                         S2Error::Code expected_error, EdgeType edge_type) {
@@ -85,17 +95,7 @@ void TestS2PolygonError(const vector<const char*>& input_strs,
   TestS2PolygonError(input_strs, expected_error, EdgeType::UNDIRECTED);
 }
 
-void TestS2Polygon(const vector<const char*>& input_strs,
-                   const char* expected_str) {
-  TestS2Polygon(input_strs, expected_str, EdgeType::DIRECTED);
-  TestS2Polygon(input_strs, expected_str, EdgeType::UNDIRECTED);
-}
-
-void TestS2PolygonUnchanged(const char* input_str) {
-  TestS2Polygon(vector<const char*>{input_str}, input_str);
-}
-
-TEST(S2PolygonLayer, NoLoops) {
+TEST(S2PolygonLayer, Empty) {
   TestS2PolygonUnchanged("");
 }
 
