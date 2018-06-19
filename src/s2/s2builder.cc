@@ -308,8 +308,8 @@ void S2Builder::set_label(Label label) {
   label_set_modified_ = true;
 }
 
-static bool IsFullPolygonUnspecified(const S2Builder::Graph& g,
-                                     S2Error* error) {
+bool S2Builder::IsFullPolygonUnspecified(const S2Builder::Graph& g,
+                                         S2Error* error) {
   error->Init(S2Error::BUILDER_IS_FULL_PREDICATE_NOT_SPECIFIED,
               "A degenerate polygon was found, but no predicate was specified "
               "to determine whether the polygon is empty or full.  Call "
@@ -317,10 +317,16 @@ static bool IsFullPolygonUnspecified(const S2Builder::Graph& g,
   return false;  // Assumes the polygon is empty.
 }
 
+S2Builder::IsFullPolygonPredicate S2Builder::IsFullPolygon(bool is_full) {
+  return [is_full](const S2Builder::Graph& g, S2Error* error) {
+      return is_full;
+    };
+}
+
 void S2Builder::StartLayer(unique_ptr<Layer> layer) {
   layer_options_.push_back(layer->graph_options());
   layer_begins_.push_back(input_edges_.size());
-  layer_is_full_polygon_predicates_.push_back(IsFullPolygonUnspecified);
+  layer_is_full_polygon_predicates_.push_back(IsFullPolygon(false));
   layers_.push_back(std::move(layer));
 }
 

@@ -393,14 +393,17 @@ class S2Builder {
   // the empty polygon or a degenerate hole in the full polygon.
   //
   // To resolve this ambiguity, an IsFullPolygonPredicate may be specified for
-  // each input layer (see AddIsFullPolygonPredicate below).  If the layer
-  // consists only of polygon degeneracies, the layer implementation may call
-  // this method to determine whether the polygon is empty or full except for
-  // the given degeneracies.  (Note that under the semi-open boundary model,
-  // degeneracies do not affect point containment.)
+  // each output layer (see AddIsFullPolygonPredicate below).  If the output
+  // after snapping consists only of degenerate edges and/or sibling pairs
+  // (including the case where there are no edges at all), then the layer
+  // implementation calls the given predicate to determine whether the polygon
+  // is empty or full except for those degeneracies.  The predicate is given
+  // an S2Builder::Graph containing the output edges, but note that in general
+  // the predicate must also have knowledge of the input geometry in order to
+  // determine the correct result.
   //
-  // This predicate is only required for layers that will be assembled into
-  // polygons.  It is not used by other layer types.
+  // This predicate is only needed by layers that are assembled into polygons.
+  // It is not used by other layer types.
   using IsFullPolygonPredicate =
       std::function<bool (const Graph& g, S2Error* error)>;
 
@@ -469,17 +472,41 @@ class S2Builder {
   // Adds the edges of the given shape to the current layer.
   void AddShape(const S2Shape& shape);
 
-  // For layers that will be assembled into polygons, this method specifies a
-  // predicate that will be called to determine whether the polygon is empty
-  // or full except for the given degeneracies.  (See IsFullPolygonPredicate
-  // above.)
+  // For layers that are assembled into polygons, this method specifies a
+  // predicate that is called when the output consists entirely of degenerate
+  // edges and/or sibling pairs.  The predicate is given an S2Builder::Graph
+  // containing the output edges (if any) and is responsible for deciding
+  // whether this graph represents the empty polygon (possibly with degenerate
+  // shells) or the full polygon (possibly with degenerate holes).  Note that
+  // this cannot be determined from the output edges alone; it also requires
+  // knowledge of the input geometry.  (Also see IsFullPolygonPredicate above.)
   //
   // This method should be called at most once per layer; additional calls
   // simply overwrite the previous value for the current layer.
   //
-  // The default implementation sets an appropriate error and returns false
-  // (i.e., degenerate polygons are assumed to be empty).
+  // The default predicate simply returns false (i.e., degenerate polygons are
+  // assumed to be empty).  Arguably it would better to return an error in
+  // this case, but the fact is that relatively few clients need to be able to
+  // construct full polygons, and it is unreasonable to expect all such
+  // clients to supply an appropriate predicate.
+  //
+  // The reason for having a predicate rather than a boolean value is that the
+  // predicate is responsible for determining whether the output polygon is
+  // empty or full.  In general the input geometry is not degenerate, but
+  // rather collapses into a degenerate configuration due to snapping and/or
+  // simplification.
+  //
+  // TODO(ericv): Provide standard predicates to handle common cases,
+  // e.g. valid input geometry that becomes degenerate due to snapping.
   void AddIsFullPolygonPredicate(IsFullPolygonPredicate predicate);
+
+  // A predicate that returns an error indicating that no polygon predicate
+  // has been specified.
+  static bool IsFullPolygonUnspecified(const S2Builder::Graph& g,
+                                       S2Error* error);
+
+  // Returns a predicate that returns a constant value (true or false);
+  static IsFullPolygonPredicate IsFullPolygon(bool is_full);
 
   // Forces a vertex to be located at the given position.  This can be used to
   // prevent certain input vertices from moving.  However if you are trying to
@@ -779,6 +806,8 @@ class S2Builder::GraphOptions {
   // be used.  (Note that some values of the sibling_pairs() option
   // automatically take care of this issue by removing half of the edges and
   // changing edge_type() to DIRECTED.)
+  //
+  // DEFAULT: EdgeType::DIRECTED
   EdgeType edge_type() const;
   void set_edge_type(EdgeType edge_type);
 
@@ -800,6 +829,8 @@ class S2Builder::GraphOptions {
   //       redundant edges when simplifying geometry (e.g., a polyline of the
   //       form AABBBBBCCCCCCDDDD).  DegenerateEdges::KEEP is mainly useful
   //       for algorithms that require an output edge for every input edge.
+  //
+  // DEFAULT: DegenerateEdges::KEEP
   enum class DegenerateEdges { DISCARD, DISCARD_EXCESS, KEEP };
   DegenerateEdges degenerate_edges() const;
   void set_degenerate_edges(DegenerateEdges degenerate_edges);
@@ -809,6 +840,8 @@ class S2Builder::GraphOptions {
   // be created when vertices are snapped together.  When several edges are
   // merged, the result is a single edge labelled with all of the original
   // input edge ids.
+  //
+  // DEFAULT: DuplicateEdges::KEEP
   enum class DuplicateEdges { MERGE, KEEP };
   DuplicateEdges duplicate_edges() const;
   void set_duplicate_edges(DuplicateEdges duplicate_edges);
@@ -870,6 +903,8 @@ class S2Builder::GraphOptions {
   // arbitrarily, instead we merge the labels of all duplicate edges (even
   // ones where no sibling pairs were discarded), yielding {AB12, CD45, CD45}
   // (assuming that duplicate edges are being kept).
+  //
+  // DEFAULT: SiblingPairs::KEEP
   enum class SiblingPairs { DISCARD, DISCARD_EXCESS, KEEP, REQUIRE, CREATE };
   SiblingPairs sibling_pairs() const;
   void set_sibling_pairs(SiblingPairs sibling_pairs);

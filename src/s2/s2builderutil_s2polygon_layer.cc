@@ -141,7 +141,14 @@ void S2PolygonLayer::Build(const Graph& g, S2Error* error) {
   // not the loop contained S2::Origin().  By comparing this with the final
   // S2Polygon loops we can fix up the edge labels appropriately.
   LoopMap loop_map;
-  if (g.options().edge_type() == EdgeType::DIRECTED) {
+  if (g.num_edges() == 0) {
+    // The polygon is either full or empty.
+    if (g.IsFullPolygon(error)) {
+      polygon_->Init(make_unique<S2Loop>(S2Loop::kFull()));
+    } else {
+      polygon_->InitNested(vector<unique_ptr<S2Loop>>{});
+    }
+  } else if (g.options().edge_type() == EdgeType::DIRECTED) {
     vector<Graph::EdgeLoop> edge_loops;
     if (!g.GetDirectedLoops(LoopType::SIMPLE, &edge_loops, error)) {
       return;
