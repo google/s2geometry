@@ -150,7 +150,7 @@ TEST(S2EdgeTessellator, UnprojectedNoTessellation) {
   EXPECT_EQ(2, vertices.size());
 }
 
-TEST(S2EdgeTessellator, WrapUnprojected) {
+TEST(S2EdgeTessellator, UnprojectedWrapping) {
   // This tests that a projected edge that crosses the 180 degree meridian
   // goes the "short way" around the sphere.
 
@@ -178,29 +178,27 @@ TEST(S2EdgeTessellator, ProjectedWrapping) {
   }
 }
 
-TEST(S2EdgeTessellator, AppendUnprojected) {
-  S2::MercatorProjection proj(180);
-  S1Angle tolerance(S1Angle::Degrees(1e-5));
-  R2Point pa(0, 0), pb(89.999999, 179);
-  DistStats stats = TestUnprojected(proj, tolerance, pa, pb);
-  EXPECT_LT(stats.max_dist(), tolerance);
-}
-
-TEST(S2EdgeTessellator, AppendProjected) {
+TEST(S2EdgeTessellator, UnprojectedWrappingMultipleCrossings) {
+  // Tests an edge chain that crosses the 180 degree meridian multiple times.
+  // Note that due to coordinate wrapping, the last vertex of one edge may not
+  // exactly match the first edge of the next edge after unprojection.
   S2::PlateCarreeProjection proj(180);
-  S1Angle tolerance(S1Angle::E7(1));
-  S2Point a = S2LatLng::FromDegrees(-89.999, -170).ToPoint();
-  S2Point b = S2LatLng::FromDegrees(50, 100).ToPoint();
-  DistStats stats = TestProjected(proj, tolerance, a, b);
-  EXPECT_LT(stats.max_dist(), tolerance);
+  S2EdgeTessellator tess(&proj, S1Angle::Degrees(0.01));
+  vector<S2Point> vertices;
+  for (double lat = 1; lat <= 60; ++lat) {
+    tess.AppendUnprojected(R2Point(180 - 0.03 * lat, lat),
+                           R2Point(-180 + 0.07 * lat, lat), &vertices);
+    tess.AppendUnprojected(R2Point(-180 + 0.07 * lat, lat),
+                           R2Point(180 - 0.03 * (lat + 1), lat + 1), &vertices);
+  }
+  for (const auto& v : vertices) {
+    EXPECT_GE(fabs(S2LatLng::Longitude(v).degrees()), 175);
+  }
 }
 
-TEST(S2EdgeTessellator, AppendProjectedLoopAcrossAntimeridian) {
-  // Verify that projecting a chain of edges will generate longitudes outside
-  // the range [-180, 180] if necessary to maintain continuity.
-  //
-  // The following loop crosses the antimeridian four times (twice in each
-  // direction).
+TEST(S2EdgeTessellator, ProjectedWrappingMultipleCrossings) {
+  // The following loop crosses the 180 degree meridian four times (twice in
+  // each direction).
   auto loop = ParsePointsOrDie("0:160, 0:-40, 0:120, 0:-80, 10:120, "
                                "10:-40, 0:160");
   S2::PlateCarreeProjection proj(180);
@@ -210,6 +208,8 @@ TEST(S2EdgeTessellator, AppendProjectedLoopAcrossAntimeridian) {
   for (int i = 0; i + 1 < loop.size(); ++i) {
     tess.AppendProjected(loop[i], loop[i + 1], &vertices);
   }
+  EXPECT_EQ(vertices.front(), vertices.back());
+
   // Note that the R2Point coordinates are in (lng, lat) order.
   double min_lng = vertices[0].x();
   double max_lng = vertices[0].x();
@@ -221,7 +221,24 @@ TEST(S2EdgeTessellator, AppendProjectedLoopAcrossAntimeridian) {
   EXPECT_EQ(640, max_lng);
 }
 
-TEST(S2EdgeTessellator, SeattleToNewYork) {
+TEST(S2EdgeTessellator, UnprojectedAccuracy) {
+  S2::MercatorProjection proj(180);
+  S1Angle tolerance(S1Angle::Degrees(1e-5));
+  R2Point pa(0, 0), pb(89.999999, 179);
+  DistStats stats = TestUnprojected(proj, tolerance, pa, pb);
+  EXPECT_LT(stats.max_dist(), tolerance);
+}
+
+TEST(S2EdgeTessellator, ProjectedAccuracy) {
+  S2::PlateCarreeProjection proj(180);
+  S1Angle tolerance(S1Angle::E7(1));
+  S2Point a = S2LatLng::FromDegrees(-89.999, -170).ToPoint();
+  S2Point b = S2LatLng::FromDegrees(50, 100).ToPoint();
+  DistStats stats = TestProjected(proj, tolerance, a, b);
+  EXPECT_LT(stats.max_dist(), tolerance);
+}
+
+TEST(S2EdgeTessellator, ProjectedAccuracySeattleToNewYork) {
   S2::PlateCarreeProjection proj(180);
   S1Angle tolerance = S2Testing::MetersToAngle(1.23);
   S2Point seattle(S2LatLng::FromDegrees(47.6062, -122.3321).ToPoint());

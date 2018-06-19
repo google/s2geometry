@@ -68,7 +68,10 @@ class S2EdgeTessellator {
   // required to match that last vertex of the previous edge).
   //
   // Note that to construct an S2Loop, you must call vertices->pop_back() at
-  // the very end to eliminate the duplicate first and last vertex.
+  // the very end to eliminate the duplicate first and last vertex.  Note also
+  // that if the given projection involves coordinate "wrapping" (e.g. across
+  // the 180 degree meridian) then the first and last vertices may not be
+  // exactly the same.
   void AppendUnprojected(const R2Point& a, const R2Point& b,
                          std::vector<S2Point>* vertices) const;
 
