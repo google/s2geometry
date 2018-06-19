@@ -208,12 +208,12 @@ TEST_F(NormalizeTest, DuplicateEdgeMerging) {
   // Verify that when DuplicateEdges::KEEP is specified, demoted edges are
   // added as new edges rather than being merged with existing ones.
   // (Note that NormalizeTest specifies DuplicateEdges::KEEP by default.)
-  Run("0:0 # 0:0, 0:0 | 0:1, 0:2 # 0:0; 0:1, 0:2",
-      "0:0 | 0:0 | 0:0 # 0:1, 0:2 | 0:1, 0:2 #");
+  Run("0:0 | 0:0 # 0:0, 0:0 | 0:1, 0:2 # 0:0; 0:1, 0:2",
+      "0:0 | 0:0 | 0:0 | 0:0 # 0:1, 0:2 | 0:1, 0:2 #");
   // Now verify that the duplicate edges are merged if requested.
   graph_options_out_[0].set_duplicate_edges(DuplicateEdges::MERGE);
   graph_options_out_[1].set_duplicate_edges(DuplicateEdges::MERGE);
-  Run("0:0 # 0:0, 0:0 | 0:1, 0:2 # 0:0; 0:1, 0:2",
+  Run("0:0 | 0:0 # 0:0, 0:0 | 0:1, 0:2 # 0:0; 0:1, 0:2",
       "0:0 # 0:1, 0:2 #");
 }
 
