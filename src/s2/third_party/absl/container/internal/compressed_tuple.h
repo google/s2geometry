@@ -20,7 +20,8 @@
 // To access the members, use member get<N>() function.
 //
 // Eg:
-//   gtl::subtle::CompressedTuple<int, T1, T2, T3> value(7, t1, t2, t3);
+//   absl::container_internal::CompressedTuple<int, T1, T2, T3> value(7, t1, t2,
+//                                                                    t3);
 //   assert(value.get<0>() == 7);
 //   T1& t1 = value.get<1>();
 //   const T2& t2 = value.get<2>();
@@ -40,13 +41,13 @@
 #ifdef _MSC_VER
 // We need to mark these classes with this declspec to ensure that
 // CompressedTuple happens.
-#define GTL_COMPRESSED_TUPLE_DECLSPEC __declspec(empty_bases)
+#define ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC __declspec(empty_bases)
 #else  // _MSC_VER
-#define GTL_COMPRESSED_TUPLE_DECLSPEC
+#define ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
 #endif  // _MSC_VER
 
-namespace gtl {
-namespace subtle {
+namespace absl {
+namespace container_internal {
 
 template <typename... Ts>
 class CompressedTuple;
@@ -93,7 +94,8 @@ struct Storage {
 };
 
 template <typename D, size_t I>
-struct GTL_COMPRESSED_TUPLE_DECLSPEC Storage<D, I, true> : ElemT<D, I> {
+struct ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC Storage<D, I, true>
+    : ElemT<D, I> {
   using T = internal_compressed_tuple::ElemT<D, I>;
   constexpr Storage() = default;
   explicit constexpr Storage(T&& v) : T(absl::forward<T>(v)) {}
@@ -102,10 +104,10 @@ struct GTL_COMPRESSED_TUPLE_DECLSPEC Storage<D, I, true> : ElemT<D, I> {
 };
 
 template <typename D, typename I>
-struct GTL_COMPRESSED_TUPLE_DECLSPEC CompressedTupleImpl;
+struct ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTupleImpl;
 
 template <typename... Ts, size_t... I>
-struct GTL_COMPRESSED_TUPLE_DECLSPEC
+struct ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
     CompressedTupleImpl<CompressedTuple<Ts...>, absl::index_sequence<I...>>
     // We use the dummy identity function through std::integral_constant to
     // convince MSVC of accepting and expanding I in that context. Without it
@@ -128,7 +130,8 @@ struct GTL_COMPRESSED_TUPLE_DECLSPEC
 // To access the members, use member .get<N>() function.
 //
 // Eg:
-//   gtl::subtle::CompressedTuple<int, T1, T2, T3> value(7, t1, t2, t3);
+//   absl::container_internal::CompressedTuple<int, T1, T2, T3> value(7, t1, t2,
+//                                                                    t3);
 //   assert(value.get<0>() == 7);
 //   T1& t1 = value.get<1>();
 //   const T2& t2 = value.get<2>();
@@ -136,7 +139,7 @@ struct GTL_COMPRESSED_TUPLE_DECLSPEC
 //
 // http://en.cppreference.com/w/cpp/language/ebo
 template <typename... Ts>
-class GTL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple
+class ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple
     : private internal_compressed_tuple::CompressedTupleImpl<
           CompressedTuple<Ts...>, absl::index_sequence_for<Ts...>> {
  private:
@@ -162,11 +165,11 @@ class GTL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple
 // Explicit specialization for a zero-element tuple
 // (needed to avoid ambiguous overloads for the default constructor).
 template <>
-class GTL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple<> {};
+class ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple<> {};
 
-}  // namespace subtle
-}  // namespace gtl
+}  // namespace container_internal
+}  // namespace absl
 
-#undef GTL_COMPRESSED_TUPLE_DECLSPEC
+#undef ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
 
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INTERNAL_COMPRESSED_TUPLE_H_

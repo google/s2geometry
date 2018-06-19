@@ -70,11 +70,11 @@
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/internal/compressed_tuple.h"
 #include "s2/third_party/absl/container/internal/container_memory.h"
-#include "s2/third_party/absl/container/internal/layout.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/meta/type_traits.h"
 #include "s2/third_party/absl/strings/string_view.h"
 #include "s2/third_party/absl/utility/utility.h"
+#include "s2/util/gtl/layout.h"
 
 namespace gtl {
 
@@ -285,7 +285,7 @@ struct map_params : common_params<Key, Compare, Alloc, TargetNodeSize,
   using mapped_type = Data;
   // This type allows us to move keys when it is safe to do so. It is safe
   // for maps in which value_type and mutable_value_type are layout compatible.
-  using slot_type = subtle::slot_type<Key, mapped_type>;
+  using slot_type = absl::container_internal::slot_type<Key, mapped_type>;
   using value_type = typename slot_type::value_type;
   using mutable_value_type = typename slot_type::mutable_value_type;
   using pointer = value_type *;
@@ -1433,7 +1433,9 @@ class btree {
  private:
   // We use compressed tuple in order to save space because key_compare and
   // allocator_type are usually empty.
-  subtle::CompressedTuple<key_compare, allocator_type, node_type *> root_;
+  absl::container_internal::CompressedTuple<key_compare, allocator_type,
+                                            node_type *>
+      root_;
 
   // A pointer to the rightmost node. Note that the leftmost node is stored as
   // the root's parent.

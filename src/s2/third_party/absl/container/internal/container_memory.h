@@ -33,8 +33,8 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/utility/utility.h"
 
-namespace gtl {
-namespace subtle {
+namespace absl {
+namespace container_internal {
 
 // Allocates at least n bytes aligned to the specified alignment.
 // Alignment must be a power of 2. It must be positive.
@@ -71,7 +71,7 @@ void Deallocate(Alloc* alloc, void* p, size_t n) {
                  (n + sizeof(M) - 1) / sizeof(M));
 }
 
-namespace internal_memory {
+namespace memory_internal {
 
 // Constructs T into uninitialized storage pointed by `ptr` using the args
 // specified in the tuple.
@@ -127,13 +127,13 @@ DecomposePairImpl(F&& f, std::pair<std::tuple<K>, V> p) {
                             std::move(p.second));
 }
 
-}  // namespace internal_memory
+}  // namespace memory_internal
 
 // Constructs T into uninitialized storage pointed by `ptr` using the args
 // specified in the tuple.
 template <class Alloc, class T, class Tuple>
 void ConstructFromTuple(Alloc* alloc, T* ptr, Tuple&& t) {
-  internal_memory::ConstructFromTupleImpl(
+  memory_internal::ConstructFromTupleImpl(
       alloc, ptr, std::forward<Tuple>(t),
       absl::make_index_sequence<
           std::tuple_size<typename std::decay<Tuple>::type>::value>());
@@ -144,7 +144,7 @@ void ConstructFromTuple(Alloc* alloc, T* ptr, Tuple&& t) {
 template <class T, class Tuple, class F>
 decltype(std::declval<F>()(std::declval<T>())) WithConstructed(
     Tuple&& t, F&& f) {
-  return internal_memory::WithConstructedImpl<T>(
+  return memory_internal::WithConstructedImpl<T>(
       std::forward<Tuple>(t),
       absl::make_index_sequence<
           std::tuple_size<typename std::decay<Tuple>::type>::value>(),
@@ -179,18 +179,18 @@ std::pair<std::tuple<F&&>, std::tuple<S&&>> PairArgs(std::pair<F, S>&& p) {
 }
 template <class F, class S>
 auto PairArgs(std::piecewise_construct_t, F&& f, S&& s)
-    -> decltype(std::make_pair(internal_memory::TupleRef(std::forward<F>(f)),
-                               internal_memory::TupleRef(std::forward<S>(s)))) {
-  return std::make_pair(internal_memory::TupleRef(std::forward<F>(f)),
-                        internal_memory::TupleRef(std::forward<S>(s)));
+    -> decltype(std::make_pair(memory_internal::TupleRef(std::forward<F>(f)),
+                               memory_internal::TupleRef(std::forward<S>(s)))) {
+  return std::make_pair(memory_internal::TupleRef(std::forward<F>(f)),
+                        memory_internal::TupleRef(std::forward<S>(s)));
 }
 
 // A helper function for implementing apply() in map policies.
 template <class F, class... Args>
 auto DecomposePair(F&& f, Args&&... args)
-    -> decltype(internal_memory::DecomposePairImpl(
+    -> decltype(memory_internal::DecomposePairImpl(
         std::forward<F>(f), PairArgs(std::forward<Args>(args)...))) {
-  return internal_memory::DecomposePairImpl(
+  return memory_internal::DecomposePairImpl(
       std::forward<F>(f), PairArgs(std::forward<Args>(args)...));
 }
 
@@ -231,7 +231,7 @@ inline void SanitizerUnpoisonObject(const T* object) {
   SanitizerUnpoisonMemoryRegion(object, sizeof(T));
 }
 
-namespace internal_memory {
+namespace memory_internal {
 
 // If Pair is a standard-layout type, OffsetOf<Pair>::kFirst and
 // OffsetOf<Pair>::kSecond are equivalent to offsetof(Pair, first) and
@@ -264,10 +264,10 @@ struct IsLayoutCompatible {
   static constexpr bool LayoutCompatible() {
     return std::is_standard_layout<P>() && sizeof(P) == sizeof(Pair) &&
            alignof(P) == alignof(Pair) &&
-           internal_memory::OffsetOf<P>::kFirst ==
-               internal_memory::OffsetOf<Pair>::kFirst &&
-           internal_memory::OffsetOf<P>::kSecond ==
-               internal_memory::OffsetOf<Pair>::kSecond;
+           memory_internal::OffsetOf<P>::kFirst ==
+               memory_internal::OffsetOf<Pair>::kFirst &&
+           memory_internal::OffsetOf<P>::kSecond ==
+               memory_internal::OffsetOf<Pair>::kSecond;
   }
 
  public:
@@ -275,12 +275,12 @@ struct IsLayoutCompatible {
   // then it is safe to store them in a union and read from either.
   static constexpr bool value = std::is_standard_layout<K>() &&
                                 std::is_standard_layout<Pair>() &&
-                                internal_memory::OffsetOf<Pair>::kFirst == 0 &&
+                                memory_internal::OffsetOf<Pair>::kFirst == 0 &&
                                 LayoutCompatible<std::pair<K, V>>() &&
                                 LayoutCompatible<std::pair<const K, V>>();
 };
 
-}  // namespace internal_memory
+}  // namespace memory_internal
 
 // If kMutableKeys is false, only the value member is accessed.
 //
@@ -300,7 +300,7 @@ union slot_type {
   // slot_type::key in this case.
   using kMutableKeys =
       std::integral_constant<bool,
-                             internal_memory::IsLayoutCompatible<K, V>::value>;
+                             memory_internal::IsLayoutCompatible<K, V>::value>;
 
  public:
   slot_type() {}
@@ -395,6 +395,22 @@ union slot_type {
   }
 };
 
+}  // namespace container_internal
+}  // namespace absl
+
+namespace gtl {
+namespace subtle {
+using absl::container_internal::Allocate;
+using absl::container_internal::ConstructFromTuple;
+using absl::container_internal::Deallocate;
+using absl::container_internal::DecomposePair;
+using absl::container_internal::DecomposeValue;
+using absl::container_internal::PairArgs;
+using absl::container_internal::SanitizerPoisonMemoryRegion;
+using absl::container_internal::SanitizerPoisonObject;
+using absl::container_internal::SanitizerUnpoisonMemoryRegion;
+using absl::container_internal::SanitizerUnpoisonObject;
+using absl::container_internal::WithConstructed;
 }  // namespace subtle
 }  // namespace gtl
 

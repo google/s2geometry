@@ -18,4 +18,11 @@
 
 #include "s2/third_party/absl/container/internal/layout.h"
 
+namespace gtl {
+
+using absl::container_internal::Aligned;
+using absl::container_internal::Layout;
+
+}  // namespace gtl
+
 #endif  // S2_UTIL_GTL_LAYOUT_H_
