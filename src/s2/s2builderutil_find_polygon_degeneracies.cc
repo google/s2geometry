@@ -311,22 +311,22 @@ void DegeneracyFinder::ComputeUnknownSignsBruteForce(
 }
 
 // An S2Shape representing the edges in an S2Builder::Graph.
-class GraphShape : public S2Shape {
+class GraphShape final : public S2Shape {
  public:
   explicit GraphShape(const Graph* g) : g_(*g) {}
-  int num_edges() const final { return g_.num_edges(); }
-  Edge edge(int e) const final {
+  int num_edges() const override { return g_.num_edges(); }
+  Edge edge(int e) const override {
     Graph::Edge g_edge = g_.edge(e);
     return Edge(g_.vertex(g_edge.first), g_.vertex(g_edge.second));
   }
-  int dimension() const final { return 1; }
-  ReferencePoint GetReferencePoint() const final {
+  int dimension() const override { return 1; }
+  ReferencePoint GetReferencePoint() const override {
     return ReferencePoint::Contained(false);
   }
-  int num_chains() const final { return g_.num_edges(); }
-  Chain chain(int i) const final { return Chain(i, 1); }
-  Edge chain_edge(int i, int j) const final { return edge(i); }
-  ChainPosition chain_position(int e) const final {
+  int num_chains() const override { return g_.num_edges(); }
+  Chain chain(int i) const override { return Chain(i, 1); }
+  Edge chain_edge(int i, int j) const override { return edge(i); }
+  ChainPosition chain_position(int e) const override {
     return ChainPosition(e, 0);
   }
 
