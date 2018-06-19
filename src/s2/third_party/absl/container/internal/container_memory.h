@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <memory>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "s2/third_party/absl/memory/memory.h"
@@ -229,6 +230,170 @@ template <typename T>
 inline void SanitizerUnpoisonObject(const T* object) {
   SanitizerUnpoisonMemoryRegion(object, sizeof(T));
 }
+
+namespace internal_memory {
+
+// If Pair is a standard-layout type, OffsetOf<Pair>::kFirst and
+// OffsetOf<Pair>::kSecond are equivalent to offsetof(Pair, first) and
+// offsetof(Pair, second) respectively. Otherwise they are -1.
+//
+// The purpose of OffsetOf is to avoid calling offsetof() on non-standard-layout
+// type, which is non-portable.
+template <class Pair, class = std::true_type>
+struct OffsetOf {
+  static constexpr size_t kFirst = -1;
+  static constexpr size_t kSecond = -1;
+};
+
+template <class Pair>
+struct OffsetOf<Pair, typename std::is_standard_layout<Pair>::type> {
+  static constexpr size_t kFirst = offsetof(Pair, first);
+  static constexpr size_t kSecond = offsetof(Pair, second);
+};
+
+template <class K, class V>
+struct IsLayoutCompatible {
+ private:
+  struct Pair {
+    K first;
+    V second;
+  };
+
+  // Is P layout-compatible with Pair?
+  template <class P>
+  static constexpr bool LayoutCompatible() {
+    return std::is_standard_layout<P>() && sizeof(P) == sizeof(Pair) &&
+           alignof(P) == alignof(Pair) &&
+           internal_memory::OffsetOf<P>::kFirst ==
+               internal_memory::OffsetOf<Pair>::kFirst &&
+           internal_memory::OffsetOf<P>::kSecond ==
+               internal_memory::OffsetOf<Pair>::kSecond;
+  }
+
+ public:
+  // Whether pair<const K, V> and pair<K, V> are layout-compatible. If they are,
+  // then it is safe to store them in a union and read from either.
+  static constexpr bool value = std::is_standard_layout<K>() &&
+                                std::is_standard_layout<Pair>() &&
+                                internal_memory::OffsetOf<Pair>::kFirst == 0 &&
+                                LayoutCompatible<std::pair<K, V>>() &&
+                                LayoutCompatible<std::pair<const K, V>>();
+};
+
+}  // namespace internal_memory
+
+// If kMutableKeys is false, only the value member is accessed.
+//
+// If kMutableKeys is true, key is accessed through all slots while value and
+// mutable_value are accessed only via INITIALIZED slots. Slots are created and
+// destroyed via mutable_value so that the key can be moved later.
+template <class K, class V>
+union slot_type {
+ private:
+  static void emplace(slot_type* slot) {
+    // The construction of union doesn't do anything at runtime but it allows us
+    // to access its members without violating aliasing rules.
+    new (slot) slot_type;
+  }
+  // If pair<const K, V> and pair<K, V> are layout-compatible, we can accept one
+  // or the other via slot_type. We are also free to access the key via
+  // slot_type::key in this case.
+  using kMutableKeys =
+      std::integral_constant<bool,
+                             internal_memory::IsLayoutCompatible<K, V>::value>;
+
+ public:
+  slot_type() {}
+  ~slot_type() = delete;
+  using value_type = std::pair<const K, V>;
+  using mutable_value_type = std::pair<K, V>;
+
+  value_type value;
+  mutable_value_type mutable_value;
+  K key;
+
+  template <class Allocator, class... Args>
+  static void construct(Allocator* alloc, slot_type* slot, Args&&... args) {
+    emplace(slot);
+    if (kMutableKeys::value) {
+      absl::allocator_traits<Allocator>::construct(*alloc, &slot->mutable_value,
+                                                   std::forward<Args>(args)...);
+    } else {
+      absl::allocator_traits<Allocator>::construct(*alloc, &slot->value,
+                                                   std::forward<Args>(args)...);
+    }
+  }
+
+  // Construct this slot by moving from another slot.
+  template <class Allocator>
+  static void construct(Allocator* alloc, slot_type* slot, slot_type* other) {
+    emplace(slot);
+    if (kMutableKeys::value) {
+      absl::allocator_traits<Allocator>::construct(
+          *alloc, &slot->mutable_value, std::move(other->mutable_value));
+    } else {
+      absl::allocator_traits<Allocator>::construct(*alloc, &slot->value,
+                                                   std::move(other->value));
+    }
+  }
+
+  template <class Allocator>
+  static void destroy(Allocator* alloc, slot_type* slot) {
+    if (kMutableKeys::value) {
+      absl::allocator_traits<Allocator>::destroy(*alloc, &slot->mutable_value);
+    } else {
+      absl::allocator_traits<Allocator>::destroy(*alloc, &slot->value);
+    }
+  }
+
+  template <class Allocator>
+  static void transfer(Allocator* alloc, slot_type* new_slot,
+                       slot_type* old_slot) {
+    emplace(new_slot);
+    if (kMutableKeys::value) {
+      absl::allocator_traits<Allocator>::construct(
+          *alloc, &new_slot->mutable_value, std::move(old_slot->mutable_value));
+    } else {
+      absl::allocator_traits<Allocator>::construct(*alloc, &new_slot->value,
+                                                   std::move(old_slot->value));
+    }
+    destroy(alloc, old_slot);
+  }
+
+  template <class Allocator>
+  static void swap(Allocator* alloc, slot_type* a, slot_type* b) {
+    if (kMutableKeys::value) {
+      using std::swap;
+      swap(a->mutable_value, b->mutable_value);
+    } else {
+      value_type tmp = std::move(a->value);
+      absl::allocator_traits<Allocator>::destroy(*alloc, &a->value);
+      absl::allocator_traits<Allocator>::construct(*alloc, &a->value,
+                                                   std::move(b->value));
+      absl::allocator_traits<Allocator>::destroy(*alloc, &b->value);
+      absl::allocator_traits<Allocator>::construct(*alloc, &b->value,
+                                                   std::move(tmp));
+    }
+  }
+
+  template <class Allocator>
+  static void move(Allocator* alloc, slot_type* src, slot_type* dest) {
+    if (kMutableKeys::value) {
+      dest->mutable_value = std::move(src->mutable_value);
+    } else {
+      absl::allocator_traits<Allocator>::destroy(*alloc, &dest->value);
+      absl::allocator_traits<Allocator>::construct(*alloc, &dest->value,
+                                                   std::move(src->value));
+    }
+  }
+
+  template <class Allocator>
+  static void move(Allocator* alloc, slot_type* first, slot_type* last,
+                   slot_type* result) {
+    for (slot_type *src = first, *dest = result; src != last; ++src, ++dest)
+      move(alloc, src, dest);
+  }
+};
 
 }  // namespace subtle
 }  // namespace gtl
