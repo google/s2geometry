@@ -360,37 +360,6 @@ class string_view {
   }
 #endif  // HAS_GLOBAL_STRING
 
-  // Note that `std::string_view::to_string()` returns `std::basic_string`.
-  // But `absl::string_view::to_string()` returns a `::basic_string` whenever
-  // that template is available.
-#ifdef HAS_GLOBAL_STRING
-  template <typename A = std::allocator<char>>
-  ABSL_DEPRECATED("Use string(sv)")::basic_string<
-      char, traits_type, A> to_string(const A& a = A()) const {
-    if (!data()) return ::basic_string<char, traits_type, A>(a);
-    return ::basic_string<char, traits_type, A>(data(), size(), a);
-  }
-#else   // !HAS_GLOBAL_STRING
-
-  template <typename A = std::allocator<char> >
-  ABSL_DEPRECATED("Use std::string(sv)")
-  std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
-    if (!data()) return std::basic_string<char, traits_type, A>(a);
-    return std::basic_string<char, traits_type, A>(data(), size(), a);
-  }
-#endif  // HAS_GLOBAL_STRING
-
-  ABSL_DEPRECATED("Use string(sv)")
-  string as_string() const {
-    if (!data()) return {};
-    return string(data(), size());
-  }
-  ABSL_DEPRECATED("Use string(sv)")
-  string ToString() const {
-    if (!data()) return {};
-    return string(data(), size());
-  }
-
   // string_view::copy()
   //
   // Copies the contents of the `string_view` at offset `pos` and length `n`
