@@ -530,13 +530,13 @@ class btree_node {
   // N is the index of the type in the Layout definition.
   // ElementType<N> is the Nth type in the Layout definition.
   template <size_type N>
-  inline typename layout_type::template ElementType<N> *GetField() {
+  inline typename std::tuple_element<N, typename layout_type::ElementTypes>::type *GetField() {
     // We assert that we don't read from values that aren't there.
     assert(N < 4 || !leaf());
     return InternalLayout().template Pointer<N>(reinterpret_cast<char *>(this));
   }
   template <size_type N>
-  inline const typename layout_type::template ElementType<N> *GetField() const {
+  inline const typename std::tuple_element<N, typename layout_type::ElementTypes>::type *GetField() const {
     assert(N < 4 || !leaf());
     return InternalLayout().template Pointer<N>(
         reinterpret_cast<const char *>(this));
