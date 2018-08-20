@@ -1,94 +1,105 @@
 dist: trusty
-
 language: cpp
-
 matrix:
   include:
-    - os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-7
-            - libgflags-dev
-            - libgoogle-glog-dev
-            - libgtest-dev
-            - libssl-dev
-            - swig3.0
-      env:
-        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
-        - GTEST_ROOT=/usr/src/gtest
-
-    - os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-6
-            - libgflags-dev
-            - libgoogle-glog-dev
-            - libgtest-dev
-            - libssl-dev
-            - swig3.0
-      env:
-        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
-        - GTEST_ROOT=/usr/src/gtest
-
-    - os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-5
-            - libgflags-dev
-            - libgoogle-glog-dev
-            - libgtest-dev
-            - libssl-dev
-            - swig3.0
-      env:
-        - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
-        - GTEST_ROOT=/usr/src/gtest
-
-    - os: linux
-      addons:
-        apt:
-          sources:
-            - llvm-toolchain-trusty-5.0
-            - ubuntu-toolchain-r-test
-          packages:
-            - clang-5.0
-            - g++-7
-            - libgflags-dev
-            - libgoogle-glog-dev
-            - libgtest-dev
-            - libssl-dev
-            - swig3.0
-      env:
-        - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
-        - GTEST_ROOT=/usr/src/gtest
-
-    - os: osx
-      osx_image: xcode8.3
-      env:
-        - MATRIX_EVAL=""
-        - GTEST_ROOT="$( /bin/pwd )/googletest-release-1.8.0/googletest"
-        - OPENSSL_ROOT_DIR=/usr/local/opt/openssl
-
+  - os: linux
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-7
+        - libgflags-dev
+        - libgoogle-glog-dev
+        - libgtest-dev
+        - libssl-dev
+        - swig3.0
+    env:
+    - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+    - GTEST_ROOT=/usr/src/gtest
+    - WHEEL=true
+  - os: linux
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-6
+        - libgflags-dev
+        - libgoogle-glog-dev
+        - libgtest-dev
+        - libssl-dev
+        - swig3.0
+    env:
+    - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+    - GTEST_ROOT=/usr/src/gtest
+  - os: linux
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-5
+        - libgflags-dev
+        - libgoogle-glog-dev
+        - libgtest-dev
+        - libssl-dev
+        - swig3.0
+    env:
+    - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+    - GTEST_ROOT=/usr/src/gtest
+  - os: linux
+    addons:
+      apt:
+        sources:
+        - llvm-toolchain-trusty-5.0
+        - ubuntu-toolchain-r-test
+        packages:
+        - clang-5.0
+        - g++-7
+        - libgflags-dev
+        - libgoogle-glog-dev
+        - libgtest-dev
+        - libssl-dev
+        - swig3.0
+    env:
+    - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+    - GTEST_ROOT=/usr/src/gtest
+  - os: osx
+    osx_image: xcode8.3
+    env:
+    - MATRIX_EVAL=""
+    - GTEST_ROOT="$( /bin/pwd )/googletest-release-1.8.0/googletest"
+    - OPENSSL_ROOT_DIR=/usr/local/opt/openssl
+    - WHEEL=true
 before_install:
-  - eval "${MATRIX_EVAL}"
-  - ${CC} --version
-  - ${CXX} --version
-
+- eval "${MATRIX_EVAL}"
+- "${CC} --version"
+- "${CXX} --version"
 install:
-  - if [[ "$TRAVIS_OS_NAME" == osx ]]; then brew install gflags glog; fi
-  - if [[ "$TRAVIS_OS_NAME" == osx ]]; then wget https://github.com/google/googletest/archive/release-1.8.0.tar.gz; fi
-  - if [[ "$TRAVIS_OS_NAME" == osx ]]; then tar zxvf release-1.8.0.tar.gz; fi
-
+- if [[ "$TRAVIS_OS_NAME" == osx ]]; then brew install gflags glog swig; fi
+- if [[ "$TRAVIS_OS_NAME" == osx ]]; then wget https://github.com/google/googletest/archive/release-1.8.0.tar.gz; fi
+- if [[ "$TRAVIS_OS_NAME" == osx ]]; then tar zxvf release-1.8.0.tar.gz; fi
 script:
-  - mkdir build
-  - cd build
-  - cmake -DGTEST_ROOT=$GTEST_ROOT -DWITH_GFLAGS=ON -DWITH_GLOG=ON ..
-  - make && make CTEST_OUTPUT_ON_FAILURE=1 test
+- mkdir build
+- cd build
+- cmake -DGTEST_ROOT=$GTEST_ROOT -DWITH_GFLAGS=ON -DWITH_GLOG=ON ..
+- make && make CTEST_OUTPUT_ON_FAILURE=1 test
+- cd ..
+after_success:
+- if [[ "$TRAVIS_OS_NAME" == osx ]]; then find . -name *pywraps2.*; fi
+- echo "from .pywraps2 import *" > build/python/__init__.py
+- if [[ "$TRAVIS_OS_NAME" == osx ]]; then pip2 install --user travis -U wheel setuptools; fi
+- python setup.py bdist_wheel
+- cd dist
+deploy:
+  skip_cleanup: true
+  provider: gcs
+  access_key_id: GOOGIJDJKOAEEHC5H4YNY66C
+  secret_access_key:
+    secure: jNtihmX3V8Sr3n6iUJVh8PCR0TYFZjt/uRENR3bEeaV9H7OGN7cMAL41xSNO4kci7zu6+vFYbNA2uFTIiXCoAPkNtUMfRUxGk10kQgr+kAT4BAPEJ6ne6xRnNWWrqnSoomKqfzaPIl+iJMHh351m/VvFYZsdIBxztfr4TAGjz+o/mj0ikrENVtO3z4vNRTah3oPlvlHPrp3tbC0RrtGQ+i3NBu9HFqiZIEgAlJ7K70FG6qoP2xzpWUIEFfj9M6NEhY93EI7pR0ydn8mvGkuxYoUVL8LbNMgyiF4k74/BnPIGUM4weJuZnqL4WSI/2th9amj8cQ5+mSv6I6CJIzyzReYqbniQFAP1d8HaMaNEbtE8Hq8X90yEdUWd/mejhPCsbbvH0UGBRxV7i1hg1zfaBYKqeB1krixBBLPqqODMbuRCZ1WHzT4ZXNDuvumnbyyvhh1sVXPReJDi0I20Cxmyn8jswp9pmbW6tJgxr5fG7P0ocivccmUuM53kfiOX1L/aJHJ3cKLzUy/vLRcxRem6xqzybSkP9JoZUBASoRo70IQorw9QnXEUXRalfOjxfwU6EOH2pAcEwqgRIFE+8E/AKVG9G4p+9m5733sEwGO7V8k2BkTL6qwpKW8gBy+bNnrpem9UC5lQbmrF290Syd4h5hS9/u/+UUG62eA5tbHKfdc=
+  bucket: dl-s2-whl
+  on:
+    repo: justinwp/s2geometry
+    condition: $WHEEL = true
+    all_branches: true
