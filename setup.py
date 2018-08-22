@@ -13,14 +13,13 @@ def get_git_version():
     if commit is None:
         return ""
 
-    return ".dev+{}".format(commit[:7])
+    return ".dev+{}".format(commit[1:7])
 
 
 setup(
     name='s2geometry',
     version="0.0.0" + get_git_version(),
     packages=['s2geometry'],
-    package_dir={'s2geometry': 'build/python'},
     package_data={'': ['_pywraps2.so']},
     distclass=BinaryDistribution
 )
