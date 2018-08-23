@@ -90,7 +90,8 @@ after_success:
 - if [[ "$TRAVIS_OS_NAME" == osx ]]; then find . -name *pywraps2.*; fi
 - echo "from .pywraps2 import *" > build/python/__init__.py
 - cp -a build/python s2geometry
-- if [[ "$TRAVIS_OS_NAME" == osx ]]; then pip2 install --user travis -U wheel setuptools; fi
+- if [[ "$TRAVIS_OS_NAME" == osx ]]; then pip2 install --user travis -U wheel=0.30.0 setuptools; fi
+- if [[ "$TRAVIS_OS_NAME" != osx ]]; then pip install --user travis -U wheel=0.30.0; fi
 - python setup.py bdist_wheel
 
 deploy:
