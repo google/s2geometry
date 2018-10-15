@@ -136,7 +136,7 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
   // performance penalty.
   absl::FixedArray<unsigned char> bytes(BN_num_bytes(bn));
   // "le" indicates little endian.
-  S2_DCHECK_EQ(BN_bn2lebinpad(bn, bytes.data(), bytes.size()), bytes.size());
+  S2_CHECK_EQ(BN_bn2lebinpad(bn, bytes.data(), bytes.size()), bytes.size());
 
   int count = 0;
   for (unsigned char c : bytes) {
