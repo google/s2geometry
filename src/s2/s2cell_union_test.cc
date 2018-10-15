@@ -36,6 +36,8 @@
 #include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
 
+DECLARE_bool(s2debug);
+
 using absl::StrCat;
 using std::max;
 using std::min;
@@ -81,6 +83,17 @@ TEST(S2CellUnion, InvalidCellIdNotValid) {
   auto cell_union =
       S2CellUnionTestPeer::FromVerbatimNoChecks({S2CellId::None()});
   EXPECT_FALSE(cell_union.IsValid());
+}
+
+TEST(S2CellUnion, InvalidCellIdNotValidWithDebugFlag) {
+  // Manually save and restore flag, to preserve test state in opensource
+  // without gflags.
+  const bool saved_s2debug = FLAGS_s2debug;
+  FLAGS_s2debug = false;
+  ASSERT_FALSE(S2CellId::None().is_valid());
+  auto cell_union = S2CellUnion::FromVerbatim({S2CellId::None()});
+  EXPECT_FALSE(cell_union.IsValid());
+  FLAGS_s2debug = saved_s2debug;
 }
 
 TEST(S2CellUnion, IsNormalized) {

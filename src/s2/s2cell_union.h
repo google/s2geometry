@@ -35,6 +35,7 @@ class S2Cap;
 class S2Cell;
 class S2LatLngRect;
 
+DECLARE_bool(s2debug);
 DECLARE_int32(s2cell_union_decode_max_num_cells);
 
 // An S2CellUnion is a region consisting of cells of various sizes.  Typically
@@ -361,7 +362,7 @@ inline S2CellUnion S2CellUnion::FromNormalized(std::vector<S2CellId> cell_ids) {
 
 inline S2CellUnion S2CellUnion::FromVerbatim(std::vector<S2CellId> cell_ids) {
   S2CellUnion result(std::move(cell_ids), VERBATIM);
-  S2_DCHECK(result.IsValid());
+  S2_DCHECK(!FLAGS_s2debug || result.IsValid());
   return result;
 }
 
