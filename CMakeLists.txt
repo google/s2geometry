@@ -403,7 +403,7 @@ install(FILES src/s2/util/math/mathutil.h
 install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h
         DESTINATION include/s2/util/units)
-install(TARGETS s2 DESTINATION lib)
+install(TARGETS s2 s2testing DESTINATION lib)
 
 message("GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
