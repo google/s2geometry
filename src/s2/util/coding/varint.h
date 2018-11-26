@@ -136,11 +136,12 @@ class Varint {
   // Decode and sum up a sequence of deltas until the sum >= goal.
   // It is significantly faster than calling ParseXXInline in a loop.
   // NOTE(user): The code does NO error checking, it assumes all the
-  // deltas are valid and the sum of deltas will never exceed kint64max. The
-  // code works for both 32bits and 64bits varint, and on 64 bits machines,
-  // the 64 bits version is almost always faster. Thus we only have a 64 bits
-  // interface here. The interface is slightly different from the other
-  // functions in that it requires *signed* integers.
+  // deltas are valid and the sum of deltas will never exceed
+  // numeric_limits<int64>::max(). The code works for both 32bits and
+  // 64bits varint, and on 64 bits machines, the 64 bits version is
+  // almost always faster. Thus we only have a 64 bits interface here.
+  // The interface is slightly different from the other functions in that
+  // it requires *signed* integers.
   // REQUIRES   "ptr" points to the first byte of a varint-encoded delta.
   //            The sum of deltas >= goal (the code does NO boundary check).
   //            goal is positive and fit into a signed int64.

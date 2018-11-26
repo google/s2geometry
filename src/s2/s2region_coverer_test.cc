@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <queue>
 #include <string>
 #include <unordered_map>
@@ -143,7 +144,7 @@ TEST(S2RegionCoverer, RandomCaps) {
 TEST(S2RegionCoverer, SimpleCoverings) {
   static const int kMaxLevel = S2CellId::kMaxLevel;
   S2RegionCoverer::Options options;
-  options.set_max_cells(kint32max);
+  options.set_max_cells(std::numeric_limits<int32>::max());
   for (int i = 0; i < 1000; ++i) {
     int level = S2Testing::rnd.Uniform(kMaxLevel + 1);
     options.set_min_level(level);

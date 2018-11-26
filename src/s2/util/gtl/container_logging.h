@@ -22,6 +22,7 @@
 #ifndef S2_UTIL_GTL_CONTAINER_LOGGING_H_
 #define S2_UTIL_GTL_CONTAINER_LOGGING_H_
 
+#include <limits>
 #include <ostream>
 #include <string>
 #include <type_traits>
@@ -94,7 +95,7 @@ struct LogLegacyBase : public LogBase {
 // LogShort uses [] braces and separates items with comma-spaces.  For
 // example "[1, 2, 3]".
 struct LogShort : public internal::LogShortBase {
-  int64 MaxElements() const { return kint64max; }
+  int64 MaxElements() const { return std::numeric_limits<int64>::max(); }
 };
 
 // LogShortUpToN(max_elements) formats the same as LogShort but prints no more
@@ -121,7 +122,7 @@ struct LogShortUpTo100 : public LogShortUpToN {
 // 3
 // ]".
 struct LogMultiline : public internal::LogMultilineBase {
-  int64 MaxElements() const { return kint64max; }
+  int64 MaxElements() const { return std::numeric_limits<int64>::max(); }
 };
 
 // LogMultilineUpToN(max_elements) formats the same as LogMultiline but
@@ -148,7 +149,7 @@ struct LogLegacyUpTo100 : public internal::LogLegacyBase {
   int64 MaxElements() const { return 100; }
 };
 struct LogLegacy : public internal::LogLegacyBase {
-  int64 MaxElements() const { return kint64max; }
+  int64 MaxElements() const { return std::numeric_limits<int64>::max(); }
 };
 
 // The default policy for new code.
