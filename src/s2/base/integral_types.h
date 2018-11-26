@@ -13,38 +13,19 @@
 // limitations under the License.
 //
 
-#ifndef S2_BASE_TIMER_H_
-#define S2_BASE_TIMER_H_
+#ifndef S2_BASE_INTEGRAL_TYPES_H_
+#define S2_BASE_INTEGRAL_TYPES_H_
 
-#include <chrono>
+using int8 = signed char;
+using int16 = short;
+using int32 = int;
+using int64 = long long;
 
-#include "s2/base/integral_types.h"
+using uint8 = unsigned char;
+using uint16 = unsigned short;
+using uint32 = unsigned int;
+using uint64 = unsigned long long;
 
-class CycleTimer {
- public:
-  CycleTimer() = default;
+using uword_t = unsigned long;
 
-  void Start() {
-    start_ = Now();
-  }
-
-  int64 GetInMs() const {
-    using msec = std::chrono::milliseconds;
-    return std::chrono::duration_cast<msec>(GetDuration()).count();
-  }
-
- private:
-  using Clock = std::chrono::high_resolution_clock;
-
-  static Clock::time_point Now() {
-    return Clock::now();
-  }
-
-  Clock::duration GetDuration() const {
-    return Now() - start_;
-  }
-
-  Clock::time_point start_;
-};
-
-#endif  // S2_BASE_TIMER_H_
+#endif  // S2_BASE_INTEGRAL_TYPES_H_

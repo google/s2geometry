@@ -23,7 +23,7 @@
 #include <iterator>
 #include <utility>
 #include <vector>
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"

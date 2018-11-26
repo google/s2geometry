@@ -27,8 +27,8 @@
 #include <openssl/bn.h>
 #include <openssl/crypto.h>  // for OPENSSL_free
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/fixed_array.h"
 

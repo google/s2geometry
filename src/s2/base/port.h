@@ -37,8 +37,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "s2/base/integral_types.h"
 #include "s2/third_party/absl/base/config.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/port.h"  // IWYU pragma: export
 
 #ifdef SWIG

@@ -34,7 +34,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include <gtest/gtest.h>
 #include "s2/r2.h"

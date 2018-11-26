@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r1interval.h"
@@ -52,7 +53,6 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2wedge_relations.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/types/span.h"
 #include "s2/util/coding/coder.h"

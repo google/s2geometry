@@ -29,6 +29,7 @@
 #include <gtest/gtest.h>
 
 #include "s2/base/commandlineflags.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/stringprintf.h"
 #include "s2/base/strtoint.h"
@@ -40,7 +41,6 @@
 #include "s2/s2latlng.h"
 #include "s2/s2region.h"
 #include "s2/s2testing.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/third_party/absl/strings/str_split.h"
 

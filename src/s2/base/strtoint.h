@@ -46,9 +46,9 @@
 
 #include <cstdlib> // For strtol* functions.
 #include <string>
-#include "s2/third_party/absl/base/integral_types.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/port.h"
+#include "s2/third_party/absl/base/macros.h"
 
 // Adapter functions for handling overflow and errno.
 int32 strto32_adapter(const char *nptr, char **endptr, int base);

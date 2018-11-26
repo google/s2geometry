@@ -22,7 +22,7 @@
 #include <limits>
 #include <vector>
 
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include "s2/util/gtl/dense_hash_set.h"
 #include "s2/util/hash/mix.h"
 

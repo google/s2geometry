@@ -324,6 +324,7 @@ install(FILES src/s2/_fp_contract_off.h
         DESTINATION include/s2)
 install(FILES src/s2/base/casts.h
               src/s2/base/commandlineflags.h
+              src/s2/base/integral_types.h
               src/s2/base/log_severity.h
               src/s2/base/logging.h
               src/s2/base/mutex.h
@@ -338,7 +339,6 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/casts.h
               src/s2/third_party/absl/base/config.h
               src/s2/third_party/absl/base/dynamic_annotations.h
-              src/s2/third_party/absl/base/integral_types.h
               src/s2/third_party/absl/base/log_severity.h
               src/s2/third_party/absl/base/macros.h
               src/s2/third_party/absl/base/optimization.h

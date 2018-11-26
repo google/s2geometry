@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
@@ -42,7 +43,6 @@
 #include "s2/s2region.h"
 #include "s2/s2text_format.h"
 #include "s2/strings/serialize.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/util/math/matrix3x3.h"

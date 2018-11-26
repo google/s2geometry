@@ -22,9 +22,9 @@
 #include <climits>
 #include <limits>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/port.h"
 #include "s2/base/strtoint.h"
-#include "s2/third_party/absl/base/integral_types.h"
 
 // Replacement strto[u]l functions that have identical overflow and underflow
 // characteristics for both ILP-32 and LP-64 platforms, including errno

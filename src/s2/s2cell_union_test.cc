@@ -24,6 +24,7 @@
 
 #include <gtest/gtest.h>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -33,7 +34,6 @@
 #include "s2/s2metrics.h"
 #include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
 

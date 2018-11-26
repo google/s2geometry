@@ -100,11 +100,11 @@
 #include <algorithm>
 #include <cmath>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/r2.h"
 #include "s2/s2coords_internal.h"
 #include "s2/s2point.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/util/math/mathutil.h"
 
 // S2 is a namespace for constants and simple utility functions that are used

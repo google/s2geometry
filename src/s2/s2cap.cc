@@ -22,6 +22,7 @@
 #include <iosfwd>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/r1interval.h"
 #include "s2/s1interval.h"
@@ -32,7 +33,6 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2metrics.h"
 #include "s2/s2pointutil.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/util/math/vector.h"
 
 using std::fabs;

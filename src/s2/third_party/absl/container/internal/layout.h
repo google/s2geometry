@@ -174,7 +174,6 @@
 #include <sanitizer/asan_interface.h>
 #endif
 
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/meta/type_traits.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/third_party/absl/types/span.h"

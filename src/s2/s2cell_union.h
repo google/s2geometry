@@ -21,11 +21,11 @@
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
 
 class Decoder;

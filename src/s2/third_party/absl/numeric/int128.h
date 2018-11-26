@@ -33,7 +33,6 @@
 #include <limits>
 
 #include "s2/third_party/absl/base/config.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 
@@ -165,12 +164,12 @@ class alignas(16) uint128 {
   // Uint128Low64()
   //
   // Returns the lower 64-bit value of a `uint128` value.
-  friend constexpr uint64 Uint128Low64(uint128 v);
+  friend constexpr uint64_t Uint128Low64(uint128 v);
 
   // Uint128High64()
   //
   // Returns the higher 64-bit value of a `uint128` value.
-  friend constexpr uint64 Uint128High64(uint128 v);
+  friend constexpr uint64_t Uint128High64(uint128 v);
 
   // MakeUInt128()
   //
@@ -309,9 +308,9 @@ inline uint128& uint128::operator%=(uint128 other) {
   return *this;
 }
 
-constexpr uint64 Uint128Low64(uint128 v) { return v.lo_; }
+constexpr uint64_t Uint128Low64(uint128 v) { return v.lo_; }
 
-constexpr uint64 Uint128High64(uint128 v) { return v.hi_; }
+constexpr uint64_t Uint128High64(uint128 v) { return v.hi_; }
 
 // Constructors from integer types.
 
