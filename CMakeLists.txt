@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.1)
 project(s2-geometry)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
 include(FeatureSummary)
