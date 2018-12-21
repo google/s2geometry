@@ -861,53 +861,6 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 
 #endif  // defined(__cplusplus), end of unaligned API
 
-// aligned_malloc, aligned_free
-#if defined(__ANDROID__) || defined(__ASYLO__)
-#include <malloc.h>  // for memalign()
-#endif
-
-// __ASYLO__ platform uses newlib without an underlying OS, which provides
-// memalign, but not posix_memalign.
-#if defined(__cplusplus) &&                                               \
-    (((defined(__GNUC__) || defined(__APPLE__) || \
-       defined(__NVCC__)) &&                                              \
-      !defined(SWIG)) ||                                                  \
-     ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)) ||   \
-     defined(__ASYLO__))
-inline void *aligned_malloc(size_t size, int minimum_alignment) {
-#if defined(__ANDROID__) || defined(OS_ANDROID) || defined(__ASYLO__)
-  return memalign(minimum_alignment, size);
-#else  // !__ANDROID__ && !OS_ANDROID && !__ASYLO__
-  void *ptr = nullptr;
-  // posix_memalign requires that the requested alignment be at least
-  // sizeof(void*). In this case, fall back on malloc which should return memory
-  // aligned to at least the size of a pointer.
-  const int required_alignment = sizeof(void*);
-  if (minimum_alignment < required_alignment)
-    return malloc(size);
-  if (posix_memalign(&ptr, static_cast<size_t>(minimum_alignment), size) != 0)
-    return nullptr;
-  else
-    return ptr;
-#endif
-}
-
-inline void aligned_free(void *aligned_memory) {
-  free(aligned_memory);
-}
-
-#elif defined(_MSC_VER)  // MSVC
-
-inline void *aligned_malloc(size_t size, int minimum_alignment) {
-  return _aligned_malloc(size, minimum_alignment);
-}
-
-inline void aligned_free(void *aligned_memory) {
-  _aligned_free(aligned_memory);
-}
-
-#endif  // aligned_malloc, aligned_free
-
 // ALIGNED_CHAR_ARRAY
 //
 // Provides a char array with the exact same alignment as another type. The
