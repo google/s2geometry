@@ -197,7 +197,7 @@ add_library(s2
             src/s2/util/units/length-units.cc)
 add_library(s2testing STATIC
             src/s2/s2builderutil_testing.cc
-            src/s2/s2shapeutil_testing.cc
+#           src/s2/s2shapeutil_testing.cc
             src/s2/s2testing.cc)
 target_link_libraries(
     s2
@@ -503,6 +503,7 @@ if (GTEST_ROOT)
       src/s2/s2shapeutil_edge_iterator_test.cc
       src/s2/s2shapeutil_get_reference_point_test.cc
       src/s2/s2shapeutil_range_iterator_test.cc
+      src/s2/s2shapeutil_testing_test.cc
       src/s2/s2shapeutil_visit_crossing_edge_pairs_test.cc
       src/s2/s2testing_test.cc
       src/s2/s2text_format_test.cc
