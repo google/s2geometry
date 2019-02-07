@@ -101,6 +101,7 @@ void DegeneracyCheckingLayer::Build(const Graph& g, S2Error* error) {
   std::sort(expected_.begin(), expected_.end());
   EXPECT_TRUE(expected_ == actual) << "\nExpected: " << expected_
                                    << "\nActual: " << actual;
+  EXPECT_EQ(IsFullyDegenerate(g), degeneracies.size() == g.num_edges());
 }
 
 void ExpectDegeneracies(const string& polygon_str,
