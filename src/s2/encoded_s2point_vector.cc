@@ -585,7 +585,7 @@ uint64 ChooseBase(const vector<uint64>& values, int level, bool have_exceptions,
   if (base == 0) {
     *base_bits = 0;
   } else {
-    int low_bit = Bits::Log2Floor64(base & (~base + 1));
+    int low_bit = Bits::FindLSBSetNonZero64(base);
     *base_bits = (MaxBitsForLevel(level) - low_bit + 7) & ~7;
   }
 
@@ -712,7 +712,8 @@ BlockCode GetBlockCode(Span<const uint64> values, uint64 base,
     uint64 mask = BitMask(offset_shift);
     uint64 min_offset = (b_max - max_delta + mask) & ~mask;
     S2_DCHECK_GT(min_offset, 0);
-    offset_bits = (Bits::Log2Floor64(min_offset) + 1 - offset_shift + 7) & ~7;
+    offset_bits =
+        (Bits::FindMSBSetNonZero64(min_offset) + 1 - offset_shift + 7) & ~7;
     // A 64-bit offset can only be encoded with an overlap of 4 bits.
     if (offset_bits == 64) overlap_bits = 4;
   }

@@ -202,7 +202,7 @@ void EncodeUintVector(absl::Span<const T> v, Encoder* encoder) {
 
   T one_bits = 1;  // Ensures len >= 1.
   for (auto x : v) one_bits |= x;
-  int len = (Bits::Log2FloorNonZero64(one_bits) >> 3) + 1;
+  int len = (Bits::FindMSBSetNonZero64(one_bits) >> 3) + 1;
   S2_DCHECK(len >= 1 && len <= 8);
 
   // Note that the multiplication is optimized into a bit shift.
