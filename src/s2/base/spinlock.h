@@ -41,4 +41,16 @@ class SpinLock {
   std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
 };
 
+class SpinLockHolder {
+ public:
+  inline explicit SpinLockHolder(SpinLock* l) : lock_(l) { lock_->Lock(); }
+  inline ~SpinLockHolder() { lock_->Unlock(); }
+
+  SpinLockHolder(const SpinLockHolder&) = delete;
+  SpinLockHolder& operator=(const SpinLockHolder&) = delete;
+
+ private:
+  SpinLock* lock_;
+};
+
 #endif  // S2_BASE_SPINLOCK_H_
