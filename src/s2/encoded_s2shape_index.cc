@@ -127,6 +127,8 @@ bool EncodedS2ShapeIndex::Init(Decoder* decoder,
 }
 
 void EncodedS2ShapeIndex::Minimize() {
+  if (cells_ == nullptr) return;  // Not initialized yet.
+
   for (auto& atomic_shape : shapes_) {
     S2Shape* shape = atomic_shape.load(std::memory_order_relaxed);
     if (shape != kUndecodedShape() && shape != nullptr) {
