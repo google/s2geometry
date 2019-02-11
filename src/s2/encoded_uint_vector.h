@@ -86,6 +86,8 @@ class EncodedUintVector {
   std::vector<T> Decode() const;
 
  private:
+  template <int length> size_t lower_bound(T target) const;
+
   const char* data_;
   uint32 size_;
   uint8 len_;
@@ -246,17 +248,35 @@ inline T EncodedUintVector<T>::operator[](int i) const {
 }
 
 template <class T>
-inline size_t EncodedUintVector<T>::lower_bound(T target) const {
+size_t EncodedUintVector<T>::lower_bound(T target) const {
+  static_assert(sizeof(T) & 0xe, "Unsupported integer length");
+  S2_DCHECK(len_ >= 1 && len_ <= sizeof(T));
+
   // TODO(ericv): Consider using the unused 28 bits of "len_" to store the
   // last result of lower_bound() to be used as a hint.  This should help in
   // common situation where the same element is looked up repeatedly.  This
   // would require declaring the new field (length_lower_bound_hint_) as
   // mutable std::atomic<uint32> (accessed using std::memory_order_relaxed)
   // with a custom copy constructor that resets the hint component to zero.
+  switch (len_) {
+    case 1: return lower_bound<1>(target);
+    case 2: return lower_bound<2>(target);
+    case 3: return lower_bound<3>(target);
+    case 4: return lower_bound<4>(target);
+    case 5: return lower_bound<5>(target);
+    case 6: return lower_bound<6>(target);
+    case 7: return lower_bound<7>(target);
+    default: return lower_bound<8>(target);
+  }
+}
+
+template <class T> template <int length>
+inline size_t EncodedUintVector<T>::lower_bound(T target) const {
   size_t lo = 0, hi = size_;
   while (lo < hi) {
     size_t mid = (lo + hi) >> 1;
-    if ((*this)[mid] < target) {
+    T value = GetUintWithLength<T>(data_ + mid * length, length);
+    if (value < target) {
       lo = mid + 1;
     } else {
       hi = mid;
