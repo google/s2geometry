@@ -398,20 +398,4 @@ union slot_type {
 }  // namespace container_internal
 }  // namespace absl
 
-namespace gtl {
-namespace subtle {
-using absl::container_internal::Allocate;
-using absl::container_internal::ConstructFromTuple;
-using absl::container_internal::Deallocate;
-using absl::container_internal::DecomposePair;
-using absl::container_internal::DecomposeValue;
-using absl::container_internal::PairArgs;
-using absl::container_internal::SanitizerPoisonMemoryRegion;
-using absl::container_internal::SanitizerPoisonObject;
-using absl::container_internal::SanitizerUnpoisonMemoryRegion;
-using absl::container_internal::SanitizerUnpoisonObject;
-using absl::container_internal::WithConstructed;
-}  // namespace subtle
-}  // namespace gtl
-
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INTERNAL_CONTAINER_MEMORY_H_
