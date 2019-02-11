@@ -197,6 +197,19 @@ TEST(S2ClosestEdgeQuery, TargetPolygonContainingIndexedPoints) {
   EXPECT_EQ(3, results[1].edge_id());  // 3:13
 }
 
+TEST(S2ClosestEdgeQuery, EmptyTargetOptimized) {
+  // Ensure that the optimized algorithm handles empty targets when a distance
+  // limit is specified.
+  MutableS2ShapeIndex index;
+  index.Add(make_unique<S2Polygon::OwningShape>(make_unique<S2Polygon>(
+      S2Loop::MakeRegularLoop(S2Point(1, 0, 0), S1Angle::Radians(0.1), 1000))));
+  S2ClosestEdgeQuery query(&index);
+  query.mutable_options()->set_max_distance(S1Angle::Radians(1e-5));
+  MutableS2ShapeIndex target_index;
+  S2ClosestEdgeQuery::ShapeIndexTarget target(&target_index);
+  EXPECT_EQ(0, query.FindClosestEdges(&target).size());
+}
+
 TEST(S2ClosestEdgeQuery, EmptyPolygonTarget) {
   // Verifies that distances are measured correctly to empty polygon targets.
   auto empty_polygon_index = MakeIndexOrDie("# # empty");

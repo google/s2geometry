@@ -574,6 +574,7 @@ void S2ClosestPointQueryBase<Distance, Data>::InitQueue() {
   // that disc and intersect it with the covering for the index.  This can
   // save a lot of work when the search region is small.
   S2Cap cap = target_->GetCapBound();
+  if (cap.is_empty()) return;  // Empty target.
   if (options().max_results() == 1) {
     // If the user is searching for just the closest point, we can compute an
     // upper bound on search radius by seeking to the center of the target's

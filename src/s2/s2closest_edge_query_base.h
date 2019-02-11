@@ -709,6 +709,7 @@ void S2ClosestEdgeQueryBase<Distance>::InitQueue() {
   // process one or both of the adjacent index cells in S2CellId order,
   // provided that those cells are closer than distance_limit_.
   S2Cap cap = target_->GetCapBound();
+  if (cap.is_empty()) return;  // Empty target.
   if (options().max_results() == 1 && iter_.Locate(cap.center())) {
     ProcessEdges(QueueEntry(Distance::Zero(), iter_.id(), &iter_.cell()));
     // Skip the rest of the algorithm if we found an intersecting edge.
