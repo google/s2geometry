@@ -210,6 +210,8 @@ inline void SanitizerPoisonMemoryRegion(const void* m, size_t s) {
 #ifdef MEMORY_SANITIZER
   __msan_poison(m, s);
 #endif
+  (void)m;
+  (void)s;
 }
 
 inline void SanitizerUnpoisonMemoryRegion(const void* m, size_t s) {
@@ -219,6 +221,8 @@ inline void SanitizerUnpoisonMemoryRegion(const void* m, size_t s) {
 #ifdef MEMORY_SANITIZER
   __msan_unpoison(m, s);
 #endif
+  (void)m;
+  (void)s;
 }
 
 template <typename T>
