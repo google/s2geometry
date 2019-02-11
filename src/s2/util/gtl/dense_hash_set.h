@@ -136,7 +136,7 @@ namespace gtl {
 template <class Value,
           class HashFcn = std::hash<Value>,
           class EqualKey = std::equal_to<Value>,
-          class Alloc = libc_allocator_with_realloc<Value> >
+          class Alloc = std::allocator<Value> >
 class dense_hash_set {
  private:
 
