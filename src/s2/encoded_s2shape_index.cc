@@ -120,7 +120,15 @@ bool EncodedS2ShapeIndex::Init(Decoder* decoder,
   // For very large S2ShapeIndexes the internal memset() call to initialize
   // cells_decoded_ still takes about 4 microseconds per million cells, but
   // this seems reasonable relative to other likely costs (I/O, etc).
-  cells_ = make_unique<std::atomic<S2ShapeIndexCell*>[]>(cell_ids_.size());
+  //
+  // NOTE(ericv): DO NOT use make_unique<> here!  make_unique<> allocates memory
+  // using "new T[n]()", which initializes all elements of the array.  This
+  // slows down some benchmarks by over 100x.
+  //
+  // cells_ = make_unique<std::atomic<S2ShapeIndexCell*>[]>(cell_ids_.size());
+  // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  //                                NO NO NO
+  cells_.reset(new std::atomic<S2ShapeIndexCell*>[cell_ids_.size()]);
   cells_decoded_ = vector<std::atomic<uint64>>((cell_ids_.size() + 63) >> 6);
 
   return encoded_cells_.Init(decoder);
