@@ -40,9 +40,6 @@
 // that evaluate to a concrete mutex object whenever possible. If the mutex
 // you want to refer to is not in scope, you may use a member pointer
 // (e.g. &MyClass::mutex_) to refer to a mutex in some (unknown) object.
-//
-//
-// IWYU pragma: private, include "base/thread_annotations.h"
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_THREAD_ANNOTATIONS_H_
 #define S2_THIRD_PARTY_ABSL_BASE_THREAD_ANNOTATIONS_H_

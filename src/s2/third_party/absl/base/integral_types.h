@@ -18,10 +18,6 @@
 // This code is compiled directly on many platforms, including client
 // platforms like Windows, Mac, and embedded systems.  Before making
 // any changes here, make sure that you're not breaking any platforms.
-//
-// NOTE FOR GOOGLERS:
-//
-// IWYU pragma: private, include "base/integral_types.h"
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_INTEGRAL_TYPES_H_
 #define S2_THIRD_PARTY_ABSL_BASE_INTEGRAL_TYPES_H_
