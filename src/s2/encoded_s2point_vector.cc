@@ -18,7 +18,6 @@
 #include "s2/encoded_s2point_vector.h"
 
 #include "s2/third_party/absl/base/internal/unaligned_access.h"
-#include "s2/util/bits/bit-interleave.h"
 #include "s2/util/bits/bits.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
@@ -30,6 +29,49 @@ using std::min;
 using std::vector;
 
 namespace s2coding {
+
+// Like util_bits::InterleaveUint32, but interleaves bit pairs rather than
+// individual bits.  This format is faster to decode than the fully interleaved
+// format, and produces the same results for our use case.
+inline uint64 InterleaveUint32BitPairs(const uint32 val0, const uint32 val1) {
+  uint64 v0 = val0, v1 = val1;
+  v0 = (v0 | (v0 << 16)) & 0x0000ffff0000ffff;
+  v1 = (v1 | (v1 << 16)) & 0x0000ffff0000ffff;
+  v0 = (v0 | (v0 << 8)) & 0x00ff00ff00ff00ff;
+  v1 = (v1 | (v1 << 8)) & 0x00ff00ff00ff00ff;
+  v0 = (v0 | (v0 << 4)) & 0x0f0f0f0f0f0f0f0f;
+  v1 = (v1 | (v1 << 4)) & 0x0f0f0f0f0f0f0f0f;
+  v0 = (v0 | (v0 << 2)) & 0x3333333333333333;
+  v1 = (v1 | (v1 << 2)) & 0x3333333333333333;
+  return v0 | (v1 << 2);
+}
+
+// This code is about 50% faster than util_bits::DeinterleaveUint32, which
+// uses a lookup table.  The speed advantage is expected to be even larger in
+// code that mixes bit interleaving with other significant operations since it
+// doesn't require keeping a 256-byte lookup table in the L1 data cache.
+inline void DeinterleaveUint32BitPairs(uint64 code,
+                                       uint32 *val0, uint32 *val1) {
+  uint64 v0 = code, v1 = code >> 2;
+  v0 &= 0x3333333333333333;
+  v0 |= v0 >> 2;
+  v1 &= 0x3333333333333333;
+  v1 |= v1 >> 2;
+  v0 &= 0x0f0f0f0f0f0f0f0f;
+  v0 |= v0 >> 4;
+  v1 &= 0x0f0f0f0f0f0f0f0f;
+  v1 |= v1 >> 4;
+  v0 &= 0x00ff00ff00ff00ff;
+  v0 |= v0 >> 8;
+  v1 &= 0x00ff00ff00ff00ff;
+  v1 |= v1 >> 8;
+  v0 &= 0x0000ffff0000ffff;
+  v0 |= v0 >> 16;
+  v1 &= 0x0000ffff0000ffff;
+  v1 |= v1 >> 16;
+  *val0 = v0;
+  *val1 = v1;
+}
 
 // Forward declarations.
 void EncodeS2PointVectorFast(Span<const S2Point> points, Encoder* encoder);
@@ -241,14 +283,14 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
   // constant bits and then prepends the bits for "face", yielding a total of
   // (level + 2) bits for "sj" and (level + 1) bits for "tj".
   //
-  // We then combine (sj, tj) into one 64-bit value by interleaving bits:
+  // We then combine (sj, tj) into one 64-bit value by interleaving bit pairs:
   //
-  //   v = InterleaveBits(sj, tj);
+  //   v = InterleaveBitPairs(sj, tj);
   //
-  // (Technically we only need to interleave bit pairs in order to get the most
-  // efficient encoding, but it's not worth writing a separate function.)  The
-  // result is similar to right-shifting an S2CellId by (61 - 2 * level), except
-  // that it is faster to decode and the spatial locality is not quite as good.
+  // (We could also interleave individual bits, but it is faster this way.)
+  // The result is similar to right-shifting an S2CellId by (61 - 2 * level),
+  // except that it is faster to decode and the spatial locality is not quite
+  // as good.
   //
   // The 64-bit values are divided into blocks of size 8, and then each value is
   // encoded as the sum of a base value, a per-block offset, and a per-value
@@ -545,7 +587,7 @@ vector<uint64> ConvertCellsToValues(const vector<CellPoint>& cell_points,
       //            parent(level).id() >> (2 * shift + 1);
       uint32 sj = (((cp.face & 3) << 30) | (cp.si >> 1)) >> shift;
       uint32 tj = (((cp.face & 4) << 29) | cp.ti) >> (shift + 1);
-      uint64 v = util_bits::InterleaveUint32(sj, tj);
+      uint64 v = InterleaveUint32BitPairs(sj, tj);
       S2_DCHECK_LE(v, BitMask(MaxBitsForLevel(level)));
       values.push_back(v);
     }
@@ -785,7 +827,7 @@ S2Point EncodedS2PointVector::DecodeCellIdsFormat(int i) const {
   // The S2CellId version of the following code is:
   //   return S2CellId(((value << 1) | 1) << (2 * shift)).ToPoint();
   uint32 sj, tj;
-  util_bits::DeinterleaveUint32(value, &sj, &tj);
+  DeinterleaveUint32BitPairs(value, &sj, &tj);
   int si = (((sj << 1) | 1) << shift) & 0x7fffffff;
   int ti = (((tj << 1) | 1) << shift) & 0x7fffffff;
   int face = ((sj << shift) >> 30) | (((tj << (shift + 1)) >> 29) & 4);

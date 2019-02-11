@@ -68,6 +68,9 @@ class EncodedS2PointVector {
   // Decodes and returns the entire original vector.
   std::vector<S2Point> Decode() const;
 
+  // TODO(ericv): Consider adding a method that returns an adjacent pair of
+  // points.  This would save some decoding overhead.
+
  private:
   friend void EncodeS2PointVector(absl::Span<const S2Point>, CodingHint,
                                   Encoder*);
