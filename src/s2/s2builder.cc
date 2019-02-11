@@ -1342,7 +1342,7 @@ void S2Builder::MergeLayerEdges(
   }
 }
 
-// A comparision function that allows stable sorting with std::sort (which is
+// A comparison function that allows stable sorting with std::sort (which is
 // fast but not stable).  It breaks ties between equal edges by comparing
 // their LayerEdgeIds.
 inline bool S2Builder::StableLessThan(
