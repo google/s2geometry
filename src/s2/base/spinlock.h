@@ -27,18 +27,22 @@ class SpinLock {
   SpinLock& operator=(SpinLock const&) = delete;
 
   inline void Lock() {
-    while (flag_.test_and_set(std::memory_order_acquire)) {
+    while (locked_.exchange(true, std::memory_order_acquire)) {
       // Spin.
       continue;
     }
   }
 
   inline void Unlock() {
-    flag_.clear(std::memory_order_release);
+    locked_.store(false, std::memory_order_release);
+  }
+
+  inline bool IsHeld() const {
+    return locked_.load(std::memory_order_relaxed);
   }
 
  private:
-  std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
+  std::atomic_bool locked_{false};
 };
 
 class SpinLockHolder {
