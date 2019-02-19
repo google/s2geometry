@@ -59,9 +59,7 @@
 
 namespace gtl {
 
-template <typename T,
-          typename A =
-              gtl::libc_allocator_with_realloc<T> >
+template <typename T, typename A = std::allocator<T> >
 class compact_array_base {
  private:
   // The number of bits for the variable size_ and capacity_
@@ -540,9 +538,7 @@ template <typename T, typename A>
 // compact_array:  Wrapper for compact_array_base that provides the
 //  constructors and destructor.
 
-template <class T,
-          class A = gtl::
-                    libc_allocator_with_realloc<T> >
+template <class T, class A = std::allocator<T> >
 class compact_array : public compact_array_base<T, A> {
  private:
   typedef compact_array_base<T, A> Base;
@@ -606,7 +602,6 @@ class compact_array : public compact_array_base<T, A> {
     Base::Destruct();
   }
 };
-
 
 // Comparison operators
 template <typename T, typename A>
