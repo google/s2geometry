@@ -138,8 +138,10 @@ class btree_container {
   // Support absl::Hash.
   template <typename State>
   friend State AbslHashValue(State h, const btree_container &b) {
-    return State::combine(
-        State::combine_range(std::move(h), b.begin(), b.end()), b.size());
+    for (const auto &v : b) {
+      h = State::combine(std::move(h), v);
+    }
+    return State::combine(std::move(h), b.size());
   }
 
   // Exposed only for tests.
