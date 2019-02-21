@@ -335,6 +335,11 @@ class FixedArray {
     return !(lhs < rhs);
   }
 
+  template <typename H>
+  friend H AbslHashValue(H h, const FixedArray& v) {
+    return H::combine(H::combine_contiguous(std::move(h), v.data(), v.size()),
+                      v.size());
+  }
  private:
   // StorageElement
   //
