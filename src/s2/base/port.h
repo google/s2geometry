@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc. All Rights Reserved.
+// Copyright Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -714,6 +714,32 @@ inline void UNALIGNED_STORE64(void *p, uint64 v) {
   __sanitizer_unaligned_store64(p, v);
 }
 
+#elif defined(UNDEFINED_BEHAVIOR_SANITIZER)
+
+inline uint16 UNALIGNED_LOAD16(const void *p) {
+  uint16 t;
+  memcpy(&t, p, sizeof t);
+  return t;
+}
+
+inline uint32 UNALIGNED_LOAD32(const void *p) {
+  uint32 t;
+  memcpy(&t, p, sizeof t);
+  return t;
+}
+
+inline uint64 UNALIGNED_LOAD64(const void *p) {
+  uint64 t;
+  memcpy(&t, p, sizeof t);
+  return t;
+}
+
+inline void UNALIGNED_STORE16(void *p, uint16 v) { memcpy(p, &v, sizeof v); }
+
+inline void UNALIGNED_STORE32(void *p, uint32 v) { memcpy(p, &v, sizeof v); }
+
+inline void UNALIGNED_STORE64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
+
 #elif defined(__x86_64__) || defined(_M_X64) || defined(__i386) || \
     defined(_M_IX86) || defined(__ppc__) || defined(__PPC__) ||    \
     defined(__ppc64__) || defined(__PPC64__)
@@ -868,11 +894,11 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 
 // __ASYLO__ platform uses newlib without an underlying OS, which provides
 // memalign, but not posix_memalign.
-#if defined(__cplusplus) &&                                               \
-    (((defined(__GNUC__) || defined(__APPLE__) || \
-       defined(__NVCC__)) &&                                              \
-      !defined(SWIG)) ||                                                  \
-     ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)) ||   \
+#if defined(__cplusplus) &&                                             \
+    (((defined(__GNUC__) || defined(__APPLE__) ||                  \
+       defined(__NVCC__)) &&   \
+      !defined(SWIG)) ||                                                \
+     ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)) || \
      defined(__ASYLO__))
 inline void *aligned_malloc(size_t size, int minimum_alignment) {
 #if defined(__ANDROID__) || defined(OS_ANDROID) || defined(__ASYLO__)
