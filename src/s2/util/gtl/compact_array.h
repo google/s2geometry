@@ -55,7 +55,6 @@
 #include "s2/third_party/absl/meta/type_traits.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/gtl/container_logging.h"
-#include "s2/util/gtl/libc_allocator_with_realloc.h"
 
 namespace gtl {
 
@@ -146,33 +145,7 @@ class compact_array_base {
     return const_cast<compact_array_base<T, A>*>(this)->Array();
   }
 
-  template <class V, class Alloc>
-  class alloc_impl : public Alloc {
-   public:
-    V* do_realloc(V* ptr, size_t old_size, size_t new_size) {
-      V* new_ptr = this->allocate(new_size);
-      memcpy(new_ptr, ptr, old_size * sizeof(V));
-      this->deallocate(ptr, old_size);
-      return new_ptr;
-    }
-  };
-
-  // A template specialization of alloc_impl for
-  // libc_allocator_with_realloc that supports reallocate.
-  template <class V, class Alloc>
-  class alloc_impl<V,
-                   gtl::
-                   libc_allocator_with_realloc<Alloc> >
-      : public gtl::
-               libc_allocator_with_realloc<Alloc> {
-   public:
-    V* do_realloc(V* ptr, size_t old_size, size_t new_size) {
-      return this->reallocate(ptr, new_size);
-    }
-  };
-
-  typedef typename A::template rebind<T>::other internal_alloc;
-  typedef alloc_impl<T, internal_alloc> value_allocator_type;
+  typedef typename A::template rebind<T>::other value_allocator_type;
 
  public:
   typedef T                                     value_type;
@@ -418,7 +391,12 @@ class compact_array_base {
       }
     }
     value_allocator_type allocator;
-    SetArray(allocator.do_realloc(Array(), old_capacity, capacity()));
+
+    T* new_ptr = allocator.allocate(capacity());
+    memcpy(new_ptr, Array(), old_capacity * sizeof(T));
+    allocator.deallocate(Array(), old_capacity);
+
+    SetArray(new_ptr);
   }
 
   value_type* lastp() { return Array() + size(); }
