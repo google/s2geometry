@@ -342,6 +342,81 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertTrue(rect_bound.Contains(inside))
     self.assertFalse(rect_bound.Contains(outside))
 
+  def testS2CellUnionEmpty(self):
+    empty_cell_union = s2.S2CellUnion()
+    self.assertTrue(empty_cell_union.empty())
+
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8)
+    cell_union = s2.S2CellUnion()
+    cell_union.Init([cell_id.id()])
+    self.assertFalse(cell_union.empty())
+
+  def testS2CellUnionIntersectionWithS2CellUnion(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0))
+    cell_union = s2.S2CellUnion()
+    cell_union.Init([cell_id.id()])
+
+    # No intersection.
+    outside_cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(5.0, 6.0))
+    outside_cell_union = s2.S2CellUnion()
+    outside_cell_union.Init([outside_cell_id.id()])
+    empty_intersection = cell_union.Intersection(outside_cell_union)
+    self.assertTrue(empty_intersection.empty())
+
+    # Complete overlap.
+    self_intersection = cell_union.Intersection(cell_union)
+    self.assertTrue(self_intersection.Contains(cell_union))
+    self.assertTrue(cell_union.Contains(self_intersection))
+
+    # Some intersection.
+    joint_cell_union = s2.S2CellUnion()
+    joint_cell_union.Init([cell_id.id(), outside_cell_id.id()])
+    outside_intersection = joint_cell_union.Intersection(outside_cell_union)
+    self.assertTrue(outside_intersection.Contains(outside_cell_id))
+    self.assertFalse(outside_intersection.Contains(cell_id))
+
+  def testS2CellUnionIntersectionWithS2CellId(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0))
+    cell_union = s2.S2CellUnion()
+    cell_union.Init([cell_id.id()])
+
+    # No intersection.
+    outside_cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(4.0, 5.0))
+    empty_intersection = cell_union.Intersection(outside_cell_id)
+    self.assertTrue(empty_intersection.empty())
+
+    # Complete overlap.
+    intersection = cell_union.Intersection(cell_id)
+    self.assertTrue(intersection.Contains(cell_id))
+
+    # Some intersection.
+    joint_cell_union = s2.S2CellUnion()
+    joint_cell_union.Init([cell_id.id(), outside_cell_id.id()])
+    outside_intersection = joint_cell_union.Intersection(outside_cell_id)
+    self.assertTrue(outside_intersection.Contains(outside_cell_id))
+    self.assertFalse(outside_intersection.Contains(cell_id))
+
+  def testS2CellUnionIsNormalized(self):
+    empty_cell_union = s2.S2CellUnion()
+    self.assertTrue(empty_cell_union.IsNormalized())
+
+    london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
+    london_cell_id = s2.S2CellId(london)
+    normalized_union = s2.S2CellUnion()
+    normalized_union.Init([london_cell_id.id()])
+    self.assertTrue(normalized_union.IsNormalized())
+
+  def testS2CellUnionNormalizeS2CellUnion(self):
+    empty_cell_union = s2.S2CellUnion()
+    empty_cell_union.NormalizeS2CellUnion()
+    self.assertTrue(empty_cell_union.IsNormalized())
+
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8)
+    cell_union = s2.S2CellUnion()
+    cell_union.Init([cell_id.id()])
+    cell_union.NormalizeS2CellUnion()
+    self.assertTrue(cell_union.IsNormalized())
+
   def testS2LoopRegion(self):
     cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
     loop = s2.S2Loop(cell)
