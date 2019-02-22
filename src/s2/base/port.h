@@ -631,14 +631,6 @@ inline void bzero(void *s, int n) { memset(s, 0, n); }
 #define gethostbyname gethostbyname_is_not_thread_safe_DO_NOT_USE
 #endif
 
-// __has_extension
-// Private implementation detail: __has_extension is useful to implement
-// static_assert, and defining it for all toolchains avoids an extra level of
-// nesting of #if/#ifdef/#ifndef.
-#ifndef __has_extension
-#define __has_extension(x) 0  // MSVC 10's preprocessor can't handle 'false'.
-#endif
-
 // -----------------------------------------------------------------------------
 // Performance Optimization
 // -----------------------------------------------------------------------------
@@ -1024,37 +1016,5 @@ extern inline void prefetch(const void *) {}
 extern inline void prefetch(const void *, int) {}
 #endif
 #endif  // Prefetch
-
-// -----------------------------------------------------------------------------
-// Obsolete (to be removed)
-// -----------------------------------------------------------------------------
-
-// FTELLO, FSEEKO
-#if (defined(__GNUC__) || defined(__APPLE__)) && \
-    !defined(SWIG)
-#define FTELLO ftello
-#define FSEEKO fseeko
-#else  // not GCC
-// These should be redefined appropriately if better alternatives to
-// ftell/fseek exist in the compiler
-#define FTELLO ftell
-#define FSEEKO fseek
-#endif  // GCC
-
-// __STD
-// Our STL-like classes use __STD.
-#if defined(__GNUC__) || defined(__APPLE__) || \
-    defined(_MSC_VER)
-#define __STD std
-#endif
-
-// STREAM_SET, STREAM_SETF
-#if defined __GNUC__
-#define STREAM_SET(s, bit) (s).setstate(std::ios_base::bit)
-#define STREAM_SETF(s, flag) (s).setf(std::ios_base::flag)
-#else
-#define STREAM_SET(s, bit) (s).set(std::ios::bit)
-#define STREAM_SETF(s, flag) (s).setf(std::ios::flag)
-#endif
 
 #endif  // S2_BASE_PORT_H_
