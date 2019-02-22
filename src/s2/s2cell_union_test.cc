@@ -64,6 +64,13 @@ TEST(S2CellUnion, S2CellIdConstructor) {
   EXPECT_EQ(face1_id, face1_union.cell_id(0));
 }
 
+TEST(S2CellUnion, WholeSphere) {
+  S2CellUnion whole_sphere = S2CellUnion::WholeSphere();
+  EXPECT_EQ(whole_sphere.LeafCellsCovered(), 6 * (1ULL << 60));
+  whole_sphere.Expand(0);
+  EXPECT_EQ(whole_sphere, S2CellUnion::WholeSphere());
+}
+
 TEST(S2CellUnion, DuplicateCellsNotValid) {
   S2CellId id = S2CellId(S2Point(1, 0, 0));
   auto cell_union = S2CellUnionTestPeer::FromVerbatimNoChecks(

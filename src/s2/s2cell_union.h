@@ -72,6 +72,9 @@ class S2CellUnion final : public S2Region {
   // unlike the constructor above, this one makes a copy of "cell_ids".
   explicit S2CellUnion(const std::vector<uint64>& cell_ids);
 
+  // Constructs a cell union for the whole sphere.
+  static S2CellUnion WholeSphere();
+
   // Constructs a cell union from S2CellIds that have already been normalized
   // (typically because they were extracted from another S2CellUnion).
   //

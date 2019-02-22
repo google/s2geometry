@@ -52,6 +52,12 @@ S2CellUnion::S2CellUnion(const vector<uint64>& cell_ids)
   Normalize();
 }
 
+S2CellUnion S2CellUnion::WholeSphere() {
+  return S2CellUnion({S2CellId::FromFace(0), S2CellId::FromFace(1),
+                      S2CellId::FromFace(2), S2CellId::FromFace(3),
+                      S2CellId::FromFace(4), S2CellId::FromFace(5)});
+}
+
 S2CellUnion S2CellUnion::FromMinMax(S2CellId min_id, S2CellId max_id) {
   S2CellUnion result;
   result.InitFromMinMax(min_id, max_id);
