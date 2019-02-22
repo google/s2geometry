@@ -29,7 +29,7 @@
 // - Type alias
 // - Predefined system/language macros
 // - Predefined system/language functions
-// - Performance optimization (alignment, prefetch)
+// - Performance optimization (alignment)
 // - Obsolete
 
 #include <cassert>
@@ -999,22 +999,5 @@ struct AlignType { typedef char result[Size]; };
 #else  // __cplusplus
 #define ALIGNED_CHAR_ARRAY ALIGNED_CHAR_ARRAY_is_not_available_without_Cplusplus
 #endif  // __cplusplus
-
-// Prefetch
-#if (defined(__GNUC__) || defined(__APPLE__)) && \
-    !defined(SWIG)
-#ifdef __cplusplus
-// prefetch() is deprecated.  Prefer compiler::PrefetchNta() from
-// util/compiler/prefetch.h, which is identical.  Current callers will
-// be updated in a go/lsc, so there is no need to proactively change
-// your code now.  More information: go/lsc-prefetch
-extern inline void prefetch(const void *x) { __builtin_prefetch(x, 0, 0); }
-#endif  // ifdef __cplusplus
-#else   // not GCC
-#if defined(__cplusplus)
-extern inline void prefetch(const void *) {}
-extern inline void prefetch(const void *, int) {}
-#endif
-#endif  // Prefetch
 
 #endif  // S2_BASE_PORT_H_
