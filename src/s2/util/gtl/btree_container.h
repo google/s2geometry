@@ -135,6 +135,15 @@ class btree_container {
   key_compare key_comp() const { return tree_.key_comp(); }
   value_compare value_comp() const { return tree_.value_comp(); }
 
+  // Support absl::Hash.
+  template <typename State>
+  friend State AbslHashValue(State h, const btree_container &b) {
+    for (const auto &v : b) {
+      h = State::combine(std::move(h), v);
+    }
+    return State::combine(std::move(h), b.size());
+  }
+
   // Exposed only for tests.
   static bool testonly_uses_linear_node_search() {
     return Tree::testonly_uses_linear_node_search();

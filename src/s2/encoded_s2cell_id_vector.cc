@@ -39,10 +39,21 @@ void EncodeS2CellIdVector(Span<const S2CellId> v, Encoder* encoder) {
   //
   // "base" (3 bits) and "shift" (6 bits) are encoded in either one or two
   // bytes as follows:
+  //
   //   - if (shift <= 4 or shift is even), then 1 byte
   //   - otherwise 2 bytes
+  //
   // Note that (shift == 1) means that all S2CellIds are leaf cells, and
   // (shift == 2) means that all S2CellIds are at level 29.
+  //
+  // The full encoded format is as follows:
+  //
+  //  Byte 0, bits 0-2: base length (0-7 bytes)
+  //  Byte 0, bits 3-7: encoded shift (see below)
+  //  Byte 1: extended shift code (only needed for odd shifts >= 5)
+  //  Followed by 0-7 bytes of "base"
+  //  Followed by an EncodedUintVector of deltas.
+
   uint64 v_or = 0, v_and = ~0ULL, v_min = ~0ULL, v_max = 0;
   for (auto cellid : v) {
     v_or |= cellid.id();

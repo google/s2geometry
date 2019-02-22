@@ -126,7 +126,6 @@
 #include "s2/base/port.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/util/gtl/densehashtable.h"  // IWYU pragma: export
-#include "s2/util/gtl/libc_allocator_with_realloc.h"
 
 // Some files test for this symbol.
 #define S2__DENSE_HASH_SET_H_
@@ -136,7 +135,7 @@ namespace gtl {
 template <class Value,
           class HashFcn = std::hash<Value>,
           class EqualKey = std::equal_to<Value>,
-          class Alloc = libc_allocator_with_realloc<Value> >
+          class Alloc = std::allocator<Value> >
 class dense_hash_set {
  private:
 

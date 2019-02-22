@@ -37,6 +37,8 @@
 #include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
 
+DECLARE_bool(s2debug);
+
 using absl::StrCat;
 using std::max;
 using std::min;
@@ -63,6 +65,13 @@ TEST(S2CellUnion, S2CellIdConstructor) {
   EXPECT_EQ(face1_id, face1_union.cell_id(0));
 }
 
+TEST(S2CellUnion, WholeSphere) {
+  S2CellUnion whole_sphere = S2CellUnion::WholeSphere();
+  EXPECT_EQ(whole_sphere.LeafCellsCovered(), 6 * (1ULL << 60));
+  whole_sphere.Expand(0);
+  EXPECT_EQ(whole_sphere, S2CellUnion::WholeSphere());
+}
+
 TEST(S2CellUnion, DuplicateCellsNotValid) {
   S2CellId id = S2CellId(S2Point(1, 0, 0));
   auto cell_union = S2CellUnionTestPeer::FromVerbatimNoChecks(
@@ -82,6 +91,17 @@ TEST(S2CellUnion, InvalidCellIdNotValid) {
   auto cell_union =
       S2CellUnionTestPeer::FromVerbatimNoChecks({S2CellId::None()});
   EXPECT_FALSE(cell_union.IsValid());
+}
+
+TEST(S2CellUnion, InvalidCellIdNotValidWithDebugFlag) {
+  // Manually save and restore flag, to preserve test state in opensource
+  // without gflags.
+  const bool saved_s2debug = FLAGS_s2debug;
+  FLAGS_s2debug = false;
+  ASSERT_FALSE(S2CellId::None().is_valid());
+  auto cell_union = S2CellUnion::FromVerbatim({S2CellId::None()});
+  EXPECT_FALSE(cell_union.IsValid());
+  FLAGS_s2debug = saved_s2debug;
 }
 
 TEST(S2CellUnion, IsNormalized) {

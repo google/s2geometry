@@ -638,13 +638,15 @@ bool S2Loop::DecodeInternal(Decoder* const decoder,
   num_vertices_ = num_vertices;
 
   // x86 can do unaligned floating-point reads; however, many other
-  // platforms can not. Do not use the zero-copy version if we are on
+  // platforms cannot. Do not use the zero-copy version if we are on
   // an architecture that does not support unaligned reads, and the
   // pointer is not correctly aligned.
-#if defined(ARCH_PIII) || defined(ARCH_K8)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || \
+    defined(_M_IX86)
   bool is_misaligned = false;
 #else
-  bool is_misaligned = ((intptr_t)decoder->ptr() % sizeof(double) != 0);
+  bool is_misaligned =
+      reinterpret_cast<intptr_t>(decoder->ptr()) % sizeof(double) != 0;
 #endif
   if (within_scope && !is_misaligned) {
     vertices_ = const_cast<S2Point *>(reinterpret_cast<const S2Point*>(

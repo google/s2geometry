@@ -47,7 +47,7 @@
 // PERFORMANCE
 //
 // See the latest benchmark results at:
-// https://paste.googleplex.com/5876428872613888
+// https://paste.googleplex.com/6529281429602304
 //
 
 #ifndef S2_UTIL_GTL_BTREE_H_
@@ -319,8 +319,8 @@ struct set_params
   using mapped_type = void;
   using value_type = Key;
   using mutable_value_type = Key;
-  // This type implements the necessary functions from the subtle::slot_type
-  // interface.
+  // This type implements the necessary functions from the
+  // absl::container_internal::slot_type interface.
   struct slot_type {
     value_type value;
 
@@ -583,9 +583,11 @@ class btree_node {
   // Getters/setter for the child at position i in the node.
   btree_node *child(int i) const { return GetField<4>()[i]; }
   btree_node *&mutable_child(int i) { return GetField<4>()[i]; }
-  void clear_child(int i) { subtle::SanitizerPoisonObject(&mutable_child(i)); }
+  void clear_child(int i) {
+    absl::container_internal::SanitizerPoisonObject(&mutable_child(i));
+  }
   void set_child(int i, btree_node *c) {
-    subtle::SanitizerUnpoisonObject(&mutable_child(i));
+    absl::container_internal::SanitizerUnpoisonObject(&mutable_child(i));
     mutable_child(i) = c;
     c->set_position(i);
   }
@@ -741,14 +743,14 @@ class btree_node {
     n->set_max_count(max_count);
     n->set_count(0);
     n->set_type(NodeType::kLeaf);
-    subtle::SanitizerPoisonMemoryRegion(n->slot(0),
-                                        max_count * sizeof(slot_type));
+    absl::container_internal::SanitizerPoisonMemoryRegion(
+        n->slot(0), max_count * sizeof(slot_type));
     return n;
   }
   static btree_node *init_internal(btree_node *n, btree_node *parent) {
     init_leaf(n, parent, kNodeValues);
     n->set_type(NodeType::kInternal);
-    subtle::SanitizerPoisonMemoryRegion(
+    absl::container_internal::SanitizerPoisonMemoryRegion(
         &n->mutable_child(0), (kNodeValues + 1) * sizeof(btree_node *));
     return n;
   }
@@ -767,12 +769,12 @@ class btree_node {
  private:
   template <typename... Args>
   void value_init(const size_type i, allocator_type *alloc, Args &&... args) {
-    subtle::SanitizerUnpoisonObject(slot(i));
+    absl::container_internal::SanitizerUnpoisonObject(slot(i));
     slot_type::construct(alloc, slot(i), std::forward<Args>(args)...);
   }
   void value_destroy(const size_type i, allocator_type *alloc) {
     slot_type::destroy(alloc, slot(i));
-    subtle::SanitizerPoisonObject(slot(i));
+    absl::container_internal::SanitizerPoisonObject(slot(i));
   }
 
   // Move n values starting at value i in this node into the values starting at
@@ -780,7 +782,8 @@ class btree_node {
   void uninitialized_move_n(const size_type n, const size_type i,
                             const size_type j, btree_node *x,
                             allocator_type *alloc) {
-    subtle::SanitizerUnpoisonMemoryRegion(x->slot(j), n * sizeof(slot_type));
+    absl::container_internal::SanitizerUnpoisonMemoryRegion(
+        x->slot(j), n * sizeof(slot_type));
     for (slot_type *src = slot(i), *end = src + n, *dest = x->slot(j);
          src != end; ++src, ++dest) {
       slot_type::construct(alloc, dest, src);
@@ -1298,7 +1301,8 @@ class btree {
   // allocator.
   node_type *allocate(const size_type size) {
     return reinterpret_cast<node_type *>(
-        subtle::Allocate<node_type::Alignment()>(mutable_allocator(), size));
+        absl::container_internal::Allocate<node_type::Alignment()>(
+            mutable_allocator(), size));
   }
 
   // Node creation/deletion routines.
@@ -1317,7 +1321,8 @@ class btree {
 
   // Deallocates a node of a certain size in bytes using the allocator.
   void deallocate(const size_type size, node_type *node) {
-    subtle::Deallocate<node_type::Alignment()>(mutable_allocator(), node, size);
+    absl::container_internal::Deallocate<node_type::Alignment()>(
+        mutable_allocator(), node, size);
   }
 
   void delete_internal_node(node_type *node) {

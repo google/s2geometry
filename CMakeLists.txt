@@ -105,6 +105,7 @@ add_library(s2
             src/s2/s2builder_graph.cc
             src/s2/s2builderutil_closed_set_normalizer.cc
             src/s2/s2builderutil_find_polygon_degeneracies.cc
+            src/s2/s2builderutil_lax_polygon_layer.cc
             src/s2/s2builderutil_s2point_vector_layer.cc
             src/s2/s2builderutil_s2polygon_layer.cc
             src/s2/s2builderutil_s2polyline_layer.cc
@@ -232,6 +233,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2builder_layer.h
               src/s2/s2builderutil_closed_set_normalizer.h
               src/s2/s2builderutil_find_polygon_degeneracies.h
+              src/s2/s2builderutil_lax_polygon_layer.h
               src/s2/s2builderutil_s2point_vector_layer.h
               src/s2/s2builderutil_s2polygon_layer.h
               src/s2/s2builderutil_s2polyline_layer.h
@@ -391,7 +393,6 @@ install(FILES src/s2/util/gtl/btree.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
               src/s2/util/gtl/layout.h
-              src/s2/util/gtl/libc_allocator_with_realloc.h
         DESTINATION include/s2/util/gtl)
 install(FILES src/s2/util/hash/mix.h
         DESTINATION include/s2/util/hash)
@@ -428,6 +429,7 @@ if (GTEST_ROOT)
       src/s2/s2builder_test.cc
       src/s2/s2builderutil_closed_set_normalizer_test.cc
       src/s2/s2builderutil_find_polygon_degeneracies_test.cc
+      src/s2/s2builderutil_lax_polygon_layer_test.cc
       src/s2/s2builderutil_s2point_vector_layer_test.cc
       src/s2/s2builderutil_s2polygon_layer_test.cc
       src/s2/s2builderutil_s2polyline_layer_test.cc

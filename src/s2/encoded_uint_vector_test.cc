@@ -69,4 +69,56 @@ TEST(EncodedUintVectorTest, EightBytes) {
   TestEncodedUintVector(vector<uint64>{~0ULL, 0, 0x0102030405060708}, 25);
 }
 
+template <class T>
+vector<T> MakeSortedTestVector(int bytes_per_value, int num_values) {
+  S2_DCHECK_LE(bytes_per_value, sizeof(T));
+  T limit_value = ~T{0} >> (8 * (sizeof(T) - bytes_per_value));
+  vector<T> values;
+  for (int i = 0; i + 1 < num_values; ++i) {
+    values.push_back(limit_value * (static_cast<double>(i) / (num_values - 1)));
+  }
+  // The last value needs special handling since casting it to "double" loses
+  // precision when T == uint64.
+  values.push_back(limit_value);
+  S2_CHECK(std::is_sorted(values.begin(), values.end()));
+  return values;
+}
+
+template <class T>
+EncodedUintVector<T> MakeEncodedVector(const vector<T>& values,
+                                       Encoder* encoder) {
+  EncodeUintVector<T>(values, encoder);
+  Decoder decoder(encoder->base(), encoder->length());
+  EncodedUintVector<T> actual;
+  S2_CHECK(actual.Init(&decoder));
+  return actual;
+}
+
+template <class T>
+void TestLowerBound(int bytes_per_value, int num_values) {
+  auto v = MakeSortedTestVector<T>(bytes_per_value, num_values);
+  Encoder encoder;
+  auto actual = MakeEncodedVector(v, &encoder);
+  for (T x : v) {
+    EXPECT_EQ(std::lower_bound(v.begin(), v.end(), x) - v.begin(),
+              actual.lower_bound(x));
+    if (x > 0) {
+      EXPECT_EQ(std::lower_bound(v.begin(), v.end(), x - 1) - v.begin(),
+                actual.lower_bound(x - 1));
+    }
+  }
+}
+
+TEST(EncodedUintVector, LowerBound) {
+  for (int bytes_per_value = 8; bytes_per_value <= 8; ++bytes_per_value) {
+    TestLowerBound<uint64>(bytes_per_value, 10);
+    if (bytes_per_value <= 4) {
+      TestLowerBound<uint32>(bytes_per_value, 500);
+      if (bytes_per_value <= 2) {
+        TestLowerBound<uint16>(bytes_per_value, 100);
+      }
+    }
+  }
+}
+
 }  // namespace s2coding

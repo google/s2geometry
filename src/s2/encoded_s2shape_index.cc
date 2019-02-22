@@ -43,7 +43,6 @@ void EncodedS2ShapeIndex::Iterator::Copy(const IteratorBase& other)  {
   *this = *down_cast<const Iterator*>(&other);
 }
 
-
 S2Shape* EncodedS2ShapeIndex::GetShape(int id) const {
   // This method is called when a shape has not been decoded yet.
   unique_ptr<S2Shape> shape = (*shape_factory_)[id];
@@ -55,20 +54,29 @@ S2Shape* EncodedS2ShapeIndex::GetShape(int id) const {
   }
   return shapes_[id].load(std::memory_order_relaxed);
 }
+
 inline const S2ShapeIndexCell* EncodedS2ShapeIndex::GetCell(int i) const {
-  // This method is called by Iterator::cell() when the cell has not been
-  // decoded yet.  For thread safety, we first decode the cell and then assign
-  // it atomically using a compare-and-swap operation.
+  if (cell_decoded(i)) {
+    auto cell = cells_[i].load(std::memory_order_acquire);
+    if (cell != nullptr) return cell;
+  }
+  // We decode the cell before acquiring the spinlock in order to minimize the
+  // time that the lock is held.
   auto cell = make_unique<S2ShapeIndexCell>();
   Decoder decoder = encoded_cells_.GetDecoder(i);
-  if (cell->Decode(num_shape_ids(), &decoder)) {
-    S2ShapeIndexCell* expected = nullptr;
-    if (cells_[i].compare_exchange_strong(expected, cell.get(),
-                                          std::memory_order_relaxed)) {
-      return cell.release();  // Ownership has been transferred to cells_.
-    }
+  if (!cell->Decode(num_shape_ids(), &decoder)) {
+    return nullptr;
   }
-  return cells_[i].load(std::memory_order_relaxed);
+  SpinLockHolder l(&cells_lock_);
+  if (test_and_set_cell_decoded(i)) {
+    // This cell has already been decoded.
+    return cells_[i].load(std::memory_order_relaxed);
+  }
+  if (cell_cache_.size() < max_cell_cache_size()) {
+    cell_cache_.push_back(i);
+  }
+  cells_[i].store(cell.get(), std::memory_order_relaxed);
+  return cell.release();  // Ownership has been transferred to cells_.
 }
 
 const S2ShapeIndexCell* EncodedS2ShapeIndex::Iterator::GetCell() const {
@@ -79,21 +87,9 @@ EncodedS2ShapeIndex::EncodedS2ShapeIndex() {
 }
 
 EncodedS2ShapeIndex::~EncodedS2ShapeIndex() {
-  // Optimization notes:
-  //
-  //  - For large S2ShapeIndexes where very few cells need to be decoded,
-  //    initialization/destruction of the cells_ vector can dominate benchmark
-  //    times.  (In theory this could also happen with shapes_.)
-  //
-  //  - Although Minimize() does more than required (by resetting the vector
-  //    elements to their default values), this does not affect benchmarks.
-  //
-  //  - The time required to initialize and destroy cells_ and/or shapes_
-  //    could be avoided by using more complex data structures, at the expense
-  //    of increasing access times.  One simple idea would be to use
-  //    uninitialized memory for the atomic pointers, plus one bit per pointer
-  //    indicating whether it has been initialized yet.  This would reduce the
-  //    linear initialization/destruction costs by a factor of 64.
+  // Although Minimize() does slightly more than required for destruction
+  // (i.e., it resets vector elements to their default values), this does not
+  // affect benchmark times.
   Minimize();
 }
 
@@ -115,12 +111,32 @@ bool EncodedS2ShapeIndex::Init(Decoder* decoder,
   shape_factory_ = shape_factory.Clone();
   if (!cell_ids_.Init(decoder)) return false;
 
-  // The cells_ elements are default-initialized to nullptr.
-  cells_ = std::vector<std::atomic<S2ShapeIndexCell*>>(cell_ids_.size());
+  // The cells_ elements are *uninitialized memory*.  Instead we have bit
+  // vector (cells_decoded_) to indicate which elements of cells_ are valid.
+  // This reduces constructor times by more than a factor of 50, since rather
+  // than needing to initialize one 64-bit pointer per cell to zero, we only
+  // need to initialize one bit per cell to zero.
+  //
+  // For very large S2ShapeIndexes the internal memset() call to initialize
+  // cells_decoded_ still takes about 4 microseconds per million cells, but
+  // this seems reasonable relative to other likely costs (I/O, etc).
+  //
+  // NOTE(ericv): DO NOT use make_unique<> here!  make_unique<> allocates memory
+  // using "new T[n]()", which initializes all elements of the array.  This
+  // slows down some benchmarks by over 100x.
+  //
+  // cells_ = make_unique<std::atomic<S2ShapeIndexCell*>[]>(cell_ids_.size());
+  // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  //                                NO NO NO
+  cells_.reset(new std::atomic<S2ShapeIndexCell*>[cell_ids_.size()]);
+  cells_decoded_ = vector<std::atomic<uint64>>((cell_ids_.size() + 63) >> 6);
+
   return encoded_cells_.Init(decoder);
 }
 
 void EncodedS2ShapeIndex::Minimize() {
+  if (cells_ == nullptr) return;  // Not initialized yet.
+
   for (auto& atomic_shape : shapes_) {
     S2Shape* shape = atomic_shape.load(std::memory_order_relaxed);
     if (shape != kUndecodedShape() && shape != nullptr) {
@@ -128,13 +144,29 @@ void EncodedS2ShapeIndex::Minimize() {
       delete shape;
     }
   }
-  for (auto& atomic_cell : cells_) {
-    S2ShapeIndexCell* cell = atomic_cell.load(std::memory_order_relaxed);
-    if (cell != nullptr) {
-      atomic_cell.store(nullptr, std::memory_order_relaxed);
-      delete cell;
+  if (cell_cache_.size() < max_cell_cache_size()) {
+    // When only a tiny fraction of the cells are decoded, we keep track of
+    // those cells in cell_cache_ to avoid the cost of scanning the
+    // cells_decoded_ vector.  (The cost is only about 1 cycle per 64 cells,
+    // but for a huge polygon with 1 million cells that's still 16000 cycles.)
+    for (int pos : cell_cache_) {
+      cells_decoded_[pos >> 6].store(0, std::memory_order_relaxed);
+      delete cells_[pos].load(std::memory_order_relaxed);
+    }
+  } else {
+    // Scan the cells_decoded_ vector looking for cells that must be deleted.
+    for (int i = cells_decoded_.size(), base = 0; --i >= 0; base += 64) {
+      uint64 bits = cells_decoded_[i].load(std::memory_order_relaxed);
+      if (bits == 0) continue;
+      do {
+        int offset = Bits::FindLSBSetNonZero64(bits);
+        delete cells_[(i << 6) + offset].load(std::memory_order_relaxed);
+        bits &= bits - 1;
+      } while (bits != 0);
+      cells_decoded_[i].store(0, std::memory_order_relaxed);
     }
   }
+  cell_cache_.clear();
 }
 
 size_t EncodedS2ShapeIndex::SpaceUsed() const {
@@ -142,6 +174,8 @@ size_t EncodedS2ShapeIndex::SpaceUsed() const {
   // memory owned by the allocated S2Shapes (here and in S2ShapeIndex).
   size_t size = sizeof(*this);
   size += shapes_.capacity() * sizeof(std::atomic<S2Shape*>);
-  size += cells_.capacity() * sizeof(std::atomic<S2ShapeIndexCell*>);
+  size += cell_ids_.size() * sizeof(std::atomic<S2ShapeIndexCell*>);  // cells_
+  size += cells_decoded_.capacity() * sizeof(std::atomic<uint64>);
+  size += cell_cache_.capacity() * sizeof(int);
   return size;
 }

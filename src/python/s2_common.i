@@ -64,6 +64,8 @@
 // overloaded.
 %rename(InitFromS2LatLngs) S2Polyline::Init(std::vector<S2LatLng> const& vertices);
 %rename(InitFromS2Points) S2Polyline::Init(std::vector<S2Point> const& vertices);
+// And similarly for the overloaded S2CellUnion::Normalize method.
+%rename(NormalizeS2CellUnion) S2CellUnion::Normalize();
 
 %apply int *OUTPUT {int *next_vertex};
 %apply int *OUTPUT {int *psi};
@@ -340,11 +342,16 @@ class S2Point {
 %unignore S2CellUnion::GetDifference;
 %unignore S2CellUnion::GetRectBound;
 %unignore S2CellUnion::Init(std::vector<uint64> const &);
+%unignore S2CellUnion::Intersection;
 %unignore S2CellUnion::Intersects;
+%unignore S2CellUnion::IsNormalized;
 %unignore S2CellUnion::MayIntersect(const S2Cell&) const;
-%unignore S2CellUnion::Normalize;
+// SWIG doesn't handle disambiguation of the overloaded Normalize methods, so
+// the Normalize() instance method is renamed to NormalizeS2CellUnion.
+%unignore S2CellUnion::Normalize(std::vector<S2CellId>*);
 %unignore S2CellUnion::cell_id;
 %unignore S2CellUnion::cell_ids;
+%unignore S2CellUnion::empty;
 %unignore S2CellUnion::num_cells;
 %unignore S2LatLng;
 %unignore S2LatLng::S2LatLng;

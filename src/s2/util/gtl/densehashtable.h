@@ -120,7 +120,6 @@
 #include <type_traits>
 
 #include "s2/util/gtl/hashtable_common.h"
-#include "s2/util/gtl/libc_allocator_with_realloc.h"
 #include "s2/base/port.h"
 #include <stdexcept>                 // For length_error
 
@@ -679,12 +678,7 @@ class dense_hashtable {
   }
 
   // We require table be non-null and empty before calling this.
-  void resize_table(size_type /*old_size*/, size_type new_size,
-                    std::true_type) {
-    table = get_internal_allocator().realloc_or_die(table, new_size);
-  }
-
-  void resize_table(size_type old_size, size_type new_size, std::false_type) {
+  void resize_table(size_type old_size, size_type new_size) {
     get_internal_allocator().deallocate(table, old_size);
     table = get_internal_allocator().allocate(new_size);
   }
@@ -791,7 +785,7 @@ class dense_hashtable {
                            const SetKey& set = SetKey(),
                            const Alloc& alloc = Alloc())
       : settings(hf),
-        key_info(ext, set, eql, alloc_impl<value_alloc_type>(alloc)),
+        key_info(ext, set, eql, value_alloc_type(alloc)),
         num_deleted(0),
         num_elements(0),
         num_buckets(expected_max_items_in_table == 0
@@ -810,7 +804,7 @@ class dense_hashtable {
       : settings(ht.settings),
         key_info(ht.key_info.as_extract_key(), ht.key_info.as_set_key(),
                  ht.key_info.as_equal_key(),
-                 alloc_impl<value_alloc_type>(
+                 value_alloc_type(
                      std::allocator_traits<value_alloc_type>::
                          select_on_container_copy_construction(
                              ht.key_info.as_value_alloc()))),
@@ -844,8 +838,8 @@ class dense_hashtable {
       if (key_info.as_value_alloc() != ht.key_info.as_value_alloc()) {
         destroy_table();
       }
-      static_cast<alloc_impl<value_alloc_type>&>(key_info) =
-          static_cast<const alloc_impl<value_alloc_type>&>(ht.key_info);
+      static_cast<value_alloc_type&>(key_info) =
+          static_cast<const value_alloc_type&>(ht.key_info);
     }
     key_info.empty = ht.key_info.empty;
     key_info.delkey = ht.key_info.delkey;
@@ -943,8 +937,8 @@ class dense_hashtable {
     swap(key_info.as_equal_key(), ht.key_info.as_equal_key());
     if (std::allocator_traits<
             value_alloc_type>::propagate_on_container_swap::value) {
-      swap(static_cast<alloc_impl<value_alloc_type>&>(key_info),
-           static_cast<alloc_impl<value_alloc_type>&>(ht.key_info));
+      swap(static_cast<value_alloc_type&>(key_info),
+           static_cast<value_alloc_type&>(ht.key_info));
     } else {
       // Swapping when allocators are unequal and
       // propagate_on_container_swap is false is undefined behavior.
@@ -973,11 +967,7 @@ class dense_hashtable {
     } else {
       destroy_buckets(0, num_buckets);
       if (new_num_buckets != num_buckets) {   // resize, if necessary
-        typedef std::integral_constant<bool,
-            std::is_same<value_alloc_type,
-                         libc_allocator_with_realloc<value_type> >::value>
-            realloc_ok;
-        resize_table(num_buckets, new_num_buckets, realloc_ok());
+        resize_table(num_buckets, new_num_buckets);
       }
     }
     assert(table);
@@ -1370,48 +1360,6 @@ class dense_hashtable {
   typedef unsigned long MagicNumberType;
   static const MagicNumberType MAGIC_NUMBER = 0x13578642;
 
-  template <class A>
-  class alloc_impl : public A {
-   public:
-    typedef typename A::pointer pointer;
-    typedef typename A::size_type size_type;
-
-    // Convert a normal allocator to one that has realloc_or_die()
-    alloc_impl(const A& a) : A(a) { }
-
-    // realloc_or_die should only be used when using the default
-    // allocator (libc_allocator_with_realloc).
-    pointer realloc_or_die(pointer /*ptr*/, size_type /*n*/) {
-      fprintf(stderr, "realloc_or_die is only supported for "
-                      "libc_allocator_with_realloc\n");
-      exit(1);
-      return nullptr;
-    }
-  };
-
-  // A template specialization of alloc_impl for
-  // libc_allocator_with_realloc that can handle realloc_or_die.
-  template <class A>
-  class alloc_impl<libc_allocator_with_realloc<A> >
-      : public libc_allocator_with_realloc<A> {
-   public:
-    typedef typename libc_allocator_with_realloc<A>::pointer pointer;
-    typedef typename libc_allocator_with_realloc<A>::size_type size_type;
-
-    alloc_impl(const libc_allocator_with_realloc<A>& a)
-        : libc_allocator_with_realloc<A>(a) { }
-
-    pointer realloc_or_die(pointer ptr, size_type n) {
-      pointer retval = this->reallocate(ptr, n);
-      if (retval == nullptr) {
-        fprintf(stderr, "sparsehash: FATAL ERROR: failed to reallocate "
-                "%lu elements for ptr %p", static_cast<unsigned long>(n), ptr);
-        exit(1);
-      }
-      return retval;
-    }
-  };
-
   // Package functors with another class to eliminate memory needed for
   // zero-size functors.  Since ExtractKey and hasher's operator() might
   // have the same function signature, they must be packaged in
@@ -1428,13 +1376,13 @@ class dense_hashtable {
   struct KeyInfo : public ExtractKey,
                    public SetKey,
                    public EqualKey,
-                   public alloc_impl<value_alloc_type> {
+                   public value_alloc_type {
     KeyInfo(const ExtractKey& ek, const SetKey& sk, const EqualKey& eq,
-            const alloc_impl<value_alloc_type>& a)
+            const value_alloc_type& a)
         : ExtractKey(ek),
           SetKey(sk),
           EqualKey(eq),
-          alloc_impl<value_alloc_type>(a),
+          value_alloc_type(a),
           delkey(),
           empty() {}
 
@@ -1465,7 +1413,7 @@ class dense_hashtable {
     }
 
     pointer allocate(size_type size) {
-      pointer memory = alloc_impl<value_alloc_type>::allocate(size);
+      pointer memory = value_alloc_type::allocate(size);
       assert(memory != nullptr);
       return memory;
     }
@@ -1477,9 +1425,9 @@ class dense_hashtable {
     typename std::remove_const<key_type>::type empty;
   };
 
-  // Returns the alloc_impl<value_alloc_type> used to allocate and deallocate
+  // Returns the value_alloc_type used to allocate and deallocate
   // the table. This can be different from the one returned by get_allocator().
-  alloc_impl<value_alloc_type>& get_internal_allocator() { return key_info; }
+  value_alloc_type& get_internal_allocator() { return key_info; }
 
   // Utility functions to access the templated operators
   size_type hash(const key_type& v) const {

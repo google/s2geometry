@@ -158,7 +158,7 @@ namespace absl {
 // All empty `string_view` objects whether null or not, are equal:
 //
 //   absl::string_view() == absl::string_view("", 0)
-//   absl::string_view(nullptr, 0) == absl:: string_view("abcdef"+6, 0)
+//   absl::string_view(nullptr, 0) == absl::string_view("abcdef"+6, 0)
 class string_view {
  public:
   using traits_type = std::char_traits<char>;
@@ -360,37 +360,6 @@ class string_view {
   }
 #endif  // HAS_GLOBAL_STRING
 
-  // Note that `std::string_view::to_string()` returns `std::basic_string`.
-  // But `absl::string_view::to_string()` returns a `::basic_string` whenever
-  // that template is available.
-#ifdef HAS_GLOBAL_STRING
-  template <typename A = std::allocator<char>>
-  ABSL_DEPRECATED("Use string(sv)")::basic_string<
-      char, traits_type, A> to_string(const A& a = A()) const {
-    if (!data()) return ::basic_string<char, traits_type, A>(a);
-    return ::basic_string<char, traits_type, A>(data(), size(), a);
-  }
-#else   // !HAS_GLOBAL_STRING
-
-  template <typename A = std::allocator<char> >
-  ABSL_DEPRECATED("Use std::string(sv)")
-  std::basic_string<char, traits_type, A> to_string(const A& a = A()) const {
-    if (!data()) return std::basic_string<char, traits_type, A>(a);
-    return std::basic_string<char, traits_type, A>(data(), size(), a);
-  }
-#endif  // HAS_GLOBAL_STRING
-
-  ABSL_DEPRECATED("Use string(sv)")
-  string as_string() const {
-    if (!data()) return {};
-    return string(data(), size());
-  }
-  ABSL_DEPRECATED("Use string(sv)")
-  string ToString() const {
-    if (!data()) return {};
-    return string(data(), size());
-  }
-
   // string_view::copy()
   //
   // Copies the contents of the `string_view` at offset `pos` and length `n`
@@ -401,7 +370,7 @@ class string_view {
   //
   // Returns a "substring" of the `string_view` (at offset `pos` and length
   // `n`) as another string_view. This function throws `std::out_of_bounds` if
-  // `pos > size'.
+  // `pos > size`.
   // Use absl::ClippedSubstr if you need a truncating substr operation.
   string_view substr(size_type pos, size_type n = npos) const {
     if (ABSL_PREDICT_FALSE(pos > length_))
@@ -413,7 +382,7 @@ class string_view {
   // string_view::compare()
   //
   // Performs a lexicographical comparison between the `string_view` and
-  // another `absl::string_view), returning -1 if `this` is less than, 0 if
+  // another `absl::string_view`, returning -1 if `this` is less than, 0 if
   // `this` is equal to, and 1 if `this` is greater than the passed string
   // view. Note that in the case of data equality, a further comparison is made
   // on the respective sizes of the two `string_view`s to determine which is

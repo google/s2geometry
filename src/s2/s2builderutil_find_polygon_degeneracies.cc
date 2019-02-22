@@ -35,12 +35,16 @@ using std::make_pair;
 using std::pair;
 using std::vector;
 
+using EdgeType = S2Builder::EdgeType;
 using Graph = S2Builder::Graph;
 using GraphOptions = S2Builder::GraphOptions;
 
 using Edge = Graph::Edge;
 using EdgeId = Graph::EdgeId;
 using VertexId = Graph::VertexId;
+
+using DegenerateEdges = GraphOptions::DegenerateEdges;
+using SiblingPairs = GraphOptions::SiblingPairs;
 
 using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
 
@@ -102,9 +106,7 @@ vector<PolygonDegeneracy> DegeneracyFinder::Run(S2Error* error) {
   // vector, and mark any vertices with unbalanced edges in the
   // "is_vertex_unbalanced_" vector.
   int num_degeneracies = ComputeDegeneracies();
-  if (num_degeneracies == 0) {
-    return vector<PolygonDegeneracy>();
-  }
+  if (num_degeneracies == 0) return {};
 
   // If all edges are degenerate, then use IsFullPolygon() to classify the
   // degeneracies (they are necessarily all the same type).
@@ -377,18 +379,37 @@ vector<PolygonDegeneracy> DegeneracyFinder::MergeDegeneracies(
   return result;
 }
 
+void CheckGraphOptions(const Graph& g) {
+  S2_DCHECK(g.options().edge_type() == EdgeType::DIRECTED);
+  S2_DCHECK(g.options().degenerate_edges() == DegenerateEdges::DISCARD ||
+         g.options().degenerate_edges() == DegenerateEdges::DISCARD_EXCESS);
+  S2_DCHECK(g.options().sibling_pairs() == SiblingPairs::DISCARD ||
+         g.options().sibling_pairs() == SiblingPairs::DISCARD_EXCESS);
+}
+
 }  // namespace
 
-vector<PolygonDegeneracy> FindPolygonDegeneracies(const Graph& graph,
+vector<PolygonDegeneracy> FindPolygonDegeneracies(const Graph& g,
                                                   S2Error* error) {
-  using DegenerateEdges = GraphOptions::DegenerateEdges;
-  using SiblingPairs = GraphOptions::SiblingPairs;
-  S2_DCHECK(graph.options().degenerate_edges() == DegenerateEdges::DISCARD ||
-         graph.options().degenerate_edges() == DegenerateEdges::DISCARD_EXCESS);
-  S2_DCHECK(graph.options().sibling_pairs() == SiblingPairs::DISCARD ||
-         graph.options().sibling_pairs() == SiblingPairs::DISCARD_EXCESS);
+  CheckGraphOptions(g);
+  if (g.options().degenerate_edges() == DegenerateEdges::DISCARD &&
+      g.options().sibling_pairs() == SiblingPairs::DISCARD) {
+    return {};  // All degeneracies have already been discarded.
+  }
+  return DegeneracyFinder(&g).Run(error);
+}
 
-  return DegeneracyFinder(&graph).Run(error);
+bool IsFullyDegenerate(const S2Builder::Graph& g) {
+  CheckGraphOptions(g);
+  const vector<Edge>& edges = g.edges();
+  for (int e = 0; e < g.num_edges(); ++e) {
+    Edge edge = edges[e];
+    if (edge.first == edge.second) continue;
+    if (!std::binary_search(edges.begin(), edges.end(), Graph::reverse(edge))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace s2builderutil

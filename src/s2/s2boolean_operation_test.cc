@@ -22,9 +22,13 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/third_party/absl/strings/strip.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
+#include "s2/s2builderutil_lax_polygon_layer.h"
+#include "s2/s2builderutil_s2point_vector_layer.h"
+#include "s2/s2builderutil_s2polyline_vector_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2polygon.h"
 #include "s2/s2text_format.h"
@@ -124,9 +128,9 @@ void ExpectResult(S2BooleanOperation::OpType op_type,
                   const S2BooleanOperation::Options& options,
                   const string& a_str, const string& b_str,
                   const string& expected_str) {
-  auto a = s2textformat::MakeIndex(a_str);
-  auto b = s2textformat::MakeIndex(b_str);
-  auto expected = s2textformat::MakeIndex(expected_str);
+  auto a = s2textformat::MakeIndexOrDie(a_str);
+  auto b = s2textformat::MakeIndexOrDie(b_str);
+  auto expected = s2textformat::MakeIndexOrDie(expected_str);
   vector<unique_ptr<S2Builder::Layer>> layers;
   for (int dim = 0; dim < 3; ++dim) {
     layers.push_back(make_unique<IndexMatchingLayer>(expected.get(), dim));
@@ -1043,4 +1047,72 @@ TEST(S2BooleanOperation, PolylineCrossingRectangleTwice) {
   ExpectResult(OpType::SYMMETRIC_DIFFERENCE, options, a, b,
       "# 0:-5, 0:-1 | 0:1, 0:5, 5:0, 1:0 | -1:0, -5:0 "
       "# 1:1, 1:0, 1:-1, 0:-1, -1:-1, -1:0, -1:1, 0:1");
+}
+
+void TestMeridianSplitting(const char* input_str, const char* expected_str) {
+  MutableS2ShapeIndex index;
+  vector<unique_ptr<S2Builder::Layer>> layers(3);
+  layers[0] = make_unique<s2builderutil::IndexedS2PointVectorLayer>(&index);
+
+  s2builderutil::IndexedS2PolylineVectorLayer::Options polyline_options;
+  polyline_options.set_edge_type(S2Builder::EdgeType::DIRECTED);
+  polyline_options.set_polyline_type(Graph::PolylineType::WALK);
+  polyline_options.set_duplicate_edges(DuplicateEdges::MERGE);
+  layers[1] = make_unique<s2builderutil::IndexedS2PolylineVectorLayer>(
+      &index, polyline_options);
+
+  layers[2] = make_unique<s2builderutil::IndexedLaxPolygonLayer>(&index);
+  S2BooleanOperation op(OpType::DIFFERENCE, std::move(layers));
+
+  MutableS2ShapeIndex meridian;
+  vector<vector<S2Point>> loops {{S2Point(0, 0, -1), S2Point(-1, 0, 0),
+                                  S2Point(0, 0, 1), S2Point(-1, 0, 0)}};
+  meridian.Add(make_unique<S2LaxPolygonShape>(loops));
+  auto input = s2textformat::MakeIndexOrDie(input_str);
+  S2Error error;
+  ASSERT_TRUE(op.Build(*input, meridian, &error));
+  EXPECT_EQ(expected_str, s2textformat::ToString(index));
+}
+
+TEST(S2BooleanOperation, MeridianSplitting) {
+  // A line along the equator crossing the 180 degree meridian.
+  TestMeridianSplitting("# 0:-160, 0:170 #", "# 0:-160, 0:180, 0:170 #");
+
+  // The northern hemisphere.
+  TestMeridianSplitting("# # 0:0, 0:120, 0:-120",
+                        "# # 90:0, 0:180, 0:-120, 0:0, 0:120, 0:180");
+
+  // A small square that crosses the 180th meridian.  Notice that one input
+  // loop is split into two output loops.
+  TestMeridianSplitting(
+      "# # 9:179, 9:-179, 10:-179, 10:179",
+      "# # 9.00134850712993:180, 9:-179, 10:-179, 10.0014925269841:-180; "
+      "10.0014925269841:-180, 10:179, 9:179, 9.00134850712993:180");
+
+  // An annulus that crosses the 180th meridian.  This turns into two shells.
+  TestMeridianSplitting(
+      "# # 8:178, 8:-178, 11:-178, 11:178; 9:179, 10:179, 10:-179, 9:-179",
+      "# # 10.0014925269841:180, 10:-179, 9:-179, 9.00134850712993:-180, "
+      "8.00481316618607:180, 8:-178, 11:-178, 11.00654129428:-180; "
+      "9.00134850712993:-180, 9:179, 10:179, 10.0014925269841:180, "
+      "11.00654129428:-180, 11:178, 8:178, 8.00481316618607:180");
+
+  // An annulus that crosses the 180th meridian.  This turns into two shells.
+  TestMeridianSplitting(
+      "# # 8:178, 8:-178, 11:-178, 11:178; 9:179, 10:179, 10:-179, 9:-179",
+      "# # 10.0014925269841:180, 10:-179, 9:-179, 9.00134850712993:-180, "
+      "8.00481316618607:180, 8:-178, 11:-178, 11.00654129428:-180; "
+      "9.00134850712993:-180, 9:179, 10:179, 10.0014925269841:180, "
+      "11.00654129428:-180, 11:178, 8:178, 8.00481316618607:180");
+
+  // The whole world except for a small square that crosses the 180th meridian.
+  // This is a single loop that visits both poles.  The result is correct
+  // except that (1) +180 or -180 needs to be chosen consistently with the
+  // adjacent points, and (2) each pole needs to be duplicated (once with
+  // longitude -180 and once with longitude 180).
+  TestMeridianSplitting(
+      "# # 9:-179, 9:179, 10:179, 10:-179",
+      "# # 0:180, 9.00134850712993:-180, 9:179, 10:179, 10.0014925269841:180, "
+      "90:0, 10.0014925269841:180, 10:-179, 9:-179, 9.00134850712993:-180, "
+      "0:180, -90:0");
 }

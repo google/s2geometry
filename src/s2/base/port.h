@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc. All Rights Reserved.
+// Copyright Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@
 // - Type alias
 // - Predefined system/language macros
 // - Predefined system/language functions
-// - Performance optimization (alignment, prefetch)
+// - Performance optimization (alignment)
 // - Obsolete
 
 #include <cassert>
@@ -631,14 +631,6 @@ inline void bzero(void *s, int n) { memset(s, 0, n); }
 #define gethostbyname gethostbyname_is_not_thread_safe_DO_NOT_USE
 #endif
 
-// __has_extension
-// Private implementation detail: __has_extension is useful to implement
-// static_assert, and defining it for all toolchains avoids an extra level of
-// nesting of #if/#ifdef/#ifndef.
-#ifndef __has_extension
-#define __has_extension(x) 0  // MSVC 10's preprocessor can't handle 'false'.
-#endif
-
 // -----------------------------------------------------------------------------
 // Performance Optimization
 // -----------------------------------------------------------------------------
@@ -713,6 +705,32 @@ inline void UNALIGNED_STORE32(void *p, uint32 v) {
 inline void UNALIGNED_STORE64(void *p, uint64 v) {
   __sanitizer_unaligned_store64(p, v);
 }
+
+#elif defined(UNDEFINED_BEHAVIOR_SANITIZER)
+
+inline uint16 UNALIGNED_LOAD16(const void *p) {
+  uint16 t;
+  memcpy(&t, p, sizeof t);
+  return t;
+}
+
+inline uint32 UNALIGNED_LOAD32(const void *p) {
+  uint32 t;
+  memcpy(&t, p, sizeof t);
+  return t;
+}
+
+inline uint64 UNALIGNED_LOAD64(const void *p) {
+  uint64 t;
+  memcpy(&t, p, sizeof t);
+  return t;
+}
+
+inline void UNALIGNED_STORE16(void *p, uint16 v) { memcpy(p, &v, sizeof v); }
+
+inline void UNALIGNED_STORE32(void *p, uint32 v) { memcpy(p, &v, sizeof v); }
+
+inline void UNALIGNED_STORE64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 
 #elif defined(__x86_64__) || defined(_M_X64) || defined(__i386) || \
     defined(_M_IX86) || defined(__ppc__) || defined(__PPC__) ||    \
@@ -868,11 +886,11 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 
 // __ASYLO__ platform uses newlib without an underlying OS, which provides
 // memalign, but not posix_memalign.
-#if defined(__cplusplus) &&                                               \
-    (((defined(__GNUC__) || defined(__APPLE__) || \
-       defined(__NVCC__)) &&                                              \
-      !defined(SWIG)) ||                                                  \
-     ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)) ||   \
+#if defined(__cplusplus) &&                                             \
+    (((defined(__GNUC__) || defined(__APPLE__) ||                  \
+       defined(__NVCC__)) &&   \
+      !defined(SWIG)) ||                                                \
+     ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)) || \
      defined(__ASYLO__))
 inline void *aligned_malloc(size_t size, int minimum_alignment) {
 #if defined(__ANDROID__) || defined(OS_ANDROID) || defined(__ASYLO__)
@@ -981,54 +999,5 @@ struct AlignType { typedef char result[Size]; };
 #else  // __cplusplus
 #define ALIGNED_CHAR_ARRAY ALIGNED_CHAR_ARRAY_is_not_available_without_Cplusplus
 #endif  // __cplusplus
-
-// Prefetch
-#if (defined(__GNUC__) || defined(__APPLE__)) && \
-    !defined(SWIG)
-#ifdef __cplusplus
-// prefetch() is deprecated.  Prefer compiler::PrefetchNta() from
-// util/compiler/prefetch.h, which is identical.  Current callers will
-// be updated in a go/lsc, so there is no need to proactively change
-// your code now.  More information: go/lsc-prefetch
-extern inline void prefetch(const void *x) { __builtin_prefetch(x, 0, 0); }
-#endif  // ifdef __cplusplus
-#else   // not GCC
-#if defined(__cplusplus)
-extern inline void prefetch(const void *) {}
-extern inline void prefetch(const void *, int) {}
-#endif
-#endif  // Prefetch
-
-// -----------------------------------------------------------------------------
-// Obsolete (to be removed)
-// -----------------------------------------------------------------------------
-
-// FTELLO, FSEEKO
-#if (defined(__GNUC__) || defined(__APPLE__)) && \
-    !defined(SWIG)
-#define FTELLO ftello
-#define FSEEKO fseeko
-#else  // not GCC
-// These should be redefined appropriately if better alternatives to
-// ftell/fseek exist in the compiler
-#define FTELLO ftell
-#define FSEEKO fseek
-#endif  // GCC
-
-// __STD
-// Our STL-like classes use __STD.
-#if defined(__GNUC__) || defined(__APPLE__) || \
-    defined(_MSC_VER)
-#define __STD std
-#endif
-
-// STREAM_SET, STREAM_SETF
-#if defined __GNUC__
-#define STREAM_SET(s, bit) (s).setstate(std::ios_base::bit)
-#define STREAM_SETF(s, flag) (s).setf(std::ios_base::flag)
-#else
-#define STREAM_SET(s, bit) (s).set(std::ios::bit)
-#define STREAM_SETF(s, flag) (s).setf(std::ios::flag)
-#endif
 
 #endif  // S2_BASE_PORT_H_
