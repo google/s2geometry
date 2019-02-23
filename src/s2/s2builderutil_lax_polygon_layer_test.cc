@@ -22,8 +22,8 @@
 #include <memory>
 #include <set>
 #include <string>
-#include "s2/third_party/absl/base/integral_types.h"
 #include <gtest/gtest.h>
+#include "s2/base/integral_types.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/string_view.h"
 #include "s2/mutable_s2shape_index.h"
