@@ -159,6 +159,7 @@ class btree_set_container : public btree_container<Tree> {
   using super_type = btree_container<Tree>;
   using mutable_value_type = typename Tree::mutable_value_type;
   using params_type = typename Tree::params_type;
+  friend class BtreeNodePeer;
 
  public:
   using value_type = typename Tree::value_type;

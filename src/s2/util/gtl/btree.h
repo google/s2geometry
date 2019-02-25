@@ -47,7 +47,7 @@
 // PERFORMANCE
 //
 // See the latest benchmark results at:
-// https://paste.googleplex.com/6529281429602304
+// https://paste.googleplex.com/6304429389119488
 //
 
 #ifndef S2_UTIL_GTL_BTREE_H_
@@ -800,6 +800,7 @@ class btree_node {
 
   template <typename P>
   friend class btree;
+  friend class BtreeNodePeer;
 };
 
 template <typename Node, typename Reference, typename Pointer>
