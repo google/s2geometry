@@ -491,9 +491,13 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   //   std::tie(ints, doubles) = x.Pointers(p);
   //
   // Requires: `p` is aligned to `Alignment()`.
+  //
+  // Note: We're not using ElementType alias here because it does not compile
+  // under MSVC.
   template <class Char>
-  std::tuple<CopyConst<Char, ElementType<OffsetSeq>>*...> Pointers(
-      Char* p) const {
+  std::tuple<CopyConst<
+      Char, typename std::tuple_element<OffsetSeq, ElementTypes>::type>*...>
+  Pointers(Char* p) const {
     return std::tuple<CopyConst<Char, ElementType<OffsetSeq>>*...>(
         Pointer<OffsetSeq>(p)...);
   }
@@ -545,9 +549,13 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   //   std::tie(ints, doubles) = x.Slices(p);
   //
   // Requires: `p` is aligned to `Alignment()`.
+  //
+  // Note: We're not using ElementType alias here because it does not compile
+  // under MSVC.
   template <class Char>
-  std::tuple<SliceType<CopyConst<Char, ElementType<SizeSeq>>>...> Slices(
-      Char* p) const {
+  std::tuple<SliceType<CopyConst<
+      Char, typename std::tuple_element<SizeSeq, ElementTypes>::type>>...>
+  Slices(Char* p) const {
     // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=63875 (fixed
     // in 6.1).
     (void)p;
