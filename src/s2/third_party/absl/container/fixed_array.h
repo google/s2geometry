@@ -366,6 +366,7 @@ class FixedArray {
     return H::combine(H::combine_contiguous(std::move(h), v.data(), v.size()),
                       v.size());
   }
+
  private:
   // StorageElement
   //
