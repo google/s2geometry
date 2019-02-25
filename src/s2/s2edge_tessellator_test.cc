@@ -229,11 +229,28 @@ TEST(S2EdgeTessellator, UnprojectedAccuracy) {
   EXPECT_LT(stats.max_dist(), tolerance);
 }
 
+TEST(S2EdgeTessellator, DISABLED_UnprojectedAccuracyCrossEquator) {
+  S2::MercatorProjection proj(180);
+  S1Angle tolerance(S1Angle::Degrees(1e-5));
+  R2Point pa(-10, -10), pb(10, 10);
+  DistStats stats = TestUnprojected(proj, tolerance, pa, pb);
+  EXPECT_LT(stats.max_dist(), tolerance);
+}
+
 TEST(S2EdgeTessellator, ProjectedAccuracy) {
   S2::PlateCarreeProjection proj(180);
   S1Angle tolerance(S1Angle::E7(1));
   S2Point a = S2LatLng::FromDegrees(-89.999, -170).ToPoint();
   S2Point b = S2LatLng::FromDegrees(50, 100).ToPoint();
+  DistStats stats = TestProjected(proj, tolerance, a, b);
+  EXPECT_LT(stats.max_dist(), tolerance);
+}
+
+TEST(S2EdgeTessellator, DISABLED_ProjectedAccuracyCrossEquator) {
+  S2::PlateCarreeProjection proj(180);
+  S1Angle tolerance(S1Angle::E7(1));
+  S2Point a = S2LatLng::FromDegrees(-20, -20).ToPoint();
+  S2Point b = S2LatLng::FromDegrees(20, 20).ToPoint();
   DistStats stats = TestProjected(proj, tolerance, a, b);
   EXPECT_LT(stats.max_dist(), tolerance);
 }
