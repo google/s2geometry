@@ -181,6 +181,14 @@
 #include "s2/third_party/absl/types/span.h"
 #include "s2/third_party/absl/utility/utility.h"
 
+#if defined(__GXX_RTTI)
+#define ABSL_INTERNAL_HAS_CXA_DEMANGLE
+#endif
+
+#ifdef ABSL_INTERNAL_HAS_CXA_DEMANGLE
+#include <cxxabi.h>
+#endif
+
 namespace absl {
 namespace container_internal {
 
@@ -278,11 +286,21 @@ constexpr size_t Max(size_t a, size_t b, Ts... rest) {
 
 template <class T>
 string TypeName() {
-#if !defined(__GNUC__) || defined(__GXX_RTTI)
-  return absl::StrCat("<", typeid(T).name(), ">");
-#else
-  return "";
+  string out;
+  int status = 0;
+  char* demangled = nullptr;
+#ifdef ABSL_INTERNAL_HAS_CXA_DEMANGLE
+  demangled = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, &status);
 #endif
+  if (status == 0 && demangled != nullptr) {  // Demangling succeeeded.
+    absl::StrAppend(&out, "<", demangled, ">");
+    free(demangled);
+  } else {
+#if defined(__GXX_RTTI) || defined(_CPPRTTI)
+    absl::StrAppend(&out, "<", typeid(T).name(), ">");
+#endif
+  }
+  return out;
 }
 
 }  // namespace adl_barrier
