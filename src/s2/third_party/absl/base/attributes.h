@@ -93,6 +93,7 @@
 #define ABSL_MUST_USE_RESULT
 #define ABSL_ATTRIBUTE_HOT
 #define ABSL_ATTRIBUTE_COLD
+#define ABSL_ATTRIBUTE_REINITIALIZES
 #define ABSL_ATTRIBUTE_UNUSED
 #define ABSL_ATTRIBUTE_INITIAL_EXEC
 #define ABSL_ATTRIBUTE_PACKED
@@ -546,6 +547,20 @@
 #define ABSL_XRAY_ALWAYS_INSTRUMENT
 #define ABSL_XRAY_NEVER_INSTRUMENT
 #define ABSL_XRAY_LOG_ARGS(N)
+#endif
+
+// ABSL_ATTRIBUTE_REINITIALIZES
+//
+// Indicates that a member function reinitializes the entire object to a known
+// state, independent of the previous state of the object.
+//
+// The clang-tidy check bugprone-use-after-move allows member functions marked
+// with this attribute to be called on objects that have been moved from;
+// without the attribute, this would result in a use-after-move warning.
+#if ABSL_HAVE_CPP_ATTRIBUTE(clang::reinitializes)
+#define ABSL_ATTRIBUTE_REINITIALIZES [[clang::reinitializes]]
+#else
+#define ABSL_ATTRIBUTE_REINITIALIZES
 #endif
 
 // -----------------------------------------------------------------------------
