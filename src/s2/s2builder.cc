@@ -482,6 +482,7 @@ void S2Builder::Reset() {
   layers_.clear();
   layer_options_.clear();
   layer_begins_.clear();
+  layer_is_full_polygon_predicates_.clear();
   label_set_ids_.clear();
   label_set_lexicon_.Clear();
   label_set_.clear();
