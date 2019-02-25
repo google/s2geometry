@@ -358,6 +358,7 @@ const char* DecodeTwo32ValuesInternal(const char* ptr, const char* limit,
 
 #undef PARSE_BITS_DECODE_TWO
 
+  if (RespectLimit && uptr >= ulimit) return nullptr;
   byte = *(uptr++);
   // 10th byte has at most one bit set.
   if (byte > 1) {
