@@ -78,6 +78,12 @@ bool StartsWithIgnoreCase(absl::string_view text, absl::string_view prefix);
 // in the comparison.
 bool EndsWithIgnoreCase(absl::string_view text, absl::string_view suffix);
 
+// EqualsIgnoreCase()
+//
+// Returns whether given strings `piece1` and `piece2` are equal, ignoring case
+// in the comparison.
+bool EqualsIgnoreCase(absl::string_view piece1, absl::string_view piece2);
+
 }  // namespace absl
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_MATCH_H_

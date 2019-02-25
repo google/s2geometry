@@ -39,4 +39,11 @@ bool EndsWithIgnoreCase(absl::string_view text, absl::string_view suffix) {
          CaseEqual(text.substr(text.size() - suffix.size()), suffix);
 }
 
+bool EqualsIgnoreCase(absl::string_view piece1, absl::string_view piece2) {
+  return (piece1.size() == piece2.size() &&
+          0 == absl::strings_internal::memcasecmp(piece1.data(), piece2.data(),
+                                                  piece1.size()));
+  // memcasecmp uses absl::ascii_tolower().
+}
+
 }  // namespace absl
