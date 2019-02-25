@@ -395,8 +395,6 @@
 #if __has_include(<variant>) && __cplusplus >= 201703L
 #define ABSL_HAVE_STD_VARIANT 1
 #endif
-// compiling errors with modules.
-#undef ABSL_HAVE_STD_VARIANT
 #endif
 
 // ABSL_HAVE_STD_STRING_VIEW
