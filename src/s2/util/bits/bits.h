@@ -112,19 +112,9 @@ class Bits {
   }
 
   // Count bits using popcnt instruction.
+  ABSL_DEPRECATED("Use CountOnes64")
   static inline int CountOnes64withPopcount(uint64 n) {
-    // POPCNT has a false data dependency on its output register.
-    // gcc / clang will optimize the intrinsic, but not inline asm.
-    // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=62011
-#if defined(__x86_64__) && defined(__POPCNT__) && defined(__SSE4__)
-    return _mm_popcnt_u64(n);
-#elif defined(__x86_64__) && defined(__GNUC__)
-    int64 count = 0;
-    asm("popcnt %1,%0" : "=r"(count) : "rm"(n) : "cc");
-    return static_cast<int>(count);
-#else
     return CountOnes64(n);
-#endif
   }
 
   // Count leading zeroes.  This is similar to wordsize - 1 - floor(log2(n)).
