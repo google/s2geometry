@@ -336,21 +336,23 @@ class S2Polyline final : public S2Region {
     OwningShape() {}  // Must call Init().
 
     explicit OwningShape(std::unique_ptr<const S2Polyline> polyline)
-        : Shape(polyline.release()) {
-    }
+        : Shape(polyline.get()), owned_polyline_(std::move(polyline)) {}
 
     void Init(std::unique_ptr<const S2Polyline> polyline) {
-      Shape::Init(polyline.release());
+      Shape::Init(polyline.get());
+      owned_polyline_ = std::move(polyline);
     }
 
     bool Init(Decoder* decoder) {
       auto polyline = absl::make_unique<S2Polyline>();
       if (!polyline->Decode(decoder)) return false;
-      Shape::Init(polyline.release());
+      Shape::Init(polyline.get());
+      owned_polyline_ = std::move(polyline);
       return true;
     }
 
-    ~OwningShape() override { delete polyline(); }
+   private:
+    std::unique_ptr<const S2Polyline> owned_polyline_;
   };
 #endif  // SWIG
 

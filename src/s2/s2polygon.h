@@ -751,21 +751,22 @@ class S2Polygon final : public S2Region {
     OwningShape() {}  // Must call Init().
 
     explicit OwningShape(std::unique_ptr<const S2Polygon> polygon)
-        : Shape(polygon.release()) {
-    }
+        : Shape(polygon.get()), owned_polygon_(std::move(polygon)) {}
 
     void Init(std::unique_ptr<const S2Polygon> polygon) {
-      Shape::Init(polygon.release());
+      Shape::Init(polygon.get());
+      owned_polygon_ = std::move(polygon);
     }
 
     bool Init(Decoder* decoder) {
       auto polygon = absl::make_unique<S2Polygon>();
       if (!polygon->Decode(decoder)) return false;
-      Shape::Init(polygon.release());
+      Shape::Init(polygon.get());
+      owned_polygon_ = std::move(polygon);
       return true;
     }
 
-    ~OwningShape() override { delete polygon(); }
+    std::unique_ptr<const S2Polygon> owned_polygon_;
   };
 #endif  // SWIG
 
