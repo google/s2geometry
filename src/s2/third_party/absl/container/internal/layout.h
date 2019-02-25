@@ -646,8 +646,11 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
       absl::StrAppend(&res, "[", size_[i], "]; @", offsets[i + 1], types[i + 1],
                       "(", sizes[i + 1], ")");
     }
-    if (NumTypes == NumSizes && NumSizes > 0) {
-      absl::StrAppend(&res, "[", size_[NumSizes - 1], "]");
+    // NumSizes is a constant that may be zero. Some compilers cannot see that
+    // inside the if statement "size_[NumSizes - 1]" must be valid.
+    int last = static_cast<int>(NumSizes) - 1;
+    if (NumTypes == NumSizes && last >= 0) {
+      absl::StrAppend(&res, "[", size_[last], "]");
     }
     return res;
   }
