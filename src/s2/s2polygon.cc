@@ -862,15 +862,23 @@ void S2Polygon::InitToComplement(const S2Polygon* a) {
   Invert();
 }
 
-bool S2Polygon::InitToOperation(S2BooleanOperation::OpType op_type,
+void S2Polygon::InitToOperation(S2BooleanOperation::OpType op_type,
                                 const S2Builder::SnapFunction& snap_function,
-                                const S2Polygon& a, const S2Polygon& b) {
+                                const S2Polygon& a, const S2Polygon& b,
+                                S2Error* error) {
   S2BooleanOperation::Options options;
   options.set_snap_function(snap_function);
   S2BooleanOperation op(op_type, make_unique<S2PolygonLayer>(this),
                          options);
+  op.Build(a.index_, b.index_, error);
+}
+
+bool S2Polygon::InitToOperation(S2BooleanOperation::OpType op_type,
+                                const S2Builder::SnapFunction& snap_function,
+                                const S2Polygon& a, const S2Polygon& b) {
   S2Error error;
-  if (!op.Build(a.index_, b.index_, &error)) {
+  InitToOperation(op_type, snap_function, a, b, &error);
+  if (!error.ok()) {
     S2_LOG(DFATAL) << S2BooleanOperation::OpTypeToString(op_type)
                 << " operation failed: " << error;
     return false;

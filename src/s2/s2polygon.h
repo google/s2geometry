@@ -25,6 +25,7 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -783,6 +784,11 @@ class S2Polygon final : public S2Region {
   //
   // The index contains a single S2Polygon::Shape object.
   const MutableS2ShapeIndex& index() const { return index_; }
+
+  // Initializes the polygon to the result of the given boolean operation.
+  void InitToOperation(S2BooleanOperation::OpType op_type,
+                       const S2Builder::SnapFunction& snap_function,
+                       const S2Polygon& a, const S2Polygon& b, S2Error* error);
 
  private:
   friend class S2Stats;
