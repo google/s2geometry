@@ -454,7 +454,7 @@ inline unsigned char const* Decoder::ptr() const {
 inline void DecoderExtensions::FillArray(Decoder* array, int num_decoders) {
   // This is an optimization based on the fact that Decoder(nullptr, 0) sets all
   // structure bytes to 0. This is valid because Decoder is TriviallyCopyable
-  // (http://en.cppreference.com/w/cpp/concept/TriviallyCopyable).
+  // (https://en.cppreference.com/w/cpp/named_req/TriviallyCopyable).
   static_assert(absl::is_trivially_copy_constructible<Decoder>::value,
                 "Decoder must be trivially copy-constructible");
   static_assert(absl::is_trivially_copy_assignable<Decoder>::value,
