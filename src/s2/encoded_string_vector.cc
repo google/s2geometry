@@ -30,8 +30,9 @@ StringVectorEncoder::StringVectorEncoder() {
 void StringVectorEncoder::Encode(Encoder* encoder) {
   offsets_.push_back(data_.length());
   // We don't encode the first element of "offsets_", which is always zero.
-  EncodeUintVector<uint64>(MakeSpan(offsets_.data() + 1, &*offsets_.end()),
-                                    encoder);
+  EncodeUintVector<uint64>(
+      MakeSpan(offsets_.data() + 1, offsets_.data() + offsets_.size()),
+      encoder);
   encoder->Ensure(data_.length());
   encoder->putn(data_.base(), data_.length());
 }

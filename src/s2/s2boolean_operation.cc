@@ -661,7 +661,9 @@ bool GraphEdgeClipper::EdgeChainOnLeft(
   if (g_.edge(b_last).second != a[0]) std::reverse(loop.begin(), loop.end());
   loop.insert(loop.end(), a.begin(), a.end());
   // Duplicate the first two vertices to simplify vertex indexing.
-  loop.insert(loop.end(), loop.begin(), loop.begin() + 2);
+  for (int j = 0; j < 2; j++) {
+    loop.insert(loop.end(), *(loop.begin() + j));
+  }
   // Now B is to the left of A if and only if the loop is counterclockwise.
   double sum = 0;
   for (int i = 2; i < loop.size(); ++i) {
