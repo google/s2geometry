@@ -682,59 +682,42 @@ struct default_allocator_is_nothrow : std::false_type {};
 #endif
 
 namespace memory_internal {
-#ifdef ABSL_HAVE_EXCEPTIONS  // ConstructRange
 template <typename Allocator, typename Iterator, typename... Args>
 void ConstructRange(Allocator& alloc, Iterator first, Iterator last,
                     const Args&... args) {
   for (Iterator cur = first; cur != last; ++cur) {
-    try {
-      std::allocator_traits<Allocator>::construct(alloc, cur, args...);
-    } catch (...) {
+    ABSL_INTERNAL_TRY {
+      std::allocator_traits<Allocator>::construct(alloc, std::addressof(*cur),
+                                                  args...);
+    }
+    ABSL_INTERNAL_CATCH_ANY {
       while (cur != first) {
         --cur;
-        std::allocator_traits<Allocator>::destroy(alloc, cur);
+        std::allocator_traits<Allocator>::destroy(alloc, std::addressof(*cur));
       }
-      throw;
+      ABSL_INTERNAL_RETHROW;
     }
   }
 }
-#else   // ABSL_HAVE_EXCEPTIONS  // ConstructRange
-template <typename Allocator, typename Iterator, typename... Args>
-void ConstructRange(Allocator& alloc, Iterator first, Iterator last,
-                    const Args&... args) {
-  for (; first != last; ++first) {
-    std::allocator_traits<Allocator>::construct(alloc, first, args...);
-  }
-}
-#endif  // ABSL_HAVE_EXCEPTIONS  // ConstructRange
 
-#ifdef ABSL_HAVE_EXCEPTIONS  // CopyRange
 template <typename Allocator, typename Iterator, typename InputIterator>
 void CopyRange(Allocator& alloc, Iterator destination, InputIterator first,
                InputIterator last) {
   for (Iterator cur = destination; first != last;
        static_cast<void>(++cur), static_cast<void>(++first)) {
-    try {
-      std::allocator_traits<Allocator>::construct(alloc, cur, *first);
-    } catch (...) {
+    ABSL_INTERNAL_TRY {
+      std::allocator_traits<Allocator>::construct(alloc, std::addressof(*cur),
+                                                  *first);
+    }
+    ABSL_INTERNAL_CATCH_ANY {
       while (cur != destination) {
         --cur;
-        std::allocator_traits<Allocator>::destroy(alloc, cur);
+        std::allocator_traits<Allocator>::destroy(alloc, std::addressof(*cur));
       }
-      throw;
+      ABSL_INTERNAL_RETHROW;
     }
   }
 }
-#else   // ABSL_HAVE_EXCEPTIONS  // CopyRange
-template <typename Allocator, typename Iterator, typename InputIterator>
-void CopyRange(Allocator& alloc, Iterator destination, InputIterator first,
-               InputIterator last) {
-  for (; first != last;
-       static_cast<void>(++destination), static_cast<void>(++first)) {
-    std::allocator_traits<Allocator>::construct(alloc, destination, *first);
-  }
-}
-#endif  // ABSL_HAVE_EXCEPTIONS  // CopyRange
 }  // namespace memory_internal
 }  // namespace absl
 
