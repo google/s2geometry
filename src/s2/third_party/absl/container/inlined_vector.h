@@ -168,9 +168,8 @@ class InlinedVector {
   ~InlinedVector() { clear(); }
 
   InlinedVector& operator=(const InlinedVector& other) {
-    if (this == &other) {
-      return *this;
-    }
+    if (ABSL_PREDICT_FALSE(this == &other)) return *this;
+
     // Optimized to avoid reallocation.
     // Prefer reassignment to copy construction for elements.
     if (size() < other.size()) {  // grow
@@ -185,9 +184,8 @@ class InlinedVector {
   }
 
   InlinedVector& operator=(InlinedVector&& other) {
-    if (this == &other) {
-      return *this;
-    }
+    if (ABSL_PREDICT_FALSE(this == &other)) return *this;
+
     if (other.allocated()) {
       clear();
       tag().set_allocated_size(other.size());
@@ -598,10 +596,7 @@ class InlinedVector {
   // be moved to a smaller heap allocation.
   void shrink_to_fit() {
     const auto s = size();
-    if (!allocated() || s == capacity()) {
-      // There's nothing to deallocate.
-      return;
-    }
+    if (ABSL_PREDICT_FALSE(!allocated() || s == capacity())) return;
 
     if (s <= inline_elements()) {
       // Move the elements to the inlined storage.
@@ -1092,7 +1087,7 @@ auto InlinedVector<T, N, A>::emplace(const_iterator position, Args&&... args)
     -> iterator {
   assert(position >= begin());
   assert(position <= end());
-  if (position == end()) {
+  if (ABSL_PREDICT_FALSE(position == end())) {
     emplace_back(std::forward<Args>(args)...);
     return end() - 1;
   }
@@ -1141,9 +1136,8 @@ auto InlinedVector<T, N, A>::erase(const_iterator from, const_iterator to)
 template <typename T, size_t N, typename A>
 void InlinedVector<T, N, A>::swap(InlinedVector& other) {
   using std::swap;  // Augment ADL with `std::swap`.
-  if (this == &other) {
-    return;
-  }
+  if (ABSL_PREDICT_FALSE(this == &other)) return;
+
   if (allocated() && other.allocated()) {
     // Both out of line, so just swap the tag, allocation, and allocator.
     swap(tag(), other.tag());
@@ -1370,7 +1364,7 @@ auto InlinedVector<T, N, A>::InsertWithCount(const_iterator position,
                                              size_type n, const_reference v)
     -> iterator {
   assert(position >= begin() && position <= end());
-  if (n == 0) return const_cast<iterator>(position);
+  if (ABSL_PREDICT_FALSE(n == 0)) return const_cast<iterator>(position);
 
   value_type copy = v;
   std::pair<iterator, iterator> it_pair = ShiftRight(position, n);
@@ -1402,9 +1396,8 @@ auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
                                              std::forward_iterator_tag)
     -> iterator {
   assert(position >= begin() && position <= end());
-  if (first == last) {
-    return const_cast<iterator>(position);
-  }
+  if (ABSL_PREDICT_FALSE(first == last)) return const_cast<iterator>(position);
+
   auto n = std::distance(first, last);
   std::pair<iterator, iterator> it_pair = ShiftRight(position, n);
   size_type used_spots = it_pair.second - it_pair.first;
