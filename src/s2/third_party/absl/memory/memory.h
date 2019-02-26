@@ -626,7 +626,7 @@ struct allocator_traits {
     return a.max_size();
   }
   static size_type max_size_impl(char, const Alloc&) {
-    return std::numeric_limits<size_type>::max() / sizeof(value_type);
+    return (std::numeric_limits<size_type>::max)() / sizeof(value_type);
   }
 
   template <typename A>
