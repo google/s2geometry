@@ -98,7 +98,7 @@ void S2Cap::AddPoint(const S2Point& p) {
 void S2Cap::AddCap(const S2Cap& other) {
   if (is_empty()) {
     *this = other;
-  } else {
+  } else if (!other.is_empty()) {
     // We round up the distance to ensure that the cap is actually contained.
     // TODO(ericv): Do some error analysis in order to guarantee this.
     S1ChordAngle dist = S1ChordAngle(center_, other.center_) + other.radius_;

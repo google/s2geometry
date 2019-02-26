@@ -151,6 +151,20 @@ TEST(S2Cap, Basic) {
       S2Cap::FromCenterHeight(-concave.center(), 0.1)));
 }
 
+TEST(S2Cap, AddEmptyCapToNonEmptyCap) {
+  S2Cap non_empty_cap(S2Point(1, 0, 0), S1Angle::Degrees(10));
+  double initial_area = non_empty_cap.GetArea();
+  non_empty_cap.AddCap(S2Cap::Empty());
+  EXPECT_EQ(initial_area, non_empty_cap.GetArea());
+}
+
+TEST(S2Cap, AddNonEmptyCapToEmptyCap) {
+  S2Cap empty = S2Cap::Empty();
+  S2Cap non_empty_cap(S2Point(1, 0, 0), S1Angle::Degrees(10));
+  empty.AddCap(non_empty_cap);
+  EXPECT_EQ(non_empty_cap.GetArea(), empty.GetArea());
+}
+
 TEST(S2Cap, GetRectBound) {
   // Empty and full caps.
   EXPECT_TRUE(S2Cap::Empty().GetRectBound().is_empty());
