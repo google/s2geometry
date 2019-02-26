@@ -47,7 +47,7 @@
 // PERFORMANCE
 //
 // See the latest benchmark results at:
-// https://paste.googleplex.com/6304429389119488
+// https://paste.googleplex.com/5549632792821760
 //
 
 #ifndef S2_UTIL_GTL_BTREE_H_
@@ -66,7 +66,6 @@
 #include <utility>
 
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/internal/compressed_tuple.h"
 #include "s2/third_party/absl/container/internal/container_memory.h"
@@ -2076,15 +2075,15 @@ void btree<P>::swap(btree &x) {
 template <typename P>
 void btree<P>::verify() const {
   if (root() != nullptr) {
-    S2_CHECK_EQ(size(), internal_verify(root(), nullptr, nullptr));
-    S2_CHECK_EQ(leftmost(), (++const_iterator(root(), -1)).node);
-    S2_CHECK_EQ(rightmost_, (--const_iterator(root(), root()->count())).node);
-    S2_CHECK(leftmost()->leaf());
-    S2_CHECK(rightmost_->leaf());
+    assert(size() == internal_verify(root(), nullptr, nullptr));
+    assert(leftmost() == (++const_iterator(root(), -1)).node);
+    assert(rightmost_ == (--const_iterator(root(), root()->count())).node);
+    assert(leftmost()->leaf());
+    assert(rightmost_->leaf());
   } else {
-    S2_CHECK_EQ(size(), 0);
-    S2_CHECK(leftmost() == nullptr);
-    S2_CHECK(rightmost_ == nullptr);
+    assert(empty());
+    assert(leftmost() == nullptr);
+    assert(rightmost_ == nullptr);
   }
 }
 
@@ -2439,23 +2438,23 @@ void btree<P>::internal_clear(node_type *node) {
 template <typename P>
 int btree<P>::internal_verify(
     const node_type *node, const key_type *lo, const key_type *hi) const {
-  S2_CHECK_GT(node->count(), 0);
-  S2_CHECK_LE(node->count(), node->max_count());
+  assert(node->count() > 0);
+  assert(node->count() <= node->max_count());
   if (lo) {
-    S2_CHECK(!compare_keys(node->key(0), *lo));
+    assert(!compare_keys(node->key(0), *lo));
   }
   if (hi) {
-    S2_CHECK(!compare_keys(*hi, node->key(node->count() - 1)));
+    assert(!compare_keys(*hi, node->key(node->count() - 1)));
   }
   for (int i = 1; i < node->count(); ++i) {
-    S2_CHECK(!compare_keys(node->key(i), node->key(i - 1)));
+    assert(!compare_keys(node->key(i), node->key(i - 1)));
   }
   int count = node->count();
   if (!node->leaf()) {
     for (int i = 0; i <= node->count(); ++i) {
-      S2_CHECK(node->child(i) != nullptr);
-      S2_CHECK_EQ(node->child(i)->parent(), node);
-      S2_CHECK_EQ(node->child(i)->position(), i);
+      assert(node->child(i) != nullptr);
+      assert(node->child(i)->parent() == node);
+      assert(node->child(i)->position() == i);
       count += internal_verify(
           node->child(i),
           (i == 0) ? lo : &node->key(i - 1),
