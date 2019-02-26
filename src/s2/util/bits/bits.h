@@ -58,6 +58,7 @@
 #include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/base/port.h"
+#include <gtest/gtest_prod.h>
 
 class Bits {
  public:
@@ -67,7 +68,7 @@ class Bits {
   template<int size /* in bytes */>
   struct UnsignedTypeBySize;
 
-  // Auxilliary struct for figuring out an unsigned type for a given type.
+  // Auxiliary struct for figuring out an unsigned type for a given type.
   template<typename T> struct UnsignedType {
     typedef typename UnsignedTypeBySize<sizeof(T)>::Type Type;
   };
@@ -358,18 +359,8 @@ class Bits {
   Bits(Bits const&) = delete;
   void operator=(Bits const&) = delete;
 
-  // Allow tests to call _Portable variants directly.
-  // Originally, I wanted to depend on //testing/production_stub/public
-  // so that I would be able to
-  // #include "testing/production_stub/public/gunit_prod.h", which provides
-  // FRIEND_MACRO. But that broke iOS: http://b/22806226 . I then noticed that
-  // the previously mentioned header file says to instead
-  // #include "testing/base/gunit_prod.h". I cannot find a library that a)
-  // provides the alternative header file b) is visisble. Thus, I have thrown
-  // my hands up in frustration, and gone with raw friend instead of using the
-  // usual FRIEND_TEST macro. Hate the game, not the player.
-  friend class Bits_Port32_Test;
-  friend class Bits_Port64_Test;
+  FRIEND_TEST(Bits, Port32);
+  FRIEND_TEST(Bits, Port64);
 };
 
 // A utility class for some handy bit patterns.  The names l and h
