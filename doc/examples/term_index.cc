@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
   // region types include polygons, polylines, rectangles, discs, buffered
   // geometry, etc.)
   std::vector<S2Point> documents;
+  documents.reserve(FLAGS_num_documents);
   for (int docid = 0; docid < FLAGS_num_documents; ++docid) {
     documents.push_back(S2Testing::RandomPoint());
   }

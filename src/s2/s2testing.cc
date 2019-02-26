@@ -148,6 +148,7 @@ vector<S2Point> S2Testing::MakeRegularPoints(const S2Point& center,
   unique_ptr<S2Loop> loop(
       S2Loop::MakeRegularLoop(center, radius, num_vertices));
   vector<S2Point> points;
+  points.reserve(loop->num_vertices());
   for (int i = 0; i < loop->num_vertices(); i++) {
     points.push_back(loop->vertex(i));
   }
