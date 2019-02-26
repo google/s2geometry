@@ -1,12 +1,20 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
+
 project(s2-geometry)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
 include(FeatureSummary)
 include(FindPackageHandleStandardArgs)
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Avoid "Policy CMP0042 is not set" warning on macOS.
+if (APPLE)
+    set(CMAKE_MACOSX_RPATH TRUE)
+endif()
+
 
 option(WITH_GFLAGS "Use gflags to change command line flags." OFF)
 add_feature_info(GFLAGS WITH_GFLAGS
@@ -52,11 +60,6 @@ find_package(Threads REQUIRED)
 find_package(SWIG)
 find_package(PythonInterp)
 find_package(PythonLibs)
-
-# Avoid "Policy CMP0042 is not set" warning on macOS.
-if (APPLE)
-    set(CMAKE_MACOSX_RPATH TRUE)
-endif()
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
