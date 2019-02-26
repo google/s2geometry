@@ -182,12 +182,12 @@ class dense_hash_set {
   // These come from tr1's unordered_set. For us, a bucket has 0 or 1 elements.
   ABSL_DEPRECATED(
       "This method is slated for removal.  Please migrate to "
-      "gtl::flat_hash_set.")
+      "absl::flat_hash_set.")
   local_iterator begin(size_type i) const { return rep.begin(i); }
 
   ABSL_DEPRECATED(
       "This method is slated for removal.  Please migrate to "
-      "gtl::flat_hash_set.")
+      "absl::flat_hash_set.")
   local_iterator end(size_type i) const   { return rep.end(i); }
 
 
@@ -238,17 +238,17 @@ class dense_hash_set {
 
   ABSL_DEPRECATED(
       "This method is slated for removal.  Please migrate to "
-      "gtl::flat_hash_set.")
+      "absl::flat_hash_set.")
   size_type max_bucket_count() const  { return rep.max_bucket_count(); }
 
   // These are tr1 methods.  bucket() is the bucket the key is or would be in.
   ABSL_DEPRECATED(
       "This method is slated for removal.  Please migrate to "
-      "gtl::flat_hash_set.")
+      "absl::flat_hash_set.")
   size_type bucket_size(size_type i) const    { return rep.bucket_size(i); }
   ABSL_DEPRECATED(
       "This method is slated for removal.  Please migrate to "
-      "gtl::flat_hash_set.")
+      "absl::flat_hash_set.")
   size_type bucket(const key_type& key) const { return rep.bucket(key); }
   float load_factor() const {
     return size() * 1.0f / bucket_count();
@@ -266,7 +266,7 @@ class dense_hash_set {
   // These aren't tr1 methods but perhaps ought to be.
   ABSL_DEPRECATED(
       "This method is slated for removal.  Please migrate to "
-      "gtl::flat_hash_set.")
+      "absl::flat_hash_set.")
   float min_load_factor() const {
     float shrink, grow;
     rep.get_resizing_parameters(&shrink, &grow);
