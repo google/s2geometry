@@ -111,12 +111,6 @@ class Bits {
            Bits::CountOnes64(absl::Uint128Low64(n));
   }
 
-  // Count bits using popcnt instruction.
-  ABSL_DEPRECATED("Use CountOnes64")
-  static inline int CountOnes64withPopcount(uint64 n) {
-    return CountOnes64(n);
-  }
-
   // Count leading zeroes.  This is similar to wordsize - 1 - floor(log2(n)).
   // Returns number of bits if n is 0.
   static inline int CountLeadingZeros32(uint32 n) {
