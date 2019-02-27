@@ -355,7 +355,9 @@ class Vector2
     return c_[0] * vb.c_[1] - c_[1] * vb.c_[0];
   }
 
-  // return the angle between "this" and v in radians
+  // Returns the angle between "this" and v in radians. If either vector is
+  // zero-length, or nearly zero-length, the result will be zero, regardless of
+  // the other value.
   FloatType Angle(const Vector2 &v) const {
     using std::atan2;
     return atan2(CrossProd(v), this->DotProd(v));
@@ -438,7 +440,9 @@ class Vector3
     return CrossProd(temp).Normalize();
   }
 
-  // return the angle between two vectors in radians
+  // Returns the angle between two vectors in radians. If either vector is
+  // zero-length, or nearly zero-length, the result will be zero, regardless of
+  // the other value.
   FloatType Angle(const Vector3 &va) const {
     using std::atan2;
     return atan2(CrossProd(va).Norm(), this->DotProd(va));
