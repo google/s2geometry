@@ -169,12 +169,19 @@ class S2CrossingEdgeQuery {
   // false as well).
   //
   // NOTE: Each candidate cell is visited exactly once.
+  //
+  // REQUIRES: root.padding() == 0
+  //   [This low-level method does not support padding; the argument is supplied
+  //    as an S2PaddedCell in order to avoid constructing it repeatedly when
+  //    this method is called using different query edges with the same root.]
   bool VisitCells(const S2Point& a0, const S2Point& a1,
                   const S2PaddedCell& root, const CellVisitor& visitor);
 
 
   // Given a query edge AB and a cell "root", returns all S2ShapeIndex cells
   // within "root" that might contain edges intersecting AB.
+  //
+  // REQUIRES: root.padding() == 0 (see above)
   void GetCells(const S2Point& a0, const S2Point& a1, const S2PaddedCell& root,
                 std::vector<const S2ShapeIndexCell*>* cells);
 
