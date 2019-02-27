@@ -188,6 +188,25 @@ void Dump(const S2Polygon& polygon) {
   std::cout << "S2Polygon: " << s2textformat::ToString(polygon) << std::endl;
 }
 
+// Outputs the contents of an S2ShapeIndex in human-readable form.
+void Dump(const S2ShapeIndex& index) {
+  std::cout << "S2ShapeIndex: " << &index << std::endl;
+  for (S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
+       !it.done(); it.Next()) {
+    std::cout << "  id: " << it.id().ToString() << std::endl;
+    const S2ShapeIndexCell& cell = it.cell();
+    for (int s = 0; s < cell.num_clipped(); ++s) {
+      const S2ClippedShape& clipped = cell.clipped(s);
+      std::cout << "    shape_id " << clipped.shape_id() << ": ";
+      for (int e = 0; e < clipped.num_edges(); ++e) {
+        if (e > 0) std::cout << ", ";
+        std::cout << clipped.edge(e);
+      }
+      std::cout << std::endl;
+    }
+  }
+}
+
 S2Point S2Testing::RandomPoint() {
   // The order of evaluation of function arguments is unspecified,
   // so we may not just call S2Point with three RandDouble-based args.
