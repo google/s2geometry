@@ -31,6 +31,7 @@
 #include "s2/base/logging.h"
 #include "s2/base/strtoint.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/s1angle.h"
@@ -39,6 +40,7 @@
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2latlng.h"
+#include "s2/s2polyline.h"
 #include "s2/s2region.h"
 #include "s2/s2testing.h"
 
@@ -473,4 +475,33 @@ TEST(CanonicalizeCovering, MaxCellsMergesRepeatedly) {
        "1/311", "1/312", "1/313", "1/3100", "1/3101", "1/3103",
        "1/31021", "1/31023"},
       {"0/0121", "0/0123", "1/"}, options);
+}
+
+TEST(JavaCcConsistency, CheckCovering) {
+  std::vector<S2Point> points = {
+      S2LatLng::FromDegrees(-33.8663457, 151.1960891).ToPoint(),
+      S2LatLng::FromDegrees(-33.866094000000004, 151.19517439999998).ToPoint()};
+  std::unique_ptr<S2Polyline> polyline = absl::make_unique<S2Polyline>(points);
+  S2RegionCoverer coverer;
+  coverer.mutable_options()->set_min_level(0);
+  coverer.mutable_options()->set_max_level(22);
+  coverer.mutable_options()->set_max_cells(INT_MAX);
+  S2CellUnion ret = coverer.GetCovering(*polyline);
+  std::vector<std::string> expected(
+      {"6b12ae36313d", "6b12ae36313f", "6b12ae363141", "6b12ae363143",
+       "6b12ae363145", "6b12ae363159", "6b12ae36315b", "6b12ae363343",
+       "6b12ae363345", "6b12ae36334d", "6b12ae36334f", "6b12ae363369",
+       "6b12ae36336f", "6b12ae363371", "6b12ae363377", "6b12ae363391",
+       "6b12ae363393", "6b12ae36339b", "6b12ae36339d", "6b12ae3633e3",
+       "6b12ae3633e5", "6b12ae3633ed", "6b12ae3633ef", "6b12ae37cc11",
+       "6b12ae37cc13", "6b12ae37cc1b", "6b12ae37cc1d", "6b12ae37cc63",
+       "6b12ae37cc65", "6b12ae37cc6d", "6b12ae37cc6f", "6b12ae37cc89",
+       "6b12ae37cc8f", "6b12ae37cc91", "6b12ae37cc97", "6b12ae37ccb1",
+       "6b12ae37ccb3", "6b12ae37ccbb", "6b12ae37ccbd", "6b12ae37cea5",
+       "6b12ae37cea7", "6b12ae37cebb"});
+  std::vector<std::string> actual;
+  for (auto& cell_id : ret) {
+    actual.push_back(cell_id.ToToken());
+  }
+  EXPECT_EQ(expected, actual);
 }
