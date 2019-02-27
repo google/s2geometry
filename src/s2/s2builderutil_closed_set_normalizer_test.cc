@@ -20,6 +20,7 @@
 #include <memory>
 #include <vector>
 
+#include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2boolean_operation.h"
@@ -31,7 +32,6 @@
 #include "s2/s2builderutil_s2polyline_vector_layer.h"
 #include "s2/s2builderutil_testing.h"
 #include "s2/s2text_format.h"
-#include <gtest/gtest.h>
 
 using absl::make_unique;
 using std::unique_ptr;
