@@ -100,6 +100,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/r2.h"
 #include "s2/s2coords_internal.h"
@@ -298,7 +299,7 @@ inline double STtoUV(double s) {
   // the nearest double-precision result.
 
   s = std::tan(M_PI_2 * s - M_PI_4);
-  return s + (1.0 / (GG_LONGLONG(1) << 53)) * s;
+  return s + (1.0 / (int64{1} << 53)) * s;
 }
 
 inline double UVtoST(double u) {
