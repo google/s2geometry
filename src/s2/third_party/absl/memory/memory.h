@@ -190,6 +190,36 @@ typename memory_internal::MakeUniqueResult<T>::invalid make_unique(
 #endif
 
 
+// These are make_unique_default_init variants modeled after
+// http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1020r0.html
+// Unlike absl::make_unique, values are default initialized rather than value
+// initialized.
+//
+// `absl::make_unique_default_init` overload for non-array types.
+template <typename T>
+typename memory_internal::MakeUniqueResult<T>::scalar
+    make_unique_default_init() {
+  return std::unique_ptr<T>(new T);
+}
+
+// `absl::make_unique_default_init` overload for an array T[] of unknown bounds.
+// The array allocation needs to use the `new T[size]` form and cannot take
+// element constructor arguments. The `std::unique_ptr` will manage destructing
+// these array elements.
+template <typename T>
+typename memory_internal::MakeUniqueResult<T>::array
+    make_unique_default_init(size_t n) {
+  return std::unique_ptr<T>(new typename absl::remove_extent_t<T>[n]);
+}
+
+// `absl::make_unique_default_init` overload for an array T[N] of known bounds.
+// This construction will be rejected.
+template <typename T, typename... Args>
+typename memory_internal::MakeUniqueResult<T>::invalid
+    make_unique_default_init(Args&&... /* args */) = delete;
+
+
+
 // NOTE TO GOOGLERS:
 // absl::MakeUnique / gtl::MakeUnique is a legacy spelling.  New code should
 // prefer absl::make_unique.
