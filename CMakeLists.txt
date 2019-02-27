@@ -222,6 +222,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2builder_layer.h
               src/s2/s2builderutil_closed_set_normalizer.h
               src/s2/s2builderutil_find_polygon_degeneracies.h
+              src/s2/s2builderutil_graph_shape.h
               src/s2/s2builderutil_lax_polygon_layer.h
               src/s2/s2builderutil_s2point_vector_layer.h
               src/s2/s2builderutil_s2polygon_layer.h
