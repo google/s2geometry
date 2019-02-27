@@ -67,11 +67,10 @@ namespace absl {
 // designed to cover the same API footprint as covered by `std::vector`.
 template <typename T, size_t N, typename A = std::allocator<T>>
 class InlinedVector {
+  static_assert(N > 0, "InlinedVector requires inline capacity greater than 0");
   constexpr static typename A::size_type inlined_capacity() {
     return static_cast<typename A::size_type>(N);
   }
-
-  static_assert(inlined_capacity() > 0, "InlinedVector needs inlined capacity");
 
   template <typename Iterator>
   using DisableIfIntegral =
@@ -890,7 +889,8 @@ class InlinedVector {
     // Structs wrap the buffers to perform indirection that solves a bizarre
     // compilation error on Visual Studio (all known versions).
     struct InlinedRep {
-      ValueTypeBuffer inlined[inlined_capacity()];
+      // `N` used in place of `inlined_capacity()` due to b/119696660
+      ValueTypeBuffer inlined[N];
     };
     struct AllocatedRep {
       AllocationBuffer allocation;
