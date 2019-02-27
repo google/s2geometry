@@ -36,6 +36,7 @@
 namespace {
 
 using absl::make_unique;
+using s2builderutil::LaxPolygonLayer;
 using std::unique_ptr;
 using std::vector;
 
@@ -1113,4 +1114,58 @@ TEST(S2BooleanOperation, MeridianSplitting) {
       "# # 0:180, 9.00134850712993:-180, 9:179, 10:179, 10.0014925269841:180, "
       "90:0, 10.0014925269841:180, 10:-179, 9:-179, 9.00134850712993:-180, "
       "0:180, -90:0");
+}
+
+// This test exercises the "special case" documented in
+// GraphEdgeClipper::GetCrossedVertexIndex().
+TEST(S2BooleanOperation, GetCrossedVertexIndexBug) {
+  // The first two edges (a0, a1) and (b0, b1) of the following polygons cross
+  // such that after snapping, the corresponding edge chains are:
+  //
+  //   a0 a1 -> a0 b0 b1 x a1
+  //   b0 b1 -> b0 x b1
+  //
+  // where "x" is the computed intersection point of (a0, a1) and (b0, b1).
+  // Previously there was a bug such that the two edge chains did not choose
+  // the same vertex to represent the point where the two chains cross: the
+  // (a0, a1) chain chose "x" as the crossing point while the (b0, b1) chain
+  // chose "b0".  This has been fixed such that both chains now choose "x".
+  // (Both "x" and "b1" happen to be valid choices in this example, but it is
+  // essential that both subchains make the same choice.)
+
+  // S2LatLng coordinates are not accurate enough to reproduce this example.
+  vector<vector<S2Point>> a_loops = {{
+      // 51.5131559470858:-0.130381523356724
+      {0.62233331065911901, -0.0014161759526823048, 0.78275107466533156},
+      // 51.5131892038956:-0.130404244210776
+      {0.6223328557578689, -0.0014164217071954736, 0.78275143589379825},
+      s2textformat::MakePointOrDie("51.51317:-0.1306")
+    }};
+  vector<vector<S2Point>> b_loops = {{
+      // 51.5131559705551:-0.13038153939079
+      {0.62233331033809591, -0.001416176126110953, 0.78275107492024998},
+      // 51.5131559705551:-0.130381539390786
+      {0.62233331033809591, -0.0014161761261109063, 0.78275107492025009},
+      s2textformat::MakePointOrDie("51.52:-0.12"),
+      s2textformat::MakePointOrDie("51.52:-0.14")
+    }};
+  MutableS2ShapeIndex a, b;
+  a.Add(make_unique<S2LaxPolygonShape>(a_loops));
+  b.Add(make_unique<S2LaxPolygonShape>(b_loops));
+  S2LaxPolygonShape actual;
+  LaxPolygonLayer::Options options;
+  options.set_degenerate_boundaries(
+      LaxPolygonLayer::Options::DegenerateBoundaries::DISCARD);
+  S2BooleanOperation op(OpType::UNION,
+                        make_unique<LaxPolygonLayer>(&actual, options));
+  S2Error error;
+  ASSERT_TRUE(op.Build(a, b, &error)) << error;
+  EXPECT_EQ("51.513187135478:-0.130425328888064, "
+            "51.51317:-0.1306, "
+            "51.5131559470858:-0.130381523356724, "
+            "51.5131559705551:-0.13038153939079, "
+            "51.5131559705551:-0.130381539390786, "
+            "51.52:-0.12, "
+            "51.52:-0.14",
+            s2textformat::ToString(actual));
 }

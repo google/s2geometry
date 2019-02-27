@@ -418,23 +418,28 @@ void GraphEdgeClipper::Run() {
       bool left_to_right = b_input_edges[bi].left_to_right();
       int a_index = GetCrossedVertexIndex(a_vertices, b_edges[bi],
                                           left_to_right);
-      if (s2builder_verbose) {
-        std::cout << std::endl << "  " << "b input edge "
-                  << b_input_edges[bi].input_id() << " (l2r=" << left_to_right
-                  << ", crossing=" << a_vertices[a_index] << ")";
-        for (const auto& x : b_edges[bi]) {
-          const Graph::Edge& e = g_.edge(x.id);
-          std::cout << " (" << e.first << ", " << e.second << ")";
+      if (a_index >= 0) {
+        if (s2builder_verbose) {
+          std::cout << std::endl << "  " << "b input edge "
+                    << b_input_edges[bi].input_id() << " (l2r=" << left_to_right
+                    << ", crossing=" << a_vertices[a_index] << ")";
+          for (const auto& x : b_edges[bi]) {
+            const Graph::Edge& e = g_.edge(x.id);
+            std::cout << " (" << e.first << ", " << e.second << ")";
+          }
         }
-      }
-      // Keep track of the number of signed crossings (see above).
-      bool is_line = input_dimensions_[b_input_edges[bi].input_id()] == 1;
-      int sign = is_line ? 0 : (left_to_right == invert_b) ? -1 : 1;
-      a_num_crossings[a_index] += sign;
+        // Keep track of the number of signed crossings (see above).
+        bool is_line = input_dimensions_[b_input_edges[bi].input_id()] == 1;
+        int sign = is_line ? 0 : (left_to_right == invert_b) ? -1 : 1;
+        a_num_crossings[a_index] += sign;
 
-      // Any polyline or polygon vertex that has at least one crossing but no
-      // adjacent emitted edge may be emitted as an isolated vertex.
-      a_isolated[a_index] = true;
+        // Any polyline or polygon vertex that has at least one crossing but no
+        // adjacent emitted edge may be emitted as an isolated vertex.
+        a_isolated[a_index] = true;
+      } else {
+        // TODO(b/112043775): fix this condition.
+        S2_LOG(DFATAL) << "Failed to get crossed vertex index.";
+      }
     }
     if (s2builder_verbose) std::cout << std::endl;
 
@@ -544,7 +549,7 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
   //
   // (where "*" is a vertex, and "A" and "B" are edge labels).  Note that B
   // may also follow A for one or more edges whenever they touch (e.g. between
-  // vertices 2 and 3 ).  In this case the only vertices of A where the
+  // vertices 2 and 3).  In this case the only vertices of A where the
   // crossing could take place are 5 and 6, i.e. after all excursions of B to
   // the left of A, and before all excursions of B to the right of A.
   //
@@ -570,12 +575,15 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
   // GetVertexRank).
   //
   // Note that if an edge of B is incident to the first or last vertex of A,
-  // we can't test which side of the A chain it is on.  There can be up to 4
-  // such edges (one incoming and one outgoing edge at each vertex).  Two of
-  // these edges logically extend past the end of the A chain and place no
-  // restrictions on the crossing vertex.  The other two edges define the ends
-  // of the subchain where B shares vertices with A.  We save these edges in
-  // order to handle a special case (see below).
+  // we can't test which side of the A chain it is on.  (An s2pred::Sign test
+  // doesn't work; e.g. if the B edge is XY and the first edge of A is YZ,
+  // then snapping can change the sign of XYZ while maintaining topological
+  // guarantees.)  There can be up to 4 such edges (one incoming and one
+  // outgoing edge at each endpoint of A).  Two of these edges logically
+  // extend past the end of the A chain and place no restrictions on the
+  // crossing vertex.  The other two edges define the ends of the subchain
+  // where B shares vertices with A.  We save these edges in order to handle a
+  // special case (see below).
   int lo = -1, hi = order_.size();   // Vertex ranks of acceptable crossings
   EdgeId b_first = -1, b_last = -1;  // "b" subchain connecting "a" endpoints
   for (const auto& e : b) {
@@ -609,26 +617,38 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
       }
     }
   }
-  // There is one special case.  If there were no B edges incident to interior
-  // vertices of A, then we can't reliably test which side of A the B edges
-  // are on.  (An s2pred::Sign test doesn't work, since an edge of B can snap to
-  // the "wrong" side of A while maintaining topological guarantees.)  So
-  // instead we construct a loop consisting of the A edge chain plus the
-  // portion of the B chain that connects the endpoints of A.  We can then
-  // test the orientation of this loop.
+  // There is one special case.  If a subchain of B connects the first and
+  // last vertices of A, then together with the edges of A this forms a loop
+  // whose orientation can be tested to determine whether B is on the left or
+  // right side of A.  This is only possible (and only necessary) if the B
+  // subchain does not include any interior vertices of A, since otherwise the
+  // B chain might cross from one side of A to the other.
   //
-  // Note that it would be possible to avoid this in some situations by
-  // testing whether either endpoint of the A chain has two incident B edges,
+  // Note that it would be possible to avoid this test in some situations by
+  // checking whether either endpoint of the A chain has two incident B edges,
   // in which case we could check which side of the B chain the A edge is on
   // and use this to limit the possible crossing locations.
-  if (lo < 0 && hi >= order_.size() && b_first >= 0 && b_last >= 0) {
-    // Swap the edges if necessary so that they are in B chain order.
-    if (b_reversed) swap(b_first, b_last);
-    bool on_left = EdgeChainOnLeft(a, b_first, b_last);
-    if (left_to_right == on_left) {
-      lo = max(lo, rank_[b_last] + 1);
-    } else {
-      hi = min(hi, rank_[b_first]);
+  if (b_first >= 0 && b_last >= 0) {
+    // The B subchain connects the first and last vertices of A.  Test whether
+    // the chain includes any interior vertices of A.  We do this indirectly
+    // by testing whether any edge of B has restricted the range of allowable
+    // crossing vertices (since any interior edge of the B subchain incident
+    // to any interior edge of A is guaranteed to do so).
+    int min_rank = order_.size(), max_rank = -1;
+    for (const auto& e : b) {
+      min_rank = min(min_rank, GetVertexRank(e));
+      max_rank = max(max_rank, GetVertexRank(e));
+    }
+    if (lo <= min_rank && hi >= max_rank) {
+      // The B subchain is not incident to any interior vertex of A.
+      // Swap the edges if necessary so that they are in B chain order.
+      if (b_reversed) swap(b_first, b_last);
+      bool on_left = EdgeChainOnLeft(a, b_first, b_last);
+      if (left_to_right == on_left) {
+        lo = max(lo, rank_[b_last] + 1);
+      } else {
+        hi = min(hi, rank_[b_first]);
+      }
     }
   }
 
