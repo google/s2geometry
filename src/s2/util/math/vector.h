@@ -209,14 +209,15 @@ class BasicVector {
 
   // Round of each component.
   D FRound() const {
+    using std::rint;
     return Generate([](const T& x) { return rint(x); }, AsD());
   }
 
   // Round of each component and return an integer vector.
   VecTemplate<int> IRound() const {
-    return Generate<VecTemplate<int>>([](const T& x) {
-      return lrint(x);
-    }, AsD());
+    using std::lrint;
+    return Generate<VecTemplate<int>>([](const T& x) { return lrint(x); },
+                                      AsD());
   }
 
   // True if any of the components is not a number.
