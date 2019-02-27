@@ -37,7 +37,6 @@
 
 using std::fabs;
 using std::max;
-using std::min;
 using std::vector;
 
 double S2Cap::GetArea() const {

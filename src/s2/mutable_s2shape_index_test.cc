@@ -497,7 +497,7 @@ void LazyUpdatesTest::ReaderThread() {
     lock_.Unlock();
     for (MutableS2ShapeIndex::Iterator it(&index_, S2ShapeIndex::BEGIN);
          !it.done(); it.Next()) {
-      continue;
+      continue;  // NOLINT
     }
     lock_.Lock();
     if (--num_readers_left_ == 0) {

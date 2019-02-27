@@ -36,8 +36,6 @@
 namespace {
 
 using absl::make_unique;
-using std::make_pair;
-using std::pair;
 using std::unique_ptr;
 using std::vector;
 

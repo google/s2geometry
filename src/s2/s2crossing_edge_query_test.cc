@@ -39,15 +39,14 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::StrCat;
 using absl::make_unique;
+using absl::StrCat;
 using s2shapeutil::ShapeEdge;
 using s2shapeutil::ShapeEdgeId;
 using s2textformat::MakePoint;
 using s2textformat::MakePolyline;
 using std::is_sorted;
 using std::pair;
-using std::unique_ptr;
 using std::vector;
 
 namespace {

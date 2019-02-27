@@ -58,11 +58,8 @@
 #include "s2/s2wedge_relations.h"
 #include "s2/util/math/matrix3x3.h"
 
-using absl::MakeSpan;
 using absl::make_unique;
-using std::fabs;
-using std::max;
-using std::min;
+using absl::MakeSpan;
 using std::pair;
 using std::set;
 using std::vector;

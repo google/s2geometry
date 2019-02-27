@@ -37,7 +37,6 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
 using std::unique_ptr;
 using std::vector;
 

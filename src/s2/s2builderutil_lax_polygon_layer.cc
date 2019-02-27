@@ -23,10 +23,6 @@
 #include "s2/s2builderutil_find_polygon_degeneracies.h"
 #include "s2/s2debug.h"
 
-using absl::make_unique;
-using std::make_pair;
-using std::pair;
-using std::unique_ptr;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;
