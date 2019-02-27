@@ -127,13 +127,15 @@ class S2Polygon final : public S2Region {
   // IsValid() explicitly.  (See set_s2debug_override() for details.)
   // Example:
   //
-  //   S2Polygon* polygon = new S2Polygon(loops, S2Debug::DISABLE);
+  //   std::vector<std::unique_ptr<S2Loop>> loops;
+  //   // ... set up loops ...
+  //   S2Polygon* polygon = new S2Polygon(std::move(loops), S2Debug::DISABLE);
   //
   // This is equivalent to:
   //
   //   S2Polygon* polygon = new S2Polygon;
   //   polygon->set_s2debug_override(S2Debug::DISABLE);
-  //   polygon->InitNested(loops);
+  //   polygon->InitNested(std::move(loops));
   explicit S2Polygon(std::vector<std::unique_ptr<S2Loop> > loops,
                      S2Debug override = S2Debug::ALLOW);
 #endif
