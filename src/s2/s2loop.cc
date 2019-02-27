@@ -499,7 +499,7 @@ bool S2Loop::BoundaryApproxIntersects(const MutableS2ShapeIndex::Iterator& it,
     int ai = a_clipped.edge(i);
     R2Point v0, v1;
     if (S2::ClipToPaddedFace(vertex(ai), vertex(ai+1), target.face(),
-                                     kMaxError, &v0, &v1) &&
+                             kMaxError, &v0, &v1) &&
         S2::IntersectsRect(v0, v1, bound)) {
       return true;
     }
