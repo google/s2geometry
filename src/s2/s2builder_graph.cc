@@ -99,40 +99,42 @@ void Graph::MakeSiblingMap(vector<Graph::EdgeId>* in_edge_ids) const {
   }
 }
 
-Graph::VertexOutMap::VertexOutMap(const Graph& g)
-    : edges_(g.edges()), edge_begins_(g.num_vertices() + 1) {
+void Graph::VertexOutMap::Init(const Graph& g) {
+  edges_ = &g.edges();
+  edge_begins_.reserve(g.num_vertices() + 1);
   EdgeId e = 0;
   for (VertexId v = 0; v <= g.num_vertices(); ++v) {
     while (e < g.num_edges() && g.edge(e).first < v) ++e;
-    edge_begins_[v] = e;
+    edge_begins_.push_back(e);
   }
 }
 
-Graph::VertexInMap::VertexInMap(const Graph& g)
-    : in_edge_ids_(g.GetInEdgeIds()),
-      in_edge_begins_(g.num_vertices() + 1) {
+void Graph::VertexInMap::Init(const Graph& g) {
+  in_edge_ids_ = g.GetInEdgeIds();
+  in_edge_begins_.reserve(g.num_vertices() + 1);
   EdgeId e = 0;
   for (VertexId v = 0; v <= g.num_vertices(); ++v) {
     while (e < g.num_edges() && g.edge(in_edge_ids_[e]).second < v) ++e;
-    in_edge_begins_[v] = e;
+    in_edge_begins_.push_back(e);
   }
 }
 
-Graph::LabelFetcher::LabelFetcher(const Graph& g, S2Builder::EdgeType edge_type)
-    : g_(g), edge_type_(edge_type) {
+void Graph::LabelFetcher::Init(const Graph& g, S2Builder::EdgeType edge_type) {
+  g_ = &g;
+  edge_type_ = edge_type;
   if (edge_type == EdgeType::UNDIRECTED) sibling_map_ = g.GetSiblingMap();
 }
 
 void Graph::LabelFetcher::Fetch(EdgeId e, vector<S2Builder::Label>* labels) {
   labels->clear();
-  for (InputEdgeId input_edge_id : g_.input_edge_ids(e)) {
-    for (Label label : g_.labels(input_edge_id)) {
+  for (InputEdgeId input_edge_id : g_->input_edge_ids(e)) {
+    for (Label label : g_->labels(input_edge_id)) {
       labels->push_back(label);
     }
   }
   if (edge_type_ == EdgeType::UNDIRECTED) {
-    for (InputEdgeId input_edge_id : g_.input_edge_ids(sibling_map_[e])) {
-      for (Label label : g_.labels(input_edge_id)) {
+    for (InputEdgeId input_edge_id : g_->input_edge_ids(sibling_map_[e])) {
+      for (Label label : g_->labels(input_edge_id)) {
         labels->push_back(label);
       }
     }
