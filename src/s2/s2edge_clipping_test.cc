@@ -135,11 +135,11 @@ void TestFaceClippingEdgePair(const S2Point& a, const S2Point& b) {
   TestFaceClipping(b, a);
 }
 
-// This function is designed to choose line segment endpoints that are
-// difficult to handle correctly.  Given two adjacent cube vertices P and Q,
-// it returns either an edge midpoint, face midpoint, or corner vertex that is
-// in the plane of PQ and that has been perturbed slightly.  It also sometimes
-// returns a random point from anywhere on the sphere.
+// This function is designed to choose line segment endpoints that are difficult
+// to handle correctly.  Given two adjacent cube vertices P and Q, it returns
+// either an edge midpoint, face midpoint, or corner vertex along the edge PQ
+// and then perturbs it slightly.  It also sometimes returns a random point from
+// anywhere on the sphere.
 S2Point PerturbedCornerOrMidpoint(const S2Point& p, const S2Point& q) {
   S2Testing::Random* rnd = &S2Testing::rnd;
   S2Point a = (rnd->Uniform(3) - 1) * p + (rnd->Uniform(3) - 1) * q;
@@ -173,7 +173,7 @@ TEST(S2EdgeUtil, FaceClipping) {
   TestFaceClippingEdgePair(S2Point(0.75, 0, -1), S2Point(0.75, 0, 1));
   // An edge that crosses two adjacent edges of face 2:
   TestFaceClippingEdgePair(S2Point(1, 0, 0.75), S2Point(0, 1, 0.75));
-  // An edges that crosses three cube edges (four faces):
+  // An edge that crosses three cube edges (four faces):
   TestFaceClippingEdgePair(S2Point(1, 0.9, 0.95), S2Point(-1, 0.95, 0.9));
 
   // Comprehensively test edges that are difficult to handle, especially those
@@ -190,8 +190,8 @@ TEST(S2EdgeUtil, FaceClipping) {
     S2Point p = S2::FaceUVtoXYZ(face, biunit.GetVertex(i));
     S2Point q = S2::FaceUVtoXYZ(face, biunit.GetVertex(j));
 
-    // Now choose two points that are nearly in the plane of PQ, preferring
-    // points that are near cube corners, face midpoints, or edge midpoints.
+    // Now choose two points that are nearly on the edge PQ, preferring points
+    // that are near cube corners, face midpoints, or edge midpoints.
     S2Point a = PerturbedCornerOrMidpoint(p, q);
     S2Point b = PerturbedCornerOrMidpoint(p, q);
     TestFaceClipping(a, b);

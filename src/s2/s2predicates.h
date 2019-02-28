@@ -141,7 +141,7 @@ int CompareEdgeDirections(const S2Point& a0, const S2Point& a1,
                           const S2Point& b0, const S2Point& b1);
 
 // Returns Sign(X0, X1, Z) where Z is the circumcenter of triangle ABC.
-// The return value is -1 if Z is to the left of edge X, and +1 if Z is to the
+// The return value is +1 if Z is to the left of edge X, and -1 if Z is to the
 // right of edge X.  The return value is zero if A == B, B == C, or C == A
 // (exactly), and also if X0 and X1 project to identical points on the sphere
 // (e.g., X0 == X1).

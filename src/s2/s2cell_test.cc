@@ -51,14 +51,12 @@
 #include "s2/third_party/absl/strings/str_cat.h"
 
 using absl::StrCat;
-using absl::make_unique;
 using S2::internal::kSwapMask;
 using s2textformat::MakePointOrDie;
 using std::fabs;
 using std::map;
 using std::max;
 using std::min;
-using std::pair;
 using std::pow;
 using std::vector;
 

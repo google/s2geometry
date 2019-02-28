@@ -48,7 +48,7 @@ class S2Error;
 class S2Loop;
 class S2PolygonBuilder;
 class S2Polyline;
-class S2XYZFaceSiTi;
+struct S2XYZFaceSiTi;
 
 // An S2Polygon is an S2Region object that represents a polygon.  A polygon is
 // defined by zero or more loops; recall that the interior of a loop is
@@ -126,13 +126,15 @@ class S2Polygon final : public S2Region {
   // IsValid() explicitly.  (See set_s2debug_override() for details.)
   // Example:
   //
-  //   S2Polygon* polygon = new S2Polygon(loops, S2Debug::DISABLE);
+  //   std::vector<std::unique_ptr<S2Loop>> loops;
+  //   // ... set up loops ...
+  //   S2Polygon* polygon = new S2Polygon(std::move(loops), S2Debug::DISABLE);
   //
   // This is equivalent to:
   //
   //   S2Polygon* polygon = new S2Polygon;
   //   polygon->set_s2debug_override(S2Debug::DISABLE);
-  //   polygon->InitNested(loops);
+  //   polygon->InitNested(std::move(loops));
   explicit S2Polygon(std::vector<std::unique_ptr<S2Loop> > loops,
                      S2Debug override = S2Debug::ALLOW);
 #endif
@@ -360,21 +362,38 @@ class S2Polygon final : public S2Region {
   // and edges are sufficiently well-separated first.  In particular you need
   // to use a snap function whose min_edge_vertex_separation() is at least
   // twice the maximum distance that a vertex can move when rounded.
+  //
+  // The versions of these functions with an S2Error argument return true on
+  // success and set "error" appropriately otherwise.  However note that these
+  // functions should never return an error provided that both input polygons
+  // are valid (i.e., IsValid() returns true).
   void InitToIntersection(const S2Polygon* a, const S2Polygon* b);
   void InitToIntersection(const S2Polygon& a, const S2Polygon& b,
                           const S2Builder::SnapFunction& snap_function);
+  bool InitToIntersection(const S2Polygon& a, const S2Polygon& b,
+                          const S2Builder::SnapFunction& snap_function,
+                          S2Error *error);
 
   void InitToUnion(const S2Polygon* a, const S2Polygon* b);
   void InitToUnion(const S2Polygon& a, const S2Polygon& b,
                    const S2Builder::SnapFunction& snap_function);
+  bool InitToUnion(const S2Polygon& a, const S2Polygon& b,
+                   const S2Builder::SnapFunction& snap_function,
+                   S2Error *error);
 
   void InitToDifference(const S2Polygon* a, const S2Polygon* b);
   void InitToDifference(const S2Polygon& a, const S2Polygon& b,
                         const S2Builder::SnapFunction& snap_function);
+  bool InitToDifference(const S2Polygon& a, const S2Polygon& b,
+                        const S2Builder::SnapFunction& snap_function,
+                        S2Error *error);
 
   void InitToSymmetricDifference(const S2Polygon* a, const S2Polygon* b);
   void InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b,
                                  const S2Builder::SnapFunction& snap_function);
+  bool InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b,
+                                 const S2Builder::SnapFunction& snap_function,
+                                 S2Error *error);
 
   // Convenience functions that use the IdentitySnapFunction with the given
   // snap radius.  TODO(ericv): Consider deprecating these and require the
@@ -751,21 +770,22 @@ class S2Polygon final : public S2Region {
     OwningShape() {}  // Must call Init().
 
     explicit OwningShape(std::unique_ptr<const S2Polygon> polygon)
-        : Shape(polygon.release()) {
-    }
+        : Shape(polygon.get()), owned_polygon_(std::move(polygon)) {}
 
     void Init(std::unique_ptr<const S2Polygon> polygon) {
-      Shape::Init(polygon.release());
+      Shape::Init(polygon.get());
+      owned_polygon_ = std::move(polygon);
     }
 
     bool Init(Decoder* decoder) {
       auto polygon = absl::make_unique<S2Polygon>();
       if (!polygon->Decode(decoder)) return false;
-      Shape::Init(polygon.release());
+      Shape::Init(polygon.get());
+      owned_polygon_ = std::move(polygon);
       return true;
     }
 
-    ~OwningShape() override { delete polygon(); }
+    std::unique_ptr<const S2Polygon> owned_polygon_;
   };
 #endif  // SWIG
 
@@ -815,8 +835,15 @@ class S2Polygon final : public S2Region {
   // indexing structures need to be cleared since they become invalid.
   void ClearIndex();
 
-  // Initializes the polygon to the result of the given boolean operation.
+  // Initializes the polygon to the result of the given boolean operation,
+  // returning an error on failure.
   bool InitToOperation(S2BooleanOperation::OpType op_type,
+                       const S2Builder::SnapFunction& snap_function,
+                       const S2Polygon& a, const S2Polygon& b, S2Error* error);
+
+  // Initializes the polygon to the result of the given boolean operation,
+  // logging an error on failure (fatal in debug builds).
+  void InitToOperation(S2BooleanOperation::OpType op_type,
                        const S2Builder::SnapFunction& snap_function,
                        const S2Polygon& a, const S2Polygon& b);
 

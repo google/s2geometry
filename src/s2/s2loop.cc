@@ -59,11 +59,8 @@
 #include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
-using absl::MakeSpan;
 using absl::make_unique;
-using std::fabs;
-using std::max;
-using std::min;
+using absl::MakeSpan;
 using std::pair;
 using std::set;
 using std::vector;
@@ -503,7 +500,7 @@ bool S2Loop::BoundaryApproxIntersects(const MutableS2ShapeIndex::Iterator& it,
     int ai = a_clipped.edge(i);
     R2Point v0, v1;
     if (S2::ClipToPaddedFace(vertex(ai), vertex(ai+1), target.face(),
-                                     kMaxError, &v0, &v1) &&
+                             kMaxError, &v0, &v1) &&
         S2::IntersectsRect(v0, v1, bound)) {
       return true;
     }

@@ -39,16 +39,30 @@ namespace absl {
 // Function Template: WrapUnique()
 // -----------------------------------------------------------------------------
 //
-//  Adopts ownership from a raw pointer and transfers it to the returned
-//  `std::unique_ptr`, whose type is deduced. DO NOT specify the template type T
-//  when calling WrapUnique.
+// Adopts ownership from a raw pointer and transfers it to the returned
+// `std::unique_ptr`, whose type is deduced. Because of this deduction, *do not*
+// specify the template type `T` when calling `WrapUnique`.
 //
 // Example:
 //   X* NewX(int, int);
 //   auto x = WrapUnique(NewX(1, 2));  // 'x' is std::unique_ptr<X>.
 //
-// `absl::WrapUnique` is useful for capturing the output of a raw pointer
-// factory. However, prefer 'absl::make_unique<T>(args...) over
+// The purpose of WrapUnique is to automatically deduce the pointer type. If you
+// wish to make the type explicit, for readability reasons or because you prefer
+// to use a base-class pointer rather than a derived one, just use
+// `std::unique_ptr` directly.
+//
+// Example:
+//   X* Factory(int, int);
+//   auto x = std::unique_ptr<X>(Factory(1, 2));
+//                  - or -
+//   std::unique_ptr<X> x(Factory(1, 2));
+//
+// This has the added advantage of working whether Factory returns a raw
+// pointer or a `std::unique_ptr`.
+//
+// While `absl::WrapUnique` is useful for capturing the output of a raw
+// pointer factory, prefer 'absl::make_unique<T>(args...)' over
 // 'absl::WrapUnique(new T(args...))'.
 //
 //   auto x = WrapUnique(new X(1, 2));  // works, but nonideal.
@@ -174,6 +188,36 @@ template <typename T, typename... Args>
 typename memory_internal::MakeUniqueResult<T>::invalid make_unique(
     Args&&... /* args */) = delete;
 #endif
+
+
+// These are make_unique_default_init variants modeled after
+// http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1020r0.html
+// Unlike absl::make_unique, values are default initialized rather than value
+// initialized.
+//
+// `absl::make_unique_default_init` overload for non-array types.
+template <typename T>
+typename memory_internal::MakeUniqueResult<T>::scalar
+    make_unique_default_init() {
+  return std::unique_ptr<T>(new T);
+}
+
+// `absl::make_unique_default_init` overload for an array T[] of unknown bounds.
+// The array allocation needs to use the `new T[size]` form and cannot take
+// element constructor arguments. The `std::unique_ptr` will manage destructing
+// these array elements.
+template <typename T>
+typename memory_internal::MakeUniqueResult<T>::array
+    make_unique_default_init(size_t n) {
+  return std::unique_ptr<T>(new typename absl::remove_extent_t<T>[n]);
+}
+
+// `absl::make_unique_default_init` overload for an array T[N] of known bounds.
+// This construction will be rejected.
+template <typename T, typename... Args>
+typename memory_internal::MakeUniqueResult<T>::invalid
+    make_unique_default_init(Args&&... /* args */) = delete;
+
 
 
 // NOTE TO GOOGLERS:
@@ -612,7 +656,7 @@ struct allocator_traits {
     return a.max_size();
   }
   static size_type max_size_impl(char, const Alloc&) {
-    return std::numeric_limits<size_type>::max() / sizeof(value_type);
+    return (std::numeric_limits<size_type>::max)() / sizeof(value_type);
   }
 
   template <typename A>
@@ -668,59 +712,42 @@ struct default_allocator_is_nothrow : std::false_type {};
 #endif
 
 namespace memory_internal {
-#ifdef ABSL_HAVE_EXCEPTIONS  // ConstructRange
 template <typename Allocator, typename Iterator, typename... Args>
 void ConstructRange(Allocator& alloc, Iterator first, Iterator last,
                     const Args&... args) {
   for (Iterator cur = first; cur != last; ++cur) {
-    try {
-      std::allocator_traits<Allocator>::construct(alloc, cur, args...);
-    } catch (...) {
+    ABSL_INTERNAL_TRY {
+      std::allocator_traits<Allocator>::construct(alloc, std::addressof(*cur),
+                                                  args...);
+    }
+    ABSL_INTERNAL_CATCH_ANY {
       while (cur != first) {
         --cur;
-        std::allocator_traits<Allocator>::destroy(alloc, cur);
+        std::allocator_traits<Allocator>::destroy(alloc, std::addressof(*cur));
       }
-      throw;
+      ABSL_INTERNAL_RETHROW;
     }
   }
 }
-#else   // ABSL_HAVE_EXCEPTIONS  // ConstructRange
-template <typename Allocator, typename Iterator, typename... Args>
-void ConstructRange(Allocator& alloc, Iterator first, Iterator last,
-                    const Args&... args) {
-  for (; first != last; ++first) {
-    std::allocator_traits<Allocator>::construct(alloc, first, args...);
-  }
-}
-#endif  // ABSL_HAVE_EXCEPTIONS  // ConstructRange
 
-#ifdef ABSL_HAVE_EXCEPTIONS  // CopyRange
 template <typename Allocator, typename Iterator, typename InputIterator>
 void CopyRange(Allocator& alloc, Iterator destination, InputIterator first,
                InputIterator last) {
   for (Iterator cur = destination; first != last;
        static_cast<void>(++cur), static_cast<void>(++first)) {
-    try {
-      std::allocator_traits<Allocator>::construct(alloc, cur, *first);
-    } catch (...) {
+    ABSL_INTERNAL_TRY {
+      std::allocator_traits<Allocator>::construct(alloc, std::addressof(*cur),
+                                                  *first);
+    }
+    ABSL_INTERNAL_CATCH_ANY {
       while (cur != destination) {
         --cur;
-        std::allocator_traits<Allocator>::destroy(alloc, cur);
+        std::allocator_traits<Allocator>::destroy(alloc, std::addressof(*cur));
       }
-      throw;
+      ABSL_INTERNAL_RETHROW;
     }
   }
 }
-#else   // ABSL_HAVE_EXCEPTIONS  // CopyRange
-template <typename Allocator, typename Iterator, typename InputIterator>
-void CopyRange(Allocator& alloc, Iterator destination, InputIterator first,
-               InputIterator last) {
-  for (; first != last;
-       static_cast<void>(++destination), static_cast<void>(++first)) {
-    std::allocator_traits<Allocator>::construct(alloc, destination, *first);
-  }
-}
-#endif  // ABSL_HAVE_EXCEPTIONS  // CopyRange
 }  // namespace memory_internal
 }  // namespace absl
 

@@ -23,10 +23,6 @@
 #include "s2/s2builderutil_find_polygon_degeneracies.h"
 #include "s2/s2debug.h"
 
-using absl::make_unique;
-using std::make_pair;
-using std::pair;
-using std::unique_ptr;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;
@@ -152,7 +148,7 @@ void LaxPolygonLayer::BuildDirected(Graph g, S2Error* error) {
   auto degenerate_boundaries = options_.degenerate_boundaries();
   if (degenerate_boundaries == DegenerateBoundaries::DISCARD) {
     // This is the easiest case, since there are no degeneracies.
-    MaybeAddFullLoop(g, &loops, error);
+    if (g.num_edges() == 0) MaybeAddFullLoop(g, &loops, error);
   } else if (degenerate_boundaries == DegenerateBoundaries::KEEP) {
     // S2LaxPolygonShape doesn't need to distinguish degenerate shells from
     // holes except when the entire graph is degenerate, in which case we need

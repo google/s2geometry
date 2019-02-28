@@ -1206,6 +1206,8 @@ inline void S2Builder::AddSnappedEdge(
   input_edge_ids->push_back(id);
   if (edge_type == EdgeType::UNDIRECTED) {
     edges->push_back(Edge(dst, src));
+    // Automatically created edges do not have input edge ids or labels.  This
+    // can be used to distinguish the original direction of the undirected edge.
     input_edge_ids->push_back(IdSetLexicon::EmptySetId());
   }
 }

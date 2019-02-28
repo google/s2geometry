@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "s2/base/logging.h"
+#include "s2/util/gtl/btree_set.h"
 #include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
@@ -35,7 +36,6 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_count_edges.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
-#include "s2/util/gtl/btree_set.h"
 #include "s2/util/gtl/dense_hash_set.h"
 
 // S2ClosestEdgeQueryBase is a templatized class for finding the closest
@@ -272,7 +272,7 @@ class S2ClosestEdgeQueryBase {
   Result FindClosestEdge(Target* target, const Options& options);
 
  private:
-  class QueueEntry;
+  struct QueueEntry;
 
   const Options& options() const { return *options_; }
   void FindClosestEdgesInternal(Target* target, const Options& options);

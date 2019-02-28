@@ -17,10 +17,6 @@
 // This file is used for both C and C++!
 // It also contains obsolete things that are pending cleanup but need to stay
 // in Abseil for now.
-//
-// NOTE FOR GOOGLERS:
-//
-// IWYU pragma: private, include "base/port.h"
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_PORT_H_
 #define S2_THIRD_PARTY_ABSL_BASE_PORT_H_

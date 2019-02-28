@@ -252,8 +252,10 @@ double ExactFloat::ToDoubleHelper() const {
   S2_DCHECK_LE(BN_num_bits(bn_.get()), kDoubleMantissaBits);
   if (!is_normal()) {
     if (is_zero()) return copysign(0, sign_);
-    if (is_inf()) return copysign(INFINITY, sign_);
-    return copysign(NAN, sign_);
+    if (is_inf()) {
+      return std::copysign(std::numeric_limits<double>::infinity(), sign_);
+    }
+    return std::copysign(std::numeric_limits<double>::quiet_NaN(), sign_);
   }
   uint64 d_mantissa = BN_ext_get_uint64(bn_.get());
   // We rely on ldexp() to handle overflow and underflow.  (It will return a

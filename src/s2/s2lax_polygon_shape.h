@@ -22,8 +22,8 @@
 #include <vector>
 
 #include "s2/third_party/absl/types/span.h"
-#include "s2/encoded_uint_vector.h"
 #include "s2/encoded_s2point_vector.h"
+#include "s2/encoded_uint_vector.h"
 #include "s2/s2polygon.h"
 #include "s2/s2shape.h"
 

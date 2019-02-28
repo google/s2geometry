@@ -44,7 +44,6 @@ using s2shapeutil::ShapeEdgeId;
 using s2textformat::MakeIndexOrDie;
 using s2textformat::MakePointOrDie;
 using s2textformat::MakePolygonOrDie;
-using s2textformat::ParsePointsOrDie;
 using std::min;
 using std::pair;
 using std::unique_ptr;

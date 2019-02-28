@@ -23,11 +23,11 @@
 #include <numeric>
 #include <vector>
 #include "s2/base/logging.h"
+#include "s2/util/gtl/btree_map.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
 #include "s2/s2predicates.h"
-#include "s2/util/gtl/btree_map.h"
 
 using std::make_pair;
 using std::max;
@@ -56,6 +56,7 @@ Graph::Graph(const GraphOptions& options,
       label_set_lexicon_(label_set_lexicon),
       is_full_polygon_predicate_(std::move(is_full_polygon_predicate)) {
   S2_DCHECK(std::is_sorted(edges->begin(), edges->end()));
+  S2_DCHECK_EQ(edges->size(), input_edge_id_set_ids->size());
 }
 
 vector<Graph::EdgeId> Graph::GetInEdgeIds() const {
@@ -99,40 +100,42 @@ void Graph::MakeSiblingMap(vector<Graph::EdgeId>* in_edge_ids) const {
   }
 }
 
-Graph::VertexOutMap::VertexOutMap(const Graph& g)
-    : edges_(g.edges()), edge_begins_(g.num_vertices() + 1) {
+void Graph::VertexOutMap::Init(const Graph& g) {
+  edges_ = &g.edges();
+  edge_begins_.reserve(g.num_vertices() + 1);
   EdgeId e = 0;
   for (VertexId v = 0; v <= g.num_vertices(); ++v) {
     while (e < g.num_edges() && g.edge(e).first < v) ++e;
-    edge_begins_[v] = e;
+    edge_begins_.push_back(e);
   }
 }
 
-Graph::VertexInMap::VertexInMap(const Graph& g)
-    : in_edge_ids_(g.GetInEdgeIds()),
-      in_edge_begins_(g.num_vertices() + 1) {
+void Graph::VertexInMap::Init(const Graph& g) {
+  in_edge_ids_ = g.GetInEdgeIds();
+  in_edge_begins_.reserve(g.num_vertices() + 1);
   EdgeId e = 0;
   for (VertexId v = 0; v <= g.num_vertices(); ++v) {
     while (e < g.num_edges() && g.edge(in_edge_ids_[e]).second < v) ++e;
-    in_edge_begins_[v] = e;
+    in_edge_begins_.push_back(e);
   }
 }
 
-Graph::LabelFetcher::LabelFetcher(const Graph& g, S2Builder::EdgeType edge_type)
-    : g_(g), edge_type_(edge_type) {
+void Graph::LabelFetcher::Init(const Graph& g, S2Builder::EdgeType edge_type) {
+  g_ = &g;
+  edge_type_ = edge_type;
   if (edge_type == EdgeType::UNDIRECTED) sibling_map_ = g.GetSiblingMap();
 }
 
 void Graph::LabelFetcher::Fetch(EdgeId e, vector<S2Builder::Label>* labels) {
   labels->clear();
-  for (InputEdgeId input_edge_id : g_.input_edge_ids(e)) {
-    for (Label label : g_.labels(input_edge_id)) {
+  for (InputEdgeId input_edge_id : g_->input_edge_ids(e)) {
+    for (Label label : g_->labels(input_edge_id)) {
       labels->push_back(label);
     }
   }
   if (edge_type_ == EdgeType::UNDIRECTED) {
-    for (InputEdgeId input_edge_id : g_.input_edge_ids(sibling_map_[e])) {
-      for (Label label : g_.labels(input_edge_id)) {
+    for (InputEdgeId input_edge_id : g_->input_edge_ids(sibling_map_[e])) {
+      for (Label label : g_->labels(input_edge_id)) {
         labels->push_back(label);
       }
     }
@@ -1031,11 +1034,14 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
       if (options_.duplicate_edges() == DuplicateEdges::MERGE) {
         AddEdge(edge, MergeInputIds(out_begin, out));
       } else if (options_.edge_type() == EdgeType::UNDIRECTED) {
+        // Convert graph to use directed edges instead (see documentation of
+        // REQUIRE/CREATE for undirected edges).
         AddEdges((n_out + 1) / 2, edge, MergeInputIds(out_begin, out));
       } else {
         CopyEdges(out_begin, out);
         if (n_in > n_out) {
-          AddEdges(n_in - n_out, edge, MergeInputIds(out, out));
+          // Automatically created edges have no input edge ids or labels.
+          AddEdges(n_in - n_out, edge, IdSetLexicon::EmptySetId());
         }
       }
     }

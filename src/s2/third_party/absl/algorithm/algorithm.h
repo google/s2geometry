@@ -71,6 +71,16 @@ bool EqualImpl(InputIter1 first1, InputIter1 last1, InputIter2 first2,
          std::equal(first1, last1, first2);
 }
 
+// clamp()
+//
+// Performs comparisons with operator<, similar to C++14's `std::less<void>`.
+struct Less {
+  template <typename T, typename U>
+  constexpr bool operator()(const T& a, const U& b) const {
+    return a < b;
+  }
+};
+
 template <typename It>
 It RotateImpl(It first, It middle, It last, std::true_type) {
   return std::rotate(first, middle, last);
@@ -83,6 +93,33 @@ It RotateImpl(It first, It middle, It last, std::false_type) {
 }
 
 }  // namespace algorithm_internal
+
+// clamp()
+//
+// Clamps the provided value to the range [low, high]. Returns a reference to
+// low if value is less than low, reference to high if high is less than value,
+// otherwise a reference to value.
+//
+// Requires comp(hi, lo) to be false. Invokes the comparison function at most
+// 2 times.
+//
+// Note that clamp returns a reference to its inputs, disabling temporary
+// lifetime extension, so passing a prvalue (including literals) and
+// subsequently assigning the result to a const reference is likely to be
+// incorrect.
+//
+// This is a C++11-compatible implementation of C++17 `std::clamp`. See
+// http://en.cppreference.com/w/cpp/algorithm/clamp for more information.
+template <typename T, typename Compare>
+constexpr const T& clamp(const T& v, const T& lo, const T& hi, Compare comp) {
+  return comp(v, lo) ? lo : comp(hi, v) ? hi : v;
+}
+
+// Requires T is LessThanComparable.
+template <typename T>
+constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
+  return absl::clamp(v, lo, hi, algorithm_internal::Less{});
+}
 
 // Compares the equality of two ranges specified by pairs of iterators, using
 // the given predicate, returning true iff for each corresponding iterator i1

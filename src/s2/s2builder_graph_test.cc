@@ -35,8 +35,6 @@ using absl::make_unique;
 using s2builderutil::GraphClone;
 using s2builderutil::GraphCloningLayer;
 using s2textformat::MakeLaxPolylineOrDie;
-using s2textformat::MakePointOrDie;
-using std::unique_ptr;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;

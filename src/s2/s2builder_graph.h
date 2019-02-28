@@ -211,7 +211,9 @@ class S2Builder::Graph {
   //   for (const Graph::Edge& edge : out.edges(v)) { ... }
   class VertexOutMap {
    public:
-    explicit VertexOutMap(const Graph& g);
+    VertexOutMap() = default;
+    explicit VertexOutMap(const Graph& g) { Init(g); }
+    void Init(const Graph& g);
 
     int degree(VertexId v) const;
     VertexOutEdges edges(VertexId v) const;
@@ -222,7 +224,7 @@ class S2Builder::Graph {
     VertexOutEdgeIds edge_ids(VertexId v0, VertexId v1) const;
 
    private:
-    const std::vector<Edge>& edges_;
+    const std::vector<Edge>* edges_;
     std::vector<EdgeId> edge_begins_;
     VertexOutMap(const VertexOutMap&) = delete;
     void operator=(const VertexOutMap&) = delete;
@@ -248,7 +250,9 @@ class S2Builder::Graph {
   //   for (Graph::EdgeId e : in.edge_ids(v)) { ... }
   class VertexInMap {
    public:
-    explicit VertexInMap(const Graph& g);
+    VertexInMap() = default;
+    explicit VertexInMap(const Graph& g) { Init(g); }
+    void Init(const Graph& g);
 
     int degree(VertexId v) const;
     VertexInEdgeIds edge_ids(VertexId v) const;
@@ -331,12 +335,15 @@ class S2Builder::Graph {
   // labels; the automatically generated sibling edge does not.
   class LabelFetcher {
    public:
+    LabelFetcher() = default;
+    LabelFetcher(const Graph& g, EdgeType edge_type) { Init(g, edge_type); }
+
     // Prepares to fetch labels associated with the given edge type.  For
     // EdgeType::UNDIRECTED, labels associated with both edges of the sibling
     // pair will be returned.  "edge_type" is a parameter (rather than using
     // g.options().edge_type()) so that clients can explicitly control whether
     // labels from one or both siblings are returned.
-    LabelFetcher(const Graph& g, EdgeType edge_type);
+    void Init(const Graph& g, EdgeType edge_type);
 
     // Returns the set of labels associated with edge "e" (and also the labels
     // associated with the sibling of "e" if edge_type() is UNDIRECTED).
@@ -347,7 +354,7 @@ class S2Builder::Graph {
     void Fetch(EdgeId e, std::vector<S2Builder::Label>* labels);
 
    private:
-    const Graph& g_;
+    const Graph* g_;
     EdgeType edge_type_;
     std::vector<EdgeId> sibling_map_;
   };
@@ -682,14 +689,14 @@ inline S2Builder::Graph::VertexOutEdges::VertexOutEdges(const Edge* begin,
 
 inline S2Builder::Graph::VertexOutEdges
 S2Builder::Graph::VertexOutMap::edges(VertexId v) const {
-  return VertexOutEdges(edges_.data() + edge_begins_[v],
-                        edges_.data() + edge_begins_[v + 1]);
+  return VertexOutEdges(edges_->data() + edge_begins_[v],
+                        edges_->data() + edge_begins_[v + 1]);
 }
 
 inline S2Builder::Graph::VertexOutEdges
 S2Builder::Graph::VertexOutMap::edges(VertexId v0, VertexId v1) const {
-  auto range = std::equal_range(edges_.data() + edge_begins_[v0],
-                                edges_.data() + edge_begins_[v0 + 1],
+  auto range = std::equal_range(edges_->data() + edge_begins_[v0],
+                                edges_->data() + edge_begins_[v0 + 1],
                                 Edge(v0, v1));
   return VertexOutEdges(range.first, range.second);
 }
@@ -706,12 +713,12 @@ S2Builder::Graph::VertexOutMap::edge_ids(VertexId v) const {
 
 inline S2Builder::Graph::VertexOutEdgeIds
 S2Builder::Graph::VertexOutMap::edge_ids(VertexId v0, VertexId v1) const {
-  auto range = std::equal_range(edges_.data() + edge_begins_[v0],
-                                edges_.data() + edge_begins_[v0 + 1],
+  auto range = std::equal_range(edges_->data() + edge_begins_[v0],
+                                edges_->data() + edge_begins_[v0 + 1],
                                 Edge(v0, v1));
   return VertexOutEdgeIds(
-      static_cast<S2Builder::Graph::EdgeId>(range.first - edges_.data()),
-      static_cast<S2Builder::Graph::EdgeId>(range.second - edges_.data()));
+      static_cast<S2Builder::Graph::EdgeId>(range.first - edges_->data()),
+      static_cast<S2Builder::Graph::EdgeId>(range.second - edges_->data()));
 }
 
 inline int S2Builder::Graph::VertexOutMap::degree(VertexId v) const {

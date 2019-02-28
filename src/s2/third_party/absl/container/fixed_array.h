@@ -190,7 +190,7 @@ class FixedArray {
   // `FixedArray<T>`. This is equivalent to the most possible addressable bytes
   // over the number of bytes taken by T.
   constexpr size_type max_size() const {
-    return std::numeric_limits<difference_type>::max() / sizeof(value_type);
+    return (std::numeric_limits<difference_type>::max)() / sizeof(value_type);
   }
 
   // FixedArray::empty()
@@ -366,6 +366,7 @@ class FixedArray {
     return H::combine(H::combine_contiguous(std::move(h), v.data(), v.size()),
                       v.size());
   }
+
  private:
   // StorageElement
   //

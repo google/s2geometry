@@ -49,7 +49,7 @@ class S2PointLoopSpan : public S2PointSpan {
   reference operator[](int i) const noexcept {
     S2_DCHECK_GE(i, 0);
     S2_DCHECK_LT(i, 2 * size());
-    int j = i - size();
+    int j = i - static_cast<int>(size());
     return S2PointSpan::operator[](j < 0 ? i : j);
   }
 };

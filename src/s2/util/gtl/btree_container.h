@@ -18,6 +18,7 @@
 #ifndef S2_UTIL_GTL_BTREE_CONTAINER_H_
 #define S2_UTIL_GTL_BTREE_CONTAINER_H_
 
+#include <algorithm>
 #include <initializer_list>
 #include <utility>
 
@@ -128,6 +129,22 @@ class btree_container {
     return !(x == y);
   }
 
+  friend bool operator<(const btree_container &x, const btree_container &y) {
+    return std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());
+  }
+
+  friend bool operator>(const btree_container &x, const btree_container &y) {
+    return y < x;
+  }
+
+  friend bool operator<=(const btree_container &x, const btree_container &y) {
+    return !(y < x);
+  }
+
+  friend bool operator>=(const btree_container &x, const btree_container &y) {
+    return !(x < y);
+  }
+
   // The allocator used by the btree.
   allocator_type get_allocator() const { return tree_.get_allocator(); }
 
@@ -159,6 +176,7 @@ class btree_set_container : public btree_container<Tree> {
   using super_type = btree_container<Tree>;
   using mutable_value_type = typename Tree::mutable_value_type;
   using params_type = typename Tree::params_type;
+  friend class BtreeNodePeer;
 
  public:
   using value_type = typename Tree::value_type;

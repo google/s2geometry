@@ -35,6 +35,8 @@ bool IsUnitLength(const S2Point& p) {
 }
 
 bool ApproxEquals(const S2Point& a, const S2Point& b, S1Angle max_error) {
+  S2_DCHECK_NE(a, S2Point());
+  S2_DCHECK_NE(b, S2Point());
   return S1Angle(a, b) <= max_error;
 }
 

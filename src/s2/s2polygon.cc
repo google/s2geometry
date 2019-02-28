@@ -865,18 +865,23 @@ void S2Polygon::InitToComplement(const S2Polygon* a) {
 
 bool S2Polygon::InitToOperation(S2BooleanOperation::OpType op_type,
                                 const S2Builder::SnapFunction& snap_function,
-                                const S2Polygon& a, const S2Polygon& b) {
+                                const S2Polygon& a, const S2Polygon& b,
+                                S2Error* error) {
   S2BooleanOperation::Options options;
   options.set_snap_function(snap_function);
   S2BooleanOperation op(op_type, make_unique<S2PolygonLayer>(this),
                          options);
+  return op.Build(a.index_, b.index_, error);
+}
+
+void S2Polygon::InitToOperation(S2BooleanOperation::OpType op_type,
+                                const S2Builder::SnapFunction& snap_function,
+                                const S2Polygon& a, const S2Polygon& b) {
   S2Error error;
-  if (!op.Build(a.index_, b.index_, &error)) {
+  if (!InitToOperation(op_type, snap_function, a, b, &error)) {
     S2_LOG(DFATAL) << S2BooleanOperation::OpTypeToString(op_type)
                 << " operation failed: " << error;
-    return false;
   }
-  return true;
 }
 
 void S2Polygon::InitToIntersection(const S2Polygon* a, const S2Polygon* b) {
@@ -894,38 +899,14 @@ void S2Polygon::InitToIntersection(
   if (!a.bound_.Intersects(b.bound_)) return;
   InitToOperation(S2BooleanOperation::OpType::INTERSECTION,
                   snap_function, a, b);
+}
 
-  // If the boundary is empty then there are two possible results: the empty
-  // polygon or the full polygon.  Note that the (approximate) intersection of
-  // two non-full polygons may be full, because one or both polygons may have
-  // tiny cracks or holes that are eliminated by snapping.  Similarly, the
-  // (approximate) intersection of two polygons that contain a common point
-  // may be empty, since the point might be contained by tiny loops that are
-  // snapped away.
-  //
-  // So instead we fall back to heuristics.  First we compute the minimum and
-  // maximum intersection area based on the areas of the two input polygons.
-  // If only one of {0, 4*Pi} is possible then we return that result.  If
-  // neither is possible (before snapping) then we return the one that is
-  // closest to being possible.  (It never true that both are possible.)
-  if (num_loops() == 0) {
-    // We know that both polygons are non-empty due to the initial bounds
-    // check.  By far the most common case is that the intersection is empty,
-    // so we want to make that case fast.  The intersection area satisfies:
-    //
-    //   max(0, A + B - 4*Pi) <= Intersection(A, B) <= min(A, B)
-    //
-    // where A, B can refer to a polygon or its area.  Note that if either A
-    // or B is at most 2*Pi, the result must be empty.  We can use the
-    // bounding rectangle areas as upper bounds on the polygon areas.
-    if (a.bound_.Area() <= 2 * M_PI || b.bound_.Area() <= 2 * M_PI) return;
-    double a_area = a.GetArea(), b_area = b.GetArea();
-    double min_area = max(0.0, a_area + b_area - 4 * M_PI);
-    double max_area = min(a_area, b_area);
-    if (min_area > 4 * M_PI - max_area) {
-      Invert();
-    }
-  }
+bool S2Polygon::InitToIntersection(
+    const S2Polygon& a, const S2Polygon& b,
+    const S2Builder::SnapFunction& snap_function, S2Error* error) {
+  if (!a.bound_.Intersects(b.bound_)) return true;  // Success.
+  return InitToOperation(S2BooleanOperation::OpType::INTERSECTION,
+                         snap_function, a, b, error);
 }
 
 void S2Polygon::InitToUnion(const S2Polygon* a, const S2Polygon* b) {
@@ -941,23 +922,13 @@ void S2Polygon::InitToUnion(
     const S2Polygon& a, const S2Polygon& b,
     const S2Builder::SnapFunction& snap_function) {
   InitToOperation(S2BooleanOperation::OpType::UNION, snap_function, a, b);
-  if (num_loops() == 0) {
-    // See comments in InitToApproxIntersection().  In this case, the union
-    // area satisfies:
-    //
-    //   max(A, B) <= Union(A, B) <= min(4*Pi, A + B)
-    //
-    // where A, B can refer to a polygon or its area.  The most common case is
-    // that neither input polygon is empty, but the union is empty due to
-    // snapping.
-    if (a.bound_.Area() + b.bound_.Area() <= 2 * M_PI) return;
-    double a_area = a.GetArea(), b_area = b.GetArea();
-    double min_area = max(a_area, b_area);
-    double max_area = min(4 * M_PI, a_area + b_area);
-    if (min_area > 4 * M_PI - max_area) {
-      Invert();
-    }
-  }
+}
+
+bool S2Polygon::InitToUnion(
+    const S2Polygon& a, const S2Polygon& b,
+    const S2Builder::SnapFunction& snap_function, S2Error* error) {
+  return InitToOperation(S2BooleanOperation::OpType::UNION,
+                         snap_function, a, b, error);
 }
 
 void S2Polygon::InitToDifference(const S2Polygon* a, const S2Polygon* b) {
@@ -973,22 +944,13 @@ void S2Polygon::InitToDifference(
     const S2Polygon& a, const S2Polygon& b,
     const S2Builder::SnapFunction& snap_function) {
   InitToOperation(S2BooleanOperation::OpType::DIFFERENCE, snap_function, a, b);
-  if (num_loops() == 0) {
-    // See comments in InitToApproxIntersection().  In this case, the
-    // difference area satisfies:
-    //
-    //   max(0, A - B) <= Difference(A, B) <= min(A, 4*Pi - B)
-    //
-    // where A, B can refer to a polygon or its area.  By far the most common
-    // case is that result is empty.
-    if (a.bound_.Area() <= 2 * M_PI || b.bound_.Area() >= 2 * M_PI) return;
-    double a_area = a.GetArea(), b_area = b.GetArea();
-    double min_area = max(0.0, a_area - b_area);
-    double max_area = min(a_area, 4 * M_PI - b_area);
-    if (min_area > 4 * M_PI - max_area) {
-      Invert();
-    }
-  }
+}
+
+bool S2Polygon::InitToDifference(
+    const S2Polygon& a, const S2Polygon& b,
+    const S2Builder::SnapFunction& snap_function, S2Error* error) {
+  return InitToOperation(S2BooleanOperation::OpType::DIFFERENCE,
+                         snap_function, a, b, error);
 }
 
 void S2Polygon::InitToSymmetricDifference(const S2Polygon* a,
@@ -1007,27 +969,13 @@ void S2Polygon::InitToSymmetricDifference(
     const S2Builder::SnapFunction& snap_function) {
   InitToOperation(S2BooleanOperation::OpType::SYMMETRIC_DIFFERENCE,
                   snap_function, a, b);
-  if (num_loops() == 0) {
-    // See comments in InitToApproxIntersection().  In this case, the
-    // difference area satisfies:
-    //
-    //   |A - B| <= SymmetricDifference(A, B) <= 4*Pi - |4*Pi - (A + B)|
-    //
-    // where A, B can refer to a polygon or its area.  By far the most common
-    // case is that result is empty.
-    if (a.bound_.Area() + b.bound_.Area() <= 2 * M_PI) return;
-    double a_area = a.GetArea(), b_area = b.GetArea();
-    double min_area = fabs(a_area - b_area);
-    double max_area = 4 * M_PI - fabs(4 * M_PI - (a_area + b_area));
-    // If both input polygons have area 2*Pi, the result could be either empty
-    // or full.  We explicitly want to choose "empty" in this case since it is
-    // much more likely that the user is computing the difference between two
-    // nearly identical polygons.  Hence the bias below.
-    static constexpr double kBiasTowardsEmpty = 1e-14;
-    if (min_area - kBiasTowardsEmpty > 4 * M_PI - max_area) {
-      Invert();
-    }
-  }
+}
+
+bool S2Polygon::InitToSymmetricDifference(
+    const S2Polygon& a, const S2Polygon& b,
+    const S2Builder::SnapFunction& snap_function, S2Error* error) {
+  return InitToOperation(S2BooleanOperation::OpType::SYMMETRIC_DIFFERENCE,
+                         snap_function, a, b, error);
 }
 
 void S2Polygon::InitFromBuilder(const S2Polygon& a, S2Builder* builder) {

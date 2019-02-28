@@ -37,6 +37,11 @@
   $1 = temp;
 }
 
+// For S2Polygon::GetOverlapFractions
+%typemap(out) std::pair<double, double> {
+  $result = Py_BuildValue("dd", $1.first, $1.second);
+}
+
 %typemap(argout) S2CellId *OUTPUT_ARRAY_4 {
   $result = PyList_New(4);
   if ($result == nullptr) return nullptr;
@@ -447,6 +452,7 @@ class S2Point {
 %unignore S2Polygon::GetCapBound() const;
 %unignore S2Polygon::GetCentroid;
 %unignore S2Polygon::GetDistance;
+%unignore S2Polygon::GetOverlapFractions(const S2Polygon*, const S2Polygon*);
 %unignore S2Polygon::GetRectBound;
 %unignore S2Polygon::Init;
 %unignore S2Polygon::InitNested;

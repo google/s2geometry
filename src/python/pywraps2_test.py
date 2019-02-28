@@ -138,6 +138,31 @@ class PyWrapS2TestCase(unittest.TestCase):
     cell_union.Init([london_level_10.id()])
     self.assertAlmostEqual(cell_union.ExactArea(), polygon.GetArea(), places=10)
 
+  def testS2PolygonGetOverlapFractions(self):
+    # Matches S2Polygon, OverlapFractions test from cs/s2polygon_test.cc
+    a = s2.S2Polygon()
+    b = s2.S2Polygon()
+    r1, r2 = s2.S2Polygon.GetOverlapFractions(a, b)
+    self.assertAlmostEqual(1.0, r1)
+    self.assertAlmostEqual(1.0, r2)
+
+    def verts2loop(vs):
+      loop = s2.S2Loop()
+      loop.Init([s2.S2LatLng.FromDegrees(*v).ToPoint() for v in vs])
+      return loop
+
+    loop1verts = [(-10, 10), (0, 10), (0, -10), (-10, -10), (-10, 0)]
+    b = s2.S2Polygon(verts2loop(loop1verts))
+    r1, r2 = s2.S2Polygon.GetOverlapFractions(a, b)
+    self.assertAlmostEqual(1.0, r1)
+    self.assertAlmostEqual(0.0, r2)
+
+    loop2verts = [(-10, 0), (10, 0), (10, -10), (-10, -10)]
+    a = s2.S2Polygon(verts2loop(loop2verts))
+    r1, r2 = s2.S2Polygon.GetOverlapFractions(a, b)
+    self.assertAlmostEqual(0.5, r1)
+    self.assertAlmostEqual(0.5, r2)
+
   def testGetS2LatLngVertexIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
     polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId(london)))

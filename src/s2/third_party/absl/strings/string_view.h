@@ -196,8 +196,19 @@ class string_view {
   // Implicit constructor of a `string_view` from nul-terminated `str`. When
   // accepting possibly null strings, use `absl::NullSafeStringView(str)`
   // instead (see below).
+#if ABSL_HAVE_BUILTIN(__builtin_strlen) || \
+    (defined(__GNUC__) && !defined(__clang__))
+  // GCC has __builtin_strlen according to
+  // https://gcc.gnu.org/onlinedocs/gcc-4.7.0/gcc/Other-Builtins.html, but
+  // ABSL_HAVE_BUILTIN doesn't detect that, so we use the extra checks above.
+  // __builtin_strlen is constexpr.
   constexpr string_view(const char* str)  // NOLINT(runtime/explicit)
-      : ptr_(str), length_(CheckLengthInternal(StrLenInternal(str))) {}
+      : ptr_(str),
+        length_(CheckLengthInternal(str ? __builtin_strlen(str) : 0)) {}
+#else
+  constexpr string_view(const char* str)  // NOLINT(runtime/explicit)
+      : ptr_(str), length_(CheckLengthInternal(str ? strlen(str) : 0)) {}
+#endif
 
   // Implicit constructor of a `string_view` from a `const char*` and length.
   constexpr string_view(const char* data, size_type len)
@@ -375,7 +386,7 @@ class string_view {
   string_view substr(size_type pos, size_type n = npos) const {
     if (ABSL_PREDICT_FALSE(pos > length_))
       base_internal::ThrowStdOutOfRange("absl::string_view::substr");
-    n = std::min(n, length_ - pos);
+    n = (std::min)(n, length_ - pos);
     return string_view(ptr_ + pos, n);
   }
 
@@ -388,7 +399,7 @@ class string_view {
   // on the respective sizes of the two `string_view`s to determine which is
   // smaller, equal, or greater.
   int compare(string_view x) const noexcept {
-    auto min_length = std::min(length_, x.length_);
+    auto min_length = (std::min)(length_, x.length_);
     if (min_length > 0) {
       int r = memcmp(ptr_, x.ptr_, min_length);
       if (r < 0) return -1;
@@ -510,23 +521,7 @@ class string_view {
 
  private:
   static constexpr size_type kMaxSize =
-      std::numeric_limits<difference_type>::max();
-
-  // check whether __builtin_strlen is provided by the compiler.
-  // GCC doesn't have __has_builtin()
-  // (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66970),
-  // but has __builtin_strlen according to
-  // https://gcc.gnu.org/onlinedocs/gcc-4.7.0/gcc/Other-Builtins.html.
-#if ABSL_HAVE_BUILTIN(__builtin_strlen) || \
-    (defined(__GNUC__) && !defined(__clang__))
-  static constexpr size_type StrLenInternal(const char* str) {
-    return str ? __builtin_strlen(str) : 0;
-  }
-#else
-  static constexpr size_type StrLenInternal(const char* str) {
-    return str ? strlen(str) : 0;
-  }
-#endif
+      (std::numeric_limits<difference_type>::max)();
 
   static constexpr size_type CheckLengthInternal(size_type len) {
     return ABSL_ASSERT(len <= kMaxSize), len;
@@ -554,7 +549,7 @@ inline bool operator!=(string_view x, string_view y) noexcept {
 }
 
 inline bool operator<(string_view x, string_view y) noexcept {
-  auto min_size = std::min(x.size(), y.size());
+  auto min_size = (std::min)(x.size(), y.size());
   const int r = min_size == 0 ? 0 : memcmp(x.data(), y.data(), min_size);
   return (r < 0) || (r == 0 && x.size() < y.size());
 }
@@ -579,7 +574,6 @@ std::ostream& operator<<(std::ostream& o, string_view piece);
 
 #endif  // ABSL_HAVE_STD_STRING_VIEW
 
-
 namespace absl {
 
 // ClippedSubstr()
@@ -588,7 +582,7 @@ namespace absl {
 // Provided because std::string_view::substr throws if `pos > size()`
 inline string_view ClippedSubstr(string_view s, size_t pos,
                                  size_t n = string_view::npos) {
-  pos = std::min(pos, static_cast<size_t>(s.size()));
+  pos = (std::min)(pos, static_cast<size_t>(s.size()));
   return s.substr(pos, n);
 }
 

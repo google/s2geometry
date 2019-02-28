@@ -53,6 +53,8 @@
 
 #include <type_traits>
 
+#include <gtest/gtest_prod.h>
+
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
@@ -66,7 +68,7 @@ class Bits {
   template<int size /* in bytes */>
   struct UnsignedTypeBySize;
 
-  // Auxilliary struct for figuring out an unsigned type for a given type.
+  // Auxiliary struct for figuring out an unsigned type for a given type.
   template<typename T> struct UnsignedType {
     typedef typename UnsignedTypeBySize<sizeof(T)>::Type Type;
   };
@@ -108,22 +110,6 @@ class Bits {
   static inline int CountOnes128(absl::uint128 n) {
     return Bits::CountOnes64(absl::Uint128High64(n)) +
            Bits::CountOnes64(absl::Uint128Low64(n));
-  }
-
-  // Count bits using popcnt instruction.
-  static inline int CountOnes64withPopcount(uint64 n) {
-    // POPCNT has a false data dependency on its output register.
-    // gcc / clang will optimize the intrinsic, but not inline asm.
-    // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=62011
-#if defined(__x86_64__) && defined(__POPCNT__) && defined(__SSE4__)
-    return _mm_popcnt_u64(n);
-#elif defined(__x86_64__) && defined(__GNUC__)
-    int64 count = 0;
-    asm("popcnt %1,%0" : "=r"(count) : "rm"(n) : "cc");
-    return static_cast<int>(count);
-#else
-    return CountOnes64(n);
-#endif
   }
 
   // Count leading zeroes.  This is similar to wordsize - 1 - floor(log2(n)).
@@ -373,18 +359,8 @@ class Bits {
   Bits(Bits const&) = delete;
   void operator=(Bits const&) = delete;
 
-  // Allow tests to call _Portable variants directly.
-  // Originally, I wanted to depend on //testing/production_stub/public
-  // so that I would be able to
-  // #include "testing/production_stub/public/gunit_prod.h", which provides
-  // FRIEND_MACRO. But that broke iOS: http://b/22806226 . I then noticed that
-  // the previously mentioned header file says to instead
-  // #include "testing/base/gunit_prod.h". I cannot find a library that a)
-  // provides the alternative header file b) is visisble. Thus, I have thrown
-  // my hands up in frustration, and gone with raw friend instead of using the
-  // usual FRIEND_TEST macro. Hate the game, not the player.
-  friend class Bits_Port32_Test;
-  friend class Bits_Port64_Test;
+  FRIEND_TEST(Bits, Port32);
+  FRIEND_TEST(Bits, Port64);
 };
 
 // A utility class for some handy bit patterns.  The names l and h

@@ -179,6 +179,14 @@
 #include "s2/third_party/absl/types/span.h"
 #include "s2/third_party/absl/utility/utility.h"
 
+#if defined(__GXX_RTTI)
+#define ABSL_INTERNAL_HAS_CXA_DEMANGLE
+#endif
+
+#ifdef ABSL_INTERNAL_HAS_CXA_DEMANGLE
+#include <cxxabi.h>
+#endif
+
 namespace absl {
 namespace container_internal {
 
@@ -224,13 +232,17 @@ struct SizeOf : NotAligned<T>, std::integral_constant<size_t, sizeof(T)> {};
 template <class T, size_t N>
 struct SizeOf<Aligned<T, N>> : std::integral_constant<size_t, sizeof(T)> {};
 
+// Note: workaround for https://gcc.gnu.org/PR88115
 template <class T>
-struct AlignOf : NotAligned<T>, std::integral_constant<size_t, alignof(T)> {};
+struct AlignOf : NotAligned<T> {
+  static constexpr size_t value = alignof(T);
+};
 
 template <class T, size_t N>
-struct AlignOf<Aligned<T, N>> : std::integral_constant<size_t, N> {
+struct AlignOf<Aligned<T, N>> {
   static_assert(N % alignof(T) == 0,
                 "Custom alignment can't be lower than the type's alignment");
+  static constexpr size_t value = N;
 };
 
 // Does `Ts...` contain `T`?
@@ -241,8 +253,10 @@ template <class From, class To>
 using CopyConst =
     typename std::conditional<std::is_const<From>::value, const To, To>::type;
 
+// Note: We're not qualifying this with absl:: because it doesn't compile under
+// MSVC.
 template <class T>
-using SliceType = absl::Span<T>;
+using SliceType = Span<T>;
 
 // This namespace contains no types. It prevents functions defined in it from
 // being found by ADL.
@@ -276,11 +290,21 @@ constexpr size_t Max(size_t a, size_t b, Ts... rest) {
 
 template <class T>
 string TypeName() {
-#if !defined(__GNUC__) || defined(__GXX_RTTI)
-  return absl::StrCat("<", typeid(T).name(), ">");
-#else
-  return "";
+  string out;
+  int status = 0;
+  char* demangled = nullptr;
+#ifdef ABSL_INTERNAL_HAS_CXA_DEMANGLE
+  demangled = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, &status);
 #endif
+  if (status == 0 && demangled != nullptr) {  // Demangling succeeded.
+    absl::StrAppend(&out, "<", demangled, ">");
+    free(demangled);
+  } else {
+#if defined(__GXX_RTTI) || defined(_CPPRTTI)
+    absl::StrAppend(&out, "<", typeid(T).name(), ">");
+#endif
+  }
+  return out;
 }
 
 }  // namespace adl_barrier
@@ -378,7 +402,7 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
     static_assert(N < NumOffsets, "Index out of bounds");
     return adl_barrier::Align(
         Offset<N - 1>() + SizeOf<ElementType<N - 1>>() * size_[N - 1],
-        ElementAlignment<N>());
+        ElementAlignment<N>::value);
   }
 
   // Offset in bytes of the array with the specified element type. There must
@@ -427,7 +451,7 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
     return Size<ElementIndex<T>()>();
   }
 
-    // The number of elements of all arrays for which they are known.
+  // The number of elements of all arrays for which they are known.
   constexpr std::array<size_t, NumSizes> Sizes() const {
     return {{Size<SizeSeq>()...}};
   }
@@ -438,7 +462,7 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   //
   //   // int[3], 4 bytes of padding, double[4].
   //   Layout<int, double> x(3, 4);
-  //   unsigned char* p = unsigned char[x.AllocSize()];
+  //   unsigned char* p = new unsigned char[x.AllocSize()];
   //   int* ints = x.Pointer<0>(p);
   //   double* doubles = x.Pointer<1>(p);
   //
@@ -489,9 +513,13 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   //   std::tie(ints, doubles) = x.Pointers(p);
   //
   // Requires: `p` is aligned to `Alignment()`.
+  //
+  // Note: We're not using ElementType alias here because it does not compile
+  // under MSVC.
   template <class Char>
-  std::tuple<CopyConst<Char, ElementType<OffsetSeq>>*...> Pointers(
-      Char* p) const {
+  std::tuple<CopyConst<
+      Char, typename std::tuple_element<OffsetSeq, ElementTypes>::type>*...>
+  Pointers(Char* p) const {
     return std::tuple<CopyConst<Char, ElementType<OffsetSeq>>*...>(
         Pointer<OffsetSeq>(p)...);
   }
@@ -543,9 +571,13 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   //   std::tie(ints, doubles) = x.Slices(p);
   //
   // Requires: `p` is aligned to `Alignment()`.
+  //
+  // Note: We're not using ElementType alias here because it does not compile
+  // under MSVC.
   template <class Char>
-  std::tuple<SliceType<CopyConst<Char, ElementType<SizeSeq>>>...> Slices(
-      Char* p) const {
+  std::tuple<SliceType<CopyConst<
+      Char, typename std::tuple_element<SizeSeq, ElementTypes>::type>>...>
+  Slices(Char* p) const {
     // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=63875 (fixed
     // in 6.1).
     (void)p;
@@ -585,7 +617,7 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
 #ifdef ADDRESS_SANITIZER
     PoisonPadding<Char, N - 1>(p);
     // The `if` is an optimization. It doesn't affect the observable behaviour.
-    if (ElementAlignment<N - 1>() % ElementAlignment<N>()) {
+    if (ElementAlignment<N - 1>::value % ElementAlignment<N>::value) {
       size_t start =
           Offset<N - 1>() + SizeOf<ElementType<N - 1>>() * size_[N - 1];
       ASAN_POISON_MEMORY_REGION(p + start, Offset<N>() - start);
@@ -618,8 +650,11 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
       absl::StrAppend(&res, "[", size_[i], "]; @", offsets[i + 1], types[i + 1],
                       "(", sizes[i + 1], ")");
     }
-    if (NumTypes == NumSizes && NumSizes > 0) {
-      absl::StrAppend(&res, "[", size_[NumSizes - 1], "]");
+    // NumSizes is a constant that may be zero. Some compilers cannot see that
+    // inside the if statement "size_[NumSizes - 1]" must be valid.
+    int last = static_cast<int>(NumSizes) - 1;
+    if (NumTypes == NumSizes && last >= 0) {
+      absl::StrAppend(&res, "[", size_[last], "]");
     }
     return res;
   }
@@ -662,7 +697,7 @@ class Layout : public internal_layout::LayoutType<sizeof...(Ts), Ts...> {
   //
   // It's allowed to pass fewer array sizes than the number of arrays. E.g.,
   // if all you need is to the offset of the second array, you only need to
-  // pass one argument -- the number of elements in the first arrays.
+  // pass one argument -- the number of elements in the first array.
   //
   //   // int[3] followed by 4 bytes of padding and an unknown number of
   //   // doubles.
