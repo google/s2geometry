@@ -69,6 +69,7 @@
 #include <memory>
 #include <utility>
 
+#include "s2/util/gtl/btree_map.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_layer.h"
@@ -81,7 +82,6 @@
 #include "s2/s2predicates.h"
 #include "s2/s2shape_index_measures.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
-#include "s2/util/gtl/btree_map.h"
 
 // TODO(ericv): Remove this debugging output at some point.
 extern bool s2builder_verbose;
