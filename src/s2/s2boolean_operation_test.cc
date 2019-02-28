@@ -1176,10 +1176,11 @@ TEST(S2BooleanOperation, GetCrossedVertexIndexBug) {
             s2textformat::ToString(actual));
 }
 
-// Like the above, except that all arguments are in MakeLaxPolygon() format.
-void ExpectResult(S2BooleanOperation::OpType op_type,
-                        const string& a_str, const string& b_str,
-                        const string& expected_str) {
+// Performs the given operation and compares the result to "expected_str".  All
+// arguments are in s2textformat::MakeLaxPolygon() format.
+void ExpectPolygon(S2BooleanOperation::OpType op_type,
+                   const string& a_str, const string& b_str,
+                   const string& expected_str) {
   auto a = s2textformat::MakeIndexOrDie(string("# # ") + a_str);
   auto b = s2textformat::MakeIndexOrDie(string("# # ") + b_str);
   s2builderutil::LaxPolygonLayer::Options polygon_options;
@@ -1235,118 +1236,165 @@ TEST(S2BooleanOperation, FullAndEmptyResults) {
 
   // Test empty UNION results.
   //  - Exact result, no input edges.
-  ExpectResult(OpType::UNION, kEmpty, kEmpty, kEmpty);
+  ExpectPolygon(OpType::UNION, kEmpty, kEmpty, kEmpty);
   //  - Empty due to snapping, union does not intersect all 6 cube faces.
-  ExpectResult(OpType::UNION, kAlmostEmpty1, kAlmostEmpty2, kEmpty);
+  ExpectPolygon(OpType::UNION, kAlmostEmpty1, kAlmostEmpty2, kEmpty);
   //  - Empty due to snapping, union intersects all 6 cube faces.
-  ExpectResult(OpType::UNION, k6FaceAlmostEmpty1, k6FaceAlmostEmpty1, kEmpty);
+  ExpectPolygon(OpType::UNION, k6FaceAlmostEmpty1, k6FaceAlmostEmpty1, kEmpty);
 
   // Test full UNION results.
   //  - Exact result, no input edges.
-  ExpectResult(OpType::UNION, kEmpty, kFull, kFull);
-  ExpectResult(OpType::UNION, kEmpty, kFull, kFull);
-  ExpectResult(OpType::UNION, kFull, kFull, kFull);
+  ExpectPolygon(OpType::UNION, kEmpty, kFull, kFull);
+  ExpectPolygon(OpType::UNION, kEmpty, kFull, kFull);
+  ExpectPolygon(OpType::UNION, kFull, kFull, kFull);
   //  - Exact result, some input edges.
-  ExpectResult(OpType::UNION, kFull, kShell1, kFull);
-  ExpectResult(OpType::UNION, kHole1, kHole2, kFull);
-  ExpectResult(OpType::UNION, kHole1, kShell1, kFull);
+  ExpectPolygon(OpType::UNION, kFull, kShell1, kFull);
+  ExpectPolygon(OpType::UNION, kHole1, kHole2, kFull);
+  ExpectPolygon(OpType::UNION, kHole1, kShell1, kFull);
   //  - Full due to snapping, almost complementary polygons.
-  ExpectResult(OpType::UNION, kHole1, kShell1Minus, kFull);
-  ExpectResult(OpType::UNION, k6FaceHole1, k6FaceShell1Minus, kFull);
+  ExpectPolygon(OpType::UNION, kHole1, kShell1Minus, kFull);
+  ExpectPolygon(OpType::UNION, k6FaceHole1, k6FaceShell1Minus, kFull);
 
   // Test empty INTERSECTION results.
   //  - Exact result, no input edges.
-  ExpectResult(OpType::INTERSECTION, kEmpty, kEmpty, kEmpty);
-  ExpectResult(OpType::INTERSECTION, kEmpty, kFull, kEmpty);
-  ExpectResult(OpType::INTERSECTION, kFull, kEmpty, kEmpty);
+  ExpectPolygon(OpType::INTERSECTION, kEmpty, kEmpty, kEmpty);
+  ExpectPolygon(OpType::INTERSECTION, kEmpty, kFull, kEmpty);
+  ExpectPolygon(OpType::INTERSECTION, kFull, kEmpty, kEmpty);
   //  - Exact result, inputs do not both intersect all 6 cube faces.
-  ExpectResult(OpType::INTERSECTION, kEmpty, kHole1, kEmpty);
-  ExpectResult(OpType::INTERSECTION, kShell1, kShell2, kEmpty);
-  ExpectResult(OpType::INTERSECTION, kShell1, kHole1, kEmpty);
+  ExpectPolygon(OpType::INTERSECTION, kEmpty, kHole1, kEmpty);
+  ExpectPolygon(OpType::INTERSECTION, kShell1, kShell2, kEmpty);
+  ExpectPolygon(OpType::INTERSECTION, kShell1, kHole1, kEmpty);
   //  - Exact result, inputs both intersect all 6 cube faces.
-  ExpectResult(OpType::INTERSECTION, k6FaceShell1, k6FaceHole1, kEmpty);
+  ExpectPolygon(OpType::INTERSECTION, k6FaceShell1, k6FaceHole1, kEmpty);
   //  - Empty due to snapping, inputs do not both intersect all 6 cube faces.
-  ExpectResult(OpType::INTERSECTION, kShell1Plus, kHole1, kEmpty);
+  ExpectPolygon(OpType::INTERSECTION, kShell1Plus, kHole1, kEmpty);
   //  - Empty due to snapping, inputs both intersect all 6 cube faces.
-  ExpectResult(OpType::INTERSECTION, k6FaceShell1Plus, k6FaceHole1, kEmpty);
+  ExpectPolygon(OpType::INTERSECTION, k6FaceShell1Plus, k6FaceHole1, kEmpty);
 
   // Test full INTERSECTION results.
   //  - Exact result, no input edges.
-  ExpectResult(OpType::INTERSECTION, kFull, kFull, kFull);
+  ExpectPolygon(OpType::INTERSECTION, kFull, kFull, kFull);
   //  - Full due to snapping, almost full input polygons.
-  ExpectResult(OpType::INTERSECTION, kAlmostFull1, kAlmostFull2, kFull);
+  ExpectPolygon(OpType::INTERSECTION, kAlmostFull1, kAlmostFull2, kFull);
 
   // Test empty DIFFERENCE results.
   //  - Exact result, no input edges.
-  ExpectResult(OpType::DIFFERENCE, kEmpty, kEmpty, kEmpty);
-  ExpectResult(OpType::DIFFERENCE, kEmpty, kFull, kEmpty);
-  ExpectResult(OpType::DIFFERENCE, kFull, kFull, kEmpty);
+  ExpectPolygon(OpType::DIFFERENCE, kEmpty, kEmpty, kEmpty);
+  ExpectPolygon(OpType::DIFFERENCE, kEmpty, kFull, kEmpty);
+  ExpectPolygon(OpType::DIFFERENCE, kFull, kFull, kEmpty);
   //  - Exact result, first input does not intersect all 6 cube faces.
-  ExpectResult(OpType::DIFFERENCE, kEmpty, kShell1, kEmpty);
-  ExpectResult(OpType::DIFFERENCE, kShell1, kFull, kEmpty);
-  ExpectResult(OpType::DIFFERENCE, kShell1, kShell1, kEmpty);
-  ExpectResult(OpType::DIFFERENCE, kShell1, kHole2, kEmpty);
+  ExpectPolygon(OpType::DIFFERENCE, kEmpty, kShell1, kEmpty);
+  ExpectPolygon(OpType::DIFFERENCE, kShell1, kFull, kEmpty);
+  ExpectPolygon(OpType::DIFFERENCE, kShell1, kShell1, kEmpty);
+  ExpectPolygon(OpType::DIFFERENCE, kShell1, kHole2, kEmpty);
   //  - Exact result, first input intersects all 6 cube faces.
-  ExpectResult(OpType::DIFFERENCE, k6FaceShell1, k6FaceShell1Plus, kEmpty);
+  ExpectPolygon(OpType::DIFFERENCE, k6FaceShell1, k6FaceShell1Plus, kEmpty);
   //  - Empty due to snapping, first input does not intersect all 6 cube faces.
-  ExpectResult(OpType::DIFFERENCE, kShell1Plus, kShell1, kEmpty);
+  ExpectPolygon(OpType::DIFFERENCE, kShell1Plus, kShell1, kEmpty);
   //  - Empty due to snapping, first input intersect all 6 cube faces.
-  ExpectResult(OpType::DIFFERENCE, k6FaceShell1Plus, k6FaceShell1, kEmpty);
+  ExpectPolygon(OpType::DIFFERENCE, k6FaceShell1Plus, k6FaceShell1, kEmpty);
 
   // Test full DIFFERENCE results.
   //  - Exact result, no input edges.
-  ExpectResult(OpType::DIFFERENCE, kFull, kEmpty, kFull);
+  ExpectPolygon(OpType::DIFFERENCE, kFull, kEmpty, kFull);
   //  - Full due to snapping, almost full/empty input polygons.
-  ExpectResult(OpType::DIFFERENCE, kAlmostFull1, kAlmostEmpty2, kFull);
+  ExpectPolygon(OpType::DIFFERENCE, kAlmostFull1, kAlmostEmpty2, kFull);
 
   // Test empty SYMMETRIC_DIFFERENCE results.
   //  - Exact result, no input edges.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kEmpty, kEmpty, kEmpty);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kFull, kFull, kEmpty);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kEmpty, kEmpty, kEmpty);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kFull, kFull, kEmpty);
   //  - Exact result, union does not intersect all 6 cube faces.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kShell1, kShell1, kEmpty);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kNorthHemi, kNorthHemi, kEmpty);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kShell1, kShell1, kEmpty);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kNorthHemi, kNorthHemi, kEmpty);
   //  - Exact result, union intersects all 6 cube faces.  This case is only
   //    handled correctly due to the kBiasTowardsEmpty heuristic.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1, k6FaceShell1,
-               kEmpty);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1, k6FaceShell1,
+                kEmpty);
   //  - Empty due to snapping, union does not intersect all 6 cube faces.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kShell1Plus, kShell1, kEmpty);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kShell1Plus, kShell1, kEmpty);
   //  - Empty due to snapping, union intersects all 6 cube faces.  This case is
   //    only handled correctly due to the kBiasTowardsEmpty heuristic.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Plus, k6FaceShell1,
-               kEmpty);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Minus, k6FaceShell1,
-               kEmpty);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Plus, k6FaceShell1,
+                kEmpty);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Minus, k6FaceShell1,
+                kEmpty);
 
   // Test full SYMMETRIC_DIFFERENCE results.
   //  - Exact result, no input edges.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kFull, kEmpty, kFull);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kEmpty, kFull, kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kFull, kEmpty, kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kEmpty, kFull, kFull);
   //  - Exact result, complementary input polygons.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kShell1, kHole1, kFull);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kAlmostEmpty1, kAlmostFull1,
-               kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kShell1, kHole1, kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kAlmostEmpty1, kAlmostFull1,
+                kFull);
   //  - Full due to snapping, almost complementary input polygons.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kShell1Plus, kHole1, kFull);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kAlmostFull1, kAlmostEmpty2,
-               kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kShell1Plus, kHole1, kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kAlmostFull1, kAlmostEmpty2,
+                kFull);
   //  - Exact result, complementary hemispheres, at least one input does not
   //    intersect all 6 cube faces.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kNorthHemi, kSouthHemi, kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kNorthHemi, kSouthHemi, kFull);
   //  - Exact result, almost complementary hemispheres, at least one input does
   //    not intersect all 6 cube faces.
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kNorthHemi, kSouthHemiPlus, kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, kNorthHemi, kSouthHemiPlus,
+                kFull);
 
   // TODO(ericv): The following case is not currently implemented.
   //  - Full result, complementary (to within the snap radius) input polygons
   //    each with an area of approximately 2*Pi, and both polygons intersect all
   //    6 cube faces.
 #if 0
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1, k6FaceHole1, kFull);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Plus, k6FaceHole1,
-               kFull);
-  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Minus, k6FaceHole1,
-               kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1, k6FaceHole1, kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Plus, k6FaceHole1,
+                kFull);
+  ExpectPolygon(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Minus, k6FaceHole1,
+                kFull);
 #endif
+}
+
+// Tests whether the two S2ShapeIndexes are equal according to
+// S2BooleanOperation::Equals().
+bool TestEqual(const string& a_str, const string& b_str) {
+  auto a = s2textformat::MakeIndexOrDie(a_str);
+  auto b = s2textformat::MakeIndexOrDie(b_str);
+  return S2BooleanOperation::Equals(*a, *b);
+}
+
+// Tests S2BooleanOperation::Equals, which computes the symmetric difference
+// between two geometries and tests whether the result is empty.
+//
+// This also indirectly tests IsEmpty(), which is used to implement Contains()
+// and Intersects().
+TEST(S2BooleanOperation, Equals) {
+  EXPECT_TRUE(TestEqual("# #", "# #"));
+  EXPECT_TRUE(TestEqual("# # full", "# # full"));
+
+  EXPECT_FALSE(TestEqual("# #", "# # full"));
+  EXPECT_FALSE(TestEqual("0:0 # #", "# #"));
+  EXPECT_FALSE(TestEqual("0:0 # #", "# # full"));
+  EXPECT_FALSE(TestEqual("# 0:0, 1:1 #", "# #"));
+  EXPECT_FALSE(TestEqual("# 0:0, 1:1 #", "# # full"));
+  EXPECT_FALSE(TestEqual("# # 0:0, 0:1, 1:0 ", "# #"));
+  EXPECT_FALSE(TestEqual("# # 0:0, 0:1, 1:0 ", "# # full"));
+}
+
+// Tests Contains() on empty and full geometries.
+TEST(S2BooleanOperation, ContainsEmptyAndFull) {
+  auto empty = s2textformat::MakeIndexOrDie("# #");
+  auto full = s2textformat::MakeIndexOrDie("# # full");
+  EXPECT_TRUE(S2BooleanOperation::Contains(*empty, *empty));
+  EXPECT_FALSE(S2BooleanOperation::Contains(*empty, *full));
+  EXPECT_TRUE(S2BooleanOperation::Contains(*full, *empty));
+  EXPECT_TRUE(S2BooleanOperation::Contains(*full, *full));
+}
+
+// Tests Intersects() on empty and full geometries.
+TEST(S2BooleanOperation, IntersectsEmptyAndFull) {
+  auto empty = s2textformat::MakeIndexOrDie("# #");
+  auto full = s2textformat::MakeIndexOrDie("# # full");
+  EXPECT_FALSE(S2BooleanOperation::Intersects(*empty, *empty));
+  EXPECT_FALSE(S2BooleanOperation::Intersects(*empty, *full));
+  EXPECT_FALSE(S2BooleanOperation::Intersects(*full, *empty));
+  EXPECT_TRUE(S2BooleanOperation::Intersects(*full, *full));
 }

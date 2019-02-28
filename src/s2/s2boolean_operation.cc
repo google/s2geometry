@@ -2229,8 +2229,10 @@ bool S2BooleanOperation::Impl::AreRegionsIdentical() const {
 bool S2BooleanOperation::Impl::Build(S2Error* error) {
   error->Clear();
   if (is_boolean_output()) {
-    // BuildOpType() returns true if and only if the result is empty.
-    *op_->result_empty_ = BuildOpType(op_->op_type());
+    // BuildOpType() returns true if and only if the result has no edges.
+    S2Builder::Graph g;  // Unused by IsFullPolygonResult() implementation.
+    *op_->result_empty_ =
+        BuildOpType(op_->op_type()) && !IsFullPolygonResult(g, error);
     return true;
   }
   // TODO(ericv): Rather than having S2Builder split the edges, it would be

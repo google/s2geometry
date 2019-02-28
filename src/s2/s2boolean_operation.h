@@ -449,8 +449,8 @@ class S2BooleanOperation {
   S2BooleanOperation(OpType op_type, const Options& options);
 
   // Specifies that "result_empty" should be set to indicate whether the exact
-  // result of the operation is empty (contains no edges).  This constructor
-  // is used to efficiently test boolean relationships (see IsEmpty above).
+  // result of the operation is empty.  This constructor is used to efficiently
+  // test boolean relationships (see IsEmpty above).
   S2BooleanOperation(OpType op_type, bool* result_empty,
                      const Options& options = Options());
 
