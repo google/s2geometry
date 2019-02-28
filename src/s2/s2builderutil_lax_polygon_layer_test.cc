@@ -124,6 +124,25 @@ TEST(LaxPolygonLayer, OneNormalShell) {
   }
 }
 
+TEST(LaxPolygonLayer, IsFullPolygonPredicateNotCalled) {
+  // Test that the IsFullPolygonPredicate is not called when at least one
+  // non-degenerate loop is present.
+  for (auto degenerate_boundaries : kAllDegenerateBoundaries()) {
+    S2Builder builder{S2Builder::Options()};
+    S2LaxPolygonShape output;
+    LaxPolygonLayer::Options options;
+    options.set_edge_type(EdgeType::DIRECTED);
+    options.set_degenerate_boundaries(degenerate_boundaries);
+    builder.StartLayer(make_unique<LaxPolygonLayer>(&output, options));
+    auto polygon = MakeLaxPolygonOrDie("0:0, 0:1, 1:1");
+    builder.AddShape(*polygon);
+    // If the predicate is called, it will return an error.
+    builder.AddIsFullPolygonPredicate(S2Builder::IsFullPolygonUnspecified);
+    S2Error error;
+    ASSERT_TRUE(builder.Build(&error));
+  }
+}
+
 TEST(LaxPolygonLayer, TwoNormalShellsOneNormalHole) {
   // The second two loops are nested.  Note that S2LaxPolygon and S2Polygon
   // require opposite vertex orderings for holes.
