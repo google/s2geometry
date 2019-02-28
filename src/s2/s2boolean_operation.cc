@@ -79,6 +79,7 @@
 #include "s2/s2edge_crossings.h"
 #include "s2/s2measures.h"
 #include "s2/s2predicates.h"
+#include "s2/s2shape_index_measures.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/util/gtl/btree_map.h"
 
@@ -878,6 +879,18 @@ class S2BooleanOperation::Impl {
                        CrossingProcessor* cp);
   bool AreRegionsIdentical() const;
   bool BuildOpType(OpType op_type);
+  bool IsFullPolygonResult(const S2Builder::Graph& g, S2Error* error) const;
+  bool IsFullPolygonUnion(const S2ShapeIndex& a,
+                          const S2ShapeIndex& b) const;
+  bool IsFullPolygonIntersection(const S2ShapeIndex& a,
+                                 const S2ShapeIndex& b) const;
+  bool IsFullPolygonDifference(const S2ShapeIndex& a,
+                               const S2ShapeIndex& b) const;
+  bool IsFullPolygonSymmetricDifference(const S2ShapeIndex& a,
+                                        const S2ShapeIndex& b) const;
+
+  // A bit mask representing all six faces of the S2 cube.
+  static constexpr uint8 kAllFacesMask = 0x3f;
 
   S2BooleanOperation* op_;
 
@@ -1987,19 +2000,196 @@ bool S2BooleanOperation::Impl::BuildOpType(OpType op_type) {
   return false;
 }
 
-// Given a polygon edge graph containing only degenerate edges and sibling
-// edge pairs, the purpose of this function is to decide whether the polygon
-// is empty or full except for the degeneracies, i.e. whether the degeneracies
-// represent shells or holes.
-//
-// This function always returns false, meaning that the polygon is empty and
-// the degeneracies represent shells.  The main side effect of this is that
-// operations whose result should be the full polygon will instead be the
-// empty polygon.  (Classes such as S2Polygon already have code to correct for
-// this, but if that functionality were moved here then it would be useful for
-// other polygon representations such as S2LaxPolygonShape.)
-static bool IsFullPolygonNever(const S2Builder::Graph& g, S2Error* error) {
-  return false;  // Assumes the polygon is empty.
+// Returns a bit mask indicating which of the 6 S2 cube faces intersect the
+// index contents.
+uint8 GetFaceMask(const S2ShapeIndex& index) {
+  uint8 mask = 0;
+  S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
+  while (!it.done()) {
+    int face = it.id().face();
+    mask |= 1 << face;
+    it.Seek(S2CellId::FromFace(face + 1).range_min());
+  }
+  return mask;
+}
+
+// Given a polygon edge graph containing only degenerate edges and sibling edge
+// pairs, the purpose of this function is to decide whether the polygon is empty
+// or full except for the degeneracies, i.e. whether the degeneracies represent
+// shells or holes.
+bool S2BooleanOperation::Impl::IsFullPolygonResult(
+    const S2Builder::Graph& g, S2Error* error) const {
+  // If there are no edges of dimension 2, the result could be either the
+  // empty polygon or the full polygon.  Note that this is harder to determine
+  // than you might think due to snapping.  For example, the union of two
+  // non-empty polygons can be empty, because both polygons consist of tiny
+  // loops that are eliminated by snapping.  Similarly, even if two polygons
+  // both contain a common point their intersection can still be empty.
+  //
+  // We distinguish empty from full results using two heuristics:
+  //
+  //  1. We compute a bit mask representing the subset of the six S2 cube faces
+  //     intersected by each input geometry, and use this to determine if only
+  //     one of the two results is possible.  (This test is very fast.)  Note
+  //     that snapping will never cause the result to cover an entire extra
+  //     cube face because the maximum allowed snap radius is too small.
+  S2_DCHECK_LE(S2Builder::SnapFunction::kMaxSnapRadius().degrees(), 70);
+  //
+  //  2. We compute the area of each input geometry, and use this to bound the
+  //     minimum and maximum area of the result.  If only one of {0, 4*Pi} is
+  //     possible then we are done.  If neither is possible then we choose the
+  //     one that is closest to being possible (since snapping can change the
+  //     result area).  Both results are possible only when computing the
+  //     symmetric difference of two regions of area 2*Pi each, in which case we
+  //     must resort to additional heuristics (see below).
+  //
+  // TODO(ericv): Implement a predicate that uses the results of edge snapping
+  // directly, rather than computing areas.  This would not only be much faster
+  // but would also allows all cases to be handled 100% robustly.
+  const S2ShapeIndex& a = *op_->regions_[0];
+  const S2ShapeIndex& b = *op_->regions_[1];
+  switch (op_->op_type()) {
+    case OpType::UNION:
+      return IsFullPolygonUnion(a, b);
+
+    case OpType::INTERSECTION:
+      return IsFullPolygonIntersection(a, b);
+
+    case OpType::DIFFERENCE:
+      return IsFullPolygonDifference(a, b);
+
+    case OpType::SYMMETRIC_DIFFERENCE:
+      return IsFullPolygonSymmetricDifference(a, b);
+
+    default:
+      S2_LOG(FATAL) << "Invalid S2BooleanOperation::OpType";
+      return false;
+  }
+}
+
+bool S2BooleanOperation::Impl::IsFullPolygonUnion(
+    const S2ShapeIndex& a, const S2ShapeIndex& b) const {
+  // See comments in IsFullPolygonResult().  The most common case is that
+  // neither input polygon is empty but the result is empty due to snapping.
+
+  // The result can be full only if the union of the two input geometries
+  // intersects all six faces of the S2 cube.  This test is fast.
+  if ((GetFaceMask(a) | GetFaceMask(b)) != kAllFacesMask) return false;
+
+  // The union area satisfies:
+  //
+  //   max(A, B) <= Union(A, B) <= min(4*Pi, A + B)
+  //
+  // where A, B can refer to a polygon or its area.  We then choose the result
+  // that assumes the smallest amount of error.
+  double a_area = S2::GetArea(a), b_area = S2::GetArea(b);
+  double min_area = max(a_area, b_area);
+  double max_area = min(4 * M_PI, a_area + b_area);
+  return min_area > 4 * M_PI - max_area;
+}
+
+bool S2BooleanOperation::Impl::IsFullPolygonIntersection(
+    const S2ShapeIndex& a, const S2ShapeIndex& b) const {
+  // See comments in IsFullPolygonResult().  By far the most common case is
+  // that the result is empty.
+
+  // The result can be full only if each of the two input geometries
+  // intersects all six faces of the S2 cube.  This test is fast.
+  if ((GetFaceMask(a) & GetFaceMask(b)) != kAllFacesMask) return false;
+
+  // The intersection area satisfies:
+  //
+  //   max(0, A + B - 4*Pi) <= Intersection(A, B) <= min(A, B)
+  //
+  // where A, B can refer to a polygon or its area.  We then choose the result
+  // that assumes the smallest amount of error.
+  double a_area = S2::GetArea(a), b_area = S2::GetArea(b);
+  double min_area = max(0.0, a_area + b_area - 4 * M_PI);
+  double max_area = min(a_area, b_area);
+  return min_area > 4 * M_PI - max_area;
+}
+
+bool S2BooleanOperation::Impl::IsFullPolygonDifference(
+    const S2ShapeIndex& a, const S2ShapeIndex& b) const {
+  // See comments in IsFullPolygonResult().  By far the most common case is
+  // that the result is empty.
+
+  // The result can be full only if each cube face is intersected by the first
+  // geometry.  (The second geometry is irrelevant, since for example it could
+  // consist of a tiny loop on each S2 cube face.)  This test is fast.
+  if (GetFaceMask(a) != kAllFacesMask) return false;
+
+  // The difference area satisfies:
+  //
+  //   max(0, A - B) <= Difference(A, B) <= min(A, 4*Pi - B)
+  //
+  // where A, B can refer to a polygon or its area.  We then choose the result
+  // that assumes the smallest amount of error.
+  double a_area = S2::GetArea(a), b_area = S2::GetArea(b);
+  double min_area = max(0.0, a_area - b_area);
+  double max_area = min(a_area, 4 * M_PI - b_area);
+  return min_area > 4 * M_PI - max_area;
+}
+
+bool S2BooleanOperation::Impl::IsFullPolygonSymmetricDifference(
+    const S2ShapeIndex& a, const S2ShapeIndex& b) const {
+  // See comments in IsFullPolygonResult().  By far the most common case is
+  // that the result is empty.
+
+  // The result can be full only if the union of the two input geometries
+  // intersects all six faces of the S2 cube.  This test is fast.
+  uint8 a_mask = GetFaceMask(a);
+  uint8 b_mask = GetFaceMask(b);
+  if ((a_mask | b_mask) != kAllFacesMask) return false;
+
+  // The symmetric difference area satisfies:
+  //
+  //   |A - B| <= SymmetricDifference(A, B) <= 4*Pi - |4*Pi - (A + B)|
+  //
+  // where A, B can refer to a polygon or its area.
+  double a_area = S2::GetArea(a), b_area = S2::GetArea(b);
+  double min_area = fabs(a_area - b_area);
+  double max_area = 4 * M_PI - fabs(4 * M_PI - (a_area + b_area));
+
+  // Now we choose the result that assumes the smallest amount of error
+  // (min_area in the empty case, and (4*Pi - max_area) in the full case).
+  // However in the case of symmetric difference these two errors may be equal,
+  // meaning that the result is ambiguous.  This happens when both polygons have
+  // area 2*Pi.  Furthermore, this can happen even when the areas are not
+  // exactly 2*Pi due to snapping and area calculation errors.
+  //
+  // To determine whether the result is ambiguous, we compute a rough estimate
+  // of the maximum expected area error (including errors due to snapping),
+  // using the worst-case error bound for a hemisphere defined by 4 vertices.
+  auto edge_snap_radius = op_->options_.snap_function().snap_radius() +
+                          S2::kIntersectionError;  // split_crossing_edges
+  double hemisphere_area_error = 2 * M_PI * edge_snap_radius.radians() +
+                                 40 * DBL_EPSILON;  // GetCurvatureMaxError
+
+  // The following sign is the difference between the error needed for an empty
+  // result and the error needed for a full result.  It is negative if an
+  // empty result is possible, positive if a full result is possible, and zero
+  // if both results are possible.
+  double error_sign = min_area - (4 * M_PI - max_area);
+  if (fabs(error_sign) <= hemisphere_area_error) {
+    // Handling the ambiguous case correctly requires a more sophisticated
+    // algorithm (see below), but we can at least handle the simple cases by
+    // testing whether both input geometries intersect all 6 cube faces.  If
+    // not, then the result is definitely full.
+    if ((a_mask & b_mask) != kAllFacesMask) return true;
+
+    // Otherwise both regions have area 2*Pi and intersect all 6 cube faces.
+    // We choose "empty" in this case under the assumption that it is more
+    // likely that the user is computing the difference between two nearly
+    // identical polygons.
+    //
+    // TODO(ericv): Implement a robust algorithm based on examining the edge
+    // snapping results directly, or alternatively add another heuristic (such
+    // as testing containment of random points, or using a larger bit mask in
+    // the tests above, e.g. a 24-bit mask representing all level 1 cells).
+    return false;
+  }
+  return error_sign > 0;
 }
 
 bool S2BooleanOperation::Impl::AreRegionsIdentical() const {
@@ -2057,13 +2247,12 @@ bool S2BooleanOperation::Impl::Build(S2Error* error) {
   builder_->StartLayer(make_unique<EdgeClippingLayer>(
       &op_->layers_, &input_dimensions_, &input_crossings_));
 
-  // Polygons with no edges are assumed to be empty.  It is the responsibility
-  // of clients to fix this if desired (e.g. S2Polygon has code for this).
-  //
-  // TODO(ericv): Implement a predicate that can determine whether a
-  // degenerate polygon is empty or full based on the input S2ShapeIndexes.
-  // (It is possible to do this 100% robustly, but tricky.)
-  builder_->AddIsFullPolygonPredicate(IsFullPolygonNever);
+  // Add a predicate that decides whether a result with no polygon edges should
+  // be interpreted as the empty polygon or the full polygon.
+  builder_->AddIsFullPolygonPredicate(
+      [this](const S2Builder::Graph& g, S2Error* error) {
+        return IsFullPolygonResult(g, error);
+      });
   (void) BuildOpType(op_->op_type());
   return builder_->Build(error);
 }

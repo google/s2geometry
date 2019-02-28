@@ -50,6 +50,8 @@ using OpType = S2BooleanOperation::OpType;
 using PolygonModel = S2BooleanOperation::PolygonModel;
 using PolylineModel = S2BooleanOperation::PolylineModel;
 
+using DegenerateBoundaries = LaxPolygonLayer::Options::DegenerateBoundaries;
+
 S2Error::Code INDEXES_DO_NOT_MATCH = S2Error::USER_DEFINED_START;
 
 class IndexMatchingLayer : public S2Builder::Layer {
@@ -75,7 +77,7 @@ class IndexMatchingLayer : public S2Builder::Layer {
 string IndexMatchingLayer::ToString(const EdgeVector& edges) {
   string msg;
   for (const auto& edge : edges) {
-    vector<S2Point> vertices = { edge.v0, edge.v1 };
+    vector<S2Point> vertices{edge.v0, edge.v1};
     msg += s2textformat::ToString(vertices);
     msg += "; ";
   }
@@ -1048,31 +1050,35 @@ TEST(S2BooleanOperation, PolylineCrossingRectangleTwice) {
       "# 1:1, 1:0, 1:-1, 0:-1, -1:-1, -1:0, -1:1, 0:1");
 }
 
+// Subtracts a degenerate loop along the 180 degree meridian from the given
+// input geometry, and compares the result to "expected_str".  The inputs should
+// be in the format expected by s2textformat::MakeIndex().
 void TestMeridianSplitting(const char* input_str, const char* expected_str) {
-  MutableS2ShapeIndex index;
-  vector<unique_ptr<S2Builder::Layer>> layers(3);
-  layers[0] = make_unique<s2builderutil::IndexedS2PointVectorLayer>(&index);
-
-  s2builderutil::IndexedS2PolylineVectorLayer::Options polyline_options;
-  polyline_options.set_edge_type(S2Builder::EdgeType::DIRECTED);
-  polyline_options.set_polyline_type(Graph::PolylineType::WALK);
-  polyline_options.set_duplicate_edges(DuplicateEdges::MERGE);
-  layers[1] = make_unique<s2builderutil::IndexedS2PolylineVectorLayer>(
-      &index, polyline_options);
-
-  layers[2] = make_unique<s2builderutil::IndexedLaxPolygonLayer>(&index);
-  S2BooleanOperation op(OpType::DIFFERENCE, std::move(layers));
-
-  MutableS2ShapeIndex meridian;
-  vector<vector<S2Point>> loops {{S2Point(0, 0, -1), S2Point(-1, 0, 0),
-                                  S2Point(0, 0, 1), S2Point(-1, 0, 0)}};
-  meridian.Add(make_unique<S2LaxPolygonShape>(loops));
   auto input = s2textformat::MakeIndexOrDie(input_str);
+  MutableS2ShapeIndex meridian;
+  vector<vector<S2Point>> loops{{S2Point(0, 0, -1), S2Point(-1, 0, 0),
+                                 S2Point(0, 0, 1), S2Point(-1, 0, 0)}};
+  meridian.Add(make_unique<S2LaxPolygonShape>(loops));
+  MutableS2ShapeIndex output;
+  vector<unique_ptr<S2Builder::Layer>> layers(3);
+  layers[0] = make_unique<s2builderutil::IndexedS2PointVectorLayer>(&output);
+  // TODO(ericv): Implement s2builderutil::IndexedS2LaxPolylineVectorLayer.
+  layers[1] = make_unique<s2builderutil::IndexedS2PolylineVectorLayer>(&output);
+  layers[2] = make_unique<s2builderutil::IndexedLaxPolygonLayer>(&output);
+  S2BooleanOperation op(OpType::DIFFERENCE, std::move(layers));
   S2Error error;
-  ASSERT_TRUE(op.Build(*input, meridian, &error));
-  EXPECT_EQ(expected_str, s2textformat::ToString(index));
+  ASSERT_TRUE(op.Build(*input, meridian, &error)) << error;
+  EXPECT_EQ(expected_str, s2textformat::ToString(output));
 }
 
+// This test demonstrated that S2 geometry can easily be transformed such that
+// no edge crosses the 180 degree meridian, as required by formats such as
+// GeoJSON, by simply subtracting a degenerate loop that follows the 180 degree
+// meridian.  This not only splits polylines along the meridian, it also inserts
+// the necessary extra vertices at the north/south poles.  (The only extra step
+// is that the vertices along the 180 degree meridian or at the poles may need
+// to be "doubled" into two vertices, one at longitude 180 and one at longitude
+// -180, in order to match the longitudes of the adjacent vertices.)
 TEST(S2BooleanOperation, MeridianSplitting) {
   // A line along the equator crossing the 180 degree meridian.
   TestMeridianSplitting("# 0:-160, 0:170 #", "# 0:-160, 0:180, 0:170 #");
@@ -1134,14 +1140,14 @@ TEST(S2BooleanOperation, GetCrossedVertexIndexBug) {
   // essential that both subchains make the same choice.)
 
   // S2LatLng coordinates are not accurate enough to reproduce this example.
-  vector<vector<S2Point>> a_loops = {{
+  vector<vector<S2Point>> a_loops{{
       // 51.5131559470858:-0.130381523356724
       {0.62233331065911901, -0.0014161759526823048, 0.78275107466533156},
       // 51.5131892038956:-0.130404244210776
       {0.6223328557578689, -0.0014164217071954736, 0.78275143589379825},
       s2textformat::MakePointOrDie("51.51317:-0.1306")
     }};
-  vector<vector<S2Point>> b_loops = {{
+  vector<vector<S2Point>> b_loops{{
       // 51.5131559705551:-0.13038153939079
       {0.62233331033809591, -0.001416176126110953, 0.78275107492024998},
       // 51.5131559705551:-0.130381539390786
@@ -1168,4 +1174,179 @@ TEST(S2BooleanOperation, GetCrossedVertexIndexBug) {
             "51.52:-0.12, "
             "51.52:-0.14",
             s2textformat::ToString(actual));
+}
+
+// Like the above, except that all arguments are in MakeLaxPolygon() format.
+void ExpectResult(S2BooleanOperation::OpType op_type,
+                        const string& a_str, const string& b_str,
+                        const string& expected_str) {
+  auto a = s2textformat::MakeIndexOrDie(string("# # ") + a_str);
+  auto b = s2textformat::MakeIndexOrDie(string("# # ") + b_str);
+  s2builderutil::LaxPolygonLayer::Options polygon_options;
+  polygon_options.set_degenerate_boundaries(DegenerateBoundaries::DISCARD);
+  S2LaxPolygonShape output;
+  S2BooleanOperation op(
+      op_type,
+      make_unique<s2builderutil::LaxPolygonLayer>(&output, polygon_options),
+      S2BooleanOperation::Options{s2builderutil::IdentitySnapFunction{
+          S1Angle::Degrees(1.1)}});
+  S2Error error;
+  ASSERT_TRUE(op.Build(*a, *b, &error)) << error;
+  EXPECT_EQ(expected_str, s2textformat::ToString(output));
+}
+
+TEST(S2BooleanOperation, FullAndEmptyResults) {
+  // The following constants are all in s2textformat::MakeLaxPolygon() format.
+  string kEmpty = "";
+  string kFull = "full";
+
+  // Two complementary shell/hole pairs, together with alternative shells that
+  // are slightly smaller or larger than the original.
+  string kShell1 = "10:0, 10:10, 20:10";
+  string kHole1 = "10:0, 20:10, 10:10";
+  string kShell1Minus = "11:2, 11:9, 18:9";
+  string kShell1Plus = "9:-2, 9:11, 22:11";
+  string kShell2 = "10:20, 10:30, 20:30";
+  string kHole2 = "10:20, 20:30, 10:30";
+
+  // The northern and southern hemispheres.
+  string kNorthHemi = "0:0, 0:120, 0:-120";
+  string kSouthHemi = "0:0, 0:-120, 0:120";
+  // These edges deviate from kSouthHemi by slightly more than 1 degree.
+  string kSouthHemiPlus = "0.5:0, 0.5:-120, 0.5:120";
+
+  // A shell and hole that cover complementary hemispheres, such that each
+  // hemisphere intersects all six S2 cube faces.  There are also alternative
+  // shells that are slightly smaller or larger than the original.
+  string k6FaceShell1 = "0:-45, 45:0, 45:90, 0:135, -45:180, -45:-90";
+  string k6FaceHole1 = "0:-45, -45:-90, -45:180, 0:135, 45:90, 45:0";
+  string k6FaceShell1Minus = "-1:-45, 44:0, 44:90, -1:135, -46:180, -46:-90";
+  string k6FaceShell1Plus = "1:-45, 46:0, 46:90, 1:135, -44:180, -44:-90";
+
+  // Two complementary shell/hole pairs that are small enough so that they will
+  // disappear when the snap radius chosen above is used.
+  string kAlmostEmpty1 = "2:0, 2:10, 3:0";
+  string kAlmostFull1 = "2:0, 3:0, 2:10";
+  string kAlmostEmpty2 = "4:0, 4:10, 5:0";
+  string kAlmostFull2 = "4:0, 5:0, 4:10";
+
+  // A polygon that intersects all 6 faces such but snaps to an empty polygon.
+  string k6FaceAlmostEmpty1 = k6FaceShell1Minus + "; " + k6FaceHole1;
+
+  // Test empty UNION results.
+  //  - Exact result, no input edges.
+  ExpectResult(OpType::UNION, kEmpty, kEmpty, kEmpty);
+  //  - Empty due to snapping, union does not intersect all 6 cube faces.
+  ExpectResult(OpType::UNION, kAlmostEmpty1, kAlmostEmpty2, kEmpty);
+  //  - Empty due to snapping, union intersects all 6 cube faces.
+  ExpectResult(OpType::UNION, k6FaceAlmostEmpty1, k6FaceAlmostEmpty1, kEmpty);
+
+  // Test full UNION results.
+  //  - Exact result, no input edges.
+  ExpectResult(OpType::UNION, kEmpty, kFull, kFull);
+  ExpectResult(OpType::UNION, kEmpty, kFull, kFull);
+  ExpectResult(OpType::UNION, kFull, kFull, kFull);
+  //  - Exact result, some input edges.
+  ExpectResult(OpType::UNION, kFull, kShell1, kFull);
+  ExpectResult(OpType::UNION, kHole1, kHole2, kFull);
+  ExpectResult(OpType::UNION, kHole1, kShell1, kFull);
+  //  - Full due to snapping, almost complementary polygons.
+  ExpectResult(OpType::UNION, kHole1, kShell1Minus, kFull);
+  ExpectResult(OpType::UNION, k6FaceHole1, k6FaceShell1Minus, kFull);
+
+  // Test empty INTERSECTION results.
+  //  - Exact result, no input edges.
+  ExpectResult(OpType::INTERSECTION, kEmpty, kEmpty, kEmpty);
+  ExpectResult(OpType::INTERSECTION, kEmpty, kFull, kEmpty);
+  ExpectResult(OpType::INTERSECTION, kFull, kEmpty, kEmpty);
+  //  - Exact result, inputs do not both intersect all 6 cube faces.
+  ExpectResult(OpType::INTERSECTION, kEmpty, kHole1, kEmpty);
+  ExpectResult(OpType::INTERSECTION, kShell1, kShell2, kEmpty);
+  ExpectResult(OpType::INTERSECTION, kShell1, kHole1, kEmpty);
+  //  - Exact result, inputs both intersect all 6 cube faces.
+  ExpectResult(OpType::INTERSECTION, k6FaceShell1, k6FaceHole1, kEmpty);
+  //  - Empty due to snapping, inputs do not both intersect all 6 cube faces.
+  ExpectResult(OpType::INTERSECTION, kShell1Plus, kHole1, kEmpty);
+  //  - Empty due to snapping, inputs both intersect all 6 cube faces.
+  ExpectResult(OpType::INTERSECTION, k6FaceShell1Plus, k6FaceHole1, kEmpty);
+
+  // Test full INTERSECTION results.
+  //  - Exact result, no input edges.
+  ExpectResult(OpType::INTERSECTION, kFull, kFull, kFull);
+  //  - Full due to snapping, almost full input polygons.
+  ExpectResult(OpType::INTERSECTION, kAlmostFull1, kAlmostFull2, kFull);
+
+  // Test empty DIFFERENCE results.
+  //  - Exact result, no input edges.
+  ExpectResult(OpType::DIFFERENCE, kEmpty, kEmpty, kEmpty);
+  ExpectResult(OpType::DIFFERENCE, kEmpty, kFull, kEmpty);
+  ExpectResult(OpType::DIFFERENCE, kFull, kFull, kEmpty);
+  //  - Exact result, first input does not intersect all 6 cube faces.
+  ExpectResult(OpType::DIFFERENCE, kEmpty, kShell1, kEmpty);
+  ExpectResult(OpType::DIFFERENCE, kShell1, kFull, kEmpty);
+  ExpectResult(OpType::DIFFERENCE, kShell1, kShell1, kEmpty);
+  ExpectResult(OpType::DIFFERENCE, kShell1, kHole2, kEmpty);
+  //  - Exact result, first input intersects all 6 cube faces.
+  ExpectResult(OpType::DIFFERENCE, k6FaceShell1, k6FaceShell1Plus, kEmpty);
+  //  - Empty due to snapping, first input does not intersect all 6 cube faces.
+  ExpectResult(OpType::DIFFERENCE, kShell1Plus, kShell1, kEmpty);
+  //  - Empty due to snapping, first input intersect all 6 cube faces.
+  ExpectResult(OpType::DIFFERENCE, k6FaceShell1Plus, k6FaceShell1, kEmpty);
+
+  // Test full DIFFERENCE results.
+  //  - Exact result, no input edges.
+  ExpectResult(OpType::DIFFERENCE, kFull, kEmpty, kFull);
+  //  - Full due to snapping, almost full/empty input polygons.
+  ExpectResult(OpType::DIFFERENCE, kAlmostFull1, kAlmostEmpty2, kFull);
+
+  // Test empty SYMMETRIC_DIFFERENCE results.
+  //  - Exact result, no input edges.
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kEmpty, kEmpty, kEmpty);
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kFull, kFull, kEmpty);
+  //  - Exact result, union does not intersect all 6 cube faces.
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kShell1, kShell1, kEmpty);
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kNorthHemi, kNorthHemi, kEmpty);
+  //  - Exact result, union intersects all 6 cube faces.  This case is only
+  //    handled correctly due to the kBiasTowardsEmpty heuristic.
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1, k6FaceShell1,
+               kEmpty);
+  //  - Empty due to snapping, union does not intersect all 6 cube faces.
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kShell1Plus, kShell1, kEmpty);
+  //  - Empty due to snapping, union intersects all 6 cube faces.  This case is
+  //    only handled correctly due to the kBiasTowardsEmpty heuristic.
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Plus, k6FaceShell1,
+               kEmpty);
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Minus, k6FaceShell1,
+               kEmpty);
+
+  // Test full SYMMETRIC_DIFFERENCE results.
+  //  - Exact result, no input edges.
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kFull, kEmpty, kFull);
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kEmpty, kFull, kFull);
+  //  - Exact result, complementary input polygons.
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kShell1, kHole1, kFull);
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kAlmostEmpty1, kAlmostFull1,
+               kFull);
+  //  - Full due to snapping, almost complementary input polygons.
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kShell1Plus, kHole1, kFull);
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kAlmostFull1, kAlmostEmpty2,
+               kFull);
+  //  - Exact result, complementary hemispheres, at least one input does not
+  //    intersect all 6 cube faces.
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kNorthHemi, kSouthHemi, kFull);
+  //  - Exact result, almost complementary hemispheres, at least one input does
+  //    not intersect all 6 cube faces.
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, kNorthHemi, kSouthHemiPlus, kFull);
+
+  // TODO(ericv): The following case is not currently implemented.
+  //  - Full result, complementary (to within the snap radius) input polygons
+  //    each with an area of approximately 2*Pi, and both polygons intersect all
+  //    6 cube faces.
+#if 0
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1, k6FaceHole1, kFull);
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Plus, k6FaceHole1,
+               kFull);
+  ExpectResult(OpType::SYMMETRIC_DIFFERENCE, k6FaceShell1Minus, k6FaceHole1,
+               kFull);
+#endif
 }

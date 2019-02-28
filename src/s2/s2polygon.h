@@ -363,21 +363,38 @@ class S2Polygon final : public S2Region {
   // and edges are sufficiently well-separated first.  In particular you need
   // to use a snap function whose min_edge_vertex_separation() is at least
   // twice the maximum distance that a vertex can move when rounded.
+  //
+  // The versions of these functions with an S2Error argument return true on
+  // success and set "error" appropriately otherwise.  However note that these
+  // functions should never return an error provided that both input polygons
+  // are valid (i.e., IsValid() returns true).
   void InitToIntersection(const S2Polygon* a, const S2Polygon* b);
   void InitToIntersection(const S2Polygon& a, const S2Polygon& b,
                           const S2Builder::SnapFunction& snap_function);
+  bool InitToIntersection(const S2Polygon& a, const S2Polygon& b,
+                          const S2Builder::SnapFunction& snap_function,
+                          S2Error *error);
 
   void InitToUnion(const S2Polygon* a, const S2Polygon* b);
   void InitToUnion(const S2Polygon& a, const S2Polygon& b,
                    const S2Builder::SnapFunction& snap_function);
+  bool InitToUnion(const S2Polygon& a, const S2Polygon& b,
+                   const S2Builder::SnapFunction& snap_function,
+                   S2Error *error);
 
   void InitToDifference(const S2Polygon* a, const S2Polygon* b);
   void InitToDifference(const S2Polygon& a, const S2Polygon& b,
                         const S2Builder::SnapFunction& snap_function);
+  bool InitToDifference(const S2Polygon& a, const S2Polygon& b,
+                        const S2Builder::SnapFunction& snap_function,
+                        S2Error *error);
 
   void InitToSymmetricDifference(const S2Polygon* a, const S2Polygon* b);
   void InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b,
                                  const S2Builder::SnapFunction& snap_function);
+  bool InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b,
+                                 const S2Builder::SnapFunction& snap_function,
+                                 S2Error *error);
 
   // Convenience functions that use the IdentitySnapFunction with the given
   // snap radius.  TODO(ericv): Consider deprecating these and require the
@@ -787,11 +804,6 @@ class S2Polygon final : public S2Region {
   // The index contains a single S2Polygon::Shape object.
   const MutableS2ShapeIndex& index() const { return index_; }
 
-  // Initializes the polygon to the result of the given boolean operation.
-  void InitToOperation(S2BooleanOperation::OpType op_type,
-                       const S2Builder::SnapFunction& snap_function,
-                       const S2Polygon& a, const S2Polygon& b, S2Error* error);
-
  private:
   friend class S2Stats;
   friend class PolygonOperation;
@@ -824,8 +836,15 @@ class S2Polygon final : public S2Region {
   // indexing structures need to be cleared since they become invalid.
   void ClearIndex();
 
-  // Initializes the polygon to the result of the given boolean operation.
+  // Initializes the polygon to the result of the given boolean operation,
+  // returning an error on failure.
   bool InitToOperation(S2BooleanOperation::OpType op_type,
+                       const S2Builder::SnapFunction& snap_function,
+                       const S2Polygon& a, const S2Polygon& b, S2Error* error);
+
+  // Initializes the polygon to the result of the given boolean operation,
+  // logging an error on failure (fatal in debug builds).
+  void InitToOperation(S2BooleanOperation::OpType op_type,
                        const S2Builder::SnapFunction& snap_function,
                        const S2Polygon& a, const S2Polygon& b);
 
