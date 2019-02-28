@@ -44,8 +44,6 @@
 //   void *ptr = mmap(...);
 //   ...
 //   #endif  // ABSL_HAVE_MMAP
-//
-// NOTE FOR GOOGLERS:
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_CONFIG_H_
 #define S2_THIRD_PARTY_ABSL_BASE_CONFIG_H_

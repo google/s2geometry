@@ -16,9 +16,6 @@
 #ifndef S2_BASE_PORT_H_
 #define S2_BASE_PORT_H_
 
-// Users should still #include "base/port.h".  Code in //third_party/absl/base
-// is not visible for general use.
-//
 // This file contains things that are not used in third_party/absl but needed by
 // - Platform specific requirement
 //   - MSVC
@@ -39,7 +36,7 @@
 
 #include "s2/third_party/absl/base/config.h"
 #include "s2/third_party/absl/base/integral_types.h"
-#include "s2/third_party/absl/base/port.h"  // IWYU pragma: export
+#include "s2/third_party/absl/base/port.h"
 
 #ifdef SWIG
 %include "third_party/absl/base/port.h"

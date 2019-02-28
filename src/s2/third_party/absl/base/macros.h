@@ -24,10 +24,6 @@
 // This code is compiled directly on many platforms, including client
 // platforms like Windows, Mac, and embedded systems.  Before making
 // any changes here, make sure that you're not breaking any platforms.
-//
-// NOTE FOR GOOGLERS:
-//
-// IWYU pragma: private, include "base/macros.h"
 
 #ifndef S2_THIRD_PARTY_ABSL_BASE_MACROS_H_
 #define S2_THIRD_PARTY_ABSL_BASE_MACROS_H_
