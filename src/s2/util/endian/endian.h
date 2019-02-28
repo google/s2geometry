@@ -27,9 +27,10 @@
 #include <cassert>
 #include <type_traits>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
+#include "s2/base/port.h"
 #include "s2/third_party/absl/base/casts.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/absl/numeric/int128.h"
 
@@ -60,7 +61,7 @@ inline uint64 gbswap_64(uint64 host_int) {
   if (__builtin_constant_p(host_int)) {
     return __bswap_constant_64(host_int);
   } else {
-    register uint64 result;
+    uint64 result;
     __asm__("bswap %0" : "=r" (result) : "0" (host_int));
     return result;
   }

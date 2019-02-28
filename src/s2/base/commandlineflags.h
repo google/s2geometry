@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc. All Rights Reserved.
+// Copyright Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 
 #include <string>
 
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 
 #define DEFINE_bool(name, default_value, description) \
   bool FLAGS_##name = default_value

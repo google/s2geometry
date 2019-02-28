@@ -138,6 +138,31 @@ class PyWrapS2TestCase(unittest.TestCase):
     cell_union.Init([london_level_10.id()])
     self.assertAlmostEqual(cell_union.ExactArea(), polygon.GetArea(), places=10)
 
+  def testS2PolygonGetOverlapFractions(self):
+    # Matches S2Polygon, OverlapFractions test from cs/s2polygon_test.cc
+    a = s2.S2Polygon()
+    b = s2.S2Polygon()
+    r1, r2 = s2.S2Polygon.GetOverlapFractions(a, b)
+    self.assertAlmostEqual(1.0, r1)
+    self.assertAlmostEqual(1.0, r2)
+
+    def verts2loop(vs):
+      loop = s2.S2Loop()
+      loop.Init([s2.S2LatLng.FromDegrees(*v).ToPoint() for v in vs])
+      return loop
+
+    loop1verts = [(-10, 10), (0, 10), (0, -10), (-10, -10), (-10, 0)]
+    b = s2.S2Polygon(verts2loop(loop1verts))
+    r1, r2 = s2.S2Polygon.GetOverlapFractions(a, b)
+    self.assertAlmostEqual(1.0, r1)
+    self.assertAlmostEqual(0.0, r2)
+
+    loop2verts = [(-10, 0), (10, 0), (10, -10), (-10, -10)]
+    a = s2.S2Polygon(verts2loop(loop2verts))
+    r1, r2 = s2.S2Polygon.GetOverlapFractions(a, b)
+    self.assertAlmostEqual(0.5, r1)
+    self.assertAlmostEqual(0.5, r2)
+
   def testGetS2LatLngVertexIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
     polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId(london)))
@@ -341,6 +366,81 @@ class PyWrapS2TestCase(unittest.TestCase):
     rect_bound = cell_union.GetRectBound()
     self.assertTrue(rect_bound.Contains(inside))
     self.assertFalse(rect_bound.Contains(outside))
+
+  def testS2CellUnionEmpty(self):
+    empty_cell_union = s2.S2CellUnion()
+    self.assertTrue(empty_cell_union.empty())
+
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8)
+    cell_union = s2.S2CellUnion()
+    cell_union.Init([cell_id.id()])
+    self.assertFalse(cell_union.empty())
+
+  def testS2CellUnionIntersectionWithS2CellUnion(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0))
+    cell_union = s2.S2CellUnion()
+    cell_union.Init([cell_id.id()])
+
+    # No intersection.
+    outside_cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(5.0, 6.0))
+    outside_cell_union = s2.S2CellUnion()
+    outside_cell_union.Init([outside_cell_id.id()])
+    empty_intersection = cell_union.Intersection(outside_cell_union)
+    self.assertTrue(empty_intersection.empty())
+
+    # Complete overlap.
+    self_intersection = cell_union.Intersection(cell_union)
+    self.assertTrue(self_intersection.Contains(cell_union))
+    self.assertTrue(cell_union.Contains(self_intersection))
+
+    # Some intersection.
+    joint_cell_union = s2.S2CellUnion()
+    joint_cell_union.Init([cell_id.id(), outside_cell_id.id()])
+    outside_intersection = joint_cell_union.Intersection(outside_cell_union)
+    self.assertTrue(outside_intersection.Contains(outside_cell_id))
+    self.assertFalse(outside_intersection.Contains(cell_id))
+
+  def testS2CellUnionIntersectionWithS2CellId(self):
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0))
+    cell_union = s2.S2CellUnion()
+    cell_union.Init([cell_id.id()])
+
+    # No intersection.
+    outside_cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(4.0, 5.0))
+    empty_intersection = cell_union.Intersection(outside_cell_id)
+    self.assertTrue(empty_intersection.empty())
+
+    # Complete overlap.
+    intersection = cell_union.Intersection(cell_id)
+    self.assertTrue(intersection.Contains(cell_id))
+
+    # Some intersection.
+    joint_cell_union = s2.S2CellUnion()
+    joint_cell_union.Init([cell_id.id(), outside_cell_id.id()])
+    outside_intersection = joint_cell_union.Intersection(outside_cell_id)
+    self.assertTrue(outside_intersection.Contains(outside_cell_id))
+    self.assertFalse(outside_intersection.Contains(cell_id))
+
+  def testS2CellUnionIsNormalized(self):
+    empty_cell_union = s2.S2CellUnion()
+    self.assertTrue(empty_cell_union.IsNormalized())
+
+    london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
+    london_cell_id = s2.S2CellId(london)
+    normalized_union = s2.S2CellUnion()
+    normalized_union.Init([london_cell_id.id()])
+    self.assertTrue(normalized_union.IsNormalized())
+
+  def testS2CellUnionNormalizeS2CellUnion(self):
+    empty_cell_union = s2.S2CellUnion()
+    empty_cell_union.NormalizeS2CellUnion()
+    self.assertTrue(empty_cell_union.IsNormalized())
+
+    cell_id = s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8)
+    cell_union = s2.S2CellUnion()
+    cell_union.Init([cell_id.id()])
+    cell_union.NormalizeS2CellUnion()
+    self.assertTrue(cell_union.IsNormalized())
 
   def testS2LoopRegion(self):
     cell = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))

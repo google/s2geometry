@@ -23,7 +23,7 @@
 #include <ostream>
 #include <type_traits>
 
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2point.h"
 #include "s2/util/math/mathutil.h"
@@ -111,7 +111,9 @@ class S1Angle {
   // Return the angle between two points, which is also equal to the distance
   // between these points on the unit sphere.  The points do not need to be
   // normalized.  This function has a maximum error of 3.25 * DBL_EPSILON (or
-  // 2.5 * DBL_EPSILON for angles up to 1 radian).
+  // 2.5 * DBL_EPSILON for angles up to 1 radian). If either point is
+  // zero-length (e.g. an uninitialized S2Point), or almost zero-length, the
+  // resulting angle will be zero.
   S1Angle(const S2Point& x, const S2Point& y);
 
   // Like the constructor above, but return the angle (i.e., distance) between

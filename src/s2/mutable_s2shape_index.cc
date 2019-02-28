@@ -856,7 +856,7 @@ inline void MutableS2ShapeIndex::AddFaceEdge(
   // Otherwise we simply clip the edge to all six faces.
   for (int face = 0; face < 6; ++face) {
     if (S2::ClipToPaddedFace(edge->edge.v0, edge->edge.v1, face,
-                                     kCellPadding, &edge->a, &edge->b)) {
+                             kCellPadding, &edge->a, &edge->b)) {
       all_edges[face].push_back(*edge);
     }
   }
@@ -1329,9 +1329,8 @@ void MutableS2ShapeIndex::AbsorbIndexCell(const S2PaddedCell& pcell,
       edge.edge = shape->edge(e);
       edge.max_level = GetEdgeMaxLevel(edge.edge);
       if (edge.has_interior) tracker->TestEdge(shape_id, edge.edge);
-      if (!S2::ClipToPaddedFace(edge.edge.v0, edge.edge.v1,
-                                        pcell.id().face(), kCellPadding,
-                                        &edge.a, &edge.b)) {
+      if (!S2::ClipToPaddedFace(edge.edge.v0, edge.edge.v1, pcell.id().face(),
+                                kCellPadding, &edge.a, &edge.b)) {
         S2_LOG(DFATAL) << "Invariant failure in MutableS2ShapeIndex";
       }
       face_edges->push_back(edge);

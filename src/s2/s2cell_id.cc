@@ -25,12 +25,12 @@
 #include <mutex>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/r1interval.h"
 #include "s2/s2coords.h"
 #include "s2/s2latlng.h"
 #include "s2/third_party/absl/base/casts.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 
 using absl::StrCat;

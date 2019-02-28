@@ -40,6 +40,7 @@ S2LaxPolygonShape::S2LaxPolygonShape(const S2Polygon& polygon) {
 
 void S2LaxPolygonShape::Init(const vector<S2LaxPolygonShape::Loop>& loops) {
   vector<Span<const S2Point>> spans;
+  spans.reserve(loops.size());
   for (const S2LaxPolygonShape::Loop& loop : loops) {
     spans.emplace_back(loop);
   }

@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc. All Rights Reserved.
+// Copyright Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -195,6 +195,7 @@ TEST(ToString, S2ShapeIndex) {
   TestS2ShapeIndex("# # 0:0, 0:1");
   TestS2ShapeIndex("# # 0:0, 0:1, 1:0");
   TestS2ShapeIndex("# # 0:0, 0:1, 1:0; 2:2");
+  TestS2ShapeIndex("# # full");
 }
 
 TEST(MakePoint, ValidInput) {

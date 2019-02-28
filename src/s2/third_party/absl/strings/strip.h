@@ -88,44 +88,6 @@ ABSL_MUST_USE_RESULT inline absl::string_view StripSuffix(
 }  // namespace absl
 
 
-// Returns a copy of the input string 'str' with the given 'prefix' removed. If
-// the prefix doesn't match, returns a copy of the original string.
-//
-// The "Try" version stores the stripped string in the 'result' out-param and
-// returns true iff the prefix was found and removed. It is safe for 'result' to
-// point back to the input string.
-//
-// See also absl::ConsumePrefix().
-inline string StripPrefixString(absl::string_view str,
-                                absl::string_view prefix) {
-  return string(absl::StripPrefix(str, prefix));
-}
-inline bool TryStripPrefixString(absl::string_view str,
-                                 absl::string_view prefix, string* result) {
-  bool res = absl::ConsumePrefix(&str, prefix);
-  result->assign(str.begin(), str.end());
-  return res;
-}
-
-// Returns a copy of the input string 'str' with the given 'suffix' removed. If
-// the suffix doesn't match, returns a copy of the original string.
-//
-// The "Try" version stores the stripped string in the 'result' out-param and
-// returns true iff the suffix was found and removed. It is safe for 'result' to
-// point back to the input string.
-//
-// See also absl::ConsumeSuffix().
-inline string StripSuffixString(absl::string_view str,
-                                absl::string_view suffix) {
-  return string(absl::StripSuffix(str, suffix));
-}
-inline bool TryStripSuffixString(absl::string_view str,
-                                 absl::string_view suffix, string* result) {
-  bool res = absl::ConsumeSuffix(&str, suffix);
-  result->assign(str.begin(), str.end());
-  return res;
-}
-
 // Replaces any of the *bytes* in 'remove' with the *byte* 'replace_with'.
 //
 // *Warning*: This function operates on *bytes* in the remove string.

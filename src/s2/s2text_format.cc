@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc. All Rights Reserved.
+// Copyright Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -483,7 +483,12 @@ string ToString(const S2ShapeIndex& index) {
       for (int i = 0; i < shape->num_chains(); ++i, ++count) {
         if (i > 0) out += (dim == 2) ? "; " : " | ";
         S2Shape::Chain chain = shape->chain(i);
-        AppendVertex(shape->edge(chain.start).v0, &out);
+        if (chain.length == 0) {
+          S2_DCHECK_EQ(dim, 2);
+          out += "full";
+        } else {
+          AppendVertex(shape->edge(chain.start).v0, &out);
+        }
         int limit = chain.start + chain.length;
         if (dim != 1) --limit;
         for (int e = chain.start; e < limit; ++e) {

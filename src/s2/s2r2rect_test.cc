@@ -22,6 +22,7 @@
 
 #include <gtest/gtest.h>
 
+#include "s2/base/integral_types.h"
 #include "s2/r1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -31,7 +32,6 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 
 using absl::StrCat;

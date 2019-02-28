@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
@@ -42,7 +43,6 @@
 #include "s2/s2region.h"
 #include "s2/s2text_format.h"
 #include "s2/strings/serialize.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/util/math/matrix3x3.h"
@@ -148,6 +148,7 @@ vector<S2Point> S2Testing::MakeRegularPoints(const S2Point& center,
   unique_ptr<S2Loop> loop(
       S2Loop::MakeRegularLoop(center, radius, num_vertices));
   vector<S2Point> points;
+  points.reserve(loop->num_vertices());
   for (int i = 0; i < loop->num_vertices(); i++) {
     points.push_back(loop->vertex(i));
   }
@@ -185,6 +186,25 @@ void Dump(const S2Polyline& polyline) {
 
 void Dump(const S2Polygon& polygon) {
   std::cout << "S2Polygon: " << s2textformat::ToString(polygon) << std::endl;
+}
+
+// Outputs the contents of an S2ShapeIndex in human-readable form.
+void Dump(const S2ShapeIndex& index) {
+  std::cout << "S2ShapeIndex: " << &index << std::endl;
+  for (S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
+       !it.done(); it.Next()) {
+    std::cout << "  id: " << it.id().ToString() << std::endl;
+    const S2ShapeIndexCell& cell = it.cell();
+    for (int s = 0; s < cell.num_clipped(); ++s) {
+      const S2ClippedShape& clipped = cell.clipped(s);
+      std::cout << "    shape_id " << clipped.shape_id() << ": ";
+      for (int e = 0; e < clipped.num_edges(); ++e) {
+        if (e > 0) std::cout << ", ";
+        std::cout << clipped.edge(e);
+      }
+      std::cout << std::endl;
+    }
+  }
 }
 
 S2Point S2Testing::RandomPoint() {

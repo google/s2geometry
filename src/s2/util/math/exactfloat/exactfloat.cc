@@ -27,8 +27,8 @@
 #include <openssl/bn.h>
 #include <openssl/crypto.h>  // for OPENSSL_free
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/fixed_array.h"
 
@@ -136,7 +136,7 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
   // performance penalty.
   absl::FixedArray<unsigned char> bytes(BN_num_bytes(bn));
   // "le" indicates little endian.
-  S2_DCHECK_EQ(BN_bn2lebinpad(bn, bytes.data(), bytes.size()), bytes.size());
+  S2_CHECK_EQ(BN_bn2lebinpad(bn, bytes.data(), bytes.size()), bytes.size());
 
   int count = 0;
   for (unsigned char c : bytes) {
@@ -252,8 +252,10 @@ double ExactFloat::ToDoubleHelper() const {
   S2_DCHECK_LE(BN_num_bits(bn_.get()), kDoubleMantissaBits);
   if (!is_normal()) {
     if (is_zero()) return copysign(0, sign_);
-    if (is_inf()) return copysign(INFINITY, sign_);
-    return copysign(NAN, sign_);
+    if (is_inf()) {
+      return std::copysign(std::numeric_limits<double>::infinity(), sign_);
+    }
+    return std::copysign(std::numeric_limits<double>::quiet_NaN(), sign_);
   }
   uint64 d_mantissa = BN_ext_get_uint64(bn_.get());
   // We rely on ldexp() to handle overflow and underflow.  (It will return a

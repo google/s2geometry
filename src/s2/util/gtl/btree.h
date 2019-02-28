@@ -47,7 +47,7 @@
 // PERFORMANCE
 //
 // See the latest benchmark results at:
-// https://paste.googleplex.com/5876428872613888
+// https://paste.googleplex.com/5549632792821760
 //
 
 #ifndef S2_UTIL_GTL_BTREE_H_
@@ -65,8 +65,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "s2/third_party/absl/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/internal/compressed_tuple.h"
 #include "s2/third_party/absl/container/internal/container_memory.h"
@@ -270,7 +269,9 @@ struct common_params {
   // This is an integral type large enough to hold as many
   // ValueSize-values as will fit a node of TargetNodeSize bytes.
   using node_count_type =
-      absl::conditional_t<kNodeValueSpace / ValueSize >= 256, uint16, uint8>;
+      absl::conditional_t<(kNodeValueSpace / ValueSize >
+                           std::numeric_limits<uint8>::max()),
+                          uint16, uint8>;  // NOLINT
   static_assert(kNodeValueSpace / ValueSize <=
                     std::numeric_limits<uint16>::max(),
                 "uint16 is not big enough for node_count_type.");
@@ -319,8 +320,8 @@ struct set_params
   using mapped_type = void;
   using value_type = Key;
   using mutable_value_type = Key;
-  // This type implements the necessary functions from the subtle::slot_type
-  // interface.
+  // This type implements the necessary functions from the
+  // absl::container_internal::slot_type interface.
   struct slot_type {
     value_type value;
 
@@ -433,20 +434,29 @@ class btree_node {
   //
   //   // The position of the node in the node's parent.
   //   field_type position;
-  //   // The count of the number of values in the node.
+  //   // The index of the first populated value in `values`.
+  //   // TODO(user): right now, `start` is always 0. Update insertion/merge
+  //   // logic to allow for floating storage within nodes.
+  //   field_type start;
+  //   // The count of the number of populated values in the node.
   //   field_type count;
-  //   // The maximum number of values the node can hold.
+  //   // The maximum number of values the node can hold. This is an integer in
+  //   // [1, kNodeValues] for root leaf nodes, kNodeValues for non-root leaf
+  //   // nodes, and kInternalNodeMaxCount (as a sentinel value) for internal
+  //   // nodes (even though there are still kNodeValues values in the node).
+  //   // TODO(user): make max_count use only 4 bits and record log2(capacity)
+  //   // to free extra bits for is_root, etc.
   //   field_type max_count;
-  //   // An enum indicating whether the node is a leaf, internal, or a root.
-  //   NodeType type;
   //
-  //   // The array of values. Only the first `count` of these values have been
-  //   // constructed and are valid.
-  //   slot_type values[kNodeValues];
+  //   // The array of values. The capacity is `max_count` for leaf nodes and
+  //   // kNodeValues for internal nodes. Only the values in
+  //   // [start, start + count) have been initialized and are valid.
+  //   slot_type values[max_count];
   //
   //   // The array of child pointers. The keys in children[i] are all less
   //   // than key(i). The keys in children[i + 1] are all greater than key(i).
-  //   // There are always count + 1 children. Invalid for leaf nodes.
+  //   // There are 0 children for leaf nodes and kNodeValues + 1 children for
+  //   // internal nodes.
   //   btree_node *children[kNodeValues + 1];
   //
   // This class is never constructed or deleted. Instead, pointers to the layout
@@ -458,18 +468,10 @@ class btree_node {
   btree_node &operator=(btree_node const &) = delete;
 
  private:
-  // This is the type of node allocation, which determines which fields in the
-  // node layout are valid.
-  enum NodeType : int8 {
-    kLeaf,
-    kInternal,
-  };
-
-  using layout_type =
-      Layout<btree_node *, field_type, NodeType, slot_type, btree_node *>;
+  using layout_type = Layout<btree_node *, field_type, slot_type, btree_node *>;
   constexpr static size_type SizeWithNValues(size_type n) {
     return layout_type(/*parent*/ 1,
-                       /*position, count, max_count*/ 3, /*type*/ 1,
+                       /*position, start, count, max_count*/ 4,
                        /*values*/ n,
                        /*children*/ 0)
         .AllocSize();
@@ -500,18 +502,22 @@ class btree_node {
 
     kExactMatch = 1 << 30,
     kMatchMask = kExactMatch - 1,
+
+    // The node is internal (i.e. is not a leaf node) if and only if `max_count`
+    // has this value.
+    kInternalNodeMaxCount = 0,
   };
 
   // Leaves can have less than kNodeValues values.
   constexpr static layout_type LeafLayout(const int max_values = kNodeValues) {
     return layout_type(/*parent*/ 1,
-                       /*position, count, max_count*/ 3, /*type*/ 1,
+                       /*position, start, count, max_count*/ 4,
                        /*values*/ max_values,
                        /*children*/ 0);
   }
   constexpr static layout_type InternalLayout() {
     return layout_type(/*parent*/ 1,
-                       /*position, count, max_count*/ 3, /*type*/ 1,
+                       /*position, start, count, max_count*/ 4,
                        /*values*/ kNodeValues,
                        /*children*/ kNodeValues + 1);
   }
@@ -532,37 +538,44 @@ class btree_node {
   template <size_type N>
   inline typename std::tuple_element<N, typename layout_type::ElementTypes>::type *GetField() {
     // We assert that we don't read from values that aren't there.
-    assert(N < 4 || !leaf());
+    assert(N < 3 || !leaf());
     return InternalLayout().template Pointer<N>(reinterpret_cast<char *>(this));
   }
   template <size_type N>
-  inline const typename std::tuple_element<N, typename layout_type::ElementTypes>::type *GetField() const {
-    assert(N < 4 || !leaf());
+  inline const typename layout_type::template ElementType<N> *GetField() const {
+    assert(N < 3 || !leaf());
     return InternalLayout().template Pointer<N>(
         reinterpret_cast<const char *>(this));
   }
-  NodeType type() const { return *GetField<2>(); }
-  // This method is only called by the node init methods.
-  void set_type(NodeType type) { *GetField<2>() = type; }
   void set_parent(btree_node *p) { *GetField<0>() = p; }
-  field_type &mutable_count() { return GetField<1>()[1]; }
-  slot_type *slot(int i) { return &GetField<3>()[i]; }
-  const slot_type *slot(int i) const { return &GetField<3>()[i]; }
+  field_type &mutable_count() { return GetField<1>()[2]; }
+  slot_type *slot(int i) { return &GetField<2>()[i]; }
+  const slot_type *slot(int i) const { return &GetField<2>()[i]; }
   void set_position(field_type v) { GetField<1>()[0] = v; }
-  void set_count(field_type v) { GetField<1>()[1] = v; }
-  void set_max_count(field_type v) { GetField<1>()[2] = v; }
+  void set_start(field_type v) { GetField<1>()[1] = v; }
+  void set_count(field_type v) { GetField<1>()[2] = v; }
+  // This method is only called by the node init methods.
+  void set_max_count(field_type v) { GetField<1>()[3] = v; }
 
  public:
   // Whether this is a leaf node or not. This value doesn't change after the
   // node is created.
-  bool leaf() const { return *GetField<2>() == NodeType::kLeaf; }
+  bool leaf() const { return GetField<1>()[3] != kInternalNodeMaxCount; }
 
   // Getter for the position of this node in its parent.
   field_type position() const { return GetField<1>()[0]; }
 
+  // Getter for the offset of the first value in the `values` array.
+  field_type start() const { return GetField<1>()[1]; }
+
   // Getters for the number of values stored in this node.
-  field_type count() const { return GetField<1>()[1]; }
-  field_type max_count() const { return GetField<1>()[2]; }
+  field_type count() const { return GetField<1>()[2]; }
+  field_type max_count() const {
+    // Internal nodes have max_count==kInternalNodeMaxCount.
+    // Leaf nodes have max_count in [1, kNodeValues].
+    const field_type max_count = GetField<1>()[3];
+    return max_count == kInternalNodeMaxCount ? kNodeValues : max_count;
+  }
 
   // Getter for the parent of this node.
   btree_node *parent() const { return *GetField<0>(); }
@@ -581,11 +594,13 @@ class btree_node {
   const_reference value(int i) const { return slot(i)->value; }
 
   // Getters/setter for the child at position i in the node.
-  btree_node *child(int i) const { return GetField<4>()[i]; }
-  btree_node *&mutable_child(int i) { return GetField<4>()[i]; }
-  void clear_child(int i) { subtle::SanitizerPoisonObject(&mutable_child(i)); }
+  btree_node *child(int i) const { return GetField<3>()[i]; }
+  btree_node *&mutable_child(int i) { return GetField<3>()[i]; }
+  void clear_child(int i) {
+    absl::container_internal::SanitizerPoisonObject(&mutable_child(i));
+  }
   void set_child(int i, btree_node *c) {
-    subtle::SanitizerUnpoisonObject(&mutable_child(i));
+    absl::container_internal::SanitizerUnpoisonObject(&mutable_child(i));
     mutable_child(i) = c;
     c->set_position(i);
   }
@@ -738,17 +753,19 @@ class btree_node {
                                int max_count) {
     n->set_parent(parent);
     n->set_position(0);
-    n->set_max_count(max_count);
+    n->set_start(0);
     n->set_count(0);
-    n->set_type(NodeType::kLeaf);
-    subtle::SanitizerPoisonMemoryRegion(n->slot(0),
-                                        max_count * sizeof(slot_type));
+    n->set_max_count(max_count);
+    absl::container_internal::SanitizerPoisonMemoryRegion(
+        n->slot(0), max_count * sizeof(slot_type));
     return n;
   }
   static btree_node *init_internal(btree_node *n, btree_node *parent) {
     init_leaf(n, parent, kNodeValues);
-    n->set_type(NodeType::kInternal);
-    subtle::SanitizerPoisonMemoryRegion(
+    // Set `max_count` to a sentinel value to indicate that this node is
+    // internal.
+    n->set_max_count(kInternalNodeMaxCount);
+    absl::container_internal::SanitizerPoisonMemoryRegion(
         &n->mutable_child(0), (kNodeValues + 1) * sizeof(btree_node *));
     return n;
   }
@@ -767,12 +784,12 @@ class btree_node {
  private:
   template <typename... Args>
   void value_init(const size_type i, allocator_type *alloc, Args &&... args) {
-    subtle::SanitizerUnpoisonObject(slot(i));
+    absl::container_internal::SanitizerUnpoisonObject(slot(i));
     slot_type::construct(alloc, slot(i), std::forward<Args>(args)...);
   }
   void value_destroy(const size_type i, allocator_type *alloc) {
     slot_type::destroy(alloc, slot(i));
-    subtle::SanitizerPoisonObject(slot(i));
+    absl::container_internal::SanitizerPoisonObject(slot(i));
   }
 
   // Move n values starting at value i in this node into the values starting at
@@ -780,7 +797,8 @@ class btree_node {
   void uninitialized_move_n(const size_type n, const size_type i,
                             const size_type j, btree_node *x,
                             allocator_type *alloc) {
-    subtle::SanitizerUnpoisonMemoryRegion(x->slot(j), n * sizeof(slot_type));
+    absl::container_internal::SanitizerUnpoisonMemoryRegion(
+        x->slot(j), n * sizeof(slot_type));
     for (slot_type *src = slot(i), *end = src + n, *dest = x->slot(j);
          src != end; ++src, ++dest) {
       slot_type::construct(alloc, dest, src);
@@ -797,6 +815,7 @@ class btree_node {
 
   template <typename P>
   friend class btree;
+  friend class BtreeNodePeer;
 };
 
 template <typename Node, typename Reference, typename Pointer>
@@ -1298,7 +1317,8 @@ class btree {
   // allocator.
   node_type *allocate(const size_type size) {
     return reinterpret_cast<node_type *>(
-        subtle::Allocate<node_type::Alignment()>(mutable_allocator(), size));
+        absl::container_internal::Allocate<node_type::Alignment()>(
+            mutable_allocator(), size));
   }
 
   // Node creation/deletion routines.
@@ -1317,7 +1337,8 @@ class btree {
 
   // Deallocates a node of a certain size in bytes using the allocator.
   void deallocate(const size_type size, node_type *node) {
-    subtle::Deallocate<node_type::Alignment()>(mutable_allocator(), node, size);
+    absl::container_internal::Deallocate<node_type::Alignment()>(
+        mutable_allocator(), node, size);
   }
 
   void delete_internal_node(node_type *node) {
@@ -1630,6 +1651,7 @@ template <typename P>
 void btree_node<P>::split(const int insert_position, btree_node *dest,
                           allocator_type *alloc) {
   assert(dest->count() == 0);
+  assert(max_count() == kNodeValues);
 
   // We bias the split based on the position being inserted. If we're
   // inserting at the beginning of the left node then bias the split to put
@@ -1637,7 +1659,7 @@ void btree_node<P>::split(const int insert_position, btree_node *dest,
   // right node then bias the split to put more values on the left node.
   if (insert_position == 0) {
     dest->set_count(count() - 1);
-  } else if (insert_position == max_count()) {
+  } else if (insert_position == kNodeValues) {
     dest->set_count(0);
   } else {
     dest->set_count(count() / 2);
@@ -2053,15 +2075,15 @@ void btree<P>::swap(btree &x) {
 template <typename P>
 void btree<P>::verify() const {
   if (root() != nullptr) {
-    S2_CHECK_EQ(size(), internal_verify(root(), nullptr, nullptr));
-    S2_CHECK_EQ(leftmost(), (++const_iterator(root(), -1)).node);
-    S2_CHECK_EQ(rightmost_, (--const_iterator(root(), root()->count())).node);
-    S2_CHECK(leftmost()->leaf());
-    S2_CHECK(rightmost_->leaf());
+    assert(size() == internal_verify(root(), nullptr, nullptr));
+    assert(leftmost() == (++const_iterator(root(), -1)).node);
+    assert(rightmost_ == (--const_iterator(root(), root()->count())).node);
+    assert(leftmost()->leaf());
+    assert(rightmost_->leaf());
   } else {
-    S2_CHECK_EQ(size(), 0);
-    S2_CHECK(leftmost() == nullptr);
-    S2_CHECK(rightmost_ == nullptr);
+    assert(empty());
+    assert(leftmost() == nullptr);
+    assert(rightmost_ == nullptr);
   }
 }
 
@@ -2070,6 +2092,7 @@ void btree<P>::rebalance_or_split(iterator *iter) {
   node_type *&node = iter->node;
   int &insert_position = iter->position;
   assert(node->count() == node->max_count());
+  assert(kNodeValues == node->max_count());
 
   // First try to make room on the node by rebalancing.
   node_type *parent = node->parent();
@@ -2077,16 +2100,17 @@ void btree<P>::rebalance_or_split(iterator *iter) {
     if (node->position() > 0) {
       // Try rebalancing with our left sibling.
       node_type *left = parent->child(node->position() - 1);
-      if (left->count() < left->max_count()) {
+      assert(left->max_count() == kNodeValues);
+      if (left->count() < kNodeValues) {
         // We bias rebalancing based on the position being inserted. If we're
         // inserting at the end of the right node then we bias rebalancing to
         // fill up the left node.
-        int to_move = (left->max_count() - left->count()) /
-            (1 + (insert_position < left->max_count()));
+        int to_move = (kNodeValues - left->count()) /
+                      (1 + (insert_position < kNodeValues));
         to_move = std::max(1, to_move);
 
         if (((insert_position - to_move) >= 0) ||
-            ((left->count() + to_move) < left->max_count())) {
+            ((left->count() + to_move) < kNodeValues)) {
           left->rebalance_right_to_left(to_move, node, mutable_allocator());
 
           assert(node->max_count() - node->count() == to_move);
@@ -2105,16 +2129,17 @@ void btree<P>::rebalance_or_split(iterator *iter) {
     if (node->position() < parent->count()) {
       // Try rebalancing with our right sibling.
       node_type *right = parent->child(node->position() + 1);
-      if (right->count() < right->max_count()) {
+      assert(right->max_count() == kNodeValues);
+      if (right->count() < kNodeValues) {
         // We bias rebalancing based on the position being inserted. If we're
         // inserting at the beginning of the left node then we bias rebalancing
         // to fill up the right node.
-        int to_move = (right->max_count() - right->count()) /
-            (1 + (insert_position > 0));
+        int to_move =
+            (kNodeValues - right->count()) / (1 + (insert_position > 0));
         to_move = std::max(1, to_move);
 
         if ((insert_position <= (node->count() - to_move)) ||
-            ((right->count() + to_move) < right->max_count())) {
+            ((right->count() + to_move) < kNodeValues)) {
           node->rebalance_left_to_right(to_move, right, mutable_allocator());
 
           if (insert_position > node->count()) {
@@ -2130,7 +2155,8 @@ void btree<P>::rebalance_or_split(iterator *iter) {
 
     // Rebalancing failed, make sure there is room on the parent node for a new
     // value.
-    if (parent->count() == parent->max_count()) {
+    assert(parent->max_count() == kNodeValues);
+    if (parent->count() == kNodeValues) {
       iterator parent_iter(node->parent(), node->position());
       rebalance_or_split(&parent_iter);
     }
@@ -2179,7 +2205,8 @@ bool btree<P>::try_merge_or_rebalance(iterator *iter) {
   if (iter->node->position() > 0) {
     // Try merging with our left sibling.
     node_type *left = parent->child(iter->node->position() - 1);
-    if ((1 + left->count() + iter->node->count()) <= left->max_count()) {
+    assert(left->max_count() == kNodeValues);
+    if ((1 + left->count() + iter->node->count()) <= kNodeValues) {
       iter->position += 1 + left->count();
       merge_nodes(left, iter->node);
       iter->node = left;
@@ -2189,7 +2216,8 @@ bool btree<P>::try_merge_or_rebalance(iterator *iter) {
   if (iter->node->position() < parent->count()) {
     // Try merging with our right sibling.
     node_type *right = parent->child(iter->node->position() + 1);
-    if ((1 + iter->node->count() + right->count()) <= right->max_count()) {
+    assert(right->max_count() == kNodeValues);
+    if ((1 + iter->node->count() + right->count()) <= kNodeValues) {
       merge_nodes(iter->node, right);
       return true;
     }
@@ -2266,14 +2294,14 @@ inline auto btree<P>::internal_emplace(iterator iter, Args &&... args)
     --iter;
     ++iter.position;
   }
-  if (iter.node->count() == iter.node->max_count()) {
+  const int max_count = iter.node->max_count();
+  if (iter.node->count() == max_count) {
     // Make room in the leaf for the new item.
-    if (iter.node->max_count() < kNodeValues) {
-      // Insertion into the root where the root is smaller that the full node
+    if (max_count < kNodeValues) {
+      // Insertion into the root where the root is smaller than the full node
       // size. Simply grow the size of the root node.
       assert(iter.node == root());
-      iter.node = new_leaf_root_node(
-          std::min<int>(kNodeValues, 2 * iter.node->max_count()));
+      iter.node = new_leaf_root_node(std::min<int>(kNodeValues, 2 * max_count));
       iter.node->swap(root(), mutable_allocator());
       delete_leaf_node(root());
       mutable_root() = iter.node;
@@ -2410,23 +2438,23 @@ void btree<P>::internal_clear(node_type *node) {
 template <typename P>
 int btree<P>::internal_verify(
     const node_type *node, const key_type *lo, const key_type *hi) const {
-  S2_CHECK_GT(node->count(), 0);
-  S2_CHECK_LE(node->count(), node->max_count());
+  assert(node->count() > 0);
+  assert(node->count() <= node->max_count());
   if (lo) {
-    S2_CHECK(!compare_keys(node->key(0), *lo));
+    assert(!compare_keys(node->key(0), *lo));
   }
   if (hi) {
-    S2_CHECK(!compare_keys(*hi, node->key(node->count() - 1)));
+    assert(!compare_keys(*hi, node->key(node->count() - 1)));
   }
   for (int i = 1; i < node->count(); ++i) {
-    S2_CHECK(!compare_keys(node->key(i), node->key(i - 1)));
+    assert(!compare_keys(node->key(i), node->key(i - 1)));
   }
   int count = node->count();
   if (!node->leaf()) {
     for (int i = 0; i <= node->count(); ++i) {
-      S2_CHECK(node->child(i) != nullptr);
-      S2_CHECK_EQ(node->child(i)->parent(), node);
-      S2_CHECK_EQ(node->child(i)->position(), i);
+      assert(node->child(i) != nullptr);
+      assert(node->child(i)->parent() == node);
+      assert(node->child(i)->position() == i);
       count += internal_verify(
           node->child(i),
           (i == 0) ? lo : &node->key(i - 1),

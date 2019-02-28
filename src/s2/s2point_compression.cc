@@ -19,11 +19,11 @@
 #include <utility>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
 #include "s2/third_party/absl/base/casts.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/third_party/absl/types/span.h"

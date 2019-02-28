@@ -482,6 +482,7 @@ void S2Builder::Reset() {
   layers_.clear();
   layer_options_.clear();
   layer_begins_.clear();
+  layer_is_full_polygon_predicates_.clear();
   label_set_ids_.clear();
   label_set_lexicon_.Clear();
   label_set_.clear();
@@ -1205,6 +1206,8 @@ inline void S2Builder::AddSnappedEdge(
   input_edge_ids->push_back(id);
   if (edge_type == EdgeType::UNDIRECTED) {
     edges->push_back(Edge(dst, src));
+    // Automatically created edges do not have input edge ids or labels.  This
+    // can be used to distinguish the original direction of the undirected edge.
     input_edge_ids->push_back(IdSetLexicon::EmptySetId());
   }
 }
@@ -1342,7 +1345,7 @@ void S2Builder::MergeLayerEdges(
   }
 }
 
-// A comparision function that allows stable sorting with std::sort (which is
+// A comparison function that allows stable sorting with std::sort (which is
 // fast but not stable).  It breaks ties between equal edges by comparing
 // their LayerEdgeIds.
 inline bool S2Builder::StableLessThan(

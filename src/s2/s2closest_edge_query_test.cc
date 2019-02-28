@@ -44,7 +44,6 @@ using s2shapeutil::ShapeEdgeId;
 using s2textformat::MakeIndexOrDie;
 using s2textformat::MakePointOrDie;
 using s2textformat::MakePolygonOrDie;
-using s2textformat::ParsePointsOrDie;
 using std::min;
 using std::pair;
 using std::unique_ptr;
@@ -195,6 +194,19 @@ TEST(S2ClosestEdgeQuery, TargetPolygonContainingIndexedPoints) {
   EXPECT_EQ(S1ChordAngle::Zero(), results[1].distance());
   EXPECT_EQ(0, results[1].shape_id());
   EXPECT_EQ(3, results[1].edge_id());  // 3:13
+}
+
+TEST(S2ClosestEdgeQuery, EmptyTargetOptimized) {
+  // Ensure that the optimized algorithm handles empty targets when a distance
+  // limit is specified.
+  MutableS2ShapeIndex index;
+  index.Add(make_unique<S2Polygon::OwningShape>(make_unique<S2Polygon>(
+      S2Loop::MakeRegularLoop(S2Point(1, 0, 0), S1Angle::Radians(0.1), 1000))));
+  S2ClosestEdgeQuery query(&index);
+  query.mutable_options()->set_max_distance(S1Angle::Radians(1e-5));
+  MutableS2ShapeIndex target_index;
+  S2ClosestEdgeQuery::ShapeIndexTarget target(&target_index);
+  EXPECT_EQ(0, query.FindClosestEdges(&target).size());
 }
 
 TEST(S2ClosestEdgeQuery, EmptyPolygonTarget) {

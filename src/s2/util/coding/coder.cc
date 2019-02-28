@@ -21,8 +21,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/base/integral_types.h"
 
 // An initialization value used when we are allowed to
 unsigned char Encoder::kEmptyBuffer = 0;

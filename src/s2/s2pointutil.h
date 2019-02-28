@@ -41,8 +41,10 @@ inline S2Point Origin();
 // (this is mainly useful for assertions).
 bool IsUnitLength(const S2Point& p);
 
-// Return true if two points are within the given distance of each other
-// (this is mainly useful for testing).
+// Return true if two points are within the given distance of each other (this
+// is mainly useful for testing). It is an error if either point is a
+// zero-length vector (default S2Point), but this is only checked in debug mode.
+// In non-debug mode it will always return true.
 bool ApproxEquals(const S2Point& a, const S2Point& b,
                   S1Angle max_error = S1Angle::Radians(1e-15));
 

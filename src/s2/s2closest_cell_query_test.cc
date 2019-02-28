@@ -124,6 +124,21 @@ TEST(S2ClosestCellQuery, TargetPointInsideIndexedCell) {
   EXPECT_EQ(1, result.label());
 }
 
+TEST(S2ClosestCellQuery, EmptyTargetOptimized) {
+  // Ensure that the optimized algorithm handles empty targets when a distance
+  // limit is specified.
+  S2CellIndex index;
+  for (int i = 0; i < 1000; ++i) {
+    index.Add(S2Testing::GetRandomCellId(), i);
+  }
+  index.Build();
+  S2ClosestCellQuery query(&index);
+  query.mutable_options()->set_max_distance(S1Angle::Radians(1e-5));
+  MutableS2ShapeIndex target_index;
+  S2ClosestCellQuery::ShapeIndexTarget target(&target_index);
+  EXPECT_EQ(0, query.FindClosestCells(&target).size());
+}
+
 TEST(S2ClosestCellQuery, EmptyCellUnionTarget) {
   // Verifies that distances are measured correctly to empty S2CellUnion
   // targets.

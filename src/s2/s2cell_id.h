@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
 #include "s2/_fp_contract_off.h"
@@ -32,7 +32,6 @@
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
 #include "s2/s2coords.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/strings/string_view.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"

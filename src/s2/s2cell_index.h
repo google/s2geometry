@@ -19,7 +19,7 @@
 #define S2_S2CELL_INDEX_H_
 
 #include <vector>
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
@@ -513,7 +513,7 @@ inline bool S2CellIndex::RangeIterator::is_empty() const {
 
 inline bool S2CellIndex::RangeIterator::Advance(int n) {
   // Note that the last element of range_nodes_ is a sentinel value.
-  if (it_ + n >= range_nodes_->end() - 1) return false;
+  if (n >= range_nodes_->end() - 1 - it_) return false;
   it_ += n;
   return true;
 }

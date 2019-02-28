@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -27,7 +28,6 @@
 #include "s2/s2cell_id.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2metrics.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/util/coding/coder.h"
 
 using std::is_sorted;
@@ -50,6 +50,12 @@ vector<S2CellId> S2CellUnion::ToS2CellIds(const vector<uint64>& ids) {
 S2CellUnion::S2CellUnion(const vector<uint64>& cell_ids)
     : cell_ids_(ToS2CellIds(cell_ids)) {
   Normalize();
+}
+
+S2CellUnion S2CellUnion::WholeSphere() {
+  return S2CellUnion({S2CellId::FromFace(0), S2CellId::FromFace(1),
+                      S2CellId::FromFace(2), S2CellId::FromFace(3),
+                      S2CellId::FromFace(4), S2CellId::FromFace(5)});
 }
 
 S2CellUnion S2CellUnion::FromMinMax(S2CellId min_id, S2CellId max_id) {

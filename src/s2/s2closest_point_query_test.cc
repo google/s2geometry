@@ -60,6 +60,20 @@ TEST(S2ClosestPointQuery, ManyDuplicatePoints) {
   EXPECT_EQ(kNumPoints, results.size());
 }
 
+TEST(S2ClosestPointQuery, EmptyTargetOptimized) {
+  // Ensure that the optimized algorithm handles empty targets when a distance
+  // limit is specified.
+  TestIndex index;
+  for (int i = 0; i < 1000; ++i) {
+    index.Add(S2Testing::RandomPoint(), i);
+  }
+  TestQuery query(&index);
+  query.mutable_options()->set_max_distance(S1Angle::Radians(1e-5));
+  MutableS2ShapeIndex target_index;
+  S2ClosestPointQueryShapeIndexTarget target(&target_index);
+  EXPECT_EQ(0, query.FindClosestPoints(&target).size());
+}
+
 // An abstract class that adds points to an S2PointIndex for benchmarking.
 struct PointIndexFactory {
  public:

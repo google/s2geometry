@@ -1,10 +1,22 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
+
 project(s2-geometry)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
 include(FeatureSummary)
 include(FindPackageHandleStandardArgs)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# Avoid "Policy CMP0042 is not set" warning on macOS.
+if (APPLE)
+    set(CMAKE_MACOSX_RPATH TRUE)
+endif()
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
 
@@ -53,16 +65,6 @@ find_package(SWIG)
 find_package(PythonInterp)
 find_package(PythonLibs)
 
-# Avoid "Policy CMP0042 is not set" warning on macOS.
-if (APPLE)
-    set(CMAKE_MACOSX_RPATH TRUE)
-endif()
-
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
-set(CMAKE_CXX_EXTENSIONS OFF)
-
 if (WIN32)
     # Use unsigned characters
     add_definitions(-J)
@@ -105,6 +107,7 @@ add_library(s2
             src/s2/s2builder_graph.cc
             src/s2/s2builderutil_closed_set_normalizer.cc
             src/s2/s2builderutil_find_polygon_degeneracies.cc
+            src/s2/s2builderutil_lax_polygon_layer.cc
             src/s2/s2builderutil_s2point_vector_layer.cc
             src/s2/s2builderutil_s2polygon_layer.cc
             src/s2/s2builderutil_s2polyline_layer.cc
@@ -232,6 +235,8 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2builder_layer.h
               src/s2/s2builderutil_closed_set_normalizer.h
               src/s2/s2builderutil_find_polygon_degeneracies.h
+              src/s2/s2builderutil_graph_shape.h
+              src/s2/s2builderutil_lax_polygon_layer.h
               src/s2/s2builderutil_s2point_vector_layer.h
               src/s2/s2builderutil_s2polygon_layer.h
               src/s2/s2builderutil_s2polyline_layer.h
@@ -324,6 +329,7 @@ install(FILES src/s2/_fp_contract_off.h
         DESTINATION include/s2)
 install(FILES src/s2/base/casts.h
               src/s2/base/commandlineflags.h
+              src/s2/base/integral_types.h
               src/s2/base/log_severity.h
               src/s2/base/logging.h
               src/s2/base/mutex.h
@@ -338,7 +344,6 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/casts.h
               src/s2/third_party/absl/base/config.h
               src/s2/third_party/absl/base/dynamic_annotations.h
-              src/s2/third_party/absl/base/integral_types.h
               src/s2/third_party/absl/base/log_severity.h
               src/s2/third_party/absl/base/macros.h
               src/s2/third_party/absl/base/optimization.h
@@ -391,7 +396,6 @@ install(FILES src/s2/util/gtl/btree.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
               src/s2/util/gtl/layout.h
-              src/s2/util/gtl/libc_allocator_with_realloc.h
         DESTINATION include/s2/util/gtl)
 install(FILES src/s2/util/hash/mix.h
         DESTINATION include/s2/util/hash)
@@ -403,7 +407,7 @@ install(FILES src/s2/util/math/mathutil.h
 install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h
         DESTINATION include/s2/util/units)
-install(TARGETS s2 DESTINATION lib)
+install(TARGETS s2 s2testing DESTINATION lib)
 
 message("GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
@@ -428,6 +432,7 @@ if (GTEST_ROOT)
       src/s2/s2builder_test.cc
       src/s2/s2builderutil_closed_set_normalizer_test.cc
       src/s2/s2builderutil_find_polygon_degeneracies_test.cc
+      src/s2/s2builderutil_lax_polygon_layer_test.cc
       src/s2/s2builderutil_s2point_vector_layer_test.cc
       src/s2/s2builderutil_s2polygon_layer_test.cc
       src/s2/s2builderutil_s2polyline_layer_test.cc

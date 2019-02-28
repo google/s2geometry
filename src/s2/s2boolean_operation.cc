@@ -69,6 +69,7 @@
 #include <memory>
 #include <utility>
 
+#include "s2/util/gtl/btree_map.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_layer.h"
@@ -79,8 +80,8 @@
 #include "s2/s2edge_crossings.h"
 #include "s2/s2measures.h"
 #include "s2/s2predicates.h"
+#include "s2/s2shape_index_measures.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
-#include "s2/util/gtl/btree_map.h"
 
 // TODO(ericv): Remove this debugging output at some point.
 extern bool s2builder_verbose;
@@ -418,23 +419,28 @@ void GraphEdgeClipper::Run() {
       bool left_to_right = b_input_edges[bi].left_to_right();
       int a_index = GetCrossedVertexIndex(a_vertices, b_edges[bi],
                                           left_to_right);
-      if (s2builder_verbose) {
-        std::cout << std::endl << "  " << "b input edge "
-                  << b_input_edges[bi].input_id() << " (l2r=" << left_to_right
-                  << ", crossing=" << a_vertices[a_index] << ")";
-        for (const auto& x : b_edges[bi]) {
-          const Graph::Edge& e = g_.edge(x.id);
-          std::cout << " (" << e.first << ", " << e.second << ")";
+      if (a_index >= 0) {
+        if (s2builder_verbose) {
+          std::cout << std::endl << "  " << "b input edge "
+                    << b_input_edges[bi].input_id() << " (l2r=" << left_to_right
+                    << ", crossing=" << a_vertices[a_index] << ")";
+          for (const auto& x : b_edges[bi]) {
+            const Graph::Edge& e = g_.edge(x.id);
+            std::cout << " (" << e.first << ", " << e.second << ")";
+          }
         }
-      }
-      // Keep track of the number of signed crossings (see above).
-      bool is_line = input_dimensions_[b_input_edges[bi].input_id()] == 1;
-      int sign = is_line ? 0 : (left_to_right == invert_b) ? -1 : 1;
-      a_num_crossings[a_index] += sign;
+        // Keep track of the number of signed crossings (see above).
+        bool is_line = input_dimensions_[b_input_edges[bi].input_id()] == 1;
+        int sign = is_line ? 0 : (left_to_right == invert_b) ? -1 : 1;
+        a_num_crossings[a_index] += sign;
 
-      // Any polyline or polygon vertex that has at least one crossing but no
-      // adjacent emitted edge may be emitted as an isolated vertex.
-      a_isolated[a_index] = true;
+        // Any polyline or polygon vertex that has at least one crossing but no
+        // adjacent emitted edge may be emitted as an isolated vertex.
+        a_isolated[a_index] = true;
+      } else {
+        // TODO(b/112043775): fix this condition.
+        S2_LOG(DFATAL) << "Failed to get crossed vertex index.";
+      }
     }
     if (s2builder_verbose) std::cout << std::endl;
 
@@ -544,7 +550,7 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
   //
   // (where "*" is a vertex, and "A" and "B" are edge labels).  Note that B
   // may also follow A for one or more edges whenever they touch (e.g. between
-  // vertices 2 and 3 ).  In this case the only vertices of A where the
+  // vertices 2 and 3).  In this case the only vertices of A where the
   // crossing could take place are 5 and 6, i.e. after all excursions of B to
   // the left of A, and before all excursions of B to the right of A.
   //
@@ -570,12 +576,15 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
   // GetVertexRank).
   //
   // Note that if an edge of B is incident to the first or last vertex of A,
-  // we can't test which side of the A chain it is on.  There can be up to 4
-  // such edges (one incoming and one outgoing edge at each vertex).  Two of
-  // these edges logically extend past the end of the A chain and place no
-  // restrictions on the crossing vertex.  The other two edges define the ends
-  // of the subchain where B shares vertices with A.  We save these edges in
-  // order to handle a special case (see below).
+  // we can't test which side of the A chain it is on.  (An s2pred::Sign test
+  // doesn't work; e.g. if the B edge is XY and the first edge of A is YZ,
+  // then snapping can change the sign of XYZ while maintaining topological
+  // guarantees.)  There can be up to 4 such edges (one incoming and one
+  // outgoing edge at each endpoint of A).  Two of these edges logically
+  // extend past the end of the A chain and place no restrictions on the
+  // crossing vertex.  The other two edges define the ends of the subchain
+  // where B shares vertices with A.  We save these edges in order to handle a
+  // special case (see below).
   int lo = -1, hi = order_.size();   // Vertex ranks of acceptable crossings
   EdgeId b_first = -1, b_last = -1;  // "b" subchain connecting "a" endpoints
   for (const auto& e : b) {
@@ -609,26 +618,38 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
       }
     }
   }
-  // There is one special case.  If there were no B edges incident to interior
-  // vertices of A, then we can't reliably test which side of A the B edges
-  // are on.  (An s2pred::Sign test doesn't work, since an edge of B can snap to
-  // the "wrong" side of A while maintaining topological guarantees.)  So
-  // instead we construct a loop consisting of the A edge chain plus the
-  // portion of the B chain that connects the endpoints of A.  We can then
-  // test the orientation of this loop.
+  // There is one special case.  If a subchain of B connects the first and
+  // last vertices of A, then together with the edges of A this forms a loop
+  // whose orientation can be tested to determine whether B is on the left or
+  // right side of A.  This is only possible (and only necessary) if the B
+  // subchain does not include any interior vertices of A, since otherwise the
+  // B chain might cross from one side of A to the other.
   //
-  // Note that it would be possible to avoid this in some situations by
-  // testing whether either endpoint of the A chain has two incident B edges,
+  // Note that it would be possible to avoid this test in some situations by
+  // checking whether either endpoint of the A chain has two incident B edges,
   // in which case we could check which side of the B chain the A edge is on
   // and use this to limit the possible crossing locations.
-  if (lo < 0 && hi >= order_.size() && b_first >= 0 && b_last >= 0) {
-    // Swap the edges if necessary so that they are in B chain order.
-    if (b_reversed) swap(b_first, b_last);
-    bool on_left = EdgeChainOnLeft(a, b_first, b_last);
-    if (left_to_right == on_left) {
-      lo = max(lo, rank_[b_last] + 1);
-    } else {
-      hi = min(hi, rank_[b_first]);
+  if (b_first >= 0 && b_last >= 0) {
+    // The B subchain connects the first and last vertices of A.  Test whether
+    // the chain includes any interior vertices of A.  We do this indirectly
+    // by testing whether any edge of B has restricted the range of allowable
+    // crossing vertices (since any interior edge of the B subchain incident
+    // to any interior edge of A is guaranteed to do so).
+    int min_rank = order_.size(), max_rank = -1;
+    for (const auto& e : b) {
+      min_rank = min(min_rank, GetVertexRank(e));
+      max_rank = max(max_rank, GetVertexRank(e));
+    }
+    if (lo <= min_rank && hi >= max_rank) {
+      // The B subchain is not incident to any interior vertex of A.
+      // Swap the edges if necessary so that they are in B chain order.
+      if (b_reversed) swap(b_first, b_last);
+      bool on_left = EdgeChainOnLeft(a, b_first, b_last);
+      if (left_to_right == on_left) {
+        lo = max(lo, rank_[b_last] + 1);
+      } else {
+        hi = min(hi, rank_[b_first]);
+      }
     }
   }
 
@@ -661,7 +682,9 @@ bool GraphEdgeClipper::EdgeChainOnLeft(
   if (g_.edge(b_last).second != a[0]) std::reverse(loop.begin(), loop.end());
   loop.insert(loop.end(), a.begin(), a.end());
   // Duplicate the first two vertices to simplify vertex indexing.
-  loop.insert(loop.end(), loop.begin(), loop.begin() + 2);
+  for (int j = 0; j < 2; j++) {
+    loop.insert(loop.end(), *(loop.begin() + j));
+  }
   // Now B is to the left of A if and only if the loop is counterclockwise.
   double sum = 0;
   for (int i = 2; i < loop.size(); ++i) {
@@ -856,6 +879,18 @@ class S2BooleanOperation::Impl {
                        CrossingProcessor* cp);
   bool AreRegionsIdentical() const;
   bool BuildOpType(OpType op_type);
+  bool IsFullPolygonResult(const S2Builder::Graph& g, S2Error* error) const;
+  bool IsFullPolygonUnion(const S2ShapeIndex& a,
+                          const S2ShapeIndex& b) const;
+  bool IsFullPolygonIntersection(const S2ShapeIndex& a,
+                                 const S2ShapeIndex& b) const;
+  bool IsFullPolygonDifference(const S2ShapeIndex& a,
+                               const S2ShapeIndex& b) const;
+  bool IsFullPolygonSymmetricDifference(const S2ShapeIndex& a,
+                                        const S2ShapeIndex& b) const;
+
+  // A bit mask representing all six faces of the S2 cube.
+  static constexpr uint8 kAllFacesMask = 0x3f;
 
   S2BooleanOperation* op_;
 
@@ -1049,8 +1084,8 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // edge; it crosses the edge from left to right iff the second parameter
   // is "true".
   using SourceEdgeCrossing = pair<SourceId, bool>;
-  class PointCrossingResult;
-  class EdgeCrossingResult;
+  struct PointCrossingResult;
+  struct EdgeCrossingResult;
 
   InputEdgeId input_edge_id() const { return input_dimensions_->size(); }
 
@@ -1965,19 +2000,196 @@ bool S2BooleanOperation::Impl::BuildOpType(OpType op_type) {
   return false;
 }
 
-// Given a polygon edge graph containing only degenerate edges and sibling
-// edge pairs, the purpose of this function is to decide whether the polygon
-// is empty or full except for the degeneracies, i.e. whether the degeneracies
-// represent shells or holes.
-//
-// This function always returns false, meaning that the polygon is empty and
-// the degeneracies represent shells.  The main side effect of this is that
-// operations whose result should be the full polygon will instead be the
-// empty polygon.  (Classes such as S2Polygon already have code to correct for
-// this, but if that functionality were moved here then it would be useful for
-// other polygon representations such as S2LaxPolygonShape.)
-static bool IsFullPolygonNever(const S2Builder::Graph& g, S2Error* error) {
-  return false;  // Assumes the polygon is empty.
+// Returns a bit mask indicating which of the 6 S2 cube faces intersect the
+// index contents.
+uint8 GetFaceMask(const S2ShapeIndex& index) {
+  uint8 mask = 0;
+  S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
+  while (!it.done()) {
+    int face = it.id().face();
+    mask |= 1 << face;
+    it.Seek(S2CellId::FromFace(face + 1).range_min());
+  }
+  return mask;
+}
+
+// Given a polygon edge graph containing only degenerate edges and sibling edge
+// pairs, the purpose of this function is to decide whether the polygon is empty
+// or full except for the degeneracies, i.e. whether the degeneracies represent
+// shells or holes.
+bool S2BooleanOperation::Impl::IsFullPolygonResult(
+    const S2Builder::Graph& g, S2Error* error) const {
+  // If there are no edges of dimension 2, the result could be either the
+  // empty polygon or the full polygon.  Note that this is harder to determine
+  // than you might think due to snapping.  For example, the union of two
+  // non-empty polygons can be empty, because both polygons consist of tiny
+  // loops that are eliminated by snapping.  Similarly, even if two polygons
+  // both contain a common point their intersection can still be empty.
+  //
+  // We distinguish empty from full results using two heuristics:
+  //
+  //  1. We compute a bit mask representing the subset of the six S2 cube faces
+  //     intersected by each input geometry, and use this to determine if only
+  //     one of the two results is possible.  (This test is very fast.)  Note
+  //     that snapping will never cause the result to cover an entire extra
+  //     cube face because the maximum allowed snap radius is too small.
+  S2_DCHECK_LE(S2Builder::SnapFunction::kMaxSnapRadius().degrees(), 70);
+  //
+  //  2. We compute the area of each input geometry, and use this to bound the
+  //     minimum and maximum area of the result.  If only one of {0, 4*Pi} is
+  //     possible then we are done.  If neither is possible then we choose the
+  //     one that is closest to being possible (since snapping can change the
+  //     result area).  Both results are possible only when computing the
+  //     symmetric difference of two regions of area 2*Pi each, in which case we
+  //     must resort to additional heuristics (see below).
+  //
+  // TODO(ericv): Implement a predicate that uses the results of edge snapping
+  // directly, rather than computing areas.  This would not only be much faster
+  // but would also allows all cases to be handled 100% robustly.
+  const S2ShapeIndex& a = *op_->regions_[0];
+  const S2ShapeIndex& b = *op_->regions_[1];
+  switch (op_->op_type()) {
+    case OpType::UNION:
+      return IsFullPolygonUnion(a, b);
+
+    case OpType::INTERSECTION:
+      return IsFullPolygonIntersection(a, b);
+
+    case OpType::DIFFERENCE:
+      return IsFullPolygonDifference(a, b);
+
+    case OpType::SYMMETRIC_DIFFERENCE:
+      return IsFullPolygonSymmetricDifference(a, b);
+
+    default:
+      S2_LOG(FATAL) << "Invalid S2BooleanOperation::OpType";
+      return false;
+  }
+}
+
+bool S2BooleanOperation::Impl::IsFullPolygonUnion(
+    const S2ShapeIndex& a, const S2ShapeIndex& b) const {
+  // See comments in IsFullPolygonResult().  The most common case is that
+  // neither input polygon is empty but the result is empty due to snapping.
+
+  // The result can be full only if the union of the two input geometries
+  // intersects all six faces of the S2 cube.  This test is fast.
+  if ((GetFaceMask(a) | GetFaceMask(b)) != kAllFacesMask) return false;
+
+  // The union area satisfies:
+  //
+  //   max(A, B) <= Union(A, B) <= min(4*Pi, A + B)
+  //
+  // where A, B can refer to a polygon or its area.  We then choose the result
+  // that assumes the smallest amount of error.
+  double a_area = S2::GetArea(a), b_area = S2::GetArea(b);
+  double min_area = max(a_area, b_area);
+  double max_area = min(4 * M_PI, a_area + b_area);
+  return min_area > 4 * M_PI - max_area;
+}
+
+bool S2BooleanOperation::Impl::IsFullPolygonIntersection(
+    const S2ShapeIndex& a, const S2ShapeIndex& b) const {
+  // See comments in IsFullPolygonResult().  By far the most common case is
+  // that the result is empty.
+
+  // The result can be full only if each of the two input geometries
+  // intersects all six faces of the S2 cube.  This test is fast.
+  if ((GetFaceMask(a) & GetFaceMask(b)) != kAllFacesMask) return false;
+
+  // The intersection area satisfies:
+  //
+  //   max(0, A + B - 4*Pi) <= Intersection(A, B) <= min(A, B)
+  //
+  // where A, B can refer to a polygon or its area.  We then choose the result
+  // that assumes the smallest amount of error.
+  double a_area = S2::GetArea(a), b_area = S2::GetArea(b);
+  double min_area = max(0.0, a_area + b_area - 4 * M_PI);
+  double max_area = min(a_area, b_area);
+  return min_area > 4 * M_PI - max_area;
+}
+
+bool S2BooleanOperation::Impl::IsFullPolygonDifference(
+    const S2ShapeIndex& a, const S2ShapeIndex& b) const {
+  // See comments in IsFullPolygonResult().  By far the most common case is
+  // that the result is empty.
+
+  // The result can be full only if each cube face is intersected by the first
+  // geometry.  (The second geometry is irrelevant, since for example it could
+  // consist of a tiny loop on each S2 cube face.)  This test is fast.
+  if (GetFaceMask(a) != kAllFacesMask) return false;
+
+  // The difference area satisfies:
+  //
+  //   max(0, A - B) <= Difference(A, B) <= min(A, 4*Pi - B)
+  //
+  // where A, B can refer to a polygon or its area.  We then choose the result
+  // that assumes the smallest amount of error.
+  double a_area = S2::GetArea(a), b_area = S2::GetArea(b);
+  double min_area = max(0.0, a_area - b_area);
+  double max_area = min(a_area, 4 * M_PI - b_area);
+  return min_area > 4 * M_PI - max_area;
+}
+
+bool S2BooleanOperation::Impl::IsFullPolygonSymmetricDifference(
+    const S2ShapeIndex& a, const S2ShapeIndex& b) const {
+  // See comments in IsFullPolygonResult().  By far the most common case is
+  // that the result is empty.
+
+  // The result can be full only if the union of the two input geometries
+  // intersects all six faces of the S2 cube.  This test is fast.
+  uint8 a_mask = GetFaceMask(a);
+  uint8 b_mask = GetFaceMask(b);
+  if ((a_mask | b_mask) != kAllFacesMask) return false;
+
+  // The symmetric difference area satisfies:
+  //
+  //   |A - B| <= SymmetricDifference(A, B) <= 4*Pi - |4*Pi - (A + B)|
+  //
+  // where A, B can refer to a polygon or its area.
+  double a_area = S2::GetArea(a), b_area = S2::GetArea(b);
+  double min_area = fabs(a_area - b_area);
+  double max_area = 4 * M_PI - fabs(4 * M_PI - (a_area + b_area));
+
+  // Now we choose the result that assumes the smallest amount of error
+  // (min_area in the empty case, and (4*Pi - max_area) in the full case).
+  // However in the case of symmetric difference these two errors may be equal,
+  // meaning that the result is ambiguous.  This happens when both polygons have
+  // area 2*Pi.  Furthermore, this can happen even when the areas are not
+  // exactly 2*Pi due to snapping and area calculation errors.
+  //
+  // To determine whether the result is ambiguous, we compute a rough estimate
+  // of the maximum expected area error (including errors due to snapping),
+  // using the worst-case error bound for a hemisphere defined by 4 vertices.
+  auto edge_snap_radius = op_->options_.snap_function().snap_radius() +
+                          S2::kIntersectionError;  // split_crossing_edges
+  double hemisphere_area_error = 2 * M_PI * edge_snap_radius.radians() +
+                                 40 * DBL_EPSILON;  // GetCurvatureMaxError
+
+  // The following sign is the difference between the error needed for an empty
+  // result and the error needed for a full result.  It is negative if an
+  // empty result is possible, positive if a full result is possible, and zero
+  // if both results are possible.
+  double error_sign = min_area - (4 * M_PI - max_area);
+  if (fabs(error_sign) <= hemisphere_area_error) {
+    // Handling the ambiguous case correctly requires a more sophisticated
+    // algorithm (see below), but we can at least handle the simple cases by
+    // testing whether both input geometries intersect all 6 cube faces.  If
+    // not, then the result is definitely full.
+    if ((a_mask & b_mask) != kAllFacesMask) return true;
+
+    // Otherwise both regions have area 2*Pi and intersect all 6 cube faces.
+    // We choose "empty" in this case under the assumption that it is more
+    // likely that the user is computing the difference between two nearly
+    // identical polygons.
+    //
+    // TODO(ericv): Implement a robust algorithm based on examining the edge
+    // snapping results directly, or alternatively add another heuristic (such
+    // as testing containment of random points, or using a larger bit mask in
+    // the tests above, e.g. a 24-bit mask representing all level 1 cells).
+    return false;
+  }
+  return error_sign > 0;
 }
 
 bool S2BooleanOperation::Impl::AreRegionsIdentical() const {
@@ -2017,8 +2229,10 @@ bool S2BooleanOperation::Impl::AreRegionsIdentical() const {
 bool S2BooleanOperation::Impl::Build(S2Error* error) {
   error->Clear();
   if (is_boolean_output()) {
-    // BuildOpType() returns true if and only if the result is empty.
-    *op_->result_empty_ = BuildOpType(op_->op_type());
+    // BuildOpType() returns true if and only if the result has no edges.
+    S2Builder::Graph g;  // Unused by IsFullPolygonResult() implementation.
+    *op_->result_empty_ =
+        BuildOpType(op_->op_type()) && !IsFullPolygonResult(g, error);
     return true;
   }
   // TODO(ericv): Rather than having S2Builder split the edges, it would be
@@ -2035,13 +2249,12 @@ bool S2BooleanOperation::Impl::Build(S2Error* error) {
   builder_->StartLayer(make_unique<EdgeClippingLayer>(
       &op_->layers_, &input_dimensions_, &input_crossings_));
 
-  // Polygons with no edges are assumed to be empty.  It is the responsibility
-  // of clients to fix this if desired (e.g. S2Polygon has code for this).
-  //
-  // TODO(ericv): Implement a predicate that can determine whether a
-  // degenerate polygon is empty or full based on the input S2ShapeIndexes.
-  // (It is possible to do this 100% robustly, but tricky.)
-  builder_->AddIsFullPolygonPredicate(IsFullPolygonNever);
+  // Add a predicate that decides whether a result with no polygon edges should
+  // be interpreted as the empty polygon or the full polygon.
+  builder_->AddIsFullPolygonPredicate(
+      [this](const S2Builder::Graph& g, S2Error* error) {
+        return IsFullPolygonResult(g, error);
+      });
   (void) BuildOpType(op_->op_type());
   return builder_->Build(error);
 }

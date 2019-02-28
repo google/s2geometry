@@ -20,8 +20,8 @@
 
 #include <tuple>
 #include <type_traits>
-#include "s2/s2cell_id.h"
 #include "s2/util/gtl/btree_map.h"
+#include "s2/s2cell_id.h"
 
 // S2PointIndex maintains an index of points sorted by leaf S2CellId.  Each
 // point can optionally store auxiliary data such as an integer or pointer.

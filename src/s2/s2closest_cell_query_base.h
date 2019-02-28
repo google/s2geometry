@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "s2/base/logging.h"
+#include "s2/util/gtl/btree_set.h"
 #include "s2/third_party/absl/container/inlined_vector.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
@@ -31,7 +32,6 @@
 #include "s2/s2cell_union.h"
 #include "s2/s2distance_target.h"
 #include "s2/s2region_coverer.h"
-#include "s2/util/gtl/btree_set.h"
 #include "s2/util/gtl/dense_hash_set.h"
 #include "s2/util/hash/mix.h"
 
@@ -621,6 +621,7 @@ void S2ClosestCellQueryBase<Distance>::InitQueue() {
   // that disc and intersect it with the covering for the index.  This can
   // save a lot of work when the search region is small.
   S2Cap cap = target_->GetCapBound();
+  if (cap.is_empty()) return;  // Empty target.
   if (options().max_results() == 1) {
     // If the user is searching for just the closest cell, we can compute an
     // upper bound on search radius by seeking to the center of the target's

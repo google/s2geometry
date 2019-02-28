@@ -37,6 +37,11 @@
   $1 = temp;
 }
 
+// For S2Polygon::GetOverlapFractions
+%typemap(out) std::pair<double, double> {
+  $result = Py_BuildValue("dd", $1.first, $1.second);
+}
+
 %typemap(argout) S2CellId *OUTPUT_ARRAY_4 {
   $result = PyList_New(4);
   if ($result == nullptr) return nullptr;
@@ -64,6 +69,8 @@
 // overloaded.
 %rename(InitFromS2LatLngs) S2Polyline::Init(std::vector<S2LatLng> const& vertices);
 %rename(InitFromS2Points) S2Polyline::Init(std::vector<S2Point> const& vertices);
+// And similarly for the overloaded S2CellUnion::Normalize method.
+%rename(NormalizeS2CellUnion) S2CellUnion::Normalize();
 
 %apply int *OUTPUT {int *next_vertex};
 %apply int *OUTPUT {int *psi};
@@ -340,11 +347,16 @@ class S2Point {
 %unignore S2CellUnion::GetDifference;
 %unignore S2CellUnion::GetRectBound;
 %unignore S2CellUnion::Init(std::vector<uint64> const &);
+%unignore S2CellUnion::Intersection;
 %unignore S2CellUnion::Intersects;
+%unignore S2CellUnion::IsNormalized;
 %unignore S2CellUnion::MayIntersect(const S2Cell&) const;
-%unignore S2CellUnion::Normalize;
+// SWIG doesn't handle disambiguation of the overloaded Normalize methods, so
+// the Normalize() instance method is renamed to NormalizeS2CellUnion.
+%unignore S2CellUnion::Normalize(std::vector<S2CellId>*);
 %unignore S2CellUnion::cell_id;
 %unignore S2CellUnion::cell_ids;
+%unignore S2CellUnion::empty;
 %unignore S2CellUnion::num_cells;
 %unignore S2LatLng;
 %unignore S2LatLng::S2LatLng;
@@ -440,6 +452,7 @@ class S2Point {
 %unignore S2Polygon::GetCapBound() const;
 %unignore S2Polygon::GetCentroid;
 %unignore S2Polygon::GetDistance;
+%unignore S2Polygon::GetOverlapFractions(const S2Polygon*, const S2Polygon*);
 %unignore S2Polygon::GetRectBound;
 %unignore S2Polygon::Init;
 %unignore S2Polygon::InitNested;

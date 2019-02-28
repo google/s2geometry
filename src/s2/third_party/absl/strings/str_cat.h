@@ -97,6 +97,10 @@ enum PadSpec : uint8_t {
   kZeroPad14,
   kZeroPad15,
   kZeroPad16,
+  kZeroPad17,
+  kZeroPad18,
+  kZeroPad19,
+  kZeroPad20,
 
   kSpacePad2 = kZeroPad2 + 64,
   kSpacePad3,
@@ -113,6 +117,10 @@ enum PadSpec : uint8_t {
   kSpacePad14,
   kSpacePad15,
   kSpacePad16,
+  kSpacePad17,
+  kSpacePad18,
+  kSpacePad19,
+  kSpacePad20,
 };
 
 // -----------------------------------------------------------------------------
@@ -386,6 +394,5 @@ SixDigits(double d) {
 
 
 }  // namespace absl
-
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STR_CAT_H_

@@ -46,7 +46,7 @@ S1Angle GetPerimeter(const S2Shape& shape) {
   int num_chains = shape.num_chains();
   for (int chain_id = 0; chain_id < num_chains; ++chain_id) {
     GetChainVertices(shape, chain_id, &vertices);
-    perimeter += S2::GetPerimeter(vertices);
+    perimeter += S2::GetPerimeter(S2PointLoopSpan(vertices));
   }
   return perimeter;
 }
@@ -71,7 +71,7 @@ double GetArea(const S2Shape& shape) {
   int num_chains = shape.num_chains();
   for (int chain_id = 0; chain_id < num_chains; ++chain_id) {
     GetChainVertices(shape, chain_id, &vertices);
-    area += S2::GetSignedArea(vertices);
+    area += S2::GetSignedArea(S2PointLoopSpan(vertices));
   }
   // Note that S2::GetSignedArea() guarantees that the full loop (containing
   // all points on the sphere) has a very small negative area.
@@ -88,7 +88,7 @@ double GetApproxArea(const S2Shape& shape) {
   int num_chains = shape.num_chains();
   for (int chain_id = 0; chain_id < num_chains; ++chain_id) {
     GetChainVertices(shape, chain_id, &vertices);
-    area += S2::GetApproxArea(vertices);
+    area += S2::GetApproxArea(S2PointLoopSpan(vertices));
   }
   // Special case to ensure that full polygons are handled correctly.
   if (area <= 4 * M_PI) return area;

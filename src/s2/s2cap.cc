@@ -22,6 +22,7 @@
 #include <iosfwd>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/r1interval.h"
 #include "s2/s1interval.h"
@@ -32,12 +33,10 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2metrics.h"
 #include "s2/s2pointutil.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/util/math/vector.h"
 
 using std::fabs;
 using std::max;
-using std::min;
 using std::vector;
 
 double S2Cap::GetArea() const {
@@ -98,7 +97,7 @@ void S2Cap::AddPoint(const S2Point& p) {
 void S2Cap::AddCap(const S2Cap& other) {
   if (is_empty()) {
     *this = other;
-  } else {
+  } else if (!other.is_empty()) {
     // We round up the distance to ensure that the cap is actually contained.
     // TODO(ericv): Do some error analysis in order to guarantee this.
     S1ChordAngle dist = S1ChordAngle(center_, other.center_) + other.radius_;

@@ -19,7 +19,7 @@
 
 #include <string>
 #include "s2/base/casts.h"
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2builderutil_snap_functions.h"

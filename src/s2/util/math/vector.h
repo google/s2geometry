@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc. All Rights Reserved.
+// Copyright Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@
 #include <limits>
 #include <type_traits>
 
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/utility/utility.h"
@@ -209,14 +209,15 @@ class BasicVector {
 
   // Round of each component.
   D FRound() const {
+    using std::rint;
     return Generate([](const T& x) { return rint(x); }, AsD());
   }
 
   // Round of each component and return an integer vector.
   VecTemplate<int> IRound() const {
-    return Generate<VecTemplate<int>>([](const T& x) {
-      return lrint(x);
-    }, AsD());
+    using std::lrint;
+    return Generate<VecTemplate<int>>([](const T& x) { return lrint(x); },
+                                      AsD());
   }
 
   // True if any of the components is not a number.
@@ -354,7 +355,9 @@ class Vector2
     return c_[0] * vb.c_[1] - c_[1] * vb.c_[0];
   }
 
-  // return the angle between "this" and v in radians
+  // Returns the angle between "this" and v in radians. If either vector is
+  // zero-length, or nearly zero-length, the result will be zero, regardless of
+  // the other value.
   FloatType Angle(const Vector2 &v) const {
     using std::atan2;
     return atan2(CrossProd(v), this->DotProd(v));
@@ -437,7 +440,9 @@ class Vector3
     return CrossProd(temp).Normalize();
   }
 
-  // return the angle between two vectors in radians
+  // Returns the angle between two vectors in radians. If either vector is
+  // zero-length, or nearly zero-length, the result will be zero, regardless of
+  // the other value.
   FloatType Angle(const Vector3 &va) const {
     using std::atan2;
     return atan2(CrossProd(va).Norm(), this->DotProd(va));
@@ -543,16 +548,19 @@ class Vector4
 };
 
 typedef Vector2<uint8>  Vector2_b;
+typedef Vector2<int16>  Vector2_s;
 typedef Vector2<int>    Vector2_i;
 typedef Vector2<float>  Vector2_f;
 typedef Vector2<double> Vector2_d;
 
 typedef Vector3<uint8>  Vector3_b;
+typedef Vector3<int16>  Vector3_s;
 typedef Vector3<int>    Vector3_i;
 typedef Vector3<float>  Vector3_f;
 typedef Vector3<double> Vector3_d;
 
 typedef Vector4<uint8>  Vector4_b;
+typedef Vector4<int16>  Vector4_s;
 typedef Vector4<int>    Vector4_i;
 typedef Vector4<float>  Vector4_f;
 typedef Vector4<double> Vector4_d;

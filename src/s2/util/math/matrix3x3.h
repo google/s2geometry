@@ -422,11 +422,14 @@ class Matrix3x3 {
   }
 
   // Finds the eigen values of the matrix. Return the number of real eigenvalues
-  // found
+  // found.
+  // If the matrix is known to be symmetric due to your problem formulation,
+  // then please use SymmetricEigenSolver, since this method does not guarantee
+  // finding all 3 real eigenvalues in pathological cases.  See CL 49170250.
   int EigenValues(MVector *eig_val) const {
     long double r1, r2, r3;  // NOLINT
-    // characteristic polynomial is
-    // x^3 + (a11*a22+a22*a33+a33*a11)*x^2 - trace(A)*x - det(A)
+    // characteristic polynomial
+    // x^3 + a*x^2 + b*x + c
     VType a = -Trace();
     VType b = m_[0][0]*m_[1][1] + m_[1][1]*m_[2][2] + m_[2][2]*m_[0][0]
             - m_[1][0]*m_[0][1] - m_[2][1]*m_[1][2] - m_[0][2]*m_[2][0];
@@ -441,34 +444,42 @@ class Matrix3x3 {
     return 1;
   }
 
-  // Finds the eigen values and associated eigen vectors of a
-  // symmetric positive definite 3x3 matrix,eigen values are
-  // sorted in decreasing order, eig_val corresponds to the
-  // columns of the eig_vec matrix.
+  // Finds the eigen values and optional associated eigen vectors of a
+  // symmetric 3x3 matrix (not necessarily positive definite).
+  // eigen values are sorted in decreasing order;
+  // eig_val corresponds to the columns of the eig_vec matrix.
   // Note: The routine will only use the lower diagonal part
   // of the matrix, i.e.
   // |  a00,          |
   // |  a10, a11,     |
   // |  a20, a21, a22 |
   void SymmetricEigenSolver(MVector *eig_val,
-                            Matrix3x3 *eig_vec) const {
-    // Compute characteristic polynomial coefficients
-    double c2 = -(m_[0][0] + m_[1][1] + m_[2][2]);
+                            Matrix3x3 *eig_vec /*nullable*/) const {
+    // Compute characteristic polynomial coefficients.
+    double c2 = -Trace();
     double c1 = -(m_[1][0] * m_[1][0] - m_[0][0] * m_[1][1]
                   - m_[0][0] * m_[2][2] - m_[1][1] * m_[2][2]
                   + m_[2][0] * m_[2][0] + m_[2][1] * m_[2][1]);
-    double c0 = -(m_[0][0] * m_[1][1] * m_[2][2] - m_[2][0]
-                  * m_[2][0] * m_[1][1] - m_[1][0] * m_[1][0]
-                  * m_[2][2] - m_[0][0] * m_[2][1] * m_[2][1]
+    double c0 = -(m_[0][0] * m_[1][1] * m_[2][2]    //
+                  - m_[2][0] * m_[2][0] * m_[1][1]  //
+                  - m_[1][0] * m_[1][0] * m_[2][2]  //
+                  - m_[0][0] * m_[2][1] * m_[2][1]  //
                   + 2 * m_[1][0] * m_[2][0] * m_[2][1]);
 
-    // Root finding
+    // Root finding x^3 + c2*x^2 + c1*x + c0 = 0.
+    // NOTE: Cannot reuse general cubic solver MathUtil::RealRootsForCubic()
+    // because it doesn't guarantee finding 3 real roots, e.g. it won't always
+    // return roots {2, 2, 0} for the cubic x^3 - 4*x^2 + 4*x + epsilon = 0.
     double q = (c2*c2-3*c1)/9.0;
     double r = (2*c2*c2*c2-9*c2*c1+27*c0)/54.0;
-    // Assume R^3 <Q^3 so there are three real roots
+    // Assume R^2 <= Q^3 so there are three real roots.
+    // Avoid sqrt of negative q, which can only happen due to numerical error.
     if (q < 0) q = 0;
     double sqrt_q = -2.0 * sqrt(q);
-    double theta = acos(r / sqrt(q * q * q));
+    double q3_r2 = q * q * q - r * r;
+    // Avoid sqrt of negative q3_r2, which can only happen due to numerical
+    // error.
+    double theta = atan2(q3_r2 <= 0 ? 0 : sqrt(q3_r2), r);
     double c2_3 = c2 / 3;
     (*eig_val)[0] = sqrt_q * cos(theta / 3.0) - c2_3;
     (*eig_val)[1] = sqrt_q * cos((theta + 2.0 * M_PI)/3.0) - c2_3;
@@ -479,7 +490,9 @@ class Matrix3x3 {
     (*eig_val) = MVector((*eig_val)[d_order[2]],
                          (*eig_val)[d_order[1]],
                          (*eig_val)[d_order[0]]);
+
     // Compute eigenvectors
+    if (!eig_vec) return;
     for (int i = 0; i < 3; ++i) {
       MVector r1 , r2 , r3 , e1 , e2 , e3;
       r1[0] = m_[0][0] - (*eig_val)[i];

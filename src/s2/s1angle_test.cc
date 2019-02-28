@@ -19,10 +19,10 @@
 
 #include <gtest/gtest.h>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/s2latlng.h"
 #include "s2/s2testing.h"
-#include "s2/third_party/absl/base/integral_types.h"
 
 TEST(S1Angle, DefaultConstructor) {
   // Check that the default constructor returns an angle of 0.

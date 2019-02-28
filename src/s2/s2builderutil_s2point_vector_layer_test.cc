@@ -20,7 +20,7 @@
 #include <memory>
 #include <string>
 #include "s2/base/casts.h"
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
@@ -30,7 +30,6 @@ using absl::make_unique;
 using s2builderutil::IndexedS2PointVectorLayer;
 using s2builderutil::S2PointVectorLayer;
 using s2textformat::MakePointOrDie;
-using std::unique_ptr;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;

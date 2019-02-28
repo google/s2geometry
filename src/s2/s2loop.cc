@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r1interval.h"
@@ -52,18 +53,14 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2wedge_relations.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
-using absl::MakeSpan;
 using absl::make_unique;
-using std::fabs;
-using std::max;
-using std::min;
+using absl::MakeSpan;
 using std::pair;
 using std::set;
 using std::vector;
@@ -503,7 +500,7 @@ bool S2Loop::BoundaryApproxIntersects(const MutableS2ShapeIndex::Iterator& it,
     int ai = a_clipped.edge(i);
     R2Point v0, v1;
     if (S2::ClipToPaddedFace(vertex(ai), vertex(ai+1), target.face(),
-                                     kMaxError, &v0, &v1) &&
+                             kMaxError, &v0, &v1) &&
         S2::IntersectsRect(v0, v1, bound)) {
       return true;
     }
@@ -638,13 +635,15 @@ bool S2Loop::DecodeInternal(Decoder* const decoder,
   num_vertices_ = num_vertices;
 
   // x86 can do unaligned floating-point reads; however, many other
-  // platforms can not. Do not use the zero-copy version if we are on
+  // platforms cannot. Do not use the zero-copy version if we are on
   // an architecture that does not support unaligned reads, and the
   // pointer is not correctly aligned.
-#if defined(ARCH_PIII) || defined(ARCH_K8)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || \
+    defined(_M_IX86)
   bool is_misaligned = false;
 #else
-  bool is_misaligned = ((intptr_t)decoder->ptr() % sizeof(double) != 0);
+  bool is_misaligned =
+      reinterpret_cast<intptr_t>(decoder->ptr()) % sizeof(double) != 0;
 #endif
   if (within_scope && !is_misaligned) {
     vertices_ = const_cast<S2Point *>(reinterpret_cast<const S2Point*>(

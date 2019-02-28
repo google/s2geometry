@@ -21,6 +21,8 @@
 #include <memory>
 #include <vector>
 
+#include <gtest/gtest.h>
+#include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
@@ -29,11 +31,8 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
-#include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
 
 using absl::make_unique;
-using std::unique_ptr;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;
@@ -101,6 +100,7 @@ void DegeneracyCheckingLayer::Build(const Graph& g, S2Error* error) {
   std::sort(expected_.begin(), expected_.end());
   EXPECT_TRUE(expected_ == actual) << "\nExpected: " << expected_
                                    << "\nActual: " << actual;
+  EXPECT_EQ(IsFullyDegenerate(g), degeneracies.size() == g.num_edges());
 }
 
 void ExpectDegeneracies(const string& polygon_str,

@@ -21,7 +21,7 @@
 #include <cfloat>
 #include <cmath>
 #include <memory>
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2cell_id.h"

@@ -37,7 +37,6 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
 using std::unique_ptr;
 using std::vector;
 
@@ -82,7 +81,7 @@ const char kEncodedCellFromFacePosLevel[] = "0057341200000060";
 const char kEncodedCellFace0[] = "0000000000000010";
 
 // S2CellUnion.
-// An unitialized empty S2CellUnion.
+// An uninitialized empty S2CellUnion.
 const char kEncodedCellUnionEmpty[] = "010000000000000000";
 // S2CellUnion from an S2CellId from Face 1.
 const char kEncodedCellUnionFace1[] = "0101000000000000000000000000000030";

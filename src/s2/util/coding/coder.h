@@ -24,9 +24,9 @@
 
 // Avoid adding expensive includes here.
 #include "s2/base/casts.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
-#include "s2/third_party/absl/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/meta/type_traits.h"
 #include "s2/util/coding/varint.h"
@@ -454,7 +454,7 @@ inline unsigned char const* Decoder::ptr() const {
 inline void DecoderExtensions::FillArray(Decoder* array, int num_decoders) {
   // This is an optimization based on the fact that Decoder(nullptr, 0) sets all
   // structure bytes to 0. This is valid because Decoder is TriviallyCopyable
-  // (http://en.cppreference.com/w/cpp/concept/TriviallyCopyable).
+  // (https://en.cppreference.com/w/cpp/named_req/TriviallyCopyable).
   static_assert(absl::is_trivially_copy_constructible<Decoder>::value,
                 "Decoder must be trivially copy-constructible");
   static_assert(absl::is_trivially_copy_assignable<Decoder>::value,

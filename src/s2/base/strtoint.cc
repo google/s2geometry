@@ -20,6 +20,9 @@
 
 #include <cerrno>
 #include <climits>
+#include <limits>
+
+#include "s2/base/integral_types.h"
 #include "s2/base/port.h"
 #include "s2/base/strtoint.h"
 
@@ -31,15 +34,15 @@ int32 strto32_adapter(const char *nptr, char **endptr, int base) {
   errno = 0;
   const long result = strtol(nptr, endptr, base);
   if (errno == ERANGE && result == LONG_MIN) {
-    return kint32min;
+    return std::numeric_limits<int32>::min();
   } else if (errno == ERANGE && result == LONG_MAX) {
-    return kint32max;
-  } else if (errno == 0 && result < kint32min) {
+    return std::numeric_limits<int32>::max();
+  } else if (errno == 0 && result < std::numeric_limits<int32>::min()) {
     errno = ERANGE;
-    return kint32min;
-  } else if (errno == 0 && result > kint32max) {
+    return std::numeric_limits<int32>::min();
+  } else if (errno == 0 && result > std::numeric_limits<int32>::max()) {
     errno = ERANGE;
-    return kint32max;
+    return std::numeric_limits<int32>::max();
   }
   if (errno == 0)
     errno = saved_errno;
@@ -51,10 +54,10 @@ uint32 strtou32_adapter(const char *nptr, char **endptr, int base) {
   errno = 0;
   const unsigned long result = strtoul(nptr, endptr, base);
   if (errno == ERANGE && result == ULONG_MAX) {
-    return kuint32max;
-  } else if (errno == 0 && result > kuint32max) {
+    return std::numeric_limits<uint32>::max();
+  } else if (errno == 0 && result > std::numeric_limits<uint32>::max()) {
     errno = ERANGE;
-    return kuint32max;
+    return std::numeric_limits<uint32>::max();
   }
   if (errno == 0)
     errno = saved_errno;
