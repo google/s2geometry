@@ -261,9 +261,9 @@ class S2BooleanOperation {
     // Specifies the function to be used for snap rounding.
     //
     // DEFAULT: s2builderutil::IdentitySnapFunction(S1Angle::Zero())
-    // [This does no snapping and preserves all input vertices exactly unless
-    //  there are crossing edges, in which case the snap radius is increased
-    //  to the maximum intersection point error (S2::kIntersectionError.]
+    //  - This does no snapping and preserves all input vertices exactly unless
+    //    there are crossing edges, in which case the snap radius is increased
+    //    to the maximum intersection point error (S2::kIntersectionError).
     const S2Builder::SnapFunction& snap_function() const;
     void set_snap_function(const S2Builder::SnapFunction& snap_function);
 

@@ -56,6 +56,7 @@ Graph::Graph(const GraphOptions& options,
       label_set_lexicon_(label_set_lexicon),
       is_full_polygon_predicate_(std::move(is_full_polygon_predicate)) {
   S2_DCHECK(std::is_sorted(edges->begin(), edges->end()));
+  S2_DCHECK_EQ(edges->size(), input_edge_id_set_ids->size());
 }
 
 vector<Graph::EdgeId> Graph::GetInEdgeIds() const {
@@ -1033,11 +1034,14 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
       if (options_.duplicate_edges() == DuplicateEdges::MERGE) {
         AddEdge(edge, MergeInputIds(out_begin, out));
       } else if (options_.edge_type() == EdgeType::UNDIRECTED) {
+        // Convert graph to use directed edges instead (see documentation of
+        // REQUIRE/CREATE for undirected edges).
         AddEdges((n_out + 1) / 2, edge, MergeInputIds(out_begin, out));
       } else {
         CopyEdges(out_begin, out);
         if (n_in > n_out) {
-          AddEdges(n_in - n_out, edge, MergeInputIds(out, out));
+          // Automatically created edges have no input edge ids or labels.
+          AddEdges(n_in - n_out, edge, IdSetLexicon::EmptySetId());
         }
       }
     }
