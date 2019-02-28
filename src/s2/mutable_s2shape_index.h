@@ -27,9 +27,9 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/base/macros.h"
 #include "s2/base/spinlock.h"
 #include "s2/third_party/absl/base/thread_annotations.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/util/gtl/btree_map.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/base/mutex.h"

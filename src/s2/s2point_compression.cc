@@ -21,8 +21,8 @@
 
 #include "s2/third_party/absl/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/casts.h"
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/third_party/absl/types/span.h"
 #include "s2/util/bits/bit-interleave.h"

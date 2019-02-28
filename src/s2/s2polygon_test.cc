@@ -31,9 +31,9 @@
 #include "s2/base/casts.h"
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/base/macros.h"
 #include "s2/strings/serialize.h"
 #include <gtest/gtest.h>
+#include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/container/fixed_array.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/str_cat.h"
