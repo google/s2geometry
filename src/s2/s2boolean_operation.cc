@@ -1084,8 +1084,8 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // edge; it crosses the edge from left to right iff the second parameter
   // is "true".
   using SourceEdgeCrossing = pair<SourceId, bool>;
-  class PointCrossingResult;
-  class EdgeCrossingResult;
+  struct PointCrossingResult;
+  struct EdgeCrossingResult;
 
   InputEdgeId input_edge_id() const { return input_dimensions_->size(); }
 

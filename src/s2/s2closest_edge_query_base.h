@@ -272,7 +272,7 @@ class S2ClosestEdgeQueryBase {
   Result FindClosestEdge(Target* target, const Options& options);
 
  private:
-  class QueueEntry;
+  struct QueueEntry;
 
   const Options& options() const { return *options_; }
   void FindClosestEdgesInternal(Target* target, const Options& options);
