@@ -77,6 +77,7 @@
 #define ABSL_ATTRIBUTE_NO_SANITIZE_THREAD
 #define ABSL_ATTRIBUTE_NO_SANITIZE_UNDEFINED
 #define ABSL_ATTRIBUTE_NO_SANITIZE_CFI
+#define ABSL_ATTRIBUTE_NO_SANITIZE_SAFESTACK
 #define ABSL_ATTRIBUTE_RETURNS_NONNULL
 #if SWIG_VERSION >= 0x020000
 #define ABSL_HAVE_ATTRIBUTE_SECTION 0
@@ -331,6 +332,17 @@
 #define ABSL_ATTRIBUTE_NO_SANITIZE_CFI __attribute__((no_sanitize("cfi")))
 #else
 #define ABSL_ATTRIBUTE_NO_SANITIZE_CFI
+#endif
+
+// ABSL_ATTRIBUTE_NO_SANITIZE_SAFESTACK
+//
+// Tells the SafeStack to not instrument a given function.
+// See https://clang.llvm.org/docs/SafeStack.html for details.
+#if defined(__GNUC__) && defined(SAFESTACK_SANITIZER)
+#define ABSL_ATTRIBUTE_NO_SANITIZE_SAFESTACK \
+  __attribute__((no_sanitize("safe-stack")))
+#else
+#define ABSL_ATTRIBUTE_NO_SANITIZE_SAFESTACK
 #endif
 
 // ABSL_ATTRIBUTE_RETURNS_NONNULL
