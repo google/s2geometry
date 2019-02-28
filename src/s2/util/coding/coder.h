@@ -200,16 +200,6 @@ class Decoder {
   const unsigned char* limit_;
 };
 
-// TODO(user): Remove when LLVM detects and optimizes this case.
-class DecoderExtensions {
- private:
-  friend class Untranspose;  // In net/proto/transpose.cc.
-  friend void TestFillArray();
-  // Fills an array of num_decoders decoders with Decoder(nullptr, 0) instances.
-  // This is much more efficient than using the stl.
-  static void FillArray(Decoder* array, int num_decoders);
-};
-
 /***** Implementation details.  Clients should ignore them. *****/
 
 inline Encoder::Encoder(void* b, size_t maxn) :
@@ -449,19 +439,6 @@ inline void Decoder::skip(ptrdiff_t n) {
 
 inline unsigned char const* Decoder::ptr() const {
   return buf_;
-}
-
-inline void DecoderExtensions::FillArray(Decoder* array, int num_decoders) {
-  // This is an optimization based on the fact that Decoder(nullptr, 0) sets all
-  // structure bytes to 0. This is valid because Decoder is TriviallyCopyable
-  // (https://en.cppreference.com/w/cpp/named_req/TriviallyCopyable).
-  static_assert(absl::is_trivially_copy_constructible<Decoder>::value,
-                "Decoder must be trivially copy-constructible");
-  static_assert(absl::is_trivially_copy_assignable<Decoder>::value,
-                "Decoder must be trivially copy-assignable");
-  static_assert(absl::is_trivially_destructible<Decoder>::value,
-                "Decoder must be trivially destructible");
-  std::memset(array, 0, num_decoders * sizeof(Decoder));
 }
 
 inline void Encoder::put8(unsigned char v) {
