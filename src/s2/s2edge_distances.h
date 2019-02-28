@@ -64,8 +64,8 @@ bool IsDistanceLess(const S2Point& x, const S2Point& a, const S2Point& b,
 bool UpdateMinDistance(const S2Point& x, const S2Point& a, const S2Point& b,
                        S1ChordAngle* min_dist);
 
-// If the distance from X to the edge AB is greater than "max_dist", this
-// method updates "max_dist" and returns true.  Otherwise it returns false.
+// If the maximum distance from X to the edge AB is greater than "max_dist",
+// this method updates "max_dist" and returns true.  Otherwise it returns false.
 // The case A == B is handled correctly.
 bool UpdateMaxDistance(const S2Point& x, const S2Point& a, const S2Point& b,
                        S1ChordAngle* max_dist);
