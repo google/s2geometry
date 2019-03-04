@@ -53,8 +53,6 @@
 
 #include <type_traits>
 
-#include <gtest/gtest_prod.h>
-
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
@@ -358,9 +356,6 @@ class Bits {
   static const char num_bits[];
   Bits(Bits const&) = delete;
   void operator=(Bits const&) = delete;
-
-  FRIEND_TEST(Bits, Port32);
-  FRIEND_TEST(Bits, Port64);
 };
 
 // A utility class for some handy bit patterns.  The names l and h
