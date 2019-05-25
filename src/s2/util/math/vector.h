@@ -225,7 +225,7 @@ class BasicVector {
     bool r = false;
     const T* ap = AsD().Data();
     for (int i = 0; i < SIZE; ++i)
-      r = r || isnan(ap[i]);
+      r = r || std::isnan(ap[i]);
     return r;
   }
 
