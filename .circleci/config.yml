@@ -1,0 +1,34 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: buildpack-deps:bionic
+    steps:
+      - checkout
+      - run:
+          name: build
+          command: |
+                  cmake -H. -Bbuild
+                  cmake --build build
+      - persist_to_workspace:
+          paths:
+            - ./
+  test:
+    - image: buildpack-deps:bionic
+  steps:
+    - attach_workspace:
+        at: ./
+  - run:
+      name: test
+      command: |
+              cmake --build build --target test
+
+workflows:
+  version: 2
+  build_test_deploy:
+    jobs:
+      - build
+      - test:
+          requires:
+            build
+            
