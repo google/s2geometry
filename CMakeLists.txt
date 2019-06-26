@@ -1,6 +1,9 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
-project(s2-geometry)
+project(s2-geometry
+  VERSION 0.9.0
+  DESCRIPTION "Computational geometry and spatial indexing on the sphere"
+  LANGUAGES C CXX)
 
 include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
@@ -17,6 +20,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
 
@@ -33,6 +37,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries instead of static." ON)
 add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
                  "builds shared libraries instead of static.")
 
+option(BUILD_PYTHON "Build Python bindings with SWIG." ON)
 option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
 
 feature_summary(WHAT ALL)
@@ -89,119 +94,123 @@ include_directories(
     ${PYTHON_INCLUDE_DIRS})
 include_directories(src)
 
-add_library(s2
-            src/s2/base/stringprintf.cc
-            src/s2/base/strtoint.cc
-            src/s2/encoded_s2cell_id_vector.cc
-            src/s2/encoded_s2point_vector.cc
-            src/s2/encoded_s2shape_index.cc
-            src/s2/encoded_string_vector.cc
-            src/s2/id_set_lexicon.cc
-            src/s2/mutable_s2shape_index.cc
-            src/s2/r2rect.cc
-            src/s2/s1angle.cc
-            src/s2/s1chord_angle.cc
-            src/s2/s1interval.cc
-            src/s2/s2boolean_operation.cc
-            src/s2/s2builder.cc
-            src/s2/s2builder_graph.cc
-            src/s2/s2builderutil_closed_set_normalizer.cc
-            src/s2/s2builderutil_find_polygon_degeneracies.cc
-            src/s2/s2builderutil_lax_polygon_layer.cc
-            src/s2/s2builderutil_s2point_vector_layer.cc
-            src/s2/s2builderutil_s2polygon_layer.cc
-            src/s2/s2builderutil_s2polyline_layer.cc
-            src/s2/s2builderutil_s2polyline_vector_layer.cc
-            src/s2/s2builderutil_snap_functions.cc
-            src/s2/s2cap.cc
-            src/s2/s2cell.cc
-            src/s2/s2cell_id.cc
-            src/s2/s2cell_index.cc
-            src/s2/s2cell_union.cc
-            src/s2/s2centroids.cc
-            src/s2/s2closest_cell_query.cc
-            src/s2/s2closest_edge_query.cc
-            src/s2/s2closest_point_query.cc
-            src/s2/s2contains_vertex_query.cc
-            src/s2/s2convex_hull_query.cc
-            src/s2/s2coords.cc
-            src/s2/s2crossing_edge_query.cc
-            src/s2/s2debug.cc
-            src/s2/s2earth.cc
-            src/s2/s2edge_clipping.cc
-            src/s2/s2edge_crosser.cc
-            src/s2/s2edge_crossings.cc
-            src/s2/s2edge_distances.cc
-            src/s2/s2edge_tessellator.cc
-            src/s2/s2error.cc
-            src/s2/s2furthest_edge_query.cc
-            src/s2/s2latlng.cc
-            src/s2/s2latlng_rect.cc
-            src/s2/s2latlng_rect_bounder.cc
-            src/s2/s2lax_loop_shape.cc
-            src/s2/s2lax_polygon_shape.cc
-            src/s2/s2lax_polyline_shape.cc
-            src/s2/s2loop.cc
-            src/s2/s2loop_measures.cc
-            src/s2/s2measures.cc
-            src/s2/s2metrics.cc
-            src/s2/s2max_distance_targets.cc
-            src/s2/s2min_distance_targets.cc
-            src/s2/s2padded_cell.cc
-            src/s2/s2point_compression.cc
-            src/s2/s2point_region.cc
-            src/s2/s2pointutil.cc
-            src/s2/s2polygon.cc
-            src/s2/s2polyline.cc
-            src/s2/s2polyline_alignment.cc
-            src/s2/s2polyline_measures.cc
-            src/s2/s2polyline_simplifier.cc
-            src/s2/s2predicates.cc
-            src/s2/s2projections.cc
-            src/s2/s2r2rect.cc
-            src/s2/s2region.cc
-            src/s2/s2region_term_indexer.cc
-            src/s2/s2region_coverer.cc
-            src/s2/s2region_intersection.cc
-            src/s2/s2region_union.cc
-            src/s2/s2shape_index.cc
-            src/s2/s2shape_index_buffered_region.cc
-            src/s2/s2shape_index_measures.cc
-            src/s2/s2shape_measures.cc
-            src/s2/s2shapeutil_build_polygon_boundaries.cc
-            src/s2/s2shapeutil_coding.cc
-            src/s2/s2shapeutil_contains_brute_force.cc
-            src/s2/s2shapeutil_edge_iterator.cc
-            src/s2/s2shapeutil_get_reference_point.cc
-            src/s2/s2shapeutil_range_iterator.cc
-            src/s2/s2shapeutil_visit_crossing_edge_pairs.cc
-            src/s2/s2text_format.cc
-            src/s2/s2wedge_relations.cc
-            src/s2/strings/ostringstream.cc
-            src/s2/strings/serialize.cc
-            src/s2/third_party/absl/base/dynamic_annotations.cc
-            src/s2/third_party/absl/base/internal/raw_logging.cc
-            src/s2/third_party/absl/base/internal/throw_delegate.cc
-            src/s2/third_party/absl/numeric/int128.cc
-            src/s2/third_party/absl/strings/ascii.cc
-            src/s2/third_party/absl/strings/match.cc
-            src/s2/third_party/absl/strings/numbers.cc
-            src/s2/third_party/absl/strings/str_cat.cc
-            src/s2/third_party/absl/strings/str_split.cc
-            src/s2/third_party/absl/strings/string_view.cc
-            src/s2/third_party/absl/strings/strip.cc
-            src/s2/third_party/absl/strings/internal/memutil.cc
-            src/s2/util/bits/bit-interleave.cc
-            src/s2/util/bits/bits.cc
-            src/s2/util/coding/coder.cc
-            src/s2/util/coding/varint.cc
-            src/s2/util/math/exactfloat/exactfloat.cc
-            src/s2/util/math/mathutil.cc
-            src/s2/util/units/length-units.cc)
+set(SOURCES
+  src/s2/base/stringprintf.cc
+  src/s2/base/strtoint.cc
+  src/s2/encoded_s2cell_id_vector.cc
+  src/s2/encoded_s2point_vector.cc
+  src/s2/encoded_s2shape_index.cc
+  src/s2/encoded_string_vector.cc
+  src/s2/id_set_lexicon.cc
+  src/s2/mutable_s2shape_index.cc
+  src/s2/r2rect.cc
+  src/s2/s1angle.cc
+  src/s2/s1chord_angle.cc
+  src/s2/s1interval.cc
+  src/s2/s2boolean_operation.cc
+  src/s2/s2builder.cc
+  src/s2/s2builder_graph.cc
+  src/s2/s2builderutil_closed_set_normalizer.cc
+  src/s2/s2builderutil_find_polygon_degeneracies.cc
+  src/s2/s2builderutil_lax_polygon_layer.cc
+  src/s2/s2builderutil_s2point_vector_layer.cc
+  src/s2/s2builderutil_s2polygon_layer.cc
+  src/s2/s2builderutil_s2polyline_layer.cc
+  src/s2/s2builderutil_s2polyline_vector_layer.cc
+  src/s2/s2builderutil_snap_functions.cc
+  src/s2/s2cap.cc
+  src/s2/s2cell.cc
+  src/s2/s2cell_id.cc
+  src/s2/s2cell_index.cc
+  src/s2/s2cell_union.cc
+  src/s2/s2centroids.cc
+  src/s2/s2closest_cell_query.cc
+  src/s2/s2closest_edge_query.cc
+  src/s2/s2closest_point_query.cc
+  src/s2/s2contains_vertex_query.cc
+  src/s2/s2convex_hull_query.cc
+  src/s2/s2coords.cc
+  src/s2/s2crossing_edge_query.cc
+  src/s2/s2debug.cc
+  src/s2/s2earth.cc
+  src/s2/s2edge_clipping.cc
+  src/s2/s2edge_crosser.cc
+  src/s2/s2edge_crossings.cc
+  src/s2/s2edge_distances.cc
+  src/s2/s2edge_tessellator.cc
+  src/s2/s2error.cc
+  src/s2/s2furthest_edge_query.cc
+  src/s2/s2latlng.cc
+  src/s2/s2latlng_rect.cc
+  src/s2/s2latlng_rect_bounder.cc
+  src/s2/s2lax_loop_shape.cc
+  src/s2/s2lax_polygon_shape.cc
+  src/s2/s2lax_polyline_shape.cc
+  src/s2/s2loop.cc
+  src/s2/s2loop_measures.cc
+  src/s2/s2measures.cc
+  src/s2/s2metrics.cc
+  src/s2/s2max_distance_targets.cc
+  src/s2/s2min_distance_targets.cc
+  src/s2/s2padded_cell.cc
+  src/s2/s2point_compression.cc
+  src/s2/s2point_region.cc
+  src/s2/s2pointutil.cc
+  src/s2/s2polygon.cc
+  src/s2/s2polyline.cc
+  src/s2/s2polyline_alignment.cc
+  src/s2/s2polyline_measures.cc
+  src/s2/s2polyline_simplifier.cc
+  src/s2/s2predicates.cc
+  src/s2/s2projections.cc
+  src/s2/s2r2rect.cc
+  src/s2/s2region.cc
+  src/s2/s2region_term_indexer.cc
+  src/s2/s2region_coverer.cc
+  src/s2/s2region_intersection.cc
+  src/s2/s2region_union.cc
+  src/s2/s2shape_index.cc
+  src/s2/s2shape_index_buffered_region.cc
+  src/s2/s2shape_index_measures.cc
+  src/s2/s2shape_measures.cc
+  src/s2/s2shapeutil_build_polygon_boundaries.cc
+  src/s2/s2shapeutil_coding.cc
+  src/s2/s2shapeutil_contains_brute_force.cc
+  src/s2/s2shapeutil_edge_iterator.cc
+  src/s2/s2shapeutil_get_reference_point.cc
+  src/s2/s2shapeutil_range_iterator.cc
+  src/s2/s2shapeutil_visit_crossing_edge_pairs.cc
+  src/s2/s2text_format.cc
+  src/s2/s2wedge_relations.cc
+  src/s2/strings/ostringstream.cc
+  src/s2/strings/serialize.cc
+  src/s2/third_party/absl/base/dynamic_annotations.cc
+  src/s2/third_party/absl/base/internal/raw_logging.cc
+  src/s2/third_party/absl/base/internal/throw_delegate.cc
+  src/s2/third_party/absl/numeric/int128.cc
+  src/s2/third_party/absl/strings/ascii.cc
+  src/s2/third_party/absl/strings/match.cc
+  src/s2/third_party/absl/strings/numbers.cc
+  src/s2/third_party/absl/strings/str_cat.cc
+  src/s2/third_party/absl/strings/str_split.cc
+  src/s2/third_party/absl/strings/string_view.cc
+  src/s2/third_party/absl/strings/strip.cc
+  src/s2/third_party/absl/strings/internal/memutil.cc
+  src/s2/util/bits/bit-interleave.cc
+  src/s2/util/bits/bits.cc
+  src/s2/util/coding/coder.cc
+  src/s2/util/coding/varint.cc
+  src/s2/util/math/exactfloat/exactfloat.cc
+  src/s2/util/math/mathutil.cc
+  src/s2/util/units/length-units.cc)
+
+add_library(s2 ${SOURCES})
+
 add_library(s2testing STATIC
             src/s2/s2builderutil_testing.cc
             src/s2/s2shapeutil_testing.cc
             src/s2/s2testing.cc)
+
 target_link_libraries(
     s2
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
@@ -326,7 +335,8 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2wedge_relations.h
               src/s2/sequence_lexicon.h
               src/s2/value_lexicon.h
-        DESTINATION include/s2)
+        DESTINATION include/s2
+        COMPONENT dev)
 install(FILES src/s2/base/casts.h
               src/s2/base/commandlineflags.h
               src/s2/base/integral_types.h
@@ -335,11 +345,14 @@ install(FILES src/s2/base/casts.h
               src/s2/base/mutex.h
               src/s2/base/port.h
               src/s2/base/spinlock.h
-        DESTINATION include/s2/base)
+        DESTINATION include/s2/base
+        COMPONENT dev)
 install(FILES src/s2/strings/ostringstream.h
-        DESTINATION include/s2/strings)
+        DESTINATION include/s2/strings
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/algorithm/algorithm.h
-        DESTINATION include/s2/third_party/absl/algorithm)
+        DESTINATION include/s2/third_party/absl/algorithm
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/casts.h
               src/s2/third_party/absl/base/config.h
@@ -350,42 +363,55 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/policy_checks.h
               src/s2/third_party/absl/base/port.h
               src/s2/third_party/absl/base/thread_annotations.h
-        DESTINATION include/s2/third_party/absl/base)
+        DESTINATION include/s2/third_party/absl/base
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/base/internal/identity.h
               src/s2/third_party/absl/base/internal/inline_variable.h
               src/s2/third_party/absl/base/internal/invoke.h
               src/s2/third_party/absl/base/internal/throw_delegate.h
               src/s2/third_party/absl/base/internal/unaligned_access.h
-        DESTINATION include/s2/third_party/absl/base/internal)
+        DESTINATION include/s2/third_party/absl/base/internal
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/container/inlined_vector.h
-        DESTINATION include/s2/third_party/absl/container)
+        DESTINATION include/s2/third_party/absl/container
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/container/internal/compressed_tuple.h
               src/s2/third_party/absl/container/internal/container_memory.h
               src/s2/third_party/absl/container/internal/layout.h
-        DESTINATION include/s2/third_party/absl/container/internal)
+        DESTINATION include/s2/third_party/absl/container/internal
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/memory/memory.h
-        DESTINATION include/s2/third_party/absl/memory)
+        DESTINATION include/s2/third_party/absl/memory
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/meta/type_traits.h
-        DESTINATION include/s2/third_party/absl/meta)
+        DESTINATION include/s2/third_party/absl/meta
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/numeric/int128.h
               src/s2/third_party/absl/numeric/int128_have_intrinsic.inc
               src/s2/third_party/absl/numeric/int128_no_intrinsic.inc
-        DESTINATION include/s2/third_party/absl/numeric)
+        DESTINATION include/s2/third_party/absl/numeric
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/strings/numbers.h
               src/s2/third_party/absl/strings/str_cat.h
               src/s2/third_party/absl/strings/string_view.h
-        DESTINATION include/s2/third_party/absl/strings)
+        DESTINATION include/s2/third_party/absl/strings
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/types/span.h
-        DESTINATION include/s2/third_party/absl/types)
+        DESTINATION include/s2/third_party/absl/types
+        COMPONENT dev)
 install(FILES src/s2/third_party/absl/utility/utility.h
-        DESTINATION include/s2/third_party/absl/utility)
+        DESTINATION include/s2/third_party/absl/utility
+        COMPONENT dev)
 install(FILES src/s2/util/bits/bits.h
-        DESTINATION include/s2/util/bits)
+        DESTINATION include/s2/util/bits
+        COMPONENT dev)
 install(FILES src/s2/util/coding/coder.h
               src/s2/util/coding/varint.h
-        DESTINATION include/s2/util/coding)
+        DESTINATION include/s2/util/coding
+        COMPONENT dev)
 install(FILES src/s2/util/endian/endian.h
-        DESTINATION include/s2/util/endian)
+        DESTINATION include/s2/util/endian
+        COMPONENT dev)
 install(FILES src/s2/util/gtl/btree.h
               src/s2/util/gtl/btree_container.h
               src/s2/util/gtl/btree_map.h
@@ -396,18 +422,23 @@ install(FILES src/s2/util/gtl/btree.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
               src/s2/util/gtl/layout.h
-        DESTINATION include/s2/util/gtl)
+        DESTINATION include/s2/util/gtl
+        COMPONENT dev)
 install(FILES src/s2/util/hash/mix.h
-        DESTINATION include/s2/util/hash)
+        DESTINATION include/s2/util/hash
+        COMPONENT dev)
 install(FILES src/s2/util/math/mathutil.h
               src/s2/util/math/matrix3x3.h
               src/s2/util/math/vector.h
               src/s2/util/math/vector3_hash.h
-        DESTINATION include/s2/util/math)
+        DESTINATION include/s2/util/math
+        COMPONENT dev)
 install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h
-        DESTINATION include/s2/util/units)
-install(TARGETS s2 s2testing DESTINATION lib)
+        DESTINATION include/s2/util/units
+        COMPONENT dev)
+install(TARGETS s2 DESTINATION lib COMPONENT lib)
+install(TARGETS s2testing DESTINATION lib COMPONENT testing)
 
 message("GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
@@ -531,6 +562,38 @@ if (BUILD_EXAMPLES)
   add_subdirectory("doc/examples" examples)
 endif()
 
-if (${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
+if ($(BUILD_PYTHON) AND ${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
   add_subdirectory("src/python" python)
 endif()
+
+# Packaging
+set(CPACK_COMPONENTS_ALL lib dev)
+set(CPACK_COMPONENT_HEADERS DEPENDS lib)
+set(CPACK_PACKAGE_NAME "libs2")
+set(CPACK_PACKAGE_VENDOR "Google")
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
+
+if(${CPACK_GENERATOR} MATCHES "DEB")
+  set(CPACK_GENERATOR "DEB")
+  set(CPACK_DEBIAN_LIB_PACKAGE_NAME "libs2")
+  set(CPACK_DEBIAN_DEV_PACKAGE_NAME "libs2-dev")
+  set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+  set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Loki Coyote <lokkju@gmail.com>")
+  set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+  set(CPACK_DEB_COMPONENT_INSTALL ON)
+elseif(${CPACK_GENERATOR} MATCHES "RPM")
+  set(CPACK_GENERATOR "RPM")
+  set(CPACK_RPM_PACKAGE_LICENSE "Apache 2.0")
+  set(CPACK_RPM_COMPONENT_INSTALL ON)
+  set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+  set(CPACK_RPM_MAIN_COMPONENT lib)
+  set(CPACK_RPM_PACKAGE_GROUP "devel")
+  set(CPACK_RPM_PACKAGE_REQUIRES "libssl-dev >= 1.1.1")
+else()
+  set(CPACK_GENERATOR "TGZ")
+endif()
+
+include(CPack)

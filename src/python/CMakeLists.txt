@@ -27,6 +27,6 @@ execute_process(COMMAND "${PYTHON_EXECUTABLE}" -c "if True:
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # Install the wrapper.
-install(TARGETS _pywraps2 DESTINATION ${PYTHON_SITE})
+install(TARGETS _pywraps2 DESTINATION ${PYTHON_SITE} COMPONENT python)
 install(FILES "${PROJECT_BINARY_DIR}/python/pywraps2.py"
-        DESTINATION ${PYTHON_SITE})
+        DESTINATION ${PYTHON_SITE} COMPONENT python)
