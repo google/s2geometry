@@ -290,8 +290,8 @@ inline void sized_delete_array(void *ptr, size_t size) {
 
 #endif
 
-// defines __BYTE_ORDER for MSVC
-#ifdef _MSC_VER
+// defines __BYTE_ORDER for MSVC and MINGW
+#if defined(_MSC_VER) || defined(__MINGW32__)
 #define __BYTE_ORDER __LITTLE_ENDIAN
 #define IS_LITTLE_ENDIAN
 #else
@@ -883,7 +883,7 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 
 // __ASYLO__ platform uses newlib without an underlying OS, which provides
 // memalign, but not posix_memalign.
-#if defined(__cplusplus) &&                                             \
+#if !defined(__MINGW32__) && defined(__cplusplus) &&                                             \
     (((defined(__GNUC__) || defined(__APPLE__) ||                  \
        defined(__NVCC__)) &&   \
       !defined(SWIG)) ||                                                \
@@ -910,7 +910,7 @@ inline void aligned_free(void *aligned_memory) {
   free(aligned_memory);
 }
 
-#elif defined(_MSC_VER)  // MSVC
+#elif defined(_MSC_VER) || defined(__MINGW32__) // MSVC and MINGW
 
 inline void *aligned_malloc(size_t size, size_t minimum_alignment) {
   return _aligned_malloc(size, minimum_alignment);
