@@ -100,7 +100,7 @@ class S2LoopTestBase : public testing::Test {
   unique_ptr<const S2Loop> snapped_loop_a_;
 
  private:
-  unique_ptr<const S2Loop> AddLoop(const string& str) {
+  unique_ptr<const S2Loop> AddLoop(const std::string& str) {
     return AddLoop(s2textformat::MakeLoop(str));
   }
 
@@ -1184,19 +1184,19 @@ TEST(S2Loop, S2CellConstructorAndContains) {
 
 // Construct a loop using s2textformat::MakeLoop(str) and check that it
 // produces a validation error that includes "snippet".
-static void CheckLoopIsInvalid(const string& str, const string& snippet) {
+static void CheckLoopIsInvalid(const std::string& str, const std::string& snippet) {
   unique_ptr<S2Loop> loop(s2textformat::MakeLoop(str, S2Debug::DISABLE));
   S2Error error;
   EXPECT_TRUE(loop->FindValidationError(&error));
-  EXPECT_NE(string::npos, error.text().find(snippet));
+  EXPECT_NE(std::string::npos, error.text().find(snippet));
 }
 
 static void CheckLoopIsInvalid(const vector<S2Point>& points,
-                               const string& snippet) {
+                               const std::string& snippet) {
   S2Loop l(points, S2Debug::DISABLE);
   S2Error error;
   EXPECT_TRUE(l.FindValidationError(&error));
-  EXPECT_NE(string::npos, error.text().find(snippet));
+  EXPECT_NE(std::string::npos, error.text().find(snippet));
 }
 
 TEST(S2Loop, IsValidDetectsInvalidLoops) {
@@ -1368,4 +1368,3 @@ TEST(S2LoopOwningShape, Ownership) {
   auto loop = make_unique<S2Loop>(S2Loop::kEmpty());
   S2Loop::OwningShape shape(std::move(loop));
 }
-

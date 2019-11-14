@@ -39,7 +39,7 @@ namespace {
 // "abac"), returns a vector of S2Points of the form (ch, 0, 0).  Note that
 // these points are not unit length and therefore are not suitable for general
 // use, however they are useful for testing certain functions below.
-vector<S2Point> MakeTestLoop(const string& loop_str) {
+vector<S2Point> MakeTestLoop(const std::string& loop_str) {
   vector<S2Point> loop;
   for (char ch : loop_str) {
     loop.push_back(S2Point(ch, 0, 0));
@@ -49,11 +49,11 @@ vector<S2Point> MakeTestLoop(const string& loop_str) {
 
 // Given a loop whose vertices are represented as characters (such as "abcd" or
 // "abccb"), verify that S2::PruneDegeneracies() yields the loop "expected".
-void TestPruneDegeneracies(const string& input_str,
-                           const string& expected_str) {
+void TestPruneDegeneracies(const std::string& input_str,
+                           const std::string& expected_str) {
   vector<S2Point> input = MakeTestLoop(input_str);
   vector<S2Point> new_vertices;
-  string actual_str;
+  std::string actual_str;
   for (const S2Point& p : S2::PruneDegeneracies(input, &new_vertices)) {
     actual_str.push_back(static_cast<char>(p[0]));
   }
@@ -88,7 +88,7 @@ TEST(PruneDegeneracies, SomeDegeneracies) {
 
 // Given a loop whose vertices are represented as characters (such as "abcd" or
 // "abccb"), verify that S2::GetCanonicalLoopOrder returns the given result.
-void TestCanonicalLoopOrder(const string& input_str,
+void TestCanonicalLoopOrder(const std::string& input_str,
                             S2::LoopOrder expected_order) {
   EXPECT_EQ(expected_order, S2::GetCanonicalLoopOrder(MakeTestLoop(input_str)));
 }

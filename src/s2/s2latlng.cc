@@ -76,12 +76,12 @@ S1Angle S2LatLng::GetDistance(const S2LatLng& o) const {
   return S1Angle::Radians(2 * asin(sqrt(min(1.0, x))));
 }
 
-string S2LatLng::ToStringInDegrees() const {
+std::string S2LatLng::ToStringInDegrees() const {
   S2LatLng pt = Normalized();
   return StringPrintf("%f,%f", pt.lat().degrees(), pt.lng().degrees());
 }
 
-void S2LatLng::ToStringInDegrees(string* s) const {
+void S2LatLng::ToStringInDegrees(std::string* s) const {
   *s = ToStringInDegrees();
 }
 

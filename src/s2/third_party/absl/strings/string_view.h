@@ -23,7 +23,7 @@
 // another `string_view`.
 //
 // This `absl::string_view` abstraction is designed to be a drop-in
-// replacement for the C++17 `std::string_view` abstraction.
+// replacement for the C++17 `string_view` abstraction.
 #ifndef S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_H_
 #define S2_THIRD_PARTY_ABSL_STRINGS_STRING_VIEW_H_
 
@@ -35,7 +35,7 @@
 #include <string_view>
 
 namespace absl {
-using std::string_view;
+using string_view;
 }  // namespace absl
 
 #else  // ABSL_HAVE_STD_STRING_VIEW
@@ -62,7 +62,7 @@ using std::string_view;
 //   is 32 bits in LP32, 64 bits in LP64, 64 bits in LLP64
 //   future changes intended
 //
-typedef string::difference_type stringpiece_ssize_type;
+typedef std::string::difference_type stringpiece_ssize_type;
 
 namespace absl {
 
@@ -579,7 +579,7 @@ namespace absl {
 // ClippedSubstr()
 //
 // Like `s.substr(pos, n)`, but clips `pos` to an upper bound of `s.size()`.
-// Provided because std::string_view::substr throws if `pos > size()`
+// Provided because string_view::substr throws if `pos > size()`
 inline string_view ClippedSubstr(string_view s, size_t pos,
                                  size_t n = string_view::npos) {
   pos = (std::min)(pos, static_cast<size_t>(s.size()));
@@ -592,7 +592,7 @@ inline string_view ClippedSubstr(string_view s, size_t pos,
 // This function should be used where an `absl::string_view` can be created from
 // a possibly-null pointer.
 // Our absl::string_view has historically been constructible from a null-valued
-// pointer, but the same null value isn't valid for std::string_view.
+// pointer, but the same null value isn't valid for string_view.
 inline string_view NullSafeStringView(const char* p) {
   return p ? string_view(p) : string_view();
 }

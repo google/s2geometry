@@ -362,7 +362,7 @@ class S2CellId {
   // These methods guarantee that FromToken(ToToken(x)) == x even when
   // "x" is an invalid cell id.  All tokens are alphanumeric strings.
   // FromToken() returns S2CellId::None() for malformed inputs.
-  string ToToken() const;
+  std::string ToToken() const;
   static S2CellId FromToken(const char* token, size_t length);
   static S2CellId FromToken(const std::string& token);
 
@@ -381,7 +381,7 @@ class S2CellId {
   //
   // For example "4/" represents S2CellId::FromFace(4), and "3/02" represents
   // S2CellId::FromFace(3).child(0).child(2).
-  string ToString() const;
+  std::string ToString() const;
 
   // Converts a string in the format returned by ToString() to an S2CellId.
   // Returns S2CellId::None() if the string could not be parsed.

@@ -474,7 +474,7 @@ class PrecisionStats {
  public:
   PrecisionStats();
   void Tally(Precision precision) { ++counts_[precision]; }
-  string ToString();
+  std::string ToString();
 
  private:
   int counts_[NUM_PRECISIONS];
@@ -484,8 +484,8 @@ PrecisionStats::PrecisionStats() {
   for (int& count : counts_) count = 0;
 }
 
-string PrecisionStats::ToString() {
-  string result;
+std::string PrecisionStats::ToString() {
+  std::string result;
   int total = 0;
   for (int i = 0; i < NUM_PRECISIONS; ++i) {
     StringAppendF(&result, "%s=%6d, ", kPrecisionNames[i], counts_[i]);

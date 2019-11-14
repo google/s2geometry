@@ -51,7 +51,7 @@ static vector<string_view> SplitString(string_view str, char separator) {
   return result;
 }
 
-static bool ParseDouble(const string& str, double* value) {
+static bool ParseDouble(const std::string& str, double* value) {
   char* end_ptr = nullptr;
   *value = strtod(str.c_str(), &end_ptr);
   return end_ptr && *end_ptr == 0;
@@ -64,7 +64,7 @@ vector<S2LatLng> ParseLatLngsOrDie(string_view str) {
 }
 
 bool ParseLatLngs(string_view str, vector<S2LatLng>* latlngs) {
-  vector<pair<string, string>> ps;
+  vector<pair<std::string, std::string>> ps;
   if (!strings::DictionaryParse(str, &ps)) return false;
   for (const auto& p : ps) {
     double lat;
@@ -339,48 +339,48 @@ std::unique_ptr<MutableS2ShapeIndex> MakeIndex(string_view str) {
   return MakeIndexOrDie(str);
 }
 
-static void AppendVertex(const S2LatLng& ll, string* out) {
+static void AppendVertex(const S2LatLng& ll, std::string* out) {
   StringAppendF(out, "%.15g:%.15g", ll.lat().degrees(), ll.lng().degrees());
 }
 
-static void AppendVertex(const S2Point& p, string* out) {
+static void AppendVertex(const S2Point& p, std::string* out) {
   S2LatLng ll(p);
   return AppendVertex(ll, out);
 }
 
-static void AppendVertices(const S2Point* v, int n, string* out) {
+static void AppendVertices(const S2Point* v, int n, std::string* out) {
   for (int i = 0; i < n; ++i) {
     if (i > 0) *out += ", ";
     AppendVertex(v[i], out);
   }
 }
 
-string ToString(const S2Point& point) {
-  string out;
+std::string ToString(const S2Point& point) {
+  std::string out;
   AppendVertex(point, &out);
   return out;
 }
 
-string ToString(const S2LatLng& latlng) {
-  string out;
+std::string ToString(const S2LatLng& latlng) {
+  std::string out;
   AppendVertex(latlng, &out);
   return out;
 }
 
-string ToString(const S2LatLngRect& rect) {
-  string out;
+std::string ToString(const S2LatLngRect& rect) {
+  std::string out;
   AppendVertex(rect.lo(), &out);
   out += ", ";
   AppendVertex(rect.hi(), &out);
   return out;
 }
 
-string ToString(const S2CellId& cell_id) {
+std::string ToString(const S2CellId& cell_id) {
   return cell_id.ToString();
 }
 
-string ToString(const S2CellUnion& cell_union) {
-  string out;
+std::string ToString(const S2CellUnion& cell_union) {
+  std::string out;
   for (S2CellId cell_id : cell_union) {
     if (!out.empty()) out += ", ";
     out += cell_id.ToString();
@@ -388,45 +388,45 @@ string ToString(const S2CellUnion& cell_union) {
   return out;
 }
 
-string ToString(const S2Loop& loop) {
+std::string ToString(const S2Loop& loop) {
   if (loop.is_empty()) {
     return "empty";
   } else if (loop.is_full()) {
     return "full";
   }
-  string out;
+  std::string out;
   if (loop.num_vertices() > 0) {
     AppendVertices(&loop.vertex(0), loop.num_vertices(), &out);
   }
   return out;
 }
 
-string ToString(S2PointLoopSpan loop) {
+std::string ToString(S2PointLoopSpan loop) {
   // S2Shape represents the full loop as a loop with no vertices.
   // There is no representation of the empty loop.
   if (loop.empty()) {
     return "full";
   }
-  string out;
+  std::string out;
   AppendVertices(loop.data(), loop.size(), &out);
   return out;
 }
 
-string ToString(const S2Polyline& polyline) {
-  string out;
+std::string ToString(const S2Polyline& polyline) {
+  std::string out;
   if (polyline.num_vertices() > 0) {
     AppendVertices(&polyline.vertex(0), polyline.num_vertices(), &out);
   }
   return out;
 }
 
-string ToString(const S2Polygon& polygon, const char* loop_separator) {
+std::string ToString(const S2Polygon& polygon, const char* loop_separator) {
   if (polygon.is_empty()) {
     return "empty";
   } else if (polygon.is_full()) {
     return "full";
   }
-  string out;
+  std::string out;
   for (int i = 0; i < polygon.num_loops(); ++i) {
     if (i > 0) out += loop_separator;
     const S2Loop& loop = *polygon.loop(i);
@@ -435,14 +435,14 @@ string ToString(const S2Polygon& polygon, const char* loop_separator) {
   return out;
 }
 
-string ToString(const vector<S2Point>& points) {
-  string out;
+std::string ToString(const vector<S2Point>& points) {
+  std::string out;
   AppendVertices(points.data(), points.size(), &out);
   return out;
 }
 
-string ToString(const vector<S2LatLng>& latlngs) {
-  string out;
+std::string ToString(const vector<S2LatLng>& latlngs) {
+  std::string out;
   for (int i = 0; i < latlngs.size(); ++i) {
     if (i > 0) out += ", ";
     AppendVertex(latlngs[i], &out);
@@ -450,16 +450,16 @@ string ToString(const vector<S2LatLng>& latlngs) {
   return out;
 }
 
-string ToString(const S2LaxPolylineShape& polyline) {
-  string out;
+std::string ToString(const S2LaxPolylineShape& polyline) {
+  std::string out;
   if (polyline.num_vertices() > 0) {
     AppendVertices(&polyline.vertex(0), polyline.num_vertices(), &out);
   }
   return out;
 }
 
-string ToString(const S2LaxPolygonShape& polygon, const char* loop_separator) {
-  string out;
+std::string ToString(const S2LaxPolygonShape& polygon, const char* loop_separator) {
+  std::string out;
   for (int i = 0; i < polygon.num_loops(); ++i) {
     if (i > 0) out += loop_separator;
     int n = polygon.num_loop_vertices(i);
@@ -472,8 +472,8 @@ string ToString(const S2LaxPolygonShape& polygon, const char* loop_separator) {
   return out;
 }
 
-string ToString(const S2ShapeIndex& index) {
-  string out;
+std::string ToString(const S2ShapeIndex& index) {
+  std::string out;
   for (int dim = 0; dim < 3; ++dim) {
     if (dim > 0) out += "#";
     int count = 0;

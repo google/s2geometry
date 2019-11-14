@@ -304,27 +304,27 @@ class AlphaNum {
 namespace strings_internal {
 
 // Do not call directly - this is not part of the public API.
-string CatPieces(std::initializer_list<absl::string_view> pieces);
-void AppendPieces(string* dest,
+std::string CatPieces(std::initializer_list<absl::string_view> pieces);
+void AppendPieces(std::string* dest,
                   std::initializer_list<absl::string_view> pieces);
 
 }  // namespace strings_internal
 
-ABSL_MUST_USE_RESULT inline string StrCat() { return string(); }
+ABSL_MUST_USE_RESULT inline std::string StrCat() { return std::string(); }
 
-ABSL_MUST_USE_RESULT inline string StrCat(const AlphaNum& a) {
-  return string(a.data(), a.size());
+ABSL_MUST_USE_RESULT inline std::string StrCat(const AlphaNum& a) {
+  return std::string(a.data(), a.size());
 }
 
-ABSL_MUST_USE_RESULT string StrCat(const AlphaNum& a, const AlphaNum& b);
-ABSL_MUST_USE_RESULT string StrCat(const AlphaNum& a, const AlphaNum& b,
+ABSL_MUST_USE_RESULT std::string StrCat(const AlphaNum& a, const AlphaNum& b);
+ABSL_MUST_USE_RESULT std::string StrCat(const AlphaNum& a, const AlphaNum& b,
                                    const AlphaNum& c);
-ABSL_MUST_USE_RESULT string StrCat(const AlphaNum& a, const AlphaNum& b,
+ABSL_MUST_USE_RESULT std::string StrCat(const AlphaNum& a, const AlphaNum& b,
                                    const AlphaNum& c, const AlphaNum& d);
 
 // Support 5 or more arguments
 template <typename... AV>
-ABSL_MUST_USE_RESULT inline string StrCat(const AlphaNum& a, const AlphaNum& b,
+ABSL_MUST_USE_RESULT inline std::string StrCat(const AlphaNum& a, const AlphaNum& b,
                                           const AlphaNum& c, const AlphaNum& d,
                                           const AlphaNum& e,
                                           const AV&... args) {
@@ -360,17 +360,17 @@ ABSL_MUST_USE_RESULT inline string StrCat(const AlphaNum& a, const AlphaNum& b,
 //   absl::string_view p = s;
 //   StrAppend(&s, p);
 
-inline void StrAppend(string*) {}
-void StrAppend(string* dest, const AlphaNum& a);
-void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b);
-void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b,
+inline void StrAppend(std::string*) {}
+void StrAppend(std::string* dest, const AlphaNum& a);
+void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b);
+void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b,
                const AlphaNum& c);
-void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b,
+void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b,
                const AlphaNum& c, const AlphaNum& d);
 
 // Support 5 or more arguments
 template <typename... AV>
-inline void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b,
+inline void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b,
                       const AlphaNum& c, const AlphaNum& d, const AlphaNum& e,
                       const AV&... args) {
   strings_internal::AppendPieces(

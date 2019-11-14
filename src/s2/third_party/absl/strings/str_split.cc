@@ -31,7 +31,7 @@ vector<String> StrSplit(String const& text, char const delim,
     elems.emplace_back(view);
   return elems;
 }
-template vector<string> StrSplit(string const& text, char const delim,
+template vector<std::string> StrSplit(string const& text, char const delim,
                                  function<bool(string_view)> predicate);
 template vector<string_view> StrSplit(string_view const& text, char const delim,
                                       function<bool(string_view)> predicate);
@@ -40,7 +40,7 @@ template <typename String>
 vector<String> StrSplit(String const& text, char const delim) {
   return StrSplit(text, delim, [](string_view) { return true; });
 }
-template vector<string> StrSplit(string const& text, char const delim);
+template vector<std::string> StrSplit(string const& text, char const delim);
 template vector<string_view> StrSplit(string_view const& text,
                                       char const delim);
 

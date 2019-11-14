@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 
   // We use a hash map as our inverted index.  The key is an index term, and
   // the value is the set of "document ids" where this index term is present.
-  std::unordered_map<string, std::vector<int>> index;
+  std::unordered_map<std::string, std::vector<int>> index;
 
   // Create an indexer suitable for an index that contains points only.
   // (You may also want to adjust min_level() or max_level() if you plan

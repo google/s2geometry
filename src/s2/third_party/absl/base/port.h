@@ -33,19 +33,6 @@
 // Obsolete (to be removed)
 // -----------------------------------------------------------------------------
 
-// HAS_GLOBAL_STRING
-// Some platforms have a ::string class that is different from ::std::string
-// (although the interface is the same, of course).  On other platforms,
-// ::string is the same as ::std::string.
-#if defined(__cplusplus) && !defined(SWIG)
-#include <string>
-#ifndef HAS_GLOBAL_STRING
-using std::basic_string;
-using std::string;
-// TODO(user): using std::wstring?
-#endif  // HAS_GLOBAL_STRING
-#endif  // SWIG, __cplusplus
-
 // NOTE: These live in Abseil purely as a short-term layering workaround to
 // resolve a dependency chain between util/hash/hash, absl/strings, and //base:
 // in order for //base to depend on absl/strings, the includes of hash need

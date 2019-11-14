@@ -24,7 +24,7 @@ using std::vector;
 
 namespace {
 
-S2CellId MakeCellId(const string& str) {
+S2CellId MakeCellId(const std::string& str) {
   return S2CellId::FromDebugString(str);
 }
 

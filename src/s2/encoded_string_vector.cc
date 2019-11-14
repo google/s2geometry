@@ -37,7 +37,7 @@ void StringVectorEncoder::Encode(Encoder* encoder) {
   encoder->putn(data_.base(), data_.length());
 }
 
-void StringVectorEncoder::Encode(Span<const string> v, Encoder* encoder) {
+void StringVectorEncoder::Encode(Span<const std::string> v, Encoder* encoder) {
   StringVectorEncoder string_vector;
   for (const auto& str : v) string_vector.Add(str);
   string_vector.Encode(encoder);

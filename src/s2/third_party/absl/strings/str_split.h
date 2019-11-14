@@ -20,7 +20,7 @@ std::vector<String> StrSplit(String const& text, char delim);
 // Returns false if the given StringPiece is empty, indicating that the
 // StrSplit() API should omit the empty string.
 //
-// std::vector<string> v = StrSplit(" a , ,,b,", ',', SkipEmpty());
+// std::vector<std::string> v = StrSplit(" a , ,,b,", ',', SkipEmpty());
 // EXPECT_THAT(v, ElementsAre(" a ", " ", "b"));
 struct SkipEmpty {
   bool operator()(string_view sv) const { return !sv.empty(); }
@@ -29,7 +29,7 @@ struct SkipEmpty {
 // Returns false if the given string is empty or contains only whitespace,
 // indicating that the StrSplit() API should omit the string.
 //
-// std::vector<string> v = StrSplit(" a , ,,b,", ',', SkipWhitespace());
+// std::vector<std::string> v = StrSplit(" a , ,,b,", ',', SkipWhitespace());
 // EXPECT_THAT(v, ElementsAre(" a ", "b"));
 struct SkipWhitespace {
   bool operator()(string_view sv) const {

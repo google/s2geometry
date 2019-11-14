@@ -29,17 +29,17 @@
 #include "s2/base/port.h"
 
 // Return a C++ string
-extern string StringPrintf(const char* format, ...)
+extern std::string StringPrintf(const char* format, ...)
     // Tell the compiler to do printf format string checking.
     ABSL_PRINTF_ATTRIBUTE(1, 2);
 
 // Store result into a supplied string and return it
-extern const string& SStringPrintf(string* dst, const char* format, ...)
+extern const std::string& SStringPrintf(std::string* dst, const char* format, ...)
     // Tell the compiler to do printf format string checking.
     ABSL_PRINTF_ATTRIBUTE(2, 3);
 
 // Append result to a supplied string
-extern void StringAppendF(string* dst, const char* format, ...)
+extern void StringAppendF(std::string* dst, const char* format, ...)
     // Tell the compiler to do printf format string checking.
     ABSL_PRINTF_ATTRIBUTE(2, 3);
 
@@ -48,6 +48,6 @@ extern void StringAppendF(string* dst, const char* format, ...)
 //
 // Implementation note: the va_list is never modified, this implementation
 // always operates on copies.
-extern void StringAppendV(string* dst, const char* format, va_list ap);
+extern void StringAppendV(std::string* dst, const char* format, va_list ap);
 
 #endif  // S2_BASE_STRINGPRINTF_H_

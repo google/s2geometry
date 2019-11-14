@@ -81,48 +81,48 @@ using std::vector;
 // A set of nested loops around the point 0:0 (lat:lng).
 // Every vertex of kNear0 is a vertex of kNear1.
 const char kNearPoint[] = "0:0";
-const string kNear0 = "-1:0, 0:1, 1:0, 0:-1;";
-const string kNear1 = "-1:-1, -1:0, -1:1, 0:1, 1:1, 1:0, 1:-1, 0:-1;";
-const string kNear2 = "-1:-2, -2:5, 5:-2;";
-const string kNear3 = "-2:-2, -3:6, 6:-3;";
-const string kNearHemi = "0:-90, -90:0, 0:90, 90:0;";
+const std::string kNear0 = "-1:0, 0:1, 1:0, 0:-1;";
+const std::string kNear1 = "-1:-1, -1:0, -1:1, 0:1, 1:1, 1:0, 1:-1, 0:-1;";
+const std::string kNear2 = "-1:-2, -2:5, 5:-2;";
+const std::string kNear3 = "-2:-2, -3:6, 6:-3;";
+const std::string kNearHemi = "0:-90, -90:0, 0:90, 90:0;";
 
 // A set of nested loops around the point 0:180 (lat:lng).
 // Every vertex of kFar0 and kFar2 belongs to kFar1, and all
 // the loops except kFar2 are non-convex.
-const string kFar0 = "0:179, 1:180, 0:-179, 2:-180;";
-const string kFar1 =
+const std::string kFar0 = "0:179, 1:180, 0:-179, 2:-180;";
+const std::string kFar1 =
   "0:179, -1:179, 1:180, -1:-179, 0:-179, 3:-178, 2:-180, 3:178;";
-const string kFar2 = "3:-178, 3:178, -1:179, -1:-179;";
-const string kFar3 = "-3:-178, 4:-177, 4:177, -3:178, -2:179;";
-const string kFarHemi = "0:-90, 60:90, -60:90;";
+const std::string kFar2 = "3:-178, 3:178, -1:179, -1:-179;";
+const std::string kFar3 = "-3:-178, 4:-177, 4:177, -3:178, -2:179;";
+const std::string kFarHemi = "0:-90, 60:90, -60:90;";
 
 // A set of nested loops around the point -90:0 (lat:lng).
-const string kSouthPoint = "-89.9999:0.001";
-const string kSouth0a = "-90:0, -89.99:0.01, -89.99:0;";
-const string kSouth0b = "-90:0, -89.99:0.03, -89.99:0.02;";
-const string kSouth0c = "-90:0, -89.99:0.05, -89.99:0.04;";
-const string kSouth1 = "-90:0, -89.9:0.1, -89.9:-0.1;";
-const string kSouth2 = "-90:0, -89.8:0.2, -89.8:-0.2;";
-const string kSouthHemi = "0:-180, 0:60, 0:-60;";
+const std::string kSouthPoint = "-89.9999:0.001";
+const std::string kSouth0a = "-90:0, -89.99:0.01, -89.99:0;";
+const std::string kSouth0b = "-90:0, -89.99:0.03, -89.99:0.02;";
+const std::string kSouth0c = "-90:0, -89.99:0.05, -89.99:0.04;";
+const std::string kSouth1 = "-90:0, -89.9:0.1, -89.9:-0.1;";
+const std::string kSouth2 = "-90:0, -89.8:0.2, -89.8:-0.2;";
+const std::string kSouthHemi = "0:-180, 0:60, 0:-60;";
 
 // Two different loops that surround all the Near and Far loops except
 // for the hemispheres.
-const string kNearFar1 = "-1:-9, -9:-9, -9:9, 9:9, 9:-9, 1:-9, "
+const std::string kNearFar1 = "-1:-9, -9:-9, -9:9, 9:9, 9:-9, 1:-9, "
                          "1:-175, 9:-175, 9:175, -9:175, -9:-175, -1:-175;";
-const string kNearFar2 = "-2:15, -2:170, -8:-175, 8:-175, "
+const std::string kNearFar2 = "-2:15, -2:170, -8:-175, 8:-175, "
                          "2:170, 2:15, 8:-4, -8:-4;";
 
 // Loops that result from intersection of other loops.
-const string kFarHSouthH = "0:-180, 0:90, -60:90, 0:-90;";
+const std::string kFarHSouthH = "0:-180, 0:90, -60:90, 0:-90;";
 
 // Rectangles that form a cross, with only shared vertices, no crossing edges.
 // Optional holes outside the intersecting region.
-const string kCross1 = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1;";
-const string kCross1SideHole = "-1.5:0.5, -1.2:0.5, -1.2:-0.5, -1.5:-0.5;";
-const string kCross2 = "1:-2, 1:-1, 1:1, 1:2, -1:2, -1:1, -1:-1, -1:-2;";
-const string kCross2SideHole = "0.5:-1.5, 0.5:-1.2, -0.5:-1.2, -0.5:-1.5;";
-const string kCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;";
+const std::string kCross1 = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1;";
+const std::string kCross1SideHole = "-1.5:0.5, -1.2:0.5, -1.2:-0.5, -1.5:-0.5;";
+const std::string kCross2 = "1:-2, 1:-1, 1:1, 1:2, -1:2, -1:1, -1:-1, -1:-2;";
+const std::string kCross2SideHole = "0.5:-1.5, 0.5:-1.2, -0.5:-1.2, -0.5:-1.5;";
+const std::string kCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;";
 
 // Two rectangles that intersect, but no edges cross and there's always
 // local containment (rather than crossing) at each shared vertex.
@@ -130,18 +130,18 @@ const string kCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;";
 //      +---+---+---+
 //      | A | B | C |
 //      +---+---+---+
-const string kOverlap1 = "0:1, 1:1, 2:1, 2:0, 1:0, 0:0;";
-const string kOverlap1SideHole = "0.2:0.8, 0.8:0.8, 0.8:0.2, 0.2:0.2;";
-const string kOverlap2 = "1:1, 2:1, 3:1, 3:0, 2:0, 1:0;";
-const string kOverlap2SideHole = "2.2:0.8, 2.8:0.8, 2.8:0.2, 2.2:0.2;";
-const string kOverlapCenterHole = "1.2:0.8, 1.8:0.8, 1.8:0.2, 1.2:0.2;";
+const std::string kOverlap1 = "0:1, 1:1, 2:1, 2:0, 1:0, 0:0;";
+const std::string kOverlap1SideHole = "0.2:0.8, 0.8:0.8, 0.8:0.2, 0.2:0.2;";
+const std::string kOverlap2 = "1:1, 2:1, 3:1, 3:0, 2:0, 1:0;";
+const std::string kOverlap2SideHole = "2.2:0.8, 2.8:0.8, 2.8:0.2, 2.2:0.2;";
+const std::string kOverlapCenterHole = "1.2:0.8, 1.8:0.8, 1.8:0.2, 1.2:0.2;";
 
 // An empty polygon.
-const string kEmpty = "";
+const std::string kEmpty = "";
 // By symmetry, the intersection of the two polygons has almost half the area
 // of either polygon.
-const string kOverlap3 = "-10:10, 0:10, 0:-10, -10:-10, -10:0";
-const string kOverlap4 = "-10:0, 10:0, 10:-10, -10:-10";
+const std::string kOverlap3 = "-10:10, 0:10, 0:-10, -10:-10, -10:0";
+const std::string kOverlap4 = "-10:0, 10:0, 10:-10, -10:-10";
 
 class S2PolygonTestBase : public testing::Test {
  public:
@@ -205,7 +205,7 @@ static bool TestEncodeDecode(const S2Polygon* src) {
   return src->Equals(&dst);
 }
 
-static unique_ptr<S2Polygon> MakePolygon(const string& str) {
+static unique_ptr<S2Polygon> MakePolygon(const std::string& str) {
   unique_ptr<S2Polygon> polygon(s2textformat::MakeVerbatimPolygon(str));
 
   // Check that InitToSnapped() is idempotent.
@@ -219,7 +219,7 @@ static unique_ptr<S2Polygon> MakePolygon(const string& str) {
   return polygon;
 }
 
-static void CheckContains(const string& a_str, const string& b_str) {
+static void CheckContains(const std::string& a_str, const std::string& b_str) {
   unique_ptr<S2Polygon> a = MakePolygon(a_str);
   unique_ptr<S2Polygon> b = MakePolygon(b_str);
   EXPECT_TRUE(a->Contains(b.get()));
@@ -227,7 +227,7 @@ static void CheckContains(const string& a_str, const string& b_str) {
   EXPECT_FALSE(a->ApproxDisjoint(b.get(), S1Angle::Radians(1e-15)));
 }
 
-static void CheckContainsPoint(const string& a_str, const string& b_str) {
+static void CheckContainsPoint(const std::string& a_str, const std::string& b_str) {
   unique_ptr<S2Polygon> a(s2textformat::MakePolygon(a_str));
   EXPECT_TRUE(a->Contains(s2textformat::MakePoint(b_str)))
     << " " << a_str << " did not contain " << b_str;
@@ -2270,7 +2270,7 @@ class IsValidTest : public testing::Test {
     vloops_.clear();
   }
 
-  void CheckInvalid(const string& snippet) {
+  void CheckInvalid(const std::string& snippet) {
     vector<unique_ptr<S2Loop>> loops;
     for (const auto& vloop : vloops_) {
       loops.push_back(make_unique<S2Loop>(*vloop, S2Debug::DISABLE));
@@ -2290,7 +2290,7 @@ class IsValidTest : public testing::Test {
     if (modify_polygon_hook_) (*modify_polygon_hook_)(&polygon);
     S2Error error;
     EXPECT_TRUE(polygon.FindValidationError(&error));
-    EXPECT_TRUE(error.text().find(snippet) != string::npos)
+    EXPECT_TRUE(error.text().find(snippet) != std::string::npos)
         << "\nActual error: " << error << "\nExpected substring: " << snippet;
     Reset();
   }
@@ -2571,7 +2571,7 @@ class S2PolygonSimplifierTest : public ::testing::Test {
                                      S1Angle::Degrees(tolerance_in_degrees)));
   }
 
-  void SetInput(const string& poly, double tolerance_in_degrees) {
+  void SetInput(const std::string& poly, double tolerance_in_degrees) {
     SetInput(s2textformat::MakePolygon(poly), tolerance_in_degrees);
   }
 
@@ -2621,10 +2621,10 @@ TEST_F(S2PolygonSimplifierTest, EdgeSplitInManyPieces) {
   // near_square's right four-point side will be simplified to a vertical
   // line at lng=7.9, that will cut the 9 teeth of the saw (the edge will
   // therefore be broken into 19 pieces).
-  const string saw =
+  const std::string saw =
       "1:1, 1:8, 2:2, 2:8, 3:2, 3:8, 4:2, 4:8, 5:2, 5:8,"
       "6:2, 6:8, 7:2, 7:8, 8:2, 8:8, 9:2, 9:8, 10:1";
-  const string near_square =
+  const std::string near_square =
       "0:0, 0:7.9, 1:8.1, 10:8.1, 11:7.9, 11:0";
   SetInput(saw + ";" + near_square, 0.21);
 
@@ -2776,7 +2776,7 @@ TEST(InitToSimplifiedInCell, InteriorEdgesSnappedToBoundary) {
 
 
 unique_ptr<S2Polygon> MakeRegularPolygon(
-    const string& center, int num_points, double radius_in_degrees) {
+    const std::string& center, int num_points, double radius_in_degrees) {
   S1Angle radius = S1Angle::Degrees(radius_in_degrees);
   return make_unique<S2Polygon>(S2Loop::MakeRegularLoop(
       s2textformat::MakePoint(center), radius, num_points));
@@ -3022,4 +3022,3 @@ TEST_F(S2PolygonTestBase, PolygonPolygonDistance) {
   S1ChordAngle distance = query.GetDistance(&target);
   EXPECT_GT(distance, S1ChordAngle(S1Angle::Degrees(175)));
 }
-

@@ -33,7 +33,7 @@ void ReplaceCharacters(char* str, size_t len, absl::string_view remove,
   }
 }
 
-void ReplaceCharacters(string* s, absl::string_view remove, char replace_with) {
+void ReplaceCharacters(std::string* s, absl::string_view remove, char replace_with) {
   for (char& ch : *s) {
     if (remove.find(ch) != absl::string_view::npos) {
       ch = replace_with;

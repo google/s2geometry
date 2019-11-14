@@ -289,8 +289,8 @@ constexpr size_t Max(size_t a, size_t b, Ts... rest) {
 }
 
 template <class T>
-string TypeName() {
-  string out;
+std::string TypeName() {
+  std::string out;
   int status = 0;
   char* demangled = nullptr;
 #ifdef ABSL_INTERNAL_HAS_CXA_DEMANGLE
@@ -641,11 +641,11 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   // be missing (as in the example above). Only fields with known offsets are
   // described. Type names may differ across platforms: one compiler might
   // produce "unsigned*" where another produces "unsigned int *".
-  string DebugString() const {
+  std::string DebugString() const {
     const auto offsets = Offsets();
     const size_t sizes[] = {SizeOf<ElementType<OffsetSeq>>()...};
-    const string types[] = {adl_barrier::TypeName<ElementType<OffsetSeq>>()...};
-    string res = absl::StrCat("@0", types[0], "(", sizes[0], ")");
+    const std::string types[] = {adl_barrier::TypeName<ElementType<OffsetSeq>>()...};
+    std::string res = absl::StrCat("@0", types[0], "(", sizes[0], ")");
     for (size_t i = 0; i != NumOffsets - 1; ++i) {
       absl::StrAppend(&res, "[", size_[i], "]; @", offsets[i + 1], types[i + 1],
                       "(", sizes[i + 1], ")");

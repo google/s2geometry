@@ -93,8 +93,8 @@ static char* Append(char* out, const AlphaNum& x) {
   return after;
 }
 
-string StrCat(const AlphaNum& a, const AlphaNum& b) {
-  string result;
+std::string StrCat(const AlphaNum& a, const AlphaNum& b) {
+  std::string result;
   absl::strings_internal::STLStringResizeUninitialized(&result,
                                                        a.size() + b.size());
   char* const begin = &*result.begin();
@@ -105,8 +105,8 @@ string StrCat(const AlphaNum& a, const AlphaNum& b) {
   return result;
 }
 
-string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c) {
-  string result;
+std::string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c) {
+  std::string result;
   strings_internal::STLStringResizeUninitialized(
       &result, a.size() + b.size() + c.size());
   char* const begin = &*result.begin();
@@ -118,9 +118,9 @@ string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c) {
   return result;
 }
 
-string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c,
+std::string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c,
               const AlphaNum& d) {
-  string result;
+  std::string result;
   strings_internal::STLStringResizeUninitialized(
       &result, a.size() + b.size() + c.size() + d.size());
   char* const begin = &*result.begin();
@@ -136,8 +136,8 @@ string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c,
 namespace strings_internal {
 
 // Do not call directly - these are not part of the public API.
-string CatPieces(std::initializer_list<absl::string_view> pieces) {
-  string result;
+std::string CatPieces(std::initializer_list<absl::string_view> pieces) {
+  std::string result;
   size_t total_size = 0;
   for (const absl::string_view piece : pieces) total_size += piece.size();
   strings_internal::STLStringResizeUninitialized(&result, total_size);
@@ -162,7 +162,7 @@ string CatPieces(std::initializer_list<absl::string_view> pieces) {
   assert(((src).size() == 0) ||      \
          (uintptr_t((src).data() - (dest).data()) > uintptr_t((dest).size())))
 
-void AppendPieces(string* dest,
+void AppendPieces(std::string* dest,
                   std::initializer_list<absl::string_view> pieces) {
   size_t old_size = dest->size();
   size_t total_size = old_size;
@@ -185,15 +185,15 @@ void AppendPieces(string* dest,
 
 }  // namespace strings_internal
 
-void StrAppend(string* dest, const AlphaNum& a) {
+void StrAppend(std::string* dest, const AlphaNum& a) {
   ASSERT_NO_OVERLAP(*dest, a);
   dest->append(a.data(), a.size());
 }
 
-void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b) {
+void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b) {
   ASSERT_NO_OVERLAP(*dest, a);
   ASSERT_NO_OVERLAP(*dest, b);
-  string::size_type old_size = dest->size();
+  std::string::size_type old_size = dest->size();
   strings_internal::STLStringResizeUninitialized(
       dest, old_size + a.size() + b.size());
   char* const begin = &*dest->begin();
@@ -203,12 +203,12 @@ void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b) {
   assert(out == begin + dest->size());
 }
 
-void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b,
+void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b,
                const AlphaNum& c) {
   ASSERT_NO_OVERLAP(*dest, a);
   ASSERT_NO_OVERLAP(*dest, b);
   ASSERT_NO_OVERLAP(*dest, c);
-  string::size_type old_size = dest->size();
+  std::string::size_type old_size = dest->size();
   strings_internal::STLStringResizeUninitialized(
       dest, old_size + a.size() + b.size() + c.size());
   char* const begin = &*dest->begin();
@@ -219,13 +219,13 @@ void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b,
   assert(out == begin + dest->size());
 }
 
-void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b,
+void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b,
                const AlphaNum& c, const AlphaNum& d) {
   ASSERT_NO_OVERLAP(*dest, a);
   ASSERT_NO_OVERLAP(*dest, b);
   ASSERT_NO_OVERLAP(*dest, c);
   ASSERT_NO_OVERLAP(*dest, d);
-  string::size_type old_size = dest->size();
+  std::string::size_type old_size = dest->size();
   strings_internal::STLStringResizeUninitialized(
       dest, old_size + a.size() + b.size() + c.size() + d.size());
   char* const begin = &*dest->begin();

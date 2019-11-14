@@ -54,7 +54,7 @@ class Stats {
   double max() const { return max_; }
   double avg() const { return sum_ / count_; }
 
-  string ToString() const {
+  std::string ToString() const {
     return StrCat("avg = ", sum_ / count_, ", max = ", max_);
   }
 

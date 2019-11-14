@@ -52,13 +52,13 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
   S2RegionCoverer coverer(options);
   vector<S2Cap> caps;
   vector<S2CellUnion> coverings;
-  std::unordered_map<string, vector<int>> index;
+  std::unordered_map<std::string, vector<int>> index;
   int index_terms = 0, query_terms = 0;
   for (int i = 0; i < FLAGS_iters; ++i) {
     // Choose the region to be indexed: either a single point or a cap
     // of random size (up to a full sphere).
     S2Cap cap;
-    vector<string> terms;
+    vector<std::string> terms;
     if (options.index_contains_points_only()) {
       cap = S2Cap::FromPoint(S2Testing::RandomPoint());
       terms = indexer.GetIndexTerms(cap.center(), "");
@@ -70,7 +70,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     }
     caps.push_back(cap);
     coverings.push_back(coverer.GetCovering(cap));
-    for (const string& term : terms) {
+    for (const std::string& term : terms) {
       index[term].push_back(i);
     }
     index_terms += terms.size();
@@ -79,7 +79,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     // Choose the region to be queried: either a random point or a cap of
     // random size.
     S2Cap cap;
-    vector<string> terms;
+    vector<std::string> terms;
     if (query_type == QueryType::CAP) {
       cap = S2Cap::FromPoint(S2Testing::RandomPoint());
       terms = indexer.GetQueryTerms(cap.center(), "");
@@ -97,7 +97,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
         expected.insert(j);
       }
     }
-    for (const string& term : terms) {
+    for (const std::string& term : terms) {
       actual.insert(index[term].begin(), index[term].end());
     }
     EXPECT_EQ(expected, actual);

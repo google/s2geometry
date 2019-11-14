@@ -467,7 +467,7 @@ TEST(S2, EdgePairMaxDistance) {
                            M_PI);
 }
 
-bool IsEdgeBNearEdgeA(const string& a_str, const string& b_str,
+bool IsEdgeBNearEdgeA(const std::string& a_str, const std::string& b_str,
                       double max_error_degrees) {
   unique_ptr<S2Polyline> a(s2textformat::MakePolyline(a_str));
   EXPECT_EQ(2, a->num_vertices());

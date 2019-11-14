@@ -96,7 +96,7 @@ S2RegionTermIndexer::Options::Options() {
 
 void S2RegionTermIndexer::Options::set_marker_character(char ch) {
   S2_DCHECK(!std::isalnum(ch));
-  marker_ = string(1, ch);
+  marker_ = std::string(1, ch);
 }
 
 S2RegionTermIndexer::S2RegionTermIndexer(const Options& options)
@@ -110,7 +110,7 @@ S2RegionTermIndexer::S2RegionTermIndexer(S2RegionTermIndexer&&) = default;
 S2RegionTermIndexer& S2RegionTermIndexer::operator=(S2RegionTermIndexer&&) =
                                                    default;
 
-string S2RegionTermIndexer::GetTerm(TermType term_type, const S2CellId& id,
+std::string S2RegionTermIndexer::GetTerm(TermType term_type, const S2CellId& id,
                                     string_view prefix) const {
   // There are generally more ancestor terms than covering terms, so we add
   // the extra "marker" character to the covering terms to distinguish them.
@@ -121,7 +121,7 @@ string S2RegionTermIndexer::GetTerm(TermType term_type, const S2CellId& id,
   }
 }
 
-vector<string> S2RegionTermIndexer::GetIndexTerms(const S2Point& point,
+vector<std::string> S2RegionTermIndexer::GetIndexTerms(const S2Point& point,
                                                   string_view prefix) {
   // See the top of this file for an overview of the indexing strategy.
   //
@@ -133,7 +133,7 @@ vector<string> S2RegionTermIndexer::GetIndexTerms(const S2Point& point,
   // max_level() != true_max_level() (see S2RegionCoverer::Options).
 
   const S2CellId id(point);
-  vector<string> terms;
+  vector<std::string> terms;
   for (int level = options_.min_level(); level <= options_.max_level();
        level += options_.level_mod()) {
     terms.push_back(GetTerm(TermType::ANCESTOR, id.parent(level), prefix));
@@ -141,7 +141,7 @@ vector<string> S2RegionTermIndexer::GetIndexTerms(const S2Point& point,
   return terms;
 }
 
-vector<string> S2RegionTermIndexer::GetIndexTerms(const S2Region& region,
+vector<std::string> S2RegionTermIndexer::GetIndexTerms(const S2Region& region,
                                                   string_view prefix) {
   // Note that options may have changed since the last call.
   *coverer_.mutable_options() = options_;
@@ -149,7 +149,7 @@ vector<string> S2RegionTermIndexer::GetIndexTerms(const S2Region& region,
   return GetIndexTermsForCanonicalCovering(covering, prefix);
 }
 
-vector<string> S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
+vector<std::string> S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
     const S2CellUnion& covering, string_view prefix) {
   // See the top of this file for an overview of the indexing strategy.
   //
@@ -165,7 +165,7 @@ vector<string> S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
     *coverer_.mutable_options() = options_;
     S2_CHECK(coverer_.IsCanonical(covering));
   }
-  vector<string> terms;
+  vector<std::string> terms;
   S2CellId prev_id = S2CellId::None();
   int true_max_level = options_.true_max_level();
   for (S2CellId id : covering) {
@@ -198,12 +198,12 @@ vector<string> S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
   return terms;
 }
 
-vector<string> S2RegionTermIndexer::GetQueryTerms(const S2Point& point,
+vector<std::string> S2RegionTermIndexer::GetQueryTerms(const S2Point& point,
                                                   string_view prefix) {
   // See the top of this file for an overview of the indexing strategy.
 
   const S2CellId id(point);
-  vector<string> terms;
+  vector<std::string> terms;
   // Recall that all true_max_level() cells are indexed only as ancestor terms.
   int level = options_.true_max_level();
   terms.push_back(GetTerm(TermType::ANCESTOR, id.parent(level), prefix));
@@ -216,7 +216,7 @@ vector<string> S2RegionTermIndexer::GetQueryTerms(const S2Point& point,
   return terms;
 }
 
-vector<string> S2RegionTermIndexer::GetQueryTerms(const S2Region& region,
+vector<std::string> S2RegionTermIndexer::GetQueryTerms(const S2Region& region,
                                                   string_view prefix) {
   // Note that options may have changed since the last call.
   *coverer_.mutable_options() = options_;
@@ -224,7 +224,7 @@ vector<string> S2RegionTermIndexer::GetQueryTerms(const S2Region& region,
   return GetQueryTermsForCanonicalCovering(covering, prefix);
 }
 
-vector<string> S2RegionTermIndexer::GetQueryTermsForCanonicalCovering(
+vector<std::string> S2RegionTermIndexer::GetQueryTermsForCanonicalCovering(
     const S2CellUnion& covering, string_view prefix) {
   // See the top of this file for an overview of the indexing strategy.
 
@@ -232,7 +232,7 @@ vector<string> S2RegionTermIndexer::GetQueryTermsForCanonicalCovering(
     *coverer_.mutable_options() = options_;
     S2_CHECK(coverer_.IsCanonical(covering));
   }
-  vector<string> terms;
+  vector<std::string> terms;
   S2CellId prev_id = S2CellId::None();
   int true_max_level = options_.true_max_level();
   for (S2CellId id : covering) {

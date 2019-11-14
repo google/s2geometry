@@ -38,7 +38,7 @@ void EdgeIterator::Next() {
   }
 }
 
-string EdgeIterator::DebugString() const {
+std::string EdgeIterator::DebugString() const {
   return absl::StrCat("(shape=", shape_id_, ", edge=", edge_id_, ")");
 }
 

@@ -106,7 +106,7 @@ TEST(S2ShapeIndexBufferedRegion, BufferedPointVsCap) {
 //
 // The "radius" parameter is an S1Angle for convenience.
 // TODO(ericv): Add Degrees, Radians, etc, methods to S1ChordAngle?
-void TestBufferIndex(const string& index_str, S1Angle radius_angle,
+void TestBufferIndex(const std::string& index_str, S1Angle radius_angle,
                      S2RegionCoverer* coverer) {
   auto index = MakeIndexOrDie(index_str);
   S1ChordAngle radius(radius_angle);

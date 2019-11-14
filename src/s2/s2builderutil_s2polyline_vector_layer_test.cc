@@ -58,7 +58,7 @@ void TestS2PolylineVector(
   }
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
-  vector<string> output_strs;
+  vector<std::string> output_strs;
   for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
@@ -215,8 +215,8 @@ TEST(IndexedS2PolylineVectorLayer, AddsShapes) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolylineVectorLayer>(&index));
-  string polyline0_str = "0:0, 1:1";
-  string polyline1_str = "2:2, 3:3";
+  std::string polyline0_str = "0:0, 1:1";
+  std::string polyline1_str = "2:2, 3:3";
   builder.AddPolyline(*s2textformat::MakePolylineOrDie(polyline0_str));
   builder.AddPolyline(*s2textformat::MakePolylineOrDie(polyline1_str));
   S2Error error;

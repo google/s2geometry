@@ -96,7 +96,7 @@ ABSL_MUST_USE_RESULT inline absl::string_view StripSuffix(
 // Use icu::UnicodeSet and its spanUTF8()/spanBackUTF8().
 void ReplaceCharacters(char* str, size_t len, absl::string_view remove,
                        char replace_with);
-void ReplaceCharacters(string* s, absl::string_view remove, char replace_with);
+void ReplaceCharacters(std::string* s, absl::string_view remove, char replace_with);
 
 // Replaces the character 'remove' with the character 'replace_with'.
 //
@@ -108,7 +108,7 @@ inline void ReplaceCharacter(char* str, size_t len, char remove,
 }
 
 ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
-inline void StripWhitespace(string* str) { absl::StripAsciiWhitespace(str); }
+inline void StripWhitespace(std::string* str) { absl::StripAsciiWhitespace(str); }
 
 ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
 inline void StripWhitespace(absl::string_view* str) {

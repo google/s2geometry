@@ -286,14 +286,14 @@ TEST(S2CellId, Tokens) {
   // Test random cell ids at all levels.
   for (int i = 0; i < 10000; ++i) {
     S2CellId id = S2Testing::GetRandomCellId();
-    string token = id.ToToken();
+    std::string token = id.ToToken();
     EXPECT_LE(token.size(), 16);
     EXPECT_EQ(id, S2CellId::FromToken(token));
     EXPECT_EQ(id, S2CellId::FromToken(token.data(), token.size()));
   }
   // Check that invalid cell ids can be encoded, and round-trip is
   // the identity operation.
-  string token = S2CellId::None().ToToken();
+  std::string token = S2CellId::None().ToToken();
   EXPECT_EQ(S2CellId::None(), S2CellId::FromToken(token));
   EXPECT_EQ(S2CellId::None(), S2CellId::FromToken(token.data(), token.size()));
 
@@ -630,4 +630,3 @@ TEST(S2CellId, OutputOperator) {
   s << cell;
   EXPECT_EQ("5/31200", s.str());
 }
-

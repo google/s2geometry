@@ -196,7 +196,7 @@ TEST(IndexedS2PolylineLayer, AddsShape) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolylineLayer>(&index));
-  const string& polyline_str = "0:0, 0:10";
+  const std::string& polyline_str = "0:0, 0:10";
   builder.AddPolyline(*MakePolylineOrDie(polyline_str));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));

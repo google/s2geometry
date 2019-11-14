@@ -102,7 +102,7 @@ Window Window::Dilate(const int radius) const {
 }
 
 // Debug string implemented primarily for testing purposes.
-string Window::DebugString() const {
+std::string Window::DebugString() const {
   std::stringstream buffer;
   for (int row = 0; row < rows_; ++row) {
     for (int col = 0; col < cols_; ++col) {

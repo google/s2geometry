@@ -200,8 +200,8 @@ class RangeLogger {
 
   // operator<< above is generally recommended. However, some situations may
   // require a string, so a convenience str() method is provided as well.
-  string str() const {
-    string s;
+  std::string str() const {
+    std::string s;
     ::strings::OStringStream(&s) << *this;
     return s;
   }

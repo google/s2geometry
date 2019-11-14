@@ -29,7 +29,7 @@ namespace s2shapeutil {
 
 class TestLaxLoop : public S2LaxLoopShape {
  public:
-  explicit TestLaxLoop(const string& vertex_str) {
+  explicit TestLaxLoop(const std::string& vertex_str) {
     vector<S2Point> vertices = s2textformat::ParsePoints(vertex_str);
     Init(vertices);
   }

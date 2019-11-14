@@ -277,7 +277,7 @@ static void TestAccuracy(int max_cells) {
 TEST(S2RegionCoverer, Accuracy) {
   for (auto max_cells :
            absl::StrSplit(FLAGS_max_cells, ',', absl::SkipEmpty())) {
-    TestAccuracy(atoi32(string(max_cells).c_str()));
+    TestAccuracy(atoi32(std::string(max_cells).c_str()));
   }
 }
 
@@ -319,7 +319,7 @@ TEST(GetFastCovering, HugeFixedLevelCovering) {
   EXPECT_GE(covering.size(), 1 << 16);
 }
 
-bool IsCanonical(const vector<string>& input_str,
+bool IsCanonical(const vector<std::string>& input_str,
                  const S2RegionCoverer::Options& options) {
   vector<S2CellId> input;
   for (const auto& str : input_str) {
@@ -397,8 +397,8 @@ TEST(IsCanonical, Normalized) {
 }
 
 void TestCanonicalizeCovering(
-    const vector<string>& input_str,
-    const vector<string>& expected_str,
+    const vector<std::string>& input_str,
+    const vector<std::string>& expected_str,
     const S2RegionCoverer::Options& options) {
   vector<S2CellId> actual, expected;
   for (const auto& str : input_str) {
@@ -411,7 +411,7 @@ void TestCanonicalizeCovering(
   EXPECT_FALSE(coverer.IsCanonical(actual));
   coverer.CanonicalizeCovering(&actual);
   EXPECT_TRUE(coverer.IsCanonical(actual));
-  vector<string> actual_str;
+  vector<std::string> actual_str;
   EXPECT_EQ(expected, actual);
 }
 

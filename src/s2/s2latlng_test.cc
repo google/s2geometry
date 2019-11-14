@@ -131,7 +131,7 @@ TEST(S2LatLng, TestToString) {
   for (const auto& v : values) {
     SCOPED_TRACE(StrCat("Iteration ", i++));
     S2LatLng p = S2LatLng::FromDegrees(v.lat, v.lng);
-    string output;
+    std::string output;
     p.ToStringInDegrees(&output);
 
     double lat, lng;
@@ -143,7 +143,7 @@ TEST(S2LatLng, TestToString) {
 
 // Test the variant that returns a string.
 TEST(S2LatLng, TestToStringReturnsString) {
-  string s;
+  std::string s;
   S2LatLng::FromDegrees(0, 1).ToStringInDegrees(&s);
   EXPECT_EQ(S2LatLng::FromDegrees(0, 1).ToStringInDegrees(), s);
 }
@@ -162,4 +162,3 @@ TEST(S2LatLng, TestHashCode) {
   EXPECT_EQ(4, map[S2LatLng::FromDegrees(7, 17)]);
   EXPECT_EQ(5, map[S2LatLng::FromDegrees(11, 19)]);
 }
-

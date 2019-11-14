@@ -119,7 +119,7 @@ namespace internal_btree {
 //    bool operator()(const string &a, const char* b) const {
 //      return strcmp(a.c_str(), b) < 0;
 //    }
-//    bool operator()(const char* a, const string& b) const {
+//    bool operator()(const char* a, const std::string& b) const {
 //      return strcmp(a, b.c_str()) < 0;
 //    }
 //    using is_transparent = void;

@@ -26,7 +26,7 @@ using std::vector;
 
 namespace s2coding {
 
-void TestEncodedStringVector(const vector<string>& input,
+void TestEncodedStringVector(const vector<std::string>& input,
                              size_t expected_bytes) {
   Encoder encoder;
   StringVectorEncoder::Encode(input, &encoder);
@@ -62,7 +62,7 @@ TEST(EncodedStringVectorTest, TwoStrings) {
 }
 
 TEST(EncodedStringVectorTest, TwoBigStrings) {
-  TestEncodedStringVector({string(10000, 'x'), string(100000, 'y')},
+  TestEncodedStringVector({std::string(10000, 'x'), std::string(100000, 'y')},
                           110007);
 }
 

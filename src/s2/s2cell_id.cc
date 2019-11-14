@@ -194,14 +194,14 @@ int S2CellId::GetCommonAncestorLevel(S2CellId other) const {
 }
 
 // Print the num_digits low order hex digits.
-static string HexFormatString(uint64 val, size_t num_digits) {
-  string result(num_digits, ' ');
+static std::string HexFormatString(uint64 val, size_t num_digits) {
+  std::string result(num_digits, ' ');
   for (; num_digits--; val >>= 4)
     result[num_digits] = "0123456789abcdef"[val & 0xF];
   return result;
 }
 
-string S2CellId::ToToken() const {
+std::string S2CellId::ToToken() const {
   // Simple implementation: print the id in hex without trailing zeros.
   // Using hex has the advantage that the tokens are case-insensitive, all
   // characters are alphanumeric, no characters require any special escaping
@@ -238,7 +238,7 @@ S2CellId S2CellId::FromToken(const char* token, size_t length) {
   return S2CellId(id);
 }
 
-S2CellId S2CellId::FromToken(const string& token) {
+S2CellId S2CellId::FromToken(const std::string& token) {
   return FromToken(token.data(), token.size());
 }
 
@@ -585,11 +585,11 @@ void S2CellId::AppendAllNeighbors(int nbr_level,
   }
 }
 
-string S2CellId::ToString() const {
+std::string S2CellId::ToString() const {
   if (!is_valid()) {
     return StrCat("Invalid: ", absl::Hex(id(), absl::kZeroPad16));
   }
-  string out = StrCat(face(), "/");
+  std::string out = StrCat(face(), "/");
   for (int current_level = 1; current_level <= level(); ++current_level) {
     // Avoid dependencies of SimpleItoA, and slowness of StrAppend &
     // std::to_string.

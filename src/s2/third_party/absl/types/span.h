@@ -93,7 +93,7 @@ constexpr auto GetDataImpl(C& c, int) noexcept  // NOLINT(runtime/references)
 }
 
 // Before C++17, string::data returns a const char* in all cases.
-inline char* GetDataImpl(string& s,  // NOLINT(runtime/references)
+inline char* GetDataImpl(std::string& s,  // NOLINT(runtime/references)
                          int) noexcept {
   return &s[0];
 }

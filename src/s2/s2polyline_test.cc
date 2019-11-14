@@ -45,7 +45,7 @@ using std::vector;
 namespace {
 
 // Wraps s2textformat::MakePolyline in order to test Encode/Decode.
-unique_ptr<S2Polyline> MakePolyline(const string& str,
+unique_ptr<S2Polyline> MakePolyline(const std::string& str,
                                     S2Debug debug_override = S2Debug::ALLOW) {
   unique_ptr<S2Polyline> polyline =
       s2textformat::MakePolyline(str, debug_override);
@@ -301,8 +301,8 @@ TEST(S2Polyline, SpaceUsedNonEmptyPolyline)  {
   EXPECT_GT(line->SpaceUsed(), 3 * sizeof(S2Point));
 }
 
-static string JoinInts(const vector<int>& ints) {
-  string result;
+static std::string JoinInts(const vector<int>& ints) {
+  std::string result;
   int n = ints.size();
   for (int i = 0; i + 1 < n; ++i) {
     absl::StrAppend(&result, ints[i], ",");
@@ -450,7 +450,7 @@ TEST(S2PolylineOwningShape, Ownership) {
   S2Polyline::OwningShape shape(std::move(polyline));
 }
 
-void TestNearlyCovers(const string& a_str, const string& b_str,
+void TestNearlyCovers(const std::string& a_str, const std::string& b_str,
                       double max_error_degrees, bool expect_b_covers_a,
                       bool expect_a_covers_b,
                       S2Debug debug_override = S2Debug::ALLOW) {
@@ -464,7 +464,7 @@ void TestNearlyCovers(const string& a_str, const string& b_str,
 }
 
 TEST(S2PolylineCoveringTest, PolylineOverlapsSelf) {
-  string pline = "1:1, 2:2, -1:10";
+  std::string pline = "1:1, 2:2, -1:10";
   TestNearlyCovers(pline, pline, 1e-10, true, true);
 }
 
@@ -494,8 +494,8 @@ TEST(S2PolylineCoveringTest, PartialOverlapOnly) {
 TEST(S2PolylineCoveringTest, ShortBacktracking) {
   // Two lines that backtrack a bit (less than 1.5 degrees) on different edges.
   // A simple greedy matching algorithm would fail on this example.
-  const string& t1 = "0:0, 0:2, 0:1, 0:4, 0:5";
-  const string& t2 = "0:0, 0:2, 0:4, 0:3, 0:5";
+  const std::string& t1 = "0:0, 0:2, 0:1, 0:4, 0:5";
+  const std::string& t2 = "0:0, 0:2, 0:4, 0:3, 0:5";
   TestNearlyCovers(t1, t2, 1.5, true, true);
   TestNearlyCovers(t1, t2, 0.5, false, false);
 }
