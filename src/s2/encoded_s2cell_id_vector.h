@@ -75,9 +75,9 @@ class EncodedS2CellIdVector {
 
  private:
   // Values are decoded as (base_ + (deltas_[i] << shift_)).
-  EncodedUintVector<uint64> deltas_;
-  uint64 base_;
-  uint8 shift_;
+  EncodedUintVector<uint64_t> deltas_;
+  uint64_t base_;
+  uint8_t shift_;
 };
 
 

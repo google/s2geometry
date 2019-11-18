@@ -36,7 +36,7 @@ namespace s2coding {
 static int kBlockSize = 16;  // Number of deltas per block in implementation.
 
 size_t TestEncodedS2PointVector(const vector<S2Point>& expected,
-                                CodingHint hint, int64 expected_bytes) {
+                                CodingHint hint, int64_t expected_bytes) {
   Encoder encoder;
   EncodeS2PointVector(expected, hint, &encoder);
   if (expected_bytes >= 0) {
@@ -52,8 +52,8 @@ size_t TestEncodedS2PointVector(const vector<S2Point>& expected,
 // In order to make it easier to construct tests that encode particular
 // values, this function duplicates the part of EncodedS2PointVector that
 // converts an encoded 64-bit value back to an S2Point.
-S2Point EncodedValueToPoint(uint64 value, int level) {
-  uint32 sj, tj;
+S2Point EncodedValueToPoint(uint64_t value, int level) {
+  uint32_t sj, tj;
   util_bits::DeinterleaveUint32(value, &sj, &tj);
   int shift = S2CellId::kMaxLevel - level;
   int si = (((sj << 1) | 1) << shift) & 0x7fffffff;

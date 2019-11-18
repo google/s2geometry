@@ -25,7 +25,6 @@
 #include <map>
 #include <vector>
 
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/mutable_s2shape_index.h"
@@ -648,7 +647,7 @@ class S2Loop final : public S2Region {
   // force implementation that is also relatively cheap.  For this one method
   // we keep track of the number of calls made and only build the index once
   // enough calls have been made that we think an index would be worthwhile.
-  mutable std::atomic<int32> unindexed_contains_calls_;
+  mutable std::atomic<int32_t> unindexed_contains_calls_;
 
   // "bound_" is a conservative bound on all points contained by this loop:
   // if A.Contains(P), then A.bound_.Contains(S2LatLng(P)).

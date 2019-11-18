@@ -29,8 +29,8 @@ namespace s2shapeutil {
 struct ShapeEdge {
  public:
   ShapeEdge() {}
-  ShapeEdge(const S2Shape& shape, int32 edge_id);
-  ShapeEdge(int32 shape_id, int32 edge_id, const S2Shape::Edge& edge);
+  ShapeEdge(const S2Shape& shape, int32_t edge_id);
+  ShapeEdge(int32_t shape_id, int32_t edge_id, const S2Shape::Edge& edge);
   ShapeEdgeId id() const { return id_; }
   const S2Point& v0() const { return edge_.v0; }
   const S2Point& v1() const { return edge_.v1; }
@@ -44,11 +44,11 @@ struct ShapeEdge {
 //////////////////   Implementation details follow   ////////////////////
 
 
-inline ShapeEdge::ShapeEdge(const S2Shape& shape, int32 edge_id)
+inline ShapeEdge::ShapeEdge(const S2Shape& shape, int32_t edge_id)
     : ShapeEdge(shape.id(), edge_id, shape.edge(edge_id)) {
 }
 
-inline ShapeEdge::ShapeEdge(int32 shape_id, int32 edge_id,
+inline ShapeEdge::ShapeEdge(int32_t shape_id, int32_t edge_id,
                             const S2Shape::Edge& edge)
     : id_(shape_id, edge_id), edge_(edge) {
 }

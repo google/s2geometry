@@ -26,7 +26,6 @@
 #include <vector>
 
 
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/mutex.h"
 #include "s2/base/spinlock.h"
@@ -409,7 +408,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
 
   // The representation of an edge that has been queued for removal.
   struct RemovedShape {
-    int32 shape_id;
+    int32_t shape_id;
     bool has_interior;  // Belongs to a shape of dimension 2.
     bool contains_tracker_origin;
     std::vector<S2Shape::Edge> edges;

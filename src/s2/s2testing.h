@@ -25,7 +25,6 @@
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/integral_types.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
@@ -250,13 +249,13 @@ class S2Testing::Random {
   Random();
 
   // Reset the generator state using the given seed.
-  void Reset(int32 seed);
+  void Reset(int32_t seed);
 
   // Return a uniformly distributed 64-bit unsigned integer.
-  uint64 Rand64();
+  uint64_t Rand64();
 
   // Return a uniformly distributed 32-bit unsigned integer.
-  uint32 Rand32();
+  uint32_t Rand32();
 
   // Return a uniformly distributed "double" in the range [0,1).  Note that
   // the values returned are all multiples of 2**-53, which means that not all
@@ -264,24 +263,24 @@ class S2Testing::Random {
   double RandDouble();
 
   // Return a uniformly distributed integer in the range [0,n).
-  int32 Uniform(int32 n);
+  int32_t Uniform(int32_t n);
 
   // Return a uniformly distributed "double" in the range [min, limit).
   double UniformDouble(double min, double limit);
 
   // A functor-style version of Uniform, so that this class can be used with
   // STL functions that require a RandomNumberGenerator concept.
-  int32 operator() (int32 n) {
+  int32_t operator() (int32_t n) {
     return Uniform(n);
   }
 
   // Return true with probability 1 in n.
-  bool OneIn(int32 n);
+  bool OneIn(int32_t n);
 
   // Skewed: pick "base" uniformly from range [0,max_log] and then
   // return "base" random bits.  The effect is to pick a number in the
   // range [0,2^max_log-1] with bias towards smaller numbers.
-  int32 Skewed(int max_log);
+  int32_t Skewed(int max_log);
 
  private:
   // Currently this class is based on random(), therefore it makes no sense to

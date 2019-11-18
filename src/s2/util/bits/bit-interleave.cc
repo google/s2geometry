@@ -27,11 +27,10 @@
 
 #include "s2/util/bits/bit-interleave.h"
 
-#include "s2/base/integral_types.h"
 
 namespace util_bits {
 
-static const uint16 kInterleaveLut[256] = {
+static const uint16_t kInterleaveLut[256] = {
   0x0000, 0x0001, 0x0004, 0x0005, 0x0010, 0x0011, 0x0014, 0x0015,
   0x0040, 0x0041, 0x0044, 0x0045, 0x0050, 0x0051, 0x0054, 0x0055,
   0x0100, 0x0101, 0x0104, 0x0105, 0x0110, 0x0111, 0x0114, 0x0115,
@@ -69,27 +68,27 @@ static const uint16 kInterleaveLut[256] = {
   0x5540, 0x5541, 0x5544, 0x5545, 0x5550, 0x5551, 0x5554, 0x5555,
 };
 
-uint16 InterleaveUint8(const uint8 val0, const uint8 val1) {
+uint16_t InterleaveUint8(const uint8_t val0, const uint8_t val1) {
   return kInterleaveLut[val0] | (kInterleaveLut[val1] << 1);
 }
 
-uint32 InterleaveUint16(const uint16 val0, const uint16 val1) {
+uint32_t InterleaveUint16(const uint16_t val0, const uint16_t val1) {
   return kInterleaveLut[val0 & 0xff] |
       (kInterleaveLut[val0 >> 8] << 16) |
       (kInterleaveLut[val1 & 0xff] << 1) |
       (kInterleaveLut[val1 >> 8] << 17);
 }
 
-uint64 InterleaveUint32(const uint32 val0, const uint32 val1) {
+uint64_t InterleaveUint32(const uint32_t val0, const uint32_t val1) {
   return
-      (static_cast<uint64>(kInterleaveLut[val0 & 0xff])) |
-      (static_cast<uint64>(kInterleaveLut[(val0 >> 8) & 0xff]) << 16) |
-      (static_cast<uint64>(kInterleaveLut[(val0 >> 16) & 0xff]) << 32) |
-      (static_cast<uint64>(kInterleaveLut[val0 >> 24]) << 48) |
-      (static_cast<uint64>(kInterleaveLut[val1 & 0xff]) << 1) |
-      (static_cast<uint64>(kInterleaveLut[(val1 >> 8) & 0xff]) << 17) |
-      (static_cast<uint64>(kInterleaveLut[(val1 >> 16) & 0xff]) << 33) |
-      (static_cast<uint64>(kInterleaveLut[val1 >> 24]) << 49);
+      (static_cast<uint64_t>(kInterleaveLut[val0 & 0xff])) |
+      (static_cast<uint64_t>(kInterleaveLut[(val0 >> 8) & 0xff]) << 16) |
+      (static_cast<uint64_t>(kInterleaveLut[(val0 >> 16) & 0xff]) << 32) |
+      (static_cast<uint64_t>(kInterleaveLut[val0 >> 24]) << 48) |
+      (static_cast<uint64_t>(kInterleaveLut[val1 & 0xff]) << 1) |
+      (static_cast<uint64_t>(kInterleaveLut[(val1 >> 8) & 0xff]) << 17) |
+      (static_cast<uint64_t>(kInterleaveLut[(val1 >> 16) & 0xff]) << 33) |
+      (static_cast<uint64_t>(kInterleaveLut[val1 >> 24]) << 49);
 }
 
 // The lookup table below can convert a sequence of interleaved 8 bits into
@@ -106,7 +105,7 @@ uint64 InterleaveUint32(const uint32 val0, const uint32 val1) {
 //
 // for i in range(256): print "0x%x," % deinterleave(i),
 //
-static const uint8 kDeinterleaveLut[256] = {
+static const uint8_t kDeinterleaveLut[256] = {
   0x0, 0x1, 0x1, 0x1, 0x2, 0x3, 0x3, 0x3,
   0x2, 0x3, 0x3, 0x3, 0x2, 0x3, 0x3, 0x3,
   0x4, 0x5, 0x5, 0x5, 0x6, 0x7, 0x7, 0x7,
@@ -144,14 +143,14 @@ static const uint8 kDeinterleaveLut[256] = {
   0xe, 0xf, 0xf, 0xf, 0xe, 0xf, 0xf, 0xf,
 };
 
-void DeinterleaveUint8(uint16 val, uint8 *val0, uint8 *val1) {
+void DeinterleaveUint8(uint16_t val, uint8_t *val0, uint8_t *val1) {
   *val0 = ((kDeinterleaveLut[val & 0x55]) |
            (kDeinterleaveLut[(val >> 8) & 0x55] << 4));
   *val1 = ((kDeinterleaveLut[val & 0xaa]) |
            (kDeinterleaveLut[(val >> 8) & 0xaa] << 4));
 }
 
-void DeinterleaveUint16(uint32 code, uint16 *val0, uint16 *val1) {
+void DeinterleaveUint16(uint32_t code, uint16_t *val0, uint16_t *val1) {
   *val0 = ((kDeinterleaveLut[code & 0x55]) |
            (kDeinterleaveLut[(code >> 8) & 0x55] << 4) |
            (kDeinterleaveLut[(code >> 16) & 0x55] << 8) |
@@ -162,7 +161,7 @@ void DeinterleaveUint16(uint32 code, uint16 *val0, uint16 *val1) {
            (kDeinterleaveLut[(code >> 24) & 0xaa] << 12));
 }
 
-void DeinterleaveUint32(uint64 code, uint32 *val0, uint32 *val1) {
+void DeinterleaveUint32(uint64_t code, uint32_t *val0, uint32_t *val1) {
   *val0 = ((kDeinterleaveLut[code & 0x55]) |
            (kDeinterleaveLut[(code >> 8) & 0x55] << 4) |
            (kDeinterleaveLut[(code >> 16) & 0x55] << 8) |
@@ -213,7 +212,7 @@ void DeinterleaveUint32(uint64 code, uint32 *val0, uint32 *val1) {
 // BM_3_ReferenceBitInterleave3         58         58   10000000
 // BM_3_InterleaveUint8_NoTemplate      11         11   61082024
 template<int kShift>
-static uint64 SplitFor3(uint8 x) {
+static uint64_t SplitFor3(uint8_t x) {
   return
       ((((x * 0x0101010101010101ULL)
             & 0x000000C00C003003ULL)
@@ -221,8 +220,8 @@ static uint64 SplitFor3(uint8 x) {
             & (0x0000024924900000ULL << kShift));
 }
 
-uint32 InterleaveUint8(uint8 val0, uint8 val1, uint8 val2) {
-  return static_cast<uint32>(
+uint32_t InterleaveUint8(uint8_t val0, uint8_t val1, uint8_t val2) {
+  return static_cast<uint32_t>(
       (SplitFor3<0>(val0) | SplitFor3<1>(val1) | SplitFor3<2>(val2)) >> 20);
 }
 
@@ -258,14 +257,14 @@ uint32 InterleaveUint8(uint8 val0, uint8 val1, uint8 val2) {
 // BM_3_DeinterleaveUint8_Using_Template   10         10   67385445
 // BM_3_DeinterleaveUint8_Uint64_Param     10         10   70838731
 // BM_3_ReferenceDeinterleaveUint8         79         79    8712211
-static inline uint8 UnsplitFor3(uint32 x) {
+static inline uint8_t UnsplitFor3(uint32_t x) {
   return ((((x & 0x00249249U)
                * 0x00000015U)
                & 0x00381C0CU)
                * 0x00001041U) >> 14;
 }
 
-void DeinterleaveUint8(uint32 x, uint8* a, uint8* b, uint8* c) {
+void DeinterleaveUint8(uint32_t x, uint8_t* a, uint8_t* b, uint8_t* c) {
   *a = UnsplitFor3(x);
   *b = UnsplitFor3(x >> 1);
   *c = UnsplitFor3(x >> 2);

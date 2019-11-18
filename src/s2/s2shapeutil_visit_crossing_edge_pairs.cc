@@ -327,7 +327,7 @@ bool VisitCrossingEdgePairs(const S2ShapeIndex& a_index,
       bi.SeekTo(ai);
     } else {
       // One cell contains the other.  Determine which cell is larger.
-      int64 ab_relation = ai.id().lsb() - bi.id().lsb();
+      int64_t ab_relation = ai.id().lsb() - bi.id().lsb();
       if (ab_relation > 0) {
         // A's index cell is larger.
         if (!ab.VisitCrossings(&ai, &bi)) return false;

@@ -53,11 +53,11 @@ void TestEncodedS2CellIdVector(const vector<S2CellId>& expected,
   EXPECT_EQ(actual.Decode(), expected);
 }
 
-// Like the above, but accepts a vector<uint64> rather than a vector<S2CellId>.
-void TestEncodedS2CellIdVector(const vector<uint64>& raw_expected,
+// Like the above, but accepts a vector<uint64_t> rather than a vector<S2CellId>.
+void TestEncodedS2CellIdVector(const vector<uint64_t>& raw_expected,
                                size_t expected_bytes) {
   vector<S2CellId> expected;
-  for (uint64 raw_id : raw_expected) {
+  for (uint64_t raw_id : raw_expected) {
     expected.push_back(S2CellId(raw_id));
   }
   TestEncodedS2CellIdVector(expected, expected_bytes);
@@ -174,7 +174,7 @@ TEST(EncodedS2CellIdVector, FractalS2ShapeIndexCells) {
 }
 
 TEST(EncodedS2CellIdVector, CoveringCells) {
-  vector<uint64> ids {
+  vector<uint64_t> ids {
     0x414a617f00000000, 0x414a61c000000000, 0x414a624000000000,
     0x414a63c000000000, 0x414a647000000000, 0x414a64c000000000,
     0x414a653000000000, 0x414a704000000000, 0x414a70c000000000,

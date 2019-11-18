@@ -30,7 +30,7 @@ StringVectorEncoder::StringVectorEncoder() {
 void StringVectorEncoder::Encode(Encoder* encoder) {
   offsets_.push_back(data_.length());
   // We don't encode the first element of "offsets_", which is always zero.
-  EncodeUintVector<uint64>(
+  EncodeUintVector<uint64_t>(
       MakeSpan(offsets_.data() + 1, offsets_.data() + offsets_.size()),
       encoder);
   encoder->Ensure(data_.length());
@@ -47,7 +47,7 @@ bool EncodedStringVector::Init(Decoder* decoder) {
   if (!offsets_.Init(decoder)) return false;
   data_ = reinterpret_cast<const char*>(decoder->ptr());
   if (offsets_.size() > 0) {
-    uint64 length = offsets_[offsets_.size() - 1];
+    uint64_t length = offsets_[offsets_.size() - 1];
     if (decoder->avail() < length) return false;
     decoder->skip(length);
   }

@@ -34,10 +34,10 @@ void ExpectSequence(const std::vector<T>& expected,
   EXPECT_TRUE(std::equal(expected.begin(), expected.end(), actual.begin()));
 }
 
-using Seq = std::vector<int64>;
+using Seq = std::vector<int64_t>;
 
 TEST(SequenceLexicon, int64) {
-  SequenceLexicon<int64> lex;
+  SequenceLexicon<int64_t> lex;
   EXPECT_EQ(0, lex.Add(Seq{}));
   EXPECT_EQ(1, lex.Add(Seq{5}));
   EXPECT_EQ(0, lex.Add(Seq{}));
@@ -56,7 +56,7 @@ TEST(SequenceLexicon, int64) {
 }
 
 TEST(SequenceLexicon, Clear) {
-  SequenceLexicon<int64> lex;
+  SequenceLexicon<int64_t> lex;
   EXPECT_EQ(0, lex.Add(Seq{1}));
   EXPECT_EQ(1, lex.Add(Seq{2}));
   lex.Clear();
@@ -65,7 +65,7 @@ TEST(SequenceLexicon, Clear) {
 }
 
 TEST(SequenceLexicon, CopyConstructor) {
-  auto original = make_unique<SequenceLexicon<int64>>();
+  auto original = make_unique<SequenceLexicon<int64_t>>();
   EXPECT_EQ(0, original->Add(Seq{1, 2}));
   auto lex = *original;
   original.reset(nullptr);
@@ -75,7 +75,7 @@ TEST(SequenceLexicon, CopyConstructor) {
 }
 
 TEST(SequenceLexicon, MoveConstructor) {
-  auto original = make_unique<SequenceLexicon<int64>>();
+  auto original = make_unique<SequenceLexicon<int64_t>>();
   EXPECT_EQ(0, original->Add(Seq{1, 2}));
   auto lex = std::move(*original);
   original.reset(nullptr);
@@ -85,9 +85,9 @@ TEST(SequenceLexicon, MoveConstructor) {
 }
 
 TEST(SequenceLexicon, CopyAssignmentOperator) {
-  auto original = make_unique<SequenceLexicon<int64>>();
+  auto original = make_unique<SequenceLexicon<int64_t>>();
   EXPECT_EQ(0, original->Add(Seq{1, 2}));
-  SequenceLexicon<int64> lex;
+  SequenceLexicon<int64_t> lex;
   EXPECT_EQ(0, lex.Add(Seq{3, 4}));
   EXPECT_EQ(1, lex.Add(Seq{5, 6}));
   lex = *original;
@@ -99,9 +99,9 @@ TEST(SequenceLexicon, CopyAssignmentOperator) {
 }
 
 TEST(SequenceLexicon, MoveAssignmentOperator) {
-  auto original = make_unique<SequenceLexicon<int64>>();
+  auto original = make_unique<SequenceLexicon<int64_t>>();
   EXPECT_EQ(0, original->Add(Seq{1, 2}));
-  SequenceLexicon<int64> lex;
+  SequenceLexicon<int64_t> lex;
   EXPECT_EQ(0, lex.Add(Seq{3, 4}));
   EXPECT_EQ(1, lex.Add(Seq{5, 6}));
   lex = std::move(*original);
@@ -110,4 +110,3 @@ TEST(SequenceLexicon, MoveAssignmentOperator) {
   ExpectSequence(Seq{1, 2}, lex.sequence(0));
   ExpectSequence(Seq{7, 8}, lex.sequence(1));
 }
-

@@ -48,7 +48,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/base/port.h"
@@ -70,19 +69,19 @@ class compact_array_base {
   static const int kMaxSize = (1 << kSizeNumBits) - 1;
 
 #ifdef IS_LITTLE_ENDIAN
-  uint32 size_        : kSizeNumBits;      // number of valid items in the array
-  uint32 capacity_    : kCapacityNumBits;  // allocated array size
-  uint32 is_exponent_ : 1;                 // whether capacity_ is an exponent
+  uint32_t size_        : kSizeNumBits;      // number of valid items in the array
+  uint32_t capacity_    : kCapacityNumBits;  // allocated array size
+  uint32_t is_exponent_ : 1;                 // whether capacity_ is an exponent
 
   // This object might share memory representation (ie. union) with
   // other data structures. We reserved the DO_NOT_USE (32nd bit in
   // little endian format) to be used as a tag.
-  uint32 DO_NOT_USE   : 1;
+  uint32_t DO_NOT_USE   : 1;
 #else
-  uint32 DO_NOT_USE   : 1;
-  uint32 is_exponent_ : 1;
-  uint32 capacity_    : kCapacityNumBits;
-  uint32 size_        : kSizeNumBits;
+  uint32_t DO_NOT_USE   : 1;
+  uint32_t is_exponent_ : 1;
+  uint32_t capacity_    : kCapacityNumBits;
+  uint32_t size_        : kSizeNumBits;
 #endif
 
   // Opportunistically consider allowing inlined elements.
@@ -154,7 +153,7 @@ class compact_array_base {
   typedef const value_type*                     const_pointer;
   typedef value_type&                           reference;
   typedef const value_type&                     const_reference;
-  typedef uint32                                size_type;
+  typedef uint32_t                                size_type;
   typedef ptrdiff_t                             difference_type;
 
   typedef value_type*                           iterator;
@@ -625,11 +624,11 @@ struct LogArray : public gtl::LogLegacyUpTo100 {
   void Log(std::ostream& out, const ElementT& element) const {  // NOLINT
     out << element;
   }
-  void Log(std::ostream& out, int8 c) const {  // NOLINT
-    out << static_cast<int32>(c);
+  void Log(std::ostream& out, int8_t c) const {  // NOLINT
+    out << static_cast<int32_t>(c);
   }
-  void Log(std::ostream& out, uint8 c) const {  // NOLINT
-    out << static_cast<uint32>(c);
+  void Log(std::ostream& out, uint8_t c) const {  // NOLINT
+    out << static_cast<uint32_t>(c);
   }
 
   void LogOpening(std::ostream& out) const { out << "["; }  // NOLINT

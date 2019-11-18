@@ -38,7 +38,6 @@
 
 #include <string>
 
-#include "s2/base/integral_types.h"
 
 // Create a set of gflags-like macros for declaring/defining flags. Use
 // a library-specific name to potential minimize clashes with GFlags.
@@ -53,9 +52,9 @@
   extern double FLAGS_##name
 
 #define S2_DEFINE_int32(name, default_value, description) \
-  int32 FLAGS_##name = default_value
+  std::int32_t FLAGS_##name = default_value
 #define S2_DECLARE_int32(name) \
-  extern int32 FLAGS_##name
+  extern std::int32_t FLAGS_##name
 
 #define S2_DEFINE_string(name, default_value, description) \
   std::string FLAGS_##name = default_value

@@ -18,7 +18,6 @@
 
 #include <chrono>
 
-#include "s2/base/integral_types.h"
 
 class CycleTimer {
  public:
@@ -28,7 +27,7 @@ class CycleTimer {
     start_ = Now();
   }
 
-  int64 GetInMs() const {
+  int64_t GetInMs() const {
     using msec = std::chrono::milliseconds;
     return std::chrono::duration_cast<msec>(GetDuration()).count();
   }

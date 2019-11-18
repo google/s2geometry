@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <cassert>
 
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 
 // An initialization value used when we are allowed to
@@ -39,11 +38,11 @@ Encoder::~Encoder() {
   }
 }
 
-int Encoder::varint32_length(uint32 v) {
+int Encoder::varint32_length(uint32_t v) {
   return Varint::Length32(v);
 }
 
-int Encoder::varint64_length(uint64 v) {
+int Encoder::varint64_length(uint64_t v) {
   return Varint::Length64(v);
 }
 

@@ -236,19 +236,19 @@ class S2BooleanOperation {
   class SourceId {
    public:
     SourceId();
-    SourceId(int region_id, int32 shape_id, int32 edge_id);
-    explicit SourceId(int32 special_edge_id);
+    SourceId(int region_id, int32_t shape_id, int32_t edge_id);
+    explicit SourceId(int32_t special_edge_id);
     int region_id() const { return region_id_; }
-    int32 shape_id() const { return shape_id_; }
-    int32 edge_id() const { return edge_id_; }
+    int32_t shape_id() const { return shape_id_; }
+    int32_t edge_id() const { return edge_id_; }
     // TODO(ericv): Convert to functions, define all 6 comparisons.
     bool operator==(SourceId other) const;
     bool operator<(SourceId other) const;
 
    private:
-    uint32 region_id_ : 1;
-    uint32 shape_id_ : 31;
-    int32 edge_id_;
+    uint32_t region_id_ : 1;
+    uint32_t shape_id_ : 31;
+    int32_t edge_id_;
   };
 
   class Options {
@@ -357,7 +357,7 @@ class S2BooleanOperation {
     // "label_set_lexicon" and an "label_set_id" for each edge.  You can then
     // look up the source information for each edge like this:
     //
-    // for (int32 label : label_set_lexicon.id_set(label_set_id)) {
+    // for (int32_t label : label_set_lexicon.id_set(label_set_id)) {
     //   const SourceId& src = source_id_lexicon.value(label);
     //   // region_id() specifies which S2ShapeIndex the edge is from (0 or 1).
     //   DoSomething(src.region_id(), src.shape_id(), src.edge_id());
@@ -476,7 +476,7 @@ inline S2BooleanOperation::SourceId::SourceId()
 }
 
 inline S2BooleanOperation::SourceId::SourceId(
-    int region_id, int32 shape_id, int32 edge_id)
+    int region_id, int32_t shape_id, int32_t edge_id)
     : region_id_(region_id), shape_id_(shape_id), edge_id_(edge_id) {
 }
 

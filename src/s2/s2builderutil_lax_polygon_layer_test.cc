@@ -23,7 +23,6 @@
 #include <set>
 #include <string>
 #include <gtest/gtest.h>
-#include "s2/base/integral_types.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/string_view.h"
 #include "s2/mutable_s2shape_index.h"
@@ -265,7 +264,7 @@ TEST(LaxPolygonLayer, DuplicateInputEdges) {
             s2textformat::ToString(output, "; "));
 }
 
-using EdgeLabelMap = map<S2Shape::Edge, set<int32>>;
+using EdgeLabelMap = map<S2Shape::Edge, set<int32_t>>;
 
 inline S2Shape::Edge GetKey(S2Shape::Edge edge, EdgeType edge_type) {
   // For undirected edges, sort the vertices in lexicographic order.
@@ -279,7 +278,7 @@ void AddShapeWithLabels(const S2Shape& shape, EdgeType edge_type,
                         S2Builder* builder, EdgeLabelMap *edge_label_map) {
   static int const kLabelBegin = 1234;  // Arbitrary.
   for (int e = 0; e < shape.num_edges(); ++e) {
-    int32 label = kLabelBegin + e;
+    int32_t label = kLabelBegin + e;
     builder->set_label(label);
     // For undirected edges, reverse the direction of every other input edge.
     S2Shape::Edge edge = shape.edge(e);

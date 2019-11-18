@@ -19,19 +19,18 @@
 #define S2_S2SHAPEUTIL_SHAPE_EDGE_ID_H_
 
 #include <iostream>
-#include "s2/base/integral_types.h"
 
 namespace s2shapeutil {
 
 // ShapeEdgeId is a unique identifier for an edge within an S2ShapeIndex,
 // consisting of a (shape_id, edge_id) pair.  It is similar to
-// std::pair<int32, int32> except that it has named fields.
+// std::pair<int32_t, int32_t> except that it has named fields.
 // It should be passed and returned by value.
 struct ShapeEdgeId {
  public:
-  int32 shape_id, edge_id;
+  int32_t shape_id, edge_id;
   ShapeEdgeId() : shape_id(-1), edge_id(-1) {}
-  ShapeEdgeId(int32 _shape_id, int32 _edge_id);
+  ShapeEdgeId(int32_t _shape_id, int32_t _edge_id);
 
   bool operator==(ShapeEdgeId other) const;
   bool operator!=(ShapeEdgeId other) const;
@@ -50,7 +49,7 @@ struct ShapeEdgeIdHash;
 //////////////////   Implementation details follow   ////////////////////
 
 
-inline ShapeEdgeId::ShapeEdgeId(int32 _shape_id, int32 _edge_id)
+inline ShapeEdgeId::ShapeEdgeId(int32_t _shape_id, int32_t _edge_id)
     : shape_id(_shape_id), edge_id(_edge_id) {
 }
 
@@ -87,8 +86,8 @@ inline std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
 struct ShapeEdgeIdHash {
   size_t operator()(ShapeEdgeId id) const {
     // The following preserves all bits even when edge_id < 0.
-    return std::hash<uint64>()((static_cast<uint64>(id.shape_id) << 32) |
-                               static_cast<uint32>(id.edge_id));
+    return std::hash<uint64_t>()((static_cast<uint64_t>(id.shape_id) << 32) |
+                               static_cast<uint32_t>(id.edge_id));
   }
 };
 

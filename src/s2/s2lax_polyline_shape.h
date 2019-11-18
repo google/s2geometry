@@ -83,7 +83,7 @@ class S2LaxPolylineShape : public S2Shape {
  private:
   // For clients that have many small polylines, we save some memory by
   // representing the vertices as an array rather than using std::vector.
-  int32 num_vertices_;
+  int32_t num_vertices_;
   std::unique_ptr<S2Point[]> vertices_;
 };
 

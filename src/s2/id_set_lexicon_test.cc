@@ -21,14 +21,14 @@
 
 #include <gtest/gtest.h>
 
-void ExpectIdSet(const std::vector<int32>& expected,
+void ExpectIdSet(const std::vector<int32_t>& expected,
                  const IdSetLexicon::IdSet& actual) {
   EXPECT_EQ(expected.size(), actual.size());
   EXPECT_TRUE(std::equal(expected.begin(), expected.end(), actual.begin()));
 }
 
 using IdSet = IdSetLexicon::IdSet;
-using Seq = std::vector<int32>;
+using Seq = std::vector<int32_t>;
 
 TEST(IdSetLexicon, EmptySet) {
   IdSetLexicon lexicon;
@@ -40,7 +40,7 @@ TEST(IdSetLexicon, SingletonSets) {
   EXPECT_EQ(5, lexicon.Add(Seq{5}));
   EXPECT_EQ(0, lexicon.Add(Seq{0}));
   EXPECT_EQ(1, lexicon.AddSingleton(1));
-  int32 m = std::numeric_limits<int32>::max();
+  int32_t m = std::numeric_limits<int32_t>::max();
   EXPECT_EQ(m, lexicon.Add(&m, &m + 1));
 
   ExpectIdSet({0}, lexicon.id_set(0));

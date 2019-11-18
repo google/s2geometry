@@ -18,7 +18,6 @@
 #ifndef S2_S2CELL_H_
 #define S2_S2CELL_H_
 
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2rect.h"
@@ -65,7 +64,7 @@ class S2Cell final : public S2Region {
   // to the Hilbert curve position at the center of the returned cell.  This
   // is a static function rather than a constructor in order to indicate what
   // the arguments represent.
-  static S2Cell FromFacePosLevel(int face, uint64 pos, int level) {
+  static S2Cell FromFacePosLevel(int face, uint64_t pos, int level) {
     return S2Cell(S2CellId::FromFacePosLevel(face, pos, level));
   }
 
@@ -207,9 +206,9 @@ class S2Cell final : public S2Region {
                                    bool to_interior) const;
 
   // This structure occupies 44 bytes plus one pointer for the vtable.
-  int8 face_;
-  int8 level_;
-  int8 orientation_;
+  int8_t face_;
+  int8_t level_;
+  int8_t orientation_;
   S2CellId id_;
   R2Rect uv_;
 };

@@ -30,7 +30,6 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/mutex.h"
 #include "s2/base/spinlock.h"
@@ -84,7 +83,7 @@ class S2ClippedShape {
   friend class S2Stats;
 
   // Internal methods are documented with their definition.
-  void Init(int32 shape_id, int32 num_edges);
+  void Init(int32_t shape_id, int32_t num_edges);
   void Destruct();
   bool is_inline() const;
   void set_contains_center(bool contains_center);
@@ -93,15 +92,15 @@ class S2ClippedShape {
   // All fields are packed into 16 bytes (assuming 64-bit pointers).  Up to
   // two edge ids are stored inline; this is an important optimization for
   // clients that use S2Shapes consisting of a single edge.
-  int32 shape_id_;
-  uint32 contains_center_ : 1;  // shape contains the cell center
-  uint32 num_edges_ : 31;
+  int32_t shape_id_;
+  uint32_t contains_center_ : 1;  // shape contains the cell center
+  uint32_t num_edges_ : 31;
 
   // If there are more than two edges, this field holds a pointer.
   // Otherwise it holds an array of edge ids.
   union {
-    int32* edges_;  // Owned by the containing S2ShapeIndexCell.
-    std::array<int32, 2> inline_edges_;
+    int32_t* edges_;  // Owned by the containing S2ShapeIndexCell.
+    std::array<int32_t, 2> inline_edges_;
   };
 };
 
@@ -587,12 +586,12 @@ inline int S2ClippedShape::edge(int i) const {
 }
 
 // Initialize an S2ClippedShape to hold the given number of edges.
-inline void S2ClippedShape::Init(int32 shape_id, int32 num_edges) {
+inline void S2ClippedShape::Init(int32_t shape_id, int32_t num_edges) {
   shape_id_ = shape_id;
   num_edges_ = num_edges;
   contains_center_ = false;
   if (!is_inline()) {
-    edges_ = new int32[num_edges];
+    edges_ = new int32_t[num_edges];
   }
 }
 

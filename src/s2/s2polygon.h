@@ -23,7 +23,6 @@
 #include <map>
 #include <vector>
 
-#include "s2/base/integral_types.h"
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/mutable_s2shape_index.h"
@@ -900,7 +899,7 @@ class S2Polygon final : public S2Region {
   // this error so that it can be returned later by FindValidationError(),
   // since it is not possible to detect this error once the polygon has been
   // initialized.  This field is not preserved by Encode/Decode.
-  uint8 error_inconsistent_loop_orientations_;
+  uint8_t error_inconsistent_loop_orientations_;
 
   // Cache for num_vertices().
   int num_vertices_;
@@ -910,7 +909,7 @@ class S2Polygon final : public S2Region {
   // force implementation that is also relatively cheap.  For this one method
   // we keep track of the number of calls made and only build the index once
   // enough calls have been made that we think an index would be worthwhile.
-  mutable std::atomic<int32> unindexed_contains_calls_;
+  mutable std::atomic<int32_t> unindexed_contains_calls_;
 
   // "bound_" is a conservative bound on all points contained by this polygon:
   // if A.Contains(P), then A.bound_.Contains(S2LatLng(P)).

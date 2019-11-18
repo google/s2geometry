@@ -87,7 +87,7 @@ class S2LaxLoopShape : public S2Shape {
  private:
   // For clients that have many small loops, we save some memory by
   // representing the vertices as an array rather than using std::vector.
-  int32 num_vertices_;
+  int32_t num_vertices_;
   std::unique_ptr<S2Point[]> vertices_;
 };
 
@@ -119,17 +119,17 @@ class S2VertexIdLaxLoopShape : public S2Shape {
   //
   // ENSURES:  loop->vertex(i) == (*vertex_array)[vertex_ids[i]]
   // REQUIRES: "vertex_array" persists for the lifetime of this object.
-  explicit S2VertexIdLaxLoopShape(const std::vector<int32>& vertex_ids,
+  explicit S2VertexIdLaxLoopShape(const std::vector<int32_t>& vertex_ids,
                                   const S2Point* vertex_array);
 
   // Initializes the shape from the given vertex array and indices.
   // "vertex_ids" is a vector of indices into "vertex_array".
-  void Init(const std::vector<int32>& vertex_ids,
+  void Init(const std::vector<int32_t>& vertex_ids,
             const S2Point* vertex_array);
 
   // Returns the number of vertices in the loop.
   int num_vertices() const { return num_vertices_; }
-  int32 vertex_id(int i) const { return vertex_ids_[i]; }
+  int32_t vertex_id(int i) const { return vertex_ids_[i]; }
   const S2Point& vertex(int i) const { return vertex_array_[vertex_id(i)]; }
 
   // S2Shape interface:
@@ -145,8 +145,8 @@ class S2VertexIdLaxLoopShape : public S2Shape {
   }
 
  private:
-  int32 num_vertices_;
-  std::unique_ptr<int32[]> vertex_ids_;
+  int32_t num_vertices_;
+  std::unique_ptr<int32_t[]> vertex_ids_;
   const S2Point* vertex_array_;
 };
 

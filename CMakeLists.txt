@@ -329,7 +329,6 @@ install(FILES src/s2/_fp_contract_off.h
         DESTINATION include/s2)
 install(FILES src/s2/base/casts.h
               src/s2/base/commandlineflags.h
-              src/s2/base/integral_types.h
               src/s2/base/log_severity.h
               src/s2/base/logging.h
               src/s2/base/mutex.h

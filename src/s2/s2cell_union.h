@@ -21,7 +21,6 @@
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2cell_id.h"
@@ -68,9 +67,9 @@ class S2CellUnion final : public S2Region {
   //     S2CellUnion example({cell_id});
   explicit S2CellUnion(std::vector<S2CellId> cell_ids);
 
-  // Convenience constructor that accepts a vector of uint64.  Note that
+  // Convenience constructor that accepts a vector of uint64_t.  Note that
   // unlike the constructor above, this one makes a copy of "cell_ids".
-  explicit S2CellUnion(const std::vector<uint64>& cell_ids);
+  explicit S2CellUnion(const std::vector<uint64_t>& cell_ids);
 
   // Constructs a cell union for the whole sphere.
   static S2CellUnion WholeSphere();
@@ -114,7 +113,7 @@ class S2CellUnion final : public S2Region {
   // TODO(ericv): Consider deprecating these methods in favor of using the
   // constructors and move assignment operator.
   void Init(std::vector<S2CellId> cell_ids);
-  void Init(const std::vector<uint64>& cell_ids);
+  void Init(const std::vector<uint64_t>& cell_ids);
   void InitFromMinMax(S2CellId min_id, S2CellId max_id);
   void InitFromBeginEnd(S2CellId begin, S2CellId end);
 
@@ -251,7 +250,7 @@ class S2CellUnion final : public S2Region {
 
   // The number of leaf cells covered by the union.
   // This will be no more than 6*2^60 for the whole sphere.
-  uint64 LeafCellsCovered() const;
+  uint64_t LeafCellsCovered() const;
 
   // Approximates this cell union's area in steradians by summing the average
   // area of each contained cell's average area, using the AverageArea method
@@ -342,8 +341,8 @@ class S2CellUnion final : public S2Region {
   S2CellUnion(std::vector<S2CellId> cell_ids, VerbatimFlag verbatim)
       : cell_ids_(std::move(cell_ids)) {}
 
-  // Converts a vector of uint64 to a vector of S2CellIds.
-  static std::vector<S2CellId> ToS2CellIds(const std::vector<uint64>& ids);
+  // Converts a vector of uint64_t to a vector of S2CellIds.
+  static std::vector<S2CellId> ToS2CellIds(const std::vector<uint64_t>& ids);
 
   std::vector<S2CellId> cell_ids_;
 };

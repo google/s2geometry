@@ -23,7 +23,7 @@
 // a = Sub(Add(a, Mul(b,2)),c)   )
 //
 // Please be careful about overflows when using those matrices wth integer types
-// The calculations are carried with VType. eg : if you are using uint8 as the
+// The calculations are carried with VType. eg : if you are using uint8_t as the
 // base type, all values will be modulo 256.
 // This feature is necessary to use the class in a more general framework with
 // VType != plain old data type.

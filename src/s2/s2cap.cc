@@ -22,7 +22,6 @@
 #include <iosfwd>
 #include <vector>
 
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/r1interval.h"
 #include "s2/s1interval.h"

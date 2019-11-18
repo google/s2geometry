@@ -128,7 +128,7 @@ class LaxPolygonLayer : public S2Builder::Layer {
   // The labels associated with the edge "polygon.chain_edge(i, j)"
   // can be retrieved as follows:
   //
-  //   for (int32 label : label_set_lexicon.id_set(label_set_ids[i][j])) {...}
+  //   for (int32_t label : label_set_lexicon.id_set(label_set_ids[i][j])) {...}
   using LabelSetIds = std::vector<std::vector<LabelSetId>>;
   LaxPolygonLayer(S2LaxPolygonShape* polygon, LabelSetIds* label_set_ids,
                   IdSetLexicon* label_set_lexicon,

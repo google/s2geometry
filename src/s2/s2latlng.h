@@ -23,7 +23,6 @@
 #include <ostream>
 #include <string>
 
-#include "s2/base/integral_types.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
@@ -57,16 +56,16 @@ class S2LatLng {
   // Convenience functions -- shorter than calling S1Angle::Radians(), etc.
   static S2LatLng FromRadians(double lat_radians, double lng_radians);
   static S2LatLng FromDegrees(double lat_degrees, double lng_degrees);
-  static S2LatLng FromE5(int32 lat_e5, int32 lng_e5);
-  static S2LatLng FromE6(int32 lat_e6, int32 lng_e6);
-  static S2LatLng FromE7(int32 lat_e7, int32 lng_e7);
+  static S2LatLng FromE5(int32_t lat_e5, int32_t lng_e5);
+  static S2LatLng FromE6(int32_t lat_e6, int32_t lng_e6);
+  static S2LatLng FromE7(int32_t lat_e7, int32_t lng_e7);
 
   // Convenience functions -- to use when args have been fixed32s in protos.
   //
-  // The arguments are static_cast into int32, so very large unsigned values
+  // The arguments are static_cast into int32_t, so very large unsigned values
   // are treated as negative numbers.
-  static S2LatLng FromUnsignedE6(uint32 lat_e6, uint32 lng_e6);
-  static S2LatLng FromUnsignedE7(uint32 lat_e7, uint32 lng_e7);
+  static S2LatLng FromUnsignedE6(uint32_t lat_e6, uint32_t lng_e6);
+  static S2LatLng FromUnsignedE7(uint32_t lat_e7, uint32_t lng_e7);
 
   // Methods to compute the latitude and longitude of a point separately.
   static S1Angle Latitude(const S2Point& p);
@@ -168,23 +167,23 @@ inline S2LatLng S2LatLng::FromDegrees(double lat_degrees, double lng_degrees) {
   return S2LatLng(S1Angle::Degrees(lat_degrees), S1Angle::Degrees(lng_degrees));
 }
 
-inline S2LatLng S2LatLng::FromE5(int32 lat_e5, int32 lng_e5) {
+inline S2LatLng S2LatLng::FromE5(int32_t lat_e5, int32_t lng_e5) {
   return S2LatLng(S1Angle::E5(lat_e5), S1Angle::E5(lng_e5));
 }
 
-inline S2LatLng S2LatLng::FromE6(int32 lat_e6, int32 lng_e6) {
+inline S2LatLng S2LatLng::FromE6(int32_t lat_e6, int32_t lng_e6) {
   return S2LatLng(S1Angle::E6(lat_e6), S1Angle::E6(lng_e6));
 }
 
-inline S2LatLng S2LatLng::FromE7(int32 lat_e7, int32 lng_e7) {
+inline S2LatLng S2LatLng::FromE7(int32_t lat_e7, int32_t lng_e7) {
   return S2LatLng(S1Angle::E7(lat_e7), S1Angle::E7(lng_e7));
 }
 
-inline S2LatLng S2LatLng::FromUnsignedE6(uint32 lat_e6, uint32 lng_e6) {
+inline S2LatLng S2LatLng::FromUnsignedE6(uint32_t lat_e6, uint32_t lng_e6) {
   return S2LatLng(S1Angle::UnsignedE6(lat_e6), S1Angle::UnsignedE6(lng_e6));
 }
 
-inline S2LatLng S2LatLng::FromUnsignedE7(uint32 lat_e7, uint32 lng_e7) {
+inline S2LatLng S2LatLng::FromUnsignedE7(uint32_t lat_e7, uint32_t lng_e7) {
   return S2LatLng(S1Angle::UnsignedE7(lat_e7), S1Angle::UnsignedE7(lng_e7));
 }
 

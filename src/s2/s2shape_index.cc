@@ -93,7 +93,7 @@ void S2ShapeIndexCell::Encode(int num_shape_ids, Encoder* encoder) const {
       //           bit 1: contains_center
       //           bits 2-5: (num_edges - 2)
       //           bits 6+: edge_id
-      encoder->put_varint64(static_cast<uint64>(clipped.edge(0)) << 6 |
+      encoder->put_varint64(static_cast<uint64_t>(clipped.edge(0)) << 6 |
                             (n - 2) << 2 | clipped.contains_center() << 1 | 0);
     } else if (n == 1) {
       // The cell contains only one edge.  For edge ids up to 15, we can
@@ -102,7 +102,7 @@ void S2ShapeIndexCell::Encode(int num_shape_ids, Encoder* encoder) const {
       // Encoding: bits 0-1: 1
       //           bit 2: contains_center
       //           bits 3+: edge_id
-      encoder->put_varint64(static_cast<uint64>(clipped.edge(0)) << 3 |
+      encoder->put_varint64(static_cast<uint64_t>(clipped.edge(0)) << 3 |
                             clipped.contains_center() << 2 | 1);
     } else {
       // General case (including n == 0, which is encoded compactly here).
@@ -110,7 +110,7 @@ void S2ShapeIndexCell::Encode(int num_shape_ids, Encoder* encoder) const {
       // Encoding: bits 0-1: 3
       //           bit 2: contains_center
       //           bits 3+: num_edges
-      encoder->put_varint64(static_cast<uint64>(n) << 3 |
+      encoder->put_varint64(static_cast<uint64_t>(n) << 3 |
                             clipped.contains_center() << 2 | 3);
       EncodeEdges(clipped, encoder);
     }
@@ -182,7 +182,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
   if (num_shape_ids == 1) {
     // Entire S2ShapeIndex contains only one shape.
     S2ClippedShape* clipped = add_shapes(1);
-    uint64 header;
+    uint64_t header;
     if (!decoder->get_varint64(&header)) return false;
     if ((header & 1) == 0) {
       // The cell contains a contiguous range of edges.
@@ -208,7 +208,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
     return DecodeEdges(num_edges, clipped, decoder);
   }
   // S2ShapeIndex contains more than one shape.
-  uint32 header;
+  uint32_t header;
   if (!decoder->get_varint32(&header)) return false;
   int num_clipped = 1;
   if ((header & 7) == 3) {
@@ -222,7 +222,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
     if (j > 0 && !decoder->get_varint32(&header)) return false;
     if ((header & 1) == 0) {
       // The clipped shape contains a contiguous range of edges.
-      uint32 shape_id_count = 0;
+      uint32_t shape_id_count = 0;
       if (!decoder->get_varint32(&shape_id_count)) return false;
       shape_id += shape_id_count >> 4;
       int num_edges = (shape_id_count & 15) + 1;
@@ -239,7 +239,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
     } else {
       // The clipped shape contains some other combination of edges.
       S2_DCHECK_EQ(header & 3, 1);
-      uint32 shape_delta;
+      uint32_t shape_delta;
       if (!decoder->get_varint32(&shape_delta)) return false;
       shape_id += shape_delta;
       int num_edges = (header >> 3) + 1;
@@ -296,16 +296,16 @@ inline bool S2ShapeIndexCell::DecodeEdges(int num_edges,
                                           S2ClippedShape* clipped,
                                           Decoder* decoder) {
   // This function inverts the encodings documented above.
-  int32 edge_id = 0;
+  int32_t edge_id = 0;
   for (int i = 0; i < num_edges; ) {
-    uint32 delta;
+    uint32_t delta;
     if (!decoder->get_varint32(&delta)) return false;
     if (i + 1 == num_edges) {
       // The last edge is encoded without an edge count.
       clipped->set_edge(i++, edge_id + delta);
     } else {
       // Otherwise decode the count and edge delta.
-      uint32 count = (delta & 7) + 1;
+      uint32_t count = (delta & 7) + 1;
       delta >>= 3;
       if (count == 8) {
         count = delta + 8;

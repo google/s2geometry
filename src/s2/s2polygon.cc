@@ -752,13 +752,13 @@ bool S2Polygon::DecodeWithinScope(Decoder* const decoder) {
 }
 
 bool S2Polygon::DecodeUncompressed(Decoder* const decoder, bool within_scope) {
-  if (decoder->avail() < 2 * sizeof(uint8) + sizeof(uint32)) return false;
+  if (decoder->avail() < 2 * sizeof(uint8_t) + sizeof(uint32_t)) return false;
   ClearLoops();
   decoder->get8();  // Ignore irrelevant serialized owns_loops_ value.
   decoder->get8();  // Ignore irrelevant serialized has_holes_ value.
   // Polygons with no loops are explicitly allowed here: a newly created
   // polygon has zero loops and such polygons encode and decode properly.
-  const uint32 num_loops = decoder->get32();
+  const uint32_t num_loops = decoder->get32();
   if (num_loops > FLAGS_s2polygon_decode_max_num_loops) return false;
   loops_.reserve(num_loops);
   num_vertices_ = 0;
@@ -1010,9 +1010,9 @@ void S2Polygon::InitToSimplified(const S2Polygon& a,
 // comparisons are to within a maximum "u" or "v" error of "tolerance_uv".
 // Bit "i" in the result is set if and only "p" is incident to the edge
 // corresponding to S2Cell::edge(i).
-uint8 GetCellEdgeIncidenceMask(const S2Cell& cell, const S2Point& p,
+uint8_t GetCellEdgeIncidenceMask(const S2Cell& cell, const S2Point& p,
                                double tolerance_uv) {
-  uint8 mask = 0;
+  uint8_t mask = 0;
   R2Point uv;
   if (S2::FaceXYZtoUV(cell.face(), p, &uv)) {
     R2Rect bound = cell.GetBoundUV();
@@ -1116,11 +1116,11 @@ vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
   for (int i = 0; i < a.num_loops(); ++i) {
     const S2Loop& a_loop = *a.loop(i);
     const S2Point* v0 = &a_loop.oriented_vertex(0);
-    uint8 mask0 = GetCellEdgeIncidenceMask(cell, *v0, tolerance_uv);
+    uint8_t mask0 = GetCellEdgeIncidenceMask(cell, *v0, tolerance_uv);
     bool in_interior = false;  // Was the last edge an interior edge?
     for (int j = 1; j <= a_loop.num_vertices(); ++j) {
       const S2Point* v1 = &a_loop.oriented_vertex(j);
-      uint8 mask1 = GetCellEdgeIncidenceMask(cell, *v1, tolerance_uv);
+      uint8_t mask1 = GetCellEdgeIncidenceMask(cell, *v1, tolerance_uv);
       if ((mask0 & mask1) != 0) {
         // This is an edge along the cell boundary.  Such edges do not get
         // simplified; we add them directly to the output.  (We create a
@@ -1298,7 +1298,7 @@ void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
   // happen: either the cell union is empty, or it consists of all six faces.
   if (num_loops() == 0) {
     if (cells.empty()) return;
-    S2_DCHECK_EQ(uint64{6} << (2 * S2CellId::kMaxLevel),
+    S2_DCHECK_EQ(uint64_t{6} << (2 * S2CellId::kMaxLevel),
               cells.LeafCellsCovered());
     Invert();
   }
@@ -1429,13 +1429,13 @@ void S2Polygon::EncodeCompressed(Encoder* encoder,
 }
 
 bool S2Polygon::DecodeCompressed(Decoder* decoder) {
-  if (decoder->avail() < sizeof(uint8)) return false;
+  if (decoder->avail() < sizeof(uint8_t)) return false;
   ClearLoops();
   int snap_level = decoder->get8();
   if (snap_level > S2CellId::kMaxLevel) return false;
   // Polygons with no loops are explicitly allowed here: a newly created
   // polygon has zero loops and such polygons encode and decode properly.
-  uint32 num_loops;
+  uint32_t num_loops;
   if (!decoder->get_varint32(&num_loops)) return false;
   if (num_loops > FLAGS_s2polygon_decode_max_num_loops) return false;
   loops_.reserve(num_loops);

@@ -20,13 +20,12 @@
 #ifndef S2_UTIL_CODING_TRANSFORMS_H_
 #define S2_UTIL_CODING_TRANSFORMS_H_
 
-#include "s2/base/integral_types.h"
 
 // ZigZag Transform
 //
 // Good for varint coding small signed integers centered around 0.
 //
-//       int32 ->     uint32
+//     int32_t ->   uint32_t
 // -------------------------
 //           0 ->          0
 //          -1 ->          1
@@ -39,23 +38,23 @@
 //        >> encode >>
 //        << decode <<
 
-static inline uint32 ZigZagEncode(int32 n) {
+static inline uint32_t ZigZagEncode(int32_t n) {
   // We need the cast to avoid an arithmetic shift.
-  uint32 sign = (static_cast<uint32>(n)) >> 31;
-  return (static_cast<uint32>(n) << 1) ^ (0u - sign);
+  uint32_t sign = (static_cast<uint32_t>(n)) >> 31;
+  return (static_cast<uint32_t>(n) << 1) ^ (0u - sign);
 }
 
-static inline int32 ZigZagDecode(uint32 n) {
+static inline int32_t ZigZagDecode(uint32_t n) {
   return (n >> 1) ^ (0u - (n & 1));
 }
 
-static inline uint64 ZigZagEncode64(int64 n) {
+static inline uint64_t ZigZagEncode64(int64_t n) {
   // We need the cast to avoid an arithmetic shift.
-  uint64 sign = (static_cast<uint64>(n)) >> 63;
-  return (static_cast<uint64>(n) << 1) ^ (0u - sign);
+  uint64_t sign = (static_cast<uint64_t>(n)) >> 63;
+  return (static_cast<uint64_t>(n) << 1) ^ (0u - sign);
 }
 
-static inline int64 ZigZagDecode64(uint64 n) {
+static inline int64_t ZigZagDecode64(uint64_t n) {
   return (n >> 1) ^ (0u - (n & 1));
 }
 

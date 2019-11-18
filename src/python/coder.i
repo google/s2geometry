@@ -113,9 +113,9 @@
 %unignore Encoder::clear();
 %unignore Encoder::length() const;
 %unignore Encoder::put8(unsigned char);
-%unignore Encoder::put16(uint16);
-%unignore Encoder::put32(uint32);
-%unignore Encoder::put64(uint64);
+%unignore Encoder::put16(uint16_t);
+%unignore Encoder::put32(uint32_t);
+%unignore Encoder::put64(uint64_t);
 %unignore Encoder::putdouble(double);
 %unignore Encoder::putfloat(float);
 %unignore Encoder::reset(void *, size_t);

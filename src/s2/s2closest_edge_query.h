@@ -112,8 +112,8 @@ class S2ClosestEdgeQuery {
   // fields:
   //
   //   S1ChordAngle distance;  // The distance from the target to this edge.
-  //   int32 shape_id;         // Identifies an indexed shape.
-  //   int32 edge_id;          // Identifies an edge within the shape.
+  //   int32_t shape_id;         // Identifies an indexed shape.
+  //   int32_t edge_id;          // Identifies an edge within the shape.
   using Result = Base::Result;
 
   // Options that control the set of edges returned.  Note that by default

@@ -354,7 +354,7 @@ void S2Polyline::Encode(Encoder* const encoder) const {
 }
 
 bool S2Polyline::Decode(Decoder* const decoder) {
-  if (decoder->avail() < sizeof(unsigned char) + sizeof(uint32)) return false;
+  if (decoder->avail() < sizeof(unsigned char) + sizeof(uint32_t)) return false;
   unsigned char version = decoder->get8();
   if (version > kCurrentLosslessEncodingVersionNumber) return false;
 

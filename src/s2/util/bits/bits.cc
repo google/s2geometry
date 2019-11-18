@@ -46,7 +46,7 @@ const char Bits::num_bits[] = {
 
 int Bits::Count(const void *m, int num_bytes) {
   int nbits = 0;
-  const uint8 *s = (const uint8 *) m;
+  const uint8_t *s = (const uint8_t *) m;
   for (int i = 0; i < num_bytes; i++)
     nbits += num_bits[*s++];
   return nbits;
@@ -54,8 +54,8 @@ int Bits::Count(const void *m, int num_bytes) {
 
 int Bits::Difference(const void *m1, const void *m2, int num_bytes) {
   int nbits = 0;
-  const uint8 *s1 = (const uint8 *) m1;
-  const uint8 *s2 = (const uint8 *) m2;
+  const uint8_t *s1 = (const uint8_t *) m1;
+  const uint8_t *s2 = (const uint8_t *) m2;
   for (int i = 0; i < num_bytes; i++)
     nbits += num_bits[(*s1++) ^ (*s2++)];
   return nbits;
@@ -64,21 +64,21 @@ int Bits::Difference(const void *m1, const void *m2, int num_bytes) {
 int Bits::CappedDifference(const void *m1, const void *m2,
                            int num_bytes, int cap) {
   int nbits = 0;
-  const uint8 *s1 = (const uint8 *) m1;
-  const uint8 *s2 = (const uint8 *) m2;
+  const uint8_t *s1 = (const uint8_t *) m1;
+  const uint8_t *s2 = (const uint8_t *) m2;
   for (int i = 0; i < num_bytes && nbits <= cap; i++)
     nbits += num_bits[(*s1++) ^ (*s2++)];
   return nbits;
 }
 
-int Bits::Log2Floor_Portable(uint32 n) {
+int Bits::Log2Floor_Portable(uint32_t n) {
   if (n == 0)
     return -1;
   int log = 0;
-  uint32 value = n;
+  uint32_t value = n;
   for (int i = 4; i >= 0; --i) {
     int shift = (1 << i);
-    uint32 x = value >> shift;
+    uint32_t x = value >> shift;
     if (x != 0) {
       value = x;
       log += shift;
@@ -88,7 +88,7 @@ int Bits::Log2Floor_Portable(uint32 n) {
   return log;
 }
 
-int Bits::Log2Ceiling(uint32 n) {
+int Bits::Log2Ceiling(uint32_t n) {
   int floor = Log2Floor(n);
   if ((n & (n - 1)) == 0)              // zero or a power of two
     return floor;
@@ -96,7 +96,7 @@ int Bits::Log2Ceiling(uint32 n) {
     return floor + 1;
 }
 
-int Bits::Log2Ceiling64(uint64 n) {
+int Bits::Log2Ceiling64(uint64_t n) {
   int floor = Log2Floor64(n);
   if ((n & (n - 1)) == 0)              // zero or a power of two
     return floor;
@@ -112,10 +112,10 @@ int Bits::Log2Ceiling128(absl::uint128 n) {
     return floor + 1;
 }
 
-int Bits::FindLSBSetNonZero_Portable(uint32 n) {
+int Bits::FindLSBSetNonZero_Portable(uint32_t n) {
   int rc = 31;
   for (int i = 4, shift = 1 << 4; i >= 0; --i) {
-    const uint32 x = n << shift;
+    const uint32_t x = n << shift;
     if (x != 0) {
       n = x;
       rc -= shift;
@@ -125,7 +125,7 @@ int Bits::FindLSBSetNonZero_Portable(uint32 n) {
   return rc;
 }
 
-int Bits::CountLeadingZeros32_Portable(uint32 n) {
+int Bits::CountLeadingZeros32_Portable(uint32_t n) {
   int bits = 1;
   if (n == 0)
     return 32;
@@ -148,7 +148,7 @@ int Bits::CountLeadingZeros32_Portable(uint32 n) {
   return bits - (n >> 31);
 }
 
-int Bits::CountLeadingZeros64_Portable(uint64 n) {
+int Bits::CountLeadingZeros64_Portable(uint64_t n) {
   return ((n >> 32)
            ? Bits::CountLeadingZeros32_Portable(n >> 32)
            : 32 +  Bits::CountLeadingZeros32_Portable(n));

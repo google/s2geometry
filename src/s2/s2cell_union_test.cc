@@ -24,7 +24,6 @@
 
 #include <gtest/gtest.h>
 
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -579,7 +578,7 @@ TEST(S2CellUnion, LeafCellsCovered) {
   ids.push_back(S2CellId::FromFace(4).child_end(15).prev());
   ids.push_back(S2CellId::FromFace(5).child_begin(30));
   cell_union.Init(ids);
-  uint64 expected = 1ULL + (1ULL << 6) + (1ULL << 30) + (1ULL << 32) +
+  uint64_t expected = 1ULL + (1ULL << 6) + (1ULL << 30) + (1ULL << 32) +
       (2ULL << 56) + (1ULL << 58) + (1ULL << 60);
   EXPECT_EQ(expected, cell_union.LeafCellsCovered());
 }

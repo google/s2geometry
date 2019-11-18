@@ -71,14 +71,14 @@ S2Shape::ReferencePoint S2LaxLoopShape::GetReferencePoint() const {
 }
 
 S2VertexIdLaxLoopShape::S2VertexIdLaxLoopShape(
-    const std::vector<int32>& vertex_ids, const S2Point* vertex_array) {
+    const std::vector<int32_t>& vertex_ids, const S2Point* vertex_array) {
   Init(vertex_ids, vertex_array);
 }
 
-void S2VertexIdLaxLoopShape::Init(const std::vector<int32>& vertex_ids,
+void S2VertexIdLaxLoopShape::Init(const std::vector<int32_t>& vertex_ids,
                            const S2Point* vertex_array) {
   num_vertices_ = vertex_ids.size();
-  vertex_ids_.reset(new int32[num_vertices_]);
+  vertex_ids_.reset(new int32_t[num_vertices_]);
   std::copy(vertex_ids.begin(), vertex_ids.end(), vertex_ids_.get());
   vertex_array_ = vertex_array;
 }

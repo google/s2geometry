@@ -173,14 +173,14 @@ vector<Graph::EdgeId> Graph::GetInputEdgeOrder(
 // A struct for sorting the incoming and outgoing edges around a vertex "v0".
 struct VertexEdge {
   VertexEdge(bool _incoming, Graph::EdgeId _index,
-             Graph::VertexId _endpoint, int32 _rank)
+             Graph::VertexId _endpoint, int32_t _rank)
       : incoming(_incoming), index(_index),
         endpoint(_endpoint), rank(_rank) {
   }
   bool incoming;             // Is this an incoming edge to "v0"?
   Graph::EdgeId index;       // Index of this edge in "edges_" or "in_edge_ids"
   Graph::VertexId endpoint;  // The other (not "v0") endpoint of this edge
-  int32 rank;                // Secondary key for edges with the same endpoint
+  int32_t rank;                // Secondary key for edges with the same endpoint
 };
 
 // Given a set of duplicate outgoing edges (v0, v1) and a set of duplicate

@@ -23,7 +23,6 @@
 #include <set>
 #include <string>
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
@@ -151,13 +150,13 @@ TEST(S2PolygonLayer, DuplicateInputEdges) {
 // Since we don't expect to have any crossing edges, the key for each edge is
 // simply the sum of its endpoints.  This key has the advantage of being
 // unchanged when the endpoints of an edge are swapped.
-using EdgeLabelMap = map<S2Point, set<int32>>;
+using EdgeLabelMap = map<S2Point, set<int32_t>>;
 
 void AddPolylineWithLabels(const S2Polyline& polyline, EdgeType edge_type,
-                           int32 label_begin, S2Builder* builder,
+                           int32_t label_begin, S2Builder* builder,
                            EdgeLabelMap *edge_label_map) {
   for (int i = 0; i + 1 < polyline.num_vertices(); ++i) {
-    int32 label = label_begin + i;
+    int32_t label = label_begin + i;
     builder->set_label(label);
     // With undirected edges, reverse the direction of every other input edge.
     int dir = edge_type == EdgeType::DIRECTED ? 1 : (i & 1);
@@ -190,7 +189,7 @@ static void TestEdgeLabels(EdgeType edge_type) {
     ASSERT_EQ(expected_loop_sizes[i], label_set_ids[i].size());
     for (int j = 0; j < label_set_ids[i].size(); ++j) {
       S2Point key = output.loop(i)->vertex(j) + output.loop(i)->vertex(j + 1);
-      const set<int32>& expected_labels = edge_label_map[key];
+      const set<int32_t>& expected_labels = edge_label_map[key];
       ASSERT_EQ(expected_labels.size(),
                 label_set_lexicon.id_set(label_set_ids[i][j]).size());
       EXPECT_TRUE(std::equal(

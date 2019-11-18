@@ -29,7 +29,6 @@
 #include <gtest/gtest.h>
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/stringprintf.h"
 #include "s2/base/strtoint.h"
@@ -146,7 +145,7 @@ TEST(S2RegionCoverer, RandomCaps) {
 TEST(S2RegionCoverer, SimpleCoverings) {
   static const int kMaxLevel = S2CellId::kMaxLevel;
   S2RegionCoverer::Options options;
-  options.set_max_cells(std::numeric_limits<int32>::max());
+  options.set_max_cells(std::numeric_limits<int32_t>::max());
   for (int i = 0; i < 1000; ++i) {
     int level = S2Testing::rnd.Uniform(kMaxLevel + 1);
     options.set_min_level(level);

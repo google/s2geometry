@@ -22,7 +22,6 @@
 
 #include <gtest/gtest.h>
 
-#include "s2/base/integral_types.h"
 #include "s2/r1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -307,6 +306,6 @@ TEST(S2R2Rect, CellOperations) {
 
   // Rectangle that intersects one corner of face 0.
   TestCellOps(S2R2Rect(R2Point(0.99, -0.01), R2Point(1.01, 0.01)),
-              S2Cell::FromFacePosLevel(0, ~uint64{0} >> S2CellId::kFaceBits, 5),
+              S2Cell::FromFacePosLevel(0, ~uint64_t{0} >> S2CellId::kFaceBits, 5),
               3);
 }

@@ -21,7 +21,6 @@
 #include <cfloat>
 #include <cmath>
 #include <memory>
-#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/s2cell_id.h"
@@ -342,8 +341,8 @@ S1Angle IntLatLngSnapFunction::min_edge_vertex_separation() const {
 S2Point IntLatLngSnapFunction::SnapPoint(const S2Point& point) const {
   S2_DCHECK_GE(exponent_, 0);  // Make sure the snap function was initialized.
   S2LatLng input(point);
-  int64 lat = MathUtil::FastInt64Round(input.lat().degrees() * from_degrees_);
-  int64 lng = MathUtil::FastInt64Round(input.lng().degrees() * from_degrees_);
+  int64_t lat = MathUtil::FastInt64Round(input.lat().degrees() * from_degrees_);
+  int64_t lng = MathUtil::FastInt64Round(input.lng().degrees() * from_degrees_);
   return S2LatLng::FromDegrees(lat * to_degrees_, lng * to_degrees_).ToPoint();
 }
 
