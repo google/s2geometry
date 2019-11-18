@@ -51,7 +51,7 @@ class S2Region;
 //
 // This flag currently does *not* affect the initial seed value for
 // S2Testing::rnd.  TODO(user): Fix this.
-DECLARE_int32(s2_random_seed);
+S2_DECLARE_int32(s2_random_seed);
 
 // This class defines various static functions that are useful for writing
 // unit tests.

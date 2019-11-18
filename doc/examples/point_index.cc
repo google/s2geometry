@@ -14,9 +14,9 @@
 #include "s2/s2point_index.h"
 #include "s2/s2testing.h"
 
-DEFINE_int32(num_index_points, 10000, "Number of points to index");
-DEFINE_int32(num_queries, 10000, "Number of queries");
-DEFINE_double(query_radius_km, 100, "Query radius in kilometers");
+S2_DEFINE_int32(num_index_points, 10000, "Number of points to index");
+S2_DEFINE_int32(num_queries, 10000, "Number of queries");
+S2_DEFINE_double(query_radius_km, 100, "Query radius in kilometers");
 
 int main(int argc, char **argv) {
   // Build an index containing random points anywhere on the Earth.

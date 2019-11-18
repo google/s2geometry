@@ -24,9 +24,9 @@
 #include "s2/s2region_term_indexer.h"
 #include "s2/s2testing.h"
 
-DEFINE_int32(num_documents, 10000, "Number of documents");
-DEFINE_int32(num_queries, 10000, "Number of queries");
-DEFINE_double(query_radius_km, 100, "Query radius in kilometers");
+S2_DEFINE_int32(num_documents, 10000, "Number of documents");
+S2_DEFINE_int32(num_queries, 10000, "Number of queries");
+S2_DEFINE_double(query_radius_km, 100, "Query radius in kilometers");
 
 // A prefix added to spatial terms to distinguish them from other index terms
 // (e.g. representing words or phrases).

@@ -84,7 +84,7 @@ using std::sqrt;
 using std::unique_ptr;
 using std::vector;
 
-DEFINE_bool(
+S2_DEFINE_bool(
     s2polygon_lazy_indexing, true,
     "Build the S2ShapeIndex only when it is first needed.  This can save "
     "significant amounts of memory and time when geometry is constructed but "
@@ -92,7 +92,7 @@ DEFINE_bool(
 
 // The maximum number of loops we'll allow when decoding a polygon.
 // The default value of 10 million is 200x bigger than the number of
-DEFINE_int32(
+S2_DEFINE_int32(
     s2polygon_decode_max_num_loops, 10000000,
     "The upper limit on the number of loops that are allowed by the "
     "S2Polygon::Decode method.");
