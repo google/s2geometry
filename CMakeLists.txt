@@ -416,7 +416,7 @@ install(FILES src/s2/util/units/length-units.h
         DESTINATION include/s2/util/units)
 install(TARGETS s2 s2testing DESTINATION lib)
 
-message("GTEST_ROOT: ${GTEST_ROOT}")
+message(" * GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
   add_subdirectory(${GTEST_ROOT} build_gtest)
   include_directories(${GTEST_ROOT}/include)
