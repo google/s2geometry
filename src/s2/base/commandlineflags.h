@@ -20,7 +20,8 @@
 
 #include <gflags/gflags.h>
 
-// Map local macros to GFlags macros.
+// If the GFlags library is available, map the local macro names to
+// GFlags macros.
 #define S2_DEFINE_bool  DEFINE_bool
 #define S2_DECLARE_bool  DECLARE_bool
 
@@ -38,6 +39,9 @@
 #include <string>
 
 #include "s2/base/integral_types.h"
+
+// Create a set of gflags-like macros for declaring/defining flags. Use
+// a library-specific name to potential minimize clashes with GFlags.
 
 #define S2_DEFINE_bool(name, default_value, description) \
   bool FLAGS_##name = default_value
