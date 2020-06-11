@@ -38,9 +38,9 @@ using absl::MakeSpan;
 using absl::Span;
 using std::vector;
 
-DEFINE_int32(s2point_compression_bm_level, 30,
+S2_DEFINE_int32(s2point_compression_bm_level, 30,
              "Level to encode at for benchmarks.");
-DEFINE_double(s2point_compression_bm_radius_km, 1000.0,
+S2_DEFINE_double(s2point_compression_bm_radius_km, 1000.0,
               "Radius to use for loop for benchmarks.");
 
 namespace {
