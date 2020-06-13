@@ -36,7 +36,6 @@
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/base/thread_annotations.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/gtl/btree_map.h"
 
@@ -477,9 +476,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   std::unique_ptr<UpdateState> update_state_;
 
   // Documented in the .cc file.
-  void UnlockAndSignal()
-      UNLOCK_FUNCTION(lock_)
-      UNLOCK_FUNCTION(update_state_->wait_mutex);
+  void UnlockAndSignal();
 
   MutableS2ShapeIndex(const MutableS2ShapeIndex&) = delete;
   void operator=(const MutableS2ShapeIndex&) = delete;

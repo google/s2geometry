@@ -39,7 +39,6 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2shape.h"
 #include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/base/thread_annotations.h"
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/gtl/compact_array.h"
 
