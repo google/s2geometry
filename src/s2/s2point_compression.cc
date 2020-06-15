@@ -56,17 +56,17 @@ struct FaceRun {
     // but since this would only help if there were more than 21 faces, it will
     // be a small overall savings, much smaller than the bound encoding.
     encoder->put_varint64(
-        S2CellId::kNumFaces * absl::implicit_cast<int64_t>(count) + face);
+        S2CellId::kNumFaces * absl::implicit_cast<std::int64_t>(count) + face);
     S2_DCHECK_GE(encoder->avail(), 0);
   }
 
   bool Decode(Decoder* decoder) {
-    uint64_t face_and_count;
+    std::uint64_t face_and_count;
     if (!decoder->get_varint64(&face_and_count)) return false;
 
     face = face_and_count % S2CellId::kNumFaces;
     // Make sure large counts don't wrap on malicious or random input.
-    const uint64_t count64 = face_and_count / S2CellId::kNumFaces;
+    const std::uint64_t count64 = face_and_count / S2CellId::kNumFaces;
     count = count64;
 
     return count > 0 && count == count64;
@@ -209,13 +209,13 @@ void EncodeFirstPointFixedLength(const pair<int, int>& vertex_pi_qi,
                                  NthDerivativeCoder* qi_coder,
                                  Encoder* encoder) {
   // Do not ZigZagEncode the first point, since it cannot be negative.
-  const uint32_t pi = pi_coder->Encode(vertex_pi_qi.first);
-  const uint32_t qi = qi_coder->Encode(vertex_pi_qi.second);
+  const std::uint32_t pi = pi_coder->Encode(vertex_pi_qi.first);
+  const std::uint32_t qi = qi_coder->Encode(vertex_pi_qi.second);
   // Interleave to reduce overhead from two partial bytes to one.
-  const uint64_t interleaved_pi_qi = util_bits::InterleaveUint32(pi, qi);
+  const std::uint64_t interleaved_pi_qi = util_bits::InterleaveUint32(pi, qi);
 
   // Convert to little endian for architecture independence.
-  const uint64_t little_endian_interleaved_pi_qi =
+  const std::uint64_t little_endian_interleaved_pi_qi =
       LittleEndian::FromHost64(interleaved_pi_qi);
 
   const int bytes_required = (level + 7) / 8 * 2;
@@ -231,12 +231,12 @@ void EncodePointCompressed(const pair<int, int>& vertex_pi_qi,
                            Encoder* encoder) {
   // ZigZagEncode, as varint requires the maximum number of bytes for
   // negative numbers.
-  const uint32_t zig_zag_encoded_deriv_pi =
+  const std::uint32_t zig_zag_encoded_deriv_pi =
       ZigZagEncode(pi_coder->Encode(vertex_pi_qi.first));
-  const uint32_t zig_zag_encoded_deriv_qi =
+  const std::uint32_t zig_zag_encoded_deriv_qi =
       ZigZagEncode(qi_coder->Encode(vertex_pi_qi.second));
   // Interleave to reduce overhead from two partial bytes to one.
-  const uint64_t interleaved_zig_zag_encoded_derivs =
+  const std::uint64_t interleaved_zig_zag_encoded_derivs =
       util_bits::InterleaveUint32(zig_zag_encoded_deriv_pi,
                                   zig_zag_encoded_deriv_qi);
 
@@ -273,13 +273,13 @@ bool DecodeFirstPointFixedLength(Decoder* decoder,
                                  pair<int, int>* vertex_pi_qi) {
   const int bytes_required = (level + 7) / 8 * 2;
   if (decoder->avail() < bytes_required) return false;
-  uint64_t little_endian_interleaved_pi_qi = 0;
+  std::uint64_t little_endian_interleaved_pi_qi = 0;
   decoder->getn(&little_endian_interleaved_pi_qi, bytes_required);
 
-  const uint64_t interleaved_pi_qi =
+  const std::uint64_t interleaved_pi_qi =
       LittleEndian::ToHost64(little_endian_interleaved_pi_qi);
 
-  uint32_t pi, qi;
+  std::uint32_t pi, qi;
   util_bits::DeinterleaveUint32(interleaved_pi_qi, &pi, &qi);
 
   vertex_pi_qi->first = pi_coder->Decode(pi);
@@ -293,12 +293,12 @@ bool DecodePointCompressed(Decoder* decoder,
                            NthDerivativeCoder* pi_coder,
                            NthDerivativeCoder* qi_coder,
                            pair<int, int>* vertex_pi_qi) {
-  uint64_t interleaved_zig_zag_encoded_deriv_pi_qi;
+  std::uint64_t interleaved_zig_zag_encoded_deriv_pi_qi;
   if (!decoder->get_varint64(&interleaved_zig_zag_encoded_deriv_pi_qi)) {
     return false;
   }
 
-  uint32_t zig_zag_encoded_deriv_pi, zig_zag_encoded_deriv_qi;
+  std::uint32_t zig_zag_encoded_deriv_pi, zig_zag_encoded_deriv_qi;
   util_bits::DeinterleaveUint32(interleaved_zig_zag_encoded_deriv_pi_qi,
                                 &zig_zag_encoded_deriv_pi,
                                 &zig_zag_encoded_deriv_qi);
@@ -376,7 +376,7 @@ bool S2DecodePointsCompressed(Decoder* decoder, int level,
     return false;
   }
   for (int i = 0; i < num_off_center; ++i) {
-    uint32_t index;
+    std::uint32_t index;
     if (!decoder->get_varint32(&index) || index >= points.size()) {
       return false;
     }

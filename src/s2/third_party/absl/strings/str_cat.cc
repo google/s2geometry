@@ -27,7 +27,7 @@ namespace absl {
 AlphaNum::AlphaNum(Hex hex) {
   char* const end = &digits_[numbers_internal::kFastToBufferSize];
   char* writer = end;
-  uint64_t value = hex.value;
+  std::uint64_t value = hex.value;
   static const char hexdigits[] = "0123456789abcdef";
   do {
     *--writer = hexdigits[value & 0xF];
@@ -50,7 +50,7 @@ AlphaNum::AlphaNum(Dec dec) {
   char* const end = &digits_[numbers_internal::kFastToBufferSize];
   char* const minfill = end - dec.width;
   char* writer = end;
-  uint64_t value = dec.value;
+  std::uint64_t value = dec.value;
   bool neg = dec.neg;
   while (value > 9) {
     *--writer = '0' + (value % 10);

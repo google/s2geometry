@@ -251,9 +251,9 @@ void MutableS2ShapeIndex::Clear() {
 //    ClippedEdge and this data is cached more successfully.
 
 struct MutableS2ShapeIndex::FaceEdge {
-  int32_t shape_id;      // The shape that this edge belongs to
-  int32_t edge_id;       // Edge id within that shape
-  int32_t max_level;     // Not desirable to subdivide this edge beyond this level
+  std::int32_t shape_id;      // The shape that this edge belongs to
+  std::int32_t edge_id;       // Edge id within that shape
+  std::int32_t max_level;     // Not desirable to subdivide this edge beyond this level
   bool has_interior;   // Belongs to a shape of dimension 2.
   R2Point a, b;        // The edge endpoints, clipped to a given face
   S2Shape::Edge edge;  // The edge endpoints
@@ -307,7 +307,7 @@ class MutableS2ShapeIndex::InteriorTracker {
   // This updates the state to correspond to the new focus point.
   //
   // REQUIRES: shape->dimension() == 2
-  void AddShape(int32_t shape_id, bool is_inside);
+  void AddShape(std::int32_t shape_id, bool is_inside);
 
   // Moves the focus to the given point.  This method should only be used when
   // it is known that there are no edge crossings between the old and new
@@ -322,7 +322,7 @@ class MutableS2ShapeIndex::InteriorTracker {
   // Indicates that the given edge of the given shape may cross the line
   // segment between the old and new focus locations (see DrawTo).
   // REQUIRES: shape->dimension() == 2
-  inline void TestEdge(int32_t shape_id, const S2Shape::Edge& edge);
+  inline void TestEdge(std::int32_t shape_id, const S2Shape::Edge& edge);
 
   // The set of shape ids that contain the current focus.
   const ShapeIdSet& shape_ids() const { return shape_ids_; }
@@ -347,18 +347,18 @@ class MutableS2ShapeIndex::InteriorTracker {
   // and then clear the state for those shapes.  This is used during
   // incremental updates to track the state of added and removed shapes
   // separately.
-  void SaveAndClearStateBefore(int32_t limit_shape_id);
+  void SaveAndClearStateBefore(std::int32_t limit_shape_id);
 
   // Restores the state previously saved by SaveAndClearStateBefore().  This
   // only affects the state for shape_ids below "limit_shape_id".
-  void RestoreStateBefore(int32_t limit_shape_id);
+  void RestoreStateBefore(std::int32_t limit_shape_id);
 
  private:
   // Removes "shape_id" from shape_ids_ if it exists, otherwise insert it.
   void ToggleShape(int shape_id);
 
   // Returns a pointer to the first entry "x" where x >= shape_id.
-  ShapeIdSet::iterator lower_bound(int32_t shape_id);
+  ShapeIdSet::iterator lower_bound(std::int32_t shape_id);
 
   bool is_active_;
   S2Point a_, b_;
@@ -384,7 +384,7 @@ S2Point MutableS2ShapeIndex::InteriorTracker::Origin() {
   return S2::FaceUVtoXYZ(0, -1, -1).Normalize();
 }
 
-void MutableS2ShapeIndex::InteriorTracker::AddShape(int32_t shape_id,
+void MutableS2ShapeIndex::InteriorTracker::AddShape(std::int32_t shape_id,
                                                     bool contains_focus) {
   is_active_ = true;
   if (contains_focus) {
@@ -423,7 +423,7 @@ void MutableS2ShapeIndex::InteriorTracker::DrawTo(const S2Point& b) {
 }
 
 inline void MutableS2ShapeIndex::InteriorTracker::TestEdge(
-    int32_t shape_id, const S2Shape::Edge& edge) {
+    std::int32_t shape_id, const S2Shape::Edge& edge) {
   if (crosser_.EdgeOrVertexCrossing(&edge.v0, &edge.v1)) {
     ToggleShape(shape_id);
   }
@@ -433,14 +433,14 @@ inline void MutableS2ShapeIndex::InteriorTracker::TestEdge(
 // implemented with linear rather than binary search because the number of
 // shapes being tracked is typically very small.
 inline MutableS2ShapeIndex::ShapeIdSet::iterator
-MutableS2ShapeIndex::InteriorTracker::lower_bound(int32_t shape_id) {
+MutableS2ShapeIndex::InteriorTracker::lower_bound(std::int32_t shape_id) {
   ShapeIdSet::iterator pos = shape_ids_.begin();
   while (pos != shape_ids_.end() && *pos < shape_id) { ++pos; }
   return pos;
 }
 
 void MutableS2ShapeIndex::InteriorTracker::SaveAndClearStateBefore(
-    int32_t limit_shape_id) {
+    std::int32_t limit_shape_id) {
   S2_DCHECK(saved_ids_.empty());
   ShapeIdSet::iterator limit = lower_bound(limit_shape_id);
   saved_ids_.assign(shape_ids_.begin(), limit);
@@ -448,7 +448,7 @@ void MutableS2ShapeIndex::InteriorTracker::SaveAndClearStateBefore(
 }
 
 void MutableS2ShapeIndex::InteriorTracker::RestoreStateBefore(
-    int32_t limit_shape_id) {
+    std::int32_t limit_shape_id) {
   shape_ids_.erase(shape_ids_.begin(), lower_bound(limit_shape_id));
   shape_ids_.insert(shape_ids_.begin(), saved_ids_.begin(), saved_ids_.end());
   saved_ids_.clear();
@@ -1523,7 +1523,7 @@ size_t MutableS2ShapeIndex::SpaceUsed() const {
     for (int s = 0; s < cell.num_clipped(); ++s) {
       const S2ClippedShape& clipped = cell.clipped(s);
       if (!clipped.is_inline()) {
-        size += clipped.num_edges() * sizeof(int32_t);
+        size += clipped.num_edges() * sizeof(std::int32_t);
       }
     }
   }
@@ -1539,7 +1539,7 @@ void MutableS2ShapeIndex::Encode(Encoder* encoder) const {
   // time we need 5 versions the first version can be permanently retired.
   // This only saves 1 byte, but that's significant for very small indexes.
   encoder->Ensure(Varint::kMax64);
-  uint64_t max_edges = options_.max_edges_per_cell();
+  std::uint64_t max_edges = options_.max_edges_per_cell();
   encoder->put_varint64(max_edges << 2 | kCurrentEncodingVersionNumber);
 
   vector<S2CellId> cell_ids;
@@ -1556,12 +1556,12 @@ void MutableS2ShapeIndex::Encode(Encoder* encoder) const {
 bool MutableS2ShapeIndex::Init(Decoder* decoder,
                                const ShapeFactory& shape_factory) {
   Clear();
-  uint64_t max_edges_version;
+  std::uint64_t max_edges_version;
   if (!decoder->get_varint64(&max_edges_version)) return false;
   int version = max_edges_version & 3;
   if (version != kCurrentEncodingVersionNumber) return false;
   options_.set_max_edges_per_cell(max_edges_version >> 2);
-  uint32_t num_shapes = shape_factory.size();
+  std::uint32_t num_shapes = shape_factory.size();
   shapes_.reserve(num_shapes);
   for (int shape_id = 0; shape_id < num_shapes; ++shape_id) {
     auto shape = shape_factory[shape_id];

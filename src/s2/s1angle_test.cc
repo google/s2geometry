@@ -70,16 +70,16 @@ TEST(S1Angle, E6E7RepresentationsUnsigned) {
   // Check that unsigned E6/E7 representations work as expected.
   EXPECT_DOUBLE_EQ(
       S1Angle::Degrees(60).radians(),
-      S1Angle::UnsignedE6(static_cast<uint32_t>(60000000)).radians());
+      S1Angle::UnsignedE6(static_cast<std::uint32_t>(60000000)).radians());
   EXPECT_DOUBLE_EQ(
       S1Angle::Degrees(-60).radians(),
-      S1Angle::UnsignedE6(static_cast<uint32_t>(-60000000)).radians());
+      S1Angle::UnsignedE6(static_cast<std::uint32_t>(-60000000)).radians());
   EXPECT_DOUBLE_EQ(
       S1Angle::Degrees(75).radians(),
-      S1Angle::UnsignedE7(static_cast<uint32_t>(750000000)).radians());
+      S1Angle::UnsignedE7(static_cast<std::uint32_t>(750000000)).radians());
   EXPECT_DOUBLE_EQ(
       S1Angle::Degrees(-75).radians(),
-      S1Angle::UnsignedE7(static_cast<uint32_t>(-750000000)).radians());
+      S1Angle::UnsignedE7(static_cast<std::uint32_t>(-750000000)).radians());
 }
 
 TEST(S1Angle, NormalizeCorrectlyCanonicalizesAngles) {

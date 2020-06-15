@@ -422,7 +422,7 @@ namespace {
 class VertexIdEdgeVectorShape final : public S2Shape {
  public:
   // Requires that "edges" is constant for the lifetime of this object.
-  VertexIdEdgeVectorShape(const vector<pair<int32_t, int32_t>>& edges,
+  VertexIdEdgeVectorShape(const vector<pair<std::int32_t, std::int32_t>>& edges,
                           const vector<S2Point>& vertices)
       : edges_(edges), vertices_(vertices) {
   }
@@ -449,7 +449,7 @@ class VertexIdEdgeVectorShape final : public S2Shape {
  private:
   const S2Point& vertex(int i) const { return vertices_[i]; }
 
-  const vector<std::pair<int32_t, int32_t>>& edges_;
+  const vector<std::pair<std::int32_t, std::int32_t>>& edges_;
   const vector<S2Point>& vertices_;
 };
 }  // namespace
@@ -1047,7 +1047,7 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
 }
 
 void S2Builder::BuildLayers() {
-  // Each output edge has an "input edge id set id" (an int32_t) representing
+  // Each output edge has an "input edge id set id" (an int32) representing
   // the set of input edge ids that were snapped to this edge.  The actual
   // InputEdgeIds can be retrieved using "input_edge_id_set_lexicon".
   vector<vector<Edge>> layer_edges;

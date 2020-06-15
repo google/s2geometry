@@ -21,7 +21,7 @@
 #ifndef S2_UTIL_MATH_MATHUTIL_H_
 #define S2_UTIL_MATH_MATHUTIL_H_
 
-#include <stdint.h>
+#include <cstdint>
 #include <type_traits>
 
 
@@ -99,7 +99,7 @@ class MathUtil {
   //   widely adopted yet and these functions are not available by default.
   //   --------------------------------------------------------------------
 
-  static int32_t FastIntRound(double x) {
+  static std::int32_t FastIntRound(double x) {
     // This function is not templatized because gcc doesn't seem to be able
     // to deal with inline assembly code in templatized functions, and there
     // is no advantage to passing an argument type of "float" on Intel
@@ -108,7 +108,7 @@ class MathUtil {
 #if defined __GNUC__ && (defined __i386__ || defined __SSE2__)
 #if defined __SSE2__
     // SSE2.
-    int32_t result;
+    std::int32_t result;
     __asm__ __volatile__
         ("cvtsd2si %1, %0"
          : "=r" (result)    // Output operand is a register
@@ -116,7 +116,7 @@ class MathUtil {
     return result;
 #elif defined __i386__
     // FPU stack.  Adapted from /usr/include/bits/mathinline.h.
-    int32_t result;
+    std::int32_t result;
     __asm__ __volatile__
         ("fistpl %0"
          : "=m" (result)    // Output operand is a memory location
@@ -125,15 +125,15 @@ class MathUtil {
     return result;
 #endif  // if defined __x86_64__ || ...
 #else
-    return Round<int32_t, double>(x);
+    return Round<std::int32_t, double>(x);
 #endif  // if defined __GNUC__ && ...
   }
 
-  static int64_t FastInt64Round(double x) {
+  static std::int64_t FastInt64Round(double x) {
 #if defined __GNUC__ && (defined __i386__ || defined __x86_64__)
 #if defined __x86_64__
     // SSE2.
-    int64_t result;
+    std::int64_t result;
     __asm__ __volatile__
         ("cvtsd2si %1, %0"
          : "=r" (result)    // Output operand is a register
@@ -142,7 +142,7 @@ class MathUtil {
 #elif defined __i386__
     // There is no CVTSD2SI in i386 to produce a 64 bit int, even with SSE2.
     // FPU stack.  Adapted from /usr/include/bits/mathinline.h.
-    int64_t result;
+    std::int64_t result;
     __asm__ __volatile__
         ("fistpll %0"
          : "=m" (result)    // Output operand is a memory location
@@ -151,7 +151,7 @@ class MathUtil {
     return result;
 #endif  // if defined __i386__
 #else
-    return Round<int64_t, double>(x);
+    return Round<std::int64_t, double>(x);
 #endif  // if defined __GNUC__ && ...
   }
 };
@@ -165,22 +165,22 @@ class MathUtil {
 // partial specialization of templatized functions.
 
 template<>
-inline int32_t MathUtil::Round<int32_t, double>(double x) {
+inline std::int32_t MathUtil::Round<std::int32_t, double>(double x) {
   return FastIntRound(x);
 }
 
 template<>
-inline int32_t MathUtil::Round<int32_t, float>(float x) {
+inline std::int32_t MathUtil::Round<std::int32_t, float>(float x) {
   return FastIntRound(x);
 }
 
 template<>
-inline int64_t MathUtil::Round<int64_t, double>(double x) {
+inline std::int64_t MathUtil::Round<std::int64_t, double>(double x) {
   return FastInt64Round(x);
 }
 
 template<>
-inline int64_t MathUtil::Round<int64_t, float>(float x) {
+inline std::int64_t MathUtil::Round<std::int64_t, float>(float x) {
   return FastInt64Round(x);
 }
 

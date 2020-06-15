@@ -162,13 +162,13 @@ TEST(S2PolylineLayer, SimpleEdgeLabels) {
   builder.AddPolyline(*MakePolylineOrDie("0:6, 0:5"));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
-  vector<vector<int32_t>> expected = {{5}, {5}, {5, 7}, {}, {}, {11}};
+  vector<vector<std::int32_t>> expected = {{5}, {5}, {5, 7}, {}, {}, {11}};
   ASSERT_EQ(expected.size(), label_set_ids.size());
   for (int i = 0; i < expected.size(); ++i) {
     ASSERT_EQ(expected[i].size(),
               label_set_lexicon.id_set(label_set_ids[i]).size());
     int j = 0;
-    for (int32_t label : label_set_lexicon.id_set(label_set_ids[i])) {
+    for (std::int32_t label : label_set_lexicon.id_set(label_set_ids[i])) {
       EXPECT_EQ(expected[i][j++], label);
     }
   }

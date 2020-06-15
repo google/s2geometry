@@ -27,7 +27,7 @@ class CycleTimer {
     start_ = Now();
   }
 
-  int64_t GetInMs() const {
+  std::int64_t GetInMs() const {
     using msec = std::chrono::milliseconds;
     return std::chrono::duration_cast<msec>(GetDuration()).count();
   }

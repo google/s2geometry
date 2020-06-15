@@ -408,7 +408,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
 
   // The representation of an edge that has been queued for removal.
   struct RemovedShape {
-    int32_t shape_id;
+    std::int32_t shape_id;
     bool has_interior;  // Belongs to a shape of dimension 2.
     bool contains_tracker_origin;
     std::vector<S2Shape::Edge> edges;

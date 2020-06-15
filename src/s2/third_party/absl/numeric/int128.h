@@ -80,8 +80,8 @@ namespace absl {
 //                                    // converted to float.
 //
 //     absl::uint128 v;
-//     uint64_t i = v;                         // Error
-//     uint64_t i = static_cast<uint64_t>(v);  // OK
+//     std::uint64_t i = v;                         // Error
+//     std::uint64_t i = static_cast<std::uint64_t>(v);  // OK
 //
 class alignas(16) uint128 {
  public:
@@ -164,12 +164,12 @@ class alignas(16) uint128 {
   // Uint128Low64()
   //
   // Returns the lower 64-bit value of a `uint128` value.
-  friend constexpr uint64_t Uint128Low64(uint128 v);
+  friend constexpr std::uint64_t Uint128Low64(uint128 v);
 
   // Uint128High64()
   //
   // Returns the higher 64-bit value of a `uint128` value.
-  friend constexpr uint64_t Uint128High64(uint128 v);
+  friend constexpr std::uint64_t Uint128High64(uint128 v);
 
   // MakeUInt128()
   //
@@ -180,7 +180,7 @@ class alignas(16) uint128 {
   // Example:
   //
   //   absl::uint128 big = absl::MakeUint128(1, 0);
-  friend constexpr uint128 MakeUint128(uint64_t high, uint64_t low);
+  friend constexpr uint128 MakeUint128(std::uint64_t high, std::uint64_t low);
 
   // Uint128Max()
   //
@@ -188,18 +188,18 @@ class alignas(16) uint128 {
   friend constexpr uint128 Uint128Max();
 
  private:
-  constexpr uint128(uint64_t high, uint64_t low);
+  constexpr uint128(std::uint64_t high, std::uint64_t low);
 
   // TODO(user) Update implementation to use __int128 once all users of
   // uint128 are fixed to not depend on alignof(uint128) == 8. Also add
   // alignas(16) to class definition to keep alignment consistent across
   // platforms.
 #if defined(ABSL_IS_LITTLE_ENDIAN)
-  uint64_t lo_;
-  uint64_t hi_;
+  std::uint64_t lo_;
+  std::uint64_t hi_;
 #elif defined(ABSL_IS_BIG_ENDIAN)
-  uint64_t hi_;
-  uint64_t lo_;
+  std::uint64_t hi_;
+  std::uint64_t lo_;
 #else  // byte order
 #error "Unsupported byte order: must be little-endian or big-endian."
 #endif  // byte order
@@ -216,13 +216,13 @@ std::ostream& operator<<(std::ostream& os, uint128 v);
 //                      Implementation details follow
 // --------------------------------------------------------------------------
 
-constexpr uint128 MakeUint128(uint64_t high, uint64_t low) {
+constexpr uint128 MakeUint128(std::uint64_t high, std::uint64_t low) {
   return uint128(high, low);
 }
 
 constexpr uint128 Uint128Max() {
-  return uint128(std::numeric_limits<uint64_t>::max(),
-                 std::numeric_limits<uint64_t>::max());
+  return uint128(std::numeric_limits<std::uint64_t>::max(),
+                 std::numeric_limits<std::uint64_t>::max());
 }
 
 // Assignment from integer types.
@@ -308,26 +308,26 @@ inline uint128& uint128::operator%=(uint128 other) {
   return *this;
 }
 
-constexpr uint64_t Uint128Low64(uint128 v) { return v.lo_; }
+constexpr std::uint64_t Uint128Low64(uint128 v) { return v.lo_; }
 
-constexpr uint64_t Uint128High64(uint128 v) { return v.hi_; }
+constexpr std::uint64_t Uint128High64(uint128 v) { return v.hi_; }
 
 // Constructors from integer types.
 
 #if defined(ABSL_IS_LITTLE_ENDIAN)
 
-constexpr uint128::uint128(uint64_t high, uint64_t low)
+constexpr uint128::uint128(std::uint64_t high, std::uint64_t low)
     : lo_{low}, hi_{high} {}
 
 constexpr uint128::uint128(int v)
-    : lo_{static_cast<uint64_t>(v)},
-      hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0} {}
+    : lo_{static_cast<std::uint64_t>(v)},
+      hi_{v < 0 ? std::numeric_limits<std::uint64_t>::max() : 0} {}
 constexpr uint128::uint128(long v)  // NOLINT(runtime/int)
-    : lo_{static_cast<uint64_t>(v)},
-      hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0} {}
+    : lo_{static_cast<std::uint64_t>(v)},
+      hi_{v < 0 ? std::numeric_limits<std::uint64_t>::max() : 0} {}
 constexpr uint128::uint128(long long v)  // NOLINT(runtime/int)
-    : lo_{static_cast<uint64_t>(v)},
-      hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0} {}
+    : lo_{static_cast<std::uint64_t>(v)},
+      hi_{v < 0 ? std::numeric_limits<std::uint64_t>::max() : 0} {}
 
 constexpr uint128::uint128(unsigned int v) : lo_{v}, hi_{0} {}
 // NOLINTNEXTLINE(runtime/int)
@@ -337,28 +337,28 @@ constexpr uint128::uint128(unsigned long long v) : lo_{v}, hi_{0} {}
 
 #ifdef ABSL_HAVE_INTRINSIC_INT128
 constexpr uint128::uint128(__int128 v)
-    : lo_{static_cast<uint64_t>(v & ~uint64_t{0})},
-      hi_{static_cast<uint64_t>(static_cast<unsigned __int128>(v) >> 64)} {}
+    : lo_{static_cast<std::uint64_t>(v & ~std::uint64_t{0})},
+      hi_{static_cast<std::uint64_t>(static_cast<unsigned __int128>(v) >> 64)} {}
 constexpr uint128::uint128(unsigned __int128 v)
-    : lo_{static_cast<uint64_t>(v & ~uint64_t{0})},
-      hi_{static_cast<uint64_t>(v >> 64)} {}
+    : lo_{static_cast<std::uint64_t>(v & ~std::uint64_t{0})},
+      hi_{static_cast<std::uint64_t>(v >> 64)} {}
 #endif  // ABSL_HAVE_INTRINSIC_INT128
 
 
 #elif defined(ABSL_IS_BIG_ENDIAN)
 
-constexpr uint128::uint128(uint64_t high, uint64_t low)
+constexpr uint128::uint128(std::uint64_t high, std::uint64_t low)
     : hi_{high}, lo_{low} {}
 
 constexpr uint128::uint128(int v)
-    : hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0},
-      lo_{static_cast<uint64_t>(v)} {}
+    : hi_{v < 0 ? std::numeric_limits<std::uint64_t>::max() : 0},
+      lo_{static_cast<std::uint64_t>(v)} {}
 constexpr uint128::uint128(long v)  // NOLINT(runtime/int)
-    : hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0},
-      lo_{static_cast<uint64_t>(v)} {}
+    : hi_{v < 0 ? std::numeric_limits<std::uint64_t>::max() : 0},
+      lo_{static_cast<std::uint64_t>(v)} {}
 constexpr uint128::uint128(long long v)  // NOLINT(runtime/int)
-    : hi_{v < 0 ? std::numeric_limits<uint64_t>::max() : 0},
-      lo_{static_cast<uint64_t>(v)} {}
+    : hi_{v < 0 ? std::numeric_limits<std::uint64_t>::max() : 0},
+      lo_{static_cast<std::uint64_t>(v)} {}
 
 constexpr uint128::uint128(unsigned int v) : hi_{0}, lo_{v} {}
 // NOLINTNEXTLINE(runtime/int)
@@ -368,11 +368,11 @@ constexpr uint128::uint128(unsigned long long v) : hi_{0}, lo_{v} {}
 
 #ifdef ABSL_HAVE_INTRINSIC_INT128
 constexpr uint128::uint128(__int128 v)
-    : hi_{static_cast<uint64_t>(static_cast<unsigned __int128>(v) >> 64)},
-      lo_{static_cast<uint64_t>(v & ~uint64_t{0})} {}
+    : hi_{static_cast<std::uint64_t>(static_cast<unsigned __int128>(v) >> 64)},
+      lo_{static_cast<std::uint64_t>(v & ~std::uint64_t{0})} {}
 constexpr uint128::uint128(unsigned __int128 v)
-    : hi_{static_cast<uint64_t>(v >> 64)},
-      lo_{static_cast<uint64_t>(v & ~uint64_t{0})} {}
+    : hi_{static_cast<std::uint64_t>(v >> 64)},
+      lo_{static_cast<std::uint64_t>(v & ~std::uint64_t{0})} {}
 #endif  // ABSL_HAVE_INTRINSIC_INT128
 
 
@@ -497,8 +497,8 @@ inline bool operator>=(uint128 lhs, uint128 rhs) {
 // Unary operators.
 
 inline uint128 operator-(uint128 val) {
-  uint64_t hi = ~Uint128High64(val);
-  uint64_t lo = ~Uint128Low64(val) + 1;
+  std::uint64_t hi = ~Uint128High64(val);
+  std::uint64_t lo = ~Uint128Low64(val) + 1;
   if (lo == 0) ++hi;  // carry
   return MakeUint128(hi, lo);
 }
@@ -549,7 +549,7 @@ inline uint128& uint128::operator^=(uint128 other) {
 // Arithmetic operators.
 
 inline uint128 operator<<(uint128 lhs, int amount) {
-  // uint64_t shifts of >= 64 are undefined, so we will need some
+  // std::uint64_t shifts of >= 64 are undefined, so we will need some
   // special-casing.
   if (amount < 64) {
     if (amount != 0) {
@@ -563,7 +563,7 @@ inline uint128 operator<<(uint128 lhs, int amount) {
 }
 
 inline uint128 operator>>(uint128 lhs, int amount) {
-  // uint64_t shifts of >= 64 are undefined, so we will need some
+  // std::uint64_t shifts of >= 64 are undefined, so we will need some
   // special-casing.
   if (amount < 64) {
     if (amount != 0) {
@@ -601,10 +601,10 @@ inline uint128 operator*(uint128 lhs, uint128 rhs) {
   return static_cast<unsigned __int128>(lhs) *
          static_cast<unsigned __int128>(rhs);
 #else   // ABSL_HAVE_INTRINSIC128
-  uint64_t a32 = Uint128Low64(lhs) >> 32;
-  uint64_t a00 = Uint128Low64(lhs) & 0xffffffff;
-  uint64_t b32 = Uint128Low64(rhs) >> 32;
-  uint64_t b00 = Uint128Low64(rhs) & 0xffffffff;
+  std::uint64_t a32 = Uint128Low64(lhs) >> 32;
+  std::uint64_t a00 = Uint128Low64(lhs) & 0xffffffff;
+  std::uint64_t b32 = Uint128Low64(rhs) >> 32;
+  std::uint64_t b00 = Uint128Low64(rhs) & 0xffffffff;
   uint128 result =
       MakeUint128(Uint128High64(lhs) * Uint128Low64(rhs) +
                       Uint128Low64(lhs) * Uint128High64(rhs) + a32 * b32,

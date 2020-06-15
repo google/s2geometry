@@ -26,7 +26,7 @@ namespace absl {
 namespace strings_internal {
 
 // Returns the number of leading 0 bits in a 64-bit value.
-inline int CountLeadingZeros64(uint64_t n) {
+inline int CountLeadingZeros64(std::uint64_t n) {
 #if defined(__GNUC__)
   static_assert(sizeof(unsigned long long) == sizeof(n),  // NOLINT(runtime/int)
                 "__builtin_clzll does not take 64bit arg");

@@ -33,6 +33,7 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include <cstdint>
 
 #include "s2/third_party/absl/base/config.h"
 #include "s2/third_party/absl/base/port.h"
@@ -339,22 +340,22 @@ inline void sized_delete_array(void *ptr, size_t size) {
 
 #else
 
-static inline uint16_t bswap_16(uint16_t x) {
+static inline std::uint16_t bswap_16(std::uint16_t x) {
 #ifdef __cplusplus
-  return static_cast<uint16_t>(((x & 0xFF) << 8) | ((x & 0xFF00) >> 8));
+  return static_cast<std::uint16_t>(((x & 0xFF) << 8) | ((x & 0xFF00) >> 8));
 #else
-  return (uint16_t)(((x & 0xFF) << 8) | ((x & 0xFF00) >> 8));  // NOLINT
+  return (std::uint16_t)(((x & 0xFF) << 8) | ((x & 0xFF00) >> 8));  // NOLINT
 #endif  // __cplusplus
 }
 #define bswap_16(x) bswap_16(x)
-static inline uint32_t bswap_32(uint32_t x) {
+static inline std::uint32_t bswap_32(std::uint32_t x) {
   return (((x & 0xFF) << 24) |
           ((x & 0xFF00) << 8) |
           ((x & 0xFF0000) >> 8) |
           ((x & 0xFF000000) >> 24));
 }
 #define bswap_32(x) bswap_32(x)
-static inline uint64_t bswap_64(uint64_t x) {
+static inline std::uint64_t bswap_64(std::uint64_t x) {
   return (((x & 0xFFULL) << 56) |
           ((x & 0xFF00ULL) << 40) |
           ((x & 0xFF0000ULL) << 24) |
@@ -670,63 +671,63 @@ inline void bzero(void *s, int n) { memset(s, 0, n); }
 #include <cstdint>
 
 extern "C" {
-uint16_t __sanitizer_unaligned_load16(const void *p);
-uint32_t __sanitizer_unaligned_load32(const void *p);
-uint64_t __sanitizer_unaligned_load64(const void *p);
-void __sanitizer_unaligned_store16(void *p, uint16_t v);
-void __sanitizer_unaligned_store32(void *p, uint32_t v);
-void __sanitizer_unaligned_store64(void *p, uint64_t v);
+std::uint16_t __sanitizer_unaligned_load16(const void *p);
+std::uint32_t __sanitizer_unaligned_load32(const void *p);
+std::uint64_t __sanitizer_unaligned_load64(const void *p);
+void __sanitizer_unaligned_store16(void *p, std::uint16_t v);
+void __sanitizer_unaligned_store32(void *p, std::uint32_t v);
+void __sanitizer_unaligned_store64(void *p, std::uint64_t v);
 }  // extern "C"
 
-inline uint16_t UNALIGNED_LOAD16(const void *p) {
+inline std::uint16_t UNALIGNED_LOAD16(const void *p) {
   return __sanitizer_unaligned_load16(p);
 }
 
-inline uint32_t UNALIGNED_LOAD32(const void *p) {
+inline std::uint32_t UNALIGNED_LOAD32(const void *p) {
   return __sanitizer_unaligned_load32(p);
 }
 
-inline uint64_t UNALIGNED_LOAD64(const void *p) {
+inline std::uint64_t UNALIGNED_LOAD64(const void *p) {
   return __sanitizer_unaligned_load64(p);
 }
 
-inline void UNALIGNED_STORE16(void *p, uint16_t v) {
+inline void UNALIGNED_STORE16(void *p, std::uint16_t v) {
   __sanitizer_unaligned_store16(p, v);
 }
 
-inline void UNALIGNED_STORE32(void *p, uint32_t v) {
+inline void UNALIGNED_STORE32(void *p, std::uint32_t v) {
   __sanitizer_unaligned_store32(p, v);
 }
 
-inline void UNALIGNED_STORE64(void *p, uint64_t v) {
+inline void UNALIGNED_STORE64(void *p, std::uint64_t v) {
   __sanitizer_unaligned_store64(p, v);
 }
 
 #elif defined(UNDEFINED_BEHAVIOR_SANITIZER)
 
-inline uint16_t UNALIGNED_LOAD16(const void *p) {
-  uint16_t t;
+inline std::uint16_t UNALIGNED_LOAD16(const void *p) {
+  std::uint16_t t;
   memcpy(&t, p, sizeof t);
   return t;
 }
 
-inline uint32_t UNALIGNED_LOAD32(const void *p) {
-  uint32_t t;
+inline std::uint32_t UNALIGNED_LOAD32(const void *p) {
+  std::uint32_t t;
   memcpy(&t, p, sizeof t);
   return t;
 }
 
-inline uint64_t UNALIGNED_LOAD64(const void *p) {
-  uint64_t t;
+inline std::uint64_t UNALIGNED_LOAD64(const void *p) {
+  std::uint64_t t;
   memcpy(&t, p, sizeof t);
   return t;
 }
 
-inline void UNALIGNED_STORE16(void *p, uint16_t v) { memcpy(p, &v, sizeof v); }
+inline void UNALIGNED_STORE16(void *p, std::uint16_t v) { memcpy(p, &v, sizeof v); }
 
-inline void UNALIGNED_STORE32(void *p, uint32_t v) { memcpy(p, &v, sizeof v); }
+inline void UNALIGNED_STORE32(void *p, std::uint32_t v) { memcpy(p, &v, sizeof v); }
 
-inline void UNALIGNED_STORE64(void *p, uint64_t v) { memcpy(p, &v, sizeof v); }
+inline void UNALIGNED_STORE64(void *p, std::uint64_t v) { memcpy(p, &v, sizeof v); }
 
 #elif defined(__x86_64__) || defined(_M_X64) || defined(__i386) || \
     defined(_M_IX86) || defined(__ppc__) || defined(__PPC__) ||    \
@@ -736,13 +737,13 @@ inline void UNALIGNED_STORE64(void *p, uint64_t v) { memcpy(p, &v, sizeof v); }
 // modern PowerPC hardware can also do unaligned integer loads and stores;
 // but note: the FPU still sends unaligned loads and stores to a trap handler!
 
-#define UNALIGNED_LOAD16(_p) (*reinterpret_cast<const uint16_t *>(_p))
-#define UNALIGNED_LOAD32(_p) (*reinterpret_cast<const uint32_t *>(_p))
-#define UNALIGNED_LOAD64(_p) (*reinterpret_cast<const uint64_t *>(_p))
+#define UNALIGNED_LOAD16(_p) (*reinterpret_cast<const std::uint16_t *>(_p))
+#define UNALIGNED_LOAD32(_p) (*reinterpret_cast<const std::uint32_t *>(_p))
+#define UNALIGNED_LOAD64(_p) (*reinterpret_cast<const std::uint64_t *>(_p))
 
-#define UNALIGNED_STORE16(_p, _val) (*reinterpret_cast<uint16_t *>(_p) = (_val))
-#define UNALIGNED_STORE32(_p, _val) (*reinterpret_cast<uint32_t *>(_p) = (_val))
-#define UNALIGNED_STORE64(_p, _val) (*reinterpret_cast<uint64_t *>(_p) = (_val))
+#define UNALIGNED_STORE16(_p, _val) (*reinterpret_cast<std::uint16_t *>(_p) = (_val))
+#define UNALIGNED_STORE32(_p, _val) (*reinterpret_cast<std::uint32_t *>(_p) = (_val))
+#define UNALIGNED_STORE64(_p, _val) (*reinterpret_cast<std::uint64_t *>(_p) = (_val))
 
 #elif defined(__arm__) && !defined(__ARM_ARCH_5__) &&          \
     !defined(__ARM_ARCH_5T__) && !defined(__ARM_ARCH_5TE__) && \
@@ -765,7 +766,7 @@ inline void UNALIGNED_STORE64(void *p, uint64_t v) { memcpy(p, &v, sizeof v); }
 // allowed to be unaligned, not LDRD (two reads) or LDM (many reads). Unless we
 // explicitly tell the compiler that these accesses can be unaligned, it can and
 // will combine accesses. On armcc, the way to signal this is done by accessing
-// through the type (uint32_t __packed *), but GCC has no such attribute
+// through the type (uint32 __packed *), but GCC has no such attribute
 // (it ignores __attribute__((packed)) on individual variables). However,
 // we can tell it that a _struct_ is unaligned, which has the same effect,
 // so we do that.
@@ -774,13 +775,13 @@ namespace base {
 namespace internal {
 
 struct Unaligned16Struct {
-  uint16_t value;
-  uint8_t dummy;  // To make the size non-power-of-two.
+  std::uint16_t value;
+  std::uint8_t dummy;  // To make the size non-power-of-two.
 } ABSL_ATTRIBUTE_PACKED;
 
 struct Unaligned32Struct {
-  uint32_t value;
-  uint8_t dummy;  // To make the size non-power-of-two.
+  std::uint32_t value;
+  std::uint8_t dummy;  // To make the size non-power-of-two.
 } ABSL_ATTRIBUTE_PACKED;
 
 }  // namespace internal
@@ -802,13 +803,13 @@ struct Unaligned32Struct {
 // See if that would be more efficient on platforms supporting it,
 // at least for copies.
 
-inline uint64_t UNALIGNED_LOAD64(const void *p) {
-  uint64_t t;
+inline std::uint64_t UNALIGNED_LOAD64(const void *p) {
+  std::uint64_t t;
   memcpy(&t, p, sizeof t);
   return t;
 }
 
-inline void UNALIGNED_STORE64(void *p, uint64_t v) { memcpy(p, &v, sizeof v); }
+inline void UNALIGNED_STORE64(void *p, std::uint64_t v) { memcpy(p, &v, sizeof v); }
 
 #else
 
@@ -817,29 +818,29 @@ inline void UNALIGNED_STORE64(void *p, uint64_t v) { memcpy(p, &v, sizeof v); }
 // These functions are provided for architectures that don't support
 // unaligned loads and stores.
 
-inline uint16_t UNALIGNED_LOAD16(const void *p) {
-  uint16_t t;
+inline std::uint16_t UNALIGNED_LOAD16(const void *p) {
+  std::uint16_t t;
   memcpy(&t, p, sizeof t);
   return t;
 }
 
-inline uint32_t UNALIGNED_LOAD32(const void *p) {
-  uint32_t t;
+inline std::uint32_t UNALIGNED_LOAD32(const void *p) {
+  std::uint32_t t;
   memcpy(&t, p, sizeof t);
   return t;
 }
 
-inline uint64_t UNALIGNED_LOAD64(const void *p) {
-  uint64_t t;
+inline std::uint64_t UNALIGNED_LOAD64(const void *p) {
+  std::uint64_t t;
   memcpy(&t, p, sizeof t);
   return t;
 }
 
-inline void UNALIGNED_STORE16(void *p, uint16_t v) { memcpy(p, &v, sizeof v); }
+inline void UNALIGNED_STORE16(void *p, std::uint16_t v) { memcpy(p, &v, sizeof v); }
 
-inline void UNALIGNED_STORE32(void *p, uint32_t v) { memcpy(p, &v, sizeof v); }
+inline void UNALIGNED_STORE32(void *p, std::uint32_t v) { memcpy(p, &v, sizeof v); }
 
-inline void UNALIGNED_STORE64(void *p, uint64_t v) { memcpy(p, &v, sizeof v); }
+inline void UNALIGNED_STORE64(void *p, std::uint64_t v) { memcpy(p, &v, sizeof v); }
 
 #endif
 

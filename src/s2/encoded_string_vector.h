@@ -67,7 +67,7 @@ class StringVectorEncoder {
   // A vector consisting of the starting offset of each string in the
   // encoder's data buffer, plus a final entry pointing just past the end of
   // the last string.
-  std::vector<uint64_t> offsets_;
+  std::vector<std::uint64_t> offsets_;
   Encoder data_;
 };
 
@@ -114,7 +114,7 @@ class EncodedStringVector {
   std::vector<absl::string_view> Decode() const;
 
  private:
-  EncodedUintVector<uint64_t> offsets_;
+  EncodedUintVector<std::uint64_t> offsets_;
   const char* data_;
 };
 
@@ -143,19 +143,19 @@ inline size_t EncodedStringVector::size() const {
 }
 
 inline absl::string_view EncodedStringVector::operator[](int i) const {
-  uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
-  uint64_t limit = offsets_[i];
+  std::uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
+  std::uint64_t limit = offsets_[i];
   return absl::string_view(data_ + start, limit - start);
 }
 
 inline Decoder EncodedStringVector::GetDecoder(int i) const {
-  uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
-  uint64_t limit = offsets_[i];
+  std::uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
+  std::uint64_t limit = offsets_[i];
   return Decoder(data_ + start, limit - start);
 }
 
 inline const char* EncodedStringVector::GetStart(int i) const {
-  uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
+  std::uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
   return data_ + start;
 }
 

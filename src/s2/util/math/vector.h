@@ -258,11 +258,11 @@ class BasicVector {
   const D& AsD() const { return static_cast<const D&>(*this); }
   D& AsD() { return static_cast<D&>(*this); }
 
-  // ostream << uint8_t prints the ASCII character, which is not useful.
+  // ostream << uint8 prints the ASCII character, which is not useful.
   // Cast to int so that numbers will be printed instead.
   template <typename U>
   static void Print(std::ostream& out, const U& v) { out << v; }
-  static void Print(std::ostream& out, uint8_t v) { out << static_cast<int>(v); }
+  static void Print(std::ostream& out, std::uint8_t v) { out << static_cast<int>(v); }
 
   // Ignores its arguments so that side-effects of variadic unpacking can occur.
   static void Ignore(std::initializer_list<bool>) {}
@@ -546,20 +546,20 @@ class Vector4
   VType c_[SIZE];
 };
 
-typedef Vector2<uint8_t>  Vector2_b;
-typedef Vector2<int16_t>  Vector2_s;
+typedef Vector2<std::uint8_t>  Vector2_b;
+typedef Vector2<std::int16_t>  Vector2_s;
 typedef Vector2<int>    Vector2_i;
 typedef Vector2<float>  Vector2_f;
 typedef Vector2<double> Vector2_d;
 
-typedef Vector3<uint8_t>  Vector3_b;
-typedef Vector3<int16_t>  Vector3_s;
+typedef Vector3<std::uint8_t>  Vector3_b;
+typedef Vector3<std::int16_t>  Vector3_s;
 typedef Vector3<int>    Vector3_i;
 typedef Vector3<float>  Vector3_f;
 typedef Vector3<double> Vector3_d;
 
-typedef Vector4<uint8_t>  Vector4_b;
-typedef Vector4<int16_t>  Vector4_s;
+typedef Vector4<std::uint8_t>  Vector4_b;
+typedef Vector4<std::int16_t>  Vector4_s;
 typedef Vector4<int>    Vector4_i;
 typedef Vector4<float>  Vector4_f;
 typedef Vector4<double> Vector4_d;

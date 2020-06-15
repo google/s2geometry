@@ -80,7 +80,7 @@ struct AlphaNumBuffer {
 // `Dec` conversion and fill character to use. A `kZeroPad2` value, for example,
 // would produce hexadecimal strings such as "0A","0F" and a 'kSpacePad5' value
 // would produce hexadecimal strings such as "    A","    F".
-enum PadSpec : uint8_t {
+enum PadSpec : std::uint8_t {
   kNoPad = 1,
   kZeroPad2,
   kZeroPad3,
@@ -130,8 +130,8 @@ enum PadSpec : uint8_t {
 // `Hex` stores a set of hexadecimal string conversion parameters for use
 // within `AlphaNum` string conversions.
 struct Hex {
-  uint64_t value;
-  uint8_t width;
+  std::uint64_t value;
+  std::uint8_t width;
   char fill;
 
   template <typename Int>
@@ -139,31 +139,31 @@ struct Hex {
       Int v, PadSpec spec = absl::kNoPad,
       typename std::enable_if<sizeof(Int) == 1 &&
                               !std::is_pointer<Int>::value>::type* = nullptr)
-      : Hex(spec, static_cast<uint8_t>(v)) {}
+      : Hex(spec, static_cast<std::uint8_t>(v)) {}
   template <typename Int>
   explicit Hex(
       Int v, PadSpec spec = absl::kNoPad,
       typename std::enable_if<sizeof(Int) == 2 &&
                               !std::is_pointer<Int>::value>::type* = nullptr)
-      : Hex(spec, static_cast<uint16_t>(v)) {}
+      : Hex(spec, static_cast<std::uint16_t>(v)) {}
   template <typename Int>
   explicit Hex(
       Int v, PadSpec spec = absl::kNoPad,
       typename std::enable_if<sizeof(Int) == 4 &&
                               !std::is_pointer<Int>::value>::type* = nullptr)
-      : Hex(spec, static_cast<uint32_t>(v)) {}
+      : Hex(spec, static_cast<std::uint32_t>(v)) {}
   template <typename Int>
   explicit Hex(
       Int v, PadSpec spec = absl::kNoPad,
       typename std::enable_if<sizeof(Int) == 8 &&
                               !std::is_pointer<Int>::value>::type* = nullptr)
-      : Hex(spec, static_cast<uint64_t>(v)) {}
+      : Hex(spec, static_cast<std::uint64_t>(v)) {}
   template <typename Pointee>
   explicit Hex(Pointee* v, PadSpec spec = absl::kNoPad)
       : Hex(spec, reinterpret_cast<uintptr_t>(v)) {}
 
  private:
-  Hex(PadSpec spec, uint64_t v)
+  Hex(PadSpec spec, std::uint64_t v)
       : value(v),
         width(spec == absl::kNoPad
                   ? 1
@@ -180,16 +180,16 @@ struct Hex {
 // within `AlphaNum` string conversions.  Dec is slower than the default
 // integer conversion, so use it only if you need padding.
 struct Dec {
-  uint64_t value;
-  uint8_t width;
+  std::uint64_t value;
+  std::uint8_t width;
   char fill;
   bool neg;
 
   template <typename Int>
   explicit Dec(Int v, PadSpec spec = absl::kNoPad,
                typename std::enable_if<(sizeof(Int) <= 8)>::type* = nullptr)
-      : value(v >= 0 ? static_cast<uint64_t>(v)
-                     : uint64_t{0} - static_cast<uint64_t>(v)),
+      : value(v >= 0 ? static_cast<std::uint64_t>(v)
+                     : std::uint64_t{0} - static_cast<std::uint64_t>(v)),
         width(spec == absl::kNoPad
                   ? 1
                   : spec >= absl::kSpacePad2 ? spec - absl::kSpacePad2 + 2

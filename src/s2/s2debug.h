@@ -60,7 +60,7 @@ S2_DECLARE_bool(s2debug);
 
 // Class that allows the --s2debug validity checks to be enabled or disabled
 // for specific objects (e.g., see S2Polygon).
-enum class S2Debug : uint8_t {
+enum class S2Debug : std::uint8_t {
   ALLOW,    // Validity checks are controlled by --s2debug
   DISABLE   // No validity checks even when --s2debug is true
 };

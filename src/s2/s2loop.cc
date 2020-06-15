@@ -620,13 +620,13 @@ bool S2Loop::DecodeInternal(Decoder* const decoder,
   // Perform all checks before modifying vertex state. Empty loops are
   // explicitly allowed here: a newly created loop has zero vertices
   // and such loops encode and decode properly.
-  if (decoder->avail() < sizeof(uint32_t)) return false;
-  const uint32_t num_vertices = decoder->get32();
+  if (decoder->avail() < sizeof(std::uint32_t)) return false;
+  const std::uint32_t num_vertices = decoder->get32();
   if (num_vertices > FLAGS_s2polygon_decode_max_num_vertices) {
     return false;
   }
   if (decoder->avail() < (num_vertices * sizeof(*vertices_) +
-                          sizeof(uint8_t) + sizeof(uint32_t))) {
+                          sizeof(std::uint8_t) + sizeof(std::uint32_t))) {
     return false;
   }
   ClearIndex();
@@ -980,7 +980,7 @@ bool LoopCrosser::HasCrossingRelation(RangeIterator* ai, RangeIterator* bi) {
       bi.SeekTo(ai);
     } else {
       // One cell contains the other.  Determine which cell is larger.
-      int64_t ab_relation = ai.id().lsb() - bi.id().lsb();
+      std::int64_t ab_relation = ai.id().lsb() - bi.id().lsb();
       if (ab_relation > 0) {
         // A's index cell is larger.
         if (ab.HasCrossingRelation(&ai, &bi)) return true;
@@ -1396,9 +1396,9 @@ void S2Loop::EncodeCompressed(Encoder* encoder, const S2XYZFaceSiTi* vertices,
 }
 
 bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
-  // get_varint32 takes a uint32_t*, but num_vertices_ is signed.
+  // get_varint32 takes a std::uint32_t*, but num_vertices_ is signed.
   // Decode to a temporary variable to avoid reinterpret_cast.
-  uint32_t unsigned_num_vertices;
+  std::uint32_t unsigned_num_vertices;
   if (!decoder->get_varint32(&unsigned_num_vertices)) {
     return false;
   }
@@ -1416,14 +1416,14 @@ bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
                                 MakeSpan(vertices_, num_vertices_))) {
     return false;
   }
-  uint32_t properties_uint32;
+  std::uint32_t properties_uint32;
   if (!decoder->get_varint32(&properties_uint32)) {
     return false;
   }
   const std::bitset<kNumProperties> properties(properties_uint32);
   origin_inside_ = properties.test(kOriginInside);
 
-  uint32_t unsigned_depth;
+  std::uint32_t unsigned_depth;
   if (!decoder->get_varint32(&unsigned_depth)) {
     return false;
   }

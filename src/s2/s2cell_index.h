@@ -38,7 +38,7 @@
 //   string label_str = ...;
 //   cell_index.Add(cell_id, my_label_lexicon.Add(label_str));
 //   ...
-//   int32_t label = ...;
+//   std::int32_t label = ...;
 //   string label_str = my_label_lexicon.value(label);
 //
 // To build an S2CellIndex, call Add() for each (cell_id, label) pair, and
@@ -103,7 +103,7 @@ class S2CellIndex {
   //
   //   ValueLexicon<MyLabel> my_label_lexicon;
   //   index.Add(cell_id, my_label_lexicon.Add(label));
-  using Label = int32_t;
+  using Label = std::int32_t;
 
   // Convenience class that represents a (cell_id, label) pair.
   struct LabelledCell {
@@ -187,9 +187,9 @@ class S2CellIndex {
   struct CellNode {
     S2CellId cell_id;
     Label label;
-    int32_t parent;
+    std::int32_t parent;
 
-    CellNode(S2CellId _cell_id, Label _label, int32_t _parent)
+    CellNode(S2CellId _cell_id, Label _label, std::int32_t _parent)
         : cell_id(_cell_id), label(_label), parent(_parent) {
     }
     CellNode() : cell_id(S2CellId::None()), label(kDoneContents), parent(-1) {}
@@ -390,11 +390,11 @@ class S2CellIndex {
     // The maximum index within the cell_tree_ vector visited during the
     // previous call to StartUnion().  This is used to eliminate duplicate
     // values when StartUnion() is called multiple times.
-    int32_t node_cutoff_;
+    std::int32_t node_cutoff_;
 
     // The maximum index within the cell_tree_ vector visited during the
     // current call to StartUnion().  This is used to update node_cutoff_.
-    int32_t next_node_cutoff_;
+    std::int32_t next_node_cutoff_;
 
     // A copy of the current node in the cell tree.
     CellNode node_;
@@ -416,9 +416,9 @@ class S2CellIndex {
   // cells that overlap this range.
   struct RangeNode {
     S2CellId start_id;  // First leaf cell contained by this range.
-    int32_t contents;     // Contents of this node (an index within cell_tree_).
+    std::int32_t contents;     // Contents of this node (an index within cell_tree_).
 
-    RangeNode(S2CellId _start_id, int32_t _contents)
+    RangeNode(S2CellId _start_id, std::int32_t _contents)
         : start_id(_start_id), contents(_contents) {
     }
 

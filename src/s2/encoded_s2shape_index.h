@@ -105,8 +105,8 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
    private:
     void Refresh();  // Updates the IteratorBase fields.
     const EncodedS2ShapeIndex* index_;
-    int32_t cell_pos_;  // Current position in the vector of index cells.
-    int32_t num_cells_;
+    std::int32_t cell_pos_;  // Current position in the vector of index cells.
+    std::int32_t num_cells_;
   };
 
   // Returns the number of bytes currently occupied by the index (including any
@@ -160,7 +160,7 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
 
   // A bit vector indicating which elements of cells_ have been decoded.
   // All other elements of cells_ contain uninitialized (random) memory.
-  mutable std::vector<std::atomic<uint64_t>> cells_decoded_;
+  mutable std::vector<std::atomic<std::uint64_t>> cells_decoded_;
 
   // In order to minimize destructor time when very few cells of a large
   // S2ShapeIndex are needed, we keep track of the indices of the first few
@@ -247,15 +247,15 @@ inline S2Shape* EncodedS2ShapeIndex::shape(int id) const {
 
 // Returns true if the given cell has been decoded yet.
 inline bool EncodedS2ShapeIndex::cell_decoded(int i) const {
-  uint64_t group_bits = cells_decoded_[i >> 6].load(std::memory_order_relaxed);
+  std::uint64_t group_bits = cells_decoded_[i >> 6].load(std::memory_order_relaxed);
   return (group_bits & (1ULL << (i & 63))) != 0;
 }
 
 // Marks the given cell as decoded and returns true if it was already marked.
 inline bool EncodedS2ShapeIndex::test_and_set_cell_decoded(int i) const {
-  std::atomic<uint64_t>* group = &cells_decoded_[i >> 6];
-  uint64_t group_bits = group->load(std::memory_order_relaxed);
-  uint64_t test_bit = 1ULL << (i & 63);
+  std::atomic<std::uint64_t>* group = &cells_decoded_[i >> 6];
+  std::uint64_t group_bits = group->load(std::memory_order_relaxed);
+  std::uint64_t test_bit = 1ULL << (i & 63);
   group->store(group_bits | test_bit, std::memory_order_relaxed);
   return (group_bits & test_bit) != 0;
 }

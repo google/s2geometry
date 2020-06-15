@@ -69,7 +69,7 @@ void S2Testing::Random::Reset(int seed) {
 
 // Return a 64-bit unsigned integer whose lowest "num_bits" are random, and
 // whose other bits are zero.
-inline uint64_t GetBits(int num_bits) {
+inline std::uint64_t GetBits(int num_bits) {
   S2_DCHECK_GE(num_bits, 0);
   S2_DCHECK_LE(num_bits, 64);
 
@@ -87,7 +87,7 @@ inline uint64_t GetBits(int num_bits) {
   // but random() should always adhere to the behavior specified in BSD.
   static const int RAND_BITS = 31;
 
-  uint64_t result = 0;
+  std::uint64_t result = 0;
   for (int bits = 0; bits < num_bits; bits += RAND_BITS) {
     result = (result << RAND_BITS) + random();
   }
@@ -97,11 +97,11 @@ inline uint64_t GetBits(int num_bits) {
   return result;
 }
 
-uint64_t S2Testing::Random::Rand64() {
+std::uint64_t S2Testing::Random::Rand64() {
   return GetBits(64);
 }
 
-uint32_t S2Testing::Random::Rand32() {
+std::uint32_t S2Testing::Random::Rand32() {
   return GetBits(32);
 }
 
@@ -110,9 +110,9 @@ double S2Testing::Random::RandDouble() {
   return ldexp(GetBits(NUM_BITS), -NUM_BITS);
 }
 
-int32_t S2Testing::Random::Uniform(int32_t n) {
+std::int32_t S2Testing::Random::Uniform(std::int32_t n) {
   S2_DCHECK_GT(n, 0);
-  return static_cast<uint32_t>(RandDouble() * n);
+  return static_cast<std::uint32_t>(RandDouble() * n);
 }
 
 double S2Testing::Random::UniformDouble(double min, double limit) {
@@ -120,14 +120,14 @@ double S2Testing::Random::UniformDouble(double min, double limit) {
   return min + RandDouble() * (limit - min);
 }
 
-bool S2Testing::Random::OneIn(int32_t n) {
+bool S2Testing::Random::OneIn(std::int32_t n) {
   return Uniform(n) == 0;
 }
 
-int32_t S2Testing::Random::Skewed(int max_log) {
+std::int32_t S2Testing::Random::Skewed(int max_log) {
   S2_DCHECK_GE(max_log, 0);
   S2_DCHECK_LE(max_log, 31);
-  int32_t base = Uniform(max_log + 1);
+  std::int32_t base = Uniform(max_log + 1);
   return GetBits(31) & ((1U << base) - 1);
 }
 
@@ -238,7 +238,7 @@ Matrix3x3_d S2Testing::GetRandomFrameAt(const S2Point& z) {
 
 S2CellId S2Testing::GetRandomCellId(int level) {
   int face = rnd.Uniform(S2CellId::kNumFaces);
-  uint64_t pos = rnd.Rand64() & ((1ULL << S2CellId::kPosBits) - 1);
+  std::uint64_t pos = rnd.Rand64() & ((1ULL << S2CellId::kPosBits) - 1);
   return S2CellId::FromFacePosLevel(face, pos, level);
 }
 

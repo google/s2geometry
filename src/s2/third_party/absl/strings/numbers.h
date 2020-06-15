@@ -80,10 +80,10 @@ namespace absl {
 namespace numbers_internal {
 
 // safe_strto?() functions for implementing SimpleAtoi()
-bool safe_strto32_base(absl::string_view text, int32_t* value, int base);
+bool safe_strto32_base(absl::string_view text, std::int32_t* value, int base);
 bool safe_strto64_base(absl::string_view text, int64_t* value, int base);
-bool safe_strtou32_base(absl::string_view text, uint32_t* value, int base);
-bool safe_strtou64_base(absl::string_view text, uint64_t* value, int base);
+bool safe_strtou32_base(absl::string_view text, std::uint32_t* value, int base);
+bool safe_strtou64_base(absl::string_view text, std::uint64_t* value, int base);
 
 static const int kFastToBufferSize = 32;
 static const int kSixDigitsToBufferSize = 16;
@@ -101,9 +101,9 @@ size_t SixDigitsToBuffer(double d, char* buffer);
 // as an argument and return a pointer to the last byte they wrote, which is the
 // terminating '\0'. At most `kFastToBufferSize` bytes are written.
 char* FastIntToBuffer(int32_t, char*);
-char* FastIntToBuffer(uint32_t, char*);
+char* FastIntToBuffer(std::uint32_t, char*);
 char* FastIntToBuffer(int64_t, char*);
-char* FastIntToBuffer(uint64_t, char*);
+char* FastIntToBuffer(std::uint64_t, char*);
 
 // For enums and integer types that are not an exact match for the types above,
 // use templates to call the appropriate one of the four overloads above.
@@ -122,9 +122,9 @@ char* FastIntToBuffer(int_type i, char* buffer) {
     }
   } else {                     // Unsigned
     if (sizeof(i) > 32 / 8) {  // 33-bit to 64-bit
-      return FastIntToBuffer(static_cast<uint64_t>(i), buffer);
+      return FastIntToBuffer(static_cast<std::uint64_t>(i), buffer);
     } else {  // 32-bit or less
-      return FastIntToBuffer(static_cast<uint32_t>(i), buffer);
+      return FastIntToBuffer(static_cast<std::uint32_t>(i), buffer);
     }
   }
 }
@@ -148,17 +148,17 @@ ABSL_MUST_USE_RESULT bool safe_strtoi_base(absl::string_view s, int_type* out,
       parsed = numbers_internal::safe_strto64_base(s, &val, base);
       *out = static_cast<int_type>(val);
     } else {  // 32-bit
-      int32_t val;
+      std::int32_t val;
       parsed = numbers_internal::safe_strto32_base(s, &val, base);
       *out = static_cast<int_type>(val);
     }
   } else {                         // Unsigned
     if (sizeof(*out) == 64 / 8) {  // 64-bit
-      uint64_t val;
+      std::uint64_t val;
       parsed = numbers_internal::safe_strtou64_base(s, &val, base);
       *out = static_cast<int_type>(val);
     } else {  // 32-bit
-      uint32_t val;
+      std::uint32_t val;
       parsed = numbers_internal::safe_strtou32_base(s, &val, base);
       *out = static_cast<int_type>(val);
     }

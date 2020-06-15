@@ -49,14 +49,14 @@ class S2Builder::Graph {
  public:
   // Identifies a vertex in the graph.  Vertices are numbered sequentially
   // starting from zero.
-  using VertexId = int32_t;
+  using VertexId = std::int32_t;
 
   // Defines an edge as an (origin, destination) vertex pair.
   using Edge = std::pair<VertexId, VertexId>;
 
   // Identifies an edge in the graph.  Edges are numbered sequentially
   // starting from zero.
-  using EdgeId = int32_t;
+  using EdgeId = std::int32_t;
 
   // Identifies an S2Builder *input* edge (before snapping).
   using InputEdgeId = S2Builder::InputEdgeId;

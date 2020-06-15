@@ -37,8 +37,8 @@ namespace s2builderutil {
 // only with other sibling pairs.  (Below we require a slightly stronger
 // condition, namely that sibling pairs cannot coincide with any other edges.)
 struct PolygonDegeneracy {
-  uint32_t edge_id : 31;
-  uint32_t is_hole : 1;
+  std::uint32_t edge_id : 31;
+  std::uint32_t is_hole : 1;
 
   PolygonDegeneracy() : edge_id(0), is_hole(false) {}
   PolygonDegeneracy(S2Builder::Graph::EdgeId _edge_id, bool _is_hole)

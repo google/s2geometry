@@ -163,7 +163,7 @@ bool EncodeTaggedShapes(const S2ShapeIndex& index,
     Encoder* sub_encoder = shape_vector.AddViaEncoder();
     if (shape == nullptr) continue;  // Encode as zero bytes.
 
-    uint32_t tag = shape->type_tag();
+    std::uint32_t tag = shape->type_tag();
     if (tag == S2Shape::kNoTypeTag) {
       S2_LOG(DFATAL) << "Unsupported S2Shape type: " << tag;
       return false;

@@ -215,7 +215,7 @@ class S2FurthestEdgeQuery {
                  base.edge_id()) {}
 
     // Constructs a Result object for the given edge with the given distance.
-    Result(S1ChordAngle distance, int32_t _shape_id, int32_t _edge_id)
+    Result(S1ChordAngle distance, std::int32_t _shape_id, std::int32_t _edge_id)
         : distance_(distance), shape_id_(_shape_id), edge_id_(_edge_id) {}
 
     // Returns true if this Result object does not refer to any edge.
@@ -228,8 +228,8 @@ class S2FurthestEdgeQuery {
     S1ChordAngle distance() const { return distance_; }
 
     // The edge identifiers.
-    int32_t shape_id() const { return shape_id_; }
-    int32_t edge_id() const { return edge_id_; }
+    std::int32_t shape_id() const { return shape_id_; }
+    std::int32_t edge_id() const { return edge_id_; }
 
     // Returns true if two Result objects are identical.
     friend bool operator==(const Result& x, const Result& y) {
@@ -249,8 +249,8 @@ class S2FurthestEdgeQuery {
 
    private:
     S1ChordAngle distance_;
-    int32_t shape_id_;     // Identifies an indexed shape.
-    int32_t edge_id_;      // Identifies an edge within the shape.
+    std::int32_t shape_id_;     // Identifies an indexed shape.
+    std::int32_t edge_id_;      // Identifies an edge within the shape.
   };
 
   // Convenience constructor that calls Init().  Options may be specified here

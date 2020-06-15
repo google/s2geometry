@@ -38,9 +38,9 @@ using std::min;
 const int ExactFloat::kMinExp;
 const int ExactFloat::kMaxExp;
 const int ExactFloat::kMaxPrec;
-const int32_t ExactFloat::kExpNaN;
-const int32_t ExactFloat::kExpInfinity;
-const int32_t ExactFloat::kExpZero;
+const std::int32_t ExactFloat::kExpNaN;
+const std::int32_t ExactFloat::kExpInfinity;
+const std::int32_t ExactFloat::kExpZero;
 const int ExactFloat::kDoubleMantissaBits;
 
 // To simplify the overflow/underflow logic, we limit the exponent and
@@ -59,14 +59,14 @@ static_assert(
 
 #ifdef OPENSSL_IS_BORINGSSL
 
-inline static void BN_ext_set_uint64(BIGNUM* bn, uint64_t v) {
+inline static void BN_ext_set_uint64(BIGNUM* bn, std::uint64_t v) {
   S2_CHECK(BN_set_u64(bn, v));
 }
 
 // Return the absolute value of a BIGNUM as a 64-bit unsigned integer.
 // Requires that BIGNUM fits into 64 bits.
-inline static uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
-  uint64_t u64;
+inline static std::uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
+  std::uint64_t u64;
   if (!BN_get_u64(bn, &u64)) {
     S2_DCHECK(false) << "BN has " << BN_num_bits(bn) << " bits";
     return 0;
@@ -81,21 +81,21 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
 #else  // !defined(OPENSSL_IS_BORINGSSL)
 
 // Set a BIGNUM to the given unsigned 64-bit value.
-inline static void BN_ext_set_uint64(BIGNUM* bn, uint64_t v) {
+inline static void BN_ext_set_uint64(BIGNUM* bn, std::uint64_t v) {
 #if BN_BITS2 == 64
   S2_CHECK(BN_set_word(bn, v));
 #else
   static_assert(BN_BITS2 == 32, "at least 32 bit openssl build needed");
-  S2_CHECK(BN_set_word(bn, static_cast<uint32_t>(v >> 32)));
+  S2_CHECK(BN_set_word(bn, static_cast<std::uint32_t>(v >> 32)));
   S2_CHECK(BN_lshift(bn, bn, 32));
-  S2_CHECK(BN_add_word(bn, static_cast<uint32_t>(v)));
+  S2_CHECK(BN_add_word(bn, static_cast<std::uint32_t>(v)));
 #endif
 }
 
 // Return the absolute value of a BIGNUM as a 64-bit unsigned integer.
 // Requires that BIGNUM fits into 64 bits.
-inline static uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
-  S2_DCHECK_LE(BN_num_bytes(bn), sizeof(uint64_t));
+inline static std::uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
+  S2_DCHECK_LE(BN_num_bytes(bn), sizeof(std::uint64_t));
 #if BN_BITS2 == 64
   return BN_get_word(bn);
 #else
@@ -103,7 +103,7 @@ inline static uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
   if (bn->top == 0) return 0;
   if (bn->top == 1) return BN_get_word(bn);
   S2_DCHECK_EQ(bn->top, 2);
-  return (static_cast<uint64_t>(bn->d[1]) << 32) + bn->d[0];
+  return (static_cast<std::uint64_t>(bn->d[1]) << 32) + bn->d[0];
 #endif
 }
 
@@ -170,7 +170,7 @@ ExactFloat::ExactFloat(double v) {
     // "1") then the result is always an integer.
     int exp;
     double f = frexp(fabs(v), &exp);
-    uint64_t m = static_cast<uint64_t>(ldexp(f, kDoubleMantissaBits));
+    std::uint64_t m = static_cast<std::uint64_t>(ldexp(f, kDoubleMantissaBits));
     BN_ext_set_uint64(bn_.get(), m);
     bn_exp_ = exp - kDoubleMantissaBits;
     Canonicalize();
@@ -256,7 +256,7 @@ double ExactFloat::ToDoubleHelper() const {
     }
     return std::copysign(std::numeric_limits<double>::quiet_NaN(), sign_);
   }
-  uint64_t d_mantissa = BN_ext_get_uint64(bn_.get());
+  std::uint64_t d_mantissa = BN_ext_get_uint64(bn_.get());
   // We rely on ldexp() to handle overflow and underflow.  (It will return a
   // signed zero or infinity if the result is too small or too large.)
   return sign_ * ldexp(static_cast<double>(d_mantissa), bn_exp_);
@@ -737,10 +737,10 @@ ExactFloat rint(const ExactFloat& a) {
 template <class T>
 T ExactFloat::ToInteger(RoundingMode mode) const {
   using std::numeric_limits;
-  static_assert(sizeof(T) <= sizeof(uint64_t), "max 64 bits supported");
+  static_assert(sizeof(T) <= sizeof(std::uint64_t), "max 64 bits supported");
   static_assert(numeric_limits<T>::is_signed, "only signed types supported");
-  const int64_t kMinValue = numeric_limits<T>::min();
-  const int64_t kMaxValue = numeric_limits<T>::max();
+  const std::int64_t kMinValue = numeric_limits<T>::min();
+  const std::int64_t kMaxValue = numeric_limits<T>::max();
 
   ExactFloat r = RoundToPowerOf2(0, mode);
   if (r.is_nan()) return kMaxValue;
@@ -748,7 +748,7 @@ T ExactFloat::ToInteger(RoundingMode mode) const {
   if (!r.is_inf()) {
     // If the unsigned value has more than 63 bits it is always clamped.
     if (r.exp() < 64) {
-      int64_t value = BN_ext_get_uint64(r.bn_.get()) << r.bn_exp_;
+      std::int64_t value = BN_ext_get_uint64(r.bn_.get()) << r.bn_exp_;
       if (r.sign_ < 0) value = -value;
       return max(kMinValue, min(kMaxValue, value));
     }

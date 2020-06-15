@@ -86,16 +86,16 @@ class S1Angle {
   // or degrees.
   static constexpr S1Angle Radians(double radians);
   static constexpr S1Angle Degrees(double degrees);
-  static constexpr S1Angle E5(int32_t e5);
-  static constexpr S1Angle E6(int32_t e6);
-  static constexpr S1Angle E7(int32_t e7);
+  static constexpr S1Angle E5(std::int32_t e5);
+  static constexpr S1Angle E6(std::int32_t e6);
+  static constexpr S1Angle E7(std::int32_t e7);
 
   // Convenience functions -- to use when args have been fixed32s in protos.
   //
-  // The arguments are static_cast into int32_t, so very large unsigned values
+  // The arguments are static_cast into std::int32_t, so very large unsigned values
   // are treated as negative numbers.
-  static constexpr S1Angle UnsignedE6(uint32_t e6);
-  static constexpr S1Angle UnsignedE7(uint32_t e7);
+  static constexpr S1Angle UnsignedE6(std::uint32_t e6);
+  static constexpr S1Angle UnsignedE7(std::uint32_t e7);
 
   // The default constructor yields a zero angle.  This is useful for STL
   // containers and class methods with output arguments.
@@ -124,9 +124,9 @@ class S1Angle {
   constexpr double radians() const;
   constexpr double degrees() const;
 
-  int32_t e5() const;
-  int32_t e6() const;
-  int32_t e7() const;
+  std::int32_t e5() const;
+  std::int32_t e6() const;
+  std::int32_t e7() const;
 
   // Return the absolute value of an angle.
   S1Angle abs() const;
@@ -198,15 +198,15 @@ inline constexpr double S1Angle::degrees() const {
 // break many tests), but it does have the nice side effect that conversions
 // between Degrees, E6, and E7 are exact when the arguments are integers.
 
-inline int32_t S1Angle::e5() const {
+inline std::int32_t S1Angle::e5() const {
   return MathUtil::FastIntRound(1e5 * degrees());
 }
 
-inline int32_t S1Angle::e6() const {
+inline std::int32_t S1Angle::e6() const {
   return MathUtil::FastIntRound(1e6 * degrees());
 }
 
-inline int32_t S1Angle::e7() const {
+inline std::int32_t S1Angle::e7() const {
   return MathUtil::FastIntRound(1e7 * degrees());
 }
 
@@ -306,24 +306,24 @@ inline constexpr S1Angle S1Angle::Degrees(double degrees) {
   return S1Angle((M_PI / 180) * degrees);
 }
 
-inline constexpr S1Angle S1Angle::E5(int32_t e5) {
+inline constexpr S1Angle S1Angle::E5(std::int32_t e5) {
   return Degrees(1e-5 * e5);
 }
 
-inline constexpr S1Angle S1Angle::E6(int32_t e6) {
+inline constexpr S1Angle S1Angle::E6(std::int32_t e6) {
   return Degrees(1e-6 * e6);
 }
 
-inline constexpr S1Angle S1Angle::E7(int32_t e7) {
+inline constexpr S1Angle S1Angle::E7(std::int32_t e7) {
   return Degrees(1e-7 * e7);
 }
 
-inline constexpr S1Angle S1Angle::UnsignedE6(uint32_t e6) {
-  return E6(static_cast<int32_t>(e6));
+inline constexpr S1Angle S1Angle::UnsignedE6(std::uint32_t e6) {
+  return E6(static_cast<std::int32_t>(e6));
 }
 
-inline constexpr S1Angle S1Angle::UnsignedE7(uint32_t e7) {
-  return E7(static_cast<int32_t>(e7));
+inline constexpr S1Angle S1Angle::UnsignedE7(std::uint32_t e7) {
+  return E7(static_cast<std::int32_t>(e7));
 }
 
 // Writes the angle in degrees with 7 digits of precision after the

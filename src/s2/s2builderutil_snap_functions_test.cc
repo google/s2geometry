@@ -439,14 +439,14 @@ TEST(S2CellIdSnapFunction, MinEdgeVertexSeparationSnapRadiusRatio) {
 
 // A scaled S2LatLng with integer coordinates, similar to E7 coordinates,
 // except that the scale is variable (see LatLngConfig below).
-using IntLatLng = Vector2<int64_t>;
+using IntLatLng = Vector2<std::int64_t>;
 
-static bool IsValid(const IntLatLng& ll, int64_t scale) {
+static bool IsValid(const IntLatLng& ll, std::int64_t scale) {
   // A coordinate value of "scale" corresponds to 180 degrees.
   return (abs(ll[0]) <= scale / 2 && abs(ll[1]) <= scale);
 }
 
-static bool HasValidVertices(const IntLatLng& ll, int64_t scale) {
+static bool HasValidVertices(const IntLatLng& ll, std::int64_t scale) {
   // Like IsValid, but excludes latitudes of 90 and longitudes of 180.
   // A coordinate value of "scale" corresponds to 180 degrees.
   return (abs(ll[0]) < scale / 2 && abs(ll[1]) < scale);
@@ -457,12 +457,12 @@ static IntLatLng Rescale(const IntLatLng&ll, double scale_factor) {
                    MathUtil::FastInt64Round(scale_factor * ll[1]));
 }
 
-static S2Point ToPoint(const IntLatLng& ll, int64_t scale) {
+static S2Point ToPoint(const IntLatLng& ll, std::int64_t scale) {
   return S2LatLng::FromRadians(ll[0] * (M_PI / scale),
                                ll[1] * (M_PI / scale)).ToPoint();
 }
 
-static S2Point GetVertex(const IntLatLng& ll, int64_t scale, int i) {
+static S2Point GetVertex(const IntLatLng& ll, std::int64_t scale, int i) {
   // Return the points in CCW order starting from the lower left.
   int dlat = (i == 0 || i == 3) ? -1 : 1;
   int dlng = (i == 0 || i == 1) ? -1 : 1;
@@ -470,14 +470,14 @@ static S2Point GetVertex(const IntLatLng& ll, int64_t scale, int i) {
 }
 
 static S1Angle GetMaxVertexDistance(const S2Point& p,
-                                    const IntLatLng& ll, int64_t scale) {
+                                    const IntLatLng& ll, std::int64_t scale) {
   return max(max(S1Angle(p, GetVertex(ll, scale, 0)),
                  S1Angle(p, GetVertex(ll, scale, 1))),
              max(S1Angle(p, GetVertex(ll, scale, 2)),
                  S1Angle(p, GetVertex(ll, scale, 3))));
 }
 
-static double GetLatLngMinVertexSeparation(int64_t old_scale, int64_t scale,
+static double GetLatLngMinVertexSeparation(std::int64_t old_scale, std::int64_t scale,
                                            set<IntLatLng>* best_configs) {
   // The worst-case separation ratios always occur when the snap_radius is not
   // much larger than the minimum, since this allows the site spacing to be
@@ -546,10 +546,10 @@ TEST(IntLatLngSnapFunction, MinVertexSeparationSnapRadiusRatio) {
 // A triple of scaled S2LatLng coordinates.  The coordinates are multiplied by
 // (M_PI / scale) to convert them to radians.
 struct LatLngConfig {
-  int64_t scale;
+  std::int64_t scale;
   IntLatLng ll0, ll1, ll2;
 
-  LatLngConfig(int64_t _scale, const IntLatLng& _ll0,
+  LatLngConfig(std::int64_t _scale, const IntLatLng& _ll0,
                const IntLatLng& _ll1, const IntLatLng& _ll2) :
       scale(_scale), ll0(_ll0), ll1(_ll1), ll2(_ll2) {
   }
@@ -563,12 +563,12 @@ struct LatLngConfig {
   }
 };
 
-typedef double LatLngMinEdgeSeparationFunction(int64_t scale, S1Angle edge_sep,
+typedef double LatLngMinEdgeSeparationFunction(std::int64_t scale, S1Angle edge_sep,
                                                S1Angle max_snap_radius);
 
 static double GetLatLngMinEdgeSeparation(
     const char* label, LatLngMinEdgeSeparationFunction objective,
-    int64_t scale, vector<LatLngConfig>* best_configs) {
+    std::int64_t scale, vector<LatLngConfig>* best_configs) {
   S1Angle min_snap_radius_at_scale = S1Angle::Radians(M_SQRT1_2 * M_PI / scale);
   vector<pair<double, LatLngConfig>> scores;
   for (LatLngConfig parent : *best_configs) {
@@ -638,7 +638,7 @@ static double GetLatLngMinEdgeSeparation(
   printf("Scale %" PRId64 ":\n", int64_t{scale});
   for (const auto& entry : scores) {
     const LatLngConfig& config = entry.second;
-    int64_t scale = config.scale;
+    std::int64_t scale = config.scale;
     if (--num_to_print >= 0) {
       printf("  %s = %.15f %s %s %s\n",
              label, entry.first,
@@ -658,7 +658,7 @@ static double GetLatLngMinEdgeSeparation(
     const char* label, LatLngMinEdgeSeparationFunction objective) {
   double best_score = 1e10;
   vector<LatLngConfig> best_configs;
-  int64_t scale = 6;  // Initially points are 30 degrees apart.
+  std::int64_t scale = 6;  // Initially points are 30 degrees apart.
   int max_lng = scale;
   int max_lat = scale / 2;
   for (int lat0 = 0; lat0 <= max_lat; ++lat0) {
@@ -677,10 +677,10 @@ static double GetLatLngMinEdgeSeparation(
     }
   }
   S2_LOG(INFO) << "Starting with " << best_configs.size() << " configurations";
-  int64_t target_scale = 180;
+  std::int64_t target_scale = 180;
   for (int exp = 0; exp <= 10; ++exp, target_scale *= 10) {
     while (scale < target_scale) {
-      scale = min(static_cast<int64_t>(1.8 * scale), target_scale);
+      scale = min(static_cast<std::int64_t>(1.8 * scale), target_scale);
       double score = GetLatLngMinEdgeSeparation(label, objective, scale,
                                                 &best_configs);
       if (scale == target_scale) {
@@ -695,7 +695,7 @@ TEST(IntLatLngSnapFunction, MinEdgeVertexSeparationForLevel) {
   // Computes the minimum edge separation (as a fraction of kMinDiag) for any
   // snap radius at each level.
   double score = GetLatLngMinEdgeSeparation("min_sep_for_level",
-                                            [](int64_t scale, S1Angle edge_sep,
+                                            [](std::int64_t scale, S1Angle edge_sep,
                                                S1Angle max_snap_radius) {
     double e_unit = M_PI / scale;
     return edge_sep.radians() / e_unit;
@@ -707,7 +707,7 @@ TEST(IntLatLngSnapFunction, MinEdgeVertexSeparationSnapRadiusRatio) {
   // Computes the minimum edge separation expressed as a fraction of the
   // maximum snap radius that could yield that edge separation.
   double score = GetLatLngMinEdgeSeparation("min_sep_snap_radius_ratio",
-                                              [](int64_t scale, S1Angle edge_sep,
+                                              [](std::int64_t scale, S1Angle edge_sep,
                                                  S1Angle max_snap_radius) {
     return edge_sep.radians() / max_snap_radius.radians();
   });

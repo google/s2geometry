@@ -536,7 +536,7 @@ class S2Builder {
   // to add and remove labels hierarchically (e.g., polygon 5, loop 2).  Use
   // set_label() and clear_labels() if you need at most one label per edge.
   //
-  using Label = int32_t;
+  using Label = std::int32_t;
 
   // Clear the stack of labels.
   void clear_labels();
@@ -572,16 +572,16 @@ class S2Builder {
   // All types associated with the S2Builder inputs are prefixed with "Input".
 
   // Identifies an input vertex.
-  using InputVertexId = int32_t;
+  using InputVertexId = std::int32_t;
 
   // Defines an input edge.
   using InputEdge = std::pair<InputVertexId, InputVertexId>;
 
   // Identifies an input edge.
-  using InputEdgeId = int32_t;
+  using InputEdgeId = std::int32_t;
 
   // Identifies the set of input edge ids that were snapped to a given edge.
-  using InputEdgeIdSetId = int32_t;
+  using InputEdgeIdSetId = std::int32_t;
 
   // Sort key for prioritizing input vertices.  (Note that keys are *not*
   // compared using std::less; see SortInputVertices for details.)
@@ -594,13 +594,13 @@ class S2Builder {
   // than SiteId is the same as Graph::VertexId, but if there are many layers
   // then each Graph may contain only a subset of the sites.  Also see
   // GraphOptions::allow_vertex_filtering().
-  using SiteId = int32_t;
+  using SiteId = std::int32_t;
 
   // Defines an output edge.
   using Edge = std::pair<SiteId, SiteId>;
 
   // Identifies an output edge.
-  using EdgeId = int32_t;
+  using EdgeId = std::int32_t;
 
   // Identifies an output edge in a particular layer.
   using LayerEdgeId = std::pair<int, EdgeId>;
@@ -725,10 +725,10 @@ class S2Builder {
   std::vector<InputEdgeId> layer_begins_;
   std::vector<IsFullPolygonPredicate> layer_is_full_polygon_predicates_;
 
-  // Each input edge has "label set id" (an int32_t) representing the set of
+  // Each input edge has "label set id" (an int32) representing the set of
   // labels attached to that edge.  This vector is populated only if at least
   // one label is used.
-  using LabelSetId = int32_t;
+  using LabelSetId = std::int32_t;
   std::vector<LabelSetId> label_set_ids_;
   IdSetLexicon label_set_lexicon_;
 

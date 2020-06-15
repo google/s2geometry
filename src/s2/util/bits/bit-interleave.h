@@ -20,7 +20,7 @@
 #ifndef S2_UTIL_BITS_BIT_INTERLEAVE_H_
 #define S2_UTIL_BITS_BIT_INTERLEAVE_H_
 
-#include <stdint.h>
+#include <cstdint>
 
 
 namespace util_bits {
@@ -30,24 +30,24 @@ namespace util_bits {
 // The 0-bit in val0 will be the 0-bit in the return value.
 // The 0-bit in val1 will be the 1-bit in the return value.
 // The 1-bit of val0 will be the 2-bit in the return value, and so on.
-uint16_t InterleaveUint8(uint8_t val0, uint8_t val1);
-uint32_t InterleaveUint16(uint16_t val0, uint16_t val1);
-uint64_t InterleaveUint32(uint32_t val0, uint32_t val1);
+std::uint16_t InterleaveUint8(std::uint8_t val0, std::uint8_t val1);
+std::uint32_t InterleaveUint16(std::uint16_t val0, std::uint16_t val1);
+std::uint64_t InterleaveUint32(std::uint32_t val0, std::uint32_t val1);
 
 // These functions will decode the interleaved values.
-void DeinterleaveUint8(uint16_t code, uint8_t *val0, uint8_t *val1);
-void DeinterleaveUint16(uint32_t code, uint16_t *val0, uint16_t *val1);
-void DeinterleaveUint32(uint64_t code, uint32_t *val0, uint32_t *val1);
+void DeinterleaveUint8(std::uint16_t code, std::uint8_t *val0, std::uint8_t *val1);
+void DeinterleaveUint16(std::uint32_t code, std::uint16_t *val0, std::uint16_t *val1);
+void DeinterleaveUint32(std::uint64_t code, std::uint32_t *val0, std::uint32_t *val1);
 
 // These functions interleave three arguments into the return value.
 // The 0-bit in val0 will be the 0-bit in the return value.
 // The 0-bit in val1 will be the 1-bit in the return value.
 // The 0-bit in val2 will be the 2-bit in the return value.
 // The 1-bit of val0 will be the 3-bit in the return value, and so on.
-uint32_t InterleaveUint8(uint8_t val0, uint8_t val1, uint8_t val2);
+std::uint32_t InterleaveUint8(std::uint8_t val0, std::uint8_t val1, std::uint8_t val2);
 
 // These functions will decode the interleaved values.
-void DeinterleaveUint8(uint32_t code, uint8_t *val0, uint8_t* val1, uint8_t* val2);
+void DeinterleaveUint8(std::uint32_t code, std::uint8_t *val0, std::uint8_t* val1, std::uint8_t* val2);
 
 }  // namespace util_bits
 

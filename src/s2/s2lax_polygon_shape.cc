@@ -79,8 +79,8 @@ void S2LaxPolygonShape::Init(const vector<Span<const S2Point>>& loops) {
     vertices_.reset(new S2Point[num_vertices_]);
     std::copy(loops[0].begin(), loops[0].end(), vertices_.get());
   } else {
-    cumulative_vertices_ = new uint32_t[num_loops_ + 1];
-    int32_t num_vertices = 0;
+    cumulative_vertices_ = new std::uint32_t[num_loops_ + 1];
+    std::int32_t num_vertices = 0;
     for (int i = 0; i < num_loops_; ++i) {
       cumulative_vertices_[i] = num_vertices;
       num_vertices += loops[i].size();
@@ -135,17 +135,17 @@ void S2LaxPolygonShape::Encode(Encoder* encoder,
   s2coding::EncodeS2PointVector(MakeSpan(vertices_.get(), num_vertices()),
                                 hint, encoder);
   if (num_loops() > 1) {
-    s2coding::EncodeUintVector<uint32_t>(MakeSpan(cumulative_vertices_,
+    s2coding::EncodeUintVector<std::uint32_t>(MakeSpan(cumulative_vertices_,
                                                 num_loops() + 1), encoder);
   }
 }
 
 bool S2LaxPolygonShape::Init(Decoder* decoder) {
   if (decoder->avail() < 1) return false;
-  uint8_t version = decoder->get8();
+  std::uint8_t version = decoder->get8();
   if (version != kCurrentEncodingVersionNumber) return false;
 
-  uint32_t num_loops;
+  std::uint32_t num_loops;
   if (!decoder->get_varint32(&num_loops)) return false;
   num_loops_ = num_loops;
   s2coding::EncodedS2PointVector vertices;
@@ -162,9 +162,9 @@ bool S2LaxPolygonShape::Init(Decoder* decoder) {
     if (num_loops_ == 1) {
       num_vertices_ = vertices.size();
     } else {
-      s2coding::EncodedUintVector<uint32_t> cumulative_vertices;
+      s2coding::EncodedUintVector<std::uint32_t> cumulative_vertices;
       if (!cumulative_vertices.Init(decoder)) return false;
-      cumulative_vertices_ = new uint32_t[cumulative_vertices.size()];
+      cumulative_vertices_ = new std::uint32_t[cumulative_vertices.size()];
       for (int i = 0; i < cumulative_vertices.size(); ++i) {
         cumulative_vertices_[i] = cumulative_vertices[i];
       }
@@ -181,7 +181,7 @@ S2Shape::Edge S2LaxPolygonShape::edge(int e0) const {
   } else {
     // Find the index of the first vertex of the loop following this one.
     const int kMaxLinearSearchLoops = 12;  // From benchmarks.
-    uint32_t* next = cumulative_vertices_ + 1;
+    std::uint32_t* next = cumulative_vertices_ + 1;
     if (num_loops() <= kMaxLinearSearchLoops) {
       while (*next <= e0) ++next;
     } else {
@@ -227,7 +227,7 @@ S2Shape::ChainPosition S2LaxPolygonShape::chain_position(int e) const {
     return ChainPosition(0, e);
   } else {
     // Find the index of the first vertex of the loop following this one.
-    uint32_t* next = cumulative_vertices_ + 1;
+    std::uint32_t* next = cumulative_vertices_ + 1;
     if (num_loops() <= kMaxLinearSearchLoops) {
       while (*next <= e) ++next;
     } else {
@@ -239,10 +239,10 @@ S2Shape::ChainPosition S2LaxPolygonShape::chain_position(int e) const {
 
 bool EncodedS2LaxPolygonShape::Init(Decoder* decoder) {
   if (decoder->avail() < 1) return false;
-  uint8_t version = decoder->get8();
+  std::uint8_t version = decoder->get8();
   if (version != kCurrentEncodingVersionNumber) return false;
 
-  uint32_t num_loops;
+  std::uint32_t num_loops;
   if (!decoder->get_varint32(&num_loops)) return false;
   num_loops_ = num_loops;
 

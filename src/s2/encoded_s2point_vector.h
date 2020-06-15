@@ -29,7 +29,7 @@ namespace s2coding {
 // Controls whether to optimize for speed or size when encoding points.  (Note
 // that encoding is always lossless, and that currently compact encodings are
 // only possible when points have been snapped to S2CellId centers.)
-enum class CodingHint : uint8_t { FAST, COMPACT };
+enum class CodingHint : std::uint8_t { FAST, COMPACT };
 
 // Encodes a vector of S2Points in a format that can later be decoded as an
 // EncodedS2PointVector.
@@ -90,20 +90,20 @@ class EncodedS2PointVector {
   // TODO(ericv): Once additional formats have been implemented, consider
   // using std::variant<> instead.  It's unclear whether this would have
   // better or worse performance than the current approach.
-  enum Format : uint8_t {
+  enum Format : std::uint8_t {
     UNCOMPRESSED = 0,
     CELL_IDS = 1,
   };
   Format format_;
-  uint32_t size_;
+  std::uint32_t size_;
   union {
     struct {
       const S2Point* points;
     } uncompressed_;
     struct {
       EncodedStringVector blocks;
-      uint64_t base;
-      uint8_t level;
+      std::uint64_t base;
+      std::uint8_t level;
       bool have_exceptions;
 
       // TODO(ericv): Use std::atomic_flag to cache the last point decoded in

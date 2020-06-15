@@ -133,14 +133,14 @@ class S2LaxPolygonShape : public S2Shape {
  private:
   void Init(const std::vector<absl::Span<const S2Point>>& loops);
 
-  int32_t num_loops_;
+  std::int32_t num_loops_;
   std::unique_ptr<S2Point[]> vertices_;
   // If num_loops_ <= 1, this union stores the number of vertices.
   // Otherwise it points to an array of size (num_loops + 1) where element "i"
   // is the total number of vertices in loops 0..i-1.
   union {
-    int32_t num_vertices_;
-    uint32_t* cumulative_vertices_;  // Don't use unique_ptr in unions.
+    std::int32_t num_vertices_;
+    std::uint32_t* cumulative_vertices_;  // Don't use unique_ptr in unions.
   };
 };
 
@@ -175,9 +175,9 @@ class EncodedS2LaxPolygonShape : public S2Shape {
   ChainPosition chain_position(int e) const final;
 
  private:
-  int32_t num_loops_;
+  std::int32_t num_loops_;
   s2coding::EncodedS2PointVector vertices_;
-  s2coding::EncodedUintVector<uint32_t> cumulative_vertices_;
+  s2coding::EncodedUintVector<std::uint32_t> cumulative_vertices_;
 };
 
 #endif  // S2_S2LAX_POLYGON_SHAPE_H_

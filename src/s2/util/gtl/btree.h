@@ -18,12 +18,12 @@
 // and generally also faster than STL set/map (refer to the benchmarks below).
 // The red-black tree implementation of STL set/map has an overhead of 3
 // pointers (left, right and parent) plus the node color information for each
-// stored value. So a set<int32_t> consumes 40 bytes for each value stored in
+// stored value. So a set<int32> consumes 40 bytes for each value stored in
 // 64-bit mode. This btree implementation stores multiple values on fixed
 // size nodes (usually 256 bytes) and doesn't store child pointers for leaf
-// nodes. The result is that a btree_set<int32_t> may use much less memory per
+// nodes. The result is that a btree_set<int32> may use much less memory per
 // stored value. For the random insertion benchmark in btree_bench.cc, a
-// btree_set<int32_t> with node-size of 256 uses 5.1 bytes per stored value.
+// btree_set<int32> with node-size of 256 uses 5.1 bytes per stored value.
 //
 // The packing of multiple values on to each node of a btree has another effect
 // besides better space utilization: better cache locality due to fewer cache
@@ -269,11 +269,11 @@ struct common_params {
   // ValueSize-values as will fit a node of TargetNodeSize bytes.
   using node_count_type =
       absl::conditional_t<(kNodeValueSpace / ValueSize >
-                           std::numeric_limits<uint8_t>::max()),
-                          uint16_t, uint8_t>;  // NOLINT
+                           std::numeric_limits<std::uint8_t>::max()),
+                          std::uint16_t, std::uint8_t>;  // NOLINT
   static_assert(kNodeValueSpace / ValueSize <=
-                    std::numeric_limits<uint16_t>::max(),
-                "uint16_t is not big enough for node_count_type.");
+                    std::numeric_limits<std::uint16_t>::max(),
+                "std::uint16_t is not big enough for node_count_type.");
 };
 
 // A parameters structure for holding the type parameters for a btree_map.

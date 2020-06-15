@@ -51,7 +51,7 @@ void IdSetLexicon::Clear() {
   id_sets_.Clear();
 }
 
-int32_t IdSetLexicon::AddInternal(std::vector<int32_t>* ids) {
+std::int32_t IdSetLexicon::AddInternal(std::vector<std::int32_t>* ids) {
   if (ids->empty()) {
     // Empty sets have a special id chosen not to conflict with other ids.
     return kEmptySetId;
@@ -68,7 +68,7 @@ int32_t IdSetLexicon::AddInternal(std::vector<int32_t>* ids) {
   }
 }
 
-IdSetLexicon::IdSet IdSetLexicon::id_set(int32_t set_id) const {
+IdSetLexicon::IdSet IdSetLexicon::id_set(std::int32_t set_id) const {
   if (set_id >= 0) {
     return IdSet(set_id);
   } else if (set_id == kEmptySetId) {

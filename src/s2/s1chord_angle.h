@@ -87,9 +87,9 @@ class S1ChordAngle {
   // Convenience methods implemented by converting from an S1Angle.
   static S1ChordAngle Radians(double radians);
   static S1ChordAngle Degrees(double degrees);
-  static S1ChordAngle E5(int32_t e5);
-  static S1ChordAngle E6(int32_t e6);
-  static S1ChordAngle E7(int32_t e7);
+  static S1ChordAngle E5(std::int32_t e5);
+  static S1ChordAngle E6(std::int32_t e6);
+  static S1ChordAngle E7(std::int32_t e7);
 
   // Construct an S1ChordAngle that is an upper bound on the given S1Angle,
   // i.e. such that FastUpperBoundFrom(x).ToAngle() >= x.  Unlike the S1Angle
@@ -123,9 +123,9 @@ class S1ChordAngle {
   // are needed inside loops.
   double radians() const;
   double degrees() const;
-  int32_t e5() const;
-  int32_t e6() const;
-  int32_t e7() const;
+  std::int32_t e5() const;
+  std::int32_t e6() const;
+  std::int32_t e7() const;
 
   // All operators and functions are declared here so that we can put them all
   // in one place.  (The compound assignment operators must be put here.)
@@ -272,15 +272,15 @@ inline S1ChordAngle S1ChordAngle::Degrees(double degrees) {
   return S1ChordAngle(S1Angle::Degrees(degrees));
 }
 
-inline S1ChordAngle S1ChordAngle::E5(int32_t e5) {
+inline S1ChordAngle S1ChordAngle::E5(std::int32_t e5) {
   return S1ChordAngle(S1Angle::E5(e5));
 }
 
-inline S1ChordAngle S1ChordAngle::E6(int32_t e6) {
+inline S1ChordAngle S1ChordAngle::E6(std::int32_t e6) {
   return S1ChordAngle(S1Angle::E6(e6));
 }
 
-inline S1ChordAngle S1ChordAngle::E7(int32_t e7) {
+inline S1ChordAngle S1ChordAngle::E7(std::int32_t e7) {
   return S1ChordAngle(S1Angle::E7(e7));
 }
 
@@ -302,15 +302,15 @@ inline double S1ChordAngle::degrees() const {
   return ToAngle().degrees();
 }
 
-inline int32_t S1ChordAngle::e5() const {
+inline std::int32_t S1ChordAngle::e5() const {
   return ToAngle().e5();
 }
 
-inline int32_t S1ChordAngle::e6() const {
+inline std::int32_t S1ChordAngle::e6() const {
   return ToAngle().e6();
 }
 
-inline int32_t S1ChordAngle::e7() const {
+inline std::int32_t S1ChordAngle::e7() const {
   return ToAngle().e7();
 }
 

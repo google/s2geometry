@@ -58,7 +58,7 @@
 
 %apply S2CellId *OUTPUT_ARRAY_4 {S2CellId neighbors[4]};
 
-// This overload shadows the one the takes vector<uint64_t>&, and it
+// This overload shadows the one the takes vector<uint64>&, and it
 // does not work anyway.
 %ignore S2CellUnion::Init(std::vector<S2CellId> const& cell_ids);
 
@@ -304,7 +304,7 @@ class S2Point {
 %unignore S2CellId::Begin;
 %unignore S2CellId::End;
 %unignore S2CellId::FromFaceIJ(int, int, int);
-%unignore S2CellId::FromFacePosLevel(int, uint64_t, int);
+%unignore S2CellId::FromFacePosLevel(int, std::uint64_t, int);
 %unignore S2CellId::FromLatLng;
 %unignore S2CellId::FromPoint;
 %unignore S2CellId::FromToken;
@@ -346,7 +346,7 @@ class S2Point {
 %unignore S2CellUnion::GetCapBound() const;
 %unignore S2CellUnion::GetDifference;
 %unignore S2CellUnion::GetRectBound;
-%unignore S2CellUnion::Init(std::vector<uint64_t> const &);
+%unignore S2CellUnion::Init(std::vector<std::uint64_t> const &);
 %unignore S2CellUnion::Intersection;
 %unignore S2CellUnion::Intersects;
 %unignore S2CellUnion::IsNormalized;

@@ -70,7 +70,7 @@ TEST(S2LaxClosedPolylineShape, NoInterior) {
 }
 
 TEST(S2VertexIdLaxLoopShape, EmptyLoop) {
-  S2VertexIdLaxLoopShape shape(vector<int32_t>(), nullptr);
+  S2VertexIdLaxLoopShape shape(vector<std::int32_t>(), nullptr);
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(0, shape.num_vertices());
   EXPECT_EQ(0, shape.num_chains());
@@ -83,7 +83,7 @@ TEST(S2VertexIdLaxLoopShape, EmptyLoop) {
 TEST(S2VertexIdLaxLoopShape, InvertedLoop) {
   vector<S2Point> vertex_array =
       s2textformat::ParsePoints("0:0, 0:1, 1:1, 1:0");
-  vector<int32_t> vertex_ids { 0, 3, 2, 1 };  // Inverted.
+  vector<std::int32_t> vertex_ids { 0, 3, 2, 1 };  // Inverted.
   S2VertexIdLaxLoopShape shape(vertex_ids, &vertex_array[0]);
   EXPECT_EQ(4, shape.num_edges());
   EXPECT_EQ(4, shape.num_vertices());

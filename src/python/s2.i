@@ -6,10 +6,10 @@
 %template() std::vector<S2Point>;
 %template() std::vector<S2LatLng>;
 
-%apply int {int32_t};
-%apply unsigned long long {uint64_t};
+%apply int {std::int32_t};
+%apply unsigned long long {std::uint64_t};
 %apply std::string {string};
-%apply std::vector<unsigned long long> const & {std::vector<uint64_t> const &};
+%apply std::vector<unsigned long long> const & {std::vector<std::uint64_t> const &};
 
 // Standard Google convention is to ignore all functions and methods, and
 // selectively add back those for which wrapping is both required and

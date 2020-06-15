@@ -177,17 +177,17 @@ class S2ClosestEdgeQueryBase {
     Result() : distance_(Distance::Infinity()), shape_id_(-1), edge_id_(-1) {}
 
     // Constructs a Result object for the given arguments.
-    Result(Distance distance, int32_t shape_id, int32_t edge_id)
+    Result(Distance distance, std::int32_t shape_id, std::int32_t edge_id)
         : distance_(distance), shape_id_(shape_id), edge_id_(edge_id) {}
 
     // The distance from the target to this edge.
     Distance distance() const { return distance_; }
 
     // Identifies an indexed shape.
-    int32_t shape_id() const { return shape_id_; }
+    std::int32_t shape_id() const { return shape_id_; }
 
     // Identifies an edge within the shape.
-    int32_t edge_id() const { return edge_id_; }
+    std::int32_t edge_id() const { return edge_id_; }
 
     // Returns true if this Result object represents the interior of a shape.
     // (Such results may be returned when options.include_interiors() is true.)
@@ -221,8 +221,8 @@ class S2ClosestEdgeQueryBase {
 
    private:
     Distance distance_;  // The distance from the target to this edge.
-    int32_t shape_id_;     // Identifies an indexed shape.
-    int32_t edge_id_;      // Identifies an edge within the shape.
+    std::int32_t shape_id_;     // Identifies an indexed shape.
+    std::int32_t edge_id_;      // Identifies an edge within the shape.
   };
 
   // Default constructor; requires Init() to be called.
@@ -566,7 +566,7 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
   }
 
   if (options.include_interiors()) {
-    gtl::btree_set<int32_t> shape_ids;
+    gtl::btree_set<std::int32_t> shape_ids;
     (void) target->VisitContainingShapes(
         *index_, [&shape_ids, &options](S2Shape* containing_shape,
                                         const S2Point& target_point) {

@@ -120,7 +120,7 @@ class S2PolygonLayer : public S2Builder::Layer {
   // The labels associated with the edge "polygon.loop(i).vertex({j, j+1})"
   // can be retrieved as follows:
   //
-  //   for (int32_t label : label_set_lexicon.id_set(label_set_ids[i][j])) {...}
+  //   for (int32 label : label_set_lexicon.id_set(label_set_ids[i][j])) {...}
   using LabelSetIds = std::vector<std::vector<LabelSetId>>;
   S2PolygonLayer(S2Polygon* polygon, LabelSetIds* label_set_ids,
                  IdSetLexicon* label_set_lexicon,

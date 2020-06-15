@@ -71,8 +71,8 @@ const int S2CellId::kPosBits;
 const int S2CellId::kMaxSize;
 
 static const int kLookupBits = 4;
-static uint16_t lookup_pos[1 << (2 * kLookupBits + 2)];
-static uint16_t lookup_ij[1 << (2 * kLookupBits + 2)];
+static std::uint16_t lookup_pos[1 << (2 * kLookupBits + 2)];
+static std::uint16_t lookup_ij[1 << (2 * kLookupBits + 2)];
 
 static void InitLookupCell(int level, int i, int j, int orig_orientation,
                            int pos, int orientation) {
@@ -107,7 +107,7 @@ inline static void MaybeInit() {
   });
 }
 
-S2CellId S2CellId::advance(int64_t steps) const {
+S2CellId S2CellId::advance(std::int64_t steps) const {
   if (steps == 0) return *this;
 
   // We clamp the number of steps if necessary to ensure that we do not
@@ -116,44 +116,44 @@ S2CellId S2CellId::advance(int64_t steps) const {
 
   int step_shift = 2 * (kMaxLevel - level()) + 1;
   if (steps < 0) {
-    int64_t min_steps = -static_cast<int64_t>(id_ >> step_shift);
+    std::int64_t min_steps = -static_cast<std::int64_t>(id_ >> step_shift);
     if (steps < min_steps) steps = min_steps;
   } else {
-    int64_t max_steps = (kWrapOffset + lsb() - id_) >> step_shift;
+    std::int64_t max_steps = (kWrapOffset + lsb() - id_) >> step_shift;
     if (steps > max_steps) steps = max_steps;
   }
   // If steps is negative, then shifting it left has undefined behavior.
-  // Cast to uint64_t for a 2's complement answer.
-  return S2CellId(id_ + (static_cast<uint64_t>(steps) << step_shift));
+  // Cast to std::uint64_t for a 2's complement answer.
+  return S2CellId(id_ + (static_cast<std::uint64_t>(steps) << step_shift));
 }
 
-int64_t S2CellId::distance_from_begin() const {
+std::int64_t S2CellId::distance_from_begin() const {
   const int step_shift = 2 * (kMaxLevel - level()) + 1;
   return id_ >> step_shift;
 }
 
-S2CellId S2CellId::advance_wrap(int64_t steps) const {
+S2CellId S2CellId::advance_wrap(std::int64_t steps) const {
   S2_DCHECK(is_valid());
   if (steps == 0) return *this;
 
   int step_shift = 2 * (kMaxLevel - level()) + 1;
   if (steps < 0) {
-    int64_t min_steps = -static_cast<int64_t>(id_ >> step_shift);
+    std::int64_t min_steps = -static_cast<std::int64_t>(id_ >> step_shift);
     if (steps < min_steps) {
-      int64_t step_wrap = kWrapOffset >> step_shift;
+      std::int64_t step_wrap = kWrapOffset >> step_shift;
       steps %= step_wrap;
       if (steps < min_steps) steps += step_wrap;
     }
   } else {
     // Unlike advance(), we don't want to return End(level).
-    int64_t max_steps = (kWrapOffset - id_) >> step_shift;
+    std::int64_t max_steps = (kWrapOffset - id_) >> step_shift;
     if (steps > max_steps) {
-      int64_t step_wrap = kWrapOffset >> step_shift;
+      std::int64_t step_wrap = kWrapOffset >> step_shift;
       steps %= step_wrap;
       if (steps > max_steps) steps -= step_wrap;
     }
   }
-  return S2CellId(id_ + (static_cast<uint64_t>(steps) << step_shift));
+  return S2CellId(id_ + (static_cast<std::uint64_t>(steps) << step_shift));
 }
 
 S2CellId S2CellId::maximum_tile(const S2CellId limit) const {
@@ -183,7 +183,7 @@ int S2CellId::GetCommonAncestorLevel(S2CellId other) const {
   // Basically we find the first bit position at which the two S2CellIds
   // differ and convert that to a level.  The max() below is necessary for the
   // case where one S2CellId is a descendant of the other.
-  uint64_t bits = max(id() ^ other.id(), max(lsb(), other.lsb()));
+  std::uint64_t bits = max(id() ^ other.id(), max(lsb(), other.lsb()));
   S2_DCHECK_NE(bits, 0);  // Because lsb() is non-zero.
 
   // Compute the position of the most significant bit, and then map the bit
@@ -193,7 +193,7 @@ int S2CellId::GetCommonAncestorLevel(S2CellId other) const {
 }
 
 // Print the num_digits low order hex digits.
-static string HexFormatString(uint64_t val, size_t num_digits) {
+static string HexFormatString(std::uint64_t val, size_t num_digits) {
   string result(num_digits, ' ');
   for (; num_digits--; val >>= 4)
     result[num_digits] = "0123456789abcdef"[val & 0xF];
@@ -220,9 +220,9 @@ string S2CellId::ToToken() const {
 
 S2CellId S2CellId::FromToken(const char* token, size_t length) {
   if (length > 16) return S2CellId::None();
-  uint64_t id = 0;
+  std::uint64_t id = 0;
   for (int i = 0, pos = 60; i < length; ++i, pos -= 4) {
-    uint64_t d;
+    std::uint64_t d;
     if ('0' <= token[i] && token[i] <= '9') {
       d = token[i] - '0';
     } else if ('a' <= token[i] && token[i] <= 'f') {
@@ -242,12 +242,12 @@ S2CellId S2CellId::FromToken(const string& token) {
 }
 
 void S2CellId::Encode(Encoder* const encoder) const {
-  encoder->Ensure(sizeof(uint64_t));  // A single uint64_t.
+  encoder->Ensure(sizeof(std::uint64_t));  // A single std::uint64_t.
   encoder->put64(id_);
 }
 
 bool S2CellId::Decode(Decoder* const decoder) {
-  if (decoder->avail() < sizeof(uint64_t)) return false;
+  if (decoder->avail() < sizeof(std::uint64_t)) return false;
   id_ = decoder->get64();
   return true;
 }
@@ -262,12 +262,12 @@ S2CellId S2CellId::FromFaceIJ(int face, int i, int j) {
 
   // Note that this value gets shifted one bit to the left at the end
   // of the function.
-  uint64_t n = absl::implicit_cast<uint64_t>(face) << (kPosBits - 1);
+  std::uint64_t n = absl::implicit_cast<std::uint64_t>(face) << (kPosBits - 1);
 
   // Alternating faces have opposite Hilbert curve orientations; this
   // is necessary in order for all faces to have a right-handed
   // coordinate system.
-  uint64_t bits = (face & kSwapMask);
+  std::uint64_t bits = (face & kSwapMask);
 
   // Each iteration maps 4 bits of "i" and "j" into 8 bits of the Hilbert
   // curve position.  The lookup table transforms a 10-bit key of the form

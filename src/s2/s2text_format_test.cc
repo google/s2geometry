@@ -91,10 +91,10 @@ TEST(ToString, MinimalDigitsDoubleConstants) {
   // number of digits.
   for (int iter = 0; iter < kIters; ++iter) {
     int max_digits = S2Testing::rnd.Uniform(11);
-    int64_t scale = MathUtil::FastInt64Round(pow(10, max_digits));
-    int64_t lat = MathUtil::FastInt64Round(
+    std::int64_t scale = MathUtil::FastInt64Round(pow(10, max_digits));
+    std::int64_t lat = MathUtil::FastInt64Round(
         S2Testing::rnd.UniformDouble(-90 * scale, 90 * scale));
-    int64_t lng = MathUtil::FastInt64Round(
+    std::int64_t lng = MathUtil::FastInt64Round(
         S2Testing::rnd.UniformDouble(-180 * scale, 180 * scale));
     S2LatLng ll = S2LatLng::FromDegrees(lat / static_cast<double>(scale),
                                         lng / static_cast<double>(scale));

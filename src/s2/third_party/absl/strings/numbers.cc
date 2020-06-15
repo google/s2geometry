@@ -171,8 +171,8 @@ const char one_ASCII_final_digits[10][2] {
 
 }  // namespace
 
-char* numbers_internal::FastIntToBuffer(uint32_t i, char* buffer) {
-  uint32_t digits;
+char* numbers_internal::FastIntToBuffer(std::uint32_t i, char* buffer) {
+  std::uint32_t digits;
   // The idea of this implementation is to trim the number of divides to as few
   // as possible, and also reducing memory stores and branches, by going in
   // steps of two digits at a time rather than one whenever possible.
@@ -242,7 +242,7 @@ char* numbers_internal::FastIntToBuffer(uint32_t i, char* buffer) {
 }
 
 char* numbers_internal::FastIntToBuffer(int32_t i, char* buffer) {
-  uint32_t u = i;
+  std::uint32_t u = i;
   if (i < 0) {
     *buffer++ = '-';
     // We need to do the negation in modular (i.e., "unsigned")
@@ -253,28 +253,28 @@ char* numbers_internal::FastIntToBuffer(int32_t i, char* buffer) {
   return numbers_internal::FastIntToBuffer(u, buffer);
 }
 
-char* numbers_internal::FastIntToBuffer(uint64_t i, char* buffer) {
-  uint32_t u32 = static_cast<uint32_t>(i);
+char* numbers_internal::FastIntToBuffer(std::uint64_t i, char* buffer) {
+  std::uint32_t u32 = static_cast<std::uint32_t>(i);
   if (u32 == i) return numbers_internal::FastIntToBuffer(u32, buffer);
 
   // Here we know i has at least 10 decimal digits.
-  uint64_t top_1to11 = i / 1000000000;
-  u32 = static_cast<uint32_t>(i - top_1to11 * 1000000000);
-  uint32_t top_1to11_32 = static_cast<uint32_t>(top_1to11);
+  std::uint64_t top_1to11 = i / 1000000000;
+  u32 = static_cast<std::uint32_t>(i - top_1to11 * 1000000000);
+  std::uint32_t top_1to11_32 = static_cast<std::uint32_t>(top_1to11);
 
   if (top_1to11_32 == top_1to11) {
     buffer = numbers_internal::FastIntToBuffer(top_1to11_32, buffer);
   } else {
     // top_1to11 has more than 32 bits too; print it in two steps.
-    uint32_t top_8to9 = static_cast<uint32_t>(top_1to11 / 100);
-    uint32_t mid_2 = static_cast<uint32_t>(top_1to11 - top_8to9 * 100);
+    std::uint32_t top_8to9 = static_cast<std::uint32_t>(top_1to11 / 100);
+    std::uint32_t mid_2 = static_cast<std::uint32_t>(top_1to11 - top_8to9 * 100);
     buffer = numbers_internal::FastIntToBuffer(top_8to9, buffer);
     PutTwoDigits(mid_2, buffer);
     buffer += 2;
   }
 
-  // We have only 9 digits now, again the maximum uint32_t can handle fully.
-  uint32_t digits = u32 / 10000000;  // 10,000,000
+  // We have only 9 digits now, again the maximum std::uint32_t can handle fully.
+  std::uint32_t digits = u32 / 10000000;  // 10,000,000
   u32 -= digits * 10000000;
   PutTwoDigits(digits, buffer);
   buffer += 2;
@@ -295,7 +295,7 @@ char* numbers_internal::FastIntToBuffer(uint64_t i, char* buffer) {
 }
 
 char* numbers_internal::FastIntToBuffer(int64_t i, char* buffer) {
-  uint64_t u = i;
+  std::uint64_t u = i;
   if (i < 0) {
     *buffer++ = '-';
     u = 0 - u;
@@ -304,15 +304,15 @@ char* numbers_internal::FastIntToBuffer(int64_t i, char* buffer) {
 }
 
 
-// Given a 128-bit number expressed as a pair of uint64_t, high half first,
+// Given a 128-bit number expressed as a pair of std::uint64_t, high half first,
 // return that number multiplied by the given 32-bit value.  If the result is
 // too large to fit in a 128-bit number, divide it by 2 until it fits.
-static std::pair<uint64_t, uint64_t> Mul32(std::pair<uint64_t, uint64_t> num,
-                                           uint32_t mul) {
-  uint64_t bits0_31 = num.second & 0xFFFFFFFF;
-  uint64_t bits32_63 = num.second >> 32;
-  uint64_t bits64_95 = num.first & 0xFFFFFFFF;
-  uint64_t bits96_127 = num.first >> 32;
+static std::pair<std::uint64_t, std::uint64_t> Mul32(std::pair<std::uint64_t, std::uint64_t> num,
+                                           std::uint32_t mul) {
+  std::uint64_t bits0_31 = num.second & 0xFFFFFFFF;
+  std::uint64_t bits32_63 = num.second >> 32;
+  std::uint64_t bits64_95 = num.first & 0xFFFFFFFF;
+  std::uint64_t bits96_127 = num.first >> 32;
 
   // The picture so far: each of these 64-bit values has only the lower 32 bits
   // filled in.
@@ -335,23 +335,23 @@ static std::pair<uint64_t, uint64_t> Mul32(std::pair<uint64_t, uint64_t> num,
   // bits0_31:                       |                 [ | mmmmmmmm mmmmmmmm ]
   // eventually:        [ bits128_up | ...bits64_127.... | ..bits0_63... ]
 
-  uint64_t bits0_63 = bits0_31 + (bits32_63 << 32);
-  uint64_t bits64_127 = bits64_95 + (bits96_127 << 32) + (bits32_63 >> 32) +
+  std::uint64_t bits0_63 = bits0_31 + (bits32_63 << 32);
+  std::uint64_t bits64_127 = bits64_95 + (bits96_127 << 32) + (bits32_63 >> 32) +
                         (bits0_63 < bits0_31);
-  uint64_t bits128_up = (bits96_127 >> 32) + (bits64_127 < bits64_95);
+  std::uint64_t bits128_up = (bits96_127 >> 32) + (bits64_127 < bits64_95);
   if (bits128_up == 0) return {bits64_127, bits0_63};
 
   int shift = 64 - strings_internal::CountLeadingZeros64(bits128_up);
-  uint64_t lo = (bits0_63 >> shift) + (bits64_127 << (64 - shift));
-  uint64_t hi = (bits64_127 >> shift) + (bits128_up << (64 - shift));
+  std::uint64_t lo = (bits0_63 >> shift) + (bits64_127 << (64 - shift));
+  std::uint64_t hi = (bits64_127 >> shift) + (bits128_up << (64 - shift));
   return {hi, lo};
 }
 
 // Compute num * 5 ^ expfive, and return the first 128 bits of the result,
 // where the first bit is always a one.  So PowFive(1, 0) starts 0b100000,
 // PowFive(1, 1) starts 0b101000, PowFive(1, 2) starts 0b110010, etc.
-static std::pair<uint64_t, uint64_t> PowFive(uint64_t num, int expfive) {
-  std::pair<uint64_t, uint64_t> result = {num, 0};
+static std::pair<std::uint64_t, std::uint64_t> PowFive(std::uint64_t num, int expfive) {
+  std::pair<std::uint64_t, std::uint64_t> result = {num, 0};
   while (expfive >= 13) {
     // 5^13 is the highest power of five that will fit in a 32-bit integer.
     result = Mul32(result, 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5);
@@ -381,7 +381,7 @@ static std::pair<uint64_t, uint64_t> PowFive(uint64_t num, int expfive) {
 }
 
 struct ExpDigits {
-  int32_t exponent;
+  std::int32_t exponent;
   char digits[6];
 };
 
@@ -431,7 +431,7 @@ static ExpDigits SplitToSix(const double value) {
   // Since we'd like to know if the fractional part of d is close to a half,
   // we multiply it by 65536 and see if the fractional part is close to 32768.
   // (The number doesn't have to be a power of two,but powers of two are faster)
-  uint64_t d64k = d * 65536;
+  std::uint64_t d64k = d * 65536;
   int dddddd;  // A 6-digit decimal integer.
   if ((d64k % 65536) == 32767 || (d64k % 65536) == 32768) {
     // OK, it's fairly likely that precision was lost above, which is
@@ -445,7 +445,7 @@ static ExpDigits SplitToSix(const double value) {
     // value we're representing, of course, is M.mmm... * 2^exp2.
     int exp2;
     double m = std::frexp(value, &exp2);
-    uint64_t mantissa = m * (32768.0 * 65536.0 * 65536.0 * 65536.0);
+    std::uint64_t mantissa = m * (32768.0 * 65536.0 * 65536.0 * 65536.0);
     // std::frexp returns an m value in the range [0.5, 1.0), however we
     // can't multiply it by 2^64 and convert to an integer because some FPUs
     // throw an exception when converting an number higher than 2^63 into an
@@ -463,7 +463,7 @@ static ExpDigits SplitToSix(const double value) {
     // the math since the 2^exp2 calculation is unnecessary and the power-of-10
     // calculation can become a power-of-5 instead.
 
-    std::pair<uint64_t, uint64_t> edge, val;
+    std::pair<std::uint64_t, std::uint64_t> edge, val;
     if (exp >= 6) {
       // Compare (dddddd + 0.5) * 5 ^ (exp - 5) to mantissa
       // Since we're tossing powers of two, 2 * dddddd + 1 is the
@@ -889,20 +889,20 @@ inline bool safe_uint_internal(absl::string_view text, IntType* value_p,
 }  // anonymous namespace
 
 namespace numbers_internal {
-bool safe_strto32_base(absl::string_view text, int32_t* value, int base) {
-  return safe_int_internal<int32_t>(text, value, base);
+bool safe_strto32_base(absl::string_view text, std::int32_t* value, int base) {
+  return safe_int_internal<std::int32_t>(text, value, base);
 }
 
-bool safe_strto64_base(absl::string_view text, int64_t* value, int base) {
-  return safe_int_internal<int64_t>(text, value, base);
+bool safe_strto64_base(absl::string_view text, std::int64_t* value, int base) {
+  return safe_int_internal<std::int64_t>(text, value, base);
 }
 
-bool safe_strtou32_base(absl::string_view text, uint32_t* value, int base) {
-  return safe_uint_internal<uint32_t>(text, value, base);
+bool safe_strtou32_base(absl::string_view text, std::uint32_t* value, int base) {
+  return safe_uint_internal<std::uint32_t>(text, value, base);
 }
 
-bool safe_strtou64_base(absl::string_view text, uint64_t* value, int base) {
-  return safe_uint_internal<uint64_t>(text, value, base);
+bool safe_strtou64_base(absl::string_view text, std::uint64_t* value, int base) {
+  return safe_uint_internal<std::uint64_t>(text, value, base);
 }
 }  // namespace numbers_internal
 

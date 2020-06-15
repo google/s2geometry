@@ -25,7 +25,7 @@
 //
 // Good for varint coding small signed integers centered around 0.
 //
-//     int32_t ->   uint32_t
+//     std::int32_t ->   std::uint32_t
 // -------------------------
 //           0 ->          0
 //          -1 ->          1
@@ -38,23 +38,23 @@
 //        >> encode >>
 //        << decode <<
 
-static inline uint32_t ZigZagEncode(int32_t n) {
+static inline std::uint32_t ZigZagEncode(std::int32_t n) {
   // We need the cast to avoid an arithmetic shift.
-  uint32_t sign = (static_cast<uint32_t>(n)) >> 31;
-  return (static_cast<uint32_t>(n) << 1) ^ (0u - sign);
+  std::uint32_t sign = (static_cast<std::uint32_t>(n)) >> 31;
+  return (static_cast<std::uint32_t>(n) << 1) ^ (0u - sign);
 }
 
-static inline int32_t ZigZagDecode(uint32_t n) {
+static inline std::int32_t ZigZagDecode(std::uint32_t n) {
   return (n >> 1) ^ (0u - (n & 1));
 }
 
-static inline uint64_t ZigZagEncode64(int64_t n) {
+static inline std::uint64_t ZigZagEncode64(std::int64_t n) {
   // We need the cast to avoid an arithmetic shift.
-  uint64_t sign = (static_cast<uint64_t>(n)) >> 63;
-  return (static_cast<uint64_t>(n) << 1) ^ (0u - sign);
+  std::uint64_t sign = (static_cast<std::uint64_t>(n)) >> 63;
+  return (static_cast<std::uint64_t>(n) << 1) ^ (0u - sign);
 }
 
-static inline int64_t ZigZagDecode64(uint64_t n) {
+static inline std::int64_t ZigZagDecode64(std::uint64_t n) {
   return (n >> 1) ^ (0u - (n & 1));
 }
 

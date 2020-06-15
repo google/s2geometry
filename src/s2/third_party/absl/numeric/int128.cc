@@ -24,13 +24,13 @@
 
 namespace absl {
 
-const uint128 kuint128max = MakeUint128(std::numeric_limits<uint64_t>::max(),
-                                        std::numeric_limits<uint64_t>::max());
+const uint128 kuint128max = MakeUint128(std::numeric_limits<std::uint64_t>::max(),
+                                        std::numeric_limits<std::uint64_t>::max());
 
 namespace {
 
 // Returns the 0-based position of the last set bit (i.e., most significant bit)
-// in the given uint64_t. The argument may not be 0.
+// in the given std::uint64_t. The argument may not be 0.
 //
 // For example:
 //   Given: 5 (decimal) == 101 (binary)
@@ -42,22 +42,22 @@ namespace {
       (pos) |= (sh);                          \
     }                                         \
   } while (0)
-static inline int Fls64(uint64_t n) {
+static inline int Fls64(std::uint64_t n) {
   assert(n != 0);
   int pos = 0;
-  STEP(uint64_t, n, pos, 0x20);
-  uint32_t n32 = static_cast<uint32_t>(n);
-  STEP(uint32_t, n32, pos, 0x10);
-  STEP(uint32_t, n32, pos, 0x08);
-  STEP(uint32_t, n32, pos, 0x04);
-  return pos + ((uint64_t{0x3333333322221100} >> (n32 << 2)) & 0x3);
+  STEP(std::uint64_t, n, pos, 0x20);
+  std::uint32_t n32 = static_cast<std::uint32_t>(n);
+  STEP(std::uint32_t, n32, pos, 0x10);
+  STEP(std::uint32_t, n32, pos, 0x08);
+  STEP(std::uint32_t, n32, pos, 0x04);
+  return pos + ((std::uint64_t{0x3333333322221100} >> (n32 << 2)) & 0x3);
 }
 #undef STEP
 
 // Like Fls64() above, but returns the 0-based position of the last set bit
 // (i.e., most significant bit) in the given uint128. The argument may not be 0.
 static inline int Fls128(uint128 n) {
-  if (uint64_t hi = Uint128High64(n)) {
+  if (std::uint64_t hi = Uint128High64(n)) {
     return Fls64(hi) + 64;
   }
   return Fls64(Uint128Low64(n));
@@ -116,12 +116,12 @@ uint128 MakeUint128FromFloat(T v) {
           v < std::ldexp(static_cast<T>(1), 128)));
 
   if (v >= std::ldexp(static_cast<T>(1), 64)) {
-    uint64_t hi = static_cast<uint64_t>(std::ldexp(v, -64));
-    uint64_t lo = static_cast<uint64_t>(v - std::ldexp(static_cast<T>(hi), 64));
+    std::uint64_t hi = static_cast<std::uint64_t>(std::ldexp(v, -64));
+    std::uint64_t lo = static_cast<std::uint64_t>(v - std::ldexp(static_cast<T>(hi), 64));
     return MakeUint128(hi, lo);
   }
 
-  return MakeUint128(0, static_cast<uint64_t>(v));
+  return MakeUint128(0, static_cast<std::uint64_t>(v));
 }
 }  // namespace
 
@@ -175,7 +175,7 @@ std::string Uint128ToFormattedString(uint128 v, std::ios_base::fmtflags flags) {
 
   // Now piece together the uint128 representation from three chunks of the
   // original value, each less than "div" and therefore representable as a
-  // uint64_t.
+  // std::uint64_t.
   std::ostringstream os;
   std::ios_base::fmtflags copy_mask =
       std::ios::basefield | std::ios::showbase | std::ios::uppercase;
@@ -227,6 +227,3 @@ namespace {
 }
 
 }  // namespace absl
-
-
-

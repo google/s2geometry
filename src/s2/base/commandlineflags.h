@@ -36,8 +36,8 @@
 
 #else  // !defined(S2_USE_GFLAGS)
 
+#include <cstdint>
 #include <string>
-
 
 // Create a set of gflags-like macros for declaring/defining flags. Use
 // a library-specific name to potential minimize clashes with GFlags.

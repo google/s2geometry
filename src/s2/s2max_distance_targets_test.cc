@@ -251,7 +251,7 @@ TEST(CellTarget, UpdateMaxDistanceToCellAntipodal) {
 
 vector<int> GetContainingShapes(S2MaxDistanceTarget* target,
                                 const S2ShapeIndex& index, int max_shapes) {
-  gtl::btree_set<int32_t> shape_ids;
+  gtl::btree_set<std::int32_t> shape_ids;
   (void) target->VisitContainingShapes(
       index, [&shape_ids, max_shapes](S2Shape* containing_shape,
                                       const S2Point& target_point) {

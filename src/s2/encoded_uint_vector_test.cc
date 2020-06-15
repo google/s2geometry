@@ -24,7 +24,7 @@ using std::vector;
 
 namespace s2coding {
 
-static_assert(sizeof(EncodedUintVector<uint64_t>) == 16, "too big");
+static_assert(sizeof(EncodedUintVector<std::uint64_t>) == 16, "too big");
 
 template <class T>
 void TestEncodedUintVector(const vector<T>& expected, size_t expected_bytes) {
@@ -38,35 +38,35 @@ void TestEncodedUintVector(const vector<T>& expected, size_t expected_bytes) {
 }
 
 TEST(EncodedUintVectorTest, Empty) {
-  TestEncodedUintVector(vector<uint32_t>{}, 1);
+  TestEncodedUintVector(vector<std::uint32_t>{}, 1);
 }
 
 TEST(EncodedUintVectorTest, Zero) {
-  TestEncodedUintVector(vector<uint64_t>{0}, 2);
+  TestEncodedUintVector(vector<std::uint64_t>{0}, 2);
 }
 
 TEST(EncodedUintVectorTest, RepeatedZeros) {
-  TestEncodedUintVector(vector<uint16_t>{0, 0, 0}, 4);
+  TestEncodedUintVector(vector<std::uint16_t>{0, 0, 0}, 4);
 }
 
 TEST(EncodedUintVectorTest, MaxInt) {
-  TestEncodedUintVector(vector<uint64_t>{~0ULL}, 9);
+  TestEncodedUintVector(vector<std::uint64_t>{~0ULL}, 9);
 }
 
 TEST(EncodedUintVectorTest, OneByte) {
-  TestEncodedUintVector(vector<uint64_t>{0, 255, 1, 254}, 5);
+  TestEncodedUintVector(vector<std::uint64_t>{0, 255, 1, 254}, 5);
 }
 
 TEST(EncodedUintVectorTest, TwoBytes) {
-  TestEncodedUintVector(vector<uint64_t>{0, 255, 256, 254}, 9);
+  TestEncodedUintVector(vector<std::uint64_t>{0, 255, 256, 254}, 9);
 }
 
 TEST(EncodedUintVectorTest, ThreeBytes) {
-  TestEncodedUintVector(vector<uint64_t>{0xffffff, 0x0102, 0, 0x050403}, 13);
+  TestEncodedUintVector(vector<std::uint64_t>{0xffffff, 0x0102, 0, 0x050403}, 13);
 }
 
 TEST(EncodedUintVectorTest, EightBytes) {
-  TestEncodedUintVector(vector<uint64_t>{~0ULL, 0, 0x0102030405060708}, 25);
+  TestEncodedUintVector(vector<std::uint64_t>{~0ULL, 0, 0x0102030405060708}, 25);
 }
 
 template <class T>
@@ -78,7 +78,7 @@ vector<T> MakeSortedTestVector(int bytes_per_value, int num_values) {
     values.push_back(limit_value * (static_cast<double>(i) / (num_values - 1)));
   }
   // The last value needs special handling since casting it to "double" loses
-  // precision when T == uint64_t.
+  // precision when T == std::uint64_t.
   values.push_back(limit_value);
   S2_CHECK(std::is_sorted(values.begin(), values.end()));
   return values;
@@ -111,11 +111,11 @@ void TestLowerBound(int bytes_per_value, int num_values) {
 
 TEST(EncodedUintVector, LowerBound) {
   for (int bytes_per_value = 8; bytes_per_value <= 8; ++bytes_per_value) {
-    TestLowerBound<uint64_t>(bytes_per_value, 10);
+    TestLowerBound<std::uint64_t>(bytes_per_value, 10);
     if (bytes_per_value <= 4) {
-      TestLowerBound<uint32_t>(bytes_per_value, 500);
+      TestLowerBound<std::uint32_t>(bytes_per_value, 500);
       if (bytes_per_value <= 2) {
-        TestLowerBound<uint16_t>(bytes_per_value, 100);
+        TestLowerBound<std::uint16_t>(bytes_per_value, 100);
       }
     }
   }

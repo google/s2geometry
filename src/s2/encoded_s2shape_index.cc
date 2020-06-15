@@ -96,7 +96,7 @@ EncodedS2ShapeIndex::~EncodedS2ShapeIndex() {
 bool EncodedS2ShapeIndex::Init(Decoder* decoder,
                                const ShapeFactory& shape_factory) {
   Minimize();
-  uint64_t max_edges_version;
+  std::uint64_t max_edges_version;
   if (!decoder->get_varint64(&max_edges_version)) return false;
   int version = max_edges_version & 3;
   if (version != MutableS2ShapeIndex::kCurrentEncodingVersionNumber) {
@@ -129,7 +129,7 @@ bool EncodedS2ShapeIndex::Init(Decoder* decoder,
   // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   //                                NO NO NO
   cells_.reset(new std::atomic<S2ShapeIndexCell*>[cell_ids_.size()]);
-  cells_decoded_ = vector<std::atomic<uint64_t>>((cell_ids_.size() + 63) >> 6);
+  cells_decoded_ = vector<std::atomic<std::uint64_t>>((cell_ids_.size() + 63) >> 6);
 
   return encoded_cells_.Init(decoder);
 }
@@ -156,7 +156,7 @@ void EncodedS2ShapeIndex::Minimize() {
   } else {
     // Scan the cells_decoded_ vector looking for cells that must be deleted.
     for (int i = cells_decoded_.size(), base = 0; --i >= 0; base += 64) {
-      uint64_t bits = cells_decoded_[i].load(std::memory_order_relaxed);
+      std::uint64_t bits = cells_decoded_[i].load(std::memory_order_relaxed);
       if (bits == 0) continue;
       do {
         int offset = Bits::FindLSBSetNonZero64(bits);
@@ -175,7 +175,7 @@ size_t EncodedS2ShapeIndex::SpaceUsed() const {
   size_t size = sizeof(*this);
   size += shapes_.capacity() * sizeof(std::atomic<S2Shape*>);
   size += cell_ids_.size() * sizeof(std::atomic<S2ShapeIndexCell*>);  // cells_
-  size += cells_decoded_.capacity() * sizeof(std::atomic<uint64_t>);
+  size += cells_decoded_.capacity() * sizeof(std::atomic<std::uint64_t>);
   size += cell_cache_.capacity() * sizeof(int);
   return size;
 }

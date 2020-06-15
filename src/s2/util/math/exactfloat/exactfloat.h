@@ -535,16 +535,16 @@ class ExactFloat {
   // mantissa of zero.  Do not change these values; methods such as
   // is_normal() make assumptions about their ordering.  Non-normal numbers
   // can have either a positive or negative sign (including zero and NaN).
-  static const int32_t kExpNaN = INT_MAX;
-  static const int32_t kExpInfinity = INT_MAX - 1;
-  static const int32_t kExpZero = INT_MAX - 2;
+  static const std::int32_t kExpNaN = INT_MAX;
+  static const std::int32_t kExpInfinity = INT_MAX - 1;
+  static const std::int32_t kExpZero = INT_MAX - 2;
 
   // Normal numbers are represented as (sign_ * bn_ * (2 ** bn_exp_)), where:
   //  - sign_ is either +1 or -1
   //  - bn_ is a BIGNUM with a positive value
   //  - bn_exp_ is the base-2 exponent applied to bn_.
-  int32_t sign_;
-  int32_t bn_exp_;
+  std::int32_t sign_;
+  std::int32_t bn_exp_;
   BigNum bn_;
 
   // A standard IEEE "double" has a 53-bit mantissa consisting of a 52-bit

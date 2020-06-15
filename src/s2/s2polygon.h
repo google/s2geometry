@@ -899,7 +899,7 @@ class S2Polygon final : public S2Region {
   // this error so that it can be returned later by FindValidationError(),
   // since it is not possible to detect this error once the polygon has been
   // initialized.  This field is not preserved by Encode/Decode.
-  uint8_t error_inconsistent_loop_orientations_;
+  std::uint8_t error_inconsistent_loop_orientations_;
 
   // Cache for num_vertices().
   int num_vertices_;
