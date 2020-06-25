@@ -194,8 +194,8 @@ struct dense_hashtable_iterator {
   typedef V value_type;
   typedef typename value_alloc_type::difference_type difference_type;
   typedef typename value_alloc_type::size_type size_type;
-  typedef typename value_alloc_type::reference reference;
-  typedef typename value_alloc_type::pointer pointer;
+  typedef V& reference;
+  typedef V* pointer;
 
   // "Real" constructor and default constructor
   dense_hashtable_iterator(
@@ -257,8 +257,8 @@ struct dense_hashtable_const_iterator {
   typedef V value_type;
   typedef typename value_alloc_type::difference_type difference_type;
   typedef typename value_alloc_type::size_type size_type;
-  typedef typename value_alloc_type::const_reference reference;
-  typedef typename value_alloc_type::const_pointer pointer;
+  typedef const V& reference;
+  typedef const V* pointer;
 
   // "Real" constructor and default constructor
   dense_hashtable_const_iterator(
@@ -574,7 +574,7 @@ class dense_hashtable {
   // FUNCTIONS CONCERNING SIZE
  public:
   size_type size() const      { return num_elements - num_deleted; }
-  size_type max_size() const { return get_allocator().max_size(); }
+  size_type max_size() const { return std::numeric_limits<size_type>::max(); }
   bool empty() const          { return size() == 0; }
   size_type bucket_count() const      { return num_buckets; }
   size_type max_bucket_count() const  { return max_size(); }
@@ -1396,10 +1396,10 @@ class dense_hashtable {
     const value_alloc_type& as_value_alloc() const { return *this; }
 
     // We want to return the exact same type as ExtractKey: Key or const Key&
-    typename ExtractKey::result_type get_key(const_reference v) const {
+    typename ExtractKey::result_type get_key(const Value& v) const {
       return ExtractKey::operator()(v);
     }
-    void set_key(pointer v, const key_type& k) const {
+    void set_key(Value* v, const key_type& k) const {
       SetKey::operator()(v, k);
     }
 
@@ -1411,8 +1411,8 @@ class dense_hashtable {
       return EqualKey::operator()(a, b);
     }
 
-    pointer allocate(size_type size) {
-      pointer memory = value_alloc_type::allocate(size);
+    Value* allocate(size_type size) {
+      Value* memory = value_alloc_type::allocate(size);
       assert(memory != nullptr);
       return memory;
     }
