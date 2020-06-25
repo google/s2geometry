@@ -523,7 +523,7 @@ if (GTEST_ROOT)
   endforeach()
 endif()
 
-if (BUILD_EXAMPLES)
+if (BUILD_EXAMPLES AND GTEST_ROOT)
   add_subdirectory("doc/examples" examples)
 endif()
 
