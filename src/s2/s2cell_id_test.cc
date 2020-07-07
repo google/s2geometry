@@ -81,6 +81,7 @@ TEST(S2CellId, ParentChildRelationships) {
   EXPECT_TRUE(id.is_valid());
   EXPECT_EQ(3, id.face());
   EXPECT_EQ(0x12345700, id.pos());
+  EXPECT_EQ(0x91a2b, id.levelpos());
   EXPECT_EQ(S2CellId::kMaxLevel - 4, id.level());
   EXPECT_FALSE(id.is_leaf());
 

@@ -208,6 +208,10 @@ class S2CellId {
   // in the range 0..(2**kPosBits-1).
   uint64 pos() const;
 
+  // The position of the cell center along the coarsest Hilbert curve over this
+  // face, in the range 0..(2**(2k))
+  uint64 levelpos() const;
+
   // Return the subdivision level of the cell (range 0..kMaxLevel).
   int level() const;
 
@@ -538,6 +542,10 @@ inline int S2CellId::face() const {
 
 inline uint64 S2CellId::pos() const {
   return id_ & (~uint64{0} >> kFaceBits);
+}
+
+inline uint64 S2CellId::levelpos() const {
+  return pos() >> (kPosBits-2*level());
 }
 
 inline int S2CellId::level() const {
