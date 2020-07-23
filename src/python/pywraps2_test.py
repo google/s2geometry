@@ -104,6 +104,7 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertEqual(0, loop.depth())
     self.assertFalse(loop.is_hole())
     self.assertEqual(4, loop.num_vertices())
+    self.assertTrue(loop.IsNormalized())
     point = london.ToPoint()
     self.assertTrue(loop.Contains(point))
 

@@ -429,6 +429,7 @@ class S2Point {
 %unignore S2Loop::GetS2LatLngVertex;
 %unignore S2Loop::Init;
 %unignore S2Loop::Intersects;
+%unignore S2Loop::IsNormalized() const;
 %unignore S2Loop::IsValid;
 %unignore S2Loop::MayIntersect(const S2Cell&) const;
 %unignore S2Loop::Normalize;
