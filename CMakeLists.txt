@@ -61,9 +61,13 @@ endif()
 find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
-find_package(SWIG)
-find_package(PythonInterp)
-find_package(PythonLibs)
+
+option(BULID_PYTHON "Build Python interfaces" ON)
+if (BULID_PYTHON)
+    find_package(SWIG)
+    find_package(PythonInterp)
+    find_package(PythonLibs)
+endif()
 
 if (WIN32)
     # Use unsigned characters
@@ -515,22 +519,25 @@ if (GTEST_ROOT)
       src/s2/sequence_lexicon_test.cc
       src/s2/value_lexicon_test.cc)
 
-  enable_testing()
+  option(BUILD_TESTING "Build s2 unit tests" ON)
+  if (BUILD_TESTING)
+    enable_testing()
+    foreach (test_cc ${S2TestFiles})
+        get_filename_component(test ${test_cc} NAME_WE)
+        add_executable(${test} ${test_cc})
+        target_link_libraries(
+            ${test}
+            s2testing s2 gtest_main)
+        add_test(${test} ${test})
+    endforeach()
+  endif()
 
-  foreach (test_cc ${S2TestFiles})
-    get_filename_component(test ${test_cc} NAME_WE)
-    add_executable(${test} ${test_cc})
-    target_link_libraries(
-        ${test}
-        s2testing s2 gtest_main)
-    add_test(${test} ${test})
-  endforeach()
 endif()
 
 if (BUILD_EXAMPLES)
   add_subdirectory("doc/examples" examples)
 endif()
 
-if (${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
+if (${BUILD_PYTHON} AND ${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
   add_subdirectory("src/python" python)
 endif()
