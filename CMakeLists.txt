@@ -62,8 +62,8 @@ find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
 
-option(BULID_PYTHON "Build Python interfaces" ON)
-if (BULID_PYTHON)
+option(BUILD_PYTHON "Build Python interfaces" ON)
+if (BUILD_PYTHON)
     find_package(SWIG)
     find_package(PythonInterp)
     find_package(PythonLibs)
