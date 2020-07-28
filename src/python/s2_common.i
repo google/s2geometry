@@ -343,6 +343,7 @@ class S2Point {
 %unignore S2CellUnion::Denormalize(int, int, std::vector<S2CellId>*) const;
 %unignore S2CellUnion::Encode;
 %unignore S2CellUnion::ExactArea;
+%unignore S2CellUnion::FromNormalized(std::vector<S2CellId>);
 %unignore S2CellUnion::GetCapBound() const;
 %unignore S2CellUnion::GetDifference;
 %unignore S2CellUnion::GetRectBound;

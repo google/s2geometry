@@ -89,6 +89,13 @@ class PyWrapS2TestCase(unittest.TestCase):
     trondheim = s2.S2LatLng.FromDegrees(63.431052, 10.395083)
     self.assertTrue(cell_union.Contains(s2.S2CellId(trondheim)))
 
+    # Init() calls Normalized, so cell_ids() are normalized.
+    cell_union2 = s2.S2CellUnion.FromNormalized(cell_union.cell_ids())
+    # There is no S2CellUnion::Equals, and cell_ids is a non-iterable
+    # SWIG object, so just perform the same checks again.
+    self.assertEqual(cell_union2.num_cells(), 2)
+    self.assertTrue(cell_union2.Contains(s2.S2CellId(trondheim)))
+
   def testS2PolygonIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
     polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId(london)))
