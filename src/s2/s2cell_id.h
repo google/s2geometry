@@ -364,7 +364,7 @@ class S2CellId {
   // FromToken() returns S2CellId::None() for malformed inputs.
   string ToToken() const;
   static S2CellId FromToken(const char* token, size_t length);
-  static S2CellId FromToken(const string& token);
+  static S2CellId FromToken(const std::string& token);
 
   // Use encoder to generate a serialized representation of this cell id.
   // Can also encode an invalid cell.
