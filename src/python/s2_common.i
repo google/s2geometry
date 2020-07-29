@@ -5,6 +5,7 @@
 
 %{
 #include <sstream>
+#include <string>
 
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"
@@ -307,7 +308,7 @@ class S2Point {
 %unignore S2CellId::FromFacePosLevel(int, uint64, int);
 %unignore S2CellId::FromLatLng;
 %unignore S2CellId::FromPoint;
-%unignore S2CellId::FromToken;
+%unignore S2CellId::FromToken(const std::string&);
 %unignore S2CellId::GetCenterSiTi(int*, int*) const;
 %unignore S2CellId::GetEdgeNeighbors;
 %unignore S2CellId::ToFaceIJOrientation(int*, int*, int*) const;
