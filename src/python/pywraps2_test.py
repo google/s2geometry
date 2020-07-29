@@ -41,6 +41,19 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertLess(cell, cell.next())
     self.assertGreater(cell.next(), cell)
 
+  def testS2CellIdFromToTokenIsWrappedCorrectly(self):
+    cell = s2.S2CellId.FromToken("487604c489f841c3")
+    self.assertEqual(cell.ToToken(), "487604c489f841c3")
+    self.assertEqual(cell.id(), 0x487604c489f841c3)
+
+    cell = s2.S2CellId.FromToken("487")
+    self.assertEqual(cell.ToToken(), "487")
+    self.assertEqual(cell.id(), 0x4870000000000000)
+
+    cell = s2.S2CellId.FromToken("this is invalid")
+    self.assertEqual(cell.ToToken(), "X")
+    self.assertEqual(cell.id(), 0)
+
   def testS2CellIdGetEdgeNeighborsIsWrappedCorrectly(self):
     cell = s2.S2CellId(0x466d319000000000)
     expected_neighbors = [s2.S2CellId(0x466d31b000000000),
