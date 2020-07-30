@@ -106,21 +106,9 @@ S2RegionCoverer::Candidate* S2RegionCoverer::NewCandidate(const S2Cell& cell) {
       }
     }
   }
-  size_t children_size = 0;
-  if (!is_terminal) {
-    children_size = sizeof(Candidate*) << max_children_shift();
-  }
-  Candidate* candidate = static_cast<Candidate*>(
-      ::operator new(sizeof(Candidate) + children_size));
-  candidate->cell = cell;
-  candidate->is_terminal = is_terminal;
-  candidate->num_children = 0;
-  if (!is_terminal) {
-    std::fill_n(&candidate->children[0], 1 << max_children_shift(),
-                absl::implicit_cast<Candidate*>(nullptr));
-  }
   ++candidates_created_counter_;
-  return candidate;
+  const std::size_t max_children = is_terminal ? 0 : 1 << max_children_shift();
+  return new (max_children) Candidate(cell, max_children);
 }
 
 void S2RegionCoverer::DeleteCandidate(Candidate* candidate,
@@ -129,7 +117,7 @@ void S2RegionCoverer::DeleteCandidate(Candidate* candidate,
     for (int i = 0; i < candidate->num_children; ++i)
       DeleteCandidate(candidate->children[i], true);
   }
-  ::operator delete(candidate);
+  delete candidate;
 }
 
 int S2RegionCoverer::ExpandChildren(Candidate* candidate,
