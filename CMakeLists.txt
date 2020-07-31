@@ -38,6 +38,10 @@ option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
 
 feature_summary(WHAT ALL)
 
+# TODO(jmr): Allow use of installed abseil; needs Findabsl.cmake or similar.
+# Install is currently a bit useless since absl doesn't get installed.
+# find_package(absl REQUIRED)
+
 if (WITH_GLOG)
     find_package(Glog REQUIRED)
     # FindGFlags.cmake and FindGlog.cmake do not seem to implement REQUIRED;
@@ -81,6 +85,14 @@ else()
     # match [-Wattributes]
     add_definitions(-Wno-attributes)
     add_definitions(-Wno-deprecated-declarations)
+endif()
+
+# Configure with: cmake -DABSL_SOURCE_DIR=/path/to/abseil-cpp
+message("ABSL_SOURCE_DIR: ${ABSL_SOURCE_DIR}")
+if (ABSL_SOURCE_DIR)
+    add_subdirectory(${ABSL_SOURCE_DIR} build_absl)
+else()
+    message(FATAL_ERROR "absl not found")
 endif()
 
 # If OpenSSL is installed in a non-standard location, configure with
@@ -181,18 +193,6 @@ add_library(s2
             src/s2/s2wedge_relations.cc
             src/s2/strings/ostringstream.cc
             src/s2/strings/serialize.cc
-            src/s2/third_party/absl/base/dynamic_annotations.cc
-            src/s2/third_party/absl/base/internal/raw_logging.cc
-            src/s2/third_party/absl/base/internal/throw_delegate.cc
-            src/s2/third_party/absl/numeric/int128.cc
-            src/s2/third_party/absl/strings/ascii.cc
-            src/s2/third_party/absl/strings/match.cc
-            src/s2/third_party/absl/strings/numbers.cc
-            src/s2/third_party/absl/strings/str_cat.cc
-            src/s2/third_party/absl/strings/str_split.cc
-            src/s2/third_party/absl/strings/string_view.cc
-            src/s2/third_party/absl/strings/strip.cc
-            src/s2/third_party/absl/strings/internal/memutil.cc
             src/s2/util/bits/bit-interleave.cc
             src/s2/util/bits/bits.cc
             src/s2/util/coding/coder.cc
@@ -207,7 +207,27 @@ add_library(s2testing STATIC
 target_link_libraries(
     s2
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
+    absl::base
+    absl::btree
+    absl::config
+    absl::core_headers
+    absl::dynamic_annotations
+    absl::endian
+    absl::fixed_array
+    absl::inlined_vector
+    absl::int128
+    absl::log_severity
+    absl::memory
+    absl::span
+    absl::strings
+    absl::type_traits
+    absl::utility
     ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(
+    s2testing
+    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+    absl::memory
+    absl::strings)
 
 # Allow other CMake projects to use this one with:
 # list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
@@ -345,47 +365,6 @@ install(FILES src/s2/base/casts.h
         DESTINATION include/s2/base)
 install(FILES src/s2/strings/ostringstream.h
         DESTINATION include/s2/strings)
-install(FILES src/s2/third_party/absl/algorithm/algorithm.h
-        DESTINATION include/s2/third_party/absl/algorithm)
-install(FILES src/s2/third_party/absl/base/attributes.h
-              src/s2/third_party/absl/base/casts.h
-              src/s2/third_party/absl/base/config.h
-              src/s2/third_party/absl/base/dynamic_annotations.h
-              src/s2/third_party/absl/base/log_severity.h
-              src/s2/third_party/absl/base/macros.h
-              src/s2/third_party/absl/base/optimization.h
-              src/s2/third_party/absl/base/policy_checks.h
-              src/s2/third_party/absl/base/port.h
-              src/s2/third_party/absl/base/thread_annotations.h
-        DESTINATION include/s2/third_party/absl/base)
-install(FILES src/s2/third_party/absl/base/internal/identity.h
-              src/s2/third_party/absl/base/internal/inline_variable.h
-              src/s2/third_party/absl/base/internal/invoke.h
-              src/s2/third_party/absl/base/internal/throw_delegate.h
-              src/s2/third_party/absl/base/internal/unaligned_access.h
-        DESTINATION include/s2/third_party/absl/base/internal)
-install(FILES src/s2/third_party/absl/container/inlined_vector.h
-        DESTINATION include/s2/third_party/absl/container)
-install(FILES src/s2/third_party/absl/container/internal/compressed_tuple.h
-              src/s2/third_party/absl/container/internal/container_memory.h
-              src/s2/third_party/absl/container/internal/layout.h
-        DESTINATION include/s2/third_party/absl/container/internal)
-install(FILES src/s2/third_party/absl/memory/memory.h
-        DESTINATION include/s2/third_party/absl/memory)
-install(FILES src/s2/third_party/absl/meta/type_traits.h
-        DESTINATION include/s2/third_party/absl/meta)
-install(FILES src/s2/third_party/absl/numeric/int128.h
-              src/s2/third_party/absl/numeric/int128_have_intrinsic.inc
-              src/s2/third_party/absl/numeric/int128_no_intrinsic.inc
-        DESTINATION include/s2/third_party/absl/numeric)
-install(FILES src/s2/third_party/absl/strings/numbers.h
-              src/s2/third_party/absl/strings/str_cat.h
-              src/s2/third_party/absl/strings/string_view.h
-        DESTINATION include/s2/third_party/absl/strings)
-install(FILES src/s2/third_party/absl/types/span.h
-        DESTINATION include/s2/third_party/absl/types)
-install(FILES src/s2/third_party/absl/utility/utility.h
-        DESTINATION include/s2/third_party/absl/utility)
 install(FILES src/s2/util/bits/bits.h
         DESTINATION include/s2/util/bits)
 install(FILES src/s2/util/coding/coder.h
@@ -393,16 +372,11 @@ install(FILES src/s2/util/coding/coder.h
         DESTINATION include/s2/util/coding)
 install(FILES src/s2/util/endian/endian.h
         DESTINATION include/s2/util/endian)
-install(FILES src/s2/util/gtl/btree.h
-              src/s2/util/gtl/btree_container.h
-              src/s2/util/gtl/btree_map.h
-              src/s2/util/gtl/btree_set.h
-              src/s2/util/gtl/compact_array.h
+install(FILES src/s2/util/gtl/compact_array.h
               src/s2/util/gtl/container_logging.h
               src/s2/util/gtl/dense_hash_set.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
-              src/s2/util/gtl/layout.h
         DESTINATION include/s2/util/gtl)
 install(FILES src/s2/util/hash/mix.h
         DESTINATION include/s2/util/hash)
@@ -529,7 +503,14 @@ if (GTEST_ROOT)
     add_executable(${test} ${test_cc})
     target_link_libraries(
         ${test}
-        s2testing s2 gtest_main)
+        s2testing s2
+        absl::base
+        absl::btree
+        absl::core_headers
+        absl::memory
+        absl::span
+        absl::strings
+        gtest_main)
     add_test(${test} ${test})
   endforeach()
 endif()

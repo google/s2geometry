@@ -20,8 +20,8 @@
 
 #include <type_traits>
 #include <vector>
-#include "s2/third_party/absl/base/internal/unaligned_access.h"
-#include "s2/third_party/absl/types/span.h"
+#include "absl/base/internal/unaligned_access.h"
+#include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 
 namespace s2coding {

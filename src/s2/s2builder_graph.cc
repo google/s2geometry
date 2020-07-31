@@ -23,7 +23,7 @@
 #include <numeric>
 #include <vector>
 #include "s2/base/logging.h"
-#include "s2/util/gtl/btree_map.h"
+#include "absl/container/btree_map.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
@@ -616,7 +616,7 @@ class Graph::PolylineBuilder {
   int edges_left_;
   vector<bool> used_;
   // A map of (outdegree(v) - indegree(v)) considering used edges only.
-  gtl::btree_map<VertexId, int> excess_used_;
+  absl::btree_map<VertexId, int> excess_used_;
 };
 
 vector<Graph::EdgePolyline> Graph::GetPolylines(

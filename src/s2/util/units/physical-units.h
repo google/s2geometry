@@ -91,7 +91,7 @@
 #include <type_traits>
 
 #include "s2/base/integral_types.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 
 namespace util {
 

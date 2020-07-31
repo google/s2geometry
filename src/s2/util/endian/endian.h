@@ -30,9 +30,9 @@
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
-#include "s2/third_party/absl/base/casts.h"
-#include "s2/third_party/absl/base/port.h"
-#include "s2/third_party/absl/numeric/int128.h"
+#include "absl/base/casts.h"
+#include "absl/base/port.h"
+#include "absl/numeric/int128.h"
 
 // Use compiler byte-swapping intrinsics if they are available.  32-bit
 // and 64-bit versions are available in Clang and GCC as of GCC 4.3.0.

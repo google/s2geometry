@@ -50,7 +50,7 @@
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 
 using absl::WrapUnique;
 using absl::make_unique;

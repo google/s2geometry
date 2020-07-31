@@ -34,7 +34,7 @@
 #include "s2/s2metrics.h"
 #include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
 
 S2_DECLARE_bool(s2debug);

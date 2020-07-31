@@ -19,7 +19,7 @@
 
 #include <iostream>
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/strings/str_cat.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2loop.h"
 #include "s2/s2pointutil.h"

@@ -24,7 +24,7 @@
 #include <utility>
 #include <vector>
 
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"

@@ -37,7 +37,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2region.h"
 #include "s2/s2shape_index.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 #include "s2/util/math/matrix3x3.h"
 #include "s2/util/math/vector.h"
 

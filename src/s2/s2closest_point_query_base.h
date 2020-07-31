@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/container/inlined_vector.h"
+#include "absl/container/inlined_vector.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"

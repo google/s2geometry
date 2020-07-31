@@ -86,7 +86,7 @@ TEST(S2EarthTest, TestToLongitudeRadians) {
 
 TEST(S2EarthTest, TestGetInitialBearing) {
   struct TestConfig {
-    string description;
+    std::string description;
     S2LatLng a;
     S2LatLng b;
     S1Angle bearing;

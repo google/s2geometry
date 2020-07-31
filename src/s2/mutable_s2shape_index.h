@@ -35,10 +35,19 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
-#include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/base/thread_annotations.h"
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/util/gtl/btree_map.h"
+#include "absl/base/macros.h"
+#include "absl/base/thread_annotations.h"
+#include "absl/memory/memory.h"
+#include "absl/container/btree_map.h"
+
+namespace s2internal {
+// Hack to expose bytes_used.
+template <typename Key, typename Value>
+class BTreeMap : public absl::btree_map<Key, Value> {
+ public:
+  size_t bytes_used() const { return this->tree_.bytes_used(); }
+};
+}  // namespace s2internal
 
 // MutableS2ShapeIndex is a class for in-memory indexing of polygonal geometry.
 // The objects in the index are known as "shapes", and may consist of points,
@@ -116,7 +125,9 @@
 // in the S2ShapeIndexCell that contains that point.
 class MutableS2ShapeIndex final : public S2ShapeIndex {
  private:
-  using CellMap = gtl::btree_map<S2CellId, S2ShapeIndexCell*>;
+  // TODO(jmr): Switch this back to absl::btree_map when bytes_used is
+  // supported.
+  using CellMap = s2internal::BTreeMap<S2CellId, S2ShapeIndexCell*>;
 
  public:
   // Options that affect construction of the MutableS2ShapeIndex.

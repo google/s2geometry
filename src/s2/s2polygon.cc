@@ -64,9 +64,9 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shape_index_region.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
-#include "s2/third_party/absl/container/fixed_array.h"
-#include "s2/third_party/absl/container/inlined_vector.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/container/fixed_array.h"
+#include "absl/container/inlined_vector.h"
+#include "absl/memory/memory.h"
 #include "s2/util/coding/coder.h"
 
 using absl::make_unique;

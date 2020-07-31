@@ -21,19 +21,24 @@ S2 documentation can be found on [s2geometry.io](http://s2geometry.io).
 * [CMake](http://www.cmake.org/)
 * A C++ compiler with C++11 support, such as [g++](https://gcc.gnu.org/)
   \>= 4.7.
+* [Abseil](https://github.com/abseil/abseil-cpp) (standard library extensions)
 * [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 * [gflags command line flags](https://github.com/gflags/gflags), optional
 * [glog logging module](https://github.com/google/glog), optional
 * [googletest testing framework](https://github.com/google/googletest)
   (to build tests and example programs, optional)
 
-On Ubuntu, all of these can be installed via apt-get:
+On Ubuntu, all of these other than abseil can be installed via apt-get:
 
 ```
 sudo apt-get install cmake libgflags-dev libgoogle-glog-dev libgtest-dev libssl-dev
 ```
 
 Otherwise, you may need to install some from source.
+
+Currently, Abseil must always be installed from source.  See the use of
+`-DABSL_SOURCE_DIR` in the [build instructions below](#building).
+This is likely to change.
 
 On macOS, use [MacPorts](http://www.macports.org/) or
 [Homebrew](http://brew.sh/).  For MacPorts:
@@ -85,7 +90,7 @@ From the appropriate directory depending on how you got the source:
 mkdir build
 cd build
 # You can omit -DGTEST_ROOT to skip tests; see above for macOS.
-cmake -DGTEST_ROOT=/usr/src/gtest ..
+cmake -DGTEST_ROOT=/usr/src/gtest -DABSL_SOURCE_DIR=.../abseil-cpp ..
 make
 make test  # If GTEST_ROOT specified above.
 sudo make install

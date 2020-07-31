@@ -27,8 +27,8 @@
 #include <string>
 #include <vector>
 
-#include "s2/third_party/absl/base/attributes.h"
-#include "s2/third_party/absl/strings/string_view.h"
+#include "absl/base/attributes.h"
+#include "absl/strings/string_view.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2debug.h"

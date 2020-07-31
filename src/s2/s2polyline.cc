@@ -26,7 +26,7 @@
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/utility/utility.h"
+#include "absl/utility/utility.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"

@@ -35,8 +35,8 @@
 #include <cstring>
 
 #include "s2/base/integral_types.h"
-#include "s2/third_party/absl/base/config.h"
-#include "s2/third_party/absl/base/port.h"
+#include "absl/base/config.h"
+#include "absl/base/port.h"
 
 #ifdef SWIG
 %include "third_party/absl/base/port.h"
@@ -241,6 +241,23 @@ enum { kPlatformUsesOPDSections = 0 };
 #endif  // __cplusplus
 
 // -----------------------------------------------------------------------------
+// Obsolete (to be removed)
+// -----------------------------------------------------------------------------
+
+// HAS_GLOBAL_STRING
+// Some platforms have a ::string class that is different from ::std::string
+// (although the interface is the same, of course).  On other platforms,
+// ::string is the same as ::std::string.
+#if defined(__cplusplus) && !defined(SWIG)
+#include <string>
+#ifndef HAS_GLOBAL_STRING
+using std::basic_string;
+using std::string;
+// TODO(user): using std::wstring?
+#endif  // HAS_GLOBAL_STRING
+#endif  // SWIG, __cplusplus
+
+// -----------------------------------------------------------------------------
 // Utility Functions
 // -----------------------------------------------------------------------------
 
@@ -375,7 +392,7 @@ static inline uint64 bswap_64(uint64 x) {
 
 #ifdef __cplusplus
 #ifdef STL_MSVC  // not always the same as _MSC_VER
-#include "s2/third_party/absl/base/internal/port_hash.inc"
+#include "absl/base/internal/port_hash.inc"
 #else
 struct PortableHashBase {};
 #endif  // STL_MSVC

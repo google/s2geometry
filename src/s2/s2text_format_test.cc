@@ -17,7 +17,7 @@
 
 #include <vector>
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/strings/str_split.h"
+#include "absl/strings/str_split.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2latlng.h"

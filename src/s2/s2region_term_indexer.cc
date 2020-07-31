@@ -81,7 +81,7 @@
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/strings/str_cat.h"
 
 using absl::string_view;
 using std::vector;

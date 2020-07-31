@@ -32,8 +32,8 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
 
 using absl::StrCat;

@@ -19,7 +19,7 @@
 
 #include <vector>
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/s2loop.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2shape_index.h"
