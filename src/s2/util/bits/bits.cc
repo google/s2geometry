@@ -19,7 +19,7 @@
 #include "s2/util/bits/bits.h"
 
 #include <cassert>
-#include "s2/third_party/absl/numeric/int128.h"
+#include "absl/numeric/int128.h"
 
 using absl::uint128;
 

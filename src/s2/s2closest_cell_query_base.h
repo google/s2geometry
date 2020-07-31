@@ -23,8 +23,8 @@
 #include <vector>
 
 #include "s2/base/logging.h"
-#include "s2/util/gtl/btree_set.h"
-#include "s2/third_party/absl/container/inlined_vector.h"
+#include "absl/container/btree_set.h"
+#include "absl/container/inlined_vector.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
@@ -201,7 +201,7 @@ class S2ClosestCellQueryBase {
 
     // Indicates that linear rather than binary search should be used when this
     // type is used as the key in gtl::btree data structures.
-    using goog_btree_prefer_linear_node_search = std::true_type;
+    using absl_btree_prefer_linear_node_search = std::true_type;
 
    private:
     Distance distance_;
@@ -308,7 +308,7 @@ class S2ClosestCellQueryBase {
   // when result_set_ is used so that we could use a priority queue instead.
   Result result_singleton_;
   std::vector<Result> result_vector_;
-  gtl::btree_set<Result> result_set_;
+  absl::btree_set<Result> result_set_;
 
   // When the results are stored in a btree_set (see above), usually
   // duplicates can be removed simply by inserting candidate cells in the

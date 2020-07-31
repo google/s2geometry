@@ -49,8 +49,8 @@
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
-#include "s2/third_party/absl/container/fixed_array.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/container/fixed_array.h"
+#include "absl/memory/memory.h"
 #include "s2/util/math/matrix3x3.h"
 #include "s2/util/math/vector.h"
 

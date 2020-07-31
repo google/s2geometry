@@ -29,8 +29,8 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2region.h"
 #include "s2/s2shape.h"
-#include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/base/macros.h"
+#include "absl/memory/memory.h"
 
 class Decoder;
 class Encoder;

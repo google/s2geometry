@@ -35,7 +35,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2metrics.h"
 #include "s2/s2testing.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 
 using S2::internal::kPosToOrientation;
 using std::fabs;

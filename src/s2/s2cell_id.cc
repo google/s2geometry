@@ -30,8 +30,8 @@
 #include "s2/r1interval.h"
 #include "s2/s2coords.h"
 #include "s2/s2latlng.h"
-#include "s2/third_party/absl/base/casts.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/base/casts.h"
+#include "absl/strings/str_cat.h"
 
 using absl::StrCat;
 using S2::internal::kSwapMask;

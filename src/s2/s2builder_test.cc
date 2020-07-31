@@ -30,9 +30,9 @@
 #include "s2/base/log_severity.h"
 #include "s2/base/timer.h"
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/str_cat.h"
-#include "s2/third_party/absl/strings/str_join.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_s2polygon_layer.h"
 #include "s2/s2builderutil_s2polyline_layer.h"

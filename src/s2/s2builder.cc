@@ -79,7 +79,7 @@
 
 #include "s2/base/casts.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/util/bits/bits.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"

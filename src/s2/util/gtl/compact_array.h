@@ -50,9 +50,9 @@
 
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 #include "s2/base/port.h"
-#include "s2/third_party/absl/meta/type_traits.h"
+#include "absl/meta/type_traits.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/gtl/container_logging.h"
 

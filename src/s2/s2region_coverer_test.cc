@@ -42,9 +42,9 @@
 #include "s2/s2polyline.h"
 #include "s2/s2region.h"
 #include "s2/s2testing.h"
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/str_cat.h"
-#include "s2/third_party/absl/strings/str_split.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_split.h"
 
 using absl::StrCat;
 using std::max;

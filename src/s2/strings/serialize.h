@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "s2/third_party/absl/strings/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace strings {
 

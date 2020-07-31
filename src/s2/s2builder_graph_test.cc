@@ -25,7 +25,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builderutil_testing.h"
 #include "s2/s2lax_polyline_shape.h"

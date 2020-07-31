@@ -216,7 +216,7 @@ class S1ChordAngle {
   // When S1ChordAngle is used as a key in one of the btree container types
   // (util/btree), indicate that linear rather than binary search should be
   // used.  This is much faster when the comparison function is cheap.
-  typedef std::true_type goog_btree_prefer_linear_node_search;
+  typedef std::true_type absl_btree_prefer_linear_node_search;
 
  private:
   // S1ChordAngles are represented by the squared chord length, which can

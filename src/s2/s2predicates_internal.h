@@ -23,7 +23,7 @@
 
 #include <limits>
 
-#include "s2/third_party/absl/base/casts.h"
+#include "absl/base/casts.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2predicates.h"
 #include "s2/util/math/exactfloat/exactfloat.h"

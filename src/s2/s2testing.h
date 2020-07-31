@@ -31,7 +31,7 @@
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell_id.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 #include "s2/util/math/matrix3x3.h"
 
 class S1Angle;

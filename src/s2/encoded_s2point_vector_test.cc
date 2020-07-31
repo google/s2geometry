@@ -19,7 +19,7 @@
 
 #include <vector>
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/strings/str_cat.h"
 #include "s2/util/bits/bit-interleave.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"

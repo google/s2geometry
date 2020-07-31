@@ -18,7 +18,7 @@
 #include "s2/encoded_s2shape_index.h"
 
 #include <memory>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
 
 using absl::make_unique;

@@ -22,7 +22,7 @@
 
 #else  // !defined(S2_USE_GLOG)
 
-#include "s2/third_party/absl/base/log_severity.h"
+#include "absl/base/log_severity.h"
 
 // Stay compatible with glog.
 namespace google {

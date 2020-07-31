@@ -24,7 +24,7 @@
 #include "s2/base/commandlineflags.h"
 #include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/base/casts.h"
+#include "absl/base/casts.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_distances.h"
