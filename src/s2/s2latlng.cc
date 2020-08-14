@@ -25,6 +25,7 @@
 
 using std::max;
 using std::min;
+using std::string;
 
 S2LatLng S2LatLng::Normalized() const {
   // remainder(x, 2 * M_PI) reduces its argument to the range [-M_PI, M_PI]
@@ -76,12 +77,12 @@ S1Angle S2LatLng::GetDistance(const S2LatLng& o) const {
   return S1Angle::Radians(2 * asin(sqrt(min(1.0, x))));
 }
 
-std::string S2LatLng::ToStringInDegrees() const {
+string S2LatLng::ToStringInDegrees() const {
   S2LatLng pt = Normalized();
   return StringPrintf("%f,%f", pt.lat().degrees(), pt.lng().degrees());
 }
 
-void S2LatLng::ToStringInDegrees(std::string* s) const {
+void S2LatLng::ToStringInDegrees(string* s) const {
   *s = ToStringInDegrees();
 }
 

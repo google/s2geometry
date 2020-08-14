@@ -28,6 +28,7 @@
 #include "s2/s2polyline.h"
 #include "s2/s2testing.h"
 
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
@@ -38,12 +39,12 @@ static const int kIters = 10000;
 // Verify that s2textformat::ToString() formats the given lat/lng with at most
 // "max_digits" after the decimal point and has no trailing zeros.
 void ExpectMaxDigits(const S2LatLng& ll, int max_digits) {
-  std::string result = s2textformat::ToString(ll.ToPoint());
-  vector<std::string> values = absl::StrSplit(result, ':', absl::SkipEmpty());
+  string result = s2textformat::ToString(ll.ToPoint());
+  vector<string> values = absl::StrSplit(result, ':', absl::SkipEmpty());
   EXPECT_EQ(2, values.size()) << result;
   for (const auto& value : values) {
     int num_digits = 0;
-    if (value.find('.') != std::string::npos) {
+    if (value.find('.') != string::npos) {
       num_digits = value.size() - value.find('.') - 1;
       EXPECT_NE('0', value.back());
     }
@@ -51,7 +52,7 @@ void ExpectMaxDigits(const S2LatLng& ll, int max_digits) {
   }
 }
 
-void ExpectString(const std::string& expected, const S2LatLng& ll) {
+void ExpectString(const string& expected, const S2LatLng& ll) {
   EXPECT_EQ(expected, s2textformat::ToString(ll.ToPoint()));
 }
 
@@ -143,16 +144,16 @@ TEST(ToString, FullPolygon) {
 }
 
 TEST(ToString, S2PolygonLoopSeparator) {
-  const std::string kLoop1 = "0:0, 0:5, 5:0";
-  const std::string kLoop2 = "1:1, 1:4, 4:1";  // Shells and holes same direction.
+  const string kLoop1 = "0:0, 0:5, 5:0";
+  const string kLoop2 = "1:1, 1:4, 4:1";  // Shells and holes same direction.
   auto polygon = s2textformat::MakePolygonOrDie(kLoop1 + "; " + kLoop2);
   EXPECT_EQ(kLoop1 + ";\n" + kLoop2, s2textformat::ToString(*polygon));
   EXPECT_EQ(kLoop1 + "; " + kLoop2, s2textformat::ToString(*polygon, "; "));
 }
 
 TEST(ToString, LaxPolygonLoopSeparator) {
-  const std::string kLoop1 = "0:0, 0:5, 5:0";
-  const std::string kLoop2 = "1:1, 4:1, 1:4";  // Interior on left of all loops.
+  const string kLoop1 = "0:0, 0:5, 5:0";
+  const string kLoop2 = "1:1, 4:1, 1:4";  // Interior on left of all loops.
   auto polygon = s2textformat::MakeLaxPolygonOrDie(kLoop1 + "; " + kLoop2);
   EXPECT_EQ(kLoop1 + ";\n" + kLoop2, s2textformat::ToString(*polygon));
   EXPECT_EQ(kLoop1 + "; " + kLoop2, s2textformat::ToString(*polygon, "; "));
@@ -180,7 +181,7 @@ TEST(MakeLaxPolygon, FullWithHole) {
   EXPECT_EQ(1, shape->num_edges());
 }
 
-void TestS2ShapeIndex(const std::string& str) {
+void TestS2ShapeIndex(const string& str) {
   EXPECT_EQ(str, s2textformat::ToString(*s2textformat::MakeIndexOrDie(str)));
 }
 

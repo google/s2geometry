@@ -22,11 +22,12 @@
 #include "s2/third_party/absl/strings/string_view.h"
 
 using absl::string_view;
+using std::string;
 using std::vector;
 
 namespace s2coding {
 
-void TestEncodedStringVector(const vector<std::string>& input,
+void TestEncodedStringVector(const vector<string>& input,
                              size_t expected_bytes) {
   Encoder encoder;
   StringVectorEncoder::Encode(input, &encoder);
@@ -62,7 +63,7 @@ TEST(EncodedStringVectorTest, TwoStrings) {
 }
 
 TEST(EncodedStringVectorTest, TwoBigStrings) {
-  TestEncodedStringVector({std::string(10000, 'x'), std::string(100000, 'y')},
+  TestEncodedStringVector({string(10000, 'x'), string(100000, 'y')},
                           110007);
 }
 

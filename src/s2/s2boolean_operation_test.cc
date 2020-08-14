@@ -37,6 +37,7 @@ namespace {
 
 using absl::make_unique;
 using s2builderutil::LaxPolygonLayer;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
@@ -68,14 +69,14 @@ class IndexMatchingLayer : public S2Builder::Layer {
 
  private:
   using EdgeVector = vector<S2Shape::Edge>;
-  static std::string ToString(const EdgeVector& edges);
+  static string ToString(const EdgeVector& edges);
 
   const S2ShapeIndex& index_;
   int dimension_;
 };
 
-std::string IndexMatchingLayer::ToString(const EdgeVector& edges) {
-  std::string msg;
+string IndexMatchingLayer::ToString(const EdgeVector& edges) {
+  string msg;
   for (const auto& edge : edges) {
     vector<S2Point> vertices{edge.v0, edge.v1};
     msg += s2textformat::ToString(vertices);
@@ -127,8 +128,8 @@ void IndexMatchingLayer::Build(const Graph& g, S2Error* error) {
 
 void ExpectResult(S2BooleanOperation::OpType op_type,
                   const S2BooleanOperation::Options& options,
-                  const std::string& a_str, const std::string& b_str,
-                  const std::string& expected_str) {
+                  const string& a_str, const string& b_str,
+                  const string& expected_str) {
   auto a = s2textformat::MakeIndexOrDie(a_str);
   auto b = s2textformat::MakeIndexOrDie(b_str);
   auto expected = s2textformat::MakeIndexOrDie(expected_str);
@@ -538,7 +539,7 @@ TEST(S2BooleanOperation,
 }
 
 // The polygon used in the polyline/polygon vertex tests below.
-static std::string kVertexTestPolygonStr() {
+static string kVertexTestPolygonStr() {
   return "0:0, 0:1, 0:2, 0:3, 0:4, 0:5, 5:5, 5:4, 5:3, 5:2, 5:1, 5:0";
 }
 
@@ -572,7 +573,7 @@ TEST(S2BooleanOperation, PolylineVertexOpenPolygonVertex) {
             "| 6:1, 5:1 | 5:2, 6:2 | 4:3, 5:3 | 5:4, 4:4 #");
   auto b = "# # " + kVertexTestPolygonStr();
 
-  const std::string kDifferenceResult =
+  const string kDifferenceResult =
       "# 0:1, 0:1 | 0:2, 0:2 | -1:3, 0:3 | 0:4, -1:4"
       "| 6:1, 5:1 | 5:2, 6:2 | 5:3, 5:3 | 5:4, 5:4 #";
   ExpectResult(OpType::UNION, options, a, b,
@@ -588,7 +589,7 @@ TEST(S2BooleanOperation, PolylineVertexOpenPolygonVertex) {
 // closed polyline vertex.  This tests that when an open vertex and a closed
 // vertex coincide with each other, the result is considered closed.
 TEST(S2BooleanOperation, PolylineVertexOpenPolygonClosedPolylineVertex) {
-  const std::string kTestGeometrySuffix =
+  const string kTestGeometrySuffix =
       "-2:0, 0:1 | -2:1, 0:2 | -2:2, 0:3 | -2:3, 0:4 | "
       "7:0, 5:1 | 7:1, 5:2 | 7:2, 5:3 | 7:3, 5:4 # " + kVertexTestPolygonStr();
 
@@ -598,7 +599,7 @@ TEST(S2BooleanOperation, PolylineVertexOpenPolygonClosedPolylineVertex) {
             "| 6:1, 5:1 | 5:2, 6:2 | 4:3, 5:3 | 5:4, 4:4 #");
   auto b = ("# " + kTestGeometrySuffix);
 
-  const std::string kDifferencePrefix =
+  const string kDifferencePrefix =
       "# -1:3, 0:3 | 0:4, -1:4 | 6:1, 5:1 | 5:2, 6:2";
   ExpectResult(OpType::UNION, options, a, b,
                kDifferencePrefix +
@@ -626,7 +627,7 @@ TEST(S2BooleanOperation, PolylineVertexSemiOpenPolygonVertex) {
   auto a = ("# 1:1, 0:1 | 0:2, 1:2 | -1:3, 0:3 | 0:4, -1:4 "
             "| 6:1, 5:1 | 5:2, 6:2 | 4:3, 5:3 | 5:4, 4:4 #");
   auto b = "# # " + kVertexTestPolygonStr();
-  const std::string kDifferenceResult =
+  const string kDifferenceResult =
       "# -1:3, 0:3 | 0:4, -1:4 | 6:1, 5:1 | 5:2, 6:2 | 5:3, 5:3 | 5:4, 5:4 #";
   ExpectResult(OpType::UNION, options, a, b,
                kDifferenceResult + kVertexTestPolygonStr());
@@ -647,7 +648,7 @@ TEST(S2BooleanOperation, PolylineVertexClosedPolygonVertex) {
   auto a = ("# 1:1, 0:1 | 0:2, 1:2 | -1:3, 0:3 | 0:4, -1:4 "
             "| 6:1, 5:1 | 5:2, 6:2 | 4:3, 5:3 | 5:4, 4:4 #");
   auto b = "# # " + kVertexTestPolygonStr();
-  const std::string kDifferenceResult =
+  const string kDifferenceResult =
       "# -1:3, 0:3 | 0:4, -1:4 | 6:1, 5:1 | 5:2, 6:2 #";
   ExpectResult(OpType::UNION, options, a, b,
                kDifferenceResult + kVertexTestPolygonStr());
@@ -1179,10 +1180,10 @@ TEST(S2BooleanOperation, GetCrossedVertexIndexBug) {
 // Performs the given operation and compares the result to "expected_str".  All
 // arguments are in s2textformat::MakeLaxPolygon() format.
 void ExpectPolygon(S2BooleanOperation::OpType op_type,
-                   const std::string& a_str, const std::string& b_str,
-                   const std::string& expected_str) {
-  auto a = s2textformat::MakeIndexOrDie(std::string("# # ") + a_str);
-  auto b = s2textformat::MakeIndexOrDie(std::string("# # ") + b_str);
+                   const string& a_str, const string& b_str,
+                   const string& expected_str) {
+  auto a = s2textformat::MakeIndexOrDie(string("# # ") + a_str);
+  auto b = s2textformat::MakeIndexOrDie(string("# # ") + b_str);
   s2builderutil::LaxPolygonLayer::Options polygon_options;
   polygon_options.set_degenerate_boundaries(DegenerateBoundaries::DISCARD);
   S2LaxPolygonShape output;
@@ -1198,41 +1199,41 @@ void ExpectPolygon(S2BooleanOperation::OpType op_type,
 
 TEST(S2BooleanOperation, FullAndEmptyResults) {
   // The following constants are all in s2textformat::MakeLaxPolygon() format.
-  std::string kEmpty = "";
-  std::string kFull = "full";
+  string kEmpty = "";
+  string kFull = "full";
 
   // Two complementary shell/hole pairs, together with alternative shells that
   // are slightly smaller or larger than the original.
-  std::string kShell1 = "10:0, 10:10, 20:10";
-  std::string kHole1 = "10:0, 20:10, 10:10";
-  std::string kShell1Minus = "11:2, 11:9, 18:9";
-  std::string kShell1Plus = "9:-2, 9:11, 22:11";
-  std::string kShell2 = "10:20, 10:30, 20:30";
-  std::string kHole2 = "10:20, 20:30, 10:30";
+  string kShell1 = "10:0, 10:10, 20:10";
+  string kHole1 = "10:0, 20:10, 10:10";
+  string kShell1Minus = "11:2, 11:9, 18:9";
+  string kShell1Plus = "9:-2, 9:11, 22:11";
+  string kShell2 = "10:20, 10:30, 20:30";
+  string kHole2 = "10:20, 20:30, 10:30";
 
   // The northern and southern hemispheres.
-  std::string kNorthHemi = "0:0, 0:120, 0:-120";
-  std::string kSouthHemi = "0:0, 0:-120, 0:120";
+  string kNorthHemi = "0:0, 0:120, 0:-120";
+  string kSouthHemi = "0:0, 0:-120, 0:120";
   // These edges deviate from kSouthHemi by slightly more than 1 degree.
-  std::string kSouthHemiPlus = "0.5:0, 0.5:-120, 0.5:120";
+  string kSouthHemiPlus = "0.5:0, 0.5:-120, 0.5:120";
 
   // A shell and hole that cover complementary hemispheres, such that each
   // hemisphere intersects all six S2 cube faces.  There are also alternative
   // shells that are slightly smaller or larger than the original.
-  std::string k6FaceShell1 = "0:-45, 45:0, 45:90, 0:135, -45:180, -45:-90";
-  std::string k6FaceHole1 = "0:-45, -45:-90, -45:180, 0:135, 45:90, 45:0";
-  std::string k6FaceShell1Minus = "-1:-45, 44:0, 44:90, -1:135, -46:180, -46:-90";
-  std::string k6FaceShell1Plus = "1:-45, 46:0, 46:90, 1:135, -44:180, -44:-90";
+  string k6FaceShell1 = "0:-45, 45:0, 45:90, 0:135, -45:180, -45:-90";
+  string k6FaceHole1 = "0:-45, -45:-90, -45:180, 0:135, 45:90, 45:0";
+  string k6FaceShell1Minus = "-1:-45, 44:0, 44:90, -1:135, -46:180, -46:-90";
+  string k6FaceShell1Plus = "1:-45, 46:0, 46:90, 1:135, -44:180, -44:-90";
 
   // Two complementary shell/hole pairs that are small enough so that they will
   // disappear when the snap radius chosen above is used.
-  std::string kAlmostEmpty1 = "2:0, 2:10, 3:0";
-  std::string kAlmostFull1 = "2:0, 3:0, 2:10";
-  std::string kAlmostEmpty2 = "4:0, 4:10, 5:0";
-  std::string kAlmostFull2 = "4:0, 5:0, 4:10";
+  string kAlmostEmpty1 = "2:0, 2:10, 3:0";
+  string kAlmostFull1 = "2:0, 3:0, 2:10";
+  string kAlmostEmpty2 = "4:0, 4:10, 5:0";
+  string kAlmostFull2 = "4:0, 5:0, 4:10";
 
   // A polygon that intersects all 6 faces such but snaps to an empty polygon.
-  std::string k6FaceAlmostEmpty1 = k6FaceShell1Minus + "; " + k6FaceHole1;
+  string k6FaceAlmostEmpty1 = k6FaceShell1Minus + "; " + k6FaceHole1;
 
   // Test empty UNION results.
   //  - Exact result, no input edges.
@@ -1355,7 +1356,7 @@ TEST(S2BooleanOperation, FullAndEmptyResults) {
 
 // Tests whether the two S2ShapeIndexes are equal according to
 // S2BooleanOperation::Equals().
-bool TestEqual(const std::string& a_str, const std::string& b_str) {
+bool TestEqual(const string& a_str, const string& b_str) {
   auto a = s2textformat::MakeIndexOrDie(a_str);
   auto b = s2textformat::MakeIndexOrDie(b_str);
   return S2BooleanOperation::Equals(*a, *b);

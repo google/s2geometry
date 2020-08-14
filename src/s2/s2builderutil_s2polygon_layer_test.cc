@@ -36,6 +36,7 @@ using s2builderutil::S2PolygonLayer;
 using s2textformat::MakePolylineOrDie;
 using std::map;
 using std::set;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
@@ -52,7 +53,7 @@ void TestS2Polygon(const vector<const char*>& input_strs,
       &output, S2PolygonLayer::Options(edge_type)));
   bool is_full = false;
   for (auto input_str : input_strs) {
-    if (std::string(input_str) == "full") is_full = true;
+    if (string(input_str) == "full") is_full = true;
     builder.AddPolygon(*s2textformat::MakeVerbatimPolygonOrDie(input_str));
   }
   builder.AddIsFullPolygonPredicate(S2Builder::IsFullPolygon(is_full));
@@ -290,7 +291,7 @@ TEST(IndexedS2PolygonLayer, AddsShape) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolygonLayer>(&index));
-  const std::string& polygon_str = "0:0, 0:10, 10:0";
+  const string& polygon_str = "0:0, 0:10, 10:0";
   builder.AddPolygon(*s2textformat::MakePolygon(polygon_str));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));

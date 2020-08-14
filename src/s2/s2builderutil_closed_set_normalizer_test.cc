@@ -34,6 +34,7 @@
 #include "s2/s2text_format.h"
 
 using absl::make_unique;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
@@ -71,22 +72,22 @@ class NormalizeTest : public testing::Test {
                      DuplicateEdges::KEEP, SiblingPairs::KEEP));
   }
 
-  void Run(const std::string& input_str, const std::string& expected_str);
+  void Run(const string& input_str, const string& expected_str);
 
  protected:
   bool suppress_lower_dimensions_;
   vector<GraphOptions> graph_options_out_;
 
  private:
-  static std::string ToString(const Graph& g);
-  void AddLayers(const std::string& str, const vector<GraphOptions>& graph_options,
+  static string ToString(const Graph& g);
+  void AddLayers(const string& str, const vector<GraphOptions>& graph_options,
                  vector<Graph>* graphs_out, S2Builder* builder);
 
   vector<unique_ptr<GraphClone>> graph_clones_;
 };
 
-void NormalizeTest::Run(const std::string& input_str,
-                        const std::string& expected_str) {
+void NormalizeTest::Run(const string& input_str,
+                        const string& expected_str) {
   ClosedSetNormalizer::Options options;
   options.set_suppress_lower_dimensions(suppress_lower_dimensions_);
   ClosedSetNormalizer normalizer(options, graph_options_out_);
@@ -107,7 +108,7 @@ void NormalizeTest::Run(const std::string& input_str,
 }
 
 void NormalizeTest::AddLayers(
-    const std::string& str, const vector<GraphOptions>& graph_options,
+    const string& str, const vector<GraphOptions>& graph_options,
     vector<Graph>* graphs_out, S2Builder* builder) {
   auto index = s2textformat::MakeIndex(str);
   for (int dim = 0; dim < 3; ++dim) {
@@ -124,8 +125,8 @@ void NormalizeTest::AddLayers(
   }
 }
 
-std::string NormalizeTest::ToString(const Graph& g) {
-  std::string msg;
+string NormalizeTest::ToString(const Graph& g) {
+  string msg;
   for (const auto& edge : g.edges()) {
     vector<S2Point> vertices = { g.vertex(edge.first),
                                  g.vertex(edge.second) };

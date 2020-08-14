@@ -29,7 +29,9 @@ enum { IS__MSC_VER = 1 };
 enum { IS__MSC_VER = 0 };
 #endif
 
-void StringAppendV(std::string* dst, const char* format, va_list ap) {
+using std::string;
+
+void StringAppendV(string* dst, const char* format, va_list ap) {
   // First try with a small fixed size buffer
   static const int kSpaceLength = 1024;
   char space[kSpaceLength];
@@ -81,16 +83,16 @@ void StringAppendV(std::string* dst, const char* format, va_list ap) {
 }
 
 
-std::string StringPrintf(const char* format, ...) {
+string StringPrintf(const char* format, ...) {
   va_list ap;
   va_start(ap, format);
-  std::string result;
+  string result;
   StringAppendV(&result, format, ap);
   va_end(ap);
   return result;
 }
 
-const std::string& SStringPrintf(std::string* dst, const char* format, ...) {
+const string& SStringPrintf(string* dst, const char* format, ...) {
   va_list ap;
   va_start(ap, format);
   dst->clear();
@@ -99,7 +101,7 @@ const std::string& SStringPrintf(std::string* dst, const char* format, ...) {
   return *dst;
 }
 
-void StringAppendF(std::string* dst, const char* format, ...) {
+void StringAppendF(string* dst, const char* format, ...) {
   va_list ap;
   va_start(ap, format);
   StringAppendV(dst, format, ap);

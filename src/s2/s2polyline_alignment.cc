@@ -28,6 +28,8 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/math/mathutil.h"
 
+using std::string;
+
 namespace s2polyline_alignment {
 
 Window::Window(const std::vector<ColumnStride>& strides) {
@@ -102,7 +104,7 @@ Window Window::Dilate(const int radius) const {
 }
 
 // Debug string implemented primarily for testing purposes.
-std::string Window::DebugString() const {
+string Window::DebugString() const {
   std::stringstream buffer;
   for (int row = 0; row < rows_; ++row) {
     for (int col = 0; col < cols_; ++col) {

@@ -24,6 +24,8 @@
 #include "s2/s2region_term_indexer.h"
 #include "s2/s2testing.h"
 
+using std::string;
+
 S2_DEFINE_int32(num_documents, 10000, "Number of documents");
 S2_DEFINE_int32(num_queries, 10000, "Number of queries");
 S2_DEFINE_double(query_radius_km, 100, "Query radius in kilometers");
@@ -46,7 +48,7 @@ int main(int argc, char **argv) {
 
   // We use a hash map as our inverted index.  The key is an index term, and
   // the value is the set of "document ids" where this index term is present.
-  std::unordered_map<std::string, std::vector<int>> index;
+  std::unordered_map<string, std::vector<int>> index;
 
   // Create an indexer suitable for an index that contains points only.
   // (You may also want to adjust min_level() or max_level() if you plan

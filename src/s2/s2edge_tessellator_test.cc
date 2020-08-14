@@ -34,6 +34,7 @@ using std::endl;
 using std::fabs;
 using std::min;
 using std::max;
+using std::string;
 using std::vector;
 
 namespace {
@@ -54,7 +55,7 @@ class Stats {
   double max() const { return max_; }
   double avg() const { return sum_ / count_; }
 
-  std::string ToString() const {
+  string ToString() const {
     return StrCat("avg = ", sum_ / count_, ", max = ", max_);
   }
 

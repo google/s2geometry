@@ -34,6 +34,7 @@
 
 using std::max;
 using std::min;
+using std::string;
 
 // Define storage for constants.
 const int ExactFloat::kMinExp;
@@ -360,22 +361,22 @@ int ExactFloat::NumSignificantDigitsForPrec(int prec) {
 // (e.g. 1/512 == 0.001953125 formatted as 0.002).
 static const int kMinSignificantDigits = 10;
 
-std::string ExactFloat::ToString() const {
+string ExactFloat::ToString() const {
   int max_digits = max(kMinSignificantDigits,
                        NumSignificantDigitsForPrec(prec()));
   return ToStringWithMaxDigits(max_digits);
 }
 
-std::string ExactFloat::ToStringWithMaxDigits(int max_digits) const {
+string ExactFloat::ToStringWithMaxDigits(int max_digits) const {
   S2_DCHECK_GT(max_digits, 0);
   if (!is_normal()) {
     if (is_nan()) return "nan";
     if (is_zero()) return (sign_ < 0) ? "-0" : "0";
     return (sign_ < 0) ? "-inf" : "inf";
   }
-  std::string digits;
+  string digits;
   int exp10 = GetDecimalDigits(max_digits, &digits);
-  std::string str;
+  string str;
   if (sign_ < 0) str.push_back('-');
 
   // We use the standard '%g' formatting rules.  If the exponent is less than
@@ -421,8 +422,8 @@ std::string ExactFloat::ToStringWithMaxDigits(int max_digits) const {
 }
 
 // Increment an unsigned integer represented as a string of ASCII digits.
-static void IncrementDecimalDigits(std::string* digits) {
-  std::string::iterator pos = digits->end();
+static void IncrementDecimalDigits(string* digits) {
+  string::iterator pos = digits->end();
   while (--pos >= digits->begin()) {
     if (*pos < '9') { ++*pos; return; }
     *pos = '0';
@@ -430,7 +431,7 @@ static void IncrementDecimalDigits(std::string* digits) {
   digits->insert(0, "1");
 }
 
-int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
+int ExactFloat::GetDecimalDigits(int max_digits, string* digits) const {
   S2_DCHECK(is_normal());
   // Convert the value to the form (bn * (10 ** bn_exp10)) where "bn" is a
   // positive integer (BIGNUM).
@@ -481,7 +482,7 @@ int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
 
   // Now strip any trailing zeros.
   S2_DCHECK_NE((*digits)[0], '0');
-  std::string::iterator pos = digits->end();
+  string::iterator pos = digits->end();
   while (pos[-1] == '0') --pos;
   if (pos < digits->end()) {
     bn_exp10 += digits->end() - pos;
@@ -494,7 +495,7 @@ int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
   return bn_exp10 + digits->size();
 }
 
-std::string ExactFloat::ToUniqueString() const {
+string ExactFloat::ToUniqueString() const {
   char prec_buf[20];
   sprintf(prec_buf, "<%d>", prec());
   return ToString() + prec_buf;

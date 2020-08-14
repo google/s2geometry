@@ -30,6 +30,7 @@ using absl::make_unique;
 using s2builderutil::IndexedS2PointVectorLayer;
 using s2builderutil::S2PointVectorLayer;
 using s2textformat::MakePointOrDie;
+using std::string;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;
@@ -39,7 +40,7 @@ namespace {
 void VerifyS2PointVectorLayerResults(
     const S2PointVectorLayer::LabelSetIds& label_set_ids,
     const IdSetLexicon& label_set_lexicon, const vector<S2Point>& output,
-    const std::string& str_expected_points,
+    const string& str_expected_points,
     const vector<vector<int32>>& expected_labels) {
   vector<S2Point> expected_points =
       s2textformat::ParsePoints(str_expected_points);
@@ -82,7 +83,7 @@ TEST(S2PointVectorLayer, MergeDuplicates) {
   ASSERT_TRUE(builder.Build(&error));
 
   vector<vector<int32>> expected_labels = {{1, 2}, {1}, {2}, {2}, {}};
-  std::string expected_points = "0:1, 0:2, 0:4, 0:5, 0:6";
+  string expected_points = "0:1, 0:2, 0:4, 0:5, 0:6";
 
   VerifyS2PointVectorLayerResults(label_set_ids, label_set_lexicon, output,
                                   expected_points, expected_labels);
@@ -112,7 +113,7 @@ TEST(S2PointVectorLayer, KeepDuplicates) {
   ASSERT_TRUE(builder.Build(&error));
 
   vector<vector<int32>> expected_labels = {{1}, {2}, {1}, {2}, {2}, {}, {}};
-  std::string expected_points = "0:1, 0:1, 0:2, 0:4, 0:5, 0:5, 0:6";
+  string expected_points = "0:1, 0:1, 0:2, 0:4, 0:5, 0:5, 0:6";
 
   VerifyS2PointVectorLayerResults(label_set_ids, label_set_lexicon, output,
                                   expected_points, expected_labels);
@@ -142,8 +143,8 @@ TEST(IndexedS2PointVectorLayer, AddsShapes) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PointVectorLayer>(&index));
-  std::string point0_str = "0:0";
-  std::string point1_str = "2:2";
+  string point0_str = "0:0";
+  string point1_str = "2:2";
   builder.AddPoint(s2textformat::MakePointOrDie(point0_str));
   builder.AddPoint(s2textformat::MakePointOrDie(point1_str));
   S2Error error;

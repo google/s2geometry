@@ -22,6 +22,8 @@
 #include <gtest/gtest.h>
 #include "s2/util/units/physical-units.h"
 
+using std::string;
+
 TEST(S2EarthTest, TestAngleConversion) {
   ASSERT_DOUBLE_EQ(S2Earth::ToAngle(S2Earth::Radius()).radians(), 1);
   ASSERT_DOUBLE_EQ(S2Earth::ToChordAngle(S2Earth::Radius()).radians(), 1);
@@ -86,7 +88,7 @@ TEST(S2EarthTest, TestToLongitudeRadians) {
 
 TEST(S2EarthTest, TestGetInitialBearing) {
   struct TestConfig {
-    std::string description;
+    string description;
     S2LatLng a;
     S2LatLng b;
     S1Angle bearing;

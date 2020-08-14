@@ -22,6 +22,8 @@
 #include "s2/third_party/absl/strings/ascii.h"
 #include "s2/third_party/absl/strings/internal/resize_uninitialized.h"
 
+using std::string;
+
 namespace absl {
 
 AlphaNum::AlphaNum(Hex hex) {
@@ -93,8 +95,8 @@ static char* Append(char* out, const AlphaNum& x) {
   return after;
 }
 
-std::string StrCat(const AlphaNum& a, const AlphaNum& b) {
-  std::string result;
+string StrCat(const AlphaNum& a, const AlphaNum& b) {
+  string result;
   absl::strings_internal::STLStringResizeUninitialized(&result,
                                                        a.size() + b.size());
   char* const begin = &*result.begin();
@@ -105,8 +107,8 @@ std::string StrCat(const AlphaNum& a, const AlphaNum& b) {
   return result;
 }
 
-std::string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c) {
-  std::string result;
+string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c) {
+  string result;
   strings_internal::STLStringResizeUninitialized(
       &result, a.size() + b.size() + c.size());
   char* const begin = &*result.begin();
@@ -118,9 +120,9 @@ std::string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c) {
   return result;
 }
 
-std::string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c,
+string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c,
               const AlphaNum& d) {
-  std::string result;
+  string result;
   strings_internal::STLStringResizeUninitialized(
       &result, a.size() + b.size() + c.size() + d.size());
   char* const begin = &*result.begin();
@@ -136,8 +138,8 @@ std::string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c,
 namespace strings_internal {
 
 // Do not call directly - these are not part of the public API.
-std::string CatPieces(std::initializer_list<absl::string_view> pieces) {
-  std::string result;
+string CatPieces(std::initializer_list<absl::string_view> pieces) {
+  string result;
   size_t total_size = 0;
   for (const absl::string_view piece : pieces) total_size += piece.size();
   strings_internal::STLStringResizeUninitialized(&result, total_size);
@@ -162,7 +164,7 @@ std::string CatPieces(std::initializer_list<absl::string_view> pieces) {
   assert(((src).size() == 0) ||      \
          (uintptr_t((src).data() - (dest).data()) > uintptr_t((dest).size())))
 
-void AppendPieces(std::string* dest,
+void AppendPieces(string* dest,
                   std::initializer_list<absl::string_view> pieces) {
   size_t old_size = dest->size();
   size_t total_size = old_size;
@@ -185,15 +187,15 @@ void AppendPieces(std::string* dest,
 
 }  // namespace strings_internal
 
-void StrAppend(std::string* dest, const AlphaNum& a) {
+void StrAppend(string* dest, const AlphaNum& a) {
   ASSERT_NO_OVERLAP(*dest, a);
   dest->append(a.data(), a.size());
 }
 
-void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b) {
+void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b) {
   ASSERT_NO_OVERLAP(*dest, a);
   ASSERT_NO_OVERLAP(*dest, b);
-  std::string::size_type old_size = dest->size();
+  string::size_type old_size = dest->size();
   strings_internal::STLStringResizeUninitialized(
       dest, old_size + a.size() + b.size());
   char* const begin = &*dest->begin();
@@ -203,12 +205,12 @@ void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b) {
   assert(out == begin + dest->size());
 }
 
-void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b,
+void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b,
                const AlphaNum& c) {
   ASSERT_NO_OVERLAP(*dest, a);
   ASSERT_NO_OVERLAP(*dest, b);
   ASSERT_NO_OVERLAP(*dest, c);
-  std::string::size_type old_size = dest->size();
+  string::size_type old_size = dest->size();
   strings_internal::STLStringResizeUninitialized(
       dest, old_size + a.size() + b.size() + c.size());
   char* const begin = &*dest->begin();
@@ -219,13 +221,13 @@ void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b,
   assert(out == begin + dest->size());
 }
 
-void StrAppend(std::string* dest, const AlphaNum& a, const AlphaNum& b,
+void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b,
                const AlphaNum& c, const AlphaNum& d) {
   ASSERT_NO_OVERLAP(*dest, a);
   ASSERT_NO_OVERLAP(*dest, b);
   ASSERT_NO_OVERLAP(*dest, c);
   ASSERT_NO_OVERLAP(*dest, d);
-  std::string::size_type old_size = dest->size();
+  string::size_type old_size = dest->size();
   strings_internal::STLStringResizeUninitialized(
       dest, old_size + a.size() + b.size() + c.size() + d.size());
   char* const begin = &*dest->begin();

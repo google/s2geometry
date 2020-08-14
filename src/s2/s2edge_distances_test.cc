@@ -28,6 +28,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using std::string;
 using std::unique_ptr;
 
 // Checks that the error returned by S2::GetUpdateMinDistanceMaxError() for
@@ -467,7 +468,7 @@ TEST(S2, EdgePairMaxDistance) {
                            M_PI);
 }
 
-bool IsEdgeBNearEdgeA(const std::string& a_str, const std::string& b_str,
+bool IsEdgeBNearEdgeA(const string& a_str, const string& b_str,
                       double max_error_degrees) {
   unique_ptr<S2Polyline> a(s2textformat::MakePolyline(a_str));
   EXPECT_EQ(2, a->num_vertices());

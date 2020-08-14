@@ -49,6 +49,7 @@ using s2textformat::MakePoint;
 using s2textformat::MakePolyline;
 using std::is_sorted;
 using std::pair;
+using std::string;
 using std::vector;
 
 namespace {
@@ -146,7 +147,7 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
     EXPECT_GE(candidates.front().edge_id, 0);
     EXPECT_LT(candidates.back().edge_id, shape->num_edges());
     num_candidates += candidates.size();
-    std::string missing_candidates;
+    string missing_candidates;
     vector<ShapeEdgeId> expected_crossings, expected_interior_crossings;
     for (int i = 0; i < shape->num_edges(); ++i) {
       auto edge = shape->edge(i);

@@ -60,6 +60,7 @@ using std::endl;
 using std::make_pair;
 using std::min;
 using std::pair;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 using s2builderutil::GraphClone;
@@ -575,7 +576,7 @@ void TestPolylineLayers(
   }
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
-  vector<std::string> output_strs;
+  vector<string> output_strs;
   for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
@@ -597,7 +598,7 @@ void TestPolylineVector(
   }
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
-  vector<std::string> output_strs;
+  vector<string> output_strs;
   for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
@@ -814,7 +815,7 @@ TEST(S2Builder, SimplifyKeepsForcedVertices) {
 // A set of (edge string, vector<InputEdgeId>) pairs representing the
 // InputEdgeIds attached to the edges of a graph.  Edges are in
 // s2textformat::ToString() format, such as "1:3, 4:5".
-using EdgeInputEdgeIds = vector<pair<std::string, vector<int>>>;
+using EdgeInputEdgeIds = vector<pair<string, vector<int>>>;
 
 S2Error::Code INPUT_EDGE_ID_MISMATCH = S2Error::USER_DEFINED_START;
 
@@ -828,8 +829,8 @@ class InputEdgeIdCheckingLayer : public S2Builder::Layer {
   void Build(const Graph& g, S2Error* error) override;
 
  private:
-  std::string ToString(const pair<std::string, vector<int>>& p) {
-    std::string r = StrCat("  (", p.first, ")={");
+  string ToString(const pair<string, vector<int>>& p) {
+    string r = StrCat("  (", p.first, ")={");
     if (!p.second.empty()) {
       for (int id : p.second) {
         StrAppend(&r, id, ", ");
@@ -851,7 +852,7 @@ void InputEdgeIdCheckingLayer::Build(const Graph& g, S2Error* error) {
     vertices.clear();
     vertices.push_back(g.vertex(g.edge(e).first));
     vertices.push_back(g.vertex(g.edge(e).second));
-    std::string edge = s2textformat::ToString(
+    string edge = s2textformat::ToString(
         vector<S2Point>{g.vertex(g.edge(e).first),
                         g.vertex(g.edge(e).second)});
     auto ids = g.input_edge_ids(e);
@@ -859,7 +860,7 @@ void InputEdgeIdCheckingLayer::Build(const Graph& g, S2Error* error) {
         edge, vector<InputEdgeId>(ids.begin(), ids.end())));
   }
   // This comparison doesn't consider multiplicity, but that's fine.
-  std::string missing, extra;
+  string missing, extra;
   for (const auto& p : expected_) {
     if (std::count(actual.begin(), actual.end(), p) > 0) continue;
     missing += ToString(p);

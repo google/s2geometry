@@ -37,6 +37,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
@@ -198,10 +199,10 @@ const char kEncodedPolyline3Segments[] =
 //////////////////////////////////////////////////////////////
 
 // HexEncodeStr returns the data in str in hex encoded form.
-const std::string HexEncodeStr(const std::string& str) {
+const string HexEncodeStr(const string& str) {
   static const char* const lut = "0123456789ABCDEF";
 
-  std::string result;
+  string result;
   result.reserve(2 * str.size());
   for (size_t i = 0; i < str.length(); ++i) {
     const unsigned char c = str[i];
@@ -216,11 +217,11 @@ class S2RegionEncodeDecodeTest : public testing::Test {
   // TestEncodeDecode tests that the input encodes to match the expected
   // golden data, and then returns the decode of the data into dst.
   template <class Region>
-  void TestEncodeDecode(const std::string& golden, const Region& src, Region* dst) {
+  void TestEncodeDecode(const string& golden, const Region& src, Region* dst) {
     Encoder encoder;
     src.Encode(&encoder);
 
-    EXPECT_EQ(golden, HexEncodeStr(std::string(encoder.base(), encoder.length())));
+    EXPECT_EQ(golden, HexEncodeStr(string(encoder.base(), encoder.length())));
 
     Decoder decoder(encoder.base(), encoder.length());
     dst->Decode(&decoder);
@@ -297,8 +298,8 @@ TEST_F(S2RegionEncodeDecodeTest, S2LatLngRect) {
 }
 
 TEST_F(S2RegionEncodeDecodeTest, S2Loop) {
-  const std::string kCross1 = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1";
-  const std::string kCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;";
+  const string kCross1 = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1";
+  const string kCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;";
 
   S2Loop loop;
   S2Loop loop_empty(S2Loop::kEmpty());
@@ -324,8 +325,8 @@ TEST_F(S2RegionEncodeDecodeTest, S2PointRegion) {
 }
 
 TEST_F(S2RegionEncodeDecodeTest, S2Polygon) {
-  const std::string kCross1 = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1";
-  const std::string kCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;";
+  const string kCross1 = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1";
+  const string kCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;";
 
   S2Polygon polygon;
   unique_ptr<S2Polygon> polygon_empty = s2textformat::MakePolygon("");

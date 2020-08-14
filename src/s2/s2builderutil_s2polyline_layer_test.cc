@@ -30,6 +30,7 @@ using absl::make_unique;
 using s2builderutil::IndexedS2PolylineLayer;
 using s2builderutil::S2PolylineLayer;
 using s2textformat::MakePolylineOrDie;
+using std::string;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;
@@ -196,7 +197,7 @@ TEST(IndexedS2PolylineLayer, AddsShape) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolylineLayer>(&index));
-  const std::string& polyline_str = "0:0, 0:10";
+  const string& polyline_str = "0:0, 0:10";
   builder.AddPolyline(*MakePolylineOrDie(polyline_str));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));

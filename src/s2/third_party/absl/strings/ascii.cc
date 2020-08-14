@@ -14,6 +14,8 @@
 
 #include "s2/third_party/absl/strings/ascii.h"
 
+using std::string;
+
 namespace absl {
 namespace ascii_internal {
 
@@ -154,19 +156,19 @@ const char kToUpper[256] = {
 
 }  // namespace ascii_internal
 
-void AsciiStrToLower(std::string* s) {
+void AsciiStrToLower(string* s) {
   for (auto& ch : *s) {
     ch = absl::ascii_tolower(ch);
   }
 }
 
-void AsciiStrToUpper(std::string* s) {
+void AsciiStrToUpper(string* s) {
   for (auto& ch : *s) {
     ch = absl::ascii_toupper(ch);
   }
 }
 
-void RemoveExtraAsciiWhitespace(std::string* str) {
+void RemoveExtraAsciiWhitespace(string* str) {
   auto stripped = StripAsciiWhitespace(*str);
 
   if (stripped.empty()) {

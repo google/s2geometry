@@ -421,7 +421,7 @@
 
 // ABSL_HAVE_STD_STRING_VIEW
 //
-// Checks whether C++17 string_view is available.
+// Checks whether C++17 std::string_view is available.
 #ifdef ABSL_HAVE_STD_STRING_VIEW
 #error "ABSL_HAVE_STD_STRING_VIEW cannot be directly set."
 #endif
@@ -430,8 +430,8 @@
 #if __has_include(<string_view>) && __cplusplus >= 201703L
 #define ABSL_HAVE_STD_STRING_VIEW 1
 #endif
-// TODO(b/68770332) For now, using string_view is not practical.
-// This can be reversed when absl::string_view presents the string_view
+// TODO(b/68770332) For now, using std::string_view is not practical.
+// This can be reversed when absl::string_view presents the std::string_view
 #undef ABSL_HAVE_STD_STRING_VIEW
 #endif
 

@@ -33,6 +33,7 @@
 #include "s2/s2text_format.h"
 
 using absl::make_unique;
+using std::string;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;
@@ -46,9 +47,9 @@ using SiblingPairs = GraphOptions::SiblingPairs;
 namespace s2builderutil {
 
 struct TestDegeneracy {
-  std::string edge_str;
+  string edge_str;
   bool is_hole;
-  TestDegeneracy(std::string _edge_str, bool _is_hole)
+  TestDegeneracy(string _edge_str, bool _is_hole)
       : edge_str(_edge_str), is_hole(_is_hole) {
   }
 };
@@ -103,7 +104,7 @@ void DegeneracyCheckingLayer::Build(const Graph& g, S2Error* error) {
   EXPECT_EQ(IsFullyDegenerate(g), degeneracies.size() == g.num_edges());
 }
 
-void ExpectDegeneracies(const std::string& polygon_str,
+void ExpectDegeneracies(const string& polygon_str,
                         const vector<TestDegeneracy>& expected) {
   S2Builder builder{S2Builder::Options()};
   builder.StartLayer(make_unique<DegeneracyCheckingLayer>(expected));

@@ -17,6 +17,8 @@
 
 #include "s2/third_party/absl/strings/str_cat.h"
 
+using std::String;
+
 namespace s2shapeutil {
 
 EdgeIterator::EdgeIterator(const S2ShapeIndex* index)
@@ -38,7 +40,7 @@ void EdgeIterator::Next() {
   }
 }
 
-std::string EdgeIterator::DebugString() const {
+string EdgeIterator::DebugString() const {
   return absl::StrCat("(shape=", shape_id_, ", edge=", edge_id_, ")");
 }
 

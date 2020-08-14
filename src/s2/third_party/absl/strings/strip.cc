@@ -19,6 +19,8 @@
 
 #include "s2/third_party/absl/strings/string_view.h"
 
+using std::string;
+
 // ----------------------------------------------------------------------
 // ReplaceCharacters
 //    Replaces any occurrence of any of the 'remove' *bytes*
@@ -33,7 +35,7 @@ void ReplaceCharacters(char* str, size_t len, absl::string_view remove,
   }
 }
 
-void ReplaceCharacters(std::string* s, absl::string_view remove, char replace_with) {
+void ReplaceCharacters(string* s, absl::string_view remove, char replace_with) {
   for (char& ch : *s) {
     if (remove.find(ch) != absl::string_view::npos) {
       ch = replace_with;

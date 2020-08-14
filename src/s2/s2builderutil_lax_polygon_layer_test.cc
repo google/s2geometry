@@ -39,6 +39,7 @@ using s2textformat::MakePointOrDie;
 using s2textformat::MakePolylineOrDie;
 using std::map;
 using std::set;
+using std::string;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;
@@ -46,7 +47,7 @@ using DegenerateBoundaries = LaxPolygonLayer::Options::DegenerateBoundaries;
 
 namespace {
 
-std::string ToString(DegenerateBoundaries degenerate_boundaries) {
+string ToString(DegenerateBoundaries degenerate_boundaries) {
   switch (degenerate_boundaries) {
     case DegenerateBoundaries::DISCARD: return "DISCARD";
     case DegenerateBoundaries::DISCARD_HOLES: return "DISCARD_HOLES";
@@ -80,7 +81,7 @@ void TestLaxPolygon(string_view input_str, string_view expected_str,
   builder.AddIsFullPolygonPredicate(S2Builder::IsFullPolygon(has_full_loop));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
-  std::string actual_str = s2textformat::ToString(output, "; ");
+  string actual_str = s2textformat::ToString(output, "; ");
   EXPECT_EQ(expected_str, actual_str);
 }
 
@@ -176,8 +177,8 @@ TEST(LaxPolygonLayer, AllDegenerateHoles) {
 }
 
 TEST(LaxPolygonLayer, SomeDegenerateShells) {
-  const std::string kNormal = "0:0, 0:9, 9:0; 1:1, 7:1, 1:7";
-  const std::string kInput = kNormal + "; 3:2; 2:2, 2:3";
+  const string kNormal = "0:0, 0:9, 9:0; 1:1, 7:1, 1:7";
+  const string kInput = kNormal + "; 3:2; 2:2, 2:3";
   TestLaxPolygonUnchanged(kInput, DegenerateBoundaries::KEEP);
   TestLaxPolygonUnchanged(kInput, DegenerateBoundaries::DISCARD_HOLES);
   TestLaxPolygon(kInput, kNormal, DegenerateBoundaries::DISCARD);
@@ -197,19 +198,19 @@ TEST(LaxPolygonLayer, SomeDegenerateHoles) {
 
 TEST(LaxPolygonLayer, NormalAndDegenerateShellsAndHoles) {
   // We start with two normal shells and one normal hole.
-  const std::string kNormal = "0:0, 0:9, 9:9, 9:0; "
+  const string kNormal = "0:0, 0:9, 9:9, 9:0; "
                          "0:10, 0:19, 9:19, 9:10; 1:11, 8:11, 8:18, 1:18";
   // These are the same loops augmented with degenerate interior filaments
   // (holes).  Note that one filament connects the second shell and hole
   // above, transforming them into a single loop.
-  const std::string kNormalWithDegenHoles =
+  const string kNormalWithDegenHoles =
       "0:0, 0:9, 1:8, 1:7, 1:8, 0:9, 9:9, 9:0; "
       "0:10, 0:19, 9:19, 9:10, 0:10, 1:11, 8:11, 8:18, 1:18, 1:11";
   // Then we add other degenerate shells and holes, including a sibling pair
   // that connects the two shells above.
-  const std::string kDegenShells = "0:9, 0:10; 2:12; 3:13, 3:14; 20:20; 10:0, 10:1";
-  const std::string kDegenHoles = "2:5; 3:6, 3:7; 8:8";
-  const std::string kInput = kNormalWithDegenHoles + "; " +
+  const string kDegenShells = "0:9, 0:10; 2:12; 3:13, 3:14; 20:20; 10:0, 10:1";
+  const string kDegenHoles = "2:5; 3:6, 3:7; 8:8";
+  const string kInput = kNormalWithDegenHoles + "; " +
                         kDegenShells + "; " + kDegenHoles;
   TestLaxPolygon(kInput, kNormal, DegenerateBoundaries::DISCARD);
   TestLaxPolygon(kInput, kNormal + "; " + kDegenShells,
@@ -342,7 +343,7 @@ TEST(IndexedLaxPolygonLayer, AddsShape) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedLaxPolygonLayer>(&index));
-  const std::string& polygon_str = "0:0, 0:10, 10:0";
+  const string& polygon_str = "0:0, 0:10, 10:0";
   builder.AddPolygon(*s2textformat::MakePolygon(polygon_str));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
