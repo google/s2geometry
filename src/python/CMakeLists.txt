@@ -1,5 +1,5 @@
 include(${SWIG_USE_FILE})
-include_directories(${PYTHON_INCLUDE_PATH})
+include_directories(${Python3_INCLUDE_DIRS})
 
 set(CMAKE_SWIG_FLAGS "")
 set_property(SOURCE s2.i PROPERTY SWIG_FLAGS "-module" "pywraps2")
@@ -12,21 +12,15 @@ else()
     swig_add_library(pywraps2 LANGUAGE python SOURCES s2.i)
 endif()
 
-swig_link_libraries(pywraps2 ${PYTHON_LIBRARIES} s2)
+swig_link_libraries(pywraps2 ${Python3_LIBRARIES} s2)
 enable_testing()
 add_test(NAME pywraps2_test COMMAND
-         ${PYTHON_EXECUTABLE}
+         ${Python3_EXECUTABLE}
 	 "${PROJECT_SOURCE_DIR}/src/python/pywraps2_test.py")
 set_property(TEST pywraps2_test PROPERTY ENVIRONMENT
              "PYTHONPATH=$ENV{PYTHONPATH}:${PROJECT_BINARY_DIR}/python")
 
-execute_process(COMMAND "${PYTHON_EXECUTABLE}" -c "if True:
-                  from distutils import sysconfig as sc;
-                  print(sc.get_python_lib(prefix='', plat_specific=True))"
-                OUTPUT_VARIABLE PYTHON_SITE
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
 # Install the wrapper.
-install(TARGETS _pywraps2 DESTINATION ${PYTHON_SITE})
+install(TARGETS _pywraps2 DESTINATION ${Python3_SITELIB})
 install(FILES "${PROJECT_BINARY_DIR}/python/pywraps2.py"
-        DESTINATION ${PYTHON_SITE})
+	DESTINATION ${Python3_SITELIB})

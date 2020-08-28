@@ -114,6 +114,8 @@ sudo port install swig
 ```
 Expect to see some warnings if you build with swig 2.0.
 
+Python 3 is required.
+
 ## Other S2 implementations
 
 * [Go](https://github.com/golang/geo) (Approximately 40% complete.)
