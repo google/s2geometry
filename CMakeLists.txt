@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
 
 project(s2-geometry)
 
@@ -62,8 +62,9 @@ find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
 find_package(SWIG)
-find_package(PythonInterp)
-find_package(PythonLibs)
+# Use Python3_ROOT_DIR to help find python3, if the correct location is not
+# being found by default.
+find_package(Python3 COMPONENTS Interpreter Development)
 
 if (WIN32)
     # Use unsigned characters
@@ -86,7 +87,7 @@ endif()
 # OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
 include_directories(
     ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR}
-    ${PYTHON_INCLUDE_DIRS})
+    ${Python3_INCLUDE_DIRS})
 include_directories(src)
 
 add_library(s2
@@ -531,6 +532,6 @@ if (BUILD_EXAMPLES)
   add_subdirectory("doc/examples" examples)
 endif()
 
-if (${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
+if (${SWIG_FOUND} AND ${Python3_FOUND})
   add_subdirectory("src/python" python)
 endif()
