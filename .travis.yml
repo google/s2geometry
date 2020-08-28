@@ -81,6 +81,19 @@ matrix:
     - os: linux
       addons:
         apt:
+          packages:
+            - libgflags-dev
+            - libgoogle-glog-dev
+            - libgtest-dev
+            - libssl-dev
+            - swig3.0
+      env:
+        - MATRIX_EVAL="CC=clang && CXX=clang++"
+        - GTEST_ROOT=/usr/src/gtest
+
+    - os: linux
+      addons:
+        apt:
           sources:
             - llvm-toolchain-bionic-8
             - ubuntu-toolchain-r-test
