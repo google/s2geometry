@@ -23,14 +23,14 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-7
+            - g++-8
             - libgflags-dev
             - libgoogle-glog-dev
             - libgtest-dev
             - libssl-dev
             - swig3.0
       env:
-        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+        - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
         - GTEST_ROOT=/usr/src/gtest
 
     - os: linux
@@ -39,14 +39,14 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-6
+            - g++-9
             - libgflags-dev
             - libgoogle-glog-dev
             - libgtest-dev
             - libssl-dev
             - swig3.0
       env:
-        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+        - MATRIX_EVAL="CC=gcc-9 && CXX=g++-9"
         - GTEST_ROOT=/usr/src/gtest
 
     - os: linux
@@ -55,14 +55,14 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-5
+            - g++-10
             - libgflags-dev
             - libgoogle-glog-dev
             - libgtest-dev
             - libssl-dev
             - swig3.0
       env:
-        - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+        - MATRIX_EVAL="CC=gcc-10 && CXX=g++-10"
         - GTEST_ROOT=/usr/src/gtest
 
     - os: linux
@@ -82,6 +82,24 @@ matrix:
       addons:
         apt:
           sources:
+            - llvm-toolchain-bionic-8
+            - ubuntu-toolchain-r-test
+          packages:
+            - clang-8
+            - g++-7
+            - libgflags-dev
+            - libgoogle-glog-dev
+            - libgtest-dev
+            - libssl-dev
+            - swig3.0
+      env:
+        - MATRIX_EVAL="CC=clang-8 && CXX=clang++-8"
+        - GTEST_ROOT=/usr/src/gtest
+
+    - os: linux
+      addons:
+        apt:
+          sources:
             - llvm-toolchain-bionic-9
             - ubuntu-toolchain-r-test
           packages:
@@ -94,6 +112,24 @@ matrix:
             - swig3.0
       env:
         - MATRIX_EVAL="CC=clang-9 && CXX=clang++-9"
+        - GTEST_ROOT=/usr/src/gtest
+
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-bionic-10
+            - ubuntu-toolchain-r-test
+          packages:
+            - clang-10
+            - g++-7
+            - libgflags-dev
+            - libgoogle-glog-dev
+            - libgtest-dev
+            - libssl-dev
+            - swig3.0
+      env:
+        - MATRIX_EVAL="CC=clang-10 && CXX=clang++-10"
         - GTEST_ROOT=/usr/src/gtest
 
     - os: osx
