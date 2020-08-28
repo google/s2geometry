@@ -82,10 +82,10 @@ matrix:
       addons:
         apt:
           sources:
-            - llvm-toolchain-bionic-8.0
+            - llvm-toolchain-bionic-9.0
             - ubuntu-toolchain-r-test
           packages:
-            - clang-8.0
+            - clang-9.0
             - g++-7
             - libgflags-dev
             - libgoogle-glog-dev
@@ -93,7 +93,7 @@ matrix:
             - libssl-dev
             - swig3.0
       env:
-        - MATRIX_EVAL="CC=clang-8.0 && CXX=clang++-8.0"
+        - MATRIX_EVAL="CC=clang-9.0 && CXX=clang++-9.0"
         - GTEST_ROOT=/usr/src/gtest
 
     - os: osx
