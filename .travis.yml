@@ -1,9 +1,22 @@
-dist: trusty
+dist: bionic
 
 language: cpp
 
 matrix:
   include:
+    - os: linux
+      addons:
+        apt:
+          packages:
+            - libgflags-dev
+            - libgoogle-glog-dev
+            - libgtest-dev
+            - libssl-dev
+            - swig3.0
+      env:
+        - MATRIX_EVAL="CC=gcc && CXX=g++"
+        - GTEST_ROOT=/usr/src/gtest
+
     - os: linux
       addons:
         apt:
@@ -55,11 +68,24 @@ matrix:
     - os: linux
       addons:
         apt:
+          packages:
+            - libgflags-dev
+            - libgoogle-glog-dev
+            - libgtest-dev
+            - libssl-dev
+            - swig3.0
+      env:
+        - MATRIX_EVAL="CC=clang && CXX=clang++"
+        - GTEST_ROOT=/usr/src/gtest
+
+    - os: linux
+      addons:
+        apt:
           sources:
-            - llvm-toolchain-trusty-5.0
+            - llvm-toolchain-bionic-9
             - ubuntu-toolchain-r-test
           packages:
-            - clang-5.0
+            - clang-9
             - g++-7
             - libgflags-dev
             - libgoogle-glog-dev
@@ -67,7 +93,7 @@ matrix:
             - libssl-dev
             - swig3.0
       env:
-        - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+        - MATRIX_EVAL="CC=clang-9 && CXX=clang++-9"
         - GTEST_ROOT=/usr/src/gtest
 
     - os: osx
