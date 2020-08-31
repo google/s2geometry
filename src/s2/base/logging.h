@@ -91,7 +91,7 @@ class S2FatalLogMessage : public S2LogMessage {
                     absl::LogSeverity severity, std::ostream& stream)
       ABSL_ATTRIBUTE_COLD
     : S2LogMessage(file, line, severity, stream) {}
-  ABSL_ATTRIBUTE_NORETURN ~S2FatalLogMessage() { abort(); }
+  ABSL_ATTRIBUTE_NORETURN ~S2FatalLogMessage() { throw std::runtime_error("s2geometry fatal error"); }
 };
 
 // Logging stream that does nothing.
