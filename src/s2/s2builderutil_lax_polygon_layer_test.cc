@@ -53,6 +53,10 @@ string ToString(DegenerateBoundaries degenerate_boundaries) {
     case DegenerateBoundaries::DISCARD_SHELLS: return "DISCARD_SHELLS";
     case DegenerateBoundaries::KEEP: return "KEEP";
   }
+  // Cases are exhaustive, but some compilers don't know that and emit a
+  // warning.
+  S2_LOG(FATAL) << "Unknown DegenerateBoundaries value: "
+                << static_cast<int>(degenerate_boundaries);
 }
 
 void TestLaxPolygon(string_view input_str, string_view expected_str,
