@@ -534,6 +534,18 @@ class S2Point {
   }
 %enddef
 
+%define USE_EQUALS_FN_FOR_EQ_AND_NE(type)
+  %extend type {
+    bool __eq__(const type& other) {
+      return $self->Equals(&other);
+    }
+
+    bool __ne__(const type& other) {
+      return !$self->Equals(&other);
+    }
+  }
+%enddef
+
 %define USE_EQUALS_FOR_EQ_AND_NE(type)
   %extend type {
     bool __eq__(const type& other) {
@@ -579,3 +591,7 @@ USE_HASH_FOR_TYPE(S2CellId, S2CellIdHash)
 
 USE_EQUALS_FOR_EQ_AND_NE(S1Angle)
 USE_COMPARISON_FOR_LT_AND_GT(S1Angle)
+
+USE_EQUALS_FN_FOR_EQ_AND_NE(S2Loop)
+USE_EQUALS_FN_FOR_EQ_AND_NE(S2Polygon)
+USE_EQUALS_FN_FOR_EQ_AND_NE(S2Polyline)

@@ -128,6 +128,9 @@ class PyWrapS2TestCase(unittest.TestCase):
     point = london.ToPoint()
     self.assertTrue(loop.Contains(point))
 
+  def testS2LoopUsesValueEquality(self):
+    self.assertEqual(s2.S2Loop(), s2.S2Loop())
+
   def testS2PolygonCopiesLoopInConstructorBecauseItTakesOwnership(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
     loop = s2.S2Loop(s2.S2Cell(s2.S2CellId(london)))
@@ -213,6 +216,9 @@ class PyWrapS2TestCase(unittest.TestCase):
     line.InitFromS2Points(list_points)
     self.assertAlmostEqual(20.0, line.GetLength().degrees())
 
+  def testS2PolylineUsesValueEquality(self):
+    self.assertEqual(s2.S2Polyline(), s2.S2Polyline())
+
   def testS2PointsCanBeNormalized(self):
     line = s2.S2Polyline()
     line.InitFromS2LatLngs([s2.S2LatLng.FromDegrees(37.794484, -122.394871),
@@ -234,6 +240,9 @@ class PyWrapS2TestCase(unittest.TestCase):
                             s2.S2LatLng.FromDegrees(51.5, -0.125)])
     intersections = polygon.IntersectWithPolyline(line)
     self.assertEqual(1, len(intersections))
+
+  def testS2PolygonUsesValueEquality(self):
+    self.assertEqual(s2.S2Polygon(), s2.S2Polygon())
 
   def testCrossingSign(self):
     a = s2.S2LatLng.FromDegrees(-1, 0).ToPoint()
