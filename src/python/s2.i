@@ -1,5 +1,6 @@
 %include "std_vector.i"
 %include "std_string.i"
+%include "stdint.i"
 
 %template() std::vector<unsigned long long>;
 %template() std::vector<S2CellId>;
