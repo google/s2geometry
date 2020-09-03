@@ -83,8 +83,7 @@ class S2LogMessage {
   std::ostream& stream_;
 };
 
-// Same as S2LogMessage, but destructor is marked no-return to avoid
-// "no return value warnings" in functions that return non-void.
+// Same as S2LogMessage, but constructor throws.
 class S2FatalLogMessage : public S2LogMessage {
  public:
   S2FatalLogMessage(const char* file, int line,
@@ -94,7 +93,7 @@ class S2FatalLogMessage : public S2LogMessage {
   {
     throw std::runtime_error("s2geometry fatal error");
   }
-  ABSL_ATTRIBUTE_NORETURN ~S2FatalLogMessage() { }
+  ~S2FatalLogMessage() { }
 };
 
 // Logging stream that does nothing.
