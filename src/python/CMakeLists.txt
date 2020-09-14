@@ -16,11 +16,11 @@ swig_link_libraries(pywraps2 ${Python3_LIBRARIES} s2)
 enable_testing()
 add_test(NAME pywraps2_test COMMAND
          ${Python3_EXECUTABLE}
-	 "${PROJECT_SOURCE_DIR}/src/python/pywraps2_test.py")
+         "${PROJECT_SOURCE_DIR}/src/python/pywraps2_test.py")
 set_property(TEST pywraps2_test PROPERTY ENVIRONMENT
              "PYTHONPATH=$ENV{PYTHONPATH}:${PROJECT_BINARY_DIR}/python")
 
 # Install the wrapper.
 install(TARGETS _pywraps2 DESTINATION ${Python3_SITELIB})
 install(FILES "${PROJECT_BINARY_DIR}/python/pywraps2.py"
-	DESTINATION ${Python3_SITELIB})
+        DESTINATION ${Python3_SITELIB})
