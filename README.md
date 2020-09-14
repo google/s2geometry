@@ -100,6 +100,8 @@ Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
 If you want the Python interface, you will also need:
 
 * [SWIG](https://github.com/swig/swig) (for Python support, optional)
+* [setuptools](https://github.com/pypa/setuptools) and
+  [wheel](https://github.com/pypa/wheel) (required to build wheel package)
 
 which can be installed via
 
