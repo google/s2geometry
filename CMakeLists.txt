@@ -25,15 +25,15 @@ add_feature_info(GFLAGS WITH_GFLAGS
                  "allows changing command line flags.")
 
 # glog option can only be turned on if gflags is on.
-cmake_dependent_option(WITH_GLOG "Use glog for logging." ON
+cmake_dependent_option(WITH_GLOG "Use glog for logging." OFF
                        "WITH_GFLAGS" OFF)
 add_feature_info(GLOG WITH_GLOG "provides logging configurability.")
 
-option(BUILD_SHARED_LIBS "Build shared libraries instead of static." ON)
+option(BUILD_SHARED_LIBS "Build shared libraries instead of static." OFF)
 add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
                  "builds shared libraries instead of static.")
 
-option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
+option(BUILD_EXAMPLES "Build s2 documentation examples." OFF)
 
 feature_summary(WHAT ALL)
 
@@ -65,6 +65,25 @@ find_package(SWIG)
 # Use Python3_ROOT_DIR to help find python3, if the correct location is not
 # being found by default.
 find_package(Python3 COMPONENTS Interpreter Development)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    MESSAGE( STATUS "using clang settings" )
+    add_compile_options( -Oz )
+    # add_compile_options( -std=c++11 -stdlib=libc++ )
+    # add_compile_options( -ftemplate-depth=1024 ) # sometimes you just do what the compiler tells you
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    MESSAGE( STATUS "using gnu settings" )
+    # add_compile_options( -Wall -Wextra -Werror )
+    # add_compile_options( -std=c++11 )
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    MESSAGE( STATUS "using msvc settings" )
+    # add_compile_options( /W4 /WX )
+    # add_compile_options( /wd4503 ) # truncated symbol
+    # add_compile_options( /wd4702 ) # unreachable code
+    # add_compile_options( /wd4091 ) # typedef ignored on left when no variable is declared
+    # add_compile_options( /bigobj )
+    # add_definitions( /DUNICODE /D_UNICODE ) # it is a new millenium
+endif()
 
 if (WIN32)
     # Use unsigned characters
@@ -199,10 +218,6 @@ add_library(s2
             src/s2/util/math/exactfloat/exactfloat.cc
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
-add_library(s2testing STATIC
-            src/s2/s2builderutil_testing.cc
-            src/s2/s2shapeutil_testing.cc
-            src/s2/s2testing.cc)
 target_link_libraries(
     s2
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
@@ -408,125 +423,7 @@ install(FILES src/s2/util/math/mathutil.h
 install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h
         DESTINATION include/s2/util/units)
-install(TARGETS s2 s2testing DESTINATION lib)
 
-message("GTEST_ROOT: ${GTEST_ROOT}")
-if (GTEST_ROOT)
-  add_subdirectory(${GTEST_ROOT} build_gtest)
-  include_directories(${GTEST_ROOT}/include)
-
-  set(S2TestFiles
-      src/s2/encoded_s2cell_id_vector_test.cc
-      src/s2/encoded_s2point_vector_test.cc
-      src/s2/encoded_s2shape_index_test.cc
-      src/s2/encoded_string_vector_test.cc
-      src/s2/encoded_uint_vector_test.cc
-      src/s2/id_set_lexicon_test.cc
-      src/s2/mutable_s2shape_index_test.cc
-      src/s2/r1interval_test.cc
-      src/s2/r2rect_test.cc
-      src/s2/s1angle_test.cc
-      src/s2/s1chord_angle_test.cc
-      src/s2/s1interval_test.cc
-      src/s2/s2boolean_operation_test.cc
-      src/s2/s2builder_graph_test.cc
-      src/s2/s2builder_test.cc
-      src/s2/s2builderutil_closed_set_normalizer_test.cc
-      src/s2/s2builderutil_find_polygon_degeneracies_test.cc
-      src/s2/s2builderutil_lax_polygon_layer_test.cc
-      src/s2/s2builderutil_s2point_vector_layer_test.cc
-      src/s2/s2builderutil_s2polygon_layer_test.cc
-      src/s2/s2builderutil_s2polyline_layer_test.cc
-      src/s2/s2builderutil_s2polyline_vector_layer_test.cc
-      src/s2/s2builderutil_snap_functions_test.cc
-      src/s2/s2builderutil_testing_test.cc
-      src/s2/s2cap_test.cc
-      src/s2/s2cell_test.cc
-      src/s2/s2cell_id_test.cc
-      src/s2/s2cell_index_test.cc
-      src/s2/s2cell_union_test.cc
-      src/s2/s2centroids_test.cc
-      src/s2/s2closest_cell_query_base_test.cc
-      src/s2/s2closest_cell_query_test.cc
-      src/s2/s2closest_edge_query_base_test.cc
-      src/s2/s2closest_edge_query_test.cc
-      src/s2/s2closest_point_query_base_test.cc
-      src/s2/s2closest_point_query_test.cc
-      src/s2/s2contains_point_query_test.cc
-      src/s2/s2contains_vertex_query_test.cc
-      src/s2/s2convex_hull_query_test.cc
-      src/s2/s2coords_test.cc
-      src/s2/s2crossing_edge_query_test.cc
-      src/s2/s2earth_test.cc
-      src/s2/s2edge_clipping_test.cc
-      src/s2/s2edge_crosser_test.cc
-      src/s2/s2edge_crossings_test.cc
-      src/s2/s2edge_distances_test.cc
-      src/s2/s2edge_tessellator_test.cc
-      src/s2/s2edge_vector_shape_test.cc
-      src/s2/s2error_test.cc
-      src/s2/s2furthest_edge_query_test.cc
-      src/s2/s2latlng_test.cc
-      src/s2/s2latlng_rect_bounder_test.cc
-      src/s2/s2latlng_rect_test.cc
-      src/s2/s2lax_loop_shape_test.cc
-      src/s2/s2lax_polygon_shape_test.cc
-      src/s2/s2lax_polyline_shape_test.cc
-      src/s2/s2loop_measures_test.cc
-      src/s2/s2loop_test.cc
-      src/s2/s2measures_test.cc
-      src/s2/s2metrics_test.cc
-      src/s2/s2max_distance_targets_test.cc
-      src/s2/s2min_distance_targets_test.cc
-      src/s2/s2padded_cell_test.cc
-      src/s2/s2point_test.cc
-      src/s2/s2point_vector_shape_test.cc
-      src/s2/s2point_compression_test.cc
-      src/s2/s2point_index_test.cc
-      src/s2/s2point_region_test.cc
-      src/s2/s2pointutil_test.cc
-      src/s2/s2polygon_test.cc
-      src/s2/s2polyline_alignment_test.cc
-      src/s2/s2polyline_simplifier_test.cc
-      src/s2/s2polyline_measures_test.cc
-      src/s2/s2polyline_test.cc
-      src/s2/s2predicates_test.cc
-      src/s2/s2projections_test.cc
-      src/s2/s2r2rect_test.cc
-      src/s2/s2region_test.cc
-      src/s2/s2region_term_indexer_test.cc
-      src/s2/s2region_coverer_test.cc
-      src/s2/s2region_union_test.cc
-      src/s2/s2shape_index_buffered_region_test.cc
-      src/s2/s2shape_index_measures_test.cc
-      src/s2/s2shape_index_region_test.cc
-      src/s2/s2shape_index_test.cc
-      src/s2/s2shape_measures_test.cc
-      src/s2/s2shapeutil_build_polygon_boundaries_test.cc
-      src/s2/s2shapeutil_coding_test.cc
-      src/s2/s2shapeutil_contains_brute_force_test.cc
-      src/s2/s2shapeutil_count_edges_test.cc
-      src/s2/s2shapeutil_edge_iterator_test.cc
-      src/s2/s2shapeutil_get_reference_point_test.cc
-      src/s2/s2shapeutil_range_iterator_test.cc
-      src/s2/s2shapeutil_visit_crossing_edge_pairs_test.cc
-      src/s2/s2testing_test.cc
-      src/s2/s2text_format_test.cc
-      src/s2/s2wedge_relations_test.cc
-      src/s2/sequence_lexicon_test.cc
-      src/s2/value_lexicon_test.cc)
-
-  enable_testing()
-
-  foreach (test_cc ${S2TestFiles})
-    get_filename_component(test ${test_cc} NAME_WE)
-    add_executable(${test} ${test_cc})
-    target_link_libraries(
-        ${test}
-        s2testing s2 gtest_main)
-    add_test(${test} ${test})
-  endforeach()
-endif()
 
 if (BUILD_EXAMPLES)
   add_subdirectory("doc/examples" examples)
