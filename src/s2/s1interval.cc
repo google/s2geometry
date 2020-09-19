@@ -48,7 +48,7 @@ double S1Interval::GetLength() const {
 
 S1Interval S1Interval::Complement() const {
   if (lo() == hi()) return Full();   // Singleton.
-  return S1Interval(hi(), lo(), ARGS_CHECKED);  // Handles empty and full.
+  return S1Interval(lo(), hi(), ARGS_CHECKED);  // Handles empty and full.
 }
 
 double S1Interval::GetComplementCenter() const {
