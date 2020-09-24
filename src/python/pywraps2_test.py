@@ -63,6 +63,19 @@ class PyWrapS2TestCase(unittest.TestCase):
     neighbors = cell.GetEdgeNeighbors()
     self.assertEqual(neighbors, expected_neighbors)
 
+  def testS2CellIdGetAllNeighborsIsWrappedCorrectly(self):
+    cell = s2.S2CellId(0x6aa7590000000000)
+    expected_neighbors = (s2.S2CellId(0x2ab3530000000000),
+                          s2.S2CellId(0x2ab34b0000000000),
+                          s2.S2CellId(0x2ab34d0000000000),
+                          s2.S2CellId(0x6aa75b0000000000),
+                          s2.S2CellId(0x6aa7570000000000),
+                          s2.S2CellId(0x6aa75f0000000000),
+                          s2.S2CellId(0x6aa7510000000000),
+                          s2.S2CellId(0x6aa75d0000000000))
+    neighbors = cell.GetAllNeighbors(cell.level())
+    self.assertEqual(neighbors, expected_neighbors)
+
   def testS2CellIdIntersectsIsTrueForOverlap(self):
     cell1 = s2.S2CellId(0x89c259c000000000)
     cell2 = s2.S2CellId(0x89c2590000000000)
