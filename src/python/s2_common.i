@@ -302,6 +302,8 @@ class S2Point {
 %unignore S2CellId;
 %unignore S2CellId::S2CellId;
 %unignore S2CellId::~S2CellId;
+%unignore S2CellId::AppendAllNeighbors(int, std::vector<S2CellId>*) const;
+%rename(GetAllNeighbors) S2CellId::AppendAllNeighbors(int level, std::vector<S2CellId>* output) const;
 %unignore S2CellId::Begin;
 %unignore S2CellId::End;
 %unignore S2CellId::FromFaceIJ(int, int, int);
