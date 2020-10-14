@@ -369,7 +369,6 @@ class S2ClosestCellQueryBase {
 
   std::vector<S2CellId> max_distance_covering_;
   std::vector<S2CellId> intersection_with_max_distance_;
-  const LabelledCell* tmp_range_data_[kMinRangesToEnqueue - 1];
 };
 
 
