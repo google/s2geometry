@@ -407,19 +407,6 @@ class S2Polygon final : public S2Region {
   void InitToApproxSymmetricDifference(const S2Polygon* a, const S2Polygon* b,
                                        S1Angle snap_radius);
 
-  // Snaps the vertices of the given polygon using the given SnapFunction
-  // (e.g., s2builderutil::IntLatLngSnapFunction(6) snaps to E6 coordinates).
-  // This can change the polygon topology (merging loops, for example), but
-  // the resulting polygon is guaranteed to be valid, and no vertex will move
-  // by more than snap_function.snap_radius().  See S2Builder for other
-  // guarantees (e.g., minimum edge-vertex separation).
-  //
-  // Note that this method is a thin wrapper over S2Builder, so if you are
-  // starting with data that is not in S2Polygon format (e.g., integer E7
-  // coordinates) then it is faster to just use S2Builder directly.
-  void InitToSnapped(const S2Polygon& polygon,
-                     const S2Builder::SnapFunction& snap_function);
-
   // Convenience function that snaps the vertices to S2CellId centers at the
   // given level (default level 30, which has S2CellId centers spaced about 1
   // centimeter apart).  Polygons can be efficiently encoded by Encode() after
