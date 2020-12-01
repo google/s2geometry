@@ -128,6 +128,16 @@ std::vector<S2Polyline *> *out(std::vector<S2Polyline *> temp) {
   }
 }
 
+%inline %{
+  // This isn't a constructor because it clashes with the SWIG-redefinition
+  // below and the actual S2Point (a Vector_3d).
+  static PyObject *S2Point_FromRaw(double x, double y, double z) {
+    // Creates an S2Point directly, mostly useful for testing.
+    return SWIG_NewPointerObj(new S2Point(x, y, z), SWIGTYPE_p_S2Point,
+                              SWIG_POINTER_OWN);
+  }
+%}
+
 // We provide our own definition of S2Point, because the real one is too
 // difficult to wrap correctly.
 class S2Point {
@@ -267,6 +277,8 @@ class S2Point {
 %unignore S2Cap::Empty;
 %unignore S2Cap::Encode;
 %unignore S2Cap::Expanded;
+%unignore S2Cap::FromCenterArea(const S2Point&, double);
+%unignore S2Cap::FromCenterHeight(const S2Point&, double);
 %unignore S2Cap::FromPoint;
 %unignore S2Cap::Full;
 %unignore S2Cap::GetCapBound() const;
@@ -634,3 +646,34 @@ USE_COMPARISON_FOR_LT_AND_GT(S1Angle)
 USE_EQUALS_FN_FOR_EQ_AND_NE(S2Loop)
 USE_EQUALS_FN_FOR_EQ_AND_NE(S2Polygon)
 USE_EQUALS_FN_FOR_EQ_AND_NE(S2Polyline)
+
+// Simple implementation of key S2Testing methods
+%pythoncode %{
+import random
+
+class S2Testing(object):
+  """ Simple implementation of key S2Testing methods. """
+  _rnd = random.Random(1)
+
+  @classmethod
+  def RandomPoint(cls):
+    """ Return a random unit-length vector. """
+    x = cls._rnd.uniform(-1, 1)
+    y = cls._rnd.uniform(-1, 1)
+    z = cls._rnd.uniform(-1, 1)
+    return S2Point_FromRaw(x, y, z).Normalize()
+
+  @classmethod
+  def GetRandomCap(cls, min_area, max_area):
+    """
+    Return a cap with a random axis such that the log of its area is
+    uniformly distributed between the logs of the two given values.
+    (The log of the cap angle is also approximately uniformly distributed.)
+    """
+    cap_area = max_area * pow(min_area / max_area, cls._rnd.random())
+    assert cap_area >= min_area
+    assert cap_area <= max_area
+
+    # The surface area of a cap is 2*Pi times its height.
+    return S2Cap.FromCenterArea(cls.RandomPoint(), cap_area)
+%}

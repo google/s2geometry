@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-
-
 import unittest
 import pywraps2 as s2
 
