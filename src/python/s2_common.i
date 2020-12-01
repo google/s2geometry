@@ -11,6 +11,7 @@
 #include "s2/s2region.h"
 #include "s2/s2cap.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2earth.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"
@@ -362,6 +363,41 @@ class S2Point {
 %unignore S2CellUnion::cell_ids;
 %unignore S2CellUnion::empty;
 %unignore S2CellUnion::num_cells;
+%unignore S2Earth;
+%unignore S2Earth::GetDistance(const S2LatLng&, const S2LatLng&);
+%unignore S2Earth::GetDistance(const S2Point&, const S2Point&);
+%unignore S2Earth::GetDistanceKm(const S2LatLng&, const S2LatLng&);
+%unignore S2Earth::GetDistanceKm(const S2Point&, const S2Point&);
+%unignore S2Earth::GetDistanceMeters(const S2LatLng&, const S2LatLng&);
+%unignore S2Earth::GetDistanceMeters(const S2Point&, const S2Point&);
+%unignore S2Earth::GetInitialBearing(const S2LatLng&, const S2LatLng&);
+%unignore S2Earth::HighestAltitude();
+%unignore S2Earth::HighestAltitudeKm();
+%unignore S2Earth::HighestAltitudeMeters();
+%unignore S2Earth::KmToRadians(double);
+%unignore S2Earth::LowestAltitude();
+%unignore S2Earth::LowestAltitudeKm();
+%unignore S2Earth::LowestAltitudeMeters();
+%unignore S2Earth::MetersToRadians(double);
+%unignore S2Earth::RadiansToKm(double);
+%unignore S2Earth::RadiansToMeters(double);
+%unignore S2Earth::Radius();
+%unignore S2Earth::RadiusKm();
+%unignore S2Earth::RadiusMeters();
+%unignore S2Earth::SquareKmToSteradians(double);
+%unignore S2Earth::SquareMetersToSteradians(double);
+%unignore S2Earth::SteradiansToSquareKm(double);
+%unignore S2Earth::SteradiansToSquareMeters(double);
+%unignore S2Earth::ToAngle(const util::units::Meters&);
+%unignore S2Earth::ToChordAngle(const util::units::Meters&);
+%unignore S2Earth::ToDistance(const S1Angle&);
+%unignore S2Earth::ToDistance(const S1ChordAngle&);
+%unignore S2Earth::ToKm(const S1Angle&);
+%unignore S2Earth::ToKm(const S1ChordAngle&);
+%unignore S2Earth::ToLongitudeRadians(const util::units::Meters&, double);
+%unignore S2Earth::ToMeters(const S1Angle&);
+%unignore S2Earth::ToMeters(const S1ChordAngle&);
+%unignore S2Earth::ToRadians(const util::units::Meters&);
 %unignore S2LatLng;
 %unignore S2LatLng::S2LatLng;
 %unignore S2LatLng::~S2LatLng;
@@ -511,6 +547,7 @@ class S2Point {
 %include "s2/s1interval.h"
 %include "s2/s2cell_id.h"
 %include "s2/s2edge_crossings.h"
+%include "s2/s2earth.h"
 %include "s2/s2region.h"
 %include "s2/s2cap.h"
 %include "s2/s2latlng.h"

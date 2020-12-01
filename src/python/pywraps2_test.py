@@ -606,5 +606,13 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertEqual(1234, i)
     self.assertEqual(5678, j)
 
+  def testS2EarthMetricRadians(self):
+    radius_rad = s2.S2Earth.KmToRadians(12.34)
+    self.assertAlmostEqual(radius_rad, 0.0019368985451286374)
+    angle = s2.S1Angle.Radians(radius_rad)
+    radius_m = s2.S2Earth.RadiansToMeters(angle.radians())
+    self.assertEqual(radius_m, 12340.0)
+
+
 if __name__ == "__main__":
   unittest.main()
