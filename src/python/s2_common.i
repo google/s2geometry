@@ -20,6 +20,7 @@
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2region_coverer.h"
+#include "s2/s2region_term_indexer.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_union.h"
 %}
@@ -34,6 +35,16 @@
 %apply std::vector<S2CellId> *OUTPUT {std::vector<S2CellId> *covering};
 %apply std::vector<S2CellId> *OUTPUT {std::vector<S2CellId> *interior};
 %apply std::vector<S2CellId> *OUTPUT {std::vector<S2CellId> *output};
+
+%typemap(in) absl::string_view {
+  if (PyUnicode_Check($input)) {
+    $1 = absl::string_view(PyUnicode_AsUTF8($input));
+  } else {
+    SWIG_exception(SWIG_TypeError, "string expected");
+  }
+}
+%typemap(typecheck) absl::string_view = char *;
+
 
 %typemap(in, numinputs=0) S2CellId *OUTPUT_ARRAY_4(S2CellId temp[4]) {
   $1 = temp;
@@ -233,6 +244,57 @@ class S2Point {
   void set_level_mod(int level_mod) {
     $self->mutable_options()->set_level_mod(level_mod);
   }
+
+  int true_max_level() const { return $self->options().true_max_level(); }
+}
+
+// Expose Options functions on S2RegionTermIndexer until we figure out
+// nested classes in SWIG.
+%extend S2RegionTermIndexer {
+  int max_cells() const { return $self->options().max_cells(); }
+  void set_max_cells(int max_cells) {
+    $self->mutable_options()->set_max_cells(max_cells);
+  }
+
+  int min_level() const { return $self->options().min_level(); }
+  void set_min_level(int min_level) {
+    $self->mutable_options()->set_min_level(min_level);
+  }
+
+  int max_level() const { return $self->options().max_level(); }
+  void set_max_level(int max_level) {
+    $self->mutable_options()->set_max_level(max_level);
+  }
+
+  void set_fixed_level(int fixed_level) {
+    $self->mutable_options()->set_fixed_level(fixed_level);
+  }
+
+  int level_mod() const { return $self->options().level_mod(); }
+  void set_level_mod(int level_mod) {
+    $self->mutable_options()->set_level_mod(level_mod);
+  }
+
+  int true_max_level() const { return $self->options().true_max_level(); }
+
+  bool index_contains_points_only() const {
+    return $self->options().index_contains_points_only();
+  }
+  void set_index_contains_points_only(bool value) {
+    $self->mutable_options()->set_index_contains_points_only(value);
+  }
+
+  bool optimize_for_space() const {
+    return $self->options().optimize_for_space();
+  }
+  void set_optimize_for_space(bool value) {
+    $self->mutable_options()->set_optimize_for_space(value);
+  }
+
+  char marker_character() const { return $self->options().marker_character(); }
+  void set_marker_character(char ch) {
+    $self->mutable_options()->set_marker_character(ch);
+  }
 }
 
 %ignoreall
@@ -295,6 +357,7 @@ class S2Point {
 %unignore S2Cell::S2Cell;
 %unignore S2Cell::~S2Cell;
 %unignore S2Cell::ApproxArea;
+%unignore S2Cell::AverageArea;
 %unignore S2Cell::Clone;
 %unignore S2Cell::Contains;
 %unignore S2Cell::Decode;
@@ -552,6 +615,19 @@ class S2Point {
 %unignore S2RegionCoverer::GetCovering(const S2Region&, std::vector<S2CellId>*);
 %unignore S2RegionCoverer::GetInteriorCovering(const S2Region&,
                                                std::vector<S2CellId>*);
+%unignore S2RegionTermIndexer;
+%unignore S2RegionTermIndexer::S2RegionTermIndexer;
+%unignore S2RegionTermIndexer::~S2RegionTermIndexer;
+%unignore S2RegionTermIndexer::GetIndexTerms(const S2Point&, absl::string_view);
+%unignore S2RegionTermIndexer::GetIndexTerms(const S2Region&,
+                                             absl::string_view);
+%unignore S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
+    const S2CellUnion&, absl::string_view);
+%unignore S2RegionTermIndexer::GetQueryTerms(const S2Point&, absl::string_view);
+%unignore S2RegionTermIndexer::GetQueryTerms(const S2Region&,
+                                             absl::string_view);
+%unignore S2RegionTermIndexer::GetQueryTermsForCanonicalCovering(
+    const S2CellUnion&, absl::string_view);
 
 %include "s2/r1interval.h"
 %include "s2/s1angle.h"
@@ -570,6 +646,7 @@ class S2Point {
 %include "s2/s2polygon.h"
 %include "s2/s2polyline.h"
 %include "s2/s2region_coverer.h"
+%include "s2/s2region_term_indexer.h"
 %include "s2/s2cell.h"
 %include "s2/s2cell_union.h"
 
