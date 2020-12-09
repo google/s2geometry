@@ -724,6 +724,44 @@ USE_EQUALS_FN_FOR_EQ_AND_NE(S2Loop)
 USE_EQUALS_FN_FOR_EQ_AND_NE(S2Polygon)
 USE_EQUALS_FN_FOR_EQ_AND_NE(S2Polyline)
 
+// repr() methods for geodetic/cell classes
+
+%extend S2CellId {
+  %pythoncode %{
+    def __repr__(self):
+      return '<S2CellId: %s>' % self.ToString()
+  %}
+};
+
+%extend S2Cell {
+  %pythoncode %{
+    def __repr__(self):
+      return '<S2Cell: %s>' % self.id().ToString()
+  %}
+};
+
+%extend S2LatLng {
+  %pythoncode %{
+    def __repr__(self):
+      return '<S2LatLng: (%s)>' % self.ToStringInDegrees()
+  %}
+};
+
+%extend S2LatLngRect {
+  %pythoncode %{
+    def __repr__(self):
+      if self.is_empty():
+        return '<S2LatLngRect: Empty>'
+      else:
+        return '<S2LatLngRect: (%s,%s,%s,%s)>' % (
+          self.lat_lo().degrees(),
+          self.lng_lo().degrees(),
+          self.lat_hi().degrees(),
+          self.lng_hi().degrees(),
+        )
+  %}
+};
+
 // Simple implementation of key S2Testing methods
 %pythoncode %{
 import random
