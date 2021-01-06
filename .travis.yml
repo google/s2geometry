@@ -133,13 +133,6 @@ matrix:
         - GTEST_ROOT=/usr/src/gtest
 
     - os: osx
-      osx_image: xcode10.1
-      env:
-        - MATRIX_EVAL=""
-        - GTEST_ROOT="$( /bin/pwd )/googletest-release-1.8.0/googletest"
-        - OPENSSL_ROOT_DIR=/usr/local/opt/openssl
-
-    - os: osx
       osx_image: xcode11.3
       env:
         - MATRIX_EVAL=""
