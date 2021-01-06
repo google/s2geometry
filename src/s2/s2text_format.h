@@ -276,7 +276,7 @@ std::string ToString(const std::vector<S2Point>& points);
 std::string ToString(const std::vector<S2LatLng>& points);
 std::string ToString(const S2LaxPolylineShape& polyline);
 std::string ToString(const S2LaxPolygonShape& polygon,
-                const char* loop_separator = ";\n");
+                     const char* loop_separator = ";\n");
 
 // Convert the contents of an S2ShapeIndex to the format above.  The index may
 // contain S2Shapes of any type.  Shapes are reordered if necessary so that

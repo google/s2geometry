@@ -43,7 +43,7 @@
 // Example usage:
 //
 //   SequenceLexicon<string> lexicon;
-//   vector<std::string> pets {"cat", "dog", "parrot"};
+//   vector<string> pets {"cat", "dog", "parrot"};
 //   uint32 pets_id = lexicon.Add(pets);
 //   S2_CHECK_EQ(pets_id, lexicon.Add(pets));
 //   string values;

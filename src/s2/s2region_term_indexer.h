@@ -251,7 +251,7 @@ class S2RegionTermIndexer {
   // parking lots, etc).  The prefix should be kept short since it is
   // prepended to every term.
   std::vector<std::string> GetIndexTerms(const S2Region& region,
-                                    absl::string_view prefix);
+                                         absl::string_view prefix);
 
   // Converts a given query region into a set of terms.  If you compute the
   // union of all the documents associated with these terms, the result will
@@ -259,7 +259,7 @@ class S2RegionTermIndexer {
   //
   // "prefix" should match the corresponding value used when indexing.
   std::vector<std::string> GetQueryTerms(const S2Region& region,
-                                    absl::string_view prefix);
+                                         absl::string_view prefix);
 
   // Convenience methods that accept an S2Point rather than S2Region.  (These
   // methods are also faster.)
@@ -267,9 +267,9 @@ class S2RegionTermIndexer {
   // Note that you can index an S2LatLng by converting it to an S2Point first:
   //     auto terms = GetIndexTerms(S2Point(latlng), ...);
   std::vector<std::string> GetIndexTerms(const S2Point& point,
-                                    absl::string_view prefix);
+                                         absl::string_view prefix);
   std::vector<std::string> GetQueryTerms(const S2Point& point,
-                                    absl::string_view prefix);
+                                         absl::string_view prefix);
 
   // Low-level methods that accept an S2CellUnion covering of the region to be
   // indexed or queried.
@@ -290,7 +290,7 @@ class S2RegionTermIndexer {
   enum TermType { ANCESTOR, COVERING };
 
   std::string GetTerm(TermType term_type, const S2CellId& id,
-                 absl::string_view prefix) const;
+                      absl::string_view prefix) const;
 
   Options options_;
   S2RegionCoverer coverer_;
