@@ -203,10 +203,12 @@ add_library(s2
             src/s2/util/math/exactfloat/exactfloat.cc
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
+if (GTEST_ROOT)
 add_library(s2testing STATIC
             src/s2/s2builderutil_testing.cc
             src/s2/s2shapeutil_testing.cc
             src/s2/s2testing.cc)
+endif()
 target_link_libraries(
     s2
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
