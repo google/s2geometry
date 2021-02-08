@@ -88,7 +88,10 @@ endif()
 # OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
 include_directories(
     ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR}
-    ${Python3_INCLUDE_DIRS})
+)
+if (${Python3_FOUND})
+    include_directories(${Python3_INCLUDE_DIRS})
+endif()
 include_directories(src)
 
 add_library(s2
