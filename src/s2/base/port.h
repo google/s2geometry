@@ -290,11 +290,11 @@ inline void sized_delete_array(void *ptr, size_t size) {
 
 #endif
 
-// defines __BYTE_ORDER for MSVC
-#ifdef _MSC_VER
+// defines __BYTE_ORDER
+#ifdef _WIN32
 #define __BYTE_ORDER __LITTLE_ENDIAN
 #define IS_LITTLE_ENDIAN
-#else
+#else // _WIN32
 
 // define the macros IS_LITTLE_ENDIAN or IS_BIG_ENDIAN
 // using the above endian definitions from endian.h if
@@ -317,7 +317,7 @@ inline void sized_delete_array(void *ptr, size_t size) {
 #endif
 
 #endif  // __BYTE_ORDER
-#endif  // _MSC_VER
+#endif  // _WIN32
 
 // byte swap functions (bswap_16, bswap_32, bswap_64).
 
@@ -602,11 +602,11 @@ std::ostream &operator<<(std::ostream &out, const pthread_t &thread_id);
 #endif  // _MSC_VER
 
 // random, srandom
-#ifdef _MSC_VER
+#ifdef _WIN32
 // You say tomato, I say toma
 inline int random() { return rand(); }
 inline void srandom(unsigned int seed) { srand(seed); }
-#endif  // _MSC_VER
+#endif  // _WIN32
 
 // bcopy, bzero
 #ifdef _MSC_VER
@@ -884,9 +884,9 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 // __ASYLO__ platform uses newlib without an underlying OS, which provides
 // memalign, but not posix_memalign.
 #if defined(__cplusplus) &&                                             \
-    (((defined(__GNUC__) || defined(__APPLE__) ||                  \
-       defined(__NVCC__)) &&   \
-      !defined(SWIG)) ||                                                \
+    (((defined(__GNUC__) || defined(__APPLE__) ||                       \
+       defined(__NVCC__)) &&                                            \
+      !defined(SWIG) && !defined(__MINGW32__)) ||                       \
      ((__GNUC__ >= 3 || defined(__clang__)) && defined(__ANDROID__)) || \
      defined(__ASYLO__))
 inline void *aligned_malloc(size_t size, size_t minimum_alignment) {
@@ -910,7 +910,7 @@ inline void aligned_free(void *aligned_memory) {
   free(aligned_memory);
 }
 
-#elif defined(_MSC_VER)  // MSVC
+#elif defined(_WIN32)
 
 inline void *aligned_malloc(size_t size, size_t minimum_alignment) {
   return _aligned_malloc(size, minimum_alignment);
