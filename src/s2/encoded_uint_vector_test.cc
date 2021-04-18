@@ -24,7 +24,7 @@ using std::vector;
 
 namespace s2coding {
 
-static_assert(sizeof(EncodedUintVector<uint64>) == 16, "too big");
+static_assert(sizeof(EncodedUintVector<uint64>) <= 16, "too big");
 
 template <class T>
 void TestEncodedUintVector(const vector<T>& expected, size_t expected_bytes) {
