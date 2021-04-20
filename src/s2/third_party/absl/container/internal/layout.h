@@ -372,8 +372,8 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   using ElementTypes = std::tuple<typename Type<Elements>::type...>;
 
   // Element type of the Nth array.
-  template <size_t N>
-  using ElementType = typename std::tuple_element<N, ElementTypes>::type;
+  //template <size_t N>
+  //using ElementType = typename std::tuple_element<N, ElementTypes>::type;
 
   constexpr explicit LayoutImpl(IntToSize<SizeSeq>... sizes)
       : size_{sizes...} {}
@@ -469,7 +469,7 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   // Requires: `N <= NumSizes && N < sizeof...(Ts)`.
   // Requires: `p` is aligned to `Alignment()`.
   template <size_t N, class Char>
-  CopyConst<Char, ElementType<N>>* Pointer(Char* p) const {
+  CopyConst<Char, typename std::tuple_element<N, ElementTypes>::type>* Pointer(Char* p) const {
     using C = typename std::remove_const<Char>::type;
     static_assert(
         std::is_same<C, char>() || std::is_same<C, unsigned char>() ||
@@ -479,7 +479,7 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
     constexpr size_t alignment = Alignment();
     (void)alignment;
     assert(reinterpret_cast<uintptr_t>(p) % alignment == 0);
-    return reinterpret_cast<CopyConst<Char, ElementType<N>>*>(p + Offset<N>());
+    return reinterpret_cast<CopyConst<Char, typename std::tuple_element<N, ElementTypes>::type>*>(p + Offset<N>());
   }
 
   // Pointer to the beginning of the array with the specified element type.
@@ -537,8 +537,8 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   // Requires: `N < NumSizes`.
   // Requires: `p` is aligned to `Alignment()`.
   template <size_t N, class Char>
-  SliceType<CopyConst<Char, ElementType<N>>> Slice(Char* p) const {
-    return SliceType<CopyConst<Char, ElementType<N>>>(Pointer<N>(p), Size<N>());
+  SliceType<CopyConst<Char, typename std::tuple_element<N, ElementTypes>::type>> Slice(Char* p) const {
+    return SliceType<CopyConst<Char, typename std::tuple_element<N, ElementTypes>::type>>(Pointer<N>(p), Size<N>());
   }
 
   // The array with the specified element type. There must be exactly one
@@ -581,7 +581,7 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
     // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=63875 (fixed
     // in 6.1).
     (void)p;
-    return std::tuple<SliceType<CopyConst<Char, ElementType<SizeSeq>>>...>(
+    return std::tuple<SliceType<CopyConst<Char, typename std::tuple_element<SizeSeq, ElementTypes>::type>>...>(
         Slice<SizeSeq>(p)...);
   }
 
@@ -595,7 +595,7 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   constexpr size_t AllocSize() const {
     static_assert(NumTypes == NumSizes, "You must specify sizes of all fields");
     return Offset<NumTypes - 1>() +
-           SizeOf<ElementType<NumTypes - 1>>() * size_[NumTypes - 1];
+           SizeOf<typename std::tuple_element<NumTypes - 1, ElementTypes>::type>() * size_[NumTypes - 1];
   }
 
   // If built with --config=asan, poisons padding bytes (if any) in the
@@ -619,7 +619,7 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
     // The `if` is an optimization. It doesn't affect the observable behaviour.
     if (ElementAlignment<N - 1>::value % ElementAlignment<N>::value) {
       size_t start =
-          Offset<N - 1>() + SizeOf<ElementType<N - 1>>() * size_[N - 1];
+          Offset<N - 1>() + SizeOf<typename std::tuple_element<N - 1, ElementTypes>::type>() * size_[N - 1];
       ASAN_POISON_MEMORY_REGION(p + start, Offset<N>() - start);
     }
 #endif
@@ -643,8 +643,8 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
   // produce "unsigned*" where another produces "unsigned int *".
   string DebugString() const {
     const auto offsets = Offsets();
-    const size_t sizes[] = {SizeOf<ElementType<OffsetSeq>>()...};
-    const string types[] = {adl_barrier::TypeName<ElementType<OffsetSeq>>()...};
+    const size_t sizes[] = {SizeOf<typename std::tuple_element<OffsetSeq, ElementTypes>::type>()...};
+    const string types[] = {adl_barrier::TypeName<typename std::tuple_element<OffsetSeq, ElementTypes>::type>()...};
     string res = absl::StrCat("@0", types[0], "(", sizes[0], ")");
     for (size_t i = 0; i != NumOffsets - 1; ++i) {
       absl::StrAppend(&res, "[", size_[i], "]; @", offsets[i + 1], types[i + 1],
