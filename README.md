@@ -108,23 +108,25 @@ Prefix it with `sudo` if needed:
 sudo make install
 ```
 
-_NOTE_: The `uninstall` target missed but `install_manifest.txt` may be helpfull.
+_NOTE_: There is not `uninstall` target but `install_manifest.txt` may be helpfull.
 
 All files will be installed at location specified in `CMAKE_INSTALL_PREFIX` variable.
 
 Several suffix variables used for some file groups:
 
-Variable | Description
--------- | -----------
-`CMAKE_INSTALL_INCLUDEDIR` | For header files
-`CMAKE_INSTALL_BINDIR`     | For executables and `*.dll` files on `DLL`-based platforms
-`CMAKE_INSTALL_LIBDIR`     | For library files (`*.so`, `*.a`, `*.lib` etc)
+Variable | Default | Description
+-------- | ------- | -----------
+`CMAKE_INSTALL_INCLUDEDIR` | `include` | For header files
+`CMAKE_INSTALL_BINDIR`     | `bin`     | For executables and `*.dll` files on `DLL`-based platforms
+`CMAKE_INSTALL_LIBDIR`     | `lib`     | For library files (`*.so`, `*.a`, `*.lib` etc)
 
-To edit cached variables type:
+If needed set this variables on command line as `cmake` arguments with `-D` prefix or edit from `build` subdirectory:
 
 ```
 make edit_cache
 ```
+
+For more info read: [The CMake Cache](https://cmake.org/cmake/help/latest/guide/user-interaction/index.html#the-cmake-cache).
 
 ## Python
 
