@@ -100,10 +100,6 @@
 #define ABSL_ATTRIBUTE_PACKED
 #define ABSL_ATTRIBUTE_FUNC_ALIGN(bytes)
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#define MUST_USE_RESULT
-
 #else  // SWIG
 
 // ABSL_HAVE_ATTRIBUTE
@@ -496,14 +492,6 @@
 #define ABSL_MUST_USE_RESULT
 #endif
 
-// To be deleted macros. All macros are going te be renamed with ABSL_ prefix.
-// TODO(user): delete macros
-#if ABSL_HAVE_ATTRIBUTE(warn_unused_result) || \
-    (defined(__GNUC__) && !defined(__clang__))
-#define MUST_USE_RESULT __attribute__ ((warn_unused_result))
-#else
-#define MUST_USE_RESULT
-#endif
 
 // ABSL_ATTRIBUTE_HOT, ABSL_ATTRIBUTE_COLD
 //
