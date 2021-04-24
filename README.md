@@ -88,12 +88,45 @@ cd build
 cmake -DGTEST_ROOT=/usr/src/gtest ..
 make
 make test  # If GTEST_ROOT specified above.
-sudo make install
 ```
 
 Enable gflags and glog with `cmake -DWITH_GFLAGS=ON -DWITH_GLOG=ON ...`.
 
 Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
+
+## Installing
+
+From `build` subdirectory:
+
+```
+make install
+```
+
+Prefix it with `sudo` if needed:
+
+```
+sudo make install
+```
+
+_NOTE_: There is not `uninstall` target but `install_manifest.txt` may be helpfull.
+
+All files will be installed at location specified in `CMAKE_INSTALL_PREFIX` variable.
+
+Several suffix variables used for some file groups:
+
+Variable | Default | Description
+-------- | ------- | -----------
+`CMAKE_INSTALL_INCLUDEDIR` | `include` | For header files
+`CMAKE_INSTALL_BINDIR`     | `bin`     | For executables and `*.dll` files on `DLL`-based platforms
+`CMAKE_INSTALL_LIBDIR`     | `lib`     | For library files (`*.so`, `*.a`, `*.lib` etc)
+
+If needed set this variables on command line as `cmake` arguments with `-D` prefix or edit from `build` subdirectory:
+
+```
+make edit_cache
+```
+
+For more info read: [The CMake Cache](https://cmake.org/cmake/help/latest/guide/user-interaction/index.html#the-cmake-cache).
 
 ## Python
 
