@@ -133,11 +133,12 @@ For more info read: [The CMake Cache](https://cmake.org/cmake/help/latest/guide/
 If you want the Python interface, you will also need:
 
 * [SWIG](https://github.com/swig/swig) (for Python support, optional)
+* python3-dev (for Python support, optional)
 
 which can be installed via
 
 ```
-sudo apt-get install swig
+sudo apt-get install swig python3-dev
 ```
 
 or on macOS:
