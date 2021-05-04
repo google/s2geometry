@@ -94,6 +94,8 @@ Enable gflags and glog with `cmake -DWITH_GFLAGS=ON -DWITH_GLOG=ON ...`.
 
 Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
 
+Enable the python interface with `-DWITH_PYTHON=ON`.
+
 ## Installing
 
 From `build` subdirectory:
@@ -130,7 +132,8 @@ For more info read: [The CMake Cache](https://cmake.org/cmake/help/latest/guide/
 
 ## Python
 
-If you want the Python interface, you will also need:
+If you want the Python interface, you need to run cmake using
+`-DWITH_PYTHON=ON`. You will also need to install the following dependencies:
 
 * [SWIG](https://github.com/swig/swig) (for Python support, optional)
 * python3-dev (for Python support, optional)

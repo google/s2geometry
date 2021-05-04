@@ -97,8 +97,7 @@ include_directories(
     ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
 
 if (WITH_PYTHON)
-  include_directories(
-    ${Python3_INCLUDE_DIRS})
+    include_directories(${Python3_INCLUDE_DIRS})
 endif()
 
 include_directories(src)
