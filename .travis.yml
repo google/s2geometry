@@ -159,5 +159,5 @@ install:
 script:
   - mkdir build
   - cd build
-  - cmake -DGTEST_ROOT=$GTEST_ROOT -DWITH_GFLAGS=ON -DWITH_GLOG=ON ..
+  - cmake -DGTEST_ROOT=$GTEST_ROOT -DWITH_GFLAGS=ON -DWITH_GLOG=ON -DWITH_PYTHON=ON ..
   - make && make CTEST_OUTPUT_ON_FAILURE=1 test
