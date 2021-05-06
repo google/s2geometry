@@ -37,6 +37,9 @@ add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
 
 option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
 
+option(WITH_PYTHON "Add python interface" OFF)
+add_feature_info(PYTHON WITH_PYTHON "provides python interface to S2")
+
 feature_summary(WHAT ALL)
 
 if (WITH_GLOG)
@@ -63,10 +66,13 @@ endif()
 find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
-find_package(SWIG)
-# Use Python3_ROOT_DIR to help find python3, if the correct location is not
-# being found by default.
-find_package(Python3 COMPONENTS Interpreter Development)
+
+if (WITH_PYTHON)
+    find_package(SWIG)
+    # Use Python3_ROOT_DIR to help find python3, if the correct location is not
+    # being found by default.
+    find_package(Python3 COMPONENTS Interpreter Development)
+endif()
 
 if (WIN32)
     # Use unsigned characters
@@ -88,8 +94,12 @@ endif()
 # something like:
 # OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
 include_directories(
-    ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR}
-    ${Python3_INCLUDE_DIRS})
+    ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+
+if (WITH_PYTHON)
+    include_directories(${Python3_INCLUDE_DIRS})
+endif()
+
 include_directories(src)
 
 add_library(s2
