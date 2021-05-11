@@ -613,6 +613,33 @@ class PyWrapS2TestCase(unittest.TestCase):
     radius_m = s2.S2Earth.RadiansToMeters(angle.radians())
     self.assertEqual(radius_m, 12340.0)
 
+  def testRepr(self):
+    ll_null = s2.S2LatLng()
+    self.assertEqual(repr(ll_null), "<S2LatLng: (0.000000,0.000000)>")
+
+    lon1 = s2.S2LatLng.FromDegrees(51.3368602, 0.4931979)
+    self.assertEqual(repr(lon1), "<S2LatLng: (51.336860,0.493198)>")
+
+    london = s2.S2LatLngRect(lon1,
+                             s2.S2LatLng.FromDegrees(51.7323965, 0.1495211))
+    self.assertEqual(repr(london),
+      "<S2LatLngRect: (51.3368602,0.4931979,51.7323965,0.1495211)>"
+    )
+
+    llr_null = s2.S2LatLngRect()
+    self.assertEqual(repr(llr_null),
+      "<S2LatLngRect: Empty>"
+    )
+
+    cell_id = s2.S2CellId.FromToken("487604c489f841c3")
+    self.assertEqual(repr(cell_id), "<S2CellId: 2/100323000212021010333002003201>")
+
+    cell = s2.S2Cell(cell_id)
+    self.assertEqual(repr(cell), "<S2Cell: 2/100323000212021010333002003201>")
+
+    cell_id = s2.S2CellId.FromToken("this is invalid")
+    self.assertEqual(repr(cell_id), "<S2CellId: Invalid: 0000000000000000>")
+
 
 class RegionTermIndexerTest(unittest.TestCase):
   def _randomCaps(self, query_type, **indexer_options):
