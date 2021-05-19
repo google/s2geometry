@@ -50,7 +50,7 @@ using std::vector;
 // If a cell has more than this many edges, and it is not a leaf cell, then it
 // is subdivided.  This flag can be overridden via MutableS2ShapeIndex::Options.
 // Reasonable values range from 10 to about 50 or so.
-DEFINE_int32(
+S2_DEFINE_int32(
     s2shape_index_default_max_edges_per_cell, 10,
     "Default maximum number of edges (not counting 'long' edges) per cell; "
     "reasonable values range from 10 to 50.  Small values makes queries "
@@ -70,7 +70,7 @@ DEFINE_int32(
 //      with huge numbers of edges may exceed the budget;
 //  (3) shapes being removed are always processed in a single batch.  (This
 //      could be fixed, but it seems better to keep the code simpler for now.)
-DEFINE_int32(
+S2_DEFINE_int32(
     s2shape_index_tmp_memory_budget_mb, 100,
     "Attempts to limit the amount of temporary memory used by "
     "MutableS2ShapeIndex when creating or updating very large indexes "
@@ -88,7 +88,7 @@ DEFINE_int32(
 // time and memory costs without much benefit, and (2) in pathological cases,
 // many long edges close together could force subdivision to continue all the
 // way to the leaf cell level.
-DEFINE_double(
+S2_DEFINE_double(
     s2shape_index_cell_size_to_long_edge_ratio, 1.0,
     "The cell size relative to the length of an edge at which it is first "
     "considered to be 'long'.  Long edges do not contribute to the decision "

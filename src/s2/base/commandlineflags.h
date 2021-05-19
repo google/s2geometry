@@ -20,30 +20,46 @@
 
 #include <gflags/gflags.h>
 
+// If the GFlags library is available, map the local macro names to
+// GFlags macros.
+#define S2_DEFINE_bool  DEFINE_bool
+#define S2_DECLARE_bool  DECLARE_bool
+
+#define S2_DEFINE_double  DEFINE_double
+#define S2_DECLARE_double  DECLARE_double
+
+#define S2_DEFINE_int32  DEFINE_int32
+#define S2_DECLARE_int32  DECLARE_int32
+
+#define S2_DEFINE_string  DEFINE_string
+#define S2_DECLARE_string  DECLARE_string
+
 #else  // !defined(S2_USE_GFLAGS)
 
 #include <string>
 
 #include "s2/base/integral_types.h"
 
-#define DEFINE_bool(name, default_value, description) \
-  bool FLAGS_##name = default_value
-#define DECLARE_bool(name) \
-  extern bool FLAGS_##name
+// Create a set of gflags-like macros for declaring/defining flags. Use
+// a library-specific name to potential minimize clashes with GFlags.
 
-#define DEFINE_double(name, default_value, description) \
+#define S2_DEFINE_bool(name, default_value, description) \
+  bool FLAGS_##name = default_value
+#define S2_DECLARE_bool(name) \
+  extern bool FLAGS_##name
+#define S2_DEFINE_double(name, default_value, description) \
   double FLAGS_##name = default_value
-#define DECLARE_double(name) \
+#define S2_DECLARE_double(name) \
   extern double FLAGS_##name
 
-#define DEFINE_int32(name, default_value, description) \
+#define S2_DEFINE_int32(name, default_value, description) \
   int32 FLAGS_##name = default_value
-#define DECLARE_int32(name) \
+#define S2_DECLARE_int32(name) \
   extern int32 FLAGS_##name
 
-#define DEFINE_string(name, default_value, description) \
+#define S2_DEFINE_string(name, default_value, description) \
   std::string FLAGS_##name = default_value
-#define DECLARE_string(name) \
+#define S2_DECLARE_string(name) \
   extern std::string FLAGS_##name
 
 #endif  // !defined(S2_USE_GFLAGS)

@@ -92,7 +92,6 @@ S2Point ToFrame(const Matrix3x3_d& m, const S2Point& p);
 // Given an orthonormal basis "m" of column vectors and a point "q" with
 // respect to that basis, return the equivalent point "p" with respect to
 // the standard axis-aligned basis.  The result satisfies (p == m * q).
-Matrix3x3_d GetFrame(const S2Point& z);
 S2Point FromFrame(const Matrix3x3_d& m, const S2Point& q);
 
 // Return true if the points A, B, C are strictly counterclockwise.  Return

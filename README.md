@@ -88,23 +88,60 @@ cd build
 cmake -DGTEST_ROOT=/usr/src/gtest ..
 make
 make test  # If GTEST_ROOT specified above.
-sudo make install
 ```
 
 Enable gflags and glog with `cmake -DWITH_GFLAGS=ON -DWITH_GLOG=ON ...`.
 
 Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
 
+Enable the python interface with `-DWITH_PYTHON=ON`.
+
+## Installing
+
+From `build` subdirectory:
+
+```
+make install
+```
+
+Prefix it with `sudo` if needed:
+
+```
+sudo make install
+```
+
+_NOTE_: There is not `uninstall` target but `install_manifest.txt` may be helpfull.
+
+All files will be installed at location specified in `CMAKE_INSTALL_PREFIX` variable.
+
+Several suffix variables used for some file groups:
+
+Variable | Default | Description
+-------- | ------- | -----------
+`CMAKE_INSTALL_INCLUDEDIR` | `include` | For header files
+`CMAKE_INSTALL_BINDIR`     | `bin`     | For executables and `*.dll` files on `DLL`-based platforms
+`CMAKE_INSTALL_LIBDIR`     | `lib`     | For library files (`*.so`, `*.a`, `*.lib` etc)
+
+If needed set this variables on command line as `cmake` arguments with `-D` prefix or edit from `build` subdirectory:
+
+```
+make edit_cache
+```
+
+For more info read: [The CMake Cache](https://cmake.org/cmake/help/latest/guide/user-interaction/index.html#the-cmake-cache).
+
 ## Python
 
-If you want the Python interface, you will also need:
+If you want the Python interface, you need to run cmake using
+`-DWITH_PYTHON=ON`. You will also need to install the following dependencies:
 
 * [SWIG](https://github.com/swig/swig) (for Python support, optional)
+* python3-dev (for Python support, optional)
 
 which can be installed via
 
 ```
-sudo apt-get install swig
+sudo apt-get install swig python3-dev
 ```
 
 or on macOS:
@@ -113,6 +150,8 @@ or on macOS:
 sudo port install swig
 ```
 Expect to see some warnings if you build with swig 2.0.
+
+Python 3 is required.
 
 ## Other S2 implementations
 

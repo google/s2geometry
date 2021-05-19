@@ -37,7 +37,7 @@
 #include "s2/third_party/absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
 
-DECLARE_bool(s2debug);
+S2_DECLARE_bool(s2debug);
 
 using absl::StrCat;
 using std::max;

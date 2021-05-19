@@ -53,10 +53,10 @@ using std::priority_queue;
 using std::unordered_map;
 using std::vector;
 
-DEFINE_string(max_cells, "4,8",
+S2_DEFINE_string(max_cells, "4,8",
               "Comma-separated list of values to use for 'max_cells'");
 
-DEFINE_int32(iters, google::DEBUG_MODE ? 1000 : 100000,
+S2_DEFINE_int32(iters, google::DEBUG_MODE ? 1000 : 100000,
              "Number of random caps to try for each max_cells value");
 
 TEST(S2RegionCoverer, RandomCells) {

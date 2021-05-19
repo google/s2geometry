@@ -36,7 +36,7 @@
 
 using std::vector;
 
-DEFINE_int32(iters, 400, "number of iterations for testing");
+S2_DEFINE_int32(iters, 400, "number of iterations for testing");
 
 namespace {
 

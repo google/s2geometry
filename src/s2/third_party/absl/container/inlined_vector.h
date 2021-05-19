@@ -85,17 +85,18 @@ class InlinedVector {
   using IteratorCategory =
       typename std::iterator_traits<Iterator>::iterator_category;
 
+  using AllocatorTraits = std::allocator_traits<A>;
   using rvalue_reference = typename A::value_type&&;
 
  public:
-  using allocator_type = A;
-  using value_type = T;
-  using pointer = T*;
-  using const_pointer = const T*;
-  using reference = T&;
-  using const_reference = const T&;
-  using size_type = typename allocator_type::size_type;
-  using difference_type = typename allocator_type::difference_type;
+  using allocator_type = typename AllocatorTraits::allocator_type;
+  using value_type = typename AllocatorTraits::value_type;
+  using pointer = typename AllocatorTraits::pointer;
+  using const_pointer = typename AllocatorTraits::const_pointer;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+  using size_type = typename AllocatorTraits::size_type;
+  using difference_type = typename AllocatorTraits::difference_type;
   using iterator = pointer;
   using const_iterator = const_pointer;
   using reverse_iterator = std::reverse_iterator<iterator>;

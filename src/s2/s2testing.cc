@@ -52,7 +52,7 @@ using std::max;
 using std::unique_ptr;
 using std::vector;
 
-DEFINE_int32(s2_random_seed, 1,
+S2_DEFINE_int32(s2_random_seed, 1,
              "Seed value that can be passed to S2Testing::rnd.Reset()");
 
 const double S2Testing::kEarthRadiusKm = 6371.01;

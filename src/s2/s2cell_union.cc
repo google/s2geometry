@@ -35,8 +35,8 @@ using std::max;
 using std::min;
 using std::vector;
 
-DEFINE_int32(s2cell_union_decode_max_num_cells, 1000000,
-             "The maximum number of cells allowed by S2CellUnion::Decode");
+S2_DEFINE_int32(s2cell_union_decode_max_num_cells, 1000000,
+                "The maximum number of cells allowed by S2CellUnion::Decode");
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 

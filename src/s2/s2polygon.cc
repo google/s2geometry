@@ -84,7 +84,7 @@ using std::sqrt;
 using std::unique_ptr;
 using std::vector;
 
-DEFINE_bool(
+S2_DEFINE_bool(
     s2polygon_lazy_indexing, true,
     "Build the S2ShapeIndex only when it is first needed.  This can save "
     "significant amounts of memory and time when geometry is constructed but "
@@ -92,7 +92,7 @@ DEFINE_bool(
 
 // The maximum number of loops we'll allow when decoding a polygon.
 // The default value of 10 million is 200x bigger than the number of
-DEFINE_int32(
+S2_DEFINE_int32(
     s2polygon_decode_max_num_loops, 10000000,
     "The upper limit on the number of loops that are allowed by the "
     "S2Polygon::Decode method.");
@@ -992,9 +992,14 @@ void S2Polygon::InitFromBuilder(const S2Polygon& a, S2Builder* builder) {
   }
 }
 
+void S2Polygon::InitToSnapped(const S2Polygon& polygon,
+                              const S2Builder::SnapFunction& snap_function) {
+  S2Builder builder{S2Builder::Options(snap_function)};
+  InitFromBuilder(polygon, &builder);
+}
+
 void S2Polygon::InitToSnapped(const S2Polygon* a, int snap_level) {
-  S2Builder builder{S2Builder::Options(S2CellIdSnapFunction(snap_level))};
-  InitFromBuilder(*a, &builder);
+  InitToSnapped(*a, S2CellIdSnapFunction(snap_level));
 }
 
 void S2Polygon::InitToSimplified(const S2Polygon& a,

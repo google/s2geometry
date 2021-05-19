@@ -145,7 +145,8 @@ class compact_array_base {
     return const_cast<compact_array_base<T, A>*>(this)->Array();
   }
 
-  using value_allocator_type = typename std::allocator_traits<A>::template rebind_alloc<T>;
+  using value_allocator_type =
+      typename std::allocator_traits<A>::template rebind_alloc<T>;
 
  public:
   typedef T                                     value_type;

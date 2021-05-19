@@ -65,7 +65,7 @@ using std::pair;
 using std::set;
 using std::vector;
 
-DEFINE_bool(
+S2_DEFINE_bool(
     s2loop_lazy_indexing, true,
     "Build the S2ShapeIndex only when it is first needed.  This can save "
     "significant amounts of memory and time when geometry is constructed but "
@@ -74,7 +74,7 @@ DEFINE_bool(
 
 // The maximum number of vertices we'll allow when decoding a loop.
 // The default value of 50 million is about 30x bigger than the number of
-DEFINE_int32(
+S2_DEFINE_int32(
     s2polygon_decode_max_num_vertices, 50000000,
     "The upper limit on the number of loops that are allowed by the "
     "S2Polygon::Decode method.");

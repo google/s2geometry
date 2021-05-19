@@ -14,9 +14,9 @@
 # limitations under the License.
 #
 
-
-
 import unittest
+from collections import defaultdict
+
 import pywraps2 as s2
 
 
@@ -41,6 +41,19 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertLess(cell, cell.next())
     self.assertGreater(cell.next(), cell)
 
+  def testS2CellIdFromToTokenIsWrappedCorrectly(self):
+    cell = s2.S2CellId.FromToken("487604c489f841c3")
+    self.assertEqual(cell.ToToken(), "487604c489f841c3")
+    self.assertEqual(cell.id(), 0x487604c489f841c3)
+
+    cell = s2.S2CellId.FromToken("487")
+    self.assertEqual(cell.ToToken(), "487")
+    self.assertEqual(cell.id(), 0x4870000000000000)
+
+    cell = s2.S2CellId.FromToken("this is invalid")
+    self.assertEqual(cell.ToToken(), "X")
+    self.assertEqual(cell.id(), 0)
+
   def testS2CellIdGetEdgeNeighborsIsWrappedCorrectly(self):
     cell = s2.S2CellId(0x466d319000000000)
     expected_neighbors = [s2.S2CellId(0x466d31b000000000),
@@ -48,6 +61,19 @@ class PyWrapS2TestCase(unittest.TestCase):
                           s2.S2CellId(0x466d323000000000),
                           s2.S2CellId(0x466d31f000000000)]
     neighbors = cell.GetEdgeNeighbors()
+    self.assertEqual(neighbors, expected_neighbors)
+
+  def testS2CellIdGetAllNeighborsIsWrappedCorrectly(self):
+    cell = s2.S2CellId(0x6aa7590000000000)
+    expected_neighbors = (s2.S2CellId(0x2ab3530000000000),
+                          s2.S2CellId(0x2ab34b0000000000),
+                          s2.S2CellId(0x2ab34d0000000000),
+                          s2.S2CellId(0x6aa75b0000000000),
+                          s2.S2CellId(0x6aa7570000000000),
+                          s2.S2CellId(0x6aa75f0000000000),
+                          s2.S2CellId(0x6aa7510000000000),
+                          s2.S2CellId(0x6aa75d0000000000))
+    neighbors = cell.GetAllNeighbors(cell.level())
     self.assertEqual(neighbors, expected_neighbors)
 
   def testS2CellIdIntersectsIsTrueForOverlap(self):
@@ -89,6 +115,13 @@ class PyWrapS2TestCase(unittest.TestCase):
     trondheim = s2.S2LatLng.FromDegrees(63.431052, 10.395083)
     self.assertTrue(cell_union.Contains(s2.S2CellId(trondheim)))
 
+    # Init() calls Normalized, so cell_ids() are normalized.
+    cell_union2 = s2.S2CellUnion.FromNormalized(cell_union.cell_ids())
+    # There is no S2CellUnion::Equals, and cell_ids is a non-iterable
+    # SWIG object, so just perform the same checks again.
+    self.assertEqual(cell_union2.num_cells(), 2)
+    self.assertTrue(cell_union2.Contains(s2.S2CellId(trondheim)))
+
   def testS2PolygonIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
     polygon = s2.S2Polygon(s2.S2Cell(s2.S2CellId(london)))
@@ -104,8 +137,12 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertEqual(0, loop.depth())
     self.assertFalse(loop.is_hole())
     self.assertEqual(4, loop.num_vertices())
+    self.assertTrue(loop.IsNormalized())
     point = london.ToPoint()
     self.assertTrue(loop.Contains(point))
+
+  def testS2LoopUsesValueEquality(self):
+    self.assertEqual(s2.S2Loop(), s2.S2Loop())
 
   def testS2PolygonCopiesLoopInConstructorBecauseItTakesOwnership(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
@@ -192,6 +229,9 @@ class PyWrapS2TestCase(unittest.TestCase):
     line.InitFromS2Points(list_points)
     self.assertAlmostEqual(20.0, line.GetLength().degrees())
 
+  def testS2PolylineUsesValueEquality(self):
+    self.assertEqual(s2.S2Polyline(), s2.S2Polyline())
+
   def testS2PointsCanBeNormalized(self):
     line = s2.S2Polyline()
     line.InitFromS2LatLngs([s2.S2LatLng.FromDegrees(37.794484, -122.394871),
@@ -213,6 +253,9 @@ class PyWrapS2TestCase(unittest.TestCase):
                             s2.S2LatLng.FromDegrees(51.5, -0.125)])
     intersections = polygon.IntersectWithPolyline(line)
     self.assertEqual(1, len(intersections))
+
+  def testS2PolygonUsesValueEquality(self):
+    self.assertEqual(s2.S2Polygon(), s2.S2Polygon())
 
   def testCrossingSign(self):
     a = s2.S2LatLng.FromDegrees(-1, 0).ToPoint()
@@ -562,6 +605,182 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertEqual(3, face)
     self.assertEqual(1234, i)
     self.assertEqual(5678, j)
+
+  def testS2EarthMetricRadians(self):
+    radius_rad = s2.S2Earth.KmToRadians(12.34)
+    self.assertAlmostEqual(radius_rad, 0.0019368985451286374)
+    angle = s2.S1Angle.Radians(radius_rad)
+    radius_m = s2.S2Earth.RadiansToMeters(angle.radians())
+    self.assertEqual(radius_m, 12340.0)
+
+
+class RegionTermIndexerTest(unittest.TestCase):
+  def _randomCaps(self, query_type, **indexer_options):
+    # This function creates an index consisting either of points (if
+    # options.index_contains_points_only() is true) or S2Caps of random size.
+    # It then executes queries consisting of points (if query_type == POINT)
+    # or S2Caps of random size (if query_type == CAP).
+    #
+    # indexer_options are set on both the indexer & coverer (if relevant)
+    # eg. _randomCaps('cap', min_level=0) calls indexer.set_min_level(0)
+    ITERATIONS = 400
+
+    indexer = s2.S2RegionTermIndexer()
+    coverer = s2.S2RegionCoverer()
+
+    # set indexer options
+    for opt_key, opt_value in indexer_options.items():
+      setter = "set_%s" % opt_key
+      getattr(indexer, setter)(opt_value)
+      if hasattr(coverer, setter):
+        getattr(coverer, setter)(opt_value)
+
+    caps = []
+    coverings = []
+    index = defaultdict(set)
+
+    index_terms = 0
+    query_terms = 0
+    for i in range(ITERATIONS):
+      # Choose the region to be indexed: either a single point or a cap
+      # of random size (up to a full sphere).
+      terms = []
+      if indexer.index_contains_points_only():
+        cap = s2.S2Cap.FromPoint(s2.S2Testing.RandomPoint())
+        terms = indexer.GetIndexTerms(cap.center(), "")
+      else:
+        cap = s2.S2Testing.GetRandomCap(
+          0.3 * s2.S2Cell.AverageArea(indexer.max_level()),
+          4.0 * s2.S2Cell.AverageArea(indexer.min_level())
+        )
+        terms = indexer.GetIndexTerms(cap, "")
+
+      caps.append(cap)
+      coverings.append(s2.S2CellUnion(coverer.GetCovering(cap)))
+      for term in terms:
+        index[term].add(i)
+
+      index_terms += len(terms)
+
+    for i in range(ITERATIONS):
+      # Choose the region to be queried: either a random point or a cap of
+      # random size.
+      terms = []
+
+      if query_type == 'cap':
+        cap = s2.S2Cap.FromPoint(s2.S2Testing.RandomPoint())
+        terms = indexer.GetQueryTerms(cap.center(), "")
+      else:
+        cap = s2.S2Testing.GetRandomCap(
+          0.3 * s2.S2Cell.AverageArea(indexer.max_level()),
+          4.0 * s2.S2Cell.AverageArea(indexer.min_level())
+        )
+        terms = indexer.GetQueryTerms(cap, "")
+
+      # Compute the expected results of the S2Cell query by brute force.
+      covering = s2.S2CellUnion(coverer.GetCovering(cap))
+      expected, actual = set(), set()
+      for j in range(len(caps)):
+        if covering.Intersects(coverings[j]):
+          expected.add(j)
+      
+      for term in terms:
+        actual |= index[term]
+
+      self.assertEqual(expected, actual)
+      query_terms += len(terms)
+
+      print("Index terms/doc: %0.2f, Query terms/doc: %0.2f" % (
+        float(index_terms) / ITERATIONS,
+        float(query_terms) / ITERATIONS)
+      )
+
+  # We run one test case for each combination of space vs. time optimization,
+  # and indexing regions vs. only points.
+
+  def testIndexRegionsQueryRegionsOptimizeTime(self):
+    self._randomCaps("cap",
+      optimize_for_space=False,
+      min_level=0,
+      max_level=16,
+      max_cells=20,
+    )
+
+  def testIndexRegionsQueryPointsOptimizeTime(self):
+    self._randomCaps("point",
+      optimize_for_space=False,
+      min_level=0,
+      max_level=16,
+      max_cells=20,
+    )
+
+  def testIndexRegionsQueryRegionsOptimizeTimeWithLevelMod(self):
+    self._randomCaps("cap",
+      optimize_for_space=False,
+      min_level=6,
+      max_level=12,
+      level_mod=3,
+    )
+
+  def testIndexRegionsQueryRegionsOptimizeSpace(self):
+    self._randomCaps("cap",
+      optimize_for_space=True,
+      min_level=4,
+      max_level=s2.S2CellId.kMaxLevel,
+      max_cells=8,
+    )
+
+  def testIndexPointsQueryRegionsOptimizeTime(self):
+    self._randomCaps("cap",
+      optimize_for_space=False,
+      min_level=0,
+      max_level=s2.S2CellId.kMaxLevel,
+      level_mod=2,
+      max_cells=20,
+      index_contains_points_only=True,
+    )
+
+  def testIndexPointsQueryRegionsOptimizeSpace(self):
+    self._randomCaps("cap",
+      optimize_for_space=True,
+      index_contains_points_only=True,
+    )
+
+  def testMaxLevelSetLoosely(self):
+    # Test that correct terms are generated even when (max_level - min_level)
+    # is not a multiple of level_mod.
+    indexer1 = s2.S2RegionTermIndexer()
+    indexer1.set_min_level(1)
+    indexer1.set_level_mod(2)
+    indexer1.set_max_level(19)
+
+    indexer2 = s2.S2RegionTermIndexer()
+    indexer2.set_min_level(1)
+    indexer2.set_level_mod(2)
+    indexer2.set_max_level(19)
+    indexer2.set_max_level(20)
+
+    point = s2.S2Testing.RandomPoint()
+
+    self.assertEqual(
+      indexer1.GetIndexTerms(point, ""),
+      indexer2.GetIndexTerms(point, "")
+    )
+    self.assertEqual(
+      indexer1.GetQueryTerms(point, ""),
+      indexer2.GetQueryTerms(point, "")
+    )
+
+    cap = s2.S2Testing.GetRandomCap(0.0, 1.0)
+    self.assertEqual(
+      indexer1.GetIndexTerms(cap, ""),
+      indexer2.GetIndexTerms(cap, "")
+    )
+    self.assertEqual(
+      indexer1.GetQueryTerms(cap, ""),
+      indexer2.GetQueryTerms(cap, "")
+    )
+
 
 if __name__ == "__main__":
   unittest.main()

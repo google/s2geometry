@@ -1,11 +1,13 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
 
-project(s2-geometry)
+project(s2-geometry
+	VERSION 0.10.0)
 
 include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
 include(FeatureSummary)
 include(FindPackageHandleStandardArgs)
+include(GNUInstallDirs)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Avoid "Policy CMP0042 is not set" warning on macOS.
@@ -35,6 +37,9 @@ add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
 
 option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
 
+option(WITH_PYTHON "Add python interface" OFF)
+add_feature_info(PYTHON WITH_PYTHON "provides python interface to S2")
+
 feature_summary(WHAT ALL)
 
 if (WITH_GLOG)
@@ -61,9 +66,13 @@ endif()
 find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
-find_package(SWIG)
-find_package(PythonInterp)
-find_package(PythonLibs)
+
+if (WITH_PYTHON)
+    find_package(SWIG)
+    # Use Python3_ROOT_DIR to help find python3, if the correct location is not
+    # being found by default.
+    find_package(Python3 COMPONENTS Interpreter Development)
+endif()
 
 if (WIN32)
     # Use unsigned characters
@@ -85,8 +94,12 @@ endif()
 # something like:
 # OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
 include_directories(
-    ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR}
-    ${PYTHON_INCLUDE_DIRS})
+    ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+
+if (WITH_PYTHON)
+    include_directories(${Python3_INCLUDE_DIRS})
+endif()
+
 include_directories(src)
 
 add_library(s2
@@ -209,6 +222,11 @@ target_link_libraries(
 # target_link_libraries(<target_name> s2)
 target_include_directories(s2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# Add version information to the target
+set_target_properties(s2 PROPERTIES
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    VERSION ${PROJECT_VERSION})
+
 # We don't need to install all headers, only those
 # transitively included by s2 headers we are exporting.
 install(FILES src/s2/_fp_contract_off.h
@@ -322,7 +340,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2wedge_relations.h
               src/s2/sequence_lexicon.h
               src/s2/value_lexicon.h
-        DESTINATION include/s2)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2")
 install(FILES src/s2/base/casts.h
               src/s2/base/commandlineflags.h
               src/s2/base/integral_types.h
@@ -331,11 +349,11 @@ install(FILES src/s2/base/casts.h
               src/s2/base/mutex.h
               src/s2/base/port.h
               src/s2/base/spinlock.h
-        DESTINATION include/s2/base)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/base")
 install(FILES src/s2/strings/ostringstream.h
-        DESTINATION include/s2/strings)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/strings")
 install(FILES src/s2/third_party/absl/algorithm/algorithm.h
-        DESTINATION include/s2/third_party/absl/algorithm)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/algorithm")
 install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/casts.h
               src/s2/third_party/absl/base/config.h
@@ -346,42 +364,42 @@ install(FILES src/s2/third_party/absl/base/attributes.h
               src/s2/third_party/absl/base/policy_checks.h
               src/s2/third_party/absl/base/port.h
               src/s2/third_party/absl/base/thread_annotations.h
-        DESTINATION include/s2/third_party/absl/base)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/base")
 install(FILES src/s2/third_party/absl/base/internal/identity.h
               src/s2/third_party/absl/base/internal/inline_variable.h
               src/s2/third_party/absl/base/internal/invoke.h
               src/s2/third_party/absl/base/internal/throw_delegate.h
               src/s2/third_party/absl/base/internal/unaligned_access.h
-        DESTINATION include/s2/third_party/absl/base/internal)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/base/internal")
 install(FILES src/s2/third_party/absl/container/inlined_vector.h
-        DESTINATION include/s2/third_party/absl/container)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/container")
 install(FILES src/s2/third_party/absl/container/internal/compressed_tuple.h
               src/s2/third_party/absl/container/internal/container_memory.h
               src/s2/third_party/absl/container/internal/layout.h
-        DESTINATION include/s2/third_party/absl/container/internal)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/container/internal")
 install(FILES src/s2/third_party/absl/memory/memory.h
-        DESTINATION include/s2/third_party/absl/memory)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/memory")
 install(FILES src/s2/third_party/absl/meta/type_traits.h
-        DESTINATION include/s2/third_party/absl/meta)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/meta")
 install(FILES src/s2/third_party/absl/numeric/int128.h
               src/s2/third_party/absl/numeric/int128_have_intrinsic.inc
               src/s2/third_party/absl/numeric/int128_no_intrinsic.inc
-        DESTINATION include/s2/third_party/absl/numeric)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/numeric")
 install(FILES src/s2/third_party/absl/strings/numbers.h
               src/s2/third_party/absl/strings/str_cat.h
               src/s2/third_party/absl/strings/string_view.h
-        DESTINATION include/s2/third_party/absl/strings)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/strings")
 install(FILES src/s2/third_party/absl/types/span.h
-        DESTINATION include/s2/third_party/absl/types)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/types")
 install(FILES src/s2/third_party/absl/utility/utility.h
-        DESTINATION include/s2/third_party/absl/utility)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/third_party/absl/utility")
 install(FILES src/s2/util/bits/bits.h
-        DESTINATION include/s2/util/bits)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bits")
 install(FILES src/s2/util/coding/coder.h
               src/s2/util/coding/varint.h
-        DESTINATION include/s2/util/coding)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/coding")
 install(FILES src/s2/util/endian/endian.h
-        DESTINATION include/s2/util/endian)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/endian")
 install(FILES src/s2/util/gtl/btree.h
               src/s2/util/gtl/btree_container.h
               src/s2/util/gtl/btree_map.h
@@ -392,18 +410,21 @@ install(FILES src/s2/util/gtl/btree.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
               src/s2/util/gtl/layout.h
-        DESTINATION include/s2/util/gtl)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/gtl")
 install(FILES src/s2/util/hash/mix.h
-        DESTINATION include/s2/util/hash)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/hash")
 install(FILES src/s2/util/math/mathutil.h
               src/s2/util/math/matrix3x3.h
               src/s2/util/math/vector.h
               src/s2/util/math/vector3_hash.h
-        DESTINATION include/s2/util/math)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math")
 install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h
-        DESTINATION include/s2/util/units)
-install(TARGETS s2 DESTINATION lib)
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/units")
+install(TARGETS s2 s2testing
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 message("GTEST_ROOT: ${GTEST_ROOT}")
 if (GTEST_ROOT)
@@ -527,6 +548,6 @@ if (BUILD_EXAMPLES AND GTEST_ROOT)
   add_subdirectory("doc/examples" examples)
 endif()
 
-if (${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
+if (${SWIG_FOUND} AND ${Python3_FOUND})
   add_subdirectory("src/python" python)
 endif()

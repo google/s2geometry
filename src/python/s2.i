@@ -1,7 +1,9 @@
 %include "std_vector.i"
 %include "std_string.i"
+%include "stdint.i"
 
 %template() std::vector<unsigned long long>;
+%template() std::vector<string>;
 %template() std::vector<S2CellId>;
 %template() std::vector<S2Point>;
 %template() std::vector<S2LatLng>;

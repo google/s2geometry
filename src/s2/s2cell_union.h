@@ -35,8 +35,8 @@ class S2Cap;
 class S2Cell;
 class S2LatLngRect;
 
-DECLARE_bool(s2debug);
-DECLARE_int32(s2cell_union_decode_max_num_cells);
+S2_DECLARE_bool(s2debug);
+S2_DECLARE_int32(s2cell_union_decode_max_num_cells);
 
 // An S2CellUnion is a region consisting of cells of various sizes.  Typically
 // a cell union is used to approximate some other shape.  There is a tradeoff

@@ -18,6 +18,8 @@
 #ifndef S2_S2REGION_COVERER_H_
 #define S2_S2REGION_COVERER_H_
 
+#include <cstddef>
+#include <new>
 #include <queue>
 #include <utility>
 #include <vector>
@@ -245,9 +247,27 @@ class S2RegionCoverer {
 
  private:
   struct Candidate {
+    void* operator new(std::size_t size, std::size_t max_children) {
+      return ::operator new (size + max_children * sizeof(Candidate *));
+    }
+
+    void operator delete(void* p) {
+      ::operator delete (p);
+    }
+
+    Candidate(const S2Cell& cell, const std::size_t max_children)
+        : cell(cell), is_terminal(max_children == 0) {
+      std::fill_n(&children[0], max_children,
+                  absl::implicit_cast<Candidate*>(nullptr));
+    }
+
+    // Default destructor is fine; Candidate* is trivially destructible.
+    // children must be deleted by DeleteCandidate.
+    ~Candidate() = default;
+
     S2Cell cell;
     bool is_terminal;        // Cell should not be expanded further.
-    int num_children;        // Number of children that intersect the region.
+    int num_children = 0;    // Number of children that intersect the region.
     Candidate* children[0];  // Actual size may be 0, 4, 16, or 64 elements.
   };
 

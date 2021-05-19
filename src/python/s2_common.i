@@ -5,11 +5,13 @@
 
 %{
 #include <sstream>
+#include <string>
 
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"
 #include "s2/s2cap.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2earth.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"
@@ -18,6 +20,7 @@
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2region_coverer.h"
+#include "s2/s2region_term_indexer.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_union.h"
 %}
@@ -32,6 +35,16 @@
 %apply std::vector<S2CellId> *OUTPUT {std::vector<S2CellId> *covering};
 %apply std::vector<S2CellId> *OUTPUT {std::vector<S2CellId> *interior};
 %apply std::vector<S2CellId> *OUTPUT {std::vector<S2CellId> *output};
+
+%typemap(in) absl::string_view {
+  if (PyUnicode_Check($input)) {
+    $1 = absl::string_view(PyUnicode_AsUTF8($input));
+  } else {
+    SWIG_exception(SWIG_TypeError, "string expected");
+  }
+}
+%typemap(typecheck) absl::string_view = char *;
+
 
 %typemap(in, numinputs=0) S2CellId *OUTPUT_ARRAY_4(S2CellId temp[4]) {
   $1 = temp;
@@ -125,6 +138,16 @@ std::vector<S2Polyline *> *out(std::vector<S2Polyline *> temp) {
     PyList_SET_ITEM($result, i, o);
   }
 }
+
+%inline %{
+  // This isn't a constructor because it clashes with the SWIG-redefinition
+  // below and the actual S2Point (a Vector_3d).
+  static PyObject *S2Point_FromRaw(double x, double y, double z) {
+    // Creates an S2Point directly, mostly useful for testing.
+    return SWIG_NewPointerObj(new S2Point(x, y, z), SWIGTYPE_p_S2Point,
+                              SWIG_POINTER_OWN);
+  }
+%}
 
 // We provide our own definition of S2Point, because the real one is too
 // difficult to wrap correctly.
@@ -221,6 +244,57 @@ class S2Point {
   void set_level_mod(int level_mod) {
     $self->mutable_options()->set_level_mod(level_mod);
   }
+
+  int true_max_level() const { return $self->options().true_max_level(); }
+}
+
+// Expose Options functions on S2RegionTermIndexer until we figure out
+// nested classes in SWIG.
+%extend S2RegionTermIndexer {
+  int max_cells() const { return $self->options().max_cells(); }
+  void set_max_cells(int max_cells) {
+    $self->mutable_options()->set_max_cells(max_cells);
+  }
+
+  int min_level() const { return $self->options().min_level(); }
+  void set_min_level(int min_level) {
+    $self->mutable_options()->set_min_level(min_level);
+  }
+
+  int max_level() const { return $self->options().max_level(); }
+  void set_max_level(int max_level) {
+    $self->mutable_options()->set_max_level(max_level);
+  }
+
+  void set_fixed_level(int fixed_level) {
+    $self->mutable_options()->set_fixed_level(fixed_level);
+  }
+
+  int level_mod() const { return $self->options().level_mod(); }
+  void set_level_mod(int level_mod) {
+    $self->mutable_options()->set_level_mod(level_mod);
+  }
+
+  int true_max_level() const { return $self->options().true_max_level(); }
+
+  bool index_contains_points_only() const {
+    return $self->options().index_contains_points_only();
+  }
+  void set_index_contains_points_only(bool value) {
+    $self->mutable_options()->set_index_contains_points_only(value);
+  }
+
+  bool optimize_for_space() const {
+    return $self->options().optimize_for_space();
+  }
+  void set_optimize_for_space(bool value) {
+    $self->mutable_options()->set_optimize_for_space(value);
+  }
+
+  char marker_character() const { return $self->options().marker_character(); }
+  void set_marker_character(char ch) {
+    $self->mutable_options()->set_marker_character(ch);
+  }
 }
 
 %ignoreall
@@ -265,6 +339,8 @@ class S2Point {
 %unignore S2Cap::Empty;
 %unignore S2Cap::Encode;
 %unignore S2Cap::Expanded;
+%unignore S2Cap::FromCenterArea(const S2Point&, double);
+%unignore S2Cap::FromCenterHeight(const S2Point&, double);
 %unignore S2Cap::FromPoint;
 %unignore S2Cap::Full;
 %unignore S2Cap::GetCapBound() const;
@@ -281,6 +357,7 @@ class S2Point {
 %unignore S2Cell::S2Cell;
 %unignore S2Cell::~S2Cell;
 %unignore S2Cell::ApproxArea;
+%unignore S2Cell::AverageArea;
 %unignore S2Cell::Clone;
 %unignore S2Cell::Contains;
 %unignore S2Cell::Decode;
@@ -301,13 +378,15 @@ class S2Point {
 %unignore S2CellId;
 %unignore S2CellId::S2CellId;
 %unignore S2CellId::~S2CellId;
+%unignore S2CellId::AppendAllNeighbors(int, std::vector<S2CellId>*) const;
+%rename(GetAllNeighbors) S2CellId::AppendAllNeighbors(int level, std::vector<S2CellId>* output) const;
 %unignore S2CellId::Begin;
 %unignore S2CellId::End;
 %unignore S2CellId::FromFaceIJ(int, int, int);
 %unignore S2CellId::FromFacePosLevel(int, uint64, int);
 %unignore S2CellId::FromLatLng;
 %unignore S2CellId::FromPoint;
-%unignore S2CellId::FromToken;
+%unignore S2CellId::FromToken(const std::string&);
 %unignore S2CellId::GetCenterSiTi(int*, int*) const;
 %unignore S2CellId::GetEdgeNeighbors;
 %unignore S2CellId::ToFaceIJOrientation(int*, int*, int*) const;
@@ -343,6 +422,7 @@ class S2Point {
 %unignore S2CellUnion::Denormalize(int, int, std::vector<S2CellId>*) const;
 %unignore S2CellUnion::Encode;
 %unignore S2CellUnion::ExactArea;
+%unignore S2CellUnion::FromNormalized(std::vector<S2CellId>);
 %unignore S2CellUnion::GetCapBound() const;
 %unignore S2CellUnion::GetDifference;
 %unignore S2CellUnion::GetRectBound;
@@ -358,6 +438,41 @@ class S2Point {
 %unignore S2CellUnion::cell_ids;
 %unignore S2CellUnion::empty;
 %unignore S2CellUnion::num_cells;
+%unignore S2Earth;
+%unignore S2Earth::GetDistance(const S2LatLng&, const S2LatLng&);
+%unignore S2Earth::GetDistance(const S2Point&, const S2Point&);
+%unignore S2Earth::GetDistanceKm(const S2LatLng&, const S2LatLng&);
+%unignore S2Earth::GetDistanceKm(const S2Point&, const S2Point&);
+%unignore S2Earth::GetDistanceMeters(const S2LatLng&, const S2LatLng&);
+%unignore S2Earth::GetDistanceMeters(const S2Point&, const S2Point&);
+%unignore S2Earth::GetInitialBearing(const S2LatLng&, const S2LatLng&);
+%unignore S2Earth::HighestAltitude();
+%unignore S2Earth::HighestAltitudeKm();
+%unignore S2Earth::HighestAltitudeMeters();
+%unignore S2Earth::KmToRadians(double);
+%unignore S2Earth::LowestAltitude();
+%unignore S2Earth::LowestAltitudeKm();
+%unignore S2Earth::LowestAltitudeMeters();
+%unignore S2Earth::MetersToRadians(double);
+%unignore S2Earth::RadiansToKm(double);
+%unignore S2Earth::RadiansToMeters(double);
+%unignore S2Earth::Radius();
+%unignore S2Earth::RadiusKm();
+%unignore S2Earth::RadiusMeters();
+%unignore S2Earth::SquareKmToSteradians(double);
+%unignore S2Earth::SquareMetersToSteradians(double);
+%unignore S2Earth::SteradiansToSquareKm(double);
+%unignore S2Earth::SteradiansToSquareMeters(double);
+%unignore S2Earth::ToAngle(const util::units::Meters&);
+%unignore S2Earth::ToChordAngle(const util::units::Meters&);
+%unignore S2Earth::ToDistance(const S1Angle&);
+%unignore S2Earth::ToDistance(const S1ChordAngle&);
+%unignore S2Earth::ToKm(const S1Angle&);
+%unignore S2Earth::ToKm(const S1ChordAngle&);
+%unignore S2Earth::ToLongitudeRadians(const util::units::Meters&, double);
+%unignore S2Earth::ToMeters(const S1Angle&);
+%unignore S2Earth::ToMeters(const S1ChordAngle&);
+%unignore S2Earth::ToRadians(const util::units::Meters&);
 %unignore S2LatLng;
 %unignore S2LatLng::S2LatLng;
 %unignore S2LatLng::~S2LatLng;
@@ -429,6 +544,7 @@ class S2Point {
 %unignore S2Loop::GetS2LatLngVertex;
 %unignore S2Loop::Init;
 %unignore S2Loop::Intersects;
+%unignore S2Loop::IsNormalized() const;
 %unignore S2Loop::IsValid;
 %unignore S2Loop::MayIntersect(const S2Cell&) const;
 %unignore S2Loop::Normalize;
@@ -499,6 +615,19 @@ class S2Point {
 %unignore S2RegionCoverer::GetCovering(const S2Region&, std::vector<S2CellId>*);
 %unignore S2RegionCoverer::GetInteriorCovering(const S2Region&,
                                                std::vector<S2CellId>*);
+%unignore S2RegionTermIndexer;
+%unignore S2RegionTermIndexer::S2RegionTermIndexer;
+%unignore S2RegionTermIndexer::~S2RegionTermIndexer;
+%unignore S2RegionTermIndexer::GetIndexTerms(const S2Point&, absl::string_view);
+%unignore S2RegionTermIndexer::GetIndexTerms(const S2Region&,
+                                             absl::string_view);
+%unignore S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
+    const S2CellUnion&, absl::string_view);
+%unignore S2RegionTermIndexer::GetQueryTerms(const S2Point&, absl::string_view);
+%unignore S2RegionTermIndexer::GetQueryTerms(const S2Region&,
+                                             absl::string_view);
+%unignore S2RegionTermIndexer::GetQueryTermsForCanonicalCovering(
+    const S2CellUnion&, absl::string_view);
 
 %include "s2/r1interval.h"
 %include "s2/s1angle.h"
@@ -506,6 +635,7 @@ class S2Point {
 %include "s2/s1interval.h"
 %include "s2/s2cell_id.h"
 %include "s2/s2edge_crossings.h"
+%include "s2/s2earth.h"
 %include "s2/s2region.h"
 %include "s2/s2cap.h"
 %include "s2/s2latlng.h"
@@ -516,6 +646,7 @@ class S2Point {
 %include "s2/s2polygon.h"
 %include "s2/s2polyline.h"
 %include "s2/s2region_coverer.h"
+%include "s2/s2region_term_indexer.h"
 %include "s2/s2cell.h"
 %include "s2/s2cell_union.h"
 
@@ -527,6 +658,18 @@ class S2Point {
       std::ostringstream output;
       output << *self << std::ends;
       return output.str();
+    }
+  }
+%enddef
+
+%define USE_EQUALS_FN_FOR_EQ_AND_NE(type)
+  %extend type {
+    bool __eq__(const type& other) {
+      return $self->Equals(&other);
+    }
+
+    bool __ne__(const type& other) {
+      return !$self->Equals(&other);
     }
   }
 %enddef
@@ -576,3 +719,38 @@ USE_HASH_FOR_TYPE(S2CellId, S2CellIdHash)
 
 USE_EQUALS_FOR_EQ_AND_NE(S1Angle)
 USE_COMPARISON_FOR_LT_AND_GT(S1Angle)
+
+USE_EQUALS_FN_FOR_EQ_AND_NE(S2Loop)
+USE_EQUALS_FN_FOR_EQ_AND_NE(S2Polygon)
+USE_EQUALS_FN_FOR_EQ_AND_NE(S2Polyline)
+
+// Simple implementation of key S2Testing methods
+%pythoncode %{
+import random
+
+class S2Testing(object):
+  """ Simple implementation of key S2Testing methods. """
+  _rnd = random.Random(1)
+
+  @classmethod
+  def RandomPoint(cls):
+    """ Return a random unit-length vector. """
+    x = cls._rnd.uniform(-1, 1)
+    y = cls._rnd.uniform(-1, 1)
+    z = cls._rnd.uniform(-1, 1)
+    return S2Point_FromRaw(x, y, z).Normalize()
+
+  @classmethod
+  def GetRandomCap(cls, min_area, max_area):
+    """
+    Return a cap with a random axis such that the log of its area is
+    uniformly distributed between the logs of the two given values.
+    (The log of the cap angle is also approximately uniformly distributed.)
+    """
+    cap_area = max_area * pow(min_area / max_area, cls._rnd.random())
+    assert cap_area >= min_area
+    assert cap_area <= max_area
+
+    # The surface area of a cap is 2*Pi times its height.
+    return S2Cap.FromCenterArea(cls.RandomPoint(), cap_area)
+%}
