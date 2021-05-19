@@ -421,7 +421,7 @@ install(FILES src/s2/util/math/mathutil.h
 install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/units")
-install(TARGETS s2 s2testing
+install(TARGETS s2
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
