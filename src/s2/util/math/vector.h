@@ -96,6 +96,7 @@ class BasicVector {
     const T* ap = static_cast<const D&>(*this).Data();
     return std::equal(ap, ap + this->Size(), b.Data());
   }
+  bool operator!=(const D& b) const { return !(AsD() == b); }
   bool operator<(const D& b) const {
     const T* ap = static_cast<const D&>(*this).Data();
     const T* bp = b.Data();
