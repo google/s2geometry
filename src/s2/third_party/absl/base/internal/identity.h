@@ -16,7 +16,7 @@
 #ifndef S2_THIRD_PARTY_ABSL_BASE_INTERNAL_IDENTITY_H_
 #define S2_THIRD_PARTY_ABSL_BASE_INTERNAL_IDENTITY_H_
 
-namespace absl {
+namespace s2::absl {
 namespace internal {
 
 template <typename T>
@@ -28,6 +28,6 @@ template <typename T>
 using identity_t = typename identity<T>::type;
 
 }  // namespace internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_INTERNAL_IDENTITY_H_

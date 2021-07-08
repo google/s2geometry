@@ -20,7 +20,7 @@
 // To access the members, use member get<N>() function.
 //
 // Eg:
-//   absl::container_internal::CompressedTuple<int, T1, T2, T3> value(7, t1, t2,
+//   ::s2::absl::container_internal::CompressedTuple<int, T1, T2, T3> value(7, t1, t2,
 //                                                                    t3);
 //   assert(value.get<0>() == 7);
 //   T1& t1 = value.get<1>();
@@ -46,7 +46,7 @@
 #define ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
 #endif  // _MSC_VER
 
-namespace absl {
+namespace s2::absl {
 namespace container_internal {
 
 template <typename... Ts>
@@ -88,10 +88,10 @@ struct Storage {
   using T = ElemT<D, I>;
   T value;
   constexpr Storage() = default;
-  explicit constexpr Storage(T&& v) : value(absl::forward<T>(v)) {}
+  explicit constexpr Storage(T&& v) : value(::s2::absl::forward<T>(v)) {}
   constexpr const T& get() const& { return value; }
   T& get() & { return value; }
-  constexpr const T&& get() const&& { return absl::move(*this).value; }
+  constexpr const T&& get() const&& { return ::s2::absl::move(*this).value; }
   T&& get() && { return std::move(*this).value; }
 };
 
@@ -100,10 +100,10 @@ struct ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC Storage<D, I, true>
     : ElemT<D, I> {
   using T = internal_compressed_tuple::ElemT<D, I>;
   constexpr Storage() = default;
-  explicit constexpr Storage(T&& v) : T(absl::forward<T>(v)) {}
+  explicit constexpr Storage(T&& v) : T(::s2::absl::forward<T>(v)) {}
   constexpr const T& get() const& { return *this; }
   T& get() & { return *this; }
-  constexpr const T&& get() const&& { return absl::move(*this); }
+  constexpr const T&& get() const&& { return ::s2::absl::move(*this); }
   T&& get() && { return std::move(*this); }
 };
 
@@ -112,7 +112,7 @@ struct ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTupleImpl;
 
 template <typename... Ts, size_t... I>
 struct ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
-    CompressedTupleImpl<CompressedTuple<Ts...>, absl::index_sequence<I...>>
+    CompressedTupleImpl<CompressedTuple<Ts...>, ::s2::absl::index_sequence<I...>>
     // We use the dummy identity function through std::integral_constant to
     // convince MSVC of accepting and expanding I in that context. Without it
     // you would get:
@@ -121,7 +121,7 @@ struct ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
               std::integral_constant<size_t, I>::value>... {
   constexpr CompressedTupleImpl() = default;
   explicit constexpr CompressedTupleImpl(Ts&&... args)
-      : Storage<CompressedTuple<Ts...>, I>(absl::forward<Ts>(args))... {}
+      : Storage<CompressedTuple<Ts...>, I>(::s2::absl::forward<Ts>(args))... {}
 };
 
 }  // namespace internal_compressed_tuple
@@ -134,7 +134,7 @@ struct ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
 // To access the members, use member .get<N>() function.
 //
 // Eg:
-//   absl::container_internal::CompressedTuple<int, T1, T2, T3> value(7, t1, t2,
+//   ::s2::absl::container_internal::CompressedTuple<int, T1, T2, T3> value(7, t1, t2,
 //                                                                    t3);
 //   assert(value.get<0>() == 7);
 //   T1& t1 = value.get<1>();
@@ -145,7 +145,7 @@ struct ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
 template <typename... Ts>
 class ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple
     : private internal_compressed_tuple::CompressedTupleImpl<
-          CompressedTuple<Ts...>, absl::index_sequence_for<Ts...>> {
+          CompressedTuple<Ts...>, ::s2::absl::index_sequence_for<Ts...>> {
  private:
   template <int I>
   using ElemT = internal_compressed_tuple::ElemT<CompressedTuple, I>;
@@ -153,7 +153,7 @@ class ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple
  public:
   constexpr CompressedTuple() = default;
   explicit constexpr CompressedTuple(Ts... base)
-      : CompressedTuple::CompressedTupleImpl(absl::forward<Ts>(base)...) {}
+      : CompressedTuple::CompressedTupleImpl(::s2::absl::forward<Ts>(base)...) {}
 
   template <int I>
   ElemT<I>& get() & {
@@ -173,7 +173,7 @@ class ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple
 
   template <int I>
   constexpr const ElemT<I>&& get() const&& {
-    return absl::move(*this)
+    return ::s2::absl::move(*this)
         .internal_compressed_tuple::template Storage<CompressedTuple, I>::get();
   }
 };
@@ -184,7 +184,7 @@ template <>
 class ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple<> {};
 
 }  // namespace container_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #undef ABSL_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
 

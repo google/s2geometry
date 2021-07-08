@@ -50,7 +50,7 @@ enum class CrossingType { INTERIOR, ALL };
 //           const S2Point& a0, const S2Point &a1) {
 //   MutableS2ShapeIndex index;
 //   for (S2Polyline* polyline : polylines) {
-//     index.Add(absl::make_unique<S2Polyline::Shape>(polyline));
+//     index.Add(s2::absl::make_unique<S2Polyline::Shape>(polyline));
 //   }
 //   S2CrossingEdgeQuery query(&index);
 //   for (const auto& edge : query.GetCrossingEdges(a, b, CrossingType::ALL)) {

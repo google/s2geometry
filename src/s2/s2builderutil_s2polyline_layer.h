@@ -130,7 +130,7 @@ class IndexedS2PolylineLayer : public S2Builder::Layer {
     layer_.Build(g, error);
     if (error->ok() && polyline_->num_vertices() > 0) {
       index_->Add(
-          absl::make_unique<S2Polyline::OwningShape>(std::move(polyline_)));
+          s2::absl::make_unique<S2Polyline::OwningShape>(std::move(polyline_)));
     }
   }
 

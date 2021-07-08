@@ -117,7 +117,7 @@ S2RegionCoverer::Candidate* S2RegionCoverer::NewCandidate(const S2Cell& cell) {
   candidate->num_children = 0;
   if (!is_terminal) {
     std::fill_n(&candidate->children[0], 1 << max_children_shift(),
-                absl::implicit_cast<Candidate*>(nullptr));
+                s2::absl::implicit_cast<Candidate*>(nullptr));
   }
   ++candidates_created_counter_;
   return candidate;

@@ -18,18 +18,18 @@
 // -----------------------------------------------------------------------------
 //
 // This file contains simple utilities for performing string matching checks.
-// All of these function parameters are specified as `absl::string_view`,
-// meaning that these functions can accept `std::string`, `absl::string_view` or
+// All of these function parameters are specified as `::s2::absl::string_view`,
+// meaning that these functions can accept `std::string`, `::s2::absl::string_view` or
 // nul-terminated C-style strings.
 //
 // Examples:
 //   std::string s = "foo";
-//   absl::string_view sv = "f";
-//   assert(absl::StrContains(s, sv));
+//   ::s2::absl::string_view sv = "f";
+//   assert(::s2::absl::StrContains(s, sv));
 //
 // Note: The order of parameters in these functions is designed to mimic the
 // order an equivalent member function would exhibit;
-// e.g. `s.Contains(x)` ==> `absl::StrContains(s, x).
+// e.g. `s.Contains(x)` ==> `::s2::absl::StrContains(s, x).
 #ifndef S2_THIRD_PARTY_ABSL_STRINGS_MATCH_H_
 #define S2_THIRD_PARTY_ABSL_STRINGS_MATCH_H_
 
@@ -37,19 +37,19 @@
 
 #include "s2/third_party/absl/strings/string_view.h"
 
-namespace absl {
+namespace s2::absl {
 
 // StrContains()
 //
 // Returns whether a given string `haystack` contains the substring `needle`.
-inline bool StrContains(absl::string_view haystack, absl::string_view needle) {
+inline bool StrContains(::s2::absl::string_view haystack, ::s2::absl::string_view needle) {
   return haystack.find(needle, 0) != haystack.npos;
 }
 
 // StartsWith()
 //
 // Returns whether a given string `text` begins with `prefix`.
-inline bool StartsWith(absl::string_view text, absl::string_view prefix) {
+inline bool StartsWith(::s2::absl::string_view text, ::s2::absl::string_view prefix) {
   return prefix.empty() ||
          (text.size() >= prefix.size() &&
           0 == std::memcmp(text.data(), prefix.data(), prefix.size()));
@@ -58,7 +58,7 @@ inline bool StartsWith(absl::string_view text, absl::string_view prefix) {
 // EndsWith()
 //
 // Returns whether a given string `text` ends with `suffix`.
-inline bool EndsWith(absl::string_view text, absl::string_view suffix) {
+inline bool EndsWith(::s2::absl::string_view text, ::s2::absl::string_view suffix) {
   return suffix.empty() ||
          (text.size() >= suffix.size() &&
           0 == std::memcmp(text.data() + (text.size() - suffix.size()),
@@ -70,20 +70,20 @@ inline bool EndsWith(absl::string_view text, absl::string_view suffix) {
 //
 // Returns whether given ASCII strings `piece1` and `piece2` are equal, ignoring
 // case in the comparison.
-bool EqualsIgnoreCase(absl::string_view piece1, absl::string_view piece2);
+bool EqualsIgnoreCase(::s2::absl::string_view piece1, ::s2::absl::string_view piece2);
 
 // StartsWithIgnoreCase()
 //
 // Returns whether a given ASCII string `text` starts with `prefix`,
 // ignoring case in the comparison.
-bool StartsWithIgnoreCase(absl::string_view text, absl::string_view prefix);
+bool StartsWithIgnoreCase(::s2::absl::string_view text, ::s2::absl::string_view prefix);
 
 // EndsWithIgnoreCase()
 //
 // Returns whether a given ASCII string `text` ends with `suffix`, ignoring
 // case in the comparison.
-bool EndsWithIgnoreCase(absl::string_view text, absl::string_view suffix);
+bool EndsWithIgnoreCase(::s2::absl::string_view text, ::s2::absl::string_view suffix);
 
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_MATCH_H_

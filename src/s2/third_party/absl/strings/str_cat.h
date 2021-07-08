@@ -62,7 +62,7 @@
 #include "s2/third_party/absl/strings/numbers.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
-namespace absl {
+namespace s2::absl {
 
 namespace strings_internal {
 // AlphaNumBuffer allows a way to pass a string to StrCat without having to do
@@ -136,40 +136,40 @@ struct Hex {
 
   template <typename Int>
   explicit Hex(
-      Int v, PadSpec spec = absl::kNoPad,
+      Int v, PadSpec spec = ::s2::absl::kNoPad,
       typename std::enable_if<sizeof(Int) == 1 &&
                               !std::is_pointer<Int>::value>::type* = nullptr)
       : Hex(spec, static_cast<uint8_t>(v)) {}
   template <typename Int>
   explicit Hex(
-      Int v, PadSpec spec = absl::kNoPad,
+      Int v, PadSpec spec = ::s2::absl::kNoPad,
       typename std::enable_if<sizeof(Int) == 2 &&
                               !std::is_pointer<Int>::value>::type* = nullptr)
       : Hex(spec, static_cast<uint16_t>(v)) {}
   template <typename Int>
   explicit Hex(
-      Int v, PadSpec spec = absl::kNoPad,
+      Int v, PadSpec spec = ::s2::absl::kNoPad,
       typename std::enable_if<sizeof(Int) == 4 &&
                               !std::is_pointer<Int>::value>::type* = nullptr)
       : Hex(spec, static_cast<uint32_t>(v)) {}
   template <typename Int>
   explicit Hex(
-      Int v, PadSpec spec = absl::kNoPad,
+      Int v, PadSpec spec = ::s2::absl::kNoPad,
       typename std::enable_if<sizeof(Int) == 8 &&
                               !std::is_pointer<Int>::value>::type* = nullptr)
       : Hex(spec, static_cast<uint64_t>(v)) {}
   template <typename Pointee>
-  explicit Hex(Pointee* v, PadSpec spec = absl::kNoPad)
+  explicit Hex(Pointee* v, PadSpec spec = ::s2::absl::kNoPad)
       : Hex(spec, reinterpret_cast<uintptr_t>(v)) {}
 
  private:
   Hex(PadSpec spec, uint64_t v)
       : value(v),
-        width(spec == absl::kNoPad
+        width(spec == ::s2::absl::kNoPad
                   ? 1
-                  : spec >= absl::kSpacePad2 ? spec - absl::kSpacePad2 + 2
-                                             : spec - absl::kZeroPad2 + 2),
-        fill(spec >= absl::kSpacePad2 ? ' ' : '0') {}
+                  : spec >= ::s2::absl::kSpacePad2 ? spec - ::s2::absl::kSpacePad2 + 2
+                                             : spec - ::s2::absl::kZeroPad2 + 2),
+        fill(spec >= ::s2::absl::kSpacePad2 ? ' ' : '0') {}
 };
 
 // -----------------------------------------------------------------------------
@@ -186,15 +186,15 @@ struct Dec {
   bool neg;
 
   template <typename Int>
-  explicit Dec(Int v, PadSpec spec = absl::kNoPad,
+  explicit Dec(Int v, PadSpec spec = ::s2::absl::kNoPad,
                typename std::enable_if<(sizeof(Int) <= 8)>::type* = nullptr)
       : value(v >= 0 ? static_cast<uint64_t>(v)
                      : uint64_t{0} - static_cast<uint64_t>(v)),
-        width(spec == absl::kNoPad
+        width(spec == ::s2::absl::kNoPad
                   ? 1
-                  : spec >= absl::kSpacePad2 ? spec - absl::kSpacePad2 + 2
-                                             : spec - absl::kZeroPad2 + 2),
-        fill(spec >= absl::kSpacePad2 ? ' ' : '0'),
+                  : spec >= ::s2::absl::kSpacePad2 ? spec - ::s2::absl::kSpacePad2 + 2
+                                             : spec - ::s2::absl::kZeroPad2 + 2),
+        fill(spec >= ::s2::absl::kSpacePad2 ? ' ' : '0'),
         neg(v < 0) {}
 };
 
@@ -244,7 +244,7 @@ class AlphaNum {
       : piece_(&buf.data[0], buf.size) {}
 
   AlphaNum(const char* c_str) : piece_(c_str) {}  // NOLINT(runtime/explicit)
-  AlphaNum(absl::string_view pc) : piece_(pc) {}  // NOLINT(runtime/explicit)
+  AlphaNum(::s2::absl::string_view pc) : piece_(pc) {}  // NOLINT(runtime/explicit)
 
   template <typename Allocator>
   AlphaNum(  // NOLINT(runtime/explicit)
@@ -257,9 +257,9 @@ class AlphaNum {
   AlphaNum(const AlphaNum&) = delete;
   AlphaNum& operator=(const AlphaNum&) = delete;
 
-  absl::string_view::size_type size() const { return piece_.size(); }
+  ::s2::absl::string_view::size_type size() const { return piece_.size(); }
   const char* data() const { return piece_.data(); }
-  absl::string_view Piece() const { return piece_; }
+  ::s2::absl::string_view Piece() const { return piece_; }
 
   // Normal enums are already handled by the integer formatters.
   // This overload matches only scoped enums.
@@ -270,7 +270,7 @@ class AlphaNum {
       : AlphaNum(static_cast<typename std::underlying_type<T>::type>(e)) {}
 
  private:
-  absl::string_view piece_;
+  ::s2::absl::string_view piece_;
   char digits_[numbers_internal::kFastToBufferSize];
 };
 
@@ -304,9 +304,9 @@ class AlphaNum {
 namespace strings_internal {
 
 // Do not call directly - this is not part of the public API.
-string CatPieces(std::initializer_list<absl::string_view> pieces);
+string CatPieces(std::initializer_list<::s2::absl::string_view> pieces);
 void AppendPieces(string* dest,
-                  std::initializer_list<absl::string_view> pieces);
+                  std::initializer_list<::s2::absl::string_view> pieces);
 
 }  // namespace strings_internal
 
@@ -353,11 +353,11 @@ ABSL_MUST_USE_RESULT inline string StrCat(const AlphaNum& a, const AlphaNum& b,
 //   string s = "foo";
 //   StrAppend(&s, s);
 //
-// This output is undefined as well, since `absl::string_view` does not own its
+// This output is undefined as well, since `::s2::absl::string_view` does not own its
 // data:
 //
 //   string s = "foobar";
-//   absl::string_view p = s;
+//   ::s2::absl::string_view p = s;
 //   StrAppend(&s, p);
 
 inline void StrAppend(string*) {}
@@ -393,6 +393,6 @@ SixDigits(double d) {
 
 
 
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_STR_CAT_H_

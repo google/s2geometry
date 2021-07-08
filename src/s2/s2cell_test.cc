@@ -50,7 +50,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 
-using absl::StrCat;
+using s2::absl::StrCat;
 using S2::internal::kSwapMask;
 using s2textformat::MakePointOrDie;
 using std::fabs;

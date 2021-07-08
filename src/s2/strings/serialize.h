@@ -32,7 +32,7 @@ namespace strings {
 //   <key, value> pairs. Returns true if there if no error in parsing, false
 //   otherwise.
 // -------------------------------------------------------------------------
-bool DictionaryParse(absl::string_view encoded_str,
+bool DictionaryParse(s2::absl::string_view encoded_str,
                      std::vector<std::pair<std::string, std::string>>* items);
 
 }  // namespace strings

@@ -17,7 +17,7 @@
 
 #include "s2/encoded_s2cell_id_vector.h"
 
-using absl::Span;
+using s2::absl::Span;
 using std::max;
 using std::min;
 using std::vector;

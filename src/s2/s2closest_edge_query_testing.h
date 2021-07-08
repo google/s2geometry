@@ -56,7 +56,7 @@ class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
   void AddEdges(const S2Cap& index_cap, int num_edges,
                 MutableS2ShapeIndex* index) const override {
-    index->Add(absl::make_unique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
+    index->Add(s2::absl::make_unique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
         index_cap.center(), index_cap.GetRadius(), num_edges)));
   }
 };
@@ -68,7 +68,7 @@ class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
                 MutableS2ShapeIndex* index) const override {
     S2Testing::Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(num_edges);
-    index->Add(absl::make_unique<S2Loop::OwningShape>(
+    index->Add(s2::absl::make_unique<S2Loop::OwningShape>(
         fractal.MakeLoop(S2Testing::GetRandomFrameAt(index_cap.center()),
                          index_cap.GetRadius())));
   }
@@ -83,7 +83,7 @@ class PointCloudShapeIndexFactory : public ShapeIndexFactory {
     for (int i = 0; i < num_edges; ++i) {
       points.push_back(S2Testing::SamplePoint(index_cap));
     }
-    index->Add(absl::make_unique<S2PointVectorShape>(std::move(points)));
+    index->Add(s2::absl::make_unique<S2PointVectorShape>(std::move(points)));
   }
 };
 

@@ -34,7 +34,7 @@
 #include "s2/s2testing.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 
-using absl::StrCat;
+using s2::absl::StrCat;
 
 static void TestIntervalOps(const S2R2Rect& x, const S2R2Rect& y,
                             const char* expected_rexion,

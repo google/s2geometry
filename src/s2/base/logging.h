@@ -58,11 +58,11 @@
 class S2LogMessage {
  public:
   S2LogMessage(const char* file, int line,
-               absl::LogSeverity severity, std::ostream& stream)
+               s2::absl::LogSeverity severity, std::ostream& stream)
     : severity_(severity), stream_(stream) {
     if (enabled()) {
       stream_ << file << ":" << line << " "
-              << absl::LogSeverityName(severity) << " ";
+              << s2::absl::LogSeverityName(severity) << " ";
     }
   }
   ~S2LogMessage() { if (enabled()) stream_ << std::endl; }
@@ -73,13 +73,13 @@ class S2LogMessage {
   bool enabled() const {
 #ifdef ABSL_MIN_LOG_LEVEL
     return (static_cast<int>(severity_) >= ABSL_MIN_LOG_LEVEL ||
-            severity_ >= absl::LogSeverity::kFatal);
+            severity_ >= s2::absl::LogSeverity::kFatal);
 #else
     return true;
 #endif
   }
 
-  absl::LogSeverity severity_;
+  s2::absl::LogSeverity severity_;
   std::ostream& stream_;
 };
 
@@ -88,7 +88,7 @@ class S2LogMessage {
 class S2FatalLogMessage : public S2LogMessage {
  public:
   S2FatalLogMessage(const char* file, int line,
-                    absl::LogSeverity severity, std::ostream& stream)
+                    s2::absl::LogSeverity severity, std::ostream& stream)
       ABSL_ATTRIBUTE_COLD
     : S2LogMessage(file, line, severity, stream) {}
   ABSL_ATTRIBUTE_NORETURN ~S2FatalLogMessage() { abort(); }
@@ -109,13 +109,13 @@ struct S2LogMessageVoidify {
 #define S2_LOG_MESSAGE_(LogMessageClass, log_severity) \
     LogMessageClass(__FILE__, __LINE__, log_severity, std::cerr)
 #define S2_LOG_INFO \
-    S2_LOG_MESSAGE_(S2LogMessage, absl::LogSeverity::kInfo)
+    S2_LOG_MESSAGE_(S2LogMessage, s2::absl::LogSeverity::kInfo)
 #define S2_LOG_WARNING \
-    S2_LOG_MESSAGE_(S2LogMessage, absl::LogSeverity::kWarning)
+    S2_LOG_MESSAGE_(S2LogMessage, s2::absl::LogSeverity::kWarning)
 #define S2_LOG_ERROR \
-    S2_LOG_MESSAGE_(S2LogMessage, absl::LogSeverity::kError)
+    S2_LOG_MESSAGE_(S2LogMessage, s2::absl::LogSeverity::kError)
 #define S2_LOG_FATAL \
-    S2_LOG_MESSAGE_(S2FatalLogMessage, absl::LogSeverity::kFatal)
+    S2_LOG_MESSAGE_(S2FatalLogMessage, s2::absl::LogSeverity::kFatal)
 #ifndef NDEBUG
 #define S2_LOG_DFATAL S2_LOG_FATAL
 #else

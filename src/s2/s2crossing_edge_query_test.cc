@@ -41,8 +41,8 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 
-using absl::make_unique;
-using absl::StrCat;
+using s2::absl::make_unique;
+using s2::absl::StrCat;
 using s2shapeutil::ShapeEdge;
 using s2shapeutil::ShapeEdgeId;
 using s2textformat::MakePoint;
@@ -121,7 +121,7 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
   MutableS2ShapeIndex::Options options;
   options.set_max_edges_per_cell(1);
   MutableS2ShapeIndex index(options);
-  const int shape_id = index.Add(absl::WrapUnique(shape));
+  const int shape_id = index.Add(s2::absl::WrapUnique(shape));
   EXPECT_EQ(0, shape_id);
   // To check that candidates are being filtered reasonably, we count the
   // total number of candidates that the total number of edge pairs that
@@ -161,7 +161,7 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
         ++num_nearby_pairs;
         if (!std::binary_search(candidates.begin(), candidates.end(),
                                 ShapeEdgeId{0, i})) {
-          absl::StrAppend(&missing_candidates, " ", i);
+          s2::absl::StrAppend(&missing_candidates, " ", i);
         }
       } else {
         const double kMaxDist = S2::kMaxDiag.GetValue(S2::kMaxCellLevel);

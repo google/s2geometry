@@ -228,14 +228,14 @@
 #if (defined(__powerpc__) && !(_CALL_ELF > 1)) || defined(__ia64)
 // use opd section for function descriptors on these platforms, the function
 // address is the first word of the descriptor
-namespace absl {
+namespace s2::absl {
 enum { kPlatformUsesOPDSections = 1 };
-}  // namespace absl
+}  // namespace s2::absl
 #define ABSL_FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char **>(func)[0])
 #else  // not PPC or IA64
-namespace absl {
+namespace s2::absl {
 enum { kPlatformUsesOPDSections = 0 };
-}  // namespace absl
+}  // namespace s2::absl
 #define ABSL_FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char *>(func))
 #endif  // PPC or IA64
 #endif  // __cplusplus

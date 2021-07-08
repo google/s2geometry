@@ -39,7 +39,7 @@ void EdgeIterator::Next() {
 }
 
 string EdgeIterator::DebugString() const {
-  return absl::StrCat("(shape=", shape_id_, ", edge=", edge_id_, ")");
+  return s2::absl::StrCat("(shape=", shape_id_, ", edge=", edge_id_, ")");
 }
 
 }  // namespace s2shapeutil

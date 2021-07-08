@@ -155,7 +155,7 @@ class TaggedShapeFactory : public S2ShapeIndex::ShapeFactory {
   std::unique_ptr<S2Shape> operator[](int shape_id) const override;
 
   std::unique_ptr<ShapeFactory> Clone() const override {
-    return absl::make_unique<TaggedShapeFactory>(*this);
+    return s2::absl::make_unique<TaggedShapeFactory>(*this);
   }
 
  private:
@@ -185,7 +185,7 @@ class VectorShapeFactory : public S2ShapeIndex::ShapeFactory {
   std::unique_ptr<S2Shape> operator[](int shape_id) const override;
 
   std::unique_ptr<ShapeFactory> Clone() const override {
-    return absl::make_unique<VectorShapeFactory>(*this);
+    return s2::absl::make_unique<VectorShapeFactory>(*this);
   }
 
  private:
@@ -208,7 +208,7 @@ class WrappedShapeFactory : public S2ShapeIndex::ShapeFactory {
   std::unique_ptr<S2Shape> operator[](int shape_id) const override;
 
   std::unique_ptr<ShapeFactory> Clone() const override {
-    return absl::make_unique<WrappedShapeFactory>(*this);
+    return s2::absl::make_unique<WrappedShapeFactory>(*this);
   }
 
  private:
@@ -244,7 +244,7 @@ class HomogeneousShapeFactory : public S2ShapeIndex::ShapeFactory {
   std::unique_ptr<S2Shape> operator[](int shape_id) const override;
 
   std::unique_ptr<ShapeFactory> Clone() const override {
-    return absl::make_unique<HomogeneousShapeFactory>(*this);
+    return s2::absl::make_unique<HomogeneousShapeFactory>(*this);
   }
 
  private:
@@ -273,7 +273,7 @@ template <class Shape>
 std::unique_ptr<S2Shape> HomogeneousShapeFactory<Shape>::operator[](
     int shape_id) const {
   Decoder decoder = encoded_shapes_.GetDecoder(shape_id);
-  auto shape = absl::make_unique<Shape>();
+  auto shape = s2::absl::make_unique<Shape>();
   if (!shape->Init(&decoder)) return nullptr;
   return std::move(shape);  // Converts from Shape to S2Shape.
 }

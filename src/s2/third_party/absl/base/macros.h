@@ -39,16 +39,16 @@
 // can be used in defining new arrays. If you use this macro on a pointer by
 // mistake, you will get a compile-time error.
 #define ABSL_ARRAYSIZE(array) \
-  (sizeof(::absl::macros_internal::ArraySizeHelper(array)))
+  (sizeof(::s2::absl::macros_internal::ArraySizeHelper(array)))
 
-namespace absl {
+namespace s2::absl {
 namespace macros_internal {
 // Note: this internal template function declaration is used by ABSL_ARRAYSIZE.
 // The function doesn't need a definition, as we only use its type.
 template <typename T, size_t N>
 auto ArraySizeHelper(const T (&array)[N]) -> char (&)[N];
 }  // namespace macros_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 // TODO(b/62370839): Replace arraysize() with ABSL_ARRAYSIZE().
 template <typename T, size_t N>
@@ -62,7 +62,7 @@ auto ArraySizeHelper(const T (&array)[N]) -> char (&)[N];
 // static storage duration, and that the constructor should do nothing to its
 // state. Use of this macro indicates to the reader that it is legal to
 // declare a static instance of the class, provided the constructor is given
-// the absl::base_internal::kLinkerInitialized argument.
+// the ::s2::absl::base_internal::kLinkerInitialized argument.
 //
 // Normally, it is unsafe to declare a static variable that has a constructor or
 // a destructor because invocation order is undefined. However, if the type can
@@ -72,22 +72,22 @@ auto ArraySizeHelper(const T (&array)[N]) -> char (&)[N];
 //
 // Example:
 //       // Declaration
-//       explicit MyClass(absl::base_internal:LinkerInitialized x) {}
+//       explicit MyClass(::s2::absl::base_internal:LinkerInitialized x) {}
 //
 //       // Invocation
-//       static MyClass my_global(absl::base_internal::kLinkerInitialized);
-namespace absl {
+//       static MyClass my_global(::s2::absl::base_internal::kLinkerInitialized);
+namespace s2::absl {
 namespace base_internal {
 enum LinkerInitialized {
   kLinkerInitialized = 0,
   LINKER_INITIALIZED = 0,
 };
 }  // namespace base_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 namespace base {
-using absl::base_internal::LinkerInitialized;
-using absl::base_internal::LINKER_INITIALIZED;
+using ::s2::absl::base_internal::LinkerInitialized;
+using ::s2::absl::base_internal::LINKER_INITIALIZED;
 }  // namespace base
 
 // ABSL_FALLTHROUGH_INTENDED

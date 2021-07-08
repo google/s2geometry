@@ -19,7 +19,7 @@
 
 #include <string>
 
-namespace absl {
+namespace s2::absl {
 namespace base_internal {
 
 // Helper functions that allow throwing exceptions consistently from anywhere.
@@ -66,6 +66,6 @@ namespace base_internal {
 // [[noreturn]] void ThrowStdBadArrayNewLength();
 
 }  // namespace base_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_INTERNAL_THROW_DELEGATE_H_

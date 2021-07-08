@@ -29,7 +29,7 @@ namespace s2coding {
 //
 // REQUIRES: "encoder" uses the default constructor, so that its buffer
 //           can be enlarged as necessary by calling Ensure(int).
-void EncodeS2CellIdVector(absl::Span<const S2CellId> v, Encoder* encoder);
+void EncodeS2CellIdVector(s2::absl::Span<const S2CellId> v, Encoder* encoder);
 
 // This class represents an encoded vector of S2CellIds.  Values are decoded
 // only when they are accessed.  This allows for very fast initialization and

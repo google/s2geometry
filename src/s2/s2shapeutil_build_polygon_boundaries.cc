@@ -24,7 +24,7 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
 
-using absl::WrapUnique;
+using s2::absl::WrapUnique;
 using std::vector;
 
 namespace s2shapeutil {

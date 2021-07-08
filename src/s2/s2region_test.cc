@@ -121,7 +121,7 @@ const char kEncodedLoopCross[] =
 //       S2CellId(s2textformat::MakePoint("0:-179")).ToPoint(),
 //       S2CellId(s2textformat::MakePoint("1:-180")).ToPoint()};
 // snapped_loop = make_unique<S2Loop>(snapped_loop_a_vertices));
-// absl::FixedArray<S2XYZFaceSiTi> points(loop.num_vertices());
+// s2::absl::FixedArray<S2XYZFaceSiTi> points(loop.num_vertices());
 // loop.GetXYZFaceSiTiVertices(points.data());
 // loop.EncodeCompressed(encoder, points.data(), level);
 //

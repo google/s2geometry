@@ -237,7 +237,7 @@ std::unique_ptr<S2Polyline> HalfResolution(const S2Polyline& in) {
   for (int i = 0; i < n; i += 2) {
     vertices.push_back(in.vertex(i));
   }
-  return absl::make_unique<S2Polyline>(vertices);
+  return s2::absl::make_unique<S2Polyline>(vertices);
 }
 
 // Helper methods for GetMedoidPolyline and GetConsensusPolyline to auto-select
@@ -405,7 +405,7 @@ std::unique_ptr<S2Polyline> GetConsensusPolyline(
     }
 
     ++iterations;
-    auto new_consensus = absl::make_unique<S2Polyline>(points);
+    auto new_consensus = s2::absl::make_unique<S2Polyline>(points);
     converged = new_consensus->ApproxEquals(*consensus);
     consensus = std::move(new_consensus);
   }

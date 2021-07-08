@@ -21,8 +21,8 @@
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
-using absl::StrSplit;
-using absl::string_view;
+using s2::absl::StrSplit;
+using s2::absl::string_view;
 using std::pair;
 using std::string;
 using std::vector;

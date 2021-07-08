@@ -26,7 +26,7 @@
 #include <iterator>
 #include <type_traits>
 
-namespace absl {
+namespace s2::absl {
 
 namespace algorithm_internal {
 
@@ -118,7 +118,7 @@ constexpr const T& clamp(const T& v, const T& lo, const T& hi, Compare comp) {
 // Requires T is LessThanComparable.
 template <typename T>
 constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
-  return absl::clamp(v, lo, hi, algorithm_internal::Less{});
+  return ::s2::absl::clamp(v, lo, hi, algorithm_internal::Less{});
 }
 
 // Compares the equality of two ranges specified by pairs of iterators, using
@@ -146,7 +146,7 @@ bool equal(InputIter1 first1, InputIter1 last1, InputIter2 first2,
 template <typename InputIter1, typename InputIter2>
 bool equal(InputIter1 first1, InputIter1 last1, InputIter2 first2,
            InputIter2 last2) {
-  return absl::equal(first1, last1, first2, last2,
+  return ::s2::absl::equal(first1, last1, first2, last2,
                      algorithm_internal::EqualTo{});
 }
 
@@ -170,7 +170,7 @@ bool linear_search(InputIterator first, InputIterator last,
 // <= 4.9 where `std::rotate` returns `void` instead of an iterator.
 //
 // The complexity of this algorithm is the same as that of `std::rotate`, but if
-// `ForwardIterator` is not a random-access iterator, then `absl::rotate`
+// `ForwardIterator` is not a random-access iterator, then `::s2::absl::rotate`
 // performs an additional pass over the range to construct the return value.
 
 template <typename ForwardIterator>
@@ -182,6 +182,6 @@ ForwardIterator rotate(ForwardIterator first, ForwardIterator middle,
                    ForwardIterator>());
 }
 
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_ALGORITHM_ALGORITHM_H_

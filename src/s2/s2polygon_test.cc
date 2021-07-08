@@ -67,8 +67,8 @@
 #include "s2/util/gtl/legacy_random_shuffle.h"
 #include "s2/util/math/matrix3x3.h"
 
-using absl::StrCat;
-using absl::make_unique;
+using s2::absl::StrCat;
+using s2::absl::make_unique;
 using s2builderutil::IntLatLngSnapFunction;
 using s2builderutil::S2PolygonLayer;
 using std::max;
@@ -2873,7 +2873,7 @@ class S2PolygonDecodeTest : public ::testing::Test {
   const int kMaxBytes = 256;
 
   // The data array.
-  absl::FixedArray<int8> data_array_;
+  s2::absl::FixedArray<int8> data_array_;
 
   // Encoder that is used to put data into the array.
   Encoder encoder_;

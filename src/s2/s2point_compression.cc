@@ -33,7 +33,7 @@
 #include "s2/util/coding/transforms.h"
 #include "s2/util/endian/endian.h"
 
-using absl::Span;
+using s2::absl::Span;
 using std::pair;
 using std::vector;
 
@@ -57,7 +57,7 @@ struct FaceRun {
     // but since this would only help if there were more than 21 faces, it will
     // be a small overall savings, much smaller than the bound encoding.
     encoder->put_varint64(
-        S2CellId::kNumFaces * absl::implicit_cast<int64>(count) + face);
+        S2CellId::kNumFaces * s2::absl::implicit_cast<int64>(count) + face);
     S2_DCHECK_GE(encoder->avail(), 0);
   }
 
@@ -317,7 +317,7 @@ bool DecodePointCompressed(Decoder* decoder,
 void S2EncodePointsCompressed(Span<const S2XYZFaceSiTi> points,
                               int level,
                               Encoder* encoder) {
-  absl::FixedArray<pair<int, int>> vertices_pi_qi(points.size());
+  s2::absl::FixedArray<pair<int, int>> vertices_pi_qi(points.size());
   vector<int> off_center;
   Faces faces;
   for (int i = 0; i < points.size(); ++i) {

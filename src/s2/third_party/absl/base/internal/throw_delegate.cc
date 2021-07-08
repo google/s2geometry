@@ -21,7 +21,7 @@
 #include "s2/third_party/absl/base/config.h"
 #include "s2/third_party/absl/base/internal/raw_logging.h"
 
-namespace absl {
+namespace s2::absl {
 namespace base_internal {
 
 namespace {
@@ -103,4 +103,4 @@ void ThrowStdBadFunctionCall() { Throw(std::bad_function_call()); }
 void ThrowStdBadAlloc() { Throw(std::bad_alloc()); }
 
 }  // namespace base_internal
-}  // namespace absl
+}  // namespace s2::absl

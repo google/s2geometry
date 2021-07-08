@@ -39,7 +39,7 @@ static const int kIters = 10000;
 // "max_digits" after the decimal point and has no trailing zeros.
 void ExpectMaxDigits(const S2LatLng& ll, int max_digits) {
   string result = s2textformat::ToString(ll.ToPoint());
-  vector<string> values = absl::StrSplit(result, ':', absl::SkipEmpty());
+  vector<string> values = s2::absl::StrSplit(result, ':', s2::absl::SkipEmpty());
   EXPECT_EQ(2, values.size()) << result;
   for (const auto& value : values) {
     int num_digits = 0;
@@ -138,7 +138,7 @@ TEST(ToString, EmptyPolygon) {
 }
 
 TEST(ToString, FullPolygon) {
-  S2Polygon full(absl::make_unique<S2Loop>(S2Loop::kFull()));
+  S2Polygon full(s2::absl::make_unique<S2Loop>(S2Loop::kFull()));
   EXPECT_EQ("full", s2textformat::ToString(full));
 }
 
@@ -342,7 +342,7 @@ TEST(SafeMakePolygon, ValidInput) {
   std::vector<S2Point> vertices({S2LatLng::FromDegrees(-20, 150).ToPoint(),
                                  S2LatLng::FromDegrees(-20, 151).ToPoint(),
                                  S2LatLng::FromDegrees(-19, 150).ToPoint()});
-  S2Polygon expected(absl::make_unique<S2Loop>(vertices));
+  S2Polygon expected(s2::absl::make_unique<S2Loop>(vertices));
   EXPECT_TRUE(polygon->Equals(&expected));
 }
 
@@ -374,7 +374,7 @@ TEST(SafeMakeVerbatimPolygon, ValidInput) {
   std::vector<S2Point> vertices({S2LatLng::FromDegrees(-20, 150).ToPoint(),
                                  S2LatLng::FromDegrees(-20, 151).ToPoint(),
                                  S2LatLng::FromDegrees(-19, 150).ToPoint()});
-  S2Polygon expected(absl::make_unique<S2Loop>(vertices));
+  S2Polygon expected(s2::absl::make_unique<S2Loop>(vertices));
   EXPECT_TRUE(polygon->Equals(&expected));
 }
 
@@ -404,13 +404,13 @@ TEST(SafeMakeLaxPolygon, InvalidInput) {
 }
 
 TEST(SafeMakeIndex, ValidInput) {
-  auto index = absl::make_unique<MutableS2ShapeIndex>();
+  auto index = s2::absl::make_unique<MutableS2ShapeIndex>();
   EXPECT_TRUE(s2textformat::MakeIndex("# 0:0, 0:0 | 1:0, 2:0 #", &index));
   EXPECT_EQ("# 0:0, 0:0 | 1:0, 2:0 #", s2textformat::ToString(*index));
 }
 
 TEST(SafeMakeIndex, InvalidInput) {
-  auto index = absl::make_unique<MutableS2ShapeIndex>();
+  auto index = s2::absl::make_unique<MutableS2ShapeIndex>();
   EXPECT_FALSE(s2textformat::MakeIndex("# blah #", &index));
 }
 

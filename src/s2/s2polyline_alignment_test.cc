@@ -387,7 +387,7 @@ std::vector<std::unique_ptr<S2Polyline>> GenPolylines(
       pts.push_back(
           S2Testing::SamplePoint(S2Cap(loop[j], perturbation_radius)));
     }
-    polylines.push_back(absl::make_unique<S2Polyline>(pts));
+    polylines.push_back(s2::absl::make_unique<S2Polyline>(pts));
   }
   return polylines;
 }

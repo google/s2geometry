@@ -344,7 +344,7 @@ class S2Polyline final : public S2Region {
     }
 
     bool Init(Decoder* decoder) {
-      auto polyline = absl::make_unique<S2Polyline>();
+      auto polyline = s2::absl::make_unique<S2Polyline>();
       if (!polyline->Decode(decoder)) return false;
       Shape::Init(polyline.get());
       owned_polyline_ = std::move(polyline);

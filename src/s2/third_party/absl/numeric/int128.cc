@@ -22,7 +22,7 @@
 #include <string>
 #include <type_traits>
 
-namespace absl {
+namespace s2::absl {
 
 const uint128 kuint128max = MakeUint128(std::numeric_limits<uint64_t>::max(),
                                         std::numeric_limits<uint64_t>::max());
@@ -226,7 +226,7 @@ namespace {
 
 }
 
-}  // namespace absl
+}  // namespace s2::absl
 
 
 

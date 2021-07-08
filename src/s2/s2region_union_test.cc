@@ -31,7 +31,7 @@
 #include "s2/s2region_coverer.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using std::unique_ptr;
 using std::vector;
 

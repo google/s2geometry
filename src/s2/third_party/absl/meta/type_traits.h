@@ -41,7 +41,7 @@
 
 #include "s2/third_party/absl/base/config.h"
 
-namespace absl {
+namespace s2::absl {
 
 namespace type_traits_internal {
 
@@ -133,7 +133,7 @@ struct is_move_assignable : type_traits_internal::is_detected<
 // This metafunction is designed to be a drop-in replacement for the C++17
 // `std::void_t` metafunction.
 //
-// NOTE: `absl::void_t` does not use the standard-specified implementation so
+// NOTE: `::s2::absl::void_t` does not use the standard-specified implementation so
 // that it can remain compatible with gcc < 5.1. This can introduce slightly
 // different behavior, such as when ordering partial specializations.
 template <typename... Ts>
@@ -326,7 +326,7 @@ template <typename T>
 struct is_trivially_copy_assignable
     : std::integral_constant<
           bool, __has_trivial_assign(typename std::remove_reference<T>::type) &&
-                    absl::is_copy_assignable<T>::value> {
+                    ::s2::absl::is_copy_assignable<T>::value> {
 #ifdef ABSL_HAVE_STD_IS_TRIVIALLY_ASSIGNABLE
  private:
   static constexpr bool compliant =
@@ -423,14 +423,14 @@ struct IsHashable<Key,
 
 template <typename Key>
 struct IsHashEnabled
-    : absl::conjunction<std::is_default_constructible<std::hash<Key>>,
+    : ::s2::absl::conjunction<std::is_default_constructible<std::hash<Key>>,
                         std::is_copy_constructible<std::hash<Key>>,
                         std::is_destructible<std::hash<Key>>,
-                        absl::is_copy_assignable<std::hash<Key>>,
+                        ::s2::absl::is_copy_assignable<std::hash<Key>>,
                         IsHashable<Key>> {};
 
 }  // namespace type_traits_internal
 
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_META_TYPE_TRAITS_H_

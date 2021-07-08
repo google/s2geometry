@@ -55,7 +55,7 @@ inline static Vector3_ld ToLD(const S2Point& x) {
 }
 
 inline static long double ToLD(double x) {
-  return absl::implicit_cast<long double>(x);
+  return s2::absl::implicit_cast<long double>(x);
 }
 
 inline static Vector3_xf ToExact(const S2Point& x) {

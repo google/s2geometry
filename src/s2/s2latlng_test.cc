@@ -29,7 +29,7 @@
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 
-using absl::StrCat;
+using s2::absl::StrCat;
 using std::fabs;
 
 TEST(S2LatLng, TestBasic) {

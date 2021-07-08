@@ -22,7 +22,7 @@
 #pragma intrinsic(_BitScanReverse64)
 #endif
 
-namespace absl {
+namespace s2::absl {
 namespace strings_internal {
 
 // Returns the number of leading 0 bits in a 64-bit value.
@@ -48,6 +48,6 @@ inline int CountLeadingZeros64(uint64_t n) {
 }
 
 }  // namespace strings_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_STRINGS_INTERNAL_BITS_H_

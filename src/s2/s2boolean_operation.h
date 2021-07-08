@@ -167,7 +167,7 @@
 //   S2BooleanOperation::Options options;
 //   options.set_snap_function(snap_function);
 //   S2BooleanOperation op(S2BooleanOperation::OpType::INTERSECTION,
-//                         absl::make_unique<S2PolygonLayer>(&polygon),
+//                         s2::absl::make_unique<S2PolygonLayer>(&polygon),
 //                         options);
 //   S2Error error;
 //   if (!op.Build(a, b, &error)) {
@@ -183,9 +183,9 @@
 //   S2Polygon polygon;
 //   S2BooleanOperation op(
 //       S2BooleanOperation::OpType::UNION,
-//       absl::make_unique<s2builderutil::PointVectorLayer>(&points),
-//       absl::make_unique<s2builderutil::S2PolylineVectorLayer>(&polylines),
-//       absl::make_unique<S2PolygonLayer>(&polygon));
+//       s2::absl::make_unique<s2builderutil::PointVectorLayer>(&points),
+//       s2::absl::make_unique<s2builderutil::S2PolylineVectorLayer>(&polylines),
+//       s2::absl::make_unique<S2PolygonLayer>(&polygon));
 
 class S2BooleanOperation {
  public:

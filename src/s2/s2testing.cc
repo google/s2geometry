@@ -47,7 +47,7 @@
 #include "s2/third_party/absl/strings/str_split.h"
 #include "s2/util/math/matrix3x3.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using std::max;
 using std::unique_ptr;
 using std::vector;

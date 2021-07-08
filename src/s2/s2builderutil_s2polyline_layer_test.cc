@@ -26,7 +26,7 @@
 #include "s2/s2debug.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using s2builderutil::IndexedS2PolylineLayer;
 using s2builderutil::S2PolylineLayer;
 using s2textformat::MakePolylineOrDie;

@@ -279,7 +279,7 @@ LoopOrder GetCanonicalLoopOrder(S2PointLoopSpan loop) {
   int n = loop.size();
   if (n == 0) return LoopOrder(0, 1);
 
-  absl::InlinedVector<int, 4> min_indices;
+  s2::absl::InlinedVector<int, 4> min_indices;
   min_indices.push_back(0);
   for (int i = 1; i < n; ++i) {
     if (loop[i] <= loop[min_indices[0]]) {

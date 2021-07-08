@@ -18,7 +18,7 @@
 // -----------------------------------------------------------------------------
 //
 // This header file defines a `Span<T>` type for holding a view of an existing
-// array of data. The `Span` object, much like the `absl::string_view` object,
+// array of data. The `Span` object, much like the `::s2::absl::string_view` object,
 // does not own such data itself. A span provides a lightweight way to pass
 // around view of such data.
 //
@@ -30,26 +30,26 @@
 // The C++ standards committee currently has a proposal for a `std::span` type,
 // (http://wg21.link/p0122), which is not yet part of the standard (though may
 // become part of C++20). As of August 2017, the differences between
-// `absl::Span` and this proposal are:
-//    * `absl::Span` uses `size_t` for `size_type`
-//    * `absl::Span` has no `operator()`
-//    * `absl::Span` has no constructors for `std::unique_ptr` or
+// `::s2::absl::Span` and this proposal are:
+//    * `::s2::absl::Span` uses `size_t` for `size_type`
+//    * `::s2::absl::Span` has no `operator()`
+//    * `::s2::absl::Span` has no constructors for `std::unique_ptr` or
 //      `std::shared_ptr`
-//    * `absl::Span` has the factory functions `MakeSpan()` and
+//    * `::s2::absl::Span` has the factory functions `MakeSpan()` and
 //      `MakeConstSpan()`
-//    * `absl::Span` has `front()` and `back()` methods
-//    * bounds-checked access to `absl::Span` is accomplished with `at()`
-//    * `absl::Span` has compiler-provided move and copy constructors and
+//    * `::s2::absl::Span` has `front()` and `back()` methods
+//    * bounds-checked access to `::s2::absl::Span` is accomplished with `at()`
+//    * `::s2::absl::Span` has compiler-provided move and copy constructors and
 //      assignment. This is due to them being specified as `constexpr`, but that
 //      implies const in C++11.
-//    * `absl::Span` has no `element_type` or `index_type` typedefs
-//    * A read-only `absl::Span<const T>` can be implicitly constructed from an
+//    * `::s2::absl::Span` has no `element_type` or `index_type` typedefs
+//    * A read-only `::s2::absl::Span<const T>` can be implicitly constructed from an
 //      initializer list.
-//    * `absl::Span` has no `bytes()`, `size_bytes()`, `as_bytes()`, or
+//    * `::s2::absl::Span` has no `bytes()`, `size_bytes()`, `as_bytes()`, or
 //      `as_mutable_bytes()` methods
-//    * `absl::Span` has no static extent template parameter, nor constructors
+//    * `::s2::absl::Span` has no static extent template parameter, nor constructors
 //      which exist only because of the static extent parameter.
-//    * `absl::Span` has an explicit mutable-reference constructor
+//    * `::s2::absl::Span` has an explicit mutable-reference constructor
 //
 // For more information, see the class comments below.
 #ifndef S2_THIRD_PARTY_ABSL_TYPES_SPAN_H_
@@ -71,7 +71,7 @@
 #include "s2/third_party/absl/base/port.h"
 #include "s2/third_party/absl/meta/type_traits.h"
 
-namespace absl {
+namespace s2::absl {
 
 template <typename T>
 class Span;
@@ -107,7 +107,7 @@ constexpr auto GetData(C& c) noexcept  // NOLINT(runtime/references)
 // Detection idioms for size() and data().
 template <typename C>
 using HasSize =
-    std::is_integral<absl::decay_t<decltype(std::declval<C&>().size())>>;
+    std::is_integral<::s2::absl::decay_t<decltype(std::declval<C&>().size())>>;
 
 // We want to enable conversion from vector<T*> to Span<const T* const> but
 // disable conversion from vector<Derived> to Span<Base>. Here we use
@@ -117,13 +117,13 @@ using HasSize =
 // which returns a reference.
 template <typename T, typename C>
 using HasData =
-    std::is_convertible<absl::decay_t<decltype(GetData(std::declval<C&>()))>*,
+    std::is_convertible<::s2::absl::decay_t<decltype(GetData(std::declval<C&>()))>*,
                         T* const*>;
 
 // Extracts value type from a Container
 template <typename C>
 struct ElementType {
-  using type = typename absl::remove_reference_t<C>::value_type;
+  using type = typename ::s2::absl::remove_reference_t<C>::value_type;
 };
 
 template <typename T, size_t N>
@@ -141,7 +141,7 @@ using EnableIfMutable =
 template <typename T>
 bool EqualImpl(Span<T> a, Span<T> b) {
   static_assert(std::is_const<T>::value, "");
-  return absl::equal(a.begin(), a.end(), b.begin(), b.end());
+  return ::s2::absl::equal(a.begin(), a.end(), b.begin(), b.end());
 }
 
 template <typename T>
@@ -192,12 +192,12 @@ using EnableIfConvertibleToSpanConst =
 //
 // Spans may also be constructed from containers holding contiguous sequences.
 // Such containers must supply `data()` and `size() const` methods (e.g
-// `std::vector<T>`, `absl::InlinedVector<T, N>`). All implicit conversions to
-// `absl::Span` from such containers will create spans of type `const T`;
+// `std::vector<T>`, `::s2::absl::InlinedVector<T, N>`). All implicit conversions to
+// `::s2::absl::Span` from such containers will create spans of type `const T`;
 // spans which can mutate their values (of type `T`) must use explicit
 // constructors.
 //
-// A `Span<T>` is somewhat analogous to an `absl::string_view`, but for an array
+// A `Span<T>` is somewhat analogous to an `::s2::absl::string_view`, but for an array
 // of elements of type `T`. A user of `Span` must ensure that the data being
 // pointed to outlives the `Span` itself.
 //
@@ -212,14 +212,14 @@ using EnableIfConvertibleToSpanConst =
 //
 //   // Construct a Span explicitly from a container:
 //   std::vector<int> v = {1, 2, 3, 4, 5};
-//   auto span = absl::Span<const int>(v);
+//   auto span = ::s2::absl::Span<const int>(v);
 //
 //   // Construct a Span explicitly from a C-style array:
 //   int a[5] =  {1, 2, 3, 4, 5};
-//   auto span = absl::Span<const int>(a);
+//   auto span = ::s2::absl::Span<const int>(a);
 //
 //   // Construct a Span implicitly from a container
-//   void MyRoutine(absl::Span<const int> a) {
+//   void MyRoutine(::s2::absl::Span<const int> a) {
 //     ...
 //   }
 //   std::vector v = {1,2,3,4,5};
@@ -232,25 +232,25 @@ using EnableIfConvertibleToSpanConst =
 // (such as resizing) or invalidate iterators into the container.
 //
 // One common use for a `Span` is when passing arguments to a routine that can
-// accept a variety of array types (e.g. a `std::vector`, `absl::InlinedVector`,
+// accept a variety of array types (e.g. a `std::vector`, `::s2::absl::InlinedVector`,
 // a C-style array, etc.). Instead of creating overloads for each case, you
 // can simply specify a `Span` as the argument to such a routine.
 //
 // Example:
 //
-//   void MyRoutine(absl::Span<const int> a) {
+//   void MyRoutine(::s2::absl::Span<const int> a) {
 //     ...
 //   }
 //
 //   std::vector v = {1,2,3,4,5};
 //   MyRoutine(v);
 //
-//   absl::InlinedVector<int, 4> my_inline_vector;
+//   ::s2::absl::InlinedVector<int, 4> my_inline_vector;
 //   MyRoutine(my_inline_vector);
 //
 //   // Explicit constructor from pointer,size
 //   int* my_array = new int[10];
-//   MyRoutine(absl::Span<const int>(my_array, 10));
+//   MyRoutine(::s2::absl::Span<const int>(my_array, 10));
 template <typename T>
 class Span {
  private:
@@ -272,7 +272,7 @@ class Span {
       typename std::enable_if<!std::is_const<T>::value, U>::type;
 
  public:
-  using value_type = absl::remove_cv_t<T>;
+  using value_type = ::s2::absl::remove_cv_t<T>;
   using pointer = T*;
   using const_pointer = const T*;
   using reference = T&;
@@ -330,7 +330,7 @@ class Span {
   // brace-enclosed initializer list to a function expecting a `Span`. Such
   // spans constructed from an initializer list must be of type `Span<const T>`.
   //
-  //   void Process(absl::Span<const int> x);
+  //   void Process(::s2::absl::Span<const int> x);
   //   Process({1, 2, 3});
   //
   // Note that as always the array referenced by the span must outlive the span.
@@ -343,7 +343,7 @@ class Span {
   //
   //   // Assume that this function uses the array directly, not retaining any
   //   // copy of the span or pointer to any of its elements.
-  //   void Process(absl::Span<const int> ints);
+  //   void Process(::s2::absl::Span<const int> ints);
   //
   //   // Okay: the std::initializer_list<int> will reference a temporary array
   //   // that isn't destroyed until after the call to Process returns.
@@ -351,14 +351,14 @@ class Span {
   //
   //   // Not okay: the storage used by the std::initializer_list<int> is not
   //   // allowed to be referenced after the first line.
-  //   absl::Span<const int> ints = { 17, 19 };
+  //   ::s2::absl::Span<const int> ints = { 17, 19 };
   //   Process(ints);
   //
   //   // Not okay for the same reason as above: even when the elements of the
   //   // initializer list expression are not temporaries the underlying array
   //   // is, so the initializer list must still outlive the span.
   //   const int foo = 17;
-  //   absl::Span<const int> ints = { foo };
+  //   ::s2::absl::Span<const int> ints = { foo };
   //   Process(ints);
   //
   template <typename LazyT = T,
@@ -498,18 +498,18 @@ class Span {
   // Examples:
   //
   //   std::vector<int> vec = {10, 11, 12, 13};
-  //   absl::MakeSpan(vec).subspan(1, 2);  // {11, 12}
-  //   absl::MakeSpan(vec).subspan(2, 8);  // {12, 13}
-  //   absl::MakeSpan(vec).subspan(1);     // {11, 12, 13}
-  //   absl::MakeSpan(vec).subspan(4);     // {}
-  //   absl::MakeSpan(vec).subspan(5);     // throws std::out_of_range
+  //   ::s2::absl::MakeSpan(vec).subspan(1, 2);  // {11, 12}
+  //   ::s2::absl::MakeSpan(vec).subspan(2, 8);  // {12, 13}
+  //   ::s2::absl::MakeSpan(vec).subspan(1);     // {11, 12, 13}
+  //   ::s2::absl::MakeSpan(vec).subspan(4);     // {}
+  //   ::s2::absl::MakeSpan(vec).subspan(5);     // throws std::out_of_range
   constexpr Span subspan(size_type pos = 0, size_type len = npos) const {
     return (pos <= size())
                ? Span(data() + pos, span_internal::Min(size() - pos, len))
                : (base_internal::ThrowStdOutOfRange("pos > size()"), Span());
   }
 
-  // Support for absl::Hash.
+  // Support for ::s2::absl::Hash.
   template <typename H>
   friend H AbslHashValue(H h, Span v) {
     return H::combine(H::combine_contiguous(std::move(h), v.data(), v.size()),
@@ -697,7 +697,7 @@ bool operator>=(Span<T> a, const U& b) {
 //
 // Examples:
 //
-//   void MyRoutine(absl::Span<MyComplicatedType> a) {
+//   void MyRoutine(::s2::absl::Span<MyComplicatedType> a) {
 //     ...
 //   };
 //   // my_vector is a container of non-const types
@@ -708,20 +708,20 @@ bool operator>=(Span<T> a, const U& b) {
 //   MyRoutine(my_vector);                // error, type mismatch
 //
 //   // Explicitly constructing the Span is verbose
-//   MyRoutine(absl::Span<MyComplicatedType>(my_vector));
+//   MyRoutine(::s2::absl::Span<MyComplicatedType>(my_vector));
 //
-//   // Use MakeSpan() to make an absl::Span<T>
-//   MyRoutine(absl::MakeSpan(my_vector));
+//   // Use MakeSpan() to make an ::s2::absl::Span<T>
+//   MyRoutine(::s2::absl::MakeSpan(my_vector));
 //
 //   // Construct a span from an array ptr+size
-//   absl::Span<T> my_span() {
-//     return absl::MakeSpan(&array[0], num_elements_);
+//   ::s2::absl::Span<T> my_span() {
+//     return ::s2::absl::MakeSpan(&array[0], num_elements_);
 //   }
 //
 //
 // `MakeSpan() differs from `gtl::MakeArraySlice()` in that it automatically
 // deduces the constness of the argument rather than always returning
-// `absl::Span<const T>` as the latter does. If you want the "always const"
+// `::s2::absl::Span<const T>` as the latter does. If you want the "always const"
 // behavior, use `MakeConstSpan()`.
 //
 template <int&... ExplicitArgumentBarrier, typename T>
@@ -736,7 +736,7 @@ Span<T> MakeSpan(T* begin, T* end) noexcept {
 
 template <int&... ExplicitArgumentBarrier, typename C>
 constexpr auto MakeSpan(C& c) noexcept  // NOLINT(runtime/references)
-    -> decltype(absl::MakeSpan(span_internal::GetData(c), c.size())) {
+    -> decltype(::s2::absl::MakeSpan(span_internal::GetData(c), c.size())) {
   return MakeSpan(span_internal::GetData(c), c.size());
 }
 
@@ -752,22 +752,22 @@ constexpr Span<T> MakeSpan(T (&array)[N]) noexcept {
 //
 // Examples:
 //
-//   void ProcessInts(absl::Span<const int> some_ints);
+//   void ProcessInts(::s2::absl::Span<const int> some_ints);
 //
 //   // Call with a pointer and size.
 //   int array[3] = { 0, 0, 0 };
-//   ProcessInts(absl::MakeConstSpan(&array[0], 3));
+//   ProcessInts(::s2::absl::MakeConstSpan(&array[0], 3));
 //
 //   // Call with a [begin, end) pair.
-//   ProcessInts(absl::MakeConstSpan(&array[0], &array[3]));
+//   ProcessInts(::s2::absl::MakeConstSpan(&array[0], &array[3]));
 //
 //   // Call directly with an array.
-//   ProcessInts(absl::MakeConstSpan(array));
+//   ProcessInts(::s2::absl::MakeConstSpan(array));
 //
 //   // Call with a contiguous container.
 //   std::vector<int> some_ints = ...;
-//   ProcessInts(absl::MakeConstSpan(some_ints));
-//   ProcessInts(absl::MakeConstSpan(std::vector<int>{ 0, 0, 0 }));
+//   ProcessInts(::s2::absl::MakeConstSpan(some_ints));
+//   ProcessInts(::s2::absl::MakeConstSpan(std::vector<int>{ 0, 0, 0 }));
 //
 template <int&... ExplicitArgumentBarrier, typename T>
 constexpr Span<const T> MakeConstSpan(T* ptr, size_t size) noexcept {
@@ -788,6 +788,6 @@ template <int&... ExplicitArgumentBarrier, typename T, size_t N>
 constexpr Span<const T> MakeConstSpan(const T (&array)[N]) noexcept {
   return Span<const T>(array, N);
 }
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_TYPES_SPAN_H_

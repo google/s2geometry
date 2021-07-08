@@ -24,7 +24,7 @@
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 
 TEST(ValueLexicon, DuplicateValues) {
   ValueLexicon<int64> lex;

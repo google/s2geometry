@@ -69,7 +69,7 @@ void __sanitizer_unaligned_store32(void *p, uint32_t v);
 void __sanitizer_unaligned_store64(void *p, uint64_t v);
 }  // extern "C"
 
-namespace absl {
+namespace s2::absl {
 namespace base_internal {
 
 inline uint16_t UnalignedLoad16(const void *p) {
@@ -97,25 +97,25 @@ inline void UnalignedStore64(void *p, uint64 v) {
 }
 
 }  // namespace base_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #define ABSL_INTERNAL_UNALIGNED_LOAD16(_p) \
-  (absl::base_internal::UnalignedLoad16(_p))
+  (::s2::absl::base_internal::UnalignedLoad16(_p))
 #define ABSL_INTERNAL_UNALIGNED_LOAD32(_p) \
-  (absl::base_internal::UnalignedLoad32(_p))
+  (::s2::absl::base_internal::UnalignedLoad32(_p))
 #define ABSL_INTERNAL_UNALIGNED_LOAD64(_p) \
-  (absl::base_internal::UnalignedLoad64(_p))
+  (::s2::absl::base_internal::UnalignedLoad64(_p))
 
 #define ABSL_INTERNAL_UNALIGNED_STORE16(_p, _val) \
-  (absl::base_internal::UnalignedStore16(_p, _val))
+  (::s2::absl::base_internal::UnalignedStore16(_p, _val))
 #define ABSL_INTERNAL_UNALIGNED_STORE32(_p, _val) \
-  (absl::base_internal::UnalignedStore32(_p, _val))
+  (::s2::absl::base_internal::UnalignedStore32(_p, _val))
 #define ABSL_INTERNAL_UNALIGNED_STORE64(_p, _val) \
-  (absl::base_internal::UnalignedStore64(_p, _val))
+  (::s2::absl::base_internal::UnalignedStore64(_p, _val))
 
 #elif defined(UNDEFINED_BEHAVIOR_SANITIZER)
 
-namespace absl {
+namespace s2::absl {
 namespace base_internal {
 
 inline uint16_t UnalignedLoad16(const void *p) {
@@ -143,21 +143,21 @@ inline void UnalignedStore32(void *p, uint32_t v) { memcpy(p, &v, sizeof v); }
 inline void UnalignedStore64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 
 }  // namespace base_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #define ABSL_INTERNAL_UNALIGNED_LOAD16(_p) \
-  (absl::base_internal::UnalignedLoad16(_p))
+  (::s2::absl::base_internal::UnalignedLoad16(_p))
 #define ABSL_INTERNAL_UNALIGNED_LOAD32(_p) \
-  (absl::base_internal::UnalignedLoad32(_p))
+  (::s2::absl::base_internal::UnalignedLoad32(_p))
 #define ABSL_INTERNAL_UNALIGNED_LOAD64(_p) \
-  (absl::base_internal::UnalignedLoad64(_p))
+  (::s2::absl::base_internal::UnalignedLoad64(_p))
 
 #define ABSL_INTERNAL_UNALIGNED_STORE16(_p, _val) \
-  (absl::base_internal::UnalignedStore16(_p, _val))
+  (::s2::absl::base_internal::UnalignedStore16(_p, _val))
 #define ABSL_INTERNAL_UNALIGNED_STORE32(_p, _val) \
-  (absl::base_internal::UnalignedStore32(_p, _val))
+  (::s2::absl::base_internal::UnalignedStore32(_p, _val))
 #define ABSL_INTERNAL_UNALIGNED_STORE64(_p, _val) \
-  (absl::base_internal::UnalignedStore64(_p, _val))
+  (::s2::absl::base_internal::UnalignedStore64(_p, _val))
 
 #elif defined(__x86_64__) || defined(_M_X64) || defined(__i386) || \
     defined(_M_IX86) || defined(__ppc__) || defined(__PPC__) ||    \
@@ -213,7 +213,7 @@ inline void UnalignedStore64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 // we can tell it that a _struct_ is unaligned, which has the same effect,
 // so we do that.
 
-namespace absl {
+namespace s2::absl {
 namespace base_internal {
 
 struct Unaligned16Struct {
@@ -227,23 +227,23 @@ struct Unaligned32Struct {
 } ABSL_ATTRIBUTE_PACKED;
 
 }  // namespace base_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #define ABSL_INTERNAL_UNALIGNED_LOAD16(_p)                                  \
-  ((reinterpret_cast<const ::absl::base_internal::Unaligned16Struct *>(_p)) \
+  ((reinterpret_cast<const ::s2::absl::base_internal::Unaligned16Struct *>(_p)) \
        ->value)
 #define ABSL_INTERNAL_UNALIGNED_LOAD32(_p)                                  \
-  ((reinterpret_cast<const ::absl::base_internal::Unaligned32Struct *>(_p)) \
+  ((reinterpret_cast<const ::s2::absl::base_internal::Unaligned32Struct *>(_p)) \
        ->value)
 
 #define ABSL_INTERNAL_UNALIGNED_STORE16(_p, _val)                      \
-  ((reinterpret_cast< ::absl::base_internal::Unaligned16Struct *>(_p)) \
+  ((reinterpret_cast< ::s2::absl::base_internal::Unaligned16Struct *>(_p)) \
        ->value = (_val))
 #define ABSL_INTERNAL_UNALIGNED_STORE32(_p, _val)                      \
-  ((reinterpret_cast< ::absl::base_internal::Unaligned32Struct *>(_p)) \
+  ((reinterpret_cast< ::s2::absl::base_internal::Unaligned32Struct *>(_p)) \
        ->value = (_val))
 
-namespace absl {
+namespace s2::absl {
 namespace base_internal {
 
 inline uint64 UnalignedLoad64(const void *p) {
@@ -255,12 +255,12 @@ inline uint64 UnalignedLoad64(const void *p) {
 inline void UnalignedStore64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 
 }  // namespace base_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #define ABSL_INTERNAL_UNALIGNED_LOAD64(_p) \
-  (absl::base_internal::UnalignedLoad64(_p))
+  (::s2::absl::base_internal::UnalignedLoad64(_p))
 #define ABSL_INTERNAL_UNALIGNED_STORE64(_p, _val) \
-  (absl::base_internal::UnalignedStore64(_p, _val))
+  (::s2::absl::base_internal::UnalignedStore64(_p, _val))
 
 #else
 
@@ -271,7 +271,7 @@ inline void UnalignedStore64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 // These functions are provided for architectures that don't support
 // unaligned loads and stores.
 
-namespace absl {
+namespace s2::absl {
 namespace base_internal {
 
 inline uint16_t UnalignedLoad16(const void *p) {
@@ -299,21 +299,21 @@ inline void UnalignedStore32(void *p, uint32_t v) { memcpy(p, &v, sizeof v); }
 inline void UnalignedStore64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 
 }  // namespace base_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #define ABSL_INTERNAL_UNALIGNED_LOAD16(_p) \
-  (absl::base_internal::UnalignedLoad16(_p))
+  (::s2::absl::base_internal::UnalignedLoad16(_p))
 #define ABSL_INTERNAL_UNALIGNED_LOAD32(_p) \
-  (absl::base_internal::UnalignedLoad32(_p))
+  (::s2::absl::base_internal::UnalignedLoad32(_p))
 #define ABSL_INTERNAL_UNALIGNED_LOAD64(_p) \
-  (absl::base_internal::UnalignedLoad64(_p))
+  (::s2::absl::base_internal::UnalignedLoad64(_p))
 
 #define ABSL_INTERNAL_UNALIGNED_STORE16(_p, _val) \
-  (absl::base_internal::UnalignedStore16(_p, _val))
+  (::s2::absl::base_internal::UnalignedStore16(_p, _val))
 #define ABSL_INTERNAL_UNALIGNED_STORE32(_p, _val) \
-  (absl::base_internal::UnalignedStore32(_p, _val))
+  (::s2::absl::base_internal::UnalignedStore32(_p, _val))
 #define ABSL_INTERNAL_UNALIGNED_STORE64(_p, _val) \
-  (absl::base_internal::UnalignedStore64(_p, _val))
+  (::s2::absl::base_internal::UnalignedStore64(_p, _val))
 
 #endif
 

@@ -36,7 +36,7 @@ enum class CodingHint : uint8 { FAST, COMPACT };
 //
 // REQUIRES: "encoder" uses the default constructor, so that its buffer
 //           can be enlarged as necessary by calling Ensure(int).
-void EncodeS2PointVector(absl::Span<const S2Point> points, CodingHint hint,
+void EncodeS2PointVector(s2::absl::Span<const S2Point> points, CodingHint hint,
                          Encoder* encoder);
 
 // This class represents an encoded vector of S2Points.  Values are decoded
@@ -72,10 +72,10 @@ class EncodedS2PointVector {
   // points.  This would save some decoding overhead.
 
  private:
-  friend void EncodeS2PointVector(absl::Span<const S2Point>, CodingHint,
+  friend void EncodeS2PointVector(s2::absl::Span<const S2Point>, CodingHint,
                                   Encoder*);
-  friend void EncodeS2PointVectorFast(absl::Span<const S2Point>, Encoder*);
-  friend void EncodeS2PointVectorCompact(absl::Span<const S2Point>, Encoder*);
+  friend void EncodeS2PointVectorFast(s2::absl::Span<const S2Point>, Encoder*);
+  friend void EncodeS2PointVectorCompact(s2::absl::Span<const S2Point>, Encoder*);
 
   bool InitUncompressedFormat(Decoder* decoder);
   bool InitCellIdsFormat(Decoder* decoder);

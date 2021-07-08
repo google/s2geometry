@@ -45,7 +45,7 @@ struct FaceSegment {
   int face;
   R2Point a, b;
 };
-using FaceSegmentVector = absl::InlinedVector<FaceSegment, 6>;
+using FaceSegmentVector = s2::absl::InlinedVector<FaceSegment, 6>;
 
 // Subdivides the given edge AB at every point where it crosses the boundary
 // between two S2 cube faces and returns the corresponding FaceSegments.  The

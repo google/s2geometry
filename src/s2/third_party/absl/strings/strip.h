@@ -30,7 +30,7 @@
 #include "s2/third_party/absl/strings/match.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
-namespace absl {
+namespace s2::absl {
 
 // ConsumePrefix()
 //
@@ -39,11 +39,11 @@ namespace absl {
 //
 // Example:
 //
-//   absl::string_view input("abc");
-//   EXPECT_TRUE(absl::ConsumePrefix(&input, "a"));
+//   ::s2::absl::string_view input("abc");
+//   EXPECT_TRUE(::s2::absl::ConsumePrefix(&input, "a"));
 //   EXPECT_EQ(input, "bc");
-inline bool ConsumePrefix(absl::string_view* str, absl::string_view expected) {
-  if (!absl::StartsWith(*str, expected)) return false;
+inline bool ConsumePrefix(::s2::absl::string_view* str, ::s2::absl::string_view expected) {
+  if (!::s2::absl::StartsWith(*str, expected)) return false;
   str->remove_prefix(expected.size());
   return true;
 }
@@ -54,11 +54,11 @@ inline bool ConsumePrefix(absl::string_view* str, absl::string_view expected) {
 //
 // Example:
 //
-//   absl::string_view input("abcdef");
-//   EXPECT_TRUE(absl::ConsumeSuffix(&input, "def"));
+//   ::s2::absl::string_view input("abcdef");
+//   EXPECT_TRUE(::s2::absl::ConsumeSuffix(&input, "def"));
 //   EXPECT_EQ(input, "abc");
-inline bool ConsumeSuffix(absl::string_view* str, absl::string_view expected) {
-  if (!absl::EndsWith(*str, expected)) return false;
+inline bool ConsumeSuffix(::s2::absl::string_view* str, ::s2::absl::string_view expected) {
+  if (!::s2::absl::EndsWith(*str, expected)) return false;
   str->remove_suffix(expected.size());
   return true;
 }
@@ -68,9 +68,9 @@ inline bool ConsumeSuffix(absl::string_view* str, absl::string_view expected) {
 // Returns a view into the input string 'str' with the given 'prefix' removed,
 // but leaving the original string intact. If the prefix does not match at the
 // start of the string, returns the original string instead.
-ABSL_MUST_USE_RESULT inline absl::string_view StripPrefix(
-    absl::string_view str, absl::string_view prefix) {
-  if (absl::StartsWith(str, prefix)) str.remove_prefix(prefix.size());
+ABSL_MUST_USE_RESULT inline ::s2::absl::string_view StripPrefix(
+    ::s2::absl::string_view str, ::s2::absl::string_view prefix) {
+  if (::s2::absl::StartsWith(str, prefix)) str.remove_prefix(prefix.size());
   return str;
 }
 
@@ -79,13 +79,13 @@ ABSL_MUST_USE_RESULT inline absl::string_view StripPrefix(
 // Returns a view into the input string 'str' with the given 'suffix' removed,
 // but leaving the original string intact. If the suffix does not match at the
 // end of the string, returns the original string instead.
-ABSL_MUST_USE_RESULT inline absl::string_view StripSuffix(
-    absl::string_view str, absl::string_view suffix) {
-  if (absl::EndsWith(str, suffix)) str.remove_suffix(suffix.size());
+ABSL_MUST_USE_RESULT inline ::s2::absl::string_view StripSuffix(
+    ::s2::absl::string_view str, ::s2::absl::string_view suffix) {
+  if (::s2::absl::EndsWith(str, suffix)) str.remove_suffix(suffix.size());
   return str;
 }
 
-}  // namespace absl
+}  // namespace s2::absl
 
 
 // Replaces any of the *bytes* in 'remove' with the *byte* 'replace_with'.
@@ -94,9 +94,9 @@ ABSL_MUST_USE_RESULT inline absl::string_view StripSuffix(
 // When the remove string contains multi-byte (non-ASCII) characters,
 // then some strings will turn into garbage which will break downstream code.
 // Use icu::UnicodeSet and its spanUTF8()/spanBackUTF8().
-void ReplaceCharacters(char* str, size_t len, absl::string_view remove,
+void ReplaceCharacters(char* str, size_t len, ::s2::absl::string_view remove,
                        char replace_with);
-void ReplaceCharacters(string* s, absl::string_view remove, char replace_with);
+void ReplaceCharacters(string* s, ::s2::absl::string_view remove, char replace_with);
 
 // Replaces the character 'remove' with the character 'replace_with'.
 //
@@ -107,22 +107,22 @@ inline void ReplaceCharacter(char* str, size_t len, char remove,
   }
 }
 
-ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
-inline void StripWhitespace(string* str) { absl::StripAsciiWhitespace(str); }
+ABSL_DEPRECATED("Use ::s2::absl::StripAsciiWhitespace() instead")
+inline void StripWhitespace(string* str) { ::s2::absl::StripAsciiWhitespace(str); }
 
-ABSL_DEPRECATED("Use absl::StripAsciiWhitespace() instead")
-inline void StripWhitespace(absl::string_view* str) {
-  *str = absl::StripAsciiWhitespace(*str);
+ABSL_DEPRECATED("Use ::s2::absl::StripAsciiWhitespace() instead")
+inline void StripWhitespace(::s2::absl::string_view* str) {
+  *str = ::s2::absl::StripAsciiWhitespace(*str);
 }
 
 // Returns a pointer to the first character in 'str' that is not
 // ASCII whitespace. Never returns nullptr. 'str' must be NUL-terminated.
 inline const char* SkipLeadingWhitespace(const char* str) {
-  while (absl::ascii_isspace(*str)) ++str;
+  while (::s2::absl::ascii_isspace(*str)) ++str;
   return str;
 }
 inline char* SkipLeadingWhitespace(char* str) {
-  while (absl::ascii_isspace(*str)) ++str;
+  while (::s2::absl::ascii_isspace(*str)) ++str;
   return str;
 }
 

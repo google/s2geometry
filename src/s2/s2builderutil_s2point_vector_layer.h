@@ -87,7 +87,7 @@ class IndexedS2PointVectorLayer : public S2Builder::Layer {
   void Build(const Graph& g, S2Error* error) override {
     layer_.Build(g, error);
     if (error->ok() && !points_.empty()) {
-      index_->Add(absl::make_unique<S2PointVectorShape>(std::move(points_)));
+      index_->Add(s2::absl::make_unique<S2PointVectorShape>(std::move(points_)));
     }
   }
 

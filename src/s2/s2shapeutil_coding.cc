@@ -28,7 +28,7 @@
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using std::make_shared;
 using std::unique_ptr;
 using std::vector;

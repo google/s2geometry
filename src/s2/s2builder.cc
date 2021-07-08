@@ -103,7 +103,7 @@
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using gtl::compact_array;
 using std::max;
 using std::pair;

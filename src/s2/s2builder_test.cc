@@ -52,9 +52,9 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::StrAppend;
-using absl::StrCat;
-using absl::make_unique;
+using s2::absl::StrAppend;
+using s2::absl::StrCat;
+using s2::absl::make_unique;
 using std::cout;
 using std::endl;
 using std::make_pair;
@@ -532,7 +532,7 @@ class GraphPersistenceLayer : public S2Builder::Layer {
       ExpectGraphsEqual((*clones_)[i]->graph(), (*graphs_)[i]);
     }
     graphs_->push_back(g);
-    clones_->push_back(absl::make_unique<GraphClone>(g));
+    clones_->push_back(s2::absl::make_unique<GraphClone>(g));
   }
 
  private:
@@ -579,8 +579,8 @@ void TestPolylineLayers(
   for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
-  EXPECT_EQ(absl::StrJoin(expected_strs, "; "),
-            absl::StrJoin(output_strs, "; "));
+  EXPECT_EQ(s2::absl::StrJoin(expected_strs, "; "),
+            s2::absl::StrJoin(output_strs, "; "));
 }
 
 void TestPolylineVector(
@@ -601,8 +601,8 @@ void TestPolylineVector(
   for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
-  EXPECT_EQ(absl::StrJoin(expected_strs, "; "),
-            absl::StrJoin(output_strs, "; "));
+  EXPECT_EQ(s2::absl::StrJoin(expected_strs, "; "),
+            s2::absl::StrJoin(output_strs, "; "));
 }
 
 void TestPolylineLayersBothEdgeTypes(

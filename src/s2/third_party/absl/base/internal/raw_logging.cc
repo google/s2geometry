@@ -70,10 +70,10 @@
 // Explicitly #error out when not ABSL_LOW_LEVEL_WRITE_SUPPORTED, except for a
 // whitelisted set of platforms for which we expect not to be able to raw log.
 
-ABSL_CONST_INIT static absl::base_internal::AtomicHook<
-    absl::raw_logging_internal::LogPrefixHook> log_prefix_hook;
-ABSL_CONST_INIT static absl::base_internal::AtomicHook<
-    absl::raw_logging_internal::AbortHook> abort_hook;
+ABSL_CONST_INIT static ::s2::absl::base_internal::AtomicHook<
+    ::s2::absl::raw_logging_internal::LogPrefixHook> log_prefix_hook;
+ABSL_CONST_INIT static ::s2::absl::base_internal::AtomicHook<
+    ::s2::absl::raw_logging_internal::AbortHook> abort_hook;
 
 #ifdef ABSL_LOW_LEVEL_WRITE_SUPPORTED
 static const char kTruncated[] = " ... (message truncated)\n";
@@ -129,9 +129,9 @@ bool DoRawLog(char** buf, int* size, const char* format, ...) {
   return true;
 }
 
-void RawLogVA(absl::LogSeverity severity, const char* file, int line,
+void RawLogVA(::s2::absl::LogSeverity severity, const char* file, int line,
               const char* format, va_list ap) ABSL_PRINTF_ATTRIBUTE(4, 0);
-void RawLogVA(absl::LogSeverity severity, const char* file, int line,
+void RawLogVA(::s2::absl::LogSeverity severity, const char* file, int line,
               const char* format, va_list ap) {
   char buffer[kLogBufSize];
   char* buf = buffer;
@@ -144,7 +144,7 @@ void RawLogVA(absl::LogSeverity severity, const char* file, int line,
 
 #ifdef ABSL_MIN_LOG_LEVEL
   if (static_cast<int>(severity) < ABSL_MIN_LOG_LEVEL &&
-      severity < absl::LogSeverity::kFatal) {
+      severity < ::s2::absl::LogSeverity::kFatal) {
     enabled = false;
   }
 #endif
@@ -167,7 +167,7 @@ void RawLogVA(absl::LogSeverity severity, const char* file, int line,
     } else {
       DoRawLog(&buf, &size, "%s", kTruncated);
     }
-    absl::raw_logging_internal::SafeWriteToStderr(buffer, strlen(buffer));
+    ::s2::absl::raw_logging_internal::SafeWriteToStderr(buffer, strlen(buffer));
   }
 #else
   static_cast<void>(format);
@@ -176,7 +176,7 @@ void RawLogVA(absl::LogSeverity severity, const char* file, int line,
 
   // Abort the process after logging a FATAL message, even if the output itself
   // was suppressed.
-  if (severity == absl::LogSeverity::kFatal) {
+  if (severity == ::s2::absl::LogSeverity::kFatal) {
     abort_hook(file, line, buffer, prefix_end, buffer + kLogBufSize);
     abort();
   }
@@ -184,7 +184,7 @@ void RawLogVA(absl::LogSeverity severity, const char* file, int line,
 
 }  // namespace
 
-namespace absl {
+namespace s2::absl {
 namespace raw_logging_internal {
 void SafeWriteToStderr(const char *s, size_t len) {
 #if defined(ABSL_HAVE_SYSCALL_WRITE)
@@ -200,9 +200,9 @@ void SafeWriteToStderr(const char *s, size_t len) {
 #endif
 }
 
-void RawLog(absl::LogSeverity severity, const char* file, int line,
+void RawLog(::s2::absl::LogSeverity severity, const char* file, int line,
             const char* format, ...) ABSL_PRINTF_ATTRIBUTE(4, 5);
-void RawLog(absl::LogSeverity severity, const char* file, int line,
+void RawLog(::s2::absl::LogSeverity severity, const char* file, int line,
             const char* format, ...) {
   va_list ap;
   va_start(ap, format);
@@ -212,7 +212,7 @@ void RawLog(absl::LogSeverity severity, const char* file, int line,
 void RawLog(int severity, const char* file, int line, const char* format, ...) {
   va_list ap;
   va_start(ap, format);
-  RawLogVA(absl::NormalizeLogSeverity(severity), file, line, format, ap);
+  RawLogVA(::s2::absl::NormalizeLogSeverity(severity), file, line, format, ap);
   va_end(ap);
 }
 
@@ -225,11 +225,11 @@ bool RawLoggingFullySupported() {
 }
 
 }  // namespace raw_logging_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 namespace base_raw_logging {
 
-void RawLog(absl::LogSeverity severity, const char* file, int line,
+void RawLog(::s2::absl::LogSeverity severity, const char* file, int line,
             const char* format, ...) {
   va_list ap;
   va_start(ap, format);
@@ -239,7 +239,7 @@ void RawLog(absl::LogSeverity severity, const char* file, int line,
 void RawLog(int severity, const char* file, int line, const char* format, ...) {
   va_list ap;
   va_start(ap, format);
-  RawLogVA(absl::NormalizeLogSeverity(severity), file, line, format, ap);
+  RawLogVA(::s2::absl::NormalizeLogSeverity(severity), file, line, format, ap);
   va_end(ap);
 }
 

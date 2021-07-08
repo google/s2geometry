@@ -24,18 +24,18 @@
 //    Replaces any occurrence of any of the 'remove' *bytes*
 //    with the 'replace_with' *byte*.
 // ----------------------------------------------------------------------
-void ReplaceCharacters(char* str, size_t len, absl::string_view remove,
+void ReplaceCharacters(char* str, size_t len, ::s2::absl::string_view remove,
                        char replace_with) {
   for (char* end = str + len; str != end; ++str) {
-    if (remove.find(*str) != absl::string_view::npos) {
+    if (remove.find(*str) != ::s2::absl::string_view::npos) {
       *str = replace_with;
     }
   }
 }
 
-void ReplaceCharacters(string* s, absl::string_view remove, char replace_with) {
+void ReplaceCharacters(string* s, ::s2::absl::string_view remove, char replace_with) {
   for (char& ch : *s) {
-    if (remove.find(ch) != absl::string_view::npos) {
+    if (remove.find(ch) != ::s2::absl::string_view::npos) {
       ch = replace_with;
     }
   }

@@ -431,7 +431,7 @@
 #define ABSL_HAVE_STD_STRING_VIEW 1
 #endif
 // TODO(b/68770332) For now, using std::string_view is not practical.
-// This can be reversed when absl::string_view presents the std::string_view
+// This can be reversed when ::s2::absl::string_view presents the std::string_view
 #undef ABSL_HAVE_STD_STRING_VIEW
 #endif
 

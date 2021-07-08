@@ -37,7 +37,7 @@
 #include "s2/third_party/absl/numeric/int128.h"
 #include "s2/third_party/absl/strings/string_view.h"
 
-namespace absl {
+namespace s2::absl {
 
 // SimpleAtoi()
 //
@@ -46,7 +46,7 @@ namespace absl {
 // preceded by ASCII whitespace) whose value falls within the range of the
 // integer type,
 template <typename int_type>
-ABSL_MUST_USE_RESULT bool SimpleAtoi(absl::string_view s, int_type* out);
+ABSL_MUST_USE_RESULT bool SimpleAtoi(::s2::absl::string_view s, int_type* out);
 
 // SimpleAtof()
 //
@@ -54,7 +54,7 @@ ABSL_MUST_USE_RESULT bool SimpleAtoi(absl::string_view s, int_type* out);
 // whitespace) into a float, which may be rounded on overflow or underflow.
 // See http://en.cppreference.com/w/c/string/byte/strtof for details about the
 // allowed formats for `str`.
-ABSL_MUST_USE_RESULT bool SimpleAtof(absl::string_view str, float* value);
+ABSL_MUST_USE_RESULT bool SimpleAtof(::s2::absl::string_view str, float* value);
 
 // SimpleAtod()
 //
@@ -62,7 +62,7 @@ ABSL_MUST_USE_RESULT bool SimpleAtof(absl::string_view str, float* value);
 // whitespace) into a double, which may be rounded on overflow or underflow.
 // See http://en.cppreference.com/w/c/string/byte/strtof for details about the
 // allowed formats for `str`.
-ABSL_MUST_USE_RESULT bool SimpleAtod(absl::string_view str, double* value);
+ABSL_MUST_USE_RESULT bool SimpleAtod(::s2::absl::string_view str, double* value);
 
 // SimpleAtob()
 //
@@ -70,20 +70,20 @@ ABSL_MUST_USE_RESULT bool SimpleAtod(absl::string_view str, double* value);
 // The following case-insensitive strings are interpreted as boolean `true`:
 // "true", "t", "yes", "y", "1". The following case-insensitive strings
 // are interpreted as boolean `false`: "false", "f", "no", "n", "0".
-ABSL_MUST_USE_RESULT bool SimpleAtob(absl::string_view str, bool* value);
+ABSL_MUST_USE_RESULT bool SimpleAtob(::s2::absl::string_view str, bool* value);
 
-}  // namespace absl
+}  // namespace s2::absl
 
 // End of public API.  Implementation details follow.
 
-namespace absl {
+namespace s2::absl {
 namespace numbers_internal {
 
 // safe_strto?() functions for implementing SimpleAtoi()
-bool safe_strto32_base(absl::string_view text, int32_t* value, int base);
-bool safe_strto64_base(absl::string_view text, int64_t* value, int base);
-bool safe_strtou32_base(absl::string_view text, uint32_t* value, int base);
-bool safe_strtou64_base(absl::string_view text, uint64_t* value, int base);
+bool safe_strto32_base(::s2::absl::string_view text, int32_t* value, int base);
+bool safe_strto64_base(::s2::absl::string_view text, int64_t* value, int base);
+bool safe_strtou32_base(::s2::absl::string_view text, uint32_t* value, int base);
+bool safe_strtou64_base(::s2::absl::string_view text, uint64_t* value, int base);
 
 static const int kFastToBufferSize = 32;
 static const int kSixDigitsToBufferSize = 16;
@@ -132,7 +132,7 @@ char* FastIntToBuffer(int_type i, char* buffer) {
 // Implementation of SimpleAtoi, generalized to support arbitrary base (used
 // with base different from 10 elsewhere in Abseil implementation).
 template <typename int_type>
-ABSL_MUST_USE_RESULT bool safe_strtoi_base(absl::string_view s, int_type* out,
+ABSL_MUST_USE_RESULT bool safe_strtoi_base(::s2::absl::string_view s, int_type* out,
                                            int base) {
   static_assert(sizeof(*out) == 4 || sizeof(*out) == 8,
                 "SimpleAtoi works only with 32-bit or 64-bit integers.");
@@ -176,11 +176,11 @@ ABSL_MUST_USE_RESULT bool safe_strtoi_base(absl::string_view s, int_type* out,
 // preceded by ASCII whitespace, with a value in the range of the corresponding
 // integer type.
 template <typename int_type>
-ABSL_MUST_USE_RESULT bool SimpleAtoi(absl::string_view s, int_type* out) {
+ABSL_MUST_USE_RESULT bool SimpleAtoi(::s2::absl::string_view s, int_type* out) {
   return numbers_internal::safe_strtoi_base(s, out, 10);
 }
 
-}  // namespace absl
+}  // namespace s2::absl
 
 
 

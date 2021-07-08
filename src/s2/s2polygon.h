@@ -778,7 +778,7 @@ class S2Polygon final : public S2Region {
     }
 
     bool Init(Decoder* decoder) {
-      auto polygon = absl::make_unique<S2Polygon>();
+      auto polygon = s2::absl::make_unique<S2Polygon>();
       if (!polygon->Decode(decoder)) return false;
       Shape::Init(polygon.get());
       owned_polygon_ = std::move(polygon);

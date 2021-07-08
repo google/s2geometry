@@ -31,7 +31,7 @@
 #include "s2/third_party/absl/base/internal/identity.h"
 #include "s2/third_party/absl/base/macros.h"
 
-namespace absl {
+namespace s2::absl {
 
 namespace internal_casts {
 
@@ -105,7 +105,7 @@ struct is_bitcastable
 //
 // Such implicit cast chaining may be useful within template logic.
 template <typename To>
-constexpr To implicit_cast(typename absl::internal::identity_t<To> to) {
+constexpr To implicit_cast(typename ::s2::absl::internal::identity_t<To> to) {
   return to;
 }
 
@@ -173,7 +173,7 @@ template <
     typename std::enable_if<
         !internal_casts::is_bitcastable<Dest, Source>::value, int>::type = 0>
 ABSL_DEPRECATED(
-    "absl::bit_cast type requirements were violated. Update the types being "
+    "::s2::absl::bit_cast type requirements were violated. Update the types being "
     "used such that they are the same size and are both TriviallyCopyable.")
 inline Dest bit_cast(const Source& source) {
   static_assert(sizeof(Dest) == sizeof(Source),
@@ -184,6 +184,6 @@ inline Dest bit_cast(const Source& source) {
   return dest;
 }
 
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_CASTS_H_

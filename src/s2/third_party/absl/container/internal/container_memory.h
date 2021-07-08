@@ -33,7 +33,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/third_party/absl/utility/utility.h"
 
-namespace absl {
+namespace s2::absl {
 namespace container_internal {
 
 // Allocates at least n bytes aligned to the specified alignment.
@@ -48,8 +48,8 @@ void* Allocate(Alloc* alloc, size_t n) {
   static_assert(Alignment > 0, "");
   assert(n && "n must be positive");
   struct alignas(Alignment) M {};
-  using A = typename absl::allocator_traits<Alloc>::template rebind_alloc<M>;
-  using AT = typename absl::allocator_traits<Alloc>::template rebind_traits<M>;
+  using A = typename ::s2::absl::allocator_traits<Alloc>::template rebind_alloc<M>;
+  using AT = typename ::s2::absl::allocator_traits<Alloc>::template rebind_traits<M>;
   A mem_alloc(*alloc);
   void* p = AT::allocate(mem_alloc, (n + sizeof(M) - 1) / sizeof(M));
   assert(reinterpret_cast<uintptr_t>(p) % Alignment == 0 &&
@@ -64,8 +64,8 @@ void Deallocate(Alloc* alloc, void* p, size_t n) {
   static_assert(Alignment > 0, "");
   assert(n && "n must be positive");
   struct alignas(Alignment) M {};
-  using A = typename absl::allocator_traits<Alloc>::template rebind_alloc<M>;
-  using AT = typename absl::allocator_traits<Alloc>::template rebind_traits<M>;
+  using A = typename ::s2::absl::allocator_traits<Alloc>::template rebind_alloc<M>;
+  using AT = typename ::s2::absl::allocator_traits<Alloc>::template rebind_traits<M>;
   A mem_alloc(*alloc);
   AT::deallocate(mem_alloc, static_cast<M*>(p),
                  (n + sizeof(M) - 1) / sizeof(M));
@@ -77,8 +77,8 @@ namespace memory_internal {
 // specified in the tuple.
 template <class Alloc, class T, class Tuple, size_t... I>
 void ConstructFromTupleImpl(Alloc* alloc, T* ptr, Tuple&& t,
-                            absl::index_sequence<I...>) {
-  absl::allocator_traits<Alloc>::construct(
+                            ::s2::absl::index_sequence<I...>) {
+  ::s2::absl::allocator_traits<Alloc>::construct(
       *alloc, ptr, std::get<I>(std::forward<Tuple>(t))...);
 }
 
@@ -94,13 +94,13 @@ struct WithConstructedImplF {
 
 template <class T, class Tuple, size_t... Is, class F>
 decltype(std::declval<F>()(std::declval<T>())) WithConstructedImpl(
-    Tuple&& t, absl::index_sequence<Is...>, F&& f) {
+    Tuple&& t, ::s2::absl::index_sequence<Is...>, F&& f) {
   return WithConstructedImplF<T, F>{std::forward<F>(f)}(
       std::get<Is>(std::forward<Tuple>(t))...);
 }
 
 template <class T, size_t... Is>
-auto TupleRefImpl(T&& t, absl::index_sequence<Is...>)
+auto TupleRefImpl(T&& t, ::s2::absl::index_sequence<Is...>)
     -> decltype(std::forward_as_tuple(std::get<Is>(std::forward<T>(t))...)) {
   return std::forward_as_tuple(std::get<Is>(std::forward<T>(t))...);
 }
@@ -110,11 +110,11 @@ auto TupleRefImpl(T&& t, absl::index_sequence<Is...>)
 template <class T>
 auto TupleRef(T&& t) -> decltype(
     TupleRefImpl(std::forward<T>(t),
-                 absl::make_index_sequence<
+                 ::s2::absl::make_index_sequence<
                      std::tuple_size<typename std::decay<T>::type>::value>())) {
   return TupleRefImpl(
       std::forward<T>(t),
-      absl::make_index_sequence<
+      ::s2::absl::make_index_sequence<
           std::tuple_size<typename std::decay<T>::type>::value>());
 }
 
@@ -135,7 +135,7 @@ template <class Alloc, class T, class Tuple>
 void ConstructFromTuple(Alloc* alloc, T* ptr, Tuple&& t) {
   memory_internal::ConstructFromTupleImpl(
       alloc, ptr, std::forward<Tuple>(t),
-      absl::make_index_sequence<
+      ::s2::absl::make_index_sequence<
           std::tuple_size<typename std::decay<Tuple>::type>::value>());
 }
 
@@ -146,7 +146,7 @@ decltype(std::declval<F>()(std::declval<T>())) WithConstructed(
     Tuple&& t, F&& f) {
   return memory_internal::WithConstructedImpl<T>(
       std::forward<Tuple>(t),
-      absl::make_index_sequence<
+      ::s2::absl::make_index_sequence<
           std::tuple_size<typename std::decay<Tuple>::type>::value>(),
       std::forward<F>(f));
 }
@@ -339,10 +339,10 @@ union slot_type {
   static void construct(Allocator* alloc, slot_type* slot, Args&&... args) {
     emplace(slot);
     if (kMutableKeys::value) {
-      absl::allocator_traits<Allocator>::construct(*alloc, &slot->mutable_value,
+      ::s2::absl::allocator_traits<Allocator>::construct(*alloc, &slot->mutable_value,
                                                    std::forward<Args>(args)...);
     } else {
-      absl::allocator_traits<Allocator>::construct(*alloc, &slot->value,
+      ::s2::absl::allocator_traits<Allocator>::construct(*alloc, &slot->value,
                                                    std::forward<Args>(args)...);
     }
   }
@@ -352,10 +352,10 @@ union slot_type {
   static void construct(Allocator* alloc, slot_type* slot, slot_type* other) {
     emplace(slot);
     if (kMutableKeys::value) {
-      absl::allocator_traits<Allocator>::construct(
+      ::s2::absl::allocator_traits<Allocator>::construct(
           *alloc, &slot->mutable_value, std::move(other->mutable_value));
     } else {
-      absl::allocator_traits<Allocator>::construct(*alloc, &slot->value,
+      ::s2::absl::allocator_traits<Allocator>::construct(*alloc, &slot->value,
                                                    std::move(other->value));
     }
   }
@@ -363,9 +363,9 @@ union slot_type {
   template <class Allocator>
   static void destroy(Allocator* alloc, slot_type* slot) {
     if (kMutableKeys::value) {
-      absl::allocator_traits<Allocator>::destroy(*alloc, &slot->mutable_value);
+      ::s2::absl::allocator_traits<Allocator>::destroy(*alloc, &slot->mutable_value);
     } else {
-      absl::allocator_traits<Allocator>::destroy(*alloc, &slot->value);
+      ::s2::absl::allocator_traits<Allocator>::destroy(*alloc, &slot->value);
     }
   }
 
@@ -374,10 +374,10 @@ union slot_type {
                        slot_type* old_slot) {
     emplace(new_slot);
     if (kMutableKeys::value) {
-      absl::allocator_traits<Allocator>::construct(
+      ::s2::absl::allocator_traits<Allocator>::construct(
           *alloc, &new_slot->mutable_value, std::move(old_slot->mutable_value));
     } else {
-      absl::allocator_traits<Allocator>::construct(*alloc, &new_slot->value,
+      ::s2::absl::allocator_traits<Allocator>::construct(*alloc, &new_slot->value,
                                                    std::move(old_slot->value));
     }
     destroy(alloc, old_slot);
@@ -390,11 +390,11 @@ union slot_type {
       swap(a->mutable_value, b->mutable_value);
     } else {
       value_type tmp = std::move(a->value);
-      absl::allocator_traits<Allocator>::destroy(*alloc, &a->value);
-      absl::allocator_traits<Allocator>::construct(*alloc, &a->value,
+      ::s2::absl::allocator_traits<Allocator>::destroy(*alloc, &a->value);
+      ::s2::absl::allocator_traits<Allocator>::construct(*alloc, &a->value,
                                                    std::move(b->value));
-      absl::allocator_traits<Allocator>::destroy(*alloc, &b->value);
-      absl::allocator_traits<Allocator>::construct(*alloc, &b->value,
+      ::s2::absl::allocator_traits<Allocator>::destroy(*alloc, &b->value);
+      ::s2::absl::allocator_traits<Allocator>::construct(*alloc, &b->value,
                                                    std::move(tmp));
     }
   }
@@ -404,8 +404,8 @@ union slot_type {
     if (kMutableKeys::value) {
       dest->mutable_value = std::move(src->mutable_value);
     } else {
-      absl::allocator_traits<Allocator>::destroy(*alloc, &dest->value);
-      absl::allocator_traits<Allocator>::construct(*alloc, &dest->value,
+      ::s2::absl::allocator_traits<Allocator>::destroy(*alloc, &dest->value);
+      ::s2::absl::allocator_traits<Allocator>::construct(*alloc, &dest->value,
                                                    std::move(src->value));
     }
   }
@@ -419,6 +419,6 @@ union slot_type {
 };
 
 }  // namespace container_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INTERNAL_CONTAINER_MEMORY_H_

@@ -388,7 +388,7 @@ class S2CellId {
   //
   // The method name includes "Debug" in order to avoid possible confusion
   // with FromToken() above.
-  static S2CellId FromDebugString(absl::string_view str);
+  static S2CellId FromDebugString(s2::absl::string_view str);
 
   // Return the four cells that are adjacent across the cell's four edges.
   // Neighbors are returned in the order defined by S2Cell::GetEdge.  All

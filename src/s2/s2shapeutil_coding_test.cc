@@ -22,7 +22,7 @@
 #include "s2/s2polygon.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 
 namespace s2shapeutil {
 

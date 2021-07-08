@@ -35,7 +35,7 @@
 
 namespace {
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using s2builderutil::LaxPolygonLayer;
 using std::unique_ptr;
 using std::vector;

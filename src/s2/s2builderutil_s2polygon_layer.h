@@ -167,7 +167,7 @@ class IndexedS2PolygonLayer : public S2Builder::Layer {
     layer_.Build(g, error);
     if (error->ok() && !polygon_->is_empty()) {
       index_->Add(
-          absl::make_unique<S2Polygon::OwningShape>(std::move(polygon_)));
+          s2::absl::make_unique<S2Polygon::OwningShape>(std::move(polygon_)));
     }
   }
 

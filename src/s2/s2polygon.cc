@@ -69,7 +69,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/util/coding/coder.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using s2builderutil::IdentitySnapFunction;
 using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
@@ -663,7 +663,7 @@ void S2Polygon::Encode(Encoder* const encoder) const {
     return;
   }
   // Converts all the polygon vertices to S2XYZFaceSiTi format.
-  absl::FixedArray<S2XYZFaceSiTi> all_vertices(num_vertices_);
+  s2::absl::FixedArray<S2XYZFaceSiTi> all_vertices(num_vertices_);
   S2XYZFaceSiTi* current_loop_vertices = all_vertices.data();
   for (const unique_ptr<S2Loop>& loop : loops_) {
     loop->GetXYZFaceSiTiVertices(current_loop_vertices);

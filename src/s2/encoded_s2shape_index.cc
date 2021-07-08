@@ -21,7 +21,7 @@
 #include "s2/third_party/absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using std::unique_ptr;
 using std::vector;
 

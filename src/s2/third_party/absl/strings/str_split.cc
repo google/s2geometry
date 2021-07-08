@@ -6,12 +6,12 @@
 
 #include "s2/third_party/absl/strings/string_view.h"
 
-using absl::string_view;
+using ::s2::absl::string_view;
 using std::function;
 using std::string;
 using std::vector;
 
-namespace absl {
+namespace s2::absl {
 
 template <typename String>
 vector<String> StrSplit(String const& text, char const delim,
@@ -44,4 +44,4 @@ template vector<string> StrSplit(string const& text, char const delim);
 template vector<string_view> StrSplit(string_view const& text,
                                       char const delim);
 
-}  // namespace absl
+}  // namespace s2::absl

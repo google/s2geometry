@@ -36,9 +36,9 @@
 #include "s2/third_party/absl/strings/internal/memutil.h"
 #include "s2/third_party/absl/strings/str_cat.h"
 
-namespace absl {
+namespace s2::absl {
 
-bool SimpleAtof(absl::string_view str, float* value) {
+bool SimpleAtof(::s2::absl::string_view str, float* value) {
   *value = 0.0;
   if (str.empty()) return false;
   char buf[32];
@@ -54,7 +54,7 @@ bool SimpleAtof(absl::string_view str, float* value) {
   char* endptr;
   *value = strtof(ptr, &endptr);
   if (endptr != ptr) {
-    while (absl::ascii_isspace(*endptr)) ++endptr;
+    while (::s2::absl::ascii_isspace(*endptr)) ++endptr;
   }
   // Ignore range errors from strtod/strtof.
   // The values it returns on underflow and
@@ -63,7 +63,7 @@ bool SimpleAtof(absl::string_view str, float* value) {
   return *ptr != '\0' && *endptr == '\0';
 }
 
-bool SimpleAtod(absl::string_view str, double* value) {
+bool SimpleAtod(::s2::absl::string_view str, double* value) {
   *value = 0.0;
   if (str.empty()) return false;
   char buf[32];
@@ -79,7 +79,7 @@ bool SimpleAtod(absl::string_view str, double* value) {
   char* endptr;
   *value = strtod(ptr, &endptr);
   if (endptr != ptr) {
-    while (absl::ascii_isspace(*endptr)) ++endptr;
+    while (::s2::absl::ascii_isspace(*endptr)) ++endptr;
   }
   // Ignore range errors from strtod.  The values it
   // returns on underflow and overflow are the right
@@ -91,7 +91,7 @@ namespace {
 
 // TODO(user): replace with the real released thing once we figure out what
 // it is.
-inline bool CaseEqual(absl::string_view piece1, absl::string_view piece2) {
+inline bool CaseEqual(::s2::absl::string_view piece1, ::s2::absl::string_view piece2) {
   return (piece1.size() == piece2.size() &&
           0 == strings_internal::memcasecmp(piece1.data(), piece2.data(),
                                             piece1.size()));
@@ -132,7 +132,7 @@ inline void PutTwoDigits(size_t i, char* buf) {
 
 }  // namespace
 
-bool SimpleAtob(absl::string_view str, bool* value) {
+bool SimpleAtob(::s2::absl::string_view str, bool* value) {
   ABSL_RAW_CHECK(value != nullptr, "Output pointer must not be nullptr.");
   if (CaseEqual(str, "true") || CaseEqual(str, "t") ||
       CaseEqual(str, "yes") || CaseEqual(str, "y") ||
@@ -658,7 +658,7 @@ static const int8_t kAsciiToInt[256] = {
     36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36};
 
 // Parse the sign and optional hex or oct prefix in text.
-inline bool safe_parse_sign_and_base(absl::string_view* text /*inout*/,
+inline bool safe_parse_sign_and_base(::s2::absl::string_view* text /*inout*/,
                                      int* base_ptr /*inout*/,
                                      bool* negative_ptr /*output*/) {
   if (text->data() == nullptr) {
@@ -670,10 +670,10 @@ inline bool safe_parse_sign_and_base(absl::string_view* text /*inout*/,
   int base = *base_ptr;
 
   // Consume whitespace.
-  while (start < end && absl::ascii_isspace(start[0])) {
+  while (start < end && ::s2::absl::ascii_isspace(start[0])) {
     ++start;
   }
-  while (start < end && absl::ascii_isspace(end[-1])) {
+  while (start < end && ::s2::absl::ascii_isspace(end[-1])) {
     --end;
   }
   if (start >= end) {
@@ -722,7 +722,7 @@ inline bool safe_parse_sign_and_base(absl::string_view* text /*inout*/,
   } else {
     return false;
   }
-  *text = absl::string_view(start, end - start);
+  *text = ::s2::absl::string_view(start, end - start);
   *base_ptr = base;
   return true;
 }
@@ -785,7 +785,7 @@ const IntType LookupTables<IntType>::kVminOverBase[] =
 #undef X_OVER_BASE_INITIALIZER
 
 template <typename IntType>
-inline bool safe_parse_positive_int(absl::string_view text, int base,
+inline bool safe_parse_positive_int(::s2::absl::string_view text, int base,
                                     IntType* value_p) {
   IntType value = 0;
   const IntType vmax = std::numeric_limits<IntType>::max();
@@ -819,7 +819,7 @@ inline bool safe_parse_positive_int(absl::string_view text, int base,
 }
 
 template <typename IntType>
-inline bool safe_parse_negative_int(absl::string_view text, int base,
+inline bool safe_parse_negative_int(::s2::absl::string_view text, int base,
                                     IntType* value_p) {
   IntType value = 0;
   const IntType vmin = std::numeric_limits<IntType>::min();
@@ -862,7 +862,7 @@ inline bool safe_parse_negative_int(absl::string_view text, int base,
 // Input format based on POSIX.1-2008 strtol
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/strtol.html
 template <typename IntType>
-inline bool safe_int_internal(absl::string_view text, IntType* value_p,
+inline bool safe_int_internal(::s2::absl::string_view text, IntType* value_p,
                               int base) {
   *value_p = 0;
   bool negative;
@@ -877,7 +877,7 @@ inline bool safe_int_internal(absl::string_view text, IntType* value_p,
 }
 
 template <typename IntType>
-inline bool safe_uint_internal(absl::string_view text, IntType* value_p,
+inline bool safe_uint_internal(::s2::absl::string_view text, IntType* value_p,
                                int base) {
   *value_p = 0;
   bool negative;
@@ -889,21 +889,21 @@ inline bool safe_uint_internal(absl::string_view text, IntType* value_p,
 }  // anonymous namespace
 
 namespace numbers_internal {
-bool safe_strto32_base(absl::string_view text, int32_t* value, int base) {
+bool safe_strto32_base(::s2::absl::string_view text, int32_t* value, int base) {
   return safe_int_internal<int32_t>(text, value, base);
 }
 
-bool safe_strto64_base(absl::string_view text, int64_t* value, int base) {
+bool safe_strto64_base(::s2::absl::string_view text, int64_t* value, int base) {
   return safe_int_internal<int64_t>(text, value, base);
 }
 
-bool safe_strtou32_base(absl::string_view text, uint32_t* value, int base) {
+bool safe_strtou32_base(::s2::absl::string_view text, uint32_t* value, int base) {
   return safe_uint_internal<uint32_t>(text, value, base);
 }
 
-bool safe_strtou64_base(absl::string_view text, uint64_t* value, int base) {
+bool safe_strtou64_base(::s2::absl::string_view text, uint64_t* value, int base) {
   return safe_uint_internal<uint64_t>(text, value, base);
 }
 }  // namespace numbers_internal
 
-}  // namespace absl
+}  // namespace s2::absl

@@ -27,7 +27,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::StrCat;
+using s2::absl::StrCat;
 using s2textformat::ParsePointsOrDie;
 using std::cout;
 using std::endl;

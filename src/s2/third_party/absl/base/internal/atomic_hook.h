@@ -27,7 +27,7 @@
 #define ABSL_HAVE_WORKING_ATOMIC_POINTER 1
 #endif
 
-namespace absl {
+namespace s2::absl {
 namespace base_internal {
 
 template <typename T>
@@ -163,6 +163,6 @@ class AtomicHook<ReturnType (*)(Args...)> {
 #undef ABSL_HAVE_WORKING_ATOMIC_POINTER
 
 }  // namespace base_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_INTERNAL_ATOMIC_HOOK_H_

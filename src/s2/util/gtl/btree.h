@@ -133,7 +133,7 @@ template <typename, typename = void>
 struct is_comparator_transparent : std::false_type {};
 template <typename Compare>
 struct is_comparator_transparent<Compare,
-                                 absl::void_t<typename Compare::is_transparent>>
+                                 s2::absl::void_t<typename Compare::is_transparent>>
     : std::true_type {};
 
 // A helper class to convert a boolean comparison into a three-way "compare-to"
@@ -173,22 +173,22 @@ struct key_compare_to_adapter<std::greater<std::string>> {
 };
 
 template <>
-struct key_compare_to_adapter<std::less<absl::string_view>> {
+struct key_compare_to_adapter<std::less<s2::absl::string_view>> {
   struct type : public btree_key_compare_to_tag {
     type() = default;
-    explicit type(const std::less<absl::string_view> &) {}
-    int operator()(const absl::string_view a, const absl::string_view b) const {
+    explicit type(const std::less<s2::absl::string_view> &) {}
+    int operator()(const s2::absl::string_view a, const s2::absl::string_view b) const {
       return a.compare(b);
     }
   };
 };
 
 template <>
-struct key_compare_to_adapter<std::greater<absl::string_view>> {
+struct key_compare_to_adapter<std::greater<s2::absl::string_view>> {
   struct type : public btree_key_compare_to_tag {
     type() = default;
-    explicit type(const std::greater<absl::string_view> &) {}
-    int operator()(const absl::string_view a, const absl::string_view b) const {
+    explicit type(const std::greater<s2::absl::string_view> &) {}
+    int operator()(const s2::absl::string_view a, const s2::absl::string_view b) const {
       return b.compare(a);
     }
   };
@@ -228,11 +228,11 @@ template <typename T, typename = void>
 struct prefers_linear_node_search : std::false_type {};
 template <typename T>
 struct has_linear_node_search_preference<
-    T, absl::void_t<typename T::goog_btree_prefer_linear_node_search>>
+    T, s2::absl::void_t<typename T::goog_btree_prefer_linear_node_search>>
     : std::true_type {};
 template <typename T>
 struct prefers_linear_node_search<
-    T, absl::void_t<typename T::goog_btree_prefer_linear_node_search>>
+    T, s2::absl::void_t<typename T::goog_btree_prefer_linear_node_search>>
     : T::goog_btree_prefer_linear_node_search {};
 
 template <typename Key, typename Compare, typename Alloc, int TargetNodeSize,
@@ -242,7 +242,7 @@ struct common_params {
   // key_compare type. Otherwise, use key_compare_to_adapter<> which will
   // fall-back to Compare if we don't have an appropriate specialization.
   using key_compare =
-      absl::conditional_t<btree_is_key_compare_to<Compare>::value, Compare,
+      s2::absl::conditional_t<btree_is_key_compare_to<Compare>::value, Compare,
                           typename key_compare_to_adapter<Compare>::type>;
   // A type which indicates if we have a key-compare-to functor or a plain old
   // key-compare functor.
@@ -269,7 +269,7 @@ struct common_params {
   // This is an integral type large enough to hold as many
   // ValueSize-values as will fit a node of TargetNodeSize bytes.
   using node_count_type =
-      absl::conditional_t<(kNodeValueSpace / ValueSize >
+      s2::absl::conditional_t<(kNodeValueSpace / ValueSize >
                            std::numeric_limits<uint8>::max()),
                           uint16, uint8>;  // NOLINT
   static_assert(kNodeValueSpace / ValueSize <=
@@ -286,7 +286,7 @@ struct map_params : common_params<Key, Compare, Alloc, TargetNodeSize,
   using mapped_type = Data;
   // This type allows us to move keys when it is safe to do so. It is safe
   // for maps in which value_type and mutable_value_type are layout compatible.
-  using slot_type = absl::container_internal::slot_type<Key, mapped_type>;
+  using slot_type = s2::absl::container_internal::slot_type<Key, mapped_type>;
   using value_type = typename slot_type::value_type;
   using mutable_value_type = typename slot_type::mutable_value_type;
   using pointer = value_type *;
@@ -301,7 +301,7 @@ struct map_params : common_params<Key, Compare, Alloc, TargetNodeSize,
     explicit value_compare(const key_compare &cmp) : key_compare(cmp) {}
 
     template <typename T, typename U>
-    absl::conditional_t<btree_is_key_compare_to<key_compare>::value, int, bool>
+    s2::absl::conditional_t<btree_is_key_compare_to<key_compare>::value, int, bool>
     operator()(const T &left, const U &right) const {
       return key_compare::operator()(left.first, right.first);
     }
@@ -321,23 +321,23 @@ struct set_params
   using value_type = Key;
   using mutable_value_type = Key;
   // This type implements the necessary functions from the
-  // absl::container_internal::slot_type interface.
+  // s2::absl::container_internal::slot_type interface.
   struct slot_type {
     value_type value;
 
     template <class... Args>
     static void construct(Alloc *alloc, slot_type *slot, Args &&... args) {
-      absl::allocator_traits<Alloc>::construct(*alloc, &slot->value,
+      s2::absl::allocator_traits<Alloc>::construct(*alloc, &slot->value,
                                                std::forward<Args>(args)...);
     }
 
     static void construct(Alloc *alloc, slot_type *slot, slot_type *other) {
-      absl::allocator_traits<Alloc>::construct(*alloc, &slot->value,
+      s2::absl::allocator_traits<Alloc>::construct(*alloc, &slot->value,
                                                std::move(other->value));
     }
 
     static void destroy(Alloc *alloc, slot_type *slot) {
-      absl::allocator_traits<Alloc>::destroy(*alloc, &slot->value);
+      s2::absl::allocator_traits<Alloc>::destroy(*alloc, &slot->value);
     }
 
     static void swap(Alloc * /*alloc*/, slot_type *a, slot_type *b) {
@@ -416,7 +416,7 @@ class btree_node {
   // See documentation for has_linear_node_search_preference and
   // prefers_linear_node_search above.
   // Might be wise to also configure linear search based on node-size.
-  using use_linear_search = absl::conditional_t<
+  using use_linear_search = s2::absl::conditional_t<
       has_linear_node_search_preference<key_compare>::value
           ? prefers_linear_node_search<key_compare>::value
           : has_linear_node_search_preference<key_type>::value
@@ -597,10 +597,10 @@ class btree_node {
   btree_node *child(int i) const { return GetField<3>()[i]; }
   btree_node *&mutable_child(int i) { return GetField<3>()[i]; }
   void clear_child(int i) {
-    absl::container_internal::SanitizerPoisonObject(&mutable_child(i));
+    s2::absl::container_internal::SanitizerPoisonObject(&mutable_child(i));
   }
   void set_child(int i, btree_node *c) {
-    absl::container_internal::SanitizerUnpoisonObject(&mutable_child(i));
+    s2::absl::container_internal::SanitizerUnpoisonObject(&mutable_child(i));
     mutable_child(i) = c;
     c->set_position(i);
   }
@@ -756,7 +756,7 @@ class btree_node {
     n->set_start(0);
     n->set_count(0);
     n->set_max_count(max_count);
-    absl::container_internal::SanitizerPoisonMemoryRegion(
+    s2::absl::container_internal::SanitizerPoisonMemoryRegion(
         n->slot(0), max_count * sizeof(slot_type));
     return n;
   }
@@ -765,7 +765,7 @@ class btree_node {
     // Set `max_count` to a sentinel value to indicate that this node is
     // internal.
     n->set_max_count(kInternalNodeMaxCount);
-    absl::container_internal::SanitizerPoisonMemoryRegion(
+    s2::absl::container_internal::SanitizerPoisonMemoryRegion(
         &n->mutable_child(0), (kNodeValues + 1) * sizeof(btree_node *));
     return n;
   }
@@ -784,12 +784,12 @@ class btree_node {
  private:
   template <typename... Args>
   void value_init(const size_type i, allocator_type *alloc, Args &&... args) {
-    absl::container_internal::SanitizerUnpoisonObject(slot(i));
+    s2::absl::container_internal::SanitizerUnpoisonObject(slot(i));
     slot_type::construct(alloc, slot(i), std::forward<Args>(args)...);
   }
   void value_destroy(const size_type i, allocator_type *alloc) {
     slot_type::destroy(alloc, slot(i));
-    absl::container_internal::SanitizerPoisonObject(slot(i));
+    s2::absl::container_internal::SanitizerPoisonObject(slot(i));
   }
 
   // Move n values starting at value i in this node into the values starting at
@@ -797,7 +797,7 @@ class btree_node {
   void uninitialized_move_n(const size_type n, const size_type i,
                             const size_type j, btree_node *x,
                             allocator_type *alloc) {
-    absl::container_internal::SanitizerUnpoisonMemoryRegion(
+    s2::absl::container_internal::SanitizerUnpoisonMemoryRegion(
         x->slot(j), n * sizeof(slot_type));
     for (slot_type *src = slot(i), *end = src + n, *dest = x->slot(j);
          src != end; ++src, ++dest) {
@@ -855,7 +855,7 @@ struct btree_iterator {
   // binary size reasons.
   template <
       typename N, typename R, typename P,
-      absl::enable_if_t<
+      s2::absl::enable_if_t<
           std::is_same<btree_iterator<N, R, P>, iterator>::value &&
               !std::is_same<btree_iterator<N, R, P>, btree_iterator>::value,
           int> = 0>
@@ -933,11 +933,11 @@ struct btree_iterator {
 
 // Approximation of std::is_trivially_copyable (which is currently unsupported).
 template <typename T>
-using is_trivially_copyable = absl::conjunction<
-    absl::is_trivially_copy_constructible<T>,
-    absl::disjunction<absl::is_trivially_copy_assignable<T>,
-                      absl::negation<std::is_copy_assignable<T>>>,
-    absl::is_trivially_destructible<T>>;
+using is_trivially_copyable = s2::absl::conjunction<
+    s2::absl::is_trivially_copy_constructible<T>,
+    s2::absl::disjunction<s2::absl::is_trivially_copy_assignable<T>,
+                      s2::absl::negation<std::is_copy_assignable<T>>>,
+    s2::absl::is_trivially_destructible<T>>;
 
 template <typename Params>
 class btree {
@@ -945,7 +945,7 @@ class btree {
   using is_key_compare_to = typename Params::is_key_compare_to;
 
   template <typename K>
-  using const_lookup_key_reference = absl::conditional_t<
+  using const_lookup_key_reference = s2::absl::conditional_t<
       is_comparator_transparent<typename Params::key_compare>::value, const K &,
       const typename Params::key_type &>;
 
@@ -1009,8 +1009,8 @@ class btree {
   btree(const btree &x);
   btree(btree &&x) noexcept
       : root_(std::move(x.root_)),
-        rightmost_(absl::exchange(x.rightmost_, nullptr)),
-        size_(absl::exchange(x.size_, 0)) {
+        rightmost_(s2::absl::exchange(x.rightmost_, nullptr)),
+        size_(s2::absl::exchange(x.size_, 0)) {
     x.mutable_root() = nullptr;
   }
 
@@ -1317,7 +1317,7 @@ class btree {
   // allocator.
   node_type *allocate(const size_type size) {
     return reinterpret_cast<node_type *>(
-        absl::container_internal::Allocate<node_type::Alignment()>(
+        s2::absl::container_internal::Allocate<node_type::Alignment()>(
             mutable_allocator(), size));
   }
 
@@ -1337,7 +1337,7 @@ class btree {
 
   // Deallocates a node of a certain size in bytes using the allocator.
   void deallocate(const size_type size, node_type *node) {
-    absl::container_internal::Deallocate<node_type::Alignment()>(
+    s2::absl::container_internal::Deallocate<node_type::Alignment()>(
         mutable_allocator(), node, size);
   }
 
@@ -1454,7 +1454,7 @@ class btree {
  private:
   // We use compressed tuple in order to save space because key_compare and
   // allocator_type are usually empty.
-  absl::container_internal::CompressedTuple<key_compare, allocator_type,
+  s2::absl::container_internal::CompressedTuple<key_compare, allocator_type,
                                             node_type *>
       root_;
 
@@ -1467,8 +1467,8 @@ class btree {
 
   // Verify that key_compare returns an int or bool, as appropriate
   // depending on the value of is_key_compare_to.
-  static_assert(std::is_same<absl::result_of_t<key_compare(key_type, key_type)>,
-                             absl::conditional_t<is_key_compare_to::value, int,
+  static_assert(std::is_same<s2::absl::result_of_t<key_compare(key_type, key_type)>,
+                             s2::absl::conditional_t<is_key_compare_to::value, int,
                                                  bool>>::value,
                 "key comparison function must return bool");
 

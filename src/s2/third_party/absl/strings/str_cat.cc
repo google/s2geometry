@@ -22,7 +22,7 @@
 #include "s2/third_party/absl/strings/ascii.h"
 #include "s2/third_party/absl/strings/internal/resize_uninitialized.h"
 
-namespace absl {
+namespace s2::absl {
 
 AlphaNum::AlphaNum(Hex hex) {
   char* const end = &digits_[numbers_internal::kFastToBufferSize];
@@ -42,7 +42,7 @@ AlphaNum::AlphaNum(Hex hex) {
     beg = writer;
   }
 
-  piece_ = absl::string_view(beg, end - beg);
+  piece_ = ::s2::absl::string_view(beg, end - beg);
 }
 
 AlphaNum::AlphaNum(Dec dec) {
@@ -73,7 +73,7 @@ AlphaNum::AlphaNum(Dec dec) {
     if (add_sign_again) *--writer = '-';
   }
 
-  piece_ = absl::string_view(writer, end - writer);
+  piece_ = ::s2::absl::string_view(writer, end - writer);
 }
 
 // ----------------------------------------------------------------------
@@ -95,7 +95,7 @@ static char* Append(char* out, const AlphaNum& x) {
 
 string StrCat(const AlphaNum& a, const AlphaNum& b) {
   string result;
-  absl::strings_internal::STLStringResizeUninitialized(&result,
+  ::s2::absl::strings_internal::STLStringResizeUninitialized(&result,
                                                        a.size() + b.size());
   char* const begin = &*result.begin();
   char* out = begin;
@@ -136,15 +136,15 @@ string StrCat(const AlphaNum& a, const AlphaNum& b, const AlphaNum& c,
 namespace strings_internal {
 
 // Do not call directly - these are not part of the public API.
-string CatPieces(std::initializer_list<absl::string_view> pieces) {
+string CatPieces(std::initializer_list<::s2::absl::string_view> pieces) {
   string result;
   size_t total_size = 0;
-  for (const absl::string_view piece : pieces) total_size += piece.size();
+  for (const ::s2::absl::string_view piece : pieces) total_size += piece.size();
   strings_internal::STLStringResizeUninitialized(&result, total_size);
 
   char* const begin = &*result.begin();
   char* out = begin;
-  for (const absl::string_view piece : pieces) {
+  for (const ::s2::absl::string_view piece : pieces) {
     const size_t this_size = piece.size();
     memcpy(out, piece.data(), this_size);
     out += this_size;
@@ -153,7 +153,7 @@ string CatPieces(std::initializer_list<absl::string_view> pieces) {
   return result;
 }
 
-// It's possible to call StrAppend with an absl::string_view that is itself a
+// It's possible to call StrAppend with an ::s2::absl::string_view that is itself a
 // fragment of the string we're appending to.  However the results of this are
 // random. Therefore, check for this in debug mode.  Use unsigned math so we
 // only have to do one comparison. Note, there's an exception case: appending an
@@ -163,10 +163,10 @@ string CatPieces(std::initializer_list<absl::string_view> pieces) {
          (uintptr_t((src).data() - (dest).data()) > uintptr_t((dest).size())))
 
 void AppendPieces(string* dest,
-                  std::initializer_list<absl::string_view> pieces) {
+                  std::initializer_list<::s2::absl::string_view> pieces) {
   size_t old_size = dest->size();
   size_t total_size = old_size;
-  for (const absl::string_view piece : pieces) {
+  for (const ::s2::absl::string_view piece : pieces) {
     ASSERT_NO_OVERLAP(*dest, piece);
     total_size += piece.size();
   }
@@ -174,7 +174,7 @@ void AppendPieces(string* dest,
 
   char* const begin = &*dest->begin();
   char* out = begin + old_size;
-  for (const absl::string_view piece : pieces) {
+  for (const ::s2::absl::string_view piece : pieces) {
     const size_t this_size = piece.size();
     memcpy(out, piece.data(), this_size);
     out += this_size;
@@ -237,4 +237,4 @@ void StrAppend(string* dest, const AlphaNum& a, const AlphaNum& b,
   assert(out == begin + dest->size());
 }
 
-}  // namespace absl
+}  // namespace s2::absl

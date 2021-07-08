@@ -36,7 +36,7 @@
 #include "s2/third_party/absl/base/macros.h"
 #include "s2/third_party/absl/base/port.h"
 
-namespace absl {
+namespace s2::absl {
 
 
 // uint128
@@ -76,10 +76,10 @@ namespace absl {
 //
 // Example:
 //
-//     float y = absl::Uint128Max();  // Error. uint128 cannot be implicitly
+//     float y = ::s2::absl::Uint128Max();  // Error. uint128 cannot be implicitly
 //                                    // converted to float.
 //
-//     absl::uint128 v;
+//     ::s2::absl::uint128 v;
 //     uint64_t i = v;                         // Error
 //     uint64_t i = static_cast<uint64_t>(v);  // OK
 //
@@ -179,7 +179,7 @@ class alignas(16) uint128 {
   //
   // Example:
   //
-  //   absl::uint128 big = absl::MakeUint128(1, 0);
+  //   ::s2::absl::uint128 big = ::s2::absl::MakeUint128(1, 0);
   friend constexpr uint128 MakeUint128(uint64_t high, uint64_t low);
 
   // Uint128Max()
@@ -648,7 +648,7 @@ inline uint128& uint128::operator--() {
 #include "s2/third_party/absl/numeric/int128_no_intrinsic.inc"
 #endif  // ABSL_HAVE_INTRINSIC_INT128
 
-}  // namespace absl
+}  // namespace s2::absl
 
 
 

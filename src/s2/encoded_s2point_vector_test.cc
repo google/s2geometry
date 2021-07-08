@@ -26,7 +26,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using s2textformat::MakeCellIdOrDie;
 using s2textformat::MakePointOrDie;
 using std::vector;
@@ -237,7 +237,7 @@ TEST(EncodedS2PointVectorTest, FirstAtAllLevels) {
   // the maximum face, si, and ti values).  All such S2CellIds can be encoded in
   // 6 bytes because most of the bits are zero.
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
-    SCOPED_TRACE(absl::StrCat("Level = ", level));
+    SCOPED_TRACE(s2::absl::StrCat("Level = ", level));
     TestEncodedS2PointVector({S2CellId::Begin(level).ToPoint()},
                              CodingHint::COMPACT, 6);
   }
@@ -249,7 +249,7 @@ TEST(EncodedS2PointVectorTest, LastAtAllLevels) {
   // possible si value at that level.  Such S2CellIds can be encoded in 6 to 13
   // bytes depending on the level.
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
-    SCOPED_TRACE(absl::StrCat("Level = ", level));
+    SCOPED_TRACE(s2::absl::StrCat("Level = ", level));
     // Note that 8 bit deltas are used to encode blocks of size 1, which
     // reduces the size of "base" from ((level + 2) / 4) to (level / 4) bytes.
     int expected_size = 6 + level / 4;
@@ -264,7 +264,7 @@ TEST(EncodedS2PointVectorTest, MaxFaceSiTiAtAllLevels) {
   // S2CellId whose human-readable form is 5/222...22 (0xb555555555555555),
   // however for clarity we consruct it using S2CellId::FromFaceIJ.
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
-    SCOPED_TRACE(absl::StrCat("Level = ", level));
+    SCOPED_TRACE(s2::absl::StrCat("Level = ", level));
     S2CellId id = S2CellId::FromFaceIJ(5, S2::kLimitIJ - 1, S2::kLimitIJ - 1)
                   .parent(level);
 
@@ -283,7 +283,7 @@ TEST(EncodedS2PointVectorTest, MaxFaceSiTiAtAllLevels) {
 TEST(EncodedS2PointVectorTest, LastTwoPointsAtAllLevels) {
   // Test encoding the last two S2CellIds at each level.
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
-    SCOPED_TRACE(absl::StrCat("Level = ", level));
+    SCOPED_TRACE(s2::absl::StrCat("Level = ", level));
     S2CellId id = S2CellId::End(level).prev();
     // Notice that this costs only 4 bits more than encoding the last S2CellId
     // by itself (see LastAtAllLevels).  This is because encoding a block of
@@ -300,7 +300,7 @@ TEST(EncodedS2PointVectorTest, ManyDuplicatePointsAtAllLevels) {
   // between 27 and 38 bytes depending on the level.  (Note that the encoding
   // can use less than 1 byte per point in this situation.)
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
-    SCOPED_TRACE(absl::StrCat("Level = ", level));
+    SCOPED_TRACE(s2::absl::StrCat("Level = ", level));
     S2CellId id = S2CellId::End(level).prev();
     // Encoding: header (2 bytes), base ((level + 2) / 4 bytes), block count
     // (1 byte), block lengths (2 bytes), block headers (2 bytes), 32 deltas

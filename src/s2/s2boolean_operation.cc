@@ -88,7 +88,7 @@ extern bool s2builder_verbose;
 
 namespace {  // Anonymous namespace for helper classes.
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using std::make_pair;
 using std::max;
 using std::min;
@@ -174,7 +174,7 @@ struct CrossingGraphEdge {
   bool outgoing;
   VertexId dst;
 };
-using CrossingGraphEdgeVector = absl::InlinedVector<CrossingGraphEdge, 2>;
+using CrossingGraphEdgeVector = s2::absl::InlinedVector<CrossingGraphEdge, 2>;
 
 // Returns a vector of EdgeIds sorted by input edge id.  When more than one
 // output edge has the same input edge id (i.e., the input edge snapped to a

@@ -357,7 +357,7 @@ class S2ClosestCellQueryBase {
     }
   };
   using CellQueue =
-      std::priority_queue<QueueEntry, absl::InlinedVector<QueueEntry, 16>>;
+      std::priority_queue<QueueEntry, s2::absl::InlinedVector<QueueEntry, 16>>;
   CellQueue queue_;
 
   // Used to iterate over the contents of an S2CellIndex range.  It is defined

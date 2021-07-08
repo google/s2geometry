@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// absl::base_internal::Invoke(f, args...) is an implementation of
+// ::s2::absl::base_internal::Invoke(f, args...) is an implementation of
 // INVOKE(f, args...) from section [func.require] of the C++ standard.
 //
 // [func.require]
@@ -42,7 +42,7 @@
 // The following code is internal implementation detail.  See the comment at the
 // top of this file for the API documentation.
 
-namespace absl {
+namespace s2::absl {
 namespace base_internal {
 
 // The five classes below each implement one of the clauses from the definition
@@ -183,6 +183,6 @@ InvokeT<F, Args...> Invoke(F&& f, Args&&... args) {
                                            std::forward<Args>(args)...);
 }
 }  // namespace base_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_BASE_INTERNAL_INVOKE_H_

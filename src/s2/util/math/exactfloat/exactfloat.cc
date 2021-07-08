@@ -134,7 +134,7 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
   // In OpenSSL >= 1.1, BIGNUM is an opaque type, so d and top
   // cannot be accessed.  The bytes must be copied out at a ~25%
   // performance penalty.
-  absl::FixedArray<unsigned char> bytes(BN_num_bytes(bn));
+  s2::absl::FixedArray<unsigned char> bytes(BN_num_bytes(bn));
   // "le" indicates little endian.
   S2_CHECK_EQ(BN_bn2lebinpad(bn, bytes.data(), bytes.size()), bytes.size());
 

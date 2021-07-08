@@ -195,7 +195,7 @@ class IndexedS2PolylineVectorLayer : public S2Builder::Layer {
     if (error->ok()) {
       for (auto& polyline : polylines_) {
         index_->Add(
-            absl::make_unique<S2Polyline::OwningShape>(std::move(polyline)));
+            s2::absl::make_unique<S2Polyline::OwningShape>(std::move(polyline)));
       }
     }
   }

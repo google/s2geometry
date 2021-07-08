@@ -21,16 +21,16 @@
 // that storage for small sequences of the vector are provided inline without
 // requiring any heap allocation.
 //
-// An `absl::InlinedVector<T, N>` specifies the default capacity `N` as one of
+// An `::s2::absl::InlinedVector<T, N>` specifies the default capacity `N` as one of
 // its template parameters. Instances where `size() <= N` hold contained
 // elements in inline space. Typically `N` is very small so that sequences that
 // are expected to be short do not require allocations.
 //
-// An `absl::InlinedVector` does not usually require a specific allocator. If
+// An `::s2::absl::InlinedVector` does not usually require a specific allocator. If
 // the inlined vector grows beyond its initial constraints, it will need to
 // allocate (as any normal `std::vector` would). This is usually performed with
 // the default allocator (defined as `std::allocator<T>`). Optionally, a custom
-// allocator type may be specified as `A` in `absl::InlinedVector<T, N, A>`.
+// allocator type may be specified as `A` in `::s2::absl::InlinedVector<T, N, A>`.
 
 #ifndef S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_
 #define S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_
@@ -53,17 +53,17 @@
 #include "s2/third_party/absl/memory/memory.h"
 
 
-namespace absl {
+namespace s2::absl {
 
 // -----------------------------------------------------------------------------
 // InlinedVector
 // -----------------------------------------------------------------------------
 //
-// An `absl::InlinedVector` is designed to be a drop-in replacement for
+// An `::s2::absl::InlinedVector` is designed to be a drop-in replacement for
 // `std::vector` for use cases where the vector's size is sufficiently small
 // that it can be inlined. If the inlined vector does grow beyond its estimated
 // capacity, it will trigger an initial allocation on the heap, and will behave
-// as a `std:vector`. The API of the `absl::InlinedVector` within this file is
+// as a `std:vector`. The API of the `::s2::absl::InlinedVector` within this file is
 // designed to cover the same API footprint as covered by `std::vector`.
 template <typename T, size_t N, typename A = std::allocator<T>>
 class InlinedVector {
@@ -74,10 +74,10 @@ class InlinedVector {
 
   template <typename Iterator>
   using DisableIfIntegral =
-      absl::enable_if_t<!std::is_integral<Iterator>::value>;
+      ::s2::absl::enable_if_t<!std::is_integral<Iterator>::value>;
 
   template <typename Iterator>
-  using EnableIfInputIterator = absl::enable_if_t<std::is_convertible<
+  using EnableIfInputIterator = ::s2::absl::enable_if_t<std::is_convertible<
       typename std::iterator_traits<Iterator>::iterator_category,
       std::input_iterator_tag>::value>;
 
@@ -164,7 +164,7 @@ class InlinedVector {
   //     constructor is non-throwing if the allocator is non-throwing or
   //     `value_type`'s move constructor is specified as `noexcept`.
   InlinedVector(InlinedVector&& v) noexcept(
-      absl::allocator_is_nothrow<allocator_type>::value ||
+      ::s2::absl::allocator_is_nothrow<allocator_type>::value ||
       std::is_nothrow_move_constructible<value_type>::value);
 
   // Creates an inlined vector by moving in the contents of `other`.
@@ -176,7 +176,7 @@ class InlinedVector {
   // whether the allocation can throw regardless of whether `value_type`'s move
   // constructor is specified as `noexcept`.
   InlinedVector(InlinedVector&& v, const allocator_type& alloc) noexcept(
-      absl::allocator_is_nothrow<allocator_type>::value);
+      ::s2::absl::allocator_is_nothrow<allocator_type>::value);
 
   ~InlinedVector() { clear(); }
 
@@ -882,9 +882,9 @@ class InlinedVector {
   // Stores either the inlined or allocated representation
   union Rep {
     using ValueTypeBuffer =
-        absl::aligned_storage_t<sizeof(value_type), alignof(value_type)>;
+        ::s2::absl::aligned_storage_t<sizeof(value_type), alignof(value_type)>;
     using AllocationBuffer =
-        absl::aligned_storage_t<sizeof(Allocation), alignof(Allocation)>;
+        ::s2::absl::aligned_storage_t<sizeof(Allocation), alignof(Allocation)>;
 
     // Structs wrap the buffers to perform indirection that solves a bizarre
     // compilation error on Visual Studio (all known versions).
@@ -924,7 +924,7 @@ void swap(InlinedVector<T, N, A>& a,
 template <typename T, size_t N, typename A>
 bool operator==(const InlinedVector<T, N, A>& a,
                 const InlinedVector<T, N, A>& b) {
-  return absl::equal(a.begin(), a.end(), b.begin(), b.end());
+  return ::s2::absl::equal(a.begin(), a.end(), b.begin(), b.end());
 }
 
 // `operator!=()`
@@ -1011,7 +1011,7 @@ InlinedVector<T, N, A>::InlinedVector(const InlinedVector& other,
 
 template <typename T, size_t N, typename A>
 InlinedVector<T, N, A>::InlinedVector(InlinedVector&& other) noexcept(
-    absl::allocator_is_nothrow<allocator_type>::value ||
+    ::s2::absl::allocator_is_nothrow<allocator_type>::value ||
     std::is_nothrow_move_constructible<value_type>::value)
     : allocator_and_tag_(other.allocator_and_tag_) {
   if (other.allocated()) {
@@ -1030,7 +1030,7 @@ InlinedVector<T, N, A>::InlinedVector(InlinedVector&& other) noexcept(
 template <typename T, size_t N, typename A>
 InlinedVector<T, N, A>::InlinedVector(InlinedVector&& other,
                                       const allocator_type& alloc) noexcept(  //
-    absl::allocator_is_nothrow<allocator_type>::value)
+    ::s2::absl::allocator_is_nothrow<allocator_type>::value)
     : allocator_and_tag_(alloc) {
   if (other.allocated()) {
     if (alloc == other.allocator()) {
@@ -1447,7 +1447,7 @@ auto InlinedVector<T, N, A>::InsertWithRange(const_iterator position,
   return it_pair.first;
 }
 
-}  // namespace absl
+}  // namespace s2::absl
 
 
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INLINED_VECTOR_H_

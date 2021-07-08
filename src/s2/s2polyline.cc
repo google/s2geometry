@@ -54,13 +54,13 @@ S2Polyline::S2Polyline()
 
 S2Polyline::S2Polyline(S2Polyline&& other)
   : s2debug_override_(other.s2debug_override_),
-    num_vertices_(absl::exchange(other.num_vertices_, 0)),
+    num_vertices_(s2::absl::exchange(other.num_vertices_, 0)),
     vertices_(std::move(other.vertices_)) {
 }
 
 S2Polyline& S2Polyline::operator=(S2Polyline&& other) {
   s2debug_override_ = other.s2debug_override_;
-  num_vertices_ = absl::exchange(other.num_vertices_, 0);
+  num_vertices_ = s2::absl::exchange(other.num_vertices_, 0);
   vertices_ = std::move(other.vertices_);
   return *this;
 }

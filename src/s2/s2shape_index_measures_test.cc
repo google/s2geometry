@@ -30,7 +30,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using s2::absl::make_unique;
 using s2textformat::MakeIndexOrDie;
 
 namespace {

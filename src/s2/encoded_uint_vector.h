@@ -34,7 +34,7 @@ namespace s2coding {
 // REQUIRES: "encoder" uses the default constructor, so that its buffer
 //           can be enlarged as necessary by calling Ensure(int).
 template <class T>
-void EncodeUintVector(absl::Span<const T> v, Encoder* encoder);
+void EncodeUintVector(s2::absl::Span<const T> v, Encoder* encoder);
 
 // This class represents an encoded vector of unsigned integers of type T.
 // Values are decoded only when they are accessed.  This allows for very fast
@@ -193,7 +193,7 @@ bool DecodeUintWithLength(int length, Decoder* decoder, T* result) {
 }
 
 template <class T>
-void EncodeUintVector(absl::Span<const T> v, Encoder* encoder) {
+void EncodeUintVector(s2::absl::Span<const T> v, Encoder* encoder) {
   // The encoding is as follows:
   //
   //   varint64: (v.size() * sizeof(T)) | (len - 1)

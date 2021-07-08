@@ -187,7 +187,7 @@
 #include <cxxabi.h>
 #endif
 
-namespace absl {
+namespace s2::absl {
 namespace container_internal {
 
 // A type wrapper that instructs `Layout` to use the specific alignment for the
@@ -247,13 +247,13 @@ struct AlignOf<Aligned<T, N>> {
 
 // Does `Ts...` contain `T`?
 template <class T, class... Ts>
-using Contains = absl::disjunction<std::is_same<T, Ts>...>;
+using Contains = ::s2::absl::disjunction<std::is_same<T, Ts>...>;
 
 template <class From, class To>
 using CopyConst =
     typename std::conditional<std::is_const<From>::value, const To, To>::type;
 
-// Note: We're not qualifying this with absl:: because it doesn't compile under
+// Note: We're not qualifying this with ::s2::absl:: because it doesn't compile under
 // MSVC.
 template <class T>
 using SliceType = Span<T>;
@@ -297,11 +297,11 @@ string TypeName() {
   demangled = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, &status);
 #endif
   if (status == 0 && demangled != nullptr) {  // Demangling succeeded.
-    absl::StrAppend(&out, "<", demangled, ">");
+    ::s2::absl::StrAppend(&out, "<", demangled, ">");
     free(demangled);
   } else {
 #if defined(__GXX_RTTI) || defined(_CPPRTTI)
-    absl::StrAppend(&out, "<", typeid(T).name(), ">");
+    ::s2::absl::StrAppend(&out, "<", typeid(T).name(), ">");
 #endif
   }
   return out;
@@ -335,11 +335,11 @@ class LayoutImpl;
 // `Min(sizeof...(Elements), NumSizes + 1)` (the number of arrays for which we
 // can compute offsets).
 template <class... Elements, size_t... SizeSeq, size_t... OffsetSeq>
-class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
-                 absl::index_sequence<OffsetSeq...>> {
+class LayoutImpl<std::tuple<Elements...>, ::s2::absl::index_sequence<SizeSeq...>,
+                 ::s2::absl::index_sequence<OffsetSeq...>> {
  private:
   static_assert(sizeof...(Elements) > 0, "At least one field is required");
-  static_assert(absl::conjunction<IsLegalElementType<Elements>...>::value,
+  static_assert(::s2::absl::conjunction<IsLegalElementType<Elements>...>::value,
                 "Invalid element type (see IsLegalElementType)");
 
   enum {
@@ -645,16 +645,16 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
     const auto offsets = Offsets();
     const size_t sizes[] = {SizeOf<ElementType<OffsetSeq>>()...};
     const string types[] = {adl_barrier::TypeName<ElementType<OffsetSeq>>()...};
-    string res = absl::StrCat("@0", types[0], "(", sizes[0], ")");
+    string res = ::s2::absl::StrCat("@0", types[0], "(", sizes[0], ")");
     for (size_t i = 0; i != NumOffsets - 1; ++i) {
-      absl::StrAppend(&res, "[", size_[i], "]; @", offsets[i + 1], types[i + 1],
+      ::s2::absl::StrAppend(&res, "[", size_[i], "]; @", offsets[i + 1], types[i + 1],
                       "(", sizes[i + 1], ")");
     }
     // NumSizes is a constant that may be zero. Some compilers cannot see that
     // inside the if statement "size_[NumSizes - 1]" must be valid.
     int last = static_cast<int>(NumSizes) - 1;
     if (NumTypes == NumSizes && last >= 0) {
-      absl::StrAppend(&res, "[", size_[last], "]");
+      ::s2::absl::StrAppend(&res, "[", size_[last], "]");
     }
     return res;
   }
@@ -666,8 +666,8 @@ class LayoutImpl<std::tuple<Elements...>, absl::index_sequence<SizeSeq...>,
 
 template <size_t NumSizes, class... Ts>
 using LayoutType = LayoutImpl<
-    std::tuple<Ts...>, absl::make_index_sequence<NumSizes>,
-    absl::make_index_sequence<adl_barrier::Min(sizeof...(Ts), NumSizes + 1)>>;
+    std::tuple<Ts...>, ::s2::absl::make_index_sequence<NumSizes>,
+    ::s2::absl::make_index_sequence<adl_barrier::Min(sizeof...(Ts), NumSizes + 1)>>;
 
 }  // namespace internal_layout
 
@@ -682,7 +682,7 @@ class Layout : public internal_layout::LayoutType<sizeof...(Ts), Ts...> {
  public:
   static_assert(sizeof...(Ts) > 0, "At least one field is required");
   static_assert(
-      absl::conjunction<internal_layout::IsLegalElementType<Ts>...>::value,
+      ::s2::absl::conjunction<internal_layout::IsLegalElementType<Ts>...>::value,
       "Invalid element type (see IsLegalElementType)");
 
   // The result type of `Partial()` with `NumSizes` arguments.
@@ -718,7 +718,7 @@ class Layout : public internal_layout::LayoutType<sizeof...(Ts), Ts...> {
   template <class... Sizes>
   static constexpr PartialType<sizeof...(Sizes)> Partial(Sizes&&... sizes) {
     static_assert(sizeof...(Sizes) <= sizeof...(Ts), "");
-    return PartialType<sizeof...(Sizes)>(absl::forward<Sizes>(sizes)...);
+    return PartialType<sizeof...(Sizes)>(::s2::absl::forward<Sizes>(sizes)...);
   }
 
   // Creates a layout with the sizes of all arrays specified. If you know
@@ -734,6 +734,6 @@ class Layout : public internal_layout::LayoutType<sizeof...(Ts), Ts...> {
 };
 
 }  // namespace container_internal
-}  // namespace absl
+}  // namespace s2::absl
 
 #endif  // S2_THIRD_PARTY_ABSL_CONTAINER_INTERNAL_LAYOUT_H_

@@ -61,7 +61,7 @@ class StringVectorEncoder {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  static void Encode(absl::Span<const string> v, Encoder* encoder);
+  static void Encode(s2::absl::Span<const string> v, Encoder* encoder);
 
  private:
   // A vector consisting of the starting offset of each string in the
@@ -99,7 +99,7 @@ class EncodedStringVector {
   size_t size() const;
 
   // Returns the string at the given index.
-  absl::string_view operator[](int i) const;
+  s2::absl::string_view operator[](int i) const;
 
   // Returns a Decoder initialized with the string at the given index.
   Decoder GetDecoder(int i) const;
@@ -111,7 +111,7 @@ class EncodedStringVector {
   // Returns the entire vector of original strings.  Requires that the
   // data buffer passed to the constructor persists until the result vector is
   // no longer needed.
-  std::vector<absl::string_view> Decode() const;
+  std::vector<s2::absl::string_view> Decode() const;
 
  private:
   EncodedUintVector<uint64> offsets_;
@@ -142,10 +142,10 @@ inline size_t EncodedStringVector::size() const {
   return offsets_.size();
 }
 
-inline absl::string_view EncodedStringVector::operator[](int i) const {
+inline s2::absl::string_view EncodedStringVector::operator[](int i) const {
   uint64 start = (i == 0) ? 0 : offsets_[i - 1];
   uint64 limit = offsets_[i];
-  return absl::string_view(data_ + start, limit - start);
+  return s2::absl::string_view(data_ + start, limit - start);
 }
 
 inline Decoder EncodedStringVector::GetDecoder(int i) const {
