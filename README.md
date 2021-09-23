@@ -158,6 +158,7 @@ Python 3 is required.
 * [Go](https://github.com/golang/geo) (Approximately 40% complete.)
 * [Java](https://github.com/google/s2-geometry-library-java) (Some newer C++ features are missing;
   last updated in 2021.)
+* [Kotlin](https://github.com/Enovea/s2-geometry-kotlin) (Complete except binary serialization)
 
 ## Disclaimer
 
