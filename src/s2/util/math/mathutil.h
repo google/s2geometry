@@ -105,7 +105,7 @@ class MathUtil {
     // is no advantage to passing an argument type of "float" on Intel
     // architectures anyway.
 
-#if defined __GNUC__ && (defined __i386__ || defined __SSE2__)
+#if defined __GNUC__ && (defined __i386__ || defined __x86_64__)
 #if defined __SSE2__
     // SSE2.
     int32 result;
