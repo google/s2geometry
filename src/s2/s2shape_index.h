@@ -272,8 +272,7 @@ class S2ShapeIndex {
   //   for (S2Shape* shape : index) { ... }
   //
   // CAVEAT: Returns nullptr for shapes that have been removed from the index.
-  class ShapeIterator
-      : public std::iterator<std::forward_iterator_tag, S2Shape*> {
+  class ShapeIterator {
    public:
     ShapeIterator() = default;
     S2Shape* operator*() const;

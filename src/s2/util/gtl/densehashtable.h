@@ -1404,10 +1404,10 @@ class dense_hashtable {
     const value_alloc_type& as_value_alloc() const { return *this; }
 
     // We want to return the exact same type as ExtractKey: Key or const Key&
-    typename ExtractKey::result_type get_key(const_reference v) const {
+    typename ExtractKey::result_type get_key(const Value& v) const {
       return ExtractKey::operator()(v);
     }
-    void set_key(pointer v, const key_type& k) const {
+    void set_key(Value* v, const key_type& k) const {
       SetKey::operator()(v, k);
     }
 
@@ -1419,8 +1419,8 @@ class dense_hashtable {
       return EqualKey::operator()(a, b);
     }
 
-    pointer allocate(size_type size) {
-      pointer memory = value_alloc_type::allocate(size);
+    Value* allocate(size_type size) {
+      Value* memory = value_alloc_type::allocate(size);
       assert(memory != nullptr);
       return memory;
     }

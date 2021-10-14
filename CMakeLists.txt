@@ -15,7 +15,7 @@ if (APPLE)
     set(CMAKE_MACOSX_RPATH TRUE)
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -211,10 +211,6 @@ add_library(s2
             src/s2/util/math/exactfloat/exactfloat.cc
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
-add_library(s2testing STATIC
-            src/s2/s2builderutil_testing.cc
-            src/s2/s2shapeutil_testing.cc
-            src/s2/s2testing.cc)
 target_link_libraries(
     s2
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
@@ -425,7 +421,7 @@ install(FILES src/s2/util/math/mathutil.h
 install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/units")
-install(TARGETS s2 s2testing
+install(TARGETS s2
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
@@ -548,7 +544,7 @@ if (GTEST_ROOT)
   endforeach()
 endif()
 
-if (BUILD_EXAMPLES)
+if (BUILD_EXAMPLES AND GTEST_ROOT)
   add_subdirectory("doc/examples" examples)
 endif()
 

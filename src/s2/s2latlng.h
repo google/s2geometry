@@ -117,7 +117,6 @@ class S2LatLng {
   friend S2LatLng operator*(const S2LatLng& a, double m);
 
   bool operator==(const S2LatLng& o) const { return coords_ == o.coords_; }
-  bool operator!=(const S2LatLng& o) const { return coords_ != o.coords_; }
   bool operator<(const S2LatLng& o) const { return coords_ < o.coords_; }
   bool operator>(const S2LatLng& o) const { return coords_ > o.coords_; }
   bool operator<=(const S2LatLng& o) const { return coords_ <= o.coords_; }

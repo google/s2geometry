@@ -29,7 +29,7 @@ struct GoodFastHash;
 template <class VType>
 struct GoodFastHash<Vector2<VType>> {
   std::size_t operator()(const Vector2<VType>& v) const {
-    static_assert(std::is_pod<VType>::value, "POD expected");
+    static_assert(std::is_trivial<VType>::value, "POD expected");
     // std::hash collapses +/-0.
     std::hash<VType> h;
     HashMix mix(h(v.x()));
@@ -41,7 +41,7 @@ struct GoodFastHash<Vector2<VType>> {
 template <class VType>
 struct GoodFastHash<Vector3<VType>> {
   std::size_t operator()(const Vector3<VType>& v) const {
-    static_assert(std::is_pod<VType>::value, "POD expected");
+    static_assert(std::is_trivial<VType>::value, "POD expected");
     // std::hash collapses +/-0.
     std::hash<VType> h;
     HashMix mix(h(v.x()));
