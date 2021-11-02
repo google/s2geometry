@@ -167,7 +167,7 @@ class S1Angle {
   // When S1Angle is used as a key in one of the btree container types
   // (util/btree), indicate that linear rather than binary search should be
   // used.  This is much faster when the comparison function is cheap.
-  typedef std::true_type goog_btree_prefer_linear_node_search;
+  typedef std::true_type absl_btree_prefer_linear_node_search;
 
  private:
   explicit IFNDEF_SWIG(constexpr) S1Angle(double radians) : radians_(radians) {}

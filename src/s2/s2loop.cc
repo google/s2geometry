@@ -53,14 +53,14 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2wedge_relations.h"
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/types/span.h"
+#include "absl/memory/memory.h"
+#include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
-using s2::absl::make_unique;
-using s2::absl::MakeSpan;
+using absl::make_unique;
+using absl::MakeSpan;
 using std::pair;
 using std::set;
 using std::vector;

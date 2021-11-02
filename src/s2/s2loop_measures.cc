@@ -21,7 +21,7 @@
 #include <cmath>
 #include <vector>
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/container/inlined_vector.h"
+#include "absl/container/inlined_vector.h"
 #include "s2/s1angle.h"
 #include "s2/s2centroids.h"
 #include "s2/s2edge_distances.h"
@@ -279,7 +279,7 @@ LoopOrder GetCanonicalLoopOrder(S2PointLoopSpan loop) {
   int n = loop.size();
   if (n == 0) return LoopOrder(0, 1);
 
-  s2::absl::InlinedVector<int, 4> min_indices;
+  absl::InlinedVector<int, 4> min_indices;
   min_indices.push_back(0);
   for (int i = 1; i < n; ++i) {
     if (loop[i] <= loop[min_indices[0]]) {

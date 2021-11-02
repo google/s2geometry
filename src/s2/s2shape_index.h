@@ -38,8 +38,8 @@
 #include "s2/s2cell_id.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2shape.h"
-#include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/base/macros.h"
+#include "absl/memory/memory.h"
 #include "s2/util/gtl/compact_array.h"
 
 class R1Interval;
@@ -212,7 +212,7 @@ class S2ShapeIndexCell {
 //                        const vector<S2Polygon*>& polygons) {
 //     MutableS2ShapeIndex index;
 //     for (auto polygon : polygons) {
-//       index.Add(s2::absl::make_unique<S2Polygon::Shape>(polygon));
+//       index.Add(absl::make_unique<S2Polygon::Shape>(polygon));
 //     }
 //     auto query = MakeS2ContainsPointQuery(&index);
 //     for (const auto& point : points) {

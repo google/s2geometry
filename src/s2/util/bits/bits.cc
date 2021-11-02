@@ -19,9 +19,9 @@
 #include "s2/util/bits/bits.h"
 
 #include <cassert>
-#include "s2/third_party/absl/numeric/int128.h"
+#include "absl/numeric/int128.h"
 
-using s2::absl::uint128;
+using absl::uint128;
 
 // this array gives the number of bits for any number from 0 to 255
 // (We could make these ints.  The tradeoff is size (eg does it overwhelm
@@ -104,7 +104,7 @@ int Bits::Log2Ceiling64(uint64 n) {
     return floor + 1;
 }
 
-int Bits::Log2Ceiling128(s2::absl::uint128 n) {
+int Bits::Log2Ceiling128(absl::uint128 n) {
   int floor = Log2Floor128(n);
   if ((n & (n - 1)) == 0)              // zero or a power of two
     return floor;

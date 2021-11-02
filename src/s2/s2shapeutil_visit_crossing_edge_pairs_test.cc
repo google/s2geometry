@@ -21,7 +21,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_vector_shape.h"
@@ -32,7 +32,7 @@
 #include "s2/s2shapeutil_edge_iterator.h"
 #include "s2/s2text_format.h"
 
-using s2::absl::make_unique;
+using absl::make_unique;
 using std::unique_ptr;
 using std::vector;
 

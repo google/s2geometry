@@ -32,12 +32,12 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
 
-using s2::absl::StrCat;
-using s2::absl::make_unique;
+using absl::StrCat;
+using absl::make_unique;
 using std::fabs;
 using std::unique_ptr;
 using std::vector;
@@ -305,10 +305,10 @@ static string JoinInts(const vector<int>& ints) {
   string result;
   int n = ints.size();
   for (int i = 0; i + 1 < n; ++i) {
-    s2::absl::StrAppend(&result, ints[i], ",");
+    absl::StrAppend(&result, ints[i], ",");
   }
   if (n > 0) {
-    s2::absl::StrAppend(&result, ints[n - 1]);
+    absl::StrAppend(&result, ints[n - 1]);
   }
   return result;
 }

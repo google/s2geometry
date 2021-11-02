@@ -21,7 +21,7 @@
 #include <memory>
 #include <vector>
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -130,7 +130,7 @@ class IndexedS2PolylineLayer : public S2Builder::Layer {
     layer_.Build(g, error);
     if (error->ok() && polyline_->num_vertices() > 0) {
       index_->Add(
-          s2::absl::make_unique<S2Polyline::OwningShape>(std::move(polyline_)));
+          absl::make_unique<S2Polyline::OwningShape>(std::move(polyline_)));
     }
   }
 

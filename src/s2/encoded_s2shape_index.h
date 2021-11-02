@@ -236,7 +236,7 @@ inline void EncodedS2ShapeIndex::Iterator::Seek(S2CellId target) {
 
 inline std::unique_ptr<EncodedS2ShapeIndex::IteratorBase>
 EncodedS2ShapeIndex::NewIterator(InitialPosition pos) const {
-  return s2::absl::make_unique<Iterator>(this, pos);
+  return absl::make_unique<Iterator>(this, pos);
 }
 
 inline S2Shape* EncodedS2ShapeIndex::shape(int id) const {

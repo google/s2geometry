@@ -20,11 +20,11 @@
 #include <memory>
 
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 
-using s2::absl::make_unique;
+using absl::make_unique;
 
 TEST(ValueLexicon, DuplicateValues) {
   ValueLexicon<int64> lex;

@@ -20,7 +20,7 @@
 
 #include <tuple>
 #include <type_traits>
-#include "s2/util/gtl/btree_map.h"
+#include "absl/container/btree_map.h"
 #include "s2/s2cell_id.h"
 
 // S2PointIndex maintains an index of points sorted by leaf S2CellId.  Each
@@ -140,7 +140,7 @@ class S2PointIndex {
 
  private:
   // Defined here because the Iterator class below uses it.
-  using Map = gtl::btree_multimap<S2CellId, PointData>;
+  using Map = absl::btree_multimap<S2CellId, PointData>;
 
  public:
   class Iterator {

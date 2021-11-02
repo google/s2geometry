@@ -32,9 +32,9 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/strings/str_cat.h"
 
-using s2::absl::StrCat;
+using absl::StrCat;
 
 static void TestIntervalOps(const S2R2Rect& x, const S2R2Rect& y,
                             const char* expected_rexion,

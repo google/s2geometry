@@ -79,7 +79,7 @@
 
 #include "s2/base/casts.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/util/bits/bits.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
@@ -103,7 +103,7 @@
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2text_format.h"
 
-using s2::absl::make_unique;
+using absl::make_unique;
 using gtl::compact_array;
 using std::max;
 using std::pair;

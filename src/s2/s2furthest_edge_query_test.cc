@@ -18,7 +18,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -36,7 +36,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using s2::absl::make_unique;
+using absl::make_unique;
 using s2textformat::MakeIndexOrDie;
 using s2textformat::MakePointOrDie;
 using s2textformat::ParsePointsOrDie;

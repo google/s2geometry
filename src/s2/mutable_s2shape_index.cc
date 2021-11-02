@@ -133,7 +133,7 @@ const S2ShapeIndexCell* MutableS2ShapeIndex::Iterator::GetCell() const {
 
 unique_ptr<MutableS2ShapeIndex::IteratorBase>
 MutableS2ShapeIndex::Iterator::Clone() const {
-  return s2::absl::make_unique<Iterator>(*this);
+  return absl::make_unique<Iterator>(*this);
 }
 
 void MutableS2ShapeIndex::Iterator::Copy(const IteratorBase& other)  {
@@ -588,7 +588,7 @@ void MutableS2ShapeIndex::GetUpdateBatches(vector<BatchDescriptor>* batches)
     }
   }
   int num_edges_added = 0;
-  for (int id = pending_additions_begin_; id < shapes_.size(); ++id) {
+  for (int id = pending_additions_begin_; id < static_cast<int>(shapes_.size()); ++id) {
     const S2Shape* shape = this->shape(id);
     if (shape == nullptr) continue;
     num_edges_added += shape->num_edges();
@@ -648,7 +648,7 @@ void MutableS2ShapeIndex::GetUpdateBatches(vector<BatchDescriptor>* batches)
   }
   // Keep adding shapes to each batch until the recommended number of edges
   // for that batch is reached, then move on to the next batch.
-  for (int id = pending_additions_begin_; id < shapes_.size(); ++id) {
+  for (int id = pending_additions_begin_; id < static_cast<int>(shapes_.size()); ++id) {
     const S2Shape* shape = this->shape(id);
     if (shape == nullptr) continue;
     num_edges += shape->num_edges();

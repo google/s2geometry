@@ -18,11 +18,11 @@
 #include <string>
 #include <vector>
 
-#include "s2/third_party/absl/strings/str_split.h"
-#include "s2/third_party/absl/strings/string_view.h"
+#include "absl/strings/str_split.h"
+#include "absl/strings/string_view.h"
 
-using s2::absl::StrSplit;
-using s2::absl::string_view;
+using absl::StrSplit;
+using absl::string_view;
 using std::pair;
 using std::string;
 using std::vector;
@@ -34,7 +34,7 @@ bool DictionaryParse(string_view encoded_str,
   if (encoded_str.empty())
     return true;
   vector<string_view> const entries = StrSplit(encoded_str, ',');
-  for (int i = 0; i < entries.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(entries.size()); ++i) {
     vector<string_view> const fields = StrSplit(entries[i], ':');
     if (fields.size() != 2)  // parsing error
       return false;

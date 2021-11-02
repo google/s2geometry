@@ -17,13 +17,13 @@
 
 #include "s2/encoded_s2point_vector.h"
 
-#include "s2/third_party/absl/base/internal/unaligned_access.h"
+#include "absl/base/internal/unaligned_access.h"
 #include "s2/util/bits/bits.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
 
-using s2::absl::MakeSpan;
-using s2::absl::Span;
+using absl::MakeSpan;
+using absl::Span;
 using std::max;
 using std::min;
 using std::vector;

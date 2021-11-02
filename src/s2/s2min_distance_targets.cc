@@ -18,7 +18,7 @@
 #include "s2/s2min_distance_targets.h"
 
 #include <memory>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -127,7 +127,7 @@ bool S2MinDistanceCellTarget::VisitContainingShapes(
 S2MinDistanceCellUnionTarget::S2MinDistanceCellUnionTarget(
     S2CellUnion cell_union)
     : cell_union_(std::move(cell_union)),
-      query_(s2::absl::make_unique<S2ClosestCellQuery>(&index_)) {
+      query_(absl::make_unique<S2ClosestCellQuery>(&index_)) {
   for (S2CellId cell_id : cell_union_) {
     index_.Add(cell_id, 0);
   }
@@ -196,7 +196,7 @@ bool S2MinDistanceCellUnionTarget::VisitContainingShapes(
 
 S2MinDistanceShapeIndexTarget::S2MinDistanceShapeIndexTarget(
     const S2ShapeIndex* index)
-    : index_(index), query_(s2::absl::make_unique<S2ClosestEdgeQuery>(index)) {
+    : index_(index), query_(absl::make_unique<S2ClosestEdgeQuery>(index)) {
 }
 
 S2MinDistanceShapeIndexTarget::~S2MinDistanceShapeIndexTarget() {

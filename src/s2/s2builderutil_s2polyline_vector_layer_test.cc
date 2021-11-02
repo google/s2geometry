@@ -22,13 +22,13 @@
 #include "s2/base/casts.h"
 #include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/str_join.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_join.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2text_format.h"
 
-using s2::absl::make_unique;
+using absl::make_unique;
 using s2builderutil::IndexedS2PolylineVectorLayer;
 using s2builderutil::S2PolylineVectorLayer;
 using s2textformat::MakePolylineOrDie;
@@ -62,8 +62,8 @@ void TestS2PolylineVector(
   for (const auto& polyline : output) {
     output_strs.push_back(s2textformat::ToString(*polyline));
   }
-  EXPECT_EQ(s2::absl::StrJoin(expected_strs, "; "),
-            s2::absl::StrJoin(output_strs, "; "));
+  EXPECT_EQ(absl::StrJoin(expected_strs, "; "),
+            absl::StrJoin(output_strs, "; "));
 }
 
 // Convenience function that tests both directed and undirected edges.

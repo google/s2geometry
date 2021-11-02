@@ -19,7 +19,7 @@
 
 #include <memory>
 
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/encoded_s2point_vector.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/s2lax_polygon_shape.h"
@@ -28,7 +28,7 @@
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 
-using s2::absl::make_unique;
+using absl::make_unique;
 using std::make_shared;
 using std::unique_ptr;
 using std::vector;

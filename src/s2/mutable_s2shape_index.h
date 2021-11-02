@@ -35,9 +35,18 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
-#include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/util/gtl/btree_map.h"
+#include "absl/base/macros.h"
+#include "absl/memory/memory.h"
+#include "absl/container/btree_map.h"
+
+namespace s2internal {
+// Hack to expose bytes_used.
+template <typename Key, typename Value>
+class BTreeMap : public absl::btree_map<Key, Value> {
+ public:
+  size_t bytes_used() const { return this->tree_.bytes_used(); }
+};
+}  // namespace s2internal
 
 // MutableS2ShapeIndex is a class for in-memory indexing of polygonal geometry.
 // The objects in the index are known as "shapes", and may consist of points,
@@ -79,7 +88,7 @@
 //                        const vector<S2Polygon*>& polygons) {
 //     MutableS2ShapeIndex index;
 //     for (auto polygon : polygons) {
-//       index.Add(s2::absl::make_unique<S2Polygon::Shape>(polygon));
+//       index.Add(absl::make_unique<S2Polygon::Shape>(polygon));
 //     }
 //     auto query = MakeS2ContainsPointQuery(&index);
 //     for (const auto& point : points) {
@@ -115,7 +124,7 @@
 // in the S2ShapeIndexCell that contains that point.
 class MutableS2ShapeIndex final : public S2ShapeIndex {
  private:
-  using CellMap = gtl::btree_map<S2CellId, S2ShapeIndexCell*>;
+  using CellMap = s2internal::BTreeMap<S2CellId, S2ShapeIndexCell*>;
 
  public:
   // Options that affect construction of the MutableS2ShapeIndex.
@@ -458,7 +467,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
     // This mutex is used as a condition variable.  It is locked by the
     // updating thread for the entire duration of the update; other threads
     // lock it in order to wait until the update is finished.
-    s2::absl::Mutex wait_mutex;
+    absl::Mutex wait_mutex;
 
     // The number of threads currently waiting on "wait_mutex_".  The
     // UpdateState can only be freed when this number reaches zero.
@@ -558,7 +567,7 @@ inline void MutableS2ShapeIndex::Iterator::Seek(S2CellId target) {
 
 inline std::unique_ptr<MutableS2ShapeIndex::IteratorBase>
 MutableS2ShapeIndex::NewIterator(InitialPosition pos) const {
-  return s2::absl::make_unique<Iterator>(this, pos);
+  return absl::make_unique<Iterator>(this, pos);
 }
 
 inline bool MutableS2ShapeIndex::is_fresh() const {

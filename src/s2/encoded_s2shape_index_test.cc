@@ -20,8 +20,8 @@
 #include <map>
 #include <vector>
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
 #include "s2/s2builderutil_s2polyline_layer.h"
@@ -41,8 +41,8 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using s2::absl::make_unique;
-using s2::absl::StrCat;
+using absl::make_unique;
+using absl::StrCat;
 using s2builderutil::S2CellIdSnapFunction;
 using s2builderutil::S2PolylineLayer;
 using std::max;
@@ -213,7 +213,7 @@ class IndexedLaxPolylineLayer : public S2Builder::Layer {
   void Build(const Graph& g, S2Error* error) override {
     layer_.Build(g, error);
     if (error->ok() && polyline_->num_vertices() > 0) {
-      index_->Add(s2::absl::make_unique<S2LaxPolylineShape>(*polyline_));
+      index_->Add(absl::make_unique<S2LaxPolylineShape>(*polyline_));
     }
   }
 

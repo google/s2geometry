@@ -24,7 +24,7 @@
 #include "s2/base/commandlineflags.h"
 #include "s2/base/stringprintf.h"
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/base/casts.h"
+#include "absl/base/casts.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_distances.h"
@@ -717,7 +717,7 @@ class Sin2Distance {
  public:
   template <class T>
   static int Triage(const Vector3<T>& x, const Vector3<T>& y, S1ChordAngle r) {
-    return TriageCompareSin2Distance(x, y, s2::absl::implicit_cast<T>(r.length2()));
+    return TriageCompareSin2Distance(x, y, absl::implicit_cast<T>(r.length2()));
   }
 };
 
@@ -725,7 +725,7 @@ class CosDistance {
  public:
   template <class T>
   static int Triage(const Vector3<T>& x, const Vector3<T>& y, S1ChordAngle r) {
-    return TriageCompareCosDistance(x, y, s2::absl::implicit_cast<T>(r.length2()));
+    return TriageCompareCosDistance(x, y, absl::implicit_cast<T>(r.length2()));
   }
 };
 

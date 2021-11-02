@@ -46,7 +46,7 @@
 #ifndef S2_S2POINT_COMPRESSION_H_
 #define S2_S2POINT_COMPRESSION_H_
 
-#include "s2/third_party/absl/types/span.h"
+#include "absl/types/span.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
 
@@ -66,13 +66,13 @@ struct S2XYZFaceSiTi {
 // Encode the points in the encoder, using an optimized compressed format for
 // points at the center of a cell at 'level', plus 3 double values for the
 // others.
-void S2EncodePointsCompressed(s2::absl::Span<const S2XYZFaceSiTi> points,
+void S2EncodePointsCompressed(absl::Span<const S2XYZFaceSiTi> points,
                               int level, Encoder* encoder);
 
 // Decode points encoded with S2EncodePointsCompressed. Requires that the
 // level is the level that was used in S2EncodePointsCompressed. Ensures
 // that the decoded points equal the encoded points. Returns true on success.
 bool S2DecodePointsCompressed(Decoder* decoder, int level,
-                              s2::absl::Span<S2Point> points);
+                              absl::Span<S2Point> points);
 
 #endif  // S2_S2POINT_COMPRESSION_H_

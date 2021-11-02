@@ -22,7 +22,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
@@ -32,7 +32,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using s2::absl::make_unique;
+using absl::make_unique;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;

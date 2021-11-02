@@ -29,8 +29,8 @@
 
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/container/fixed_array.h"
+#include "absl/base/macros.h"
+#include "absl/container/fixed_array.h"
 
 using std::max;
 using std::min;
@@ -134,7 +134,7 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
   // In OpenSSL >= 1.1, BIGNUM is an opaque type, so d and top
   // cannot be accessed.  The bytes must be copied out at a ~25%
   // performance penalty.
-  s2::absl::FixedArray<unsigned char> bytes(BN_num_bytes(bn));
+  absl::FixedArray<unsigned char> bytes(BN_num_bytes(bn));
   // "le" indicates little endian.
   S2_CHECK_EQ(BN_bn2lebinpad(bn, bytes.data(), bytes.size()), bytes.size());
 
@@ -399,7 +399,7 @@ string ExactFloat::ToStringWithMaxDigits(int max_digits) const {
     // Use fixed format.  We split this into two cases depending on whether
     // the integer portion is non-zero or not.
     if (exp10 > 0) {
-      if (exp10 >= digits.size()) {
+      if (exp10 >= static_cast<int>(digits.size())) {
         str += digits;
         for (int i = exp10 - digits.size(); i > 0; --i) {
           str.push_back('0');

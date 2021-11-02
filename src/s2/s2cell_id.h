@@ -32,7 +32,7 @@
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
 #include "s2/s2coords.h"
-#include "s2/third_party/absl/strings/string_view.h"
+#include "absl/strings/string_view.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
 
@@ -388,7 +388,7 @@ class S2CellId {
   //
   // The method name includes "Debug" in order to avoid possible confusion
   // with FromToken() above.
-  static S2CellId FromDebugString(s2::absl::string_view str);
+  static S2CellId FromDebugString(absl::string_view str);
 
   // Return the four cells that are adjacent across the cell's four edges.
   // Neighbors are returned in the order defined by S2Cell::GetEdge.  All
@@ -445,7 +445,7 @@ class S2CellId {
   // When S2CellId is used as a key in one of the btree container types
   // (util/btree), indicate that linear rather than binary search should be
   // used.  This is much faster when the comparison function is cheap.
-  typedef std::true_type goog_btree_prefer_linear_node_search;
+  typedef std::true_type absl_btree_prefer_linear_node_search;
 
  private:
   // This is the offset required to wrap around from the beginning of the

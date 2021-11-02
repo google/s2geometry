@@ -69,8 +69,8 @@
 #include <memory>
 #include <utility>
 
-#include "s2/util/gtl/btree_map.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/container/btree_map.h"
+#include "absl/memory/memory.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
@@ -88,7 +88,7 @@ extern bool s2builder_verbose;
 
 namespace {  // Anonymous namespace for helper classes.
 
-using s2::absl::make_unique;
+using absl::make_unique;
 using std::make_pair;
 using std::max;
 using std::min;
@@ -174,7 +174,7 @@ struct CrossingGraphEdge {
   bool outgoing;
   VertexId dst;
 };
-using CrossingGraphEdgeVector = s2::absl::InlinedVector<CrossingGraphEdge, 2>;
+using CrossingGraphEdgeVector = absl::InlinedVector<CrossingGraphEdge, 2>;
 
 // Returns a vector of EdgeIds sorted by input edge id.  When more than one
 // output edge has the same input edge id (i.e., the input edge snapped to a
@@ -1226,7 +1226,7 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // A map that translates from SourceId (the (region_id, shape_id,
   // edge_id) triple that identifies an S2ShapeIndex edge) to InputEdgeId (the
   // sequentially increasing numbers assigned to input edges by S2Builder).
-  using SourceIdMap = gtl::btree_map<SourceId, InputEdgeId>;
+  using SourceIdMap = absl::btree_map<SourceId, InputEdgeId>;
   SourceIdMap source_id_map_;
 
   // Indicates whether the point being processed along the current edge chain

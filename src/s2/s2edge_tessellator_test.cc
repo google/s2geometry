@@ -19,7 +19,7 @@
 
 #include <iostream>
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/strings/str_cat.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2loop.h"
 #include "s2/s2pointutil.h"
@@ -27,7 +27,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using s2::absl::StrCat;
+using absl::StrCat;
 using s2textformat::ParsePointsOrDie;
 using std::cout;
 using std::endl;

@@ -32,87 +32,15 @@ On Ubuntu, all of these can be installed via apt-get:
 ```
 sudo apt-get install cmake libgflags-dev libgoogle-glog-dev libgtest-dev libssl-dev
 ```
+## Build in Alpha docker image
 
-Otherwise, you may need to install some from source.
-
-On macOS, use [MacPorts](http://www.macports.org/) or
-[Homebrew](http://brew.sh/).  For MacPorts:
-
-```
-sudo port install cmake gflags google-glog openssl
-```
-
-Do not install `gtest` from MacPorts; instead download [release
-1.8.0](https://github.com/google/googletest/releases/tag/release-1.8.0), unpack,
-and substitute
+To avoit the absl conflicts, this branch version can only build in Alpha image using bazel.
+We have removed the cmake.
 
 ```
-cmake -DGTEST_ROOT=/...absolute path to.../googletest-release-1.8.0/googletest ..
+Make sure to build it in Alpha env since boringssl
+baezel build src:all
 ```
-
-in the build instructions below.
-
-Thorough testing has only been done on Ubuntu 14.04.3 and macOS 10.12.
-
-## Build and Install
-
-You may either download the source as a ZIP archive, or [clone the git
-repository](https://help.github.com/articles/cloning-a-repository/).
-
-### Via ZIP archive
-
-Download [ZIP file](https://github.com/google/s2geometry/archive/master.zip)
-
-```
-cd [parent of directory where you want to put S2]
-unzip [path to ZIP file]/s2geometry-master.zip
-cd s2geometry-master
-```
-
-### Via `git clone`
-
-```
-cd [parent of directory where you want to put S2]
-git clone https://github.com/google/s2geometry.git
-cd s2geometry
-```
-
-### Building
-
-From the appropriate directory depending on how you got the source:
-
-```
-mkdir build
-cd build
-# You can omit -DGTEST_ROOT to skip tests; see above for macOS.
-cmake -DGTEST_ROOT=/usr/src/gtest ..
-make
-make test  # If GTEST_ROOT specified above.
-sudo make install
-```
-
-Enable gflags and glog with `cmake -DWITH_GFLAGS=ON -DWITH_GLOG=ON ...`.
-
-Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
-
-## Python
-
-If you want the Python interface, you will also need:
-
-* [SWIG](https://github.com/swig/swig) (for Python support, optional)
-
-which can be installed via
-
-```
-sudo apt-get install swig
-```
-
-or on macOS:
-
-```
-sudo port install swig
-```
-Expect to see some warnings if you build with swig 2.0.
 
 ## Other S2 implementations
 

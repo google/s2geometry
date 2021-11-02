@@ -64,12 +64,12 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shape_index_region.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
-#include "s2/third_party/absl/container/fixed_array.h"
-#include "s2/third_party/absl/container/inlined_vector.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/container/fixed_array.h"
+#include "absl/container/inlined_vector.h"
+#include "absl/memory/memory.h"
 #include "s2/util/coding/coder.h"
 
-using s2::absl::make_unique;
+using absl::make_unique;
 using s2builderutil::IdentitySnapFunction;
 using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
@@ -663,7 +663,7 @@ void S2Polygon::Encode(Encoder* const encoder) const {
     return;
   }
   // Converts all the polygon vertices to S2XYZFaceSiTi format.
-  s2::absl::FixedArray<S2XYZFaceSiTi> all_vertices(num_vertices_);
+  absl::FixedArray<S2XYZFaceSiTi> all_vertices(num_vertices_);
   S2XYZFaceSiTi* current_loop_vertices = all_vertices.data();
   for (const unique_ptr<S2Loop>& loop : loops_) {
     loop->GetXYZFaceSiTiVertices(current_loop_vertices);

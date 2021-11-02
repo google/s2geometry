@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "s2/third_party/absl/strings/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace strings {
 
@@ -32,7 +32,7 @@ namespace strings {
 //   <key, value> pairs. Returns true if there if no error in parsing, false
 //   otherwise.
 // -------------------------------------------------------------------------
-bool DictionaryParse(s2::absl::string_view encoded_str,
+bool DictionaryParse(absl::string_view encoded_str,
                      std::vector<std::pair<std::string, std::string>>* items);
 
 }  // namespace strings

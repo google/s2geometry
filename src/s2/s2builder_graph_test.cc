@@ -25,13 +25,13 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builderutil_testing.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2text_format.h"
 
-using s2::absl::make_unique;
+using absl::make_unique;
 using s2builderutil::GraphClone;
 using s2builderutil::GraphCloningLayer;
 using s2textformat::MakeLaxPolylineOrDie;

@@ -30,7 +30,7 @@ namespace s2shapeutil {
 
 // Ensure that we don't usually need to allocate memory when collecting the
 // edges in an S2ShapeIndex cell (which by default have about 10 edges).
-using ShapeEdgeVector = s2::absl::InlinedVector<ShapeEdge, 16>;
+using ShapeEdgeVector = absl::InlinedVector<ShapeEdge, 16>;
 
 // Appends all edges in the given S2ShapeIndexCell to the given vector.
 static void AppendShapeEdges(const S2ShapeIndex& index,

@@ -16,7 +16,7 @@
 #include "s2/s2max_distance_targets.h"
 
 #include <memory>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -153,7 +153,7 @@ bool S2MaxDistanceCellTarget::VisitContainingShapes(
 
 S2MaxDistanceShapeIndexTarget::S2MaxDistanceShapeIndexTarget(
     const S2ShapeIndex* index)
-    : index_(index), query_(s2::absl::make_unique<S2FurthestEdgeQuery>(index)) {
+    : index_(index), query_(absl::make_unique<S2FurthestEdgeQuery>(index)) {
 }
 
 S2MaxDistanceShapeIndexTarget::~S2MaxDistanceShapeIndexTarget() {

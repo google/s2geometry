@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "s2/base/integral_types.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -778,7 +778,7 @@ class S2Polygon final : public S2Region {
     }
 
     bool Init(Decoder* decoder) {
-      auto polygon = s2::absl::make_unique<S2Polygon>();
+      auto polygon = absl::make_unique<S2Polygon>();
       if (!polygon->Decode(decoder)) return false;
       Shape::Init(polygon.get());
       owned_polygon_ = std::move(polygon);

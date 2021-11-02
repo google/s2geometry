@@ -17,8 +17,8 @@
 #include "s2/s2region.h"
 
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/container/fixed_array.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/container/fixed_array.h"
+#include "absl/memory/memory.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
@@ -121,7 +121,7 @@ const char kEncodedLoopCross[] =
 //       S2CellId(s2textformat::MakePoint("0:-179")).ToPoint(),
 //       S2CellId(s2textformat::MakePoint("1:-180")).ToPoint()};
 // snapped_loop = make_unique<S2Loop>(snapped_loop_a_vertices));
-// s2::absl::FixedArray<S2XYZFaceSiTi> points(loop.num_vertices());
+// absl::FixedArray<S2XYZFaceSiTi> points(loop.num_vertices());
 // loop.GetXYZFaceSiTiVertices(points.data());
 // loop.EncodeCompressed(encoder, points.data(), level);
 //

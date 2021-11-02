@@ -21,8 +21,8 @@
 #include <gtest/gtest.h>
 
 #include "s2/base/stringprintf.h"
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
 #include "s2/s2cap.h"
 #include "s2/s2loop.h"
 #include "s2/s2testing.h"
@@ -387,7 +387,7 @@ std::vector<std::unique_ptr<S2Polyline>> GenPolylines(
       pts.push_back(
           S2Testing::SamplePoint(S2Cap(loop[j], perturbation_radius)));
     }
-    polylines.push_back(s2::absl::make_unique<S2Polyline>(pts));
+    polylines.push_back(absl::make_unique<S2Polyline>(pts));
   }
   return polylines;
 }

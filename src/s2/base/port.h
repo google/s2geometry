@@ -35,8 +35,8 @@
 #include <cstring>
 
 #include "s2/base/integral_types.h"
-#include "s2/third_party/absl/base/config.h"
-#include "s2/third_party/absl/base/port.h"
+#include "absl/base/config.h"
+#include "absl/base/port.h"
 
 #ifdef SWIG
 %include "third_party/absl/base/port.h"
@@ -228,17 +228,34 @@
 #if (defined(__powerpc__) && !(_CALL_ELF > 1)) || defined(__ia64)
 // use opd section for function descriptors on these platforms, the function
 // address is the first word of the descriptor
-namespace s2::absl {
+namespace absl {
 enum { kPlatformUsesOPDSections = 1 };
-}  // namespace s2::absl
+}  // namespace absl
 #define ABSL_FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char **>(func)[0])
 #else  // not PPC or IA64
-namespace s2::absl {
+namespace absl {
 enum { kPlatformUsesOPDSections = 0 };
-}  // namespace s2::absl
+}  // namespace absl
 #define ABSL_FUNC_PTR_TO_CHAR_PTR(func) (reinterpret_cast<char *>(func))
 #endif  // PPC or IA64
 #endif  // __cplusplus
+
+// -----------------------------------------------------------------------------
+// Obsolete (to be removed)
+// -----------------------------------------------------------------------------
+
+// HAS_GLOBAL_STRING
+// Some platforms have a ::string class that is different from ::std::string
+// (although the interface is the same, of course).  On other platforms,
+// ::string is the same as ::std::string.
+#if defined(__cplusplus) && !defined(SWIG)
+#include <string>
+#ifndef HAS_GLOBAL_STRING
+using std::basic_string;
+using std::string;
+// TODO(user): using std::wstring?
+#endif  // HAS_GLOBAL_STRING
+#endif  // SWIG, __cplusplus
 
 // -----------------------------------------------------------------------------
 // Utility Functions
@@ -375,7 +392,7 @@ static inline uint64 bswap_64(uint64 x) {
 
 #ifdef __cplusplus
 #ifdef STL_MSVC  // not always the same as _MSC_VER
-#include "s2/third_party/absl/base/internal/port_hash.inc"
+#include "absl/base/internal/port_hash.inc"
 #else
 struct PortableHashBase {};
 #endif  // STL_MSVC

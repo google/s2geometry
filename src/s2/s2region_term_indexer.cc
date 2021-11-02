@@ -81,9 +81,9 @@
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/strings/str_cat.h"
 
-using s2::absl::string_view;
+using absl::string_view;
 using std::vector;
 
 S2RegionTermIndexer::Options::Options() {
@@ -115,9 +115,9 @@ string S2RegionTermIndexer::GetTerm(TermType term_type, const S2CellId& id,
   // There are generally more ancestor terms than covering terms, so we add
   // the extra "marker" character to the covering terms to distinguish them.
   if (term_type == TermType::ANCESTOR) {
-    return s2::absl::StrCat(prefix, id.ToToken());
+    return absl::StrCat(prefix, id.ToToken());
   } else {
-    return s2::absl::StrCat(prefix, options_.marker(), id.ToToken());
+    return absl::StrCat(prefix, options_.marker(), id.ToToken());
   }
 }
 

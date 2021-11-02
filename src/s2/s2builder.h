@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 #include "s2/base/integral_types.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
@@ -124,7 +124,7 @@ class S2Polyline;
 //  using s2builderutil::IntLatLngSnapFunction;
 //  S2Builder builder(S2Builder::Options(IntLatLngSnapFunction(7)));
 //  S2Polygon output;
-//  builder.StartLayer(s2::absl::make_unique<s2builderutil::S2PolygonLayer>(&output));
+//  builder.StartLayer(absl::make_unique<s2builderutil::S2PolygonLayer>(&output));
 //  builder.AddPolygon(input);
 //  S2Error error;
 //  if (!builder.Build(&error)) {

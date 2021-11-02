@@ -19,7 +19,7 @@
 #define S2_S2POINT_SPAN_H_
 
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/types/span.h"
+#include "absl/types/span.h"
 #include "s2/s2point.h"
 
 // S2PointSpan represents a view of an S2Point array.  It is used to pass
@@ -29,7 +29,7 @@
 // NOTE: S2PointSpan has an implicit constructor from any container type with
 // data() and size() methods (such as std::vector and std::array).  Therefore
 // you can use such containers as arguments for any S2PointSpan parameter.
-using S2PointSpan = s2::absl::Span<const S2Point>;
+using S2PointSpan = absl::Span<const S2Point>;
 
 // Like S2PointSpan, except that operator[] maps index values in the range
 // [n, 2*n-1] to the range [0, n-1] by subtracting n (where n == size()).
@@ -42,7 +42,7 @@ using S2PointSpan = s2::absl::Span<const S2Point>;
 class S2PointLoopSpan : public S2PointSpan {
  public:
   // Inherit all constructors.
-  using s2::absl::Span<const S2Point>::Span;
+  using absl::Span<const S2Point>::Span;
 
   // Like operator[], but allows index values in the range [0, 2*size()-1]
   // where each index i >= size() is mapped to i - size().

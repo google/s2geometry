@@ -30,9 +30,9 @@
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
-#include "s2/third_party/absl/base/casts.h"
-#include "s2/third_party/absl/base/port.h"
-#include "s2/third_party/absl/numeric/int128.h"
+#include "absl/base/casts.h"
+#include "absl/base/port.h"
+#include "absl/numeric/int128.h"
 
 // Use compiler byte-swapping intrinsics if they are available.  32-bit
 // and 64-bit versions are available in Clang and GCC as of GCC 4.3.0.
@@ -81,9 +81,9 @@ inline uint16 gbswap_16(uint16 host_int) {
 
 #endif  // intrinics available
 
-inline s2::absl::uint128 gbswap_128(s2::absl::uint128 host_int) {
-  return s2::absl::MakeUint128(gbswap_64(s2::absl::Uint128Low64(host_int)),
-                           gbswap_64(s2::absl::Uint128High64(host_int)));
+inline absl::uint128 gbswap_128(absl::uint128 host_int) {
+  return absl::MakeUint128(gbswap_64(absl::Uint128Low64(host_int)),
+                           gbswap_64(absl::Uint128High64(host_int)));
 }
 
 #ifdef IS_LITTLE_ENDIAN
@@ -185,8 +185,8 @@ class LittleEndian {
   static uint64 FromHost64(uint64 x) { return x; }
   static uint64 ToHost64(uint64 x) { return x; }
 
-  static s2::absl::uint128 FromHost128(s2::absl::uint128 x) { return x; }
-  static s2::absl::uint128 ToHost128(s2::absl::uint128 x) { return x; }
+  static absl::uint128 FromHost128(absl::uint128 x) { return x; }
+  static absl::uint128 ToHost128(absl::uint128 x) { return x; }
 
   static constexpr bool IsLittleEndian() { return true; }
 
@@ -201,8 +201,8 @@ class LittleEndian {
   static uint64 FromHost64(uint64 x) { return gbswap_64(x); }
   static uint64 ToHost64(uint64 x) { return gbswap_64(x); }
 
-  static s2::absl::uint128 FromHost128(s2::absl::uint128 x) { return gbswap_128(x); }
-  static s2::absl::uint128 ToHost128(s2::absl::uint128 x) { return gbswap_128(x); }
+  static absl::uint128 FromHost128(absl::uint128 x) { return gbswap_128(x); }
+  static absl::uint128 ToHost128(absl::uint128 x) { return gbswap_128(x); }
 
   static constexpr bool IsLittleEndian() { return false; }
 
@@ -299,27 +299,27 @@ class LittleEndian {
     UNALIGNED_STORE64(p, FromHost64(v));
   }
 
-  static s2::absl::uint128 Load128(const void* p) {
-    return s2::absl::MakeUint128(
+  static absl::uint128 Load128(const void* p) {
+    return absl::MakeUint128(
         ToHost64(UNALIGNED_LOAD64(reinterpret_cast<const uint64*>(p) + 1)),
         ToHost64(UNALIGNED_LOAD64(p)));
   }
 
-  static void Store128(void* p, const s2::absl::uint128 v) {
-    UNALIGNED_STORE64(p, FromHost64(s2::absl::Uint128Low64(v)));
+  static void Store128(void* p, const absl::uint128 v) {
+    UNALIGNED_STORE64(p, FromHost64(absl::Uint128Low64(v)));
     UNALIGNED_STORE64(reinterpret_cast<uint64*>(p) + 1,
-                      FromHost64(s2::absl::Uint128High64(v)));
+                      FromHost64(absl::Uint128High64(v)));
   }
 
   // Build a uint128 from 1-16 bytes.
   // 8 * len least significant bits are loaded from the memory with
   // LittleEndian order. The 128 - 8 * len most significant bits are
   // set all to 0.
-  static s2::absl::uint128 Load128VariableLength(const void* p, int len) {
+  static absl::uint128 Load128VariableLength(const void* p, int len) {
     if (len <= 8) {
-      return s2::absl::uint128(Load64VariableLength(p, len));
+      return absl::uint128(Load64VariableLength(p, len));
     } else {
-      return s2::absl::MakeUint128(
+      return absl::MakeUint128(
           Load64VariableLength(static_cast<const char*>(p) + 8, len - 8),
           Load64(p));
     }
@@ -380,8 +380,8 @@ class BigEndian {
   static uint64 FromHost64(uint64 x) { return gbswap_64(x); }
   static uint64 ToHost64(uint64 x) { return gbswap_64(x); }
 
-  static s2::absl::uint128 FromHost128(s2::absl::uint128 x) { return gbswap_128(x); }
-  static s2::absl::uint128 ToHost128(s2::absl::uint128 x) { return gbswap_128(x); }
+  static absl::uint128 FromHost128(absl::uint128 x) { return gbswap_128(x); }
+  static absl::uint128 ToHost128(absl::uint128 x) { return gbswap_128(x); }
 
   static constexpr bool IsLittleEndian() { return true; }
 
@@ -396,8 +396,8 @@ class BigEndian {
   static uint64 FromHost64(uint64 x) { return x; }
   static uint64 ToHost64(uint64 x) { return x; }
 
-  static s2::absl::uint128 FromHost128(s2::absl::uint128 x) { return x; }
-  static s2::absl::uint128 ToHost128(s2::absl::uint128 x) { return x; }
+  static absl::uint128 FromHost128(absl::uint128 x) { return x; }
+  static absl::uint128 ToHost128(absl::uint128 x) { return x; }
 
   static constexpr bool IsLittleEndian() { return false; }
 
@@ -483,31 +483,31 @@ class BigEndian {
     UNALIGNED_STORE64(p, FromHost64(v));
   }
 
-  static s2::absl::uint128 Load128(const void* p) {
-    return s2::absl::MakeUint128(
+  static absl::uint128 Load128(const void* p) {
+    return absl::MakeUint128(
         ToHost64(UNALIGNED_LOAD64(p)),
         ToHost64(UNALIGNED_LOAD64(reinterpret_cast<const uint64*>(p) + 1)));
   }
 
-  static void Store128(void* p, const s2::absl::uint128 v) {
-    UNALIGNED_STORE64(p, FromHost64(s2::absl::Uint128High64(v)));
+  static void Store128(void* p, const absl::uint128 v) {
+    UNALIGNED_STORE64(p, FromHost64(absl::Uint128High64(v)));
     UNALIGNED_STORE64(reinterpret_cast<uint64*>(p) + 1,
-                      FromHost64(s2::absl::Uint128Low64(v)));
+                      FromHost64(absl::Uint128Low64(v)));
   }
 
   // Build a uint128 from 1-16 bytes.
   // 8 * len least significant bits are loaded from the memory with
   // BigEndian order. The 128 - 8 * len most significant bits are
   // set all to 0.
-  static s2::absl::uint128 Load128VariableLength(const void* p, int len) {
+  static absl::uint128 Load128VariableLength(const void* p, int len) {
     if (len <= 8) {
-      return s2::absl::uint128(
+      return absl::uint128(
           Load64VariableLength(static_cast<const char*>(p), len));
     } else if (len < 16) {
-      return s2::absl::MakeUint128(Load64VariableLength(p, len - 8),
+      return absl::MakeUint128(Load64VariableLength(p, len - 8),
                                Load64(static_cast<const char*>(p) + len - 8));
     } else {
-      return s2::absl::MakeUint128(Load64(static_cast<const char*>(p)),
+      return absl::MakeUint128(Load64(static_cast<const char*>(p)),
                                Load64(static_cast<const char*>(p) + 8));
     }
   }
@@ -580,7 +580,7 @@ FROMHOST_TYPE_MAP(uint64, int64);
 FROMHOST_TYPE_MAP(uint32, float);
 FROMHOST_TYPE_MAP(uint64, double);
 FROMHOST_TYPE_MAP(uint8, bool);
-FROMHOST_TYPE_MAP(s2::absl::uint128, s2::absl::uint128);
+FROMHOST_TYPE_MAP(absl::uint128, absl::uint128);
 #undef FROMHOST_TYPE_MAP
 
 // Default implementation for the unified FromHost(ValueType) API, which
@@ -640,12 +640,12 @@ class GeneralFormatConverter<EndianClass, float> {
  public:
   static typename tofromhost_value_type_traits<float>::int_type FromHost(
       float v) {
-    return EndianClass::FromHost32(s2::absl::bit_cast<uint32>(v));
+    return EndianClass::FromHost32(absl::bit_cast<uint32>(v));
   }
   static typename tofromhost_value_type_traits<float>::int_type ToHost(
       float v) {
-    return s2::absl::bit_cast<float>(
-        EndianClass::ToHost32(s2::absl::bit_cast<uint32>(v)));
+    return absl::bit_cast<float>(
+        EndianClass::ToHost32(absl::bit_cast<uint32>(v)));
   }
 };
 
@@ -656,26 +656,26 @@ class GeneralFormatConverter<EndianClass, double> {
  public:
   static typename tofromhost_value_type_traits<double>::int_type FromHost(
       double v) {
-    return EndianClass::FromHost64(s2::absl::bit_cast<uint64>(v));
+    return EndianClass::FromHost64(absl::bit_cast<uint64>(v));
   }
   static typename tofromhost_value_type_traits<double>::int_type ToHost(
       double v) {
-    return s2::absl::bit_cast<double>(
-        EndianClass::ToHost64(s2::absl::bit_cast<uint64>(v)));
+    return absl::bit_cast<double>(
+        EndianClass::ToHost64(absl::bit_cast<uint64>(v)));
   }
 };
 
 // Specialization of the unified FromHost(ValueType) API, which handles
 // uint128 types (ValueType is uint128).
 template <class EndianClass>
-class GeneralFormatConverter<EndianClass, s2::absl::uint128> {
+class GeneralFormatConverter<EndianClass, absl::uint128> {
  public:
-  static typename tofromhost_value_type_traits<s2::absl::uint128>::int_type
-  FromHost(s2::absl::uint128 v) {
+  static typename tofromhost_value_type_traits<absl::uint128>::int_type
+  FromHost(absl::uint128 v) {
     return EndianClass::FromHost128(v);
   }
-  static typename tofromhost_value_type_traits<s2::absl::uint128>::int_type ToHost(
-      s2::absl::uint128 v) {
+  static typename tofromhost_value_type_traits<absl::uint128>::int_type ToHost(
+      absl::uint128 v) {
     return EndianClass::ToHost128(v);
   }
 };
@@ -722,22 +722,22 @@ inline void StoreInteger(T value, char* p) {
 
 template<typename EndianClass>
 inline float LoadFloat(const char* p) {
-  return s2::absl::bit_cast<float>(EndianClass::ToHost32(UNALIGNED_LOAD32(p)));
+  return absl::bit_cast<float>(EndianClass::ToHost32(UNALIGNED_LOAD32(p)));
 }
 
 template<typename EndianClass>
 inline void StoreFloat(float value, char* p) {
-  UNALIGNED_STORE32(p, EndianClass::FromHost32(s2::absl::bit_cast<uint32>(value)));
+  UNALIGNED_STORE32(p, EndianClass::FromHost32(absl::bit_cast<uint32>(value)));
 }
 
 template<typename EndianClass>
 inline double LoadDouble(const char* p) {
-  return s2::absl::bit_cast<double>(EndianClass::ToHost64(UNALIGNED_LOAD64(p)));
+  return absl::bit_cast<double>(EndianClass::ToHost64(UNALIGNED_LOAD64(p)));
 }
 
 template<typename EndianClass>
 inline void StoreDouble(double value, char* p) {
-  UNALIGNED_STORE64(p, EndianClass::FromHost64(s2::absl::bit_cast<uint64>(value)));
+  UNALIGNED_STORE64(p, EndianClass::FromHost64(absl::bit_cast<uint64>(value)));
 }
 
 }  // namespace endian_internal
@@ -837,22 +837,22 @@ inline void BigEndian::Store<double>(double value, char* p) {
 // Load/Store for uint128.
 
 template <>
-inline s2::absl::uint128 LittleEndian::Load<s2::absl::uint128>(const char* p) {
+inline absl::uint128 LittleEndian::Load<absl::uint128>(const char* p) {
   return LittleEndian::Load128(p);
 }
 
 template <>
-inline void LittleEndian::Store<s2::absl::uint128>(s2::absl::uint128 value, char* p) {
+inline void LittleEndian::Store<absl::uint128>(absl::uint128 value, char* p) {
   LittleEndian::Store128(p, value);
 }
 
 template <>
-inline s2::absl::uint128 BigEndian::Load<s2::absl::uint128>(const char* p) {
+inline absl::uint128 BigEndian::Load<absl::uint128>(const char* p) {
   return BigEndian::Load128(p);
 }
 
 template <>
-inline void BigEndian::Store<s2::absl::uint128>(s2::absl::uint128 value, char* p) {
+inline void BigEndian::Store<absl::uint128>(absl::uint128 value, char* p) {
   BigEndian::Store128(p, value);
 }
 

@@ -21,7 +21,7 @@
 #include <memory>
 #include <vector>
 
-#include "s2/third_party/absl/types/span.h"
+#include "absl/types/span.h"
 #include "s2/encoded_s2point_vector.h"
 #include "s2/encoded_uint_vector.h"
 #include "s2/s2polygon.h"
@@ -131,7 +131,7 @@ class S2LaxPolygonShape : public S2Shape {
   TypeTag type_tag() const override { return kTypeTag; }
 
  private:
-  void Init(const std::vector<s2::absl::Span<const S2Point>>& loops);
+  void Init(const std::vector<absl::Span<const S2Point>>& loops);
 
   int32 num_loops_;
   std::unique_ptr<S2Point[]> vertices_;

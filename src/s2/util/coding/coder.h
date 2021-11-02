@@ -27,8 +27,8 @@
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
-#include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/meta/type_traits.h"
+#include "absl/base/macros.h"
+#include "absl/meta/type_traits.h"
 #include "s2/util/coding/varint.h"
 #include "s2/util/endian/endian.h"
 
@@ -455,11 +455,11 @@ inline void DecoderExtensions::FillArray(Decoder* array, int num_decoders) {
   // This is an optimization based on the fact that Decoder(nullptr, 0) sets all
   // structure bytes to 0. This is valid because Decoder is TriviallyCopyable
   // (https://en.cppreference.com/w/cpp/named_req/TriviallyCopyable).
-  static_assert(s2::absl::is_trivially_copy_constructible<Decoder>::value,
+  static_assert(absl::is_trivially_copy_constructible<Decoder>::value,
                 "Decoder must be trivially copy-constructible");
-  static_assert(s2::absl::is_trivially_copy_assignable<Decoder>::value,
+  static_assert(absl::is_trivially_copy_assignable<Decoder>::value,
                 "Decoder must be trivially copy-assignable");
-  static_assert(s2::absl::is_trivially_destructible<Decoder>::value,
+  static_assert(absl::is_trivially_destructible<Decoder>::value,
                 "Decoder must be trivially destructible");
   std::memset(array, 0, num_decoders * sizeof(Decoder));
 }
@@ -489,11 +489,11 @@ inline void Encoder::put64(uint64 v) {
 }
 
 inline void Encoder::putfloat(float f) {
-  put32(s2::absl::bit_cast<uint32>(f));
+  put32(absl::bit_cast<uint32>(f));
 }
 
 inline void Encoder::putdouble(double d) {
-  put64(s2::absl::bit_cast<uint64>(d));
+  put64(absl::bit_cast<uint64>(d));
 }
 
 inline unsigned char Decoder::get8() {
@@ -521,11 +521,11 @@ inline uint64 Decoder::get64() {
 }
 
 inline float Decoder::getfloat() {
-  return s2::absl::bit_cast<float>(get32());
+  return absl::bit_cast<float>(get32());
 }
 
 inline double Decoder::getdouble() {
-  return s2::absl::bit_cast<double>(get64());
+  return absl::bit_cast<double>(get64());
 }
 
 inline bool Decoder::get_varint32(uint32* v) {

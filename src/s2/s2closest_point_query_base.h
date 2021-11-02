@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/container/inlined_vector.h"
+#include "absl/container/inlined_vector.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
@@ -292,7 +292,7 @@ class S2ClosestPointQueryBase {
   //    have been found.
   Result result_singleton_;
   std::vector<Result> result_vector_;
-  std::priority_queue<Result, s2::absl::InlinedVector<Result, 16>> result_set_;
+  std::priority_queue<Result, absl::InlinedVector<Result, 16>> result_set_;
 
   // The algorithm maintains a priority queue of unprocessed S2CellIds, sorted
   // in increasing order of distance from the target.
@@ -314,7 +314,7 @@ class S2ClosestPointQueryBase {
     }
   };
   using CellQueue =
-      std::priority_queue<QueueEntry, s2::absl::InlinedVector<QueueEntry, 16>>;
+      std::priority_queue<QueueEntry, absl::InlinedVector<QueueEntry, 16>>;
   CellQueue queue_;
 
   // Temporaries, defined here to avoid multiple allocations / initializations.

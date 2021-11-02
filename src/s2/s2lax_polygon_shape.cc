@@ -19,9 +19,9 @@
 
 #include "s2/s2shapeutil_get_reference_point.h"
 
-using s2::absl::make_unique;
-using s2::absl::MakeSpan;
-using s2::absl::Span;
+using absl::make_unique;
+using absl::MakeSpan;
+using absl::Span;
 using std::vector;
 using ChainPosition = S2Shape::ChainPosition;
 

@@ -30,10 +30,10 @@
 #include "s2/r1interval.h"
 #include "s2/s2coords.h"
 #include "s2/s2latlng.h"
-#include "s2/third_party/absl/base/casts.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/base/casts.h"
+#include "absl/strings/str_cat.h"
 
-using s2::absl::StrCat;
+using absl::StrCat;
 using S2::internal::kSwapMask;
 using S2::internal::kInvertMask;
 using S2::internal::kPosToIJ;
@@ -263,7 +263,7 @@ S2CellId S2CellId::FromFaceIJ(int face, int i, int j) {
 
   // Note that this value gets shifted one bit to the left at the end
   // of the function.
-  uint64 n = s2::absl::implicit_cast<uint64>(face) << (kPosBits - 1);
+  uint64 n = absl::implicit_cast<uint64>(face) << (kPosBits - 1);
 
   // Alternating faces have opposite Hilbert curve orientations; this
   // is necessary in order for all faces to have a right-handed
@@ -587,7 +587,7 @@ void S2CellId::AppendAllNeighbors(int nbr_level,
 
 string S2CellId::ToString() const {
   if (!is_valid()) {
-    return StrCat("Invalid: ", s2::absl::Hex(id(), s2::absl::kZeroPad16));
+    return StrCat("Invalid: ", absl::Hex(id(), absl::kZeroPad16));
   }
   string out = StrCat(face(), "/");
   for (int current_level = 1; current_level <= level(); ++current_level) {
@@ -602,7 +602,7 @@ std::ostream& operator<<(std::ostream& os, S2CellId id) {
   return os << id.ToString();
 }
 
-S2CellId S2CellId::FromDebugString(s2::absl::string_view str) {
+S2CellId S2CellId::FromDebugString(absl::string_view str) {
   // This function is reasonably efficient, but is only intended for use in
   // tests.
   int level = static_cast<int>(str.size() - 2);

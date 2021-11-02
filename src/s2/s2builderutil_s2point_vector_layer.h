@@ -21,7 +21,7 @@
 #include <memory>
 #include <vector>
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -87,7 +87,7 @@ class IndexedS2PointVectorLayer : public S2Builder::Layer {
   void Build(const Graph& g, S2Error* error) override {
     layer_.Build(g, error);
     if (error->ok() && !points_.empty()) {
-      index_->Add(s2::absl::make_unique<S2PointVectorShape>(std::move(points_)));
+      index_->Add(absl::make_unique<S2PointVectorShape>(std::move(points_)));
     }
   }
 
