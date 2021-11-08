@@ -20,6 +20,7 @@
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2lax_loop_shape.h"
 
+using std::string;
 using std::vector;
 
 namespace {

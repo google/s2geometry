@@ -41,6 +41,7 @@ using S2::internal::kPosToOrientation;
 using std::fabs;
 using std::max;
 using std::min;
+using std::string;
 using std::vector;
 
 // The following lookup tables are used to convert efficiently between an

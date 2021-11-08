@@ -23,6 +23,7 @@
 #include "s2/s2lax_loop_shape.h"
 #include "s2/s2text_format.h"
 
+using std::string;
 using std::vector;
 
 namespace s2shapeutil {

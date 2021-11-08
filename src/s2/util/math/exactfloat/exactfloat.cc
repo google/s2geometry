@@ -34,6 +34,7 @@
 
 using std::max;
 using std::min;
+using std::string;
 
 // Define storage for constants.
 const int ExactFloat::kMinExp;

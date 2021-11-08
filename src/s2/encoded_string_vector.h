@@ -43,7 +43,7 @@ class StringVectorEncoder {
   StringVectorEncoder();
 
   // Adds a string to the encoded vector.
-  void Add(const string& str);
+  void Add(const std::string& str);
 
   // Adds a string to the encoded vector by means of the given Encoder.  The
   // string consists of all output added to the encoder before the next call
@@ -61,7 +61,7 @@ class StringVectorEncoder {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  static void Encode(absl::Span<const string> v, Encoder* encoder);
+  static void Encode(absl::Span<const std::string> v, Encoder* encoder);
 
  private:
   // A vector consisting of the starting offset of each string in the
@@ -122,7 +122,7 @@ class EncodedStringVector {
 //////////////////   Implementation details follow   ////////////////////
 
 
-inline void StringVectorEncoder::Add(const string& str) {
+inline void StringVectorEncoder::Add(const std::string& str) {
   offsets_.push_back(data_.length());
   data_.Ensure(str.size());
   data_.putn(str.data(), str.size());

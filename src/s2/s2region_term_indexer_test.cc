@@ -34,6 +34,7 @@
 #include "s2/s2cell_union.h"
 #include "s2/s2testing.h"
 
+using std::string;
 using std::vector;
 
 S2_DEFINE_int32(iters, 400, "number of iterations for testing");

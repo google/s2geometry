@@ -84,6 +84,7 @@
 #include "absl/strings/str_cat.h"
 
 using absl::string_view;
+using std::string;
 using std::vector;
 
 S2RegionTermIndexer::Options::Options() {

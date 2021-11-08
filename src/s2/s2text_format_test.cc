@@ -28,6 +28,7 @@
 #include "s2/s2polyline.h"
 #include "s2/s2testing.h"
 
+using std::string;
 using std::unique_ptr;
 using std::vector;
 

@@ -32,6 +32,7 @@ using absl::make_unique;
 using s2builderutil::IndexedS2PolylineVectorLayer;
 using s2builderutil::S2PolylineVectorLayer;
 using s2textformat::MakePolylineOrDie;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 

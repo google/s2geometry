@@ -28,6 +28,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using std::string;
 using std::unique_ptr;
 
 // Checks that the error returned by S2::GetUpdateMinDistanceMaxError() for

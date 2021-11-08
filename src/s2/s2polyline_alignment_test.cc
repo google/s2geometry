@@ -28,6 +28,8 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using std::string;
+
 namespace s2polyline_alignment {
 
 // PRIVATE API TESTS

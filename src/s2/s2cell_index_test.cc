@@ -28,6 +28,7 @@
 
 using std::pair;
 using std::set;
+using std::string;
 using std::vector;
 
 using Label = S2CellIndex::Label;

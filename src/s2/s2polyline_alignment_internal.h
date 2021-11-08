@@ -137,7 +137,7 @@ class Window {
   Window Dilate(const int radius) const;
 
   // Return a string representation of this window.
-  string DebugString() const;
+  std::string DebugString() const;
 
  private:
   int rows_;
