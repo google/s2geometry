@@ -32,7 +32,7 @@
 #include "s2/s2cell_union.h"
 #include "s2/s2metrics.h"
 #include "s2/s2region.h"
-#include "s2/third_party/absl/base/casts.h"
+#include "absl/base/casts.h"
 
 using std::is_sorted;
 using std::max;

@@ -26,7 +26,7 @@
 #include "s2/_fp_contract_off.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 
 class Decoder;
 class Encoder;

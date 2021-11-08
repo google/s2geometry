@@ -26,8 +26,8 @@
 #include "s2/base/logging.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
-#include "s2/third_party/absl/base/macros.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/base/macros.h"
+#include "absl/strings/str_cat.h"
 
 using absl::StrCat;
 using std::fabs;

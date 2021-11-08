@@ -21,8 +21,8 @@
 #include <gtest/gtest.h>
 
 #include "s2/base/stringprintf.h"
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
 #include "s2/s2cap.h"
 #include "s2/s2loop.h"
 #include "s2/s2testing.h"

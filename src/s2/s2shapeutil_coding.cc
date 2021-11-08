@@ -19,7 +19,7 @@
 
 #include <memory>
 
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/encoded_s2point_vector.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/s2lax_polygon_shape.h"

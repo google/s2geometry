@@ -22,7 +22,7 @@
 #include "s2/base/casts.h"
 #include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2text_format.h"
 

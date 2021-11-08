@@ -45,8 +45,8 @@
 // Bits) containing a few bit patterns (which vary based on value of template
 // parameter).
 
-#include "s2/third_party/absl/base/casts.h"
-#include "s2/third_party/absl/numeric/int128.h"
+#include "absl/base/casts.h"
+#include "absl/numeric/int128.h"
 #if defined(__i386__) || defined(__x86_64__)
 #include <x86intrin.h>
 #endif
@@ -56,7 +56,7 @@
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 
 class Bits {
  public:

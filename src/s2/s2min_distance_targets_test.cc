@@ -20,7 +20,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "s2/util/gtl/btree_set.h"
+#include "absl/container/btree_set.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -124,7 +124,7 @@ TEST(ShapeIndexTarget, UpdateMinDistanceToCellWhenEqual) {
 
 vector<int> GetContainingShapes(S2MinDistanceTarget* target,
                                 const S2ShapeIndex& index, int max_shapes) {
-  gtl::btree_set<int32> shape_ids;
+  absl::btree_set<int32> shape_ids;
   (void) target->VisitContainingShapes(
       index, [&shape_ids, max_shapes](S2Shape* containing_shape,
                                       const S2Point& target_point) {

@@ -43,8 +43,8 @@
 #include "s2/s2region.h"
 #include "s2/s2text_format.h"
 #include "s2/strings/serialize.h"
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/str_split.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_split.h"
 #include "s2/util/math/matrix3x3.h"
 
 using absl::make_unique;

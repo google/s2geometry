@@ -37,7 +37,7 @@
 
 #include "s2/base/integral_types.h"
 #include "s2/base/port.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 #include "s2/util/bits/bits.h"
 
 // Just a namespace, not a real class

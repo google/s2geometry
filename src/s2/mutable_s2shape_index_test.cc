@@ -28,7 +28,6 @@
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
-#include "s2/base/mutex.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -50,7 +49,8 @@
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
+#include "absl/synchronization/mutex.h"
 
 using absl::WrapUnique;
 using absl::make_unique;

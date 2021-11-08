@@ -17,8 +17,8 @@
 #include "s2/s2region.h"
 
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/container/fixed_array.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/container/fixed_array.h"
+#include "absl/memory/memory.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
