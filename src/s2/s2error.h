@@ -25,7 +25,7 @@
 #include <ostream>
 #include <string>
 
-#include "s2/base/port.h"
+#include "absl/base/attributes.h"
 
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.
@@ -121,14 +121,14 @@ class S2Error {
 
   bool ok() const { return code_ == OK; }
   Code code() const { return code_; }
-  string text() const { return text_; }
+  std::string text() const { return text_; }
 
   // Clear the error to contain the OK code and no error message.
   void Clear();
 
  private:
   Code code_;
-  string text_;
+  std::string text_;
 };
 
 

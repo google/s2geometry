@@ -28,6 +28,8 @@
 #include "absl/memory/memory.h"
 #include "s2/util/math/mathutil.h"
 
+using std::string;
+
 namespace s2polyline_alignment {
 
 Window::Window(const std::vector<ColumnStride>& strides) {

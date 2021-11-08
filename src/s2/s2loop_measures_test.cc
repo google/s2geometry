@@ -31,6 +31,7 @@
 using s2textformat::ParsePointsOrDie;
 using std::fabs;
 using std::min;
+using std::string;
 using std::vector;
 
 namespace {

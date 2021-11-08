@@ -31,6 +31,7 @@
 
 using absl::StrCat;
 using std::fabs;
+using std::string;
 
 TEST(S2LatLng, TestBasic) {
   S2LatLng ll_rad = S2LatLng::FromRadians(M_PI_4, M_PI_2);

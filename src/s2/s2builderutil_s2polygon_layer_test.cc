@@ -37,6 +37,7 @@ using s2textformat::MakePolylineOrDie;
 using std::map;
 using std::set;
 using std::unique_ptr;
+using std::string;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;

@@ -34,6 +34,7 @@ using absl::make_unique;
 using s2textformat::MakeIndexOrDie;
 using s2textformat::MakePointOrDie;
 using std::cout;
+using std::string;
 
 TEST(S2ShapeIndexBufferedRegion, EmptyIndex) {
   // Test buffering an empty S2ShapeIndex.

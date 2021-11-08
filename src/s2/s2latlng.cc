@@ -25,6 +25,7 @@
 
 using std::max;
 using std::min;
+using std::string;
 
 S2LatLng S2LatLng::Normalized() const {
   // remainder(x, 2 * M_PI) reduces its argument to the range [-M_PI, M_PI]

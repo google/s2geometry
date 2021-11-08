@@ -20,6 +20,7 @@
 using absl::MakeSpan;
 using absl::Span;
 using absl::string_view;
+using std::string;
 using std::vector;
 
 namespace s2coding {

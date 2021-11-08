@@ -30,6 +30,7 @@ using absl::make_unique;
 using s2builderutil::IndexedS2PointVectorLayer;
 using s2builderutil::S2PointVectorLayer;
 using s2textformat::MakePointOrDie;
+using std::string;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;

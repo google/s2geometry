@@ -39,6 +39,7 @@ S2_DEFINE_int32(consistency_iters, 5000,
 using std::min;
 using std::numeric_limits;
 using std::pow;
+using std::string;
 using std::vector;
 
 namespace s2pred {

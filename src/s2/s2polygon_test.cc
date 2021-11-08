@@ -74,6 +74,7 @@ using s2builderutil::S2PolygonLayer;
 using std::max;
 using std::min;
 using std::numeric_limits;
+using std::string;
 using std::swap;
 using std::unique_ptr;
 using std::vector;

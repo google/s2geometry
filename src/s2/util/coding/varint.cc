@@ -276,13 +276,13 @@ const char* Varint::Skip64BackwardSlow(const char* p, const char* b) {
   return nullptr; // value is too long to be a varint64
 }
 
-void Varint::Append32Slow(string* s, uint32 value) {
+void Varint::Append32Slow(std::string* s, uint32 value) {
   const size_t start = s->size();
   s->resize(start + Varint::Length32(value));
   Varint::Encode32(&((*s)[start]), value);
 }
 
-void Varint::Append64Slow(string* s, uint64 value) {
+void Varint::Append64Slow(std::string* s, uint64 value) {
   const size_t start = s->size();
   s->resize(start + Varint::Length64(value));
   Varint::Encode64(&((*s)[start]), value);

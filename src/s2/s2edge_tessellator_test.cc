@@ -34,6 +34,7 @@ using std::endl;
 using std::fabs;
 using std::min;
 using std::max;
+using std::string;
 using std::vector;
 
 namespace {

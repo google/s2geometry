@@ -49,6 +49,7 @@ using s2textformat::MakePoint;
 using s2textformat::MakePolyline;
 using std::is_sorted;
 using std::pair;
+using std::string;
 using std::vector;
 
 namespace {

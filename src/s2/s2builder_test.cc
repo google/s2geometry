@@ -60,6 +60,7 @@ using std::endl;
 using std::make_pair;
 using std::min;
 using std::pair;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 using s2builderutil::GraphClone;

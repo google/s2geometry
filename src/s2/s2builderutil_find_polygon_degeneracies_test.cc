@@ -33,6 +33,7 @@
 #include "s2/s2text_format.h"
 
 using absl::make_unique;
+using std::string;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;

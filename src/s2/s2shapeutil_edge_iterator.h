@@ -58,7 +58,7 @@ class EdgeIterator {
 
   bool operator!=(const EdgeIterator& other) const { return !(*this == other); }
 
-  string DebugString() const;
+  std::string DebugString() const;
 
  private:
   const S2ShapeIndex* index_;

@@ -24,6 +24,8 @@
 #include "s2/s2region_term_indexer.h"
 #include "s2/s2testing.h"
 
+using std::string;
+
 S2_DEFINE_int32(num_documents, 10000, "Number of documents");
 S2_DEFINE_int32(num_queries, 10000, "Number of queries");
 S2_DEFINE_double(query_radius_km, 100, "Query radius in kilometers");

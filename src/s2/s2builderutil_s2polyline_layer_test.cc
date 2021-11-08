@@ -30,6 +30,7 @@ using absl::make_unique;
 using s2builderutil::IndexedS2PolylineLayer;
 using s2builderutil::S2PolylineLayer;
 using s2textformat::MakePolylineOrDie;
+using std::string;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;

@@ -37,6 +37,7 @@
 using absl::make_unique;
 using absl::string_view;
 using std::pair;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 

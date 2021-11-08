@@ -39,6 +39,7 @@
 using absl::StrCat;
 using absl::make_unique;
 using std::fabs;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
