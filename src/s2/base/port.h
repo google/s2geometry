@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
 #ifndef S2_BASE_PORT_H_
 #define S2_BASE_PORT_H_
+#if 0
 
 // This file contains things that are not used in third_party/absl but needed by
 // - Platform specific requirement
@@ -286,6 +286,8 @@ inline void sized_delete_array(void *ptr, size_t size) {
 }  // namespace base
 #endif  // __cplusplus
 
+#endif
+
 // -----------------------------------------------------------------------------
 // Endianness
 // -----------------------------------------------------------------------------
@@ -386,6 +388,7 @@ static inline uint64 bswap_64(uint64 x) {
 
 #endif
 
+#if 0
 // -----------------------------------------------------------------------------
 // Hash
 // -----------------------------------------------------------------------------
@@ -494,6 +497,8 @@ using std::hash;
 #endif  // __cplusplus
 #endif  // _MSC_VER
 
+#endif
+
 // printf macros
 // __STDC_FORMAT_MACROS must be defined before inttypes.h inclusion */
 #if defined(__APPLE__)
@@ -521,6 +526,8 @@ using std::hash;
 #define PRIuS __PRIS_PREFIX "u"
 #define PRIXS __PRIS_PREFIX "X"
 #define PRIoS __PRIS_PREFIX "o"
+
+#if 0
 
 #define GPRIuPTHREAD "lu"
 #define GPRIxPTHREAD "lx"
@@ -644,6 +651,8 @@ inline void bzero(void *s, int n) { memset(s, 0, n); }
 // should either use the HostLookup::Lookup*() methods, or gethostbyname_r()
 #define gethostbyname gethostbyname_is_not_thread_safe_DO_NOT_USE
 #endif
+
+#endif 
 
 // -----------------------------------------------------------------------------
 // Performance Optimization
@@ -893,6 +902,8 @@ inline void UnalignedCopy64(const void *src, void *dst) {
 
 #endif  // defined(__cplusplus), end of unaligned API
 
+#if 0
+
 // aligned_malloc, aligned_free
 #if defined(__ANDROID__) || defined(__ASYLO__)
 #include <malloc.h>  // for memalign()
@@ -1012,5 +1023,6 @@ struct AlignType { typedef char result[Size]; };
 #else  // __cplusplus
 #define ALIGNED_CHAR_ARRAY ALIGNED_CHAR_ARRAY_is_not_available_without_Cplusplus
 #endif  // __cplusplus
+#endif
 
 #endif  // S2_BASE_PORT_H_
