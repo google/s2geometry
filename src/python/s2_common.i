@@ -654,7 +654,7 @@ class S2Point {
 
 %define USE_STREAM_INSERTOR_FOR_STR(type)
   %extend type {
-    string __str__() {
+    std::string __str__() {
       std::ostringstream output;
       output << *self << std::ends;
       return output.str();
