@@ -26,6 +26,7 @@
 #include <string>
 
 #include "s2/base/port.h"
+#include "absl/strings/str_format.h"
 
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.
@@ -45,6 +46,8 @@ class S2Error {
     INTERNAL = 1005,             // An internal invariant has failed.
     DATA_LOSS = 1006,            // Data loss or corruption.
     RESOURCE_EXHAUSTED = 1007,   // A resource has been exhausted.
+    CANCELLED = 1008,            // Operation was cancelled.
+
 
     ////////////////////////////////////////////////////////////////////
     // Error codes in the following range can be defined by clients:
@@ -113,22 +116,34 @@ class S2Error {
   };
   S2Error() : code_(OK), text_() {}
 
+  // Convenience constructor that calls Init().
+  template <typename... Args>
+  S2Error(Code code, const absl::FormatSpec<Args...>& format,
+          const Args&... args) {
+    Init(code, format, args...);
+  }
+
   // Set the error to the given code and printf-style message.  Note that you
   // can prepend text to an existing error by calling Init() more than once:
   //
   //   error->Init(error->code(), "Loop %d: %s", j, error->text().c_str());
-  void Init(Code code, const char* format, ...) ABSL_PRINTF_ATTRIBUTE(3, 4);
+  template <typename... Args>
+  void Init(Code code, const absl::FormatSpec<Args...>& format,
+            const Args&... args) {
+    code_ = code;
+    text_ = absl::StrFormat(format, args...);
+  }
 
   bool ok() const { return code_ == OK; }
   Code code() const { return code_; }
-  string text() const { return text_; }
+  std::string text() const { return text_; }
 
   // Clear the error to contain the OK code and no error message.
   void Clear();
 
  private:
   Code code_;
-  string text_;
+  std::string text_;
 };
 
 

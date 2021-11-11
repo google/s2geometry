@@ -35,7 +35,7 @@
 #include <memory>
 #include <vector>
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -106,7 +106,7 @@ class LaxPolygonLayer : public S2Builder::Layer {
     // since it maintains the closest fidelity to the original geometry.)
     //
     // DEFAULT: DegenerateBoundaries::KEEP
-    enum class DegenerateBoundaries {
+    enum class DegenerateBoundaries : uint8 {
       DISCARD, DISCARD_HOLES, DISCARD_SHELLS, KEEP
     };
     DegenerateBoundaries degenerate_boundaries() const;

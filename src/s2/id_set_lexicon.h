@@ -21,7 +21,7 @@
 #include <limits>
 #include <vector>
 
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/sequence_lexicon.h"
 
@@ -132,7 +132,7 @@ class IdSetLexicon {
  private:
   // Choose kEmptySetId to be the last id that will ever be generated.
   // (Non-negative ids are reserved for singleton sets.)
-  static const int32 kEmptySetId = std::numeric_limits<int32>::min();
+  static constexpr int32 kEmptySetId = std::numeric_limits<int32>::min();
   int32 AddInternal(std::vector<int32>* ids);
 
   SequenceLexicon<int32> id_sets_;

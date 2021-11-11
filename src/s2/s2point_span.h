@@ -19,7 +19,7 @@
 #define S2_S2POINT_SPAN_H_
 
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/types/span.h"
+#include "absl/types/span.h"
 #include "s2/s2point.h"
 
 // S2PointSpan represents a view of an S2Point array.  It is used to pass

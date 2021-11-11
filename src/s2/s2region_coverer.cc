@@ -23,11 +23,11 @@
 #include <cstring>
 #include <functional>
 #include <queue>
-#include <unordered_set>
 #include <vector>
 
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/base/casts.h"
+#include "absl/base/casts.h"
+#include "absl/container/flat_hash_set.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_union.h"
@@ -37,7 +37,6 @@
 using std::is_sorted;
 using std::max;
 using std::min;
-using std::unordered_set;
 using std::vector;
 
 // Define storage for header file constants (the values are not needed here).
@@ -106,21 +105,9 @@ S2RegionCoverer::Candidate* S2RegionCoverer::NewCandidate(const S2Cell& cell) {
       }
     }
   }
-  size_t children_size = 0;
-  if (!is_terminal) {
-    children_size = sizeof(Candidate*) << max_children_shift();
-  }
-  Candidate* candidate = static_cast<Candidate*>(
-      ::operator new(sizeof(Candidate) + children_size));
-  candidate->cell = cell;
-  candidate->is_terminal = is_terminal;
-  candidate->num_children = 0;
-  if (!is_terminal) {
-    std::fill_n(&candidate->children[0], 1 << max_children_shift(),
-                absl::implicit_cast<Candidate*>(nullptr));
-  }
   ++candidates_created_counter_;
-  return candidate;
+  const std::size_t max_children = is_terminal ? 0 : 1 << max_children_shift();
+  return new (max_children) Candidate(cell, max_children);
 }
 
 void S2RegionCoverer::DeleteCandidate(Candidate* candidate,
@@ -129,7 +116,7 @@ void S2RegionCoverer::DeleteCandidate(Candidate* candidate,
     for (int i = 0; i < candidate->num_children; ++i)
       DeleteCandidate(candidate->children[i], true);
   }
-  ::operator delete(candidate);
+  delete candidate;
 }
 
 int S2RegionCoverer::ExpandChildren(Candidate* candidate,
@@ -497,7 +484,7 @@ void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
 
 void S2RegionCoverer::FloodFill(const S2Region& region, S2CellId start,
                                 vector<S2CellId>* output) {
-  unordered_set<S2CellId, S2CellIdHash> all;
+  absl::flat_hash_set<S2CellId, S2CellIdHash> all;
   vector<S2CellId> frontier;
   output->clear();
   all.insert(start);

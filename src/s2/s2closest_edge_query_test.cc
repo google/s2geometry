@@ -21,7 +21,8 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/flags/flag.h"
+#include "absl/memory/memory.h"
 #include "s2/encoded_s2shape_index.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -46,6 +47,7 @@ using s2textformat::MakePointOrDie;
 using s2textformat::MakePolygonOrDie;
 using std::min;
 using std::pair;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
@@ -398,13 +400,13 @@ static void TestWithIndexFactory(const s2testing::ShapeIndexFactory& factory,
   vector<S2Cap> index_caps;
   vector<unique_ptr<MutableS2ShapeIndex>> indexes;
   for (int i = 0; i < num_indexes; ++i) {
-    S2Testing::rnd.Reset(FLAGS_s2_random_seed + i);
+    S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed) + i);
     index_caps.push_back(S2Cap(S2Testing::RandomPoint(), kTestCapRadius));
     indexes.push_back(make_unique<MutableS2ShapeIndex>());
     factory.AddEdges(index_caps.back(), num_edges, indexes.back().get());
   }
   for (int i = 0; i < num_queries; ++i) {
-    S2Testing::rnd.Reset(FLAGS_s2_random_seed + i);
+    S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed) + i);
     int i_index = S2Testing::rnd.Uniform(num_indexes);
     const S2Cap& index_cap = index_caps[i_index];
 
@@ -491,15 +493,15 @@ TEST(S2ClosestEdgeQuery, PointCloudEdges) {
 }
 
 TEST(S2ClosestEdgeQuery, ConservativeCellDistanceIsUsed) {
-  // Don't use google::FlagSaver, so it works in opensource without gflags.
-  const int saved_seed = FLAGS_s2_random_seed;
+  // Don't use absl::FlagSaver, so it works in opensource without gflags.
+  const int saved_seed = absl::GetFlag(FLAGS_s2_random_seed);
   // These specific test cases happen to fail if max_error() is not properly
   // taken into account when measuring distances to S2ShapeIndex cells.
   for (int seed : {42, 681, 894, 1018, 1750, 1759, 2401}) {
-    FLAGS_s2_random_seed = seed;
+    absl::SetFlag(&FLAGS_s2_random_seed, seed);
     TestWithIndexFactory(s2testing::FractalLoopShapeIndexFactory(),
                          5, 100, 10);
   }
-  FLAGS_s2_random_seed = saved_seed;
+  absl::SetFlag(&FLAGS_s2_random_seed, saved_seed);
 }
 

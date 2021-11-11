@@ -27,8 +27,9 @@
 #include <string>
 #include <vector>
 
-#include "s2/third_party/absl/base/attributes.h"
-#include "s2/third_party/absl/strings/string_view.h"
+#include "absl/base/attributes.h"
+#include "absl/types/span.h"
+#include "absl/strings/string_view.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2debug.h"
@@ -149,10 +150,6 @@ ABSL_MUST_USE_RESULT bool MakeLoop(absl::string_view str,
                                    std::unique_ptr<S2Loop>* loop,
                                    S2Debug debug_override = S2Debug::ALLOW);
 
-ABSL_DEPRECATED("Use MakeLoopOrDie.")
-std::unique_ptr<S2Loop> MakeLoop(absl::string_view str,
-                                 S2Debug debug_override = S2Debug::ALLOW);
-
 // Similar to MakeLoop(), but returns an S2Polyline rather than an S2Loop.
 std::unique_ptr<S2Polyline> MakePolylineOrDie(
     absl::string_view str,
@@ -263,26 +260,26 @@ std::unique_ptr<MutableS2ShapeIndex> MakeIndex(absl::string_view str);
 
 // Convert an S2Point, S2LatLng, S2LatLngRect, S2CellId, S2CellUnion, loop,
 // polyline, or polygon to the string format above.
-string ToString(const S2Point& point);
-string ToString(const S2LatLng& latlng);
-string ToString(const S2LatLngRect& rect);
-string ToString(const S2CellId& cell_id);
-string ToString(const S2CellUnion& cell_union);
-string ToString(const S2Loop& loop);
-string ToString(S2PointLoopSpan loop);
-string ToString(const S2Polyline& polyline);
-string ToString(const S2Polygon& polygon, const char* loop_separator = ";\n");
-string ToString(const std::vector<S2Point>& points);
-string ToString(const std::vector<S2LatLng>& points);
-string ToString(const S2LaxPolylineShape& polyline);
-string ToString(const S2LaxPolygonShape& polygon,
-                const char* loop_separator = ";\n");
+std::string ToString(const S2Point& point);
+std::string ToString(const S2LatLng& latlng);
+std::string ToString(const S2LatLngRect& rect);
+std::string ToString(const S2CellId& cell_id);
+std::string ToString(const S2CellUnion& cell_union);
+std::string ToString(const S2Loop& loop);
+std::string ToString(const S2Polyline& polyline);
+std::string ToString(const S2Polygon& polygon,
+                     const char* loop_separator = ";\n");
+std::string ToString(absl::Span<const S2Point> points);
+std::string ToString(absl::Span<const S2LatLng> latlngs);
+std::string ToString(const S2LaxPolylineShape& polyline);
+std::string ToString(const S2LaxPolygonShape& polygon,
+                     const char* loop_separator = ";\n");
 
 // Convert the contents of an S2ShapeIndex to the format above.  The index may
 // contain S2Shapes of any type.  Shapes are reordered if necessary so that
 // all point geometry (shapes of dimension 0) are first, followed by all
 // polyline geometry, followed by all polygon geometry.
-string ToString(const S2ShapeIndex& index);
+std::string ToString(const S2ShapeIndex& index);
 
 }  // namespace s2textformat
 

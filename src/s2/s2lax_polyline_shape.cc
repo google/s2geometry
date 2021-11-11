@@ -23,9 +23,9 @@
 
 using absl::make_unique;
 using absl::MakeSpan;
-using std::vector;
+using absl::Span;
 
-S2LaxPolylineShape::S2LaxPolylineShape(const vector<S2Point>& vertices) {
+S2LaxPolylineShape::S2LaxPolylineShape(Span<const S2Point> vertices) {
   Init(vertices);
 }
 
@@ -33,7 +33,7 @@ S2LaxPolylineShape::S2LaxPolylineShape(const S2Polyline& polyline) {
   Init(polyline);
 }
 
-void S2LaxPolylineShape::Init(const vector<S2Point>& vertices) {
+void S2LaxPolylineShape::Init(Span<const S2Point> vertices) {
   num_vertices_ = vertices.size();
   S2_LOG_IF(WARNING, num_vertices_ == 1)
       << "s2shapeutil::S2LaxPolylineShape with one vertex has no edges";
@@ -92,6 +92,12 @@ S2Shape::ChainPosition S2LaxPolylineShape::chain_position(int e) const {
 
 bool EncodedS2LaxPolylineShape::Init(Decoder* decoder) {
   return vertices_.Init(decoder);
+}
+
+// The encoding must be identical to S2LaxPolylineShape::Encode().
+void EncodedS2LaxPolylineShape::Encode(Encoder* encoder,
+                                       s2coding::CodingHint) const {
+  vertices_.Encode(encoder);
 }
 
 S2Shape::Edge EncodedS2LaxPolylineShape::edge(int e) const {

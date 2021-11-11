@@ -20,7 +20,9 @@
 #ifndef S2_UTIL_BITS_BIT_INTERLEAVE_H_
 #define S2_UTIL_BITS_BIT_INTERLEAVE_H_
 
-#include "s2/third_party/absl/base/integral_types.h"
+#include <cstdint>
+
+#include "s2/base/integral_types.h"
 
 namespace util_bits {
 
@@ -46,7 +48,8 @@ void DeinterleaveUint32(uint64 code, uint32 *val0, uint32 *val1);
 uint32 InterleaveUint8(uint8 val0, uint8 val1, uint8 val2);
 
 // These functions will decode the interleaved values.
-void DeinterleaveUint8(uint32 code, uint8 *val0, uint8* val1, uint8* val2);
+void DeinterleaveUint8(uint32 code, uint8 *val0, uint8 *val1,
+                       uint8 *val2);
 
 }  // namespace util_bits
 

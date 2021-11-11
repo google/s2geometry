@@ -22,10 +22,10 @@
 #include <memory>
 #include <set>
 #include <string>
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/string_view.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/string_view.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2debug.h"
 #include "s2/s2text_format.h"
@@ -39,6 +39,7 @@ using s2textformat::MakePointOrDie;
 using s2textformat::MakePolylineOrDie;
 using std::map;
 using std::set;
+using std::string;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;
@@ -53,6 +54,10 @@ string ToString(DegenerateBoundaries degenerate_boundaries) {
     case DegenerateBoundaries::DISCARD_SHELLS: return "DISCARD_SHELLS";
     case DegenerateBoundaries::KEEP: return "KEEP";
   }
+  // Cases are exhaustive, but some compilers don't know that and emit a
+  // warning.
+  S2_LOG(FATAL) << "Unknown DegenerateBoundaries value: "
+             << static_cast<int>(degenerate_boundaries);
 }
 
 void TestLaxPolygon(string_view input_str, string_view expected_str,

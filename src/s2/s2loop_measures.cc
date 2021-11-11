@@ -21,7 +21,7 @@
 #include <cmath>
 #include <vector>
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/container/inlined_vector.h"
+#include "absl/container/inlined_vector.h"
 #include "s2/s1angle.h"
 #include "s2/s2centroids.h"
 #include "s2/s2edge_distances.h"
@@ -120,8 +120,11 @@ double GetSignedArea(S2PointLoopSpan loop) {
   // Normalize it to be in the range [-2*Pi, 2*Pi].
   double area = GetSurfaceIntegral(loop, S2::SignedArea);
   double max_error = GetCurvatureMaxError(loop);
-  S2_DCHECK_LE(fabs(area), 4 * M_PI + max_error);
+
+  // Normalize the area to be in the range (-2*Pi, 2*Pi].  Effectively this
+  // means that hemispheres are always interpreted as having positive area.
   area = remainder(area, 4 * M_PI);
+  if (area == -2 * M_PI) area = 2 * M_PI;
 
   // If the area is a small negative or positive number, verify that the sign
   // of the result is consistent with the loop orientation.
@@ -218,12 +221,12 @@ double GetCurvature(S2PointLoopSpan loop) {
 
 double GetCurvatureMaxError(S2PointLoopSpan loop) {
   // The maximum error can be bounded as follows:
-  //   2.24 * DBL_EPSILON    for RobustCrossProd(b, a)
-  //   2.24 * DBL_EPSILON    for RobustCrossProd(c, b)
+  //   3.00 * DBL_EPSILON    for RobustCrossProd(b, a)
+  //   3.00 * DBL_EPSILON    for RobustCrossProd(c, b)
   //   3.25 * DBL_EPSILON    for Angle()
   //   2.00 * DBL_EPSILON    for each addition in the Kahan summation
-  //   ------------------
-  //   9.73 * DBL_EPSILON
+  //  -------------------
+  //  11.25 * DBL_EPSILON
   //
   // TODO(ericv): This error estimate is approximate.  There are two issues:
   // (1) SignedArea needs some improvements to ensure that its error is
@@ -232,7 +235,7 @@ double GetCurvatureMaxError(S2PointLoopSpan loop) {
   // 2*N for pathological inputs.  But in other respects this error bound is
   // very conservative since it assumes that the maximum error is achieved on
   // every triangle.
-  const double kMaxErrorPerVertex = 9.73 * DBL_EPSILON;
+  const double kMaxErrorPerVertex = 11.25 * DBL_EPSILON;
   return kMaxErrorPerVertex * loop.size();
 }
 

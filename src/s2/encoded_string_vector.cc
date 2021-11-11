@@ -20,6 +20,7 @@
 using absl::MakeSpan;
 using absl::Span;
 using absl::string_view;
+using std::string;
 using std::vector;
 
 namespace s2coding {
@@ -61,6 +62,17 @@ vector<string_view> EncodedStringVector::Decode() const {
     result[i] = (*this)[i];
   }
   return result;
+}
+
+// The encoding must be identical to StringVectorEncoder::Encode().
+void EncodedStringVector::Encode(Encoder* encoder) const {
+  offsets_.Encode(encoder);
+
+  if (offsets_.size() > 0) {
+    const uint64 length = offsets_[offsets_.size() - 1];
+    encoder->Ensure(length);
+    encoder->putn(data_, length);
+  }
 }
 
 }  // namespace s2coding

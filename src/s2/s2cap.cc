@@ -22,8 +22,9 @@
 #include <iosfwd>
 #include <vector>
 
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
+#include "absl/flags/flag.h"
 #include "s2/r1interval.h"
 #include "s2/s1interval.h"
 #include "s2/s2cell.h"
@@ -340,8 +341,8 @@ bool S2Cap::Decode(Decoder* decoder) {
   center_ = S2Point(x, y, z);
   radius_ = S1ChordAngle::FromLength2(decoder->getdouble());
 
-  if (FLAGS_s2debug) {
-     S2_CHECK(is_valid()) << "Invalid S2Cap: " << *this;
+  if (absl::GetFlag(FLAGS_s2debug)) {
+    S2_CHECK(is_valid()) << "Invalid S2Cap: " << *this;
   }
   return true;
 }

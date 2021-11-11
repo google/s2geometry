@@ -117,6 +117,7 @@
 #define S2_UTIL_GTL_DENSE_HASH_SET_H_
 
 #include <cstdio>
+
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -124,7 +125,7 @@
 #include <vector>
 
 #include "s2/base/port.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "absl/base/macros.h"
 #include "s2/util/gtl/densehashtable.h"  // IWYU pragma: export
 
 // Some files test for this symbol.

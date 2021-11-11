@@ -107,20 +107,22 @@
 
 #include <cassert>
 #include <cstddef>
-#include <cstdio>              // for FILE, fwrite, fread
-#include <algorithm>            // For swap(), eg
+#include <cstdio>  // for FILE, fwrite, fread
+
+#include <algorithm>  // For swap(), eg
+#include <cstdint>
 #include <functional>
-#include <iterator>             // For iterator tags
-#include <limits>               // for numeric_limits
-#include <memory>               // For uninitialized_fill
+#include <iterator>  // For iterator tags
+#include <limits>    // for numeric_limits
+#include <memory>    // For uninitialized_fill
 #include <new>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
-#include <type_traits>
 
-#include "s2/util/gtl/hashtable_common.h"
 #include "s2/base/port.h"
+#include "s2/util/gtl/hashtable_common.h"
 #include <stdexcept>                 // For length_error
 
 namespace gtl {
@@ -182,7 +184,8 @@ struct dense_hashtable_const_iterator;
 template <class V, class K, class HF, class ExK, class SetK, class EqK, class A>
 struct dense_hashtable_iterator {
  private:
-  typedef typename A::template rebind<V>::other value_alloc_type;
+  using value_alloc_type =
+      typename std::allocator_traits<A>::template rebind_alloc<V>;
 
  public:
   typedef dense_hashtable_iterator<V, K, HF, ExK, SetK, EqK, A>
@@ -245,7 +248,8 @@ struct dense_hashtable_iterator {
 template <class V, class K, class HF, class ExK, class SetK, class EqK, class A>
 struct dense_hashtable_const_iterator {
  private:
-  typedef typename A::template rebind<V>::other value_alloc_type;
+  using value_alloc_type =
+      typename std::allocator_traits<A>::template rebind_alloc<V>;
 
  public:
   typedef dense_hashtable_iterator<V, K, HF, ExK, SetK, EqK, A>
@@ -311,7 +315,8 @@ template <class Value, class Key, class HashFcn,
           class ExtractKey, class SetKey, class EqualKey, class Alloc>
 class dense_hashtable {
  private:
-  typedef typename Alloc::template rebind<Value>::other value_alloc_type;
+  using value_alloc_type =
+      typename std::allocator_traits<Alloc>::template rebind_alloc<Value>;
 
 
  public:
@@ -532,9 +537,9 @@ class dense_hashtable {
   }
 
  private:
-  bool test_empty(size_type bucknum, const_pointer table) const {
+  bool test_empty(size_type bucknum, const_pointer ptable) const {
     assert(settings.use_empty());
-    return equals(key_info.empty, get_key(table[bucknum]));
+    return equals(key_info.empty, get_key(ptable[bucknum]));
   }
 
   void fill_range_with_empty(pointer table_start, pointer table_end) {
@@ -1034,7 +1039,7 @@ class dense_hashtable {
     const size_type bucket_count_minus_one = bucket_count() - 1;
     size_type bucknum = key_hash & bucket_count_minus_one;
     size_type insert_pos = ILLEGAL_BUCKET;  // where we would insert
-    while (1) {                             // probe until something happens
+    while (true) {                          // probe until something happens
       if (test_empty(bucknum)) {            // bucket is empty
         if (insert_pos == ILLEGAL_BUCKET)   // found no prior place to insert
           return std::pair<size_type, size_type>(ILLEGAL_BUCKET, bucknum);
@@ -1072,7 +1077,7 @@ class dense_hashtable {
     size_type num_probes = 0;              // how many times we've probed
     const size_type bucket_count_minus_one = bucket_count() - 1;
     size_type bucknum = key_hash & bucket_count_minus_one;
-    while (1) {                             // probe until something happens
+    while (true) {  // probe until something happens
       if (equals(key, get_key(table[bucknum]))) {
         return std::pair<size_type, bool>(bucknum, true);
       } else if (test_empty(bucknum)) {
@@ -1290,7 +1295,7 @@ class dense_hashtable {
 
 
   void erase(iterator pos) {
-    if (pos == end()) return;    // sanity check
+    if (pos == end()) return;
     set_deleted(pos);
     ++num_deleted;
     // will think about shrink after next insert
@@ -1312,7 +1317,7 @@ class dense_hashtable {
   // you can't use the object after it's erased anyway, so it doesn't matter
   // if it's const or not.
   void erase(const_iterator pos) {
-    if (pos == end()) return;    // sanity check
+    if (pos == end()) return;
     set_deleted(pos);
     ++num_deleted;
     // will think about shrink after next insert

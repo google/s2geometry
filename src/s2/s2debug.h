@@ -53,7 +53,7 @@
 #define S2_S2DEBUG_H_
 
 #include "s2/base/commandlineflags.h"
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 
 // Command line flag that enables extra validity checking throughout the S2
 // code.  It is turned on by default in debug-mode builds.

@@ -76,13 +76,15 @@
 
 #include <cctype>
 #include "s2/base/logging.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "s2/base/log_severity.h"
+#include "absl/strings/str_cat.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"
 
 using absl::string_view;
+using std::string;
 using std::vector;
 
 S2RegionTermIndexer::Options::Options() {

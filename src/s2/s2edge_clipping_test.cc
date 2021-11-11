@@ -20,16 +20,16 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
-#include <string>
 
 #include "s2/base/logging.h"
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/strings/str_cat.h"
 #include "s2/r1interval.h"
 #include "s2/r2rect.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2coords.h"
+#include "s2/s2edge_crossings.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
@@ -40,9 +40,6 @@ using std::max;
 void TestFaceClipping(const S2Point& a_raw, const S2Point& b_raw) {
   S2Point a = a_raw.Normalize();
   S2Point b = b_raw.Normalize();
-  // TODO(ericv): Remove the following line once S2::RobustCrossProd is
-  // extended to use simulation of simplicity.
-  if (a == -b) return;
 
   // First we test GetFaceSegments.
   S2::FaceSegmentVector segments;
@@ -163,7 +160,7 @@ S2Point PerturbedCornerOrMidpoint(const S2Point& p, const S2Point& q) {
   return a;
 }
 
-TEST(S2EdgeUtil, FaceClipping) {
+TEST(S2, FaceClipping) {
   // Start with a few simple cases.
   // An edge that is entirely contained within one cube face:
   TestFaceClippingEdgePair(S2Point(1, -0.5, -0.5), S2Point(1, 0.5, 0.5));
@@ -308,7 +305,7 @@ R2Point ChooseEndpoint(const R2Rect& clip) {
   }
 }
 
-// Given a rectangle "clip", test the S2EdgeUtil edge clipping methods using
+// Given a rectangle "clip", test the S2 edge clipping methods using
 // many edges that are randomly constructed to trigger special cases.
 void TestEdgeClipping(const R2Rect& clip) {
   const int kIters = 1000;  // Test passes with 1e6 iterations
@@ -318,7 +315,7 @@ void TestEdgeClipping(const R2Rect& clip) {
   }
 }
 
-TEST(S2EdgeUtil, EdgeClipping) {
+TEST(S2, EdgeClipping) {
   S2Testing::Random* rnd = &S2Testing::rnd;
   // Test clipping against random rectangles.
   for (int i = 0; i < 5; ++i) {

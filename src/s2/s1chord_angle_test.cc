@@ -148,6 +148,22 @@ TEST(S1ChordAngle, Arithmetic) {
   EXPECT_EQ(180, (degree180 + degree180).degrees());
 }
 
+TEST(S1ChordAngle, ArithmeticPrecision) {
+  // Verifies that S1ChordAngle is capable of adding and subtracting angles
+  // extremely accurately up to Pi/2 radians.  (Accuracy continues to be good
+  // well beyond this value but degrades as angles approach Pi.)
+  S1ChordAngle kEps = S1ChordAngle::Radians(1e-15);
+  S1ChordAngle k90 = S1ChordAngle::Right();
+  S1ChordAngle k90MinusEps = k90 - kEps;
+  S1ChordAngle k90PlusEps = k90 + kEps;
+  double kMaxError = 2 * DBL_EPSILON;
+  EXPECT_NEAR(k90MinusEps.radians(), M_PI_2 - kEps.radians(), kMaxError);
+  EXPECT_NEAR(k90PlusEps.radians(), M_PI_2 + kEps.radians(), kMaxError);
+  EXPECT_NEAR((k90 - k90MinusEps).radians(), kEps.radians(), kMaxError);
+  EXPECT_NEAR((k90PlusEps - k90).radians(), kEps.radians(), kMaxError);
+  EXPECT_NEAR((k90MinusEps + kEps).radians(), M_PI_2, kMaxError);
+}
+
 TEST(S1ChordAngle, Trigonometry) {
   static const int kIters = 20;
   for (int iter = 0; iter <= kIters; ++iter) {

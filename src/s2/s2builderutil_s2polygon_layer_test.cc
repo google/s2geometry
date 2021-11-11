@@ -23,9 +23,9 @@
 #include <set>
 #include <string>
 #include "s2/base/casts.h"
-#include "s2/third_party/absl/base/integral_types.h"
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2debug.h"
 #include "s2/s2text_format.h"
@@ -36,6 +36,7 @@ using s2builderutil::S2PolygonLayer;
 using s2textformat::MakePolylineOrDie;
 using std::map;
 using std::set;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
@@ -85,7 +86,7 @@ void TestS2PolygonError(const vector<const char*>& input_strs,
   options.set_validate(true);
   builder.StartLayer(make_unique<S2PolygonLayer>(&output, options));
   for (auto input_str : input_strs) {
-    builder.AddPolyline(*s2textformat::MakePolyline(input_str));
+    builder.AddPolyline(*s2textformat::MakePolylineOrDie(input_str));
   }
   S2Error error;
   ASSERT_FALSE(builder.Build(&error));
@@ -142,8 +143,8 @@ TEST(S2PolygonLayer, DuplicateInputEdges) {
   EXPECT_FALSE(builder.Build(&error));
   EXPECT_EQ(S2Error::POLYGON_LOOPS_SHARE_EDGE, error.code());
   ASSERT_EQ(2, output.num_loops());
-  unique_ptr<S2Loop> loop0(s2textformat::MakeLoop("0:0, 0:2, 2:2, 2:0"));
-  unique_ptr<S2Loop> loop1(s2textformat::MakeLoop("0:2, 2:2, 1:1"));
+  unique_ptr<S2Loop> loop0(s2textformat::MakeLoopOrDie("0:0, 0:2, 2:2, 2:0"));
+  unique_ptr<S2Loop> loop1(s2textformat::MakeLoopOrDie("0:2, 2:2, 1:1"));
   EXPECT_TRUE(loop0->Equals(output.loop(0)));
   EXPECT_TRUE(loop1->Equals(output.loop(1)));
 }
@@ -206,6 +207,24 @@ TEST(S2PolygonLayer, DirectedEdgeLabels) {
 
 TEST(S2PolygonLayer, UndirectedEdgeLabels) {
   TestEdgeLabels(EdgeType::UNDIRECTED);
+}
+
+TEST(S2PolygonLayer, LabelsRequestedButNotProvided) {
+  // Tests the situation where labels are requested but none were provided.
+  S2Builder builder{S2Builder::Options()};
+  S2Polygon output;
+  S2PolygonLayer::LabelSetIds label_set_ids;
+  IdSetLexicon label_set_lexicon;
+  builder.StartLayer(make_unique<S2PolygonLayer>(
+      &output, &label_set_ids, &label_set_lexicon));
+  builder.AddPolyline(*MakePolylineOrDie("0:0, 0:1, 1:0, 0:0"));
+  S2Error error;
+  ASSERT_TRUE(builder.Build(&error));
+  EXPECT_EQ(label_set_ids.size(), 1);     // One loop.
+  EXPECT_EQ(label_set_ids[0].size(), 3);  // Three edges.
+  for (auto label_set_id : label_set_ids[0]) {
+    EXPECT_EQ(label_set_id, IdSetLexicon::EmptySetId());
+  }
 }
 
 TEST(S2PolygonLayer, ThreeLoopsIntoOne) {

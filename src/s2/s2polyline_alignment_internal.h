@@ -26,7 +26,7 @@
 
 namespace s2polyline_alignment {
 
-static constexpr double DOUBLE_MAX = std::numeric_limits<double>::max();
+constexpr double DOUBLE_MAX = std::numeric_limits<double>::max();
 
 // Alias for a 2d Dynamic Programming table.
 typedef std::vector<std::vector<double>> CostTable;
@@ -137,7 +137,7 @@ class Window {
   Window Dilate(const int radius) const;
 
   // Return a string representation of this window.
-  string DebugString() const;
+  std::string DebugString() const;
 
  private:
   int rows_;

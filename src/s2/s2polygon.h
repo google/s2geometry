@@ -23,8 +23,9 @@
 #include <map>
 #include <vector>
 
-#include "s2/third_party/absl/base/integral_types.h"
-#include "s2/third_party/absl/base/macros.h"
+#include "s2/base/integral_types.h"
+#include "absl/base/macros.h"
+#include "absl/container/node_hash_map.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -46,7 +47,6 @@ class S2Cell;
 class S2CellUnion;
 class S2Error;
 class S2Loop;
-class S2PolygonBuilder;
 class S2Polyline;
 struct S2XYZFaceSiTi;
 
@@ -230,6 +230,7 @@ class S2Polygon final : public S2Region {
   int num_loops() const { return static_cast<int>(loops_.size()); }
 
   // Total number of vertices in all loops.
+  // TODO(ericv): Change to num_edges() for consistency with the S2Shape API.
   int num_vertices() const { return num_vertices_; }
 
   // Return the loop at the given index.  Note that during initialization, the
@@ -568,6 +569,9 @@ class S2Polygon final : public S2Region {
   static std::unique_ptr<S2Polygon> DestructiveApproxUnion(
       std::vector<std::unique_ptr<S2Polygon> > polygons,
       S1Angle snap_radius);
+  static std::unique_ptr<S2Polygon> DestructiveUnion(
+      std::vector<std::unique_ptr<S2Polygon> > polygons,
+      const S2Builder::SnapFunction& snap_function);
 #endif  // !defined(SWIG)
 
   // Initialize this polygon to the outline of the given cell union.
@@ -710,7 +714,7 @@ class S2Polygon final : public S2Region {
    public:
     static constexpr TypeTag kTypeTag = 1;
 
-    Shape() : polygon_(nullptr), cumulative_edges_(nullptr) {}
+    Shape() : polygon_(nullptr), loop_starts_(nullptr) {}
     ~Shape() override;
 
     // Initialization.  Does not take ownership of "polygon".  May be called
@@ -721,20 +725,11 @@ class S2Polygon final : public S2Region {
 
     const S2Polygon* polygon() const { return polygon_; }
 
-    // Encodes the polygon using S2Polygon::Encode().
-    void Encode(Encoder* encoder) const {
-      polygon_->Encode(encoder);
-    }
-
-    // Encodes the polygon using S2Polygon::EncodeUncompressed().
-    void EncodeUncompressed(Encoder* encoder) const {
-      polygon_->EncodeUncompressed(encoder);
-    }
-
-    // Decoding is defined only for S2Polyline::OwningShape below.
-
     // S2Shape interface:
-    int num_edges() const final { return num_edges_; }
+    int num_edges() const final {
+      return (polygon_->num_vertices() != 1) ? polygon_->num_vertices()
+                                             : polygon_->is_full() ? 0 : 1;
+    }
     Edge edge(int e) const final;
     int dimension() const final { return 2; }
     ReferencePoint GetReferencePoint() const final;
@@ -744,22 +739,27 @@ class S2Polygon final : public S2Region {
     ChainPosition chain_position(int e) const final;
     TypeTag type_tag() const override { return kTypeTag; }
 
+  void Encode(Encoder* encoder, s2coding::CodingHint hint) const override {
+      if (hint == s2coding::CodingHint::FAST) {
+        polygon_->EncodeUncompressed(encoder);
+      } else {
+        polygon_->Encode(encoder);
+      }
+    }
+    // Decoding is defined only for S2Polygon::OwningShape below.
+
    private:
-    // The total number of edges in the polygon.  This is the same as
-    // polygon_->num_vertices() except in one case (polygon_->is_full()).  On
-    // the other hand this field doesn't take up any extra space due to field
-    // packing with S2Shape::id_.
-    //
-    // TODO(ericv): Consider using this field instead as an atomic<int> hint to
-    // speed up edge location when there are a large number of loops.  Also
-    // consider changing S2Polygon::num_vertices to num_edges instead.
-    int num_edges_;
+    // The loop that contained the edge returned by the previous call to the
+    // edge() method.  This is used as a hint to speed up edge location when
+    // there are many loops.  Note that this field does not take up any space
+    // due to field packing with S2Shape::id_.
+    mutable std::atomic<int> prev_loop_ = 0;
 
     const S2Polygon* polygon_;
 
     // An array where element "i" is the total number of edges in loops 0..i-1.
     // This field is only used for polygons that have a large number of loops.
-    int* cumulative_edges_;
+    std::unique_ptr<uint32[]> loop_starts_;
   };
 
   // Like Shape, except that the S2Polygon is automatically deleted when this
@@ -822,7 +822,7 @@ class S2Polygon final : public S2Region {
   // A map from each loop to its immediate children with respect to nesting.
   // This map is built during initialization of multi-loop polygons to
   // determine which are shells and which are holes, and then discarded.
-  typedef std::map<S2Loop*, std::vector<S2Loop*> > LoopMap;
+  typedef absl::node_hash_map<S2Loop*, std::vector<S2Loop*> > LoopMap;
 
   void InsertLoop(S2Loop* new_loop, S2Loop* parent, LoopMap* loop_map);
   void InitLoops(LoopMap* loop_map);

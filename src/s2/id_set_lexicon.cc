@@ -62,6 +62,10 @@ int32 IdSetLexicon::AddInternal(std::vector<int32>* ids) {
     // Canonicalize the set by sorting and removing duplicates.
     std::sort(ids->begin(), ids->end());
     ids->erase(std::unique(ids->begin(), ids->end()), ids->end());
+
+    // After eliminating duplicates, we may now have a singleton.
+    if (ids->size() == 1) return (*ids)[0];
+
     // Non-singleton sets are represented by the bitwise complement of the id
     // returned by SequenceLexicon.
     return ~id_sets_.Add(*ids);

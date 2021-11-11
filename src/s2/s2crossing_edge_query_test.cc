@@ -23,8 +23,8 @@
 
 #include "s2/base/casts.h"
 #include <gtest/gtest.h>
-#include "s2/third_party/absl/memory/memory.h"
-#include "s2/third_party/absl/strings/str_cat.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -45,9 +45,10 @@ using absl::StrCat;
 using s2shapeutil::ShapeEdge;
 using s2shapeutil::ShapeEdgeId;
 using s2textformat::MakePoint;
-using s2textformat::MakePolyline;
+using s2textformat::MakePolylineOrDie;
 using std::is_sorted;
 using std::pair;
+using std::string;
 using std::vector;
 
 namespace {
@@ -302,11 +303,11 @@ TEST(GetCrossings, PolylineCrossings) {
   MutableS2ShapeIndex index;
   // Three zig-zag lines near the equator.
   index.Add(make_unique<S2Polyline::OwningShape>(
-      MakePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6")));
+      MakePolylineOrDie("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6")));
   index.Add(make_unique<S2Polyline::OwningShape>(
-      MakePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6")));
+      MakePolylineOrDie("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6")));
   index.Add(make_unique<S2Polyline::OwningShape>(
-      MakePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6")));
+      MakePolylineOrDie("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6")));
   TestPolylineCrossings(index, MakePoint("1:0"), MakePoint("1:4"));
   TestPolylineCrossings(index, MakePoint("5:5"), MakePoint("6:6"));
 }

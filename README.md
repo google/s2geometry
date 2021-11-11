@@ -19,21 +19,25 @@ S2 documentation can be found on [s2geometry.io](http://s2geometry.io).
 ## Requirements for End Users
 
 * [CMake](http://www.cmake.org/)
-* A C++ compiler with C++11 support, such as [g++](https://gcc.gnu.org/)
-  \>= 4.7.
+* A C++ compiler with C++17 support, such as [g++ 7](https://gcc.gnu.org/)
+* [Abseil](https://github.com/abseil/abseil-cpp) (standard library extensions)
 * [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 * [gflags command line flags](https://github.com/gflags/gflags), optional
 * [glog logging module](https://github.com/google/glog), optional
 * [googletest testing framework](https://github.com/google/googletest)
   (to build tests and example programs, optional)
 
-On Ubuntu, all of these can be installed via apt-get:
+On Ubuntu, all of these other than abseil can be installed via apt-get:
 
 ```
 sudo apt-get install cmake libgflags-dev libgoogle-glog-dev libgtest-dev libssl-dev
 ```
 
 Otherwise, you may need to install some from source.
+
+Currently, Abseil must always be installed from source.  See the use of
+`-DCMAKE_PREFIX_PATH` in the [build instructions below](#building).
+This is likely to change.
 
 On macOS, use [MacPorts](http://www.macports.org/) or
 [Homebrew](http://brew.sh/).  For MacPorts:
@@ -79,13 +83,16 @@ cd s2geometry
 
 ### Building
 
+First, [install Abseil](https://abseil.io/docs/cpp/tools/cmake-installs).
+It must be configured with `-DCMAKE_POSITION_INDEPENDENT_CODE=ON`.
+
 From the appropriate directory depending on how you got the source:
 
 ```
 mkdir build
 cd build
 # You can omit -DGTEST_ROOT to skip tests; see above for macOS.
-cmake -DGTEST_ROOT=/usr/src/gtest ..
+cmake -DGTEST_ROOT=/usr/src/gtest -DCMAKE_PREFIX_PATH=/path/to/absl/install ..
 make
 make test  # If GTEST_ROOT specified above.
 sudo make install
@@ -99,7 +106,7 @@ Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
 
 If you want the Python interface, you will also need:
 
-* [SWIG](https://github.com/swig/swig) (for Python support, optional)
+* [SWIG 4](https://github.com/swig/swig) (for Python support, optional)
 
 which can be installed via
 
@@ -112,7 +119,8 @@ or on macOS:
 ```
 sudo port install swig
 ```
-Expect to see some warnings if you build with swig 2.0.
+Version 4.0 is required, but it should be easy to make it work 3.0 or probably
+even 2.0.
 
 ## Other S2 implementations
 

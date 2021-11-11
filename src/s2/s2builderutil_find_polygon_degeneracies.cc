@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-#include "s2/third_party/absl/memory/memory.h"
+#include "absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builderutil_graph_shape.h"
@@ -158,8 +158,8 @@ vector<PolygonDegeneracy> DegeneracyFinder::Run(S2Error* error) {
       known_vertex = FindUnbalancedVertex();
       known_vertex_sign = ContainsVertexSign(known_vertex);
     }
-    const int kMaxUnindexedContainsCalls = 20;  // Tuned using benchmarks.
-    if (num_unknown_signs <= kMaxUnindexedContainsCalls) {
+    const int kMaxUnindexedSignComputations = 25;  // Tuned using benchmarks.
+    if (num_unknown_signs <= kMaxUnindexedSignComputations) {
       ComputeUnknownSignsBruteForce(known_vertex, known_vertex_sign,
                                     &components);
     } else {
@@ -254,7 +254,7 @@ bool DegeneracyFinder::CrossingParity(VertexId v0, VertexId v1,
   int crossings = 0;
   S2Point p0 = g_.vertex(v0);
   S2Point p1 = g_.vertex(v1);
-  S2Point p0_ref = S2::Ortho(p0);
+  S2Point p0_ref = S2::RefDir(p0);
   for (const Edge& edge : out_.edges(v0)) {
     if (edge.second == v1) {
       if (include_same) ++crossings;
