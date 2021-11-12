@@ -113,6 +113,8 @@ class EncodedStringVector {
   // no longer needed.
   std::vector<absl::string_view> Decode() const;
 
+  void Encode(Encoder* encoder) const;
+
  private:
   EncodedUintVector<uint64> offsets_;
   const char* data_;

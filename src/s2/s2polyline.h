@@ -21,16 +21,20 @@
 #include <memory>
 #include <vector>
 
+#include "absl/base/macros.h"
+#include "absl/memory/memory.h"
+#include "absl/types/span.h"
+
 #include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
+#include "s2/s2builder.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2debug.h"
 #include "s2/s2error.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2region.h"
 #include "s2/s2shape.h"
-#include "absl/base/macros.h"
-#include "absl/memory/memory.h"
 
 class Decoder;
 class Encoder;
@@ -38,6 +42,7 @@ class S1Angle;
 class S2Cap;
 class S2Cell;
 class S2LatLng;
+struct S2XYZFaceSiTi;
 
 // An S2Polyline represents a sequence of zero or more vertices connected by
 // straight edges (geodesics).  Edges of length 0 and 180 degrees are not
@@ -55,8 +60,8 @@ class S2Polyline final : public S2Region {
 #endif  // SWIG
 
   // Convenience constructors that call Init() with the given vertices.
-  explicit S2Polyline(const std::vector<S2Point>& vertices);
-  explicit S2Polyline(const std::vector<S2LatLng>& vertices);
+  explicit S2Polyline(absl::Span<const S2Point> vertices);
+  explicit S2Polyline(absl::Span<const S2LatLng> vertices);
 
   // Convenience constructors to disable the automatic validity checking
   // controlled by the --s2debug flag.  Example:
@@ -71,17 +76,17 @@ class S2Polyline final : public S2Region {
   //
   // The main reason to use this constructors is if you intend to call
   // IsValid() explicitly.  See set_s2debug_override() for details.
-  S2Polyline(const std::vector<S2Point>& vertices, S2Debug override);
-  S2Polyline(const std::vector<S2LatLng>& vertices, S2Debug override);
+  S2Polyline(absl::Span<const S2Point> vertices, S2Debug override);
+  S2Polyline(absl::Span<const S2LatLng> vertices, S2Debug override);
 
   // Initialize a polyline that connects the given vertices. Empty polylines are
   // allowed.  Adjacent vertices should not be identical or antipodal.  All
   // vertices should be unit length.
-  void Init(const std::vector<S2Point>& vertices);
+  void Init(absl::Span<const S2Point> vertices);
 
   // Convenience initialization function that accepts latitude-longitude
   // coordinates rather than S2Points.
-  void Init(const std::vector<S2LatLng>& vertices);
+  void Init(absl::Span<const S2LatLng> vertices);
 
   ~S2Polyline() override;
 
@@ -99,6 +104,22 @@ class S2Polyline final : public S2Region {
   // fatal error in Init() whenever the --s2debug flag is enabled.
   void set_s2debug_override(S2Debug override);
   S2Debug s2debug_override() const;
+
+  // Convenience function that snaps the vertices to S2CellId centers at the
+  // given level (default level 30, which has S2CellId centers spaced about 1
+  // centimeter apart)
+  void InitToSnapped(const S2Polyline& polyline,
+                     int snap_level = S2CellId::kMaxLevel);
+
+  // Snaps the input polyline according to the given "snap_function" and
+  // reduces the number of vertices if possible, while ensuring that no vertex
+  // moves further than snap_function.snap_radius().
+  //
+  // Simplification works by replacing nearly straight chains of short edges
+  // with longer edges, in a way that preserves the topology of the input
+  // polyline up to the creation of degeneracies.
+  void InitToSimplified(const S2Polyline& polyline,
+                        const S2Builder::SnapFunction& snap_function);
 
   // Return true if the given vertices form a valid polyline.
   bool IsValid() const;
@@ -126,6 +147,12 @@ class S2Polyline final : public S2Region {
   // Prescaling by the polyline length makes it easy to compute the centroid
   // of several polylines (by simply adding up their centroids).
   S2Point GetCentroid() const;
+
+  // If all of the polyline's vertices happen to be the centers of S2Cells at
+  // some level, then returns that level, otherwise returns -1.  See also
+  // InitToSnapped() and s2builderutil::S2CellIdSnapFunction.
+  // Returns -1 if the polyline has no vertices.
+  int GetSnapLevel() const;
 
   // Return the point whose distance from vertex 0 along the polyline is the
   // given fraction of the polyline's total length.  Fractions less than zero
@@ -262,12 +289,25 @@ class S2Polyline final : public S2Region {
   bool Contains(const S2Point& p) const override { return false; }
 
   // Appends a serialized representation of the S2Polyline to "encoder".
+  // Currently just calls EncodeUncompressed().
+  //
+  // TODO(b/128865764): After transition period, replace it with
+  // EncodeMostCompact.
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
   void Encode(Encoder* const encoder) const;
 
-  // Decodes an S2Polyline encoded with Encode().  Returns true on success.
+  // Appends a serialized uncompressed representation of the S2Polyline to
+  // "encoder".
+  void EncodeUncompressed(Encoder* encoder) const;
+
+  // Encode the polylines's vertices using the most compact way: compressed or
+  // uncompressed.
+  void EncodeMostCompact(Encoder* encoder) const;
+
+  // Decodes an S2Polyline encoded with any of Encode*() methods. Returns true
+  // on success.
   bool Decode(Decoder* const decoder);
 
 #ifndef SWIG
@@ -293,14 +333,6 @@ class S2Polyline final : public S2Region {
 
     const S2Polyline* polyline() const { return polyline_; }
 
-    // Encodes the polyline using S2Polyline::Encode().
-    void Encode(Encoder* encoder) const {
-      // TODO(geometry-library): Support compressed encodings.
-      polyline_->Encode(encoder);
-    }
-
-    // Decoding is defined only for S2Polyline::OwningShape below.
-
     // S2Shape interface:
 
     int num_edges() const final {
@@ -323,6 +355,15 @@ class S2Polyline final : public S2Region {
       return ChainPosition(0, e);
     }
     TypeTag type_tag() const override { return kTypeTag; }
+
+    void Encode(Encoder* encoder, s2coding::CodingHint hint) const override {
+      if (hint == s2coding::CodingHint::FAST) {
+        polyline_->EncodeUncompressed(encoder);
+      } else {
+        polyline_->EncodeMostCompact(encoder);
+      }
+    }
+    // Decoding is defined only for S2Polyline::OwningShape below.
 
    private:
     const S2Polyline* polyline_;
@@ -360,6 +401,22 @@ class S2Polyline final : public S2Region {
   // Internal copy constructor used only by Clone() that makes a deep copy of
   // its argument.
   S2Polyline(const S2Polyline& src);
+
+  // Initializes this polyline from input polyline using the given S2Builder.
+  void InitFromBuilder(const S2Polyline& polyline, S2Builder* builder);
+
+  // Encode the polylines's vertices using S2EncodePointsCompressed().
+  void EncodeCompressed(Encoder* encoder,
+                        absl::Span<const S2XYZFaceSiTi> all_vertices,
+                        int snap_level) const;
+
+  // Decode a polyline encoded with EncodeUncompressed(). Used by the Decode
+  // method above.
+  bool DecodeUncompressed(Decoder* const decoder);
+
+  // Decodes a polyline encoded with EncodeCompressed(). Used by the Decode
+  // method above.
+  bool DecodeCompressed(Decoder* decoder);
 
   // Allows overriding the automatic validity checking controlled by the
   // --s2debug flag.

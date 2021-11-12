@@ -19,20 +19,25 @@
 #define S2_S2CELL_ID_H_
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <string>
 #include <vector>
 
+#include "absl/hash/hash.h"
+#include "absl/strings/string_view.h"
+
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
+#include "s2/util/bits/bits.h"
+#include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
 #include "s2/s2coords.h"
-#include "absl/strings/string_view.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
 
@@ -80,12 +85,16 @@ class S2CellId {
   // The extra position bit (61 rather than 60) let us encode each cell as its
   // Hilbert curve position at the cell center (which is halfway along the
   // portion of the Hilbert curve that fills that cell).
-  static const int kFaceBits = 3;
-  static const int kNumFaces = 6;
-  static const int kMaxLevel = S2::kMaxCellLevel;  // Valid levels: 0..kMaxLevel
-  static const int kPosBits = 2 * kMaxLevel + 1;
-  static const int kMaxSize = 1 << kMaxLevel;
+  static constexpr int kFaceBits = 3;
+  static constexpr int kNumFaces = 6;
+  static constexpr int kMaxLevel =
+      S2::kMaxCellLevel;  // Valid levels: 0..kMaxLevel
+  static constexpr int kPosBits = 2 * kMaxLevel + 1;
+  static constexpr int kMaxSize = 1 << kMaxLevel;
 
+  // This arg is uint64 rather than to help the uint64 -> uint64
+  // transition.  TODO(user): Remove inconsistency and update
+  // the rest of util/geometry when these are the same types, ~2020-09-01.
   explicit IFNDEF_SWIG(constexpr) S2CellId(uint64 id) : id_(id) {}
 
   // Construct a leaf cell containing the given point "p".  Usually there is
@@ -252,8 +261,8 @@ class S2CellId {
   // range queries), do not attempt to define "limit" as range_max.next().
   // The problem is that leaf S2CellIds are 2 units apart, so the semi-open
   // interval [min, limit) includes an additional value (range_max.id() + 1)
-  // which is happens to be a valid S2CellId about one-third of the time and
-  // is *never* contained by this cell.  (It always correpsonds to a cell that
+  // which happens to be a valid S2CellId about one-third of the time and
+  // is *never* contained by this cell.  (It always corresponds to a cell that
   // is larger than this one.)  You can define "limit" as (range_max.id() + 1)
   // if necessary (which is not always a valid S2CellId but can still be used
   // with FromToken/ToToken), or you can convert range_max() to the key space
@@ -338,7 +347,11 @@ class S2CellId {
   S2CellId maximum_tile(S2CellId limit) const;
 
   // Returns the level of the lowest common ancestor of this cell and "other",
-  // that is, the maximum level such that parent(level) == other.parent(level).
+  // i.e. the maximum level where this->parent(level) == other.parent(level).
+  // Note that this definition also covers the situation where this cell is a
+  // descendant of "other" or vice versa, or the two cells are the same,
+  // since this->parent(this->level()) == *this.
+  //
   // Returns -1 if the two cells do not have any common ancestor (i.e., they
   // are from different faces).
   int GetCommonAncestorLevel(S2CellId other) const;
@@ -363,8 +376,7 @@ class S2CellId {
   // "x" is an invalid cell id.  All tokens are alphanumeric strings.
   // FromToken() returns S2CellId::None() for malformed inputs.
   std::string ToToken() const;
-  static S2CellId FromToken(const char* token, size_t length);
-  static S2CellId FromToken(const std::string& token);
+  static S2CellId FromToken(absl::string_view token);
 
   // Use encoder to generate a serialized representation of this cell id.
   // Can also encode an invalid cell.
@@ -451,7 +463,8 @@ class S2CellId {
   // This is the offset required to wrap around from the beginning of the
   // Hilbert curve to the end or vice versa; see next_wrap() and prev_wrap().
   // SWIG doesn't understand uint64{}, so use static_cast.
-  static const uint64 kWrapOffset = static_cast<uint64>(kNumFaces) << kPosBits;
+  static constexpr uint64 kWrapOffset = static_cast<uint64>(kNumFaces)
+                                        << kPosBits;
 
   // Given a face and a point (i,j) where either i or j is outside the valid
   // range [0..kMaxSize-1], this function first determines which neighboring
@@ -544,7 +557,7 @@ inline int S2CellId::level() const {
   // We can't just S2_DCHECK(is_valid()) because we want level() to be
   // defined for end-iterators, i.e. S2CellId::End(kLevel).  However there is
   // no good way to define S2CellId::None().level(), so we do prohibit that.
-  S2_DCHECK(id_ != 0);
+  S2_DCHECK_NE(id_, uint64{0});
 
   // A special case for leaf cells is not worthwhile.
   return kMaxLevel - (Bits::FindLSBSetNonZero64(id_) >> 1);
@@ -566,9 +579,7 @@ inline double S2CellId::GetSizeST(int level) {
   return S2::IJtoSTMin(GetSizeIJ(level));
 }
 
-inline bool S2CellId::is_leaf() const {
-  return int(id_) & 1;
-}
+inline bool S2CellId::is_leaf() const { return id_ & 1; }
 
 inline bool S2CellId::is_face() const {
   return (id_ & (lsb_for_level(0) - 1)) == 0;
@@ -693,10 +704,19 @@ inline S2CellId S2CellId::End(int level) {
 std::ostream& operator<<(std::ostream& os, S2CellId id);
 
 // Hasher for S2CellId.
-// Example use: std::unordered_map<S2CellId, int, S2CellIdHash>.
+// Does *not* need to be specified explicitly; this will be used by default for
+// absl::flat_hash_map/set.
+template <typename H>
+H AbslHashValue(H h, S2CellId id) {
+  return H::combine(std::move(h), id.id());
+}
+
+// Legacy hash functor for S2CellId. This only exists for backwards
+// compatibility with old hash types like std::unordered_map that don't use
+// absl::Hash natively.
 struct S2CellIdHash {
   size_t operator()(S2CellId id) const {
-    return std::hash<uint64>()(id.id());
+    return absl::Hash<S2CellId>()(id);
   }
 };
 

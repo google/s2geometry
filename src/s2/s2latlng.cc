@@ -21,7 +21,7 @@
 #include <ostream>
 
 #include "s2/base/logging.h"
-#include "s2/base/stringprintf.h"
+#include "absl/strings/str_format.h"
 
 using std::max;
 using std::min;
@@ -79,11 +79,7 @@ S1Angle S2LatLng::GetDistance(const S2LatLng& o) const {
 
 string S2LatLng::ToStringInDegrees() const {
   S2LatLng pt = Normalized();
-  return StringPrintf("%f,%f", pt.lat().degrees(), pt.lng().degrees());
-}
-
-void S2LatLng::ToStringInDegrees(string* s) const {
-  *s = ToStringInDegrees();
+  return absl::StrFormat("%f,%f", pt.lat().degrees(), pt.lng().degrees());
 }
 
 std::ostream& operator<<(std::ostream& os, const S2LatLng& ll) {

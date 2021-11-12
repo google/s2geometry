@@ -21,13 +21,15 @@
 #include <memory>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <vector>
+
+#include <gtest/gtest.h>
+
+#include "absl/container/flat_hash_map.h"
+#include "absl/flags/flag.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
-#include <gtest/gtest.h>
-
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
@@ -53,9 +55,9 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
   S2RegionCoverer coverer(options);
   vector<S2Cap> caps;
   vector<S2CellUnion> coverings;
-  std::unordered_map<string, vector<int>> index;
+  absl::flat_hash_map<string, vector<int>> index;
   int index_terms = 0, query_terms = 0;
-  for (int i = 0; i < FLAGS_iters; ++i) {
+  for (int i = 0; i < absl::GetFlag(FLAGS_iters); ++i) {
     // Choose the region to be indexed: either a single point or a cap
     // of random size (up to a full sphere).
     S2Cap cap;
@@ -76,7 +78,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     }
     index_terms += terms.size();
   }
-  for (int i = 0; i < FLAGS_iters; ++i) {
+  for (int i = 0; i < absl::GetFlag(FLAGS_iters); ++i) {
     // Choose the region to be queried: either a random point or a cap of
     // random size.
     S2Cap cap;
@@ -105,8 +107,8 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     query_terms += terms.size();
   }
   printf("Index terms/doc: %.2f,  Query terms/doc: %.2f\n",
-         static_cast<double>(index_terms) / FLAGS_iters,
-         static_cast<double>(query_terms) / FLAGS_iters);
+         static_cast<double>(index_terms) / absl::GetFlag(FLAGS_iters),
+         static_cast<double>(query_terms) / absl::GetFlag(FLAGS_iters));
 }
 
 // We run one test case for each combination of space vs. time optimization,

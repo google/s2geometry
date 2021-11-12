@@ -23,10 +23,12 @@
 #include <iterator>
 #include <utility>
 #include <vector>
+
 #include "s2/base/integral_types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
+#include "s2/s2memory_tracker.h"
 
 // An S2Builder::Graph represents a collection of snapped edges that is passed
 // to a Layer for assembly.  (Example layers include polygons, polylines, and
@@ -95,9 +97,11 @@ class S2Builder::Graph {
   // "label_set_ids":
   //   - a vector indexed by InputEdgeId that allows access to the set of
   //     labels that were attached to the given input edge, by looking up the
-  //     returned value (a LabelSetId) in the "label_set_lexicon".
+  //     returned value (a LabelSetId) in the "label_set_lexicon".  This
+  //     vector may be empty to indicate that no labels are present.
   // "label_set_lexicon":
-  //   - a class that maps a LabelSetId to a set of S2Builder::Labels.
+  //   - a class that maps a LabelSetId to a set of S2Builder::Labels.  (Must
+  //     be provided even if no labels are present.)
   // "is_full_polygon_predicate":
   //   - a predicate called to determine whether a graph consisting only of
   //     polygon degeneracies represents the empty polygon or the full polygon
@@ -143,8 +147,9 @@ class S2Builder::Graph {
   // from EdgeId to the sibling EdgeId.  This method is identical to
   // GetInEdgeIds() except that (1) it requires edges to have siblings, and
   // (2) undirected degenerate edges are grouped together in pairs such that
-  // one edge is the sibling of the other.  Handles duplicate edges correctly
-  // and is also consistent with GetLeftTurnMap().
+  // one edge is the sibling of the other.  (The sibling of a directed
+  // degenerate edge is itself.)  Handles duplicate edges correctly and is
+  // also consistent with GetLeftTurnMap().
   //
   // REQUIRES: An option is chosen that guarantees sibling pairs:
   //     (options.sibling_pairs() == { REQUIRE, CREATE } ||
@@ -153,9 +158,9 @@ class S2Builder::Graph {
 
   // Like GetSiblingMap(), but constructs the map starting from the vector of
   // incoming edge ids returned by GetInEdgeIds().  (This operation is a no-op
-  // except unless undirected degenerate edges are present, in which case such
-  // edges are grouped together in pairs to satisfy the requirement that every
-  // edge must have a sibling edge.)
+  // unless undirected degenerate edges are present, in which case such edges
+  // are grouped together in pairs to satisfy the requirement that every edge
+  // must have a sibling edge.)
   void MakeSiblingMap(std::vector<EdgeId>* in_edge_ids) const;
 
   class VertexOutMap;  // Forward declaration
@@ -268,12 +273,12 @@ class S2Builder::Graph {
   };
 
   // Defines a value larger than any valid InputEdgeId.
-  static const InputEdgeId kMaxInputEdgeId =
+  static constexpr InputEdgeId kMaxInputEdgeId =
       std::numeric_limits<InputEdgeId>::max();
 
   // The following value of InputEdgeId means that an edge does not
   // corresponds to any input edge.
-  static const InputEdgeId kNoInputEdgeId = kMaxInputEdgeId - 1;
+  static constexpr InputEdgeId kNoInputEdgeId = kMaxInputEdgeId - 1;
 
   // Returns the set of input edge ids that were snapped to the given
   // edge.  ("Input edge ids" are assigned to input edges sequentially in
@@ -361,6 +366,7 @@ class S2Builder::Graph {
 
   // Returns the set of labels associated with a given input edge.  Example:
   //   for (Label label : g.labels(input_edge_id)) { ... }
+  // See also LabelFetcher, which returns the labels for a given graph edge.
   IdSetLexicon::IdSet labels(InputEdgeId e) const;
 
   // Low-level method that returns an integer representing the set of
@@ -369,7 +375,8 @@ class S2Builder::Graph {
   LabelSetId label_set_id(InputEdgeId e) const;
 
   // Low-level method that returns a vector where each element represents the
-  // set of labels associated with a particular output edge.
+  // set of labels associated with a particular input edge.  Note that this
+  // vector may be empty, which indicates that no labels are present.
   const std::vector<LabelSetId>& label_set_ids() const;
 
   // Returns a mapping from a LabelSetId to a set of labels.
@@ -588,13 +595,21 @@ class S2Builder::Graph {
   // which input edges were snapped to each edge.  This vector is also updated
   // appropriately as edges are discarded, merged, etc.
   //
-  // Note that "options" may be modified by this method: in particular, the
-  // edge_type() can be changed if sibling_pairs() is CREATE or REQUIRE (see
-  // the description of S2Builder::GraphOptions).
+  // Note that "options" may be modified by this method: in particular, if
+  // edge_type() is UNDIRECTED and sibling_pairs() is CREATE or REQUIRE, then
+  // half of the edges in each direction will be discarded and edge_type()
+  // will be changed to DIRECTED (see S2Builder::GraphOptions::SiblingPairs).
+  //
+  // If "tracker" is provided then the memory usage of this method is tracked
+  // and an error is returned if the specified memory limit would be exceeded.
+  // This option requires that "new_edges" and "new_input_edge_id_set_ids" are
+  // already being tracked, i.e. their current memory usage is reflected in
+  // "tracker".  Note that "id_set_lexicon" typically uses a negligible amount
+  // of memory and is not tracked.
   static void ProcessEdges(
       GraphOptions* options, std::vector<Edge>* edges,
       std::vector<InputEdgeIdSetId>* input_ids, IdSetLexicon* id_set_lexicon,
-      S2Error* error);
+      S2Error* error, S2MemoryTracker::Client* tracker = nullptr);
 
   // Given a set of vertices and edges, removes all vertices that do not have
   // any edges and returned the new, minimal set of vertices.  Also updates
@@ -622,6 +637,42 @@ class S2Builder::Graph {
   // their edge ids.
   static bool StableLessThan(const Edge& a, const Edge& b,
                              EdgeId ai, EdgeId bi);
+
+  // Constructs a new graph with the given GraphOptions and containing the
+  // given edges.  Each edge is associated with a (possibly empty) set of
+  // input edges as specified by new_input_edge_id_set_ids (which must be the
+  // same length as "new_edges") and the given IdSetLexicon (which allows
+  // looking up the set of input edge ids associated with a graph edge).
+  // Finally, the subgraph may also specify a new IsFullPolygonPredicate
+  // (which is used to distinguish an empty polygon possibly with degenerate
+  // shells from a full polygon possibly with degenerate holes).
+  //
+  // The output graph has the same set of vertices and edge labels as the
+  // input graph (noting that edge labels are associated with *input* edges,
+  // not graph edges).
+  //
+  // If new_options.edge_type() is UNDIRECTED then note the following:
+  //
+  //  - If this->options().edge_type() is DIRECTED then each input edge will
+  //    be transformed into a pair of directed edges before calling
+  //    ProcessEdges() above.
+  //
+  //  - If new_options.sibling_pairs() is CREATE or REQUIRE then ProcessEdges()
+  //    will discard half of the edges in each direction and change edge_type()
+  //    to DIRECTED (see S2Builder::GraphOptions::SiblingPairs).
+  //
+  // If "tracker" is provided then the memory usage of this method is tracked
+  // and an error is returned if the specified memory limit would be exceeded.
+  // This option requires that "new_edges" and "new_input_edge_id_set_ids" are
+  // already being tracked, i.e. their current memory usage is reflected in
+  // "tracker".  Note that "id_set_lexicon" typically uses a negligible amount
+  // of memory and is not tracked.
+  Graph MakeSubgraph(
+      GraphOptions new_options, std::vector<Edge>* new_edges,
+      std::vector<InputEdgeIdSetId>* new_input_edge_id_set_ids,
+      IdSetLexicon* new_input_edge_id_set_lexicon,
+      IsFullPolygonPredicate is_full_polygon_predicate,
+      S2Error* error, S2MemoryTracker::Client* tracker = nullptr) const;
 
  private:
   class EdgeProcessor;
@@ -758,12 +809,14 @@ inline const IdSetLexicon& S2Builder::Graph::input_edge_id_set_lexicon() const {
   return *input_edge_id_set_lexicon_;
 }
 
-inline IdSetLexicon::IdSet S2Builder::Graph::labels(LabelSetId id) const {
-  return label_set_lexicon().id_set(label_set_ids()[id]);
+inline IdSetLexicon::IdSet S2Builder::Graph::labels(InputEdgeId e) const {
+  return label_set_lexicon().id_set(label_set_id(e));
 }
 
-inline S2Builder::LabelSetId S2Builder::Graph::label_set_id(EdgeId e) const {
-  return label_set_ids()[e];
+inline S2Builder::LabelSetId S2Builder::Graph::label_set_id(InputEdgeId e)
+    const {
+  return label_set_ids().empty() ? IdSetLexicon::EmptySetId()
+                                 : label_set_ids()[e];
 }
 
 inline const std::vector<S2Builder::LabelSetId>&

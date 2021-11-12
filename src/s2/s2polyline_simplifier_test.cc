@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
+#include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
@@ -98,6 +99,33 @@ TEST(S2PolylineSimplifier, AvoidOnePoint) {
   // Three points where the middle point is on the left, but where the client
   // requires the point to be on the right of the edge.
   CheckSimplify("0:0", "0:2", "", "1:1", {false}, 1e-10, false);
+
+  // Check cases where the point to be avoided is behind the source vertex.
+  // In this situation "disc_on_left" should not affect the result.
+  CheckSimplify("0:0", "0:2", "", "1:-1", {false}, 1.4, true);
+  CheckSimplify("0:0", "0:2", "", "1:-1", {true}, 1.4, true);
+  CheckSimplify("0:0", "0:2", "", "-1:-1", {false}, 1.4, true);
+  CheckSimplify("0:0", "0:2", "", "-1:-1", {true}, 1.4, true);
+}
+
+TEST(S2PolylineSimplifier, AvoidSeveralPoints) {
+  // Tests that when several discs are avoided but none are targeted, the
+  // range of acceptable edge directions is not represented a single interval.
+  // (The output edge can proceed through any gap between the discs as long as
+  // the "disc_on_left" criteria are satisfied.)
+  //
+  // This test involves 3 very small discs spaced 120 degrees apart around the
+  // source vertex, where "disc_on_left" is true for all discs.  This means
+  // that each disc blocks the 90 degrees of potential output directions just
+  // to its left, leave 3 gaps measuring about 30 degrees each.
+  for (const auto& dst : {"0:2", "1.732:-1", "-1.732:-1"}) {
+    CheckSimplify("0:0", dst, "", "0.01:2, 1.732:-1.01, -1.732:-0.99",
+                  {true, true, true}, 0.00001, true);
+
+    // Also test that directions prohibited by "disc_on_left" are avoided.
+    CheckSimplify("0:0", dst, "", "0.01:2, 1.732:-1.01, -1.732:-0.99",
+                  {false, false, false}, 0.00001, false);
+  }
 }
 
 TEST(S2PolylineSimplifier, TargetAndAvoid) {
@@ -142,11 +170,17 @@ TEST(S2PolylineSimplifier, Precision) {
     const int kNumDiscs = 5;
     int bad_disc = S2Testing::rnd.Uniform(2 * kNumDiscs) - kNumDiscs;
     for (int i = 0; i < kNumDiscs; ++i) {
-      double f = S2Testing::rnd.RandDouble();
+      // The center of the disc projects to a point that is the given fraction
+      // "f" along the edge (src, dst).  If f < 0, the center is located
+      // behind "src" (in order to test this case).
+      double f = S2Testing::rnd.UniformDouble(-0.5, 1.0);
       S2Point a = ((1 - f) * src + f * dst).Normalize();
       S1Angle r = S1Angle::Radians(S2Testing::rnd.RandDouble());
       bool on_left = S2Testing::rnd.OneIn(2);
       S2Point x = S2::InterpolateAtDistance(r, a, on_left ? n : -n);
+      // If the disc is behind "src", adjust its radius so that it just
+      // touches "src" rather than just touching the line through (src, dst).
+      if (f < 0) r = S1Angle(src, x);
       // We grow the radius slightly if we want to target the disc and shrink
       // it otherwise, *unless* we want targeting to fail for this disc, in
       // which case these actions are reversed.

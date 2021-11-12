@@ -161,3 +161,10 @@ TEST(S2ShapeIndexBufferedRegion, PolygonWithHole) {
   TestBufferIndex("# # 10:10, 10:100, 70:0; 11:11, 69:0, 11:99",
                   S1Angle::Degrees(2), &coverer);
 }
+
+TEST(S2ShapeIndexBufferedRegion, HugeBufferRadius) {
+  // Test buffering a set of points.
+  S2RegionCoverer coverer;
+  coverer.mutable_options()->set_max_cells(100);
+  TestBufferIndex("10:20 # #", S1Angle::Degrees(200), &coverer);
+}

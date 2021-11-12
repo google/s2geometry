@@ -40,7 +40,9 @@
 #include <cstddef>
 #include <cstring>
 #include <sys/types.h>
+
 #include <algorithm>
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <ostream>  // NOLINT
@@ -48,11 +50,12 @@
 #include <type_traits>
 #include <utility>
 
+#include "absl/base/macros.h"
+#include "absl/meta/type_traits.h"
+
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "absl/base/macros.h"
 #include "s2/base/port.h"
-#include "absl/meta/type_traits.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/gtl/container_logging.h"
 
@@ -70,14 +73,14 @@ class compact_array_base {
   static const int kMaxSize = (1 << kSizeNumBits) - 1;
 
 #ifdef IS_LITTLE_ENDIAN
-  uint32 size_        : kSizeNumBits;      // number of valid items in the array
-  uint32 capacity_    : kCapacityNumBits;  // allocated array size
-  uint32 is_exponent_ : 1;                 // whether capacity_ is an exponent
+  uint32 size_ : kSizeNumBits;          // number of valid items in the array
+  uint32 capacity_ : kCapacityNumBits;  // allocated array size
+  uint32 is_exponent_ : 1;              // whether capacity_ is an exponent
 
   // This object might share memory representation (ie. union) with
   // other data structures. We reserved the DO_NOT_USE (32nd bit in
   // little endian format) to be used as a tag.
-  uint32 DO_NOT_USE   : 1;
+  uint32 DO_NOT_USE : 1;
 #else
   uint32 DO_NOT_USE   : 1;
   uint32 is_exponent_ : 1;
@@ -155,7 +158,7 @@ class compact_array_base {
   typedef const value_type*                     const_pointer;
   typedef value_type&                           reference;
   typedef const value_type&                     const_reference;
-  typedef uint32                                size_type;
+  typedef uint32 size_type;
   typedef ptrdiff_t                             difference_type;
 
   typedef value_type*                           iterator;
@@ -274,6 +277,15 @@ class compact_array_base {
     insert(p, first, last, Int());
   }
 
+  template <typename... Args>
+  reference emplace_back(Args&&... args) {
+    return *Insert(end(), value_type(std::forward<Args>(args)...));
+  }
+  template <typename... Args>
+  iterator emplace(const_iterator p, Args&&... args) {
+    return Insert(p, value_type(std::forward<Args>(args)...));
+  }
+
   iterator erase(const_iterator p) {
     size_type index = p - begin();
     erase_aux(p, 1);
@@ -353,6 +365,13 @@ class compact_array_base {
         new (p) value_type();
     }
     set_size(n);
+  }
+
+  template <typename H>
+  friend H AbslHashValue(H h, const compact_array_base& v) {
+    return H::combine(
+        H::combine_contiguous(std::move(h), v.ConstArray(), v.size()),
+        v.size());
   }
 
  private:                               // Low-level helper functions.

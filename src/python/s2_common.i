@@ -79,9 +79,19 @@
 // when given a list parameter.  SWIG_Python_ConvertPtrAndOwn calls
 // SWIG_Python_GetSwigThis, doesn't find the 'this' attribute and gives up.
 // To avoid this problem rename the Polyline::Init methods so they aren't
-// overloaded.
-%rename(InitFromS2LatLngs) S2Polyline::Init(std::vector<S2LatLng> const& vertices);
-%rename(InitFromS2Points) S2Polyline::Init(std::vector<S2Point> const& vertices);
+// overloaded.  We also need to reimplement them since SWIG doesn't
+// seem to understand absl::Span.
+%extend S2Polyline {
+ public:
+  void InitFromS2LatLngs(const std::vector<S2LatLng>& vertices) {
+    $self->Init(absl::MakeConstSpan(vertices));
+  }
+
+  void InitFromS2Points(const std::vector<S2Point>& vertices) {
+    $self->Init(absl::MakeConstSpan(vertices));
+  }
+ };
+
 // And similarly for the overloaded S2CellUnion::Normalize method.
 %rename(NormalizeS2CellUnion) S2CellUnion::Normalize();
 
@@ -181,6 +191,18 @@ class S2Point {
  public:
   S2LatLng GetS2LatLngEdge(int k) {
     return S2LatLng($self->GetEdge(k));
+  }
+};
+
+// The extensions below exist to work around the use of absl::Span.
+%extend S2Loop {
+ public:
+  explicit S2Loop(const std::vector<S2Point>& vertices) {
+    return new S2Loop(absl::MakeConstSpan(vertices));
+  }
+
+  void Init(const std::vector<S2Point>& vertices) {
+    $self->Init(absl::MakeConstSpan(vertices));
   }
 };
 
@@ -297,6 +319,57 @@ class S2Point {
   }
 }
 
+// Raise ValueError for any functions that would trigger a S2_CHECK/S2_DCHECK.
+%pythonprepend S2CellId::child %{
+  if not self.is_valid():
+    raise ValueError("S2CellId must be valid.")
+  if self.is_leaf():
+    raise ValueError("S2CellId must be non-leaf.")
+
+  if not 0 <= position < 4:
+    raise ValueError("Position must be 0-3.")
+%}
+
+// TODO(jrosenstock): child_begin()
+// TODO(jrosenstock): child_end()
+
+%pythonprepend S2CellId::child_position(int) const %{
+  if not self.is_valid():
+    raise ValueError("S2CellId must be valid.")
+  if level < 1 or level > self.level():
+    raise ValueError("level must must be in range [1, S2 cell level]")
+%}
+
+%pythonprepend S2CellId::contains %{
+  if not self.is_valid() or not other.is_valid():
+    raise ValueError("Both S2CellIds must be valid.")
+%}
+
+%pythonprepend S2CellId::intersects %{
+  if not self.is_valid() or not other.is_valid():
+    raise ValueError("Both S2CellIds must be valid.")
+%}
+
+%pythonprepend S2CellId::level %{
+  # As in the C++ version:
+  # We can't just check is_valid() because we want level() to be
+  # defined for end-iterators, i.e. S2CellId.End(level).  However there is
+  # no good way to define S2CellId::None().level(), so we do prohibit that.
+  if self.id() == 0:
+    raise ValueError("None has no level.")
+%}
+
+%pythonprepend S2CellId::parent %{
+  if not self.is_valid():
+    raise ValueError("S2CellId must be valid.")
+  if len(args) == 1:
+    level, = args
+    if level < 0:
+      raise ValueError("Level must be non-negative.")
+    if level > self.level():
+      raise ValueError("Level must be less than or equal to cell's level.")
+%}
+
 %ignoreall
 
 %unignore R1Interval;
@@ -379,14 +452,17 @@ class S2Point {
 %unignore S2CellId::S2CellId;
 %unignore S2CellId::~S2CellId;
 %unignore S2CellId::AppendAllNeighbors(int, std::vector<S2CellId>*) const;
-%rename(GetAllNeighbors) S2CellId::AppendAllNeighbors(int level, std::vector<S2CellId>* output) const;
+%rename(GetAllNeighbors) S2CellId::AppendAllNeighbors(int, std::vector<S2CellId>*) const;
+%unignore S2CellId::AppendVertexNeighbors(int, std::vector<S2CellId>*) const;
+%rename(GetVertexNeighbors) S2CellId::AppendVertexNeighbors(int, std::vector<S2CellId>*) const;
 %unignore S2CellId::Begin;
 %unignore S2CellId::End;
+%unignore S2CellId::FromDebugString(absl::string_view);
 %unignore S2CellId::FromFaceIJ(int, int, int);
 %unignore S2CellId::FromFacePosLevel(int, uint64, int);
 %unignore S2CellId::FromLatLng;
 %unignore S2CellId::FromPoint;
-%unignore S2CellId::FromToken(const std::string&);
+%unignore S2CellId::FromToken(absl::string_view);
 %unignore S2CellId::GetCenterSiTi(int*, int*) const;
 %unignore S2CellId::GetEdgeNeighbors;
 %unignore S2CellId::ToFaceIJOrientation(int*, int*, int*) const;
@@ -397,10 +473,12 @@ class S2Point {
 %unignore S2CellId::child;
 %unignore S2CellId::child_begin;
 %unignore S2CellId::child_end;
+%unignore S2CellId::child_position(int) const;
 %unignore S2CellId::contains;
 %unignore S2CellId::face;
 %unignore S2CellId::id;
 %unignore S2CellId::intersects;
+%unignore S2CellId::is_leaf;
 %unignore S2CellId::is_face;
 %unignore S2CellId::is_valid;
 %unignore S2CellId::kMaxLevel;
@@ -429,7 +507,7 @@ class S2Point {
 %unignore S2CellUnion::Init(std::vector<uint64> const &);
 %unignore S2CellUnion::Intersection;
 %unignore S2CellUnion::Intersects;
-%unignore S2CellUnion::IsNormalized;
+%unignore S2CellUnion::IsNormalized() const;
 %unignore S2CellUnion::MayIntersect(const S2Cell&) const;
 // SWIG doesn't handle disambiguation of the overloaded Normalize methods, so
 // the Normalize() instance method is renamed to NormalizeS2CellUnion.
@@ -530,19 +608,18 @@ class S2Point {
 %unignore S2LatLngRect::lng_lo;
 %unignore S2LatLngRect::lo;
 %unignore S2Loop;
-%unignore S2Loop::S2Loop;
 %unignore S2Loop::~S2Loop;
 %unignore S2Loop::Clone;
 %unignore S2Loop::Contains;
 %unignore S2Loop::Decode;
 %unignore S2Loop::Encode;
 %unignore S2Loop::Equals;
+%unignore S2Loop::GetArea;
 %unignore S2Loop::GetCapBound() const;
 %unignore S2Loop::GetCentroid;
 %unignore S2Loop::GetDistance;
 %unignore S2Loop::GetRectBound;
 %unignore S2Loop::GetS2LatLngVertex;
-%unignore S2Loop::Init;
 %unignore S2Loop::Intersects;
 %unignore S2Loop::IsNormalized() const;
 %unignore S2Loop::IsValid;
@@ -558,6 +635,7 @@ class S2Point {
 %unignore S2Polygon;
 %unignore S2Polygon::S2Polygon;
 %unignore S2Polygon::~S2Polygon;
+%unignore S2Polygon::BoundaryNear;
 %unignore S2Polygon::Clone;
 %unignore S2Polygon::Contains;
 %unignore S2Polygon::Copy;
@@ -568,6 +646,7 @@ class S2Point {
 %unignore S2Polygon::GetCapBound() const;
 %unignore S2Polygon::GetCentroid;
 %unignore S2Polygon::GetDistance;
+%unignore S2Polygon::GetLastDescendant(int) const;
 %unignore S2Polygon::GetOverlapFractions(const S2Polygon*, const S2Polygon*);
 %unignore S2Polygon::GetRectBound;
 %unignore S2Polygon::Init;
@@ -597,8 +676,6 @@ class S2Point {
 %unignore S2Polyline::GetLength;
 %unignore S2Polyline::GetRectBound;
 %unignore S2Polyline::GetSuffix;
-%unignore S2Polyline::InitFromS2LatLngs;
-%unignore S2Polyline::InitFromS2Points;
 %unignore S2Polyline::Interpolate;
 %unignore S2Polyline::Intersects;
 %unignore S2Polyline::IsOnRight;
@@ -656,7 +733,7 @@ class S2Point {
   %extend type {
     std::string __str__() {
       std::ostringstream output;
-      output << *self << std::ends;
+      output << *$self << std::ends;
       return output.str();
     }
   }
@@ -677,11 +754,11 @@ class S2Point {
 %define USE_EQUALS_FOR_EQ_AND_NE(type)
   %extend type {
     bool __eq__(const type& other) {
-      return *self == other;
+      return *$self == other;
     }
 
     bool __ne__(const type& other) {
-      return *self != other;
+      return *$self != other;
     }
   }
 %enddef
@@ -689,11 +766,11 @@ class S2Point {
 %define USE_COMPARISON_FOR_LT_AND_GT(type)
   %extend type {
     bool __lt__(const type& other) {
-      return *self < other;
+      return *$self < other;
     }
 
     bool __gt__(const type& other) {
-      return *self > other;
+      return *$self > other;
     }
   }
 %enddef
@@ -701,7 +778,7 @@ class S2Point {
 %define USE_HASH_FOR_TYPE(type, hash_type)
   %extend type {
     size_t __hash__() {
-      return hash_type()(*self);
+      return hash_type()(*$self);
     }
   }
 %enddef

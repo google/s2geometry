@@ -24,6 +24,8 @@ using std::vector;
 
 namespace s2coding {
 
+// Make sure that this class is compact since it is extensively used.
+// 16 for 64-bit, 12 for 32-bit.
 static_assert(sizeof(EncodedUintVector<uint64>) <= 16, "too big");
 
 template <class T>
@@ -119,6 +121,23 @@ TEST(EncodedUintVector, LowerBound) {
       }
     }
   }
+}
+
+TEST(EncodedUintVectorTest, RoundtripEncoding) {
+  std::vector<uint64> values{10, 20, 30, 40};
+
+  Encoder a_encoder;
+  auto a = MakeEncodedVector<uint64>(values, &a_encoder);
+  ASSERT_EQ(a.Decode(), values);
+
+  Encoder b_encoder;
+  a.Encode(&b_encoder);
+  Decoder decoder(b_encoder.base(), b_encoder.length());
+
+  EncodedUintVector<uint64> v2;
+  ASSERT_TRUE(v2.Init(&decoder));
+
+  EXPECT_EQ(v2.Decode(), values);
 }
 
 }  // namespace s2coding

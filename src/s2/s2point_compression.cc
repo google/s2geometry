@@ -19,14 +19,15 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
-#include "s2/s2cell_id.h"
-#include "s2/s2coords.h"
 #include "absl/base/casts.h"
 #include "absl/base/macros.h"
 #include "absl/container/fixed_array.h"
 #include "absl/types/span.h"
+
+#include "s2/base/integral_types.h"
+#include "s2/base/logging.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2coords.h"
 #include "s2/util/bits/bit-interleave.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/nth-derivative.h"

@@ -21,7 +21,10 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+
 #include "absl/memory/memory.h"
+#include "absl/strings/string_view.h"
+
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2boolean_operation.h"
 #include "s2/s2builder.h"
@@ -80,7 +83,8 @@ class NormalizeTest : public testing::Test {
 
  private:
   static string ToString(const Graph& g);
-  void AddLayers(const string& str, const vector<GraphOptions>& graph_options,
+  void AddLayers(absl::string_view str,
+                 const vector<GraphOptions>& graph_options,
                  vector<Graph>* graphs_out, S2Builder* builder);
 
   vector<unique_ptr<GraphClone>> graph_clones_;
@@ -107,9 +111,9 @@ void NormalizeTest::Run(const string& input_str,
   }
 }
 
-void NormalizeTest::AddLayers(
-    const string& str, const vector<GraphOptions>& graph_options,
-    vector<Graph>* graphs_out, S2Builder* builder) {
+void NormalizeTest::AddLayers(absl::string_view str,
+                              const vector<GraphOptions>& graph_options,
+                              vector<Graph>* graphs_out, S2Builder* builder) {
   auto index = s2textformat::MakeIndex(str);
   for (int dim = 0; dim < 3; ++dim) {
     builder->StartLayer(make_unique<GraphAppendingLayer>(

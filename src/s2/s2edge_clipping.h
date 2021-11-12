@@ -56,8 +56,7 @@ using FaceSegmentVector = absl::InlinedVector<FaceSegment, 6>;
 // from A to B, and that all vertices are within kFaceClipErrorUVDist of the
 // line AB.  All vertices lie within the [-1,1]x[-1,1] cube face rectangles.
 // The results are consistent with s2pred::Sign(), i.e. the edge is
-// well-defined even its endpoints are antipodal.  [TODO(ericv): Extend the
-// implementation of S2::RobustCrossProd so that this statement is true.]
+// well-defined even its endpoints are antipodal.
 void GetFaceSegments(const S2Point& a, const S2Point& b,
                      FaceSegmentVector* segments);
 

@@ -106,7 +106,7 @@ class LaxPolygonLayer : public S2Builder::Layer {
     // since it maintains the closest fidelity to the original geometry.)
     //
     // DEFAULT: DegenerateBoundaries::KEEP
-    enum class DegenerateBoundaries {
+    enum class DegenerateBoundaries : uint8 {
       DISCARD, DISCARD_HOLES, DISCARD_SHELLS, KEEP
     };
     DegenerateBoundaries degenerate_boundaries() const;

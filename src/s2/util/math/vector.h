@@ -22,7 +22,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
+#include <initializer_list>
 #include <iosfwd>
 #include <iostream>  // NOLINT(readability/streams)
 #include <limits>
@@ -63,7 +65,7 @@ class BasicVector {
 
   template <typename R = D, std::size_t... Is, typename F, typename... As>
   static R GenerateEach(absl::index_sequence<Is...>, F f, As*... as) {
-    return R(Reduce<Is>(f, as...)...);
+    return R(Reduce<Is>(std::move(f), as...)...);
   }
 
   // Generate<R>(f,a,b,...) returns an R(...), where the constructor arguments
@@ -71,7 +73,8 @@ class BasicVector {
   // and with a,b,...  all optional.
   template <typename R = D, typename F, typename... As>
   static R Generate(F f, As&&... as) {
-    return GenerateEach<R>(IdxSeqN(), f, std::forward<As>(as).Data()...);
+    return GenerateEach<R>(IdxSeqN(), std::move(f),
+                           std::forward<As>(as).Data()...);
   }
 
  public:
@@ -118,19 +121,19 @@ class BasicVector {
   }
 
   D& operator*=(T k) {
-    MulEq(static_cast<D&>(*this).Data(), k, IdxSeqN{});
+    MulEq(static_cast<D&>(*this).Data(), std::move(k), IdxSeqN{});
     return static_cast<D&>(*this);
   }
 
   D& operator/=(T k) {
-    DivEq(static_cast<D&>(*this).Data(), k, IdxSeqN{});
+    DivEq(static_cast<D&>(*this).Data(), std::move(k), IdxSeqN{});
     return static_cast<D&>(*this);
   }
 
   D operator+(const D& b) const { return D(AsD()) += b; }
   D operator-(const D& b) const { return D(AsD()) -= b; }
-  D operator*(T k) const { return D(AsD()) *= k; }
-  D operator/(T k) const { return D(AsD()) /= k; }
+  D operator*(T k) const { return D(AsD()) *= std::move(k); }
+  D operator/(T k) const { return D(AsD()) /= std::move(k); }
 
   friend D operator-(const D& a) {
     return Generate([](const T& x) { return -x; }, a);
@@ -186,7 +189,7 @@ class BasicVector {
     if (n != T(0.0)) {
       n = T(1.0) / n;
     }
-    return D(AsD()) *= n;
+    return D(AsD()) *= std::move(n);
   }
 
   // Compose a vector from the sqrt of each component.
@@ -199,12 +202,22 @@ class BasicVector {
 
   // Take the floor of each component.
   D Floor() const {
-    return Generate([](const T& x) { return floor(x); }, AsD());
+    return Generate(
+        [](const T& x) {
+          using std::floor;
+          return floor(x);
+        },
+        AsD());
   }
 
   // Take the ceil of each component.
   D Ceil() const {
-    return Generate([](const T& x) { return ceil(x); }, AsD());
+    return Generate(
+        [](const T& x) {
+          using std::ceil;
+          return ceil(x);
+        },
+        AsD());
   }
 
   // Round of each component.
@@ -255,6 +268,12 @@ class BasicVector {
     return Generate([k](const T& x) { return k / x; }, AsD());
   }
 
+  template <typename H>
+  friend H AbslHashValue(H h, const BasicVector& vec) {
+    return H::combine_contiguous(std::move(h),
+                                 static_cast<const D&>(vec).Data(), vec.Size());
+  }
+
  private:
   const D& AsD() const { return static_cast<const D&>(*this); }
   D& AsD() { return static_cast<D&>(*this); }
@@ -263,7 +282,9 @@ class BasicVector {
   // Cast to int so that numbers will be printed instead.
   template <typename U>
   static void Print(std::ostream& out, const U& v) { out << v; }
-  static void Print(std::ostream& out, uint8 v) { out << static_cast<int>(v); }
+  static void Print(std::ostream& out, uint8 v) {
+    out << static_cast<int>(v);
+  }
 
   // Ignores its arguments so that side-effects of variadic unpacking can occur.
   static void Ignore(std::initializer_list<bool>) {}
@@ -328,8 +349,8 @@ class Vector2
 
   Vector2() : c_() {}
   Vector2(T x, T y) {
-    c_[0] = x;
-    c_[1] = y;
+    c_[0] = std::move(x);
+    c_[1] = std::move(y);
   }
   explicit Vector2(const Vector3<T> &b) : Vector2(b.x(), b.y()) {}
   explicit Vector2(const Vector4<T> &b) : Vector2(b.x(), b.y()) {}
@@ -347,7 +368,7 @@ class Vector2
     return (fabs(c_[0]-vb.c_[0]) < margin) && (fabs(c_[1]-vb.c_[1]) < margin);
   }
 
-  void Set(T x, T y) { *this = Vector2(x, y); }
+  void Set(T x, T y) { *this = Vector2(std::move(x), std::move(y)); }
 
   // Cross product.  Be aware that if T is an integer type, the high bits
   // of the result are silently discarded.
@@ -355,9 +376,9 @@ class Vector2
     return c_[0] * vb.c_[1] - c_[1] * vb.c_[0];
   }
 
-  // Returns the angle between "this" and v in radians. If either vector is
-  // zero-length, or nearly zero-length, the result will be zero, regardless of
-  // the other value.
+  // Returns the angle from "this" to v in the counterclockwise direction in
+  // radians. Result range: [-pi, pi]. If either vector is zero-length, or
+  // nearly zero-length, the result will be zero, regardless of the other value.
   FloatType Angle(const Vector2 &v) const {
     using std::atan2;
     return atan2(CrossProd(v), this->DotProd(v));
@@ -397,9 +418,9 @@ class Vector3
 
   Vector3() : c_() {}
   Vector3(T x, T y, T z) {
-    c_[0] = x;
-    c_[1] = y;
-    c_[2] = z;
+    c_[0] = std::move(x);
+    c_[1] = std::move(y);
+    c_[2] = std::move(z);
   }
   Vector3(const Vector2<T> &b, T z) : Vector3(b.x(), b.y(), z) {}
   explicit Vector3(const Vector4<T> &b) : Vector3(b.x(), b.y(), b.z()) {}
@@ -421,7 +442,9 @@ class Vector3
         && (abs(c_[2] - vb.c_[2]) < margin);
   }
 
-  void Set(T x, T y, T z) { *this = Vector3(x, y, z); }
+  void Set(T x, T y, T z) {
+    *this = Vector3(std::move(x), std::move(y), std::move(z));
+  }
 
   // Cross product.  Be aware that if VType is an integer type, the high bits
   // of the result are silently discarded.
@@ -440,12 +463,12 @@ class Vector3
     return CrossProd(temp).Normalize();
   }
 
-  // Returns the angle between two vectors in radians. If either vector is
-  // zero-length, or nearly zero-length, the result will be zero, regardless of
-  // the other value.
-  FloatType Angle(const Vector3 &va) const {
+  // Returns the angle between "this" and v in radians, in the range [0, pi]. If
+  // either vector is zero-length, or nearly zero-length, the result will be
+  // zero, regardless of the other value.
+  FloatType Angle(const Vector3& v) const {
     using std::atan2;
-    return atan2(CrossProd(va).Norm(), this->DotProd(va));
+    return atan2(CrossProd(v).Norm(), this->DotProd(v));
   }
 
   Vector3 Fabs() const {
@@ -496,18 +519,18 @@ class Vector4
 
   Vector4() : c_() {}
   Vector4(T x, T y, T z, T w) {
-    c_[0] = x;
-    c_[1] = y;
-    c_[2] = z;
-    c_[3] = w;
+    c_[0] = std::move(x);
+    c_[1] = std::move(y);
+    c_[2] = std::move(z);
+    c_[3] = std::move(w);
   }
 
   Vector4(const Vector2<T> &b, T z, T w)
       : Vector4(b.x(), b.y(), z, w) {}
   Vector4(const Vector2<T> &a, const Vector2<T> &b)
       : Vector4(a.x(), a.y(), b.x(), b.y()) {}
-  Vector4(const Vector3<T> &b, T w)
-      : Vector4(b.x(), b.y(), b.z(), w) {}
+  Vector4(const Vector3<T>& b, T w)
+      : Vector4(b.x(), b.y(), b.z(), std::move(w)) {}
 
   T* Data() { return c_; }
   const T* Data() const { return c_; }
@@ -547,20 +570,20 @@ class Vector4
   VType c_[SIZE];
 };
 
-typedef Vector2<uint8>  Vector2_b;
-typedef Vector2<int16>  Vector2_s;
+typedef Vector2<uint8> Vector2_b;
+typedef Vector2<int16> Vector2_s;
 typedef Vector2<int>    Vector2_i;
 typedef Vector2<float>  Vector2_f;
 typedef Vector2<double> Vector2_d;
 
-typedef Vector3<uint8>  Vector3_b;
-typedef Vector3<int16>  Vector3_s;
+typedef Vector3<uint8> Vector3_b;
+typedef Vector3<int16> Vector3_s;
 typedef Vector3<int>    Vector3_i;
 typedef Vector3<float>  Vector3_f;
 typedef Vector3<double> Vector3_d;
 
-typedef Vector4<uint8>  Vector4_b;
-typedef Vector4<int16>  Vector4_s;
+typedef Vector4<uint8> Vector4_b;
+typedef Vector4<int16> Vector4_s;
 typedef Vector4<int>    Vector4_i;
 typedef Vector4<float>  Vector4_f;
 typedef Vector4<double> Vector4_d;

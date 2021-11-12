@@ -21,11 +21,15 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <set>
 #include <stack>
 #include <utility>
 #include <vector>
 
+#include "absl/container/fixed_array.h"
+#include "absl/container/flat_hash_set.h"
+#include "absl/container/inlined_vector.h"
+#include "absl/flags/flag.h"
+#include "absl/memory/memory.h"
 
 #include "s2/base/casts.h"
 #include "s2/base/commandlineflags.h"
@@ -64,22 +68,17 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shape_index_region.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
-#include "absl/container/fixed_array.h"
-#include "absl/container/inlined_vector.h"
-#include "absl/memory/memory.h"
 #include "s2/util/coding/coder.h"
 
+using absl::flat_hash_set;
 using absl::make_unique;
 using s2builderutil::IdentitySnapFunction;
+using s2builderutil::S2CellIdSnapFunction;
 using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
 using s2builderutil::S2PolylineVectorLayer;
-using s2builderutil::S2CellIdSnapFunction;
 using std::fabs;
-using std::max;
-using std::min;
 using std::pair;
-using std::set;
 using std::sqrt;
 using std::unique_ptr;
 using std::vector;
@@ -177,7 +176,7 @@ S2Polygon::~S2Polygon() {
 bool S2Polygon::IsValid() const {
   S2Error error;
   if (FindValidationError(&error)) {
-    S2_LOG_IF(ERROR, FLAGS_s2debug) << error;
+    S2_LOG_IF(ERROR, absl::GetFlag(FLAGS_s2debug)) << error;
     return false;
   }
   return true;
@@ -268,7 +267,7 @@ void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
   // Some of the children of the parent loop may now be children of
   // the new loop.
   vector<S2Loop*>* new_children = &(*loop_map)[new_loop];
-  for (int i = 0; i < children->size();) {
+  for (int i = 0; i < children->size(); ) {
     S2Loop* child = (*children)[i];
     if (new_loop->ContainsNested(child)) {
       new_children->push_back(child);
@@ -303,10 +302,10 @@ void S2Polygon::InitLoops(LoopMap* loop_map) {
 void S2Polygon::InitIndex() {
   S2_DCHECK_EQ(0, index_.num_shape_ids());
   index_.Add(make_unique<Shape>(this));
-  if (!FLAGS_s2polygon_lazy_indexing) {
+  if (!absl::GetFlag(FLAGS_s2polygon_lazy_indexing)) {
     index_.ForceBuild();
   }
-  if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
+  if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
     // Note that FLAGS_s2debug is false in optimized builds (by default).
     S2_CHECK(IsValid());
   }
@@ -402,7 +401,7 @@ void S2Polygon::InitOriented(vector<unique_ptr<S2Loop>> loops) {
   //    necessary if the polygon requires at least one non-normalized loop to
   //    represent it.
 
-  set<const S2Loop*> contained_origin;
+  flat_hash_set<const S2Loop*> contained_origin;
   for (int i = 0; i < loops.size(); ++i) {
     S2Loop* loop = loops[i].get();
     if (loop->contains_origin()) {
@@ -441,7 +440,7 @@ void S2Polygon::InitOriented(vector<unique_ptr<S2Loop>> loops) {
       // property of the entire set of loops.  In general there is no way to
       // determine which ones are incorrect.
       error_inconsistent_loop_orientations_ = true;
-      if (FLAGS_s2debug && s2debug_override_ == S2Debug::ALLOW) {
+      if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
         // The FLAGS_s2debug validity checking usually happens in InitIndex(),
         // but this error is detected too late for that.
         S2_CHECK(IsValid());  // Always fails.
@@ -759,7 +758,8 @@ bool S2Polygon::DecodeUncompressed(Decoder* const decoder, bool within_scope) {
   // Polygons with no loops are explicitly allowed here: a newly created
   // polygon has zero loops and such polygons encode and decode properly.
   const uint32 num_loops = decoder->get32();
-  if (num_loops > FLAGS_s2polygon_decode_max_num_loops) return false;
+  if (num_loops > absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops))
+    return false;
   loops_.reserve(num_loops);
   num_vertices_ = 0;
   for (int i = 0; i < num_loops; ++i) {
@@ -896,7 +896,10 @@ void S2Polygon::InitToApproxIntersection(const S2Polygon* a, const S2Polygon* b,
 void S2Polygon::InitToIntersection(
     const S2Polygon& a, const S2Polygon& b,
     const S2Builder::SnapFunction& snap_function) {
-  if (!a.bound_.Intersects(b.bound_)) return;
+  if (!a.bound_.Intersects(b.bound_)) {
+    InitNested({});
+    return;
+  }
   InitToOperation(S2BooleanOperation::OpType::INTERSECTION,
                   snap_function, a, b);
 }
@@ -904,7 +907,10 @@ void S2Polygon::InitToIntersection(
 bool S2Polygon::InitToIntersection(
     const S2Polygon& a, const S2Polygon& b,
     const S2Builder::SnapFunction& snap_function, S2Error* error) {
-  if (!a.bound_.Intersects(b.bound_)) return true;  // Success.
+  if (!a.bound_.Intersects(b.bound_))  {
+    InitNested({});
+    return true;  // Success.
+  }
   return InitToOperation(S2BooleanOperation::OpType::INTERSECTION,
                          snap_function, a, b, error);
 }
@@ -1021,7 +1027,8 @@ uint8 GetCellEdgeIncidenceMask(const S2Cell& cell, const S2Point& p,
   R2Point uv;
   if (S2::FaceXYZtoUV(cell.face(), p, &uv)) {
     R2Rect bound = cell.GetBoundUV();
-    if (FLAGS_s2debug) S2_DCHECK(bound.Expanded(tolerance_uv).Contains(uv));
+    if (absl::GetFlag(FLAGS_s2debug))
+      S2_DCHECK(bound.Expanded(tolerance_uv).Contains(uv));
     if (fabs(uv[1] - bound[1][0]) <= tolerance_uv) mask |= 1;
     if (fabs(uv[0] - bound[0][1]) <= tolerance_uv) mask |= 2;
     if (fabs(uv[1] - bound[1][1]) <= tolerance_uv) mask |= 4;
@@ -1244,6 +1251,13 @@ unique_ptr<S2Polygon> S2Polygon::DestructiveUnion(
 
 unique_ptr<S2Polygon> S2Polygon::DestructiveApproxUnion(
     vector<unique_ptr<S2Polygon>> polygons, S1Angle snap_radius) {
+  return DestructiveUnion(std::move(polygons),
+                          IdentitySnapFunction(snap_radius));
+}
+
+unique_ptr<S2Polygon> S2Polygon::DestructiveUnion(
+    vector<std::unique_ptr<S2Polygon>> polygons,
+    const S2Builder::SnapFunction& snap_function) {
   // Effectively create a priority queue of polygons in order of number of
   // vertices.  Repeatedly union the two smallest polygons and add the result
   // to the queue until we have a single polygon to return.
@@ -1265,8 +1279,7 @@ unique_ptr<S2Polygon> S2Polygon::DestructiveApproxUnion(
 
     // Union and add result back to queue.
     auto union_polygon = make_unique<S2Polygon>();
-    union_polygon->InitToApproxUnion(a_polygon.get(), b_polygon.get(),
-                                     snap_radius);
+    union_polygon->InitToUnion(*a_polygon, *b_polygon, snap_function);
     queue.insert(std::make_pair(a_size + b_size, std::move(union_polygon)));
     // We assume that the number of vertices in the union polygon is the
     // sum of the number of vertices in the original polygons, which is not
@@ -1315,7 +1328,7 @@ bool S2Polygon::IsNormalized() const {
   // most one vertex with their parent loop.  Example: suppose loop A has
   // children B, C, D, and the following pairs are connected: AB, BC, CD, DA.
   // Then the polygon is not normalized.
-  set<S2Point> vertices;
+  flat_hash_set<S2Point> vertices;
   const S2Loop* last_parent = nullptr;
   for (int i = 0; i < num_loops(); ++i) {
     const S2Loop* child = loop(i);
@@ -1442,7 +1455,8 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   // polygon has zero loops and such polygons encode and decode properly.
   uint32 num_loops;
   if (!decoder->get_varint32(&num_loops)) return false;
-  if (num_loops > FLAGS_s2polygon_decode_max_num_loops) return false;
+  if (num_loops > absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops))
+    return false;
   loops_.reserve(num_loops);
   for (int i = 0; i < num_loops; ++i) {
     auto loop = make_unique<S2Loop>();
@@ -1457,58 +1471,42 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
 }
 
 S2Polygon::Shape::Shape(const S2Polygon* polygon)
-    : cumulative_edges_(nullptr) {
+    : loop_starts_(nullptr) {
   Init(polygon);
 }
 
 void S2Polygon::Shape::Init(const S2Polygon* polygon) {
   polygon_ = polygon;
-  delete[] cumulative_edges_;
-  cumulative_edges_ = nullptr;
-  num_edges_ = 0;
+  loop_starts_ = nullptr;
+  uint32 offset = 0;
   if (!polygon->is_full()) {
     const int kMaxLinearSearchLoops = 12;  // From benchmarks.
     int num_loops = polygon->num_loops();
     if (num_loops > kMaxLinearSearchLoops) {
-      cumulative_edges_ = new int[num_loops];
+      // Unlike make_unique<>, new T[] does not default-construct each element.
+      loop_starts_.reset(new uint32[num_loops + 1]);  // NOLINT
     }
     for (int i = 0; i < num_loops; ++i) {
-      if (cumulative_edges_) cumulative_edges_[i] = num_edges_;
-      num_edges_ += polygon->loop(i)->num_vertices();
+      if (loop_starts_) loop_starts_[i] = offset;
+      offset += polygon->loop(i)->num_vertices();
     }
+    if (loop_starts_) loop_starts_[num_loops] = offset;
   }
 }
 
 S2Polygon::Shape::~Shape() {
-  delete[] cumulative_edges_;
 }
 
 S2Shape::Edge S2Polygon::Shape::edge(int e) const {
-  S2_DCHECK_LT(e, num_edges());
-  const S2Polygon* p = polygon();
-  int i;
-  if (cumulative_edges_) {
-    // "upper_bound" finds the loop just beyond the one we want.
-    int* start = std::upper_bound(cumulative_edges_,
-                                  cumulative_edges_ + p->num_loops(), e) - 1;
-    i = start - cumulative_edges_;
-    e -= *start;
-  } else {
-    // When the number of loops is small, linear search is faster.  Most often
-    // there is exactly one loop and the code below executes zero times.
-    for (i = 0; e >= p->loop(i)->num_vertices(); ++i) {
-      e -= p->loop(i)->num_vertices();
-    }
-  }
-  return Edge(p->loop(i)->oriented_vertex(e),
-              p->loop(i)->oriented_vertex(e + 1));
+  // Method names are fully specified to enable inlining.
+  ChainPosition pos = S2Polygon::Shape::chain_position(e);
+  return S2Polygon::Shape::chain_edge(pos.chain_id, pos.offset);
 }
 
 S2Shape::ReferencePoint S2Polygon::Shape::GetReferencePoint() const {
-  const S2Polygon* p = polygon();
   bool contains_origin = false;
-  for (int i = 0; i < p->num_loops(); ++i) {
-    contains_origin ^= p->loop(i)->contains_origin();
+  for (int i = 0; i < polygon_->num_loops(); ++i) {
+    contains_origin ^= polygon_->loop(i)->contains_origin();
   }
   return ReferencePoint(S2::Origin(), contains_origin);
 }
@@ -1519,8 +1517,9 @@ int S2Polygon::Shape::num_chains() const {
 
 S2Shape::Chain S2Polygon::Shape::chain(int i) const {
   S2_DCHECK_LT(i, Shape::num_chains());
-  if (cumulative_edges_) {
-    return Chain(cumulative_edges_[i], polygon_->loop(i)->num_vertices());
+  if (loop_starts_) {
+    int start = loop_starts_[i];
+    return Chain(start, loop_starts_[i + 1] - start);
   } else {
     int e = 0;
     for (int j = 0; j < i; ++j) e += polygon_->loop(j)->num_vertices();
@@ -1531,30 +1530,40 @@ S2Shape::Chain S2Polygon::Shape::chain(int i) const {
   }
 }
 
-S2Shape::Edge S2Polygon::Shape::chain_edge(int i, int j) const {
+inline S2Shape::Edge S2Polygon::Shape::chain_edge(int i, int j) const {
   S2_DCHECK_LT(i, Shape::num_chains());
-  S2_DCHECK_LT(j, polygon_->loop(i)->num_vertices());
-  return Edge(polygon()->loop(i)->oriented_vertex(j),
-              polygon()->loop(i)->oriented_vertex(j + 1));
+  const S2Loop* loop = polygon_->loop(i);
+  S2_DCHECK_LT(j, loop->num_vertices());
+  return Edge(loop->oriented_vertex(j), loop->oriented_vertex(j + 1));
 }
 
-S2Shape::ChainPosition S2Polygon::Shape::chain_position(int e) const {
-  // TODO(ericv): Make inline to remove code duplication with GetEdge.
+inline S2Shape::ChainPosition S2Polygon::Shape::chain_position(int e) const {
   S2_DCHECK_LT(e, num_edges());
-  const S2Polygon* p = polygon();
   int i;
-  if (cumulative_edges_) {
-    // "upper_bound" finds the loop just beyond the one we want.
-    int* start = std::upper_bound(cumulative_edges_,
-                                  cumulative_edges_ + p->num_loops(), e) - 1;
-    i = start - cumulative_edges_;
-    e -= *start;
-  } else {
+  const uint32* start = loop_starts_.get();
+  if (start == nullptr) {
     // When the number of loops is small, linear search is faster.  Most often
     // there is exactly one loop and the code below executes zero times.
-    for (i = 0; e >= p->loop(i)->num_vertices(); ++i) {
-      e -= p->loop(i)->num_vertices();
+    for (i = 0; e >= polygon_->loop(i)->num_vertices(); ++i) {
+      e -= polygon_->loop(i)->num_vertices();
     }
+  } else {
+    i = prev_loop_.load(std::memory_order_relaxed);
+    if (e >= start[i] && e < start[i + 1]) {
+      // This edge belongs to the same loop as the previous call.
+    } else {
+      if (e == start[i + 1]) {
+        // This edge immediately follows the loop from the previous call.
+        // Note that S2Polygon does not allow empty loops.
+        ++i;
+      } else {
+        // "upper_bound" finds the loop just beyond the one we want.
+        i = std::upper_bound(&start[1], &start[polygon_->num_loops()], e)
+            - &start[1];
+      }
+      prev_loop_.store(i, std::memory_order_relaxed);
+    }
+    e -= start[i];
   }
   return ChainPosition(i, e);
 }

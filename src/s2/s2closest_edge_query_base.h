@@ -167,7 +167,7 @@ class S2ClosestEdgeQueryBase {
   //    Such results may be returned when options.include_interiors() is true.
   //    Such results can be identified using the is_interior() method.
   //
-  //  - (shape_id() < 0) && (edge_id() < 0) is returned by `FindClosestEdge`
+  //  - (shape_id() < 0) && (edge_id() < 0) is returned by FindClosestEdge()
   //    to indicate that no edge satisfies the given query options.  Such
   //    results can be identified using is_empty() method.
   class Result {

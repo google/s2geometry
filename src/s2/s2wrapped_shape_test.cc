@@ -1,4 +1,4 @@
-// Copyright 2013 Google Inc. All Rights Reserved.
+// Copyright 2021 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,15 +15,17 @@
 
 // Author: ericv@google.com (Eric Veach)
 
-#include "s2/s2error.h"
+#include "s2/s2wrapped_shape.h"
 
-#include "s2/base/stringprintf.h"
+#include <gtest/gtest.h>
+#include "s2/s2lax_polygon_shape.h"
+#include "s2/s2shapeutil_testing.h"
+#include "s2/s2text_format.h"
 
-void S2Error::Init(Code code, const char* format, ...) {
-  code_ = code;
-  text_.clear();
-  va_list ap;
-  va_start(ap, format);
-  StringAppendV(&text_, format, ap);
-  va_end(ap);
+TEST(S2WrappedShape, Coverage) {
+  // Tests that all the S2Shape methods are implemented.
+
+  auto shape = s2textformat::MakeLaxPolygonOrDie("0:0; 1:1, 1:2, 2:1");
+  S2WrappedShape wrapped_shape(shape.get());
+  s2testing::ExpectEqual(wrapped_shape, *shape);
 }

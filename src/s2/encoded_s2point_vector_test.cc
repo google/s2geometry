@@ -18,11 +18,17 @@
 #include "s2/encoded_s2point_vector.h"
 
 #include <vector>
+
 #include <gtest/gtest.h>
+
+#include "absl/flags/flag.h"
 #include "absl/strings/str_cat.h"
+
+#include "s2/base/log_severity.h"
 #include "s2/util/bits/bit-interleave.h"
 #include "s2/s2loop.h"
 #include "s2/s2polygon.h"
+#include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
@@ -73,16 +79,51 @@ TEST(EncodedS2PointVectorTest, Empty) {
 TEST(EncodedS2PointVectorTest, OnePoint) {
   TestEncodedS2PointVector({S2Point(1, 0, 0)}, CodingHint::FAST, 25);
 
-  // Encoding: header (2 bytes), block count (1 byte), block lengths (1 byte),
+  // Encoding: header (2 bytes), block count (1 byte), block offsets (1 byte),
   // block header (1 byte), delta (1 byte).
   TestEncodedS2PointVector({S2Point(1, 0, 0)}, CodingHint::COMPACT, 6);
+}
+
+TEST(EncodedS2PointVectorTest, OnePointWithExceptionsNoOverlap) {
+  // Test encoding a block with one point when other blocks have exceptions
+  // (which changes the encoding for all blocks).  The case below yields
+  // delta_bits == 8 and overlap_bits == 0.
+  //
+  // Encoding: header (2 bytes), block count (1 byte), block offsets (2 bytes)
+  // Block 0: block header (1 byte), 16 deltas (16 bytes), exception (24 bytes)
+  // Block 1: block header (1 byte), delta (1 byte)
+  S2Point a(1, 0, 0);
+  vector<S2Point> points = {
+    S2Point(1, 2, 3).Normalize(), a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,
+    a  // Second block
+  };
+  TestEncodedS2PointVector(points, CodingHint::COMPACT, 48);
+}
+
+TEST(EncodedS2PointVectorTest, OnePointWithExceptionsWithOverlap) {
+  // Test encoding a block with one point when other blocks have exceptions
+  // (which changes the encoding for all blocks).  The case below yields
+  // delta_bits == 8 and overlap_bits == 4.
+  //
+  // Encoding: header (2 bytes), base (2 bytes), block count (1 byte),
+  //           block offsets (2 bytes)
+  // Block 0: header (1 byte), offset (2 bytes), 16 deltas (16 bytes),
+  //          exception (24 bytes)
+  // Block 1: header (1 byte), offset (2 bytes), delta (1 byte)
+  S2Point a = S2CellId(0x946df618d0000000).ToPoint();
+  S2Point b = S2CellId(0x947209e070000000).ToPoint();
+  vector<S2Point> points = {
+    S2Point(1, 2, 3).Normalize(), a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,
+    b  // Second block
+  };
+  TestEncodedS2PointVector(points, CodingHint::COMPACT, 54);
 }
 
 TEST(EncodedS2PointVectorTest, CellIdWithException) {
   // Test one point encoded as an S2CellId with one point encoded as an
   // exception.
   //
-  // Encoding: header (2 bytes), block count (1 byte), block lengths (1 byte),
+  // Encoding: header (2 bytes), block count (1 byte), block offsets (1 byte),
   // block header (1 byte), two deltas (2 bytes), exception (24 bytes).
   TestEncodedS2PointVector(
       {MakeCellIdOrDie("1/23").ToPoint(), S2Point(0.1, 0.2, 0.3).Normalize()},
@@ -124,7 +165,7 @@ TEST(EncodedS2PointVectorTest, NoOverlapOrExtraDeltaBitsNeeded) {
   // minimum value, and the other to encode a specific range of deltas.  To
   // make things easier, the first block has a minimum value of zero.
   //
-  // Encoding: header (2 bytes), block count (1 byte), block lengths (2 bytes)
+  // Encoding: header (2 bytes), block count (1 byte), block offsets (2 bytes)
   // Block 0: header (1 byte), 8 deltas (8 bytes)
   // Block 1: header (1 byte), offset (1 byte), 4 deltas (2 bytes)
   const int level = 3;
@@ -146,7 +187,7 @@ TEST(EncodedS2PointVectorTest, OverlapNeeded) {
   //   increase the overlap to 4 bits then we can represent an offset of 0x78,
   //   which lets us encode values up to 0x78 + 0x0f = 0x87.
   //
-  // Encoding: header (2 bytes), block count (1 byte), block lengths (2 bytes)
+  // Encoding: header (2 bytes), block count (1 byte), block offsets (2 bytes)
   // Block 0: header (1 byte), 8 deltas (8 bytes)
   // Block 1: header (1 byte), offset (1 byte), 4 deltas (2 bytes)
   const int level = 3;
@@ -167,7 +208,7 @@ TEST(EncodedS2PointVectorTest, ExtraDeltaBitsNeeded) {
   //   bigger overlaps because statistically they are not worthwhile.)  Instead
   //   we increase the delta size to 12 bits, which handles this case easily.
   //
-  // Encoding: header (2 bytes), block count (1 byte), block lengths (2 bytes)
+  // Encoding: header (2 bytes), block count (1 byte), block offsets (2 bytes)
   // Block 0: header (1 byte), 8 deltas (8 bytes)
   // Block 1: header (1 byte), 4 deltas (6 bytes)
   const int level = 3;
@@ -191,7 +232,7 @@ TEST(EncodedS2PointVectorTest, ExtraDeltaBitsAndOverlapNeeded) {
   //   overlap_bits = 4, we can represent offset = 0xf00 and a maximum encodable
   //   value of 0xf00 + 0xfff = 0x1eff.
   //
-  // Encoding: header (2 bytes), block count (1 byte), block lengths (2 bytes)
+  // Encoding: header (2 bytes), block count (1 byte), block offsets (2 bytes)
   // Block 0: header (1 byte), 8 deltas (8 bytes)
   // Block 1: header (1 byte), offset (1 byte), 4 deltas (6 bytes)
   const int level = 5;
@@ -206,7 +247,7 @@ TEST(EncodedS2PointVectorTest, ExtraDeltaBitsAndOverlapNeeded) {
 TEST(EncodedS2PointVectorTest, SixtyFourBitOffset) {
   // Tests a case where a 64-bit block offset is needed.
   //
-  // Encoding: header (2 bytes), block count (1 byte), block lengths (2 bytes)
+  // Encoding: header (2 bytes), block count (1 byte), block offsets (2 bytes)
   // Block 0: header (1 byte), 8 deltas (8 bytes)
   // Block 1: header (1 byte), offset (8 bytes), 2 deltas (1 byte)
   const int level = S2CellId::kMaxLevel;
@@ -223,7 +264,7 @@ TEST(EncodedS2PointVectorTest, AllExceptionsBlock) {
                          EncodedValueToPoint(0, S2CellId::kMaxLevel));
   points.push_back(S2Point(0.1, 0.2, 0.3).Normalize());
   points.push_back(S2Point(0.3, 0.2, 0.1).Normalize());
-  // Encoding: header (2 bytes), block count (1 byte), block lengths (2 bytes).
+  // Encoding: header (2 bytes), block count (1 byte), block offsets (2 bytes).
   // 1st block header (1 byte), 16 deltas (16 bytes).
   // 2nd block header (1 byte), 2 deltas (1 byte), 2 exceptions (48 bytes).
   TestEncodedS2PointVector(points, CodingHint::COMPACT, 72);
@@ -303,7 +344,7 @@ TEST(EncodedS2PointVectorTest, ManyDuplicatePointsAtAllLevels) {
     SCOPED_TRACE(absl::StrCat("Level = ", level));
     S2CellId id = S2CellId::End(level).prev();
     // Encoding: header (2 bytes), base ((level + 2) / 4 bytes), block count
-    // (1 byte), block lengths (2 bytes), block headers (2 bytes), 32 deltas
+    // (1 byte), block offsets (2 bytes), block headers (2 bytes), 32 deltas
     // (16 bytes).  At level 30 the encoding size goes up by 1 byte because
     // we can't encode an 8 byte "base" value, so instead this case uses a
     // base of 7 bytes plus a one-byte offset in each of the 2 blocks.
@@ -315,7 +356,7 @@ TEST(EncodedS2PointVectorTest, ManyDuplicatePointsAtAllLevels) {
 }
 
 TEST(EncodedS2PointVectorTest, SnappedFractalLoops) {
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   int kMaxPoints = 3 << (google::DEBUG_MODE ? 10 : 14);
   for (int num_points = 3; num_points <= kMaxPoints; num_points *= 4) {
     size_t s2polygon_size = 0, lax_polygon_size = 0;
@@ -339,6 +380,47 @@ TEST(EncodedS2PointVectorTest, SnappedFractalLoops) {
     printf("n=%5d  s2=%9" PRIuS "  lax=%9" PRIuS "\n",
            num_points, s2polygon_size, lax_polygon_size);
   }
+}
+
+void TestRoundtripEncoding(s2coding::CodingHint hint) {
+  // Ensures that the EncodedS2PointVector can be encoded and decoded without
+  // loss.
+  const int level = 3;
+  vector<S2Point> points(kBlockSize, EncodedValueToPoint(0, level));
+  points.push_back(EncodedValueToPoint(0x78, level));
+  points.push_back(EncodedValueToPoint(0x7a, level));
+  points.push_back(EncodedValueToPoint(0x7c, level));
+  points.push_back(EncodedValueToPoint(0x84, level));
+
+  EncodedS2PointVector a_vector;
+  Encoder a_encoder;
+
+  EncodedS2PointVector b_vector;
+  Encoder b_encoder;
+
+  // Encode and decode from a vector<S2Point>.
+  {
+    EncodeS2PointVector(points, hint, &a_encoder);
+    Decoder decoder(a_encoder.base(), a_encoder.length());
+    a_vector.Init(&decoder);
+  }
+  ASSERT_EQ(points, a_vector.Decode());
+
+  // Encode and decode from an EncodedS2PointVector.
+  {
+    a_vector.Encode(&b_encoder);
+    Decoder decoder(b_encoder.base(), b_encoder.length());
+    b_vector.Init(&decoder);
+  }
+  EXPECT_EQ(points, b_vector.Decode());
+}
+
+TEST(EncodedS2PointVectorTest, RoundtripEncodingFast) {
+  TestRoundtripEncoding(s2coding::CodingHint::FAST);
+}
+
+TEST(EncodedS2PointVectorTest, RoundtripEncodingCompact) {
+  TestRoundtripEncoding(s2coding::CodingHint::COMPACT);
 }
 
 }  // namespace s2coding

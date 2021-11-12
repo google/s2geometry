@@ -19,7 +19,10 @@
 
 #include <iostream>
 #include <gtest/gtest.h>
+
 #include "absl/strings/str_cat.h"
+
+#include "s2/base/log_severity.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2loop.h"
 #include "s2/s2pointutil.h"
@@ -272,6 +275,7 @@ TEST(S2EdgeTessellator, UnprojectedAccuracy) {
   EXPECT_LE(stats.max(), 1.0);
 }
 
+// Repro case for b/110719057.
 TEST(S2EdgeTessellator, UnprojectedAccuracyCrossEquator) {
   S2::MercatorProjection proj(180);
   S1Angle tolerance(S1Angle::Degrees(1e-5));
@@ -306,6 +310,7 @@ TEST(S2EdgeTessellator, ProjectedAccuracyMidpointEquator) {
   EXPECT_LE(stats.max(), 1.0);
 }
 
+// Repro case for b/110719057.
 TEST(S2EdgeTessellator, ProjectedAccuracyCrossEquator) {
   S2::PlateCarreeProjection proj(180);
   S1Angle tolerance(S1Angle::E7(1));

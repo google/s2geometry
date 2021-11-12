@@ -17,8 +17,11 @@
 #include "s2/s2region.h"
 
 #include <gtest/gtest.h>
+
 #include "absl/container/fixed_array.h"
 #include "absl/memory/memory.h"
+#include "absl/strings/string_view.h"
+
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
@@ -39,6 +42,7 @@
 
 using std::string;
 using std::unique_ptr;
+using std::string;
 using std::vector;
 
 namespace {
@@ -199,7 +203,7 @@ const char kEncodedPolyline3Segments[] =
 //////////////////////////////////////////////////////////////
 
 // HexEncodeStr returns the data in str in hex encoded form.
-const string HexEncodeStr(const string& str) {
+const string HexEncodeStr(absl::string_view str) {
   static const char* const lut = "0123456789ABCDEF";
 
   string result;
@@ -217,7 +221,8 @@ class S2RegionEncodeDecodeTest : public testing::Test {
   // TestEncodeDecode tests that the input encodes to match the expected
   // golden data, and then returns the decode of the data into dst.
   template <class Region>
-  void TestEncodeDecode(const string& golden, const Region& src, Region* dst) {
+  void TestEncodeDecode(absl::string_view golden, const Region& src,
+                        Region* dst) {
     Encoder encoder;
     src.Encode(&encoder);
 
@@ -304,7 +309,7 @@ TEST_F(S2RegionEncodeDecodeTest, S2Loop) {
   S2Loop loop;
   S2Loop loop_empty(S2Loop::kEmpty());
   S2Loop loop_full(S2Loop::kFull());
-  unique_ptr<S2Loop> loop_cross = s2textformat::MakeLoop(kCross1);
+  unique_ptr<S2Loop> loop_cross = s2textformat::MakeLoopOrDie(kCross1);
 
   TestEncodeDecode(kEncodedLoopEmpty, loop_empty, &loop);
   EXPECT_TRUE(loop_empty.Equals(&loop));
@@ -355,7 +360,7 @@ TEST_F(S2RegionEncodeDecodeTest, S2Polyline) {
                               S2LatLng::FromDegrees(0, 180)};
   S2Polyline polyline_semi(latlngs);
   unique_ptr<S2Polyline> polyline_3segments =
-      s2textformat::MakePolyline("0:0, 0:10, 10:20, 20:30");
+      s2textformat::MakePolylineOrDie("0:0, 0:10, 10:20, 20:30");
 
   TestEncodeDecode(kEncodedPolylineEmpty, polyline_empty, &polyline);
   EXPECT_TRUE(polyline_empty.Equals(&polyline));
