@@ -178,6 +178,28 @@ TEST(S2PolylineVectorLayer, InputEdgeStartsMultipleLoops) {
   TestS2PolylineVector(input, expected, layer_options, builder_options);
 }
 
+TEST(S2PolylineVectorLayer, ValidateFalse) {
+  // Verifies that calling set_validate(false) does not turn off s2 debugging.
+  S2PolylineVectorLayer::Options layer_options;
+  layer_options.set_validate(false);
+  EXPECT_EQ(layer_options.s2debug_override(), S2Debug::ALLOW);
+}
+
+TEST(S2PolylineVectorLayer, ValidateTrue) {
+  // Verifies that the validate() option works.
+  S2PolylineVectorLayer::Options layer_options;
+  layer_options.set_validate(true);
+  EXPECT_EQ(layer_options.s2debug_override(), S2Debug::DISABLE);
+  S2Builder builder{S2Builder::Options()};
+  vector<unique_ptr<S2Polyline>> output;
+  builder.StartLayer(
+      make_unique<S2PolylineVectorLayer>(&output, layer_options));
+  builder.AddEdge(S2Point(1, 0, 0), S2Point(-1, 0, 0));
+  S2Error error;
+  ASSERT_FALSE(builder.Build(&error));
+  EXPECT_EQ(error.code(), S2Error::ANTIPODAL_VERTICES);
+}
+
 TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
   S2Builder builder{S2Builder::Options()};
   vector<unique_ptr<S2Polyline>> output;

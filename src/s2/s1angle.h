@@ -131,23 +131,24 @@ class S1Angle {
 
   // Return the absolute value of an angle.
   S1Angle abs() const;
+  friend S1Angle abs(S1Angle a);
 
   // Comparison operators.
-  friend bool operator==(S1Angle x, S1Angle y);
-  friend bool operator!=(S1Angle x, S1Angle y);
-  friend bool operator<(S1Angle x, S1Angle y);
-  friend bool operator>(S1Angle x, S1Angle y);
-  friend bool operator<=(S1Angle x, S1Angle y);
-  friend bool operator>=(S1Angle x, S1Angle y);
+  friend IFNDEF_SWIG(constexpr) bool operator==(S1Angle x, S1Angle y);
+  friend IFNDEF_SWIG(constexpr) bool operator!=(S1Angle x, S1Angle y);
+  friend IFNDEF_SWIG(constexpr) bool operator<(S1Angle x, S1Angle y);
+  friend IFNDEF_SWIG(constexpr) bool operator>(S1Angle x, S1Angle y);
+  friend IFNDEF_SWIG(constexpr) bool operator<=(S1Angle x, S1Angle y);
+  friend IFNDEF_SWIG(constexpr) bool operator>=(S1Angle x, S1Angle y);
 
   // Simple arithmetic operators for manipulating S1Angles.
-  friend S1Angle operator-(S1Angle a);
-  friend S1Angle operator+(S1Angle a, S1Angle b);
-  friend S1Angle operator-(S1Angle a, S1Angle b);
-  friend S1Angle operator*(double m, S1Angle a);
-  friend S1Angle operator*(S1Angle a, double m);
-  friend S1Angle operator/(S1Angle a, double m);
-  friend double operator/(S1Angle a, S1Angle b);
+  friend IFNDEF_SWIG(constexpr) S1Angle operator-(S1Angle a);
+  friend IFNDEF_SWIG(constexpr) S1Angle operator+(S1Angle a, S1Angle b);
+  friend IFNDEF_SWIG(constexpr) S1Angle operator-(S1Angle a, S1Angle b);
+  friend IFNDEF_SWIG(constexpr) S1Angle operator*(double m, S1Angle a);
+  friend IFNDEF_SWIG(constexpr) S1Angle operator*(S1Angle a, double m);
+  friend IFNDEF_SWIG(constexpr) S1Angle operator/(S1Angle a, double m);
+  friend IFNDEF_SWIG(constexpr) double operator/(S1Angle a, S1Angle b);
   S1Angle& operator+=(S1Angle a);
   S1Angle& operator-=(S1Angle a);
   S1Angle& operator*=(double m);
@@ -215,55 +216,59 @@ inline S1Angle S1Angle::abs() const {
   return S1Angle(std::fabs(radians_));
 }
 
-inline bool operator==(S1Angle x, S1Angle y) {
+inline S1Angle abs(S1Angle a) {
+  return S1Angle(std::fabs(a.radians_));
+}
+
+inline constexpr bool operator==(S1Angle x, S1Angle y) {
   return x.radians() == y.radians();
 }
 
-inline bool operator!=(S1Angle x, S1Angle y) {
+inline constexpr bool operator!=(S1Angle x, S1Angle y) {
   return x.radians() != y.radians();
 }
 
-inline bool operator<(S1Angle x, S1Angle y) {
+inline constexpr bool operator<(S1Angle x, S1Angle y) {
   return x.radians() < y.radians();
 }
 
-inline bool operator>(S1Angle x, S1Angle y) {
+inline constexpr bool operator>(S1Angle x, S1Angle y) {
   return x.radians() > y.radians();
 }
 
-inline bool operator<=(S1Angle x, S1Angle y) {
+inline constexpr bool operator<=(S1Angle x, S1Angle y) {
   return x.radians() <= y.radians();
 }
 
-inline bool operator>=(S1Angle x, S1Angle y) {
+inline constexpr bool operator>=(S1Angle x, S1Angle y) {
   return x.radians() >= y.radians();
 }
 
-inline S1Angle operator-(S1Angle a) {
+inline constexpr S1Angle operator-(S1Angle a) {
   return S1Angle::Radians(-a.radians());
 }
 
-inline S1Angle operator+(S1Angle a, S1Angle b) {
+inline constexpr S1Angle operator+(S1Angle a, S1Angle b) {
   return S1Angle::Radians(a.radians() + b.radians());
 }
 
-inline S1Angle operator-(S1Angle a, S1Angle b) {
+inline constexpr S1Angle operator-(S1Angle a, S1Angle b) {
   return S1Angle::Radians(a.radians() - b.radians());
 }
 
-inline S1Angle operator*(double m, S1Angle a) {
+inline constexpr S1Angle operator*(double m, S1Angle a) {
   return S1Angle::Radians(m * a.radians());
 }
 
-inline S1Angle operator*(S1Angle a, double m) {
+inline constexpr S1Angle operator*(S1Angle a, double m) {
   return S1Angle::Radians(m * a.radians());
 }
 
-inline S1Angle operator/(S1Angle a, double m) {
+inline constexpr S1Angle operator/(S1Angle a, double m) {
   return S1Angle::Radians(a.radians() / m);
 }
 
-inline double operator/(S1Angle a, S1Angle b) {
+inline constexpr double operator/(S1Angle a, S1Angle b) {
   return a.radians() / b.radians();
 }
 

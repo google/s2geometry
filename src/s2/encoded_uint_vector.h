@@ -20,9 +20,13 @@
 
 #include <type_traits>
 #include <vector>
+
 #include "absl/base/internal/unaligned_access.h"
 #include "absl/types/span.h"
+
+#include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
+#include "s2/util/coding/varint.h"
 
 namespace s2coding {
 
@@ -84,6 +88,8 @@ class EncodedUintVector {
 
   // Decodes and returns the entire original vector.
   std::vector<T> Decode() const;
+
+  void Encode(Encoder* encoder) const;
 
  private:
   template <int length> size_t lower_bound(T target) const;
@@ -292,6 +298,16 @@ std::vector<T> EncodedUintVector<T>::Decode() const {
     result[i] = (*this)[i];
   }
   return result;
+}
+
+template <class T>
+// The encoding must be identical to StringVectorEncoder::Encode().
+void EncodedUintVector<T>::Encode(Encoder* encoder) const {
+  uint64 size_len = (uint64{size_} * sizeof(T)) | (len_ - 1);
+
+  encoder->Ensure(Varint::kMax64 + size_len);
+  encoder->put_varint64(size_len);
+  encoder->putn(data_, size_ * len_);
 }
 
 }  // namespace s2coding

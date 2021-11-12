@@ -18,6 +18,7 @@
 #include "s2/s2lax_polyline_shape.h"
 
 #include <gtest/gtest.h>
+#include "s2/s2shapeutil_testing.h"
 #include "s2/s2text_format.h"
 
 using std::vector;
@@ -59,4 +60,22 @@ TEST(S2LaxPolylineShape, EdgeAccess) {
   auto edge1 = shape.edge(1);
   EXPECT_EQ(vertices[1], edge1.v0);
   EXPECT_EQ(vertices[2], edge1.v1);
+}
+
+TEST(EncodedS2LaxPolylineShape, RoundtripEncoding) {
+  vector<S2Point> vertices = s2textformat::ParsePoints("0:0, 0:1, 1:1");
+  S2LaxPolylineShape shape(vertices);
+
+  Encoder encoder;
+  shape.Encode(&encoder, s2coding::CodingHint::COMPACT);
+  Decoder a_decoder(encoder.base(), encoder.length());
+  EncodedS2LaxPolylineShape a_shape;
+  a_shape.Init(&a_decoder);
+
+  Encoder b_encoder;
+  a_shape.Encode(&b_encoder, s2coding::CodingHint::COMPACT);
+  Decoder b_decoder(b_encoder.base(), b_encoder.length());
+  EncodedS2LaxPolylineShape b_shape;
+  b_shape.Init(&b_decoder);
+  s2testing::ExpectEqual(shape, b_shape);
 }

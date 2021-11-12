@@ -18,6 +18,7 @@
 #include "s2/s2edge_vector_shape.h"
 
 #include <gtest/gtest.h>
+#include "absl/flags/flag.h"
 #include "s2/s2testing.h"
 
 TEST(S2EdgeVectorShape, Empty) {
@@ -32,7 +33,7 @@ TEST(S2EdgeVectorShape, Empty) {
 
 TEST(S2EdgeVectorShape, EdgeAccess) {
   S2EdgeVectorShape shape;
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   const int kNumEdges = 100;
   for (int i = 0; i < kNumEdges; ++i) {
     S2Point a = S2Testing::RandomPoint();  // Control the evaluation order
@@ -43,7 +44,7 @@ TEST(S2EdgeVectorShape, EdgeAccess) {
   EXPECT_EQ(1, shape.dimension());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   for (int i = 0; i < kNumEdges; ++i) {
     EXPECT_EQ(i, shape.chain(i).start);
     EXPECT_EQ(1, shape.chain(i).length);

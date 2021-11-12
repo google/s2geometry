@@ -29,6 +29,8 @@
 
 #include "absl/base/attributes.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
+
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2debug.h"
@@ -149,10 +151,6 @@ ABSL_MUST_USE_RESULT bool MakeLoop(absl::string_view str,
                                    std::unique_ptr<S2Loop>* loop,
                                    S2Debug debug_override = S2Debug::ALLOW);
 
-ABSL_DEPRECATED("Use MakeLoopOrDie.")
-std::unique_ptr<S2Loop> MakeLoop(absl::string_view str,
-                                 S2Debug debug_override = S2Debug::ALLOW);
-
 // Similar to MakeLoop(), but returns an S2Polyline rather than an S2Loop.
 std::unique_ptr<S2Polyline> MakePolylineOrDie(
     absl::string_view str,
@@ -269,12 +267,11 @@ std::string ToString(const S2LatLngRect& rect);
 std::string ToString(const S2CellId& cell_id);
 std::string ToString(const S2CellUnion& cell_union);
 std::string ToString(const S2Loop& loop);
-std::string ToString(S2PointLoopSpan loop);
 std::string ToString(const S2Polyline& polyline);
 std::string ToString(const S2Polygon& polygon,
                      const char* loop_separator = ";\n");
-std::string ToString(const std::vector<S2Point>& points);
-std::string ToString(const std::vector<S2LatLng>& points);
+std::string ToString(absl::Span<const S2Point> points);
+std::string ToString(absl::Span<const S2LatLng> latlngs);
 std::string ToString(const S2LaxPolylineShape& polyline);
 std::string ToString(const S2LaxPolygonShape& polygon,
                      const char* loop_separator = ";\n");

@@ -19,7 +19,10 @@ endif()
 # undefined symbol errors since ABSL_HAVE_STD_STRING_VIEW etc will
 # end up defined differently.  There is probably a better way to achieve
 # this than assuming what absl used.  s2geometry should actually work fine
-# with C++11.
+# with C++11, but there are a few places that use std::exchange instead of
+# absl::exchange, is_x_t, and some atomic constructors that would need
+# to change.  File a bug if you need support for earlier versions.
+# TODO(jrosenstock,b/205952836): Use absl functions if possible.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # No compiler-specific extensions, i.e. -std=c++17, not -std=gnu++17.
@@ -74,7 +77,9 @@ find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 
 if (WITH_PYTHON)
-    find_package(SWIG)
+    # Should be easy to make it work with swig3, but some args to %pythonprepend
+    # seem to be different and were changed.
+    find_package(SWIG 4.0)
     # Use Python3_ROOT_DIR to help find python3, if the correct location is not
     # being found by default.
     find_package(Python3 COMPONENTS Interpreter Development)
@@ -109,8 +114,6 @@ endif()
 include_directories(src)
 
 add_library(s2
-            src/s2/base/stringprintf.cc
-            src/s2/base/strtoint.cc
             src/s2/encoded_s2cell_id_vector.cc
             src/s2/encoded_s2point_vector.cc
             src/s2/encoded_s2shape_index.cc
@@ -122,11 +125,14 @@ add_library(s2
             src/s2/s1chord_angle.cc
             src/s2/s1interval.cc
             src/s2/s2boolean_operation.cc
+            src/s2/s2buffer_operation.cc
             src/s2/s2builder.cc
             src/s2/s2builder_graph.cc
             src/s2/s2builderutil_closed_set_normalizer.cc
             src/s2/s2builderutil_find_polygon_degeneracies.cc
+            src/s2/s2builderutil_get_snapped_winding_delta.cc
             src/s2/s2builderutil_lax_polygon_layer.cc
+            src/s2/s2builderutil_lax_polyline_layer.cc
             src/s2/s2builderutil_s2point_vector_layer.cc
             src/s2/s2builderutil_s2polygon_layer.cc
             src/s2/s2builderutil_s2polyline_layer.cc
@@ -152,7 +158,6 @@ add_library(s2
             src/s2/s2edge_crossings.cc
             src/s2/s2edge_distances.cc
             src/s2/s2edge_tessellator.cc
-            src/s2/s2error.cc
             src/s2/s2furthest_edge_query.cc
             src/s2/s2latlng.cc
             src/s2/s2latlng_rect.cc
@@ -163,6 +168,7 @@ add_library(s2
             src/s2/s2loop.cc
             src/s2/s2loop_measures.cc
             src/s2/s2measures.cc
+            src/s2/s2memory_tracker.cc
             src/s2/s2metrics.cc
             src/s2/s2max_distance_targets.cc
             src/s2/s2min_distance_targets.cc
@@ -190,12 +196,14 @@ add_library(s2
             src/s2/s2shapeutil_build_polygon_boundaries.cc
             src/s2/s2shapeutil_coding.cc
             src/s2/s2shapeutil_contains_brute_force.cc
+            src/s2/s2shapeutil_conversion.cc
             src/s2/s2shapeutil_edge_iterator.cc
             src/s2/s2shapeutil_get_reference_point.cc
             src/s2/s2shapeutil_range_iterator.cc
             src/s2/s2shapeutil_visit_crossing_edge_pairs.cc
             src/s2/s2text_format.cc
             src/s2/s2wedge_relations.cc
+            src/s2/s2winding_operation.cc
             src/s2/strings/ostringstream.cc
             src/s2/strings/serialize.cc
             src/s2/util/bits/bit-interleave.cc
@@ -208,7 +216,8 @@ add_library(s2
 add_library(s2testing STATIC
             src/s2/s2builderutil_testing.cc
             src/s2/s2shapeutil_testing.cc
-            src/s2/s2testing.cc)
+            src/s2/s2testing.cc
+            src/s2/thread_testing.cc)
 target_link_libraries(
     s2
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
@@ -219,11 +228,15 @@ target_link_libraries(
     absl::dynamic_annotations
     absl::endian
     absl::fixed_array
+    absl::flat_hash_map
+    absl::flat_hash_set
+    absl::hash
     absl::inlined_vector
     absl::int128
     absl::log_severity
     absl::memory
     absl::span
+    absl::str_format
     absl::strings
     absl::type_traits
     absl::utility
@@ -262,13 +275,16 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s1chord_angle.h
               src/s2/s1interval.h
               src/s2/s2boolean_operation.h
+              src/s2/s2buffer_operation.h
               src/s2/s2builder.h
               src/s2/s2builder_graph.h
               src/s2/s2builder_layer.h
               src/s2/s2builderutil_closed_set_normalizer.h
               src/s2/s2builderutil_find_polygon_degeneracies.h
+              src/s2/s2builderutil_get_snapped_winding_delta.h
               src/s2/s2builderutil_graph_shape.h
               src/s2/s2builderutil_lax_polygon_layer.h
+              src/s2/s2builderutil_lax_polyline_layer.h
               src/s2/s2builderutil_s2point_vector_layer.h
               src/s2/s2builderutil_s2polygon_layer.h
               src/s2/s2builderutil_s2polyline_layer.h
@@ -299,6 +315,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2edge_clipping.h
               src/s2/s2edge_crosser.h
               src/s2/s2edge_crossings.h
+              src/s2/s2edge_crossings_internal.h
               src/s2/s2edge_distances.h
               src/s2/s2edge_tessellator.h
               src/s2/s2edge_vector_shape.h
@@ -313,6 +330,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2loop.h
               src/s2/s2loop_measures.h
               src/s2/s2measures.h
+              src/s2/s2memory_tracker.h
               src/s2/s2metrics.h
               src/s2/s2max_distance_targets.h
               src/s2/s2min_distance_targets.h
@@ -330,6 +348,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2polyline_measures.h
               src/s2/s2polyline_simplifier.h
               src/s2/s2predicates.h
+              src/s2/s2predicates_internal.h
               src/s2/s2projections.h
               src/s2/s2r2rect.h
               src/s2/s2region.h
@@ -345,6 +364,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2shapeutil_build_polygon_boundaries.h
               src/s2/s2shapeutil_coding.h
               src/s2/s2shapeutil_contains_brute_force.h
+              src/s2/s2shapeutil_conversion.h
               src/s2/s2shapeutil_count_edges.h
               src/s2/s2shapeutil_edge_iterator.h
               src/s2/s2shapeutil_get_reference_point.h
@@ -356,7 +376,10 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2testing.h
               src/s2/s2text_format.h
               src/s2/s2wedge_relations.h
+              src/s2/s2winding_operation.h
+              src/s2/s2wrapped_shape.h
               src/s2/sequence_lexicon.h
+              src/s2/thread_testing.h
               src/s2/value_lexicon.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2")
 install(FILES src/s2/base/casts.h
@@ -387,8 +410,9 @@ install(FILES src/s2/util/hash/mix.h
 install(FILES src/s2/util/math/mathutil.h
               src/s2/util/math/matrix3x3.h
               src/s2/util/math/vector.h
-              src/s2/util/math/vector3_hash.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math")
+install(FILES src/s2/util/math/exactfloat/exactfloat.h
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/math/exactfloat")
 install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/units")
@@ -416,11 +440,14 @@ if (GTEST_ROOT)
       src/s2/s1chord_angle_test.cc
       src/s2/s1interval_test.cc
       src/s2/s2boolean_operation_test.cc
+      src/s2/s2buffer_operation_test.cc
       src/s2/s2builder_graph_test.cc
       src/s2/s2builder_test.cc
       src/s2/s2builderutil_closed_set_normalizer_test.cc
       src/s2/s2builderutil_find_polygon_degeneracies_test.cc
+      src/s2/s2builderutil_get_snapped_winding_delta_test.cc
       src/s2/s2builderutil_lax_polygon_layer_test.cc
+      src/s2/s2builderutil_lax_polyline_layer_test.cc
       src/s2/s2builderutil_s2point_vector_layer_test.cc
       src/s2/s2builderutil_s2polygon_layer_test.cc
       src/s2/s2builderutil_s2polyline_layer_test.cc
@@ -462,6 +489,7 @@ if (GTEST_ROOT)
       src/s2/s2loop_measures_test.cc
       src/s2/s2loop_test.cc
       src/s2/s2measures_test.cc
+      src/s2/s2memory_tracker_test.cc
       src/s2/s2metrics_test.cc
       src/s2/s2max_distance_targets_test.cc
       src/s2/s2min_distance_targets_test.cc
@@ -492,6 +520,7 @@ if (GTEST_ROOT)
       src/s2/s2shapeutil_build_polygon_boundaries_test.cc
       src/s2/s2shapeutil_coding_test.cc
       src/s2/s2shapeutil_contains_brute_force_test.cc
+      src/s2/s2shapeutil_conversion_test.cc
       src/s2/s2shapeutil_count_edges_test.cc
       src/s2/s2shapeutil_edge_iterator_test.cc
       src/s2/s2shapeutil_get_reference_point_test.cc
@@ -500,6 +529,8 @@ if (GTEST_ROOT)
       src/s2/s2testing_test.cc
       src/s2/s2text_format_test.cc
       src/s2/s2wedge_relations_test.cc
+      src/s2/s2winding_operation_test.cc
+      src/s2/s2wrapped_shape_test.cc
       src/s2/sequence_lexicon_test.cc
       src/s2/value_lexicon_test.cc)
 
@@ -514,6 +545,7 @@ if (GTEST_ROOT)
         absl::base
         absl::btree
         absl::core_headers
+        absl::flags_reflection
         absl::memory
         absl::span
         absl::strings

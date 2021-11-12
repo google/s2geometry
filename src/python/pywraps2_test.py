@@ -61,7 +61,78 @@ class PyWrapS2TestCase(unittest.TestCase):
                           s2.S2CellId(0x466d323000000000),
                           s2.S2CellId(0x466d31f000000000)]
     neighbors = cell.GetEdgeNeighbors()
-    self.assertEqual(neighbors, expected_neighbors)
+    self.assertCountEqual(neighbors, expected_neighbors)
+
+  def testS2CellIdGetVertexNeighborsIsWrappedCorrectly(self):
+    cell = s2.S2CellId(0x466d319000000000)
+    expected_neighbors = [s2.S2CellId(0x466d31c000000000),
+                          s2.S2CellId(0x466d314000000000),
+                          s2.S2CellId(0x466d324000000000),
+                          s2.S2CellId(0x466d33c000000000)]
+    self.assertEqual(cell.level(), 12)
+    # Requires level < cell.level.
+    neighbors = cell.GetVertexNeighbors(11)
+    self.assertCountEqual(neighbors, expected_neighbors)
+
+  def testS2CellIdGetAllNeighborsIsWrappedCorrectly(self):
+    cell = s2.S2CellId(0x466d319000000000)
+    expected_neighbors = [s2.S2CellId(0x466d31d000000000),
+                          s2.S2CellId(0x466d311000000000),
+                          s2.S2CellId(0x466d31b000000000),
+                          s2.S2CellId(0x466d323000000000),
+                          s2.S2CellId(0x466d31f000000000),
+                          s2.S2CellId(0x466d317000000000),
+                          s2.S2CellId(0x466d321000000000),
+                          s2.S2CellId(0x466d33d000000000)]
+    self.assertEqual(cell.level(), 12)
+    # Requires level >= cell.level.
+    neighbors = cell.GetAllNeighbors(12)
+    self.assertCountEqual(neighbors, expected_neighbors)
+
+  def testS2CellIdChild(self):
+    valid = s2.S2CellId(0x89c259c000000000)
+    invalid = s2.S2CellId(0)
+    self.assertTrue(valid.is_valid())
+    self.assertFalse(invalid.is_valid())
+
+    self.assertEqual(valid.child(0).parent().id(), valid.id())
+
+    with self.assertRaises(ValueError):
+      valid.child(-1)
+
+    with self.assertRaises(ValueError):
+      valid.child(4)
+
+    with self.assertRaises(ValueError):
+      invalid.child(0)
+
+    leaf = s2.S2CellId(s2.S2LatLng.FromDegrees(10.0, 20.0))
+    with self.assertRaises(ValueError):
+      leaf.child(0)
+
+  def testS2CellIdChildLevelIsWrappedCorrectly(self):
+    cell = s2.S2CellId(0x876bec2688e50000)
+    self.assertEqual(cell.child_position(3), 2)
+    with self.assertRaises(ValueError):
+      cell.child_position(-1)
+    with self.assertRaises(ValueError):
+      cell.child_position(0)
+    with self.assertRaises(ValueError):
+      cell.child_position(40)
+
+  def testS2CellIdContainsInvalidRaises(self):
+    valid = s2.S2CellId(0x89c259c000000000)
+    invalid = s2.S2CellId(0)
+    self.assertTrue(valid.is_valid())
+    self.assertFalse(invalid.is_valid())
+
+    self.assertTrue(valid.contains(valid))
+
+    with self.assertRaises(ValueError):
+      valid.contains(invalid)
+
+    with self.assertRaises(ValueError):
+      invalid.contains(valid)
 
   def testS2CellIdGetAllNeighborsIsWrappedCorrectly(self):
     cell = s2.S2CellId(0x6aa7590000000000)
@@ -85,6 +156,50 @@ class PyWrapS2TestCase(unittest.TestCase):
     cell1 = s2.S2CellId(0x89c259c000000000)
     cell2 = s2.S2CellId(0x89e83d0000000000)
     self.assertFalse(cell1.intersects(cell2))
+
+  def testS2CellIdIntersectsInvalidRaises(self):
+    valid = s2.S2CellId(0x89c259c000000000)
+    invalid = s2.S2CellId(0)
+    self.assertTrue(valid.is_valid())
+    self.assertFalse(invalid.is_valid())
+
+    with self.assertRaises(ValueError):
+      valid.intersects(invalid)
+
+    with self.assertRaises(ValueError):
+      invalid.intersects(valid)
+
+  def testS2CellIdLevel(self):
+    leaf = s2.S2CellId(s2.S2LatLng.FromDegrees(10.0, 20.0))
+    self.assertEqual(leaf.level(), 30)
+
+    with self.assertRaises(ValueError):
+      s2.S2CellId(0).level()
+
+  def testS2CellIdParent(self):
+    leaf = s2.S2CellId(s2.S2LatLng.FromDegrees(10.0, 20.0))
+    self.assertEqual(leaf.level(), 30)
+    self.assertEqual(leaf.parent().level(), 29)
+
+    level8 = leaf.parent(8)
+    self.assertEqual(level8.level(), 8)
+
+    self.assertEqual(level8.parent(0).level(), 0)
+
+    # Error to have negative level.
+    with self.assertRaises(ValueError):
+      level8.parent(-1)
+
+    # Same level is ok.
+    self.assertEqual(level8.parent(8).level(), 8)
+
+    # Error to ask for parent with lower level.
+    with self.assertRaises(ValueError):
+      level8.parent(9)
+
+    # Parent of invalid is an error
+    with self.assertRaises(ValueError):
+      s2.S2CellId(0).parent()
 
   def testS2HashingIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
@@ -149,6 +264,12 @@ class PyWrapS2TestCase(unittest.TestCase):
     loop = s2.S2Loop(s2.S2Cell(s2.S2CellId(london)))
     s2.S2Polygon(loop)
 
+  def testS2LoopAreaIsWrappedCorrectly(self):
+    london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
+    loop = s2.S2Loop(s2.S2Cell(s2.S2CellId(london)))
+    equivalent_polygon = s2.S2Polygon(loop)
+    self.assertAlmostEqual(loop.GetArea(), equivalent_polygon.GetArea())
+
   def testS2PolygonInitNestedIsWrappedCorrectly(self):
     london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
     small_loop = s2.S2Loop(s2.S2Cell(s2.S2CellId(london)))
@@ -211,6 +332,23 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertIsInstance(second_vertex, s2.S2LatLng)
     self.assertEqual("51.500153,-0.126235", second_vertex.ToStringInDegrees())
 
+  def testGetLastDescendant(self):
+    def verts2loop(vs):
+      loop = s2.S2Loop()
+      loop.Init([s2.S2LatLng.FromDegrees(*v).ToPoint() for v in vs])
+      return loop
+
+    loop1 = verts2loop([(0, 0), (0, 10), (10, 10), (10, 0)])    # Shell
+    loop2 = verts2loop([(2, 2), (2, 5), (5, 5), (5, 2)])        # Hole
+    loop3 = verts2loop([(0, 20), (0, 30), (10, 30), (10, 20)])  # Another shell
+
+    polygon = s2.S2Polygon()
+    polygon.InitNested([loop1, loop2, loop3])
+
+    self.assertEqual(1, polygon.GetLastDescendant(0))
+    self.assertEqual(1, polygon.GetLastDescendant(1))
+    self.assertEqual(2, polygon.GetLastDescendant(2))
+
   def testS2PolylineInitFromS2LatLngs(self):
     e7_10deg = 0x5f5e100
     list_ll = []
@@ -253,6 +391,33 @@ class PyWrapS2TestCase(unittest.TestCase):
                             s2.S2LatLng.FromDegrees(51.5, -0.125)])
     intersections = polygon.IntersectWithPolyline(line)
     self.assertEqual(1, len(intersections))
+
+  def testS2PolygonBoundaryNearIsSame(self):
+    london_1 = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
+    polygon_1 = s2.S2Polygon(s2.S2Loop(s2.S2Cell(s2.S2CellId(london_1))))
+    london_2 = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
+    polygon_2 = s2.S2Polygon(s2.S2Loop(s2.S2Cell(s2.S2CellId(london_2))))
+    self.assertTrue(polygon_1.BoundaryNear(polygon_2))
+
+  def testS2PolygonBoundaryNearIsTotallyDifferent(self):
+    london = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
+    polygon_1 = s2.S2Polygon(s2.S2Loop(s2.S2Cell(s2.S2CellId(london))))
+    seattle = s2.S2LatLng.FromDegrees(47.6062, -122.3321)
+    polygon_2 = s2.S2Polygon(s2.S2Loop(s2.S2Cell(s2.S2CellId(seattle))))
+    self.assertFalse(polygon_1.BoundaryNear(polygon_2))
+
+  def testS2PolygonBoundaryNearIsNear(self):
+
+    def verts2loop(vs):
+      loop = s2.S2Loop()
+      loop.Init([s2.S2LatLng.FromDegrees(*v).ToPoint() for v in vs])
+      return loop
+
+    vertices_1 = [(-10, 10), (0, 10), (0, -10), (-10, -10), (-10, 0)]
+    polygon_1 = s2.S2Polygon(verts2loop(vertices_1))
+    vertices_2 = [(-10, 10), (0, 10), (0, -10.1), (-10, -10), (-10, 0)]
+    polygon_2 = s2.S2Polygon(verts2loop(vertices_2))
+    self.assertTrue(polygon_1.BoundaryNear(polygon_2, s2.S1Angle.Degrees(1)))
 
   def testS2PolygonUsesValueEquality(self):
     self.assertEqual(s2.S2Polygon(), s2.S2Polygon())
@@ -781,6 +946,10 @@ class RegionTermIndexerTest(unittest.TestCase):
       indexer2.GetQueryTerms(cap, "")
     )
 
+  def testS2CellIdFromDebugString(self):
+    cell = s2.S2CellId.FromDebugString("5/31200")
+    self.assertTrue(cell.is_valid())
+    self.assertEqual("5/31200", cell.ToString())
 
 if __name__ == "__main__":
   unittest.main()

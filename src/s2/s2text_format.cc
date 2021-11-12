@@ -18,13 +18,14 @@
 #include <string>
 #include <vector>
 
-#include "s2/base/logging.h"
-#include "s2/base/stringprintf.h"
-#include "s2/strings/serialize.h"
 #include "absl/memory/memory.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/strip.h"
+
+#include "s2/base/logging.h"
+#include "s2/strings/serialize.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2latlng.h"
 #include "s2/s2lax_polygon_shape.h"
@@ -34,6 +35,7 @@
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 
+using absl::Span;
 using absl::make_unique;
 using absl::string_view;
 using std::pair;
@@ -106,7 +108,7 @@ bool MakePoint(string_view str, S2Point* point) {
 }
 
 bool MakeLatLng(string_view str, S2LatLng* latlng) {
-  std::vector<S2LatLng> latlngs;
+  vector<S2LatLng> latlngs;
   if (!ParseLatLngs(str, &latlngs) || latlngs.size() != 1) return false;
   *latlng = latlngs[0];
   return true;
@@ -182,10 +184,6 @@ bool MakeLoop(string_view str, unique_ptr<S2Loop>* loop,
   if (!ParsePoints(str, &vertices)) return false;
   *loop = make_unique<S2Loop>(vertices, debug_override);
   return true;
-}
-
-std::unique_ptr<S2Loop> MakeLoop(string_view str, S2Debug debug_override) {
-  return MakeLoopOrDie(str, debug_override);
 }
 
 unique_ptr<S2Polyline> MakePolylineOrDie(string_view str,
@@ -326,12 +324,12 @@ bool MakeIndex(string_view str, std::unique_ptr<MutableS2ShapeIndex>* index) {
   for (const auto& line_str : SplitString(strs[1], '|')) {
     std::unique_ptr<S2LaxPolylineShape> lax_polyline;
     if (!MakeLaxPolyline(line_str, &lax_polyline)) return false;
-    (*index)->Add(unique_ptr<S2Shape>(lax_polyline.release()));
+    (*index)->Add(std::move(lax_polyline));
   }
   for (const auto& polygon_str : SplitString(strs[2], '|')) {
     std::unique_ptr<S2LaxPolygonShape> lax_polygon;
     if (!MakeLaxPolygon(polygon_str, &lax_polygon)) return false;
-    (*index)->Add(unique_ptr<S2Shape>(lax_polygon.release()));
+    (*index)->Add(std::move(lax_polygon));
   }
   return true;
 }
@@ -341,7 +339,8 @@ std::unique_ptr<MutableS2ShapeIndex> MakeIndex(string_view str) {
 }
 
 static void AppendVertex(const S2LatLng& ll, string* out) {
-  StringAppendF(out, "%.15g:%.15g", ll.lat().degrees(), ll.lng().degrees());
+  absl::StrAppendFormat(out, "%.15g:%.15g", ll.lat().degrees(),
+                        ll.lng().degrees());
 }
 
 static void AppendVertex(const S2Point& p, string* out) {
@@ -402,17 +401,6 @@ string ToString(const S2Loop& loop) {
   return out;
 }
 
-string ToString(S2PointLoopSpan loop) {
-  // S2Shape represents the full loop as a loop with no vertices.
-  // There is no representation of the empty loop.
-  if (loop.empty()) {
-    return "full";
-  }
-  string out;
-  AppendVertices(loop.data(), loop.size(), &out);
-  return out;
-}
-
 string ToString(const S2Polyline& polyline) {
   string out;
   if (polyline.num_vertices() > 0) {
@@ -436,13 +424,13 @@ string ToString(const S2Polygon& polygon, const char* loop_separator) {
   return out;
 }
 
-string ToString(const vector<S2Point>& points) {
+string ToString(Span<const S2Point> points) {
   string out;
   AppendVertices(points.data(), points.size(), &out);
   return out;
 }
 
-string ToString(const vector<S2LatLng>& latlngs) {
+string ToString(Span<const S2LatLng> latlngs) {
   string out;
   for (int i = 0; i < latlngs.size(); ++i) {
     if (i > 0) out += ", ";

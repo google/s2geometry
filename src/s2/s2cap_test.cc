@@ -18,6 +18,7 @@
 #include "s2/s2cap.h"
 
 #include <cfloat>
+
 #include <gtest/gtest.h>
 #include "s2/r1interval.h"
 #include "s2/s1interval.h"
@@ -51,6 +52,11 @@ TEST(S2Cap, Basic) {
   EXPECT_TRUE(full.Complement().is_empty());
   EXPECT_EQ(2, full.height());
   EXPECT_DOUBLE_EQ(180.0, full.GetRadius().degrees());
+
+  // Test ==/!=.
+  EXPECT_EQ(full, full);
+  EXPECT_EQ(empty, empty);
+  EXPECT_NE(full, empty);
 
   // Test the S1Angle constructor using out-of-range arguments.
   EXPECT_TRUE(S2Cap(S2Point(1, 0, 0), S1Angle::Radians(-20)).is_empty());
@@ -377,3 +383,4 @@ TEST(S2Cap, EncodeDecode) {
   EXPECT_TRUE(decoded_cap.Decode(&decoder));
   EXPECT_EQ(cap, decoded_cap);
 }
+

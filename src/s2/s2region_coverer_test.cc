@@ -23,28 +23,31 @@
 #include <limits>
 #include <queue>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include <gtest/gtest.h>
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/flags/flag.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/numbers.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_split.h"
+
 #include "s2/base/commandlineflags.h"
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "s2/base/stringprintf.h"
-#include "s2/base/strtoint.h"
+#include "s2/base/log_severity.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2latlng.h"
+#include "s2/s2point.h"
 #include "s2/s2polyline.h"
 #include "s2/s2region.h"
 #include "s2/s2testing.h"
-#include "absl/memory/memory.h"
-#include "absl/strings/str_cat.h"
-#include "absl/strings/str_split.h"
 
 using absl::StrCat;
 using std::max;
@@ -59,6 +62,17 @@ S2_DEFINE_string(max_cells, "4,8",
 
 S2_DEFINE_int32(iters, google::DEBUG_MODE ? 1000 : 100000,
              "Number of random caps to try for each max_cells value");
+
+namespace {
+
+using absl::SimpleAtoi;
+using absl::StrCat;
+using absl::flat_hash_map;
+using std::max;
+using std::min;
+using std::priority_queue;
+using std::string;
+using std::vector;
 
 TEST(S2RegionCoverer, RandomCells) {
   S2RegionCoverer::Options options;
@@ -80,7 +94,7 @@ static void CheckCovering(const S2RegionCoverer::Options& options,
                           const vector<S2CellId>& covering,
                           bool interior) {
   // Keep track of how many cells have the same options.min_level() ancestor.
-  unordered_map<S2CellId, int, S2CellIdHash> min_level_cells;
+  flat_hash_map<S2CellId, int, S2CellIdHash> min_level_cells;
   for (S2CellId cell_id : covering) {
     int level = cell_id.level();
     EXPECT_GE(level, options.min_level());
@@ -91,10 +105,8 @@ static void CheckCovering(const S2RegionCoverer::Options& options,
   if (covering.size() > options.max_cells()) {
     // If the covering has more than the requested number of cells, then check
     // that the cell count cannot be reduced by using the parent of some cell.
-    for (unordered_map<S2CellId, int, S2CellIdHash>::const_iterator i =
-             min_level_cells.begin();
-         i != min_level_cells.end(); ++i) {
-      EXPECT_EQ(i->second, 1);
+    for (const auto [_, cells] : min_level_cells) {
+      EXPECT_EQ(cells, 1);
     }
   }
   if (interior) {
@@ -199,7 +211,7 @@ static void TestAccuracy(int max_cells) {
   for (int method = 0; method < kNumMethods; ++method) {
     min_ratio[method] = 1e20;
   }
-  for (int i = 0; i < FLAGS_iters; ++i) {
+  for (int i = 0; i < absl::GetFlag(FLAGS_iters); ++i) {
     // Choose the log of the cap area to be uniformly distributed over
     // the allowable range.  Don't try to approximate regions that are so
     // small they can't use the given maximum number of cells efficiently.
@@ -248,9 +260,11 @@ static void TestAccuracy(int max_cells) {
   }
   for (int method = 0; method < kNumMethods; ++method) {
     printf("\nMax cells %d, method %d:\n", max_cells, method);
-    printf("  Average cells: %.4f\n", cell_total[method] /
-           static_cast<double>(FLAGS_iters));
-    printf("  Average area ratio: %.4f\n", ratio_total[method] / FLAGS_iters);
+    printf(
+        "  Average cells: %.4f\n",
+        cell_total[method] / static_cast<double>(absl::GetFlag(FLAGS_iters)));
+    printf("  Average area ratio: %.4f\n",
+           ratio_total[method] / absl::GetFlag(FLAGS_iters));
     vector<double>& mratios = ratios[method];
     std::sort(mratios.begin(), mratios.end());
     printf("  Median ratio: %.4f\n", mratios[mratios.size() / 2]);
@@ -258,9 +272,11 @@ static void TestAccuracy(int max_cells) {
     printf("  Min ratio: %.4f\n", min_ratio[method]);
     if (kNumMethods > 1) {
       printf("  Cell winner probability: %.4f\n",
-             cell_winner_tally[method] / static_cast<double>(FLAGS_iters));
+             cell_winner_tally[method] /
+                 static_cast<double>(absl::GetFlag(FLAGS_iters)));
       printf("  Area winner probability: %.4f\n",
-             area_winner_tally[method] / static_cast<double>(FLAGS_iters));
+             area_winner_tally[method] /
+                 static_cast<double>(absl::GetFlag(FLAGS_iters)));
     }
     printf("  Caps with the worst approximation ratios:\n");
     for (; !worst_caps[method].empty(); worst_caps[method].pop()) {
@@ -276,9 +292,11 @@ static void TestAccuracy(int max_cells) {
 }
 
 TEST(S2RegionCoverer, Accuracy) {
-  for (auto max_cells :
-           absl::StrSplit(FLAGS_max_cells, ',', absl::SkipEmpty())) {
-    TestAccuracy(atoi32(string(max_cells).c_str()));
+  for (auto max_cells_str :
+       absl::StrSplit(absl::GetFlag(FLAGS_max_cells), ',', absl::SkipEmpty())) {
+    int max_cells;
+    S2_CHECK(absl::SimpleAtoi(max_cells_str, &max_cells));
+    TestAccuracy(max_cells);
   }
 }
 
@@ -480,17 +498,25 @@ TEST(CanonicalizeCovering, MaxCellsMergesRepeatedly) {
       {"0/0121", "0/0123", "1/"}, options);
 }
 
+vector<string> ToTokens(const S2CellUnion& cell_union) {
+  vector<string> tokens;
+  for (auto& cell_id : cell_union) {
+    tokens.push_back(cell_id.ToToken());
+  }
+  return tokens;
+}
+
 TEST(JavaCcConsistency, CheckCovering) {
-  std::vector<S2Point> points = {
+  vector<S2Point> points = {
       S2LatLng::FromDegrees(-33.8663457, 151.1960891).ToPoint(),
       S2LatLng::FromDegrees(-33.866094000000004, 151.19517439999998).ToPoint()};
-  std::unique_ptr<S2Polyline> polyline = absl::make_unique<S2Polyline>(points);
+  S2Polyline polyline(points);
   S2RegionCoverer coverer;
   coverer.mutable_options()->set_min_level(0);
   coverer.mutable_options()->set_max_level(22);
   coverer.mutable_options()->set_max_cells(INT_MAX);
-  S2CellUnion ret = coverer.GetCovering(*polyline);
-  std::vector<std::string> expected(
+  S2CellUnion covering = coverer.GetCovering(polyline);
+  vector<string> expected(
       {"6b12ae36313d", "6b12ae36313f", "6b12ae363141", "6b12ae363143",
        "6b12ae363145", "6b12ae363159", "6b12ae36315b", "6b12ae363343",
        "6b12ae363345", "6b12ae36334d", "6b12ae36334f", "6b12ae363369",
@@ -502,9 +528,7 @@ TEST(JavaCcConsistency, CheckCovering) {
        "6b12ae37cc8f", "6b12ae37cc91", "6b12ae37cc97", "6b12ae37ccb1",
        "6b12ae37ccb3", "6b12ae37ccbb", "6b12ae37ccbd", "6b12ae37cea5",
        "6b12ae37cea7", "6b12ae37cebb"});
-  std::vector<std::string> actual;
-  for (auto& cell_id : ret) {
-    actual.push_back(cell_id.ToToken());
-  }
-  EXPECT_EQ(expected, actual);
+  EXPECT_EQ(expected, ToTokens(covering));
 }
+
+}  // namespace

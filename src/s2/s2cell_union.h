@@ -20,13 +20,15 @@
 
 #include <vector>
 
+#include "absl/base/macros.h"
+#include "absl/flags/flag.h"
+
 #include "s2/base/commandlineflags.h"
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"
-#include "absl/base/macros.h"
 
 class Decoder;
 class Encoder;
@@ -157,10 +159,7 @@ class S2CellUnion final : public S2Region {
   // Normalizes the cell union by discarding cells that are contained by other
   // cells, replacing groups of 4 child cells by their parent cell whenever
   // possible, and sorting all the cell ids in increasing order.
-  //
-  // Returns true if the number of cells was reduced.
-  // TODO(ericv): Change this method to return void.
-  bool Normalize();
+  void Normalize();
 
   // Replaces "output" with an expanded version of the cell union where any
   // cells whose level is less than "min_level" or where (level - min_level)
@@ -313,7 +312,7 @@ class S2CellUnion final : public S2Region {
   // Like Normalize(), but works with a vector of S2CellIds.
   // Equivalent to:
   //   *cell_ids = S2CellUnion(std::move(*cell_ids)).Release();
-  static bool Normalize(std::vector<S2CellId>* cell_ids);
+  static void Normalize(std::vector<S2CellId>* cell_ids);
 
   // Like Denormalize(), but works with a vector of S2CellIds.
   // REQUIRES: out != &in
@@ -333,6 +332,11 @@ class S2CellUnion final : public S2Region {
   static void GetIntersection(const std::vector<S2CellId>& x,
                               const std::vector<S2CellId>& y,
                               std::vector<S2CellId>* out);
+
+  // Returns a human-readable string describing the S2CellUnion, consisting of
+  // the number of cells and the list of S2CellIds in S2CellId::ToToken()
+  // format (limited to at most 500 cells).
+  std::string ToString() const;
 
  private:
   friend class S2CellUnionTestPeer;  // For creating invalid S2CellUnions.
@@ -365,7 +369,7 @@ inline S2CellUnion S2CellUnion::FromNormalized(std::vector<S2CellId> cell_ids) {
 
 inline S2CellUnion S2CellUnion::FromVerbatim(std::vector<S2CellId> cell_ids) {
   S2CellUnion result(std::move(cell_ids), VERBATIM);
-  S2_DCHECK(!FLAGS_s2debug || result.IsValid());
+  S2_DCHECK(!absl::GetFlag(FLAGS_s2debug) || result.IsValid());
   return result;
 }
 
@@ -394,6 +398,11 @@ inline std::vector<S2CellId>::const_iterator S2CellUnion::begin() const {
 
 inline std::vector<S2CellId>::const_iterator S2CellUnion::end() const {
   return cell_ids_.end();
+}
+
+// Output stream operator. Automatically guards against large inputs.
+inline std::ostream& operator<<(std::ostream& os, const S2CellUnion& u) {
+  return os << u.ToString();
 }
 
 #endif  // S2_S2CELL_UNION_H_

@@ -19,10 +19,14 @@
 
 #include <memory>
 #include <string>
+
+#include <gtest/gtest.h>
+
+#include "absl/memory/memory.h"
+#include "absl/strings/string_view.h"
+
 #include "s2/base/casts.h"
 #include "s2/base/integral_types.h"
-#include <gtest/gtest.h>
-#include "absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2text_format.h"
 
@@ -40,7 +44,7 @@ namespace {
 void VerifyS2PointVectorLayerResults(
     const S2PointVectorLayer::LabelSetIds& label_set_ids,
     const IdSetLexicon& label_set_lexicon, const vector<S2Point>& output,
-    const string& str_expected_points,
+    absl::string_view str_expected_points,
     const vector<vector<int32>>& expected_labels) {
   vector<S2Point> expected_points =
       s2textformat::ParsePoints(str_expected_points);

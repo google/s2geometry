@@ -22,7 +22,10 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+
+#include "absl/flags/flag.h"
 #include "absl/memory/memory.h"
+
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
@@ -113,10 +116,7 @@ void ExpectDegeneracies(const string& polygon_str,
       [&polygon](const Graph& graph, S2Error* error) {
         return polygon->GetReferencePoint().contained;
       });
-  for (int i = 0; i < polygon->num_edges(); ++i) {
-    auto edge = polygon->edge(i);
-    builder.AddEdge(edge.v0, edge.v1);
-  }
+  builder.AddShape(*polygon);
   S2Error error;
   EXPECT_TRUE(builder.Build(&error)) << error;
 }

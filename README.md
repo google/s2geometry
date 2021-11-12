@@ -19,8 +19,7 @@ S2 documentation can be found on [s2geometry.io](http://s2geometry.io).
 ## Requirements for End Users
 
 * [CMake](http://www.cmake.org/)
-* A C++ compiler with C++11 support, such as [g++](https://gcc.gnu.org/)
-  \>= 4.7.
+* A C++ compiler with C++17 support, such as [g++ 7](https://gcc.gnu.org/)
 * [Abseil](https://github.com/abseil/abseil-cpp) (standard library extensions)
 * [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 * [gflags command line flags](https://github.com/gflags/gflags), optional
@@ -143,7 +142,7 @@ For more info read: [The CMake Cache](https://cmake.org/cmake/help/latest/guide/
 If you want the Python interface, you need to run cmake using
 `-DWITH_PYTHON=ON`. You will also need to install the following dependencies:
 
-* [SWIG](https://github.com/swig/swig) (for Python support, optional)
+* [SWIG 4](https://github.com/swig/swig) (for Python support, optional)
 * python3-dev (for Python support, optional)
 
 which can be installed via
@@ -157,7 +156,8 @@ or on macOS:
 ```
 sudo port install swig
 ```
-Expect to see some warnings if you build with swig 2.0.
+Version 4.0 is required, but it should be easy to make it work 3.0 or probably
+even 2.0.
 
 Python 3 is required.
 

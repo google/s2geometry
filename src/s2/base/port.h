@@ -29,14 +29,14 @@
 // - Performance optimization (alignment)
 // - Obsolete
 
-#include <cassert>
-#include <climits>
+#include <inttypes.h>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 
 #include "s2/base/integral_types.h"
 #include "absl/base/config.h"
-#include "absl/base/port.h"
+#include "absl/base/port.h"  // IWYU pragma: keep
 
 #ifdef SWIG
 %include "third_party/absl/base/port.h"
@@ -48,10 +48,14 @@
 
 #ifdef _MSC_VER /* if Visual C++ */
 
-#include <winsock2.h>  // Must come before <windows.h>
 #include <intrin.h>
 #include <process.h>  // _getpid()
+
+// clang-format off
+#include <winsock2.h>  // Must come before <windows.h>
 #include <windows.h>
+// clang-format on
+
 #undef ERROR
 #undef DELETE
 #undef DIFFERENCE
@@ -140,42 +144,6 @@
 
 #endif  // _MSC_VER
 
-// LANG_CXX11
-// GXX_EXPERIMENTAL_CXX0X is defined by gcc and clang up to at least
-// gcc-4.7 and clang-3.1 (2011-12-13).  __cplusplus was defined to 1
-// in gcc before 4.7 (Crosstool 16) and clang before 3.1, but is
-// defined according to the language version in effect thereafter.
-// Microsoft Visual Studio 14 (2015) sets __cplusplus==199711 despite
-// reasonably good C++11 support, so we set LANG_CXX for it and
-// newer versions (_MSC_VER >= 1900).
-#if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L || \
-     (defined(_MSC_VER) && _MSC_VER >= 1900))
-// DEPRECATED: Do not key off LANG_CXX11. Instead, write more accurate condition
-// that checks whether the C++ feature you need is available or missing, and
-// define a more specific feature macro (GOOGLE_HAVE_FEATURE_FOO). You can check
-// http://en.cppreference.com/w/cpp/compiler_support for compiler support on C++
-// features.
-// Define this to 1 if the code is compiled in C++11 mode; leave it
-// undefined otherwise.  Do NOT define it to 0 -- that causes
-// '#ifdef LANG_CXX11' to behave differently from '#if LANG_CXX11'.
-#define LANG_CXX11 1
-#endif
-
-// This sanity check can be removed when all references to
-// LANG_CXX11 is removed from the code base.
-#if defined(__cplusplus) && !defined(LANG_CXX11) && !defined(SWIG)
-#error "LANG_CXX11 is required."
-#endif
-
-// GOOGLE_OBSCURE_SIGNAL
-#if defined(__APPLE__)
-// No SIGPWR on MacOSX.  SIGINFO seems suitably obscure.
-#define GOOGLE_OBSCURE_SIGNAL SIGINFO
-#else
-/* We use SIGPWR since that seems unlikely to be used for other reasons. */
-#define GOOGLE_OBSCURE_SIGNAL SIGPWR
-#endif
-
 // -----------------------------------------------------------------------------
 // Endianness
 // -----------------------------------------------------------------------------
@@ -190,6 +158,7 @@
 
 // BIG_ENDIAN
 #include <machine/endian.h>  // NOLINT(build/include)
+
 /* Let's try and follow the Linux convention */
 #define __BYTE_ORDER  BYTE_ORDER
 #define __LITTLE_ENDIAN LITTLE_ENDIAN
@@ -231,6 +200,7 @@
 // The following guarantees declaration of the byte swap functions
 #ifdef _MSC_VER
 #include <cstdlib>  // NOLINT(build/include)
+
 #define bswap_16(x) _byteswap_ushort(x)
 #define bswap_32(x) _byteswap_ulong(x)
 #define bswap_64(x) _byteswap_uint64(x)
@@ -238,11 +208,13 @@
 #elif defined(__APPLE__)
 // Mac OS X / Darwin features
 #include <libkern/OSByteOrder.h>
+
 #define bswap_16(x) OSSwapInt16(x)
 #define bswap_32(x) OSSwapInt32(x)
 #define bswap_64(x) OSSwapInt64(x)
 
-#elif defined(__GLIBC__) || defined(__BIONIC__) || defined(__ASYLO__)
+#elif defined(__GLIBC__) || defined(__BIONIC__) || defined(__ASYLO__) || \
+    0
 #include <byteswap.h>  // IWYU pragma: export
 
 #else
@@ -263,14 +235,12 @@ static inline uint32 bswap_32(uint32 x) {
 }
 #define bswap_32(x) bswap_32(x)
 static inline uint64 bswap_64(uint64 x) {
-  return (((x & 0xFFULL) << 56) |
-          ((x & 0xFF00ULL) << 40) |
-          ((x & 0xFF0000ULL) << 24) |
-          ((x & 0xFF000000ULL) << 8) |
-          ((x & 0xFF00000000ULL) >> 8) |
-          ((x & 0xFF0000000000ULL) >> 24) |
-          ((x & 0xFF000000000000ULL) >> 40) |
-          ((x & 0xFF00000000000000ULL) >> 56));
+  return (((x & (uint64)0xFF) << 56) | ((x & (uint64)0xFF00) << 40) |
+          ((x & (uint64)0xFF0000) << 24) | ((x & (uint64)0xFF000000) << 8) |
+          ((x & (uint64)0xFF00000000) >> 8) |
+          ((x & (uint64)0xFF0000000000) >> 24) |
+          ((x & (uint64)0xFF000000000000) >> 40) |
+          ((x & (uint64)0xFF00000000000000) >> 56));
 }
 #define bswap_64(x) bswap_64(x)
 
@@ -312,75 +282,16 @@ static inline uint64 bswap_64(uint64 x) {
 
 // Unaligned APIs
 
-// Portable handling of unaligned loads, stores, and copies.
-// On some platforms, like ARM, the copy functions can be more efficient
-// then a load and a store.
+// Portable handling of unaligned loads, stores, and copies. These are simply
+// constant-length memcpy calls.
 //
-// It is possible to implement all of these these using constant-length memcpy
-// calls, which is portable and will usually be inlined into simple loads and
-// stores if the architecture supports it. However, such inlining usually
-// happens in a pass that's quite late in compilation, which means the resulting
-// loads and stores cannot participate in many other optimizations, leading to
-// overall worse code.
 // TODO(user): These APIs are forked in Abseil, see
-// LLVM, we should reimplement these APIs with functions calling memcpy(), and
-// maybe publish them in Abseil.
-
+// "third_party/absl/base/internal/unaligned_access.h".
+//
 // The unaligned API is C++ only.  The declarations use C++ features
 // (namespaces, inline) which are absent or incompatible in C.
 #if defined(__cplusplus)
 
-#if defined(ADDRESS_SANITIZER) || defined(THREAD_SANITIZER) || \
-    defined(MEMORY_SANITIZER)
-// Consider we have an unaligned load/store of 4 bytes from address 0x...05.
-// AddressSanitizer will treat it as a 3-byte access to the range 05:07 and
-// will miss a bug if 08 is the first unaddressable byte.
-// ThreadSanitizer will also treat this as a 3-byte access to 05:07 and will
-// miss a race between this access and some other accesses to 08.
-// MemorySanitizer will correctly propagate the shadow on unaligned stores
-// and correctly report bugs on unaligned loads, but it may not properly
-// update and report the origin of the uninitialized memory.
-// For all three tools, replacing an unaligned access with a tool-specific
-// callback solves the problem.
-
-// Make sure uint16_t/uint32_t/uint64_t are defined.
-#include <cstdint>
-
-extern "C" {
-uint16_t __sanitizer_unaligned_load16(const void *p);
-uint32_t __sanitizer_unaligned_load32(const void *p);
-uint64_t __sanitizer_unaligned_load64(const void *p);
-void __sanitizer_unaligned_store16(void *p, uint16_t v);
-void __sanitizer_unaligned_store32(void *p, uint32_t v);
-void __sanitizer_unaligned_store64(void *p, uint64_t v);
-}  // extern "C"
-
-inline uint16 UNALIGNED_LOAD16(const void *p) {
-  return __sanitizer_unaligned_load16(p);
-}
-
-inline uint32 UNALIGNED_LOAD32(const void *p) {
-  return __sanitizer_unaligned_load32(p);
-}
-
-inline uint64 UNALIGNED_LOAD64(const void *p) {
-  return __sanitizer_unaligned_load64(p);
-}
-
-inline void UNALIGNED_STORE16(void *p, uint16 v) {
-  __sanitizer_unaligned_store16(p, v);
-}
-
-inline void UNALIGNED_STORE32(void *p, uint32 v) {
-  __sanitizer_unaligned_store32(p, v);
-}
-
-inline void UNALIGNED_STORE64(void *p, uint64 v) {
-  __sanitizer_unaligned_store64(p, v);
-}
-
-#elif defined(UNDEFINED_BEHAVIOR_SANITIZER)
-
 inline uint16 UNALIGNED_LOAD16(const void *p) {
   uint16 t;
   memcpy(&t, p, sizeof t);
@@ -404,121 +315,6 @@ inline void UNALIGNED_STORE16(void *p, uint16 v) { memcpy(p, &v, sizeof v); }
 inline void UNALIGNED_STORE32(void *p, uint32 v) { memcpy(p, &v, sizeof v); }
 
 inline void UNALIGNED_STORE64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
-
-#elif defined(__x86_64__) || defined(_M_X64) || defined(__i386) || \
-    defined(_M_IX86) || defined(__ppc__) || defined(__PPC__) ||    \
-    defined(__ppc64__) || defined(__PPC64__)
-
-// x86 and x86-64 can perform unaligned loads/stores directly;
-// modern PowerPC hardware can also do unaligned integer loads and stores;
-// but note: the FPU still sends unaligned loads and stores to a trap handler!
-
-#define UNALIGNED_LOAD16(_p) (*reinterpret_cast<const uint16 *>(_p))
-#define UNALIGNED_LOAD32(_p) (*reinterpret_cast<const uint32 *>(_p))
-#define UNALIGNED_LOAD64(_p) (*reinterpret_cast<const uint64 *>(_p))
-
-#define UNALIGNED_STORE16(_p, _val) (*reinterpret_cast<uint16 *>(_p) = (_val))
-#define UNALIGNED_STORE32(_p, _val) (*reinterpret_cast<uint32 *>(_p) = (_val))
-#define UNALIGNED_STORE64(_p, _val) (*reinterpret_cast<uint64 *>(_p) = (_val))
-
-#elif defined(__arm__) && !defined(__ARM_ARCH_5__) &&          \
-    !defined(__ARM_ARCH_5T__) && !defined(__ARM_ARCH_5TE__) && \
-    !defined(__ARM_ARCH_5TEJ__) && !defined(__ARM_ARCH_6__) && \
-    !defined(__ARM_ARCH_6J__) && !defined(__ARM_ARCH_6K__) &&  \
-    !defined(__ARM_ARCH_6Z__) && !defined(__ARM_ARCH_6ZK__) && \
-    !defined(__ARM_ARCH_6T2__)
-
-// ARMv7 and newer support native unaligned accesses, but only of 16-bit
-// and 32-bit values (not 64-bit); older versions either raise a fatal signal,
-// do an unaligned read and rotate the words around a bit, or do the reads very
-// slowly (trip through kernel mode). There's no simple #define that says just
-// “ARMv7 or higher”, so we have to filter away all ARMv5 and ARMv6
-// sub-architectures. Newer gcc (>= 4.6) set an __ARM_FEATURE_ALIGNED #define,
-// so in time, maybe we can move on to that.
-//
-// This is a mess, but there's not much we can do about it.
-//
-// To further complicate matters, only LDR instructions (single reads) are
-// allowed to be unaligned, not LDRD (two reads) or LDM (many reads). Unless we
-// explicitly tell the compiler that these accesses can be unaligned, it can and
-// will combine accesses. On armcc, the way to signal this is done by accessing
-// through the type (uint32 __packed *), but GCC has no such attribute
-// (it ignores __attribute__((packed)) on individual variables). However,
-// we can tell it that a _struct_ is unaligned, which has the same effect,
-// so we do that.
-
-namespace base {
-namespace internal {
-
-struct Unaligned16Struct {
-  uint16 value;
-  uint8 dummy;  // To make the size non-power-of-two.
-} ABSL_ATTRIBUTE_PACKED;
-
-struct Unaligned32Struct {
-  uint32 value;
-  uint8 dummy;  // To make the size non-power-of-two.
-} ABSL_ATTRIBUTE_PACKED;
-
-}  // namespace internal
-}  // namespace base
-
-#define UNALIGNED_LOAD16(_p) \
-  ((reinterpret_cast<const ::base::internal::Unaligned16Struct *>(_p))->value)
-#define UNALIGNED_LOAD32(_p) \
-  ((reinterpret_cast<const ::base::internal::Unaligned32Struct *>(_p))->value)
-
-#define UNALIGNED_STORE16(_p, _val)                                        \
-  ((reinterpret_cast< ::base::internal::Unaligned16Struct *>(_p))->value = \
-       (_val))
-#define UNALIGNED_STORE32(_p, _val)                                        \
-  ((reinterpret_cast< ::base::internal::Unaligned32Struct *>(_p))->value = \
-       (_val))
-
-// TODO(user): NEON supports unaligned 64-bit loads and stores.
-// See if that would be more efficient on platforms supporting it,
-// at least for copies.
-
-inline uint64 UNALIGNED_LOAD64(const void *p) {
-  uint64 t;
-  memcpy(&t, p, sizeof t);
-  return t;
-}
-
-inline void UNALIGNED_STORE64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
-
-#else
-
-#define NEED_ALIGNED_LOADS
-
-// These functions are provided for architectures that don't support
-// unaligned loads and stores.
-
-inline uint16 UNALIGNED_LOAD16(const void *p) {
-  uint16 t;
-  memcpy(&t, p, sizeof t);
-  return t;
-}
-
-inline uint32 UNALIGNED_LOAD32(const void *p) {
-  uint32 t;
-  memcpy(&t, p, sizeof t);
-  return t;
-}
-
-inline uint64 UNALIGNED_LOAD64(const void *p) {
-  uint64 t;
-  memcpy(&t, p, sizeof t);
-  return t;
-}
-
-inline void UNALIGNED_STORE16(void *p, uint16 v) { memcpy(p, &v, sizeof v); }
-
-inline void UNALIGNED_STORE32(void *p, uint32 v) { memcpy(p, &v, sizeof v); }
-
-inline void UNALIGNED_STORE64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
-
-#endif
 
 // The UNALIGNED_LOADW and UNALIGNED_STOREW macros load and store values
 // of type uword_t.
@@ -531,23 +327,15 @@ inline void UNALIGNED_STORE64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 #endif
 
 inline void UnalignedCopy16(const void *src, void *dst) {
-  UNALIGNED_STORE16(dst, UNALIGNED_LOAD16(src));
+  memcpy(dst, src, 2);
 }
 
 inline void UnalignedCopy32(const void *src, void *dst) {
-  UNALIGNED_STORE32(dst, UNALIGNED_LOAD32(src));
+  memcpy(dst, src, 4);
 }
 
 inline void UnalignedCopy64(const void *src, void *dst) {
-  if (sizeof(void *) == 8) {
-    UNALIGNED_STORE64(dst, UNALIGNED_LOAD64(src));
-  } else {
-    const char *src_char = reinterpret_cast<const char *>(src);
-    char *dst_char = reinterpret_cast<char *>(dst);
-
-    UNALIGNED_STORE32(dst_char, UNALIGNED_LOAD32(src_char));
-    UNALIGNED_STORE32(dst_char + 4, UNALIGNED_LOAD32(src_char + 4));
-  }
+  memcpy(dst, src, 8);
 }
 
 #endif  // defined(__cplusplus), end of unaligned API

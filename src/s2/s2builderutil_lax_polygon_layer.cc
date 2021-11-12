@@ -72,11 +72,8 @@ GraphOptions LaxPolygonLayer::graph_options() const {
                         DuplicateEdges::KEEP, SiblingPairs::DISCARD);
   } else {
     // Keep at most one copy of each sibling pair and each isolated vertex.
-    // We need DuplicateEdges::MERGE because DegenerateEdges::DISCARD_EXCESS
-    // can still keep multiple copies (it only discards degenerate edges that
-    // are connected to non-degenerate edges).
     return GraphOptions(options_.edge_type(), DegenerateEdges::DISCARD_EXCESS,
-                        DuplicateEdges::MERGE, SiblingPairs::DISCARD_EXCESS);
+                        DuplicateEdges::KEEP, SiblingPairs::DISCARD_EXCESS);
   }
 }
 

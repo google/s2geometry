@@ -30,9 +30,17 @@
 
 #include <gtest/gtest.h>
 
+#include "absl/base/macros.h"
+#include "absl/container/fixed_array.h"
+#include "absl/flags/flag.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
+
 #include "s2/base/casts.h"
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
+#include "s2/base/log_severity.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
@@ -59,10 +67,6 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 #include "s2/strings/serialize.h"
-#include "absl/base/macros.h"
-#include "absl/container/fixed_array.h"
-#include "absl/memory/memory.h"
-#include "absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/gtl/legacy_random_shuffle.h"
 #include "s2/util/math/matrix3x3.h"
@@ -378,7 +382,7 @@ TEST(S2Polygon, TestApproxContainsAndDisjoint) {
   // tests should fail, while all of the approximate test should succeed.
   const int kIters = 1000;
   int exact_contains = 0, exact_disjoint = 0;
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   for (int iter = 0; iter < kIters; ++iter) {
     S2CellId id = S2Testing::GetRandomCellId(10);
     S2Polygon parent_polygon((S2Cell(id)));
@@ -423,11 +427,12 @@ TEST(S2Polygon, TestApproxContainsAndDisjoint) {
   // the parent 50% of the time.  Otherwise there is a 50% chance that the
   // intersection point will not be chosen for snapping because it has a
   // higher S2CellId that the shared vertex, and otherwise there is still a
-  // 50% chance that intersection point is on the side of the shared edge that
-  // results in no intersection.  This works out to an expectation that
-  // (1 - 0.5 * 0.5 * 0.5) = 87.5% of the exact disjoint tests will succeed.
+  // 50-75% chance that intersection point will not be inside the adjacent
+  // child cell (depending on how far the shared vertex is outside the parent
+  // cell).  This means that we expect 1 - 0.5 * 0.5 * (0.25 ~ 0.5) = 87.5% to
+  // 93.75% of the exact disjoint tests to succeed on average.
   EXPECT_LT(exact_contains, 0.40 * kIters);  // about 37.5% succeed
-  EXPECT_LT(exact_disjoint, 0.90 * kIters);  // about 87.5% succeed
+  EXPECT_LT(exact_disjoint, 0.96 * kIters);  // 87.5% - 93.75% succeed
 }
 
 // Given a pair of polygons where A contains B, check that various identities
@@ -883,17 +888,38 @@ TEST(S2Polygon, IntersectionPreservesLoopOrder) {
   EXPECT_EQ(s2textformat::ToString(*b), s2textformat::ToString(actual));
 }
 
+// Verifies that the bounding rectangle optimization in InitToIntersection()
+// resets the result polygon to be empty.
+TEST(S2Polygon, EmptyIntersectionClearsResult) {
+  // The bounding rectangles of these two polygons do not intersect.
+  unique_ptr<S2Polygon> a = MakePolygon("0:0, 0:1, 1:0");
+  unique_ptr<S2Polygon> b = MakePolygon("3:3, 3:4, 4:3");
+
+  // Initialize the result polygon to be non-empty, then verify that computing
+  // the intersection clears the result.
+  unique_ptr<S2Polygon> result = MakePolygon("0:0, 0:1, 1:0");
+  result->InitToIntersection(a.get(), b.get());
+  EXPECT_TRUE(result->is_empty());
+
+  // Repeat with the version of InitToIntersection that allows error reporting.
+  S2Error error;
+  result = MakePolygon("0:0, 0:1, 1:0");
+  EXPECT_TRUE(result->InitToIntersection(
+      *a, *b, s2builderutil::IdentitySnapFunction(S1Angle::Zero()), &error));
+  EXPECT_TRUE(result->is_empty());
+}
+
 // Verifies that S2Polygon does not destroy or replace pointers to S2Loop, so
 // caller can rely on using raw pointers.
 TEST(S2Polygon, LoopPointers) {
   vector<unique_ptr<S2Loop>> loops;
-  loops.emplace_back(s2textformat::MakeLoop("4:4, 4:6, 6:6, 6:4"));
-  loops.emplace_back(s2textformat::MakeLoop("3:3, 3:7, 7:7, 7:3"));
-  loops.emplace_back(s2textformat::MakeLoop("2:2, 2:8, 8:8, 8:2"));
-  loops.emplace_back(s2textformat::MakeLoop("1:1, 1:9, 9:9, 9:1"));
-  loops.emplace_back(s2textformat::MakeLoop("10:10, 15:15, 20:10"));
-  loops.emplace_back(s2textformat::MakeLoop("-1:-1, -9:-1, -9:-9, -1:-9"));
-  loops.emplace_back(s2textformat::MakeLoop("-5:-5, -6:-5, -6:-6, -5:-6"));
+  loops.emplace_back(s2textformat::MakeLoopOrDie("4:4, 4:6, 6:6, 6:4"));
+  loops.emplace_back(s2textformat::MakeLoopOrDie("3:3, 3:7, 7:7, 7:3"));
+  loops.emplace_back(s2textformat::MakeLoopOrDie("2:2, 2:8, 8:8, 8:2"));
+  loops.emplace_back(s2textformat::MakeLoopOrDie("1:1, 1:9, 9:9, 9:1"));
+  loops.emplace_back(s2textformat::MakeLoopOrDie("10:10, 15:15, 20:10"));
+  loops.emplace_back(s2textformat::MakeLoopOrDie("-1:-1, -9:-1, -9:-9, -1:-9"));
+  loops.emplace_back(s2textformat::MakeLoopOrDie("-5:-5, -6:-5, -6:-6, -5:-6"));
 
   std::set<const S2Loop*> loops_raw_ptrs;
   for (auto& loop : loops) {
@@ -1496,94 +1522,6 @@ TEST(S2Polygon, Bug12) {
       << "\nS2Polygon: " << s2textformat::ToString(b);
 }
 
-TEST(S2Polygon, Bug13) {
-  // This test exercises a rare special case in GetCrossedVertexIndex where
-  // two crossing edge chains snap to a different permutation of the same
-  // vertices.  In this example one input edge crosses another edge from right
-  // to left, the first edge snaps to BCD and the second snaps to ABDC, and
-  // triangle BCD is CCW.  Since BCD is to the right of BD, this means that
-  // the first edge has not yet crossed the second at vertex B, leaving C or D
-  // as the possible crossing vertices.
-  vector<vector<S2Point>> a_vertices = {
-    {
-      {-0.38306437985388492, -0.74921955334206214, 0.54030708099846292},
-      {-0.3830643798552798, -0.74921955334134249, 0.5403070809984718},
-      {-0.38306437985529124, -0.74921955334136414, 0.54030708099843361},
-      {-0.38306437985389635, -0.74921955334208379, 0.54030708099842473},
-    },
-  };
-  vector<vector<S2Point>> b_vertices = {
-    {
-      {-0.38306437985390962, -0.74921955334210588, 0.54030708099838465},
-      {-0.38306437985527797, -0.74921955334134205, 0.54030708099847369},
-      {-0.38306437985527941, -0.74921955334134405, 0.54030708099847014},
-      {-0.38306437985391095, -0.74921955334210777, 0.54030708099838098},
-    },
-  };
-  S2Polygon a(MakeLoops(a_vertices));
-  S2Polygon b(MakeLoops(b_vertices));
-  S2Polygon c;
-  c.InitToUnion(&a, &b);
-  // Given edges do not form loops (indegree != outdegree)
-  EXPECT_FALSE(c.is_empty())
-      << "\nS2Polygon: " << s2textformat::ToString(a)
-      << "\nS2Polygon: " << s2textformat::ToString(b);
-}
-
-TEST(S2Polygon, Bug14) {
-  // This test exercises another rare case where the crossing vertices chosen
-  // by GetCrossedVertexIndex() are not ordered correctly along the edge being
-  // crossed.  This is handled by adding extra edges to the output in order to
-  // link up the crossings in the correct order.
-  vector<vector<S2Point>> a_vertices = {
-    {
-      {-0.3837392878495085, -0.7477800800281974, 0.5418201831546835},
-      {-0.38373928785696076, -0.7477800800212292, 0.54182018315902258},
-      {-0.38373928785701278, -0.74778008002124685, 0.5418201831589613},
-      {-0.38373928785703426, -0.7477800800212544, 0.54182018315893576},
-      {-0.38373947205489456, -0.74778014227795497, 0.5418199667802881},
-      {-0.38373947204434411, -0.74778014228781997, 0.54181996677414512},
-      {-0.38373947205872994, -0.74778014228185352, 0.54181996677219124},
-      {-0.38373947218468357, -0.74778014288930306, 0.54181996584462788},
-      {-0.3837396702525171, -0.74778021044361542, 0.54181973233114322},
-      {-0.38373967023137123, -0.74778021046333043, 0.54181973231891067},
-      {-0.38373947216030285, -0.74778014290791484, 0.54181996583620895},
-      {-0.38373947217087578, -0.74778014289805739, 0.54181996584232528},
-      {-0.38373947215649007, -0.74778014290402395, 0.54181996584427927},
-      {-0.3837394720305386, -0.74778014229658485, 0.5418199667718262},
-      {-0.38373928783585998, -0.74778008004095942, 0.54182018314673686},
-      {-0.38373928784641037, -0.7477800800310942, 0.54182018315287972},
-      {-0.38373928783578648, -0.74778008004093421, 0.54182018314682368},
-      {-0.383739287835765, -0.74778008004092666, 0.54182018314684921},
-    },
-  };
-  vector<vector<S2Point>> b_vertices = {
-    {
-      {-0.38373923813692823, -0.7477800632164362, 0.54182024156551456},
-      {-0.3837392878569364, -0.74778008002122087, 0.54182018315905123},
-      {-0.38373928784640354, -0.74778008003106944, 0.54182018315291858},
-      {-0.38373928784638789, -0.74778008003108642, 0.54182018315290648},
-      {-0.38373928784638023, -0.74778008003109453, 0.54182018315290048},
-      {-0.38373928783692102, -0.74778008004124585, 0.54182018314559},
-      {-0.38373928783691913, -0.74778008004124541, 0.54182018314559188},
-      {-0.38373928784636568, -0.74778008003110774, 0.54182018315289271},
-      {-0.38373928784637329, -0.74778008003109953, 0.54182018315289848},
-      {-0.38373928783583561, -0.74778008004095109, 0.5418201831467655},
-      {-0.38373923811582744, -0.74778006323616641, 0.54182024155322883},
-      {-0.38373857650312843, -0.74777983961840766, 0.54182101875399913},
-      {-0.38373857652422921, -0.74777983959867744, 0.54182101876628486},
-    },
-  };
-  S2Polygon a(MakeLoops(a_vertices));
-  S2Polygon b(MakeLoops(b_vertices));
-  S2Polygon c;
-  c.InitToUnion(&a, &b);
-  // Given edges do not form loops (indegree != outdegree)
-  EXPECT_FALSE(c.is_empty())
-      << "\nS2Polygon: " << s2textformat::ToString(a)
-      << "\nS2Polygon: " << s2textformat::ToString(b);
-}
-
 static void PolylineIntersectionSharedEdgeTest(const S2Polygon& p,
                                                int start_vertex,
                                                int direction) {
@@ -2007,8 +1945,8 @@ TEST(S2Polygon, MultipleInit) {
   S2LatLngRect bound1 = polygon->GetRectBound();
 
   vector<unique_ptr<S2Loop>> loops;
-  loops.push_back(s2textformat::MakeLoop("10:0, -10:-20, -10:20"));
-  loops.push_back(s2textformat::MakeLoop("40:30, 20:10, 20:50"));
+  loops.push_back(s2textformat::MakeLoopOrDie("10:0, -10:-20, -10:20"));
+  loops.push_back(s2textformat::MakeLoopOrDie("40:30, 20:10, 20:50"));
   polygon->InitNested(std::move(loops));
   EXPECT_TRUE(polygon->IsValid());
   EXPECT_EQ(2, polygon->num_loops());
@@ -2021,7 +1959,7 @@ TEST(S2Polygon, InitSingleLoop) {
   EXPECT_TRUE(polygon.is_empty());
   polygon.Init(make_unique<S2Loop>(S2Loop::kFull()));
   EXPECT_TRUE(polygon.is_full());
-  polygon.Init(s2textformat::MakeLoop("0:0, 0:10, 10:0"));
+  polygon.Init(s2textformat::MakeLoopOrDie("0:0, 0:10, 10:0"));
   EXPECT_EQ(3, polygon.num_vertices());
 }
 
@@ -2241,7 +2179,7 @@ class IsValidTest : public testing::Test {
     init_oriented_ = false;
     modify_polygon_hook_ = nullptr;
     rnd_ = &S2Testing::rnd;
-    rnd_->Reset(FLAGS_s2_random_seed);
+    rnd_->Reset(absl::GetFlag(FLAGS_s2_random_seed));
   }
 
   ~IsValidTest() override { Reset(); }
@@ -2297,7 +2235,7 @@ class IsValidTest : public testing::Test {
   }
 
  protected:
-  static const int kIters = 100;
+  static constexpr int kIters = 100;
 
   bool init_oriented_;
   void (*modify_polygon_hook_)(S2Polygon*);
@@ -2572,7 +2510,7 @@ class S2PolygonSimplifierTest : public ::testing::Test {
                                      S1Angle::Degrees(tolerance_in_degrees)));
   }
 
-  void SetInput(const string& poly, double tolerance_in_degrees) {
+  void SetInput(absl::string_view poly, double tolerance_in_degrees) {
     SetInput(s2textformat::MakePolygon(poly), tolerance_in_degrees);
   }
 
@@ -2775,9 +2713,9 @@ TEST(InitToSimplifiedInCell, InteriorEdgesSnappedToBoundary) {
   EXPECT_FALSE(simplified_polygon.FindValidationError(&error)) << error;
 }
 
-
-unique_ptr<S2Polygon> MakeRegularPolygon(
-    const string& center, int num_points, double radius_in_degrees) {
+unique_ptr<S2Polygon> MakeRegularPolygon(absl::string_view center,
+                                         int num_points,
+                                         double radius_in_degrees) {
   S1Angle radius = S1Angle::Degrees(radius_in_degrees);
   return make_unique<S2Polygon>(S2Loop::MakeRegularLoop(
       s2textformat::MakePoint(center), radius, num_points));

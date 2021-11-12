@@ -127,6 +127,23 @@ vector<S2Point> EncodedS2PointVector::Decode() const {
   return points;
 }
 
+// The encoding must be identical to EncodeS2PointVector().
+void EncodedS2PointVector::Encode(Encoder* encoder) const {
+  switch (format_) {
+    case UNCOMPRESSED:
+      EncodeS2PointVectorFast(MakeSpan(uncompressed_.points, size_), encoder);
+      break;
+
+    case CELL_IDS: {
+      // This is a full decode/encode dance, and not at all efficient.
+      EncodeS2PointVectorCompact(Decode(), encoder);
+      break;
+    }
+
+    default:
+      S2_LOG(FATAL) << "Unknown Format: " << static_cast<int>(format_);
+  }
+}
 
 //////////////////////////////////////////////////////////////////////////////
 //                     UNCOMPRESSED Encoding Format
@@ -205,12 +222,12 @@ struct CellPoint {
 // Block sizes of 4, 8, 16, and 32 were tested and kBlockSize == 16 seems to
 // offer the best compression.  (Note that kBlockSize == 32 requires some code
 // modifications which have since been removed.)
-constexpr int kBlockShift = 4;
-constexpr size_t kBlockSize = 1 << kBlockShift;
+static constexpr int kBlockShift = 4;
+static constexpr size_t kBlockSize = 1 << kBlockShift;
 
 // Used to indicate that a point must be encoded as an exception (a 24-byte
 // S2Point) rather than as an S2CellId.
-constexpr uint64 kException = ~0ULL;
+static constexpr uint64 kException = ~0ULL;
 
 // Represents the encoding parameters to be used for a given block (consisting
 // of kBlockSize encodable 64-bit values).  See below.
@@ -292,9 +309,9 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
   // except that it is faster to decode and the spatial locality is not quite
   // as good.
   //
-  // The 64-bit values are divided into blocks of size 8, and then each value is
-  // encoded as the sum of a base value, a per-block offset, and a per-value
-  // delta within that block:
+  // The 64-bit values are divided into blocks of size kBlockSize, and then
+  // each value is encoded as the sum of a base value, a per-block offset, and
+  // a per-value delta within that block:
   //
   //   v[i,j] = base + offset[i] + delta[i, j]
   //
@@ -380,10 +397,11 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
   //
   // If there are any points that could not be represented as S2CellIds, then
   // "have_exceptions" in the header is true.  In that case the delta values
-  // within each block are encoded as (delta + 8), and values 0-7 are used to
-  // represent exceptions.  If a block has exceptions, they are encoded
-  // immediately following the array of deltas, and are referenced by encoding
-  // the corresponding exception index (0-7) as the delta.
+  // within each block are encoded as (delta + kBlockSize), and values
+  // 0...kBlockSize-1 are used to represent exceptions.  If a block has
+  // exceptions, they are encoded immediately following the array of deltas,
+  // and are referenced by encoding the corresponding exception index
+  // 0...kBlockSize-1 as the delta.
   //
   // TODO(ericv): A vector containing a single leaf cell is currently encoded as
   // 13 bytes (2 byte header, 7 byte base, 1 byte block count, 1 byte block
@@ -394,7 +412,7 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
   // (3 bits), followed by the S2CellId bytes.  The extra 2 header bits could be
   // used to store single points using other encodings, e.g. E7.
   //
-  // If we wind up using 8-value blocks, we could also use the extra bit in the
+  // If we had used 8-value blocks, we could have used the extra bit in the
   // first byte of the header to indicate that there is only one value, and
   // then skip the 2nd byte of header and the EncodedStringVector.  But this
   // would be messy because it also requires special cases while decoding.
@@ -736,9 +754,12 @@ BlockCode GetBlockCode(Span<const uint64> values, uint64 base,
     }
   }
 
-  // Avoid wasting 4 bits of delta when the block size is 1.  This reduces the
-  // encoding size for single leaf cells by one byte.
-  if (values.size() == 1) {
+  // When the block size is 1 and no exceptions exist, we have delta_bits == 4
+  // and overlap_bits == 0 which wastes 4 bits.  We fix this below, which
+  // among other things reduces the encoding size for single leaf cells by one
+  // byte.  (Note that when exceptions exist, delta_bits == 8 and overlap_bits
+  // may be 0 or 4.  These cases are covered by the unit tests.)
+  if (values.size() == 1 && !have_exceptions) {
     S2_DCHECK(delta_bits == 4 && overlap_bits == 0);
     delta_bits = 8;
   }

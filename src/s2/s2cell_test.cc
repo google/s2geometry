@@ -27,7 +27,13 @@
 
 #include <gtest/gtest.h>
 
+#include "absl/base/macros.h"
+#include "absl/flags/flag.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_cat.h"
+
 #include "s2/base/logging.h"
+#include "s2/base/log_severity.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -46,9 +52,6 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
-#include "absl/base/macros.h"
-#include "absl/memory/memory.h"
-#include "absl/strings/str_cat.h"
 
 using absl::StrCat;
 using S2::internal::kSwapMask;
@@ -503,7 +506,7 @@ static S1ChordAngle GetMaxDistanceToPointBruteForce(const S2Cell& cell,
 }
 
 TEST(S2Cell, GetDistanceToPoint) {
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   for (int iter = 0; iter < 1000; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
     S2Cell cell(S2Testing::GetRandomCellId());
@@ -603,7 +606,7 @@ static S1ChordAngle GetMaxDistanceToEdgeBruteForce(
 }
 
 TEST(S2Cell, GetDistanceToEdge) {
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   for (int iter = 0; iter < 1000; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
     S2Cell cell(S2Testing::GetRandomCellId());

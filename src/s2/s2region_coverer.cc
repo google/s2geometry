@@ -23,8 +23,10 @@
 #include <cstring>
 #include <functional>
 #include <queue>
-#include <unordered_set>
 #include <vector>
+
+#include "absl/base/casts.h"
+#include "absl/container/flat_hash_set.h"
 
 #include "s2/base/logging.h"
 #include "s2/s1angle.h"
@@ -32,12 +34,10 @@
 #include "s2/s2cell_union.h"
 #include "s2/s2metrics.h"
 #include "s2/s2region.h"
-#include "absl/base/casts.h"
 
 using std::is_sorted;
 using std::max;
 using std::min;
-using std::unordered_set;
 using std::vector;
 
 // Define storage for header file constants (the values are not needed here).
@@ -485,7 +485,7 @@ void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
 
 void S2RegionCoverer::FloodFill(const S2Region& region, S2CellId start,
                                 vector<S2CellId>* output) {
-  unordered_set<S2CellId, S2CellIdHash> all;
+  absl::flat_hash_set<S2CellId, S2CellIdHash> all;
   vector<S2CellId> frontier;
   output->clear();
   all.insert(start);

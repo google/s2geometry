@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/flags/flag.h"
 #include "s2/s2testing.h"
 
 TEST(S2PointVectorShape, Empty) {
@@ -35,7 +36,7 @@ TEST(S2PointVectorShape, Empty) {
 
 TEST(S2PointVectorShape, ConstructionAndAccess) {
   std::vector<S2Point> points;
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   const int kNumPoints = 100;
   for (int i = 0; i < kNumPoints; ++i) {
     points.push_back(S2Testing::RandomPoint());
@@ -47,7 +48,7 @@ TEST(S2PointVectorShape, ConstructionAndAccess) {
   EXPECT_EQ(0, shape.dimension());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
-  S2Testing::rnd.Reset(FLAGS_s2_random_seed);
+  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   for (int i = 0; i < kNumPoints; ++i) {
     EXPECT_EQ(i, shape.chain(i).start);
     EXPECT_EQ(1, shape.chain(i).length);

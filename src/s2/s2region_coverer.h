@@ -179,7 +179,7 @@ class S2RegionCoverer {
   // Returns an S2CellUnion that covers (GetCovering) or is contained within
   // (GetInteriorCovering) the given region and satisfies the current options.
   //
-  // Note that if options().min_level() > 0 or options().level_mod() > 1, the
+  // Note that if options().min_level() > 0 or options().level_mod() > 1, then
   // by definition the S2CellUnion may not be normalized, i.e. there may be
   // groups of four child cells that can be replaced by their parent cell.
   S2CellUnion GetCovering(const S2Region& region);
