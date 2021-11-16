@@ -17,7 +17,6 @@
 
 #include "s2/s2lax_polygon_shape.h"
 
-#include "absl/base/attributes.h"
 #include "absl/memory/memory.h"
 #include "absl/meta/type_traits.h"
 #include "s2/util/coding/varint.h"
@@ -206,47 +205,6 @@ S2Shape::Chain S2LaxPolygonShape::chain(int i) const {
   }
 }
 
-inline S2Shape::Edge S2LaxPolygonShape::chain_edge(int i, int j) const {
-  S2_DCHECK_LT(i, num_loops());
-  S2_DCHECK_LT(j, num_loop_vertices(i));
-  int n = num_loop_vertices(i);
-  int k = (j + 1 == n) ? 0 : j + 1;
-  if (num_loops() == 1) {
-    return Edge(vertices_[j], vertices_[k]);
-  } else {
-    int start = loop_starts_[i];
-    return Edge(vertices_[start + j], vertices_[start + k]);
-  }
-}
-
-inline S2Shape::ChainPosition S2LaxPolygonShape::chain_position(int e) const {
-  S2_DCHECK_LT(e, num_edges());
-  if (num_loops() == 1) {
-    return ChainPosition(0, e);
-  }
-  // Test if this edge belongs to the loop returned by the previous call.
-  const uint32* start = &loop_starts_[0] +
-                        prev_loop_.load(std::memory_order_relaxed);
-  if (e >= start[0] && e < start[1]) {
-    // This edge belongs to the same loop as the previous call.
-  } else {
-    if (e == start[1]) {
-      // This is the edge immediately following the previous loop.
-      do { ++start; } while (e == start[1]);
-    } else {
-      start = &loop_starts_[0];
-      constexpr int kMaxLinearSearchLoops = 12;  // From benchmarks.
-      if (num_loops() <= kMaxLinearSearchLoops) {
-        while (start[1] <= e) ++start;
-      } else {
-        start = std::upper_bound(start + 1, start + num_loops(), e) - 1;
-      }
-    }
-    prev_loop_.store(start - &loop_starts_[0], std::memory_order_relaxed);
-  }
-  return ChainPosition(start - &loop_starts_[0], e - start[0]);
-}
-
 bool EncodedS2LaxPolygonShape::Init(Decoder* decoder) {
   if (decoder->avail() < 1) return false;
   uint8 version = decoder->get8();
@@ -330,44 +288,3 @@ S2Shape::Chain EncodedS2LaxPolygonShape::chain(int i) const {
   }
 }
 
-ABSL_ATTRIBUTE_ALWAYS_INLINE
-inline S2Shape::Edge EncodedS2LaxPolygonShape::chain_edge(int i, int j) const {
-  S2_DCHECK_LT(i, num_loops());
-  S2_DCHECK_LT(j, num_loop_vertices(i));
-  int n = num_loop_vertices(i);
-  int k = (j + 1 == n) ? 0 : j + 1;
-  if (num_loops() == 1) {
-    return Edge(vertices_[j], vertices_[k]);
-  } else {
-    int start = loop_starts_[i];
-    return Edge(vertices_[start + j], vertices_[start + k]);
-  }
-}
-
-ABSL_ATTRIBUTE_ALWAYS_INLINE
-inline S2Shape::ChainPosition EncodedS2LaxPolygonShape::chain_position(int e)
-    const {
-  S2_DCHECK_LT(e, num_edges());
-  if (num_loops() == 1) {
-    return ChainPosition(0, e);
-  }
-  constexpr int kMaxLinearSearchLoops = 12;  // From benchmarks.
-  int i = prev_loop_.load(std::memory_order_relaxed);
-  if (i == 0 && e < loop_starts_[1]) {
-    return ChainPosition(0, e);  // Optimization for first loop.
-  }
-  if (e >= loop_starts_[i] && e < loop_starts_[i + 1]) {
-    // This edge belongs to the same loop as the previous call.
-  } else {
-    if (e == loop_starts_[i + 1]) {
-      // This is the edge immediately following the previous loop.
-      do { ++i; } while (e == loop_starts_[i + 1]);
-    } else if (num_loops() <= kMaxLinearSearchLoops) {
-      for (i = 0; loop_starts_[i + 1] <= e; ++i) {}
-    } else {
-      i = loop_starts_.lower_bound(e + 1) - 1;
-    }
-    prev_loop_.store(i, std::memory_order_relaxed);
-  }
-  return ChainPosition(i, e - loop_starts_[i]);
-}

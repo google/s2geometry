@@ -59,7 +59,7 @@ std::pair<unsigned char*, size_t> Encoder::NewBuffer(size_t size) {
 }
 
 void Encoder::DeleteBuffer(unsigned char* buf, size_t size) {
-  base::sized_delete(buf, size);
+  std::allocator<unsigned char>().deallocate(buf, size);
 }
 
 void Encoder::EnsureSlowPath(size_t N) {

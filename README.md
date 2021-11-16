@@ -83,7 +83,7 @@ cd s2geometry
 
 ### Building
 
-First, [install Abseil](https://abseil.io/docs/cpp/tools/cmake-installs).
+First, [install Abseil](https://github.com/abseil/abseil-cpp/blob/master/CMake/README.md#traditional-cmake-set-up).
 It must be configured with `-DCMAKE_POSITION_INDEPENDENT_CODE=ON`.
 
 From the appropriate directory depending on how you got the source:
@@ -93,10 +93,12 @@ mkdir build
 cd build
 # You can omit -DGTEST_ROOT to skip tests; see above for macOS.
 cmake -DGTEST_ROOT=/usr/src/gtest -DCMAKE_PREFIX_PATH=/path/to/absl/install ..
-make
-make test  # If GTEST_ROOT specified above.
+make -j $(nproc)
+make test ARGS="-j$(nproc)"  # If GTEST_ROOT specified above.
 sudo make install
 ```
+
+On macOS, `sysctl -n hw.logicalcpu` is the equivalent of `nproc`.
 
 Enable gflags and glog with `cmake -DWITH_GFLAGS=ON -DWITH_GLOG=ON ...`.
 

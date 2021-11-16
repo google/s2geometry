@@ -178,7 +178,6 @@ add_library(s2
             src/s2/s2text_format.cc
             src/s2/s2wedge_relations.cc
             src/s2/s2winding_operation.cc
-            src/s2/strings/ostringstream.cc
             src/s2/strings/serialize.cc
             src/s2/util/bits/bit-interleave.cc
             src/s2/util/bits/bits.cc
@@ -359,8 +358,6 @@ install(FILES src/s2/base/casts.h
               src/s2/base/port.h
               src/s2/base/spinlock.h
         DESTINATION include/s2/base)
-install(FILES src/s2/strings/ostringstream.h
-        DESTINATION include/s2/strings)
 install(FILES src/s2/util/bits/bits.h
         DESTINATION include/s2/util/bits)
 install(FILES src/s2/util/coding/coder.h
