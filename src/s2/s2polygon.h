@@ -23,10 +23,12 @@
 #include <map>
 #include <vector>
 
+#include "absl/base/attributes.h"
 #include "absl/base/macros.h"
 #include "absl/container/node_hash_map.h"
 
 #include "s2/base/integral_types.h"
+#include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -931,5 +933,49 @@ class S2Polygon final : public S2Region {
   void operator=(const S2Polygon&) = delete;
 #endif
 };
+
+
+//////////////////   Implementation details follow   ////////////////////
+
+
+ABSL_ATTRIBUTE_ALWAYS_INLINE
+inline S2Shape::Edge S2Polygon::Shape::chain_edge(int i, int j) const {
+  S2_DCHECK_LT(i, Shape::num_chains());
+  const S2Loop* loop = polygon_->loop(i);
+  S2_DCHECK_LT(j, loop->num_vertices());
+  return Edge(loop->oriented_vertex(j), loop->oriented_vertex(j + 1));
+}
+
+ABSL_ATTRIBUTE_ALWAYS_INLINE
+inline S2Shape::ChainPosition S2Polygon::Shape::chain_position(int e) const {
+  S2_DCHECK_LT(e, num_edges());
+  int i;
+  const uint32* start = loop_starts_.get();
+  if (start == nullptr) {
+    // When the number of loops is small, linear search is faster.  Most often
+    // there is exactly one loop and the code below executes zero times.
+    for (i = 0; e >= polygon_->loop(i)->num_vertices(); ++i) {
+      e -= polygon_->loop(i)->num_vertices();
+    }
+  } else {
+    i = prev_loop_.load(std::memory_order_relaxed);
+    if (e >= start[i] && e < start[i + 1]) {
+      // This edge belongs to the same loop as the previous call.
+    } else {
+      if (e == start[i + 1]) {
+        // This edge immediately follows the loop from the previous call.
+        // Note that S2Polygon does not allow empty loops.
+        ++i;
+      } else {
+        // "upper_bound" finds the loop just beyond the one we want.
+        i = std::upper_bound(&start[1], &start[polygon_->num_loops()], e)
+            - &start[1];
+      }
+      prev_loop_.store(i, std::memory_order_relaxed);
+    }
+    e -= start[i];
+  }
+  return ChainPosition(i, e);
+}
 
 #endif  // S2_S2POLYGON_H_
