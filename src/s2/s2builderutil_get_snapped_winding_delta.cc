@@ -173,7 +173,7 @@ S2Point GetConnector(const S2Point& b0, const S2Point& b1,
   // Otherwise we use the point on (B0, B1) that is 90 degrees away from B1'.
   // This is sufficient to ensure conditions (1) and (2).
   S2Point x = S2::RobustCrossProd(b0, b1).CrossProd(b1_snapped).Normalize();
-  return (x.DotProd(S2::Interpolate(0.5, b0, b1)) >= 0) ? x : -x;
+  return (x.DotProd(S2::Interpolate(b0, b1, 0.5)) >= 0) ? x : -x;
 }
 
 // Returns the set of incoming and outgoing edges incident to the given

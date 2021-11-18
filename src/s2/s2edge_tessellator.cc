@@ -201,8 +201,8 @@ S1ChordAngle S2EdgeTessellator::EstimateMaxError(
 
   constexpr double t1 = kInterpolationFraction;
   constexpr double t2 = 1 - kInterpolationFraction;
-  S2Point mid1 = S2::Interpolate(t1, a, b);
-  S2Point mid2 = S2::Interpolate(t2, a, b);
+  S2Point mid1 = S2::Interpolate(a, b, t1);
+  S2Point mid2 = S2::Interpolate(a, b, t2);
   S2Point pmid1 = proj_.Unproject(proj_.Interpolate(t1, pa, pb));
   S2Point pmid2 = proj_.Unproject(proj_.Interpolate(t2, pa, pb));
   return std::max(S1ChordAngle(mid1, pmid1), S1ChordAngle(mid2, pmid2));

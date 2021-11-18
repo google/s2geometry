@@ -238,8 +238,7 @@ S2Point S2Polyline::GetSuffix(double fraction, int* next_vertex) const {
     if (target < length) {
       // This interpolates with respect to arc length rather than
       // straight-line distance, and produces a unit-length result.
-      S2Point result = S2::InterpolateAtDistance(target, vertex(i-1),
-                                                         vertex(i));
+      S2Point result = S2::GetPointOnLine(vertex(i-1), vertex(i), target);
       // It is possible that (result == vertex(i)) due to rounding errors.
       *next_vertex = (result == vertex(i)) ? (i + 1) : i;
       return result;

@@ -203,7 +203,7 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetSingleEdgeLoop(const S2Point& a,
   vector<S2Point> vertices;
   vertices.push_back(a);
   vertices.push_back(b);
-  vertices.push_back(S2::Interpolate(0.5, a, b));
+  vertices.push_back(S2::Interpolate(a, b, 0.5));
   auto loop = make_unique<S2Loop>(vertices);
   // The resulting loop may be clockwise, so invert it if necessary.
   loop->Normalize();

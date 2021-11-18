@@ -105,7 +105,7 @@ bool EncodedS2PointVector::Init(Decoder* decoder) {
 
   // Peek at the format but don't advance the decoder; the format-specific
   // Init functions will do that.
-  format_ = static_cast<Format>(*decoder->ptr() & kEncodingFormatMask);
+  format_ = static_cast<Format>(*decoder->skip(0) & kEncodingFormatMask);
   switch (format_) {
     case UNCOMPRESSED:
       return InitUncompressedFormat(decoder);
@@ -196,7 +196,7 @@ bool EncodedS2PointVector::InitUncompressedFormat(Decoder* decoder) {
   size_t bytes = size_t{size_} * sizeof(S2Point);
   if (decoder->avail() < bytes) return false;
 
-  uncompressed_.points = reinterpret_cast<const S2Point*>(decoder->ptr());
+  uncompressed_.points = reinterpret_cast<const S2Point*>(decoder->skip(0));
   decoder->skip(bytes);
   return true;
 }

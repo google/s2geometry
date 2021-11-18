@@ -127,10 +127,10 @@ S2Cap S2Cap::Union(const S2Cap& other) const {
     return *this;
   } else {
     S1Angle result_radius = 0.5 * (distance + this_radius + other_radius);
-    S2Point result_center = S2::InterpolateAtDistance(
-        0.5 * (distance - this_radius + other_radius),
+    S2Point result_center = S2::GetPointOnLine(
         center(),
-        other.center());
+        other.center(),
+        0.5 * (distance - this_radius + other_radius));
     return S2Cap(result_center, result_radius);
   }
 }
