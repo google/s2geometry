@@ -71,7 +71,7 @@ inline static void BN_ext_set_uint64(BIGNUM* bn, uint64 v) {
 // Return the absolute value of a BIGNUM as a 64-bit unsigned integer.
 // Requires that BIGNUM fits into 64 bits.
 inline static uint64 BN_ext_get_uint64(const BIGNUM* bn) {
-  std::uint64_t u64;
+  uint64_t u64;
   if (!BN_get_u64(bn, &u64)) {
     S2_DCHECK(false) << "BN has " << BN_num_bits(bn) << " bits";
     return 0;
