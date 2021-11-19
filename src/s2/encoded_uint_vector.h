@@ -192,7 +192,7 @@ inline T GetUintWithLength(const char* ptr, int length) {
 template <class T>
 bool DecodeUintWithLength(int length, Decoder* decoder, T* result) {
   if (decoder->avail() < length) return false;
-  const char* ptr = reinterpret_cast<const char*>(decoder->ptr());
+  const char* ptr = reinterpret_cast<const char*>(decoder->skip(0));
   *result = GetUintWithLength<T>(ptr, length);
   decoder->skip(length);
   return true;
@@ -231,7 +231,7 @@ bool EncodedUintVector<T>::Init(Decoder* decoder) {
   if (size_ > std::numeric_limits<size_t>::max() / sizeof(T)) return false;
   size_t bytes = size_ * len_;
   if (decoder->avail() < bytes) return false;
-  data_ = reinterpret_cast<const char*>(decoder->ptr());
+  data_ = reinterpret_cast<const char*>(decoder->skip(0));
   decoder->skip(bytes);
   return true;
 }

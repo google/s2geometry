@@ -644,7 +644,7 @@ bool S2Loop::DecodeInternal(Decoder* const decoder,
 #endif
   if (within_scope && !is_misaligned) {
     vertices_ = const_cast<S2Point *>(reinterpret_cast<const S2Point*>(
-                    decoder->ptr()));
+                    decoder->skip(0)));
     decoder->skip(num_vertices_ * sizeof(*vertices_));
     owns_vertices_ = false;
   } else {
