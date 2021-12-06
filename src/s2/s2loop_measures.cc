@@ -52,7 +52,7 @@ double GetArea(S2PointLoopSpan loop) {
 }
 
 double GetSignedArea(S2PointLoopSpan loop) {
-  // It is suprisingly difficult to compute the area of a loop robustly.  The
+  // It is surprisingly difficult to compute the area of a loop robustly.  The
   // main issues are (1) whether degenerate loops are considered to be CCW or
   // not (i.e., whether their area is close to 0 or 4*Pi), and (2) computing
   // the areas of small loops with good relative accuracy.
@@ -228,8 +228,8 @@ double GetCurvatureMaxError(S2PointLoopSpan loop) {
   //  -------------------
   //  11.25 * DBL_EPSILON
   //
-  // TODO(ericv): This error estimate is approximate.  There are two issues:
-  // (1) SignedArea needs some improvements to ensure that its error is
+  // TODO(b/203697029): This error estimate is approximate.  There are two
+  // issues: (1) SignedArea needs some improvements to ensure that its error is
   // actually never higher than GirardArea, and (2) although the number of
   // triangles in the sum is typically N-2, in theory it could be as high as
   // 2*N for pathological inputs.  But in other respects this error bound is

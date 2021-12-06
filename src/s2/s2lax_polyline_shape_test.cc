@@ -17,6 +17,8 @@
 
 #include "s2/s2lax_polyline_shape.h"
 
+#include <utility>
+
 #include <gtest/gtest.h>
 #include "s2/s2shapeutil_testing.h"
 #include "s2/s2text_format.h"
@@ -42,6 +44,23 @@ TEST(S2LaxPolylineShape, OneVertex) {
   EXPECT_EQ(1, shape.dimension());
   EXPECT_TRUE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
+}
+
+TEST(S2LaxPolylineShape, MoveConstructor) {
+  std::unique_ptr<S2LaxPolylineShape> original =
+      s2textformat::MakeLaxPolylineOrDie("1:1, 4:4");
+  S2LaxPolylineShape moved(std::move(*original));
+  ASSERT_EQ(0, original->num_vertices());
+  ASSERT_EQ(2, moved.num_vertices());
+}
+
+TEST(S2LaxPolylineShape, MoveAssignmentOperator) {
+  std::unique_ptr<S2LaxPolylineShape> original =
+      s2textformat::MakeLaxPolylineOrDie("1:1, 4:4");
+  S2LaxPolylineShape moved;
+  moved = std::move(*original);
+  ASSERT_EQ(0, original->num_vertices());
+  ASSERT_EQ(2, moved.num_vertices());
 }
 
 TEST(S2LaxPolylineShape, EdgeAccess) {

@@ -388,6 +388,7 @@ bool S2ShapeIndexRegion<IndexType>::VisitIntersectingShapes(
       return true;
     }
   }
+  S2_LOG(FATAL) << "Unhandled S2ShapeIndex::CellRelation";
 }
 
 template <class IndexType>

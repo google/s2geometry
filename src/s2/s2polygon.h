@@ -18,9 +18,12 @@
 #ifndef S2_S2POLYGON_H_
 #define S2_S2POLYGON_H_
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <map>
+#include <memory>
+#include <utility>
 #include <vector>
 
 #include "absl/base/attributes.h"
