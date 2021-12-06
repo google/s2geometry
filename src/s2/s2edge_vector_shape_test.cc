@@ -35,22 +35,23 @@ TEST(S2EdgeVectorShape, EdgeAccess) {
   S2EdgeVectorShape shape;
   S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   const int kNumEdges = 100;
+  std::vector<std::pair<S2Point, S2Point>> edges;
   for (int i = 0; i < kNumEdges; ++i) {
     S2Point a = S2Testing::RandomPoint();  // Control the evaluation order
-    shape.Add(a, S2Testing::RandomPoint());
+    edges.emplace_back(a, S2Testing::RandomPoint());
+    shape.Add(edges.back().first, edges.back().second);
   }
   EXPECT_EQ(kNumEdges, shape.num_edges());
   EXPECT_EQ(kNumEdges, shape.num_chains());
   EXPECT_EQ(1, shape.dimension());
   EXPECT_FALSE(shape.is_empty());
   EXPECT_FALSE(shape.is_full());
-  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   for (int i = 0; i < kNumEdges; ++i) {
     EXPECT_EQ(i, shape.chain(i).start);
     EXPECT_EQ(1, shape.chain(i).length);
     auto edge = shape.edge(i);
-    EXPECT_EQ(S2Testing::RandomPoint(), edge.v0);
-    EXPECT_EQ(S2Testing::RandomPoint(), edge.v1);
+    EXPECT_EQ(edges.at(i).first, edge.v0);
+    EXPECT_EQ(edges.at(i).second, edge.v1);
   }
 }
 

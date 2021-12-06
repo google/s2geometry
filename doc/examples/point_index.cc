@@ -42,5 +42,5 @@ int main(int argc, char **argv) {
 
   std::printf("Found %" PRId64 " points in %d queries\n", num_found,
               absl::GetFlag(FLAGS_num_queries));
-  return  0;
+  return 0;
 }

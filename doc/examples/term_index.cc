@@ -14,7 +14,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <set>
-#include <unordered_map>
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
@@ -35,7 +34,7 @@ DEFINE_double(query_radius_km, 100, "Query radius in kilometers");
 // (e.g. representing words or phrases).
 static const char kPrefix[] = "s2:";
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   // Create a set of "documents" to be indexed.  Each document consists of a
   // single point.  (You can easily substitute any S2Region type here, or even
   // index a mixture of region types using std::unique_ptr<S2Region>.  Other
@@ -98,5 +97,5 @@ int main(int argc, char **argv) {
   }
   std::printf("Found %" PRId64 " points in %d queries\n", num_found,
               absl::GetFlag(FLAGS_num_queries));
-  return  0;
+  return 0;
 }

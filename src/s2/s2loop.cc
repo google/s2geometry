@@ -637,11 +637,11 @@ bool S2Loop::DecodeInternal(Decoder* const decoder,
   bool is_misaligned = false;
 #else
   bool is_misaligned =
-      reinterpret_cast<intptr_t>(decoder->ptr()) % sizeof(double) != 0;
+      reinterpret_cast<intptr_t>(decoder->skip(0)) % sizeof(double) != 0;
 #endif
   if (within_scope && !is_misaligned) {
     vertices_ = const_cast<S2Point *>(reinterpret_cast<const S2Point*>(
-                    decoder->ptr()));
+                    decoder->skip(0)));
     decoder->skip(num_vertices_ * sizeof(*vertices_));
     owns_vertices_ = false;
   } else {

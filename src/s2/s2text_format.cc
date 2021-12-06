@@ -201,11 +201,6 @@ bool MakePolyline(string_view str, unique_ptr<S2Polyline>* polyline,
   return true;
 }
 
-std::unique_ptr<S2Polyline> MakePolyline(string_view str,
-                                         S2Debug debug_override) {
-  return MakePolylineOrDie(str, debug_override);
-}
-
 unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(string_view str) {
   unique_ptr<S2LaxPolylineShape> lax_polyline;
   S2_CHECK(MakeLaxPolyline(str, &lax_polyline)) << ": str == \"" << str << "\"";
@@ -218,10 +213,6 @@ bool MakeLaxPolyline(string_view str,
   if (!ParsePoints(str, &vertices)) return false;
   *lax_polyline = make_unique<S2LaxPolylineShape>(vertices);
   return true;
-}
-
-std::unique_ptr<S2LaxPolylineShape> MakeLaxPolyline(string_view str) {
-  return MakeLaxPolylineOrDie(str);
 }
 
 static bool InternalMakePolygon(string_view str,
@@ -255,11 +246,6 @@ bool MakePolygon(string_view str, unique_ptr<S2Polygon>* polygon,
   return InternalMakePolygon(str, debug_override, true, polygon);
 }
 
-std::unique_ptr<S2Polygon> MakePolygon(string_view str,
-                                       S2Debug debug_override) {
-  return MakePolygonOrDie(str, debug_override);
-}
-
 unique_ptr<S2Polygon> MakeVerbatimPolygonOrDie(string_view str) {
   unique_ptr<S2Polygon> polygon;
   S2_CHECK(MakeVerbatimPolygon(str, &polygon)) << ": str == \"" << str << "\"";
@@ -268,10 +254,6 @@ unique_ptr<S2Polygon> MakeVerbatimPolygonOrDie(string_view str) {
 
 bool MakeVerbatimPolygon(string_view str, unique_ptr<S2Polygon>* polygon) {
   return InternalMakePolygon(str, S2Debug::ALLOW, false, polygon);
-}
-
-std::unique_ptr<S2Polygon> MakeVerbatimPolygon(string_view str) {
-  return MakeVerbatimPolygonOrDie(str);
 }
 
 unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(string_view str) {
@@ -295,10 +277,6 @@ bool MakeLaxPolygon(string_view str,
   }
   *lax_polygon = make_unique<S2LaxPolygonShape>(loops);
   return true;
-}
-
-std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygon(string_view str) {
-  return MakeLaxPolygonOrDie(str);
 }
 
 unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(string_view str) {
@@ -331,10 +309,6 @@ bool MakeIndex(string_view str, std::unique_ptr<MutableS2ShapeIndex>* index) {
     (*index)->Add(std::move(lax_polygon));
   }
   return true;
-}
-
-std::unique_ptr<MutableS2ShapeIndex> MakeIndex(string_view str) {
-  return MakeIndexOrDie(str);
 }
 
 static void AppendVertex(const S2LatLng& ll, string* out) {

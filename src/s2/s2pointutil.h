@@ -35,6 +35,7 @@ namespace S2 {
 // Returns a unique "origin" on the sphere for operations that need a fixed
 // reference point.  In particular, this is the "point at infinity" used for
 // point-in-polygon testing (by counting the number of edge crossings).
+// To be clear, this is NOT (0,0,0), the origin of the coordinate system.
 inline S2Point Origin();
 
 // Returns true if the given point is approximately unit length

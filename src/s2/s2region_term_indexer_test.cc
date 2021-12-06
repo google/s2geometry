@@ -32,6 +32,7 @@
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
+#include "s2/s2latlng.h"
 #include "s2/s2testing.h"
 
 using std::string;
@@ -165,6 +166,23 @@ TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeSpace) {
   options.set_index_contains_points_only(true);
   // Use default parameter values.
   TestRandomCaps(options, QueryType::CAP);
+}
+
+TEST(S2RegionTermIndexer, MarkerCharacter) {
+  S2RegionTermIndexer::Options options;
+  options.set_min_level(20);
+  options.set_max_level(20);
+
+  S2RegionTermIndexer indexer(options);
+  S2Point point = S2LatLng::FromDegrees(10, 20).ToPoint();
+  EXPECT_EQ(indexer.options().marker_character(), '$');
+  EXPECT_EQ(indexer.GetQueryTerms(point, ""),
+            vector<string>({"11282087039", "$11282087039"}));
+
+  indexer.mutable_options()->set_marker_character(':');
+  EXPECT_EQ(indexer.options().marker_character(), ':');
+  EXPECT_EQ(indexer.GetQueryTerms(point, ""),
+            vector<string>({"11282087039", ":11282087039"}));
 }
 
 TEST(S2RegionTermIndexer, MaxLevelSetLoosely) {

@@ -18,8 +18,10 @@
 #ifndef S2_S2LAX_POLYLINE_SHAPE_H_
 #define S2_S2LAX_POLYLINE_SHAPE_H_
 
+#include <algorithm>
 #include <memory>
 #include <vector>
+
 #include "absl/types/span.h"
 #include "s2/encoded_s2point_vector.h"
 #include "s2/s2polyline.h"
@@ -39,6 +41,12 @@ class S2LaxPolylineShape : public S2Shape {
 
   // Constructs an empty polyline.
   S2LaxPolylineShape() : num_vertices_(0) {}
+
+  // Move constructor.
+  S2LaxPolylineShape(S2LaxPolylineShape&&);
+
+  // Move-assignment operator.
+  S2LaxPolylineShape& operator=(S2LaxPolylineShape&&);
 
   // Constructs an S2LaxPolylineShape with the given vertices.
   explicit S2LaxPolylineShape(absl::Span<const S2Point> vertices);

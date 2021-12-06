@@ -78,8 +78,10 @@ class Bits {
     typedef typename UnsignedTypeBySize<sizeof(T)>::Type Type;
   };
 
+  ABSL_DEPRECATED("Inline the implementation")
   static int CountOnes(uint32 n) { return absl::popcount(n); }
 
+  ABSL_DEPRECATED("Inline the implementation")
   static inline int CountOnes64(uint64 n) { return absl::popcount(n); }
 
   // Count bits in uint128
@@ -117,7 +119,9 @@ class Bits {
                               int num_bytes, int cap);
 
   // Return floor(log2(n)) for positive integer n.  Returns -1 iff n == 0.
+  ABSL_DEPRECATED("Inline the implementation")
   static int Log2Floor(uint32 n);
+  ABSL_DEPRECATED("Inline the implementation")
   static int Log2Floor64(uint64 n);
   static int Log2Floor128(absl::uint128 n);
 
@@ -135,6 +139,7 @@ class Bits {
   // Returns true if and only if n is a power of two.
   template <typename IntType,
             absl::enable_if_t<std::is_unsigned<IntType>::value, int> = 0>
+  ABSL_DEPRECATED("Inline the implementation")
   static constexpr bool IsPowerOfTwo(IntType n) {
     return absl::has_single_bit(n);
   }

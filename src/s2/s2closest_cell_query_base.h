@@ -25,6 +25,7 @@
 #include "s2/base/logging.h"
 #include "absl/container/btree_set.h"
 #include "absl/container/inlined_vector.h"
+#include "absl/hash/hash.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
