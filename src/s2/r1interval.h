@@ -66,8 +66,9 @@ class R1Interval {
     }
   }
 
-  // Accessors methods.
+  // The low bound of the interval.
   double lo() const { return bounds_[0]; }
+  // The high bound of the interval.
   double hi() const { return bounds_[1]; }
 
   // Methods to modify one endpoint of an existing R1Interval.  Do not use
@@ -97,10 +98,12 @@ class R1Interval {
   // is negative.
   double GetLength() const { return hi() - lo(); }
 
+  // Returns true if the given point is in the closed interval [lo, hi].
   bool Contains(double p) const {
     return p >= lo() && p <= hi();
   }
 
+  // Returns true if the given point is in the open interval (lo, hi).
   bool InteriorContains(double p) const {
     return p > lo() && p < hi();
   }

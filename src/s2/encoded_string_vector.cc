@@ -46,7 +46,7 @@ void StringVectorEncoder::Encode(Span<const string> v, Encoder* encoder) {
 
 bool EncodedStringVector::Init(Decoder* decoder) {
   if (!offsets_.Init(decoder)) return false;
-  data_ = reinterpret_cast<const char*>(decoder->skip(0));
+  data_ = decoder->skip(0);
   if (offsets_.size() > 0) {
     uint64 length = offsets_[offsets_.size() - 1];
     if (decoder->avail() < length) return false;

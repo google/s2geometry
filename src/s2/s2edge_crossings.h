@@ -138,10 +138,10 @@ bool AngleContainsVertex(const S2Point& a, const S2Point& b, const S2Point& c);
 
 // Given two edges AB and CD where at least two vertices are identical
 // (i.e. CrossingSign(a,b,c,d) == 0), this function defines whether the
-// two edges "cross" in a such a way that point-in-polygon containment tests
-// can be implemented by counting the number of edge crossings.  The basic
-// rule is that a "crossing" occurs if AB is encountered after CD during a
-// CCW sweep around the shared vertex starting from a fixed reference point.
+// two edges "cross" in such a way that point-in-polygon containment tests can
+// be implemented by counting the number of edge crossings.  The basic rule is
+// that a "crossing" occurs if AB is encountered after CD during a CCW sweep
+// around the shared vertex starting from a fixed reference point.
 //
 // Note that according to this rule, if AB crosses CD then in general CD
 // does not cross AB.  However, this leads to the correct result when

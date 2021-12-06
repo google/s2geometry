@@ -139,7 +139,9 @@ bool EncodedS2CellIdVector::Init(Decoder* decoder) {
   int shift_code = code_plus_len >> 3;
   if (shift_code == 31) {
     shift_code = 29 + decoder->get8();
+    if (shift_code > 56) return false;  // Valid range 0..56
   }
+
   // Decode the "base_len" most-significant bytes of "base".
   int base_len = code_plus_len & 7;
   if (!DecodeUintWithLength(base_len, decoder, &base_)) return false;

@@ -640,7 +640,7 @@ bool S2Loop::DecodeInternal(Decoder* const decoder,
   bool is_misaligned = false;
 #else
   bool is_misaligned =
-      reinterpret_cast<intptr_t>(decoder->ptr()) % sizeof(double) != 0;
+      reinterpret_cast<intptr_t>(decoder->skip(0)) % sizeof(double) != 0;
 #endif
   if (within_scope && !is_misaligned) {
     vertices_ = const_cast<S2Point *>(reinterpret_cast<const S2Point*>(

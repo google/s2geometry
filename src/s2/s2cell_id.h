@@ -82,9 +82,10 @@ class S2LatLng;
 // the default copy constructor and assignment operator.
 class S2CellId {
  public:
-  // The extra position bit (61 rather than 60) let us encode each cell as its
-  // Hilbert curve position at the cell center (which is halfway along the
-  // portion of the Hilbert curve that fills that cell).
+  // Although only 60 bits are needed to represent the index of a leaf cell, the
+  // extra position bit lets us encode each cell as its Hilbert curve position
+  // at the cell center, which is halfway along the portion of the Hilbert curve
+  // that fills that cell.
   static constexpr int kFaceBits = 3;
   static constexpr int kNumFaces = 6;
   static constexpr int kMaxLevel =
@@ -98,7 +99,7 @@ class S2CellId {
   explicit IFNDEF_SWIG(constexpr) S2CellId(uint64 id) : id_(id) {}
 
   // Construct a leaf cell containing the given point "p".  Usually there is
-  // is exactly one such cell, but for points along the edge of a cell, any
+  // exactly one such cell, but for points along the edge of a cell, any
   // adjacent cell may be (deterministically) chosen.  This is because
   // S2CellIds are considered to be closed sets.  The returned cell will
   // always contain the given point, i.e.
@@ -117,6 +118,7 @@ class S2CellId {
 
   // The default constructor returns an invalid cell id.
   IFNDEF_SWIG(constexpr) S2CellId() : id_(0) {}
+  // Returns an invalid cell id.
   static constexpr S2CellId None() { return S2CellId(); }
 
   // Returns an invalid cell id guaranteed to be larger than any
