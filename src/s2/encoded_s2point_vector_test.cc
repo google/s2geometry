@@ -140,7 +140,7 @@ TEST(EncodedS2PointVectorTest, PointsAtMultipleLevels) {
   // encoding (since different numbers of "base" bytes are encoded).
   //
   // Encoding: header (2 bytes), base (1 byte), block count (1 byte), block
-  // lengths (1 byte), block header (1 byte), 5 deltas (5 bytes), S2Point
+  // offsets (1 byte), block header (1 byte), 5 deltas (5 bytes), S2Point
   // exceptions (72 bytes).
   TestEncodedS2PointVector(
       {MakeCellIdOrDie("2/11001310230102").ToPoint(),
