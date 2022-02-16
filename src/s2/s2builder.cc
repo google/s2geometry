@@ -74,6 +74,7 @@
 #include <iostream>
 #include <memory>
 #include <numeric>
+#include <utility>
 #include <vector>
 
 #include "s2/base/casts.h"

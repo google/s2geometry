@@ -19,7 +19,7 @@ S2 documentation can be found on [s2geometry.io](http://s2geometry.io).
 ## Requirements for End Users
 
 * [CMake](http://www.cmake.org/)
-* A C++ compiler with C++17 support, such as [g++ 7](https://gcc.gnu.org/)
+* A C++ compiler with C++11 support, such as [g++ >= 4.7](https://gcc.gnu.org/)
 * [Abseil](https://github.com/abseil/abseil-cpp) (standard library extensions)
 * [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 * [gflags command line flags](https://github.com/gflags/gflags), optional
@@ -85,6 +85,10 @@ cd s2geometry
 
 First, [install Abseil](https://github.com/abseil/abseil-cpp/blob/master/CMake/README.md#traditional-cmake-set-up).
 It must be configured with `-DCMAKE_POSITION_INDEPENDENT_CODE=ON`.
+s2geometry must be configured to use the came C++ version that
+abseil uses.  The easiest way to achieve this is to pass
+`-DCMAKE_CXX_STANDARD=11` (or `-DCMAKE_CXX_STANDARD=17`) to `cmake`
+when compiling both abseil and s2geometry.
 
 From the appropriate directory depending on how you got the source:
 
@@ -92,7 +96,8 @@ From the appropriate directory depending on how you got the source:
 mkdir build
 cd build
 # You can omit -DGTEST_ROOT to skip tests; see above for macOS.
-cmake -DGTEST_ROOT=/usr/src/gtest -DCMAKE_PREFIX_PATH=/path/to/absl/install ..
+# Use the same CMAKE_CXX_STANDARD value that was used with absl.
+cmake -DGTEST_ROOT=/usr/src/gtest -DCMAKE_PREFIX_PATH=/path/to/absl/install -DCMAKE_CXX_STANDARD=11 ..
 make -j $(nproc)
 make test ARGS="-j$(nproc)"  # If GTEST_ROOT specified above.
 sudo make install

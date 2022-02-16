@@ -37,7 +37,10 @@
 // or use S2LaxClosedPolylineShape defined in s2_lax_loop_shape.h.)
 class S2LaxPolylineShape : public S2Shape {
  public:
-  static constexpr TypeTag kTypeTag = 4;
+  // Define as enum so we don't have to declare storage.
+  // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
+  // in opensource.
+  enum : TypeTag { kTypeTag = 4 };
 
   // Constructs an empty polyline.
   S2LaxPolylineShape() : num_vertices_(0) {}
@@ -102,7 +105,10 @@ class S2LaxPolylineShape : public S2Shape {
 // into a large contiguous buffer that contains other encoded data as well.
 class EncodedS2LaxPolylineShape : public S2Shape {
  public:
-  static constexpr TypeTag kTypeTag = S2LaxPolylineShape::kTypeTag;
+  // Define as enum so we don't have to declare storage.
+  // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
+  // in opensource.
+  enum : TypeTag { kTypeTag = S2LaxPolylineShape::kTypeTag };
 
   // Constructs an uninitialized object; requires Init() to be called.
   EncodedS2LaxPolylineShape() {}

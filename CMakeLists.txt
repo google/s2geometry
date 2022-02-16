@@ -62,14 +62,10 @@ endif()
 # s2geometry needs to use the same C++ standard that absl used to avoid
 # undefined symbol errors since ABSL_HAVE_STD_STRING_VIEW etc will
 # end up defined differently.  There is probably a better way to achieve
-# this than assuming what absl used.  s2geometry should actually work fine
-# with C++11, but there are a few places that use std::exchange instead of
-# absl::exchange, is_x_t, and some atomic constructors that would need
-# to change.  File a bug if you need support for earlier versions.
-# TODO(jrosenstock,b/205952836): Use absl functions if possible.
-set(CMAKE_CXX_STANDARD 17)
+# this than assuming what absl used.
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# No compiler-specific extensions, i.e. -std=c++17, not -std=gnu++17.
+# No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Avoid megabytes of warnings like:

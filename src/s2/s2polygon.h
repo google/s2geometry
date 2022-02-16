@@ -717,7 +717,10 @@ class S2Polygon final : public S2Region {
   // such that the polygon interior is always on the left.
   class Shape : public S2Shape {
    public:
-    static constexpr TypeTag kTypeTag = 1;
+    // Define as enum so we don't have to declare storage.
+    // TODO(user, b/210097200): Use static constexpr when C++17 is
+    // allowed in opensource.
+    enum : TypeTag { kTypeTag = 1 };
 
     Shape() : polygon_(nullptr), loop_starts_(nullptr) {}
     ~Shape() override;
@@ -758,7 +761,7 @@ class S2Polygon final : public S2Region {
     // edge() method.  This is used as a hint to speed up edge location when
     // there are many loops.  Note that this field does not take up any space
     // due to field packing with S2Shape::id_.
-    mutable std::atomic<int> prev_loop_ = 0;
+    mutable std::atomic<int> prev_loop_{0};
 
     const S2Polygon* polygon_;
 

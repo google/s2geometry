@@ -148,9 +148,14 @@ class R1Interval {
 
   // Expand the interval so that it contains the given point "p".
   void AddPoint(double p) {
-    if (is_empty()) { set_lo(p); set_hi(p); }
-    else if (p < lo()) { set_lo(p); }  // NOLINT
-    else if (p > hi()) { set_hi(p); }  // NOLINT
+    if (is_empty()) {
+      set_lo(p);
+      set_hi(p);
+    } else if (p < lo()) {
+      set_lo(p);
+    } else if (p > hi()) {
+      set_hi(p);
+    }
   }
 
   // Expand the interval so that it contains the given interval "y".

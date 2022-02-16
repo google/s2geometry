@@ -41,6 +41,7 @@
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
 #include "s2/s2latlng_rect_bounder.h"
+#include "s2/s2point.h"
 #include "s2/s2point_compression.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polyline_measures.h"
@@ -431,8 +432,11 @@ bool S2Polyline::DecodeUncompressed(Decoder* const decoder) {
     return false;
   }
   num_vertices_ = decoder->get32();
+
+  // Check the bytes available before allocating memory in case of
+  // corrupt/malicious input.
+  if (decoder->avail() < num_vertices_ * sizeof(S2Point)) return false;
   vertices_.reset(new S2Point[num_vertices_]);
-  if (decoder->avail() < num_vertices_ * sizeof(vertices_[0])) return false;
   decoder->getn(&vertices_[0], num_vertices_ * sizeof(vertices_[0]));
 
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
@@ -505,6 +509,8 @@ void S2Polyline::EncodeCompressed(Encoder* encoder,
 bool S2Polyline::DecodeCompressed(Decoder* decoder) {
   if (decoder->avail() < sizeof(uint8)) return false;
   const int snap_level = decoder->get8();
+  if (snap_level > S2::kMaxCellLevel) return false;
+
   vector<S2Point> points;
   uint32 num_vertices;
   if (!decoder->get_varint32(&num_vertices)) return false;
@@ -513,6 +519,10 @@ bool S2Polyline::DecodeCompressed(Decoder* decoder) {
     Init(points);
     return true;
   }
+
+  // TODO(b/209937354): Prevent large allocations like in DecodeUncompressed.
+  // This is more complicated due to the compressed encoding, but perhaps the
+  // minimum required size can be bounded.
   points.resize(num_vertices);
   if (!S2DecodePointsCompressed(decoder, snap_level, absl::MakeSpan(points))) {
     return false;

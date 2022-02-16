@@ -32,7 +32,7 @@ namespace {
 template <typename T>
 std::unique_ptr<T> make_unique_for_overwrite(size_t n) {
   // We only need to support this one variant.
-  static_assert(std::is_array_v<T>);
+  static_assert(std::is_array<T>::value);
   return std::unique_ptr<T>(new typename absl::remove_extent_t<T>[n]);
 }
 }  // namespace

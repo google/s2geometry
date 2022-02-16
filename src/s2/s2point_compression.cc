@@ -344,6 +344,8 @@ void S2EncodePointsCompressed(Span<const S2XYZFaceSiTi> points,
 
 bool S2DecodePointsCompressed(Decoder* decoder, int level,
                               Span<S2Point> points) {
+  S2_DCHECK_LE(level, S2::kMaxCellLevel);
+
   Faces faces;
   if (!faces.Decode(points.size(), decoder)) {
     return false;

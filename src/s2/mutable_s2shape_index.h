@@ -541,7 +541,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
     FRESH,     // There are no pending updates.
   };
   // Reads and writes to this field are guarded by "lock_".
-  std::atomic<IndexStatus> index_status_ = FRESH;
+  std::atomic<IndexStatus> index_status_{FRESH};
 
   // UpdateState holds temporary data related to thread synchronization.  It
   // is only allocated while updates are being applied.

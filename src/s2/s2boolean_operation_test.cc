@@ -18,7 +18,9 @@
 #include "s2/s2boolean_operation.h"
 
 #include <memory>
+#include <string>
 #include <tuple>
+#include <utility>
 
 #include <gtest/gtest.h>
 #include "absl/flags/reflection.h"

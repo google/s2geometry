@@ -334,10 +334,13 @@ bool UpdateEdgePairMinDistance(
   //
   // The calculation below computes each of the six vertex-vertex distances
   // twice (this could be optimized).
-  return (UpdateMinDistance(a0, b0, b1, min_dist) |
-          UpdateMinDistance(a1, b0, b1, min_dist) |
-          UpdateMinDistance(b0, a0, a1, min_dist) |
-          UpdateMinDistance(b1, a0, a1, min_dist));
+  //
+  // We do not want the short circuit behavior of ||. Suppress
+  // -Wbitwise-instead-of-logical errors by converting to int.
+  return (int{UpdateMinDistance(a0, b0, b1, min_dist)} |
+          int{UpdateMinDistance(a1, b0, b1, min_dist)} |
+          int{UpdateMinDistance(b0, a0, a1, min_dist)} |
+          int{UpdateMinDistance(b1, a0, a1, min_dist)});
 }
 
 bool UpdateEdgePairMaxDistance(
@@ -357,10 +360,13 @@ bool UpdateEdgePairMaxDistance(
   //
   // The calculation below computes each of the six vertex-vertex distances
   // twice (this could be optimized).
-  return (UpdateMaxDistance(a0, b0, b1, max_dist) |
-          UpdateMaxDistance(a1, b0, b1, max_dist) |
-          UpdateMaxDistance(b0, a0, a1, max_dist) |
-          UpdateMaxDistance(b1, a0, a1, max_dist));
+  //
+  // We do not want the short circuit behavior of ||. Suppress
+  // -Wbitwise-instead-of-logical errors by converting to int.
+  return (int{UpdateMaxDistance(a0, b0, b1, max_dist)} |
+          int{UpdateMaxDistance(a1, b0, b1, max_dist)} |
+          int{UpdateMaxDistance(b0, a0, a1, max_dist)} |
+          int{UpdateMaxDistance(b1, a0, a1, max_dist)});
 }
 
 std::pair<S2Point, S2Point> GetEdgePairClosestPoints(

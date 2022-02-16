@@ -75,7 +75,10 @@
 // (S2BooleanOperation, S2ClosestEdgeQuery, etc).
 class S2LaxPolygonShape : public S2Shape {
  public:
-  static constexpr TypeTag kTypeTag = 5;
+  // Define as enum so we don't have to declare storage.
+  // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
+  // in opensource.
+  enum : TypeTag { kTypeTag = 5 };
 
   // Constructs an empty polygon.
   S2LaxPolygonShape() : num_loops_(0), num_vertices_(0) {}
@@ -148,7 +151,7 @@ class S2LaxPolygonShape : public S2Shape {
   // The loop that contained the edge returned by the previous call to the
   // edge() method.  This is used as a hint to speed up edge location when
   // there are many loops.
-  mutable std::atomic<int> prev_loop_ = 0;
+  mutable std::atomic<int> prev_loop_{0};
 
   int32 num_vertices_;
   std::unique_ptr<S2Point[]> vertices_;
@@ -205,7 +208,7 @@ class EncodedS2LaxPolygonShape : public S2Shape {
   // The loop that contained the edge returned by the previous call to the
   // edge() method.  This is used as a hint to speed up edge location when
   // there are many loops.
-  mutable std::atomic<int> prev_loop_ = 0;
+  mutable std::atomic<int> prev_loop_{0};
 
   s2coding::EncodedS2PointVector vertices_;
   s2coding::EncodedUintVector<uint32> loop_starts_;

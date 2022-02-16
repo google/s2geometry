@@ -27,20 +27,21 @@
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
+#include "absl/utility/utility.h"
 
 Encoder::Encoder(Encoder&& other)
-    : buf_(std::exchange(other.buf_, nullptr)),
-      limit_(std::exchange(other.limit_, nullptr)),
-      underlying_buffer_(std::exchange(other.underlying_buffer_, nullptr)),
-      orig_(std::exchange(other.orig_, nullptr)) {}
+    : buf_(absl::exchange(other.buf_, nullptr)),
+      limit_(absl::exchange(other.limit_, nullptr)),
+      underlying_buffer_(absl::exchange(other.underlying_buffer_, nullptr)),
+      orig_(absl::exchange(other.orig_, nullptr)) {}
 
 Encoder& Encoder::operator=(Encoder&& other) {
   if (this == &other) return *this;
   if (ensure_allowed()) DeleteBuffer(underlying_buffer_, capacity());
-  buf_ = std::exchange(other.buf_, nullptr);
-  limit_ = std::exchange(other.limit_, nullptr);
-  underlying_buffer_ = std::exchange(other.underlying_buffer_, nullptr);
-  orig_ = std::exchange(other.orig_, nullptr);
+  buf_ = absl::exchange(other.buf_, nullptr);
+  limit_ = absl::exchange(other.limit_, nullptr);
+  underlying_buffer_ = absl::exchange(other.underlying_buffer_, nullptr);
+  orig_ = absl::exchange(other.orig_, nullptr);
   return *this;
 }
 
@@ -69,7 +70,11 @@ void Encoder::EnsureSlowPath(size_t N) {
 
   // Double buffer size, but make sure we always have at least N extra bytes
   const size_t current_len = length();
-  const auto [new_buffer, new_capacity] =
+  // Used in opensource; avoid structured bindings (a C++17 feature) to
+  // remain C++11-compatible.  b/210097200
+  unsigned char* new_buffer;
+  size_t new_capacity;
+  std::tie(new_buffer, new_capacity) =
       NewBuffer(std::max(current_len + N, 2 * current_len));
 
   if (underlying_buffer_) {

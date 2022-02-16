@@ -31,6 +31,7 @@
 #include "s2/s1angle.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2cell.h"
+#include "s2/s2coords.h"
 #include "s2/s2debug.h"
 #include "s2/s2latlng.h"
 #include "s2/s2pointutil.h"
@@ -76,6 +77,8 @@ TEST(S2Polyline, Basic) {
                                S2Point(0, 1, 0)));
   semi_equator.Reverse();
   EXPECT_EQ(S2Point(1, 0, 0), semi_equator.vertex(2));
+  ASSERT_EQ(3, semi_equator.vertices_span().size());
+  EXPECT_EQ(S2Point(1, 0, 0), semi_equator.vertices_span()[2]);
 }
 
 TEST(S2Polyline, NoData) {
@@ -530,6 +533,30 @@ TEST(S2Polyline, DecodeCompressedBadData) {
   Decoder decoder(data.data(), data.length());
   S2Polyline decoded_polyline;
   EXPECT_FALSE(decoded_polyline.Decode(&decoder));
+}
+
+TEST(S2Polyline, DecodeCompressedMaxCellLevel) {
+  Encoder encoder;
+  encoder.Ensure(6);
+  encoder.put8(2);  // kCurrentCompressedEncodingVersionNumber
+  encoder.put8(S2::kMaxCellLevel);
+  encoder.put32(0);
+  Decoder decoder(encoder.base(), encoder.length());
+
+  S2Polyline polyline;
+  EXPECT_TRUE(polyline.Decode(&decoder));
+}
+
+TEST(S2Polyline, DecodeCompressedCellLevelTooHigh) {
+  Encoder encoder;
+  encoder.Ensure(6);
+  encoder.put8(2);  // kCurrentCompressedEncodingVersionNumber
+  encoder.put8(S2::kMaxCellLevel + 1);
+  encoder.put32(0);
+  Decoder decoder(encoder.base(), encoder.length());
+
+  S2Polyline polyline;
+  EXPECT_FALSE(polyline.Decode(&decoder));
 }
 
 TEST(S2PolylineShape, Basic) {
