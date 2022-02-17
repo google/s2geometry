@@ -23,6 +23,7 @@
 #include <cstring>
 #include <functional>
 #include <queue>
+#include <utility>
 #include <vector>
 
 #include "absl/base/casts.h"

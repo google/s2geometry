@@ -190,7 +190,11 @@ class S2Polygon final : public S2Region {
 
   // Makes a deep copy of the given source polygon.  The destination polygon
   // will be cleared if necessary.
-  void Copy(const S2Polygon* src);
+  void Copy(const S2Polygon& src);
+#ifndef SWIG
+  ABSL_DEPRECATED("Inline the implementation")
+  void Copy(const S2Polygon* src) { Copy(*src); }
+#endif
 
   // Destroys the polygon and frees its loops.
   ~S2Polygon() override;
@@ -290,8 +294,15 @@ class S2Polygon final : public S2Region {
 
   // Return the overlap fractions between two polygons, i.e. the ratios of the
   // area of intersection to the area of each polygon.
+  static std::pair<double, double> GetOverlapFractions(const S2Polygon& a,
+                                                       const S2Polygon& b);
+#ifndef SWIG
+  ABSL_DEPRECATED("Inline the implementation")
   static std::pair<double, double> GetOverlapFractions(const S2Polygon* a,
-                                                       const S2Polygon* b);
+                                                       const S2Polygon* b) {
+    return GetOverlapFractions(*a, *b);
+  }
+#endif
 
   // If the given point is contained by the polygon, return it.  Otherwise
   // return the closest point on the polygon boundary.  If the polygon is
@@ -306,7 +317,7 @@ class S2Polygon final : public S2Region {
 
   // Return true if this polygon contains the given other polygon, i.e.
   // if polygon A contains all points contained by polygon B.
-  bool Contains(const S2Polygon* b) const;
+  bool Contains(const S2Polygon& b) const;
 
   // Returns true if this polgyon (A) approximately contains the given other
   // polygon (B). This is true if it is possible to move the vertices of B
@@ -314,11 +325,11 @@ class S2Polygon final : public S2Region {
   //
   // For example, the empty polygon will contain any polygon whose maximum
   // width is no more than "tolerance".
-  bool ApproxContains(const S2Polygon* b, S1Angle tolerance) const;
+  bool ApproxContains(const S2Polygon& b, S1Angle tolerance) const;
 
   // Return true if this polygon intersects the given other polygon, i.e.
   // if there is a point that is contained by both polygons.
-  bool Intersects(const S2Polygon* b) const;
+  bool Intersects(const S2Polygon& b) const;
 
   // Returns true if this polgyon (A) and the given polygon (B) are
   // approximately disjoint.  This is true if it is possible to ensure that A
@@ -328,7 +339,7 @@ class S2Polygon final : public S2Region {
   //
   // For example, any polygon is approximately disjoint from a polygon whose
   // maximum width is no more than "tolerance".
-  bool ApproxDisjoint(const S2Polygon* b, S1Angle tolerance) const;
+  bool ApproxDisjoint(const S2Polygon& b, S1Angle tolerance) const;
 
   // Initialize this polygon to the intersection, union, difference (A - B),
   // or symmetric difference (XOR) of the given two polygons.
@@ -374,45 +385,64 @@ class S2Polygon final : public S2Region {
   // success and set "error" appropriately otherwise.  However note that these
   // functions should never return an error provided that both input polygons
   // are valid (i.e., IsValid() returns true).
-  void InitToIntersection(const S2Polygon* a, const S2Polygon* b);
+  void InitToIntersection(const S2Polygon& a, const S2Polygon& b);
   void InitToIntersection(const S2Polygon& a, const S2Polygon& b,
                           const S2Builder::SnapFunction& snap_function);
   bool InitToIntersection(const S2Polygon& a, const S2Polygon& b,
                           const S2Builder::SnapFunction& snap_function,
                           S2Error *error);
 
-  void InitToUnion(const S2Polygon* a, const S2Polygon* b);
+  void InitToUnion(const S2Polygon& a, const S2Polygon& b);
   void InitToUnion(const S2Polygon& a, const S2Polygon& b,
                    const S2Builder::SnapFunction& snap_function);
   bool InitToUnion(const S2Polygon& a, const S2Polygon& b,
                    const S2Builder::SnapFunction& snap_function,
                    S2Error *error);
 
-  void InitToDifference(const S2Polygon* a, const S2Polygon* b);
+  void InitToDifference(const S2Polygon& a, const S2Polygon& b);
   void InitToDifference(const S2Polygon& a, const S2Polygon& b,
                         const S2Builder::SnapFunction& snap_function);
   bool InitToDifference(const S2Polygon& a, const S2Polygon& b,
                         const S2Builder::SnapFunction& snap_function,
                         S2Error *error);
 
-  void InitToSymmetricDifference(const S2Polygon* a, const S2Polygon* b);
+  void InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b);
   void InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b,
                                  const S2Builder::SnapFunction& snap_function);
   bool InitToSymmetricDifference(const S2Polygon& a, const S2Polygon& b,
                                  const S2Builder::SnapFunction& snap_function,
                                  S2Error *error);
 
-  // Convenience functions that use the IdentitySnapFunction with the given
-  // snap radius.  TODO(ericv): Consider deprecating these and require the
-  // snap function to be specified explcitly?
-  void InitToApproxIntersection(const S2Polygon* a, const S2Polygon* b,
-                                S1Angle snap_radius);
-  void InitToApproxUnion(const S2Polygon* a, const S2Polygon* b,
-                         S1Angle snap_radius);
-  void InitToApproxDifference(const S2Polygon* a, const S2Polygon* b,
-                              S1Angle snap_radius);
-  void InitToApproxSymmetricDifference(const S2Polygon* a, const S2Polygon* b,
-                                       S1Angle snap_radius);
+#ifndef SWIG
+  ABSL_DEPRECATED("Inline the implementation")
+  bool Contains(const S2Polygon* b) const { return Contains(*b); }
+  ABSL_DEPRECATED("Inline the implementation")
+  bool ApproxContains(const S2Polygon* b, S1Angle tolerance) const {
+    return ApproxContains(*b, tolerance);
+  }
+  ABSL_DEPRECATED("Inline the implementation")
+  bool Intersects(const S2Polygon* b) const { return Intersects(*b); }
+  ABSL_DEPRECATED("Inline the implementation")
+  bool ApproxDisjoint(const S2Polygon* b, S1Angle tolerance) const {
+    return ApproxDisjoint(*b, tolerance);
+  }
+  ABSL_DEPRECATED("Inline the implementation")
+  void InitToIntersection(const S2Polygon* a, const S2Polygon* b) {
+    return InitToIntersection(*a, *b);
+  }
+  ABSL_DEPRECATED("Inline the implementation")
+  void InitToUnion(const S2Polygon* a, const S2Polygon* b) {
+    return InitToUnion(*a, *b);
+  }
+  ABSL_DEPRECATED("Inline the implementation")
+  void InitToDifference(const S2Polygon* a, const S2Polygon* b) {
+    return InitToDifference(*a, *b);
+  }
+  ABSL_DEPRECATED("Inline the implementation")
+  void InitToSymmetricDifference(const S2Polygon* a, const S2Polygon* b) {
+    return InitToSymmetricDifference(*a, *b);
+  }
+#endif
 
   // Snaps the vertices of the given polygon using the given SnapFunction
   // (e.g., s2builderutil::IntLatLngSnapFunction(6) snaps to E6 coordinates).
@@ -431,7 +461,7 @@ class S2Polygon final : public S2Region {
   // given level (default level 30, which has S2CellId centers spaced about 1
   // centimeter apart).  Polygons can be efficiently encoded by Encode() after
   // they have been snapped.
-  void InitToSnapped(const S2Polygon* polygon,
+  void InitToSnapped(const S2Polygon& polygon,
                      int snap_level = S2CellId::kMaxLevel);
 
   // Snaps the input polygon according to the given "snap_function" and
@@ -482,11 +512,27 @@ class S2Polygon final : public S2Region {
   //
   // REQUIRES: all vertices of "a" are within "boundary_tolerance" of "cell".
   void InitToSimplifiedInCell(
-      const S2Polygon* a, const S2Cell& cell, S1Angle snap_radius,
+      const S2Polygon& a, const S2Cell& cell, S1Angle snap_radius,
       S1Angle boundary_tolerance = S1Angle::Radians(1e-15));
 
   // Initialize this polygon to the complement of the given polygon.
-  void InitToComplement(const S2Polygon* a);
+  void InitToComplement(const S2Polygon& a);
+
+#ifndef SWIG
+  ABSL_DEPRECATED("Inline the implementation")
+  void InitToSnapped(const S2Polygon* polygon,
+                     int snap_level = S2CellId::kMaxLevel) {
+    return InitToSnapped(*polygon, snap_level);
+  }
+  ABSL_DEPRECATED("Inline the implementation")
+  void InitToSimplifiedInCell(
+      const S2Polygon* a, const S2Cell& cell, S1Angle snap_radius,
+      S1Angle boundary_tolerance = S1Angle::Radians(1e-15)) {
+    return InitToSimplifiedInCell(*a, cell, snap_radius, boundary_tolerance);
+  }
+  ABSL_DEPRECATED("Inline the implementation")
+  void InitToComplement(const S2Polygon* a) { return InitToComplement(*a); }
+#endif
 
   // Invert the polygon (replace it by its complement).
   void Invert();
@@ -609,7 +655,7 @@ class S2Polygon final : public S2Region {
   // Return true if two polygons have exactly the same loops.  The loops must
   // appear in the same order, and corresponding loops must have the same
   // linear vertex ordering (i.e., cyclic rotations are not allowed).
-  bool Equals(const S2Polygon* b) const;
+  bool Equals(const S2Polygon& b) const;
 
   // Return true if two polygons are approximately equal to within the given
   // tolerance.  This is true if it is possible to move the vertices of the
@@ -624,7 +670,7 @@ class S2Polygon final : public S2Region {
   // a good choice for comparing polygons that have been snapped, simplified,
   // unioned, etc, since these operations use a model similar to this one
   // (i.e., degenerate loops or portions of loops are automatically removed).
-  bool ApproxEquals(const S2Polygon* b, S1Angle tolerance) const;
+  bool ApproxEquals(const S2Polygon& b, S1Angle tolerance) const;
 
   // Returns true if two polygons have the same boundary.  More precisely,
   // this method requires that both polygons have loops with the same cyclic
@@ -632,7 +678,18 @@ class S2Polygon final : public S2Region {
   // may be cyclically rotated between corresponding loops, and the loop
   // ordering may be different between the two polygons as long as the nesting
   // hierarchy is the same.)
-  bool BoundaryEquals(const S2Polygon* b) const;
+  bool BoundaryEquals(const S2Polygon& b) const;
+
+#ifndef SWIG
+  ABSL_DEPRECATED("Inline the implementation")
+  bool Equals(const S2Polygon* b) const { return Equals(*b); }
+  ABSL_DEPRECATED("Inline the implementation")
+  bool ApproxEquals(const S2Polygon* b, S1Angle tolerance) const {
+    return ApproxEquals(*b, tolerance);
+  }
+  ABSL_DEPRECATED("Inline the implementation")
+  bool BoundaryEquals(const S2Polygon* b) const { return BoundaryEquals(*b); }
+#endif
 
   // Return true if two polygons have the same boundary except for vertex
   // perturbations.  Both polygons must have loops with the same cyclic vertex
@@ -895,7 +952,13 @@ class S2Polygon final : public S2Region {
   // Defines a total ordering on S2Loops that does not depend on the cyclic
   // order of loop vertices.  This function is used to choose which loop to
   // invert in the case where several loops have exactly the same area.
-  static int CompareLoops(const S2Loop* a, const S2Loop* b);
+  static int CompareLoops(const S2Loop& a, const S2Loop& b);
+#ifndef SWIG
+  ABSL_DEPRECATED("Inline the implementation")
+  static int CompareLoops(const S2Loop* a, const S2Loop* b) {
+    return CompareLoops(*a, *b);
+  }
+#endif
 
   std::vector<std::unique_ptr<S2Loop> > loops_;
 

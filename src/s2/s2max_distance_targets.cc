@@ -16,6 +16,7 @@
 #include "s2/s2max_distance_targets.h"
 
 #include <memory>
+
 #include "absl/memory/memory.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"

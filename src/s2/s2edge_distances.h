@@ -212,13 +212,6 @@ inline S2Point Interpolate(double t, const S2Point& a, const S2Point& b) {
   return Interpolate(a, b, t);
 }
 
-ABSL_DEPRECATED("Inline the implementation")
-inline S2Point InterpolateAtDistance(S1Angle ax, const S2Point& a,
-                                     const S2Point& b) {
-  return GetPointOnLine(a, b, ax);
-}
-
-
 /////////////////////////////////////////////////////////////////////////////
 ///////////////            (edge, edge) functions             ///////////////
 

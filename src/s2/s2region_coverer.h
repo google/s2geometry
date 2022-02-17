@@ -18,6 +18,7 @@
 #ifndef S2_S2REGION_COVERER_H_
 #define S2_S2REGION_COVERER_H_
 
+#include <algorithm>
 #include <cstddef>
 #include <new>
 #include <queue>

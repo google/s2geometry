@@ -77,22 +77,21 @@ class Matrix3x3 {
   // Casting constructor
   template <class VType2>
   static Matrix3x3 Cast(const Matrix3x3<VType2> &mb) {
-    return Matrix3x3(static_cast<VType>(mb(0, 0)),
-                     static_cast<VType>(mb(0, 1)),
-                     static_cast<VType>(mb(0, 2)),
-                     static_cast<VType>(mb(1, 0)),
-                     static_cast<VType>(mb(1, 1)),
-                     static_cast<VType>(mb(1, 2)),
-                     static_cast<VType>(mb(2, 0)),
-                     static_cast<VType>(mb(2, 1)),
+    return Matrix3x3(static_cast<VType>(mb(0, 0)),  //
+                     static_cast<VType>(mb(0, 1)),  //
+                     static_cast<VType>(mb(0, 2)),  //
+                     static_cast<VType>(mb(1, 0)),  //
+                     static_cast<VType>(mb(1, 1)),  //
+                     static_cast<VType>(mb(1, 2)),  //
+                     static_cast<VType>(mb(2, 0)),  //
+                     static_cast<VType>(mb(2, 1)),  //
                      static_cast<VType>(mb(2, 2)));
   }
 
   // Change the value of all the coefficients of the matrix
-  inline Matrix3x3 &
-    Set(const VType &m00, const VType &m01, const VType &m02,
-        const VType &m10, const VType &m11, const VType &m12,
-        const VType &m20, const VType &m21, const VType &m22) {
+  inline Matrix3x3 &Set(const VType &m00, const VType &m01, const VType &m02,
+                        const VType &m10, const VType &m11, const VType &m12,
+                        const VType &m20, const VType &m21, const VType &m22) {
     m_[0][0] = m00;
     m_[0][1] = m01;
     m_[0][2] = m02;
@@ -108,7 +107,7 @@ class Matrix3x3 {
   }
 
   // Matrix addition
-  inline Matrix3x3& operator+=(const Matrix3x3 &mb) {
+  inline Matrix3x3 &operator+=(const Matrix3x3 &mb) {
     m_[0][0] += mb.m_[0][0];
     m_[0][1] += mb.m_[0][1];
     m_[0][2] += mb.m_[0][2];
@@ -124,7 +123,7 @@ class Matrix3x3 {
   }
 
   // Matrix subtration
-  inline Matrix3x3& operator-=(const Matrix3x3 &mb) {
+  inline Matrix3x3 &operator-=(const Matrix3x3 &mb) {
     m_[0][0] -= mb.m_[0][0];
     m_[0][1] -= mb.m_[0][1];
     m_[0][2] -= mb.m_[0][2];
@@ -140,7 +139,7 @@ class Matrix3x3 {
   }
 
   // Matrix multiplication by a scalar
-  inline Matrix3x3& operator*=(const VType &k) {
+  inline Matrix3x3 &operator*=(const VType &k) {
     m_[0][0] *= k;
     m_[0][1] *= k;
     m_[0][2] *= k;
@@ -167,8 +166,8 @@ class Matrix3x3 {
 
   // Change the sign of all the coefficients in the matrix
   friend inline Matrix3x3 operator-(const Matrix3x3 &vb) {
-    return Matrix3x3(-vb.m_[0][0], -vb.m_[0][1], -vb.m_[0][2],
-                     -vb.m_[1][0], -vb.m_[1][1], -vb.m_[1][2],
+    return Matrix3x3(-vb.m_[0][0], -vb.m_[0][1], -vb.m_[0][2],  //
+                     -vb.m_[1][0], -vb.m_[1][1], -vb.m_[1][2],  //
                      -vb.m_[2][0], -vb.m_[2][1], -vb.m_[2][2]);
   }
 
@@ -178,11 +177,12 @@ class Matrix3x3 {
   }
 
   friend inline Matrix3x3 operator*(const VType &k, const Matrix3x3 &mb) {
-    return Matrix3x3(mb)*k;
+    return Matrix3x3(mb) * k;
   }
 
   // Matrix multiplication
   inline Matrix3x3 operator*(const Matrix3x3 &mb) const {
+    // clang-format off
     return Matrix3x3(
       m_[0][0] * mb.m_[0][0] + m_[0][1] * mb.m_[1][0] + m_[0][2] * mb.m_[2][0],
       m_[0][0] * mb.m_[0][1] + m_[0][1] * mb.m_[1][1] + m_[0][2] * mb.m_[2][1],
@@ -195,24 +195,21 @@ class Matrix3x3 {
       m_[2][0] * mb.m_[0][0] + m_[2][1] * mb.m_[1][0] + m_[2][2] * mb.m_[2][0],
       m_[2][0] * mb.m_[0][1] + m_[2][1] * mb.m_[1][1] + m_[2][2] * mb.m_[2][1],
       m_[2][0] * mb.m_[0][2] + m_[2][1] * mb.m_[1][2] + m_[2][2] * mb.m_[2][2]);
+    // clang-format on
   }
 
   // Multiplication of a matrix by a vector
   inline MVector operator*(const MVector &v) const {
-    return MVector(
-      m_[0][0] * v[0] + m_[0][1] * v[1] + m_[0][2] * v[2],
-      m_[1][0] * v[0] + m_[1][1] * v[1] + m_[1][2] * v[2],
-      m_[2][0] * v[0] + m_[2][1] * v[1] + m_[2][2] * v[2]);
+    return MVector(m_[0][0] * v[0] + m_[0][1] * v[1] + m_[0][2] * v[2],
+                   m_[1][0] * v[0] + m_[1][1] * v[1] + m_[1][2] * v[2],
+                   m_[2][0] * v[0] + m_[2][1] * v[1] + m_[2][2] * v[2]);
   }
 
   // Return the determinant of the matrix
   inline VType Det() const {
-    return m_[0][0] * m_[1][1] * m_[2][2]
-         + m_[0][1] * m_[1][2] * m_[2][0]
-         + m_[0][2] * m_[1][0] * m_[2][1]
-         - m_[2][0] * m_[1][1] * m_[0][2]
-         - m_[2][1] * m_[1][2] * m_[0][0]
-         - m_[2][2] * m_[1][0] * m_[0][1];
+    return m_[0][0] * m_[1][1] * m_[2][2] + m_[0][1] * m_[1][2] * m_[2][0] +
+           m_[0][2] * m_[1][0] * m_[2][1] - m_[2][0] * m_[1][1] * m_[0][2] -
+           m_[2][1] * m_[1][2] * m_[0][0] - m_[2][2] * m_[1][0] * m_[0][1];
   }
 
   // Return the trace of the matrix
@@ -220,12 +217,8 @@ class Matrix3x3 {
 
   // Return a pointer to the data array for interface with other libraries
   // like opencv
-  VType* Data() {
-    return reinterpret_cast<VType*>(m_);
-  }
-  const VType* Data() const {
-    return reinterpret_cast<const VType*>(m_);
-  }
+  VType *Data() { return reinterpret_cast<VType *>(m_); }
+  const VType *Data() const { return reinterpret_cast<const VType *>(m_); }
 
   // Return matrix element (i,j) with 0<=i<=2 0<=j<=2
   inline VType &operator()(const int i, const int j) {
@@ -247,36 +240,35 @@ class Matrix3x3 {
   inline VType &operator[](const int i) {
     S2_DCHECK_GE(i, 0);
     S2_DCHECK_LT(i, 9);
-    return reinterpret_cast<VType*>(m_)[i];
+    return reinterpret_cast<VType *>(m_)[i];
   }
   inline VType operator[](const int i) const {
     S2_DCHECK_GE(i, 0);
     S2_DCHECK_LT(i, 9);
-    return reinterpret_cast<const VType*>(m_)[i];
+    return reinterpret_cast<const VType *>(m_)[i];
   }
 
   // Return the transposed matrix
   inline Matrix3x3 Transpose() const {
-    return Matrix3x3(m_[0][0], m_[1][0], m_[2][0],
-                     m_[0][1], m_[1][1], m_[2][1],
+    return Matrix3x3(m_[0][0], m_[1][0], m_[2][0],  //
+                     m_[0][1], m_[1][1], m_[2][1],  //
                      m_[0][2], m_[1][2], m_[2][2]);
   }
 
   // Return the transposed of the matrix of the cofactors
   // (Useful for inversion for example)
   inline Matrix3x3 ComatrixTransposed() const {
-    return Matrix3x3(
-      m_[1][1] * m_[2][2] - m_[2][1] * m_[1][2],
-      m_[2][1] * m_[0][2] - m_[0][1] * m_[2][2],
-      m_[0][1] * m_[1][2] - m_[1][1] * m_[0][2],
+    return Matrix3x3(m_[1][1] * m_[2][2] - m_[2][1] * m_[1][2],
+                     m_[2][1] * m_[0][2] - m_[0][1] * m_[2][2],
+                     m_[0][1] * m_[1][2] - m_[1][1] * m_[0][2],
 
-      m_[1][2] * m_[2][0] - m_[2][2] * m_[1][0],
-      m_[2][2] * m_[0][0] - m_[0][2] * m_[2][0],
-      m_[0][2] * m_[1][0] - m_[1][2] * m_[0][0],
+                     m_[1][2] * m_[2][0] - m_[2][2] * m_[1][0],
+                     m_[2][2] * m_[0][0] - m_[0][2] * m_[2][0],
+                     m_[0][2] * m_[1][0] - m_[1][2] * m_[0][0],
 
-      m_[1][0] * m_[2][1] - m_[2][0] * m_[1][1],
-      m_[2][0] * m_[0][1] - m_[0][0] * m_[2][1],
-      m_[0][0] * m_[1][1] - m_[1][0] * m_[0][1]);
+                     m_[1][0] * m_[2][1] - m_[2][0] * m_[1][1],
+                     m_[2][0] * m_[0][1] - m_[0][0] * m_[2][1],
+                     m_[0][0] * m_[1][1] - m_[1][0] * m_[0][1]);
   }
   // Matrix inversion
   inline Matrix3x3 Inverse() const {
@@ -300,23 +292,21 @@ class Matrix3x3 {
   }
 
   // Create a matrix from 3 row vectors
-  static inline Matrix3x3 FromRows(const MVector &v1,
-                              const MVector &v2,
-                              const MVector &v3) {
+  static inline Matrix3x3 FromRows(const MVector &v1, const MVector &v2,
+                                   const MVector &v3) {
     Matrix3x3 temp;
-    temp.Set(v1[0], v1[1], v1[2],
-             v2[0], v2[1], v2[2],
+    temp.Set(v1[0], v1[1], v1[2],  //
+             v2[0], v2[1], v2[2],  //
              v3[0], v3[1], v3[2]);
     return temp;
   }
 
   // Create a matrix from 3 column vectors
-  static inline Matrix3x3 FromCols(const MVector &v1,
-                              const MVector &v2,
-                              const MVector &v3) {
+  static inline Matrix3x3 FromCols(const MVector &v1, const MVector &v2,
+                                   const MVector &v3) {
     Matrix3x3 temp;
-    temp.Set(v1[0], v2[0], v3[0],
-             v1[1], v2[1], v3[1],
+    temp.Set(v1[0], v2[0], v3[0],  //
+             v1[1], v2[1], v3[1],  //
              v1[2], v2[2], v3[2]);
     return temp;
   }
@@ -363,24 +353,23 @@ class Matrix3x3 {
 
   // Return a diagonal matrix with the coefficients in v
   static inline Matrix3x3 Diagonal(const MVector &v) {
-    return Matrix3x3(v[0], VType(), VType(),
-                     VType(), v[1], VType(),
+    return Matrix3x3(v[0], VType(), VType(),  //
+                     VType(), v[1], VType(),  //
                      VType(), VType(), v[2]);
   }
 
   // Return the matrix vvT
   static Matrix3x3 Sym3(const MVector &v) {
-    return Matrix3x3(
-      v[0]*v[0], v[0]*v[1], v[0]*v[2],
-      v[1]*v[0], v[1]*v[1], v[1]*v[2],
-      v[2]*v[0], v[2]*v[1], v[2]*v[2]);
+    return Matrix3x3(v[0] * v[0], v[0] * v[1], v[0] * v[2],  //
+                     v[1] * v[0], v[1] * v[1], v[1] * v[2],  //
+                     v[2] * v[0], v[2] * v[1], v[2] * v[2]);
   }
   // Return a matrix M such that:
   // for each u,  M * u = v.CrossProd(u)
   static Matrix3x3 AntiSym3(const MVector &v) {
-    return Matrix3x3(VType(),    -v[2],     v[1],
-                     v[2],     VType(),    -v[0],
-                     -v[1],       v[0],   VType());
+    return Matrix3x3(VType(), -v[2], v[1],  //
+                     v[2], VType(), -v[0],  //
+                     -v[1], v[0], VType());
   }
 
   // Returns matrix that rotates |rot| radians around axis rot.
@@ -427,8 +416,8 @@ class Matrix3x3 {
     // characteristic polynomial
     // x^3 + a*x^2 + b*x + c
     VType a = -Trace();
-    VType b = m_[0][0]*m_[1][1] + m_[1][1]*m_[2][2] + m_[2][2]*m_[0][0]
-            - m_[1][0]*m_[0][1] - m_[2][1]*m_[1][2] - m_[0][2]*m_[2][0];
+    VType b = m_[0][0] * m_[1][1] + m_[1][1] * m_[2][2] + m_[2][2] * m_[0][0] -
+              m_[1][0] * m_[0][1] - m_[2][1] * m_[1][2] - m_[0][2] * m_[2][0];
     VType c = -Det();
     bool res = MathUtil::RealRootsForCubic(a, b, c, &r1, &r2, &r3);
     (*eig_val)[0] = r1;
@@ -453,9 +442,9 @@ class Matrix3x3 {
                             Matrix3x3 *eig_vec /*nullable*/) const {
     // Compute characteristic polynomial coefficients.
     double c2 = -Trace();
-    double c1 = -(m_[1][0] * m_[1][0] - m_[0][0] * m_[1][1]
-                  - m_[0][0] * m_[2][2] - m_[1][1] * m_[2][2]
-                  + m_[2][0] * m_[2][0] + m_[2][1] * m_[2][1]);
+    double c1 =
+        -(m_[1][0] * m_[1][0] - m_[0][0] * m_[1][1] - m_[0][0] * m_[2][2] -
+          m_[1][1] * m_[2][2] + m_[2][0] * m_[2][0] + m_[2][1] * m_[2][1]);
     double c0 = -(m_[0][0] * m_[1][1] * m_[2][2]    //
                   - m_[2][0] * m_[2][0] * m_[1][1]  //
                   - m_[1][0] * m_[1][0] * m_[2][2]  //
@@ -466,8 +455,8 @@ class Matrix3x3 {
     // NOTE: Cannot reuse general cubic solver MathUtil::RealRootsForCubic()
     // because it doesn't guarantee finding 3 real roots, e.g. it won't always
     // return roots {2, 2, 0} for the cubic x^3 - 4*x^2 + 4*x + epsilon = 0.
-    double q = (c2*c2-3*c1)/9.0;
-    double r = (2*c2*c2*c2-9*c2*c1+27*c0)/54.0;
+    double q = (c2 * c2 - 3 * c1) / 9.0;
+    double r = (2 * c2 * c2 * c2 - 9 * c2 * c1 + 27 * c0) / 54.0;
     // Assume R^2 <= Q^3 so there are three real roots.
     // Avoid sqrt of negative q, which can only happen due to numerical error.
     if (q < 0) q = 0;
@@ -478,19 +467,18 @@ class Matrix3x3 {
     double theta = atan2(q3_r2 <= 0 ? 0 : sqrt(q3_r2), r);
     double c2_3 = c2 / 3;
     (*eig_val)[0] = sqrt_q * cos(theta / 3.0) - c2_3;
-    (*eig_val)[1] = sqrt_q * cos((theta + 2.0 * M_PI)/3.0) - c2_3;
-    (*eig_val)[2] = sqrt_q * cos((theta - 2.0 * M_PI)/3.0) - c2_3;
+    (*eig_val)[1] = sqrt_q * cos((theta + 2.0 * M_PI) / 3.0) - c2_3;
+    (*eig_val)[2] = sqrt_q * cos((theta - 2.0 * M_PI) / 3.0) - c2_3;
 
     // Sort eigen value in decreasing order
     Vector3<int> d_order = eig_val->ComponentOrder();
-    (*eig_val) = MVector((*eig_val)[d_order[2]],
-                         (*eig_val)[d_order[1]],
+    (*eig_val) = MVector((*eig_val)[d_order[2]], (*eig_val)[d_order[1]],
                          (*eig_val)[d_order[0]]);
 
     // Compute eigenvectors
     if (!eig_vec) return;
     for (int i = 0; i < 3; ++i) {
-      MVector r1 , r2 , r3 , e1 , e2 , e3;
+      MVector r1, r2, r3, e1, e2, e3;
       r1[0] = m_[0][0] - (*eig_val)[i];
       r2[0] = m_[1][0];
       r3[0] = m_[2][0];
@@ -515,9 +503,9 @@ class Matrix3x3 {
 
   // Return true is one of the elements of the matrix is NaN
   bool IsNaN() const {
-    for ( int i = 0; i < 3; ++i ) {
-      for ( int j = 0; j < 3; ++j ) {
-        if ( isnan(m_[i][j]) ) {
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        if (isnan(m_[i][j])) {
           return true;
         }
       }
@@ -526,14 +514,10 @@ class Matrix3x3 {
   }
 
   friend bool operator==(const Matrix3x3 &a, const Matrix3x3 &b) {
-    return a.m_[0][0] == b.m_[0][0] &&
-           a.m_[0][1] == b.m_[0][1] &&
-           a.m_[0][2] == b.m_[0][2] &&
-           a.m_[1][0] == b.m_[1][0] &&
-           a.m_[1][1] == b.m_[1][1] &&
-           a.m_[1][2] == b.m_[1][2] &&
-           a.m_[2][0] == b.m_[2][0] &&
-           a.m_[2][1] == b.m_[2][1] &&
+    return a.m_[0][0] == b.m_[0][0] && a.m_[0][1] == b.m_[0][1] &&
+           a.m_[0][2] == b.m_[0][2] && a.m_[1][0] == b.m_[1][0] &&
+           a.m_[1][1] == b.m_[1][1] && a.m_[1][2] == b.m_[1][2] &&
+           a.m_[2][0] == b.m_[2][0] && a.m_[2][1] == b.m_[2][1] &&
            a.m_[2][2] == b.m_[2][2];
   }
 
@@ -541,10 +525,10 @@ class Matrix3x3 {
     return !(a == b);
   }
 
-  friend std::ostream &operator <<(std::ostream &out, const Matrix3x3 &mb) {
+  friend std::ostream &operator<<(std::ostream &out, const Matrix3x3 &mb) {
     int i, j;
     for (i = 0; i < 3; i++) {
-      if (i ==0) {
+      if (i == 0) {
         out << "[";
       } else {
         out << " ";
@@ -562,13 +546,13 @@ class Matrix3x3 {
   }
 
   template <typename H>
-  friend H AbslHashValue(H h, const Matrix3x3& m) {
+  friend H AbslHashValue(H h, const Matrix3x3 &m) {
     return H::combine_contiguous(std::move(h), m.Data(), 3 * 3);
   }
 };
 
-typedef Matrix3x3<int>    Matrix3x3_i;
-typedef Matrix3x3<float>  Matrix3x3_f;
+typedef Matrix3x3<int> Matrix3x3_i;
+typedef Matrix3x3<float> Matrix3x3_f;
 typedef Matrix3x3<double> Matrix3x3_d;
 
 

@@ -18,6 +18,7 @@
 #include "s2/s2closest_edge_query.h"
 
 #include <memory>
+
 #include "absl/memory/memory.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"

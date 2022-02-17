@@ -210,7 +210,7 @@ TEST(S1ChordAngle, GetS2PointConstructorMaxError) {
     if (rnd.OneIn(10)) {
       // Occasionally test a point pair that is nearly identical or antipodal.
       S1Angle r = S1Angle::Radians(1e-15 * rnd.RandDouble());
-      y = S2::InterpolateAtDistance(r, x, y);
+      y = S2::GetPointOnLine(x, y, r);
       if (rnd.OneIn(2)) y = -y;
     }
     S1ChordAngle dist = S1ChordAngle(x, y);

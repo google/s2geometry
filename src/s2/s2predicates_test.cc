@@ -703,8 +703,8 @@ TEST(CompareDistances, Consistency) {
     S1Angle r = S1Angle::Radians(M_PI_2 * pow(1e-30, rnd.RandDouble()));
     if (rnd.OneIn(2)) r = S1Angle::Radians(M_PI_2) - r;
     if (rnd.OneIn(2)) r = S1Angle::Radians(M_PI_2) + r;
-    S2Point a = S2::InterpolateAtDistance(r, x, dir);
-    S2Point b = S2::InterpolateAtDistance(r, x, -dir);
+    S2Point a = S2::GetPointOnLine(x, dir, r);
+    S2Point b = S2::GetPointOnLine(x, -dir, r);
     Precision prec = TestCompareDistancesConsistency<CosDistances>(x, a, b);
     if (r.degrees() >= 45 && r.degrees() <= 135) cos_stats.Tally(prec);
     // The Sin2 method is only valid if both distances are less than 90
@@ -854,7 +854,7 @@ TEST(CompareDistance, Consistency) {
     S1Angle r = S1Angle::Radians(M_PI_2 * pow(1e-30, rnd.RandDouble()));
     if (rnd.OneIn(2)) r = S1Angle::Radians(M_PI_2) - r;
     if (rnd.OneIn(5)) r = S1Angle::Radians(M_PI_2) + r;
-    S2Point y = S2::InterpolateAtDistance(r, x, dir);
+    S2Point y = S2::GetPointOnLine(x, dir, r);
     Precision prec = TestCompareDistanceConsistency<CosDistance>(
         x, y, S1ChordAngle(r));
     if (r.degrees() >= 45) cos_stats.Tally(prec);
@@ -986,7 +986,7 @@ TEST(CompareEdgeDistance, Consistency) {
     rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
     S2Point a0 = ChoosePoint();
     S1Angle len = S1Angle::Radians(M_PI * pow(1e-20, rnd.RandDouble()));
-    S2Point a1 = S2::InterpolateAtDistance(len, a0, ChoosePoint());
+    S2Point a1 = S2::GetPointOnLine(a0, ChoosePoint(), len);
     if (rnd.OneIn(2)) a1 = -a1;
     if (a0 == -a1) continue;  // Not allowed by API.
     S2Point n = S2::RobustCrossProd(a0, a1).Normalize();
@@ -994,7 +994,7 @@ TEST(CompareEdgeDistance, Consistency) {
     S2Point a = ((1 - f) * a0 + f * a1).Normalize();
     S1Angle r = S1Angle::Radians(M_PI_2 * pow(1e-20, rnd.RandDouble()));
     if (rnd.OneIn(2)) r = S1Angle::Radians(M_PI_2) - r;
-    S2Point x = S2::InterpolateAtDistance(r, a, n);
+    S2Point x = S2::GetPointOnLine(a, n, r);
     if (rnd.OneIn(5)) {
       // Replace "x" with a random point that is closest to an edge endpoint.
       do {
@@ -1138,11 +1138,11 @@ TEST(CompareEdgeDirections, Consistency) {
     rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
     S2Point a0 = ChoosePoint();
     S1Angle a_len = S1Angle::Radians(M_PI * pow(1e-20, rnd.RandDouble()));
-    S2Point a1 = S2::InterpolateAtDistance(a_len, a0, ChoosePoint());
+    S2Point a1 = S2::GetPointOnLine(a0, ChoosePoint(), a_len);
     S2Point a_norm = S2::RobustCrossProd(a0, a1).Normalize();
     S2Point b0 = ChoosePoint();
     S1Angle b_len = S1Angle::Radians(M_PI * pow(1e-20, rnd.RandDouble()));
-    S2Point b1 = S2::InterpolateAtDistance(b_len, b0, a_norm);
+    S2Point b1 = S2::GetPointOnLine(b0, a_norm, b_len);
     if (a0 == -a1 || b0 == -b1) continue;  // Not allowed by API.
     Precision prec = TestCompareEdgeDirectionsConsistency(a0, a1, b0, b1);
     // Don't skew the statistics by recording degenerate inputs.
@@ -1289,9 +1289,9 @@ TEST(EdgeCircumcenterSign, Consistency) {
     double c1 = (rnd.OneIn(2) ? -1 : 1) * pow(1e-20, rnd.RandDouble());
     S2Point z = (c0 * x0 + c1 * x1).Normalize();
     S1Angle r = S1Angle::Radians(M_PI * pow(1e-30, rnd.RandDouble()));
-    S2Point a = S2::InterpolateAtDistance(r, z, ChoosePoint());
-    S2Point b = S2::InterpolateAtDistance(r, z, ChoosePoint());
-    S2Point c = S2::InterpolateAtDistance(r, z, ChoosePoint());
+    S2Point a = S2::GetPointOnLine(z, ChoosePoint(), r);
+    S2Point b = S2::GetPointOnLine(z, ChoosePoint(), r);
+    S2Point c = S2::GetPointOnLine(z, ChoosePoint(), r);
     Precision prec = TestEdgeCircumcenterSignConsistency(x0, x1, a, b, c);
     // Don't skew the statistics by recording degenerate inputs.
     if (x0 == x1) {
@@ -1537,8 +1537,8 @@ TEST(VoronoiSiteExclusion, Consistency) {
     double f = pow(1e-20, rnd.RandDouble());
     S2Point p = ((1 - f) * x0 + f * x1).Normalize();
     S1Angle r1 = S1Angle::Radians(M_PI_2 * pow(1e-20, rnd.RandDouble()));
-    S2Point a = S2::InterpolateAtDistance(r1, p, ChoosePoint());
-    S2Point b = S2::InterpolateAtDistance(r1, p, ChoosePoint());
+    S2Point a = S2::GetPointOnLine(p, ChoosePoint(), r1);
+    S2Point b = S2::GetPointOnLine(p, ChoosePoint(), r1);
     // Check that the other API requirements are met.
     S1ChordAngle r(r1);
     if (s2pred::CompareEdgeDistance(a, x0, x1, r) > 0) continue;

@@ -131,12 +131,12 @@ S2Point PerturbATowardsB(const S2Point& a, const S2Point& b) {
   }
   if (choice < 0.5) {
     // Return a point such that the distance squared to A will underflow.
-    return S2::InterpolateAtDistance(S1Angle::Radians(1e-300), a, b);
+    return S2::GetPointOnLine(a, b, S1Angle::Radians(1e-300));
   }
   // Otherwise return a point whose distance from A is near DBL_EPSILON such
   // that the log of the pdf is uniformly distributed.
   double distance = DBL_EPSILON * 1e-5 * pow(1e6, rnd->RandDouble());
-  return S2::InterpolateAtDistance(S1Angle::Radians(distance), a, b);
+  return S2::GetPointOnLine(a, b, S1Angle::Radians(distance));
 }
 
 S2Point RandomPole() {

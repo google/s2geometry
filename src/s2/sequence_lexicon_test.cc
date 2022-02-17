@@ -17,8 +17,10 @@
 
 #include "s2/sequence_lexicon.h"
 
+#include <algorithm>
 #include <array>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "s2/base/logging.h"

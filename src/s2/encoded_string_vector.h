@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <string>
+
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "s2/encoded_uint_vector.h"

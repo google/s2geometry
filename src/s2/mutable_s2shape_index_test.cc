@@ -17,10 +17,13 @@
 
 #include "s2/mutable_s2shape_index.h"
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <numeric>
 #include <thread>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -720,7 +723,7 @@ TEST_F(MutableS2ShapeIndexTest, LinearSpace) {
   }
   // Create the clusters of short edges.
   for (int k = 0; k < num_clusters; ++k) {
-    S2Point p = S2::Interpolate(k / (num_clusters - 1.0), a, b);
+    S2Point p = S2::Interpolate(a, b, k / (num_clusters - 1.0));
     vector<S2Point> points(edges_per_cluster, p);
     index_.Add(make_unique<S2PointVectorShape>(points));
   }

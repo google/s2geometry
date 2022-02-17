@@ -305,7 +305,7 @@ TEST(S2, RobustCrossProdError) {
       S1Angle r = S1Angle::Radians(M_PI_2 * pow(2, -53 * rnd.RandDouble()));
       // Occasionally perturb the point by a tiny distance.
       if (rnd.OneIn(3)) r *= pow(2, -1022 * rnd.RandDouble());
-      b = PerturbLength(S2::InterpolateAtDistance(r, a, dir));
+      b = PerturbLength(S2::GetPointOnLine(a, dir, r));
       if (rnd.OneIn(2)) b = -b;
     } while (a == b);
     auto prec = TestRobustCrossProdError(a, b);

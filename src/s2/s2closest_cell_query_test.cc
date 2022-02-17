@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <set>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -43,7 +44,6 @@ using absl::make_unique;
 using s2testing::FractalLoopShapeIndexFactory;
 using s2textformat::MakeCellIdOrDie;
 using s2textformat::MakePointOrDie;
-using std::min;
 using std::pair;
 using std::unique_ptr;
 using std::vector;

@@ -17,6 +17,8 @@
 
 #include "s2/s2shapeutil_coding.h"
 
+#include <string>
+
 #include <gtest/gtest.h>
 #include "absl/strings/escaping.h"
 #include "s2/util/coding/coder.h"

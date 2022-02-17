@@ -18,6 +18,7 @@
 #include "s2/encoded_uint_vector.h"
 
 #include <vector>
+
 #include <gtest/gtest.h>
 
 using std::vector;

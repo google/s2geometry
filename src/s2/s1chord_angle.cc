@@ -17,6 +17,7 @@
 
 #include "s2/s1chord_angle.h"
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
 

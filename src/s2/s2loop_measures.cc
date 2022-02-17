@@ -20,6 +20,7 @@
 #include <cfloat>
 #include <cmath>
 #include <vector>
+
 #include "s2/base/logging.h"
 #include "absl/container/inlined_vector.h"
 #include "s2/s1angle.h"

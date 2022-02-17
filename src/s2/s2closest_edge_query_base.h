@@ -63,7 +63,7 @@
 // The Distance template argument is used to represent distances.  Usually it
 // is a thin wrapper around S1ChordAngle, but another distance type may be
 // used as long as it implements the Distance concept described in
-// s2distance_targets.h.  For example this can be used to measure maximum
+// s2distance_target.h.  For example this can be used to measure maximum
 // distances, to get more accuracy, or to measure non-spheroidal distances.
 template <class Distance>
 class S2ClosestEdgeQueryBase {
@@ -569,7 +569,7 @@ void S2ClosestEdgeQueryBase<Distance>::FindClosestEdgesInternal(
     absl::btree_set<int32> shape_ids;
     (void) target->VisitContainingShapes(
         *index_, [&shape_ids, &options](S2Shape* containing_shape,
-                                        const S2Point& target_point) {
+                                        const S2Point& /*target_point*/) {
           shape_ids.insert(containing_shape->id());
           return shape_ids.size() < options.max_results();
         });

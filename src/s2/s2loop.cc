@@ -1026,7 +1026,7 @@ class ContainsRelation : public LoopRelation {
   bool found_shared_vertex_;
 };
 
-bool S2Loop::Contains(const S2Loop* b) const {
+bool S2Loop::Contains(const S2Loop& b) const {
   // For this loop A to contains the given loop B, all of the following must
   // be true:
   //
@@ -1042,17 +1042,17 @@ bool S2Loop::Contains(const S2Loop* b) const {
   // The second part of (3) is necessary to detect the case of two loops whose
   // union is the entire sphere, i.e. two loops that contains each other's
   // boundaries but not each other's interiors.
-  if (!subregion_bound_.Contains(b->bound_)) return false;
+  if (!subregion_bound_.Contains(b.bound_)) return false;
 
   // Special cases to handle either loop being empty or full.
-  if (is_empty_or_full() || b->is_empty_or_full()) {
-    return is_full() || b->is_empty();
+  if (is_empty_or_full() || b.is_empty_or_full()) {
+    return is_full() || b.is_empty();
   }
 
   // Check whether there are any edge crossings, and also check the loop
   // relationship at any shared vertices.
   ContainsRelation relation;
-  if (HasCrossingRelation(*this, *b, &relation)) return false;
+  if (HasCrossingRelation(*this, b, &relation)) return false;
 
   // There are no crossings, and if there are any shared vertices then A
   // contains B locally at each shared vertex.
@@ -1061,17 +1061,17 @@ bool S2Loop::Contains(const S2Loop* b) const {
   // Since there are no edge intersections or shared vertices, we just need to
   // test condition (3) above.  We can skip this test if we discovered that A
   // contains at least one point of B while checking for edge crossings.
-  if (!Contains(b->vertex(0))) return false;
+  if (!Contains(b.vertex(0))) return false;
 
   // We still need to check whether (A union B) is the entire sphere.
   // Normally this check is very cheap due to the bounding box precondition.
-  if ((b->subregion_bound_.Contains(bound_) ||
-       b->bound_.Union(bound_).is_full()) && b->Contains(vertex(0))) {
+  if ((b.subregion_bound_.Contains(bound_) ||
+       b.bound_.Union(bound_).is_full()) &&
+      b.Contains(vertex(0))) {
     return false;
   }
   return true;
 }
-
 
 // Loop relation for Intersects().
 class IntersectsRelation : public LoopRelation {
@@ -1094,16 +1094,16 @@ class IntersectsRelation : public LoopRelation {
   bool found_shared_vertex_;
 };
 
-bool S2Loop::Intersects(const S2Loop* b) const {
+bool S2Loop::Intersects(const S2Loop& b) const {
   // a->Intersects(b) if and only if !a->Complement()->Contains(b).
   // This code is similar to Contains(), but is optimized for the case
   // where both loops enclose less than half of the sphere.
-  if (!bound_.Intersects(b->bound_)) return false;
+  if (!bound_.Intersects(b.bound_)) return false;
 
   // Check whether there are any edge crossings, and also check the loop
   // relationship at any shared vertices.
   IntersectsRelation relation;
-  if (HasCrossingRelation(*this, *b, &relation)) return true;
+  if (HasCrossingRelation(*this, b, &relation)) return true;
   if (relation.found_shared_vertex()) return false;
 
   // Since there are no edge intersections or shared vertices, the loops
@@ -1114,13 +1114,12 @@ bool S2Loop::Intersects(const S2Loop* b) const {
 
   // Check whether A contains B, or A and B contain each other's boundaries.
   // (Note that A contains all the vertices of B in either case.)
-  if (subregion_bound_.Contains(b->bound_) ||
-      bound_.Union(b->bound_).is_full()) {
-    if (Contains(b->vertex(0))) return true;
+  if (subregion_bound_.Contains(b.bound_) || bound_.Union(b.bound_).is_full()) {
+    if (Contains(b.vertex(0))) return true;
   }
   // Check whether B contains A.
-  if (b->subregion_bound_.Contains(bound_)) {
-    if (b->Contains(vertex(0))) return true;
+  if (b.subregion_bound_.Contains(bound_)) {
+    if (b.Contains(vertex(0))) return true;
   }
   return false;
 }
@@ -1184,96 +1183,96 @@ class CompareBoundaryRelation : public LoopRelation {
   bool excludes_edge_;        // True if any edge of B is excluded by A.
 };
 
-int S2Loop::CompareBoundary(const S2Loop* b) const {
-  S2_DCHECK(!is_empty() && !b->is_empty());
-  S2_DCHECK(!b->is_full() || !b->is_hole());
+int S2Loop::CompareBoundary(const S2Loop& b) const {
+  S2_DCHECK(!is_empty() && !b.is_empty());
+  S2_DCHECK(!b.is_full() || !b.is_hole());
 
   // The bounds must intersect for containment or crossing.
-  if (!bound_.Intersects(b->bound_)) return -1;
+  if (!bound_.Intersects(b.bound_)) return -1;
 
   // Full loops are handled as though the loop surrounded the entire sphere.
   if (is_full()) return 1;
-  if (b->is_full()) return -1;
+  if (b.is_full()) return -1;
 
   // Check whether there are any edge crossings, and also check the loop
   // relationship at any shared vertices.
-  CompareBoundaryRelation relation(b->is_hole());
-  if (HasCrossingRelation(*this, *b, &relation)) return 0;
+  CompareBoundaryRelation relation(b.is_hole());
+  if (HasCrossingRelation(*this, b, &relation)) return 0;
   if (relation.found_shared_vertex()) {
     return relation.contains_edge() ? 1 : -1;
   }
 
   // There are no edge intersections or shared vertices, so we can check
   // whether A contains an arbitrary vertex of B.
-  return Contains(b->vertex(0)) ? 1 : -1;
+  return Contains(b.vertex(0)) ? 1 : -1;
 }
 
-bool S2Loop::ContainsNonCrossingBoundary(const S2Loop* b, bool reverse_b)
-    const {
-  S2_DCHECK(!is_empty() && !b->is_empty());
-  S2_DCHECK(!b->is_full() || !reverse_b);
+bool S2Loop::ContainsNonCrossingBoundary(const S2Loop& b,
+                                         bool reverse_b) const {
+  S2_DCHECK(!is_empty() && !b.is_empty());
+  S2_DCHECK(!b.is_full() || !reverse_b);
 
   // The bounds must intersect for containment.
-  if (!bound_.Intersects(b->bound_)) return false;
+  if (!bound_.Intersects(b.bound_)) return false;
 
   // Full loops are handled as though the loop surrounded the entire sphere.
   if (is_full()) return true;
-  if (b->is_full()) return false;
+  if (b.is_full()) return false;
 
-  int m = FindVertex(b->vertex(0));
+  int m = FindVertex(b.vertex(0));
   if (m < 0) {
     // Since vertex b0 is not shared, we can check whether A contains it.
-    return Contains(b->vertex(0));
+    return Contains(b.vertex(0));
   }
   // Otherwise check whether the edge (b0, b1) is contained by A.
-  return WedgeContainsSemiwedge(vertex(m-1), vertex(m), vertex(m+1),
-                                b->vertex(1), reverse_b);
+  return WedgeContainsSemiwedge(vertex(m - 1), vertex(m), vertex(m + 1),
+                                b.vertex(1), reverse_b);
 }
 
-bool S2Loop::ContainsNested(const S2Loop* b) const {
-  if (!subregion_bound_.Contains(b->bound_)) return false;
+bool S2Loop::ContainsNested(const S2Loop& b) const {
+  if (!subregion_bound_.Contains(b.bound_)) return false;
 
   // Special cases to handle either loop being empty or full.  Also bail out
   // when B has no vertices to avoid heap overflow on the vertex(1) call
   // below.  (This method is called during polygon initialization before the
   // client has an opportunity to call IsValid().)
-  if (is_empty_or_full() || b->num_vertices() < 2) {
-    return is_full() || b->is_empty();
+  if (is_empty_or_full() || b.num_vertices() < 2) {
+    return is_full() || b.is_empty();
   }
 
   // We are given that A and B do not share any edges, and that either one
   // loop contains the other or they do not intersect.
-  int m = FindVertex(b->vertex(1));
+  int m = FindVertex(b.vertex(1));
   if (m < 0) {
-    // Since b->vertex(1) is not shared, we can check whether A contains it.
-    return Contains(b->vertex(1));
+    // Since b.vertex(1) is not shared, we can check whether A contains it.
+    return Contains(b.vertex(1));
   }
-  // Check whether the edge order around b->vertex(1) is compatible with
+  // Check whether the edge order around b.vertex(1) is compatible with
   // A containing B.
-  return S2::WedgeContains(vertex(m-1), vertex(m), vertex(m+1),
-                                   b->vertex(0), b->vertex(2));
+  return S2::WedgeContains(vertex(m - 1), vertex(m), vertex(m + 1), b.vertex(0),
+                           b.vertex(2));
 }
 
-bool S2Loop::Equals(const S2Loop* b) const {
-  if (num_vertices() != b->num_vertices()) return false;
+bool S2Loop::Equals(const S2Loop& b) const {
+  if (num_vertices() != b.num_vertices()) return false;
   for (int i = 0; i < num_vertices(); ++i) {
-    if (vertex(i) != b->vertex(i)) return false;
+    if (vertex(i) != b.vertex(i)) return false;
   }
   return true;
 }
 
-bool S2Loop::BoundaryEquals(const S2Loop* b) const {
-  if (num_vertices() != b->num_vertices()) return false;
+bool S2Loop::BoundaryEquals(const S2Loop& b) const {
+  if (num_vertices() != b.num_vertices()) return false;
 
   // Special case to handle empty or full loops.  Since they have the same
   // number of vertices, if one loop is empty/full then so is the other.
-  if (is_empty_or_full()) return is_empty() == b->is_empty();
+  if (is_empty_or_full()) return is_empty() == b.is_empty();
 
   for (int offset = 0; offset < num_vertices(); ++offset) {
-    if (vertex(offset) == b->vertex(0)) {
+    if (vertex(offset) == b.vertex(0)) {
       // There is at most one starting offset since loop vertices are unique.
       for (int i = 0; i < num_vertices(); ++i) {
-        if (vertex(i + offset) != b->vertex(i)) return false;
+        if (vertex(i + offset) != b.vertex(i)) return false;
       }
       return true;
     }

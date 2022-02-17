@@ -300,21 +300,21 @@ class S2Loop final : public S2Region {
 
   // Returns true if the region contained by this loop is a superset of the
   // region contained by the given other loop.
-  bool Contains(const S2Loop* b) const;
+  bool Contains(const S2Loop& b) const;
 
   // Returns true if the region contained by this loop intersects the region
   // contained by the given other loop.
-  bool Intersects(const S2Loop* b) const;
+  bool Intersects(const S2Loop& b) const;
 
   // Returns true if two loops have the same vertices in the same linear order
   // (i.e., cyclic rotations are not allowed).
-  bool Equals(const S2Loop* b) const;
+  bool Equals(const S2Loop& b) const;
 
   // Returns true if two loops have the same boundary.  This is true if and
   // only if the loops have the same vertices in the same cyclic order (i.e.,
   // the vertices may be cyclically rotated).  The empty and full loops are
   // considered to have different boundaries.
-  bool BoundaryEquals(const S2Loop* b) const;
+  bool BoundaryEquals(const S2Loop& b) const;
 
   // Returns true if two loops have the same boundary except for vertex
   // perturbations.  More precisely, the vertices in the two loops must be in
@@ -333,6 +333,17 @@ class S2Loop final : public S2Region {
   // within "max_error" of each other.
   bool BoundaryNear(const S2Loop& b,
                     S1Angle max_error = S1Angle::Radians(1e-15)) const;
+
+#ifndef SWIG
+  ABSL_DEPRECATED("Inline the implementation")
+  bool Contains(const S2Loop* b) const { return Contains(*b); }
+  ABSL_DEPRECATED("Inline the implementation")
+  bool Intersects(const S2Loop* b) const { return Intersects(*b); }
+  ABSL_DEPRECATED("Inline the implementation")
+  bool Equals(const S2Loop* b) const { return Equals(*b); }
+  ABSL_DEPRECATED("Inline the implementation")
+  bool BoundaryEquals(const S2Loop* b) const { return BoundaryEquals(*b); }
+#endif
 
   // This method computes the oriented surface integral of some quantity f(x)
   // over the loop interior, given a function f_tri(A,B,C) that returns the
@@ -428,7 +439,7 @@ class S2Loop final : public S2Region {
   // The loops must meet all the S2Polygon requirements; for example this
   // implies that their boundaries may not cross or have any shared edges
   // (although they may have shared vertices).
-  bool ContainsNested(const S2Loop* b) const;
+  bool ContainsNested(const S2Loop& b) const;
 
   // Returns +1 if A contains the boundary of B, -1 if A excludes the boundary
   // of B, and 0 if the boundaries of A and B cross.  Shared edges are handled
@@ -445,7 +456,7 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: neither loop is empty.
   // REQUIRES: if b->is_full(), then !b->is_hole().
-  int CompareBoundary(const S2Loop* b) const;
+  int CompareBoundary(const S2Loop& b) const;
 
   // Given two loops whose boundaries do not cross (see CompareBoundary),
   // return true if A contains the boundary of B.  If "reverse_b" is true, the
@@ -455,7 +466,18 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: neither loop is empty.
   // REQUIRES: if b->is_full(), then reverse_b == false.
-  bool ContainsNonCrossingBoundary(const S2Loop* b, bool reverse_b) const;
+  bool ContainsNonCrossingBoundary(const S2Loop& b, bool reverse_b) const;
+
+#ifndef SWIG
+  ABSL_DEPRECATED("Inline the implementation")
+  bool ContainsNested(const S2Loop* b) const { return ContainsNested(*b); }
+  ABSL_DEPRECATED("Inline the implementation")
+  int CompareBoundary(const S2Loop* b) const { return CompareBoundary(*b); }
+  ABSL_DEPRECATED("Inline the implementation")
+  bool ContainsNonCrossingBoundary(const S2Loop* b, bool reverse_b) const {
+    return ContainsNonCrossingBoundary(*b, reverse_b);
+  }
+#endif
 
   // Wrapper class for indexing a loop (see S2ShapeIndex).  Once this object
   // is inserted into an S2ShapeIndex it is owned by that index, and will be

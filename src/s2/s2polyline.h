@@ -219,7 +219,11 @@ class S2Polyline final : public S2Region {
   // The running time is quadratic in the number of vertices.  (To intersect
   // polylines more efficiently, or compute the actual intersection geometry,
   // use S2BooleanOperation.)
-  bool Intersects(const S2Polyline* line) const;
+  bool Intersects(const S2Polyline& line) const;
+#ifndef SWIG
+  ABSL_DEPRECATED("Inline the implementation")
+  bool Intersects(const S2Polyline* line) const { return Intersects(*line); }
+#endif
 
   // Reverse the order of the polyline vertices.
   void Reverse();
@@ -254,7 +258,11 @@ class S2Polyline final : public S2Region {
   void SubsampleVertices(S1Angle tolerance, std::vector<int>* indices) const;
 
   // Return true if two polylines are exactly the same.
-  bool Equals(const S2Polyline* b) const;
+  bool Equals(const S2Polyline& b) const;
+#ifndef SWIG
+  ABSL_DEPRECATED("Inline the implementation")
+  bool Equals(const S2Polyline* b) const { return Equals(*b); }
+#endif
 
   // Return true if two polylines have the same number of vertices, and
   // corresponding vertex pairs are separated by no more than "max_error".

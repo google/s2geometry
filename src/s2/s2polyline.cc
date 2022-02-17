@@ -20,12 +20,14 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <memory>
 #include <set>
 #include <utility>
 #include <vector>
 
 #include "absl/container/fixed_array.h"
 #include "absl/flags/flag.h"
+#include "absl/memory/memory.h"
 #include "absl/utility/utility.h"
 
 #include "s2/base/commandlineflags.h"
@@ -49,6 +51,7 @@
 #include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
+using absl::make_unique;
 using absl::Span;
 using s2builderutil::S2CellIdSnapFunction;
 using s2builderutil::S2PolylineLayer;
@@ -106,7 +109,7 @@ S2Debug S2Polyline::s2debug_override() const {
 
 void S2Polyline::Init(Span<const S2Point> vertices) {
   num_vertices_ = vertices.size();
-  vertices_.reset(new S2Point[num_vertices_]);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
   std::copy(vertices.begin(), vertices.end(), &vertices_[0]);
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
     S2_CHECK(IsValid());
@@ -115,7 +118,7 @@ void S2Polyline::Init(Span<const S2Point> vertices) {
 
 void S2Polyline::Init(Span<const S2LatLng> vertices) {
   num_vertices_ = vertices.size();
-  vertices_.reset(new S2Point[num_vertices_]);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
   for (int i = 0; i < num_vertices_; ++i) {
     vertices_[i] = vertices[i].ToPoint();
   }
@@ -195,11 +198,11 @@ S2Polyline* S2Polyline::Clone() const {
 }
 
 S1Angle S2Polyline::GetLength() const {
-  return S2::GetLength(S2PointSpan(vertices_.get(), num_vertices_));
+  return S2::GetLength(vertices_span());
 }
 
 S2Point S2Polyline::GetCentroid() const {
-  return S2::GetCentroid(S2PointSpan(vertices_.get(), num_vertices_));
+  return S2::GetCentroid(vertices_span());
 }
 
 int S2Polyline::GetSnapLevel() const {
@@ -239,7 +242,7 @@ S2Point S2Polyline::GetSuffix(double fraction, int* next_vertex) const {
     if (target < length) {
       // This interpolates with respect to arc length rather than
       // straight-line distance, and produces a unit-length result.
-      S2Point result = S2::GetPointOnLine(vertex(i-1), vertex(i), target);
+      S2Point result = S2::GetPointOnLine(vertex(i - 1), vertex(i), target);
       // It is possible that (result == vertex(i)) due to rounding errors.
       *next_vertex = (result == vertex(i)) ? (i + 1) : i;
       return result;
@@ -333,21 +336,20 @@ bool S2Polyline::IsOnRight(const S2Point& point) const {
   return s2pred::Sign(point, vertex(next_vertex), vertex(next_vertex - 1)) > 0;
 }
 
-bool S2Polyline::Intersects(const S2Polyline* line) const {
-  if (num_vertices() <= 0 || line->num_vertices() <= 0) {
+bool S2Polyline::Intersects(const S2Polyline& line) const {
+  if (num_vertices() <= 0 || line.num_vertices() <= 0) {
     return false;
   }
 
-  if (!GetRectBound().Intersects(line->GetRectBound())) {
+  if (!GetRectBound().Intersects(line.GetRectBound())) {
     return false;
   }
 
   // TODO(ericv): Use S2ShapeIndex here.
   for (int i = 1; i < num_vertices(); ++i) {
-    S2EdgeCrosser crosser(
-        &vertex(i - 1), &vertex(i), &line->vertex(0));
-    for (int j = 1; j < line->num_vertices(); ++j) {
-      if (crosser.CrossingSign(&line->vertex(j)) >= 0) {
+    S2EdgeCrosser crosser(&vertex(i - 1), &vertex(i), &line.vertex(0));
+    for (int j = 1; j < line.num_vertices(); ++j) {
+      if (crosser.CrossingSign(&line.vertex(j)) >= 0) {
         return true;
       }
     }
@@ -436,7 +438,7 @@ bool S2Polyline::DecodeUncompressed(Decoder* const decoder) {
   // Check the bytes available before allocating memory in case of
   // corrupt/malicious input.
   if (decoder->avail() < num_vertices_ * sizeof(S2Point)) return false;
-  vertices_.reset(new S2Point[num_vertices_]);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
   decoder->getn(&vertices_[0], num_vertices_ * sizeof(vertices_[0]));
 
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
@@ -630,10 +632,10 @@ void S2Polyline::SubsampleVertices(S1Angle tolerance,
   }
 }
 
-bool S2Polyline::Equals(const S2Polyline* b) const {
-  if (num_vertices() != b->num_vertices()) return false;
+bool S2Polyline::Equals(const S2Polyline& b) const {
+  if (num_vertices() != b.num_vertices()) return false;
   for (int offset = 0; offset < num_vertices(); ++offset) {
-    if (vertex(offset) != b->vertex(offset)) return false;
+    if (vertex(offset) != b.vertex(offset)) return false;
   }
   return true;
 }

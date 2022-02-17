@@ -440,7 +440,7 @@ TEST(S2Cell, RectBoundIsLargeEnough) {
     S2Point v1 = cell.GetVertex(i);
     S2Point v2 = S2Testing::SamplePoint(
         S2Cap(cell.GetVertex(i + 1), S1Angle::Radians(1e-15)));
-    S2Point p = S2::Interpolate(S2Testing::rnd.RandDouble(), v1, v2);
+    S2Point p = S2::Interpolate(v1, v2, S2Testing::rnd.RandDouble());
     if (S2Loop(cell).Contains(p)) {
       EXPECT_TRUE(cell.GetRectBound().Contains(S2LatLng(p)));
       ++iter;
@@ -458,7 +458,7 @@ TEST(S2Cell, ConsistentWithS2CellIdFromPoint) {
     S2Point v1 = cell.GetVertex(i);
     S2Point v2 = S2Testing::SamplePoint(
         S2Cap(cell.GetVertex(i + 1), S1Angle::Radians(1e-15)));
-    S2Point p = S2::Interpolate(S2Testing::rnd.RandDouble(), v1, v2);
+    S2Point p = S2::Interpolate(v1, v2, S2Testing::rnd.RandDouble());
     EXPECT_TRUE(S2Cell(S2CellId(p)).Contains(p));
   }
 }
@@ -639,8 +639,8 @@ TEST(S2Cell, GetMaxDistanceToEdge) {
   // Test an edge for which its antipode crosses the cell. Validates both the
   // standard and brute force implementations for this case.
   S2Cell cell = S2Cell::FromFacePosLevel(0, 0, 20);
-  S2Point a = -S2::Interpolate(2.0, cell.GetCenter(), cell.GetVertex(0));
-  S2Point b = -S2::Interpolate(2.0, cell.GetCenter(), cell.GetVertex(2));
+  S2Point a = -S2::Interpolate(cell.GetCenter(), cell.GetVertex(0), 2.0);
+  S2Point b = -S2::Interpolate(cell.GetCenter(), cell.GetVertex(2), 2.0);
 
   S1ChordAngle actual = cell.GetMaxDistance(a, b);
   S1ChordAngle expected = GetMaxDistanceToEdgeBruteForce(cell, a, b);

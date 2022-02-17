@@ -18,6 +18,7 @@
 #ifndef S2_S1CHORD_ANGLE_H_
 #define S2_S1CHORD_ANGLE_H_
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <ostream>
@@ -286,9 +287,9 @@ class S1ChordAngle {
   // Infinity() are both considered valid.
   bool is_valid() const;
 
-  // When S1ChordAngle is used as a key in one of the btree container types
-  // (util/btree), indicate that linear rather than binary search should be
-  // used.  This is much faster when the comparison function is cheap.
+  // When S1ChordAngle is used as a key in one of the absl::btree container
+  // types, indicate that linear rather than binary search should be used.
+  // This is much faster when the comparison function is cheap.
   typedef std::true_type absl_btree_prefer_linear_node_search;
 
  private:

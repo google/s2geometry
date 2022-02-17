@@ -18,6 +18,7 @@
 #include "s2/s2shapeutil_coding.h"
 
 #include <memory>
+#include <utility>
 
 #include "absl/memory/memory.h"
 #include "s2/encoded_s2point_vector.h"

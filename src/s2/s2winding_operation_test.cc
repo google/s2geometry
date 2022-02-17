@@ -18,6 +18,7 @@
 #include "s2/s2winding_operation.h"
 
 #include <memory>
+#include <string>
 
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"

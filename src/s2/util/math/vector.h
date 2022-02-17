@@ -36,9 +36,12 @@
 #include "absl/base/macros.h"
 #include "absl/utility/utility.h"
 
-template <typename T> class Vector2;
-template <typename T> class Vector3;
-template <typename T> class Vector4;
+template <typename T>
+class Vector2;
+template <typename T>
+class Vector3;
+template <typename T>
+class Vector4;
 
 namespace util {
 namespace math {
@@ -53,14 +56,13 @@ class BasicVector {
   // FloatType is the type returned by Norm() and Angle().  These methods are
   // special because they return floating-point values even when VType is an
   // integer.
-  typedef typename std::conditional<std::is_integral<T>::value,
-                                    double, T>::type FloatType;
+  typedef typename std::conditional<std::is_integral<T>::value, double, T>::type
+      FloatType;
 
   using IdxSeqN = typename absl::make_index_sequence<N>;
 
   template <std::size_t I, typename F, typename... As>
-  static auto Reduce(F f, As*... as)
-      -> decltype(f(as[I]...)) {
+  static auto Reduce(F f, As*... as) -> decltype(f(as[I]...)) {
     return f(as[I]...);
   }
 
@@ -104,8 +106,8 @@ class BasicVector {
   bool operator<(const D& b) const {
     const T* ap = static_cast<const D&>(*this).Data();
     const T* bp = b.Data();
-    return std::lexicographical_compare(
-        ap, ap + this->Size(), bp, bp + b.Size());
+    return std::lexicographical_compare(ap, ap + this->Size(), bp,
+                                        bp + b.Size());
   }
   bool operator>(const D& b) const { return b < AsD(); }
   bool operator<=(const D& b) const { return !(AsD() > b); }
@@ -142,31 +144,29 @@ class BasicVector {
 
   // Convert from another vector type
   template <typename T2>
-  static D Cast(const VecTemplate<T2> &b) {
+  static D Cast(const VecTemplate<T2>& b) {
     return Generate([](const T2& x) { return static_cast<T>(x); }, b);
   }
 
   // multiply two vectors component by component
-  D MulComponents(const D &b) const {
+  D MulComponents(const D& b) const {
     return Generate([](const T& x, const T& y) { return x * y; }, AsD(), b);
   }
   // divide two vectors component by component
-  D DivComponents(const D &b) const {
+  D DivComponents(const D& b) const {
     return Generate([](const T& x, const T& y) { return x / y; }, AsD(), b);
   }
 
   // Element-wise max.  {max(a[0],b[0]), max(a[1],b[1]), ...}
-  friend D Max(const D &a, const D &b) {
-    return Generate([](const T& x, const T& y) {
-      return std::max(x, y);
-    }, a, b);
+  friend D Max(const D& a, const D& b) {
+    return Generate([](const T& x, const T& y) { return std::max(x, y); }, a,
+                    b);
   }
 
   // Element-wise min.  {min(a[0],b[0]), min(a[1],b[1]), ...}
-  friend D Min(const D &a, const D &b) {
-    return Generate([](const T& x, const T& y) {
-      return std::min(x, y);
-    }, a, b);
+  friend D Min(const D& a, const D& b) {
+    return Generate([](const T& x, const T& y) { return std::min(x, y); }, a,
+                    b);
   }
 
   T DotProd(const D& b) const {
@@ -195,10 +195,12 @@ class BasicVector {
 
   // Compose a vector from the sqrt of each component.
   D Sqrt() const {
-    return Generate([](const T& x) {
-      using std::sqrt;
-      return sqrt(x);
-    }, AsD());
+    return Generate(
+        [](const T& x) {
+          using std::sqrt;
+          return sqrt(x);
+        },
+        AsD());
   }
 
   // Take the floor of each component.
@@ -238,8 +240,8 @@ class BasicVector {
   bool IsNaN() const {
     bool r = false;
     const T* ap = AsD().Data();
-    for (int i = 0; i < SIZE; ++i)
-      r = r || std::isnan(ap[i]);
+    using std::isnan;
+    for (int i = 0; i < SIZE; ++i) r = r || isnan(ap[i]);
     return r;
   }
 
@@ -250,7 +252,7 @@ class BasicVector {
 
   friend std::ostream& operator<<(std::ostream& out, const D& v) {
     out << "[";
-    const char *sep = "";
+    const char* sep = "";
     for (int i = 0; i < SIZE; ++i) {
       out << sep;
       Print(out, v[i]);
@@ -275,6 +277,19 @@ class BasicVector {
                                  static_cast<const D&>(vec).Data(), vec.Size());
   }
 
+  // Enable Flume default PCoder.
+  template <typename E>
+  friend void FlumeEncode(E e, const BasicVector& vec) {
+    for (int i = 0; i < N; ++i) e(vec[i]);
+  }
+  template <typename D>
+  friend bool FlumeDecode(D d, BasicVector& vec) {
+    for (int i = 0; i < N; ++i) {
+      if (!d(vec[i])) return false;
+    }
+    return true;
+  }
+
  private:
   const D& AsD() const { return static_cast<const D&>(*this); }
   D& AsD() { return static_cast<D&>(*this); }
@@ -282,7 +297,9 @@ class BasicVector {
   // ostream << uint8 prints the ASCII character, which is not useful.
   // Cast to int so that numbers will be printed instead.
   template <typename U>
-  static void Print(std::ostream& out, const U& v) { out << v; }
+  static void Print(std::ostream& out, const U& v) {
+    out << v;
+  }
   static void Print(std::ostream& out, uint8 v) {
     out << static_cast<int>(v);
   }
@@ -320,13 +337,13 @@ class BasicVector {
 // These templates must be defined outside of BasicVector so that the
 // template specialization match algorithm must deduce 'a'. See the review
 // of cl/119944115.
-template <typename K,
-          template <typename> class VT2, typename T2, std::size_t N2>
+template <typename K, template <typename> class VT2, typename T2,
+          std::size_t N2>
 VT2<T2> operator*(const K& k, const BasicVector<VT2, T2, N2>& a) {
   return a.MulScalarInternal(k);
 }
-template <typename K,
-          template <typename> class VT2, typename T2, std::size_t N2>
+template <typename K, template <typename> class VT2, typename T2,
+          std::size_t N2>
 VT2<T2> operator/(const K& k, const BasicVector<VT2, T2, N2>& a) {
   return a.DivScalarInternal(k);
 }
@@ -337,8 +354,7 @@ VT2<T2> operator/(const K& k, const BasicVector<VT2, T2, N2>& a) {
 
 // ======================================================================
 template <typename T>
-class Vector2
-    : public util::math::internal_vector::BasicVector<Vector2, T, 2> {
+class Vector2 : public util::math::internal_vector::BasicVector<Vector2, T, 2> {
  private:
   using Base = util::math::internal_vector::BasicVector<::Vector2, T, 2>;
   using VType = T;
@@ -353,8 +369,8 @@ class Vector2
     c_[0] = std::move(x);
     c_[1] = std::move(y);
   }
-  explicit Vector2(const Vector3<T> &b) : Vector2(b.x(), b.y()) {}
-  explicit Vector2(const Vector4<T> &b) : Vector2(b.x(), b.y()) {}
+  explicit Vector2(const Vector3<T>& b) : Vector2(b.x(), b.y()) {}
+  explicit Vector2(const Vector4<T>& b) : Vector2(b.x(), b.y()) {}
 
   T* Data() { return c_; }
   const T* Data() const { return c_; }
@@ -364,23 +380,25 @@ class Vector2
   T x() const { return c_[0]; }
   T y() const { return c_[1]; }
 
-  bool aequal(const Vector2 &vb, FloatType margin) const {
+  // Returns true if this vector's dimensions are at most `margin` from `vb`.
+  bool aequal(const Vector2& vb, FloatType margin) const {
     using std::fabs;
-    return (fabs(c_[0]-vb.c_[0]) < margin) && (fabs(c_[1]-vb.c_[1]) < margin);
+    return (fabs(c_[0] - vb.c_[0]) <= margin) &&
+           (fabs(c_[1] - vb.c_[1]) <= margin);
   }
 
   void Set(T x, T y) { *this = Vector2(std::move(x), std::move(y)); }
 
   // Cross product.  Be aware that if T is an integer type, the high bits
   // of the result are silently discarded.
-  T CrossProd(const Vector2 &vb) const {
+  T CrossProd(const Vector2& vb) const {
     return c_[0] * vb.c_[1] - c_[1] * vb.c_[0];
   }
 
   // Returns the angle from "this" to v in the counterclockwise direction in
   // radians. Result range: [-pi, pi]. If either vector is zero-length, or
   // nearly zero-length, the result will be zero, regardless of the other value.
-  FloatType Angle(const Vector2 &v) const {
+  FloatType Angle(const Vector2& v) const {
     using std::atan2;
     return atan2(CrossProd(v), this->DotProd(v));
   }
@@ -406,8 +424,7 @@ class Vector2
 };
 
 template <typename T>
-class Vector3
-    : public util::math::internal_vector::BasicVector<Vector3, T, 3> {
+class Vector3 : public util::math::internal_vector::BasicVector<Vector3, T, 3> {
  private:
   using Base = util::math::internal_vector::BasicVector<::Vector3, T, 3>;
   using VType = T;
@@ -423,24 +440,25 @@ class Vector3
     c_[1] = std::move(y);
     c_[2] = std::move(z);
   }
-  Vector3(const Vector2<T> &b, T z) : Vector3(b.x(), b.y(), z) {}
-  explicit Vector3(const Vector4<T> &b) : Vector3(b.x(), b.y(), b.z()) {}
+  Vector3(const Vector2<T>& b, T z) : Vector3(b.x(), b.y(), z) {}
+  explicit Vector3(const Vector4<T>& b) : Vector3(b.x(), b.y(), b.z()) {}
 
   T* Data() { return c_; }
   const T* Data() const { return c_; }
 
-  void x(const T &v) { c_[0] = v; }
-  void y(const T &v) { c_[1] = v; }
-  void z(const T &v) { c_[2] = v; }
+  void x(const T& v) { c_[0] = v; }
+  void y(const T& v) { c_[1] = v; }
+  void z(const T& v) { c_[2] = v; }
   T x() const { return c_[0]; }
   T y() const { return c_[1]; }
   T z() const { return c_[2]; }
 
-  bool aequal(const Vector3 &vb, FloatType margin) const {
+  // Returns true if this vector's dimensions are at most `margin` from `vb`.
+  bool aequal(const Vector3& vb, FloatType margin) const {
     using std::abs;
-    return (abs(c_[0] - vb.c_[0]) < margin)
-        && (abs(c_[1] - vb.c_[1]) < margin)
-        && (abs(c_[2] - vb.c_[2]) < margin);
+    return (abs(c_[0] - vb.c_[0]) <= margin) &&
+           (abs(c_[1] - vb.c_[1]) <= margin) &&
+           (abs(c_[2] - vb.c_[2]) <= margin);
   }
 
   void Set(T x, T y, T z) {
@@ -472,9 +490,7 @@ class Vector3
     return atan2(CrossProd(v).Norm(), this->DotProd(v));
   }
 
-  Vector3 Fabs() const {
-    return Abs();
-  }
+  Vector3 Fabs() const { return Abs(); }
 
   Vector3 Abs() const {
     static_assert(
@@ -487,9 +503,9 @@ class Vector3
   // return the index of the largest component (fabs)
   int LargestAbsComponent() const {
     Vector3 temp = Abs();
-    return temp[0] > temp[1] ?
-             temp[0] > temp[2] ? 0 : 2 :
-             temp[1] > temp[2] ? 1 : 2;
+    return temp[0] > temp[1]   ? temp[0] > temp[2] ? 0 : 2
+           : temp[1] > temp[2] ? 1
+                               : 2;
   }
 
   // return the index of the smallest, median ,largest component of the vector
@@ -507,8 +523,7 @@ class Vector3
 };
 
 template <typename T>
-class Vector4
-    : public util::math::internal_vector::BasicVector<Vector4, T, 4> {
+class Vector4 : public util::math::internal_vector::BasicVector<Vector4, T, 4> {
  private:
   using Base = util::math::internal_vector::BasicVector<::Vector4, T, 4>;
   using VType = T;
@@ -526,9 +541,8 @@ class Vector4
     c_[3] = std::move(w);
   }
 
-  Vector4(const Vector2<T> &b, T z, T w)
-      : Vector4(b.x(), b.y(), z, w) {}
-  Vector4(const Vector2<T> &a, const Vector2<T> &b)
+  Vector4(const Vector2<T>& b, T z, T w) : Vector4(b.x(), b.y(), z, w) {}
+  Vector4(const Vector2<T>& a, const Vector2<T>& b)
       : Vector4(a.x(), a.y(), b.x(), b.y()) {}
   Vector4(const Vector3<T>& b, T w)
       : Vector4(b.x(), b.y(), b.z(), std::move(w)) {}
@@ -536,18 +550,19 @@ class Vector4
   T* Data() { return c_; }
   const T* Data() const { return c_; }
 
-  bool aequal(const Vector4 &vb, FloatType margin) const {
+  // Returns true if this vector's dimensions are at most `margin` from `vb`.
+  bool aequal(const Vector4& vb, FloatType margin) const {
     using std::fabs;
-    return (fabs(c_[0] - vb.c_[0]) < margin)
-        && (fabs(c_[1] - vb.c_[1]) < margin)
-        && (fabs(c_[2] - vb.c_[2]) < margin)
-        && (fabs(c_[3] - vb.c_[3]) < margin);
+    return (fabs(c_[0] - vb.c_[0]) <= margin) &&
+           (fabs(c_[1] - vb.c_[1]) <= margin) &&
+           (fabs(c_[2] - vb.c_[2]) <= margin) &&
+           (fabs(c_[3] - vb.c_[3]) <= margin);
   }
 
-  void x(const T &v) { c_[0] = v; }
-  void y(const T &v) { c_[1] = v; }
-  void z(const T &v) { c_[2] = v; }
-  void w(const T &v) { c_[3] = v; }
+  void x(const T& v) { c_[0] = v; }
+  void y(const T& v) { c_[1] = v; }
+  void z(const T& v) { c_[2] = v; }
+  void w(const T& v) { c_[3] = v; }
   T x() const { return c_[0]; }
   T y() const { return c_[1]; }
   T z() const { return c_[2]; }
@@ -573,20 +588,20 @@ class Vector4
 
 typedef Vector2<uint8> Vector2_b;
 typedef Vector2<int16> Vector2_s;
-typedef Vector2<int>    Vector2_i;
-typedef Vector2<float>  Vector2_f;
+typedef Vector2<int> Vector2_i;
+typedef Vector2<float> Vector2_f;
 typedef Vector2<double> Vector2_d;
 
 typedef Vector3<uint8> Vector3_b;
 typedef Vector3<int16> Vector3_s;
-typedef Vector3<int>    Vector3_i;
-typedef Vector3<float>  Vector3_f;
+typedef Vector3<int> Vector3_i;
+typedef Vector3<float> Vector3_f;
 typedef Vector3<double> Vector3_d;
 
 typedef Vector4<uint8> Vector4_b;
 typedef Vector4<int16> Vector4_s;
-typedef Vector4<int>    Vector4_i;
-typedef Vector4<float>  Vector4_f;
+typedef Vector4<int> Vector4_i;
+typedef Vector4<float> Vector4_f;
 typedef Vector4<double> Vector4_d;
 
 

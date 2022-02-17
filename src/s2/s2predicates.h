@@ -49,6 +49,7 @@
 
 #include <cfloat>
 #include <iosfwd>
+#include <ostream>
 
 #include "absl/flags/flag.h"
 #include "s2/_fp_contract_off.h"
