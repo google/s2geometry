@@ -18,6 +18,8 @@
 
 #include "s2/s2winding_operation.h"
 
+#include <utility>
+
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"

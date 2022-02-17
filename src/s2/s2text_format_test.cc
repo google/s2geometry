@@ -15,6 +15,7 @@
 
 #include "s2/s2text_format.h"
 
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>

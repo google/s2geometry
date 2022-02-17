@@ -18,6 +18,8 @@
 #ifndef S2_S2CELL_INDEX_H_
 #define S2_S2CELL_INDEX_H_
 
+#include <algorithm>
+#include <functional>
 #include <vector>
 
 #include "s2/base/integral_types.h"

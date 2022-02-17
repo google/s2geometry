@@ -23,6 +23,7 @@
 #include <cstring>
 #include <functional>
 #include <queue>
+#include <utility>
 #include <vector>
 
 #include "s2/base/logging.h"

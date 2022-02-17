@@ -293,7 +293,7 @@ inline const char* Varint::Parse32WithLimit(const char* p, const char* l,
    auto ptr = reinterpret_cast<const int8*>(p);
    int64 byte = *ptr;
    if (byte >= 0) {
-     *OUTPUT = byte;
+     *OUTPUT = static_cast<uint64>(byte);
      return reinterpret_cast<const char*>(ptr) + 1;
   } else {
     auto tmp = Parse64FallbackPair(p, byte);
@@ -394,7 +394,7 @@ inline int Varint::Length32(uint32 v) {
   // Use an explicit multiplication to implement the divide of
   // a number in the 1..31 range.
   // Explicit OR 0x1 to handle v == 0.
-  uint32 log2value = Bits::Log2FloorNonZero(v | 0x1);
+  uint32 log2value = static_cast<uint32>(Bits::Log2FloorNonZero(v | 0x1));
   return static_cast<int>((log2value * 9 + 73) / 64);
 }
 
@@ -403,7 +403,7 @@ inline int Varint::Length64(uint64 v) {
   // Use an explicit multiplication to implement the divide of
   // a number in the 1..63 range.
   // Explicit OR 0x1 to handle v == 0.
-  uint32 log2value = Bits::Log2FloorNonZero64(v | 0x1);
+  uint32 log2value = static_cast<uint32>(Bits::Log2FloorNonZero64(v | 0x1));
   return static_cast<int>((log2value * 9 + 73) / 64);
 }
 

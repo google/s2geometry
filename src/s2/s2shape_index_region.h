@@ -18,6 +18,7 @@
 #define S2_S2SHAPE_INDEX_REGION_H_
 
 #include <vector>
+
 #include "absl/container/flat_hash_map.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"

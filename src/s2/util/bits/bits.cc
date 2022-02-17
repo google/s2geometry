@@ -42,8 +42,8 @@ int Bits::Difference(const void *m1, const void *m2, int num_bytes) {
   return nbits;
 }
 
-int Bits::CappedDifference(const void *m1, const void *m2,
-                           int num_bytes, int cap) {
+int Bits::CappedDifference(const void *m1, const void *m2, int num_bytes,
+                           int cap) {
   int nbits = 0;
   const uint8 *s1 = (const uint8 *)m1;
   const uint8 *s2 = (const uint8 *)m2;
@@ -54,7 +54,7 @@ int Bits::CappedDifference(const void *m1, const void *m2,
 
 int Bits::Log2Ceiling(uint32 n) {
   int floor = (absl::bit_width(n) - 1);
-  if ((n & (n - 1)) == 0)              // zero or a power of two
+  if ((n & (n - 1)) == 0)  // zero or a power of two
     return floor;
   else
     return floor + 1;
@@ -62,7 +62,7 @@ int Bits::Log2Ceiling(uint32 n) {
 
 int Bits::Log2Ceiling64(uint64 n) {
   int floor = (absl::bit_width(n) - 1);
-  if ((n & (n - 1)) == 0)              // zero or a power of two
+  if ((n & (n - 1)) == 0)  // zero or a power of two
     return floor;
   else
     return floor + 1;
@@ -70,7 +70,7 @@ int Bits::Log2Ceiling64(uint64 n) {
 
 int Bits::Log2Ceiling128(absl::uint128 n) {
   int floor = Log2Floor128(n);
-  if ((n & (n - 1)) == 0)              // zero or a power of two
+  if ((n & (n - 1)) == 0)  // zero or a power of two
     return floor;
   else
     return floor + 1;

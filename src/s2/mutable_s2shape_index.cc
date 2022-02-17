@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <utility>
 
 #include "s2/base/casts.h"
 #include "s2/base/commandlineflags.h"

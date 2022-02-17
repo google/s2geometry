@@ -220,10 +220,10 @@ class S2LoopTestBase : public testing::Test {
       loop_i_(AddLoop("10:34, 0:34, -10:34, -10:36, 0:36, 10:36")) {
     // Like loop_a, but the vertices are at leaf cell centers.
     vector<S2Point> snapped_loop_a_vertices = {
-        S2CellId(s2textformat::MakePoint("0:178")).ToPoint(),
-        S2CellId(s2textformat::MakePoint("-1:180")).ToPoint(),
-        S2CellId(s2textformat::MakePoint("0:-179")).ToPoint(),
-        S2CellId(s2textformat::MakePoint("1:-180")).ToPoint()};
+        S2CellId(s2textformat::MakePointOrDie("0:178")).ToPoint(),
+        S2CellId(s2textformat::MakePointOrDie("-1:180")).ToPoint(),
+        S2CellId(s2textformat::MakePointOrDie("0:-179")).ToPoint(),
+        S2CellId(s2textformat::MakePointOrDie("1:-180")).ToPoint()};
     snapped_loop_a_ = AddLoop(make_unique<S2Loop>(snapped_loop_a_vertices));
   }
 
@@ -448,7 +448,7 @@ TEST_F(S2LoopTestBase, GetCurvature) {
 // Checks that if a loop is normalized, it doesn't contain a
 // point outside of it, and vice versa.
 static void CheckNormalizeAndContains(const S2Loop& loop) {
-  S2Point p = s2textformat::MakePoint("40:40");
+  S2Point p = s2textformat::MakePointOrDie("40:40");
 
   unique_ptr<S2Loop> flip(loop.Clone());
   flip->Invert();
@@ -916,8 +916,8 @@ TEST(S2Loop, BoundsForLoopContainment) {
     // below B (i.e., ABC is CCW).
     S2Point b = (S2Testing::RandomPoint() + S2Point(0, 0, 1)).Normalize();
     S2Point v = b.CrossProd(S2Point(0, 0, 1)).Normalize();
-    S2Point a = S2::Interpolate(rnd->RandDouble(), -v, b);
-    S2Point c = S2::Interpolate(rnd->RandDouble(), b, v);
+    S2Point a = S2::Interpolate(-v, b, rnd->RandDouble());
+    S2Point c = S2::Interpolate(b, v, rnd->RandDouble());
     if (s2pred::Sign(a, b, c) < 0) {
       --iter; continue;
     }

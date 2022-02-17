@@ -20,6 +20,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "s2/base/integral_types.h"

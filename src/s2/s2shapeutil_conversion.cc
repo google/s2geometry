@@ -17,6 +17,8 @@
 
 #include "s2/s2shapeutil_conversion.h"
 
+#include <utility>
+
 #include "s2/s2shape_measures.h"
 
 namespace s2shapeutil {

@@ -18,6 +18,7 @@
 #include "s2/s2projections.h"
 
 #include <cmath>
+
 #include "s2/s2latlng.h"
 
 using std::fabs;

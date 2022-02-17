@@ -35,6 +35,7 @@
 
 #include <functional>
 #include <memory>
+
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/s2shape.h"

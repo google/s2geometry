@@ -99,6 +99,7 @@
 
 #include <string>
 #include <vector>
+
 #include "absl/strings/string_view.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2region.h"

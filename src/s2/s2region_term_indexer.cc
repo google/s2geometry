@@ -75,6 +75,7 @@
 #include "s2/s2region_term_indexer.h"
 
 #include <cctype>
+
 #include "s2/base/logging.h"
 #include "s2/base/log_severity.h"
 #include "absl/strings/str_cat.h"

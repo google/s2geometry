@@ -17,10 +17,13 @@
 
 #include "s2/encoded_s2shape_index.h"
 
+#include <algorithm>
 #include <map>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/base/call_once.h"
 #include "absl/flags/flag.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/escaping.h"
@@ -162,7 +165,7 @@ TEST(EncodedS2ShapeIndex, OverlappingPolylines) {
       vector<S2Point> vertices;
       int n = test_case.num_shape_edges;
       for (int j = 0; j <= n; ++j) {
-        vertices.push_back(S2::InterpolateAtDistance(j * edge_len, a, b));
+        vertices.push_back(S2::GetPointOnLine(a, b, j * edge_len));
       }
       index.Add(make_unique<S2LaxPolylineShape>(vertices));
     }

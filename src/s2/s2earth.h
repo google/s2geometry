@@ -48,7 +48,7 @@ class S2Earth {
 
   // Like the above, but where distances are expressed in kilometers:
   static constexpr S1Angle KmToAngle(double km);
-  static inline S1ChordAngle KmToChordAngle(double meters);
+  static inline S1ChordAngle KmToChordAngle(double km);
   static constexpr double KmToRadians(double km);
   static constexpr double ToKm(const S1Angle& angle);
   static inline double ToKm(const S1ChordAngle& cangle);

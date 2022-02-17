@@ -17,7 +17,9 @@
 
 #include "s2/s2cell_index.h"
 
+#include <algorithm>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -32,7 +34,6 @@
 
 using absl::flat_hash_set;
 using std::pair;
-using std::set;
 using std::string;
 using std::vector;
 

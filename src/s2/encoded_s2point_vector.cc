@@ -17,6 +17,8 @@
 
 #include "s2/encoded_s2point_vector.h"
 
+#include <algorithm>
+
 #include "absl/base/internal/unaligned_access.h"
 #include "s2/util/bits/bits.h"
 #include "s2/s2cell_id.h"

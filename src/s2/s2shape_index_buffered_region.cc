@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <vector>
+
 #include "s2/s2metrics.h"
 #include "s2/s2shape_index_region.h"
 

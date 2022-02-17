@@ -19,6 +19,7 @@
 #define S2_R2RECT_H_
 
 #include <iosfwd>
+#include <ostream>
 
 #include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"

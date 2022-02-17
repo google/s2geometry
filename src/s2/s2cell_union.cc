@@ -18,6 +18,8 @@
 #include "s2/s2cell_union.h"
 
 #include <algorithm>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "s2/base/integral_types.h"

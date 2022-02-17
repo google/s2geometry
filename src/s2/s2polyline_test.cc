@@ -20,6 +20,7 @@
 #include <cmath>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
@@ -48,7 +49,7 @@ using std::vector;
 
 namespace {
 
-// Wraps s2textformat::MakePolyline in order to test Encode/Decode.
+// Wraps s2textformat::MakePolylineOrDie in order to test Encode/Decode.
 unique_ptr<S2Polyline> MakePolyline(absl::string_view str,
                                     S2Debug debug_override = S2Debug::ALLOW) {
   unique_ptr<S2Polyline> polyline =

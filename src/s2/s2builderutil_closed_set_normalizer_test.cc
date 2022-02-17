@@ -18,6 +18,8 @@
 #include "s2/s2builderutil_closed_set_normalizer.h"
 
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -112,7 +114,7 @@ void NormalizeTest::Run(const string& input_str,
 void NormalizeTest::AddLayers(absl::string_view str,
                               const vector<GraphOptions>& graph_options,
                               vector<Graph>* graphs_out, S2Builder* builder) {
-  auto index = s2textformat::MakeIndex(str);
+  auto index = s2textformat::MakeIndexOrDie(str);
   for (int dim = 0; dim < 3; ++dim) {
     builder->StartLayer(make_unique<GraphAppendingLayer>(
         graph_options[dim], graphs_out, &graph_clones_));
@@ -244,11 +246,11 @@ TEST(ComputeUnion, MixedGeometry) {
   //  - Degenerate polygon holes are removed
   //  - Points coincident with polyline or polygon edges are removed
   //  - Polyline edges coincident with polygon edges are removed
-  auto a = s2textformat::MakeIndex(
+  auto a = s2textformat::MakeIndexOrDie(
       "0:0 | 10:10 | 20:20 # "
       "0:0, 0:10 | 0:0, 10:0 | 15:15, 16:16 # "
       "0:0, 0:10, 10:10, 10:0; 0:0, 1:1; 2:2; 10:10, 11:11; 12:12");
-  auto b = s2textformat::MakeIndex(
+  auto b = s2textformat::MakeIndexOrDie(
       "0:10 | 10:0 | 3:3 | 16:16 # "
       "10:10, 0:10 | 10:10, 10:0 | 5:5, 6:6 # "
       "19:19, 19:21, 21:21, 21:19");

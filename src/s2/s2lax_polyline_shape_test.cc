@@ -64,7 +64,7 @@ TEST(S2LaxPolylineShape, MoveAssignmentOperator) {
 }
 
 TEST(S2LaxPolylineShape, EdgeAccess) {
-  vector<S2Point> vertices = s2textformat::ParsePoints("0:0, 0:1, 1:1");
+  vector<S2Point> vertices = s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1");
   S2LaxPolylineShape shape(vertices);
   EXPECT_EQ(2, shape.num_edges());
   EXPECT_EQ(1, shape.num_chains());
@@ -82,7 +82,7 @@ TEST(S2LaxPolylineShape, EdgeAccess) {
 }
 
 TEST(EncodedS2LaxPolylineShape, RoundtripEncoding) {
-  vector<S2Point> vertices = s2textformat::ParsePoints("0:0, 0:1, 1:1");
+  vector<S2Point> vertices = s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1");
   S2LaxPolylineShape shape(vertices);
 
   Encoder encoder;

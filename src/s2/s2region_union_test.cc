@@ -59,7 +59,7 @@ TEST(S2RegionUnionTest, Basic) {
   two_points_orig.reset();
   // The bounds below may not be exactly equal because the S2PointRegion
   // version converts each S2LatLng value to an S2Point and back.
-  EXPECT_TRUE(s2textformat::MakeLatLngRect("-35:-40,35:40").ApproxEquals(
+  EXPECT_TRUE(s2textformat::MakeLatLngRectOrDie("-35:-40,35:40").ApproxEquals(
       two_points->GetRectBound()))
       << two_points->GetRectBound();
 

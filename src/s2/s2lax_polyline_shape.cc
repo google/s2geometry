@@ -51,7 +51,7 @@ void S2LaxPolylineShape::Init(Span<const S2Point> vertices) {
   num_vertices_ = vertices.size();
   S2_LOG_IF(WARNING, num_vertices_ == 1)
       << "s2shapeutil::S2LaxPolylineShape with one vertex has no edges";
-  vertices_.reset(new S2Point[num_vertices_]);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
   std::copy(vertices.begin(), vertices.end(), vertices_.get());
 }
 
@@ -59,7 +59,7 @@ void S2LaxPolylineShape::Init(const S2Polyline& polyline) {
   num_vertices_ = polyline.num_vertices();
   S2_LOG_IF(WARNING, num_vertices_ == 1)
       << "s2shapeutil::S2LaxPolylineShape with one vertex has no edges";
-  vertices_.reset(new S2Point[num_vertices_]);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
   std::copy(&polyline.vertex(0), &polyline.vertex(0) + num_vertices_,
             vertices_.get());
 }

@@ -18,6 +18,9 @@
 #ifndef S2_S2CELL_UNION_H_
 #define S2_S2CELL_UNION_H_
 
+#include <ostream>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "s2/base/commandlineflags.h"

@@ -348,7 +348,7 @@ TEST(IndexedLaxPolygonLayer, AddsShape) {
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedLaxPolygonLayer>(&index));
   const string& polygon_str = "0:0, 0:10, 10:0";
-  builder.AddPolygon(*s2textformat::MakePolygon(polygon_str));
+  builder.AddPolygon(*s2textformat::MakePolygonOrDie(polygon_str));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   EXPECT_EQ(1, index.num_shape_ids());

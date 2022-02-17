@@ -44,7 +44,6 @@ using absl::make_unique;
 using s2shapeutil::ShapeEdgeId;
 using s2textformat::MakeIndexOrDie;
 using s2textformat::MakePointOrDie;
-using s2textformat::MakePolygonOrDie;
 using std::min;
 using std::pair;
 using std::string;
@@ -288,7 +287,7 @@ TEST(S2ClosestEdgeQuery, IsConservativeDistanceLessOrEqual) {
     S2Point x = S2Testing::RandomPoint();
     S2Point dir = S2Testing::RandomPoint();
     S1Angle r = S1Angle::Radians(M_PI * pow(1e-30, rnd.RandDouble()));
-    S2Point y = S2::InterpolateAtDistance(r, x, dir);
+    S2Point y = S2::GetPointOnLine(x, dir, r);
     S1ChordAngle limit(r);
     if (s2pred::CompareDistance(x, y, limit) <= 0) {
       MutableS2ShapeIndex index;

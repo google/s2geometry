@@ -16,14 +16,15 @@
 // Author: ericv@google.com (Eric Veach)
 
 #include "s2/s2predicates.h"
-#include "s2/s2predicates_internal.h"
 
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
 #include <ostream>
+
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2predicates_internal.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 #include "s2/util/math/vector.h"
 

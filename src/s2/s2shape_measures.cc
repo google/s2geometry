@@ -19,6 +19,7 @@
 
 #include <cmath>
 #include <vector>
+
 #include "s2/base/log_severity.h"
 #include "s2/s2loop_measures.h"
 #include "s2/s2polyline_measures.h"

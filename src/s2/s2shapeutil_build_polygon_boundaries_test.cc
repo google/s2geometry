@@ -17,6 +17,7 @@
 
 #include "s2/s2shapeutil_build_polygon_boundaries.h"
 
+#include <algorithm>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -32,7 +33,7 @@ namespace s2shapeutil {
 class TestLaxLoop : public S2LaxLoopShape {
  public:
   explicit TestLaxLoop(absl::string_view vertex_str) {
-    vector<S2Point> vertices = s2textformat::ParsePoints(vertex_str);
+    vector<S2Point> vertices = s2textformat::ParsePointsOrDie(vertex_str);
     Init(vertices);
   }
 };

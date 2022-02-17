@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <utility>
 
 #include <gtest/gtest.h>
 #include "absl/memory/memory.h"
