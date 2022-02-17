@@ -105,7 +105,10 @@ static void CheckCovering(const S2RegionCoverer::Options& options,
   if (covering.size() > options.max_cells()) {
     // If the covering has more than the requested number of cells, then check
     // that the cell count cannot be reduced by using the parent of some cell.
-    for (const auto [_, cells] : min_level_cells) {
+    // TODO(user,b/210097200): Use structured bindings when we require
+    // C++17 in opensource.
+    for (const auto& p : min_level_cells) {
+      const int cells = p.second;
       EXPECT_EQ(cells, 1);
     }
   }

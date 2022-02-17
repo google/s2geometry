@@ -33,6 +33,7 @@
 #include "s2/s2debug.h"
 #include "s2/s2error.h"
 #include "s2/s2latlng_rect.h"
+#include "s2/s2point_span.h"
 #include "s2/s2region.h"
 #include "s2/s2shape.h"
 
@@ -135,6 +136,11 @@ class S2Polyline final : public S2Region {
     S2_DCHECK_GE(k, 0);
     S2_DCHECK_LT(k, num_vertices_);
     return vertices_[k];
+  }
+
+  // Returns an S2PointSpan containing the polyline's vertices.
+  S2PointSpan vertices_span() const {
+    return S2PointSpan(vertices_.get(), num_vertices_);
   }
 
   // Return the length of the polyline.
@@ -319,7 +325,10 @@ class S2Polyline final : public S2Region {
   // data (see S2Shape for details).
   class Shape : public S2Shape {
    public:
-    static constexpr TypeTag kTypeTag = 2;
+    // Define as enum so we don't have to declare storage.
+    // TODO(user, b/210097200): Use static constexpr when C++17 is
+    // allowed in opensource.
+    enum : TypeTag { kTypeTag = 2 };
 
     Shape() : polyline_(nullptr) {}  // Must call Init().
 

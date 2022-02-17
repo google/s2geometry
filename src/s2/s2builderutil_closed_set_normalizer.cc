@@ -18,6 +18,7 @@
 #include "s2/s2builderutil_closed_set_normalizer.h"
 
 #include <memory>
+#include <utility>
 
 #include "absl/memory/memory.h"
 #include "s2/s2builder_layer.h"

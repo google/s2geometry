@@ -30,6 +30,7 @@
 #include "absl/base/macros.h"
 #include "absl/meta/type_traits.h"
 #include "absl/numeric/int128.h"
+#include "absl/utility/utility.h"
 
 #include "s2/base/casts.h"
 #include "s2/base/integral_types.h"
@@ -142,10 +143,13 @@ class Encoder {
  private:
   // All encoding operations are done through the Writer. This avoids aliasing
   // between `buf_` and `this` which allows the compiler to avoid reloading
-  // `buf_` repeatedly. See https://godbolt.org/z/sfEnePYWP.
+  // `buf_` repeatedly. See https://godbolt.org/z/zM36s3ded.
   struct Writer {
     Encoder* enc;
-    char* p{reinterpret_cast<char*>(enc->buf_)};
+    char* p;
+
+    explicit Writer(Encoder* e)
+        : enc(e), p(reinterpret_cast<char*>(enc->buf_)) {}
 
     ~Writer() {
       enc->buf_ = reinterpret_cast<unsigned char*>(p);
@@ -153,7 +157,7 @@ class Encoder {
       S2_DCHECK_LE(enc->buf_, enc->limit_);
     }
 
-    char* skip(ptrdiff_t N) { return std::exchange(p, p + N); }
+    char* skip(ptrdiff_t N) { return absl::exchange(p, p + N); }
 
     void put8(unsigned char v) { *p++ = v; }
     void put16(uint16 v) { LittleEndian::Store16(skip(2), v); }
@@ -182,7 +186,7 @@ class Encoder {
     }
   };
 
-  Writer writer() { return Writer{this}; }
+  Writer writer() { return Writer(this); }
 
   static std::pair<unsigned char*, size_t> NewBuffer(size_t size);
   static void DeleteBuffer(unsigned char* buf, size_t size);

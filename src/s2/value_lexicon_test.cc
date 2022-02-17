@@ -17,7 +17,9 @@
 
 #include "s2/value_lexicon.h"
 
+#include <algorithm>
 #include <memory>
+#include <utility>
 
 #include <gtest/gtest.h>
 #include "absl/memory/memory.h"

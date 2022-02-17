@@ -29,7 +29,10 @@
 // This class is useful for adding a collection of points to an S2ShapeIndex.
 class S2PointVectorShape : public S2Shape {
  public:
-  static constexpr TypeTag kTypeTag = 3;
+  // Define as enum so we don't have to declare storage.
+  // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
+  // in opensource.
+  enum : TypeTag { kTypeTag = 3 };
 
   // Constructs an empty point vector.
   S2PointVectorShape() {}
@@ -90,7 +93,10 @@ class S2PointVectorShape : public S2Shape {
 // into a large contiguous buffer that contains other encoded data as well.
 class EncodedS2PointVectorShape : public S2Shape {
  public:
-  static constexpr TypeTag kTypeTag = S2PointVectorShape::kTypeTag;
+  // Define as enum so we don't have to declare storage.
+  // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
+  // in opensource.
+  enum : TypeTag { kTypeTag = S2PointVectorShape::kTypeTag };
 
   // Constructs an uninitialized object; requires Init() to be called.
   EncodedS2PointVectorShape() {}

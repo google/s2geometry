@@ -18,9 +18,11 @@
 #ifndef S2_S2BUILDER_GRAPH_H_
 #define S2_S2BUILDER_GRAPH_H_
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <utility>
 #include <vector>
 

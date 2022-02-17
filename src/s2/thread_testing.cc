@@ -17,6 +17,7 @@
 
 #include "s2/thread_testing.h"
 
+#include <functional>
 #include <memory>
 #include <thread>
 
