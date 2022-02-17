@@ -21,6 +21,8 @@
 #ifndef S2_S2BUILDER_H_
 #define S2_S2BUILDER_H_
 
+#include <algorithm>
+#include <functional>
 #include <memory>
 #include <utility>
 #include <vector>

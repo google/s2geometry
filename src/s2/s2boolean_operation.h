@@ -21,6 +21,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
@@ -452,7 +453,7 @@ class S2BooleanOperation {
 
    private:
     std::unique_ptr<S2Builder::SnapFunction> snap_function_;
-    PolygonModel polygon_model_ = PolygonModel::SEMI_OPEN;;
+    PolygonModel polygon_model_ = PolygonModel::SEMI_OPEN;
     PolylineModel polyline_model_ = PolylineModel::CLOSED;
     bool polyline_loops_have_boundaries_ = true;
     bool split_all_crossing_polyline_edges_ = false;

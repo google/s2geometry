@@ -33,7 +33,7 @@
 
 #include <cmath>
 #include <iosfwd>
-#include <type_traits>
+#include <ostream>
 
 #include "s2/base/logging.h"
 #include "s2/util/math/mathutil.h"

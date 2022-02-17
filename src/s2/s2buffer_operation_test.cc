@@ -18,8 +18,11 @@
 #include "s2/s2buffer_operation.h"
 
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <memory>
+#include <string>
+#include <utility>
 
 #include "s2/base/casts.h"
 #include "s2/base/logging.h"
@@ -288,8 +291,8 @@ void TestMinimumDistance(const MutableS2ShapeIndex& input,
     S2ClosestEdgeQuery::EdgeTarget in_target(a.v0, a.v1);
     for (const auto& out_result : out_query.FindClosestEdges(&in_target)) {
       auto b = output.shape(out_result.shape_id())->edge(out_result.edge_id());
-      ASSERT_GE(s2pred::CompareEdgePairDistance(
-          a.v0, a.v1, b.v0, b.v1, min_dist), 0);;
+      ASSERT_GE(
+          s2pred::CompareEdgePairDistance(a.v0, a.v1, b.v0, b.v1, min_dist), 0);
     }
   }
 }

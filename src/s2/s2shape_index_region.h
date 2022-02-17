@@ -360,7 +360,11 @@ bool S2ShapeIndexRegion<IndexType>::VisitIntersectingShapes(
               clipped.num_edges() > 0 || !clipped.contains_center();
         }
       }
-      for (const auto& [shape_id, not_contains] : shape_not_contains) {
+      // TODO(user,b/210097200): Use structured bindings when we require
+      // C++17 in opensource.
+      for (const auto& p : shape_not_contains) {
+        const int shape_id = p.first;
+        const bool not_contains = p.second;
         if (!visitor(index().shape(shape_id), !not_contains)) return false;
       }
       return true;

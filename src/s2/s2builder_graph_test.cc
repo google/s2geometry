@@ -65,7 +65,7 @@ TEST(Graph, LabelsRequestedButNotProvided) {
   vector<S2Point> vertices{S2Point(1, 0, 0)};
   vector<Edge> edges{{0, 0}};
   vector<InputEdgeIdSetId> input_edge_id_set_ids{0};
-  IdSetLexicon input_edge_id_set_lexicon, label_set_lexicon;;
+  IdSetLexicon input_edge_id_set_lexicon, label_set_lexicon;
   vector<LabelSetId> label_set_ids;  // Empty means no labels are present.
   Graph g{
     options, &vertices, &edges, &input_edge_id_set_ids,

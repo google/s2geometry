@@ -21,6 +21,7 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <utility>
 #include <vector>
 
 #include "s2/base/logging.h"

@@ -28,6 +28,7 @@
 #include <iosfwd>
 #include <iostream>  // NOLINT(readability/streams)
 #include <limits>
+#include <ostream>
 #include <type_traits>
 
 #include "s2/base/integral_types.h"

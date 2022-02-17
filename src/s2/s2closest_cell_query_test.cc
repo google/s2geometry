@@ -222,18 +222,6 @@ static const S1Angle kTestCapRadius = S2Testing::KmToAngle(10);
 
 using TestingResult = pair<S2MinDistance, LabelledCell>;
 
-// Converts to the format required by CheckDistanceResults() in s2testing.h.
-vector<TestingResult> ConvertResults(
-    const vector<S2ClosestCellQuery::Result>& results) {
-  vector<TestingResult> testing_results;
-  for (const auto& result : results) {
-    testing_results.push_back(
-        TestingResult(result.distance(),
-                      LabelledCell(result.cell_id(), result.label())));
-  }
-  return testing_results;
-}
-
 // Use "query" to find the closest cell(s) to the given target, and extract
 // the query results into the given vector.  Also verify that the results
 // satisfy the search criteria.

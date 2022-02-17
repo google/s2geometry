@@ -51,6 +51,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "absl/memory/memory.h"
@@ -127,6 +128,10 @@ static constexpr S1Angle kMinRequestedError = S1Angle::Radians(2 * DBL_ERR);
 // construct inputs where the error is anywhere close to this large.
 static constexpr S1Angle kMaxAbsoluteInterpolationError =
     S2::kGetPointOnLineError + S2::kGetPointOnRayPerpendicularError;
+
+// TODO(user, b/210097200): Remove when we require c++17 for opensource.
+constexpr double S2BufferOperation::Options::kMinErrorFraction;
+constexpr double S2BufferOperation::Options::kMaxCircleSegments;
 
 S2BufferOperation::Options::Options()
     : snap_function_(

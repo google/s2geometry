@@ -58,7 +58,7 @@
 
 template <typename To, typename From>  // use like this: down_cast<T*>(foo);
 inline To down_cast(From* f) {         // so we only accept pointers
-  static_assert((std::is_base_of<From, std::remove_pointer_t<To>>::value),
+  static_assert((std::is_base_of<From, absl::remove_pointer_t<To>>::value),
                 "target type not derived from source type");
 
   // We skip the assert and hence the dynamic_cast if RTTI is disabled.
@@ -82,13 +82,13 @@ template <typename To, typename From>
 inline To down_cast(From& f) {
   static_assert(std::is_lvalue_reference<To>::value,
                 "target type not a reference");
-  static_assert((std::is_base_of<From, std::remove_reference_t<To>>::value),
+  static_assert((std::is_base_of<From, absl::remove_reference_t<To>>::value),
                 "target type not derived from source type");
 
   // We skip the assert and hence the dynamic_cast if RTTI is disabled.
 #if !defined(__GNUC__) || defined(__GXX_RTTI)
   // RTTI: debug mode only
-  assert(dynamic_cast<std::remove_reference_t<To>*>(&f) != nullptr);
+  assert(dynamic_cast<absl::remove_reference_t<To>*>(&f) != nullptr);
 #endif  // !defined(__GNUC__) || defined(__GXX_RTTI)
 
   return static_cast<To>(f);
