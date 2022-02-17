@@ -18,6 +18,7 @@
 #include "s2/encoded_string_vector.h"
 
 #include <vector>
+
 #include <gtest/gtest.h>
 #include "absl/strings/string_view.h"
 

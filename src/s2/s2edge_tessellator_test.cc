@@ -18,6 +18,7 @@
 #include "s2/s2edge_tessellator.h"
 
 #include <iostream>
+
 #include <gtest/gtest.h>
 
 #include "absl/strings/str_cat.h"
@@ -86,7 +87,7 @@ S1Angle GetMaxDistance(const S2::Projection& proj,
       S2::UpdateMinDistance(p, x, y, &dist);
     } else {
       S2_DCHECK(dist_type == DistType::PARAMETRIC);
-      dist = S1ChordAngle(p, S2::Interpolate(f, x, y));
+      dist = S1ChordAngle(p, S2::Interpolate(x, y, f));
     }
     if (dist > max_dist) max_dist = dist;
   }
@@ -384,8 +385,9 @@ void TestEdgeError(const S2::Projection& proj, double t) {
     if (max_dist_p <= S2EdgeTessellator::kMinTolerance()) continue;
 
     // Compute the estimated error bound.
-    S1Angle d1(S2::Interpolate(t, a, b), proj.Unproject((1-t) * pa + t * pb));
-    S1Angle d2(S2::Interpolate(1-t, a, b), proj.Unproject(t * pa + (1-t) * pb));
+    S1Angle d1(S2::Interpolate(a, b, t), proj.Unproject((1 - t) * pa + t * pb));
+    S1Angle d2(S2::Interpolate(a, b, 1 - t),
+               proj.Unproject(t * pa + (1 - t) * pb));
     S1Angle dist = kScaleFactor * max(S1Angle::Radians(1e-300), max(d1, d2));
 
     // Compute the ratio of the true geometric/parametric errors to the

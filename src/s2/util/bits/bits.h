@@ -45,7 +45,13 @@
 // Bits) containing a few bit patterns (which vary based on value of template
 // parameter).
 
+#include <cstdint>
 
+#include "absl/base/casts.h"
+#include "absl/base/macros.h"
+#include "absl/meta/type_traits.h"
+#include "absl/numeric/bits.h"
+#include "absl/numeric/int128.h"
 #if defined(__i386__) || defined(__x86_64__)
 #include <x86intrin.h>
 #endif
@@ -55,11 +61,6 @@
 
 #include <type_traits>
 
-#include "absl/base/casts.h"
-#include "absl/base/macros.h"
-#include "absl/numeric/bits.h"
-#include "absl/numeric/int128.h"
-
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/base/port.h"
@@ -68,20 +69,51 @@ class Bits {
  public:
   // A traits class template for unsigned integer type sizes. Primary
   // information contained herein is corresponding (unsigned) integer type.
-  // E.g. UnsignedTypeBySize<32>::Type is uint32. Used by UnsignedType.
-  template<int size /* in bytes */>
+  // E.g. UnsignedTypeBySize<4>::Type is uint32. Used by UnsignedType.
+  template <int size /* in bytes */>
   struct UnsignedTypeBySize;
 
   // Auxiliary struct for figuring out an unsigned type for a given type.
-  template<typename T> struct UnsignedType {
+  template <typename T>
+  struct UnsignedType {
     typedef typename UnsignedTypeBySize<sizeof(T)>::Type Type;
   };
 
+  template <typename T,
+            absl::enable_if_t<std::is_unsigned<absl::remove_cv_t<
+                                  absl::remove_reference_t<T>>>::value,
+                              int> = 0>
   ABSL_DEPRECATED("Inline the implementation")
-  static int CountOnes(uint32 n) { return absl::popcount(n); }
+  static int CountOnes(T &&n) {
+    return absl::popcount(n);
+  }
 
+  template <typename T,
+            absl::enable_if_t<!std::is_unsigned<absl::remove_cv_t<
+                                  absl::remove_reference_t<T>>>::value,
+                              int> = 0>
   ABSL_DEPRECATED("Inline the implementation")
-  static inline int CountOnes64(uint64 n) { return absl::popcount(n); }
+  static int CountOnes(T &&n) {
+    return absl::popcount(static_cast<uint32>(n));
+  }
+
+  template <typename T,
+            absl::enable_if_t<std::is_unsigned<absl::remove_cv_t<
+                                  absl::remove_reference_t<T>>>::value,
+                              int> = 0>
+  ABSL_DEPRECATED("Inline the implementation")
+  static inline int CountOnes64(T &&n) {
+    return absl::popcount(n);
+  }
+
+  template <typename T,
+            absl::enable_if_t<!std::is_unsigned<absl::remove_cv_t<
+                                  absl::remove_reference_t<T>>>::value,
+                              int> = 0>
+  ABSL_DEPRECATED("Inline the implementation")
+  static inline int CountOnes64(T &&n) {
+    return absl::popcount(static_cast<uint64>(n));
+  }
 
   // Count bits in uint128
   static inline int CountOnes128(absl::uint128 n) {
@@ -114,14 +146,39 @@ class Bits {
   // up to a maximum.  Values larger than the maximum may be returned
   // (because multiple bits are checked at a time), but the function
   // may exit early if the cap is exceeded.
-  static int CappedDifference(const void *m1, const void *m2,
-                              int num_bytes, int cap);
+  static int CappedDifference(const void *m1, const void *m2, int num_bytes,
+                              int cap);
 
   // Return floor(log2(n)) for positive integer n.  Returns -1 iff n == 0.
+
+  template <typename T,
+            absl::enable_if_t<std::is_unsigned<absl::remove_cv_t<
+                                  absl::remove_reference_t<T>>>::value,
+                              int> = 0>
   ABSL_DEPRECATED("Inline the implementation")
-  static int Log2Floor(uint32 n);
+  static int Log2Floor(T &&n);
+
+  template <typename T,
+            absl::enable_if_t<!std::is_unsigned<absl::remove_cv_t<
+                                  absl::remove_reference_t<T>>>::value,
+                              int> = 0>
   ABSL_DEPRECATED("Inline the implementation")
-  static int Log2Floor64(uint64 n);
+  static int Log2Floor(T &&n);
+
+  template <typename T,
+            absl::enable_if_t<std::is_unsigned<absl::remove_cv_t<
+                                  absl::remove_reference_t<T>>>::value,
+                              int> = 0>
+  ABSL_DEPRECATED("Inline the implementation")
+  static int Log2Floor64(T &&n);
+
+  template <typename T,
+            absl::enable_if_t<!std::is_unsigned<absl::remove_cv_t<
+                                  absl::remove_reference_t<T>>>::value,
+                              int> = 0>
+  ABSL_DEPRECATED("Inline the implementation")
+  static int Log2Floor64(T &&n);
+
   static int Log2Floor128(absl::uint128 n);
 
   // Potentially faster version of Log2Floor() that returns an
@@ -182,9 +239,8 @@ class Bits {
   // specified by 'offset' from the LSB.  'T' is a scalar type (integral,
   // float or pointer) whose size is the same as one of the unsigned types.
   // The return type is an unsigned type having the same size as T.
-  template<typename T>
-  static typename UnsignedType<T>::Type GetBits(const T src,
-                                                const int offset,
+  template <typename T>
+  static typename UnsignedType<T>::Type GetBits(const T src, const int offset,
                                                 const int nbits) {
     typedef typename UnsignedType<T>::Type UnsignedT;
     const UnsignedT unsigned_src = absl::bit_cast<UnsignedT>(src);
@@ -196,11 +252,9 @@ class Bits {
   // Overwrite 'nbits' consecutive bits of 'dest.'.  Position of bits are
   // specified by an offset from the LSB.  'T' is a scalar type (integral,
   // float or pointer) whose size is the same as one of the unsigned types.
-  template<typename T>
+  template <typename T>
   static void SetBits(const typename UnsignedType<T>::Type value,
-                      const int offset,
-                      const int nbits,
-                      T* const dest) {
+                      const int offset, const int nbits, T *const dest) {
     typedef typename UnsignedType<T>::Type UnsignedT;
     const UnsignedT unsigned_dest = absl::bit_cast<UnsignedT>(*dest);
     S2_DCHECK_GT(sizeof(UnsignedT) * 8, offset);
@@ -218,11 +272,9 @@ class Bits {
   //
   // uint32 a, b;
   // Bits::CopyBits(&a, 0, b, 12, 3);
-  template<typename DestType, typename SrcType>
-  static void CopyBits(DestType* const dest,
-                       const int dest_offset,
-                       const SrcType src,
-                       const int src_offset,
+  template <typename DestType, typename SrcType>
+  static void CopyBits(DestType *const dest, const int dest_offset,
+                       const SrcType src, const int src_offset,
                        const int nbits) {
     const typename UnsignedType<SrcType>::Type value =
         GetBits(src, src_offset, nbits);
@@ -231,7 +283,7 @@ class Bits {
 
   // Extract the lowest 'nbits' consecutive bits from 'src'.
   // Bits::GetLowBits(13, 3); /* = 5 (0b1101 => 0b101) */
-  template<typename T>
+  template <typename T>
   static typename UnsignedType<T>::Type GetLowBits(const T src,
                                                    const int nbits) {
     typedef typename UnsignedType<T>::Type UnsignedT;
@@ -242,29 +294,26 @@ class Bits {
 
  private:
   // We only use this for unsigned types and for 0 <= n <= sizeof(UnsignedT).
-  template<typename UnsignedT>
+  template <typename UnsignedT>
   static UnsignedT NBitsFromLSB(const int nbits) {
     const UnsignedT all_ones = ~static_cast<UnsignedT>(0);
     return nbits == 0 ? static_cast<UnsignedT>(0)
                       : all_ones >> (sizeof(UnsignedT) * 8 - nbits);
   }
 
-  template<typename UnsignedT>
-  static inline UnsignedT GetBitsImpl(const UnsignedT src,
-                                      const int offset,
+  template <typename UnsignedT>
+  static inline UnsignedT GetBitsImpl(const UnsignedT src, const int offset,
                                       const int nbits);
   template <typename UnsignedT>
   static inline UnsignedT GetLowBitsImpl(const UnsignedT src, const int nbits);
 
 #ifdef __GNUC__
 #if defined(__BMI__) && (defined(__i386__) || defined(__x86_64__))
-  static inline uint32 GetBitsImpl(const uint32 src,
-                                   const int offset,
+  static inline uint32 GetBitsImpl(const uint32 src, const int offset,
                                    const int nbits);
 #endif
 #if defined(__BMI__) && defined(__x86_64__)
-  static inline uint64 GetBitsImpl(const uint64 src,
-                                   const int offset,
+  static inline uint64 GetBitsImpl(const uint64 src, const int offset,
                                    const int nbits);
 #endif
 #if defined(__BMI2__) && (defined(__i386__) || defined(__x86_64__))
@@ -275,14 +324,15 @@ class Bits {
 #endif
 #endif  // __GNUC__
 
-  Bits(Bits const&) = delete;
-  void operator=(Bits const&) = delete;
+  Bits(Bits const &) = delete;
+  void operator=(Bits const &) = delete;
 };
 
 // A utility class for some handy bit patterns.  The names l and h
 // were chosen to match Knuth Volume 4: l is 0x010101... and h is 0x808080...;
 // half_ones is ones in the lower half only.  We assume sizeof(T) is 1 or even.
-template <class T> struct BitPattern {
+template <class T>
+struct BitPattern {
   typedef typename std::make_unsigned<T>::type U;
   static constexpr U half_ones = (static_cast<U>(1) << (sizeof(U) * 4)) - 1;
   static constexpr U l =
@@ -294,14 +344,44 @@ template <class T> struct BitPattern {
 // Implementation details follow
 // ------------------------------------------------------------------------
 
-inline int Bits::Log2Floor(uint32 n) { return absl::bit_width(n) - 1; }
+template <
+    typename T,
+    absl::enable_if_t<
+        std::is_unsigned<absl::remove_cv_t<absl::remove_reference_t<T>>>::value,
+        int>>
+inline int Bits::Log2Floor(T &&n) {
+  return absl::bit_width(n) - 1;
+}
+
+template <typename T,
+          absl::enable_if_t<!std::is_unsigned<absl::remove_cv_t<
+                                absl::remove_reference_t<T>>>::value,
+                            int>>
+inline int Bits::Log2Floor(T &&n) {
+  return absl::bit_width(static_cast<uint32>(n)) - 1;
+}
 
 inline int Bits::Log2FloorNonZero(uint32 n) {
   ABSL_INTERNAL_ASSUME(n != 0);
   return absl::bit_width(n) - 1;
 }
 
-inline int Bits::Log2Floor64(uint64 n) { return absl::bit_width(n) - 1; }
+template <
+    typename T,
+    absl::enable_if_t<
+        std::is_unsigned<absl::remove_cv_t<absl::remove_reference_t<T>>>::value,
+        int>>
+inline int Bits::Log2Floor64(T &&n) {
+  return absl::bit_width(n) - 1;
+}
+
+template <typename T,
+          absl::enable_if_t<!std::is_unsigned<absl::remove_cv_t<
+                                absl::remove_reference_t<T>>>::value,
+                            int>>
+inline int Bits::Log2Floor64(T &&n) {
+  return absl::bit_width(static_cast<uint64>(n)) - 1;
+}
 
 inline int Bits::Log2FloorNonZero64(uint64 n) {
   ABSL_INTERNAL_ASSUME(n != 0);
@@ -340,7 +420,7 @@ inline uint8 Bits::ReverseBits8(unsigned char n) {
   const uint32 n_shifted = static_cast<uint32>(n) << 24;
   asm("rbit %w0, %w1" : "=r"(result) : "r"(n_shifted));
   return static_cast<uint8>(result);
-#elif defined (__powerpc64__)
+#elif defined(__powerpc64__)
   uint64 temp = n;
   // bpermd selects a byte's worth of bits from its second input. Grab one byte
   // at a time, in reversed order. 0x3f is the lowest order bit of a 64-bit int.
@@ -351,7 +431,7 @@ inline uint8 Bits::ReverseBits8(unsigned char n) {
 #else
   n = static_cast<unsigned char>(((n >> 1) & 0x55) | ((n & 0x55) << 1));
   n = static_cast<unsigned char>(((n >> 2) & 0x33) | ((n & 0x33) << 2));
-  return static_cast<unsigned char>(((n >> 4) & 0x0f)  | ((n & 0x0f) << 4));
+  return static_cast<unsigned char>(((n >> 4) & 0x0f) | ((n & 0x0f) << 4));
 #endif
 }
 
@@ -408,16 +488,16 @@ inline uint64 Bits::ReverseBits64(uint64 n) {
   uint64 result_hi1 = __builtin_bpermd(0x1716151413121110, n) << 16;
   uint64 result_hi2 = __builtin_bpermd(0x0f0e0d0c0b0a0908, n) << 8;
   uint64 result_hi3 = __builtin_bpermd(0x0706050403020100, n);
-  return (result_lo0 | result_lo1 | result_lo2 | result_lo3 |
-          result_hi0 | result_hi1 | result_hi2 | result_hi3);
+  return (result_lo0 | result_lo1 | result_lo2 | result_lo3 | result_hi0 |
+          result_hi1 | result_hi2 | result_hi3);
 #elif defined(_LP64)
   n = ((n >> 1) & 0x5555555555555555ULL) | ((n & 0x5555555555555555ULL) << 1);
   n = ((n >> 2) & 0x3333333333333333ULL) | ((n & 0x3333333333333333ULL) << 2);
   n = ((n >> 4) & 0x0F0F0F0F0F0F0F0FULL) | ((n & 0x0F0F0F0F0F0F0F0FULL) << 4);
   return bswap_64(n);
 #else
-  return ReverseBits32( n >> 32 ) |
-         (static_cast<uint64>(ReverseBits32(n &  0xffffffff)) << 32);
+  return ReverseBits32(n >> 32) |
+         (static_cast<uint64>(ReverseBits32(n & 0xffffffff)) << 32);
 #endif
 }
 
@@ -432,9 +512,8 @@ inline bool Bits::BytesContainByteLessThan(T bytes, uint8 c) {
   auto h = BitPattern<T>::h;
   // The c <= 0x80 code is straight out of Knuth Volume 4.
   // Usually c will be manifestly constant.
-  return c <= 0x80 ?
-      ((h & (bytes - l * c) & ~bytes) != 0) :
-      ((((bytes - l * c) | (bytes ^ h)) & h) != 0);
+  return c <= 0x80 ? ((h & (bytes - l * c) & ~bytes) != 0)
+                   : ((((bytes - l * c) | (bytes ^ h)) & h) != 0);
 }
 
 template <class T>
@@ -462,43 +541,41 @@ inline bool Bits::BytesAllInRange(T bytes, uint8 lo, uint8 hi) {
 
 // Specializations for Bits::UnsignedTypeBySize.  For unsupported type
 // sizes, a compile-time error will be generated.
-template<>
+template <>
 struct Bits::UnsignedTypeBySize<1> {
   typedef uint8 Type;
 };
 
-template<>
+template <>
 struct Bits::UnsignedTypeBySize<2> {
   typedef uint16 Type;
 };
 
-template<>
+template <>
 struct Bits::UnsignedTypeBySize<4> {
   typedef uint32 Type;
 };
 
-template<>
+template <>
 struct Bits::UnsignedTypeBySize<8> {
   typedef uint64 Type;
 };
 
-template<>
+template <>
 struct Bits::UnsignedTypeBySize<16> {
   typedef absl::uint128 Type;
 };
 
 #ifdef __GNUC__
 #if defined(__BMI__) && (defined(__i386__) || defined(__x86_64__))
-inline uint32 Bits::GetBitsImpl(const uint32 src,
-                                const int offset,
+inline uint32 Bits::GetBitsImpl(const uint32 src, const int offset,
                                 const int nbits) {
   return _bextr_u32(src, offset, nbits);
 }
 #endif
 
 #if defined(__BMI__) && defined(__x86_64__)
-inline uint64 Bits::GetBitsImpl(const uint64 src,
-                                const int offset,
+inline uint64 Bits::GetBitsImpl(const uint64 src, const int offset,
                                 const int nbits) {
   return _bextr_u64(src, offset, nbits);
 }
@@ -518,15 +595,14 @@ inline uint64 Bits::GetLowBitsImpl(const uint64 src, const int nbits) {
 
 #endif  // __GNUC__
 
-template<typename UnsignedT>
-inline UnsignedT Bits::GetBitsImpl(const UnsignedT src,
-                                   const int offset,
+template <typename UnsignedT>
+inline UnsignedT Bits::GetBitsImpl(const UnsignedT src, const int offset,
                                    const int nbits) {
   const UnsignedT result = (src >> offset) & NBitsFromLSB<UnsignedT>(nbits);
   return result;
 }
 
-template<typename UnsignedT>
+template <typename UnsignedT>
 inline UnsignedT Bits::GetLowBitsImpl(const UnsignedT src, const int nbits) {
   return GetBitsImpl(src, 0, nbits);
 }

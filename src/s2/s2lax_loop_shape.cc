@@ -17,9 +17,13 @@
 
 #include "s2/s2lax_loop_shape.h"
 
+#include <memory>
+
+#include "absl/memory/memory.h"
 #include "s2/s2loop.h"
 #include "s2/s2shapeutil_get_reference_point.h"
 
+using absl::make_unique;
 using absl::Span;
 using ReferencePoint = S2Shape::ReferencePoint;
 
@@ -33,7 +37,7 @@ S2LaxLoopShape::S2LaxLoopShape(const S2Loop& loop) {
 
 void S2LaxLoopShape::Init(Span<const S2Point> vertices) {
   num_vertices_ = vertices.size();
-  vertices_.reset(new S2Point[num_vertices_]);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
   std::copy(vertices.begin(), vertices.end(), vertices_.get());
 }
 
@@ -44,7 +48,7 @@ void S2LaxLoopShape::Init(const S2Loop& loop) {
     vertices_ = nullptr;
   } else {
     num_vertices_ = loop.num_vertices();
-    vertices_.reset(new S2Point[num_vertices_]);
+    vertices_ = make_unique<S2Point[]>(num_vertices_);
     std::copy(&loop.vertex(0), &loop.vertex(0) + num_vertices_,
               vertices_.get());
   }

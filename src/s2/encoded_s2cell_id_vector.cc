@@ -17,6 +17,8 @@
 
 #include "s2/encoded_s2cell_id_vector.h"
 
+#include <algorithm>
+
 #include "s2/util/bits/bits.h"
 
 using absl::Span;

@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "s2/base/commandlineflags.h"

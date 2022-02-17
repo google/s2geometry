@@ -65,9 +65,8 @@ S2_DEFINE_int32(iters, google::DEBUG_MODE ? 1000 : 100000,
 
 namespace {
 
-using absl::SimpleAtoi;
-using absl::StrCat;
 using absl::flat_hash_map;
+using absl::StrCat;
 using std::max;
 using std::min;
 using std::priority_queue;

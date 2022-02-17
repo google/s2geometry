@@ -47,7 +47,7 @@ void VerifyS2PointVectorLayerResults(
     absl::string_view str_expected_points,
     const vector<vector<int32>>& expected_labels) {
   vector<S2Point> expected_points =
-      s2textformat::ParsePoints(str_expected_points);
+      s2textformat::ParsePointsOrDie(str_expected_points);
 
   ASSERT_EQ(expected_labels.size(), label_set_ids.size());
   for (int i = 0; i < output.size(); ++i) {

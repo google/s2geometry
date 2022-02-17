@@ -279,11 +279,11 @@ TEST(S2Builder, MaxEdgeDeviation) {
     EXPECT_EQ(a, output.vertex(0));
     EXPECT_EQ(b, output.vertex(n - 1));
     for (int i = 0; i + 1 < n; ++i) {
-      EXPECT_TRUE(S2::IsEdgeBNearEdgeA(
-          a, b, output.vertex(i), output.vertex(i + 1), max_deviation))
-          << "Iteration " << iter << ": (" << s2textformat::ToString(a)
-          << ", " << s2textformat::ToString(S2::Interpolate(0.5, a, b))
-          << "), " << s2textformat::ToString(output);
+      EXPECT_TRUE(S2::IsEdgeBNearEdgeA(a, b, output.vertex(i),
+                                       output.vertex(i + 1), max_deviation))
+          << "Iteration " << iter << ": (" << s2textformat::ToString(a) << ", "
+          << s2textformat::ToString(S2::Interpolate(a, b, 0.5)) << "), "
+          << s2textformat::ToString(output);
     }
     if (n > 2) ++num_effective;
   }
@@ -1343,9 +1343,9 @@ TEST(S2Builder, HighPrecisionStressTest) {
     // v2 is located along (v0,v1) but is perturbed by up to 2 * snap_radius.
     S2Point v1 = ChoosePoint(), v0_dir = ChoosePoint();
     double d0 = pow(1e-16, rnd.RandDouble());
-    S2Point v0 = S2::InterpolateAtDistance(S1Angle::Radians(d0), v1, v0_dir);
+    S2Point v0 = S2::GetPointOnLine(v1, v0_dir, S1Angle::Radians(d0));
     double d2 = 0.5 * d0 * pow(1e-16, pow(rnd.RandDouble(), 2));
-    S2Point v2 = S2::InterpolateAtDistance(S1Angle::Radians(d2), v1, v0_dir);
+    S2Point v2 = S2::GetPointOnLine(v1, v0_dir, S1Angle::Radians(d2));
     v2 = S2Testing::SamplePoint(S2Cap(v2, 2 * snap_radius));
     // Vary the edge directions by randomly swapping v0 and v2.
     if (rnd.OneIn(2)) std::swap(v0, v2);
@@ -1358,10 +1358,10 @@ TEST(S2Builder, HighPrecisionStressTest) {
     S2Point v3;
     if (rnd.OneIn(5)) {
       v3 = rnd.OneIn(2) ? v1 : v2;
-      v3 = S2::InterpolateAtDistance(d3, v3, ChoosePoint());
+      v3 = S2::GetPointOnLine(v3, ChoosePoint(), d3);
     } else {
-      v3 = S2::Interpolate(pow(1e-16, rnd.RandDouble()), v1, v2);
-      v3 = S2::InterpolateAtDistance(d3, v3, v1.CrossProd(v2).Normalize());
+      v3 = S2::Interpolate(v1, v2, pow(1e-16, rnd.RandDouble()));
+      v3 = S2::GetPointOnLine(v3, v1.CrossProd(v2).Normalize(), d3);
     }
     S2Builder::Options options((IdentitySnapFunction(snap_radius)));
     options.set_idempotent(false);
@@ -1488,7 +1488,7 @@ void TestSnappingWithForcedVertices(const char* input_str,
                                     const char* vertices_str,
                                     const char* expected_str) {
   S2Builder builder{S2Builder::Options{IdentitySnapFunction(snap_radius)}};
-  vector<S2Point> vertices = s2textformat::ParsePoints(vertices_str);
+  vector<S2Point> vertices = s2textformat::ParsePointsOrDie(vertices_str);
   for (const auto& vertex : vertices) {
     builder.ForceVertex(vertex);
   }

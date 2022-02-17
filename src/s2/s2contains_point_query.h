@@ -18,6 +18,7 @@
 #ifndef S2_S2CONTAINS_POINT_QUERY_H_
 #define S2_S2CONTAINS_POINT_QUERY_H_
 
+#include <functional>
 #include <vector>
 
 #include "s2/s2edge_crosser.h"

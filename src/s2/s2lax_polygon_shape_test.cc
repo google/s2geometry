@@ -117,7 +117,7 @@ TEST(S2LaxPolygonShape, SingleVertexPolygon) {
   // S2Polygon doesn't support single-vertex loops, so we need to construct
   // the S2LaxPolygonShape directly.
   vector<vector<S2Point>> loops;
-  loops.push_back(s2textformat::ParsePoints("0:0"));
+  loops.push_back(s2textformat::ParsePointsOrDie("0:0"));
   S2LaxPolygonShape shape(loops);
   EXPECT_EQ(1, shape.num_loops());
   EXPECT_EQ(1, shape.num_vertices());
@@ -138,7 +138,8 @@ TEST(S2LaxPolygonShape, SingleVertexPolygon) {
 
 TEST(S2LaxPolygonShape, SingleLoopPolygon) {
   // Test S2Polygon constructor.
-  vector<S2Point> vertices = s2textformat::ParsePoints("0:0, 0:1, 1:1, 1:0");
+  vector<S2Point> vertices =
+      s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1, 1:0");
   S2LaxPolygonShape shape(S2Polygon(make_unique<S2Loop>(vertices)));
   EXPECT_EQ(1, shape.num_loops());
   EXPECT_EQ(vertices.size(), shape.num_vertices());
@@ -166,8 +167,8 @@ TEST(S2LaxPolygonShape, MultiLoopPolygon) {
   // Test vector<vector<S2Point>> constructor.  Make sure that the loops are
   // oriented so that the interior of the polygon is always on the left.
   vector<S2LaxPolygonShape::Loop> loops = {
-    s2textformat::ParsePoints("0:0, 0:3, 3:3"),  // CCW
-    s2textformat::ParsePoints("1:1, 2:2, 1:2")   // CW
+      s2textformat::ParsePointsOrDie("0:0, 0:3, 3:3"),  // CCW
+      s2textformat::ParsePointsOrDie("1:1, 2:2, 1:2")   // CW
   };
   S2LaxPolygonShape shape(loops);
 
@@ -263,10 +264,9 @@ TEST(S2LaxPolygonShape, ManyLoopPolygon) {
 
 TEST(S2LaxPolygonShape, DegenerateLoops) {
   vector<S2LaxPolygonShape::Loop> loops = {
-    s2textformat::ParsePoints("1:1, 1:2, 2:2, 1:2, 1:3, 1:2, 1:1"),
-    s2textformat::ParsePoints("0:0, 0:3, 0:6, 0:9, 0:6, 0:3, 0:0"),
-    s2textformat::ParsePoints("5:5, 6:6")
-  };
+      s2textformat::ParsePointsOrDie("1:1, 1:2, 2:2, 1:2, 1:3, 1:2, 1:1"),
+      s2textformat::ParsePointsOrDie("0:0, 0:3, 0:6, 0:9, 0:6, 0:3, 0:0"),
+      s2textformat::ParsePointsOrDie("5:5, 6:6")};
   S2LaxPolygonShape shape(loops);
   EXPECT_FALSE(shape.GetReferencePoint().contained);
   TestEncodedS2LaxPolygonShape(shape);
@@ -274,9 +274,8 @@ TEST(S2LaxPolygonShape, DegenerateLoops) {
 
 TEST(S2LaxPolygonShape, InvertedLoops) {
   vector<S2LaxPolygonShape::Loop> loops = {
-    s2textformat::ParsePoints("1:2, 1:1, 2:2"),
-    s2textformat::ParsePoints("3:4, 3:3, 4:4")
-  };
+      s2textformat::ParsePointsOrDie("1:2, 1:1, 2:2"),
+      s2textformat::ParsePointsOrDie("3:4, 3:3, 4:4")};
   S2LaxPolygonShape shape(loops);
   EXPECT_TRUE(s2shapeutil::ContainsBruteForce(shape, S2::Origin()));
   TestEncodedS2LaxPolygonShape(shape);

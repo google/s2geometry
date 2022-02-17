@@ -19,11 +19,12 @@
 #define S2_S2POINT_VECTOR_SHAPE_H_
 
 #include <vector>
+
 #include "s2/encoded_s2point_vector.h"
 #include "s2/s2shape.h"
 
 // S2PointVectorShape is an S2Shape representing a set of S2Points. Each point
-// is reprsented as a degenerate edge with the same starting and ending
+// is represented as a degenerate edge with the same starting and ending
 // vertices.
 //
 // This class is useful for adding a collection of points to an S2ShapeIndex.
@@ -64,8 +65,12 @@ class S2PointVectorShape : public S2Shape {
     return true;
   }
 
-  // S2Shape interface:
+  // S2Shape interface.
+
+  // Returns the number of points.
   int num_edges() const final { return num_points(); }
+
+  // Returns a point represented as a degenerate edge.
   Edge edge(int e) const final { return Edge(points_[e], points_[e]); }
   int dimension() const final { return 0; }
   ReferencePoint GetReferencePoint() const final {

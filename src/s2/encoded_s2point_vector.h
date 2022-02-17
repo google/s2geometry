@@ -19,6 +19,7 @@
 #define S2_ENCODED_S2POINT_VECTOR_H_
 
 #include <atomic>
+
 #include "absl/types/span.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/encoded_uint_vector.h"

@@ -24,40 +24,40 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using s2textformat::MakePoint;
+using s2textformat::MakePointOrDie;
 
 TEST(S2ContainsVertexQuery, Undetermined) {
-  S2ContainsVertexQuery q(MakePoint("1:2"));
-  q.AddEdge(MakePoint("3:4"), 1);
-  q.AddEdge(MakePoint("3:4"), -1);
+  S2ContainsVertexQuery q(MakePointOrDie("1:2"));
+  q.AddEdge(MakePointOrDie("3:4"), 1);
+  q.AddEdge(MakePointOrDie("3:4"), -1);
   EXPECT_EQ(0, q.ContainsSign());
 }
 
 TEST(S2ContainsVertexQuery, ContainedWithDuplicates) {
   // The S2::RefDir reference direction points approximately due west.
   // Containment is determined by the unmatched edge immediately clockwise.
-  S2ContainsVertexQuery q(MakePoint("0:0"));
-  q.AddEdge(MakePoint("3:-3"), -1);
-  q.AddEdge(MakePoint("1:-5"), 1);
-  q.AddEdge(MakePoint("2:-4"), 1);
-  q.AddEdge(MakePoint("1:-5"), -1);
+  S2ContainsVertexQuery q(MakePointOrDie("0:0"));
+  q.AddEdge(MakePointOrDie("3:-3"), -1);
+  q.AddEdge(MakePointOrDie("1:-5"), 1);
+  q.AddEdge(MakePointOrDie("2:-4"), 1);
+  q.AddEdge(MakePointOrDie("1:-5"), -1);
   EXPECT_EQ(1, q.ContainsSign());
 }
 
 TEST(S2ContainsVertexQuery, NotContainedWithDuplicates) {
   // The S2::RefDir reference direction points approximately due west.
   // Containment is determined by the unmatched edge immediately clockwise.
-  S2ContainsVertexQuery q(MakePoint("1:1"));
-  q.AddEdge(MakePoint("1:-5"), 1);
-  q.AddEdge(MakePoint("2:-4"), -1);
-  q.AddEdge(MakePoint("3:-3"), 1);
-  q.AddEdge(MakePoint("1:-5"), -1);
+  S2ContainsVertexQuery q(MakePointOrDie("1:1"));
+  q.AddEdge(MakePointOrDie("1:-5"), 1);
+  q.AddEdge(MakePointOrDie("2:-4"), -1);
+  q.AddEdge(MakePointOrDie("3:-3"), 1);
+  q.AddEdge(MakePointOrDie("1:-5"), -1);
   EXPECT_EQ(-1, q.ContainsSign());
 }
 
 // Tests that S2ContainsVertexQuery is compatible with S2::AngleContainsVertex.
 TEST(S2ContainsVertexQuery, CompatibleWithAngleContainsVertex) {
-  auto points = S2Testing::MakeRegularPoints(MakePoint("89:1"),
+  auto points = S2Testing::MakeRegularPoints(MakePointOrDie("89:1"),
                                              S1Angle::Degrees(5), 10);
   S2PointLoopSpan loop(points);
   for (int i = 0; i < loop.size(); ++i) {

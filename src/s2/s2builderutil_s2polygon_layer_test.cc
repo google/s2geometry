@@ -62,7 +62,7 @@ void TestS2Polygon(const vector<const char*>& input_strs,
   ASSERT_TRUE(builder.Build(&error));
   // The input strings in tests may not be in normalized form, so we build an
   // S2Polygon and convert it back to a string.
-  unique_ptr<S2Polygon> expected(s2textformat::MakePolygon(expected_str));
+  unique_ptr<S2Polygon> expected(s2textformat::MakePolygonOrDie(expected_str));
   EXPECT_EQ(s2textformat::ToString(*expected),
             s2textformat::ToString(output));
 }
@@ -311,7 +311,7 @@ TEST(IndexedS2PolygonLayer, AddsShape) {
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PolygonLayer>(&index));
   const string& polygon_str = "0:0, 0:10, 10:0";
-  builder.AddPolygon(*s2textformat::MakePolygon(polygon_str));
+  builder.AddPolygon(*s2textformat::MakePolygonOrDie(polygon_str));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   EXPECT_EQ(1, index.num_shape_ids());
