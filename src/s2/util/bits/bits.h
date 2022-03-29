@@ -58,6 +58,10 @@
 #if defined(_MSC_VER)
 #include <intrin.h>
 #endif
+// keep compatibility with abseil-cpp LTS branch "lts_2021_11_02"
+#if !defined(ABSL_ASSUME)
+#define ABSL_ASSUME(cond) ABSL_INTERNAL_ASSUME(cond)
+#endif
 
 #include <type_traits>
 
@@ -362,7 +366,7 @@ inline int Bits::Log2Floor(T &&n) {
 }
 
 inline int Bits::Log2FloorNonZero(uint32 n) {
-  ABSL_INTERNAL_ASSUME(n != 0);
+  ABSL_ASSUME(n != 0);
   return absl::bit_width(n) - 1;
 }
 
@@ -384,17 +388,17 @@ inline int Bits::Log2Floor64(T &&n) {
 }
 
 inline int Bits::Log2FloorNonZero64(uint64 n) {
-  ABSL_INTERNAL_ASSUME(n != 0);
+  ABSL_ASSUME(n != 0);
   return absl::bit_width(n) - 1;
 }
 
 inline int Bits::FindLSBSetNonZero(uint32 n) {
-  ABSL_INTERNAL_ASSUME(n != 0);
+  ABSL_ASSUME(n != 0);
   return absl::countr_zero(n);
 }
 
 inline int Bits::FindLSBSetNonZero64(uint64 n) {
-  ABSL_INTERNAL_ASSUME(n != 0);
+  ABSL_ASSUME(n != 0);
   return absl::countr_zero(n);
 }
 
