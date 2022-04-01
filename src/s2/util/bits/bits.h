@@ -58,9 +58,14 @@
 #if defined(_MSC_VER)
 #include <intrin.h>
 #endif
-// keep compatibility with abseil-cpp LTS branch "lts_2021_11_02"
-#if !defined(ABSL_ASSUME)
-#define ABSL_ASSUME(cond) ABSL_INTERNAL_ASSUME(cond)
+
+// TODO: Remove this and just use ABSL_ASSUME when it is in an LTS release.
+#if defined(ABSL_ASSUME)
+#define S2_ASSUME(cond) ABSL_ASSUME(cond)
+#elif defined(ABSL_INTERNAL_ASSUME)
+#define S2_ASSUME(cond) ABSL_INTERNAL_ASSUME(cond)
+#else
+#error "abseil-cpp must provide ABSL_ASSUME or ABSL_INTERNAL_ASSUME, what version are you using?"
 #endif
 
 #include <type_traits>
@@ -366,7 +371,7 @@ inline int Bits::Log2Floor(T &&n) {
 }
 
 inline int Bits::Log2FloorNonZero(uint32 n) {
-  ABSL_ASSUME(n != 0);
+  S2_ASSUME(n != 0);
   return absl::bit_width(n) - 1;
 }
 
@@ -388,17 +393,17 @@ inline int Bits::Log2Floor64(T &&n) {
 }
 
 inline int Bits::Log2FloorNonZero64(uint64 n) {
-  ABSL_ASSUME(n != 0);
+  S2_ASSUME(n != 0);
   return absl::bit_width(n) - 1;
 }
 
 inline int Bits::FindLSBSetNonZero(uint32 n) {
-  ABSL_ASSUME(n != 0);
+  S2_ASSUME(n != 0);
   return absl::countr_zero(n);
 }
 
 inline int Bits::FindLSBSetNonZero64(uint64 n) {
-  ABSL_ASSUME(n != 0);
+  S2_ASSUME(n != 0);
   return absl::countr_zero(n);
 }
 
