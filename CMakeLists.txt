@@ -155,6 +155,7 @@ add_library(s2
             src/s2/s2edge_distances.cc
             src/s2/s2edge_tessellator.cc
             src/s2/s2furthest_edge_query.cc
+            src/s2/s2hausdorff_distance_query.cc
             src/s2/s2latlng.cc
             src/s2/s2latlng_rect.cc
             src/s2/s2latlng_rect_bounder.cc
@@ -189,6 +190,7 @@ add_library(s2
             src/s2/s2shape_index_buffered_region.cc
             src/s2/s2shape_index_measures.cc
             src/s2/s2shape_measures.cc
+            src/s2/s2shape_nesting_query.cc
             src/s2/s2shapeutil_build_polygon_boundaries.cc
             src/s2/s2shapeutil_coding.cc
             src/s2/s2shapeutil_contains_brute_force.cc
@@ -202,7 +204,6 @@ add_library(s2
             src/s2/s2winding_operation.cc
             src/s2/strings/serialize.cc
             src/s2/util/bits/bit-interleave.cc
-            src/s2/util/bits/bits.cc
             src/s2/util/coding/coder.cc
             src/s2/util/coding/varint.cc
             src/s2/util/math/exactfloat/exactfloat.cc
@@ -323,6 +324,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2edge_vector_shape.h
               src/s2/s2error.h
               src/s2/s2furthest_edge_query.h
+              src/s2/s2hausdorff_distance_query.h
               src/s2/s2latlng.h
               src/s2/s2latlng_rect.h
               src/s2/s2latlng_rect_bounder.h
@@ -363,6 +365,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2shape_index_buffered_region.h
               src/s2/s2shape_index_region.h
               src/s2/s2shape_measures.h
+              src/s2/s2shape_nesting_query.h
               src/s2/s2shapeutil_build_polygon_boundaries.h
               src/s2/s2shapeutil_coding.h
               src/s2/s2shapeutil_contains_brute_force.h
@@ -392,6 +395,8 @@ install(FILES src/s2/base/casts.h
               src/s2/base/port.h
               src/s2/base/spinlock.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/base")
+install(FILES src/s2/util/bitmap/bitmap.h
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bitmap")
 install(FILES src/s2/util/bits/bits.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bits")
 install(FILES src/s2/util/coding/coder.h
@@ -487,6 +492,7 @@ if (GTEST_ROOT)
       src/s2/s2edge_vector_shape_test.cc
       src/s2/s2error_test.cc
       src/s2/s2furthest_edge_query_test.cc
+      src/s2/s2hausdorff_distance_query_test.cc
       src/s2/s2latlng_test.cc
       src/s2/s2latlng_rect_bounder_test.cc
       src/s2/s2latlng_rect_test.cc
@@ -524,6 +530,7 @@ if (GTEST_ROOT)
       src/s2/s2shape_index_region_test.cc
       src/s2/s2shape_index_test.cc
       src/s2/s2shape_measures_test.cc
+      src/s2/s2shape_nesting_query_test.cc
       src/s2/s2shapeutil_build_polygon_boundaries_test.cc
       src/s2/s2shapeutil_coding_test.cc
       src/s2/s2shapeutil_contains_brute_force_test.cc
