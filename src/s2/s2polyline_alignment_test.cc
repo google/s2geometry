@@ -15,6 +15,7 @@
 
 #include "s2/s2polyline_alignment.h"
 
+#include <memory>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -27,6 +28,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using absl::make_unique;
 using std::string;
 
 namespace s2polyline_alignment {
@@ -388,7 +390,7 @@ std::vector<std::unique_ptr<S2Polyline>> GenPolylines(
       pts.push_back(
           S2Testing::SamplePoint(S2Cap(loop[j], perturbation_radius)));
     }
-    polylines.push_back(absl::make_unique<S2Polyline>(pts));
+    polylines.push_back(make_unique<S2Polyline>(pts));
   }
   return polylines;
 }

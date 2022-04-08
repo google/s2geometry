@@ -22,7 +22,7 @@
 #include <bitset>
 #include <cmath>
 #include <cstddef>
-#include <map>
+#include <memory>
 #include <vector>
 
 #include "s2/base/integral_types.h"
@@ -88,6 +88,11 @@ class S2Loop final : public S2Region {
   // Default constructor.  The loop must be initialized by calling Init() or
   // Decode() before it is used.
   S2Loop();
+
+#ifndef SWIG
+  S2Loop(S2Loop&&);
+  S2Loop& operator=(S2Loop&&);
+#endif
 
   // Convenience constructor that calls Init() with the given vertices.
   explicit S2Loop(absl::Span<const S2Point> vertices);
@@ -337,8 +342,6 @@ class S2Loop final : public S2Region {
   ABSL_DEPRECATED("Inline the implementation")
   bool Contains(const S2Loop* b) const { return Contains(*b); }
   ABSL_DEPRECATED("Inline the implementation")
-  bool Intersects(const S2Loop* b) const { return Intersects(*b); }
-  ABSL_DEPRECATED("Inline the implementation")
   bool Equals(const S2Loop* b) const { return Equals(*b); }
   ABSL_DEPRECATED("Inline the implementation")
   bool BoundaryEquals(const S2Loop* b) const { return BoundaryEquals(*b); }
@@ -466,17 +469,6 @@ class S2Loop final : public S2Region {
   // REQUIRES: neither loop is empty.
   // REQUIRES: if b->is_full(), then reverse_b == false.
   bool ContainsNonCrossingBoundary(const S2Loop& b, bool reverse_b) const;
-
-#ifndef SWIG
-  ABSL_DEPRECATED("Inline the implementation")
-  bool ContainsNested(const S2Loop* b) const { return ContainsNested(*b); }
-  ABSL_DEPRECATED("Inline the implementation")
-  int CompareBoundary(const S2Loop* b) const { return CompareBoundary(*b); }
-  ABSL_DEPRECATED("Inline the implementation")
-  bool ContainsNonCrossingBoundary(const S2Loop* b, bool reverse_b) const {
-    return ContainsNonCrossingBoundary(*b, reverse_b);
-  }
-#endif
 
   // Wrapper class for indexing a loop (see S2ShapeIndex).  Once this object
   // is inserted into an S2ShapeIndex it is owned by that index, and will be

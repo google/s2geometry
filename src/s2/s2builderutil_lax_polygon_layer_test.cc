@@ -22,6 +22,7 @@
 #include <memory>
 #include <set>
 #include <string>
+
 #include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "absl/memory/memory.h"

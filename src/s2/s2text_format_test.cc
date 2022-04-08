@@ -15,6 +15,7 @@
 
 #include "s2/s2text_format.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,7 @@
 #include "s2/s2polyline.h"
 #include "s2/s2testing.h"
 
+using absl::make_unique;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -127,6 +129,15 @@ TEST(ToString, MinimalDigitsDoubleConstants) {
   }
 }
 
+TEST(ToString, FaceCellId) {
+  EXPECT_EQ("2/", s2textformat::ToString(S2CellId::FromFace(2)));
+}
+
+TEST(ToString, Level3CellId) {
+  EXPECT_EQ("2/033", s2textformat::ToString(
+                         S2CellId::FromFace(2).child(0).child(3).child(3)));
+}
+
 TEST(ToString, UninitializedLoop) {
   S2Loop loop;
   EXPECT_EQ("", s2textformat::ToString(loop));
@@ -158,7 +169,7 @@ TEST(ToString, EmptyPolygon) {
 }
 
 TEST(ToString, FullPolygon) {
-  S2Polygon full(absl::make_unique<S2Loop>(S2Loop::kFull()));
+  S2Polygon full(make_unique<S2Loop>(S2Loop::kFull()));
   EXPECT_EQ("full", s2textformat::ToString(full));
 }
 
@@ -176,6 +187,12 @@ TEST(ToString, LaxPolygonLoopSeparator) {
   auto polygon = s2textformat::MakeLaxPolygonOrDie(kLoop1 + "; " + kLoop2);
   EXPECT_EQ(kLoop1 + ";\n" + kLoop2, s2textformat::ToString(*polygon));
   EXPECT_EQ(kLoop1 + "; " + kLoop2, s2textformat::ToString(*polygon, "; "));
+}
+
+TEST(ToString, S2LatLngSpan) {
+  const std::vector<S2LatLng> latlngs =
+      s2textformat::ParseLatLngsOrDie("-20:150, -20:151, -19:150");
+  EXPECT_EQ("-20:150, -20:151, -19:150", s2textformat::ToString(latlngs));
 }
 
 TEST(MakeLaxPolygon, Empty) {
@@ -343,7 +360,7 @@ TEST(SafeMakePolyline, ValidInput) {
   S2Polyline expected({S2LatLng::FromDegrees(-20, 150).ToPoint(),
                        S2LatLng::FromDegrees(-20, 151).ToPoint(),
                        S2LatLng::FromDegrees(-19, 150).ToPoint()});
-  EXPECT_TRUE(polyline->Equals(&expected));
+  EXPECT_TRUE(polyline->Equals(expected));
 }
 
 TEST(SafeMakePolyline, InvalidInput) {
@@ -376,8 +393,8 @@ TEST(SafeMakePolygon, ValidInput) {
   std::vector<S2Point> vertices({S2LatLng::FromDegrees(-20, 150).ToPoint(),
                                  S2LatLng::FromDegrees(-20, 151).ToPoint(),
                                  S2LatLng::FromDegrees(-19, 150).ToPoint()});
-  S2Polygon expected(absl::make_unique<S2Loop>(vertices));
-  EXPECT_TRUE(polygon->Equals(&expected));
+  S2Polygon expected(make_unique<S2Loop>(vertices));
+  EXPECT_TRUE(polygon->Equals(expected));
 }
 
 TEST(SafeMakePolygon, InvalidInput) {
@@ -408,8 +425,8 @@ TEST(SafeMakeVerbatimPolygon, ValidInput) {
   std::vector<S2Point> vertices({S2LatLng::FromDegrees(-20, 150).ToPoint(),
                                  S2LatLng::FromDegrees(-20, 151).ToPoint(),
                                  S2LatLng::FromDegrees(-19, 150).ToPoint()});
-  S2Polygon expected(absl::make_unique<S2Loop>(vertices));
-  EXPECT_TRUE(polygon->Equals(&expected));
+  S2Polygon expected(make_unique<S2Loop>(vertices));
+  EXPECT_TRUE(polygon->Equals(expected));
 }
 
 TEST(SafeMakeVerbatimPolygon, InvalidInput) {
@@ -443,13 +460,13 @@ TEST(SafeMakeLaxPolygon, InvalidInput) {
 }
 
 TEST(SafeMakeIndex, ValidInput) {
-  auto index = absl::make_unique<MutableS2ShapeIndex>();
+  auto index = make_unique<MutableS2ShapeIndex>();
   EXPECT_TRUE(s2textformat::MakeIndex("# 0:0, 0:0 | 1:0, 2:0 #", &index));
   EXPECT_EQ("# 0:0, 0:0 | 1:0, 2:0 #", s2textformat::ToString(*index));
 }
 
 TEST(SafeMakeIndex, InvalidInput) {
-  auto index = absl::make_unique<MutableS2ShapeIndex>();
+  auto index = make_unique<MutableS2ShapeIndex>();
   EXPECT_FALSE(s2textformat::MakeIndex("# blah #", &index));
 }
 

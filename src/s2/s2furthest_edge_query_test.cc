@@ -15,8 +15,10 @@
 
 #include "s2/s2furthest_edge_query.h"
 
+#include <algorithm>
 #include <memory>
 #include <set>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>

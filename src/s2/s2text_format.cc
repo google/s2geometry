@@ -15,7 +15,9 @@
 
 #include "s2/s2text_format.h"
 
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "s2/base/logging.h"
@@ -348,7 +350,7 @@ string ToString(const S2LatLngRect& rect) {
   return out;
 }
 
-string ToString(const S2CellId& cell_id) {
+string ToString(const S2CellId cell_id) {
   return cell_id.ToString();
 }
 
