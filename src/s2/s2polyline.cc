@@ -142,7 +142,7 @@ void S2Polyline::InitToSimplified(
 
 void S2Polyline::InitFromBuilder(const S2Polyline& polyline,
                                  S2Builder* builder) {
-  builder->StartLayer(absl::make_unique<S2PolylineLayer>(this));
+  builder->StartLayer(make_unique<S2PolylineLayer>(this));
   builder->AddPolyline(polyline);
   S2Error error;
   S2_CHECK(builder->Build(&error)) << "Could not build polyline: " << error;

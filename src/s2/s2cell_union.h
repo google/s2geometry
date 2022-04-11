@@ -408,4 +408,9 @@ inline std::ostream& operator<<(std::ostream& os, const S2CellUnion& u) {
   return os << u.ToString();
 }
 
+template <typename H>
+H AbslHashValue(H h, const S2CellUnion& u) {
+  return H::combine(std::move(h), absl::HashOf(u.cell_ids()));
+}
+
 #endif  // S2_S2CELL_UNION_H_

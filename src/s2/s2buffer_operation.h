@@ -18,6 +18,7 @@
 #ifndef S2_S2BUFFER_OPERATION_H_
 #define S2_S2BUFFER_OPERATION_H_
 
+#include <memory>
 #include <vector>
 
 #include "s2/s1angle.h"

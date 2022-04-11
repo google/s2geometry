@@ -22,6 +22,7 @@
 #include <memory>
 #include <set>
 #include <string>
+
 #include "s2/base/casts.h"
 #include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
@@ -146,8 +147,8 @@ TEST(S2PolygonLayer, DuplicateInputEdges) {
   ASSERT_EQ(2, output.num_loops());
   unique_ptr<S2Loop> loop0(s2textformat::MakeLoopOrDie("0:0, 0:2, 2:2, 2:0"));
   unique_ptr<S2Loop> loop1(s2textformat::MakeLoopOrDie("0:2, 2:2, 1:1"));
-  EXPECT_TRUE(loop0->Equals(output.loop(0)));
-  EXPECT_TRUE(loop1->Equals(output.loop(1)));
+  EXPECT_TRUE(loop0->Equals(*output.loop(0)));
+  EXPECT_TRUE(loop1->Equals(*output.loop(1)));
 }
 
 // Since we don't expect to have any crossing edges, the key for each edge is

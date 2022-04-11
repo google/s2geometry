@@ -17,6 +17,7 @@
 
 #include "s2/s2closest_edge_query.h"
 
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -84,6 +85,24 @@ TEST(S2ClosestEdgeQuery, OptionsNotModified) {
   EXPECT_EQ(options.max_results(), query.options().max_results());
   EXPECT_EQ(options.max_distance(), query.options().max_distance());
   EXPECT_EQ(options.max_error(), query.options().max_error());
+}
+
+TEST(S2ClosestEdgeQuery, OptionsS1AngleSetters) {
+  // Verify that the S1Angle and S1ChordAngle versions do the same thing.
+  // This is mainly to prevent the (so far unused) S1Angle versions from
+  // being detected as dead code.
+  S2ClosestEdgeQuery::Options angle_options, chord_angle_options;
+  angle_options.set_max_distance(S1Angle::Degrees(1));
+  chord_angle_options.set_max_distance(S1ChordAngle::Degrees(1));
+  EXPECT_EQ(chord_angle_options.max_distance(), angle_options.max_distance());
+
+  angle_options.set_inclusive_max_distance(S1Angle::Degrees(1));
+  chord_angle_options.set_inclusive_max_distance(S1ChordAngle::Degrees(1));
+  EXPECT_EQ(chord_angle_options.max_distance(), angle_options.max_distance());
+
+  angle_options.set_conservative_max_distance(S1Angle::Degrees(1));
+  chord_angle_options.set_conservative_max_distance(S1ChordAngle::Degrees(1));
+  EXPECT_EQ(chord_angle_options.max_distance(), angle_options.max_distance());
 }
 
 TEST(S2ClosestEdgeQuery, DistanceEqualToLimit) {

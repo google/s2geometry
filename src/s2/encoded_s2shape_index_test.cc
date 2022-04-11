@@ -18,7 +18,7 @@
 #include "s2/encoded_s2shape_index.h"
 
 #include <algorithm>
-#include <map>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -221,7 +221,7 @@ class IndexedLaxPolylineLayer : public S2Builder::Layer {
   void Build(const Graph& g, S2Error* error) override {
     layer_.Build(g, error);
     if (error->ok() && polyline_->num_vertices() > 0) {
-      index_->Add(absl::make_unique<S2LaxPolylineShape>(*polyline_));
+      index_->Add(make_unique<S2LaxPolylineShape>(*polyline_));
     }
   }
 
@@ -283,12 +283,12 @@ class LazyDecodeTest : public s2testing::ReaderWriterTest {
       }
     }
     Encoder encoder;
-    s2shapeutil::CompactEncodeTaggedShapes(input, &encoder);
+    S2_CHECK(s2shapeutil::CompactEncodeTaggedShapes(input, &encoder));
     input.Encode(&encoder);
     encoded_.assign(encoder.base(), encoder.length());
 
     Decoder decoder(encoded_.data(), encoded_.size());
-    index_.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder));
+    S2_CHECK(index_.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
   }
 
   void WriteOp() override {
@@ -337,7 +337,8 @@ TEST(EncodedS2ShapeIndex, JavaByteCompatibility) {
       "B805F6EF3F28516A6D8FDBA13F27DCF7C958DEA13F28C809010408020010");
   Decoder decoder(bytes.data(), bytes.length());
   MutableS2ShapeIndex actual;
-  actual.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder));
+  ASSERT_TRUE(
+      actual.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder)));
 
   s2testing::ExpectEqual(expected, actual);
 }
