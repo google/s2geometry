@@ -967,5 +967,36 @@ class RegionTermIndexerTest(unittest.TestCase):
     self.assertTrue(cell.is_valid())
     self.assertEqual("5/31200", cell.ToString())
 
+class S2PolygonTestCase(unittest.TestCase):
+  def testInitToUnionSame(self):
+    cell1 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    polygon1 = s2.S2Polygon(cell1)
+
+    cell2 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    polygon2 = s2.S2Polygon(cell2)
+
+    polygon3 = s2.S2Polygon()
+    polygon3.InitToUnion(polygon1, polygon2)
+
+    self.assertEqual(1, polygon3.num_loops())
+    loop = polygon3.loop(0)
+    self.assertEqual(4, loop.num_vertices())
+
+  def testInitToUnionDistinct(self):
+    cell1 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    polygon1 = s2.S2Polygon(cell1)
+
+    cell2 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(13.0, 4.0)).parent(8))
+    polygon2 = s2.S2Polygon(cell2)
+
+    polygon3 = s2.S2Polygon()
+    polygon3.InitToUnion(polygon1, polygon2)
+
+    self.assertEqual(2, polygon3.num_loops())
+    loop = polygon3.loop(0)
+    self.assertEqual(4, loop.num_vertices())
+    loop = polygon3.loop(1)
+    self.assertEqual(4, loop.num_vertices())
+
 if __name__ == "__main__":
   unittest.main()

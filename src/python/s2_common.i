@@ -658,6 +658,7 @@ class S2Point {
 %unignore S2Polygon::GetRectBound;
 %unignore S2Polygon::Init;
 %unignore S2Polygon::InitNested;
+%unignore S2Polygon::InitToUnion;
 %unignore S2Polygon::Intersects;
 %unignore S2Polygon::IntersectWithPolyline;
 %unignore S2Polygon::IsValid;
