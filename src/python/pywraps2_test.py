@@ -787,6 +787,13 @@ class PyWrapS2TestCase(unittest.TestCase):
     radius_m = s2.S2Earth.RadiansToMeters(angle.radians())
     self.assertEqual(radius_m, 12340.0)
 
+  def testS2Point_ToFromRaw(self):
+    p = s2.S2Point_FromRaw(1.0, 1.0, 1.0)
+    p = p.Normalize()
+    p_raw = s2.S2Point_ToRaw(p)
+    self.assertAlmostEqual(p_raw[0], 0.57735027)
+    self.assertAlmostEqual(p_raw[1], 0.57735027)
+    self.assertAlmostEqual(p_raw[2], 0.57735027)
 
 class RegionTermIndexerTest(unittest.TestCase):
   def _randomCaps(self, query_type, **indexer_options):

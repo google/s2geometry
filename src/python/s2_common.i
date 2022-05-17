@@ -157,6 +157,10 @@ std::vector<S2Polyline *> *out(std::vector<S2Polyline *> temp) {
     return SWIG_NewPointerObj(new S2Point(x, y, z), SWIGTYPE_p_S2Point,
                               SWIG_POINTER_OWN);
   }
+
+  static PyObject *S2Point_ToRaw(const S2Point& p) {
+    return Py_BuildValue("ddd", p[0], p[1], p[2]);
+  }
 %}
 
 // We provide our own definition of S2Point, because the real one is too
