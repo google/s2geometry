@@ -20,6 +20,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2predicates.h"
 #include "s2/s2region_coverer.h"
 #include "s2/s2region_term_indexer.h"
 #include "s2/s2cell.h"
@@ -696,6 +697,8 @@ class S2Point {
 %unignore S2Polyline::UnInterpolate;
 %unignore S2Polyline::num_vertices;
 %unignore S2Polyline::vertex;
+%unignore s2pred;
+%unignore s2pred::OrderedCCW;
 %unignore S2RegionCoverer;
 %unignore S2RegionCoverer::S2RegionCoverer;
 %unignore S2RegionCoverer::~S2RegionCoverer;
@@ -733,6 +736,7 @@ class S2Point {
 %include "s2/s2pointutil.h"
 %include "s2/s2polygon.h"
 %include "s2/s2polyline.h"
+%include "s2/s2predicates.h"
 %include "s2/s2region_coverer.h"
 %include "s2/s2region_term_indexer.h"
 %include "s2/s2cell.h"
