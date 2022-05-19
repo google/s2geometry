@@ -25,9 +25,9 @@
 #include "s2/util/coding/varint.h"
 #include "s2/s2shapeutil_get_reference_point.h"
 
-using absl::make_unique;
 using absl::MakeSpan;
 using absl::Span;
+using absl::make_unique;
 using std::vector;
 using ChainPosition = S2Shape::ChainPosition;
 
@@ -125,7 +125,7 @@ void S2LaxPolygonShape::Init(Span<const Span<const S2Point>> loops) {
     // since "new T[]" stores its own copy of the array size.
     //
     // Note that even absl::make_unique_for_overwrite<> and c++20's
-    // std::make_unique_for_overwrite<T[]> default-construct all elements when
+    // absl::make_unique_for_overwrite<T[]> default-construct all elements when
     // T is a class type.
     vertices_ = make_unique<S2Point[]>(num_vertices_);
     std::copy(loops[0].begin(), loops[0].end(), vertices_.get());

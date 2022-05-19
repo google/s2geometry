@@ -342,7 +342,6 @@ TEST(S2CellId, DecodeFailsWithTruncatedBuffer) {
   EXPECT_FALSE(decoded_id.Decode(&decoder));
 }
 
-
 static const int kMaxExpandLevel = 3;
 
 static void ExpandCell(

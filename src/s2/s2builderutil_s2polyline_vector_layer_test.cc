@@ -29,10 +29,10 @@
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
 using s2builderutil::IndexedS2PolylineVectorLayer;
 using s2builderutil::S2PolylineVectorLayer;
 using s2textformat::MakePolylineOrDie;
+using absl::make_unique;
 using std::string;
 using std::unique_ptr;
 using std::vector;

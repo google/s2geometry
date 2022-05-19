@@ -383,7 +383,7 @@ TEST(EncodedS2PointVectorTest, SnappedFractalLoops) {
       lax_polygon_size +=
           TestEncodedS2PointVector(points, CodingHint::COMPACT, -1) + 2;
     }
-    printf("n=%5d  s2=%9" PRIuS "  lax=%9" PRIuS "\n",
+    printf("n=%5d  s2=%9zu  lax=%9zu\n",
            num_points, s2polygon_size, lax_polygon_size);
   }
 }

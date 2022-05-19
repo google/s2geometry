@@ -30,6 +30,7 @@
 #include "absl/base/casts.h"
 #include "absl/strings/str_cat.h"
 #include "s2/util/bits/bits.h"
+#include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/s2coords.h"
 #include "s2/s2latlng.h"

@@ -39,10 +39,10 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
 using absl::StrCat;
 using s2builderutil::S2CellIdSnapFunction;
 using std::fabs;
+using absl::make_unique;
 using std::string;
 using std::unique_ptr;
 using std::vector;

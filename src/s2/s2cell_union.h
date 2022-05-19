@@ -28,6 +28,7 @@
 #include "s2/base/logging.h"
 #include "absl/base/macros.h"
 #include "absl/flags/flag.h"
+#include "absl/hash/hash.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2region.h"

@@ -41,10 +41,10 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
 using s2shapeutil::ShapeEdgeId;
 using s2textformat::MakeIndexOrDie;
 using s2textformat::MakePointOrDie;
+using absl::make_unique;
 using std::min;
 using std::pair;
 using std::string;
@@ -208,12 +208,26 @@ TEST(S2ClosestEdgeQuery, TargetPolygonContainingIndexedPoints) {
   target.set_include_interiors(true);
   auto results = query.FindClosestEdges(&target);
   ASSERT_EQ(2, results.size());
+
   EXPECT_EQ(S1ChordAngle::Zero(), results[0].distance());
   EXPECT_EQ(0, results[0].shape_id());
   EXPECT_EQ(2, results[0].edge_id());  // 1:11
+  EXPECT_FALSE(results[0].is_interior());
+  S2Shape::Edge e0 = query.GetEdge(results[0]);
+  EXPECT_TRUE(S2::ApproxEquals(e0.v0, S2LatLng::FromDegrees(1, 11).ToPoint()))
+      << S2LatLng(e0.v0);
+  EXPECT_TRUE(S2::ApproxEquals(e0.v1, S2LatLng::FromDegrees(1, 11).ToPoint()))
+      << S2LatLng(e0.v1);
+
   EXPECT_EQ(S1ChordAngle::Zero(), results[1].distance());
   EXPECT_EQ(0, results[1].shape_id());
   EXPECT_EQ(3, results[1].edge_id());  // 3:13
+  EXPECT_FALSE(results[1].is_interior());
+  S2Shape::Edge e1 = query.GetEdge(results[1]);
+  EXPECT_TRUE(S2::ApproxEquals(e1.v0, S2LatLng::FromDegrees(3, 13).ToPoint()))
+      << S2LatLng(e1.v0);
+  EXPECT_TRUE(S2::ApproxEquals(e1.v1, S2LatLng::FromDegrees(3, 13).ToPoint()))
+      << S2LatLng(e1.v1);
 }
 
 TEST(S2ClosestEdgeQuery, EmptyTargetOptimized) {

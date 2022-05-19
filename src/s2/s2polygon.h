@@ -517,14 +517,6 @@ class S2Polygon final : public S2Region {
                      int snap_level = S2CellId::kMaxLevel) {
     return InitToSnapped(*polygon, snap_level);
   }
-  ABSL_DEPRECATED("Inline the implementation")
-  void InitToSimplifiedInCell(
-      const S2Polygon* a, const S2Cell& cell, S1Angle snap_radius,
-      S1Angle boundary_tolerance = S1Angle::Radians(1e-15)) {
-    return InitToSimplifiedInCell(*a, cell, snap_radius, boundary_tolerance);
-  }
-  ABSL_DEPRECATED("Inline the implementation")
-  void InitToComplement(const S2Polygon* a) { return InitToComplement(*a); }
 #endif
 
   // Invert the polygon (replace it by its complement).
@@ -680,8 +672,6 @@ class S2Polygon final : public S2Region {
   bool ApproxEquals(const S2Polygon* b, S1Angle tolerance) const {
     return ApproxEquals(*b, tolerance);
   }
-  ABSL_DEPRECATED("Inline the implementation")
-  bool BoundaryEquals(const S2Polygon* b) const { return BoundaryEquals(*b); }
 #endif
 
   // Return true if two polygons have the same boundary except for vertex
@@ -949,12 +939,6 @@ class S2Polygon final : public S2Region {
   // order of loop vertices.  This function is used to choose which loop to
   // invert in the case where several loops have exactly the same area.
   static int CompareLoops(const S2Loop& a, const S2Loop& b);
-#ifndef SWIG
-  ABSL_DEPRECATED("Inline the implementation")
-  static int CompareLoops(const S2Loop* a, const S2Loop* b) {
-    return CompareLoops(*a, *b);
-  }
-#endif
 
   std::vector<std::unique_ptr<S2Loop> > loops_;
 

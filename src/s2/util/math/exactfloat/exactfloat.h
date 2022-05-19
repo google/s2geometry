@@ -115,6 +115,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <ostream>
 #include <string>
 
 #include "s2/base/integral_types.h"

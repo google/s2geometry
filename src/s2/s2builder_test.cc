@@ -59,15 +59,6 @@
 
 using absl::StrAppend;
 using absl::StrCat;
-using absl::make_unique;
-using std::cout;
-using std::endl;
-using std::make_pair;
-using std::min;
-using std::pair;
-using std::string;
-using std::unique_ptr;
-using std::vector;
 using s2builderutil::GraphClone;
 using s2builderutil::IdentitySnapFunction;
 using s2builderutil::IntLatLngSnapFunction;
@@ -79,6 +70,15 @@ using s2builderutil::S2PolylineVectorLayer;
 using s2textformat::MakePointOrDie;
 using s2textformat::MakePolygonOrDie;
 using s2textformat::MakePolylineOrDie;
+using std::cout;
+using std::endl;
+using std::make_pair;
+using absl::make_unique;
+using std::min;
+using std::pair;
+using std::string;
+using std::unique_ptr;
+using std::vector;
 using EdgeType = S2Builder::EdgeType;
 using InputEdgeId = S2Builder::Graph::InputEdgeId;
 using Graph = S2Builder::Graph;
@@ -1712,6 +1712,13 @@ TEST(S2Builder, IncorrectSeparationSiteBug) {
       S2Point(1, 2.2603503297237029e-320, 4.7729929394856619e-65));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error)) << error;
+}
+
+TEST(S2Builder, PushPopLabel) {
+  // TODO(b/232074544): Test more thoroughly.
+  S2Builder builder;
+  builder.push_label(S2Builder::Label{1});
+  builder.pop_label();
 }
 
 }  // namespace

@@ -31,10 +31,10 @@
 #include "s2/s2debug.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
 using s2builderutil::IndexedS2PolygonLayer;
 using s2builderutil::S2PolygonLayer;
 using s2textformat::MakePolylineOrDie;
+using absl::make_unique;
 using std::map;
 using std::set;
 using std::string;

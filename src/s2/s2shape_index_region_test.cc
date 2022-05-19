@@ -29,7 +29,6 @@
 #include "s2/s2testing.h"
 #include "s2/s2wrapped_shape.h"
 
-
 using absl::make_unique;
 using std::map;
 using std::string;

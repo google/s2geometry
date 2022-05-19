@@ -27,6 +27,7 @@
 #include "s2/base/commandlineflags.h"
 #include "s2/base/integral_types.h"
 #include "absl/base/macros.h"
+#include "absl/strings/string_view.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
@@ -317,7 +318,7 @@ bool CheckResultSet(const std::vector<std::pair<Distance, Id>>& x,
                     int max_size, Distance max_distance,
                     typename Distance::Delta max_error,
                     typename Distance::Delta max_pruning_error,
-                    const std::string& label) {
+                    absl::string_view label) {
   using Result = std::pair<Distance, Id>;
   // Results should be sorted by distance, but not necessarily then by Id.
   EXPECT_TRUE(std::is_sorted(x.begin(), x.end(),

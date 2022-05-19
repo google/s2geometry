@@ -485,6 +485,11 @@ static const char* kPrecisionNames[] = {
   "double", "long double", "exact", "symbolic"
 };
 
+// If `sizeof(long double) == sizeof(double)`, then we will never do
+// calculations with `long double` and instead fall back to exact.
+constexpr Precision kLongDoublePrecision =
+    s2pred::kHasLongDouble ? LONG_DOUBLE : EXACT;
+
 // A helper class that keeps track of how often each precision was used and
 // generates a string for logging purposes.
 class PrecisionStats {
@@ -604,7 +609,7 @@ TEST(CompareDistances, Coverage) {
       1, DOUBLE);
   TestCompareDistances<Sin2Distances>(
       S2Point(2, 0, 0), S2Point(2, -1, 0), S2Point(2, 1, 1e-8),
-      -1, LONG_DOUBLE);
+      -1, kLongDoublePrecision);
   TestCompareDistances<Sin2Distances>(
       S2Point(2, 0, 0), S2Point(2, -1, 0), S2Point(2, 1, 1e-100),
       -1, EXACT);
@@ -624,7 +629,7 @@ TEST(CompareDistances, Coverage) {
       -1, DOUBLE);
   TestCompareDistances<CosDistances>(
       S2Point(1, 1, 1), S2Point(1, -1, 0), S2Point(-1, 1, 3e-18),
-      1, LONG_DOUBLE);
+      1, kLongDoublePrecision);
   TestCompareDistances<CosDistances>(
       S2Point(1, 1, 1), S2Point(1, -1, 0), S2Point(-1, 1, 1e-100),
       1, EXACT);
@@ -644,7 +649,7 @@ TEST(CompareDistances, Coverage) {
       S2Point(1, 1 - 1e-15, 1e-21), 1, DOUBLE);
   TestCompareDistances<MinusSin2Distances>(
       S2Point(-1, -1, 0), S2Point(2, 1, 0), S2Point(2, 1, 1e-8),
-      1, LONG_DOUBLE);
+      1, kLongDoublePrecision);
   TestCompareDistances<MinusSin2Distances>(
       S2Point(-1, -1, 0), S2Point(2, 1, 0), S2Point(2, 1, 1e-30),
       1, EXACT);
@@ -789,7 +794,7 @@ TEST(CompareDistance, Coverage) {
       S1ChordAngle::Radians(1e-15), -1, DOUBLE);
   TestCompareDistance<Sin2Distance>(
       S2Point(1, 0, 0), S2Point(1, 1, 0),
-      S1ChordAngle::Radians(M_PI_4), -1, LONG_DOUBLE);
+      S1ChordAngle::Radians(M_PI_4), -1, kLongDoublePrecision);
   TestCompareDistance<Sin2Distance>(
       S2Point(1, 1e-40, 0), S2Point(1 + DBL_EPSILON, 1e-40, 0),
       S1ChordAngle::Radians(0.9 * DBL_EPSILON * 1e-40), 1, EXACT);
@@ -812,7 +817,7 @@ TEST(CompareDistance, Coverage) {
       S1ChordAngle::Right(), 1, DOUBLE);
   TestCompareDistance<CosDistance>(
       S2Point(1, 1, 0), S2Point(1, -1 - DBL_EPSILON, 0),
-      S1ChordAngle::Right(), 1, LONG_DOUBLE);
+      S1ChordAngle::Right(), 1, kLongDoublePrecision);
   TestCompareDistance<CosDistance>(
       S2Point(1, 1, 0), S2Point(1, -1, 1e-30),
       S1ChordAngle::Right(), 0, EXACT);
@@ -901,7 +906,7 @@ TEST(CompareEdgeDistance, Coverage) {
       S1ChordAngle::Radians(1e-15 + DBL_EPSILON), -1, DOUBLE);
   TestCompareEdgeDistance(
       S2Point(1, 1, 1e-15), S2Point(1, 0, 0), S2Point(0, 1, 0),
-      S1ChordAngle::Radians(1e-15 + DBL_EPSILON), -1, LONG_DOUBLE);
+      S1ChordAngle::Radians(1e-15 + DBL_EPSILON), -1, kLongDoublePrecision);
   TestCompareEdgeDistance(
       S2Point(1, 1, 1e-40), S2Point(1, 0, 0), S2Point(0, 1, 0),
       S1ChordAngle::Radians(1e-40), -1, EXACT);
@@ -917,7 +922,7 @@ TEST(CompareEdgeDistance, Coverage) {
   TestCompareEdgeDistance(
       S2Point(1e-15, 0, 1), S2Point(1, 0, 0), S2Point(0, 1, 0),
       S1ChordAngle::Radians(M_PI_2 - 1e-15 - DBL_EPSILON),
-      1, LONG_DOUBLE);
+      1, kLongDoublePrecision);
   TestCompareEdgeDistance(
       S2Point(1e-40, 0, 1), S2Point(1, 0, 0), S2Point(0, 1, 0),
       S1ChordAngle::Right(), -1, EXACT);
@@ -934,7 +939,7 @@ TEST(CompareEdgeDistance, Coverage) {
       S1ChordAngle::Right(), 1, DOUBLE);
   TestCompareEdgeDistance(
       S2Point(1e-18, -1, 0), S2Point(1, 0, 0), S2Point(1, 1, 0),
-      S1ChordAngle::Right(), -1, LONG_DOUBLE);
+      S1ChordAngle::Right(), -1, kLongDoublePrecision);
   TestCompareEdgeDistance(
       S2Point(1e-100, -1, 0), S2Point(1, 0, 0), S2Point(1, 1, 0),
       S1ChordAngle::Right(), -1, EXACT);
@@ -948,7 +953,7 @@ TEST(CompareEdgeDistance, Coverage) {
       S1ChordAngle::Right(), 1, DOUBLE);
   TestCompareEdgeDistance(
       S2Point(-1, 0, 0), S2Point(1, 0, 0), S2Point(1e-18, 1, 0),
-      S1ChordAngle::Right(), 1, LONG_DOUBLE);
+      S1ChordAngle::Right(), 1, kLongDoublePrecision);
   TestCompareEdgeDistance(
       S2Point(-1, 0, 0), S2Point(1, 0, 0), S2Point(1e-100, 1, 0),
       S1ChordAngle::Right(), 1, EXACT);
@@ -1099,7 +1104,7 @@ TEST(CompareEdgeDirections, Coverage) {
                             1, DOUBLE);
   TestCompareEdgeDirections(S2Point(1, 0, 1e-18), S2Point(1, 1, 0),
                             S2Point(0, -1, 0), S2Point(0, 0, 1),
-                            1, LONG_DOUBLE);
+                            1, kLongDoublePrecision);
   TestCompareEdgeDirections(S2Point(1, 0, 1e-50), S2Point(1, 1, 0),
                             S2Point(0, -1, 0), S2Point(0, 0, 1),
                             1, EXACT);
@@ -1221,7 +1226,7 @@ TEST(EdgeCircumcenterSign, Coverage) {
   TestEdgeCircumcenterSign(
       S2Point(1, -1, 0), S2Point(1, 1, 0),
       S2Point(1, -1e-5, 1), S2Point(1, 1e-5, -1), S2Point(1, 1 - 1e-9, 1e-5),
-      -1, LONG_DOUBLE);
+      -1, kLongDoublePrecision);
   TestEdgeCircumcenterSign(
       S2Point(1, -1, 0), S2Point(1, 1, 0),
       S2Point(1, -1e-5, 1), S2Point(1, 1e-5, -1), S2Point(1, 1 - 1e-15, 1e-5),
@@ -1380,11 +1385,11 @@ TEST(VoronoiSiteExclusion, Coverage) {
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-10, 1e-5), S2Point(1, 1e-10, -1e-5),
       S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1e-5),
-      Excluded::NEITHER, LONG_DOUBLE);
+      Excluded::NEITHER, kLongDoublePrecision);
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-17, 1e-5), S2Point(1, 1e-17, -1e-5),
       S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1e-4),
-      Excluded::NEITHER, LONG_DOUBLE);
+      Excluded::NEITHER, kLongDoublePrecision);
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-20, 1e-5), S2Point(1, 1e-20, -1e-5),
       S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1e-5),
@@ -1399,11 +1404,11 @@ TEST(VoronoiSiteExclusion, Coverage) {
   TestVoronoiSiteExclusion(
       S2Point(1, -1.00105e-6, 1.0049999999e-5), S2Point(1, 0, -1e-5),
       S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1.005e-5),
-      Excluded::FIRST, LONG_DOUBLE);
+      Excluded::FIRST, kLongDoublePrecision);
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-6, 1.005e-5), S2Point(1, 0, -1e-5),
       S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1.005e-5),
-      Excluded::FIRST, LONG_DOUBLE);
+      Excluded::FIRST, kLongDoublePrecision);
   TestVoronoiSiteExclusion(
       S2Point(1, -1e-31, 1.005e-30), S2Point(1, 0, -1e-30),
       S2Point(1, -1, 0), S2Point(1, 1, 0), S1ChordAngle::Radians(1.005e-30),

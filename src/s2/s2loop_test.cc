@@ -55,9 +55,9 @@
 #include "s2/util/math/matrix3x3.h"
 #include "s2/util/math/vector.h"
 
-using absl::make_unique;
 using ::s2textformat::MakeLoopOrDie;
 using std::fabs;
+using absl::make_unique;
 using std::map;
 using std::max;
 using std::min;
@@ -1193,16 +1193,20 @@ TEST(S2Loop, IsValidDetectsInvalidLoops) {
   // Some edges cross
   CheckLoopIsInvalid("20:20, 21:21, 21:20.5, 21:20, 20:21", "crosses");
 
+  // Adjacent antipodal vertices
+  CheckLoopIsInvalid({S2Point(1, 0, 0), S2Point(-1, 0, 0), S2Point(0, 0, 1)},
+                    "antipodal");
+}
+
+#if GTEST_HAS_DEATH_TEST
+TEST(S2LoopDeathTest, IsValidDetectsInvalidLoops) {
   // Points with non-unit length (triggers S2_DCHECK failure in debug)
   EXPECT_DEBUG_DEATH(
       CheckLoopIsInvalid({S2Point(2, 0, 0), S2Point(0, 1, 0), S2Point(0, 0, 1)},
                          "unit length"),
       "IsUnitLength");
-
-  // Adjacent antipodal vertices
-  CheckLoopIsInvalid({S2Point(1, 0, 0), S2Point(-1, 0, 0), S2Point(0, 0, 1)},
-                    "antipodal");
 }
+#endif
 
 // Helper function for testing the distance methods.  "boundary_x" is the
 // expected result of projecting "x" onto the loop boundary.  For convenience

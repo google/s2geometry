@@ -25,6 +25,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <string>
 
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"

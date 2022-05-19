@@ -71,13 +71,13 @@
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 
 using absl::flat_hash_set;
-using absl::make_unique;
 using s2builderutil::IdentitySnapFunction;
 using s2builderutil::S2CellIdSnapFunction;
 using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
 using s2builderutil::S2PolylineVectorLayer;
 using std::fabs;
+using absl::make_unique;
 using std::pair;
 using std::sqrt;
 using std::unique_ptr;
@@ -138,7 +138,9 @@ S2Polygon::S2Polygon(S2Polygon&& b)
   // `index_` has a pointer to an S2Polygon::Shape which points to S2Polygon.
   // But, we've moved to a new address, so get the Shape back out of the index
   // and update it to point to our new location.
-  down_cast<Shape*>(*index_.begin())->polygon_ = this;
+  if (index_.begin() != index_.end()) {
+    down_cast<Shape*>(*index_.begin())->polygon_ = this;
+  }
 }
 
 S2Polygon& S2Polygon::operator=(S2Polygon&& b) {
@@ -161,7 +163,9 @@ S2Polygon& S2Polygon::operator=(S2Polygon&& b) {
   // `index_` has a pointer to an S2Polygon::Shape which points to S2Polygon.
   // But, we've moved to a new address, so get the Shape back out of the index
   // and update it to point to our new location.
-  down_cast<Shape*>(*index_.begin())->polygon_ = this;
+  if (index_.begin() != index_.end()) {
+    down_cast<Shape*>(*index_.begin())->polygon_ = this;
+  }
 
   return *this;
 }
