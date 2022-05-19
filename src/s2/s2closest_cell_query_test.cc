@@ -40,10 +40,10 @@
 
 namespace {
 
-using absl::make_unique;
 using s2testing::FractalLoopShapeIndexFactory;
 using s2textformat::MakeCellIdOrDie;
 using s2textformat::MakePointOrDie;
+using absl::make_unique;
 using std::pair;
 using std::unique_ptr;
 using std::vector;

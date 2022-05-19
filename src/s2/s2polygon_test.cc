@@ -72,9 +72,9 @@
 #include "s2/util/math/matrix3x3.h"
 
 using absl::StrCat;
-using absl::make_unique;
 using s2builderutil::IntLatLngSnapFunction;
 using s2builderutil::S2PolygonLayer;
+using absl::make_unique;
 using std::max;
 using std::min;
 using std::numeric_limits;
@@ -738,6 +738,18 @@ TEST_F(S2PolygonTestBase, ValidAfterMove) {
     moved = std::move(polygon);
     S2_CHECK(!moved.is_empty());
     EXPECT_TRUE(moved.IsValid());
+  }
+
+  {
+    S2Polygon polygon;
+    S2Polygon moved(std::move(polygon));
+    EXPECT_TRUE(moved.is_empty());
+  }
+
+  {
+    S2Polygon polygon;
+    S2Polygon moved = std::move(polygon);
+    EXPECT_TRUE(moved.is_empty());
   }
 }
 
@@ -2647,7 +2659,7 @@ TEST(InitToSimplifiedInCell, PointsOnCellBoundaryKept) {
   EXPECT_TRUE(simplified.is_empty());
   S2Polygon simplified_in_cell;
   simplified_in_cell.InitToSimplifiedInCell(*polygon, cell, tolerance);
-  EXPECT_TRUE(simplified_in_cell.BoundaryEquals(polygon.get()));
+  EXPECT_TRUE(simplified_in_cell.BoundaryEquals(*polygon));
   EXPECT_EQ(3, simplified_in_cell.num_vertices());
   EXPECT_EQ(-1, simplified.GetSnapLevel());
 }
@@ -2863,6 +2875,8 @@ TEST_F(S2PolygonDecodeTest, FuzzUncompressedEncoding) {
 #endif
 }
 
+#ifndef __EMSCRIPTEN__
+// TODO(b/231695412): Investigate further.
 TEST_F(S2PolygonDecodeTest, FuzzCompressedEncoding) {
   // Some parts of the S2 library S2_DCHECK on invalid data, even if we set
   // FLAGS_s2debug to false or use S2Polygon::set_s2debug_override. So we
@@ -2874,6 +2888,7 @@ TEST_F(S2PolygonDecodeTest, FuzzCompressedEncoding) {
   }
 #endif
 }
+#endif
 
 TEST_F(S2PolygonDecodeTest, FuzzEverything) {
   // Some parts of the S2 library S2_DCHECK on invalid data, even if we set

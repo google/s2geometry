@@ -38,8 +38,8 @@
 #include "s2/s2polyline.h"
 
 using absl::Span;
-using absl::make_unique;
 using absl::string_view;
+using absl::make_unique;
 using std::pair;
 using std::string;
 using std::unique_ptr;
