@@ -25,6 +25,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <string>
 
 #include <openssl/bn.h>
 #include <openssl/crypto.h>  // for OPENSSL_free

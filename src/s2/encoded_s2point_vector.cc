@@ -175,8 +175,8 @@ void EncodeS2PointVectorFast(Span<const S2Point> points, Encoder* encoder) {
 bool EncodedS2PointVector::InitUncompressedFormat(Decoder* decoder) {
 #if !defined(IS_LITTLE_ENDIAN) || defined(__arm__) || \
   defined(ABSL_INTERNAL_NEED_ALIGNED_LOADS)
-  // TODO(ericv): Make this work on platforms that don't support unaligned
-  // 64-bit little-endian reads, e.g. by falling back to
+  // TODO(b/231674214): Make this work on platforms that don't support
+  // unaligned 64-bit little-endian reads, e.g. by falling back to
   //
   //   bit_cast<double>(little_endian::Load64()).
   //

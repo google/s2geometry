@@ -117,6 +117,11 @@ TEST(EncodedS2ShapeIndex, RegularLoops) {
   }
 }
 
+#ifndef __EMSCRIPTEN__
+// TODO(b/232496949): This test relies on `random()` return values because
+// it tests an exact encoded byte size.  Either change it to accept a range
+// of sizes, or decode and check either the number of shapes, or possibly
+// the points themselves by resetting the RNG state.
 TEST(EncodedS2ShapeIndex, OverlappingPointClouds) {
   struct TestCase {
     int num_shapes, num_points_per_shape;
@@ -144,6 +149,7 @@ TEST(EncodedS2ShapeIndex, OverlappingPointClouds) {
   }
 }
 
+// TODO(b/232496949): This test relies on `random()` return values.
 TEST(EncodedS2ShapeIndex, OverlappingPolylines) {
   struct TestCase {
     int num_shapes, num_shape_edges;
@@ -174,6 +180,7 @@ TEST(EncodedS2ShapeIndex, OverlappingPolylines) {
   }
 }
 
+// TODO(b/232496949): This test relies on `random()` return values.
 TEST(EncodedS2ShapeIndex, OverlappingLoops) {
   struct TestCase {
     int num_shapes, max_edges_per_loop;
@@ -203,6 +210,7 @@ TEST(EncodedS2ShapeIndex, OverlappingLoops) {
         index, test_case.expected_bytes);
   }
 }
+#endif  // defined(__EMSCRIPTEN__)
 
 // Like S2PolylineLayer, but converts the polyline to an S2LaxPolylineShape
 // and adds it to an S2ShapeIndex (if the polyline is non-empty).

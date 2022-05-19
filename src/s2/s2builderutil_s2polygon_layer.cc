@@ -24,8 +24,8 @@
 #include "absl/memory/memory.h"
 #include "s2/s2debug.h"
 
-using absl::make_unique;
 using std::make_pair;
+using absl::make_unique;
 using std::pair;
 using std::unique_ptr;
 using std::vector;

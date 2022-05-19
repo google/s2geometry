@@ -18,7 +18,6 @@
 #define S2_S2SHAPE_NESTING_QUERY_H_
 
 #include <climits>
-#include <functional>
 #include <vector>
 
 #include "absl/container/inlined_vector.h"

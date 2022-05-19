@@ -742,11 +742,11 @@ class S2Point {
 %define USE_EQUALS_FN_FOR_EQ_AND_NE(type)
   %extend type {
     bool __eq__(const type& other) {
-      return $self->Equals(&other);
+      return $self->Equals(other);
     }
 
     bool __ne__(const type& other) {
-      return !$self->Equals(&other);
+      return !$self->Equals(other);
     }
   }
 %enddef

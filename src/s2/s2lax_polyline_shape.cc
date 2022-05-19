@@ -26,9 +26,9 @@
 #include "absl/utility/utility.h"
 #include "s2/s2polyline.h"
 
-using absl::make_unique;
 using absl::MakeSpan;
 using absl::Span;
+using absl::make_unique;
 
 S2LaxPolylineShape::S2LaxPolylineShape(S2LaxPolylineShape&& other)
     : S2Shape(std::move(other)),

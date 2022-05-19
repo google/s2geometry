@@ -25,6 +25,7 @@
 
 #include "absl/base/macros.h"
 #include "absl/flags/flag.h"
+#include "absl/hash/hash.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/integral_types.h"

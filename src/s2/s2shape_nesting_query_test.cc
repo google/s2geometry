@@ -17,6 +17,7 @@
 #include "s2/s2shape_nesting_query.h"
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -29,8 +30,8 @@
 #include "s2/s2text_format.h"
 #include "s2/util/gtl/legacy_random_shuffle.h"
 
-using absl::make_unique;
 using absl::Span;
+using absl::make_unique;
 using std::unique_ptr;
 using std::vector;
 

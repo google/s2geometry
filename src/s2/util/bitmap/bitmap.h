@@ -31,6 +31,7 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <type_traits>
 
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
@@ -149,7 +150,7 @@ class BasicBitmap {
   // element, you will be left with only the valid, defined bits (the
   // others will be 0)
   Word HighOrderMapElementMask() const {
-    return (size_ == 0) ? 0 : (~W{0}) >> (-size_ & (kIntBits - 1));
+    return (size_ == 0) ? 0 : kAllOnesWord >> (-size_ & (kIntBits - 1));
   }
 
   bool Get(size_type index) const {
@@ -197,7 +198,7 @@ class BasicBitmap {
   // Returns true if all bits are set
   bool IsAllOnes() const {
     return std::all_of(map_, map_ + array_size() - 1,
-                       [](Word w) { return w == ~W{0}; }) &&
+                       [](Word w) { return w == kAllOnesWord; }) &&
            ((~map_[array_size() - 1]) & HighOrderMapElementMask()) == W{0};
   }
 
@@ -343,7 +344,7 @@ class BasicBitmap {
 
   // Sets all the bits to true or false
   void SetAll(bool value) {
-    std::fill(map_, map_ + array_size(), value ? ~W{0} : W{0});
+    std::fill(map_, map_ + array_size(), value ? kAllOnesWord : W{0});
   }
 
   // Clears all bits in the bitmap
@@ -372,7 +373,8 @@ class BasicBitmap {
 
   // Sets "this" to be the "~" (Complement) of "this".
   void Complement() {
-    std::transform(map_, map_ + array_size(), map_, [](Word w) { return ~w; });
+    std::transform(map_, map_ + array_size(), map_,
+                   [](Word w) -> Word { return ~w; });
   }
 
   // Sets "this" to be the set of bits in "this" but not in "other"
@@ -584,6 +586,26 @@ class BasicBitmap {
   BitIndexRange TrueBitIndices() const { return BitIndexRange(this); }
 
  private:
+  // An unsigned integral type that is not promoted and can represent all values
+  // of `Word` (assuming `Word` is unsigned). Note that if `Word` does not get
+  // promoted, then this type is the same as `Word`. We occaisionally use this
+  // type to perform arithmetic, to avoid having `Word`-typed values promoted to
+  // a signed type via integral promotions.
+  // TODO(b/228178585)
+  using ArithmeticWord = absl::make_unsigned_t<decltype(+std::declval<Word>())>;
+
+  // A value of type `Word` with all bits set to one. If `Word` !=
+  // `ArithmeticWord`, i.e. `Word` gets promoted, then this is a `Word` with all
+  // bits set to one then promoted to `ArithmeticWord`. In other words, the
+  // lowest N bits are one, and all other bits are zero, where N is the width of
+  // `Word`.
+  //
+  // For example, for uint32, this is 0xFFFFFFFF. However, if `Word` is
+  // `unit8_t`, and `ArithmeticWord` is equal to `uint32` and kAllOnesWord is
+  // 0x000000FF.
+  static constexpr auto kAllOnesWord =
+      ArithmeticWord{static_cast<Word>(~ArithmeticWord{0})};
+
   // Implements FindNextSetBitInVector if 'complement' is false,
   // and FindNextUnsetBitInVector if 'complement' is true.
   static bool FindNextBitInVector(bool complement, const Word* words,
@@ -624,13 +646,18 @@ inline std::ostream& operator<<(std::ostream& out,
 namespace util {
 namespace bitmap {
 
+using Bitmap8 = ::util::bitmap::internal::BasicBitmap<uint8>;
+using Bitmap16 = ::util::bitmap::internal::BasicBitmap<uint16>;
 using Bitmap32 = ::util::bitmap::internal::BasicBitmap<uint32>;
 using Bitmap64 = ::util::bitmap::internal::BasicBitmap<uint64>;
 
 }  // namespace bitmap
 }  // namespace util
 
-// Legacy definition, use Bitmap32/Bitmap64 instead in new code.
+// Legacy definition, use Bitmap32/Bitmap64 instead in new code.    Do not use
+// this to instantiate the BasicBitmap template (i.e. do not spell
+// `::Bitmap::BasicBitmap<Y>`).  Instead, use one of the aliases above (e.g.
+// ::util::bitmap::Bitmap32).
 // TODO(b/145388656): remove this class, once all forward declarations are gone.
 class ABSL_DEPRECATED(
     "Legacy definition, use util::bitmap::{Bitmap32|Bitmap64} instead in new "
@@ -883,20 +910,22 @@ typename BasicBitmap<W>::size_type BasicBitmap<W>::GetOnesCountInRange(
   size_t end_word = (end - 1) / kIntBits;  // Word containing the last bit.
 
   Word* p = map_ + start_word;
-  Word c = (*p & (~W{0} << (start & (kIntBits - 1))));
+  ArithmeticWord c = static_cast<ArithmeticWord>(*p) &
+                     (kAllOnesWord << (start & (kIntBits - 1)));
 
-  Word endmask = (~W{0} >> ((end_word + 1) * kIntBits - end));
+  ArithmeticWord endmask = (kAllOnesWord >> ((end_word + 1) * kIntBits - end));
   if (end_word == start_word) {  // Only one word?
-    return absl::popcount(c & endmask);
+    return absl::popcount(static_cast<Word>(c & endmask));
   }
 
-  size_type sum = absl::popcount(c);
+  size_type sum = absl::popcount(static_cast<Word>(c));
 
   for (++p; p < map_ + end_word; ++p) {
     sum += absl::popcount(*p);
   }
 
-  return sum + absl::popcount(*p & endmask);
+  return sum + absl::popcount(static_cast<Word>(
+                   static_cast<ArithmeticWord>(*p) & endmask));
 }
 
 template <typename W>
@@ -942,7 +971,7 @@ bool BasicBitmap<W>::FindNextBitInVector(bool complement, const Word* words,
   if (one_word & (W{1} << first_bit_offset)) return true;
 
   // First word is special - we need to mask off leading bits
-  one_word &= (~W{0} << first_bit_offset);
+  one_word &= (kAllOnesWord << first_bit_offset);
 
   // Loop through all but the last word.  Note that 'limit' is one
   // past the last bit we want to check, and we don't want to read
@@ -962,7 +991,7 @@ bool BasicBitmap<W>::FindNextBitInVector(bool complement, const Word* words,
   // Last word is special - we may need to mask off trailing bits.  Note that
   // 'limit' is one past the last bit we want to check, and if limit is a
   // multiple of kIntBits we want to check all bits in this word.
-  one_word &= ~((~W{0} - 1) << ((limit - 1) & (kIntBits - 1)));
+  one_word &= ~((kAllOnesWord - 1) << ((limit - 1) & (kIntBits - 1)));
   if (one_word != 0) {
     *bit_index_inout =
         (int_index << kLogIntBits) + Bits::FindLSBSetNonZero64(one_word);
@@ -979,7 +1008,7 @@ bool BasicBitmap<W>::FindPreviousBitInVector(bool complement, const Word* words,
   const size_type bit_index = *bit_index_inout;
   size_t map_index = bit_index >> kLogIntBits;
   const size_t map_limit = limit >> kLogIntBits;
-  const size_t bit_limit_mask = ~W{0} << (limit & (kIntBits - 1));
+  const size_t bit_limit_mask = kAllOnesWord << (limit & (kIntBits - 1));
   Word one_word = complement ? ~words[map_index] : words[map_index];
 
   if (limit > *bit_index_inout) return false;
@@ -990,7 +1019,7 @@ bool BasicBitmap<W>::FindPreviousBitInVector(bool complement, const Word* words,
   if (one_word & (W{1} << bit_offset)) return true;
 
   // First word is special - we need to mask off trailing bits
-  one_word &= ~((~W{0} - 1) << bit_offset);
+  one_word &= ~((kAllOnesWord - 1) << bit_offset);
   // Then any leading bits if the limit is within this word
   if (map_index == map_limit) one_word &= bit_limit_mask;
 
@@ -1043,11 +1072,11 @@ void BasicBitmap<W>::SetRange(size_type begin, size_type end, bool value) {
   const size_type begin_bit = begin % kIntBits;
   const size_type end_element = end / kIntBits;
   const size_type end_bit = end % kIntBits;
-  Word initial_mask = ~W{0} << begin_bit;
+  Word initial_mask = kAllOnesWord << begin_bit;
   if (end_element == begin_element) {
     // The range is contained in a single element of the array, so
     // adjust both ends of the mask.
-    initial_mask = initial_mask & (~W{0} >> (kIntBits - end_bit));
+    initial_mask = initial_mask & (kAllOnesWord >> (kIntBits - end_bit));
   }
   if (value) {
     map_[begin_element] |= initial_mask;
@@ -1058,14 +1087,14 @@ void BasicBitmap<W>::SetRange(size_type begin, size_type end, bool value) {
     // Set all the bits in the array elements between the begin
     // and end elements.
     std::fill(map_ + begin_element + 1, map_ + end_element,
-              value ? ~W{0} : W{0});
+              value ? kAllOnesWord : W{0});
 
     // Update the appropriate bit-range in the last element.
     // Note end_bit is an exclusive bound, so if it's 0 none of the
     // bits in end_element are contained in the range (and we don't
     // have to modify it).
     if (end_bit != 0) {
-      const Word final_mask = ~W{0} >> (kIntBits - end_bit);
+      const Word final_mask = kAllOnesWord >> (kIntBits - end_bit);
       if (value) {
         map_[end_element] |= final_mask;
       } else {

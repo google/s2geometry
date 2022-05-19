@@ -339,15 +339,6 @@ class S2Loop final : public S2Region {
   bool BoundaryNear(const S2Loop& b,
                     S1Angle max_error = S1Angle::Radians(1e-15)) const;
 
-#ifndef SWIG
-  ABSL_DEPRECATED("Inline the implementation")
-  bool Contains(const S2Loop* b) const { return Contains(*b); }
-  ABSL_DEPRECATED("Inline the implementation")
-  bool Equals(const S2Loop* b) const { return Equals(*b); }
-  ABSL_DEPRECATED("Inline the implementation")
-  bool BoundaryEquals(const S2Loop* b) const { return BoundaryEquals(*b); }
-#endif
-
   // This method computes the oriented surface integral of some quantity f(x)
   // over the loop interior, given a function f_tri(A,B,C) that returns the
   // corresponding integral over the spherical triangle ABC.  Here "oriented
