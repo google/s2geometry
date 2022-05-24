@@ -813,6 +813,19 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertTrue(s2.OrderedCCW(p1, p3, p2, pC))
     self.assertTrue(s2.OrderedCCW(p3, p2, p1, pC))
 
+  def testS2UpdateMinDistance(self):
+    pC = s2.S2LatLng.FromDegrees(3.0, 4.0).ToPoint()
+    p1 = s2.S2LatLng.FromDegrees(3.0, 5.0).ToPoint()
+    p2 = s2.S2LatLng.FromDegrees(2.7, 3.0).ToPoint()
+
+    md = s2.S1ChordAngle.Infinity()
+    self.assertTrue(s2.UpdateMinDistance(pC, p1, p2, md))
+    self.assertAlmostEqual(0.1478883, md.degrees())
+
+    pC = s2.S2LatLng.FromDegrees(3.0, 40.0).ToPoint()
+    self.assertFalse(s2.UpdateMinDistance(pC, p1, p2, md))
+    self.assertAlmostEqual(0.1478883, md.degrees())
+
 class RegionTermIndexerTest(unittest.TestCase):
   def _randomCaps(self, query_type, **indexer_options):
     # This function creates an index consisting either of points (if

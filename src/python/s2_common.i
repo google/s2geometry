@@ -415,6 +415,7 @@ class S2Point {
 %unignore S2::Interpolate;
 %unignore S2::Rotate;
 %unignore S2::TurnAngle;
+%unignore S2::UpdateMinDistance;
 %unignore S2Cap;
 %unignore S2Cap::S2Cap;
 %unignore S2Cap::~S2Cap;
