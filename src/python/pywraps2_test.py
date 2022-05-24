@@ -1016,5 +1016,42 @@ class S2PolygonTestCase(unittest.TestCase):
     loop = polygon3.loop(1)
     self.assertEqual(4, loop.num_vertices())
 
+class S2ChordAngleTest(unittest.TestCase):
+  def testBasic(self):
+    ca = s2.S1ChordAngle(s2.S1Angle_Degrees(100))
+    self.assertAlmostEqual(100, ca.degrees())
+
+  def testArithmetic(self):
+    ca1 = s2.S1ChordAngle(s2.S1Angle_Degrees(10))
+    ca2 = s2.S1ChordAngle(s2.S1Angle_Degrees(20))
+    ca3 = ca1 + ca2
+    self.assertAlmostEqual(30, ca3.degrees())
+    ca4 = ca2 - ca1
+    self.assertAlmostEqual(10, ca4.degrees())
+
+  def testComparison(self):
+    ca1 = s2.S1ChordAngle(s2.S1Angle_Degrees(10))
+    ca2 = s2.S1ChordAngle(s2.S1Angle_Degrees(20))
+    self.assertTrue(ca1 < ca2)
+    self.assertTrue(ca2 > ca1)
+    self.assertFalse(ca1 > ca2)
+    self.assertFalse(ca2 < ca1)
+
+    ca3 = s2.S1ChordAngle(s2.S1Angle_Degrees(10))
+    self.assertTrue(ca1 == ca3)
+    self.assertFalse(ca1 == ca2)
+    self.assertFalse(ca1 != ca3)
+    self.assertTrue(ca1 != ca2)
+
+  def testInfinity(self):
+    ca1 = s2.S1ChordAngle(s2.S1Angle_Degrees(179))
+    ca2 = s2.S1ChordAngle.Infinity()
+    self.assertTrue(ca2 > ca1)
+
+  def testCopy(self):
+    ca1 = s2.S1ChordAngle(s2.S1Angle_Degrees(100))
+    ca2 = s2.S1ChordAngle(ca1)
+    self.assertAlmostEqual(100, ca2.degrees())
+
 if __name__ == "__main__":
   unittest.main()

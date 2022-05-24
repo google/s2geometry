@@ -328,6 +328,8 @@ class S2Point {
   }
 }
 
+%copyctor S1ChordAngle;
+
 // Raise ValueError for any functions that would trigger a S2_CHECK/S2_DCHECK.
 %pythonprepend S2CellId::child %{
   if not self.is_valid():
@@ -402,6 +404,8 @@ class S2Point {
 %unignore S1Angle::radians;
 %unignore S1ChordAngle;
 %unignore S1ChordAngle::ToAngle;
+%unignore S1ChordAngle::degrees;
+%unignore S1ChordAngle::Infinity;
 %unignore S1Interval;
 %ignore S1Interval::operator[];
 %unignore S1Interval::GetLength;
@@ -790,6 +794,18 @@ class S2Point {
   }
 %enddef
 
+%define USE_ARITHMETIC_FOR_ADD_AND_SUB(type)
+  %extend type {
+    type __add__(const type& other) {
+      return *$self + other;
+    }
+
+    type __sub__(const type& other) {
+      return *$self - other;
+    }
+  }
+%enddef
+
 %define USE_HASH_FOR_TYPE(type, hash_type)
   %extend type {
     size_t __hash__() {
@@ -811,6 +827,10 @@ USE_HASH_FOR_TYPE(S2CellId, S2CellIdHash)
 
 USE_EQUALS_FOR_EQ_AND_NE(S1Angle)
 USE_COMPARISON_FOR_LT_AND_GT(S1Angle)
+
+USE_EQUALS_FOR_EQ_AND_NE(S1ChordAngle)
+USE_COMPARISON_FOR_LT_AND_GT(S1ChordAngle)
+USE_ARITHMETIC_FOR_ADD_AND_SUB(S1ChordAngle)
 
 USE_EQUALS_FN_FOR_EQ_AND_NE(S2Loop)
 USE_EQUALS_FN_FOR_EQ_AND_NE(S2Polygon)
