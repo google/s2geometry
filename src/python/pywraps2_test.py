@@ -795,6 +795,13 @@ class PyWrapS2TestCase(unittest.TestCase):
     self.assertAlmostEqual(p_raw[1], 0.57735027)
     self.assertAlmostEqual(p_raw[2], 0.57735027)
 
+  def testS2Interpolate(self):
+    p1 = s2.S2LatLng.FromDegrees(3.0, 4.0).ToPoint()
+    p2 = s2.S2LatLng.FromDegrees(4.0, 5.0).ToPoint()
+
+    p3 = s2.Interpolate(p1, p2, 0.5)
+    self.assertEqual("3.500133,4.499733", s2.S2LatLng(p3).ToStringInDegrees())
+
 class RegionTermIndexerTest(unittest.TestCase):
   def _randomCaps(self, query_type, **indexer_options):
     # This function creates an index consisting either of points (if

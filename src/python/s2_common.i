@@ -11,6 +11,7 @@
 #include "s2/s2region.h"
 #include "s2/s2cap.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2earth.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
@@ -406,6 +407,7 @@ class S2Point {
 %unignore S2;
 %unignore S2::CrossingSign;
 %unignore S2::GetIntersection;
+%unignore S2::Interpolate;
 %unignore S2::Rotate;
 %unignore S2::TurnAngle;
 %unignore S2Cap;
@@ -720,6 +722,7 @@ class S2Point {
 %include "s2/s1interval.h"
 %include "s2/s2cell_id.h"
 %include "s2/s2edge_crossings.h"
+%include "s2/s2edge_distances.h"
 %include "s2/s2earth.h"
 %include "s2/s2region.h"
 %include "s2/s2cap.h"
