@@ -1066,5 +1066,58 @@ class S2ChordAngleTest(unittest.TestCase):
     ca2 = s2.S1ChordAngle(ca1)
     self.assertAlmostEqual(100, ca2.degrees())
 
+class S2BufferOperationTest(unittest.TestCase):
+  def setUp(self):
+    self.opts = s2.S2BufferOperationOptions()
+    self.result = s2.S2Polygon()
+    self.layer = s2.S2PolygonLayer(self.result)
+
+  def testDefaults(self):
+    op = s2.S2BufferOperation(self.layer, self.opts)
+
+    cell1 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    op.AddPolygon(s2.S2Polygon(cell1))
+    op.Build()
+
+    self.assertEqual(1, self.result.num_loops())
+    loop = self.result.loop(0)
+    self.assertEqual(4, loop.num_vertices())
+
+  def testRadius(self):
+    self.opts.set_buffer_radius(s2.S1Angle_Degrees(0.001))
+    op = s2.S2BufferOperation(self.layer, self.opts)
+
+    cell1 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    op.AddPolygon(s2.S2Polygon(cell1))
+    op.Build()
+
+    self.assertEqual(1, self.result.num_loops())
+    loop = self.result.loop(0)
+    self.assertEqual(20, loop.num_vertices())
+
+  def testRadiusAndError(self):
+    self.opts.set_buffer_radius(s2.S1Angle_Degrees(0.001))
+    self.opts.set_error_fraction(0.1)
+    op = s2.S2BufferOperation(self.layer, self.opts)
+
+    cell1 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    op.AddPolygon(s2.S2Polygon(cell1))
+    op.Build()
+
+    self.assertEqual(1, self.result.num_loops())
+    loop = self.result.loop(0)
+    self.assertEqual(12, loop.num_vertices())
+
+  def testPoint(self):
+    self.opts.set_buffer_radius(s2.S1Angle_Degrees(0.001))
+    op = s2.S2BufferOperation(self.layer, self.opts)
+
+    op.AddPoint(s2.S2LatLng.FromDegrees(14.0, 15.0).ToPoint())
+    op.Build()
+
+    self.assertEqual(1, self.result.num_loops())
+    loop = self.result.loop(0)
+    self.assertEqual(16, loop.num_vertices())
+
 if __name__ == "__main__":
   unittest.main()
