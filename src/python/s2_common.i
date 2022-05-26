@@ -48,6 +48,17 @@ public:
   }
 };
 
+// Wrapper for S2PolygonLayer::Options to work around the inability to
+// handle nested classes in SWIG.
+class S2PolygonLayerOptions {
+public:
+  s2builderutil::S2PolygonLayer::Options opts;
+
+  void set_edge_type(S2Builder::EdgeType edge_type) {
+    opts.set_edge_type(edge_type);
+  }
+};
+
 %}
 
 %inline %{
@@ -288,6 +299,19 @@ class S2Point {
   }
 }
 
+%extend S2Builder {
+ public:
+  void StartLayer(S2Builder::Layer* layer_disown) {
+    $self->StartLayer(std::unique_ptr<S2Builder::Layer>(layer_disown));
+  }
+}
+
+class S2PolygonLayerOptions {
+public:
+  s2builderutil::S2PolygonLayer::Options opts;
+  void set_edge_type(S2Builder::EdgeType);
+};
+
 // S2PolygonLayer's constructor takes a pointer to an S2Polygon. We
 // need to ensure that the S2Polygon is not destroyed while the
 // S2PolygonLayer still references it. To do this, save a reference to
@@ -295,6 +319,14 @@ class S2Point {
 %pythonprepend s2builderutil::S2PolygonLayer::S2PolygonLayer %{
   self._incref = args[0]
 %}
+
+%extend s2builderutil::S2PolygonLayer {
+ public:
+  S2PolygonLayer(S2Polygon* layer,
+                 const S2PolygonLayerOptions& options) {
+   return new s2builderutil::S2PolygonLayer(layer, options.opts);
+  }
+}
 
 %extend MutableS2ShapeIndex {
  public:
@@ -535,6 +567,13 @@ public:
 %unignore S2BufferOperationOptions::set_error_fraction;
 %unignore S2Builder;
 %unignore S2Builder::Layer;
+%unignore S2Builder::S2Builder;
+%unignore S2Builder::StartLayer(S2Builder::Layer*);
+%unignore S2Builder::AddEdge;
+%unignore S2Builder::Build;
+%unignore S2Builder::EdgeType;
+%unignore S2Builder::EdgeType::DIRECTED;
+%unignore S2Builder::EdgeType::UNDIRECTED;
 %unignore s2builderutil;
 %unignore s2builderutil::S2PolygonLayer;
 %unignore s2builderutil::S2PolygonLayer::S2PolygonLayer(S2Polygon*);

@@ -1158,5 +1158,66 @@ class S2BooleanOperationTest(unittest.TestCase):
     loop = result.loop(1)
     self.assertEqual(4, loop.num_vertices())
 
+class S2BuilderTest(unittest.TestCase):
+  def setUp(self):
+    self.p1 = s2.S2LatLng.FromDegrees(10.0, 10.0).ToPoint()
+    self.p2 = s2.S2LatLng.FromDegrees(10.0, 11.0).ToPoint()
+    self.p3 = s2.S2LatLng.FromDegrees(11.0, 10.0).ToPoint()
+    self.p4 = s2.S2LatLng.FromDegrees(11.0, 11.0).ToPoint()
+
+  def testSquareDirected(self):
+    opts = s2.S2PolygonLayerOptions()
+    opts.set_edge_type(s2.S2Builder.EdgeType_DIRECTED)
+
+    result = s2.S2Polygon()
+    b = s2.S2Builder()
+    b.StartLayer(s2.S2PolygonLayer(result, opts))
+
+    b.AddEdge(self.p1, self.p2)
+    b.AddEdge(self.p2, self.p4)
+    b.AddEdge(self.p4, self.p3)
+    b.AddEdge(self.p3, self.p1)
+
+    b.Build()
+
+    self.assertEqual(1, result.num_loops())
+    loop = result.loop(0)
+    self.assertEqual(4, loop.num_vertices())
+
+  def testSquareUndirected(self):
+    opts = s2.S2PolygonLayerOptions()
+    opts.set_edge_type(s2.S2Builder.EdgeType_UNDIRECTED)
+
+    result = s2.S2Polygon()
+    b = s2.S2Builder()
+    b.StartLayer(s2.S2PolygonLayer(result, opts))
+
+    b.AddEdge(self.p1, self.p2)
+    b.AddEdge(self.p1, self.p3)
+    b.AddEdge(self.p2, self.p4)
+    b.AddEdge(self.p3, self.p4)
+
+    b.Build()
+
+    self.assertEqual(1, result.num_loops())
+    loop = result.loop(0)
+    self.assertEqual(4, loop.num_vertices())
+
+  def testException(self):
+    opts = s2.S2PolygonLayerOptions()
+    opts.set_edge_type(s2.S2Builder.EdgeType_DIRECTED)
+
+    result = s2.S2Polygon()
+    b = s2.S2Builder()
+    b.StartLayer(s2.S2PolygonLayer(result, opts))
+
+    b.AddEdge(self.p1, self.p2)
+    b.AddEdge(self.p1, self.p3)
+    b.AddEdge(self.p2, self.p4)
+    b.AddEdge(self.p3, self.p4)
+
+    with self.assertRaises(ValueError):
+      b.Build()
+
 if __name__ == "__main__":
   unittest.main()
