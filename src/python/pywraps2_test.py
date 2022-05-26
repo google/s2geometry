@@ -1119,5 +1119,44 @@ class S2BufferOperationTest(unittest.TestCase):
     loop = self.result.loop(0)
     self.assertEqual(16, loop.num_vertices())
 
+class S2BooleanOperationTest(unittest.TestCase):
+  def setUp(self):
+    self.index1 = s2.MutableS2ShapeIndex()
+    self.index2 = s2.MutableS2ShapeIndex()
+
+  def operate(self):
+    poly = s2.S2Polygon()
+    layer = s2.S2PolygonLayer(poly)
+    op = s2.S2BooleanOperation(s2.S2BooleanOperation.OpType_UNION,
+                               layer)
+    op.Build(self.index1, self.index2)
+    return poly
+
+  def testUnionSame(self):
+    cell1 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    self.index1.Add(s2.S2Polygon(cell1))
+
+    cell2 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    self.index2.Add(s2.S2Polygon(cell2))
+
+    result = self.operate()
+    self.assertEqual(1, result.num_loops())
+    loop = result.loop(0)
+    self.assertEqual(4, loop.num_vertices())
+
+  def testUnionDistinct(self):
+    cell1 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
+    self.index1.Add(s2.S2Polygon(cell1))
+
+    cell2 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(13.0, 4.0)).parent(8))
+    self.index2.Add(s2.S2Polygon(cell2))
+
+    result = self.operate()
+    self.assertEqual(2, result.num_loops())
+    loop = result.loop(0)
+    self.assertEqual(4, loop.num_vertices())
+    loop = result.loop(1)
+    self.assertEqual(4, loop.num_vertices())
+
 if __name__ == "__main__":
   unittest.main()

@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 
+#include "s2/s2boolean_operation.h"
 #include "s2/s2buffer_operation.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_layer.h"
@@ -29,6 +30,8 @@
 #include "s2/s2region_term_indexer.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_union.h"
+#include "s2/s2shape_index.h"
+#include "s2/mutable_s2shape_index.h"
 
 // Wrapper for S2BufferOperation::Options to work around the inability
 // to handle nested classes in SWIG.
@@ -293,6 +296,24 @@ class S2Point {
   self._incref = args[0]
 %}
 
+%extend MutableS2ShapeIndex {
+ public:
+  void Add(S2Polygon* polygon_disown) {
+    auto polygon = std::unique_ptr<S2Polygon>(polygon_disown);
+    $self->Add(std::unique_ptr<S2Shape>(new S2Polygon::OwningShape(std::move(polygon))));
+  }
+}
+
+%extend S2BooleanOperation {
+ public:
+ S2BooleanOperation(OpType op_type,
+                              S2Builder::Layer* layer_disown) {
+   S2BooleanOperation::Options options;
+   auto layer = std::unique_ptr<S2Builder::Layer>(layer_disown);
+   return new S2BooleanOperation(op_type, std::move(layer), options);
+  }
+}
+
 class S2BufferOperationOptions {
 public:
   S2BufferOperation::Options opts;
@@ -457,6 +478,9 @@ public:
 
 %ignoreall
 
+%unignore MutableS2ShapeIndex;
+%unignore MutableS2ShapeIndex::~MutableS2ShapeIndex;
+%unignore MutableS2ShapeIndex::Add(S2Shape*);
 %unignore R1Interval;
 %ignore R1Interval::operator[];
 %unignore R1Interval::GetLength;
@@ -490,6 +514,16 @@ public:
 %unignore S2::Rotate;
 %unignore S2::TurnAngle;
 %unignore S2::UpdateMinDistance;
+%unignore S2BooleanOperation;
+%unignore S2BooleanOperation::Build;
+%unignore S2BooleanOperation::OpType;
+%unignore S2BooleanOperation::OpType::UNION;
+%unignore S2BooleanOperation::OpType::INTERSECTION;
+%unignore S2BooleanOperation::OpType::DIFFERENCE;
+%unignore S2BooleanOperation::OpType::SYMMETRIC_DIFFERENCE;
+%unignore S2BooleanOperation::S2BooleanOperation(OpType, S2Builder::Layer*, const Options&);
+%ignore S2BooleanOperation::S2BooleanOperation(OpType, std::unique_ptr<S2Builder::Layer>, const Options&);
+%ignore S2BooleanOperation::S2BooleanOperation(OpType, std::unique_ptr<S2Builder::Layer>);
 %unignore S2BufferOperation;
 %unignore S2BufferOperation::Build;
 %unignore S2BufferOperation::Options;
@@ -811,11 +845,13 @@ public:
                                              absl::string_view);
 %unignore S2RegionTermIndexer::GetQueryTermsForCanonicalCovering(
     const S2CellUnion&, absl::string_view);
+%unignore S2ShapeIndex;
 
 %include "s2/r1interval.h"
 %include "s2/s1angle.h"
 %include "s2/s1chord_angle.h"
 %include "s2/s1interval.h"
+%include "s2/s2boolean_operation.h"
 %include "s2/s2buffer_operation.h"
 %include "s2/s2builder.h"
 %include "s2/s2builder_layer.h"
@@ -838,6 +874,8 @@ public:
 %include "s2/s2region_term_indexer.h"
 %include "s2/s2cell.h"
 %include "s2/s2cell_union.h"
+%include "s2/s2shape_index.h"
+%include "s2/mutable_s2shape_index.h"
 
 %unignoreall
 
