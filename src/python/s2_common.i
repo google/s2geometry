@@ -163,6 +163,9 @@ std::vector<S2Polyline *> *out(std::vector<S2Polyline *> temp) {
 // difficult to wrap correctly.
 class S2Point {
  public:
+  double x();
+  double y();
+  double z();
   double Norm();
   S2Point Normalize();
   ~S2Point();
