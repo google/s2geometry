@@ -22,6 +22,15 @@ import pywraps2 as s2
 
 class PyWrapS2TestCase(unittest.TestCase):
 
+  def testS2PointFromRawToNamedCorrectly(self):
+      x = 1.0
+      y = 2.0
+      z = 3.0
+      point = s2.S2Point_FromRaw(x, y, z)
+      self.assertEqual(x, point.x())
+      self.assertEqual(y, point.y())
+      self.assertEqual(z, point.z())
+
   def testContainsIsWrappedCorrectly(self):
     london = s2.S2LatLngRect(s2.S2LatLng.FromDegrees(51.3368602, 0.4931979),
                              s2.S2LatLng.FromDegrees(51.7323965, 0.1495211))
