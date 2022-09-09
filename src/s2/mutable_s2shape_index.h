@@ -571,9 +571,11 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
 
   S2MemoryTracker::Client mem_tracker_;
 
+#ifndef SWIG
   // Documented in the .cc file.
   void UnlockAndSignal() ABSL_UNLOCK_FUNCTION(lock_)
       ABSL_UNLOCK_FUNCTION(update_state_->wait_mutex);
+#endif
 
   MutableS2ShapeIndex(const MutableS2ShapeIndex&) = delete;
   MutableS2ShapeIndex& operator=(const MutableS2ShapeIndex&) = delete;
