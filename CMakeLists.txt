@@ -20,7 +20,7 @@ endif()
 # end up defined differently.  There is probably a better way to achieve
 # this than assuming what absl used. 
 # Using CACHE allows the user to override the default.
-(CMAKE_CXX_STANDARD 11 CACHE)
+set(CMAKE_CXX_STANDARD 11 CACHE STRING "The C++ standard to build with")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
 set(CMAKE_CXX_EXTENSIONS OFF)
