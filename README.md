@@ -149,13 +149,18 @@ For more info read: [The CMake Cache](https://cmake.org/cmake/help/latest/guide/
 
 You can download and install s2geometry using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
 
+```
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
     ./bootstrap-vcpkg.sh
     ./vcpkg integrate install
     ./vcpkg install s2geometry
+```
 
-The s2geometry port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
+The s2geometry port in vcpkg is kept up to date by Microsoft team members and 
+community contributors. If the version is out of date, please 
+[create an issue or pull request](https://github.com/Microsoft/vcpkg) on the 
+vcpkg repository.
 
 ## Python
 
