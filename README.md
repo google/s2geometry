@@ -85,7 +85,7 @@ cd s2geometry
 
 First, [install Abseil](https://github.com/abseil/abseil-cpp/blob/master/CMake/README.md#traditional-cmake-set-up).
 It must be configured with `-DCMAKE_POSITION_INDEPENDENT_CODE=ON`.
-s2geometry must be configured to use the came C++ version that
+s2geometry must be configured to use the same C++ version that
 abseil uses.  The easiest way to achieve this is to pass
 `-DCMAKE_CXX_STANDARD=11` (or `-DCMAKE_CXX_STANDARD=17`) to `cmake`
 when compiling both abseil and s2geometry.
