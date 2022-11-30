@@ -68,7 +68,9 @@ if (WITH_GFLAGS)
     add_definitions(-DS2_USE_GFLAGS)
 endif()
 
-find_package(absl REQUIRED)
+if (NOT TARGET absl::base)
+    find_package(absl REQUIRED)
+endif()
 find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
