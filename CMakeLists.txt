@@ -68,6 +68,9 @@ if (WITH_GFLAGS)
     add_definitions(-DS2_USE_GFLAGS)
 endif()
 
+# If we already have abseil we don't need to find it, for an example:
+# add_subdirectory(absl-submbodule)
+# add_subdirectory(s2-submodule)
 if (NOT TARGET absl::base)
     find_package(absl REQUIRED)
 endif()
