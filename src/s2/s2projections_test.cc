@@ -18,11 +18,13 @@
 #include "s2/s2projections.h"
 
 #include <limits>
+#include <string>
 
 #include <gtest/gtest.h>
+#include "s2/r2.h"
 #include "s2/s2latlng.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
-#include "s2/s2testing.h"
 
 namespace S2 {
 

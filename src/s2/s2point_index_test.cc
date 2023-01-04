@@ -18,10 +18,12 @@
 #include "s2/s2point_index.h"
 
 #include <set>
+#include <string>
 
 #include <gtest/gtest.h>
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
+#include "s2/s2point.h"
 #include "s2/s2testing.h"
 
 class S2PointIndexTest : public ::testing::Test {

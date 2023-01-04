@@ -17,6 +17,11 @@
 
 #include "s2/s2shape_index.h"
 
+#include "s2/base/integral_types.h"
+#include "s2/util/coding/coder.h"
+#include "s2/util/coding/varint.h"
+#include "s2/util/gtl/compact_array.h"
+
 bool S2ClippedShape::ContainsEdge(int id) const {
   // Linear search is fast because the number of edges per shape is typically
   // very small (less than 10).

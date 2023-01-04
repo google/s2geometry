@@ -17,23 +17,37 @@
 
 #include "s2/s2closest_point_query.h"
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
+#include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2closest_edge_query_testing.h"
-#include "s2/s2edge_distances.h"
+#include "s2/s2closest_point_query_base.h"
+#include "s2/s2latlng.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"
+#include "s2/s2metrics.h"
+#include "s2/s2min_distance_targets.h"
+#include "s2/s2point.h"
+#include "s2/s2point_index.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2region.h"
 #include "s2/s2testing.h"
+#include "s2/util/math/matrix3x3.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::pair;
 using std::unique_ptr;
 using std::vector;
@@ -79,7 +93,7 @@ TEST(S2ClosestPointQuery, EmptyTargetOptimized) {
 // An abstract class that adds points to an S2PointIndex for benchmarking.
 struct PointIndexFactory {
  public:
-  virtual ~PointIndexFactory() {}
+  virtual ~PointIndexFactory() = default;
 
   // Requests that approximately "num_points" points located within the given
   // S2Cap bound should be added to "index".

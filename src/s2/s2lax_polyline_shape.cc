@@ -21,14 +21,19 @@
 #include <memory>
 #include <utility>
 
-#include "s2/base/logging.h"
-#include "absl/memory/memory.h"
+#include "absl/types/span.h"
 #include "absl/utility/utility.h"
+#include "s2/util/coding/coder.h"
+#include "s2/encoded_s2point_vector.h"
+#include "s2/s2coder.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
 #include "s2/s2polyline.h"
+#include "s2/s2shape.h"
 
 using absl::MakeSpan;
 using absl::Span;
-using absl::make_unique;
+using std::make_unique;
 
 S2LaxPolylineShape::S2LaxPolylineShape(S2LaxPolylineShape&& other)
     : S2Shape(std::move(other)),
@@ -80,6 +85,15 @@ bool S2LaxPolylineShape::Init(Decoder* decoder) {
   vertices_ = make_unique<S2Point[]>(vertices.size());
   for (int i = 0; i < num_vertices_; ++i) {
     vertices_[i] = vertices[i];
+  }
+  return true;
+}
+
+bool S2LaxPolylineShape::Init(Decoder* decoder, S2Error& error) {
+  if (!Init(decoder)) {
+    error.Init(S2Error::DATA_LOSS,
+               "Unknown error occurred decoding S2LaxPolylineShape");
+    return false;
   }
   return true;
 }

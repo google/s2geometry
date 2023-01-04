@@ -31,6 +31,7 @@
 
 #include <inttypes.h>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 
@@ -210,12 +211,13 @@
 // Fuchsia macros.
 #if defined(__Fuchsia__) || 0
 #ifndef TEMP_FAILURE_RETRY
-# define TEMP_FAILURE_RETRY(expression)                             \
-  (__extension__                                                    \
-    ({ long int _temp_failure_retry_result;                         \
-       do _temp_failure_retry_result = (long int) (expression);     \
-       while (_temp_failure_retry_result == -1L && errno == EINTR); \
-       _temp_failure_retry_result; }))
+#define TEMP_FAILURE_RETRY(expression)                           \
+  (__extension__({                                               \
+    long int _temp_failure_retry_result;                         \
+    do _temp_failure_retry_result = (long int)(expression);      \
+    while (_temp_failure_retry_result == -1L && errno == EINTR); \
+    _temp_failure_retry_result;                                  \
+  }))
 #endif  // TEMP_FAILURE_RETRY
 #endif  // __Fuchsia__
 
@@ -286,7 +288,7 @@ inline void sized_delete_array(void *ptr, size_t size) {
 #ifdef GOOGLE_HAVE_SIZED_DELETEARRAY
   ::operator delete[](ptr, size);
 #else
-  (void) size;
+  (void)size;
   ::operator delete[](ptr);
 #endif
 }
@@ -309,7 +311,7 @@ inline void sized_delete_array(void *ptr, size_t size) {
 #include <machine/endian.h>  // NOLINT(build/include)
 
 /* Let's try and follow the Linux convention */
-#define __BYTE_ORDER  BYTE_ORDER
+#define __BYTE_ORDER BYTE_ORDER
 #define __LITTLE_ENDIAN LITTLE_ENDIAN
 #define __BIG_ENDIAN BIG_ENDIAN
 
@@ -377,9 +379,7 @@ static inline uint16 bswap_16(uint16 x) {
 }
 #define bswap_16(x) bswap_16(x)
 static inline uint32 bswap_32(uint32 x) {
-  return (((x & 0xFF) << 24) |
-          ((x & 0xFF00) << 8) |
-          ((x & 0xFF0000) >> 8) |
+  return (((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) |
           ((x & 0xFF000000) >> 24));
 }
 #define bswap_32(x) bswap_32(x)
@@ -447,12 +447,12 @@ typedef unsigned int uint;
 #if !defined(HAVE_USHORT)
 #define HAVE_USHORT 1
 typedef unsigned short ushort;  // NOLINT
-#endif  // !HAVE_USHORT
+#endif                          // !HAVE_USHORT
 #if !defined(HAVE_ULONG)
 #define HAVE_ULONG 1
 typedef unsigned long ulong;  // NOLINT
-#endif  // !HAVE_ULONG
-#endif  // !__USE_MISC
+#endif                        // !HAVE_ULONG
+#endif                        // !__USE_MISC
 
 #endif  // __linux__
 
@@ -492,28 +492,6 @@ typedef unsigned short u_int16;  // NOLINT
 typedef short int16;             // NOLINT
 #endif                             // _MSC_VER
 
-// using std::hash
-#ifdef _MSC_VER
-#ifdef __cplusplus
-// Define a minimal set of things typically available in the global
-// namespace in Google code.
-#include <functional>
-
-using std::hash;
-#endif  // __cplusplus
-#endif  // _MSC_VER
-
-// printf macros
-// __STDC_FORMAT_MACROS must be defined before inttypes.h inclusion */
-#if defined(__APPLE__)
-/* From MacOSX's inttypes.h:
- * "C++ implementations should define these macros only when
- *  __STDC_FORMAT_MACROS is defined before <inttypes.h> is included." */
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif /* __STDC_FORMAT_MACROS */
-#endif /* __APPLE__ */
-
 // printf macros for size_t, in the style of inttypes.h
 #if defined(_LP64) || defined(__APPLE__)
 #define __PRIS_PREFIX "z"
@@ -542,7 +520,7 @@ using std::hash;
 #ifdef PTHREADS_REDHAT_WIN32
 #include <pthread.h>  // NOLINT(build/include)
 
-#include <iosfwd>     // NOLINT(build/include)
+#include <iosfwd>  // NOLINT(build/include)
 
 // pthread_t is not a simple integer or pointer on Win32
 std::ostream &operator<<(std::ostream &out, const pthread_t &thread_id);
@@ -701,17 +679,11 @@ inline void UNALIGNED_STORE64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 #define UNALIGNED_STOREW(_p, _val) UNALIGNED_STORE32(_p, _val)
 #endif
 
-inline void UnalignedCopy16(const void *src, void *dst) {
-  memcpy(dst, src, 2);
-}
+inline void UnalignedCopy16(const void *src, void *dst) { memcpy(dst, src, 2); }
 
-inline void UnalignedCopy32(const void *src, void *dst) {
-  memcpy(dst, src, 4);
-}
+inline void UnalignedCopy32(const void *src, void *dst) { memcpy(dst, src, 4); }
 
-inline void UnalignedCopy64(const void *src, void *dst) {
-  memcpy(dst, src, 8);
-}
+inline void UnalignedCopy64(const void *src, void *dst) { memcpy(dst, src, 8); }
 
 #endif  // defined(__cplusplus), end of unaligned API
 
@@ -736,19 +708,15 @@ inline void *aligned_malloc(size_t size, size_t minimum_alignment) {
   // posix_memalign requires that the requested alignment be at least
   // sizeof(void*). In this case, fall back on malloc which should return memory
   // aligned to at least the size of a pointer.
-  const size_t required_alignment = sizeof(void*);
-  if (minimum_alignment < required_alignment)
-    return malloc(size);
+  const size_t required_alignment = sizeof(void *);
+  if (minimum_alignment < required_alignment) return malloc(size);
   void *ptr = nullptr;
-  if (posix_memalign(&ptr, minimum_alignment, size) == 0)
-    return ptr;
+  if (posix_memalign(&ptr, minimum_alignment, size) == 0) return ptr;
   return nullptr;
 #endif
 }
 
-inline void aligned_free(void *aligned_memory) {
-  free(aligned_memory);
-}
+inline void aligned_free(void *aligned_memory) { free(aligned_memory); }
 
 #elif defined(_MSC_VER)  // MSVC
 
@@ -776,8 +744,12 @@ inline void aligned_free(void *aligned_memory) {
 // construct to be a literal constant integer, we use a template instantiated
 // at all the possible powers of two.
 #ifndef SWIG
-template<int alignment, int size> struct AlignType { };
-template<int size> struct AlignType<0, size> { typedef char result[size]; };
+template <int alignment, int size>
+struct AlignType {};
+template <int size>
+struct AlignType<0, size> {
+  typedef char result[size];
+};
 #if defined(_MSC_VER)
 #define BASE_PORT_H_ALIGN_ATTRIBUTE(X) __declspec(align(X))
 #define BASE_PORT_H_ALIGN_OF(T) __alignof(T)
@@ -788,8 +760,9 @@ template<int size> struct AlignType<0, size> { typedef char result[size]; };
 
 #if defined(BASE_PORT_H_ALIGN_ATTRIBUTE)
 
-#define BASE_PORT_H_ALIGNTYPE_TEMPLATE(X) \
-  template<int size> struct AlignType<X, size> { \
+#define BASE_PORT_H_ALIGNTYPE_TEMPLATE(X)                     \
+  template <int size>                                         \
+  struct AlignType<X, size> {                                 \
     typedef BASE_PORT_H_ALIGN_ATTRIBUTE(X) char result[size]; \
   }
 
@@ -824,15 +797,17 @@ BASE_PORT_H_ALIGNTYPE_TEMPLATE(8192);
 
 // SWIG can't represent alignment and doesn't care about alignment on data
 // members (it works fine without it).
-template<typename Size>
-struct AlignType { typedef char result[Size]; };
+template <typename Size>
+struct AlignType {
+  typedef char result[Size];
+};
 #define ALIGNED_CHAR_ARRAY(T, Size) AlignType<Size * sizeof(T)>::result
 
 // Enough to parse with SWIG, will never be used by running code.
 #define BASE_PORT_H_ALIGN_OF(Type) 16
 
 #endif  // !SWIG
-#else  // __cplusplus
+#else   // __cplusplus
 #define ALIGNED_CHAR_ARRAY ALIGNED_CHAR_ARRAY_is_not_available_without_Cplusplus
 #endif  // __cplusplus
 

@@ -17,9 +17,15 @@
 
 #include "s2/encoded_uint_vector.h"
 
+#include <cstddef>
+
+#include <algorithm>
+#include <string>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
+#include "s2/util/coding/coder.h"
 
 using std::vector;
 

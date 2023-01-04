@@ -31,6 +31,7 @@
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
 #include "s2/s2memory_tracker.h"
+#include "s2/s2point.h"
 
 // An S2Builder::Graph represents a collection of snapped edges that is passed
 // to a Layer for assembly.  (Example layers include polygons, polylines, and
@@ -165,8 +166,8 @@ class S2Builder::Graph {
   // must have a sibling edge.)
   void MakeSiblingMap(std::vector<EdgeId>* in_edge_ids) const;
 
-  class VertexOutMap;  // Forward declaration
   class VertexInMap;   // Forward declaration
+  class VertexOutMap;  // Forward declaration
 
   // A helper class for VertexOutMap that represents the outgoing edges
   // from a given vertex.
@@ -352,9 +353,10 @@ class S2Builder::Graph {
     // labels from one or both siblings are returned.
     void Init(const Graph& g, EdgeType edge_type);
 
-    // Returns the set of labels associated with edge "e" (and also the labels
-    // associated with the sibling of "e" if edge_type() is UNDIRECTED).
-    // Labels are sorted and duplicate labels are automatically removed.
+    // Fills "labels" with the set of labels associated with edge "e" (and also
+    // the labels associated with the sibling of "e" if edge_type() is
+    // UNDIRECTED). Labels are sorted and duplicate labels are automatically
+    // removed.
     //
     // This method uses an output parameter rather than returning by value in
     // order to avoid allocating a new vector on every call to this method.
@@ -394,11 +396,11 @@ class S2Builder::Graph {
   // (see s2builder.h for details).
   const IsFullPolygonPredicate& is_full_polygon_predicate() const;
 
-  // Returns a map "m" that maps each edge e=(v0,v1) to the following outgoing
-  // edge around "v1" in clockwise order.  (This corresponds to making a "left
-  // turn" at the vertex.)  By starting at a given edge and making only left
-  // turns, you can construct a loop whose interior does not contain any edges
-  // in the same connected component.
+  // Fills in "left_turn_map" so it maps each edge e=(v0,v1) to the following
+  // outgoing edge around "v1" in clockwise order.  (This corresponds to making
+  // a "left turn" at the vertex.)  By starting at a given edge and making only
+  // left turns, you can construct a loop whose interior does not contain any
+  // edges in the same connected component.
   //
   // If the incoming and outgoing edges around a vertex do not alternate
   // perfectly (e.g., there are two incoming edges in a row), then adjacent
@@ -444,7 +446,7 @@ class S2Builder::Graph {
       const std::vector<InputEdgeId>& min_input_ids,
       std::vector<std::vector<EdgeId>>* chains);
 
-  // A loop consisting of a sequence of edges.
+  // A loop consisting of a sequence of edge ids.
   using EdgeLoop = std::vector<EdgeId>;
 
   // Indicates whether loops should be simple cycles (no repeated vertices) or
@@ -594,8 +596,9 @@ class S2Builder::Graph {
   // should already have been transformed into a pair of directed edges.
   //
   // "input_ids" is a vector of the same length as "edges" that indicates
-  // which input edges were snapped to each edge.  This vector is also updated
-  // appropriately as edges are discarded, merged, etc.
+  // which input edges were snapped to each edge, by mapping each edge id to a
+  // set of input edge ids in "id_set_lexicon".  This vector and the lexicon are
+  // also updated appropriately as edges are discarded, merged, etc.
   //
   // Note that "options" may be modified by this method: in particular, if
   // edge_type() is UNDIRECTED and sibling_pairs() is CREATE or REQUIRE, then

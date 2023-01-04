@@ -18,9 +18,11 @@
 #include "s2/s2shapeutil_get_reference_point.h"
 
 #include <algorithm>
+#include <vector>
 
-#include "s2/base/logging.h"
 #include "s2/s2contains_vertex_query.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 
 using std::vector;
 using ReferencePoint = S2Shape::ReferencePoint;

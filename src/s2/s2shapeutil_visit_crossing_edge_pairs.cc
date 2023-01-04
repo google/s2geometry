@@ -17,10 +17,23 @@
 
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 
+#include <string>
+#include <vector>
+
+#include "s2/base/integral_types.h"
+#include "absl/container/inlined_vector.h"
+#include "absl/strings/str_format.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2cell_range_iterator.h"
 #include "s2/s2crossing_edge_query.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2error.h"
-#include "s2/s2shapeutil_range_iterator.h"
+#include "s2/s2padded_cell.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
+#include "s2/s2shapeutil_shape_edge.h"
+#include "s2/s2shapeutil_shape_edge_id.h"
 #include "s2/s2wedge_relations.h"
 
 using std::vector;
@@ -153,7 +166,8 @@ class IndexCrosser {
   // visits all crossings between edges of A and B that intersect a->id().
   // Terminates early and returns false if visitor_ returns false.
   // Advances both iterators past ai->id().
-  bool VisitCrossings(RangeIterator* ai, RangeIterator* bi);
+  bool VisitCrossings(S2CellRangeIterator<S2ShapeIndex::Iterator>* ai,
+                      S2CellRangeIterator<S2ShapeIndex::Iterator>* bi);
 
   // Given two index cells, visits all crossings between edges of those cells.
   // Terminates early and returns false if visitor_ returns false.
@@ -266,9 +280,11 @@ inline bool IndexCrosser::VisitCellCellCrossings(
   return VisitEdgesEdgesCrossings(a_shape_edges_, b_shape_edges_);
 }
 
-bool IndexCrosser::VisitCrossings(RangeIterator* ai, RangeIterator* bi) {
+bool IndexCrosser::VisitCrossings(
+    S2CellRangeIterator<S2ShapeIndex::Iterator>* ai,
+    S2CellRangeIterator<S2ShapeIndex::Iterator>* bi) {
   S2_DCHECK(ai->id().contains(bi->id()));
-  if (ai->cell().num_edges() == 0) {
+  if (ai->iterator().cell().num_edges() == 0) {
     // Skip over the cells of B using binary search.
     bi->SeekBeyond(*ai);
   } else {
@@ -281,22 +297,23 @@ bool IndexCrosser::VisitCrossings(RangeIterator* ai, RangeIterator* bi) {
     int b_edges = 0;
     b_cells_.clear();
     do {
-      int cell_edges = bi->cell().num_edges();
+      int cell_edges = bi->iterator().cell().num_edges();
       if (cell_edges > 0) {
         b_edges += cell_edges;
         if (b_edges >= kEdgeQueryMinEdges) {
           // There are too many edges, so use an S2CrossingEdgeQuery.
-          if (!VisitSubcellCrossings(ai->cell(), ai->id())) return false;
+          if (!VisitSubcellCrossings(ai->iterator().cell(), ai->id()))
+            return false;
           bi->SeekBeyond(*ai);
           return true;
         }
-        b_cells_.push_back(&bi->cell());
+        b_cells_.push_back(&bi->iterator().cell());
       }
       bi->Next();
     } while (bi->id() <= ai->range_max());
     if (!b_cells_.empty()) {
       // Test all the edge crossings directly.
-      GetShapeEdges(a_index_, ai->cell(), &a_shape_edges_);
+      GetShapeEdges(a_index_, ai->iterator().cell(), &a_shape_edges_);
       GetShapeEdges(b_index_, b_cells_, &b_shape_edges_);
       if (!VisitEdgesEdgesCrossings(a_shape_edges_, b_shape_edges_)) {
         return false;
@@ -315,7 +332,8 @@ bool VisitCrossingEdgePairs(const S2ShapeIndex& a_index,
 
   // TODO(ericv): Use brute force if the total number of edges is small enough
   // (using a larger threshold if the S2ShapeIndex is not constructed yet).
-  RangeIterator ai(a_index), bi(b_index);
+  auto ai = MakeS2CellRangeIterator(&a_index);
+  auto bi = MakeS2CellRangeIterator(&b_index);
   IndexCrosser ab(a_index, b_index, type, visitor, false);  // Tests A against B
   IndexCrosser ba(b_index, a_index, type, visitor, true);   // Tests B against A
   while (!ai.done() || !bi.done()) {
@@ -336,8 +354,11 @@ bool VisitCrossingEdgePairs(const S2ShapeIndex& a_index,
         if (!ba.VisitCrossings(&bi, &ai)) return false;
       } else {
         // The A and B cells are the same.
-        if (ai.cell().num_edges() > 0 && bi.cell().num_edges() > 0) {
-          if (!ab.VisitCellCellCrossings(ai.cell(), bi.cell())) return false;
+        if (ai.iterator().cell().num_edges() > 0 &&
+            bi.iterator().cell().num_edges() > 0) {
+          if (!ab.VisitCellCellCrossings(ai.iterator().cell(),
+                                         bi.iterator().cell()))
+            return false;
         }
         ai.Next();
         bi.Next();

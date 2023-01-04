@@ -22,6 +22,7 @@
 #define S2_S2SHAPEUTIL_CONVERSION_H_
 
 #include <memory>
+#include <vector>
 
 #include "s2/s2point.h"
 #include "s2/s2polygon.h"

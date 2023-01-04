@@ -17,13 +17,19 @@
 
 #include "s2/s2builderutil_closed_set_normalizer.h"
 
+#include <limits>
 #include <memory>
 #include <utility>
+#include <vector>
 
-#include "absl/memory/memory.h"
+#include "s2/id_set_lexicon.h"
+#include "s2/s2builder.h"
+#include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
+#include "s2/s2builderutil_find_polygon_degeneracies.h"
+#include "s2/s2error.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::vector;
@@ -104,7 +110,8 @@ const vector<Graph>& ClosedSetNormalizer::Run(
   bool modified[3];
   bool any_modified = false;
   for (int dim = 2; dim >= 0; --dim) {
-    if (new_edges_[dim].size() != g[dim].num_edges()) any_modified = true;
+    if (new_edges_[dim].size() != static_cast<size_t>(g[dim].num_edges()))
+      any_modified = true;
     modified[dim] = any_modified;
   }
   if (!any_modified) {
@@ -147,8 +154,9 @@ inline Edge ClosedSetNormalizer::Advance(const Graph& g, EdgeId* e) const {
 // returning a sentinel value once all edges are exhausted.
 inline Edge ClosedSetNormalizer::AdvanceIncoming(
     const Graph& g, const vector<EdgeId>& in_edges, int* i) const {
-  return ((++*i == in_edges.size()) ? sentinel_ :
-          Graph::reverse(g.edge(in_edges[*i])));
+  return ((static_cast<size_t>(++*i) == in_edges.size())
+              ? sentinel_
+              : Graph::reverse(g.edge(in_edges[*i])));
   }
 
 void ClosedSetNormalizer::NormalizeEdges(const vector<Graph>& g,

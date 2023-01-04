@@ -24,6 +24,7 @@
 #include "s2/base/logging.h"
 #include "absl/base/macros.h"
 #include "s2/_fp_contract_off.h"
+#include "s2/s2point.h"
 #include "s2/s2region.h"
 
 class Decoder;
@@ -55,7 +56,7 @@ class S2RegionUnion final : public S2Region {
   explicit S2RegionUnion(std::vector<std::unique_ptr<S2Region>> regions);
 
   // Use {} instead of = default to work around gcc bug.
-  ~S2RegionUnion() override {}
+  ~S2RegionUnion() override = default;
 
   // Initialize region by taking ownership of the given regions.
   void Init(std::vector<std::unique_ptr<S2Region>> regions);

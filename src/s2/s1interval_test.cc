@@ -19,6 +19,7 @@
 
 #include <cfloat>
 #include <cmath>
+#include <string>
 
 #include <gtest/gtest.h>
 

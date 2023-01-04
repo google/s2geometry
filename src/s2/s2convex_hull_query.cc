@@ -25,14 +25,22 @@
 
 #include "s2/s2convex_hull_query.h"
 
+#include <algorithm>
 #include <memory>
+#include <vector>
 
-#include "absl/memory/memory.h"
+#include "s2/s2cap.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2latlng_rect.h"
+#include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2polygon.h"
+#include "s2/s2polyline.h"
 #include "s2/s2predicates.h"
+#include "s2/s2predicates_internal.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::unique_ptr;
 using std::vector;
 

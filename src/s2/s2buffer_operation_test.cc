@@ -17,38 +17,57 @@
 
 #include "s2/s2buffer_operation.h"
 
+#include <cfloat>
+#include <cmath>
+#include <cstdlib>
+
 #include <algorithm>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
-#include "s2/base/casts.h"
 #include "s2/base/logging.h"
 #include <gtest/gtest.h>
 #include "absl/base/call_once.h"
 #include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s2boolean_operation.h"
+#include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_lax_polygon_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2closest_edge_query.h"
+#include "s2/s2closest_edge_query_base.h"
 #include "s2/s2contains_point_query.h"
+#include "s2/s2edge_crossings.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
 #include "s2/s2lax_loop_shape.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2loop.h"
+#include "s2/s2memory_tracker.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
+#include "s2/s2point_span.h"
 #include "s2/s2point_vector_shape.h"
-#include "s2/s2shape_measures.h"
+#include "s2/s2pointutil.h"
+#include "s2/s2polygon.h"
+#include "s2/s2predicates.h"
+#include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::max;
 using std::string;
 using std::unique_ptr;
@@ -516,7 +535,7 @@ TEST(S2BufferOperation, RadiiAndErrorFractionCoverage) {
 
 class TestBufferPolyline {
  public:
-  TestBufferPolyline(const string& input_str,
+  TestBufferPolyline(absl::string_view input_str,
                      const S2BufferOperation::Options& options);
 
  private:
@@ -601,7 +620,7 @@ class TestBufferPolyline {
 // instead.  Similarly TestBuffer should be used to test negative buffer radii
 // and polylines with 0 or 1 vertices.
 TestBufferPolyline::TestBufferPolyline(
-    const string& input_str, const S2BufferOperation::Options& options)
+    absl::string_view input_str, const S2BufferOperation::Options& options)
     : polyline_(s2textformat::ParsePointsOrDie(input_str)),
       buffer_radius_(options.buffer_radius()),
       max_error_(options.max_error()),

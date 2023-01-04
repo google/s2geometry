@@ -17,6 +17,11 @@
 
 #include "s2/s2memory_tracker.h"
 
+#include <utility>
+
+#include "s2/base/integral_types.h"
+#include "s2/s2error.h"
+
 void S2MemoryTracker::SetError(S2Error error) {
   error_ = std::move(error);
 }

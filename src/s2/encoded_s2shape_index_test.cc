@@ -17,41 +17,53 @@
 
 #include "s2/encoded_s2shape_index.h"
 
+#include <cstddef>
+
 #include <algorithm>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/base/call_once.h"
 #include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
+#include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s1angle.h"
 #include "s2/s2builder.h"
+#include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_s2polyline_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2cap.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2closest_edge_query.h"
+#include "s2/s2coder.h"
 #include "s2/s2contains_point_query.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2error.h"
 #include "s2/s2latlng.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2polygon.h"
+#include "s2/s2polyline.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_coding.h"
 #include "s2/s2shapeutil_testing.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 #include "s2/thread_testing.h"
 
-using absl::make_unique;
 using absl::StrCat;
 using s2builderutil::S2CellIdSnapFunction;
 using s2builderutil::S2PolylineLayer;
+using std::make_unique;
 using std::max;
 using std::string;
 using std::unique_ptr;
@@ -117,7 +129,7 @@ TEST(EncodedS2ShapeIndex, RegularLoops) {
   }
 }
 
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__) && !(defined(__ANDROID__) && defined(__i386__))
 // TODO(b/232496949): This test relies on `random()` return values because
 // it tests an exact encoded byte size.  Either change it to accept a range
 // of sizes, or decode and check either the number of shapes, or possibly

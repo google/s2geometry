@@ -18,9 +18,13 @@
 #ifndef S2_ENCODED_UINT_VECTOR_H_
 #define S2_ENCODED_UINT_VECTOR_H_
 
+#include <cstddef>
+
+#include <limits>
 #include <type_traits>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "absl/base/internal/unaligned_access.h"
 #include "absl/types/span.h"
 #include "s2/util/bits/bits.h"
@@ -62,7 +66,7 @@ class EncodedUintVector {
   static_assert(sizeof(T) & 0xe, "Unsupported integer length");
 
   // Constructs an uninitialized object; requires Init() to be called.
-  EncodedUintVector() {}
+  EncodedUintVector() = default;
 
   // Initializes the EncodedUintVector.  Returns false on errors, leaving the
   // vector in an unspecified state.
@@ -116,7 +120,7 @@ void EncodeUintWithLength(T value, int length, Encoder* encoder);
 // REQUIRES: 2 <= sizeof(T) <= 8
 // REQUIRES: 0 <= length <= sizeof(T)
 template <class T>
-T GetUintWithLength(const void* ptr, int length);
+T GetUintWithLength(const char* ptr, int length);
 
 // Decodes and consumes a variable-length integer consisting of "length" bytes
 // in little-endian format.  Returns false if not enough bytes are available.
@@ -190,7 +194,7 @@ inline T GetUintWithLength(const char* ptr, int length) {
 
 template <class T>
 bool DecodeUintWithLength(int length, Decoder* decoder, T* result) {
-  if (decoder->avail() < length) return false;
+  if (decoder->avail() < static_cast<size_t>(length)) return false;
   const char* ptr = decoder->skip(0);
   *result = GetUintWithLength<T>(ptr, length);
   decoder->skip(length);
@@ -228,7 +232,7 @@ bool EncodedUintVector<T>::Init(Decoder* decoder) {
   size_ = size_len / sizeof(T);  // Optimized into bit shift.
   len_ = (size_len & (sizeof(T) - 1)) + 1;
   if (size_ > std::numeric_limits<size_t>::max() / sizeof(T)) return false;
-  size_t bytes = size_ * len_;
+  size_t bytes = static_cast<size_t>(size_) * static_cast<size_t>(len_);
   if (decoder->avail() < bytes) return false;
   data_ = decoder->skip(0);
   decoder->skip(bytes);

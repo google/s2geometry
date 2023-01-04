@@ -20,11 +20,13 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <string>
 
-#include "s2/base/logging.h"
 #include <gtest/gtest.h>
 #include "s2/s1angle.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
+#include "s2/util/math/matrix3x3.h"
 
 using std::max;
 using std::min;

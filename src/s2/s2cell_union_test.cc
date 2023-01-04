@@ -24,18 +24,24 @@
 #include <utility>
 #include <vector>
 
+#include "s2/base/commandlineflags_declare.h"
 #include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
+#include "absl/hash/hash_testing.h"
 #include "absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2cell_iterator_join.h"
+#include "s2/s2coder_testing.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2error.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
 #include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
 
@@ -45,6 +51,10 @@ using absl::StrCat;
 using std::max;
 using std::min;
 using std::vector;
+
+using ::testing::Eq;
+using ::testing::IsFalse;
+using ::testing::IsTrue;
 
 class S2CellUnionTestPeer {
  public:
@@ -657,3 +667,40 @@ TEST(S2CellUnion, IntersectionOneInputNormalized) {
   S2CellUnion intersection = parent.Intersection(children);
   EXPECT_EQ(intersection, children);
 }
+
+TEST(S2CellUnion, SupportsAbslHash) {
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly(
+      {S2CellUnion({S2CellId::FromFace(1)}),
+       S2CellUnion({S2CellId::FromFace(1), S2CellId::FromFace(2).child_begin(1),
+                    S2CellId::FromFace(3).child_begin(2)})}));
+}
+
+TEST(S2CellUnion, IteratorWorks) {
+  // Get a cell union of the face cells.
+  auto cell_union = S2CellUnion::FromBeginEnd(
+      S2CellId::Begin(S2CellId::kMaxLevel), S2CellId::End(S2CellId::kMaxLevel));
+  S2_CHECK_EQ(cell_union.num_cells(), 6);
+
+  auto iter = S2CellUnion::Iterator(&cell_union);
+
+  EXPECT_THAT(iter.id(), Eq(S2CellId::FromFace(0)));
+  EXPECT_THAT(iter.done(), IsFalse());
+  EXPECT_THAT(iter.Prev(), IsFalse());
+
+  iter.Next();
+  EXPECT_THAT(iter.id(), Eq(S2CellId::FromFace(1)));
+
+  iter.Finish();
+  EXPECT_THAT(iter.done(), IsTrue());
+  EXPECT_THAT(iter.Prev(), IsTrue());
+  EXPECT_THAT(iter.id(), Eq(S2CellId::FromFace(5)));
+
+  iter.Seek(S2CellId::FromFace(3));
+  EXPECT_THAT(iter.done(), IsFalse());
+  EXPECT_THAT(iter.id(), Eq(S2CellId::FromFace(3)));
+
+  iter.Begin();
+  EXPECT_THAT(iter.done(), IsFalse());
+  EXPECT_THAT(iter.id(), Eq(S2CellId::FromFace(0)));
+}
+

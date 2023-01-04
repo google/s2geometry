@@ -20,6 +20,13 @@
 #ifndef S2_S2CLOSEST_CELL_QUERY_BASE_H_
 #define S2_S2CLOSEST_CELL_QUERY_BASE_H_
 
+#include <cstddef>
+
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <queue>
+#include <type_traits>
 #include <vector>
 
 #include "s2/base/logging.h"
@@ -28,10 +35,12 @@
 #include "absl/hash/hash.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
+#include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_index.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2distance_target.h"
+#include "s2/s2region.h"
 #include "s2/s2region_coverer.h"
 #include "s2/util/gtl/dense_hash_set.h"
 
@@ -372,10 +381,8 @@ class S2ClosestCellQueryBase {
 
 //////////////////   Implementation details follow   ////////////////////
 
-
 template <class Distance>
-inline S2ClosestCellQueryBase<Distance>::Options::Options() {
-}
+inline S2ClosestCellQueryBase<Distance>::Options::Options() = default;
 
 template <class Distance>
 inline int S2ClosestCellQueryBase<Distance>::Options::max_results() const {
@@ -672,7 +679,7 @@ void S2ClosestCellQueryBase<Distance>::InitQueue() {
     initial_cells = &intersection_with_max_distance_;
   }
   NonEmptyRangeIterator range(index_);
-  for (int i = 0; i < initial_cells->size(); ++i) {
+  for (size_t i = 0; i < initial_cells->size(); ++i) {
     S2CellId id = (*initial_cells)[i];
     bool seek = (i == 0) || id.range_min() >= range.limit_id();
     ProcessOrEnqueue(id, &range, seek);

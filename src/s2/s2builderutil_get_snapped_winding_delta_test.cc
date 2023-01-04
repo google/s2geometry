@@ -17,25 +17,37 @@
 
 #include "s2/s2builderutil_get_snapped_winding_delta.h"
 
+#include <cmath>
+
 #include <iostream>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
+#include "absl/container/btree_map.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
+#include "s2/id_set_lexicon.h"
+#include "s2/s1angle.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2cap.h"
 #include "s2/s2edge_crosser.h"
+#include "s2/s2error.h"
 #include "s2/s2lax_loop_shape.h"
 #include "s2/s2lax_polygon_shape.h"
+#include "s2/s2point.h"
+#include "s2/s2pointutil.h"
+#include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
 using absl::StrCat;
-using absl::make_unique;
+using std::make_unique;
 using std::string;
 using std::vector;
 
@@ -92,10 +104,11 @@ class WindingNumberComparingLayer : public S2Builder::Layer {
 // degrees, verifies that the change in winding number computed by
 // s2builderutil::GetSnappedWindingDelta() for the degenerate edge
 // "ref_input_edge_id" is "expected_winding_delta".
-void ExpectWindingDelta(
-    const string& loops_str, const string& forced_vertices_str,
-    double snap_radius_degrees, InputEdgeId ref_input_edge_id,
-    int expected_winding_delta) {
+void ExpectWindingDelta(absl::string_view loops_str,
+                        absl::string_view forced_vertices_str,
+                        double snap_radius_degrees,
+                        InputEdgeId ref_input_edge_id,
+                        int expected_winding_delta) {
   S2Builder builder{S2Builder::Options{s2builderutil::IdentitySnapFunction{
         S1Angle::Degrees(snap_radius_degrees)}}};
   builder.StartLayer(make_unique<WindingNumberComparingLayer>(

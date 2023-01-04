@@ -21,18 +21,23 @@
 #include <algorithm>
 #include <cmath>
 #include <iosfwd>
+#include <ostream>
 #include <vector>
 
 #include "s2/base/logging.h"
+#include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
+#include "s2/s2coder.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2region.h"
 
 class Decoder;
 class Encoder;
 class S2Cell;
+class S2CellId;
 class S2LatLngRect;
 
 // S2Cap represents a disc-shaped region defined by a center and radius.
@@ -58,6 +63,8 @@ class S2LatLngRect;
 // "plain old datatype" (POD) because it has virtual functions.
 class S2Cap final : public S2Region {
  public:
+  typedef s2coding::internal::S2LegacyCoder<S2Cap> Coder;
+
   // The default constructor returns an empty S2Cap.
   S2Cap() : center_(1, 0, 0), radius_(S1ChordAngle::Negative()) {}
 
@@ -91,7 +98,7 @@ class S2Cap final : public S2Region {
   // Return a full cap, i.e. a cap that contains all points.
   static S2Cap Full();
 
-  ~S2Cap() override {}
+  ~S2Cap() override{};
 
   // Accessor methods.
   const S2Point& center() const { return center_; }
@@ -208,8 +215,9 @@ class S2Cap final : public S2Region {
   // Return true if two caps are not identical.
   bool operator!=(const S2Cap& other) const;
 
-  // Return true if the cap center and height differ by at most "max_error"
-  // from the given cap "other".
+  // Return true if the angle between the centers of 'this' and 'other' is at
+  // most 'max_error' radians, and the difference between squared chord distance
+  // radii of 'this' and 'other' is also at most max_error.
   bool ApproxEquals(const S2Cap& other,
                     S1Angle max_error = S1Angle::Radians(1e-14)) const;
 

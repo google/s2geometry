@@ -186,6 +186,8 @@ struct dense_hashtable_iterator {
  private:
   using value_alloc_type =
       typename std::allocator_traits<A>::template rebind_alloc<V>;
+  using value_alloc_traits =
+      typename std::allocator_traits<A>::template rebind_traits<V>;
 
  public:
   typedef dense_hashtable_iterator<V, K, HF, ExK, SetK, EqK, A>
@@ -195,10 +197,10 @@ struct dense_hashtable_iterator {
 
   typedef std::forward_iterator_tag iterator_category;  // very little defined!
   typedef V value_type;
-  typedef typename value_alloc_type::difference_type difference_type;
-  typedef typename value_alloc_type::size_type size_type;
-  typedef typename value_alloc_type::reference reference;
-  typedef typename value_alloc_type::pointer pointer;
+  typedef typename value_alloc_traits::difference_type difference_type;
+  typedef typename value_alloc_traits::size_type size_type;
+  typedef typename value_alloc_traits::value_type& reference;
+  typedef typename value_alloc_traits::pointer pointer;
 
   // "Real" constructor and default constructor
   dense_hashtable_iterator(
@@ -250,6 +252,8 @@ struct dense_hashtable_const_iterator {
  private:
   using value_alloc_type =
       typename std::allocator_traits<A>::template rebind_alloc<V>;
+  using value_alloc_traits =
+      typename std::allocator_traits<A>::template rebind_traits<V>;
 
  public:
   typedef dense_hashtable_iterator<V, K, HF, ExK, SetK, EqK, A>
@@ -259,10 +263,10 @@ struct dense_hashtable_const_iterator {
 
   typedef std::forward_iterator_tag iterator_category;  // very little defined!
   typedef V value_type;
-  typedef typename value_alloc_type::difference_type difference_type;
-  typedef typename value_alloc_type::size_type size_type;
-  typedef typename value_alloc_type::const_reference reference;
-  typedef typename value_alloc_type::const_pointer pointer;
+  typedef typename value_alloc_traits::difference_type difference_type;
+  typedef typename value_alloc_traits::size_type size_type;
+  typedef const typename value_alloc_traits::value_type& reference;
+  typedef typename value_alloc_traits::const_pointer pointer;
 
   // "Real" constructor and default constructor
   dense_hashtable_const_iterator(
@@ -317,6 +321,8 @@ class dense_hashtable {
  private:
   using value_alloc_type =
       typename std::allocator_traits<Alloc>::template rebind_alloc<Value>;
+  using value_alloc_traits =
+      typename std::allocator_traits<Alloc>::template rebind_traits<Value>;
 
 
  public:
@@ -326,12 +332,12 @@ class dense_hashtable {
   typedef EqualKey key_equal;
   typedef Alloc allocator_type;
 
-  typedef typename value_alloc_type::size_type size_type;
-  typedef typename value_alloc_type::difference_type difference_type;
-  typedef typename value_alloc_type::reference reference;
-  typedef typename value_alloc_type::const_reference const_reference;
-  typedef typename value_alloc_type::pointer pointer;
-  typedef typename value_alloc_type::const_pointer const_pointer;
+  typedef typename value_alloc_traits::size_type size_type;
+  typedef typename value_alloc_traits::difference_type difference_type;
+  typedef typename value_alloc_traits::value_type& reference;
+  typedef const typename value_alloc_traits::value_type& const_reference;
+  typedef typename value_alloc_traits::pointer pointer;
+  typedef typename value_alloc_traits::const_pointer const_pointer;
   typedef dense_hashtable_iterator<Value, Key, HashFcn,
                                    ExtractKey, SetKey, EqualKey, Alloc>
   iterator;

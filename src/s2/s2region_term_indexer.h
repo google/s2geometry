@@ -101,7 +101,9 @@
 #include <vector>
 
 #include "absl/strings/string_view.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
+#include "s2/s2point.h"
 #include "s2/s2region.h"
 #include "s2/s2region_coverer.h"
 

@@ -20,16 +20,20 @@
 
 #include "s2/s2r2rect.h"
 
+#include <string>
+
 #include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "absl/strings/str_cat.h"
 #include "s2/r1interval.h"
+#include "s2/r2.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
+#include "s2/s2point.h"
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"
 
@@ -102,6 +106,10 @@ TEST(S2R2Rect, ConstructorsAndAccessors) {
   EXPECT_EQ(1.0, d1.y().hi());
   EXPECT_EQ(R1Interval(0.1, 0.25), d1.x());
   EXPECT_EQ(R1Interval(0, 1), d1.y());
+  EXPECT_EQ(R1Interval(0.1, 0.25), d1[0]);
+  EXPECT_EQ(R1Interval(0, 1), d1[1]);
+  EXPECT_EQ(d1.GetVertex(0, 0), d1.lo());
+  EXPECT_EQ(d1.GetVertex(1, 1), d1.hi());
   EXPECT_EQ(d1, d1);
   EXPECT_NE(d1, S2R2Rect::Empty());
 }

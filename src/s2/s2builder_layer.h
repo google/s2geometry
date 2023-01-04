@@ -18,7 +18,9 @@
 #ifndef S2_S2BUILDER_LAYER_H_
 #define S2_S2BUILDER_LAYER_H_
 
+#include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
+#include "s2/s2error.h"
 
 // This class is not needed by ordinary S2Builder clients.  It is only
 // necessary if you wish to implement a new S2Builder::Layer subtype.
@@ -31,7 +33,7 @@ class S2Builder::Layer {
   using Label = S2Builder::Label;
   using LabelSetId = S2Builder::LabelSetId;
 
-  virtual ~Layer() {}
+  virtual ~Layer() = default;
 
   // Defines options for building the edge graph that is passed to Build().
   virtual GraphOptions graph_options() const = 0;

@@ -17,34 +17,46 @@
 
 #include "s2/s2closest_edge_query.h"
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
+#include "s2/util/coding/coder.h"
 #include "s2/encoded_s2shape_index.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2closest_edge_query_base.h"
 #include "s2/s2closest_edge_query_testing.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2latlng.h"
 #include "s2/s2loop.h"
 #include "s2/s2metrics.h"
+#include "s2/s2min_distance_targets.h"
+#include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2predicates.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_coding.h"
+#include "s2/s2shapeutil_count_edges.h"
+#include "s2/s2shapeutil_shape_edge_id.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
 using s2shapeutil::ShapeEdgeId;
 using s2textformat::MakeIndexOrDie;
 using s2textformat::MakePointOrDie;
-using absl::make_unique;
+using std::make_unique;
 using std::min;
 using std::pair;
 using std::string;

@@ -23,26 +23,32 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2cell.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2coder_testing.h"
 #include "s2/s2coords.h"
 #include "s2/s2debug.h"
+#include "s2/s2error.h"
 #include "s2/s2latlng.h"
+#include "s2/s2latlng_rect.h"
+#include "s2/s2point.h"
+#include "s2/s2point_span.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
 using absl::StrCat;
 using s2builderutil::S2CellIdSnapFunction;
 using std::fabs;
-using absl::make_unique;
+using std::make_unique;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -59,6 +65,9 @@ unique_ptr<S2Polyline> MakePolyline(absl::string_view str,
   Decoder decoder(encoder.base(), encoder.length());
   auto decoded_polyline = make_unique<S2Polyline>();
   decoded_polyline->set_s2debug_override(debug_override);
+  // Provide some minimal test coverage for `s2debug_override`.
+  S2_CHECK_EQ(static_cast<int>(debug_override),
+           static_cast<int>(decoded_polyline->s2debug_override()));
   S2_CHECK(decoded_polyline->Decode(&decoder)) << str;
   return decoded_polyline;
 }
@@ -120,7 +129,7 @@ TEST(S2Polyline, GetLengthAndCentroid) {
 
   for (int i = 0; i < 100; ++i) {
     // Choose a coordinate frame for the great circle.
-    Vector3_d x, y, z;
+    S2Point x, y, z;
     S2Testing::GetRandomFrame(&x, &y, &z);
 
     vector<S2Point> vertices;
@@ -693,6 +702,18 @@ TEST(S2PolylineCoveringTest, EmptyPolylines) {
   //    empty.covers(nonempty) = false
   TestNearlyCovers("0:1, 0:2", "", 0.0, false, true);
   TestNearlyCovers("", "", 0.0, true, true);
+}
+
+TEST(S2Polyline, S2CoderWorks) {
+  using s2textformat::ToString;
+
+  unique_ptr<S2Polyline> polyline =
+      s2textformat::MakePolylineOrDie("0:0, 0:10, 10:20, 20:30");
+
+  S2Error error;
+  auto decoded = s2coding::RoundTrip(S2Polyline::Coder(), *polyline, error);
+
+  EXPECT_EQ(ToString(decoded), ToString(*polyline));
 }
 
 }  // namespace

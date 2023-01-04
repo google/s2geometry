@@ -17,10 +17,14 @@
 
 #include "s2/encoded_string_vector.h"
 
+#include <cstddef>
+
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/strings/string_view.h"
+#include "s2/util/coding/coder.h"
 
 using absl::string_view;
 using std::string;

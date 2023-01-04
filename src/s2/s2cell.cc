@@ -20,21 +20,26 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
-#include <iomanip>
+#include <new>
 
-#include "s2/base/logging.h"
+#include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
+#include "s2/r2rect.h"
+#include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2cap.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
+#include "s2/s2coords_internal.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2measures.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
 
 using S2::internal::kPosToIJ;
 using S2::internal::kPosToOrientation;
@@ -272,6 +277,15 @@ bool S2Cell::Contains(const S2Point& p) const {
   // We can't just call XYZtoFaceUV, because for points that lie on the
   // boundary between two faces (i.e. u or v is +1/-1) we need to return
   // true for both adjacent cells.
+  //
+  // We can get away with not checking if the face of the point matches the face
+  // of the cell here because, for the 4 faces adjacent to face_, p will be
+  // projected outside the range of ([-1,1]x[-1,1]) and thus can't intersect the
+  // cell bounds (except on the face boundary which we want).
+  //
+  // For the face opposite face_, the sign of the UV coordinates of P will be
+  // flipped so it will automatically fall outside the cell boundary as no cells
+  // cross the origin.
   R2Point uv;
   if (!S2::FaceXYZtoUV(face_, p, &uv)) return false;
 
@@ -545,4 +559,3 @@ S1ChordAngle S2Cell::GetMaxDistance(const S2Cell& target) const {
   }
   return max_dist;
 }
-

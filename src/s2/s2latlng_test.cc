@@ -19,15 +19,17 @@
 
 #include <cmath>
 #include <cstdio>
+#include <string>
 
-#include "s2/base/logging.h"
 #include <gtest/gtest.h>
-#include "absl/base/macros.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
+#include "s2/s1angle.h"
+#include "s2/s2coder_testing.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
-#include "s2/s2text_format.h"
 
 using absl::StrCat;
 using std::fabs;
@@ -172,5 +174,13 @@ TEST(S2LatLng, TestHashCode) {
   EXPECT_EQ(3, map[S2LatLng::FromDegrees(5, 15)]);
   EXPECT_EQ(4, map[S2LatLng::FromDegrees(7, 17)]);
   EXPECT_EQ(5, map[S2LatLng::FromDegrees(11, 19)]);
+}
+
+TEST(S2LatLng, S2CoderWorks) {
+  S2LatLng pnt = S2LatLng::FromDegrees(0, 10);
+
+  S2Error error;
+  auto decoded = s2coding::RoundTrip(S2LatLng::Coder(), pnt, error);
+  EXPECT_EQ(pnt, decoded);
 }
 

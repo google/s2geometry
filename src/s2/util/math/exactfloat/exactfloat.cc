@@ -31,6 +31,7 @@
 #include "s2/base/logging.h"
 #include "absl/base/macros.h"
 #include "absl/container/fixed_array.h"
+#include "absl/numeric/int128.h"
 #include <openssl/bn.h>
 #include <openssl/crypto.h>  // for OPENSSL_free
 

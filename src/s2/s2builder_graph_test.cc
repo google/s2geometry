@@ -20,26 +20,33 @@
 
 #include "s2/s2builder_graph.h"
 
-#include <iosfwd>
+#include <array>
 #include <memory>
+#include <ostream>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
 #include "s2/id_set_lexicon.h"
+#include "s2/s2builder.h"
+#include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_testing.h"
+#include "s2/s2error.h"
 #include "s2/s2lax_polyline_shape.h"
+#include "s2/s2point.h"
 #include "s2/s2text_format.h"
 
 using s2builderutil::GraphClone;
 using s2builderutil::GraphCloningLayer;
 using s2textformat::MakeLaxPolylineOrDie;
 using s2textformat::ParsePointsOrDie;
-using absl::make_unique;
+using std::make_unique;
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;
 using Graph = S2Builder::Graph;
+using VertexOutMap = S2Builder::Graph::VertexOutMap;
+using VertexOutEdgeIds = S2Builder::Graph::VertexOutEdgeIds;
 using GraphOptions = S2Builder::GraphOptions;
 
 using DegenerateEdges = GraphOptions::DegenerateEdges;
@@ -121,6 +128,34 @@ TEST(GetDirectedComponents, DegenerateEdges) {
   EXPECT_EQ(components[1].size(), 2);
   EXPECT_EQ(components[1][0].size(), 4);
   EXPECT_EQ(components[1][1].size(), 4);
+}
+
+TEST(S2BuilderGraph, BasicVertexOutApi) {
+  GraphClone gc;
+  S2Builder builder{S2Builder::Options()};
+  GraphOptions graph_options(EdgeType::DIRECTED,
+                             DegenerateEdges::DISCARD_EXCESS,
+                             DuplicateEdges::KEEP, SiblingPairs::KEEP);
+  builder.StartLayer(make_unique<GraphCloningLayer>(graph_options, &gc));
+  builder.AddShape(*MakeLaxPolylineOrDie("0:0, 1:1, 2:0"));
+  builder.AddShape(*MakeLaxPolylineOrDie("0:0, 1:0, 2:0"));
+  builder.AddShape(*MakeLaxPolylineOrDie("0:0, 0:1, 0:2"));
+  S2Error error;
+  EXPECT_TRUE(builder.Build(&error));
+
+  // Should be one edge between the first two vertices.
+  VertexOutMap outmap(gc.graph());
+  EXPECT_EQ(outmap.edges(0, 1).size(), 1);
+
+  // Exercise the iteration API of VertexOutEdgeIds
+  VertexOutEdgeIds ids = outmap.edge_ids(0);
+  for (VertexOutEdgeIds::Iterator iter = ids.begin(); iter != ids.end();
+       ++iter) {
+    VertexOutEdgeIds::Iterator copy = iter;
+    EXPECT_EQ(copy, iter);
+    EXPECT_EQ(copy++ - iter, 0);
+    EXPECT_EQ(copy - iter, 1);
+  }
 }
 
 TEST(GetUndirectedComponents, DegenerateEdges) {

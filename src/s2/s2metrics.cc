@@ -30,6 +30,10 @@
 
 #include "s2/s2metrics.h"
 
+#include <cmath>
+
+#include "s2/s2coords.h"
+
 namespace S2 {
 
 const LengthMetric kMinAngleSpan(

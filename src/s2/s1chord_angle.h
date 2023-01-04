@@ -24,8 +24,10 @@
 #include <ostream>
 #include <type_traits>
 
+#include "s2/base/integral_types.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 
 // S1ChordAngle represents the angle subtended by a chord (i.e., the straight

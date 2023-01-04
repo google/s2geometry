@@ -17,17 +17,19 @@
 
 #include "s2/s2loop_measures.h"
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <limits>
+#include <ostream>
 #include <vector>
 
-#include "s2/base/logging.h"
 #include "absl/container/inlined_vector.h"
 #include "s2/s1angle.h"
 #include "s2/s2centroids.h"
-#include "s2/s2edge_distances.h"
 #include "s2/s2measures.h"
-#include "s2/s2pointutil.h"
+#include "s2/s2point.h"
+#include "s2/s2point_span.h"
 
 using std::fabs;
 using std::max;
@@ -39,7 +41,7 @@ namespace S2 {
 S1Angle GetPerimeter(S2PointLoopSpan loop) {
   S1Angle perimeter = S1Angle::Zero();
   if (loop.size() <= 1) return perimeter;
-  for (int i = 0; i < loop.size(); ++i) {
+  for (size_t i = 0; i < loop.size(); ++i) {
     perimeter += S1Angle(loop[i], loop[i + 1]);
   }
   return perimeter;
@@ -119,7 +121,7 @@ double GetSignedArea(S2PointLoopSpan loop) {
 
   // The signed area should be between approximately -4*Pi and 4*Pi.
   // Normalize it to be in the range [-2*Pi, 2*Pi].
-  double area = GetSurfaceIntegral(loop, S2::SignedArea);
+  double area = GetSurfaceIntegralKahan(loop, S2::SignedArea);
   double max_error = GetCurvatureMaxError(loop);
 
   // Normalize the area to be in the range (-2*Pi, 2*Pi].  Effectively this
@@ -154,29 +156,49 @@ S2PointLoopSpan PruneDegeneracies(S2PointLoopSpan loop,
   vector<S2Point>& vertices = *new_vertices;
   vertices.clear();
   vertices.reserve(loop.size());
+  // Move vertices from `loop` to `vertices`, checking for degeneracies as we
+  // go.  Invariant: the partially constructed sequence `vertices` contains no
+  // AAs nor ABAs.
   for (const S2Point& v : loop) {
-    // Remove duplicate vertices.
-    if (vertices.empty() || v != vertices.back()) {
-      // Remove edge pairs of the form ABA.
+    if (!vertices.empty()) {
+      if (v == vertices.back()) {
+        // De-dup: AA -> A.
+        continue;
+      }
       if (vertices.size() >= 2 && v == vertices.end()[-2]) {
+        // Remove whisker: ABA -> A.
         vertices.pop_back();
-      } else {
-        vertices.push_back(v);
+        continue;
       }
     }
+    // The new vertex isn't involved in a degeneracy involving earlier vertices.
+    vertices.push_back(v);
   }
+  if (vertices.size() >= 2 && vertices[0] == vertices.back()) {
+    // Remove AA that wraps from end to beginning.
+    vertices.pop_back();
+  }
+
+  // Invariant from this point on: there are no more AA's (not even wrapped),
+  // and no transformations we do after this (ABA -> A) introduce any AA's.
+
   // Check whether the loop was completely degenerate.
   if (vertices.size() < 3) return S2PointLoopSpan();
 
-  // Otherwise some portion of the loop is guaranteed to be non-degenerate.
-  // However there may still be some degenerate portions to remove.
-  if (vertices[0] == vertices.back()) vertices.pop_back();
+  // Otherwise some portion of the loop is guaranteed to be non-degenerate
+  // (this requires some thought).
+  // However there may still be some ABA->A's to do at the ends.
 
-  // If the loop begins with BA and ends with A, then there is an edge pair of
-  // the form ABA at the end/start of the loop.  Remove all such pairs.  As
-  // noted above, this is guaranteed to leave a non-degenerate loop.
+  // If the loop begins with BA and ends with A, or begins with A and ends with
+  // AB, then there is an edge pair of the form ABA including the first and last
+  // point, which we remove by removing the first and last point, leaving A at
+  // the beginning or end.  Do this as many times as we can.
+  // As noted above, this is guaranteed to leave a non-degenerate loop.
   int k = 0;
-  while (vertices[k + 1] == vertices.end()[-(k + 1)]) ++k;
+  while (vertices[k + 1] == vertices.end()[-(k + 1)] ||
+         vertices[k] == vertices.end()[-(k + 2)]) {
+    ++k;
+  }
   return S2PointLoopSpan(vertices.data() + k, vertices.size() - 2 * k);
 }
 

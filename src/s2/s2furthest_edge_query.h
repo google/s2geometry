@@ -21,6 +21,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "absl/base/macros.h"
 #include "absl/container/inlined_vector.h"
@@ -30,8 +31,11 @@
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2closest_edge_query_base.h"
+#include "s2/s2distance_target.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2max_distance_targets.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 
 // S2FurthestEdgeQuery is a helper class for searching within an S2ShapeIndex
@@ -360,8 +364,7 @@ class S2FurthestEdgeQuery {
 
 //////////////////   Implementation details follow   ////////////////////
 
-inline S2FurthestEdgeQuery::Options::Options() {
-}
+inline S2FurthestEdgeQuery::Options::Options() = default;
 
 inline S1ChordAngle S2FurthestEdgeQuery::Options::min_distance() const {
   return S1ChordAngle(max_distance());

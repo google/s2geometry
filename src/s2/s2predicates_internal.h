@@ -25,6 +25,7 @@
 
 #include "absl/base/casts.h"
 #include "s2/s1chord_angle.h"
+#include "s2/s2point.h"
 #include "s2/s2predicates.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 #include "s2/util/math/vector.h"

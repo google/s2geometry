@@ -36,8 +36,10 @@
 #include <memory>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "absl/types/span.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2shape.h"
 
 // S2LaxLoopShape represents a closed loop of edges surrounding an interior

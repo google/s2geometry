@@ -23,6 +23,7 @@
 #include <cstring>
 
 #include <cstdint>
+#include <cstring>
 #include <utility>
 
 // Avoid adding expensive includes here.
@@ -133,7 +134,7 @@ class Encoder {
 
   // REQUIRES: length() >= N
   // Removes the last N bytes out of the encoded buffer
-  void RemoveLast(size_t N) { writer().skip(-N); }
+  void RemoveLast(size_t N) { writer().skip(-static_cast<ptrdiff_t>(N)); }
 
   // REQUIRES: length() >= N
   // Removes the last length()-N bytes to make the encoded buffer have length N

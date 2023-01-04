@@ -22,9 +22,13 @@
 #include <utility>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
+#include "s2/s2error.h"
+#include "s2/s2memory_tracker.h"
+#include "s2/s2shape_index.h"
 #include "s2/value_lexicon.h"
 
 // This class implements boolean operations (intersection, union, difference,
@@ -199,7 +203,7 @@
 //   S2BooleanOperation::Options options;
 //   options.set_snap_function(snap_function);
 //   S2BooleanOperation op(S2BooleanOperation::OpType::INTERSECTION,
-//                         absl::make_unique<S2PolygonLayer>(&polygon),
+//                         std::make_unique<S2PolygonLayer>(&polygon),
 //                         options);
 //   S2Error error;
 //   if (!op.Build(a, b, &error)) {
@@ -215,9 +219,9 @@
 //   S2Polygon polygon;
 //   S2BooleanOperation op(
 //       S2BooleanOperation::OpType::UNION,
-//       absl::make_unique<s2builderutil::PointVectorLayer>(&points),
-//       absl::make_unique<s2builderutil::S2PolylineVectorLayer>(&polylines),
-//       absl::make_unique<S2PolygonLayer>(&polygon));
+//       std::make_unique<s2builderutil::PointVectorLayer>(&points),
+//       std::make_unique<s2builderutil::S2PolylineVectorLayer>(&polylines),
+//       std::make_unique<S2PolygonLayer>(&polygon));
 
 class S2BooleanOperation {
  public:

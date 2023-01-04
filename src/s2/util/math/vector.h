@@ -363,8 +363,8 @@ class Vector2 : public util::math::internal_vector::BasicVector<Vector2, T, 2> {
   using FloatType = typename Base::FloatType;
   using Base::SIZE;
 
-  Vector2() : c_() {}
-  Vector2(T x, T y) {
+  constexpr Vector2() : c_() {}
+  constexpr Vector2(T x, T y) {
     c_[0] = std::move(x);
     c_[1] = std::move(y);
   }
@@ -433,8 +433,8 @@ class Vector3 : public util::math::internal_vector::BasicVector<Vector3, T, 3> {
   using FloatType = typename Base::FloatType;
   using Base::SIZE;
 
-  Vector3() : c_() {}
-  Vector3(T x, T y, T z) {
+  constexpr Vector3() : c_() {}
+  constexpr Vector3(T x, T y, T z) {
     c_[0] = std::move(x);
     c_[1] = std::move(y);
     c_[2] = std::move(z);
@@ -532,8 +532,8 @@ class Vector4 : public util::math::internal_vector::BasicVector<Vector4, T, 4> {
   using FloatType = typename Base::FloatType;
   using Base::SIZE;
 
-  Vector4() : c_() {}
-  Vector4(T x, T y, T z, T w) {
+  constexpr Vector4() : c_() {}
+  constexpr Vector4(T x, T y, T z, T w) {
     c_[0] = std::move(x);
     c_[1] = std::move(y);
     c_[2] = std::move(z);

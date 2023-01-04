@@ -17,16 +17,20 @@
 #include "s2/s2shape_nesting_query.h"
 
 #include <algorithm>
-#include <climits>
+#include <limits>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "absl/container/fixed_array.h"
-#include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_format.h"
 #include "s2/util/bitmap/bitmap.h"
 #include "s2/s2crossing_edge_query.h"
-#include "s2/s2latlng.h"
+#include "s2/s2point.h"
 #include "s2/s2predicates.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
+#include "s2/s2shapeutil_shape_edge.h"
+#include "s2/s2shapeutil_shape_edge_id.h"
 
 using std::vector;
 using util::bitmap::Bitmap64;
@@ -199,7 +203,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
     Bitmap64::size_type parent_chain;
     parents[current_chain].FindFirstSetBit(&parent_chain);
 
-    int next_chain = current_chain;
+    Bitmap64::size_type next_chain = current_chain;
     Bitmap64::size_type child = 0;
     for (; children[current_chain].FindNextSetBit(&child); child++) {
       if (parents[child].Get(parent_chain)) {
@@ -223,7 +227,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
     }
 
     // Backup current chain so next loop increment sets it properly
-    if (next_chain != current_chain) {
+    if (next_chain != static_cast<Bitmap64::size_type>(current_chain)) {
       current_chain = next_chain - 1;
     }
   }

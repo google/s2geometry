@@ -18,17 +18,23 @@
 #include "s2/s2lax_loop_shape.h"
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
+#include "s2/base/casts.h"
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
+#include "s2/s2pointutil.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
 #include "s2/s2shapeutil_testing.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::vector;
 
 TEST(S2LaxLoopShape, EmptyLoop) {

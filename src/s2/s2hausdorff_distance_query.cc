@@ -15,12 +15,13 @@
 
 #include "s2/s2hausdorff_distance_query.h"
 
-#include <vector>
-
 #include "absl/types/optional.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2closest_edge_query.h"
 #include "s2/s2point.h"
+#include "s2/s2predicates.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 
 using DirectedResult = S2HausdorffDistanceQuery::DirectedResult;
 using Options = S2HausdorffDistanceQuery::Options;
@@ -38,7 +39,7 @@ void UpdateMaxDistance(const S2Point& point,
   // bound estimate for the final Hausdorff distance. Therefore, if the
   // distance between the current target point and the last source point
   // does not exceed this lower bound, we can safely skip this target point, not
-  // updating the maximim distance.
+  // updating the maximum distance.
   if (!max_distance.is_negative() &&
       s2pred::CompareDistance(point, source_point, max_distance) <= 0) {
     return;
@@ -107,25 +108,9 @@ absl::optional<DirectedResult> S2HausdorffDistanceQuery::GetDirectedResult(
   // over all chains in those shapes, then over all edges in those chains, and
   // then over the edges' vertices.
   for (const S2Shape* shape : *target) {
-    for (int chain_id = 0; chain_id < shape->num_chains(); ++chain_id) {
-      const int chain_length = shape->chain(chain_id).length;
-      // We include the first vertex (v0) of an edge only if this is the first
-      // edge of a polyline. For point shapes (dim == 0) the first vertex is not
-      // needed since it coincides with the second vertex (v1). For polygon
-      // shapes (dim == 2) the first vertex is not needed since it coincides
-      // with the second vertex of the previous edge (or of the last) edge.
-      // TODO(b/212844787): Avoid loading vertices twice by using chain vertex
-      // iterators.
-      bool include_first_vertex = shape->dimension() == 1;
-      for (int offset = 0; offset < chain_length; ++offset) {
-        const S2Shape::Edge edge = shape->chain_edge(chain_id, offset);
-
-        if (include_first_vertex) {
-          UpdateMaxDistance(edge.v0, closest_edge_query, max_distance,
-                            target_point, source_point);
-          include_first_vertex = false;
-        }
-        UpdateMaxDistance(edge.v1, closest_edge_query, max_distance,
+    for (auto chain : shape->chains()) {
+      for (const S2Point& vertex : shape->vertices(chain)) {
+        UpdateMaxDistance(vertex, closest_edge_query, max_distance,
                           target_point, source_point);
       }
     }

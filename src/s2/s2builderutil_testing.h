@@ -19,12 +19,17 @@
 #define S2_S2BUILDERUTIL_TESTING_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
-#include "absl/memory/memory.h"
+#include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 
 namespace s2builderutil {
 
@@ -32,7 +37,7 @@ namespace s2builderutil {
 // (unlike S2Builder::Graph, which is just a view).
 class GraphClone {
  public:
-  GraphClone() {}  // Must call Init().
+  GraphClone() = default;  // Must call Init().
   explicit GraphClone(const S2Builder::Graph& g) { Init(g); }
   void Init(const S2Builder::Graph& g);
   const S2Builder::Graph& graph() { return g_; }
@@ -86,7 +91,7 @@ class GraphAppendingLayer : public S2Builder::Layer {
   }
 
   void Build(const S2Builder::Graph& g, S2Error* error) override {
-    clones_->push_back(absl::make_unique<GraphClone>(g));
+    clones_->push_back(std::make_unique<GraphClone>(g));
     graphs_->push_back(clones_->back()->graph());
   }
 

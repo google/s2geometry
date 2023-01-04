@@ -17,17 +17,10 @@
 
 #include "s2/s2closest_cell_query.h"
 
-#include <memory>
-
-#include "absl/memory/memory.h"
 #include "s2/s1angle.h"
-#include "s2/s2cap.h"
-#include "s2/s2cell.h"
-#include "s2/s2cell_id.h"
-#include "s2/s2cell_union.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s2closest_cell_query_base.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2region_coverer.h"
-#include "s2/s2shape_index_region.h"
 
 void S2ClosestCellQuery::Options::set_conservative_max_distance(
     S1ChordAngle max_distance) {

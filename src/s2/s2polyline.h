@@ -18,20 +18,27 @@
 #ifndef S2_S2POLYLINE_H_
 #define S2_S2POLYLINE_H_
 
+#include <cstddef>
+
+#include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "s2/base/logging.h"
 #include "absl/base/macros.h"
-#include "absl/memory/memory.h"
 #include "absl/types/span.h"
+#include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2coder.h"
 #include "s2/s2debug.h"
 #include "s2/s2error.h"
+#include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
+#include "s2/s2point.h"
 #include "s2/s2point_span.h"
 #include "s2/s2region.h"
 #include "s2/s2shape.h"
@@ -42,6 +49,7 @@ class S1Angle;
 class S2Cap;
 class S2Cell;
 class S2LatLng;
+class S2PolylineCoder;
 struct S2XYZFaceSiTi;
 
 // An S2Polyline represents a sequence of zero or more vertices connected by
@@ -49,6 +57,8 @@ struct S2XYZFaceSiTi;
 // allowed, i.e. adjacent vertices should not be identical or antipodal.
 class S2Polyline final : public S2Region {
  public:
+  typedef s2coding::internal::S2LegacyHintCoder<S2Polyline> Coder;
+
   // Creates an empty S2Polyline that should be initialized by calling Init()
   // or Decode().
   S2Polyline();
@@ -161,7 +171,7 @@ class S2Polyline final : public S2Region {
 
   // Return the point whose distance from vertex 0 along the polyline is the
   // given fraction of the polyline's total length.  Fractions less than zero
-  // or greater than one are clamped.  The return value is unit length.  This
+  // or greater than one are clamped.  The return value is unit length.  The
   // cost of this function is currently linear in the number of vertices.
   // The polyline must not be empty.
   S2Point Interpolate(double fraction) const;
@@ -187,7 +197,7 @@ class S2Polyline final : public S2Region {
   // The inverse operation of GetSuffix/Interpolate.  Given a point on the
   // polyline, returns the ratio of the distance to the point from the
   // beginning of the polyline over the length of the polyline.  The return
-  // value is always betwen 0 and 1 inclusive.  See GetSuffix() for the
+  // value is always between 0 and 1 inclusive.  See GetSuffix() for the
   // meaning of "next_vertex".
   //
   // The polyline should not be empty.  If it has fewer than 2 vertices, the
@@ -219,10 +229,6 @@ class S2Polyline final : public S2Region {
   // polylines more efficiently, or compute the actual intersection geometry,
   // use S2BooleanOperation.)
   bool Intersects(const S2Polyline& line) const;
-#ifndef SWIG
-  ABSL_DEPRECATED("Inline the implementation")
-  bool Intersects(const S2Polyline* line) const { return Intersects(*line); }
-#endif
 
   // Reverse the order of the polyline vertices.
   void Reverse();
@@ -258,10 +264,6 @@ class S2Polyline final : public S2Region {
 
   // Return true if two polylines are exactly the same.
   bool Equals(const S2Polyline& b) const;
-#ifndef SWIG
-  ABSL_DEPRECATED("Inline the implementation")
-  bool Equals(const S2Polyline* b) const { return Equals(*b); }
-#endif
 
   // Return true if two polylines have the same number of vertices, and
   // corresponding vertex pairs are separated by no more than "max_error".
@@ -309,7 +311,8 @@ class S2Polyline final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const;
+  void Encode(Encoder* const encoder,
+              s2coding::CodingHint hint = s2coding::CodingHint::FAST) const;
 
   // Appends a serialized uncompressed representation of the S2Polyline to
   // "encoder".
@@ -390,7 +393,7 @@ class S2Polyline final : public S2Region {
   // is constructed solely for the purpose of indexing it.
   class OwningShape : public Shape {
    public:
-    OwningShape() {}  // Must call Init().
+    OwningShape() = default;  // Must call Init().
 
     explicit OwningShape(std::unique_ptr<const S2Polyline> polyline)
         : Shape(polyline.get()), owned_polyline_(std::move(polyline)) {}
@@ -401,7 +404,7 @@ class S2Polyline final : public S2Region {
     }
 
     bool Init(Decoder* decoder) {
-      auto polyline = absl::make_unique<S2Polyline>();
+      auto polyline = std::make_unique<S2Polyline>();
       if (!polyline->Decode(decoder)) return false;
       Shape::Init(polyline.get());
       owned_polyline_ = std::move(polyline);

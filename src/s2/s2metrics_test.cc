@@ -17,6 +17,10 @@
 
 #include "s2/s2metrics.h"
 
+#include <cmath>
+
+#include <algorithm>
+
 #include <gtest/gtest.h>
 #include "s2/s2coords.h"
 

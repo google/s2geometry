@@ -17,8 +17,6 @@
 
 #include "s2/s2shape_index.h"
 
-#include <gtest/gtest.h>
-
 // TODO(ericv): Add tests for S2ShapeIndexCell and S2ClippedShape.
 // (Currently these are tested indirectly by MutableS2ShapeIndex.)
 // Also test the base Iterator type (which wraps another iterator).

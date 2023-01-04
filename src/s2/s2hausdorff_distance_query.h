@@ -205,7 +205,6 @@ class S2HausdorffDistanceQuery {
 
 //////////////////   Implementation details follow   ////////////////////
 
-inline S2HausdorffDistanceQuery::Options::Options (){
-}
+inline S2HausdorffDistanceQuery::Options::Options() = default;
 
 #endif  // S2_S2HAUSDORFF_DISTANCE_QUERY_H_

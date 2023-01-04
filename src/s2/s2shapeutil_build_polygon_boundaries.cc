@@ -17,11 +17,15 @@
 
 #include "s2/s2shapeutil_build_polygon_boundaries.h"
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "absl/container/btree_map.h"
-#include "absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2contains_point_query.h"
-#include "s2/s2shape_index.h"
+#include "s2/s2pointutil.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
 
 using absl::WrapUnique;
@@ -59,7 +63,7 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
   // A map from shape.id() to the corresponding component number.
   vector<int> component_ids;
   vector<S2Shape*> outer_loops;
-  for (int i = 0; i < components.size(); ++i) {
+  for (size_t i = 0; i < components.size(); ++i) {
     const auto& component = components[i];
     for (S2Shape* loop : component) {
       if (component.size() > 1 &&
@@ -77,7 +81,7 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
   // Find the loops containing each component.
   vector<vector<S2Shape*>> ancestors(components.size());
   auto contains_query = MakeS2ContainsPointQuery(&index);
-  for (int i = 0; i < outer_loops.size(); ++i) {
+  for (size_t i = 0; i < outer_loops.size(); ++i) {
     auto loop = outer_loops[i];
     S2_DCHECK_GT(loop->num_edges(), 0);
     ancestors[i] = contains_query.GetContainingShapes(loop->edge(0).v0);
@@ -85,9 +89,9 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
   // Assign each outer loop to the component whose depth is one less.
   // Components at depth 0 become a single face.
   absl::btree_map<S2Shape*, vector<S2Shape*>> children;
-  for (int i = 0; i < outer_loops.size(); ++i) {
+  for (size_t i = 0; i < outer_loops.size(); ++i) {
     S2Shape* ancestor = nullptr;
-    int depth = ancestors[i].size();
+    size_t depth = ancestors[i].size();
     if (depth > 0) {
       for (auto candidate : ancestors[i]) {
         if (ancestors[component_ids[candidate->id()]].size() == depth - 1) {

@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <tuple>
 #include <utility>
 
 #include "s2/base/integral_types.h"

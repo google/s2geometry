@@ -18,15 +18,21 @@
 #ifndef S2_S2LAX_POLYGON_SHAPE_H_
 #define S2_S2LAX_POLYGON_SHAPE_H_
 
+#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "absl/base/attributes.h"
 #include "absl/types/span.h"
+#include "s2/util/coding/coder.h"
 #include "s2/encoded_s2point_vector.h"
 #include "s2/encoded_uint_vector.h"
+#include "s2/s2coder.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
 #include "s2/s2polygon.h"
 #include "s2/s2shape.h"
 
@@ -75,6 +81,8 @@
 // (S2BooleanOperation, S2ClosestEdgeQuery, etc).
 class S2LaxPolygonShape : public S2Shape {
  public:
+  typedef s2coding::S2HintCoder<S2LaxPolygonShape> Coder;
+
   // Define as enum so we don't have to declare storage.
   // TODO(user, b/210097200): Use static constexpr when C++17 is allowed
   // in opensource.
@@ -134,6 +142,9 @@ class S2LaxPolygonShape : public S2Shape {
   // name is chosen for compatibility with EncodedS2LaxPolygonShape below.)
   bool Init(Decoder* decoder);
 
+  // Populates an S2Error if decoding fails.
+  bool Init(Decoder* decoder, S2Error& error);
+
   // S2Shape interface:
   int num_edges() const final { return num_vertices(); }
   Edge edge(int e) const final;
@@ -174,7 +185,7 @@ class EncodedS2LaxPolygonShape : public S2Shape {
   static constexpr TypeTag kTypeTag = S2LaxPolygonShape::kTypeTag;
 
   // Constructs an uninitialized object; requires Init() to be called.
-  EncodedS2LaxPolygonShape() {}
+  EncodedS2LaxPolygonShape() = default;
 
   EncodedS2LaxPolygonShape(EncodedS2LaxPolygonShape&&);
   EncodedS2LaxPolygonShape& operator=(EncodedS2LaxPolygonShape&&);
@@ -247,17 +258,19 @@ inline S2Shape::ChainPosition S2LaxPolygonShape::chain_position(int e) const {
   // Test if this edge belongs to the loop returned by the previous call.
   const uint32* start = &loop_starts_[0] +
                         prev_loop_.load(std::memory_order_relaxed);
-  if (e >= start[0] && e < start[1]) {
+  if (static_cast<uint>(e) >= start[0] && static_cast<uint>(e) < start[1]) {
     // This edge belongs to the same loop as the previous call.
   } else {
-    if (e == start[1]) {
+    if (static_cast<uint>(e) == start[1]) {
       // This is the edge immediately following the previous loop.
-      do { ++start; } while (e == start[1]);
+      do {
+        ++start;
+      } while (static_cast<uint>(e) == start[1]);
     } else {
       start = &loop_starts_[0];
       constexpr int kMaxLinearSearchLoops = 12;  // From benchmarks.
       if (num_loops() <= kMaxLinearSearchLoops) {
-        while (start[1] <= e) ++start;
+        while (start[1] <= static_cast<uint>(e)) ++start;
       } else {
         start = std::upper_bound(start + 1, start + num_loops(), e) - 1;
       }
@@ -290,17 +303,21 @@ inline S2Shape::ChainPosition EncodedS2LaxPolygonShape::chain_position(int e)
   }
   constexpr int kMaxLinearSearchLoops = 12;  // From benchmarks.
   int i = prev_loop_.load(std::memory_order_relaxed);
-  if (i == 0 && e < loop_starts_[1]) {
+  if (i == 0 && static_cast<uint>(e) < loop_starts_[1]) {
     return ChainPosition(0, e);  // Optimization for first loop.
   }
-  if (e >= loop_starts_[i] && e < loop_starts_[i + 1]) {
+  if (static_cast<uint>(e) >= loop_starts_[i] &&
+      static_cast<uint>(e) < loop_starts_[i + 1]) {
     // This edge belongs to the same loop as the previous call.
   } else {
-    if (e == loop_starts_[i + 1]) {
+    if (static_cast<uint>(e) == loop_starts_[i + 1]) {
       // This is the edge immediately following the previous loop.
-      do { ++i; } while (e == loop_starts_[i + 1]);
+      do {
+        ++i;
+      } while (static_cast<uint>(e) == loop_starts_[i + 1]);
     } else if (num_loops() <= kMaxLinearSearchLoops) {
-      for (i = 0; loop_starts_[i + 1] <= e; ++i) {}
+      for (i = 0; loop_starts_[i + 1] <= static_cast<uint>(e); ++i) {
+      }
     } else {
       i = loop_starts_.lower_bound(e + 1) - 1;
     }

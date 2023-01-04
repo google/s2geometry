@@ -23,6 +23,7 @@
 #include "s2/base/logging.h"
 #include "absl/base/macros.h"
 #include "s2/_fp_contract_off.h"
+#include "s2/s2point.h"
 #include "s2/s2region.h"
 
 class Decoder;

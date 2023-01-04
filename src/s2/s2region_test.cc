@@ -16,12 +16,15 @@
 
 #include "s2/s2region.h"
 
+#include <cstddef>
+
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
-#include "absl/container/fixed_array.h"
-#include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
+#include "s2/util/coding/coder.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
@@ -29,15 +32,11 @@
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"
-#include "s2/s2point_compression.h"
+#include "s2/s2point.h"
 #include "s2/s2point_region.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
-#include "s2/s2r2rect.h"
-#include "s2/s2region_intersection.h"
-#include "s2/s2region_union.h"
-#include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
 using std::unique_ptr;

@@ -19,6 +19,7 @@
 
 #include <limits>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "s2/s2polyline.h"

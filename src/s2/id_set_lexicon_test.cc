@@ -17,8 +17,12 @@
 
 #include "s2/id_set_lexicon.h"
 
+#include <algorithm>
+#include <limits>
+#include <string>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 
 void ExpectIdSet(const std::vector<int32>& expected,

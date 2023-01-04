@@ -21,8 +21,6 @@
 #include <cfloat>
 #include <cmath>
 
-#include "s2/base/logging.h"
-
 using std::fabs;
 using std::max;
 

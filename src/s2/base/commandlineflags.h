@@ -18,6 +18,7 @@
 
 #include <string>
 
+#include "s2/base/commandlineflags_declare.h"
 #include "s2/base/integral_types.h"
 #include "absl/strings/string_view.h"
 
@@ -37,27 +38,18 @@ inline void SetFlag(google::int64* f, google::int64 v) { *f = v; }
 
 #define DEFINE_bool(name, default_value, description) \
   bool FLAGS_##name = default_value
-#define DECLARE_bool(name) \
-  extern bool FLAGS_##name
 
 #define DEFINE_double(name, default_value, description) \
   double FLAGS_##name = default_value
-#define DECLARE_double(name) \
-  extern double FLAGS_##name
 
 #define DEFINE_int32(name, default_value, description) \
   int32 FLAGS_##name = default_value
-#define DECLARE_int32(name) \
-  extern int32 FLAGS_##name
 
 #define DEFINE_int64(name, default_value, description) \
   int64 FLAGS_##name = default_value
-#define DECLARE_int64(name) extern int64 FLAGS_##name
 
 #define DEFINE_string(name, default_value, description) \
   std::string FLAGS_##name = default_value
-#define DECLARE_string(name) \
-  extern std::string FLAGS_##name
 
 namespace absl {
 inline int32 GetFlag(int32 flag) { return flag; }

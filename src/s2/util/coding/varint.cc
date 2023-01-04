@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"

@@ -17,7 +17,15 @@
 
 #include "s2/s2builderutil_s2point_vector_layer.h"
 
+#include <utility>
+#include <vector>
+
+#include "s2/id_set_lexicon.h"
+#include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
+#include "s2/s2builder_layer.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
 
 using std::vector;
 
@@ -51,7 +59,8 @@ void S2PointVectorLayer::Build(const Graph& g, S2Error* error) {
   Graph::LabelFetcher fetcher(g, EdgeType::DIRECTED);
 
   vector<Label> labels;  // Temporary storage for labels.
-  for (EdgeId edge_id = 0; edge_id < g.edges().size(); edge_id++) {
+  for (EdgeId edge_id = 0; static_cast<size_t>(edge_id) < g.edges().size();
+       edge_id++) {
     auto& edge = g.edge(edge_id);
     if (edge.first != edge.second) {
       error->Init(S2Error::INVALID_ARGUMENT, "Found non-degenerate edges");

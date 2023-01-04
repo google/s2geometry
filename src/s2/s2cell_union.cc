@@ -17,13 +17,15 @@
 
 #include "s2/s2cell_union.h"
 
+#include <cstddef>
+
 #include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "s2/base/commandlineflags.h"
 #include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
 #include "absl/flags/flag.h"
 #include "absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
@@ -33,6 +35,7 @@
 #include "s2/s2cell_id.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
 
 using std::is_sorted;
 using std::max;
@@ -104,7 +107,7 @@ void S2CellUnion::InitFromBeginEnd(S2CellId begin, S2CellId end) {
 }
 
 void S2CellUnion::Pack(int excess) {
-  if (cell_ids_.capacity() - cell_ids_.size() > excess) {
+  if (cell_ids_.capacity() - cell_ids_.size() > static_cast<size_t>(excess)) {
     cell_ids_.shrink_to_fit();
   }
 }
@@ -164,7 +167,7 @@ void S2CellUnion::Normalize() {
   // and looking for cases where all subcells of a parent cell are present.
 
   std::sort(ids->begin(), ids->end());
-  int out = 0;
+  size_t out = 0;
   for (S2CellId id : *ids) {
     S2_DCHECK(id.is_valid()) << id;
     // Check whether this cell is contained by the previous cell.
@@ -533,12 +536,13 @@ bool S2CellUnion::Decode(Decoder* const decoder) {
   if (version > kCurrentLosslessEncodingVersionNumber) return false;
 
   uint64 num_cells = decoder->get64();
-  if (num_cells > absl::GetFlag(FLAGS_s2cell_union_decode_max_num_cells)) {
+  if (num_cells > static_cast<size_t>(
+                      absl::GetFlag(FLAGS_s2cell_union_decode_max_num_cells))) {
     return false;
   }
 
   vector<S2CellId> temp_cell_ids(num_cells);
-  for (int i = 0; i < num_cells; ++i) {
+  for (size_t i = 0; i < num_cells; ++i) {
     if (!temp_cell_ids[i].Decode(decoder)) return false;
   }
   cell_ids_.swap(temp_cell_ids);

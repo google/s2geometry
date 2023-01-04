@@ -31,6 +31,7 @@
 
 #include "s2/base/logging.h"
 #include "absl/base/casts.h"  // IWYU pragma: keep
+#include "absl/log/log.h"
 
 // An "upcast", i.e. a conversion from a pointer to an object to a pointer to a
 // base subobject, always succeeds if the base is unambiguous and accessible,
@@ -44,10 +45,11 @@
 // downcast in a polymorphic type hierarchy, you should use the following
 // function template.
 //
-// In debug mode, we use dynamic_cast to double-check whether the downcast is
-// legal (we die if it's not). In normal mode, we do the efficient static_cast
-// instead. Thus, it's important to test in debug mode to make sure the cast is
-// legal!
+// This function never returns null. In debug mode, we use dynamic_cast to
+// double-check whether the downcast is legal (we die if it's not). In normal
+// mode, we do the efficient static_cast instead. Because the process will die
+// in debug mode, it's important to test to make sure the cast is legal before
+// calling this function!
 //
 // This is the only place in the codebase we should use dynamic_cast.
 // In particular, you should NOT use dynamic_cast for RTTI, e.g. for
@@ -58,7 +60,7 @@
 
 template <typename To, typename From>  // use like this: down_cast<T*>(foo);
 inline To down_cast(From* f) {         // so we only accept pointers
-  static_assert((std::is_base_of<From, absl::remove_pointer_t<To>>::value),
+  static_assert((std::is_base_of<From, std::remove_pointer_t<To>>::value),
                 "target type not derived from source type");
 
   // We skip the assert and hence the dynamic_cast if RTTI is disabled.
@@ -82,13 +84,13 @@ template <typename To, typename From>
 inline To down_cast(From& f) {
   static_assert(std::is_lvalue_reference<To>::value,
                 "target type not a reference");
-  static_assert((std::is_base_of<From, absl::remove_reference_t<To>>::value),
+  static_assert((std::is_base_of<From, std::remove_reference_t<To>>::value),
                 "target type not derived from source type");
 
   // We skip the assert and hence the dynamic_cast if RTTI is disabled.
 #if !defined(__GNUC__) || defined(__GXX_RTTI)
   // RTTI: debug mode only
-  assert(dynamic_cast<absl::remove_reference_t<To>*>(&f) != nullptr);
+  assert(dynamic_cast<std::remove_reference_t<To>*>(&f) != nullptr);
 #endif  // !defined(__GNUC__) || defined(__GXX_RTTI)
 
   return static_cast<To>(f);

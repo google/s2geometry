@@ -17,23 +17,33 @@
 
 #include "s2/encoded_s2point_vector.h"
 
+#include <cstddef>
+#include <cstdio>
+
 #include <cstring>
+#include <memory>
+#include <string>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
 #include "absl/flags/flag.h"
 #include "absl/strings/str_cat.h"
 #include "s2/util/bits/bit-interleave.h"
+#include "s2/util/coding/coder.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2coder.h"
+#include "s2/s2coords.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2polygon.h"
-#include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
 using s2textformat::MakeCellIdOrDie;
 using s2textformat::MakePointOrDie;
+using std::make_unique;
 using std::vector;
 
 namespace s2coding {

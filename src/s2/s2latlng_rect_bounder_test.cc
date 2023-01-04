@@ -17,13 +17,23 @@
 
 #include "s2/s2latlng_rect_bounder.h"
 
+#include <cmath>
+
 #include <cfloat>
+#include <string>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "absl/strings/str_cat.h"
+#include "s2/r1interval.h"
+#include "s2/s1angle.h"
+#include "s2/s1interval.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2latlng.h"
+#include "s2/s2latlng_rect.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"

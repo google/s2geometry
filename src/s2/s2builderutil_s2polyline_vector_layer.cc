@@ -19,6 +19,15 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
+
+#include "s2/id_set_lexicon.h"
+#include "s2/s2builder.h"
+#include "s2/s2builder_graph.h"
+#include "s2/s2builder_layer.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
+#include "s2/s2polyline.h"
 
 using std::unique_ptr;
 using std::vector;

@@ -20,14 +20,22 @@
 #include <algorithm>
 #include <vector>
 
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s2cap.h"
+#include "s2/s2cell.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2closest_edge_query.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2shape_index_region.h"
 
 using std::min;
 using std::vector;
 
-S2ShapeIndexBufferedRegion::S2ShapeIndexBufferedRegion() {
-}
+S2ShapeIndexBufferedRegion::S2ShapeIndexBufferedRegion() = default;
 
 void S2ShapeIndexBufferedRegion::Init(const S2ShapeIndex* index,
                                       S1ChordAngle radius) {

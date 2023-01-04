@@ -18,19 +18,23 @@
 #ifndef S2_S2CLOSEST_EDGE_QUERY_TESTING_H_
 #define S2_S2CLOSEST_EDGE_QUERY_TESTING_H_
 
+#include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2edge_vector_shape.h"
 #include "s2/s2loop.h"
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_count_edges.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
 #include "s2/s2testing.h"
@@ -40,7 +44,7 @@ namespace s2testing {
 // An abstract class that adds edges to a MutableS2ShapeIndex for benchmarking.
 class ShapeIndexFactory {
  public:
-  virtual ~ShapeIndexFactory() {}
+  virtual ~ShapeIndexFactory() = default;
 
   // Requests that approximately "num_edges" edges located within the given
   // S2Cap bound should be added to "index".
@@ -57,7 +61,7 @@ class RegularLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
   void AddEdges(const S2Cap& index_cap, int num_edges,
                 MutableS2ShapeIndex* index) const override {
-    index->Add(absl::make_unique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
+    index->Add(std::make_unique<S2Loop::OwningShape>(S2Loop::MakeRegularLoop(
         index_cap.center(), index_cap.GetRadius(), num_edges)));
   }
 };
@@ -69,7 +73,7 @@ class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
                 MutableS2ShapeIndex* index) const override {
     S2Testing::Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(num_edges);
-    index->Add(absl::make_unique<S2Loop::OwningShape>(
+    index->Add(std::make_unique<S2Loop::OwningShape>(
         fractal.MakeLoop(S2Testing::GetRandomFrameAt(index_cap.center()),
                          index_cap.GetRadius())));
   }
@@ -84,7 +88,7 @@ class PointCloudShapeIndexFactory : public ShapeIndexFactory {
     for (int i = 0; i < num_edges; ++i) {
       points.push_back(S2Testing::SamplePoint(index_cap));
     }
-    index->Add(absl::make_unique<S2PointVectorShape>(std::move(points)));
+    index->Add(std::make_unique<S2PointVectorShape>(std::move(points)));
   }
 };
 

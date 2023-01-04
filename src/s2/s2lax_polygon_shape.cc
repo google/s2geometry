@@ -17,17 +17,31 @@
 
 #include "s2/s2lax_polygon_shape.h"
 
+#include <algorithm>
+#include <atomic>
 #include <memory>
 #include <utility>
+#include <vector>
 
+#include "s2/base/integral_types.h"
 #include "absl/memory/memory.h"
-#include "absl/meta/type_traits.h"
+#include "absl/types/span.h"
+#include "absl/utility/utility.h"
+#include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
+#include "s2/encoded_s2point_vector.h"
+#include "s2/encoded_uint_vector.h"
+#include "s2/s2coder.h"
+#include "s2/s2error.h"
+#include "s2/s2loop.h"
+#include "s2/s2point.h"
+#include "s2/s2polygon.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_get_reference_point.h"
 
 using absl::MakeSpan;
 using absl::Span;
-using absl::make_unique;
+using std::make_unique;
 using std::vector;
 using ChainPosition = S2Shape::ChainPosition;
 
@@ -125,7 +139,7 @@ void S2LaxPolygonShape::Init(Span<const Span<const S2Point>> loops) {
     // since "new T[]" stores its own copy of the array size.
     //
     // Note that even absl::make_unique_for_overwrite<> and c++20's
-    // absl::make_unique_for_overwrite<T[]> default-construct all elements when
+    // std::make_unique_for_overwrite<T[]> default-construct all elements when
     // T is a class type.
     vertices_ = make_unique<S2Point[]>(num_vertices_);
     std::copy(loops[0].begin(), loops[0].end(), vertices_.get());
@@ -201,10 +215,19 @@ bool S2LaxPolygonShape::Init(Decoder* decoder) {
       s2coding::EncodedUintVector<uint32> loop_starts;
       if (!loop_starts.Init(decoder)) return false;
       loop_starts_ = make_unique_for_overwrite<uint32[]>(loop_starts.size());
-      for (int i = 0; i < loop_starts.size(); ++i) {
+      for (size_t i = 0; i < loop_starts.size(); ++i) {
         loop_starts_[i] = loop_starts[i];
       }
     }
+  }
+  return true;
+}
+
+bool S2LaxPolygonShape::Init(Decoder* decoder, S2Error& error) {
+  if (!Init(decoder)) {
+    error.Init(S2Error::DATA_LOSS,
+               "Unknown error occurred decoding S2LaxPolygonShape");
+    return false;
   }
   return true;
 }
@@ -308,7 +331,7 @@ S2Point EncodedS2LaxPolygonShape::loop_vertex(int i, int j) const {
 
 S2Shape::Edge EncodedS2LaxPolygonShape::edge(int e) const {
   S2_DCHECK_LT(e, num_edges());
-  int e1 = e + 1;
+  size_t e1 = e + 1;
   if (num_loops() == 1) {
     if (e1 == vertices_.size()) { e1 = 0; }
     return Edge(vertices_[e], vertices_[e1]);
@@ -332,4 +355,3 @@ S2Shape::Chain EncodedS2LaxPolygonShape::chain(int i) const {
     return Chain(start, loop_starts_[i + 1] - start);
   }
 }
-

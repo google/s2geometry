@@ -28,19 +28,22 @@
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "absl/base/attributes.h"
-#include "absl/base/macros.h"
 #include "absl/container/node_hash_map.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2boolean_operation.h"
 #include "s2/s2builder.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2coder.h"
 #include "s2/s2debug.h"
+#include "s2/s2error.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2polyline.h"
 #include "s2/s2region.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 
 class Decoder;
@@ -111,6 +114,8 @@ struct S2XYZFaceSiTi;
 
 class S2Polygon final : public S2Region {
  public:
+  typedef s2coding::internal::S2LegacyCoder<S2Polygon> Coder;
+
   // The default constructor creates an empty polygon.  It can be made
   // non-empty by calling Init(), Decode(), etc.
   S2Polygon();
@@ -192,10 +197,6 @@ class S2Polygon final : public S2Region {
   // Makes a deep copy of the given source polygon.  The destination polygon
   // will be cleared if necessary.
   void Copy(const S2Polygon& src);
-#ifndef SWIG
-  ABSL_DEPRECATED("Inline the implementation")
-  void Copy(const S2Polygon* src) { Copy(*src); }
-#endif
 
   // Destroys the polygon and frees its loops.
   ~S2Polygon() override;
@@ -297,13 +298,6 @@ class S2Polygon final : public S2Region {
   // area of intersection to the area of each polygon.
   static std::pair<double, double> GetOverlapFractions(const S2Polygon& a,
                                                        const S2Polygon& b);
-#ifndef SWIG
-  ABSL_DEPRECATED("Inline the implementation")
-  static std::pair<double, double> GetOverlapFractions(const S2Polygon* a,
-                                                       const S2Polygon* b) {
-    return GetOverlapFractions(*a, *b);
-  }
-#endif
 
   // If the given point is contained by the polygon, return it.  Otherwise
   // return the closest point on the polygon boundary.  If the polygon is
@@ -414,29 +408,6 @@ class S2Polygon final : public S2Region {
                                  const S2Builder::SnapFunction& snap_function,
                                  S2Error *error);
 
-#ifndef SWIG
-  ABSL_DEPRECATED("Inline the implementation")
-  bool Contains(const S2Polygon* b) const { return Contains(*b); }
-  ABSL_DEPRECATED("Inline the implementation")
-  bool ApproxContains(const S2Polygon* b, S1Angle tolerance) const {
-    return ApproxContains(*b, tolerance);
-  }
-  ABSL_DEPRECATED("Inline the implementation")
-  bool Intersects(const S2Polygon* b) const { return Intersects(*b); }
-  ABSL_DEPRECATED("Inline the implementation")
-  void InitToIntersection(const S2Polygon* a, const S2Polygon* b) {
-    return InitToIntersection(*a, *b);
-  }
-  ABSL_DEPRECATED("Inline the implementation")
-  void InitToUnion(const S2Polygon* a, const S2Polygon* b) {
-    return InitToUnion(*a, *b);
-  }
-  ABSL_DEPRECATED("Inline the implementation")
-  void InitToDifference(const S2Polygon* a, const S2Polygon* b) {
-    return InitToDifference(*a, *b);
-  }
-#endif
-
   // Snaps the vertices of the given polygon using the given SnapFunction
   // (e.g., s2builderutil::IntLatLngSnapFunction(6) snaps to E6 coordinates).
   // This can change the polygon topology (merging loops, for example), but
@@ -510,14 +481,6 @@ class S2Polygon final : public S2Region {
 
   // Initialize this polygon to the complement of the given polygon.
   void InitToComplement(const S2Polygon& a);
-
-#ifndef SWIG
-  ABSL_DEPRECATED("Inline the implementation")
-  void InitToSnapped(const S2Polygon* polygon,
-                     int snap_level = S2CellId::kMaxLevel) {
-    return InitToSnapped(*polygon, snap_level);
-  }
-#endif
 
   // Invert the polygon (replace it by its complement).
   void Invert();
@@ -665,15 +628,6 @@ class S2Polygon final : public S2Region {
   // hierarchy is the same.)
   bool BoundaryEquals(const S2Polygon& b) const;
 
-#ifndef SWIG
-  ABSL_DEPRECATED("Inline the implementation")
-  bool Equals(const S2Polygon* b) const { return Equals(*b); }
-  ABSL_DEPRECATED("Inline the implementation")
-  bool ApproxEquals(const S2Polygon* b, S1Angle tolerance) const {
-    return ApproxEquals(*b, tolerance);
-  }
-#endif
-
   // Return true if two polygons have the same boundary except for vertex
   // perturbations.  Both polygons must have loops with the same cyclic vertex
   // order and the same nesting hierarchy, but the vertex locations are
@@ -724,7 +678,8 @@ class S2Polygon final : public S2Region {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* const encoder) const;
+  void Encode(Encoder* const encoder,
+              s2coding::CodingHint hint = s2coding::CodingHint::COMPACT) const;
 
   // Encodes the polygon's S2Points directly as three doubles using
   // (40 + 43 * num_loops + 24 * num_vertices) bytes.
@@ -735,16 +690,6 @@ class S2Polygon final : public S2Region {
 
   // Decodes a polygon encoded with Encode().  Returns true on success.
   bool Decode(Decoder* const decoder);
-
-  // Decodes a polygon by pointing the S2Loop vertices directly into the
-  // decoder's memory buffer (which needs to persist for the lifetime of the
-  // decoded S2Polygon).  It is much faster than Decode(), but requires that
-  // all the polygon vertices were encoded exactly using 24 bytes per vertex.
-  // This essentially requires that the polygon was not snapped beforehand to
-  // a given S2Cell level; otherwise this method falls back to Decode().
-  //
-  // Returns true on success.
-  bool DecodeWithinScope(Decoder* const decoder);
 
 #ifndef SWIG
   // Wrapper class for indexing a polygon (see S2ShapeIndex).  Once this
@@ -819,7 +764,7 @@ class S2Polygon final : public S2Region {
   // is constructed solely for the purpose of indexing it.
   class OwningShape : public Shape {
    public:
-    OwningShape() {}  // Must call Init().
+    OwningShape() = default;  // Must call Init().
 
     explicit OwningShape(std::unique_ptr<const S2Polygon> polygon)
         : Shape(polygon.get()), owned_polygon_(std::move(polygon)) {}
@@ -830,7 +775,7 @@ class S2Polygon final : public S2Region {
     }
 
     bool Init(Decoder* decoder) {
-      auto polygon = absl::make_unique<S2Polygon>();
+      auto polygon = std::make_unique<S2Polygon>();
       if (!polygon->Decode(decoder)) return false;
       Shape::Init(polygon.get());
       owned_polygon_ = std::move(polygon);
@@ -911,9 +856,8 @@ class S2Polygon final : public S2Region {
       const S2Polyline& a) const;
 
   // Decode a polygon encoded with EncodeUncompressed().  Used by the Decode
-  // and DecodeWithinScope methods above.  The within_scope parameter
-  // specifies whether to call DecodeWithinScope on the loops.
-  bool DecodeUncompressed(Decoder* const decoder, bool within_scope);
+  // method above.
+  bool DecodeUncompressed(Decoder* const decoder);
 
   // Encode the polygon's vertices using about 4 bytes / vertex plus 24 bytes /
   // unsnapped vertex. All the loop vertices must be converted first to the
@@ -1008,10 +952,11 @@ inline S2Shape::ChainPosition S2Polygon::Shape::chain_position(int e) const {
     }
   } else {
     i = prev_loop_.load(std::memory_order_relaxed);
-    if (e >= start[i] && e < start[i + 1]) {
+    if (static_cast<uint>(e) >= start[i] &&
+        static_cast<uint>(e) < start[i + 1]) {
       // This edge belongs to the same loop as the previous call.
     } else {
-      if (e == start[i + 1]) {
+      if (static_cast<uint>(e) == start[i + 1]) {
         // This edge immediately follows the loop from the previous call.
         // Note that S2Polygon does not allow empty loops.
         ++i;

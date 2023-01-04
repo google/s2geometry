@@ -21,12 +21,13 @@
 #include <cfloat>
 #include <cmath>
 
-#include "s2/base/logging.h"
 #include "s2/r1interval.h"
+#include "s2/r2.h"
+#include "s2/r2rect.h"
 #include "s2/s2coords.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
-#include "s2/util/math/vector.h"
 
 namespace S2 {
 

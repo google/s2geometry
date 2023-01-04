@@ -23,7 +23,6 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2boolean_operation.h"
@@ -34,9 +33,13 @@
 #include "s2/s2builderutil_s2polygon_layer.h"
 #include "s2/s2builderutil_s2polyline_vector_layer.h"
 #include "s2/s2builderutil_testing.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -75,7 +78,7 @@ class NormalizeTest : public testing::Test {
                      DuplicateEdges::KEEP, SiblingPairs::KEEP));
   }
 
-  void Run(const string& input_str, const string& expected_str);
+  void Run(absl::string_view input_str, absl::string_view expected_str);
 
  protected:
   bool suppress_lower_dimensions_;
@@ -90,8 +93,8 @@ class NormalizeTest : public testing::Test {
   vector<unique_ptr<GraphClone>> graph_clones_;
 };
 
-void NormalizeTest::Run(const string& input_str,
-                        const string& expected_str) {
+void NormalizeTest::Run(absl::string_view input_str,
+                        absl::string_view expected_str) {
   ClosedSetNormalizer::Options options;
   options.set_suppress_lower_dimensions(suppress_lower_dimensions_);
   ClosedSetNormalizer normalizer(options, graph_options_out_);

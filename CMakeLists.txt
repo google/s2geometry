@@ -63,9 +63,9 @@ endif()
 # undefined symbol errors since ABSL_HAVE_STD_STRING_VIEW etc will
 # end up defined differently.  There is probably a better way to achieve
 # this than assuming what absl used.
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
+# No compiler-specific extensions, i.e. -std=c++14, not -std=gnu++14.
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Avoid megabytes of warnings like:
@@ -128,6 +128,7 @@ add_library(s2
             src/s2/s2edge_crossings.cc
             src/s2/s2edge_distances.cc
             src/s2/s2edge_tessellator.cc
+            src/s2/s2error.cc
             src/s2/s2furthest_edge_query.cc
             src/s2/s2hausdorff_distance_query.cc
             src/s2/s2latlng.cc
@@ -171,7 +172,6 @@ add_library(s2
             src/s2/s2shapeutil_conversion.cc
             src/s2/s2shapeutil_edge_iterator.cc
             src/s2/s2shapeutil_get_reference_point.cc
-            src/s2/s2shapeutil_range_iterator.cc
             src/s2/s2shapeutil_visit_crossing_edge_pairs.cc
             src/s2/s2text_format.cc
             src/s2/s2wedge_relations.cc
@@ -206,6 +206,7 @@ target_link_libraries(
     absl::log_severity
     absl::memory
     absl::span
+    absl::status
     absl::str_format
     absl::strings
     absl::type_traits
@@ -260,6 +261,9 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2cell.h
               src/s2/s2cell_id.h
               src/s2/s2cell_index.h
+              src/s2/s2cell_iterator.h
+              src/s2/s2cell_iterator_join.h
+              src/s2/s2cell_range_iterator.h
               src/s2/s2cell_union.h
               src/s2/s2centroids.h
               src/s2/s2closest_cell_query.h
@@ -268,6 +272,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2closest_edge_query_base.h
               src/s2/s2closest_point_query.h
               src/s2/s2closest_point_query_base.h
+              src/s2/s2coder.h
               src/s2/s2contains_point_query.h
               src/s2/s2contains_vertex_query.h
               src/s2/s2convex_hull_query.h
@@ -335,7 +340,6 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2shapeutil_count_edges.h
               src/s2/s2shapeutil_edge_iterator.h
               src/s2/s2shapeutil_get_reference_point.h
-              src/s2/s2shapeutil_range_iterator.h
               src/s2/s2shapeutil_shape_edge.h
               src/s2/s2shapeutil_shape_edge_id.h
               src/s2/s2shapeutil_testing.h
@@ -351,6 +355,7 @@ install(FILES src/s2/_fp_contract_off.h
         DESTINATION include/s2)
 install(FILES src/s2/base/casts.h
               src/s2/base/commandlineflags.h
+              src/s2/base/commandlineflags_declare.h
               src/s2/base/integral_types.h
               src/s2/base/log_severity.h
               src/s2/base/logging.h
@@ -385,10 +390,11 @@ install(FILES src/s2/util/units/length-units.h
         DESTINATION include/s2/util/units)
 install(TARGETS s2 DESTINATION lib)
 
-message("GTEST_ROOT: ${GTEST_ROOT}")
-if (GTEST_ROOT)
-  add_subdirectory(${GTEST_ROOT} build_gtest)
-  include_directories(${GTEST_ROOT}/include)
+message("GOOGLETEST_ROOT: ${GOOGLETEST_ROOT}")
+if (GOOGLETEST_ROOT)
+  add_subdirectory(${GOOGLETEST_ROOT}/googlemock build_gmock)
+  include_directories(${GOOGLETEST_ROOT}/googlemock/include)
+  include_directories(${GOOGLETEST_ROOT}/googletest/include)
 
   set(S2TestFiles
       src/s2/encoded_s2cell_id_vector_test.cc
@@ -422,6 +428,9 @@ if (GTEST_ROOT)
       src/s2/s2cell_test.cc
       src/s2/s2cell_id_test.cc
       src/s2/s2cell_index_test.cc
+      src/s2/s2cell_iterator_join_test.cc
+      src/s2/s2cell_iterator_testing_test.cc
+      src/s2/s2cell_range_iterator_test.cc
       src/s2/s2cell_union_test.cc
       src/s2/s2centroids_test.cc
       src/s2/s2closest_cell_query_base_test.cc
@@ -490,7 +499,6 @@ if (GTEST_ROOT)
       src/s2/s2shapeutil_count_edges_test.cc
       src/s2/s2shapeutil_edge_iterator_test.cc
       src/s2/s2shapeutil_get_reference_point_test.cc
-      src/s2/s2shapeutil_range_iterator_test.cc
       src/s2/s2shapeutil_visit_crossing_edge_pairs_test.cc
       src/s2/s2testing_test.cc
       src/s2/s2text_format_test.cc
@@ -514,9 +522,10 @@ if (GTEST_ROOT)
         absl::flags_reflection
         absl::memory
         absl::span
+        absl::status
         absl::strings
         absl::synchronization
-        gtest_main)
+        gmock_main)
     add_test(${test} ${test})
   endforeach()
 endif()

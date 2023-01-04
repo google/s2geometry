@@ -21,8 +21,12 @@
 #include <vector>
 
 #include "s2/base/log_severity.h"
+#include "s2/s1angle.h"
 #include "s2/s2loop_measures.h"
+#include "s2/s2point.h"
+#include "s2/s2point_span.h"
 #include "s2/s2polyline_measures.h"
+#include "s2/s2shape.h"
 
 using std::fabs;
 using std::vector;

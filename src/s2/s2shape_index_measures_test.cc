@@ -21,19 +21,22 @@
 
 #include "s2/s2shape_index_measures.h"
 
+#include <cmath>
+
 #include <memory>
+#include <string>
 
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
 #include "s2/mutable_s2shape_index.h"
-#include "s2/s2lax_polygon_shape.h"
-#include "s2/s2lax_polyline_shape.h"
+#include "s2/s1angle.h"
+#include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
 using s2textformat::MakeIndexOrDie;
-using absl::make_unique;
+using std::make_unique;
 
 namespace {
 

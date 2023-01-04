@@ -17,9 +17,9 @@
 
 #include "s2/s2shapeutil_contains_brute_force.h"
 
-#include <utility>
-
 #include "s2/s2edge_crosser.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 
 namespace s2shapeutil {
 

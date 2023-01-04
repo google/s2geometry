@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <ostream>
 #include <vector>
 
 #include "s2/base/integral_types.h"

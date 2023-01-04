@@ -19,6 +19,7 @@
 
 #include <cmath>
 
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 
 namespace S2 {

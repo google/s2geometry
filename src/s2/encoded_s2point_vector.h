@@ -18,11 +18,17 @@
 #ifndef S2_ENCODED_S2POINT_VECTOR_H_
 #define S2_ENCODED_S2POINT_VECTOR_H_
 
-#include <atomic>
+#include <cstddef>
 
+#include <atomic>
+#include <vector>
+
+#include "s2/base/integral_types.h"
 #include "absl/types/span.h"
+#include "s2/util/coding/coder.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/encoded_uint_vector.h"
+#include "s2/s2coder.h"
 #include "s2/s2point.h"
 #include "s2/s2shape.h"
 

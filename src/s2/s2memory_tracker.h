@@ -18,6 +18,13 @@
 #ifndef S2_S2MEMORY_TRACKER_H_
 #define S2_S2MEMORY_TRACKER_H_
 
+#include <algorithm>
+#include <functional>
+#include <limits>
+#include <vector>
+
+#include "s2/base/integral_types.h"
+#include "absl/strings/str_format.h"
 #include "s2/s2error.h"
 #include "s2/util/gtl/compact_array.h"
 

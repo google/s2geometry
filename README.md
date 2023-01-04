@@ -16,21 +16,32 @@ introduction to the [basic types](http://s2geometry.io/devguide/basic_types).
 
 S2 documentation can be found on [s2geometry.io](http://s2geometry.io).
 
+## API/ABI Stability
+
+Note that all [releases](https://github.com/google/s2geometry/releases) are
+version 0.x, so there are
+[no API or ABI stability guarantees](https://semver.org/#spec-item-4).
+Starting with 1.0 we will adhere to [SemVer](https://semver.org/).
+
+The Python API is particularly unstable, and it is planned that the SWIGged
+API will be replaced by a pybind11 version with more Pythonic names and more
+complete functionality.
+
 ## Requirements for End Users
 
 * [CMake](http://www.cmake.org/)
-* A C++ compiler with C++11 support, such as [g++ >= 4.7](https://gcc.gnu.org/)
+* A C++ compiler with C++14 support, such as [g++ >= 5](https://gcc.gnu.org/)
 * [Abseil](https://github.com/abseil/abseil-cpp) (standard library extensions)
 * [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
 * [gflags command line flags](https://github.com/gflags/gflags), optional
 * [glog logging module](https://github.com/google/glog), optional
-* [googletest testing framework](https://github.com/google/googletest)
+* [googletest testing framework >= 1.10](https://github.com/google/googletest)
   (to build tests and example programs, optional)
 
 On Ubuntu, all of these other than abseil can be installed via apt-get:
 
 ```
-sudo apt-get install cmake libgflags-dev libgoogle-glog-dev libgtest-dev libssl-dev
+sudo apt-get install cmake libgflags-dev libgoogle-glog-dev googletest libssl-dev
 ```
 
 Otherwise, you may need to install some from source.
@@ -47,11 +58,11 @@ sudo port install cmake gflags google-glog openssl
 ```
 
 Do not install `gtest` from MacPorts; instead download [release
-1.8.0](https://github.com/google/googletest/releases/tag/release-1.8.0), unpack,
+1.10.0](https://github.com/google/googletest/releases/tag/release-1.10.0), unpack,
 and substitute
 
 ```
-cmake -DGTEST_ROOT=/...absolute path to.../googletest-release-1.8.0/googletest ..
+cmake -DGOOGLETEST_ROOT=/...absolute path to.../googletest-release-1.10.0 ..
 ```
 
 in the build instructions below.
@@ -87,7 +98,7 @@ First, [install Abseil](https://github.com/abseil/abseil-cpp/blob/master/CMake/R
 It must be configured with `-DCMAKE_POSITION_INDEPENDENT_CODE=ON`.
 s2geometry must be configured to use the came C++ version that
 abseil uses.  The easiest way to achieve this is to pass
-`-DCMAKE_CXX_STANDARD=11` (or `-DCMAKE_CXX_STANDARD=17`) to `cmake`
+`-DCMAKE_CXX_STANDARD=14` (or `-DCMAKE_CXX_STANDARD=17`) to `cmake`
 when compiling both abseil and s2geometry.
 
 From the appropriate directory depending on how you got the source:
@@ -95,11 +106,11 @@ From the appropriate directory depending on how you got the source:
 ```
 mkdir build
 cd build
-# You can omit -DGTEST_ROOT to skip tests; see above for macOS.
+# You can omit -DGOOGLETEST_ROOT to skip tests; see above for macOS.
 # Use the same CMAKE_CXX_STANDARD value that was used with absl.
-cmake -DGTEST_ROOT=/usr/src/gtest -DCMAKE_PREFIX_PATH=/path/to/absl/install -DCMAKE_CXX_STANDARD=11 ..
+cmake -DGOOGLETEST_ROOT=/usr/src/googletest -DCMAKE_PREFIX_PATH=/path/to/absl/install -DCMAKE_CXX_STANDARD=14 ..
 make -j $(nproc)
-make test ARGS="-j$(nproc)"  # If GTEST_ROOT specified above.
+make test ARGS="-j$(nproc)"  # If GOOGLETEST_ROOT specified above.
 sudo make install
 ```
 
@@ -132,8 +143,7 @@ even 2.0.
 ## Other S2 implementations
 
 * [Go](https://github.com/golang/geo) (Approximately 40% complete.)
-* [Java](https://github.com/google/s2-geometry-library-java) (Older version;
-  last updated in 2011.)
+* [Java](https://github.com/google/s2-geometry-library-java)
 
 ## Disclaimer
 

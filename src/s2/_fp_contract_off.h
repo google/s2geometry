@@ -38,16 +38,7 @@
 // appears before the first non-inline function definition.  It is
 // named with an underscore so that it is included first among the S2 headers.
 
-// TODO(compiler-team): Figure out how to do this in a portable way.
-#if defined(HAVE_ARMEABI_V7A)
-// Some android builds use a buggy compiler that runs out of memory while
-// parsing the pragma (--cpu=armeabi-v7a).
-
-#elif defined(__ANDROID__)
-// Other android builds use a buggy compiler that crashes with an internal
-// error (Android NDK R9).
-
-#elif defined(__clang__)
+#if defined(__clang__)
 // Clang supports the standard C++ pragma for turning off this optimization.
 #pragma STDC FP_CONTRACT OFF
 

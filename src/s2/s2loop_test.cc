@@ -19,7 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <set>
@@ -28,11 +28,11 @@
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/logging.h"
+#include "s2/base/commandlineflags_declare.h"
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/container/fixed_array.h"
 #include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
@@ -45,19 +45,20 @@
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
 #include "s2/s2latlng.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2latlng_rect_bounder.h"
-#include "s2/s2measures.h"
+#include "s2/s2point.h"
 #include "s2/s2point_compression.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
+#include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 #include "s2/util/math/matrix3x3.h"
-#include "s2/util/math/vector.h"
 
 using ::s2textformat::MakeLoopOrDie;
 using std::fabs;
-using absl::make_unique;
+using std::make_unique;
 using std::map;
 using std::max;
 using std::min;
@@ -346,7 +347,7 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
 
   for (int i = 0; i < 50; ++i) {
     // Choose a coordinate frame for the spherical cap.
-    Vector3_d x, y, z;
+    S2Point x, y, z;
     S2Testing::GetRandomFrame(&x, &y, &z);
 
     // Given two points at latitude phi and whose longitudes differ by dtheta,
@@ -1070,48 +1071,6 @@ TEST(S2Loop, EmptyFullLossyConversions) {
   TestEmptyFullConversions(full);
 }
 
-TEST(S2Loop, EncodeDecodeWithinScope) {
-  unique_ptr<S2Loop> l(MakeLoopOrDie("30:20, 40:20, 39:43, 33:35"));
-  l->set_depth(3);
-  Encoder encoder;
-  l->Encode(&encoder);
-  Decoder decoder1(encoder.base(), encoder.length());
-
-  // Initialize the loop using DecodeWithinScope and check that it is the
-  // same as the original loop.
-  S2Loop loop1;
-  ASSERT_TRUE(loop1.DecodeWithinScope(&decoder1));
-  EXPECT_TRUE(l->BoundaryEquals(loop1));
-  EXPECT_EQ(l->depth(), loop1.depth());
-  EXPECT_EQ(l->GetRectBound(), loop1.GetRectBound());
-
-  // Initialize the same loop using Init with a vector of vertices, and
-  // check that it doesn't deallocate the original memory.
-  vector<S2Point> vertices = {loop1.vertex(0), loop1.vertex(2),
-                              loop1.vertex(3)};
-  loop1.Init(vertices);
-  Decoder decoder2(encoder.base(), encoder.length());
-  S2Loop loop2;
-  ASSERT_TRUE(loop2.DecodeWithinScope(&decoder2));
-  EXPECT_TRUE(l->BoundaryEquals(loop2));
-  EXPECT_EQ(l->vertex(1), loop2.vertex(1));
-  EXPECT_NE(loop1.vertex(1), loop2.vertex(1));
-
-  // Initialize loop2 using Decode with a decoder on different data.
-  // Check that the original memory is not deallocated or overwritten.
-  unique_ptr<S2Loop> l2(MakeLoopOrDie("30:40, 40:75, 39:43, 80:35"));
-  l2->set_depth(2);
-  Encoder encoder2;
-  l2->Encode(&encoder2);
-  Decoder decoder3(encoder2.base(), encoder2.length());
-  ASSERT_TRUE(loop2.Decode(&decoder3));
-  Decoder decoder4(encoder.base(), encoder.length());
-  ASSERT_TRUE(loop1.DecodeWithinScope(&decoder4));
-  EXPECT_TRUE(l->BoundaryEquals(loop1));
-  EXPECT_EQ(l->vertex(1), loop1.vertex(1));
-  EXPECT_NE(loop1.vertex(1), loop2.vertex(1));
-}
-
 TEST_F(S2LoopTestBase, FourVertexCompressedLoopRequires36Bytes) {
   Encoder encoder;
   TestEncodeCompressed(*snapped_loop_a_, S2CellId::kMaxLevel, &encoder);
@@ -1162,19 +1121,20 @@ TEST(S2Loop, S2CellConstructorAndContains) {
 
 // Construct a loop using MakeLoopOrDie(str) and check that it
 // produces a validation error that includes "snippet".
-static void CheckLoopIsInvalid(const string& str, const string& snippet) {
+static void CheckLoopIsInvalid(absl::string_view str,
+                               absl::string_view snippet) {
   unique_ptr<S2Loop> loop(MakeLoopOrDie(str, S2Debug::DISABLE));
   S2Error error;
   EXPECT_TRUE(loop->FindValidationError(&error));
-  EXPECT_NE(string::npos, error.text().find(snippet));
+  EXPECT_THAT(error.text(), testing::HasSubstr(snippet));
 }
 
 static void CheckLoopIsInvalid(const vector<S2Point>& points,
-                               const string& snippet) {
+                               absl::string_view snippet) {
   S2Loop l(points, S2Debug::DISABLE);
   S2Error error;
   EXPECT_TRUE(l.FindValidationError(&error));
-  EXPECT_NE(string::npos, error.text().find(snippet));
+  EXPECT_THAT(error.text(), testing::HasSubstr(snippet));
 }
 
 TEST(S2Loop, IsValidDetectsInvalidLoops) {

@@ -19,12 +19,14 @@
 #define S2_S2TESTING_H_
 
 #include <algorithm>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
+#include "s2/base/commandlineflags_declare.h"
 #include "s2/base/integral_types.h"
 #include "absl/base/macros.h"
 #include "absl/strings/string_view.h"
@@ -33,6 +35,8 @@
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2point.h"
+#include "s2/s2region.h"
 #include "s2/util/math/matrix3x3.h"
 
 class S1Angle;
@@ -375,12 +379,14 @@ bool CheckDistanceResults(
   // pruned from the result set even though they may be slightly closer.
   static const typename Distance::Delta kMaxPruningError(
       S1ChordAngle::Radians(1e-15));
-  return (S2::internal::CheckResultSet(
+  // Use `&` instead of `&&` to evaluate both sides and cast to int to avoid
+  // `bitwise-instead-of-logical` warning.
+  return (static_cast<int>(S2::internal::CheckResultSet(
               actual, expected, max_size, max_distance, max_error,
-              kMaxPruningError, "Missing") & /*not &&*/
-          S2::internal::CheckResultSet(
+              kMaxPruningError, "Missing")) & /*not &&*/
+          static_cast<int>(S2::internal::CheckResultSet(
               expected, actual, max_size, max_distance, max_error,
-              Distance::Delta::Zero(), "Extra"));
+              Distance::Delta::Zero(), "Extra")));
 }
 
 #endif  // S2_S2TESTING_H_

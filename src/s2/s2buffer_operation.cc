@@ -50,11 +50,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "absl/memory/memory.h"
+#include "absl/types/span.h"
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
@@ -64,14 +67,22 @@
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
 #include "s2/s2lax_loop_shape.h"
+#include "s2/s2memory_tracker.h"
+#include "s2/s2point.h"
+#include "s2/s2point_span.h"
+#include "s2/s2pointutil.h"
+#include "s2/s2predicates.h"
 #include "s2/s2predicates_internal.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2shape_measures.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
+#include "s2/s2winding_operation.h"
 #include "s2/util/math/mathutil.h"
 
 using s2pred::DBL_ERR;
 using std::ceil;
-using absl::make_unique;
+using std::make_unique;
 using std::max;
 using std::min;
 using std::unique_ptr;
@@ -264,8 +275,7 @@ void S2BufferOperation::Options::set_memory_tracker(S2MemoryTracker* tracker) {
   memory_tracker_ = tracker;
 }
 
-S2BufferOperation::S2BufferOperation() {
-}
+S2BufferOperation::S2BufferOperation() = default;
 
 S2BufferOperation::S2BufferOperation(unique_ptr<S2Builder::Layer> result_layer,
                                      const Options& options) {
@@ -633,7 +643,7 @@ void S2BufferOperation::BufferLoop(S2PointLoopSpan loop) {
     path_.assign(loop.begin(), loop.end());
   } else {
     SetInputVertex(loop[0]);
-    for (int i = 0; i < loop.size(); ++i) {
+    for (size_t i = 0; i < loop.size(); ++i) {
       BufferEdgeAndVertex(loop[i], loop[i + 1], loop[i + 2]);
     }
     CloseBufferRegion();

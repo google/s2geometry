@@ -20,9 +20,14 @@
 
 #include "s2/s2closest_cell_query_base.h"
 
+#include <vector>
+
 #include <gtest/gtest.h>
-#include "s2/mutable_s2shape_index.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2cell_index.h"
 #include "s2/s2max_distance_targets.h"
+#include "s2/s2point.h"
 #include "s2/s2text_format.h"
 
 using s2textformat::MakeCellIdOrDie;

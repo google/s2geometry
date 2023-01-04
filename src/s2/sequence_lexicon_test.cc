@@ -18,16 +18,15 @@
 #include "s2/sequence_lexicon.h"
 
 #include <algorithm>
-#include <array>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
-#include "s2/base/logging.h"
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::min;
 using std::vector;
 

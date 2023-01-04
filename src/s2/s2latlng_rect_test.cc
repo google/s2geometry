@@ -23,14 +23,21 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 #include <gtest/gtest.h>
 #include "s2/util/coding/coder.h"
+#include "s2/r1interval.h"
 #include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2coder_testing.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2error.h"
 #include "s2/s2latlng.h"
+#include "s2/s2point.h"
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
@@ -1026,4 +1033,12 @@ TEST(S2LatLngRect, GetDirectedHausdorffDistanceRectToRectDegenerateCases) {
       RectFromDegrees(-20, 105, 20, 110), RectFromDegrees(-30, 5, 30, 15));
   VerifyGetDirectedHausdorffDistance(
       RectFromDegrees(-20, 95, 20, 105), RectFromDegrees(-30, 5, 30, 15));
+}
+
+TEST(S2LatLngRect, S2CoderWorks) {
+  S2LatLngRect rect = RectFromDegrees(-87, 0, -85, 3);
+
+  S2Error error;
+  auto decoded = s2coding::RoundTrip(S2LatLngRect::Coder(), rect, error);
+  EXPECT_EQ(rect, decoded);
 }

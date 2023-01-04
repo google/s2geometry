@@ -19,12 +19,18 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
+#include "s2/s2loop.h"
+#include "s2/s2point.h"
+#include "s2/s2polygon.h"
+#include "s2/s2polyline.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_measures.h"
 
 namespace s2shapeutil {
 
-using absl::make_unique;
+using std::make_unique;
 
 std::vector<S2Point> ShapeToS2Points(const S2Shape& multipoint) {
   S2_DCHECK_EQ(multipoint.dimension(), 0);

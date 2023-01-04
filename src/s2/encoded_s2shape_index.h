@@ -18,11 +18,22 @@
 #ifndef S2_ENCODED_S2SHAPE_INDEX_H_
 #define S2_ENCODED_S2SHAPE_INDEX_H_
 
-#include <memory>
+#include <cstddef>
 
+#include <atomic>
+#include <memory>
+#include <vector>
+
+#include "s2/base/integral_types.h"
+#include "absl/strings/cord.h"
+#include "s2/util/coding/coder.h"
 #include "s2/encoded_s2cell_id_vector.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 
 // EncodedS2ShapeIndex is an S2ShapeIndex implementation that works directly
 // with encoded data.  Rather than decoding everything in advance, geometry is
@@ -179,14 +190,20 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
     //   bool done() const;
     //   S2Point center() const;
 
-    // IteratorBase API:
+    // S2CellIterator API:
     void Begin() override;
     void Finish() override;
     void Next() override;
     bool Prev() override;
     void Seek(S2CellId target) override;
-    bool Locate(const S2Point& target) override;
-    CellRelation Locate(S2CellId target) override;
+
+    bool Locate(const S2Point& target) override {
+      return LocateImpl(*this, target);
+    }
+
+    S2CellRelation Locate(S2CellId target) override {
+      return LocateImpl(*this, target);
+    }
 
    protected:
     const S2ShapeIndexCell* GetCell() const override;
@@ -327,7 +344,7 @@ inline void EncodedS2ShapeIndex::Iterator::Seek(S2CellId target) {
 
 inline std::unique_ptr<EncodedS2ShapeIndex::IteratorBase>
 EncodedS2ShapeIndex::NewIterator(InitialPosition pos) const {
-  return absl::make_unique<Iterator>(this, pos);
+  return std::make_unique<Iterator>(this, pos);
 }
 
 inline S2Shape* EncodedS2ShapeIndex::shape(int id) const {

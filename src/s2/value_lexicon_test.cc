@@ -17,16 +17,17 @@
 
 #include "s2/value_lexicon.h"
 
+#include <cstring>
+
 #include <algorithm>
 #include <memory>
 #include <utility>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
-#include "s2/s1angle.h"
 #include "s2/s2point.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::min;
 
 TEST(ValueLexicon, DuplicateValues) {

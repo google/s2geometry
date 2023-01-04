@@ -22,6 +22,7 @@
 
 #include <gtest/gtest.h>
 #include "s2/s1angle.h"
+#include "s2/s2point.h"
 #include "s2/s2testing.h"
 
 using std::fabs;
