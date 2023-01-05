@@ -243,6 +243,12 @@ class S2RegionTermIndexer {
   const Options& options() const { return options_; }
   Options* mutable_options() { return &options_; }
 
+  // Returns the current coverer.
+  // It's useful if for some data you use GetIndexTerms
+  // and for another GetIndexTermsForCanonicalCovering but still need coverer.
+  const S2RegionCoverer& coverer() const { return coverer_; }
+  S2RegionCoverer* mutable_coverer() { return &coverer_; }
+
   // Converts the given region into a set of terms for indexing.  Terms
   // consist of lowercase letters, numbers, '$', and an optional prefix.
   //
