@@ -260,7 +260,13 @@ endif()
 # list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
 # add_subdirectory(<path_to_s2geometry_dir> s2geometry)
 # target_link_libraries(<target_name> s2)
-target_include_directories(s2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+if (S2_SYSTEM_HEADERS)
+    # it's useful to avoid warnings from s2 headers
+    # because it's impossible to pass same settings to target_link_libraries
+    target_include_directories(s2 SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+else ()
+    target_include_directories(s2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+endif ()
 
 # Add version information to the target
 set_target_properties(s2 PROPERTIES
