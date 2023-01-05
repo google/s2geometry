@@ -701,6 +701,9 @@ class S2Polygon final : public S2Region {
   S2Polygon* Clone() const override;
   S2Cap GetCapBound() const override;  // Cap surrounding rect bound.
   S2LatLngRect GetRectBound() const override { return bound_; }
+  // It's useful for external Contains operation.
+  // (see subregion_bound_ definition for details)
+  S2LatLngRect GetSubRegionBound() const { return subregion_bound_; }
   void GetCellUnionBound(std::vector<S2CellId> *cell_ids) const override;
 
   bool Contains(const S2Cell& cell) const override;
