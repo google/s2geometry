@@ -196,8 +196,21 @@ class S2RegionTermIndexer {
     // this flag if your index consists entirely of points.)
     //
     // DEFAULT: false
-    bool index_contains_points_only() const { return points_only_; }
-    void set_index_contains_points_only(bool value) { points_only_ = value; }
+    bool index_contains_points_only() const { return index_points_only_; }
+    void set_index_contains_points_only(bool value) { index_points_only_ = value; }
+
+    // If your query will only contain points (rather than regions), be sure
+    // to set this flag.  This will generate smaller and faster index that
+    // are specialized for the points-only case.
+    //
+    // With the default quality settings, this flag reduces the number of
+    // index terms by about a factor of two.  (The improvement gets smaller
+    // as max_cells() is increased, but there is really no reason not to use
+    // this flag if your query consist entirely of points.)
+    //
+    // DEFAULT: false
+    bool query_contains_points_only() const { return query_points_only_; }
+    void set_query_contains_points_only(bool value) { query_points_only_ = value; }
 
     // If true, the index will be optimized for space rather than for query
     // time.  With the default quality settings, this flag reduces the number
@@ -221,7 +234,8 @@ class S2RegionTermIndexer {
     void set_marker_character(char ch);
 
    private:
-    bool points_only_ = false;
+    bool index_points_only_ = false;
+    bool query_points_only_ = false;
     bool optimize_for_space_ = false;
     std::string marker_ = std::string(1, '$');
   };
@@ -292,6 +306,21 @@ class S2RegionTermIndexer {
       const S2CellUnion& covering, absl::string_view prefix);
   std::vector<std::string> GetQueryTermsForCanonicalCovering(
       const S2CellUnion& covering, absl::string_view prefix);
+
+  // Same as above but allows to reuse same buffer for different points or use
+  // single buffer for multiple points (common case is GeoJson MultiPoint)
+  void GetIndexTerms(const S2Point& point, absl::string_view prefix,
+                     std::vector<std::string>* terms);
+  void GetQueryTerms(const S2Point& point, absl::string_view prefix,
+                     std::vector<std::string>* terms);
+
+  // Same as above but allows to reuse same buffer for different covering
+  void GetIndexTermsForCanonicalCovering(const S2CellUnion &covering,
+                                         absl::string_view prefix,
+                                         std::vector<std::string> *terms);
+  void GetQueryTermsForCanonicalCovering(const S2CellUnion &covering,
+                                         absl::string_view prefix,
+                                         std::vector<std::string> *terms);
 
  private:
   enum TermType { ANCESTOR, COVERING };
