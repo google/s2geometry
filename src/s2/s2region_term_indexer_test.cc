@@ -84,7 +84,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     // random size.
     S2Cap cap;
     vector<string> terms;
-    if (query_type == QueryType::CAP) {
+    if (query_type == QueryType::POINT) {
       cap = S2Cap::FromPoint(S2Testing::RandomPoint());
       terms = indexer.GetQueryTerms(cap.center(), "");
     } else {
