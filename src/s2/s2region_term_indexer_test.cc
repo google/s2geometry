@@ -123,6 +123,9 @@ TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTime) {
   options.set_max_level(16);
   options.set_max_cells(20);
   TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(options, QueryType::POINT);
+  options.set_query_contains_points_only(true);
+  TestRandomCaps(options, QueryType::POINT);
 }
 
 TEST(S2RegionTermIndexer, IndexRegionsQueryPointsOptimizeTime) {
@@ -131,6 +134,8 @@ TEST(S2RegionTermIndexer, IndexRegionsQueryPointsOptimizeTime) {
   options.set_min_level(0);                    // Use face cells.
   options.set_max_level(16);
   options.set_max_cells(20);
+  TestRandomCaps(options, QueryType::POINT);
+  options.set_query_contains_points_only(true);
   TestRandomCaps(options, QueryType::POINT);
 }
 
@@ -141,6 +146,9 @@ TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTimeWithLevelMod) {
   options.set_max_level(12);
   options.set_level_mod(3);
   TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(options, QueryType::POINT);
+  options.set_query_contains_points_only(true);
+  TestRandomCaps(options, QueryType::POINT);
 }
 
 TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeSpace) {
@@ -150,6 +158,9 @@ TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeSpace) {
   options.set_max_level(S2CellId::kMaxLevel);  // Use leaf cells.
   options.set_max_cells(8);
   TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(options, QueryType::POINT);
+  options.set_query_contains_points_only(true);
+  TestRandomCaps(options, QueryType::POINT);
 }
 
 TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeTime) {
@@ -161,6 +172,9 @@ TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeTime) {
   options.set_max_cells(20);
   options.set_index_contains_points_only(true);
   TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(options, QueryType::POINT);
+  options.set_query_contains_points_only(true);
+  TestRandomCaps(options, QueryType::POINT);
 }
 
 TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeSpace) {
@@ -169,6 +183,9 @@ TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeSpace) {
   options.set_index_contains_points_only(true);
   // Use default parameter values.
   TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(options, QueryType::POINT);
+  options.set_query_contains_points_only(true);
+  TestRandomCaps(options, QueryType::POINT);
 }
 
 TEST(S2RegionTermIndexer, MarkerCharacter) {
