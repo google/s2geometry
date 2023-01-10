@@ -26,6 +26,7 @@
 #include <gtest/gtest.h>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/strings/str_cat.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
@@ -45,7 +46,10 @@ S2_DEFINE_int32(iters, 400, "number of iterations for testing");
 
 namespace {
 
-enum DataType { POINT, CAP };
+enum DataType {
+  POINT = 0,
+  CAP = 1,
+};
 
 void TestRandomCaps(const S2RegionTermIndexer::Options& options,
                     DataType index_type, DataType query_type) {
@@ -148,7 +152,13 @@ INSTANTIATE_TEST_CASE_P(
     S2RegionTermIndexerTests, S2RegionTermIndexerTest,
     testing::Combine(testing::Values(DataType::POINT, DataType::CAP),
                      testing::Values(DataType::POINT, DataType::CAP),
-                     testing::Bool(), testing::Bool(), testing::Bool()));
+                     testing::Bool(), testing::Bool(), testing::Bool()),
+    [](const testing::TestParamInfo<TestCase>& info) {
+      return absl::StrCat(
+          "Index", std::get<0>(info.param), "Query", std::get<1>(info.param),
+          "SpaceOpt", std::get<2>(info.param), "IndexOpt",
+          std::get<3>(info.param), "QueryOpt", std::get<4>(info.param));
+    });
 
 TEST_P(S2RegionTermIndexerTest, DefaultParametersValues) {
   TestRandomCaps(options, index_type, query_type);
