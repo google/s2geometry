@@ -61,6 +61,12 @@
 //   never be any document regions larger than the query region.  This can
 //   significantly reduce the size of queries.
 //
+// + If the query will contain only points (rather than general regions), then
+//   we can skip all the ancestor terms mentioned above (except last cell see
+//   `GetIndexTerms(const S2Point& point...` for details) because there will
+//   never be any document regions larger than the index region.  This can
+//   significantly reduce the size of index.
+//
 // + If it is more important to optimize index size rather than query speed,
 //   the number of index terms can be reduced by creating ancestor terms only
 //   for the *proper* ancestors of the cells in a document region, and
@@ -196,7 +202,7 @@ void S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
     S2_DCHECK_GE(level, options_.min_level());
     S2_DCHECK_LE(level, options_.max_level());
     S2_DCHECK_EQ(0, (level - options_.min_level()) % options_.level_mod());
-    // assume level <= options_.true_max_level()
+    S2_DCHECK_LE(level, options_.true_max_level());
 
     const bool is_max_level_cell = level == true_max_level;
     // Add a term for this cell, max_level cell ANCESTOR is optimization
@@ -281,7 +287,7 @@ void S2RegionTermIndexer::GetQueryTermsForCanonicalCovering(
     S2_DCHECK_GE(level, options_.min_level());
     S2_DCHECK_LE(level, options_.max_level());
     S2_DCHECK_EQ(0, (level - options_.min_level()) % options_.level_mod());
-    // assume level <= options_.true_max_level()
+    S2_DCHECK_LE(level, options_.true_max_level());
 
     // Cells in the covering are always queried as ancestor terms.
     terms->push_back(GetTerm(TermType::ANCESTOR, id, prefix));
