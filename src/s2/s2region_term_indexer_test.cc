@@ -138,12 +138,11 @@ protected:
 };
 
 // We run one test case for each combination:
-// QueryType: POINT, CAP
+// index_type: POINT, CAP
+// query_type: POINT, CAP
 // optimize_for_space: false, true
 // index_contains_points_only: false, true
 // query_contains_points_only: false, true
-// Case QueryType != Cap and query_contains_points_only == true is invalid,
-// so we skip it
 INSTANTIATE_TEST_CASE_P(
     S2RegionTermIndexerTests, S2RegionTermIndexerTest,
     testing::Combine(testing::Values(DataType::POINT, DataType::CAP),
