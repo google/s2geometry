@@ -113,79 +113,69 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
          static_cast<double>(query_terms) / absl::GetFlag(FLAGS_iters));
 }
 
-// We run one test case for each combination of space vs. time optimization,
-// and indexing regions vs. only points.
+using TestCase = std::tuple<QueryType, bool, bool, bool>;
 
-TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTime) {
+class S2RegionTermIndexerTest : public testing::TestWithParam<TestCase> {
+protected:
+  void SetUp() override {
+    query_type = std::get<0>(GetParam());
+    options.set_optimize_for_space(std::get<1>(GetParam()));
+    options.set_index_contains_points_only(std::get<2>(GetParam()));
+    options.set_query_contains_points_only(std::get<3>(GetParam()));
+    if (query_type != QueryType::POINT &&
+        options.query_contains_points_only()) {
+      GTEST_SKIP() << "Case query_type != QueryType::POINT && "
+                      "options.query_contains_points_only() is invalid.";
+    }
+  }
+
   S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(false);       // Optimize for time.
-  options.set_min_level(0);                    // Use face cells.
-  options.set_max_level(16);
-  options.set_max_cells(20);
-  TestRandomCaps(options, QueryType::CAP);
-  TestRandomCaps(options, QueryType::POINT);
-  options.set_query_contains_points_only(true);
-  TestRandomCaps(options, QueryType::POINT);
+  QueryType query_type{};
+};
+
+// We run one test case for each combination:
+// QueryType: POINT, CAP
+// optimize_for_space: false, true
+// index_contains_points_only: false, true
+// query_contains_points_only: false, true
+// Case QueryType != Cap and query_contains_points_only == true is invalid,
+// so we skip it
+INSTANTIATE_TEST_CASE_P(
+    S2RegionTermIndexerTests, S2RegionTermIndexerTest,
+    testing::Combine(testing::Values(QueryType::POINT, QueryType::CAP),
+                     testing::Bool(), testing::Bool(), testing::Bool()));
+
+TEST_P(S2RegionTermIndexerTest, DefaultParametersValues) {
+  TestRandomCaps(options, query_type);
 }
 
-TEST(S2RegionTermIndexer, IndexRegionsQueryPointsOptimizeTime) {
-  S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(false);       // Optimize for time.
-  options.set_min_level(0);                    // Use face cells.
+TEST_P(S2RegionTermIndexerTest, UseFaceCells) {
+  options.set_min_level(0);
   options.set_max_level(16);
   options.set_max_cells(20);
-  TestRandomCaps(options, QueryType::POINT);
-  options.set_query_contains_points_only(true);
-  TestRandomCaps(options, QueryType::POINT);
+  TestRandomCaps(options, query_type);
 }
 
-TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTimeWithLevelMod) {
-  S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(false);       // Optimize for time.
-  options.set_min_level(6);                    // Constrain min/max levels.
+TEST_P(S2RegionTermIndexerTest, ConstrainMinMaxLevels) {
+  options.set_min_level(6);
   options.set_max_level(12);
   options.set_level_mod(3);
-  TestRandomCaps(options, QueryType::CAP);
-  TestRandomCaps(options, QueryType::POINT);
-  options.set_query_contains_points_only(true);
-  TestRandomCaps(options, QueryType::POINT);
+  TestRandomCaps(options, query_type);
 }
 
-TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeSpace) {
-  S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(true);        // Optimize for space.
+TEST_P(S2RegionTermIndexerTest, UseLeafCells) {
   options.set_min_level(4);
-  options.set_max_level(S2CellId::kMaxLevel);  // Use leaf cells.
+  options.set_max_level(S2CellId::kMaxLevel);
   options.set_max_cells(8);
-  TestRandomCaps(options, QueryType::CAP);
-  TestRandomCaps(options, QueryType::POINT);
-  options.set_query_contains_points_only(true);
-  TestRandomCaps(options, QueryType::POINT);
+  TestRandomCaps(options, query_type);
 }
 
-TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeTime) {
-  S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(false);       // Optimize for time.
-  options.set_min_level(0);                    // Use face cells.
+TEST_P(S2RegionTermIndexerTest, UseFaceCells2) {
+  options.set_min_level(0);
   options.set_max_level(S2CellId::kMaxLevel);
   options.set_level_mod(2);
   options.set_max_cells(20);
-  options.set_index_contains_points_only(true);
-  TestRandomCaps(options, QueryType::CAP);
-  TestRandomCaps(options, QueryType::POINT);
-  options.set_query_contains_points_only(true);
-  TestRandomCaps(options, QueryType::POINT);
-}
-
-TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeSpace) {
-  S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(true);        // Optimize for space.
-  options.set_index_contains_points_only(true);
-  // Use default parameter values.
-  TestRandomCaps(options, QueryType::CAP);
-  TestRandomCaps(options, QueryType::POINT);
-  options.set_query_contains_points_only(true);
-  TestRandomCaps(options, QueryType::POINT);
+  TestRandomCaps(options, query_type);
 }
 
 TEST(S2RegionTermIndexer, MarkerCharacter) {
