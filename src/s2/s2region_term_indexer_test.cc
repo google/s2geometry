@@ -44,10 +44,10 @@ S2_DEFINE_int32(iters, 400, "number of iterations for testing");
 
 namespace {
 
-enum QueryType { POINT, CAP };
+enum DataType { POINT, CAP };
 
 void TestRandomCaps(const S2RegionTermIndexer::Options& options,
-                    QueryType query_type) {
+                    DataType index_type, DataType query_type) {
   // This function creates an index consisting either of points (if
   // options.index_contains_points_only() is true) or S2Caps of random size.
   // It then executes queries consisting of points (if query_type == POINT)
@@ -63,7 +63,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     // of random size (up to a full sphere).
     S2Cap cap;
     vector<string> terms;
-    if (options.index_contains_points_only()) {
+    if (index_type == DataType::POINT) {
       cap = S2Cap::FromPoint(S2Testing::RandomPoint());
       terms = indexer.GetIndexTerms(cap.center(), "");
     } else {
@@ -84,7 +84,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     // random size.
     S2Cap cap;
     vector<string> terms;
-    if (query_type == QueryType::POINT) {
+    if (query_type == DataType::POINT) {
       cap = S2Cap::FromPoint(S2Testing::RandomPoint());
       terms = indexer.GetQueryTerms(cap.center(), "");
     } else {
@@ -112,24 +112,29 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
          static_cast<double>(query_terms) / absl::GetFlag(FLAGS_iters));
 }
 
-using TestCase = std::tuple<QueryType, bool, bool, bool>;
+using TestCase = std::tuple<DataType, DataType, bool, bool, bool>;
 
 class S2RegionTermIndexerTest : public testing::TestWithParam<TestCase> {
 protected:
   void SetUp() override {
-    query_type = std::get<0>(GetParam());
-    options.set_optimize_for_space(std::get<1>(GetParam()));
-    options.set_index_contains_points_only(std::get<2>(GetParam()));
-    options.set_query_contains_points_only(std::get<3>(GetParam()));
-    if (query_type != QueryType::POINT &&
-        options.query_contains_points_only()) {
-      GTEST_SKIP() << "Case query_type != QueryType::POINT && "
+    index_type = std::get<0>(GetParam());
+    query_type = std::get<1>(GetParam());
+    options.set_optimize_for_space(std::get<2>(GetParam()));
+    options.set_index_contains_points_only(std::get<3>(GetParam()));
+    options.set_query_contains_points_only(std::get<4>(GetParam()));
+    if (index_type != DataType::POINT && options.index_contains_points_only()) {
+      GTEST_SKIP() << "Case index_type != DataType::POINT && "
+                      "options.index_contains_points_only() is invalid.";
+    }
+    if (query_type != DataType::POINT && options.query_contains_points_only()) {
+      GTEST_SKIP() << "Case query_type != DataType::POINT && "
                       "options.query_contains_points_only() is invalid.";
     }
   }
 
   S2RegionTermIndexer::Options options;
-  QueryType query_type{};
+  DataType index_type{};
+  DataType query_type{};
 };
 
 // We run one test case for each combination:
@@ -141,32 +146,33 @@ protected:
 // so we skip it
 INSTANTIATE_TEST_CASE_P(
     S2RegionTermIndexerTests, S2RegionTermIndexerTest,
-    testing::Combine(testing::Values(QueryType::POINT, QueryType::CAP),
+    testing::Combine(testing::Values(DataType::POINT, DataType::CAP),
+                     testing::Values(DataType::POINT, DataType::CAP),
                      testing::Bool(), testing::Bool(), testing::Bool()));
 
 TEST_P(S2RegionTermIndexerTest, DefaultParametersValues) {
-  TestRandomCaps(options, query_type);
+  TestRandomCaps(options, index_type, query_type);
 }
 
 TEST_P(S2RegionTermIndexerTest, UseFaceCells) {
   options.set_min_level(0);
   options.set_max_level(16);
   options.set_max_cells(20);
-  TestRandomCaps(options, query_type);
+  TestRandomCaps(options, index_type, query_type);
 }
 
 TEST_P(S2RegionTermIndexerTest, ConstrainMinMaxLevels) {
   options.set_min_level(6);
   options.set_max_level(12);
   options.set_level_mod(3);
-  TestRandomCaps(options, query_type);
+  TestRandomCaps(options, index_type, query_type);
 }
 
 TEST_P(S2RegionTermIndexerTest, UseLeafCells) {
   options.set_min_level(4);
   options.set_max_level(S2CellId::kMaxLevel);
   options.set_max_cells(8);
-  TestRandomCaps(options, query_type);
+  TestRandomCaps(options, index_type, query_type);
 }
 
 TEST_P(S2RegionTermIndexerTest, UseFaceCells2) {
@@ -174,7 +180,7 @@ TEST_P(S2RegionTermIndexerTest, UseFaceCells2) {
   options.set_max_level(S2CellId::kMaxLevel);
   options.set_level_mod(2);
   options.set_max_cells(20);
-  TestRandomCaps(options, query_type);
+  TestRandomCaps(options, index_type, query_type);
 }
 
 TEST(S2RegionTermIndexer, MarkerCharacter) {
