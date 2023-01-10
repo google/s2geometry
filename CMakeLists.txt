@@ -45,6 +45,11 @@ option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
 option(WITH_PYTHON "Add python interface" OFF)
 add_feature_info(PYTHON WITH_PYTHON "provides python interface to S2")
 
+option(S2_USE_SYSTEM_INCLUDES
+    "Silence warnings in s2 headers by marking them as SYSTEM includes." OFF)
+add_feature_info(S2_USE_SYSTEM_INCLUDES S2_USE_SYSTEM_INCLUDES
+    "Silence warnings in s2 headers by marking them as SYSTEM includes.")
+
 feature_summary(WHAT ALL)
 
 if (WITH_GLOG)
@@ -260,9 +265,7 @@ endif()
 # list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
 # add_subdirectory(<path_to_s2geometry_dir> s2geometry)
 # target_link_libraries(<target_name> s2)
-if (S2_SYSTEM_HEADERS)
-    # it's useful to avoid warnings from s2 headers
-    # because it's impossible to pass same settings to target_link_libraries
+if (S2_USE_SYSTEM_INCLUDES)
     target_include_directories(s2 SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 else ()
     target_include_directories(s2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
