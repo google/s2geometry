@@ -17,7 +17,12 @@
 
 #include "s2/s2shapeutil_testing.h"
 
+#include <string>
+
 #include <gtest/gtest.h>
+#include "s2/s2cell_id.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 
 namespace s2testing {
 

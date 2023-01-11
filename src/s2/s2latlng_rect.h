@@ -21,13 +21,17 @@
 #include <cmath>
 #include <iosfwd>
 #include <iostream>
+#include <ostream>
 
 #include "s2/base/logging.h"
+#include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
+#include "s2/s2coder.h"
 #include "s2/s2latlng.h"
+#include "s2/s2point.h"
 #include "s2/s2region.h"
 
 class Decoder;
@@ -59,6 +63,8 @@ class S2Cell;
 // not a "plain old datatype" (POD) because it has virtual functions.
 class S2LatLngRect final : public S2Region {
  public:
+  typedef s2coding::internal::S2LegacyCoder<S2LatLngRect> Coder;
+
   // Construct a rectangle from minimum and maximum latitudes and longitudes.
   // If lo.lng() > hi.lng(), the rectangle spans the 180 degree longitude
   // line. Both points must be normalized, with lo.lat() <= hi.lat().

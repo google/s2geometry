@@ -21,16 +21,19 @@
 #include <string>
 #include <utility>
 
+#include "s2/base/casts.h"
 #include <gtest/gtest.h>
 #include "absl/strings/escaping.h"
 #include "s2/util/coding/coder.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2point_vector_shape.h"
 #include "s2/s2polygon.h"
+#include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::string;
 
 namespace s2shapeutil {

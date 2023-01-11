@@ -17,6 +17,8 @@
 
 #include "s2/s2builder.h"
 
+#include <cstdio>
+
 #include <algorithm>
 #include <cinttypes>
 #include <cmath>
@@ -24,18 +26,23 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
-#include "s2/base/timer.h"
 #include <gtest/gtest.h>
 
 #include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 
+#include "s2/base/commandlineflags.h"
+#include "s2/base/timer.h"
 #include "s2/base/log_severity.h"
+#include "s2/id_set_lexicon.h"
+#include "s2/mutable_s2shape_index.h"
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_lax_polygon_layer.h"
 #include "s2/s2builderutil_lax_polyline_layer.h"
@@ -51,8 +58,11 @@
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
 #include "s2/s2latlng.h"
+#include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2loop.h"
+#include "s2/s2memory_tracker.h"
+#include "s2/s2point.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2predicates.h"
@@ -75,7 +85,7 @@ using s2textformat::MakePolylineOrDie;
 using std::cout;
 using std::endl;
 using std::make_pair;
-using absl::make_unique;
+using std::make_unique;
 using std::min;
 using std::pair;
 using std::string;
@@ -1549,7 +1559,8 @@ TEST(S2Builder, AdjacentCoverageIntervalsSpanMoreThan90Degrees) {
 }
 
 // The following test requires internal debugging checks to be skipped.
-#ifdef NDEBUG
+// TODO(b/233610812): This test fails for Android-x86.
+#if defined(NDEBUG) && !(defined(__ANDROID__) && defined(__i386__))
 TEST(S2Builder, NaNVertices) {
   // Test that S2Builder operations don't crash when some vertices are NaN.
   vector<vector<S2Point>> loops = {

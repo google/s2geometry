@@ -21,12 +21,13 @@
 #include <cfloat>
 #include <cmath>
 #include <ostream>
+#include <utility>
 
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2point.h"
 #include "s2/s2predicates_internal.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
-#include "s2/util/math/vector.h"
 
 using std::fabs;
 using std::max;
@@ -1471,47 +1472,47 @@ std::ostream& operator<<(std::ostream& os, Excluded excluded) {
 // tests can use them without putting all the definitions in a header file.
 
 template int TriageCompareCosDistances<double>(
-    const S2Point&, const S2Point&, const S2Point&);
+    const Vector3_d&, const Vector3_d&, const Vector3_d&);
 
 template int TriageCompareCosDistances<long double>(
     const Vector3_ld&, const Vector3_ld&, const Vector3_ld&);
 
 template int TriageCompareSin2Distances<double>(
-    const S2Point&, const S2Point&, const S2Point&);
+    const Vector3_d&, const Vector3_d&, const Vector3_d&);
 
 template int TriageCompareSin2Distances<long double>(
     const Vector3_ld&, const Vector3_ld&, const Vector3_ld&);
 
 template int TriageCompareCosDistance<double>(
-    const S2Point&, const S2Point&, double r2);
+    const Vector3_d&, const Vector3_d&, double r2);
 
 template int TriageCompareCosDistance<long double>(
     const Vector3_ld&, const Vector3_ld&, long double r2);
 
 template int TriageCompareSin2Distance<double>(
-    const S2Point&, const S2Point&, double r2);
+    const Vector3_d&, const Vector3_d&, double r2);
 
 template int TriageCompareSin2Distance<long double>(
     const Vector3_ld&, const Vector3_ld&, long double r2);
 
 template int TriageCompareEdgeDistance<double>(
-    const S2Point& x, const S2Point& a0, const S2Point& a1, double r2);
+    const Vector3_d& x, const Vector3_d& a0, const Vector3_d& a1, double r2);
 
 template int TriageCompareEdgeDistance<long double>(
     const Vector3_ld& x, const Vector3_ld& a0, const Vector3_ld& a1,
     long double r2);
 
 template int TriageCompareEdgeDirections<double>(
-    const S2Point& a0, const S2Point& a1,
-    const S2Point& b0, const S2Point& b1);
+    const Vector3_d& a0, const Vector3_d& a1,
+    const Vector3_d& b0, const Vector3_d& b1);
 
 template int TriageCompareEdgeDirections<long double>(
     const Vector3_ld& a0, const Vector3_ld& a1,
     const Vector3_ld& b0, const Vector3_ld& b1);
 
 template int TriageEdgeCircumcenterSign<double>(
-    const S2Point& x0, const S2Point& x1,
-    const S2Point& a, const S2Point& b, const S2Point& c, int abc_sign);
+    const Vector3_d& x0, const Vector3_d& x1, const Vector3_d& a,
+    const Vector3_d& b, const Vector3_d& c, int abc_sign);
 
 template int TriageEdgeCircumcenterSign<long double>(
     const Vector3_ld& x0, const Vector3_ld& x1,
@@ -1519,8 +1520,8 @@ template int TriageEdgeCircumcenterSign<long double>(
     int abc_sign);
 
 template Excluded TriageVoronoiSiteExclusion(
-    const S2Point& a, const S2Point& b,
-    const S2Point& x0, const S2Point& x1, double r2);
+    const Vector3_d& a, const Vector3_d& b,
+    const Vector3_d& x0, const Vector3_d& x1, double r2);
 
 template Excluded TriageVoronoiSiteExclusion(
     const Vector3_ld& a, const Vector3_ld& b,

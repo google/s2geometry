@@ -23,13 +23,15 @@
 #include <memory>
 
 #include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
-#include "absl/memory/memory.h"
+#include "s2/s1angle.h"
+#include "s2/s2builder.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2latlng.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
+#include "s2/util/math/mathutil.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::max;
 using std::min;
 using std::unique_ptr;

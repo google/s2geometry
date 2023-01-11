@@ -21,10 +21,16 @@
 #include <memory>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2builder.h"
+#include "s2/s2error.h"
+#include "s2/s2memory_tracker.h"
+#include "s2/s2point.h"
 #include "s2/s2point_span.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2winding_operation.h"
 
 // This class provides a way to expand an arbitrary collection of geometry by

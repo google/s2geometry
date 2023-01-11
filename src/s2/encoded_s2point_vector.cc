@@ -17,13 +17,26 @@
 
 #include "s2/encoded_s2point_vector.h"
 
-#include <algorithm>
+#include <cstddef>
 
+#include <algorithm>
+#include <limits>
+#include <vector>
+
+#include "s2/base/integral_types.h"
+#include "s2/base/port.h"
 #include "absl/base/internal/unaligned_access.h"
 #include "absl/numeric/bits.h"
+#include "absl/types/span.h"
 #include "s2/util/bits/bits.h"
+#include "s2/util/coding/coder.h"
+#include "s2/util/coding/varint.h"
+#include "s2/encoded_string_vector.h"
+#include "s2/encoded_uint_vector.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2coder.h"
 #include "s2/s2coords.h"
+#include "s2/s2point.h"
 
 using absl::MakeSpan;
 using absl::Span;
@@ -124,7 +137,7 @@ bool EncodedS2PointVector::Init(Decoder* decoder) {
 vector<S2Point> EncodedS2PointVector::Decode() const {
   vector<S2Point> points;
   points.reserve(size_);
-  for (int i = 0; i < size_; ++i) {
+  for (size_t i = 0; i < size_; ++i) {
     points.push_back((*this)[i]);
   }
   return points;
@@ -464,7 +477,7 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
   // Now we encode the contents of each block.
   StringVectorEncoder blocks;
   vector<S2Point> exceptions;
-  for (int i = 0; i < values.size(); i += kBlockSize) {
+  for (size_t i = 0; i < values.size(); i += kBlockSize) {
     int block_size = min(kBlockSize, values.size() - i);
     BlockCode code = GetBlockCode(MakeSpan(&values[i], block_size),
                                   base, have_exceptions);

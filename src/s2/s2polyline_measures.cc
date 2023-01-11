@@ -17,16 +17,17 @@
 
 #include "s2/s2polyline_measures.h"
 
-#include <cmath>
-
-#include "s2/base/logging.h"
+#include "absl/types/span.h"
+#include "s2/s1angle.h"
 #include "s2/s2centroids.h"
+#include "s2/s2point.h"
+#include "s2/s2point_span.h"
 
 namespace S2 {
 
 S1Angle GetLength(S2PointSpan polyline) {
   S1Angle length;
-  for (int i = 1; i < polyline.size(); ++i) {
+  for (size_t i = 1; i < polyline.size(); ++i) {
     length += S1Angle(polyline[i - 1], polyline[i]);
   }
   return length;
@@ -34,7 +35,7 @@ S1Angle GetLength(S2PointSpan polyline) {
 
 S2Point GetCentroid(S2PointSpan polyline) {
   S2Point centroid;
-  for (int i = 1; i < polyline.size(); ++i) {
+  for (size_t i = 1; i < polyline.size(); ++i) {
     centroid += S2::TrueCentroid(polyline[i - 1], polyline[i]);
   }
   return centroid;

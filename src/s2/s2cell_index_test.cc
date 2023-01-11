@@ -18,16 +18,17 @@
 #include "s2/s2cell_index.h"
 
 #include <algorithm>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2testing.h"
@@ -101,6 +102,7 @@ void ExpectEqual(vector<LabelledCell> expected, vector<LabelledCell> actual) {
 void S2CellIndexTest::VerifyCellIterator() const {
   vector<LabelledCell> actual;
   for (S2CellIndex::CellIterator it(&index_); !it.done(); it.Next()) {
+    EXPECT_EQ(LabelledCell(it.cell_id(), it.label()), it.labelled_cell());
     actual.push_back(LabelledCell(it.cell_id(), it.label()));
   }
   ExpectEqual(contents_, std::move(actual));
@@ -202,7 +204,9 @@ void S2CellIndexTest::VerifyIndexContents() const {
     vector<LabelledCell> actual;
     S2CellIndex::ContentsIterator contents(&index_);
     for (contents.StartUnion(range); !contents.done(); contents.Next()) {
-      actual.push_back(LabelledCell(contents.cell_id(), contents.label()));
+      const LabelledCell labelled_cell(contents.cell_id(), contents.label());
+      EXPECT_EQ(labelled_cell, contents.labelled_cell());
+      actual.push_back(labelled_cell);
     }
     ExpectEqual(std::move(expected), std::move(actual));
   }

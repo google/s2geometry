@@ -17,11 +17,14 @@
 
 #include "s2/s1angle.h"
 
+#include <sys/types.h>
+
 #include <cmath>
 #include <cstdio>
 #include <ostream>
 
 #include "s2/s2latlng.h"
+#include "s2/s2point.h"
 
 S1Angle::S1Angle(const S2Point& x, const S2Point& y)
     : radians_(x.Angle(y)) {
@@ -46,7 +49,8 @@ std::ostream& operator<<(std::ostream& os, S1Angle a) {
   double degrees = a.degrees();
   char buffer[13];
   int sz = snprintf(buffer, sizeof(buffer), "%.7f", degrees);
-  if (sz >= 0 && sz < sizeof(buffer)) {
+  // Fix sign/unsign comparison for client that use `-Wextra` (e.g. Chrome).
+  if (sz >= 0 && static_cast<uint>(sz) < sizeof(buffer)) {
     return os << buffer;
   } else {
     return os << degrees;

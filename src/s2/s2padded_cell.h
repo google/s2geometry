@@ -21,6 +21,8 @@
 #include "s2/_fp_contract_off.h"
 #include "s2/r2rect.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2coords_internal.h"
+#include "s2/s2point.h"
 
 // S2PaddedCell represents an S2Cell whose (u,v)-range has been expanded on
 // all sides by a given amount of "padding".  Unlike S2Cell, its methods and

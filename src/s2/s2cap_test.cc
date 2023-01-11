@@ -17,19 +17,28 @@
 
 #include "s2/s2cap.h"
 
+#include <cmath>
+
 #include <cfloat>
+#include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
+#include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2coder_testing.h"
 #include "s2/s2coords.h"
+#include "s2/s2error.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
 #include "s2/s2testing.h"
-#include "s2/util/math/vector.h"
 
 using std::vector;
 
@@ -115,7 +124,7 @@ TEST(S2Cap, Basic) {
   EXPECT_EQ(1, hemi.Complement().height());
   EXPECT_TRUE(hemi.Contains(S2Point(1, 0, 0)));
   EXPECT_FALSE(hemi.Complement().Contains(S2Point(1, 0, 0)));
-  EXPECT_TRUE(hemi.Contains(S2Point(1, 0, -(1-kEps)).Normalize()));
+  EXPECT_TRUE(hemi.Contains(S2Point(1, 0, -(1 - kEps)).Normalize()));
   EXPECT_FALSE(hemi.InteriorContains(S2Point(1, 0, -(1+kEps)).Normalize()));
 
   // A concave cap.  Note that the error bounds for point containment tests
@@ -382,5 +391,13 @@ TEST(S2Cap, EncodeDecode) {
   S2Cap decoded_cap;
   EXPECT_TRUE(decoded_cap.Decode(&decoder));
   EXPECT_EQ(cap, decoded_cap);
+}
+
+TEST(S2Cap, S2CoderWorks) {
+  S2Cap cap = S2Cap::FromCenterHeight(S2Point(3, 2, 1).Normalize(), 1);
+
+  S2Error error;
+  auto decoded = s2coding::RoundTrip(S2Cap::Coder(), cap, error);
+  EXPECT_EQ(cap, decoded);
 }
 

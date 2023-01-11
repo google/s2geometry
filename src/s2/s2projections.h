@@ -22,6 +22,8 @@
 #ifndef S2_S2PROJECTIONS_H_
 #define S2_S2PROJECTIONS_H_
 
+#include <cmath>
+
 #include "s2/r2.h"
 #include "s2/s2latlng.h"
 #include "s2/s2point.h"
@@ -33,7 +35,7 @@ namespace S2 {
 // behavior along each axis.
 class Projection {
  public:
-  virtual ~Projection() {}
+  virtual ~Projection() = default;
 
   // Converts a point on the sphere to a projected 2D point.
   virtual R2Point Project(const S2Point& p) const = 0;

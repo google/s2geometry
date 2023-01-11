@@ -20,10 +20,13 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <utility>
 
-#include "s2/base/logging.h"
+#include "absl/base/optimization.h"
+#include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 
@@ -390,8 +393,8 @@ std::pair<S2Point, S2Point> GetEdgePairClosestPoints(
     case A1: return std::make_pair(a1, Project(a1, b0, b1));
     case B0: return std::make_pair(Project(b0, a0, a1), b0);
     case B1: return std::make_pair(Project(b1, a0, a1), b1);
-    default: S2_LOG(FATAL) << "Unreached (to suppress Android compiler warning)";
   }
+  ABSL_UNREACHABLE();
 }
 
 // TODO(ericv): Optimize this function to use S1ChordAngle rather than S1Angle.

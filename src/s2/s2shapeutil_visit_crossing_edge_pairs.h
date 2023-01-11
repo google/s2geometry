@@ -21,6 +21,7 @@
 #include <functional>
 
 #include "s2/s2crossing_edge_query.h"
+#include "s2/s2error.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_shape_edge.h"
 
@@ -40,7 +41,7 @@ using EdgePairVisitor = std::function<
 
 // Visits all pairs of crossing edges in the given S2ShapeIndex, terminating
 // early if the given EdgePairVisitor function returns false (in which case
-// VisitCrossings returns false as well).  "type" indicates whether all
+// VisitCrossingEdgePairs returns false as well).  "type" indicates whether all
 // crossings should be visited, or only interior crossings.
 //
 // CAVEAT: Crossings may be visited more than once.

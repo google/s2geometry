@@ -17,19 +17,25 @@
 
 #include "s2/s2latlng_rect.h"
 
+#include <cfloat>
+
 #include <algorithm>
 #include <cmath>
-#include <iosfwd>
-#include <iostream>
+#include <ostream>
 
-#include "s2/base/logging.h"
 #include "absl/flags/flag.h"
 #include "s2/util/coding/coder.h"
+#include "s2/r1interval.h"
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2debug.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2latlng.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 
 using std::fabs;

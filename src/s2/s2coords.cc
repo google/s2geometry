@@ -18,6 +18,8 @@
 #include "s2/s2coords.h"
 
 #include "s2/util/bits/bits.h"
+#include "s2/s2coords_internal.h"
+#include "s2/s2point.h"
 
 namespace S2 {
 

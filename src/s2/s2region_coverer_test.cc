@@ -17,19 +17,20 @@
 
 #include "s2/s2region_coverer.h"
 
+#include <climits>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <limits>
 #include <queue>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -39,6 +40,7 @@
 #include "s2/base/logging.h"
 #include "s2/base/log_severity.h"
 #include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"

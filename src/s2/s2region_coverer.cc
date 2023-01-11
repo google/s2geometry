@@ -18,22 +18,17 @@
 #include "s2/s2region_coverer.h"
 
 #include <algorithm>
-#include <cstddef>
-#include <cstdlib>
-#include <cstring>
-#include <functional>
-#include <queue>
 #include <utility>
 #include <vector>
 
-#include "absl/base/casts.h"
 #include "absl/container/flat_hash_set.h"
 
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
-#include "s2/s1angle.h"
-#include "s2/s2cap.h"
+#include "s2/s2cell.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
-#include "s2/s2metrics.h"
+#include "s2/s2point.h"
 #include "s2/s2region.h"
 
 using std::is_sorted;
@@ -249,7 +244,8 @@ void S2RegionCoverer::GetCoveringInternal(const S2Region& region) {
 
   GetInitialCandidates();
   while (!pq_.empty() &&
-         (!interior_covering_ || result_.size() < options_.max_cells())) {
+         (!interior_covering_ ||
+          result_.size() < static_cast<size_t>(options_.max_cells()))) {
     Candidate* candidate = pq_.top().second;
     pq_.pop();
     S2_VLOG(2) << "Pop: " << candidate->cell.id();
@@ -261,14 +257,14 @@ void S2RegionCoverer::GetCoveringInternal(const S2Region& region) {
     // takes care of the situation when we already have more than max_cells()
     // in results (min_level is too high).  Subdividing the candidate with one
     // child does no harm in this case.
-    if (interior_covering_ ||
-        candidate->cell.level() < options_.min_level() ||
+    if (interior_covering_ || candidate->cell.level() < options_.min_level() ||
         candidate->num_children == 1 ||
         (result_.size() + pq_.size() + candidate->num_children <=
-         options_.max_cells())) {
+         static_cast<size_t>(options_.max_cells()))) {
       // Expand this candidate into its children.
       for (int i = 0; i < candidate->num_children; ++i) {
-        if (interior_covering_ && result_.size() >= options_.max_cells()) {
+        if (interior_covering_ &&
+            result_.size() >= static_cast<size_t>(options_.max_cells())) {
           DeleteCandidate(candidate->children[i], true);
         } else {
           AddCandidate(candidate->children[i]);
@@ -347,7 +343,8 @@ bool S2RegionCoverer::IsCanonical(const vector<S2CellId>& covering) const {
   const int min_level = options_.min_level();
   const int max_level = options_.true_max_level();
   const int level_mod = options_.level_mod();
-  const bool too_many_cells = covering.size() > options_.max_cells();
+  const bool too_many_cells =
+      covering.size() > static_cast<size_t>(options_.max_cells());
   int same_parent_count = 1;
   S2CellId prev_id = S2CellId::None();
   for (const S2CellId id : covering) {
@@ -455,9 +452,9 @@ void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
   } else {
     // Repeatedly replace two adjacent cells in S2CellId order by their lowest
     // common ancestor until the number of cells is acceptable.
-    while (covering->size() > options_.max_cells()) {
+    while (covering->size() > static_cast<size_t>(options_.max_cells())) {
       int best_index = -1, best_level = -1;
-      for (int i = 0; i + 1 < covering->size(); ++i) {
+      for (size_t i = 0; i + 1 < covering->size(); ++i) {
         int level = (*covering)[i].GetCommonAncestorLevel((*covering)[i+1]);
         level = AdjustLevel(level);
         if (level > best_level) {

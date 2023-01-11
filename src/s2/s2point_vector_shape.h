@@ -21,7 +21,10 @@
 #include <utility>
 #include <vector>
 
+#include "s2/util/coding/coder.h"
 #include "s2/encoded_s2point_vector.h"
+#include "s2/s2coder.h"
+#include "s2/s2point.h"
 #include "s2/s2shape.h"
 
 // S2PointVectorShape is an S2Shape representing a set of S2Points. Each point
@@ -37,7 +40,7 @@ class S2PointVectorShape : public S2Shape {
   enum : TypeTag { kTypeTag = 3 };
 
   // Constructs an empty point vector.
-  S2PointVectorShape() {}
+  S2PointVectorShape() = default;
 
   S2PointVectorShape(S2PointVectorShape&& other) = default;
 
@@ -109,7 +112,7 @@ class EncodedS2PointVectorShape : public S2Shape {
   enum : TypeTag { kTypeTag = S2PointVectorShape::kTypeTag };
 
   // Constructs an uninitialized object; requires Init() to be called.
-  EncodedS2PointVectorShape() {}
+  EncodedS2PointVectorShape() = default;
 
   // Initializes an EncodedS2PointVectorShape.
   //

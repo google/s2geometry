@@ -20,6 +20,10 @@
 #include <cfloat>
 #include <cmath>
 
+#include "s2/s1angle.h"
+#include "s2/s2point.h"
+#include "s2/util/math/matrix3x3.h"
+
 using std::fabs;
 
 namespace S2 {

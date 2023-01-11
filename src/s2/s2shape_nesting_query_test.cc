@@ -17,21 +17,28 @@
 #include "s2/s2shape_nesting_query.h"
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
-#include "absl/strings/str_format.h"
+#include "absl/flags/flag.h"
+#include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s1angle.h"
+#include "s2/s2latlng.h"
+#include "s2/s2lax_polygon_shape.h"
+#include "s2/s2point.h"
 #include "s2/s2polygon.h"
+#include "s2/s2shape.h"
 #include "s2/s2testing.h"
-#include "s2/s2text_format.h"
 #include "s2/util/gtl/legacy_random_shuffle.h"
 
 using absl::Span;
-using absl::make_unique;
+using std::make_unique;
 using std::unique_ptr;
 using std::vector;
 

@@ -7,11 +7,12 @@
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
+#include <vector>
 
 #include "s2/base/commandlineflags.h"
 #include "s2/s2earth.h"
 #include "absl/flags/flag.h"
-#include "s2/s1chord_angle.h"
+#include "s2/s1angle.h"
 #include "s2/s2closest_point_query.h"
 #include "s2/s2point_index.h"
 #include "s2/s2testing.h"

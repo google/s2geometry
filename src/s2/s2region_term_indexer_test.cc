@@ -18,15 +18,14 @@
 #include "s2/s2region_term_indexer.h"
 
 #include <cstdio>
-#include <memory>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/flags/flag.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
@@ -35,6 +34,8 @@
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2latlng.h"
+#include "s2/s2point.h"
+#include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
 
 using std::string;

@@ -17,7 +17,12 @@
 
 #include "s2/s2cell_index.h"
 
+#include <algorithm>
+#include <vector>
+
 #include "absl/container/flat_hash_set.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2cell_union.h"
 
 using absl::flat_hash_set;
 using std::vector;
@@ -58,8 +63,7 @@ void S2CellIndex::ContentsIterator::StartUnion(const RangeIterator& range) {
   next_node_cutoff_ = contents;
 }
 
-S2CellIndex::S2CellIndex() {
-}
+S2CellIndex::S2CellIndex() = default;
 
 void S2CellIndex::Add(const S2CellUnion& cell_ids, Label label) {
   for (S2CellId cell_id : cell_ids) {
@@ -118,7 +122,7 @@ void S2CellIndex::Build() {
   cell_tree_.clear();
   range_nodes_.reserve(deltas.size());
   int contents = -1;
-  for (int i = 0; i < deltas.size(); ) {
+  for (size_t i = 0; i < deltas.size();) {
     S2CellId start_id = deltas[i].start_id;
     // Process all the deltas associated with the current start_id.
     for (; i < deltas.size() && deltas[i].start_id == start_id; ++i) {

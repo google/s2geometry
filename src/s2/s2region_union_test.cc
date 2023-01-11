@@ -18,20 +18,24 @@
 #include "s2/s2region_union.h"
 
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
+#include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point_region.h"
+#include "s2/s2region.h"
 #include "s2/s2region_coverer.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::unique_ptr;
 using std::vector;
 

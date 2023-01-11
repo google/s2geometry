@@ -18,6 +18,9 @@
 #ifndef S2_S2SHAPEUTIL_COUNT_EDGES_H_
 #define S2_S2SHAPEUTIL_COUNT_EDGES_H_
 
+#include <limits>
+
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 
 namespace s2shapeutil {

@@ -18,7 +18,8 @@
 
 #ifdef S2_USE_GLOG
 
-#include <glog/log_severity.h>
+// Including <glog/log_severity.h> directly will give errors.
+#include <glog/logging.h>
 
 #else  // !defined(S2_USE_GLOG)
 

@@ -17,6 +17,10 @@
 
 #include "s2/s2closest_point_query.h"
 
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s2edge_distances.h"
+
 void S2ClosestPointQueryOptions::set_conservative_max_distance(
     S1ChordAngle max_distance) {
   set_max_distance(Distance(max_distance.PlusError(

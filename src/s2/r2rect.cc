@@ -17,9 +17,8 @@
 
 #include "s2/r2rect.h"
 
-#include <iosfwd>
+#include <ostream>
 
-#include "s2/base/logging.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 

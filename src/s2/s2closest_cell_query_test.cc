@@ -17,24 +17,38 @@
 
 #include "s2/s2closest_cell_query.h"
 
+#include <cmath>
+
+#include <algorithm>
 #include <memory>
-#include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 
 #include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
 #include "absl/strings/str_format.h"
 
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2cell_index.h"
+#include "s2/s2cell_union.h"
+#include "s2/s2closest_cell_query_base.h"
 #include "s2/s2closest_edge_query_testing.h"
-#include "s2/s2loop.h"
+#include "s2/s2edge_distances.h"
+#include "s2/s2latlng.h"
+#include "s2/s2latlng_rect.h"
+#include "s2/s2metrics.h"
+#include "s2/s2min_distance_targets.h"
+#include "s2/s2point.h"
+#include "s2/s2region.h"
+#include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
@@ -43,7 +57,7 @@ namespace {
 using s2testing::FractalLoopShapeIndexFactory;
 using s2textformat::MakeCellIdOrDie;
 using s2textformat::MakePointOrDie;
-using absl::make_unique;
+using std::make_unique;
 using std::pair;
 using std::unique_ptr;
 using std::vector;
@@ -180,7 +194,7 @@ TEST(S2ClosestCellQuery, EmptyCellUnionTarget) {
 // An abstract class that adds cells to an S2CellIndex for benchmarking.
 struct CellIndexFactory {
  public:
-  virtual ~CellIndexFactory() {}
+  virtual ~CellIndexFactory() = default;
 
   // Requests that approximately "num_cells" cells located within the given
   // S2Cap bound should be added to "index".

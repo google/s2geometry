@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -27,13 +28,20 @@
 
 #include "s2/base/casts.h"
 #include "s2/base/integral_types.h"
+#include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s2builder.h"
+#include "s2/s2builder_layer.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
+#include "s2/s2point_vector_shape.h"
+#include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
 using s2builderutil::IndexedS2PointVectorLayer;
 using s2builderutil::S2PointVectorLayer;
 using s2textformat::MakePointOrDie;
-using absl::make_unique;
+using std::make_unique;
 using std::string;
 using std::vector;
 

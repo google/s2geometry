@@ -17,18 +17,25 @@
 
 #include "s2/s2edge_crossings.h"
 
+#include <cstdio>
+
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <string>
+#include <utility>
 #include <vector>
 
-#include "s2/base/logging.h"
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
 #include "absl/strings/str_format.h"
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings_internal.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2point.h"
 #include "s2/s2point_span.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/s2predicates_internal.h"
 #include "s2/s2testing.h"
@@ -425,7 +432,7 @@ TEST(S2, IntersectionError) {
     //
     // Sometimes the edges we generate will not actually cross, in which case
     // we simply try again.
-    Vector3_d p, d1, d2;
+    S2Point p, d1, d2;
     S2Testing::GetRandomFrame(&p, &d1, &d2);
     double slope = 1e-15 * pow(1e30, rnd->RandDouble());
     d2 = (d1 + slope * d2).Normalize();
@@ -498,7 +505,7 @@ TEST(S2, GrazingIntersections) {
   // along AB (to within kIntersectionError).
   GetIntersectionStats stats;
   for (int iter = 0; iter < 1000; ++iter) {
-    Vector3_d x, y, z;
+    S2Point x, y, z;
     S2Testing::GetRandomFrame(&x, &y, &z);
     S2Point a, b, c, d, e, ab;
     do {

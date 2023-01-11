@@ -17,18 +17,17 @@
 
 #include "s2/s2point_region.h"
 
-#include "s2/base/logging.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
-S2PointRegion::~S2PointRegion() {
-}
+S2PointRegion::~S2PointRegion() = default;
 
 S2PointRegion* S2PointRegion::Clone() const {
   return new S2PointRegion(point_);

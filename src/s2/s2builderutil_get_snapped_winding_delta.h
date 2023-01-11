@@ -23,6 +23,8 @@
 #include "absl/types/span.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
 
 namespace s2builderutil {
 

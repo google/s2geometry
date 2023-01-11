@@ -23,6 +23,7 @@
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2point.h"
 
 namespace s2builderutil {
 

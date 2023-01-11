@@ -21,38 +21,41 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <ios>
 #include <memory>
+#include <ostream>
+#include <string>
 #include <utility>
 #include <vector>
 
-#include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
-#include "absl/strings/str_cat.h"
-#include "absl/strings/str_split.h"
+#include "absl/strings/string_view.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
 #include "s2/r1interval.h"
+#include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2region.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2text_format.h"
 #include "s2/strings/serialize.h"
 #include "s2/util/math/matrix3x3.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::max;
 using std::string;
 using std::unique_ptr;
@@ -239,7 +242,7 @@ S2Point S2Testing::RandomPoint() {
   return S2Point(x, y, z).Normalize();
 }
 
-void S2Testing::GetRandomFrame(Vector3_d* x, Vector3_d* y, Vector3_d* z) {
+void S2Testing::GetRandomFrame(S2Point* x, S2Point* y, S2Point* z) {
   *z = RandomPoint();
   GetRandomFrameAt(*z, x, y);
 }

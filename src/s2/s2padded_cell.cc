@@ -22,7 +22,11 @@
 
 #include "s2/util/bits/bits.h"
 #include "s2/r1interval.h"
+#include "s2/r2rect.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
+#include "s2/s2coords_internal.h"
+#include "s2/s2point.h"
 
 using std::max;
 using std::min;

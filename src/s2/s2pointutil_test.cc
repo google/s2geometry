@@ -17,14 +17,22 @@
 
 #include "s2/s2pointutil.h"
 
+#include <cmath>
+
+#include <string>
+
 #include <gtest/gtest.h>
+#include "s2/s1angle.h"
 #include "s2/s2cell.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
 #include "s2/s2measures.h"
+#include "s2/s2point.h"
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"
+#include "s2/util/math/matrix3x3.h"
 
 TEST(S2, Frames) {
   Matrix3x3_d m;

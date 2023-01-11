@@ -17,7 +17,7 @@
 
 #include "s2/s2debug.h"
 
-#include "s2/base/logging.h"
+#include "s2/base/commandlineflags.h"
 #include "s2/base/log_severity.h"
 
 S2_DEFINE_bool(s2debug, !!google::DEBUG_MODE,

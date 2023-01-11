@@ -17,18 +17,28 @@
 
 #include "s2/s2min_distance_targets.h"
 
-#include <memory>
+#include <cmath>
 
-#include "absl/memory/memory.h"
-#include "s2/s1angle.h"
+#include <memory>
+#include <utility>
+
+#include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2cell_index.h"
+#include "s2/s2cell_union.h"
 #include "s2/s2closest_cell_query.h"
 #include "s2/s2closest_edge_query.h"
+#include "s2/s2contains_point_query.h"
+#include "s2/s2distance_target.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2shape_index_region.h"
 
-using absl::make_unique;
+using std::make_unique;
 
 S2Cap S2MinDistancePointTarget::GetCapBound() {
   return S2Cap(point_, S1ChordAngle::Zero());
@@ -137,8 +147,7 @@ S2MinDistanceCellUnionTarget::S2MinDistanceCellUnionTarget(
   index_.Build();
 }
 
-S2MinDistanceCellUnionTarget::~S2MinDistanceCellUnionTarget() {
-}
+S2MinDistanceCellUnionTarget::~S2MinDistanceCellUnionTarget() = default;
 
 bool S2MinDistanceCellUnionTarget::use_brute_force() const {
   return query_->options().use_brute_force();
@@ -201,8 +210,7 @@ S2MinDistanceShapeIndexTarget::S2MinDistanceShapeIndexTarget(
     const S2ShapeIndex* index)
     : index_(index), query_(make_unique<S2ClosestEdgeQuery>(index)) {}
 
-S2MinDistanceShapeIndexTarget::~S2MinDistanceShapeIndexTarget() {
-}
+S2MinDistanceShapeIndexTarget::~S2MinDistanceShapeIndexTarget() = default;
 
 bool S2MinDistanceShapeIndexTarget::include_interiors() const {
   return query_->options().include_interiors();

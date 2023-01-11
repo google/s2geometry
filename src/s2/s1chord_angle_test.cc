@@ -15,12 +15,16 @@
 
 #include "s2/s1chord_angle.h"
 
+#include <cmath>
+
 #include <cfloat>
 #include <limits>
+#include <string>
 
 #include <gtest/gtest.h>
 #include "s2/s1angle.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2point.h"
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"
 

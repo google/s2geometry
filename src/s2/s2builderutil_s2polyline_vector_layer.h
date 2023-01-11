@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "s2/base/logging.h"
-#include "absl/memory/memory.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -32,6 +31,7 @@
 #include "s2/s2debug.h"
 #include "s2/s2error.h"
 #include "s2/s2polyline.h"
+#include "s2/s2shape.h"
 
 namespace s2builderutil {
 
@@ -198,7 +198,7 @@ class IndexedS2PolylineVectorLayer : public S2Builder::Layer {
     if (error->ok()) {
       for (auto& polyline : polylines_) {
         index_->Add(
-            absl::make_unique<S2Polyline::OwningShape>(std::move(polyline)));
+            std::make_unique<S2Polyline::OwningShape>(std::move(polyline)));
       }
     }
   }

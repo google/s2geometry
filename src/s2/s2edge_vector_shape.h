@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "s2/s2point.h"
 #include "s2/s2shape.h"
 
 // S2EdgeVectorShape is an S2Shape representing an arbitrary set of edges.  It
@@ -37,7 +38,7 @@
 class S2EdgeVectorShape : public S2Shape {
  public:
   // Constructs an empty edge vector.
-  S2EdgeVectorShape() {}
+  S2EdgeVectorShape() = default;
 
   S2EdgeVectorShape(S2EdgeVectorShape&& other) = default;
 

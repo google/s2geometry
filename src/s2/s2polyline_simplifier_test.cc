@@ -18,6 +18,7 @@
 #include "s2/s2polyline_simplifier.h"
 
 #include <cfloat>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -25,7 +26,7 @@
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2pointutil.h"
+#include "s2/s2point.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
@@ -146,7 +147,7 @@ TEST(S2PolylineSimplifier, TargetAndAvoid) {
 
 TEST(S2PolylineSimplifier, Precision) {
   // This is a rough upper bound on both the error in constructing the disc
-  // locations (i.e., S2::GetPointOnLine, etc), and also on the
+  // locations (i.e., S2::GetPointOnLine, etc.), and also on the
   // padding that S2PolylineSimplifier uses to ensure that its results are
   // conservative (i.e., the error calculated by GetSemiwidth).
   const S1Angle kMaxError = S1Angle::Radians(25 * DBL_EPSILON);

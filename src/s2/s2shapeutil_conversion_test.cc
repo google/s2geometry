@@ -18,11 +18,17 @@
 #include "s2/s2shapeutil_conversion.h"
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
+#include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
+#include "s2/s2polygon.h"
+#include "s2/s2polyline.h"
 #include "s2/s2text_format.h"
 
 namespace s2shapeutil {

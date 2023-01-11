@@ -22,6 +22,8 @@
 
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 
 // S2DistanceTarget represents a geometric object to which distances are
@@ -89,7 +91,7 @@ class S2DistanceTarget {
  public:
   using Delta = typename Distance::Delta;
 
-  virtual ~S2DistanceTarget() {}
+  virtual ~S2DistanceTarget() = default;
 
   // Returns an S2Cap that bounds the set of points whose distance to the
   // target is Distance::Zero().

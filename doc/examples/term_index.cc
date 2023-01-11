@@ -13,7 +13,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -22,8 +21,9 @@
 #include "absl/container/btree_set.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
+#include "s2/s1angle.h"
 #include "s2/s2cap.h"
-#include "s2/s2point_index.h"
+#include "s2/s2point.h"
 #include "s2/s2region_term_indexer.h"
 #include "s2/s2testing.h"
 

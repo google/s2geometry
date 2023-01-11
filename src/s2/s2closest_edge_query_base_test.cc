@@ -20,9 +20,15 @@
 
 #include "s2/s2closest_edge_query_base.h"
 
+#include <memory>
+#include <vector>
+
 #include <gtest/gtest.h>
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2max_distance_targets.h"
+#include "s2/s2point.h"
 #include "s2/s2text_format.h"
 
 namespace {

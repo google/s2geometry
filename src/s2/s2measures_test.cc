@@ -17,10 +17,12 @@
 
 #include "s2/s2measures.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include <gtest/gtest.h>
 #include "s2/s2latlng.h"
+#include "s2/s2point.h"
 #include "s2/s2testing.h"
 
 using std::fabs;
@@ -29,7 +31,6 @@ TEST(S2, AngleMethods) {
   S2Point pz(0, 0, 1);
   S2Point p000(1, 0, 0);
   S2Point p045 = S2Point(1, 1, 0).Normalize();
-  S2Point p090(0, 1, 0);
   S2Point p180(-1, 0, 0);
 
   EXPECT_DOUBLE_EQ(S2::Angle(p000, pz, p045), M_PI_4);
@@ -132,4 +133,18 @@ TEST(S2, AreaMethods) {
   EXPECT_EQ(0.0, S2::Area(S2LatLng::FromDegrees(-45, -170).ToPoint(),
                           S2LatLng::FromDegrees(45, -170).ToPoint(),
                           S2LatLng::FromDegrees(0, -170).ToPoint()));
+}
+
+// Previously these three points shows catastrophic error in their cross product
+// which prevented Area() from falling back to the Girard method properly. They
+// returned an area on the order of 1e-14 and the real area is ~1e-21, 7 orders
+// of magnitude relative error. Check that they return zero now.
+TEST(S2, GetAreaRegression_B229644268) {
+  const S2Point a(-1.705424004316021258e-01, -8.242696197922716461e-01,
+                  5.399026611737816062e-01);
+  const S2Point b(-1.706078905422188652e-01, -8.246067119418969416e-01,
+                  5.393669607095969987e-01);
+  const S2Point c(-1.705800600596222294e-01, -8.244634596153025408e-01,
+                  5.395947061167500891e-01);
+  EXPECT_EQ(S2::Area(a, b, c), 0);
 }

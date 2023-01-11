@@ -21,7 +21,12 @@
 #include <functional>
 #include <vector>
 
+#include "s2/base/integral_types.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2edge_crosser.h"
+#include "s2/s2edge_crossings.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_shape_edge.h"
 
@@ -48,7 +53,7 @@ enum class S2VertexModel : uint8 { OPEN, SEMI_OPEN, CLOSED };
 // This class defines the options supported by S2ContainsPointQuery.
 class S2ContainsPointQueryOptions {
  public:
-  S2ContainsPointQueryOptions() {}
+  S2ContainsPointQueryOptions() = default;
 
   // Convenience constructor that sets the vertex_model() option.
   explicit S2ContainsPointQueryOptions(S2VertexModel vertex_model);
@@ -71,7 +76,8 @@ class S2ContainsPointQueryOptions {
 // whether or not shapes are considered to contain their vertices).
 //
 // Example usage:
-//   auto query = MakeS2ContainsPointQuery(&index, S2VertexModel::CLOSED);
+//   auto query = MakeS2ContainsPointQuery(
+//       &index, S2ContainsPointQueryOptions(S2VertexModel::CLOSED));
 //   return query.Contains(point);
 //
 // This class is not thread-safe.  To use it in parallel, each thread should

@@ -17,9 +17,15 @@
 
 #include "s2/s2shapeutil_contains_brute_force.h"
 
+#include <memory>
+#include <string>
+
 #include <gtest/gtest.h>
+#include "s2/s1angle.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
+#include "s2/s2loop.h"
+#include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
 using s2textformat::MakeLaxPolygonOrDie;

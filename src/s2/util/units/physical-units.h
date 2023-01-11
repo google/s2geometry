@@ -88,6 +88,7 @@
 #include <cstdint>
 #include <iosfwd>
 #include <iostream>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <type_traits>

@@ -15,7 +15,11 @@
 
 #include "s2/s2shapeutil_edge_iterator.h"
 
+#include <string>
+
 #include "absl/strings/str_cat.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 
 using std::string;
 

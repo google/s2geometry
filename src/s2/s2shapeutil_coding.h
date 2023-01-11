@@ -35,9 +35,13 @@
 
 #include <functional>
 #include <memory>
+#include <utility>
+#include <vector>
 
+#include "s2/base/casts.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_string_vector.h"
+#include "s2/s2coder.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 
@@ -155,7 +159,7 @@ class TaggedShapeFactory : public S2ShapeIndex::ShapeFactory {
   std::unique_ptr<S2Shape> operator[](int shape_id) const override;
 
   std::unique_ptr<ShapeFactory> Clone() const override {
-    return absl::make_unique<TaggedShapeFactory>(*this);
+    return std::make_unique<TaggedShapeFactory>(*this);
   }
 
  private:
@@ -185,7 +189,7 @@ class VectorShapeFactory : public S2ShapeIndex::ShapeFactory {
   std::unique_ptr<S2Shape> operator[](int shape_id) const override;
 
   std::unique_ptr<ShapeFactory> Clone() const override {
-    return absl::make_unique<VectorShapeFactory>(*this);
+    return std::make_unique<VectorShapeFactory>(*this);
   }
 
  private:
@@ -208,7 +212,7 @@ class WrappedShapeFactory : public S2ShapeIndex::ShapeFactory {
   std::unique_ptr<S2Shape> operator[](int shape_id) const override;
 
   std::unique_ptr<ShapeFactory> Clone() const override {
-    return absl::make_unique<WrappedShapeFactory>(*this);
+    return std::make_unique<WrappedShapeFactory>(*this);
   }
 
  private:
@@ -246,7 +250,7 @@ class HomogeneousShapeFactory : public S2ShapeIndex::ShapeFactory {
   std::unique_ptr<S2Shape> operator[](int shape_id) const override;
 
   std::unique_ptr<ShapeFactory> Clone() const override {
-    return absl::make_unique<HomogeneousShapeFactory>(*this);
+    return std::make_unique<HomogeneousShapeFactory>(*this);
   }
 
  private:
@@ -276,7 +280,7 @@ template <class Shape>
 std::unique_ptr<S2Shape> HomogeneousShapeFactory<Shape>::operator[](
     int shape_id) const {
   Decoder decoder = encoded_shapes_.GetDecoder(shape_id);
-  auto shape = absl::make_unique<Shape>();
+  auto shape = std::make_unique<Shape>();
   if (!shape->Init(&decoder)) return nullptr;
   // Some platforms (e.g. NaCl) require the following conversion.
   return std::move(shape);  // Converts from Shape to S2Shape.

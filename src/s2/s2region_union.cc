@@ -18,9 +18,13 @@
 #include "s2/s2region_union.h"
 
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include "s2/s2cap.h"
 #include "s2/s2latlng_rect.h"
+#include "s2/s2point.h"
+#include "s2/s2region.h"
 
 using std::vector;
 

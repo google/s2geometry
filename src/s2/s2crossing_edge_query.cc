@@ -20,12 +20,19 @@
 #include <algorithm>
 #include <vector>
 
-#include "s2/base/logging.h"
 #include "s2/r1interval.h"
+#include "s2/r2.h"
+#include "s2/r2rect.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2edge_clipping.h"
 #include "s2/s2edge_crosser.h"
+#include "s2/s2padded_cell.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_count_edges.h"
+#include "s2/s2shapeutil_shape_edge.h"
+#include "s2/s2shapeutil_shape_edge_id.h"
 
 using s2shapeutil::ShapeEdge;
 using s2shapeutil::ShapeEdgeId;
@@ -35,11 +42,9 @@ using std::vector;
 // determined using the benchmarks in the unit test.
 static const int kMaxBruteForceEdges = 27;
 
-S2CrossingEdgeQuery::S2CrossingEdgeQuery() {
-}
+S2CrossingEdgeQuery::S2CrossingEdgeQuery() = default;
 
-S2CrossingEdgeQuery::~S2CrossingEdgeQuery() {
-}
+S2CrossingEdgeQuery::~S2CrossingEdgeQuery() = default;
 
 void S2CrossingEdgeQuery::Init(const S2ShapeIndex* index) {
   index_ = index;
@@ -222,12 +227,12 @@ bool S2CrossingEdgeQuery::VisitCells(const S2Point& a0, const S2Point& a1,
     //     we recursively subdivide to find the cells intersected by a0a1.
     //  3. edge_root does not intersect any index cells.  In this case there
     //     is nothing to do.
-    S2ShapeIndex::CellRelation relation = iter_.Locate(edge_root);
-    if (relation == S2ShapeIndex::INDEXED) {
+    S2CellRelation relation = iter_.Locate(edge_root);
+    if (relation == S2CellRelation::INDEXED) {
       // edge_root is an index cell or is contained by an index cell (case 1).
       S2_DCHECK(iter_.id().contains(edge_root));
       if (!visitor(iter_.cell())) return false;
-    } else if (relation == S2ShapeIndex::SUBDIVIDED) {
+    } else if (relation == S2CellRelation::SUBDIVIDED) {
       // edge_root is subdivided into one or more index cells (case 2).  We
       // find the cells intersected by a0a1 using recursive subdivision.
       if (!edge_root.is_face()) pcell = S2PaddedCell(edge_root, 0);

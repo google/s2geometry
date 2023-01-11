@@ -17,6 +17,9 @@
 
 #include "s2/s1angle.h"
 
+#include <cmath>
+#include <sstream>
+
 #include <gtest/gtest.h>
 
 #include "absl/flags/flag.h"
@@ -24,6 +27,7 @@
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/s2latlng.h"
+#include "s2/s2point.h"
 #include "s2/s2testing.h"
 
 TEST(S1Angle, DefaultConstructor) {

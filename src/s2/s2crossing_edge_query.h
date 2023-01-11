@@ -19,6 +19,7 @@
 #define S2_S2CROSSING_EDGE_QUERY_H_
 
 #include <functional>
+#include <memory>
 #include <type_traits>
 #include <vector>
 
@@ -28,6 +29,8 @@
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s2padded_cell.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_shape_edge.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
@@ -51,7 +54,7 @@ enum class CrossingType { INTERIOR, ALL };
 //           const S2Point& a0, const S2Point &a1) {
 //   MutableS2ShapeIndex index;
 //   for (S2Polyline* polyline : polylines) {
-//     index.Add(absl::make_unique<S2Polyline::Shape>(polyline));
+//     index.Add(std::make_unique<S2Polyline::Shape>(polyline));
 //   }
 //   S2CrossingEdgeQuery query(&index);
 //   for (const auto& edge : query.GetCrossingEdges(a, b, CrossingType::ALL)) {

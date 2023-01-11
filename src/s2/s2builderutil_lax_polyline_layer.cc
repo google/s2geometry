@@ -17,6 +17,16 @@
 
 #include "s2/s2builderutil_lax_polyline_layer.h"
 
+#include <vector>
+
+#include "s2/id_set_lexicon.h"
+#include "s2/s2builder.h"
+#include "s2/s2builder_graph.h"
+#include "s2/s2builder_layer.h"
+#include "s2/s2error.h"
+#include "s2/s2lax_polyline_shape.h"
+#include "s2/s2point.h"
+
 using std::vector;
 
 using EdgeType = S2Builder::EdgeType;

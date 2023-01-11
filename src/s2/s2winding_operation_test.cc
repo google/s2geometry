@@ -17,25 +17,36 @@
 
 #include "s2/s2winding_operation.h"
 
+#include <cmath>
+
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
+#include "absl/strings/string_view.h"
+#include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
+#include "s2/s2boolean_operation.h"
+#include "s2/s2builder.h"
+#include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_lax_polygon_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2cap.h"
 #include "s2/s2error.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2loop.h"
+#include "s2/s2memory_tracker.h"
+#include "s2/s2point.h"
+#include "s2/s2point_span.h"
+#include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
 using s2builderutil::IdentitySnapFunction;
 using s2builderutil::IntLatLngSnapFunction;
-using absl::make_unique;
+using std::make_unique;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -51,10 +62,11 @@ namespace {
 // use s2builderutil::IndexMatchingLayer because that class does not
 // distinguish empty from full polygons, and we don't need its ability to
 // match edge multiplicities here.)
-void ExpectWindingResult(
-    const S2WindingOperation::Options& options, const vector<string>& loop_strs,
-    const string& ref_point_str, int ref_winding,
-    S2WindingOperation::WindingRule rule, const string& expected_str) {
+void ExpectWindingResult(const S2WindingOperation::Options& options,
+                         const vector<string>& loop_strs,
+                         absl::string_view ref_point_str, int ref_winding,
+                         S2WindingOperation::WindingRule rule,
+                         absl::string_view expected_str) {
   MutableS2ShapeIndex expected;
   expected.Add(s2textformat::MakeLaxPolygonOrDie(expected_str));
   MutableS2ShapeIndex actual;

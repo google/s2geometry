@@ -17,16 +17,18 @@
 
 #include "s2/s2edge_crossings.h"
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
+#include <utility>
 
-#include <cmath>
-
-#include "s2/base/logging.h"
 #include "s2/s1angle.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings_internal.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
+#include "s2/s2predicates_internal.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 
 namespace S2 {
@@ -123,13 +125,13 @@ inline bool GetStableCrossProd(const Vector3<T>& a, const Vector3<T>& b,
 // Explicitly instantiate this function so that we can use it in tests without
 // putting its definition in a header file.
 template bool GetStableCrossProd<double>(
-    const S2Point&, const S2Point&, S2Point*);
+  const Vector3_d&, const Vector3_d&, Vector3_d*);
 template bool GetStableCrossProd<long double>(
     const Vector3_ld&, const Vector3_ld&, Vector3_ld*);
 
 }  // namespace internal
 
-Vector3_d RobustCrossProd(const S2Point& a, const S2Point& b) {
+S2Point RobustCrossProd(const S2Point& a, const S2Point& b) {
   S2_DCHECK(IsUnitLength(a));
   S2_DCHECK(IsUnitLength(b));
 
