@@ -27,6 +27,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
+#include "absl/strings/str_cat.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
@@ -44,10 +45,13 @@ S2_DEFINE_int32(iters, 400, "number of iterations for testing");
 
 namespace {
 
-enum QueryType { POINT, CAP };
+enum DataType {
+  POINT = 0,
+  CAP = 1,
+};
 
 void TestRandomCaps(const S2RegionTermIndexer::Options& options,
-                    QueryType query_type) {
+                    DataType index_type, DataType query_type) {
   // This function creates an index consisting either of points (if
   // options.index_contains_points_only() is true) or S2Caps of random size.
   // It then executes queries consisting of points (if query_type == POINT)
@@ -63,7 +67,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     // of random size (up to a full sphere).
     S2Cap cap;
     vector<string> terms;
-    if (options.index_contains_points_only()) {
+    if (index_type == DataType::POINT) {
       cap = S2Cap::FromPoint(S2Testing::RandomPoint());
       terms = indexer.GetIndexTerms(cap.center(), "");
     } else {
@@ -84,7 +88,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     // random size.
     S2Cap cap;
     vector<string> terms;
-    if (query_type == QueryType::CAP) {
+    if (query_type == DataType::POINT) {
       cap = S2Cap::FromPoint(S2Testing::RandomPoint());
       terms = indexer.GetQueryTerms(cap.center(), "");
     } else {
@@ -112,62 +116,80 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
          static_cast<double>(query_terms) / absl::GetFlag(FLAGS_iters));
 }
 
-// We run one test case for each combination of space vs. time optimization,
-// and indexing regions vs. only points.
+using TestCase = std::tuple<DataType, DataType, bool, bool, bool>;
 
-TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTime) {
+class S2RegionTermIndexerTest : public testing::TestWithParam<TestCase> {
+protected:
+  void SetUp() override {
+    index_type = std::get<0>(GetParam());
+    query_type = std::get<1>(GetParam());
+    options.set_optimize_for_space(std::get<2>(GetParam()));
+    options.set_index_contains_points_only(std::get<3>(GetParam()));
+    options.set_query_contains_points_only(std::get<4>(GetParam()));
+    if (index_type != DataType::POINT && options.index_contains_points_only()) {
+      GTEST_SKIP() << "Case index_type != DataType::POINT && "
+                      "options.index_contains_points_only() is invalid.";
+    }
+    if (query_type != DataType::POINT && options.query_contains_points_only()) {
+      GTEST_SKIP() << "Case query_type != DataType::POINT && "
+                      "options.query_contains_points_only() is invalid.";
+    }
+  }
+
   S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(false);       // Optimize for time.
-  options.set_min_level(0);                    // Use face cells.
-  options.set_max_level(16);
-  options.set_max_cells(20);
-  TestRandomCaps(options, QueryType::CAP);
+  DataType index_type{};
+  DataType query_type{};
+};
+
+// We run one test case for each combination:
+// index_type: POINT, CAP
+// query_type: POINT, CAP
+// optimize_for_space: false, true
+// index_contains_points_only: false, true
+// query_contains_points_only: false, true
+INSTANTIATE_TEST_CASE_P(
+    S2RegionTermIndexerTests, S2RegionTermIndexerTest,
+    testing::Combine(testing::Values(DataType::POINT, DataType::CAP),
+                     testing::Values(DataType::POINT, DataType::CAP),
+                     testing::Bool(), testing::Bool(), testing::Bool()),
+    [](const testing::TestParamInfo<TestCase>& info) {
+      return absl::StrCat(
+          "Index", std::get<0>(info.param), "Query", std::get<1>(info.param),
+          "SpaceOpt", std::get<2>(info.param), "IndexOpt",
+          std::get<3>(info.param), "QueryOpt", std::get<4>(info.param));
+    });
+
+TEST_P(S2RegionTermIndexerTest, DefaultParametersValues) {
+  TestRandomCaps(options, index_type, query_type);
 }
 
-TEST(S2RegionTermIndexer, IndexRegionsQueryPointsOptimizeTime) {
-  S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(false);       // Optimize for time.
-  options.set_min_level(0);                    // Use face cells.
+TEST_P(S2RegionTermIndexerTest, UseFaceCells) {
+  options.set_min_level(0);
   options.set_max_level(16);
   options.set_max_cells(20);
-  TestRandomCaps(options, QueryType::POINT);
+  TestRandomCaps(options, index_type, query_type);
 }
 
-TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTimeWithLevelMod) {
-  S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(false);       // Optimize for time.
-  options.set_min_level(6);                    // Constrain min/max levels.
+TEST_P(S2RegionTermIndexerTest, ConstrainMinMaxLevels) {
+  options.set_min_level(6);
   options.set_max_level(12);
   options.set_level_mod(3);
-  TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(options, index_type, query_type);
 }
 
-TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeSpace) {
-  S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(true);        // Optimize for space.
+TEST_P(S2RegionTermIndexerTest, UseLeafCells) {
   options.set_min_level(4);
-  options.set_max_level(S2CellId::kMaxLevel);  // Use leaf cells.
+  options.set_max_level(S2CellId::kMaxLevel);
   options.set_max_cells(8);
-  TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(options, index_type, query_type);
 }
 
-TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeTime) {
-  S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(false);       // Optimize for time.
-  options.set_min_level(0);                    // Use face cells.
+TEST_P(S2RegionTermIndexerTest, UseFaceCells2) {
+  options.set_min_level(0);
   options.set_max_level(S2CellId::kMaxLevel);
   options.set_level_mod(2);
   options.set_max_cells(20);
-  options.set_index_contains_points_only(true);
-  TestRandomCaps(options, QueryType::CAP);
-}
-
-TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeSpace) {
-  S2RegionTermIndexer::Options options;
-  options.set_optimize_for_space(true);        // Optimize for space.
-  options.set_index_contains_points_only(true);
-  // Use default parameter values.
-  TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(options, index_type, query_type);
 }
 
 TEST(S2RegionTermIndexer, MarkerCharacter) {

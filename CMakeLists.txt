@@ -20,7 +20,7 @@ endif()
 # end up defined differently.  There is probably a better way to achieve
 # this than assuming what absl used. 
 # Using CACHE allows the user to override the default.
-set(CMAKE_CXX_STANDARD 11 CACHE STRING "The C++ standard to build with")
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -73,6 +73,7 @@ endif()
 # add_subdirectory(s2-submodule)
 if (NOT TARGET absl::base)
     find_package(absl REQUIRED)
+    find_package(GTest)
 endif()
 find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
@@ -216,13 +217,11 @@ add_library(s2
             src/s2/util/math/mathutil.cc
             src/s2/util/units/length-units.cc)
 
-if (GTEST_ROOT)
   add_library(s2testing STATIC
               src/s2/s2builderutil_testing.cc
               src/s2/s2shapeutil_testing.cc
               src/s2/s2testing.cc
               src/s2/thread_testing.cc)
-endif()
 
 target_link_libraries(
     s2
@@ -248,13 +247,11 @@ target_link_libraries(
     absl::utility
     ${CMAKE_THREAD_LIBS_INIT})
 
-if (GTEST_ROOT)
   target_link_libraries(
       s2testing
       ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
       absl::memory
       absl::strings)
-endif()
 
 # Allow other CMake projects to use this one with:
 # list(APPEND CMAKE_MODULE_PATH "<path_to_s2geometry_dir>/third_party/cmake")
@@ -428,21 +425,12 @@ install(FILES src/s2/util/units/length-units.h
               src/s2/util/units/physical-units.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/units")
 
-if (GTEST_ROOT)
   set(S2_TARGETS s2 s2testing)
-else()
-  set(S2_TARGETS s2)
-endif()
 
 install(TARGETS ${S2_TARGETS}
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-
-message("GTEST_ROOT: ${GTEST_ROOT}")
-if (GTEST_ROOT)
-  add_subdirectory(${GTEST_ROOT} build_gtest)
-  include_directories(${GTEST_ROOT}/include)
 
   set(S2TestFiles
       src/s2/encoded_s2cell_id_vector_test.cc
@@ -570,10 +558,9 @@ if (GTEST_ROOT)
         absl::span
         absl::strings
         absl::synchronization
-        gtest_main)
+        GTest::gtest_main)
     add_test(${test} ${test})
   endforeach()
-endif()
 
 if (BUILD_EXAMPLES AND TARGET s2testing)
   add_subdirectory("doc/examples" examples)
@@ -582,3 +569,21 @@ endif()
 if (${SWIG_FOUND} AND ${Python3_FOUND})
   add_subdirectory("src/python" python)
 endif()
+
+find_package(benchmark)
+
+add_executable(s2region_term_indexer_benchmark src/s2/s2region_term_indexer_benchmark.cpp)
+target_link_libraries(
+        s2region_term_indexer_benchmark
+        PUBLIC
+        s2testing s2
+        absl::base
+        absl::btree
+        absl::core_headers
+        absl::flags_reflection
+        absl::memory
+        absl::span
+        absl::strings
+        absl::synchronization
+        benchmark::benchmark
+        benchmark::benchmark_main)
