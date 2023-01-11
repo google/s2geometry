@@ -38,7 +38,8 @@
 #include "absl/hash/hash.h"
 #include "s2/util/bits/bits.h"
 
-namespace util::bitmap {
+namespace util {
+namespace bitmap {
 
 template <typename W>
 void SetBit(W* map, size_t index, bool value) {
@@ -1130,6 +1131,7 @@ BasicBitmap<W>::BitIndexIter::BitIndexIter(const BasicBitmap* bitmap,
 }
 
 }  // namespace internal
-}  // namespace util::bitmap
+}  // namespace bitmap
+}  // namespace util
 
 #endif  // UTIL_BITMAP_BITMAP_H__
