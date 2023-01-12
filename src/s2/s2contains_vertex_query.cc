@@ -17,9 +17,11 @@
 
 #include "s2/s2contains_vertex_query.h"
 
-#include <cmath>
+#include <cstdlib>
+
 #include <utility>
 
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 

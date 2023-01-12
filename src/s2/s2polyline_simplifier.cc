@@ -17,10 +17,14 @@
 
 #include "s2/s2polyline_simplifier.h"
 
+#include <cmath>
+
 #include <cfloat>
+#include <vector>
 
 #include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
+#include "s2/s2point.h"
 
 void S2PolylineSimplifier::Init(const S2Point& src) {
   src_ = src;

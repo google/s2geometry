@@ -19,28 +19,33 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <stack>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include "absl/container/fixed_array.h"
 #include "absl/container/flat_hash_set.h"
-#include "absl/container/inlined_vector.h"
-#include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
+#include "absl/container/node_hash_map.h"
+#include "absl/utility/utility.h"
 
-#include "s2/base/casts.h"
-#include "s2/base/commandlineflags.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/mutable_s2shape_index.h"
+#include "s2/r1interval.h"
+#include "s2/r2.h"
+#include "s2/r2rect.h"
 #include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2boolean_operation.h"
 #include "s2/s2builder.h"
+#include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_s2polygon_layer.h"
 #include "s2/s2builderutil_s2polyline_layer.h"
 #include "s2/s2builderutil_s2polyline_vector_layer.h"
@@ -50,23 +55,23 @@
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2closest_edge_query.h"
+#include "s2/s2coder.h"
 #include "s2/s2contains_point_query.h"
 #include "s2/s2coords.h"
-#include "s2/s2crossing_edge_query.h"
 #include "s2/s2debug.h"
-#include "s2/s2edge_clipping.h"
-#include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2error.h"
-#include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2latlng_rect_bounder.h"
 #include "s2/s2loop.h"
-#include "s2/s2measures.h"
+#include "s2/s2loop_measures.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
 #include "s2/s2point_compression.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2polyline.h"
-#include "s2/s2predicates.h"
+#include "s2/s2region.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shape_index_region.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
@@ -79,7 +84,7 @@ using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
 using s2builderutil::S2PolylineVectorLayer;
 using std::fabs;
-using absl::make_unique;
+using std::make_unique;
 using std::pair;
 using std::sqrt;
 using std::unique_ptr;
@@ -316,7 +321,7 @@ void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
   // Some of the children of the parent loop may now be children of
   // the new loop.
   vector<S2Loop*>* new_children = &(*loop_map)[new_loop];
-  for (int i = 0; i < children->size(); ) {
+  for (size_t i = 0; i < children->size();) {
     S2Loop* child = (*children)[i];
     if (new_loop->ContainsNested(*child)) {
       new_children->push_back(child);
@@ -451,7 +456,7 @@ void S2Polygon::InitOriented(vector<unique_ptr<S2Loop>> loops) {
   //    represent it.
 
   flat_hash_set<const S2Loop*> contained_origin;
-  for (int i = 0; i < loops.size(); ++i) {
+  for (size_t i = 0; i < loops.size(); ++i) {
     S2Loop* loop = loops[i].get();
     if (loop->contains_origin()) {
       contained_origin.insert(loop);
@@ -482,7 +487,7 @@ void S2Polygon::InitOriented(vector<unique_ptr<S2Loop>> loops) {
   // Verify that the original loops had consistent shell/hole orientations.
   // Each original loop L should have been inverted if and only if it now
   // represents a hole.
-  for (int i = 0; i < loops_.size(); ++i) {
+  for (size_t i = 0; i < loops_.size(); ++i) {
     if ((contained_origin.count(loop(i)) != loop(i)->contains_origin()) !=
         loop(i)->is_hole()) {
       // There is no point in saving the loop index, because the error is a
@@ -706,7 +711,13 @@ bool S2Polygon::Contains(const S2Point& p) const {
   return MakeS2ContainsPointQuery(&index_).Contains(p);
 }
 
-void S2Polygon::Encode(Encoder* const encoder) const {
+void S2Polygon::Encode(Encoder* const encoder,
+                       s2coding::CodingHint hint) const {
+  if (hint == s2coding::CodingHint::FAST) {
+    EncodeUncompressed(encoder);
+    return;
+  }
+
   if (num_vertices_ == 0) {
     EncodeCompressed(encoder, nullptr, S2::kMaxCellLevel);
     return;
@@ -781,26 +792,14 @@ bool S2Polygon::Decode(Decoder* const decoder) {
   unsigned char version = decoder->get8();
   switch (version) {
     case kCurrentUncompressedEncodingVersionNumber:
-      return DecodeUncompressed(decoder, false);
+      return DecodeUncompressed(decoder);
     case kCurrentCompressedEncodingVersionNumber:
       return DecodeCompressed(decoder);
   }
   return false;
 }
 
-bool S2Polygon::DecodeWithinScope(Decoder* const decoder) {
-  if (decoder->avail() < sizeof(unsigned char)) return false;
-  unsigned char version = decoder->get8();
-  switch (version) {
-    case kCurrentUncompressedEncodingVersionNumber:
-      return DecodeUncompressed(decoder, true);
-    case kCurrentCompressedEncodingVersionNumber:
-      return DecodeCompressed(decoder);
-  }
-  return false;
-}
-
-bool S2Polygon::DecodeUncompressed(Decoder* const decoder, bool within_scope) {
+bool S2Polygon::DecodeUncompressed(Decoder* const decoder) {
   if (decoder->avail() < 2 * sizeof(uint8) + sizeof(uint32)) return false;
   ClearLoops();
   decoder->get8();  // Ignore irrelevant serialized owns_loops_ value.
@@ -808,18 +807,15 @@ bool S2Polygon::DecodeUncompressed(Decoder* const decoder, bool within_scope) {
   // Polygons with no loops are explicitly allowed here: a newly created
   // polygon has zero loops and such polygons encode and decode properly.
   const uint32 num_loops = decoder->get32();
-  if (num_loops > absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops))
+  if (num_loops >
+      static_cast<uint32>(absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops)))
     return false;
   loops_.reserve(num_loops);
   num_vertices_ = 0;
-  for (int i = 0; i < num_loops; ++i) {
+  for (size_t i = 0; i < num_loops; ++i) {
     loops_.push_back(make_unique<S2Loop>());
     loops_.back()->set_s2debug_override(s2debug_override());
-    if (within_scope) {
-      if (!loops_.back()->DecodeWithinScope(decoder)) return false;
-    } else {
-      if (!loops_.back()->Decode(decoder)) return false;
-    }
+    if (!loops_.back()->Decode(decoder)) return false;
     num_vertices_ += loops_.back()->num_vertices();
   }
   if (!bound_.Decode(decoder)) return false;
@@ -1485,10 +1481,11 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   // polygon has zero loops and such polygons encode and decode properly.
   uint32 num_loops;
   if (!decoder->get_varint32(&num_loops)) return false;
-  if (num_loops > absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops))
+  if (num_loops >
+      static_cast<uint32>(absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops)))
     return false;
   loops_.reserve(num_loops);
-  for (int i = 0; i < num_loops; ++i) {
+  for (size_t i = 0; i < num_loops; ++i) {
     auto loop = make_unique<S2Loop>();
     loop->set_s2debug_override(s2debug_override());
     if (!loop->DecodeCompressed(decoder, snap_level)) {
@@ -1524,8 +1521,7 @@ void S2Polygon::Shape::Init(const S2Polygon* polygon) {
   }
 }
 
-S2Polygon::Shape::~Shape() {
-}
+S2Polygon::Shape::~Shape() = default;
 
 S2Shape::Edge S2Polygon::Shape::edge(int e) const {
   // Method names are fully specified to enable inlining.

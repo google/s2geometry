@@ -42,6 +42,7 @@
 #include "s2/s1interval.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/s2predicates_internal.h"

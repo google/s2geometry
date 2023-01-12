@@ -26,9 +26,11 @@
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
+#include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2distance_target.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2point.h"
 #include "s2/s2shape_index.h"
 
 class S2FurthestEdgeQuery;

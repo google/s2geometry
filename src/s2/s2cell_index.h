@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <ostream>
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"

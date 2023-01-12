@@ -49,14 +49,22 @@
 
 #include "s2/s2builderutil_get_snapped_winding_delta.h"
 
+#include <limits>
 #include <utility>
 #include <vector>
 
-#include "s2/base/logging.h"
+#include "absl/container/btree_map.h"
 #include "absl/types/span.h"
+#include "s2/id_set_lexicon.h"
+#include "s2/s2builder.h"
+#include "s2/s2builder_graph.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
+#include "s2/s2pointutil.h"
+#include "s2/s2shape.h"
 
 using absl::Span;
 using std::make_pair;
@@ -153,7 +161,7 @@ int GetEdgeWindingDelta(const S2Point& a, const S2Point& b,
 
   int delta = 0;
   S2EdgeCrosser crosser(&a, &b, &chain[0]);
-  for (int i = 1; i < chain.size(); ++i) {
+  for (size_t i = 1; i < chain.size(); ++i) {
     delta += crosser.SignedEdgeOrVertexCrossing(&chain[i]);
   }
   return delta;

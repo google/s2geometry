@@ -17,6 +17,7 @@
 
 #include "s2/s2wedge_relations.h"
 
+#include "s2/s2point.h"
 #include "s2/s2predicates.h"
 
 namespace S2 {

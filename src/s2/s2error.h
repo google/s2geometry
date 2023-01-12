@@ -25,6 +25,8 @@
 #include <ostream>
 #include <string>
 
+#include "absl/base/attributes.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 
 #include "s2/base/port.h"
@@ -34,7 +36,7 @@
 class S2Error {
  public:
   enum Code {
-    OK = 0,                  // No error.
+    OK = 0,  // No error.
 
     ////////////////////////////////////////////////////////////////////
     // Generic errors, not specific to geometric objects:
@@ -49,12 +51,11 @@ class S2Error {
     RESOURCE_EXHAUSTED = 1007,   // A resource has been exhausted.
     CANCELLED = 1008,            // Operation was cancelled.
 
-
     ////////////////////////////////////////////////////////////////////
     // Error codes in the following range can be defined by clients:
 
     USER_DEFINED_START = 1000000,
-    USER_DEFINED_END   = 9999999,
+    USER_DEFINED_END = 9999999,
 
     ////////////////////////////////////////////////////////////////////
     // Errors that apply to more than one type of geometry:
@@ -62,6 +63,8 @@ class S2Error {
     NOT_UNIT_LENGTH = 1,     // Vertex is not unit length.
     DUPLICATE_VERTICES = 2,  // There are two identical vertices.
     ANTIPODAL_VERTICES = 3,  // There are two antipodal vertices.
+    NOT_CONTINUOUS = 4,      // Edges of a chain aren't continuous.
+    INVALID_VERTEX = 5,      // Vertex has value that's inf or NaN.
 
     ////////////////////////////////////////////////////////////////////
     // S2Loop errors:
@@ -70,14 +73,15 @@ class S2Error {
     LOOP_SELF_INTERSECTION = 101,    // Loop has a self-intersection.
 
     ////////////////////////////////////////////////////////////////////
-    // S2Polygon errors:
+    // S2Polygon/S2Shape errors:
 
     POLYGON_LOOPS_SHARE_EDGE = 200,  // Two polygon loops share an edge.
     POLYGON_LOOPS_CROSS = 201,       // Two polygon loops cross.
     POLYGON_EMPTY_LOOP = 202,        // Polygon has an empty loop.
     POLYGON_EXCESS_FULL_LOOP = 203,  // Non-full polygon has a full loop.
 
-    // InitOriented() was called and detected inconsistent loop orientations.
+    // Inconsistent loop orientations were detected, indicating that the
+    // interior is not on the left of all edges.
     POLYGON_INCONSISTENT_LOOP_ORIENTATIONS = 204,
 
     // Loop depths don't correspond to any valid nesting hierarchy.
@@ -86,6 +90,10 @@ class S2Error {
     // Actual polygon nesting does not correspond to the nesting hierarchy
     // encoded by the loop depths.
     POLYGON_INVALID_LOOP_NESTING = 206,
+
+    INVALID_DIMENSION = 207,     // Shape dimension isn't valid.
+    SPLIT_INTERIOR = 208,        // Interior split by holes.
+    OVERLAPPING_GEOMETRY = 209,  // Geometry overlaps where it shouldn't
 
     ////////////////////////////////////////////////////////////////////
     // S2Builder errors:
@@ -146,6 +154,31 @@ class S2Error {
   Code code_;
   std::string text_;
 };
+
+// Converts an absl::Status object into an S2Error.
+//
+// absl::Status codes with no exact equivalent in S2Error::Code are converted to
+// S2Error::UNKNOWN.
+ABSL_MUST_USE_RESULT S2Error ToS2Error(const absl::Status& status);
+
+// Converts an S2Error into an absl::Status.
+//
+// Custom error space are deprecated,
+// so S2Error codes with no exact equivalent in absl::StatusCode are converted
+// as follows:
+//
+//   - errors related to S2Loop, S2Polygon, and S2Builder, as well as those that
+//     apply to more than one type of geometry are mapped to
+//     absl::StatusCode::kInvalidArgument.
+//
+//   - client-defined errors (those in the [USER_DEFINED_START,USER_DEFINED_END]
+//     range), UNKNOWN errors, and all other errors not covered above are mapped
+//     to absl::StatusCode::kUnknown
+//
+// The above mapping significantly reduces the set of expressible errors.
+// Clients reacting to specific S2 errors (e.g. polygon validation errors)
+// should continue to use S2Error for its richer error API.
+absl::Status ToStatus(const S2Error& error);
 
 
 //////////////////   Implementation details follow   ////////////////////

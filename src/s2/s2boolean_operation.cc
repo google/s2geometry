@@ -64,27 +64,46 @@
 
 #include "s2/s2boolean_operation.h"
 
+#include <cfloat>
+#include <cmath>
+
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <memory>
+#include <ostream>
 #include <utility>
+#include <vector>
 
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/inlined_vector.h"
 #include "absl/memory/memory.h"
 
+#include "s2/base/integral_types.h"
+#include "s2/id_set_lexicon.h"
+#include "s2/s1angle.h"
 #include "s2/s2builder.h"
+#include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2contains_point_query.h"
 #include "s2/s2crossing_edge_query.h"
-#include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2error.h"
 #include "s2/s2measures.h"
+#include "s2/s2memory_tracker.h"
+#include "s2/s2point.h"
 #include "s2/s2predicates.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2shape_index_measures.h"
+#include "s2/s2shapeutil_shape_edge.h"
+#include "s2/s2shapeutil_shape_edge_id.h"
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
+#include "s2/value_lexicon.h"
 
 // TODO(ericv): Remove this debugging output at some point.
 extern bool s2builder_verbose;
@@ -94,7 +113,7 @@ namespace {  // Anonymous namespace for helper classes.
 using absl::flat_hash_map;
 using std::lower_bound;
 using std::make_pair;
-using absl::make_unique;
+using std::make_unique;
 using std::max;
 using std::min;
 using std::pair;
@@ -208,7 +227,7 @@ static vector<EdgeId> GetInputEdgeChainOrder(
   // chain order (e.g.  AB, BC, CD).
   vector<pair<VertexId, EdgeId>> vmap;     // Map from source vertex to edge id.
   vector<int> indegree(g.num_vertices());  // Restricted to current input edge.
-  for (int end, begin = 0; begin < order.size(); begin = end) {
+  for (size_t end, begin = 0; begin < order.size(); begin = end) {
     // Gather the edges that came from a single input edge.
     InputEdgeId input_id = input_ids[order[begin]];
     for (end = begin; end < order.size(); ++end) {
@@ -219,7 +238,7 @@ static vector<EdgeId> GetInputEdgeChainOrder(
     // Build a map from the source vertex of each edge to its edge id,
     // and also compute the indegree at each vertex considering only the edges
     // that came from the current input edge.
-    for (int i = begin; i < end; ++i) {
+    for (size_t i = begin; i < end; ++i) {
       EdgeId e = order[i];
       vmap.push_back(make_pair(g.edge(e).first, e));
       indegree[g.edge(e).second] += 1;
@@ -228,12 +247,12 @@ static vector<EdgeId> GetInputEdgeChainOrder(
 
     // Find the starting edge for building the edge chain.
     EdgeId next = g.num_edges();
-    for (int i = begin; i < end; ++i) {
+    for (size_t i = begin; i < end; ++i) {
       EdgeId e = order[i];
       if (indegree[g.edge(e).first] == 0) next = e;
     }
     // Build the edge chain.
-    for (int i = begin; ;) {
+    for (size_t i = begin;;) {
       order[i] = next;
       VertexId v = g.edge(next).second;
       indegree[v] = 0;  // Clear as we go along.
@@ -323,7 +342,7 @@ GraphEdgeClipper::GraphEdgeClipper(
       input_ids_(g.input_edge_id_set_ids()),
       order_(GetInputEdgeChainOrder(g_, input_ids_)),
       rank_(order_.size()) {
-  for (int i = 0; i < order_.size(); ++i) {
+  for (size_t i = 0; i < order_.size(); ++i) {
     rank_[order_[i]] = i;
   }
   // new_edges_ is obtained by filtering the graph edges and therefore the
@@ -350,7 +369,7 @@ void GraphEdgeClipper::Run() {
   bool invert_b = false;
   bool reverse_a = false;
   auto next = input_crossings_.begin();
-  for (int i = 0; i < order_.size(); ++i) {
+  for (size_t i = 0; i < order_.size(); ++i) {
     // For each input edge (the "A" input edge), gather all the input edges
     // that cross it (the "B" input edges).
     InputEdgeId a_input_id = input_ids_[order_[i]];
@@ -426,7 +445,7 @@ void GraphEdgeClipper::Run() {
     a_num_crossings.resize(a_vertices.size());
     a_isolated.clear();
     a_isolated.resize(a_vertices.size());
-    for (int bi = 0; bi < b_input_edges.size(); ++bi) {
+    for (size_t bi = 0; bi < b_input_edges.size(); ++bi) {
       bool left_to_right = b_input_edges[bi].left_to_right();
       int a_index = GetCrossedVertexIndex(a_vertices, b_edges[bi],
                                           left_to_right);
@@ -462,7 +481,7 @@ void GraphEdgeClipper::Run() {
     // up the edge crossings in the correct order.  (The multiplicity is
     // almost always either 0 or 1 except in very rare cases.)
     int multiplicity = inside + a_num_crossings[0];
-    for (int ai = 1; ai < a_vertices.size(); ++ai) {
+    for (size_t ai = 1; ai < a_vertices.size(); ++ai) {
       if (multiplicity != 0) {
         a_isolated[ai - 1] = a_isolated[ai] = false;
       }
@@ -484,7 +503,7 @@ void GraphEdgeClipper::Run() {
     // Output any isolated polyline vertices.
     // TODO(ericv): Only do this if an output layer wants degenerate edges.
     if (input_dimensions_[a_input_id] != 0) {
-      for (int ai = 0; ai < a_vertices.size(); ++ai) {
+      for (size_t ai = 0; ai < a_vertices.size(); ++ai) {
         if (a_isolated[ai]) {
           AddEdge(Graph::Edge(a_vertices[ai], a_vertices[ai]), a_input_id);
         }
@@ -705,7 +724,7 @@ bool GraphEdgeClipper::EdgeChainOnLeft(
   }
   // Now B is to the left of A if and only if the loop is counterclockwise.
   double sum = 0;
-  for (int i = 2; i < loop.size(); ++i) {
+  for (size_t i = 2; i < loop.size(); ++i) {
     sum += S2::TurnAngle(g_.vertex(loop[i - 2]), g_.vertex(loop[i - 1]),
                          g_.vertex(loop[i]));
   }
@@ -780,7 +799,7 @@ void EdgeClippingLayer::Build(const Graph& g, S2Error* error) {
                    &new_edges, &new_input_edge_ids).Run();
   if (s2builder_verbose) {
     std::cout << "Edges after clipping: " << std::endl;
-    for (int i = 0; i < new_edges.size(); ++i) {
+    for (size_t i = 0; i < new_edges.size(); ++i) {
       std::cout << "  " << new_input_edge_ids[i] << " (" << new_edges[i].first
                 << ", " << new_edges[i].second << ")" << std::endl;
     }
@@ -805,7 +824,7 @@ void EdgeClippingLayer::Build(const Graph& g, S2Error* error) {
     vector<Graph::Edge> layer_edges[3];
     vector<InputEdgeIdSetId> layer_input_edge_ids[3];
     // Separate the edges according to their dimension.
-    for (int i = 0; i < new_edges.size(); ++i) {
+    for (size_t i = 0; i < new_edges.size(); ++i) {
       int d = input_dimensions_[new_input_edge_ids[i]];
       if (!tracker_->AddSpace(&layer_edges[d], 1)) return;
       if (!tracker_->AddSpace(&layer_input_edge_ids[d], 1)) return;
@@ -846,6 +865,7 @@ class S2BooleanOperation::Impl {
  private:
   class CrossingIterator;
   class CrossingProcessor;
+
   using ShapeEdge = s2shapeutil::ShapeEdge;
   using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
   using ShapeEdgeIdHash = s2shapeutil::ShapeEdgeIdHash;
@@ -1158,8 +1178,8 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // edge; it crosses the edge from left to right iff the second parameter
   // is "true".
   using SourceEdgeCrossing = pair<SourceId, bool>;
-  struct PointCrossingResult;
   struct EdgeCrossingResult;
+  struct PointCrossingResult;
 
   InputEdgeId input_edge_id() const { return input_dimensions_->size(); }
 

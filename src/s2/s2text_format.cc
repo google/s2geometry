@@ -15,31 +15,40 @@
 
 #include "s2/s2text_format.h"
 
+#include <cstdlib>
+
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "absl/memory/memory.h"
+#include "absl/strings/ascii.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
-#include "absl/strings/strip.h"
+#include "absl/types/span.h"
 
-#include "s2/base/logging.h"
-#include "s2/strings/serialize.h"
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s1angle.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2cell_union.h"
+#include "s2/s2debug.h"
 #include "s2/s2latlng.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
+#include "s2/strings/serialize.h"
 
 using absl::Span;
 using absl::string_view;
-using absl::make_unique;
+using std::make_unique;
 using std::pair;
 using std::string;
 using std::unique_ptr;
@@ -132,7 +141,7 @@ bool MakeLatLngRect(string_view str, S2LatLngRect* rect) {
   vector<S2LatLng> latlngs;
   if (!ParseLatLngs(str, &latlngs) || latlngs.empty()) return false;
   *rect = S2LatLngRect::FromPoint(latlngs[0]);
-  for (int i = 1; i < latlngs.size(); ++i) {
+  for (size_t i = 1; i < latlngs.size(); ++i) {
     rect->AddPoint(latlngs[i]);
   }
   return rect;
@@ -408,7 +417,7 @@ string ToString(Span<const S2Point> points) {
 
 string ToString(Span<const S2LatLng> latlngs) {
   string out;
-  for (int i = 0; i < latlngs.size(); ++i) {
+  for (size_t i = 0; i < latlngs.size(); ++i) {
     if (i > 0) out += ", ";
     AppendVertex(latlngs[i], &out);
   }

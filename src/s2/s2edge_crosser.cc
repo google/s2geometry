@@ -17,8 +17,12 @@
 
 #include "s2/s2edge_crosser.h"
 
-#include "s2/base/logging.h"
-#include "s2/s2pointutil.h"
+#include <cfloat>
+#include <cmath>
+
+#include "s2/s2edge_crossings.h"
+#include "s2/s2edge_crossings_internal.h"
+#include "s2/s2point.h"
 #include "s2/s2predicates.h"
 
 template <class PointRep>

@@ -17,27 +17,36 @@
 
 #include "s2/s2cell_id.h"
 
+#include <cstdint>
+
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
-#include <iosfwd>
-#include <iostream>
+#include <ios>
+#include <sstream>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "absl/base/macros.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/strings/string_view.h"
 
 #include "s2/base/logging.h"
+#include "s2/base/integral_types.h"
+#include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
+#include "s2/s1angle.h"
 #include "s2/s2cap.h"
+#include "s2/s2coder_testing.h"
 #include "s2/s2coords.h"
+#include "s2/s2error.h"
 #include "s2/s2latlng.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
 #include "s2/s2testing.h"
-#include "absl/base/macros.h"
+#include "s2/util/coding/coder.h"
 
 using absl::flat_hash_map;
 using S2::internal::kPosToOrientation;
@@ -345,6 +354,77 @@ TEST(S2CellId, DecodeFailsWithTruncatedBuffer) {
   EXPECT_FALSE(decoded_id.Decode(&decoder));
 }
 
+TEST(S2CellId, LegacyCoder) {
+  S2CellId id(0x7837423);
+  Encoder encoder;
+  S2CellId::Coder().Encode(encoder, id);
+  S2CellId decoded_id;
+  Decoder decoder(encoder.base(), encoder.length());
+  S2Error error;
+  EXPECT_TRUE(S2CellId::Coder().Decode(decoder, decoded_id, error));
+  EXPECT_EQ(id, decoded_id);
+}
+
+TEST(S2CellId, LegacyCoderTokenInvalid) {
+  // Token too long
+  absl::string_view invalid_token = "000000000000000404\0";
+  Decoder decoder(invalid_token.data(), invalid_token.size());
+  S2CellId decoded;
+  S2Error error;
+  ASSERT_FALSE(S2CellId::Coder().Decode(decoder, decoded, error));
+
+  // Max length token but has no nul terminator.
+  invalid_token = "0000000000000004";
+  decoder.reset(invalid_token.data(), invalid_token.size());
+  ASSERT_FALSE(S2CellId::Coder().Decode(decoder, decoded, error));
+
+  // Less than max length token without nul terminator.
+  invalid_token = "000000004";
+  decoder.reset(invalid_token.data(), invalid_token.size());
+  ASSERT_FALSE(S2CellId::Coder().Decode(decoder, decoded, error));
+
+  // Input empty
+  invalid_token = "";
+  decoder.reset(invalid_token.data(), invalid_token.size());
+  ASSERT_FALSE(S2CellId::Coder().Decode(decoder, decoded, error));
+}
+
+TEST(S2CellId, LegacyCoderNoneCell) {
+  S2CellId none_id = S2CellId::None();
+  Encoder encoder;
+  S2CellId::Coder().Encode(encoder, none_id);
+  S2CellId decoded_id;
+  Decoder decoder(encoder.base(), encoder.length());
+  S2Error error;
+  EXPECT_TRUE(S2CellId::Coder().Decode(decoder, decoded_id, error));
+  EXPECT_EQ(none_id, decoded_id);
+}
+
+TEST(S2CellId, LegacyCoderMany) {
+  Encoder encoder;
+  S2CellId::Coder coder;
+
+  // Encode valid S2CellIds interspersed with sentinel values. We go all the way
+  // to kMaxLevel to ensure that we exercise all possible lengths of the token
+  // format.
+  for (int64 i = 0; i <= S2CellId::kMaxLevel; ++i) {
+    coder.Encode(encoder, S2CellId::FromFacePosLevel(0, 0, i));
+    coder.Encode(encoder, S2CellId::None());
+  }
+
+  Decoder decoder(encoder.base(), encoder.length());
+  for (int64 i = 0; i <= S2CellId::kMaxLevel; ++i) {
+    S2CellId cell_id;
+    S2Error error;
+
+    ASSERT_TRUE(coder.Decode(decoder, cell_id, error)) << i;
+    ASSERT_EQ(cell_id, S2CellId::FromFacePosLevel(0, 0, i));
+
+    ASSERT_TRUE(coder.Decode(decoder, cell_id, error));
+    ASSERT_EQ(cell_id, S2CellId::None());
+  }
+}
+
 static const int kMaxExpandLevel = 3;
 
 static void ExpandCell(
@@ -625,5 +705,13 @@ TEST(S2CellId, OutputOperator) {
   std::ostringstream s;
   s << cell;
   EXPECT_EQ("5/31200", s.str());
+}
+
+TEST(S2CellId, S2CoderWorks) {
+  S2CellId cell(0xbb04000000000000ULL);
+
+  S2Error error;
+  auto decoded = s2coding::RoundTrip(S2CellId::Coder(), cell, error);
+  EXPECT_EQ(cell, decoded);
 }
 

@@ -16,24 +16,24 @@
 #include "s2/s2hausdorff_distance_query.h"
 
 #include <algorithm>
-#include <utility>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
+#include "absl/types/optional.h"
 #include "s2/mutable_s2shape_index.h"
-#include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2latlng.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
-#include "s2/s2predicates.h"
+#include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
 using s2textformat::ParsePointsOrDie;
+using std::make_unique;
 using DirectedResult = S2HausdorffDistanceQuery::DirectedResult;
 using Result = S2HausdorffDistanceQuery::Result;
 using Options = S2HausdorffDistanceQuery::Options;
@@ -81,7 +81,7 @@ TEST(S2HausdorffDistanceQueryTest, QueryOptionsAccessorsWorks) {
   EXPECT_FALSE(modified_include_interiors);
 }
 
-// Test involving 2 simple polyline shape indexes..
+// Test involving 2 simple polyline shape indexes.
 TEST(S2HausdorffDistanceQueryTest, SimplePolylineQueriesSucceed) {
   const std::vector<S2Point> a0 = ParsePointsOrDie("0:0, 0:1, 0:1.5");
   const std::vector<S2Point> a1 = ParsePointsOrDie("0:2, 0:1.5, -10:1");
@@ -90,12 +90,12 @@ TEST(S2HausdorffDistanceQueryTest, SimplePolylineQueriesSucceed) {
   // Setup the shape indexes.
   const MutableS2ShapeIndex empty_index;
 
-  // Shape index a consists or 2 polylines, a0 and a1.
+  // Shape index a consists of 2 polylines, a0 and a1.
   MutableS2ShapeIndex a;
   a.Add(make_unique<S2LaxPolylineShape>(a0));
   a.Add(make_unique<S2LaxPolylineShape>(a1));
 
-  // Shape index b consists or 1 polylines: b0.
+  // Shape index b consists of 1 polylines: b0.
   MutableS2ShapeIndex b;
   b.Add(make_unique<S2LaxPolylineShape>(b0));
 
@@ -158,7 +158,7 @@ TEST(S2HausdorffDistanceQueryTest, PointVectorShapeQueriesSucceed) {
   // Points for the polyline shape.
   const std::vector<S2Point> a_points =
       ParsePointsOrDie("2:0, 0:1, 1:2, 0:3, 0:4");
-  // Points for the polint vector shape.
+  // Points for the point vector shape.
   const std::vector<S2Point> b_points =
       ParsePointsOrDie("-1:2, -0.5:0.5, -0.5:3.5");
 
@@ -179,7 +179,7 @@ TEST(S2HausdorffDistanceQueryTest, PointVectorShapeQueriesSucceed) {
   // and vertex 3 of a.
   const S1ChordAngle expected_b_to_a(b_points[0], a_points[3]);
 
-  // Unddrected Hausdorff distance between a and b is the maximum of the two
+  // Undirected Hausdorff distance between a and b is the maximum of the two
   // directed Hausdorff distances.
   const S1ChordAngle expected_a_b = std::max(expected_a_to_b, expected_b_to_a);
 
@@ -211,7 +211,7 @@ TEST(S2HausdorffDistanceQueryTest, OverlappingPolygons) {
   MutableS2ShapeIndex a;
   a.Add(s2textformat::MakeLaxPolygonOrDie("1:1, 1:2, 3.5:1.5"));
 
-  // The other polygon is a quadraangle.
+  // The other polygon is a quadrangle.
   MutableS2ShapeIndex b;
   b.Add(s2textformat::MakeLaxPolygonOrDie("0:0, 0:3, 3:3, 3:0"));
 
@@ -228,7 +228,7 @@ TEST(S2HausdorffDistanceQueryTest, OverlappingPolygons) {
 
   // Error tolerance to account for the difference between the northern edge of
   // the quadrangle, which is a geodesic line, and the parallel lat=3 connecting
-  // the verices of that edge.
+  // the vertices of that edge.
   static constexpr double kEpsilon = 3.0e-3;
 
   // The directed Hausdorff distance from the first query is achieved on the

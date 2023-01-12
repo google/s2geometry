@@ -18,6 +18,8 @@
 #ifndef S2_S2POINT_SPAN_H_
 #define S2_S2POINT_SPAN_H_
 
+#include <vector>
+
 #include "s2/base/logging.h"
 #include "absl/types/span.h"
 #include "s2/s2point.h"

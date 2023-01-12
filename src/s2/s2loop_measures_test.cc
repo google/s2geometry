@@ -17,17 +17,27 @@
 
 #include "s2/s2loop_measures.h"
 
+#include <cfloat>
+#include <cstdint>
+
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "s2/s1angle.h"
+#include "s2/s2debug.h"
 #include "s2/s2latlng.h"
 #include "s2/s2loop.h"
 #include "s2/s2measures.h"
+#include "s2/s2point.h"
+#include "s2/s2point_span.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
+#include "s2/util/math/mathutil.h"
 
 using s2textformat::ParsePointsOrDie;
 using std::fabs;
@@ -37,32 +47,82 @@ using std::vector;
 
 namespace {
 
+// Simple inefficient reference implementation of PruneDegeneracies() on a
+// character string.  The result will be some cyclic permutation of what
+// PruneDegeneracies() produces.
+std::string BruteForceQuadraticPrune(const absl::string_view s) {
+  std::string answer(s);
+  // Make repeated passes over answer, reducing AAs and ABAs to As
+  // (and, incidentally, if the whole string has length 1 or 2, turn it
+  // into the empty string).
+  // Return answer as soon as we see that we've reached a fixed point.
+  while (true) {
+    bool something_changed = false;
+    for (int i = 0; i < answer.size(); ++i) {
+      if (answer[i] == answer[(i + 1) % answer.size()]) {
+        // AA starting at i (or A is the whole string).
+        // Remove answer[i].
+        answer.erase(i, /*count=*/1);
+        something_changed = true;
+        break;
+      } else if (answer[i] == answer[(i + 2) % answer.size()]) {
+        // ABA starting at i (or AB is the whole string).
+        if (i + 1 < answer.size()) {
+          // Remove the AB at answer[i] and answer[i+1].
+          answer.erase(i, /*count=*/2);
+        } else {
+          // Remove the BA at answer[0] and answer[1].
+          answer.erase(0, /*count=*/2);
+        }
+        something_changed = true;
+        break;
+      }
+    }
+    if (!something_changed) return answer;
+  }
+}
+
+// Return the lexicographically least cyclic permutation of s.
+std::string BruteForceQuadraticCyclicallyCanonicalize(
+    const absl::string_view s) {
+  std::string answer;
+  for (int i = 0; i < s.size(); ++i) {
+    const std::string candidate = absl::StrCat(s.substr(i), s.substr(0, i));
+    if (i == 0 || candidate < answer) answer = candidate;
+  }
+  return answer;
+}
+
 // Given a string where each character "ch" represents a vertex (such as
 // "abac"), returns a vector of S2Points of the form (ch, 0, 0).  Note that
 // these points are not unit length and therefore are not suitable for general
-// use, however they are useful for testing certain functions below.
+// use; however, they are useful for testing certain functions below.
 vector<S2Point> MakeTestLoop(absl::string_view loop_str) {
   vector<S2Point> loop;
-  for (char ch : loop_str) {
+  for (const char ch : loop_str) {
     loop.push_back(S2Point(ch, 0, 0));
   }
   return loop;
 }
 
 // Given a loop whose vertices are represented as characters (such as "abcd" or
-// "abccb"), verify that S2::PruneDegeneracies() yields the loop "expected".
-void TestPruneDegeneracies(absl::string_view input_str,
-                           absl::string_view expected_str) {
-  vector<S2Point> input = MakeTestLoop(input_str);
+// "abccb"), verify that S2::PruneDegeneracies() yields a loop cyclically
+// equivalent to "expected_str".
+std::string TestPruneDegeneracies(absl::string_view input_str,
+                                  absl::string_view expected_str) {
+  const vector<S2Point> input = MakeTestLoop(input_str);
   vector<S2Point> new_vertices;
   string actual_str;
   for (const S2Point& p : S2::PruneDegeneracies(input, &new_vertices)) {
     actual_str.push_back(static_cast<char>(p[0]));
   }
-  EXPECT_EQ(expected_str, actual_str);
+  EXPECT_EQ(BruteForceQuadraticCyclicallyCanonicalize(actual_str),
+            BruteForceQuadraticCyclicallyCanonicalize(expected_str))
+      << "input_str = \"" << input_str << "\"";
+  return actual_str;  // in case caller wants to show it
 }
 
-TEST(PruneDegeneracies, AllDegeneracies) {
+TEST(PruneDegeneracies, CompletelyDegenerate) {
   TestPruneDegeneracies("", "");
   TestPruneDegeneracies("a", "");
   TestPruneDegeneracies("aaaaa", "");
@@ -76,7 +136,7 @@ TEST(PruneDegeneracies, AllDegeneracies) {
   TestPruneDegeneracies("abcdcdedefedcbcdcb", "");
 }
 
-TEST(PruneDegeneracies, SomeDegeneracies) {
+TEST(PruneDegeneracies, PartiallyDegenerate) {
   TestPruneDegeneracies("abc", "abc");
   TestPruneDegeneracies("abca", "abc");
   TestPruneDegeneracies("abcc", "abc");
@@ -86,6 +146,66 @@ TEST(PruneDegeneracies, SomeDegeneracies) {
   TestPruneDegeneracies("abcbabcbcdc", "abc");
   TestPruneDegeneracies("xyzabcazy", "abc");
   TestPruneDegeneracies("xxyyzzaabbccaazzyyxx", "abc");
+  TestPruneDegeneracies("abcdb", "bcd");
+  TestPruneDegeneracies("abcdecb", "cde");
+  TestPruneDegeneracies("abcdefdcb", "def");
+  TestPruneDegeneracies("abcad", "bca");
+  TestPruneDegeneracies("abcdbae", "cdb");
+  TestPruneDegeneracies("abcdecbaf", "dec");
+}
+
+TEST(PruneDegeneracies, AllSmallCases) {
+  for (int base = 0; base <= 10; ++base) {
+    for (int exponent = 0; exponent <= 12; ++exponent) {
+      // Do all base^exponent strings of length `exponent` using a `base`-letter
+      // alphabet (as long as there are 5000 or fewer of them).
+
+      const int64 num_strings = MathUtil::IPow<int64>(base, exponent);
+      if (num_strings > 5000) break;   // getting too many, for this base
+      if (num_strings == 0) continue;  // base=0 and exponent>0 is not useful
+      if (base > exponent) continue;  // more chars than positions is not useful
+
+      S2_LOG(INFO) << "      pruning " << base << "^" << exponent << "="
+                << num_strings << " string" << (num_strings == 1 ? "" : "s")
+                << " of length " << exponent << " from " << base << " character"
+                << (base == 1 ? "" : "s");
+      for (int64 i_string = 0; i_string < num_strings; ++i_string) {
+        // Construct the i_string'th string to be the `exponent`-digit numeral
+        // representing the integer i_string in base `base`, little-endian.
+        std::string string;
+        {
+          int64 scratch = i_string;
+          for (int position = 0; position < exponent; ++position) {
+            string.push_back(static_cast<char>('a' + (scratch % base)));
+            scratch /= base;
+          }
+          S2_CHECK_EQ(scratch, 0);
+        }
+        const std::string result =
+            TestPruneDegeneracies(string, BruteForceQuadraticPrune(string));
+
+        // If log level >=3, show all strings of this alphabet and length;
+        // if log level ==2, then just show the first 12 and last 2;
+        // if log level <=1, don't show them at all.
+        const int max_to_print_at_beginning = S2_VLOG_IS_ON(3) ? num_strings : 12;
+        if (i_string < max_to_print_at_beginning ||
+            (num_strings - i_string - 1) < 2) {
+          // Output at log level >=2 looks like, e.g.:
+          //     ...
+          //     pruning 5^5=3125 strings
+          //         ...
+          //         10/3125: "acaaa" -> ""
+          //         11/3125: "bcaaa" -> "bca"
+          //         ...    (<-- actual ellipsis emitted here if log level is 2)
+          //     ...
+          S2_VLOG(2) << "          " << i_string << "/" << num_strings << ": \""
+                  << string << "\" -> \"" << result << "\"";
+        } else if (i_string == max_to_print_at_beginning) {
+          S2_VLOG(2) << "          ...";
+        }
+      }
+    }
+  }
 }
 
 // Given a loop whose vertices are represented as characters (such as "abcd" or
@@ -124,6 +244,38 @@ TEST(GetPerimeter, MoreThanTwoPi) {
 TEST(GetSignedArea, Underflow) {
   auto loop = ParsePointsOrDie("0:0, 0:1e-88, 1e-88:1e-88, 1e-88:0");
   EXPECT_GT(S2::GetSignedArea(loop), 0);
+}
+
+TEST(GetSignedArea, ErrorAccumulation) {
+  // Loop encompassing half an octant of the sphere.
+  std::vector<S2Point> loop{
+      {1.0, 0.0, 0.0},
+      {M_SQRT1_2, M_SQRT1_2, 0.0},
+      {0.0, 0.0, 1.0},
+  };
+
+  // Area of just one loop.
+  const double expected_area = S2::GetSignedArea(loop);
+
+  // Repeat the loop kIters times.  We shouldn't accumulate significant error.
+  constexpr int kIters = 100001;
+  S2_CHECK_EQ(kIters % 16, 1);  // Area wraps every sixteen loops.
+
+  loop.reserve(3 * kIters);
+  for (int i = 0; i < kIters - 1; ++i) {
+    loop.push_back(loop[0]);
+    loop.push_back(loop[1]);
+    loop.push_back(loop[2]);
+  }
+  double actual_area = S2::GetSignedArea(loop);
+
+  // For well conditioned sums, Kahan has ~constant error of 2 epsilon.  To get
+  // absolute error we multiply by the sum of absolute values of the terms, so
+  // kIters*expected_area.
+  //
+  // see: https://en.wikipedia.org/wiki/Kahan_summation_algorithm#Accuracy
+  double allowed_error = 2 * DBL_EPSILON * (kIters * std::fabs(expected_area));
+  EXPECT_NEAR(expected_area, actual_area, allowed_error);
 }
 
 class LoopTestBase : public testing::Test {
@@ -385,6 +537,39 @@ TEST_F(LoopTestBase, GetCurvature) {
   // purposes of this test since it is generally much smaller.
   EXPECT_NEAR(2 * M_PI - S2::GetArea(spiral), S2::GetCurvature(spiral),
               0.01 * S2::GetCurvatureMaxError(spiral));
+}
+
+TEST(KahanSum, DefaultValue) {
+  S2::internal::KahanSum<double> sum;
+  EXPECT_EQ(0.0, (double)sum);
+  EXPECT_EQ(0.0, sum.Compensation());
+}
+
+TEST(KahanSum, SingleValue) {
+  S2::internal::KahanSum<double> sum;
+  sum += -3;
+  EXPECT_EQ(-3.0, (double)sum);
+  EXPECT_EQ(0.0, sum.Compensation());
+}
+
+// Summing the squares has particularly bad behavior when doing the natural sum,
+// and it has a closed formula for verifying the correctness.
+TEST(KahanSum, SumOfSquares) {
+  for (int direction = 0; direction < 2; ++direction) {
+    S2::internal::KahanSum<double> safe_sum;
+    double sum = 0;
+    const int64 n = 1000000;
+    for (int64 i = 0; i <= n; ++i) {
+      const int64 v = direction == 0 ? i : n - i;
+      safe_sum += (v * v);
+      sum += v * v;
+    }
+    const int64 expected_sum = (2 * n + 1) * n * (n + 1) / 6;
+    // Yes we *do* want a *strict* equality check here.
+    EXPECT_EQ(static_cast<double>(expected_sum), (double)safe_sum);
+    // To show that the trivial summation really gets it wrong!
+    EXPECT_GE(fabs(sum - expected_sum), expected_sum / (n * n));
+  }
 }
 
 }  // namespace

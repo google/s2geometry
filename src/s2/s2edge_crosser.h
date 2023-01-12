@@ -22,6 +22,7 @@
 #include "s2/_fp_contract_off.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_crossings_internal.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 
@@ -71,7 +72,7 @@ class S2EdgeCrosserBase {
 
  public:
   // Default constructor; must be followed by a call to Init().
-  S2EdgeCrosserBase() {}
+  S2EdgeCrosserBase() = default;
 
   // Convenience constructor that calls Init() with the given fixed edge AB.
   //
@@ -95,6 +96,7 @@ class S2EdgeCrosserBase {
   //
   // For S2EdgeCrosser (only), the arguments "a" and "b" must point to values
   // that persist for the lifetime of the S2EdgeCrosser object.
+
   //
   // void S2EdgeCrosser::Init(const S2Point* a, const S2Point* b);
   // void S2CopyingEdgeCrosser::Init(const S2Point& a, const S2Point& b);

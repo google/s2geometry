@@ -311,6 +311,15 @@ class Matrix3x3 {
     return temp;
   }
 
+  // Create a matrix from outer product of two vectors.
+  static inline Matrix3x3 FromOuter(const MVector &ma, const MVector &mb) {
+    Matrix3x3 m;
+    for (int row = 0; row < 3; ++row) {
+      m.SetRow(row, ma[row] * mb);
+    }
+    return m;
+  }
+
   // Set the vector in row i to be v1
   void SetRow(int i, const MVector &v1) {
     S2_DCHECK_GE(i, 0);
@@ -382,6 +391,12 @@ class Matrix3x3 {
     Matrix3x3 A = Matrix3x3::Sym3(w);
     R = (1 - std::cos(theta)) * A + std::sin(theta) * Wv + std::cos(theta) * I;
     return R;
+  }
+
+  // Return a matrix that reflects a point across the plane defined by normal.
+  static Matrix3x3 Householder(const MVector &normal) {
+    MVector unit = normal.Normalize();
+    return Matrix3x3::Identity() - 2 * Matrix3x3::FromOuter(unit, unit);
   }
 
   // Returns v.Transpose() * (*this) * u

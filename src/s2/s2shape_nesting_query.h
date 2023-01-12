@@ -20,7 +20,10 @@
 #include <climits>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include "absl/container/inlined_vector.h"
+#include "absl/types/span.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 
 // On a sphere, polygon hierarchy is ambiguous.  If you imagine two chains

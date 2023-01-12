@@ -152,8 +152,13 @@ extern const double kEdgeClipErrorUVDist;
 // makes the following guarantees:
 //  - If x == a, then x1 = a1 (exactly).
 //  - If x == b, then x1 = b1 (exactly).
-//  - If a <= x <= b, then a1 <= x1 <= b1 (even if a1 == b1).
+//  - If a <= x <= b and a1 <= b1, then a1 <= x1 <= b1 (even if a1 == b1).
+//  - More generally, if x is between a and b, then x1 is between a1 and b1.
 // REQUIRES: a != b
+//
+// When a <= x <= b or b <= x <= a we can prove the error bound on the resulting
+// value is 2.25*DBL_EPSILON.  The error for extrapolating an x value outside of
+// a and b can be much worse.  See the gappa proof at the end of the file.
 double InterpolateDouble(double x, double a, double b, double a1, double b1);
 
 
@@ -171,11 +176,60 @@ inline double InterpolateDouble(double x, double a, double b,
   // To get results that are accurate near both A and B, we interpolate
   // starting from the closer of the two points.
   if (std::fabs(a - x) <= std::fabs(b - x)) {
-    return a1 + (b1 - a1) * (x - a) / (b - a);
+    return a1 + (b1 - a1) * ((x - a) / (b - a));
   } else {
-    return b1 + (a1 - b1) * (x - b) / (a - b);
+    return b1 + (a1 - b1) * ((x - b) / (a - b));
   }
 }
+
+// Gappa proof of bounds for InterpolateDouble
+//
+// NOTE: this proof is only valid for a <= x <= b or b <= x <= a, not for
+// extrapolating values outside of the input range.
+// -----------------------------------------------------------------------------
+//
+// # Use IEEE754 double precision, round-to-nearest by default.
+// @rnd = float<ieee_64, ne>;
+//
+// # Define values to be floating point numbers (rounded reals).
+// x  = rnd(x_ex);
+// a  = rnd(a_ex);
+// b  = rnd(b_ex);
+// a1 = rnd(a1_ex);
+// b1 = rnd(b1_ex);
+//
+// # Compute answer in floating point and exact arithmetic.
+// InterpolateDouble_fp rnd = a1 + (b1-a1)*((x-a)/(b-a));
+// InterpolateDouble_ex     = a1 + (b1-a1)*((x-a)/(b-a));
+//
+// {
+//   # We operate in UV space so inputs are always in [-1,1].
+//   |x|  in [0,1] /\
+//   |a|  in [0,1] /\
+//   |b|  in [0,1] /\
+//   |a1| in [0,1] /\
+//   |b1| in [0,1] /\
+//
+//   # b != a is asserted by the algorithm.
+//   b-a <> 0 /\
+//
+//   # Either a <= x <= b or b <= x <= a, and we either do (x-a) or (x-b)
+//   # depending on which endpoint is closer to x.  So the ratio (x-a)/(b-a) can
+//   # only be up to one half of the total interval before we switch.
+//   rnd(x-a)/rnd(b-a) in [0,0.5]
+//
+//   # Estimate absolute error.
+//   -> InterpolateDouble_fp - InterpolateDouble_ex in ?
+// }
+//
+// -----------------------------------------------------------------------------
+// > gappa interpolate.gappa
+// Results:
+//   InterpolateDouble_fp - InterpolateDouble_ex in
+//       [-324259173170675769b-109 {-4.996e-16, -2^(-50.8301)},
+//         324259173170675769b-109 {+4.996e-16, +2^(-50.8301)}]
+//
+// 324259173170675769*2**-109/DBL_EPSILON == 2.25
 
 }  // namespace S2
 

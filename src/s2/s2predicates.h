@@ -48,6 +48,7 @@
 #define S2_S2PREDICATES_H_
 
 #include <cfloat>
+#include <cmath>
 #include <iosfwd>
 #include <ostream>
 
@@ -55,6 +56,7 @@
 #include "s2/_fp_contract_off.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2debug.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 
 namespace s2pred {

@@ -18,6 +18,7 @@
 #include "s2/r1interval.h"
 
 #include <cfloat>
+#include <string>
 
 #include <gtest/gtest.h>
 

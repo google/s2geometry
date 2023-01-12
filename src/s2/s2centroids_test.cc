@@ -17,7 +17,13 @@
 
 #include "s2/s2centroids.h"
 
+#include <cmath>
+
+#include <string>
+
 #include <gtest/gtest.h>
+#include "s2/s2point.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 
 namespace {
@@ -38,7 +44,7 @@ TEST(TriangleTrueCentroid, SmallTriangles) {
   // Test TrueCentroid() with very small triangles.  This test assumes that
   // the triangle is small enough so that it is nearly planar.
   for (int iter = 0; iter < 100; ++iter) {
-    Vector3_d p, x, y;
+    S2Point p, x, y;
     S2Testing::GetRandomFrame(&p, &x, &y);
     double d = 1e-4 * pow(1e-4, S2Testing::rnd.RandDouble());
     S2Point p0 = (p - d * x).Normalize();

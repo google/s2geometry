@@ -17,44 +17,53 @@
 
 #include "s2/s2polyline.h"
 
+#include <cstddef>
+
 #include <algorithm>
+#include <array>
 #include <cmath>
-#include <functional>
 #include <memory>
 #include <set>
 #include <utility>
 #include <vector>
 
 #include "absl/container/fixed_array.h"
-#include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
+#include "absl/types/span.h"
 #include "absl/utility/utility.h"
 
 #include "s2/base/commandlineflags.h"
+#include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
+#include "s2/s2builder.h"
+#include "s2/s2builder_layer.h"
 #include "s2/s2builderutil_s2polyline_layer.h"
 #include "s2/s2builderutil_snap_functions.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2coder.h"
+#include "s2/s2coords.h"
 #include "s2/s2debug.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
+#include "s2/s2latlng.h"
+#include "s2/s2latlng_rect.h"
 #include "s2/s2latlng_rect_bounder.h"
 #include "s2/s2point.h"
 #include "s2/s2point_compression.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polyline_measures.h"
 #include "s2/s2predicates.h"
+#include "s2/s2shape.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
 using absl::Span;
 using s2builderutil::S2CellIdSnapFunction;
 using s2builderutil::S2PolylineLayer;
-using absl::make_unique;
+using std::make_unique;
 using std::max;
 using std::min;
 using std::set;
@@ -96,8 +105,7 @@ S2Polyline::S2Polyline(Span<const S2LatLng> vertices, S2Debug override)
   Init(vertices);
 }
 
-S2Polyline::~S2Polyline() {
-}
+S2Polyline::~S2Polyline() = default;
 
 void S2Polyline::set_s2debug_override(S2Debug override) {
   s2debug_override_ = override;
@@ -401,7 +409,13 @@ bool S2Polyline::MayIntersect(const S2Cell& cell) const {
   return false;
 }
 
-void S2Polyline::Encode(Encoder* const encoder) const {
+void S2Polyline::Encode(Encoder* const encoder,
+                        s2coding::CodingHint hint) const {
+  if (hint == s2coding::CodingHint::COMPACT) {
+    EncodeMostCompact(encoder);
+    return;
+  }
+
   EncodeUncompressed(encoder);
 }
 

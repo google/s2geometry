@@ -19,9 +19,18 @@
 
 #include <cmath>
 #include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include <gtest/gtest.h>
+#include "s2/s1angle.h"
+#include "s2/s2cap.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2loop.h"
+#include "s2/s2point.h"
+#include "s2/s2polygon.h"
+#include "s2/s2polyline.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 

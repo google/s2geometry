@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "s2/r2.h"
+#include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2point.h"
 #include "s2/s2projections.h"

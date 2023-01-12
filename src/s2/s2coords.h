@@ -128,7 +128,7 @@ const int kLimitIJ = 1 << kMaxCellLevel;  // == S2CellId::kMaxSize
 unsigned const int kMaxSiTi = 1U << (kMaxCellLevel + 1);
 
 // Convert an s- or t-value to the corresponding u- or v-value.  This is
-// a non-linear transformation from [-1,1] to [-1,1] that attempts to
+// a non-linear transformation from [0,1] to [-1,1] that attempts to
 // make the cell sizes more uniform.
 double STtoUV(double s);
 

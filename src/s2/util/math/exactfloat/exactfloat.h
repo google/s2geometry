@@ -116,6 +116,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <ostream>
 #include <string>
 

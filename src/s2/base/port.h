@@ -31,6 +31,7 @@
 
 #include <inttypes.h>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 
@@ -160,7 +161,7 @@
 #include <machine/endian.h>  // NOLINT(build/include)
 
 /* Let's try and follow the Linux convention */
-#define __BYTE_ORDER  BYTE_ORDER
+#define __BYTE_ORDER BYTE_ORDER
 #define __LITTLE_ENDIAN LITTLE_ENDIAN
 #define __BIG_ENDIAN BIG_ENDIAN
 
@@ -228,9 +229,7 @@ static inline uint16 bswap_16(uint16 x) {
 }
 #define bswap_16(x) bswap_16(x)
 static inline uint32 bswap_32(uint32 x) {
-  return (((x & 0xFF) << 24) |
-          ((x & 0xFF00) << 8) |
-          ((x & 0xFF0000) >> 8) |
+  return (((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) |
           ((x & 0xFF000000) >> 24));
 }
 #define bswap_32(x) bswap_32(x)
@@ -245,17 +244,6 @@ static inline uint64 bswap_64(uint64 x) {
 #define bswap_64(x) bswap_64(x)
 
 #endif
-
-// printf macros
-// __STDC_FORMAT_MACROS must be defined before inttypes.h inclusion */
-#if defined(__APPLE__)
-/* From MacOSX's inttypes.h:
- * "C++ implementations should define these macros only when
- *  __STDC_FORMAT_MACROS is defined before <inttypes.h> is included." */
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif /* __STDC_FORMAT_MACROS */
-#endif /* __APPLE__ */
 
 // printf macros for size_t, in the style of inttypes.h
 #if defined(_LP64) || defined(__APPLE__)
@@ -326,17 +314,11 @@ inline void UNALIGNED_STORE64(void *p, uint64 v) { memcpy(p, &v, sizeof v); }
 #define UNALIGNED_STOREW(_p, _val) UNALIGNED_STORE32(_p, _val)
 #endif
 
-inline void UnalignedCopy16(const void *src, void *dst) {
-  memcpy(dst, src, 2);
-}
+inline void UnalignedCopy16(const void *src, void *dst) { memcpy(dst, src, 2); }
 
-inline void UnalignedCopy32(const void *src, void *dst) {
-  memcpy(dst, src, 4);
-}
+inline void UnalignedCopy32(const void *src, void *dst) { memcpy(dst, src, 4); }
 
-inline void UnalignedCopy64(const void *src, void *dst) {
-  memcpy(dst, src, 8);
-}
+inline void UnalignedCopy64(const void *src, void *dst) { memcpy(dst, src, 8); }
 
 #endif  // defined(__cplusplus), end of unaligned API
 

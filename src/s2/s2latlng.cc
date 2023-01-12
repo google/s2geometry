@@ -17,15 +17,40 @@
 
 #include "s2/s2latlng.h"
 
+#include <cmath>
+
 #include <algorithm>
 #include <ostream>
+#include <string>
 
-#include "s2/base/logging.h"
 #include "absl/strings/str_format.h"
+#include "s2/util/coding/coder.h"
+#include "s2/r2.h"
+#include "s2/s1angle.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
 
 using std::max;
 using std::min;
 using std::string;
+
+void S2LatLng::Encode(Encoder* encoder) const {
+  encoder->Ensure(2 * sizeof(double));
+  encoder->putdouble(coords_.x());
+  encoder->putdouble(coords_.y());
+}
+
+bool S2LatLng::Init(Decoder* decoder, S2Error& error) {
+  if (decoder->avail() < 2 * sizeof(double)) {
+    error.Init(S2Error::DATA_LOSS, "Insufficient data to decode");
+    return false;
+  }
+
+  double lat = decoder->getdouble();
+  double lon = decoder->getdouble();
+  *this = S2LatLng(R2Point(lat, lon));
+  return true;
+}
 
 S2LatLng S2LatLng::Normalized() const {
   // remainder(x, 2 * M_PI) reduces its argument to the range [-M_PI, M_PI]

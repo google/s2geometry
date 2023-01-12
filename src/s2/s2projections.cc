@@ -19,7 +19,10 @@
 
 #include <cmath>
 
+#include "s2/r2.h"
+#include "s2/s1angle.h"
 #include "s2/s2latlng.h"
+#include "s2/s2point.h"
 
 using std::fabs;
 

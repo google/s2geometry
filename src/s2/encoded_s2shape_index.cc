@@ -17,24 +17,27 @@
 
 #include "s2/encoded_s2shape_index.h"
 
+#include <cstddef>
+
+#include <atomic>
 #include <memory>
+#include <vector>
 
-#include "absl/memory/memory.h"
+#include "s2/base/casts.h"
+#include "s2/base/integral_types.h"
 #include "s2/util/bits/bits.h"
+#include "s2/util/coding/coder.h"
+#include "s2/encoded_s2cell_id_vector.h"
+#include "s2/encoded_string_vector.h"
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::unique_ptr;
 using std::vector;
-
-bool EncodedS2ShapeIndex::Iterator::Locate(const S2Point& target) {
-  return LocateImpl(target, this);
-}
-
-EncodedS2ShapeIndex::CellRelation EncodedS2ShapeIndex::Iterator::Locate(
-    S2CellId target) {
-  return LocateImpl(target, this);
-}
 
 unique_ptr<EncodedS2ShapeIndex::IteratorBase>
 EncodedS2ShapeIndex::Iterator::Clone() const {
@@ -93,7 +96,7 @@ inline const S2ShapeIndexCell* EncodedS2ShapeIndex::GetCell(int i) const {
   // Update the cell, setting cells_[i] before cell_decoded(i).
   cells_[i] = cell.get();
   set_cell_decoded(i);
-  if (cell_cache_.size() < max_cell_cache_size()) {
+  if (cell_cache_.size() < static_cast<size_t>(max_cell_cache_size())) {
     cell_cache_.push_back(i);
   }
   return cell.release();  // Ownership has been transferred to cells_.
@@ -103,8 +106,7 @@ const S2ShapeIndexCell* EncodedS2ShapeIndex::Iterator::GetCell() const {
   return index_->GetCell(cell_pos_);
 }
 
-EncodedS2ShapeIndex::EncodedS2ShapeIndex() {
-}
+EncodedS2ShapeIndex::EncodedS2ShapeIndex() = default;
 
 EncodedS2ShapeIndex::~EncodedS2ShapeIndex() {
   // Although Minimize() does slightly more than required for destruction
@@ -165,7 +167,7 @@ void EncodedS2ShapeIndex::Minimize() {
       delete shape;
     }
   }
-  if (cell_cache_.size() < max_cell_cache_size()) {
+  if (cell_cache_.size() < static_cast<size_t>(max_cell_cache_size())) {
     // When only a tiny fraction of the cells are decoded, we keep track of
     // those cells in cell_cache_ to avoid the cost of scanning the
     // cells_decoded_ vector.  (The cost is only about 1 cycle per 64 cells,

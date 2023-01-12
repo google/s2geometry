@@ -17,15 +17,21 @@
 
 #include "s2/s2min_distance_targets.h"
 
+#include <algorithm>
+#include <memory>
+#include <string>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "absl/container/btree_set.h"
 #include "s2/mutable_s2shape_index.h"
-#include "s2/s1angle.h"
-#include "s2/s2cap.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
-#include "s2/s2edge_distances.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2cell_union.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2text_format.h"
 

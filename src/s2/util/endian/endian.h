@@ -35,6 +35,7 @@
 #include "absl/base/casts.h"
 #include "absl/base/config.h"
 #include "absl/base/internal/endian.h"
+#include "absl/base/optimization.h"
 #include "absl/base/port.h"
 #include "absl/numeric/int128.h"
 
@@ -248,13 +249,11 @@ class LittleEndian {
   //
   // The caller needs to guarantee that 0 <= len <= 8.
   static uint64 Load64VariableLength(const void* const p, int len) {
-    assert(len >= 0 && len <= 8);
+    ABSL_ASSUME(len >= 0 && len <= 8);
     uint64 val = 0;
     const uint8* const src = static_cast<const uint8*>(p);
-    for (int i = 0; i < 8; ++i) {
-      if (i < len) {
-        val |= static_cast<uint64>(src[i]) << (8 * i);
-      }
+    for (int i = 0; i < len; ++i) {
+      val |= static_cast<uint64>(src[i]) << (8 * i);
     }
     return val;
   }

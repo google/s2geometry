@@ -18,12 +18,23 @@
 #ifndef S2_VALUE_LEXICON_H_
 #define S2_VALUE_LEXICON_H_
 
+#include <cstddef>
+
 #include <functional>
 #include <limits>
+#include <utility>
 #include <vector>
 
 #include "s2/base/integral_types.h"
 #include "s2/util/gtl/dense_hash_set.h"
+
+class S2Point;
+namespace absl {
+namespace hash_internal {
+template <typename T>
+struct Hash;
+}  // namespace hash_internal
+}  // namespace absl
 
 // ValueLexicon is a class that maps distinct values to sequentially numbered
 // integer identifiers.  It automatically eliminates duplicates and uses a

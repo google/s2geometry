@@ -136,7 +136,7 @@ class R2Rect {
 
   // Return a rectangle that has been expanded on each side in the x-direction
   // by margin.x(), and on each side in the y-direction by margin.y().  If
-  // either margin is empty, then shrink the interval on the corresponding
+  // either margin is negative, then shrink the interval on the corresponding
   // sides instead.  The resulting rectangle may be empty.  Any expansion of
   // an empty rectangle remains empty.
   R2Rect Expanded(const R2Point& margin) const;

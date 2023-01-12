@@ -17,19 +17,28 @@
 
 #include "s2/encoded_s2cell_id_vector.h"
 
+#include <cstddef>
+#include <cstdint>
+
+#include <memory>
 #include <vector>
 
+#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
-#include "absl/memory/memory.h"
+#include "s2/util/coding/coder.h"
+#include "s2/mutable_s2shape_index.h"
+#include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
 using s2textformat::MakeCellIdOrDie;
+using std::make_unique;
 using std::vector;
 
 namespace s2coding {

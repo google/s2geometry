@@ -17,13 +17,18 @@
 
 #include "s2/s2builderutil_testing.h"
 
-#include <memory>
+#include <algorithm>
 #include <string>
 #include <vector>
 
-#include <gtest/gtest.h>
 #include "absl/strings/str_format.h"
+#include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
+#include "s2/s2builder_graph.h"
+#include "s2/s2builder_layer.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
 using std::string;

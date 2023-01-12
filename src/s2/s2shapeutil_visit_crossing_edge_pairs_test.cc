@@ -18,26 +18,35 @@
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 
 #include <algorithm>
+#include <iostream>
 #include <memory>
+#include <ostream>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
 
-#include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s2crossing_edge_query.h"
+#include "s2/s2debug.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_vector_shape.h"
 #include "s2/s2error.h"
+#include "s2/s2latlng.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
 #include "s2/s2polygon.h"
-#include "s2/s2shapeutil_contains_brute_force.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_edge_iterator.h"
+#include "s2/s2shapeutil_shape_edge.h"
+#include "s2/s2shapeutil_shape_edge_id.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -165,7 +174,7 @@ void TestHasCrossingPermutations(vector<unique_ptr<S2Loop>>* loops, int i,
 }
 
 // Given a string reprsenting a polygon, and a boolean indicating whether this
-// polygon has any self-intersections or loop crossings, verify that all
+// polygon has any self-intersections or loop crossings, verify that
 // HasSelfIntersection returns the expected result for all possible cyclic
 // permutations of the loop vertices.
 void TestHasCrossing(absl::string_view polygon_str, bool has_crossing) {

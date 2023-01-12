@@ -62,10 +62,11 @@
 #include "s2/_fp_contract_off.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
+#include "s2/s2point.h"
 
 class S2PolylineSimplifier {
  public:
-  S2PolylineSimplifier() {}
+  S2PolylineSimplifier() = default;
 
   // Starts a new simplified edge at "src".
   void Init(const S2Point& src);

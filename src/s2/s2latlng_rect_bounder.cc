@@ -17,13 +17,16 @@
 
 #include "s2/s2latlng_rect_bounder.h"
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
 
-#include "s2/base/logging.h"
 #include "s2/r1interval.h"
-#include "s2/s1chord_angle.h"
+#include "s2/s1angle.h"
 #include "s2/s1interval.h"
+#include "s2/s2latlng.h"
+#include "s2/s2latlng_rect.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 
 using std::fabs;

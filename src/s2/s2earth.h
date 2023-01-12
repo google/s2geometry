@@ -134,15 +134,11 @@ class S2Earth {
   // point on Earth is the Challenger Deep with an altitude of -10898 meters
   // above the surface of the spherical earth.
   static constexpr double LowestAltitudeMeters();
-  static constexpr double LowestAltitudeKm();
-  static constexpr util::units::Meters LowestAltitude();
 
   // Returns the altitude of the highest known point on Earth. The highest
   // known point on Earth is Mount Everest with an altitude of 8846 meters
   // above the surface of the spherical earth.
   static constexpr double HighestAltitudeMeters();
-  static constexpr double HighestAltitudeKm();
-  static constexpr util::units::Meters HighestAltitude();
 };
 
 constexpr S1Angle S2Earth::MetersToAngle(double meters) {
@@ -277,22 +273,6 @@ constexpr util::units::Meters S2Earth::Radius() {
 
 constexpr double S2Earth::LowestAltitudeMeters() { return -10898; }
 
-constexpr double S2Earth::LowestAltitudeKm() {
-  return 0.001 * LowestAltitudeMeters();
-}
-
-constexpr util::units::Meters S2Earth::LowestAltitude() {
-  return util::units::Meters(LowestAltitudeMeters());
-}
-
 constexpr double S2Earth::HighestAltitudeMeters() { return 8846; }
-
-constexpr double S2Earth::HighestAltitudeKm() {
-  return 0.001 * HighestAltitudeMeters();
-}
-
-constexpr util::units::Meters S2Earth::HighestAltitude() {
-  return util::units::Meters(HighestAltitudeMeters());
-}
 
 #endif  // S2_S2EARTH_H_

@@ -18,6 +18,9 @@
 #ifndef S2_ID_SET_LEXICON_H_
 #define S2_ID_SET_LEXICON_H_
 
+#include <cstddef>
+
+#include <iterator>
 #include <limits>
 #include <vector>
 
@@ -65,8 +68,8 @@
 // This class is similar to SequenceLexicon, except:
 //
 // 1. Empty and singleton sets are represented implicitly; they use no space.
-// 2. Sets are represented rather than sequences; the ordering of values is
-//    not important and duplicates are removed.
+// 2. Sets are represented rather than sequences; values are reordered to be in
+//    sorted order, and duplicates are removed.
 // 3. The values must be 32-bit non-negative integers (only).
 class IdSetLexicon {
  public:

@@ -17,11 +17,17 @@
 
 #include "s2/s2shapeutil_get_reference_point.h"
 
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "s2/s2cell_id.h"
 #include "s2/s2lax_polygon_shape.h"
+#include "s2/s2loop.h"
+#include "s2/s2point.h"
+#include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"

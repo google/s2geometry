@@ -22,8 +22,14 @@
 
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
+#include "s2/s2error.h"
+#include "s2/s2memory_tracker.h"
+#include "s2/s2point.h"
+#include "s2/s2point_span.h"
 
-namespace s2builderutil { class WindingLayer; }  // Forward declaration
+namespace s2builderutil {
+class WindingLayer;
+}  // namespace s2builderutil
 
 // Given a set of possibly self-intersecting closed loops, this class computes
 // a partitioning of the sphere into regions of constant winding number and

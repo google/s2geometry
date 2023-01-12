@@ -18,11 +18,14 @@
 #include "s2/s2shapeutil_build_polygon_boundaries.h"
 
 #include <algorithm>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/strings/string_view.h"
 #include "s2/s2lax_loop_shape.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
 using std::string;

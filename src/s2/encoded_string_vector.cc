@@ -17,6 +17,18 @@
 
 #include "s2/encoded_string_vector.h"
 
+#include <cstddef>
+#include <cstdint>
+
+#include <string>
+#include <vector>
+
+#include "s2/base/integral_types.h"
+#include "absl/strings/string_view.h"
+#include "absl/types/span.h"
+#include "s2/util/coding/coder.h"
+#include "s2/encoded_uint_vector.h"
+
 using absl::MakeSpan;
 using absl::Span;
 using absl::string_view;
@@ -25,8 +37,7 @@ using std::vector;
 
 namespace s2coding {
 
-StringVectorEncoder::StringVectorEncoder() {
-}
+StringVectorEncoder::StringVectorEncoder() = default;
 
 void StringVectorEncoder::Encode(Encoder* encoder) {
   offsets_.push_back(data_.length());
@@ -58,7 +69,7 @@ bool EncodedStringVector::Init(Decoder* decoder) {
 vector<string_view> EncodedStringVector::Decode() const {
   size_t n = size();
   vector<string_view> result(n);
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     result[i] = (*this)[i];
   }
   return result;

@@ -18,9 +18,10 @@
 #include "s2/s2contains_vertex_query.h"
 
 #include <gtest/gtest.h>
+#include "s2/s1angle.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2point.h"
 #include "s2/s2point_span.h"
-#include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 

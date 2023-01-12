@@ -15,17 +15,21 @@
 
 #include "s2/s2shapeutil_edge_iterator.h"
 
+#include <memory>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2text_format.h"
 
 namespace s2shapeutil {
 
 namespace {
 
-// Returns the full list of edges in g.
+// Returns the full list of edges in the given S2ShapeIndex.
 // The edges are collected from points, lines, and polygons in that order.
 std::vector<S2Shape::Edge> GetEdges(const S2ShapeIndex* index) {
   std::vector<S2Shape::Edge> result;

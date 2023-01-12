@@ -17,11 +17,14 @@
 
 #include "s2/s2edge_vector_shape.h"
 
-#include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_testing.h"
 #include "s2/s2testing.h"
 

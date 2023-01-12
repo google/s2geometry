@@ -17,10 +17,17 @@
 
 #include "s2/s2lax_polyline_shape.h"
 
-#include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include <gtest/gtest.h>
+#include "s2/util/coding/coder.h"
+#include "s2/s2coder.h"
+#include "s2/s2coder_testing.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_testing.h"
 #include "s2/s2text_format.h"
 
@@ -110,3 +117,79 @@ TEST(EncodedS2LaxPolylineShape, RoundtripEncoding) {
   ASSERT_TRUE(b_shape.Init(&b_decoder));
   s2testing::ExpectEqual(shape, b_shape);
 }
+
+// TODO(b/222446546): Decoding EncodedS2PointVector on ARM isn't currently
+// supported, so comment out S2Coder test on ARM for now.
+#ifndef __arm__
+
+TEST(S2LaxPolylineShape, S2CoderWorks) {
+  vector<S2Point> vertices = s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1");
+  S2LaxPolylineShape shape(vertices);
+
+  S2Error error;
+  auto decoded = s2coding::RoundTrip(S2LaxPolylineShape::Coder(), shape, error);
+  s2testing::ExpectEqual(decoded, shape);
+}
+
+TEST(S2LaxPolylineShape, ChainIteratorWorks) {
+  S2LaxPolylineShape empty;
+  std::vector<S2Point> points = s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1");
+  S2LaxPolylineShape shape(points);
+
+  S2Shape::ChainIterator empty_begin = empty.chains().begin();
+  S2Shape::ChainIterator empty_end = empty.chains().end();
+  S2Shape::ChainIterator it1 = shape.chains().begin();
+  S2Shape::ChainIterator it2 = shape.chains().begin();
+  S2Shape::ChainIterator end = shape.chains().end();
+
+  for (const auto& chain : shape.chains()) {
+    EXPECT_EQ(chain.start, 0);
+    EXPECT_EQ(chain.length, 2);
+  }
+
+  EXPECT_EQ(empty_begin, empty_end);
+  EXPECT_EQ(it1, it2);
+  EXPECT_NE(it1, end);
+  EXPECT_EQ((*it1).start, 0);
+  EXPECT_EQ((*it1).length, 2);
+  EXPECT_EQ(++it1, end);
+  EXPECT_NE(it1, it2);
+  EXPECT_NE(it2++, end);
+  EXPECT_EQ(it2, end);
+}
+
+TEST(S2LaxPolylineShape, ChainVertexIteratorWorks) {
+  std::vector<std::vector<S2Point>> test_sets;
+  test_sets.push_back(s2textformat::ParsePointsOrDie("0:0, 0:0"));
+  test_sets.push_back(s2textformat::ParsePointsOrDie("0:0, 0:1"));
+  test_sets.push_back(s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1"));
+  test_sets.push_back(s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1, 2:2"));
+
+  for (int i = 0; i < test_sets.size(); ++i) {
+    const auto& points = test_sets[i];
+    S2LaxPolylineShape shape(points);
+
+    S2Shape::Chain chain = *shape.chains().begin();
+    S2Shape::ChainVertexRange vertices(&shape, chain);
+    EXPECT_EQ(vertices.num_vertices(), points.size());
+
+    auto it1 = vertices.begin();
+    auto it2 = it1;
+    int vertex_index = 0;
+    for (const S2Point& p : shape.vertices(0)) {
+      EXPECT_EQ(p, points[vertex_index]);
+      EXPECT_EQ(p, *S2Shape::ChainVertexIterator(&shape, chain, vertex_index));
+
+      EXPECT_NE(it1, vertices.end());
+      EXPECT_NE(it2, vertices.end());
+      EXPECT_NE(it1++, vertices.end());
+      ++it2;
+
+      ++vertex_index;
+    }
+    EXPECT_EQ(it1, vertices.end());
+    EXPECT_EQ(it2, vertices.end());
+  }
+}
+
+#endif

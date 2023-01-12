@@ -34,6 +34,8 @@
 #include "s2/s2closest_edge_query_base.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2min_distance_targets.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 
 // S2ClosestEdgeQuery is a helper class for searching within an S2ShapeIndex

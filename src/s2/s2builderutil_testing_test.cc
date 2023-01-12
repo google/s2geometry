@@ -17,16 +17,23 @@
 
 #include "s2/s2builderutil_testing.h"
 
+#include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
-#include "absl/memory/memory.h"
-
+#include "s2/id_set_lexicon.h"
+#include "s2/s2builder.h"
+#include "s2/s2builder_graph.h"
+#include "s2/s2builder_layer.h"
+#include "s2/s2error.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::unique_ptr;
 using std::vector;
 

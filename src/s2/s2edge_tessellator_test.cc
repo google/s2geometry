@@ -18,16 +18,23 @@
 #include "s2/s2edge_tessellator.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
+#include <limits>
+#include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 
 #include "absl/strings/str_cat.h"
 
 #include "s2/base/log_severity.h"
+#include "s2/r2.h"
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2edge_distances.h"
-#include "s2/s2loop.h"
-#include "s2/s2pointutil.h"
+#include "s2/s2latlng.h"
+#include "s2/s2point.h"
 #include "s2/s2projections.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
@@ -61,7 +68,7 @@ class Stats {
   double avg() const { return sum_ / count_; }
 
   string ToString() const {
-    return StrCat("avg = ", sum_ / count_, ", max = ", max_);
+    return StrCat("avg = ", avg(), ", max = ", max());
   }
 
  private:

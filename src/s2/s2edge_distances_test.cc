@@ -17,15 +17,21 @@
 
 #include "s2/s2edge_distances.h"
 
+#include <cmath>
+
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <gtest/gtest.h>
 #include "absl/strings/string_view.h"
+#include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2latlng.h"
 #include "s2/s2measures.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polyline.h"
 #include "s2/s2predicates.h"

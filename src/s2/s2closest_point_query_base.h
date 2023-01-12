@@ -20,17 +20,24 @@
 #ifndef S2_S2CLOSEST_POINT_QUERY_BASE_H_
 #define S2_S2CLOSEST_POINT_QUERY_BASE_H_
 
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <queue>
 #include <vector>
 
 #include "s2/base/logging.h"
 #include "absl/container/inlined_vector.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
+#include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2distance_target.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2point.h"
 #include "s2/s2point_index.h"
+#include "s2/s2region.h"
 #include "s2/s2region_coverer.h"
 
 // Options that control the set of points returned.  Note that by default
@@ -330,10 +337,9 @@ class S2ClosestPointQueryBase {
 
 //////////////////   Implementation details follow   ////////////////////
 
-
-template <class Distance> inline
-S2ClosestPointQueryBaseOptions<Distance>::S2ClosestPointQueryBaseOptions() {
-}
+template <class Distance>
+inline S2ClosestPointQueryBaseOptions<
+    Distance>::S2ClosestPointQueryBaseOptions() = default;
 
 template <class Distance>
 inline int S2ClosestPointQueryBaseOptions<Distance>::max_results() const {
@@ -395,8 +401,7 @@ inline void S2ClosestPointQueryBaseOptions<Distance>::set_use_brute_force(
 }
 
 template <class Distance, class Data>
-S2ClosestPointQueryBase<Distance, Data>::S2ClosestPointQueryBase() {
-}
+S2ClosestPointQueryBase<Distance, Data>::S2ClosestPointQueryBase() = default;
 
 template <class Distance, class Data>
 S2ClosestPointQueryBase<Distance, Data>::~S2ClosestPointQueryBase() {
@@ -622,7 +627,7 @@ void S2ClosestPointQueryBase<Distance, Data>::InitQueue() {
     initial_cells = &intersection_with_max_distance_;
   }
   iter_.Begin();
-  for (int i = 0; i < initial_cells->size() && !iter_.done(); ++i) {
+  for (size_t i = 0; i < initial_cells->size() && !iter_.done(); ++i) {
     S2CellId id = (*initial_cells)[i];
     ProcessOrEnqueue(id, &iter_, id.range_min() > iter_.id() /*seek*/);
   }
@@ -709,11 +714,11 @@ void S2ClosestPointQueryBase<Distance, Data>::MaybeAddResult(
     // each candidate point is considered at most once (except for one special
     // case where max_results() == 1, see InitQueue for details), so we don't
     // need to worry about possibly adding a duplicate entry here.
-    if (result_set_.size() >= options().max_results()) {
+    if (result_set_.size() >= static_cast<size_t>(options().max_results())) {
       result_set_.pop();  // Replace the furthest result point.
     }
     result_set_.push(result);
-    if (result_set_.size() >= options().max_results()) {
+    if (result_set_.size() >= static_cast<size_t>(options().max_results())) {
       distance_limit_ = result_set_.top().distance() - options().max_error();
     }
   }

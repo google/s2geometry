@@ -20,8 +20,14 @@
 
 #include "s2/s2closest_point_query_base.h"
 
+#include <vector>
+
 #include <gtest/gtest.h>
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2max_distance_targets.h"
+#include "s2/s2point.h"
+#include "s2/s2point_index.h"
 #include "s2/s2text_format.h"
 
 namespace {

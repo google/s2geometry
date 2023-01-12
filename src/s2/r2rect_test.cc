@@ -20,7 +20,10 @@
 
 #include "s2/r2rect.h"
 
+#include <string>
+
 #include <gtest/gtest.h>
+#include "s2/r1interval.h"
 #include "s2/r2.h"
 
 static void TestIntervalOps(const R2Rect& x, const R2Rect& y,

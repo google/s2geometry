@@ -22,15 +22,24 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <gtest/gtest.h>
 
-#include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 
+#include "s2/base/casts.h"
 #include "s2/base/integral_types.h"
+#include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
-#include "s2/s2debug.h"
+#include "s2/s2builder.h"
+#include "s2/s2builder_graph.h"
+#include "s2/s2builder_layer.h"
+#include "s2/s2error.h"
+#include "s2/s2lax_polygon_shape.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
 using absl::string_view;
@@ -39,7 +48,7 @@ using s2builderutil::LaxPolygonLayer;
 using s2textformat::MakeLaxPolygonOrDie;
 using s2textformat::MakePointOrDie;
 using s2textformat::MakePolylineOrDie;
-using absl::make_unique;
+using std::make_unique;
 using std::map;
 using std::set;
 using std::string;

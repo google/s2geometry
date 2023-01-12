@@ -21,13 +21,12 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/logging.h"
+#include "s2/base/integral_types.h"
+#include "s2/sequence_lexicon.h"
 
-IdSetLexicon::IdSetLexicon() {
-}
+IdSetLexicon::IdSetLexicon() = default;
 
-IdSetLexicon::~IdSetLexicon() {
-}
+IdSetLexicon::~IdSetLexicon() = default;
 
 // We define the copy/move constructors and assignment operators explicitly
 // in order to avoid copying/moving the temporary storage vector "tmp_".

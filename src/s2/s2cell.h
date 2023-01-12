@@ -20,10 +20,13 @@
 
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
+#include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2rect.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2coords.h"
+#include "s2/s2point.h"
 #include "s2/s2region.h"
 #include "s2/util/math/vector.h"
 
@@ -44,7 +47,7 @@ class S2Cell final : public S2Region {
  public:
   // The default constructor is required in order to use freelists.
   // Cells should otherwise always be constructed explicitly.
-  S2Cell() {}
+  S2Cell() = default;
 
   // An S2Cell always corresponds to a particular S2CellId.  The other
   // constructors are just convenience methods.

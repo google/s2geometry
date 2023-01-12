@@ -22,9 +22,9 @@
 #include <thread>
 
 #include "s2/base/logging.h"
-#include "absl/memory/memory.h"
+#include "absl/synchronization/mutex.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::unique_ptr;
 
 namespace s2testing {

@@ -21,11 +21,20 @@
 
 #include "s2/s2shape_measures.h"
 
+#include <cmath>
+
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include <gtest/gtest.h>
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s1angle.h"
 #include "s2/s2edge_vector_shape.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2text_format.h"

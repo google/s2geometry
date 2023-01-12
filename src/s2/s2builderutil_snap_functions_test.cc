@@ -24,6 +24,8 @@
 
 #include "s2/s2builderutil_snap_functions.h"
 
+#include <cstdlib>
+
 #include <algorithm>
 #include <cinttypes>
 #include <cmath>
@@ -31,21 +33,23 @@
 #include <cstdio>
 #include <map>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
+#include "s2/s2builder.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
 #include "s2/s2measures.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 #include "s2/util/math/mathutil.h"

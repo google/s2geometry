@@ -31,8 +31,8 @@ namespace s2testing {
 // const methods are thread safe and non-const methods are not thread safe.
 class ReaderWriterTest {
  public:
-  ReaderWriterTest() {}
-  virtual ~ReaderWriterTest() {}
+  ReaderWriterTest() = default;
+  virtual ~ReaderWriterTest() = default;
 
   // Create the given number of reader threads and execute the given number of
   // (write, read) iterations.

@@ -20,8 +20,13 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
+#include "s2/base/integral_types.h"
+#include "absl/base/optimization.h"
+#include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s1angle.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2builder_layer.h"
@@ -31,9 +36,14 @@
 #include "s2/s2crossing_edge_query.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings.h"
+#include "s2/s2error.h"
+#include "s2/s2memory_tracker.h"
+#include "s2/s2point.h"
+#include "s2/s2point_span.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::unique_ptr;
 using std::vector;
 
@@ -411,6 +421,7 @@ bool WindingLayer::MatchesRule(int winding) const {
     case WindingRule::NON_ZERO:  return winding != 0;
     case WindingRule::ODD:       return (winding & 1) != 0;
   }
+  ABSL_UNREACHABLE();
 }
 
 bool WindingLayer::MatchesDegeneracy(int winding, int winding_minus,
@@ -511,8 +522,7 @@ void S2WindingOperation::Options::set_memory_tracker(S2MemoryTracker* tracker) {
   memory_tracker_ = tracker;
 }
 
-S2WindingOperation::S2WindingOperation() {
-}
+S2WindingOperation::S2WindingOperation() = default;
 
 S2WindingOperation::S2WindingOperation(
     unique_ptr<S2Builder::Layer> result_layer, const Options& options) {

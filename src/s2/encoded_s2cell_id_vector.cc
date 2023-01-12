@@ -18,9 +18,15 @@
 #include "s2/encoded_s2cell_id_vector.h"
 
 #include <algorithm>
+#include <vector>
 
+#include "s2/base/integral_types.h"
 #include "absl/numeric/bits.h"
+#include "absl/types/span.h"
 #include "s2/util/bits/bits.h"
+#include "s2/util/coding/coder.h"
+#include "s2/encoded_uint_vector.h"
+#include "s2/s2cell_id.h"
 
 using absl::Span;
 using std::max;
@@ -164,7 +170,7 @@ bool EncodedS2CellIdVector::Init(Decoder* decoder) {
 
 vector<S2CellId> EncodedS2CellIdVector::Decode() const {
   vector<S2CellId> result(size());
-  for (int i = 0; i < size(); ++i) {
+  for (size_t i = 0; i < size(); ++i) {
     result[i] = (*this)[i];
   }
   return result;

@@ -17,13 +17,14 @@
 
 #include "s2/s2edge_crosser.h"
 
-#include <limits>
+#include <cmath>
+
 #include <vector>
 
-#include "s2/base/logging.h"
 #include <gtest/gtest.h>
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"

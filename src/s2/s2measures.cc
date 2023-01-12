@@ -21,6 +21,7 @@
 #include <cmath>
 
 #include "s2/s2edge_crossings.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 
@@ -52,6 +53,34 @@ double TurnAngle(const S2Point& a, const S2Point& b, const S2Point& c) {
 
   // Don't return Sign() * angle because it is legal to have (a == c).
   return (s2pred::Sign(a, b, c) > 0) ? angle : -angle;
+}
+
+// The .Angle() member function uses atan2(|AxB|, A.B) to compute the angle
+// between A and B, which can lose about half its precision when A and B are
+// nearly (anti-)parallel.
+//
+// Kahan provides a much more stable form:
+//   2*atan2(| A*|B| - |A|*B |, | A*|B| + |A|*B |)
+//
+// Since S2Points are unit magnitude by construction we can simplify further:
+//   2*atan2(|A-B|,|A+B|)
+//
+// This likely can't replace Vector::Angle since it requires four magnitude
+// calculations, each of which takes 5 operations + a square root, plus 6
+// operations to find the sum and difference of the vectors, for a total of 26 +
+// 4 square roots.  Vector::Angle requires 19 + 1 square root.
+//
+// Since we always have unit vectors, we can elide two of those magnitude
+// calculations for a total of 16 + 2 square roots which is competitive with
+// Vector::Angle performance.
+//
+// Reference: Kahan, W. (2006, Jan 11). "How Futile are Mindless Assessments of
+//   Roundoff in Floating-Point Computation?"
+// (p. 47). https://people.eecs.berkeley.edu/~wkahan/Mindless.pdf
+double StableAngle(S2Point a, S2Point b) {
+  S2_DCHECK(IsUnitLength(a));
+  S2_DCHECK(IsUnitLength(b));
+  return 2 * atan2((a - b).Norm(), (a + b).Norm());
 }
 
 double Area(const S2Point& a, const S2Point& b, const S2Point& c) {
@@ -88,10 +117,16 @@ double Area(const S2Point& a, const S2Point& b, const S2Point& c) {
   // is about 1e-15, this means that we shouldn't even consider it unless
   // s >= 3e-4 or so.
   //
+  // The 'standard' formula for finding the angle between two vectors used by
+  // Vector::Angle is known to have poor numerical properties when the vectors
+  // are nearly (anti-)parallel.  Instead we use an alternate formulation by
+  // Kahan which has much better properties in that case, see `StableAngle` for
+  // more information.
+  //
   // TODO(ericv): Implement rigorous error bounds (analysis already done).
-  double sa = b.Angle(c);
-  double sb = c.Angle(a);
-  double sc = a.Angle(b);
+  double sa = StableAngle(b, c);
+  double sb = StableAngle(c, a);
+  double sc = StableAngle(a, b);
   double s = 0.5 * (sa + sb + sc);
   if (s >= 3e-4) {
     // Consider whether Girard's formula might be more accurate.

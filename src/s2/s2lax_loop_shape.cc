@@ -17,15 +17,20 @@
 
 #include "s2/s2lax_loop_shape.h"
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
-#include "absl/memory/memory.h"
+#include "s2/base/integral_types.h"
+#include "absl/types/span.h"
+#include "absl/utility/utility.h"
 #include "s2/s2loop.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2shapeutil_get_reference_point.h"
 
-using absl::make_unique;
 using absl::Span;
+using std::make_unique;
 using ReferencePoint = S2Shape::ReferencePoint;
 
 S2LaxLoopShape::S2LaxLoopShape(S2LaxLoopShape&& other)

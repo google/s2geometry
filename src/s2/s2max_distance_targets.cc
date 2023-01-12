@@ -15,18 +15,23 @@
 
 #include "s2/s2max_distance_targets.h"
 
+#include <cmath>
+
 #include <memory>
 
-#include "absl/memory/memory.h"
-#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
+#include "s2/s2contains_point_query.h"
+#include "s2/s2distance_target.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2furthest_edge_query.h"
+#include "s2/s2point.h"
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2shape_index_region.h"
-#include "s2/s2text_format.h"
 
-using absl::make_unique;
+using std::make_unique;
 
 //////////////////   Point Target   ////////////////////
 
@@ -158,8 +163,7 @@ S2MaxDistanceShapeIndexTarget::S2MaxDistanceShapeIndexTarget(
     const S2ShapeIndex* index)
     : index_(index), query_(make_unique<S2FurthestEdgeQuery>(index)) {}
 
-S2MaxDistanceShapeIndexTarget::~S2MaxDistanceShapeIndexTarget() {
-}
+S2MaxDistanceShapeIndexTarget::~S2MaxDistanceShapeIndexTarget() = default;
 
 bool S2MaxDistanceShapeIndexTarget::include_interiors() const {
   return query_->options().include_interiors();

@@ -18,8 +18,13 @@
 #ifndef S2_SEQUENCE_LEXICON_H_
 #define S2_SEQUENCE_LEXICON_H_
 
+#include <cstddef>
+
+#include <algorithm>
 #include <functional>
+#include <iterator>
 #include <limits>
+#include <utility>
 #include <vector>
 
 #include "s2/base/integral_types.h"

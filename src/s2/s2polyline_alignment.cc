@@ -17,19 +17,19 @@
 #include "s2/s2polyline_alignment.h"
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
-#include <numeric>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "s2/base/logging.h"
-#include "absl/memory/memory.h"
+#include "s2/s2point.h"
+#include "s2/s2polyline.h"
 #include "s2/s2polyline_alignment_internal.h"
-#include "s2/util/math/mathutil.h"
 
-using absl::make_unique;
+using std::make_unique;
 using std::string;
 
 namespace s2polyline_alignment {

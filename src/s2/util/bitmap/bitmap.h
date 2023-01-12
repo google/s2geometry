@@ -1,4 +1,4 @@
-// Copyright 2000 Google Inc. All Rights Reserved.
+// Copyright Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,13 +13,10 @@
 // limitations under the License.
 //
 
+// A simple bitmap class that handles all that bit twiddling.
 //
-//
-//
-// A simple bitmap class that handles all that bit twiddling
-// NOTE: You have to do your bounds checking. Especially if you
-// pass in your own map without providing a size.
-//
+// NOTE: You have to do your bounds checking, especially
+// if you pass in your own map without providing a size.
 
 #ifndef UTIL_BITMAP_BITMAP_H__
 #define UTIL_BITMAP_BITMAP_H__
@@ -69,6 +66,7 @@ class BasicBitmap {
  public:
   using size_type = size_t;
   using Word = W;  // packed bit internal storage type.
+  using MutableWord = typename std::remove_const<W>::type;
 
   // Allocates a new bitmap with size bits set to the value fill.
   BasicBitmap(size_type size, bool fill) : size_(size), alloc_(true) {
@@ -92,6 +90,10 @@ class BasicBitmap {
   // to have enough memory to store size bits.
   BasicBitmap(Word* map, size_type size)
       : map_(map), size_(size), alloc_(false) {}
+
+  static BasicBitmap<const W> CreateConst(const W* map, size_type size) {
+    return BasicBitmap<const W>(map, size);
+  }
 
   // Default constructor: creates a bitmap with zero bits.
   BasicBitmap() : size_(0), alloc_(true) {
@@ -592,7 +594,7 @@ class BasicBitmap {
   // type to perform arithmetic, to avoid having `Word`-typed values promoted to
   // a signed type via integral promotions.
   // TODO(b/228178585)
-  using ArithmeticWord = absl::make_unsigned_t<decltype(+std::declval<Word>())>;
+  using ArithmeticWord = std::make_unsigned_t<decltype(+std::declval<Word>())>;
 
   // A value of type `Word` with all bits set to one. If `Word` !=
   // `ArithmeticWord`, i.e. `Word` gets promoted, then this is a `Word` with all
@@ -640,36 +642,21 @@ inline std::ostream& operator<<(std::ostream& out,
 }
 
 }  // namespace internal
-}  // namespace bitmap
-}  // namespace util
 
-namespace util {
-namespace bitmap {
-
+using BitmapChar = ::util::bitmap::internal::BasicBitmap<char>;
 using Bitmap8 = ::util::bitmap::internal::BasicBitmap<uint8>;
 using Bitmap16 = ::util::bitmap::internal::BasicBitmap<uint16>;
 using Bitmap32 = ::util::bitmap::internal::BasicBitmap<uint32>;
 using Bitmap64 = ::util::bitmap::internal::BasicBitmap<uint64>;
 
-}  // namespace bitmap
-}  // namespace util
-
-// Legacy definition, use Bitmap32/Bitmap64 instead in new code.    Do not use
-// this to instantiate the BasicBitmap template (i.e. do not spell
-// `::Bitmap::BasicBitmap<Y>`).  Instead, use one of the aliases above (e.g.
-// ::util::bitmap::Bitmap32).
-// TODO(b/145388656): remove this class, once all forward declarations are gone.
-class ABSL_DEPRECATED(
-    "Legacy definition, use util::bitmap::{Bitmap32|Bitmap64} instead in new "
-    "code.") Bitmap : public util::bitmap::internal::BasicBitmap<uint32> {
- public:
-  using util::bitmap::internal::BasicBitmap<uint32>::BasicBitmap;
-};
+using ConstBitmapChar = ::util::bitmap::internal::BasicBitmap<const char>;
+using ConstBitmap8 = ::util::bitmap::internal::BasicBitmap<const uint8>;
+using ConstBitmap16 = ::util::bitmap::internal::BasicBitmap<const uint16>;
+using ConstBitmap32 = ::util::bitmap::internal::BasicBitmap<const uint32>;
+using ConstBitmap64 = ::util::bitmap::internal::BasicBitmap<const uint64>;
 
 // Implementations follow.
 
-namespace util {
-namespace bitmap {
 namespace internal {
 
 template <typename W>
@@ -803,8 +790,8 @@ int BasicBitmap<W>::CompareToHelper(const BasicBitmap<W>& first,
   // bits for the element representing the highest order bits) and then we
   // can do direct integer comparison.
   size_t index = second.array_size() - 1;
-  Word left = first.map_[index] & second.HighOrderMapElementMask();
-  Word right = second.map_[index] & second.HighOrderMapElementMask();
+  MutableWord left = first.map_[index] & second.HighOrderMapElementMask();
+  MutableWord right = second.map_[index] & second.HighOrderMapElementMask();
   if (left != right) {
     return left < right ? -1 : 1;
   }
@@ -961,7 +948,7 @@ bool BasicBitmap<W>::FindNextBitInVector(bool complement, const Word* words,
   if (bit_index >= limit) return false;
   // From now on limit != 0, since if it was we would have returned false.
   size_t int_index = bit_index >> kLogIntBits;
-  Word one_word = words[int_index];
+  MutableWord one_word = words[int_index];
   if (complement) one_word = ~one_word;
 
   // Simple optimization where we can immediately return true if the first
@@ -1009,7 +996,7 @@ bool BasicBitmap<W>::FindPreviousBitInVector(bool complement, const Word* words,
   size_t map_index = bit_index >> kLogIntBits;
   const size_t map_limit = limit >> kLogIntBits;
   const size_t bit_limit_mask = kAllOnesWord << (limit & (kIntBits - 1));
-  Word one_word = complement ? ~words[map_index] : words[map_index];
+  MutableWord one_word = complement ? ~words[map_index] : words[map_index];
 
   if (limit > *bit_index_inout) return false;
   // Simple optimization where we can immediately return true if the first

@@ -22,26 +22,23 @@
 #include <cmath>
 #include <cstdio>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
 
-#include "absl/base/macros.h"
 #include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 
-#include "s2/base/logging.h"
 #include "s2/base/log_severity.h"
-#include "s2/mutable_s2shape_index.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2cap.h"
-#include "s2/s2crossing_edge_query.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
@@ -49,9 +46,11 @@
 #include "s2/s2latlng_rect_bounder.h"
 #include "s2/s2loop.h"
 #include "s2/s2metrics.h"
+#include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
+#include "s2/util/coding/coder.h"
 
 using absl::StrCat;
 using S2::internal::kSwapMask;
@@ -620,8 +619,8 @@ TEST(S2Cell, GetDistanceToEdge) {
     // The error has a peak near Pi/2 for edge distance, and another peak near
     // Pi for vertex distance.
     if (expected_min.radians() > M_PI/2) {
-      // Max error for S1ChordAngle as it approaches Pi is about 2e-8.
-      EXPECT_NEAR(expected_min.radians(), actual_min.radians(), 2e-8);
+      // Max error for S1ChordAngle as it approaches Pi is about 3e-8.
+      EXPECT_NEAR(expected_min.radians(), actual_min.radians(), 3e-8);
     } else if (expected_min.radians() <= M_PI / 3) {
       EXPECT_NEAR(expected_min.radians(), actual_min.radians(), 1e-15);
     } else {

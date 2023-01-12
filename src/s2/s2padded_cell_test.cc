@@ -19,11 +19,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 #include <gtest/gtest.h>
 #include "s2/r1interval.h"
 #include "s2/r2.h"
+#include "s2/r2rect.h"
 #include "s2/s2cell.h"
+#include "s2/s2cell_id.h"
+#include "s2/s2point.h"
 #include "s2/s2testing.h"
 
 using std::min;

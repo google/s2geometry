@@ -18,6 +18,7 @@
 #define S2_S2POLYLINE_ALIGNMENT_H_
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "s2/s2polyline.h"
