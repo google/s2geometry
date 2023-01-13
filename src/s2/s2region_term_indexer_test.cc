@@ -46,10 +46,7 @@ S2_DEFINE_int32(iters, 400, "number of iterations for testing");
 
 namespace {
 
-enum DataType {
-  POINT = 0,
-  CAP = 1,
-};
+enum DataType { POINT, CAP };
 
 void TestRandomCaps(const S2RegionTermIndexer::Options& options,
                     DataType index_type, DataType query_type) {
@@ -180,12 +177,12 @@ TEST_P(S2RegionTermIndexerTest, ConstrainMinMaxLevels) {
 
 TEST_P(S2RegionTermIndexerTest, UseLeafCells) {
   options.set_min_level(4);
-  options.set_max_level(S2CellId::kMaxLevel);
+  options.set_max_level(S2CellId::kMaxLevel);  // Use leaf cells.
   options.set_max_cells(8);
   TestRandomCaps(options, index_type, query_type);
 }
 
-TEST_P(S2RegionTermIndexerTest, UseFaceCells2) {
+TEST_P(S2RegionTermIndexerTest, UseFaceCellsCustomLevelMode) {
   options.set_min_level(0);
   options.set_max_level(S2CellId::kMaxLevel);
   options.set_level_mod(2);

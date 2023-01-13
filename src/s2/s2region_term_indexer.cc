@@ -210,7 +210,6 @@ void S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
                                                : TermType::COVERING,
                              id, prefix));
 
-    // If query only contains points, there are no need other terms.
     if (options_.query_contains_points_only()) continue;
 
     if (!options_.optimize_for_space() && !is_max_level_cell) {
