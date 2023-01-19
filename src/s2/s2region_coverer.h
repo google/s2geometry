@@ -34,6 +34,10 @@
 #include "s2/s2point.h"
 #include "s2/s2region.h"
 
+#ifdef _WIN32
+#pragma warning(disable : 4200)
+#endif
+
 class S2Region;
 
 // An S2RegionCoverer is a class that allows arbitrary regions to be
