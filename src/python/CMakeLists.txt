@@ -15,7 +15,15 @@ add_test(NAME pywraps2_test COMMAND
 set_property(TEST pywraps2_test PROPERTY ENVIRONMENT
              "PYTHONPATH=$ENV{PYTHONPATH}:${PROJECT_BINARY_DIR}/python")
 
+execute_process(COMMAND ${Python3_EXECUTABLE} -c
+                "from distutils import sysconfig; print(sysconfig.get_python_lib(prefix=''))"
+                OUTPUT_VARIABLE CMAKE_INSTALL_PYLIBDIR_DEFAULT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+set(CMAKE_INSTALL_PYLIBDIR "${CMAKE_INSTALL_PYLIBDIR_DEFAULT}"
+    CACHE STRING "Python site-packages installation directory")
+
 # Install the wrapper.
-install(TARGETS _pywraps2 DESTINATION ${Python3_SITELIB})
+install(TARGETS _pywraps2 DESTINATION "${CMAKE_INSTALL_PYLIBDIR}")
 install(FILES "${PROJECT_BINARY_DIR}/python/pywraps2.py"
-        DESTINATION ${Python3_SITELIB})
+        DESTINATION "${CMAKE_INSTALL_PYLIBDIR}")
