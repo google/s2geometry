@@ -24,6 +24,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/container/flat_hash_set.h"
+#include "absl/strings/string_view.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_iterator_testing.h"
@@ -33,17 +34,21 @@
 
 namespace {
 
+using ::absl::string_view;
+using std::vector;
 using ::testing::Contains;
 using ::testing::Eq;
+using ::testing::IsFalse;
 using ::testing::Le;
+using ::testing::SizeIs;
 
 // Cell IDs covering Central Park in New York City
-constexpr static absl::string_view kCentralParkATokens[] = {
+constexpr static string_view kCentralParkATokens[] = {
     "89c2589",  "89c258a1", "89c258a3", "89c258bc",
     "89c258c1", "89c258ec", "89c258f4"};
 
 // Cell Ids also covering Central Park but a subset of CentralParkA.
-constexpr static absl::string_view kCentralParkBTokens[] = {
+constexpr static string_view kCentralParkBTokens[] = {
     "89c2589", "89c258a03", "89c258a1c", "89c258a3", "89c258bd", "89c258be1"};
 
 // Builds an S2JoinRow from S2CellId tokens.
@@ -54,8 +59,7 @@ std::pair<S2CellId, S2CellId> PairFromTokens(std::string token_a,
 }
 
 // Builds a btree_map from a list of token to use with MockS2CellIterator.
-absl::btree_map<S2CellId, int> TokenMap(
-    absl::Span<const absl::string_view> tokens) {
+absl::btree_map<S2CellId, int> TokenMap(absl::Span<const string_view> tokens) {
   absl::btree_map<S2CellId, int> map;
   int count = 0;
   for (const auto& token : tokens) {
@@ -76,7 +80,7 @@ TEST(S2CellJoinIterator, ExactJoinWorks) {
   auto cpa_map = TokenMap(absl::MakeSpan(kCentralParkATokens));
   auto cpb_map = TokenMap(absl::MakeSpan(kCentralParkBTokens));
 
-  std::vector<std::pair<S2CellId, S2CellId>> rows;
+  vector<std::pair<S2CellId, S2CellId>> rows;
   MakeS2CellIteratorJoin(MakeMockS2CellIterator(&cpa_map),
                          MakeMockS2CellIterator(&cpb_map))
       .Join([&rows](const MockS2CellIterator<int>& iter_a,
@@ -88,7 +92,7 @@ TEST(S2CellJoinIterator, ExactJoinWorks) {
 
   EXPECT_THAT(rows.size(), Eq(std::min(cpa_map.size(), cpb_map.size())));
 
-  const std::vector<std::pair<S2CellId, S2CellId>> truth = {
+  const vector<std::pair<S2CellId, S2CellId>> truth = {
       PairFromTokens("89c2589", "89c2589"),
       PairFromTokens("89c258a1", "89c258a03"),
       PairFromTokens("89c258a1", "89c258a1c"),
@@ -102,6 +106,42 @@ TEST(S2CellJoinIterator, ExactJoinWorks) {
   }
 }
 
+TEST(S2CellJoinIterator, ExactFalseJoinReturnsImmediately) {
+  auto cpa_map = TokenMap(absl::MakeSpan(kCentralParkATokens));
+  auto cpb_map = TokenMap(absl::MakeSpan(kCentralParkBTokens));
+
+  vector<std::pair<S2CellId, S2CellId>> rows;
+  bool cancelled = MakeS2CellIteratorJoin(MakeMockS2CellIterator(&cpa_map),
+                                          MakeMockS2CellIterator(&cpb_map))
+                       .Join([&rows](const MockS2CellIterator<int>& iter_a,
+                                     const MockS2CellIterator<int>& iter_b) {
+                         rows.emplace_back(iter_a.id(), iter_b.id());
+                         return false;
+                       });
+  EXPECT_THAT(cancelled, IsFalse());
+  EXPECT_THAT(rows, SizeIs(1));
+}
+
+TEST(S2CellJoinIterator, TolerantFalseJoinReturnsImmediately) {
+  auto cpa_map = TokenMap(absl::MakeSpan(kCentralParkATokens));
+  auto cpb_map = TokenMap(absl::MakeSpan(kCentralParkBTokens));
+
+  // Just need a non-zero tolerance to trigger tolerant join logic.
+  auto dist = S1ChordAngle::Degrees(.001);
+
+  vector<std::pair<S2CellId, S2CellId>> rows;
+  bool cancelled =
+      MakeS2CellIteratorJoin(MakeMockS2CellIterator(&cpa_map),
+                             MakeMockS2CellIterator(&cpb_map), dist)
+          .Join([&rows](const MockS2CellIterator<int>& iter_a,
+                        const MockS2CellIterator<int>& iter_b) {
+            rows.emplace_back(iter_a.id(), iter_b.id());
+            return false;
+          });
+  EXPECT_THAT(cancelled, IsFalse());
+  EXPECT_THAT(rows, SizeIs(1));
+}
+
 TEST(S2CellJoinIterator, ExactJoinSeekingWorks) {
   // Sometimes we have to seek more than once to find a pair of cells that
   // overlap.  2d5e3 below doesn't overlap anything in map_b, and so shouldn't
@@ -110,14 +150,14 @@ TEST(S2CellJoinIterator, ExactJoinSeekingWorks) {
   auto map_a = TokenMap({"2d5dd7", "2d5ddc", "2d5e3", "2d5e801", "2d5e803"});
   auto map_b = TokenMap({"2d5d", "2d5e84"});
 
-  const std::vector<std::pair<S2CellId, S2CellId>> truth = {
+  const vector<std::pair<S2CellId, S2CellId>> truth = {
       PairFromTokens("2d5dd7", "2d5d"),     //
       PairFromTokens("2d5ddc", "2d5d"),     //
       PairFromTokens("2d5e801", "2d5e84"),  //
       PairFromTokens("2d5e803", "2d5e84")   //
   };
 
-  std::vector<std::pair<S2CellId, S2CellId>> rows;
+  vector<std::pair<S2CellId, S2CellId>> rows;
   MakeS2CellIteratorJoin(MakeMockS2CellIterator(&map_a),
                          MakeMockS2CellIterator(&map_b))
       .Join([&rows](const MockS2CellIterator<int>& iter_a,
@@ -147,7 +187,7 @@ TEST(S2CellJoinIterator, NearJoinWorks) {
         return true;
       });
 
-  const std::vector<std::pair<S2CellId, S2CellId>> truth = {
+  const vector<std::pair<S2CellId, S2CellId>> truth = {
       PairFromTokens("89c2589", "89c2589"),
       PairFromTokens("89c258a1", "89c258a03"),
       PairFromTokens("89c258a1", "89c258a1c"),
@@ -168,7 +208,7 @@ TEST(S2CellJoinIterator, NearJoinWorks) {
 
   // These cells are more than 0 degrees apart (i.e. not touching) and not part
   // of the exact results, but should be included in the tolerant result.
-  const std::vector<std::pair<S2CellId, S2CellId>> tolerant_truth = {
+  const vector<std::pair<S2CellId, S2CellId>> tolerant_truth = {
       PairFromTokens("89c258a1", "89c258bd"),
       PairFromTokens("89c258a1", "89c258be1"),
       PairFromTokens("89c258a3", "89c258a03"),

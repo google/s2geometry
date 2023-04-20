@@ -23,12 +23,12 @@
 #include <array>
 #include <cmath>
 #include <memory>
-#include <set>
 #include <utility>
 #include <vector>
 
 #include "s2/base/integral_types.h"
 #include "absl/container/fixed_array.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
 #include "absl/types/span.h"
 #include "absl/utility/utility.h"
@@ -58,13 +58,13 @@
 #include "s2/s2shape.h"
 #include "s2/util/math/matrix3x3.h"
 
+using absl::flat_hash_set;
 using absl::Span;
 using s2builderutil::S2CellIdSnapFunction;
 using s2builderutil::S2PolylineLayer;
 using std::make_unique;
 using std::max;
 using std::min;
-using std::set;
 using std::vector;
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
@@ -684,19 +684,18 @@ struct SearchState {
   inline SearchState(int i_val, int j_val, bool i_in_progress_val)
       : i(i_val), j(j_val), i_in_progress(i_in_progress_val) {}
 
+  friend bool operator==(const SearchState& a, const SearchState& b) {
+    return a.i == b.i && a.j == b.j && a.i_in_progress == b.i_in_progress;
+  }
+
+  template <typename H>
+  friend H AbslHashValue(H h, const SearchState& s) {
+    return H::combine(std::move(h), s.i, s.j, s.i_in_progress);
+  }
+
   int i;
   int j;
   bool i_in_progress;
-};
-
-// This operator is needed for storing SearchStates in a set.  The ordering
-// chosen has no special meaning.
-struct SearchStateKeyCompare {
-  bool operator() (const SearchState& a, const SearchState& b) const {
-    if (a.i != b.i) return a.i < b.i;
-    if (a.j != b.j) return a.j < b.j;
-    return a.i_in_progress < b.i_in_progress;
-  }
 };
 
 }  // namespace
@@ -751,7 +750,7 @@ bool S2Polyline::NearlyCovers(const S2Polyline& covered,
   if (this->num_vertices() == 0) return false;
 
   vector<SearchState> pending;
-  set<SearchState, SearchStateKeyCompare> done;
+  flat_hash_set<SearchState> done;
 
   // Find all possible starting states.
   for (int i = 0, next_i = NextDistinctVertex(*this, 0), next_next_i;

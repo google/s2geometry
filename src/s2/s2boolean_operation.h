@@ -233,21 +233,21 @@ class S2BooleanOperation {
     SYMMETRIC_DIFFERENCE  // Contained by one region but not the other.
   };
   // Translates OpType to one of the strings above.
-  static const char* OpTypeToString(OpType op_type);
+  static absl::string_view OpTypeToString(OpType op_type);
 
   // Defines whether polygons are considered to contain their vertices and/or
   // edges (see definitions above).
   enum class PolygonModel : uint8 { OPEN, SEMI_OPEN, CLOSED };
 
   // Translates PolygonModel to one of the strings above.
-  static const char* PolygonModelToString(PolygonModel model);
+  static absl::string_view PolygonModelToString(PolygonModel model);
 
   // Defines whether polylines are considered to contain their endpoints
   // (see definitions above).
   enum class PolylineModel : uint8 { OPEN, SEMI_OPEN, CLOSED };
 
   // Translates PolylineModel to one of the strings above.
-  static const char* PolylineModelToString(PolylineModel model);
+  static absl::string_view PolylineModelToString(PolylineModel model);
 
   // With Precision::EXACT, the operation is evaluated using the exact input
   // geometry.  Predicates that use this option will produce exact results;

@@ -316,6 +316,12 @@ inline bool S2ShapeIndexCell::DecodeEdges(int num_edges,
         count = delta + 8;
         if (!decoder->get_varint32(&delta)) return false;
       }
+
+      // Guard against overflowing edge memory for bad inputs.
+      if (static_cast<int32>(i + count) > num_edges) {
+        return false;
+      }
+
       edge_id += delta;
       for (; count > 0; --count, ++i, ++edge_id) {
         clipped->set_edge(i, edge_id);

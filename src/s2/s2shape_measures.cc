@@ -137,7 +137,7 @@ S2Point GetCentroid(const S2Shape& shape) {
 }
 
 void GetChainVertices(const S2Shape& shape, int chain_id,
-                      std::vector<S2Point>* vertices) {
+                      vector<S2Point>* vertices) {
   S2Shape::Chain chain = shape.chain(chain_id);
   int num_vertices = chain.length + (shape.dimension() == 1);
   vertices->clear();

@@ -21,6 +21,7 @@
 #ifndef S2_S2EDGE_CROSSINGS_INTERNAL_H_
 #define S2_S2EDGE_CROSSINGS_INTERNAL_H_
 
+#include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 
@@ -77,7 +78,7 @@ enum class IntersectionMethod {
   EXACT,
   NUM_METHODS
 };
-const char* GetIntersectionMethodName(IntersectionMethod method);
+absl::string_view GetIntersectionMethodName(IntersectionMethod method);
 
 // The following classes are used as template arguments to S2EdgeCrosserBase in
 // order to create two versions, namely S2EdgeCrosser itself (which takes

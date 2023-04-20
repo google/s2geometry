@@ -110,10 +110,10 @@ class MutableS2ShapeIndexTest : public ::testing::Test {
 
   // Verifies that removing and adding the given combination of shapes with
   // the given memory budget yields the expected vector of batches.
-  void TestBatchGenerator(
-      int num_edges_removed, const vector<int>& shape_edges_added,
-      int64 tmp_memory_budget, int shape_id_begin,
-      const vector<BatchDescriptor>& expected_batches);
+  void TestBatchGenerator(int num_edges_removed,
+                          const vector<int>& shape_edges_added,
+                          int64 tmp_memory_budget, int shape_id_begin,
+                          const vector<BatchDescriptor>& expected_batches);
 };
 
 void MutableS2ShapeIndexTest::QuadraticValidate() {

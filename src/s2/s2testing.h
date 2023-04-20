@@ -218,6 +218,11 @@ class S2Testing {
   // sphere) from the given latitude-longitude rectangle.
   static S2Point SamplePoint(const S2LatLngRect& rect);
 
+  // Return an edge that bisects a cap.  We pick a random uniform point on the
+  // cap with SamplePoint() and connect that point to its image reflected across
+  // the cap center.
+  static void SampleCapEdge(const S2Cap& cap, S2Point* a, S2Point* b);
+
   // Return a random cell id at the given level or at a randomly chosen
   // level.  The distribution is uniform over the space of cell ids,
   // but only approximately uniform over the surface of the sphere.
@@ -276,9 +281,7 @@ class S2Testing::Random {
 
   // A functor-style version of Uniform, so that this class can be used with
   // STL functions that require a RandomNumberGenerator concept.
-  int32 operator() (int32 n) {
-    return Uniform(n);
-  }
+  int32 operator()(int32 n) { return Uniform(n); }
 
   // Return true with probability 1 in n.
   bool OneIn(int32 n);

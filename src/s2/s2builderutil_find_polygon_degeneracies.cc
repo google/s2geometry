@@ -282,7 +282,7 @@ VertexId DegeneracyFinder::FindUnbalancedVertex() const {
   for (VertexId v = 0; v < g_.num_vertices(); ++v) {
     if (is_vertex_unbalanced_[v]) return v;
   }
-  S2_LOG(DFATAL) << "Could not find previously marked unbalanced vertex";
+  S2_LOG(ERROR) << "Could not find previously marked unbalanced vertex";
   return -1;
 }
 

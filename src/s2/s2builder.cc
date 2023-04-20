@@ -83,6 +83,7 @@
 #include "s2/base/log_severity.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/btree_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
@@ -113,10 +114,9 @@
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 #include "s2/s2text_format.h"
 #include "s2/util/gtl/compact_array.h"
-#include "s2/util/gtl/dense_hash_set.h"
 
+using absl::flat_hash_set;
 using gtl::compact_array;
-using gtl::dense_hash_set;
 using std::make_unique;
 using std::max;
 using std::pair;
@@ -489,8 +489,7 @@ class VertexIdEdgeVectorShape final : public S2Shape {
   // Requires that "edges" is constant for the lifetime of this object.
   VertexIdEdgeVectorShape(const vector<pair<int32, int32>>& edges,
                           const vector<S2Point>& vertices)
-      : edges_(edges), vertices_(vertices) {
-  }
+      : edges_(edges), vertices_(vertices) {}
 
   const S2Point& vertex0(int e) const { return vertex(edges_[e].first); }
   const S2Point& vertex1(int e) const { return vertex(edges_[e].second); }
@@ -889,11 +888,11 @@ void S2Builder::AddExtraSites(const MutableS2ShapeIndex& input_edge_index) {
   // snapped edge chains in a vector, but currently this is not worthwhile
   // since SnapEdge() accounts for less than 5% of the runtime.
 
-  // Note that we intentionally use dense_hash_set rather than flat_hash_set
-  // in order to ensure that iteration is deterministic when debugging.
-  dense_hash_set<InputEdgeId> edges_to_resnap(16 /*expected_max_elements*/);
-  edges_to_resnap.set_empty_key(-1);
-  edges_to_resnap.set_deleted_key(-2);
+  // Using 18 buckets is equivalent to `reserve(16)`, which was the
+  // `expected_max_elements` used by the old `dense_hash_set` version.
+  // This will actually get us 31 buckets since it gets rounded up.
+  // We could experiment with different values here.
+  flat_hash_set<InputEdgeId> edges_to_resnap(/*bucket_count=*/18);
 
   vector<SiteId> chain;  // Temporary storage.
   int num_edges_after_snapping = 0;
@@ -935,7 +934,7 @@ void S2Builder::AddExtraSites(const MutableS2ShapeIndex& input_edge_index) {
 void S2Builder::MaybeAddExtraSites(
     InputEdgeId edge_id, const vector<SiteId>& chain,
     const MutableS2ShapeIndex& input_edge_index,
-    dense_hash_set<InputEdgeId>* edges_to_resnap) {
+    flat_hash_set<InputEdgeId>* edges_to_resnap) {
   // If the memory tracker has a periodic callback function, tally an amount
   // of memory proportional to the work being done so that the caller has an
   // opportunity to cancel the operation if necessary.
@@ -1060,7 +1059,7 @@ void S2Builder::MaybeAddExtraSites(
 // and adds them to "edges_to_resnap" for resnapping.
 void S2Builder::AddExtraSite(const S2Point& new_site,
                              const MutableS2ShapeIndex& input_edge_index,
-                             dense_hash_set<InputEdgeId>* edges_to_resnap) {
+                             flat_hash_set<InputEdgeId>* edges_to_resnap) {
   if (!sites_.empty()) S2_DCHECK_NE(new_site, sites_.back());
   if (!tracker_.AddSpace(&sites_, 1)) return;
   SiteId new_site_id = sites_.size();
@@ -1111,8 +1110,8 @@ S2Point S2Builder::GetSeparationSite(const S2Point& site_to_avoid,
   Vector3_d xy_dir = y - x;
   S2Point n = S2::RobustCrossProd(x, y);
   S2Point new_site = S2::Project(site_to_avoid, x, y, n);
-  S2Point gap_min = GetCoverageEndpoint(v0, x, y, n);
-  S2Point gap_max = GetCoverageEndpoint(v1, y, x, -n);
+  S2Point gap_min = GetCoverageEndpoint(v0, n);
+  S2Point gap_max = GetCoverageEndpoint(v1, -n);
   if ((new_site - gap_min).DotProd(xy_dir) < 0) {
     new_site = gap_min;
   } else if ((gap_max - new_site).DotProd(xy_dir) < 0) {
@@ -1127,8 +1126,7 @@ S2Point S2Builder::GetSeparationSite(const S2Point& site_to_avoid,
 // Given a site P and an edge XY with normal N, intersect XY with the disc of
 // radius snap_radius() around P, and return the intersection point that is
 // further along the edge XY toward Y.
-S2Point S2Builder::GetCoverageEndpoint(const S2Point& p, const S2Point& x,
-                                       const S2Point& y, const S2Point& n)
+S2Point S2Builder::GetCoverageEndpoint(const S2Point& p, const S2Point& n)
     const {
   // Consider the plane perpendicular to P that cuts off a spherical cap of
   // radius snap_radius().  This plane intersects the plane through the edge
@@ -1489,7 +1487,7 @@ class S2Builder::EdgeChainSimplifier {
   void OutputAllEdges(VertexId v0, VertexId v1);
   bool TargetInputVertices(VertexId v, S2PolylineSimplifier* simplifier) const;
   bool AvoidSites(VertexId v0, VertexId v1, VertexId v2,
-                  dense_hash_set<VertexId>* used_vertices,
+                  flat_hash_set<VertexId>* used_vertices,
                   S2PolylineSimplifier* simplifier) const;
   void MergeChain(const vector<VertexId>& vertices);
   void AssignDegenerateEdges(
@@ -1508,7 +1506,7 @@ class S2Builder::EdgeChainSimplifier {
   IdSetLexicon* input_edge_id_set_lexicon_;
 
   // Convenience member copied from builder_.
-  const std::vector<InputEdgeId>& layer_begins_;
+  const vector<InputEdgeId>& layer_begins_;
 
   // is_interior_[v] indicates that VertexId "v" is eligible to be an interior
   // vertex of a simplified edge chain.  You can think of it as vertex whose
@@ -1522,7 +1520,7 @@ class S2Builder::EdgeChainSimplifier {
   // Temporary objects declared here to avoid repeated allocation.
   vector<VertexId> tmp_vertices_;
   vector<EdgeId> tmp_edges_;
-  dense_hash_set<VertexId> tmp_vertex_set_;
+  flat_hash_set<VertexId> tmp_vertex_set_;
 
   // The output edges after simplification.
   vector<Edge> new_edges_;
@@ -1622,8 +1620,8 @@ S2Builder::EdgeChainSimplifier::EdgeChainSimplifier(
       input_edge_id_set_lexicon_(input_edge_id_set_lexicon),
       layer_begins_(builder_.layer_begins_),
       is_interior_(g.num_vertices()), used_(g.num_edges()),
-      tmp_vertex_set_(16) /*expected_max_elements*/ {
-  tmp_vertex_set_.set_empty_key(-1);
+      // See `AddExtraSites` for explanation of `bucket_count`.
+      tmp_vertex_set_(/*bucket_count=*/18) {
   new_edges_.reserve(g.num_edges());
   new_input_edge_ids_.reserve(g.num_edges());
   new_edge_layers_.reserve(g.num_edges());
@@ -1814,7 +1812,7 @@ void S2Builder::EdgeChainSimplifier::SimplifyChain(VertexId v0, VertexId v1) {
   // Contains the set of vertices that have either been avoided or added to
   // the chain so far.  This is necessary so that AvoidSites() doesn't try to
   // avoid vertices that have already been added to the chain.
-  dense_hash_set<VertexId>& used_vertices = tmp_vertex_set_;
+  flat_hash_set<VertexId>& used_vertices = tmp_vertex_set_;
   S2PolylineSimplifier simplifier;
   VertexId vstart = v0;
   bool done = false;
@@ -1889,7 +1887,7 @@ bool S2Builder::EdgeChainSimplifier::TargetInputVertices(
 // near the edge (v1, v2) are avoided by at least min_edge_vertex_separation.
 bool S2Builder::EdgeChainSimplifier::AvoidSites(
     VertexId v0, VertexId v1, VertexId v2,
-    dense_hash_set<VertexId>* used_vertices,
+    flat_hash_set<VertexId>* used_vertices,
     S2PolylineSimplifier* simplifier) const {
   const S2Point& p0 = g_.vertex(v0);
   const S2Point& p1 = g_.vertex(v1);
@@ -2183,9 +2181,9 @@ bool S2Builder::MemoryTracker::TallySimplifyEdgeChains(
   //
   // Note that the temporary vector<LayerEdgeId> in MergeLayerEdges() does not
   // affect peak usage.
-  const int64 kTempPerEdge =
-      sizeof(bool) + sizeof(EdgeId) + 2 * sizeof(Edge) +
-      2 * sizeof(InputEdgeIdSetId) + 2 * sizeof(int);
+  const int64 kTempPerEdge = sizeof(bool) + sizeof(EdgeId) +
+                               2 * sizeof(Edge) + 2 * sizeof(InputEdgeIdSetId) +
+                               2 * sizeof(int);
   int64 simplify_bytes = site_vertices.size() * kTempPerSite;
   for (const auto& array : site_vertices) {
     simplify_bytes += GetCompactArrayAllocBytes(array);

@@ -27,6 +27,7 @@
 
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
+#include "s2/testing/gtest_prod.h"
 #include "absl/base/macros.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
@@ -501,6 +502,10 @@ class S2Loop final : public S2Region {
     }
 
    private:
+    // Allow the move constructor/operator= to update `loop_`
+    friend class S2Loop;
+    friend class S2LoopTestBase;
+
     const S2Loop* loop_;
   };
 
@@ -529,6 +534,9 @@ class S2Loop final : public S2Region {
   friend class S2LoopTestBase;
   friend class LoopCrosser;
   friend class s2builderutil::S2PolygonLayer;
+
+  // So that test can access InitIndex().
+  FRIEND_TEST(S2LoopTestBase, PointersCorrectAfterMove);
 
   // Internal copy constructor used only by Clone() that makes a deep copy of
   // its argument.

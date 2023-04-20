@@ -40,6 +40,7 @@
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
+#include "s2/s2edge_distances.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2lax_polygon_shape.h"
@@ -54,6 +55,7 @@
 #include "s2/s2text_format.h"
 #include "s2/util/math/matrix3x3.h"
 
+using absl::string_view;
 using std::make_unique;
 using std::max;
 using std::string;
@@ -106,13 +108,9 @@ inline uint64 GetBits(int num_bits) {
   return result;
 }
 
-uint64 S2Testing::Random::Rand64() {
-  return GetBits(64);
-}
+uint64 S2Testing::Random::Rand64() { return GetBits(64); }
 
-uint32 S2Testing::Random::Rand32() {
-  return GetBits(32);
-}
+uint32 S2Testing::Random::Rand32() { return GetBits(32); }
 
 double S2Testing::Random::RandDouble() {
   const int NUM_BITS = 53;
@@ -129,9 +127,7 @@ double S2Testing::Random::UniformDouble(double min, double limit) {
   return min + RandDouble() * (limit - min);
 }
 
-bool S2Testing::Random::OneIn(int32 n) {
-  return Uniform(n) == 0;
-}
+bool S2Testing::Random::OneIn(int32 n) { return Uniform(n) == 0; }
 
 int32 S2Testing::Random::Skewed(int max_log) {
   S2_DCHECK_GE(max_log, 0);
@@ -333,6 +329,11 @@ S2Point S2Testing::SamplePoint(const S2LatLngRect& rect) {
   return S2LatLng::FromRadians(lat, lng).Normalized().ToPoint();
 }
 
+void S2Testing::SampleCapEdge(const S2Cap& cap, S2Point* a, S2Point* b) {
+  *a = SamplePoint(cap);
+  *b = S2::GetPointOnLine(*a, cap.center(), 2 * cap.GetRadius());
+}
+
 void S2Testing::CheckCovering(const S2Region& region,
                               const S2CellUnion& covering,
                               bool check_tight, S2CellId id) {
@@ -473,9 +474,8 @@ void S2Testing::Fractal::GetR2VerticesHelper(const R2Point& v0,
   GetR2VerticesHelper(v3, v4, level+1, vertices);
 }
 
-std::unique_ptr<S2Loop> S2Testing::Fractal::MakeLoop(
-    const Matrix3x3_d& frame,
-    S1Angle nominal_radius) const {
+unique_ptr<S2Loop> S2Testing::Fractal::MakeLoop(const Matrix3x3_d& frame,
+                                                S1Angle nominal_radius) const {
   vector<R2Point> r2vertices;
   GetR2Vertices(&r2vertices);
   vector<S2Point> vertices;

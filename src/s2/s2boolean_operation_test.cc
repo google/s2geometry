@@ -1706,7 +1706,7 @@ TEST(S2BooleanOperation, SelfIntersectingPolylines) {
 // Subtracts a degenerate loop along the 180 degree meridian from the given
 // input geometry, and compares the result to "expected_str".  The inputs should
 // be in the format expected by s2textformat::MakeIndexOrDie().
-void TestMeridianSplitting(const char* input_str, const char* expected_str) {
+void TestMeridianSplitting(string_view input_str, string_view expected_str) {
   auto input = s2textformat::MakeIndexOrDie(input_str);
   MutableS2ShapeIndex meridian;
   vector<vector<S2Point>> loops{{S2Point(0, 0, -1), S2Point(-1, 0, 0),

@@ -46,6 +46,7 @@
 #include "s2/s2text_format.h"
 
 using absl::StrCat;
+using absl::string_view;
 using s2builderutil::S2CellIdSnapFunction;
 using std::fabs;
 using std::make_unique;
@@ -56,7 +57,7 @@ using std::vector;
 namespace {
 
 // Wraps s2textformat::MakePolylineOrDie in order to test Encode/Decode.
-unique_ptr<S2Polyline> MakePolyline(absl::string_view str,
+unique_ptr<S2Polyline> MakePolyline(string_view str,
                                     S2Debug debug_override = S2Debug::ALLOW) {
   unique_ptr<S2Polyline> polyline =
       s2textformat::MakePolylineOrDie(str, debug_override);
@@ -379,8 +380,8 @@ static string JoinInts(const vector<int>& ints) {
   return result;
 }
 
-void CheckSubsample(const char* polyline_str, double tolerance_degrees,
-                    const char* expected_str,
+void CheckSubsample(string_view polyline_str, double tolerance_degrees,
+                    string_view expected_str,
                     S2Debug debug_override = S2Debug::ALLOW) {
   SCOPED_TRACE(StrCat("\"", polyline_str, "\", tolerance ",
                       tolerance_degrees));
@@ -414,7 +415,7 @@ TEST(S2Polyline, SubsampleVerticesTrivialInputs) {
 }
 
 TEST(S2Polyline, SubsampleVerticesSimpleExample) {
-  const char* poly_str("0:0, 0:1, -1:2, 0:3, 0:4, 1:4, 2:4.5, 3:4, 3.5:4, 4:4");
+  string_view poly_str("0:0, 0:1, -1:2, 0:3, 0:4, 1:4, 2:4.5, 3:4, 3.5:4, 4:4");
   CheckSubsample(poly_str, 3.0, "0,9");
   CheckSubsample(poly_str, 2.0, "0,6,9");
   CheckSubsample(poly_str, 0.9, "0,2,6,9");
@@ -467,8 +468,7 @@ TEST(S2Polyline, InitToSimplified) {
   EXPECT_EQ(snapped.GetSnapLevel(), S2CellId::kMaxLevel);
 }
 
-static bool TestEquals(const char* a_str,
-                       const char* b_str,
+static bool TestEquals(string_view a_str, string_view b_str,
                        S1Angle max_error) {
   unique_ptr<S2Polyline> a(MakePolyline(a_str));
   unique_ptr<S2Polyline> b(MakePolyline(b_str));
@@ -603,7 +603,7 @@ TEST(S2PolylineOwningShape, Ownership) {
   S2Polyline::OwningShape shape(std::move(polyline));
 }
 
-void TestNearlyCovers(absl::string_view a_str, absl::string_view b_str,
+void TestNearlyCovers(string_view a_str, string_view b_str,
                       double max_error_degrees, bool expect_b_covers_a,
                       bool expect_a_covers_b,
                       S2Debug debug_override = S2Debug::ALLOW) {

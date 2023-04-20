@@ -135,8 +135,7 @@ class S2VertexIdLaxLoopShape : public S2Shape {
 
   // Initializes the shape from the given vertex array and indices.
   // "vertex_ids" is a vector of indices into "vertex_array".
-  void Init(absl::Span<const int32> vertex_ids,
-            const S2Point* vertex_array);
+  void Init(absl::Span<const int32> vertex_ids, const S2Point* vertex_array);
 
   // Returns the number of vertices in the loop.
   int num_vertices() const { return num_vertices_; }

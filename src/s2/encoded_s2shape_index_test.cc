@@ -247,7 +247,7 @@ class IndexedLaxPolylineLayer : public S2Builder::Layer {
 
  private:
   MutableS2ShapeIndex* index_;
-  std::unique_ptr<S2Polyline> polyline_;
+  unique_ptr<S2Polyline> polyline_;
   S2PolylineLayer layer_;
 };
 
@@ -260,7 +260,7 @@ TEST(EncodedS2ShapeIndex, SnappedFractalPolylines) {
     fractal.SetLevelForApproxMaxEdges(3 * 256);
     auto frame = S2::GetFrame(S2LatLng::FromDegrees(10, i).ToPoint());
     auto loop = fractal.MakeLoop(frame, S1Angle::Degrees(0.1));
-    std::vector<S2Point> vertices;
+    vector<S2Point> vertices;
     S2Testing::AppendLoopVertices(*loop, &vertices);
     S2Polyline polyline(vertices);
     builder.AddPolyline(polyline);

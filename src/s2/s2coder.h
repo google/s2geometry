@@ -26,13 +26,16 @@
 
 // A general purpose encoding/decoding interface for S2 data types; This
 // interface abstracts away differences in how classes marshal themselves to
-// provide a simpler, more consistent API.
+// provide a simpler, more consistent API. Each value is serialized into a
+// compact internally-restrained format, such that users of the coder do not
+// need to independently include the length of variable-length values.
 //
 // Concrete types used with this API are required to be move-constructible and
 // default-constructible.
 //
 // Note that, in general, encoded forms don't store type information, leaving
-// correct tracking of types to the end user.
+// correct tracking of types to the end user, although polymorphism is an
+// internal feature of some S2Coders.
 
 namespace s2coding {
 
@@ -46,7 +49,13 @@ template <class T>
 class S2Coder {
  public:
   virtual ~S2Coder() = default;
+
+  // Encodes the value of T into the given encoder, including its own length
+  // information if not implicit from the type.
   virtual void Encode(Encoder&, const T&) const = 0;
+
+  // Decodes the next value of T from the decoder and leaves it positioned at
+  // the first byte after the encoded representation of T.
   virtual bool Decode(Decoder&, T&, S2Error&) const = 0;
 
   absl::Status Decode(Decoder& decoder, T& v) const {

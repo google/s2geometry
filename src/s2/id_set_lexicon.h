@@ -117,6 +117,8 @@ class IdSetLexicon {
   // This class represents a set of integers stored in the IdSetLexicon.
   class IdSet {
    public:
+    using value_type = const int32;
+
     Iterator begin() const;
     Iterator end() const;
     size_t size() const;

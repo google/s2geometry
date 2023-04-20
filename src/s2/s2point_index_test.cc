@@ -17,7 +17,6 @@
 
 #include "s2/s2point_index.h"
 
-#include <set>
 #include <string>
 
 #include <gtest/gtest.h>

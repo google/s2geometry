@@ -24,6 +24,8 @@
 #include "s2/base/integral_types.h"
 #include "s2/sequence_lexicon.h"
 
+using std::vector;
+
 IdSetLexicon::IdSetLexicon() = default;
 
 IdSetLexicon::~IdSetLexicon() = default;
@@ -51,7 +53,7 @@ void IdSetLexicon::Clear() {
   id_sets_.Clear();
 }
 
-int32 IdSetLexicon::AddInternal(std::vector<int32>* ids) {
+int32 IdSetLexicon::AddInternal(vector<int32>* ids) {
   if (ids->empty()) {
     // Empty sets have a special id chosen not to conflict with other ids.
     return kEmptySetId;

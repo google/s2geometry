@@ -617,7 +617,7 @@ class S2Builder::Graph {
       S2Error* error, S2MemoryTracker::Client* tracker = nullptr);
 
   // Given a set of vertices and edges, removes all vertices that do not have
-  // any edges and returned the new, minimal set of vertices.  Also updates
+  // any edges and returns the new, minimal set of vertices.  Also updates
   // each edge in "edges" to correspond to the new vertex numbering.  (Note
   // that this method does *not* merge duplicate vertices, it simply removes
   // vertices of degree zero.)

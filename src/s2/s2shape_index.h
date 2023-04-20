@@ -77,6 +77,8 @@ class S2PaddedCell;
 // original shape.
 class S2ClippedShape {
  public:
+  S2ClippedShape() : num_edges_(0) {}
+
   // The shape id of the clipped shape.
   int shape_id() const;
 
@@ -118,11 +120,14 @@ class S2ClippedShape {
   uint32 contains_center_ : 1;  // shape contains the cell center
   uint32 num_edges_ : 31;
 
+  // The maximum number of edges that we can store inline in the union.
+  static constexpr int kMaxInlineEdges = 2;
+
   // If there are more than two edges, this field holds a pointer.
   // Otherwise it holds an array of edge ids.
   union {
     int32* edges_;  // Owned by the containing S2ShapeIndexCell.
-    std::array<int32, 2> inline_edges_;
+    std::array<int32, kMaxInlineEdges> inline_edges_;
   };
 };
 
@@ -596,7 +601,7 @@ inline void S2ClippedShape::Destruct() {
 }
 
 inline bool S2ClippedShape::is_inline() const {
-  return num_edges_ <= inline_edges_.size();
+  return num_edges_ <= kMaxInlineEdges;
 }
 
 // Set "contains_center_" to indicate whether this clipped shape contains the
@@ -678,9 +683,16 @@ inline const S2ShapeIndexCell& S2ShapeIndex::IteratorBase::cell() const {
   // Like other const methods, this method is thread-safe provided that it
   // does not overlap with calls to non-const methods.
   S2_DCHECK(!done());
-  auto cell = raw_cell();
+  const S2ShapeIndexCell* cell = raw_cell();
   if (cell == nullptr) {
     cell = GetCell();
+    if (cell == nullptr) {
+      static const S2ShapeIndexCell* empty_cell = new S2ShapeIndexCell();
+
+      // TODO(b/264878715): Replace with proper error handling.
+      S2_LOG(WARNING) << "Couldn't retrieve cell, possible data corruption?";
+      cell = empty_cell;
+    }
     set_cell(cell);
   }
   return *cell;

@@ -21,6 +21,8 @@
 
 #include "s2/s2cap.h"
 
-void S2Region::GetCellUnionBound(std::vector<S2CellId> *cell_ids) const {
+using std::vector;
+
+void S2Region::GetCellUnionBound(vector<S2CellId> *cell_ids) const {
   return GetCapBound().GetCellUnionBound(cell_ids);
 }

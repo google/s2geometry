@@ -29,6 +29,7 @@
 
 #include "s2/base/integral_types.h"
 #include "absl/base/macros.h"
+#include "absl/container/flat_hash_set.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
@@ -45,7 +46,6 @@
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/util/gtl/compact_array.h"
-#include "s2/util/gtl/dense_hash_set.h"
 
 class S2Loop;
 class S2Polygon;
@@ -833,18 +833,16 @@ class S2Builder {
   void InsertSiteByDistance(SiteId new_site_id, const S2Point& x,
                             gtl::compact_array<SiteId>* sites);
   void AddExtraSites(const MutableS2ShapeIndex& input_edge_index);
-  void MaybeAddExtraSites(InputEdgeId edge_id,
-                          const std::vector<SiteId>& chain,
+  void MaybeAddExtraSites(InputEdgeId edge_id, const std::vector<SiteId>& chain,
                           const MutableS2ShapeIndex& input_edge_index,
-                          gtl::dense_hash_set<InputEdgeId>* edges_to_resnap);
+                          absl::flat_hash_set<InputEdgeId>* edges_to_resnap);
   void AddExtraSite(const S2Point& new_site,
                     const MutableS2ShapeIndex& input_edge_index,
-                    gtl::dense_hash_set<InputEdgeId>* edges_to_resnap);
+                    absl::flat_hash_set<InputEdgeId>* edges_to_resnap);
   S2Point GetSeparationSite(const S2Point& site_to_avoid,
                             const S2Point& v0, const S2Point& v1,
                             InputEdgeId input_edge_id) const;
-  S2Point GetCoverageEndpoint(const S2Point& p, const S2Point& x,
-                              const S2Point& y, const S2Point& n) const;
+  S2Point GetCoverageEndpoint(const S2Point& p, const S2Point& n) const;
   void SnapEdge(InputEdgeId e, std::vector<SiteId>* chain) const;
 
   void BuildLayers();

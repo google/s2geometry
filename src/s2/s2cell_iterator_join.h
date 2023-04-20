@@ -112,8 +112,10 @@ class S2CellIteratorJoin {
         tolerance_(tolerance) {}
 
   // Executes the join.  Explicitly supports type inference for the visitor.
+  //
+  // Returns false if the visitor ever does, true otherwise.
   template <typename Visitor>
-  void Join(Visitor visitor) {
+  bool Join(Visitor visitor) {
     // We want to take the visitor as a template parameter for inlining, but
     // also be type safe, so check that we can call it the way we want and print
     // a reasonable error message if we can't.
@@ -124,9 +126,9 @@ class S2CellIteratorJoin {
         "references to the iterators");
 
     if (tolerance_ == S1ChordAngle::Zero()) {
-      ExactJoin(visitor);
+      return ExactJoin(visitor);
     } else {
-      TolerantJoin(visitor);
+      return TolerantJoin(visitor);
     }
   }
 
@@ -140,7 +142,7 @@ class S2CellIteratorJoin {
 
   // Performs an exact inner join (when the tolerance is zero).
   template <typename Visitor>
-  void ExactJoin(Visitor& visitor);
+  bool ExactJoin(Visitor& visitor);
 
   // ---- Tolerant join related code.
 
@@ -149,7 +151,7 @@ class S2CellIteratorJoin {
 
   // Does a tolerant join (when the tolerance is non-zero).
   template <typename Visitor>
-  void TolerantJoin(Visitor& visitor);
+  bool TolerantJoin(Visitor& visitor);
 
   // Returns a minimal set of cells that cover the range of the iterator to seed
   // the tolerant join set.  Returns empty list if the iterator has no cells.
@@ -159,7 +161,7 @@ class S2CellIteratorJoin {
   // Forms all possible pairs of cells from two lists.  Visits any pairs that
   // are closer to each other than the tolerance.
   template <typename Visitor>
-  void ProcessNearbyCellPairs(absl::InlinedVector<S2CellId, 4> cells_a,
+  bool ProcessNearbyCellPairs(absl::InlinedVector<S2CellId, 4> cells_a,
                               absl::InlinedVector<S2CellId, 4> cells_b,
                               Visitor& visitor);
 
@@ -174,7 +176,7 @@ class S2CellIteratorJoin {
   // Since there are only thirty levels to the cell hierarchy, this recursion is
   // safe as we'll never go more than 30 stack frames deep.
   template <typename Visitor>
-  void ProcessCellPair(const S2Cell& cell_a, const S2Cell& cell_b,
+  bool ProcessCellPair(const S2Cell& cell_a, const S2Cell& cell_b,
                        Visitor& visitor);
 
   // Find cells from a given iterator that are covered by a given cell.
@@ -220,7 +222,7 @@ MakeS2CellIteratorJoin(
 
 template <typename A, typename B>
 template <typename Visitor>
-void S2CellIteratorJoin<A, B>::ExactJoin(Visitor& visitor) {
+bool S2CellIteratorJoin<A, B>::ExactJoin(Visitor& visitor) {
   iter_a_.Begin();
   iter_b_.Begin();
 
@@ -242,7 +244,7 @@ void S2CellIteratorJoin<A, B>::ExactJoin(Visitor& visitor) {
         // Iterators overlap.
         // If visitor rejects pair, then we're done.
         if (!visitor(iter_a_.iterator(), iter_b_.iterator())) {
-          break;
+          return false;
         }
 
         // Move the smaller of the cells forward.
@@ -262,6 +264,7 @@ void S2CellIteratorJoin<A, B>::ExactJoin(Visitor& visitor) {
       }
     }
   }
+  return true;
 }
 
 template <typename A, typename B>
@@ -305,27 +308,27 @@ absl::InlinedVector<S2CellId, 4> S2CellIteratorJoin<A, B>::GetIteratorCovering(
 
 template <typename A, typename B>
 template <typename Visitor>
-void S2CellIteratorJoin<A, B>::TolerantJoin(Visitor& visitor) {
+bool S2CellIteratorJoin<A, B>::TolerantJoin(Visitor& visitor) {
   absl::InlinedVector<S2CellId, 4> cells_a, cells_b;
 
   // Seed cells with a covering for iterator A, quit if empty.
   cells_a = GetIteratorCovering(iter_a_);
   if (cells_a.empty()) {
-    return;
+    return true;
   }
 
   // Seed cells with a covering for iterator B, quit if empty.
   cells_b = GetIteratorCovering(iter_b_);
   if (cells_b.empty()) {
-    return;
+    return true;
   }
 
-  ProcessNearbyCellPairs(cells_a, cells_b, visitor);
+  return ProcessNearbyCellPairs(cells_a, cells_b, visitor);
 }
 
 template <typename A, typename B>
 template <typename Visitor>
-void S2CellIteratorJoin<A, B>::ProcessNearbyCellPairs(
+bool S2CellIteratorJoin<A, B>::ProcessNearbyCellPairs(
     absl::InlinedVector<S2CellId, 4> cells_a,
     absl::InlinedVector<S2CellId, 4> cells_b, Visitor& visitor) {
   for (const auto& id_a : cells_a) {
@@ -335,27 +338,30 @@ void S2CellIteratorJoin<A, B>::ProcessNearbyCellPairs(
       const S2Cell cell_b(id_b);
 
       if (cell_a.GetDistance(cell_b) <= tolerance_) {
-        ProcessCellPair(cell_a, cell_b, visitor);
+        if (!ProcessCellPair(cell_a, cell_b, visitor)) {
+          return false;
+        }
       }
     }
   }
+  return true;
 }
 
 template <typename A, typename B>
 template <typename Visitor>
-void S2CellIteratorJoin<A, B>::ProcessCellPair(const S2Cell& cell_a,
+bool S2CellIteratorJoin<A, B>::ProcessCellPair(const S2Cell& cell_a,
                                                const S2Cell& cell_b,
                                                Visitor& visitor) {
   // Find matches for the A cell.
   int num_covered_a = EstimateCoveredCells(iter_a_, cell_a.id());
   if (num_covered_a == 0) {
-    return;
+    return true;
   }
 
   // Find matches for the B cell.
   int num_covered_b = EstimateCoveredCells(iter_b_, cell_b.id());
   if (num_covered_b == 0) {
-    return;
+    return true;
   }
 
   // If there's not too many matches, we can just process them directly
@@ -374,12 +380,12 @@ void S2CellIteratorJoin<A, B>::ProcessCellPair(const S2Cell& cell_a,
       for (int j = 0; j < num_covered_b; ++j, iter_b_.Next()) {
         if (S2Cell(iter_a_.id()).GetDistance(matched_cells_[j]) <= tolerance_) {
           if (!visitor(iter_a_.iterator(), iter_b_.iterator())) {
-            return;
+            return false;
           }
         }
       }
     }
-    return;
+    return true;
   }
 
   // Too many matches, recurse on A or B, whichever's larger.
@@ -396,7 +402,7 @@ void S2CellIteratorJoin<A, B>::ProcessCellPair(const S2Cell& cell_a,
       cells_b.push_back(cell_b.id().child(i));
     }
   }
-  ProcessNearbyCellPairs(cells_a, cells_b, visitor);
+  return ProcessNearbyCellPairs(cells_a, cells_b, visitor);
 }
 
 template <typename A, typename B>

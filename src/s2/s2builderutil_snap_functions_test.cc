@@ -31,8 +31,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <map>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -40,6 +38,10 @@
 #include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
+#include "absl/strings/str_format.h"
+#include "absl/strings/string_view.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
@@ -54,17 +56,18 @@
 #include "s2/s2text_format.h"
 #include "s2/util/math/mathutil.h"
 
+using absl::flat_hash_map;
+using absl::flat_hash_set;
+using absl::string_view;
+using s2builderutil::IntLatLngSnapFunction;
+using s2builderutil::S2CellIdSnapFunction;
 using std::abs;
 using std::fabs;
 using std::make_pair;
-using std::map;
-using std::min;
 using std::max;
+using std::min;
 using std::pair;
-using std::set;
 using std::vector;
-using s2builderutil::S2CellIdSnapFunction;
-using s2builderutil::IntLatLngSnapFunction;
 
 TEST(S2CellIdSnapFunction, LevelToFromSnapRadius) {
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
@@ -131,6 +134,10 @@ TEST(IntLatLngSnapFunction, SnapPoint) {
   }
 }
 
+// S2CellIdSnapFunction MinEdgeVertexSeparationForLevel has a difference of
+// 3.88e-8 between google::DEBUG_MODE and non-google::DEBUG_MODE results, but otherwise results
+// are the same within 1e-15.
+static double kRatioTolerance = 1e-7;
 static S2CellId kSearchRootId = S2CellId::FromFace(0);
 static S2CellId kSearchFocusId = S2CellId::FromFace(0).child(3);
 
@@ -160,8 +167,8 @@ static void UpdateS2CellIdMinVertexSeparation(
   }
 }
 
-static double GetS2CellIdMinVertexSeparation(int level,
-                                             set<S2CellId>* best_cells) {
+static double GetS2CellIdMinVertexSeparation(
+    int level, flat_hash_set<S2CellId>* best_cells) {
   // The worst-case separation ratios always occur when the snap_radius is not
   // much larger than the minimum, since this allows the site spacing to be
   // reduced by as large a fraction as possible.
@@ -223,17 +230,20 @@ TEST(S2CellIdSnapFunction, MinVertexSeparationSnapRadiusRatio) {
   // a fairly large number of candidates ("num_to_keep"), we are essentially
   // keeping all the neighbors of the optimal cell as well.
   double best_score = 1e10;
-  set<S2CellId> best_cells;
+  flat_hash_set<S2CellId> best_cells;
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
     double score = GetS2CellIdMinVertexSeparation(level, &best_cells);
     best_score = min(best_score, score);
   }
-  printf("min_vertex_sep / snap_radius ratio: %.15f\n", best_score);
+  printf("S2CellIdSnapFunction min_vertex_sep / snap_radius ratio: %.15f\n",
+         best_score);
+  // Detect unexpected changes.
+  EXPECT_NEAR(0.548490277027825, best_score, kRatioTolerance);
 }
 
 static S1Angle GetCircumRadius(const S2Point& a, const S2Point& b,
                                const S2Point& c) {
-  // We return this value is the circumradius is very large.
+  // We return this value if the circumradius is very large.
   S1Angle kTooBig = S1Angle::Radians(M_PI);
   double turn_angle = S2::TurnAngle(a, b, c);
   if (fabs(remainder(turn_angle, M_PI)) < 1e-2) return kTooBig;
@@ -284,14 +294,14 @@ typedef double S2CellIdMinEdgeSeparationFunction(int level, S1Angle edge_sep,
 // nearby vertices that are designed to minimize the edge-vertex separation
 // when an edge is snapped.
 static double GetS2CellIdMinEdgeSeparation(
-    const char* label, S2CellIdMinEdgeSeparationFunction objective,
-    int level, set<S2CellId>* best_cells) {
+    string_view label, S2CellIdMinEdgeSeparationFunction objective, int level,
+    flat_hash_set<S2CellId>* best_cells) {
   // To find minimum edge separations, we choose a cell ("id0") and two nearby
   // cells ("id1" and "id2"), where "nearby" is defined by GetNeighbors().
   // Let "site0", "site1", and "site2" be the centers of these cells.  The
   // idea is to consider an input edge E that intersects the Voronoi regions
   // of "site1" and "site2" (and therefore snaps to an edge E' between these
-  // sites) but does not not intersect the Voronoi region of "site0" (and
+  // sites) but does not intersect the Voronoi region of "site0" (and
   // therefore can't be snapped to site0).  The goal is to search for snapped
   // edges E' that approach site0 as closely as possible.
   //
@@ -313,8 +323,8 @@ static double GetS2CellIdMinEdgeSeparation(
   // next level.  In order to get better coverage, we keep track of the best
   // score and configuration (i.e. the two neighboring cells "id1" and "id2")
   // for each initial cell "id0".
-  map<S2CellId, double> best_scores;
-  map<S2CellId, pair<S2CellId, S2CellId>> best_configs;
+  flat_hash_map<S2CellId, double> best_scores;
+  flat_hash_map<S2CellId, pair<S2CellId, S2CellId>> best_configs;
   for (S2CellId parent : *best_cells) {
     for (S2CellId id0 = parent.child_begin(level);
          id0 != parent.child_end(level); id0 = id0.next()) {
@@ -354,7 +364,7 @@ static double GetS2CellIdMinEdgeSeparation(
   }
   // Now sort the entries, print out the "num_to_print" best ones, and
   // generate a set of candidates for the next round by generating all the
-  // 8-way neighbors of the best candidates, and keeping up to"num_to_keep" of
+  // 8-way neighbors of the best candidates, and keeping up to "num_to_keep" of
   // them.  The results vary slightly according to how many candidates we
   // keep, but the variations are much smaller than the conservative
   // assumptions made by the S2CellIdSnapFunction implementation.
@@ -372,9 +382,10 @@ static double GetS2CellIdMinEdgeSeparation(
     if (--num_to_print >= 0) {
       R2Point uv = id.GetCenterUV();
       const pair<S2CellId, S2CellId>& nbrs = best_configs.find(id)->second;
-      printf("  %s = %.15f u=%7.4f v=%7.4f %s %s %s\n",
-             label, entry.first, uv[0], uv[1], id.ToToken().c_str(),
-             nbrs.first.ToToken().c_str(), nbrs.second.ToToken().c_str());
+      puts(absl::StrFormat("  %s = %.15f u=%7.4f v=%7.4f %s %s %s\n", label,
+                           entry.first, uv[0], uv[1], id.ToToken(),
+                           nbrs.first.ToToken().c_str(), nbrs.second.ToToken())
+               .c_str());
     }
     vector<S2CellId> nbrs(1, id);
     id.AppendAllNeighbors(id.level(), &nbrs);
@@ -393,9 +404,9 @@ static double GetS2CellIdMinEdgeSeparation(
 }
 
 static double GetS2CellIdMinEdgeSeparation(
-    const char* label, S2CellIdMinEdgeSeparationFunction objective) {
+    string_view label, S2CellIdMinEdgeSeparationFunction objective) {
   double best_score = 1e10;
-  set<S2CellId> best_cells;
+  flat_hash_set<S2CellId> best_cells;
   best_cells.insert(kSearchRootId);
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
     double score = GetS2CellIdMinEdgeSeparation(label, objective, level,
@@ -408,39 +419,53 @@ static double GetS2CellIdMinEdgeSeparation(
 TEST(S2CellIdSnapFunction, MinEdgeVertexSeparationForLevel) {
   // Computes the minimum edge separation (as a fraction of kMinDiag) for any
   // snap radius at each level.
-  double score = GetS2CellIdMinEdgeSeparation("min_sep_for_level",
-                                              [](int level, S1Angle edge_sep,
-                                                 S1Angle min_snap_radius,
-                                                 S1Angle max_snap_radius) {
-    return edge_sep.radians() / S2::kMinDiag.GetValue(level);
-  });
-  printf("min_edge_vertex_sep / kMinDiag ratio: %.15f\n", score);
+  double score = GetS2CellIdMinEdgeSeparation(
+      "min_sep_for_level",
+      [](int level, S1Angle edge_sep, S1Angle min_snap_radius,
+         S1Angle max_snap_radius) {
+        return edge_sep.radians() / S2::kMinDiag.GetValue(level);
+      });
+  printf("S2CellIdSnapFunction min_edge_vertex_sep / kMinDiag ratio: %.15f\n",
+         score);
+  // Detect unexpected changes.
+  EXPECT_NEAR(0.397359568667803, score, kRatioTolerance);
 }
+
 TEST(S2CellIdSnapFunction, MinEdgeVertexSeparationAtMinSnapRadius) {
   // Computes the minimum edge separation (as a fraction of kMinDiag) for the
   // special case where the minimum snap radius is being used.
-  double score = GetS2CellIdMinEdgeSeparation("min_sep_at_min_radius",
-                                              [](int level, S1Angle edge_sep,
-                                                 S1Angle min_snap_radius,
-                                                 S1Angle max_snap_radius) {
-    double min_radius_at_level = S2::kMaxDiag.GetValue(level) / 2;
-    return (min_snap_radius.radians() <= (1 + 1e-10) * min_radius_at_level) ?
-        (edge_sep.radians() / S2::kMinDiag.GetValue(level)) : 100.0;
-  });
-  printf("min_edge_vertex_sep / kMinDiag at MinSnapRadiusForLevel: %.15f\n",
-         score);
+  double score = GetS2CellIdMinEdgeSeparation(
+      "min_sep_at_min_radius",
+      [](int level, S1Angle edge_sep, S1Angle min_snap_radius,
+         S1Angle max_snap_radius) {
+        double min_radius_at_level = S2::kMaxDiag.GetValue(level) / 2;
+        return (min_snap_radius.radians() <= (1 + 1e-10) * min_radius_at_level)
+                   ? (edge_sep.radians() / S2::kMinDiag.GetValue(level))
+                   : 100.0;
+      });
+  printf(
+      "S2CellIdSnapFunction "
+      "min_edge_vertex_sep / kMinDiag at MinSnapRadiusForLevel: %.15f\n",
+      score);
+  // Detect unexpected changes.
+  EXPECT_NEAR(0.565298006776224, score, kRatioTolerance);
 }
 
 TEST(S2CellIdSnapFunction, MinEdgeVertexSeparationSnapRadiusRatio) {
   // Computes the minimum edge separation expressed as a fraction of the
   // maximum snap radius that could yield that edge separation.
-  double score = GetS2CellIdMinEdgeSeparation("min_sep_snap_radius_ratio",
-                                              [](int level, S1Angle edge_sep,
-                                                 S1Angle min_snap_radius,
-                                                 S1Angle max_snap_radius) {
-    return edge_sep.radians() / max_snap_radius.radians();
-  });
-  printf("min_edge_vertex_sep / snap_radius ratio: %.15f\n", score);
+  double score = GetS2CellIdMinEdgeSeparation(
+      "min_sep_snap_radius_ratio",
+      [](int level, S1Angle edge_sep, S1Angle min_snap_radius,
+         S1Angle max_snap_radius) {
+        return edge_sep.radians() / max_snap_radius.radians();
+      });
+  printf(
+      "S2CellIdSnapFunction "
+      "min_edge_vertex_sep / snap_radius ratio: %.15f\n",
+      score);
+  // Detect unexpected changes.
+  EXPECT_NEAR(0.219666695288891, score, kRatioTolerance);
 }
 
 // A scaled S2LatLng with integer coordinates, similar to E7 coordinates,
@@ -475,16 +500,16 @@ static S2Point GetVertex(const IntLatLng& ll, int64 scale, int i) {
   return ToPoint(2 * ll + IntLatLng(dlat, dlng), 2 * scale);
 }
 
-static S1Angle GetMaxVertexDistance(const S2Point& p,
-                                    const IntLatLng& ll, int64 scale) {
+static S1Angle GetMaxVertexDistance(const S2Point& p, const IntLatLng& ll,
+                                    int64 scale) {
   return max(max(S1Angle(p, GetVertex(ll, scale, 0)),
                  S1Angle(p, GetVertex(ll, scale, 1))),
              max(S1Angle(p, GetVertex(ll, scale, 2)),
                  S1Angle(p, GetVertex(ll, scale, 3))));
 }
 
-static double GetLatLngMinVertexSeparation(int64 old_scale, int64 scale,
-                                           set<IntLatLng>* best_configs) {
+static double GetLatLngMinVertexSeparation(
+    int64 old_scale, int64 scale, flat_hash_set<IntLatLng>* best_configs) {
   // The worst-case separation ratios always occur when the snap_radius is not
   // much larger than the minimum, since this allows the site spacing to be
   // reduced by as large a fraction as possible.
@@ -536,7 +561,7 @@ static double GetLatLngMinVertexSeparation(int64 old_scale, int64 scale,
 
 TEST(IntLatLngSnapFunction, MinVertexSeparationSnapRadiusRatio) {
   double best_score = 1e10;
-  set<IntLatLng> best_configs;
+  flat_hash_set<IntLatLng> best_configs;
   int64 scale = 18;
   for (int lat0 = 0; lat0 <= 9; ++lat0) {
     best_configs.insert(IntLatLng(lat0, 0));
@@ -546,7 +571,10 @@ TEST(IntLatLngSnapFunction, MinVertexSeparationSnapRadiusRatio) {
                                                 &best_configs);
     best_score = min(best_score, score);
   }
-  printf("min_vertex_sep / snap_radius ratio: %.15f\n", best_score);
+  printf("IntLatLngSnapFunction min_vertex_sep / snap_radius ratio: %.15f\n",
+         best_score);
+  // Detect unexpected changes.
+  EXPECT_NEAR(0.471337477576603, best_score, kRatioTolerance);
 }
 
 // A triple of scaled S2LatLng coordinates.  The coordinates are multiplied by
@@ -555,10 +583,9 @@ struct LatLngConfig {
   int64 scale;
   IntLatLng ll0, ll1, ll2;
 
-  LatLngConfig(int64 _scale, const IntLatLng& _ll0,
-               const IntLatLng& _ll1, const IntLatLng& _ll2) :
-      scale(_scale), ll0(_ll0), ll1(_ll1), ll2(_ll2) {
-  }
+  LatLngConfig(int64 _scale, const IntLatLng& _ll0, const IntLatLng& _ll1,
+               const IntLatLng& _ll2)
+      : scale(_scale), ll0(_ll0), ll1(_ll1), ll2(_ll2) {}
   bool operator<(const LatLngConfig& other) const {
     S2_DCHECK_EQ(scale, other.scale);
     return (make_pair(ll0, make_pair(ll1, ll2)) <
@@ -573,8 +600,8 @@ typedef double LatLngMinEdgeSeparationFunction(int64 scale, S1Angle edge_sep,
                                                S1Angle max_snap_radius);
 
 static double GetLatLngMinEdgeSeparation(
-    const char* label, LatLngMinEdgeSeparationFunction objective,
-    int64 scale, vector<LatLngConfig>* best_configs) {
+    string_view label, LatLngMinEdgeSeparationFunction objective, int64 scale,
+    vector<LatLngConfig>* best_configs) {
   S1Angle min_snap_radius_at_scale = S1Angle::Radians(M_SQRT1_2 * M_PI / scale);
   vector<pair<double, LatLngConfig>> scores;
   for (LatLngConfig parent : *best_configs) {
@@ -646,11 +673,11 @@ static double GetLatLngMinEdgeSeparation(
     const LatLngConfig& config = entry.second;
     int64 scale = config.scale;
     if (--num_to_print >= 0) {
-      printf("  %s = %.15f %s %s %s\n",
-             label, entry.first,
-             s2textformat::ToString(ToPoint(config.ll0, scale)).c_str(),
-             s2textformat::ToString(ToPoint(config.ll1, scale)).c_str(),
-             s2textformat::ToString(ToPoint(config.ll2, scale)).c_str());
+      puts(absl::StrFormat("  %s = %.15f %s %s %s\n", label, entry.first,
+                           s2textformat::ToString(ToPoint(config.ll0, scale)),
+                           s2textformat::ToString(ToPoint(config.ll1, scale)),
+                           s2textformat::ToString(ToPoint(config.ll2, scale)))
+               .c_str());
     }
     // Optional: filter the candidates to concentrate on a specific region
     // (e.g., the north pole).
@@ -661,7 +688,7 @@ static double GetLatLngMinEdgeSeparation(
 }
 
 static double GetLatLngMinEdgeSeparation(
-    const char* label, LatLngMinEdgeSeparationFunction objective) {
+    string_view label, LatLngMinEdgeSeparationFunction objective) {
   double best_score = 1e10;
   vector<LatLngConfig> best_configs;
   int64 scale = 6;  // Initially points are 30 degrees apart.
@@ -700,22 +727,30 @@ static double GetLatLngMinEdgeSeparation(
 TEST(IntLatLngSnapFunction, MinEdgeVertexSeparationForLevel) {
   // Computes the minimum edge separation (as a fraction of kMinDiag) for any
   // snap radius at each level.
-  double score = GetLatLngMinEdgeSeparation("min_sep_for_level",
-                                            [](int64 scale, S1Angle edge_sep,
-                                               S1Angle max_snap_radius) {
-    double e_unit = M_PI / scale;
-    return edge_sep.radians() / e_unit;
-  });
-  printf("min_edge_vertex_sep / e_unit ratio: %.15f\n", score);
+  double score = GetLatLngMinEdgeSeparation(
+      "min_sep_for_level",
+      [](int64 scale, S1Angle edge_sep, S1Angle max_snap_radius) {
+        double e_unit = M_PI / scale;
+        return edge_sep.radians() / e_unit;
+      });
+  printf("IntLatLngSnapFunction min_edge_vertex_sep / e_unit ratio: %.15f\n",
+         score);
+  // Detect unexpected changes.
+  EXPECT_NEAR(0.277258917722462, score, kRatioTolerance);
 }
 
 TEST(IntLatLngSnapFunction, MinEdgeVertexSeparationSnapRadiusRatio) {
   // Computes the minimum edge separation expressed as a fraction of the
   // maximum snap radius that could yield that edge separation.
-  double score = GetLatLngMinEdgeSeparation("min_sep_snap_radius_ratio",
-                                              [](int64 scale, S1Angle edge_sep,
-                                                 S1Angle max_snap_radius) {
-    return edge_sep.radians() / max_snap_radius.radians();
-  });
-  printf("min_edge_vertex_sep / snap_radius ratio: %.15f\n", score);
+  double score = GetLatLngMinEdgeSeparation(
+      "min_sep_snap_radius_ratio",
+      [](int64 scale, S1Angle edge_sep, S1Angle max_snap_radius) {
+        return edge_sep.radians() / max_snap_radius.radians();
+      });
+  printf(
+      "IntLatLngSnapFunction "
+      "min_edge_vertex_sep / snap_radius ratio: %.15f\n",
+      score);
+  // Detect unexpected changes.
+  EXPECT_NEAR(0.222222126756717, score, kRatioTolerance);
 }

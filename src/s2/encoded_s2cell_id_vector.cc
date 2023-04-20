@@ -73,7 +73,7 @@ void EncodeS2CellIdVector(Span<const S2CellId> v, Encoder* encoder) {
     v_max = max(v_max, cellid.id());
   }
   // These variables represent the values that will used during encoding.
-  uint64 e_base = 0;        // Base value.
+  uint64 e_base = 0;      // Base value.
   int e_base_len = 0;       // Number of bytes to represent "base".
   int e_shift = 0;          // Delta shift.
   int e_max_delta_msb = 0;  // Bit position of the MSB of the largest delta.

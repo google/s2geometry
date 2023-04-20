@@ -262,18 +262,24 @@ std::string ToString(const S2CellUnion& cell_union);
 std::string ToString(const S2Loop& loop);
 std::string ToString(const S2Polyline& polyline);
 std::string ToString(const S2Polygon& polygon,
-                     const char* loop_separator = ";\n");
+                     absl::string_view loop_separator = ";\n");
 std::string ToString(absl::Span<const S2Point> points);
 std::string ToString(absl::Span<const S2LatLng> latlngs);
 std::string ToString(const S2LaxPolylineShape& polyline);
 std::string ToString(const S2LaxPolygonShape& polygon,
-                     const char* loop_separator = ";\n");
+                     absl::string_view loop_separator = ";\n");
+
+// Convert any S2Shape to the string format above.
+std::string ToString(const S2Shape& shape);
 
 // Convert the contents of an S2ShapeIndex to the format above.  The index may
 // contain S2Shapes of any type.  Shapes are reordered if necessary so that
 // all point geometry (shapes of dimension 0) are first, followed by all
 // polyline geometry, followed by all polygon geometry.
-std::string ToString(const S2ShapeIndex& index);
+// If `roundtrip_precision` is true, the coordinates are formatted using
+// enough precision to exactly preserve the floating point values.
+std::string ToString(const S2ShapeIndex& index,
+                     bool roundtrip_precision = false);
 
 }  // namespace s2textformat
 

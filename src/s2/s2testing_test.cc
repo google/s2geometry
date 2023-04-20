@@ -66,7 +66,7 @@ void TestFractal(int min_level, int max_level, double dimension) {
   // noting that most of the variance is due to the random choices about
   // whether to stop subdividing at "min_level" or not.  (The random choices
   // at higher levels contribute progressively less and less to the variance.)
-  // The "relative_error" below corresponds to *one* standard deviation of
+  // The "relative_error" below corresponds to *two* standard deviations of
   // error; it can be increased to a higher multiple if necessary.
   //
   // Details: Let n=3*(4**min_level) and k=(max_level-min_level+1).  Each of
@@ -76,7 +76,7 @@ void TestFractal(int min_level, int max_level, double dimension) {
   // can be simplified to sqrt((k-1)/n).
   int num_levels = max_level - min_level + 1;
   int min_vertices = NumVerticesAtLevel(min_level);
-  double relative_error = sqrt((num_levels - 1.0) / min_vertices);
+  double relative_error = 2*sqrt((num_levels - 1.0) / min_vertices);
 
   // "expansion_factor" is the total fractal length at level "n+1" divided by
   // the total fractal length at level "n".

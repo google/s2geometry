@@ -39,6 +39,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using std::make_unique;
 using std::string;
 using std::vector;
@@ -111,7 +112,7 @@ void DegeneracyCheckingLayer::Build(const Graph& g, S2Error* error) {
   EXPECT_EQ(IsFullyDegenerate(g), degeneracies.size() == g.num_edges());
 }
 
-void ExpectDegeneracies(absl::string_view polygon_str,
+void ExpectDegeneracies(string_view polygon_str,
                         const vector<TestDegeneracy>& expected) {
   S2Builder builder{S2Builder::Options()};
   builder.StartLayer(make_unique<DegeneracyCheckingLayer>(expected));

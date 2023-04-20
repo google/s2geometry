@@ -53,7 +53,7 @@ TEST(S2LaxLoopShape, EmptyLoop) {
 TEST(S2LaxLoopShape, Move) {
   // Construct a shape to use as the correct answer and a second identical shape
   // to be moved.
-  const std::vector<S2Point> vertices =
+  const vector<S2Point> vertices =
       s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1, 1:0");
   const S2LaxLoopShape correct(vertices);
   S2LaxLoopShape to_move(vertices);
@@ -145,9 +145,9 @@ TEST(S2VertexIdLaxLoopShape, EmptyLoop) {
 TEST(S2VertexIdLaxLoopShape, Move) {
   // Construct a shape to use as the correct answer and a second identical shape
   // to be moved.
-  const std::vector<S2Point> vertices =
+  const vector<S2Point> vertices =
       s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1, 1:0");
-  const std::vector<int32> vertex_ids = {0, 3, 2, 1};  // Inverted.
+  const vector<int32> vertex_ids = {0, 3, 2, 1};  // Inverted.
   const S2VertexIdLaxLoopShape correct(vertex_ids, &vertices[0]);
   S2VertexIdLaxLoopShape to_move(vertex_ids, &vertices[0]);
 
@@ -173,12 +173,12 @@ TEST(S2VertexIdLaxLoopShape, Move) {
 
 TEST(S2VertexIdLaxLoopShape, MoveFromShapeIndex) {
   // Setup vertices and vertex ids.
-  const std::vector<S2Point> vertices0 =
+  const vector<S2Point> vertices0 =
       s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1, 1:0");
-  const std::vector<int32> vertex_ids0 = {0, 3, 2, 1};
-  const std::vector<S2Point> vertices1 =
+  const vector<int32> vertex_ids0 = {0, 3, 2, 1};
+  const vector<S2Point> vertices1 =
       s2textformat::ParsePointsOrDie("0:0, 0:2, 2:2, 2:0");
-  const std::vector<int32> vertex_ids1 = {0, 3, 2, 1};
+  const vector<int32> vertex_ids1 = {0, 3, 2, 1};
 
   // Construct an index containing shapes to be moved.
   MutableS2ShapeIndex index;
@@ -205,7 +205,7 @@ TEST(S2VertexIdLaxLoopShape, MoveFromShapeIndex) {
 TEST(S2VertexIdLaxLoopShape, InvertedLoop) {
   vector<S2Point> vertex_array =
       s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1, 1:0");
-  vector<int32> vertex_ids { 0, 3, 2, 1 };  // Inverted.
+  vector<int32> vertex_ids{0, 3, 2, 1};  // Inverted.
   S2VertexIdLaxLoopShape shape(vertex_ids, &vertex_array[0]);
   EXPECT_EQ(4, shape.num_edges());
   EXPECT_EQ(4, shape.num_vertices());

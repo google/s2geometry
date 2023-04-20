@@ -35,14 +35,6 @@ using std::fabs;
 using std::max;
 using std::min;
 
-// Error constant definitions.  See the header file for details.
-const double kFaceClipErrorRadians = 3 * DBL_EPSILON;
-const double kFaceClipErrorUVDist = 9 * DBL_EPSILON;
-const double kFaceClipErrorUVCoord = 9 * M_SQRT1_2 * DBL_EPSILON;
-const double kIntersectsRectErrorUVDist = 3 * M_SQRT2 * DBL_EPSILON;
-const double kEdgeClipErrorUVCoord = 2.25 * DBL_EPSILON;
-const double kEdgeClipErrorUVDist = 2.25 * DBL_EPSILON;
-
 // S2PointUVW is used to document that a given S2Point is expressed in the
 // (u,v,w) coordinates of some cube face.
 using S2PointUVW = S2Point;

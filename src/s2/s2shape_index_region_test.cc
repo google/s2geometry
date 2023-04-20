@@ -16,7 +16,6 @@
 #include "s2/s2shape_index_region.h"
 
 #include <algorithm>
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -44,23 +43,22 @@
 #include "s2/s2testing.h"
 #include "s2/s2wrapped_shape.h"
 
+using absl::flat_hash_map;
+using absl::string_view;
 using std::make_unique;
-using std::map;
 using std::string;
 using std::unique_ptr;
 using std::vector;
 
 namespace {
 
-S2CellId MakeCellId(absl::string_view str) {
-  return S2CellId::FromDebugString(str);
-}
+S2CellId MakeCellId(string_view str) { return S2CellId::FromDebugString(str); }
 
 // Pad by at least twice the maximum error for reliable results.
 static const double kPadding = 2 * (S2::kFaceClipErrorUVCoord +
                                     S2::kIntersectsRectErrorUVDist);
 
-std::unique_ptr<S2Shape> NewPaddedCell(S2CellId id, double padding_uv) {
+unique_ptr<S2Shape> NewPaddedCell(S2CellId id, double padding_uv) {
   int ij[2], orientation;
   int face = id.ToFaceIJOrientation(&ij[0], &ij[1], &orientation);
   R2Rect uv = S2CellId::IJLevelToBoundUV(ij, id.level()).Expanded(padding_uv);
@@ -214,7 +212,7 @@ class VisitIntersectingShapesTest {
  private:
   void TestCell(const S2Cell& target) {
     // Indicates whether each shape that intersects "target" also contains it.
-    map<int, bool> shape_contains;
+    flat_hash_map<int, bool> shape_contains;
     EXPECT_TRUE(region_.VisitIntersectingShapes(
         target, [&](S2Shape* shape, bool contains_target) {
             // Verify that each shape is visited at most once.

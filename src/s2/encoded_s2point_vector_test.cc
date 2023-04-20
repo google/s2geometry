@@ -381,7 +381,7 @@ TEST(EncodedS2PointVectorTest, SnappedFractalLoops) {
       fractal.SetLevelForApproxMaxEdges(num_points);
       auto frame = S2Testing::GetRandomFrame();
       auto loop = fractal.MakeLoop(frame, S2Testing::KmToAngle(10));
-      std::vector<S2Point> points;
+      vector<S2Point> points;
       for (int j = 0; j < loop->num_vertices(); ++j) {
         points.push_back(S2CellId(loop->vertex(j)).ToPoint());
       }

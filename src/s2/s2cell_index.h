@@ -131,6 +131,11 @@ class S2CellIndex {
       if (y.cell_id < cell_id) return false;
       return label < y.label;
     }
+
+    template <typename H>
+    friend H AbslHashValue(H h, LabelledCell x) {
+      return H::combine(std::move(h), x.cell_id, x.label);
+    }
   };
 
   // Default constructor.

@@ -79,7 +79,9 @@ class S2PolylineSimplifier {
   // 90 degrees (such edges are not supported).
   bool Extend(const S2Point& dst) const;
 
-  // Requires that the output edge must pass through the given disc.
+  // Requires that the output edge must pass through the given disc. Returns
+  // true if it is possible to intersect the target disc, given previous
+  // constraints.
   bool TargetDisc(const S2Point& point, S1ChordAngle radius);
 
   // Requires that the output edge must avoid the given disc.  "disc_on_left"
@@ -106,6 +108,10 @@ class S2PolylineSimplifier {
   // s2pred::OrderedCCW(A, D, X_i, C) (in other words, if X_i is to the left of
   // the angle wedge ACD).  Note that simply testing s2pred::Sign(C, D, X_i)
   // or s2pred::Sign(A, D, X_i) does not handle all cases correctly.
+  //
+  // Returns true if the disc can be avoided given previous constraints, or if
+  // the discs to avoid have not been processed yet. Returns false if the disc
+  // cannot be avoided.
   bool AvoidDisc(const S2Point& point, S1ChordAngle radius, bool disc_on_left);
 
  private:

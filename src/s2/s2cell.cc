@@ -40,11 +40,12 @@
 #include "s2/s2measures.h"
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
+#include "s2/s2predicates.h"
 
 using S2::internal::kPosToIJ;
 using S2::internal::kPosToOrientation;
-using std::min;
 using std::max;
+using std::min;
 
 // Since S2Cells are copied by value, the following assertion is a reminder
 // not to add fields unnecessarily.  An S2Cell currently consists of 43 data

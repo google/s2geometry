@@ -124,8 +124,9 @@ static bool VisitCrossings(const ShapeEdgeVector& shape_edges,
 static bool VisitCrossings(
     const S2ShapeIndex& index, CrossingType type, bool need_adjacent,
     const EdgePairVisitor& visitor) {
-  // TODO(ericv): Use brute force if the total number of edges is small enough
-  // (using a larger threshold if the S2ShapeIndex is not constructed yet).
+  // TODO(b/262264880): Use brute force if the total number of edges is small
+  // enough (using a larger threshold if the S2ShapeIndex is not constructed
+  // yet).
   ShapeEdgeVector shape_edges;
   for (S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
        !it.done(); it.Next()) {
@@ -152,8 +153,8 @@ bool VisitCrossingEdgePairs(const S2ShapeIndex& index, CrossingType type,
 namespace {
 class IndexCrosser {
  public:
-  // If "swapped" is true, the loops A and B have been swapped.  This affects
-  // how arguments are passed to the given loop relation, since for example
+  // If "swapped" is true, the shape indexes A and B have been swapped.  This
+  // affects how arguments are passed to the visitor, since for example
   // A.Contains(B) is not the same as B.Contains(A).
   IndexCrosser(const S2ShapeIndex& a_index, const S2ShapeIndex& b_index,
                CrossingType type, const EdgePairVisitor& visitor, bool swapped)
@@ -330,8 +331,9 @@ bool VisitCrossingEdgePairs(const S2ShapeIndex& a_index,
   // We look for S2CellId ranges where the indexes of A and B overlap, and
   // then test those edges for crossings.
 
-  // TODO(ericv): Use brute force if the total number of edges is small enough
-  // (using a larger threshold if the S2ShapeIndex is not constructed yet).
+  // TODO(b/262264880): Use brute force if the total number of edges is small
+  // enough (using a larger threshold if the S2ShapeIndex is not constructed
+  // yet).
   auto ai = MakeS2CellRangeIterator(&a_index);
   auto bi = MakeS2CellRangeIterator(&b_index);
   IndexCrosser ab(a_index, b_index, type, visitor, false);  // Tests A against B

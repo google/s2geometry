@@ -22,6 +22,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
@@ -30,9 +31,11 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-void CheckSimplify(const char* src, const char* dst,
-                   const char* target, const char* avoid,
-                   const std::vector<bool>& disc_on_left,
+using absl::string_view;
+using std::vector;
+
+void CheckSimplify(string_view src, string_view dst, string_view target,
+                   string_view avoid, const vector<bool>& disc_on_left,
                    double radius_degrees, bool expected_result) {
   S1ChordAngle radius(S1Angle::Degrees(radius_degrees));
   S2PolylineSimplifier s;
@@ -58,7 +61,7 @@ TEST(S2PolylineSimplifier, Reuse) {
   EXPECT_TRUE(s.TargetDisc(S2Point(1, 1, 0.1).Normalize(), radius));
   EXPECT_FALSE(s.Extend(S2Point(1, 1, 0.4).Normalize()));
 
-  // s.Init(S2Point(0, 1, 0));
+  s.Init(S2Point(0, 1, 0));
   EXPECT_TRUE(s.TargetDisc(S2Point(1, 1, 0.3).Normalize(), radius));
   EXPECT_TRUE(s.TargetDisc(S2Point(1, 1, 0.2).Normalize(), radius));
   EXPECT_FALSE(s.Extend(S2Point(1, 1, 0).Normalize()));

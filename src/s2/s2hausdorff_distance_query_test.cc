@@ -34,6 +34,7 @@
 
 using s2textformat::ParsePointsOrDie;
 using std::make_unique;
+using std::vector;
 using DirectedResult = S2HausdorffDistanceQuery::DirectedResult;
 using Result = S2HausdorffDistanceQuery::Result;
 using Options = S2HausdorffDistanceQuery::Options;
@@ -83,9 +84,9 @@ TEST(S2HausdorffDistanceQueryTest, QueryOptionsAccessorsWorks) {
 
 // Test involving 2 simple polyline shape indexes.
 TEST(S2HausdorffDistanceQueryTest, SimplePolylineQueriesSucceed) {
-  const std::vector<S2Point> a0 = ParsePointsOrDie("0:0, 0:1, 0:1.5");
-  const std::vector<S2Point> a1 = ParsePointsOrDie("0:2, 0:1.5, -10:1");
-  const std::vector<S2Point> b0 = ParsePointsOrDie("1:0, 1:1, 3:2");
+  const vector<S2Point> a0 = ParsePointsOrDie("0:0, 0:1, 0:1.5");
+  const vector<S2Point> a1 = ParsePointsOrDie("0:2, 0:1.5, -10:1");
+  const vector<S2Point> b0 = ParsePointsOrDie("1:0, 1:1, 3:2");
 
   // Setup the shape indexes.
   const MutableS2ShapeIndex empty_index;
@@ -156,11 +157,9 @@ TEST(S2HausdorffDistanceQueryTest, SimplePolylineQueriesSucceed) {
 // == 0).
 TEST(S2HausdorffDistanceQueryTest, PointVectorShapeQueriesSucceed) {
   // Points for the polyline shape.
-  const std::vector<S2Point> a_points =
-      ParsePointsOrDie("2:0, 0:1, 1:2, 0:3, 0:4");
+  const vector<S2Point> a_points = ParsePointsOrDie("2:0, 0:1, 1:2, 0:3, 0:4");
   // Points for the point vector shape.
-  const std::vector<S2Point> b_points =
-      ParsePointsOrDie("-1:2, -0.5:0.5, -0.5:3.5");
+  const vector<S2Point> b_points = ParsePointsOrDie("-1:2, -0.5:0.5, -0.5:3.5");
 
   MutableS2ShapeIndex a;
   a.Add(make_unique<S2LaxPolylineShape>(a_points));

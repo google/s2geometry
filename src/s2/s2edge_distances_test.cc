@@ -19,6 +19,7 @@
 
 #include <cmath>
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -38,8 +39,9 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
-using std::unique_ptr;
+using absl::string_view;
 using std::string;
+using std::unique_ptr;
 
 namespace {
 
@@ -309,9 +311,16 @@ TEST(S2, Interpolate) {
   S2Point p1 = S2Point(0.1, 1e-30, 0.3).Normalize();
   S2Point p2 = S2Point(-0.7, -0.55, -1e30).Normalize();
 
-  // A zero-length edge.
+  // A zero-length edge, "interpolated" at the end points.
   TestInterpolate(p1, p1, 0, p1);
   TestInterpolate(p1, p1, 1, p1);
+
+  // Zero-length edges, actually interpolated.
+  TestInterpolate(S2Point(1, 0, 0), S2Point(1, 0, 0), 0.5, S2Point(1, 0, 0));
+  TestInterpolate(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                  std::numeric_limits<double>::min(), S2Point(1, 0, 0));
+  TestInterpolate(p1, p1, 0.5, p1);
+  TestInterpolate(p1, p1, std::numeric_limits<double>::min(), p1);
 
   // Start, end, and middle of a medium-length edge.
   TestInterpolate(p1, p2, 0, p1);
@@ -555,7 +564,7 @@ TEST(S2, EdgePairMaxDistance) {
                            M_PI);
 }
 
-bool IsEdgeBNearEdgeA(absl::string_view a_str, absl::string_view b_str,
+bool IsEdgeBNearEdgeA(string_view a_str, string_view b_str,
                       double max_error_degrees) {
   unique_ptr<S2Polyline> a(s2textformat::MakePolylineOrDie(a_str));
   EXPECT_EQ(2, a->num_vertices());

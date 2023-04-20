@@ -562,7 +562,7 @@ TEST(S2CellUnion, Clear) {
 }
 
 TEST(S2CellUnion, RefuseToDecode) {
-  std::vector<S2CellId> cellids;
+  vector<S2CellId> cellids;
   S2CellId id = S2CellId::Begin(S2CellId::kMaxLevel);
   for (int i = 0; i <= absl::GetFlag(FLAGS_s2cell_union_decode_max_num_cells);
        ++i) {
@@ -620,7 +620,7 @@ TEST(S2CellUnion, LeafCellsCovered) {
   ids.push_back(S2CellId::FromFace(5).child_begin(30));
   cell_union.Init(ids);
   uint64 expected = 1ULL + (1ULL << 6) + (1ULL << 30) + (1ULL << 32) +
-      (2ULL << 56) + (1ULL << 58) + (1ULL << 60);
+                      (2ULL << 56) + (1ULL << 58) + (1ULL << 60);
   EXPECT_EQ(expected, cell_union.LeafCellsCovered());
 }
 

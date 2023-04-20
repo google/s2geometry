@@ -22,8 +22,8 @@
 #include <atomic>
 #include <cmath>
 #include <cstddef>
-#include <map>
 #include <memory>
+#include <queue>
 #include <stack>
 #include <string>
 #include <utility>
@@ -34,7 +34,6 @@
 #include "s2/base/integral_types.h"
 #include "absl/container/fixed_array.h"
 #include "absl/container/flat_hash_set.h"
-#include "absl/container/node_hash_map.h"
 #include "absl/flags/flag.h"
 #include "absl/utility/utility.h"
 #include "s2/util/coding/coder.h"
@@ -85,8 +84,10 @@ using s2builderutil::S2PolygonLayer;
 using s2builderutil::S2PolylineLayer;
 using s2builderutil::S2PolylineVectorLayer;
 using std::fabs;
+using std::greater;
 using std::make_unique;
 using std::pair;
+using std::priority_queue;
 using std::sqrt;
 using std::unique_ptr;
 using std::vector;
@@ -146,8 +147,8 @@ S2Polygon::S2Polygon(S2Polygon&& b)
   // `index_` has a pointer to an S2Polygon::Shape which points to S2Polygon.
   // But, we've moved to a new address, so get the Shape back out of the index
   // and update it to point to our new location.
-  if (index_.begin() != index_.end()) {
-    down_cast<Shape*>(*index_.begin())->polygon_ = this;
+  for (S2Shape* shape : index_) {
+    down_cast<Shape*>(shape)->polygon_ = this;
   }
 }
 
@@ -171,8 +172,8 @@ S2Polygon& S2Polygon::operator=(S2Polygon&& b) {
   // `index_` has a pointer to an S2Polygon::Shape which points to S2Polygon.
   // But, we've moved to a new address, so get the Shape back out of the index
   // and update it to point to our new location.
-  if (index_.begin() != index_.end()) {
-    down_cast<Shape*>(*index_.begin())->polygon_ = this;
+  for (S2Shape* shape : index_) {
+    down_cast<Shape*>(shape)->polygon_ = this;
   }
 
   return *this;
@@ -306,6 +307,13 @@ bool S2Polygon::FindLoopNestingError(S2Error* error) const {
 
 void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
                            LoopMap* loop_map) {
+  // Below, we are going to keep a pointer (`children`) into `loop_map`.
+  // Insert the new children loop vector before we get the pointer,
+  // otherwise the pointer will be invalidated when we do the insert.
+  vector<S2Loop*>* new_children = &(*loop_map)[new_loop];
+
+  // Find most nested containing loop.  `children` is where we need to
+  // add `new_loop`.
   vector<S2Loop*>* children;
   for (bool done = false; !done; ) {
     children = &(*loop_map)[parent];
@@ -321,7 +329,6 @@ void S2Polygon::InsertLoop(S2Loop* new_loop, S2Loop* parent,
 
   // Some of the children of the parent loop may now be children of
   // the new loop.
-  vector<S2Loop*>* new_children = &(*loop_map)[new_loop];
   for (size_t i = 0; i < children->size();) {
     S2Loop* child = (*children)[i];
     if (new_loop->ContainsNested(*child)) {
@@ -808,8 +815,8 @@ bool S2Polygon::DecodeUncompressed(Decoder* const decoder) {
   // Polygons with no loops are explicitly allowed here: a newly created
   // polygon has zero loops and such polygons encode and decode properly.
   const uint32 num_loops = decoder->get32();
-  if (num_loops >
-      static_cast<uint32>(absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops)))
+  if (num_loops > static_cast<uint32>(
+                      absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops)))
     return false;
   loops_.reserve(num_loops);
   num_vertices_ = 0;
@@ -926,7 +933,7 @@ void S2Polygon::InitToOperation(S2BooleanOperation::OpType op_type,
                                 const S2Polygon& a, const S2Polygon& b) {
   S2Error error;
   if (!InitToOperation(op_type, snap_function, a, b, &error)) {
-    S2_LOG(DFATAL) << S2BooleanOperation::OpTypeToString(op_type)
+    S2_LOG(ERROR) << S2BooleanOperation::OpTypeToString(op_type)
                 << " operation failed: " << error;
   }
 }
@@ -1016,7 +1023,7 @@ void S2Polygon::InitFromBuilder(const S2Polygon& a, S2Builder* builder) {
   builder->AddPolygon(a);
   S2Error error;
   if (!builder->Build(&error)) {
-    S2_LOG(DFATAL) << "Could not build polygon: " << error;
+    S2_LOG(ERROR) << "Could not build polygon: " << error;
   }
   // If there are no loops, check whether the result should be the full
   // polygon rather than the empty one.  (See InitToIntersection.)
@@ -1049,7 +1056,7 @@ void S2Polygon::InitToSimplified(const S2Polygon& a,
 // Bit "i" in the result is set if and only "p" is incident to the edge
 // corresponding to S2Cell::edge(i).
 uint8 GetCellEdgeIncidenceMask(const S2Cell& cell, const S2Point& p,
-                               double tolerance_uv) {
+                                 double tolerance_uv) {
   uint8 mask = 0;
   R2Point uv;
   if (S2::FaceXYZtoUV(cell.face(), p, &uv)) {
@@ -1131,7 +1138,7 @@ void S2Polygon::InitToSimplifiedInCell(const S2Polygon& a, const S2Cell& cell,
   }
   S2Error error;
   if (!builder.Build(&error)) {
-    S2_LOG(DFATAL) << "Could not build polygon: " << error;
+    S2_LOG(ERROR) << "Could not build polygon: " << error;
     return;
   }
   // If there are no loops, check whether the result should be the full
@@ -1192,7 +1199,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
   }
   S2Error error;
   if (!builder.Build(&error)) {
-    S2_LOG(DFATAL) << "InitToSimplifiedInCell failed: " << error;
+    S2_LOG(ERROR) << "InitToSimplifiedInCell failed: " << error;
   }
   return polylines;
 }
@@ -1214,7 +1221,7 @@ vector<unique_ptr<S2Polyline>> S2Polygon::OperationWithPolyline(
   a_index.Add(make_unique<S2Polyline::Shape>(&a));
   S2Error error;
   if (!op.Build(a_index, index_, &error)) {
-    S2_LOG(DFATAL) << "Polyline " << S2BooleanOperation::OpTypeToString(op_type)
+    S2_LOG(ERROR) << "Polyline " << S2BooleanOperation::OpTypeToString(op_type)
                 << " operation failed: " << error;
   }
   return result;
@@ -1283,41 +1290,48 @@ unique_ptr<S2Polygon> S2Polygon::DestructiveApproxUnion(
 }
 
 unique_ptr<S2Polygon> S2Polygon::DestructiveUnion(
-    vector<std::unique_ptr<S2Polygon>> polygons,
+    vector<unique_ptr<S2Polygon>> polygons,
     const S2Builder::SnapFunction& snap_function) {
-  // Effectively create a priority queue of polygons in order of number of
-  // vertices.  Repeatedly union the two smallest polygons and add the result
-  // to the queue until we have a single polygon to return.
-  using QueueType = std::multimap<int, unique_ptr<S2Polygon>>;
-  QueueType queue;  // Map from # of vertices to polygon.
-  for (auto& polygon : polygons)
-    queue.insert(std::make_pair(polygon->num_vertices(), std::move(polygon)));
+  if (polygons.empty())
+    return make_unique<S2Polygon>();
+
+  // Create a priority queue of polygons in order of number of vertices.
+  // Repeatedly union the two smallest polygons and add the result to the
+  // queue until we have a single polygon to return.  We use the index
+  // into `polygons` as the second component of the pair instead of a
+  // pointer so the comparison is deterministic rather than depending
+  // on the polygon's address.  (Some clients depend on determinism.)
+  using Pair = pair<int, size_t>;  // (num vertices, `polygons` index)
+  using PriorityQueue = priority_queue<Pair, vector<Pair>, greater<Pair>>;
+  PriorityQueue queue;  // Least vertices is `top`.
+  for (size_t i = 0; i < polygons.size(); ++i) {
+    queue.emplace(polygons[i]->num_vertices(), i);
+  }
 
   while (queue.size() > 1) {
     // Pop two simplest polygons from queue.
-    QueueType::iterator smallest_it = queue.begin();
-    int a_size = smallest_it->first;
-    unique_ptr<S2Polygon> a_polygon(std::move(smallest_it->second));
-    queue.erase(smallest_it);
-    smallest_it = queue.begin();
-    int b_size = smallest_it->first;
-    unique_ptr<S2Polygon> b_polygon(std::move(smallest_it->second));
-    queue.erase(smallest_it);
+    const Pair a = queue.top();
+    queue.pop();
+    const Pair b = queue.top();
+    queue.pop();
 
     // Union and add result back to queue.
     auto union_polygon = make_unique<S2Polygon>();
-    union_polygon->InitToUnion(*a_polygon, *b_polygon, snap_function);
-    queue.insert(std::make_pair(a_size + b_size, std::move(union_polygon)));
+    union_polygon->InitToUnion(*polygons[a.second], *polygons[b.second],
+                               snap_function);
+
+    // Replace `a` with the union, and clear `b` to reclaim memory.
+    polygons[a.second] = std::move(union_polygon);
+    polygons[b.second].reset();
+
     // We assume that the number of vertices in the union polygon is the
     // sum of the number of vertices in the original polygons, which is not
     // always true, but will almost always be a decent approximation, and
     // faster than recomputing.
+    queue.emplace(a.first + b.first, a.second);
   }
 
-  if (queue.empty())
-    return make_unique<S2Polygon>();
-  else
-    return std::move(queue.begin()->second);
+  return std::move(polygons[queue.top().second]);
 }
 
 void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
@@ -1336,7 +1350,7 @@ void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
   }
   S2Error error;
   if (!builder.Build(&error)) {
-    S2_LOG(DFATAL) << "InitToCellUnionBorder failed: " << error;
+    S2_LOG(ERROR) << "InitToCellUnionBorder failed: " << error;
   }
   // If there are no loops, check whether the result should be the full
   // polygon rather than the empty one.  There are only two ways that this can
@@ -1482,8 +1496,8 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   // polygon has zero loops and such polygons encode and decode properly.
   uint32 num_loops;
   if (!decoder->get_varint32(&num_loops)) return false;
-  if (num_loops >
-      static_cast<uint32>(absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops)))
+  if (num_loops > static_cast<uint32>(
+                      absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops)))
     return false;
   loops_.reserve(num_loops);
   for (size_t i = 0; i < num_loops; ++i) {

@@ -139,6 +139,10 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   using CellMap = s2internal::BTreeMap<S2CellId, S2ShapeIndexCell*>;
 
  public:
+  // The amount by which cells are "padded" to compensate for numerical errors
+  // when clipping line segments to cell boundaries.
+  static const double kCellPadding;
+
   // Options that affect construction of the MutableS2ShapeIndex.
   class Options {
    public:
@@ -489,10 +493,6 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   static void ClipVAxis(const ClippedEdge* edge, const R1Interval& middle,
                         std::vector<const ClippedEdge*> child_edges[2],
                         EdgeAllocator* alloc);
-
-  // The amount by which cells are "padded" to compensate for numerical errors
-  // when clipping line segments to cell boundaries.
-  static const double kCellPadding;
 
   // The shapes in the index, accessed by their shape id.  Removed shapes are
   // replaced by nullptr pointers.
