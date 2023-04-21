@@ -44,6 +44,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using s2builderutil::IdentitySnapFunction;
 using s2builderutil::IntLatLngSnapFunction;
 using std::make_unique;
@@ -64,9 +65,9 @@ namespace {
 // match edge multiplicities here.)
 void ExpectWindingResult(const S2WindingOperation::Options& options,
                          const vector<string>& loop_strs,
-                         absl::string_view ref_point_str, int ref_winding,
+                         string_view ref_point_str, int ref_winding,
                          S2WindingOperation::WindingRule rule,
-                         absl::string_view expected_str) {
+                         string_view expected_str) {
   MutableS2ShapeIndex expected;
   expected.Add(s2textformat::MakeLaxPolygonOrDie(expected_str));
   MutableS2ShapeIndex actual;
@@ -90,11 +91,12 @@ void ExpectWindingResult(const S2WindingOperation::Options& options,
 
 // Like ExpectWindingResult(), but with two different expected results
 // depending on whether options.include_degeneracies() is false or true.
-void ExpectDegenerateWindingResult(
-    S2WindingOperation::Options options, const vector<string>& loop_strs,
-    const string& ref_point_str, int ref_winding,
-    S2WindingOperation::WindingRule rule,
-    const string& expected_str_false, const string& expected_str_true) {
+void ExpectDegenerateWindingResult(S2WindingOperation::Options options,
+                                   const vector<string>& loop_strs,
+                                   string_view ref_point_str, int ref_winding,
+                                   S2WindingOperation::WindingRule rule,
+                                   string_view expected_str_false,
+                                   string_view expected_str_true) {
   options.set_include_degeneracies(false);
   ExpectWindingResult(options, loop_strs, ref_point_str, ref_winding, rule,
                       expected_str_false);

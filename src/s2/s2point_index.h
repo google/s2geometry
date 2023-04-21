@@ -131,6 +131,7 @@ class S2PointIndex {
   };
 
   // Default constructor.
+  // TODO(b/252809194): Move definition back to .cc file.
   S2PointIndex() = default;
 
   // Returns the number of points in the index.

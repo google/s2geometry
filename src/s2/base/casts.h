@@ -30,6 +30,8 @@
 #include <type_traits>
 
 #include "absl/base/casts.h"  // IWYU pragma: keep
+#include "absl/base/config.h"
+#include "absl/log/log.h"
 
 #include "s2/base/logging.h"
 
@@ -63,8 +65,8 @@ inline To down_cast(From* f) {         // so we only accept pointers
   static_assert((std::is_base_of<From, std::remove_pointer_t<To>>::value),
                 "target type not derived from source type");
 
-  // We skip the assert and hence the dynamic_cast if RTTI is disabled.
-#if !defined(__GNUC__) || defined(__GXX_RTTI)
+// We skip the assert and hence the dynamic_cast if RTTI is disabled.
+#if ABSL_INTERNAL_HAS_RTTI
   // Uses RTTI in dbg and fastbuild. asserts are disabled in opt builds.
   assert(f == nullptr || dynamic_cast<To>(f) != nullptr);
 #endif  // !defined(__GNUC__) || defined(__GXX_RTTI)
@@ -88,7 +90,7 @@ inline To down_cast(From& f) {
                 "target type not derived from source type");
 
   // We skip the assert and hence the dynamic_cast if RTTI is disabled.
-#if !defined(__GNUC__) || defined(__GXX_RTTI)
+#if ABSL_INTERNAL_HAS_RTTI
   // RTTI: debug mode only
   assert(dynamic_cast<std::remove_reference_t<To>*>(&f) != nullptr);
 #endif  // !defined(__GNUC__) || defined(__GXX_RTTI)
@@ -289,7 +291,7 @@ inline bool tight_enum_test_cast(int e_val, Enum* e_var) {
 template <typename Enum>
 inline Enum loose_enum_cast(int e_val) {
   if (!loose_enum_test<Enum>(e_val)) {
-    S2_LOG(DFATAL) << "enum_cast error for value " << e_val;
+    S2_LOG(ERROR) << "enum_cast error for value " << e_val;
   }
   return static_cast<Enum>(e_val);
 }
@@ -297,7 +299,7 @@ inline Enum loose_enum_cast(int e_val) {
 template <typename Enum>
 inline Enum tight_enum_cast(int e_val) {
   if (!tight_enum_test<Enum>(e_val)) {
-    S2_LOG(DFATAL) << "enum_cast error for value " << e_val;
+    S2_LOG(ERROR) << "enum_cast error for value " << e_val;
   }
   return static_cast<Enum>(e_val);
 }

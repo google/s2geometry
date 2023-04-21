@@ -51,24 +51,24 @@
 // a = [(1, 0), (5, 0), (6, 0), (9, 0)] and
 // b = [(2, 0), (7, 0), (8, 0)].
 //
-// The "cost matrix" between these two polylines (using squared chordal
-// distance, .Norm2(), as our distance function) looks like this:
+// The "cost matrix" between these two polylines (using chordal
+// distance, .Norm(), as our distance function) looks like this:
 //
 //        (2, 0)  (7, 0)  (8, 0)
-// (1, 0)     1      36      49
-// (5, 0)     9       4       9
-// (6, 0)    16       1       4
-// (9, 0)    49       4       1
+// (1, 0)     1       6       7
+// (5, 0)     3       2       3
+// (6, 0)     4       1       2
+// (9, 0)     7       2       1
 //
 // The Dynamic Timewarp DP table for this cost matrix has cells defined by
 //
 // table[i][j] = cost(i,j) + min(table[i-1][j-1], table[i][j-1], table[i-1, j])
 //
 //        (2, 0)  (7, 0)  (8, 0)
-// (1, 0)     1      37      86
-// (5, 0)    10       5      14
-// (6, 0)    26       6       9
-// (9, 0)    75      10       7
+// (1, 0)     1       7      14
+// (5, 0)     4       3       7
+// (6, 0)     8       4       6
+// (9, 0)    15       6       5
 //
 // Starting at the bottom right corner of the DP table, we can work our way
 // backwards to the upper left corner  to recover the reverse of the warp path:
@@ -97,13 +97,13 @@ typedef std::vector<std::pair<int, int>> WarpPath;
 struct VertexAlignment {
   // `alignment_cost` represents the sum of the squared chordal distances
   // between each pair of vertices in the warp path. Specifically,
-  // cost = sum_{(i, j) \in path} (a.vertex(i) - b.vertex(j)).Norm2();
-  // This means that the units of alignment_cost are "squared distance". This is
+  // cost = sum_{(i, j) \in path} (a.vertex(i) - b.vertex(j)).Norm();
+  // This means that the units of alignment_cost are distance. This is
   // an optimization to avoid the (expensive) atan computation of the true
-  // spherical angular distance between the points, as well as an unnecessary
-  // square root. All we need to compute vertex alignment is a metric that
-  // satisifies the triangle inequality, and squared chordal distance works as
-  // well as spherical S1Angle distance for this purpose.
+  // spherical angular distance between the points. All we need to compute
+  // vertex alignment is a metric that satisfies the triangle inequality, and
+  // chordal distance works as well as spherical S1Angle distance for
+  // this purpose.
   double alignment_cost;
 
   // Each entry (i, j) of `warp_path` represents a pairing between vertex

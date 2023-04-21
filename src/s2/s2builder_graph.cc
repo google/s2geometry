@@ -76,6 +76,12 @@ vector<Graph::EdgeId> Graph::GetInEdgeIds() const {
 vector<Graph::EdgeId> Graph::GetSiblingMap() const {
   vector<EdgeId> in_edge_ids = GetInEdgeIds();
   MakeSiblingMap(&in_edge_ids);
+  // Validates the sibling map, and indirectly the edge ordering comparator,
+  // which must break ties on equal edges correctly for the sibling map to be
+  // created correctly.
+  for (EdgeId e = 0; e < num_edges(); ++e) {
+    S2_DCHECK(e == in_edge_ids[in_edge_ids[e]]);
+  }
   return in_edge_ids;
 }
 
@@ -176,15 +182,13 @@ vector<Graph::EdgeId> Graph::GetInputEdgeOrder(
 
 // A struct for sorting the incoming and outgoing edges around a vertex "v0".
 struct VertexEdge {
-  VertexEdge(bool _incoming, Graph::EdgeId _index,
-             Graph::VertexId _endpoint, int32 _rank)
-      : incoming(_incoming), index(_index),
-        endpoint(_endpoint), rank(_rank) {
-  }
+  VertexEdge(bool _incoming, Graph::EdgeId _index, Graph::VertexId _endpoint,
+             int32 _rank)
+      : incoming(_incoming), index(_index), endpoint(_endpoint), rank(_rank) {}
   bool incoming;             // Is this an incoming edge to "v0"?
   Graph::EdgeId index;       // Index of this edge in "edges_" or "in_edge_ids"
   Graph::VertexId endpoint;  // The other (not "v0") endpoint of this edge
-  int32 rank;                // Secondary key for edges with the same endpoint
+  int32 rank;              // Secondary key for edges with the same endpoint
 };
 
 // Given a set of duplicate outgoing edges (v0, v1) and a set of duplicate
@@ -868,10 +872,10 @@ class Graph::EdgeProcessor {
   vector<InputEdgeId> tmp_ids_;
 };
 
-void Graph::ProcessEdges(
-    GraphOptions* options, std::vector<Edge>* edges,
-    std::vector<InputEdgeIdSetId>* input_ids, IdSetLexicon* id_set_lexicon,
-    S2Error* error, S2MemoryTracker::Client* tracker) {
+void Graph::ProcessEdges(GraphOptions* options, vector<Edge>* edges,
+                         vector<InputEdgeIdSetId>* input_ids,
+                         IdSetLexicon* id_set_lexicon, S2Error* error,
+                         S2MemoryTracker::Client* tracker) {
   // Graph::EdgeProcessor uses 8 bytes per input edge (out_edges_ and
   // in_edges_) plus 12 bytes per output edge (new_edges_, new_input_ids_).
   // For simplicity we assume that num_input_edges == num_output_edges, since
@@ -1088,7 +1092,7 @@ void Graph::EdgeProcessor::Run(S2Error* error) {
 
 // LINT.IfChange
 vector<S2Point> Graph::FilterVertices(const vector<S2Point>& vertices,
-                                      std::vector<Edge>* edges,
+                                      vector<Edge>* edges,
                                       vector<VertexId>* tmp) {
   // Gather the vertices that are actually used.
   vector<VertexId> used;

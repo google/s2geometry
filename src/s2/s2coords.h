@@ -98,6 +98,7 @@
 #define S2_S2COORDS_H_
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 
 #include "s2/base/integral_types.h"
@@ -112,6 +113,13 @@
 // symbol for the two-dimensional unit sphere (note that the "2" refers to the
 // dimension of the surface, not the space it is embedded in).
 namespace S2 {
+
+// The maximum absolute error in U/V coordinates when converting from XYZ.
+//
+// The XYZ -> UV conversion is a single division per coordinate, which is
+// promised to be at most 0.5*DBL_EPSILON absolute error for values with
+// magnitude less than two.
+constexpr double kMaxXYZtoUVError = 0.5 * DBL_EPSILON;
 
 // This is the number of levels needed to specify a leaf cell.  This
 // constant is defined here so that the S2::Metric class and the conversion

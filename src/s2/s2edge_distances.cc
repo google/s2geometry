@@ -286,8 +286,8 @@ S2Point Project(const S2Point& x, const S2Point& a, const S2Point& b,
   S2_DCHECK(S2::IsUnitLength(b));
   S2_DCHECK(S2::IsUnitLength(x));
 
-  // TODO(ericv): When X is nearly perpendicular to the plane containing AB,
-  // the result is guaranteed to be close to the edge AB but may be far from
+  // TODO(b/266451020): When X is nearly perpendicular to the plane containing
+  // AB, the result is guaranteed to be close to the edge AB but may be far from
   // the true projected result.  This could be fixed by computing the product
   // (A x B) x X x (A x B) using methods similar to S2::RobustCrossProd() and
   // S2::GetIntersection().  However note that the error tolerance would need

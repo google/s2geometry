@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "absl/base/attributes.h"
-#include "absl/container/node_hash_map.h"
+#include "absl/container/flat_hash_map.h"
 
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
@@ -434,14 +434,22 @@ class S2Polygon final : public S2Region {
   // reduces the number of vertices if possible, while ensuring that no vertex
   // moves further than snap_function.snap_radius().
   //
+  // A zero snap radius will leave the input geometry unmodified.
+  //
   // Simplification works by replacing nearly straight chains of short edges
   // with longer edges, in a way that preserves the topology of the input
   // polygon up to the creation of degeneracies.  This means that loops or
   // portions of loops may become degenerate, in which case they are removed.
+  //
   // For example, if there is a very small island in the original polygon, it
-  // may disappear completely.  (Even if there are dense islands, they could
-  // all be removed rather than being replaced by a larger simplified island
-  // if more area is covered by water than land.)
+  // may disappear completely.  (Even if there are dense islands, they could all
+  // be removed rather than being replaced by a larger simplified island if more
+  // area is covered by water than land.)
+  //
+  // What's more, since we snap at the same time that we simplify, edges that
+  // come within the snap radius of a vertex may have a vertex inserted
+  // resulting in a "pinch" that forces S2Builder to produce multiple output
+  // loops.
   void InitToSimplified(const S2Polygon& a,
                         const S2Builder::SnapFunction& snap_function);
 
@@ -821,7 +829,7 @@ class S2Polygon final : public S2Region {
   // A map from each loop to its immediate children with respect to nesting.
   // This map is built during initialization of multi-loop polygons to
   // determine which are shells and which are holes, and then discarded.
-  typedef absl::node_hash_map<S2Loop*, std::vector<S2Loop*> > LoopMap;
+  typedef absl::flat_hash_map<S2Loop*, std::vector<S2Loop*> > LoopMap;
 
   void InsertLoop(S2Loop* new_loop, S2Loop* parent, LoopMap* loop_map);
   void InitLoops(LoopMap* loop_map);

@@ -29,6 +29,7 @@
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings_internal.h"
@@ -41,8 +42,9 @@
 #include "s2/s2testing.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 
-using S2::internal::GetStableCrossProd;
+using absl::string_view;
 using S2::internal::ExactCrossProd;
+using S2::internal::GetStableCrossProd;
 using S2::internal::SymbolicCrossProd;
 using s2pred::DBL_ERR;
 using s2pred::LD_ERR;
@@ -57,9 +59,8 @@ namespace {
 
 enum Precision { DOUBLE, LONG_DOUBLE, EXACT, SYMBOLIC, NUM_PRECISIONS };
 
-const char* kPrecisionNames[] = {
-  "double", "long double", "exact", "symbolic"
-};
+constexpr string_view kPrecisionNames[] = {"double", "long double", "exact",
+                                           "symbolic"};
 
 // A helper class that keeps track of how often each precision was used and
 // generates a string for logging purposes.
@@ -383,12 +384,14 @@ class GetIntersectionStats {
            "Method", "Successes", "Attempts", "Rate");
     for (int i = 0; i < kNumMethods; ++i) {
       if (tally_[i] == 0) continue;
-      printf("%10s %9d %5.1f%% %9d %5.1f%%  %5.1f%%\n",
-             S2::internal::GetIntersectionMethodName(
-                 static_cast<IntersectionMethod>(i)),
-             tally_[i], 100.0 * tally_[i] / total,
-             totals[i], 100.0 * totals[i] / total,
-             100.0 * tally_[i] / totals[i]);
+      // Use `StrFormat` to handle `string_view`.
+      puts(absl::StrFormat("%10s %9d %5.1f%% %9d %5.1f%%  %5.1f%%",
+                           S2::internal::GetIntersectionMethodName(
+                               static_cast<IntersectionMethod>(i)),
+                           tally_[i], 100.0 * tally_[i] / total, totals[i],
+                           100.0 * totals[i] / total,
+                           100.0 * tally_[i] / totals[i])
+               .c_str());
     }
     for (int i = 0; i < kNumMethods; ++i) tally_[i] = 0;
   }

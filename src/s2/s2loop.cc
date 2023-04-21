@@ -24,10 +24,11 @@
 #include <bitset>
 #include <cmath>
 #include <memory>
-#include <set>
 #include <utility>
 #include <vector>
 
+#include "absl/container/flat_hash_set.h"
+#include "absl/flags/flag.h"
 #include "absl/types/span.h"
 #include "absl/utility/utility.h"
 
@@ -70,11 +71,12 @@
 #include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
+using absl::flat_hash_set;
 using absl::MakeSpan;
 using absl::Span;
 using std::make_unique;
 using std::pair;
-using std::set;
+using std::unique_ptr;
 using std::vector;
 
 S2_DEFINE_bool(
@@ -118,11 +120,10 @@ S2Loop::S2Loop(S2Loop&& b)
       bound_(std::move(b.bound_)),
       subregion_bound_(std::move(b.subregion_bound_)),
       index_(std::move(b.index_)) {
-  // `index_` has a pointer to an S2Loop::Shape which points to S2Loop.
-  // But, we've moved to a new address, so get the Shape back out of the index
-  // and update it to point to our new location.
-  if (index_.begin() != index_.end()) {
-    down_cast<Shape*>(*index_.begin())->loop_ = this;
+  // Our index points to S2Loop::Shape instances which point back to S2Loop,
+  // we need to update those S2Loop pointers now that we've moved.
+  for (S2Shape* shape : index_) {
+    down_cast<Shape*>(shape)->loop_ = this;
   }
 }
 
@@ -140,11 +141,10 @@ S2Loop& S2Loop::operator=(S2Loop&& b) {
   subregion_bound_ = std::move(b.subregion_bound_);
   index_ = std::move(b.index_);
 
-  // `index_` has a pointer to an S2Loop::Shape which points to S2Loop.
-  // But, we've moved to a new address, so get the Shape back out of the index
-  // and update it to point to our new location.
-  if (index_.begin() != index_.end()) {
-    down_cast<Shape*>(*index_.begin())->loop_ = this;
+  // Our index points to S2Loop::Shape instances which point back to S2Loop,
+  // we need to update those S2Loop pointers now that we've moved.
+  for (S2Shape* shape : index_) {
+    down_cast<Shape*>(shape)->loop_ = this;
   }
 
   return *this;
@@ -175,7 +175,7 @@ void S2Loop::ClearIndex() {
 void S2Loop::Init(Span<const S2Point> vertices) {
   ClearIndex();
   num_vertices_ = vertices.size();
-  vertices_ = std::make_unique<S2Point[]>(num_vertices_);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
   std::copy(vertices.begin(), vertices.end(), &vertices_[0]);
   InitOriginAndBound();
 }
@@ -353,7 +353,7 @@ S2Loop::~S2Loop() = default;
 S2Loop::S2Loop(const S2Loop& src)
     : depth_(src.depth_),
       num_vertices_(src.num_vertices_),
-      vertices_(std::make_unique<S2Point[]>(num_vertices_)),
+      vertices_(make_unique<S2Point[]>(num_vertices_)),
       s2debug_override_(src.s2debug_override_),
       origin_inside_(src.origin_inside_),
       unindexed_contains_calls_(0),
@@ -659,14 +659,14 @@ bool S2Loop::DecodeInternal(Decoder* const decoder) {
                          FLAGS_s2polygon_decode_max_num_vertices))) {
     return false;
   }
-  if (decoder->avail() <
-      (num_vertices * sizeof(vertices_[0]) + sizeof(uint8) + sizeof(uint32))) {
+  if (decoder->avail() < (num_vertices * sizeof(vertices_[0]) +
+                          sizeof(uint8) + sizeof(uint32))) {
     return false;
   }
   ClearIndex();
   num_vertices_ = num_vertices;
 
-  vertices_ = std::make_unique<S2Point[]>(num_vertices_);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
   decoder->getn(vertices_.get(), num_vertices_ * sizeof(vertices_[0]));
   origin_inside_ = decoder->get8();
   depth_ = decoder->get32();
@@ -1334,7 +1334,7 @@ static bool MatchBoundaries(const S2Loop& a, const S2Loop& b, int a_offset,
   // explored to avoid duplicating work.
 
   vector<pair<int, int>> pending;
-  set<pair<int, int>> done;
+  flat_hash_set<pair<int, int>> done;
   pending.push_back(std::make_pair(0, 0));
   while (!pending.empty()) {
     int i = pending.back().first;
@@ -1422,7 +1422,7 @@ bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
   }
   ClearIndex();
   num_vertices_ = unsigned_num_vertices;
-  vertices_ = std::make_unique<S2Point[]>(num_vertices_);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
 
   if (!S2DecodePointsCompressed(decoder, snap_level,
                                 MakeSpan(vertices_.get(), num_vertices_))) {
@@ -1474,16 +1474,14 @@ std::bitset<kNumProperties> S2Loop::GetCompressedEncodingProperties() const {
 }
 
 /* static */
-std::unique_ptr<S2Loop> S2Loop::MakeRegularLoop(const S2Point& center,
-                                                S1Angle radius,
-                                                int num_vertices) {
+unique_ptr<S2Loop> S2Loop::MakeRegularLoop(const S2Point& center,
+                                           S1Angle radius, int num_vertices) {
   return MakeRegularLoop(S2::GetFrame(center), radius, num_vertices);
 }
 
 /* static */
-std::unique_ptr<S2Loop> S2Loop::MakeRegularLoop(const Matrix3x3_d& frame,
-                                                S1Angle radius,
-                                                int num_vertices) {
+unique_ptr<S2Loop> S2Loop::MakeRegularLoop(const Matrix3x3_d& frame,
+                                           S1Angle radius, int num_vertices) {
   // We construct the loop in the given frame coordinates, with the center at
   // (0, 0, 1).  For a loop of radius "r", the loop vertices have the form
   // (x, y, z) where x^2 + y^2 = sin(r) and z = cos(r).  The distance on the

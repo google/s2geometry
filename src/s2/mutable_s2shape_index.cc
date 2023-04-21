@@ -193,7 +193,7 @@ void MutableS2ShapeIndex::Options::set_max_edges_per_cell(
 }
 
 const S2ShapeIndexCell* MutableS2ShapeIndex::Iterator::GetCell() const {
-  S2_LOG(DFATAL) << "Should never be called";
+  S2_LOG(ERROR) << "Should never be called";
   return nullptr;
 }
 
@@ -225,9 +225,9 @@ void MutableS2ShapeIndex::Iterator::Copy(const IteratorBase& other)  {
 //    ClippedEdge and this data is cached more successfully.
 
 struct MutableS2ShapeIndex::FaceEdge {
-  int32 shape_id;      // The shape that this edge belongs to
-  int32 edge_id;       // Edge id within that shape
-  int32 max_level;     // Not desirable to subdivide this edge beyond this level
+  int32 shape_id;    // The shape that this edge belongs to
+  int32 edge_id;     // Edge id within that shape
+  int32 max_level;   // Not desirable to subdivide this edge beyond this level
   bool has_interior;   // Belongs to a shape of dimension 2.
   R2Point a, b;        // The edge endpoints, clipped to a given face
   S2Shape::Edge edge;  // The edge endpoints
@@ -410,8 +410,9 @@ void MutableS2ShapeIndex::InteriorTracker::DrawTo(const S2Point& b) {
 }
 
 ABSL_ATTRIBUTE_ALWAYS_INLINE  // ~1% faster
-inline void MutableS2ShapeIndex::InteriorTracker::TestEdge(
-    int32 shape_id, const S2Shape::Edge& edge) {
+    inline void
+    MutableS2ShapeIndex::InteriorTracker::TestEdge(int32 shape_id,
+                                                   const S2Shape::Edge& edge) {
   if (crosser_.EdgeOrVertexCrossing(&edge.v0, &edge.v1)) {
     ToggleShape(shape_id);
   }
@@ -1065,9 +1066,9 @@ void MutableS2ShapeIndex::FinishPartialShape(int shape_id) {
   if (mem_tracker_.is_active()) {
     const int64 new_usage =
         SpaceUsed() - mem_tracker_.client_usage_bytes() +
-        0.1 * shape->num_edges() * (1.5 * sizeof(CellMap::value_type) +
-                                    sizeof(S2ShapeIndexCell) +
-                                    sizeof(S2ClippedShape));
+        0.1 * shape->num_edges() *
+            (1.5 * sizeof(CellMap::value_type) + sizeof(S2ShapeIndexCell) +
+             sizeof(S2ClippedShape));
     if (!mem_tracker_.TallyTemp(new_usage)) return;
   }
 
@@ -1658,7 +1659,7 @@ void MutableS2ShapeIndex::AbsorbIndexCell(const S2PaddedCell& pcell,
       if (edge.has_interior) tracker->TestEdge(shape_id, edge.edge);
       if (!S2::ClipToPaddedFace(edge.edge.v0, edge.edge.v1, pcell.id().face(),
                                 kCellPadding, &edge.a, &edge.b)) {
-        S2_LOG(DFATAL) << "Invariant failure in MutableS2ShapeIndex";
+        S2_LOG(ERROR) << "Invariant failure in MutableS2ShapeIndex";
       }
       face_edges->push_back(edge);
     }

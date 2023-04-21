@@ -282,7 +282,7 @@ S2BufferOperation::S2BufferOperation(unique_ptr<S2Builder::Layer> result_layer,
   Init(std::move(result_layer), options);
 }
 
-void S2BufferOperation::Init(std::unique_ptr<S2Builder::Layer> result_layer,
+void S2BufferOperation::Init(unique_ptr<S2Builder::Layer> result_layer,
                              const Options& options) {
   options_ = options;
   ref_point_ = S2::Origin();

@@ -27,15 +27,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
 
-option(WITH_GFLAGS "Use gflags to change command line flags." OFF)
-add_feature_info(GFLAGS WITH_GFLAGS
-                 "allows changing command line flags.")
-
-# glog option can only be turned on if gflags is on.
-cmake_dependent_option(WITH_GLOG "Use glog for logging." ON
-                       "WITH_GFLAGS" OFF)
-add_feature_info(GLOG WITH_GLOG "provides logging configurability.")
-
 option(BUILD_SHARED_LIBS "Build shared libraries instead of static." ON)
 add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
                  "builds shared libraries instead of static.")
@@ -52,26 +43,8 @@ add_feature_info(S2_USE_SYSTEM_INCLUDES S2_USE_SYSTEM_INCLUDES
 
 feature_summary(WHAT ALL)
 
-if (WITH_GLOG)
-    find_package(Glog REQUIRED)
-    # FindGFlags.cmake and FindGlog.cmake do not seem to implement REQUIRED;
-    # check manually.
-    if (NOT ${GLOG_FOUND})
-        message(FATAL_ERROR "Glog requested but not found")
-    endif()
-    add_definitions(-DS2_USE_GLOG)
-else()
-    # Don't output anything for LOG(INFO).
-    add_definitions(-DABSL_MIN_LOG_LEVEL=1)
-endif()
-
-if (WITH_GFLAGS)
-    find_package(GFlags REQUIRED)
-    if (NOT ${GFLAGS_FOUND})
-        message(FATAL_ERROR "GFlags requested but not found")
-    endif()
-    add_definitions(-DS2_USE_GFLAGS)
-endif()
+# Don't output anything for LOG(INFO).
+add_definitions(-DABSL_MIN_LOG_LEVEL=1)
 
 # If we already have abseil we don't need to find it, for an example:
 # add_subdirectory(absl-submbodule)
@@ -111,8 +84,7 @@ endif()
 # If OpenSSL is installed in a non-standard location, configure with
 # something like:
 # OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
-include_directories(
-    ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+include_directories(${OPENSSL_INCLUDE_DIR})
 
 if (WITH_PYTHON)
     include_directories(${Python3_INCLUDE_DIRS})
@@ -213,7 +185,6 @@ add_library(s2
             src/s2/s2text_format.cc
             src/s2/s2wedge_relations.cc
             src/s2/s2winding_operation.cc
-            src/s2/strings/serialize.cc
             src/s2/util/bits/bit-interleave.cc
             src/s2/util/coding/coder.cc
             src/s2/util/coding/varint.cc
@@ -231,19 +202,22 @@ endif()
 
 target_link_libraries(
     s2
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
     absl::base
     absl::btree
+    absl::check
     absl::config
     absl::core_headers
     absl::dynamic_annotations
     absl::endian
     absl::fixed_array
+    absl::flags
     absl::flat_hash_map
     absl::flat_hash_set
     absl::hash
     absl::inlined_vector
     absl::int128
+    absl::log
     absl::log_severity
     absl::memory
     absl::span
@@ -257,7 +231,9 @@ target_link_libraries(
 if (GOOGLETEST_ROOT)
   target_link_libraries(
       s2testing
-      ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+      absl::check
+      absl::flags
+      absl::log
       absl::memory
       absl::strings)
 endif()
@@ -415,6 +391,8 @@ install(FILES src/s2/base/casts.h
               src/s2/base/port.h
               src/s2/base/spinlock.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/base")
+install(FILES src/s2/testing/gtest_prod.h
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/testing")
 install(FILES src/s2/util/bitmap/bitmap.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bitmap")
 install(FILES src/s2/util/bits/bits.h
@@ -581,8 +559,11 @@ if (GOOGLETEST_ROOT)
         s2testing s2
         absl::base
         absl::btree
+        absl::check
         absl::core_headers
+        absl::flags
         absl::flags_reflection
+        absl::log
         absl::memory
         absl::span
         absl::status

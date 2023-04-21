@@ -44,10 +44,11 @@
 #include "s2/s2point.h"
 
 using absl::StrCat;
-using S2::internal::kSwapMask;
+using absl::string_view;
 using S2::internal::kInvertMask;
 using S2::internal::kPosToIJ;
 using S2::internal::kPosToOrientation;
+using S2::internal::kSwapMask;
 using std::fabs;
 using std::max;
 using std::min;
@@ -230,7 +231,7 @@ string S2CellId::ToToken() const {
   return HexFormatString(id_ >> (4 * num_zero_digits), 16 - num_zero_digits);
 }
 
-S2CellId S2CellId::FromToken(const absl::string_view token) {
+S2CellId S2CellId::FromToken(const string_view token) {
   if (token.length() > 16) return S2CellId::None();
   uint64 id = 0;
   // Use size_t to fix signed/unsigned comparison for client that use `-Wextra`
@@ -620,7 +621,7 @@ std::ostream& operator<<(std::ostream& os, S2CellId id) {
   return os << id.ToString();
 }
 
-S2CellId S2CellId::FromDebugString(absl::string_view str) {
+S2CellId S2CellId::FromDebugString(string_view str) {
   // This function is reasonably efficient, but is only intended for use in
   // tests.
   int level = static_cast<int>(str.size() - 2);
@@ -662,7 +663,7 @@ bool S2CellId::Coder::Decode(Decoder& decoder, S2CellId& v,
     return false;
   }
 
-  const absl::string_view token(bytes, bytes_read - 1);
+  const string_view token(bytes, bytes_read - 1);
   v = S2CellId::FromToken(token);
   // Prevent edge cases where S2CellId::FromToken returns S2CellId::None for
   // an invalid token.

@@ -79,7 +79,7 @@
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/inlined_vector.h"
-#include "absl/memory/memory.h"
+#include "absl/strings/string_view.h"
 
 #include "s2/base/integral_types.h"
 #include "s2/id_set_lexicon.h"
@@ -111,6 +111,7 @@ extern bool s2builder_verbose;
 namespace {  // Anonymous namespace for helper classes.
 
 using absl::flat_hash_map;
+using absl::string_view;
 using std::lower_bound;
 using std::make_pair;
 using std::make_unique;
@@ -329,12 +330,14 @@ class GraphEdgeClipper {
   vector<int> rank_;      // The rank of each graph edge within order_.
 };
 
-GraphEdgeClipper::GraphEdgeClipper(
-    const Graph& g, const vector<int8>& input_dimensions,
-    const InputEdgeCrossings& input_crossings,
-    vector<Graph::Edge>* new_edges,
-    vector<InputEdgeIdSetId>* new_input_edge_ids)
-    : g_(g), in_(g), out_(g),
+GraphEdgeClipper::GraphEdgeClipper(const Graph& g,
+                                   const vector<int8>& input_dimensions,
+                                   const InputEdgeCrossings& input_crossings,
+                                   vector<Graph::Edge>* new_edges,
+                                   vector<InputEdgeIdSetId>* new_input_edge_ids)
+    : g_(g),
+      in_(g),
+      out_(g),
       input_dimensions_(input_dimensions),
       input_crossings_(input_crossings),
       new_edges_(new_edges),
@@ -469,7 +472,7 @@ void GraphEdgeClipper::Run() {
         a_isolated[a_index] = true;
       } else {
         // TODO(b/112043775): fix this condition.
-        S2_LOG(DFATAL) << "Failed to get crossed vertex index.";
+        S2_LOG(ERROR) << "Failed to get crossed vertex index.";
       }
     }
     if (s2builder_verbose) std::cout << std::endl;
@@ -564,7 +567,7 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
     const vector<VertexId>& a, const CrossingGraphEdgeVector& b,
     bool left_to_right) const {
   if (a.empty() || b.empty()) {
-    S2_LOG(DFATAL) << "GraphEdgeClipper::GetCrossedVertexIndex called with "
+    S2_LOG(ERROR) << "GraphEdgeClipper::GetCrossedVertexIndex called with "
                 << a.size() << " vertex ids and " << b.size()
                 << " crossing graph edges.";
     return -1;
@@ -742,9 +745,10 @@ class EdgeClippingLayer : public S2Builder::Layer {
                     const vector<int8>* input_dimensions,
                     const InputEdgeCrossings* input_crossings,
                     S2MemoryTracker::Client* tracker)
-      : layers_(*layers), input_dimensions_(*input_dimensions),
-        input_crossings_(*input_crossings), tracker_(tracker) {
-  }
+      : layers_(*layers),
+        input_dimensions_(*input_dimensions),
+        input_crossings_(*input_crossings),
+        tracker_(tracker) {}
 
   // Layer interface:
   GraphOptions graph_options() const override;
@@ -779,9 +783,9 @@ void EdgeClippingLayer::Build(const Graph& g, S2Error* error) {
   // destruction.  There is also a temporary vector "indegree" in
   // GetInputEdgeChainOrder() but this does not affect peak memory usage.
   int64 tmp_bytes = g.num_edges() * (sizeof(EdgeId) + sizeof(int)) +
-                    g.num_vertices() * (2 * sizeof(EdgeId));
-  int64 final_bytes = g.num_edges() * (sizeof(Graph::Edge) +
-                                       sizeof(InputEdgeIdSetId));
+                      g.num_vertices() * (2 * sizeof(EdgeId));
+  int64 final_bytes =
+      g.num_edges() * (sizeof(Graph::Edge) + sizeof(InputEdgeIdSetId));
 
   // The order of the calls below is important.  Note that all memory tracked
   // through this client is automatically untallied upon object destruction.
@@ -868,7 +872,6 @@ class S2BooleanOperation::Impl {
 
   using ShapeEdge = s2shapeutil::ShapeEdge;
   using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
-  using ShapeEdgeIdHash = s2shapeutil::ShapeEdgeIdHash;
 
   // An IndexCrossing represents a pair of intersecting S2ShapeIndex edges
   // ("a_edge" and "b_edge").  We store all such intersections because the
@@ -882,7 +885,7 @@ class S2BooleanOperation::Impl {
 
     // True if "a_edge" crosses "b_edge" from left to right.  Undefined if
     // is_interior_crossing is false.
-    uint32 left_to_right: 1;
+    uint32 left_to_right : 1;
 
     // Equal to S2::VertexCrossing(a_edge, b_edge).  Undefined if "a_edge" and
     // "b_edge" do not share exactly one vertex or either edge is degenerate.
@@ -1122,17 +1125,17 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // be nullptr.
   CrossingProcessor(const PolygonModel& polygon_model,
                     const PolylineModel& polyline_model,
-                    bool polyline_loops_have_boundaries,
-                    S2Builder* builder,
+                    bool polyline_loops_have_boundaries, S2Builder* builder,
                     vector<int8>* input_dimensions,
-                    InputEdgeCrossings* input_crossings,
-                    MemoryTracker* tracker)
-      : polygon_model_(polygon_model), polyline_model_(polyline_model),
+                    InputEdgeCrossings* input_crossings, MemoryTracker* tracker)
+      : polygon_model_(polygon_model),
+        polyline_model_(polyline_model),
         polyline_loops_have_boundaries_(polyline_loops_have_boundaries),
-        builder_(builder), input_dimensions_(input_dimensions),
-        input_crossings_(input_crossings), tracker_(tracker),
-        prev_inside_(false) {
-  }
+        builder_(builder),
+        input_dimensions_(input_dimensions),
+        input_crossings_(input_crossings),
+        tracker_(tracker),
+        prev_inside_(false) {}
 
   // Starts processing edges from the given region.  "invert_a", "invert_b",
   // and "invert_result" indicate whether region A, region B, and/or the
@@ -1368,7 +1371,7 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // loop or a sibling pair), indicates whether that loop represents a shell
   // or a hole.  This information is used during the second pass of
   // AddBoundaryPair() to determine the output for degenerate edges.
-  flat_hash_map<ShapeEdgeId, bool, ShapeEdgeIdHash> is_degenerate_hole_;
+  flat_hash_map<ShapeEdgeId, bool> is_degenerate_hole_;
 
   // Indicates whether the point being processed along the current edge chain
   // is in the polygonal interior of the opposite region, using semi-open
@@ -2720,7 +2723,7 @@ void S2BooleanOperation::Options::set_memory_tracker(S2MemoryTracker* tracker) {
   memory_tracker_ = tracker;
 }
 
-const char* S2BooleanOperation::OpTypeToString(OpType op_type) {
+string_view S2BooleanOperation::OpTypeToString(OpType op_type) {
   switch (op_type) {
     case OpType::UNION:                return "UNION";
     case OpType::INTERSECTION:         return "INTERSECTION";
@@ -2730,7 +2733,7 @@ const char* S2BooleanOperation::OpTypeToString(OpType op_type) {
   }
 }
 
-const char* S2BooleanOperation::PolygonModelToString(PolygonModel model) {
+string_view S2BooleanOperation::PolygonModelToString(PolygonModel model) {
   switch (model) {
     case PolygonModel::OPEN:           return "OPEN";
     case PolygonModel::SEMI_OPEN:      return "SEMI_OPEN";
@@ -2739,7 +2742,7 @@ const char* S2BooleanOperation::PolygonModelToString(PolygonModel model) {
   }
 }
 
-const char* S2BooleanOperation::PolylineModelToString(PolylineModel model) {
+string_view S2BooleanOperation::PolylineModelToString(PolylineModel model) {
   switch (model) {
     case PolylineModel::OPEN:          return "OPEN";
     case PolylineModel::SEMI_OPEN:     return "SEMI_OPEN";

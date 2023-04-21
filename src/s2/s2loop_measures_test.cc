@@ -39,6 +39,7 @@
 #include "s2/s2text_format.h"
 #include "s2/util/math/mathutil.h"
 
+using absl::string_view;
 using s2textformat::ParsePointsOrDie;
 using std::fabs;
 using std::min;
@@ -50,7 +51,7 @@ namespace {
 // Simple inefficient reference implementation of PruneDegeneracies() on a
 // character string.  The result will be some cyclic permutation of what
 // PruneDegeneracies() produces.
-std::string BruteForceQuadraticPrune(const absl::string_view s) {
+std::string BruteForceQuadraticPrune(const string_view s) {
   std::string answer(s);
   // Make repeated passes over answer, reducing AAs and ABAs to As
   // (and, incidentally, if the whole string has length 1 or 2, turn it
@@ -83,8 +84,7 @@ std::string BruteForceQuadraticPrune(const absl::string_view s) {
 }
 
 // Return the lexicographically least cyclic permutation of s.
-std::string BruteForceQuadraticCyclicallyCanonicalize(
-    const absl::string_view s) {
+std::string BruteForceQuadraticCyclicallyCanonicalize(const string_view s) {
   std::string answer;
   for (int i = 0; i < s.size(); ++i) {
     const std::string candidate = absl::StrCat(s.substr(i), s.substr(0, i));
@@ -97,7 +97,7 @@ std::string BruteForceQuadraticCyclicallyCanonicalize(
 // "abac"), returns a vector of S2Points of the form (ch, 0, 0).  Note that
 // these points are not unit length and therefore are not suitable for general
 // use; however, they are useful for testing certain functions below.
-vector<S2Point> MakeTestLoop(absl::string_view loop_str) {
+vector<S2Point> MakeTestLoop(string_view loop_str) {
   vector<S2Point> loop;
   for (const char ch : loop_str) {
     loop.push_back(S2Point(ch, 0, 0));
@@ -108,8 +108,8 @@ vector<S2Point> MakeTestLoop(absl::string_view loop_str) {
 // Given a loop whose vertices are represented as characters (such as "abcd" or
 // "abccb"), verify that S2::PruneDegeneracies() yields a loop cyclically
 // equivalent to "expected_str".
-std::string TestPruneDegeneracies(absl::string_view input_str,
-                                  absl::string_view expected_str) {
+std::string TestPruneDegeneracies(string_view input_str,
+                                  string_view expected_str) {
   const vector<S2Point> input = MakeTestLoop(input_str);
   vector<S2Point> new_vertices;
   string actual_str;
@@ -210,7 +210,7 @@ TEST(PruneDegeneracies, AllSmallCases) {
 
 // Given a loop whose vertices are represented as characters (such as "abcd" or
 // "abccb"), verify that S2::GetCanonicalLoopOrder returns the given result.
-void TestCanonicalLoopOrder(absl::string_view input_str,
+void TestCanonicalLoopOrder(string_view input_str,
                             S2::LoopOrder expected_order) {
   EXPECT_EQ(expected_order, S2::GetCanonicalLoopOrder(MakeTestLoop(input_str)));
 }
@@ -248,7 +248,7 @@ TEST(GetSignedArea, Underflow) {
 
 TEST(GetSignedArea, ErrorAccumulation) {
   // Loop encompassing half an octant of the sphere.
-  std::vector<S2Point> loop{
+  vector<S2Point> loop{
       {1.0, 0.0, 0.0},
       {M_SQRT1_2, M_SQRT1_2, 0.0},
       {0.0, 0.0, 1.0},

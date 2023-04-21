@@ -76,8 +76,17 @@ class S2Shape {
     friend bool operator==(const Edge& x, const Edge& y) {
       return x.v0 == y.v0 && x.v1 == y.v1;
     }
+
+    friend bool operator!=(const Edge& x, const Edge& y) { return !(x == y); }
+
     friend bool operator<(const Edge& x, const Edge& y) {
-      return x.v0 < y.v0 || (x.v0 == y.v0 && x.v1 < y.v1); }
+      return x.v0 < y.v0 || (x.v0 == y.v0 && x.v1 < y.v1);
+    }
+
+    template <typename H>
+    friend H AbslHashValue(H h, const Edge& e) {
+      return H::combine(std::move(h), e.v0, e.v1);
+    }
   };
 
   // A range of edge ids corresponding to a chain of zero or more connected

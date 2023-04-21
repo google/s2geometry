@@ -789,9 +789,256 @@ int CompareEdgePairDistance(const S2Point& a0, const S2Point& a1,
 }
 
 template <class T>
-int TriageCompareEdgeDirections(
-    const Vector3<T>& a0, const Vector3<T>& a1,
-    const Vector3<T>& b0, const Vector3<T>& b1) {
+int TriageIntersectionOrdering(const Vector3<T>& a, const Vector3<T>& b,
+                               const Vector3<T>& c, const Vector3<T>& d,
+                               const Vector3<T>& m, const Vector3<T>& n) {
+  S2_DCHECK_NE(a, b);
+  S2_DCHECK_NE(a, -b);
+  S2_DCHECK_NE(c, d);
+  S2_DCHECK_NE(c, -d);
+  S2_DCHECK_NE(m, n);
+  S2_DCHECK_NE(m, -n);
+
+  // Given an edge AB, and the normal of a great circle M, the intersection of
+  // the edge with the great circle is given by the triple product (A×B)×M.
+  //
+  // Its distance relative to the reference circle N is then proportional to the
+  // dot product with N: d0 = ((A×B)×M)•N
+  //
+  // Edge CD is similar, we want to compute d1 = ((C×D)×M)•N and compare d0 to
+  // d1.  If they're further than some error from each other, we can rely on the
+  // comparison, otherwise we fall back to more exact arithmetic.
+  //
+  // ((A×B)×M)•N is a quadruple product.  We can expand this out using
+  // Lagrange's formula for a vector triple product and then distribute the dot
+  // product, which eliminates all the cross products:
+  //
+  // d0 = ((A×B)×M)•N
+  // d0 = ((M•A)B - (M•B)A)•N
+  // d0 = (M•A)(N•B) - (M•B)(N•A)
+  //
+  // Similarly:
+  //
+  // d1 = (M•C)(N•D) - (M•D)(N•C)
+  //
+  // We can compute this difference with a maximum absolute error of 32ε (see
+  // the gappa proof at end of the file).
+  //
+  // NOTE: If we want to push this error bound down as far as possible, we could
+  // use the dot product algorithm created by Ogita et al:
+  //
+  //   Accurate Sum and Dot Product, Ogita, Rump, Oishi 2005.
+  //
+  // Along with the 2x2 determinant algorithm by Kahan (which is useful for any
+  // bilinear form):
+  //
+  //   Further Analysis of Kahan's Algorithm for the Accurate Computation of
+  //   2x2 Determinants, Jeannerod, Louvet, and Muller, 2013.
+  //
+  // Both algorithms allow us to have bounded relative error, and since we're
+  // only interested in the sign of this operation, as long as the relative
+  // error is < 1 we can never get a sign flip, which would make this exact for
+  // our purposes.
+  constexpr T kMaxError = 32 * std::numeric_limits<T>::epsilon();
+
+  T mdota = m.DotProd(a);
+  T mdotb = m.DotProd(b);
+  T mdotc = m.DotProd(c);
+  T mdotd = m.DotProd(d);
+
+  T ndota = n.DotProd(a);
+  T ndotb = n.DotProd(b);
+  T ndotc = n.DotProd(c);
+  T ndotd = n.DotProd(d);
+
+  T prodab = mdota * ndotb - mdotb * ndota;
+  T prodcd = mdotc * ndotd - mdotd * ndotc;
+
+  if (std::fabs(prodab - prodcd) > kMaxError) {
+    return prodab < prodcd ? -1 : +1;
+  }
+  return 0;
+}
+
+int ExactIntersectionOrdering(const Vector3_xf& a, const Vector3_xf& b,
+                              const Vector3_xf& c, const Vector3_xf& d,
+                              const Vector3_xf& m, const Vector3_xf& n) {
+  S2_DCHECK_NE(a, b);
+  S2_DCHECK_NE(a, -b);
+  S2_DCHECK_NE(c, d);
+  S2_DCHECK_NE(c, -d);
+  S2_DCHECK_NE(n, m);
+  S2_DCHECK_NE(n, -m);
+
+  ExactFloat mdota = m.DotProd(a);
+  ExactFloat mdotb = m.DotProd(b);
+  ExactFloat mdotc = m.DotProd(c);
+  ExactFloat mdotd = m.DotProd(d);
+
+  ExactFloat ndota = n.DotProd(a);
+  ExactFloat ndotb = n.DotProd(b);
+  ExactFloat ndotc = n.DotProd(c);
+  ExactFloat ndotd = n.DotProd(d);
+
+  ExactFloat prodab = mdota * ndotb - mdotb * ndota;
+  ExactFloat prodcd = mdotc * ndotd - mdotd * ndotc;
+
+  if (prodab < prodcd) return -1;
+  if (prodab > prodcd) return +1;
+  return 0;
+}
+
+int CircleEdgeIntersectionOrdering(const S2Point& a, const S2Point& b,
+                                   const S2Point& c, const S2Point& d,
+                                   const S2Point& m, const S2Point& n) {
+  int ans = TriageIntersectionOrdering(a, b, c, d, m, n);
+  if (ans != 0) {
+    return ans;
+  }
+
+  // We got zero, check for duplicate/reverse duplicate edges before falling
+  // back to more precision.
+  if ((a == c && b == d) || (a == d && b == c)) {
+    return 0;
+  }
+
+  if (kHasLongDouble) {
+    ans = TriageIntersectionOrdering(ToLD(a), ToLD(b), ToLD(c), ToLD(d),
+                                     ToLD(m), ToLD(n));
+    if (ans != 0) {
+      return ans;
+    }
+  }
+
+  return ExactIntersectionOrdering(  //
+      ToExact(a), ToExact(b), ToExact(c), ToExact(d), ToExact(m), ToExact(n));
+
+  return 0;
+}
+
+template <typename T>
+int TriageSignDotProd(const Vector3<T>& a, const Vector3<T>& b) {
+  S2_DCHECK_LE(a.Norm2(), 2);
+  S2_DCHECK_LE(b.Norm2(), 2);
+
+  // The dot product error can be bound as 1.01nu|a||b| assuming nu < .01,
+  // where u is the rounding unit (epsilon/2).  n=3 because we have 3
+  // components, and we require that our vectors be <= sqrt(2) in length (so
+  // that we can support the un-normalized edge normals for cells).
+  //
+  // So we have 1.01*3*ε/2*2 = 3.03ε, which we'll round up to 3.046875ε
+  // which is exactly representable.
+  //
+  // Reference:
+  //   Error Estimation Of Floating-Point Summation And Dot Product, Rump
+  //   2011
+  constexpr T kMaxError = 3.046875 * std::numeric_limits<T>::epsilon();
+
+  T na = a.DotProd(b);
+  if (std::fabs(na) <= kMaxError) return 0;
+  return na > 0 ? +1 : -1;
+}
+
+int ExactSignDotProd(const Vector3_xf& a, const Vector3_xf& b) {
+  ExactFloat dot = a.DotProd(b);
+  if (dot.is_zero()) {
+    return 0;
+  }
+  return dot.sgn() > 0 ? +1 : -1;
+}
+
+int SignDotProd(const S2Point& a, const S2Point& b) {
+  int sign = TriageSignDotProd(a, b);
+  if (sign != 0) {
+    return sign;
+  }
+
+  if (kHasLongDouble) {
+    sign = TriageSignDotProd(ToLD(a), ToLD(b));
+    if (sign != 0) {
+      return sign;
+    }
+  }
+
+  return ExactSignDotProd(ToExact(a), ToExact(b));
+}
+
+template <class T>
+int TriageCircleEdgeIntersectionSign(const Vector3<T>& a, const Vector3<T>& b,
+                                     const Vector3<T>& n, const Vector3<T>& x) {
+  S2_DCHECK_NE(a, b);
+  S2_DCHECK_NE(a, -b);
+
+  // The normal vector for the edge is A×B.  The vector for the line of
+  // intersection between the plane defined by N and A×B is (A×B)×N.  We then
+  // want to dot this with the normals of the other great circles X and compute
+  // the sign.
+  //
+  // So the full formula for the test is ((A×B)×N)•X which is a quadruple
+  // product.  We can expand this out using Lagrange's formula for a triple
+  // product, and then distribute the dot product:
+  //
+  // = ((A×B)×N)•X
+  // = ((N•A)B - (N•B)A)•X
+  // = (N•A)(X•B) - (N•B)(X•A)
+  //
+  // We can compute this with a maximum absolute error of 14ε (see the gappa
+  // proof at end of the file).
+  constexpr T kMaxError = 14 * std::numeric_limits<T>::epsilon();
+
+  T ndota = n.DotProd(a);
+  T ndotb = n.DotProd(b);
+  T xdota = x.DotProd(a);
+  T xdotb = x.DotProd(b);
+
+  T prod = ndota * xdotb - ndotb * xdota;
+
+  // If we're too close to the plane of X we'll have to use more precision.
+  if (std::fabs(prod) <= kMaxError) {
+    return 0;
+  }
+  return prod < 0 ? -1 : +1;
+}
+
+int ExactCircleEdgeIntersectionSign(const Vector3_xf& a, const Vector3_xf& b,
+                                    const Vector3_xf& n, const Vector3_xf& x) {
+  S2_DCHECK_NE(a, b);
+  S2_DCHECK_NE(a, -b);
+
+  ExactFloat ndota = n.DotProd(a);
+  ExactFloat ndotb = n.DotProd(b);
+  ExactFloat xdota = x.DotProd(a);
+  ExactFloat xdotb = x.DotProd(b);
+
+  ExactFloat prod = ndota * xdotb - ndotb * xdota;
+
+  if (prod.is_zero()) {
+    return 0;
+  }
+  return prod.sgn() > 0 ? +1 : -1;
+}
+
+int CircleEdgeIntersectionSign(const S2Point& a, const S2Point& b,
+                               const S2Point& n, const S2Point& x) {
+  int ans = TriageCircleEdgeIntersectionSign(a, b, n, x);
+  if (ans != 0) {
+    return ans;
+  }
+
+  if (kHasLongDouble) {
+    ans = TriageCircleEdgeIntersectionSign(ToLD(a), ToLD(b), ToLD(n), ToLD(x));
+    if (ans != 0) {
+      return ans;
+    }
+  }
+
+  return ExactCircleEdgeIntersectionSign(  //
+      ToExact(a), ToExact(b), ToExact(n), ToExact(x));
+}
+
+template <class T>
+int TriageCompareEdgeDirections(const Vector3<T>& a0, const Vector3<T>& a1,
+                                const Vector3<T>& b0, const Vector3<T>& b1) {
   constexpr T T_ERR = rounding_epsilon<T>();
   Vector3<T> na = (a0 - a1).CrossProd(a0 + a1);
   Vector3<T> nb = (b0 - b1).CrossProd(b0 + b1);
@@ -1016,7 +1263,7 @@ int UnperturbedSign(const S2Point& a, const S2Point& b, const S2Point& c) {
 int SymbolicEdgeCircumcenterSign(
     const S2Point& x0, const S2Point& x1,
     const S2Point& a_arg, const S2Point& b_arg, const S2Point& c_arg) {
-  // We use the same perturbation strategy as SymbolicCompareDistances.  Note
+  // We use the same perturbation strategy as SymbolicCompareDistances. Note
   // that pedestal perturbations of X0 and X1 do not affect the result,
   // because Sign(X0, X1, Z) does not change when its arguments are scaled
   // by a positive factor.  Therefore we only need to consider A, B, C.
@@ -1138,7 +1385,7 @@ Excluded TriageVoronoiSiteExclusion(const Vector3<T>& a, const Vector3<T>& b,
   // The planes perpendicular to OA1 and OA2 cut off two discs of radius r
   // around A and B.  Now consider the two lines (inside the sphere) where
   // these planes intersect the plane containing the input edge X, and let A2
-  // and B2 be the points on these lines that are closest to A and B.  The
+  // and B2 be the points on these lines that are closest to A and B. The
   // coverage intervals of A and B can be represented as an interval along
   // each of these lines, centered at A2 and B2.  Let P1 and P2 be the
   // endpoints of the coverage interval for A, and let Q1 and Q2 be the
@@ -1213,7 +1460,7 @@ Excluded TriageVoronoiSiteExclusion(const Vector3<T>& a, const Vector3<T>& b,
   T aDn_error = Dn_error * sqrt(ax2);
   T ra2 = n2sin2_r - aDn2;
   T ra2_error = (8 * DBL_ERR + 4 * T_ERR) * aDn2 +
-      (2 * fabs(aDn) + aDn_error) * aDn_error + 6 * T_ERR * n2sin2_r;
+                (2 * fabs(aDn) + aDn_error) * aDn_error + 6 * T_ERR * n2sin2_r;
   // This is the minimum possible value of ra2, which is used to bound the
   // derivative of sqrt(ra2) in computing ra_error below.
   T min_ra2 = ra2 - ra2_error;
@@ -1227,7 +1474,7 @@ Excluded TriageVoronoiSiteExclusion(const Vector3<T>& a, const Vector3<T>& b,
   T bDn_error = Dn_error * sqrt(bx2);
   T rb2 = n2sin2_r - bDn2;
   T rb2_error = (8 * DBL_ERR + 4 * T_ERR) * bDn2 +
-      (2 * fabs(bDn) + bDn_error) * bDn_error + 6 * T_ERR * n2sin2_r;
+                (2 * fabs(bDn) + bDn_error) * bDn_error + 6 * T_ERR * n2sin2_r;
   T min_rb2 = rb2 - rb2_error;
   if (min_rb2 < 0) return Excluded::UNCERTAIN;
   T rb = sqrt(rb2);
@@ -1246,7 +1493,7 @@ Excluded TriageVoronoiSiteExclusion(const Vector3<T>& a, const Vector3<T>& b,
   T aXb1 = aXb.Norm();
   T sin_d = 0.5 * aXb.DotProd(n);
   T sin_d_error = (4 * DBL_ERR + (2.5 + 2 * sqrt(3)) * T_ERR) * aXb1 * n1 +
-      16 * sqrt(3) * DBL_ERR * T_ERR * (aXb1 + n1);
+                  16 * sqrt(3) * DBL_ERR * T_ERR * (aXb1 + n1);
 
   // If LHS(3) is definitely less than RHS(3), neither site excludes the other.
   T result = abs_lhs3 - sin_d;
@@ -1495,6 +1742,29 @@ template int TriageCompareSin2Distance<double>(
 template int TriageCompareSin2Distance<long double>(
     const Vector3_ld&, const Vector3_ld&, long double r2);
 
+template int TriageSignDotProd<double>(const Vector3_d& a, const Vector3_d& b);
+
+template int TriageSignDotProd<long double>(const Vector3_ld& a,
+                                            const Vector3_ld& b);
+
+template int TriageIntersectionOrdering<double>(
+    const Vector3_d& a, const Vector3_d& b, const Vector3_d& c,
+    const Vector3_d& d, const Vector3_d& m, const Vector3_d& n);
+
+template int TriageIntersectionOrdering<long double>(
+    const Vector3_ld& a, const Vector3_ld& b, const Vector3_ld& c,
+    const Vector3_ld& d, const Vector3_ld& m, const Vector3_ld& n);
+
+template int TriageCircleEdgeIntersectionSign<double>(const Vector3_d& a,
+                                                      const Vector3_d& b,
+                                                      const Vector3_d& n,
+                                                      const Vector3_d& x);
+
+template int TriageCircleEdgeIntersectionSign<long double>(const Vector3_ld& a,
+                                                           const Vector3_ld& b,
+                                                           const Vector3_ld& n,
+                                                           const Vector3_ld& x);
+
 template int TriageCompareEdgeDistance<double>(
     const Vector3_d& x, const Vector3_d& a0, const Vector3_d& a1, double r2);
 
@@ -1515,9 +1785,8 @@ template int TriageEdgeCircumcenterSign<double>(
     const Vector3_d& b, const Vector3_d& c, int abc_sign);
 
 template int TriageEdgeCircumcenterSign<long double>(
-    const Vector3_ld& x0, const Vector3_ld& x1,
-    const Vector3_ld& a, const Vector3_ld& b, const Vector3_ld& c,
-    int abc_sign);
+    const Vector3_ld& x0, const Vector3_ld& x1, const Vector3_ld& a,
+    const Vector3_ld& b, const Vector3_ld& c, int abc_sign);
 
 template Excluded TriageVoronoiSiteExclusion(
     const Vector3_d& a, const Vector3_d& b,
@@ -1528,3 +1797,175 @@ template Excluded TriageVoronoiSiteExclusion(
     const Vector3_ld& x0, const Vector3_ld& x1, long double r2);
 
 }  // namespace s2pred
+
+// Gappa proof for TriageIntersectionOrdering
+//
+// # Use IEEE754 double precision, round-to-nearest by default.
+// @rnd = float<ieee_64, ne>;
+//
+// # Five vectors, two forming edges AB, CD and two normals N,M for great
+// # circles.
+// a0 = rnd(a0_ex);
+// a1 = rnd(a1_ex);
+// a2 = rnd(a2_ex);
+// b0 = rnd(b0_ex);
+// b1 = rnd(b1_ex);
+// b2 = rnd(b2_ex);
+// c0 = rnd(c0_ex);
+// c1 = rnd(c1_ex);
+// c2 = rnd(c2_ex);
+// d0 = rnd(d0_ex);
+// d1 = rnd(d1_ex);
+// d2 = rnd(d2_ex);
+// n0 = rnd(n0_ex);
+// n1 = rnd(n1_ex);
+// n2 = rnd(n2_ex);
+// m0 = rnd(m0_ex);
+// m1 = rnd(m1_ex);
+// m2 = rnd(m2_ex);
+//
+// # (AxB)xN     =  (N*A)B - (N*B)*A         -- Lagrange's formula
+// # ((AxB)xN)*M = ((N*A)B - (N*B)*A)*M
+// #             = (N*A)(M*B) - (X*B)(M*A)
+//
+// ndota_ rnd = n0*a0 + n1*a1 + n2*a2;
+// ndotb_ rnd = n0*b0 + n1*b1 + n2*b2;
+// mdota_ rnd = m0*a0 + m1*a1 + m2*a2;
+// mdotb_ rnd = m0*b0 + m1*b1 + m2*b2;
+// prod0_ rnd = ndota_*mdotb_ - ndotb_*mdota_;
+//
+// ndotc_ rnd = n0*c0 + n1*c1 + n2*c2;
+// ndotd_ rnd = n0*d0 + n1*d1 + n2*d2;
+// mdotc_ rnd = m0*c0 + m1*c1 + m2*c2;
+// mdotd_ rnd = m0*d0 + m1*d1 + m2*d2;
+// prod1_ rnd = ndotc_*mdotd_ - ndotd_*mdotc_;
+//
+// diff_ rnd = prod1_ - prod0_;
+//
+// # Compute it all again in exact arithmetic.
+// ndota = n0*a0 + n1*a1 + n2*a2;
+// ndotb = n0*b0 + n1*b1 + n2*b2;
+// mdota = m0*a0 + m1*a1 + m2*a2;
+// mdotb = m0*b0 + m1*b1 + m2*b2;
+// prod0 = ndota*mdotb - ndotb*mdota;
+//
+// ndotc = n0*c0 + n1*c1 + n2*c2;
+// ndotd = n0*d0 + n1*d1 + n2*d2;
+// mdotc = m0*c0 + m1*c1 + m2*c2;
+// mdotd = m0*d0 + m1*d1 + m2*d2;
+// prod1 = ndotc*mdotd - ndotd*mdotc;
+//
+// diff = prod1 - prod0;
+//
+// {
+//   # A,B,C, and D are meant to be normalized S2Point values, so their
+//   # magnitude will be at most 1.  M and N are allowed to be unnormalized cell
+//   # edge normals, so their magnitude can be up to sqrt(2).  In each case the
+//   # components will be at most one.
+//      a0 in [-1, 1]
+//   /\ a1 in [-1, 1]
+//   /\ a2 in [-1, 1]
+//   /\ b0 in [-1, 1]
+//   /\ b1 in [-1, 1]
+//   /\ b2 in [-1, 1]
+//   /\ c0 in [-1, 1]
+//   /\ c1 in [-1, 1]
+//   /\ c2 in [-1, 1]
+//   /\ d0 in [-1, 1]
+//   /\ d1 in [-1, 1]
+//   /\ d2 in [-1, 1]
+//
+//   /\ n0 in [-1, 1]
+//   /\ n1 in [-1, 1]
+//   /\ n2 in [-1, 1]
+//   /\ m0 in [-1, 1]
+//   /\ m1 in [-1, 1]
+//   /\ m2 in [-1, 1]
+//
+//   # We always dot an unnormalized normal against a normalized point so the
+//   # magnitude of the dot product in each case is bounded by sqrt(2).
+//   /\ |ndota_| in [0, 1.4142135623730954]
+//   /\ |ndotb_| in [0, 1.4142135623730954]
+//   /\ |ndotc_| in [0, 1.4142135623730954]
+//   /\ |ndotd_| in [0, 1.4142135623730954]
+//
+//   /\ |mdota_| in [0, 1.4142135623730954]
+//   /\ |mdotb_| in [0, 1.4142135623730954]
+//   /\ |mdotc_| in [0, 1.4142135623730954]
+//   /\ |mdotd_| in [0, 1.4142135623730954]
+//
+//   ->
+//   |diff_ - diff| in ?
+// }
+//
+// > gappa proof.gappa
+// Results:
+//|  diff_ - diff| in [0, 1145679351550454559b-107 {7.06079e-15, 2^(-47.0091)}]
+//
+// >>> 1145679351550454559*2**-107/2**-52
+// 31.79898987322334
+
+// Gappa proof for TriageCircleEdgeIntersectionSign
+//
+// # Use IEEE754 double precision, round-to-nearest by default.
+// @rnd = float<ieee_64, ne>;
+//
+// # Four vectors, two forming an edge AB and two normals (X,Y) for great
+// circles. a0 = rnd(a0_ex); a1 = rnd(a1_ex); a2 = rnd(a2_ex); b0 =
+// rnd(b0_ex); b1 = rnd(b1_ex); b2 = rnd(b2_ex); n0 = rnd(n0_ex); n1 =
+// rnd(n1_ex); n2 = rnd(n2_ex); x0 = rnd(x0_ex); x1 = rnd(x1_ex); x2 =
+// rnd(x2_ex);
+//
+// # (AxB)xX     =  (X*A)B - (X*B)*A         -- Lagrange's formula
+// # ((AxB)xX)*Y = ((X*A)B - (X*B)*A)*Y
+// #             = (X*A)(Y*B) - (X*B)(Y*A)
+//
+// ndota_ rnd = n0*a0 + n1*a1 + n2*a2;
+// ndotb_ rnd = n0*b0 + n1*b1 + n2*b2;
+// xdota_ rnd = x0*a0 + x1*a1 + x2*a2;
+// xdotb_ rnd = x0*b0 + x1*b1 + x2*b2;
+// diff_  rnd = ndota_*xdotb_ - ndotb_*xdota_;
+//
+// # Compute it all again in exact arithmetic.
+// ndota = n0*a0 + n1*a1 + n2*a2;
+// ndotb = n0*b0 + n1*b1 + n2*b2;
+// xdota = x0*a0 + x1*a1 + x2*a2;
+// xdotb = x0*b0 + x1*b1 + x2*b2;
+// diff  = ndota*xdotb - ndotb*xdota;
+//
+// {
+//   # A and B are meant to be normalized S2Point values, so their magnitude
+//   will # be at most 1.  X and Y are allowed to be unnormalized cell edge
+//   normals, so # their magnitude can be up to sqrt(2).  In each case the
+//   components will be # at most one.
+//      a0 in [-1, 1]
+//   /\ a1 in [-1, 1]
+//   /\ a2 in [-1, 1]
+//   /\ b0 in [-1, 1]
+//   /\ b1 in [-1, 1]
+//   /\ b2 in [-1, 1]
+//   /\ n0 in [-1, 1]
+//   /\ n1 in [-1, 1]
+//   /\ n2 in [-1, 1]
+//   /\ x0 in [-1, 1]
+//   /\ x1 in [-1, 1]
+//   /\ x2 in [-1, 1]
+//
+//   # We always dot an unnormalized normal against a normalized point so the
+//   # magnitude of the dot product in each case is bounded by sqrt(2).
+//   /\ |ndota_| in [0, 1.4142135623730954]
+//   /\ |ndotb_| in [0, 1.4142135623730954]
+//   /\ |xdota_| in [0, 1.4142135623730954]
+//   /\ |xdotb_| in [0, 1.4142135623730954]
+//
+//   ->
+//   |diff_ - diff| in ?
+// } 6ms
+//
+// > gappa proof.gappa
+// Results:
+//   |diff_ - diff| in [0, 1001564163474598623b-108 {3.08631e-15,
+//   2^(-48.2031)}]
+//
+// >>> 1001564163474598623*2**-108/2**-52
+// 13.89949493661167

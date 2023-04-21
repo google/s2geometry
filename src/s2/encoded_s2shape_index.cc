@@ -129,7 +129,7 @@ bool EncodedS2ShapeIndex::Init(Decoder* decoder,
   // AtomicShape is a subtype of std::atomic<S2Shape*> that changes the
   // default constructor value to kUndecodedShape().  This saves the effort of
   // initializing all the elements twice.
-  shapes_ = std::vector<AtomicShape>(shape_factory.size());
+  shapes_ = vector<AtomicShape>(shape_factory.size());
   shape_factory_ = shape_factory.Clone();
   if (!cell_ids_.Init(decoder)) return false;
 

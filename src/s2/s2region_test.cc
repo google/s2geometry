@@ -41,9 +41,9 @@
 #include "s2/s2text_format.h"
 #include "s2/util/coding/coder.h"
 
+using absl::string_view;
 using std::string;
 using std::unique_ptr;
-using std::string;
 using std::vector;
 
 namespace {
@@ -51,54 +51,55 @@ namespace {
 //////////////  These values are in version 1 encoding format.  ////////////////
 
 // S2Cap.
-const char kEncodedCapEmpty[] =
+constexpr string_view kEncodedCapEmpty =
     "000000000000F03F00000000000000000000000000000000000000000000F0BF";
-const char kEncodedCapFull[] =
+constexpr string_view kEncodedCapFull =
     "000000000000F03F000000000000000000000000000000000000000000001040";
 // S2Cap from S2Point(3, 2, 1).Normalize()
-const char kEncodedCapFromPoint[] =
+constexpr string_view kEncodedCapFromPoint =
     "3F36105836A8E93F2A2460E5CE1AE13F2A2460E5CE1AD13F0000000000000000";
 // S2Cap from S2Point(0, 0, 1) with height 5
-const char kEncodedCapFromCenterHeight[] =
+constexpr string_view kEncodedCapFromCenterHeight =
     "00000000000000000000000000000000000000000000F03F0000000000001040";
 
 // S2Cell.
 // S2Cell from S2Point(1, 2, 3)
-const char kEncodedCellFromPoint[] = "F51392E0F35DCC43";
+constexpr string_view kEncodedCellFromPoint = "F51392E0F35DCC43";
 // S2Cell from LatLng(39.0, -120.0) - The Lake Tahoe border corner of CA/NV.
-const char kEncodedCellFromLatLng[] = "6308962A95849980";
+constexpr string_view kEncodedCellFromLatLng = "6308962A95849980";
 // S2Cell from FacePosLevel(3, 0x12345678, S2CellId::kMaxLevel - 4)
-const char kEncodedCellFromFacePosLevel[] = "0057341200000060";
+constexpr string_view kEncodedCellFromFacePosLevel = "0057341200000060";
 // S2Cell from Face 0.
-const char kEncodedCellFace0[] = "0000000000000010";
+constexpr string_view kEncodedCellFace0 = "0000000000000010";
 
 // S2CellUnion.
 // An uninitialized empty S2CellUnion.
-const char kEncodedCellUnionEmpty[] = "010000000000000000";
+constexpr string_view kEncodedCellUnionEmpty = "010000000000000000";
 // S2CellUnion from an S2CellId from Face 1.
-const char kEncodedCellUnionFace1[] = "0101000000000000000000000000000030";
+constexpr string_view kEncodedCellUnionFace1 =
+    "0101000000000000000000000000000030";
 // S2CellUnion from the cells {0x33, 0x8e3748fab, 0x91230abcdef83427};
-const char kEncodedCellUnionFromCells[] =
+constexpr string_view kEncodedCellUnionFromCells =
     "0103000000000000003300000000000000AB8F74E3080000002734F8DEBC0A2391";
 
 // S2LatLngRect
-const char kEncodedRectEmpty[] =
+constexpr string_view kEncodedRectEmpty =
     "01000000000000F03F0000000000000000182D4454FB210940182D4454FB2109C0";
-const char kEncodedRectFull[] =
+constexpr string_view kEncodedRectFull =
     "01182D4454FB21F9BF182D4454FB21F93F182D4454FB2109C0182D4454FB210940";
 // S2LatLngRect from Center=(80,170), Size=(40,60)
-const char kEncodedRectCentersize[] =
+constexpr string_view kEncodedRectCentersize =
     "0165732D3852C1F03F182D4454FB21F93FF75B8A41358C03408744E74A185706C0";
 
 // S2Loop
-const char kEncodedLoopEmpty[] =
+constexpr string_view kEncodedLoopEmpty =
     "010100000000000000000000000000000000000000000000000000F03F0000000000010000"
     "00000000F03F0000000000000000182D4454FB210940182D4454FB2109C0";
-const char kEncodedLoopFull[] =
+constexpr string_view kEncodedLoopFull =
     "010100000000000000000000000000000000000000000000000000F0BF010000000001182D"
     "4454FB21F9BF182D4454FB21F93F182D4454FB2109C0182D4454FB210940";
 // S2Loop from the unit test value kCross1;
-const char kEncodedLoopCross[] =
+constexpr string_view kEncodedLoopCross =
     "0108000000D44A8442C3F9EF3F7EDA2AB341DC913F27DCF7C958DEA1BFB4825F3C81FDEF3F"
     "27DCF7C958DE913F1EDD892B0BDF91BFB4825F3C81FDEF3F27DCF7C958DE913F1EDD892B0B"
     "DF913FD44A8442C3F9EF3F7EDA2AB341DC913F27DCF7C958DEA13FD44A8442C3F9EF3F7EDA"
@@ -113,21 +114,21 @@ const char kEncodedLoopCross[] =
 // S2Loop and others encode a stream of S2Points, they are writing triples of
 // doubles instead of encoding the points with the version byte.)
 // S2PointRegion(S2::Origin())
-const char kEncodedPointOrigin[] =
+constexpr string_view kEncodedPointOrigin =
     "013BED86AA997A84BF88EC8B48C53C653FACD2721A90FFEF3F";
 // S2PointRegion(S2Point(12.34, 56.78, 9.1011).Normalize())
-const char kEncodedPointTesting[] =
+constexpr string_view kEncodedPointTesting =
     "0109AD578332DBCA3FBC9FDB9BB4E4EE3FE67E7C2CA7CEC33F";
 
 // S2Polygon
 // S2Polygon from s2textformat::MakePolygonOrDie("").
 // This is encoded in compressed format v4.
-const char kEncodedPolygonEmpty[] = "041E00";
+constexpr string_view kEncodedPolygonEmpty = "041E00";
 // S2Polygon from s2textformat::MakePolygonOrDie("full").
 // This is encoded in compressed format v4.
-const char kEncodedPolygonFull[] = "040001010B000100";
+constexpr string_view kEncodedPolygonFull = "040001010B000100";
 // S2Polygon from the unit test value kCross1. Encoded in lossless format.
-const char kEncodedPolygon1Loops[] =
+constexpr string_view kEncodedPolygon1Loops =
     "010100010000000108000000D44A8442C3F9EF3F7EDA2AB341DC913F27DCF7C958DEA1BFB4"
     "825F3C81FDEF3F27DCF7C958DE913F1EDD892B0BDF91BFB4825F3C81FDEF3F27DCF7C958DE"
     "913F1EDD892B0BDF913FD44A8442C3F9EF3F7EDA2AB341DC913F27DCF7C958DEA13FD44A84"
@@ -138,7 +139,7 @@ const char kEncodedPolygon1Loops[] =
     "389D52A246DF91BF389D52A246DF913F";
 // S2Polygon from the unit test value kCross1+kCrossHole.
 // This is encoded in lossless format.
-const char kEncodedPolygon2Loops[] =
+constexpr string_view kEncodedPolygon2Loops =
     "010101020000000108000000D44A8442C3F9EF3F7EDA2AB341DC913F27DCF7C958DEA1BFB4"
     "825F3C81FDEF3F27DCF7C958DE913F1EDD892B0BDF91BFB4825F3C81FDEF3F27DCF7C958DE"
     "913F1EDD892B0BDF913FD44A8442C3F9EF3F7EDA2AB341DC913F27DCF7C958DEA13FD44A84"
@@ -156,14 +157,14 @@ const char kEncodedPolygon2Loops[] =
 
 // S2Polyline
 // An S2Polyline from an empty vector.
-const char kEncodedPolylineEmpty[] = "0100000000";
+constexpr string_view kEncodedPolylineEmpty = "0100000000";
 // An S2Polyline from 3 S2LatLngs {(0, 0),(0, 90),(0,180)};
-const char kEncodedPolylineSemiEquator[] =
+constexpr string_view kEncodedPolylineSemiEquator =
     "0103000000000000000000F03F00000000000000000000000000000000075C143326A6913C"
     "000000000000F03F0000000000000000000000000000F0BF075C143326A6A13C0000000000"
     "000000";
 // An S2Polyline from MakePolyline("0:0, 0:10, 10:20, 20:30");
-const char kEncodedPolyline3Segments[] =
+constexpr string_view kEncodedPolyline3Segments =
     "0104000000000000000000F03F00000000000000000000000000000000171C818C8B83EF3F"
     "89730B7E1A3AC63F000000000000000061B46C3A039DED3FE2DC829F868ED53F89730B7E1A"
     "3AC63F1B995E6FA10AEA3F1B2D5242F611DE3FF50B8A74A8E3D53F";
@@ -176,8 +177,8 @@ const char kEncodedPolyline3Segments[] =
 //////////////////////////////////////////////////////////////
 
 // HexEncodeStr returns the data in str in hex encoded form.
-const string HexEncodeStr(absl::string_view str) {
-  static const char* const lut = "0123456789ABCDEF";
+const string HexEncodeStr(string_view str) {
+  static constexpr string_view lut = "0123456789ABCDEF";
 
   string result;
   result.reserve(2 * str.size());
@@ -194,12 +195,12 @@ class S2RegionEncodeDecodeTest : public testing::Test {
   // TestEncodeDecode tests that the input encodes to match the expected
   // golden data, and then returns the decode of the data into dst.
   template <class Region>
-  void TestEncodeDecode(absl::string_view golden, const Region& src,
-                        Region* dst) {
+  void TestEncodeDecode(string_view golden, const Region& src, Region* dst) {
     Encoder encoder;
     src.Encode(&encoder);
 
-    EXPECT_EQ(golden, HexEncodeStr(string(encoder.base(), encoder.length())));
+    EXPECT_EQ(golden,
+              HexEncodeStr(string_view(encoder.base(), encoder.length())));
 
     Decoder decoder(encoder.base(), encoder.length());
     ASSERT_TRUE(dst->Decode(&decoder));

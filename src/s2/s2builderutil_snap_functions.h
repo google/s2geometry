@@ -150,7 +150,7 @@ class S2CellIdSnapFunction : public S2Builder::SnapFunction {
 // point (23.12345651, -45.65432149) would become (23123457, -45654321).
 //
 // The main argument of the SnapFunction is the exponent for the power of 10
-// that coordinates should be multipled by before rounding.  For example,
+// that coordinates should be multiplied by before rounding.  For example,
 // IntLatLngSnapFunction(7) is a function that snaps to E7 coordinates.  The
 // exponent can range from 0 to 10.
 //
@@ -185,7 +185,7 @@ class IntLatLngSnapFunction : public S2Builder::SnapFunction {
   void set_exponent(int exponent);
   int exponent() const;
 
-  // The minum exponent supported for snapping.
+  // The minimum exponent supported for snapping.
   static constexpr int kMinExponent = 0;
 
   // The maximum exponent supported for snapping.

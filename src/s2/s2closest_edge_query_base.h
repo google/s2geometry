@@ -30,6 +30,7 @@
 #include "s2/base/integral_types.h"
 #include "s2/base/logging.h"
 #include "absl/container/btree_set.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/container/inlined_vector.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
@@ -45,7 +46,6 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_count_edges.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
-#include "s2/util/gtl/dense_hash_set.h"
 
 // S2ClosestEdgeQueryBase is a templatized class for finding the closest
 // edge(s) between two geometries.  It is not intended to be used directly,
@@ -372,7 +372,7 @@ class S2ClosestEdgeQueryBase {
   // (even when Options::max_results() == 1), rather than just when we need to.
   bool avoid_duplicates_;
   using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
-  gtl::dense_hash_set<ShapeEdgeId, s2shapeutil::ShapeEdgeIdHash> tested_edges_;
+  absl::flat_hash_set<ShapeEdgeId> tested_edges_;
 
   // The algorithm maintains a priority queue of unprocessed S2CellIds, sorted
   // in increasing order of distance from the target.
@@ -478,9 +478,7 @@ inline void S2ClosestEdgeQueryBase<Distance>::Options::set_use_brute_force(
 
 template <class Distance>
 S2ClosestEdgeQueryBase<Distance>::S2ClosestEdgeQueryBase()
-    : tested_edges_(1) /* expected_max_elements*/ {
-  tested_edges_.set_empty_key(ShapeEdgeId(-1, -1));
-}
+    : tested_edges_(/*bucket_count=*/1) {}
 
 template <class Distance>
 S2ClosestEdgeQueryBase<Distance>::~S2ClosestEdgeQueryBase() {
