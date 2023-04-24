@@ -15,7 +15,7 @@ setuptools.setup(
             # This could be anything you like, it is used to create build folders
             name="SwigBindings",
             # Name of the resulting package name (import mymath_swig)
-            install_prefix="pywraps2",
+            install_prefix="s2geometry",
             # Selects the folder where the main CMakeLists.txt is stored
             # (it could be a subfolder)
             source_dir=str(Path(__file__).parent.absolute()),
