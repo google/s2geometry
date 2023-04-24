@@ -122,6 +122,12 @@ Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
 
 Enable the python interface with `-DWITH_PYTHON=ON`.
 
+If OpenSSL is installed in a non-standard location set `OPENSSL_ROOT_DIR`
+before running configure, for example on macOS:
+```
+OPENSSL_ROOT_DIR=/opt/homebrew/Cellar/openssl@3/3.1.0 cmake -DCMAKE_PREFIX_PATH=/opt/homebrew -DCMAKE_CXX_STANDARD=17
+```
+
 ## Installing
 
 From `build` subdirectory:
@@ -179,6 +185,15 @@ Version 4.0 is required, but it should be easy to make it work 3.0 or probably
 even 2.0.
 
 Python 3 is required.
+
+### Creating wheels
+```
+python setup.py bdist_wheel
+```
+
+> If OpenSSL is in a non-standard location (e.g., as installed by Homebrew on
+> macOS) make sure to set `OPENSSL_ROOT_DIR` when calling `setup.py`, for 
+> example: `OPENSSL_ROOT_DIR=/opt/homebrew/Cellar/openssl@3/3.1.0 python setup.py bdist_wheel`.
 
 ## Other S2 implementations
 
