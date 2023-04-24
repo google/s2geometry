@@ -187,9 +187,20 @@ even 2.0.
 Python 3 is required.
 
 ### Creating wheels
+First, make a virtual environment and install `cmake_build_extension` and `wheel`
+into it:
+```
+python3 -m venv venv
+source venv/bin/activate
+pip install cmake_build_extension wheel
+```
+
+Then build the wheel:
 ```
 python setup.py bdist_wheel
 ```
+
+The resulting wheel will be in the `dist` directory.
 
 > If OpenSSL is in a non-standard location (e.g., as installed by Homebrew on
 > macOS) make sure to set `OPENSSL_ROOT_DIR` when calling `setup.py`, for 
