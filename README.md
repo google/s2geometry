@@ -202,9 +202,8 @@ python setup.py bdist_wheel
 
 The resulting wheel will be in the `dist` directory.
 
-> If OpenSSL is in a non-standard location (e.g., as installed by Homebrew on
-> macOS) make sure to set `OPENSSL_ROOT_DIR` when calling `setup.py`, for 
-> example: `OPENSSL_ROOT_DIR=/opt/homebrew/Cellar/openssl@3/3.1.0 python setup.py bdist_wheel`.
+> If OpenSSL is in a non-standard location make sure to set `OPENSSL_ROOT_DIR` 
+> when calling `setup.py`, see above for more information.
 
 ## Other S2 implementations
 
