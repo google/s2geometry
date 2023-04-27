@@ -1,5 +1,6 @@
-# Set SWIG policies
+# Generate standard target names.
 cmake_policy(SET CMP0078 NEW)
+# Honor SWIG_MODULE_NAME via -module flag.
 cmake_policy(SET CMP0086 NEW)
 
 # Handle where to install the resulting Python package
