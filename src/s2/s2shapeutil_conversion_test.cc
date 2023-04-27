@@ -34,13 +34,15 @@
 namespace s2shapeutil {
 namespace {
 
+using std::unique_ptr;
+using std::vector;
+
 // ShapeToS2Points tests
 
 TEST(S2ShapeConversionUtilTest, PointVectorShapeToPoints) {
-  std::vector<S2Point> points =
-      s2textformat::ParsePointsOrDie("11:11, 10:0, 5:5");
+  vector<S2Point> points = s2textformat::ParsePointsOrDie("11:11, 10:0, 5:5");
   S2PointVectorShape point_vector(points);
-  std::vector<S2Point> extract = ShapeToS2Points(point_vector);
+  vector<S2Point> extract = ShapeToS2Points(point_vector);
   // TODO(user,b/205813109): Use gmock ASSERT_THAT.
   ASSERT_EQ(extract.size(), 3);
   for (int i = 0; i < extract.size(); i++) {
@@ -51,10 +53,9 @@ TEST(S2ShapeConversionUtilTest, PointVectorShapeToPoints) {
 // ShapeToS2Polyline tests
 
 TEST(S2ShapeConversionUtilTest, LineToS2Polyline) {
-  std::vector<S2Point> points =
-      s2textformat::ParsePointsOrDie("11:11, 10:0, 5:5");
+  vector<S2Point> points = s2textformat::ParsePointsOrDie("11:11, 10:0, 5:5");
   S2LaxPolylineShape lax_polyline(points);
-  std::unique_ptr<S2Polyline> polyline = ShapeToS2Polyline(lax_polyline);
+  unique_ptr<S2Polyline> polyline = ShapeToS2Polyline(lax_polyline);
   EXPECT_EQ(polyline->num_vertices(), 3);
   for (int i = 0; i < polyline->num_vertices(); i++) {
     EXPECT_EQ(polyline->vertex(i), points[i]);
@@ -62,10 +63,10 @@ TEST(S2ShapeConversionUtilTest, LineToS2Polyline) {
 }
 
 TEST(S2ShapeConversionUtilTest, ClosedLineToS2Polyline) {
-  std::vector<S2Point> points =
+  vector<S2Point> points =
       s2textformat::ParsePointsOrDie("0:0, 0:10, 10:10, 0:0");
   S2LaxPolylineShape lax_polyline(points);
-  std::unique_ptr<S2Polyline> polyline = ShapeToS2Polyline(lax_polyline);
+  unique_ptr<S2Polyline> polyline = ShapeToS2Polyline(lax_polyline);
   EXPECT_EQ(polyline->num_vertices(), 4);
   for (int i = 0; i < polyline->num_vertices(); i++) {
     EXPECT_EQ(polyline->vertex(i), points[i]);
@@ -76,10 +77,10 @@ TEST(S2ShapeConversionUtilTest, ClosedLineToS2Polyline) {
 
 // Creates a (lax) polygon shape from the provided loops, and ensures that the
 // S2Polygon produced by ShapeToS2Polygon represents the same polygon.
-void VerifyShapeToS2Polygon(const std::vector<S2LaxPolygonShape::Loop>& loops,
+void VerifyShapeToS2Polygon(const vector<S2LaxPolygonShape::Loop>& loops,
                             int expected_num_loops, int expected_num_vertices) {
   S2LaxPolygonShape lax_polygon(loops);
-  std::unique_ptr<S2Polygon> polygon = ShapeToS2Polygon(lax_polygon);
+  unique_ptr<S2Polygon> polygon = ShapeToS2Polygon(lax_polygon);
 
   EXPECT_EQ(polygon->num_loops(), expected_num_loops);
   EXPECT_EQ(polygon->num_vertices(), expected_num_vertices);
@@ -97,7 +98,7 @@ TEST(S2ShapeConversionUtilTest, PolygonWithHoleToS2Polygon) {
       s2textformat::ParsePointsOrDie("0:0, 0:10, 10:10, 10:0"));
   S2LaxPolygonShape::Loop hole(
       s2textformat::ParsePointsOrDie("4:4, 6:4, 6:6, 4:6"));
-  std::vector<S2LaxPolygonShape::Loop> loops{shell, hole};
+  vector<S2LaxPolygonShape::Loop> loops{shell, hole};
 
   VerifyShapeToS2Polygon(loops, 2, 8);
 }
@@ -108,7 +109,7 @@ TEST(S2ShapeConversionUtilTest, MultiPolygonToS2Polygon) {
       s2textformat::ParsePointsOrDie("0:0, 0:2, 2:2, 2:0"));
   S2LaxPolygonShape::Loop shell2(
       s2textformat::ParsePointsOrDie("0:4, 0:6, 3:6"));
-  std::vector<S2LaxPolygonShape::Loop> loops{shell1, shell2};
+  vector<S2LaxPolygonShape::Loop> loops{shell1, shell2};
 
   VerifyShapeToS2Polygon(loops, 2, 7);
 }
@@ -121,7 +122,7 @@ TEST(S2ShapeConversionUtilTest, TwoHolesToS2Polygon) {
       "1:1, 3:3, 1:3"));
   S2LaxPolygonShape::Loop hole2(s2textformat::ParsePointsOrDie(
       "2:6, 4:7, 2:8"));
-  std::vector<S2LaxPolygonShape::Loop> loops{shell, hole1, hole2};
+  vector<S2LaxPolygonShape::Loop> loops{shell, hole1, hole2};
 
   VerifyShapeToS2Polygon(loops, 3, 10);
 }
@@ -129,10 +130,10 @@ TEST(S2ShapeConversionUtilTest, TwoHolesToS2Polygon) {
 TEST(S2ShapeConversionUtilTest, FullPolygonToS2Polygon) {
   // verify that a full polygon is converted correctly
   S2LaxPolygonShape::Loop loop1(S2Loop::kFull());
-  std::vector<S2LaxPolygonShape::Loop> loops{loop1};
+  vector<S2LaxPolygonShape::Loop> loops{loop1};
 
   auto lax_polygon = s2textformat::MakeLaxPolygonOrDie("full");
-  std::unique_ptr<S2Polygon> polygon = ShapeToS2Polygon(*lax_polygon);
+  unique_ptr<S2Polygon> polygon = ShapeToS2Polygon(*lax_polygon);
   EXPECT_EQ(polygon->num_loops(), 1);
   EXPECT_EQ(polygon->num_vertices(), 1);
   EXPECT_TRUE(polygon->is_full());

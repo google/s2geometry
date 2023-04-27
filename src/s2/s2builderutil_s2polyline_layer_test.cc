@@ -24,6 +24,7 @@
 #include "s2/base/casts.h"
 #include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
+#include "absl/strings/string_view.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -36,6 +37,7 @@
 #include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using s2builderutil::IndexedS2PolylineLayer;
 using s2builderutil::S2PolylineLayer;
 using s2textformat::MakePolylineOrDie;
@@ -47,10 +49,9 @@ using EdgeType = S2Builder::EdgeType;
 
 namespace {
 
-void TestS2Polyline(
-    const vector<const char*>& input_strs,
-    const char* expected_str, EdgeType edge_type,
-    const S2Builder::Options& options = S2Builder::Options()) {
+void TestS2Polyline(const vector<string_view>& input_strs,
+                    string_view expected_str, EdgeType edge_type,
+                    const S2Builder::Options& options = S2Builder::Options()) {
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder(options);
   S2Polyline output;
@@ -65,15 +66,15 @@ void TestS2Polyline(
 }
 
 // Convenience function that tests both directed and undirected edges.
-void TestS2Polyline(
-    const vector<const char*>& input_strs, const char* expected_str,
-    const S2Builder::Options& options = S2Builder::Options()) {
+void TestS2Polyline(const vector<string_view>& input_strs,
+                    string_view expected_str,
+                    const S2Builder::Options& options = S2Builder::Options()) {
   TestS2Polyline(input_strs, expected_str, EdgeType::DIRECTED, options);
   TestS2Polyline(input_strs, expected_str, EdgeType::UNDIRECTED, options);
 }
 
-void TestS2PolylineUnchanged(const char* input_str) {
-  TestS2Polyline(vector<const char*>{input_str}, input_str);
+void TestS2PolylineUnchanged(string_view input_str) {
+  TestS2Polyline(vector<string_view>{input_str}, input_str);
 }
 
 TEST(S2PolylineLayer, NoEdges) {

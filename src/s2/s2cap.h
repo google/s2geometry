@@ -98,7 +98,9 @@ class S2Cap final : public S2Region {
   // Return a full cap, i.e. a cap that contains all points.
   static S2Cap Full();
 
-  ~S2Cap() override{};
+  // TODO(b/221261577): `= default` causes SWIG errors. Use it when SWIG  has
+  // been deleted.
+  ~S2Cap() override {}
 
   // Accessor methods.
   const S2Point& center() const { return center_; }

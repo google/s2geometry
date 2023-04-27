@@ -57,7 +57,7 @@ TEST(S2LaxPolylineShape, OneVertex) {
 TEST(S2LaxPolylineShape, Move) {
   // Construct a shape to use as the correct answer and a second identical shape
   // to be moved.
-  const std::vector<S2Point> vertices =
+  const vector<S2Point> vertices =
       s2textformat::ParsePointsOrDie("1:1, 4:4, 2:2, 3:3");
   const S2LaxPolylineShape correct(vertices);
   S2LaxPolylineShape to_move(vertices);
@@ -133,7 +133,7 @@ TEST(S2LaxPolylineShape, S2CoderWorks) {
 
 TEST(S2LaxPolylineShape, ChainIteratorWorks) {
   S2LaxPolylineShape empty;
-  std::vector<S2Point> points = s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1");
+  vector<S2Point> points = s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1");
   S2LaxPolylineShape shape(points);
 
   S2Shape::ChainIterator empty_begin = empty.chains().begin();
@@ -159,7 +159,7 @@ TEST(S2LaxPolylineShape, ChainIteratorWorks) {
 }
 
 TEST(S2LaxPolylineShape, ChainVertexIteratorWorks) {
-  std::vector<std::vector<S2Point>> test_sets;
+  vector<vector<S2Point>> test_sets;
   test_sets.push_back(s2textformat::ParsePointsOrDie("0:0, 0:0"));
   test_sets.push_back(s2textformat::ParsePointsOrDie("0:0, 0:1"));
   test_sets.push_back(s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1"));

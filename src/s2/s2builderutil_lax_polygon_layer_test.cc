@@ -18,15 +18,17 @@
 #include "s2/s2builderutil_lax_polygon_layer.h"
 
 #include <algorithm>
-#include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "absl/base/optimization.h"
+#include "absl/container/btree_set.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
 
 #include "s2/base/casts.h"
@@ -42,6 +44,8 @@
 #include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
+using absl::btree_set;
+using absl::flat_hash_map;
 using absl::string_view;
 using s2builderutil::IndexedLaxPolygonLayer;
 using s2builderutil::LaxPolygonLayer;
@@ -49,8 +53,6 @@ using s2textformat::MakeLaxPolygonOrDie;
 using s2textformat::MakePointOrDie;
 using s2textformat::MakePolylineOrDie;
 using std::make_unique;
-using std::map;
-using std::set;
 using std::string;
 using std::vector;
 
@@ -68,8 +70,7 @@ string ToString(DegenerateBoundaries degenerate_boundaries) {
   }
   // Cases are exhaustive, but some compilers don't know that and emit a
   // warning.
-  S2_LOG(FATAL) << "Unknown DegenerateBoundaries value: "
-                << static_cast<int>(degenerate_boundaries);
+  ABSL_UNREACHABLE();
 }
 
 void TestLaxPolygon(string_view input_str, string_view expected_str,
@@ -282,7 +283,8 @@ TEST(LaxPolygonLayer, DuplicateInputEdges) {
             s2textformat::ToString(output, "; "));
 }
 
-using EdgeLabelMap = map<S2Shape::Edge, set<int32>>;
+// IdSet returns ordered ids, so use an ordered set.
+using EdgeLabelMap = flat_hash_map<S2Shape::Edge, btree_set<int32>>;
 
 inline S2Shape::Edge GetKey(S2Shape::Edge edge, EdgeType edge_type) {
   // For undirected edges, sort the vertices in lexicographic order.
@@ -332,12 +334,10 @@ static void TestEdgeLabels(string_view input_str, EdgeType edge_type,
   for (int i = 0; i < output.num_chains(); ++i) {
     for (int j = 0; j < output.chain(i).length; ++j) {
       S2Shape::Edge edge = output.chain_edge(i, j);
-      const auto& expected_labels = edge_label_map[GetKey(edge, edge_type)];
-      ASSERT_EQ(expected_labels.size(),
-                label_set_lexicon.id_set(label_set_ids[i][j]).size());
-      EXPECT_TRUE(std::equal(
-          expected_labels.begin(), expected_labels.end(),
-          label_set_lexicon.id_set(label_set_ids[i][j]).begin()));
+      const btree_set<int32>& expected_labels =
+          edge_label_map[GetKey(edge, edge_type)];
+      EXPECT_THAT(label_set_lexicon.id_set(label_set_ids[i][j]),
+                  testing::ElementsAreArray(expected_labels));
     }
   }
 }

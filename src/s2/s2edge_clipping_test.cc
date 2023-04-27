@@ -21,22 +21,28 @@
 #include <cfloat>
 #include <cmath>
 #include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/container/inlined_vector.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1interval.h"
+#include "s2/s2cell.h"
 #include "s2/s2coords.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2point.h"
+#include "s2/s2shape.h"
 #include "s2/s2testing.h"
 
 using absl::StrCat;
+using absl::string_view;
 using std::fabs;
 using std::max;
+using std::vector;
 
 void TestFaceClipping(const S2Point& a_raw, const S2Point& b_raw) {
   S2Point a = a_raw.Normalize();

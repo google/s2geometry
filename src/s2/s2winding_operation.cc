@@ -529,7 +529,7 @@ S2WindingOperation::S2WindingOperation(
   Init(std::move(result_layer), options);
 }
 
-void S2WindingOperation::Init(std::unique_ptr<S2Builder::Layer> result_layer,
+void S2WindingOperation::Init(unique_ptr<S2Builder::Layer> result_layer,
                               const Options& options) {
   options_ = options;
   S2Builder::Options builder_options{options_.snap_function()};

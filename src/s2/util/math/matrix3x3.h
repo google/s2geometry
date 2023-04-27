@@ -389,7 +389,9 @@ class Matrix3x3 {
     Matrix3x3 Wv = Matrix3x3::AntiSym3(w);
     Matrix3x3 I = Matrix3x3::Identity();
     Matrix3x3 A = Matrix3x3::Sym3(w);
-    R = (1 - std::cos(theta)) * A + std::sin(theta) * Wv + std::cos(theta) * I;
+    using std::cos;
+    using std::sin;
+    R = (1 - cos(theta)) * A + sin(theta) * Wv + cos(theta) * I;
     return R;
   }
 
@@ -418,7 +420,8 @@ class Matrix3x3 {
         sum += m_[i][j] * m_[i][j];
       }
     }
-    return std::sqrt(sum);
+    using std::sqrt;
+    return sqrt(sum);
   }
 
   // Finds the eigen values of the matrix. Return the number of real eigenvalues

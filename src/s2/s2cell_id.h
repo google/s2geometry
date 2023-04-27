@@ -425,10 +425,10 @@ class S2CellId {
   // neighbors are guaranteed to be distinct.
   void GetEdgeNeighbors(S2CellId neighbors[4]) const;
 
-  // Return the neighbors of closest vertex to this cell at the given level,
-  // by appending them to "output".  Normally there are four neighbors, but
-  // the closest vertex may only have three neighbors if it is one of the 8
-  // cube vertices.
+  // Return the S2CellIds of the neighbors of the closest vertex to this cell
+  // at the given level, by appending them to "output".  Normally there are four
+  // neighbors, but the closest vertex may only have three neighbors if it is
+  // one of the 8 cube vertices.
   //
   // Requires: level < this->level(), so that we can determine which vertex is
   // closest (in particular, level == kMaxLevel is not allowed).
@@ -590,7 +590,7 @@ inline double S2CellId::GetSizeST() const {
 }
 
 inline int S2CellId::GetSizeIJ(int level) {
-  return 1 << (kMaxLevel - level);
+  return uint64{1} << (kMaxLevel - level);
 }
 
 inline double S2CellId::GetSizeST(int level) {

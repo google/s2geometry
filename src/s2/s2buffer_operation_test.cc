@@ -67,6 +67,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using std::make_unique;
 using std::max;
 using std::string;
@@ -421,14 +422,14 @@ void TestBuffer(const MutableS2ShapeIndex& input, S1Angle buffer_radius,
 }
 
 // Convenience function that takes an S2ShapeIndex in s2textformat format.
-void TestBuffer(absl::string_view index_str, S1Angle buffer_radius,
+void TestBuffer(string_view index_str, S1Angle buffer_radius,
                 double error_fraction) {
   TestBuffer(*s2textformat::MakeIndexOrDie(index_str), buffer_radius,
              error_fraction);
 }
 
 // Convenience function that tests buffering using +/- the given radius.
-void TestSignedBuffer(absl::string_view index_str, S1Angle buffer_radius,
+void TestSignedBuffer(string_view index_str, S1Angle buffer_radius,
                       double error_fraction) {
   TestBuffer(index_str, buffer_radius, error_fraction);
   TestBuffer(index_str, -buffer_radius, error_fraction);
@@ -493,7 +494,7 @@ TEST(S2BufferOperation, S2Curve) {
 // Tests buffering the given S2ShapeIndex with a variety of radii and error
 // fractions.  This method is intended to be used with relatively simple
 // shapes since calling it is quite expensive.
-void TestRadiiAndErrorFractions(absl::string_view index_str) {
+void TestRadiiAndErrorFractions(string_view index_str) {
   // Try the full range of radii with a representative error fraction.
   constexpr double kFrac = 0.01;
   vector<double> kTestRadiiRadians = {
@@ -535,7 +536,7 @@ TEST(S2BufferOperation, RadiiAndErrorFractionCoverage) {
 
 class TestBufferPolyline {
  public:
-  TestBufferPolyline(absl::string_view input_str,
+  TestBufferPolyline(string_view input_str,
                      const S2BufferOperation::Options& options);
 
  private:
@@ -620,7 +621,7 @@ class TestBufferPolyline {
 // instead.  Similarly TestBuffer should be used to test negative buffer radii
 // and polylines with 0 or 1 vertices.
 TestBufferPolyline::TestBufferPolyline(
-    absl::string_view input_str, const S2BufferOperation::Options& options)
+    string_view input_str, const S2BufferOperation::Options& options)
     : polyline_(s2textformat::ParsePointsOrDie(input_str)),
       buffer_radius_(options.buffer_radius()),
       max_error_(options.max_error()),

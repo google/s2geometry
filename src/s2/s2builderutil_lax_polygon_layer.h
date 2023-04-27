@@ -111,7 +111,10 @@ class LaxPolygonLayer : public S2Builder::Layer {
     //
     // DEFAULT: DegenerateBoundaries::KEEP
     enum class DegenerateBoundaries : uint8 {
-      DISCARD, DISCARD_HOLES, DISCARD_SHELLS, KEEP
+      DISCARD,
+      DISCARD_HOLES,
+      DISCARD_SHELLS,
+      KEEP
     };
     DegenerateBoundaries degenerate_boundaries() const;
     void set_degenerate_boundaries(DegenerateBoundaries degenerate_boundaries);

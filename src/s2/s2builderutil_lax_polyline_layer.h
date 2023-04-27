@@ -47,7 +47,7 @@ namespace s2builderutil {
 //
 // LaxPolylineLayer does not support options such as discarding sibling pairs
 // or merging duplicate edges because these options can split the polyline
-// into several pieces.  TODO(ericv): Implement LaxPolylineVectorLayer.
+// into several pieces.  TODO(b/266625836): Implement LaxPolylineVectorLayer.
 class LaxPolylineLayer : public S2Builder::Layer {
  public:
   class Options {
@@ -76,7 +76,7 @@ class LaxPolylineLayer : public S2Builder::Layer {
 
   // Specifies that a polyline should be constructed using the given options,
   // and that any labels attached to the input edges should be returned in
-  // "label_set_ids" and "label_set_lexicion".
+  // "label_set_ids" and "label_set_lexicon".
   //
   // The labels associated with the edge "polyline.vertex({j, j+1})" can be
   // retrieved as follows:

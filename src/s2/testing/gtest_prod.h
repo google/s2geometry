@@ -13,23 +13,12 @@
 // limitations under the License.
 //
 
-#ifndef S2_BASE_COMMANDLINEFLAGS_DECLARE_H_
-#define S2_BASE_COMMANDLINEFLAGS_DECLARE_H_
+#ifndef S2_TESTING_GTEST_PROD_H_
+#define S2_TESTING_GTEST_PROD_H_
 
-#include <string>
+// Allow use of prod headers without googletest.
+// This must be kept in sync with the googletest definition.
+#define FRIEND_TEST(test_case_name, test_name) \
+  friend class test_case_name##_##test_name##_Test
 
-#include "absl/flags/declare.h"
-
-#include "s2/base/integral_types.h"
-
-#define S2_DECLARE_bool(name) ABSL_DECLARE_FLAG(bool, name)
-
-#define S2_DECLARE_double(name) ABSL_DECLARE_FLAG(double, name)
-
-#define S2_DECLARE_int32(name) ABSL_DECLARE_FLAG(int32, name)
-
-#define S2_DECLARE_int64(name) ABSL_DECLARE_FLAG(int64, name)
-
-#define S2_DECLARE_string(name) ABSL_DECLARE_FLAG(std::string, name)
-
-#endif  // S2_BASE_COMMANDLINEFLAGS_DECLARE_H_
+#endif  // S2_TESTING_GTEST_PROD_H_

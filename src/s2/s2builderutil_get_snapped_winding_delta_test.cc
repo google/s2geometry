@@ -47,6 +47,7 @@
 #include "s2/s2text_format.h"
 
 using absl::StrCat;
+using absl::string_view;
 using std::make_unique;
 using std::string;
 using std::vector;
@@ -104,8 +105,7 @@ class WindingNumberComparingLayer : public S2Builder::Layer {
 // degrees, verifies that the change in winding number computed by
 // s2builderutil::GetSnappedWindingDelta() for the degenerate edge
 // "ref_input_edge_id" is "expected_winding_delta".
-void ExpectWindingDelta(absl::string_view loops_str,
-                        absl::string_view forced_vertices_str,
+void ExpectWindingDelta(string_view loops_str, string_view forced_vertices_str,
                         double snap_radius_degrees,
                         InputEdgeId ref_input_edge_id,
                         int expected_winding_delta) {

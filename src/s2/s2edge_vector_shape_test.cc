@@ -28,6 +28,8 @@
 #include "s2/s2shapeutil_testing.h"
 #include "s2/s2testing.h"
 
+using std::vector;
+
 TEST(S2EdgeVectorShape, Empty) {
   S2EdgeVectorShape shape;
   EXPECT_EQ(0, shape.num_edges());
@@ -68,7 +70,7 @@ TEST(S2EdgeVectorShape, EdgeAccess) {
   S2EdgeVectorShape shape;
   S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   const int kNumEdges = 100;
-  std::vector<std::pair<S2Point, S2Point>> edges;
+  vector<std::pair<S2Point, S2Point>> edges;
   for (int i = 0; i < kNumEdges; ++i) {
     S2Point a = S2Testing::RandomPoint();  // Control the evaluation order
     edges.emplace_back(a, S2Testing::RandomPoint());

@@ -15,14 +15,14 @@
 
 #include "s2/s2text_format.h"
 
-#include <cstdlib>
-
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "absl/strings/ascii.h"
+#include "absl/strings/numbers.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
@@ -44,7 +44,6 @@
 #include "s2/s2polyline.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
-#include "s2/strings/serialize.h"
 
 using absl::Span;
 using absl::string_view;
@@ -65,12 +64,6 @@ static vector<string_view> SplitString(string_view str, char separator) {
   return result;
 }
 
-static bool ParseDouble(const string& str, double* value) {
-  char* end_ptr = nullptr;
-  *value = strtod(str.c_str(), &end_ptr);
-  return end_ptr && *end_ptr == 0;
-}
-
 vector<S2LatLng> ParseLatLngsOrDie(string_view str) {
   vector<S2LatLng> latlngs;
   S2_CHECK(ParseLatLngs(str, &latlngs)) << ": str == \"" << str << "\"";
@@ -78,13 +71,13 @@ vector<S2LatLng> ParseLatLngsOrDie(string_view str) {
 }
 
 bool ParseLatLngs(string_view str, vector<S2LatLng>* latlngs) {
-  vector<pair<string, string>> ps;
-  if (!strings::DictionaryParse(str, &ps)) return false;
-  for (const auto& p : ps) {
-    double lat;
-    if (!ParseDouble(p.first, &lat)) return false;
-    double lng;
-    if (!ParseDouble(p.second, &lng)) return false;
+  for (const string_view lat_lng_str :
+       absl::StrSplit(str, ',', absl::SkipEmpty())) {
+    const vector<string_view> lat_lng = absl::StrSplit(lat_lng_str, ':');
+    if (lat_lng.size() != 2) return false;
+    double lat, lng;
+    if (!absl::SimpleAtod(lat_lng[0], &lat)) return false;
+    if (!absl::SimpleAtod(lat_lng[1], &lng)) return false;
     latlngs->push_back(S2LatLng::FromDegrees(lat, lng));
   }
   return true;
@@ -235,7 +228,7 @@ static bool InternalMakePolygon(string_view str,
   vector<string_view> loop_strs = SplitString(str, ';');
   vector<unique_ptr<S2Loop>> loops;
   for (const auto& loop_str : loop_strs) {
-    std::unique_ptr<S2Loop> loop;
+    unique_ptr<S2Loop> loop;
     if (!MakeLoop(loop_str, &loop, debug_override)) return false;
     // Don't normalize loops that were explicitly specified as "full".
     if (normalize_loops && !loop->is_full()) loop->Normalize();
@@ -297,7 +290,7 @@ unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(string_view str) {
   return index;
 }
 
-bool MakeIndex(string_view str, std::unique_ptr<MutableS2ShapeIndex>* index) {
+bool MakeIndex(string_view str, unique_ptr<MutableS2ShapeIndex>* index) {
   vector<string_view> strs = absl::StrSplit(str, '#');
   S2_DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
 
@@ -311,26 +304,33 @@ bool MakeIndex(string_view str, std::unique_ptr<MutableS2ShapeIndex>* index) {
     (*index)->Add(make_unique<S2PointVectorShape>(std::move(points)));
   }
   for (const auto& line_str : SplitString(strs[1], '|')) {
-    std::unique_ptr<S2LaxPolylineShape> lax_polyline;
+    unique_ptr<S2LaxPolylineShape> lax_polyline;
     if (!MakeLaxPolyline(line_str, &lax_polyline)) return false;
     (*index)->Add(std::move(lax_polyline));
   }
   for (const auto& polygon_str : SplitString(strs[2], '|')) {
-    std::unique_ptr<S2LaxPolygonShape> lax_polygon;
+    unique_ptr<S2LaxPolygonShape> lax_polygon;
     if (!MakeLaxPolygon(polygon_str, &lax_polygon)) return false;
     (*index)->Add(std::move(lax_polygon));
   }
   return true;
 }
 
-static void AppendVertex(const S2LatLng& ll, string* out) {
-  absl::StrAppendFormat(out, "%.15g:%.15g", ll.lat().degrees(),
-                        ll.lng().degrees());
+static void AppendVertex(const S2LatLng& ll, string* out,
+                         bool roundtrip_precision = false) {
+  if (roundtrip_precision) {
+    absl::StrAppendFormat(out, "%.17g:%.17g", ll.lat().degrees(),
+                          ll.lng().degrees());
+  } else {
+    absl::StrAppendFormat(out, "%.15g:%.15g", ll.lat().degrees(),
+                          ll.lng().degrees());
+  }
 }
 
-static void AppendVertex(const S2Point& p, string* out) {
+static void AppendVertex(const S2Point& p, string* out,
+                         bool roundtrip_precision = false) {
   S2LatLng ll(p);
-  return AppendVertex(ll, out);
+  return AppendVertex(ll, out, roundtrip_precision);
 }
 
 static void AppendVertices(const S2Point* v, int n, string* out) {
@@ -394,7 +394,7 @@ string ToString(const S2Polyline& polyline) {
   return out;
 }
 
-string ToString(const S2Polygon& polygon, const char* loop_separator) {
+string ToString(const S2Polygon& polygon, string_view loop_separator) {
   if (polygon.is_empty()) {
     return "empty";
   } else if (polygon.is_full()) {
@@ -402,7 +402,7 @@ string ToString(const S2Polygon& polygon, const char* loop_separator) {
   }
   string out;
   for (int i = 0; i < polygon.num_loops(); ++i) {
-    if (i > 0) out += loop_separator;
+    if (i > 0) absl::StrAppend(&out, loop_separator);
     const S2Loop& loop = *polygon.loop(i);
     AppendVertices(&loop.vertex(0), loop.num_vertices(), &out);
   }
@@ -424,6 +424,31 @@ string ToString(Span<const S2LatLng> latlngs) {
   return out;
 }
 
+string ToString(const S2Shape& shape) {
+  string out;
+  if (shape.dimension() == 1) out += "# ";
+  if (shape.dimension() == 2) out += "## ";
+
+  int nchain = 0;
+  for (const auto& chain : shape.chains()) {
+    if (nchain++ > 0) {
+      out += " | ";
+    }
+
+    int nvertex = 0;
+    for (const S2Point& vertex : shape.vertices(chain)) {
+      if (nvertex++ > 0) {
+        out += ", ";
+      }
+      AppendVertex(vertex, &out);
+    }
+  }
+
+  if (shape.dimension() == 1) out += " #";
+  if (shape.dimension() == 0) out += " ##";
+  return out;
+}
+
 string ToString(const S2LaxPolylineShape& polyline) {
   string out;
   if (polyline.num_vertices() > 0) {
@@ -432,10 +457,10 @@ string ToString(const S2LaxPolylineShape& polyline) {
   return out;
 }
 
-string ToString(const S2LaxPolygonShape& polygon, const char* loop_separator) {
+string ToString(const S2LaxPolygonShape& polygon, string_view loop_separator) {
   string out;
   for (int i = 0; i < polygon.num_loops(); ++i) {
-    if (i > 0) out += loop_separator;
+    if (i > 0) absl::StrAppend(&out, loop_separator);
     int n = polygon.num_loop_vertices(i);
     if (n == 0) {
       out += "full";
@@ -446,7 +471,7 @@ string ToString(const S2LaxPolygonShape& polygon, const char* loop_separator) {
   return out;
 }
 
-string ToString(const S2ShapeIndex& index) {
+string ToString(const S2ShapeIndex& index, bool roundtrip_precision) {
   string out;
   for (int dim = 0; dim < 3; ++dim) {
     if (dim > 0) out += "#";
@@ -461,13 +486,13 @@ string ToString(const S2ShapeIndex& index) {
           S2_DCHECK_EQ(dim, 2);
           out += "full";
         } else {
-          AppendVertex(shape->edge(chain.start).v0, &out);
+          AppendVertex(shape->edge(chain.start).v0, &out, roundtrip_precision);
         }
         int limit = chain.start + chain.length;
         if (dim != 1) --limit;
         for (int e = chain.start; e < limit; ++e) {
           out += ", ";
-          AppendVertex(shape->edge(e).v1, &out);
+          AppendVertex(shape->edge(e).v1, &out, roundtrip_precision);
         }
       }
     }

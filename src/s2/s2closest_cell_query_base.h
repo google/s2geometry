@@ -31,6 +31,7 @@
 
 #include "s2/base/logging.h"
 #include "absl/container/btree_set.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/hash/hash.h"
 #include "s2/s1chord_angle.h"
@@ -42,7 +43,6 @@
 #include "s2/s2distance_target.h"
 #include "s2/s2region.h"
 #include "s2/s2region_coverer.h"
-#include "s2/util/gtl/dense_hash_set.h"
 
 // S2ClosestCellQueryBase is a templatized class for finding the closest
 // (cell_id, label) pairs in an S2CellIndex to a given target.  It is not
@@ -337,12 +337,7 @@ class S2ClosestCellQueryBase {
   // TODO(ericv): Check whether it is faster to avoid duplicates by default
   // (even when Options::max_results() == 1), rather than just when we need to.
   bool avoid_duplicates_;
-  struct LabelledCellHash {
-    size_t operator()(LabelledCell x) const {
-      return absl::HashOf(x.cell_id.id(), x.label);
-    }
-  };
-  gtl::dense_hash_set<LabelledCell, LabelledCellHash> tested_cells_;
+  absl::flat_hash_set<LabelledCell> tested_cells_;
 
   // The algorithm maintains a priority queue of unprocessed S2CellIds, sorted
   // in increasing order of distance from the target.
@@ -445,9 +440,7 @@ inline void S2ClosestCellQueryBase<Distance>::Options::set_use_brute_force(
 
 template <class Distance>
 S2ClosestCellQueryBase<Distance>::S2ClosestCellQueryBase()
-    : tested_cells_(1) /* expected_max_elements*/ {
-  tested_cells_.set_empty_key(LabelledCell(S2CellId::None(), -1));
-}
+    : tested_cells_(/*bucket_count=*/1) {}
 
 template <class Distance>
 S2ClosestCellQueryBase<Distance>::~S2ClosestCellQueryBase() {

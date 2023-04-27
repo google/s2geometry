@@ -31,10 +31,12 @@
 
 using std::make_unique;
 using std::string;
+using std::unique_ptr;
+using std::vector;
 
 namespace s2polyline_alignment {
 
-Window::Window(const std::vector<ColumnStride>& strides) {
+Window::Window(const vector<ColumnStride>& strides) {
   S2_DCHECK(!strides.empty()) << "Cannot construct empty window.";
   S2_DCHECK(strides[0].start == 0) << "First element of start_cols is non-zero.";
   strides_ = strides;
@@ -75,7 +77,7 @@ Window Window::Upsample(const int new_rows, const int new_cols) const {
   S2_DCHECK(new_cols >= cols_) << "Upsampling: New_cols < current_cols";
   const double row_scale = static_cast<double>(new_rows) / rows_;
   const double col_scale = static_cast<double>(new_cols) / cols_;
-  std::vector<ColumnStride> new_strides(new_rows);
+  vector<ColumnStride> new_strides(new_rows);
   ColumnStride from_stride;
   for (int row = 0; row < new_rows; ++row) {
     from_stride = strides_[static_cast<int>((row + 0.5) / row_scale)];
@@ -94,7 +96,7 @@ Window Window::Upsample(const int new_rows, const int new_cols) const {
 // feels unnecessary to combine them.
 Window Window::Dilate(const int radius) const {
   S2_DCHECK(radius >= 0) << "Negative dilation radius.";
-  std::vector<ColumnStride> new_strides(rows_);
+  vector<ColumnStride> new_strides(rows_);
   int prev_row, next_row;
   for (int row = 0; row < rows_; ++row) {
     prev_row = std::max(0, row - radius);
@@ -181,18 +183,22 @@ VertexAlignment DynamicTimewarp(const S2Polyline& a, const S2Polyline& b,
                                 const Window& w) {
   const int rows = a.num_vertices();
   const int cols = b.num_vertices();
-  auto costs = CostTable(rows, std::vector<double>(cols));
+  auto costs = CostTable(rows, vector<double>(cols));
 
   ColumnStride curr;
   ColumnStride prev = ColumnStride::All();
   for (int row = 0; row < rows; ++row) {
     curr = w.GetColumnStride(row);
     for (int col = curr.start; col < curr.end; ++col) {
+      // The total cost up to (row,col) is the minimum of the cost up, down,
+      // left and the distance between the points in row and col. We use
+      // the distance between the points, as we are trying to minimize the
+      // distance between the two polylines.
       double d_cost = BoundsCheckedTableCost(row - 1, col - 1, prev, costs);
       double u_cost = BoundsCheckedTableCost(row - 1, col - 0, prev, costs);
       double l_cost = BoundsCheckedTableCost(row - 0, col - 1, curr, costs);
       costs[row][col] = std::min({d_cost, u_cost, l_cost}) +
-                        (a.vertex(row) - b.vertex(col)).Norm2();
+                        (a.vertex(row) - b.vertex(col)).Norm();
     }
     prev = curr;
   }
@@ -234,9 +240,9 @@ VertexAlignment DynamicTimewarp(const S2Polyline& a, const S2Polyline& b,
   return VertexAlignment(costs.back().back(), warp_path);
 }
 
-std::unique_ptr<S2Polyline> HalfResolution(const S2Polyline& in) {
+unique_ptr<S2Polyline> HalfResolution(const S2Polyline& in) {
   const int n = in.num_vertices();
-  std::vector<S2Point> vertices;
+  vector<S2Point> vertices;
   vertices.reserve(n / 2);
   for (int i = 0; i < n; i += 2) {
     vertices.push_back(in.vertex(i));
@@ -266,13 +272,13 @@ double GetExactVertexAlignmentCost(const S2Polyline& a, const S2Polyline& b) {
   const int b_n = b.num_vertices();
   S2_CHECK(a_n > 0) << "A is empty polyline.";
   S2_CHECK(b_n > 0) << "B is empty polyline.";
-  std::vector<double> cost(b_n, DOUBLE_MAX);
+  vector<double> cost(b_n, DOUBLE_MAX);
   double left_diag_min_cost = 0;
   for (int row = 0; row < a_n; ++row) {
     for (int col = 0; col < b_n; ++col) {
       double up_cost = cost[col];
       cost[col] = std::min(left_diag_min_cost, up_cost) +
-                  (a.vertex(row) - b.vertex(col)).Norm2();
+                  (a.vertex(row) - b.vertex(col)).Norm();
       left_diag_min_cost = std::min(cost[col], up_cost);
     }
     left_diag_min_cost = DOUBLE_MAX;
@@ -286,7 +292,7 @@ VertexAlignment GetExactVertexAlignment(const S2Polyline& a,
   const int b_n = b.num_vertices();
   S2_CHECK(a_n > 0) << "A is empty polyline.";
   S2_CHECK(b_n > 0) << "B is empty polyline.";
-  const auto w = Window(std::vector<ColumnStride>(a_n, {0, b_n}));
+  const auto w = Window(vector<ColumnStride>(a_n, {0, b_n}));
   return DynamicTimewarp(a, b, w);
 }
 
@@ -338,14 +344,14 @@ VertexAlignment GetApproxVertexAlignment(const S2Polyline& a,
 // alignments. Specifically, because cost_fn(a, b) = cost_fn(b, a), and
 // cost_fn(a, a) = 0, we can compute only the lower triangle of cost matrix
 // and then mirror it across the diagonal to save on cost_fn invocations.
-int GetMedoidPolyline(const std::vector<std::unique_ptr<S2Polyline>>& polylines,
+int GetMedoidPolyline(const vector<unique_ptr<S2Polyline>>& polylines,
                       const MedoidOptions options) {
   const int num_polylines = polylines.size();
   const bool approx = options.approx();
   S2_CHECK_GT(num_polylines, 0);
 
   // costs[i] stores total cost of aligning [i] with all other polylines.
-  std::vector<double> costs(num_polylines, 0.0);
+  vector<double> costs(num_polylines, 0.0);
   for (int i = 0; i < num_polylines; ++i) {
     for (int j = i + 1; j < num_polylines; ++j) {
       double cost = CostFn(*polylines[i], *polylines[j], approx);
@@ -375,8 +381,8 @@ int GetMedoidPolyline(const std::vector<std::unique_ptr<S2Polyline>>& polylines,
 //
 //  This algorithm takes O(iteration_cap * num_polylines) pairwise alignments.
 
-std::unique_ptr<S2Polyline> GetConsensusPolyline(
-    const std::vector<std::unique_ptr<S2Polyline>>& polylines,
+unique_ptr<S2Polyline> GetConsensusPolyline(
+    const vector<unique_ptr<S2Polyline>>& polylines,
     const ConsensusOptions options) {
   const int num_polylines = polylines.size();
   S2_CHECK_GT(num_polylines, 0);
@@ -390,14 +396,14 @@ std::unique_ptr<S2Polyline> GetConsensusPolyline(
     medoid_options.set_approx(approx);
     seed_index = GetMedoidPolyline(polylines, medoid_options);
   }
-  auto consensus = std::unique_ptr<S2Polyline>(polylines[seed_index]->Clone());
+  auto consensus = unique_ptr<S2Polyline>(polylines[seed_index]->Clone());
   const int num_consensus_vertices = consensus->num_vertices();
   S2_DCHECK_GT(num_consensus_vertices, 1);
 
   bool converged = false;
   int iterations = 0;
   while (!converged && iterations < options.iteration_cap()) {
-    std::vector<S2Point> points(num_consensus_vertices, S2Point());
+    vector<S2Point> points(num_consensus_vertices, S2Point());
     for (const auto& polyline : polylines) {
       const auto alignment = AlignmentFn(*consensus, *polyline, approx);
       for (const auto& pair : alignment.warp_path) {

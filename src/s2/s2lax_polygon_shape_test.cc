@@ -49,6 +49,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using s2textformat::MakePolygonOrDie;
 using std::make_unique;
 using std::unique_ptr;
@@ -94,8 +95,8 @@ void TestEncodedS2LaxPolygonShape(const S2LaxPolygonShape& original) {
   // bytes as the originally encoded form.
   Encoder reencoder;
   encoded.Encode(&reencoder, s2coding::CodingHint::COMPACT);
-  ASSERT_EQ(absl::string_view(encoder.base(), encoder.length()),
-            absl::string_view(reencoder.base(), reencoder.length()));
+  ASSERT_EQ(string_view(encoder.base(), encoder.length()),
+            string_view(reencoder.base(), reencoder.length()));
 }
 
 TEST(S2LaxPolygonShape, EmptyPolygon) {
@@ -118,7 +119,7 @@ TEST(S2LaxPolygonShape, EmptyPolygon) {
 TEST(S2LaxPolygonShape, Move) {
   // Construct a shape to use as the correct answer and a second identical shape
   // to be moved.
-  const std::vector<S2LaxPolygonShape::Loop> loops = {
+  const vector<S2LaxPolygonShape::Loop> loops = {
       s2textformat::ParsePointsOrDie("0:0, 0:3, 3:3"),
       s2textformat::ParsePointsOrDie("1:1, 2:2, 1:2")};
   const S2LaxPolygonShape correct(loops);
@@ -156,7 +157,7 @@ TEST(S2LaxPolygonShape, Move) {
 
 TEST(S2LaxPolygonShape, MoveFromShapeIndex) {
   // Construct an index containing shapes to be moved.
-  const std::vector<S2LaxPolygonShape::Loop> loops = {
+  const vector<S2LaxPolygonShape::Loop> loops = {
       s2textformat::ParsePointsOrDie("0:0, 0:3, 3:3"),
       s2textformat::ParsePointsOrDie("1:1, 2:2, 1:2")};
   MutableS2ShapeIndex index;
@@ -406,7 +407,7 @@ TEST(S2LaxPolygonShape, S2CoderWorks) {
 #endif
 
 TEST(S2LaxPolygonShape, ChainIteratorWorks) {
-  std::vector<S2LaxPolygonShape::Loop> loops;
+  vector<S2LaxPolygonShape::Loop> loops;
   loops.push_back(s2textformat::ParsePointsOrDie("0:0, 0:5, 5:5, 5:2.5, 5:0"));
   loops.push_back(s2textformat::ParsePointsOrDie("1:1, 1:4, 4:4, 4:1"));
   loops.push_back(s2textformat::ParsePointsOrDie("2:2, 2:3, 3:2"));
@@ -435,7 +436,7 @@ TEST(S2LaxPolygonShape, ChainIteratorWorks) {
 }
 
 TEST(S2LaxPolygonShape, ChainVertexIteratorWorks) {
-  std::vector<S2LaxPolygonShape::Loop> loops;
+  vector<S2LaxPolygonShape::Loop> loops;
   loops.push_back(s2textformat::ParsePointsOrDie("0:0, 0:5, 5:5, 5:2.5, 5:0"));
   loops.push_back(s2textformat::ParsePointsOrDie("1:1, 1:4, 4:4, 4:1"));
   loops.push_back(s2textformat::ParsePointsOrDie("2:2, 2:3, 3:2"));
@@ -465,8 +466,8 @@ TEST(S2LaxPolygonShape, ChainVertexIteratorWorks) {
     EXPECT_EQ(it2, vertices.end());
 
     // Testing with STL algorithms and containers.
-    std::vector<S2Point> copy1(vertices.begin(), vertices.end());
-    std::vector<S2Point> copy2(vertices.num_vertices());
+    vector<S2Point> copy1(vertices.begin(), vertices.end());
+    vector<S2Point> copy2(vertices.num_vertices());
     std::copy(vertices.begin(), vertices.end(), copy2.begin());
     for (int i = 0; i < vertices.num_vertices(); ++i) {
       EXPECT_EQ(copy1[i], loops[chain_counter][i]);

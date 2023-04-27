@@ -38,6 +38,7 @@
 #include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using s2builderutil::IndexedS2PointVectorLayer;
 using s2builderutil::S2PointVectorLayer;
 using s2textformat::MakePointOrDie;
@@ -52,7 +53,7 @@ namespace {
 void VerifyS2PointVectorLayerResults(
     const S2PointVectorLayer::LabelSetIds& label_set_ids,
     const IdSetLexicon& label_set_lexicon, const vector<S2Point>& output,
-    absl::string_view str_expected_points,
+    string_view str_expected_points,
     const vector<vector<int32>>& expected_labels) {
   vector<S2Point> expected_points =
       s2textformat::ParsePointsOrDie(str_expected_points);

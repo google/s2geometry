@@ -25,14 +25,16 @@
 #include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
 
-void ExpectIdSet(const std::vector<int32>& expected,
+using std::vector;
+
+void ExpectIdSet(const vector<int32>& expected,
                  const IdSetLexicon::IdSet& actual) {
   EXPECT_EQ(expected.size(), actual.size());
   EXPECT_TRUE(std::equal(expected.begin(), expected.end(), actual.begin()));
 }
 
 using IdSet = IdSetLexicon::IdSet;
-using Seq = std::vector<int32>;
+using Seq = vector<int32>;
 
 TEST(IdSetLexicon, EmptySet) {
   IdSetLexicon lexicon;

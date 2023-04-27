@@ -26,13 +26,14 @@
 #include "s2/s2point.h"
 #include "s2/s2region.h"
 
+using std::unique_ptr;
 using std::vector;
 
-S2RegionUnion::S2RegionUnion(vector<std::unique_ptr<S2Region>> regions) {
+S2RegionUnion::S2RegionUnion(vector<unique_ptr<S2Region>> regions) {
   Init(std::move(regions));
 }
 
-void S2RegionUnion::Init(vector<std::unique_ptr<S2Region>> regions) {
+void S2RegionUnion::Init(vector<unique_ptr<S2Region>> regions) {
   S2_DCHECK(regions_.empty());
   regions_ = std::move(regions);
 }
@@ -44,13 +45,13 @@ S2RegionUnion::S2RegionUnion(const S2RegionUnion& src)
   }
 }
 
-vector<std::unique_ptr<S2Region>> S2RegionUnion::Release() {
-  vector<std::unique_ptr<S2Region>> result;
+vector<unique_ptr<S2Region>> S2RegionUnion::Release() {
+  vector<unique_ptr<S2Region>> result;
   result.swap(regions_);
   return result;
 }
 
-void S2RegionUnion::Add(std::unique_ptr<S2Region> region) {
+void S2RegionUnion::Add(unique_ptr<S2Region> region) {
   regions_.push_back(std::move(region));
 }
 

@@ -49,6 +49,7 @@
 #include "s2/util/coding/coder.h"
 
 using absl::flat_hash_map;
+using absl::string_view;
 using S2::internal::kPosToOrientation;
 using std::fabs;
 using std::min;
@@ -367,7 +368,7 @@ TEST(S2CellId, LegacyCoder) {
 
 TEST(S2CellId, LegacyCoderTokenInvalid) {
   // Token too long
-  absl::string_view invalid_token = "000000000000000404\0";
+  string_view invalid_token = "000000000000000404\0";
   Decoder decoder(invalid_token.data(), invalid_token.size());
   S2CellId decoded;
   S2Error error;

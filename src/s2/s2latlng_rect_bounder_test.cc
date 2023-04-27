@@ -41,6 +41,7 @@
 #include "s2/s2testing.h"
 
 using absl::StrCat;
+using std::vector;
 
 S2LatLngRect GetEdgeBound(const S2Point& a, const S2Point& b) {
   S2LatLngRectBounder bounder;

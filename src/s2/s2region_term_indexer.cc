@@ -74,10 +74,10 @@
 
 #include "s2/s2region_term_indexer.h"
 
-#include <cctype>
 #include <string>
 #include <vector>
 
+#include "absl/strings/ascii.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
@@ -101,8 +101,8 @@ S2RegionTermIndexer::Options::Options() {
 }
 
 void S2RegionTermIndexer::Options::set_marker_character(char ch) {
-  S2_DCHECK(!std::isalnum(ch));
-  marker_ = string(1, ch);
+  S2_DCHECK(!absl::ascii_isalnum(ch));
+  marker_ = ch;
 }
 
 S2RegionTermIndexer::S2RegionTermIndexer(const Options& options)
@@ -140,6 +140,9 @@ vector<string> S2RegionTermIndexer::GetIndexTerms(const S2Point& point,
 
   const S2CellId id(point);
   vector<string> terms;
+  terms.reserve((options_.true_max_level() - options_.min_level()) /
+                    options_.level_mod() +
+                1);
   for (int level = options_.min_level(); level <= options_.max_level();
        level += options_.level_mod()) {
     terms.push_back(GetTerm(TermType::ANCESTOR, id.parent(level), prefix));
@@ -172,6 +175,9 @@ vector<string> S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
     S2_CHECK(coverer_.IsCanonical(covering));
   }
   vector<string> terms;
+  // `covering.size()` is necessary.  Double it because we'll probably add
+  // more.  This could probably reasonably be even higher.
+  terms.reserve(2 * covering.size());
   S2CellId prev_id = S2CellId::None();
   int true_max_level = options_.true_max_level();
   for (S2CellId id : covering) {
@@ -210,6 +216,11 @@ vector<string> S2RegionTermIndexer::GetQueryTerms(const S2Point& point,
 
   const S2CellId id(point);
   vector<string> terms;
+  terms.reserve(options_.index_contains_points_only()
+                    ? 1
+                    : ((options_.true_max_level() - options_.min_level()) /
+                           options_.level_mod() +
+                       2));
   // Recall that all true_max_level() cells are indexed only as ancestor terms.
   int level = options_.true_max_level();
   terms.push_back(GetTerm(TermType::ANCESTOR, id.parent(level), prefix));
@@ -239,6 +250,7 @@ vector<string> S2RegionTermIndexer::GetQueryTermsForCanonicalCovering(
     S2_CHECK(coverer_.IsCanonical(covering));
   }
   vector<string> terms;
+  terms.reserve(2 * covering.size());
   S2CellId prev_id = S2CellId::None();
   int true_max_level = options_.true_max_level();
   for (S2CellId id : covering) {

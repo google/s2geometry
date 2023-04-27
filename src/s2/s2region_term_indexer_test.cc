@@ -18,7 +18,6 @@
 #include "s2/s2region_term_indexer.h"
 
 #include <cstdio>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -26,6 +25,8 @@
 #include <gtest/gtest.h>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
+#include "absl/flags/flag.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/logging.h"
@@ -45,7 +46,7 @@ S2_DEFINE_int32(iters, 400, "number of iterations for testing");
 
 namespace {
 
-enum QueryType { POINT, CAP };
+enum class QueryType { POINT, CAP };
 
 void TestRandomCaps(const S2RegionTermIndexer::Options& options,
                     QueryType query_type) {
@@ -85,7 +86,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     // random size.
     S2Cap cap;
     vector<string> terms;
-    if (query_type == QueryType::CAP) {
+    if (query_type == QueryType::POINT) {
       cap = S2Cap::FromPoint(S2Testing::RandomPoint());
       terms = indexer.GetQueryTerms(cap.center(), "");
     } else {
@@ -96,7 +97,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     }
     // Compute the expected results of the S2Cell query by brute force.
     S2CellUnion covering = coverer.GetCovering(cap);
-    std::set<int> expected, actual;
+    absl::flat_hash_set<int> expected, actual;
     for (int j = 0; j < caps.size(); ++j) {
       if (covering.Intersects(coverings[j])) {
         expected.insert(j);

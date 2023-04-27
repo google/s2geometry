@@ -269,8 +269,8 @@ class S2FurthestEdgeQuery {
 
    private:
     S1ChordAngle distance_;
-    int32 shape_id_;     // Identifies an indexed shape.
-    int32 edge_id_;      // Identifies an edge within the shape.
+    int32 shape_id_;  // Identifies an indexed shape.
+    int32 edge_id_;   // Identifies an edge within the shape.
   };
 
   // Convenience constructor that calls Init().  Options may be specified here
