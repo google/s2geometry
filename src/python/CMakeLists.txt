@@ -4,7 +4,7 @@ cmake_policy(SET CMP0078 NEW)
 cmake_policy(SET CMP0086 NEW)
 
 # Handle where to install the resulting Python package
-if(CALL_FROM_SETUP_PY)
+if (CALL_FROM_SETUP_PY)
     # The CMakeExtension will set CMAKE_INSTALL_PREFIX to the root
     # of the resulting wheel archive
     set(S2GEOMETRY_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
