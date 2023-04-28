@@ -116,6 +116,12 @@ Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
 
 Enable the python interface with `-DWITH_PYTHON=ON`.
 
+If OpenSSL is installed in a non-standard location set `OPENSSL_ROOT_DIR`
+before running configure, for example on macOS:
+```
+OPENSSL_ROOT_DIR=/opt/homebrew/Cellar/openssl@3/3.1.0 cmake -DCMAKE_PREFIX_PATH=/opt/homebrew -DCMAKE_CXX_STANDARD=17
+```
+
 ## Installing
 
 From `build` subdirectory:
@@ -173,6 +179,25 @@ Version 4.0 is required, but it should be easy to make it work 3.0 or probably
 even 2.0.
 
 Python 3 is required.
+
+### Creating wheels
+First, make a virtual environment and install `cmake_build_extension` and `wheel`
+into it:
+```
+python3 -m venv venv
+source venv/bin/activate
+pip install cmake_build_extension wheel
+```
+
+Then build the wheel:
+```
+python setup.py bdist_wheel
+```
+
+The resulting wheel will be in the `dist` directory.
+
+> If OpenSSL is in a non-standard location make sure to set `OPENSSL_ROOT_DIR` 
+> when calling `setup.py`, see above for more information.
 
 ## Other S2 implementations
 
