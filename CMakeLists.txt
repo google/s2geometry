@@ -32,6 +32,7 @@ add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
                  "builds shared libraries instead of static.")
 
 option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
+option(BUILD_TESTS "Build s2 unittests." OFF)
 
 option(WITH_PYTHON "Add python interface" OFF)
 add_feature_info(PYTHON WITH_PYTHON "provides python interface to S2")
@@ -432,7 +433,7 @@ install(TARGETS ${S2_TARGETS}
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 message("GOOGLETEST_ROOT: ${GOOGLETEST_ROOT}")
-if (GOOGLETEST_ROOT)
+if (GOOGLETEST_ROOT AND BUILD_TESTS)
   add_subdirectory(${GOOGLETEST_ROOT}/googlemock build_gmock)
   include_directories(${GOOGLETEST_ROOT}/googlemock/include)
   include_directories(${GOOGLETEST_ROOT}/googletest/include)
