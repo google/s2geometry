@@ -32,7 +32,7 @@ add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
                  "builds shared libraries instead of static.")
 
 option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
-option(BUILD_TESTS "Build s2 unittests." OFF)
+option(BUILD_TESTS "Build s2 unittests." ON)
 
 option(WITH_PYTHON "Add python interface" OFF)
 add_feature_info(PYTHON WITH_PYTHON "provides python interface to S2")
