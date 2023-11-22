@@ -432,8 +432,12 @@ install(TARGETS ${S2_TARGETS}
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
-message("GOOGLETEST_ROOT: ${GOOGLETEST_ROOT}")
-if (GOOGLETEST_ROOT AND BUILD_TESTS)
+if (BUILD_TESTS)
+  if (NOT GOOGLETEST_ROOT)
+    message(FATAL_ERROR "BUILD_TESTS requires GOOGLETEST_ROOT")
+  endif()
+  message("GOOGLETEST_ROOT: ${GOOGLETEST_ROOT}")
+
   add_subdirectory(${GOOGLETEST_ROOT}/googlemock build_gmock)
   include_directories(${GOOGLETEST_ROOT}/googlemock/include)
   include_directories(${GOOGLETEST_ROOT}/googletest/include)
