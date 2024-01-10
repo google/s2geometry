@@ -50,7 +50,7 @@ std::ostream& operator<<(std::ostream& os, S1Angle a) {
   char buffer[13];
   int sz = snprintf(buffer, sizeof(buffer), "%.7f", degrees);
   // Fix sign/unsign comparison for client that use `-Wextra` (e.g. Chrome).
-  if (sz >= 0 && static_cast<uint>(sz) < sizeof(buffer)) {
+  if (sz >= 0 && static_cast<uint32_t>(sz) < sizeof(buffer)) {
     return os << buffer;
   } else {
     return os << degrees;
