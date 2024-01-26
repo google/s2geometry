@@ -248,8 +248,7 @@ if (S2_USE_SYSTEM_INCLUDES)
 else ()
     target_include_directories(s2 PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-      $<INSTALL_INTERFACE:include>
-    )
+      $<INSTALL_INTERFACE:include>)
 endif ()
 
 # Add version information to the target
@@ -437,10 +436,9 @@ install(TARGETS ${S2_TARGETS}
 
 install(TARGETS s2 EXPORT s2Targets)
 install(EXPORT s2Targets
-  NAMESPACE s2
-  FILE s2Targets.cmake
-  DESTINATION share/s2/
-)
+        NAMESPACE s2
+        FILE s2Targets.cmake
+        DESTINATION share/s2/)
 
 if (BUILD_TESTS)
   if (NOT GOOGLETEST_ROOT)
@@ -599,11 +597,10 @@ endif()
 
 include(CMakePackageConfigHelpers)
 
-# generate the config file that is includes the exports
+# Generate the config file that includes the exports.
 configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
   "${CMAKE_CURRENT_BINARY_DIR}/s2Config.cmake"
   INSTALL_DESTINATION "share/s2/"
   NO_SET_AND_CHECK_MACRO
-  NO_CHECK_REQUIRED_COMPONENTS_MACRO
-)
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/s2Config.cmake DESTINATION "share/s2/")
