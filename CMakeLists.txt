@@ -434,7 +434,10 @@ install(TARGETS ${S2_TARGETS}
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
+# create an export type "s2Targets" detailing the targetable artifacts created by this project
 install(TARGETS s2 EXPORT s2Targets)
+# install the export targets as a CMake config file in the share/s2 folder so that they can referenced 
+# by downstream projects as `s2::s2` after a successful `find_package` call
 install(EXPORT s2Targets
         NAMESPACE s2
         FILE s2Targets.cmake
