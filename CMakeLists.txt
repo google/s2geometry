@@ -441,7 +441,7 @@ install(TARGETS s2 EXPORT s2Targets)
 # that they can referenced  by downstream projects as `s2::s2` after a
 # successful `find_package` call.
 install(EXPORT s2Targets
-        NAMESPACE s2
+        NAMESPACE s2::
         FILE s2Targets.cmake
         DESTINATION share/s2/)
 
