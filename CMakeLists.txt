@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 project(s2-geometry
-	VERSION 0.11.0)
+	VERSION 0.11.1)
 
 include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
