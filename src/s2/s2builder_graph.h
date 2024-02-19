@@ -186,9 +186,14 @@ class S2Builder::Graph {
 
   // A helper class for VertexOutMap that represents the outgoing edge *ids*
   // from a given vertex.
-  class VertexOutEdgeIds
-      : public std::iterator<std::forward_iterator_tag, EdgeId> {
+  class VertexOutEdgeIds {
    public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = EdgeId;
+    using difference_type = std::ptrdiff_t;
+    using pointer = EdgeId*;
+    using reference = EdgeId&;
+
     // An iterator over a range of edge ids (like boost::counting_iterator).
     class Iterator {
      public:
