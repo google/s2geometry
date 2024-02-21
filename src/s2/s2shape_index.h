@@ -323,9 +323,14 @@ class S2ShapeIndex {
   //   for (S2Shape* shape : index) { ... }
   //
   // CAVEAT: Returns nullptr for shapes that have been removed from the index.
-  class ShapeIterator
-      : public std::iterator<std::forward_iterator_tag, S2Shape*> {
+  class ShapeIterator {
    public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = S2Shape*;
+    using difference_type = std::ptrdiff_t;
+    using pointer = S2Shape**;
+    using reference = S2Shape*&;
+
     ShapeIterator() = default;
     S2Shape* operator*() const;
     ShapeIterator& operator++();
