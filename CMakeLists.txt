@@ -57,6 +57,10 @@ find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
 
+if (NOT TARGET absl::vlog_is_on)
+    message(FATAL_ERROR "Could not find absl vlog module. Are you using an older version?")
+endif()
+
 if (WITH_PYTHON)
     # Should be easy to make it work with swig3, but some args to %pythonprepend
     # seem to be different and were changed.
