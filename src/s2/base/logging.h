@@ -20,6 +20,7 @@
 // include the relevant absl file directly instead.
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "absl/log/vlog_is_on.h"
 #include "s2/base/log_severity.h"
 
 // The names CHECK, etc. are too common and may conflict with other
@@ -48,14 +49,7 @@
 #define S2_DCHECK_GT DCHECK_GT
 #define S2_DCHECK_GE DCHECK_GE
 
-// Logging stream that does nothing.
-struct S2NullStream {
-  template <typename T>
-  S2NullStream& operator<<(const T& v) { return *this; }
-};
-
-// Abseil-cpp doesn't support VLOG yet.  Make VLOG a no-op.
-#define S2_VLOG(verbose_level) S2NullStream()
-#define S2_VLOG_IS_ON(verbose_level) (false)
+#define S2_VLOG VLOG
+#define S2_VLOG_IS_ON VLOG_IS_ON
 
 #endif  // S2_BASE_LOGGING_H_
