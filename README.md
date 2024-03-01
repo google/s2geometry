@@ -90,7 +90,7 @@ cd s2geometry
 
 ### Building
 
-First, [install Abseil](https://github.com/abseil/abseil-cpp/blob/master/CMake/README.md#traditional-cmake-set-up).
+First, [install Abseil](https://github.com/abseil/abseil-cpp/blob/master/CMake/README.md#traditional-cmake-set-up). We require [20240116.1](https://github.com/abseil/abseil-cpp/releases/tag/20240116.1) as the minimal version.
 It must be configured with `-DCMAKE_POSITION_INDEPENDENT_CODE=ON`.
 s2geometry must be configured to use the same C++ version that
 abseil uses.  The easiest way to achieve this is to pass
