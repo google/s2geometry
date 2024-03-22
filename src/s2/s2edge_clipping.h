@@ -28,10 +28,11 @@
 #ifndef S2_S2EDGE_CLIPPING_H_
 #define S2_S2EDGE_CLIPPING_H_
 
+#include <cfloat>
 #include <cmath>
 
-#include "s2/base/logging.h"
 #include "absl/container/inlined_vector.h"
+#include "absl/log/absl_check.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -64,8 +65,12 @@ void GetFaceSegments(const S2Point& a, const S2Point& b,
 // of AB that intersects that face.  This method guarantees that the clipped
 // vertices lie within the [-1,1]x[-1,1] cube face rectangle and are within
 // kFaceClipErrorUVDist of the line AB, but the results may differ from
-// those produced by GetFaceSegments.  Returns false if AB does not
-// intersect the given face.
+// those produced by GetFaceSegments.
+//
+// Returns false if AB does not intersect the given face.
+//
+// The test for face intersection is exact, so if this function returns false
+// then the edge definitively does not intersect the face.
 bool ClipToFace(const S2Point& a, const S2Point& b, int face,
                 R2Point* a_uv, R2Point* b_uv);
 
@@ -91,9 +96,9 @@ bool ClipToPaddedFace(const S2Point& a, const S2Point& b, int face,
 //    returned vertex there is a point on the exact edge AB whose u- and
 //    v-coordinates differ from the vertex by at most this amount.
 
-extern const double kFaceClipErrorRadians;
-extern const double kFaceClipErrorUVDist;
-extern const double kFaceClipErrorUVCoord;
+constexpr double kFaceClipErrorRadians = 3 * DBL_EPSILON;
+constexpr double kFaceClipErrorUVDist = 9 * DBL_EPSILON;
+constexpr double kFaceClipErrorUVCoord = 9 * M_SQRT1_2 * DBL_EPSILON;
 
 // Returns true if the edge AB intersects the given (closed) rectangle to
 // within the error bound below.
@@ -105,7 +110,7 @@ bool IntersectsRect(const R2Point& a, const R2Point& b, const R2Rect& rect);
 // the result is guaranteed to be false.  This bound assumes that "rect" is
 // a subset of the rectangle [-1,1]x[-1,1] or extends slightly outside it
 // (e.g., by 1e-10 or less).
-extern const double kIntersectsRectErrorUVDist;
+constexpr double kIntersectsRectErrorUVDist = 3 * M_SQRT2 * DBL_EPSILON;
 
 // Given an edge AB, returns the portion of AB that is contained by the given
 // rectangle "clip".  Returns false if there is no intersection.
@@ -144,8 +149,8 @@ bool ClipEdgeBound(const R2Point& a, const R2Point& b,
 //    the corresponding exact result.  It is equal to the error in a single
 //    coordinate because at most one coordinate is subject to error.
 
-extern const double kEdgeClipErrorUVCoord;
-extern const double kEdgeClipErrorUVDist;
+constexpr double kEdgeClipErrorUVCoord = 2.25 * DBL_EPSILON;
+constexpr double kEdgeClipErrorUVDist = 2.25 * DBL_EPSILON;
 
 // Given a value x that is some linear combination of a and b, returns the
 // value x1 that is the same linear combination of a1 and b1.  This function
@@ -172,7 +177,13 @@ inline bool ClipToFace(const S2Point& a, const S2Point& b, int face,
 
 inline double InterpolateDouble(double x, double a, double b,
                                 double a1, double b1) {
-  S2_DCHECK_NE(a, b);
+  // If A == B == X all we can return is the single point.
+  if (a == b) {
+    ABSL_DCHECK(x == a && a1 == b1);
+    return a1;
+  }
+
+  ABSL_DCHECK_NE(a, b);
   // To get results that are accurate near both A and B, we interpolate
   // starting from the closer of the two points.
   if (std::fabs(a - x) <= std::fabs(b - x)) {

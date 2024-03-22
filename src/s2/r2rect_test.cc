@@ -23,11 +23,14 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/strings/string_view.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 
+using absl::string_view;
+
 static void TestIntervalOps(const R2Rect& x, const R2Rect& y,
-                            const char* expected_rexion,
+                            string_view expected_rexion,
                             const R2Rect& expected_union,
                             const R2Rect& expected_intersection) {
   // Test all of the interval operations on the given pair of intervals.

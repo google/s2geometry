@@ -23,8 +23,8 @@
 
 #include <type_traits>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
+#include "absl/log/absl_check.h"
 #include "s2/util/bits/bits.h"
 
 // Returns the sign of x:
@@ -176,7 +176,7 @@ class MathUtil {
   // You can also use any type for which operator*= is defined.
   template <typename T>
   static T IPow(T base, int exp) {
-    S2_DCHECK_GE(exp, 0);
+    ABSL_DCHECK_GE(exp, 0);
     uint32 uexp = static_cast<uint32>(exp);
 
     if (uexp < 16) {

@@ -20,7 +20,6 @@
 #include <memory>
 #include <vector>
 
-#include "s2/base/logging.h"
 #include "absl/base/macros.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2point.h"
@@ -63,6 +62,7 @@ class S2RegionIntersection final : public S2Region {
   S2RegionIntersection* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
   bool Contains(const S2Point& p) const override;
   bool Contains(const S2Cell& cell) const override;
   bool MayIntersect(const S2Cell& cell) const override;

@@ -24,7 +24,7 @@
 #include <ostream>
 #include <vector>
 
-#include "s2/base/logging.h"
+#include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
@@ -98,7 +98,9 @@ class S2Cap final : public S2Region {
   // Return a full cap, i.e. a cap that contains all points.
   static S2Cap Full();
 
-  ~S2Cap() override{};
+  // TODO(b/221261577): `= default` causes SWIG errors. Use it when SWIG  has
+  // been deleted.
+  ~S2Cap() override {}
 
   // Accessor methods.
   const S2Point& center() const { return center_; }
@@ -248,12 +250,12 @@ std::ostream& operator<<(std::ostream& os, const S2Cap& cap);
 inline S2Cap::S2Cap(const S2Point& center, S1Angle radius)
     : center_(center), radius_(std::min(radius, S1Angle::Radians(M_PI))) {
   // The "min" calculation above is necessary to handle S1Angle::Infinity().
-  S2_DCHECK(is_valid());
+  ABSL_DCHECK(is_valid());
 }
 
 inline S2Cap::S2Cap(const S2Point& center, S1ChordAngle radius)
     : center_(center), radius_(radius) {
-  S2_DCHECK(is_valid());
+  ABSL_DCHECK(is_valid());
 }
 
 inline S2Cap S2Cap::FromPoint(const S2Point& center) {

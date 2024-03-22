@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
@@ -34,6 +34,7 @@
 #include "s2/s2testing.h"
 
 using absl::flat_hash_set;
+using absl::string_view;
 using std::pair;
 using std::string;
 using std::vector;
@@ -52,7 +53,7 @@ class S2CellIndexTest : public ::testing::Test {
     contents_.push_back(LabelledCell(cell_id, label));
   }
 
-  void Add(absl::string_view cell_str, Label label) {
+  void Add(string_view cell_str, Label label) {
     Add(S2CellId::FromDebugString(cell_str), label);
   }
 
@@ -70,7 +71,7 @@ class S2CellIndexTest : public ::testing::Test {
   void VerifyRangeIterators() const;
   void VerifyIndexContents() const;
   void TestIntersection(const S2CellUnion& target);
-  void ExpectContents(absl::string_view target_str,
+  void ExpectContents(string_view target_str,
                       S2CellIndex::ContentsIterator* contents,
                       const vector<pair<string, Label>>& expected_strs) const;
 
@@ -284,7 +285,7 @@ TEST_F(S2CellIndexTest, RandomCellUnions) {
 // first leaf cell contained by this target will intersect the exact set of
 // (cell_id, label) pairs given by "expected_strs".
 void S2CellIndexTest::ExpectContents(
-    absl::string_view target_str, S2CellIndex::ContentsIterator* contents,
+    string_view target_str, S2CellIndex::ContentsIterator* contents,
     const vector<pair<string, Label>>& expected_strs) const {
   S2CellIndex::RangeIterator range(&index_);
   range.Seek(S2CellId::FromDebugString(target_str).range_min());

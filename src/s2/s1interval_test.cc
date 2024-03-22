@@ -22,7 +22,9 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/strings/string_view.h"
 
+using absl::string_view;
 using std::fabs;
 
 class S1IntervalTestBase : public testing::Test {
@@ -181,7 +183,7 @@ TEST_F(S1IntervalTestBase, Contains) {
 }
 
 static void TestIntervalOps(const S1Interval& x, const S1Interval& y,
-                            const char* expected_relation,
+                            string_view expected_relation,
                             const S1Interval& expected_union,
                             const S1Interval& expected_intersection) {
   // Test all of the interval operations on the given pair of intervals.

@@ -39,6 +39,7 @@
 #include "s2/s2shape_index.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
@@ -78,7 +79,7 @@ class NormalizeTest : public testing::Test {
                      DuplicateEdges::KEEP, SiblingPairs::KEEP));
   }
 
-  void Run(absl::string_view input_str, absl::string_view expected_str);
+  void Run(string_view input_str, string_view expected_str);
 
  protected:
   bool suppress_lower_dimensions_;
@@ -86,15 +87,13 @@ class NormalizeTest : public testing::Test {
 
  private:
   static string ToString(const Graph& g);
-  void AddLayers(absl::string_view str,
-                 const vector<GraphOptions>& graph_options,
+  void AddLayers(string_view str, const vector<GraphOptions>& graph_options,
                  vector<Graph>* graphs_out, S2Builder* builder);
 
   vector<unique_ptr<GraphClone>> graph_clones_;
 };
 
-void NormalizeTest::Run(absl::string_view input_str,
-                        absl::string_view expected_str) {
+void NormalizeTest::Run(string_view input_str, string_view expected_str) {
   ClosedSetNormalizer::Options options;
   options.set_suppress_lower_dimensions(suppress_lower_dimensions_);
   ClosedSetNormalizer normalizer(options, graph_options_out_);
@@ -114,14 +113,14 @@ void NormalizeTest::Run(absl::string_view input_str,
   }
 }
 
-void NormalizeTest::AddLayers(absl::string_view str,
+void NormalizeTest::AddLayers(string_view str,
                               const vector<GraphOptions>& graph_options,
                               vector<Graph>* graphs_out, S2Builder* builder) {
   auto index = s2textformat::MakeIndexOrDie(str);
   for (int dim = 0; dim < 3; ++dim) {
     builder->StartLayer(make_unique<GraphAppendingLayer>(
         graph_options[dim], graphs_out, &graph_clones_));
-    for (S2Shape* shape : *index) {
+    for (const S2Shape* shape : *index) {
       if (shape->dimension() != dim) continue;
       int n = shape->num_edges();
       for (int e = 0; e < n; ++e) {

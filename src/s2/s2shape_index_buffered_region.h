@@ -51,10 +51,8 @@
 // S2CellUnion GetBufferedCovering(const S2ShapeIndex& index, S1Angle radius) {
 //   S2RegionCoverer coverer;
 //   coverer.mutable_options()->set_max_cells(20);
-//   S2CellUnion covering;
 //   S2ShapeIndexBufferedRegion region(&index, radius);
-//   coverer.GetCovering(region, &covering);
-//   return covering;
+//   return coverer.GetCovering(region);
 // }
 //
 // This class is not thread-safe.  To use it in parallel, each thread should

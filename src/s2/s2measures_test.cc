@@ -21,6 +21,7 @@
 #include <cmath>
 
 #include <gtest/gtest.h>
+#include "absl/log/absl_log.h"
 #include "s2/s2latlng.h"
 #include "s2/s2point.h"
 #include "s2/s2testing.h"
@@ -88,7 +89,7 @@ TEST(S2, AreaMethods) {
     max_girard = std::max(max_girard, S2::GirardArea(p0, p1, p2));
   }
   // This check only passes if GirardArea() uses RobustCrossProd().
-  S2_LOG(INFO) << "Worst case Girard for triangle area 1e-30: " << max_girard;
+  ABSL_LOG(INFO) << "Worst case Girard for triangle area 1e-30: " << max_girard;
   EXPECT_LE(max_girard, 1e-14);
 
   // Try a very long and skinny triangle.

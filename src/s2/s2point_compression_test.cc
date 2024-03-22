@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 #include "absl/container/fixed_array.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s1angle.h"
@@ -73,7 +74,7 @@ vector<S2Point> MakeRegularPoints(int num_vertices,
 
 void MakeXYZFaceSiTiPoints(Span<const S2Point> points,
                            Span<S2XYZFaceSiTi> result) {
-  S2_CHECK_EQ(points.size(), result.size());
+  ABSL_CHECK_EQ(points.size(), result.size());
   for (int i = 0; i < points.size(); ++i) {
     result[i].xyz = points[i];
     result[i].cell_level = S2::XYZtoFaceSiTi(points[i], &result[i].face,
@@ -297,8 +298,8 @@ TEST_F(S2PointCompressionTest, FirstPointOnFaceEdge) {
   Decoder decoder(encoder.base(), encoder.length());
   S2Point result[2];
   ASSERT_TRUE(S2DecodePointsCompressed(&decoder, 8, result));
-  S2_CHECK(result[0] == points[0].xyz);
-  S2_CHECK(result[1] == points[1].xyz);
+  ABSL_CHECK(result[0] == points[0].xyz);
+  ABSL_CHECK(result[1] == points[1].xyz);
 }
 
 }  // namespace

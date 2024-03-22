@@ -18,8 +18,8 @@
 #ifndef S2_S2POINT_REGION_H_
 #define S2_S2POINT_REGION_H_
 
-#include "s2/base/logging.h"
 #include "absl/base/macros.h"
+#include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
@@ -53,6 +53,7 @@ class S2PointRegion final : public S2Region {
   S2PointRegion* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
   bool Contains(const S2Cell& cell) const override { return false; }
   bool MayIntersect(const S2Cell& cell) const override;
   bool Contains(const S2Point& p) const override { return (point_ == p); }
@@ -72,7 +73,7 @@ class S2PointRegion final : public S2Region {
 };
 
 inline S2PointRegion::S2PointRegion(const S2Point& point) : point_(point) {
-  S2_DCHECK(S2::IsUnitLength(point));
+  ABSL_DCHECK(S2::IsUnitLength(point));
 }
 
 #endif  // S2_S2POINT_REGION_H_

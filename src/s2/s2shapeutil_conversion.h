@@ -13,7 +13,6 @@
 // limitations under the License.
 //
 
-// Author: ericv@google.com (Eric Veach)
 //
 // Helper functions for converting S2Shapes to typed shapes: S2Point,
 // S2Polyline and S2Polygon.

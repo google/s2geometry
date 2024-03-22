@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
 #include "s2/s2polygon.h"
@@ -31,10 +32,12 @@
 namespace s2shapeutil {
 
 using std::make_unique;
+using std::unique_ptr;
+using std::vector;
 
-std::vector<S2Point> ShapeToS2Points(const S2Shape& multipoint) {
-  S2_DCHECK_EQ(multipoint.dimension(), 0);
-  std::vector<S2Point> points;
+vector<S2Point> ShapeToS2Points(const S2Shape& multipoint) {
+  ABSL_DCHECK_EQ(multipoint.dimension(), 0);
+  vector<S2Point> points;
   points.reserve(multipoint.num_edges());
   for (int i = 0; i < multipoint.num_edges(); ++i) {
     points.push_back(multipoint.edge(i).v0);
@@ -42,21 +45,21 @@ std::vector<S2Point> ShapeToS2Points(const S2Shape& multipoint) {
   return points;
 }
 
-std::unique_ptr<S2Polyline> ShapeToS2Polyline(const S2Shape& line) {
-  S2_DCHECK_EQ(line.dimension(), 1);
-  S2_DCHECK_EQ(line.num_chains(), 1);
-  std::vector<S2Point> vertices;
+unique_ptr<S2Polyline> ShapeToS2Polyline(const S2Shape& line) {
+  ABSL_DCHECK_EQ(line.dimension(), 1);
+  ABSL_DCHECK_EQ(line.num_chains(), 1);
+  vector<S2Point> vertices;
   S2::GetChainVertices(line, 0, &vertices);
   return make_unique<S2Polyline>(std::move(vertices));
 }
 
-std::unique_ptr<S2Polygon> ShapeToS2Polygon(const S2Shape& poly) {
+unique_ptr<S2Polygon> ShapeToS2Polygon(const S2Shape& poly) {
   if (poly.is_full()) {
     return make_unique<S2Polygon>(make_unique<S2Loop>(S2Loop::kFull()));
   }
-  S2_DCHECK_EQ(poly.dimension(), 2);
-  std::vector<std::unique_ptr<S2Loop>> loops;
-  std::vector<S2Point> vertices;
+  ABSL_DCHECK_EQ(poly.dimension(), 2);
+  vector<unique_ptr<S2Loop>> loops;
+  vector<S2Point> vertices;
   for (int i = 0; i < poly.num_chains(); ++i) {
     S2::GetChainVertices(poly, i, &vertices);
     loops.push_back(make_unique<S2Loop>(vertices));

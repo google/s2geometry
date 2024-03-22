@@ -54,6 +54,8 @@
 #include <vector>
 
 #include "absl/container/btree_map.h"
+#include "absl/container/flat_hash_map.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
@@ -102,8 +104,8 @@ constexpr int kErrorResult = std::numeric_limits<int>::max();
 bool BuildChain(
     VertexId ref_v, const Graph& g, InputVertexEdgeMap* input_vertex_edge_map,
     vector<S2Point>* chain_in, vector<S2Point>* chain_out, S2Error* error) {
-  S2_DCHECK(chain_in->empty());
-  S2_DCHECK(chain_out->empty());
+  ABSL_DCHECK(chain_in->empty());
+  ABSL_DCHECK(chain_out->empty());
 
   // First look for an incoming edge to the reference vertex.  (This will be
   // the start of a chain that eventually leads to an outgoing edge.)
@@ -157,7 +159,7 @@ bool BuildChain(
 // given edge chain.  This is simply the sum of the signed edge crossings.
 int GetEdgeWindingDelta(const S2Point& a, const S2Point& b,
                         absl::Span<const S2Point> chain) {
-  S2_DCHECK_GT(chain.size(), 0);
+  ABSL_DCHECK_GT(chain.size(), 0);
 
   int delta = 0;
   S2EdgeCrosser crosser(&a, &b, &chain[0]);
@@ -204,16 +206,18 @@ int GetSnappedWindingDelta(
     const S2Point& ref_in, VertexId ref_v, Span<const EdgeId> incident_edges,
     const InputEdgeFilter& input_edge_filter, const S2Builder& builder,
     const Graph& g, S2Error* error) {
-  S2_DCHECK(!builder.options().simplify_edge_chains());
-  S2_DCHECK(g.options().edge_type() == S2Builder::EdgeType::DIRECTED);
-  S2_DCHECK(g.options().degenerate_edges() == GraphOptions::DegenerateEdges::KEEP);
-  S2_DCHECK(g.options().sibling_pairs() == GraphOptions::SiblingPairs::KEEP ||
-         g.options().sibling_pairs() == GraphOptions::SiblingPairs::REQUIRE ||
-         g.options().sibling_pairs() == GraphOptions::SiblingPairs::CREATE);
+  ABSL_DCHECK(!builder.options().simplify_edge_chains());
+  ABSL_DCHECK(g.options().edge_type() == S2Builder::EdgeType::DIRECTED);
+  ABSL_DCHECK(g.options().degenerate_edges() ==
+              GraphOptions::DegenerateEdges::KEEP);
+  ABSL_DCHECK(
+      g.options().sibling_pairs() == GraphOptions::SiblingPairs::KEEP ||
+      g.options().sibling_pairs() == GraphOptions::SiblingPairs::REQUIRE ||
+      g.options().sibling_pairs() == GraphOptions::SiblingPairs::CREATE);
 
   // First we group all the incident edges by input edge id, to handle the
   // problem that input edges can map to either one or two snapped edges.
-  absl::btree_map<InputEdgeId, EdgeSnap> input_id_edge_map;
+  absl::flat_hash_map<InputEdgeId, EdgeSnap> input_id_edge_map;
   for (EdgeId e : incident_edges) {
     Graph::Edge edge = g.edge(e);
     for (InputEdgeId input_id : g.input_edge_ids(e)) {
@@ -277,8 +281,8 @@ int GetSnappedWindingDelta(
       // compute the winding number of R by counting signed crossings of the
       // edge ZR, while the winding number of R' relative to Z is always zero
       // because the snapped chain collapses to a single point.
-      S2_DCHECK_EQ(chain_out[0], ref_out);         // Snaps to R'.
-      S2_DCHECK_EQ(chain_in[0], chain_in.back());  // Chain is a loop.
+      ABSL_DCHECK_EQ(chain_out[0], ref_out);         // Snaps to R'.
+      ABSL_DCHECK_EQ(chain_in[0], chain_in.back());  // Chain is a loop.
       S2Point z = S2::Ortho(ref_out);
       winding_delta += 0 - GetEdgeWindingDelta(z, ref_in, chain_in);
     } else {
@@ -320,8 +324,8 @@ int GetSnappedWindingDelta(
       // reverse order to C' to form a single closed loop.  The remaining term
       // s(RR', C') can be implemented as signed edge crossing tests, or more
       // directly by testing whether R is contained by the wedge C'.
-      S2_DCHECK_EQ(chain_out.size(), 3);
-      S2_DCHECK_EQ(chain_out[1], ref_out);
+      ABSL_DCHECK_EQ(chain_out.size(), 3);
+      ABSL_DCHECK_EQ(chain_out[1], ref_out);
 
       // Compute two points Za and Zb such that Za is not affected by the
       // snapping of any edge except possibly B0B1, and Zb is not affected by
@@ -388,7 +392,7 @@ int GetSnappedWindingDelta(
 
       // Compute the change in winding number of RR' with respect to C' only.
       // (This could also be computed using two calls to s2pred::OrderedCCW.)
-      S2_DCHECK_EQ(chain_out[1], ref_out);
+      ABSL_DCHECK_EQ(chain_out[1], ref_out);
       winding_delta += GetEdgeWindingDelta(ref_in, ref_out, chain_out);
     }
   }
@@ -431,7 +435,7 @@ VertexId FindFirstVertexId(InputEdgeId input_edge_id, const Graph& g) {
     if (entry.second == 1) return entry.first;
   }
   // Otherwise "input_edge_id" must snap to a single degenerate edge.
-  S2_DCHECK_EQ(excess_degree_map.size(), 1);
+  ABSL_DCHECK_EQ(excess_degree_map.size(), 1);
   return excess_degree_map.begin()->first;
 }
 

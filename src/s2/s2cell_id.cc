@@ -26,9 +26,10 @@
 #include <string>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/base/call_once.h"
 #include "absl/base/casts.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/util/bits/bits.h"
@@ -44,10 +45,11 @@
 #include "s2/s2point.h"
 
 using absl::StrCat;
-using S2::internal::kSwapMask;
+using absl::string_view;
 using S2::internal::kInvertMask;
 using S2::internal::kPosToIJ;
 using S2::internal::kPosToOrientation;
+using S2::internal::kSwapMask;
 using std::fabs;
 using std::max;
 using std::min;
@@ -145,7 +147,7 @@ int64 S2CellId::distance_from_begin() const {
 }
 
 S2CellId S2CellId::advance_wrap(int64 steps) const {
-  S2_DCHECK(is_valid());
+  ABSL_DCHECK(is_valid());
   if (steps == 0) return *this;
 
   int step_shift = 2 * (kMaxLevel - level()) + 1;
@@ -196,7 +198,7 @@ int S2CellId::GetCommonAncestorLevel(S2CellId other) const {
   // differ and convert that to a level.  The max() below is necessary for the
   // case where one S2CellId is a descendant of the other.
   uint64 bits = max(id() ^ other.id(), max(lsb(), other.lsb()));
-  S2_DCHECK_NE(bits, 0);  // Because lsb() is non-zero.
+  ABSL_DCHECK_NE(bits, 0);  // Because lsb() is non-zero.
 
   // Compute the position of the most significant bit, and then map the bit
   // position as follows:
@@ -230,7 +232,7 @@ string S2CellId::ToToken() const {
   return HexFormatString(id_ >> (4 * num_zero_digits), 16 - num_zero_digits);
 }
 
-S2CellId S2CellId::FromToken(const absl::string_view token) {
+S2CellId S2CellId::FromToken(const string_view token) {
   if (token.length() > 16) return S2CellId::None();
   uint64 id = 0;
   // Use size_t to fix signed/unsigned comparison for client that use `-Wextra`
@@ -365,8 +367,8 @@ int S2CellId::ToFaceIJOrientation(int* pi, int* pj, int* orientation) const {
     // by (kMaxLevel-n-1) repetitions of "00", followed by "0".  The "10" has
     // no effect, while each occurrence of "00" has the effect of reversing
     // the kSwapMask bit.
-    S2_DCHECK_EQ(0, kPosToOrientation[2]);
-    S2_DCHECK_EQ(kSwapMask, kPosToOrientation[0]);
+    ABSL_DCHECK_EQ(0, kPosToOrientation[2]);
+    ABSL_DCHECK_EQ(kSwapMask, kPosToOrientation[0]);
     if (lsb() & 0x1111111111111110ULL) {
       bits ^= kSwapMask;
     }
@@ -484,7 +486,7 @@ S2CellId S2CellId::FromFaceIJWrap(int face, int i, int j) {
   static const double kScale = 1.0 / kMaxSize;
   static const double kLimit = 1.0 + DBL_EPSILON;
   // The arithmetic below is designed to avoid 32-bit integer overflows.
-  S2_DCHECK_EQ(0, kMaxSize % 2);
+  ABSL_DCHECK_EQ(0, kMaxSize % 2);
   double u = max(-kLimit, min(kLimit, kScale * (2 * (i - kMaxSize / 2) + 1)));
   double v = max(-kLimit, min(kLimit, kScale * (2 * (j - kMaxSize / 2) + 1)));
 
@@ -523,7 +525,7 @@ void S2CellId::AppendVertexNeighbors(int level,
                                      vector<S2CellId>* output) const {
   // "level" must be strictly less than this cell's level so that we can
   // determine which vertex this cell is closest to.
-  S2_DCHECK_LT(level, this->level());
+  ABSL_DCHECK_LT(level, this->level());
   int i, j;
   int face = ToFaceIJOrientation(&i, &j, nullptr);
 
@@ -562,7 +564,7 @@ void S2CellId::AppendVertexNeighbors(int level,
 
 void S2CellId::AppendAllNeighbors(int nbr_level,
                                   vector<S2CellId>* output) const {
-  S2_DCHECK_GE(nbr_level, level());
+  ABSL_DCHECK_GE(nbr_level, level());
   int i, j;
   int face = ToFaceIJOrientation(&i, &j, nullptr);
 
@@ -574,7 +576,7 @@ void S2CellId::AppendAllNeighbors(int nbr_level,
   j &= -size;
 
   int nbr_size = GetSizeIJ(nbr_level);
-  S2_DCHECK_LE(nbr_size, size);
+  ABSL_DCHECK_LE(nbr_size, size);
 
   // We compute the top-bottom, left-right, and diagonal neighbors in one
   // pass.  The loop test is at the end of the loop to avoid 32-bit overflow.
@@ -620,7 +622,7 @@ std::ostream& operator<<(std::ostream& os, S2CellId id) {
   return os << id.ToString();
 }
 
-S2CellId S2CellId::FromDebugString(absl::string_view str) {
+S2CellId S2CellId::FromDebugString(string_view str) {
   // This function is reasonably efficient, but is only intended for use in
   // tests.
   int level = static_cast<int>(str.size() - 2);
@@ -662,7 +664,7 @@ bool S2CellId::Coder::Decode(Decoder& decoder, S2CellId& v,
     return false;
   }
 
-  const absl::string_view token(bytes, bytes_read - 1);
+  const string_view token(bytes, bytes_read - 1);
   v = S2CellId::FromToken(token);
   // Prevent edge cases where S2CellId::FromToken returns S2CellId::None for
   // an invalid token.
@@ -672,3 +674,14 @@ bool S2CellId::Coder::Decode(Decoder& decoder, S2CellId& v,
   }
   return true;
 }
+
+bool AbslParseFlag(string_view input, S2CellId* id, string* error) {
+  *id = S2CellId::FromToken(input);
+  if (!id->is_valid()) {
+    *error = absl::StrCat("Error. Expected valid S2 token got: '", input, "'");
+    return false;
+  }
+  return true;
+}
+
+string AbslUnparseFlag(S2CellId id) { return id.ToToken(); }

@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/log/absl_check.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
@@ -163,7 +164,7 @@ TEST(S2ConvexHullQuery, CapBoundExpandedToHemisphere) {
 void TestNorthPoleLoop(S1Angle radius, int num_vertices) {
   // If the radius is very close to 90, then it's hard to predict whether the
   // result will be the full loop or not.
-  S2_DCHECK_GE(fabs(radius.radians() - M_PI_2), 1e-15);
+  ABSL_DCHECK_GE(fabs(radius.radians() - M_PI_2), 1e-15);
 
   S2ConvexHullQuery query;
   unique_ptr<S2Loop> loop(

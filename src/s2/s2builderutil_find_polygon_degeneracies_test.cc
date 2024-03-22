@@ -25,6 +25,7 @@
 
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
@@ -32,6 +33,7 @@
 #include "s2/s2builder_layer.h"
 #include "s2/s2cap.h"
 #include "s2/s2error.h"
+#include "s2/s2fractal.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
@@ -39,6 +41,7 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using std::make_unique;
 using std::string;
 using std::vector;
@@ -111,7 +114,7 @@ void DegeneracyCheckingLayer::Build(const Graph& g, S2Error* error) {
   EXPECT_EQ(IsFullyDegenerate(g), degeneracies.size() == g.num_edges());
 }
 
-void ExpectDegeneracies(absl::string_view polygon_str,
+void ExpectDegeneracies(string_view polygon_str,
                         const vector<TestDegeneracy>& expected) {
   S2Builder builder{S2Builder::Options()};
   builder.StartLayer(make_unique<DegeneracyCheckingLayer>(expected));

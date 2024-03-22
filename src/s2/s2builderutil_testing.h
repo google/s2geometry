@@ -113,7 +113,7 @@ class IndexMatchingLayer : public S2Builder::Layer {
   // are found, sets "error" to a descriptive error message.
   //
   // If "dimension" is non-negative then only shapes of the given dimension
-  // are used.  (This makes allows use with classes such as S2BooleanOperation
+  // are used.  (This allows for use with classes such as S2BooleanOperation
   // that output one S2Builder::Graph for each dimension.)
   explicit IndexMatchingLayer(const S2Builder::GraphOptions& graph_options,
                               const S2ShapeIndex* index, int dimension = -1)

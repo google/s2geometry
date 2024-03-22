@@ -21,8 +21,11 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
+#include "absl/log/absl_check.h"
 #include "s2/sequence_lexicon.h"
+
+using std::vector;
 
 IdSetLexicon::IdSetLexicon() = default;
 
@@ -51,7 +54,7 @@ void IdSetLexicon::Clear() {
   id_sets_.Clear();
 }
 
-int32 IdSetLexicon::AddInternal(std::vector<int32>* ids) {
+int32 IdSetLexicon::AddInternal(vector<int32>* ids) {
   if (ids->empty()) {
     // Empty sets have a special id chosen not to conflict with other ids.
     return kEmptySetId;
@@ -79,7 +82,7 @@ IdSetLexicon::IdSet IdSetLexicon::id_set(int32 set_id) const {
     return IdSet();
   } else {
     auto sequence = id_sets_.sequence(~set_id);
-    S2_DCHECK_NE(0, sequence.size());
+    ABSL_DCHECK_NE(0, sequence.size());
     return IdSet(&*sequence.begin(), &*sequence.begin() + sequence.size());
   }
 }

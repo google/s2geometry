@@ -33,6 +33,15 @@ namespace {
 
 using ::testing::Eq;
 
+// A matcher that applies DoubleNear to each field of an S2Point.
+MATCHER_P2(NearPoint, P, tol,
+           absl::StrFormat("Near point (%f, %f, %f) (tol: %.3e)", P.x(), P.y(),
+                           P.z(), tol)) {
+  return ::testing::Value(arg.x(), ::testing::DoubleNear(P.x(), tol)) &&
+         ::testing::Value(arg.y(), ::testing::DoubleNear(P.y(), tol)) &&
+         ::testing::Value(arg.z(), ::testing::DoubleNear(P.z(), tol));
+}
+
 TEST(S2Point, HashSpreads) {
   int kTestPoints = 1 << 16;
   absl::flat_hash_set<size_t> set;
@@ -102,5 +111,4 @@ TEST(S2Point, FRoundWorks) {
   S2Point a(1.4, 1.5, 1.6);
   EXPECT_THAT(a.FRound(), Eq(S2Point(1, 2, 2)));
 }
-
 }  // namespace

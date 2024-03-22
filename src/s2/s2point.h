@@ -50,10 +50,10 @@ class S2Point : public Vector3_d {
   // explicit before.
 
   // NOLINTNEXTLINE(google-explicit-constructor)
-  S2Point(const Base& base) : Base(base) {}
+  constexpr S2Point(const Base& base) : Base(base) {}
 
   // NOLINTNEXTLINE(google-explicit-constructor)
-  S2Point(Base&& base) : Base(std::move(base)) {}
+  constexpr S2Point(Base&& base) : Base(std::move(base)) {}
 
   // Initialize S2Point from a Decoder instance.
   bool Init(Decoder* decoder, S2Error& error) {

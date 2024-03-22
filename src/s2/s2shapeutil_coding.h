@@ -39,6 +39,8 @@
 #include <vector>
 
 #include "s2/base/casts.h"
+#include "absl/base/attributes.h"
+#include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/s2coder.h"
@@ -152,7 +154,10 @@ bool CompactEncodeTaggedShapes(const S2ShapeIndex& index, Encoder* encoder);
 class TaggedShapeFactory : public S2ShapeIndex::ShapeFactory {
  public:
   // Returns an empty vector and/or null S2Shapes on decoding errors.
-  TaggedShapeFactory(const ShapeDecoder& shape_decoder, Decoder* decoder);
+  // Some but not all encoding errors are detected during factory construction,
+  // and reported to `error` parameter.
+  TaggedShapeFactory(const ShapeDecoder& shape_decoder, Decoder* decoder,
+                     S2Error& error);
 
   int size() const override { return encoded_shapes_.size(); }
 
@@ -169,10 +174,16 @@ class TaggedShapeFactory : public S2ShapeIndex::ShapeFactory {
 
 // Convenience function that calls TaggedShapeFactory using FullDecodeShape
 // as the ShapeDecoder.
+TaggedShapeFactory FullDecodeShapeFactory(Decoder* decoder, S2Error& error);
+
+[[deprecated("Use version that accepts S2Error to detect encoding errors")]]
 TaggedShapeFactory FullDecodeShapeFactory(Decoder* decoder);
 
 // Convenience function that calls TaggedShapeFactory using LazyDecodeShape
 // as the ShapeDecoder.
+TaggedShapeFactory LazyDecodeShapeFactory(Decoder* decoder, S2Error& error);
+
+[[deprecated("Use version that accepts S2Error to detect encoding errors")]]
 TaggedShapeFactory LazyDecodeShapeFactory(Decoder* decoder);
 
 // A ShapeFactory that simply returns shapes from the given vector.
@@ -264,9 +275,9 @@ template <class Shape>
 void EncodeHomogeneousShapes(const S2ShapeIndex& index, Encoder* encoder,
                              s2coding::CodingHint hint) {
   s2coding::StringVectorEncoder shape_vector;
-  for (S2Shape* shape : index) {
-    S2_DCHECK(shape != nullptr);
-    down_cast<Shape*>(shape)->Encode(shape_vector.AddViaEncoder(), hint);
+  for (const S2Shape* shape : index) {
+    ABSL_DCHECK(shape != nullptr);
+    down_cast<const Shape*>(shape)->Encode(shape_vector.AddViaEncoder(), hint);
   }
   shape_vector.Encode(encoder);
 }

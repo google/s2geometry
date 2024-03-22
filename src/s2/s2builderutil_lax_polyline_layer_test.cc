@@ -22,8 +22,9 @@
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
+#include "absl/strings/string_view.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -35,6 +36,7 @@
 #include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using s2builderutil::IndexedLaxPolylineLayer;
 using s2builderutil::LaxPolylineLayer;
 using s2textformat::MakeLaxPolylineOrDie;
@@ -47,8 +49,8 @@ using EdgeType = S2Builder::EdgeType;
 namespace {
 
 void TestS2LaxPolylineShape(
-    const vector<const char*>& input_strs,
-    const char* expected_str, EdgeType edge_type,
+    const vector<string_view>& input_strs, string_view expected_str,
+    EdgeType edge_type,
     const S2Builder::Options& options = S2Builder::Options()) {
   SCOPED_TRACE(edge_type == EdgeType::DIRECTED ? "DIRECTED" : "UNDIRECTED");
   S2Builder builder(options);
@@ -65,15 +67,15 @@ void TestS2LaxPolylineShape(
 
 // Convenience function that tests both directed and undirected edges.
 void TestS2LaxPolylineShape(
-    const vector<const char*>& input_strs, const char* expected_str,
+    const vector<string_view>& input_strs, string_view expected_str,
     const S2Builder::Options& options = S2Builder::Options()) {
   TestS2LaxPolylineShape(input_strs, expected_str, EdgeType::DIRECTED, options);
   TestS2LaxPolylineShape(input_strs, expected_str, EdgeType::UNDIRECTED,
                          options);
 }
 
-void TestS2LaxPolylineShapeUnchanged(const char* input_str) {
-  TestS2LaxPolylineShape(vector<const char*>{input_str}, input_str);
+void TestS2LaxPolylineShapeUnchanged(string_view input_str) {
+  TestS2LaxPolylineShape(vector<string_view>{input_str}, input_str);
 }
 
 TEST(LaxPolylineLayer, NoEdges) {
@@ -94,8 +96,8 @@ TEST(LaxPolylineLayer, StraightLineWithBacktracking) {
 
 TEST(LaxPolylineLayer, EarlyWalkTerminationWithEndLoop1) {
   // Test that the "early walk termination" code (which is needed by
-  // S2LaxPolylineShapeVectorLayer in order to implement idempotency) does not
-  // create two polylines when it is possible to assemble the edges into one.
+  // S2LaxPolylineLayer in order to implement idempotency) does not create two
+  // polylines when it is possible to assemble the edges into one.
   //
   // This example tests a code path where the early walk termination code
   // should not be triggered at all (but was at one point due to a bug).
@@ -106,7 +108,7 @@ TEST(LaxPolylineLayer, EarlyWalkTerminationWithEndLoop1) {
 
 TEST(LaxPolylineLayer, EarlyWalkTerminationWithEndLoop2) {
   // This tests a different code path where the walk is terminated early
-  // (yield a polyline with one edge), and then the walk is "maximimzed" by
+  // (yield a polyline with one edge), and then the walk is "maximized" by
   // appending a two-edge loop to the end.
   TestS2LaxPolylineShape({"0:0, 0:1", "0:2, 0:1", "0:1, 0:2"},
                          "0:0, 0:1, 0:2, 0:1");

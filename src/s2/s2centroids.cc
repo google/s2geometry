@@ -19,6 +19,7 @@
 
 #include <cmath>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 
@@ -29,9 +30,9 @@ S2Point PlanarCentroid(const S2Point& a, const S2Point& b, const S2Point& c) {
 }
 
 S2Point TrueCentroid(const S2Point& a, const S2Point& b, const S2Point& c) {
-  S2_DCHECK(IsUnitLength(a));
-  S2_DCHECK(IsUnitLength(b));
-  S2_DCHECK(IsUnitLength(c));
+  ABSL_DCHECK(IsUnitLength(a));
+  ABSL_DCHECK(IsUnitLength(b));
+  ABSL_DCHECK(IsUnitLength(c));
 
   // I couldn't find any references for computing the true centroid of a
   // spherical triangle...  I have a truly marvellous demonstration of this

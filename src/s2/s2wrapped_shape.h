@@ -20,12 +20,12 @@
 
 #include "s2/s2shape.h"
 
-// An S2Shape that simply some other shape.  This is useful for adding
-// an existing S2Shape to a new S2ShapeIndex without needing to copy
-// its underlying data.
+// An S2Shape that simply wraps some other shape.  This is useful for adding an
+// existing S2Shape to a new S2ShapeIndex without needing to copy its underlying
+// data.
 //
-// Also see s2shapeutil::WrappedShapeFactory in s2shapeutil_coding.h, which
-// is useful for testing S2ShapeIndex coding.
+// Also see s2shapeutil::WrappedShapeFactory in s2shapeutil_coding.h, which is
+// useful for testing S2ShapeIndex coding.
 class S2WrappedShape : public S2Shape {
  public:
   explicit S2WrappedShape(const S2Shape* shape) : shape_(*shape) {}

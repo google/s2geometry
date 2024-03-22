@@ -21,14 +21,14 @@
 //
 // The typical use looks like this:
 //
-//   S2_LOG(INFO) << gtl::LogContainer(container);
+//   ABSL_LOG(INFO) << gtl::LogContainer(container);
 //
 // By default, LogContainer() uses the LogShortUpTo100 policy: comma-space
 // separation, no newlines, and with limit of 100 items.
 //
 // Policies can be specified:
 //
-//   S2_LOG(INFO) << gtl::LogContainer(container, gtl::LogMultiline());
+//   ABSL_LOG(INFO) << gtl::LogContainer(container, gtl::LogMultiline());
 //
 // The above example will print the container using newlines between
 // elements, enclosed in [] braces.
@@ -44,9 +44,6 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
-
-#include "s2/base/integral_types.h"
-#include "s2/base/port.h"
 
 namespace gtl {
 
@@ -247,7 +244,7 @@ class EnumLogger {
 
 // Log a range using "policy".  For example:
 //
-//   S2_LOG(INFO) << gtl::LogRange(start_pos, end_pos, gtl::LogMultiline());
+//   ABSL_LOG(INFO) << gtl::LogRange(start_pos, end_pos, gtl::LogMultiline());
 //
 // The above example will print the range using newlines between
 // elements, enclosed in [] braces.
@@ -259,7 +256,7 @@ detail::RangeLogger<IteratorT, PolicyT> LogRange(
 
 // Log a range.  For example:
 //
-//   S2_LOG(INFO) << gtl::LogRange(start_pos, end_pos);
+//   ABSL_LOG(INFO) << gtl::LogRange(start_pos, end_pos);
 //
 // By default, Range() uses the LogShortUpTo100 policy: comma-space
 // separation, no newlines, and with limit of 100 items.
@@ -271,7 +268,7 @@ detail::RangeLogger<IteratorT, LogDefault> LogRange(
 
 // Log a container using "policy".  For example:
 //
-//   S2_LOG(INFO) << gtl::LogContainer(container, gtl::LogMultiline());
+//   ABSL_LOG(INFO) << gtl::LogContainer(container, gtl::LogMultiline());
 //
 // The above example will print the container using newlines between
 // elements, enclosed in [] braces.
@@ -283,7 +280,7 @@ auto LogContainer(const ContainerT &container, const PolicyT &policy)
 
 // Log a container.  For example:
 //
-//   S2_LOG(INFO) << gtl::LogContainer(container);
+//   ABSL_LOG(INFO) << gtl::LogContainer(container);
 //
 // By default, Container() uses the LogShortUpTo100 policy: comma-space
 // separation, no newlines, and with limit of 100 items.
@@ -296,7 +293,7 @@ auto LogContainer(const ContainerT &container)
 // Log a (possibly scoped) enum.  For example:
 //
 //   enum class Color { kRed, kGreen, kBlue };
-//   S2_LOG(INFO) << gtl::LogEnum(kRed);
+//   ABSL_LOG(INFO) << gtl::LogEnum(kRed);
 template <typename E>
 detail::EnumLogger<E> LogEnum(E e) {
   static_assert(std::is_enum<E>::value, "must be an enum");

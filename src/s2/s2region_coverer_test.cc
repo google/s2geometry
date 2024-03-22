@@ -21,7 +21,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <limits>
 #include <queue>
 #include <string>
@@ -29,13 +28,15 @@
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -253,34 +254,34 @@ static void TestAccuracy(int max_cells) {
     }
   }
   for (int method = 0; method < kNumMethods; ++method) {
-    printf("\nMax cells %d, method %d:\n", max_cells, method);
-    printf(
+    absl::PrintF("\nMax cells %d, method %d:\n", max_cells, method);
+    absl::PrintF(
         "  Average cells: %.4f\n",
         cell_total[method] / static_cast<double>(absl::GetFlag(FLAGS_iters)));
-    printf("  Average area ratio: %.4f\n",
-           ratio_total[method] / absl::GetFlag(FLAGS_iters));
+    absl::PrintF("  Average area ratio: %.4f\n",
+                 ratio_total[method] / absl::GetFlag(FLAGS_iters));
     vector<double>& mratios = ratios[method];
     std::sort(mratios.begin(), mratios.end());
-    printf("  Median ratio: %.4f\n", mratios[mratios.size() / 2]);
-    printf("  Max ratio: %.4f\n", max_ratio[method]);
-    printf("  Min ratio: %.4f\n", min_ratio[method]);
+    absl::PrintF("  Median ratio: %.4f\n", mratios[mratios.size() / 2]);
+    absl::PrintF("  Max ratio: %.4f\n", max_ratio[method]);
+    absl::PrintF("  Min ratio: %.4f\n", min_ratio[method]);
     if (kNumMethods > 1) {
-      printf("  Cell winner probability: %.4f\n",
-             cell_winner_tally[method] /
-                 static_cast<double>(absl::GetFlag(FLAGS_iters)));
-      printf("  Area winner probability: %.4f\n",
-             area_winner_tally[method] /
-                 static_cast<double>(absl::GetFlag(FLAGS_iters)));
+      absl::PrintF("  Cell winner probability: %.4f\n",
+                   cell_winner_tally[method] /
+                       static_cast<double>(absl::GetFlag(FLAGS_iters)));
+      absl::PrintF("  Area winner probability: %.4f\n",
+                   area_winner_tally[method] /
+                       static_cast<double>(absl::GetFlag(FLAGS_iters)));
     }
-    printf("  Caps with the worst approximation ratios:\n");
+    absl::PrintF("  Caps with the worst approximation ratios:\n");
     for (; !worst_caps[method].empty(); worst_caps[method].pop()) {
       const WorstCap& w = worst_caps[method].top();
       S2LatLng ll(w.cap.center());
-      printf("    Ratio %.4f, Cells %d, "
-             "Center (%.8f, %.8f), Km %.6f\n",
-             w.ratio, w.num_cells,
-             ll.lat().degrees(), ll.lng().degrees(),
-             w.cap.GetRadius().radians() * 6367.0);
+      absl::PrintF(
+          "    Ratio %.4f, Cells %d, "
+          "Center (%.8f, %.8f), Km %.6f\n",
+          w.ratio, w.num_cells, ll.lat().degrees(), ll.lng().degrees(),
+          w.cap.GetRadius().radians() * 6367.0);
     }
   }
 }
@@ -289,7 +290,7 @@ TEST(S2RegionCoverer, Accuracy) {
   for (auto max_cells_str :
        absl::StrSplit(absl::GetFlag(FLAGS_max_cells), ',', absl::SkipEmpty())) {
     int max_cells;
-    S2_CHECK(absl::SimpleAtoi(max_cells_str, &max_cells));
+    ABSL_CHECK(absl::SimpleAtoi(max_cells_str, &max_cells));
     TestAccuracy(max_cells);
   }
 }

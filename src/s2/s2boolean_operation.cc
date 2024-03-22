@@ -75,11 +75,14 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/inlined_vector.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+#include "absl/strings/string_view.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
@@ -109,6 +112,7 @@ extern bool s2builder_verbose;
 namespace {  // Anonymous namespace for helper classes.
 
 using absl::flat_hash_map;
+using absl::string_view;
 using std::lower_bound;
 using std::make_pair;
 using std::make_unique;
@@ -205,16 +209,15 @@ using CrossingGraphEdgeVector = absl::InlinedVector<CrossingGraphEdge, 2>;
 // chain of edges), the edges are sorted so that they form a directed edge
 // chain.
 //
-// This function could possibily be moved to S2Builder::Graph, but note that
+// This function could possibly be moved to S2Builder::Graph, but note that
 // it has special requirements.  Namely, duplicate edges and sibling pairs
 // must be kept in order to ensure that every output edge corresponds to
 // exactly one input edge.  (See also S2Builder::Graph::GetInputEdgeOrder.)
 static vector<EdgeId> GetInputEdgeChainOrder(
     const Graph& g, const vector<InputEdgeId>& input_ids) {
-
-  S2_DCHECK(g.options().edge_type() == EdgeType::DIRECTED);
-  S2_DCHECK(g.options().duplicate_edges() == DuplicateEdges::KEEP);
-  S2_DCHECK(g.options().sibling_pairs() == SiblingPairs::KEEP);
+  ABSL_DCHECK(g.options().edge_type() == EdgeType::DIRECTED);
+  ABSL_DCHECK(g.options().duplicate_edges() == DuplicateEdges::KEEP);
+  ABSL_DCHECK(g.options().sibling_pairs() == SiblingPairs::KEEP);
 
   // First, sort the edges so that the edges corresponding to each input edge
   // are consecutive.  (Each input edge was snapped to a chain of output
@@ -256,7 +259,7 @@ static vector<EdgeId> GetInputEdgeChainOrder(
       indegree[v] = 0;  // Clear as we go along.
       if (++i == end) break;
       auto out = lower_bound(vmap.begin(), vmap.end(), make_pair(v, 0));
-      S2_DCHECK_EQ(v, out->first);
+      ABSL_DCHECK_EQ(v, out->first);
       next = out->second;
     }
     vmap.clear();
@@ -264,7 +267,7 @@ static vector<EdgeId> GetInputEdgeChainOrder(
   return order;
 }
 
-// Given a set of clipping instructions encoded as a set of InputEdgeCrossings,
+// Given a set of clipping instructions encoded as an InputEdgeCrossings,
 // GraphEdgeClipper determines which graph edges correspond to clipped
 // portions of input edges and removes them.
 //
@@ -327,12 +330,14 @@ class GraphEdgeClipper {
   vector<int> rank_;      // The rank of each graph edge within order_.
 };
 
-GraphEdgeClipper::GraphEdgeClipper(
-    const Graph& g, const vector<int8>& input_dimensions,
-    const InputEdgeCrossings& input_crossings,
-    vector<Graph::Edge>* new_edges,
-    vector<InputEdgeIdSetId>* new_input_edge_ids)
-    : g_(g), in_(g), out_(g),
+GraphEdgeClipper::GraphEdgeClipper(const Graph& g,
+                                   const vector<int8>& input_dimensions,
+                                   const InputEdgeCrossings& input_crossings,
+                                   vector<Graph::Edge>* new_edges,
+                                   vector<InputEdgeIdSetId>* new_input_edge_ids)
+    : g_(g),
+      in_(g),
+      out_(g),
       input_dimensions_(input_dimensions),
       input_crossings_(input_crossings),
       new_edges_(new_edges),
@@ -368,8 +373,8 @@ void GraphEdgeClipper::Run() {
   bool reverse_a = false;
   auto next = input_crossings_.begin();
   for (size_t i = 0; i < order_.size(); ++i) {
-    // For each input edge (the "A" input edge), gather all the input edges
-    // that cross it (the "B" input edges).
+    // For the current input edge (the "A" input edge), gather all the input
+    // edges that cross it (the "B" input edges).
     InputEdgeId a_input_id = input_ids_[order_[i]];
     const Graph::Edge& edge0 = g_.edge(order_[i]);
     b_input_edges.clear();
@@ -382,7 +387,7 @@ void GraphEdgeClipper::Run() {
       } else if (next->second.input_id() == kSetInvertB) {
         invert_b = next->second.left_to_right();
       } else {
-        S2_DCHECK_EQ(next->second.input_id(), kSetReverseA);
+        ABSL_DCHECK_EQ(next->second.input_id(), kSetReverseA);
         reverse_a = next->second.left_to_right();
       }
     }
@@ -397,7 +402,7 @@ void GraphEdgeClipper::Run() {
     // Optimization for the case where there are no crossings.
     if (b_input_edges.empty()) {
       // In general the caller only passes edges that are part of the output
-      // (i.e., we could S2_DCHECK(inside) here).  The one exception is for
+      // (i.e., we could ABSL_DCHECK(inside) here).  The one exception is for
       // polyline/polygon operations, where the polygon edges are needed to
       // compute the polyline output but are not emitted themselves.
       if (inside) {
@@ -424,7 +429,7 @@ void GraphEdgeClipper::Run() {
       for (VertexId id : a_vertices) std::cout << " " << id;
     }
     // Now for each B edge chain, decide which vertex of the A chain it
-    // crosses, and keep track of the number of signed crossings at each A
+    // crosses, and keep track of the sum of signed crossings at each A
     // vertex.  The sign of a crossing depends on whether the other edge
     // crosses from left to right or right to left.
     //
@@ -467,7 +472,7 @@ void GraphEdgeClipper::Run() {
         a_isolated[a_index] = true;
       } else {
         // TODO(b/112043775): fix this condition.
-        S2_LOG(DFATAL) << "Failed to get crossed vertex index.";
+        ABSL_LOG(ERROR) << "Failed to get crossed vertex index.";
       }
     }
     if (s2builder_verbose) std::cout << std::endl;
@@ -495,7 +500,7 @@ void GraphEdgeClipper::Run() {
       multiplicity += a_num_crossings[ai];
     }
     // Multiplicities other than 0 or 1 can only occur in the edge interior.
-    S2_DCHECK(multiplicity == 0 || multiplicity == 1);
+    ABSL_DCHECK(multiplicity == 0 || multiplicity == 1);
     inside = (multiplicity != 0);
 
     // Output any isolated polyline vertices.
@@ -522,7 +527,7 @@ void GraphEdgeClipper::GatherIncidentEdges(
     vector<CrossingGraphEdgeVector>* b_edges) const {
   // Examine all of the edges incident to the given vertex of A.  If any edge
   // comes from a B input edge, append it to the appropriate vector.
-  S2_DCHECK_EQ(b_input_edges.size(), b_edges->size());
+  ABSL_DCHECK_EQ(b_input_edges.size(), b_edges->size());
   for (EdgeId e : in_.edge_ids(a[ai])) {
     InputEdgeId id = input_ids_[e];
     auto it = lower_bound(b_input_edges.begin(), b_input_edges.end(), id);
@@ -562,11 +567,12 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
     const vector<VertexId>& a, const CrossingGraphEdgeVector& b,
     bool left_to_right) const {
   if (a.empty() || b.empty()) {
-    S2_LOG(DFATAL) << "GraphEdgeClipper::GetCrossedVertexIndex called with "
-                << a.size() << " vertex ids and " << b.size()
-                << " crossing graph edges.";
+    ABSL_LOG(ERROR) << "GraphEdgeClipper::GetCrossedVertexIndex called with "
+                     << a.size() << " vertex ids and " << b.size()
+                     << " crossing graph edges.";
     return -1;
   }
+  // TODO(b/316414071): Rework this algorithm.
 
   // The reason this calculation is tricky is that after snapping, the A and B
   // chains may meet and separate several times.  For example, if B crosses A
@@ -691,7 +697,7 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
   // Otherwise we choose the smallest shared VertexId in the acceptable range,
   // in order to ensure that both chains choose the same crossing vertex.
   int best = -1;
-  S2_DCHECK_LE(lo, hi);
+  ABSL_DCHECK_LE(lo, hi);
   for (const auto& e : b) {
     int ai = e.a_index;
     int vrank = GetVertexRank(e);
@@ -708,6 +714,9 @@ int GraphEdgeClipper::GetCrossedVertexIndex(
 // the first and last edges of the chain.
 bool GraphEdgeClipper::EdgeChainOnLeft(
     const vector<VertexId>& a, EdgeId b_first, EdgeId b_last) const {
+  // TODO(b/317065708): Rather than collecting all the vertices in a list,
+  // accumulate the angle.
+
   // Gather all the interior vertices of the B subchain.
   vector<VertexId> loop;
   for (int i = rank_[b_first]; i < rank_[b_last]; ++i) {
@@ -733,16 +742,17 @@ bool GraphEdgeClipper::EdgeChainOnLeft(
 // between input edges, EdgeClippingLayer determines which graph edges
 // correspond to clipped portions of input edges and removes them.  It
 // assembles the remaining edges into a new S2Builder::Graph and passes the
-// result to the given output layer for assembly.
+// result to the given output layer or layers for assembly.
 class EdgeClippingLayer : public S2Builder::Layer {
  public:
   EdgeClippingLayer(const vector<unique_ptr<S2Builder::Layer>>* layers,
                     const vector<int8>* input_dimensions,
                     const InputEdgeCrossings* input_crossings,
                     S2MemoryTracker::Client* tracker)
-      : layers_(*layers), input_dimensions_(*input_dimensions),
-        input_crossings_(*input_crossings), tracker_(tracker) {
-  }
+      : layers_(*layers),
+        input_dimensions_(*input_dimensions),
+        input_crossings_(*input_crossings),
+        tracker_(tracker) {}
 
   // Layer interface:
   GraphOptions graph_options() const override;
@@ -777,9 +787,9 @@ void EdgeClippingLayer::Build(const Graph& g, S2Error* error) {
   // destruction.  There is also a temporary vector "indegree" in
   // GetInputEdgeChainOrder() but this does not affect peak memory usage.
   int64 tmp_bytes = g.num_edges() * (sizeof(EdgeId) + sizeof(int)) +
-                    g.num_vertices() * (2 * sizeof(EdgeId));
-  int64 final_bytes = g.num_edges() * (sizeof(Graph::Edge) +
-                                       sizeof(InputEdgeIdSetId));
+                      g.num_vertices() * (2 * sizeof(EdgeId));
+  int64 final_bytes =
+      g.num_edges() * (sizeof(Graph::Edge) + sizeof(InputEdgeIdSetId));
 
   // The order of the calls below is important.  Note that all memory tracked
   // through this client is automatically untallied upon object destruction.
@@ -818,7 +828,7 @@ void EdgeClippingLayer::Build(const Graph& g, S2Error* error) {
   } else {
     // The Graph objects must be valid until the last Build() call completes,
     // so we store all of the graph data in arrays with 3 elements.
-    S2_DCHECK_EQ(3, layers_.size());
+    ABSL_DCHECK_EQ(3, layers_.size());
     vector<Graph::Edge> layer_edges[3];
     vector<InputEdgeIdSetId> layer_input_edge_ids[3];
     // Separate the edges according to their dimension.
@@ -866,7 +876,6 @@ class S2BooleanOperation::Impl {
 
   using ShapeEdge = s2shapeutil::ShapeEdge;
   using ShapeEdgeId = s2shapeutil::ShapeEdgeId;
-  using ShapeEdgeIdHash = s2shapeutil::ShapeEdgeIdHash;
 
   // An IndexCrossing represents a pair of intersecting S2ShapeIndex edges
   // ("a_edge" and "b_edge").  We store all such intersections because the
@@ -880,7 +889,7 @@ class S2BooleanOperation::Impl {
 
     // True if "a_edge" crosses "b_edge" from left to right.  Undefined if
     // is_interior_crossing is false.
-    uint32 left_to_right: 1;
+    uint32 left_to_right : 1;
 
     // Equal to S2::VertexCrossing(a_edge, b_edge).  Undefined if "a_edge" and
     // "b_edge" do not share exactly one vertex or either edge is degenerate.
@@ -956,7 +965,7 @@ class S2BooleanOperation::Impl {
   static bool HasInterior(const S2ShapeIndex& index);
   bool AddIndexCrossing(const ShapeEdge& a, const ShapeEdge& b,
                         bool is_interior, IndexCrossings* crossings);
-  bool GetIndexCrossings(int region_id);
+  bool InitIndexCrossings(int region_id);
   bool AddBoundaryPair(bool invert_a, bool invert_b, bool invert_result,
                        CrossingProcessor* cp);
   bool AreRegionsIdentical() const;
@@ -1120,17 +1129,17 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // be nullptr.
   CrossingProcessor(const PolygonModel& polygon_model,
                     const PolylineModel& polyline_model,
-                    bool polyline_loops_have_boundaries,
-                    S2Builder* builder,
+                    bool polyline_loops_have_boundaries, S2Builder* builder,
                     vector<int8>* input_dimensions,
-                    InputEdgeCrossings* input_crossings,
-                    MemoryTracker* tracker)
-      : polygon_model_(polygon_model), polyline_model_(polyline_model),
+                    InputEdgeCrossings* input_crossings, MemoryTracker* tracker)
+      : polygon_model_(polygon_model),
+        polyline_model_(polyline_model),
         polyline_loops_have_boundaries_(polyline_loops_have_boundaries),
-        builder_(builder), input_dimensions_(input_dimensions),
-        input_crossings_(input_crossings), tracker_(tracker),
-        prev_inside_(false) {
-  }
+        builder_(builder),
+        input_dimensions_(input_dimensions),
+        input_crossings_(input_crossings),
+        tracker_(tracker),
+        prev_inside_(false) {}
 
   // Starts processing edges from the given region.  "invert_a", "invert_b",
   // and "invert_result" indicate whether region A, region B, and/or the
@@ -1300,7 +1309,7 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // that allows GraphEdgeClipper to determine which segments of those input
   // edges belong to the output.  The auxiliary information consists of the
   // dimension of each input edge, and set of input edges from the other
-  // region that cross each input input edge.
+  // region that cross each input edge.
   S2Builder* builder_;  // (nullptr if boolean output was requested)
   vector<int8>* input_dimensions_;
   InputEdgeCrossings* input_crossings_;
@@ -1366,7 +1375,7 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // loop or a sibling pair), indicates whether that loop represents a shell
   // or a hole.  This information is used during the second pass of
   // AddBoundaryPair() to determine the output for degenerate edges.
-  flat_hash_map<ShapeEdgeId, bool, ShapeEdgeIdHash> is_degenerate_hole_;
+  flat_hash_map<ShapeEdgeId, bool> is_degenerate_hole_;
 
   // Indicates whether the point being processed along the current edge chain
   // is in the polygonal interior of the opposite region, using semi-open
@@ -1375,10 +1384,10 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // Equal to: b_index_.Contains(current point) ^ invert_b_
   bool inside_;
 
-  // The value of that "inside_" would have just before the end of the
-  // previous edge added to S2Builder.  This value is used to determine
-  // whether the GraphEdgeClipper state needs to be updated when jumping from
-  // one edge chain to another.
+  // The value that "inside_" would have just before the end of the previous
+  // edge added to S2Builder.  This value is used to determine whether the
+  // GraphEdgeClipper state needs to be updated when jumping from one edge chain
+  // to another.
   bool prev_inside_;
 
   // The maximum edge id of any edge in the current chain whose v0 vertex has
@@ -1435,7 +1444,7 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge(
   } else if (a_dimension_ == 1) {
     return ProcessEdge1(a_id, a, it);
   } else {
-    S2_DCHECK_EQ(2, a_dimension_);
+    ABSL_DCHECK_EQ(2, a_dimension_);
     return ProcessEdge2(a_id, a, it);
   }
 }
@@ -1461,7 +1470,7 @@ struct S2BooleanOperation::Impl::CrossingProcessor::PointCrossingResult {
 // as soon as the result is known to be non-empty.
 bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge0(
     ShapeEdgeId a_id, const S2Shape::Edge& a, CrossingIterator* it) {
-  S2_DCHECK_EQ(a.v0, a.v1);
+  ABSL_DCHECK_EQ(a.v0, a.v1);
   // When a region is inverted, all points and polylines are discarded.
   if (invert_a_ != invert_result_) {
     SkipCrossings(a_id, it);
@@ -1605,8 +1614,8 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge1(
   // Verify that edge crossings are being counted correctly.
   inside_ ^= (r.a1_crossings & 1);
   if (it->crossings_complete()) {
-    S2_DCHECK_EQ(MakeS2ContainsPointQuery(&it->b_index()).Contains(a.v1),
-              inside_ ^ invert_b_);
+    ABSL_DCHECK_EQ(MakeS2ContainsPointQuery(&it->b_index()).Contains(a.v1),
+                   inside_ ^ invert_b_);
   }
 
   // Special case to test whether the last vertex of a polyline should be
@@ -1741,7 +1750,7 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge2(
   bool keep_degen_b = (polygon_model_ == PolygonModel::OPEN && invert_a_);
 
   EdgeCrossingResult r = ProcessEdgeCrossings(a_id, a, it);
-  S2_DCHECK(!r.matches_polyline);
+  ABSL_DCHECK(!r.matches_polyline);
 
   // If only one region is inverted, matching/sibling relations are reversed.
   if (invert_a_ != invert_b_) swap(r.polygon_match_id, r.sibling_match_id);
@@ -1775,7 +1784,7 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge2(
         is_degenerate_hole_[r.polygon_match_id] = inside_;
         is_degenerate_hole_[r.sibling_match_id] = inside_;
       }
-      S2_DCHECK_EQ(r.interior_crossings, 0);
+      ABSL_DCHECK_EQ(r.interior_crossings, 0);
       inside_ ^= (r.a1_crossings & 1);
       return true;
     }
@@ -1844,9 +1853,9 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge2(
   //
   // The logic does not attempt to avoid redundant extra vertices (e.g. the
   // extra code in ProcessEdge1() that checks whether the vertex is the
-  // endpoint of the preceding emitted edge) since these these will be removed
-  // during S2Builder::Graph creation by DegenerateEdges::DISCARD or
-  // DISCARD_EXCESS (which are necessary in any case due to snapping).
+  // endpoint of the preceding emitted edge) since these will be removed during
+  // S2Builder::Graph creation by DegenerateEdges::DISCARD or DISCARD_EXCESS
+  // (which are necessary in any case due to snapping).
   if (emit_shared && r.a0_matches_polygon && !inside_ &&
       (create_degen || (keep_degen_b && r.loop_matches_a0()))) {
     if (!AddPointEdge(a.v0, 2)) return false;
@@ -1879,8 +1888,8 @@ bool S2BooleanOperation::Impl::CrossingProcessor::ProcessEdge2(
 
   // Verify that edge crossings are being counted correctly.
   if (it->crossings_complete()) {
-    S2_DCHECK_EQ(MakeS2ContainsPointQuery(&it->b_index()).Contains(a.v1),
-              inside_ ^ invert_b_);
+    ABSL_DCHECK_EQ(MakeS2ContainsPointQuery(&it->b_index()).Contains(a.v1),
+                   inside_ ^ invert_b_);
   }
   return true;
 }
@@ -1929,7 +1938,7 @@ S2BooleanOperation::Impl::CrossingProcessor::ProcessEdgeCrossings(
         r.a1_matches_polyline = true;
       }
     } else {
-      S2_DCHECK_EQ(2, it->b_dimension());
+      ABSL_DCHECK_EQ(2, it->b_dimension());
       if (a.v0 == a.v1 || b.v0 == b.v1) {
         // There are no edge crossings since at least one edge is degenerate.
         if (a.v0 == b.v0 && a.v0 == b.v1) {
@@ -1970,9 +1979,9 @@ S2BooleanOperation::Impl::CrossingProcessor::ProcessEdgeCrossings(
 // REQUIRES: "v" is an endpoint of it.b_edge()
 bool S2BooleanOperation::Impl::CrossingProcessor::PolylineEdgeContainsVertex(
     const S2Point& v, const CrossingIterator& it, int dimension) const {
-  S2_DCHECK_EQ(1, it.b_dimension());
-  S2_DCHECK(it.b_edge().v0 == v || it.b_edge().v1 == v);
-  S2_DCHECK(dimension == 0 || dimension == 1);
+  ABSL_DCHECK_EQ(1, it.b_dimension());
+  ABSL_DCHECK(it.b_edge().v0 == v || it.b_edge().v1 == v);
+  ABSL_DCHECK(dimension == 0 || dimension == 1);
 
   // Closed polylines contain all their vertices.
   if (polyline_model_ == PolylineModel::CLOSED) return true;
@@ -2013,7 +2022,7 @@ void S2BooleanOperation::Impl::CrossingProcessor::DoneBoundaryPair() {
   source_id_map_[SourceId(kSetReverseA)] = kSetReverseA;
   for (const auto& tmp : source_edge_crossings_) {
     auto it = source_id_map_.find(tmp.second.first);
-    S2_DCHECK(it != source_id_map_.end());
+    ABSL_DCHECK(it != source_id_map_.end());
     input_crossings_->push_back(make_pair(
         tmp.first, CrossingInputEdge(it->second, tmp.second.second)));
   }
@@ -2043,15 +2052,15 @@ bool S2BooleanOperation::Impl::AddBoundary(
     const vector<ShapeEdgeId>& a_chain_starts, CrossingProcessor* cp) {
   const S2ShapeIndex& a_index = *op_->regions_[a_region_id];
   const S2ShapeIndex& b_index = *op_->regions_[1 - a_region_id];
-  if (!GetIndexCrossings(a_region_id)) return false;
+  if (!InitIndexCrossings(a_region_id)) return false;
   cp->StartBoundary(a_region_id, invert_a, invert_b, invert_result);
 
   // Walk the boundary of region A and build a list of all edge crossings.
   // We also keep track of whether the current vertex is inside region B.
-  auto next_start = a_chain_starts.begin();
-  CrossingIterator next_crossing(&b_index, &index_crossings_,
-                                 true /*crossings_complete*/);
-  ShapeEdgeId next_id = min(*next_start, next_crossing.a_id());
+  auto chain_start_iter = a_chain_starts.begin();
+  CrossingIterator next_crossing_iter(&b_index, &index_crossings_,
+                                      true /*crossings_complete*/);
+  ShapeEdgeId next_id = min(*chain_start_iter, next_crossing_iter.a_id());
   while (next_id != kSentinel) {
     int a_shape_id = next_id.shape_id;
     const S2Shape& a_shape = *a_index.shape(a_shape_id);
@@ -2063,26 +2072,26 @@ bool S2BooleanOperation::Impl::AddBoundary(
       S2Shape::ChainPosition chain_position = a_shape.chain_position(edge_id);
       int chain_id = chain_position.chain_id;
       S2Shape::Chain chain = a_shape.chain(chain_id);
-      bool start_inside = (next_id == *next_start);
-      if (start_inside) ++next_start;
+      bool start_inside = (next_id == *chain_start_iter);
+      if (start_inside) ++chain_start_iter;
       cp->StartChain(chain_id, chain, start_inside);
       int chain_limit = chain.start + chain.length;
       while (edge_id < chain_limit) {
         ShapeEdgeId a_id(a_shape_id, edge_id);
-        S2_DCHECK(cp->inside() || next_crossing.a_id() == a_id);
-        if (!cp->ProcessEdge(a_id, &next_crossing)) {
+        ABSL_DCHECK(cp->inside() || next_crossing_iter.a_id() == a_id);
+        if (!cp->ProcessEdge(a_id, &next_crossing_iter)) {
           return false;
         }
         if (cp->inside()) {
           ++edge_id;
-        } else if (next_crossing.a_id().shape_id == a_shape_id &&
-                   next_crossing.a_id().edge_id < chain_limit) {
-          edge_id = next_crossing.a_id().edge_id;
+        } else if (next_crossing_iter.a_id().shape_id == a_shape_id &&
+                   next_crossing_iter.a_id().edge_id < chain_limit) {
+          edge_id = next_crossing_iter.a_id().edge_id;
         } else {
           break;
         }
       }
-      next_id = min(*next_start, next_crossing.a_id());
+      next_id = min(*chain_start_iter, next_crossing_iter.a_id());
     }
   }
   return true;
@@ -2093,7 +2102,7 @@ bool S2BooleanOperation::Impl::AddBoundary(
 // boundary model).  Each input region and the result region are inverted as
 // specified (invert_a, invert_b, and invert_result) before testing for
 // containment.  The algorithm uses these "chain starts" in order to clip the
-// boundary of A to the interior of B in an output-senstive way.
+// boundary of A to the interior of B in an output-sensitive way.
 //
 // This method supports "early exit" in the case where a boolean predicate is
 // being evaluated and the algorithm discovers that the result region will be
@@ -2122,7 +2131,7 @@ bool S2BooleanOperation::Impl::GetChainStarts(
     auto query = MakeS2ContainsPointQuery(&b_index);
     int num_shape_ids = a_index.num_shape_ids();
     for (int shape_id = 0; shape_id < num_shape_ids; ++shape_id) {
-      S2Shape* a_shape = a_index.shape(shape_id);
+      const S2Shape* a_shape = a_index.shape(shape_id);
       if (a_shape == nullptr) continue;
 
       // If region A is being subtracted from region B, points and polylines
@@ -2170,8 +2179,9 @@ bool S2BooleanOperation::Impl::ProcessIncidentEdges(
   if (tmp_crossings_.size() > 1) {
     std::sort(tmp_crossings_.begin(), tmp_crossings_.end());
     // VisitIncidentEdges() should not generate any duplicate values.
-    S2_DCHECK(std::adjacent_find(tmp_crossings_.begin(), tmp_crossings_.end()) ==
-           tmp_crossings_.end());
+    ABSL_DCHECK(
+        std::adjacent_find(tmp_crossings_.begin(), tmp_crossings_.end()) ==
+        tmp_crossings_.end());
   }
   tmp_crossings_.push_back(IndexCrossing(kSentinel, kSentinel));
   CrossingIterator next_crossing(&query->index(), &tmp_crossings_,
@@ -2181,7 +2191,7 @@ bool S2BooleanOperation::Impl::ProcessIncidentEdges(
 
 bool S2BooleanOperation::Impl::HasInterior(const S2ShapeIndex& index) {
   for (int s = index.num_shape_ids(); --s >= 0; ) {
-    S2Shape* shape = index.shape(s);
+    const S2Shape* shape = index.shape(s);
     if (shape && shape->dimension() == 2) return true;
   }
   return false;
@@ -2216,10 +2226,10 @@ inline bool S2BooleanOperation::Impl::AddIndexCrossing(
 //
 // Supports "early exit" in the case of boolean results by returning false
 // as soon as the result is known to be non-empty.
-bool S2BooleanOperation::Impl::GetIndexCrossings(int region_id) {
+bool S2BooleanOperation::Impl::InitIndexCrossings(int region_id) {
   if (region_id == index_crossings_first_region_id_) return true;
   if (index_crossings_first_region_id_ < 0) {
-    S2_DCHECK_EQ(region_id, 0);  // For efficiency, not correctness.
+    ABSL_DCHECK_EQ(region_id, 0);  // For efficiency, not correctness.
     // TODO(ericv): This would be more efficient if VisitCrossingEdgePairs()
     // returned the sign (+1 or -1) of the interior crossing, i.e.
     // "int interior_crossing_sign" rather than "bool is_interior".
@@ -2321,7 +2331,7 @@ bool S2BooleanOperation::Impl::BuildOpType(OpType op_type) {
       return (AddBoundaryPair(false, true, false, &cp) &&
               AddBoundaryPair(true, false, false, &cp));
   }
-  S2_LOG(FATAL) << "Invalid S2BooleanOperation::OpType";
+  ABSL_LOG(FATAL) << "Invalid S2BooleanOperation::OpType";
   return false;
 }
 
@@ -2358,7 +2368,7 @@ bool S2BooleanOperation::Impl::IsFullPolygonResult(
   //     one of the two results is possible.  (This test is very fast.)  Note
   //     that snapping will never cause the result to cover an entire extra
   //     cube face because the maximum allowed snap radius is too small.
-  S2_DCHECK_LE(S2Builder::SnapFunction::kMaxSnapRadius().degrees(), 70);
+  ABSL_DCHECK_LE(S2Builder::SnapFunction::kMaxSnapRadius().degrees(), 70);
   //
   //  2. We compute the area of each input geometry, and use this to bound the
   //     minimum and maximum area of the result.  If only one of {0, 4*Pi} is
@@ -2387,7 +2397,7 @@ bool S2BooleanOperation::Impl::IsFullPolygonResult(
       return IsFullPolygonSymmetricDifference(a, b);
 
     default:
-      S2_LOG(FATAL) << "Invalid S2BooleanOperation::OpType";
+      ABSL_LOG(FATAL) << "Invalid S2BooleanOperation::OpType";
       return false;
   }
 }
@@ -2541,13 +2551,13 @@ bool S2BooleanOperation::Impl::AreRegionsIdentical() const {
     int num_edges = a_shape->num_edges();
     if (num_edges != b_shape->num_edges()) return false;
     if (dimension == 0) {
-      S2_DCHECK_EQ(num_edges, num_chains);  // All chains are of length 1.
+      ABSL_DCHECK_EQ(num_edges, num_chains);  // All chains are of length 1.
       continue;
     }
     for (int c = 0; c < num_chains; ++c) {
       S2Shape::Chain a_chain = a_shape->chain(c);
       S2Shape::Chain b_chain = b_shape->chain(c);
-      S2_DCHECK_EQ(a_chain.start, b_chain.start);
+      ABSL_DCHECK_EQ(a_chain.start, b_chain.start);
       if (a_chain.length != b_chain.length) return false;
     }
   }
@@ -2718,7 +2728,7 @@ void S2BooleanOperation::Options::set_memory_tracker(S2MemoryTracker* tracker) {
   memory_tracker_ = tracker;
 }
 
-const char* S2BooleanOperation::OpTypeToString(OpType op_type) {
+string_view S2BooleanOperation::OpTypeToString(OpType op_type) {
   switch (op_type) {
     case OpType::UNION:                return "UNION";
     case OpType::INTERSECTION:         return "INTERSECTION";
@@ -2728,7 +2738,7 @@ const char* S2BooleanOperation::OpTypeToString(OpType op_type) {
   }
 }
 
-const char* S2BooleanOperation::PolygonModelToString(PolygonModel model) {
+string_view S2BooleanOperation::PolygonModelToString(PolygonModel model) {
   switch (model) {
     case PolygonModel::OPEN:           return "OPEN";
     case PolygonModel::SEMI_OPEN:      return "SEMI_OPEN";
@@ -2737,7 +2747,7 @@ const char* S2BooleanOperation::PolygonModelToString(PolygonModel model) {
   }
 }
 
-const char* S2BooleanOperation::PolylineModelToString(PolylineModel model) {
+string_view S2BooleanOperation::PolylineModelToString(PolylineModel model) {
   switch (model) {
     case PolylineModel::OPEN:          return "OPEN";
     case PolylineModel::SEMI_OPEN:     return "SEMI_OPEN";
@@ -2784,6 +2794,6 @@ bool S2BooleanOperation::IsEmpty(
   S2BooleanOperation op(op_type, &result_empty, options);
   S2Error error;
   op.Build(a, b, &error);
-  S2_DCHECK(error.ok());
+  ABSL_DCHECK(error.ok());
   return result_empty;
 }

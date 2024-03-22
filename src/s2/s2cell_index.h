@@ -23,10 +23,10 @@
 #include <ostream>
 #include <vector>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
 #include "s2/base/log_severity.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/log/absl_check.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 
@@ -131,6 +131,11 @@ class S2CellIndex {
       if (y.cell_id < cell_id) return false;
       return label < y.label;
     }
+
+    template <typename H>
+    friend H AbslHashValue(H h, LabelledCell x) {
+      return H::combine(std::move(h), x.cell_id, x.label);
+    }
   };
 
   // Default constructor.
@@ -197,8 +202,7 @@ class S2CellIndex {
     int32 parent;
 
     CellNode(S2CellId _cell_id, Label _label, int32 _parent)
-        : cell_id(_cell_id), label(_label), parent(_parent) {
-    }
+        : cell_id(_cell_id), label(_label), parent(_parent) {}
     CellNode() : cell_id(S2CellId::None()), label(kDoneContents), parent(-1) {}
   };
 
@@ -424,11 +428,10 @@ class S2CellIndex {
   // cells that overlap this range.
   struct RangeNode {
     S2CellId start_id;  // First leaf cell contained by this range.
-    int32 contents;     // Contents of this node (an index within cell_tree_).
+    int32 contents;   // Contents of this node (an index within cell_tree_).
 
     RangeNode(S2CellId _start_id, int32 _contents)
-        : start_id(_start_id), contents(_contents) {
-    }
+        : start_id(_start_id), contents(_contents) {}
 
     // Comparison operator needed for std::upper_bound().
     friend bool operator<(S2CellId x, const RangeNode& y) {
@@ -450,22 +453,22 @@ std::ostream& operator<<(std::ostream& os, S2CellIndex::LabelledCell x);
 inline S2CellIndex::CellIterator::CellIterator(const S2CellIndex* index)
     : cell_it_(index->cell_tree_.begin()),
       cell_end_(index->cell_tree_.end()) {
-  S2_DCHECK(!index->range_nodes_.empty()) << "Call Build() first.";
+  ABSL_DCHECK(!index->range_nodes_.empty()) << "Call Build() first.";
 }
 
 inline S2CellId S2CellIndex::CellIterator::cell_id() const {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   return cell_it_->cell_id;
 }
 
 inline S2CellIndex::Label S2CellIndex::CellIterator::label() const {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   return cell_it_->label;
 }
 
 inline S2CellIndex::LabelledCell S2CellIndex::CellIterator::labelled_cell()
     const {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   return LabelledCell(cell_it_->cell_id, cell_it_->label);
 }
 
@@ -474,13 +477,13 @@ inline bool S2CellIndex::CellIterator::done() const {
 }
 
 inline void S2CellIndex::CellIterator::Next() {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   ++cell_it_;
 }
 
 inline S2CellIndex::RangeIterator::RangeIterator(const S2CellIndex* index)
     : range_nodes_(&index->range_nodes_), it_() {
-  S2_DCHECK(!range_nodes_->empty()) << "Call Build() first.";
+  ABSL_DCHECK(!range_nodes_->empty()) << "Call Build() first.";
   if (google::DEBUG_MODE) it_ = kUninitialized();  // See done().
 }
 
@@ -489,12 +492,12 @@ inline S2CellId S2CellIndex::RangeIterator::start_id() const {
 }
 
 inline S2CellId S2CellIndex::RangeIterator::limit_id() const {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   return (it_ + 1)->start_id;
 }
 
 inline bool S2CellIndex::RangeIterator::done() const {
-  S2_DCHECK(it_ != kUninitialized()) << "Call Begin() or Seek() first.";
+  ABSL_DCHECK(it_ != kUninitialized()) << "Call Begin() or Seek() first.";
 
   // Note that the last element of range_nodes_ is a sentinel value.
   return it_ >= range_nodes_->end() - 1;
@@ -510,7 +513,7 @@ inline void S2CellIndex::RangeIterator::Finish() {
 }
 
 inline void S2CellIndex::RangeIterator::Next() {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   ++it_;
 }
 
@@ -583,18 +586,18 @@ inline void S2CellIndex::ContentsIterator::Clear() {
 }
 
 inline S2CellId S2CellIndex::ContentsIterator::cell_id() const {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   return node_.cell_id;
 }
 
 inline S2CellIndex::Label S2CellIndex::ContentsIterator::label() const {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   return node_.label;
 }
 
 inline S2CellIndex::LabelledCell S2CellIndex::ContentsIterator::labelled_cell()
     const {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   return LabelledCell(node_.cell_id, node_.label);
 }
 
@@ -603,7 +606,7 @@ inline bool S2CellIndex::ContentsIterator::done() const {
 }
 
 inline void S2CellIndex::ContentsIterator::Next() {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   if (node_.parent <= node_cutoff_) {
     // We have already processed this node and its ancestors.
     node_cutoff_ = next_node_cutoff_;
@@ -618,8 +621,8 @@ inline int S2CellIndex::num_cells() const {
 }
 
 inline void S2CellIndex::Add(S2CellId cell_id, Label label) {
-  S2_DCHECK(cell_id.is_valid());
-  S2_DCHECK_GE(label, 0);
+  ABSL_DCHECK(cell_id.is_valid());
+  ABSL_DCHECK_GE(label, 0);
   cell_tree_.push_back(CellNode(cell_id, label, -1));
 }
 

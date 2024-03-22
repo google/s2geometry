@@ -19,12 +19,12 @@
 #define S2_S2LATLNG_H_
 
 #include <cmath>
+#include <cstdint>
 #include <iosfwd>
 #include <ostream>
 #include <string>
 #include <utility>
 
-#include "s2/base/integral_types.h"
 #include "absl/hash/hash.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"

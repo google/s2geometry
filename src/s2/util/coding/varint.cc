@@ -20,14 +20,8 @@
 #include <string>
 #include <utility>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
-
-#ifndef _MSC_VER
-const int Varint::kMax32;
-const int Varint::kMax64;
-const int Varint::kSlopBytes;
-#endif
+#include "s2/base/types.h"
+#include "absl/log/absl_check.h"
 
 char* Varint::Encode32(char* sptr, uint32 v) {
   return Encode32Inline(sptr, v);
@@ -72,7 +66,7 @@ std::pair<const char*, uint64> Varint::Parse64FallbackPair(const char* p,
   // x86_64 a shld from a single register filled with enough 1's in the high
   // bits can accomplish all this in one instruction. It so happens that res1
   // has 57 high bits of ones, which is enough for the largest shift done.
-  S2_DCHECK_EQ(res1 >> 7, -1);
+  ABSL_DCHECK_EQ(res1 >> 7, -1);
   uint64 ones = res1;  // save the useful high bit 1's in res1
   uint64 byte;
   int64 res2, res3;

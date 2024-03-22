@@ -29,6 +29,7 @@
 #include <memory>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2cap.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2latlng_rect.h"
@@ -145,7 +146,7 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetConvexHull() {
   }
 
   // Verify that all points lie within a 180 degree span around the origin.
-  S2_DCHECK_GE(s2pred::Sign(origin, points_.front(), points_.back()), 0);
+  ABSL_DCHECK_GE(s2pred::Sign(origin, points_.front(), points_.back()), 0);
 
   // Generate the lower and upper halves of the convex hull.  Each half
   // consists of the maximal subset of vertices such that the edge chain makes
@@ -156,8 +157,8 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetConvexHull() {
   GetMonotoneChain(&upper);
 
   // Remove the duplicate vertices and combine the chains.
-  S2_DCHECK_EQ(lower.front(), upper.back());
-  S2_DCHECK_EQ(lower.back(), upper.front());
+  ABSL_DCHECK_EQ(lower.front(), upper.back());
+  ABSL_DCHECK_EQ(lower.back(), upper.front());
   lower.pop_back();
   upper.pop_back();
   lower.insert(lower.end(), upper.begin(), upper.end());
@@ -167,7 +168,7 @@ unique_ptr<S2Loop> S2ConvexHullQuery::GetConvexHull() {
 // Iterate through the given points, selecting the maximal subset of points
 // such that the edge chain makes only left (CCW) turns.
 void S2ConvexHullQuery::GetMonotoneChain(vector<S2Point>* output) {
-  S2_DCHECK(output->empty());
+  ABSL_DCHECK(output->empty());
   for (const S2Point& p : points_) {
     // Remove any points that would cause the chain to make a clockwise turn.
     while (output->size() >= 2 &&

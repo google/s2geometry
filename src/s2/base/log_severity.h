@@ -16,12 +16,6 @@
 #ifndef S2_BASE_LOG_SEVERITY_H_
 #define S2_BASE_LOG_SEVERITY_H_
 
-#ifdef S2_USE_GLOG
-
-#include <glog/log_severity.h>
-
-#else  // !defined(S2_USE_GLOG)
-
 #include "absl/base/log_severity.h"
 
 // Stay compatible with glog.
@@ -34,7 +28,5 @@ constexpr bool DEBUG_MODE = true;
 #endif
 
 }  // namespace google
-
-#endif  // !defined(S2_USE_GLOG)
 
 #endif  // S2_BASE_LOG_SEVERITY_H_

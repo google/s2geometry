@@ -23,7 +23,6 @@
 #include <iostream>
 #include <ostream>
 
-#include "s2/base/logging.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r1interval.h"
@@ -328,12 +327,19 @@ class S2LatLngRect final : public S2Region {
   // ApproxEquals() with separate tolerances for latitude and longitude.
   bool ApproxEquals(const S2LatLngRect& other, const S2LatLng& max_error) const;
 
+  // Support abseil hashing.
+  template <typename H>
+  friend H AbslHashValue(H h, const S2LatLngRect& rect) {
+    return H::combine(std::move(h), rect.lo(), rect.hi());
+  }
+
   ////////////////////////////////////////////////////////////////////////
   // S2Region interface (see s2region.h for details):
 
   S2LatLngRect* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
   bool Contains(const S2Cell& cell) const override;
 
   // This test is cheap but is NOT exact.  Use Intersects() if you want a more
@@ -385,13 +391,13 @@ class S2LatLngRect final : public S2Region {
 inline S2LatLngRect::S2LatLngRect(const S2LatLng& lo, const S2LatLng& hi)
   : lat_(lo.lat().radians(), hi.lat().radians()),
     lng_(lo.lng().radians(), hi.lng().radians()) {
-  S2_DLOG_IF(ERROR, !is_valid())
+  ABSL_DLOG_IF(ERROR, !is_valid())
       << "Invalid rect: " << lo << ", " << hi;
 }
 
 inline S2LatLngRect::S2LatLngRect(const R1Interval& lat, const S1Interval& lng)
   : lat_(lat), lng_(lng) {
-  S2_DLOG_IF(ERROR, !is_valid())
+  ABSL_DLOG_IF(ERROR, !is_valid())
       << "Invalid rect: " << lat << ", " << lng;
 }
 

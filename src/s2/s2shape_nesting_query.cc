@@ -20,8 +20,11 @@
 #include <limits>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/container/fixed_array.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/str_format.h"
 #include "s2/util/bitmap/bitmap.h"
 #include "s2/s2crossing_edge_query.h"
@@ -96,7 +99,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
   if (shape == nullptr || shape->num_chains() == 0) {
     return {};
   }
-  S2_DCHECK_EQ(shape->dimension(), 2);
+  ABSL_DCHECK_EQ(shape->dimension(), 2);
 
   const int num_chains = shape->num_chains();
 
@@ -127,7 +130,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
     if (chain == datum_shell) {
       continue;
     }
-    S2_VLOG(1) << "Processing chain " << chain;
+    ABSL_VLOG(1) << "Processing chain " << chain;
 
     // Find a close point on the target chain out of 4 equally spaced ones.
     int end_idx = ClosestOfNPoints(start_point, *shape, chain, 4);
@@ -142,7 +145,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
     // datum shell _or_ target chain edges we'll cross is either even or odd.
     // Each of these edges toggles our "insideness" relative to the datum shell,
     if (s2pred::OrderedCCW(vertices[2], end_point, vertices[0], start_point)) {
-      S2_VLOG(1) << "  Edge starts into interior of datum chain";
+      ABSL_VLOG(1) << "  Edge starts into interior of datum chain";
       parents[chain].Set(datum_shell, true);
       children[datum_shell].Set(chain, true);
     }
@@ -151,16 +154,16 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
     S2Point next = NextChainEdge(shape, chain, end_idx).v0;
     S2Point prev = PrevChainEdge(shape, chain, end_idx).v0;
     if (s2pred::OrderedCCW(next, start_point, prev, end_point)) {
-      S2_VLOG(1) << "  Edge ends from interior of target chain";
+      ABSL_VLOG(1) << "  Edge ends from interior of target chain";
       parents[chain].Set(chain, true);
     }
-    S2_VLOG(2) << "    Initial set: " << parents[chain].ToString(8);
+    ABSL_VLOG(2) << "    Initial set: " << parents[chain].ToString(8);
 
     // Query all the edges crossed by the line from the datum shell to a point
     // on this chain.  Only look at edges that belong to the requested shape.
     // Using INTERIOR here will avoid returning the two edges on the datum and
     // target shells that are touched by the endpoints of our line segment.
-    crossing_query.GetCrossingEdges(start_point, end_point, *shape,
+    crossing_query.GetCrossingEdges(start_point, end_point, shape_id, *shape,
                                     s2shapeutil::CrossingType::INTERIOR,
                                     &edges);
 
@@ -172,8 +175,8 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
       if (other_chain != chain) {
         children[other_chain].Toggle(chain);
       }
-      S2_VLOG(1) << "  Crosses chain " << other_chain;
-      S2_VLOG(2) << "    Parent set: " << parents[chain].ToString(8);
+      ABSL_VLOG(1) << "  Crosses chain " << other_chain;
+      ABSL_VLOG(2) << "    Parent set: " << parents[chain].ToString(8);
     }
 
     // Now set the final state.  Remove the target chain from its own parent set
@@ -184,11 +187,11 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
     parents[chain].Set(chain, false);
   }
 
-  if (S2_VLOG_IS_ON(2)) {
-    S2_LOG(INFO) << "Current parent set";
+  if (ABSL_VLOG_IS_ON(2)) {
+    ABSL_LOG(INFO) << "Current parent set";
     for (int chain = 0; chain < num_chains; ++chain) {
-      S2_LOG(INFO) << "  " << absl::StrFormat("%2d", chain) << ": "
-                << parents[chain].ToString(8);
+      ABSL_LOG(INFO) << "  " << absl::StrFormat("%2d", chain) << ": "
+                     << parents[chain].ToString(8);
     }
   }
 
@@ -217,12 +220,12 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
       }
     }
 
-    S2_VLOG(1) << "Chain " << current_chain << " has one parent";
-    if (S2_VLOG_IS_ON(2)) {
-      S2_LOG(INFO) << "  Parent set now:";
+    ABSL_VLOG(1) << "Chain " << current_chain << " has one parent";
+    if (ABSL_VLOG_IS_ON(2)) {
+      ABSL_LOG(INFO) << "  Parent set now:";
       for (int chain = 0; chain < num_chains; ++chain) {
-        S2_LOG(INFO) << "  " << absl::StrFormat("%2d", chain) << ": "
-                  << parents[chain].ToString(8);
+        ABSL_LOG(INFO) << "  " << absl::StrFormat("%2d", chain) << ": "
+                       << parents[chain].ToString(8);
       }
     }
 
@@ -236,7 +239,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
   // to point to parent and vice-versa.
   vector<ChainRelation> relations(num_chains);
   for (int chain = 0; chain < num_chains; ++chain) {
-    S2_DCHECK_LE(parents[chain].GetOnesCount(), 1);
+    ABSL_DCHECK_LE(parents[chain].GetOnesCount(), 1);
 
     Bitmap64::size_type parent;
     if (parents[chain].FindFirstSetBit(&parent)) {
@@ -253,7 +256,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
       ++depth;
       current = relations[current].parent_id();
     } while (current >= 0 && depth < num_chains);
-    S2_DCHECK_LT(depth, num_chains);
+    ABSL_DCHECK_LT(depth, num_chains);
 
     if (depth && (depth % 2 == 0)) {
       relations[chain].ClearParent();

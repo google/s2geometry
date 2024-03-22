@@ -20,19 +20,22 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
-#include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "s2/base/casts.h"
 #include "s2/base/commandlineflags.h"
 #include "s2/base/commandlineflags_declare.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/container/fixed_array.h"
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/string_view.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
@@ -56,13 +59,14 @@
 #include "s2/s2text_format.h"
 #include "s2/util/math/matrix3x3.h"
 
+using absl::flat_hash_map;
+using absl::flat_hash_set;
+using absl::string_view;
 using ::s2textformat::MakeLoopOrDie;
 using std::fabs;
 using std::make_unique;
-using std::map;
 using std::max;
 using std::min;
-using std::set;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -104,11 +108,11 @@ class S2LoopTestBase : public testing::Test {
   unique_ptr<const S2Loop> snapped_loop_a_;
 
  private:
-  unique_ptr<const S2Loop> AddLoop(absl::string_view str) {
+  unique_ptr<const S2Loop> AddLoop(string_view str) {
     return AddLoop(MakeLoopOrDie(str));
   }
 
-  unique_ptr<const S2Loop> AddLoop(std::unique_ptr<const S2Loop> loop) {
+  unique_ptr<const S2Loop> AddLoop(unique_ptr<const S2Loop> loop) {
     all_loops.push_back(&*loop);
     return loop;
   }
@@ -241,6 +245,10 @@ class S2LoopTestBase : public testing::Test {
   void TestDecodeCompressed(const Encoder& encoder, int level, S2Loop* loop) {
     Decoder decoder(encoder.base(), encoder.length());
     ASSERT_TRUE(loop->DecodeCompressed(&decoder, level));
+  }
+
+  static const S2Loop* GetLoopIndexPtr(S2Loop& loop) {
+    return down_cast<const S2Loop::Shape*>(loop.index_.shape(0))->loop_;
   }
 };
 
@@ -500,7 +508,7 @@ TEST_F(S2LoopTestBase, Contains) {
   for (int level = 0; level < 3; ++level) {
     vector<unique_ptr<S2Loop>> loops;
     vector<S2Point> loop_vertices;
-    set<S2Point> points;
+    flat_hash_set<S2Point> points;
     for (S2CellId id = S2CellId::Begin(level);
          id != S2CellId::End(level); id = id.next()) {
       S2Cell cell(id);
@@ -520,6 +528,11 @@ TEST_F(S2LoopTestBase, Contains) {
       EXPECT_EQ(count, 1);
     }
   }
+}
+
+TEST(S2Loop, DefaultLoopIsInvalid) {
+  S2Loop loop;
+  EXPECT_FALSE(loop.IsValid());
 }
 
 TEST(S2Loop, ContainsMatchesCrossingSign) {
@@ -683,9 +696,9 @@ enum RelationFlags {
 // Verify the relationship between two loops A and B.  "flags" is the set of
 // RelationFlags that apply.  "shared_edge" means that the loops share at
 // least one edge (possibly reversed).
-static void TestRelationWithDesc(const S2Loop& a, const S2Loop& b,
-                                 int flags, bool shared_edge,
-                                 const char* test_description) {
+static void TestRelationWithDesc(const S2Loop& a, const S2Loop& b, int flags,
+                                 bool shared_edge,
+                                 string_view test_description) {
   SCOPED_TRACE(test_description);
   if (flags & CONTAINS) {
     TestNestedPair(a, b);
@@ -844,7 +857,7 @@ static unique_ptr<S2Loop> MakeCellLoop(S2CellId begin, S2CellId end) {
   // in the range [begin, end).  We add the edges one by one, removing
   // any edges that are already present in the opposite direction.
 
-  map<S2Point, set<S2Point>> edges;
+  flat_hash_map<S2Point, flat_hash_set<S2Point>> edges;
   for (S2CellId id = begin; id != end; id = id.next()) {
     S2Cell cell(id);
     for (int k = 0; k < 4; ++k) {
@@ -864,7 +877,7 @@ static unique_ptr<S2Loop> MakeCellLoop(S2CellId begin, S2CellId end) {
   vector<S2Point> vertices;
   S2Point p = edges.begin()->first;
   while (!edges.empty()) {
-    S2_DCHECK_EQ(1, edges[p].size());
+    ABSL_DCHECK_EQ(1, edges[p].size());
     S2Point next = *edges[p].begin();
     vertices.push_back(p);
     edges.erase(p);
@@ -894,13 +907,13 @@ TEST(S2Loop, LoopRelations2) {
     if (a.get() && b.get()) {
       bool contained = (a_begin <= b_begin && b_end <= a_end);
       bool intersects = (a_begin < b_end && b_begin < a_end);
-      S2_VLOG(1) << "Checking " << a->num_vertices() << " vs. "
-              << b->num_vertices() << ", contained = " << contained
-              << ", intersects = " << intersects;
+      ABSL_VLOG(1) << "Checking " << a->num_vertices() << " vs. "
+                   << b->num_vertices() << ", contained = " << contained
+                   << ", intersects = " << intersects;
       EXPECT_EQ(a->Contains(*b.get()), contained);
       EXPECT_EQ(a->Intersects(*b.get()), intersects);
     } else {
-      S2_VLOG(1) << "MakeCellLoop failed to create a loop.";
+      ABSL_VLOG(1) << "MakeCellLoop failed to create a loop.";
     }
   }
 }
@@ -939,8 +952,8 @@ TEST(S2Loop, BoundsForLoopContainment) {
   }
 }
 
-static void TestNear(const char* a_str, const char* b_str,
-                     S1Angle max_error, bool expected) {
+static void TestNear(string_view a_str, string_view b_str, S1Angle max_error,
+                     bool expected) {
   unique_ptr<S2Loop> a(MakeLoopOrDie(a_str));
   unique_ptr<S2Loop> b(MakeLoopOrDie(b_str));
   EXPECT_EQ(a->BoundaryNear(*b, max_error), expected);
@@ -964,10 +977,12 @@ TEST(S2Loop, BoundaryNear) {
 
   // Two triangles that backtrack a bit on different edges.  A simple
   // greedy matching algorithm would fail on this example.
-  const char* t1 = "0.1:0, 0.1:1, 0.1:2, 0.1:3, 0.1:4, 1:4, 2:4, 3:4, "
-                   "2:4.1, 1:4.1, 2:4.2, 3:4.2, 4:4.2, 5:4.2";
-  const char* t2 = "0:0, 0:1, 0:2, 0:3, 0.1:2, 0.1:1, 0.2:2, 0.2:3, "
-                   "0.2:4, 1:4.1, 2:4, 3:4, 4:4, 5:4";
+  string_view t1 =
+      "0.1:0, 0.1:1, 0.1:2, 0.1:3, 0.1:4, 1:4, 2:4, 3:4, "
+      "2:4.1, 1:4.1, 2:4.2, 3:4.2, 4:4.2, 5:4.2";
+  string_view t2 =
+      "0:0, 0:1, 0:2, 0:3, 0.1:2, 0.1:1, 0.2:2, 0.2:3, "
+      "0.2:4, 1:4.1, 2:4, 3:4, 4:4, 5:4";
   TestNear(t1, t2, 1.5 * degree, true);
   TestNear(t1, t2, 0.5 * degree, false);
 }
@@ -1035,7 +1050,7 @@ TEST(S2Loop, Moveable) {
 }
 
 static void TestEmptyFullSnapped(const S2Loop& loop, int level) {
-  S2_CHECK(loop.is_empty_or_full());
+  ABSL_CHECK(loop.is_empty_or_full());
   S2CellId cellid = S2CellId(loop.vertex(0)).parent(level);
   vector<S2Point> vertices = {cellid.ToPoint()};
   S2Loop loop2(vertices);
@@ -1047,7 +1062,7 @@ static void TestEmptyFullSnapped(const S2Loop& loop, int level) {
 // Test converting the empty/full loops to S2LatLng representations.  (We
 // don't bother testing E5/E6/E7 because that test is less demanding.)
 static void TestEmptyFullLatLng(const S2Loop& loop) {
-  S2_CHECK(loop.is_empty_or_full());
+  ABSL_CHECK(loop.is_empty_or_full());
   vector<S2Point> vertices = {S2LatLng(loop.vertex(0)).ToPoint()};
   S2Loop loop2(vertices);
   EXPECT_TRUE(loop.BoundaryEquals(loop2));
@@ -1121,8 +1136,7 @@ TEST(S2Loop, S2CellConstructorAndContains) {
 
 // Construct a loop using MakeLoopOrDie(str) and check that it
 // produces a validation error that includes "snippet".
-static void CheckLoopIsInvalid(absl::string_view str,
-                               absl::string_view snippet) {
+static void CheckLoopIsInvalid(string_view str, string_view snippet) {
   unique_ptr<S2Loop> loop(MakeLoopOrDie(str, S2Debug::DISABLE));
   S2Error error;
   EXPECT_TRUE(loop->FindValidationError(&error));
@@ -1130,7 +1144,7 @@ static void CheckLoopIsInvalid(absl::string_view str,
 }
 
 static void CheckLoopIsInvalid(const vector<S2Point>& points,
-                               absl::string_view snippet) {
+                               string_view snippet) {
   S2Loop l(points, S2Debug::DISABLE);
   S2Error error;
   EXPECT_TRUE(l.FindValidationError(&error));
@@ -1158,13 +1172,23 @@ TEST(S2Loop, IsValidDetectsInvalidLoops) {
                     "antipodal");
 }
 
+TEST_F(S2LoopTestBase, PointersCorrectAfterMove) {
+  S2Loop l0(loop_a_->vertices_span());
+  l0.set_s2debug_override(S2Debug::DISABLE);
+  l0.InitIndex();
+  EXPECT_EQ(GetLoopIndexPtr(l0), &l0);
+
+  S2Loop l1 = std::move(l0);
+  EXPECT_EQ(GetLoopIndexPtr(l1), &l1);
+}
+
 #if GTEST_HAS_DEATH_TEST
 TEST(S2LoopDeathTest, IsValidDetectsInvalidLoops) {
-  // Points with non-unit length (triggers S2_DCHECK failure in debug)
+  // Points with length > sqrt(2) (triggers ABSL_DCHECK failure in debug)
   EXPECT_DEBUG_DEATH(
       CheckLoopIsInvalid({S2Point(2, 0, 0), S2Point(0, 1, 0), S2Point(0, 0, 1)},
                          "unit length"),
-      "IsUnitLength");
+      "Norm2");
 }
 #endif
 

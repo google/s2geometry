@@ -21,9 +21,12 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/strings/string_view.h"
+
+using absl::string_view;
 
 static void TestIntervalOps(const R1Interval& x, const R1Interval& y,
-                            const char* expected) {
+                            string_view expected) {
   // Test all of the interval operations on the given pair of intervals.
   // "expected" is a sequence of "T" and "F" characters corresponding to
   // the expected results of Contains(), InteriorContains(), Intersects(),

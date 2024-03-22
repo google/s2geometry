@@ -1,4 +1,4 @@
-// Copyright 2005 Google Inc. All Rights Reserved.
+// Copyright Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,14 +13,21 @@
 // limitations under the License.
 //
 
-// Author: ericv@google.com (Eric Veach)
+#ifndef S2_BASE_TYPES_H_
+#define S2_BASE_TYPES_H_
 
-#include "s2/s2region.h"
+// NOLINTBEGIN(runtime/int)
+using int8 = signed char;
+using int16 = short;
+using int32 = int;
+using int64 = long long;
 
-#include <vector>
+using uint8 = unsigned char;
+using uint16 = unsigned short;
+using uint32 = unsigned int;
+using uint64 = unsigned long long;
 
-#include "s2/s2cap.h"
+using uword_t = unsigned long;
+// NOLINTEND(runtime/int)
 
-void S2Region::GetCellUnionBound(std::vector<S2CellId> *cell_ids) const {
-  return GetCapBound().GetCellUnionBound(cell_ids);
-}
+#endif  // S2_BASE_TYPES_H_

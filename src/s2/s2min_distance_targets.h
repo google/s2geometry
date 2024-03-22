@@ -82,8 +82,10 @@ class S2MinDistancePointTarget : public S2MinDistanceTarget {
                          S2MinDistance* min_dist) final;
   bool UpdateMinDistance(const S2Cell& cell,
                          S2MinDistance* min_dist) final;
-  bool VisitContainingShapes(const S2ShapeIndex& index,
-                             const ShapeVisitor& visitor) final;
+  bool VisitContainingShapeIds(
+      const S2ShapeIndex& index,
+      absl::FunctionRef<bool(int shape_id, const S2Point& target)> visitor)
+      final;
 
  private:
   S2Point point_;
@@ -99,8 +101,9 @@ class S2MinDistanceEdgeTarget : public S2MinDistanceTarget {
                          S2MinDistance* min_dist) final;
   bool UpdateMinDistance(const S2Cell& cell,
                          S2MinDistance* min_dist) final;
-  bool VisitContainingShapes(const S2ShapeIndex& index,
-                             const ShapeVisitor& visitor) final;
+  bool VisitContainingShapeIds(
+      const S2ShapeIndex& index,
+      absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>) final;
 
  private:
   S2Point a_, b_;
@@ -117,8 +120,9 @@ class S2MinDistanceCellTarget : public S2MinDistanceTarget {
                          S2MinDistance* min_dist) final;
   bool UpdateMinDistance(const S2Cell& cell,
                          S2MinDistance* min_dist) final;
-  bool VisitContainingShapes(const S2ShapeIndex& index,
-                             const ShapeVisitor& visitor) final;
+  bool VisitContainingShapeIds(
+      const S2ShapeIndex& index,
+      absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>) final;
 
  private:
   S2Cell cell_;
@@ -148,8 +152,9 @@ class S2MinDistanceCellUnionTarget : public S2MinDistanceTarget {
                          S2MinDistance* min_dist) final;
   bool UpdateMinDistance(const S2Cell& cell,
                          S2MinDistance* min_dist) final;
-  bool VisitContainingShapes(const S2ShapeIndex& query_index,
-                             const ShapeVisitor& visitor) final;
+  bool VisitContainingShapeIds(
+      const S2ShapeIndex& query_index,
+      absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>) final;
 
  private:
   bool UpdateMinDistance(S2MinDistanceTarget* target, S2MinDistance* min_dist);
@@ -222,8 +227,9 @@ class S2MinDistanceShapeIndexTarget : public S2MinDistanceTarget {
                          S2MinDistance* min_dist) final;
   bool UpdateMinDistance(const S2Cell& cell,
                          S2MinDistance* min_dist) final;
-  bool VisitContainingShapes(const S2ShapeIndex& query_index,
-                             const ShapeVisitor& visitor) final;
+  bool VisitContainingShapeIds(
+      const S2ShapeIndex& query_index,
+      absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>) final;
 
  private:
   bool UpdateMinDistance(S2MinDistanceTarget* target, S2MinDistance* min_dist);

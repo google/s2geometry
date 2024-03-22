@@ -24,7 +24,8 @@
 #include <memory>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/cord.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_s2cell_id_vector.h"
@@ -146,6 +147,9 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
   // in the Decoder's data buffer in this example.
   bool Init(Decoder* decoder, const ShapeFactory& shape_factory);
 
+  // Copies the encoded byte stream into a new encoder.
+  void Encode(Encoder* encoder) const override;
+
   const Options& options() const { return options_; }
 
   // The number of distinct shape ids in the index.  This equals the number of
@@ -153,9 +157,10 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
   // (Shape ids are not reused.)
   int num_shape_ids() const override { return shapes_.size(); }
 
-  // Return a pointer to the shape with the given id, or nullptr if the shape
-  // has been removed from the index.
-  S2Shape* shape(int id) const override;
+  // Return a pointer to the shape with the given id.
+  //
+  // REQUIRES: 0 <= id < num_shape_ids()
+  const S2Shape* shape(int id) const override;
 
   // Minimizes memory usage by requesting that any data structures that can be
   // rebuilt should be discarded.  This method invalidates all iterators.
@@ -184,11 +189,9 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
     void Init(const EncodedS2ShapeIndex* index,
               InitialPosition pos = UNPOSITIONED);
 
-    // Inherited non-virtual methods:
-    //   S2CellId id() const;
-    //   const S2ShapeIndexCell& cell() const;
-    //   bool done() const;
-    //   S2Point center() const;
+    S2CellId id() const override;
+    bool done() const override;
+    const S2ShapeIndexCell& cell() const override;
 
     // S2CellIterator API:
     void Begin() override;
@@ -205,14 +208,12 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
       return LocateImpl(*this, target);
     }
 
-   protected:
-    const S2ShapeIndexCell* GetCell() const override;
-    std::unique_ptr<IteratorBase> Clone() const override;
-    void Copy(const IteratorBase& other) override;
+    std::unique_ptr<IteratorBase> Clone() const override {
+      return std::make_unique<Iterator>(*this);
+    }
 
    private:
-    void Refresh();  // Updates the IteratorBase fields.
-    const EncodedS2ShapeIndex* index_;
+    const EncodedS2ShapeIndex* index_ = nullptr;
     int32 cell_pos_;  // Current position in the vector of index cells.
     int32 num_cells_;
   };
@@ -250,6 +251,9 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
   // The options specified for this index.
   Options options_;
 
+  // The index encoding version.
+  uint8 version_;
+
   // A vector containing all shapes in the index.  Initially all shapes are
   // set to kUndecodedShape(); as shapes are decoded, they are added to the
   // vector using std::atomic::compare_exchange_strong.
@@ -286,10 +290,6 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
 
 //////////////////   Implementation details follow   ////////////////////
 
-
-inline EncodedS2ShapeIndex::Iterator::Iterator() : index_(nullptr) {
-}
-
 inline EncodedS2ShapeIndex::Iterator::Iterator(
     const EncodedS2ShapeIndex* index, InitialPosition pos) {
   Init(index, pos);
@@ -300,46 +300,47 @@ inline void EncodedS2ShapeIndex::Iterator::Init(
   index_ = index;
   num_cells_ = index->cell_ids_.size();
   cell_pos_ = (pos == BEGIN) ? 0 : num_cells_;
-  Refresh();
 }
 
-inline void EncodedS2ShapeIndex::Iterator::Refresh() {
-  if (cell_pos_ == num_cells_) {
-    set_finished();
-  } else {
-    // It's faster to initialize the cell to nullptr even if it has already
-    // been decoded, since algorithms frequently don't need it (i.e., based on
-    // the S2CellId they might not need to look at the cell contents).
-    set_state(index_->cell_ids_[cell_pos_], nullptr);
+inline S2CellId EncodedS2ShapeIndex::Iterator::id() const {
+  if (done()) {
+    return S2CellId::Sentinel();
   }
+  return index_->cell_ids_[cell_pos_];
+}
+
+inline bool EncodedS2ShapeIndex::Iterator::done() const {
+  return cell_pos_ == num_cells_;
+}
+
+inline const S2ShapeIndexCell& EncodedS2ShapeIndex::Iterator::cell() const {
+  ABSL_DCHECK(!done());
+  return *index_->GetCell(cell_pos_);
 }
 
 inline void EncodedS2ShapeIndex::Iterator::Begin() {
   cell_pos_ = 0;
-  Refresh();
 }
 
 inline void EncodedS2ShapeIndex::Iterator::Finish() {
   cell_pos_ = num_cells_;
-  Refresh();
 }
 
 inline void EncodedS2ShapeIndex::Iterator::Next() {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   ++cell_pos_;
-  Refresh();
 }
 
 inline bool EncodedS2ShapeIndex::Iterator::Prev() {
-  if (cell_pos_ == 0) return false;
+  if (cell_pos_ == 0) {
+    return false;
+  }
   --cell_pos_;
-  Refresh();
   return true;
 }
 
 inline void EncodedS2ShapeIndex::Iterator::Seek(S2CellId target) {
   cell_pos_ = index_->cell_ids_.lower_bound(target);
-  Refresh();
 }
 
 inline std::unique_ptr<EncodedS2ShapeIndex::IteratorBase>
@@ -347,8 +348,8 @@ EncodedS2ShapeIndex::NewIterator(InitialPosition pos) const {
   return std::make_unique<Iterator>(this, pos);
 }
 
-inline S2Shape* EncodedS2ShapeIndex::shape(int id) const {
-  S2Shape* shape = shapes_[id].load(std::memory_order_acquire);
+inline const S2Shape* EncodedS2ShapeIndex::shape(int id) const {
+  const S2Shape* shape = shapes_[id].load(std::memory_order_acquire);
   if (shape != kUndecodedShape()) return shape;
   return GetShape(id);
 }

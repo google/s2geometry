@@ -22,7 +22,7 @@
 
 #include <cstdint>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 
 namespace util_bits {
 

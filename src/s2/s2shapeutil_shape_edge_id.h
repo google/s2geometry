@@ -20,11 +20,10 @@
 
 #include <cstddef>
 
-#include <functional>
 #include <iostream>
 #include <ostream>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 
 namespace s2shapeutil {
 
@@ -44,20 +43,19 @@ struct ShapeEdgeId {
   bool operator>(ShapeEdgeId other) const;
   bool operator<=(ShapeEdgeId other) const;
   bool operator>=(ShapeEdgeId other) const;
+
+  template <typename H>
+  friend H AbslHashValue(H h, ShapeEdgeId id) {
+    return H::combine(std::move(h), id.shape_id, id.edge_id);
+  }
 };
 std::ostream& operator<<(std::ostream& os, ShapeEdgeId id);
-
-// Hasher for ShapeEdgeId.
-// Example use: std::unordered_set<ShapeEdgeId, ShapeEdgeIdHash>.
-struct ShapeEdgeIdHash;
 
 
 //////////////////   Implementation details follow   ////////////////////
 
-
 inline ShapeEdgeId::ShapeEdgeId(int32 _shape_id, int32 _edge_id)
-    : shape_id(_shape_id), edge_id(_edge_id) {
-}
+    : shape_id(_shape_id), edge_id(_edge_id) {}
 
 inline bool ShapeEdgeId::operator==(ShapeEdgeId other) const {
   return shape_id == other.shape_id && edge_id == other.edge_id;
@@ -88,14 +86,6 @@ inline bool ShapeEdgeId::operator>=(ShapeEdgeId other) const {
 inline std::ostream& operator<<(std::ostream& os, ShapeEdgeId id) {
   return os << id.shape_id << ":" << id.edge_id;
 }
-
-struct ShapeEdgeIdHash {
-  size_t operator()(ShapeEdgeId id) const {
-    // The following preserves all bits even when edge_id < 0.
-    return std::hash<uint64>()((static_cast<uint64>(id.shape_id) << 32) |
-                               static_cast<uint32>(id.edge_id));
-  }
-};
 
 }  // namespace s2shapeutil
 

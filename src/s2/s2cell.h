@@ -18,8 +18,9 @@
 #ifndef S2_S2CELL_H_
 #define S2_S2CELL_H_
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include <cmath>
+
+#include "s2/base/types.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2rect.h"
@@ -45,6 +46,24 @@ class S2LatLngRect;
 // not a "plain old datatype" (POD) because it has virtual functions.
 class S2Cell final : public S2Region {
  public:
+  // Canonical identifiers for the boundaries of the cell.  It's promised that
+  // both GetVertex() and GetBoundUV().GetVertex() return vertices in this
+  // order.
+  //
+  // That is, for a given boundary k, the edge defining the boundary is:
+  //   {GetVertex(k), GetVertex(k+1)}
+  //
+  // The boundaries are defined in UV coordinates.  The orientation may be
+  // rotated relative to other face cells, but are consistent within a face
+  // (i.e. a cell's left edge is its left-ward neighbor's right edge).
+  //
+  enum Boundary {
+    kBottomEdge = 0,
+    kRightEdge = 1,
+    kTopEdge = 2,
+    kLeftEdge = 3,
+  };
+
   // The default constructor is required in order to use freelists.
   // Cells should otherwise always be constructed explicitly.
   S2Cell() = default;
@@ -92,10 +111,64 @@ class S2Cell final : public S2Region {
     return S2::FaceUVtoXYZ(face_, uv_.GetVertex(k));
   }
 
+  // Returns either U or V for the given edge, whichever is constant along it.
+  //
+  // E.g. boundaries 0 and 2 are constant in the V axis so we return those
+  // coordinates, but boundaries 1 and 3 are constant in the U axis, so we
+  // return those coordinates.
+  //
+  // For convenience, the argument is reduced modulo 4 to the range [0..3].
+  double GetUVCoordOfEdge(int k) const {
+    k %= 4;
+    if (k % 2 == 0) {
+      return GetBoundUV().GetVertex(k).y();
+    }
+    return GetBoundUV().GetVertex(k).x();
+  }
+
+  // Returns either I or J for the given edge, whichever is constant along it.
+  //
+  // E.g. boundaries 0 and 2 are constant in the J axis so we return those
+  // coordinates, but boundaries 1 and 3 are constant in the I axis, so we
+  // return those coordinates.
+  //
+  // The returned value is not clamped to S2::kLimitIJ-1 as in S2::StToIJ, so
+  // that cell edges at the maximum extent of a face are properly returned as
+  // S2::kLimitIJ.
+  //
+  // For convenience, the argument is reduced modulo 4 to the range [0..3].
+  int32 GetIJCoordOfEdge(int k) const {
+    // We can just convert UV->ST->IJ for this because the IJ coordinates only
+    // have 30 bits of resolution in each axis.  The error in the conversion
+    // will be a couple of epsilon which is <<< 2^-30, so if we use a proper
+    // round-to-nearest operation, we'll always round to the correct IJ value.
+    //
+    // But, we need to explicitly use round here since Mathutil::FastIntRound
+    // rounds differently on different platforms.  If we land on 0, we may end
+    // up rounding to -1.
+    //
+    // Intel CPUs that support SSE4.1 have the ROUNDSD instruction, and ARM CPUs
+    // with VFP have the VCVT instruction, both of which can implement correct
+    // rounding efficiently regardless of the current FPU rounding mode.
+    return std::round(S2::kLimitIJ * S2::UVtoST(GetUVCoordOfEdge(k)));
+  }
+
   // Returns the inward-facing normal of the great circle passing through the
   // edge from vertex k to vertex k+1 (mod 4).  The normals returned by
-  // GetEdgeRaw are not necessarily unit length.  For convenience, the
-  // argument is reduced modulo 4 to the range [0..3].
+  // GetEdgeRaw are not necessarily unit length, but their length is bounded by
+  // sqrt(2) since the worst case is two components of magnitude 1.
+  //
+  // The vertices returned by GetVertex are not guaranteed to actually be on the
+  // boundary of the cell exactly.  Instead, they're the nearest representable
+  // point to the corner.
+  //
+  // Cell edge normals returned by GetEdgeRaw, however, are computed exactly and
+  // can be used with exact predicates to determine spatial relationships to the
+  // cell exactly.
+  //
+  // GetEdge() normalizes it's return value and thus may no longer be exact.
+  //
+  // For convenience, the argument is reduced modulo 4 to the range [0..3].
   S2Point GetEdge(int k) const { return GetEdgeRaw(k).Normalize(); }
   S2Point GetEdgeRaw(int k) const;
 
@@ -172,6 +245,7 @@ class S2Cell final : public S2Region {
   S2Cell* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
   bool Contains(const S2Cell& cell) const override;
   bool MayIntersect(const S2Cell& cell) const override;
 

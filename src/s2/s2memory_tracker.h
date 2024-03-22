@@ -19,11 +19,13 @@
 #define S2_S2MEMORY_TRACKER_H_
 
 #include <algorithm>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "s2/s2error.h"
 #include "s2/util/gtl/compact_array.h"
@@ -56,7 +58,7 @@
 //   S2Error error;
 //   if (!builder.Build(&error)) {
 //     if (error.code() == S2Error::RESOURCE_EXHAUSTED) {
-//       S2_LOG(ERROR) << error;  // Memory limit exceeded
+//       ABSL_LOG(ERROR) << error;  // Memory limit exceeded
 //     }
 //   }
 //
@@ -199,7 +201,8 @@ class S2MemoryTracker {
   class Client {
    private:
     // Forward declaration to avoid code duplication.
-    template <class T, bool exact> bool AddSpaceInternal(T* v, int64 n);
+    template <class T, bool exact>
+    bool AddSpaceInternal(T* v, int64 n);
 
    public:
     // Specifies the S2MemoryTracker that will be used to track the memory
@@ -314,7 +317,8 @@ class S2MemoryTracker {
     // (This class is similar to std::vector but stores a small number of
     // elements inline.)
     template <class T>
-    static int64 GetCompactArrayAllocBytes(const gtl::compact_array<T>& array);
+    static int64 GetCompactArrayAllocBytes(
+        const gtl::compact_array<T>& array);
 
     // Returns the estimated minimum number of allocated bytes for each
     // additional entry in an absl::btree_* container (e.g. absl::btree_map)
@@ -376,11 +380,12 @@ inline bool S2MemoryTracker::Client::AddSpaceInternal(T* v, int64 n) {
   int64 new_size = v->size() + n;
   int64 old_capacity = v->capacity();
   if (new_size <= old_capacity) return true;
-  int64 new_capacity = exact ? new_size : std::max(new_size, 2 * old_capacity);
+  int64 new_capacity =
+      exact ? new_size : std::max(new_size, 2 * old_capacity);
   // Note that reserve() allocates new storage before freeing the old storage.
   if (!Tally(new_capacity * sizeof((*v)[0]))) return false;
   v->reserve(new_capacity);
-  S2_DCHECK_EQ(v->capacity(), new_capacity);
+  ABSL_DCHECK_EQ(v->capacity(), new_capacity);
   return Tally(-old_capacity * sizeof((*v)[0]));
 }
 

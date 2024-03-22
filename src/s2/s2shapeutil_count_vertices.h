@@ -13,21 +13,23 @@
 // limitations under the License.
 //
 
-#ifndef S2_BASE_INTEGRAL_TYPES_H_
-#define S2_BASE_INTEGRAL_TYPES_H_
+#ifndef S2_S2SHAPEUTIL_COUNT_VERTICES_H_
+#define S2_S2SHAPEUTIL_COUNT_VERTICES_H_
 
-// NOLINTBEGIN(runtime/int)
-using int8 = signed char;
-using int16 = short;
-using int32 = int;
-using int64 = long long;
+#include <cstdint>
 
-using uint8 = unsigned char;
-using uint16 = unsigned short;
-using uint32 = unsigned int;
-using uint64 = unsigned long long;
+#include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 
-using uword_t = unsigned long;
-// NOLINTEND(runtime/int)
+namespace s2shapeutil {
 
-#endif  // S2_BASE_INTEGRAL_TYPES_H_
+// Returns the total number of vertices in a single shape.
+int64 CountVertices(const S2Shape& shape);
+
+// Returns the total number of vertices in all indexed shapes. This method takes
+// time linear in the number of shapes.
+int64 CountVertices(const S2ShapeIndex& index);
+
+}  // namespace s2shapeutil
+
+#endif  // S2_S2SHAPEUTIL_COUNT_VERTICES_H_

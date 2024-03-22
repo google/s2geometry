@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/strings/string_view.h"
 #include "s2/id_set_lexicon.h"
@@ -35,6 +35,7 @@
 #include "s2/s2shape.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using s2builderutil::IndexedS2PointVectorLayer;
 using s2builderutil::S2PointVectorLayer;
 using s2textformat::MakePointOrDie;
@@ -49,7 +50,7 @@ namespace {
 void VerifyS2PointVectorLayerResults(
     const S2PointVectorLayer::LabelSetIds& label_set_ids,
     const IdSetLexicon& label_set_lexicon, const vector<S2Point>& output,
-    absl::string_view str_expected_points,
+    string_view str_expected_points,
     const vector<vector<int32>>& expected_labels) {
   vector<S2Point> expected_points =
       s2textformat::ParsePointsOrDie(str_expected_points);
@@ -159,13 +160,13 @@ TEST(IndexedS2PointVectorLayer, AddsShapes) {
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   EXPECT_EQ(1, index.num_shape_ids());
-  auto shape = down_cast<S2PointVectorShape*>(index.shape(0));
+  auto shape = down_cast<const S2PointVectorShape*>(index.shape(0));
   EXPECT_EQ(2, shape->num_points());
   EXPECT_EQ(point0_str, s2textformat::ToString(shape->point(0)));
   EXPECT_EQ(point1_str, s2textformat::ToString(shape->point(1)));
 }
 
-TEST(IndexedS2PointVectorLayer, AddsEmptyShape) {
+TEST(IndexedS2PointVectorLayer, DoesNotAddEmptyShape) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PointVectorLayer>(&index));

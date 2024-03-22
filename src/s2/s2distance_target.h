@@ -20,6 +20,7 @@
 
 #include <functional>
 
+#include "absl/functional/function_ref.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2point.h"
@@ -138,10 +139,19 @@ class S2DistanceTarget {
   // unlikely to be useful for other purposes.
   //
   // CAVEAT: Containing shapes may be visited more than once.
-  using ShapeVisitor = std::function<bool (S2Shape* containing_shape,
-                                           const S2Point& target_point)>;
-  virtual bool VisitContainingShapes(const S2ShapeIndex& query_index,
-                                     const ShapeVisitor& visitor) = 0;
+  bool VisitContainingShapes(
+      const S2ShapeIndex& query_index,
+      absl::FunctionRef<bool(const S2Shape*, const S2Point& target_point)>
+          visitor) {
+    return VisitContainingShapeIds(
+        query_index, [&](int shape_id, const S2Point& target) {
+          return visitor(query_index.shape(shape_id), target);
+        });
+  }
+
+  virtual bool VisitContainingShapeIds(
+      const S2ShapeIndex& query_index,
+      absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>) = 0;
 
   // Specifies that whenever one of the UpdateMinDistance() methods above
   // returns "true", the returned distance is allowed to be up to "max_error"

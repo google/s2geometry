@@ -74,11 +74,12 @@
 
 #include "s2/s2region_term_indexer.h"
 
-#include <cctype>
 #include <string>
 #include <vector>
 
 #include "s2/base/log_severity.h"
+#include "absl/log/absl_check.h"
+#include "absl/strings/ascii.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/s2cell_id.h"
@@ -100,8 +101,8 @@ S2RegionTermIndexer::Options::Options() {
 }
 
 void S2RegionTermIndexer::Options::set_marker_character(char ch) {
-  S2_DCHECK(!std::isalnum(ch));
-  marker_ = string(1, ch);
+  ABSL_DCHECK(!absl::ascii_isalnum(ch));
+  marker_ = ch;
 }
 
 S2RegionTermIndexer::S2RegionTermIndexer(const Options& options)
@@ -139,6 +140,9 @@ vector<string> S2RegionTermIndexer::GetIndexTerms(const S2Point& point,
 
   const S2CellId id(point);
   vector<string> terms;
+  terms.reserve((options_.true_max_level() - options_.min_level()) /
+                    options_.level_mod() +
+                1);
   for (int level = options_.min_level(); level <= options_.max_level();
        level += options_.level_mod()) {
     terms.push_back(GetTerm(TermType::ANCESTOR, id.parent(level), prefix));
@@ -165,21 +169,24 @@ vector<string> S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
   // cells as ancestor cells only, since these cells have the special property
   // that query regions will never contain a descendant of these cells.
 
-  S2_CHECK(!options_.index_contains_points_only());
+  ABSL_CHECK(!options_.index_contains_points_only());
   if (google::DEBUG_MODE) {
     *coverer_.mutable_options() = options_;
-    S2_CHECK(coverer_.IsCanonical(covering));
+    ABSL_CHECK(coverer_.IsCanonical(covering));
   }
   vector<string> terms;
+  // `covering.size()` is necessary.  Double it because we'll probably add
+  // more.  This could probably reasonably be even higher.
+  terms.reserve(2 * covering.size());
   S2CellId prev_id = S2CellId::None();
   int true_max_level = options_.true_max_level();
   for (S2CellId id : covering) {
     // IsCanonical() already checks the following conditions, but we repeat
     // them here for documentation purposes.
     int level = id.level();
-    S2_DCHECK_GE(level, options_.min_level());
-    S2_DCHECK_LE(level, options_.max_level());
-    S2_DCHECK_EQ(0, (level - options_.min_level()) % options_.level_mod());
+    ABSL_DCHECK_GE(level, options_.min_level());
+    ABSL_DCHECK_LE(level, options_.max_level());
+    ABSL_DCHECK_EQ(0, (level - options_.min_level()) % options_.level_mod());
 
     if (level < true_max_level) {
       // Add a covering term for this cell.
@@ -209,6 +216,11 @@ vector<string> S2RegionTermIndexer::GetQueryTerms(const S2Point& point,
 
   const S2CellId id(point);
   vector<string> terms;
+  terms.reserve(options_.index_contains_points_only()
+                    ? 1
+                    : ((options_.true_max_level() - options_.min_level()) /
+                           options_.level_mod() +
+                       2));
   // Recall that all true_max_level() cells are indexed only as ancestor terms.
   int level = options_.true_max_level();
   terms.push_back(GetTerm(TermType::ANCESTOR, id.parent(level), prefix));
@@ -235,18 +247,19 @@ vector<string> S2RegionTermIndexer::GetQueryTermsForCanonicalCovering(
 
   if (google::DEBUG_MODE) {
     *coverer_.mutable_options() = options_;
-    S2_CHECK(coverer_.IsCanonical(covering));
+    ABSL_CHECK(coverer_.IsCanonical(covering));
   }
   vector<string> terms;
+  terms.reserve(2 * covering.size());
   S2CellId prev_id = S2CellId::None();
   int true_max_level = options_.true_max_level();
   for (S2CellId id : covering) {
     // IsCanonical() already checks the following conditions, but we repeat
     // them here for documentation purposes.
     int level = id.level();
-    S2_DCHECK_GE(level, options_.min_level());
-    S2_DCHECK_LE(level, options_.max_level());
-    S2_DCHECK_EQ(0, (level - options_.min_level()) % options_.level_mod());
+    ABSL_DCHECK_GE(level, options_.min_level());
+    ABSL_DCHECK_LE(level, options_.max_level());
+    ABSL_DCHECK_EQ(0, (level - options_.min_level()) % options_.level_mod());
 
     // Cells in the covering are always queried as ancestor terms.
     terms.push_back(GetTerm(TermType::ANCESTOR, id, prefix));

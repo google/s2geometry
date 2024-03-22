@@ -25,6 +25,7 @@
 
 #include "absl/base/macros.h"
 #include "absl/container/inlined_vector.h"
+#include "absl/log/absl_check.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -58,7 +59,7 @@ enum class CrossingType { INTERIOR, ALL };
 //   }
 //   S2CrossingEdgeQuery query(&index);
 //   for (const auto& edge : query.GetCrossingEdges(a, b, CrossingType::ALL)) {
-//     S2_CHECK_GE(S2::CrossingSign(a0, a1, edge.v0(), edge.v1()), 0);
+//     ABSL_CHECK_GE(S2::CrossingSign(a0, a1, edge.v0(), edge.v1()), 0);
 //   }
 // }
 //
@@ -95,19 +96,20 @@ class S2CrossingEdgeQuery {
 
   // A specialized version of GetCrossingEdges() that only returns the edges
   // that belong to a particular S2Shape.
-  std::vector<s2shapeutil::ShapeEdge> GetCrossingEdges(
-      const S2Point& a0, const S2Point& a1,
-      const S2Shape& shape, CrossingType type);
+  std::vector<s2shapeutil::ShapeEdge> GetCrossingEdges(const S2Point& a0,
+                                                       const S2Point& a1,
+                                                       int shape_id,
+                                                       const S2Shape& shape,
+                                                       CrossingType type);
 
   // These versions can be more efficient when they are called many times,
   // since they do not require allocating a new vector on each call.
   void GetCrossingEdges(const S2Point& a0, const S2Point& a1, CrossingType type,
                         std::vector<s2shapeutil::ShapeEdge>* edges);
 
-  void GetCrossingEdges(const S2Point& a0, const S2Point& a1,
+  void GetCrossingEdges(const S2Point& a0, const S2Point& a1, int shape_id,
                         const S2Shape& shape, CrossingType type,
                         std::vector<s2shapeutil::ShapeEdge>* edges);
-
 
   /////////////////////////// Low-Level Methods ////////////////////////////
   //
@@ -125,6 +127,7 @@ class S2CrossingEdgeQuery {
   // belong to a particular S2Shape.
   std::vector<s2shapeutil::ShapeEdgeId> GetCandidates(const S2Point& a0,
                                                       const S2Point& a1,
+                                                      int shape_id,
                                                       const S2Shape& shape);
 
   // These versions can be more efficient when they are called many times,
@@ -132,7 +135,8 @@ class S2CrossingEdgeQuery {
   void GetCandidates(const S2Point& a0, const S2Point& a1,
                      std::vector<s2shapeutil::ShapeEdgeId>* edges);
 
-  void GetCandidates(const S2Point& a0, const S2Point& a1, const S2Shape& shape,
+  void GetCandidates(const S2Point& a0, const S2Point& a1, int shape_id,
+                     const S2Shape& shape,
                      std::vector<s2shapeutil::ShapeEdgeId>* edges);
 
   // A function that is called with each candidate intersecting edge.  The
@@ -149,7 +153,7 @@ class S2CrossingEdgeQuery {
   bool VisitRawCandidates(const S2Point& a0, const S2Point& a1,
                           const ShapeEdgeIdVisitor& visitor);
 
-  bool VisitRawCandidates(const S2Point& a0, const S2Point& a1,
+  bool VisitRawCandidates(const S2Point& a0, const S2Point& a1, int shape_id,
                           const S2Shape& shape,
                           const ShapeEdgeIdVisitor& visitor);
 

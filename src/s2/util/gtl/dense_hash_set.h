@@ -124,7 +124,6 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/port.h"
 #include "absl/base/macros.h"
 #include "s2/util/gtl/densehashtable.h"  // IWYU pragma: export
 
@@ -228,8 +227,7 @@ class dense_hash_set {
   // This clears the hash set without resizing it down to the minimum
   // bucket count, but rather keeps the number of buckets constant
   void clear_no_resize()              { rep.clear_no_resize(); }
-  void swap(dense_hash_set& hs)       { rep.swap(hs.rep); }
-
+  void swap(dense_hash_set& hs) noexcept { rep.swap(hs.rep); }
 
   // Functions concerning size
   size_type size() const              { return rep.size(); }
@@ -237,20 +235,6 @@ class dense_hash_set {
   bool empty() const                  { return rep.empty(); }
   size_type bucket_count() const      { return rep.bucket_count(); }
 
-  ABSL_DEPRECATED(
-      "This method is slated for removal.  Please migrate to "
-      "absl::flat_hash_set.")
-  size_type max_bucket_count() const  { return rep.max_bucket_count(); }
-
-  // These are tr1 methods.  bucket() is the bucket the key is or would be in.
-  ABSL_DEPRECATED(
-      "This method is slated for removal.  Please migrate to "
-      "absl::flat_hash_set.")
-  size_type bucket_size(size_type i) const    { return rep.bucket_size(i); }
-  ABSL_DEPRECATED(
-      "This method is slated for removal.  Please migrate to "
-      "absl::flat_hash_set.")
-  size_type bucket(const key_type& key) const { return rep.bucket(key); }
   float load_factor() const {
     return size() * 1.0f / bucket_count();
   }
@@ -350,7 +334,7 @@ class dense_hash_set {
 
 template <class Val, class HashFcn, class EqualKey, class Alloc>
 inline void swap(dense_hash_set<Val, HashFcn, EqualKey, Alloc>& hs1,
-                 dense_hash_set<Val, HashFcn, EqualKey, Alloc>& hs2) {
+                 dense_hash_set<Val, HashFcn, EqualKey, Alloc>& hs2) noexcept {
   hs1.swap(hs2);
 }
 

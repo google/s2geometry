@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
@@ -30,6 +31,7 @@
 #include "s2/s2cell_id.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2edge_vector_shape.h"
+#include "s2/s2fractal.h"
 #include "s2/s2loop.h"
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
@@ -71,7 +73,7 @@ class FractalLoopShapeIndexFactory : public ShapeIndexFactory {
  public:
   void AddEdges(const S2Cap& index_cap, int num_edges,
                 MutableS2ShapeIndex* index) const override {
-    S2Testing::Fractal fractal;
+    S2Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(num_edges);
     index->Add(std::make_unique<S2Loop::OwningShape>(
         fractal.MakeLoop(S2Testing::GetRandomFrameAt(index_cap.center()),

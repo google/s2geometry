@@ -22,7 +22,6 @@
 
 #include <vector>
 
-#include "s2/base/logging.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"

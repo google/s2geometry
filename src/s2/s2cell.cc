@@ -22,6 +22,7 @@
 #include <cmath>
 #include <new>
 
+#include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
@@ -40,11 +41,13 @@
 #include "s2/s2measures.h"
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
+#include "s2/s2predicates.h"
 
 using S2::internal::kPosToIJ;
 using S2::internal::kPosToOrientation;
-using std::min;
 using std::max;
+using std::min;
+using std::vector;
 
 // Since S2Cells are copied by value, the following assertion is a reminder
 // not to add fields unnecessarily.  An S2Cell currently consists of 43 data
@@ -226,7 +229,7 @@ S2LatLngRect S2Cell::GetRectBound() const {
   static const double kPoleMinLat = asin(sqrt(1./3)) - 0.5 * DBL_EPSILON;
 
   // The face centers are the +X, +Y, +Z, -X, -Y, -Z axes in that order.
-  S2_DCHECK_EQ(((face_ < 3) ? 1 : -1), S2::GetNorm(face_)[face_ % 3]);
+  ABSL_DCHECK_EQ(((face_ < 3) ? 1 : -1), S2::GetNorm(face_)[face_ % 3]);
 
   S2LatLngRect bound;
   switch (face_) {
@@ -263,6 +266,10 @@ S2LatLngRect S2Cell::GetRectBound() const {
   // which is guaranteed to be semi-monotonic.  (In fact the Gnu implementation
   // is also correctly rounded, but we don't even need that here.)
   return bound.Expanded(S2LatLng::FromRadians(DBL_EPSILON, 0));
+}
+
+void S2Cell::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  GetCapBound().GetCellUnionBound(cell_ids);
 }
 
 bool S2Cell::MayIntersect(const S2Cell& cell) const {

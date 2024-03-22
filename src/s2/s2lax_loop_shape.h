@@ -36,7 +36,7 @@
 #include <memory>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/types/span.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
@@ -135,8 +135,7 @@ class S2VertexIdLaxLoopShape : public S2Shape {
 
   // Initializes the shape from the given vertex array and indices.
   // "vertex_ids" is a vector of indices into "vertex_array".
-  void Init(absl::Span<const int32> vertex_ids,
-            const S2Point* vertex_array);
+  void Init(absl::Span<const int32> vertex_ids, const S2Point* vertex_array);
 
   // Returns the number of vertices in the loop.
   int num_vertices() const { return num_vertices_; }

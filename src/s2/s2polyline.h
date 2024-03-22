@@ -25,8 +25,8 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/logging.h"
 #include "absl/base/macros.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
@@ -142,8 +142,8 @@ class S2Polyline final : public S2Region {
 
   int num_vertices() const { return num_vertices_; }
   const S2Point& vertex(int k) const {
-    S2_DCHECK_GE(k, 0);
-    S2_DCHECK_LT(k, num_vertices_);
+    ABSL_DCHECK_GE(k, 0);
+    ABSL_DCHECK_LT(k, num_vertices_);
     return vertices_[k];
   }
 
@@ -296,6 +296,7 @@ class S2Polyline final : public S2Region {
   S2Polyline* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
   bool Contains(const S2Cell& cell) const override { return false; }
   bool MayIntersect(const S2Cell& cell) const override;
 
@@ -367,7 +368,7 @@ class S2Polyline final : public S2Region {
     int num_chains() const final;
     Chain chain(int i) const final;
     Edge chain_edge(int i, int j) const final {
-      S2_DCHECK_EQ(i, 0);
+      ABSL_DCHECK_EQ(i, 0);
       return Edge(polyline_->vertex(j), polyline_->vertex(j + 1));
     }
     ChainPosition chain_position(int e) const final {
