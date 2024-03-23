@@ -22,6 +22,8 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -228,7 +230,7 @@ Component DegeneracyFinder::BuildComponent(VertexId root) {
     frontier.pop_back();
     if (result.root_sign == 0 && is_vertex_unbalanced_[v0]) {
       int v0_sign = ContainsVertexSign(v0);
-      S2_DCHECK_NE(v0_sign, 0);
+      ABSL_DCHECK_NE(v0_sign, 0);
       result.root_sign = v0_same_inside ? v0_sign : -v0_sign;
     }
     for (EdgeId e : out_.edge_ids(v0)) {
@@ -282,7 +284,7 @@ VertexId DegeneracyFinder::FindUnbalancedVertex() const {
   for (VertexId v = 0; v < g_.num_vertices(); ++v) {
     if (is_vertex_unbalanced_[v]) return v;
   }
-  S2_LOG(ERROR) << "Could not find previously marked unbalanced vertex";
+  ABSL_LOG(ERROR) << "Could not find previously marked unbalanced vertex";
   return -1;
 }
 
@@ -332,8 +334,8 @@ void DegeneracyFinder::ComputeUnknownSignsIndexed(
     if (component.root_sign != 0) continue;
     bool inside = known_vertex_sign > 0;
     crosser.Init(&g_.vertex(known_vertex), &g_.vertex(component.root));
-    query.GetCandidates(g_.vertex(known_vertex), g_.vertex(component.root),
-                       *index.shape(0), &crossing_edges);
+    query.GetCandidates(g_.vertex(known_vertex), g_.vertex(component.root), 0,
+                        *index.shape(0), &crossing_edges);
     for (ShapeEdgeId id : crossing_edges) {
       int e = id.edge_id;
       if (is_edge_degeneracy_[e]) continue;
@@ -351,7 +353,7 @@ vector<PolygonDegeneracy> DegeneracyFinder::MergeDegeneracies(
     const vector<Component>& components) const {
   vector<PolygonDegeneracy> result;
   for (const Component& component : components) {
-    S2_DCHECK_NE(component.root_sign, 0);
+    ABSL_DCHECK_NE(component.root_sign, 0);
     bool invert = component.root_sign < 0;
     for (const auto& d : component.degeneracies) {
       result.push_back(PolygonDegeneracy(d.edge_id, d.is_hole ^ invert));
@@ -362,11 +364,12 @@ vector<PolygonDegeneracy> DegeneracyFinder::MergeDegeneracies(
 }
 
 void CheckGraphOptions(const Graph& g) {
-  S2_DCHECK(g.options().edge_type() == EdgeType::DIRECTED);
-  S2_DCHECK(g.options().degenerate_edges() == DegenerateEdges::DISCARD ||
-         g.options().degenerate_edges() == DegenerateEdges::DISCARD_EXCESS);
-  S2_DCHECK(g.options().sibling_pairs() == SiblingPairs::DISCARD ||
-         g.options().sibling_pairs() == SiblingPairs::DISCARD_EXCESS);
+  ABSL_DCHECK(g.options().edge_type() == EdgeType::DIRECTED);
+  ABSL_DCHECK(g.options().degenerate_edges() == DegenerateEdges::DISCARD ||
+              g.options().degenerate_edges() ==
+                  DegenerateEdges::DISCARD_EXCESS);
+  ABSL_DCHECK(g.options().sibling_pairs() == SiblingPairs::DISCARD ||
+              g.options().sibling_pairs() == SiblingPairs::DISCARD_EXCESS);
 }
 
 }  // namespace

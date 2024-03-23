@@ -22,6 +22,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/log/absl_log.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
@@ -144,8 +145,8 @@ TEST(S2, OriginTest) {
   // S2Earth because we don't want to depend on that package.)
   double distance_km = acos(S2::Origin().z()) * S2Testing::kEarthRadiusKm;
   EXPECT_GE(distance_km, 50.0);
-  S2_LOG(INFO) << "\nS2::Origin() coordinates: " << S2LatLng(S2::Origin())
-            << ", distance from pole: " << distance_km << " km";
+  ABSL_LOG(INFO) << "\nS2::Origin() coordinates: " << S2LatLng(S2::Origin())
+                 << ", distance from pole: " << distance_km << " km";
 
   // Check that S2::Origin() is not collinear with the edges of any large
   // S2Cell.  We do this is two parts.  For S2Cells that belong to either

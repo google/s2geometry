@@ -25,9 +25,10 @@
 
 #include <gtest/gtest.h>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"

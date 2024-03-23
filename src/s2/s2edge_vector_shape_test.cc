@@ -57,13 +57,11 @@ TEST(S2EdgeVectorShape, Move) {
   // Test the move constructor.
   S2EdgeVectorShape move1(std::move(to_move));
   s2testing::ExpectEqual(correct, move1);
-  EXPECT_EQ(correct.id(), move1.id());
 
   // Test the move-assignment operator.
   S2EdgeVectorShape move2;
   move2 = std::move(move1);
   s2testing::ExpectEqual(correct, move2);
-  EXPECT_EQ(correct.id(), move2.id());
 }
 
 TEST(S2EdgeVectorShape, EdgeAccess) {

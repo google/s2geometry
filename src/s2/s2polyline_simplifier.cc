@@ -22,6 +22,7 @@
 #include <cfloat>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2point.h"
@@ -144,7 +145,7 @@ void S2PolylineSimplifier::AvoidRange(const S1Interval& avoid_interval,
   // that the next input vertex is either inside "avoid_interval" or somewhere
   // in the 180 degrees to its right/left according to "disc_on_left", which
   // means that it cannot be contained by the subinterval that we ignore.
-  S2_DCHECK(!window_.is_full());
+  ABSL_DCHECK(!window_.is_full());
   if (window_.Contains(avoid_interval)) {
     if (disc_on_left) {
       window_ = S1Interval(window_.lo(), avoid_interval.lo());

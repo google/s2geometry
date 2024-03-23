@@ -18,9 +18,11 @@
 #include "s2/encoded_s2cell_id_vector.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
+#include "absl/log/absl_check.h"
 #include "absl/numeric/bits.h"
 #include "absl/types/span.h"
 #include "s2/util/bits/bits.h"
@@ -34,6 +36,30 @@ using std::min;
 using std::vector;
 
 namespace s2coding {
+
+void EncodeBaseShift(Encoder* encoder, int shift, uint64 base, int base_len) {
+  encoder->Ensure(2 + base_len);
+
+  // "shift" and "base_len" are encoded in 1 or 2 bytes.
+  //
+  // "shift_code" is 5 bits:
+  //   values <= 28 represent even shifts in the range 0..56
+  //   values 29, 30 represent odd shifts 1 and 3
+  //   value 31 indicates that the shift is odd and encoded in the next byte
+  int shift_code = shift >> 1;
+  if (shift & 1) {
+    shift_code = min(31, shift_code + 29);
+  }
+
+  encoder->put8((shift_code << 3) | base_len);
+  if (shift_code == 31) {
+    encoder->put8(shift >> 1);  // Shift is always odd, so 3 bits unused.
+  }
+
+  // Encode the "base_len" most-significant bytes of "base".
+  uint64 base_bytes = base >> (64 - 8 * max(1, base_len));
+  EncodeUintWithLength<uint64>(base_bytes, base_len, encoder);
+}
 
 void EncodeS2CellIdVector(Span<const S2CellId> v, Encoder* encoder) {
   // v[i] is encoded as (base + (deltas[i] << shift)).
@@ -112,24 +138,10 @@ void EncodeS2CellIdVector(Span<const S2CellId> v, Encoder* encoder) {
     // encoding size per delta using an even shift.
     if ((e_shift & 1) && (e_max_delta_msb & 7) != 7) --e_shift;
   }
-  S2_DCHECK_LE(e_base_len, 7);
-  S2_DCHECK_LE(e_shift, 56);
-  encoder->Ensure(2 + e_base_len);
+  ABSL_DCHECK_LE(e_base_len, 7);
+  ABSL_DCHECK_LE(e_shift, 56);
 
-  // As described above, "shift" and "base_len" are encoded in 1 or 2 bytes.
-  // "shift_code" is 5 bits:
-  //   values <= 28 represent even shifts in the range 0..56
-  //   values 29, 30 represent odd shifts 1 and 3
-  //   value 31 indicates that the shift is odd and encoded in the next byte
-  int shift_code = e_shift >> 1;
-  if (e_shift & 1) shift_code = min(31, shift_code + 29);
-  encoder->put8((shift_code << 3) | e_base_len);
-  if (shift_code == 31) {
-    encoder->put8(e_shift >> 1);  // Shift is always odd, so 3 bits unused.
-  }
-  // Encode the "base_len" most-significant bytes of "base".
-  uint64 base_bytes = e_base >> (64 - 8 * max(1, e_base_len));
-  EncodeUintWithLength<uint64>(base_bytes, e_base_len, encoder);
+  EncodeBaseShift(encoder, e_shift, e_base, e_base_len);
 
   // Finally, encode the vector of deltas.
   vector<uint64> deltas;
@@ -154,9 +166,9 @@ bool EncodedS2CellIdVector::Init(Decoder* decoder) {
   }
 
   // Decode the "base_len" most-significant bytes of "base".
-  int base_len = code_plus_len & 7;
-  if (!DecodeUintWithLength(base_len, decoder, &base_)) return false;
-  base_ <<= 64 - 8 * max(1, base_len);
+  base_len_ = code_plus_len & 7;
+  if (!DecodeUintWithLength(base_len_, decoder, &base_)) return false;
+  base_ <<= 64 - 8 * max(1, (int)base_len_);
 
   // Invert the encoding of "shift_code" described above.
   if (shift_code >= 29) {
@@ -174,6 +186,14 @@ vector<S2CellId> EncodedS2CellIdVector::Decode() const {
     result[i] = (*this)[i];
   }
   return result;
+}
+
+void EncodedS2CellIdVector::Encode(Encoder* encoder) const {
+  // Re-encode the base and shift values.
+  EncodeBaseShift(encoder, shift_, base_, base_len_);
+
+  // And copy the encoded deltas.
+  deltas_.Encode(encoder);
 }
 
 }  // namespace s2coding

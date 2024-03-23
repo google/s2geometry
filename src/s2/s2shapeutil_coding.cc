@@ -21,7 +21,9 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "absl/cleanup/cleanup.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/s2coder.h"
@@ -46,11 +48,11 @@ namespace s2shapeutil {
 bool FastEncodeShape(const S2Shape& shape, Encoder* encoder) {
   uint32 tag = shape.type_tag();
   if (tag == S2Shape::kNoTypeTag) {
-    S2_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
+    ABSL_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
     return false;
   }
   // Update the following constant when adding new S2Shape encodings.
-  S2_DCHECK_LT(shape.type_tag(), S2Shape::kNextAvailableTypeTag);
+  ABSL_DCHECK_LT(shape.type_tag(), S2Shape::kNextAvailableTypeTag);
   shape.Encode(encoder, CodingHint::FAST);
   return true;
 }
@@ -58,11 +60,11 @@ bool FastEncodeShape(const S2Shape& shape, Encoder* encoder) {
 bool CompactEncodeShape(const S2Shape& shape, Encoder* encoder) {
   uint32 tag = shape.type_tag();
   if (tag == S2Shape::kNoTypeTag) {
-    S2_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
+    ABSL_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
     return false;
   }
   // Update the following constant when adding new S2Shape encodings.
-  S2_DCHECK_LT(shape.type_tag(), S2Shape::kNextAvailableTypeTag);
+  ABSL_DCHECK_LT(shape.type_tag(), S2Shape::kNextAvailableTypeTag);
   shape.Encode(encoder, CodingHint::COMPACT);
   return true;
 }
@@ -98,7 +100,7 @@ unique_ptr<S2Shape> FullDecodeShape(S2Shape::TypeTag tag, Decoder* decoder) {
       return std::move(shape);  // Converts to S2Shape.
     }
     default: {
-      S2_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
+      ABSL_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
       return nullptr;
     }
   }
@@ -132,7 +134,7 @@ bool EncodeTaggedShapes(const S2ShapeIndex& index,
                         const ShapeEncoder& shape_encoder,
                         Encoder* encoder) {
   s2coding::StringVectorEncoder shape_vector;
-  for (S2Shape* shape : index) {
+  for (const S2Shape* shape : index) {
     Encoder* sub_encoder = shape_vector.AddViaEncoder();
     if (shape == nullptr) continue;  // Encode as zero bytes.
 
@@ -153,9 +155,12 @@ bool CompactEncodeTaggedShapes(const S2ShapeIndex& index, Encoder* encoder) {
 }
 
 TaggedShapeFactory::TaggedShapeFactory(const ShapeDecoder& shape_decoder,
-                                       Decoder* decoder)
+                                       Decoder* decoder, S2Error& error)
     : shape_decoder_(shape_decoder) {
-  if (!encoded_shapes_.Init(decoder)) encoded_shapes_.Clear();
+  if (!encoded_shapes_.Init(decoder)) {
+    encoded_shapes_.Clear();
+    error.Init(S2Error::DATA_LOSS, "Corrupted encoded shapes.");
+  }
 }
 
 unique_ptr<S2Shape> TaggedShapeFactory::operator[](int shape_id) const {
@@ -165,12 +170,26 @@ unique_ptr<S2Shape> TaggedShapeFactory::operator[](int shape_id) const {
   return shape_decoder_(tag, &decoder);
 }
 
-TaggedShapeFactory FullDecodeShapeFactory(Decoder* decoder) {
-  return TaggedShapeFactory(FullDecodeShape, decoder);
+TaggedShapeFactory FullDecodeShapeFactory(Decoder* decoder, S2Error& error) {
+  return TaggedShapeFactory(FullDecodeShape, decoder, error);
 }
 
+TaggedShapeFactory LazyDecodeShapeFactory(Decoder* decoder, S2Error& error) {
+  return TaggedShapeFactory(LazyDecodeShape, decoder, error);
+}
+
+// Deprecated, use version that accepts S2Error to detect encoding errors.
+TaggedShapeFactory FullDecodeShapeFactory(Decoder* decoder) {
+  S2Error error;
+  // TODO(b/282023846) switch to API that supports error handling, uncomment.
+  // absl::Cleanup dcheck([&error] { ABSL_DCHECK(error.ok()) << error; });
+  return TaggedShapeFactory(FullDecodeShape, decoder, error);
+}
 TaggedShapeFactory LazyDecodeShapeFactory(Decoder* decoder) {
-  return TaggedShapeFactory(LazyDecodeShape, decoder);
+  S2Error error;
+  // TODO(b/282023846) switch to API that supports error handling, uncomment.
+  // absl::Cleanup dcheck([&error] { ABSL_DCHECK(error.ok()) << error; });
+  return TaggedShapeFactory(LazyDecodeShape, decoder, error);
 }
 
 VectorShapeFactory::VectorShapeFactory(vector<unique_ptr<S2Shape>> shapes)
@@ -189,7 +208,7 @@ VectorShapeFactory SingletonShapeFactory(unique_ptr<S2Shape> shape) {
 }
 
 unique_ptr<S2Shape> WrappedShapeFactory::operator[](int shape_id) const {
-  S2Shape* shape = index_.shape(shape_id);
+  const S2Shape* shape = index_.shape(shape_id);
   if (shape == nullptr) return nullptr;
   return make_unique<S2WrappedShape>(shape);
 }

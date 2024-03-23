@@ -27,14 +27,14 @@
 
 #include "absl/base/macros.h"
 #include "absl/base/thread_annotations.h"
+#include "absl/log/absl_check.h"
 #include "absl/container/btree_map.h"
 #include "absl/synchronization/mutex.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/commandlineflags_declare.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
 #include "s2/base/spinlock.h"
+#include "s2/base/types.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r1interval.h"
 #include "s2/r2rect.h"
@@ -104,8 +104,8 @@ class BTreeMap : public absl::btree_map<Key, Value> {
 //     }
 //     auto query = MakeS2ContainsPointQuery(&index);
 //     for (const auto& point : points) {
-//       for (S2Shape* shape : query.GetContainingShapes(point)) {
-//         S2Polygon* polygon = polygons[shape->id()];
+//       for (int shape_id : query.GetContainingShapeIds(point)) {
+//         S2Polygon* polygon = polygons[shape_id];
 //         ... do something with (point, polygon) ...
 //       }
 //     }
@@ -249,7 +249,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
 
   // Returns a pointer to the shape with the given id, or nullptr if the shape
   // has been removed from the index.
-  S2Shape* shape(int id) const override { return shapes_[id].get(); }
+  const S2Shape* shape(int id) const override { return shapes_[id].get(); }
 
   // Minimizes memory usage by requesting that any data structures that can be
   // rebuilt should be discarded.  This method invalidates all iterators.
@@ -279,7 +279,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   //
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
-  void Encode(Encoder* encoder) const;
+  void Encode(Encoder* encoder) const override;
 
   // Decodes an S2ShapeIndex, returning true on success.
   //
@@ -324,11 +324,20 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
     void InitStale(const MutableS2ShapeIndex* index,
                    InitialPosition pos = UNPOSITIONED);
 
-    // Inherited non-virtual methods:
-    //   S2CellId id() const;
-    //   bool done() const;
-    //   S2Point center() const;
-    const S2ShapeIndexCell& cell() const;
+    S2CellId id() const override {
+      S2CellId id = S2CellId::Sentinel();
+      if (!done()) {
+        id = iter_->first;
+      }
+      return id;
+    }
+
+    const S2ShapeIndexCell& cell() const override {
+      ABSL_DCHECK(!done());
+      return *iter_->second;
+    }
+
+    bool done() const override { return iter_ == end_; }
 
     // S2CellIterator API:
     void Begin() override;
@@ -345,21 +354,19 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
       return LocateImpl(*this, target);
     }
 
-   protected:
-    const S2ShapeIndexCell* GetCell() const override;
-    std::unique_ptr<IteratorBase> Clone() const override;
-    void Copy(const IteratorBase& other) override;
+    std::unique_ptr<IteratorBase> Clone() const override {
+      return std::make_unique<Iterator>(*this);
+    }
 
    private:
-    void Refresh();  // Updates the IteratorBase fields.
     const MutableS2ShapeIndex* index_;
     CellMap::const_iterator iter_, end_;
   };
 
-  // Takes ownership of the given shape and adds it to the index.  Also
-  // assigns a unique id to the shape (shape->id()) and returns that id.
-  // Shape ids are assigned sequentially starting from 0 in the order shapes
-  // are added.  Invalidates all iterators and their associated data.
+  // Takes ownership of the given shape and adds it to the index.  Assigns a
+  // unique id to the shape for this index and returns it.  Shape ids are
+  // assigned sequentially starting from 0 in the order shapes are added.
+  // Invalidates all iterators and their associated data.
   //
   // Note that this method is not affected by S2MemoryTracker, i.e. shapes can
   // continue to be added even once the specified limit has been reached.
@@ -450,8 +457,8 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   std::vector<BatchDescriptor> GetUpdateBatches() const;
   void ReserveSpace(const BatchDescriptor& batch,
                     std::vector<FaceEdge> all_edges[6]);
-  void AddShape(const S2Shape* shape, int edges_begin, int edges_end,
-                std::vector<FaceEdge> all_edges[6],
+  void AddShape(const S2Shape* shape, int shape_id, int edges_begin,
+                int edges_end, std::vector<FaceEdge> all_edges[6],
                 InteriorTracker* tracker) const;
   void RemoveShape(const RemovedShape& removed,
                    std::vector<FaceEdge> all_edges[6],
@@ -575,9 +582,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
     UpdateState() : num_waiting(0) {
     }
 
-    ~UpdateState() {
-      S2_DCHECK_EQ(0, num_waiting);
-    }
+    ~UpdateState() { ABSL_DCHECK_EQ(0, num_waiting); }
   };
   std::unique_ptr<UpdateState> update_state_;
 
@@ -698,56 +703,38 @@ inline void MutableS2ShapeIndex::Iterator::InitStale(
     const MutableS2ShapeIndex* index, InitialPosition pos) {
   index_ = index;
   end_ = index_->cell_map_.end();
+  iter_ = end_;
+
   if (pos == BEGIN) {
     iter_ = index_->cell_map_.begin();
-  } else {
-    iter_ = end_;
-  }
-  Refresh();
-}
-
-inline const S2ShapeIndexCell& MutableS2ShapeIndex::Iterator::cell() const {
-  // Since MutableS2ShapeIndex always sets the "cell_" field, we can skip the
-  // logic in the base class that conditionally calls GetCell().
-  return *raw_cell();
-}
-
-inline void MutableS2ShapeIndex::Iterator::Refresh() {
-  if (iter_ == end_) {
-    set_finished();
-  } else {
-    set_state(iter_->first, iter_->second);
   }
 }
 
 inline void MutableS2ShapeIndex::Iterator::Begin() {
   // Make sure that the index has not been modified since Init() was called.
-  S2_DCHECK(index_->is_fresh());
+  ABSL_DCHECK(index_->is_fresh());
   iter_ = index_->cell_map_.begin();
-  Refresh();
 }
 
 inline void MutableS2ShapeIndex::Iterator::Finish() {
   iter_ = end_;
-  Refresh();
 }
 
 inline void MutableS2ShapeIndex::Iterator::Next() {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   ++iter_;
-  Refresh();
 }
 
 inline bool MutableS2ShapeIndex::Iterator::Prev() {
-  if (iter_ == index_->cell_map_.begin()) return false;
+  if (iter_ == index_->cell_map_.begin()) {
+    return false;
+  }
   --iter_;
-  Refresh();
   return true;
 }
 
 inline void MutableS2ShapeIndex::Iterator::Seek(S2CellId target) {
   iter_ = index_->cell_map_.lower_bound(target);
-  Refresh();
 }
 
 inline std::unique_ptr<MutableS2ShapeIndex::IteratorBase>

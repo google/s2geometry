@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -61,7 +62,7 @@ void S2PolylineVectorLayer::Init(vector<unique_ptr<S2Polyline>>* polylines,
                                  LabelSetIds* label_set_ids,
                                  IdSetLexicon* label_set_lexicon,
                                  const Options& options) {
-  S2_DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
+  ABSL_DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
   polylines_ = polylines;
   label_set_ids_ = label_set_ids;
   label_set_lexicon_ = label_set_lexicon;

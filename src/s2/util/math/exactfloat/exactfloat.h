@@ -109,7 +109,6 @@
 #ifndef S2_UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
 #define S2_UTIL_MATH_EXACTFLOAT_EXACTFLOAT_H_
 
-#include <algorithm>
 #include <climits>
 #include <cmath>
 
@@ -122,9 +121,7 @@
 
 #include <openssl/bn.h>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
-#include "s2/base/port.h"
+#include "s2/base/types.h"
 
 class ExactFloat {
  public:

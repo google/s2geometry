@@ -36,7 +36,7 @@
 #include <memory>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/types/span.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"

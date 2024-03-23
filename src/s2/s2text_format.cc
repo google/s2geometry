@@ -20,6 +20,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
@@ -48,7 +49,6 @@
 using absl::Span;
 using absl::string_view;
 using std::make_unique;
-using std::pair;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -66,7 +66,7 @@ static vector<string_view> SplitString(string_view str, char separator) {
 
 vector<S2LatLng> ParseLatLngsOrDie(string_view str) {
   vector<S2LatLng> latlngs;
-  S2_CHECK(ParseLatLngs(str, &latlngs)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(ParseLatLngs(str, &latlngs)) << ": str == \"" << str << "\"";
   return latlngs;
 }
 
@@ -85,7 +85,7 @@ bool ParseLatLngs(string_view str, vector<S2LatLng>* latlngs) {
 
 vector<S2Point> ParsePointsOrDie(string_view str) {
   vector<S2Point> vertices;
-  S2_CHECK(ParsePoints(str, &vertices)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(ParsePoints(str, &vertices)) << ": str == \"" << str << "\"";
   return vertices;
 }
 
@@ -100,7 +100,7 @@ bool ParsePoints(string_view str, vector<S2Point>* vertices) {
 
 S2Point MakePointOrDie(string_view str) {
   S2Point point;
-  S2_CHECK(MakePoint(str, &point)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(MakePoint(str, &point)) << ": str == \"" << str << "\"";
   return point;
 }
 
@@ -120,13 +120,13 @@ bool MakeLatLng(string_view str, S2LatLng* latlng) {
 
 S2LatLng MakeLatLngOrDie(string_view str) {
   S2LatLng latlng;
-  S2_CHECK(MakeLatLng(str, &latlng)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(MakeLatLng(str, &latlng)) << ": str == \"" << str << "\"";
   return latlng;
 }
 
 S2LatLngRect MakeLatLngRectOrDie(string_view str) {
   S2LatLngRect rect;
-  S2_CHECK(MakeLatLngRect(str, &rect)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(MakeLatLngRect(str, &rect)) << ": str == \"" << str << "\"";
   return rect;
 }
 
@@ -147,7 +147,7 @@ bool MakeCellId(string_view str, S2CellId* cell_id) {
 
 S2CellId MakeCellIdOrDie(string_view str) {
   S2CellId cell_id;
-  S2_CHECK(MakeCellId(str, &cell_id)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(MakeCellId(str, &cell_id)) << ": str == \"" << str << "\"";
   return cell_id;
 }
 
@@ -164,13 +164,14 @@ bool MakeCellUnion(string_view str, S2CellUnion* cell_union) {
 
 S2CellUnion MakeCellUnionOrDie(string_view str) {
   S2CellUnion cell_union;
-  S2_CHECK(MakeCellUnion(str, &cell_union)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(MakeCellUnion(str, &cell_union)) << ": str == \"" << str << "\"";
   return cell_union;
 }
 
 unique_ptr<S2Loop> MakeLoopOrDie(string_view str, S2Debug debug_override) {
   unique_ptr<S2Loop> loop;
-  S2_CHECK(MakeLoop(str, &loop, debug_override)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(MakeLoop(str, &loop, debug_override))
+      << ": str == \"" << str << "\"";
   return loop;
 }
 
@@ -193,7 +194,7 @@ bool MakeLoop(string_view str, unique_ptr<S2Loop>* loop,
 unique_ptr<S2Polyline> MakePolylineOrDie(string_view str,
                                          S2Debug debug_override) {
   unique_ptr<S2Polyline> polyline;
-  S2_CHECK(MakePolyline(str, &polyline, debug_override))
+  ABSL_CHECK(MakePolyline(str, &polyline, debug_override))
       << ": str == \"" << str << "\"";
   return polyline;
 }
@@ -208,7 +209,8 @@ bool MakePolyline(string_view str, unique_ptr<S2Polyline>* polyline,
 
 unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(string_view str) {
   unique_ptr<S2LaxPolylineShape> lax_polyline;
-  S2_CHECK(MakeLaxPolyline(str, &lax_polyline)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(MakeLaxPolyline(str, &lax_polyline))
+      << ": str == \"" << str << "\"";
   return lax_polyline;
 }
 
@@ -241,7 +243,7 @@ static bool InternalMakePolygon(string_view str,
 unique_ptr<S2Polygon> MakePolygonOrDie(string_view str,
                                        S2Debug debug_override) {
   unique_ptr<S2Polygon> polygon;
-  S2_CHECK(MakePolygon(str, &polygon, debug_override))
+  ABSL_CHECK(MakePolygon(str, &polygon, debug_override))
       << ": str == \"" << str << "\"";
   return polygon;
 }
@@ -253,7 +255,8 @@ bool MakePolygon(string_view str, unique_ptr<S2Polygon>* polygon,
 
 unique_ptr<S2Polygon> MakeVerbatimPolygonOrDie(string_view str) {
   unique_ptr<S2Polygon> polygon;
-  S2_CHECK(MakeVerbatimPolygon(str, &polygon)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(MakeVerbatimPolygon(str, &polygon))
+      << ": str == \"" << str << "\"";
   return polygon;
 }
 
@@ -263,7 +266,7 @@ bool MakeVerbatimPolygon(string_view str, unique_ptr<S2Polygon>* polygon) {
 
 unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(string_view str) {
   unique_ptr<S2LaxPolygonShape> lax_polygon;
-  S2_CHECK(MakeLaxPolygon(str, &lax_polygon)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(MakeLaxPolygon(str, &lax_polygon)) << ": str == \"" << str << "\"";
   return lax_polygon;
 }
 
@@ -286,13 +289,13 @@ bool MakeLaxPolygon(string_view str,
 
 unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(string_view str) {
   auto index = make_unique<MutableS2ShapeIndex>();
-  S2_CHECK(MakeIndex(str, &index)) << ": str == \"" << str << "\"";
+  ABSL_CHECK(MakeIndex(str, &index)) << ": str == \"" << str << "\"";
   return index;
 }
 
 bool MakeIndex(string_view str, unique_ptr<MutableS2ShapeIndex>* index) {
   vector<string_view> strs = absl::StrSplit(str, '#');
-  S2_DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
+  ABSL_DCHECK_EQ(3, strs.size()) << "Must contain two # characters: " << str;
 
   vector<S2Point> points;
   for (const auto& point_str : SplitString(strs[0], '|')) {
@@ -425,6 +428,9 @@ string ToString(Span<const S2LatLng> latlngs) {
 }
 
 string ToString(const S2Shape& shape) {
+  // Polygon chains are separated by a ; instead of |.
+  const char* separator = shape.dimension() == 2 ? "; " : " | ";
+
   string out;
   if (shape.dimension() == 1) out += "# ";
   if (shape.dimension() == 2) out += "## ";
@@ -432,7 +438,7 @@ string ToString(const S2Shape& shape) {
   int nchain = 0;
   for (const auto& chain : shape.chains()) {
     if (nchain++ > 0) {
-      out += " | ";
+      out += separator;
     }
 
     int nvertex = 0;
@@ -476,14 +482,14 @@ string ToString(const S2ShapeIndex& index, bool roundtrip_precision) {
   for (int dim = 0; dim < 3; ++dim) {
     if (dim > 0) out += "#";
     int count = 0;
-    for (S2Shape* shape : index) {
+    for (const S2Shape* shape : index) {
       if (shape == nullptr || shape->dimension() != dim) continue;
       out += (count > 0) ? " | " : (dim > 0) ? " " : "";
       for (int i = 0; i < shape->num_chains(); ++i, ++count) {
         if (i > 0) out += (dim == 2) ? "; " : " | ";
         S2Shape::Chain chain = shape->chain(i);
         if (chain.length == 0) {
-          S2_DCHECK_EQ(dim, 2);
+          ABSL_DCHECK_EQ(dim, 2);
           out += "full";
         } else {
           AppendVertex(shape->edge(chain.start).v0, &out, roundtrip_precision);

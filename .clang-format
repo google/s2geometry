@@ -1,0 +1,7 @@
+---
+Language: Cpp
+BasedOnStyle: Google
+# Always use `T* p`.
+DerivePointerAlignment: false
+PointerAlignment: Left
+...

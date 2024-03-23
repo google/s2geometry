@@ -55,6 +55,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -186,8 +187,8 @@ double S2BufferOperation::Options::error_fraction() const {
 }
 
 void S2BufferOperation::Options::set_error_fraction(double error_fraction) {
-  S2_DCHECK_GE(error_fraction, kMinErrorFraction);
-  S2_DCHECK_LE(error_fraction, 1.0);
+  ABSL_DCHECK_GE(error_fraction, kMinErrorFraction);
+  ABSL_DCHECK_LE(error_fraction, 1.0);
   error_fraction_ = max(kMinErrorFraction, min(1.0, error_fraction));
 }
 
@@ -210,8 +211,8 @@ double S2BufferOperation::Options::circle_segments() const {
 }
 
 void S2BufferOperation::Options::set_circle_segments(double circle_segments) {
-  S2_DCHECK_GE(circle_segments, 2.0);
-  S2_DCHECK_LE(circle_segments, kMaxCircleSegments);
+  ABSL_DCHECK_GE(circle_segments, 2.0);
+  ABSL_DCHECK_LE(circle_segments, kMaxCircleSegments);
   circle_segments = max(2.0, min(kMaxCircleSegments, circle_segments));
 
   // We convert circle_segments to error_fraction using planar geometry,
@@ -349,7 +350,7 @@ S1Angle S2BufferOperation::GetMaxEdgeSpan(S1Angle radius,
   // we like, however we always use at least 3 edges to approximate a circle.
   S1Angle step = S1Angle::Radians(2 * M_PI / 3 + 1e-15);
   S1Angle min_radius = radius - requested_error;
-  S2_DCHECK_GE(min_radius, S1Angle::Zero());
+  ABSL_DCHECK_GE(min_radius, S1Angle::Zero());
   if (radius.radians() < M_PI_2) {
     step = min(step, S1Angle::Radians(2 * acos(tan(min_radius) / tan(radius))));
   } else if (min_radius.radians() > M_PI_2) {
@@ -364,7 +365,7 @@ S1Angle S2BufferOperation::GetMaxEdgeSpan(S1Angle radius,
 // winding number of the reference point if necessary.
 void S2BufferOperation::SetInputVertex(const S2Point& new_a) {
   if (have_input_start_) {
-    S2_DCHECK(have_offset_start_);
+    ABSL_DCHECK(have_offset_start_);
     UpdateRefWinding(sweep_a_, sweep_b_, new_a);
   } else {
     input_start_ = new_a;
@@ -380,7 +381,7 @@ void S2BufferOperation::AddOffsetVertex(const S2Point& new_b) {
   if (!tracker_.AddSpace(&path_, 1)) return;
   path_.push_back(new_b);
   if (have_offset_start_) {
-    S2_DCHECK(have_input_start_);
+    ABSL_DCHECK(have_input_start_);
     UpdateRefWinding(sweep_a_, sweep_b_, new_b);
   } else {
     offset_start_ = new_b;
@@ -484,7 +485,7 @@ void S2BufferOperation::AddPoint(const S2Point& point) {
 // of AB if buffer_sign_ < 0.
 inline S2Point S2BufferOperation::GetEdgeAxis(const S2Point& a,
                                               const S2Point& b) const {
-  S2_DCHECK_NE(buffer_sign_, 0);
+  ABSL_DCHECK_NE(buffer_sign_, 0);
   return buffer_sign_ * S2::RobustCrossProd(b, a).Normalize();
 }
 
@@ -547,9 +548,9 @@ void S2BufferOperation::CloseEdgeArc(const S2Point& a, const S2Point& b) {
 // not leave the valid buffer zone of the previous edge and vertex.
 void S2BufferOperation::BufferEdgeAndVertex(const S2Point& a, const S2Point& b,
                                             const S2Point& c) {
-  S2_DCHECK_NE(a, b);
-  S2_DCHECK_NE(b, c);
-  S2_DCHECK_NE(buffer_sign_, 0);
+  ABSL_DCHECK_NE(a, b);
+  ABSL_DCHECK_NE(b, c);
+  ABSL_DCHECK_NE(buffer_sign_, 0);
   if (!tracker_.ok()) return;
 
   // For left (convex) turns we need to add an offset arc.  For right
@@ -588,7 +589,7 @@ void S2BufferOperation::AddStartCap(const S2Point& a, const S2Point& b) {
       AddOffsetVertex(S2::GetPointOnRay(a, -axis, abs_radius_));
     }
   } else {
-    S2_DCHECK(options_.end_cap_style() == EndCapStyle::ROUND);
+    ABSL_DCHECK(options_.end_cap_style() == EndCapStyle::ROUND);
     if (options_.polyline_side() == PolylineSide::BOTH) {
       // The end cap consists of a semicircle.
       AddVertexArc(a, -axis, axis);
@@ -607,7 +608,7 @@ void S2BufferOperation::AddEndCap(const S2Point& a, const S2Point& b) {
   if (options_.end_cap_style() == EndCapStyle::FLAT) {
     CloseEdgeArc(a, b);  // Close the previous semi-open edge arc if necessary.
   } else {
-    S2_DCHECK(options_.end_cap_style() == EndCapStyle::ROUND);
+    ABSL_DCHECK(options_.end_cap_style() == EndCapStyle::ROUND);
     if (options_.polyline_side() == PolylineSide::BOTH) {
       // The end cap consists of a semicircle.
       AddVertexArc(b, axis, -axis);

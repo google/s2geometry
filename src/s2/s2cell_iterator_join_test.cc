@@ -26,11 +26,18 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/strings/string_view.h"
 #include "s2/mutable_s2shape_index.h"
+#include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
+#include "s2/s2cell_id.h"
 #include "s2/s2cell_iterator_testing.h"
+#include "s2/s2edge_crossings.h"
+#include "s2/s2fractal.h"
+#include "s2/s2point.h"
 #include "s2/s2point_index.h"
 #include "s2/s2polygon.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2testing.h"
+#include "s2/util/math/matrix3x3.h"
 
 namespace {
 
@@ -39,6 +46,7 @@ using std::vector;
 using ::testing::Contains;
 using ::testing::Eq;
 using ::testing::IsFalse;
+using ::testing::IsTrue;
 using ::testing::Le;
 using ::testing::SizeIs;
 
@@ -58,6 +66,15 @@ std::pair<S2CellId, S2CellId> PairFromTokens(std::string token_a,
                         S2CellId::FromToken(token_b));
 }
 
+// Returns a frame in the "up" (positive z direction at a given point).  Use for
+// fractals on the equator.
+Matrix3x3_d UpFrameAt(double lat, double lng) {
+  S2Point z = S2LatLng::FromDegrees(lat, lng).ToPoint();
+  S2Point x = S2::RobustCrossProd(z, S2Point(0, 0, 1)).Normalize();
+  S2Point y = S2::RobustCrossProd(z, x).Normalize();
+  return Matrix3x3_d::FromCols(x, y, z);
+}
+
 // Builds a btree_map from a list of token to use with MockS2CellIterator.
 absl::btree_map<S2CellId, int> TokenMap(absl::Span<const string_view> tokens) {
   absl::btree_map<S2CellId, int> map;
@@ -68,7 +85,7 @@ absl::btree_map<S2CellId, int> TokenMap(absl::Span<const string_view> tokens) {
   return map;
 }
 
-TEST(S2CellJoinIterator, HeterogeneousJoinCompiles) {
+TEST(S2CellIteratorJoin, HeterogeneousJoinCompiles) {
   MutableS2ShapeIndex shape_index;
   S2PointIndex<int> point_index;
   MakeS2CellIteratorJoin(&shape_index, &point_index)
@@ -76,7 +93,7 @@ TEST(S2CellJoinIterator, HeterogeneousJoinCompiles) {
                const S2PointIndex<int>::Iterator& iterb) { return true; });
 }
 
-TEST(S2CellJoinIterator, ExactJoinWorks) {
+TEST(S2CellIteratorJoin, ExactJoinWorks) {
   auto cpa_map = TokenMap(absl::MakeSpan(kCentralParkATokens));
   auto cpb_map = TokenMap(absl::MakeSpan(kCentralParkBTokens));
 
@@ -106,7 +123,7 @@ TEST(S2CellJoinIterator, ExactJoinWorks) {
   }
 }
 
-TEST(S2CellJoinIterator, ExactFalseJoinReturnsImmediately) {
+TEST(S2CellIteratorJoin, ExactFalseJoinReturnsImmediately) {
   auto cpa_map = TokenMap(absl::MakeSpan(kCentralParkATokens));
   auto cpb_map = TokenMap(absl::MakeSpan(kCentralParkBTokens));
 
@@ -122,7 +139,7 @@ TEST(S2CellJoinIterator, ExactFalseJoinReturnsImmediately) {
   EXPECT_THAT(rows, SizeIs(1));
 }
 
-TEST(S2CellJoinIterator, TolerantFalseJoinReturnsImmediately) {
+TEST(S2CellIteratorJoin, TolerantFalseJoinReturnsImmediately) {
   auto cpa_map = TokenMap(absl::MakeSpan(kCentralParkATokens));
   auto cpb_map = TokenMap(absl::MakeSpan(kCentralParkBTokens));
 
@@ -142,7 +159,7 @@ TEST(S2CellJoinIterator, TolerantFalseJoinReturnsImmediately) {
   EXPECT_THAT(rows, SizeIs(1));
 }
 
-TEST(S2CellJoinIterator, ExactJoinSeekingWorks) {
+TEST(S2CellIteratorJoin, ExactJoinSeekingWorks) {
   // Sometimes we have to seek more than once to find a pair of cells that
   // overlap.  2d5e3 below doesn't overlap anything in map_b, and so shouldn't
   // be reported.  Instead the join should seek twice and skip it, make sure it
@@ -172,7 +189,7 @@ TEST(S2CellJoinIterator, ExactJoinSeekingWorks) {
   }
 }
 
-TEST(S2CellJoinIterator, NearJoinWorks) {
+TEST(S2CellIteratorJoin, NearJoinWorks) {
   auto cpa_map = TokenMap(absl::MakeSpan(kCentralParkATokens));
   auto cpb_map = TokenMap(absl::MakeSpan(kCentralParkBTokens));
 
@@ -234,6 +251,115 @@ TEST(S2CellJoinIterator, NearJoinWorks) {
   for (const auto& row : tolerant_truth) {
     EXPECT_THAT(rows, Contains(row));
   }
+}
+
+// Verify that the join returns all the A cells in a contiguous manner.
+TEST(S2CellIteratorJoin, TolerantJoinIsLeftDriven) {
+  // Coordinate frame to use to generate fractal.  We intentionally build a
+  // fractal that spans the boundary between faces.
+  const Matrix3x3_d kFrame = UpFrameAt(0, -45);
+
+  S2Fractal fractal;
+  fractal.SetLevelForApproxMaxEdges(100);
+
+  S2Polygon polygon(fractal.MakeLoop(kFrame, S1Angle::Degrees(10)));
+  const MutableS2ShapeIndex& index = polygon.index();
+  index.ForceBuild();
+
+  absl::flat_hash_set<S2CellId> cells_seen;
+  S2CellId curr_cell = S2CellId::Sentinel();
+
+  using Iter = MutableS2ShapeIndex::Iterator;
+  MakeS2CellIteratorJoin(&index, &index, S1ChordAngle::Degrees(2))
+      .Join([&](const Iter& a, const Iter& b) {
+        if (a.id() != curr_cell) {
+          bool a_is_new = !cells_seen.contains(a.id());
+          EXPECT_THAT(a_is_new, IsTrue());
+          curr_cell = a.id();
+          cells_seen.insert(curr_cell);
+          return a_is_new;
+        }
+        return true;
+      });
+}
+
+// Verify that the join does indeed return _all_ pairs of cells that are within
+// a tolerance of each other.
+TEST(S2CellIteratorJoin, AllPairsSeen) {
+  // Coordinate frame to use to generate fractal.  We intentionally build a
+  // fractal that spans the boundary between faces.
+  const Matrix3x3_d kFrame = UpFrameAt(0, -45);
+
+  S2Fractal fractal;
+  fractal.SetLevelForApproxMaxEdges(1000);
+
+  S2Polygon polygon(fractal.MakeLoop(kFrame, S1Angle::Degrees(10)));
+  const MutableS2ShapeIndex& index = polygon.index();
+  index.ForceBuild();
+
+  // Pull cells out of the index.
+  std::vector<S2Cell> cells;
+  MutableS2ShapeIndex::Iterator iter(&index, S2ShapeIndex::BEGIN);
+  while (!iter.done()) {
+    cells.emplace_back(iter.id());
+    iter.Next();
+  }
+
+  // Build all pairs that are closer than the tolerance by brute force.
+  const S1ChordAngle kTolerance = S1ChordAngle::Degrees(2);
+  absl::flat_hash_set<std::pair<S2CellId, S2CellId>> brute_pairs;
+  for (const S2Cell& cell0 : cells) {
+    for (const S2Cell& cell1 : cells) {
+      if (cell0.GetDistance(cell1) < kTolerance) {
+        brute_pairs.emplace(cell0.id(), cell1.id());
+      }
+    }
+  }
+
+  absl::flat_hash_set<std::pair<S2CellId, S2CellId>> join_pairs;
+  using Iter = MutableS2ShapeIndex::Iterator;
+  MakeS2CellIteratorJoin(&index, &index, kTolerance)
+      .Join([&](const Iter& a, const Iter& b) {
+        join_pairs.emplace(a.id(), b.id());
+        return true;
+      });
+
+  EXPECT_THAT(brute_pairs, Eq(join_pairs));
+}
+
+TEST(S2CellIteratorJoin, b299938257Regression) {
+  // This triggers a bug where the join wasn't checking for the end of the
+  // iterator before de-referencing it to check for the cell id.
+  S2PointIndex<int> point_index;
+  const S2Point points[4] = {
+      {0.998782953991165789, -0.034851647907011431, -0.034899476426537568},
+      {1.000000000000000000, -0.000000000000005489, -0.000000000000005494},
+      {0.998782953991165789, -0.034851647907011431, 0.034899476426537568},
+      {1.000000000000000000, -0.000000000000005489, 0.000000000000005494}};
+
+  for (const S2Point& point : points) {
+    point_index.Add(point, 0);
+  }
+
+  const Matrix3x3_d kFrame = UpFrameAt(0, 0);
+
+  S2Fractal fractal;
+  fractal.SetLevelForApproxMaxEdges(100);
+
+  S2Polygon polygon(fractal.MakeLoop(kFrame, S1Angle::Degrees(1)));
+  const MutableS2ShapeIndex& index = polygon.index();
+  index.ForceBuild();
+
+  int count = 0;
+  MakeS2CellIteratorJoin(&index, &point_index, S1ChordAngle::Degrees(0.5))
+      .Join([&](auto, auto) {
+        ++count;
+        return true;
+      });
+
+  // This is arbitrary, but for the given fractal and radius we should see eight
+  // cells within range of the point index.
+  EXPECT_THAT(count, Eq(8));
 }
 
 

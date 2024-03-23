@@ -20,7 +20,9 @@
 #ifndef S2_UTIL_CODING_TRANSFORMS_H_
 #define S2_UTIL_CODING_TRANSFORMS_H_
 
-#include "s2/base/integral_types.h"
+#include <cstdint>
+
+#include "s2/base/types.h"
 
 // ZigZag Transform
 //

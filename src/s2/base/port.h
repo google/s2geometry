@@ -23,7 +23,7 @@
 
 #include <cstring>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 
 // -----------------------------------------------------------------------------
 // Endianness

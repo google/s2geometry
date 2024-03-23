@@ -27,7 +27,7 @@
 #include "absl/strings/string_view.h"
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -163,13 +163,13 @@ TEST(IndexedS2PointVectorLayer, AddsShapes) {
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
   EXPECT_EQ(1, index.num_shape_ids());
-  auto shape = down_cast<S2PointVectorShape*>(index.shape(0));
+  auto shape = down_cast<const S2PointVectorShape*>(index.shape(0));
   EXPECT_EQ(2, shape->num_points());
   EXPECT_EQ(point0_str, s2textformat::ToString(shape->point(0)));
   EXPECT_EQ(point1_str, s2textformat::ToString(shape->point(1)));
 }
 
-TEST(IndexedS2PointVectorLayer, AddsEmptyShape) {
+TEST(IndexedS2PointVectorLayer, DoesNotAddEmptyShape) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedS2PointVectorLayer>(&index));

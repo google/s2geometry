@@ -24,7 +24,8 @@
 #include <ostream>
 #include <type_traits>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
+#include "absl/log/absl_check.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
@@ -123,11 +124,11 @@ class S1ChordAngle {
  public:
   // The default constructor yields a zero angle.  This is useful for STL
   // containers and class methods with output arguments.
-  S1ChordAngle() : length2_(0) {}
+  constexpr S1ChordAngle() : length2_(0) {}
 
   // Construct the S1ChordAngle corresponding to the distance between the two
   // given points.  The points must be unit length.
-  S1ChordAngle(const S2Point& x, const S2Point& y);
+  constexpr S1ChordAngle(const S2Point& x, const S2Point& y);
 
   // Return the zero chord angle.
   static S1ChordAngle Zero();
@@ -298,7 +299,7 @@ class S1ChordAngle {
   // S1ChordAngles are represented by the squared chord length, which can
   // range from 0 to 4.  Infinity() uses an infinite squared length.
   explicit S1ChordAngle(double length2) : length2_(length2) {
-    S2_DCHECK(is_valid());
+    ABSL_DCHECK(is_valid());
   }
   double length2_;
 };
@@ -306,14 +307,13 @@ class S1ChordAngle {
 
 //////////////////   Implementation details follow   ////////////////////
 
-
-inline S1ChordAngle::S1ChordAngle(const S2Point& x, const S2Point& y) {
-  S2_DCHECK(S2::IsUnitLength(x));
-  S2_DCHECK(S2::IsUnitLength(y));
+inline constexpr S1ChordAngle::S1ChordAngle(const S2Point& x, const S2Point& y)
+    : length2_(std::min(4.0, (x - y).Norm2())) {
+  ABSL_DCHECK(S2::IsUnitLength(x));
+  ABSL_DCHECK(S2::IsUnitLength(y));
   // The squared distance may slightly exceed 4.0 due to roundoff errors.
   // The maximum error in the result is 2 * DBL_EPSILON * length2_.
-  length2_ = std::min(4.0, (x - y).Norm2());
-  S2_DCHECK(is_valid());
+  ABSL_DCHECK(is_valid());
 }
 
 inline S1ChordAngle S1ChordAngle::FromLength2(double length2) {
@@ -378,17 +378,11 @@ inline double S1ChordAngle::degrees() const {
   return ToAngle().degrees();
 }
 
-inline int32 S1ChordAngle::e5() const {
-  return ToAngle().e5();
-}
+inline int32 S1ChordAngle::e5() const { return ToAngle().e5(); }
 
-inline int32 S1ChordAngle::e6() const {
-  return ToAngle().e6();
-}
+inline int32 S1ChordAngle::e6() const { return ToAngle().e6(); }
 
-inline int32 S1ChordAngle::e7() const {
-  return ToAngle().e7();
-}
+inline int32 S1ChordAngle::e7() const { return ToAngle().e7(); }
 
 inline bool S1ChordAngle::is_zero() const {
   return length2_ == 0;

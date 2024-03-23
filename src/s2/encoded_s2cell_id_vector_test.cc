@@ -23,12 +23,13 @@
 #include <memory>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
+#include "s2/s2fractal.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
@@ -194,7 +195,7 @@ TEST(EncodedS2CellIdVector, FourLevel10Children) {
 }
 
 TEST(EncodedS2CellIdVector, FractalS2ShapeIndexCells) {
-  S2Testing::Fractal fractal;
+  S2Fractal fractal;
   fractal.SetLevelForApproxMaxEdges(3 * 1024);
   S2Point center = s2textformat::MakePointOrDie("47.677:-122.206");
   MutableS2ShapeIndex index;

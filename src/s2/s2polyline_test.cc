@@ -25,6 +25,7 @@
 
 #include <gtest/gtest.h>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
@@ -68,9 +69,9 @@ unique_ptr<S2Polyline> MakePolyline(string_view str,
   auto decoded_polyline = make_unique<S2Polyline>();
   decoded_polyline->set_s2debug_override(debug_override);
   // Provide some minimal test coverage for `s2debug_override`.
-  S2_CHECK_EQ(static_cast<int>(debug_override),
-           static_cast<int>(decoded_polyline->s2debug_override()));
-  S2_CHECK(decoded_polyline->Decode(&decoder)) << str;
+  ABSL_CHECK_EQ(static_cast<int>(debug_override),
+                static_cast<int>(decoded_polyline->s2debug_override()));
+  ABSL_CHECK(decoded_polyline->Decode(&decoder)) << str;
   return decoded_polyline;
 }
 

@@ -19,7 +19,7 @@
 
 #include <type_traits>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/status/status.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s2error.h"

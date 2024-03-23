@@ -18,7 +18,6 @@
 #include "s2/s2latlng.h"
 
 #include <cmath>
-#include <cstdio>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -27,7 +26,6 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
 
-#include "s2/base/logging.h"
 #include "s2/s1angle.h"
 #include "s2/s2coder_testing.h"
 #include "s2/s2error.h"

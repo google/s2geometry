@@ -17,6 +17,7 @@
 
 #include "s2/s2point_region.h"
 
+#include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -24,6 +25,8 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+
+using std::vector;
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
@@ -42,6 +45,10 @@ S2LatLngRect S2PointRegion::GetRectBound() const {
   return S2LatLngRect(ll, ll);
 }
 
+void S2PointRegion::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  GetCapBound().GetCellUnionBound(cell_ids);
+}
+
 bool S2PointRegion::MayIntersect(const S2Cell& cell) const {
   return cell.Contains(point_);
 }
@@ -53,7 +60,7 @@ void S2PointRegion::Encode(Encoder* encoder) const {
   for (int i = 0; i < 3; ++i) {
     encoder->putdouble(point_[i]);
   }
-  S2_DCHECK_GE(encoder->avail(), 0);
+  ABSL_DCHECK_GE(encoder->avail(), 0);
 }
 
 bool S2PointRegion::Decode(Decoder* decoder) {

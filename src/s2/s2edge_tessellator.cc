@@ -20,6 +20,8 @@
 #include <algorithm>
 #include <vector>
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -188,7 +190,7 @@ S1Angle S2EdgeTessellator::kMinTolerance() {
 S2EdgeTessellator::S2EdgeTessellator(const S2::Projection* projection,
                                      S1Angle tolerance)
     : proj_(*projection) {
-  if (tolerance < kMinTolerance()) S2_LOG(ERROR) << "Tolerance too small";
+  if (tolerance < kMinTolerance()) ABSL_LOG(ERROR) << "Tolerance too small";
 
   // Rather than scaling the error estimate as described above, instead we scale
   // the tolerance.  See algorithm description at the top of this file.
@@ -221,7 +223,7 @@ void S2EdgeTessellator::AppendProjected(
     vertices->push_back(pa);
   } else {
     pa = proj_.WrapDestination(vertices->back(), pa);
-    S2_DCHECK_EQ(vertices->back(), pa) << "Appended edges must form a chain";
+    ABSL_DCHECK_EQ(vertices->back(), pa) << "Appended edges must form a chain";
   }
   R2Point pb = proj_.Project(b);
   AppendProjected(pa, a, pb, b, vertices);
@@ -258,7 +260,7 @@ void S2EdgeTessellator::AppendUnprojected(
     // transformed into "0:-175, 0:-181" while the second is transformed into
     // "0:179, 0:183".  The two coordinate pairs for the middle vertex
     // ("0:-181" and "0:179") may not yield exactly the same S2Point.
-    S2_DCHECK(S2::ApproxEquals(vertices->back(), a))
+    ABSL_DCHECK(S2::ApproxEquals(vertices->back(), a))
         << "Appended edges must form a chain";
   }
   AppendUnprojected(pa, a, pb, b, vertices);

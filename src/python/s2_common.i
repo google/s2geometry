@@ -291,7 +291,7 @@ class S2Point {
                              std::vector<S2Polyline*>* out) const {
     std::vector<std::unique_ptr<S2Polyline>> polylines =
         $self->IntersectWithPolyline(*in);
-    S2_DCHECK(out->empty());
+    ABSL_DCHECK(out->empty());
     out->reserve(polylines.size());
     for (auto& polyline : polylines) {
       out->push_back(polyline.release());
@@ -457,7 +457,8 @@ public:
 
 %copyctor S1ChordAngle;
 
-// Raise ValueError for any functions that would trigger a S2_CHECK/S2_DCHECK.
+// Raise ValueError for any functions that would trigger a
+// ABSL_CHECK/ABSL_DCHECK.
 %pythonprepend S2CellId::child %{
   if not self.is_valid():
     raise ValueError("S2CellId must be valid.")

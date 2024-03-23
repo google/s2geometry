@@ -17,7 +17,6 @@
 
 #include "s2/s2region_term_indexer.h"
 
-#include <cstdio>
 #include <string>
 #include <utility>
 #include <vector>
@@ -27,9 +26,9 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
+#include "absl/strings/str_format.h"
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/logging.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
@@ -109,9 +108,9 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     EXPECT_EQ(expected, actual);
     query_terms += terms.size();
   }
-  printf("Index terms/doc: %.2f,  Query terms/doc: %.2f\n",
-         static_cast<double>(index_terms) / absl::GetFlag(FLAGS_iters),
-         static_cast<double>(query_terms) / absl::GetFlag(FLAGS_iters));
+  absl::PrintF("Index terms/doc: %.2f,  Query terms/doc: %.2f\n",
+               static_cast<double>(index_terms) / absl::GetFlag(FLAGS_iters),
+               static_cast<double>(query_terms) / absl::GetFlag(FLAGS_iters));
 }
 
 // We run one test case for each combination of space vs. time optimization,

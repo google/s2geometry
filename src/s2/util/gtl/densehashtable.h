@@ -121,7 +121,6 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/port.h"
 #include "s2/util/gtl/hashtable_common.h"
 #include <stdexcept>                 // For length_error
 
@@ -591,13 +590,6 @@ class dense_hashtable {
   }
   bool empty() const          { return size() == 0; }
   size_type bucket_count() const      { return num_buckets; }
-  size_type max_bucket_count() const  { return max_size(); }
-  size_type nonempty_bucket_count() const { return num_elements; }
-  // These are tr1 methods.  Their idea of 'bucket' doesn't map well to
-  // what we do.  We just say every bucket has 0 or 1 items in it.
-  size_type bucket_size(size_type i) const {
-    return begin(i) == end(i) ? 0 : 1;
-  }
 
  private:
   // Because of the above, size_type(-1) is never legal; use it for errors
@@ -869,7 +861,7 @@ class dense_hashtable {
     return *this;
   }
 
-  dense_hashtable(dense_hashtable&& ht)
+  dense_hashtable(dense_hashtable&& ht) noexcept
       : settings(std::move(ht.settings)),
         key_info(std::move(ht.key_info)),
         num_deleted(ht.num_deleted),
@@ -884,7 +876,7 @@ class dense_hashtable {
     ht.settings.set_use_deleted(false);
   }
 
-  dense_hashtable& operator=(dense_hashtable&& ht) {
+  dense_hashtable& operator=(dense_hashtable&& ht) noexcept {
     if (&ht == this) return *this;        // don't move onto ourselves
 
     const bool can_move_table =
@@ -940,7 +932,7 @@ class dense_hashtable {
   ~dense_hashtable() { destroy_table(); }
 
   // Many STL algorithms use swap instead of copy constructors
-  void swap(dense_hashtable& ht) {
+  void swap(dense_hashtable& ht) noexcept {
     if (this == &ht) return;  // swap with self.
     using std::swap;
     swap(settings, ht.settings);
@@ -955,7 +947,7 @@ class dense_hashtable {
     } else {
       // Swapping when allocators are unequal and
       // propagate_on_container_swap is false is undefined behavior.
-      S2_CHECK(key_info.as_value_alloc() == ht.key_info.as_value_alloc());
+      ABSL_CHECK(key_info.as_value_alloc() == ht.key_info.as_value_alloc());
     }
     swap(key_info.empty, ht.key_info.empty);
     swap(key_info.delkey, ht.key_info.delkey);
@@ -1116,12 +1108,6 @@ class dense_hashtable {
   }
 
   template <class K>
-  size_type bucket_impl(const K& key) const {
-    std::pair<size_type, size_type> pos = find_position(key);
-    return pos.first == ILLEGAL_BUCKET ? pos.second : pos.first;
-  }
-
-  template <class K>
   size_type count_impl(const K& key) const {
     return find_if_present(key).second ? 1 : 0;
   }
@@ -1154,10 +1140,6 @@ class dense_hashtable {
   iterator find(const key_type& key) { return find_impl(key); }
 
   const_iterator find(const key_type& key) const { return find_impl(key); }
-
-  // This is a tr1 method: the bucket a given key is in, or what bucket
-  // it would be put in, if it were to be inserted.  Shrug.
-  size_type bucket(const key_type& key) const { return bucket_impl(key); }
 
   // Counts how many elements have key key.  For maps, it's either 0 or 1.
   size_type count(const key_type &key) const { return count_impl(key); }
@@ -1425,12 +1407,6 @@ class dense_hashtable {
       return EqualKey::operator()(a, b);
     }
 
-    pointer allocate(size_type size) {
-      pointer memory = value_alloc_type::allocate(size);
-      assert(memory != nullptr);
-      return memory;
-    }
-
     // Which key marks deleted entries.
     // TODO(user): make a pointer, and get rid of use_deleted (benchmark!)
     typename std::remove_const<key_type>::type delkey;
@@ -1472,8 +1448,8 @@ class dense_hashtable {
 
 // We need a global swap as well
 template <class V, class K, class HF, class ExK, class SetK, class EqK, class A>
-inline void swap(dense_hashtable<V, K, HF, ExK, SetK, EqK, A> &x,
-                 dense_hashtable<V, K, HF, ExK, SetK, EqK, A> &y) {
+inline void swap(dense_hashtable<V, K, HF, ExK, SetK, EqK, A>& x,
+                 dense_hashtable<V, K, HF, ExK, SetK, EqK, A>& y) noexcept {
   x.swap(y);
 }
 

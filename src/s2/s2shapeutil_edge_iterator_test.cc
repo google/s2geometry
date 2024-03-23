@@ -35,7 +35,7 @@ using std::vector;
 // The edges are collected from points, lines, and polygons in that order.
 vector<S2Shape::Edge> GetEdges(const S2ShapeIndex* index) {
   vector<S2Shape::Edge> result;
-  for (S2Shape* shape : *index) {
+  for (const S2Shape* shape : *index) {
     if (shape == nullptr) continue;
     for (int j = 0; j < shape->num_edges(); ++j) {
       result.push_back(shape->edge(j));

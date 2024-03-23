@@ -22,7 +22,7 @@
 #include <memory>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_s2point_vector.h"

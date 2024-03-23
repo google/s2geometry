@@ -28,6 +28,7 @@
 
 #include <gtest/gtest.h>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 
 #include "s2/base/casts.h"
@@ -146,7 +147,8 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
     const S2Point& a = edge.first;
     const S2Point& b = edge.second;
     S2CrossingEdgeQuery query(&index);
-    const vector<ShapeEdgeId> candidates = query.GetCandidates(a, b, *shape);
+    const vector<ShapeEdgeId> candidates =
+        query.GetCandidates(a, b, shape_id, *shape);
 
     // Verify that the second version of GetCandidates returns the same result.
     const vector<ShapeEdgeId> edge_candidates = query.GetCandidates(a, b);
@@ -190,7 +192,7 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
 
     // Test that GetCrossings() returns only the actual crossing edges.
     const vector<ShapeEdge> actual_crossings =
-        query.GetCrossingEdges(a, b, *shape, CrossingType::ALL);
+        query.GetCrossingEdges(a, b, shape_id, *shape, CrossingType::ALL);
     EXPECT_EQ(expected_crossings, GetShapeEdgeIds(actual_crossings));
 
     // Verify that the second version of GetCrossings returns the same result.
@@ -200,7 +202,7 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
 
     // Verify that CrossingType::INTERIOR returns only the interior crossings.
     const vector<ShapeEdge> actual_interior_crossings =
-        query.GetCrossingEdges(a, b, *shape, CrossingType::INTERIOR);
+        query.GetCrossingEdges(a, b, shape_id, *shape, CrossingType::INTERIOR);
     EXPECT_EQ(expected_interior_crossings,
               GetShapeEdgeIds(actual_interior_crossings));
   }
@@ -294,11 +296,11 @@ void TestPolylineCrossings(const S2ShapeIndex& index,
       query.GetCrossingEdges(a0, a1, CrossingType::ALL);
   if (edges.empty()) return;
   for (const auto& edge : edges) {
-    S2_CHECK_GE(S2::CrossingSign(a0, a1, edge.v0(), edge.v1()), 0);
+    ABSL_CHECK_GE(S2::CrossingSign(a0, a1, edge.v0(), edge.v1()), 0);
   }
   // Also test that no edges are missing.
   for (int i = 0; i < index.num_shape_ids(); ++i) {
-    const auto* shape = down_cast<S2Polyline::Shape*>(index.shape(i));
+    const auto* shape = down_cast<const S2Polyline::Shape*>(index.shape(i));
     const S2Polyline* polyline = shape->polyline();
     for (int e = 0; e < polyline->num_vertices() - 1; ++e) {
       if (S2::CrossingSign(a0, a1, polyline->vertex(e),

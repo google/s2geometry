@@ -29,11 +29,12 @@
 #include <type_traits>
 #include <vector>
 
-#include "s2/base/logging.h"
 #include "absl/container/btree_set.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/hash/hash.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -387,7 +388,7 @@ inline int S2ClosestCellQueryBase<Distance>::Options::max_results() const {
 template <class Distance>
 inline void S2ClosestCellQueryBase<Distance>::Options::set_max_results(
     int max_results) {
-  S2_DCHECK_GE(max_results, 1);
+  ABSL_DCHECK_GE(max_results, 1);
   max_results_ = max_results;
 }
 
@@ -485,7 +486,7 @@ template <class Distance>
 typename S2ClosestCellQueryBase<Distance>::Result
 S2ClosestCellQueryBase<Distance>::FindClosestCell(
     Target* target, const Options& options) {
-  S2_DCHECK_EQ(options.max_results(), 1);
+  ABSL_DCHECK_EQ(options.max_results(), 1);
   FindClosestCellsInternal(target, options);
   return result_singleton_;
 }
@@ -520,16 +521,16 @@ void S2ClosestCellQueryBase<Distance>::FindClosestCellsInternal(
   contents_it_.Clear();
   distance_limit_ = options.max_distance();
   result_singleton_ = Result();
-  S2_DCHECK(result_vector_.empty());
-  S2_DCHECK(result_set_.empty());
-  S2_DCHECK_GE(target->max_brute_force_index_size(), 0);
+  ABSL_DCHECK(result_vector_.empty());
+  ABSL_DCHECK(result_set_.empty());
+  ABSL_DCHECK_GE(target->max_brute_force_index_size(), 0);
   if (distance_limit_ == Distance::Zero()) return;
 
   if (options.max_results() == Options::kMaxMaxResults &&
       options.max_distance() == Distance::Infinity() &&
       options.region() == nullptr) {
-    S2_LOG(WARNING) << "Returning all cells "
-                    "(max_results/max_distance/region not set)";
+    ABSL_LOG(WARNING) << "Returning all cells "
+                         "(max_results/max_distance/region not set)";
   }
 
   // If max_error() > 0 and the target takes advantage of this, then we may
@@ -611,7 +612,7 @@ void S2ClosestCellQueryBase<Distance>::FindClosestCellsOptimized() {
 
 template <class Distance>
 void S2ClosestCellQueryBase<Distance>::InitQueue() {
-  S2_DCHECK(queue_.empty());
+  ABSL_DCHECK(queue_.empty());
 
   // Optimization: rather than starting with the entire index, see if we can
   // limit the search region to a small disc.  Then we can find a covering for
@@ -738,7 +739,7 @@ void S2ClosestCellQueryBase<Distance>::AddInitialRange(
     S2CellId first_id, S2CellId last_id) {
   // Add the lowest common ancestor of the given range.
   int level = first_id.GetCommonAncestorLevel(last_id);
-  S2_DCHECK_GE(level, 0);
+  ABSL_DCHECK_GE(level, 0);
   index_covering_.push_back(first_id.parent(level));
 }
 

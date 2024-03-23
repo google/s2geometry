@@ -19,12 +19,17 @@
 #define S2_S1ANGLE_H_
 
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <ostream>
 #include <type_traits>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
+#include "absl/log/absl_check.h"
+#include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
+#include "s2/s2coder.h"
+#include "s2/s2error.h"
 #include "s2/s2point.h"
 #include "s2/util/math/mathutil.h"
 #include "s2/util/math/vector.h"
@@ -125,6 +130,10 @@ class S1Angle {
   constexpr double radians() const;
   constexpr double degrees() const;
 
+  // Returns the E5/E6/E7 representation (i.e. degrees multiplied by
+  // 1e5/1e6/1e7 and rounded to the nearest integer).  The angle in degrees
+  // must be in the interval (-180, 180].  (`Normalize` and `Normalized`
+  // will ensure this.)
   int32 e5() const;
   int32 e6() const;
   int32 e7() const;
@@ -165,6 +174,14 @@ class S1Angle {
   // Normalize this angle to the range (-180, 180] degrees.
   void Normalize();
 
+  // Class for encoding and decoding the object when used in Flume pipelines.
+  class Coder : public s2coding::S2Coder<S1Angle> {
+   public:
+    void Encode(Encoder& encoder, const S1Angle& angle) const override;
+    bool Decode(Decoder& decoder, S1Angle& angle,
+                S2Error& error) const override;
+  };
+
   // When S1Angle is used as a key in one of the absl::btree container types,
   // indicate that linear rather than binary search should be used.  This is
   // much faster when the comparison function is cheap.
@@ -201,14 +218,21 @@ inline constexpr double S1Angle::degrees() const {
 // between Degrees, E6, and E7 are exact when the arguments are integers.
 
 inline int32 S1Angle::e5() const {
+  // TODO(user,b/298298095): Tighten this to [-180, 180].
+  ABSL_DCHECK_LE(std::numeric_limits<int32>::min() / 1e5, degrees());
+  ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32>::max() / 1e5);
   return MathUtil::FastIntRound(1e5 * degrees());
 }
 
 inline int32 S1Angle::e6() const {
+  ABSL_DCHECK_LE(std::numeric_limits<int32>::min() / 1e6, degrees());
+  ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32>::max() / 1e6);
   return MathUtil::FastIntRound(1e6 * degrees());
 }
 
 inline int32 S1Angle::e7() const {
+  ABSL_DCHECK_LE(std::numeric_limits<int32>::min() / 1e7, degrees());
+  ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32>::max() / 1e7);
   return MathUtil::FastIntRound(1e7 * degrees());
 }
 

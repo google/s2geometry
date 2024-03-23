@@ -23,6 +23,8 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/string_view.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -52,6 +54,7 @@ TEST(S2ShapeIndexBufferedRegion, EmptyIndex) {
   MutableS2ShapeIndex index;
   S1ChordAngle radius(S1Angle::Degrees(2));
   S2ShapeIndexBufferedRegion region(&index, radius);
+  EXPECT_EQ(region.radius(), radius);
   S2RegionCoverer coverer;
   S2CellUnion covering = coverer.GetCovering(region);
   EXPECT_TRUE(covering.empty());
@@ -129,16 +132,15 @@ TEST(S2ShapeIndexBufferedRegion, BufferedPointVsCap) {
 // original geometry and the boundary of the S2Polygon is at least "radius".
 //
 // The "radius" parameter is an S1Angle for convenience.
-// TODO(ericv): Add Degrees, Radians, etc, methods to S1ChordAngle?
 void TestBufferIndex(string_view index_str, S1Angle radius_angle,
                      S2RegionCoverer* coverer) {
   auto index = MakeIndexOrDie(index_str);
   S1ChordAngle radius(radius_angle);
   S2ShapeIndexBufferedRegion region(index.get(), radius);
   S2CellUnion covering = coverer->GetCovering(region);
-  S2_LOG(INFO) << "Covering uses " << covering.num_cells()
-            << " cells vs. max of " << coverer->options().max_cells();
-  if (S2_VLOG_IS_ON(2)) {
+  ABSL_LOG(INFO) << "Covering uses " << covering.num_cells()
+                 << " cells vs. max of " << coverer->options().max_cells();
+  if (ABSL_VLOG_IS_ON(2)) {
     // Output the cells in the covering for visualization purposes.
     for (S2CellId id : covering) {
       cout << "\nS2Polygon: " << s2textformat::ToString(S2Polygon(S2Cell(id)));

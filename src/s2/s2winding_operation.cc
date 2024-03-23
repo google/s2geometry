@@ -22,8 +22,9 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/base/optimization.h"
+#include "absl/log/absl_check.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -83,9 +84,6 @@ class WindingOracle {
   // Returns the winding number at the given point after snapping.
   int GetWindingNumber(const S2Point& p);
 
-  // Returns the current reference point.
-  S2Point current_ref_point() const { return ref_p_; }
-
   // Returns the winding number at the current reference point.
   int current_ref_winding() const { return ref_winding_; }
 
@@ -124,21 +122,21 @@ WindingOracle::WindingOracle(
     InputEdgeId ref_input_edge_id, int ref_winding_in,
     const S2Builder& builder, const Graph* g)
     : g_(*g) {
-  S2_DCHECK(g_.options().edge_type() == EdgeType::DIRECTED);
-  S2_DCHECK(g_.options().degenerate_edges() == DegenerateEdges::KEEP);
-  S2_DCHECK(g_.options().duplicate_edges() == DuplicateEdges::KEEP);
-  S2_DCHECK(g_.options().sibling_pairs() == SiblingPairs::KEEP);
+  ABSL_DCHECK(g_.options().edge_type() == EdgeType::DIRECTED);
+  ABSL_DCHECK(g_.options().degenerate_edges() == DegenerateEdges::KEEP);
+  ABSL_DCHECK(g_.options().duplicate_edges() == DuplicateEdges::KEEP);
+  ABSL_DCHECK(g_.options().sibling_pairs() == SiblingPairs::KEEP);
 
   // Compute the winding number at the reference point after snapping (see
   // s2builderutil::GetSnappedWindingDelta).
   S2Point ref_in = builder.input_edge(ref_input_edge_id).v0;
   VertexId ref_v = s2builderutil::FindFirstVertexId(ref_input_edge_id, g_);
-  S2_DCHECK_GE(ref_v, 0);  // No errors are possible.
+  ABSL_DCHECK_GE(ref_v, 0);  // No errors are possible.
   ref_p_ = g_.vertex(ref_v);
   S2Error error;
   ref_winding_ = ref_winding_in + s2builderutil::GetSnappedWindingDelta(
       ref_in, ref_v, s2builderutil::InputEdgeFilter{}, builder, g_, &error);
-  S2_DCHECK(error.ok()) << error;  // No errors are possible.
+  ABSL_DCHECK(error.ok()) << error;  // No errors are possible.
 
   // Winding numbers at other points are computed by counting signed edge
   // crossings.  If we need to do this many times, it is worthwhile to build an
@@ -179,7 +177,7 @@ int WindingOracle::GetWindingNumber(const S2Point& p) {
     }
   } else {
     S2CrossingEdgeQuery query(&index_);
-    for (ShapeEdgeId id : query.GetCandidates(ref_p_, p, *index_.shape(0))) {
+    for (ShapeEdgeId id : query.GetCandidates(ref_p_, p, 0, *index_.shape(0))) {
       winding += SignedCrossingDelta(&crosser, id.edge_id);
     }
   }
@@ -247,7 +245,7 @@ void WindingLayer::Build(const Graph& g, S2Error* error) {
   // this edge removed (since it should not be emitted to the result layer).
   WindingOracle oracle(op_.ref_input_edge_id_, op_.ref_winding_in_,
                        op_.builder_, &g);
-  S2_DCHECK(error->ok()) << *error;  // No errors are possible.
+  ABSL_DCHECK(error->ok()) << *error;  // No errors are possible.
 
   // Now that we have computed the change in winding number, we create a new
   // graph with the reference edge removed.  Note that S2MemoryTracker errors
@@ -322,7 +320,7 @@ bool WindingLayer::ComputeBoundary(const Graph& g, WindingOracle* oracle,
   vector<EdgeId> sibling_map = g.GetSiblingMap();
   vector<EdgeId> left_turn_map;
   g.GetLeftTurnMap(sibling_map, &left_turn_map, error);
-  S2_DCHECK(error->ok()) << *error;
+  ABSL_DCHECK(error->ok()) << *error;
 
   // A map from EdgeId to the winding number of the region it bounds.
   vector<int> edge_winding(g.num_edges());
@@ -392,15 +390,15 @@ EdgeId WindingLayer::GetContainingLoopEdge(
     const vector<EdgeId>& left_turn_map,
     const vector<EdgeId>& sibling_map) const {
   // If the given edge is degenerate, this is an isolated vertex.
-  S2_DCHECK_EQ(g.edge(start).second, v);
+  ABSL_DCHECK_EQ(g.edge(start).second, v);
   if (g.edge(start).first == v) return start;
 
   // Otherwise search for the loop that contains "v".
   EdgeId e0 = start;
   for (;;) {
     EdgeId e1 = left_turn_map[e0];
-    S2_DCHECK_EQ(g.edge(e0).second, v);
-    S2_DCHECK_EQ(g.edge(e1).first, v);
+    ABSL_DCHECK_EQ(g.edge(e0).second, v);
+    ABSL_DCHECK_EQ(g.edge(e1).first, v);
 
     // The first test below handles the case where there are only two edges
     // incident to this vertex (i.e., the vertex angle is 360 degrees).
@@ -410,7 +408,7 @@ EdgeId WindingLayer::GetContainingLoopEdge(
       return e0;
     }
     e0 = sibling_map[e1];
-    S2_DCHECK_NE(e0, start);
+    ABSL_DCHECK_NE(e0, start);
   }
 }
 

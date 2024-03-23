@@ -23,6 +23,7 @@
 #include <utility>
 
 #include "absl/base/optimization.h"
+#include "absl/log/absl_check.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
@@ -37,7 +38,7 @@ namespace S2 {
 
 double GetDistanceFraction(const S2Point& x,
                            const S2Point& a, const S2Point& b) {
-  S2_DCHECK_NE(a, b);
+  ABSL_DCHECK_NE(a, b);
   double da = x.Angle(a);
   double db = x.Angle(b);
   return da / (da + db);
@@ -93,9 +94,10 @@ template <bool always_update>
 inline bool AlwaysUpdateMinInteriorDistance(
     const S2Point& x, const S2Point& a, const S2Point& b,
     double xa2, double xb2, S1ChordAngle* min_dist) {
-  S2_DCHECK(S2::IsUnitLength(x) && S2::IsUnitLength(a) && S2::IsUnitLength(b));
-  S2_DCHECK_EQ(xa2, (x - a).Norm2());
-  S2_DCHECK_EQ(xb2, (x - b).Norm2());
+  ABSL_DCHECK(S2::IsUnitLength(x) && S2::IsUnitLength(a) &&
+              S2::IsUnitLength(b));
+  ABSL_DCHECK_EQ(xa2, (x - a).Norm2());
+  ABSL_DCHECK_EQ(xb2, (x - b).Norm2());
 
   // The closest point on AB could either be one of the two vertices (the
   // "vertex case") or in the interior (the "interior case").  Let C = A x B.
@@ -203,7 +205,8 @@ template <bool always_update>
 inline bool AlwaysUpdateMinDistance(const S2Point& x,
                                     const S2Point& a, const S2Point& b,
                                     S1ChordAngle* min_dist) {
-  S2_DCHECK(S2::IsUnitLength(x) && S2::IsUnitLength(a) && S2::IsUnitLength(b));
+  ABSL_DCHECK(S2::IsUnitLength(x) && S2::IsUnitLength(a) &&
+              S2::IsUnitLength(b));
 
   double xa2 = (x - a).Norm2(), xb2 = (x - b).Norm2();
   if (AlwaysUpdateMinInteriorDistance<always_update>(x, a, b, xa2, xb2,
@@ -282,9 +285,9 @@ double GetUpdateMinDistanceMaxError(S1ChordAngle dist) {
 
 S2Point Project(const S2Point& x, const S2Point& a, const S2Point& b,
                 const Vector3_d& a_cross_b) {
-  S2_DCHECK(S2::IsUnitLength(a));
-  S2_DCHECK(S2::IsUnitLength(b));
-  S2_DCHECK(S2::IsUnitLength(x));
+  ABSL_DCHECK(S2::IsUnitLength(a));
+  ABSL_DCHECK(S2::IsUnitLength(b));
+  ABSL_DCHECK(S2::IsUnitLength(x));
 
   // TODO(b/266451020): When X is nearly perpendicular to the plane containing
   // AB, the result is guaranteed to be close to the edge AB but may be far from
@@ -373,6 +376,23 @@ bool UpdateEdgePairMaxDistance(
           int{UpdateMaxDistance(b1, a0, a1, max_dist)});
 }
 
+bool IsEdgePairDistanceLess(const S2Point& a0, const S2Point& a1,
+                            const S2Point& b0, const S2Point& b1,
+                            S1ChordAngle distance) {
+  // If the edges cross or share an endpoint, the minimum distance is zero.
+  if (S2::CrossingSign(a0, a1, b0, b1) >= 0) {
+    return distance != S1ChordAngle::Zero();
+  }
+
+  // Otherwise the minimum distance is achieved at an endpoint of at least one
+  // of the endpoints of the two edges.  Written this way for short circuiting.
+  bool close = S2::IsDistanceLess(a0, b0, b1, distance);
+  close = close || S2::IsDistanceLess(a1, b0, b1, distance);
+  close = close || S2::IsDistanceLess(b0, a0, a1, distance);
+  close = close || S2::IsDistanceLess(b1, a0, a1, distance);
+  return close;
+}
+
 std::pair<S2Point, S2Point> GetEdgePairClosestPoints(
       const S2Point& a0, const S2Point& a1,
       const S2Point& b0, const S2Point& b1) {
@@ -401,8 +421,8 @@ std::pair<S2Point, S2Point> GetEdgePairClosestPoints(
 bool IsEdgeBNearEdgeA(const S2Point& a0, const S2Point& a1,
                       const S2Point& b0, const S2Point& b1,
                       S1Angle tolerance) {
-  S2_DCHECK_LT(tolerance.radians(), M_PI / 2);
-  S2_DCHECK_GT(tolerance.radians(), 0);
+  ABSL_DCHECK_LT(tolerance.radians(), M_PI / 2);
+  ABSL_DCHECK_GT(tolerance.radians(), 0);
   // The point on edge B=b0b1 furthest from edge A=a0a1 is either b0, b1, or
   // some interior point on B.  If it is an interior point on B, then it must be
   // one of the two points where the great circle containing B (circ(B)) is

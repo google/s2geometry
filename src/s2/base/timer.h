@@ -18,7 +18,7 @@
 
 #include <chrono>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 
 class CycleTimer {
  public:

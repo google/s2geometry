@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/container/btree_set.h"
 #include "s2/mutable_s2shape_index.h"
@@ -42,6 +42,11 @@ using s2textformat::MakePointOrDie;
 using s2textformat::ParsePointsOrDie;
 using std::make_unique;
 using std::vector;
+
+TEST(S2MaxDistance, Constants) {
+  EXPECT_LT(S2MaxDistance::Negative(), S2MaxDistance::Zero());
+  EXPECT_LT(S2MaxDistance::Zero(), S2MaxDistance::Infinity());
+}
 
 TEST(CellTarget, GetCapBound) {
   for (int i = 0; i < 100; i++) {
@@ -258,10 +263,10 @@ TEST(CellTarget, UpdateMaxDistanceToCellAntipodal) {
 vector<int> GetContainingShapes(S2MaxDistanceTarget* target,
                                 const S2ShapeIndex& index, int max_shapes) {
   absl::btree_set<int32> shape_ids;
-  (void)target->VisitContainingShapes(
-      index, [&shape_ids, max_shapes](S2Shape* containing_shape,
-                                      const S2Point& target_point) {
-        shape_ids.insert(containing_shape->id());
+  (void)target->VisitContainingShapeIds(
+      index,
+      [&shape_ids, max_shapes](int shape_id, const S2Point& target_point) {
+        shape_ids.insert(shape_id);
         return shape_ids.size() < max_shapes;
       });
   return vector<int>(shape_ids.begin(), shape_ids.end());

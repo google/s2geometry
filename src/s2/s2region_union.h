@@ -23,7 +23,6 @@
 
 #include "absl/base/macros.h"
 
-#include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2point.h"
 #include "s2/s2region.h"
@@ -81,6 +80,7 @@ class S2RegionUnion final : public S2Region {
   S2RegionUnion* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
   bool Contains(const S2Point& p) const override;
 
   // The current implementation only returns true if one of the regions in the

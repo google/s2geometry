@@ -17,8 +17,6 @@
 
 #include "s2/s2builder.h"
 
-#include <cstdio>
-
 #include <algorithm>
 #include <cinttypes>
 #include <cmath>
@@ -32,7 +30,10 @@
 #include <gtest/gtest.h>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
 
@@ -58,6 +59,7 @@
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
+#include "s2/s2fractal.h"
 #include "s2/s2latlng.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
@@ -966,9 +968,9 @@ TEST(S2Builder, SimplifyAvoidsBacktrackingVertices) {
   // should be processed when edge BC is added to the simplified chain.
   S2Builder::Options options(IdentitySnapFunction(S1Angle::Degrees(1.0)));
   options.set_simplify_edge_chains(true);
-  S2_CHECK_LT(S2::GetDistance(MakePointOrDie("0:1.05"),
-                           MakePointOrDie("0:0"), MakePointOrDie("1:2")),
-           options.snap_function().min_edge_vertex_separation());
+  ABSL_CHECK_LT(S2::GetDistance(MakePointOrDie("0:1.05"), MakePointOrDie("0:0"),
+                                MakePointOrDie("1:2")),
+                options.snap_function().min_edge_vertex_separation());
   TestPolylineLayersBothEdgeTypes(
       {"0:0, 1:0.1, 1:2", "0:1.05, -10:1.05"},
       {"0:0, 1:0.1, 1:2", "0:1.05, -10:1.05"},
@@ -1134,8 +1136,8 @@ void InputEdgeIdCheckingLayer::Build(const Graph& g, S2Error* error) {
     extra += ToString(p);
   }
   if (!missing.empty() || !extra.empty()) {
-    error->Init(INPUT_EDGE_ID_MISMATCH, "Missing:\n%sExtra:\n%s\n",
-                missing.c_str(), extra.c_str());
+    error->Init(INPUT_EDGE_ID_MISMATCH, "Missing:\n%sExtra:\n%s\n", missing,
+                extra);
   }
 }
 
@@ -1390,7 +1392,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
     builder.AddEdge(v2, v0);
     S2Error error;
     if (!builder.Build(&error)) {
-      S2_LOG(ERROR) << "d0=" << d0 << ", d2=" << d2 << ", d3=" << d3;
+      ABSL_LOG(ERROR) << "d0=" << d0 << ", d2=" << d2 << ", d3=" << d3;
     }
     if (error.ok() && !output.is_empty()) {
       EXPECT_EQ(1, output.num_loops());
@@ -1402,7 +1404,7 @@ TEST(S2Builder, HighPrecisionStressTest) {
       }
     }
   }
-  S2_LOG(INFO) << non_degenerate << " non-degenerate out of " << kIters;
+  ABSL_LOG(INFO) << non_degenerate << " non-degenerate out of " << kIters;
   EXPECT_GE(non_degenerate, kIters / 10);
 }
 
@@ -1450,10 +1452,9 @@ TEST(S2Builder, SelfIntersectionStressTest) {
       cout << "S2Polygon: " << s2textformat::ToString(output) << endl;
     }
     if (iter < 50) {
-      printf("iter=%4d: ms=%4" PRId64 ", radius=%8.3g, loops=%d, vertices=%d\n",
-             iter, static_cast<int64>(timer.GetInMs()),
-             cap.GetRadius().radians(), output.num_loops(),
-             output.num_vertices());
+      absl::PrintF("iter=%4d: ms=%4d, radius=%8.3g, loops=%d, vertices=%d\n",
+                   iter, timer.GetInMs(), cap.GetRadius().radians(),
+                   output.num_loops(), output.num_vertices());
     }
   }
 }
@@ -1463,7 +1464,7 @@ TEST(S2Builder, FractalStressTest) {
       (google::DEBUG_MODE ? 100 : 1000) * absl::GetFlag(FLAGS_iteration_multiplier);
   for (int iter = 0; iter < kIters; ++iter) {
     S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
-    S2Testing::Fractal fractal;
+    S2Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(google::DEBUG_MODE ? 800 : 12800);
     fractal.SetLevelForApproxMinEdges(12);
     fractal.set_fractal_dimension(1.5 + 0.5 * S2Testing::rnd.RandDouble());
@@ -1492,8 +1493,8 @@ TEST(S2Builder, FractalStressTest) {
       cout << "S2Polygon: " << s2textformat::ToString(output) << endl;
     }
     if (iter < 50) {
-      printf("iter=%4d: in_vertices=%d, out_vertices=%d\n",
-             iter, input.num_vertices(), output.num_vertices());
+      absl::PrintF("iter=%4d: in_vertices=%d, out_vertices=%d\n", iter,
+                   input.num_vertices(), output.num_vertices());
     }
   }
 }

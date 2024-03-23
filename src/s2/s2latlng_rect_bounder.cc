@@ -21,6 +21,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "absl/log/absl_check.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
@@ -34,7 +35,7 @@ using std::max;
 using std::min;
 
 void S2LatLngRectBounder::AddPoint(const S2Point& b) {
-  S2_DCHECK(S2::IsUnitLength(b));
+  ABSL_DCHECK(S2::IsUnitLength(b));
   AddInternal(b, S2LatLng(b));
 }
 
@@ -46,7 +47,7 @@ void S2LatLngRectBounder::AddInternal(const S2Point& b,
                                       const S2LatLng& b_latlng) {
   // Simple consistency check to verify that b and b_latlng are alternate
   // representations of the same vertex.
-  S2_DCHECK(S2::ApproxEquals(b, b_latlng.ToPoint()));
+  ABSL_DCHECK(S2::ApproxEquals(b, b_latlng.ToPoint()));
 
   if (bound_.is_empty()) {
     bound_.AddPoint(b_latlng);

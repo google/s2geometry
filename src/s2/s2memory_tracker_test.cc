@@ -26,6 +26,7 @@ TEST(S2MemoryTracker, PeriodicCallback) {
 
   // Test that a callback interval of 0 bytes invokes the callback every time.
   tracker.set_periodic_callback(0, [&]() { ++callback_count; });
+  ASSERT_EQ(tracker.callback_alloc_delta_bytes(), 0);
   client.Tally(0);
   EXPECT_EQ(callback_count, 1);
   client.Tally(-10);
@@ -34,6 +35,7 @@ TEST(S2MemoryTracker, PeriodicCallback) {
   // Test that the callback interval is based on total allocated bytes rather
   // than current usage.
   tracker.set_periodic_callback(100, [&]() { ++callback_count; });
+  ASSERT_EQ(tracker.callback_alloc_delta_bytes(), 100);
   client.Tally(99);
   EXPECT_EQ(callback_count, 2);
   client.Tally(1);

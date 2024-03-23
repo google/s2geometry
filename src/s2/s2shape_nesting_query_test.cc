@@ -23,9 +23,11 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -58,7 +60,7 @@ struct RingSpec {
 // Builds an S2LaxPolygonShape out of nested rings according to given ring
 // specs.  Each spec specifies a ring center and a radius in degrees.  The
 // radius will be made positive if it's not already, and crossing the poles will
-// cause a S2_CHECK failure.
+// cause a ABSL_CHECK failure.
 //
 // Rings are generated in counter-clockwise orientation around their center
 // by default, if reverse is specified, then the orientation becomes clockwise.
@@ -70,8 +72,8 @@ unique_ptr<S2LaxPolygonShape> RingShape(int vertices_per_loop,
   for (const RingSpec& spec : ring_specs) {
     // Check that we're not in reach of the poles.
     double radius = std::fabs(spec.radius_deg);
-    S2_CHECK_LT(spec.center.lat().degrees() + radius, +90);
-    S2_CHECK_GT(spec.center.lat().degrees() - radius, -90);
+    ABSL_CHECK_LT(spec.center.lat().degrees() + radius, +90);
+    ABSL_CHECK_GT(spec.center.lat().degrees() - radius, -90);
 
     vector<S2Point> vertices(vertices_per_loop);
     for (int i = 0; i < vertices_per_loop; ++i) {
@@ -129,10 +131,10 @@ unique_ptr<S2LaxPolygonShape> ArcShape(int vertices_per_loop,
     double start_rad = deg2rad(spec.start_deg);
     double end_rad = deg2rad(spec.end_deg);
 
-    S2_CHECK_LT(start_rad, end_rad);
-    S2_CHECK_GT(spec.radius_deg, 0);
-    S2_CHECK_GT(spec.thickness, 0);
-    S2_CHECK_EQ(vertices_per_loop % 2, 0);
+    ABSL_CHECK_LT(start_rad, end_rad);
+    ABSL_CHECK_GT(spec.radius_deg, 0);
+    ABSL_CHECK_GT(spec.thickness, 0);
+    ABSL_CHECK_EQ(vertices_per_loop % 2, 0);
 
     const double radius_inner = spec.radius_deg - spec.thickness;
     const double radius_outer = spec.radius_deg + spec.thickness;
@@ -141,10 +143,10 @@ unique_ptr<S2LaxPolygonShape> ArcShape(int vertices_per_loop,
 
     // Don't allow arcs to go over the poles to avoid the singularity there
     // which makes the resulting logic much more complex.
-    S2_CHECK_LT(spec.center.lat().degrees() + spec.radius_deg + spec.thickness,
-             +90);
-    S2_CHECK_GT(spec.center.lat().degrees() - spec.radius_deg - spec.thickness,
-             -90);
+    ABSL_CHECK_LT(
+        spec.center.lat().degrees() + spec.radius_deg + spec.thickness, +90);
+    ABSL_CHECK_GT(
+        spec.center.lat().degrees() - spec.radius_deg - spec.thickness, -90);
 
     // Generate inner and outer edges at the same time with implied butt joint.
     vector<S2Point> vertices(vertices_per_loop);
@@ -346,7 +348,7 @@ TEST(S2ShapeNestingQuery, ExactPathIsIrrelevant) {
   // permutations.
   for (int offset0 = 0; offset0 < kNumEdges; ++offset0) {
     for (int offset1 = 0; offset1 < kNumEdges; ++offset1) {
-      S2_VLOG(1) << "Offset (" << offset0 << "," << offset1 << ")";
+      ABSL_VLOG(1) << "Offset (" << offset0 << "," << offset1 << ")";
 
       MutableS2ShapeIndex index;
       int id = index.Add(ArcShape(
@@ -360,7 +362,7 @@ TEST(S2ShapeNestingQuery, ExactPathIsIrrelevant) {
       vector<S2ShapeNestingQuery::ChainRelation> relations =
           query.ComputeShapeNesting(id);
 
-      S2_CHECK_EQ(relations.size(), 4);
+      ABSL_CHECK_EQ(relations.size(), 4);
       EXPECT_TRUE(relations[0].is_shell());
       EXPECT_TRUE(relations[1].is_hole());
       EXPECT_EQ(relations[1].parent_id(), 0);
@@ -407,7 +409,7 @@ TEST_P(NestingTest, NestedChainsPartitionCorrectly) {
   S2ShapeNestingQuery query(&index);
   vector<S2ShapeNestingQuery::ChainRelation> relations =
       query.ComputeShapeNesting(id);
-  S2_CHECK_EQ(relations.size(), test_case.depth);
+  ABSL_CHECK_EQ(relations.size(), test_case.depth);
 
   // In the case of the outer ring being the first chain, and no shuffling,
   // then the outer chain should be a shell and then we alternate hole shell

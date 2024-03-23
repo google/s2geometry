@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2point.h"
 #include "s2/s2shape.h"
 
@@ -77,7 +78,7 @@ class S2EdgeVectorShape : public S2Shape {
   int num_chains() const final { return static_cast<int>(edges_.size()); }
   Chain chain(int i) const final { return Chain(i, 1); }
   Edge chain_edge(int i, int j) const final {
-    S2_DCHECK_EQ(j, 0);
+    ABSL_DCHECK_EQ(j, 0);
     return Edge(edges_[i].first, edges_[i].second);
   }
   ChainPosition chain_position(int e) const final {

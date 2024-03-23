@@ -20,6 +20,7 @@
 
 #include <functional>
 
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -107,7 +108,7 @@ using InputEdgeFilter = std::function<bool (S2Builder::Graph::InputEdgeId)>;
 //     S2Error error;
 //     ref_winding_ += s2builderutil::GetSnappedWindingDelta(
 //         ref_in, ref_v, InputEdgeFilter{}, builder_, g, error);
-//     S2_CHECK(error->ok());  // All errors are usage errors.
+//     ABSL_CHECK(error->ok());  // All errors are usage errors.
 //
 //     // Winding numbers of others points can now be found by counting signed
 //     // edge crossings (S2EdgeCrosser::SignedEdgeOrVertexCrossing) between

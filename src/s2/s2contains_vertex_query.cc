@@ -21,6 +21,7 @@
 
 #include <utility>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
@@ -39,7 +40,7 @@ int S2ContainsVertexQuery::ContainsSign() {
   S2Point reference_dir = S2::RefDir(target_);
   std::pair<S2Point, int> best(reference_dir, 0);
   for (const auto& e : edge_map_) {
-    S2_DCHECK_LE(abs(e.second), 1);
+    ABSL_DCHECK_LE(abs(e.second), 1);
     if (e.second == 0) continue;  // This is a "matched" edge.
     if (s2pred::OrderedCCW(reference_dir, best.first, e.first, target_)) {
       best = e;

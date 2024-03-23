@@ -22,10 +22,11 @@
 #include <gtest/gtest.h>
 
 #include "absl/container/fixed_array.h"
+#include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/logging.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
@@ -40,9 +41,9 @@ using absl::Span;
 using std::vector;
 
 S2_DEFINE_int32(s2point_compression_bm_level, 30,
-             "Level to encode at for benchmarks.");
+                "Level to encode at for benchmarks.");
 S2_DEFINE_double(s2point_compression_bm_radius_km, 1000.0,
-              "Radius to use for loop for benchmarks.");
+                 "Radius to use for loop for benchmarks.");
 
 namespace {
 
@@ -80,7 +81,7 @@ vector<S2Point> MakeRegularPoints(int num_vertices,
 
 void MakeXYZFaceSiTiPoints(Span<const S2Point> points,
                            Span<S2XYZFaceSiTi> result) {
-  S2_CHECK_EQ(points.size(), result.size());
+  ABSL_CHECK_EQ(points.size(), result.size());
   for (int i = 0; i < points.size(); ++i) {
     result[i].xyz = points[i];
     result[i].cell_level = S2::XYZtoFaceSiTi(points[i], &result[i].face,
@@ -304,8 +305,8 @@ TEST_F(S2PointCompressionTest, FirstPointOnFaceEdge) {
   Decoder decoder(encoder.base(), encoder.length());
   S2Point result[2];
   ASSERT_TRUE(S2DecodePointsCompressed(&decoder, 8, result));
-  S2_CHECK(result[0] == points[0].xyz);
-  S2_CHECK(result[1] == points[1].xyz);
+  ABSL_CHECK(result[0] == points[0].xyz);
+  ABSL_CHECK(result[1] == points[1].xyz);
 }
 
 }  // namespace

@@ -33,6 +33,7 @@
 #include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
 #include "s2/s2edge_clipping.h"
+#include "s2/s2fractal.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2lax_loop_shape.h"
@@ -215,13 +216,12 @@ class VisitIntersectingShapesTest {
   void TestCell(const S2Cell& target) {
     // Indicates whether each shape that intersects "target" also contains it.
     flat_hash_map<int, bool> shape_contains;
-    EXPECT_TRUE(region_.VisitIntersectingShapes(
-        target, [&](S2Shape* shape, bool contains_target) {
-            // Verify that each shape is visited at most once.
-            EXPECT_EQ(shape_contains.count(shape->id()), 0);
-            shape_contains[shape->id()] = contains_target;
-            return true;
-          }));
+    EXPECT_TRUE(region_.VisitIntersectingShapeIds(
+        target, [&](int shape_id, bool contains_target) {
+          // Verify that each shape is visited at most once.
+          shape_contains[shape_id] = contains_target;
+          return true;
+        }));
     for (int s = 0; s < index_->num_shape_ids(); ++s) {
       auto shape_region = MakeS2ShapeIndexRegion(shape_indexes_[s].get());
       if (!shape_region.MayIntersect(target)) {
@@ -290,7 +290,7 @@ TEST(VisitIntersectingShapes, Polylines) {
 TEST(VisitIntersectingShapes, Polygons) {
   MutableS2ShapeIndex index;
   S2Cap center_cap(S2Point(1, 0, 0), S1Angle::Radians(0.5));
-  S2Testing::Fractal fractal;
+  S2Fractal fractal;
   for (int i = 0; i < 10; ++i) {
     fractal.SetLevelForApproxMaxEdges(3 * 64);
     S2Point center = S2Testing::SamplePoint(center_cap);

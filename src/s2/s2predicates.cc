@@ -23,6 +23,7 @@
 #include <ostream>
 #include <utility>
 
+#include "absl/log/absl_check.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2point.h"
@@ -138,7 +139,7 @@ int SymbolicallyPerturbedSign(
   // the sign of the permutation, but it is more efficient to do this before
   // converting the inputs to the multi-precision representation, and this
   // also lets us re-use the result of the cross product B x C.
-  S2_DCHECK(a < b && b < c);
+  ABSL_DCHECK(a < b && b < c);
 
   // Every input coordinate x[i] is assigned a symbolic perturbation dx[i].
   // We then compute the sign of the determinant of the perturbed points,
@@ -206,7 +207,7 @@ int SymbolicallyPerturbedSign(
   if (det_sign != 0) return det_sign;
   // The following test is listed in the paper, but it is redundant because
   // the previous tests guarantee that C == (0, 0, 0).
-  S2_DCHECK_EQ(0, (c[1]*a[2] - c[2]*a[1]).sgn());  // db[0]
+  ABSL_DCHECK_EQ(0, (c[1] * a[2] - c[2] * a[1]).sgn());  // db[0]
 
   det_sign = (a[0]*b[1] - a[1]*b[0]).sgn();     // dc[2]
   if (det_sign != 0) return det_sign;
@@ -223,7 +224,7 @@ int SymbolicallyPerturbedSign(
 // permutations.  Requires that the three points are distinct.
 int ExactSign(const S2Point& a, const S2Point& b, const S2Point& c,
               bool perturb) {
-  S2_DCHECK(a != b && b != c && c != a);
+  ABSL_DCHECK(a != b && b != c && c != a);
 
   // Sort the three points in lexicographic order, keeping track of the sign
   // of the permutation.  (Each exchange inverts the sign of the determinant.)
@@ -233,7 +234,7 @@ int ExactSign(const S2Point& a, const S2Point& b, const S2Point& c,
   if (*pa > *pb) { swap(pa, pb); perm_sign = -perm_sign; }
   if (*pb > *pc) { swap(pb, pc); perm_sign = -perm_sign; }
   if (*pa > *pb) { swap(pa, pb); perm_sign = -perm_sign; }
-  S2_DCHECK(*pa < *pb && *pb < *pc);
+  ABSL_DCHECK(*pa < *pb && *pb < *pc);
 
   // Construct multiple-precision versions of the sorted points and compute
   // their exact 3x3 determinant.
@@ -245,8 +246,8 @@ int ExactSign(const S2Point& a, const S2Point& b, const S2Point& c,
 
   // The precision of ExactFloat is high enough that the result should always
   // be exact (no rounding was performed).
-  S2_DCHECK(!det.is_nan());
-  S2_DCHECK_LT(det.prec(), det.max_prec());
+  ABSL_DCHECK(!det.is_nan());
+  ABSL_DCHECK_LT(det.prec(), det.max_prec());
 
   // If the exact determinant is non-zero, we're done.
   int det_sign = det.sgn();
@@ -254,7 +255,7 @@ int ExactSign(const S2Point& a, const S2Point& b, const S2Point& c,
     // Otherwise, we need to resort to symbolic perturbations to resolve the
     // sign of the determinant.
     det_sign = SymbolicallyPerturbedSign(xa, xb, xc, xb_cross_xc);
-    S2_DCHECK_NE(0, det_sign);
+    ABSL_DCHECK_NE(0, det_sign);
   }
   return perm_sign * det_sign;
 }
@@ -296,7 +297,7 @@ int ExpensiveSign(const S2Point& a, const S2Point& b, const S2Point& c,
 
 bool OrderedCCW(const S2Point& a, const S2Point& b, const S2Point& c,
                 const S2Point& o) {
-  S2_DCHECK(a != o && b != o && c != o);
+  ABSL_DCHECK(a != o && b != o && c != o);
 
   // The last inequality below is ">" rather than ">=" so that we return true
   // if A == B or B == C, and otherwise false if A == C.  Recall that
@@ -488,7 +489,7 @@ int TriageCompareCosDistance(const Vector3<T>& x, const Vector3<T>& y, T r2) {
 
 template <class T>
 int TriageCompareSin2Distance(const Vector3<T>& x, const Vector3<T>& y, T r2) {
-  S2_DCHECK_LT(r2, 2.0);  // Only valid for distance limits < 90 degrees.
+  ABSL_DCHECK_LT(r2, 2.0);  // Only valid for distance limits < 90 degrees.
 
   constexpr T T_ERR = rounding_epsilon<T>();
   T sin2_xy_error;
@@ -756,7 +757,7 @@ int CompareEdgeDistance(const S2Point& x, const S2Point& a0, const S2Point& a1,
                         S1ChordAngle r) {
   // Check that the edge does not consist of antipodal points.  (This catches
   // the most common case -- the full test is in ExactCompareEdgeDistance.)
-  S2_DCHECK_NE(a0, -a1);
+  ABSL_DCHECK_NE(a0, -a1);
 
   int sign = TriageCompareEdgeDistance(x, a0, a1, r.length2());
   if (sign != 0) return sign;
@@ -792,12 +793,12 @@ template <class T>
 int TriageIntersectionOrdering(const Vector3<T>& a, const Vector3<T>& b,
                                const Vector3<T>& c, const Vector3<T>& d,
                                const Vector3<T>& m, const Vector3<T>& n) {
-  S2_DCHECK_NE(a, b);
-  S2_DCHECK_NE(a, -b);
-  S2_DCHECK_NE(c, d);
-  S2_DCHECK_NE(c, -d);
-  S2_DCHECK_NE(m, n);
-  S2_DCHECK_NE(m, -n);
+  ABSL_DCHECK_NE(a, b);
+  ABSL_DCHECK_NE(a, -b);
+  ABSL_DCHECK_NE(c, d);
+  ABSL_DCHECK_NE(c, -d);
+  ABSL_DCHECK_NE(m, n);
+  ABSL_DCHECK_NE(m, -n);
 
   // Given an edge AB, and the normal of a great circle M, the intersection of
   // the edge with the great circle is given by the triple product (A×B)×M.
@@ -863,12 +864,12 @@ int TriageIntersectionOrdering(const Vector3<T>& a, const Vector3<T>& b,
 int ExactIntersectionOrdering(const Vector3_xf& a, const Vector3_xf& b,
                               const Vector3_xf& c, const Vector3_xf& d,
                               const Vector3_xf& m, const Vector3_xf& n) {
-  S2_DCHECK_NE(a, b);
-  S2_DCHECK_NE(a, -b);
-  S2_DCHECK_NE(c, d);
-  S2_DCHECK_NE(c, -d);
-  S2_DCHECK_NE(n, m);
-  S2_DCHECK_NE(n, -m);
+  ABSL_DCHECK_NE(a, b);
+  ABSL_DCHECK_NE(a, -b);
+  ABSL_DCHECK_NE(c, d);
+  ABSL_DCHECK_NE(c, -d);
+  ABSL_DCHECK_NE(n, m);
+  ABSL_DCHECK_NE(n, -m);
 
   ExactFloat mdota = m.DotProd(a);
   ExactFloat mdotb = m.DotProd(b);
@@ -912,14 +913,12 @@ int CircleEdgeIntersectionOrdering(const S2Point& a, const S2Point& b,
 
   return ExactIntersectionOrdering(  //
       ToExact(a), ToExact(b), ToExact(c), ToExact(d), ToExact(m), ToExact(n));
-
-  return 0;
 }
 
 template <typename T>
 int TriageSignDotProd(const Vector3<T>& a, const Vector3<T>& b) {
-  S2_DCHECK_LE(a.Norm2(), 2);
-  S2_DCHECK_LE(b.Norm2(), 2);
+  ABSL_DCHECK_LE(a.Norm2(), 2);
+  ABSL_DCHECK_LE(b.Norm2(), 2);
 
   // The dot product error can be bound as 1.01nu|a||b| assuming nu < .01,
   // where u is the rounding unit (epsilon/2).  n=3 because we have 3
@@ -966,8 +965,8 @@ int SignDotProd(const S2Point& a, const S2Point& b) {
 template <class T>
 int TriageCircleEdgeIntersectionSign(const Vector3<T>& a, const Vector3<T>& b,
                                      const Vector3<T>& n, const Vector3<T>& x) {
-  S2_DCHECK_NE(a, b);
-  S2_DCHECK_NE(a, -b);
+  ABSL_DCHECK_NE(a, b);
+  ABSL_DCHECK_NE(a, -b);
 
   // The normal vector for the edge is A×B.  The vector for the line of
   // intersection between the plane defined by N and A×B is (A×B)×N.  We then
@@ -1002,8 +1001,8 @@ int TriageCircleEdgeIntersectionSign(const Vector3<T>& a, const Vector3<T>& b,
 
 int ExactCircleEdgeIntersectionSign(const Vector3_xf& a, const Vector3_xf& b,
                                     const Vector3_xf& n, const Vector3_xf& x) {
-  S2_DCHECK_NE(a, b);
-  S2_DCHECK_NE(a, -b);
+  ABSL_DCHECK_NE(a, b);
+  ABSL_DCHECK_NE(a, -b);
 
   ExactFloat ndota = n.DotProd(a);
   ExactFloat ndotb = n.DotProd(b);
@@ -1059,8 +1058,8 @@ bool ArePointsAntipodal(const Vector3_xf& x, const Vector3_xf& y) {
 
 int ExactCompareEdgeDirections(const Vector3_xf& a0, const Vector3_xf& a1,
                                const Vector3_xf& b0, const Vector3_xf& b1) {
-  S2_DCHECK(!ArePointsAntipodal(a0, a1));
-  S2_DCHECK(!ArePointsAntipodal(b0, b1));
+  ABSL_DCHECK(!ArePointsAntipodal(a0, a1));
+  ABSL_DCHECK(!ArePointsAntipodal(b0, b1));
   return a0.CrossProd(a1).DotProd(b0.CrossProd(b1)).sgn();
 }
 
@@ -1068,8 +1067,8 @@ int CompareEdgeDirections(const S2Point& a0, const S2Point& a1,
                           const S2Point& b0, const S2Point& b1) {
   // Check that no edge consists of antipodal points.  (This catches the most
   // common case -- the full test is in ExactCompareEdgeDirections.)
-  S2_DCHECK_NE(a0, -a1);
-  S2_DCHECK_NE(b0, -b1);
+  ABSL_DCHECK_NE(a0, -a1);
+  ABSL_DCHECK_NE(b0, -b1);
 
   int sign = TriageCompareEdgeDirections(a0, a1, b0, b1);
   if (sign != 0) return sign;
@@ -1144,7 +1143,7 @@ int ExactEdgeCircumcenterSign(const Vector3_xf& x0, const Vector3_xf& x1,
   // Return zero if the edge X is degenerate.  (Also see the comments in
   // SymbolicEdgeCircumcenterSign.)
   if (ArePointsLinearlyDependent(x0, x1)) {
-    S2_DCHECK_GT(x0.DotProd(x1), 0);  // Antipodal edges not allowed.
+    ABSL_DCHECK_GT(x0.DotProd(x1), 0);  // Antipodal edges not allowed.
     return 0;
   }
   // The simplest predicate for testing whether the sign is positive is
@@ -1244,17 +1243,6 @@ int ExactEdgeCircumcenterSign(const Vector3_xf& x0, const Vector3_xf& x1,
   return abc_sign * result;
 }
 
-// Like Sign, except this method does not use symbolic perturbations when
-// the input points are exactly coplanar with the origin (i.e., linearly
-// dependent).  Clients should never use this method, but it is useful here in
-// order to implement the combined pedestal/axis-aligned perturbation scheme
-// used by some methods (such as EdgeCircumcenterSign).
-int UnperturbedSign(const S2Point& a, const S2Point& b, const S2Point& c) {
-  int sign = TriageSign(a, b, c, a.CrossProd(b));
-  if (sign == 0) sign = ExpensiveSign(a, b, c, false /*perturb*/);
-  return sign;
-}
-
 // Given arguments such that ExactEdgeCircumcenterSign(x0, x1, a, b, c) == 0,
 // returns the value of Sign(X0, X1, Z) (where Z is the circumcenter of
 // triangle ABC) after symbolic perturbations are taken into account.  The
@@ -1332,7 +1320,7 @@ int EdgeCircumcenterSign(const S2Point& x0, const S2Point& x1,
                          const S2Point& c) {
   // Check that the edge does not consist of antipodal points.  (This catches
   // the most common case -- the full test is in ExactEdgeCircumcenterSign.)
-  S2_DCHECK_NE(x0, -x1);
+  ABSL_DCHECK_NE(x0, -x1);
 
   int abc_sign = Sign(a, b, c);
   int sign = TriageEdgeCircumcenterSign(x0, x1, a, b, c, abc_sign);
@@ -1531,7 +1519,7 @@ Excluded TriageVoronoiSiteExclusion(const Vector3<T>& a, const Vector3<T>& b,
     if (ca <= 0 && cb <= 0) return Excluded::UNCERTAIN;  // One or both kept?
     // Since either ca or cb is 1, we know the result even if the distance
     // comparison for the other site was uncertain.
-    S2_DCHECK(ca <= 0 || cb <= 0);
+    ABSL_DCHECK(ca <= 0 || cb <= 0);
     return (ca > 0) ? Excluded::FIRST : Excluded::SECOND;
   }
   if (sin_d <= sin_d_error) return Excluded::UNCERTAIN;
@@ -1555,14 +1543,14 @@ Excluded TriageVoronoiSiteExclusion(const Vector3<T>& a, const Vector3<T>& b,
 
   // Now we can finish checking the results of predicate (3).
   if (result <= result_error) return Excluded::UNCERTAIN;
-  S2_DCHECK_GT(abs_lhs3, lhs3_error);
+  ABSL_DCHECK_GT(abs_lhs3, lhs3_error);
   return (lhs3 > 0) ? Excluded::FIRST : Excluded::SECOND;
 }
 
 Excluded ExactVoronoiSiteExclusion(const Vector3_xf& a, const Vector3_xf& b,
                                    const Vector3_xf& x0, const Vector3_xf& x1,
                                    const ExactFloat& r2) {
-  S2_DCHECK(!ArePointsAntipodal(x0, x1));
+  ABSL_DCHECK(!ArePointsAntipodal(x0, x1));
 
   // Recall that one site excludes the other if
   //
@@ -1597,8 +1585,8 @@ Excluded ExactVoronoiSiteExclusion(const Vector3_xf& a, const Vector3_xf& b,
     int ca = ExactCompareDistance(a, x0, r90);
     int cb = ExactCompareDistance(b, x1, r90);
     if (ca < 0 && cb < 0) return Excluded::NEITHER;
-    S2_DCHECK(ca != 0 && cb != 0);  // This is guaranteed since d < 0.
-    S2_DCHECK(ca < 0 || cb < 0);    // At least one site must be kept.
+    ABSL_DCHECK(ca != 0 && cb != 0);  // This is guaranteed since d < 0.
+    ABSL_DCHECK(ca < 0 || cb < 0);    // At least one site must be kept.
     return (ca > 0) ? Excluded::FIRST : Excluded::SECOND;
   }
 
@@ -1628,7 +1616,7 @@ Excluded ExactVoronoiSiteExclusion(const Vector3_xf& a, const Vector3_xf& b,
     // equidistant from every point on edge X.  This case requires symbolic
     // perturbations, but it should already have been handled in
     // GetVoronoiSiteExclusion() (see the call to CompareDistances).
-    S2_DCHECK_GT(rhs2_sgn, 0);
+    ABSL_DCHECK_GT(rhs2_sgn, 0);
     return Excluded::NEITHER;
   }
   // Next we square both sides of (2), yielding
@@ -1675,13 +1663,13 @@ Excluded ExactVoronoiSiteExclusion(const Vector3_xf& a, const Vector3_xf& b,
 Excluded GetVoronoiSiteExclusion(const S2Point& a, const S2Point& b,
                                  const S2Point& x0, const S2Point& x1,
                                  S1ChordAngle r) {
-  S2_DCHECK_LT(r, S1ChordAngle::Right());
-  S2_DCHECK_LT(s2pred::CompareDistances(x0, a, b), 0);  // (implies a != b)
-  S2_DCHECK_LE(s2pred::CompareEdgeDistance(a, x0, x1, r), 0);
-  S2_DCHECK_LE(s2pred::CompareEdgeDistance(b, x0, x1, r), 0);
+  ABSL_DCHECK_LT(r, S1ChordAngle::Right());
+  ABSL_DCHECK_LT(s2pred::CompareDistances(x0, a, b), 0);  // (implies a != b)
+  ABSL_DCHECK_LE(s2pred::CompareEdgeDistance(a, x0, x1, r), 0);
+  ABSL_DCHECK_LE(s2pred::CompareEdgeDistance(b, x0, x1, r), 0);
   // Check that the edge does not consist of antipodal points.  (This catches
   // the most common case -- the full test is in ExactVoronoiSiteExclusion.)
-  S2_DCHECK_NE(x0, -x1);
+  ABSL_DCHECK_NE(x0, -x1);
 
   // If one site is closer than the other to both endpoints of X, then it is
   // closer to every point on X.  Note that this also handles the case where A

@@ -26,8 +26,10 @@
 
 #include <gtest/gtest.h>
 
-#include "s2/base/commandlineflags.h"
-#include "s2/base/integral_types.h"
+#include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+
+#include "s2/base/types.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -36,6 +38,7 @@
 #include "s2/s2cell_id.h"
 #include "s2/s2closest_edge_query_testing.h"
 #include "s2/s2closest_point_query_base.h"
+#include "s2/s2fractal.h"
 #include "s2/s2latlng.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"
@@ -122,7 +125,7 @@ struct CirclePointIndexFactory : public PointIndexFactory {
 struct FractalPointIndexFactory : public PointIndexFactory {
   void AddPoints(const S2Cap& index_cap, int num_points,
                  TestIndex* index) const override {
-    S2Testing::Fractal fractal;
+    S2Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(num_points);
     fractal.set_fractal_dimension(1.5);
     unique_ptr<S2Loop> loop(
@@ -211,6 +214,7 @@ static void TestFindClosestPoints(TestQuery::Target* target, TestQuery *query) {
 
   // Test IsDistanceLess().
   EXPECT_FALSE(query->IsDistanceLess(target, min_distance - max_error));
+  EXPECT_TRUE(query->IsDistanceLessOrEqual(target, min_distance));
   EXPECT_TRUE(query->IsConservativeDistanceLessOrEqual(target, min_distance));
 }
 
@@ -284,7 +288,7 @@ static void TestWithIndexFactory(const PointIndexFactory& factory,
       TestQuery::CellTarget target(cell);
       TestFindClosestPoints(&target, &query);
     } else {
-      S2_DCHECK_EQ(3, target_type);
+      ABSL_DCHECK_EQ(3, target_type);
       MutableS2ShapeIndex target_index;
       s2testing::FractalLoopShapeIndexFactory().AddEdges(index_cap, 100,
                                                          &target_index);

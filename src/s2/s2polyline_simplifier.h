@@ -72,7 +72,7 @@ class S2PolylineSimplifier {
   void Init(const S2Point& src);
 
   // Returns the source vertex of the output edge.
-  S2Point src() const;
+  S2Point src() const { return src_; }
 
   // Returns true if the edge (src, dst) satisfies all of the targeting
   // requirements so far.  Returns false if the edge would be longer than

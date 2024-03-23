@@ -18,7 +18,7 @@
 #ifndef S2_S2EDGE_CROSSER_H_
 #define S2_S2EDGE_CROSSER_H_
 
-#include "s2/base/logging.h"
+#include "absl/log/absl_check.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_crossings_internal.h"
@@ -305,8 +305,8 @@ template <class PointRep>
 inline S2EdgeCrosserBase<PointRep>::S2EdgeCrosserBase(ArgType a, ArgType b)
     : a_(a), b_(b), a_cross_b_(a_->CrossProd(*b_)), have_tangents_(false),
       c_() {
-  S2_DCHECK(S2::IsUnitLength(*a_));
-  S2_DCHECK(S2::IsUnitLength(*b_));
+  ABSL_DCHECK(S2::IsUnitLength(*a_));
+  ABSL_DCHECK(S2::IsUnitLength(*b_));
 }
 
 template <class PointRep>
@@ -350,22 +350,22 @@ template <class PointRep>
 inline S2EdgeCrosserBase<PointRep>::S2EdgeCrosserBase(
     ArgType a, ArgType b, ArgType c)
     : a_(a), b_(b), a_cross_b_(a_->CrossProd(*b_)), have_tangents_(false) {
-  S2_DCHECK(S2::IsUnitLength(*a_));
-  S2_DCHECK(S2::IsUnitLength(*b_));
+  ABSL_DCHECK(S2::IsUnitLength(*a_));
+  ABSL_DCHECK(S2::IsUnitLength(*b_));
   RestartAt(c);
 }
 
 template <class PointRep>
 inline void S2EdgeCrosserBase<PointRep>::RestartAt(ArgType c) {
   c_ = c;
-  S2_DCHECK(S2::IsUnitLength(*c_));
+  ABSL_DCHECK(S2::IsUnitLength(*c_));
   acb_ = -s2pred::TriageSign(*a_, *b_, *c_, a_cross_b_);
 }
 
 template <class PointRep>
 inline int S2EdgeCrosserBase<PointRep>::CrossingSign(ArgType d_arg) {
   PointRep d(d_arg);
-  S2_DCHECK(S2::IsUnitLength(*d));
+  ABSL_DCHECK(S2::IsUnitLength(*d));
   // For there to be an edge crossing, the triangles ACB, CBD, BDA, DAC must
   // all be oriented the same way (CW or CCW).  We keep the orientation of ACB
   // as part of our state.  When each new point D arrives, we compute the

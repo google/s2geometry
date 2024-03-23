@@ -20,6 +20,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2cap.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
@@ -34,7 +35,7 @@ S2RegionIntersection::S2RegionIntersection(
 }
 
 void S2RegionIntersection::Init(vector<unique_ptr<S2Region>> regions) {
-  S2_DCHECK(regions_.empty());
+  ABSL_DCHECK(regions_.empty());
   regions_ = std::move(regions);
 }
 
@@ -67,6 +68,10 @@ S2LatLngRect S2RegionIntersection::GetRectBound() const {
     result = result.Intersection(region(i)->GetRectBound());
   }
   return result;
+}
+
+void S2RegionIntersection::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  GetCapBound().GetCellUnionBound(cell_ids);
 }
 
 bool S2RegionIntersection::Contains(const S2Cell& cell) const {

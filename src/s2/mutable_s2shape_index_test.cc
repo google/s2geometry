@@ -32,12 +32,14 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/commandlineflags_declare.h"
-#include "s2/base/logging.h"
 #include "s2/base/log_severity.h"
+#include "s2/base/types.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -49,6 +51,7 @@
 #include "s2/s2edge_distances.h"
 #include "s2/s2edge_vector_shape.h"
 #include "s2/s2error.h"
+#include "s2/s2fractal.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2loop.h"
@@ -77,7 +80,6 @@ using std::unique_ptr;
 using std::vector;
 
 S2_DECLARE_double(s2shape_index_min_short_edge_fraction);
-S2_DECLARE_double(s2shape_index_cell_size_to_long_edge_ratio);
 
 class MutableS2ShapeIndexTest : public ::testing::Test {
  protected:
@@ -289,8 +291,8 @@ void TestIteratorMethods(const MutableS2ShapeIndex& index) {
       EXPECT_EQ(ids.back(), it2.id());
     }
     it2.Begin();
-    EXPECT_EQ(cellid.ToPoint(), it.center());
-    EXPECT_TRUE(it2.Locate(it.center()));
+    EXPECT_EQ(cellid.ToPoint(), it.id().ToPoint());
+    EXPECT_TRUE(it2.Locate(it.id().ToPoint()));
     EXPECT_EQ(cellid, it2.id());
     it2.Begin();
     EXPECT_EQ(S2CellRelation::INDEXED, it2.Locate(cellid));
@@ -613,24 +615,23 @@ TEST_F(MutableS2ShapeIndexTest, RandomUpdates) {
   QuadraticValidate();
   TestEncodeDecode();
   for (int iter = 0; iter < 100; ++iter) {
-    S2_VLOG(1) << "Iteration: " << iter;
+    ABSL_VLOG(1) << "Iteration: " << iter;
     // Choose some shapes to add and release.
     int num_updates = 1 + S2Testing::rnd.Skewed(5);
     for (int n = 0; n < num_updates; ++n) {
       if (S2Testing::rnd.OneIn(2) && !added.empty()) {
         int i = S2Testing::rnd.Uniform(added.size());
-        S2_VLOG(1) << "  Released shape " << added[i]
-                << " (" << index_.shape(added[i]) << ")";
+        ABSL_VLOG(1) << "  Released shape " << added[i] << " ("
+                     << index_.shape(added[i]) << ")";
         released.push_back(index_.Release(added[i]));
         added.erase(added.begin() + i);
       } else if (!released.empty()) {
         int i = S2Testing::rnd.Uniform(released.size());
         S2Shape* shape = released[i].get();
-        index_.Add(std::move(released[i]));  // Changes shape->id().
+        int shape_id = index_.Add(std::move(released[i]));
         released.erase(released.begin() + i);
-        added.push_back(shape->id());
-        S2_VLOG(1) << "  Added shape " << shape->id()
-                << " (" << shape << ")";
+        added.push_back(shape_id);
+        ABSL_VLOG(1) << "  Added shape " << shape_id << " (" << shape << ")";
       }
     }
     QuadraticValidate();
@@ -773,36 +774,21 @@ TEST_F(MutableS2ShapeIndexTest, LongIndexEntriesBound) {
   }
   int sum = 0;
   for (int i = 0; i < counts.size(); ++i) {
-    S2_LOG(INFO) << i << ": " << counts[i];
+    ABSL_LOG(INFO) << i << ": " << counts[i];
     sum += counts[i];
   }
   EXPECT_EQ(sum, 366);
 }
 
-// Test move-construct and move-assign functionality of `S2Shape`.  It has an id
-// value which is set when it's added to an index.  So we can create two
-// `S2LaxPolygonShape`s, add them to an index, then
-TEST(MutableS2ShapeIndex, ShapeIdSwaps) {
+TEST_F(MutableS2ShapeIndexTest, DecoderCatchesInvalidIndex) {
+  // An S2Shape index with one face cell but no actual shapes encoded.
+  const std::string encoded{"E\000P\340\010\020\000"};
+
+  Decoder decoder(encoded.data(), encoded.size());
   MutableS2ShapeIndex index;
-  index.Add(s2textformat::MakeLaxPolylineOrDie("1:1, 2:2"));
-  index.Add(s2textformat::MakeLaxPolylineOrDie("3:3, 4:4"));
-  index.Add(s2textformat::MakeLaxPolylineOrDie("5:5, 6:6"));
 
-  S2LaxPolylineShape& a = *down_cast<S2LaxPolylineShape*>(index.shape(1));
-  S2LaxPolylineShape& b = *down_cast<S2LaxPolylineShape*>(index.shape(2));
-  EXPECT_EQ(a.id(), 1);
-  EXPECT_EQ(b.id(), 2);
-
-  // Verify move construction moves the id value.
-  S2LaxPolylineShape c(std::move(a));
-  EXPECT_EQ(c.id(), 1);
-  s2testing::ExpectEqual(c, *s2textformat::MakeLaxPolylineOrDie("3:3, 4:4"));
-
-  // Verify move assignment moves the id value.
-  S2LaxPolylineShape d;
-  d = std::move(b);
-  EXPECT_EQ(d.id(), 2);
-  s2testing::ExpectEqual(d, *s2textformat::MakeLaxPolylineOrDie("5:5, 6:6"));
+  bool ok = index.Init(&decoder, s2shapeutil::FullDecodeShapeFactory(&decoder));
+  EXPECT_FALSE(ok);
 }
 
 TEST(S2Shape, user_data) {
@@ -823,9 +809,9 @@ TEST(S2Shape, user_data) {
   };
   MyEdgeVectorShape shape(MyData(3, 5));
   MyData* data = static_cast<MyData*>(shape.mutable_user_data());
-  S2_DCHECK_EQ(3, data->x);
+  ABSL_DCHECK_EQ(3, data->x);
   data->y = 10;
-  S2_DCHECK_EQ(10, static_cast<const MyData*>(shape.user_data())->y);
+  ABSL_DCHECK_EQ(10, static_cast<const MyData*>(shape.user_data())->y);
 }
 
 }  // namespace

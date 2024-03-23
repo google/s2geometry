@@ -26,6 +26,9 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
@@ -165,10 +168,11 @@ TEST(PruneDegeneracies, AllSmallCases) {
       if (num_strings == 0) continue;  // base=0 and exponent>0 is not useful
       if (base > exponent) continue;  // more chars than positions is not useful
 
-      S2_LOG(INFO) << "      pruning " << base << "^" << exponent << "="
-                << num_strings << " string" << (num_strings == 1 ? "" : "s")
-                << " of length " << exponent << " from " << base << " character"
-                << (base == 1 ? "" : "s");
+      ABSL_LOG(INFO) << "      pruning " << base << "^" << exponent << "="
+                     << num_strings << " string"
+                     << (num_strings == 1 ? "" : "s") << " of length "
+                     << exponent << " from " << base << " character"
+                     << (base == 1 ? "" : "s");
       for (int64 i_string = 0; i_string < num_strings; ++i_string) {
         // Construct the i_string'th string to be the `exponent`-digit numeral
         // representing the integer i_string in base `base`, little-endian.
@@ -179,7 +183,7 @@ TEST(PruneDegeneracies, AllSmallCases) {
             string.push_back(static_cast<char>('a' + (scratch % base)));
             scratch /= base;
           }
-          S2_CHECK_EQ(scratch, 0);
+          ABSL_CHECK_EQ(scratch, 0);
         }
         const std::string result =
             TestPruneDegeneracies(string, BruteForceQuadraticPrune(string));
@@ -187,7 +191,8 @@ TEST(PruneDegeneracies, AllSmallCases) {
         // If log level >=3, show all strings of this alphabet and length;
         // if log level ==2, then just show the first 12 and last 2;
         // if log level <=1, don't show them at all.
-        const int max_to_print_at_beginning = S2_VLOG_IS_ON(3) ? num_strings : 12;
+        const int max_to_print_at_beginning =
+            ABSL_VLOG_IS_ON(3) ? num_strings : 12;
         if (i_string < max_to_print_at_beginning ||
             (num_strings - i_string - 1) < 2) {
           // Output at log level >=2 looks like, e.g.:
@@ -198,10 +203,10 @@ TEST(PruneDegeneracies, AllSmallCases) {
           //         11/3125: "bcaaa" -> "bca"
           //         ...    (<-- actual ellipsis emitted here if log level is 2)
           //     ...
-          S2_VLOG(2) << "          " << i_string << "/" << num_strings << ": \""
-                  << string << "\" -> \"" << result << "\"";
+          ABSL_VLOG(2) << "          " << i_string << "/" << num_strings
+                       << ": \"" << string << "\" -> \"" << result << "\"";
         } else if (i_string == max_to_print_at_beginning) {
-          S2_VLOG(2) << "          ...";
+          ABSL_VLOG(2) << "          ...";
         }
       }
     }
@@ -259,7 +264,7 @@ TEST(GetSignedArea, ErrorAccumulation) {
 
   // Repeat the loop kIters times.  We shouldn't accumulate significant error.
   constexpr int kIters = 100001;
-  S2_CHECK_EQ(kIters % 16, 1);  // Area wraps every sixteen loops.
+  ABSL_CHECK_EQ(kIters % 16, 1);  // Area wraps every sixteen loops.
 
   loop.reserve(3 * kIters);
   for (int i = 0; i < kIters - 1; ++i) {
@@ -458,7 +463,7 @@ TEST_F(LoopTestBase, GetAreaAndCentroid) {
 
 static void ExpectSameOrder(S2PointLoopSpan loop1, S2::LoopOrder order1,
                             S2PointLoopSpan loop2, S2::LoopOrder order2) {
-  S2_DCHECK_EQ(loop1.size(), loop2.size());
+  ABSL_DCHECK_EQ(loop1.size(), loop2.size());
   int i1 = order1.first, i2 = order2.first;
   int dir1 = order1.dir, dir2 = order2.dir;
   for (int n = loop1.size(); --n >= 0; ) {

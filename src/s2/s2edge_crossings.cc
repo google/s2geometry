@@ -22,7 +22,10 @@
 #include <limits>
 #include <utility>
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/string_view.h"
+
 #include "s2/s1angle.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings_internal.h"
@@ -116,7 +119,11 @@ inline bool GetStableCrossProd(const Vector3<T>& a, const Vector3<T>& b,
   // "a" and "b" are closer than about 18 * DBL_ERR == 9 * DBL_EPSILON.
   // (80-bit precision can handle inputs as close as 2.5 * LDBL_EPSILON.)
   constexpr T T_ERR = rounding_epsilon<T>();
-  constexpr T kMinNorm =
+  // `kMinNorm` should be `constexpr`, but we make it only `const` to work
+  // around a gcc ppc64el bug with `long double`s.
+  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107745
+  // https://github.com/google/s2geometry/issues/279
+  const T kMinNorm =
       (32 * kSqrt3 * DBL_ERR) /
       (kRobustCrossProdError.radians() / T_ERR - (1 + 2 * kSqrt3));
 
@@ -134,8 +141,8 @@ template bool GetStableCrossProd<long double>(
 }  // namespace internal
 
 S2Point RobustCrossProd(const S2Point& a, const S2Point& b) {
-  S2_DCHECK(IsUnitLength(a));
-  S2_DCHECK(IsUnitLength(b));
+  ABSL_DCHECK(IsUnitLength(a));
+  ABSL_DCHECK(IsUnitLength(b));
 
   // The direction of a.CrossProd(b) becomes unstable as (a + b) or (a - b)
   // approaches zero.  This leads to situations where a.CrossProd(b) is not
@@ -168,8 +175,8 @@ S2Point RobustCrossProd(const S2Point& a, const S2Point& b) {
 // collinear, e.g. if a == -b or a == (1+eps) * b.)  The result may not be
 // normalizable (i.e., EnsureNormalizable() should be called on the result).
 static Vector3_d SymbolicCrossProdSorted(const S2Point& a, const S2Point& b) {
-  S2_DCHECK(a < b);
-  S2_DCHECK(s2pred::IsZero(ToExact(a).CrossProd(ToExact(b))));
+  ABSL_DCHECK(a < b);
+  ABSL_DCHECK(s2pred::IsZero(ToExact(a).CrossProd(ToExact(b))));
 
   // The following code uses the same symbolic perturbation model as S2::Sign.
   // The particular sequence of tests below was obtained using Mathematica
@@ -233,7 +240,7 @@ static Vector3_d SymbolicCrossProdSorted(const S2Point& a, const S2Point& b) {
   // None of the remaining cases can occur in practice, because we can only get
   // to this point if b = (0, 0, 0).  Nevertheless, even (0, 0, 0) has a
   // well-defined direction under the symbolic perturbation model.
-  S2_DCHECK(b[1] == 0 && b[2] == 0);        // da[0] coefficients (always zero)
+  ABSL_DCHECK(b[1] == 0 && b[2] == 0);  // da[0] coefficients (always zero)
 
   if (a[0] != 0 || a[1] != 0) {          // db[2]
     return Vector3_d(a[1], -a[0], 0);
@@ -279,7 +286,7 @@ inline static bool IsNormalizable(const Vector3_d& p) {
 //
 // REQUIRES: p != (0, 0, 0)
 inline static Vector3_d EnsureNormalizable(const Vector3_d& p) {
-  S2_DCHECK_NE(p, Vector3_d(0, 0, 0));
+  ABSL_DCHECK_NE(p, Vector3_d(0, 0, 0));
   if (!IsNormalizable(p)) {
     // We can't just scale by a fixed factor because the smallest representable
     // double is 2**-1074, so if we multiplied by 2**(1074 - 242) then the
@@ -325,7 +332,7 @@ static Vector3_d NormalizableFromExact(const Vector3_xf& xf) {
 namespace internal {
 
 Vector3_d SymbolicCrossProd(const S2Point& a, const S2Point& b) {
-  S2_DCHECK_NE(a, b);
+  ABSL_DCHECK_NE(a, b);
   // SymbolicCrossProdSorted() requires that a < b.
   if (a < b) {
     return EnsureNormalizable(SymbolicCrossProdSorted(a, b));
@@ -334,7 +341,7 @@ Vector3_d SymbolicCrossProd(const S2Point& a, const S2Point& b) {
   }
 }
 Vector3_d ExactCrossProd(const S2Point& a, const S2Point& b) {
-  S2_DCHECK_NE(a, b);
+  ABSL_DCHECK_NE(a, b);
   Vector3_xf result_xf = ToExact(a).CrossProd(ToExact(b));
   if (!s2pred::IsZero(result_xf)) {
     return NormalizableFromExact(result_xf);
@@ -373,7 +380,7 @@ bool VertexCrossing(const S2Point& a, const S2Point& b,
   if (a == d) return (b == c) || s2pred::OrderedCCW(S2::RefDir(a), c, b, a);
   if (b == c) return s2pred::OrderedCCW(S2::RefDir(b), d, a, b);
 
-  S2_LOG(ERROR) << "VertexCrossing called with 4 distinct vertices";
+  ABSL_LOG(ERROR) << "VertexCrossing called with 4 distinct vertices";
   return false;
 }
 
@@ -394,7 +401,7 @@ int SignedVertexCrossing(const S2Point& a, const S2Point& b,
   }
   if (b == c) return s2pred::OrderedCCW(S2::RefDir(b), d, a, b) ? -1 : 0;
 
-  S2_LOG(ERROR) << "SignedVertexCrossing called with 4 distinct vertices";
+  ABSL_LOG(ERROR) << "SignedVertexCrossing called with 4 distinct vertices";
   return false;
 }
 
@@ -546,7 +553,7 @@ template <class T>
 static bool GetIntersectionStableSorted(
     const Vector3<T>& a0, const Vector3<T>& a1,
     const Vector3<T>& b0, const Vector3<T>& b1, Vector3<T>* result) {
-  S2_DCHECK_GE((a1 - a0).Norm2(), (b1 - b0).Norm2());
+  ABSL_DCHECK_GE((a1 - a0).Norm2(), (b1 - b0).Norm2());
 
   // Compute the normal of the plane through (a0, a1) in a stable way.
   Vector3<T> a_norm = (a0 - a1).CrossProd(a0 + a1);
@@ -701,7 +708,7 @@ S2Point GetIntersectionExact(const S2Point& a0, const S2Point& a1,
   if (s2pred::OrderedCCW(a0, b0, a1, a_norm) && b0 < x) x = b0;
   if (s2pred::OrderedCCW(a0, b1, a1, a_norm) && b1 < x) x = b1;
 
-  S2_DCHECK(S2::IsUnitLength(x));
+  ABSL_DCHECK(S2::IsUnitLength(x));
   return x;
 }
 
@@ -721,7 +728,7 @@ static bool ApproximatelyOrdered(const S2Point& a, const S2Point& x,
 
 S2Point GetIntersection(const S2Point& a0, const S2Point& a1,
                         const S2Point& b0, const S2Point& b1) {
-  S2_DCHECK_GT(CrossingSign(a0, a1, b0, b1), 0);
+  ABSL_DCHECK_GT(CrossingSign(a0, a1, b0, b1), 0);
 
   // It is difficult to compute the intersection point of two edges accurately
   // when the angle between the edges is very small.  Previously we handled
@@ -779,8 +786,10 @@ S2Point GetIntersection(const S2Point& a0, const S2Point& a1,
   }
 
   // Make sure that the intersection point lies on both edges.
-  S2_DCHECK(ApproximatelyOrdered(a0, result, a1, kIntersectionError.radians()));
-  S2_DCHECK(ApproximatelyOrdered(b0, result, b1, kIntersectionError.radians()));
+  ABSL_DCHECK(
+      ApproximatelyOrdered(a0, result, a1, kIntersectionError.radians()));
+  ABSL_DCHECK(
+      ApproximatelyOrdered(b0, result, b1, kIntersectionError.radians()));
 
   return result;
 }

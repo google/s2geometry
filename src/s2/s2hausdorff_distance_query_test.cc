@@ -30,6 +30,7 @@
 #include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
 #include "s2/s2shape.h"
+#include "s2/s2shape_index.h"
 #include "s2/s2text_format.h"
 
 using s2textformat::ParsePointsOrDie;
@@ -111,10 +112,24 @@ TEST(S2HausdorffDistanceQueryTest, SimplePolylineQueriesSucceed) {
 
   absl::optional<DirectedResult> directed_empty_to_a =
       query.GetDirectedResult(&empty_index, &a);
+
   absl::optional<DirectedResult> directed_a_to_empty =
       query.GetDirectedResult(&a, &empty_index);
+
   S1ChordAngle directed_a_to_empty_distance =
       query.GetDirectedDistance(&a, &empty_index);
+  // These two should be false since an empty set is an infinite distance away.
+  bool empty_to_a_directed_distance_less = query.IsDirectedDistanceLess(
+      &empty_index, &a, S1ChordAngle::Degrees(360));
+  bool a_to_empty_directed_distance_less = query.IsDirectedDistanceLess(
+      &a, &empty_index, S1ChordAngle::Degrees(360));
+
+  EXPECT_FALSE(directed_empty_to_a);
+  EXPECT_FALSE(directed_a_to_empty);
+  EXPECT_FALSE(directed_a_to_empty);
+  EXPECT_TRUE(directed_a_to_empty_distance.is_infinity());
+  EXPECT_FALSE(empty_to_a_directed_distance_less);
+  EXPECT_FALSE(a_to_empty_directed_distance_less);
 
   absl::optional<DirectedResult> directed_a_to_b =
       query.GetDirectedResult(&a, &b);
@@ -122,14 +137,14 @@ TEST(S2HausdorffDistanceQueryTest, SimplePolylineQueriesSucceed) {
       query.GetDirectedResult(&b, &a);
   S1ChordAngle directed_a_to_b_distance = query.GetDirectedDistance(&a, &b);
 
-  absl::optional<Result> a_to_b = query.GetResult(&a, &b);
-  absl::optional<Result> b_to_a = query.GetResult(&b, &a);
-  S1ChordAngle b_to_a_distance = query.GetDistance(&b, &a);
-  absl::optional<Result> bb = query.GetResult(&b, &b);
-
-  EXPECT_FALSE(directed_empty_to_a);
-  EXPECT_FALSE(directed_a_to_empty);
-  EXPECT_TRUE(directed_a_to_empty_distance.is_infinity());
+  // Tests for IsDirectedDistanceLess with limits near the Hausdorff
+  // distance.
+  bool a_to_b_directed_distance_less_than_distance_plus =
+      query.IsDirectedDistanceLess(
+          &a, &b, directed_a_to_b_distance + S1ChordAngle::Degrees(1.0));
+  bool a_to_b_directed_distance_less_than_distance_minus =
+      query.IsDirectedDistanceLess(
+          &a, &b, directed_a_to_b_distance - S1ChordAngle::Degrees(1.0));
 
   EXPECT_TRUE(directed_a_to_b);
   EXPECT_TRUE(directed_b_to_a);
@@ -140,10 +155,45 @@ TEST(S2HausdorffDistanceQueryTest, SimplePolylineQueriesSucceed) {
                    expected_a_to_b.degrees());
   EXPECT_DOUBLE_EQ(directed_b_to_a->distance().degrees(),
                    expected_b_to_a.degrees());
+  EXPECT_TRUE(a_to_b_directed_distance_less_than_distance_plus);
+  EXPECT_FALSE(a_to_b_directed_distance_less_than_distance_minus);
+
+  // Tests for undirected cases.
+  absl::optional<Result> a_to_b = query.GetResult(&a, &b);
+  absl::optional<Result> b_to_a = query.GetResult(&b, &a);
+  S1ChordAngle b_to_a_distance = query.GetDistance(&b, &a);
+  absl::optional<Result> bb = query.GetResult(&b, &b);
 
   EXPECT_TRUE(a_to_b);
   EXPECT_TRUE(b_to_a);
   EXPECT_TRUE(bb);
+
+  // Tests for IsDistanceLess with limits near the Hausdorff distance and
+  // the average of the two directed Hausdorff distances.
+  double larger_a_and_b_distance =
+      std::max(directed_a_to_b->distance().radians(),
+               directed_b_to_a->distance().radians());
+  double smaller_a_and_b_distance =
+      std::min(directed_a_to_b->distance().radians(),
+               directed_b_to_a->distance().radians());
+  double average_a_and_b_distance =
+      (larger_a_and_b_distance + smaller_a_and_b_distance) / 2.0;
+
+  // THis should be true if we add a small epsilon upwards to account for any
+  // floating point error.
+  bool distance_less_larger_distance = query.IsDistanceLess(
+      &a, &b, S1ChordAngle::Radians(larger_a_and_b_distance + 0.001));
+  // The average should cause one direction to succeed and the other to fail so
+  // overall this should return false.
+  bool distance_less_average_distance = query.IsDistanceLess(
+      &a, &b, S1ChordAngle::Radians(average_a_and_b_distance));
+  // The IsWithin(Directed)DistanceLimit methods are inclusive so subtract some
+  // small epsilon to cause the method to return false.
+  bool distance_less_smaller_distance = query.IsDistanceLess(
+      &a, &b, S1ChordAngle::Radians(smaller_a_and_b_distance - 0.001));
+
+  bool bb_always_within =
+      query.IsDistanceLess(&b, &b, S1ChordAngle::Degrees(0));
 
   EXPECT_DOUBLE_EQ(a_to_b->distance().degrees(), b_to_a->distance().degrees());
   EXPECT_DOUBLE_EQ(bb->distance().degrees(), 0);
@@ -151,6 +201,11 @@ TEST(S2HausdorffDistanceQueryTest, SimplePolylineQueriesSucceed) {
       a_to_b->distance().degrees(),
       std::max(a_to_b->distance().degrees(), b_to_a->distance().degrees()));
   EXPECT_EQ(b_to_a_distance.degrees(), b_to_a->distance().degrees());
+
+  EXPECT_TRUE(distance_less_larger_distance);
+  EXPECT_FALSE(distance_less_average_distance);
+  EXPECT_FALSE(distance_less_smaller_distance);
+  EXPECT_TRUE(bb_always_within);
 }
 
 // Test involving a polyline shape (dimension == 1) and a point shape (dimension
@@ -191,16 +246,34 @@ TEST(S2HausdorffDistanceQueryTest, PointVectorShapeQueriesSucceed) {
   EXPECT_TRUE(directed_a_to_b);
   EXPECT_TRUE(directed_b_to_a);
   EXPECT_FALSE(undirected_a_b.is_infinity());
-
+  EXPECT_EQ(undirected_a_b.degrees(), expected_a_b.degrees());
   EXPECT_DOUBLE_EQ(directed_a_to_b->distance().degrees(),
                    expected_a_to_b.degrees());
   EXPECT_EQ(directed_a_to_b->target_point(), a_points[0]);
-
   EXPECT_DOUBLE_EQ(directed_b_to_a->distance().degrees(),
                    expected_b_to_a.degrees());
   EXPECT_EQ(directed_b_to_a->target_point(), b_points[0]);
 
-  EXPECT_EQ(undirected_a_b.degrees(), expected_a_b.degrees());
+  bool a_to_b_directed_distance_less_plus = query.IsDirectedDistanceLess(
+      &a, &b, S1ChordAngle::Degrees(expected_a_to_b.degrees() + 0.01));
+  bool b_to_a_directed_distance_less_plus = query.IsDirectedDistanceLess(
+      &b, &a, S1ChordAngle::Degrees(expected_b_to_a.degrees() + 0.01));
+  bool a_to_b_directed_distance_less_minus = query.IsDirectedDistanceLess(
+      &a, &b, S1ChordAngle::Degrees(expected_a_to_b.degrees() - 0.01));
+  bool b_to_a_directed_distance_less_minus = query.IsDirectedDistanceLess(
+      &b, &a, S1ChordAngle::Degrees(expected_b_to_a.degrees() - 0.01));
+
+  bool a_b_distance_less_plus = query.IsDistanceLess(
+      &a, &b, S1ChordAngle::Degrees(expected_a_b.degrees() + 0.01));
+  bool b_a_distance_less_minus = query.IsDistanceLess(
+      &b, &a, S1ChordAngle::Degrees(expected_b_to_a.degrees() - 0.01));
+
+  EXPECT_TRUE(a_to_b_directed_distance_less_plus);
+  EXPECT_TRUE(b_to_a_directed_distance_less_plus);
+  EXPECT_FALSE(a_to_b_directed_distance_less_minus);
+  EXPECT_FALSE(b_to_a_directed_distance_less_minus);
+  EXPECT_TRUE(a_b_distance_less_plus);
+  EXPECT_FALSE(b_a_distance_less_minus);
 }
 
 // Test involving partially overlapping polygons.
@@ -214,37 +287,119 @@ TEST(S2HausdorffDistanceQueryTest, OverlappingPolygons) {
   MutableS2ShapeIndex b;
   b.Add(s2textformat::MakeLaxPolygonOrDie("0:0, 0:3, 3:3, 3:0"));
 
-  // The first query does not include the interiors.
-  Options options;
-  options.set_include_interiors(false);
-  S2HausdorffDistanceQuery query_1(options);
-  absl::optional<DirectedResult> a_to_b_1 = query_1.GetDirectedResult(&a, &b);
-
-  // The second query has include_interiors set to true.
-  options.set_include_interiors(true);
-  S2HausdorffDistanceQuery query_2(options);
-  absl::optional<DirectedResult> a_to_b_2 = query_2.GetDirectedResult(&a, &b);
+  // A triangle.
+  MutableS2ShapeIndex c;
+  c.Add(s2textformat::MakeLaxPolygonOrDie("0:0, 0:2, 3:0"));
 
   // Error tolerance to account for the difference between the northern edge of
   // the quadrangle, which is a geodesic line, and the parallel lat=3 connecting
   // the vertices of that edge.
   static constexpr double kEpsilon = 3.0e-3;
 
+  // The first query does not include the interiors.
+  Options options;
+  options.set_include_interiors(false);
+  S2HausdorffDistanceQuery query_1(options);
+
   // The directed Hausdorff distance from the first query is achieved on the
   // vertex of the triangle that is inside the quadrangle, and is approximately
   // 1 degree away from the nearest edge of the quadrangle.
   S2Point expected_target_point_1 = S2LatLng::FromDegrees(1, 2).ToPoint();
+
+  absl::optional<DirectedResult> a_to_b_1 = query_1.GetDirectedResult(&a, &b);
+
+  bool c_to_b_less_than = query_1.IsDirectedDistanceLess(
+      &c, &b, S1ChordAngle::Degrees(1.0 + kEpsilon));
+
+  EXPECT_TRUE(a_to_b_1);
+  EXPECT_NEAR(a_to_b_1->distance().degrees(), 1, kEpsilon);
+  EXPECT_EQ(a_to_b_1->target_point(), expected_target_point_1);
+  EXPECT_TRUE(c_to_b_less_than);
+
+  // The second query has include_interiors set to true.
+  options.set_include_interiors(true);
+  S2HausdorffDistanceQuery query_2(options);
 
   // The directed Hausdorff distance from the second query is achieved on the
   // last vertex of the triangle that is outside the quadrangle, and is about
   // 0.5 degrees away from the nearest edge of the quadrangle.
   S2Point expected_target_point_2 = S2LatLng::FromDegrees(3.5, 1.5).ToPoint();
 
-  EXPECT_TRUE(a_to_b_1);
-  EXPECT_NEAR(a_to_b_1->distance().degrees(), 1, kEpsilon);
-  EXPECT_EQ(a_to_b_1->target_point(), expected_target_point_1);
+  absl::optional<DirectedResult> a_to_b_2 = query_2.GetDirectedResult(&a, &b);
+  // C is fully contained in B so all points are 0 distance to B.
+  bool c_to_b_less_than_2 =
+      query_2.IsDirectedDistanceLess(&c, &b, S1ChordAngle::Degrees(kEpsilon));
 
   EXPECT_TRUE(a_to_b_2);
   EXPECT_NEAR(a_to_b_2->distance().degrees(), 0.5, kEpsilon);
   EXPECT_EQ(a_to_b_2->target_point(), expected_target_point_2);
+  EXPECT_TRUE(c_to_b_less_than_2);
+}
+
+// Test involving full geometries.
+TEST(S2HausdorffDistanceQueryTest, WholeWorld) {
+  MutableS2ShapeIndex a;
+  a.Add(std::make_unique<S2PointVectorShape>(
+      s2textformat::ParsePointsOrDie("1:1")));
+
+  std::unique_ptr<S2ShapeIndex> b = s2textformat::MakeIndexOrDie("# # full");
+
+  Options options;
+  options.set_include_interiors(true);
+  S2HausdorffDistanceQuery query_1(options);
+  absl::optional<DirectedResult> a_to_b_1 =
+      query_1.GetDirectedResult(&a, b.get());
+
+  EXPECT_TRUE(a_to_b_1);
+  EXPECT_EQ(a_to_b_1->distance().degrees(), 0.0);
+
+  // Going from full geometry to non-full geometry should return empty option.
+  absl::optional<DirectedResult> b_to_a_1 =
+      query_1.GetDirectedResult(b.get(), &a);
+
+  EXPECT_FALSE(b_to_a_1);
+
+  absl::optional<Result> undirected_a_to_b = query_1.GetResult(b.get(), &a);
+  absl::optional<Result> undirected_b_to_a = query_1.GetResult(&a, b.get());
+
+  EXPECT_FALSE(undirected_a_to_b);
+  EXPECT_FALSE(undirected_b_to_a);
+
+  // A point to the whole world should always work.
+  bool a_to_b_directed_distance_less_zero =
+      query_1.IsDirectedDistanceLess(&a, b.get(), S1ChordAngle::Zero());
+  // The whole world to a point should always fail.
+  bool b_to_a_directed_distance_less_inf =
+      query_1.IsDirectedDistanceLess(b.get(), &a, S1ChordAngle::Infinity());
+  // In undirected case, must consider distance from full geometry to single
+  // point which is infinite.
+  bool a_b_distance_less_zero =
+      query_1.IsDistanceLess(&a, b.get(), S1ChordAngle::Infinity());
+
+  EXPECT_TRUE(a_to_b_directed_distance_less_zero);
+  EXPECT_FALSE(b_to_a_directed_distance_less_inf);
+  EXPECT_FALSE(a_b_distance_less_zero);
+}
+
+TEST(S2HausdorffDistanceQueryTest, WholeWorldSameReference) {
+  std::unique_ptr<S2ShapeIndex> a = s2textformat::MakeIndexOrDie("# # full");
+  std::unique_ptr<S2ShapeIndex> b = s2textformat::MakeIndexOrDie("# # full");
+
+  Options options;
+  options.set_include_interiors(true);
+  S2HausdorffDistanceQuery query_1(options);
+  absl::optional<Result> a_to_b = query_1.GetResult(a.get(), b.get());
+  EXPECT_FALSE(a_to_b);
+
+  S2HausdorffDistanceQuery query_2(options);
+  absl::optional<Result> a_to_a = query_1.GetResult(a.get(), a.get());
+  EXPECT_FALSE(a_to_a);
+
+  bool a_to_b_distance_less_inf =
+      query_2.IsDistanceLess(a.get(), b.get(), S1ChordAngle::Infinity());
+  bool a_to_a_distance_less_inf =
+      query_2.IsDistanceLess(a.get(), a.get(), S1ChordAngle::Infinity());
+
+  EXPECT_FALSE(a_to_b_distance_less_inf);
+  EXPECT_FALSE(a_to_a_distance_less_inf);
 }

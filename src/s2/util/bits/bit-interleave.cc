@@ -38,7 +38,9 @@
 
 #include "s2/util/bits/bit-interleave.h"
 
-#include "s2/base/integral_types.h"
+#include <cstdint>
+
+#include "s2/base/types.h"
 
 namespace util_bits {
 

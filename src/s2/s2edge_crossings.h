@@ -31,9 +31,9 @@
 
 #include <cmath>
 
-#include "s2/base/logging.h"
 #include "absl/base/macros.h"
 #include "absl/container/inlined_vector.h"
+#include "absl/log/absl_check.h"
 #include "s2/_fp_contract_off.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -231,7 +231,7 @@ inline bool AngleContainsVertex(const S2Point& a, const S2Point& b,
   // Note that the test below is written so as to get correct results when the
   // angle ABC is degenerate.  If A = C or C = R it returns false, and
   // otherwise if A = R it returns true.
-  S2_DCHECK(a != b && b != c);
+  ABSL_DCHECK(a != b && b != c);
   return !s2pred::OrderedCCW(S2::RefDir(b), c, a, b);
 }
 

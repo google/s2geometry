@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2contains_vertex_query.h"
 #include "s2/s2point.h"
 #include "s2/s2shape.h"
@@ -58,7 +59,7 @@ static bool GetReferencePointAtVertex(
 
 // See documentation in header file.
 S2Shape::ReferencePoint GetReferencePoint(const S2Shape& shape) {
-  S2_DCHECK_EQ(shape.dimension(), 2);
+  ABSL_DCHECK_EQ(shape.dimension(), 2);
   if (shape.num_edges() == 0) {
     // A shape with no edges is defined to be full if and only if it
     // contains at least one chain.
@@ -89,11 +90,11 @@ S2Shape::ReferencePoint GetReferencePoint(const S2Shape& shape) {
   std::sort(rev_edges.begin(), rev_edges.end());
   for (int i = 0; i < n; ++i) {
     if (edges[i] < rev_edges[i]) {  // edges[i] is unmatched
-      S2_CHECK(GetReferencePointAtVertex(shape, edges[i].v0, &result));
+      ABSL_CHECK(GetReferencePointAtVertex(shape, edges[i].v0, &result));
       return result;
     }
     if (rev_edges[i] < edges[i]) {  // rev_edges[i] is unmatched
-      S2_CHECK(GetReferencePointAtVertex(shape, rev_edges[i].v0, &result));
+      ABSL_CHECK(GetReferencePointAtVertex(shape, rev_edges[i].v0, &result));
       return result;
     }
   }

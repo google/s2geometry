@@ -22,10 +22,10 @@
 
 #include "absl/base/casts.h"
 #include "absl/container/fixed_array.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
 #include "s2/s2point.h"
@@ -60,7 +60,7 @@ struct FaceRun {
     // be a small overall savings, much smaller than the bound encoding.
     encoder->put_varint64(
         S2CellId::kNumFaces * absl::implicit_cast<int64>(count) + face);
-    S2_DCHECK_GE(encoder->avail(), 0);
+    ABSL_DCHECK_GE(encoder->avail(), 0);
   }
 
   bool Decode(Decoder* decoder) {
@@ -139,7 +139,7 @@ void Faces::Encode(Encoder* encoder) const {
 }
 
 bool Faces::Decode(int num_vertices, Decoder* decoder) {
-  for (int num_faces_parsed = 0; num_faces_parsed < num_vertices; ) {
+  for (int64 num_faces_parsed = 0; num_faces_parsed < num_vertices; ) {
     FaceRun face_run;
     if (!face_run.Decode(decoder)) return false;
     faces_.push_back(face_run);
@@ -156,8 +156,8 @@ Faces::Iterator::Iterator(const Faces& faces)
 }
 
 int Faces::Iterator::Next() {
-  S2_DCHECK_NE(faces_.size(), face_index_);
-  S2_DCHECK_LE(num_faces_used_for_index_, faces_[face_index_].count);
+  ABSL_DCHECK_NE(faces_.size(), face_index_);
+  ABSL_DCHECK_LE(num_faces_used_for_index_, faces_[face_index_].count);
   if (num_faces_used_for_index_ == faces_[face_index_].count) {
     ++face_index_;
     num_faces_used_for_index_ = 0;
@@ -224,7 +224,7 @@ void EncodeFirstPointFixedLength(const pair<int, int>& vertex_pi_qi,
   const int bytes_required = (level + 7) / 8 * 2;
   encoder->Ensure(bytes_required);
   encoder->putn(&little_endian_interleaved_pi_qi, bytes_required);
-  S2_DCHECK_GE(encoder->avail(), 0);
+  ABSL_DCHECK_GE(encoder->avail(), 0);
 }
 
 void EncodePointCompressed(const pair<int, int>& vertex_pi_qi,
@@ -245,7 +245,7 @@ void EncodePointCompressed(const pair<int, int>& vertex_pi_qi,
 
   encoder->Ensure(Encoder::kVarintMax64);
   encoder->put_varint64(interleaved_zig_zag_encoded_derivs);
-  S2_DCHECK_GE(encoder->avail(), 0);
+  ABSL_DCHECK_GE(encoder->avail(), 0);
 }
 
 void EncodePointsCompressed(Span<const pair<int, int>> vertices_pi_qi,
@@ -266,7 +266,7 @@ void EncodePointsCompressed(Span<const pair<int, int>> vertices_pi_qi,
     }
   }
 
-  S2_DCHECK_GE(encoder->avail(), 0);
+  ABSL_DCHECK_GE(encoder->avail(), 0);
 }
 
 bool DecodeFirstPointFixedLength(Decoder* decoder,
@@ -336,17 +336,17 @@ void S2EncodePointsCompressed(Span<const S2XYZFaceSiTi> points,
   encoder->Ensure(Encoder::kVarintMax32 +
                   (Encoder::kVarintMax32 + sizeof(S2Point)) * num_off_center);
   encoder->put_varint32(num_off_center);
-  S2_DCHECK_GE(encoder->avail(), 0);
+  ABSL_DCHECK_GE(encoder->avail(), 0);
   for (int index : off_center) {
     encoder->put_varint32(index);
     encoder->putn(&points[index].xyz, sizeof(points[index].xyz));
-    S2_DCHECK_GE(encoder->avail(), 0);
+    ABSL_DCHECK_GE(encoder->avail(), 0);
   }
 }
 
 bool S2DecodePointsCompressed(Decoder* decoder, int level,
                               Span<S2Point> points) {
-  S2_DCHECK_LE(level, S2::kMaxCellLevel);
+  ABSL_DCHECK_LE(level, S2::kMaxCellLevel);
 
   Faces faces;
   if (!faces.Decode(points.size(), decoder)) {

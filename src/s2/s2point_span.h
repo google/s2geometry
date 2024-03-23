@@ -20,7 +20,7 @@
 
 #include <vector>
 
-#include "s2/base/logging.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/s2point.h"
 
@@ -49,8 +49,8 @@ class S2PointLoopSpan : public S2PointSpan {
   // Like operator[], but allows index values in the range [0, 2*size()-1]
   // where each index i >= size() is mapped to i - size().
   reference operator[](int i) const noexcept {
-    S2_DCHECK_GE(i, 0);
-    S2_DCHECK_LT(i, 2 * size());
+    ABSL_DCHECK_GE(i, 0);
+    ABSL_DCHECK_LT(i, static_cast<int>(2 * size()));
     int j = i - static_cast<int>(size());
     return S2PointSpan::operator[](j < 0 ? i : j);
   }

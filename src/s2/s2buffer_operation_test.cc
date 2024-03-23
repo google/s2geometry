@@ -29,10 +29,12 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/logging.h"
 #include <gtest/gtest.h>
 #include "absl/base/call_once.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
@@ -51,6 +53,7 @@
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
+#include "s2/s2fractal.h"
 #include "s2/s2lax_loop_shape.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
@@ -93,7 +96,7 @@ unique_ptr<S2LaxPolygonShape> DoBuffer(
   input_callback(&op);
   S2Error error;
   EXPECT_TRUE(op.Build(&error)) << error;
-  if (S2_VLOG_IS_ON(1) && output->num_vertices() < 1000) {
+  if (ABSL_VLOG_IS_ON(1) && output->num_vertices() < 1000) {
     std::cerr << "\nS2Polygon: " << s2textformat::ToString(*output) << "\n";
   }
   return output;
@@ -180,7 +183,7 @@ TEST(S2BufferOperation, PoorlyNormalizedPoint) {
   // (which is done elsewhere), simply that no assertions occur.
   DoBuffer([](S2BufferOperation* op) {
       S2Point p(1 - 2 * DBL_EPSILON, 0, 0);  // Maximum error allowed.
-      S2_CHECK(S2::IsUnitLength(p));
+      ABSL_CHECK(S2::IsUnitLength(p));
       op->AddPoint(p);
     }, S1Angle::Degrees(1), 0.01);
 }
@@ -464,7 +467,7 @@ TEST(S2BufferOperation, ZigZagLoop) {
 
 TEST(S2BufferOperation, Fractals) {
   for (double dimension : {1.02, 1.8}) {
-    S2Testing::Fractal fractal;
+    S2Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(3 * 64);
     fractal.set_fractal_dimension(dimension);
     auto loop = fractal.MakeLoop(S2::GetFrame(S2Point(1, 0, 0)),
@@ -629,8 +632,8 @@ TestBufferPolyline::TestBufferPolyline(
       max_dist_(buffer_radius_ + max_error_),
       round_(options.end_cap_style() == EndCapStyle::ROUND),
       two_sided_(options.polyline_side() == PolylineSide::BOTH) {
-  S2_DCHECK_GE(polyline_.size(), 2);
-  S2_DCHECK(buffer_radius_ > S1Angle::Zero());
+  ABSL_DCHECK_GE(polyline_.size(), 2);
+  ABSL_DCHECK(buffer_radius_ > S1Angle::Zero());
 
   MutableS2ShapeIndex input;
   input.Add(s2textformat::MakeLaxPolylineOrDie(input_str));

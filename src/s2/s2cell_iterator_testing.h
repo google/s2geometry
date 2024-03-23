@@ -17,6 +17,7 @@
 #define S2_S2CELL_ITERATOR_TESTING_H_
 
 #include "absl/container/btree_map.h"
+#include "absl/log/absl_check.h"
 #include "s2/s2cell_iterator.h"
 
 // A mock iterator for testing.  Iterates an absl::btree_map mapping S2CellId to
@@ -42,7 +43,7 @@ class MockS2CellIterator final : public S2CellIterator {
   //
   // REQUIRES: !done()
   const T& value() const {
-    S2_DCHECK(!done());
+    ABSL_DCHECK(!done());
     return iter_->second;
   }
 
@@ -67,7 +68,7 @@ class MockS2CellIterator final : public S2CellIterator {
   //
   // REQUIRES: !done()
   void Next() override {
-    S2_DCHECK(!done());
+    ABSL_DCHECK(!done());
     ++iter_;
   }
 

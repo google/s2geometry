@@ -82,12 +82,13 @@
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/types/span.h"
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
 #include "s2/base/log_severity.h"
+#include "s2/base/types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -179,7 +180,7 @@ S1Angle S2Builder::Options::max_edge_deviation() const {
   // actual edge deviation exceeds the limit; in practice, splitting is rare
   // even with long edges.)  Note that it is always possible to split edges
   // when max_edge_deviation() is exceeded; see MaybeAddExtraSites().
-  S2_DCHECK_LE(snap_function().snap_radius(), SnapFunction::kMaxSnapRadius());
+  ABSL_DCHECK_LE(snap_function().snap_radius(), SnapFunction::kMaxSnapRadius());
   const double kMaxEdgeDeviationRatio = 1.1;
   return kMaxEdgeDeviationRatio * edge_snap_radius();
 }
@@ -218,7 +219,7 @@ void S2Builder::Init(const Options& options) {
   options_ = options;
   const SnapFunction& snap_function = options.snap_function();
   S1Angle snap_radius = snap_function.snap_radius();
-  S2_DCHECK_LE(snap_radius, SnapFunction::kMaxSnapRadius());
+  ABSL_DCHECK_LE(snap_radius, SnapFunction::kMaxSnapRadius());
 
   // Convert the snap radius to an S1ChordAngle.  This is the "true snap
   // radius" used when evaluating exact predicates (s2predicates.h).
@@ -283,7 +284,7 @@ void S2Builder::Init(const Options& options) {
                                options.edge_snap_radius() +
                                snap_function.min_edge_vertex_separation());
   if (options.intersection_tolerance() <= S1Angle::Zero()) {
-    S2_DCHECK(!check_all_site_crossings_);
+    ABSL_DCHECK(!check_all_site_crossings_);
   }
 
   // To implement idempotency, we check whether the input geometry could
@@ -335,7 +336,7 @@ void S2Builder::clear_labels() {
 }
 
 void S2Builder::push_label(Label label) {
-  S2_DCHECK_GE(label, 0);
+  ABSL_DCHECK_GE(label, 0);
   label_set_.push_back(label);
   label_set_modified_ = true;
 }
@@ -346,7 +347,7 @@ void S2Builder::pop_label() {
 }
 
 void S2Builder::set_label(Label label) {
-  S2_DCHECK_GE(label, 0);
+  ABSL_DCHECK_GE(label, 0);
   label_set_.resize(1);
   label_set_[0] = label;
   label_set_modified_ = true;
@@ -393,7 +394,7 @@ S2Builder::InputVertexId S2Builder::AddVertex(const S2Point& v) {
 void S2Builder::AddIntersection(const S2Point& vertex) {
   // It is an error to call this method without first setting
   // intersection_tolerance() to a non-zero value.
-  S2_DCHECK_GT(options_.intersection_tolerance(), S1Angle::Zero());
+  ABSL_DCHECK_GT(options_.intersection_tolerance(), S1Angle::Zero());
 
   // Calling this method also overrides the idempotent() option.
   snapping_needed_ = true;
@@ -402,7 +403,7 @@ void S2Builder::AddIntersection(const S2Point& vertex) {
 }
 
 void S2Builder::AddEdge(const S2Point& v0, const S2Point& v1) {
-  S2_DCHECK(!layers_.empty()) << "Call StartLayer before adding any edges";
+  ABSL_DCHECK(!layers_.empty()) << "Call StartLayer before adding any edges";
   if (v0 == v1 && (layer_options_.back().degenerate_edges() ==
                    GraphOptions::DegenerateEdges::DISCARD)) {
     return;
@@ -523,11 +524,11 @@ class VertexIdEdgeVectorShape final : public S2Shape {
 }  // namespace
 
 bool S2Builder::Build(S2Error* error) {
-  // S2_CHECK rather than S2_DCHECK because this is friendlier than crashing on the
-  // "error->Clear()" call below.  It would be easy to allow (error == nullptr)
-  // by declaring a local "tmp_error", but it seems better to make clients
-  // think about error handling.
-  S2_CHECK(error != nullptr);
+  // ABSL_CHECK rather than ABSL_DCHECK because this is friendlier than crashing
+  // on the "error->Clear()" call below.  It would be easy to allow (error ==
+  // nullptr) by declaring a local "tmp_error", but it seems better to make
+  // clients think about error handling.
+  ABSL_CHECK(error != nullptr);
   error_ = error;
   error_->Clear();
 
@@ -913,13 +914,13 @@ void S2Builder::AddExtraSites(const MutableS2ShapeIndex& input_edge_index) {
 
   // The first pass is different because we snap every edge.  In the following
   // passes we only snap edges that are near the extra sites that were added.
-  S2_VLOG(1) << "Before pass 0: sites=" << sites_.size();
+  ABSL_VLOG(1) << "Before pass 0: sites=" << sites_.size();
   for (InputEdgeId e = 0; static_cast<size_t>(e) < input_edges_.size(); ++e) {
     if (!CheckEdge(e)) return;
   }
-  S2_VLOG(1) << "Pass 0: edges snapped=" << input_edges_.size()
-          << ", output edges=" << num_edges_after_snapping
-          << ", sites=" << sites_.size();
+  ABSL_VLOG(1) << "Pass 0: edges snapped=" << input_edges_.size()
+               << ", output edges=" << num_edges_after_snapping
+               << ", sites=" << sites_.size();
 
   for (int num_passes = 1; !edges_to_resnap.empty(); ++num_passes) {
     auto edges_to_snap = edges_to_resnap;
@@ -928,10 +929,10 @@ void S2Builder::AddExtraSites(const MutableS2ShapeIndex& input_edge_index) {
     for (InputEdgeId e : edges_to_snap) {
       if (!CheckEdge(e)) return;
     }
-    S2_VLOG(1) << "Pass " << num_passes
-            << ": edges snapped=" << edges_to_snap.size()
-            << ", output edges=" << num_edges_after_snapping
-            << ", sites=" << sites_.size();
+    ABSL_VLOG(1) << "Pass " << num_passes
+                 << ": edges snapped=" << edges_to_snap.size()
+                 << ", output edges=" << num_edges_after_snapping
+                 << ", sites=" << sites_.size();
   }
 }
 
@@ -1047,7 +1048,7 @@ void S2Builder::MaybeAddExtraSites(
         // Then we find all the edges near the new site (including this one) and
         // add them to the snap queue.
         S2Point new_site = GetSeparationSite(site_to_avoid, v0, v1, edge_id);
-        S2_DCHECK_NE(site_to_avoid, new_site);
+        ABSL_DCHECK_NE(site_to_avoid, new_site);
         AddExtraSite(new_site, input_edge_index, edges_to_resnap);
 
         // Skip the remaining sites near this chain edge, and then continue
@@ -1064,7 +1065,7 @@ void S2Builder::MaybeAddExtraSites(
 void S2Builder::AddExtraSite(const S2Point& new_site,
                              const MutableS2ShapeIndex& input_edge_index,
                              flat_hash_set<InputEdgeId>* edges_to_resnap) {
-  if (!sites_.empty()) S2_DCHECK_NE(new_site, sites_.back());
+  if (!sites_.empty()) ABSL_DCHECK_NE(new_site, sites_.back());
   if (!tracker_.AddSpace(&sites_, 1)) return;
   SiteId new_site_id = sites_.size();
   sites_.push_back(new_site);
@@ -1122,8 +1123,8 @@ S2Point S2Builder::GetSeparationSite(const S2Point& site_to_avoid,
     new_site = gap_max;
   }
   new_site = SnapSite(new_site);
-  S2_DCHECK_NE(v0, new_site);
-  S2_DCHECK_NE(v1, new_site);
+  ABSL_DCHECK_NE(v0, new_site);
+  ABSL_DCHECK_NE(v1, new_site);
   return new_site;
 }
 
@@ -1215,7 +1216,7 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
         add_site_c = false;  // Site C is excluded by B.
         break;
       }
-      S2_DCHECK_EQ(s2pred::Excluded::NEITHER, result);
+      ABSL_DCHECK_EQ(s2pred::Excluded::NEITHER, result);
 
       // Otherwise check whether the previous site A is close enough to B and
       // C that it might further clip the Voronoi region of B.
@@ -1242,12 +1243,12 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
       chain->push_back(site_id);
     }
   }
-  S2_DCHECK(!chain->empty());
+  ABSL_DCHECK(!chain->empty());
   if (google::DEBUG_MODE) {
     for (SiteId site_id : candidates) {
       if (s2pred::CompareDistances(y, sites_[chain->back()],
                                    sites_[site_id]) > 0) {
-        S2_LOG(ERROR) << "Snapping invariant broken!";
+        ABSL_LOG(ERROR) << "Snapping invariant broken!";
       }
     }
   }
@@ -1701,7 +1702,7 @@ inline int S2Builder::EdgeChainSimplifier::graph_edge_layer(EdgeId e) const {
 int S2Builder::EdgeChainSimplifier::input_edge_layer(InputEdgeId id) const {
   // NOTE(ericv): If this method shows up in profiling, the result could be
   // stored with each edge (i.e., edge_layers_ and new_edge_layers_).
-  S2_DCHECK_GE(id, 0);
+  ABSL_DCHECK_GE(id, 0);
   return (std::upper_bound(layer_begins_.begin(), layer_begins_.end(), id) -
           (layer_begins_.begin() + 1));
 }
@@ -1859,12 +1860,12 @@ void S2Builder::EdgeChainSimplifier::SimplifyChain(VertexId v0, VertexId v1) {
 // next vertex in the edge chain.
 S2Builder::Graph::VertexId S2Builder::EdgeChainSimplifier::FollowChain(
     VertexId v0, VertexId v1) const {
-  S2_DCHECK(is_interior_[v1]);
+  ABSL_DCHECK(is_interior_[v1]);
   for (EdgeId e : out_.edge_ids(v1)) {
     VertexId v = g_.edge(e).second;
     if (v != v0 && v != v1) return v;
   }
-  S2_LOG(FATAL) << "Could not find next edge in edge chain";
+  ABSL_LOG(FATAL) << "Could not find next edge in edge chain";
 }
 
 // Copies all input edges between v0 and v1 (in both directions) to the output.
@@ -1932,7 +1933,7 @@ bool S2Builder::EdgeChainSimplifier::AvoidSites(
         best = id;
     }
   }
-  S2_DCHECK_GE(best, 0);  // Because there is at least one outgoing edge.
+  ABSL_DCHECK_GE(best, 0);  // Because there is at least one outgoing edge.
 
   for (VertexId v : edge_sites[best]) {
     // Sites whose distance from "p0" is at least "r2" are not relevant yet.
@@ -1990,7 +1991,7 @@ void S2Builder::EdgeChainSimplifier::MergeChain(
       // associated with degenerate edges.  Each input edge ids will be
       // assigned to one of the output edges later.  (Normally there are no
       // degenerate edges at all since most layer types don't want them.)
-      S2_DCHECK(is_interior_[v0]);
+      ABSL_DCHECK(is_interior_[v0]);
       for (EdgeId e : out_.edge_ids(v0, v0)) {
         for (InputEdgeId id : g_.input_edge_ids(e)) {
           degenerate_ids.push_back(id);
@@ -2016,7 +2017,7 @@ void S2Builder::EdgeChainSimplifier::MergeChain(
       used_[e] = true;
       ++j;
     }
-    S2_DCHECK_EQ(merged_input_ids.size(), j);
+    ABSL_DCHECK_EQ(merged_input_ids.size(), j);
   }
   if (!degenerate_ids.empty()) {
     std::sort(degenerate_ids.begin(), degenerate_ids.end());
@@ -2090,7 +2091,7 @@ void S2Builder::EdgeChainSimplifier::AssignDegenerateEdges(
     if (it != order.begin()) {
       if ((*merged_ids)[it[-1]][0] >= layer_begins_[layer]) --it;
     }
-    S2_DCHECK_EQ(layer, input_edge_layer((*merged_ids)[it[0]][0]));
+    ABSL_DCHECK_EQ(layer, input_edge_layer((*merged_ids)[it[0]][0]));
     (*merged_ids)[it[0]].push_back(degenerate_id);
   }
 }

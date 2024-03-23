@@ -23,8 +23,9 @@
 #include <string>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
+#include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 
 using std::vector;
@@ -80,7 +81,7 @@ TEST(EncodedUintVectorTest, EightBytes) {
 
 template <class T>
 vector<T> MakeSortedTestVector(int bytes_per_value, int num_values) {
-  S2_DCHECK_LE(bytes_per_value, sizeof(T));
+  ABSL_DCHECK_LE(bytes_per_value, sizeof(T));
   T limit_value = ~T{0} >> (8 * (sizeof(T) - bytes_per_value));
   vector<T> values;
   for (int i = 0; i + 1 < num_values; ++i) {
@@ -89,7 +90,7 @@ vector<T> MakeSortedTestVector(int bytes_per_value, int num_values) {
   // The last value needs special handling since casting it to "double" loses
   // precision when T == uint64.
   values.push_back(limit_value);
-  S2_CHECK(std::is_sorted(values.begin(), values.end()));
+  ABSL_CHECK(std::is_sorted(values.begin(), values.end()));
   return values;
 }
 
@@ -99,7 +100,7 @@ EncodedUintVector<T> MakeEncodedVector(const vector<T>& values,
   EncodeUintVector<T>(values, encoder);
   Decoder decoder(encoder->base(), encoder->length());
   EncodedUintVector<T> actual;
-  S2_CHECK(actual.Init(&decoder));
+  ABSL_CHECK(actual.Init(&decoder));
   return actual;
 }
 

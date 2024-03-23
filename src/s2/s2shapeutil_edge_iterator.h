@@ -18,7 +18,7 @@
 
 #include <string>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_shape_edge_id.h"

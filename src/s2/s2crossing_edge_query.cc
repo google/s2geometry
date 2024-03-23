@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
@@ -59,10 +60,10 @@ vector<s2shapeutil::ShapeEdge> S2CrossingEdgeQuery::GetCrossingEdges(
 }
 
 vector<s2shapeutil::ShapeEdge> S2CrossingEdgeQuery::GetCrossingEdges(
-    const S2Point& a0, const S2Point& a1, const S2Shape& shape,
+    const S2Point& a0, const S2Point& a1, int shape_id, const S2Shape& shape,
     CrossingType type) {
   vector<s2shapeutil::ShapeEdge> edges;
-  GetCrossingEdges(a0, a1, shape, type, &edges);
+  GetCrossingEdges(a0, a1, shape_id, shape, type, &edges);
   return edges;
 }
 
@@ -88,18 +89,19 @@ void S2CrossingEdgeQuery::GetCrossingEdges(
   }
 }
 
-void S2CrossingEdgeQuery::GetCrossingEdges(
-    const S2Point& a0, const S2Point& a1, const S2Shape& shape,
-    CrossingType type, vector<ShapeEdge>* edges) {
+void S2CrossingEdgeQuery::GetCrossingEdges(const S2Point& a0, const S2Point& a1,
+                                           int shape_id, const S2Shape& shape,
+                                           CrossingType type,
+                                           vector<ShapeEdge>* edges) {
   edges->clear();
-  GetCandidates(a0, a1, shape, &tmp_candidates_);
+  GetCandidates(a0, a1, shape_id, shape, &tmp_candidates_);
   int min_sign = (type == CrossingType::ALL) ? 0 : 1;
   S2CopyingEdgeCrosser crosser(a0, a1);
   for (ShapeEdgeId candidate : tmp_candidates_) {
     int edge_id = candidate.edge_id;
     S2Shape::Edge b = shape.edge(edge_id);
     if (crosser.CrossingSign(b.v0, b.v1) >= min_sign) {
-      edges->push_back(ShapeEdge(shape.id(), edge_id, b));
+      edges->push_back(ShapeEdge(shape_id, edge_id, b));
     }
   }
 }
@@ -111,10 +113,12 @@ vector<ShapeEdgeId> S2CrossingEdgeQuery::GetCandidates(
   return edges;
 }
 
-vector<ShapeEdgeId> S2CrossingEdgeQuery::GetCandidates(
-    const S2Point& a0, const S2Point& a1, const S2Shape& shape) {
+vector<ShapeEdgeId> S2CrossingEdgeQuery::GetCandidates(const S2Point& a0,
+                                                       const S2Point& a1,
+                                                       int shape_id,
+                                                       const S2Shape& shape) {
   vector<ShapeEdgeId> edges;
-  GetCandidates(a0, a1, shape, &edges);
+  GetCandidates(a0, a1, shape_id, shape, &edges);
   return edges;
 }
 
@@ -136,17 +140,17 @@ void S2CrossingEdgeQuery::GetCandidates(const S2Point& a0, const S2Point& a1,
 }
 
 void S2CrossingEdgeQuery::GetCandidates(const S2Point& a0, const S2Point& a1,
-                                        const S2Shape& shape,
+                                        int shape_id, const S2Shape& shape,
                                         vector<ShapeEdgeId>* edges) {
   edges->clear();
   int num_edges = shape.num_edges();
   if (num_edges <= kMaxBruteForceEdges) {
     edges->reserve(num_edges);
   }
-  VisitRawCandidates(a0, a1, shape, [edges](ShapeEdgeId id) {
-      edges->push_back(id);
-      return true;
-    });
+  VisitRawCandidates(a0, a1, shape_id, shape, [edges](ShapeEdgeId id) {
+    edges->push_back(id);
+    return true;
+  });
   if (edges->size() > 1) {
     std::sort(edges->begin(), edges->end());
     edges->erase(std::unique(edges->begin(), edges->end()), edges->end());
@@ -182,23 +186,23 @@ bool S2CrossingEdgeQuery::VisitRawCandidates(
 }
 
 bool S2CrossingEdgeQuery::VisitRawCandidates(
-    const S2Point& a0, const S2Point& a1, const S2Shape& shape,
+    const S2Point& a0, const S2Point& a1, int shape_id, const S2Shape& shape,
     const ShapeEdgeIdVisitor& visitor) {
   int num_edges = shape.num_edges();
   if (num_edges <= kMaxBruteForceEdges) {
     for (int e = 0; e < num_edges; ++e) {
-      if (!visitor(ShapeEdgeId(shape.id(), e))) return false;
+      if (!visitor(ShapeEdgeId(shape_id, e))) return false;
     }
     return true;
   }
-  return VisitCells(a0, a1, [&shape, &visitor](const S2ShapeIndexCell& cell) {
-      const S2ClippedShape* clipped = cell.find_clipped(shape.id());
-      if (clipped == nullptr) return true;
-      for (int j = 0; j < clipped->num_edges(); ++j) {
-        if (!visitor(ShapeEdgeId(shape.id(), clipped->edge(j)))) return false;
-      }
-      return true;
-    });
+  return VisitCells(a0, a1, [&](const S2ShapeIndexCell& cell) {
+    const S2ClippedShape* clipped = cell.find_clipped(shape_id);
+    if (clipped == nullptr) return true;
+    for (int j = 0; j < clipped->num_edges(); ++j) {
+      if (!visitor(ShapeEdgeId(shape_id, clipped->edge(j)))) return false;
+    }
+    return true;
+  });
 }
 
 bool S2CrossingEdgeQuery::VisitCells(const S2Point& a0, const S2Point& a1,
@@ -230,7 +234,7 @@ bool S2CrossingEdgeQuery::VisitCells(const S2Point& a0, const S2Point& a1,
     S2CellRelation relation = iter_.Locate(edge_root);
     if (relation == S2CellRelation::INDEXED) {
       // edge_root is an index cell or is contained by an index cell (case 1).
-      S2_DCHECK(iter_.id().contains(edge_root));
+      ABSL_DCHECK(iter_.id().contains(edge_root));
       if (!visitor(iter_.cell())) return false;
     } else if (relation == S2CellRelation::SUBDIVIDED) {
       // edge_root is subdivided into one or more index cells (case 2).  We
@@ -245,7 +249,7 @@ bool S2CrossingEdgeQuery::VisitCells(const S2Point& a0, const S2Point& a1,
 bool S2CrossingEdgeQuery::VisitCells(
     const S2Point& a0, const S2Point& a1, const S2PaddedCell& root,
     const CellVisitor& visitor) {
-  S2_DCHECK_EQ(root.padding(), 0);
+  ABSL_DCHECK_EQ(root.padding(), 0);
   visitor_ = &visitor;
   // We use padding when clipping to ensure that the result is non-empty
   // whenever the edge (a0, a1) intersects the given root cell.
@@ -270,7 +274,7 @@ bool S2CrossingEdgeQuery::VisitCells(const S2PaddedCell& pcell,
                                      const R2Rect& edge_bound) {
   // This code uses S2PaddedCell because it has the methods we need for
   // efficient splitting, however the actual padding is required to be zero.
-  S2_DCHECK_EQ(pcell.padding(), 0);
+  ABSL_DCHECK_EQ(pcell.padding(), 0);
 
   iter_.Seek(pcell.id().range_min());
   if (iter_.done() || iter_.id() > pcell.id().range_max()) {
@@ -364,14 +368,14 @@ inline void S2CrossingEdgeQuery::SplitBound(const R2Rect& edge_bound, int u_end,
   child_bounds[0] = edge_bound;
   child_bounds[0][0][1 - u_end] = u;
   child_bounds[0][1][1 - v_end] = v;
-  S2_DCHECK(!child_bounds[0].is_empty());
-  S2_DCHECK(edge_bound.Contains(child_bounds[0]));
+  ABSL_DCHECK(!child_bounds[0].is_empty());
+  ABSL_DCHECK(edge_bound.Contains(child_bounds[0]));
 
   child_bounds[1] = edge_bound;
   child_bounds[1][0][u_end] = u;
   child_bounds[1][1][v_end] = v;
-  S2_DCHECK(!child_bounds[1].is_empty());
-  S2_DCHECK(edge_bound.Contains(child_bounds[1]));
+  ABSL_DCHECK(!child_bounds[1].is_empty());
+  ABSL_DCHECK(edge_bound.Contains(child_bounds[1]));
 }
 
 void S2CrossingEdgeQuery::GetCells(const S2Point& a0, const S2Point& a1,

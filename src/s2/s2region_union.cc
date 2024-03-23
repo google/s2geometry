@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2cap.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
@@ -34,7 +35,7 @@ S2RegionUnion::S2RegionUnion(vector<unique_ptr<S2Region>> regions) {
 }
 
 void S2RegionUnion::Init(vector<unique_ptr<S2Region>> regions) {
-  S2_DCHECK(regions_.empty());
+  ABSL_DCHECK(regions_.empty());
   regions_ = std::move(regions);
 }
 
@@ -71,6 +72,10 @@ S2LatLngRect S2RegionUnion::GetRectBound() const {
     result = result.Union(region(i)->GetRectBound());
   }
   return result;
+}
+
+void S2RegionUnion::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  GetCapBound().GetCellUnionBound(cell_ids);
 }
 
 bool S2RegionUnion::Contains(const S2Cell& cell) const {

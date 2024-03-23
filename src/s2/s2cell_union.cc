@@ -25,11 +25,11 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -86,17 +86,17 @@ void S2CellUnion::Init(const vector<uint64>& cell_ids) {
 }
 
 void S2CellUnion::InitFromMinMax(S2CellId min_id, S2CellId max_id) {
-  S2_DCHECK(max_id.is_valid()) << max_id;
+  ABSL_DCHECK(max_id.is_valid()) << max_id;
   InitFromBeginEnd(min_id, max_id.next());
 }
 
 void S2CellUnion::InitFromBeginEnd(S2CellId begin, S2CellId end) {
-  S2_DCHECK(begin.is_leaf()) << begin;
-  S2_DCHECK(end.is_leaf()) << end;
+  ABSL_DCHECK(begin.is_leaf()) << begin;
+  ABSL_DCHECK(end.is_leaf()) << end;
   const S2CellId kLeafEnd = S2CellId::End(S2CellId::kMaxLevel);
-  S2_DCHECK(begin.is_valid() || begin == kLeafEnd) << begin;
-  S2_DCHECK(end.is_valid() || end == kLeafEnd) << end;
-  S2_DCHECK_LE(begin, end);
+  ABSL_DCHECK(begin.is_valid() || begin == kLeafEnd) << begin;
+  ABSL_DCHECK(end.is_valid() || end == kLeafEnd) << end;
+  ABSL_DCHECK_LE(begin, end);
 
   // We repeatedly add the largest cell we can.
   cell_ids_.clear();
@@ -105,7 +105,7 @@ void S2CellUnion::InitFromBeginEnd(S2CellId begin, S2CellId end) {
     cell_ids_.push_back(id);
   }
   // The output is already normalized.
-  S2_DCHECK(IsNormalized());
+  ABSL_DCHECK(IsNormalized());
 }
 
 void S2CellUnion::Pack(int excess) {
@@ -171,7 +171,7 @@ void S2CellUnion::Normalize() {
   std::sort(ids->begin(), ids->end());
   size_t out = 0;
   for (S2CellId id : *ids) {
-    S2_DCHECK(id.is_valid()) << id;
+    ABSL_DCHECK(id.is_valid()) << id;
     // Check whether this cell is contained by the previous cell.
     if (out > 0 && (*ids)[out-1].contains(id)) continue;
 
@@ -200,11 +200,11 @@ void S2CellUnion::Denormalize(int min_level, int level_mod,
 void S2CellUnion::Denormalize(const vector<S2CellId>& in,
                               int min_level, int level_mod,
                               vector<S2CellId>* out) {
-  S2_DCHECK_GE(min_level, 0);
-  S2_DCHECK_LE(min_level, S2CellId::kMaxLevel);
-  S2_DCHECK_GE(level_mod, 1);
-  S2_DCHECK_LE(level_mod, 3);
-  S2_DCHECK_NE(out, &in);
+  ABSL_DCHECK_GE(min_level, 0);
+  ABSL_DCHECK_LE(min_level, S2CellId::kMaxLevel);
+  ABSL_DCHECK_GE(level_mod, 1);
+  ABSL_DCHECK_LE(level_mod, 3);
+  ABSL_DCHECK_NE(out, &in);
 
   out->clear();
   out->reserve(in.size());
@@ -262,6 +262,12 @@ S2LatLngRect S2CellUnion::GetRectBound() const {
   return bound;
 }
 
+void S2CellUnion::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  // TODO(user): Try returning the cells in the covering.  The comments
+  // in s2region.h say `*cell_ids` should be small, however.
+  GetCapBound().GetCellUnionBound(cell_ids);
+}
+
 // Returns true if "a" lies entirely before "b" on the Hilbert curve.  Note that
 // this is not even a weak ordering, since incomparability is not transitive.
 // Nevertheless, given a sorted vector of disjoint S2CellIds it can be used be
@@ -283,7 +289,7 @@ bool S2CellUnion::Contains(S2CellId id) const {
   // the space-filling curve.  So we simply find the first cell that might
   // intersect (is not entirely before) the target (using binary search).
   // There is containment if and only if this cell id contains the target id.
-  S2_DCHECK(id.is_valid()) << id;
+  ABSL_DCHECK(id.is_valid()) << id;
 
   const auto i = std::lower_bound(begin(), end(), id, EntirelyPrecedes);
   return i != end() && i->contains(id);
@@ -291,7 +297,7 @@ bool S2CellUnion::Contains(S2CellId id) const {
 
 bool S2CellUnion::Intersects(S2CellId id) const {
   // This is an exact test; see the comments for Contains() above.
-  S2_DCHECK(id.is_valid()) << id;
+  ABSL_DCHECK(id.is_valid()) << id;
 
   const auto i = std::lower_bound(begin(), end(), id, EntirelyPrecedes);
   return i != end() && i->intersects(id);
@@ -328,7 +334,7 @@ bool S2CellUnion::Intersects(const S2CellUnion& y) const {
       continue;
     }
     // Neither cell is to the left of the other, so they must intersect.
-    S2_DCHECK(i->intersects(*j));
+    ABSL_DCHECK(i->intersects(*j));
     return true;
   }
   return false;
@@ -343,7 +349,7 @@ S2CellUnion S2CellUnion::Union(const S2CellUnion& y) const {
 }
 
 S2CellUnion S2CellUnion::Intersection(S2CellId id) const {
-  S2_DCHECK(id.is_valid()) << id;
+  ABSL_DCHECK(id.is_valid()) << id;
   S2CellUnion result;
   if (Contains(id)) {
     result.cell_ids_.push_back(id);
@@ -354,7 +360,7 @@ S2CellUnion S2CellUnion::Intersection(S2CellId id) const {
     while (i != cell_ids_.end() && *i <= id_max)
       result.cell_ids_.push_back(*i++);
   }
-  S2_DCHECK(result.IsNormalized() || !IsNormalized());
+  ABSL_DCHECK(result.IsNormalized() || !IsNormalized());
   return result;
 }
 
@@ -362,17 +368,17 @@ S2CellUnion S2CellUnion::Intersection(const S2CellUnion& y) const {
   S2CellUnion result;
   GetIntersection(cell_ids_, y.cell_ids_, &result.cell_ids_);
   // The output is normalized as long as both inputs are normalized.
-  S2_DCHECK(result.IsNormalized() || !IsNormalized() || !y.IsNormalized());
+  ABSL_DCHECK(result.IsNormalized() || !IsNormalized() || !y.IsNormalized());
   return result;
 }
 
 /*static*/ void S2CellUnion::GetIntersection(const vector<S2CellId>& x,
                                              const vector<S2CellId>& y,
                                              vector<S2CellId>* out) {
-  S2_DCHECK_NE(out, &x);
-  S2_DCHECK_NE(out, &y);
-  S2_DCHECK(is_sorted(x.begin(), x.end()));
-  S2_DCHECK(is_sorted(y.begin(), y.end()));
+  ABSL_DCHECK_NE(out, &x);
+  ABSL_DCHECK_NE(out, &y);
+  ABSL_DCHECK(is_sorted(x.begin(), x.end()));
+  ABSL_DCHECK(is_sorted(y.begin(), y.end()));
 
   // This is a fairly efficient calculation that uses binary search to skip
   // over sections of both input vectors.  It takes logarithmic time if all the
@@ -408,7 +414,7 @@ S2CellUnion S2CellUnion::Intersection(const S2CellUnion& y) const {
     }
   }
   // The output is generated in sorted order.
-  S2_DCHECK(is_sorted(out->begin(), out->end()));
+  ABSL_DCHECK(is_sorted(out->begin(), out->end()));
 }
 
 static void GetDifferenceInternal(S2CellId cell,
@@ -437,7 +443,7 @@ S2CellUnion S2CellUnion::Difference(const S2CellUnion& y) const {
     GetDifferenceInternal(id, y, &result.cell_ids_);
   }
   // The output is normalized as long as the first argument is normalized.
-  S2_DCHECK(result.IsNormalized() || !IsNormalized());
+  ABSL_DCHECK(result.IsNormalized() || !IsNormalized());
   return result;
 }
 

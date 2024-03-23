@@ -21,7 +21,8 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
+#include "absl/log/absl_check.h"
 #include "s2/sequence_lexicon.h"
 
 using std::vector;
@@ -81,7 +82,7 @@ IdSetLexicon::IdSet IdSetLexicon::id_set(int32 set_id) const {
     return IdSet();
   } else {
     auto sequence = id_sets_.sequence(~set_id);
-    S2_DCHECK_NE(0, sequence.size());
+    ABSL_DCHECK_NE(0, sequence.size());
     return IdSet(&*sequence.begin(), &*sequence.begin() + sequence.size());
   }
 }

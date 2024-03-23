@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -64,7 +65,7 @@ LaxPolygonLayer::LaxPolygonLayer(
 void LaxPolygonLayer::Init(
     S2LaxPolygonShape* polygon, LabelSetIds* label_set_ids,
     IdSetLexicon* label_set_lexicon, const Options& options) {
-  S2_DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
+  ABSL_DCHECK_EQ(label_set_ids == nullptr, label_set_lexicon == nullptr);
   polygon_ = polygon;
   label_set_ids_ = label_set_ids;
   label_set_lexicon_ = label_set_lexicon;
@@ -119,7 +120,7 @@ void LaxPolygonLayer::AppendEdgeLabels(
 static void DiscardEdges(const Graph& g, const vector<EdgeId>& edges_to_discard,
                          vector<Edge>* new_edges,
                          vector<InputEdgeIdSetId>* new_input_edge_id_set_ids) {
-  S2_DCHECK(std::is_sorted(edges_to_discard.begin(), edges_to_discard.end()));
+  ABSL_DCHECK(std::is_sorted(edges_to_discard.begin(), edges_to_discard.end()));
   new_edges->clear();
   new_input_edge_id_set_ids->clear();
   new_edges->reserve(g.num_edges());
@@ -133,7 +134,7 @@ static void DiscardEdges(const Graph& g, const vector<EdgeId>& edges_to_discard,
       new_input_edge_id_set_ids->push_back(g.input_edge_id_set_id(e));
     }
   }
-  S2_DCHECK(it == edges_to_discard.end());
+  ABSL_DCHECK(it == edges_to_discard.end());
 }
 
 static void MaybeAddFullLoop(

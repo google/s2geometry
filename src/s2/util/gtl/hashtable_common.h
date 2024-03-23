@@ -239,7 +239,7 @@ class sh_hashtable_settings : public HashFunc {
 template<class T>
 struct sh_is_transparent {
  private:
-  struct No { char x; };
+  struct No {};
   struct Yes { No x[2]; };
 
   template <class U>

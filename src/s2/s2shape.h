@@ -20,8 +20,10 @@
 
 #include <iterator>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "absl/log/absl_log.h"
+
+#include "s2/base/types.h"
+#include "s2/util/coding/coder.h"
 #include "s2/s2coder.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
@@ -63,14 +65,25 @@ class S2Shape {
   // allowed, and can be used to represent points.
   struct Edge {
     S2Point v0, v1;
-    Edge() = default;
-    Edge(const S2Point& _v0, const S2Point& _v1) : v0(_v0), v1(_v1) {}
+    constexpr Edge() = default;
+    constexpr Edge(const S2Point& _v0, const S2Point& _v1) : v0(_v0), v1(_v1) {}
 
     // Returns the edge with the vertices reversed.
     Edge Reversed() const { return {v1, v0}; }
 
     // Returns true if the edge is degenerate.
     bool IsDegenerate() const { return v0 == v1; }
+
+    // Returns true if point equals v1, indicating this edge is arriving.
+    bool Incoming(const S2Point& point) const { return v1 == point; }
+
+    // Returns true if point equals v0, indicating this edge is leaving.
+    bool Outgoing(const S2Point& point) const { return v0 == point; }
+
+    // Returns true if point is one of the vertices of this edge.
+    bool IncidentOn(const S2Point& point) const {
+      return Incoming(point) || Outgoing(point);
+    }
 
     // TODO(ericv): Define all 6 comparisons.
     friend bool operator==(const Edge& x, const Edge& y) {
@@ -153,7 +166,7 @@ class S2Shape {
   // The minimum allowable tag for user-defined S2Shape types.
   static constexpr TypeTag kMinUserTypeTag = 8192;
 
-  S2Shape() : id_(-1) {}
+  S2Shape() = default;
   virtual ~S2Shape() = default;
 
   // Returns the number of edges in this shape, or points, if the shape's
@@ -246,12 +259,6 @@ class S2Shape {
   // where     pos == shape.chain_position(edge_id).
   virtual ChainPosition chain_position(int edge_id) const = 0;
 
-  // A unique id assigned to this shape by S2ShapeIndex.  Shape ids are
-  // assigned sequentially starting from 0 in the order shapes are added.
-  //
-  // TODO(ericv): Consider eliminating this method.
-  int id() const { return id_; }
-
   // Returns an integer that can be used to identify the type of an encoded
   // S2Shape (see TypeTag above).
   virtual TypeTag type_tag() const { return kNoTypeTag; }
@@ -273,7 +280,7 @@ class S2Shape {
   // REQUIRES: "encoder" uses the default constructor, so that its buffer
   //           can be enlarged as necessary by calling Ensure(int).
   virtual void Encode(Encoder* encoder, s2coding::CodingHint hint) const {
-    S2_DLOG(FATAL) << "Encoding not implemented for this S2Shape type";
+    ABSL_DLOG(FATAL) << "Encoding not implemented for this S2Shape type";
   }
 
   // Virtual methods that return pointers of your choice.  These methods are
@@ -303,41 +310,12 @@ class S2Shape {
   // This is not the only way to map from an S2Shape back to your source
   // data.  Other reasonable techniques include:
   //
-  //  - Every shape has an id() assigned by S2ShapeIndex.  Ids are assigned
-  //    sequentially starting from 0 in the order the shapes are added to the
-  //    index.  You can use this id to look up arbitrary data stored in your
-  //    own vector.
-  //
   //  - If all of your shapes are the same type, then you can create your own
   //    subclass of some existing S2Shape type (such as S2Polyline::Shape) and
   //    add your own methods and fields.  You can access this data by
   //    downcasting the S2Shape pointers returned by S2ShapeIndex methods.
   virtual const void* user_data() const { return nullptr; }
   virtual void* mutable_user_data() { return nullptr; }
-
-  // Convenience method that returns the edge id of next edge in a chain.  Wraps
-  // around at the start/end of any closed chains.
-  //
-  // This is intended for one-off lookups, as it has to look up the chain for
-  // the edge every time.  If you want many lookups or to iterate the edges of a
-  // chain, then it's better to do that directly.
-  //
-  // Return -1 when the end of an open chain is reached. Polygon and closed
-  // polyline chains wrap around to the beginning and thus never return -1,
-  // while points always do.
-  int NextEdgeWrap(int edge_id) const;
-
-  // Convenience method that returns the edge id of previous edge in a chain.
-  // Wraps around at the start/end of any closed chains/
-  //
-  // This is intended for one-off lookups, as it has to look up the chain for
-  // the edge every time.  If you want many lookups or to iterate the edges of a
-  // chain, then it's better to do that directly.
-  //
-  // Return -1 when the start of an open chain is reached. Polygon and closed
-  // polyline chains wrap around to the end and thus never return -1, while
-  // points always do.
-  int PrevEdgeWrap(int edge_id) const;
 
   // ChainVertexIterator allows the use of iterator syntax for accessing
   // vertices of a shape's chain, e.g.:
@@ -535,8 +513,6 @@ class S2Shape {
  private:
   friend class EncodedS2ShapeIndex;
   friend class MutableS2ShapeIndex;
-
-  int id_;  // Assigned by S2ShapeIndex when the shape is added.
 };
 
 //////////////////   Implementation details follow   ////////////////////
