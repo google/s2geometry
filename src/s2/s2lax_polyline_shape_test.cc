@@ -65,7 +65,6 @@ TEST(S2LaxPolylineShape, Move) {
   // Test the move constructor.
   S2LaxPolylineShape move1(std::move(to_move));
   s2testing::ExpectEqual(correct, move1);
-  EXPECT_EQ(correct.id(), move1.id());
   ASSERT_EQ(vertices.size(), move1.num_vertices());
   for (int i = 0; i < move1.num_vertices(); ++i) {
     ASSERT_EQ(vertices[i], move1.vertex(i));
@@ -75,7 +74,6 @@ TEST(S2LaxPolylineShape, Move) {
   S2LaxPolylineShape move2;
   move2 = std::move(move1);
   s2testing::ExpectEqual(correct, move2);
-  EXPECT_EQ(correct.id(), move2.id());
   ASSERT_EQ(vertices.size(), move2.num_vertices());
   for (int i = 0; i < move2.num_vertices(); ++i) {
     ASSERT_EQ(vertices[i], move2.vertex(i));

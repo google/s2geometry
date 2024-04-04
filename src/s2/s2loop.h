@@ -26,11 +26,11 @@
 #include <vector>
 
 #include "absl/base/macros.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
+#include "s2/base/types.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -134,11 +134,11 @@ class S2Loop final : public S2Region {
   //
   // The loop may be safely encoded lossily (e.g. by snapping it to an S2Cell
   // center) as long as its position does not move by 90 degrees or more.
-  static std::vector<S2Point> kEmpty();
+  static absl::Span<const S2Point> kEmpty();
 
   // A special vertex chain of length 1 that creates a full loop (i.e., a loop
   // with no edges that contains all points).  See kEmpty() for details.
-  static std::vector<S2Point> kFull();
+  static absl::Span<const S2Point> kFull();
 
   // Construct a loop corresponding to the given cell.
   //
@@ -189,8 +189,8 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: 0 <= i < 2 * num_vertices()
   const S2Point& vertex(int i) const {
-    S2_DCHECK_GE(i, 0);
-    S2_DCHECK_LT(i, 2 * num_vertices());
+    ABSL_DCHECK_GE(i, 0);
+    ABSL_DCHECK_LT(i, 2 * num_vertices());
     int j = i - num_vertices();
     return vertices_[j < 0 ? i : j];
   }
@@ -203,8 +203,8 @@ class S2Loop final : public S2Region {
   //
   // REQUIRES: 0 <= i < 2 * num_vertices()
   const S2Point& oriented_vertex(int i) const {
-    S2_DCHECK_GE(i, 0);
-    S2_DCHECK_LT(i, 2 * num_vertices());
+    ABSL_DCHECK_GE(i, 0);
+    ABSL_DCHECK_LT(i, 2 * num_vertices());
     int j = i - num_vertices();
     if (j < 0) j = i;
     if (is_hole()) j = num_vertices() - 1 - j;
@@ -403,6 +403,7 @@ class S2Loop final : public S2Region {
   // if the loop contains a point P, then the bound contains P also.
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override { return bound_; }
+  void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
 
   bool Contains(const S2Cell& cell) const override;
   bool MayIntersect(const S2Cell& cell) const override;
@@ -498,7 +499,7 @@ class S2Loop final : public S2Region {
     int num_chains() const final;
     Chain chain(int i) const final;
     Edge chain_edge(int i, int j) const final {
-      S2_DCHECK_EQ(i, 0);
+      ABSL_DCHECK_EQ(i, 0);
       return Edge(loop_->vertex(j), loop_->vertex(j + 1));
     }
     ChainPosition chain_position(int e) const final {
@@ -549,11 +550,15 @@ class S2Loop final : public S2Region {
   // Returns true if this loop contains S2::Origin().
   bool contains_origin() const { return origin_inside_; }
 
+  // Any single-vertex loop is interpreted as being either the empty loop or the
+  // full loop, depending on whether the vertex is in the northern or southern
+  // hemisphere respectively.
+
   // The single vertex in the "empty loop" vertex chain.
-  static S2Point kEmptyVertex();
+  static const S2Point kEmptyVertex;
 
   // The single vertex in the "full loop" vertex chain.
-  static S2Point kFullVertex();
+  static const S2Point kFullVertex;
 
   void InitOriginAndBound();
   void InitBound();
@@ -683,19 +688,12 @@ class S2Loop final : public S2Region {
 
 //////////////////// Implementation Details Follow ////////////////////////
 
-
-// Any single-vertex loop is interpreted as being either the empty loop or the
-// full loop, depending on whether the vertex is in the northern or southern
-// hemisphere respectively.
-inline S2Point S2Loop::kEmptyVertex() { return S2Point(0, 0, 1); }
-inline S2Point S2Loop::kFullVertex() { return S2Point(0, 0, -1); }
-
-inline std::vector<S2Point> S2Loop::kEmpty() {
-  return std::vector<S2Point>(1, kEmptyVertex());
+inline absl::Span<const S2Point> S2Loop::kEmpty() {
+  return absl::MakeConstSpan(&kEmptyVertex, 1);
 }
 
-inline std::vector<S2Point> S2Loop::kFull() {
-  return std::vector<S2Point>(1, kFullVertex());
+inline absl::Span<const S2Point> S2Loop::kFull() {
+  return absl::MakeConstSpan(&kFullVertex, 1);
 }
 
 inline bool S2Loop::is_empty() const {

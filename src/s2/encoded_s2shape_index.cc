@@ -17,16 +17,17 @@
 
 #include "s2/encoded_s2shape_index.h"
 
-#include <cstddef>
-
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
+#include "s2/util/coding/varint.h"
 #include "s2/encoded_s2cell_id_vector.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/mutable_s2shape_index.h"
@@ -39,19 +40,9 @@ using std::make_unique;
 using std::unique_ptr;
 using std::vector;
 
-unique_ptr<EncodedS2ShapeIndex::IteratorBase>
-EncodedS2ShapeIndex::Iterator::Clone() const {
-  return make_unique<Iterator>(*this);
-}
-
-void EncodedS2ShapeIndex::Iterator::Copy(const IteratorBase& other)  {
-  *this = *down_cast<const Iterator*>(&other);
-}
-
 S2Shape* EncodedS2ShapeIndex::GetShape(int id) const {
   // This method is called when a shape has not been decoded yet.
   unique_ptr<S2Shape> shape = (*shape_factory_)[id];
-  if (shape) shape->id_ = id;
   S2Shape* expected = kUndecodedShape();
   if (shapes_[id].compare_exchange_strong(expected, shape.get(),
                                           std::memory_order_acq_rel)) {
@@ -60,7 +51,7 @@ S2Shape* EncodedS2ShapeIndex::GetShape(int id) const {
   return expected;  // Another thread updated shapes_[id] first.
 }
 
-inline const S2ShapeIndexCell* EncodedS2ShapeIndex::GetCell(int i) const {
+const S2ShapeIndexCell* EncodedS2ShapeIndex::GetCell(int i) const {
   // memory_order_release ensures that no reads or writes in the current
   // thread can be reordered after this store, and all writes in the current
   // thread are visible to other threads that acquire the same atomic
@@ -102,10 +93,6 @@ inline const S2ShapeIndexCell* EncodedS2ShapeIndex::GetCell(int i) const {
   return cell.release();  // Ownership has been transferred to cells_.
 }
 
-const S2ShapeIndexCell* EncodedS2ShapeIndex::Iterator::GetCell() const {
-  return index_->GetCell(cell_pos_);
-}
-
 EncodedS2ShapeIndex::EncodedS2ShapeIndex() = default;
 
 EncodedS2ShapeIndex::~EncodedS2ShapeIndex() {
@@ -120,8 +107,8 @@ bool EncodedS2ShapeIndex::Init(Decoder* decoder,
   Minimize();
   uint64 max_edges_version;
   if (!decoder->get_varint64(&max_edges_version)) return false;
-  int version = max_edges_version & 3;
-  if (version != MutableS2ShapeIndex::kCurrentEncodingVersionNumber) {
+  version_ = max_edges_version & 3;
+  if (version_ != MutableS2ShapeIndex::kCurrentEncodingVersionNumber) {
     return false;
   }
   options_.set_max_edges_per_cell(max_edges_version >> 2);
@@ -155,6 +142,17 @@ bool EncodedS2ShapeIndex::Init(Decoder* decoder,
   cells_decoded_ = vector<std::atomic<uint64>>((cell_ids_.size() + 63) >> 6);
 
   return encoded_cells_.Init(decoder);
+}
+
+void EncodedS2ShapeIndex::Encode(Encoder* encoder) const {
+  // Re-encode the max edges and version number.
+  encoder->Ensure(Varint::kMax64);
+  uint64 max_edges = options_.max_edges_per_cell();
+  encoder->put_varint64(max_edges << 2 | version_);
+
+  // And copy the encoded cell ids and cells.
+  cell_ids_.Encode(encoder);
+  encoded_cells_.Encode(encoder);
 }
 
 void EncodedS2ShapeIndex::Minimize() {

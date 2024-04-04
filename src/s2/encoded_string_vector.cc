@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
@@ -58,11 +58,16 @@ void StringVectorEncoder::Encode(Span<const string> v, Encoder* encoder) {
 bool EncodedStringVector::Init(Decoder* decoder) {
   if (!offsets_.Init(decoder)) return false;
   data_ = decoder->skip(0);
-  if (offsets_.size() > 0) {
-    uint64 length = offsets_[offsets_.size() - 1];
-    if (decoder->avail() < length) return false;
-    decoder->skip(length);
+  uint64 length = 0;
+  for (int i = 0, n = offsets_.size(); i < n; ++i) {
+    // Strings are packed sequentially, offsets_[i] representing end of item i.
+    // String length is diff of two sequential offsets, thus the offsets should
+    // not decrease, otherwise we might read memory beyond the end of data.
+    if (offsets_[i] < length) return false;
+    length = offsets_[i];
   }
+  if (decoder->avail() < length) return false;
+  decoder->skip(length);
   return true;
 }
 

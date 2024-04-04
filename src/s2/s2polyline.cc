@@ -29,12 +29,13 @@
 #include "absl/container/fixed_array.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/types/span.h"
 #include "absl/utility/utility.h"
 
 #include "s2/base/commandlineflags.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
 #include "s2/s1angle.h"
 #include "s2/s1interval.h"
 #include "s2/s2builder.h"
@@ -77,14 +78,13 @@ S2Polyline::S2Polyline()
   : s2debug_override_(S2Debug::ALLOW) {}
 
 S2Polyline::S2Polyline(S2Polyline&& other)
-  : s2debug_override_(other.s2debug_override_),
-    num_vertices_(absl::exchange(other.num_vertices_, 0)),
-    vertices_(std::move(other.vertices_)) {
-}
+    : s2debug_override_(other.s2debug_override_),
+      num_vertices_(std::exchange(other.num_vertices_, 0)),
+      vertices_(std::move(other.vertices_)) {}
 
 S2Polyline& S2Polyline::operator=(S2Polyline&& other) {
   s2debug_override_ = other.s2debug_override_;
-  num_vertices_ = absl::exchange(other.num_vertices_, 0);
+  num_vertices_ = std::exchange(other.num_vertices_, 0);
   vertices_ = std::move(other.vertices_);
   return *this;
 }
@@ -121,7 +121,7 @@ void S2Polyline::Init(Span<const S2Point> vertices) {
   vertices_ = make_unique<S2Point[]>(num_vertices_);
   std::copy(vertices.begin(), vertices.end(), &vertices_[0]);
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
-    S2_CHECK(IsValid());
+    ABSL_CHECK(IsValid());
   }
 }
 
@@ -132,7 +132,7 @@ void S2Polyline::Init(Span<const S2LatLng> vertices) {
     vertices_[i] = vertices[i].ToPoint();
   }
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
-    S2_CHECK(IsValid());
+    ABSL_CHECK(IsValid());
   }
 }
 
@@ -154,13 +154,13 @@ void S2Polyline::InitFromBuilder(const S2Polyline& polyline,
   builder->StartLayer(make_unique<S2PolylineLayer>(this));
   builder->AddPolyline(polyline);
   S2Error error;
-  S2_CHECK(builder->Build(&error)) << "Could not build polyline: " << error;
+  ABSL_CHECK(builder->Build(&error)) << "Could not build polyline: " << error;
 }
 
 bool S2Polyline::IsValid() const {
   S2Error error;
   if (FindValidationError(&error)) {
-    S2_LOG_IF(ERROR, absl::GetFlag(FLAGS_s2debug)) << error;
+    ABSL_LOG_IF(ERROR, absl::GetFlag(FLAGS_s2debug)) << error;
     return false;
   }
   return true;
@@ -233,7 +233,7 @@ int S2Polyline::GetSnapLevel() const {
 }
 
 S2Point S2Polyline::GetSuffix(double fraction, int* next_vertex) const {
-  S2_DCHECK_GT(num_vertices(), 0);
+  ABSL_DCHECK_GT(num_vertices(), 0);
   // We intentionally let the (fraction >= 1) case fall through, since
   // we need to handle it in the loop below in any case because of
   // possible roundoff errors.
@@ -268,7 +268,7 @@ S2Point S2Polyline::Interpolate(double fraction) const {
 }
 
 double S2Polyline::UnInterpolate(const S2Point& point, int next_vertex) const {
-  S2_DCHECK_GT(num_vertices(), 0);
+  ABSL_DCHECK_GT(num_vertices(), 0);
   if (num_vertices() < 2) {
     return 0;
   }
@@ -286,7 +286,7 @@ double S2Polyline::UnInterpolate(const S2Point& point, int next_vertex) const {
 }
 
 S2Point S2Polyline::Project(const S2Point& point, int* next_vertex) const {
-  S2_DCHECK_GT(num_vertices(), 0);
+  ABSL_DCHECK_GT(num_vertices(), 0);
 
   if (num_vertices() == 1) {
     // If there is only one vertex, it is always closest to any given point.
@@ -307,7 +307,7 @@ S2Point S2Polyline::Project(const S2Point& point, int* next_vertex) const {
       min_index = i;
     }
   }
-  S2_DCHECK_NE(min_index, -1);
+  ABSL_DCHECK_NE(min_index, -1);
 
   // Compute the point on the segment found that is closest to the point given.
   S2Point closest_point =
@@ -318,13 +318,13 @@ S2Point S2Polyline::Project(const S2Point& point, int* next_vertex) const {
 }
 
 bool S2Polyline::IsOnRight(const S2Point& point) const {
-  S2_DCHECK_GE(num_vertices(), 2);
+  ABSL_DCHECK_GE(num_vertices(), 2);
 
   int next_vertex;
   S2Point closest_point = Project(point, &next_vertex);
 
-  S2_DCHECK_GE(next_vertex, 1);
-  S2_DCHECK_LE(next_vertex, num_vertices());
+  ABSL_DCHECK_GE(next_vertex, 1);
+  ABSL_DCHECK_LE(next_vertex, num_vertices());
 
   // If the closest point C is an interior vertex of the polyline, let B and D
   // be the previous and next vertices.  The given point P is on the right of
@@ -384,6 +384,10 @@ S2Cap S2Polyline::GetCapBound() const {
   return GetRectBound().GetCapBound();
 }
 
+void S2Polyline::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  GetCapBound().GetCellUnionBound(cell_ids);
+}
+
 bool S2Polyline::MayIntersect(const S2Cell& cell) const {
   if (num_vertices() == 0) return false;
 
@@ -427,7 +431,7 @@ void S2Polyline::EncodeUncompressed(Encoder* const encoder) const {
   encoder->put32(num_vertices_);
   encoder->putn(vertices_.get(), sizeof(vertices_[0]) * num_vertices_);
 
-  S2_DCHECK_GE(encoder->avail(), 0);
+  ABSL_DCHECK_GE(encoder->avail(), 0);
 }
 
 bool S2Polyline::Decode(Decoder* const decoder) {
@@ -457,7 +461,7 @@ bool S2Polyline::DecodeUncompressed(Decoder* const decoder) {
   decoder->getn(&vertices_[0], num_vertices_ * sizeof(vertices_[0]));
 
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
-    S2_CHECK(IsValid());
+    ABSL_CHECK(IsValid());
   }
   return true;
 }
@@ -537,9 +541,9 @@ bool S2Polyline::DecodeCompressed(Decoder* decoder) {
     return true;
   }
 
-  // TODO(b/209937354): Prevent large allocations like in DecodeUncompressed.
-  // This is more complicated due to the compressed encoding, but perhaps the
-  // minimum required size can be bounded.
+  // Each encoded vertex uses at least 1 byte, see `DecodePointCompressed()`,
+  // so we use remaining bytes as loose bound to avoid huge allocs.
+  if (num_vertices > decoder->avail()) return false;
   points.resize(num_vertices);
   if (!S2DecodePointsCompressed(decoder, snap_level, absl::MakeSpan(points))) {
     return false;
@@ -555,8 +559,8 @@ namespace {
 // vertices passes within "tolerance" of all interior vertices, in order.
 int FindEndVertex(const S2Polyline& polyline,
                   S1Angle tolerance, int index) {
-  S2_DCHECK_GE(tolerance.radians(), 0);
-  S2_DCHECK_LT((index + 1), polyline.num_vertices());
+  ABSL_DCHECK_GE(tolerance.radians(), 0);
+  ABSL_DCHECK_LT((index + 1), polyline.num_vertices());
 
   // The basic idea is to keep track of the "pie wedge" of angles from the
   // starting vertex such that a ray from the starting vertex at that angle
@@ -622,7 +626,7 @@ int FindEndVertex(const S2Polyline& polyline,
     double half_angle = asin(sin(tolerance.radians()) / sin(distance));
     S1Interval target = S1Interval::FromPoint(center).Expanded(half_angle);
     current_wedge = current_wedge.Intersection(target);
-    S2_DCHECK(!current_wedge.is_empty());
+    ABSL_DCHECK(!current_wedge.is_empty());
   }
   // We break out of the loop when we reach a vertex index that can't be
   // included in the line segment, so back up by one vertex.
@@ -808,7 +812,7 @@ bool S2Polyline::NearlyCovers(const S2Polyline& covered,
 }
 
 void S2Polyline::Shape::Init(const S2Polyline* polyline) {
-  S2_LOG_IF(WARNING, polyline->num_vertices() == 1)
+  ABSL_LOG_IF(WARNING, polyline->num_vertices() == 1)
       << "S2Polyline::Shape with one vertex has no edges";
   polyline_ = polyline;
 }
@@ -818,6 +822,6 @@ int S2Polyline::Shape::num_chains() const {
 }
 
 S2Shape::Chain S2Polyline::Shape::chain(int i) const {
-  S2_DCHECK_EQ(i, 0);
+  ABSL_DCHECK_EQ(i, 0);
   return Chain(0, Shape::num_edges());  // Avoid virtual call.
 }

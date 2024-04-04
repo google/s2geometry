@@ -30,6 +30,7 @@
 #include <ostream>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/s1angle.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2point.h"
@@ -307,8 +308,9 @@ void internal::GetSurfaceIntegral(S2PointLoopSpan loop,
     //  2. Either O == V_0, or O is approximately perpendicular to V_0.
     //  3. "sum" is the oriented integral of f over the area defined by
     //     (O, V_0, V_1, ..., V_i).
-    S2_DCHECK(i == 1 || origin.Angle(loop[i]) < kMaxLength);
-    S2_DCHECK(origin == loop[0] || std::fabs(origin.DotProd(loop[0])) < 1e-15);
+    ABSL_DCHECK(i == 1 || origin.Angle(loop[i]) < kMaxLength);
+    ABSL_DCHECK(origin == loop[0] ||
+                std::fabs(origin.DotProd(loop[0])) < 1e-15);
 
     if (loop[i + 1].Angle(origin) > kMaxLength) {
       // We are about to create an unstable edge, so choose a new origin O'

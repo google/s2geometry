@@ -30,18 +30,21 @@
 #include <cinttypes>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
-#include "s2/base/log_severity.h"
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+
+#include "s2/base/types.h"
+#include "s2/base/log_severity.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
@@ -160,8 +163,8 @@ static void UpdateS2CellIdMinVertexSeparation(
     S2Point site1 = id1.ToPoint();
     S1Angle vertex_sep(site0, site1);
     S1Angle max_snap_radius = GetMaxVertexDistance(site0, id1);
-    S2_DCHECK_GE(max_snap_radius,
-              S2CellIdSnapFunction::MinSnapRadiusForLevel(id0.level()));
+    ABSL_DCHECK_GE(max_snap_radius,
+                   S2CellIdSnapFunction::MinSnapRadiusForLevel(id0.level()));
     double r = vertex_sep / max_snap_radius;
     scores->push_back(make_pair(r, id0));
   }
@@ -199,8 +202,8 @@ static double GetS2CellIdMinVertexSeparation(
     S2CellId id = entry.second;
     if (--num_to_print >= 0) {
       R2Point uv = id.GetCenterUV();
-      printf("Level %2d: min_vertex_sep_ratio = %.15f u=%.6f v=%.6f %s\n",
-             level, entry.first, uv[0], uv[1], id.ToToken().c_str());
+      absl::PrintF("Level %2d: min_vertex_sep_ratio = %.15f u=%.6f v=%.6f %s\n",
+                   level, entry.first, uv[0], uv[1], id.ToToken());
     }
     if (kSearchFocusId.contains(id) || id.contains(kSearchFocusId)) {
       if (best_cells->insert(id).second && --num_to_keep <= 0) break;
@@ -235,8 +238,9 @@ TEST(S2CellIdSnapFunction, MinVertexSeparationSnapRadiusRatio) {
     double score = GetS2CellIdMinVertexSeparation(level, &best_cells);
     best_score = min(best_score, score);
   }
-  printf("S2CellIdSnapFunction min_vertex_sep / snap_radius ratio: %.15f\n",
-         best_score);
+  absl::PrintF(
+      "S2CellIdSnapFunction min_vertex_sep / snap_radius ratio: %.15f\n",
+      best_score);
   // Detect unexpected changes.
   EXPECT_NEAR(0.548490277027825, best_score, kRatioTolerance);
 }
@@ -346,8 +350,8 @@ static double GetS2CellIdMinEdgeSeparation(
           S1Angle max_v2 = GetMaxVertexDistance(site0, id2);
           S1Angle max_snap_radius = min(max_v1, max_v2);
           if (min_snap_radius > max_snap_radius) continue;
-          S2_DCHECK_GE(max_snap_radius,
-                    S2CellIdSnapFunction::MinSnapRadiusForLevel(level));
+          ABSL_DCHECK_GE(max_snap_radius,
+                         S2CellIdSnapFunction::MinSnapRadiusForLevel(level));
 
           // This is a valid configuration, so evaluate it.
           S1Angle edge_sep = S2::GetDistance(site0, site1, site2);
@@ -376,16 +380,15 @@ static double GetS2CellIdMinEdgeSeparation(
   }
   std::sort(sorted.begin(), sorted.end());
   best_cells->clear();
-  printf("Level %d:\n", level);
+  absl::PrintF("Level %d:\n", level);
   for (const auto& entry : sorted) {
     S2CellId id = entry.second;
     if (--num_to_print >= 0) {
       R2Point uv = id.GetCenterUV();
       const pair<S2CellId, S2CellId>& nbrs = best_configs.find(id)->second;
-      puts(absl::StrFormat("  %s = %.15f u=%7.4f v=%7.4f %s %s %s\n", label,
-                           entry.first, uv[0], uv[1], id.ToToken(),
-                           nbrs.first.ToToken().c_str(), nbrs.second.ToToken())
-               .c_str());
+      absl::PrintF("  %s = %.15f u=%7.4f v=%7.4f %s %s %s\n", label,
+                   entry.first, uv[0], uv[1], id.ToToken(),
+                   nbrs.first.ToToken(), nbrs.second.ToToken());
     }
     vector<S2CellId> nbrs(1, id);
     id.AppendAllNeighbors(id.level(), &nbrs);
@@ -425,8 +428,9 @@ TEST(S2CellIdSnapFunction, MinEdgeVertexSeparationForLevel) {
          S1Angle max_snap_radius) {
         return edge_sep.radians() / S2::kMinDiag.GetValue(level);
       });
-  printf("S2CellIdSnapFunction min_edge_vertex_sep / kMinDiag ratio: %.15f\n",
-         score);
+  absl::PrintF(
+      "S2CellIdSnapFunction min_edge_vertex_sep / kMinDiag ratio: %.15f\n",
+      score);
   // Detect unexpected changes.
   EXPECT_NEAR(0.397359568667803, score, kRatioTolerance);
 }
@@ -443,7 +447,7 @@ TEST(S2CellIdSnapFunction, MinEdgeVertexSeparationAtMinSnapRadius) {
                    ? (edge_sep.radians() / S2::kMinDiag.GetValue(level))
                    : 100.0;
       });
-  printf(
+  absl::PrintF(
       "S2CellIdSnapFunction "
       "min_edge_vertex_sep / kMinDiag at MinSnapRadiusForLevel: %.15f\n",
       score);
@@ -460,7 +464,7 @@ TEST(S2CellIdSnapFunction, MinEdgeVertexSeparationSnapRadiusRatio) {
          S1Angle max_snap_radius) {
         return edge_sep.radians() / max_snap_radius.radians();
       });
-  printf(
+  absl::PrintF(
       "S2CellIdSnapFunction "
       "min_edge_vertex_sep / snap_radius ratio: %.15f\n",
       score);
@@ -550,9 +554,9 @@ static double GetLatLngMinVertexSeparation(
   int num_to_print = 1;
   for (const auto& entry : scores) {
     if (--num_to_print >= 0) {
-      printf("Scale %14" PRId64 ": min_vertex_sep_ratio = %.15f, %s\n",
-             int64{scale}, entry.first,
-             s2textformat::ToString(ToPoint(entry.second, scale)).c_str());
+      absl::PrintF("Scale %14d: min_vertex_sep_ratio = %.15f, %s\n", scale,
+                   entry.first,
+                   s2textformat::ToString(ToPoint(entry.second, scale)));
     }
     if (best_configs->insert(entry.second).second && --num_to_keep <= 0) break;
   }
@@ -571,8 +575,9 @@ TEST(IntLatLngSnapFunction, MinVertexSeparationSnapRadiusRatio) {
                                                 &best_configs);
     best_score = min(best_score, score);
   }
-  printf("IntLatLngSnapFunction min_vertex_sep / snap_radius ratio: %.15f\n",
-         best_score);
+  absl::PrintF(
+      "IntLatLngSnapFunction min_vertex_sep / snap_radius ratio: %.15f\n",
+      best_score);
   // Detect unexpected changes.
   EXPECT_NEAR(0.471337477576603, best_score, kRatioTolerance);
 }
@@ -587,7 +592,7 @@ struct LatLngConfig {
                const IntLatLng& _ll2)
       : scale(_scale), ll0(_ll0), ll1(_ll1), ll2(_ll2) {}
   bool operator<(const LatLngConfig& other) const {
-    S2_DCHECK_EQ(scale, other.scale);
+    ABSL_DCHECK_EQ(scale, other.scale);
     return (make_pair(ll0, make_pair(ll1, ll2)) <
             make_pair(other.ll0, make_pair(other.ll1, other.ll2)));
   }
@@ -606,7 +611,7 @@ static double GetLatLngMinEdgeSeparation(
   vector<pair<double, LatLngConfig>> scores;
   for (LatLngConfig parent : *best_configs) {
     // To reduce duplicates, we require that site0 always has longitude 0.
-    S2_DCHECK_EQ(0, parent.ll0[1]);
+    ABSL_DCHECK_EQ(0, parent.ll0[1]);
     double scale_factor = static_cast<double>(scale) / parent.scale;
     parent.ll0 = Rescale(parent.ll0, scale_factor);
     parent.ll1 = Rescale(parent.ll1, scale_factor);
@@ -668,16 +673,15 @@ static double GetLatLngMinEdgeSeparation(
   best_configs->clear();
   int num_to_keep = google::DEBUG_MODE ? 50 : 200;
   int num_to_print = 3;
-  printf("Scale %" PRId64 ":\n", int64{scale});
+  absl::PrintF("Scale %d:\n", scale);
   for (const auto& entry : scores) {
     const LatLngConfig& config = entry.second;
     int64 scale = config.scale;
     if (--num_to_print >= 0) {
-      puts(absl::StrFormat("  %s = %.15f %s %s %s\n", label, entry.first,
-                           s2textformat::ToString(ToPoint(config.ll0, scale)),
-                           s2textformat::ToString(ToPoint(config.ll1, scale)),
-                           s2textformat::ToString(ToPoint(config.ll2, scale)))
-               .c_str());
+      absl::PrintF("  %s = %.15f %s %s %s\n", label, entry.first,
+                   s2textformat::ToString(ToPoint(config.ll0, scale)),
+                   s2textformat::ToString(ToPoint(config.ll1, scale)),
+                   s2textformat::ToString(ToPoint(config.ll2, scale)));
     }
     // Optional: filter the candidates to concentrate on a specific region
     // (e.g., the north pole).
@@ -709,7 +713,8 @@ static double GetLatLngMinEdgeSeparation(
       }
     }
   }
-  S2_LOG(INFO) << "Starting with " << best_configs.size() << " configurations";
+  ABSL_LOG(INFO) << "Starting with " << best_configs.size()
+                 << " configurations";
   int64 target_scale = 180;
   for (int exp = 0; exp <= 10; ++exp, target_scale *= 10) {
     while (scale < target_scale) {
@@ -733,8 +738,9 @@ TEST(IntLatLngSnapFunction, MinEdgeVertexSeparationForLevel) {
         double e_unit = M_PI / scale;
         return edge_sep.radians() / e_unit;
       });
-  printf("IntLatLngSnapFunction min_edge_vertex_sep / e_unit ratio: %.15f\n",
-         score);
+  absl::PrintF(
+      "IntLatLngSnapFunction min_edge_vertex_sep / e_unit ratio: %.15f\n",
+      score);
   // Detect unexpected changes.
   EXPECT_NEAR(0.277258917722462, score, kRatioTolerance);
 }
@@ -747,7 +753,7 @@ TEST(IntLatLngSnapFunction, MinEdgeVertexSeparationSnapRadiusRatio) {
       [](int64 scale, S1Angle edge_sep, S1Angle max_snap_radius) {
         return edge_sep.radians() / max_snap_radius.radians();
       });
-  printf(
+  absl::PrintF(
       "IntLatLngSnapFunction "
       "min_edge_vertex_sep / snap_radius ratio: %.15f\n",
       score);

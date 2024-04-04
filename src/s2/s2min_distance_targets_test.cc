@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/container/btree_set.h"
 #include "s2/mutable_s2shape_index.h"
@@ -39,6 +39,10 @@ using s2textformat::MakeIndexOrDie;
 using s2textformat::MakePointOrDie;
 using s2textformat::ParsePointsOrDie;
 using std::vector;
+
+TEST(S2MinDistance, NegativeIsNegative) {
+  EXPECT_TRUE(S2MinDistance::Negative().is_negative());
+}
 
 TEST(PointTarget, UpdateMinDistanceToEdgeWhenEqual) {
   // Verifies that UpdateMinDistance only returns true when the new distance
@@ -92,6 +96,14 @@ TEST(CellTarget, UpdateMinDistanceToCellWhenEqual) {
   EXPECT_FALSE(target.UpdateMinDistance(cell, &dist));
 }
 
+TEST(CellUnionTarget, MinDistanceUseBruteForce) {
+  // Provide some test coverage so this isn't marked as dead code.
+  S2MinDistanceCellUnionTarget target{(S2CellUnion())};
+  EXPECT_FALSE(target.use_brute_force());
+  target.set_use_brute_force(true);
+  EXPECT_TRUE(target.use_brute_force());
+}
+
 TEST(CellUnionTarget, UpdateMinDistanceToEdgeWhenEqual) {
   S2MinDistanceCellUnionTarget
       target{S2CellUnion({S2CellId{MakePointOrDie("0:1")}})};
@@ -108,6 +120,15 @@ TEST(CellUnionTarget, UpdateMinDistanceToCellWhenEqual) {
   S2Cell cell{S2CellId(MakePointOrDie("0:0"))};
   EXPECT_TRUE(target.UpdateMinDistance(cell, &dist));
   EXPECT_FALSE(target.UpdateMinDistance(cell, &dist));
+}
+
+TEST(ShapeIndexTarget, MinDistanceUseBruteForce) {
+  // Provide some test coverage so this isn't marked as dead code.
+  auto target_index = MakeIndexOrDie("# #");
+  S2MinDistanceShapeIndexTarget target(target_index.get());
+  EXPECT_FALSE(target.use_brute_force());
+  target.set_use_brute_force(true);
+  EXPECT_TRUE(target.use_brute_force());
 }
 
 TEST(ShapeIndexTarget, UpdateMinDistanceToEdgeWhenEqual) {
@@ -131,10 +152,10 @@ TEST(ShapeIndexTarget, UpdateMinDistanceToCellWhenEqual) {
 vector<int> GetContainingShapes(S2MinDistanceTarget* target,
                                 const S2ShapeIndex& index, int max_shapes) {
   absl::btree_set<int32> shape_ids;
-  (void) target->VisitContainingShapes(
-      index, [&shape_ids, max_shapes](S2Shape* containing_shape,
-                                      const S2Point& target_point) {
-        shape_ids.insert(containing_shape->id());
+  (void)target->VisitContainingShapeIds(
+      index,
+      [&shape_ids, max_shapes](int shape_id, const S2Point& target_point) {
+        shape_ids.insert(shape_id);
         return shape_ids.size() < max_shapes;
       });
   return vector<int>(shape_ids.begin(), shape_ids.end());

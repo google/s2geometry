@@ -32,11 +32,13 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/string_view.h"
 
+#include "s2/base/casts.h"
 #include "s2/base/commandlineflags.h"
 #include "s2/base/commandlineflags_declare.h"
-#include "s2/base/logging.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
@@ -248,7 +250,7 @@ class S2LoopTestBase : public testing::Test {
   }
 
   static const S2Loop* GetLoopIndexPtr(S2Loop& loop) {
-    return down_cast<S2Loop::Shape*>(loop.index_.shape(0))->loop_;
+    return down_cast<const S2Loop::Shape*>(loop.index_.shape(0))->loop_;
   }
 };
 
@@ -528,6 +530,11 @@ TEST_F(S2LoopTestBase, Contains) {
       EXPECT_EQ(count, 1);
     }
   }
+}
+
+TEST(S2Loop, DefaultLoopIsInvalid) {
+  S2Loop loop;
+  EXPECT_FALSE(loop.IsValid());
 }
 
 TEST(S2Loop, ContainsMatchesCrossingSign) {
@@ -872,7 +879,7 @@ static unique_ptr<S2Loop> MakeCellLoop(S2CellId begin, S2CellId end) {
   vector<S2Point> vertices;
   S2Point p = edges.begin()->first;
   while (!edges.empty()) {
-    S2_DCHECK_EQ(1, edges[p].size());
+    ABSL_DCHECK_EQ(1, edges[p].size());
     S2Point next = *edges[p].begin();
     vertices.push_back(p);
     edges.erase(p);
@@ -902,13 +909,13 @@ TEST(S2Loop, LoopRelations2) {
     if (a.get() && b.get()) {
       bool contained = (a_begin <= b_begin && b_end <= a_end);
       bool intersects = (a_begin < b_end && b_begin < a_end);
-      S2_VLOG(1) << "Checking " << a->num_vertices() << " vs. "
-              << b->num_vertices() << ", contained = " << contained
-              << ", intersects = " << intersects;
+      ABSL_VLOG(1) << "Checking " << a->num_vertices() << " vs. "
+                   << b->num_vertices() << ", contained = " << contained
+                   << ", intersects = " << intersects;
       EXPECT_EQ(a->Contains(*b.get()), contained);
       EXPECT_EQ(a->Intersects(*b.get()), intersects);
     } else {
-      S2_VLOG(1) << "MakeCellLoop failed to create a loop.";
+      ABSL_VLOG(1) << "MakeCellLoop failed to create a loop.";
     }
   }
 }
@@ -1045,7 +1052,7 @@ TEST(S2Loop, Moveable) {
 }
 
 static void TestEmptyFullSnapped(const S2Loop& loop, int level) {
-  S2_CHECK(loop.is_empty_or_full());
+  ABSL_CHECK(loop.is_empty_or_full());
   S2CellId cellid = S2CellId(loop.vertex(0)).parent(level);
   vector<S2Point> vertices = {cellid.ToPoint()};
   S2Loop loop2(vertices);
@@ -1057,7 +1064,7 @@ static void TestEmptyFullSnapped(const S2Loop& loop, int level) {
 // Test converting the empty/full loops to S2LatLng representations.  (We
 // don't bother testing E5/E6/E7 because that test is less demanding.)
 static void TestEmptyFullLatLng(const S2Loop& loop) {
-  S2_CHECK(loop.is_empty_or_full());
+  ABSL_CHECK(loop.is_empty_or_full());
   vector<S2Point> vertices = {S2LatLng(loop.vertex(0)).ToPoint()};
   S2Loop loop2(vertices);
   EXPECT_TRUE(loop.BoundaryEquals(loop2));
@@ -1179,7 +1186,7 @@ TEST_F(S2LoopTestBase, PointersCorrectAfterMove) {
 
 #if GTEST_HAS_DEATH_TEST
 TEST(S2LoopDeathTest, IsValidDetectsInvalidLoops) {
-  // Points with length > sqrt(2) (triggers S2_DCHECK failure in debug)
+  // Points with length > sqrt(2) (triggers ABSL_DCHECK failure in debug)
   EXPECT_DEBUG_DEATH(
       CheckLoopIsInvalid({S2Point(2, 0, 0), S2Point(0, 1, 0), S2Point(0, 0, 1)},
                          "unit length"),

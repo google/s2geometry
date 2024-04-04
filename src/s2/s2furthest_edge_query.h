@@ -21,8 +21,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
 #include "absl/base/macros.h"
 #include "absl/container/inlined_vector.h"
 #include "s2/_fp_contract_off.h"

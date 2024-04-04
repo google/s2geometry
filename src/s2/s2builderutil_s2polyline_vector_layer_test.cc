@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"

@@ -22,6 +22,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/types/span.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
 #include "s2/s2loop.h"
@@ -129,7 +130,8 @@ TEST(S2ShapeConversionUtilTest, TwoHolesToS2Polygon) {
 
 TEST(S2ShapeConversionUtilTest, FullPolygonToS2Polygon) {
   // verify that a full polygon is converted correctly
-  S2LaxPolygonShape::Loop loop1(S2Loop::kFull());
+  const absl::Span<const S2Point> full_loop = S2Loop::kFull();
+  S2LaxPolygonShape::Loop loop1(full_loop.begin(), full_loop.end());
   vector<S2LaxPolygonShape::Loop> loops{loop1};
 
   auto lax_polygon = s2textformat::MakeLaxPolygonOrDie("full");

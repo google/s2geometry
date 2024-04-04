@@ -21,6 +21,11 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "s2/s1angle.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s2latlng.h"
+#include "s2/s2point.h"
+#include "s2/util/units/length-units.h"
 #include "s2/util/units/physical-units.h"
 
 TEST(S2EarthTest, TestAngleConversion) {

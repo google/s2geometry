@@ -16,22 +16,19 @@
 #ifndef S2_S2CELL_ITERATOR_JOIN_H_
 #define S2_S2CELL_ITERATOR_JOIN_H_
 
-#include <algorithm>
-#include <array>
-#include <bitset>
 #include <functional>
-#include <memory>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
-#include "s2/base/logging.h"
 #include "absl/base/optimization.h"
+#include "absl/container/inlined_vector.h"
+#include "absl/types/span.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_iterator.h"
 #include "s2/s2cell_range_iterator.h"
+#include "s2/s2cell_union.h"
 
 // Defines a class which can be used to perform an inner join operation on any
 // two S2CellIterator iterators.  S2CellIteratorJoin takes an optional distance
@@ -148,38 +145,38 @@ class S2CellIteratorJoin {
 
   // Maximum number of cross-terms before we recurse.
   static constexpr int kMaxCrossProduct = 25;
+  static constexpr int kCoverLimit = kMaxCrossProduct / 2;
 
   // Does a tolerant join (when the tolerance is non-zero).
   template <typename Visitor>
   bool TolerantJoin(Visitor& visitor);
 
-  // Returns a minimal set of cells that cover the range of the iterator to seed
-  // the tolerant join set.  Returns empty list if the iterator has no cells.
-  template <typename Iterator>
-  static absl::InlinedVector<S2CellId, 4> GetIteratorCovering(Iterator& iter);
+  // Positions an iterator and visits every position that intersects a given
+  // S2CellId.  The iterator is passed to the visitor at each position.  Returns
+  // false if the visitor ever does, otherwise true.
+  template <typename Iterator, typename Visitor>
+  static bool ScanCellRange(Iterator& iter, S2CellId id, Visitor&& visitor);
 
-  // Forms all possible pairs of cells from two lists.  Visits any pairs that
-  // are closer to each other than the tolerance.
+  // Given two lists of cells, filters the cells from B that are within distance
+  // of each cell of A and passes them to ProcessCellPairs().  Returns false if
+  // the visitor ever does, true otherwise.
   template <typename Visitor>
-  bool ProcessNearbyCellPairs(absl::InlinedVector<S2CellId, 4> cells_a,
-                              absl::InlinedVector<S2CellId, 4> cells_b,
-                              Visitor& visitor);
+  bool ProcessNearby(absl::Span<const S2Cell> cells_a,
+                     absl::Span<const S2Cell> cells_b, Visitor& visitor);
 
   // Processes a pair of cells known to be within tolerance of each other.
   //
-  // We find the cells in the indexes that are covered by cell_a and cell_b.  If
-  // the number of resulting (a,b) cells isn't too large, then we report them to
-  // the visitor for processing. Otherwise, we push whichever cell has _fewer_
-  // matches onto the cell stack along with the children of the other cell, and
-  // process them recursively.
+  // If the portion of each index that's covered by the cells is small enough,
+  // then we report pairs to the visitor, otherwise the cells are subdivided and
+  // we recurse.
   //
   // Since there are only thirty levels to the cell hierarchy, this recursion is
   // safe as we'll never go more than 30 stack frames deep.
   template <typename Visitor>
-  bool ProcessCellPair(const S2Cell& cell_a, const S2Cell& cell_b,
-                       Visitor& visitor);
+  bool ProcessCellPairs(  //
+      const S2Cell& cell_a, absl::Span<const S2Cell> cells_b, Visitor& visitor);
 
-  // Find cells from a given iterator that are covered by a given cell.
+  // Estimates how many values are covered by a given S2CellId.
   template <typename Iterator>
   int EstimateCoveredCells(Iterator& iter, S2CellId cell);
 };
@@ -268,79 +265,62 @@ bool S2CellIteratorJoin<A, B>::ExactJoin(Visitor& visitor) {
 }
 
 template <typename A, typename B>
-template <typename Iterator>
-absl::InlinedVector<S2CellId, 4> S2CellIteratorJoin<A, B>::GetIteratorCovering(
-    Iterator& iter) {
-  absl::InlinedVector<S2CellId, 4> cells;
-
-  // Position at the front, if the iterator's empty, we're done.
-  iter.Begin();
-  if (iter.done()) {
-    return cells;
-  }
-
-  // Find the range spanned by the iterator.
-  // TODO(b/248535702): Once GetCellUnionBound is migrated we can replace this.
-  S2CellId min_cell = iter.range_min();
-  iter.Finish();
-  if (!iter.Prev()) {
-    return cells;  // Empty index, we're done.
-  }
-  S2CellId max_cell = iter.range_max();
-
-  // Find cell level that encompasses all of the iterator range.
-  int level = min_cell.GetCommonAncestorLevel(max_cell);
-
-  if (level < 0) {
-    // The ends of the cell range don't have a common ancestor, meaning
-    // they're on different faces, so iterate the faces and add the ones that
-    // overlap.
-    const S2CellId end_id = max_cell.parent(0);
-    for (S2CellId id = min_cell.parent(0); id <= end_id; id = id.next()) {
-      cells.emplace_back(id);
+template <typename Iterator, typename Visitor>
+inline bool S2CellIteratorJoin<A, B>::ScanCellRange(Iterator& iter, S2CellId id,
+                                                    Visitor&& visitor) {
+  iter.Locate(id);
+  for (; !iter.done() && iter.id().intersects(id); iter.Next()) {
+    if (!visitor(iter)) {
+      return false;
     }
-  } else {
-    cells.emplace_back(min_cell.parent(level));
   }
-
-  return cells;
+  return true;
 }
 
 template <typename A, typename B>
 template <typename Visitor>
 bool S2CellIteratorJoin<A, B>::TolerantJoin(Visitor& visitor) {
-  absl::InlinedVector<S2CellId, 4> cells_a, cells_b;
+  const auto Covering = [&](auto& iter) -> std::vector<S2Cell> {
+    iter.Begin();
+    if (iter.done()) {
+      return {};
+    }
 
-  // Seed cells with a covering for iterator A, quit if empty.
-  cells_a = GetIteratorCovering(iter_a_);
-  if (cells_a.empty()) {
-    return true;
-  }
+    S2CellId min = iter.range_min();
+    iter.Finish();
+    if (!iter.Prev()) {
+      return {};  // Empty iterator.
+    }
+    S2CellId max = iter.range_max();
 
-  // Seed cells with a covering for iterator B, quit if empty.
-  cells_b = GetIteratorCovering(iter_b_);
-  if (cells_b.empty()) {
-    return true;
-  }
+    std::vector<S2Cell> cells;
+    for (S2CellId id : S2CellUnion::FromMinMax(min, max)) {
+      cells.emplace_back(id);
+    }
+    return cells;
+  };
 
-  return ProcessNearbyCellPairs(cells_a, cells_b, visitor);
+  // Seed the recursion with a coarse covering of each input iterator.
+  return ProcessNearby(Covering(iter_a_), Covering(iter_b_), visitor);
 }
 
 template <typename A, typename B>
 template <typename Visitor>
-bool S2CellIteratorJoin<A, B>::ProcessNearbyCellPairs(
-    absl::InlinedVector<S2CellId, 4> cells_a,
-    absl::InlinedVector<S2CellId, 4> cells_b, Visitor& visitor) {
-  for (const auto& id_a : cells_a) {
-    const S2Cell cell_a(id_a);
-
-    for (const auto& id_b : cells_b) {
-      const S2Cell cell_b(id_b);
-
+bool S2CellIteratorJoin<A, B>::ProcessNearby(absl::Span<const S2Cell> cells_a,
+                                             absl::Span<const S2Cell> cells_b,
+                                             Visitor& visitor) {
+  std::vector<S2Cell> nearby_cells;
+  for (const S2Cell& cell_a : cells_a) {
+    nearby_cells.clear();
+    for (const S2Cell& cell_b : cells_b) {
       if (cell_a.GetDistance(cell_b) <= tolerance_) {
-        if (!ProcessCellPair(cell_a, cell_b, visitor)) {
-          return false;
-        }
+        nearby_cells.emplace_back(cell_b);
+      }
+    }
+
+    if (!nearby_cells.empty()) {
+      if (!ProcessCellPairs(cell_a, nearby_cells, visitor)) {
+        return false;
       }
     }
   }
@@ -349,60 +329,84 @@ bool S2CellIteratorJoin<A, B>::ProcessNearbyCellPairs(
 
 template <typename A, typename B>
 template <typename Visitor>
-bool S2CellIteratorJoin<A, B>::ProcessCellPair(const S2Cell& cell_a,
-                                               const S2Cell& cell_b,
-                                               Visitor& visitor) {
-  // Find matches for the A cell.
+bool S2CellIteratorJoin<A, B>::ProcessCellPairs(
+    const S2Cell& cell_a, absl::Span<const S2Cell> cells_b, Visitor& visitor) {
+  // Estimate how many index cells the A cell covers.
   int num_covered_a = EstimateCoveredCells(iter_a_, cell_a.id());
   if (num_covered_a == 0) {
     return true;
   }
 
-  // Find matches for the B cell.
-  int num_covered_b = EstimateCoveredCells(iter_b_, cell_b.id());
-  if (num_covered_b == 0) {
-    return true;
+  // If the A cell covers too many index cells, then subdivide it.
+  absl::InlinedVector<S2Cell, 1> cells_a = {cell_a};
+  if (num_covered_a >= kCoverLimit) {
+    cells_a.resize(4);
+    cell_a.Subdivide(&cells_a[0]);
   }
 
-  // If there's not too many matches, we can just process them directly
-  if (num_covered_a * num_covered_b < kMaxCrossProduct) {
-    // Pre-compute the S2Cells for the B side to avoid having to do it on every
-    // iteration of the outer loop.
-    matched_cells_.clear();
-    iter_b_.Locate(cell_b.id());
-    for (int i = 0; i < num_covered_b; ++i, iter_b_.Next()) {
-      matched_cells_.emplace_back(iter_b_.id());
+  // Scan the cells of the B union.  Prune any cells that don't cover any of the
+  // index, and subdivide any that cover too much.
+  bool subdivided = false;
+  absl::InlinedVector<S2Cell, 1> subdivided_b;
+  for (const S2Cell& cell_b : cells_b) {
+    int num_covered_b = EstimateCoveredCells(iter_b_, cell_b.id());
+    if (num_covered_b == 0) {
+      continue;
+    } else if (num_covered_b < kCoverLimit) {
+      subdivided_b.emplace_back(cell_b);
+    } else {
+      S2Cell children[4];
+      cell_b.Subdivide(children);
+      subdivided_b.insert(subdivided_b.end(), children, children + 4);
+      subdivided = true;
+    }
+  }
+
+  // If A covers too many index cells or we had to subdivide B, then continue
+  // the recursion by pairing the A cells B cells that are within the tolerance.
+  if (num_covered_a >= kCoverLimit || subdivided) {
+    return ProcessNearby(cells_a, subdivided_b, visitor);
+  }
+
+  // Otherwise A and the B union are small enough we can pair them up and report
+  // nearby pairs to the visitor now.
+
+  // Pre-compute the B S2Cells to avoid replicating work in the inner loop.
+  matched_cells_.clear();
+  for (const S2Cell& cell_b : cells_b) {
+    ScanCellRange(iter_b_, cell_b.id(), [&](const auto& iter) {
+      matched_cells_.emplace_back(iter.id());
+      return true;
+    });
+  }
+
+  return ScanCellRange(iter_a_, cell_a.id(), [&](const auto& iter_a) {
+    // If the index cell doesn't have it's endpoint in this cell then ignore it.
+    // This makes it so that we only see each index cell in a single A cell.
+    if (!cell_a.id().intersects(iter_a.id().range_min())) {
+      return true;
     }
 
-    iter_a_.Locate(cell_a.id());
-    for (int i = 0; i < num_covered_a; ++i, iter_a_.Next()) {
-      iter_b_.Locate(cell_b.id());
-      for (int j = 0; j < num_covered_b; ++j, iter_b_.Next()) {
-        if (S2Cell(iter_a_.id()).GetDistance(matched_cells_[j]) <= tolerance_) {
-          if (!visitor(iter_a_.iterator(), iter_b_.iterator())) {
+    const S2Cell cell_a(iter_a_.id());
+
+    // For each A cell, scan each B cell in the cell union and send the
+    // resulting (A,B) pairs to the visitor.  If it returns false at any point
+    // then stop the join and return false.
+    int idx = 0;
+    bool success = true;
+    for (int i = 0; i < cells_b.size() && success; ++i) {
+      S2CellId id = cells_b[i].id();
+      success &= ScanCellRange(iter_b_, id, [&](const auto& iter_b) {
+        if (cell_a.GetDistance(matched_cells_[idx++]) <= tolerance_) {
+          if (!visitor(iter_a.iterator(), iter_b.iterator())) {
             return false;
           }
         }
-      }
+        return true;
+      });
     }
-    return true;
-  }
-
-  // Too many matches, recurse on A or B, whichever's larger.
-  absl::InlinedVector<S2CellId, 4> cells_a, cells_b;
-
-  if (num_covered_a > num_covered_b) {
-    cells_b.push_back(cell_b.id());
-    for (int i = 0; i < 4; ++i) {
-      cells_a.push_back(cell_a.id().child(i));
-    }
-  } else {
-    cells_a.push_back(cell_a.id());
-    for (int i = 0; i < 4; ++i) {
-      cells_b.push_back(cell_b.id().child(i));
-    }
-  }
-  return ProcessNearbyCellPairs(cells_a, cells_b, visitor);
+    return success;
+  });
 }
 
 template <typename A, typename B>
@@ -422,14 +426,13 @@ int S2CellIteratorJoin<A, B>::EstimateCoveredCells(Iterator& iter,
       // scan here that just has us repeatedly aborting.
       const S2CellId end = cell.range_max();
       int matches = 0;
-      for (; iter.id() <= end; iter.Next()) {
+      for (; !iter.done() && iter.id() <= end; iter.Next()) {
         ++matches;
 
-        // Give up after max/2 matches.  There's too many matches anyways, so
-        // this is a heuristic that will help us decide whether to recurse on
-        // the left or right.
-        if (matches >= kMaxCrossProduct / 2) {
-          return matches;
+        // There's too many matches, so give up. This is a heuristic that will
+        // help us decide whether to recurse on the left or right.
+        if (matches > kCoverLimit) {
+          return kCoverLimit;
         }
       }
       return matches;

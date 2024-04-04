@@ -27,7 +27,7 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/util/gtl/dense_hash_set.h"
 #include "s2/util/hash/mix.h"
 
@@ -50,12 +50,12 @@
 //   SequenceLexicon<string> lexicon;
 //   vector<string> pets {"cat", "dog", "parrot"};
 //   uint32 pets_id = lexicon.Add(pets);
-//   S2_CHECK_EQ(pets_id, lexicon.Add(pets));
+//   ABSL_CHECK_EQ(pets_id, lexicon.Add(pets));
 //   string values;
 //   for (const auto& pet : lexicon.sequence(pets_id)) {
 //     values += pet;
 //   }
-//   S2_CHECK_EQ("catdogparrot", values);
+//   ABSL_CHECK_EQ("catdogparrot", values);
 //
 template <class T,
           class Hasher = std::hash<T>,
@@ -121,6 +121,7 @@ class SequenceLexicon {
     IdHasher(const Hasher& hasher, const SequenceLexicon* lexicon);
     const Hasher& hasher() const;
     size_t operator()(uint32 id) const;
+
    private:
     Hasher hasher_;
     const SequenceLexicon* lexicon_;
@@ -131,6 +132,7 @@ class SequenceLexicon {
     IdKeyEqual(const KeyEqual& key_equal, const SequenceLexicon* lexicon);
     const KeyEqual& key_equal() const;
     bool operator()(uint32 id1, uint32 id2) const;
+
    private:
     KeyEqual key_equal_;
     const SequenceLexicon* lexicon_;
@@ -145,7 +147,6 @@ class SequenceLexicon {
 
 
 //////////////////   Implementation details follow   ////////////////////
-
 
 template <class T, class Hasher, class KeyEqual>
 const uint32 SequenceLexicon<T, Hasher, KeyEqual>::kEmptyKey;
@@ -265,7 +266,7 @@ void SequenceLexicon<T, Hasher, KeyEqual>::Clear() {
 template <class T, class Hasher, class KeyEqual>
 template <class FwdIterator>
 uint32 SequenceLexicon<T, Hasher, KeyEqual>::Add(FwdIterator begin,
-                                                 FwdIterator end) {
+                                                   FwdIterator end) {
   for (; begin != end; ++begin) {
     values_.push_back(*begin);
   }

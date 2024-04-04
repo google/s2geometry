@@ -19,7 +19,7 @@
 
 #include <utility>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/s2error.h"
 
 void S2MemoryTracker::SetError(S2Error error) {

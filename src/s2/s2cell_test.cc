@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
-#include <cstdio>
 #include <string>
 #include <utility>
 #include <vector>
@@ -30,12 +29,12 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 
 #include "s2/base/log_severity.h"
-#include "s2/util/coding/coder.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -178,7 +177,7 @@ static void TestSubdivide(const S2Cell& cell) {
   if (cell.is_leaf()) return;
 
   S2Cell children[4];
-  S2_CHECK(cell.Subdivide(children));
+  ABSL_CHECK(cell.Subdivide(children));
   S2CellId child_id = cell.id().child_begin();
   double exact_area = 0;
   double approx_area = 0;
@@ -322,14 +321,13 @@ static void CheckMinMaxAvg(string_view label, int level, double count,
   double min_error = min_value - min_metric.GetValue(level);
   double max_error = max_metric.GetValue(level) - max_value;
   double avg_error = fabs(avg_metric.GetValue(level) - avg_value);
-  puts(absl::StrFormat(
-           "%-10s (%6.0f samples, tolerance %8.3g) - min %9.4g (%9.3g : %9.3g) "
-           "max %9.4g (%9.3g : %9.3g), avg %9.4g (%9.3g : %9.3g)\n",
-           label, count, tolerance, min_value, min_error / min_value,
-           min_error / tolerance, max_value, max_error / max_value,
-           max_error / tolerance, avg_value, avg_error / avg_value,
-           avg_error / tolerance)
-           .c_str());
+  absl::PrintF(
+      "%-10s (%6.0f samples, tolerance %8.3g) - min %9.4g (%9.3g : %9.3g) "
+      "max %9.4g (%9.3g : %9.3g), avg %9.4g (%9.3g : %9.3g)\n",
+      label, count, tolerance, min_value, min_error / min_value,
+      min_error / tolerance, max_value, max_error / max_value,
+      max_error / tolerance, avg_value, avg_error / avg_value,
+      avg_error / tolerance);
 
   EXPECT_LE(min_metric.GetValue(level), min_value + abs_error);
   EXPECT_GE(min_metric.GetValue(level), min_value - tolerance);
@@ -354,7 +352,7 @@ TEST(S2Cell, TestSubdivide) {
   // The maximum edge *aspect* is the maximum ratio of the longest edge of a
   // cell to the shortest edge of that same cell (and similarly for the
   // maximum diagonal aspect).
-  printf(
+  absl::PrintF(
       "Ratio:  (Max value for any cell) / (Min value for any cell)\n"
       "Aspect: (Max value / min value) for any cell\n"
       "                   Edge          Diag       Approx Area/    Avg Area/\n"
@@ -370,13 +368,12 @@ TEST(S2Cell, TestSubdivide) {
       s->avg_diag /= s->count;
       s->avg_angle_span /= s->count;
     }
-    printf("%5d  %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f\n",
-           i, s->max_area / s->min_area,
-           s->max_edge / s->min_edge, s->max_edge_aspect,
-           s->max_diag / s->min_diag, s->max_diag_aspect,
-           s->min_approx_ratio, s->max_approx_ratio,
-           S2Cell::AverageArea(i) / s->max_area,
-           S2Cell::AverageArea(i) / s->min_area);
+    absl::PrintF("%5d  %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f\n",
+                 i, s->max_area / s->min_area, s->max_edge / s->min_edge,
+                 s->max_edge_aspect, s->max_diag / s->min_diag,
+                 s->max_diag_aspect, s->min_approx_ratio, s->max_approx_ratio,
+                 S2Cell::AverageArea(i) / s->max_area,
+                 S2Cell::AverageArea(i) / s->min_area);
   }
 
   // Now check the validity of the S2 length and area metrics.
@@ -384,7 +381,8 @@ TEST(S2Cell, TestSubdivide) {
     const LevelStats* s = &level_stats[i];
     if (s->count == 0) continue;
 
-    printf("Level %2d - metric value (error/actual : error/tolerance)\n", i);
+    absl::PrintF("Level %2d - metric value (error/actual : error/tolerance)\n",
+                 i);
 
     // The various length calculations are only accurate to 1e-15 or so,
     // so we need to allow for this amount of discrepancy with the theoretical

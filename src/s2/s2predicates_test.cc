@@ -31,6 +31,8 @@
 
 #include "absl/base/casts.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 
@@ -389,7 +391,7 @@ class StableSignTest : public testing::Test {
       }
     }
     double rate = static_cast<double>(failure_count) / kIters;
-    S2_LOG(INFO) << "StableSign failure rate for " << km << " km = " << rate;
+    ABSL_LOG(INFO) << "StableSign failure rate for " << km << " km = " << rate;
     return rate;
   }
 };
@@ -416,9 +418,9 @@ TEST_F(StableSignTest, FailureRate) {
 // symbolic perturbations are needed to break ties.
 static void CheckSymbolicSign(int expected, const S2Point& a,
                               const S2Point& b, const S2Point& c) {
-  S2_CHECK_LT(a, b);
-  S2_CHECK_LT(b, c);
-  S2_CHECK_EQ(0, a.DotProd(b.CrossProd(c)));
+  ABSL_CHECK_LT(a, b);
+  ABSL_CHECK_LT(b, c);
+  ABSL_CHECK_EQ(0, a.DotProd(b.CrossProd(c)));
 
   // Use ASSERT rather than EXPECT to suppress spurious error messages.
   ASSERT_EQ(expected, ExpensiveSign(a, b, c));
@@ -740,9 +742,9 @@ TEST(CompareDistances, Consistency) {
       if (r.degrees() > 135) minus_sin2_stats.Tally(prec);
     }
   }
-  S2_LOG(ERROR) << "\nsin2:  " << sin2_stats.ToString()
-             << "\ncos:   " << cos_stats.ToString()
-             << "\n-sin2: " << minus_sin2_stats.ToString();
+  ABSL_LOG(ERROR) << "\nsin2:  " << sin2_stats.ToString()
+                  << "\ncos:   " << cos_stats.ToString()
+                  << "\n-sin2: " << minus_sin2_stats.ToString();
 }
 
 // Helper classes for testing the various distance calculation methods.
@@ -878,8 +880,8 @@ TEST(CompareDistance, Consistency) {
       if (r.degrees() < 45) sin2_stats.Tally(prec);
     }
   }
-  S2_LOG(ERROR) << "\nsin2:  " << sin2_stats.ToString()
-             << "\ncos:   " << cos_stats.ToString();
+  ABSL_LOG(ERROR) << "\nsin2:  " << sin2_stats.ToString()
+                  << "\ncos:   " << cos_stats.ToString();
 }
 
 // Verifies that CompareEdgeDistance(x, a0, a1, r) == expected_sign, and
@@ -1021,7 +1023,7 @@ TEST(CompareEdgeDistance, Consistency) {
                                                         S1ChordAngle(r));
     stats.Tally(prec);
   }
-  S2_LOG(ERROR) << stats.ToString();
+  ABSL_LOG(ERROR) << stats.ToString();
 }
 
 TEST(CompareEdgePairDistance, Coverage) {
@@ -1354,7 +1356,7 @@ TEST(CompareEdgeDirections, Consistency) {
       stats.Tally(prec);
     }
   }
-  S2_LOG(ERROR) << stats.ToString();
+  ABSL_LOG(ERROR) << stats.ToString();
 }
 
 // Verifies that EdgeCircumcenterSign(x0, x1, a, b, c) == expected_sign, and
@@ -1505,7 +1507,7 @@ TEST(EdgeCircumcenterSign, Consistency) {
       stats.Tally(prec);
     }
   }
-  S2_LOG(ERROR) << stats.ToString();
+  ABSL_LOG(ERROR) << stats.ToString();
 }
 
 // Verifies that VoronoiSiteExclusion(a, b, x0, x1, r) == expected_result, and
@@ -1756,7 +1758,7 @@ TEST(VoronoiSiteExclusion, Consistency) {
       stats.Tally(prec);
     }
   }
-  S2_LOG(ERROR) << stats.ToString();
+  ABSL_LOG(ERROR) << stats.ToString();
 }
 
 }  // namespace s2pred

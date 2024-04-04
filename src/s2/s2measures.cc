@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
@@ -78,15 +79,15 @@ double TurnAngle(const S2Point& a, const S2Point& b, const S2Point& c) {
 //   Roundoff in Floating-Point Computation?"
 // (p. 47). https://people.eecs.berkeley.edu/~wkahan/Mindless.pdf
 double StableAngle(S2Point a, S2Point b) {
-  S2_DCHECK(IsUnitLength(a));
-  S2_DCHECK(IsUnitLength(b));
+  ABSL_DCHECK(IsUnitLength(a));
+  ABSL_DCHECK(IsUnitLength(b));
   return 2 * atan2((a - b).Norm(), (a + b).Norm());
 }
 
 double Area(const S2Point& a, const S2Point& b, const S2Point& c) {
-  S2_DCHECK(IsUnitLength(a));
-  S2_DCHECK(IsUnitLength(b));
-  S2_DCHECK(IsUnitLength(c));
+  ABSL_DCHECK(IsUnitLength(a));
+  ABSL_DCHECK(IsUnitLength(b));
+  ABSL_DCHECK(IsUnitLength(c));
   // This method is based on l'Huilier's theorem,
   //
   //   tan(E/4) = sqrt(tan(s/2) tan((s-a)/2) tan((s-b)/2) tan((s-c)/2))

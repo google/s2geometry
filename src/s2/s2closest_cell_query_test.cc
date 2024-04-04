@@ -25,10 +25,11 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_format.h"
 
 #include "s2/mutable_s2shape_index.h"
@@ -394,7 +395,7 @@ static void TestWithIndexFactory(const CellIndexFactory& factory,
       S2ClosestCellQuery::CellUnionTarget target(coverer.GetCovering(cap));
       TestFindClosestCells(&target, &query);
     } else {
-      S2_DCHECK_EQ(4, target_type);
+      ABSL_DCHECK_EQ(4, target_type);
       MutableS2ShapeIndex target_index;
       s2testing::FractalLoopShapeIndexFactory().AddEdges(index_cap, 100,
                                                          &target_index);

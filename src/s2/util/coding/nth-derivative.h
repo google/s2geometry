@@ -57,8 +57,11 @@
 #ifndef S2_UTIL_CODING_NTH_DERIVATIVE_H_
 #define S2_UTIL_CODING_NTH_DERIVATIVE_H_
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include <cstdint>
+
+#include "absl/log/absl_log.h"
+
+#include "s2/base/types.h"
 
 class NthDerivativeCoder {
  public:
@@ -100,7 +103,7 @@ class NthDerivativeCoder {
 
 inline NthDerivativeCoder::NthDerivativeCoder(int n) : n_(n) {
   if (n < N_MIN || n > N_MAX) {
-    S2_LOG(ERROR) << "Unsupported N: " << n << ".  Using 0 instead.";
+    ABSL_LOG(ERROR) << "Unsupported N: " << n << ".  Using 0 instead.";
     n_ = 0;
   }
   Reset();

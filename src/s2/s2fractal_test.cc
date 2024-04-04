@@ -1,4 +1,4 @@
-// Copyright 2012 Google Inc. All Rights Reserved.
+// Copyright Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,30 +13,29 @@
 // limitations under the License.
 //
 
-// Author: ericv@google.com (Eric Veach)
-
-#include "s2/s2testing.h"
+#include "s2/s2fractal.h"
 
 #include <algorithm>
 #include <cmath>
 #include <memory>
-#include <string>
 
 #include <gtest/gtest.h>
+#include "absl/log/absl_check.h"
 
 #include "s2/s1angle.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
+#include "s2/s2testing.h"
 #include "s2/util/math/matrix3x3.h"
+
+namespace {
 
 using std::max;
 using std::min;
 using std::unique_ptr;
 
-namespace {
-
 int NumVerticesAtLevel(int level) {
-  S2_DCHECK(level >= 0 && level <= 14);  // Sanity / overflow check
+  ABSL_DCHECK(level >= 0 && level <= 14);  // Sanity / overflow check
   return 3 * (1 << (2 * level));      // 3*(4**level)
 }
 
@@ -52,7 +51,7 @@ void TestFractal(int min_level, int max_level, double dimension) {
   const double nominal_radius = 0.001;  // radians, or about 6km
   const double kDistortionError = 1e-5;
 
-  S2Testing::Fractal fractal;
+  S2Fractal fractal;
   fractal.set_min_level(min_level);
   fractal.set_max_level(max_level);
   fractal.set_fractal_dimension(dimension);
@@ -77,11 +76,11 @@ void TestFractal(int min_level, int max_level, double dimension) {
   // can be simplified to sqrt((k-1)/n).
   int num_levels = max_level - min_level + 1;
   int min_vertices = NumVerticesAtLevel(min_level);
-  double relative_error = 2*sqrt((num_levels - 1.0) / min_vertices);
+  double relative_error = 2 * sqrt((num_levels - 1.0) / min_vertices);
 
   // "expansion_factor" is the total fractal length at level "n+1" divided by
   // the total fractal length at level "n".
-  double expansion_factor = pow(4, 1 - 1/dimension);
+  double expansion_factor = pow(4, 1 - 1 / dimension);
   double expected_num_vertices = 0;
   double expected_length_sum = 0;
 
@@ -110,7 +109,7 @@ void TestFractal(int min_level, int max_level, double dimension) {
     double r = tan(center.Angle(loop->vertex(i)));
     min_radius = min(min_radius, r);
     max_radius = max(max_radius, r);
-    length_sum += loop->vertex(i).Angle(loop->vertex(i+1));
+    length_sum += loop->vertex(i).Angle(loop->vertex(i + 1));
   }
   // kVertexError is an approximate bound on the error when computing vertex
   // positions of the fractal (due to S2::FromFrame, trig calculations, etc).
@@ -134,35 +133,21 @@ void TestFractal(int min_level, int max_level, double dimension) {
 
   EXPECT_NEAR(expected_length_sum, length_sum,
               relative_error * (expected_length_sum - min_length_sum) +
-              kDistortionError * length_sum);
+                  kDistortionError * length_sum);
 }
 
-TEST(S2Testing, TriangleFractal) {
-  TestFractal(7, 7, 1.0);
-}
+TEST(S2Fractal, TriangleFractal) { TestFractal(7, 7, 1.0); }
 
-TEST(S2Testing, TriangleMultiFractal) {
-  TestFractal(2, 6, 1.0);
-}
+TEST(S2Fractal, TriangleMultiFractal) { TestFractal(2, 6, 1.0); }
 
-TEST(S2Testing, SpaceFillingFractal) {
-  TestFractal(4, 4, 1.999);
-}
+TEST(S2Fractal, SpaceFillingFractal) { TestFractal(4, 4, 1.999); }
 
-TEST(S2Testing, KochCurveFractal) {
-  TestFractal(7, 7, log(4)/log(3));
-}
+TEST(S2Fractal, KochCurveFractal) { TestFractal(7, 7, log(4) / log(3)); }
 
-TEST(S2Testing, KochCurveMultiFractal) {
-  TestFractal(4, 8, log(4)/log(3));
-}
+TEST(S2Fractal, KochCurveMultiFractal) { TestFractal(4, 8, log(4) / log(3)); }
 
-TEST(S2Testing, CesaroFractal) {
-  TestFractal(7, 7, 1.8);
-}
+TEST(S2Fractal, CesaroFractal) { TestFractal(7, 7, 1.8); }
 
-TEST(S2Testing, CesaroMultiFractal) {
-  TestFractal(3, 6, 1.8);
-}
+TEST(S2Fractal, CesaroMultiFractal) { TestFractal(3, 6, 1.8); }
 
 }  // namespace

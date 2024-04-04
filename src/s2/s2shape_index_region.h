@@ -17,12 +17,13 @@
 #ifndef S2_S2SHAPE_INDEX_REGION_H_
 #define S2_S2SHAPE_INDEX_REGION_H_
 
-#include <functional>
 #include <utility>
 #include <vector>
 
 #include "absl/base/optimization.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/functional/function_ref.h"
+#include "absl/log/absl_check.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s2cap.h"
@@ -63,9 +64,7 @@
 // S2CellUnion GetCovering(const S2ShapeIndex& index) {
 //   S2RegionCoverer coverer;
 //   coverer.mutable_options()->set_max_cells(20);
-//   S2CellUnion covering;
-//   coverer.GetCovering(MakeS2ShapeIndexRegion(&index), &covering);
-//   return covering;
+//   return coverer.GetCovering(MakeS2ShapeIndexRegion(&index));
 // }
 //
 // This class is not thread-safe.  To use it in parallel, each thread should
@@ -111,26 +110,40 @@ class S2ShapeIndexRegion final : public S2Region {
   // error is less than 10 * DBL_EPSILON radians (or about 15 nanometers).
   bool MayIntersect(const S2Cell& target) const override;
 
-  // A function that is called with shapes that intersect a target S2Cell.
-  // "contains_target" means that the shape fully contains the target S2Cell.
-  // The function should return true to continue visiting intersecting shapes,
-  // or false to terminate the algorithm early.
+  // Visits all shapes that intersect an S2Cell, passing a shape id and a flag
+  // indicating whether the S2Cell was fully contained by the shape to a
+  // visitor.  Each shape is visited at most once.
   //
-  // Note that the API allows non-const access to the visited shapes.
+  // The visitor should return true to continue visiting intersecting shapes, or
+  // false to terminate the algorithm early.
+  //
+  // This method can also be used to visit all shapes that fully contain an
+  // S2Cell by simply having the visitor function immediately return true when
+  // "contains_target" is false.
+  //
+  // Returns false if the visitor ever does, true otherwise.
+  bool VisitIntersectingShapeIds(
+      const S2Cell& target,
+      absl::FunctionRef<bool(int shape_id, bool contains_target)> visitor);
+
+  // Visits all shapes that intersect an S2Cell, passing an S2Shape pointer and
+  // a flag indicating whether the S2Cell was fully contained by the shape to a
+  // visitor.  Each shape is visited at most once.
+  //
+  // The visitor should return true to continue visiting intersecting shapes, or
+  // false to terminate the algorithm early.
+  //
+  // This method can also be used to visit all shapes that fully contain an
+  // S2Cell by simply having the visitor function immediately return true when
+  // "contains_target" is false.
+  //
+  // Returns false if the visitor ever does, true otherwise.
   //
   // ENSURES: shape != nullptr
-  using ShapeVisitor = std::function<bool (S2Shape* shape,
-                                           bool contains_target)>;
-
-  // Visits all shapes that intersect "target", terminating early if the
-  // "visitor" return false (in which case VisitIntersectingShapes returns
-  // false as well).  Each shape is visited at most once.
-  //
-  // This method can also be used to visit all shapes that fully contain
-  // "target" (VisitContainingShapes) by simply having the ShapeVisitor
-  // function immediately return true when "contains_target" is false.
-  bool VisitIntersectingShapes(const S2Cell& target,
-                               const ShapeVisitor& visitor);
+  bool VisitIntersectingShapes(
+      const S2Cell& target,
+      absl::FunctionRef<bool(const S2Shape* shape, bool contains_target)>
+          visitor);
 
   // Returns true if the given point is contained by any two-dimensional shape
   // (i.e., polygon).  Boundaries are treated as being semi-open (i.e., the
@@ -275,7 +288,7 @@ inline void S2ShapeIndexRegion<IndexType>::CoverRange(
   } else {
     // Add the lowest common ancestor of the given range.
     int level = first.GetCommonAncestorLevel(last);
-    S2_DCHECK_GE(level, 0);
+    ABSL_DCHECK_GE(level, 0);
     cell_ids->push_back(first.parent(level));
   }
 }
@@ -297,7 +310,7 @@ bool S2ShapeIndexRegion<IndexType>::Contains(const S2Cell& target) const {
 
   // Otherwise, the iterator points to an index cell containing "target".
   // If any shape contains the target cell, we return true.
-  S2_DCHECK(iter_.id().contains(target.id()));
+  ABSL_DCHECK(iter_.id().contains(target.id()));
   const S2ShapeIndexCell& cell = iter_.cell();
   for (int s = 0; s < cell.num_clipped(); ++s) {
     const S2ClippedShape& clipped = cell.clipped(s);
@@ -333,7 +346,7 @@ bool S2ShapeIndexRegion<IndexType>::MayIntersect(const S2Cell& target) const {
   // If "target" is an index cell itself, there is an intersection because index
   // cells are created only if they have at least one edge or they are
   // entirely contained by the loop.
-  S2_DCHECK(iter_.id().contains(target.id()));
+  ABSL_DCHECK(iter_.id().contains(target.id()));
   if (iter_.id() == target.id()) return true;
 
   // Test whether any shape intersects the target cell or contains its center.
@@ -347,8 +360,9 @@ bool S2ShapeIndexRegion<IndexType>::MayIntersect(const S2Cell& target) const {
 }
 
 template <class IndexType>
-bool S2ShapeIndexRegion<IndexType>::VisitIntersectingShapes(
-    const S2Cell& target, const ShapeVisitor& visitor) {
+bool S2ShapeIndexRegion<IndexType>::VisitIntersectingShapeIds(
+    const S2Cell& target,
+    absl::FunctionRef<bool(int shape_id, bool contains_target)> visitor) {
   switch (iter_.Locate(target.id())) {
     case S2CellRelation::DISJOINT:
       return true;
@@ -373,7 +387,7 @@ bool S2ShapeIndexRegion<IndexType>::VisitIntersectingShapes(
       for (const auto& p : shape_not_contains) {
         const int shape_id = p.first;
         const bool not_contains = p.second;
-        if (!visitor(index().shape(shape_id), !not_contains)) return false;
+        if (!visitor(shape_id, !not_contains)) return false;
       }
       return true;
     }
@@ -395,12 +409,22 @@ bool S2ShapeIndexRegion<IndexType>::VisitIntersectingShapes(
             contains = true;
           }
         }
-        if (!visitor(index().shape(clipped.shape_id()), contains)) return false;
+        if (!visitor(clipped.shape_id(), contains)) return false;
       }
       return true;
     }
   }
   ABSL_UNREACHABLE();
+}
+
+template <class IndexType>
+bool S2ShapeIndexRegion<IndexType>::VisitIntersectingShapes(
+    const S2Cell& target,
+    absl::FunctionRef<bool(const S2Shape* shape, bool contains_target)>
+        visitor) {
+  return VisitIntersectingShapeIds(target, [&](int id, bool contains) {
+    return visitor(index().shape(id), contains);
+  });
 }
 
 template <class IndexType>

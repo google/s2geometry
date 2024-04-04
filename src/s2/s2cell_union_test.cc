@@ -19,7 +19,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,13 +27,12 @@
 #include <gtest/gtest.h>
 
 #include "absl/hash/hash_testing.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 
 #include "s2/base/commandlineflags.h"
 #include "s2/base/commandlineflags_declare.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -47,16 +45,21 @@
 #include "s2/s2point.h"
 #include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
+#include "s2/s2text_format.h"
 #include "s2/util/coding/coder.h"
 
 S2_DECLARE_bool(s2debug);
+
+S2_DEFINE_int32(iters, 2000, "Number of iterations for tests.");
 
 using absl::StrCat;
 using std::max;
 using std::min;
 using std::vector;
 
+using ::testing::ElementsAre;
 using ::testing::Eq;
+using ::testing::IsEmpty;
 using ::testing::IsFalse;
 using ::testing::IsTrue;
 
@@ -149,7 +152,7 @@ static void AddCells(S2CellId id, bool selected,
   if (id.is_leaf()) {
     // The rnd.OneIn() call below ensures that the parent of a leaf cell
     // will always be selected (if we make it that far down the hierarchy).
-    S2_DCHECK(selected);
+    ABSL_DCHECK(selected);
     input->push_back(id);
     return;
   }
@@ -160,7 +163,7 @@ static void AddCells(S2CellId id, bool selected,
     // Once a cell has been selected, the expected output is predetermined.
     // We then make sure that cells are selected that will normalize to
     // the desired output.
-    expected->push_back(id);
+    if (expected != nullptr) expected->push_back(id);
     selected = true;
   }
 
@@ -198,28 +201,39 @@ static void AddCells(S2CellId id, bool selected,
   }
 }
 
-TEST(S2CellUnion, Normalize) {
+TEST(S2CellUnion, AddCellsSizes) {
   // Try a bunch of random test cases, and keep track of average
   // statistics for normalization (to see if they agree with the
   // analysis above).
   double in_sum = 0, out_sum = 0;
-  static const int kIters = 2000;
-  for (int i = 0; i < kIters; ++i) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input, expected;
-    AddCells(S2CellId::None(), false, &input, &expected);
+    AddCells(S2CellId::None(), /*selected=*/false, &input, &expected);
     in_sum += input.size();
     out_sum += expected.size();
-    S2CellUnion cellunion(input);
-    EXPECT_EQ(expected.size(), cellunion.size());
-    for (int i = 0; i < expected.size(); ++i) {
-      EXPECT_EQ(expected[i], cellunion[i]);
-    }
+  }
+  absl::PrintF("avg in %.2f, avg out %.2f\n", in_sum / num_iters,
+               out_sum / num_iters);
+}
 
-    // Test GetCapBound().
-    S2Cap cap = cellunion.GetCapBound();
-    for (S2CellId id : cellunion) {
-      EXPECT_TRUE(cap.Contains(S2Cell(id)));
-    }
+TEST(S2CellUnion, ContainsExpectedCells) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
+    vector<S2CellId> input, expected;
+    AddCells(S2CellId::None(), /*selected=*/false, &input, &expected);
+    S2CellUnion cellunion(input);
+    EXPECT_THAT(cellunion.cell_ids(), Eq(expected));
+  }
+}
+
+TEST(S2CellUnion, ContainsInputCells) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
+    vector<S2CellId> input, expected;
+    AddCells(S2CellId::None(), /*selected=*/false, &input,
+             /*expected=*/nullptr);
+    S2CellUnion cellunion(input);
 
     // Test Contains(S2CellId) and Intersects(S2CellId).
     for (S2CellId input_id : input) {
@@ -244,16 +258,34 @@ TEST(S2CellUnion, Normalize) {
                         input_id.child_begin(S2CellId::kMaxLevel)));
       }
     }
+  }
+}
+
+TEST(S2CellUnion, DoesNotContainParentsOfExpectedCell) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
+    vector<S2CellId> input, expected;
+    AddCells(S2CellId::None(), /*selected=*/false, &input, &expected);
+    S2CellUnion cellunion(input);
+
     for (S2CellId expected_id : expected) {
       if (!expected_id.is_face()) {
         EXPECT_TRUE(!cellunion.Contains(expected_id.parent()));
         EXPECT_TRUE(!cellunion.Contains(expected_id.parent(0)));
       }
     }
+  }
+}
 
-    // Test Contains(S2CellUnion), Intersects(S2CellUnion), Union(),
-    // Intersection(), and Difference().
-    vector<S2CellId> x, y, x_or_y, x_and_y;
+TEST(S2CellUnion, UnionIsOr) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
+    vector<S2CellId> input;
+    AddCells(S2CellId::None(), /*selected=*/false, &input,
+             /*expected=*/nullptr);
+    S2CellUnion cellunion(input);
+
+    vector<S2CellId> x, y, x_or_y;
     for (S2CellId input_id : input) {
       bool in_x = rnd.OneIn(2);
       bool in_y = rnd.OneIn(2);
@@ -265,7 +297,25 @@ TEST(S2CellUnion, Normalize) {
     S2CellUnion ycells(std::move(y));
     S2CellUnion x_or_y_expected(std::move(x_or_y));
     S2CellUnion x_or_y_cells = xcells.Union(ycells);
-    EXPECT_TRUE(x_or_y_cells == x_or_y_expected);
+    EXPECT_THAT(x_or_y_cells, Eq(x_or_y_expected));
+  }
+}
+
+TEST(S2CellUnion, IntersectionIsAnd) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
+    vector<S2CellId> input;
+    AddCells(S2CellId::None(), /*selected=*/false, &input,
+             /*expected=*/nullptr);
+    S2CellUnion cellunion(input);
+
+    vector<S2CellId> x, y, x_and_y;
+    for (S2CellId input_id : input) {
+      if (rnd.OneIn(2)) x.push_back(input_id);
+      if (rnd.OneIn(2)) y.push_back(input_id);
+    }
+    S2CellUnion xcells(std::move(x));
+    S2CellUnion ycells(std::move(y));
 
     // Compute the intersection of "x" with each cell of "y",
     // check that this intersection is correct, and append the
@@ -274,20 +324,57 @@ TEST(S2CellUnion, Normalize) {
       S2CellUnion ucells = xcells.Intersection(yid);
       for (S2CellId xid : xcells) {
         if (xid.contains(yid)) {
-          EXPECT_TRUE(ucells.size() == 1 && ucells[0] == yid);
+          // TODO(user): Log `input` via `LogContainer`?  This dep
+          // currently only comes in via `compact_array`.
+          EXPECT_THAT(ucells.cell_ids(), ElementsAre(yid))
+              << "xid: " << xid << " yid: " << yid << " xcells: " << xcells
+              << " ycells: " << ycells;
         } else if (yid.contains(xid)) {
-          EXPECT_TRUE(ucells.Contains(xid));
+          EXPECT_TRUE(ucells.Contains(xid))
+              << "xid: " << xid << " yid: " << yid << " xcells: " << xcells
+              << " ycells: " << ycells << " ucells: " << ucells;
         }
       }
       for (S2CellId uid : ucells) {
-        EXPECT_TRUE(xcells.Contains(uid));
-        EXPECT_TRUE(yid.contains(uid));
+        EXPECT_TRUE(xcells.Contains(uid))
+            << "xcells: " << xcells << " uid: " << uid;
+        EXPECT_TRUE(yid.contains(uid))
+            << "xcells: " << s2textformat::ToString(xcells)
+            << " ucells: " << s2textformat::ToString(ucells)
+            << " yid: " << yid.ToToken() << " uid: " << uid.ToToken();
       }
       x_and_y.insert(x_and_y.end(), ucells.begin(), ucells.end());
     }
     S2CellUnion x_and_y_expected(std::move(x_and_y));
     S2CellUnion x_and_y_cells = xcells.Intersection(ycells);
-    EXPECT_TRUE(x_and_y_cells == x_and_y_expected);
+    EXPECT_THAT(x_and_y_cells, Eq(x_and_y_expected));
+  }
+}
+
+TEST(S2CellUnion, IntersectionWithCellIdNotInUnionIsEmpty) {
+  S2CellUnion xcells =
+      s2textformat::MakeCellUnionOrDie("2/1021322000001121003");
+  S2CellId yid = s2textformat::MakeCellIdOrDie("2/10213223");
+  S2CellUnion ucells = xcells.Intersection(yid);
+  EXPECT_THAT(ucells.cell_ids(), IsEmpty());
+  EXPECT_FALSE(ucells.Contains(yid));
+}
+
+TEST(S2CellUnion, DifferenceIsXAndNotY) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
+    vector<S2CellId> input;
+    AddCells(S2CellId::None(), /*selected=*/false, &input,
+             /*expected=*/nullptr);
+    S2CellUnion cellunion(input);
+
+    vector<S2CellId> x, y;
+    for (S2CellId input_id : input) {
+      if (rnd.OneIn(2)) x.push_back(input_id);
+      if (rnd.OneIn(2)) y.push_back(input_id);
+    }
+    S2CellUnion xcells(std::move(x));
+    S2CellUnion ycells(std::move(y));
 
     S2CellUnion x_minus_y_cells = xcells.Difference(ycells);
     S2CellUnion y_minus_x_cells = ycells.Difference(xcells);
@@ -296,13 +383,46 @@ TEST(S2CellUnion, Normalize) {
     EXPECT_TRUE(ycells.Contains(y_minus_x_cells));
     EXPECT_TRUE(!y_minus_x_cells.Intersects(xcells));
     EXPECT_TRUE(!x_minus_y_cells.Intersects(y_minus_x_cells));
+  }
+}
+
+TEST(S2CellUnion, DifferenceInclusionExclusion) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
+    vector<S2CellId> input;
+    AddCells(S2CellId::None(), /*selected=*/false, &input,
+             /*expected=*/nullptr);
+    S2CellUnion cellunion(input);
+
+    vector<S2CellId> x, y;
+    for (S2CellId input_id : input) {
+      if (rnd.OneIn(2)) x.push_back(input_id);
+      if (rnd.OneIn(2)) y.push_back(input_id);
+    }
+    S2CellUnion xcells(std::move(x));
+    S2CellUnion ycells(std::move(y));
+
+    S2CellUnion x_minus_y_cells = xcells.Difference(ycells);
+    S2CellUnion y_minus_x_cells = ycells.Difference(xcells);
+    S2CellUnion x_and_y_cells = xcells.Intersection(ycells);
+    S2CellUnion x_or_y_cells = xcells.Union(ycells);
 
     S2CellUnion diff_intersection_union =
         x_minus_y_cells.Union(y_minus_x_cells).Union(x_and_y_cells);
-    EXPECT_TRUE(diff_intersection_union == x_or_y_cells);
+    EXPECT_THAT(diff_intersection_union, Eq(x_or_y_cells));
+  }
+}
 
-    vector<S2CellId> test, dummy;
-    AddCells(S2CellId::None(), false, &test, &dummy);
+TEST(S2CellUnion, ContainsIntersectsBruteForce) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
+    vector<S2CellId> input, expected;
+    AddCells(S2CellId::None(), /*selected=*/false, &input, &expected);
+    S2CellUnion cellunion(input);
+    // Generate some new cells and see if `Contains` / `Intersects` agree
+    // with a brute-force computation.
+    vector<S2CellId> test;
+    AddCells(S2CellId::None(), /*selected=*/false, &test, /*expected=*/nullptr);
     for (S2CellId test_id : test) {
       bool contains = false, intersects = false;
       for (S2CellId expected_id : expected) {
@@ -313,7 +433,20 @@ TEST(S2CellUnion, Normalize) {
       EXPECT_EQ(intersects, cellunion.Intersects(test_id));
     }
   }
-  printf("avg in %.2f, avg out %.2f\n", in_sum / kIters, out_sum / kIters);
+}
+
+TEST(S2CellUnion, CapBoundContainsAllCells) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
+    vector<S2CellId> input;
+    AddCells(S2CellId::None(), /*selected=*/false,  //
+             &input, /*expected=*/nullptr);
+    S2CellUnion cellunion(input);
+    S2Cap cap = cellunion.GetCapBound();
+    for (S2CellId id : cellunion) {
+      EXPECT_TRUE(cap.Contains(S2Cell(id)));
+    }
+  }
 }
 
 // Return the maximum geodesic distance from "axis" to any point of
@@ -352,7 +485,8 @@ TEST(S2CellUnion, Expand) {
   // new covering is not too much larger than expected.
 
   S2RegionCoverer coverer;
-  for (int i = 0; i < 1000; ++i) {
+  const int num_iters = absl::GetFlag(FLAGS_iters);
+  for (int i = 0; i < num_iters; ++i) {
     SCOPED_TRACE(StrCat("Iteration ", i));
     S2Cap cap = S2Testing::GetRandomCap(
         S2Cell::AverageArea(S2CellId::kMaxLevel), 4 * M_PI);
@@ -683,7 +817,7 @@ TEST(S2CellUnion, IteratorWorks) {
   // Get a cell union of the face cells.
   auto cell_union = S2CellUnion::FromBeginEnd(
       S2CellId::Begin(S2CellId::kMaxLevel), S2CellId::End(S2CellId::kMaxLevel));
-  S2_CHECK_EQ(cell_union.num_cells(), 6);
+  ABSL_CHECK_EQ(cell_union.num_cells(), 6);
 
   auto iter = S2CellUnion::Iterator(&cell_union);
 

@@ -30,7 +30,7 @@ namespace S2 {
 int GetDimension(const S2ShapeIndex& index) {
   int dim = -1;
   for (int i = 0; i < index.num_shape_ids(); ++i) {
-    S2Shape* shape = index.shape(i);
+    const S2Shape* shape = index.shape(i);
     if (shape) dim = std::max(dim, shape->dimension());
   }
   return dim;
@@ -39,7 +39,7 @@ int GetDimension(const S2ShapeIndex& index) {
 int GetNumPoints(const S2ShapeIndex& index) {
   int count = 0;
   for (int i = 0; i < index.num_shape_ids(); ++i) {
-    S2Shape* shape = index.shape(i);
+    const S2Shape* shape = index.shape(i);
     if (shape && shape->dimension() == 0) {
       count += shape->num_edges();
     }
@@ -50,7 +50,7 @@ int GetNumPoints(const S2ShapeIndex& index) {
 S1Angle GetLength(const S2ShapeIndex& index) {
   S1Angle length;
   for (int i = 0; i < index.num_shape_ids(); ++i) {
-    S2Shape* shape = index.shape(i);
+    const S2Shape* shape = index.shape(i);
     if (shape) length += S2::GetLength(*shape);
   }
   return length;
@@ -59,7 +59,7 @@ S1Angle GetLength(const S2ShapeIndex& index) {
 S1Angle GetPerimeter(const S2ShapeIndex& index) {
   S1Angle perimeter;
   for (int i = 0; i < index.num_shape_ids(); ++i) {
-    S2Shape* shape = index.shape(i);
+    const S2Shape* shape = index.shape(i);
     if (shape) perimeter += S2::GetPerimeter(*shape);
   }
   return perimeter;
@@ -68,7 +68,7 @@ S1Angle GetPerimeter(const S2ShapeIndex& index) {
 double GetArea(const S2ShapeIndex& index) {
   double area = 0;
   for (int i = 0; i < index.num_shape_ids(); ++i) {
-    S2Shape* shape = index.shape(i);
+    const S2Shape* shape = index.shape(i);
     if (shape) area += S2::GetArea(*shape);
   }
   return area;
@@ -77,7 +77,7 @@ double GetArea(const S2ShapeIndex& index) {
 double GetApproxArea(const S2ShapeIndex& index) {
   double area = 0;
   for (int i = 0; i < index.num_shape_ids(); ++i) {
-    S2Shape* shape = index.shape(i);
+    const S2Shape* shape = index.shape(i);
     if (shape) area += S2::GetApproxArea(*shape);
   }
   return area;
@@ -87,7 +87,7 @@ S2Point GetCentroid(const S2ShapeIndex& index) {
   int dim = GetDimension(index);
   S2Point centroid;
   for (int i = 0; i < index.num_shape_ids(); ++i) {
-    S2Shape* shape = index.shape(i);
+    const S2Shape* shape = index.shape(i);
     if (shape && shape->dimension() == dim) {
       centroid += S2::GetCentroid(*shape);
     }

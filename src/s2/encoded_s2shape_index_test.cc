@@ -17,17 +17,18 @@
 
 #include "s2/encoded_s2shape_index.h"
 
-#include <cstddef>
-
 #include <algorithm>
+#include <cstddef>
+#include <cstring>
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/base/call_once.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
@@ -44,6 +45,7 @@
 #include "s2/s2contains_point_query.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2error.h"
+#include "s2/s2fractal.h"
 #include "s2/s2latlng.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2lax_polyline_shape.h"
@@ -89,6 +91,14 @@ void TestEncodedS2ShapeIndex(const MutableS2ShapeIndex& expected,
   EXPECT_EQ(expected.options().max_edges_per_cell(),
             actual.options().max_edges_per_cell());
   s2testing::ExpectEqual(expected, actual);
+
+  // Make sure that re-encoding the index gives us back the original bytes.
+  Encoder new_encoder;
+  actual.Encode(&new_encoder);
+  EXPECT_EQ(encoder.length() - shapes_bytes, new_encoder.length());
+
+  const char* index_base = encoder.base() + shapes_bytes;
+  EXPECT_EQ(memcmp(index_base, new_encoder.base(), new_encoder.length()), 0);
 }
 
 TEST(EncodedS2ShapeIndex, Empty) {
@@ -256,7 +266,7 @@ TEST(EncodedS2ShapeIndex, SnappedFractalPolylines) {
   S2Builder builder{S2Builder::Options{S2CellIdSnapFunction()}};
   for (int i = 0; i < 5; ++i) {
     builder.StartLayer(make_unique<IndexedLaxPolylineLayer>(&index));
-    S2Testing::Fractal fractal;
+    S2Fractal fractal;
     fractal.SetLevelForApproxMaxEdges(3 * 256);
     auto frame = S2::GetFrame(S2LatLng::FromDegrees(10, i).ToPoint());
     auto loop = fractal.MakeLoop(frame, S1Angle::Degrees(0.1));
@@ -303,12 +313,13 @@ class LazyDecodeTest : public s2testing::ReaderWriterTest {
       }
     }
     Encoder encoder;
-    S2_CHECK(s2shapeutil::CompactEncodeTaggedShapes(input, &encoder));
+    ABSL_CHECK(s2shapeutil::CompactEncodeTaggedShapes(input, &encoder));
     input.Encode(&encoder);
     encoded_.assign(encoder.base(), encoder.length());
 
     Decoder decoder(encoded_.data(), encoded_.size());
-    S2_CHECK(index_.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
+    ABSL_CHECK(
+        index_.Init(&decoder, s2shapeutil::LazyDecodeShapeFactory(&decoder)));
   }
 
   void WriteOp() override {

@@ -19,6 +19,9 @@
 
 #include <algorithm>
 
+#include "s2/s1angle.h"
+#include "s2/s2latlng.h"
+
 namespace {
 
 // http://en.wikipedia.org/wiki/Haversine_formula

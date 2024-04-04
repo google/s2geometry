@@ -26,8 +26,9 @@
 #include <queue>
 #include <vector>
 
-#include "s2/base/logging.h"
 #include "absl/container/inlined_vector.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -349,7 +350,7 @@ inline int S2ClosestPointQueryBaseOptions<Distance>::max_results() const {
 template <class Distance>
 inline void S2ClosestPointQueryBaseOptions<Distance>::set_max_results(
     int max_results) {
-  S2_DCHECK_GE(max_results, 1);
+  ABSL_DCHECK_GE(max_results, 1);
   max_results_ = max_results;
 }
 
@@ -446,7 +447,7 @@ template <class Distance, class Data>
 typename S2ClosestPointQueryBase<Distance, Data>::Result
 S2ClosestPointQueryBase<Distance, Data>::FindClosestPoint(
     Target* target, const Options& options) {
-  S2_DCHECK_EQ(options.max_results(), 1);
+  ABSL_DCHECK_EQ(options.max_results(), 1);
   FindClosestPointsInternal(target, options);
   return result_singleton_;
 }
@@ -472,7 +473,7 @@ void S2ClosestPointQueryBase<Distance, Data>::FindClosestPoints(
     }
     // The priority queue returns the largest elements first.
     std::reverse(results->begin(), results->end());
-    S2_DCHECK(std::is_sorted(results->begin(), results->end()));
+    ABSL_DCHECK(std::is_sorted(results->begin(), results->end()));
   }
 }
 
@@ -484,16 +485,16 @@ void S2ClosestPointQueryBase<Distance, Data>::FindClosestPointsInternal(
 
   distance_limit_ = options.max_distance();
   result_singleton_ = Result();
-  S2_DCHECK(result_vector_.empty());
-  S2_DCHECK(result_set_.empty());
-  S2_DCHECK_GE(target->max_brute_force_index_size(), 0);
+  ABSL_DCHECK(result_vector_.empty());
+  ABSL_DCHECK(result_set_.empty());
+  ABSL_DCHECK_GE(target->max_brute_force_index_size(), 0);
   if (distance_limit_ == Distance::Zero()) return;
 
   if (options.max_results() == Options::kMaxMaxResults &&
       options.max_distance() == Distance::Infinity() &&
       options.region() == nullptr) {
-    S2_LOG(WARNING) << "Returning all points "
-                    "(max_results/max_distance/region not set)";
+    ABSL_LOG(WARNING) << "Returning all points "
+                         "(max_results/max_distance/region not set)";
   }
 
   // If max_error() > 0 and the target takes advantage of this, then we may
@@ -572,7 +573,7 @@ void S2ClosestPointQueryBase<Distance, Data>::FindClosestPointsOptimized() {
 
 template <class Distance, class Data>
 void S2ClosestPointQueryBase<Distance, Data>::InitQueue() {
-  S2_DCHECK(queue_.empty());
+  ABSL_DCHECK(queue_.empty());
 
   // Optimization: rather than starting with the entire index, see if we can
   // limit the search region to a small disc.  Then we can find a covering for
@@ -689,7 +690,7 @@ void S2ClosestPointQueryBase<Distance, Data>::AddInitialRange(
     S2CellId first_id, S2CellId last_id) {
   // Add the lowest common ancestor of the given range.
   int level = first_id.GetCommonAncestorLevel(last_id);
-  S2_DCHECK_GE(level, 0);
+  ABSL_DCHECK_GE(level, 0);
   index_covering_.push_back(first_id.parent(level));
 }
 

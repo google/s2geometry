@@ -27,7 +27,7 @@
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
@@ -198,7 +198,7 @@ TEST(ToString, PolylineShapeWorks) {
 }
 
 TEST(ToString, PolygonShapeWorks) {
-  const string shape = "## 0:0, 0:5, 5:0";
+  const string shape = "## 0:0, 0:5, 5:0; 0:0, 0:2, 1:1";
   auto index = s2textformat::MakeIndexOrDie(shape);
   EXPECT_EQ(shape, s2textformat::ToString(*index->shape(0)));
 }
@@ -261,7 +261,7 @@ TEST(ToString, S2ShapeIndex) {
   TestS2ShapeIndex("# # 0:0");
   TestS2ShapeIndex("# # 0:0, 0:1");
   TestS2ShapeIndex("# # 0:0, 0:1, 1:0");
-  TestS2ShapeIndex("# # 0:0, 0:1, 1:0; 2:2");
+  TestS2ShapeIndex("# # 0:0, 0:1, 1:0; 2:2, 3:3");
   TestS2ShapeIndex("# # full");
 }
 

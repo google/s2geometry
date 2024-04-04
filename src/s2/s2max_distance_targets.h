@@ -87,8 +87,10 @@ class S2MaxDistancePointTarget : public S2MaxDistanceTarget {
                          S2MaxDistance* min_dist) final;
   bool UpdateMinDistance(const S2Cell& cell,
                          S2MaxDistance* min_dist) final;
-  bool VisitContainingShapes(const S2ShapeIndex& index,
-                             const ShapeVisitor& visitor) final;
+
+  bool VisitContainingShapeIds(
+      const S2ShapeIndex& index,
+      absl::FunctionRef<bool(int id, const S2Point& target)>) final;
 
  private:
   S2Point point_;
@@ -105,8 +107,10 @@ class S2MaxDistanceEdgeTarget : public S2MaxDistanceTarget {
                          S2MaxDistance* min_dist) final;
   bool UpdateMinDistance(const S2Cell& cell,
                          S2MaxDistance* min_dist) final;
-  bool VisitContainingShapes(const S2ShapeIndex& index,
-                             const ShapeVisitor& visitor) final;
+
+  bool VisitContainingShapeIds(
+      const S2ShapeIndex& index,
+      absl::FunctionRef<bool(int id, const S2Point& target)>) final;
 
  private:
   S2Point a_, b_;
@@ -123,8 +127,10 @@ class S2MaxDistanceCellTarget : public S2MaxDistanceTarget {
                          S2MaxDistance* min_dist) final;
   bool UpdateMinDistance(const S2Cell& cell,
                          S2MaxDistance* min_dist) final;
-  bool VisitContainingShapes(const S2ShapeIndex& index,
-                             const ShapeVisitor& visitor) final;
+
+  bool VisitContainingShapeIds(
+      const S2ShapeIndex& index,
+      absl::FunctionRef<bool(int id, const S2Point& target)>) final;
 
  private:
   S2Cell cell_;
@@ -178,8 +184,10 @@ class S2MaxDistanceShapeIndexTarget : public S2MaxDistanceTarget {
                          S2MaxDistance* min_dist) final;
   bool UpdateMinDistance(const S2Cell& cell,
                          S2MaxDistance* min_dist) final;
-  bool VisitContainingShapes(const S2ShapeIndex& query_index,
-                             const ShapeVisitor& visitor) final;
+
+  bool VisitContainingShapeIds(
+      const S2ShapeIndex& query_index,
+      absl::FunctionRef<bool(int id, const S2Point& target)>) final;
 
  private:
   const S2ShapeIndex* index_;

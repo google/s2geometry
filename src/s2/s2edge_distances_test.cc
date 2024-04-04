@@ -577,6 +577,48 @@ bool IsEdgeBNearEdgeA(string_view a_str, string_view b_str,
                               S1Angle::Degrees(max_error_degrees));
 }
 
+TEST(IsEdgePairDistanceLess, Coverage) {
+  using S2::IsEdgePairDistanceLess;
+
+  S2Point x(1, 0, 0), y(0, 1, 0), z(0, 0, 1);
+  S2Point a(1, 1e-100, 1e-99), b(1, 1e-100, -1e-99);
+
+  const S1ChordAngle kZeroRad = S1ChordAngle::Zero();
+  const S1ChordAngle kOneRad = S1ChordAngle::Radians(1);
+  const S1ChordAngle kOver90 = S1ChordAngle::Radians(M_PI / 2 + .001);
+
+  // Test cases where the edges have an interior crossing.  Nothing can be
+  // closer than zero, so check that zero distance compares false.
+  EXPECT_EQ(IsEdgePairDistanceLess(x, y, a, b, kZeroRad), false);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, y, a, b, kOneRad), true);
+
+  // Test cases where the edges share an endpoint.
+  EXPECT_EQ(IsEdgePairDistanceLess(x, y, x, z, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, y, z, x, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(y, x, x, z, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(y, x, z, x, kOneRad), true);
+
+  // Test cases where one edge is degenerate.
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, x, y, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, y, x, x, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, y, z, kOneRad), false);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, y, z, kOver90), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(y, z, x, x, kOneRad), false);
+  EXPECT_EQ(IsEdgePairDistanceLess(y, z, x, x, kOver90), true);
+
+  // Test cases where both edges are degenerate.
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, x, x, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, y, y, kOneRad), false);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, y, y, kOver90), true);
+
+  // Test cases where the minimum distance is non-zero and is achieved at each
+  // of the four edge endpoints.
+  EXPECT_EQ(IsEdgePairDistanceLess(a, y, x, z, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(y, a, x, z, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, z, a, y, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, z, y, a, kOneRad), true);
+}
+
 TEST(S2, EdgeBNearEdgeA) {
   // Edge is near itself.
   EXPECT_TRUE(IsEdgeBNearEdgeA("5:5, 10:-5", "5:5, 10:-5", 1e-6));

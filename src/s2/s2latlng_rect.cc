@@ -24,6 +24,7 @@
 #include <ostream>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
@@ -41,6 +42,7 @@
 using std::fabs;
 using std::max;
 using std::min;
+using std::vector;
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
@@ -50,7 +52,7 @@ S2LatLngRect S2LatLngRect::FromCenterSize(const S2LatLng& center,
 }
 
 S2LatLngRect S2LatLngRect::FromPoint(const S2LatLng& p) {
-  S2_DLOG_IF(ERROR, !p.is_valid())
+  ABSL_DLOG_IF(ERROR, !p.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::GetDistance: " << p;
 
   return S2LatLngRect(p, p);
@@ -58,10 +60,10 @@ S2LatLngRect S2LatLngRect::FromPoint(const S2LatLng& p) {
 
 S2LatLngRect S2LatLngRect::FromPointPair(const S2LatLng& p1,
                                          const S2LatLng& p2) {
-  S2_DLOG_IF(ERROR, !p1.is_valid())
+  ABSL_DLOG_IF(ERROR, !p1.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::FromPointPair: " << p1;
 
-  S2_DLOG_IF(ERROR, !p2.is_valid())
+  ABSL_DLOG_IF(ERROR, !p2.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::FromPointPair: " << p2;
 
   return S2LatLngRect(R1Interval::FromPointPair(p1.lat().radians(),
@@ -147,7 +149,7 @@ S2Point S2LatLngRect::GetCentroid() const {
 }
 
 bool S2LatLngRect::Contains(const S2LatLng& ll) const {
-  S2_DLOG_IF(ERROR, !ll.is_valid())
+  ABSL_DLOG_IF(ERROR, !ll.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::Contains: " << ll;
 
   return (lat_.Contains(ll.lat().radians()) &&
@@ -159,7 +161,7 @@ bool S2LatLngRect::InteriorContains(const S2Point& p) const {
 }
 
 bool S2LatLngRect::InteriorContains(const S2LatLng& ll) const {
-  S2_DLOG_IF(ERROR, !ll.is_valid())
+  ABSL_DLOG_IF(ERROR, !ll.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::InteriorContains: " << ll;
 
   return (lat_.InteriorContains(ll.lat().radians()) &&
@@ -205,7 +207,7 @@ void S2LatLngRect::AddPoint(const S2Point& p) {
 }
 
 void S2LatLngRect::AddPoint(const S2LatLng& ll) {
-  S2_DLOG_IF(ERROR, !ll.is_valid())
+  ABSL_DLOG_IF(ERROR, !ll.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::AddPoint: " << ll;
 
   lat_.AddPoint(ll.lat().radians());
@@ -328,6 +330,11 @@ S2LatLngRect S2LatLngRect::GetRectBound() const {
   return *this;
 }
 
+void S2LatLngRect::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  // TODO(user): Is there a tighter bound?
+  GetCapBound().GetCellUnionBound(cell_ids);
+}
+
 bool S2LatLngRect::Contains(const S2Cell& cell) const {
   // A latitude-longitude rectangle contains a cell if and only if it contains
   // the cell's bounding rectangle.  This test is exact from a mathematical
@@ -355,7 +362,7 @@ void S2LatLngRect::Encode(Encoder* encoder) const {
   encoder->putdouble(lng_.lo());
   encoder->putdouble(lng_.hi());
 
-  S2_DCHECK_GE(encoder->avail(), 0);
+  ABSL_DCHECK_GE(encoder->avail(), 0);
 }
 
 bool S2LatLngRect::Decode(Decoder* decoder) {
@@ -372,7 +379,7 @@ bool S2LatLngRect::Decode(Decoder* decoder) {
   lng_ = S1Interval(lng_lo, lng_hi);
 
   if (!is_valid()) {
-    S2_DLOG_IF(ERROR, absl::GetFlag(FLAGS_s2debug))
+    ABSL_DLOG_IF(ERROR, absl::GetFlag(FLAGS_s2debug))
         << "Invalid result in S2LatLngRect::Decode: " << *this;
     return false;
   }
@@ -396,8 +403,8 @@ bool S2LatLngRect::IntersectsLatEdge(const S2Point& a, const S2Point& b,
   // Return true if the segment AB intersects the given edge of constant
   // latitude.  Unfortunately, lines of constant latitude are curves on
   // the sphere.  They can intersect a straight edge in 0, 1, or 2 points.
-  S2_DCHECK(S2::IsUnitLength(a));
-  S2_DCHECK(S2::IsUnitLength(b));
+  ABSL_DCHECK(S2::IsUnitLength(a));
+  ABSL_DCHECK(S2::IsUnitLength(b));
 
   // First, compute the normal to the plane AB that points vaguely north.
   Vector3_d z = S2::RobustCrossProd(a, b).Normalize();
@@ -407,8 +414,8 @@ bool S2LatLngRect::IntersectsLatEdge(const S2Point& a, const S2Point& b,
   // where the great circle through AB achieves its maximium latitude.
   Vector3_d y = S2::RobustCrossProd(z, S2Point(0, 0, 1)).Normalize();
   Vector3_d x = y.CrossProd(z);
-  S2_DCHECK(S2::IsUnitLength(x));
-  S2_DCHECK_GE(x[2], 0);
+  ABSL_DCHECK(S2::IsUnitLength(x));
+  ABSL_DCHECK_GE(x[2], 0);
 
   // Compute the angle "theta" from the x-axis (in the x-y plane defined
   // above) where the great circle intersects the given line of latitude.
@@ -416,7 +423,7 @@ bool S2LatLngRect::IntersectsLatEdge(const S2Point& a, const S2Point& b,
   if (fabs(sin_lat) >= x[2]) {
     return false;  // The great circle does not reach the given latitude.
   }
-  S2_DCHECK_GT(x[2], 0);
+  ABSL_DCHECK_GT(x[2], 0);
   double cos_theta = sin_lat / x[2];
   double sin_theta = sqrt(1 - cos_theta * cos_theta);
   double theta = atan2(sin_theta, cos_theta);
@@ -495,8 +502,8 @@ bool S2LatLngRect::Intersects(const S2Cell& cell) const {
 S1Angle S2LatLngRect::GetDistance(const S2LatLngRect& other) const {
   const S2LatLngRect& a = *this;
   const S2LatLngRect& b = other;
-  S2_DCHECK(!a.is_empty());
-  S2_DCHECK(!b.is_empty());
+  ABSL_DCHECK(!a.is_empty());
+  ABSL_DCHECK(!b.is_empty());
 
   // First, handle the trivial cases where the longitude intervals overlap.
   if (a.lng().Intersects(b.lng())) {
@@ -551,10 +558,10 @@ S1Angle S2LatLngRect::GetDistance(const S2LatLng& p) const {
   // The algorithm here is the same as in GetDistance(S2LatLngRect), only
   // with simplified calculations.
   const S2LatLngRect& a = *this;
-  S2_DLOG_IF(ERROR, a.is_empty())
+  ABSL_DLOG_IF(ERROR, a.is_empty())
       << "Empty S2LatLngRect in S2LatLngRect::GetDistance: " << a;
 
-  S2_DLOG_IF(ERROR, !p.is_valid())
+  ABSL_DLOG_IF(ERROR, !p.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::GetDistance: " << p;
 
   if (a.lng().Contains(p.lng().radians())) {
@@ -589,7 +596,7 @@ S1Angle S2LatLngRect::GetDirectedHausdorffDistance(
   }
 
   double lng_distance = lng().GetDirectedHausdorffDistance(other.lng());
-  S2_DCHECK_GE(lng_distance, 0);
+  ABSL_DCHECK_GE(lng_distance, 0);
   return GetDirectedHausdorffDistance(lng_distance, lat(), other.lat());
 }
 
@@ -625,8 +632,8 @@ S1Angle S2LatLngRect::GetDirectedHausdorffDistance(
   //     b_hi to the interior of U, if any, where D (resp. U) is the portion
   //     of edge a below (resp. above) the intersection point from B2.
 
-  S2_DCHECK_GE(lng_diff, 0);
-  S2_DCHECK_LE(lng_diff, M_PI);
+  ABSL_DCHECK_GE(lng_diff, 0);
+  ABSL_DCHECK_LE(lng_diff, M_PI);
 
   if (lng_diff == 0) {
     return S1Angle::Radians(a.GetDirectedHausdorffDistance(b));

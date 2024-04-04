@@ -20,7 +20,7 @@
 #include <climits>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/types/span.h"
 #include "s2/s2shape.h"

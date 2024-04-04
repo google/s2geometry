@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "absl/base/macros.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 
@@ -61,8 +62,8 @@ namespace s2textformat {
 //     "-20:150"
 S2Point MakePointOrDie(absl::string_view str);
 
-// As above, but do not S2_CHECK-fail on invalid input. Returns true if conversion
-// is successful.
+// As above, but do not ABSL_CHECK-fail on invalid input. Returns true if
+// conversion is successful.
 ABSL_MUST_USE_RESULT bool MakePoint(absl::string_view str, S2Point* point);
 
 ABSL_DEPRECATED("Inline the implementation")
@@ -76,21 +77,16 @@ inline S2Point MakePoint(absl::string_view str) { return MakePointOrDie(str); }
 //     "-20:150, -20:151, -19:150"   // three points
 std::vector<S2LatLng> ParseLatLngsOrDie(absl::string_view str);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool ParseLatLngs(absl::string_view str,
                                 std::vector<S2LatLng>* latlngs);
-
-ABSL_DEPRECATED("Inline the implementation")
-inline std::vector<S2LatLng> ParseLatLngs(absl::string_view str) {
-  return ParseLatLngsOrDie(str);
-}
 
 // Parses a string in the same format as ParseLatLngs, and return the
 // corresponding vector of S2Point values.
 std::vector<S2Point> ParsePointsOrDie(absl::string_view str);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool ParsePoints(absl::string_view str,
                                std::vector<S2Point>* vertices);
@@ -98,7 +94,7 @@ ABSL_MUST_USE_RESULT bool ParsePoints(absl::string_view str,
 // Given a string in the same format as ParseLatLngs, returns a single S2LatLng.
 S2LatLng MakeLatLngOrDie(absl::string_view str);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeLatLng(absl::string_view str, S2LatLng* latlng);
 
@@ -106,14 +102,9 @@ ABSL_MUST_USE_RESULT bool MakeLatLng(absl::string_view str, S2LatLng* latlng);
 // bounding S2LatLngRect that contains the coordinates.
 S2LatLngRect MakeLatLngRectOrDie(absl::string_view str);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeLatLngRect(absl::string_view str, S2LatLngRect* rect);
-
-ABSL_DEPRECATED("Inline the implementation")
-inline S2LatLngRect MakeLatLngRect(absl::string_view str) {
-  return MakeLatLngRectOrDie(str);
-}
 
 // Parses an S2CellId in the format "f/dd..d" where "f" is a digit in the
 // range [0-5] representing the S2CellId face, and "dd..d" is a string of
@@ -126,7 +117,7 @@ inline S2LatLngRect MakeLatLngRect(absl::string_view str) {
 // This function is a wrapper for S2CellId::FromDebugString().
 S2CellId MakeCellIdOrDie(absl::string_view str);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeCellId(absl::string_view str, S2CellId* cell_id);
 
@@ -136,7 +127,7 @@ ABSL_MUST_USE_RESULT bool MakeCellId(absl::string_view str, S2CellId* cell_id);
 // cells by their parent cell.)
 S2CellUnion MakeCellUnionOrDie(absl::string_view str);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeCellUnion(absl::string_view str,
                                  S2CellUnion* cell_union);
@@ -148,7 +139,7 @@ ABSL_MUST_USE_RESULT bool MakeCellUnion(absl::string_view str,
 std::unique_ptr<S2Loop> MakeLoopOrDie(absl::string_view str,
                                       S2Debug debug_override = S2Debug::ALLOW);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeLoop(absl::string_view str,
                             std::unique_ptr<S2Loop>* loop,
@@ -156,10 +147,9 @@ ABSL_MUST_USE_RESULT bool MakeLoop(absl::string_view str,
 
 // Similar to MakeLoop(), but returns an S2Polyline rather than an S2Loop.
 std::unique_ptr<S2Polyline> MakePolylineOrDie(
-    absl::string_view str,
-    S2Debug debug_override = S2Debug::ALLOW);
+    absl::string_view str, S2Debug debug_override = S2Debug::ALLOW);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakePolyline(absl::string_view str,
                                 std::unique_ptr<S2Polyline>* polyline,
@@ -168,7 +158,7 @@ ABSL_MUST_USE_RESULT bool MakePolyline(absl::string_view str,
 // Like MakePolyline, but returns an S2LaxPolylineShape instead.
 std::unique_ptr<S2LaxPolylineShape> MakeLaxPolylineOrDie(absl::string_view str);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeLaxPolyline(
     absl::string_view str, std::unique_ptr<S2LaxPolylineShape>* lax_polyline);
@@ -187,10 +177,9 @@ ABSL_MUST_USE_RESULT bool MakeLaxPolyline(
 //     "empty"  // the empty polygon (consisting of no loops)
 //     "full"   // the full polygon (consisting of one full loop).
 std::unique_ptr<S2Polygon> MakePolygonOrDie(
-    absl::string_view str,
-    S2Debug debug_override = S2Debug::ALLOW);
+    absl::string_view str, S2Debug debug_override = S2Debug::ALLOW);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakePolygon(absl::string_view str,
                                std::unique_ptr<S2Polygon>* polygon,
@@ -206,7 +195,7 @@ inline std::unique_ptr<S2Polygon> MakePolygon(
 // gives you exactly what you asked for).
 std::unique_ptr<S2Polygon> MakeVerbatimPolygonOrDie(absl::string_view str);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeVerbatimPolygon(absl::string_view str,
                                        std::unique_ptr<S2Polygon>* polygon);
@@ -217,7 +206,7 @@ ABSL_MUST_USE_RESULT bool MakeVerbatimPolygon(absl::string_view str,
 // denotes the full polygon and "" or "empty" denote the empty polygon.
 std::unique_ptr<S2LaxPolygonShape> MakeLaxPolygonOrDie(absl::string_view str);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeLaxPolygon(
     absl::string_view str, std::unique_ptr<S2LaxPolygonShape>* lax_polygon);
@@ -248,7 +237,7 @@ ABSL_MUST_USE_RESULT bool MakeLaxPolygon(
 //         as the string "empty" rather than as the empty string ("").
 std::unique_ptr<MutableS2ShapeIndex> MakeIndexOrDie(absl::string_view str);
 
-// As above, but does not S2_CHECK-fail on invalid input. Returns true if
+// As above, but does not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakeIndex(absl::string_view str,
                              std::unique_ptr<MutableS2ShapeIndex>* index);

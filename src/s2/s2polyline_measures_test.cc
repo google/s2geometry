@@ -50,7 +50,7 @@ TEST(GetLengthAndCentroid, GreatCircles) {
     line.push_back(line[0]);
     S1Angle length = S2::GetLength(line);
     EXPECT_LE(fabs(length.radians() - 2 * M_PI), 2e-14);
-    S2Point centroid = S2::GetCentroid(line);
+    S2Point centroid = S2::GetCentroid(static_cast<S2PointSpan>(line));
     EXPECT_LE(centroid.Norm(), 2e-14);
   }
 }

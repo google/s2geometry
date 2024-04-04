@@ -26,9 +26,12 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/casts.h"
 #include <gtest/gtest.h>
+
+#include "absl/log/absl_log.h"
 #include "absl/strings/string_view.h"
+
+#include "s2/base/casts.h"
 #include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -37,6 +40,7 @@
 #include "s2/s2coder_testing.h"
 #include "s2/s2contains_point_query.h"
 #include "s2/s2error.h"
+#include "s2/s2fractal.h"
 #include "s2/s2latlng.h"
 #include "s2/s2lax_loop_shape.h"
 #include "s2/s2loop.h"
@@ -100,9 +104,10 @@ void TestEncodedS2LaxPolygonShape(const S2LaxPolygonShape& original) {
 }
 
 TEST(S2LaxPolygonShape, EmptyPolygon) {
-  S2_LOG(INFO) << "sizeof(S2LaxPolygonShape) == " << sizeof(S2LaxPolygonShape);
-  S2_LOG(INFO) << "sizeof(EncodedS2LaxPolygonShape) == "
-            << sizeof(EncodedS2LaxPolygonShape);
+  ABSL_LOG(INFO) << "sizeof(S2LaxPolygonShape) == "
+                 << sizeof(S2LaxPolygonShape);
+  ABSL_LOG(INFO) << "sizeof(EncodedS2LaxPolygonShape) == "
+                 << sizeof(EncodedS2LaxPolygonShape);
 
   S2LaxPolygonShape shape((S2Polygon()));
   EXPECT_EQ(0, shape.num_loops());
@@ -125,13 +130,11 @@ TEST(S2LaxPolygonShape, Move) {
   const S2LaxPolygonShape correct(loops);
   S2LaxPolygonShape to_move(loops);
   s2testing::ExpectEqual(correct, to_move);
-  EXPECT_EQ(correct.id(), to_move.id());
 
   // Test the move constructor.
   S2LaxPolygonShape move1(std::move(to_move));
   s2testing::ExpectEqual(correct, move1);
   TestEncodedS2LaxPolygonShape(move1);
-  EXPECT_EQ(correct.id(), move1.id());
   ASSERT_EQ(loops.size(), move1.num_loops());
   ASSERT_EQ(6, move1.num_vertices());
   for (int i = 0; i < loops.size(); ++i) {
@@ -145,7 +148,6 @@ TEST(S2LaxPolygonShape, Move) {
   move2 = std::move(move1);
   s2testing::ExpectEqual(correct, move2);
   TestEncodedS2LaxPolygonShape(move2);
-  EXPECT_EQ(correct.id(), move2.id());
   ASSERT_EQ(loops.size(), move2.num_loops());
   ASSERT_EQ(6, move2.num_vertices());
   for (int i = 0; i < loops.size(); ++i) {
@@ -153,28 +155,6 @@ TEST(S2LaxPolygonShape, Move) {
       EXPECT_EQ(loops[i][j], move2.loop_vertex(i, j));
     }
   }
-}
-
-TEST(S2LaxPolygonShape, MoveFromShapeIndex) {
-  // Construct an index containing shapes to be moved.
-  const vector<S2LaxPolygonShape::Loop> loops = {
-      s2textformat::ParsePointsOrDie("0:0, 0:3, 3:3"),
-      s2textformat::ParsePointsOrDie("1:1, 2:2, 1:2")};
-  MutableS2ShapeIndex index;
-  index.Add(make_unique<S2LaxPolygonShape>(loops));
-  index.Add(make_unique<S2LaxPolygonShape>(loops));
-  ASSERT_EQ(index.num_shape_ids(), 2);
-
-  // Verify that the move constructor moves the id.
-  S2LaxPolygonShape& shape0 = *down_cast<S2LaxPolygonShape*>(index.shape(0));
-  S2LaxPolygonShape moved_shape0 = std::move(shape0);
-  EXPECT_EQ(moved_shape0.id(), 0);
-
-  // Verify that the move-assignment operator moves the id.
-  S2LaxPolygonShape& shape1 = *down_cast<S2LaxPolygonShape*>(index.shape(1));
-  S2LaxPolygonShape moved_shape1;
-  moved_shape1 = std::move(shape1);
-  EXPECT_EQ(moved_shape1.id(), 1);
 }
 
 TEST(S2LaxPolygonShape, FullPolygon) {
@@ -365,14 +345,13 @@ void CompareS2LoopToShape(const S2Loop& loop, unique_ptr<S2Shape> shape) {
   auto query = MakeS2ContainsPointQuery(&index);
   for (int iter = 0; iter < 100; ++iter) {
     S2Point point = S2Testing::SamplePoint(cap);
-    EXPECT_EQ(loop.Contains(point),
-              query.ShapeContains(*index.shape(0), point));
+    EXPECT_EQ(loop.Contains(point), query.ShapeContains(0, point));
   }
 }
 
 TEST(S2LaxPolygonShape, CompareToS2Loop) {
   for (int iter = 0; iter < 100; ++iter) {
-    S2Testing::Fractal fractal;
+    S2Fractal fractal;
     fractal.set_max_level(S2Testing::rnd.Uniform(5));
     fractal.set_fractal_dimension(1 + S2Testing::rnd.RandDouble());
     S2Point center = S2Testing::RandomPoint();

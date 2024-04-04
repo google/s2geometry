@@ -17,6 +17,7 @@
 
 #include <string>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
@@ -31,14 +32,14 @@ EdgeIterator::EdgeIterator(const S2ShapeIndex* index)
 }
 
 S2Shape::Edge EdgeIterator::edge() const {
-  S2_DCHECK(!Done());
+  ABSL_DCHECK(!Done());
   return index_->shape(shape_id_)->edge(edge_id_);
 }
 
 void EdgeIterator::Next() {
   while (++edge_id_ >= num_edges_) {
     if (++shape_id_ >= index_->num_shape_ids()) break;
-    S2Shape* shape = index_->shape(shape_id_);
+    const S2Shape* shape = index_->shape(shape_id_);
     num_edges_ = (shape == nullptr) ? 0 : shape->num_edges();
     edge_id_ = -1;
   }

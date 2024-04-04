@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2loop.h"
@@ -34,7 +34,6 @@
 #include "s2/s2shapeutil_testing.h"
 #include "s2/s2text_format.h"
 
-using std::make_unique;
 using std::vector;
 
 TEST(S2LaxLoopShape, EmptyLoop) {
@@ -61,7 +60,6 @@ TEST(S2LaxLoopShape, Move) {
   // Test the move constructor.
   S2LaxLoopShape move1(std::move(to_move));
   s2testing::ExpectEqual(correct, move1);
-  EXPECT_EQ(correct.id(), move1.id());
   ASSERT_EQ(correct.num_vertices(), move1.num_vertices());
   for (int i = 0; i < correct.num_vertices(); ++i) {
     EXPECT_EQ(correct.vertex(i), move1.vertex(i));
@@ -71,32 +69,10 @@ TEST(S2LaxLoopShape, Move) {
   S2LaxLoopShape move2;
   move2 = std::move(move1);
   s2testing::ExpectEqual(correct, move2);
-  EXPECT_EQ(correct.id(), move2.id());
   ASSERT_EQ(correct.num_vertices(), move2.num_vertices());
   for (int i = 0; i < correct.num_vertices(); ++i) {
     EXPECT_EQ(correct.vertex(i), move2.vertex(i));
   }
-}
-
-TEST(S2LaxLoopShape, MoveFromShapeIndex) {
-  // Construct an index containing shapes to be moved.
-  MutableS2ShapeIndex index;
-  index.Add(make_unique<S2LaxLoopShape>(
-      s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1, 1:0")));
-  index.Add(make_unique<S2LaxLoopShape>(
-      s2textformat::ParsePointsOrDie("0:0, 0:2, 2:2, 2:0")));
-  ASSERT_EQ(index.num_shape_ids(), 2);
-
-  // Verify that the move constructor moves the id.
-  S2LaxLoopShape& shape0 = *down_cast<S2LaxLoopShape*>(index.shape(0));
-  S2LaxLoopShape moved_shape0 = std::move(shape0);
-  EXPECT_EQ(moved_shape0.id(), 0);
-
-  // Verify that the move-assignment operator moves the id.
-  S2LaxLoopShape& shape1 = *down_cast<S2LaxLoopShape*>(index.shape(1));
-  S2LaxLoopShape moved_shape1;
-  moved_shape1 = std::move(shape1);
-  EXPECT_EQ(moved_shape1.id(), 1);
 }
 
 TEST(S2LaxLoopShape, NonEmptyLoop) {
@@ -154,7 +130,6 @@ TEST(S2VertexIdLaxLoopShape, Move) {
   // Test the move constructor.
   S2VertexIdLaxLoopShape move1(std::move(to_move));
   s2testing::ExpectEqual(correct, move1);
-  EXPECT_EQ(correct.id(), move1.id());
   ASSERT_EQ(correct.num_vertices(), move1.num_vertices());
   for (int i = 0; i < correct.num_vertices(); ++i) {
     EXPECT_EQ(correct.vertex(i), move1.vertex(i));
@@ -164,42 +139,10 @@ TEST(S2VertexIdLaxLoopShape, Move) {
   S2VertexIdLaxLoopShape move2;
   move2 = std::move(move1);
   s2testing::ExpectEqual(correct, move2);
-  EXPECT_EQ(correct.id(), move2.id());
   ASSERT_EQ(correct.num_vertices(), move2.num_vertices());
   for (int i = 0; i < correct.num_vertices(); ++i) {
     EXPECT_EQ(correct.vertex(i), move2.vertex(i));
   }
-}
-
-TEST(S2VertexIdLaxLoopShape, MoveFromShapeIndex) {
-  // Setup vertices and vertex ids.
-  const vector<S2Point> vertices0 =
-      s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1, 1:0");
-  const vector<int32> vertex_ids0 = {0, 3, 2, 1};
-  const vector<S2Point> vertices1 =
-      s2textformat::ParsePointsOrDie("0:0, 0:2, 2:2, 2:0");
-  const vector<int32> vertex_ids1 = {0, 3, 2, 1};
-
-  // Construct an index containing shapes to be moved.
-  MutableS2ShapeIndex index;
-  index.Add(
-      make_unique<S2VertexIdLaxLoopShape>(vertex_ids0, &vertices0[0]));
-  index.Add(
-      make_unique<S2VertexIdLaxLoopShape>(vertex_ids1, &vertices1[0]));
-  ASSERT_EQ(index.num_shape_ids(), 2);
-
-  // Verify that the move constructor moves the id.
-  S2VertexIdLaxLoopShape& shape0 =
-      *down_cast<S2VertexIdLaxLoopShape*>(index.shape(0));
-  S2VertexIdLaxLoopShape moved_shape0 = std::move(shape0);
-  EXPECT_EQ(moved_shape0.id(), 0);
-
-  // Verify that the move-assignment operator moves the id.
-  S2VertexIdLaxLoopShape& shape1 =
-      *down_cast<S2VertexIdLaxLoopShape*>(index.shape(1));
-  S2VertexIdLaxLoopShape moved_shape1;
-  moved_shape1 = std::move(shape1);
-  EXPECT_EQ(moved_shape1.id(), 1);
 }
 
 TEST(S2VertexIdLaxLoopShape, InvertedLoop) {

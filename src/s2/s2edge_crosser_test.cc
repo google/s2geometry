@@ -22,6 +22,8 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2point.h"
@@ -166,7 +168,7 @@ void TestCrossings(S2Point a, S2Point b, S2Point c, S2Point d,
     // For vertex crossings, if AB crosses CD then CD does not cross AB.
     // In order to get the crossing sign right in both cases, all tests are
     // specified such that AB crosses CD.  The other case is tested here.
-    S2_DCHECK_NE(signed_crossing_sign, 0);
+    ABSL_DCHECK_NE(signed_crossing_sign, 0);
     TestCrossing(c, d, a, b, crossing_sign, 0);
   } else {
     // TODO(ericv): Document properties of SignedEdgeOrVertexCrossing.

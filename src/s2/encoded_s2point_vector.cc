@@ -20,12 +20,12 @@
 #include <cstddef>
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <vector>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/port.h"
-#include "absl/base/internal/unaligned_access.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/numeric/bits.h"
 #include "absl/types/span.h"
 #include "s2/util/bits/bits.h"
@@ -113,7 +113,7 @@ void EncodeS2PointVector(Span<const S2Point> points, CodingHint hint,
       return EncodeS2PointVectorCompact(points, encoder);
 
     default:
-      S2_LOG(ERROR) << "Unknown CodingHint: " << static_cast<int>(hint);
+      ABSL_LOG(ERROR) << "Unknown CodingHint: " << static_cast<int>(hint);
   }
 }
 
@@ -158,7 +158,7 @@ void EncodedS2PointVector::Encode(Encoder* encoder) const {
     }
 
     default:
-      S2_LOG(FATAL) << "Unknown Format: " << static_cast<int>(format_);
+      ABSL_LOG(FATAL) << "Unknown Format: " << static_cast<int>(format_);
   }
 }
 
@@ -169,7 +169,7 @@ void EncodedS2PointVector::Encode(Encoder* encoder) const {
 // Encodes a vector of points, optimizing for (encoding and decoding) speed.
 void EncodeS2PointVectorFast(Span<const S2Point> points, Encoder* encoder) {
 #ifndef IS_LITTLE_ENDIAN
-  S2_LOG(FATAL) << "Not implemented on big-endian architectures";
+  ABSL_LOG(FATAL) << "Not implemented on big-endian architectures";
 #endif
 
   // This function always uses the UNCOMPRESSED encoding.  The header consists
@@ -197,7 +197,8 @@ bool EncodedS2PointVector::InitUncompressedFormat(Decoder* decoder) {
   // Maybe the compiler is smart enough that we can do this all the time,
   // but more likely we will need two cases using the #ifdef above.
   // (Note that even ARMv7 does not support unaligned 64-bit loads.)
-  S2_LOG(ERROR) << "Needs architecture with 64-bit little-endian unaligned loads";
+  ABSL_LOG(ERROR)
+      << "Needs architecture with 64-bit little-endian unaligned loads";
   return false;
 #endif
 
@@ -386,7 +387,7 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
   //
   // This is followed by an EncodedStringVector containing the encoded blocks.
   // Each block contains kBlockSize (8) values.  The total size of the
-  // EncodeS2PointVector is not stored explicity, but instead is calculated as
+  // EncodeS2PointVector is not stored explicitly, but instead is calculated as
   //
   //     num_values == kBlockSize * (num_blocks - 1) + last_block_size .
   //
@@ -460,10 +461,10 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
   int base_bytes = base_bits >> 3;
   encoder->Ensure(2 + base_bytes);
   int last_block_count = values.size() - kBlockSize * (num_blocks - 1);
-  S2_DCHECK_GE(last_block_count, 0);
-  S2_DCHECK_LE(last_block_count, kBlockSize);
-  S2_DCHECK_LE(base_bytes, 7);
-  S2_DCHECK_LE(level, 30);
+  ABSL_DCHECK_GE(last_block_count, 0);
+  ABSL_DCHECK_LE(last_block_count, kBlockSize);
+  ABSL_DCHECK_LE(base_bytes, 7);
+  ABSL_DCHECK_LE(level, 30);
   encoder->put8(EncodedS2PointVector::CELL_IDS |
                 (have_exceptions << 3) |
                 ((last_block_count - 1) << 4));
@@ -487,9 +488,9 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
     int delta_nibbles = code.delta_bits >> 2;
     int overlap_nibbles = code.overlap_bits >> 2;
     block->Ensure(1 + offset_bytes + (kBlockSize / 2) * delta_nibbles);
-    S2_DCHECK_LE(offset_bytes - overlap_nibbles, 7);
-    S2_DCHECK_LE(overlap_nibbles, 1);
-    S2_DCHECK_LE(delta_nibbles, 16);
+    ABSL_DCHECK_LE(offset_bytes - overlap_nibbles, 7);
+    ABSL_DCHECK_LE(overlap_nibbles, 1);
+    ABSL_DCHECK_LE(delta_nibbles, 16);
     block->put8((offset_bytes - overlap_nibbles) |
                 (overlap_nibbles << 3) | (delta_nibbles - 1) << 4);
 
@@ -500,7 +501,7 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
       if (values[i + j] == kException) {
         num_exceptions += 1;
       } else {
-        S2_DCHECK_GE(values[i + j], base);
+        ABSL_DCHECK_GE(values[i + j], base);
         offset = min(offset, values[i + j] - base);
       }
     }
@@ -509,7 +510,7 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
     // Encode the offset.
     int offset_shift = code.delta_bits - code.overlap_bits;
     offset &= ~BitMask(offset_shift);
-    S2_DCHECK_EQ(offset == 0, offset_bytes == 0);
+    ABSL_DCHECK_EQ(offset == 0, offset_bytes == 0);
     if (offset > 0) {
       EncodeUintWithLength(offset >> offset_shift, offset_bytes, block);
     }
@@ -523,14 +524,14 @@ void EncodeS2PointVectorCompact(Span<const S2Point> points, Encoder* encoder) {
         delta = exceptions.size();
         exceptions.push_back(points[i + j]);
       } else {
-        S2_DCHECK_GE(values[i + j], offset + base);
+        ABSL_DCHECK_GE(values[i + j], offset + base);
         delta = values[i + j] - (offset + base);
         if (have_exceptions) {
-          S2_DCHECK_LE(delta, ~0ULL - kBlockSize);
+          ABSL_DCHECK_LE(delta, ~0ULL - kBlockSize);
           delta += kBlockSize;
         }
       }
-      S2_DCHECK_LE(delta, BitMask(code.delta_bits));
+      ABSL_DCHECK_LE(delta, BitMask(code.delta_bits));
       if ((delta_nibbles & 1) && (j & 1)) {
         // Combine this delta with the high-order 4 bits of the previous delta.
         uint8 last_byte = *(block->base() + block->length() - 1);
@@ -615,7 +616,7 @@ vector<uint64> ConvertCellsToValues(const vector<CellPoint>& cell_points,
       uint32 sj = (((cp.face & 3) << 30) | (cp.si >> 1)) >> shift;
       uint32 tj = (((cp.face & 4) << 29) | cp.ti) >> (shift + 1);
       uint64 v = InterleaveUint32BitPairs(sj, tj);
-      S2_DCHECK_LE(v, BitMask(MaxBitsForLevel(level)));
+      ABSL_DCHECK_LE(v, BitMask(MaxBitsForLevel(level)));
       values.push_back(v);
     }
   }
@@ -755,10 +756,10 @@ BlockCode GetBlockCode(Span<const uint64> values, uint64 base,
     if (CanEncode(b_min, b_max, delta_bits, 4, have_exceptions)) {
       overlap_bits = 4;
     } else {
-      S2_DCHECK_LE(delta_bits, 60);
+      ABSL_DCHECK_LE(delta_bits, 60);
       delta_bits += 4;
       if (!CanEncode(b_min, b_max, delta_bits, 0, have_exceptions)) {
-        S2_DCHECK(CanEncode(b_min, b_max, delta_bits, 4, have_exceptions));
+        ABSL_DCHECK(CanEncode(b_min, b_max, delta_bits, 4, have_exceptions));
         overlap_bits = 4;
       }
     }
@@ -770,7 +771,7 @@ BlockCode GetBlockCode(Span<const uint64> values, uint64 base,
   // byte.  (Note that when exceptions exist, delta_bits == 8 and overlap_bits
   // may be 0 or 4.  These cases are covered by the unit tests.)
   if (values.size() == 1 && !have_exceptions) {
-    S2_DCHECK(delta_bits == 4 && overlap_bits == 0);
+    ABSL_DCHECK(delta_bits == 4 && overlap_bits == 0);
     delta_bits = 8;
   }
 
@@ -784,7 +785,7 @@ BlockCode GetBlockCode(Span<const uint64> values, uint64 base,
     int offset_shift = delta_bits - overlap_bits;
     uint64 mask = BitMask(offset_shift);
     uint64 min_offset = (b_max - max_delta + mask) & ~mask;
-    S2_DCHECK_GT(min_offset, 0);
+    ABSL_DCHECK_GT(min_offset, 0);
     offset_bits =
         (Bits::FindMSBSetNonZero64(min_offset) + 1 - offset_shift + 7) & ~7;
     // A 64-bit offset can only be encoded with an overlap of 4 bits.
@@ -799,7 +800,7 @@ bool EncodedS2PointVector::InitCellIdsFormat(Decoder* decoder) {
   if (decoder->avail() < 2) return false;
   uint8 header1 = decoder->get8();
   uint8 header2 = decoder->get8();
-  S2_DCHECK_EQ(header1 & 7, CELL_IDS);
+  ABSL_DCHECK_EQ(header1 & 7, CELL_IDS);
   int last_block_count, base_bytes;
   cell_ids_.have_exceptions = (header1 & 8) != 0;
   last_block_count = (header1 >> 4) + 1;
@@ -827,11 +828,16 @@ S2Point EncodedS2PointVector::DecodeCellIdsFormat(int i) const {
   int offset_bytes = (header & 7) + overlap_nibbles;
   int delta_nibbles = (header >> 4) + 1;
 
-  // Decode the offset for this block.
-  int offset_shift = (delta_nibbles - overlap_nibbles) << 2;
-  uint64 offset = GetUintWithLength<uint64>(ptr, offset_bytes)
-                    << offset_shift;
-  ptr += offset_bytes;
+  // Decode the offset for this block.  If offset_bytes is zero, we don't have
+  // an offset so we can skip decoding it.  It's possible to get an offset_shift
+  // of 64 in this case, so skipping prevents us from shifting by that amount
+  // and triggering undefined behavior.
+  uint64 offset = 0;
+  if (offset_bytes > 0) {
+    int offset_shift = (delta_nibbles - overlap_nibbles) << 2;
+    offset = GetUintWithLength<uint64>(ptr, offset_bytes) << offset_shift;
+    ptr += offset_bytes;
+  }
 
   // Decode the delta for the requested value.
   int delta_nibble_offset = (i & (kBlockSize - 1)) * delta_nibbles;

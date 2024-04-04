@@ -19,6 +19,7 @@
 
 #include <memory>
 
+#include "absl/functional/function_ref.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -62,15 +63,15 @@ bool S2MaxDistancePointTarget::UpdateMinDistance(
   return min_dist->UpdateMin(S2MaxDistance(cell.GetMaxDistance(point_)));
 }
 
-bool S2MaxDistancePointTarget::VisitContainingShapes(
-    const S2ShapeIndex& index, const ShapeVisitor& visitor) {
+bool S2MaxDistancePointTarget::VisitContainingShapeIds(
+    const S2ShapeIndex& index,
+    absl::FunctionRef<bool(int id, const S2Point& target)> visitor) {
   // For furthest points, we visit the polygons whose interior contains the
   // antipode of the target point.  (These are the polygons whose
   // S2MaxDistance to the target is S2MaxDistance::Zero().)
-  return MakeS2ContainsPointQuery(&index).VisitContainingShapes(
-      -point_, [this, &visitor](S2Shape* shape) {
-        return visitor(shape, point_);
-      });
+  return MakeS2ContainsPointQuery(&index).VisitContainingShapeIds(
+      -point_,
+      [this, &visitor](int shape_id) { return visitor(shape_id, point_); });
 }
 
 //////////////////   Edge Target   ////////////////////
@@ -111,8 +112,9 @@ bool S2MaxDistanceEdgeTarget::UpdateMinDistance(
   return min_dist->UpdateMin(S2MaxDistance(cell.GetMaxDistance(a_, b_)));
 }
 
-bool S2MaxDistanceEdgeTarget::VisitContainingShapes(
-    const S2ShapeIndex& index, const ShapeVisitor& visitor) {
+bool S2MaxDistanceEdgeTarget::VisitContainingShapeIds(
+    const S2ShapeIndex& index,
+    absl::FunctionRef<bool(int id, const S2Point& target)> visitor) {
   // We only need to test one edge point.  That is because the method *must*
   // visit a polygon if it fully contains the target, and *is allowed* to
   // visit a polygon if it intersects the target.  If the tested vertex is not
@@ -121,7 +123,7 @@ bool S2MaxDistanceEdgeTarget::VisitContainingShapes(
   // intersects (is allowed to be visited).  We visit the center of the edge so
   // that edge AB gives identical results to BA.
   S2MaxDistancePointTarget target((a_ + b_).Normalize());
-  return target.VisitContainingShapes(index, visitor);
+  return target.VisitContainingShapeIds(index, visitor);
 }
 
 //////////////////   Cell Target   ////////////////////
@@ -149,12 +151,13 @@ bool S2MaxDistanceCellTarget::UpdateMinDistance(
   return min_dist->UpdateMin(S2MaxDistance(cell_.GetMaxDistance(cell)));
 }
 
-bool S2MaxDistanceCellTarget::VisitContainingShapes(
-    const S2ShapeIndex& index, const ShapeVisitor& visitor) {
+bool S2MaxDistanceCellTarget::VisitContainingShapeIds(
+    const S2ShapeIndex& index,
+    absl::FunctionRef<bool(int id, const S2Point& target)> visitor) {
   // We only need to check one point here - cell center is simplest.
   // See comment at S2MaxDistanceEdgeTarget::VisitContainingShapes.
   S2MaxDistancePointTarget target(cell_.GetCenter());
-  return target.VisitContainingShapes(index, visitor);
+  return target.VisitContainingShapeIds(index, visitor);
 }
 
 //////////////////   Index Target   ////////////////////
@@ -233,15 +236,16 @@ bool S2MaxDistanceShapeIndexTarget::UpdateMinDistance(
 // component.  (It is sufficient to test containment of one vertex per
 // connected component, since the API allows us to also return any polygon
 // whose boundary has S2MaxDistance::Zero() to the target.)
-bool S2MaxDistanceShapeIndexTarget::VisitContainingShapes(
-    const S2ShapeIndex& query_index, const ShapeVisitor& visitor) {
+bool S2MaxDistanceShapeIndexTarget::VisitContainingShapeIds(
+    const S2ShapeIndex& query_index,
+    absl::FunctionRef<bool(int id, const S2Point& target)> visitor) {
   // It is sufficient to find the set of chain starts in the target index
   // (i.e., one vertex per connected component of edges) that are contained by
   // the query index, except for one special case to handle full polygons.
   //
   // TODO(ericv): Do this by merge-joining the two S2ShapeIndexes, and share
   // the code with S2BooleanOperation.
-  for (S2Shape* shape : *index_) {
+  for (const S2Shape* shape : *index_) {
     if (shape == nullptr) continue;
     int num_chains = shape->num_chains();
     // Shapes that don't have any edges require a special case (below).
@@ -251,7 +255,7 @@ bool S2MaxDistanceShapeIndexTarget::VisitContainingShapes(
       if (chain.length == 0) continue;
       tested_point = true;
       S2MaxDistancePointTarget target(shape->chain_edge(c, 0).v0);
-      if (!target.VisitContainingShapes(query_index, visitor)) {
+      if (!target.VisitContainingShapeIds(query_index, visitor)) {
         return false;
       }
     }
@@ -260,7 +264,7 @@ bool S2MaxDistanceShapeIndexTarget::VisitContainingShapes(
       S2Shape::ReferencePoint ref = shape->GetReferencePoint();
       if (!ref.contained) continue;
       S2MaxDistancePointTarget target(ref.point);
-      if (!target.VisitContainingShapes(query_index, visitor)) {
+      if (!target.VisitContainingShapeIds(query_index, visitor)) {
         return false;
       }
     }

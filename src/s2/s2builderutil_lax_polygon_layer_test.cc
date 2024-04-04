@@ -32,7 +32,7 @@
 #include "absl/strings/string_view.h"
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -108,7 +108,7 @@ void TestLaxPolygon(string_view input_str,
   TestLaxPolygon(input_str, expected_str, EdgeType::DIRECTED,
                  degenerate_boundaries);
 #if 0
-  // TODO(ericv): Implement.
+  // TODO(b/281698554): Implement.
   TestLaxPolygon(input_str, expected_str, EdgeType::UNDIRECTED,
                  degenerate_boundaries);
 #endif
@@ -249,7 +249,7 @@ TEST(LaxPolygonLayer, PartialLoop) {
 }
 
 #if 0
-// TODO(ericv): Implement validation of S2LaxPolygonShape.
+// TODO(b/281698554): Implement validation of S2LaxPolygonShape.
 TEST(LaxPolygonLayer, InvalidPolygon) {
   S2Builder builder{S2Builder::Options()};
   S2LaxPolygonShape output;
@@ -343,7 +343,7 @@ static void TestEdgeLabels(string_view input_str, EdgeType edge_type,
 }
 
 TEST(LaxPolygonLayer, EdgeLabels) {
-  // TODO(ericv): Implement EdgeType::UNDIRECTED.
+  // TODO(b/281698554): Implement EdgeType::UNDIRECTED.
   for (auto edge_type : {EdgeType::DIRECTED}) {
     for (auto db : kAllDegenerateBoundaries()) {
       // Test a polygon with normal and degenerate shells and holes.  Note

@@ -60,7 +60,7 @@ S2LatLng S2LatLng::Normalized() const {
 }
 
 S2Point S2LatLng::ToPoint() const {
-  S2_DLOG_IF(ERROR, !is_valid())
+  ABSL_DLOG_IF(ERROR, !is_valid())
       << "Invalid S2LatLng in S2LatLng::ToPoint: " << *this;
   double phi = lat().radians();
   double theta = lng().radians();
@@ -71,7 +71,7 @@ S2Point S2LatLng::ToPoint() const {
 S2LatLng::S2LatLng(const S2Point& p)
   : coords_(Latitude(p).radians(), Longitude(p).radians()) {
   // The latitude and longitude are already normalized.
-  S2_DLOG_IF(ERROR, !is_valid())
+  ABSL_DLOG_IF(ERROR, !is_valid())
       << "Invalid S2LatLng in constructor: " << *this;
 }
 
@@ -86,10 +86,10 @@ S1Angle S2LatLng::GetDistance(const S2LatLng& o) const {
   // distance that way (which gives about 15 digits of accuracy for all
   // distances).
 
-  S2_DLOG_IF(ERROR, !is_valid())
+  ABSL_DLOG_IF(ERROR, !is_valid())
       << "Invalid S2LatLng in S2LatLng::GetDistance: " << *this;
 
-  S2_DLOG_IF(ERROR, !o.is_valid())
+  ABSL_DLOG_IF(ERROR, !o.is_valid())
       << "Invalid S2LatLng in S2LatLng::GetDistance: " << o;
 
   double lat1 = lat().radians();

@@ -20,12 +20,13 @@
 
 #include <cstddef>
 
+#include <cstdint>
 #include <iterator>
 #include <limits>
 #include <vector>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "s2/sequence_lexicon.h"
 
 // IdSetLexicon is a class for compactly representing sets of non-negative
@@ -62,7 +63,7 @@
 //
 //   int label_set_id = GetLabelSet(...);
 //   for (auto id : label_sets_.id_set(label_set_id)) {
-//     S2_LOG(INFO) << id;
+//     ABSL_LOG(INFO) << id;
 //   }
 //
 // This class is similar to SequenceLexicon, except:
@@ -170,27 +171,25 @@ inline IdSetLexicon::IdSet::IdSet(Iterator begin, Iterator end)
 }
 
 inline IdSetLexicon::IdSet::IdSet(int32 singleton_id)
-    : begin_(&singleton_id_), end_(&singleton_id_ + 1),
-      singleton_id_(singleton_id) {
-}
+    : begin_(&singleton_id_),
+      end_(&singleton_id_ + 1),
+      singleton_id_(singleton_id) {}
 
 inline int32 IdSetLexicon::AddSingleton(int32 id) const {
-  S2_DCHECK_GE(id, 0);
-  S2_DCHECK_LE(id, std::numeric_limits<int32>::max());
+  ABSL_DCHECK_GE(id, 0);
+  ABSL_DCHECK_LE(id, std::numeric_limits<int32>::max());
   // Singleton sets are represented by their element.
   return id;
 }
 
-/*static*/ inline int32 IdSetLexicon::EmptySetId() {
-  return kEmptySetId;
-}
+/*static*/ inline int32 IdSetLexicon::EmptySetId() { return kEmptySetId; }
 
 template <class FwdIterator>
 int32 IdSetLexicon::Add(FwdIterator begin, FwdIterator end) {
   tmp_.clear();
   for (; begin != end; ++begin) {
-    S2_DCHECK_GE(*begin, 0);
-    S2_DCHECK_LE(*begin, std::numeric_limits<int32>::max());
+    ABSL_DCHECK_GE(*begin, 0);
+    ABSL_DCHECK_LE(*begin, std::numeric_limits<int32>::max());
     tmp_.push_back(*begin);
   }
   return AddInternal(&tmp_);

@@ -23,7 +23,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "s2/base/logging.h"
 #include "absl/base/macros.h"
 #include "absl/container/inlined_vector.h"
 #include "s2/_fp_contract_off.h"
@@ -111,6 +110,7 @@ class S2ClosestEdgeQuery {
   // Distance concept required by S2ClosestPointQueryBase.
   using Distance = S2MinDistance;
   using Base = S2ClosestEdgeQueryBase<Distance>;
+  using ShapeFilter = Base::ShapeFilter;
 
   // Each "Result" object represents a closest edge.  Here are its main
   // methods (see S2ClosestEdgeQueryBase::Result for details):
@@ -263,11 +263,12 @@ class S2ClosestEdgeQuery {
   // include some entries with edge_id == -1.  This indicates that the target
   // intersects the indexed polygon with the given shape_id.  Such results may
   // be identifed by calling Result::is_interior().
-  std::vector<Result> FindClosestEdges(Target* target);
+  std::vector<Result> FindClosestEdges(Target* target, ShapeFilter filter = {});
 
   // This version can be more efficient when this method is called many times,
   // since it does not require allocating a new vector on each call.
-  void FindClosestEdges(Target* target, std::vector<Result>* results);
+  void FindClosestEdges(Target* target, std::vector<Result>* results,
+                        ShapeFilter filter = {});
 
   //////////////////////// Convenience Methods ////////////////////////
 
@@ -277,25 +278,27 @@ class S2ClosestEdgeQuery {
   // Note that if options.include_interiors() is true, Result::is_interior()
   // should be called to check whether the result represents an interior point
   // (in which case edge_id() == -1).
-  Result FindClosestEdge(Target* target);
+  Result FindClosestEdge(Target* target, ShapeFilter filter = {});
 
   // Returns the minimum distance to the target.  If the index or target is
   // empty, returns S1ChordAngle::Infinity().
   //
   // Use IsDistanceLess() if you only want to compare the distance against a
   // threshold value, since it is often much faster.
-  S1ChordAngle GetDistance(Target* target);
+  S1ChordAngle GetDistance(Target* target, ShapeFilter filter = {});
 
   // Returns true if the distance to "target" is less than "limit".
   //
   // This method is usually much faster than GetDistance(), since it is much
   // less work to determine whether the minimum distance is above or below a
   // threshold than it is to calculate the actual minimum distance.
-  bool IsDistanceLess(Target* target, S1ChordAngle limit);
+  bool IsDistanceLess(Target* target, S1ChordAngle limit,
+                      ShapeFilter filter = {});
 
   // Like IsDistanceLess(), but also returns true if the distance to "target"
   // is exactly equal to "limit".
-  bool IsDistanceLessOrEqual(Target* target, S1ChordAngle limit);
+  bool IsDistanceLessOrEqual(Target* target, S1ChordAngle limit,
+                             ShapeFilter filter = {});
 
   // Like IsDistanceLessOrEqual(), except that "limit" is increased by the
   // maximum error in the distance calculation.  This ensures that this
@@ -309,7 +312,8 @@ class S2ClosestEdgeQuery {
   // measure the distance between the two geometries conservatively.  If the
   // distance is definitely greater than "snap_radius", then the geometries
   // are guaranteed to not intersect after snapping.
-  bool IsConservativeDistanceLessOrEqual(Target* target, S1ChordAngle limit);
+  bool IsConservativeDistanceLessOrEqual(Target* target, S1ChordAngle limit,
+                                         ShapeFilter filter = {});
 
   // Returns the endpoints of the given result edge.
   // REQUIRES: !result.is_interior()
@@ -400,25 +404,27 @@ inline S2ClosestEdgeQuery::Options* S2ClosestEdgeQuery::mutable_options() {
 }
 
 inline std::vector<S2ClosestEdgeQuery::Result>
-S2ClosestEdgeQuery::FindClosestEdges(Target* target) {
-  return base_.FindClosestEdges(target, options_);
+S2ClosestEdgeQuery::FindClosestEdges(Target* target, ShapeFilter filter) {
+  return base_.FindClosestEdges(target, options_, filter);
 }
 
 inline void S2ClosestEdgeQuery::FindClosestEdges(Target* target,
-                                                 std::vector<Result>* results) {
-  base_.FindClosestEdges(target, options_, results);
+                                                 std::vector<Result>* results,
+                                                 ShapeFilter filter) {
+  base_.FindClosestEdges(target, options_, results, filter);
 }
 
 inline S2ClosestEdgeQuery::Result S2ClosestEdgeQuery::FindClosestEdge(
-    Target* target) {
+    Target* target, ShapeFilter filter) {
   static_assert(sizeof(Options) <= 32, "Consider not copying Options here");
   Options tmp_options = options_;
   tmp_options.set_max_results(1);
-  return base_.FindClosestEdge(target, tmp_options);
+  return base_.FindClosestEdge(target, tmp_options, filter);
 }
 
-inline S1ChordAngle S2ClosestEdgeQuery::GetDistance(Target* target) {
-  return FindClosestEdge(target).distance();
+inline S1ChordAngle S2ClosestEdgeQuery::GetDistance(Target* target,
+                                                    ShapeFilter filter) {
+  return FindClosestEdge(target, filter).distance();
 }
 
 inline S2Shape::Edge S2ClosestEdgeQuery::GetEdge(const Result& result) const {

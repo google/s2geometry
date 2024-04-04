@@ -23,8 +23,11 @@
 #include <memory>
 #include <utility>
 
-#include "s2/base/integral_types.h"
 #include <gtest/gtest.h>
+
+#include "absl/log/absl_check.h"
+
+#include "s2/base/types.h"
 #include "s2/s2point.h"
 
 using std::make_unique;

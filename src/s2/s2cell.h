@@ -20,16 +20,15 @@
 
 #include <cmath>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
-#include "s2/util/coding/coder.h"
 #include "s2/_fp_contract_off.h"
+#include "s2/base/types.h"
 #include "s2/r2rect.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords.h"
 #include "s2/s2point.h"
 #include "s2/s2region.h"
+#include "s2/util/coding/coder.h"
 #include "s2/util/math/vector.h"
 
 class Decoder;
@@ -248,6 +247,7 @@ class S2Cell final : public S2Region {
   S2Cell* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
   bool Contains(const S2Cell& cell) const override;
   bool MayIntersect(const S2Cell& cell) const override;
 

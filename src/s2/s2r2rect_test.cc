@@ -27,7 +27,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/s2cap.h"

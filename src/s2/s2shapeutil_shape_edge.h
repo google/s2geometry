@@ -18,7 +18,7 @@
 #ifndef S2_S2SHAPEUTIL_SHAPE_EDGE_H_
 #define S2_S2SHAPEUTIL_SHAPE_EDGE_H_
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/s2point.h"
 #include "s2/s2shape.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
@@ -30,7 +30,6 @@ namespace s2shapeutil {
 struct ShapeEdge {
  public:
   ShapeEdge() = default;
-  ShapeEdge(const S2Shape& shape, int32 edge_id);
   ShapeEdge(int32 shape_id, int32 edge_id, const S2Shape::Edge& edge);
   ShapeEdgeId id() const { return id_; }
   const S2Point& v0() const { return edge_.v0; }
@@ -43,9 +42,6 @@ struct ShapeEdge {
 
 
 //////////////////   Implementation details follow   ////////////////////
-
-inline ShapeEdge::ShapeEdge(const S2Shape& shape, int32 edge_id)
-    : ShapeEdge(shape.id(), edge_id, shape.edge(edge_id)) {}
 
 inline ShapeEdge::ShapeEdge(int32 shape_id, int32 edge_id,
                             const S2Shape::Edge& edge)

@@ -132,10 +132,11 @@ class S2Error {
     Init(code, format, args...);
   }
 
-  // Set the error to the given code and printf-style message.  Note that you
-  // can prepend text to an existing error by calling Init() more than once:
+  // Set the error to the given code and absl::StrFormat-style message.
+  // Note that you can prepend text to an existing error by calling Init()
+  // more than once:
   //
-  //   error->Init(error->code(), "Loop %d: %s", j, error->text().c_str());
+  //   error->Init(error->code(), "Loop %d: %s", j, error->text());
   template <typename... Args>
   void Init(Code code, const absl::FormatSpec<Args...>& format,
             const Args&... args) {

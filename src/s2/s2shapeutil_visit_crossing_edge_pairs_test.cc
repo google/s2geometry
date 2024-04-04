@@ -27,6 +27,7 @@
 
 #include <gtest/gtest.h>
 
+#include "absl/log/absl_log.h"
 #include "absl/strings/string_view.h"
 
 #include "s2/mutable_s2shape_index.h"
@@ -246,7 +247,7 @@ TEST(GetCrossingEdgePairs, EdgeGridTwoIndexes) {
 static bool HasSelfIntersection(const MutableS2ShapeIndex& index) {
   S2Error error;
   if (s2shapeutil::FindSelfIntersection(index, &error)) {
-    S2_VLOG(1) << error;
+    ABSL_VLOG(1) << error;
     return true;
   }
   return false;

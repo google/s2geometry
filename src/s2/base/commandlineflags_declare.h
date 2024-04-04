@@ -20,7 +20,7 @@
 
 #include "absl/flags/declare.h"
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 
 #define S2_DECLARE_bool(name) ABSL_DECLARE_FLAG(bool, name)
 

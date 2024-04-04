@@ -52,6 +52,12 @@ void CheckSimplify(string_view src, string_view dst, string_view target,
       << "\navoid = " << avoid;
 }
 
+TEST(S2PolylineSimplifier, Src) {
+  S2PolylineSimplifier s;
+  s.Init(S2Point(1, 0, 0));
+  EXPECT_EQ(s.src(), S2Point(1, 0, 0));
+}
+
 TEST(S2PolylineSimplifier, Reuse) {
   // Check that Init() can be called more than once.
   S2PolylineSimplifier s;

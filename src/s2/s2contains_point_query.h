@@ -21,7 +21,8 @@
 #include <functional>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
+#include "absl/functional/function_ref.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2edge_crosser.h"
 #include "s2/s2edge_crossings.h"
@@ -117,30 +118,43 @@ class S2ContainsPointQuery {
   // under the vertex model specified (OPEN, SEMI_OPEN, or CLOSED).
   bool Contains(const S2Point& p);
 
-  // Returns true if the given shape contains the point "p" under the vertex
-  // model specified (OPEN, SEMI_OPEN, or CLOSED).
-  //
-  // REQUIRES: "shape" belongs to index().
-  bool ShapeContains(const S2Shape& shape, const S2Point& p);
+  // Returns true if the given shape from the index contains the point "p" under
+  // the vertex model specified (OPEN, SEMI_OPEN, or CLOSED).
+  bool ShapeContains(int shape_id, const S2Point& p);
 
   // Visits all shapes in the given index() that contain the given point "p",
-  // terminating early if the given ShapeVisitor function returns false (in
-  // which case VisitContainingShapes returns false as well).  Each shape is
-  // visited at most once.
+  // terminating early if the given visitor function returns false (in which
+  // case VisitContainingShapeIds returns false as well).  Each shape is visited
+  // at most once.
   //
   // Note that the API allows non-const access to the visited shapes.
   //
   // Also see S2ShapeIndexRegion::VisitIntersectingShapes() which allows
   // visiting all shapes in an S2ShapeIndex that intersect or contain a given
   // target S2CellId.
+  bool VisitContainingShapeIds(const S2Point& p,
+                               absl::FunctionRef<bool(int shape_id)>);
+
+  // Visits all shapes in the given index() that contain the given point "p",
+  // terminating early if the given visitor function returns false (in which
+  // case VisitContainingShapes returns false as well).  Each shape is visited
+  // at most once.
+  //
+  // Also see S2ShapeIndexRegion::VisitIntersectingShapes() which allows
+  // visiting all shapes in an S2ShapeIndex that intersect or contain a given
+  // target S2CellId.
   //
   // ENSURES: shape != nullptr
-  using ShapeVisitor = std::function<bool (S2Shape* shape)>;
-  bool VisitContainingShapes(const S2Point& p, const ShapeVisitor& visitor);
+  bool VisitContainingShapes(const S2Point& p,
+                             absl::FunctionRef<bool(const S2Shape* shape)>);
 
   // Convenience function that returns all the shapes that contain the given
   // point "p".
-  std::vector<S2Shape*> GetContainingShapes(const S2Point& p);
+  std::vector<const S2Shape*> GetContainingShapes(const S2Point& p);
+
+  // Convenience function that returns all the shape ids that contain the given
+  // point "p".
+  std::vector<int> GetContainingShapeIds(const S2Point& p);
 
   // Visits all edges in the given index() that are incident to the point "p"
   // (i.e., "p" is one of the edge endpoints), terminating early if the given
@@ -235,31 +249,40 @@ bool S2ContainsPointQuery<IndexType>::Contains(const S2Point& p) {
 }
 
 template <class IndexType>
-bool S2ContainsPointQuery<IndexType>::ShapeContains(const S2Shape& shape,
+bool S2ContainsPointQuery<IndexType>::ShapeContains(int shape_id,
                                                     const S2Point& p) {
-  if (!it_.Locate(p)) return false;
-  const S2ClippedShape* clipped = it_.cell().find_clipped(shape.id());
-  if (clipped == nullptr) return false;
+  if (!it_.Locate(p)) {
+    return false;
+  }
+
+  const S2ClippedShape* clipped = it_.cell().find_clipped(shape_id);
+  if (clipped == nullptr) {
+    return false;
+  }
+
   return ShapeContains(it_.id(), *clipped, p);
 }
 
 template <class IndexType>
-bool S2ContainsPointQuery<IndexType>::VisitContainingShapes(
-    const S2Point& p, const ShapeVisitor& visitor) {
+bool S2ContainsPointQuery<IndexType>::VisitContainingShapeIds(
+    const S2Point& p, absl::FunctionRef<bool(int shape_id)> visitor) {
   // This function returns "false" only if the algorithm terminates early
   // because the "visitor" function returned false.
   if (!it_.Locate(p)) return true;
 
-  const S2ShapeIndexCell& cell = it_.cell();
-  int num_clipped = cell.num_clipped();
-  for (int s = 0; s < num_clipped; ++s) {
-    const S2ClippedShape& clipped = cell.clipped(s);
-    if (ShapeContains(it_.id(), clipped, p) &&
-        !visitor(index_->shape(clipped.shape_id()))) {
+  for (const S2ClippedShape& clipped : it_.cell().clipped_shapes()) {
+    if (ShapeContains(it_.id(), clipped, p) && !visitor(clipped.shape_id())) {
       return false;
     }
   }
   return true;
+}
+
+template <class IndexType>
+bool S2ContainsPointQuery<IndexType>::VisitContainingShapes(
+    const S2Point& p, absl::FunctionRef<bool(const S2Shape* shape)> visitor) {
+  return VisitContainingShapeIds(
+      p, [&](int shape_id) { return visitor(index_->shape(shape_id)); });
 }
 
 template <class IndexType>
@@ -280,7 +303,7 @@ bool S2ContainsPointQuery<IndexType>::VisitIncidentEdges(
       int edge_id = clipped.edge(i);
       auto edge = shape.edge(edge_id);
       if ((edge.v0 == p || edge.v1 == p) &&
-          !visitor(s2shapeutil::ShapeEdge(shape.id(), edge_id, edge))) {
+          !visitor(s2shapeutil::ShapeEdge(clipped.shape_id(), edge_id, edge))) {
         return false;
       }
     }
@@ -289,20 +312,30 @@ bool S2ContainsPointQuery<IndexType>::VisitIncidentEdges(
 }
 
 template <class IndexType>
-std::vector<S2Shape*> S2ContainsPointQuery<IndexType>::GetContainingShapes(
+std::vector<const S2Shape*>
+S2ContainsPointQuery<IndexType>::GetContainingShapes(const S2Point& p) {
+  std::vector<const S2Shape*> results;
+  VisitContainingShapes(p, [&results](const S2Shape* shape) {
+    results.push_back(shape);
+    return true;
+  });
+  return results;
+}
+
+template <class IndexType>
+std::vector<int> S2ContainsPointQuery<IndexType>::GetContainingShapeIds(
     const S2Point& p) {
-  std::vector<S2Shape*> results;
-  VisitContainingShapes(p, [&results](S2Shape* shape) {
-      results.push_back(shape);
-      return true;
-    });
+  std::vector<int> results;
+  VisitContainingShapeIds(p, [&results](int shape_id) {
+    results.push_back(shape_id);
+    return true;
+  });
   return results;
 }
 
 template <class IndexType>
 bool S2ContainsPointQuery<IndexType>::ShapeContains(
-    S2CellId cell_id, const S2ClippedShape& clipped,
-    const S2Point& p) const {
+    S2CellId cell_id, const S2ClippedShape& clipped, const S2Point& p) const {
   bool inside = clipped.contains_center();
   const int num_edges = clipped.num_edges();
   if (num_edges > 0) {

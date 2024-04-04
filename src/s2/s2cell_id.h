@@ -30,14 +30,12 @@
 
 #include "absl/base/attributes.h"
 #include "absl/hash/hash.h"
+#include "absl/log/absl_check.h"
 #include "absl/numeric/bits.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
 #include "s2/_fp_contract_off.h"
+#include "s2/base/types.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -86,6 +84,9 @@ class S2LatLng;
 // representations.  For cells that represent 2D regions rather than
 // discrete point, it is better to use the S2Cell class.
 //
+// All methods require `is_valid()` to be true unless otherwise specified
+// (although not all methods enforce this).
+//
 // This class is intended to be copied by value as desired.  It uses
 // the default copy constructor and assignment operator.
 class S2CellId {
@@ -101,9 +102,6 @@ class S2CellId {
   static constexpr int kPosBits = 2 * kMaxLevel + 1;
   static constexpr int kMaxSize = 1 << kMaxLevel;
 
-  // This arg is uint64 rather than to help the uint64 -> uint64
-  // transition.  TODO(user): Remove inconsistency and update
-  // the rest of util/geometry when these are the same types, ~2020-09-01.
   explicit IFNDEF_SWIG(constexpr) S2CellId(uint64 id) : id_(id) {}
 
   // Construct a leaf cell containing the given point "p".  Usually there is
@@ -279,8 +277,8 @@ class S2CellId {
   // of your key-value store and define "limit" as Successor(key).
   //
   // Note that Sentinel().range_min() == Sentinel.range_max() == Sentinel().
-  S2CellId range_min() const;
-  S2CellId range_max() const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId range_min() const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId range_max() const;
 
   // Return true if the given cell is contained within this one.
   bool contains(S2CellId other) const;
@@ -290,12 +288,12 @@ class S2CellId {
 
   // Return the cell at the previous level or at the given level (which must
   // be less than or equal to the current level).
-  S2CellId parent() const;
-  S2CellId parent(int level) const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId parent() const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId parent(int level) const;
 
   // Return the immediate child of this cell at the given traversal order
   // position (in the range 0 to 3).  This cell must not be a leaf cell.
-  S2CellId child(int position) const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId child(int position) const;
 
   // Iterator-style methods for traversing the immediate children of a cell or
   // all of the children at a given level (greater than or equal to the current
@@ -309,21 +307,21 @@ class S2CellId {
   // The convention for advancing the iterator is "c = c.next()" rather
   // than "++c" to avoid possible confusion with incrementing the
   // underlying 64-bit cell id.
-  S2CellId child_begin() const;
-  S2CellId child_begin(int level) const;
-  S2CellId child_end() const;
-  S2CellId child_end(int level) const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId child_begin() const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId child_begin(int level) const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId child_end() const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId child_end(int level) const;
 
   // Return the next/previous cell at the same level along the Hilbert curve.
   // Works correctly when advancing from one face to the next, but
   // does *not* wrap around from the last face to the first or vice versa.
-  S2CellId next() const;
-  S2CellId prev() const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId next() const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId prev() const;
 
   // This method advances or retreats the indicated number of steps along the
   // Hilbert curve at the current level, and returns the new position.  The
   // position is never advanced past End() or before Begin().
-  S2CellId advance(int64 steps) const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId advance(int64 steps) const;
 
   // Returns the number of steps that this cell is from Begin(level()). The
   // return value is always non-negative.
@@ -333,14 +331,14 @@ class S2CellId {
   // to the first and vice versa.  They should *not* be used for iteration in
   // conjunction with child_begin(), child_end(), Begin(), or End().  The
   // input must be a valid cell id.
-  S2CellId next_wrap() const;
-  S2CellId prev_wrap() const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId next_wrap() const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId prev_wrap() const;
 
   // This method advances or retreats the indicated number of steps along the
   // Hilbert curve at the current level, and returns the new position.  The
   // position wraps between the first and last faces as necessary.  The input
   // must be a valid cell id.
-  S2CellId advance_wrap(int64 steps) const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId advance_wrap(int64 steps) const;
 
   // Return the largest cell with the same range_min() and such that
   // range_max() < limit.range_min().  Returns "limit" if no such cell exists.
@@ -354,7 +352,7 @@ class S2CellId {
   // Note that in general the cells in the tiling will be of different sizes;
   // they gradually get larger (near the middle of the range) and then
   // gradually get smaller (as "limit" is approached).
-  S2CellId maximum_tile(S2CellId limit) const;
+  IFNDEF_SWIG(ABSL_MUST_USE_RESULT) S2CellId maximum_tile(S2CellId limit) const;
 
   // Returns the level of the lowest common ancestor of this cell and "other",
   // i.e. the maximum level where this->parent(level) == other.parent(level).
@@ -482,7 +480,7 @@ class S2CellId {
   // Hilbert curve to the end or vice versa; see next_wrap() and prev_wrap().
   // SWIG doesn't understand uint64{}, so use static_cast.
   static constexpr uint64 kWrapOffset = static_cast<uint64>(kNumFaces)
-                                        << kPosBits;
+                                          << kPosBits;
 
   // Given a face and a point (i,j) where either i or j is outside the valid
   // range [0..kMaxSize-1], this function first determines which neighboring
@@ -528,6 +526,7 @@ inline S2CellId S2CellId::FromFace(int face) {
 
 inline S2CellId S2CellId::FromFacePosLevel(int face, uint64 pos, int level) {
   S2CellId cell((static_cast<uint64>(face) << kPosBits) + (pos | 1));
+  // `parent` `ABSL_DCHECK`s level, so don't do it here.
   return cell.parent(level);
 }
 
@@ -572,10 +571,10 @@ inline uint64 S2CellId::pos() const {
 }
 
 inline int S2CellId::level() const {
-  // We can't just S2_DCHECK(is_valid()) because we want level() to be
+  // We can't just ABSL_DCHECK(is_valid()) because we want level() to be
   // defined for end-iterators, i.e. S2CellId::End(kLevel).  However there is
   // no good way to define S2CellId::None().level(), so we do prohibit that.
-  S2_DCHECK_NE(id_, uint64{0});
+  ABSL_DCHECK_NE(id_, uint64{0});
 
   // A special case for leaf cells is not worthwhile.
   return kMaxLevel - (Bits::FindLSBSetNonZero64(id_) >> 1);
@@ -590,10 +589,13 @@ inline double S2CellId::GetSizeST() const {
 }
 
 inline int S2CellId::GetSizeIJ(int level) {
-  return uint64{1} << (kMaxLevel - level);
+  ABSL_DCHECK_GE(level, 0);
+  ABSL_DCHECK_LE(level, kMaxLevel);
+  return 1 << (kMaxLevel - level);
 }
 
 inline double S2CellId::GetSizeST(int level) {
+  // `GetSizeIJ` `ABSL_DCHECK`s `level`, so don't do it here.
   return S2::IJtoSTMin(GetSizeIJ(level));
 }
 
@@ -609,9 +611,9 @@ inline int S2CellId::child_position() const {
 }
 
 inline int S2CellId::child_position(int level) const {
-  S2_DCHECK(is_valid());
-  S2_DCHECK_GE(level, 1);
-  S2_DCHECK_LE(level, this->level());
+  ABSL_DCHECK(is_valid());
+  ABSL_DCHECK_GE(level, 1);
+  ABSL_DCHECK_LE(level, this->level());
   return static_cast<int>(id_ >> (2 * (kMaxLevel - level) + 1)) & 3;
 }
 
@@ -624,35 +626,35 @@ inline S2CellId S2CellId::range_max() const {
 }
 
 inline bool S2CellId::contains(S2CellId other) const {
-  S2_DCHECK(is_valid());
-  S2_DCHECK(other.is_valid());
+  ABSL_DCHECK(is_valid());
+  ABSL_DCHECK(other.is_valid());
   return other >= range_min() && other <= range_max();
 }
 
 inline bool S2CellId::intersects(S2CellId other) const {
-  S2_DCHECK(is_valid());
-  S2_DCHECK(other.is_valid());
+  ABSL_DCHECK(is_valid());
+  ABSL_DCHECK(other.is_valid());
   return other.range_min() <= range_max() && other.range_max() >= range_min();
 }
 
 inline S2CellId S2CellId::parent(int level) const {
-  S2_DCHECK(is_valid());
-  S2_DCHECK_GE(level, 0);
-  S2_DCHECK_LE(level, this->level());
+  ABSL_DCHECK(is_valid());
+  ABSL_DCHECK_GE(level, 0);
+  ABSL_DCHECK_LE(level, this->level());
   uint64 new_lsb = lsb_for_level(level);
   return S2CellId((id_ & (~new_lsb + 1)) | new_lsb);
 }
 
 inline S2CellId S2CellId::parent() const {
-  S2_DCHECK(is_valid());
-  S2_DCHECK(!is_face());
+  ABSL_DCHECK(is_valid());
+  ABSL_DCHECK(!is_face());
   uint64 new_lsb = lsb() << 2;
   return S2CellId((id_ & (~new_lsb + 1)) | new_lsb);
 }
 
 inline S2CellId S2CellId::child(int position) const {
-  S2_DCHECK(is_valid());
-  S2_DCHECK(!is_leaf());
+  ABSL_DCHECK(is_valid());
+  ABSL_DCHECK(!is_leaf());
   // To change the level, we need to move the least-significant bit two
   // positions downward.  We do this by subtracting (4 * new_lsb) and adding
   // new_lsb.  Then to advance to the given child cell, we add
@@ -662,30 +664,30 @@ inline S2CellId S2CellId::child(int position) const {
 }
 
 inline S2CellId S2CellId::child_begin() const {
-  S2_DCHECK(is_valid());
-  S2_DCHECK(!is_leaf());
+  ABSL_DCHECK(is_valid());
+  ABSL_DCHECK(!is_leaf());
   uint64 old_lsb = lsb();
   return S2CellId(id_ - old_lsb + (old_lsb >> 2));
 }
 
 inline S2CellId S2CellId::child_begin(int level) const {
-  S2_DCHECK(is_valid());
-  S2_DCHECK_GE(level, this->level());
-  S2_DCHECK_LE(level, kMaxLevel);
+  ABSL_DCHECK(is_valid());
+  ABSL_DCHECK_GE(level, this->level());
+  ABSL_DCHECK_LE(level, kMaxLevel);
   return S2CellId(id_ - lsb() + lsb_for_level(level));
 }
 
 inline S2CellId S2CellId::child_end() const {
-  S2_DCHECK(is_valid());
-  S2_DCHECK(!is_leaf());
+  ABSL_DCHECK(is_valid());
+  ABSL_DCHECK(!is_leaf());
   uint64 old_lsb = lsb();
   return S2CellId(id_ + old_lsb + (old_lsb >> 2));
 }
 
 inline S2CellId S2CellId::child_end(int level) const {
-  S2_DCHECK(is_valid());
-  S2_DCHECK_GE(level, this->level());
-  S2_DCHECK_LE(level, kMaxLevel);
+  ABSL_DCHECK(is_valid());
+  ABSL_DCHECK_GE(level, this->level());
+  ABSL_DCHECK_LE(level, kMaxLevel);
   return S2CellId(id_ + lsb() + lsb_for_level(level));
 }
 
@@ -698,24 +700,26 @@ inline S2CellId S2CellId::prev() const {
 }
 
 inline S2CellId S2CellId::next_wrap() const {
-  S2_DCHECK(is_valid());
+  ABSL_DCHECK(is_valid());
   S2CellId n = next();
   if (n.id_ < kWrapOffset) return n;
   return S2CellId(n.id_ - kWrapOffset);
 }
 
 inline S2CellId S2CellId::prev_wrap() const {
-  S2_DCHECK(is_valid());
+  ABSL_DCHECK(is_valid());
   S2CellId p = prev();
   if (p.id_ < kWrapOffset) return p;
   return S2CellId(p.id_ + kWrapOffset);
 }
 
 inline S2CellId S2CellId::Begin(int level) {
+  // `child_begin` `ABSL_DCHECK`s level, so don't do it here.
   return FromFace(0).child_begin(level);
 }
 
 inline S2CellId S2CellId::End(int level) {
+  // `child_end` `ABSL_DCHECK`s level, so don't do it here.
   return FromFace(5).child_end(level);
 }
 
@@ -743,6 +747,13 @@ struct S2CellIdHash {
     return absl::Hash<S2CellId>()(id);
   }
 };
+
+// Parse valid S2 tokens from a string. Returns false if the token cannot be
+// parsed with S2CellId::FromToken.
+bool AbslParseFlag(absl::string_view input, S2CellId* id, std::string* error);
+
+// Unparse a valid S2 token into a string that can be parsed by AbslParseFlag.
+std::string AbslUnparseFlag(S2CellId id);
 
 #undef IFNDEF_SWIG
 

@@ -17,8 +17,6 @@
 
 #include "s2/s2edge_crossings.h"
 
-#include <cstdio>
-
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
@@ -28,6 +26,8 @@
 
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
@@ -238,7 +238,7 @@ TEST(S2, SymbolicCrossProdConsistentWithSign) {
         if (a == S2Point()) continue;
         for (double scale : {-1.0, 1 - DBL_ERR, 1 + 2 * DBL_ERR}) {
           S2Point b = scale * a;
-          S2_DCHECK(S2::IsUnitLength(b));
+          ABSL_DCHECK(S2::IsUnitLength(b));
           EXPECT_GT(s2pred::Sign(a, b, S2::RobustCrossProd(a, b).Normalize()),
                     0);
         }
@@ -326,7 +326,7 @@ TEST(S2, RobustCrossProdError) {
     stats.Tally(prec);
   }
   // These stats are very heavily skewed towards degenerate cases.
-  S2_LOG(ERROR) << stats.ToString();
+  ABSL_LOG(ERROR) << stats.ToString();
 }
 
 TEST(S2, AngleContainsVertex) {
@@ -380,18 +380,15 @@ class GetIntersectionStats {
       total += tally_[i];
       totals[i] = total;
     }
-    printf("%10s %16s %16s  %6s\n",
-           "Method", "Successes", "Attempts", "Rate");
+    absl::PrintF("%10s %16s %16s  %6s\n",
+                 "Method", "Successes", "Attempts", "Rate");
     for (int i = 0; i < kNumMethods; ++i) {
       if (tally_[i] == 0) continue;
-      // Use `StrFormat` to handle `string_view`.
-      puts(absl::StrFormat("%10s %9d %5.1f%% %9d %5.1f%%  %5.1f%%",
-                           S2::internal::GetIntersectionMethodName(
-                               static_cast<IntersectionMethod>(i)),
-                           tally_[i], 100.0 * tally_[i] / total, totals[i],
-                           100.0 * totals[i] / total,
-                           100.0 * tally_[i] / totals[i])
-               .c_str());
+      absl::PrintF("%10s %9d %5.1f%% %9d %5.1f%%  %5.1f%%\n",
+                   S2::internal::GetIntersectionMethodName(
+                       static_cast<IntersectionMethod>(i)),
+                   tally_[i], 100.0 * tally_[i] / total, totals[i],
+                   100.0 * totals[i] / total, 100.0 * tally_[i] / totals[i]);
     }
     for (int i = 0; i < kNumMethods; ++i) tally_[i] = 0;
   }
@@ -484,10 +481,10 @@ TEST(S2, IntersectionError) {
     max_point_dist = max(max_point_dist, point_dist);
   }
   stats.Print();
-  S2_LOG(INFO) << "Max distance to either edge being intersected: "
-            << max_edge_dist.radians();
-  S2_LOG(INFO) << "Maximum distance to expected intersection point: "
-            << max_point_dist.radians();
+  ABSL_LOG(INFO) << "Max distance to either edge being intersected: "
+                 << max_edge_dist.radians();
+  ABSL_LOG(INFO) << "Maximum distance to expected intersection point: "
+                 << max_point_dist.radians();
 }
 
 // Chooses a point in the XY plane that is separated from X by at least 1e-15

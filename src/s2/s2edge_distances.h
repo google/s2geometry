@@ -24,8 +24,8 @@
 #include <cfloat>
 #include <utility>
 
-#include "s2/base/logging.h"
 #include "absl/base/macros.h"
+#include "absl/log/absl_check.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
@@ -224,6 +224,13 @@ bool UpdateEdgePairMaxDistance(const S2Point& a0, const S2Point& a1,
                                const S2Point& b0, const S2Point& b1,
                                S1ChordAngle* max_dist);
 
+// Returns true if the minimum distance between two edges is less than distance.
+//
+// See s2pred::CompareEdgePairDistance() for an exact version of this predicate.
+bool IsEdgePairDistanceLess(const S2Point& a0, const S2Point& a1,
+                            const S2Point& b0, const S2Point& b1,
+                            S1ChordAngle distance);
+
 // Returns the pair of points (a, b) that achieves the minimum distance
 // between edges a0a1 and b0b1, where "a" is a point on a0a1 and "b" is a
 // point on b0b1.  If the two edges intersect, "a" and "b" are both equal to
@@ -256,11 +263,11 @@ inline bool IsInteriorDistanceLess(const S2Point& x, const S2Point& a,
 
 inline S2Point GetPointOnRay(const S2Point& origin, const S2Point& dir,
                              S1ChordAngle r) {
-  S2_DCHECK(S2::IsUnitLength(origin));
-  S2_DCHECK(S2::IsUnitLength(dir));
+  ABSL_DCHECK(S2::IsUnitLength(origin));
+  ABSL_DCHECK(S2::IsUnitLength(dir));
   // The error bound below includes the error in computing the dot product.
-  S2_DCHECK_LE(origin.DotProd(dir),
-            S2::kRobustCrossProdError.radians() + 0.75 * DBL_EPSILON);
+  ABSL_DCHECK_LE(origin.DotProd(dir),
+                 S2::kRobustCrossProdError.radians() + 0.75 * DBL_EPSILON);
 
   // Mathematically the result should already be unit length, but we normalize
   // it anyway to ensure that the error is within acceptable bounds.
@@ -275,10 +282,10 @@ inline S2Point GetPointOnRay(const S2Point& origin, const S2Point& dir,
 inline S2Point GetPointOnRay(const S2Point& origin, const S2Point& dir,
                              S1Angle r) {
   // See comments above.
-  S2_DCHECK(S2::IsUnitLength(origin));
-  S2_DCHECK(S2::IsUnitLength(dir));
-  S2_DCHECK_LE(origin.DotProd(dir),
-            S2::kRobustCrossProdError.radians() + 0.75 * DBL_EPSILON);
+  ABSL_DCHECK(S2::IsUnitLength(origin));
+  ABSL_DCHECK(S2::IsUnitLength(dir));
+  ABSL_DCHECK_LE(origin.DotProd(dir),
+                 S2::kRobustCrossProdError.radians() + 0.75 * DBL_EPSILON);
 
   return (cos(r) * origin + sin(r) * dir).Normalize();
 }

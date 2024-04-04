@@ -26,6 +26,8 @@
 
 #include <gtest/gtest.h>
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 
 #include "s2/base/log_severity.h"
@@ -58,7 +60,7 @@ class Stats {
   }
 
   void Tally(double v) {
-    if (std::isnan(v)) S2_LOG(FATAL) << "NaN";
+    if (std::isnan(v)) ABSL_LOG(FATAL) << "NaN";
     max_ = std::max(v, max_);
     sum_ += v;
     count_ += 1;
@@ -94,7 +96,7 @@ S1Angle GetMaxDistance(const S2::Projection& proj,
     if (dist_type == DistType::GEOMETRIC) {
       S2::UpdateMinDistance(p, x, y, &dist);
     } else {
-      S2_DCHECK(dist_type == DistType::PARAMETRIC);
+      ABSL_DCHECK(dist_type == DistType::PARAMETRIC);
       dist = S1ChordAngle(p, S2::Interpolate(x, y, f));
     }
     if (dist > max_dist) max_dist = dist;

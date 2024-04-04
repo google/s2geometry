@@ -17,7 +17,8 @@
 
 #include "s2/s2shape_index.h"
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
+#include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
 #include "s2/util/gtl/compact_array.h"
@@ -83,9 +84,9 @@ void S2ShapeIndexCell::Encode(int num_shape_ids, Encoder* encoder) const {
   if (num_shape_ids == 1) {
     // If the entire S2ShapeIndex contains just one shape, then we don't need
     // to encode any shape ids.  This is a very important and common case.
-    S2_DCHECK_EQ(num_clipped(), 1);  // Index invariant: no empty cells.
+    ABSL_DCHECK_EQ(num_clipped(), 1);  // Index invariant: no empty cells.
     const S2ClippedShape& clipped = this->clipped(0);
-    S2_DCHECK_EQ(clipped.shape_id(), 0);
+    ABSL_DCHECK_EQ(clipped.shape_id(), 0);
     int n = clipped.num_edges();
     encoder->Ensure(Varint::kMax64 + n * Varint::kMax32);
     if (n >= 2 && n <= 17 && clipped.edge(n - 1) - clipped.edge(0) == n - 1) {
@@ -131,7 +132,7 @@ void S2ShapeIndexCell::Encode(int num_shape_ids, Encoder* encoder) const {
     int shape_id_base = 0;
     for (int j = 0; j < num_clipped(); ++j) {
       const S2ClippedShape& clipped = this->clipped(j);
-      S2_DCHECK_GE(clipped.shape_id(), shape_id_base);
+      ABSL_DCHECK_GE(clipped.shape_id(), shape_id_base);
       int shape_delta = clipped.shape_id() - shape_id_base;
       shape_id_base = clipped.shape_id() + 1;
 
@@ -243,7 +244,7 @@ bool S2ShapeIndexCell::Decode(int num_shape_ids, Decoder* decoder) {
       clipped->set_contains_center((header & 8) != 0);
     } else {
       // The clipped shape contains some other combination of edges.
-      S2_DCHECK_EQ(header & 3, 1);
+      ABSL_DCHECK_EQ(header & 3, 1);
       uint32 shape_delta;
       if (!decoder->get_varint32(&shape_delta)) return false;
       shape_id += shape_delta;
@@ -273,7 +274,7 @@ inline void S2ShapeIndexCell::EncodeEdges(const S2ClippedShape& clipped,
   int num_edges = clipped.num_edges();
   for (int i = 0; i < num_edges; ++i) {
     int edge_id = clipped.edge(i);
-    S2_DCHECK_GE(edge_id, edge_id_base);
+    ABSL_DCHECK_GE(edge_id, edge_id_base);
     int delta = edge_id - edge_id_base;
     if (i + 1 == num_edges) {
       // This is the last edge; no need to encode an edge count.

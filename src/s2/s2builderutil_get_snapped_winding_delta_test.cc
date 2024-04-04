@@ -27,6 +27,7 @@
 
 #include <gtest/gtest.h>
 #include "absl/container/btree_map.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/id_set_lexicon.h"
@@ -87,10 +88,10 @@ class WindingNumberComparingLayer : public S2Builder::Layer {
   // Find the reference vertex before and after snapping.
     S2Point ref_in = builder_.input_edge(ref_input_edge_id_).v0;
     VertexId ref_v = s2builderutil::FindFirstVertexId(ref_input_edge_id_, g);
-    S2_DCHECK_GE(ref_v, 0);
+    ABSL_DCHECK_GE(ref_v, 0);
     int winding_delta = s2builderutil::GetSnappedWindingDelta(
         ref_in, ref_v, s2builderutil::InputEdgeFilter{}, builder_, g, error);
-    S2_CHECK(error->ok()) << *error;
+    ABSL_CHECK(error->ok()) << *error;
     EXPECT_EQ(winding_delta, expected_winding_delta_);
   }
 
@@ -118,7 +119,7 @@ void ExpectWindingDelta(string_view loops_str, string_view forced_vertices_str,
   }
   builder.AddShape(*s2textformat::MakeLaxPolygonOrDie(loops_str));
   S2Shape::Edge ref_edge = builder.input_edge(ref_input_edge_id);
-  S2_DCHECK(ref_edge.v0 == ref_edge.v1) << "Reference edge not degenerate";
+  ABSL_DCHECK(ref_edge.v0 == ref_edge.v1) << "Reference edge not degenerate";
   S2Error error;
   EXPECT_TRUE(builder.Build(&error)) << error;
 }
@@ -409,7 +410,7 @@ void WindingNumberCheckingLayer::Build(const Graph& g, S2Error* error) {
   // difference between the two (using only local snapping information).
   int winding_delta = s2builderutil::GetSnappedWindingDelta(
       ref_in, ref_v, s2builderutil::InputEdgeFilter{}, builder_, g, error);
-  S2_CHECK(error->ok()) << *error;
+  ABSL_CHECK(error->ok()) << *error;
   EXPECT_EQ(winding_delta, winding_out - winding_in);
   (*winding_tally_)[winding_delta] += 1;
 }

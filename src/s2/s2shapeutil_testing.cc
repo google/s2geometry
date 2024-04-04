@@ -50,12 +50,11 @@ void ExpectEqual(const S2ShapeIndex& a, const S2ShapeIndex& b) {
   // Check that both indexes have identical shapes.
   ASSERT_EQ(a.num_shape_ids(), b.num_shape_ids());
   for (int shape_id = 0; shape_id < a.num_shape_ids(); ++shape_id) {
-    S2Shape* a_shape = a.shape(shape_id);
-    S2Shape* b_shape = b.shape(shape_id);
+    const S2Shape* a_shape = a.shape(shape_id);
+    const S2Shape* b_shape = b.shape(shape_id);
     if (a_shape == nullptr || b_shape == nullptr) {
       EXPECT_EQ(a_shape, b_shape);
     } else {
-      EXPECT_EQ(a_shape->id(), b_shape->id());
       s2testing::ExpectEqual(*a_shape, *b_shape);
     }
   }

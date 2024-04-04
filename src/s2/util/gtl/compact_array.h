@@ -51,11 +51,12 @@
 #include <utility>
 
 #include "absl/base/macros.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/meta/type_traits.h"
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
 #include "s2/base/port.h"
+#include "s2/base/types.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/gtl/container_logging.h"
 
@@ -112,7 +113,7 @@ class compact_array_base {
     pointer_ = p;
   }
   void SetInlined() {
-    S2_DCHECK_LE(capacity(), kInlined);
+    ABSL_DCHECK_LE(capacity(), kInlined);
     is_inlined_ = true;
   }
   T* InlinedSpace() { return reinterpret_cast<T*>(inlined_elements_); }
@@ -137,7 +138,7 @@ class compact_array_base {
   enum { kInlined = 0, is_inlined_ = false };
   T* Array() { return first_; }
   void SetArray(T* p) { first_ = p; }
-  void SetInlined() { S2_LOG(FATAL); }
+  void SetInlined() { ABSL_LOG(FATAL); }
   T* InlinedSpace() { return nullptr; }
 
   // The pointer to the actual data array.
@@ -318,12 +319,12 @@ class compact_array_base {
   }
 
   reference operator[](size_type n) {
-    S2_DCHECK_LT(n, size_);
+    ABSL_DCHECK_LT(n, size_);
     return Array()[n];
   }
 
   const_reference operator[](size_type n) const {
-    S2_DCHECK_LT(n, size_);
+    ABSL_DCHECK_LT(n, size_);
     return ConstArray()[n];
   }
 
@@ -376,19 +377,19 @@ class compact_array_base {
 
  private:                               // Low-level helper functions.
   void set_size(size_type n) {
-    S2_DCHECK_LE(n, capacity());
+    ABSL_DCHECK_LE(n, capacity());
     size_ = n;
   }
 
   void set_capacity(size_type n) {
-    S2_DCHECK_LE(size(), n);
+    ABSL_DCHECK_LE(size(), n);
     is_exponent_ = (n >= kExponentStart);
     capacity_ = is_exponent_ ? Bits::Log2Ceiling(n) : n;
     // A tiny optimization here would be to set capacity_ to kInlined if
     // it's currently less. We don't bother, because doing so would require
     // changing the existing comments and unittests that say that, for small n,
     // capacity() will be exactly n if one calls reserve(n).
-    S2_DCHECK(n == capacity() || n > kInlined);
+    ABSL_DCHECK(n == capacity() || n > kInlined);
   }
 
   // Make capacity n or more. Reallocate and copy data as necessary.
@@ -590,7 +591,7 @@ class compact_array : public compact_array_base<T, A> {
     return *this;
   }
 
-  compact_array& operator=(compact_array&& v) {
+  compact_array& operator=(compact_array&& v) noexcept {
     // swap is only right here because the objects are trivially destructible
     // and thus there are no side effects on their destructor.
     // Otherwise we must destroy the objects on `this`.
@@ -637,7 +638,7 @@ bool operator>=(const compact_array<T, A>& x, const compact_array<T, A>& y) {
 
 // Swap
 template <typename T, typename A>
-inline void swap(compact_array<T, A>& x, compact_array<T, A>& y) {
+inline void swap(compact_array<T, A>& x, compact_array<T, A>& y) noexcept {
   x.swap(y);
 }
 

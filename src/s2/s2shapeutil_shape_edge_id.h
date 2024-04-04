@@ -23,7 +23,7 @@
 #include <iostream>
 #include <ostream>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 
 namespace s2shapeutil {
 
@@ -54,10 +54,8 @@ std::ostream& operator<<(std::ostream& os, ShapeEdgeId id);
 
 //////////////////   Implementation details follow   ////////////////////
 
-
 inline ShapeEdgeId::ShapeEdgeId(int32 _shape_id, int32 _edge_id)
-    : shape_id(_shape_id), edge_id(_edge_id) {
-}
+    : shape_id(_shape_id), edge_id(_edge_id) {}
 
 inline bool ShapeEdgeId::operator==(ShapeEdgeId other) const {
   return shape_id == other.shape_id && edge_id == other.edge_id;

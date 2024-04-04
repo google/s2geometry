@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
+#include "absl/log/absl_check.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 
@@ -30,7 +31,7 @@ using std::vector;
 using Label = S2CellIndex::Label;
 
 void S2CellIndex::RangeIterator::Seek(S2CellId target) {
-  S2_DCHECK(target.is_leaf());
+  ABSL_DCHECK(target.is_leaf());
   it_ = std::upper_bound(range_nodes_->begin(), range_nodes_->end(),
                          target) - 1;
 }
