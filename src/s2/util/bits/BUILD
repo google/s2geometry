@@ -1,0 +1,16 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "bits",
+    srcs = ["bit-interleave.cc"],
+    hdrs = [
+        "bit-interleave.h",
+        "bits.h",
+    ],
+    deps = [
+        "//:s2-includes",
+        "//s2/base:integral_types",
+    ],
+)
