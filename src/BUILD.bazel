@@ -7,6 +7,7 @@ cc_library(name = "s2-includes",includes = ["s2"],)
 cc_library(
     name = "base",
     hdrs = [
+        "@s2geometry//s2/base:log_severity.h",
     ],
     deps = [
         "@s2geometry//s2/base:commandlineflags",
@@ -20,7 +21,7 @@ cc_library(
 )
 
 cc_library(
-    name = "bitmap",
+    name = "bitmap",    
     hdrs = [
         "@s2geometry//s2/util/bitmap:bitmap.h",
     ],
@@ -102,16 +103,17 @@ cc_library(
     hdrs = [
       "@s2geometry//s2/util/bits:bits.h",
       "@s2geometry//s2/util/bits:bit-interleave.h",
-      "@s2geometry//s2/base:logging.h",
-      "@s2geometry//s2/base:log_severity.h",
-      "@s2geometry//s2/base:port.h",
-      "@s2geometry//s2/base:types.h",
+      #"@s2geometry//s2/base:logging.h",
+      #"@s2geometry//s2/base:log_severity.h",
+      #"@s2geometry//s2/base:port.h",
+      #"@s2geometry//s2/base:types.h",
     ],
     deps = [
       "@abseil-cpp//absl/base",
       "@abseil-cpp//absl/base:core_headers",
       "@abseil-cpp//absl/numeric:bits",
       "@abseil-cpp//absl/numeric:int128",
+      ":base",
     ],
 )
 
@@ -120,11 +122,11 @@ cc_library(
     srcs = ["@s2geometry//s2/util/math:mathutil.cc"],
     hdrs = [
         "@s2geometry//s2/util/math:mathutil.h",
-        "@s2geometry//s2/base:types.h",
-        "@s2geometry//s2/base:logging.h",
-        "@s2geometry//s2/base:log_severity.h",
-        "@s2geometry//s2/util/bits:bits.h",
-        "@s2geometry//s2/base:port.h",
+        #"@s2geometry//s2/base:types.h",
+        #"@s2geometry//s2/base:logging.h",
+        #"@s2geometry//s2/base:log_severity.h",
+        #"@s2geometry//s2/util/bits:bits.h",
+        #"@s2geometry//s2/base:port.h",
     ],
     deps = [
       "@abseil-cpp//absl/base",
@@ -146,11 +148,11 @@ cc_library(
       "@s2geometry//s2/util/math:vector.h",
     ],
     deps = [
-      ":mathutil",
-      ":vector",
       "@abseil-cpp//absl/base",
       "@abseil-cpp//absl/base:core_headers",
       "@abseil-cpp//absl/types:optional",
+      ":mathutil",
+      ":vector",
     ],
 )
 
@@ -159,7 +161,6 @@ cc_library(
 
     hdrs = [
        "@s2geometry//s2/testing:gtest_prod.h",
-
     ],
 )
 
@@ -172,13 +173,13 @@ cc_library(
        "@s2geometry//s2/util/math/exactfloat:exactfloat.h",
     ],
     deps = [
-        "//:s2-includes",
-        ":base",
         #"@s2geometry//s2/base:types",
         #"@s2geometry//s2/base:logging",
         #"@s2geometry//s2/base:port",
         "@abseil-cpp//absl/log:absl_check",
         "@boringssl//:crypto",
+        "//:s2-includes",
+        ":base",
     ],
 )
 
@@ -268,8 +269,8 @@ cc_library(
     ],
     hdrs = [
         "@s2geometry//s2:r2rect.h",
-        "@s2geometry//s2/base:logging.h",
-        "@s2geometry//s2/base:log_severity.h",
+        #"@s2geometry//s2/base:logging.h",
+        #"@s2geometry//s2/base:log_severity.h",
     ],
     deps = [
       "@abseil-cpp//absl/base",
@@ -287,18 +288,18 @@ cc_library(
     hdrs = [
         "@s2geometry//s2:s2coords.h",
         "@s2geometry//s2:s2coords_internal.h",
-        "@s2geometry//s2/base:logging.h",
-        "@s2geometry//s2/base:log_severity.h",
+        #"@s2geometry//s2/base:logging.h",
+        #"@s2geometry//s2/base:log_severity.h",
     ],
     deps = [
-        ":base",
         "@abseil-cpp//absl/log:log",
         "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/status",
-        ":r2rect",
-        ":s1",
+        ":base",
         ":coding",
         ":mathutil",
+        ":r2rect",
+        ":s1",
     ],
 )
 
@@ -313,7 +314,6 @@ cc_library(
         "@s2geometry//s2:s2region_intersection.cc",
         "@s2geometry//s2:s2region_term_indexer.cc",
         "@s2geometry//s2:s2region_union.cc",
-        
     ],
     hdrs = [
         "@s2geometry//s2:s2region_intersection.h",
@@ -341,9 +341,9 @@ cc_library(
     deps = [
       "@abseil-cpp//absl/container:flat_hash_set",
       "@s2geometry//s2/base:commandlineflags",
+      ":exactfloat",
       ":s1",
       ":s2coords",
-      ":exactfloat",
     ],
 )
 
@@ -357,12 +357,12 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@abseil-cpp//absl/base",
+        "@abseil-cpp//absl/hash",
         ":r1interval",
         ":s1",
         ":s2coords",
         ":s2region",
-        "@abseil-cpp//absl/base",
-        "@abseil-cpp//absl/hash",
     ],
 )
 
@@ -382,27 +382,49 @@ cc_library(
 )
 
 cc_library(
-    name = "encoded",
+    name = "edge",
     srcs = [
-        "@s2geometry//s2:encoded_s2cell_id_vector.cc",
-        "@s2geometry//s2:encoded_s2point_vector.cc",
-        "@s2geometry//s2:encoded_s2shape_index.cc",
-        "@s2geometry//s2:encoded_string_vector.cc",
         "@s2geometry//s2:s2edge_clipping.cc",
         "@s2geometry//s2:s2edge_crosser.cc",
         "@s2geometry//s2:s2edge_crossings.cc",
         "@s2geometry//s2:s2edge_distances.cc",
         "@s2geometry//s2:s2edge_tessellator.cc",
-        
     ],
     hdrs = [
-        "@s2geometry//s2:s2cell_index.h",
+        #"@s2geometry//s2:s2cell_index.h",
         "@s2geometry//s2:s2edge_clipping.h",
         "@s2geometry//s2:s2edge_tessellator.h",
         "@s2geometry//s2:s2edge_vector_shape.h",
         "@s2geometry//s2:s2projections.h",
-        "@s2geometry//s2:s2shape.h",
-        "@s2geometry//s2:s2shape_index.h",
+        #"@s2geometry//s2:s2shape.h",
+        #"@s2geometry//s2:s2shape_index.h",
+        #"@s2geometry//s2:mutable_s2shape_index.h",
+        #"@s2geometry//s2:encoded_s2cell_id_vector.h",
+        #"@s2geometry//s2:encoded_s2point_vector.h",
+        #"@s2geometry//s2:encoded_s2shape_index.h",
+        #"@s2geometry//s2:encoded_string_vector.h",
+        #"@s2geometry//s2:encoded_uint_vector.h",
+        #"@s2geometry//s2:s2coder.h",
+        #"@s2geometry//s2:s2memory_tracker.h",
+        #"@s2geometry//s2:s2shapeutil_shape_edge.h",
+        #"@s2geometry//s2:s2shapeutil_shape_edge_id.h",
+        #"@s2geometry//s2:s2shapeutil_count_edges.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":s2region",
+    ],
+)
+
+cc_library(
+    name = "encoded",
+    srcs = [
+        "@s2geometry//s2:encoded_s2cell_id_vector.cc",
+        "@s2geometry//s2:encoded_s2point_vector.cc",
+        "@s2geometry//s2:encoded_s2shape_index.cc",
+        "@s2geometry//s2:encoded_string_vector.cc",        
+    ],
+    hdrs = [
         "@s2geometry//s2:mutable_s2shape_index.h",
         "@s2geometry//s2:encoded_s2cell_id_vector.h",
         "@s2geometry//s2:encoded_s2point_vector.h",
@@ -410,15 +432,17 @@ cc_library(
         "@s2geometry//s2:encoded_string_vector.h",
         "@s2geometry//s2:encoded_uint_vector.h",
         "@s2geometry//s2:s2coder.h",
+        "@s2geometry//s2:s2cell_index.h",
         "@s2geometry//s2:s2memory_tracker.h",
+        "@s2geometry//s2:s2projections.h",
+        "@s2geometry//s2:s2shape.h",
+        "@s2geometry//s2:s2shape_index.h",
         "@s2geometry//s2:s2shapeutil_shape_edge.h",
         "@s2geometry//s2:s2shapeutil_shape_edge_id.h",
         "@s2geometry//s2:s2shapeutil_count_edges.h",
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":r1interval",
-        ":s2region",
         "@abseil-cpp//absl/base",
         "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/hash",
@@ -429,15 +453,18 @@ cc_library(
         "@abseil-cpp//absl/strings",
         "@abseil-cpp//absl/strings:str_format",
         "@abseil-cpp//absl/container:btree",
-        "@s2geometry//s2/base:commandlineflags",
-        "@s2geometry//s2/base:spinlock",
+        #"@s2geometry//s2/base:commandlineflags",
+        #"@s2geometry//s2/base:spinlock",
+        ":base",
         ":bits",
         ":coding",
+        ":edge",
         ":mathutil",
         ":matrix",
-        ":vector",
+        ":r1interval",
         ":s2cell_id",
-        
+        ":s2region",
+        ":vector",
     ],
 )
 
@@ -467,10 +494,11 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@abseil-cpp//absl/container:btree",
-        "@s2geometry//s2/base:spinlock",
-        "@s2geometry//s2/base:commandlineflags",
-        ":s2cell_id",
+        #"@s2geometry//s2/base:spinlock",
+        #"@s2geometry//s2/base:commandlineflags",
+        ":base",
         ":encoded",
+        ":s2cell_id",
     ],
 )
 
@@ -529,15 +557,15 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":s2region",
-        ":gtesting",
-        ":shape",
-        ":lexicon",
-        ":build",
-        ":text",
-        ":bitmap",
         "@abseil-cpp//absl/container:btree",
         "@abseil-cpp//absl/container:flat_hash_set",
+        ":bitmap",
+        ":build",
+        ":gtesting",
+        ":lexicon",
+        ":shape",
+        ":s2region",
+        ":text",
     ],
 )
 
@@ -556,9 +584,9 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":s2region",
         ":encoded",
         ":query",
+        ":s2region",
     ],
 )
 
@@ -596,14 +624,6 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":r1interval",
-        ":s1",
-        ":s2region",
-        ":shape",
-        ":lexicon",
-        ":gtesting",
-        ":encoded",
-        ":query",
         "@abseil-cpp//absl/base",
         "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/hash",
@@ -613,14 +633,22 @@ cc_library(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/strings",
         "@abseil-cpp//absl/strings:str_format",
-        ":bits",
-        ":coding",
-        ":mathutil",
-        ":matrix",
-        ":vector",
         "@abseil-cpp//absl/container:btree",
         "@abseil-cpp//absl/container:flat_hash_set",
-        "@s2geometry//s2/base:spinlock",
+        #"@s2geometry//s2/base:spinlock",
+        ":bits",
+        ":coding",
+        ":encoded",
+        ":gtesting",
+        ":lexicon",
+        ":mathutil",
+        ":matrix",
+        ":r1interval",
+        ":shape",
+        ":s1",
+        ":s2region",
+        ":query",
+        ":vector",
     ],
 )
 
@@ -657,8 +685,8 @@ cc_library(
         "@s2geometry//s2:s2polyline_measures.h",
     ],
     deps = [
-        ":s2coords",
         ":shape",
+        ":s2coords",
         ":query",
     ],
 )
@@ -674,9 +702,9 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        ":builder",
         ":shape",
         ":shapeutil",
-        ":builder",
     ],
 )
 cc_library(
@@ -702,8 +730,8 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":shapeutil",
         ":builder",
+        ":shapeutil",
     ],
 )
 cc_library(
@@ -752,17 +780,22 @@ cc_library(
         "@s2geometry//s2:s2r2rect.cc",
     ],
     hdrs = [
+        "@s2geometry//s2:s2buffer_operation.h",
+        "@s2geometry//s2:s2earth.h",
+        "@s2geometry//s2:s2projections.h",
+        "@s2geometry//s2:s2fractal.h",  
         "@s2geometry//s2:s2r2rect.h",
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":shape",
         ":loop",
+        ":shape",
     ],
 )
 
-cc_library(
+cc_binary(
     name = "s2",
+    linkshared=True,
     srcs = [
         "@s2geometry//s2:s2buffer_operation.cc",
         "@s2geometry//s2:s2debug.cc",
@@ -772,12 +805,12 @@ cc_library(
         "@s2geometry//s2:s2text_format.cc",
         "@s2geometry//s2:s2fractal.cc", 
     ],
-    hdrs = [
-        "@s2geometry//s2:s2buffer_operation.h",
-        "@s2geometry//s2:s2earth.h",
-        "@s2geometry//s2:s2projections.h",
-        "@s2geometry//s2:s2fractal.h",    
-    ],
+    #hdrs = [
+    #    "@s2geometry//s2:s2buffer_operation.h",
+    #    "@s2geometry//s2:s2earth.h",
+    #    "@s2geometry//s2:s2projections.h",
+    #    "@s2geometry//s2:s2fractal.h",    
+    #],
     includes = ["s2"],
     deps = [
         ":base",
