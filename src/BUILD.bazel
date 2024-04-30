@@ -164,9 +164,6 @@ cc_library(
        "@s2geometry//s2/util/math/exactfloat:exactfloat.h",
     ],
     deps = [
-        #"@s2geometry//s2/base:types",
-        #"@s2geometry//s2/base:logging",
-        #"@s2geometry//s2/base:port",
         "@abseil-cpp//absl/log:absl_check",
         "@boringssl//:crypto",
         "//:s2-includes",
@@ -185,10 +182,7 @@ cc_library(
         "@s2geometry//s2/util/coding:nth-derivative.h",
         "@s2geometry//s2/util/coding:transforms.h",
         "@s2geometry//s2/util/coding:varint.h",
-        #"@s2geometry//s2/base:port.h",
         "@s2geometry//s2/base:casts.h",
-        #"@s2geometry//s2/base:logging.h",
-        #"@s2geometry//s2/base:log_severity.h",
     ],
     deps = [
       "@abseil-cpp//absl/base",
@@ -246,10 +240,10 @@ cc_library(
       "@abseil-cpp//absl/log:check",
       "@abseil-cpp//absl/status",
       ":base",
-      ":mathutil",
       ":coding",
-      ":vector",
+      ":mathutil",
       ":matrix",
+      ":vector",
     ],
 )
 
@@ -260,8 +254,6 @@ cc_library(
     ],
     hdrs = [
         "@s2geometry//s2:r2rect.h",
-        #"@s2geometry//s2/base:logging.h",
-        #"@s2geometry//s2/base:log_severity.h",
     ],
     deps = [
       "@abseil-cpp//absl/base",
@@ -279,8 +271,6 @@ cc_library(
     hdrs = [
         "@s2geometry//s2:s2coords.h",
         "@s2geometry//s2:s2coords_internal.h",
-        #"@s2geometry//s2/base:logging.h",
-        #"@s2geometry//s2/base:log_severity.h",
     ],
     deps = [
         "@abseil-cpp//absl/log:log",
@@ -765,9 +755,8 @@ cc_library(
     ],
 )
 
-cc_binary(
+cc_library(
     name = "s2",
-    linkshared=True,
     srcs = [
         "@s2geometry//s2:s2buffer_operation.cc",
         "@s2geometry//s2:s2debug.cc",
@@ -782,8 +771,8 @@ cc_binary(
         ":base",
         ":bitmap",
         ":bits",
-        ":coding",
         ":builder",
+        ":coding",
         ":encoded",
         ":endian",
         ":exactfloat",
@@ -801,8 +790,8 @@ cc_binary(
         ":r1interval",
         ":r2rect",
         ":shape",
-        ":shapeutil",
         ":shapeindex",
+        ":shapeutil",
         ":s1",
         ":s2coords",
         ":s2region",
@@ -814,6 +803,14 @@ cc_binary(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/container:btree",
         "@abseil-cpp//absl/container:flat_hash_set",
+    ],
+)
+
+cc_binary(
+    name = "s2shared",
+    linkshared=True,
+    deps = [
+        ":s2",
     ],
 )
 
