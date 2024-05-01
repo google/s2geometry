@@ -17,7 +17,7 @@ cc_library(
     deps = [
         "//:s2-includes",
         "//s2/base:casts",
-        "//s2/base:integral_types",
+        "//s2/base:types",
         "//s2/base:logging",
         "//s2/base:port",
         "//s2/util/bits",
@@ -25,6 +25,7 @@ cc_library(
         "@abseil-cpp//absl/base",
         "@abseil-cpp//absl/container:btree",
         "@abseil-cpp//absl/container:flat_hash_set",
+        "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/strings:cord",
     ],
 )

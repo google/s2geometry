@@ -11,6 +11,6 @@ cc_library(
     ],
     deps = [
         "//:s2-includes",
-        "//s2/base:integral_types",
+        "//s2/base:types",
     ],
 )

@@ -12,11 +12,11 @@ cc_library(
     srcs = ["mathutil.cc"],
     hdrs = ["mathutil.h"],
     deps = [
-        "//:s2-includes",
-        "//s2/base:integral_types",
+        "//s2/base:types",
         "//s2/util/bits",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/log:check",
+        "@abseil-cpp//absl/log:absl_check",
     ],
 )
 

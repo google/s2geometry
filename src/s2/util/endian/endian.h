@@ -31,6 +31,7 @@
 
 #include "s2/base/port.h"
 #include "s2/base/types.h"
+#include "s2/util/gtl/unaligned.h"
 #include "absl/base/casts.h"
 #include "absl/base/config.h"
 #include "absl/base/internal/endian.h"

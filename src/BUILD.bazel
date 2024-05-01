@@ -4,185 +4,10 @@ package(default_visibility = ["//visibility:public"])
 cc_library(name = "s2-includes",includes = ["s2"],) # for tests
 
 cc_library(
-    name = "bitmap",    
-    hdrs = [
-        "@s2geometry//s2/util/bitmap:bitmap.h",
-    ],
-    deps = [
-      "@abseil-cpp//absl/base",
-      "@abseil-cpp//absl/base:core_headers",
-      "@abseil-cpp//absl/base:config",
-      "@abseil-cpp//absl/base:endian",
-      "@abseil-cpp//absl/numeric:int128",
-    ],
-)
-
-cc_library(
-    name = "endian",
-    hdrs = [
-        "@s2geometry//s2/util/endian:endian.h",
-    ],
-    deps = [
-      "@abseil-cpp//absl/base",
-      "@abseil-cpp//absl/base:core_headers",
-      "@abseil-cpp//absl/base:config",
-      "@abseil-cpp//absl/base:endian",
-      "@abseil-cpp//absl/numeric:int128",
-    ],
-)
-
-cc_library(
-    name = "gtlutil",
-    hdrs = [
-        "@s2geometry//s2/util/gtl:compact_array.h",
-        "@s2geometry//s2/util/gtl:container_logging.h",
-        "@s2geometry//s2/util/gtl:dense_hash_set.h",
-        "@s2geometry//s2/util/gtl:densehashtable.h",
-        "@s2geometry//s2/util/gtl:hashtable_common.h",
-        "@s2geometry//s2/util/gtl:legacy_random_shuffle.h",
-        "@s2geometry//s2/util/gtl:unaligned.h",
-        "@s2geometry//s2/util/gtl:unaligned_internal.h",
-        "@s2geometry//s2/util/gtl:type_traits.h",
-        "@s2geometry//s2/util/gtl:requires.h",
-    ],
-    deps = [
-        "@abseil-cpp//absl/base",
-        "@abseil-cpp//absl/meta:type_traits",
-        "@abseil-cpp//absl/strings:internal",
-    ],
-)
-
-cc_library(
-    name = "hash",
-    hdrs = [
-        "@s2geometry//s2/util/hash:mix.h",
-    ],
-    deps = [
-      "@abseil-cpp//absl/base",
-      "@abseil-cpp//absl/base:core_headers",
-      "@abseil-cpp//absl/base:endian",
-      "@abseil-cpp//absl/numeric:int128",
-      "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_library(
-    name = "vector",
-    hdrs = [
-      "@s2geometry//s2/util/math:vector.h",
-    ],
-    deps = [
-      "@abseil-cpp//absl/base",
-      "@abseil-cpp//absl/base:core_headers",
-      "@abseil-cpp//absl/utility",
-    ],
-)
-
-cc_library(
-    name = "bits",
-    srcs = [
-      "@s2geometry//s2/util/bits:bit-interleave.cc"
-    ],
-    hdrs = [
-      "@s2geometry//s2/util/bits:bits.h",
-      "@s2geometry//s2/util/bits:bit-interleave.h",
-    ],
-    deps = [
-      "@abseil-cpp//absl/base",
-      "@abseil-cpp//absl/base:core_headers",
-      "@abseil-cpp//absl/numeric:bits",
-      "@abseil-cpp//absl/numeric:int128",
-      "@s2geometry//s2/base:logging",
-      "@s2geometry//s2/base:types",
-    ],
-)
-
-cc_library(
-    name = "mathutil",
-    srcs = ["@s2geometry//s2/util/math:mathutil.cc"],
-    hdrs = [
-        "@s2geometry//s2/util/math:mathutil.h",
-    ],
-    deps = [
-      "@abseil-cpp//absl/base",
-      "@abseil-cpp//absl/base:core_headers",
-      "@abseil-cpp//absl/log:absl_check",
-      "@abseil-cpp//absl/log:log",
-      "@abseil-cpp//absl/numeric:bits",
-      "@abseil-cpp//absl/numeric:int128",
-      "@abseil-cpp//absl/meta:type_traits",
-      "@s2geometry//s2/base:types",
-      ":bits",
-    ],
-)
-
-cc_library(
-    name = "matrix",
-    hdrs = [
-      "@s2geometry//s2/util/math:matrix3x3.h",
-      "@s2geometry//s2/util/math:vector.h",
-    ],
-    deps = [
-      "@abseil-cpp//absl/base",
-      "@abseil-cpp//absl/base:core_headers",
-      "@abseil-cpp//absl/types:optional",
-      ":mathutil",
-      ":vector",
-    ],
-)
-
-cc_library(
     name = "gtesting",
 
     hdrs = [
        "@s2geometry//s2/testing:gtest_prod.h",
-    ],
-)
-
-cc_library(
-    name = "exactfloat",
-    srcs = [
-        "@s2geometry//s2/util/math/exactfloat:exactfloat.cc",
-    ],
-    hdrs = [
-       "@s2geometry//s2/util/math/exactfloat:exactfloat.h",
-    ],
-    deps = [
-        "@abseil-cpp//absl/log:absl_check",
-        "@boringssl//:crypto",
-        "@s2geometry//s2/base:logging",
-        "@s2geometry//s2/base:port",
-        "@s2geometry//s2/base:types",
-        
-    ],
-)
-
-cc_library(
-    name = "coding",
-    srcs = [
-        "@s2geometry//s2/util/coding:coder.cc",
-        "@s2geometry//s2/util/coding:varint.cc",
-    ],
-    hdrs = [
-        "@s2geometry//s2/util/coding:coder.h",
-        "@s2geometry//s2/util/coding:nth-derivative.h",
-        "@s2geometry//s2/util/coding:transforms.h",
-        "@s2geometry//s2/util/coding:varint.h",
-        "@s2geometry//s2/base:casts.h",
-    ],
-    deps = [
-      "@abseil-cpp//absl/base",
-      "@abseil-cpp//absl/base:core_headers",
-      "@abseil-cpp//absl/numeric:int128",
-      "@abseil-cpp//absl/utility",
-      "@abseil-cpp//absl/log:absl_check",
-      "@abseil-cpp//absl/log:check",
-      "@abseil-cpp//absl/log:log",
-      "@s2geometry//s2/base:port",
-      ":bits",
-      ":endian",
-      ":gtlutil",
-      ":hash",
     ],
 )
 
@@ -196,7 +21,8 @@ cc_library(
       "@abseil-cpp//absl/base",
       "@abseil-cpp//absl/log:log",
       "@abseil-cpp//absl/log:check",
-      ":vector",
+      "@s2geometry//s2/util/math:matrix3x3",
+      "@s2geometry//s2/util/math:vector",
     ],
 )
 cc_library(
@@ -225,10 +51,10 @@ cc_library(
       "@abseil-cpp//absl/log:log",
       "@abseil-cpp//absl/log:check",
       "@abseil-cpp//absl/status",
-      ":coding",
-      ":mathutil",
-      ":matrix",
-      ":vector",
+      "@s2geometry//s2/util/coding:coding",
+      "@s2geometry//s2/util/math:mathutil",
+      "@s2geometry//s2/util/math:vector",
+      "@s2geometry//s2/util/math:matrix3x3",
     ],
 )
 
@@ -262,8 +88,10 @@ cc_library(
         "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/status",
         "@s2geometry//s2/base:port",
-        ":coding",
-        ":mathutil",
+        "@s2geometry//s2/util/coding:coding",
+        "@s2geometry//s2/util/math:mathutil",
+        "@s2geometry//s2/util/math:matrix3x3",
+        "@s2geometry//s2/util/math:vector",
         ":r2rect",
         ":s1",
     ],
@@ -307,7 +135,8 @@ cc_library(
     deps = [
       "@abseil-cpp//absl/container:flat_hash_set",
       "@s2geometry//s2/base:commandlineflags",
-      ":exactfloat",
+      #":exactfloat",
+      "@s2geometry//s2/util/math/exactfloat:exactfloat",
       ":s1",
       ":s2coords",
     ],
@@ -343,6 +172,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@s2geometry//s2/base:types",
+        "@s2geometry//s2/util/hash:hash",
         ":r2rect",
     ],
 )
@@ -406,15 +236,16 @@ cc_library(
         "@abseil-cpp//absl/strings:str_format",
         "@abseil-cpp//absl/container:btree",
         "@s2geometry//s2/base:spinlock",
-        ":bits",
-        ":coding",
+        
+        "@s2geometry//s2/util/bits:bits",
+        "@s2geometry//s2/util/coding:coding",
         ":edge",
-        ":mathutil",
-        ":matrix",
+        "@s2geometry//s2/util/math:mathutil",
+        "@s2geometry//s2/util/math:matrix3x3",
+        "@s2geometry//s2/util/math:vector",
         ":r1interval",
         ":s2cell_id",
         ":s2region",
-        ":vector",
     ],
 )
 
@@ -445,6 +276,8 @@ cc_library(
     deps = [
         "@abseil-cpp//absl/container:btree",
         "@s2geometry//s2/base:port",
+        "@s2geometry//s2/util/math:matrix3x3",
+        #"//s2/util/math:matrix3x3",
         ":encoded",
         ":s2cell_id",
     ],
@@ -507,7 +340,7 @@ cc_library(
     deps = [
         "@abseil-cpp//absl/container:btree",
         "@abseil-cpp//absl/container:flat_hash_set",
-        ":bitmap",
+        "@s2geometry//s2/util/bitmap:bitmap",
         ":build",
         ":gtesting",
         ":lexicon",
@@ -583,19 +416,18 @@ cc_library(
         "@abseil-cpp//absl/strings:str_format",
         "@abseil-cpp//absl/container:btree",
         "@abseil-cpp//absl/container:flat_hash_set",
-        ":bits",
-        ":coding",
-        ":encoded",
+        "@s2geometry//s2/util/bits:bits",
+        "@s2geometry//s2/util/coding:coding",
+        "@s2geometry//s2/util/math:mathutil",
+        "@s2geometry//s2/util/math:matrix3x3",
+        "@s2geometry//s2/util/math:vector", ":encoded",
         ":gtesting",
         ":lexicon",
-        ":mathutil",
-        ":matrix",
         ":r1interval",
         ":shape",
         ":s1",
         ":s2region",
         ":query",
-        ":vector",
     ],
 )
 
@@ -732,13 +564,12 @@ cc_library(
         "@s2geometry//s2:s2projections.h",
         "@s2geometry//s2:s2fractal.h",  
         "@s2geometry//s2:s2r2rect.h",
-        "@s2geometry//s2/util/units:length-units.h",
-        "@s2geometry//s2/util/units:physical-units.h",
     ],
     visibility = ["//visibility:public"],
     deps = [    
         ":loop",
         ":shape",
+        "@s2geometry//s2/util/units:units",
     ],
 )
 
@@ -756,21 +587,22 @@ cc_library(
     ],
     deps = [
         "@s2geometry//s2/base:port",
-        ":bitmap",
-        ":bits",
+        "@s2geometry//s2/util/math:mathutil",
+        "@s2geometry//s2/util/math:matrix3x3",
+        "@s2geometry//s2/util/gtl:gtl",
+        "@s2geometry//s2/util/hash:hash",
+        "@s2geometry//s2/util/bitmap:bitmap",
+        "@s2geometry//s2/util/bits:bits",
+        "@s2geometry//s2/util/coding:coding",
+        "@s2geometry//s2/util/endian:endian",
+        "@s2geometry//s2/util/math/exactfloat:exactfloat",
         ":builder",
-        ":coding",
         ":encoded",
-        ":endian",
-        ":exactfloat",
         ":gtesting",
-        ":gtlutil",
-        ":hash",
         ":lax",
         ":layer",
         ":lexicon",
         ":loop",
-        ":mathutil",
         ":measures",
         ":polyline",
         ":query",
