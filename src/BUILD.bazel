@@ -1,24 +1,7 @@
-# @s2geometry/BUILD.bazel
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
-cc_library(name = "s2-includes",includes = ["s2"],)
-
-cc_library(
-    name = "base",
-    hdrs = [
-        "@s2geometry//s2/base:log_severity.h",
-    ],
-    deps = [
-        "@s2geometry//s2/base:commandlineflags",
-        "@s2geometry//s2/base:types",
-        "@s2geometry//s2/base:logging",
-        "@s2geometry//s2/base:port",
-        "@s2geometry//s2/base:spinlock",
-        "@s2geometry//s2/testing",
-        "@s2geometry//s2/util/units",
-    ]
-)
+cc_library(name = "s2-includes",includes = ["s2"],) # for tests
 
 cc_library(
     name = "bitmap",    
@@ -109,7 +92,8 @@ cc_library(
       "@abseil-cpp//absl/base:core_headers",
       "@abseil-cpp//absl/numeric:bits",
       "@abseil-cpp//absl/numeric:int128",
-      ":base",
+      "@s2geometry//s2/base:logging",
+      "@s2geometry//s2/base:types",
     ],
 )
 
@@ -127,7 +111,7 @@ cc_library(
       "@abseil-cpp//absl/numeric:bits",
       "@abseil-cpp//absl/numeric:int128",
       "@abseil-cpp//absl/meta:type_traits",
-      ":base",
+      "@s2geometry//s2/base:types",
       ":bits",
     ],
 )
@@ -166,8 +150,10 @@ cc_library(
     deps = [
         "@abseil-cpp//absl/log:absl_check",
         "@boringssl//:crypto",
-        "//:s2-includes",
-        ":base",
+        "@s2geometry//s2/base:logging",
+        "@s2geometry//s2/base:port",
+        "@s2geometry//s2/base:types",
+        
     ],
 )
 
@@ -192,7 +178,7 @@ cc_library(
       "@abseil-cpp//absl/log:absl_check",
       "@abseil-cpp//absl/log:check",
       "@abseil-cpp//absl/log:log",
-      ":base",
+      "@s2geometry//s2/base:port",
       ":bits",
       ":endian",
       ":gtlutil",
@@ -239,7 +225,6 @@ cc_library(
       "@abseil-cpp//absl/log:log",
       "@abseil-cpp//absl/log:check",
       "@abseil-cpp//absl/status",
-      ":base",
       ":coding",
       ":mathutil",
       ":matrix",
@@ -259,7 +244,7 @@ cc_library(
       "@abseil-cpp//absl/base",
       "@abseil-cpp//absl/log:log",
       "@abseil-cpp//absl/log:check",
-      ":base",
+      "@s2geometry//s2/base:port",
       ":s1",
       ":r1interval",
     ],
@@ -276,7 +261,7 @@ cc_library(
         "@abseil-cpp//absl/log:log",
         "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/status",
-        ":base",
+        "@s2geometry//s2/base:port",
         ":coding",
         ":mathutil",
         ":r2rect",
@@ -420,7 +405,7 @@ cc_library(
         "@abseil-cpp//absl/strings",
         "@abseil-cpp//absl/strings:str_format",
         "@abseil-cpp//absl/container:btree",
-        ":base",
+        "@s2geometry//s2/base:spinlock",
         ":bits",
         ":coding",
         ":edge",
@@ -459,7 +444,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@abseil-cpp//absl/container:btree",
-        ":base",
+        "@s2geometry//s2/base:port",
         ":encoded",
         ":s2cell_id",
     ],
@@ -747,15 +732,18 @@ cc_library(
         "@s2geometry//s2:s2projections.h",
         "@s2geometry//s2:s2fractal.h",  
         "@s2geometry//s2:s2r2rect.h",
+        "@s2geometry//s2/util/units:length-units.h",
+        "@s2geometry//s2/util/units:physical-units.h",
     ],
     visibility = ["//visibility:public"],
-    deps = [
+    deps = [    
         ":loop",
         ":shape",
     ],
 )
 
 cc_library(
+    
     name = "s2",
     srcs = [
         "@s2geometry//s2:s2buffer_operation.cc",
@@ -766,9 +754,8 @@ cc_library(
         "@s2geometry//s2:s2text_format.cc",
         "@s2geometry//s2:s2fractal.cc", 
     ],
-    includes = ["s2"],
     deps = [
-        ":base",
+        "@s2geometry//s2/base:port",
         ":bitmap",
         ":bits",
         ":builder",
@@ -809,6 +796,15 @@ cc_library(
 cc_binary(
     name = "s2shared",
     linkshared=True,
+    srcs = [
+        "@s2geometry//s2:s2buffer_operation.cc",
+        "@s2geometry//s2:s2debug.cc",
+        "@s2geometry//s2:s2earth.cc",
+        "@s2geometry//s2:s2predicates.cc",
+        "@s2geometry//s2:s2projections.cc",
+        "@s2geometry//s2:s2text_format.cc",
+        "@s2geometry//s2:s2fractal.cc", 
+    ],
     deps = [
         ":s2",
     ],

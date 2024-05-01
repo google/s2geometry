@@ -25,7 +25,29 @@ The Python API is particularly unstable, and it is planned that the SWIGged
 API will be replaced by a pybind11 version with more Pythonic names and more
 complete functionality.
 
-## Requirements for End Users
+## Requirements for End Users using Bazel
+
+## Build
+
+This bazel build requires 7.0.0 – bzlmod default. Builds were tested using 
+C++20 as set in .bazelrc. This setup relies on abseil-cpp, boringssl, and 
+googletest from the bazel central repository as set in MODULE.bazel.
+
+To build and test using bazel, run:
+
+`bazel test "//:*"`
+
+To build the libary without testing, run:
+
+`bazel build //:s2lib`
+
+## Status
+
+All tests enumerated in the BUILD.bazel file pass on x86 machines. On 
+Apple M1, s2loop_measures_test fails due to a 6% excess accumlated error. 
+This issue may require revision of boringssl or exactfloat.
+
+## Requirements for End Users using CMake
 
 * [CMake](http://www.cmake.org/)
 * A C++ compiler with C++14 support, such as [g++ >= 5](https://gcc.gnu.org/)
