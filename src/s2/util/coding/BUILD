@@ -15,7 +15,6 @@ cc_library(
         "varint.h",
     ],
     deps = [
-        "//:s2-includes",
         "//s2/base:casts",
         "//s2/base:types",
         "//s2/base:logging",

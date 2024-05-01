@@ -7,7 +7,6 @@ cc_library(
     srcs = ["exactfloat.cc"],
     hdrs = ["exactfloat.h"],
     deps = [
-        "//:s2-includes",
         "//s2/base:types",
         "//s2/base:port",
         "//s2/base:logging",

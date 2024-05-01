@@ -1,11 +1,8 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
-cc_library(name = "s2-includes",includes = ["s2"],) # for tests
-
 cc_library(
     name = "gtesting",
-
     hdrs = [
        "@s2geometry//s2/testing:gtest_prod.h",
     ],
@@ -25,6 +22,7 @@ cc_library(
       "@s2geometry//s2/util/math:vector",
     ],
 )
+
 cc_library(
     name = "s1",
     srcs = [
@@ -135,7 +133,6 @@ cc_library(
     deps = [
       "@abseil-cpp//absl/container:flat_hash_set",
       "@s2geometry//s2/base:commandlineflags",
-      #":exactfloat",
       "@s2geometry//s2/util/math/exactfloat:exactfloat",
       ":s1",
       ":s2coords",
@@ -236,7 +233,6 @@ cc_library(
         "@abseil-cpp//absl/strings:str_format",
         "@abseil-cpp//absl/container:btree",
         "@s2geometry//s2/base:spinlock",
-        
         "@s2geometry//s2/util/bits:bits",
         "@s2geometry//s2/util/coding:coding",
         ":edge",
@@ -277,7 +273,6 @@ cc_library(
         "@abseil-cpp//absl/container:btree",
         "@s2geometry//s2/base:port",
         "@s2geometry//s2/util/math:matrix3x3",
-        #"//s2/util/math:matrix3x3",
         ":encoded",
         ":s2cell_id",
     ],

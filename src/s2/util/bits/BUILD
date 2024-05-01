@@ -10,7 +10,6 @@ cc_library(
         "bits.h",
     ],
     deps = [
-        "//:s2-includes",
         "//s2/base:types",
     ],
 )
