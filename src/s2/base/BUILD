@@ -6,7 +6,6 @@ cc_library(
     name = "logging",
     hdrs = [
         "log_severity.h",
-        "logging.h",
     ],
     deps = [
         "@abseil-cpp//absl/log",
