@@ -1,4 +1,3 @@
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -235,10 +234,10 @@ cc_library(
         "@s2geometry//s2/base:spinlock",
         "@s2geometry//s2/util/bits:bits",
         "@s2geometry//s2/util/coding:coding",
-        ":edge",
         "@s2geometry//s2/util/math:mathutil",
         "@s2geometry//s2/util/math:matrix3x3",
         "@s2geometry//s2/util/math:vector",
+        ":edge",
         ":r1interval",
         ":s2cell_id",
         ":s2region",
