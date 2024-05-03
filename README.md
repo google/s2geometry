@@ -39,7 +39,7 @@ To build and test using bazel, from within s2geometry/src, run:
 
 To build the libary without testing, from within s2geometry/src, run:
 
-`bazel build //:s2lib`
+`bazel build //:s2`
 
 ## Status
 
