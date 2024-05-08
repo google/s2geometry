@@ -568,7 +568,6 @@ cc_library(
 )
 
 cc_library(
-    
     name = "s2",
     srcs = [
         "//s2:s2buffer_operation.cc",
@@ -605,15 +604,7 @@ cc_library(
 cc_binary(
     name = "s2shared",
     linkshared=True,
-    srcs = [
-        "//s2:s2buffer_operation.cc",
-        "//s2:s2debug.cc",
-        "//s2:s2earth.cc",
-        "//s2:s2predicates.cc",
-        "//s2:s2projections.cc",
-        "//s2:s2text_format.cc",
-        "//s2:s2fractal.cc", 
-    ],
+    srcs = [],
     deps = [
         ":s2",
     ],
