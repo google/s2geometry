@@ -116,6 +116,33 @@ int TriageCompareEdgeDistance(const Vector3<T>& x, const Vector3<T>& a0,
 int ExactCompareEdgeDistance(const S2Point& x, const S2Point& a0,
                              const S2Point& a1, S1ChordAngle r);
 
+// Computes the sign of a.DotProd(b) and returns it, or 0 if it's within the
+// error margin.
+template <class T>
+int TriageSignDotProd(const Vector3<T>& a, const Vector3<T>& b);
+
+// Returns the sign of a.DotProd(b) using exact arithmetic.
+int ExactSignDotProd(const Vector3_xf& a, const Vector3_xf& b);
+
+// Orders intersections along a great circle relative to some reference point.
+template <class T>
+int TriageIntersectionOrdering(const Vector3<T>& a, const Vector3<T>& b,
+                               const Vector3<T>& c, const Vector3<T>& d,
+                               const Vector3<T>& m, const Vector3<T>& n);
+
+int ExactIntersectionOrdering(const Vector3_xf& a, const Vector3_xf& b,
+                              const Vector3_xf& c, const Vector3_xf& d,
+                              const Vector3_xf& m, const Vector3_xf& n);
+
+// Computes location of the intersection of edge AB with great circle N with
+// respect to the great circles x and y.
+template <class T>
+int TriageCircleEdgeIntersectionSign(const Vector3<T>& a, const Vector3<T>& b,
+                                     const Vector3<T>& n, const Vector3<T>& x);
+
+int ExactCircleEdgeIntersectionSign(const Vector3_xf& a, const Vector3_xf& b,
+                                    const Vector3_xf& n, const Vector3_xf& x);
+
 template <class T>
 int TriageCompareEdgeDirections(
     const Vector3<T>& a0, const Vector3<T>& a1,

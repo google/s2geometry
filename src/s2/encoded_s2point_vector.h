@@ -21,9 +21,9 @@
 #include <cstddef>
 
 #include <atomic>
+#include <cstdint>
 #include <vector>
 
-#include "s2/base/integral_types.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_string_vector.h"
@@ -137,7 +137,7 @@ inline S2Point EncodedS2PointVector::operator[](int i) const {
       return DecodeCellIdsFormat(i);
 
     default:
-      S2_DLOG(FATAL) << "Unrecognized format";
+      ABSL_DLOG(FATAL) << "Unrecognized format";
       return S2Point();
   }
 }

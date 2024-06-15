@@ -29,15 +29,17 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
 #include "s2/base/port.h"
+#include "s2/base/types.h"
 #include "absl/base/casts.h"
 #include "absl/base/config.h"
 #include "absl/base/internal/endian.h"
 #include "absl/base/optimization.h"
 #include "absl/base/port.h"
+// TODO(b/329676208): remove unused log.h
+#include "absl/log/absl_log.h"  // IWYU pragma: keep
 #include "absl/numeric/int128.h"
+#include "s2/util/gtl/unaligned.h"
 
 inline uint64 gbswap_64(uint64 host_int) {
   return absl::gbswap_64(host_int);
@@ -193,14 +195,38 @@ class LittleEndian {
   }
 
   // Functions to do unaligned loads and stores in little-endian order.
+  template <typename T, size_t N>
+  static uint16 Load16(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= sizeof(uint16),
+                  "Not enough space in buffer to load value from");
+    return Load16(static_cast<const void*>(p));
+  }
+
+  template <typename T = void*, size_t N = 0>
   static uint16 Load16(const void* p) {
     return ToHost16(UNALIGNED_LOAD16(p));
   }
 
+  template <typename T, size_t N>
+  static void Store16(T (&p)[N], uint16 v) {
+    static_assert(sizeof(T) * N >= sizeof(uint16),
+                  "Not enough space in buffer to store value");
+    return Store16(static_cast<void*>(p), v);
+  }
+
+  template <typename T = void*, size_t N = 0>
   static void Store16(void* p, uint16 v) {
     UNALIGNED_STORE16(p, FromHost16(v));
   }
 
+  template <typename T, size_t N>
+  static uint32 Load24(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= 3,
+                  "Not enough space in buffer to load value from");
+    return Load24(static_cast<const void*>(p));
+  }
+
+  template <typename T = const void*, size_t N = 0>
   static uint32 Load24(const void* p) {
 #ifdef IS_LITTLE_ENDIAN
     uint32 result = 0;
@@ -212,6 +238,14 @@ class LittleEndian {
 #endif
   }
 
+  template <typename T, size_t N>
+  static void Store24(T (&p)[N], uint32 v) {
+    static_assert(sizeof(T) * N >= 3,
+                  "Not enough space in buffer to store value");
+    return Store24(static_cast<void*>(p), v);
+  }
+
+  template <typename T = void*, size_t N = 0>
   static void Store24(void* p, uint32 v) {
 #ifdef IS_LITTLE_ENDIAN
     memcpy(p, &v, 3);
@@ -223,14 +257,38 @@ class LittleEndian {
 #endif
   }
 
+  template <typename T, size_t N>
+  static uint32 Load32(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= sizeof(uint32),
+                  "Not enough space in buffer to load value from");
+    return Load32(static_cast<const void*>(p));
+  }
+
+  template <typename T = const void*, size_t N = 0>
   static uint32 Load32(const void* p) {
     return ToHost32(UNALIGNED_LOAD32(p));
   }
 
+  template <typename T, size_t N>
+  static void Store32(T (&p)[N], uint32 v) {
+    static_assert(sizeof(T) * N >= sizeof(uint32),
+                  "Not enough space in buffer to store value");
+    Store32(static_cast<void*>(p), v);
+  }
+
+  template <typename T = void*, size_t N = 0>
   static void Store32(void* p, uint32 v) {
     UNALIGNED_STORE32(p, FromHost32(v));
   }
 
+  template <typename T, size_t N>
+  static uint64 Load64(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= sizeof(uint64),
+                  "Not enough space in buffer to load value from");
+    return Load64(static_cast<const void*>(p));
+  }
+
+  template <typename T = const void*, size_t N = 0>
   static uint64 Load64(const void* p) {
     return ToHost64(UNALIGNED_LOAD64(p));
   }
@@ -270,16 +328,40 @@ class LittleEndian {
     memcpy(p, &v, len);
   }
 
+  template <typename T, size_t N>
+  static void Store64(T (&p)[N], uint64 v) {
+    static_assert(sizeof(T) * N >= sizeof(uint64),
+                  "Not enough space in buffer to store value");
+    Store64(static_cast<void*>(p), v);
+  }
+
+  template <typename T = void*, size_t N = 0>
   static void Store64(void* p, uint64 v) {
     UNALIGNED_STORE64(p, FromHost64(v));
   }
 
+  template <typename T, size_t N>
+  static absl::uint128 Load128(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= 16,
+                  "Not enough space in buffer to load value from");
+    return Load128(static_cast<const void*>(p));
+  }
+
+  template <typename T = void*, size_t N = 0>
   static absl::uint128 Load128(const void* p) {
     return absl::MakeUint128(
         ToHost64(UNALIGNED_LOAD64(reinterpret_cast<const uint64*>(p) + 1)),
         ToHost64(UNALIGNED_LOAD64(p)));
   }
 
+  template <typename T, size_t N>
+  static void Store128(T (&p)[N], const absl::uint128 v) {
+    static_assert(sizeof(T) * N >= 16,
+                  "Not enough space in buffer to store value");
+    return Store128(static_cast<void*>(p), v);
+  }
+
+  template <typename T = void*, size_t N = 0>
   static void Store128(void* p, const absl::uint128 v) {
     UNALIGNED_STORE64(p, FromHost64(absl::Uint128Low64(v)));
     UNALIGNED_STORE64(reinterpret_cast<uint64*>(p) + 1,
@@ -301,15 +383,31 @@ class LittleEndian {
   }
 
   // Load & Store in machine's word size.
-  static uword_t LoadUnsignedWord(const void *p) {
-    if (sizeof(uword_t) == 8)
+  template <typename T, size_t N>
+  static uword_t LoadUnsignedWord(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= sizeof(uword_t),
+                  "Not enough space in buffer to load value from");
+    return LoadUnsignedWord(static_cast<const void*>(p));
+  }
+
+  template <typename T = const void*, size_t N = 0>
+  static uword_t LoadUnsignedWord(const void* p) {
+    if constexpr (sizeof(uword_t) == 8)
       return Load64(p);
     else
       return Load32(p);
   }
 
-  static void StoreUnsignedWord(void *p, uword_t v) {
-    if (sizeof(v) == 8)
+  template <typename T, size_t N>
+  static void StoreUnsignedWord(T (&p)[N], uword_t v) {
+    static_assert(sizeof(T) * N <= sizeof(uword_t),
+                  "Not enough space in buffer to store value");
+    StoreUnsignedWord(static_cast<void*>(p), v);
+  }
+
+  template <typename T = const void*, size_t N = 0>
+  static void StoreUnsignedWord(void* p, uword_t v) {
+    if constexpr (sizeof(v) == 8)
       Store64(p, v);
     else
       Store32(p, v);
@@ -393,31 +491,86 @@ class BigEndian {
   }
 
   // Functions to do unaligned loads and stores in big-endian order.
+  template <typename T, size_t N>
+  static uint16 Load16(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= sizeof(uint16),
+                  "Not enough space in buffer to load value from");
+    return Load16(static_cast<const void*>(p));
+  }
+
+  template <typename T = const void*, size_t N = 0>
   static uint16 Load16(const void* p) {
     return ToHost16(UNALIGNED_LOAD16(p));
   }
 
+  template <typename T, size_t N>
+  static void Store16(T (&p)[N], uint16 v) {
+    static_assert(sizeof(T) * N >= sizeof(uint16),
+                  "Not enough space in buffer to store value");
+    return Store16(static_cast<void*>(p), v);
+  }
+
+  template <typename T = void*, size_t N = 0>
   static void Store16(void* p, uint16 v) {
     UNALIGNED_STORE16(p, FromHost16(v));
   }
 
+  template <typename T, size_t N>
+  static uint32 Load24(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= 3,
+                  "Not enough space in buffer to load value from");
+    return Load24(static_cast<const void*>(p));
+  }
+
+  template <typename T = const void*, size_t N = 0>
   static uint32 Load24(const void* p) {
     const uint8* data = reinterpret_cast<const uint8*>(p);
     return (data[0] << 16) + Load16(data + 1);
   }
 
+  template <typename T, size_t N>
+  static void Store24(T (&p)[N], uint32 v) {
+    static_assert(sizeof(T) * N >= 3,
+                  "Not enough space in buffer to store value");
+    return Store24(static_cast<void*>(p), v);
+  }
+
+  template <typename T = void*, size_t N = 0>
   static void Store24(void* p, uint32 v) {
     uint8* data = reinterpret_cast<uint8*>(p);
     Store16(data + 1, static_cast<uint16>(v));
     *data = static_cast<uint8>(v >> 16);
   }
 
+  template <typename T, size_t N>
+  static uint32 Load32(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= sizeof(uint32),
+                  "Not enough space in buffer to load value from");
+    return ToHost32(UNALIGNED_LOAD32(p));
+  }
+
+  template <typename T = const void*, size_t N = 0>
   static uint32 Load32(const void* p) {
     return ToHost32(UNALIGNED_LOAD32(p));
   }
 
+  template <typename T, size_t N>
+  static void Store32(T (&x)[N], uint32 v) {
+    static_assert(sizeof(T) * N >= sizeof(uint32),
+                  "Not enough space in buffer to store value");
+    UNALIGNED_STORE32(x, FromHost32(v));
+  }
+
+  template <typename T = void*, size_t N = 0>
   static void Store32(void* p, uint32 v) {
     UNALIGNED_STORE32(p, FromHost32(v));
+  }
+
+  template <typename T, size_t N>
+  static uint64 Load64(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= sizeof(uint64),
+                  "Not enough space in buffer to load value from");
+    return Load64(static_cast<const void*>(p));
   }
 
   static uint64 Load64(const void* p) {
@@ -461,6 +614,14 @@ class BigEndian {
     memcpy(p, reinterpret_cast<uint8*>(&v) + sizeof(uint64) - len, len);
   }
 
+  template <typename T, size_t N>
+  static void Store64(T (&p)[N], uint64 v) {
+    static_assert(sizeof(T) * N >= sizeof(uint64),
+                  "Not enough space in buffer to store value");
+    return Store64(static_cast<void*>(p), v);
+  }
+
+  template <typename T = void*, size_t N = 0>
   static void Store64(void* p, uint64 v) {
     UNALIGNED_STORE64(p, FromHost64(v));
   }
@@ -495,15 +656,31 @@ class BigEndian {
   }
 
   // Load & Store in machine's word size.
-  static uword_t LoadUnsignedWord(const void *p) {
-    if (sizeof(uword_t) == 8)
+  template <typename T, size_t N>
+  static uword_t LoadUnsignedWord(T (&p)[N]) {
+    static_assert(sizeof(T) * N >= sizeof(uword_t),
+                  "Not enough space in buffer to load value from");
+    return LoadUnsignedWord(static_cast<const void*>(p));
+  }
+
+  template <typename T = const void*, size_t N = 0>
+  static uword_t LoadUnsignedWord(const void* p) {
+    if constexpr (sizeof(uword_t) == 8)
       return Load64(p);
     else
       return Load32(p);
   }
 
-  static void StoreUnsignedWord(void *p, uword_t v) {
-    if (sizeof(uword_t) == 8)
+  template <typename T, size_t N>
+  static void StoreUnsignedWord(T (&p)[N], uword_t v) {
+    static_assert(sizeof(T) * N >= sizeof(uword_t),
+                  "Not enough space in buffer to store value");
+    return StoreUnsignedWord(static_cast<void*>(p), v);
+  }
+
+  template <typename T = const void*, size_t N = 0>
+  static void StoreUnsignedWord(void* p, uword_t v) {
+    if constexpr (sizeof(uword_t) == 8)
       Store64(p, v);
     else
       Store32(p, v);
@@ -572,21 +749,16 @@ FROMHOST_TYPE_MAP(absl::uint128, absl::uint128);
 template <class EndianClass, typename ValueType>
 typename tofromhost_value_type_traits<ValueType>::int_type
 GeneralFormatConverter<EndianClass, ValueType>::FromHost(ValueType v) {
-  switch (sizeof(ValueType)) {
-    case 1:
-      return static_cast<uint8>(v);
-      break;
-    case 2:
-      return EndianClass::FromHost16(static_cast<uint16>(v));
-      break;
-    case 4:
-      return EndianClass::FromHost32(static_cast<uint32>(v));
-      break;
-    case 8:
-      return EndianClass::FromHost64(static_cast<uint64>(v));
-      break;
-    default:
-      S2_LOG(FATAL) << "Unexpected value size: " << sizeof(ValueType);
+  if constexpr (sizeof(ValueType) == sizeof(uint8)) {
+    return static_cast<uint8>(v);
+  } else if constexpr (sizeof(ValueType) == sizeof(uint16)) {
+    return EndianClass::FromHost16(static_cast<uint16>(v));
+  } else if constexpr (sizeof(ValueType) == sizeof(uint32)) {
+    return EndianClass::FromHost32(static_cast<uint32>(v));
+  } else {
+    static_assert(sizeof(ValueType) == sizeof(uint64),
+                  "ValueType must be 8, 16, 32, or 64 bits");
+    return EndianClass::FromHost64(static_cast<uint64>(v));
   }
 }
 
@@ -597,21 +769,16 @@ GeneralFormatConverter<EndianClass, ValueType>::FromHost(ValueType v) {
 template <class EndianClass, typename ValueType>
 typename tofromhost_value_type_traits<ValueType>::int_type
 GeneralFormatConverter<EndianClass, ValueType>::ToHost(ValueType v) {
-  switch (sizeof(ValueType)) {
-    case 1:
-      return static_cast<uint8>(v);
-      break;
-    case 2:
-      return EndianClass::ToHost16(static_cast<uint16>(v));
-      break;
-    case 4:
-      return EndianClass::ToHost32(static_cast<uint32>(v));
-      break;
-    case 8:
-      return EndianClass::ToHost64(static_cast<uint64>(v));
-      break;
-    default:
-      S2_LOG(FATAL) << "Unexpected value size: " << sizeof(ValueType);
+  if constexpr (sizeof(ValueType) == sizeof(uint8)) {
+    return static_cast<uint8>(v);
+  } else if constexpr (sizeof(ValueType) == sizeof(uint16)) {
+    return EndianClass::ToHost16(static_cast<uint16>(v));
+  } else if constexpr (sizeof(ValueType) == sizeof(uint32)) {
+    return EndianClass::ToHost32(static_cast<uint32>(v));
+  } else {
+    static_assert(sizeof(ValueType) == sizeof(uint64),
+                  "ValueType must be 8, 16, 32, or 64 bits");
+    return EndianClass::ToHost64(static_cast<uint64>(v));
   }
 }
 
@@ -669,17 +836,16 @@ namespace endian_internal {
 // apparent size of this function, it compiles into efficient code.
 template<typename EndianClass, typename T>
 inline T LoadInteger(const char* p) {
-  static_assert(sizeof(T) <= 8 && std::is_integral<T>::value,
-                "T needs to be an integral type with size <= 8.");
-  switch (sizeof(T)) {
-    case 1: return *reinterpret_cast<const T*>(p);
-    case 2: return EndianClass::ToHost16(UNALIGNED_LOAD16(p));
-    case 4: return EndianClass::ToHost32(UNALIGNED_LOAD32(p));
-    case 8: return EndianClass::ToHost64(UNALIGNED_LOAD64(p));
-    default: {
-      S2_LOG(FATAL) << "Not reached!";
-      return 0;
-    }
+  if constexpr (sizeof(T) == sizeof(uint8)) {
+    return gtl::UnalignedLoad<T>(p);
+  } else if constexpr (sizeof(T) == sizeof(uint16)) {
+    return EndianClass::ToHost16(UNALIGNED_LOAD16(p));
+  } else if constexpr (sizeof(T) == sizeof(uint32)) {
+    return EndianClass::ToHost32(UNALIGNED_LOAD32(p));
+  } else {
+    static_assert(sizeof(T) == sizeof(uint64),
+                  "T must be 8, 16, 32, or 64 bits");
+    return EndianClass::ToHost64(UNALIGNED_LOAD64(p));
   }
 }
 
@@ -687,16 +853,16 @@ inline T LoadInteger(const char* p) {
 // apparent size of this function, it compiles into efficient code.
 template<typename EndianClass, typename T>
 inline void StoreInteger(T value, char* p) {
-  static_assert(sizeof(T) <= 8 && std::is_integral<T>::value,
-                "T needs to be an integral type with size <= 8.");
-  switch (sizeof(T)) {
-    case 1: *reinterpret_cast<T*>(p) = value; break;
-    case 2: UNALIGNED_STORE16(p, EndianClass::FromHost16(value)); break;
-    case 4: UNALIGNED_STORE32(p, EndianClass::FromHost32(value)); break;
-    case 8: UNALIGNED_STORE64(p, EndianClass::FromHost64(value)); break;
-    default: {
-      S2_LOG(FATAL) << "Not reached!";
-    }
+  if constexpr (sizeof(T) == sizeof(uint8)) {
+    *reinterpret_cast<T*>(p) = value;
+  } else if constexpr (sizeof(T) == sizeof(uint16)) {
+    UNALIGNED_STORE16(p, EndianClass::FromHost16(value));
+  } else if constexpr (sizeof(T) == sizeof(uint32)) {
+    UNALIGNED_STORE32(p, EndianClass::FromHost32(value));
+  } else {
+    static_assert(sizeof(T) == sizeof(uint64),
+                  "T must be 8, 16, 32, or 64 bits");
+    UNALIGNED_STORE64(p, EndianClass::FromHost64(value));
   }
 }
 

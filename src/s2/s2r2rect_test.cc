@@ -25,8 +25,9 @@
 #include <gtest/gtest.h>
 
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/s2cap.h"
@@ -40,9 +41,10 @@
 #include "s2/s2testing.h"
 
 using absl::StrCat;
+using absl::string_view;
 
 static void TestIntervalOps(const S2R2Rect& x, const S2R2Rect& y,
-                            const char* expected_rexion,
+                            string_view expected_rexion,
                             const S2R2Rect& expected_union,
                             const S2R2Rect& expected_intersection) {
   // Test all of the interval operations on the given pair of intervals.
@@ -110,6 +112,8 @@ TEST(S2R2Rect, ConstructorsAndAccessors) {
   EXPECT_EQ(R1Interval(0, 1), d1.y());
   EXPECT_EQ(R1Interval(0.1, 0.25), d1[0]);
   EXPECT_EQ(R1Interval(0, 1), d1[1]);
+  // Test `const` `operator[]`.
+  EXPECT_EQ(R1Interval(0.1, 0.25), const_cast<const S2R2Rect&>(d1)[0]);
   EXPECT_EQ(d1.GetVertex(0, 0), d1.lo());
   EXPECT_EQ(d1.GetVertex(1, 1), d1.hi());
   EXPECT_EQ(d1, d1);
@@ -318,7 +322,7 @@ TEST(S2R2Rect, CellOperations) {
               S2Cell::FromFace(0), 0);
 
   // Rectangle that intersects one corner of face 0.
-  TestCellOps(S2R2Rect(R2Point(0.99, -0.01), R2Point(1.01, 0.01)),
-              S2Cell::FromFacePosLevel(0, ~uint64{0} >> S2CellId::kFaceBits, 5),
-              3);
+  TestCellOps(
+      S2R2Rect(R2Point(0.99, -0.01), R2Point(1.01, 0.01)),
+      S2Cell::FromFacePosLevel(0, ~uint64{0} >> S2CellId::kFaceBits, 5), 3);
 }

@@ -28,12 +28,12 @@
 #include "absl/base/macros.h"
 #include "absl/flags/flag.h"
 #include "absl/hash/hash.h"
+#include "absl/log/absl_check.h"
 
+#include "s2/_fp_contract_off.h"
 #include "s2/base/commandlineflags.h"
 #include "s2/base/commandlineflags_declare.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/base/types.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_iterator.h"
@@ -179,6 +179,10 @@ class S2CellUnion final : public S2Region {
   bool empty() const { return cell_ids_.empty(); }
   S2CellId operator[](int i) const { return cell_ids_[i]; }
 
+  // Enables converting an S2CellUnion to absl::Span<S2CellId>.
+  S2CellId* data() { return cell_ids_.data(); }
+  const S2CellId* data() const { return cell_ids_.data(); }
+
   // Standard begin/end methods, to allow range-based for loops:
   //
   //  for (S2CellId id : cell_union) { ... }
@@ -269,7 +273,11 @@ class S2CellUnion final : public S2Region {
   // "expand_level" that are adjacent to "c".  Note that there can be many
   // such cells if "c" is large compared to "expand_level".  If "c" is smaller
   // than "expand_level", we first add the parent of "c" at "expand_level" and
-  // then add all the neighbors of that cell.
+  // then add all the neighbors of that cell. Note that this can cause the
+  // expansion around such cells to be up to almost twice as large as expected,
+  // because the union boundary is moved outward by up to the size difference
+  // between "c" and its parent at "expandLevel", (depending on the position of
+  // "c" in that parent) *before* the buffering neighbors are added.
   //
   // Note that the size of the output is exponential in "expand_level".  For
   // example, if expand_level == 20 and the input has a cell at level 10,
@@ -327,6 +335,7 @@ class S2CellUnion final : public S2Region {
   S2CellUnion* Clone() const override;
   S2Cap GetCapBound() const override;
   S2LatLngRect GetRectBound() const override;
+  void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const override;
 
   // This is a fast operation (logarithmic in the size of the cell union).
   bool Contains(const S2Cell& cell) const override;
@@ -405,13 +414,13 @@ inline S2CellUnion::S2CellUnion(std::vector<S2CellId> cell_ids)
 
 inline S2CellUnion S2CellUnion::FromNormalized(std::vector<S2CellId> cell_ids) {
   S2CellUnion result(std::move(cell_ids), VERBATIM);
-  S2_DCHECK(result.IsNormalized());
+  ABSL_DCHECK(result.IsNormalized());
   return result;
 }
 
 inline S2CellUnion S2CellUnion::FromVerbatim(std::vector<S2CellId> cell_ids) {
   S2CellUnion result(std::move(cell_ids), VERBATIM);
-  S2_DCHECK(!absl::GetFlag(FLAGS_s2debug) || result.IsValid());
+  ABSL_DCHECK(!absl::GetFlag(FLAGS_s2debug) || result.IsValid());
   return result;
 }
 
@@ -453,29 +462,29 @@ H AbslHashValue(H h, const S2CellUnion& u) {
 }
 
 inline S2CellId S2CellUnion::Iterator::id() const {
-  S2_DCHECK(!done());
+  ABSL_DCHECK(!done());
   return *iter_;
 }
 
 inline bool S2CellUnion::Iterator::done() const {
-  S2_DCHECK_NE(cell_union_, nullptr);
+  ABSL_DCHECK_NE(cell_union_, nullptr);
   return iter_ == cell_union_->cell_ids_.end();
 }
 
 inline void S2CellUnion::Iterator::Begin() {
-  S2_DCHECK_NE(cell_union_, nullptr);
+  ABSL_DCHECK_NE(cell_union_, nullptr);
   iter_ = cell_union_->cell_ids_.begin();
 }
 
 inline void S2CellUnion::Iterator::Finish() {
-  S2_DCHECK_NE(cell_union_, nullptr);
+  ABSL_DCHECK_NE(cell_union_, nullptr);
   iter_ = cell_union_->cell_ids_.end();
 }
 
 inline void S2CellUnion::Iterator::Next() { ++iter_; }
 
 inline bool S2CellUnion::Iterator::Prev() {
-  S2_DCHECK_NE(cell_union_, nullptr);
+  ABSL_DCHECK_NE(cell_union_, nullptr);
   if (iter_ == cell_union_->cell_ids_.begin()) {
     return false;
   }
@@ -484,7 +493,7 @@ inline bool S2CellUnion::Iterator::Prev() {
 }
 
 inline void S2CellUnion::Iterator::Seek(S2CellId target) {
-  S2_DCHECK_NE(cell_union_, nullptr);
+  ABSL_DCHECK_NE(cell_union_, nullptr);
   iter_ = absl::c_lower_bound(cell_union_->cell_ids_, target);
 }
 

@@ -24,11 +24,12 @@
 
 #include "absl/flags/flag.h"
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
+#include "s2/s2error.h"
 #include "s2/s2latlng.h"
 #include "s2/s2point.h"
 #include "s2/s2testing.h"
+#include "s2/util/coding/coder.h"
 
 TEST(S1Angle, DefaultConstructor) {
   // Check that the default constructor returns an angle of 0.
@@ -143,6 +144,29 @@ TEST(S1Angle, TestFormatting) {
   std::ostringstream ss;
   ss << S1Angle::Degrees(180.0);
   EXPECT_EQ("180.0000000", ss.str());
+}
+
+TEST(S1Angle, RoundtripEncodingSucceeds) {
+  S1Angle angle = S1Angle::Radians(4.4);
+  Encoder encoder;
+  S1Angle::Coder().Encode(encoder, angle);
+
+  S1Angle decoded_angle;
+  S2Error error;
+  Decoder decoder(encoder.base(), encoder.length());
+  EXPECT_TRUE(S1Angle::Coder().Decode(decoder, decoded_angle, error));
+  EXPECT_EQ(angle, decoded_angle);
+}
+
+TEST(S1Angle, DecodeFailsWithTruncatedBuffer) {
+  S1Angle angle = S1Angle::Radians(1.1);
+  Encoder encoder;
+  S1Angle::Coder().Encode(encoder, angle);
+
+  S1Angle decoded_angle;
+  S2Error error;
+  Decoder decoder(encoder.base(), encoder.length() - 2);
+  EXPECT_FALSE(S1Angle::Coder().Decode(decoder, decoded_angle, error));
 }
 
 // The current implementation guarantees exact conversions between

@@ -18,35 +18,18 @@
 
 #include <string>
 
-#include "s2/base/integral_types.h"
+#include "absl/flags/declare.h"
 
-#ifdef S2_USE_GFLAGS
+#include "s2/base/types.h"
 
-#include <gflags/gflags.h>
+#define S2_DECLARE_bool(name) ABSL_DECLARE_FLAG(bool, name)
 
-#define S2_DECLARE_bool(name) DECLARE_bool(name)
-#define S2_DECLARE_double(name) DECLARE_double(name)
-#define S2_DECLARE_int32(name) DECLARE_int32(name)
-#define S2_DECLARE_int64(name) DECLARE_int64(name)
-#define S2_DECLARE_string(name) DECLARE_string(name)
+#define S2_DECLARE_double(name) ABSL_DECLARE_FLAG(double, name)
 
-#else  // !defined(S2_USE_GFLAGS)
+#define S2_DECLARE_int32(name) ABSL_DECLARE_FLAG(int32, name)
 
-#define S2_DECLARE_bool(name) \
-  extern bool FLAGS_##name
+#define S2_DECLARE_int64(name) ABSL_DECLARE_FLAG(int64, name)
 
-#define S2_DECLARE_double(name) \
-  extern double FLAGS_##name
-
-#define S2_DECLARE_int32(name) \
-  extern int32 FLAGS_##name
-
-#define S2_DECLARE_int64(name) \
-  extern int64 FLAGS_##name
-
-#define S2_DECLARE_string(name) \
-  extern std::string FLAGS_##name
-
-#endif  // !defined(S2_USE_GFLAGS)
+#define S2_DECLARE_string(name) ABSL_DECLARE_FLAG(std::string, name)
 
 #endif  // S2_BASE_COMMANDLINEFLAGS_DECLARE_H_

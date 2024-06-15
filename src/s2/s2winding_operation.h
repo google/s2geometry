@@ -20,6 +20,7 @@
 
 #include <memory>
 
+#include "absl/log/absl_log.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2error.h"
@@ -133,7 +134,7 @@ class S2WindingOperation {
     //   S2Error error;
     //   if (!op.Build(..., &error)) {
     //     if (error.code() == S2Error::RESOURCE_EXHAUSTED) {
-    //       S2_LOG(ERROR) << error;  // Memory limit exceeded
+    //       ABSL_LOG(ERROR) << error;  // Memory limit exceeded
     //     }
     //   }
     //

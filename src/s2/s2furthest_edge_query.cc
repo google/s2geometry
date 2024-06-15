@@ -22,6 +22,8 @@
 #include "s2/s2closest_edge_query_base.h"
 #include "s2/s2edge_distances.h"
 
+using std::vector;
+
 void S2FurthestEdgeQuery::Options::set_conservative_min_distance(
     S1ChordAngle min_distance) {
   set_max_distance(Distance(min_distance.PlusError(
@@ -73,7 +75,7 @@ S2FurthestEdgeQuery::~S2FurthestEdgeQuery() {
 }
 
 void S2FurthestEdgeQuery::FindFurthestEdges(
-    Target* target, std::vector<S2FurthestEdgeQuery::Result>* results) {
+    Target* target, vector<S2FurthestEdgeQuery::Result>* results) {
   results->clear();
   for (auto result : base_.FindClosestEdges(target, options_)) {
     results->push_back(S2FurthestEdgeQuery::Result(result));

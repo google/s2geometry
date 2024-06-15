@@ -104,7 +104,7 @@ TEST(IndexMatchingLayer, SameResult) {
   for (int dim = -1; dim < 3; ++dim) {
     builder.StartLayer(make_unique<IndexMatchingLayer>(
         graph_options, expected.get(), dim));
-    for (S2Shape* shape : *actual) {
+    for (const S2Shape* shape : *actual) {
       if (dim < 0 || shape->dimension() == dim) builder.AddShape(*shape);
     }
     S2Error error;
@@ -123,7 +123,7 @@ TEST(IndexMatchingLayer, DifferentResult) {
                              DuplicateEdges::KEEP, SiblingPairs::KEEP);
   builder.StartLayer(make_unique<IndexMatchingLayer>(graph_options,
                                                      expected.get()));
-  for (S2Shape* shape : *actual) builder.AddShape(*shape);
+  for (const S2Shape* shape : *actual) builder.AddShape(*shape);
   S2Error error;
   EXPECT_FALSE(builder.Build(&error));
   EXPECT_FALSE(error.ok());

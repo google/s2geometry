@@ -20,16 +20,18 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/container/btree_map.h"
+#include "absl/strings/string_view.h"
 #include "s2/s2cell_id.h"
 
 namespace {
 
+using ::absl::string_view;
 using ::testing::Eq;
 using ::testing::Ge;
 using ::testing::IsFalse;
 using ::testing::IsTrue;
 
-S2CellId MakeId(absl::string_view token) { return S2CellId::FromToken(token); }
+S2CellId MakeId(string_view token) { return S2CellId::FromToken(token); }
 
 TEST(MockIterator, BasicFunctionality) {
   absl::btree_map<S2CellId, int> map = {

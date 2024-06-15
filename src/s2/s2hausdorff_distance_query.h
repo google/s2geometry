@@ -183,6 +183,11 @@ class S2HausdorffDistanceQuery {
   S1ChordAngle GetDirectedDistance(const S2ShapeIndex* target,
                                    const S2ShapeIndex* source) const;
 
+  // Computes if the directed Hausdorff distance is within the distance limit.
+  bool IsDirectedDistanceLess(const S2ShapeIndex* target,
+                              const S2ShapeIndex* source,
+                              S1ChordAngle distance_limit) const;
+
   // Compute the [undirected] Hausdorff distance between the target index
   // and the source index.  Returns nullopt iff at least one of the shape
   // indexes is empty.
@@ -198,6 +203,12 @@ class S2HausdorffDistanceQuery {
   // shape indexes is empty.
   S1ChordAngle GetDistance(const S2ShapeIndex* target,
                            const S2ShapeIndex* source) const;
+
+  // Computes if the undirected Hausdorff distance is within the maximum
+  // distance.
+  bool IsDistanceLess(const S2ShapeIndex* target,
+                      const S2ShapeIndex* source,
+                      S1ChordAngle distance_limit) const;
 
  private:
   Options options_;

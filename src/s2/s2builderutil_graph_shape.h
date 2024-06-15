@@ -20,6 +20,7 @@
 
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
 #include "s2/s2shape.h"
@@ -43,7 +44,7 @@ class GraphShape final : public S2Shape {
   int num_chains() const override { return g_.num_edges(); }
   Chain chain(int i) const override { return Chain(i, 1); }
   Edge chain_edge(int i, int j) const override {
-    S2_DCHECK_EQ(j, 0);
+    ABSL_DCHECK_EQ(j, 0);
     return edge(i);
   }
   ChainPosition chain_position(int e) const override {

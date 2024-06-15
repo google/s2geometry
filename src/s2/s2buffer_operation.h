@@ -21,7 +21,8 @@
 #include <memory>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
+#include "absl/log/absl_log.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2builder.h"
@@ -189,7 +190,7 @@ class S2BufferOperation {
     //   S2Error error;
     //   if (!op.Build(&error)) {
     //     if (error.code() == S2Error::RESOURCE_EXHAUSTED) {
-    //       S2_LOG(ERROR) << error;  // Memory limit exceeded
+    //       ABSL_LOG(ERROR) << error;  // Memory limit exceeded
     //     }
     //   }
     //

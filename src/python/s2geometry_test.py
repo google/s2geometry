@@ -17,7 +17,7 @@
 import unittest
 from collections import defaultdict
 
-import pywraps2 as s2
+import s2geometry as s2
 
 
 class PyWrapS2TestCase(unittest.TestCase):
@@ -1039,38 +1039,38 @@ class S2PolygonTestCase(unittest.TestCase):
 
 class S2ChordAngleTest(unittest.TestCase):
   def testBasic(self):
-    ca = s2.S1ChordAngle(s2.S1Angle_Degrees(100))
+    ca = s2.S1ChordAngle(s2.S1Angle.Degrees(100))
     self.assertAlmostEqual(100, ca.degrees())
 
   def testArithmetic(self):
-    ca1 = s2.S1ChordAngle(s2.S1Angle_Degrees(10))
-    ca2 = s2.S1ChordAngle(s2.S1Angle_Degrees(20))
+    ca1 = s2.S1ChordAngle(s2.S1Angle.Degrees(10))
+    ca2 = s2.S1ChordAngle(s2.S1Angle.Degrees(20))
     ca3 = ca1 + ca2
     self.assertAlmostEqual(30, ca3.degrees())
     ca4 = ca2 - ca1
     self.assertAlmostEqual(10, ca4.degrees())
 
   def testComparison(self):
-    ca1 = s2.S1ChordAngle(s2.S1Angle_Degrees(10))
-    ca2 = s2.S1ChordAngle(s2.S1Angle_Degrees(20))
+    ca1 = s2.S1ChordAngle(s2.S1Angle.Degrees(10))
+    ca2 = s2.S1ChordAngle(s2.S1Angle.Degrees(20))
     self.assertTrue(ca1 < ca2)
     self.assertTrue(ca2 > ca1)
     self.assertFalse(ca1 > ca2)
     self.assertFalse(ca2 < ca1)
 
-    ca3 = s2.S1ChordAngle(s2.S1Angle_Degrees(10))
+    ca3 = s2.S1ChordAngle(s2.S1Angle.Degrees(10))
     self.assertTrue(ca1 == ca3)
     self.assertFalse(ca1 == ca2)
     self.assertFalse(ca1 != ca3)
     self.assertTrue(ca1 != ca2)
 
   def testInfinity(self):
-    ca1 = s2.S1ChordAngle(s2.S1Angle_Degrees(179))
+    ca1 = s2.S1ChordAngle(s2.S1Angle.Degrees(179))
     ca2 = s2.S1ChordAngle.Infinity()
     self.assertTrue(ca2 > ca1)
 
   def testCopy(self):
-    ca1 = s2.S1ChordAngle(s2.S1Angle_Degrees(100))
+    ca1 = s2.S1ChordAngle(s2.S1Angle.Degrees(100))
     ca2 = s2.S1ChordAngle(ca1)
     self.assertAlmostEqual(100, ca2.degrees())
 
@@ -1092,7 +1092,7 @@ class S2BufferOperationTest(unittest.TestCase):
     self.assertEqual(4, loop.num_vertices())
 
   def testRadius(self):
-    self.opts.set_buffer_radius(s2.S1Angle_Degrees(0.001))
+    self.opts.set_buffer_radius(s2.S1Angle.Degrees(0.001))
     op = s2.S2BufferOperation(self.layer, self.opts)
 
     cell1 = s2.S2Cell(s2.S2CellId(s2.S2LatLng.FromDegrees(3.0, 4.0)).parent(8))
@@ -1104,7 +1104,7 @@ class S2BufferOperationTest(unittest.TestCase):
     self.assertEqual(20, loop.num_vertices())
 
   def testRadiusAndError(self):
-    self.opts.set_buffer_radius(s2.S1Angle_Degrees(0.001))
+    self.opts.set_buffer_radius(s2.S1Angle.Degrees(0.001))
     self.opts.set_error_fraction(0.1)
     op = s2.S2BufferOperation(self.layer, self.opts)
 
@@ -1117,7 +1117,7 @@ class S2BufferOperationTest(unittest.TestCase):
     self.assertEqual(12, loop.num_vertices())
 
   def testPoint(self):
-    self.opts.set_buffer_radius(s2.S1Angle_Degrees(0.001))
+    self.opts.set_buffer_radius(s2.S1Angle.Degrees(0.001))
     op = s2.S2BufferOperation(self.layer, self.opts)
 
     op.AddPoint(s2.S2LatLng.FromDegrees(14.0, 15.0).ToPoint())

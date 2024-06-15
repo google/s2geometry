@@ -30,12 +30,12 @@
 #include <string>
 #include <type_traits>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
 #include "absl/base/macros.h"
+#include "s2/base/types.h"
 #include "absl/base/attributes.h"
 #include "absl/base/macros.h"
 #include "absl/hash/hash.h"
+#include "absl/log/absl_check.h"
 #include "s2/util/bits/bits.h"
 
 namespace util {
@@ -103,7 +103,7 @@ class BasicBitmap {
   // Copy constructors.  The move constructor will steal the internal memory of
   // the `src` bitmap and change `src` to be a reference to the new bitmap.
   BasicBitmap(const BasicBitmap& src);
-  BasicBitmap(BasicBitmap&& src);
+  BasicBitmap(BasicBitmap&& src) noexcept;
 
   // Assigns this Bitmap to the values of the src Bitmap.
   // This includes pointing to the same underlying map_ if the src Bitmap
@@ -128,7 +128,7 @@ class BasicBitmap {
 
   // Gets an entry of the internal map. Requires array_index < array_size()
   Word GetMapElement(size_type array_index) const {
-    S2_CHECK_LT(array_index, array_size());
+    ABSL_CHECK_LT(array_index, array_size());
     return map_[array_index];
   }
 
@@ -142,7 +142,7 @@ class BasicBitmap {
 
   // Sets an element of the internal map. Requires array_index < array_size()
   void SetMapElement(size_type array_index, Word value) {
-    S2_CHECK_LT(array_index, array_size());
+    ABSL_CHECK_LT(array_index, array_size());
     map_[array_index] = value;
   }
 
@@ -156,7 +156,7 @@ class BasicBitmap {
   }
 
   bool Get(size_type index) const {
-    S2_DCHECK_LT(index, size_);
+    ABSL_DCHECK_LT(index, size_);
     return GetBit(map_, index);
   }
 
@@ -282,9 +282,11 @@ class BasicBitmap {
                                bit_limit);
   }
 
-  // If *index < bits(), finds the first offset <= "*index" and >= "limit" that
+  // If *index < bits(), finds the last offset <= "*index" and >= "limit" that
   // has its bit set.  If found, sets "*index" to this offset and returns true.
-  // Otherwise, does not modify "*index" and returns false.
+  //
+  // If not found, or *index >= bits(), does not modify "*index" and returns
+  // false.
   //
   // Note that to use these methods in a loop you must decrement
   // the index after each use, as in:
@@ -294,9 +296,9 @@ class BasicBitmap {
   //    DoSomethingWith(index);
   //  }
   //
-  //  Word to the wise: This depends on unsigned types (i.e. "size_type")
-  //  wrapping to std::numeric_limits::max<> when decremented below zero.  This
-  //  is achieved by returning false if *index >= bits().
+  // Word to the wise: This depends on unsigned types (i.e. "size_type")
+  // wrapping to std::numeric_limits::max<> when decremented below zero.  This
+  // is achieved by returning false if *index >= bits().
   bool FindPreviousSetBitBeforeLimit(size_type* index, size_type limit) const;
 
   // Equivalent to FindPreviousSetBit with "limit" set to 0.
@@ -335,12 +337,12 @@ class BasicBitmap {
   }
 
   void Set(size_type index, bool value) {
-    S2_DCHECK_LT(index, size_);
+    ABSL_DCHECK_LT(index, size_);
     SetBit(map_, index, value);
   }
 
   void Toggle(size_type index) {
-    S2_DCHECK_LT(index, size_);
+    ABSL_DCHECK_LT(index, size_);
     map_[index / kIntBits] ^= (W{1} << (index & (kIntBits - 1)));
   }
 
@@ -382,7 +384,7 @@ class BasicBitmap {
   // Sets "this" to be the set of bits in "this" but not in "other"
   // REQUIRES: "bits() == other.bits()" (i.e. the bitmaps are the same size)
   void Difference(const BasicBitmap& other) {
-    S2_CHECK_EQ(bits(), other.bits());
+    ABSL_CHECK_EQ(bits(), other.bits());
     std::transform(map_, map_ + array_size(), other.map_, map_,
                    [](Word a, Word b) { return a & ~b; });
   }
@@ -391,7 +393,7 @@ class BasicBitmap {
   // but not both.
   // REQUIRES: "bits() == other.bits()" (i.e. the bitmaps are the same size)
   void ExclusiveOr(const BasicBitmap& other) {
-    S2_CHECK_EQ(bits(), other.bits());
+    ABSL_CHECK_EQ(bits(), other.bits());
     std::transform(map_, map_ + array_size(), other.map_, map_,
                    [](Word a, Word b) { return a ^ b; });
   }
@@ -672,7 +674,7 @@ BasicBitmap<W>::BasicBitmap(const BasicBitmap& src)
 }
 
 template <typename W>
-BasicBitmap<W>::BasicBitmap(BasicBitmap&& src)
+BasicBitmap<W>::BasicBitmap(BasicBitmap&& src) noexcept
     : size_(src.size_), alloc_(src.alloc_) {
   map_ = src.map_;
   if (alloc_) {
@@ -763,7 +765,7 @@ bool BasicBitmap<W>::TestRange(size_type begin, size_type end) const {
 
 template <typename W>
 bool BasicBitmap<W>::IsSubsetOf(const BasicBitmap& other) const {
-  S2_CHECK_EQ(bits(), other.bits());
+  ABSL_CHECK_EQ(bits(), other.bits());
   Word* mp = map_;
   Word* endp = mp + array_size() - 1;
   Word* op = other.map_;
@@ -886,8 +888,8 @@ bool BasicBitmap<W>::IsIntersectionNonEmpty(const BasicBitmap<W>& other) const {
 template <typename W>
 typename BasicBitmap<W>::size_type BasicBitmap<W>::GetOnesCountInRange(
     size_type start, size_type end) const {
-  S2_CHECK_LE(end, size_);
-  S2_CHECK_LE(start, end);
+  ABSL_CHECK_LE(end, size_);
+  ABSL_CHECK_LE(start, end);
 
   if (start >= end) {
     return 0;
@@ -918,7 +920,7 @@ typename BasicBitmap<W>::size_type BasicBitmap<W>::GetOnesCountInRange(
 template <typename W>
 bool BasicBitmap<W>::FindNextSetBitBeforeLimit(size_type* index,
                                                size_type limit) const {
-  S2_CHECK_LE(limit, size_);
+  ABSL_CHECK_LE(limit, size_);
   size_t index_as_size_t = *index;
   bool result = FindNextSetBitInVector(map_, &index_as_size_t, limit);
   if (result) {
@@ -930,7 +932,7 @@ bool BasicBitmap<W>::FindNextSetBitBeforeLimit(size_type* index,
 template <typename W>
 bool BasicBitmap<W>::FindNextUnsetBitBeforeLimit(size_type* index,
                                                  size_type limit) const {
-  S2_CHECK_LE(limit, size_);
+  ABSL_CHECK_LE(limit, size_);
   size_t index_as_size_t = *index;
   bool result = FindNextUnsetBitInVector(map_, &index_as_size_t, limit);
   if (result) {

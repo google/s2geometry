@@ -31,9 +31,9 @@
 #include <ostream>
 #include <type_traits>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
 #include "absl/base/macros.h"
+#include "absl/log/absl_check.h"
 #include "absl/utility/utility.h"
 
 template <typename T>
@@ -87,14 +87,20 @@ class BasicVector {
   void Clear() { AsD() = D(); }
 
   T& operator[](int b) {
-    S2_DCHECK_GE(b, 0);
-    S2_DCHECK_LT(b, SIZE);
+    ABSL_DCHECK_GE(b, 0);
+    ABSL_DCHECK_LT(b, SIZE);
     return static_cast<D&>(*this).Data()[b];
   }
   T operator[](int b) const {
-    S2_DCHECK_GE(b, 0);
-    S2_DCHECK_LT(b, SIZE);
+    ABSL_DCHECK_GE(b, 0);
+    ABSL_DCHECK_LT(b, SIZE);
     return static_cast<const D&>(*this).Data()[b];
+  }
+
+  // Tuple accessors, e.g. for structured bindings.
+  template <size_t I>
+  const std::tuple_element_t<I, D>& get() const& {
+    if constexpr (I >= 0 && I < SIZE) return AsD().Data()[I];
   }
 
   // TODO(user): Relationals should be nonmembers.
@@ -377,8 +383,8 @@ class Vector2 : public util::math::internal_vector::BasicVector<Vector2, T, 2> {
 
   void x(T v) { c_[0] = v; }
   void y(T v) { c_[1] = v; }
-  T x() const { return c_[0]; }
-  T y() const { return c_[1]; }
+  constexpr T x() const { return c_[0]; }
+  constexpr T y() const { return c_[1]; }
 
   // Returns true if this vector's dimensions are at most `margin` from `vb`.
   bool aequal(const Vector2& vb, FloatType margin) const {
@@ -449,9 +455,9 @@ class Vector3 : public util::math::internal_vector::BasicVector<Vector3, T, 3> {
   void x(const T& v) { c_[0] = v; }
   void y(const T& v) { c_[1] = v; }
   void z(const T& v) { c_[2] = v; }
-  T x() const { return c_[0]; }
-  T y() const { return c_[1]; }
-  T z() const { return c_[2]; }
+  constexpr T x() const { return c_[0]; }
+  constexpr T y() const { return c_[1]; }
+  constexpr T z() const { return c_[2]; }
 
   // Returns true if this vector's dimensions are at most `margin` from `vb`.
   bool aequal(const Vector3& vb, FloatType margin) const {
@@ -563,10 +569,10 @@ class Vector4 : public util::math::internal_vector::BasicVector<Vector4, T, 4> {
   void y(const T& v) { c_[1] = v; }
   void z(const T& v) { c_[2] = v; }
   void w(const T& v) { c_[3] = v; }
-  T x() const { return c_[0]; }
-  T y() const { return c_[1]; }
-  T z() const { return c_[2]; }
-  T w() const { return c_[3]; }
+  constexpr T x() const { return c_[0]; }
+  constexpr T y() const { return c_[1]; }
+  constexpr T z() const { return c_[2]; }
+  constexpr T w() const { return c_[3]; }
 
   void Set(T x, T y, T z, T w) { *this = Vector4(x, y, z, w); }
 
@@ -603,6 +609,31 @@ typedef Vector4<int16> Vector4_s;
 typedef Vector4<int> Vector4_i;
 typedef Vector4<float> Vector4_f;
 typedef Vector4<double> Vector4_d;
+
+namespace std {
+
+// Constants needed for structured bindings.
+template <typename T>
+struct tuple_size<::Vector2<T>> : integral_constant<size_t, 2> {};
+template <typename T>
+struct tuple_size<::Vector3<T>> : integral_constant<size_t, 3> {};
+template <typename T>
+struct tuple_size<::Vector4<T>> : integral_constant<size_t, 4> {};
+
+template <typename T, size_t I>
+struct tuple_element<I, Vector2<T>> {
+  using type = T;
+};
+template <typename T, size_t I>
+struct tuple_element<I, Vector3<T>> {
+  using type = T;
+};
+template <typename T, size_t I>
+struct tuple_element<I, Vector4<T>> {
+  using type = T;
+};
+
+}  // namespace std
 
 
 #endif  // S2_UTIL_MATH_VECTOR_H_

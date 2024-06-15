@@ -22,6 +22,7 @@
 #include <memory>
 #include <utility>
 
+#include "absl/functional/function_ref.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
@@ -59,12 +60,13 @@ bool S2MinDistancePointTarget::UpdateMinDistance(
   return min_dist->UpdateMin(S2MinDistance(cell.GetDistance(point_)));
 }
 
-bool S2MinDistancePointTarget::VisitContainingShapes(
-    const S2ShapeIndex& index, const ShapeVisitor& visitor) {
-  return MakeS2ContainsPointQuery(&index).VisitContainingShapes(
-      point_, [this, &visitor](S2Shape* shape) {
-        return visitor(shape, point_);
-      });
+bool S2MinDistancePointTarget::VisitContainingShapeIds(
+    const S2ShapeIndex& index,
+    absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>
+        visitor) {
+  return MakeS2ContainsPointQuery(&index).VisitContainingShapeIds(
+      point_,
+      [this, &visitor](int shape_id) { return visitor(shape_id, point_); });
 }
 
 S2Cap S2MinDistanceEdgeTarget::GetCapBound() {
@@ -90,14 +92,16 @@ bool S2MinDistanceEdgeTarget::UpdateMinDistance(
   return min_dist->UpdateMin(S2MinDistance(cell.GetDistance(a_, b_)));
 }
 
-bool S2MinDistanceEdgeTarget::VisitContainingShapes(
-    const S2ShapeIndex& index, const ShapeVisitor& visitor) {
+bool S2MinDistanceEdgeTarget::VisitContainingShapeIds(
+    const S2ShapeIndex& index,
+    absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>
+        visitor) {
   // We test the center of the edge in order to ensure that edge targets AB
   // and BA yield identical results (which is not guaranteed by the API but
   // users might expect).  Other options would be to test both endpoints, or
   // return different results for AB and BA in some cases.
   S2MinDistancePointTarget target((a_ + b_).Normalize());
-  return target.VisitContainingShapes(index, visitor);
+  return target.VisitContainingShapeIds(index, visitor);
 }
 
 S2MinDistanceCellTarget::S2MinDistanceCellTarget(const S2Cell& cell)
@@ -123,8 +127,10 @@ bool S2MinDistanceCellTarget::UpdateMinDistance(
   return min_dist->UpdateMin(S2MinDistance(cell_.GetDistance(cell)));
 }
 
-bool S2MinDistanceCellTarget::VisitContainingShapes(
-    const S2ShapeIndex& index, const ShapeVisitor& visitor) {
+bool S2MinDistanceCellTarget::VisitContainingShapeIds(
+    const S2ShapeIndex& index,
+    absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>
+        visitor) {
   // The simplest approach is simply to return the polygons that contain the
   // cell center.  Alternatively, if the index cell is smaller than the target
   // cell then we could return all polygons that are present in the
@@ -134,7 +140,7 @@ bool S2MinDistanceCellTarget::VisitContainingShapes(
   // VisitContainingShapes contract so that it only guarantees approximate
   // intersection, neither of which seems like a good tradeoff.
   S2MinDistancePointTarget target(cell_.GetCenter());
-  return target.VisitContainingShapes(index, visitor);
+  return target.VisitContainingShapeIds(index, visitor);
 }
 
 S2MinDistanceCellUnionTarget::S2MinDistanceCellUnionTarget(
@@ -195,11 +201,13 @@ bool S2MinDistanceCellUnionTarget::UpdateMinDistance(
   return UpdateMinDistance(&target, min_dist);
 }
 
-bool S2MinDistanceCellUnionTarget::VisitContainingShapes(
-    const S2ShapeIndex& query_index, const ShapeVisitor& visitor) {
+bool S2MinDistanceCellUnionTarget::VisitContainingShapeIds(
+    const S2ShapeIndex& query_index,
+    absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>
+        visitor) {
   for (S2CellId cell_id : cell_union_) {
     S2MinDistancePointTarget target(cell_id.ToPoint());
-    if (!target.VisitContainingShapes(query_index, visitor)) {
+    if (!target.VisitContainingShapeIds(query_index, visitor)) {
       return false;
     }
   }
@@ -267,8 +275,10 @@ bool S2MinDistanceShapeIndexTarget::UpdateMinDistance(
   return UpdateMinDistance(&target, min_dist);
 }
 
-bool S2MinDistanceShapeIndexTarget::VisitContainingShapes(
-    const S2ShapeIndex& query_index, const ShapeVisitor& visitor) {
+bool S2MinDistanceShapeIndexTarget::VisitContainingShapeIds(
+    const S2ShapeIndex& query_index,
+    absl::FunctionRef<bool(int shape_id, const S2Point& target_point)>
+        visitor) {
   // It is sufficient to find the set of chain starts in the target index
   // (i.e., one vertex per connected component of edges) that are contained by
   // the query index, except for one special case to handle full polygons.
@@ -276,7 +286,7 @@ bool S2MinDistanceShapeIndexTarget::VisitContainingShapes(
   // TODO(ericv): Do this by merge-joining the two S2ShapeIndexes, and share
   // the code with S2BooleanOperation.
 
-  for (S2Shape* shape : *index_) {
+  for (const S2Shape* shape : *index_) {
     if (shape == nullptr) continue;
     int num_chains = shape->num_chains();
     // Shapes that don't have any edges require a special case (below).
@@ -287,7 +297,7 @@ bool S2MinDistanceShapeIndexTarget::VisitContainingShapes(
       tested_point = true;
       S2Point v0 = shape->chain_edge(c, 0).v0;
       S2MinDistancePointTarget target(v0);
-      if (!target.VisitContainingShapes(query_index, visitor)) {
+      if (!target.VisitContainingShapeIds(query_index, visitor)) {
         return false;
       }
     }
@@ -296,7 +306,7 @@ bool S2MinDistanceShapeIndexTarget::VisitContainingShapes(
       S2Shape::ReferencePoint ref = shape->GetReferencePoint();
       if (!ref.contained) continue;
       S2MinDistancePointTarget target(ref.point);
-      if (!target.VisitContainingShapes(query_index, visitor)) {
+      if (!target.VisitContainingShapeIds(query_index, visitor)) {
         return false;
       }
     }

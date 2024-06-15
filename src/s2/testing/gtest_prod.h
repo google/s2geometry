@@ -1,4 +1,4 @@
-// Copyright 2005 Google Inc. All Rights Reserved.
+// Copyright Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,14 +13,12 @@
 // limitations under the License.
 //
 
-// Author: ericv@google.com (Eric Veach)
+#ifndef S2_TESTING_GTEST_PROD_H_
+#define S2_TESTING_GTEST_PROD_H_
 
-#include "s2/s2region.h"
+// Allow use of prod headers without googletest.
+// This must be kept in sync with the googletest definition.
+#define FRIEND_TEST(test_case_name, test_name) \
+  friend class test_case_name##_##test_name##_Test
 
-#include <vector>
-
-#include "s2/s2cap.h"
-
-void S2Region::GetCellUnionBound(std::vector<S2CellId> *cell_ids) const {
-  return GetCapBound().GetCellUnionBound(cell_ids);
-}
+#endif  // S2_TESTING_GTEST_PROD_H_

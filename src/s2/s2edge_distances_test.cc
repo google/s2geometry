@@ -19,12 +19,15 @@
 
 #include <cmath>
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
 
 #include <gtest/gtest.h>
+
 #include "absl/strings/string_view.h"
+
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
@@ -38,9 +41,9 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using absl::string_view;
 using std::string;
 using std::unique_ptr;
-using std::string;
 
 namespace {
 
@@ -310,9 +313,16 @@ TEST(S2, Interpolate) {
   S2Point p1 = S2Point(0.1, 1e-30, 0.3).Normalize();
   S2Point p2 = S2Point(-0.7, -0.55, -1e30).Normalize();
 
-  // A zero-length edge.
+  // A zero-length edge, "interpolated" at the end points.
   TestInterpolate(p1, p1, 0, p1);
   TestInterpolate(p1, p1, 1, p1);
+
+  // Zero-length edges, actually interpolated.
+  TestInterpolate(S2Point(1, 0, 0), S2Point(1, 0, 0), 0.5, S2Point(1, 0, 0));
+  TestInterpolate(S2Point(1, 0, 0), S2Point(1, 0, 0),
+                  std::numeric_limits<double>::min(), S2Point(1, 0, 0));
+  TestInterpolate(p1, p1, 0.5, p1);
+  TestInterpolate(p1, p1, std::numeric_limits<double>::min(), p1);
 
   // Start, end, and middle of a medium-length edge.
   TestInterpolate(p1, p2, 0, p1);
@@ -556,7 +566,7 @@ TEST(S2, EdgePairMaxDistance) {
                            M_PI);
 }
 
-bool IsEdgeBNearEdgeA(absl::string_view a_str, absl::string_view b_str,
+bool IsEdgeBNearEdgeA(string_view a_str, string_view b_str,
                       double max_error_degrees) {
   unique_ptr<S2Polyline> a(s2textformat::MakePolylineOrDie(a_str));
   EXPECT_EQ(2, a->num_vertices());
@@ -565,6 +575,48 @@ bool IsEdgeBNearEdgeA(absl::string_view a_str, absl::string_view b_str,
   return S2::IsEdgeBNearEdgeA(a->vertex(0), a->vertex(1),
                               b->vertex(0), b->vertex(1),
                               S1Angle::Degrees(max_error_degrees));
+}
+
+TEST(IsEdgePairDistanceLess, Coverage) {
+  using S2::IsEdgePairDistanceLess;
+
+  S2Point x(1, 0, 0), y(0, 1, 0), z(0, 0, 1);
+  S2Point a(1, 1e-100, 1e-99), b(1, 1e-100, -1e-99);
+
+  const S1ChordAngle kZeroRad = S1ChordAngle::Zero();
+  const S1ChordAngle kOneRad = S1ChordAngle::Radians(1);
+  const S1ChordAngle kOver90 = S1ChordAngle::Radians(M_PI / 2 + .001);
+
+  // Test cases where the edges have an interior crossing.  Nothing can be
+  // closer than zero, so check that zero distance compares false.
+  EXPECT_EQ(IsEdgePairDistanceLess(x, y, a, b, kZeroRad), false);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, y, a, b, kOneRad), true);
+
+  // Test cases where the edges share an endpoint.
+  EXPECT_EQ(IsEdgePairDistanceLess(x, y, x, z, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, y, z, x, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(y, x, x, z, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(y, x, z, x, kOneRad), true);
+
+  // Test cases where one edge is degenerate.
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, x, y, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, y, x, x, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, y, z, kOneRad), false);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, y, z, kOver90), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(y, z, x, x, kOneRad), false);
+  EXPECT_EQ(IsEdgePairDistanceLess(y, z, x, x, kOver90), true);
+
+  // Test cases where both edges are degenerate.
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, x, x, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, y, y, kOneRad), false);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, x, y, y, kOver90), true);
+
+  // Test cases where the minimum distance is non-zero and is achieved at each
+  // of the four edge endpoints.
+  EXPECT_EQ(IsEdgePairDistanceLess(a, y, x, z, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(y, a, x, z, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, z, a, y, kOneRad), true);
+  EXPECT_EQ(IsEdgePairDistanceLess(x, z, y, a, kOneRad), true);
 }
 
 TEST(S2, EdgeBNearEdgeA) {

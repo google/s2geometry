@@ -78,11 +78,16 @@ absl::optional<Result> S2HausdorffDistanceQuery::GetResult(
     const S2ShapeIndex* target, const S2ShapeIndex* source) const {
   absl::optional<DirectedResult> target_to_source =
       GetDirectedResult(target, source);
+
   if (target_to_source) {
-    return Result(*target_to_source, *GetDirectedResult(source, target));
-  } else {
-    return absl::nullopt;
+    absl::optional<DirectedResult> source_to_target =
+        GetDirectedResult(source, target);
+    if (source_to_target) {
+      return Result(*target_to_source, *source_to_target);
+    }
   }
+
+  return absl::nullopt;
 }
 
 S1ChordAngle S2HausdorffDistanceQuery::GetDirectedDistance(
@@ -121,4 +126,40 @@ absl::optional<DirectedResult> S2HausdorffDistanceQuery::GetDirectedResult(
   } else {
     return DirectedResult(max_distance, target_point);
   }
+}
+
+bool S2HausdorffDistanceQuery::IsDirectedDistanceLess(
+    const S2ShapeIndex* target, const S2ShapeIndex* source,
+    S1ChordAngle distance_limit) const {
+  S2ClosestEdgeQuery closest_edge_query(source);
+  closest_edge_query.mutable_options()->set_max_results(1);
+  closest_edge_query.mutable_options()->set_include_interiors(
+      options_.include_interiors());
+  S1ChordAngle max_distance = S1ChordAngle::Negative();
+  S2Point source_point, target_point;
+
+  // This approximation of Haussdorff distance is based on computing closest
+  // point distances from the _vertices_ of the target index to _edges_ of the
+  // source index.  Hence we iterate over all shapes in the target index, then
+  // over all chains in those shapes, then over all edges in those chains, and
+  // then over the edges' vertices.
+  for (const S2Shape* shape : *target) {
+    for (auto chain : shape->chains()) {
+      for (const S2Point& vertex : shape->vertices(chain)) {
+        UpdateMaxDistance(vertex, closest_edge_query, max_distance,
+                          target_point, source_point);
+        if (max_distance > distance_limit) {
+          return false;
+        }
+      }
+    }
+  }
+  return !max_distance.is_negative();
+}
+
+bool S2HausdorffDistanceQuery::IsDistanceLess(
+    const S2ShapeIndex* target, const S2ShapeIndex* source,
+    S1ChordAngle distance_limit) const {
+  return IsDirectedDistanceLess(target, source, distance_limit) &&
+         IsDirectedDistanceLess(source, target, distance_limit);
 }

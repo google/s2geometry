@@ -26,7 +26,11 @@
 #include <string>
 
 #include <gtest/gtest.h>
-#include "s2/util/coding/coder.h"
+
+#include "absl/hash/hash_testing.h"
+#include "absl/log/absl_check.h"
+#include "absl/strings/string_view.h"
+
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -41,7 +45,9 @@
 #include "s2/s2predicates.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
+#include "s2/util/coding/coder.h"
 
+using absl::string_view;
 using s2textformat::MakePointOrDie;
 using std::fabs;
 using std::min;
@@ -187,7 +193,7 @@ TEST(S2LatLngRect, Contains) {
 }
 
 static void TestIntervalOps(const S2LatLngRect& x, const S2LatLngRect& y,
-                            const char* expected_relation,
+                            string_view expected_relation,
                             const S2LatLngRect& expected_union,
                             const S2LatLngRect& expected_intersection) {
   // Test all of the interval operations on the given pair of intervals.
@@ -617,7 +623,7 @@ static void TestCentroidSplitting(const S2LatLngRect& r, int splits_left) {
     child0 = S2LatLngRect(R1Interval(r.lat().lo(), lat), r.lng());
     child1 = S2LatLngRect(R1Interval(lat, r.lat().hi()), r.lng());
   } else {
-    S2_DCHECK_LE(r.lng().lo(), r.lng().hi());
+    ABSL_DCHECK_LE(r.lng().lo(), r.lng().hi());
     double lng = S2Testing::rnd.UniformDouble(r.lng().lo(), r.lng().hi());
     child0 = S2LatLngRect(r.lat(), S1Interval(r.lng().lo(), lng));
     child1 = S2LatLngRect(r.lat(), S1Interval(lng, r.lng().hi()));
@@ -1041,4 +1047,10 @@ TEST(S2LatLngRect, S2CoderWorks) {
   S2Error error;
   auto decoded = s2coding::RoundTrip(S2LatLngRect::Coder(), rect, error);
   EXPECT_EQ(rect, decoded);
+}
+
+TEST(S2LatLngRect, Hash) {
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly(
+      {RectFromDegrees(-89, 0, 89, 1), RectFromDegrees(1, 5, 1, 5),
+       S2LatLngRect::Empty(), S2LatLngRect::Full()}));
 }

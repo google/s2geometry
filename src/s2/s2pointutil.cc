@@ -20,6 +20,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "absl/log/absl_check.h"
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 #include "s2/util/math/matrix3x3.h"
@@ -39,8 +40,8 @@ bool IsUnitLength(const S2Point& p) {
 }
 
 bool ApproxEquals(const S2Point& a, const S2Point& b, S1Angle max_error) {
-  S2_DCHECK_NE(a, S2Point());
-  S2_DCHECK_NE(b, S2Point());
+  ABSL_DCHECK_NE(a, S2Point());
+  ABSL_DCHECK_NE(b, S2Point());
   return S1Angle(a, b) <= max_error;
 }
 
@@ -59,8 +60,8 @@ S2Point Ortho(const S2Point& a) {
 }
 
 S2Point Rotate(const S2Point& p, const S2Point& axis, S1Angle angle) {
-  S2_DCHECK(IsUnitLength(p));
-  S2_DCHECK(IsUnitLength(axis));
+  ABSL_DCHECK(IsUnitLength(p));
+  ABSL_DCHECK(IsUnitLength(axis));
   // Let M be the plane through P that is perpendicular to "axis", and let
   // "center" be the point where M intersects "axis".  We construct a
   // right-handed orthogonal frame (dx, dy, center) such that "dx" is the
@@ -81,7 +82,7 @@ Matrix3x3_d GetFrame(const S2Point& z) {
 }
 
 void GetFrame(const S2Point& z, Matrix3x3_d* m) {
-  S2_DCHECK(IsUnitLength(z));
+  ABSL_DCHECK(IsUnitLength(z));
   m->SetCol(2, z);
   m->SetCol(1, Ortho(z));
   m->SetCol(0, m->Col(1).CrossProd(z));  // Already unit-length.

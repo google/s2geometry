@@ -25,7 +25,9 @@
 
 #include <gtest/gtest.h>
 
-#include "s2/base/commandlineflags.h"
+#include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -338,6 +340,19 @@ TEST(S2FurthestEdgeQuery, FullS2PolygonTarget) {
   EXPECT_EQ(S1ChordAngle::Straight(), full_query.GetDistance(&target));
 }
 
+TEST(S2FurthestEdgeQuery, CheckSettings) {
+  auto full_polygon_index = MakeIndexOrDie("# #");
+  full_polygon_index->Add(make_unique<S2Polygon::OwningShape>(
+      s2textformat::MakePolygonOrDie("full")));
+
+  S2FurthestEdgeQuery::ShapeIndexTarget target(full_polygon_index.get());
+  target.set_include_interiors(true);
+  target.set_use_brute_force(true);
+
+  EXPECT_TRUE(target.include_interiors());
+  EXPECT_TRUE(target.use_brute_force());
+}
+
 //////////////////////////////////////////////////////////////////////////////
 //  General query testing by comparing with brute force method.
 //////////////////////////////////////////////////////////////////////////////
@@ -497,7 +512,7 @@ static void TestWithIndexFactory(const s2testing::ShapeIndexFactory& factory,
       S2FurthestEdgeQuery::CellTarget target(cell);
       TestFindFurthestEdges(&target, &query);
     } else {
-      S2_DCHECK_EQ(3, target_type);
+      ABSL_DCHECK_EQ(3, target_type);
       // Use another one of the pre-built indexes as the target.
       int j_index = S2Testing::rnd.Uniform(num_indexes);
       S2FurthestEdgeQuery::ShapeIndexTarget target(indexes[j_index].get());

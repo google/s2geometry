@@ -61,6 +61,14 @@ S2LatLngRect S2ShapeIndexBufferedRegion::GetRectBound() const {
 
 void S2ShapeIndexBufferedRegion::GetCellUnionBound(vector<S2CellId> *cellids)
     const {
+  // Get the max level to add neighbors at, or return the full union if the
+  // buffer radius is huge.
+  double radians = radius_.ToAngle().radians();
+  int max_level = S2::kMinWidth.GetLevelForMinValue(radians) - 1;
+  if (max_level < 0) {
+    return S2Cap::Full().GetCellUnionBound(cellids);
+  }
+
   // We start with a covering of the original S2ShapeIndex, and then expand it
   // by replacing each cell with a block of 4 cells whose union contains the
   // original cell buffered by the given radius.
@@ -70,12 +78,6 @@ void S2ShapeIndexBufferedRegion::GetCellUnionBound(vector<S2CellId> *cellids)
   // covering, but it is much better than always returning the 6 face cells.
   vector<S2CellId> orig_cellids;
   MakeS2ShapeIndexRegion(&index()).GetCellUnionBound(&orig_cellids);
-
-  double radians = radius_.ToAngle().radians();
-  int max_level = S2::kMinWidth.GetLevelForMinValue(radians) - 1;
-  if (max_level < 0) {
-    return S2Cap::Full().GetCellUnionBound(cellids);
-  }
   cellids->clear();
   for (S2CellId id : orig_cellids) {
     if (id.is_face()) {

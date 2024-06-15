@@ -231,15 +231,15 @@ class S2RegionTermIndexer {
     //
     // REQUIRES: "ch" is non-alphanumeric.
     // DEFAULT: '$'
-    const std::string& marker() const { return marker_; }
-    char marker_character() const { return marker_[0]; }
+    absl::string_view marker() const { return absl::string_view(&marker_, 1); }
+    char marker_character() const { return marker_; }
     void set_marker_character(char ch);
 
    private:
     bool index_points_only_ = false;
     bool query_points_only_ = false;
     bool optimize_for_space_ = false;
-    std::string marker_ = std::string(1, '$');
+    char marker_ = '$';
   };
 
   // Default constructor.  Options can be set using mutable_options().

@@ -232,19 +232,6 @@ struct TestEdge {
 
 namespace {
 
-std::ostream& operator<<(std::ostream& os, const Edge& edge) {
-  return os << "(" << edge.first << ", " << edge.second << ")";
-}
-
-std::ostream& operator<<(std::ostream& os, const vector<InputEdgeId>& v) {
-  os << "{";
-  for (int i = 0; i < v.size(); ++i) {
-    if (i > 0) os << ", ";
-    os << v[i];
-  }
-  return os << "}";
-}
-
 void TestProcessEdges(const vector<TestEdge>& input,
                       const vector<TestEdge>& expected,
                       GraphOptions* options,

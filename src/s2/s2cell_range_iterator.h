@@ -125,40 +125,39 @@ auto MakeS2CellRangeIterator(Iterator&& iter) {
 
 //////////////////   Implementation details follow   ////////////////////
 
-template <typename IndexType>
-void S2CellRangeIterator<IndexType>::S2CellRangeIterator::Begin() {
+template <typename Iterator>
+void S2CellRangeIterator<Iterator>::S2CellRangeIterator::Begin() {
   it_.Begin();
   Refresh();
 }
 
-template <typename IndexType>
-void S2CellRangeIterator<IndexType>::S2CellRangeIterator::Next() {
+template <typename Iterator>
+void S2CellRangeIterator<Iterator>::S2CellRangeIterator::Next() {
   it_.Next();
   Refresh();
 }
 
-template <typename IndexType>
-bool S2CellRangeIterator<IndexType>::S2CellRangeIterator::Prev() {
+template <typename Iterator>
+bool S2CellRangeIterator<Iterator>::S2CellRangeIterator::Prev() {
   bool status = it_.Prev();
   Refresh();
   return status;
 }
 
-template <typename IndexType>
-void S2CellRangeIterator<IndexType>::S2CellRangeIterator::Seek(
-    S2CellId target) {
+template <typename Iterator>
+void S2CellRangeIterator<Iterator>::S2CellRangeIterator::Seek(S2CellId target) {
   it_.Seek(target);
   Refresh();
 }
 
-template <typename IndexType>
-void S2CellRangeIterator<IndexType>::S2CellRangeIterator::Finish() {
+template <typename Iterator>
+void S2CellRangeIterator<Iterator>::S2CellRangeIterator::Finish() {
   it_.Finish();
   Refresh();
 }
 
-template <typename IndexType>
-bool S2CellRangeIterator<IndexType>::S2CellRangeIterator::Locate(
+template <typename Iterator>
+bool S2CellRangeIterator<Iterator>::S2CellRangeIterator::Locate(
     const S2Point& target) {
   bool status = it_.Locate(target);
   Refresh();
@@ -194,9 +193,9 @@ S2CellRelation S2CellRangeIterator<Iterator>::Locate(S2CellId target) {
 }
 
 // Convenience re-implementation of the above function, see it for details.
-template <typename IndexType>
+template <typename Iterator>
 template <typename T>
-S2CellRelation S2CellRangeIterator<IndexType>::S2CellRangeIterator::Locate(
+S2CellRelation S2CellRangeIterator<Iterator>::S2CellRangeIterator::Locate(
     const S2CellRangeIterator<T>& target) {
   Seek(target.range_min());
   if (!done()) {
@@ -219,9 +218,9 @@ S2CellRelation S2CellRangeIterator<IndexType>::S2CellRangeIterator::Locate(
   return S2CellRelation::DISJOINT;
 }
 
-template <typename IndexType>
+template <typename Iterator>
 template <typename T>
-void S2CellRangeIterator<IndexType>::SeekTo(
+void S2CellRangeIterator<Iterator>::SeekTo(
     const S2CellRangeIterator<T>& target) {
   Seek(target.range_min());
 
@@ -236,9 +235,9 @@ void S2CellRangeIterator<IndexType>::SeekTo(
   Refresh();
 }
 
-template <typename IndexType>
+template <typename Iterator>
 template <typename T>
-void S2CellRangeIterator<IndexType>::SeekBeyond(
+void S2CellRangeIterator<Iterator>::SeekBeyond(
     const S2CellRangeIterator<T>& target) {
   Seek(target.range_max().next());
   if (!done() && range_min() <= target.range_max()) {
@@ -249,8 +248,8 @@ void S2CellRangeIterator<IndexType>::SeekBeyond(
 
 // This method is inline, but is only called by non-inline methods defined in
 // this file.  Putting the definition here enforces this requirement.
-template <typename IndexType>
-inline void S2CellRangeIterator<IndexType>::Refresh() {
+template <typename Iterator>
+inline void S2CellRangeIterator<Iterator>::Refresh() {
   if (done()) {
     range_min_ = S2CellId::Sentinel().range_min();
     range_max_ = S2CellId::Sentinel().range_max();

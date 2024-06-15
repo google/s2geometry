@@ -12,7 +12,6 @@
 
 #include <cinttypes>
 #include <cstdint>
-#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -21,6 +20,7 @@
 #include "absl/container/btree_set.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
+#include "absl/strings/str_format.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2point.h"
@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     // Now do something with the results (in this example we just count them).
     num_found += result.size();
   }
-  std::printf("Found %" PRId64 " points in %d queries\n", num_found,
-              absl::GetFlag(FLAGS_num_queries));
+  absl::PrintF("Found %d points in %d queries\n", num_found,
+               absl::GetFlag(FLAGS_num_queries));
   return 0;
 }

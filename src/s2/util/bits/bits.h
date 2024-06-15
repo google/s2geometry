@@ -16,44 +16,32 @@
 #ifndef S2_UTIL_BITS_BITS_H_
 #define S2_UTIL_BITS_BITS_H_
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/base/optimization.h"
 #include "absl/numeric/bits.h"
-
-// abseil only exposed ABSL_ASSUME in abseil/abseil-cpp@231c393 on 2022-03-16.
-// This is not in an LTS as of 2022-04.  Use either ABSL_ASSUME or
-// ABSL_INTERNAL_ASSUME, depending on which is available.
-// TODO: Remove this and just use ABSL_ASSUME when it is in an LTS release.
-// TODO: Further investigate whether ASSUME is needed at all, or if clang
-// and gcc can prove the argument is non-zero where these are used.
-#if defined(ABSL_ASSUME)
-#define S2_ASSUME(cond) ABSL_ASSUME(cond)
-#elif defined(ABSL_INTERNAL_ASSUME)
-#define S2_ASSUME(cond) ABSL_INTERNAL_ASSUME(cond)
-#else
-#error "abseil-cpp must provide ABSL_ASSUME or ABSL_INTERNAL_ASSUME, what version are you using?"
-#endif
 
 // Use namespace because this used to be a static class.
 namespace Bits {
 
 inline int FindLSBSetNonZero(uint32 n) {
-  S2_ASSUME(n != 0);
+  // TODO: Investigate whether ABSL_ASSUME is needed at all, or if clang
+  // and gcc can prove the argument is non-zero where these are used.
+  ABSL_ASSUME(n != 0);
   return absl::countr_zero(n);
 }
 
 inline int FindLSBSetNonZero64(uint64 n) {
-  S2_ASSUME(n != 0);
+  ABSL_ASSUME(n != 0);
   return absl::countr_zero(n);
 }
 
 inline int Log2FloorNonZero(uint32 n) {
-  S2_ASSUME(n != 0);
+  ABSL_ASSUME(n != 0);
   return absl::bit_width(n) - 1;
 }
 
 inline int Log2FloorNonZero64(uint64 n) {
-  S2_ASSUME(n != 0);
+  ABSL_ASSUME(n != 0);
   return absl::bit_width(n) - 1;
 }
 

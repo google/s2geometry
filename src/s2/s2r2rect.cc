@@ -27,6 +27,8 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
 
+using std::vector;
+
 S2R2Rect S2R2Rect::FromCell(const S2Cell& cell) {
   // S2Cells have a more efficient GetSizeST() method than S2CellIds.
   double size = cell.GetSizeST();
@@ -64,6 +66,10 @@ S2Cap S2R2Rect::GetCapBound() const {
 S2LatLngRect S2R2Rect::GetRectBound() const {
   // This is not very tight but hopefully good enough.
   return GetCapBound().GetRectBound();
+}
+
+void S2R2Rect::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  GetCapBound().GetCellUnionBound(cell_ids);
 }
 
 bool S2R2Rect::Contains(const S2Point& p) const {

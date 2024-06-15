@@ -29,14 +29,13 @@
 // Avoid adding expensive includes here.
 #include "absl/base/attributes.h"
 #include "absl/base/macros.h"
+#include "absl/log/absl_check.h"
 #include "absl/meta/type_traits.h"
 #include "absl/numeric/int128.h"
 #include "absl/utility/utility.h"
 
 #include "s2/base/casts.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
-#include "s2/base/port.h"
+#include "s2/base/types.h"
 #include "s2/util/coding/varint.h"
 #include "s2/util/endian/endian.h"
 
@@ -154,11 +153,11 @@ class Encoder {
 
     ~Writer() {
       enc->buf_ = reinterpret_cast<unsigned char*>(p);
-      S2_DCHECK_GE(enc->buf_, enc->orig_);
-      S2_DCHECK_LE(enc->buf_, enc->limit_);
+      ABSL_DCHECK_GE(enc->buf_, enc->orig_);
+      ABSL_DCHECK_LE(enc->buf_, enc->limit_);
     }
 
-    char* skip(ptrdiff_t N) { return absl::exchange(p, p + N); }
+    char* skip(ptrdiff_t N) { return std::exchange(p, p + N); }
 
     void put8(unsigned char v) { *p++ = v; }
     void put16(uint16 v) { LittleEndian::Store16(skip(2), v); }
@@ -302,20 +301,20 @@ inline void Encoder::clear() {
 }
 
 inline void Encoder::Ensure(size_t N) {
-  S2_DCHECK(ensure_allowed());
+  ABSL_DCHECK(ensure_allowed());
   if (avail() < N) {
     EnsureSlowPath(N);
   }
 }
 
 inline size_t Encoder::length() const {
-  S2_DCHECK_GE(buf_, orig_);
-  S2_DCHECK_LE(buf_, limit_);
+  ABSL_DCHECK_GE(buf_, orig_);
+  ABSL_DCHECK_LE(buf_, limit_);
   return buf_ - orig_;
 }
 
 inline size_t Encoder::avail() const {
-  S2_DCHECK_GE(limit_, buf_);
+  ABSL_DCHECK_GE(limit_, buf_);
   return limit_ - buf_;
 }
 
@@ -442,12 +441,12 @@ inline void Decoder::reset(const void* b, size_t maxn) {
 }
 
 inline size_t Decoder::pos() const {
-  S2_DCHECK_GE(buf_, orig_);
+  ABSL_DCHECK_GE(buf_, orig_);
   return buf_ - orig_;
 }
 
 inline size_t Decoder::avail() const {
-  S2_DCHECK_GE(limit_, buf_);
+  ABSL_DCHECK_GE(limit_, buf_);
   return limit_ - buf_;
 }
 
@@ -468,7 +467,7 @@ inline void Decoder::getcn(void* dst, int c, size_t n) {
 
 inline void Decoder::gets(void* dst, size_t n) {
   size_t len = n - 1;
-  S2_DCHECK_GE(limit_, buf_);
+  ABSL_DCHECK_GE(limit_, buf_);
   if (n > static_cast<size_t>(1 + limit_ - buf_)) {
     len = limit_ - buf_;
   }

@@ -17,9 +17,12 @@
 
 #include <string>
 
+#include "absl/base/optimization.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+
+using absl::string_view;
 
 S2Error ToS2Error(const absl::Status& status) {
   S2Error error;
@@ -28,7 +31,7 @@ S2Error ToS2Error(const absl::Status& status) {
     return error;
   }
 
-  const absl::string_view message = status.message();
+  const string_view message = status.message();
 
   switch (status.code()) {
     case absl::StatusCode::kCancelled:
@@ -142,4 +145,5 @@ absl::Status ToStatus(const S2Error& error) {
       return absl::UnknownError(
           absl::StrCat(error.text(), " (", error.code(), ")"));
   }
+  ABSL_UNREACHABLE();
 }

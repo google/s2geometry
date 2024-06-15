@@ -21,7 +21,8 @@
 #include <utility>
 #include <vector>
 
-#include "absl/container/btree_map.h"
+#include "absl/container/flat_hash_map.h"
+#include "absl/log/absl_check.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2contains_point_query.h"
 #include "s2/s2pointutil.h"
@@ -60,7 +61,7 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
   // 4. The outer loops of all components at depth 0 become a single face.
 
   MutableS2ShapeIndex index;
-  // A map from shape.id() to the corresponding component number.
+  // A map from shape id to the corresponding component number.
   vector<int> component_ids;
   vector<S2Shape*> outer_loops;
   for (size_t i = 0; i < components.size(); ++i) {
@@ -76,31 +77,34 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
       }
     }
     // Check that there is exactly one outer loop in each component.
-    S2_DCHECK_EQ(i + 1, outer_loops.size()) << "Component is not a subdivision";
+    ABSL_DCHECK_EQ(i + 1, outer_loops.size())
+        << "Component is not a subdivision";
   }
   // Find the loops containing each component.
-  vector<vector<S2Shape*>> ancestors(components.size());
+  vector<vector<int>> ancestors(components.size());
   auto contains_query = MakeS2ContainsPointQuery(&index);
   for (size_t i = 0; i < outer_loops.size(); ++i) {
     auto loop = outer_loops[i];
-    S2_DCHECK_GT(loop->num_edges(), 0);
-    ancestors[i] = contains_query.GetContainingShapes(loop->edge(0).v0);
+    ABSL_DCHECK_GT(loop->num_edges(), 0);
+    ancestors[i] = contains_query.GetContainingShapeIds(loop->edge(0).v0);
   }
   // Assign each outer loop to the component whose depth is one less.
   // Components at depth 0 become a single face.
-  absl::btree_map<S2Shape*, vector<S2Shape*>> children;
+  absl::flat_hash_map<const S2Shape*, vector<S2Shape*>> children;
   for (size_t i = 0; i < outer_loops.size(); ++i) {
-    S2Shape* ancestor = nullptr;
+    int ancestor_id = -1;
     size_t depth = ancestors[i].size();
     if (depth > 0) {
-      for (auto candidate : ancestors[i]) {
-        if (ancestors[component_ids[candidate->id()]].size() == depth - 1) {
-          S2_DCHECK(ancestor == nullptr);
-          ancestor = candidate;
+      for (auto candidate_id : ancestors[i]) {
+        if (ancestors[component_ids[candidate_id]].size() == depth - 1) {
+          ABSL_DCHECK_EQ(ancestor_id, -1);
+          ancestor_id = candidate_id;
         }
       }
-      S2_DCHECK(ancestor != nullptr);
+      ABSL_DCHECK_GE(ancestor_id, 0);
     }
+    const S2Shape* ancestor =
+        (ancestor_id < 0) ? nullptr : index.shape(ancestor_id);
     children[ancestor].push_back(outer_loops[i]);
   }
   // There is one face per loop that is not an outer loop, plus one for the
@@ -113,7 +117,7 @@ void BuildPolygonBoundaries(const vector<vector<S2Shape*>>& components,
     if (itr != children.end()) {
       *polygon = itr->second;
     }
-    polygon->push_back(loop);
+    polygon->push_back(const_cast<S2Shape*>(loop));
   }
   polygons->back() = children[nullptr];
 

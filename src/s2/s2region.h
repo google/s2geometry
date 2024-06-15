@@ -75,8 +75,10 @@ class S2Region {
   // computed quickly.  The result is used by S2RegionCoverer as a starting
   // point for further refinement.
   //
-  // TODO(ericv): Remove the default implementation.
-  virtual void GetCellUnionBound(std::vector<S2CellId> *cell_ids) const;
+  // `GetCapBound().GetCellUnionBound(cell_ids)` and
+  // `GetRectBound().GetCellUnionBound(cell_ids)` are always valid
+  // implementations, but something better should be done if possible.
+  virtual void GetCellUnionBound(std::vector<S2CellId>* cell_ids) const = 0;
 
   // Returns true if the region completely contains the given cell, otherwise
   // either the region does not contain the cell or the containment relationship

@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "absl/container/inlined_vector.h"
+#include "absl/log/absl_check.h"
 #include "s2/s1angle.h"
 #include "s2/s2centroids.h"
 #include "s2/s2measures.h"
@@ -49,7 +50,7 @@ S1Angle GetPerimeter(S2PointLoopSpan loop) {
 
 double GetArea(S2PointLoopSpan loop) {
   double area = GetSignedArea(loop);
-  S2_DCHECK_LE(fabs(area), 2 * M_PI);
+  ABSL_DCHECK_LE(fabs(area), 2 * M_PI);
   if (area < 0.0) area += 4 * M_PI;
   return area;
 }
@@ -134,7 +135,7 @@ double GetSignedArea(S2PointLoopSpan loop) {
   if (fabs(area) <= max_error) {
     double curvature = GetCurvature(loop);
     // Zero-area loops should have a curvature of approximately +/- 2*Pi.
-    S2_DCHECK(!(area == 0 && curvature == 0));
+    ABSL_DCHECK(!(area == 0 && curvature == 0));
     if (curvature == 2 * M_PI) return 0.0;  // Degenerate
     if (area <= 0 && curvature > 0) {
       return std::numeric_limits<double>::min();
@@ -276,7 +277,7 @@ static inline bool IsOrderLess(LoopOrder order1, LoopOrder order2,
 
   int i1 = order1.first, i2 = order2.first;
   int dir1 = order1.dir, dir2 = order2.dir;
-  S2_DCHECK_EQ(loop[i1], loop[i2]);
+  ABSL_DCHECK_EQ(loop[i1], loop[i2]);
   for (int n = loop.size(); --n > 0; ) {
     i1 += dir1;
     i2 += dir2;

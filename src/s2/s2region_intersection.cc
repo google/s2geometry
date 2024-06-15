@@ -20,20 +20,22 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2cap.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
 #include "s2/s2region.h"
 
+using std::unique_ptr;
 using std::vector;
 
 S2RegionIntersection::S2RegionIntersection(
-    vector<std::unique_ptr<S2Region>> regions) {
+    vector<unique_ptr<S2Region>> regions) {
   Init(std::move(regions));
 }
 
-void S2RegionIntersection::Init(vector<std::unique_ptr<S2Region>> regions) {
-  S2_DCHECK(regions_.empty());
+void S2RegionIntersection::Init(vector<unique_ptr<S2Region>> regions) {
+  ABSL_DCHECK(regions_.empty());
   regions_ = std::move(regions);
 }
 
@@ -44,8 +46,8 @@ S2RegionIntersection::S2RegionIntersection(const S2RegionIntersection& src)
   }
 }
 
-vector<std::unique_ptr<S2Region>> S2RegionIntersection::Release() {
-  vector<std::unique_ptr<S2Region>> result;
+vector<unique_ptr<S2Region>> S2RegionIntersection::Release() {
+  vector<unique_ptr<S2Region>> result;
   result.swap(regions_);
   return result;
 }
@@ -66,6 +68,10 @@ S2LatLngRect S2RegionIntersection::GetRectBound() const {
     result = result.Intersection(region(i)->GetRectBound());
   }
   return result;
+}
+
+void S2RegionIntersection::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  GetCapBound().GetCellUnionBound(cell_ids);
 }
 
 bool S2RegionIntersection::Contains(const S2Cell& cell) const {

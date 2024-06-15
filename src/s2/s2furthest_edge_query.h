@@ -21,8 +21,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
 #include "absl/base/macros.h"
 #include "absl/container/inlined_vector.h"
 #include "s2/_fp_contract_off.h"
@@ -269,8 +268,8 @@ class S2FurthestEdgeQuery {
 
    private:
     S1ChordAngle distance_;
-    int32 shape_id_;     // Identifies an indexed shape.
-    int32 edge_id_;      // Identifies an edge within the shape.
+    int32 shape_id_;  // Identifies an indexed shape.
+    int32 edge_id_;   // Identifies an edge within the shape.
   };
 
   // Convenience constructor that calls Init().  Options may be specified here

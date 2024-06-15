@@ -25,16 +25,8 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/util/gtl/dense_hash_set.h"
-
-class S2Point;
-namespace absl {
-namespace hash_internal {
-template <typename T>
-struct Hash;
-}  // namespace hash_internal
-}  // namespace absl
 
 // ValueLexicon is a class that maps distinct values to sequentially numbered
 // integer identifiers.  It automatically eliminates duplicates and uses a
@@ -93,6 +85,7 @@ class ValueLexicon {
     IdHasher(const Hasher& hasher, const ValueLexicon* lexicon);
     const Hasher& hasher() const;
     size_t operator()(uint32 id) const;
+
    private:
     Hasher hasher_;
     const ValueLexicon* lexicon_;
@@ -102,6 +95,7 @@ class ValueLexicon {
    public:
     IdKeyEqual(const KeyEqual& key_equal, const ValueLexicon* lexicon);
     bool operator()(uint32 id1, uint32 id2) const;
+
    private:
     KeyEqual key_equal_;
     const ValueLexicon* lexicon_;
@@ -116,7 +110,6 @@ class ValueLexicon {
 
 
 //////////////////   Implementation details follow   ////////////////////
-
 
 template <class T, class Hasher, class KeyEqual>
 const uint32 ValueLexicon<T, Hasher, KeyEqual>::kEmptyKey;

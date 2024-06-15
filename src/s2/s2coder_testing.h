@@ -17,6 +17,7 @@
 #ifndef S2_S2CODER_TESTING_H_
 #define S2_S2CODER_TESTING_H_
 
+#include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s2coder.h"
 #include "s2/s2error.h"
@@ -44,7 +45,7 @@ template <typename T>
 T RoundTrip(const S2Coder<T>& coder, const T& shape, S2Error& error) {
   Encoder encoder = EncodeToEncoder(coder, shape);
   T val;
-  S2_CHECK(DecodeFromEncoded(coder, encoder, val, error));
+  ABSL_CHECK(DecodeFromEncoded(coder, encoder, val, error));
   return val;
 }
 

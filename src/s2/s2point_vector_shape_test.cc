@@ -29,8 +29,10 @@
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using std::vector;
+
 TEST(S2PointVectorShape, Empty) {
-  std::vector<S2Point> points;
+  vector<S2Point> points;
   S2PointVectorShape shape(std::move(points));
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(0, shape.num_chains());
@@ -41,7 +43,7 @@ TEST(S2PointVectorShape, Empty) {
 }
 
 TEST(S2PointVectorShape, ConstructionAndAccess) {
-  std::vector<S2Point> points;
+  vector<S2Point> points;
   S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
   const int kNumPoints = 100;
   for (int i = 0; i < kNumPoints; ++i) {
@@ -61,13 +63,14 @@ TEST(S2PointVectorShape, ConstructionAndAccess) {
     const S2Point& pt = points.at(i);
     EXPECT_EQ(pt, edge.v0);
     EXPECT_EQ(pt, edge.v1);
+    EXPECT_EQ(shape.point(i), pt);
   }
 }
 
 TEST(S2PointVectorShape, Move) {
   // Construct a shape to use as the correct answer and a second identical shape
   // to be moved.
-  std::vector<S2Point> points;
+  vector<S2Point> points;
   const int kNumPoints = 100;
   for (int i = 0; i < kNumPoints; ++i) {
     points.push_back(S2Testing::RandomPoint());
@@ -78,18 +81,16 @@ TEST(S2PointVectorShape, Move) {
   // Test the move constructor.
   S2PointVectorShape move1(std::move(to_move));
   s2testing::ExpectEqual(correct, move1);
-  EXPECT_EQ(correct.id(), move1.id());
 
   // Test the move-assignment operator.
   S2PointVectorShape move2;
   move2 = std::move(move1);
   s2testing::ExpectEqual(correct, move2);
-  EXPECT_EQ(correct.id(), move2.id());
 }
 
 TEST(S2PointVectorShape, ChainIteratorWorks) {
   S2PointVectorShape empty;
-  std::vector<S2Point> points = s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1");
+  vector<S2Point> points = s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1");
   S2PointVectorShape shape(points);
 
   S2Shape::ChainIterator empty_begin = empty.chains().begin();
@@ -117,7 +118,7 @@ TEST(S2PointVectorShape, ChainIteratorWorks) {
 
 TEST(S2PointVectorShape, ChainVertexIteratorWorks) {
   S2PointVectorShape empty;
-  std::vector<S2Point> points = s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1");
+  vector<S2Point> points = s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1");
   S2PointVectorShape shape(points);
 
   int chain_counter = 0;

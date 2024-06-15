@@ -20,12 +20,13 @@
 
 #include <cstddef>
 
+#include <cstdint>
 #include <limits>
 #include <type_traits>
 #include <vector>
 
-#include "s2/base/integral_types.h"
 #include "absl/base/internal/unaligned_access.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
 #include "s2/util/bits/bits.h"
@@ -140,21 +141,21 @@ template <class T>
 inline void EncodeUintWithLength(T value, int length, Encoder* encoder) {
   static_assert(std::is_unsigned<T>::value, "Unsupported signed integer");
   static_assert(sizeof(T) & 0xe, "Unsupported integer length");
-  S2_DCHECK(length >= 0 && length <= sizeof(T));
-  S2_DCHECK_GE(encoder->avail(), length);
+  ABSL_DCHECK(length >= 0 && length <= sizeof(T));
+  ABSL_DCHECK_GE(encoder->avail(), length);
 
   while (--length >= 0) {
     encoder->put8(value);
     value >>= 8;
   }
-  S2_DCHECK_EQ(value, 0);
+  ABSL_DCHECK_EQ(value, 0);
 }
 
 template <class T>
 inline T GetUintWithLength(const char* ptr, int length) {
   static_assert(std::is_unsigned<T>::value, "Unsupported signed integer");
   static_assert(sizeof(T) & 0xe, "Unsupported integer length");
-  S2_DCHECK(length >= 0 && length <= sizeof(T));
+  ABSL_DCHECK(length >= 0 && length <= sizeof(T));
 
   // Note that the following code is faster than any of the following:
   //
@@ -176,7 +177,7 @@ inline T GetUintWithLength(const char* ptr, int length) {
     if (sizeof(T) == 8) return ABSL_INTERNAL_UNALIGNED_LOAD64(ptr);
     if (sizeof(T) == 4) return ABSL_INTERNAL_UNALIGNED_LOAD32(ptr);
     if (sizeof(T) == 2) return ABSL_INTERNAL_UNALIGNED_LOAD16(ptr);
-    S2_DCHECK_EQ(sizeof(T), 1);
+    ABSL_DCHECK_EQ(sizeof(T), 1);
     return *ptr;
   }
   T x = 0;
@@ -215,7 +216,7 @@ void EncodeUintVector(absl::Span<const T> v, Encoder* encoder) {
   T one_bits = 1;  // Ensures len >= 1.
   for (auto x : v) one_bits |= x;
   int len = (Bits::FindMSBSetNonZero64(one_bits) >> 3) + 1;
-  S2_DCHECK(len >= 1 && len <= 8);
+  ABSL_DCHECK(len >= 1 && len <= 8);
 
   // Note that the multiplication is optimized into a bit shift.
   encoder->Ensure(Varint::kMax64 + v.size() * len);
@@ -253,14 +254,14 @@ inline size_t EncodedUintVector<T>::size() const {
 
 template <class T>
 inline T EncodedUintVector<T>::operator[](int i) const {
-  S2_DCHECK(i >= 0 && i < size_);
+  ABSL_DCHECK(i >= 0 && i < size_);
   return GetUintWithLength<T>(data_ + i * len_, len_);
 }
 
 template <class T>
 size_t EncodedUintVector<T>::lower_bound(T target) const {
   static_assert(sizeof(T) & 0xe, "Unsupported integer length");
-  S2_DCHECK(len_ >= 1 && len_ <= sizeof(T));
+  ABSL_DCHECK(len_ >= 1 && len_ <= sizeof(T));
 
   // TODO(ericv): Consider using the unused 28 bits of "len_" to store the
   // last result of lower_bound() to be used as a hint.  This should help in

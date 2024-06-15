@@ -43,6 +43,25 @@ class S2Point : public Vector3_d {
   using Base = Vector3_d;
   using Base::Base;
 
+  // Due to an ambiguity in original C++11 specificiation, it was unclear
+  // whether imported base class default constructors should be considered
+  // when deciding to delete the default constructor of a class.  GCC and
+  // Clang both accept the base class default ctor, while MSVC 2017 and
+  // later do not.
+  // The ambiguity was resolved in
+  // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0136r1.html
+  // and accepted as part of the C++17 approval process, with the intent of
+  // being retroactively applied to C++11.
+  // However, while MSVC accepted the change for C++17 and forward, it did
+  // not implement the change for prior versions. See their conformance page:
+  // https://learn.microsoft.com/en-us/cpp/overview/visual-cpp-language-conformance?view=msvc-170
+  // (search for P0136R1).
+  // The explicit declaration here of a default ctor is a workaround until
+  // this codebase is targeted at C++17 and above, at which point MSVC, GCC
+  // and Clang will all have identical behavior and won't require this
+  // explicit declaration of a default ctor.
+  S2Point() = default;
+
   // When S2Point was defined as a Vector3_d we could mix and match the two
   // names.  With inheritance upcasting to a Vector3_d is easy, but we need to
   // explicitly allow the other direction, even though there's no data to
@@ -50,10 +69,10 @@ class S2Point : public Vector3_d {
   // explicit before.
 
   // NOLINTNEXTLINE(google-explicit-constructor)
-  S2Point(const Base& base) : Base(base) {}
+  constexpr S2Point(const Base& base) : Base(base) {}
 
   // NOLINTNEXTLINE(google-explicit-constructor)
-  S2Point(Base&& base) : Base(std::move(base)) {}
+  constexpr S2Point(Base&& base) : Base(std::move(base)) {}
 
   // Initialize S2Point from a Decoder instance.
   bool Init(Decoder* decoder, S2Error& error) {

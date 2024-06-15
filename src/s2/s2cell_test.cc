@@ -20,16 +20,19 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
-#include <cstdio>
-#include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
+#include "absl/strings/string_view.h"
 
 #include "s2/base/log_severity.h"
 #include "s2/r2.h"
@@ -52,19 +55,27 @@
 #include "s2/s2text_format.h"
 #include "s2/util/coding/coder.h"
 
+using absl::flat_hash_map;
 using absl::StrCat;
+using absl::string_view;
 using S2::internal::kSwapMask;
 using s2textformat::MakePointOrDie;
 using std::fabs;
-using std::map;
 using std::max;
 using std::min;
 using std::pow;
 using std::vector;
+using ::testing::Eq;
+
+// Reflects the center point of a cell across the given boundary.
+S2Point ReflectCenter(const S2Cell& cell, int k) {
+  Vector3_d normal = cell.GetEdgeRaw(k);
+  return Matrix3x3_d::Householder(normal) * cell.GetCenter();
+}
 
 TEST(S2Cell, TestFaces) {
-  map<S2Point, int> edge_counts;
-  map<S2Point, int> vertex_counts;
+  flat_hash_map<S2Point, int> edge_counts;
+  flat_hash_map<S2Point, int> vertex_counts;
   for (int face = 0; face < 6; ++face) {
     S2CellId id = S2CellId::FromFace(face);
     S2Cell cell(id);
@@ -166,7 +177,7 @@ static void TestSubdivide(const S2Cell& cell) {
   if (cell.is_leaf()) return;
 
   S2Cell children[4];
-  S2_CHECK(cell.Subdivide(children));
+  ABSL_CHECK(cell.Subdivide(children));
   S2CellId child_id = cell.id().child_begin();
   double exact_area = 0;
   double approx_area = 0;
@@ -284,13 +295,11 @@ static void TestSubdivide(const S2Cell& cell) {
 }
 
 template <int dim>
-static void CheckMinMaxAvg(
-    const char* label, int level, double count, double abs_error,
-    double min_value, double max_value, double avg_value,
-    const S2::Metric<dim>& min_metric,
-    const S2::Metric<dim>& max_metric,
-    const S2::Metric<dim>& avg_metric) {
-
+static void CheckMinMaxAvg(string_view label, int level, double count,
+                           double abs_error, double min_value, double max_value,
+                           double avg_value, const S2::Metric<dim>& min_metric,
+                           const S2::Metric<dim>& max_metric,
+                           const S2::Metric<dim>& avg_metric) {
   // All metrics are minimums, maximums, or averages of differential
   // quantities, and therefore will not be exact for cells at any finite
   // level.  The differential minimum is always a lower bound, and the maximum
@@ -312,12 +321,13 @@ static void CheckMinMaxAvg(
   double min_error = min_value - min_metric.GetValue(level);
   double max_error = max_metric.GetValue(level) - max_value;
   double avg_error = fabs(avg_metric.GetValue(level) - avg_value);
-  printf("%-10s (%6.0f samples, tolerance %8.3g) - min %9.4g (%9.3g : %9.3g) "
-         "max %9.4g (%9.3g : %9.3g), avg %9.4g (%9.3g : %9.3g)\n",
-         label, count, tolerance,
-         min_value, min_error / min_value, min_error / tolerance,
-         max_value, max_error / max_value, max_error / tolerance,
-         avg_value, avg_error / avg_value, avg_error / tolerance);
+  absl::PrintF(
+      "%-10s (%6.0f samples, tolerance %8.3g) - min %9.4g (%9.3g : %9.3g) "
+      "max %9.4g (%9.3g : %9.3g), avg %9.4g (%9.3g : %9.3g)\n",
+      label, count, tolerance, min_value, min_error / min_value,
+      min_error / tolerance, max_value, max_error / max_value,
+      max_error / tolerance, avg_value, avg_error / avg_value,
+      avg_error / tolerance);
 
   EXPECT_LE(min_metric.GetValue(level), min_value + abs_error);
   EXPECT_GE(min_metric.GetValue(level), min_value - tolerance);
@@ -342,7 +352,7 @@ TEST(S2Cell, TestSubdivide) {
   // The maximum edge *aspect* is the maximum ratio of the longest edge of a
   // cell to the shortest edge of that same cell (and similarly for the
   // maximum diagonal aspect).
-  printf(
+  absl::PrintF(
       "Ratio:  (Max value for any cell) / (Min value for any cell)\n"
       "Aspect: (Max value / min value) for any cell\n"
       "                   Edge          Diag       Approx Area/    Avg Area/\n"
@@ -358,13 +368,12 @@ TEST(S2Cell, TestSubdivide) {
       s->avg_diag /= s->count;
       s->avg_angle_span /= s->count;
     }
-    printf("%5d  %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f\n",
-           i, s->max_area / s->min_area,
-           s->max_edge / s->min_edge, s->max_edge_aspect,
-           s->max_diag / s->min_diag, s->max_diag_aspect,
-           s->min_approx_ratio, s->max_approx_ratio,
-           S2Cell::AverageArea(i) / s->max_area,
-           S2Cell::AverageArea(i) / s->min_area);
+    absl::PrintF("%5d  %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f\n",
+                 i, s->max_area / s->min_area, s->max_edge / s->min_edge,
+                 s->max_edge_aspect, s->max_diag / s->min_diag,
+                 s->max_diag_aspect, s->min_approx_ratio, s->max_approx_ratio,
+                 S2Cell::AverageArea(i) / s->max_area,
+                 S2Cell::AverageArea(i) / s->min_area);
   }
 
   // Now check the validity of the S2 length and area metrics.
@@ -372,7 +381,8 @@ TEST(S2Cell, TestSubdivide) {
     const LevelStats* s = &level_stats[i];
     if (s->count == 0) continue;
 
-    printf("Level %2d - metric value (error/actual : error/tolerance)\n", i);
+    absl::PrintF("Level %2d - metric value (error/actual : error/tolerance)\n",
+                 i);
 
     // The various length calculations are only accurate to 1e-15 or so,
     // so we need to allow for this amount of discrepancy with the theoretical
@@ -685,5 +695,50 @@ TEST(S2Cell, EncodeDecode) {
   EXPECT_EQ(orig_cell.orientation(), decoded_cell.orientation());
   EXPECT_EQ(orig_cell.id(), decoded_cell.id());
   EXPECT_EQ(orig_cell.GetBoundUV(), decoded_cell.GetBoundUV());
+}
+
+TEST(S2Cell, GetUVCoordOfEdge) {
+  // Four cells on face 0 with two boundaries each on 0/0.
+  S2Cell kCell0[4] = {
+      S2Cell(S2CellId::FromToken("0f")), S2Cell(S2CellId::FromToken("05")),
+      S2Cell(S2CellId::FromToken("1b")), S2Cell(S2CellId::FromToken("11"))};
+
+  // And four cells on face 4 which is rotated w.r.t face 0.
+  S2Cell kCell4[4] = {
+      S2Cell(S2CellId::FromToken("8f")), S2Cell(S2CellId::FromToken("85")),
+      S2Cell(S2CellId::FromToken("9b")), S2Cell(S2CellId::FromToken("91"))};
+
+  for (int k = 0; k < 4; ++k) {
+    EXPECT_THAT(kCell0[k].GetUVCoordOfEdge(k + 0), Eq(0));
+    EXPECT_THAT(kCell0[k].GetUVCoordOfEdge(k + 1), Eq(0));
+    EXPECT_THAT(kCell4[k].GetUVCoordOfEdge(k + 0), Eq(0));
+    EXPECT_THAT(kCell4[k].GetUVCoordOfEdge(k + 1), Eq(0));
+  }
+}
+
+TEST(S2Cell, GetIJCoordOfEdge) {
+  for (int i = 0; i < 100; ++i) {
+    S2CellId id = S2Testing::GetRandomCellId();
+    S2Cell cell(id);
+
+    // Look up the canonical IJ coordinates of the cell boundary.
+    int ij[2];
+    int orientation;
+    id.ToFaceIJOrientation(ij, ij + 1, &orientation);
+
+    int ij_size = id.GetSizeIJ(id.level());
+    R2Rect ij_bounds;
+    for (int k = 0; k < 2; ++k) {
+      int ij_lo = ij[k] & -ij_size;
+      ij_bounds[k][0] = ij_lo;
+      ij_bounds[k][1] = ij_lo + ij_size;
+    }
+
+    // Check that each boundary coordinate is correct.
+    for (int k = 0; k < 4; ++k) {
+      EXPECT_THAT(cell.GetIJCoordOfEdge(k),
+                  Eq(ij_bounds.GetVertex(k)[(k + 1) % 2]));
+    }
+  }
 }
 

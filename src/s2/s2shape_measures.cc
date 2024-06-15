@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "s2/base/log_severity.h"
+#include "absl/log/absl_check.h"
 #include "s2/s1angle.h"
 #include "s2/s2loop_measures.h"
 #include "s2/s2point.h"
@@ -93,7 +94,7 @@ double GetArea(const S2Shape& shape) {
   }
   // Note that S2::GetSignedArea() guarantees that the full loop (containing
   // all points on the sphere) has a very small negative area.
-  S2_DCHECK_LE(fabs(area), 4 * M_PI + max_error);
+  ABSL_DCHECK_LE(fabs(area), 4 * M_PI + max_error);
   if (area < 0.0) area += 4 * M_PI;
   return area;
 }
@@ -137,7 +138,7 @@ S2Point GetCentroid(const S2Shape& shape) {
 }
 
 void GetChainVertices(const S2Shape& shape, int chain_id,
-                      std::vector<S2Point>* vertices) {
+                      vector<S2Point>* vertices) {
   S2Shape::Chain chain = shape.chain(chain_id);
   int num_vertices = chain.length + (shape.dimension() == 1);
   vertices->clear();

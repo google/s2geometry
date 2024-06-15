@@ -17,6 +17,7 @@
 
 #include "s2/s2coords.h"
 
+#include "absl/log/absl_check.h"
 #include "s2/util/bits/bits.h"
 #include "s2/s2coords_internal.h"
 #include "s2/s2point.h"
@@ -129,7 +130,7 @@ int XYZtoFaceSiTi(const S2Point& p, int* face, unsigned int* si,
       level != kMaxCellLevel - Bits::FindLSBSetNonZero(*ti | kMaxSiTi)) {
     return -1;
   }
-  S2_DCHECK_LE(level, kMaxCellLevel);
+  ABSL_DCHECK_LE(level, kMaxCellLevel);
   // In infinite precision, this test could be changed to ST == SiTi. However,
   // due to rounding errors, UVtoST(XYZtoFaceUV(FaceUVtoXYZ(STtoUV(...)))) is
   // not idempotent. On the other hand, center_raw is computed exactly the same

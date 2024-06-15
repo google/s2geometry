@@ -21,7 +21,8 @@
 #include <memory>
 #include <utility>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "absl/utility/utility.h"
 #include "s2/s2loop.h"
@@ -35,12 +36,12 @@ using ReferencePoint = S2Shape::ReferencePoint;
 
 S2LaxLoopShape::S2LaxLoopShape(S2LaxLoopShape&& other)
     : S2Shape(std::move(other)),
-      num_vertices_(absl::exchange(other.num_vertices_, 0)),
+      num_vertices_(std::exchange(other.num_vertices_, 0)),
       vertices_(std::move(other.vertices_)) {}
 
 S2LaxLoopShape& S2LaxLoopShape::operator=(S2LaxLoopShape&& other) {
   S2Shape::operator=(static_cast<S2Shape&&>(other));
-  num_vertices_ = absl::exchange(other.num_vertices_, 0);
+  num_vertices_ = std::exchange(other.num_vertices_, 0);
   vertices_ = std::move(other.vertices_);
   return *this;
 }
@@ -60,7 +61,8 @@ void S2LaxLoopShape::Init(Span<const S2Point> vertices) {
 }
 
 void S2LaxLoopShape::Init(const S2Loop& loop) {
-  S2_DCHECK(!loop.is_full()) << "Full loops not supported; use S2LaxPolygonShape";
+  ABSL_DCHECK(!loop.is_full())
+      << "Full loops not supported; use S2LaxPolygonShape";
   if (loop.is_empty()) {
     num_vertices_ = 0;
     vertices_ = nullptr;
@@ -73,15 +75,15 @@ void S2LaxLoopShape::Init(const S2Loop& loop) {
 }
 
 S2Shape::Edge S2LaxLoopShape::edge(int e0) const {
-  S2_DCHECK_LT(e0, num_edges());
+  ABSL_DCHECK_LT(e0, num_edges());
   int e1 = e0 + 1;
   if (e1 == num_vertices()) e1 = 0;
   return Edge(vertices_[e0], vertices_[e1]);
 }
 
 S2Shape::Edge S2LaxLoopShape::chain_edge(int i, int j) const {
-  S2_DCHECK_EQ(i, 0);
-  S2_DCHECK_LT(j, num_edges());
+  ABSL_DCHECK_EQ(i, 0);
+  ABSL_DCHECK_LT(j, num_edges());
   int k = (j + 1 == num_vertices()) ? 0 : j + 1;
   return Edge(vertices_[j], vertices_[k]);
 }
@@ -92,14 +94,14 @@ S2Shape::ReferencePoint S2LaxLoopShape::GetReferencePoint() const {
 
 S2VertexIdLaxLoopShape::S2VertexIdLaxLoopShape(S2VertexIdLaxLoopShape&& other)
     : S2Shape(std::move(other)),
-      num_vertices_(absl::exchange(other.num_vertices_, 0)),
+      num_vertices_(std::exchange(other.num_vertices_, 0)),
       vertex_ids_(std::move(other.vertex_ids_)),
       vertex_array_(std::move(other.vertex_array_)) {}
 
 S2VertexIdLaxLoopShape& S2VertexIdLaxLoopShape::operator=(
     S2VertexIdLaxLoopShape&& other) {
   S2Shape::operator=(static_cast<S2Shape&&>(other));
-  num_vertices_ = absl::exchange(other.num_vertices_, 0);
+  num_vertices_ = std::exchange(other.num_vertices_, 0);
   vertex_ids_ = std::move(other.vertex_ids_);
   vertex_array_ = std::move(other.vertex_array_);
   return *this;
@@ -119,15 +121,15 @@ void S2VertexIdLaxLoopShape::Init(Span<const int32> vertex_ids,
 }
 
 S2Shape::Edge S2VertexIdLaxLoopShape::edge(int e0) const {
-  S2_DCHECK_LT(e0, num_edges());
+  ABSL_DCHECK_LT(e0, num_edges());
   int e1 = e0 + 1;
   if (e1 == num_vertices()) e1 = 0;
   return Edge(vertex(e0), vertex(e1));
 }
 
 S2Shape::Edge S2VertexIdLaxLoopShape::chain_edge(int i, int j) const {
-  S2_DCHECK_EQ(i, 0);
-  S2_DCHECK_LT(j, num_edges());
+  ABSL_DCHECK_EQ(i, 0);
+  ABSL_DCHECK_LT(j, num_edges());
   int k = (j + 1 == num_vertices()) ? 0 : j + 1;
   return Edge(vertex(j), vertex(k));
 }

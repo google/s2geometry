@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 project(s2-geometry
-	VERSION 0.10.0)
+        VERSION 0.12.0)
 
 include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
@@ -10,6 +10,7 @@ include(FindPackageHandleStandardArgs)
 include(GNUInstallDirs)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Avoid "Policy CMP0042 is not set" warning on macOS.
 if (APPLE)
     set(CMAKE_MACOSX_RPATH TRUE)
@@ -18,29 +19,20 @@ endif()
 # s2geometry needs to use the same C++ standard that absl used to avoid
 # undefined symbol errors since ABSL_HAVE_STD_STRING_VIEW etc will
 # end up defined differently.  There is probably a better way to achieve
-# this than assuming what absl used.
+# this than assuming what absl used.  We default to c++17, but support
+# c++14 (like abseil).
 # Using CACHE allows the user to override the default.
-set(CMAKE_CXX_STANDARD 14 CACHE STRING "The C++ standard to build with")
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to build with")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# No compiler-specific extensions, i.e. -std=c++14, not -std=gnu++14.
+# No compiler-specific extensions, i.e. -std=c++17, not -std=gnu++17.
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/cmake")
-
-option(WITH_GFLAGS "Use gflags to change command line flags." OFF)
-add_feature_info(GFLAGS WITH_GFLAGS
-                 "allows changing command line flags.")
-
-# glog option can only be turned on if gflags is on.
-cmake_dependent_option(WITH_GLOG "Use glog for logging." ON
-                       "WITH_GFLAGS" OFF)
-add_feature_info(GLOG WITH_GLOG "provides logging configurability.")
 
 option(BUILD_SHARED_LIBS "Build shared libraries instead of static." ON)
 add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
                  "builds shared libraries instead of static.")
 
 option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
+option(BUILD_TESTS "Build s2 unittests." ON)
 
 option(WITH_PYTHON "Add python interface" OFF)
 add_feature_info(PYTHON WITH_PYTHON "provides python interface to S2")
@@ -52,26 +44,8 @@ add_feature_info(S2_USE_SYSTEM_INCLUDES S2_USE_SYSTEM_INCLUDES
 
 feature_summary(WHAT ALL)
 
-if (WITH_GLOG)
-    find_package(Glog REQUIRED)
-    # FindGFlags.cmake and FindGlog.cmake do not seem to implement REQUIRED;
-    # check manually.
-    if (NOT ${GLOG_FOUND})
-        message(FATAL_ERROR "Glog requested but not found")
-    endif()
-    add_definitions(-DS2_USE_GLOG)
-else()
-    # Don't output anything for LOG(INFO).
-    add_definitions(-DABSL_MIN_LOG_LEVEL=1)
-endif()
-
-if (WITH_GFLAGS)
-    find_package(GFlags REQUIRED)
-    if (NOT ${GFLAGS_FOUND})
-        message(FATAL_ERROR "GFlags requested but not found")
-    endif()
-    add_definitions(-DS2_USE_GFLAGS)
-endif()
+# Don't output anything for LOG(INFO).
+add_definitions(-DABSL_MIN_LOG_LEVEL=1)
 
 # If we already have abseil we don't need to find it, for an example:
 # add_subdirectory(absl-submbodule)
@@ -82,6 +56,10 @@ endif()
 find_package(OpenSSL REQUIRED)
 # pthreads isn't used directly, but this is still required for std::thread.
 find_package(Threads REQUIRED)
+
+if (NOT TARGET absl::vlog_is_on)
+    message(FATAL_ERROR "Could not find absl vlog module. Are you using an older version?")
+endif()
 
 if (WITH_PYTHON)
     # Should be easy to make it work with swig3, but some args to %pythonprepend
@@ -111,8 +89,7 @@ endif()
 # If OpenSSL is installed in a non-standard location, configure with
 # something like:
 # OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
-include_directories(
-    ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+include_directories(${OPENSSL_INCLUDE_DIR})
 
 if (WITH_PYTHON)
     include_directories(${Python3_INCLUDE_DIRS})
@@ -151,6 +128,7 @@ add_library(s2
             src/s2/s2cell_index.cc
             src/s2/s2cell_union.cc
             src/s2/s2centroids.cc
+            src/s2/s2chain_interpolation_query.cc
             src/s2/s2closest_cell_query.cc
             src/s2/s2closest_edge_query.cc
             src/s2/s2closest_point_query.cc
@@ -159,6 +137,7 @@ add_library(s2
             src/s2/s2coords.cc
             src/s2/s2crossing_edge_query.cc
             src/s2/s2debug.cc
+            src/s2/s2density_tree.cc
             src/s2/s2earth.cc
             src/s2/s2edge_clipping.cc
             src/s2/s2edge_crosser.cc
@@ -166,8 +145,10 @@ add_library(s2
             src/s2/s2edge_distances.cc
             src/s2/s2edge_tessellator.cc
             src/s2/s2error.cc
+            src/s2/s2fractal.cc
             src/s2/s2furthest_edge_query.cc
             src/s2/s2hausdorff_distance_query.cc
+            src/s2/s2index_cell_data.cc
             src/s2/s2latlng.cc
             src/s2/s2latlng_rect.cc
             src/s2/s2latlng_rect_bounder.cc
@@ -176,10 +157,10 @@ add_library(s2
             src/s2/s2lax_polyline_shape.cc
             src/s2/s2loop.cc
             src/s2/s2loop_measures.cc
+            src/s2/s2max_distance_targets.cc
             src/s2/s2measures.cc
             src/s2/s2memory_tracker.cc
             src/s2/s2metrics.cc
-            src/s2/s2max_distance_targets.cc
             src/s2/s2min_distance_targets.cc
             src/s2/s2padded_cell.cc
             src/s2/s2point_compression.cc
@@ -193,10 +174,10 @@ add_library(s2
             src/s2/s2predicates.cc
             src/s2/s2projections.cc
             src/s2/s2r2rect.cc
-            src/s2/s2region.cc
-            src/s2/s2region_term_indexer.cc
             src/s2/s2region_coverer.cc
             src/s2/s2region_intersection.cc
+            src/s2/s2region_sharder.cc
+            src/s2/s2region_term_indexer.cc
             src/s2/s2region_union.cc
             src/s2/s2shape_index.cc
             src/s2/s2shape_index_buffered_region.cc
@@ -207,13 +188,14 @@ add_library(s2
             src/s2/s2shapeutil_coding.cc
             src/s2/s2shapeutil_contains_brute_force.cc
             src/s2/s2shapeutil_conversion.cc
+            src/s2/s2shapeutil_count_vertices.cc
             src/s2/s2shapeutil_edge_iterator.cc
+            src/s2/s2shapeutil_edge_wrap.cc
             src/s2/s2shapeutil_get_reference_point.cc
             src/s2/s2shapeutil_visit_crossing_edge_pairs.cc
             src/s2/s2text_format.cc
             src/s2/s2wedge_relations.cc
             src/s2/s2winding_operation.cc
-            src/s2/strings/serialize.cc
             src/s2/util/bits/bit-interleave.cc
             src/s2/util/coding/coder.cc
             src/s2/util/coding/varint.cc
@@ -223,6 +205,7 @@ add_library(s2
 
 if (GOOGLETEST_ROOT)
   add_library(s2testing STATIC
+              src/s2/gmock_matchers.cc
               src/s2/s2builderutil_testing.cc
               src/s2/s2shapeutil_testing.cc
               src/s2/s2testing.cc
@@ -231,19 +214,22 @@ endif()
 
 target_link_libraries(
     s2
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES} ${OPENSSL_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
     absl::base
     absl::btree
+    absl::check
     absl::config
     absl::core_headers
     absl::dynamic_annotations
     absl::endian
     absl::fixed_array
+    absl::flags
     absl::flat_hash_map
     absl::flat_hash_set
     absl::hash
     absl::inlined_vector
     absl::int128
+    absl::log
     absl::log_severity
     absl::memory
     absl::span
@@ -252,12 +238,15 @@ target_link_libraries(
     absl::strings
     absl::type_traits
     absl::utility
+    absl::vlog_is_on
     ${CMAKE_THREAD_LIBS_INIT})
 
 if (GOOGLETEST_ROOT)
   target_link_libraries(
       s2testing
-      ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+      absl::check
+      absl::flags
+      absl::log
       absl::memory
       absl::strings)
 endif()
@@ -269,7 +258,9 @@ endif()
 if (S2_USE_SYSTEM_INCLUDES)
     target_include_directories(s2 SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 else ()
-    target_include_directories(s2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_include_directories(s2 PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+      $<INSTALL_INTERFACE:include>)
 endif ()
 
 # Add version information to the target
@@ -285,6 +276,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/encoded_s2shape_index.h
               src/s2/encoded_string_vector.h
               src/s2/encoded_uint_vector.h
+              src/s2/gmock_matchers.h
               src/s2/id_set_lexicon.h
               src/s2/mutable_s2shape_index.h
               src/s2/r1interval.h
@@ -319,6 +311,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2cell_range_iterator.h
               src/s2/s2cell_union.h
               src/s2/s2centroids.h
+              src/s2/s2chain_interpolation_query.h
               src/s2/s2closest_cell_query.h
               src/s2/s2closest_cell_query_base.h
               src/s2/s2closest_edge_query.h
@@ -329,10 +322,11 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2contains_point_query.h
               src/s2/s2contains_vertex_query.h
               src/s2/s2convex_hull_query.h
-              src/s2/s2coords_internal.h
               src/s2/s2coords.h
+              src/s2/s2coords_internal.h
               src/s2/s2crossing_edge_query.h
               src/s2/s2debug.h
+              src/s2/s2density_tree.h
               src/s2/s2distance_target.h
               src/s2/s2earth.h
               src/s2/s2edge_clipping.h
@@ -343,8 +337,10 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2edge_tessellator.h
               src/s2/s2edge_vector_shape.h
               src/s2/s2error.h
+              src/s2/s2fractal.h
               src/s2/s2furthest_edge_query.h
               src/s2/s2hausdorff_distance_query.h
+              src/s2/s2index_cell_data.h
               src/s2/s2latlng.h
               src/s2/s2latlng_rect.h
               src/s2/s2latlng_rect_bounder.h
@@ -353,18 +349,18 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2lax_polyline_shape.h
               src/s2/s2loop.h
               src/s2/s2loop_measures.h
+              src/s2/s2max_distance_targets.h
               src/s2/s2measures.h
               src/s2/s2memory_tracker.h
               src/s2/s2metrics.h
-              src/s2/s2max_distance_targets.h
               src/s2/s2min_distance_targets.h
               src/s2/s2padded_cell.h
               src/s2/s2point.h
-              src/s2/s2point_vector_shape.h
               src/s2/s2point_compression.h
               src/s2/s2point_index.h
               src/s2/s2point_region.h
               src/s2/s2point_span.h
+              src/s2/s2point_vector_shape.h
               src/s2/s2pointutil.h
               src/s2/s2polygon.h
               src/s2/s2polyline.h
@@ -376,10 +372,12 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2projections.h
               src/s2/s2r2rect.h
               src/s2/s2region.h
-              src/s2/s2region_term_indexer.h
               src/s2/s2region_coverer.h
               src/s2/s2region_intersection.h
+              src/s2/s2region_sharder.h
+              src/s2/s2region_term_indexer.h
               src/s2/s2region_union.h
+              src/s2/s2shape.h
               src/s2/s2shape.h
               src/s2/s2shape_index.h
               src/s2/s2shape_index_buffered_region.h
@@ -391,7 +389,9 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2shapeutil_contains_brute_force.h
               src/s2/s2shapeutil_conversion.h
               src/s2/s2shapeutil_count_edges.h
+              src/s2/s2shapeutil_count_vertices.h
               src/s2/s2shapeutil_edge_iterator.h
+              src/s2/s2shapeutil_edge_wrap.h
               src/s2/s2shapeutil_get_reference_point.h
               src/s2/s2shapeutil_shape_edge.h
               src/s2/s2shapeutil_shape_edge_id.h
@@ -409,12 +409,13 @@ install(FILES src/s2/_fp_contract_off.h
 install(FILES src/s2/base/casts.h
               src/s2/base/commandlineflags.h
               src/s2/base/commandlineflags_declare.h
-              src/s2/base/integral_types.h
               src/s2/base/log_severity.h
-              src/s2/base/logging.h
               src/s2/base/port.h
               src/s2/base/spinlock.h
+              src/s2/base/types.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/base")
+install(FILES src/s2/testing/gtest_prod.h
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/testing")
 install(FILES src/s2/util/bitmap/bitmap.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/bitmap")
 install(FILES src/s2/util/bits/bits.h
@@ -429,6 +430,10 @@ install(FILES src/s2/util/gtl/compact_array.h
               src/s2/util/gtl/dense_hash_set.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
+              src/s2/util/gtl/requires.h
+              src/s2/util/gtl/type_traits.h
+              src/s2/util/gtl/unaligned.h
+              src/s2/util/gtl/unaligned_internal.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/gtl")
 install(FILES src/s2/util/hash/mix.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/hash")
@@ -453,8 +458,23 @@ install(TARGETS ${S2_TARGETS}
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
-message("GOOGLETEST_ROOT: ${GOOGLETEST_ROOT}")
-if (GOOGLETEST_ROOT)
+# Create an export type "s2Targets" detailing the targetable artifacts created
+# by this project.
+install(TARGETS s2 EXPORT s2Targets)
+# Install the export targets as a CMake config file in the share/s2 folder so
+# that they can referenced  by downstream projects as `s2::s2` after a
+# successful `find_package` call.
+install(EXPORT s2Targets
+        NAMESPACE s2::
+        FILE s2Targets.cmake
+        DESTINATION share/s2/)
+
+if (BUILD_TESTS)
+  if (NOT GOOGLETEST_ROOT)
+    message(FATAL_ERROR "BUILD_TESTS requires GOOGLETEST_ROOT")
+  endif()
+  message("GOOGLETEST_ROOT: ${GOOGLETEST_ROOT}")
+
   add_subdirectory(${GOOGLETEST_ROOT}/googlemock build_gmock)
   include_directories(${GOOGLETEST_ROOT}/googlemock/include)
   include_directories(${GOOGLETEST_ROOT}/googletest/include)
@@ -465,6 +485,7 @@ if (GOOGLETEST_ROOT)
       src/s2/encoded_s2shape_index_test.cc
       src/s2/encoded_string_vector_test.cc
       src/s2/encoded_uint_vector_test.cc
+      src/s2/gmock_matchers_test.cc
       src/s2/id_set_lexicon_test.cc
       src/s2/mutable_s2shape_index_test.cc
       src/s2/r1interval_test.cc
@@ -488,14 +509,15 @@ if (GOOGLETEST_ROOT)
       src/s2/s2builderutil_snap_functions_test.cc
       src/s2/s2builderutil_testing_test.cc
       src/s2/s2cap_test.cc
-      src/s2/s2cell_test.cc
       src/s2/s2cell_id_test.cc
       src/s2/s2cell_index_test.cc
       src/s2/s2cell_iterator_join_test.cc
       src/s2/s2cell_iterator_testing_test.cc
       src/s2/s2cell_range_iterator_test.cc
+      src/s2/s2cell_test.cc
       src/s2/s2cell_union_test.cc
       src/s2/s2centroids_test.cc
+      src/s2/s2chain_interpolation_query_test.cc
       src/s2/s2closest_cell_query_base_test.cc
       src/s2/s2closest_cell_query_test.cc
       src/s2/s2closest_edge_query_base_test.cc
@@ -507,6 +529,7 @@ if (GOOGLETEST_ROOT)
       src/s2/s2convex_hull_query_test.cc
       src/s2/s2coords_test.cc
       src/s2/s2crossing_edge_query_test.cc
+      src/s2/s2density_tree_test.cc
       src/s2/s2earth_test.cc
       src/s2/s2edge_clipping_test.cc
       src/s2/s2edge_crosser_test.cc
@@ -515,39 +538,42 @@ if (GOOGLETEST_ROOT)
       src/s2/s2edge_tessellator_test.cc
       src/s2/s2edge_vector_shape_test.cc
       src/s2/s2error_test.cc
+      src/s2/s2fractal_test.cc
       src/s2/s2furthest_edge_query_test.cc
       src/s2/s2hausdorff_distance_query_test.cc
-      src/s2/s2latlng_test.cc
+      src/s2/s2index_cell_data_test.cc
       src/s2/s2latlng_rect_bounder_test.cc
       src/s2/s2latlng_rect_test.cc
+      src/s2/s2latlng_test.cc
       src/s2/s2lax_loop_shape_test.cc
       src/s2/s2lax_polygon_shape_test.cc
       src/s2/s2lax_polyline_shape_test.cc
       src/s2/s2loop_measures_test.cc
       src/s2/s2loop_test.cc
+      src/s2/s2max_distance_targets_test.cc
       src/s2/s2measures_test.cc
       src/s2/s2memory_tracker_test.cc
       src/s2/s2metrics_test.cc
-      src/s2/s2max_distance_targets_test.cc
       src/s2/s2min_distance_targets_test.cc
       src/s2/s2padded_cell_test.cc
-      src/s2/s2point_test.cc
-      src/s2/s2point_vector_shape_test.cc
       src/s2/s2point_compression_test.cc
       src/s2/s2point_index_test.cc
       src/s2/s2point_region_test.cc
+      src/s2/s2point_test.cc
+      src/s2/s2point_vector_shape_test.cc
       src/s2/s2pointutil_test.cc
       src/s2/s2polygon_test.cc
       src/s2/s2polyline_alignment_test.cc
-      src/s2/s2polyline_simplifier_test.cc
       src/s2/s2polyline_measures_test.cc
+      src/s2/s2polyline_simplifier_test.cc
       src/s2/s2polyline_test.cc
       src/s2/s2predicates_test.cc
       src/s2/s2projections_test.cc
       src/s2/s2r2rect_test.cc
-      src/s2/s2region_test.cc
-      src/s2/s2region_term_indexer_test.cc
       src/s2/s2region_coverer_test.cc
+      src/s2/s2region_sharder_test.cc
+      src/s2/s2region_term_indexer_test.cc
+      src/s2/s2region_test.cc
       src/s2/s2region_union_test.cc
       src/s2/s2shape_index_buffered_region_test.cc
       src/s2/s2shape_index_measures_test.cc
@@ -560,10 +586,12 @@ if (GOOGLETEST_ROOT)
       src/s2/s2shapeutil_contains_brute_force_test.cc
       src/s2/s2shapeutil_conversion_test.cc
       src/s2/s2shapeutil_count_edges_test.cc
+      src/s2/s2shapeutil_count_vertices_test.cc
       src/s2/s2shapeutil_edge_iterator_test.cc
+      src/s2/s2shapeutil_edge_wrap_test.cc
       src/s2/s2shapeutil_get_reference_point_test.cc
+      src/s2/s2shapeutil_shape_edge_id_test.cc
       src/s2/s2shapeutil_visit_crossing_edge_pairs_test.cc
-      src/s2/s2testing_test.cc
       src/s2/s2text_format_test.cc
       src/s2/s2wedge_relations_test.cc
       src/s2/s2winding_operation_test.cc
@@ -581,9 +609,13 @@ if (GOOGLETEST_ROOT)
         s2testing s2
         absl::base
         absl::btree
+        absl::check
         absl::core_headers
+        absl::flags
         absl::flags_reflection
+        absl::log
         absl::memory
+        absl::random_random
         absl::span
         absl::status
         absl::strings
@@ -600,3 +632,13 @@ endif()
 if (${SWIG_FOUND} AND ${Python3_FOUND})
   add_subdirectory("src/python" python)
 endif()
+
+include(CMakePackageConfigHelpers)
+
+# Generate the config file that includes the exports.
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/s2Config.cmake"
+  INSTALL_DESTINATION "share/s2/"
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/s2Config.cmake DESTINATION "share/s2/")

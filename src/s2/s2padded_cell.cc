@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cfloat>
 
+#include "absl/log/absl_check.h"
 #include "s2/util/bits/bits.h"
 #include "s2/r1interval.h"
 #include "s2/r2rect.h"
@@ -124,7 +125,7 @@ S2Point S2PaddedCell::GetExitVertex() const {
 }
 
 S2CellId S2PaddedCell::ShrinkToFit(const R2Rect& rect) const {
-  S2_DCHECK(bound().Intersects(rect));
+  ABSL_DCHECK(bound().Intersects(rect));
 
   // Quick rejection test: if "rect" contains the center of this cell along
   // either axis, then no further shrinking is possible.

@@ -47,19 +47,28 @@ of your first [pull request][].
      separate branches in order to ensure that a pull request only includes the
      commits related to that bug or feature.
 
-  1. Do your best to have [well-formed commit messages][] for each change.
-     This provides consistency throughout the project, and ensures that commit
-     messages are able to be formatted properly by various git tools.
+  1. Do your best to have [well-formed commit messages][] with a [good
+     description][] for each change.  This provides consistency throughout
+     the project, and ensures that commit messages are able to be formatted
+     properly by various git tools.
+
+  1. Keep PRs [small and focused][] on a single issue.  Do not make unrelated
+     changes in the same PR "because you're there"; this includes reformatting
+     of code, whether automatically or manually.
 
   1. Finally, push the commits to your fork and submit a [pull request][].
 
 [forking]: https://help.github.com/articles/fork-a-repo
 [well-formed commit messages]: http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
+[good description]: https://google.github.io/eng-practices/review/developer/cl-descriptions.html
 [pull request]: https://help.github.com/articles/creating-a-pull-request
+[small and focused]: https://google.github.io/eng-practices/review/developer/small-cls.html
 
 
 ## Style ##
 
-Contributions should follow the [Google C++ Style Guide].
+Contributions should follow the [Google C++ Style Guide].  Code may be
+[formatted] with `git clang-format`.
 
 [Google C++ Style Guide]: http://google.github.io/styleguide/cppguide.html
+[formatted]: http://google.github.io/styleguide/cppguide.html#Formatting

@@ -74,7 +74,7 @@ void IndexMatchingLayer::Build(const Graph& g, S2Error* error) {
     actual.push_back(S2Shape::Edge(g.vertex(edge.first),
                                    g.vertex(edge.second)));
   }
-  for (S2Shape* shape : index_) {
+  for (const S2Shape* shape : index_) {
     if (shape == nullptr) continue;
     if (dimension_ >= 0 && shape->dimension() != dimension_) continue;
     for (int e = shape->num_edges(); --e >= 0; ) {
@@ -103,9 +103,8 @@ void IndexMatchingLayer::Build(const Graph& g, S2Error* error) {
     string label;
     if (dimension_ >= 0) label = absl::StrFormat("Dimension %d: ", dimension_);
     error->Init(S2Error::FAILED_PRECONDITION,
-                "%s%sMissing edges: %s Extra edges: %s\n",
-                error->text().c_str(), label.c_str(),
-                ToString(missing).c_str(), ToString(extra).c_str());
+                "%s%sMissing edges: %s Extra edges: %s\n", error->text(), label,
+                ToString(missing), ToString(extra));
   }
 }
 

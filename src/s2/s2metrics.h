@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "absl/log/absl_check.h"
 #include "s2/s2coords.h"
 #include "s2/util/math/mathutil.h"
 
@@ -171,8 +172,8 @@ int S2::Metric<dim>::GetLevelForMaxValue(double value) const {
   // the range [1,2).
   int level = ilogb(value / deriv_);
   level = std::max(0, std::min(S2::kMaxCellLevel, -(level >> (dim - 1))));
-  S2_DCHECK(level == S2::kMaxCellLevel || GetValue(level) <= value);
-  S2_DCHECK(level == 0 || GetValue(level - 1) > value);
+  ABSL_DCHECK(level == S2::kMaxCellLevel || GetValue(level) <= value);
+  ABSL_DCHECK(level == 0 || GetValue(level - 1) > value);
   return level;
 }
 
@@ -184,8 +185,8 @@ int S2::Metric<dim>::GetLevelForMinValue(double value) const {
   // rounding down.
   int level = ilogb(deriv_ / value);
   level = std::max(0, std::min(S2::kMaxCellLevel, level >> (dim - 1)));
-  S2_DCHECK(level == 0 || GetValue(level) >= value);
-  S2_DCHECK(level == kMaxCellLevel || GetValue(level + 1) < value);
+  ABSL_DCHECK(level == 0 || GetValue(level) >= value);
+  ABSL_DCHECK(level == kMaxCellLevel || GetValue(level + 1) < value);
   return level;
 }
 

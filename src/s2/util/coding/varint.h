@@ -35,12 +35,12 @@
 #include <cstddef>
 
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <utility>
 
-#include "s2/base/integral_types.h"
-#include "s2/base/port.h"
 #include "absl/base/macros.h"
+#include "absl/numeric/bits.h"
 #include "s2/util/bits/bits.h"
 
 // Just a namespace, not a real class
@@ -158,6 +158,8 @@ class Varint {
   static std::pair<const char*, uint64> Parse64FallbackPair(const char* p,
                                                               int64 res1);
 #endif
+  template <typename T>
+  static int LengthImpl(T);
   static const char* Parse64Fallback(const char* p, uint64* val);
   static char* Encode32Fallback(char* ptr, uint32 v);
 
@@ -391,23 +393,73 @@ inline const char* Varint::Skip64Backward(const char* p, const char* b) {
   }
 }
 
-inline int Varint::Length32(uint32 v) {
+template <typename T>
+int Varint::LengthImpl(T v) {
+  static_assert(std::numeric_limits<T>::digits == 32 ||
+                    std::numeric_limits<T>::digits == 64,
+                "Unexpected length. This implementation works up to 448 bits, "
+                "but performance has not been tested other than 32 and 64.");
   // This computes value == 0 ? 1 : floor(log2(v)) / 7 + 1
-  // Use an explicit multiplication to implement the divide of
-  // a number in the 1..31 range.
-  // Explicit OR 0x1 to handle v == 0.
+  // Rather than using division by 7 to accomplish this, we use multiplication
+  // by 9/64. This has a number of important properties:
+  //   * It's roughly 1/7.111111. This makes the 0 bits set case have the same
+  //     value as the 7 bits set case, so offsetting by 1 gives us the correct
+  //     value for integers up to 448 bits.
+  //   * Multiplying by 9 is special. x * 9 = x << 3 + x, and so this
+  //     multiplication can be done by a single shifted add on arm:
+  //       add w0, w0, w0, lsl #3
+  //     or a single lea instruction on x86/64:
+  //       leal (%rax,%rax,8), %eax)
+  //   * Dividing by 64 is a 6 bit right shift.
+  //
+  // Summarized:
+  //
+  // value == 0 ? 1 : (floor(log2(v)) / 7 + 1)
+  // floor((32 - clz) / 7.1111) + 1
+  // ((32 - clz) * 9) / 64 + 1
+  // (((32 - clz) * 9) >> 6) + 1
+  // ((32 - clz) * 9 + (1 << 6)) >> 6
+  // (32 * 9 + 64 - clz * 9) >> 6
+  // (352 - clz * 9) >> 6
+  // on arm:
+  //  (352 - (clz + (clz << 3))) >> 6
+  // on x86:
+  //  (352 - lea(clz, clz, 8)) >> 6
+  uint32 clz = absl::countl_zero(v);
+  return static_cast<int>(
+      ((std::numeric_limits<T>::digits * 9 + 64) - (clz * 9)) >> 6);
+}
+
+// X86 CPUs lacking the lzcnt instruction are faster with the bsr-based
+// implementation. MSVC does not define __LZCNT__, the nearest option that
+// it interprets as lzcnt availability is __AVX2__.
+#if (defined(__x86__) || defined(__x86_64__) || defined(_M_IX86) || \
+     defined(_M_X64)) &&                                            \
+    !(defined(__LZCNT__) || defined(__AVX2__))
+#define UTIL_CODING_VARINT_H_PREFER_BSR 1
+#else
+#define UTIL_CODING_VARINT_H_PREFER_BSR 0
+#endif
+inline int Varint::Length32(uint32 v) {
+#if UTIL_CODING_VARINT_H_PREFER_BSR
+  // Use bsr instruction
   uint32 log2value = static_cast<uint32>(Bits::Log2FloorNonZero(v | 0x1));
-  return static_cast<int>((log2value * 9 + 73) / 64);
+  return static_cast<int>((log2value * 9 + (64 + 9)) / 64);
+#else
+  return LengthImpl(v);
+#endif
 }
 
 inline int Varint::Length64(uint64 v) {
-  // This computes value == 0 ? 1 : floor(log2(v)) / 7 + 1
-  // Use an explicit multiplication to implement the divide of
-  // a number in the 1..63 range.
-  // Explicit OR 0x1 to handle v == 0.
+#if UTIL_CODING_VARINT_H_PREFER_BSR
+  // Use bsr instruction
   uint32 log2value = static_cast<uint32>(Bits::Log2FloorNonZero64(v | 0x1));
-  return static_cast<int>((log2value * 9 + 73) / 64);
+  return static_cast<int>((log2value * 9 + (64 + 9)) / 64);
+#else
+  return LengthImpl(v);
+#endif
 }
+#undef UTIL_CODING_VARINT_H_PREFER_BSR
 
 inline void Varint::Append32(std::string* s, uint32 value) {
   // Inline the fast-path for single-character output, but fall back to the .cc

@@ -17,12 +17,13 @@
 
 #include "s2/s1angle.h"
 
-#include <sys/types.h>
-
 #include <cmath>
-#include <cstdio>
 #include <ostream>
 
+#include "absl/strings/str_format.h"
+
+#include "s2/util/coding/coder.h"
+#include "s2/s2error.h"
 #include "s2/s2latlng.h"
 #include "s2/s2point.h"
 
@@ -45,14 +46,21 @@ void S1Angle::Normalize() {
   if (radians_ <= -M_PI) radians_ = M_PI;
 }
 
-std::ostream& operator<<(std::ostream& os, S1Angle a) {
-  double degrees = a.degrees();
-  char buffer[13];
-  int sz = snprintf(buffer, sizeof(buffer), "%.7f", degrees);
-  // Fix sign/unsign comparison for client that use `-Wextra` (e.g. Chrome).
-  if (sz >= 0 && static_cast<uint>(sz) < sizeof(buffer)) {
-    return os << buffer;
-  } else {
-    return os << degrees;
+void S1Angle::Coder::Encode(Encoder& encoder, const S1Angle& angle) const {
+  encoder.Ensure(sizeof(double));
+  encoder.putdouble(angle.radians());
+}
+
+bool S1Angle::Coder::Decode(Decoder& decoder, S1Angle& angle,
+                            S2Error& error) const {
+  if (decoder.avail() < sizeof(double)) {
+    error.Init(S2Error::DATA_LOSS, "Could not decode S1Angle.");
+    return false;
   }
+  angle = Radians(decoder.getdouble());
+  return true;
+}
+
+std::ostream& operator<<(std::ostream& os, S1Angle a) {
+  return os << absl::StreamFormat("%.7f", a.degrees());
 }

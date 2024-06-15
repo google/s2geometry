@@ -56,12 +56,12 @@ inline std::ostream& operator<<(std::ostream& os, S2CellRelation r) {
 // This class is generally not used directly via pointer but instead to type
 // check that a given template parameter implements the interface.
 //
-// Several default implementations for methods like SeekTo and SeekPast are
-// given as static methods.  Inheritors should call them directly when defining
-// their overloads of the API and mark their methods final to ensure
-// de-virtualization when using sub-classes directly.
+// A default implementation for Locate is given as a static method.  Inheritors
+// should call it directly when defining their overloads of the API and mark
+// their methods final to ensure de-virtualization when using sub-classes
+// directly.
 //
-// A canonical implementation for SeekTo thus might look like:
+// A canonical implementation for Locate thus might look like:
 //
 //   class MyIterator : public S2CellIterator {
 //    public:

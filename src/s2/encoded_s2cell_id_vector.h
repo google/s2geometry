@@ -22,7 +22,7 @@
 
 #include <vector>
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_uint_vector.h"
@@ -79,11 +79,15 @@ class EncodedS2CellIdVector {
   // Decodes and returns the entire original vector.
   std::vector<S2CellId> Decode() const;
 
+  // Copies the encoded byte stream to a new encoder.
+  void Encode(Encoder* encoder) const;
+
  private:
   // Values are decoded as (base_ + (deltas_[i] << shift_)).
   EncodedUintVector<uint64> deltas_;
   uint64 base_;
   uint8 shift_;
+  uint8 base_len_;
 };
 
 

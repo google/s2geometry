@@ -24,16 +24,19 @@
 #include <bitset>
 #include <cmath>
 #include <memory>
-#include <set>
 #include <utility>
 #include <vector>
 
+#include "absl/container/flat_hash_set.h"
+#include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/types/span.h"
 #include "absl/utility/utility.h"
 
+#include "s2/base/casts.h"
 #include "s2/base/commandlineflags.h"
-#include "s2/base/integral_types.h"
-#include "s2/base/logging.h"
+#include "s2/base/types.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r1interval.h"
 #include "s2/r2.h"
@@ -70,11 +73,12 @@
 #include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
 
+using absl::flat_hash_set;
 using absl::MakeSpan;
 using absl::Span;
 using std::make_unique;
 using std::pair;
-using std::set;
+using std::unique_ptr;
 using std::vector;
 
 S2_DEFINE_bool(
@@ -101,6 +105,10 @@ enum CompressedLoopProperty {
   kNumProperties
 };
 
+// These could be constexpr in s2loop.h, but gcc-13 gives an error.
+const S2Point S2Loop::kEmptyVertex(0, 0, 1);
+const S2Point S2Loop::kFullVertex(0, 0, -1);
+
 S2Loop::S2Loop() {
   // The loop is not valid until Init() is called.
 }
@@ -108,8 +116,11 @@ S2Loop::S2Loop() {
 #ifndef SWIG
 S2Loop::S2Loop(S2Loop&& b)
     : S2Region(std::move(b)),
-      depth_(absl::exchange(b.depth_, 0)),
-      num_vertices_(absl::exchange(b.num_vertices_, 0)),
+      // We have moved only the S2Region base slice.  Suppress false-positive
+      // warnings from moving the rest.
+      // NOLINTBEGIN(bugprone-use-after-move)
+      depth_(std::exchange(b.depth_, 0)),
+      num_vertices_(std::exchange(b.num_vertices_, 0)),
       vertices_(std::move(b.vertices_)),
       s2debug_override_(std::move(b.s2debug_override_)),
       origin_inside_(std::move(b.origin_inside_)),
@@ -118,18 +129,18 @@ S2Loop::S2Loop(S2Loop&& b)
       bound_(std::move(b.bound_)),
       subregion_bound_(std::move(b.subregion_bound_)),
       index_(std::move(b.index_)) {
-  // `index_` has a pointer to an S2Loop::Shape which points to S2Loop.
-  // But, we've moved to a new address, so get the Shape back out of the index
-  // and update it to point to our new location.
-  if (index_.begin() != index_.end()) {
-    down_cast<Shape*>(*index_.begin())->loop_ = this;
+  // NOLINTEND(bugprone-use-after-move)
+  // Our index points to S2Loop::Shape instances which point back to S2Loop,
+  // we need to update those S2Loop pointers now that we've moved.
+  for (const S2Shape* shape : index_) {
+    const_cast<Shape*>(down_cast<const Shape*>(shape))->loop_ = this;
   }
 }
 
 S2Loop& S2Loop::operator=(S2Loop&& b) {
   S2Region::operator=(static_cast<S2Region&&>(b));
-  depth_ = absl::exchange(b.depth_, 0);
-  num_vertices_ = absl::exchange(b.num_vertices_, 0);
+  depth_ = std::exchange(b.depth_, 0);
+  num_vertices_ = std::exchange(b.num_vertices_, 0);
   vertices_ = std::move(b.vertices_);
   s2debug_override_ = std::move(b.s2debug_override_);
   origin_inside_ = std::move(b.origin_inside_);
@@ -140,11 +151,10 @@ S2Loop& S2Loop::operator=(S2Loop&& b) {
   subregion_bound_ = std::move(b.subregion_bound_);
   index_ = std::move(b.index_);
 
-  // `index_` has a pointer to an S2Loop::Shape which points to S2Loop.
-  // But, we've moved to a new address, so get the Shape back out of the index
-  // and update it to point to our new location.
-  if (index_.begin() != index_.end()) {
-    down_cast<Shape*>(*index_.begin())->loop_ = this;
+  // Our index points to S2Loop::Shape instances which point back to S2Loop,
+  // we need to update those S2Loop pointers now that we've moved.
+  for (const S2Shape* shape : index_) {
+    const_cast<Shape*>(down_cast<const Shape*>(shape))->loop_ = this;
   }
 
   return *this;
@@ -175,7 +185,7 @@ void S2Loop::ClearIndex() {
 void S2Loop::Init(Span<const S2Point> vertices) {
   ClearIndex();
   num_vertices_ = vertices.size();
-  vertices_ = std::make_unique<S2Point[]>(num_vertices_);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
   std::copy(vertices.begin(), vertices.end(), &vertices_[0]);
   InitOriginAndBound();
 }
@@ -183,7 +193,7 @@ void S2Loop::Init(Span<const S2Point> vertices) {
 bool S2Loop::IsValid() const {
   S2Error error;
   if (FindValidationError(&error)) {
-    S2_LOG_IF(ERROR, absl::GetFlag(FLAGS_s2debug)) << error;
+    ABSL_LOG_IF(ERROR, absl::GetFlag(FLAGS_s2debug)) << error;
     return false;
   }
   return true;
@@ -197,7 +207,7 @@ bool S2Loop::FindValidationError(S2Error* error) const {
 bool S2Loop::FindValidationErrorNoIndex(S2Error* error) const {
   // subregion_bound_ must be at least as large as bound_.  (This is an
   // internal consistency check rather than a test of client data.)
-  S2_DCHECK(subregion_bound_.Contains(bound_));
+  ABSL_DCHECK(subregion_bound_.Contains(bound_));
 
   // All vertices must be unit length.  (Unfortunately this check happens too
   // late in debug mode, because S2Loop construction calls s2pred::Sign which
@@ -330,7 +340,7 @@ void S2Loop::InitIndex() {
   }
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
     // Note that FLAGS_s2debug is false in optimized builds (by default).
-    S2_CHECK(IsValid());
+    ABSL_CHECK(IsValid());
   }
 }
 
@@ -353,7 +363,7 @@ S2Loop::~S2Loop() = default;
 S2Loop::S2Loop(const S2Loop& src)
     : depth_(src.depth_),
       num_vertices_(src.num_vertices_),
-      vertices_(std::make_unique<S2Point[]>(num_vertices_)),
+      vertices_(make_unique<S2Point[]>(num_vertices_)),
       s2debug_override_(src.s2debug_override_),
       origin_inside_(src.origin_inside_),
       unindexed_contains_calls_(0),
@@ -398,13 +408,13 @@ bool S2Loop::IsNormalized() const {
 
 void S2Loop::Normalize() {
   if (!IsNormalized()) Invert();
-  S2_DCHECK(IsNormalized());
+  ABSL_DCHECK(IsNormalized());
 }
 
 void S2Loop::Invert() {
   ClearIndex();
   if (is_empty_or_full()) {
-    vertices_[0] = is_full() ? kEmptyVertex() : kFullVertex();
+    vertices_[0] = is_full() ? kEmptyVertex : kFullVertex;
   } else {
     std::reverse(&vertices_[0], &vertices_[num_vertices()]);
   }
@@ -481,6 +491,10 @@ S2Cap S2Loop::GetCapBound() const {
   return bound_.GetCapBound();
 }
 
+void S2Loop::GetCellUnionBound(vector<S2CellId>* cell_ids) const {
+  GetCapBound().GetCellUnionBound(cell_ids);
+}
+
 bool S2Loop::Contains(const S2Cell& target) const {
   MutableS2ShapeIndex::Iterator it(&index_);
   S2CellRelation relation = it.Locate(target.id());
@@ -525,7 +539,7 @@ bool S2Loop::MayIntersect(const S2Cell& target) const {
 
 bool S2Loop::BoundaryApproxIntersects(const MutableS2ShapeIndex::Iterator& it,
                                       const S2Cell& target) const {
-  S2_DCHECK(it.id().contains(target.id()));
+  ABSL_DCHECK(it.id().contains(target.id()));
   const S2ClippedShape& a_clipped = it.cell().clipped(0);
   int a_num_edges = a_clipped.num_edges();
 
@@ -613,7 +627,7 @@ bool S2Loop::Contains(const MutableS2ShapeIndex::Iterator& it,
   bool inside = a_clipped.contains_center();
   int a_num_edges = a_clipped.num_edges();
   if (a_num_edges > 0) {
-    S2Point center = it.center();
+    S2Point center = it.id().ToPoint();
     S2EdgeCrosser crosser(&center, &p);
     int ai_prev = -2;
     for (int i = 0; i < a_num_edges; ++i) {
@@ -634,7 +648,7 @@ void S2Loop::Encode(Encoder* const encoder) const {
   encoder->putn(vertices_.get(), sizeof(vertices_[0]) * num_vertices_);
   encoder->put8(origin_inside_);
   encoder->put32(depth_);
-  S2_DCHECK_GE(encoder->avail(), 0);
+  ABSL_DCHECK_GE(encoder->avail(), 0);
 
   bound_.Encode(encoder);
 }
@@ -659,14 +673,14 @@ bool S2Loop::DecodeInternal(Decoder* const decoder) {
                          FLAGS_s2polygon_decode_max_num_vertices))) {
     return false;
   }
-  if (decoder->avail() <
-      (num_vertices * sizeof(vertices_[0]) + sizeof(uint8) + sizeof(uint32))) {
+  if (decoder->avail() < (num_vertices * sizeof(vertices_[0]) +
+                          sizeof(uint8) + sizeof(uint32))) {
     return false;
   }
   ClearIndex();
   num_vertices_ = num_vertices;
 
-  vertices_ = std::make_unique<S2Point[]>(num_vertices_);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
   decoder->getn(vertices_.get(), num_vertices_ * sizeof(vertices_[0]));
   origin_inside_ = decoder->get8();
   depth_ = decoder->get32();
@@ -920,7 +934,7 @@ bool LoopCrosser::CellCrossesAnySubcell(const S2ClippedShape& a_clipped,
 }
 
 bool LoopCrosser::HasCrossing(RangeIterator* ai, RangeIterator* bi) {
-  S2_DCHECK(ai->id().contains(bi->id()));
+  ABSL_DCHECK(ai->id().contains(bi->id()));
   // If ai->id() intersects many edges of B, then it is faster to use
   // S2CrossingEdgeQuery to narrow down the candidates.  But if it intersects
   // only a few edges, it is faster to check all the crossings directly.
@@ -955,7 +969,7 @@ bool LoopCrosser::HasCrossing(RangeIterator* ai, RangeIterator* bi) {
 }
 
 bool LoopCrosser::HasCrossingRelation(RangeIterator* ai, RangeIterator* bi) {
-  S2_DCHECK(ai->id().contains(bi->id()));
+  ABSL_DCHECK(ai->id().contains(bi->id()));
   if (ai->num_edges() == 0) {
     if (ai->contains_center() == a_crossing_target_) {
       // All points within ai->id() satisfy the crossing target for A, so it's
@@ -1200,8 +1214,8 @@ class CompareBoundaryRelation : public LoopRelation {
 };
 
 int S2Loop::CompareBoundary(const S2Loop& b) const {
-  S2_DCHECK(!is_empty() && !b.is_empty());
-  S2_DCHECK(!b.is_full() || !b.is_hole());
+  ABSL_DCHECK(!is_empty() && !b.is_empty());
+  ABSL_DCHECK(!b.is_full() || !b.is_hole());
 
   // The bounds must intersect for containment or crossing.
   if (!bound_.Intersects(b.bound_)) return -1;
@@ -1225,8 +1239,8 @@ int S2Loop::CompareBoundary(const S2Loop& b) const {
 
 bool S2Loop::ContainsNonCrossingBoundary(const S2Loop& b,
                                          bool reverse_b) const {
-  S2_DCHECK(!is_empty() && !b.is_empty());
-  S2_DCHECK(!b.is_full() || !reverse_b);
+  ABSL_DCHECK(!is_empty() && !b.is_empty());
+  ABSL_DCHECK(!b.is_full() || !reverse_b);
 
   // The bounds must intersect for containment.
   if (!bound_.Intersects(b.bound_)) return false;
@@ -1334,7 +1348,7 @@ static bool MatchBoundaries(const S2Loop& a, const S2Loop& b, int a_offset,
   // explored to avoid duplicating work.
 
   vector<pair<int, int>> pending;
-  set<pair<int, int>> done;
+  flat_hash_set<pair<int, int>> done;
   pending.push_back(std::make_pair(0, 0));
   while (!pending.empty()) {
     int i = pending.back().first;
@@ -1405,7 +1419,7 @@ void S2Loop::EncodeCompressed(Encoder* encoder, const S2XYZFaceSiTi* vertices,
   if (properties.test(kBoundEncoded)) {
     bound_.Encode(encoder);
   }
-  S2_DCHECK_GE(encoder->avail(), 0);
+  ABSL_DCHECK_GE(encoder->avail(), 0);
 }
 
 bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
@@ -1422,7 +1436,7 @@ bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
   }
   ClearIndex();
   num_vertices_ = unsigned_num_vertices;
-  vertices_ = std::make_unique<S2Point[]>(num_vertices_);
+  vertices_ = make_unique<S2Point[]>(num_vertices_);
 
   if (!S2DecodePointsCompressed(decoder, snap_level,
                                 MakeSpan(vertices_.get(), num_vertices_))) {
@@ -1474,16 +1488,14 @@ std::bitset<kNumProperties> S2Loop::GetCompressedEncodingProperties() const {
 }
 
 /* static */
-std::unique_ptr<S2Loop> S2Loop::MakeRegularLoop(const S2Point& center,
-                                                S1Angle radius,
-                                                int num_vertices) {
+unique_ptr<S2Loop> S2Loop::MakeRegularLoop(const S2Point& center,
+                                           S1Angle radius, int num_vertices) {
   return MakeRegularLoop(S2::GetFrame(center), radius, num_vertices);
 }
 
 /* static */
-std::unique_ptr<S2Loop> S2Loop::MakeRegularLoop(const Matrix3x3_d& frame,
-                                                S1Angle radius,
-                                                int num_vertices) {
+unique_ptr<S2Loop> S2Loop::MakeRegularLoop(const Matrix3x3_d& frame,
+                                           S1Angle radius, int num_vertices) {
   // We construct the loop in the given frame coordinates, with the center at
   // (0, 0, 1).  For a loop of radius "r", the loop vertices have the form
   // (x, y, z) where x^2 + y^2 = sin(r) and z = cos(r).  The distance on the
@@ -1513,6 +1525,6 @@ int S2Loop::Shape::num_chains() const {
 }
 
 S2Shape::Chain S2Loop::Shape::chain(int i) const {
-  S2_DCHECK_EQ(i, 0);
+  ABSL_DCHECK_EQ(i, 0);
   return Chain(0, Shape::num_edges());  // Avoid virtual call.
 }

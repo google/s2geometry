@@ -22,6 +22,7 @@
 #include <cmath>
 #include <ostream>
 
+#include "absl/log/absl_check.h"
 #include "s2/s1angle.h"
 
 using std::max;
@@ -46,7 +47,7 @@ S1ChordAngle::S1ChordAngle(S1Angle angle) {
     double length = 2 * sin(0.5 * min(M_PI, angle.radians()));
     length2_ = length * length;
   }
-  S2_DCHECK(is_valid());
+  ABSL_DCHECK(is_valid());
 }
 
 S1Angle S1ChordAngle::ToAngle() const {
@@ -98,8 +99,8 @@ S1ChordAngle operator+(S1ChordAngle a, S1ChordAngle b) {
   // Note that this method is much more efficient than converting the chord
   // angles to S1Angles and adding those.  It requires only one square root
   // plus a few additions and multiplications.
-  S2_DCHECK(!a.is_special()) << a;
-  S2_DCHECK(!b.is_special()) << b;
+  ABSL_DCHECK(!a.is_special()) << a;
+  ABSL_DCHECK(!b.is_special()) << b;
 
   // Optimization for the common case where "b" is an error tolerance
   // parameter that happens to be set to zero.
@@ -122,8 +123,8 @@ S1ChordAngle operator+(S1ChordAngle a, S1ChordAngle b) {
 
 S1ChordAngle operator-(S1ChordAngle a, S1ChordAngle b) {
   // See comments in operator+().
-  S2_DCHECK(!a.is_special()) << a;
-  S2_DCHECK(!b.is_special()) << b;
+  ABSL_DCHECK(!a.is_special()) << a;
+  ABSL_DCHECK(!b.is_special()) << b;
   double a2 = a.length2(), b2 = b.length2();
   if (b2 == 0) return a;
   if (a2 <= b2) return S1ChordAngle::Zero();
@@ -138,7 +139,7 @@ S1ChordAngle operator-(S1ChordAngle a, S1ChordAngle b) {
 }
 
 double sin2(S1ChordAngle a) {
-  S2_DCHECK(!a.is_special());
+  ABSL_DCHECK(!a.is_special());
   // Let "a" be the (non-squared) chord length, and let A be the corresponding
   // half-angle (a = 2*sin(A)).  The formula below can be derived from:
   //   sin(2*A) = 2 * sin(A) * cos(A)
@@ -153,7 +154,7 @@ double sin(S1ChordAngle a) {
 
 double cos(S1ChordAngle a) {
   // cos(2*A) = cos^2(A) - sin^2(A) = 1 - 2*sin^2(A)
-  S2_DCHECK(!a.is_special());
+  ABSL_DCHECK(!a.is_special());
   return 1 - 0.5 * a.length2();
 }
 

@@ -23,10 +23,10 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
-#include "absl/utility/utility.h"
 
-#include "s2/base/integral_types.h"
+#include "s2/base/types.h"
 #include "s2/encoded_s2point_vector.h"
 #include "s2/encoded_uint_vector.h"
 #include "s2/s2coder.h"
@@ -42,15 +42,16 @@
 using absl::MakeSpan;
 using absl::Span;
 using std::make_unique;
+using std::unique_ptr;
 using std::vector;
 using ChainPosition = S2Shape::ChainPosition;
 
 namespace {
 template <typename T>
-std::unique_ptr<T> make_unique_for_overwrite(size_t n) {
+unique_ptr<T> make_unique_for_overwrite(size_t n) {
   // We only need to support this one variant.
-  static_assert(std::is_array<T>::value);
-  return std::unique_ptr<T>(new typename absl::remove_extent_t<T>[n]);
+  static_assert(std::is_array<T>::value, "T must be an array type");
+  return unique_ptr<T>(new typename absl::remove_extent_t<T>[n]);
 }
 }  // namespace
 
@@ -74,9 +75,9 @@ S2LaxPolygonShape::S2LaxPolygonShape(const S2Polygon& polygon) {
 
 S2LaxPolygonShape::S2LaxPolygonShape(S2LaxPolygonShape&& b)
     : S2Shape(std::move(b)),
-      num_loops_(absl::exchange(b.num_loops_, 0)),
+      num_loops_(std::exchange(b.num_loops_, 0)),
       prev_loop_(b.prev_loop_.exchange(0, std::memory_order_relaxed)),
-      num_vertices_(absl::exchange(b.num_vertices_, 0)),
+      num_vertices_(std::exchange(b.num_vertices_, 0)),
       vertices_(std::move(b.vertices_)),
       loop_starts_(std::move(b.loop_starts_)) {}
 
@@ -87,10 +88,10 @@ S2LaxPolygonShape& S2LaxPolygonShape::operator=(S2LaxPolygonShape&& b) {
   // move any of its private state.  This is a little odd since b is in a
   // half-moved state after calling but is ultimately safe.
   S2Shape::operator=(static_cast<S2Shape&&>(b));
-  num_loops_ = absl::exchange(b.num_loops_, 0);
+  num_loops_ = std::exchange(b.num_loops_, 0);
   prev_loop_.store(b.prev_loop_.exchange(0, memory_order_relaxed),
                    memory_order_relaxed);
-  num_vertices_ = absl::exchange(b.num_vertices_, 0);
+  num_vertices_ = std::exchange(b.num_vertices_, 0);
   vertices_ = std::move(b.vertices_);
   loop_starts_ = std::move(b.loop_starts_);
   return *this;
@@ -161,7 +162,7 @@ void S2LaxPolygonShape::Init(Span<const Span<const S2Point>> loops) {
 }
 
 int S2LaxPolygonShape::num_loop_vertices(int i) const {
-  S2_DCHECK_LT(i, num_loops());
+  ABSL_DCHECK_LT(i, num_loops());
   if (num_loops() == 1) {
     return num_vertices_;
   } else {
@@ -170,8 +171,8 @@ int S2LaxPolygonShape::num_loop_vertices(int i) const {
 }
 
 const S2Point& S2LaxPolygonShape::loop_vertex(int i, int j) const {
-  S2_DCHECK_LT(i, num_loops());
-  S2_DCHECK_LT(j, num_loop_vertices(i));
+  ABSL_DCHECK_LT(i, num_loops());
+  ABSL_DCHECK_LT(j, num_loop_vertices(i));
   if (i == 0) {
     return vertices_[j];
   } else {
@@ -243,7 +244,7 @@ S2Shape::ReferencePoint S2LaxPolygonShape::GetReferencePoint() const {
 }
 
 S2Shape::Chain S2LaxPolygonShape::chain(int i) const {
-  S2_DCHECK_LT(i, num_loops());
+  ABSL_DCHECK_LT(i, num_loops());
   if (num_loops() == 1) {
     return Chain(0, num_vertices_);
   } else {
@@ -254,7 +255,7 @@ S2Shape::Chain S2LaxPolygonShape::chain(int i) const {
 
 EncodedS2LaxPolygonShape::EncodedS2LaxPolygonShape(EncodedS2LaxPolygonShape&& b)
     : S2Shape(std::move(b)),
-      num_loops_(absl::exchange(b.num_loops_, 0)),
+      num_loops_(std::exchange(b.num_loops_, 0)),
       prev_loop_(b.prev_loop_.exchange(0, std::memory_order_relaxed)),
       vertices_(std::move(b.vertices_)),
       loop_starts_(std::move(b.loop_starts_)) {}
@@ -265,7 +266,7 @@ EncodedS2LaxPolygonShape& EncodedS2LaxPolygonShape::operator=(
   // move any of its private state.  This is a little odd since b is in a
   // half-moved state after calling but is ultimately safe.
   S2Shape::operator=(static_cast<S2Shape&&>(b));
-  num_loops_ = absl::exchange(b.num_loops_, 0);
+  num_loops_ = std::exchange(b.num_loops_, 0);
   prev_loop_.store(b.prev_loop_.exchange(0, std::memory_order_relaxed),
                    std::memory_order_relaxed);
   vertices_ = std::move(b.vertices_);
@@ -311,7 +312,7 @@ int EncodedS2LaxPolygonShape::num_vertices() const {
 }
 
 int EncodedS2LaxPolygonShape::num_loop_vertices(int i) const {
-  S2_DCHECK_LT(i, num_loops());
+  ABSL_DCHECK_LT(i, num_loops());
   if (num_loops() == 1) {
     return vertices_.size();
   } else {
@@ -320,8 +321,8 @@ int EncodedS2LaxPolygonShape::num_loop_vertices(int i) const {
 }
 
 S2Point EncodedS2LaxPolygonShape::loop_vertex(int i, int j) const {
-  S2_DCHECK_LT(i, num_loops());
-  S2_DCHECK_LT(j, num_loop_vertices(i));
+  ABSL_DCHECK_LT(i, num_loops());
+  ABSL_DCHECK_LT(j, num_loop_vertices(i));
   if (num_loops() == 1) {
     return vertices_[j];
   } else {
@@ -330,7 +331,7 @@ S2Point EncodedS2LaxPolygonShape::loop_vertex(int i, int j) const {
 }
 
 S2Shape::Edge EncodedS2LaxPolygonShape::edge(int e) const {
-  S2_DCHECK_LT(e, num_edges());
+  ABSL_DCHECK_LT(e, num_edges());
   size_t e1 = e + 1;
   if (num_loops() == 1) {
     if (e1 == vertices_.size()) { e1 = 0; }
@@ -347,7 +348,7 @@ S2Shape::ReferencePoint EncodedS2LaxPolygonShape::GetReferencePoint() const {
 }
 
 S2Shape::Chain EncodedS2LaxPolygonShape::chain(int i) const {
-  S2_DCHECK_LT(i, num_loops());
+  ABSL_DCHECK_LT(i, num_loops());
   if (num_loops() == 1) {
     return Chain(0, vertices_.size());
   } else {

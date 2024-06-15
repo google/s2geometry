@@ -1,7 +1,5 @@
 # S2 Geometry Library
 
-[![Build Status](https://travis-ci.org/google/s2geometry.svg?branch=master)](https://travis-ci.org/google/s2geometry)
-
 ## Overview
 
 This is a package for manipulating geometric shapes. Unlike many geometry
@@ -31,17 +29,17 @@ complete functionality.
 
 * [CMake](http://www.cmake.org/)
 * A C++ compiler with C++14 support, such as [g++ >= 5](https://gcc.gnu.org/)
-* [Abseil](https://github.com/abseil/abseil-cpp) (standard library extensions)
+* [Abseil](https://github.com/abseil/abseil-cpp) >= LTS
+  [`20240116`](https://github.com/abseil/abseil-cpp/releases/tag/20240116.1)
+  (standard library extensions)
 * [OpenSSL](https://github.com/openssl/openssl) (for its bignum library)
-* [gflags command line flags](https://github.com/gflags/gflags), optional
-* [glog logging module](https://github.com/google/glog), optional
 * [googletest testing framework >= 1.10](https://github.com/google/googletest)
   (to build tests and example programs, optional)
 
 On Ubuntu, all of these other than abseil can be installed via apt-get:
 
 ```
-sudo apt-get install cmake libgflags-dev libgoogle-glog-dev googletest libssl-dev
+sudo apt-get install cmake googletest libssl-dev
 ```
 
 Otherwise, you may need to install some from source.
@@ -54,7 +52,7 @@ On macOS, use [MacPorts](http://www.macports.org/) or
 [Homebrew](http://brew.sh/).  For MacPorts:
 
 ```
-sudo port install cmake gflags google-glog openssl
+sudo port install cmake openssl
 ```
 
 Do not install `gtest` from MacPorts; instead download [release
@@ -116,11 +114,15 @@ sudo make install
 
 On macOS, `sysctl -n hw.logicalcpu` is the equivalent of `nproc`.
 
-Enable gflags and glog with `cmake -DWITH_GFLAGS=ON -DWITH_GLOG=ON ...`.
-
 Disable building of shared libraries with `-DBUILD_SHARED_LIBS=OFF`.
 
 Enable the python interface with `-DWITH_PYTHON=ON`.
+
+If OpenSSL is installed in a non-standard location set `OPENSSL_ROOT_DIR`
+before running configure, for example on macOS:
+```
+OPENSSL_ROOT_DIR=/opt/homebrew/Cellar/openssl@3/3.1.0 cmake -DCMAKE_PREFIX_PATH=/opt/homebrew -DCMAKE_CXX_STANDARD=17
+```
 
 ## Installing
 
@@ -179,6 +181,25 @@ Version 4.0 is required, but it should be easy to make it work 3.0 or probably
 even 2.0.
 
 Python 3 is required.
+
+### Creating wheels
+First, make a virtual environment and install `cmake_build_extension` and `wheel`
+into it:
+```
+python3 -m venv venv
+source venv/bin/activate
+pip install cmake_build_extension wheel
+```
+
+Then build the wheel:
+```
+python setup.py bdist_wheel
+```
+
+The resulting wheel will be in the `dist` directory.
+
+> If OpenSSL is in a non-standard location make sure to set `OPENSSL_ROOT_DIR` 
+> when calling `setup.py`, see above for more information.
 
 ## Other S2 implementations
 

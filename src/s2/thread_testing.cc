@@ -21,7 +21,7 @@
 #include <memory>
 #include <thread>
 
-#include "s2/base/logging.h"
+#include "absl/log/absl_check.h"
 #include "absl/synchronization/mutex.h"
 
 using std::make_unique;
@@ -72,7 +72,7 @@ void ReaderWriterTest::Run(int num_readers, int iters) {
   lock_.Lock();
   for (int iter = 0; iter < iters; ++iter) {
     // Loop invariant: lock_ is held and num_readers_left_ == 0.
-    S2_DCHECK_EQ(0, num_readers_left_);
+    ABSL_DCHECK_EQ(0, num_readers_left_);
     WriteOp();
 
     // Now set the readers loose.
