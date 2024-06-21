@@ -872,7 +872,7 @@ vector<int> MutableS2ShapeIndex::BatchGenerator::GetMaxBatchSizes(
   } else {
     num_edges_left += num_edges_removed;
   }
-  for (int i = 0; num_edges_left > 0; ++i) {
+  while (num_edges_left > 0) {
     int batch_size = static_cast<int>(ideal_batch_size + 1);
     batch_sizes.push_back(batch_size);
     num_edges_left -= batch_size;
