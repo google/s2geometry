@@ -22,12 +22,15 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
@@ -155,6 +158,10 @@ TEST(S2PolylineSimplifier, TargetAndAvoid) {
 }
 
 TEST(S2PolylineSimplifier, Precision) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "PRECISION",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // This is a rough upper bound on both the error in constructing the disc
   // locations (i.e., S2::GetPointOnLine, etc.), and also on the
   // padding that S2PolylineSimplifier uses to ensure that its results are
@@ -165,28 +172,27 @@ TEST(S2PolylineSimplifier, Precision) {
   // barely overlap the edge, and avoid several discs that barely miss the
   // edge.  About half the time, we choose one disc and make it slightly too
   // large or too small so that targeting fails.
-  const int kIters = 1000;  // Passes with 1 million iterations.
+  constexpr int kIters = 1000;  // Passes with 1 million iterations.
   S2PolylineSimplifier simplifier;
   for (int iter = 0; iter < kIters; ++iter) {
-    S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
-    S2Point src = S2Testing::RandomPoint();
+    S2Point src = s2random::Point(bitgen);
     simplifier.Init(src);
     S2Point dst =
-        S2::GetPointOnLine(src, S2Testing::RandomPoint(),
-                           S1Angle::Radians(S2Testing::rnd.RandDouble()));
+        S2::GetPointOnLine(src, s2random::Point(bitgen),
+                           S1Angle::Radians(absl::Uniform(bitgen, 0.0, 1.0)));
     S2Point n = S2::RobustCrossProd(src, dst).Normalize();
 
     // If bad_disc >= 0, then we make targeting fail for that disc.
-    const int kNumDiscs = 5;
-    int bad_disc = S2Testing::rnd.Uniform(2 * kNumDiscs) - kNumDiscs;
+    constexpr int kNumDiscs = 5;
+    int bad_disc = absl::Uniform(bitgen, -kNumDiscs, kNumDiscs);
     for (int i = 0; i < kNumDiscs; ++i) {
       // The center of the disc projects to a point that is the given fraction
       // "f" along the edge (src, dst).  If f < 0, the center is located
       // behind "src" (in order to test this case).
-      double f = S2Testing::rnd.UniformDouble(-0.5, 1.0);
+      double f = absl::Uniform(bitgen, -0.5, 1.0);
       S2Point a = ((1 - f) * src + f * dst).Normalize();
-      S1Angle r = S1Angle::Radians(S2Testing::rnd.RandDouble());
-      bool on_left = S2Testing::rnd.OneIn(2);
+      S1Angle r = S1Angle::Radians(absl::Uniform(bitgen, 0.0, 1.0));
+      bool on_left = absl::Bernoulli(bitgen, 0.5);
       S2Point x = S2::GetPointOnLine(a, on_left ? n : -n, r);
       // If the disc is behind "src", adjust its radius so that it just
       // touches "src" rather than just touching the line through (src, dst).
@@ -194,7 +200,7 @@ TEST(S2PolylineSimplifier, Precision) {
       // We grow the radius slightly if we want to target the disc and shrink
       // it otherwise, *unless* we want targeting to fail for this disc, in
       // which case these actions are reversed.
-      bool avoid = S2Testing::rnd.OneIn(2);
+      bool avoid = absl::Bernoulli(bitgen, 0.5);
       bool grow_radius = (avoid == (i == bad_disc));
       S1ChordAngle radius(grow_radius ? r + kMaxError : r - kMaxError);
       if (avoid) {

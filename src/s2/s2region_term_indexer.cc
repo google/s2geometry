@@ -112,9 +112,10 @@ S2RegionTermIndexer::S2RegionTermIndexer(const Options& options)
 // Defaulted in the implementation to prevent inline bloat.
 S2RegionTermIndexer::S2RegionTermIndexer() = default;
 S2RegionTermIndexer::~S2RegionTermIndexer() = default;
-S2RegionTermIndexer::S2RegionTermIndexer(S2RegionTermIndexer&&) = default;
-S2RegionTermIndexer& S2RegionTermIndexer::operator=(S2RegionTermIndexer&&) =
-                                                   default;
+S2RegionTermIndexer::S2RegionTermIndexer(S2RegionTermIndexer&&) noexcept =
+    default;
+S2RegionTermIndexer& S2RegionTermIndexer::operator=(
+    S2RegionTermIndexer&&) noexcept = default;
 
 string S2RegionTermIndexer::GetTerm(TermType term_type, const S2CellId id,
                                     string_view prefix) const {
@@ -170,7 +171,7 @@ vector<string> S2RegionTermIndexer::GetIndexTermsForCanonicalCovering(
   // that query regions will never contain a descendant of these cells.
 
   ABSL_CHECK(!options_.index_contains_points_only());
-  if (google::DEBUG_MODE) {
+  if (S2_DEBUG_MODE) {
     *coverer_.mutable_options() = options_;
     ABSL_CHECK(coverer_.IsCanonical(covering));
   }
@@ -245,7 +246,7 @@ vector<string> S2RegionTermIndexer::GetQueryTermsForCanonicalCovering(
     const S2CellUnion& covering, string_view prefix) {
   // See the top of this file for an overview of the indexing strategy.
 
-  if (google::DEBUG_MODE) {
+  if (S2_DEBUG_MODE) {
     *coverer_.mutable_options() = options_;
     ABSL_CHECK(coverer_.IsCanonical(covering));
   }

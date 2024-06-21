@@ -19,12 +19,12 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <limits>
 #include <numeric>
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
 #include "s2/id_set_lexicon.h"
@@ -184,12 +184,12 @@ vector<Graph::EdgeId> Graph::GetInputEdgeOrder(
 // A struct for sorting the incoming and outgoing edges around a vertex "v0".
 struct VertexEdge {
   VertexEdge(bool _incoming, Graph::EdgeId _index, Graph::VertexId _endpoint,
-             int32 _rank)
+             int32_t _rank)
       : incoming(_incoming), index(_index), endpoint(_endpoint), rank(_rank) {}
   bool incoming;             // Is this an incoming edge to "v0"?
   Graph::EdgeId index;       // Index of this edge in "edges_" or "in_edge_ids"
   Graph::VertexId endpoint;  // The other (not "v0") endpoint of this edge
-  int32 rank;              // Secondary key for edges with the same endpoint
+  int32_t rank;              // Secondary key for edges with the same endpoint
 };
 
 // Given a set of duplicate outgoing edges (v0, v1) and a set of duplicate
@@ -891,8 +891,8 @@ void Graph::ProcessEdges(GraphOptions* options, vector<Edge>* edges,
   // EdgeProcessor discards the "edges" and "input_ids" vectors and replaces
   // them with new vectors that could be larger or smaller.  To handle this
   // correctly, we untally these vectors now and retally them at the end.
-  const int64 kFinalPerEdge = sizeof(Edge) + sizeof(InputEdgeIdSetId);
-  const int64 kTempPerEdge = kFinalPerEdge + 2 * sizeof(EdgeId);
+  const int64_t kFinalPerEdge = sizeof(Edge) + sizeof(InputEdgeIdSetId);
+  const int64_t kTempPerEdge = kFinalPerEdge + 2 * sizeof(EdgeId);
   if (tracker) {
     tracker->TallyTemp(edges->size() * kTempPerEdge);
     tracker->Tally(-edges->capacity() * kFinalPerEdge);

@@ -16,10 +16,9 @@
 #ifndef S2_BASE_COMMANDLINEFLAGS_H_
 #define S2_BASE_COMMANDLINEFLAGS_H_
 
+#include <cstdint>
 #include <string>
 
-#include "s2/base/commandlineflags_declare.h"
-#include "s2/base/types.h"
 #include "absl/flags/flag.h"
 
 #define DEFINE_bool(name, default_value, description) \
@@ -29,10 +28,10 @@
   ABSL_FLAG(double, name, default_value, description)
 
 #define DEFINE_int32(name, default_value, description) \
-  ABSL_FLAG(int32, name, default_value, description)
+  ABSL_FLAG(int32_t, name, default_value, description)
 
 #define DEFINE_int64(name, default_value, description) \
-  ABSL_FLAG(int64, name, default_value, description)
+  ABSL_FLAG(int64_t, name, default_value, description)
 
 #define DEFINE_string(name, default_value, description) \
   ABSL_FLAG(std::string, name, default_value, description)

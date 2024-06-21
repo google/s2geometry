@@ -28,6 +28,9 @@
 #include <gtest/gtest.h>
 #include "absl/hash/hash_testing.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/string_view.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
@@ -42,6 +45,7 @@
 #include "s2/s2latlng.h"
 #include "s2/s2point.h"
 #include "s2/s2predicates.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
@@ -614,29 +618,33 @@ TEST(S2LatLngRect, Area) {
 
 // Recursively verify that when a rectangle is split into two pieces, the
 // centroids of the children sum to give the centroid of the parent.
-static void TestCentroidSplitting(const S2LatLngRect& r, int splits_left) {
+static void TestCentroidSplitting(absl::BitGenRef bitgen, const S2LatLngRect& r,
+                                  int splits_left) {
   S2LatLngRect child0, child1;
-  if (S2Testing::rnd.OneIn(2)) {
-    double lat = S2Testing::rnd.UniformDouble(r.lat().lo(), r.lat().hi());
+  if (absl::Bernoulli(bitgen, 0.5)) {
+    double lat = absl::Uniform(bitgen, r.lat().lo(), r.lat().hi());
     child0 = S2LatLngRect(R1Interval(r.lat().lo(), lat), r.lng());
     child1 = S2LatLngRect(R1Interval(lat, r.lat().hi()), r.lng());
   } else {
     ABSL_DCHECK_LE(r.lng().lo(), r.lng().hi());
-    double lng = S2Testing::rnd.UniformDouble(r.lng().lo(), r.lng().hi());
+    double lng = absl::Uniform(bitgen, r.lng().lo(), r.lng().hi());
     child0 = S2LatLngRect(r.lat(), S1Interval(r.lng().lo(), lng));
     child1 = S2LatLngRect(r.lat(), S1Interval(lng, r.lng().hi()));
   }
+  // About 3.5% flaky with 1e-15, so increase to 2e-15, which is <0.1% flaky.
   EXPECT_LE(
       (r.GetCentroid() - child0.GetCentroid() - child1.GetCentroid()).Norm(),
-      1e-15);
+      2e-15);
   if (splits_left > 0) {
-    TestCentroidSplitting(child0, splits_left - 1);
-    TestCentroidSplitting(child1, splits_left - 1);
+    TestCentroidSplitting(bitgen, child0, splits_left - 1);
+    TestCentroidSplitting(bitgen, child1, splits_left - 1);
   }
 }
 
 TEST(S2LatLngRect, GetCentroid) {
-  S2Testing::Random* rnd = &S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_CENTROID",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // Empty and full rectangles.
   EXPECT_EQ(S2Point(), S2LatLngRect::Empty().GetCentroid());
@@ -644,8 +652,8 @@ TEST(S2LatLngRect, GetCentroid) {
 
   // Rectangles that cover the full longitude range.
   for (int i = 0; i < 100; ++i) {
-    double lat1 = rnd->UniformDouble(-M_PI_2, M_PI_2);
-    double lat2 = rnd->UniformDouble(-M_PI_2, M_PI_2);
+    double lat1 = absl::Uniform(bitgen, -M_PI_2, M_PI_2);
+    double lat2 = absl::Uniform(bitgen, -M_PI_2, M_PI_2);
     S2LatLngRect r(R1Interval::FromPointPair(lat1, lat2), S1Interval::Full());
     S2Point centroid = r.GetCentroid();
     EXPECT_NEAR(0.5 * (sin(lat1) + sin(lat2)) * r.Area(), centroid.z(), 1e-15);
@@ -654,8 +662,8 @@ TEST(S2LatLngRect, GetCentroid) {
 
   // Rectangles that cover the full latitude range.
   for (int i = 0; i < 100; ++i) {
-    double lng1 = rnd->UniformDouble(-M_PI, M_PI);
-    double lng2 = rnd->UniformDouble(-M_PI, M_PI);
+    double lng1 = absl::Uniform(bitgen, -M_PI, M_PI);
+    double lng2 = absl::Uniform(bitgen, -M_PI, M_PI);
     S2LatLngRect r(S2LatLngRect::FullLat(),
                    S1Interval::FromPointPair(lng1, lng2));
     S2Point centroid = r.GetCentroid();
@@ -671,7 +679,7 @@ TEST(S2LatLngRect, GetCentroid) {
   // To make the code simpler we avoid rectangles that cross the 180 degree
   // line of longitude.
   TestCentroidSplitting(
-      S2LatLngRect(S2LatLngRect::FullLat(), S1Interval(-3.14, 3.14)),
+      bitgen, S2LatLngRect(S2LatLngRect::FullLat(), S1Interval(-3.14, 3.14)),
       10 /*splits_left*/);
 }
 
@@ -867,17 +875,17 @@ TEST(S2LatLngRect, GetDistanceRectVsRect) {
 
 TEST(S2LatLngRect, GetDistanceRandomPairs) {
   // Test random pairs.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_DISTANCE_RANDOM_PAIRS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 10000; ++i) {
-    S2LatLngRect a =
-        S2LatLngRect::FromPointPair(S2LatLng(S2Testing::RandomPoint()),
-                                    S2LatLng(S2Testing::RandomPoint()));
-    S2LatLngRect b =
-        S2LatLngRect::FromPointPair(S2LatLng(S2Testing::RandomPoint()),
-                                    S2LatLng(S2Testing::RandomPoint()));
+    S2LatLngRect a = S2LatLngRect::FromPointPair(
+        S2LatLng(s2random::Point(bitgen)), S2LatLng(s2random::Point(bitgen)));
+    S2LatLngRect b = S2LatLngRect::FromPointPair(
+        S2LatLng(s2random::Point(bitgen)), S2LatLng(s2random::Point(bitgen)));
     VerifyGetDistance(a, b);
 
-
-    S2LatLng c(S2Testing::RandomPoint());
+    S2LatLng c(s2random::Point(bitgen));
     VerifyGetRectPointDistance(a, c);
     VerifyGetRectPointDistance(b, c);
   }
@@ -923,14 +931,15 @@ static void VerifyGetDirectedHausdorffDistance(const S2LatLngRect& a,
 
 TEST(S2LatLngRect, GetDirectedHausdorffDistanceRandomPairs) {
   // Test random pairs.
-  const int kIters = 1000;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_DIRECTED_HAUSDORFF_DISTANCE_RANDOM_PAIRS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  constexpr int kIters = 1000;
   for (int i = 0; i < kIters; ++i) {
-    S2LatLngRect a =
-        S2LatLngRect::FromPointPair(S2LatLng(S2Testing::RandomPoint()),
-                                    S2LatLng(S2Testing::RandomPoint()));
-    S2LatLngRect b =
-        S2LatLngRect::FromPointPair(S2LatLng(S2Testing::RandomPoint()),
-                                    S2LatLng(S2Testing::RandomPoint()));
+    S2LatLngRect a = S2LatLngRect::FromPointPair(
+        S2LatLng(s2random::Point(bitgen)), S2LatLng(s2random::Point(bitgen)));
+    S2LatLngRect b = S2LatLngRect::FromPointPair(
+        S2LatLng(s2random::Point(bitgen)), S2LatLng(s2random::Point(bitgen)));
     // a and b are *minimum* bounding rectangles of two random points, in
     // particular, their Voronoi diagrams are always of the same topology. We
     // take the "complements" of a and b for more thorough testing.

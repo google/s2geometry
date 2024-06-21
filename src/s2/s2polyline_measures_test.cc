@@ -21,8 +21,11 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 using std::fabs;
@@ -31,6 +34,10 @@ using std::vector;
 namespace {
 
 TEST(GetLengthAndCentroid, GreatCircles) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GREAT_CIRCLES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Construct random great circles and divide them randomly into segments.
   // Then make sure that the length and centroid are correct.  Note that
   // because of the way the centroid is computed, it does not matter how
@@ -39,11 +46,11 @@ TEST(GetLengthAndCentroid, GreatCircles) {
   for (int iter = 0; iter < 100; ++iter) {
     // Choose a coordinate frame for the great circle.
     S2Point x, y, z;
-    S2Testing::GetRandomFrame(&x, &y, &z);
+    s2random::Frame(bitgen, x, y, z);
 
     vector<S2Point> line;
     for (double theta = 0; theta < 2 * M_PI;
-         theta += pow(S2Testing::rnd.RandDouble(), 10)) {
+         theta += pow(absl::Uniform(bitgen, 0.0, 1.0), 10)) {
       line.push_back(cos(theta) * x + sin(theta) * y);
     }
     // Close the circle.

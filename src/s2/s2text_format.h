@@ -28,7 +28,6 @@
 #include <vector>
 
 #include "absl/base/macros.h"
-#include "absl/log/absl_check.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
@@ -41,9 +40,9 @@
 #include "s2/s2lax_polyline_shape.h"  // TODO(user,b/207351837): Remove.
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
-#include "s2/s2point_span.h"
 #include "s2/s2polygon.h"   // TODO(user,b/207351837): Remove.
 #include "s2/s2polyline.h"  // TODO(user,b/207351837): Remove.
+#include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 
 class MutableS2ShapeIndex;
@@ -64,9 +63,6 @@ S2Point MakePointOrDie(absl::string_view str);
 // As above, but do not ABSL_CHECK-fail on invalid input. Returns true if
 // conversion is successful.
 ABSL_MUST_USE_RESULT bool MakePoint(absl::string_view str, S2Point* point);
-
-ABSL_DEPRECATED("Inline the implementation")
-inline S2Point MakePoint(absl::string_view str) { return MakePointOrDie(str); }
 
 // Parses a string of one or more latitude-longitude coordinates in degrees,
 // and return the corresponding vector of S2LatLng points.
@@ -183,12 +179,6 @@ std::unique_ptr<S2Polygon> MakePolygonOrDie(
 ABSL_MUST_USE_RESULT bool MakePolygon(absl::string_view str,
                                std::unique_ptr<S2Polygon>* polygon,
                                S2Debug debug_override = S2Debug::ALLOW);
-
-ABSL_DEPRECATED("Inline the implementation")
-inline std::unique_ptr<S2Polygon> MakePolygon(
-    absl::string_view str, S2Debug debug_override = S2Debug::ALLOW) {
-  return MakePolygonOrDie(str, debug_override);
-}
 
 // Like MakePolygon(), except that it does not normalize loops (i.e., it
 // gives you exactly what you asked for).

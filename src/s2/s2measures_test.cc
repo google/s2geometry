@@ -22,8 +22,11 @@
 
 #include <gtest/gtest.h>
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/s2latlng.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 using std::fabs;
@@ -76,11 +79,16 @@ TEST(S2, AreaMethods) {
   EXPECT_NEAR(S2::Area(pr, pq, pr), 0, 1e-15);
   EXPECT_EQ(S2::Area(p000, p045, p090), 0);
 
+  // TODO(user,b/338315414): Split up this test case.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "AREA_METHODS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   double max_girard = 0;
   for (int i = 0; i < 10000; ++i) {
-    S2Point p0 = S2Testing::RandomPoint();
-    S2Point d1 = S2Testing::RandomPoint();
-    S2Point d2 = S2Testing::RandomPoint();
+    S2Point p0 = s2random::Point(bitgen);
+    S2Point d1 = s2random::Point(bitgen);
+    S2Point d2 = s2random::Point(bitgen);
     S2Point p1 = (p0 + 1e-15 * d1).Normalize();
     S2Point p2 = (p0 + 1e-15 * d2).Normalize();
     // The actual displacement can be as much as 1.2e-15 due to roundoff.
@@ -117,10 +125,10 @@ TEST(S2, AreaMethods) {
   // Compute the area of a hemisphere using four triangles with one near-180
   // degree edge and one near-degenerate edge.
   for (int i = 0; i < 100; ++i) {
-    double lng = 2 * M_PI * S2Testing::rnd.RandDouble();
+    double lng = absl::Uniform(bitgen, 0.0, 2 * M_PI);
     S2Point p0 = S2LatLng::FromRadians(1e-20, lng).Normalized().ToPoint();
     S2Point p1 = S2LatLng::FromRadians(0, lng).Normalized().ToPoint();
-    double p2_lng = lng + S2Testing::rnd.RandDouble();
+    double p2_lng = lng + absl::Uniform(bitgen, 0.0, 1.0);
     S2Point p2 = S2LatLng::FromRadians(0, p2_lng).Normalized().ToPoint();
     S2Point p3 = S2LatLng::FromRadians(0, lng + M_PI).Normalized().ToPoint();
     S2Point p4 = S2LatLng::FromRadians(0, lng + 5.0).Normalized().ToPoint();

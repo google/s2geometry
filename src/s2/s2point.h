@@ -23,7 +23,7 @@
 #include "absl/base/attributes.h"
 #include "absl/hash/hash.h"
 #include "s2/util/coding/coder.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2coder.h"
 #include "s2/s2error.h"
 #include "s2/util/math/vector.h"  // IWYU pragma: export

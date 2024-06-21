@@ -24,11 +24,15 @@
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 using std::vector;
@@ -99,18 +103,20 @@ void TestCrossing(const S2Point& a, const S2Point& b,
   }
 
   EXPECT_EQ(crossing_sign, S2::CrossingSign(a, b, c, d));
+  bool edge_or_vertex = signed_crossing_sign != 0;
+  EXPECT_EQ(edge_or_vertex, S2::EdgeOrVertexCrossing(a, b, c, d));
+
   S2EdgeCrosser crosser(&a, &b, &c);
   EXPECT_EQ(crossing_sign, crosser.CrossingSign(&d));
   EXPECT_EQ(crossing_sign, crosser.CrossingSign(&c));
   EXPECT_EQ(crossing_sign, crosser.CrossingSign(&d, &c));
   EXPECT_EQ(crossing_sign, crosser.CrossingSign(&c, &d));
 
-  EXPECT_EQ(signed_crossing_sign != 0, S2::EdgeOrVertexCrossing(a, b, c, d));
   crosser.RestartAt(&c);
-  EXPECT_EQ(signed_crossing_sign != 0, crosser.EdgeOrVertexCrossing(&d));
-  EXPECT_EQ(signed_crossing_sign != 0, crosser.EdgeOrVertexCrossing(&c));
-  EXPECT_EQ(signed_crossing_sign != 0, crosser.EdgeOrVertexCrossing(&d, &c));
-  EXPECT_EQ(signed_crossing_sign != 0, crosser.EdgeOrVertexCrossing(&c, &d));
+  EXPECT_EQ(edge_or_vertex, crosser.EdgeOrVertexCrossing(&d));
+  EXPECT_EQ(edge_or_vertex, crosser.EdgeOrVertexCrossing(&c));
+  EXPECT_EQ(edge_or_vertex, crosser.EdgeOrVertexCrossing(&d, &c));
+  EXPECT_EQ(edge_or_vertex, crosser.EdgeOrVertexCrossing(&c, &d));
 
   crosser.RestartAt(&c);
   EXPECT_EQ(signed_crossing_sign, crosser.SignedEdgeOrVertexCrossing(&d));
@@ -132,10 +138,10 @@ void TestCrossing(const S2Point& a, const S2Point& b,
   EXPECT_EQ(crossing_sign, crosser2.CrossingSign(c, d));
 
   crosser2.RestartAt(c);
-  EXPECT_EQ(signed_crossing_sign != 0, crosser2.EdgeOrVertexCrossing(d));
-  EXPECT_EQ(signed_crossing_sign != 0, crosser2.EdgeOrVertexCrossing(c));
-  EXPECT_EQ(signed_crossing_sign != 0, crosser2.EdgeOrVertexCrossing(d, c));
-  EXPECT_EQ(signed_crossing_sign != 0, crosser2.EdgeOrVertexCrossing(c, d));
+  EXPECT_EQ(edge_or_vertex, crosser2.EdgeOrVertexCrossing(d));
+  EXPECT_EQ(edge_or_vertex, crosser2.EdgeOrVertexCrossing(c));
+  EXPECT_EQ(edge_or_vertex, crosser2.EdgeOrVertexCrossing(d, c));
+  EXPECT_EQ(edge_or_vertex, crosser2.EdgeOrVertexCrossing(c, d));
 
   crosser2.RestartAt(c);
   EXPECT_EQ(signed_crossing_sign, crosser2.SignedEdgeOrVertexCrossing(d));
@@ -180,70 +186,73 @@ TEST(S2, Crossings) {
   // The real tests of edge crossings are in s2{loop,polygon}_test,
   // but we do a few simple tests here.
 
-  // Two regular edges that cross.
+  // 1. Two regular edges that cross.
   TestCrossings(S2Point(1, 2, 1), S2Point(1, -3, 0.5),
                 S2Point(1, -0.5, -3), S2Point(0.1, 0.5, 3), 1, 1);
 
-  // Two regular edges that intersect antipodal points.
+  // 2. Two regular edges that intersect antipodal points.
   TestCrossings(S2Point(1, 2, 1), S2Point(1, -3, 0.5),
                 S2Point(-1, 0.5, 3), S2Point(-0.1, -0.5, -3), -1, 0);
 
-  // Two edges on the same great circle that start at antipodal points.
+  // 3. Two edges on the same great circle that start at antipodal points.
   TestCrossings(S2Point(0, 0, -1), S2Point(0, 1, 0),
                 S2Point(0, 0, 1), S2Point(0, 1, 1), -1, 0);
 
-  // Two edges that cross where one vertex is S2::Origin().
+  // 4. Two edges that cross where one vertex is S2::Origin().
   TestCrossings(S2Point(1, 0, 0), S2::Origin(),
                 S2Point(1, -0.1, 1), S2Point(1, 1, -0.1), 1, 1);
 
-  // Two edges that intersect antipodal points where one vertex is
+  // 5. Two edges that intersect antipodal points where one vertex is
   // S2::Origin().
   TestCrossings(S2Point(1, 0, 0), S2::Origin(),
                 S2Point(-1, 0.1, -1), S2Point(-1, -1, 0.1), -1, 0);
 
-  // Two edges that share an endpoint.  The Ortho() direction is (-4,0,2),
+  // 6. Two edges that share an endpoint.  The Ortho() direction is (-4,0,2),
   // and edge AB is further CCW around (2,3,4) than CD.
   TestCrossings(S2Point(7, -2, 3), S2Point(2, 3, 4),
                 S2Point(2, 3, 4), S2Point(-1, 2, 5), 0, -1);
 
-  // Two edges that barely cross each other near the middle of one edge.  The
+  // 7. Two edges that barely cross each other near the middle of one edge.  The
   // edge AB is approximately in the x=y plane, while CD is approximately
   // perpendicular to it and ends exactly at the x=y plane.
   TestCrossings(S2Point(1, 1, 1), S2Point(1, nextafter(1, 0), -1),
                 S2Point(11, -12, -1), S2Point(10, 10, 1), 1, -1);
 
-  // In this version, the edges are separated by a distance of about 1e-15.
+  // 8. In this version, the edges are separated by a distance of about 1e-15.
   TestCrossings(S2Point(1, 1, 1), S2Point(1, nextafter(1, 2), -1),
                 S2Point(1, -1, 0), S2Point(1, 1, 0), -1, 0);
 
-  // Two edges that barely cross each other near the end of both edges.  This
+  // 9. Two edges that barely cross each other near the end of both edges.  This
   // example cannot be handled using regular double-precision arithmetic due
   // to floating-point underflow.
   TestCrossings(S2Point(0, 0, 1), S2Point(2, -1e-323, 1),
                 S2Point(1, -1, 1), S2Point(1e-323, 0, 1), 1, -1);
 
-  // In this version, the edges are separated by a distance of about 1e-640.
+  // 10. In this version, the edges are separated by a distance of about 1e-640.
   TestCrossings(S2Point(0, 0, 1), S2Point(2, 1e-323, 1),
                 S2Point(1, -1, 1), S2Point(1e-323, 0, 1), -1, 0);
 
-  // Two edges that barely cross each other near the middle of one edge.
+  // 11. Two edges that barely cross each other near the middle of one edge.
   // Computing the exact determinant of some of the triangles in this test
   // requires more than 2000 bits of precision.
   TestCrossings(S2Point(1, -1e-323, -1e-323), S2Point(1e-323, 1, 1e-323),
                 S2Point(1, -1, 1e-323), S2Point(1, 1, 0),
                 1, 1);
 
-  // In this version, the edges are separated by a distance of about 1e-640.
+  // 12. In this version, the edges are separated by a distance of about 1e-640.
   TestCrossings(S2Point(1, 1e-323, -1e-323), S2Point(-1e-323, 1, 1e-323),
                 S2Point(1, -1, 1e-323), S2Point(1, 1, 0),
                 -1, 0);
 }
 
 TEST(S2, CollinearEdgesThatDontTouch) {
-  const int kIters = 500;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "COLLINEAR_EDGES_THAT_DONT_TOUCH",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  constexpr int kIters = 500;
   for (int iter = 0; iter < kIters; ++iter) {
-    S2Point a = S2Testing::RandomPoint();
-    S2Point d = S2Testing::RandomPoint();
+    S2Point a = s2random::Point(bitgen);
+    S2Point d = s2random::Point(bitgen);
     S2Point b = S2::Interpolate(a, d, 0.05);
     S2Point c = S2::Interpolate(a, d, 0.95);
     EXPECT_GT(0, S2::CrossingSign(a, b, c, d));
@@ -272,12 +281,15 @@ TEST(S2, CoincidentZeroLengthEdgesThatDontTouch) {
   // obvious, since it depends on the particular symbolic perturbations used
   // by s2pred::Sign().  It would be better to replace this with a test that
   // says that the CCW results must be consistent with each other.)
-  const int kIters = 1000;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "COINCIDENT_ZERO_LENGTH_EDGES_THAT_DONT_TOUCH",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  constexpr int kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
     // Construct a point P where every component is zero or a power of 2.
     S2Point p;
     for (int i = 0; i < 3; ++i) {
-      int binary_exp = S2Testing::rnd.Skewed(11);
+      int binary_exp = s2random::SkewedInt(bitgen, 11);
       p[i] = (binary_exp > 1022) ? 0 : pow(2, -binary_exp);
     }
     // If all components were zero, try again.  Note that normalization may

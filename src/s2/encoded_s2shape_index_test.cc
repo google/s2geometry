@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
+#include <random>
 #include <utility>
 #include <vector>
 
@@ -29,6 +30,8 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #include "s2/util/coding/coder.h"
@@ -55,12 +58,15 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2shapeutil_coding.h"
 #include "s2/s2shapeutil_testing.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 #include "s2/thread_testing.h"
+#include "s2/util/math/matrix3x3.h"
+#include "s2/util/random/shared_bit_gen.h"
 
 using absl::StrCat;
 using s2builderutil::S2CellIdSnapFunction;
@@ -128,7 +134,6 @@ TEST(EncodedS2ShapeIndex, RegularLoops) {
   };
   for (const auto& test_case : test_cases) {
     MutableS2ShapeIndex index;
-    S2Testing::rnd.Reset(test_case.num_edges);
     SCOPED_TRACE(StrCat("num_edges = ", test_case.num_edges));
     S2Polygon polygon(S2Loop::MakeRegularLoop(S2Point(3, 2, 1).Normalize(),
                                               S1Angle::Degrees(0.1),
@@ -140,29 +145,29 @@ TEST(EncodedS2ShapeIndex, RegularLoops) {
 }
 
 #if !defined( __EMSCRIPTEN__) && !(defined(__ANDROID__) && defined(__i386__))
-// TODO(b/232496949): This test relies on `random()` return values because
+// TODO(b/232496949): This test relies on `mt19937_64` return values because
 // it tests an exact encoded byte size.  Either change it to accept a range
 // of sizes, or decode and check either the number of shapes, or possibly
 // the points themselves by resetting the RNG state.
 TEST(EncodedS2ShapeIndex, OverlappingPointClouds) {
+  std::mt19937_64 bitgen;
   struct TestCase {
     int num_shapes, num_points_per_shape;
     size_t expected_bytes;
   };
   vector<TestCase> test_cases = {
-    {1, 50, 83},
-    {2, 100, 583},
-    {4, 100, 1383},
+      {1, 50, 85},
+      {2, 100, 600},
+      {4, 100, 1426},
   };
   S2Cap cap(S2Point(0.1, -0.4, 0.3).Normalize(), S1Angle::Degrees(1));
   for (const auto& test_case : test_cases) {
     MutableS2ShapeIndex index;
-    S2Testing::rnd.Reset(test_case.num_shapes);
     SCOPED_TRACE(StrCat("num_shapes = ", test_case.num_shapes));
     for (int i = 0; i < test_case.num_shapes; ++i) {
       vector<S2Point> points;
       for (int j = 0; j < test_case.num_points_per_shape; ++j) {
-        points.push_back(S2Testing::SamplePoint(cap));
+        points.push_back(s2random::SamplePoint(bitgen, cap));
       }
       index.Add(make_unique<S2PointVectorShape>(points));
     }
@@ -171,25 +176,26 @@ TEST(EncodedS2ShapeIndex, OverlappingPointClouds) {
   }
 }
 
-// TODO(b/232496949): This test relies on `random()` return values.
+// TODO(b/232496949): This test relies on `mt19937_64` return values.
 TEST(EncodedS2ShapeIndex, OverlappingPolylines) {
+  std::mt19937_64 bitgen;
   struct TestCase {
     int num_shapes, num_shape_edges;
     size_t expected_bytes;
   };
   vector<TestCase> test_cases = {
-    {2, 50, 139},
-    {10, 50, 777},
-    {20, 50, 2219},
+      {2, 50, 128},
+      {10, 50, 808},
+      {20, 50, 2499},
   };
   S2Cap cap(S2Point(-0.2, -0.3, 0.4).Normalize(), S1Angle::Degrees(0.1));
   for (const auto& test_case : test_cases) {
     S1Angle edge_len = 2 * cap.GetRadius() / test_case.num_shape_edges;
     MutableS2ShapeIndex index;
-    S2Testing::rnd.Reset(test_case.num_shapes);
     SCOPED_TRACE(StrCat("num_shapes = ", test_case.num_shapes));
     for (int i = 0; i < test_case.num_shapes; ++i) {
-      S2Point a = S2Testing::SamplePoint(cap), b = S2Testing::RandomPoint();
+      S2Point a = s2random::SamplePoint(bitgen, cap);
+      S2Point b = s2random::Point(bitgen);
       vector<S2Point> vertices;
       int n = test_case.num_shape_edges;
       for (int j = 0; j <= n; ++j) {
@@ -202,25 +208,25 @@ TEST(EncodedS2ShapeIndex, OverlappingPolylines) {
   }
 }
 
-// TODO(b/232496949): This test relies on `random()` return values.
+// TODO(b/232496949): This test relies on `mt19937_64` return values.
 TEST(EncodedS2ShapeIndex, OverlappingLoops) {
+  std::mt19937_64 bitgen;
   struct TestCase {
     int num_shapes, max_edges_per_loop;
     size_t expected_bytes;
   };
   vector<TestCase> test_cases = {
-    {2, 250, 138},
-    {5, 250, 1084},
-    {25, 50, 3673},
+      {2, 250, 412},
+      {5, 250, 1208},
+      {25, 50, 3162},
   };
   S2Cap cap(S2Point(-0.1, 0.25, 0.2).Normalize(), S1Angle::Degrees(3));
   for (const auto& test_case : test_cases) {
     MutableS2ShapeIndex index;
-    S2Testing::rnd.Reset(test_case.num_shapes);
     SCOPED_TRACE(StrCat("num_shapes = ", test_case.num_shapes));
     for (int i = 0; i < test_case.num_shapes; ++i) {
-      S2Point center = S2Testing::SamplePoint(cap);
-      double radius_fraction = S2Testing::rnd.RandDouble();
+      S2Point center = s2random::SamplePoint(bitgen, cap);
+      double radius_fraction = absl::Uniform(bitgen, 0.0, 1.0);
       // Scale the number of edges so that they are all about the same length
       // (similar to modeling all geometry at a similar resolution).
       int num_edges = max(3.0, test_case.max_edges_per_loop * radius_fraction);
@@ -262,11 +268,14 @@ class IndexedLaxPolylineLayer : public S2Builder::Layer {
 };
 
 TEST(EncodedS2ShapeIndex, SnappedFractalPolylines) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "SNAPPED_FRACTAL_POLYLINES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   MutableS2ShapeIndex index;
   S2Builder builder{S2Builder::Options{S2CellIdSnapFunction()}};
   for (int i = 0; i < 5; ++i) {
     builder.StartLayer(make_unique<IndexedLaxPolylineLayer>(&index));
-    S2Fractal fractal;
+    S2Fractal fractal(bitgen);
     fractal.SetLevelForApproxMaxEdges(3 * 256);
     auto frame = S2::GetFrame(S2LatLng::FromDegrees(10, i).ToPoint());
     auto loop = fractal.MakeLoop(frame, S1Angle::Degrees(0.1));
@@ -327,9 +336,10 @@ class LazyDecodeTest : public s2testing::ReaderWriterTest {
   }
 
   void ReadOp() override {
+    util_random::SharedBitGen bitgen;
     S2ClosestEdgeQuery query(&index_);
     for (int iter = 0; iter < 10; ++iter) {
-      S2ClosestEdgeQuery::PointTarget target(S2Testing::RandomPoint());
+      S2ClosestEdgeQuery::PointTarget target(s2random::Point(bitgen));
       query.FindClosestEdge(&target);
     }
   }
@@ -347,8 +357,8 @@ TEST(EncodedS2ShapeIndex, LazyDecode) {
 
   // The number of readers should be large enough so that it is likely that
   // several readers will be running at once (with a multiple-core CPU).
-  const int kNumReaders = 8;
-  const int kIters = 1000;
+  constexpr int kNumReaders = 8;
+  constexpr int kIters = 1000;
   test.Run(kNumReaders, kIters);
 }
 

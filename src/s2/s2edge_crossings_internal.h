@@ -94,7 +94,7 @@ absl::string_view GetIntersectionMethodName(IntersectionMethod method);
 class S2Point_PointerRep {
  public:
   using T = const S2Point *;
-  S2Point_PointerRep() : p_(nullptr) {}
+  S2Point_PointerRep() = default;
   explicit S2Point_PointerRep(const S2Point* p) : p_(p) {}
   S2Point_PointerRep& operator=(const S2Point* p) { p_ = p; return *this; }
   operator const S2Point*() const { return p_; }  // Conversion operator.
@@ -102,7 +102,7 @@ class S2Point_PointerRep {
   const S2Point* operator->() const { return p_; }
 
  private:
-  const S2Point* p_;
+  const S2Point* p_ = nullptr;
 };
 
 class S2Point_ValueRep {

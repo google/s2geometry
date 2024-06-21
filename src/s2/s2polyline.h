@@ -29,7 +29,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
 #include "s2/s2cell_id.h"
@@ -63,11 +63,9 @@ class S2Polyline final : public S2Region {
   // or Decode().
   S2Polyline();
 
-#ifndef SWIG
   // S2Polyline is movable, but only privately copyable.
-  S2Polyline(S2Polyline&&);
-  S2Polyline& operator=(S2Polyline&&);
-#endif  // SWIG
+  S2Polyline(S2Polyline&&) noexcept;
+  S2Polyline& operator=(S2Polyline&&) noexcept;
 
   // Convenience constructors that call Init() with the given vertices.
   explicit S2Polyline(absl::Span<const S2Point> vertices);
@@ -327,7 +325,6 @@ class S2Polyline final : public S2Region {
   // on success.
   bool Decode(Decoder* const decoder);
 
-#ifndef SWIG
   // Wrapper class for indexing a polyline (see S2ShapeIndex).  Once this
   // object is inserted into an S2ShapeIndex it is owned by that index, and
   // will be automatically deleted when no longer needed by the index.  Note
@@ -341,7 +338,7 @@ class S2Polyline final : public S2Region {
     // allowed in opensource.
     enum : TypeTag { kTypeTag = 2 };
 
-    Shape() : polyline_(nullptr) {}  // Must call Init().
+    Shape() = default;  // Must call Init().
 
     // Initialization.  Does not take ownership of "polyline".
     //
@@ -386,7 +383,7 @@ class S2Polyline final : public S2Region {
     // Decoding is defined only for S2Polyline::OwningShape below.
 
    private:
-    const S2Polyline* polyline_;
+    const S2Polyline* polyline_ = nullptr;
   };
 
   // Like Shape, except that the S2Polyline is automatically deleted when this
@@ -415,7 +412,6 @@ class S2Polyline final : public S2Region {
    private:
     std::unique_ptr<const S2Polyline> owned_polyline_;
   };
-#endif  // SWIG
 
  private:
   // Internal copy constructor used only by Clone() that makes a deep copy of
@@ -443,14 +439,13 @@ class S2Polyline final : public S2Region {
   S2Debug s2debug_override_;
 
   // We store the vertices in an array rather than a vector because we don't
-  // need any STL methods, and computing the number of vertices using size()
-  // would be relatively expensive (due to division by sizeof(S2Point) == 24).
+  // need any STL methods, and computing the number of vertices using `size()`
+  // would be somewhat more expensive (due to division by `sizeof(S2Point) ==
+  // 24`, although this is typically implemented with a multiply and shift).
   int num_vertices_ = 0;
   std::unique_ptr<S2Point[]> vertices_;
 
-#ifndef SWIG
   void operator=(const S2Polyline&) = delete;
-#endif  // SWIG
 };
 
 #endif  // S2_S2POLYLINE_H_

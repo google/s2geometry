@@ -16,6 +16,7 @@
 #ifndef S2_S2CELL_ITERATOR_JOIN_H_
 #define S2_S2CELL_ITERATOR_JOIN_H_
 
+#include <cstdint>
 #include <functional>
 #include <type_traits>
 #include <vector>
@@ -23,6 +24,7 @@
 #include "absl/base/optimization.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/types/span.h"
+#include "s2/internal/s2meta.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
@@ -193,9 +195,9 @@ class S2CellIteratorJoin {
 // for the lifetime of the join operation.
 template <
     typename IterA, typename IterB,
-    typename std::enable_if<S2CellIterator::ImplementedBy<IterA>{} &&
-                            S2CellIterator::ImplementedBy<IterB>{},
-                            bool>::type = true>
+    typename std::enable_if<
+        s2meta::derived_from_v<IterA, S2CellIterator> &&
+        s2meta::derived_from_v<IterB, S2CellIterator>, bool>::type = true>
 S2CellIteratorJoin<IterA, IterB> MakeS2CellIteratorJoin(
     const IterA& iter_a, const IterB& iter_b, S1ChordAngle tolerance = {}) {
   return {iter_a, iter_b, tolerance};
@@ -245,8 +247,8 @@ bool S2CellIteratorJoin<A, B>::ExactJoin(Visitor& visitor) {
         }
 
         // Move the smaller of the cells forward.
-        const uint64 lsb_a = iter_a_.id().lsb();
-        const uint64 lsb_b = iter_b_.id().lsb();
+        const uint64_t lsb_a = iter_a_.id().lsb();
+        const uint64_t lsb_b = iter_b_.id().lsb();
         if (lsb_a < lsb_b) {
           iter_a_.Next();
         } else if (lsb_a > lsb_b) {

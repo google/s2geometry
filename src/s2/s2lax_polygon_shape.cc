@@ -19,11 +19,11 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/log/absl_check.h"
 #include "absl/memory/memory.h"
 #include "absl/types/span.h"
@@ -74,21 +74,17 @@ S2LaxPolygonShape::S2LaxPolygonShape(const S2Polygon& polygon) {
   Init(polygon);
 }
 
-S2LaxPolygonShape::S2LaxPolygonShape(S2LaxPolygonShape&& b)
-    : S2Shape(std::move(b)),
-      num_loops_(std::exchange(b.num_loops_, 0)),
+S2LaxPolygonShape::S2LaxPolygonShape(S2LaxPolygonShape&& b) noexcept
+    : num_loops_(std::exchange(b.num_loops_, 0)),
       prev_loop_(b.prev_loop_.exchange(0, std::memory_order_relaxed)),
       num_vertices_(std::exchange(b.num_vertices_, 0)),
       vertices_(std::move(b.vertices_)),
       loop_starts_(std::move(b.loop_starts_)) {}
 
-S2LaxPolygonShape& S2LaxPolygonShape::operator=(S2LaxPolygonShape&& b) {
+S2LaxPolygonShape& S2LaxPolygonShape::operator=(
+    S2LaxPolygonShape&& b) noexcept {
   using std::memory_order_relaxed;
 
-  // We need to delegate to our parent move-assignment operator since we can't
-  // move any of its private state.  This is a little odd since b is in a
-  // half-moved state after calling but is ultimately safe.
-  S2Shape::operator=(static_cast<S2Shape&&>(b));
   num_loops_ = std::exchange(b.num_loops_, 0);
   prev_loop_.store(b.prev_loop_.exchange(0, memory_order_relaxed),
                    memory_order_relaxed);
@@ -147,7 +143,7 @@ void S2LaxPolygonShape::Init(Span<const Span<const S2Point>> loops) {
     std::copy(loops[0].begin(), loops[0].end(), vertices_.get());
   } else {
     // Don't use make_unique<> here in order to avoid zero initialization.
-    loop_starts_ = make_unique_for_overwrite<uint32[]>(num_loops_ + 1);
+    loop_starts_ = make_unique_for_overwrite<uint32_t[]>(num_loops_ + 1);
     num_vertices_ = 0;
     for (int i = 0; i < num_loops_; ++i) {
       loop_starts_[i] = num_vertices_;
@@ -189,17 +185,17 @@ void S2LaxPolygonShape::Encode(Encoder* encoder,
   s2coding::EncodeS2PointVector(MakeSpan(vertices_.get(), num_vertices()),
                                 hint, encoder);
   if (num_loops() > 1) {
-    s2coding::EncodeUintVector<uint32>(
+    s2coding::EncodeUintVector<uint32_t>(
         MakeSpan(loop_starts_.get(), num_loops() + 1), encoder);
   }
 }
 
 bool S2LaxPolygonShape::Init(Decoder* decoder) {
   if (decoder->avail() < 1) return false;
-  uint8 version = decoder->get8();
+  uint8_t version = decoder->get8();
   if (version != kCurrentEncodingVersionNumber) return false;
 
-  uint32 num_loops;
+  uint32_t num_loops;
   if (!decoder->get_varint32(&num_loops)) return false;
   num_loops_ = num_loops;
   s2coding::EncodedS2PointVector vertices;
@@ -214,9 +210,9 @@ bool S2LaxPolygonShape::Init(Decoder* decoder) {
       vertices_[i] = vertices[i];
     }
     if (num_loops_ > 1) {
-      s2coding::EncodedUintVector<uint32> loop_starts;
+      s2coding::EncodedUintVector<uint32_t> loop_starts;
       if (!loop_starts.Init(decoder)) return false;
-      loop_starts_ = make_unique_for_overwrite<uint32[]>(loop_starts.size());
+      loop_starts_ = make_unique_for_overwrite<uint32_t[]>(loop_starts.size());
       for (size_t i = 0; i < loop_starts.size(); ++i) {
         loop_starts_[i] = loop_starts[i];
       }
@@ -254,19 +250,15 @@ S2Shape::Chain S2LaxPolygonShape::chain(int i) const {
   }
 }
 
-EncodedS2LaxPolygonShape::EncodedS2LaxPolygonShape(EncodedS2LaxPolygonShape&& b)
-    : S2Shape(std::move(b)),
-      num_loops_(std::exchange(b.num_loops_, 0)),
+EncodedS2LaxPolygonShape::EncodedS2LaxPolygonShape(
+    EncodedS2LaxPolygonShape&& b) noexcept
+    : num_loops_(std::exchange(b.num_loops_, 0)),
       prev_loop_(b.prev_loop_.exchange(0, std::memory_order_relaxed)),
       vertices_(std::move(b.vertices_)),
       loop_starts_(std::move(b.loop_starts_)) {}
 
 EncodedS2LaxPolygonShape& EncodedS2LaxPolygonShape::operator=(
-    EncodedS2LaxPolygonShape&& b) {
-  // We need to delegate to our parent move-assignment operator since we can't
-  // move any of its private state.  This is a little odd since b is in a
-  // half-moved state after calling but is ultimately safe.
-  S2Shape::operator=(static_cast<S2Shape&&>(b));
+    EncodedS2LaxPolygonShape&& b) noexcept {
   num_loops_ = std::exchange(b.num_loops_, 0);
   prev_loop_.store(b.prev_loop_.exchange(0, std::memory_order_relaxed),
                    std::memory_order_relaxed);
@@ -277,10 +269,10 @@ EncodedS2LaxPolygonShape& EncodedS2LaxPolygonShape::operator=(
 
 bool EncodedS2LaxPolygonShape::Init(Decoder* decoder) {
   if (decoder->avail() < 1) return false;
-  uint8 version = decoder->get8();
+  uint8_t version = decoder->get8();
   if (version != kCurrentEncodingVersionNumber) return false;
 
-  uint32 num_loops;
+  uint32_t num_loops;
   if (!decoder->get_varint32(&num_loops)) return false;
   num_loops_ = num_loops;
 

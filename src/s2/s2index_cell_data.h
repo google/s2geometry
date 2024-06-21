@@ -17,6 +17,7 @@
 #define S2_S2INDEX_CELL_DATA_H_
 
 #include <atomic>
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -31,9 +32,8 @@
 #include "s2/s2shape_index.h"
 
 // A class for working with S2ShapeIndexCell data.  For larger queries like
-// validation, we often end up looking up edges multiple times, and sometimes
-// need to work with the edges themselves, their edge ids, or their chain and
-// offset.
+// validation, we often look up up edges multiple times, and sometimes need to
+// work with the edges themselves, their edge ids, or their chain and offset.
 //
 // S2ShapeIndexCell and the S2ClippedShape APIs fundamentally work with edge ids
 // and can't be re-worked without significant effort and loss of efficiency.
@@ -93,9 +93,9 @@ class S2IndexCellData {
       return x.v0 < y.v0 || (x.v0 == y.v0 && x.v1 < y.v1);
     }
 
-    int32 id;      // Id of the edge within its shape.
-    int32 chain;   // Id of the chain the edge belongs to.
-    int32 offset;  // Offset of the edge within the chain.
+    int32_t id;      // Id of the edge within its shape.
+    int32_t chain;   // Id of the chain the edge belongs to.
+    int32_t offset;  // Offset of the edge within the chain.
   };
 
   S2IndexCellData() = default;
@@ -113,6 +113,7 @@ class S2IndexCellData {
     cell_ = nullptr;
     edges_.clear();
     shape_regions_.clear();
+    dim_wanted_[0] = dim_wanted_[1] = dim_wanted_[2] = true;
   }
 
   // Returns true if a dimension (0, 1, or 2) is set to be decoded.
@@ -205,7 +206,8 @@ class S2IndexCellData {
   // REQUIRES: dim is a valid dimension (0, 1, or 2)
   absl::Span<const EdgeAndIdChain> dim_edges(int dim) const;
 
-  // Returns a view into the edges in the current cellfor a range of dimensions.
+  // Returns a view into the edges in the current cell for a range of
+  // dimensions.
   // REQUIRES: dimensions are valid (0, 1, or 2)
   absl::Span<const EdgeAndIdChain> dim_range_edges(int dim0, int dim1) const;
 
@@ -230,7 +232,7 @@ class S2IndexCellData {
   S2CellId cell_id_;
 
   // Computing the cell center and S2Cell can cost as much as looking up the
-  // edge themselves, so defer doing it until needed.  We want to be able to
+  // edges themselves, so defer doing it until needed.  We want to be able to
   // access the values through a const reference though, so we have to
   // synchronize access ourselves.
   //

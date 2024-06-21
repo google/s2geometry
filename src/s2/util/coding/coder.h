@@ -31,6 +31,7 @@
 #include "s2/base/types.h"
 #include "absl/base/attributes.h"
 #include "absl/base/macros.h"
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "absl/meta/type_traits.h"
 #include "absl/numeric/int128.h"
@@ -58,34 +59,90 @@ class Encoder {
   void reset(void* buf, size_t maxn);
   void clear();
 
-  // Encoding routines.  Note that these do not check bounds
-  void put8(unsigned char v) { writer().put8(v); }
-  void put16(uint16 v) { writer().put16(v); }
-  void put32(uint32 v) { writer().put32(v); }
-  void put64(uint64 v) { writer().put64(v); }
-  void put128(absl::uint128 v) { writer().put128(v); }
-  void putn(const void* mem, size_t n) { writer().putn(mem, n); }
+  // Encoding routines. Callers must know that the remaining buffer has
+  // sufficient size.
+  void put8(unsigned char v) {
+    ABSL_HARDENING_ASSERT(avail() >= sizeof(v));
+    writer().put8(v);
+  }
+  void put16(uint16_t v) {
+    ABSL_HARDENING_ASSERT(avail() >= sizeof(v));
+    writer().put16(v);
+  }
+  void put32(uint32_t v) {
+    ABSL_HARDENING_ASSERT(avail() >= sizeof(v));
+    writer().put32(v);
+  }
+  void put64(uint64_t v) {
+    ABSL_HARDENING_ASSERT(avail() >= sizeof(v));
+    writer().put64(v);
+  }
+  void put128(absl::uint128 v) {
+    ABSL_HARDENING_ASSERT(avail() >= sizeof(v));
+    writer().put128(v);
+  }
+  void putn(const void* mem, size_t n) {
+    ABSL_HARDENING_ASSERT(avail() >= n);
+    writer().putn(mem, n);
+  }
 
   // Put no more than n bytes, stopping when c is put.
-  void putcn(const void* mem, int c, size_t n) { writer().putcn(mem, c, n); }
+  void putcn(const void* mem, int c, size_t n) {
+    ABSL_HARDENING_ASSERT(avail() >= n);
+    writer().putcn(mem, c, n);
+  }
 
-  // put a c-string including \0.
-  void puts(const void* mem) { writer().puts(mem); }
-  // put a c-string without \0.
-  void puts_without_null(const char* mem) { writer().puts_no_null(mem); }
-  void putfloat(float f) { writer().put32(absl::bit_cast<uint32>(f)); }
-  void putdouble(double d) { writer().put64(absl::bit_cast<uint64>(d)); }
+  // Put a c-string including \0.
+  void puts(const void* mem) {
+    // No ABSL_HARDENING_ASSERT. This eventually calls memccpy which has size
+    // parameter.
+    writer().puts(mem);
+  }
+
+  // Put the contents of c-string up to but not including the terminating NUL
+  // character.
+  // `mem` must not be nullptr.
+  // `mem` must be a NUL-terminated string.
+  void puts_without_null(const char* mem) {
+    // No ABSL_HARDENING_ASSERT. The implementation stops writing at the end of
+    // the buffer.
+    writer().puts_no_null(mem);
+  }
+
+  void putfloat(float f) {
+    ABSL_HARDENING_ASSERT(avail() >= sizeof(uint32_t));
+    writer().put32(absl::bit_cast<uint32_t>(f));
+  }
+  void putdouble(double d) {
+    ABSL_HARDENING_ASSERT(avail() >= sizeof(uint64_t));
+    writer().put64(absl::bit_cast<uint64_t>(d));
+  }
 
   // Support for variable length encoding with 7 bits per byte
   // (these are just simple wrappers around the Varint module)
   static constexpr int kVarintMax32 = Varint::kMax32;
   static constexpr int kVarintMax64 = Varint::kMax64;
 
-  void put_varint32(uint32 v) { writer().put_varint32(v); }
-  void put_varint32_inline(uint32 v) { writer().put_varint32_inline(v); }
-  void put_varint64(uint64 v) { writer().put_varint64(v); }
-  static int varint32_length(uint32 v);  // Length of var encoding of "v"
-  static int varint64_length(uint64 v);  // Length of var encoding of "v"
+  void put_varint32(uint32_t v) {
+    // The majority of the time we can avoid computing Length32().
+    ABSL_HARDENING_ASSERT(avail() >= static_cast<size_t>(Varint::kMax32) ||
+                          avail() >= static_cast<size_t>(Varint::Length32(v)));
+    writer().put_varint32(v);
+  }
+  void put_varint32_inline(uint32_t v) {
+    // The majority of the time we can avoid computing Length32().
+    ABSL_HARDENING_ASSERT(avail() >= static_cast<size_t>(Varint::kMax32) ||
+                          avail() >= static_cast<size_t>(Varint::Length32(v)));
+    writer().put_varint32_inline(v);
+  }
+  void put_varint64(uint64_t v) {
+    // The majority of the time we can avoid computing Length64().
+    ABSL_HARDENING_ASSERT(avail() >= static_cast<size_t>(Varint::kMax64) ||
+                          avail() >= static_cast<size_t>(Varint::Length64(v)));
+    writer().put_varint64(v);
+  }
+  static int varint32_length(uint32_t v);  // Length of var encoding of "v"
+  static int varint64_length(uint64_t v);  // Length of var encoding of "v"
 
   // The fast implementation of the code below with boundary checks.
   //   uint64 val;
@@ -129,11 +186,19 @@ class Encoder {
 
   // Advances the write pointer by "N" bytes. It returns the position of the
   // pointer before the skip (in other words start of the skipped bytes).
-  char* skip(ptrdiff_t N) { return writer().skip(N); }
+  char* skip(ptrdiff_t N) {
+    // Negative values of N are allowed. Ensure the pointer lands within the
+    // original bounds.
+    ABSL_HARDENING_ASSERT(static_cast<ptrdiff_t>(length()) + N >= 0 &&
+                          static_cast<ptrdiff_t>(avail()) >= N);
+    return writer().skip(N); }
 
   // REQUIRES: length() >= N
   // Removes the last N bytes out of the encoded buffer
-  void RemoveLast(size_t N) { writer().skip(-static_cast<ptrdiff_t>(N)); }
+  void RemoveLast(size_t N) {
+    ABSL_HARDENING_ASSERT(length() >= N);
+    writer().skip(-static_cast<ptrdiff_t>(N));
+  }
 
   // REQUIRES: length() >= N
   // Removes the last length()-N bytes to make the encoded buffer have length N
@@ -159,9 +224,9 @@ class Encoder {
     char* skip(ptrdiff_t N) { return std::exchange(p, p + N); }
 
     void put8(unsigned char v) { *p++ = v; }
-    void put16(uint16 v) { LittleEndian::Store16(skip(2), v); }
-    void put32(uint32 v) { LittleEndian::Store32(skip(4), v); }
-    void put64(uint64 v) { LittleEndian::Store64(skip(8), v); }
+    void put16(uint16_t v) { LittleEndian::Store16(skip(2), v); }
+    void put32(uint32_t v) { LittleEndian::Store32(skip(4), v); }
+    void put64(uint64_t v) { LittleEndian::Store64(skip(8), v); }
     void put128(absl::uint128 v) { LittleEndian::Store128(skip(16), v); }
     void putn(const void* src, size_t n) { memcpy(skip(n), src, n); }
     void putcn(const void* src, int c, size_t n) {
@@ -174,13 +239,13 @@ class Encoder {
       auto* l = reinterpret_cast<char*>(enc->limit_);
       while (*mem != '\0' && p < l) *p++ = *mem++;
     }
-    ABSL_ATTRIBUTE_ALWAYS_INLINE void put_varint32(uint32 v) {
+    ABSL_ATTRIBUTE_ALWAYS_INLINE void put_varint32(uint32_t v) {
       p = Varint::Encode32(p, v);
     }
-    ABSL_ATTRIBUTE_ALWAYS_INLINE void put_varint32_inline(uint32 v) {
+    ABSL_ATTRIBUTE_ALWAYS_INLINE void put_varint32_inline(uint32_t v) {
       p = Varint::Encode32Inline(p, v);
     }
-    ABSL_ATTRIBUTE_ALWAYS_INLINE void put_varint64(uint64 v) {
+    ABSL_ATTRIBUTE_ALWAYS_INLINE void put_varint64(uint64_t v) {
       p = Varint::Encode64(p, v);
     }
   };
@@ -230,11 +295,12 @@ class Decoder {
   Decoder(const void* buf, size_t maxn);
   void reset(const void* buf, size_t maxn);
 
-  // Decoding routines.  Note that these do not check bounds
+  // Decoding routines.  Callers must know that the remaining buffer has
+  // sufficient size.
   unsigned char get8();
-  uint16 get16();
-  uint32 get32();
-  uint64 get64();
+  uint16_t get16();
+  uint32_t get32();
+  uint64_t get64();
   absl::uint128 get128();
   float  getfloat();
   double getdouble();
@@ -248,8 +314,8 @@ class Decoder {
   unsigned char const* ptr() const;  // Return ptr to current position in buffer
 
   // "get_varint" actually checks bounds
-  bool get_varint32(uint32* v);
-  bool get_varint64(uint64* v);
+  bool get_varint32(uint32_t* v);
+  bool get_varint64(uint64_t* v);
 
   size_t pos() const;
   // Return number of bytes decoded so far
@@ -321,7 +387,7 @@ inline size_t Encoder::avail() const {
 // Template parameter N specifies the number of bytes to copy. Passing
 // constant size results in optimized code from memcpy for the size.
 template <size_t N>
-void CopyAndAdvance(const uint8** src, uint8** dst) {
+void CopyAndAdvance(const uint8_t** src, uint8_t** dst) {
   memcpy(*dst, *src, N);
   *dst += N;
   *src += N;
@@ -475,6 +541,10 @@ inline void Decoder::gets(void* dst, size_t n) {
 }
 
 inline const char* Decoder::skip(ptrdiff_t n) {
+  // Negative values of n are allowed. Ensure the pointer lands within the
+  // original bounds.
+  ABSL_HARDENING_ASSERT(static_cast<ptrdiff_t>(avail()) >= n &&
+                        static_cast<ptrdiff_t>(pos()) + n >= 0);
   auto* start = reinterpret_cast<const char*>(buf_);
   buf_ += n;
   return start;
@@ -498,30 +568,35 @@ inline void DecoderExtensions::FillArray(Decoder* array, int num_decoders) {
 }
 
 inline unsigned char Decoder::get8() {
+  ABSL_HARDENING_ASSERT(avail() >= sizeof(unsigned char));
   const unsigned char v = *buf_;
   buf_ += sizeof(v);
   return v;
 }
 
-inline uint16 Decoder::get16() {
-  const uint16 v = LittleEndian::Load16(buf_);
+inline uint16_t Decoder::get16() {
+  ABSL_HARDENING_ASSERT(avail() >= sizeof(uint16_t));
+  const uint16_t v = LittleEndian::Load16(buf_);
   buf_ += sizeof(v);
   return v;
 }
 
-inline uint32 Decoder::get32() {
-  const uint32 v = LittleEndian::Load32(buf_);
+inline uint32_t Decoder::get32() {
+  ABSL_HARDENING_ASSERT(avail() >= sizeof(uint32_t));
+  const uint32_t v = LittleEndian::Load32(buf_);
   buf_ += sizeof(v);
   return v;
 }
 
-inline uint64 Decoder::get64() {
-  const uint64 v = LittleEndian::Load64(buf_);
+inline uint64_t Decoder::get64() {
+  ABSL_HARDENING_ASSERT(avail() >= sizeof(uint64_t));
+  const uint64_t v = LittleEndian::Load64(buf_);
   buf_ += sizeof(v);
   return v;
 }
 
 inline absl::uint128 Decoder::get128() {
+  ABSL_HARDENING_ASSERT(avail() >= sizeof(absl::uint128));
   const absl::uint128 v = LittleEndian::Load128(buf_);
   buf_ += sizeof(v);
   return v;
@@ -535,7 +610,7 @@ inline double Decoder::getdouble() {
   return absl::bit_cast<double>(get64());
 }
 
-inline bool Decoder::get_varint32(uint32* v) {
+inline bool Decoder::get_varint32(uint32_t* v) {
   const char* const r =
       Varint::Parse32WithLimit(reinterpret_cast<const char*>(buf_),
                                reinterpret_cast<const char*>(limit_), v);
@@ -546,7 +621,7 @@ inline bool Decoder::get_varint32(uint32* v) {
   return true;
 }
 
-inline bool Decoder::get_varint64(uint64* v) {
+inline bool Decoder::get_varint64(uint64_t* v) {
   const char* const r =
       Varint::Parse64WithLimit(reinterpret_cast<const char*>(buf_),
                                reinterpret_cast<const char*>(limit_), v);

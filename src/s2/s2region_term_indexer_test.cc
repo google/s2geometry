@@ -26,16 +26,22 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/string_view.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2latlng.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
 
+using absl::string_view;
 using std::string;
 using std::vector;
 
@@ -45,7 +51,8 @@ namespace {
 
 enum class QueryType { POINT, CAP };
 
-void TestRandomCaps(const S2RegionTermIndexer::Options& options,
+void TestRandomCaps(absl::BitGenRef bitgen,
+                    const S2RegionTermIndexer::Options& options,
                     QueryType query_type) {
   // This function creates an index consisting either of points (if
   // options.index_contains_points_only() is true) or S2Caps of random size.
@@ -63,17 +70,17 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     S2Cap cap;
     vector<string> terms;
     if (options.index_contains_points_only()) {
-      cap = S2Cap::FromPoint(S2Testing::RandomPoint());
+      cap = S2Cap::FromPoint(s2random::Point(bitgen));
       terms = indexer.GetIndexTerms(cap.center(), "");
     } else {
-      cap = S2Testing::GetRandomCap(
-          0.3 * S2Cell::AverageArea(options.max_level()),
-          4.0 * S2Cell::AverageArea(options.min_level()));
+      cap =
+          s2random::Cap(bitgen, 0.3 * S2Cell::AverageArea(options.max_level()),
+                        4.0 * S2Cell::AverageArea(options.min_level()));
       terms = indexer.GetIndexTerms(cap, "");
     }
     caps.push_back(cap);
     coverings.push_back(coverer.GetCovering(cap));
-    for (const string& term : terms) {
+    for (string_view term : terms) {
       index[term].push_back(i);
     }
     index_terms += terms.size();
@@ -84,12 +91,12 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
     S2Cap cap;
     vector<string> terms;
     if (query_type == QueryType::POINT) {
-      cap = S2Cap::FromPoint(S2Testing::RandomPoint());
+      cap = S2Cap::FromPoint(s2random::Point(bitgen));
       terms = indexer.GetQueryTerms(cap.center(), "");
     } else {
-      cap = S2Testing::GetRandomCap(
-          0.3 * S2Cell::AverageArea(options.max_level()),
-          4.0 * S2Cell::AverageArea(options.min_level()));
+      cap =
+          s2random::Cap(bitgen, 0.3 * S2Cell::AverageArea(options.max_level()),
+                        4.0 * S2Cell::AverageArea(options.min_level()));
       terms = indexer.GetQueryTerms(cap, "");
     }
     // Compute the expected results of the S2Cell query by brute force.
@@ -100,7 +107,7 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
         expected.insert(j);
       }
     }
-    for (const string& term : terms) {
+    for (string_view term : terms) {
       actual.insert(index[term].begin(), index[term].end());
     }
     EXPECT_EQ(expected, actual);
@@ -115,42 +122,62 @@ void TestRandomCaps(const S2RegionTermIndexer::Options& options,
 // and indexing regions vs. only points.
 
 TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTime) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INDEX_REGIONS_QUERY_REGIONS_OPTIMIZE_TIME",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(false);       // Optimize for time.
   options.set_min_level(0);                    // Use face cells.
   options.set_max_level(16);
   options.set_max_cells(20);
-  TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(bitgen, options, QueryType::CAP);
 }
 
 TEST(S2RegionTermIndexer, IndexRegionsQueryPointsOptimizeTime) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INDEX_REGIONS_QUERY_POINTS_OPTIMIZE_TIME",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(false);       // Optimize for time.
   options.set_min_level(0);                    // Use face cells.
   options.set_max_level(16);
   options.set_max_cells(20);
-  TestRandomCaps(options, QueryType::POINT);
+  TestRandomCaps(bitgen, options, QueryType::POINT);
 }
 
 TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeTimeWithLevelMod) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INDEX_REGIONS_QUERY_REGIONS_OPTIMIZE_TIME_WITH_LEVEL_MOD",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(false);       // Optimize for time.
   options.set_min_level(6);                    // Constrain min/max levels.
   options.set_max_level(12);
   options.set_level_mod(3);
-  TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(bitgen, options, QueryType::CAP);
 }
 
 TEST(S2RegionTermIndexer, IndexRegionsQueryRegionsOptimizeSpace) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INDEX_REGIONS_QUERY_REGIONS_OPTIMIZE_SPACE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(true);        // Optimize for space.
   options.set_min_level(4);
   options.set_max_level(S2CellId::kMaxLevel);  // Use leaf cells.
   options.set_max_cells(8);
-  TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(bitgen, options, QueryType::CAP);
 }
 
 TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeTime) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INDEX_POINTS_QUERY_REGIONS_OPTIMIZE_TIME",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(false);       // Optimize for time.
   options.set_min_level(0);                    // Use face cells.
@@ -158,15 +185,19 @@ TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeTime) {
   options.set_level_mod(2);
   options.set_max_cells(20);
   options.set_index_contains_points_only(true);
-  TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(bitgen, options, QueryType::CAP);
 }
 
 TEST(S2RegionTermIndexer, IndexPointsQueryRegionsOptimizeSpace) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INDEX_POINTS_QUERY_REGIONS_OPTIMIZE_SPACE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   S2RegionTermIndexer::Options options;
   options.set_optimize_for_space(true);        // Optimize for space.
   options.set_index_contains_points_only(true);
   // Use default parameter values.
-  TestRandomCaps(options, QueryType::CAP);
+  TestRandomCaps(bitgen, options, QueryType::CAP);
 }
 
 TEST(S2RegionTermIndexer, MarkerCharacter) {
@@ -197,13 +228,17 @@ TEST(S2RegionTermIndexer, MaxLevelSetLoosely) {
   options.set_max_level(20);
   S2RegionTermIndexer indexer2(options);
 
-  S2Point point = S2Testing::RandomPoint();
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "MAX_LEVEL_SET_LOOSELY",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
+  S2Point point = s2random::Point(bitgen);
   EXPECT_EQ(indexer1.GetIndexTerms(point, ""),
             indexer2.GetIndexTerms(point, ""));
   EXPECT_EQ(indexer1.GetQueryTerms(point, ""),
             indexer2.GetQueryTerms(point, ""));
 
-  S2Cap cap = S2Testing::GetRandomCap(0.0, 1.0);  // Area range.
+  S2Cap cap = s2random::Cap(bitgen, 0.0, 1.0);  // Area range.
   EXPECT_EQ(indexer1.GetIndexTerms(cap, ""),
             indexer2.GetIndexTerms(cap, ""));
   EXPECT_EQ(indexer1.GetQueryTerms(cap, ""),

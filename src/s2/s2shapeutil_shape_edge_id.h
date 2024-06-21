@@ -20,22 +20,21 @@
 
 #include <cstddef>
 
+#include <cstdint>
 #include <iostream>
 #include <ostream>
-
-#include "s2/base/types.h"
 
 namespace s2shapeutil {
 
 // ShapeEdgeId is a unique identifier for an edge within an S2ShapeIndex,
 // consisting of a (shape_id, edge_id) pair.  It is similar to
-// std::pair<int32, int32> except that it has named fields.
+// std::pair<int32_t, int32_t> except that it has named fields.
 // It should be passed and returned by value.
 struct ShapeEdgeId {
  public:
-  int32 shape_id, edge_id;
+  int32_t shape_id, edge_id;
   ShapeEdgeId() : shape_id(-1), edge_id(-1) {}
-  ShapeEdgeId(int32 _shape_id, int32 _edge_id);
+  ShapeEdgeId(int32_t _shape_id, int32_t _edge_id);
 
   bool operator==(ShapeEdgeId other) const;
   bool operator!=(ShapeEdgeId other) const;
@@ -54,7 +53,7 @@ std::ostream& operator<<(std::ostream& os, ShapeEdgeId id);
 
 //////////////////   Implementation details follow   ////////////////////
 
-inline ShapeEdgeId::ShapeEdgeId(int32 _shape_id, int32 _edge_id)
+inline ShapeEdgeId::ShapeEdgeId(int32_t _shape_id, int32_t _edge_id)
     : shape_id(_shape_id), edge_id(_edge_id) {}
 
 inline bool ShapeEdgeId::operator==(ShapeEdgeId other) const {

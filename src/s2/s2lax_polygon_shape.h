@@ -24,7 +24,6 @@
 #include <memory>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/base/attributes.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
@@ -90,11 +89,11 @@ class S2LaxPolygonShape : public S2Shape {
   enum : TypeTag { kTypeTag = 5 };
 
   // Constructs an empty polygon.
-  S2LaxPolygonShape() : num_loops_(0), num_vertices_(0) {}
+  S2LaxPolygonShape() = default;
 
   S2LaxPolygonShape(const S2LaxPolygonShape&) = delete;
-  S2LaxPolygonShape(S2LaxPolygonShape&& b);
-  S2LaxPolygonShape& operator=(S2LaxPolygonShape&& b);
+  S2LaxPolygonShape(S2LaxPolygonShape&& b) noexcept;
+  S2LaxPolygonShape& operator=(S2LaxPolygonShape&& b) noexcept;
 
   // Constructs an S2LaxPolygonShape from the given vertex loops.
   using Loop = std::vector<S2Point>;
@@ -160,7 +159,7 @@ class S2LaxPolygonShape : public S2Shape {
  private:
   // Note that the parent class has a 4-byte S2Shape::id_ field so there is no
   // wasted space in the following layout.
-  int32 num_loops_;
+  int32_t num_loops_ = 0;
 
   // The loop that contained the edge returned by the previous call to the
   // edge() method.  This is used as a hint to speed up edge location when
@@ -168,12 +167,12 @@ class S2LaxPolygonShape : public S2Shape {
   // this provides can speed up chain position lookup by 1.7-4.7x.
   mutable std::atomic<int> prev_loop_{0};
 
-  int32 num_vertices_;
+  int32_t num_vertices_ = 0;
   std::unique_ptr<S2Point[]> vertices_;
 
   // When num_loops_ > 1, stores an array of size (num_loops_ + 1) where
   // element "i" represents the total number of vertices in loops 0..i-1.
-  std::unique_ptr<uint32[]> loop_starts_;
+  std::unique_ptr<uint32_t[]> loop_starts_;
 };
 
 // Exactly like S2LaxPolygonShape, except that the vertices are kept in an
@@ -188,8 +187,8 @@ class EncodedS2LaxPolygonShape : public S2Shape {
   // Constructs an uninitialized object; requires Init() to be called.
   EncodedS2LaxPolygonShape() = default;
 
-  EncodedS2LaxPolygonShape(EncodedS2LaxPolygonShape&&);
-  EncodedS2LaxPolygonShape& operator=(EncodedS2LaxPolygonShape&&);
+  EncodedS2LaxPolygonShape(EncodedS2LaxPolygonShape&&) noexcept;
+  EncodedS2LaxPolygonShape& operator=(EncodedS2LaxPolygonShape&&) noexcept;
 
   // Initializes an EncodedS2LaxPolygonShape.
   //
@@ -221,7 +220,7 @@ class EncodedS2LaxPolygonShape : public S2Shape {
   TypeTag type_tag() const override { return kTypeTag; }
 
  private:
-  int32 num_loops_;
+  int32_t num_loops_;
 
   // The loop that contained the edge returned by the previous call to the
   // edge() method.  This is used as a hint to speed up edge location when
@@ -229,7 +228,7 @@ class EncodedS2LaxPolygonShape : public S2Shape {
   mutable std::atomic<int> prev_loop_{0};
 
   s2coding::EncodedS2PointVector vertices_;
-  s2coding::EncodedUintVector<uint32> loop_starts_;
+  s2coding::EncodedUintVector<uint32_t> loop_starts_;
 };
 
 
@@ -257,21 +256,21 @@ inline S2Shape::ChainPosition S2LaxPolygonShape::chain_position(int e) const {
     return ChainPosition(0, e);
   }
   // Test if this edge belongs to the loop returned by the previous call.
-  const uint32* start =
+  const uint32_t* start =
       &loop_starts_[0] + prev_loop_.load(std::memory_order_relaxed);
-  if (static_cast<uint32>(e) >= start[0] && static_cast<uint32>(e) < start[1]) {
+  if (static_cast<uint32_t>(e) >= start[0] && static_cast<uint32_t>(e) < start[1]) {
     // This edge belongs to the same loop as the previous call.
   } else {
-    if (static_cast<uint32>(e) == start[1]) {
+    if (static_cast<uint32_t>(e) == start[1]) {
       // This is the edge immediately following the previous loop.
       do {
         ++start;
-      } while (static_cast<uint32>(e) == start[1]);
+      } while (static_cast<uint32_t>(e) == start[1]);
     } else {
       start = &loop_starts_[0];
       constexpr int kMaxLinearSearchLoops = 12;  // From benchmarks.
       if (num_loops() <= kMaxLinearSearchLoops) {
-        while (start[1] <= static_cast<uint32>(e)) ++start;
+        while (start[1] <= static_cast<uint32_t>(e)) ++start;
       } else {
         start = std::upper_bound(start + 1, start + num_loops(), e) - 1;
       }
@@ -304,20 +303,20 @@ inline S2Shape::ChainPosition EncodedS2LaxPolygonShape::chain_position(int e)
   }
   constexpr int kMaxLinearSearchLoops = 12;  // From benchmarks.
   int i = prev_loop_.load(std::memory_order_relaxed);
-  if (i == 0 && static_cast<uint32>(e) < loop_starts_[1]) {
+  if (i == 0 && static_cast<uint32_t>(e) < loop_starts_[1]) {
     return ChainPosition(0, e);  // Optimization for first loop.
   }
-  if (static_cast<uint32>(e) >= loop_starts_[i] &&
-      static_cast<uint32>(e) < loop_starts_[i + 1]) {
+  if (static_cast<uint32_t>(e) >= loop_starts_[i] &&
+      static_cast<uint32_t>(e) < loop_starts_[i + 1]) {
     // This edge belongs to the same loop as the previous call.
   } else {
-    if (static_cast<uint32>(e) == loop_starts_[i + 1]) {
+    if (static_cast<uint32_t>(e) == loop_starts_[i + 1]) {
       // This is the edge immediately following the previous loop.
       do {
         ++i;
-      } while (static_cast<uint32>(e) == loop_starts_[i + 1]);
+      } while (static_cast<uint32_t>(e) == loop_starts_[i + 1]);
     } else if (num_loops() <= kMaxLinearSearchLoops) {
-      for (i = 0; loop_starts_[i + 1] <= static_cast<uint32>(e); ++i) {
+      for (i = 0; loop_starts_[i + 1] <= static_cast<uint32_t>(e); ++i) {
       }
     } else {
       i = loop_starts_.lower_bound(e + 1) - 1;

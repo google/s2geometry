@@ -27,12 +27,10 @@
 #include <limits>
 #include <string>
 
-#include "s2/base/types.h"
 #include "absl/base/macros.h"
 #include "absl/container/fixed_array.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
-#include "absl/numeric/int128.h"
 #include <openssl/bn.h>
 #include <openssl/crypto.h>  // for OPENSSL_free
 
@@ -43,19 +41,18 @@ using std::min;
 const int ExactFloat::kMinExp;
 const int ExactFloat::kMaxExp;
 const int ExactFloat::kMaxPrec;
-const int32 ExactFloat::kExpNaN;
-const int32 ExactFloat::kExpInfinity;
-const int32 ExactFloat::kExpZero;
+const int32_t ExactFloat::kExpNaN;
+const int32_t ExactFloat::kExpInfinity;
+const int32_t ExactFloat::kExpZero;
 const int ExactFloat::kDoubleMantissaBits;
 
 // To simplify the overflow/underflow logic, we limit the exponent and
 // precision range so that (2 * bn_exp_) does not overflow an "int".  We take
 // advantage of this, for example, by only checking for overflow/underflow
 // *after* multiplying two numbers.
-static_assert(
-    ExactFloat::kMaxExp <= INT_MAX / 2 &&
-    ExactFloat::kMinExp - ExactFloat::kMaxPrec >= INT_MIN / 2,
-    "exactfloat exponent might overflow");
+static_assert(ExactFloat::kMaxExp <= INT_MAX / 2 &&
+                  ExactFloat::kMinExp - ExactFloat::kMaxPrec >= INT_MIN / 2,
+              "exactfloat exponent might overflow");
 
 // We define a few simple extensions to the OpenSSL's BIGNUM interface.
 // In some cases these depend on BIGNUM internal fields, so they might
@@ -64,14 +61,14 @@ static_assert(
 
 #ifdef OPENSSL_IS_BORINGSSL
 
-inline static void BN_ext_set_uint64(BIGNUM* bn, uint64 v) {
+inline static void BN_ext_set_uint64(BIGNUM* bn, uint64_t v) {
   ABSL_CHECK(BN_set_u64(bn, v));
 }
 
 // Return the absolute value of a BIGNUM as a 64-bit unsigned integer.
 // Requires that BIGNUM fits into 64 bits.
-inline static uint64 BN_ext_get_uint64(const BIGNUM* bn) {
-  uint64 u64;
+inline static uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
+  uint64_t u64;
   if (!BN_get_u64(bn, &u64)) {
     ABSL_DCHECK(false) << "BN has " << BN_num_bits(bn) << " bits";
     return 0;
@@ -86,21 +83,21 @@ static int BN_ext_count_low_zero_bits(const BIGNUM* bn) {
 #else  // !defined(OPENSSL_IS_BORINGSSL)
 
 // Set a BIGNUM to the given unsigned 64-bit value.
-inline static void BN_ext_set_uint64(BIGNUM* bn, uint64 v) {
+inline static void BN_ext_set_uint64(BIGNUM* bn, uint64_t v) {
 #if BN_BITS2 == 64
   ABSL_CHECK(BN_set_word(bn, v));
 #else
   static_assert(BN_BITS2 == 32, "at least 32 bit openssl build needed");
-  ABSL_CHECK(BN_set_word(bn, static_cast<uint32>(v >> 32)));
+  ABSL_CHECK(BN_set_word(bn, static_cast<uint32_t>(v >> 32)));
   ABSL_CHECK(BN_lshift(bn, bn, 32));
-  ABSL_CHECK(BN_add_word(bn, static_cast<uint32>(v)));
+  ABSL_CHECK(BN_add_word(bn, static_cast<uint32_t>(v)));
 #endif
 }
 
 // Return the absolute value of a BIGNUM as a 64-bit unsigned integer.
 // Requires that BIGNUM fits into 64 bits.
-inline static uint64 BN_ext_get_uint64(const BIGNUM* bn) {
-  ABSL_DCHECK_LE(BN_num_bytes(bn), sizeof(uint64));
+inline static uint64_t BN_ext_get_uint64(const BIGNUM* bn) {
+  ABSL_DCHECK_LE(BN_num_bytes(bn), sizeof(uint64_t));
 #if BN_BITS2 == 64
   return BN_get_word(bn);
 #else
@@ -108,7 +105,7 @@ inline static uint64 BN_ext_get_uint64(const BIGNUM* bn) {
   if (bn->top == 0) return 0;
   if (bn->top == 1) return BN_get_word(bn);
   ABSL_DCHECK_EQ(bn->top, 2);
-  return (static_cast<uint64>(bn->d[1]) << 32) + bn->d[0];
+  return (static_cast<uint64_t>(bn->d[1]) << 32) + bn->d[0];
 #endif
 }
 
@@ -175,7 +172,7 @@ ExactFloat::ExactFloat(double v) {
     // "1") then the result is always an integer.
     int exp;
     double f = frexp(fabs(v), &exp);
-    uint64 m = static_cast<uint64>(ldexp(f, kDoubleMantissaBits));
+    uint64_t m = static_cast<uint64_t>(ldexp(f, kDoubleMantissaBits));
     BN_ext_set_uint64(bn_.get(), m);
     bn_exp_ = exp - kDoubleMantissaBits;
     Canonicalize();
@@ -192,8 +189,7 @@ ExactFloat::ExactFloat(int v) {
 }
 
 ExactFloat::ExactFloat(const ExactFloat& b)
-    : sign_(b.sign_),
-      bn_exp_(b.bn_exp_) {
+    : sign_(b.sign_), bn_exp_(b.bn_exp_) {
   BN_copy(bn_.get(), b.bn_.get());
 }
 
@@ -215,9 +211,7 @@ ExactFloat ExactFloat::NaN() {
   return r;
 }
 
-int ExactFloat::prec() const {
-  return BN_num_bits(bn_.get());
-}
+int ExactFloat::prec() const { return BN_num_bits(bn_.get()); }
 
 int ExactFloat::exp() const {
   ABSL_DCHECK(is_normal());
@@ -261,7 +255,7 @@ double ExactFloat::ToDoubleHelper() const {
     }
     return std::copysign(std::numeric_limits<double>::quiet_NaN(), sign_);
   }
-  uint64 d_mantissa = BN_ext_get_uint64(bn_.get());
+  uint64_t d_mantissa = BN_ext_get_uint64(bn_.get());
   // We rely on ldexp() to handle overflow and underflow.  (It will return a
   // signed zero or infinity if the result is too small or too large.)
   return sign_ * ldexp(static_cast<double>(d_mantissa), bn_exp_);
@@ -312,12 +306,10 @@ ExactFloat ExactFloat::RoundToPowerOf2(int bit_exp, RoundingMode mode) const {
     // Never increment.
   } else if (mode == kRoundTiesAwayFromZero) {
     // Increment if the highest discarded bit is 1.
-    if (BN_is_bit_set(bn_.get(), shift - 1))
-      increment = true;
+    if (BN_is_bit_set(bn_.get(), shift - 1)) increment = true;
   } else if (mode == kRoundAwayFromZero) {
     // Increment unless all discarded bits are zero.
-    if (BN_ext_count_low_zero_bits(bn_.get()) < shift)
-      increment = true;
+    if (BN_ext_count_low_zero_bits(bn_.get()) < shift) increment = true;
   } else {
     ABSL_DCHECK_EQ(mode, kRoundTiesToEven);
     // Let "w/xyz" denote a mantissa where "w" is the lowest kept bit and
@@ -365,8 +357,8 @@ int ExactFloat::NumSignificantDigitsForPrec(int prec) {
 static const int kMinSignificantDigits = 10;
 
 std::string ExactFloat::ToString() const {
-  int max_digits = max(kMinSignificantDigits,
-                       NumSignificantDigitsForPrec(prec()));
+  int max_digits =
+      max(kMinSignificantDigits, NumSignificantDigitsForPrec(prec()));
   return ToStringWithMaxDigits(max_digits);
 }
 
@@ -428,7 +420,10 @@ std::string ExactFloat::ToStringWithMaxDigits(int max_digits) const {
 static void IncrementDecimalDigits(std::string* digits) {
   std::string::iterator pos = digits->end();
   while (--pos >= digits->begin()) {
-    if (*pos < '9') { ++*pos; return; }
+    if (*pos < '9') {
+      ++*pos;
+      return;
+    }
     *pos = '0';
   }
   digits->insert(0, "1");
@@ -472,7 +467,7 @@ int ExactFloat::GetDecimalDigits(int max_digits, std::string* digits) const {
     // more, unless all other discarded digits are zero in which case we round
     // up only if the lowest kept digit is odd.
     if (all_digits[max_digits] >= '5' &&
-        ((all_digits[max_digits-1] & 1) == 1 ||
+        ((all_digits[max_digits - 1] & 1) == 1 ||
          strpbrk(all_digits + max_digits + 1, "123456789") != nullptr)) {
       // This can increase the number of digits by 1, but in that case at
       // least one trailing zero will be stripped off below.
@@ -513,9 +508,7 @@ ExactFloat& ExactFloat::operator=(const ExactFloat& b) {
   return *this;
 }
 
-ExactFloat ExactFloat::operator-() const {
-  return CopyWithSign(-sign_);
-}
+ExactFloat ExactFloat::operator-() const { return CopyWithSign(-sign_); }
 
 ExactFloat operator+(const ExactFloat& a, const ExactFloat& b) {
   return ExactFloat::SignedSum(a.sign_, &a, b.sign_, &b);
@@ -525,8 +518,8 @@ ExactFloat operator-(const ExactFloat& a, const ExactFloat& b) {
   return ExactFloat::SignedSum(a.sign_, &a, -b.sign_, &b);
 }
 
-ExactFloat ExactFloat::SignedSum(int a_sign, const ExactFloat* a,
-                                 int b_sign, const ExactFloat* b) {
+ExactFloat ExactFloat::SignedSum(int a_sign, const ExactFloat* a, int b_sign,
+                                 const ExactFloat* b) {
   if (!a->is_normal() || !b->is_normal()) {
     // Handle zero, infinity, and NaN according to IEEE 754-2008.
     if (a->is_nan()) return *a;
@@ -669,8 +662,8 @@ bool ExactFloat::UnsignedLess(const ExactFloat& b) const {
   if (cmp != 0) return cmp < 0;
   // Otherwise shift one of the two values so that they both have the same
   // bn_exp_ and then compare the mantissas.
-  return (bn_exp_ >= b.bn_exp_ ?
-          ScaleAndCompare(b) < 0 : b.ScaleAndCompare(*this) > 0);
+  return (bn_exp_ >= b.bn_exp_ ? ScaleAndCompare(b) < 0
+                               : b.ScaleAndCompare(*this) > 0);
 }
 
 bool operator<(const ExactFloat& a, const ExactFloat& b) {
@@ -684,13 +677,9 @@ bool operator<(const ExactFloat& a, const ExactFloat& b) {
   return (a.sign_ > 0) ? a.UnsignedLess(b) : b.UnsignedLess(a);
 }
 
-ExactFloat fabs(const ExactFloat& a) {
-  return abs(a);
-}
+ExactFloat fabs(const ExactFloat& a) { return abs(a); }
 
-ExactFloat abs(const ExactFloat& a) {
-  return a.CopyWithSign(+1);
-}
+ExactFloat abs(const ExactFloat& a) { return a.CopyWithSign(+1); }
 
 ExactFloat fmax(const ExactFloat& a, const ExactFloat& b) {
   // If one argument is NaN, return the other argument.
@@ -742,10 +731,10 @@ ExactFloat rint(const ExactFloat& a) {
 template <class T>
 T ExactFloat::ToInteger(RoundingMode mode) const {
   using std::numeric_limits;
-  static_assert(sizeof(T) <= sizeof(uint64), "max 64 bits supported");
+  static_assert(sizeof(T) <= sizeof(uint64_t), "max 64 bits supported");
   static_assert(numeric_limits<T>::is_signed, "only signed types supported");
-  const int64 kMinValue = numeric_limits<T>::min();
-  const int64 kMaxValue = numeric_limits<T>::max();
+  const int64_t kMinValue = numeric_limits<T>::min();
+  const int64_t kMaxValue = numeric_limits<T>::max();
 
   ExactFloat r = RoundToPowerOf2(0, mode);
   if (r.is_nan()) return kMaxValue;
@@ -753,7 +742,7 @@ T ExactFloat::ToInteger(RoundingMode mode) const {
   if (!r.is_inf()) {
     // If the unsigned value has more than 63 bits it is always clamped.
     if (r.exp() < 64) {
-      int64 value = BN_ext_get_uint64(r.bn_.get()) << r.bn_exp_;
+      int64_t value = BN_ext_get_uint64(r.bn_.get()) << r.bn_exp_;
       if (r.sign_ < 0) value = -value;
       return max(kMinValue, min(kMaxValue, value));
     }

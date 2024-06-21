@@ -17,20 +17,23 @@
 
 #include <cstdint>
 
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/container/btree_map.h"
-#include "absl/flags/flag.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
 #include "absl/meta/type_traits.h"
+#include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 #include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
@@ -48,6 +51,7 @@
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
+#include "s2/s2random.h"
 #include "s2/s2region_coverer.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index_region.h"
@@ -60,9 +64,9 @@ using ::std::unique_ptr;
 using ::std::vector;
 using ::testing::Eq;
 
-absl::btree_map<S2CellId, int64> SumToRoot(
-    const absl::btree_map<S2CellId, int64>& bases) {
-  absl::btree_map<S2CellId, int64> sum;
+absl::btree_map<S2CellId, int64_t> SumToRoot(
+    const absl::btree_map<S2CellId, int64_t>& bases) {
+  absl::btree_map<S2CellId, int64_t> sum;
 
   for (const auto& [cell, weight] : bases) {
     for (int level = 0; level <= cell.level(); ++level) {
@@ -77,8 +81,28 @@ absl::btree_map<S2CellId, int64> SumToRoot(
   return sum;
 }
 
-bool ExpectDecodedTreesEqual(const absl::btree_map<S2CellId, int64>& got,
-                             const absl::btree_map<S2CellId, int64>& wanted) {
+// Returns a vector of S2CellIds from a density tree.  If only_leaves is true,
+// only returns leaf cells.
+std::vector<S2CellId> TreeCells(const S2DensityTree& tree,
+                                bool only_leaves = false) {
+  std::vector<S2CellId> cell_ids;
+
+  S2Error error;
+  tree.VisitCells(
+      [&](S2CellId id, const S2DensityTree::Cell& cell) {
+        if (!only_leaves || !cell.has_children()) {
+          cell_ids.emplace_back(id);
+        }
+        return S2DensityTree::VisitAction::ENTER_CELL;
+      },
+      &error);
+  EXPECT_TRUE(error.ok());
+
+  return cell_ids;
+};
+
+bool ExpectDecodedTreesEqual(const absl::btree_map<S2CellId, int64_t>& got,
+                             const absl::btree_map<S2CellId, int64_t>& wanted) {
   if (wanted.size() != got.size()) {
     ABSL_LOG(WARNING) << "size mismatch: got " << got.size() << ", wanted "
                       << wanted.size();
@@ -138,7 +162,7 @@ TEST(ReversedLengthsWriter, Codec) {
   std::string in = out.Reversed();
   Decoder decoder(in.data(), in.size());
 
-  uint64 v;
+  uint64_t v;
   ASSERT_TRUE(decoder.get_varint64(&v));
   EXPECT_EQ(v, mask);
 
@@ -163,7 +187,7 @@ TEST(ReversedLengthsWriter, Codec) {
 
 class TreeEncoderTest : public ::testing::Test {
  protected:
-  void Put(S2CellId cell, int64 weight) { encoder_.Put(cell, weight); }
+  void Put(S2CellId cell, int64_t weight) { encoder_.Put(cell, weight); }
 
   S2DensityTree BuildTree() {
     S2DensityTree tree;
@@ -171,12 +195,15 @@ class TreeEncoderTest : public ::testing::Test {
     return tree;
   }
 
-  absl::btree_map<S2CellId, int64> BuildAndDecode() {
+  absl::btree_map<S2CellId, int64_t> BuildAndDecode() {
     S2Error error;
     auto decoded = BuildTree().Decode(&error);
     EXPECT_EQ(error.code(), S2Error::OK);
     return decoded;
   }
+
+  // Returns a new encoder.
+  S2DensityTree::TreeEncoder Encoder() const { return {}; }
 
   void Clear() { encoder_.Clear(); }
 
@@ -198,7 +225,7 @@ TEST_F(TreeEncoderTest, EncodeOneFace) {
 }
 
 TEST_F(TreeEncoderTest, EncodeOneLeaf) {
-  auto expected = SumToRoot(absl::btree_map<S2CellId, int64>{
+  auto expected = SumToRoot(absl::btree_map<S2CellId, int64_t>{
       {S2CellId(S2Point(0, 1, 0)), 123},
   });
 
@@ -212,7 +239,7 @@ TEST_F(TreeEncoderTest, EncodeOneLeaf) {
 
 TEST_F(TreeEncoderTest, EncodeOneBranch) {
   S2CellId split = S2CellId::FromFaceIJ(1, 1 << 10, 2 << 10).parent(10);
-  auto expected = SumToRoot(absl::btree_map<S2CellId, int64>{
+  auto expected = SumToRoot(absl::btree_map<S2CellId, int64_t>{
       {split.child_begin(20), 1},
       {split.child_end(20), 17},
   });
@@ -226,7 +253,7 @@ TEST_F(TreeEncoderTest, EncodeOneBranch) {
 }
 
 TEST_F(TreeEncoderTest, EncodeEachFace) {
-  absl::btree_map<S2CellId, int64> expected;
+  absl::btree_map<S2CellId, int64_t> expected;
   for (int i = 0; i < S2CellId::kNumFaces; ++i) {
     expected.insert({S2CellId::FromFace(i), 10 + i});
   }
@@ -240,12 +267,15 @@ TEST_F(TreeEncoderTest, EncodeEachFace) {
 }
 
 TEST_F(TreeEncoderTest, EncodeRandomBranches) {
-  for (int64 weight = 1; weight < 1000; ++weight) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "ENCODE_RANDOM_BRANCHES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  for (int64_t weight = 1; weight < 1000; ++weight) {
     Clear();
 
-    absl::btree_map<S2CellId, int64> expected;
+    absl::btree_map<S2CellId, int64_t> expected;
     for (int j = 0; j < 50; ++j) {
-      expected.insert({S2Testing::GetRandomCellId(), weight});
+      expected.insert({s2random::CellId(bitgen), weight});
     }
     expected = SumToRoot(expected);
     for (const auto& [cell, weight] : expected) {
@@ -313,10 +343,14 @@ TEST(S2DensityTreeTest, VisitUninitializedTree) {
 }
 
 TEST(S2DensityTreeTest, Encode) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "ENCODE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   MutableS2ShapeIndex index;
   for (int i = 0; i < 10; ++i) {
     index.Add(make_unique<S2PointVectorShape>(
-        vector<S2Point>{S2Testing::RandomPoint()}));
+        vector<S2Point>{s2random::Point(bitgen)}));
   }
 
   S2DensityTree tree;
@@ -352,11 +386,11 @@ TEST(S2DensityTreeTest, S2CoderWorks) {
 
   // Fully decode density trees and compare to check the decoding.
   error.Clear();
-  absl::btree_map<S2CellId, int64> tree_a = tree.Decode(&error);
+  absl::btree_map<S2CellId, int64_t> tree_a = tree.Decode(&error);
   EXPECT_TRUE(error.ok());
 
   error.Clear();
-  absl::btree_map<S2CellId, int64> tree_b = decoded.Decode(&error);
+  absl::btree_map<S2CellId, int64_t> tree_b = decoded.Decode(&error);
   EXPECT_TRUE(error.ok());
 
   EXPECT_EQ(tree_a, tree_b);
@@ -368,7 +402,7 @@ TEST(S2DensityTreeTest, S2CoderWorks_UninitializedTree) {
 
   auto decoded = s2coding::RoundTrip(S2DensityTree::Coder(), tree, error);
 
-  absl::btree_map<S2CellId, int64> cell_map = tree.Decode(&error);
+  absl::btree_map<S2CellId, int64_t> cell_map = tree.Decode(&error);
   EXPECT_TRUE(error.ok());
 
   EXPECT_THAT(cell_map, testing::IsEmpty());
@@ -380,7 +414,7 @@ TEST(S2DensityTreeTest, InitToFeatureDensity) {
   using Feature = std::string;
 
   absl::flat_hash_map<const S2Shape*, Feature*> features;
-  absl::flat_hash_map<Feature*, int64> weights;
+  absl::flat_hash_map<Feature*, int64_t> weights;
 
   S2Point p = S2LatLng::FromDegrees(5, 5).ToPoint();
   S2Point q = S2LatLng::FromDegrees(-5, 5).ToPoint();
@@ -430,10 +464,172 @@ TEST(S2DensityTreeTest, InitToFeatureDensity) {
                           testing::Pair(S2CellId(q).parent(1), 1)));
 }
 
+TEST(S2DensityTreeTest, CanNormalizeTree) {
+  constexpr int kNumPoints = 1000;
+
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CAN_NORMALIZE_TREE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
+  MutableS2ShapeIndex index;
+  for (int i = 0; i < kNumPoints; ++i) {
+    index.Add(make_unique<S2PointVectorShape>(
+        vector<S2Point>{s2random::Point(bitgen)}));
+  }
+
+  // Checks that each cell's weight is the sum of its children.
+  const auto ExpectNormalized = [](const S2DensityTree& tree) {
+    S2DensityTree::DecodedPath path(&tree);
+    S2Error error;
+
+    tree.VisitCells(
+        [&](S2CellId id, const S2DensityTree::Cell& cell) {
+          // Sum up child weights.
+          if (cell.has_children()) {
+            int64_t child_weight = 0;
+            for (int i = 0; i < 4; ++i) {
+              const S2DensityTree::Cell* child =
+                  path.GetCell(id.child(i), &error);
+              EXPECT_TRUE(error.ok());
+              child_weight += child->weight();
+            }
+
+            EXPECT_TRUE(cell.weight() == child_weight ||
+                        cell.weight() + 1 == child_weight);
+          }
+          return S2DensityTree::VisitAction::ENTER_CELL;
+        },
+        &error);
+  };
+
+  S2DensityTree tree;
+  S2Error error;
+  tree.InitToVertexDensity(index, 10'000, 20, &error);
+  ASSERT_TRUE(error.ok()) << error;
+  ASSERT_GT(TreeCells(tree).size(), kNumPoints);
+
+  // Normalize the tree.  The cells shouldn't change but the weights should be
+  // normalized now.
+  S2DensityTree normalized = tree.Normalize(&error);
+  EXPECT_TRUE(error.ok());
+  EXPECT_THAT(TreeCells(tree), Eq(TreeCells(normalized)));
+  ExpectNormalized(normalized);
+}
+
+TEST_F(TreeEncoderTest, NormalizeBalances) {
+  // Tests that children with more weight than their parent are linearly
+  // rebalanced.
+  const S2CellId kFace0 = S2CellId::FromFace(0);
+
+  S2DensityTree tree, expected;
+  {
+    const absl::btree_map<S2CellId, int64_t> leaves = {
+        {kFace0, 3}, {kFace0.child(0), 2}, {kFace0.child(1), 4}};
+
+    auto encoder = Encoder();
+    for (const auto& weighted_cell : SumToRoot(leaves)) {
+      encoder.Put(weighted_cell.first, weighted_cell.second);
+    }
+    encoder.Build(&tree);
+  }
+
+  {
+    const absl::btree_map<S2CellId, int64_t> leaves = {
+        {kFace0, 9}, {kFace0.child(0), 3}, {kFace0.child(1), 6}};
+
+    auto encoder = Encoder();
+    for (const auto& weighted_cell : SumToRoot(leaves)) {
+      encoder.Put(weighted_cell.first, weighted_cell.second);
+    }
+    encoder.Build(&expected);
+  }
+
+  S2Error error;
+  tree = tree.Normalize(&error);
+  ASSERT_TRUE(error.ok());
+
+  EXPECT_EQ(TreeCells(expected), TreeCells(tree));
+}
+
+TEST_F(TreeEncoderTest, NormalizeDoesNotAffectDisjointPaths) {
+  // Tests that 3 disjoint paths are unaffected by normalize.
+  const S2CellId kFace0 = S2CellId::FromFace(0);
+
+  const absl::btree_map<S2CellId, int64_t> leaves = {
+      {kFace0.child(0), 1},
+      {kFace0.child(1).child(2), 1},
+      {kFace0.child(2), 1}};
+
+  auto encoder = Encoder();
+  for (const auto& weighted_cell : SumToRoot(leaves)) {
+    encoder.Put(weighted_cell.first, weighted_cell.second);
+  }
+
+  S2DensityTree tree;
+  encoder.Build(&tree);
+
+  S2Error error;
+  S2DensityTree normalized = tree.Normalize(&error);
+  ASSERT_TRUE(error.ok());
+
+  EXPECT_EQ(TreeCells(tree), TreeCells(normalized));
+}
+
+TEST_F(TreeEncoderTest, NormalizeDoesNotOverflow) {
+  // Tests that perfectly divided large weights normalize without overflow.a
+  const S2CellId kFace0 = S2CellId::FromFace(0);
+
+  const int64_t kMax32 = std::numeric_limits<int32_t>::max();
+  const int64_t kMax64 = std::numeric_limits<int64_t>::max();
+
+  const absl::btree_map<S2CellId, int64_t> leaves = {
+      {kFace0.child(1).child(2), kMax32},
+      {kFace0.child(1).child(3), kMax64 - kMax32 - 1},
+      {kFace0.child(2), 1}};
+
+  auto encoder = Encoder();
+  for (const auto& weighted_cell : SumToRoot(leaves)) {
+    encoder.Put(weighted_cell.first, weighted_cell.second);
+  }
+
+  S2DensityTree tree;
+  encoder.Build(&tree);
+
+  S2Error error;
+  S2DensityTree normalized = tree.Normalize(&error);
+  ASSERT_TRUE(error.ok());
+
+  EXPECT_EQ(TreeCells(tree), TreeCells(normalized));
+}
+
+TEST(S2DensityTreeTest, LeavesReturnsLeavesOfTree) {
+  constexpr int kNumPoints = 1000;
+
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "LEAVES_ARE_SUBSET",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
+  MutableS2ShapeIndex index;
+  for (int i = 0; i < kNumPoints; ++i) {
+    index.Add(make_unique<S2PointVectorShape>(
+        vector<S2Point>{s2random::Point(bitgen)}));
+  }
+
+  S2DensityTree tree;
+  S2Error error;
+  tree.InitToVertexDensity(index, 10'000, 20, &error);
+  ASSERT_TRUE(error.ok()) << error;
+  ASSERT_GT(TreeCells(tree).size(), kNumPoints);
+
+  S2CellUnion leaves = tree.Leaves(&error);
+  EXPECT_TRUE(error.ok());
+  EXPECT_THAT(leaves.cell_ids(), Eq(TreeCells(tree, true)));
+}
+
 class DecodedPathTest : public TreeEncoderTest {};
 
 TEST_F(DecodedPathTest, DecoderScalesWeightsBasedOnParent) {
-  absl::btree_map<S2CellId, int64> base;
+  absl::btree_map<S2CellId, int64_t> base;
 
   // Create a tree where 4 leaves all share the same weight as their parent.
   S2CellId parent = S2CellId::FromFacePosLevel(0, 0, 5);
@@ -451,12 +647,12 @@ TEST_F(DecodedPathTest, DecoderScalesWeightsBasedOnParent) {
 
   // Children all have the same weight normalized as 25% of the parent's weight.
   for (int i = 0; i < 4; ++i) {
-    const int64 normal_weight =
+    const int64_t normal_weight =
         tree.GetNormalCellWeight(parent.child(i), &decoder, &error);
     ASSERT_TRUE(error.ok()) << error;
     EXPECT_EQ(25, normal_weight);
 
-    const int64 weight =
+    const int64_t weight =
         tree.GetCellWeight(parent.child(i), &decoder, &error);
     ASSERT_TRUE(error.ok()) << error;
     EXPECT_EQ(100, weight);
@@ -469,7 +665,7 @@ TEST_F(DecodedPathTest, DecodesPathsCorrectly) {
 
   S2CellId kCell22 = kFace2.child(2);
 
-  const absl::btree_map<S2CellId, int64> base = {{kCell22.child(2), 100},
+  const absl::btree_map<S2CellId, int64_t> base = {{kCell22.child(2), 100},
                                                    {kCell22.child(3), 120}};
 
   for (const auto& weighted_cell : SumToRoot(base)) {
@@ -489,12 +685,11 @@ TEST_F(DecodedPathTest, DecodesPathsCorrectly) {
   };
 
   // Returns a random descendent of the given cell id.
-  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
-  const auto RandomDescendant = [](S2CellId id) {
+  const auto RandomDescendant = [](absl::BitGenRef bitgen, S2CellId id) {
     ABSL_CHECK_LT(id.level(), S2::kMaxCellLevel);
-    int cnt = S2Testing::rnd.Uniform(S2::kMaxCellLevel - (id.level() + 1));
+    int cnt = absl::Uniform(bitgen, 0, S2::kMaxCellLevel - (id.level() + 1));
     for (int i = 0; i < cnt; ++i) {
-      id = id.child(S2Testing::rnd.Uniform(4));
+      id = id.child(absl::Uniform(bitgen, 0, 4));
     }
     return id;
   };
@@ -524,23 +719,27 @@ TEST_F(DecodedPathTest, DecodesPathsCorrectly) {
   ExpectWeight(kCell22.child(2), 100);
   ExpectWeight(kCell22.child(3), 120);
 
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "DECODES_PATH_CORRECTLY",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Cells not in the tree should resolve to their deepest ancestral leaf cell.
   // Therefore, a random descendant of a non-leaf cell should return zero.
   for (int iter = 0; iter < 100; ++iter) {
-    ExpectWeight(RandomDescendant(kFace2.child(3)), 0);
+    ExpectWeight(RandomDescendant(bitgen, kFace2.child(3)), 0);
   }
 
   // But random descendants of a leaf cell should resolve to that cell.
   for (int iter = 0; iter < 100; ++iter) {
-    ExpectWeight(RandomDescendant(kCell22.child(2)), 100);
-    ExpectWeight(RandomDescendant(kCell22.child(3)), 120);
+    ExpectWeight(RandomDescendant(bitgen, kCell22.child(2)), 100);
+    ExpectWeight(RandomDescendant(bitgen, kCell22.child(3)), 120);
   }
 }
 
 class GetPartitioningTest : public TreeEncoderTest {};
 
 TEST_F(GetPartitioningTest, RemovesPointlessSplits) {
-  absl::btree_map<S2CellId, int64> base{
+  absl::btree_map<S2CellId, int64_t> base{
       {S2CellId::FromFacePosLevel(0, 0, 4), 20},
   };
   for (const auto& weighted_cell : SumToRoot(base)) {
@@ -567,7 +766,7 @@ TEST_F(GetPartitioningTest, RemovesPointlessSplits) {
 }
 
 TEST_F(GetPartitioningTest, ReplacesChildrenWithParent) {
-  absl::btree_map<S2CellId, int64> base{
+  absl::btree_map<S2CellId, int64_t> base{
       {S2CellId::FromFacePosLevel(0, 0, 4), 20},
       {S2CellId::FromFacePosLevel(1, 0, 4), 40},
   };
@@ -611,7 +810,7 @@ TEST_F(GetPartitioningTest, ReplacesChildrenWithParent) {
 }
 
 TEST_F(GetPartitioningTest, OversizeCells) {
-  absl::btree_map<S2CellId, int64> base;
+  absl::btree_map<S2CellId, int64_t> base;
   for (int i = 0; i < S2CellId::kNumFaces; ++i) {
     base.insert({S2CellId::FromFacePosLevel(i, 0, 10), 1000});
   }
@@ -647,7 +846,7 @@ class SumDensityTreesTest : public ::testing::TestWithParam<bool> {
   }
 
   S2DensityTree BuildTree(
-      int64 approx_size_bytes, int max_level,
+      int64_t approx_size_bytes, int max_level,
       S2DensityTree::BreadthFirstTreeBuilder::CellWeightFunction sum,
       S2Error* error) {
     S2DensityTree tree;
@@ -658,7 +857,7 @@ class SumDensityTreesTest : public ::testing::TestWithParam<bool> {
     return tree;
   }
 
-  void CheckSum(const absl::btree_map<S2CellId, int64>& expected,
+  void CheckSum(const absl::btree_map<S2CellId, int64_t>& expected,
                 const vector<S2CellId>& roots, int max_level = 30) {
     S2Error error;
     vector<S2DensityTree> trees;
@@ -670,7 +869,7 @@ class SumDensityTreesTest : public ::testing::TestWithParam<bool> {
 
       // And then if this isn't a leaf cell, insert the root weight into all
       // cells above it.
-      int64 weight = weights_.find(root)->second;
+      int64_t weight = weights_.find(root)->second;
       while (root.level() > 0) {
         root = root.parent();
         encoder.Put(root, weight);
@@ -700,7 +899,7 @@ class SumDensityTreesTest : public ::testing::TestWithParam<bool> {
 
  protected:
   // clang-format off
-  absl::btree_map<S2CellId, int64> weights_{
+  absl::btree_map<S2CellId, int64_t> weights_{
     {S2CellId::FromFace(1), 3},
       {S2CellId::FromFace(1).child(1), 1},
       {S2CellId::FromFace(1).child(2), 2},
@@ -799,12 +998,16 @@ TEST_P(SumDensityTreesTest, SumMaxLevel) {
 }
 
 TEST_P(SumDensityTreesTest, SumEmptyAndNonEmpty) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "SUM_EMPTY_AND_NON_EMPTY",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   S2DensityTree empty_tree;
   S2DensityTree tree;
 
   MutableS2ShapeIndex index;
   index.Add(make_unique<S2PointVectorShape>(
-      vector<S2Point>{S2Testing::RandomPoint()}));
+      vector<S2Point>{s2random::Point(bitgen)}));
 
   S2Error error;
   tree.InitToVertexDensity(index, 1'000, 10, &error);
@@ -838,8 +1041,8 @@ class CoveringsTest : public ::testing::Test {
   // intersects/contains results from S2ShapeIndexRegion, which has the same
   // semantics.
   void CheckCoverings(
-      vector<std::pair<unique_ptr<S2Shape>, int64>> shape_weights) {
-    absl::btree_map<const S2Shape*, int64> weightmap;
+      vector<std::pair<unique_ptr<S2Shape>, int64_t>> shape_weights) {
+    absl::btree_map<const S2Shape*, int64_t> weightmap;
     MutableS2ShapeIndex index;
     for (auto& [shape, weight] : shape_weights) {
       weightmap.insert({shape.get(), weight});
@@ -854,7 +1057,7 @@ class CoveringsTest : public ::testing::Test {
 
     // Verify cover cells always intersect.
     S2DensityTree::IndexCellWeightFunction measure(
-        &index, [&](const S2Shape& shape) -> int64 {
+        &index, [&](const S2Shape& shape) -> int64_t {
           if (auto iter = weightmap.find(&shape); iter != weightmap.end()) {
             return iter->second;
           }
@@ -862,7 +1065,7 @@ class CoveringsTest : public ::testing::Test {
         });
     S2Error error;
     for (const S2CellId cell : cover) {
-      int64 weight = Weight(weightmap, cell);
+      int64_t weight = Weight(weightmap, cell);
       if (region.Contains(S2Cell(cell))) {
         weight = -weight;
       }
@@ -878,16 +1081,16 @@ class CoveringsTest : public ::testing::Test {
       // ...unless the cell is on the border between cover and its complement,
       // since both S2ShapeIndexRegion and S2DensityTree use a small amount of
       // outward padding.
-      int64 expected = cover.Intersects(cell) ? Weight(weightmap, cell) : 0;
+      int64_t expected = cover.Intersects(cell) ? Weight(weightmap, cell) : 0;
       EXPECT_EQ(expected, measure.WeighCell(cell, &error));
       EXPECT_EQ(error.code(), S2Error::OK);
     }
   }
 
  private:
-  int64 Weight(const absl::btree_map<const S2Shape*, int64>& weights,
+  int64_t Weight(const absl::btree_map<const S2Shape*, int64_t>& weights,
                  const S2CellId cell) const {
-    int64 sum = 0;
+    int64_t sum = 0;
     for (const auto [shape, weight] : weights) {
       MutableS2ShapeIndex index;
       index.Add(make_unique<S2WrappedShape>(shape));
@@ -900,7 +1103,7 @@ class CoveringsTest : public ::testing::Test {
 };
 
 TEST_F(CoveringsTest, ShapeIndexEmpty) {
-  vector<std::pair<unique_ptr<S2Shape>, int64>> weights;
+  vector<std::pair<unique_ptr<S2Shape>, int64_t>> weights;
   weights.emplace_back(
       make_unique<S2Loop::OwningShape>(make_unique<S2Loop>(S2Loop::kEmpty())),
       1);
@@ -909,48 +1112,64 @@ TEST_F(CoveringsTest, ShapeIndexEmpty) {
 }
 
 TEST_F(CoveringsTest, ShapeIndexPoint) {
-  vector<std::pair<unique_ptr<S2Shape>, int64>> weights;
-  weights.emplace_back(make_unique<S2PointVectorShape>(
-                           vector<S2Point>{S2Testing::RandomPoint()}),
-                       1);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "SHAPE_INDEX_POINT",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
+  vector<std::pair<unique_ptr<S2Shape>, int64_t>> weights;
+  weights.emplace_back(
+      make_unique<S2PointVectorShape>(vector<S2Point>{s2random::Point(bitgen)}),
+      1);
 
   CheckCoverings(std::move(weights));
 }
 
 TEST_F(CoveringsTest, ShapeIndexLine) {
-  vector<std::pair<unique_ptr<S2Shape>, int64>> weights;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "SHAPE_INDEX_LINE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
+  vector<std::pair<unique_ptr<S2Shape>, int64_t>> weights;
   weights.emplace_back(
       make_unique<S2LaxPolylineShape>(S2Testing::MakeRegularPoints(
-          S2Testing::RandomPoint(), S2Testing::KmToAngle(1), 3)),
+          s2random::Point(bitgen), S2Testing::KmToAngle(1), 3)),
       1);
 
   CheckCoverings(std::move(weights));
 }
 
 TEST_F(CoveringsTest, ShapeIndexPolygon) {
-  vector<std::pair<unique_ptr<S2Shape>, int64>> weights;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "SHAPE_INDEX_POLYGON",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
+  vector<std::pair<unique_ptr<S2Shape>, int64_t>> weights;
   weights.emplace_back(
       make_unique<S2LaxPolygonShape>(
           vector<vector<S2Point>>{S2Testing::MakeRegularPoints(
-              S2Testing::RandomPoint(), S2Testing::KmToAngle(1), 5)}),
+              s2random::Point(bitgen), S2Testing::KmToAngle(1), 5)}),
       1);
 
   CheckCoverings(std::move(weights));
 }
 
 TEST_F(CoveringsTest, ShapeIndexMultiple) {
-  vector<std::pair<unique_ptr<S2Shape>, int64>> weights;
-  weights.emplace_back(make_unique<S2PointVectorShape>(
-                           vector<S2Point>{S2Testing::RandomPoint()}),
-                       1);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "SHAPE_INDEX_MULTIPLE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
+  vector<std::pair<unique_ptr<S2Shape>, int64_t>> weights;
+  weights.emplace_back(
+      make_unique<S2PointVectorShape>(vector<S2Point>{s2random::Point(bitgen)}),
+      1);
   weights.emplace_back(
       make_unique<S2LaxPolygonShape>(
           vector<vector<S2Point>>{S2Testing::MakeRegularPoints(
-              S2Testing::RandomPoint(), S2Testing::KmToAngle(1), 5)}),
+              s2random::Point(bitgen), S2Testing::KmToAngle(1), 5)}),
       2);
   weights.emplace_back(
       make_unique<S2LaxPolylineShape>(S2Testing::MakeRegularPoints(
-          S2Testing::RandomPoint(), S2Testing::KmToAngle(1), 3)),
+          s2random::Point(bitgen), S2Testing::KmToAngle(1), 3)),
       3);
 
   CheckCoverings(std::move(weights));

@@ -16,7 +16,10 @@
 #ifndef S2_S2CELL_RANGE_ITERATOR_H_
 #define S2_S2CELL_RANGE_ITERATOR_H_
 
+#include <type_traits>
+
 #include "absl/meta/type_traits.h"
+#include "s2/internal/s2meta.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_iterator.h"
 #include "s2/s2shape_index.h"
@@ -35,7 +38,7 @@
 template <typename Iterator>
 class S2CellRangeIterator final : public S2CellIterator {
  public:
-  static_assert(S2CellIterator::ImplementedBy<Iterator>{},
+  static_assert(s2meta::derived_from_v<Iterator, S2CellIterator>,
                 "S2CellRangeIterator requires an S2CellIterator");
 
   // Construct a new S2CellRangeIterator positioned at the beginning.
@@ -104,20 +107,20 @@ class S2CellRangeIterator final : public S2CellIterator {
 //
 // The index must live for the duration of the iterator, so we take it by const
 // pointer instead of reference to avoid binding to temporaries.
-template <typename IndexType,
-          typename std::enable_if<S2ShapeIndex::ImplementedBy<IndexType>{},
-                                  bool>::type = true>
-S2CellRangeIterator<typename IndexType::Iterator> MakeS2CellRangeIterator(
-    const IndexType* index) {
-  using Iterator = typename IndexType::Iterator;
+template <typename Index,
+          typename std::enable_if_t<s2meta::derived_from_v<Index, S2ShapeIndex>,
+                                    bool> = true>
+S2CellRangeIterator<typename Index::Iterator> MakeS2CellRangeIterator(
+    const Index* index) {
+  using Iterator = typename Index::Iterator;
   return S2CellRangeIterator<Iterator>(Iterator(index, S2ShapeIndex::BEGIN));
 }
 
 // Builds a new S2CellRangeIterator from an S2CellIterator, explicitly supports
 // type inference for the Iterator parameter.
 template <typename Iterator,
-          typename std::enable_if<S2CellIterator::ImplementedBy<Iterator>{},
-                                  bool>::type = true>
+          typename std::enable_if_t<
+              s2meta::derived_from_v<Iterator, S2CellIterator>, bool> = true>
 auto MakeS2CellRangeIterator(Iterator&& iter) {
   return S2CellRangeIterator<absl::decay_t<Iterator>>(
       std::forward<Iterator>(iter));

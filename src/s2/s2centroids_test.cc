@@ -22,8 +22,11 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 namespace {
@@ -41,12 +44,16 @@ TEST(PlanarCentroid, SemiEquator) {
 }
 
 TEST(TriangleTrueCentroid, SmallTriangles) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "SMALL_TRIANGLES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Test TrueCentroid() with very small triangles.  This test assumes that
   // the triangle is small enough so that it is nearly planar.
   for (int iter = 0; iter < 100; ++iter) {
     S2Point p, x, y;
-    S2Testing::GetRandomFrame(&p, &x, &y);
-    double d = 1e-4 * pow(1e-4, S2Testing::rnd.RandDouble());
+    s2random::Frame(bitgen, p, x, y);
+    double d = s2random::LogUniform(bitgen, 1e-8, 1e-4);
     S2Point p0 = (p - d * x).Normalize();
     S2Point p1 = (p + d * x).Normalize();
     S2Point p2 = (p + 3 * d * y).Normalize();
@@ -71,6 +78,10 @@ TEST(EdgeTrueCentroid, SemiEquator) {
 }
 
 TEST(EdgeTrueCentroid, GreatCircles) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GREAT_CIRCLES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Construct random great circles and divide them randomly into segments.
   // Then make sure that the centroid is approximately at the center of the
   // sphere.  Note that because of the way the centroid is computed, it does
@@ -82,11 +93,11 @@ TEST(EdgeTrueCentroid, GreatCircles) {
   for (int iter = 0; iter < 100; ++iter) {
     // Choose a coordinate frame for the great circle.
     S2Point x, y, z, centroid;
-    S2Testing::GetRandomFrame(&x, &y, &z);
+    s2random::Frame(bitgen, x, y, z);
 
     S2Point v0 = x;
     for (double theta = 0; theta < 2 * M_PI;
-         theta += pow(S2Testing::rnd.RandDouble(), 10)) {
+         theta += pow(absl::Uniform(bitgen, 0.0, 1.0), 10)) {
       S2Point v1 = cos(theta) * x + sin(theta) * y;
       centroid += S2::TrueCentroid(v0, v1);
       v0 = v1;

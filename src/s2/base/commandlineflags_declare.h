@@ -16,18 +16,18 @@
 #ifndef S2_BASE_COMMANDLINEFLAGS_DECLARE_H_
 #define S2_BASE_COMMANDLINEFLAGS_DECLARE_H_
 
+#include <cstdint>
 #include <string>
 
-#include "s2/base/types.h"
 #include "absl/flags/declare.h"
 
 #define DECLARE_bool(name) ABSL_DECLARE_FLAG(bool, name)
 
 #define DECLARE_double(name) ABSL_DECLARE_FLAG(double, name)
 
-#define DECLARE_int32(name) ABSL_DECLARE_FLAG(int32, name)
+#define DECLARE_int32(name) ABSL_DECLARE_FLAG(int32_t, name)
 
-#define DECLARE_int64(name) ABSL_DECLARE_FLAG(int64, name)
+#define DECLARE_int64(name) ABSL_DECLARE_FLAG(int64_t, name)
 
 #define DECLARE_string(name) ABSL_DECLARE_FLAG(std::string, name)
 

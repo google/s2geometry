@@ -20,10 +20,10 @@
 #include <cstring>
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <utility>
 
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
 #include "s2/s2point.h"
@@ -32,7 +32,7 @@ using std::make_unique;
 using std::min;
 
 TEST(ValueLexicon, DuplicateValues) {
-  ValueLexicon<int64> lex;
+  ValueLexicon<int64_t> lex;
   EXPECT_EQ(0, lex.Add(5));
   EXPECT_EQ(1, lex.Add(0));
   EXPECT_EQ(1, lex.Add(0));
@@ -52,7 +52,7 @@ TEST(ValueLexicon, DuplicateValues) {
 }
 
 TEST(ValueLexicon, Clear) {
-  ValueLexicon<int64> lex;
+  ValueLexicon<int64_t> lex;
   EXPECT_EQ(0, lex.Add(1));
   EXPECT_EQ(1, lex.Add(2));
   EXPECT_EQ(0, lex.Add(1));
@@ -78,7 +78,7 @@ TEST(ValueLexicon, FloatEquality) {
 }
 
 TEST(ValueLexicon, CopyConstructor) {
-  auto original = make_unique<ValueLexicon<int64>>();
+  auto original = make_unique<ValueLexicon<int64_t>>();
   EXPECT_EQ(0, original->Add(5));
   auto lex = *original;
   original.reset(nullptr);
@@ -88,7 +88,7 @@ TEST(ValueLexicon, CopyConstructor) {
 }
 
 TEST(ValueLexicon, MoveConstructor) {
-  auto original = make_unique<ValueLexicon<int64>>();
+  auto original = make_unique<ValueLexicon<int64_t>>();
   EXPECT_EQ(0, original->Add(5));
   auto lex = std::move(*original);
   original.reset(nullptr);
@@ -98,9 +98,9 @@ TEST(ValueLexicon, MoveConstructor) {
 }
 
 TEST(ValueLexicon, CopyAssignmentOperator) {
-  auto original = make_unique<ValueLexicon<int64>>();
+  auto original = make_unique<ValueLexicon<int64_t>>();
   EXPECT_EQ(0, original->Add(5));
-  ValueLexicon<int64> lex;
+  ValueLexicon<int64_t> lex;
   EXPECT_EQ(0, lex.Add(10));
   EXPECT_EQ(1, lex.Add(15));
   lex = *original;
@@ -112,9 +112,9 @@ TEST(ValueLexicon, CopyAssignmentOperator) {
 }
 
 TEST(ValueLexicon, MoveAssignmentOperator) {
-  auto original = make_unique<ValueLexicon<int64>>();
+  auto original = make_unique<ValueLexicon<int64_t>>();
   EXPECT_EQ(0, original->Add(5));
-  ValueLexicon<int64> lex;
+  ValueLexicon<int64_t> lex;
   EXPECT_EQ(0, lex.Add(10));
   EXPECT_EQ(1, lex.Add(15));
   lex = std::move(*original);

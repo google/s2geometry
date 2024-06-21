@@ -23,6 +23,7 @@
 #include <ostream>
 #include <string>
 
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r2.h"
@@ -88,7 +89,6 @@ S1Angle S2LatLng::GetDistance(const S2LatLng& o) const {
 
   ABSL_DLOG_IF(ERROR, !is_valid())
       << "Invalid S2LatLng in S2LatLng::GetDistance: " << *this;
-
   ABSL_DLOG_IF(ERROR, !o.is_valid())
       << "Invalid S2LatLng in S2LatLng::GetDistance: " << o;
 

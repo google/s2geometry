@@ -19,16 +19,18 @@
 
 #include <cstddef>
 
+#include <cstdint>
 #include <cstring>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "s2/util/bits/bit-interleave.h"
@@ -40,8 +42,10 @@
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
 #include "s2/s2polygon.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
+#include "s2/util/math/matrix3x3.h"
 
 using s2textformat::MakeCellIdOrDie;
 using s2textformat::MakePointOrDie;
@@ -53,7 +57,7 @@ namespace s2coding {
 static int kBlockSize = 16;  // Number of deltas per block in implementation.
 
 size_t TestEncodedS2PointVector(const vector<S2Point>& expected,
-                                CodingHint hint, int64 expected_bytes) {
+                                CodingHint hint, int64_t expected_bytes) {
   Encoder encoder;
   EncodeS2PointVector(expected, hint, &encoder);
   if (expected_bytes >= 0) {
@@ -76,8 +80,8 @@ size_t TestEncodedS2PointVector(const vector<S2Point>& expected,
 // In order to make it easier to construct tests that encode particular
 // values, this function duplicates the part of EncodedS2PointVector that
 // converts an encoded 64-bit value back to an S2Point.
-S2Point EncodedValueToPoint(uint64 value, int level) {
-  uint32 sj, tj;
+S2Point EncodedValueToPoint(uint64_t value, int level) {
+  uint32_t sj, tj;
   util_bits::DeinterleaveUint32(value, &sj, &tj);
   int shift = S2CellId::kMaxLevel - level;
   int si = (((sj << 1) | 1) << shift) & 0x7fffffff;
@@ -374,14 +378,16 @@ TEST(EncodedS2PointVectorTest, ManyDuplicatePointsAtAllLevels) {
 }
 
 TEST(EncodedS2PointVectorTest, SnappedFractalLoops) {
-  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "SNAPPED_FRACTAL_LOOPS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   int kMaxPoints = 3 << 14;
   for (int num_points = 3; num_points <= kMaxPoints; num_points *= 4) {
     size_t s2polygon_size = 0, lax_polygon_size = 0;
     for (int i = 0; i < 10; ++i) {
-      S2Fractal fractal;
+      S2Fractal fractal(bitgen);
       fractal.SetLevelForApproxMaxEdges(num_points);
-      auto frame = S2Testing::GetRandomFrame();
+      Matrix3x3_d frame = s2random::Frame(bitgen);
       auto loop = fractal.MakeLoop(frame, S2Testing::KmToAngle(10));
       vector<S2Point> points;
       for (int j = 0; j < loop->num_vertices(); ++j) {

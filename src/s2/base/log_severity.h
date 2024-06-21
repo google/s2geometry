@@ -18,15 +18,10 @@
 
 #include "absl/base/log_severity.h"
 
-// Stay compatible with glog.
-namespace google {
-
 #ifdef NDEBUG
-constexpr bool DEBUG_MODE = false;
+constexpr bool S2_DEBUG_MODE = false;
 #else
-constexpr bool DEBUG_MODE = true;
+constexpr bool S2_DEBUG_MODE = true;
 #endif
-
-}  // namespace google
 
 #endif  // S2_BASE_LOG_SEVERITY_H_

@@ -26,6 +26,9 @@
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -42,6 +45,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2predicates.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2shapeutil_count_edges.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
@@ -445,20 +449,18 @@ static void TestFindFurthestEdges(
 // (Note that every query is checked using the brute force algorithm.)
 static void TestWithIndexFactory(const s2testing::ShapeIndexFactory& factory,
                                  int num_indexes, int num_edges,
-                                 int num_queries) {
+                                 int num_queries, absl::BitGenRef bitgen) {
   // Build a set of MutableS2ShapeIndexes containing the desired geometry.
   vector<S2Cap> index_caps;
   vector<unique_ptr<MutableS2ShapeIndex>> indexes;
   for (int i = 0; i < num_indexes; ++i) {
-    S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed) + i);
-    index_caps.push_back(S2Cap(S2Testing::RandomPoint(), kTestCapRadius));
+    index_caps.push_back(S2Cap(s2random::Point(bitgen), kTestCapRadius));
     indexes.emplace_back(new MutableS2ShapeIndex);
     factory.AddEdges(index_caps.back(), num_edges, indexes.back().get());
   }
 
   for (int i = 0; i < num_queries; ++i) {
-    S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed) + i);
-    int i_index = S2Testing::rnd.Uniform(num_indexes);
+    int i_index = absl::Uniform(bitgen, 0, num_indexes);
     const S2Cap& index_cap = index_caps[i_index];
 
     // Choose query points from an area approximately 4x larger than the
@@ -467,75 +469,86 @@ static void TestWithIndexFactory(const s2testing::ShapeIndexFactory& factory,
     S2FurthestEdgeQuery query(indexes[i_index].get());
 
     // Exercise the opposite-hemisphere code 1/5 of the time.
-    int antipodal = S2Testing::rnd.OneIn(5) ? -1 : 1;
+    int antipodal = absl::Bernoulli(bitgen, 0.2) ? -1 : 1;
     S2Cap query_cap(antipodal * index_cap.center(), query_radius);
 
     // Occasionally we don't set any limit on the number of result edges.
     // (This may return all edges if we also don't set a distance limit.)
-    if (!S2Testing::rnd.OneIn(5)) {
-      query.mutable_options()->set_max_results(1 + S2Testing::rnd.Uniform(10));
+    if (absl::Bernoulli(bitgen, 0.8)) {
+      query.mutable_options()->set_max_results(absl::Uniform(bitgen, 1, 11));
     }
     // We set a distance limit 2/3 of the time.
-    if (!S2Testing::rnd.OneIn(3)) {
+    if (!absl::Bernoulli(bitgen, 1.0 / 3)) {
       query.mutable_options()->set_min_distance(
-          S2Testing::rnd.RandDouble() * query_radius);
+          absl::Uniform(bitgen, 0.0, 1.0) * query_radius);
     }
-    if (S2Testing::rnd.OneIn(2)) {
+    if (absl::Bernoulli(bitgen, 0.5)) {
       // Choose a maximum error whose logarithm is uniformly distributed over
       // a reasonable range, except that it is sometimes zero.
       query.mutable_options()->set_max_error(S1Angle::Radians(
-          pow(1e-4, S2Testing::rnd.RandDouble()) * query_radius.radians()));
+          s2random::LogUniform(bitgen, 1e-4, 1.0) * query_radius.radians()));
     }
-    query.mutable_options()->set_include_interiors(S2Testing::rnd.OneIn(2));
-    int target_type = S2Testing::rnd.Uniform(4);
+    query.mutable_options()->set_include_interiors(
+        absl::Bernoulli(bitgen, 0.5));
+    int target_type = absl::Uniform(bitgen, 0, 4);
     if (target_type == 0) {
       // Find the edges furthest from a given point.
-      S2Point point = S2Testing::SamplePoint(query_cap);
+      S2Point point = s2random::SamplePoint(bitgen, query_cap);
       S2FurthestEdgeQuery::PointTarget target(point);
       TestFindFurthestEdges(&target, &query);
     } else if (target_type == 1) {
       // Find the edges furthest from a given edge.
-      S2Point a = S2Testing::SamplePoint(query_cap);
-      S2Point b = S2Testing::SamplePoint(
-          S2Cap(a, pow(1e-4, S2Testing::rnd.RandDouble()) * query_radius));
+      S2Point a = s2random::SamplePoint(bitgen, query_cap);
+      S2Point b = s2random::SamplePoint(
+          bitgen,
+          S2Cap(a, s2random::LogUniform(bitgen, 1e-4, 1.0) * query_radius));
       S2FurthestEdgeQuery::EdgeTarget target(a, b);
       TestFindFurthestEdges(&target, &query);
     } else if (target_type == 2) {
       // Find the edges furthest from a given cell.
       int min_level = S2::kMaxDiag.GetLevelForMaxValue(query_radius.radians());
-      int level = min_level + S2Testing::rnd.Uniform(
-          S2CellId::kMaxLevel - min_level + 1);
-      S2Point a = S2Testing::SamplePoint(query_cap);
+      int level = absl::Uniform(absl::IntervalClosedClosed, bitgen, min_level,
+                                S2CellId::kMaxLevel);
+      S2Point a = s2random::SamplePoint(bitgen, query_cap);
       S2Cell cell(S2CellId(a).parent(level));
       S2FurthestEdgeQuery::CellTarget target(cell);
       TestFindFurthestEdges(&target, &query);
     } else {
       ABSL_DCHECK_EQ(3, target_type);
       // Use another one of the pre-built indexes as the target.
-      int j_index = S2Testing::rnd.Uniform(num_indexes);
+      int j_index = absl::Uniform(bitgen, 0, num_indexes);
       S2FurthestEdgeQuery::ShapeIndexTarget target(indexes[j_index].get());
-      target.set_include_interiors(S2Testing::rnd.OneIn(2));
+      target.set_include_interiors(absl::Bernoulli(bitgen, 0.5));
       TestFindFurthestEdges(&target, &query);
     }
   }
 }
 
-static const int kNumIndexes = 50;
-static const int kNumEdges = 100;
-static const int kNumQueries = 200;
+static constexpr int kNumIndexes = 50;
+static constexpr int kNumEdges = 100;
+static constexpr int kNumQueries = 200;
 
 TEST(S2FurthestEdgeQuery, CircleEdges) {
-  TestWithIndexFactory(s2testing::RegularLoopShapeIndexFactory(),
-                       kNumIndexes, kNumEdges, kNumQueries);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CIRCLE_EDGES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  TestWithIndexFactory(s2testing::RegularLoopShapeIndexFactory(), kNumIndexes,
+                       kNumEdges, kNumQueries, bitgen);
 }
 
 TEST(S2FurthestEdgeQuery, FractalEdges) {
-  TestWithIndexFactory(s2testing::FractalLoopShapeIndexFactory(),
-                       kNumIndexes, kNumEdges, kNumQueries);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "FRACTAL_EDGES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  TestWithIndexFactory(s2testing::FractalLoopShapeIndexFactory(bitgen),
+                       kNumIndexes, kNumEdges, kNumQueries, bitgen);
 }
 
 TEST(S2FurthestEdgeQuery, PointCloudEdges) {
-  TestWithIndexFactory(s2testing::PointCloudShapeIndexFactory(),
-                       kNumIndexes, kNumEdges, kNumQueries);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "POINT_CLOUD_EDGES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  TestWithIndexFactory(s2testing::PointCloudShapeIndexFactory(bitgen),
+                       kNumIndexes, kNumEdges, kNumQueries, bitgen);
 }
 

@@ -122,7 +122,7 @@ class Matrix3x3 {
     return (*this);
   }
 
-  // Matrix subtration
+  // Matrix subtraction
   inline Matrix3x3 &operator-=(const Matrix3x3 &mb) {
     m_[0][0] -= mb.m_[0][0];
     m_[0][1] -= mb.m_[0][1];

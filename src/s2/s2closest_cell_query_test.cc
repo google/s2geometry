@@ -20,15 +20,20 @@
 #include <cmath>
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -46,6 +51,7 @@
 #include "s2/s2metrics.h"
 #include "s2/s2min_distance_targets.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2region.h"
 #include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
@@ -161,9 +167,12 @@ TEST(S2ClosestCellQuery, TargetPointInsideIndexedCell) {
 TEST(S2ClosestCellQuery, EmptyTargetOptimized) {
   // Ensure that the optimized algorithm handles empty targets when a distance
   // limit is specified.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "EMPTY_TARGET_OPTIMIZED",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   S2CellIndex index;
   for (int i = 0; i < 1000; ++i) {
-    index.Add(S2Testing::GetRandomCellId(), i);
+    index.Add(s2random::CellId(bitgen), i);
   }
   index.Build();
   S2ClosestCellQuery query(&index);
@@ -196,19 +205,19 @@ struct CellIndexFactory {
   virtual ~CellIndexFactory() = default;
 
   // Requests that approximately "num_cells" cells located within the given
-  // S2Cap bound should be added to "index".
+  // S2Cap bound should be added to "index".  Uses "bitgen" for randomness.
   virtual void AddCells(const S2Cap& index_cap, int num_cells,
-                        S2CellIndex* index) const = 0;
+                        absl::BitGenRef bitgen, S2CellIndex* index) const = 0;
 };
 
 // Generates a cloud of points that approximately fills the given S2Cap, and
 // adds a leaf S2CellId for each one.
 class PointCloudCellIndexFactory : public CellIndexFactory {
  public:
-  void AddCells(const S2Cap& index_cap, int num_cells,
+  void AddCells(const S2Cap& index_cap, int num_cells, absl::BitGenRef bitgen,
                 S2CellIndex* index) const override {
     for (int i = 0; i < num_cells; ++i) {
-      index->Add(S2CellId(S2Testing::SamplePoint(index_cap)), i);
+      index->Add(S2CellId(s2random::SamplePoint(bitgen, index_cap)), i);
     }
   }
 };
@@ -226,7 +235,7 @@ class CapsCellIndexFactory : public CellIndexFactory {
       : max_cells_per_cap_(max_cells_per_cap),
         cap_density_(cap_density) {}
 
-  void AddCells(const S2Cap& index_cap, int num_cells,
+  void AddCells(const S2Cap& index_cap, int num_cells, absl::BitGenRef bitgen,
                 S2CellIndex* index) const override {
     // All of this math is fairly approximate, since the coverings don't have
     // exactly the given number of cells, etc.
@@ -235,8 +244,8 @@ class CapsCellIndexFactory : public CellIndexFactory {
     for (int i = 0; i < num_caps; ++i) {
       // The coverings are bigger than the caps, so we compensate for this by
       // choosing the cap area randomly up to the limit value.
-      auto cap = S2Cap::FromCenterArea(S2Testing::SamplePoint(index_cap),
-                                       S2Testing::rnd.RandDouble() * max_area);
+      auto cap = S2Cap::FromCenterArea(s2random::SamplePoint(bitgen, index_cap),
+                                       absl::Uniform(bitgen, 0.0, max_area));
       S2RegionCoverer coverer;
       coverer.mutable_options()->set_max_cells(max_cells_per_cap_);
       index->Add(coverer.GetCovering(cap), i);
@@ -316,21 +325,19 @@ static void TestFindClosestCells(S2ClosestCellQuery::Target* target,
 // (Note that every query is checked using the brute force algorithm.)
 static void TestWithIndexFactory(const CellIndexFactory& factory,
                                  int num_indexes, int num_cells,
-                                 int num_queries) {
+                                 int num_queries, absl::BitGenRef bitgen) {
   // Build a set of S2CellIndexes containing the desired geometry.
   vector<S2Cap> index_caps;
   vector<unique_ptr<S2CellIndex>> indexes;
   for (int i = 0; i < num_indexes; ++i) {
-    S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed) + i);
-    index_caps.push_back(S2Cap(S2Testing::RandomPoint(), kTestCapRadius));
+    index_caps.push_back(S2Cap(s2random::Point(bitgen), kTestCapRadius));
     auto index = make_unique<S2CellIndex>();
-    factory.AddCells(index_caps.back(), num_cells, index.get());
+    factory.AddCells(index_caps.back(), num_cells, bitgen, index.get());
     index->Build();
     indexes.push_back(std::move(index));
   }
   for (int i = 0; i < num_queries; ++i) {
-    S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed) + i);
-    int i_index = S2Testing::rnd.Uniform(num_indexes);
+    int i_index = absl::Uniform(bitgen, 0, num_indexes);
     const S2Cap& index_cap = index_caps[i_index];
 
     // Choose query points from an area approximately 4x larger than the
@@ -341,53 +348,54 @@ static void TestWithIndexFactory(const CellIndexFactory& factory,
 
     // Occasionally we don't set any limit on the number of result cells.
     // (This may return all cells if we also don't set a distance limit.)
-    if (!S2Testing::rnd.OneIn(10)) {
-      query.mutable_options()->set_max_results(1 + S2Testing::rnd.Uniform(10));
+    if (absl::Bernoulli(bitgen, 0.9)) {
+      query.mutable_options()->set_max_results(absl::Uniform(bitgen, 1, 11));
     }
     // We set a distance limit 2/3 of the time.
-    if (!S2Testing::rnd.OneIn(3)) {
+    if (absl::Bernoulli(bitgen, 2.0 / 3)) {
       query.mutable_options()->set_max_distance(
-          S2Testing::rnd.RandDouble() * query_radius);
+          absl::Uniform(bitgen, 0.0, 1.0) * query_radius);
     }
-    if (S2Testing::rnd.OneIn(2)) {
+    if (absl::Bernoulli(bitgen, 0.5)) {
       // Choose a maximum error whose logarithm is uniformly distributed over
       // a reasonable range, except that it is sometimes zero.
       query.mutable_options()->set_max_error(S1Angle::Radians(
-          pow(1e-4, S2Testing::rnd.RandDouble()) * query_radius.radians()));
+          s2random::LogUniform(bitgen, 1e-4, 1.0) * query_radius.radians()));
     }
     S2LatLngRect filter_rect = S2LatLngRect::FromCenterSize(
-        S2LatLng(S2Testing::SamplePoint(query_cap)),
-        S2LatLng(S2Testing::rnd.RandDouble() * kTestCapRadius,
-                 S2Testing::rnd.RandDouble() * kTestCapRadius));
-    if (S2Testing::rnd.OneIn(5)) {
+        S2LatLng(s2random::SamplePoint(bitgen, query_cap)),
+        S2LatLng(absl::Uniform(bitgen, 0.0, 1.0) * kTestCapRadius,
+                 absl::Uniform(bitgen, 0.0, 1.0) * kTestCapRadius));
+    if (absl::Bernoulli(bitgen, 0.2)) {
       query.mutable_options()->set_region(&filter_rect);
     }
-    int target_type = S2Testing::rnd.Uniform(5);
+    int target_type = absl::Uniform(bitgen, 0, 5);
     if (target_type == 0) {
       // Find the cells closest to a given point.
-      S2Point point = S2Testing::SamplePoint(query_cap);
+      S2Point point = s2random::SamplePoint(bitgen, query_cap);
       S2ClosestCellQuery::PointTarget target(point);
       TestFindClosestCells(&target, &query);
     } else if (target_type == 1) {
       // Find the cells closest to a given edge.
-      S2Point a = S2Testing::SamplePoint(query_cap);
-      S2Point b = S2Testing::SamplePoint(
-          S2Cap(a, pow(1e-4, S2Testing::rnd.RandDouble()) * query_radius));
+      S2Point a = s2random::SamplePoint(bitgen, query_cap);
+      S2Point b = s2random::SamplePoint(
+          bitgen,
+          S2Cap(a, s2random::LogUniform(bitgen, 1e-4, 1.0) * query_radius));
       S2ClosestCellQuery::EdgeTarget target(a, b);
       TestFindClosestCells(&target, &query);
     } else if (target_type == 2) {
       // Find the cells closest to a given cell.
       int min_level = S2::kMaxDiag.GetLevelForMaxValue(query_radius.radians());
-      int level = min_level + S2Testing::rnd.Uniform(
-          S2CellId::kMaxLevel - min_level + 1);
-      S2Point a = S2Testing::SamplePoint(query_cap);
+      int level = absl::Uniform(absl::IntervalClosedClosed, bitgen, min_level,
+                                S2CellId::kMaxLevel);
+      S2Point a = s2random::SamplePoint(bitgen, query_cap);
       S2Cell cell(S2CellId(a).parent(level));
       S2ClosestCellQuery::CellTarget target(cell);
       TestFindClosestCells(&target, &query);
     } else if (target_type == 3) {
       // Find the cells closest to an S2Cap covering.
-      S2Cap cap(S2Testing::SamplePoint(query_cap),
-                0.1 * pow(1e-4, S2Testing::rnd.RandDouble()) * query_radius);
+      S2Point center = s2random::SamplePoint(bitgen, query_cap);
+      S2Cap cap(center, s2random::LogUniform(bitgen, 1e-5, 0.1) * query_radius);
       S2RegionCoverer coverer;
       coverer.mutable_options()->set_max_cells(16);
       S2ClosestCellQuery::CellUnionTarget target(coverer.GetCovering(cap));
@@ -395,38 +403,47 @@ static void TestWithIndexFactory(const CellIndexFactory& factory,
     } else {
       ABSL_DCHECK_EQ(4, target_type);
       MutableS2ShapeIndex target_index;
-      s2testing::FractalLoopShapeIndexFactory().AddEdges(index_cap, 100,
-                                                         &target_index);
+      s2testing::FractalLoopShapeIndexFactory(bitgen).AddEdges(index_cap, 100,
+                                                               &target_index);
       S2ClosestCellQuery::ShapeIndexTarget target(&target_index);
-      target.set_include_interiors(S2Testing::rnd.OneIn(2));
+      target.set_include_interiors(absl::Bernoulli(bitgen, 0.5));
       TestFindClosestCells(&target, &query);
     }
   }
 }
 
-static const int kNumIndexes = 20;
-static const int kNumCells = 100;
-static const int kNumQueries = 100;
+static constexpr int kNumIndexes = 20;
+static constexpr int kNumCells = 100;
+static constexpr int kNumQueries = 100;
 
 TEST(S2ClosestCellQuery, PointCloudCells) {
-  TestWithIndexFactory(PointCloudCellIndexFactory(),
-                       kNumIndexes, kNumCells, kNumQueries);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "POINT_CLOUD_CELLS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  TestWithIndexFactory(PointCloudCellIndexFactory(), kNumIndexes, kNumCells,
+                       kNumQueries, bitgen);
 }
 
 TEST(S2ClosestCellQuery, CapsCells) {
-  TestWithIndexFactory(CapsCellIndexFactory(16 /*max_cells_per_cap*/,
-                                            0.1 /*density*/),
-                       kNumIndexes, kNumCells, kNumQueries);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CAPS_CELLS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  TestWithIndexFactory(
+      CapsCellIndexFactory(16 /*max_cells_per_cap*/, 0.1 /*density*/),
+      kNumIndexes, kNumCells, kNumQueries, bitgen);
 }
 
 TEST(S2ClosestCellQuery, ConservativeCellDistanceIsUsed) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CONSERVATIVE_CELL_DISTANCE_IS_USED",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Don't use absl::FlagSaver, so it works in opensource without gflags.
   const int saved_seed = absl::GetFlag(FLAGS_s2_random_seed);
   // These specific test cases happen to fail if max_error() is not properly
   // taken into account when measuring distances to S2ShapeIndex cells.
   for (int seed : {32, 109, 253, 342, 948, 1535, 1884, 1887, 2133}) {
     absl::SetFlag(&FLAGS_s2_random_seed, seed);
-    TestWithIndexFactory(PointCloudCellIndexFactory(), 5, 100, 10);
+    TestWithIndexFactory(PointCloudCellIndexFactory(), 5, 100, 10, bitgen);
   }
   absl::SetFlag(&FLAGS_s2_random_seed, saved_seed);
 }

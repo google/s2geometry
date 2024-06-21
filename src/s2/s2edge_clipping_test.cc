@@ -20,11 +20,13 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
-#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/container/inlined_vector.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/r1interval.h"
@@ -35,6 +37,7 @@
 #include "s2/s2coords.h"
 #include "s2/s2edge_crossings.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2testing.h"
 
@@ -44,7 +47,8 @@ using std::fabs;
 using std::max;
 using std::vector;
 
-void TestFaceClipping(const S2Point& a_raw, const S2Point& b_raw) {
+void TestFaceClipping(absl::BitGenRef bitgen, const S2Point& a_raw,
+                      const S2Point& b_raw) {
   S2Point a = a_raw.Normalize();
   S2Point b = b_raw.Normalize();
 
@@ -109,8 +113,9 @@ void TestFaceClipping(const S2Point& a_raw, const S2Point& b_raw) {
   // [-Pi, Pi].  We then accumulate the angle intervals spanned by each
   // clipped edge; the union over all 6 faces should approximately equal the
   // interval covered by the original edge.
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  double padding = rnd->OneIn(10) ? 0.0 : 1e-10 * pow(1e-5, rnd->RandDouble());
+  double padding = absl::Bernoulli(bitgen, 0.1)
+                       ? 0.0
+                       : s2random::LogUniform(bitgen, 1e-15, 1e-10);
   S2Point x_axis = a, y_axis = a_tangent;
   S1Interval expected_angles(0, a.Angle(b));
   S1Interval max_angles = expected_angles.Expanded(kErrorRadians);
@@ -141,9 +146,10 @@ void TestFaceClipping(const S2Point& a_raw, const S2Point& b_raw) {
   EXPECT_TRUE(actual_angles.Expanded(kErrorRadians).Contains(expected_angles));
 }
 
-void TestFaceClippingEdgePair(const S2Point& a, const S2Point& b) {
-  TestFaceClipping(a, b);
-  TestFaceClipping(b, a);
+void TestFaceClippingEdgePair(absl::BitGenRef bitgen, const S2Point& a,
+                              const S2Point& b) {
+  TestFaceClipping(bitgen, a, b);
+  TestFaceClipping(bitgen, b, a);
 }
 
 // This function is designed to choose line segment endpoints that are difficult
@@ -151,77 +157,82 @@ void TestFaceClippingEdgePair(const S2Point& a, const S2Point& b) {
 // either an edge midpoint, face midpoint, or corner vertex along the edge PQ
 // and then perturbs it slightly.  It also sometimes returns a random point from
 // anywhere on the sphere.
-S2Point PerturbedCornerOrMidpoint(const S2Point& p, const S2Point& q) {
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  S2Point a = (rnd->Uniform(3) - 1) * p + (rnd->Uniform(3) - 1) * q;
-  if (rnd->OneIn(10)) {
+S2Point PerturbedCornerOrMidpoint(absl::BitGenRef bitgen, const S2Point& p,
+                                  const S2Point& q) {
+  S2Point a =
+      (absl::Uniform(bitgen, -1, 2)) * p + (absl::Uniform(bitgen, -1, 2)) * q;
+  if (absl::Bernoulli(bitgen, 0.1)) {
     // This perturbation often has no effect except on coordinates that are
     // zero, in which case the perturbed value is so small that operations on
     // it often result in underflow.
-    a += pow(1e-300, rnd->RandDouble()) * S2Testing::RandomPoint();
-  } else if (rnd->OneIn(2)) {
+    a += s2random::LogUniform(bitgen, 1e-300, 1.0) * s2random::Point(bitgen);
+  } else if (absl::Bernoulli(bitgen, 0.5)) {
     // For coordinates near 1 (say > 0.5), this perturbation yields values
     // that are only a few representable values away from the initial value.
-    a += 4 * DBL_EPSILON * S2Testing::RandomPoint();
+    a += 4 * DBL_EPSILON * s2random::Point(bitgen);
   } else {
     // A perturbation whose magnitude is in the range [1e-25, 1e-10].
-    a += 1e-10 * pow(1e-15, rnd->RandDouble()) * S2Testing::RandomPoint();
+    a += s2random::LogUniform(bitgen, 1e-25, 1e-10) * s2random::Point(bitgen);
   }
   if (a.Norm2() < DBL_MIN) {
     // If a.Norm2() is denormalized, Normalize() loses too much precision.
-    return PerturbedCornerOrMidpoint(p, q);
+    return PerturbedCornerOrMidpoint(bitgen, p, q);
   }
   return a;
 }
 
 TEST(S2, FaceClipping) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "FACE_CLIPPING",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Start with a few simple cases.
   // An edge that is entirely contained within one cube face:
-  TestFaceClippingEdgePair(S2Point(1, -0.5, -0.5), S2Point(1, 0.5, 0.5));
+  TestFaceClippingEdgePair(bitgen, S2Point(1, -0.5, -0.5),
+                           S2Point(1, 0.5, 0.5));
   // An edge that crosses one cube edge:
-  TestFaceClippingEdgePair(S2Point(1, 0, 0), S2Point(0, 1, 0));
+  TestFaceClippingEdgePair(bitgen, S2Point(1, 0, 0), S2Point(0, 1, 0));
   // An edge that crosses two opposite edges of face 0:
-  TestFaceClippingEdgePair(S2Point(0.75, 0, -1), S2Point(0.75, 0, 1));
+  TestFaceClippingEdgePair(bitgen, S2Point(0.75, 0, -1), S2Point(0.75, 0, 1));
   // An edge that crosses two adjacent edges of face 2:
-  TestFaceClippingEdgePair(S2Point(1, 0, 0.75), S2Point(0, 1, 0.75));
+  TestFaceClippingEdgePair(bitgen, S2Point(1, 0, 0.75), S2Point(0, 1, 0.75));
   // An edge that crosses three cube edges (four faces):
-  TestFaceClippingEdgePair(S2Point(1, 0.9, 0.95), S2Point(-1, 0.95, 0.9));
+  TestFaceClippingEdgePair(bitgen, S2Point(1, 0.9, 0.95),
+                           S2Point(-1, 0.95, 0.9));
 
   // Comprehensively test edges that are difficult to handle, especially those
   // that nearly follow one of the 12 cube edges.
-  S2Testing::Random* rnd = &S2Testing::rnd;
   R2Rect biunit(R1Interval(-1, 1), R1Interval(-1, 1));
-  const int kIters = 1000;  // Test passes with 1e6 iterations
+  constexpr int kIters = 1000;  // Test passes with 1e6 iterations
   for (int iter = 0; iter < kIters; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
     // Choose two adjacent cube corners P and Q.
-    int face = rnd->Uniform(6);
-    int i = rnd->Uniform(4);
+    int face = absl::Uniform(bitgen, 0, 6);
+    int i = absl::Uniform(bitgen, 0, 4);
     int j = (i + 1) & 3;
     S2Point p = S2::FaceUVtoXYZ(face, biunit.GetVertex(i));
     S2Point q = S2::FaceUVtoXYZ(face, biunit.GetVertex(j));
 
     // Now choose two points that are nearly on the edge PQ, preferring points
     // that are near cube corners, face midpoints, or edge midpoints.
-    S2Point a = PerturbedCornerOrMidpoint(p, q);
-    S2Point b = PerturbedCornerOrMidpoint(p, q);
-    TestFaceClipping(a, b);
+    S2Point a = PerturbedCornerOrMidpoint(bitgen, p, q);
+    S2Point b = PerturbedCornerOrMidpoint(bitgen, p, q);
+    TestFaceClipping(bitgen, a, b);
   }
 }
 
 // Choose a random point in the rectangle defined by points A and B, sometimes
 // returning a point on the edge AB or the points A and B themselves.
-R2Point ChooseRectPoint(const R2Point& a, const R2Point& b) {
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  if (rnd->OneIn(5)) {
-    return rnd->OneIn(2) ? a : b;
-  } else if (rnd->OneIn(3)) {
-    return a + rnd->RandDouble() * (b - a);
+R2Point ChooseRectPoint(absl::BitGenRef bitgen, const R2Point& a,
+                        const R2Point& b) {
+  if (absl::Bernoulli(bitgen, 0.2)) {
+    return absl::Bernoulli(bitgen, 0.5) ? a : b;
+  } else if (absl::Bernoulli(bitgen, 1.0 / 3)) {
+    return a + absl::Uniform(bitgen, 0.0, 1.0) * (b - a);
   } else {
     // a[i] may be >, <, or == b[i], so we write it like this instead
     // of using UniformDouble.
-    return R2Point(a[0] + rnd->RandDouble() * (b[0] - a[0]),
-                   a[1] + rnd->RandDouble() * (b[1] - a[1]));
+    return R2Point(a[0] + absl::Uniform(bitgen, 0.0, 1.0) * (b[0] - a[0]),
+                   a[1] + absl::Uniform(bitgen, 0.0, 1.0) * (b[1] - a[1]));
   }
 }
 
@@ -252,7 +263,8 @@ void CheckPointOnBoundary(const R2Point& p, const R2Point& a,
 
 // Given an edge AB and a rectangle "clip", verify that IntersectsRect(),
 // ClipEdge(), and ClipEdgeBound() produce consistent results.
-void TestClipEdge(const R2Point& a, const R2Point& b, const R2Rect& clip) {
+void TestClipEdge(absl::BitGenRef bitgen, const R2Point& a, const R2Point& b,
+                  const R2Rect& clip) {
   // A bound for the error in edge clipping plus the error in the
   // IntersectsRect calculation below.
   const double kError = (S2::kEdgeClipErrorUVDist +
@@ -270,8 +282,9 @@ void TestClipEdge(const R2Point& a, const R2Point& b, const R2Rect& clip) {
     CheckPointOnBoundary(b_clipped, b, clip);
   }
   // Choose a random initial bound to pass to ClipEdgeBound.
-  R2Rect initial_clip = R2Rect::FromPointPair(ChooseRectPoint(a, b),
-                                              ChooseRectPoint(a, b));
+  R2Point p1 = ChooseRectPoint(bitgen, a, b);
+  R2Point p2 = ChooseRectPoint(bitgen, a, b);
+  R2Rect initial_clip = R2Rect::FromPointPair(p1, p2);
   R2Rect bound = S2::GetClippedEdgeBound(a, b, initial_clip);
   if (bound.is_empty()) return;  // Precondition of ClipEdgeBound not met
   R2Rect max_bound = bound.Intersection(clip);
@@ -289,15 +302,17 @@ void TestClipEdge(const R2Point& a, const R2Point& b, const R2Rect& clip) {
 // Given an interval "clip", randomly choose either a value in the interval, a
 // value outside the interval, or one of the two interval endpoints, ensuring
 // that all cases have reasonable probability for any interval "clip".
-double ChooseEndpoint(const R1Interval& clip) {
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  if (rnd->OneIn(5)) {
-    return rnd->OneIn(2) ? clip.lo() : clip.hi();
+double ChooseEndpoint(absl::BitGenRef bitgen, const R1Interval& clip) {
+  if (absl::Bernoulli(bitgen, 0.2)) {
+    return absl::Bernoulli(bitgen, 0.5) ? clip.lo() : clip.hi();
   } else {
-    switch (rnd->Uniform(3)) {
-      case 0:  return clip.lo() - rnd->RandDouble();
-      case 1:  return clip.hi() + rnd->RandDouble();
-      default: return clip.lo() + rnd->RandDouble() * clip.GetLength();
+    switch (absl::Uniform(bitgen, 0, 3)) {
+      case 0:
+        return clip.lo() - absl::Uniform(bitgen, 0.0, 1.0);
+      case 1:
+        return clip.hi() + absl::Uniform(bitgen, 0.0, 1.0);
+      default:
+        return absl::Uniform(bitgen, clip.lo(), clip.hi());
     }
   }
 }
@@ -308,39 +323,50 @@ double ChooseEndpoint(const R1Interval& clip) {
 // Also sometimes return points that are exactly on one of the extended
 // diagonals of "clip".  All cases are reasonably likely to occur for any
 // given rectangle "clip".
-R2Point ChooseEndpoint(const R2Rect& clip) {
-  if (S2Testing::rnd.OneIn(10)) {
+R2Point ChooseEndpoint(absl::BitGenRef bitgen, const R2Rect& clip) {
+  if (absl::Bernoulli(bitgen, 0.1)) {
     // Return a point on one of the two extended diagonals.
-    int diag = S2Testing::rnd.Uniform(2);
-    double t = S2Testing::rnd.UniformDouble(-1, 2);
+    int diag = absl::Uniform(bitgen, 0, 2);
+    double t = absl::Uniform(bitgen, -1.0, 2.0);
     return (1 - t) * clip.GetVertex(diag) + t * clip.GetVertex(diag + 2);
   } else {
-    return R2Point(ChooseEndpoint(clip[0]), ChooseEndpoint(clip[1]));
+    double x = ChooseEndpoint(bitgen, clip[0]);
+    double y = ChooseEndpoint(bitgen, clip[1]);
+    return R2Point(x, y);
   }
 }
 
 // Given a rectangle "clip", test the S2 edge clipping methods using
 // many edges that are randomly constructed to trigger special cases.
-void TestEdgeClipping(const R2Rect& clip) {
-  const int kIters = 1000;  // Test passes with 1e6 iterations
+void TestEdgeClipping(absl::BitGenRef bitgen, const R2Rect& clip) {
+  constexpr int kIters = 1000;  // Test passes with 1e6 iterations
   for (int iter = 0; iter < kIters; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
-    TestClipEdge(ChooseEndpoint(clip), ChooseEndpoint(clip), clip);
+    R2Point a = ChooseEndpoint(bitgen, clip);
+    R2Point b = ChooseEndpoint(bitgen, clip);
+    TestClipEdge(bitgen, a, b, clip);
   }
 }
 
 TEST(S2, EdgeClipping) {
-  S2Testing::Random* rnd = &S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "EDGE_CLIPPING",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Test clipping against random rectangles.
   for (int i = 0; i < 5; ++i) {
-    TestEdgeClipping(R2Rect::FromPointPair(
-        R2Point(rnd->UniformDouble(-1, 1), rnd->UniformDouble(-1, 1)),
-        R2Point(rnd->UniformDouble(-1, 1), rnd->UniformDouble(-1, 1))));
+    double p1_x = absl::Uniform(bitgen, -1.0, 1.0);
+    double p1_y = absl::Uniform(bitgen, -1.0, 1.0);
+    double p2_x = absl::Uniform(bitgen, -1.0, 1.0);
+    double p2_y = absl::Uniform(bitgen, -1.0, 1.0);
+    TestEdgeClipping(bitgen, R2Rect::FromPointPair(R2Point(p1_x, p1_y),
+                                                   R2Point(p2_x, p2_y)));
   }
   // Also clip against one-dimensional, singleton, and empty rectangles.
-  TestEdgeClipping(R2Rect(R1Interval(-0.7, -0.7), R1Interval(0.3, 0.35)));
-  TestEdgeClipping(R2Rect(R1Interval(0.2, 0.5), R1Interval(0.3, 0.3)));
-  TestEdgeClipping(R2Rect(R1Interval(-0.7, 0.3), R1Interval(0, 0)));
-  TestEdgeClipping(R2Rect::FromPoint(R2Point(0.3, 0.8)));
-  TestEdgeClipping(R2Rect::Empty());
+  TestEdgeClipping(bitgen,
+                   R2Rect(R1Interval(-0.7, -0.7), R1Interval(0.3, 0.35)));
+  TestEdgeClipping(bitgen, R2Rect(R1Interval(0.2, 0.5), R1Interval(0.3, 0.3)));
+  TestEdgeClipping(bitgen, R2Rect(R1Interval(-0.7, 0.3), R1Interval(0, 0)));
+  TestEdgeClipping(bitgen, R2Rect::FromPoint(R2Point(0.3, 0.8)));
+  TestEdgeClipping(bitgen, R2Rect::Empty());
 }

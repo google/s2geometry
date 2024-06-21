@@ -18,7 +18,7 @@
 #ifndef S2_S2PADDED_CELL_H_
 #define S2_S2PADDED_CELL_H_
 
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2rect.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords_internal.h"

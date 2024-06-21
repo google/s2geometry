@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,6 +29,10 @@
 #include "s2/base/log_severity.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
@@ -39,6 +44,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
 #include "s2/s2predicates_internal.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/util/math/exactfloat/exactfloat.h"
 
@@ -272,28 +278,28 @@ TEST(S2, RobustCrossProdMagnitude) {
 // Chooses a random S2Point that is often near the intersection of one of the
 // coodinates planes or coordinate axes with the unit sphere.  (It is possible
 // to represent very small perturbations near such points.)
-S2Point ChoosePoint() {
-  S2Point x = S2Testing::RandomPoint();
+S2Point ChoosePoint(absl::BitGenRef bitgen) {
+  S2Point x = s2random::Point(bitgen);
   for (int i = 0; i < 3; ++i) {
-    if (S2Testing::rnd.OneIn(4)) {  // Denormalized
-      x[i] *= pow(2, -1022 - 53 * S2Testing::rnd.RandDouble());
-    } else if (S2Testing::rnd.OneIn(3)) {  // Zero when squared
-      x[i] *= pow(2, -511 - 511 * S2Testing::rnd.RandDouble());
-    } else if (S2Testing::rnd.OneIn(2)) {  // Simply small
-      x[i] *= pow(2, -100 * S2Testing::rnd.RandDouble());
+    if (absl::Bernoulli(bitgen, 0.25)) {  // Denormalized
+      x[i] *= pow(2, -1022 - 53 * absl::Uniform(bitgen, 0.0, 1.0));
+    } else if (absl::Bernoulli(bitgen, 1.0 / 3)) {  // Zero when squared
+      x[i] *= pow(2, -511 - 511 * absl::Uniform(bitgen, 0.0, 1.0));
+    } else if (absl::Bernoulli(bitgen, 0.5)) {  // Simply small
+      x[i] *= pow(2, -100 * absl::Uniform(bitgen, 0.0, 1.0));
     }
   }
   if (x.Norm2() >= ldexp(1, -968)) {
     return x.Normalize();
   }
-  return ChoosePoint();
+  return ChoosePoint(bitgen);
 }
 
 // Perturbs the length of the given point slightly while ensuring that it still
 // satisfies the conditions of S2::IsUnitLength().
-S2Point PerturbLength(const S2Point& p) {
-  S2Point q = p * S2Testing::rnd.UniformDouble(1 - 2 * DBL_EPSILON,
-                                               1 + 2 * DBL_EPSILON);
+S2Point PerturbLength(absl::BitGenRef bitgen, const S2Point& p) {
+  S2Point q = p * absl::Uniform<double>(bitgen, 1 - 2 * DBL_EPSILON,
+                                        1 + 2 * DBL_EPSILON);
   // S2::IsUnitLength() is not an exact test, since it tests the length using
   // ordinary double-precision arithmetic and allows for errors in its own
   // calculations.  This is fine for most purposes, but since here we are
@@ -305,22 +311,26 @@ S2Point PerturbLength(const S2Point& p) {
 }
 
 TEST(S2, RobustCrossProdError) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "ROBUST_CROSS_PROD_ERROR",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // We repeatedly choose two points (usually linearly dependent, or almost so)
   // and measure the distance between the cross product returned by
   // RobustCrossProd and one returned by ExactCrossProd.
   PrecisionStats stats;
-  auto& rnd = S2Testing::rnd;
   for (int iter = 0; iter < 5000; ++iter) {
-    rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
     S2Point a, b;
     do {
-      a = PerturbLength(ChoosePoint());
-      S2Point dir = ChoosePoint();
-      S1Angle r = S1Angle::Radians(M_PI_2 * pow(2, -53 * rnd.RandDouble()));
+      a = PerturbLength(bitgen, ChoosePoint(bitgen));
+      S2Point dir = ChoosePoint(bitgen);
+      S1Angle r = S1Angle::Radians(
+          M_PI_2 * pow(2, -53 * absl::Uniform(bitgen, 0.0, 1.0)));
       // Occasionally perturb the point by a tiny distance.
-      if (rnd.OneIn(3)) r *= pow(2, -1022 * rnd.RandDouble());
-      b = PerturbLength(S2::GetPointOnLine(a, dir, r));
-      if (rnd.OneIn(2)) b = -b;
+      if (absl::Bernoulli(bitgen, 1.0 / 3))
+        r *= pow(2, -1022 * absl::Uniform(bitgen, 0.0, 1.0));
+      b = PerturbLength(bitgen, S2::GetPointOnLine(a, dir, r));
+      if (absl::Bernoulli(bitgen, 0.5)) b = -b;
     } while (a == b);
     auto prec = TestRobustCrossProdError(a, b);
     stats.Tally(prec);
@@ -419,7 +429,9 @@ TEST(S2, IntersectionError) {
 
   GetIntersectionStats stats;
   S1Angle max_point_dist, max_edge_dist;
-  S2Testing::Random* rnd = &S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INTERSECTION_ERROR",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 5000; ++iter) {
     // We construct two edges AB and CD that intersect near "p".  The angle
     // between AB and CD (expressed as a slope) is chosen randomly between
@@ -433,17 +445,17 @@ TEST(S2, IntersectionError) {
     // Sometimes the edges we generate will not actually cross, in which case
     // we simply try again.
     S2Point p, d1, d2;
-    S2Testing::GetRandomFrame(&p, &d1, &d2);
-    double slope = 1e-15 * pow(1e30, rnd->RandDouble());
+    s2random::Frame(bitgen, p, d1, d2);
+    double slope = s2random::LogUniform(bitgen, 1e-15, 1e15);
     d2 = (d1 + slope * d2).Normalize();
     S2Point a, b, c, d;
     do {
-      double ab_len = pow(1e-15, rnd->RandDouble());
-      double cd_len = pow(1e-15, rnd->RandDouble());
-      double a_fraction = pow(1e-5, rnd->RandDouble());
-      if (rnd->OneIn(2)) a_fraction = 1 - a_fraction;
-      double c_fraction = pow(1e-5, rnd->RandDouble());
-      if (rnd->OneIn(2)) c_fraction = 1 - c_fraction;
+      double ab_len = s2random::LogUniform(bitgen, 1e-15, 1.0);
+      double cd_len = s2random::LogUniform(bitgen, 1e-15, 1.0);
+      double a_fraction = s2random::LogUniform(bitgen, 1e-5, 1.0);
+      if (absl::Bernoulli(bitgen, 0.5)) a_fraction = 1 - a_fraction;
+      double c_fraction = s2random::LogUniform(bitgen, 1e-5, 1.0);
+      if (absl::Bernoulli(bitgen, 0.5)) c_fraction = 1 - c_fraction;
       a = (p - a_fraction * ab_len * d1).Normalize();
       b = (p + (1 - a_fraction) * ab_len * d1).Normalize();
       c = (p - c_fraction * cd_len * d2).Normalize();
@@ -491,10 +503,10 @@ TEST(S2, IntersectionError) {
 // (to avoid choosing too many duplicate points) and by at most Pi/2 - 1e-3
 // (to avoid nearly-diametric edges, since the test below is not sophisticated
 // enough to test such edges).
-S2Point ChooseSemicirclePoint(const S2Point& x, const S2Point& y) {
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  double sign = (2 * rnd->Uniform(2)) - 1;
-  return (x + sign * 1e3 * pow(1e-18, rnd->RandDouble()) * y).Normalize();
+S2Point ChooseSemicirclePoint(absl::BitGenRef bitgen, const S2Point& x,
+                              const S2Point& y) {
+  double sign = (2 * absl::Uniform(bitgen, 0, 2)) - 1;
+  return (x + sign * s2random::LogUniform(bitgen, 1e-15, 1e3) * y).Normalize();
 }
 
 TEST(S2, GrazingIntersections) {
@@ -503,17 +515,20 @@ TEST(S2, GrazingIntersections) {
   // that CD and CE both cross AB.  It then checks that the intersection
   // points returned by GetIntersection() have the correct relative ordering
   // along AB (to within kIntersectionError).
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GRAZING_INTERSECTIONS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   GetIntersectionStats stats;
   for (int iter = 0; iter < 1000; ++iter) {
     S2Point x, y, z;
-    S2Testing::GetRandomFrame(&x, &y, &z);
+    s2random::Frame(bitgen, x, y, z);
     S2Point a, b, c, d, e, ab;
     do {
-      a = ChooseSemicirclePoint(x, y);
-      b = ChooseSemicirclePoint(x, y);
-      c = ChooseSemicirclePoint(x, y);
-      d = ChooseSemicirclePoint(x, y);
-      e = ChooseSemicirclePoint(x, y);
+      a = ChooseSemicirclePoint(bitgen, x, y);
+      b = ChooseSemicirclePoint(bitgen, x, y);
+      c = ChooseSemicirclePoint(bitgen, x, y);
+      d = ChooseSemicirclePoint(bitgen, x, y);
+      e = ChooseSemicirclePoint(bitgen, x, y);
       ab = (a - b).CrossProd(a + b);
     } while (ab.Norm() < 50 * DBL_EPSILON ||
              S2::CrossingSign(a, b, c, d) <= 0 ||
@@ -552,11 +567,15 @@ TEST(S2, ExactIntersectionSign) {
 }
 
 TEST(S2, GetIntersectionInvariants) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_INTERSECTION_INVARIANTS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Test that the result of GetIntersection does not change when the edges
   // are swapped and/or reversed.  The number of iterations is high because it
   // is difficult to generate test cases that show that CompareEdges() is
   // necessary and correct, for example.
-  const int kIters = google::DEBUG_MODE ? 5000 : 50000;
+  constexpr int kIters = S2_DEBUG_MODE ? 5000 : 50000;
   for (int iter = 0; iter < kIters; ++iter) {
     S2Point a, b, c, d;
     do {
@@ -565,8 +584,8 @@ TEST(S2, GetIntersectionInvariants) {
       // This can be done by swapping the "x" and "y" coordinates.
       // [Swapping other coordinate pairs doesn't work because it changes the
       // order of addition in Norm2() == (x**2 + y**2) + z**2.]
-      a = c = S2Testing::RandomPoint();
-      b = d = S2Testing::RandomPoint();
+      a = c = s2random::Point(bitgen);
+      b = d = s2random::Point(bitgen);
       swap(c[0], c[1]);
       swap(d[0], d[1]);
     } while (S2::CrossingSign(a, b, c, d) <= 0);
@@ -575,9 +594,16 @@ TEST(S2, GetIntersectionInvariants) {
     // Now verify that GetIntersection returns exactly the same result when
     // the edges are swapped and/or reversed.
     S2Point result = S2::GetIntersection(a, b, c, d);
-    if (S2Testing::rnd.OneIn(2)) { swap(a, b); }
-    if (S2Testing::rnd.OneIn(2)) { swap(c, d); }
-    if (S2Testing::rnd.OneIn(2)) { swap(a, c); swap(b, d); }
+    if (absl::Bernoulli(bitgen, 0.5)) {
+      swap(a, b);
+    }
+    if (absl::Bernoulli(bitgen, 0.5)) {
+      swap(c, d);
+    }
+    if (absl::Bernoulli(bitgen, 0.5)) {
+      swap(a, c);
+      swap(b, d);
+    }
     EXPECT_EQ(result, S2::GetIntersection(a, b, c, d));
   }
 }

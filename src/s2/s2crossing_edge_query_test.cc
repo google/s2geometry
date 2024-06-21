@@ -29,6 +29,9 @@
 #include "s2/base/casts.h"
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r2.h"
@@ -45,6 +48,7 @@
 #include "s2/s2padded_cell.h"
 #include "s2/s2point.h"
 #include "s2/s2polyline.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_shape_edge.h"
@@ -68,12 +72,12 @@ namespace {
 using TestEdge = pair<S2Point, S2Point>;
 using CrossingType = s2shapeutil::CrossingType;
 
-S2Point PerturbAtDistance(S1Angle distance, const S2Point& a0,
-                          const S2Point& b0) {
+S2Point PerturbAtDistance(absl::BitGenRef bitgen, S1Angle distance,
+                          const S2Point& a0, const S2Point& b0) {
   S2Point x = S2::GetPointOnLine(a0, b0, distance);
-  if (S2Testing::rnd.OneIn(2)) {
+  if (absl::Bernoulli(bitgen, 0.5)) {
     for (int i = 0; i < 3; ++i) {
-      x[i] = nextafter(x[i], S2Testing::rnd.OneIn(2) ? 1 : -1);
+      x[i] = nextafter(x[i], absl::Bernoulli(bitgen, 0.5) ? 1 : -1);
     }
     x = x.Normalize();
   }
@@ -83,30 +87,30 @@ S2Point PerturbAtDistance(S1Angle distance, const S2Point& a0,
 // Generate sub-edges of some given edge (a0,b0).  The length of the sub-edges
 // is distributed exponentially over a large range, and the endpoints may be
 // slightly perturbed to one side of (a0,b0) or the other.
-void GetPerturbedSubEdges(S2Point a0, S2Point b0, int count,
-                          vector<TestEdge>* edges) {
+void GetPerturbedSubEdges(absl::BitGenRef bitgen, S2Point a0, S2Point b0,
+                          int count, vector<TestEdge>* edges) {
   edges->clear();
   a0 = a0.Normalize();
   b0 = b0.Normalize();
   S1Angle length0(a0, b0);
   for (int i = 0; i < count; ++i) {
-    S1Angle length = length0 * pow(1e-15, S2Testing::rnd.RandDouble());
-    S1Angle offset = (length0 - length) * S2Testing::rnd.RandDouble();
+    S1Angle length = length0 * s2random::LogUniform(bitgen, 1e-15, 1.0);
+    S1Angle offset = (length0 - length) * absl::Uniform(bitgen, 0.0, 1.0);
     edges->push_back(
-        std::make_pair(PerturbAtDistance(offset, a0, b0),
-                       PerturbAtDistance(offset + length, a0, b0)));
+        std::make_pair(PerturbAtDistance(bitgen, offset, a0, b0),
+                       PerturbAtDistance(bitgen, offset + length, a0, b0)));
   }
 }
 
 // Generate edges whose center is randomly chosen from the given S2Cap, and
 // whose length is randomly chosen up to "max_length".
-void GetCapEdges(const S2Cap& center_cap, S1Angle max_length, int count,
-                 vector<TestEdge>* edges) {
+void GetCapEdges(absl::BitGenRef bitgen, const S2Cap& center_cap,
+                 S1Angle max_length, int count, vector<TestEdge>* edges) {
   edges->clear();
   for (int i = 0; i < count; ++i) {
-    S2Point center = S2Testing::SamplePoint(center_cap);
+    S2Point center = s2random::SamplePoint(bitgen, center_cap);
     S2Cap edge_cap(center, 0.5 * max_length);
-    S2Point p1 = S2Testing::SamplePoint(edge_cap);
+    S2Point p1 = s2random::SamplePoint(bitgen, edge_cap);
     // Compute p1 reflected through "center", and normalize for good measure.
     S2Point p2 = (2 * p1.DotProd(center) * center - p1).Normalize();
     edges->push_back(std::make_pair(p1, p2));
@@ -217,17 +221,20 @@ void TestAllCrossings(const vector<TestEdge>& edges) {
 // necessary for correctness.  (It fails if MutableS2ShapeIndex::kCellPadding
 // is set to zero.)
 TEST(GetCrossingCandidates, PerturbedCubeEdges) {
-  S2Testing::Random* rnd = &S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "PERTURBED_CUBE_EDGES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<TestEdge> edges;
   for (int iter = 0; iter < 10; ++iter) {
-    int face = rnd->Uniform(6);
-    double scale = pow(1e-15, rnd->RandDouble());
-    R2Point uv(2 * rnd->Uniform(2) - 1, 2 * rnd->Uniform(2) - 1);  // vertex
+    int face = absl::Uniform(bitgen, 0, 6);
+    double scale = s2random::LogUniform(bitgen, 1e-15, 1.0);
+    R2Point uv(2 * absl::Uniform(bitgen, 0, 2) - 1,
+               2 * absl::Uniform(bitgen, 0, 2) - 1);  // vertex
     S2Point a0 = S2::FaceUVtoXYZ(face, scale * uv);
     S2Point b0 = a0 - 2 * S2::GetNorm(face);
     // TODO(ericv): This test is currently slow because *every* crossing test
     // needs to invoke s2pred::ExpensiveSign().
-    GetPerturbedSubEdges(a0, b0, 30, &edges);
+    GetPerturbedSubEdges(bitgen, a0, b0, 30, &edges);
     TestAllCrossings(edges);
   }
 }
@@ -236,15 +243,17 @@ TEST(GetCrossingCandidates, PerturbedCubeEdges) {
 // edges are special because one coordinate is zero, and they lie on the
 // boundaries between the immediate child cells of the cube face.
 TEST(GetCrossingCandidates, PerturbedCubeFaceAxes) {
-  S2Testing::Random* rnd = &S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "PERTURBED_CUBE_FACE_AXES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<TestEdge> edges;
   for (int iter = 0; iter < 5; ++iter) {
-    int face = rnd->Uniform(6);
-    double scale = pow(1e-15, rnd->RandDouble());
-    S2Point axis = S2::GetUVWAxis(face, rnd->Uniform(2));
+    int face = absl::Uniform(bitgen, 0, 6);
+    double scale = s2random::LogUniform(bitgen, 1e-15, 1.0);
+    S2Point axis = S2::GetUVWAxis(face, absl::Uniform(bitgen, 0, 2));
     S2Point a0 = scale * axis + S2::GetNorm(face);
     S2Point b0 = scale * axis - S2::GetNorm(face);
-    GetPerturbedSubEdges(a0, b0, 30, &edges);
+    GetPerturbedSubEdges(bitgen, a0, b0, 30, &edges);
     TestAllCrossings(edges);
   }
 }
@@ -252,26 +261,36 @@ TEST(GetCrossingCandidates, PerturbedCubeFaceAxes) {
 TEST(GetCrossingCandidates, CapEdgesNearCubeVertex) {
   // Test a random collection of edges near the S2 cube vertex where the
   // Hilbert curve starts and ends.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CAP_EDGES_NEAR_CUBE_VERTEX",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<TestEdge> edges;
-  GetCapEdges(S2Cap(S2Point(-1, -1, 1).Normalize(), S1Angle::Radians(1e-3)),
+  GetCapEdges(bitgen,
+              S2Cap(S2Point(-1, -1, 1).Normalize(), S1Angle::Radians(1e-3)),
               S1Angle::Radians(1e-4), 1000, &edges);
   TestAllCrossings(edges);
 }
 
 TEST(GetCrossingCandidates, DegenerateEdgeOnCellVertexIsItsOwnCandidate) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "DEGENERATE_EDGE_ON_CELL_VERTEX_IS_ITS_OWN_CANDIDATE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; ++i) {
     vector<TestEdge> edges;
-    S2Cell cell(S2Testing::GetRandomCellId());
+    S2Cell cell(s2random::CellId(bitgen));
     edges.push_back(std::make_pair(cell.GetVertex(0), cell.GetVertex(0)));
     TestAllCrossings(edges);
   }
 }
 
 TEST(GetCrossingCandidates, CollinearEdgesOnCellBoundaries) {
-  const int kNumEdgeIntervals = 8;  // 9*8/2 = 36 edges
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "COLLINEAR_EDGES_ON_CELL_BOUNDARIES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  constexpr int kNumEdgeIntervals = 8;  // 9*8/2 = 36 edges
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
-    S2Cell cell(S2Testing::GetRandomCellId(level));
-    int i = S2Testing::rnd.Uniform(4);
+    S2Cell cell(s2random::CellId(bitgen, level));
+    int i = absl::Uniform(bitgen, 0, 4);
     S2Point p1 = cell.GetVertexRaw(i);
     S2Point p2 = cell.GetVertexRaw(i + 1);
     S2Point delta = (p2 - p1) / kNumEdgeIntervals;
@@ -346,8 +365,10 @@ TEST(GetCrossings, ShapeIdsAreCorrect) {
 // specifed root cell.  The code now uses an appropriate amount of padding,
 // i.e. S2::kFaceClipErrorUVCoord.)
 TEST(VisitCells, QueryEdgeOnFaceBoundary) {
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  const int kIters = 100;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "QUERY_EDGE_ON_FACE_BOUNDARY",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  constexpr int kIters = 100;
   for (int iter = 0; iter < kIters; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
 
@@ -358,12 +379,15 @@ TEST(VisitCells, QueryEdgeOnFaceBoundary) {
     S2Point a, b;
     R2Point a_uv, b_uv;
     do {
-      a_face = rnd->Uniform(6);
-      a = S2::FaceUVtoXYZ(a_face, rnd->UniformDouble(-1, 1),
-                          rnd->UniformDouble(-1, 1)).Normalize();
+      a_face = absl::Uniform(bitgen, 0, 6);
+      a = S2::FaceUVtoXYZ(a_face, absl::Uniform<double>(bitgen, -1, 1),
+                          absl::Uniform<double>(bitgen, -1, 1))
+              .Normalize();
       b_face = S2::GetUVWFace(a_face, 0, 1);  // Towards positive u-axis
-      b = S2::FaceUVtoXYZ(b_face, 1 - rnd->Uniform(2) * 0.5 * DBL_EPSILON,
-                          rnd->UniformDouble(-1, 1)).Normalize();
+      b = S2::FaceUVtoXYZ(b_face,
+                          1 - absl::Uniform(bitgen, 0, 2) * 0.5 * DBL_EPSILON,
+                          absl::Uniform(bitgen, -1.0, 1.0))
+              .Normalize();
     } while (S2::GetFace(b) != b_face ||
              S2::ClipToFace(a, b, b_face, &a_uv, &b_uv));
 
@@ -374,8 +398,9 @@ TEST(VisitCells, QueryEdgeOnFaceBoundary) {
 
     // Create an S2ShapeIndex containing a single edge BC, where C is on the
     // same S2 cube face as B (which is different than the face containing A).
-    S2Point c = S2::FaceUVtoXYZ(b_face, rnd->UniformDouble(-1, 1),
-                                rnd->UniformDouble(-1, 1)).Normalize();
+    S2Point c = S2::FaceUVtoXYZ(b_face, absl::Uniform(bitgen, -1.0, 1.0),
+                                absl::Uniform(bitgen, -1.0, 1.0))
+                    .Normalize();
     MutableS2ShapeIndex index;
     index.Add(make_unique<S2Polyline::OwningShape>(
         make_unique<S2Polyline>(vector<S2Point>{b, c})));
@@ -390,6 +415,13 @@ TEST(VisitCells, QueryEdgeOnFaceBoundary) {
         return false;
       }));
   }
+}
+
+TEST(S2CrossingEdgeQuery, Index) {
+  // Just give this some test coverage so it's not marked as dead code.
+  MutableS2ShapeIndex index;
+  S2CrossingEdgeQuery query(&index);
+  EXPECT_EQ(&query.index(), &index);
 }
 
 }  // namespace

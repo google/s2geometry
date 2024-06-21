@@ -26,6 +26,7 @@
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
 #include "s2/s2builder.h"
@@ -37,6 +38,7 @@
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"

@@ -20,7 +20,7 @@
 
 #include <vector>
 
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 
@@ -40,9 +40,6 @@ class S2LatLngRect;
 // is restricted to methods that are useful for computing approximations.
 class S2Region {
  public:
-  S2Region() = default;
-  S2Region(const S2Region& other) = default;
-  S2Region& operator=(const S2Region&) = default;
   virtual ~S2Region() = default;
 
   // Returns a deep copy of the region.
@@ -132,6 +129,16 @@ class S2Region {
   // Returns true on success.
   //
   // bool Decode(Decoder* const decoder);
+
+ protected:
+  S2Region() = default;
+  // Allow derived classes to define copy/move.  They may assume S2Region has
+  // no members.  Default the move assign/constructor as well so derived
+  // classes can default their constructors/assignment operator.
+  S2Region(const S2Region&) = default;
+  S2Region(S2Region&&) = default;
+  S2Region& operator=(const S2Region&) = default;
+  S2Region& operator=(S2Region&&) = default;
 };
 
 #endif  // S2_S2REGION_H_

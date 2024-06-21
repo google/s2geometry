@@ -35,7 +35,7 @@
 #include "absl/strings/string_view.h"
 #include "s2/util/bits/bits.h"
 #include "s2/util/coding/coder.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -46,12 +46,6 @@
 #include "s2/s2region.h"
 
 class S2LatLng;
-
-#ifndef SWIG
-#define IFNDEF_SWIG(x) x
-#else
-#define IFNDEF_SWIG(x)
-#endif
 
 // An S2CellId is a 64-bit unsigned integer that uniquely identifies a
 // cell in the S2 cell decomposition.  It has the following format:
@@ -100,7 +94,7 @@ class S2CellId {
   static constexpr int kPosBits = 2 * kMaxLevel + 1;
   static constexpr int kMaxSize = 1 << kMaxLevel;
 
-  explicit IFNDEF_SWIG(constexpr) S2CellId(uint64 id) : id_(id) {}
+  explicit constexpr S2CellId(uint64_t id) : id_(id) {}
 
   // Construct a leaf cell containing the given point "p".  Usually there is
   // exactly one such cell, but for points along the edge of a cell, any
@@ -121,13 +115,13 @@ class S2CellId {
   explicit S2CellId(const S2LatLng& ll);
 
   // The default constructor returns an invalid cell id.
-  IFNDEF_SWIG(constexpr) S2CellId() : id_(0) {}
+  constexpr S2CellId() = default;
   // Returns an invalid cell id.
   static constexpr S2CellId None() { return S2CellId(); }
 
   // Returns an invalid cell id guaranteed to be larger than any
   // valid cell id.  Useful for creating indexes.
-  static constexpr S2CellId Sentinel() { return S2CellId(~uint64{0}); }
+  static constexpr S2CellId Sentinel() { return S2CellId(~uint64_t{0}); }
 
   // Return the cell corresponding to a given S2 cube face.
   static S2CellId FromFace(int face);
@@ -138,7 +132,7 @@ class S2CellId {
   // to the Hilbert curve position at the center of the returned cell.  This
   // is a static function rather than a constructor in order to indicate what
   // the arguments represent.
-  static S2CellId FromFacePosLevel(int face, uint64 pos, int level);
+  static S2CellId FromFacePosLevel(int face, uint64_t pos, int level);
 
   // Return the direction vector corresponding to the center of the given
   // cell.  The vector returned by ToPointRaw is not necessarily unit length.
@@ -208,7 +202,7 @@ class S2CellId {
   S2LatLng ToLatLng() const;
 
   // The 64-bit unique identifier for this cell.
-  uint64 id() const { return id_; }
+  uint64_t id() const { return id_; }
 
   // Return true if id() represents a valid cell.
   //
@@ -221,7 +215,7 @@ class S2CellId {
 
   // The position of the cell center along the Hilbert curve over this face,
   // in the range 0..(2**kPosBits-1).
-  uint64 pos() const;
+  uint64_t pos() const;
 
   // Return the subdivision level of the cell (range 0..kMaxLevel).
   int level() const;
@@ -319,11 +313,11 @@ class S2CellId {
   // This method advances or retreats the indicated number of steps along the
   // Hilbert curve at the current level, and returns the new position.  The
   // position is never advanced past End() or before Begin().
-  ABSL_MUST_USE_RESULT S2CellId advance(int64 steps) const;
+  ABSL_MUST_USE_RESULT S2CellId advance(int64_t steps) const;
 
   // Returns the number of steps that this cell is from Begin(level()). The
   // return value is always non-negative.
-  int64 distance_from_begin() const;
+  int64_t distance_from_begin() const;
 
   // Like next() and prev(), but these methods wrap around from the last face
   // to the first and vice versa.  They should *not* be used for iteration in
@@ -336,7 +330,7 @@ class S2CellId {
   // Hilbert curve at the current level, and returns the new position.  The
   // position wraps between the first and last faces as necessary.  The input
   // must be a valid cell id.
-  ABSL_MUST_USE_RESULT S2CellId advance_wrap(int64 steps) const;
+  ABSL_MUST_USE_RESULT S2CellId advance_wrap(int64_t steps) const;
 
   // Return the largest cell with the same range_min() and such that
   // range_max() < limit.range_min().  Returns "limit" if no such cell exists.
@@ -454,14 +448,14 @@ class S2CellId {
   int ToFaceIJOrientation(int* pi, int* pj, int* orientation) const;
 
   // Return the lowest-numbered bit that is on for this cell id, which is
-  // equal to (uint64{1} << (2 * (kMaxLevel - level))).  So for example,
+  // equal to (uint64_t{1} << (2 * (kMaxLevel - level))).  So for example,
   // a.lsb() <= b.lsb() if and only if a.level() >= b.level(), but the
   // first test is more efficient.
-  uint64 lsb() const { return id_ & (~id_ + 1); }
+  uint64_t lsb() const { return id_ & (~id_ + 1); }
 
   // Return the lowest-numbered bit that is on for cells at the given level.
-  static uint64 lsb_for_level(int level) {
-    return uint64{1} << (2 * (kMaxLevel - level));
+  static uint64_t lsb_for_level(int level) {
+    return uint64_t{1} << (2 * (kMaxLevel - level));
   }
 
   // Return the bound in (u,v)-space for the cell at the given level containing
@@ -476,9 +470,7 @@ class S2CellId {
  private:
   // This is the offset required to wrap around from the beginning of the
   // Hilbert curve to the end or vice versa; see next_wrap() and prev_wrap().
-  // SWIG doesn't understand uint64{}, so use static_cast.
-  static constexpr uint64 kWrapOffset = static_cast<uint64>(kNumFaces)
-                                          << kPosBits;
+  static constexpr uint64_t kWrapOffset = uint64_t{kNumFaces} << kPosBits;
 
   // Given a face and a point (i,j) where either i or j is outside the valid
   // range [0..kMaxSize-1], this function first determines which neighboring
@@ -490,7 +482,7 @@ class S2CellId {
   // or FromFaceIJWrap if "same_face" is false.
   static S2CellId FromFaceIJSame(int face, int i, int j, bool same_face);
 
-  uint64 id_;
+  uint64_t id_ = 0;       // 0 is an invalid cell id.
 } ABSL_ATTRIBUTE_PACKED;  // Necessary so that structures containing S2CellId's
                           // can be ABSL_ATTRIBUTE_PACKED.
 
@@ -519,11 +511,11 @@ inline bool operator>=(S2CellId x, S2CellId y) {
 }
 
 inline S2CellId S2CellId::FromFace(int face) {
-  return S2CellId((static_cast<uint64>(face) << kPosBits) + lsb_for_level(0));
+  return S2CellId((static_cast<uint64_t>(face) << kPosBits) + lsb_for_level(0));
 }
 
-inline S2CellId S2CellId::FromFacePosLevel(int face, uint64 pos, int level) {
-  S2CellId cell((static_cast<uint64>(face) << kPosBits) + (pos | 1));
+inline S2CellId S2CellId::FromFacePosLevel(int face, uint64_t pos, int level) {
+  S2CellId cell((static_cast<uint64_t>(face) << kPosBits) + (pos | 1));
   // `parent` `ABSL_DCHECK`s level, so don't do it here.
   return cell.parent(level);
 }
@@ -564,15 +556,15 @@ inline int S2CellId::face() const {
   return id_ >> kPosBits;
 }
 
-inline uint64 S2CellId::pos() const {
-  return id_ & (~uint64{0} >> kFaceBits);
+inline uint64_t S2CellId::pos() const {
+  return id_ & (~uint64_t{0} >> kFaceBits);
 }
 
 inline int S2CellId::level() const {
   // We can't just ABSL_DCHECK(is_valid()) because we want level() to be
   // defined for end-iterators, i.e. S2CellId::End(kLevel).  However there is
   // no good way to define S2CellId::None().level(), so we do prohibit that.
-  ABSL_DCHECK_NE(id_, uint64{0});
+  ABSL_DCHECK_NE(id_, uint64_t{0});
 
   // A special case for leaf cells is not worthwhile.
   return kMaxLevel - (Bits::FindLSBSetNonZero64(id_) >> 1);
@@ -639,14 +631,14 @@ inline S2CellId S2CellId::parent(int level) const {
   ABSL_DCHECK(is_valid());
   ABSL_DCHECK_GE(level, 0);
   ABSL_DCHECK_LE(level, this->level());
-  uint64 new_lsb = lsb_for_level(level);
+  uint64_t new_lsb = lsb_for_level(level);
   return S2CellId((id_ & (~new_lsb + 1)) | new_lsb);
 }
 
 inline S2CellId S2CellId::parent() const {
   ABSL_DCHECK(is_valid());
   ABSL_DCHECK(!is_face());
-  uint64 new_lsb = lsb() << 2;
+  uint64_t new_lsb = lsb() << 2;
   return S2CellId((id_ & (~new_lsb + 1)) | new_lsb);
 }
 
@@ -657,14 +649,14 @@ inline S2CellId S2CellId::child(int position) const {
   // positions downward.  We do this by subtracting (4 * new_lsb) and adding
   // new_lsb.  Then to advance to the given child cell, we add
   // (2 * position * new_lsb).
-  uint64 new_lsb = lsb() >> 2;
+  uint64_t new_lsb = lsb() >> 2;
   return S2CellId(id_ + (2 * position + 1 - 4) * new_lsb);
 }
 
 inline S2CellId S2CellId::child_begin() const {
   ABSL_DCHECK(is_valid());
   ABSL_DCHECK(!is_leaf());
-  uint64 old_lsb = lsb();
+  uint64_t old_lsb = lsb();
   return S2CellId(id_ - old_lsb + (old_lsb >> 2));
 }
 
@@ -678,7 +670,7 @@ inline S2CellId S2CellId::child_begin(int level) const {
 inline S2CellId S2CellId::child_end() const {
   ABSL_DCHECK(is_valid());
   ABSL_DCHECK(!is_leaf());
-  uint64 old_lsb = lsb();
+  uint64_t old_lsb = lsb();
   return S2CellId(id_ + old_lsb + (old_lsb >> 2));
 }
 
@@ -752,7 +744,5 @@ bool AbslParseFlag(absl::string_view input, S2CellId* id, std::string* error);
 
 // Unparse a valid S2 token into a string that can be parsed by AbslParseFlag.
 std::string AbslUnparseFlag(S2CellId id);
-
-#undef IFNDEF_SWIG
 
 #endif  // S2_S2CELL_ID_H_

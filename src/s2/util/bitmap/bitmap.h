@@ -23,6 +23,8 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -30,12 +32,9 @@
 #include <string>
 #include <type_traits>
 
-#include "absl/base/macros.h"
-#include "s2/base/types.h"
-#include "absl/base/attributes.h"
-#include "absl/base/macros.h"
 #include "absl/hash/hash.h"
 #include "absl/log/absl_check.h"
+#include "absl/types/span.h"
 #include "s2/util/bits/bits.h"
 
 namespace util::bitmap {
@@ -543,7 +542,7 @@ class BasicBitmap {
     // a cached copy of the bitmap of the word from the bit array containing
     // the bit specified by bit_position_, but logically right shifted so that
     // the current bit is at position 0.
-    W current_;
+    std::remove_const_t<W> current_;
     size_type bit_position_;
   };
 
@@ -603,8 +602,8 @@ class BasicBitmap {
   // lowest N bits are one, and all other bits are zero, where N is the width of
   // `Word`.
   //
-  // For example, for uint32, this is 0xFFFFFFFF. However, if `Word` is
-  // `unit8_t`, and `ArithmeticWord` is equal to `uint32` and kAllOnesWord is
+  // For example, for uint32_t, this is 0xFFFFFFFF. However, if `Word` is
+  // `unit8_t`, and `ArithmeticWord` is equal to `uint32_t` and kAllOnesWord is
   // 0x000000FF.
   static constexpr auto kAllOnesWord =
       ArithmeticWord{static_cast<Word>(~ArithmeticWord{0})};
@@ -645,16 +644,16 @@ inline std::ostream& operator<<(std::ostream& out,
 }  // namespace internal
 
 using BitmapChar = ::util::bitmap::internal::BasicBitmap<char>;
-using Bitmap8 = ::util::bitmap::internal::BasicBitmap<uint8>;
-using Bitmap16 = ::util::bitmap::internal::BasicBitmap<uint16>;
-using Bitmap32 = ::util::bitmap::internal::BasicBitmap<uint32>;
-using Bitmap64 = ::util::bitmap::internal::BasicBitmap<uint64>;
+using Bitmap8 = ::util::bitmap::internal::BasicBitmap<uint8_t>;
+using Bitmap16 = ::util::bitmap::internal::BasicBitmap<uint16_t>;
+using Bitmap32 = ::util::bitmap::internal::BasicBitmap<uint32_t>;
+using Bitmap64 = ::util::bitmap::internal::BasicBitmap<uint64_t>;
 
 using ConstBitmapChar = ::util::bitmap::internal::BasicBitmap<const char>;
-using ConstBitmap8 = ::util::bitmap::internal::BasicBitmap<const uint8>;
-using ConstBitmap16 = ::util::bitmap::internal::BasicBitmap<const uint16>;
-using ConstBitmap32 = ::util::bitmap::internal::BasicBitmap<const uint32>;
-using ConstBitmap64 = ::util::bitmap::internal::BasicBitmap<const uint64>;
+using ConstBitmap8 = ::util::bitmap::internal::BasicBitmap<const uint8_t>;
+using ConstBitmap16 = ::util::bitmap::internal::BasicBitmap<const uint16_t>;
+using ConstBitmap32 = ::util::bitmap::internal::BasicBitmap<const uint32_t>;
+using ConstBitmap64 = ::util::bitmap::internal::BasicBitmap<const uint64_t>;
 
 // Implementations follow.
 

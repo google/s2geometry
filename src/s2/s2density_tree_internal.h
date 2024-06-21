@@ -42,7 +42,7 @@ class ReversibleBytes {
     // `absl::string_view`.
     bytes_.append(bytes.data(), bytes.size());
   }
-  void AppendVarint64(uint64 v) { Varint::Append64(&bytes_, v); }
+  void AppendVarint64(uint64_t v) { Varint::Append64(&bytes_, v); }
 
   void ReverseFrom(size_t start) {
     std::reverse(bytes_.begin() + start, bytes_.end());
@@ -80,7 +80,7 @@ class ReversedCellEncoder {
   // Writes the mask and lengths in normal order and then reverses them, where
   // the last length is not included because the position of whatever comes
   // after can be inferred.
-  void Finish(uint64 v) {
+  void Finish(uint64_t v) {
     output_->AppendVarint64(v);
 
     // Since the child cells were encoded in reverse order, if there are n
@@ -98,7 +98,7 @@ class ReversedCellEncoder {
 
  private:
   ReversibleBytes* output_;
-  std::array<uint64, S2CellId::kNumFaces> lengths_;
+  std::array<uint64_t, S2CellId::kNumFaces> lengths_;
   size_t size_ = 0;
   size_t start_;
 };

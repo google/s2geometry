@@ -17,10 +17,10 @@
 
 #include "s2/s2shapeutil_visit_crossing_edge_pairs.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_format.h"
@@ -352,7 +352,7 @@ bool VisitCrossingEdgePairs(const S2ShapeIndex& a_index,
       bi.SeekTo(ai);
     } else {
       // One cell contains the other.  Determine which cell is larger.
-      int64 ab_relation = ai.id().lsb() - bi.id().lsb();
+      int64_t ab_relation = ai.id().lsb() - bi.id().lsb();
       if (ab_relation > 0) {
         // A's index cell is larger.
         if (!ab.VisitCrossings(&ai, &bi)) return false;

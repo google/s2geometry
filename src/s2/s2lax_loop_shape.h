@@ -33,10 +33,10 @@
 #define S2_S2LAX_LOOP_SHAPE_H_
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/types/span.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
@@ -53,11 +53,10 @@
 class S2LaxLoopShape : public S2Shape {
  public:
   // Constructs an empty loop.
-  S2LaxLoopShape() : num_vertices_(0) {}
+  S2LaxLoopShape() = default;
 
-  S2LaxLoopShape(S2LaxLoopShape&& other);
-
-  S2LaxLoopShape& operator=(S2LaxLoopShape&& other);
+  S2LaxLoopShape(S2LaxLoopShape&& other) noexcept;
+  S2LaxLoopShape& operator=(S2LaxLoopShape&& other) noexcept;
 
   // Constructs an S2LaxLoopShape with the given vertices.
   explicit S2LaxLoopShape(absl::Span<const S2Point> vertices);
@@ -94,7 +93,7 @@ class S2LaxLoopShape : public S2Shape {
  private:
   // For clients that have many small loops, we save some memory by
   // representing the vertices as an array rather than using std::vector.
-  int32 num_vertices_;
+  int32_t num_vertices_ = 0;
   std::unique_ptr<S2Point[]> vertices_;
 };
 
@@ -119,27 +118,26 @@ class S2LaxClosedPolylineShape : public S2LaxLoopShape {
 class S2VertexIdLaxLoopShape : public S2Shape {
  public:
   // Constructs an empty loop.
-  S2VertexIdLaxLoopShape() : num_vertices_(0) {}
+  S2VertexIdLaxLoopShape() = default;
 
-  S2VertexIdLaxLoopShape(S2VertexIdLaxLoopShape&& other);
-
-  S2VertexIdLaxLoopShape& operator=(S2VertexIdLaxLoopShape&& other);
+  S2VertexIdLaxLoopShape(S2VertexIdLaxLoopShape&& other) noexcept;
+  S2VertexIdLaxLoopShape& operator=(S2VertexIdLaxLoopShape&& other) noexcept;
 
   // Constructs the shape from the given vertex array and indices.
   // "vertex_ids" is a vector of indices into "vertex_array".
   //
   // ENSURES:  loop->vertex(i) == (*vertex_array)[vertex_ids[i]]
   // REQUIRES: "vertex_array" persists for the lifetime of this object.
-  explicit S2VertexIdLaxLoopShape(absl::Span<const int32> vertex_ids,
+  explicit S2VertexIdLaxLoopShape(absl::Span<const int32_t> vertex_ids,
                                   const S2Point* vertex_array);
 
   // Initializes the shape from the given vertex array and indices.
   // "vertex_ids" is a vector of indices into "vertex_array".
-  void Init(absl::Span<const int32> vertex_ids, const S2Point* vertex_array);
+  void Init(absl::Span<const int32_t> vertex_ids, const S2Point* vertex_array);
 
   // Returns the number of vertices in the loop.
   int num_vertices() const { return num_vertices_; }
-  int32 vertex_id(int i) const { return vertex_ids_[i]; }
+  int32_t vertex_id(int i) const { return vertex_ids_[i]; }
   const S2Point& vertex(int i) const { return vertex_array_[vertex_id(i)]; }
 
   // S2Shape interface:
@@ -155,8 +153,8 @@ class S2VertexIdLaxLoopShape : public S2Shape {
   }
 
  private:
-  int32 num_vertices_;
-  std::unique_ptr<int32[]> vertex_ids_;
+  int32_t num_vertices_ = 0;
+  std::unique_ptr<int32_t[]> vertex_ids_;
   const S2Point* vertex_array_;
 };
 

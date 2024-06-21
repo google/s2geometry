@@ -35,6 +35,8 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/log/absl_vlog_is_on.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
@@ -66,10 +68,12 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2predicates.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using absl::StrCat;
 using absl::string_view;
 using std::make_unique;
 using std::max;
@@ -466,8 +470,11 @@ TEST(S2BufferOperation, ZigZagLoop) {
 }
 
 TEST(S2BufferOperation, Fractals) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "FRACTALS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (double dimension : {1.02, 1.8}) {
-    S2Fractal fractal;
+    S2Fractal fractal(bitgen);
     fractal.SetLevelForApproxMaxEdges(3 * 64);
     fractal.set_fractal_dimension(dimension);
     auto loop = fractal.MakeLoop(S2::GetFrame(S2Point(1, 0, 0)),
@@ -543,9 +550,9 @@ class TestBufferPolyline {
                      const S2BufferOperation::Options& options);
 
  private:
-  const double kArcLo = 0.001;
-  const double kArcHi = 0.999;
-  const int kArcSamples = 7;
+  static constexpr double kArcLo = 0.001;
+  static constexpr double kArcHi = 0.999;
+  static constexpr int kArcSamples = 7;
 
   S2Point GetEdgeAxis(const S2Point& a, const S2Point& b) {
     return S2::RobustCrossProd(a, b).Normalize();

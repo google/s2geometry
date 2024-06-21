@@ -21,21 +21,20 @@
 #include <array>
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "s2/base/commandlineflags.h"
 #include "s2/base/commandlineflags_declare.h"
 #include "s2/base/spinlock.h"
-#include "s2/base/types.h"
 #include "absl/base/macros.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/synchronization/mutex.h"
 #include "s2/util/coding/coder.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r1interval.h"
 #include "s2/r2rect.h"
 #include "s2/s2cell_id.h"
@@ -181,8 +180,8 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
 
   ~MutableS2ShapeIndex() override;
 
-  MutableS2ShapeIndex(MutableS2ShapeIndex&&);
-  MutableS2ShapeIndex& operator=(MutableS2ShapeIndex&&);
+  MutableS2ShapeIndex(MutableS2ShapeIndex&&) noexcept;
+  MutableS2ShapeIndex& operator=(MutableS2ShapeIndex&&) noexcept;
 
   // Initialize a MutableS2ShapeIndex with the given options.  This method may
   // only be called when the index is empty (i.e. newly created or Clear() has
@@ -296,7 +295,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
   class Iterator final : public IteratorBase {
    public:
     // Default constructor; must be followed by a call to Init().
-    Iterator();
+    Iterator() = default;
 
     // Constructs an iterator positioned as specified.  By default iterators
     // are unpositioned, since this avoids an extra seek in this situation
@@ -359,7 +358,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
     }
 
    private:
-    const MutableS2ShapeIndex* index_;
+    const MutableS2ShapeIndex* index_ = nullptr;
     CellMap::const_iterator iter_, end_;
   };
 
@@ -521,7 +520,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
 
   // The representation of an edge that has been queued for removal.
   struct RemovedShape {
-    int32 shape_id;
+    int32_t shape_id;
     bool has_interior;  // Belongs to a shape of dimension 2.
     bool contains_tracker_origin;
     std::vector<S2Shape::Edge> edges;
@@ -577,10 +576,7 @@ class MutableS2ShapeIndex final : public S2ShapeIndex {
     // UpdateState can only be freed when this number reaches zero.
     //
     // Reads and writes to this field are guarded by "lock_".
-    int num_waiting;
-
-    UpdateState() : num_waiting(0) {
-    }
+    int num_waiting = 0;
 
     ~UpdateState() { ABSL_DCHECK_EQ(0, num_waiting); }
   };
@@ -682,9 +678,6 @@ class MutableS2ShapeIndex::BatchGenerator {
   int batch_size_ = 0;       // The number of edges in the current batch.
   std::vector<BatchDescriptor> batches_;  // The completed batches so far.
 };
-
-inline MutableS2ShapeIndex::Iterator::Iterator() : index_(nullptr) {
-}
 
 inline MutableS2ShapeIndex::Iterator::Iterator(
     const MutableS2ShapeIndex* index, InitialPosition pos) {

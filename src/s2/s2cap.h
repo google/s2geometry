@@ -26,7 +26,7 @@
 
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2coder.h"
@@ -97,10 +97,6 @@ class S2Cap final : public S2Region {
 
   // Return a full cap, i.e. a cap that contains all points.
   static S2Cap Full();
-
-  // TODO(b/221261577): `= default` causes SWIG errors. Use it when SWIG  has
-  // been deleted.
-  ~S2Cap() override {}
 
   // Accessor methods.
   const S2Point& center() const { return center_; }

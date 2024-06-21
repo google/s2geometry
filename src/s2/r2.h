@@ -18,9 +18,25 @@
 #ifndef S2_R2_H_
 #define S2_R2_H_
 
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/util/math/vector.h"  // IWYU pragma: export
 
 using R2Point = Vector2_d;
+
+// An edge in R2 space.
+struct R2Edge {
+  R2Edge() = default;
+  R2Edge(const R2Point& v0, const R2Point& v1) : v0(v0), v1(v1) {}
+
+  bool operator==(const R2Edge& b) const { return v0 == b.v0 && v1 == b.v1; }
+
+  template <typename H>
+  friend H AbslHashValue(H h, const R2Edge& e) {
+    return H::combine(std::move(h), e.v0, e.v1);
+  }
+
+  R2Point v0;
+  R2Point v1;
+};
 
 #endif  // S2_R2_H_

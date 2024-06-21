@@ -34,13 +34,14 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "s2/base/log_severity.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "s2/r2.h"
@@ -53,6 +54,7 @@
 #include "s2/s2measures.h"
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 #include "s2/util/math/mathutil.h"
@@ -86,12 +88,15 @@ TEST(S2CellIdSnapFunction, LevelToFromSnapRadius) {
 }
 
 TEST(S2CellIdSnapFunction, SnapPoint) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CELL_ID_SNAP_POINT",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
       // This checks that points are snapped to the correct level, since
       // S2CellId centers at different levels are always different.
       S2CellIdSnapFunction f(level);
-      S2Point p = S2Testing::GetRandomCellId(level).ToPoint();
+      S2Point p = s2random::CellId(bitgen, level).ToPoint();
       EXPECT_EQ(p, f.SnapPoint(p));
     }
   }
@@ -115,11 +120,14 @@ TEST(IntLatLngSnapFunction, ExponentToFromSnapRadius) {
 }
 
 TEST(IntLatLngSnapFunction, SnapPoint) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INT_LAT_LNG_SNAP_POINT",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     // Test that IntLatLngSnapFunction does not modify points that were
     // generated using the S2LatLng::From{E5,E6,E7} methods.  This ensures
     // that both functions are using bitwise-compatible conversion methods.
-    S2Point p = S2Testing::RandomPoint();
+    S2Point p = s2random::Point(bitgen);
     S2LatLng ll(p);
     S2Point p5 = S2LatLng::FromE5(ll.lat().e5(), ll.lng().e5()).ToPoint();
     EXPECT_EQ(p5, IntLatLngSnapFunction(5).SnapPoint(p5));
@@ -136,7 +144,7 @@ TEST(IntLatLngSnapFunction, SnapPoint) {
 }
 
 // S2CellIdSnapFunction MinEdgeVertexSeparationForLevel has a difference of
-// 3.88e-8 between google::DEBUG_MODE and non-google::DEBUG_MODE results, but otherwise results
+// 3.88e-8 between S2_DEBUG_MODE and non-S2_DEBUG_MODE results, but otherwise results
 // are the same within 1e-15.
 static double kRatioTolerance = 1e-7;
 static S2CellId kSearchRootId = S2CellId::FromFace(0);
@@ -262,7 +270,7 @@ static S1Angle GetCircumRadius(const S2Point& a, const S2Point& b,
 }
 
 static vector<S2CellId> GetNeighbors(S2CellId id) {
-  const int kNumLayers = 2;
+  constexpr int kNumLayers = 2;
   vector<S2CellId> nbrs;
   nbrs.push_back(id);
   for (int layer = 0; layer < kNumLayers; ++layer) {
@@ -370,7 +378,7 @@ static double GetS2CellIdMinEdgeSeparation(
   // them.  The results vary slightly according to how many candidates we
   // keep, but the variations are much smaller than the conservative
   // assumptions made by the S2CellIdSnapFunction implementation.
-  int num_to_keep = google::DEBUG_MODE ? 20 : 100;
+  int num_to_keep = S2_DEBUG_MODE ? 20 : 100;
   int num_to_print = 3;
   vector<pair<double, S2CellId>> sorted;
   for (const auto& entry : best_scores) {
@@ -472,14 +480,14 @@ TEST(S2CellIdSnapFunction, MinEdgeVertexSeparationSnapRadiusRatio) {
 
 // A scaled S2LatLng with integer coordinates, similar to E7 coordinates,
 // except that the scale is variable (see LatLngConfig below).
-using IntLatLng = Vector2<int64>;
+using IntLatLng = Vector2<int64_t>;
 
-static bool IsValid(const IntLatLng& ll, int64 scale) {
+static bool IsValid(const IntLatLng& ll, int64_t scale) {
   // A coordinate value of "scale" corresponds to 180 degrees.
   return (abs(ll[0]) <= scale / 2 && abs(ll[1]) <= scale);
 }
 
-static bool HasValidVertices(const IntLatLng& ll, int64 scale) {
+static bool HasValidVertices(const IntLatLng& ll, int64_t scale) {
   // Like IsValid, but excludes latitudes of 90 and longitudes of 180.
   // A coordinate value of "scale" corresponds to 180 degrees.
   return (abs(ll[0]) < scale / 2 && abs(ll[1]) < scale);
@@ -490,12 +498,12 @@ static IntLatLng Rescale(const IntLatLng&ll, double scale_factor) {
                    MathUtil::FastInt64Round(scale_factor * ll[1]));
 }
 
-static S2Point ToPoint(const IntLatLng& ll, int64 scale) {
+static S2Point ToPoint(const IntLatLng& ll, int64_t scale) {
   return S2LatLng::FromRadians(ll[0] * (M_PI / scale),
                                ll[1] * (M_PI / scale)).ToPoint();
 }
 
-static S2Point GetVertex(const IntLatLng& ll, int64 scale, int i) {
+static S2Point GetVertex(const IntLatLng& ll, int64_t scale, int i) {
   // Return the points in CCW order starting from the lower left.
   int dlat = (i == 0 || i == 3) ? -1 : 1;
   int dlng = (i == 0 || i == 1) ? -1 : 1;
@@ -503,7 +511,7 @@ static S2Point GetVertex(const IntLatLng& ll, int64 scale, int i) {
 }
 
 static S1Angle GetMaxVertexDistance(const S2Point& p, const IntLatLng& ll,
-                                    int64 scale) {
+                                    int64_t scale) {
   return max(max(S1Angle(p, GetVertex(ll, scale, 0)),
                  S1Angle(p, GetVertex(ll, scale, 1))),
              max(S1Angle(p, GetVertex(ll, scale, 2)),
@@ -511,7 +519,7 @@ static S1Angle GetMaxVertexDistance(const S2Point& p, const IntLatLng& ll,
 }
 
 static double GetLatLngMinVertexSeparation(
-    int64 old_scale, int64 scale, flat_hash_set<IntLatLng>* best_configs) {
+    int64_t old_scale, int64_t scale, flat_hash_set<IntLatLng>* best_configs) {
   // The worst-case separation ratios always occur when the snap_radius is not
   // much larger than the minimum, since this allows the site spacing to be
   // reduced by as large a fraction as possible.
@@ -564,7 +572,7 @@ static double GetLatLngMinVertexSeparation(
 TEST(IntLatLngSnapFunction, MinVertexSeparationSnapRadiusRatio) {
   double best_score = 1e10;
   flat_hash_set<IntLatLng> best_configs;
-  int64 scale = 18;
+  int64_t scale = 18;
   for (int lat0 = 0; lat0 <= 9; ++lat0) {
     best_configs.insert(IntLatLng(lat0, 0));
   }
@@ -583,10 +591,10 @@ TEST(IntLatLngSnapFunction, MinVertexSeparationSnapRadiusRatio) {
 // A triple of scaled S2LatLng coordinates.  The coordinates are multiplied by
 // (M_PI / scale) to convert them to radians.
 struct LatLngConfig {
-  int64 scale;
+  int64_t scale;
   IntLatLng ll0, ll1, ll2;
 
-  LatLngConfig(int64 _scale, const IntLatLng& _ll0, const IntLatLng& _ll1,
+  LatLngConfig(int64_t _scale, const IntLatLng& _ll0, const IntLatLng& _ll1,
                const IntLatLng& _ll2)
       : scale(_scale), ll0(_ll0), ll1(_ll1), ll2(_ll2) {}
   bool operator<(const LatLngConfig& other) const {
@@ -599,11 +607,11 @@ struct LatLngConfig {
   }
 };
 
-typedef double LatLngMinEdgeSeparationFunction(int64 scale, S1Angle edge_sep,
+typedef double LatLngMinEdgeSeparationFunction(int64_t scale, S1Angle edge_sep,
                                                S1Angle max_snap_radius);
 
 static double GetLatLngMinEdgeSeparation(
-    string_view label, LatLngMinEdgeSeparationFunction objective, int64 scale,
+    string_view label, LatLngMinEdgeSeparationFunction objective, int64_t scale,
     vector<LatLngConfig>* best_configs) {
   S1Angle min_snap_radius_at_scale = S1Angle::Radians(M_SQRT1_2 * M_PI / scale);
   vector<pair<double, LatLngConfig>> scores;
@@ -669,12 +677,12 @@ static double GetLatLngMinEdgeSeparation(
   std::sort(scores.begin(), scores.end());
   scores.erase(std::unique(scores.begin(), scores.end()), scores.end());
   best_configs->clear();
-  int num_to_keep = google::DEBUG_MODE ? 50 : 200;
+  int num_to_keep = S2_DEBUG_MODE ? 50 : 200;
   int num_to_print = 3;
   absl::PrintF("Scale %d:\n", scale);
   for (const auto& entry : scores) {
     const LatLngConfig& config = entry.second;
-    int64 scale = config.scale;
+    int64_t scale = config.scale;
     if (--num_to_print >= 0) {
       absl::PrintF("  %s = %.15f %s %s %s\n", label, entry.first,
                    s2textformat::ToString(ToPoint(config.ll0, scale)),
@@ -693,7 +701,7 @@ static double GetLatLngMinEdgeSeparation(
     string_view label, LatLngMinEdgeSeparationFunction objective) {
   double best_score = 1e10;
   vector<LatLngConfig> best_configs;
-  int64 scale = 6;  // Initially points are 30 degrees apart.
+  int64_t scale = 6;  // Initially points are 30 degrees apart.
   int max_lng = scale;
   int max_lat = scale / 2;
   for (int lat0 = 0; lat0 <= max_lat; ++lat0) {
@@ -713,10 +721,10 @@ static double GetLatLngMinEdgeSeparation(
   }
   ABSL_LOG(INFO) << "Starting with " << best_configs.size()
                  << " configurations";
-  int64 target_scale = 180;
+  int64_t target_scale = 180;
   for (int exp = 0; exp <= 10; ++exp, target_scale *= 10) {
     while (scale < target_scale) {
-      scale = min(static_cast<int64>(1.8 * scale), target_scale);
+      scale = min(static_cast<int64_t>(1.8 * scale), target_scale);
       double score = GetLatLngMinEdgeSeparation(label, objective, scale,
                                                 &best_configs);
       if (scale == target_scale) {
@@ -732,7 +740,7 @@ TEST(IntLatLngSnapFunction, MinEdgeVertexSeparationForLevel) {
   // snap radius at each level.
   double score = GetLatLngMinEdgeSeparation(
       "min_sep_for_level",
-      [](int64 scale, S1Angle edge_sep, S1Angle max_snap_radius) {
+      [](int64_t scale, S1Angle edge_sep, S1Angle max_snap_radius) {
         double e_unit = M_PI / scale;
         return edge_sep.radians() / e_unit;
       });
@@ -748,7 +756,7 @@ TEST(IntLatLngSnapFunction, MinEdgeVertexSeparationSnapRadiusRatio) {
   // maximum snap radius that could yield that edge separation.
   double score = GetLatLngMinEdgeSeparation(
       "min_sep_snap_radius_ratio",
-      [](int64 scale, S1Angle edge_sep, S1Angle max_snap_radius) {
+      [](int64_t scale, S1Angle edge_sep, S1Angle max_snap_radius) {
         return edge_sep.radians() / max_snap_radius.radians();
       });
   absl::PrintF(

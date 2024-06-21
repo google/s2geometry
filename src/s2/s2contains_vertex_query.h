@@ -18,7 +18,9 @@
 #ifndef S2_S2CONTAINS_VERTEX_QUERY_H_
 #define S2_S2CONTAINS_VERTEX_QUERY_H_
 
-#include "absl/container/btree_map.h"
+#include <cstdlib>
+
+#include "absl/container/flat_hash_map.h"
 #include "s2/s2point.h"
 
 // This class determines whether a polygon contains one of its vertices given
@@ -35,32 +37,43 @@
 // construct its own instance (this is not expensive).
 class S2ContainsVertexQuery {
  public:
+  // Default constructor, Init() must be called before using.
+  S2ContainsVertexQuery() = default;
+
   // "target" is the vertex whose containment will be determined.
-  explicit S2ContainsVertexQuery(const S2Point& target);
+  explicit S2ContainsVertexQuery(const S2Point& target) { Init(target); }
+
+  // Initializes the query to target the given vertex.
+  void Init(const S2Point& target) {
+    target_ = target;
+    edge_map_.clear();
+  }
 
   // Indicates that the polygon has an edge between "target" and "v" in the
   // given direction (+1 = outgoing, -1 = incoming, 0 = degenerate).
-  void AddEdge(const S2Point& v, int direction);
+  void AddEdge(const S2Point& v, int direction) { edge_map_[v] += direction; }
 
   // Returns +1 if the vertex is contained, -1 if it is not contained, and 0
   // if the incident edges consisted of matched sibling pairs.
   int ContainsSign();
 
+  // Returns true if any duplicate edges were seen incident on target.
+  bool DuplicateEdges() const {
+    // We map from other_vertex -> directional sum, so if we see any entries in
+    // the edge_map_ with an absolute value >= 2, it means we saw the same edge
+    // with the same orientation incident on target more than once, a duplicate.
+    for (const auto& item : edge_map_) {
+      if (std::abs(item.second) >= 2) {
+        return true;
+      }
+    }
+    return false;
+  }
+
  private:
   S2Point target_;
-  absl::btree_map<S2Point, int> edge_map_;
+  absl::flat_hash_map<S2Point, int> edge_map_;
 };
 
-
-//////////////////   Implementation details follow   ////////////////////
-
-
-inline S2ContainsVertexQuery::S2ContainsVertexQuery(const S2Point& target)
-    : target_(target) {
-}
-
-inline void S2ContainsVertexQuery::AddEdge(const S2Point& v, int direction) {
-  edge_map_[v] += direction;
-}
 
 #endif  // S2_S2CONTAINS_VERTEX_QUERY_H_

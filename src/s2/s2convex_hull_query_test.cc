@@ -25,6 +25,8 @@
 
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2cell_id.h"
@@ -32,6 +34,7 @@
 #include "s2/s2point.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
@@ -192,20 +195,23 @@ TEST(S2ConvexHullQuery, LoopsAroundNorthPole) {
 }
 
 TEST(S2ConvexHullQuery, PointsInsideHull) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "POINTS_INSIDE_HULL",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Repeatedly build the convex hull of a set of points, then add more points
   // inside that loop and build the convex hull again.  The result should
   // always be the same.
-  const int kIters = 1000;
+  constexpr int kIters = 1000;
   for (int iter = 0; iter < kIters; ++iter) {
-    S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
 
     // Choose points from within a cap of random size, up to but not including
     // an entire hemisphere.
-    S2Cap cap = S2Testing::GetRandomCap(1e-15, 1.999 * M_PI);
+    S2Cap cap = s2random::Cap(bitgen, 1e-15, 1.999 * M_PI);
     S2ConvexHullQuery query;
-    int num_points1 = S2Testing::rnd.Uniform(100) + 3;
+    int num_points1 = absl::Uniform(bitgen, 3, 103);
     for (int i = 0; i < num_points1; ++i) {
-      query.AddPoint(S2Testing::SamplePoint(cap));
+      query.AddPoint(s2random::SamplePoint(bitgen, cap));
     }
     unique_ptr<S2Loop> hull(query.GetConvexHull());
 
@@ -227,7 +233,7 @@ TEST(S2ConvexHullQuery, PointsInsideHull) {
     // Otherwise, add more points inside the convex hull.
     const int num_points2 = 1000;
     for (int i = 0; i < num_points2; ++i) {
-      S2Point p = S2Testing::SamplePoint(cap);
+      S2Point p = s2random::SamplePoint(bitgen, cap);
       if (hull->Contains(p)) {
         query.AddPoint(p);
       }

@@ -22,6 +22,10 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/r2rect.h"
@@ -39,6 +43,7 @@
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
 #include "s2/s2point_vector_shape.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2testing.h"
@@ -191,8 +196,8 @@ TEST(S2ShapeIndexRegion, IntersectsExactCell) {
 // chosen subset of descendants of those cells.
 class VisitIntersectingShapesTest {
  public:
-  explicit VisitIntersectingShapesTest(const S2ShapeIndex* index)
-      : index_(index), iter_(index), region_(index) {
+  VisitIntersectingShapesTest(absl::BitGenRef bitgen, const S2ShapeIndex* index)
+      : bitgen_(bitgen), index_(index), iter_(index), region_(index) {
     // Create an S2ShapeIndex for each shape in the original index, so that we
     // can use MayIntersect() and Contains() to determine the status of
     // individual shapes.
@@ -244,13 +249,14 @@ class VisitIntersectingShapesTest {
       case S2CellRelation::INDEXED: {
         // We check a few random descendant cells by continuing randomly down
         // one branch of the tree for a few levels.
-        if (target.is_leaf() || S2Testing::rnd.OneIn(3)) return;
-        TestCell(S2Cell(target.id().child(S2Testing::rnd.Uniform(4))));
+        if (target.is_leaf() || absl::Bernoulli(bitgen_, 1.0 / 3)) return;
+        TestCell(S2Cell(target.id().child(absl::Uniform(bitgen_, 0, 4))));
         return;
       }
     }
   }
 
+  absl::BitGenRef bitgen_;
   const S2ShapeIndex* index_;
   S2ShapeIndex::Iterator iter_;
   S2ShapeIndexRegion<S2ShapeIndex> region_;
@@ -258,48 +264,57 @@ class VisitIntersectingShapesTest {
 };
 
 TEST(VisitIntersectingShapes, Points) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "POINTS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<S2Point> vertices;
   for (int i = 0; i < 100; ++i) {
-    vertices.push_back(S2Testing::RandomPoint());
+    vertices.push_back(s2random::Point(bitgen));
   }
   MutableS2ShapeIndex index;
   index.Add(make_unique<S2PointVectorShape>(vertices));
-  VisitIntersectingShapesTest(&index).Run();
+  VisitIntersectingShapesTest(bitgen, &index).Run();
 }
 
 TEST(VisitIntersectingShapes, Polylines) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "POLYLINES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   MutableS2ShapeIndex index;
   S2Cap center_cap(S2Point(1, 0, 0), S1Angle::Radians(0.5));
   for (int i = 0; i < 50; ++i) {
-    S2Point center = S2Testing::SamplePoint(center_cap);
+    S2Point center = s2random::SamplePoint(bitgen, center_cap);
     vector<S2Point> vertices;
-    if (S2Testing::rnd.OneIn(10)) {
+    if (absl::Bernoulli(bitgen, 0.1)) {
       vertices = {center, center};  // Try a few degenerate polylines.
     } else {
       vertices = S2Testing::MakeRegularPoints(
-          center, S1Angle::Radians(S2Testing::rnd.RandDouble()),
-          S2Testing::rnd.Uniform(20) + 3);
+          center, S1Angle::Radians(absl::Uniform(bitgen, 0.0, 1.0)),
+          absl::Uniform(bitgen, 3, 23));
     }
     index.Add(make_unique<S2LaxPolylineShape>(vertices));
   }
-  VisitIntersectingShapesTest(&index).Run();
+  VisitIntersectingShapesTest(bitgen, &index).Run();
 }
 
 TEST(VisitIntersectingShapes, Polygons) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "POLYGONS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   MutableS2ShapeIndex index;
   S2Cap center_cap(S2Point(1, 0, 0), S1Angle::Radians(0.5));
-  S2Fractal fractal;
+  S2Fractal fractal(bitgen);
   for (int i = 0; i < 10; ++i) {
     fractal.SetLevelForApproxMaxEdges(3 * 64);
-    S2Point center = S2Testing::SamplePoint(center_cap);
+    S2Point center = s2random::SamplePoint(bitgen, center_cap);
     index.Add(make_unique<S2Loop::OwningShape>(
-        fractal.MakeLoop(S2Testing::GetRandomFrameAt(center),
-                         S1Angle::Radians(S2Testing::rnd.RandDouble()))));
+        fractal.MakeLoop(s2random::FrameAt(bitgen, center),
+                         S1Angle::Radians(absl::Uniform(bitgen, 0.0, 1.0)))));
   }
   // Also add a big polygon containing most of the polygons above to ensure
   // that we test containment of cells that are ancestors of index cells.
   index.Add(NewPaddedCell(S2CellId::FromFace(0), 0));
-  VisitIntersectingShapesTest(&index).Run();
+  VisitIntersectingShapesTest(bitgen, &index).Run();
 }
 
 }  // namespace

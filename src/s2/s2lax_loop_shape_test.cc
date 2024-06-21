@@ -17,13 +17,13 @@
 
 #include "s2/s2lax_loop_shape.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2loop.h"
@@ -108,7 +108,7 @@ TEST(S2LaxClosedPolylineShape, NoInterior) {
 }
 
 TEST(S2VertexIdLaxLoopShape, EmptyLoop) {
-  S2VertexIdLaxLoopShape shape(vector<int32>(), nullptr);
+  S2VertexIdLaxLoopShape shape(vector<int32_t>(), nullptr);
   EXPECT_EQ(0, shape.num_edges());
   EXPECT_EQ(0, shape.num_vertices());
   EXPECT_EQ(0, shape.num_chains());
@@ -123,7 +123,7 @@ TEST(S2VertexIdLaxLoopShape, Move) {
   // to be moved.
   const vector<S2Point> vertices =
       s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1, 1:0");
-  const vector<int32> vertex_ids = {0, 3, 2, 1};  // Inverted.
+  const vector<int32_t> vertex_ids = {0, 3, 2, 1};  // Inverted.
   const S2VertexIdLaxLoopShape correct(vertex_ids, &vertices[0]);
   S2VertexIdLaxLoopShape to_move(vertex_ids, &vertices[0]);
 
@@ -148,7 +148,7 @@ TEST(S2VertexIdLaxLoopShape, Move) {
 TEST(S2VertexIdLaxLoopShape, InvertedLoop) {
   vector<S2Point> vertex_array =
       s2textformat::ParsePointsOrDie("0:0, 0:1, 1:1, 1:0");
-  vector<int32> vertex_ids{0, 3, 2, 1};  // Inverted.
+  vector<int32_t> vertex_ids{0, 3, 2, 1};  // Inverted.
   S2VertexIdLaxLoopShape shape(vertex_ids, &vertex_array[0]);
   EXPECT_EQ(4, shape.num_edges());
   EXPECT_EQ(4, shape.num_vertices());

@@ -401,7 +401,7 @@ int SignedVertexCrossing(const S2Point& a, const S2Point& b,
   if (b == c) return s2pred::OrderedCCW(S2::RefDir(b), d, a, b) ? -1 : 0;
 
   ABSL_LOG(ERROR) << "SignedVertexCrossing called with 4 distinct vertices";
-  return false;
+  return 0;
 }
 
 bool EdgeOrVertexCrossing(const S2Point& a, const S2Point& b,

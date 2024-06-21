@@ -19,11 +19,13 @@
 
 #include <cmath>
 
+#include <cstdint>
 #include <sstream>
 
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s2error.h"
 #include "s2/s2latlng.h"
@@ -77,16 +79,16 @@ TEST(S1Angle, E6E7RepresentationsUnsigned) {
   // Check that unsigned E6/E7 representations work as expected.
   EXPECT_DOUBLE_EQ(
       S1Angle::Degrees(60).radians(),
-      S1Angle::UnsignedE6(static_cast<uint32>(60000000)).radians());
+      S1Angle::UnsignedE6(static_cast<uint32_t>(60000000)).radians());
   EXPECT_DOUBLE_EQ(
       S1Angle::Degrees(-60).radians(),
-      S1Angle::UnsignedE6(static_cast<uint32>(-60000000)).radians());
+      S1Angle::UnsignedE6(static_cast<uint32_t>(-60000000)).radians());
   EXPECT_DOUBLE_EQ(
       S1Angle::Degrees(75).radians(),
-      S1Angle::UnsignedE7(static_cast<uint32>(750000000)).radians());
+      S1Angle::UnsignedE7(static_cast<uint32_t>(750000000)).radians());
   EXPECT_DOUBLE_EQ(
       S1Angle::Degrees(-75).radians(),
-      S1Angle::UnsignedE7(static_cast<uint32>(-750000000)).radians());
+      S1Angle::UnsignedE7(static_cast<uint32_t>(-750000000)).radians());
 }
 
 TEST(S1Angle, NormalizeCorrectlyCanonicalizesAngles) {
@@ -187,9 +189,11 @@ TEST(S1Angle, DegreesVsE7) {
 // The current implementation guarantees exact conversions between
 // E6() and E7() when the E6() argument is an integer.
 TEST(S1Angle, E6VsE7) {
-  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "E6_VS_E7",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
-    int i = S2Testing::rnd.Uniform(180000000);
+    int i = absl::Uniform(bitgen, 0, 180000000);
     EXPECT_EQ(S1Angle::E6(i), S1Angle::E7(10 * i));
   }
 }

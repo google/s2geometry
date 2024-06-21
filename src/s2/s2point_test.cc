@@ -17,16 +17,21 @@
 
 #include "s2/s2point.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <string>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "absl/container/flat_hash_set.h"
+#include "absl/algorithm/container.h"
 #include "absl/flags/flag.h"
 #include "absl/hash/hash.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/s2coder_testing.h"
 #include "s2/s2error.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 namespace {
@@ -43,23 +48,40 @@ MATCHER_P2(NearPoint, P, tol,
 }
 
 TEST(S2Point, HashSpreads) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "HASH_SPREADS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   int kTestPoints = 1 << 16;
-  absl::flat_hash_set<size_t> set;
-  absl::flat_hash_set<S2Point, S2PointHash> points;
+  std::vector<size_t> hashes;
+  hashes.reserve(kTestPoints);
+  std::vector<S2Point> points;
+  points.reserve(kTestPoints);
   S2PointHash hasher;
   S2Point base = S2Point(1, 1, 1);
   for (int i = 0; i < kTestPoints; ++i) {
     // All points in a tiny cap to test avalanche property of hash
     // function (the cap would be of radius 1mm on Earth (4*10^9/2^35).
-    S2Point perturbed = base + S2Testing::RandomPoint() / (1ULL << 35);
+    S2Point perturbed = base + s2random::Point(bitgen) / (1ULL << 35);
     perturbed = perturbed.Normalize();
-    set.insert(hasher(perturbed));
-    points.insert(perturbed);
+    hashes.push_back(hasher(perturbed));
+    points.push_back(perturbed);
   }
-  // A real collision is extremely unlikely.
-  EXPECT_EQ(0, kTestPoints - points.size());
-  // Allow a few for the hash.
-  EXPECT_GE(10, kTestPoints - set.size());
+
+  absl::c_sort(hashes);
+  hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
+
+  absl::c_sort(points);
+  points.erase(std::unique(points.begin(), points.end()), points.end());
+
+  // Point collisions are somewhat unlikely.  This test is ~5% flaky with a
+  // value of 0 here and ~0.4% flaky with a value of 1.  Using 2 is <0.05%
+  // flaky.  A collision analysis would be nice to have, rather than using
+  // empirically determined thresholds.
+  const int num_point_collisions = kTestPoints - points.size();
+  const int num_hash_collisions = kTestPoints - hashes.size();
+  EXPECT_LE(num_point_collisions, 2);
+  // Hashes should add no additional collisions.
+  EXPECT_EQ(num_point_collisions, num_hash_collisions);
 }
 
 TEST(S2Point, IsAVector) {
@@ -70,9 +92,11 @@ TEST(S2Point, IsAVector) {
 }
 
 TEST(S2Point, CoderWorks) {
-  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CODER_WORKS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
-  S2Point point = S2Testing::RandomPoint();
+  S2Point point = s2random::Point(bitgen);
   S2Error error;
   S2Point decoded = s2coding::RoundTrip(S2Point::Coder(), point, error);
   EXPECT_TRUE(error.ok());

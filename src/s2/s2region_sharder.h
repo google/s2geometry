@@ -31,9 +31,11 @@
 // shard's covering).
 class S2RegionSharder {
  public:
-  // Construct a new S2RegionSharder from the given list of S2CellUnions. For
-  // this S2RegionSharder to be useful, the lifetime of the input should exceed
-  // the lifetime of this S2RegionSharder.
+  // Construct a new S2RegionSharder from a pre-existing S2CellIndex.  The index
+  // must remain alive at least as long as the S2RegionSharder.
+  explicit S2RegionSharder(const S2CellIndex* index) : index_(index) {}
+
+  // Construct a new S2RegionSharder from the given list of S2CellUnions.
   explicit S2RegionSharder(const std::vector<S2CellUnion>& shards);
 
   S2RegionSharder(const S2RegionSharder&) = delete;
@@ -53,7 +55,8 @@ class S2RegionSharder {
   absl::flat_hash_map<int, S2CellUnion> GetIntersectionsByShard(
       const S2Region& region) const;
 
-  S2CellIndex index_;
+  S2CellIndex owned_index_;
+  const S2CellIndex* index_ = &owned_index_;
 };
 
 #endif  // S2_S2REGION_SHARDER_H_

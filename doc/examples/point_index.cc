@@ -6,6 +6,7 @@
 
 #include <cinttypes>
 #include <cstdint>
+#include <random>
 #include <vector>
 
 #include "s2/base/commandlineflags.h"
@@ -15,17 +16,18 @@
 #include "s2/s1angle.h"
 #include "s2/s2closest_point_query.h"
 #include "s2/s2point_index.h"
-#include "s2/s2testing.h"
+#include "s2/s2random.h"
 
 DEFINE_int32(num_index_points, 10000, "Number of points to index");
 DEFINE_int32(num_queries, 10000, "Number of queries");
 DEFINE_double(query_radius_km, 100, "Query radius in kilometers");
 
 int main(int argc, char **argv) {
+  std::mt19937_64 bitgen;
   // Build an index containing random points anywhere on the Earth.
   S2PointIndex<int> index;
   for (int i = 0; i < absl::GetFlag(FLAGS_num_index_points); ++i) {
-    index.Add(S2Testing::RandomPoint(), i);
+    index.Add(s2random::Point(bitgen), i);
   }
 
   // Create a query to search within the given radius of a target point.
@@ -37,7 +39,7 @@ int main(int argc, char **argv) {
   // are within the given radius of that point.
   int64_t num_found = 0;
   for (int i = 0; i < absl::GetFlag(FLAGS_num_queries); ++i) {
-    S2ClosestPointQuery<int>::PointTarget target(S2Testing::RandomPoint());
+    S2ClosestPointQuery<int>::PointTarget target(s2random::Point(bitgen));
     num_found += query.FindClosestPoints(&target).size();
   }
 

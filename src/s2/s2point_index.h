@@ -233,7 +233,7 @@ class S2PointIndex {
     }
 
    private:
-    const Map* map_;
+    const Map* map_ = nullptr;
     typename Map::const_iterator iter_, end_;
   };
 
@@ -305,8 +305,7 @@ size_t S2PointIndex<Data>::SpaceUsed() const {
 }
 
 template <class Data>
-inline S2PointIndex<Data>::Iterator::Iterator() : map_(nullptr) {
-}
+inline S2PointIndex<Data>::Iterator::Iterator() = default;
 
 template <class Data>
 inline S2PointIndex<Data>::Iterator::Iterator(

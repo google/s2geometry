@@ -30,6 +30,9 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
@@ -50,6 +53,7 @@
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
@@ -170,7 +174,7 @@ static void GatherStats(const S2Cell& cell) {
   s->max_approx_ratio = max(approx_ratio, s->max_approx_ratio);
 }
 
-static void TestSubdivide(const S2Cell& cell) {
+static void TestSubdivide(absl::BitGenRef bitgen, const S2Cell& cell) {
   GatherStats(cell);
   if (cell.is_leaf()) return;
 
@@ -269,10 +273,9 @@ static void TestSubdivide(const S2Cell& cell) {
       if (children[i].GetBoundUV().Contains(uv))
         force_subdivide = true;
     }
-    if (force_subdivide ||
-        cell.level() < (google::DEBUG_MODE ? 5 : 6) ||
-        S2Testing::rnd.OneIn(google::DEBUG_MODE ? 5 : 4)) {
-      TestSubdivide(children[i]);
+    if (force_subdivide || cell.level() < (S2_DEBUG_MODE ? 5 : 6) ||
+        absl::Bernoulli(bitgen, S2_DEBUG_MODE ? 0.2 : 0.25)) {
+      TestSubdivide(bitgen, children[i]);
     }
   }
 
@@ -335,10 +338,14 @@ static void CheckMinMaxAvg(string_view label, int level, double count,
 }
 
 TEST(S2Cell, TestSubdivide) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "TEST_SUBDIVIDE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Only test a sample of faces to reduce the runtime.
-  TestSubdivide(S2Cell::FromFace(0));
-  TestSubdivide(S2Cell::FromFace(3));
-  TestSubdivide(S2Cell::FromFace(5));
+  TestSubdivide(bitgen, S2Cell::FromFace(0));
+  TestSubdivide(bitgen, S2Cell::FromFace(3));
+  TestSubdivide(bitgen, S2Cell::FromFace(5));
 
   // This table is useful in evaluating the quality of the various S2
   // projections.
@@ -427,8 +434,11 @@ TEST(S2Cell, CellVsLoopRectBound) {
   // Possible additional S2Loop error compared to S2Cell error:
   static S2LatLng kLoopError = S2LatLngRectBounder::MaxErrorForTests();
 
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CELL_VS_LOOP_RECT_BOUND",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
-    S2Cell cell(S2Testing::GetRandomCellId());
+    S2Cell cell(s2random::CellId(bitgen));
     S2Loop loop(cell);
     S2LatLngRect cell_bound = cell.GetRectBound();
     S2LatLngRect loop_bound = loop.GetRectBound();
@@ -440,14 +450,17 @@ TEST(S2Cell, CellVsLoopRectBound) {
 TEST(S2Cell, RectBoundIsLargeEnough) {
   // Construct many points that are nearly on an S2Cell edge, and verify that
   // whenever the cell contains a point P then its bound contains S2LatLng(P).
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "RECT_BOUND_IS_LARGE_ENOUGH",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   for (int iter = 0; iter < 1000; /* advanced in loop below */) {
-    S2Cell cell(S2Testing::GetRandomCellId());
-    int i = S2Testing::rnd.Uniform(4);
+    S2Cell cell(s2random::CellId(bitgen));
+    int i = absl::Uniform(bitgen, 0, 4);
     S2Point v1 = cell.GetVertex(i);
-    S2Point v2 = S2Testing::SamplePoint(
-        S2Cap(cell.GetVertex(i + 1), S1Angle::Radians(1e-15)));
-    S2Point p = S2::Interpolate(v1, v2, S2Testing::rnd.RandDouble());
+    S2Point v2 = s2random::SamplePoint(
+        bitgen, S2Cap(cell.GetVertex(i + 1), S1Angle::Radians(1e-15)));
+    S2Point p = S2::Interpolate(v1, v2, absl::Uniform(bitgen, 0.0, 1.0));
     if (S2Loop(cell).Contains(p)) {
       EXPECT_TRUE(cell.GetRectBound().Contains(S2LatLng(p)));
       ++iter;
@@ -458,14 +471,17 @@ TEST(S2Cell, RectBoundIsLargeEnough) {
 TEST(S2Cell, ConsistentWithS2CellIdFromPoint) {
   // Construct many points that are nearly on an S2Cell edge, and verify that
   // S2Cell(S2CellId(p)).Contains(p) is always true.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CONSISTENT_WITH_S2CELL_ID_FROM_POINT",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   for (int iter = 0; iter < 1000; ++iter) {
-    S2Cell cell(S2Testing::GetRandomCellId());
-    int i = S2Testing::rnd.Uniform(4);
+    S2Cell cell(s2random::CellId(bitgen));
+    int i = absl::Uniform(bitgen, 0, 4);
     S2Point v1 = cell.GetVertex(i);
-    S2Point v2 = S2Testing::SamplePoint(
-        S2Cap(cell.GetVertex(i + 1), S1Angle::Radians(1e-15)));
-    S2Point p = S2::Interpolate(v1, v2, S2Testing::rnd.RandDouble());
+    S2Point v2 = s2random::SamplePoint(
+        bitgen, S2Cap(cell.GetVertex(i + 1), S1Angle::Radians(1e-15)));
+    S2Point p = S2::Interpolate(v1, v2, absl::Uniform(bitgen, 0.0, 1.0));
     EXPECT_TRUE(S2Cell(S2CellId(p)).Contains(p));
   }
 }
@@ -513,11 +529,13 @@ static S1ChordAngle GetMaxDistanceToPointBruteForce(const S2Cell& cell,
 }
 
 TEST(S2Cell, GetDistanceToPoint) {
-  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_DISTANCE_TO_POINT",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
-    S2Cell cell(S2Testing::GetRandomCellId());
-    S2Point target = S2Testing::RandomPoint();
+    S2Cell cell(s2random::CellId(bitgen));
+    S2Point target = s2random::Point(bitgen);
     S1Angle expected_to_boundary =
         GetDistanceToPointBruteForce(cell, target).ToAngle();
     S1Angle expected_to_interior =
@@ -547,22 +565,25 @@ TEST(S2Cell, GetDistanceToPoint) {
   }
 }
 
-static void ChooseEdgeNearCell(const S2Cell& cell, S2Point* a, S2Point* b) {
+static void ChooseEdgeNearCell(absl::BitGenRef bitgen, const S2Cell& cell,
+                               S2Point* a, S2Point* b) {
   S2Cap cap = cell.GetCapBound();
-  if (S2Testing::rnd.OneIn(5)) {
+  if (absl::Bernoulli(bitgen, 0.2)) {
     // Choose a point anywhere on the sphere.
-    *a = S2Testing::RandomPoint();
+    *a = s2random::Point(bitgen);
   } else {
     // Choose a point inside or somewhere near the cell.
-    *a = S2Testing::SamplePoint(S2Cap(cap.center(), 1.5 * cap.GetRadius()));
+    *a = s2random::SamplePoint(bitgen,
+                               S2Cap(cap.center(), 1.5 * cap.GetRadius()));
   }
   // Now choose a maximum edge length ranging from very short to very long
   // relative to the cell size, and choose the other endpoint.
-  double max_length = min(100 * pow(1e-4, S2Testing::rnd.RandDouble()) *
-                          cap.GetRadius().radians(), M_PI_2);
-  *b = S2Testing::SamplePoint(S2Cap(*a, S1Angle::Radians(max_length)));
+  double max_length =
+      min(s2random::LogUniform(bitgen, 1e-2, 1e2) * cap.GetRadius().radians(),
+          M_PI_2);
+  *b = s2random::SamplePoint(bitgen, S2Cap(*a, S1Angle::Radians(max_length)));
 
-  if (S2Testing::rnd.OneIn(20)) {
+  if (absl::Bernoulli(bitgen, 0.05)) {
     // Occasionally replace edge with antipodal edge.
     *a = -*a;
     *b = -*b;
@@ -613,12 +634,14 @@ static S1ChordAngle GetMaxDistanceToEdgeBruteForce(
 }
 
 TEST(S2Cell, GetDistanceToEdge) {
-  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_DISTANCE_TO_EDGE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
-    S2Cell cell(S2Testing::GetRandomCellId());
+    S2Cell cell(s2random::CellId(bitgen));
     S2Point a, b;
-    ChooseEdgeNearCell(cell, &a, &b);
+    ChooseEdgeNearCell(bitgen, cell, &a, &b);
     S1Angle expected_min = GetDistanceToEdgeBruteForce(cell, a, b).ToAngle();
     S1Angle expected_max =
         GetMaxDistanceToEdgeBruteForce(cell, a, b).ToAngle();
@@ -665,9 +688,12 @@ TEST(S2Cell, GetMaxDistanceToCellAntipodal) {
 }
 
 TEST(S2Cell, GetMaxDistanceToCell) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_MAX_DISTANCE_TO_CELL",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 1000; i++) {
-    S2Cell cell(S2Testing::GetRandomCellId());
-    S2Cell test_cell(S2Testing::GetRandomCellId());
+    S2Cell cell(s2random::CellId(bitgen));
+    S2Cell test_cell(s2random::CellId(bitgen));
     S2CellId antipodal_leaf_id(-test_cell.GetCenter());
     S2Cell antipodal_test_cell(antipodal_leaf_id.parent(test_cell.level()));
 
@@ -714,9 +740,23 @@ TEST(S2Cell, GetUVCoordOfEdge) {
   }
 }
 
-TEST(S2Cell, GetIJCoordOfEdge) {
+TEST(S2Cell, GetSizeIJAgreesWithCellId) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_SIZE_IJ_AGREES_WITH_CELL_ID",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; ++i) {
-    S2CellId id = S2Testing::GetRandomCellId();
+    S2CellId id = s2random::CellId(bitgen);
+    S2Cell cell(id);
+    EXPECT_EQ(cell.GetSizeIJ(), id.GetSizeIJ(id.level()));
+  }
+}
+
+TEST(S2Cell, GetIJCoordOfEdge) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_IJ_COORD_OF_EDGE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  for (int i = 0; i < 100; ++i) {
+    S2CellId id = s2random::CellId(bitgen);
     S2Cell cell(id);
 
     // Look up the canonical IJ coordinates of the cell boundary.
@@ -724,7 +764,7 @@ TEST(S2Cell, GetIJCoordOfEdge) {
     int orientation;
     id.ToFaceIJOrientation(ij, ij + 1, &orientation);
 
-    int ij_size = id.GetSizeIJ(id.level());
+    int ij_size = cell.GetSizeIJ();
     R2Rect ij_bounds;
     for (int k = 0; k < 2; ++k) {
       int ij_lo = ij[k] & -ij_size;

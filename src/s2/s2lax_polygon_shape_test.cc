@@ -29,6 +29,9 @@
 #include "s2/base/casts.h"
 #include <gtest/gtest.h>
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/string_view.h"
 #include "s2/util/coding/coder.h"
 #include "s2/mutable_s2shape_index.h"
@@ -45,6 +48,7 @@
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
 #include "s2/s2shapeutil_testing.h"
@@ -257,9 +261,9 @@ TEST(S2LaxPolygonShape, MultiLoopS2Polygon) {
   auto polygon = MakePolygonOrDie("0:0, 0:3, 3:3; 1:1, 1:2, 2:2");
   S2LaxPolygonShape shape(*polygon);
   for (int i = 0; i < polygon->num_loops(); ++i) {
-    S2Loop* loop = polygon->loop(i);
-    for (int j = 0; j < loop->num_vertices(); ++j) {
-      EXPECT_EQ(loop->oriented_vertex(j),
+    const S2Loop& loop = *polygon->loop(i);
+    for (int j = 0; j < loop.num_vertices(); ++j) {
+      EXPECT_EQ(loop.oriented_vertex(j),
                 shape.loop_vertex(i, j));
     }
   }
@@ -268,12 +272,14 @@ TEST(S2LaxPolygonShape, MultiLoopS2Polygon) {
 TEST(S2LaxPolygonShape, ManyLoopPolygon) {
   // Test a polygon with enough loops so that binary search is used to find
   // the loop containing a given edge.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "MANY_LOOP_POLYGON",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<vector<S2Point>> loops;
   for (int i = 0; i < 100; ++i) {
     S2Point center(S2LatLng::FromDegrees(0, i));
-    loops.push_back(
-        S2Testing::MakeRegularPoints(center, S1Angle::Degrees(0.1),
-                                     S2Testing::rnd.Uniform(3)));
+    loops.push_back(S2Testing::MakeRegularPoints(center, S1Angle::Degrees(0.1),
+                                                 absl::Uniform(bitgen, 0, 3)));
   }
   S2LaxPolygonShape shape(loops);
   EXPECT_EQ(loops.size(), shape.num_loops());
@@ -336,34 +342,38 @@ TEST(S2LaxPolygonShape, InvertedLoops) {
   TestEncodedS2LaxPolygonShape(shape);
 }
 
-void CompareS2LoopToShape(const S2Loop& loop, unique_ptr<S2Shape> shape) {
+void CompareS2LoopToShape(absl::BitGenRef bitgen, const S2Loop& loop,
+                          unique_ptr<S2Shape> shape) {
   MutableS2ShapeIndex index;
   index.Add(std::move(shape));
   S2Cap cap = loop.GetCapBound();
   auto query = MakeS2ContainsPointQuery(&index);
   for (int iter = 0; iter < 100; ++iter) {
-    S2Point point = S2Testing::SamplePoint(cap);
+    S2Point point = s2random::SamplePoint(bitgen, cap);
     EXPECT_EQ(loop.Contains(point), query.ShapeContains(0, point));
   }
 }
 
 TEST(S2LaxPolygonShape, CompareToS2Loop) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "COMPARE_TO_S2_LOOP",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 100; ++iter) {
-    S2Fractal fractal;
-    fractal.set_max_level(S2Testing::rnd.Uniform(5));
-    fractal.set_fractal_dimension(1 + S2Testing::rnd.RandDouble());
-    S2Point center = S2Testing::RandomPoint();
-    unique_ptr<S2Loop> loop(fractal.MakeLoop(
-        S2Testing::GetRandomFrameAt(center), S1Angle::Degrees(5)));
+    S2Fractal fractal(bitgen);
+    fractal.set_max_level(absl::Uniform(bitgen, 0, 5));
+    fractal.set_fractal_dimension(1 + absl::Uniform(bitgen, 0.0, 1.0));
+    S2Point center = s2random::Point(bitgen);
+    unique_ptr<S2Loop> loop(fractal.MakeLoop(s2random::FrameAt(bitgen, center),
+                                             S1Angle::Degrees(5)));
 
     // Compare S2Loop to S2LaxLoopShape.
-    CompareS2LoopToShape(*loop, make_unique<S2LaxLoopShape>(*loop));
+    CompareS2LoopToShape(bitgen, *loop, make_unique<S2LaxLoopShape>(*loop));
 
     // Compare S2Loop to S2LaxPolygonShape.
     vector<S2LaxPolygonShape::Loop> loops(
         1, vector<S2Point>(&loop->vertex(0),
                            &loop->vertex(0) + loop->num_vertices()));
-    CompareS2LoopToShape(*loop, make_unique<S2LaxPolygonShape>(loops));
+    CompareS2LoopToShape(bitgen, *loop, make_unique<S2LaxPolygonShape>(loops));
   }
 }
 

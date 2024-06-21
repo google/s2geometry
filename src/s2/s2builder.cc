@@ -73,13 +73,13 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <ostream>
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "s2/base/log_severity.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/btree_map.h"
@@ -489,7 +489,7 @@ namespace {
 class VertexIdEdgeVectorShape final : public S2Shape {
  public:
   // Requires that "edges" is constant for the lifetime of this object.
-  VertexIdEdgeVectorShape(const vector<pair<int32, int32>>& edges,
+  VertexIdEdgeVectorShape(const vector<pair<int32_t, int32_t>>& edges,
                           const vector<S2Point>& vertices)
       : edges_(edges), vertices_(vertices) {}
 
@@ -515,7 +515,7 @@ class VertexIdEdgeVectorShape final : public S2Shape {
  private:
   const S2Point& vertex(int i) const { return vertices_[i]; }
 
-  const vector<std::pair<int32, int32>>& edges_;
+  const vector<std::pair<int32_t, int32_t>>& edges_;
   const vector<S2Point>& vertices_;
 };
 }  // namespace
@@ -598,7 +598,7 @@ void S2Builder::ChooseAllVerticesAsSites() {
   // implementation of SnapEdge() for this case.
   sites_.clear();
   if (!tracker_.AddSpaceExact(&sites_, input_vertices_.size())) return;
-  const int64 kTempPerVertex = sizeof(InputVertexKey) + sizeof(InputVertexId);
+  const int64_t kTempPerVertex = sizeof(InputVertexKey) + sizeof(InputVertexId);
   if (!tracker_.TallyTemp(input_vertices_.size() * kTempPerVertex)) return;
   vector<InputVertexKey> sorted = SortInputVertices();
   vector<InputVertexId> vmap(input_vertices_.size());
@@ -1241,7 +1241,7 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
     }
   }
   ABSL_DCHECK(!chain->empty());
-  if (google::DEBUG_MODE) {
+  if (S2_DEBUG_MODE) {
     for (SiteId site_id : candidates) {
       if (s2pred::CompareDistances(y, sites_[chain->back()],
                                    sites_[site_id]) > 0) {
@@ -1259,7 +1259,7 @@ void S2Builder::SnapEdge(InputEdgeId e, vector<SiteId>* chain) const {
 void S2Builder::BuildLayers() {
   if (!tracker_.ok()) return;
 
-  // Each output edge has an "input edge id set id" (an int32) representing
+  // Each output edge has an "input edge id set id" (an int32_t) representing
   // the set of input edge ids that were snapped to this edge.  The actual
   // InputEdgeIds can be retrieved using "input_edge_id_set_lexicon".
   vector<vector<Edge>> layer_edges;
@@ -1722,10 +1722,7 @@ int S2Builder::EdgeChainSimplifier::input_edge_layer(InputEdgeId id) const {
 class S2Builder::EdgeChainSimplifier::InteriorVertexMatcher {
  public:
   // Checks whether "v0" can be an interior vertex of an edge chain.
-  explicit InteriorVertexMatcher(VertexId v0)
-      : v0_(v0), v1_(-1), v2_(-1), n0_(0), n1_(0), n2_(0), excess_out_(0),
-        too_many_endpoints_(false) {
-  }
+  explicit InteriorVertexMatcher(VertexId v0) : v0_(v0) {}
 
   // Starts analyzing the edges of a new layer.
   void StartLayer() {
@@ -1768,10 +1765,11 @@ class S2Builder::EdgeChainSimplifier::InteriorVertexMatcher {
   }
 
  private:
-  VertexId v0_, v1_, v2_;
-  int n0_, n1_, n2_;
-  int excess_out_;           // outdegree(v0) - indegree(v0)
-  bool too_many_endpoints_;  // Have we seen more than two adjacent vertices?
+  VertexId v0_ = -1, v1_ = -1, v2_ = -1;
+  int n0_ = 0, n1_ = 0, n2_ = 0;
+  int excess_out_ = 0;  // outdegree(v0) - indegree(v0)
+  // Have we seen more than two adjacent vertices?
+  bool too_many_endpoints_ = false;
 };
 
 // Returns true if VertexId "v" can be an interior vertex of a simplified edge
@@ -2100,18 +2098,18 @@ void S2Builder::EdgeChainSimplifier::AssignDegenerateEdges(
 // Called to track memory used to store the set of sites near a given edge.
 bool S2Builder::MemoryTracker::TallyEdgeSites(
     const compact_array<SiteId>& sites) {
-  int64 size = GetCompactArrayAllocBytes(sites);
+  int64_t size = GetCompactArrayAllocBytes(sites);
   edge_sites_bytes_ += size;
   return Tally(size);
 }
 
 // Ensures that "sites" contains space for at least one more edge site.
 bool S2Builder::MemoryTracker::ReserveEdgeSite(compact_array<SiteId>* sites) {
-  int64 new_size = sites->size() + 1;
+  int64_t new_size = sites->size() + 1;
   if (new_size <= sites->capacity()) return true;
-  int64 old_bytes = GetCompactArrayAllocBytes(*sites);
+  int64_t old_bytes = GetCompactArrayAllocBytes(*sites);
   sites->reserve(new_size);
-  int64 added_bytes = GetCompactArrayAllocBytes(*sites) - old_bytes;
+  int64_t added_bytes = GetCompactArrayAllocBytes(*sites) - old_bytes;
   edge_sites_bytes_ += added_bytes;
   return Tally(added_bytes);
 }
@@ -2130,7 +2128,7 @@ bool S2Builder::MemoryTracker::TallyIndexedSite() {
   // guaranteed to be half full, but in our case all nodes are full except for
   // the rightmost node at each btree level because the values are added in
   // sorted order.
-  int64 delta_bytes = GetBtreeMinBytesPerEntry<
+  int64_t delta_bytes = GetBtreeMinBytesPerEntry<
       absl::btree_multimap<S2CellId, S2PointIndex<SiteId>::PointData>>();
   site_index_bytes_ += delta_bytes;
   return Tally(delta_bytes);
@@ -2139,7 +2137,7 @@ bool S2Builder::MemoryTracker::TallyIndexedSite() {
 // Corrects the approximate S2PointIndex memory tracking done above.
 bool S2Builder::MemoryTracker::FixSiteIndexTally(
     const S2PointIndex<SiteId>& index) {
-  int64 delta_bytes = index.SpaceUsed() - site_index_bytes_;
+  int64_t delta_bytes = index.SpaceUsed() - site_index_bytes_;
   site_index_bytes_ += delta_bytes;
   return Tally(delta_bytes);
 }
@@ -2168,7 +2166,7 @@ bool S2Builder::MemoryTracker::TallySimplifyEdgeChains(
   //  vector<bool> is_interior_;  // EdgeChainSimplifier
   //  Graph::VertexInMap in_;     // EdgeChainSimplifier
   //  Graph::VertexOutMap out_;   // EdgeChainSimplifier
-  const int64 kTempPerSite =
+  const int64_t kTempPerSite =
       sizeof(compact_array<InputVertexId>) + sizeof(bool) + 2 * sizeof(EdgeId);
 
   // Per output edge:
@@ -2183,10 +2181,10 @@ bool S2Builder::MemoryTracker::TallySimplifyEdgeChains(
   //
   // Note that the temporary vector<LayerEdgeId> in MergeLayerEdges() does not
   // affect peak usage.
-  const int64 kTempPerEdge = sizeof(bool) + sizeof(EdgeId) +
+  const int64_t kTempPerEdge = sizeof(bool) + sizeof(EdgeId) +
                                2 * sizeof(Edge) + 2 * sizeof(InputEdgeIdSetId) +
                                2 * sizeof(int);
-  int64 simplify_bytes = site_vertices.size() * kTempPerSite;
+  int64_t simplify_bytes = site_vertices.size() * kTempPerSite;
   for (const auto& array : site_vertices) {
     simplify_bytes += GetCompactArrayAllocBytes(array);
   }
@@ -2209,8 +2207,8 @@ bool S2Builder::MemoryTracker::TallyFilterVertices(
   //
   //  vector<VertexId> *tmp;      // Graph::FilterVertices
   //  vector<VertexId> used;      // Graph::FilterVertices
-  const int64 kTempPerSite = sizeof(Graph::VertexId);
-  const int64 kTempPerEdge = 2 * sizeof(Graph::VertexId);
+  const int64_t kTempPerSite = sizeof(Graph::VertexId);
+  const int64_t kTempPerEdge = 2 * sizeof(Graph::VertexId);
 
   size_t max_layer_edges = 0;
   for (const auto& edges : layer_edges) {

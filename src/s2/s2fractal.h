@@ -17,12 +17,14 @@
 #define S2_S2FRACTAL_H_
 
 #include <cmath>
+#include <cstdint>
 #include <memory>
-#include <random>
 #include <vector>
 
-#include "absl/synchronization/mutex.h"
+#include "absl/base/attributes.h"
+#include "absl/random/bit_gen_ref.h"
 #include "s2/r2.h"
+#include "s2/s1angle.h"
 #include "s2/s2loop.h"
 
 // A simple class that generates "Koch snowflake" fractals (see Wikipedia for an
@@ -46,7 +48,7 @@ class S2Fractal {
  public:
   // You must call set_max_level() or SetLevelForApproxMaxEdges() before
   // calling MakeLoop().
-  S2Fractal();
+  explicit S2Fractal(absl::BitGenRef bitgen ABSL_ATTRIBUTE_LIFETIME_BOUND);
 
   // Set the maximum subdivision level for the fractal (see above).
   // REQUIRES: max_level >= 0
@@ -97,29 +99,17 @@ class S2Fractal {
   // onto the sphere.  This has the side effect of shrinking the fractal
   // slightly compared to its nominal radius.
   std::unique_ptr<S2Loop> MakeLoop(const Matrix3x3_d& frame,
-                                   S1Angle nominal_radius) const;
+                                   S1Angle nominal_radius);
 
  private:
   void ComputeMinLevel();
   void ComputeOffsets();
-  void GetR2Vertices(std::vector<R2Point>* vertices) const;
+  std::vector<R2Point> GetR2Vertices();
   void GetR2VerticesHelper(const R2Point& v0, const R2Point& v4, int level,
-                           std::vector<R2Point>* vertices) const;
+                           std::vector<R2Point>& vertices);
 
-  // Reset the PRNG to the default seed.
-  void Reseed() const {
-    absl::WriterMutexLock lock(&lock_);
-    random_.seed();
-  }
-
-  bool OneIn(int32 n) const {
-    absl::WriterMutexLock lock(&lock_);
-    return std::uniform_int_distribution<int>(0, n - 1)(random_) == 0;
-  }
-
-  // Mutable source of randomness and a lock to synchronize it.
-  mutable std::default_random_engine random_;
-  mutable absl::Mutex lock_;
+  // Source of randomness.
+  absl::BitGenRef bitgen_;
 
   int max_level_ = -1;
   int min_level_arg_ = -1;  // Value set by user

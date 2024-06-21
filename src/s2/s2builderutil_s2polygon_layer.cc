@@ -132,7 +132,7 @@ void S2PolygonLayer::ReorderEdgeLabels(const LoopMap& loop_map) {
   if (!label_set_ids_) return;
   LabelSetIds new_ids(label_set_ids_->size());
   for (int i = 0; i < polygon_->num_loops(); ++i) {
-    S2Loop* loop = polygon_->loop(i);
+    const S2Loop* loop = polygon_->loop(i);
     const pair<int, bool>& old = loop_map.find(loop)->second;
     new_ids[i].swap((*label_set_ids_)[old.first]);
     if (loop->contains_origin() != old.second) {

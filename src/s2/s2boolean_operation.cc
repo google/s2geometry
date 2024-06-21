@@ -68,6 +68,7 @@
 #include <cmath>
 
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -75,7 +76,6 @@
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
@@ -292,7 +292,7 @@ class GraphEdgeClipper {
   // The clipped set of edges and their corresponding set of input edge ids
   // are returned in "new_edges" and "new_input_edge_ids".  (These can be used
   // to construct a new S2Builder::Graph.)
-  GraphEdgeClipper(const Graph& g, const vector<int8>& input_dimensions,
+  GraphEdgeClipper(const Graph& g, const vector<int8_t>& input_dimensions,
                    const InputEdgeCrossings& input_crossings,
                    vector<Graph::Edge>* new_edges,
                    vector<InputEdgeIdSetId>* new_input_edge_ids);
@@ -314,7 +314,7 @@ class GraphEdgeClipper {
   const Graph& g_;
   Graph::VertexInMap in_;
   Graph::VertexOutMap out_;
-  const vector<int8>& input_dimensions_;
+  const vector<int8_t>& input_dimensions_;
   const InputEdgeCrossings& input_crossings_;
   vector<Graph::Edge>* new_edges_;
   vector<InputEdgeIdSetId>* new_input_edge_ids_;
@@ -331,7 +331,7 @@ class GraphEdgeClipper {
 };
 
 GraphEdgeClipper::GraphEdgeClipper(const Graph& g,
-                                   const vector<int8>& input_dimensions,
+                                   const vector<int8_t>& input_dimensions,
                                    const InputEdgeCrossings& input_crossings,
                                    vector<Graph::Edge>* new_edges,
                                    vector<InputEdgeIdSetId>* new_input_edge_ids)
@@ -746,7 +746,7 @@ bool GraphEdgeClipper::EdgeChainOnLeft(
 class EdgeClippingLayer : public S2Builder::Layer {
  public:
   EdgeClippingLayer(const vector<unique_ptr<S2Builder::Layer>>* layers,
-                    const vector<int8>* input_dimensions,
+                    const vector<int8_t>* input_dimensions,
                     const InputEdgeCrossings* input_crossings,
                     S2MemoryTracker::Client* tracker)
       : layers_(*layers),
@@ -760,7 +760,7 @@ class EdgeClippingLayer : public S2Builder::Layer {
 
  private:
   const vector<unique_ptr<S2Builder::Layer>>& layers_;
-  const vector<int8>& input_dimensions_;
+  const vector<int8_t>& input_dimensions_;
   const InputEdgeCrossings& input_crossings_;
   S2MemoryTracker::Client* tracker_;
 };
@@ -786,9 +786,9 @@ void EdgeClippingLayer::Build(const Graph& g, S2Error* error) {
   // The first and last two vectors above are freed upon GraphEdgeClipper
   // destruction.  There is also a temporary vector "indegree" in
   // GetInputEdgeChainOrder() but this does not affect peak memory usage.
-  int64 tmp_bytes = g.num_edges() * (sizeof(EdgeId) + sizeof(int)) +
+  int64_t tmp_bytes = g.num_edges() * (sizeof(EdgeId) + sizeof(int)) +
                       g.num_vertices() * (2 * sizeof(EdgeId));
-  int64 final_bytes =
+  int64_t final_bytes =
       g.num_edges() * (sizeof(Graph::Edge) + sizeof(InputEdgeIdSetId));
 
   // The order of the calls below is important.  Note that all memory tracked
@@ -885,15 +885,15 @@ class S2BooleanOperation::Impl {
     ShapeEdgeId a, b;
 
     // True if S2::CrossingSign(a_edge, b_edge) > 0.
-    uint32 is_interior_crossing : 1;
+    uint32_t is_interior_crossing : 1;
 
     // True if "a_edge" crosses "b_edge" from left to right.  Undefined if
     // is_interior_crossing is false.
-    uint32 left_to_right : 1;
+    uint32_t left_to_right : 1;
 
     // Equal to S2::VertexCrossing(a_edge, b_edge).  Undefined if "a_edge" and
     // "b_edge" do not share exactly one vertex or either edge is degenerate.
-    uint32 is_vertex_crossing : 1;
+    uint32_t is_vertex_crossing : 1;
 
     // All flags are "false" by default.
     IndexCrossing(ShapeEdgeId _a, ShapeEdgeId _b)
@@ -927,7 +927,7 @@ class S2BooleanOperation::Impl {
     // type is a template parameter so that SourceIdMap can be private.)
     template <class T>
     bool TallySourceIdMap(int num_entries) {
-      int64 delta_bytes = num_entries * GetBtreeMinBytesPerEntry<T>();
+      int64_t delta_bytes = num_entries * GetBtreeMinBytesPerEntry<T>();
       source_id_map_bytes_ += delta_bytes;
       return Tally(delta_bytes);
     }
@@ -944,7 +944,7 @@ class S2BooleanOperation::Impl {
 
    private:
     // The amount of memory used by CrossingProcessor::source_id_map_.
-    int64 source_id_map_bytes_ = 0;
+    int64_t source_id_map_bytes_ = 0;
   };
 
   bool is_boolean_output() const { return op_->result_empty_ != nullptr; }
@@ -982,7 +982,7 @@ class S2BooleanOperation::Impl {
   void DoBuild(S2Error* error);
 
   // A bit mask representing all six faces of the S2 cube.
-  static constexpr uint8 kAllFacesMask = 0x3f;
+  static constexpr uint8_t kAllFacesMask = 0x3f;
 
   S2BooleanOperation* op_;
 
@@ -994,7 +994,7 @@ class S2BooleanOperation::Impl {
   unique_ptr<S2Builder> builder_;
 
   // A vector specifying the dimension of each edge added to S2Builder.
-  vector<int8> input_dimensions_;
+  vector<int8_t> input_dimensions_;
 
   // The set of all input edge crossings, which is used by EdgeClippingLayer
   // to construct the clipped output polygon.
@@ -1023,7 +1023,7 @@ class S2BooleanOperation::Impl {
 };
 
 const s2shapeutil::ShapeEdgeId S2BooleanOperation::Impl::kSentinel(
-    std::numeric_limits<int32>::max(), 0);
+    std::numeric_limits<int32_t>::max(), 0);
 
 // A helper class for iterating through the edges from region B that cross a
 // particular edge from region A.  It caches information from the current
@@ -1130,7 +1130,7 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   CrossingProcessor(const PolygonModel& polygon_model,
                     const PolylineModel& polyline_model,
                     bool polyline_loops_have_boundaries, S2Builder* builder,
-                    vector<int8>* input_dimensions,
+                    vector<int8_t>* input_dimensions,
                     InputEdgeCrossings* input_crossings, MemoryTracker* tracker)
       : polygon_model_(polygon_model),
         polyline_model_(polyline_model),
@@ -1311,7 +1311,7 @@ class S2BooleanOperation::Impl::CrossingProcessor {
   // dimension of each input edge, and set of input edges from the other
   // region that cross each input edge.
   S2Builder* builder_;  // (nullptr if boolean output was requested)
-  vector<int8>* input_dimensions_;
+  vector<int8_t>* input_dimensions_;
   InputEdgeCrossings* input_crossings_;
   MemoryTracker* tracker_;
 
@@ -2337,8 +2337,8 @@ bool S2BooleanOperation::Impl::BuildOpType(OpType op_type) {
 
 // Returns a bit mask indicating which of the 6 S2 cube faces intersect the
 // index contents.
-uint8 GetFaceMask(const S2ShapeIndex& index) {
-  uint8 mask = 0;
+uint8_t GetFaceMask(const S2ShapeIndex& index) {
+  uint8_t mask = 0;
   S2ShapeIndex::Iterator it(&index, S2ShapeIndex::BEGIN);
   while (!it.done()) {
     int face = it.id().face();
@@ -2473,8 +2473,8 @@ bool S2BooleanOperation::Impl::IsFullPolygonSymmetricDifference(
 
   // The result can be full only if the union of the two input geometries
   // intersects all six faces of the S2 cube.  This test is fast.
-  uint8 a_mask = GetFaceMask(a);
-  uint8 b_mask = GetFaceMask(b);
+  uint8_t a_mask = GetFaceMask(a);
+  uint8_t b_mask = GetFaceMask(b);
   if ((a_mask | b_mask) != kAllFacesMask) return false;
 
   // The symmetric difference area satisfies:
@@ -2756,28 +2756,25 @@ string_view S2BooleanOperation::PolylineModelToString(PolylineModel model) {
   }
 }
 
-S2BooleanOperation::S2BooleanOperation(OpType op_type,
-                                       const Options& options)
-    : options_(options), op_type_(op_type), result_empty_(nullptr) {
-}
+S2BooleanOperation::S2BooleanOperation(OpType op_type, const Options& options)
+    : options_(options), op_type_(op_type) {}
 
 S2BooleanOperation::S2BooleanOperation(OpType op_type, bool* result_empty,
                                        const Options& options)
     : options_(options), op_type_(op_type), result_empty_(result_empty) {
 }
 
-S2BooleanOperation::S2BooleanOperation(
-    OpType op_type, unique_ptr<S2Builder::Layer> layer, const Options& options)
-    : options_(options), op_type_(op_type), result_empty_(nullptr) {
+S2BooleanOperation::S2BooleanOperation(OpType op_type,
+                                       unique_ptr<S2Builder::Layer> layer,
+                                       const Options& options)
+    : options_(options), op_type_(op_type) {
   layers_.push_back(std::move(layer));
 }
 
 S2BooleanOperation::S2BooleanOperation(
     OpType op_type, vector<unique_ptr<S2Builder::Layer>> layers,
     const Options& options)
-    : options_(options), op_type_(op_type), layers_(std::move(layers)),
-      result_empty_(nullptr) {
-}
+    : options_(options), op_type_(op_type), layers_(std::move(layers)) {}
 
 bool S2BooleanOperation::Build(const S2ShapeIndex& a,
                                const S2ShapeIndex& b,

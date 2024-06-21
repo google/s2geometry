@@ -18,10 +18,12 @@
 #ifndef S2_S2POINT_REGION_H_
 #define S2_S2POINT_REGION_H_
 
+#include <vector>
+
 #include "absl/base/macros.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"

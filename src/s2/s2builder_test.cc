@@ -34,6 +34,9 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -67,6 +70,7 @@
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
 #include "s2/s2predicates.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
@@ -265,26 +269,32 @@ TEST(S2Builder, MaxEdgeDeviation) {
   // radius is S2::kIntersectionError because split_crossing_edges() is true.
   EXPECT_EQ(builder.options().edge_snap_radius(), S2::kIntersectionError);
   S1Angle max_deviation = builder.options().max_edge_deviation();
-  const int kIters = 50 * absl::GetFlag(FLAGS_iteration_multiplier);
-  auto& rnd = S2Testing::rnd;
+  const int num_iters = 50 * absl::GetFlag(FLAGS_iteration_multiplier);
 
   // Test cases are constructed randomly, so not all tests are effective (i.e.
   // AB might not snap to the perturbed vertex C).  Here we keep track of the
   // number of effective tests.
   int num_effective = 0;
-  for (int iter = 0; iter < kIters; ++iter) {
-    rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "MAX_EDGE_DEVIATION",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  for (int iter = 0; iter < num_iters; ++iter) {
     S2LaxPolylineShape output;
     builder.StartLayer(make_unique<LaxPolylineLayer>(&output));
-    S2Point a = S2Testing::RandomPoint();
+    S2Point a = s2random::Point(bitgen);
 
     // B is slightly perturbed from -A, and C is slightly perturbed from A.
     // The perturbation amount is not critical except that it should not be
     // too much larger than edge_snap_radius() (otherwise AB will rarely snap
-    // to C) and it should also not be so small that A and C are likely to be
-    // the same point.
-    S2Point b = (-a + 5e-16 * S2Testing::RandomPoint()).Normalize();
-    S2Point c = (a + 5e-16 * S2Testing::RandomPoint()).Normalize();
+    // to C).  We sample until we have a perturbation (avoiding the exact
+    // `B == -A` and `C == A` cases).
+    S2Point b, c;
+    do {
+      b = (-a + 5e-16 * s2random::Point(bitgen)).Normalize();
+    } while (b == -a);
+    do {
+      c = (a + 5e-16 * s2random::Point(bitgen)).Normalize();
+    } while (c == a);
     builder.AddEdge(a, b);
     builder.ForceVertex(c);
     S2Error error;
@@ -302,7 +312,7 @@ TEST(S2Builder, MaxEdgeDeviation) {
     if (n > 2) ++num_effective;
   }
   // We require at least 20% of the test cases to be successful.
-  EXPECT_GE(num_effective * 5, kIters);
+  EXPECT_GE(num_effective * 5, num_iters);
 }
 
 TEST(S2Builder, IdempotencySnapsInadequatelySeparatedVertices) {
@@ -772,14 +782,17 @@ class GraphPersistenceLayer : public S2Builder::Layer {
 TEST(S2Builder, GraphPersistence) {
   // Ensure that the Graph objects passed to S2Builder::Layer::Build() methods
   // remain valid until all layers have been built.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GRAPH_PERSISTENCE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   vector<Graph> graphs;
   vector<unique_ptr<GraphClone>> clones;
   S2Builder builder{S2Builder::Options()};
   for (int i = 0; i < 20; ++i) {
     builder.StartLayer(make_unique<GraphPersistenceLayer>(
         GraphOptions(), &graphs, &clones));
-    for (int n = S2Testing::rnd.Uniform(10); n > 0; --n) {
-      builder.AddEdge(S2Testing::RandomPoint(), S2Testing::RandomPoint());
+    for (int n = absl::Uniform(bitgen, 0, 10); n > 0; --n) {
+      builder.AddEdge(s2random::Point(bitgen), s2random::Point(bitgen));
     }
   }
   S2Error error;
@@ -1002,8 +1015,8 @@ TEST(S2Builder, SimplifyPreservesTopology) {
   // Crate several nested concentric loops, and verify that the loops are
   // still nested after simplification.
 
-  const int kNumLoops = 20;
-  const int kNumVerticesPerLoop = 1000;
+  constexpr int kNumLoops = 20;
+  constexpr int kNumVerticesPerLoop = 1000;
   const S1Angle kBaseRadius = S1Angle::Degrees(5);
   const S1Angle kSnapRadius = S1Angle::Degrees(0.1);
   S2Builder::Options options((IdentitySnapFunction(kSnapRadius)));
@@ -1319,11 +1332,11 @@ TEST(S2Builder, HighPrecisionPredicates) {
 // Chooses a random S2Point that is often near the intersection of one of the
 // coodinates planes or coordinate axes with the unit sphere.  (It is possible
 // to represent very small perturbations near such points.)
-S2Point ChoosePoint() {
-  S2Point x = S2Testing::RandomPoint();
+S2Point ChoosePoint(absl::BitGenRef bitgen) {
+  S2Point x = s2random::Point(bitgen);
   for (int i = 0; i < 3; ++i) {
-    if (S2Testing::rnd.OneIn(3)) {
-      x[i] *= pow(1e-50, S2Testing::rnd.RandDouble());
+    if (absl::Bernoulli(bitgen, 1.0 / 3)) {
+      x[i] *= s2random::LogUniform(bitgen, 1e-50, 1.0);
     }
   }
   return x.Normalize();
@@ -1342,12 +1355,12 @@ TEST(S2Builder, HighPrecisionStressTest) {
       ca.GetS1AngleConstructorMaxError() +
       S2::GetUpdateMinDistanceMaxError(ca)).ToAngle();
 
-  auto& rnd = S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "HIGH_PRECISION_STRESS_TEST",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   int non_degenerate = 0;
-  const int kIters = 8000 * absl::GetFlag(FLAGS_iteration_multiplier);
-  for (int iter = 0; iter < kIters; ++iter) {
-    rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
-
+  const int num_iters = 8000 * absl::GetFlag(FLAGS_iteration_multiplier);
+  for (int iter = 0; iter < num_iters; ++iter) {
     // We construct a nearly degenerate triangle where one of the edges is
     // sometimes very short.  Then we add a forced vertex somewhere near the
     // shortest edge.  Then after snapping, we check that (1) the edges still
@@ -1356,27 +1369,33 @@ TEST(S2Builder, HighPrecisionStressTest) {
     //
     // v1 is located randomly.  (v0,v1) is the longest of the three edges.
     // v2 is located along (v0,v1) but is perturbed by up to 2 * snap_radius.
-    S2Point v1 = ChoosePoint(), v0_dir = ChoosePoint();
-    double d0 = pow(1e-16, rnd.RandDouble());
+    S2Point v1 = ChoosePoint(bitgen);
+    S2Point v0_dir = ChoosePoint(bitgen);
+    double d0 = s2random::LogUniform(bitgen, 1e-16, 1.0);
     S2Point v0 = S2::GetPointOnLine(v1, v0_dir, S1Angle::Radians(d0));
-    double d2 = 0.5 * d0 * pow(1e-16, pow(rnd.RandDouble(), 2));
+    double d2 = 0.5 * d0 * pow(1e-16, pow(absl::Uniform(bitgen, 0.0, 1.0), 2));
     S2Point v2 = S2::GetPointOnLine(v1, v0_dir, S1Angle::Radians(d2));
-    v2 = S2Testing::SamplePoint(S2Cap(v2, 2 * snap_radius));
+    v2 = s2random::SamplePoint(bitgen, S2Cap(v2, 2 * snap_radius));
     // Vary the edge directions by randomly swapping v0 and v2.
-    if (rnd.OneIn(2)) std::swap(v0, v2);
+    if (absl::Bernoulli(bitgen, 0.5)) std::swap(v0, v2);
 
     // The forced vertex (v3) is either located near the (v1, v2) edge.
     // We perturb it either in a random direction from v1 or v2, or
     // perpendicular to (v1, v2) starting from an interior edge point.
-    S1Angle d3 = rnd.OneIn(2) ? snap_radius : snap_radius_with_error;
-    if (rnd.OneIn(3)) d3 = 1.5 * rnd.RandDouble() * d3;
+    S1Angle d3 =
+        absl::Bernoulli(bitgen, 0.5) ? snap_radius : snap_radius_with_error;
+    if (absl::Bernoulli(bitgen, 1.0 / 3))
+      d3 = 1.5 * absl::Uniform(bitgen, 0.0, 1.0) * d3;
     S2Point v3;
-    if (rnd.OneIn(5)) {
-      v3 = rnd.OneIn(2) ? v1 : v2;
-      v3 = S2::GetPointOnLine(v3, ChoosePoint(), d3);
+    if (absl::Bernoulli(bitgen, 0.2)) {
+      v3 = absl::Bernoulli(bitgen, 0.5) ? v1 : v2;
+      v3 = S2::GetPointOnLine(v3, ChoosePoint(bitgen), d3);
     } else {
-      v3 = S2::Interpolate(v1, v2, pow(1e-16, rnd.RandDouble()));
-      v3 = S2::GetPointOnLine(v3, v1.CrossProd(v2).Normalize(), d3);
+      v3 = S2::Interpolate(v1, v2, s2random::LogUniform(bitgen, 1e-16, 1.0));
+      // Ignoring rounding, `v2` could be as close as `0.5e-32` to `v1`.  This
+      // is less than `DBL_EPSILON ≈ 1e-16`, so they may actually be the same.
+      // Use `RobustCrossProd` instead of `CrossProd`.
+      v3 = S2::GetPointOnLine(v3, S2::RobustCrossProd(v1, v2).Normalize(), d3);
     }
     S2Builder::Options options((IdentitySnapFunction(snap_radius)));
     options.set_idempotent(false);
@@ -1402,29 +1421,31 @@ TEST(S2Builder, HighPrecisionStressTest) {
       }
     }
   }
-  ABSL_LOG(INFO) << non_degenerate << " non-degenerate out of " << kIters;
-  EXPECT_GE(non_degenerate, kIters / 10);
+  ABSL_LOG(INFO) << non_degenerate << " non-degenerate out of " << num_iters;
+  EXPECT_GE(non_degenerate, num_iters / 10);
 }
 
 TEST(S2Builder, SelfIntersectionStressTest) {
-  const int kIters = 50 * absl::GetFlag(FLAGS_iteration_multiplier);
-  for (int iter = 0; iter < kIters; ++iter) {
-    S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "SELF_INTERSECTION_STRESS_TEST",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  const int num_iters = 50 * absl::GetFlag(FLAGS_iteration_multiplier);
+  for (int iter = 0; iter < num_iters; ++iter) {
     CycleTimer timer;
     timer.Start();
 
     // The minimum radius is about 36cm on the Earth's surface.  The
     // performance is reduced for radii much smaller than this because
     // S2ShapeIndex only indexes regions down to about 1cm across.
-    S2Cap cap = S2Testing::GetRandomCap(1e-14, 1e-2);
+    S2Cap cap = s2random::Cap(bitgen, 1e-14, 1e-2);
 
     S2Builder::Options options;
     options.set_split_crossing_edges(true);
-    if (S2Testing::rnd.OneIn(2)) {
+    if (absl::Bernoulli(bitgen, 0.5)) {
       S1Angle radius = cap.GetRadius();
       int min_exp = IntLatLngSnapFunction::ExponentForMaxSnapRadius(radius);
       int exponent = min(IntLatLngSnapFunction::kMaxExponent,
-                         min_exp + S2Testing::rnd.Uniform(5));
+                         min_exp + absl::Uniform(bitgen, 0, 5));
       options.set_snap_function(IntLatLngSnapFunction(exponent));
     }
     S2Builder builder(options);
@@ -1435,9 +1456,9 @@ TEST(S2Builder, SelfIntersectionStressTest) {
     S2Polygon output;
     builder.StartLayer(make_unique<S2PolygonLayer>(
         &output, S2PolygonLayer::Options(EdgeType::UNDIRECTED)));
-    vector<S2Point> vertices(google::DEBUG_MODE ? 50 : 200);
+    vector<S2Point> vertices(S2_DEBUG_MODE ? 50 : 200);
     for (S2Point& vertex : vertices) {
-      vertex = S2Testing::SamplePoint(cap);
+      vertex = s2random::SamplePoint(bitgen, cap);
     }
     vertices.back() = vertices.front();
     S2Polyline input(vertices);
@@ -1458,26 +1479,28 @@ TEST(S2Builder, SelfIntersectionStressTest) {
 }
 
 TEST(S2Builder, FractalStressTest) {
-  const int kIters =
-      (google::DEBUG_MODE ? 100 : 1000) * absl::GetFlag(FLAGS_iteration_multiplier);
-  for (int iter = 0; iter < kIters; ++iter) {
-    S2Testing::rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
-    S2Fractal fractal;
-    fractal.SetLevelForApproxMaxEdges(google::DEBUG_MODE ? 800 : 12800);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "FRACTAL_STRESS_TEST",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  const int num_iters =
+      (S2_DEBUG_MODE ? 100 : 1000) * absl::GetFlag(FLAGS_iteration_multiplier);
+  for (int iter = 0; iter < num_iters; ++iter) {
+    S2Fractal fractal(bitgen);
+    fractal.SetLevelForApproxMaxEdges(S2_DEBUG_MODE ? 800 : 12800);
     fractal.SetLevelForApproxMinEdges(12);
-    fractal.set_fractal_dimension(1.5 + 0.5 * S2Testing::rnd.RandDouble());
-    S2Polygon input(fractal.MakeLoop(S2Testing::GetRandomFrame(),
-                                     S1Angle::Degrees(20)));
+    fractal.set_fractal_dimension(absl::Uniform(bitgen, 1.5, 2.0));
+    S2Polygon input(
+        fractal.MakeLoop(s2random::Frame(bitgen), S1Angle::Degrees(20)));
     S2Builder::Options options;
-    if (S2Testing::rnd.OneIn(3)) {
-      int exponent = S2Testing::rnd.Uniform(11);
+    if (absl::Bernoulli(bitgen, 1.0 / 3)) {
+      int exponent = absl::Uniform(bitgen, 0, 11);
       options.set_snap_function(IntLatLngSnapFunction(exponent));
-    } else if (S2Testing::rnd.OneIn(2)) {
-      int level = S2Testing::rnd.Uniform(20);
+    } else if (absl::Bernoulli(bitgen, 0.5)) {
+      int level = absl::Uniform(bitgen, 0, 20);
       options.set_snap_function(S2CellIdSnapFunction(level));
     } else {
       options.set_snap_function(IdentitySnapFunction(
-          S1Angle::Degrees(10 * pow(1e-4, S2Testing::rnd.RandDouble()))));
+          S1Angle::Degrees(s2random::LogUniform(bitgen, 1e-3, 10.0))));
     }
     S2Builder builder(options);
     S2Polygon output;

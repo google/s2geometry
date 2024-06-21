@@ -108,13 +108,13 @@ class S2MemoryTracker {
   // this method reports attempted rather than actual memory allocation, and
   // S2 operations often attempt to allocate memory even on their failure /
   // early exit code paths.
-  int64 usage_bytes() const { return usage_bytes_; }
+  int64_t usage_bytes() const { return usage_bytes_; }
 
   // The maximum tracked memory usage.
   //
   // CAVEAT: When an operation is cancelled the return value may be wildly
   // inaccurate (see usage() for details).
-  int64 max_usage_bytes() const { return max_usage_bytes_; }
+  int64_t max_usage_bytes() const { return max_usage_bytes_; }
 
   // Specifies a memory limit in bytes.  Whenever the tracked memory usage
   // would exceed this value, an error of type S2Error::RESOURCE_EXHAUSTED is
@@ -122,11 +122,11 @@ class S2MemoryTracker {
   // kNoLimit then memory usage is tracked but not limited.
   //
   // DEFAULT: kNoLimit
-  int64 limit_bytes() const { return limit_bytes_; }
-  void set_limit_bytes(int64 limit_bytes) { limit_bytes_ = limit_bytes; }
+  int64_t limit_bytes() const { return limit_bytes_; }
+  void set_limit_bytes(int64_t limit_bytes) { limit_bytes_ = limit_bytes; }
 
   // Indicates that memory usage is unlimited.
-  static constexpr int64 kNoLimit = std::numeric_limits<int64>::max();
+  static constexpr int64_t kNoLimit = std::numeric_limits<int64_t>::max();
 
   // Returns the tracker's current error status.  Whenever an error exists
   // the current S2 operation will be cancelled.
@@ -163,13 +163,13 @@ class S2MemoryTracker {
   // should be cancelled.  The callback may also be called periodically during
   // calculations that take a long time.  Once an error has occurred, further
   // callbacks are suppressed.
-  void set_periodic_callback(int64 callback_alloc_delta_bytes,
+  void set_periodic_callback(int64_t callback_alloc_delta_bytes,
                              PeriodicCallback periodic_callback) {
     callback_alloc_delta_bytes_ = callback_alloc_delta_bytes;
     callback_ = periodic_callback;
     callback_alloc_limit_bytes_ = alloc_bytes_ + callback_alloc_delta_bytes_;
   }
-  int64 callback_alloc_delta_bytes() const {
+  int64_t callback_alloc_delta_bytes() const {
     return callback_alloc_delta_bytes_;
   }
   const PeriodicCallback& periodic_callback() const { return callback_; }
@@ -202,7 +202,7 @@ class S2MemoryTracker {
    private:
     // Forward declaration to avoid code duplication.
     template <class T, bool exact>
-    bool AddSpaceInternal(T* v, int64 n);
+    bool AddSpaceInternal(T* v, int64_t n);
 
    public:
     // Specifies the S2MemoryTracker that will be used to track the memory
@@ -225,7 +225,7 @@ class S2MemoryTracker {
     // may be called more than once (which is equivalent to destroying this
     // client and transferring the current memory usage to a new client).
     void Init(S2MemoryTracker* tracker) {
-      int64 usage_bytes = client_usage_bytes_;
+      int64_t usage_bytes = client_usage_bytes_;
       Tally(-usage_bytes);
       tracker_ = tracker;
       Tally(usage_bytes);
@@ -244,13 +244,13 @@ class S2MemoryTracker {
 
     // Returns the current tracked memory usage.
     // XXX(ericv): Return 0 when not active.
-    int64 usage_bytes() const {
+    int64_t usage_bytes() const {
       return tracker_ ? tracker_->usage_bytes() : 0;
     }
 
     // Returns the current tracked memory usage of this client only.
     // Returns zero if tracker() has not been initialized.
-    int64 client_usage_bytes() const { return client_usage_bytes_; }
+    int64_t client_usage_bytes() const { return client_usage_bytes_; }
 
     // Returns the tracker's current error status.
     const S2Error& error() const;
@@ -261,7 +261,7 @@ class S2MemoryTracker {
 
     // Records a "delta" bytes of memory use (positive or negative), returning
     // false if the current operation should be cancelled.
-    bool Tally(int64 delta_bytes) {
+    bool Tally(int64_t delta_bytes) {
       if (!is_active()) return true;
       client_usage_bytes_ += delta_bytes;
       return tracker_->Tally(delta_bytes);
@@ -269,7 +269,7 @@ class S2MemoryTracker {
 
     // Specifies that "delta" bytes of memory will be allocated and then later
     // freed.  Returns false if the current operation should be cancelled.
-    bool TallyTemp(int64 delta_bytes);
+    bool TallyTemp(int64_t delta_bytes);
 
     // Adds the memory used by the given vector to the current tally.  Returns
     // false if the current operation should be cancelled.
@@ -291,7 +291,7 @@ class S2MemoryTracker {
     // vector, otherwise memory will not be tracked correctly.  Returns false
     // if the current operation should be cancelled.
     template <class T>
-    inline bool AddSpace(T* v, int64 n) {
+    inline bool AddSpace(T* v, int64_t n) {
       return AddSpaceInternal<T, false>(v, n);
     }
 
@@ -299,7 +299,7 @@ class S2MemoryTracker {
     // sized to hold exactly "n" additional elements.  Returns false if the
     // current operation should be cancelled.
     template <class T>
-    inline bool AddSpaceExact(T* v, int64 n) {
+    inline bool AddSpaceExact(T* v, int64_t n) {
       return AddSpaceInternal<T, true>(v, n);
     }
 
@@ -308,7 +308,7 @@ class S2MemoryTracker {
     // cancelled.
     template <class T>
     inline bool Clear(T* v) {
-      int64 old_capacity = v->capacity();
+      int64_t old_capacity = v->capacity();
       T().swap(*v);
       return Tally(-old_capacity * sizeof((*v)[0]));
     }
@@ -317,7 +317,7 @@ class S2MemoryTracker {
     // (This class is similar to std::vector but stores a small number of
     // elements inline.)
     template <class T>
-    static int64 GetCompactArrayAllocBytes(
+    static int64_t GetCompactArrayAllocBytes(
         const gtl::compact_array<T>& array);
 
     // Returns the estimated minimum number of allocated bytes for each
@@ -330,27 +330,27 @@ class S2MemoryTracker {
     // such a container is being built.  Once construction is complete, the
     // exact memory usage can be determined using "container.bytes_used()".
     template <class T>
-    static int64 GetBtreeMinBytesPerEntry();
+    static int64_t GetBtreeMinBytesPerEntry();
 
    private:
     S2MemoryTracker* tracker_ = nullptr;
-    int64 client_usage_bytes_ = 0;
+    int64_t client_usage_bytes_ = 0;
   };
 
  private:
   friend class Client;
 
-  bool Tally(int64 delta_bytes);
+  bool Tally(int64_t delta_bytes);
   void SetLimitExceededError();
 
-  int64 usage_bytes_ = 0;
-  int64 max_usage_bytes_ = 0;
-  int64 limit_bytes_ = kNoLimit;
-  int64 alloc_bytes_ = 0;
+  int64_t usage_bytes_ = 0;
+  int64_t max_usage_bytes_ = 0;
+  int64_t limit_bytes_ = kNoLimit;
+  int64_t alloc_bytes_ = 0;
   S2Error error_;
   PeriodicCallback callback_;
-  int64 callback_alloc_delta_bytes_ = 0;
-  int64 callback_alloc_limit_bytes_ = kNoLimit;
+  int64_t callback_alloc_delta_bytes_ = 0;
+  int64_t callback_alloc_limit_bytes_ = kNoLimit;
 };
 
 
@@ -363,9 +363,9 @@ void S2MemoryTracker::SetError(S2Error::Code code,
   error_.Init(code, format, args...);
 }
 
-inline bool S2MemoryTracker::Tally(int64 delta_bytes) {
+inline bool S2MemoryTracker::Tally(int64_t delta_bytes) {
   usage_bytes_ += delta_bytes;
-  alloc_bytes_ += std::max(int64{0}, delta_bytes);
+  alloc_bytes_ += std::max(int64_t{0}, delta_bytes);
   max_usage_bytes_ = std::max(max_usage_bytes_, usage_bytes_);
   if (usage_bytes_ > limit_bytes_ && ok()) SetLimitExceededError();
   if (callback_ && alloc_bytes_ >= callback_alloc_limit_bytes_) {
@@ -376,11 +376,11 @@ inline bool S2MemoryTracker::Tally(int64 delta_bytes) {
 }
 
 template <class T, bool exact>
-inline bool S2MemoryTracker::Client::AddSpaceInternal(T* v, int64 n) {
-  int64 new_size = v->size() + n;
-  int64 old_capacity = v->capacity();
+inline bool S2MemoryTracker::Client::AddSpaceInternal(T* v, int64_t n) {
+  int64_t new_size = v->size() + n;
+  int64_t old_capacity = v->capacity();
   if (new_size <= old_capacity) return true;
-  int64 new_capacity =
+  int64_t new_capacity =
       exact ? new_size : std::max(new_size, 2 * old_capacity);
   // Note that reserve() allocates new storage before freeing the old storage.
   if (!Tally(new_capacity * sizeof((*v)[0]))) return false;
@@ -391,7 +391,7 @@ inline bool S2MemoryTracker::Client::AddSpaceInternal(T* v, int64 n) {
 
 // Returns the number of bytes used by compact_array<T>.
 template <class T>
-int64 S2MemoryTracker::Client::GetCompactArrayAllocBytes(
+int64_t S2MemoryTracker::Client::GetCompactArrayAllocBytes(
     const gtl::compact_array<T>& array) {
   // Unfortunately this information isn't part of the public API.
   enum {
@@ -403,7 +403,7 @@ int64 S2MemoryTracker::Client::GetCompactArrayAllocBytes(
 }
 
 template <class T>
-int64 S2MemoryTracker::Client::GetBtreeMinBytesPerEntry() {
+int64_t S2MemoryTracker::Client::GetBtreeMinBytesPerEntry() {
   return 1.12 * sizeof(typename T::value_type);
 }
 

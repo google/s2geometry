@@ -21,7 +21,10 @@
 
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/util/math/matrix3x3.h"
 
@@ -48,11 +51,15 @@ void TestFractal(int min_level, int max_level, double dimension) {
   const double nominal_radius = 0.001;  // radians, or about 6km
   const double kDistortionError = 1e-5;
 
-  S2Fractal fractal;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "TEST_FRACTAL",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
+  S2Fractal fractal(bitgen);
   fractal.set_min_level(min_level);
   fractal.set_max_level(max_level);
   fractal.set_fractal_dimension(dimension);
-  Matrix3x3_d frame = S2Testing::GetRandomFrame();
+  Matrix3x3_d frame = s2random::Frame(bitgen);
   unique_ptr<S2Loop> loop(
       fractal.MakeLoop(frame, S1Angle::Radians(nominal_radius)));
   ASSERT_TRUE(loop->IsValid());

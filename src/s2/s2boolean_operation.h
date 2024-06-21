@@ -18,11 +18,11 @@
 #ifndef S2_S2BOOLEAN_OPERATION_H_
 #define S2_S2BOOLEAN_OPERATION_H_
 
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/log/absl_log.h"
 #include "s2/s2builder.h"
 #include "s2/s2builder_graph.h"
@@ -209,7 +209,7 @@
 class S2BooleanOperation {
  public:
   // The supported operation types.
-  enum class OpType : uint8 {
+  enum class OpType : uint8_t {
     UNION,                // Contained by either region.
     INTERSECTION,         // Contained by both regions.
     DIFFERENCE,           // Contained by the first region but not the second.
@@ -220,14 +220,14 @@ class S2BooleanOperation {
 
   // Defines whether polygons are considered to contain their vertices and/or
   // edges (see definitions above).
-  enum class PolygonModel : uint8 { OPEN, SEMI_OPEN, CLOSED };
+  enum class PolygonModel : uint8_t { OPEN, SEMI_OPEN, CLOSED };
 
   // Translates PolygonModel to one of the strings above.
   static absl::string_view PolygonModelToString(PolygonModel model);
 
   // Defines whether polylines are considered to contain their endpoints
   // (see definitions above).
-  enum class PolylineModel : uint8 { OPEN, SEMI_OPEN, CLOSED };
+  enum class PolylineModel : uint8_t { OPEN, SEMI_OPEN, CLOSED };
 
   // Translates PolylineModel to one of the strings above.
   static absl::string_view PolylineModelToString(PolylineModel model);
@@ -253,7 +253,7 @@ class S2BooleanOperation {
   // Conceptually, the difference between these two options is that with
   // Precision::SNAPPED, the inputs are snap rounded (together), whereas with
   // Precision::EXACT only the result is snap rounded.
-  enum class Precision : uint8 { EXACT, SNAPPED };
+  enum class Precision : uint8_t { EXACT, SNAPPED };
 
   // SourceId identifies an edge from one of the two input S2ShapeIndexes.
   // It consists of a region id (0 or 1), a shape id within that region's
@@ -261,19 +261,21 @@ class S2BooleanOperation {
   class SourceId {
    public:
     SourceId();
-    SourceId(int region_id, int32 shape_id, int32 edge_id);
-    explicit SourceId(int32 special_edge_id);
+    SourceId(int region_id, int32_t shape_id, int32_t edge_id);
+    explicit SourceId(int32_t special_edge_id);
     int region_id() const { return region_id_; }
-    int32 shape_id() const { return shape_id_; }
-    int32 edge_id() const { return edge_id_; }
+    int32_t shape_id() const { return shape_id_; }
+    int32_t edge_id() const { return edge_id_; }
     // TODO(ericv): Convert to functions, define all 6 comparisons.
     bool operator==(SourceId other) const;
     bool operator<(SourceId other) const;
 
    private:
-    uint32 region_id_ : 1;
-    uint32 shape_id_ : 31;
-    int32 edge_id_;
+    // TODO(user): Use in-class initializers when C++20 is allowed in
+    // opensource.
+    uint32_t region_id_ : 1;
+    uint32_t shape_id_ : 31;
+    int32_t edge_id_;
   };
 
   class Options {
@@ -396,7 +398,7 @@ class S2BooleanOperation {
     // "label_set_lexicon" and an "label_set_id" for each edge.  You can then
     // look up the source information for each edge like this:
     //
-    // for (int32 label : label_set_lexicon.id_set(label_set_id)) {
+    // for (int32_t label : label_set_lexicon.id_set(label_set_id)) {
     //   const SourceId& src = source_id_lexicon.value(label);
     //   // region_id() specifies which S2ShapeIndex the edge is from (0 or 1).
     //   DoSomething(src.region_id(), src.shape_id(), src.edge_id());
@@ -541,7 +543,7 @@ class S2BooleanOperation {
   std::vector<std::unique_ptr<S2Builder::Layer>> layers_;
 
   // The following field is set if and only if there are no output layers.
-  bool* result_empty_;
+  bool* result_empty_ = nullptr;
 };
 
 
@@ -552,8 +554,8 @@ inline S2BooleanOperation::SourceId::SourceId()
     : region_id_(0), shape_id_(0), edge_id_(-1) {
 }
 
-inline S2BooleanOperation::SourceId::SourceId(int region_id, int32 shape_id,
-                                              int32 edge_id)
+inline S2BooleanOperation::SourceId::SourceId(int region_id, int32_t shape_id,
+                                              int32_t edge_id)
     : region_id_(region_id), shape_id_(shape_id), edge_id_(edge_id) {}
 
 inline S2BooleanOperation::SourceId::SourceId(int special_edge_id)

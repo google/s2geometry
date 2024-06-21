@@ -20,8 +20,9 @@
 
 #include <iosfwd>
 #include <ostream>
+#include <vector>
 
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r1interval.h"
 #include "s2/r2.h"
 #include "s2/r2rect.h"

@@ -22,13 +22,47 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/s1angle.h"
 #include "s2/s2edge_distances.h"
 #include "s2/s2point.h"
 #include "s2/s2predicates.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 using std::numeric_limits;
+
+TEST(S1ChordAngle, ConstexprFunctionsWork) {
+  // Test constexpr constructors.
+  static constexpr auto kTestZero = S1ChordAngle::Zero();
+  static constexpr auto kTestRight = S1ChordAngle::Right();
+  static constexpr auto kTestStraight = S1ChordAngle::Straight();
+  static constexpr auto kTestInfinity = S1ChordAngle::Infinity();
+  static constexpr auto kTestNegative = S1ChordAngle::Negative();
+  static constexpr auto kTestFastUpperBound =
+      S1ChordAngle::FastUpperBoundFrom(S1Angle::Radians(1));
+  static constexpr auto kTestFromLength2 = S1ChordAngle::FromLength2(2);
+
+  EXPECT_EQ(kTestRight, S1ChordAngle::Right());
+  EXPECT_EQ(kTestStraight, S1ChordAngle::Straight());
+  EXPECT_EQ(kTestFromLength2.length2(), 2);
+
+  constexpr bool kIsZero = kTestZero.is_zero();
+  EXPECT_TRUE(kIsZero);
+
+  constexpr bool kIsNegative = kTestNegative.is_negative();
+  EXPECT_TRUE(kIsNegative);
+
+  constexpr bool kIsInfinity = kTestInfinity.is_infinity();
+  EXPECT_TRUE(kIsInfinity);
+
+  constexpr bool kIsSpecial = kTestNegative.is_special();
+  EXPECT_TRUE(kIsSpecial);
+
+  constexpr bool kIsValid = kTestFastUpperBound.is_valid();
+  EXPECT_TRUE(kIsValid);
+}
 
 TEST(S1ChordAngle, DefaultConstructor) {
   // Check that the default constructor returns an angle of 0.
@@ -37,9 +71,12 @@ TEST(S1ChordAngle, DefaultConstructor) {
 }
 
 TEST(S1ChordAngle, TwoPointConstructor) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "TWO_POINT_CONSTRUCTOR",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 100; ++iter) {
     S2Point x, y, z;
-    S2Testing::GetRandomFrame(&x, &y, &z);
+    s2random::Frame(bitgen, x, y, z);
     EXPECT_EQ(S1Angle::Zero(), S1Angle(S1ChordAngle(z, z)));
     EXPECT_NEAR(M_PI, S1ChordAngle(-z, z).radians(), 1e-7);
     EXPECT_DOUBLE_EQ(M_PI_2, S1ChordAngle(x, z).radians());
@@ -169,7 +206,7 @@ TEST(S1ChordAngle, ArithmeticPrecision) {
 }
 
 TEST(S1ChordAngle, Trigonometry) {
-  static const int kIters = 20;
+  static constexpr int kIters = 20;
   for (int iter = 0; iter <= kIters; ++iter) {
     double radians = M_PI * iter / kIters;
     S1ChordAngle angle(S1Angle::Radians(radians));
@@ -206,16 +243,17 @@ TEST(S1ChordAngle, PlusError) {
 TEST(S1ChordAngle, GetS2PointConstructorMaxError) {
   // Check that the error bound returned by GetS2PointConstructorMaxError() is
   // large enough.
-  auto& rnd = S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_S2_POINT_CONSTRUCTOR_MAX_ERROR",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 100000; ++iter) {
-    rnd.Reset(iter);  // Easier to reproduce a specific case.
-    S2Point x = S2Testing::RandomPoint();
-    S2Point y = S2Testing::RandomPoint();
-    if (rnd.OneIn(10)) {
+    S2Point x = s2random::Point(bitgen);
+    S2Point y = s2random::Point(bitgen);
+    if (absl::Bernoulli(bitgen, 0.1)) {
       // Occasionally test a point pair that is nearly identical or antipodal.
-      S1Angle r = S1Angle::Radians(1e-15 * rnd.RandDouble());
+      S1Angle r = S1Angle::Radians(1e-15 * absl::Uniform(bitgen, 0.0, 1.0));
       y = S2::GetPointOnLine(x, y, r);
-      if (rnd.OneIn(2)) y = -y;
+      if (absl::Bernoulli(bitgen, 0.5)) y = -y;
     }
     S1ChordAngle dist = S1ChordAngle(x, y);
     double error = dist.GetS2PointConstructorMaxError();

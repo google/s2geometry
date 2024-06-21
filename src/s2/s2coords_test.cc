@@ -21,9 +21,12 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2coords_internal.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 using std::fabs;
@@ -120,10 +123,13 @@ TEST(S2, FaceXYZtoUVW) {
 }
 
 TEST(S2, XYZToFaceSiTi) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "XYZ_TO_FACE_SI_TI",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Check the conversion of random cells to center points and back.
   for (int level = 0; level <= S2CellId::kMaxLevel; ++level) {
     for (int i = 0; i < 1000; ++i) {
-      S2CellId id = S2Testing::GetRandomCellId(level);
+      S2CellId id = s2random::CellId(bitgen, level);
       int face;
       unsigned int si, ti;
       int actual_level = S2::XYZtoFaceSiTi(id.ToPoint(), &face, &si, &ti);
@@ -145,12 +151,13 @@ TEST(S2, XYZToFaceSiTi) {
 
       // Finally, test some random (si,ti) values that may be at different
       // levels, or not at a valid level at all (for example, si == 0).
-      int face_random = S2Testing::rnd.Uniform(S2CellId::kNumFaces);
+      int face_random = absl::Uniform(bitgen, 0, S2CellId::kNumFaces);
       unsigned int si_random, ti_random;
       unsigned int mask = ~0U << (S2CellId::kMaxLevel - level);
       do {
-        si_random = S2Testing::rnd.Rand32() & mask;
-        ti_random = S2Testing::rnd.Rand32() & mask;
+        // TODO(user): Clean this up.
+        si_random = absl::Uniform<uint32_t>(bitgen) & mask;
+        ti_random = absl::Uniform<uint32_t>(bitgen) & mask;
       } while (si_random > S2::kMaxSiTi || ti_random > S2::kMaxSiTi);
       S2Point p_random = S2::FaceSiTitoXYZ(face_random, si_random, ti_random);
       actual_level = S2::XYZtoFaceSiTi(p_random, &face, &si, &ti);

@@ -17,9 +17,9 @@
 
 #include "s2/s2memory_tracker.h"
 
+#include <cstdint>
 #include <utility>
 
-#include "s2/base/types.h"
 #include "s2/s2error.h"
 
 void S2MemoryTracker::SetError(S2Error error) {
@@ -33,7 +33,7 @@ void S2MemoryTracker::SetLimitExceededError() {
               usage_bytes_, limit_bytes_);
 }
 
-bool S2MemoryTracker::Client::TallyTemp(int64 delta_bytes) {
+bool S2MemoryTracker::Client::TallyTemp(int64_t delta_bytes) {
   Tally(delta_bytes);
   return Tally(-delta_bytes);
 }
