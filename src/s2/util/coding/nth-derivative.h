@@ -75,10 +75,10 @@ class NthDerivativeCoder {
   explicit NthDerivativeCoder(int n);
 
   // Encode the next value in the sequence.  Don't mix with Decode() calls.
-  int32 Encode(int32 k);
+  int32_t Encode(int32_t k);
 
   // Decode the next value in the sequence.  Don't mix with Encode() calls.
-  int32 Decode(int32 k);
+  int32_t Decode(int32_t k);
 
   // Reset state.
   void Reset();
@@ -89,7 +89,7 @@ class NthDerivativeCoder {
  private:
   int n_;  // derivative order of the coder (the N in NthDerivative)
   int m_;  // the derivative order in which to code the next value(ramps to n_)
-  int32 memory_[N_MAX];  // value memory. [0] is oldest
+  int32_t memory_[N_MAX];  // value memory. [0] is oldest
 };
 
 // Implementation below.  Callers Ignore.
@@ -109,9 +109,9 @@ inline NthDerivativeCoder::NthDerivativeCoder(int n) : n_(n) {
   Reset();
 }
 
-inline int32 NthDerivativeCoder::Encode(int32 k) {
+inline int32_t NthDerivativeCoder::Encode(int32_t k) {
   for (int i = 0; i < m_; ++i) {
-    uint32 delta = static_cast<uint32>(k) - memory_[i];
+    uint32_t delta = static_cast<uint32_t>(k) - memory_[i];
     memory_[i] = k;
     k = delta;
   }
@@ -120,11 +120,11 @@ inline int32 NthDerivativeCoder::Encode(int32 k) {
   return k;
 }
 
-inline int32 NthDerivativeCoder::Decode(int32 k) {
+inline int32_t NthDerivativeCoder::Decode(int32_t k) {
   if (m_ < n_)
     m_++;
   for (int i = m_ - 1; i >= 0; --i)
-    k = memory_[i] = memory_[i] + static_cast<uint32>(k);
+    k = memory_[i] = memory_[i] + static_cast<uint32_t>(k);
   return k;
 }
 

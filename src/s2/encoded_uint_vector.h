@@ -25,7 +25,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "absl/base/internal/unaligned_access.h"
+#include "s2/base/port.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
@@ -100,8 +100,8 @@ class EncodedUintVector {
   template <int length> size_t lower_bound(T target) const;
 
   const char* data_;
-  uint32 size_;
-  uint8 len_;
+  uint32_t size_;
+  uint8_t len_;
 };
 
 // Encodes an unsigned integer in little-endian format using "length" bytes.
@@ -174,22 +174,25 @@ inline T GetUintWithLength(const char* ptr, int length) {
   // following page in the address space is unmapped.)
 
   if (length & sizeof(T)) {
-    if (sizeof(T) == 8) return ABSL_INTERNAL_UNALIGNED_LOAD64(ptr);
-    if (sizeof(T) == 4) return ABSL_INTERNAL_UNALIGNED_LOAD32(ptr);
-    if (sizeof(T) == 2) return ABSL_INTERNAL_UNALIGNED_LOAD16(ptr);
+    // There is also a `gtl::UnalignedLoad<T>()`, but it has slightly heavier
+    // dependencies.  We could use it with an open-source shim, or switch
+    // to `LittleEndian::Load*()` if we want to handle big-endian architectures.
+    if (sizeof(T) == 8) return UNALIGNED_LOAD64(ptr);
+    if (sizeof(T) == 4) return UNALIGNED_LOAD32(ptr);
+    if (sizeof(T) == 2) return UNALIGNED_LOAD16(ptr);
     ABSL_DCHECK_EQ(sizeof(T), 1);
     return *ptr;
   }
   T x = 0;
   ptr += length;
   if (sizeof(T) > 4 && (length & 4)) {
-    x = ABSL_INTERNAL_UNALIGNED_LOAD32(ptr -= sizeof(uint32));
+    x = UNALIGNED_LOAD32(ptr -= sizeof(uint32_t));
   }
   if (sizeof(T) > 2 && (length & 2)) {
-    x = (x << 16) + ABSL_INTERNAL_UNALIGNED_LOAD16(ptr -= sizeof(uint16));
+    x = (x << 16) + UNALIGNED_LOAD16(ptr -= sizeof(uint16_t));
   }
   if (sizeof(T) > 1 && (length & 1)) {
-    x = (x << 8) + static_cast<uint8>(*--ptr);
+    x = (x << 8) + static_cast<uint8_t>(*--ptr);
   }
   return x;
 }
@@ -220,7 +223,7 @@ void EncodeUintVector(absl::Span<const T> v, Encoder* encoder) {
 
   // Note that the multiplication is optimized into a bit shift.
   encoder->Ensure(Varint::kMax64 + v.size() * len);
-  uint64 size_len = (uint64{v.size()} * sizeof(T)) | (len - 1);
+  uint64_t size_len = (uint64_t{v.size()} * sizeof(T)) | (len - 1);
   encoder->put_varint64(size_len);
   for (auto x : v) {
     EncodeUintWithLength(x, len, encoder);
@@ -229,7 +232,7 @@ void EncodeUintVector(absl::Span<const T> v, Encoder* encoder) {
 
 template <class T>
 bool EncodedUintVector<T>::Init(Decoder* decoder) {
-  uint64 size_len;
+  uint64_t size_len;
   if (!decoder->get_varint64(&size_len)) return false;
   size_ = size_len / sizeof(T);  // Optimized into bit shift.
   len_ = (size_len & (sizeof(T) - 1)) + 1;
@@ -267,7 +270,7 @@ size_t EncodedUintVector<T>::lower_bound(T target) const {
   // last result of lower_bound() to be used as a hint.  This should help in
   // common situation where the same element is looked up repeatedly.  This
   // would require declaring the new field (length_lower_bound_hint_) as
-  // mutable std::atomic<uint32> (accessed using std::memory_order_relaxed)
+  // mutable std::atomic<uint32_t> (accessed using std::memory_order_relaxed)
   // with a custom copy constructor that resets the hint component to zero.
   switch (len_) {
     case 1: return lower_bound<1>(target);
@@ -308,7 +311,7 @@ std::vector<T> EncodedUintVector<T>::Decode() const {
 template <class T>
 // The encoding must be identical to StringVectorEncoder::Encode().
 void EncodedUintVector<T>::Encode(Encoder* encoder) const {
-  uint64 size_len = (uint64{size_} * sizeof(T)) | (len_ - 1);
+  uint64_t size_len = (uint64_t{size_} * sizeof(T)) | (len_ - 1);
 
   encoder->Ensure(Varint::kMax64 + size_len);
   encoder->put_varint64(size_len);

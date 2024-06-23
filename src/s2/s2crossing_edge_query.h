@@ -26,7 +26,7 @@
 #include "absl/base/macros.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/log/absl_check.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s2padded_cell.h"

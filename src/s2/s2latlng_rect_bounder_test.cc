@@ -20,12 +20,16 @@
 #include <cmath>
 
 #include <cfloat>
+#include <cstdint>
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 
 #include "s2/base/types.h"
@@ -39,6 +43,7 @@
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 using absl::StrCat;
@@ -96,39 +101,41 @@ TEST(RectBounder, MaxLatitudeRandom) {
   // 3 * DBL_EPSILON (the expected maximum error).  We concentrate on maximum
   // latitudes near the equator and north pole since these are the extremes.
 
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  const int kIters = 100;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "MAX_LATITUDE_RANDOM",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  constexpr int kIters = 100;
   for (int iter = 0; iter < kIters; ++iter) {
     // Construct a right-handed coordinate frame (U,V,W) such that U points
     // slightly above the equator, V points at the equator, and W is slightly
     // offset from the north pole.
-    S2Point u = S2Testing::RandomPoint();
-    u[2] = DBL_EPSILON * 1e-6 * pow(1e12, rnd->RandDouble());  // log is uniform
+    S2Point u = s2random::Point(bitgen);
+    u[2] = DBL_EPSILON * s2random::LogUniform(bitgen, 1e-6, 1e6);
     u = u.Normalize();
     S2Point v = S2::RobustCrossProd(S2Point(0, 0, 1), u).Normalize();
     S2Point w = S2::RobustCrossProd(u, v).Normalize();
 
     // Construct a line segment AB that passes through U, and check that the
     // maximum latitude of this segment matches the latitude of U.
-    S2Point a = (u - rnd->RandDouble() * v).Normalize();
-    S2Point b = (u + rnd->RandDouble() * v).Normalize();
+    S2Point a = (u - absl::Uniform(bitgen, 0.0, 1.0) * v).Normalize();
+    S2Point b = (u + absl::Uniform(bitgen, 0.0, 1.0) * v).Normalize();
     S2LatLngRect ab_bound = GetEdgeBound(a, b);
     EXPECT_NEAR(S2LatLng::Latitude(u).radians(),
                 ab_bound.lat().hi(), kRectError.lat().radians());
 
     // Construct a line segment CD that passes through W, and check that the
     // maximum latitude of this segment matches the latitude of W.
-    S2Point c = (w - rnd->RandDouble() * v).Normalize();
-    S2Point d = (w + rnd->RandDouble() * v).Normalize();
+    S2Point c = (w - absl::Uniform(bitgen, 0.0, 1.0) * v).Normalize();
+    S2Point d = (w + absl::Uniform(bitgen, 0.0, 1.0) * v).Normalize();
     S2LatLngRect cd_bound = GetEdgeBound(c, d);
     EXPECT_NEAR(S2LatLng::Latitude(w).radians(),
                 cd_bound.lat().hi(), kRectError.lat().radians());
   }
 }
 
-S2Point PerturbATowardsB(const S2Point& a, const S2Point& b) {
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  double choice = rnd->RandDouble();
+S2Point PerturbATowardsB(absl::BitGenRef bitgen, const S2Point& a,
+                         const S2Point& b) {
+  double choice = absl::Uniform(bitgen, 0.0, 1.0);
   if (choice < 0.1) {
     return a;
   }
@@ -136,7 +143,9 @@ S2Point PerturbATowardsB(const S2Point& a, const S2Point& b) {
     // Return a point that is exactly proportional to A and that still
     // satisfies S2::IsUnitLength().
     for (;;) {
-      S2Point b = (2 - a.Norm() + 5*(rnd->RandDouble()-0.5) * DBL_EPSILON) * a;
+      S2Point b = (2 - a.Norm() +
+                   5 * (absl::Uniform(bitgen, 0.0, 1.0) - 0.5) * DBL_EPSILON) *
+                  a;
       if (b != a && S2::IsUnitLength(b))
         return b;
     }
@@ -147,22 +156,24 @@ S2Point PerturbATowardsB(const S2Point& a, const S2Point& b) {
   }
   // Otherwise return a point whose distance from A is near DBL_EPSILON such
   // that the log of the pdf is uniformly distributed.
-  double distance = DBL_EPSILON * 1e-5 * pow(1e6, rnd->RandDouble());
+  double distance = DBL_EPSILON * s2random::LogUniform(bitgen, 1e-5, 10.0);
   return S2::GetPointOnLine(a, b, S1Angle::Radians(distance));
 }
 
-S2Point RandomPole() {
-  return S2Point(0, 0, S2Testing::rnd.OneIn(2) ? 1 : -1);
+S2Point RandomPole(absl::BitGenRef bitgen) {
+  return S2Point(0, 0, absl::Bernoulli(bitgen, 0.5) ? 1 : -1);
 }
 
-S2Point PointNearPole() {
-  return PerturbATowardsB(RandomPole(), S2Testing::RandomPoint());
+S2Point PointNearPole(absl::BitGenRef bitgen) {
+  S2Point pole = RandomPole(bitgen);
+  return PerturbATowardsB(bitgen, pole, s2random::Point(bitgen));
 }
 
-S2Point PointNearEquator() {
-  return PerturbATowardsB(S2Point(S2Testing::rnd.RandDouble(),
-                                  S2Testing::rnd.RandDouble(), 0).Normalize(),
-                          RandomPole());
+S2Point PointNearEquator(absl::BitGenRef bitgen) {
+  double x = absl::Uniform(bitgen, 0.0, 1.0);
+  double y = absl::Uniform(bitgen, 0.0, 1.0);
+  return PerturbATowardsB(bitgen, S2Point(x, y, 0).Normalize(),
+                          RandomPole(bitgen));
 }
 
 TEST(RectBounder, NearlyIdenticalOrAntipodalPoints) {
@@ -179,36 +190,38 @@ TEST(RectBounder, NearlyIdenticalOrAntipodalPoints) {
   // Also test the corresponding situations for antipodal points, i.e. by
   // negating one of the points so that they are almost 180 degrees apart.
 
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  const int kIters = 10000;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "NEARLY_IDENTICAL_OR_ANTIPODAL_POINTS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  constexpr int kIters = 10000;
   for (int iter = 0; iter < kIters; ++iter) {
     SCOPED_TRACE(StrCat("Iteration ", iter));
     S2Point a, b;
-    switch (rnd->Uniform(5)) {
+    switch (absl::Uniform(bitgen, 0, 5)) {
       case 0:
         // Two nearby points on a nearly-polar great circle.
-        a = S2Testing::RandomPoint();
-        b = PerturbATowardsB(a, PointNearPole());
+        a = s2random::Point(bitgen);
+        b = PerturbATowardsB(bitgen, a, PointNearPole(bitgen));
         break;
       case 1:
         // Two nearby points on a nearly-equatorial great circle.
-        a = PointNearEquator();
-        b = PerturbATowardsB(a, PointNearEquator());
+        a = PointNearEquator(bitgen);
+        b = PerturbATowardsB(bitgen, a, PointNearEquator(bitgen));
         break;
       case 2:
         // Two nearby points near a pole, but on any great circle.
-        a = PointNearPole();
-        b = PerturbATowardsB(a, S2Testing::RandomPoint());
+        a = PointNearPole(bitgen);
+        b = PerturbATowardsB(bitgen, a, s2random::Point(bitgen));
         break;
       case 3:
         // Two nearby points near the equator, but on any great circle.
-        a = PointNearEquator();
-        b = PerturbATowardsB(a, S2Testing::RandomPoint());
+        a = PointNearEquator(bitgen);
+        b = PerturbATowardsB(bitgen, a, s2random::Point(bitgen));
         break;
       case 4:
         // Two nearby points anywhere on the sphere.
-        a = S2Testing::RandomPoint();
-        b = PerturbATowardsB(a, S2Testing::RandomPoint());
+        a = s2random::Point(bitgen);
+        b = PerturbATowardsB(bitgen, a, s2random::Point(bitgen));
         break;
     }
     // The two points are chosen to be so close to each other that the min/max

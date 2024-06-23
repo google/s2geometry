@@ -171,7 +171,7 @@ class S2ClosestPointQueryBase {
    public:
     // The default constructor creates an "empty" result, with a distance() of
     // Infinity() and non-dereferencable point() and data() values.
-    Result() : distance_(Distance::Infinity()), point_data_(nullptr) {}
+    Result() = default;
 
     // Constructs a Result object for the given point.
     Result(Distance distance, const PointData* point_data)
@@ -205,8 +205,8 @@ class S2ClosestPointQueryBase {
     }
 
    private:
-    Distance distance_;
-    const PointData* point_data_;
+    Distance distance_ = Distance::Infinity();
+    const PointData* point_data_ = nullptr;
   };
 
   // The minimum number of points that a cell must contain to enqueue it

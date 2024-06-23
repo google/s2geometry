@@ -27,7 +27,7 @@
 
 #include "absl/base/casts.h"
 #include "absl/base/macros.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2cell.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
@@ -71,7 +71,6 @@ class S2Region;
 // level to try to find contained cells.
 class S2RegionCoverer {
  public:
-#ifndef SWIG
   class Options {
    public:
     // Sets the desired maximum number of cells in the approximation.  Note
@@ -168,9 +167,8 @@ class S2RegionCoverer {
   // S2RegionCoverer is movable but not copyable.
   S2RegionCoverer(const S2RegionCoverer&) = delete;
   S2RegionCoverer& operator=(const S2RegionCoverer&) = delete;
-  S2RegionCoverer(S2RegionCoverer&&);
-  S2RegionCoverer& operator=(S2RegionCoverer&&);
-#endif  // SWIG
+  S2RegionCoverer(S2RegionCoverer&&) noexcept;
+  S2RegionCoverer& operator=(S2RegionCoverer&&) noexcept;
 
   // Default constructor.  Options can be set using mutable_options().
   S2RegionCoverer();

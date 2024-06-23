@@ -25,7 +25,8 @@
 
 #include "absl/base/macros.h"
 #include "absl/container/inlined_vector.h"
-#include "s2/_fp_contract_off.h"
+#include "absl/functional/function_ref.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
@@ -110,7 +111,6 @@ class S2ClosestEdgeQuery {
   // Distance concept required by S2ClosestPointQueryBase.
   using Distance = S2MinDistance;
   using Base = S2ClosestEdgeQueryBase<Distance>;
-  using ShapeFilter = Base::ShapeFilter;
 
   // Each "Result" object represents a closest edge.  Here are its main
   // methods (see S2ClosestEdgeQueryBase::Result for details):
@@ -119,10 +119,10 @@ class S2ClosestEdgeQuery {
   //   Distance distance() const;
   //
   //   // Identifies an indexed shape.
-  //   int32 shape_id() const;
+  //   int32_t shape_id() const;
   //
   //   // Identifies an edge within the shape.
-  //   int32 edge_id() const;
+  //   int32_t edge_id() const;
   //
   //   // Returns true if this Result object represents the interior of a shape.
   //   // Such results may be returned when options.include_interiors() is true.
@@ -134,6 +134,9 @@ class S2ClosestEdgeQuery {
   //   // It is never returned by methods that return a vector of results.)
   //   bool is_empty() const;
   using Result = Base::Result;
+
+  using ShapeFilter = Base::ShapeFilter;
+  using ResultVisitor = absl::FunctionRef<bool(const Result&)>;
 
   // Options that control the set of edges returned.  Note that by default
   // *all* edges are returned, so you will always want to set either the
@@ -269,6 +272,14 @@ class S2ClosestEdgeQuery {
   // since it does not require allocating a new vector on each call.
   void FindClosestEdges(Target* target, std::vector<Result>* results,
                         ShapeFilter filter = {});
+
+  // Calls a callback with the closest edges to the given target that satisfy
+  // the given options.  Edges are reported in order of increasing distance.
+  //
+  // Updating the state that the ShapeFilter accesses while visiting is allowed
+  // and can be used to disable reporting of results on the fly.
+  void VisitClosestEdges(Target* target, Options options, ResultVisitor visitor,
+                         ShapeFilter filter = {});
 
   //////////////////////// Convenience Methods ////////////////////////
 
@@ -420,6 +431,14 @@ inline S2ClosestEdgeQuery::Result S2ClosestEdgeQuery::FindClosestEdge(
   Options tmp_options = options_;
   tmp_options.set_max_results(1);
   return base_.FindClosestEdge(target, tmp_options, filter);
+}
+
+inline void S2ClosestEdgeQuery::VisitClosestEdges(  //
+    Target* target, Options options, ResultVisitor visitor,
+    ShapeFilter filter) {
+  base_.VisitClosestEdges(
+      target, options, [&](const Result& result) { return visitor(result); },
+      filter);
 }
 
 inline S1ChordAngle S2ClosestEdgeQuery::GetDistance(Target* target,

@@ -19,7 +19,6 @@
 
 #include <type_traits>
 
-#include "s2/base/types.h"
 #include "absl/status/status.h"
 #include "s2/util/coding/coder.h"
 #include "s2/s2error.h"
@@ -42,7 +41,7 @@ namespace s2coding {
 // Controls whether to optimize for speed or size when encoding shapes.  (Note
 // that encoding is always lossless, and that compact encodings are currently
 // only possible when points have been snapped to S2CellId centers.)
-enum class CodingHint : uint8 { FAST, COMPACT };
+enum class CodingHint : uint8_t { FAST, COMPACT };
 
 // S2Coder interface.
 template <class T>

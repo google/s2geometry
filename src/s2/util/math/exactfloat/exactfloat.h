@@ -516,6 +516,7 @@ class ExactFloat {
     ~BigNum() { BN_free(&bn_); }
     BIGNUM* get() { return &bn_; }
     const BIGNUM* get() const { return &bn_; }
+
    private:
     BIGNUM bn_;
   };
@@ -528,6 +529,7 @@ class ExactFloat {
     ~BigNum() { BN_free(bn_); }
     BIGNUM* get() { return bn_; }
     const BIGNUM* get() const { return bn_; }
+
    private:
     BIGNUM* bn_;
   };
@@ -537,16 +539,16 @@ class ExactFloat {
   // mantissa of zero.  Do not change these values; methods such as
   // is_normal() make assumptions about their ordering.  Non-normal numbers
   // can have either a positive or negative sign (including zero and NaN).
-  static constexpr int32 kExpNaN = INT_MAX;
-  static constexpr int32 kExpInfinity = INT_MAX - 1;
-  static constexpr int32 kExpZero = INT_MAX - 2;
+  static constexpr int32_t kExpNaN = INT_MAX;
+  static constexpr int32_t kExpInfinity = INT_MAX - 1;
+  static constexpr int32_t kExpZero = INT_MAX - 2;
 
   // Normal numbers are represented as (sign_ * bn_ * (2 ** bn_exp_)), where:
   //  - sign_ is either +1 or -1
   //  - bn_ is a BIGNUM with a positive value
   //  - bn_exp_ is the base-2 exponent applied to bn_.
-  int32 sign_;
-  int32 bn_exp_;
+  int32_t sign_;
+  int32_t bn_exp_;
   BigNum bn_;
 
   // A standard IEEE "double" has a 53-bit mantissa consisting of a 52-bit
@@ -568,8 +570,8 @@ class ExactFloat {
 
   // Return a_sign * fabs(a) + b_sign * fabs(b).  Used to implement addition
   // and subtraction.
-  static ExactFloat SignedSum(int a_sign, const ExactFloat* a,
-                              int b_sign, const ExactFloat* b);
+  static ExactFloat SignedSum(int a_sign, const ExactFloat* a, int b_sign,
+                              const ExactFloat* b);
 
   // Convert an ExactFloat to its canonical form.  Underflow results in signed
   // zero, overflow results in signed infinity, and precision overflow results
@@ -597,7 +599,8 @@ class ExactFloat {
   // mode.  The type "T" must be signed.  Returns the largest possible integer
   // for NaN, and clamps out of range values to the largest or smallest
   // possible values.
-  template <class T> T ToInteger(RoundingMode mode) const;
+  template <class T>
+  T ToInteger(RoundingMode mode) const;
 
   // Log a fatal error message (used for unimplemented methods).
   static ExactFloat Unimplemented();
@@ -606,8 +609,7 @@ class ExactFloat {
 /////////////////////////////////////////////////////////////////////////
 // Implementation details follow:
 
-inline ExactFloat::ExactFloat() : sign_(1), bn_exp_(kExpZero) {
-}
+inline ExactFloat::ExactFloat() : sign_(1), bn_exp_(kExpZero) {}
 
 inline bool ExactFloat::is_zero() const { return bn_exp_ == kExpZero; }
 inline bool ExactFloat::is_inf() const { return bn_exp_ == kExpInfinity; }

@@ -20,6 +20,7 @@
 #include <cstddef>
 
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -50,14 +51,14 @@ S2_DEFINE_int32(s2cell_union_decode_max_num_cells, 1000000,
 
 static const unsigned char kCurrentLosslessEncodingVersionNumber = 1;
 
-vector<S2CellId> S2CellUnion::ToS2CellIds(const vector<uint64>& ids) {
+vector<S2CellId> S2CellUnion::ToS2CellIds(const vector<uint64_t>& ids) {
   vector<S2CellId> cell_ids;
   cell_ids.reserve(ids.size());
   for (auto id : ids) cell_ids.push_back(S2CellId(id));
   return cell_ids;
 }
 
-S2CellUnion::S2CellUnion(const vector<uint64>& cell_ids)
+S2CellUnion::S2CellUnion(const vector<uint64_t>& cell_ids)
     : cell_ids_(ToS2CellIds(cell_ids)) {
   Normalize();
 }
@@ -80,7 +81,7 @@ S2CellUnion S2CellUnion::FromBeginEnd(S2CellId begin, S2CellId end) {
   return result;
 }
 
-void S2CellUnion::Init(const vector<uint64>& cell_ids) {
+void S2CellUnion::Init(const vector<uint64_t>& cell_ids) {
   cell_ids_ = ToS2CellIds(cell_ids);
   Normalize();
 }
@@ -129,9 +130,9 @@ inline static bool AreSiblings(S2CellId a, S2CellId b, S2CellId c, S2CellId d) {
   // mask that blocks out the two bits that encode the child position of
   // "id" with respect to its parent, then check that the other three
   // children all agree with "mask".
-  uint64 mask = d.lsb() << 1;
+  uint64_t mask = d.lsb() << 1;
   mask = ~(mask + (mask << 1));
-  uint64 id_masked = (d.id() & mask);
+  uint64_t id_masked = (d.id() & mask);
   return ((a.id() & mask) == id_masked &&
           (b.id() & mask) == id_masked &&
           (c.id() & mask) == id_masked &&
@@ -449,7 +450,7 @@ S2CellUnion S2CellUnion::Difference(const S2CellUnion& y) const {
 
 void S2CellUnion::Expand(int expand_level) {
   vector<S2CellId> output;
-  uint64 level_lsb = S2CellId::lsb_for_level(expand_level);
+  uint64_t level_lsb = S2CellId::lsb_for_level(expand_level);
   for (int i = num_cells(); --i >= 0; ) {
     S2CellId id = cell_id(i);
     if (id.lsb() < level_lsb) {
@@ -479,8 +480,8 @@ void S2CellUnion::Expand(S1Angle min_radius, int max_level_diff) {
   Expand(min(min_level + max_level_diff, radius_level));
 }
 
-uint64 S2CellUnion::LeafCellsCovered() const {
-  uint64 num_leaves = 0;
+uint64_t S2CellUnion::LeafCellsCovered() const {
+  uint64_t num_leaves = 0;
   for (S2CellId id : *this) {
     const int inverted_level = S2CellId::kMaxLevel - id.level();
     num_leaves += (1ULL << (inverted_level << 1));
@@ -525,13 +526,13 @@ bool S2CellUnion::MayIntersect(const S2Cell& cell) const {
 }
 
 void S2CellUnion::Encode(Encoder* const encoder) const {
-  // Unsigned char for version number, and N+1 uint64's for N cell_ids
+  // Unsigned char for version number, and N+1 uint64_t's for N cell_ids
   // (1 for vector length, N for the ids).
   encoder->Ensure(sizeof(unsigned char) +
-                  sizeof(uint64) * (1 + cell_ids_.size()));
+                  sizeof(uint64_t) * (1 + cell_ids_.size()));
 
   encoder->put8(kCurrentLosslessEncodingVersionNumber);
-  encoder->put64(uint64{cell_ids_.size()});
+  encoder->put64(uint64_t{cell_ids_.size()});
   for (const S2CellId cell_id : cell_ids_) {
     cell_id.Encode(encoder);
   }
@@ -539,11 +540,11 @@ void S2CellUnion::Encode(Encoder* const encoder) const {
 
 bool S2CellUnion::Decode(Decoder* const decoder) {
   // Should contain at least version and vector length.
-  if (decoder->avail() < sizeof(unsigned char) + sizeof(uint64)) return false;
+  if (decoder->avail() < sizeof(unsigned char) + sizeof(uint64_t)) return false;
   unsigned char version = decoder->get8();
   if (version > kCurrentLosslessEncodingVersionNumber) return false;
 
-  uint64 num_cells = decoder->get64();
+  uint64_t num_cells = decoder->get64();
   if (num_cells > static_cast<size_t>(
                       absl::GetFlag(FLAGS_s2cell_union_decode_max_num_cells))) {
     return false;

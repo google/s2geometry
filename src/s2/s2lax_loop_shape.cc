@@ -18,10 +18,10 @@
 #include "s2/s2lax_loop_shape.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <utility>
 
-#include "s2/base/types.h"
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "absl/utility/utility.h"
@@ -34,13 +34,11 @@ using absl::Span;
 using std::make_unique;
 using ReferencePoint = S2Shape::ReferencePoint;
 
-S2LaxLoopShape::S2LaxLoopShape(S2LaxLoopShape&& other)
-    : S2Shape(std::move(other)),
-      num_vertices_(std::exchange(other.num_vertices_, 0)),
+S2LaxLoopShape::S2LaxLoopShape(S2LaxLoopShape&& other) noexcept
+    : num_vertices_(std::exchange(other.num_vertices_, 0)),
       vertices_(std::move(other.vertices_)) {}
 
-S2LaxLoopShape& S2LaxLoopShape::operator=(S2LaxLoopShape&& other) {
-  S2Shape::operator=(static_cast<S2Shape&&>(other));
+S2LaxLoopShape& S2LaxLoopShape::operator=(S2LaxLoopShape&& other) noexcept {
   num_vertices_ = std::exchange(other.num_vertices_, 0);
   vertices_ = std::move(other.vertices_);
   return *this;
@@ -92,30 +90,29 @@ S2Shape::ReferencePoint S2LaxLoopShape::GetReferencePoint() const {
   return s2shapeutil::GetReferencePoint(*this);
 }
 
-S2VertexIdLaxLoopShape::S2VertexIdLaxLoopShape(S2VertexIdLaxLoopShape&& other)
-    : S2Shape(std::move(other)),
-      num_vertices_(std::exchange(other.num_vertices_, 0)),
+S2VertexIdLaxLoopShape::S2VertexIdLaxLoopShape(
+    S2VertexIdLaxLoopShape&& other) noexcept
+    : num_vertices_(std::exchange(other.num_vertices_, 0)),
       vertex_ids_(std::move(other.vertex_ids_)),
       vertex_array_(std::move(other.vertex_array_)) {}
 
 S2VertexIdLaxLoopShape& S2VertexIdLaxLoopShape::operator=(
-    S2VertexIdLaxLoopShape&& other) {
-  S2Shape::operator=(static_cast<S2Shape&&>(other));
+    S2VertexIdLaxLoopShape&& other) noexcept {
   num_vertices_ = std::exchange(other.num_vertices_, 0);
   vertex_ids_ = std::move(other.vertex_ids_);
   vertex_array_ = std::move(other.vertex_array_);
   return *this;
 }
 
-S2VertexIdLaxLoopShape::S2VertexIdLaxLoopShape(Span<const int32> vertex_ids,
+S2VertexIdLaxLoopShape::S2VertexIdLaxLoopShape(Span<const int32_t> vertex_ids,
                                                const S2Point* vertex_array) {
   Init(vertex_ids, vertex_array);
 }
 
-void S2VertexIdLaxLoopShape::Init(Span<const int32> vertex_ids,
+void S2VertexIdLaxLoopShape::Init(Span<const int32_t> vertex_ids,
                                   const S2Point* vertex_array) {
   num_vertices_ = vertex_ids.size();
-  vertex_ids_.reset(new int32[num_vertices_]);
+  vertex_ids_.reset(new int32_t[num_vertices_]);
   std::copy(vertex_ids.begin(), vertex_ids.end(), vertex_ids_.get());
   vertex_array_ = vertex_array;
 }

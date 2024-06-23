@@ -23,7 +23,7 @@
 
 namespace s2shapeutil {
 
-int64 CountVertices(const S2Shape& shape) {
+int64_t CountVertices(const S2Shape& shape) {
   int dimension = shape.dimension();
   ABSL_DCHECK_GE(dimension, 0);
   ABSL_DCHECK_LE(dimension, 2);
@@ -53,8 +53,8 @@ int64 CountVertices(const S2Shape& shape) {
   }
 }
 
-int64 CountVertices(const S2ShapeIndex& index) {
-  int64 vertices = 0;
+int64_t CountVertices(const S2ShapeIndex& index) {
+  int64_t vertices = 0;
   for (const S2Shape* shape : index) {
     vertices += CountVertices(*shape);
   }

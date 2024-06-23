@@ -17,7 +17,16 @@ endif()
 include(${SWIG_USE_FILE})
 include_directories(${Python3_INCLUDE_DIRS})
 
-set(CMAKE_SWIG_FLAGS "")
+# SWIG does not understand `uint64_t`.  `SWIGWORDSIZE64` controls whether
+# it maps `uint64_t` to `unsigned long` or `unsigned long long`.
+# (See `stdint.i`.)  https://github.com/swig/swig/issues/2923
+# TODO: This works for Linux, but may need extra conditions for macOS /
+# Windows.
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(CMAKE_SWIG_FLAGS "-DSWIGWORDSIZE64")
+else()
+    set(CMAKE_SWIG_FLAGS "")
+endif()
 set_property(SOURCE s2.i PROPERTY SWIG_FLAGS "-module" "s2geometry")
 set_property(SOURCE s2.i PROPERTY CPLUSPLUS ON)
 

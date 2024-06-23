@@ -23,6 +23,7 @@
 #include <atomic>
 #include <bitset>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -81,13 +82,6 @@ using std::pair;
 using std::unique_ptr;
 using std::vector;
 
-S2_DEFINE_bool(
-    s2loop_lazy_indexing, true,
-    "Build the S2ShapeIndex only when it is first needed.  This can save "
-    "significant amounts of memory and time when geometry is constructed but "
-    "never queried, for example when loops are passed directly to S2Polygon, "
-    "or when geometry is being converted from one format to another.");
-
 // The maximum number of vertices we'll allow when decoding a loop.
 // The default value of 50 million is about 30x bigger than the number of
 S2_DEFINE_int32(
@@ -113,13 +107,9 @@ S2Loop::S2Loop() {
   // The loop is not valid until Init() is called.
 }
 
-#ifndef SWIG
-S2Loop::S2Loop(S2Loop&& b)
-    : S2Region(std::move(b)),
-      // We have moved only the S2Region base slice.  Suppress false-positive
-      // warnings from moving the rest.
-      // NOLINTBEGIN(bugprone-use-after-move)
-      depth_(std::exchange(b.depth_, 0)),
+S2Loop::S2Loop(S2Loop&& b) noexcept
+    // S2Region has no members, so does not need to be moved.
+    : depth_(std::exchange(b.depth_, 0)),
       num_vertices_(std::exchange(b.num_vertices_, 0)),
       vertices_(std::move(b.vertices_)),
       s2debug_override_(std::move(b.s2debug_override_)),
@@ -129,7 +119,6 @@ S2Loop::S2Loop(S2Loop&& b)
       bound_(std::move(b.bound_)),
       subregion_bound_(std::move(b.subregion_bound_)),
       index_(std::move(b.index_)) {
-  // NOLINTEND(bugprone-use-after-move)
   // Our index points to S2Loop::Shape instances which point back to S2Loop,
   // we need to update those S2Loop pointers now that we've moved.
   for (const S2Shape* shape : index_) {
@@ -137,8 +126,8 @@ S2Loop::S2Loop(S2Loop&& b)
   }
 }
 
-S2Loop& S2Loop::operator=(S2Loop&& b) {
-  S2Region::operator=(static_cast<S2Region&&>(b));
+S2Loop& S2Loop::operator=(S2Loop&& b) noexcept {
+  // S2Region has no members, so does not need to be assigned.
   depth_ = std::exchange(b.depth_, 0);
   num_vertices_ = std::exchange(b.num_vertices_, 0);
   vertices_ = std::move(b.vertices_);
@@ -159,7 +148,6 @@ S2Loop& S2Loop::operator=(S2Loop&& b) {
 
   return *this;
 }
-#endif
 
 S2Loop::S2Loop(Span<const S2Point> vertices)
   : S2Loop(vertices, S2Debug::ALLOW) {}
@@ -335,9 +323,6 @@ void S2Loop::InitBound() {
 
 void S2Loop::InitIndex() {
   index_.Add(make_unique<Shape>(this));
-  if (!absl::GetFlag(FLAGS_s2loop_lazy_indexing)) {
-    index_.ForceBuild();
-  }
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
     // Note that FLAGS_s2debug is false in optimized builds (by default).
     ABSL_CHECK(IsValid());
@@ -345,11 +330,7 @@ void S2Loop::InitIndex() {
 }
 
 S2Loop::S2Loop(const S2Cell& cell)
-    : depth_(0),
-      num_vertices_(4),
-      vertices_(new S2Point[num_vertices_]),
-      s2debug_override_(S2Debug::ALLOW),
-      unindexed_contains_calls_(0) {
+    : num_vertices_(4), vertices_(new S2Point[num_vertices_]) {
   for (int i = 0; i < 4; ++i) {
     vertices_[i] = cell.GetVertex(i);
   }
@@ -366,7 +347,6 @@ S2Loop::S2Loop(const S2Loop& src)
       vertices_(make_unique<S2Point[]>(num_vertices_)),
       s2debug_override_(src.s2debug_override_),
       origin_inside_(src.origin_inside_),
-      unindexed_contains_calls_(0),
       bound_(src.bound_),
       subregion_bound_(src.subregion_bound_) {
   std::copy(&src.vertices_[0], &src.vertices_[num_vertices_], &vertices_[0]);
@@ -667,14 +647,14 @@ bool S2Loop::DecodeInternal(Decoder* const decoder) {
   // Perform all checks before modifying vertex state. Empty loops are
   // explicitly allowed here: a newly created loop has zero vertices
   // and such loops encode and decode properly.
-  if (decoder->avail() < sizeof(uint32)) return false;
-  const uint32 num_vertices = decoder->get32();
-  if (num_vertices > static_cast<uint32>(absl::GetFlag(
+  if (decoder->avail() < sizeof(uint32_t)) return false;
+  const uint32_t num_vertices = decoder->get32();
+  if (num_vertices > static_cast<uint32_t>(absl::GetFlag(
                          FLAGS_s2polygon_decode_max_num_vertices))) {
     return false;
   }
   if (decoder->avail() < (num_vertices * sizeof(vertices_[0]) +
-                          sizeof(uint8) + sizeof(uint32))) {
+                          sizeof(uint8_t) + sizeof(uint32_t))) {
     return false;
   }
   ClearIndex();
@@ -1008,7 +988,7 @@ bool LoopCrosser::HasCrossingRelation(RangeIterator* ai, RangeIterator* bi) {
       bi.SeekTo(ai);
     } else {
       // One cell contains the other.  Determine which cell is larger.
-      int64 ab_relation = ai.id().lsb() - bi.id().lsb();
+      int64_t ab_relation = ai.id().lsb() - bi.id().lsb();
       if (ab_relation > 0) {
         // A's index cell is larger.
         if (ab.HasCrossingRelation(&ai, &bi)) return true;
@@ -1423,14 +1403,14 @@ void S2Loop::EncodeCompressed(Encoder* encoder, const S2XYZFaceSiTi* vertices,
 }
 
 bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
-  // get_varint32 takes a uint32*, but num_vertices_ is signed.
+  // get_varint32 takes a uint32_t*, but num_vertices_ is signed.
   // Decode to a temporary variable to avoid reinterpret_cast.
-  uint32 unsigned_num_vertices;
+  uint32_t unsigned_num_vertices;
   if (!decoder->get_varint32(&unsigned_num_vertices)) {
     return false;
   }
   if (unsigned_num_vertices == 0 ||
-      unsigned_num_vertices > static_cast<uint32>(absl::GetFlag(
+      unsigned_num_vertices > static_cast<uint32_t>(absl::GetFlag(
                                   FLAGS_s2polygon_decode_max_num_vertices))) {
     return false;
   }
@@ -1442,14 +1422,14 @@ bool S2Loop::DecodeCompressed(Decoder* decoder, int snap_level) {
                                 MakeSpan(vertices_.get(), num_vertices_))) {
     return false;
   }
-  uint32 properties_uint32;
+  uint32_t properties_uint32;
   if (!decoder->get_varint32(&properties_uint32)) {
     return false;
   }
   const std::bitset<kNumProperties> properties(properties_uint32);
   origin_inside_ = properties.test(kOriginInside);
 
-  uint32 unsigned_depth;
+  uint32_t unsigned_depth;
   if (!decoder->get_varint32(&unsigned_depth)) {
     return false;
   }

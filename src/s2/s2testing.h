@@ -19,19 +19,20 @@
 #define S2_S2TESTING_H_
 
 #include <algorithm>
+#include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "absl/base/macros.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/base/commandlineflags.h"
 #include "s2/base/commandlineflags_declare.h"
-#include "s2/base/types.h"
 #include "s2/r2.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -50,13 +51,15 @@ class S2Polygon;
 class S2Polyline;
 class S2Region;
 
-// You can optionally call S2Testing::rnd.Reset(FLAGS_s2_random_seed) at the
-// start of a test or benchmark to ensure that its results do not depend on
-// which other tests of benchmarks have run previously.  This can help with
-// debugging.
-//
-// This flag currently does *not* affect the initial seed value for
-// S2Testing::rnd.  TODO(user): Fix this.
+// For benchmarks, this seed can be set on the command line, then combined
+// with other data to vary the seed.  Typical usage is:
+// ```
+// const std::string seed_str =
+//     absl::StrCat(__func__, absl::GetFlag(FLAGS_s2_random_seed);
+// const std::seed_seq seed(seed_str.begin(), seed_str.end());
+// std::mt19937_64 bitgen(seed);
+// // Use `bitgen`.
+// ```
 S2_DECLARE_int32(s2_random_seed);
 
 // This class defines various static functions that are useful for writing
@@ -91,42 +94,6 @@ class S2Testing {
   // The Earth's mean radius in kilometers (according to NASA).
   static const double kEarthRadiusKm;
 
-  // A deterministically-seeded random number generator.
-  class Random;
-
-  static Random rnd;
-
-  // Return a random unit-length vector.
-  static S2Point RandomPoint();
-
-  // Return a right-handed coordinate frame (three orthonormal vectors).
-  static void GetRandomFrame(S2Point* x, S2Point* y, S2Point* z);
-  static Matrix3x3_d GetRandomFrame();
-
-  // Given a unit-length z-axis, compute x- and y-axes such that (x,y,z) is a
-  // right-handed coordinate frame (three orthonormal vectors).
-  static void GetRandomFrameAt(const S2Point& z, S2Point* x, S2Point *y);
-  static Matrix3x3_d GetRandomFrameAt(const S2Point& z);
-
-  // Return a cap with a random axis such that the log of its area is
-  // uniformly distributed between the logs of the two given values.
-  // (The log of the cap angle is also approximately uniformly distributed.)
-  static S2Cap GetRandomCap(double min_area, double max_area);
-
-  // Return a point chosen uniformly at random (with respect to area)
-  // from the given cap.
-  static S2Point SamplePoint(const S2Cap& cap);
-
-  // Return a point chosen uniformly at random (with respect to area on the
-  // sphere) from the given latitude-longitude rectangle.
-  static S2Point SamplePoint(const S2LatLngRect& rect);
-
-  // Return a random cell id at the given level or at a randomly chosen
-  // level.  The distribution is uniform over the space of cell ids,
-  // but only approximately uniform over the surface of the sphere.
-  static S2CellId GetRandomCellId(int level);
-  static S2CellId GetRandomCellId();
-
   // Return a polygon with the specified center, number of concentric loops
   // and vertices per loop.
   static void ConcentricLoopsPolygon(const S2Point& center,
@@ -142,58 +109,17 @@ class S2Testing {
                             bool check_tight,
                             S2CellId id = S2CellId());
 
+  // Combines `name` with `FLAGS_s2_random_seed` to make a seed sequence.
+  // TODO(user): Remove this when `S2Testing::MakeTaggedSeedSeq` is released.
+  static std::seed_seq MakeTaggedSeedSeq(absl::string_view name,
+                                         std::ostream& strm);
+
+
  private:
   // Contains static methods
   S2Testing() = delete;
   S2Testing(const S2Testing&) = delete;
   void operator=(const S2Testing&) = delete;
-};
-
-// Functions in this class return random numbers that are as good as random()
-// is.  The results are reproducible since the seed is deterministic.  This
-// class is *NOT* thread-safe; it is only intended for testing purposes.
-class S2Testing::Random {
- public:
-  // Initialize using a deterministic seed.
-  Random();
-
-  // Reset the generator state using the given seed.
-  void Reset(int32 seed);
-
-  // Return a uniformly distributed 64-bit unsigned integer.
-  uint64 Rand64();
-
-  // Return a uniformly distributed 32-bit unsigned integer.
-  uint32 Rand32();
-
-  // Return a uniformly distributed "double" in the range [0,1).  Note that
-  // the values returned are all multiples of 2**-53, which means that not all
-  // possible values in this range are returned.
-  double RandDouble();
-
-  // Return a uniformly distributed integer in the range [0,n).
-  int32 Uniform(int32 n);
-
-  // Return a uniformly distributed "double" in the range [min, limit).
-  double UniformDouble(double min, double limit);
-
-  // A functor-style version of Uniform, so that this class can be used with
-  // STL functions that require a RandomNumberGenerator concept.
-  int32 operator()(int32 n) { return Uniform(n); }
-
-  // Return true with probability 1 in n.
-  bool OneIn(int32 n);
-
-  // Skewed: pick "base" uniformly from range [0,max_log] and then
-  // return "base" random bits.  The effect is to pick a number in the
-  // range [0,2^max_log-1] with bias towards smaller numbers.
-  int32 Skewed(int max_log);
-
- private:
-  // Currently this class is based on random(), therefore it makes no sense to
-  // make a copy.
-  Random(const Random&) = delete;
-  void operator=(const Random&) = delete;
 };
 
 // Compare two sets of "closest" items, where "expected" is computed via brute

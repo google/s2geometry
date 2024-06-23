@@ -20,5 +20,5 @@
 #include "s2/base/commandlineflags.h"
 #include "s2/base/log_severity.h"
 
-S2_DEFINE_bool(s2debug, !!google::DEBUG_MODE,
+S2_DEFINE_bool(s2debug, S2_DEBUG_MODE,
                "Enable automatic validity checking in S2 code");

@@ -19,13 +19,16 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
+#include "absl/random/distributions.h"
+#include "s2/r2.h"
+#include "s2/s1angle.h"
 
 using std::make_unique;
 using std::max;
 using std::unique_ptr;
 using std::vector;
 
-S2Fractal::S2Fractal() {
+S2Fractal::S2Fractal(absl::BitGenRef bitgen) : bitgen_(bitgen) {
   ComputeOffsets();
 }
 
@@ -99,26 +102,29 @@ double S2Fractal::max_radius_factor() const {
   return max(1.0, offset_fraction_ * sqrt(3) + 0.5);
 }
 
-void S2Fractal::GetR2Vertices(vector<R2Point>* vertices) const {
+vector<R2Point> S2Fractal::GetR2Vertices() {
   // The Koch "snowflake" consists of three Koch curves whose initial edges
   // form an equilateral triangle.
+  vector<R2Point> vertices;
   R2Point v0(1.0, 0.0);
   R2Point v1(-0.5, sqrt(3) / 2);
   R2Point v2(-0.5, -sqrt(3) / 2);
   GetR2VerticesHelper(v0, v1, 0, vertices);
   GetR2VerticesHelper(v1, v2, 0, vertices);
   GetR2VerticesHelper(v2, v0, 0, vertices);
+  return vertices;
 }
 
 // Given the two endpoints (v0,v4) of an edge, recursively subdivide the edge
 // to the desired level, and insert all vertices of the resulting curve up to
 // but not including the endpoint "v4".
 void S2Fractal::GetR2VerticesHelper(const R2Point& v0, const R2Point& v4,
-                                    int level,
-                                    vector<R2Point>* vertices) const {
-  if (level >= min_level_ && OneIn(max_level_ - level + 1)) {
+                                    int level, vector<R2Point>& vertices) {
+  const int levels_remaining = max_level_ - level + 1;
+  if (level >= min_level_ &&
+      absl::Bernoulli(bitgen_, 1.0 / levels_remaining)) {
     // Stop subdivision at this level.
-    vertices->push_back(v0);
+    vertices.push_back(v0);
     return;
   }
   // Otherwise compute the intermediate vertices v1, v2, and v3.
@@ -135,11 +141,10 @@ void S2Fractal::GetR2VerticesHelper(const R2Point& v0, const R2Point& v4,
 }
 
 unique_ptr<S2Loop> S2Fractal::MakeLoop(const Matrix3x3_d& frame,
-                                       S1Angle nominal_radius) const {
-  Reseed();
-  vector<R2Point> r2vertices;
-  GetR2Vertices(&r2vertices);
+                                       S1Angle nominal_radius) {
+  vector<R2Point> r2vertices = GetR2Vertices();
   vector<S2Point> vertices;
+  vertices.reserve(r2vertices.size());
   double r = nominal_radius.radians();
   for (const R2Point& v : r2vertices) {
     S2Point p(v[0] * r, v[1] * r, 1);

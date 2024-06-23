@@ -20,13 +20,26 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "s2/s2cell_id.h"
+#include "s2/s2cell_index.h"
 #include "s2/s2cell_union.h"
 
 namespace {
 
 using std::vector;
 
-TEST(S2RegionSharderTest, GetMostIntersectingShard) {
+class S2RegionSharderTest : public ::testing::Test {
+ public:
+  S2CellIndex IndexFromCoverings(const vector<S2CellUnion>& coverings) {
+    S2CellIndex index;
+    for (int i = 0; i < coverings.size(); ++i) {
+      index.Add(coverings[i], i);
+    }
+    index.Build();
+    return index;
+  }
+};
+
+TEST_F(S2RegionSharderTest, GetMostIntersectingShard) {
   vector<S2CellUnion> coverings{
       S2CellUnion({S2CellId::FromFacePosLevel(0, 0, 10)}),
       S2CellUnion({
@@ -36,30 +49,35 @@ TEST(S2RegionSharderTest, GetMostIntersectingShard) {
       S2CellUnion({S2CellId::FromFacePosLevel(5, 0, 10)}),
   };
 
-  S2RegionSharder sharder(coverings);
+  const auto Run = [](const S2RegionSharder& sharder) {
+    // Overlap with only 1 shard
+    EXPECT_EQ(0, sharder.GetMostIntersectingShard(
+                     S2CellUnion({
+                         S2CellId::FromFacePosLevel(0, 0, 11),
+                     }),
+                     42));
 
-  // Overlap with only 1 shard
-  EXPECT_EQ(0, sharder.GetMostIntersectingShard(
-                   S2CellUnion({
-                       S2CellId::FromFacePosLevel(0, 0, 11),
-                   }),
-                   42));
+    // Overlap with multiple shards, picks the shard with more overlap.
+    EXPECT_EQ(1, sharder.GetMostIntersectingShard(
+                     S2CellUnion({
+                         S2CellId::FromFacePosLevel(0, 0, 10),
+                         S2CellId::FromFacePosLevel(3, 0, 9),
+                         S2CellId::FromFacePosLevel(3, 1, 9),
+                     }),
+                     42));
 
-  // Overlap with multiple shards, picks the shard with more overlap.
-  EXPECT_EQ(1, sharder.GetMostIntersectingShard(
-                   S2CellUnion({
-                       S2CellId::FromFacePosLevel(0, 0, 10),
-                       S2CellId::FromFacePosLevel(3, 0, 9),
-                       S2CellId::FromFacePosLevel(3, 1, 9),
-                   }),
-                   42));
+    // Overlap with no shards.
+    EXPECT_EQ(42, sharder.GetMostIntersectingShard(
+                      S2CellUnion({S2CellId::FromFacePosLevel(4, 0, 10)}), 42));
+  };
 
-  // Overlap with no shards.
-  EXPECT_EQ(42, sharder.GetMostIntersectingShard(
-                    S2CellUnion({S2CellId::FromFacePosLevel(4, 0, 10)}), 42));
+  // Run with an internal and external index.
+  S2CellIndex index = IndexFromCoverings(coverings);
+  Run(S2RegionSharder(&index));
+  Run(S2RegionSharder(coverings));
 }
 
-TEST(S2RegionSharderTest, GetIntersectingShards) {
+TEST_F(S2RegionSharderTest, GetIntersectingShards) {
   vector<S2CellUnion> coverings{
       S2CellUnion({S2CellId::FromFacePosLevel(0, 0, 10)}),
       S2CellUnion({
@@ -69,26 +87,31 @@ TEST(S2RegionSharderTest, GetIntersectingShards) {
       S2CellUnion({S2CellId::FromFacePosLevel(5, 0, 10)}),
   };
 
-  S2RegionSharder sharder(coverings);
+  const auto Run = [](const S2RegionSharder& sharder) {
+    // Overlap with only 1 shard
+    EXPECT_THAT(sharder.GetIntersectingShards(S2CellUnion({
+                    S2CellId::FromFacePosLevel(0, 0, 11),
+                })),
+                testing::UnorderedElementsAre(0));
 
-  // Overlap with only 1 shard
-  EXPECT_THAT(sharder.GetIntersectingShards(S2CellUnion({
-                  S2CellId::FromFacePosLevel(0, 0, 11),
-              })),
-              testing::UnorderedElementsAre(0));
+    // Overlap with multiple shards, picks the shard with more overlap.
+    EXPECT_THAT(sharder.GetIntersectingShards(S2CellUnion({
+                    S2CellId::FromFacePosLevel(0, 0, 10),
+                    S2CellId::FromFacePosLevel(3, 0, 9),
+                    S2CellId::FromFacePosLevel(3, 1, 9),
+                })),
+                testing::UnorderedElementsAre(0, 1));
 
-  // Overlap with multiple shards, picks the shard with more overlap.
-  EXPECT_THAT(sharder.GetIntersectingShards(S2CellUnion({
-                  S2CellId::FromFacePosLevel(0, 0, 10),
-                  S2CellId::FromFacePosLevel(3, 0, 9),
-                  S2CellId::FromFacePosLevel(3, 1, 9),
-              })),
-              testing::UnorderedElementsAre(0, 1));
+    // Overlap with no shards.
+    EXPECT_THAT(sharder.GetIntersectingShards(
+                    S2CellUnion({S2CellId::FromFacePosLevel(4, 0, 10)})),
+                testing::IsEmpty());
+  };
 
-  // Overlap with no shards.
-  EXPECT_THAT(sharder.GetIntersectingShards(
-                  S2CellUnion({S2CellId::FromFacePosLevel(4, 0, 10)})),
-              testing::IsEmpty());
+  // Run with an internal and external index.
+  S2CellIndex index = IndexFromCoverings(coverings);
+  Run(S2RegionSharder(&index));
+  Run(S2RegionSharder(coverings));
 }
 
 }  // namespace

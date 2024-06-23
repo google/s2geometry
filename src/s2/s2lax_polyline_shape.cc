@@ -37,13 +37,12 @@ using absl::MakeSpan;
 using absl::Span;
 using std::make_unique;
 
-S2LaxPolylineShape::S2LaxPolylineShape(S2LaxPolylineShape&& other)
-    : S2Shape(std::move(other)),
-      num_vertices_(std::exchange(other.num_vertices_, 0)),
+S2LaxPolylineShape::S2LaxPolylineShape(S2LaxPolylineShape&& other) noexcept
+    : num_vertices_(std::exchange(other.num_vertices_, 0)),
       vertices_(std::move(other.vertices_)) {}
 
-S2LaxPolylineShape& S2LaxPolylineShape::operator=(S2LaxPolylineShape&& other) {
-  S2Shape::operator=(static_cast<S2Shape&&>(other));
+S2LaxPolylineShape& S2LaxPolylineShape::operator=(
+    S2LaxPolylineShape&& other) noexcept {
   num_vertices_ = std::exchange(other.num_vertices_, 0);
   vertices_ = std::move(other.vertices_);
   return *this;

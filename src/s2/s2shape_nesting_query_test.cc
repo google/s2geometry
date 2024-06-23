@@ -18,16 +18,18 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/types/span.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
@@ -37,7 +39,6 @@
 #include "s2/s2polygon.h"
 #include "s2/s2shape.h"
 #include "s2/s2testing.h"
-#include "s2/util/gtl/legacy_random_shuffle.h"
 
 using absl::Span;
 using std::make_unique;
@@ -181,7 +182,7 @@ unique_ptr<S2LaxPolygonShape> ArcShape(int vertices_per_loop,
 }  // namespace
 
 TEST(S2ShapeNestingQuery, OneChainAlwaysShell) {
-  const int kNumEdges = 100;
+  constexpr int kNumEdges = 100;
 
   MutableS2ShapeIndex index;
   int id =
@@ -198,7 +199,7 @@ TEST(S2ShapeNestingQuery, OneChainAlwaysShell) {
 }
 
 TEST(S2ShapeNestingQuery, TwoChainsFormPair) {
-  const int kNumEdges = 100;
+  constexpr int kNumEdges = 100;
   const S2LatLng kCenter = S2LatLng::FromDegrees(0.0, 0.0);
 
   {
@@ -278,7 +279,7 @@ TEST(S2ShapeNestingQuery, TwoChainsFormPair) {
 }
 
 TEST(S2ShapeNestingQuery, CanSetDatumShellOption) {
-  const int kNumEdges = 100;
+  constexpr int kNumEdges = 100;
   const S2LatLng kCenter = S2LatLng::FromDegrees(0.0, 0.0);
 
   // Nested rings, like a donut.
@@ -303,7 +304,7 @@ TEST(S2ShapeNestingQuery, CanSetDatumShellOption) {
 }
 
 TEST(S2ShapeNestingQuery, ShellCanHaveMultipleHoles) {
-  const int kNumEdges = 16;
+  constexpr int kNumEdges = 16;
 
   // A ring with four holes in it like a shirt button.
   MutableS2ShapeIndex index;
@@ -338,7 +339,7 @@ TEST(S2ShapeNestingQuery, ShellCanHaveMultipleHoles) {
 }
 
 TEST(S2ShapeNestingQuery, ExactPathIsIrrelevant) {
-  const int kNumEdges = 32;
+  constexpr int kNumEdges = 32;
   const S2LatLng kCenter = S2LatLng::FromDegrees(0.0, 0.0);
 
   // The path we take from the datum shell to the inner shell shouldn't matter
@@ -382,7 +383,7 @@ struct NestingTestCase {
 using NestingTest = testing::TestWithParam<NestingTestCase>;
 
 TEST_P(NestingTest, NestedChainsPartitionCorrectly) {
-  const int kNumEdges = 16;
+  constexpr int kNumEdges = 16;
   const S2LatLng kCenter = S2LatLng::FromDegrees(0.0, 0.0);
 
   const NestingTestCase& test_case = GetParam();
@@ -399,8 +400,10 @@ TEST_P(NestingTest, NestedChainsPartitionCorrectly) {
   }
 
   if (test_case.shuffle) {
-    S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
-    gtl::legacy_random_shuffle(rings.begin() + 1, rings.end(), S2Testing::rnd);
+    absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+        "NESTED_CHAINS_PARTITION_CORRECTLY",
+        absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+    std::shuffle(rings.begin() + 1, rings.end(), bitgen);
   }
 
   MutableS2ShapeIndex index;
@@ -449,7 +452,7 @@ TEST_P(NestingTest, NestedChainsPartitionCorrectly) {
     if (relations[chain].is_hole()) {
       num_holes++;
       int parent = relations[chain].parent_id();
-      absl::Span<const int32> holes = relations[parent].holes();
+      absl::Span<const int32_t> holes = relations[parent].holes();
       EXPECT_NE(std::find(holes.begin(), holes.end(), chain), holes.end());
     }
   }

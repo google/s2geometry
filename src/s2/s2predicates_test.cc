@@ -33,6 +33,9 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 
@@ -45,6 +48,7 @@
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates_internal.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 S2_DEFINE_int32(consistency_iters, 5000,
@@ -54,7 +58,6 @@ using absl::string_view;
 using std::back_inserter;
 using std::min;
 using std::numeric_limits;
-using std::pow;
 using std::string;
 using std::vector;
 
@@ -232,15 +235,25 @@ class SignTest : public testing::Test {
     points->push_back(a.Normalize());
   }
 
-  // Add two points A1 and A2 that are slightly offset from A along the
+  // Try to add two points A1 and A2 that are slightly offset from A along the
   // tangent toward B, and such that A, A1, and A2 are exactly collinear
-  // (i.e. even with infinite-precision arithmetic).
-  static void AddTangentPoints(const S2Point& a, const S2Point& b,
-                               vector<S2Point>* points) {
+  // (i.e. even with infinite-precision arithmetic).  If such points cannot
+  // be found, add zero points.
+  static void MaybeAddTangentPoints(absl::BitGenRef bitgen, const S2Point& a,
+                                    const S2Point& b, vector<S2Point>* points) {
     Vector3_d dir = S2::RobustCrossProd(a, b).CrossProd(a).Normalize();
-    if (dir == S2Point(0, 0, 0)) return;
-    for (;;) {
-      S2Point delta = 1e-15 * S2Testing::rnd.RandDouble() * dir;
+    // We just normalized this, so if it's not unit length, it's 0 or NaN.
+    if (!S2::IsUnitLength(dir)) return;
+    // TODO(b/339162879): Without `kMaxIters`, we could get stuck here for
+    // a very long time, possibly forever.  The `a + delta != a` condition
+    // requires `delta` is large, and the others require delta is small.
+    // They may have a small or empty overlap.  We could search for the
+    // valid range and sample from that.  For now, just don't add
+    // <0.1% of test runs will reach 100k iters, so we are not losing
+    // a significant amount of test coverage.
+    constexpr int kMaxIters = 100'000;
+    for (int i = 0; i < kMaxIters; ++i) {
+      S2Point delta = 1e-15 * absl::Uniform(bitgen, 0.0, 1.0) * dir;
       if ((a + delta) != a && (a + delta) - a == a - (a - delta) &&
           S2::IsUnitLength(a + delta) && S2::IsUnitLength(a - delta)) {
         points->push_back(a + delta);
@@ -252,38 +265,38 @@ class SignTest : public testing::Test {
 
   // Add zero or more (but usually one) point that is likely to trigger
   // Sign() degeneracies among the given points.
-  static void AddDegeneracy(vector<S2Point>* points) {
-    S2Testing::Random* rnd = &S2Testing::rnd;
-    S2Point a = (*points)[rnd->Uniform(points->size())];
-    S2Point b = (*points)[rnd->Uniform(points->size())];
-    int coord = rnd->Uniform(3);
-    switch (rnd->Uniform(8)) {
+  static void AddDegeneracy(absl::BitGenRef bitgen, vector<S2Point>* points) {
+    S2Point a = (*points)[absl::Uniform<size_t>(bitgen, 0, points->size())];
+    S2Point b = (*points)[absl::Uniform<size_t>(bitgen, 0, points->size())];
+    int coord = absl::Uniform(bitgen, 0, 3);
+    switch (absl::Uniform(bitgen, 0, 8)) {
       case 0:
         // Add a random point (not uniformly distributed) along the great
         // circle AB.
-        AddNormalized(rnd->UniformDouble(-1, 1) * a +
-                      rnd->UniformDouble(-1, 1) * b, points);
+        AddNormalized(absl::Uniform(bitgen, -1.0, 1.0) * a +
+                          absl::Uniform(bitgen, -1.0, 1.0) * b,
+                      points);
         break;
       case 1:
         // Perturb one coordinate by the minimum amount possible.
-        a[coord] = nextafter(a[coord], rnd->OneIn(2) ? 2 : -2);
+        a[coord] = nextafter(a[coord], absl::Bernoulli(bitgen, 0.5) ? 2 : -2);
         AddNormalized(a, points);
         break;
       case 2:
         // Perturb one coordinate by up to 1e-15.
-        a[coord] += 1e-15 * rnd->UniformDouble(-1, 1);
+        a[coord] += 1e-15 * absl::Uniform(bitgen, -1.0, 1.0);
         AddNormalized(a, points);
         break;
       case 3:
         // Scale a point just enough so that it is different while still being
         // considered normalized.
-        a *= rnd->OneIn(2) ? (1 + 2e-16) : (1 - 1e-16);
+        a *= absl::Bernoulli(bitgen, 0.5) ? (1 + 2e-16) : (1 - 1e-16);
         if (S2::IsUnitLength(a)) points->push_back(a);
         break;
       case 4: {
         // Add the intersection point of AB with X=0, Y=0, or Z=0.
         S2Point dir(0, 0, 0);
-        dir[coord] = rnd->OneIn(2) ? 1 : -1;
+        dir[coord] = absl::Bernoulli(bitgen, 0.5) ? 1 : -1;
         Vector3_d norm = S2::RobustCrossProd(a, b).Normalize();
         if (norm.Norm2() > 0) {
           AddNormalized(S2::RobustCrossProd(dir, norm), points);
@@ -291,14 +304,14 @@ class SignTest : public testing::Test {
         break;
       }
       case 5:
-        // Add two closely spaced points along the tangent at A to the great
-        // circle through AB.
-        AddTangentPoints(a, b, points);
+        // Try to add two closely spaced points along the tangent at A to the
+        // great circle through AB.
+        MaybeAddTangentPoints(bitgen, a, b, points);
         break;
       case 6:
-        // Add two closely spaced points along the tangent at A to the great
-        // circle through A and the X-axis.
-        AddTangentPoints(a, S2Point(1, 0, 0), points);
+        // Try to add two closely spaced points along the tangent at A to the
+        // great circle through A and the X-axis.
+        MaybeAddTangentPoints(bitgen, a, S2Point(1, 0, 0), points);
         break;
       case 7:
         // Add the negative of a point.
@@ -318,14 +331,15 @@ class SignTest : public testing::Test {
 
   // Construct approximately "n" points near the great circle through A and B,
   // then sort them and test whether they are sorted.
-  static void TestGreatCircle(S2Point a, S2Point b, int n) {
+  static void TestGreatCircle(absl::BitGenRef bitgen, S2Point a, S2Point b,
+                              int n, int min_unique_points) {
     a = a.Normalize();
     b = b.Normalize();
     vector<S2Point> points;
     points.push_back(a);
     points.push_back(b);
     while (points.size() < n) {
-      AddDegeneracy(&points);
+      AddDegeneracy(bitgen, &points);
     }
     // Remove any (0, 0, 0) points that were accidentically created, then sort
     // the points and remove duplicates.
@@ -333,7 +347,7 @@ class SignTest : public testing::Test {
                  points.end());
     std::sort(points.begin(), points.end());
     points.erase(std::unique(points.begin(), points.end()), points.end());
-    EXPECT_GE(points.size(), n / 2);
+    EXPECT_GE(points.size(), min_unique_points);
 
     SortAndTest(points, a);
     SortAndTest(points, b);
@@ -344,8 +358,15 @@ class SignTest : public testing::Test {
 };
 
 TEST_F(SignTest, StressTest) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "STRESS_TEST",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // The run time of this test is *cubic* in the parameter below.
-  static const int kNumPointsPerCircle = 17;
+  static constexpr int kNumPointsPerCircle = 17;
+  // We will fail the min unique points test ~0.5% `kMinUniquePoints == 8`,
+  // so use `7`, which moves the remaining flakiness to `AddTangentPoints`
+  // due to b/339162879.
+  static constexpr int kMinUniquePoints = 7;
 
   // This test is randomized, so it is beneficial to run it several times.
   for (int iter = 0; iter < 3; ++iter) {
@@ -356,16 +377,19 @@ TEST_F(SignTest, StressTest) {
     // tests the handling of things like underflow.)  The second reason is
     // that most of the cases of SymbolicallyPerturbedSign() can only be
     // reached when one or more input point coordinates are zero.
-    TestGreatCircle(S2Point(1, 0, 0), S2Point(0, 1, 0), kNumPointsPerCircle);
-    TestGreatCircle(S2Point(1, 0, 0), S2Point(0, 0, 1), kNumPointsPerCircle);
-    TestGreatCircle(S2Point(0, -1, 0), S2Point(0, 0, 1), kNumPointsPerCircle);
+    TestGreatCircle(bitgen, S2Point(1, 0, 0), S2Point(0, 1, 0),
+                    kNumPointsPerCircle, kMinUniquePoints);
+    TestGreatCircle(bitgen, S2Point(1, 0, 0), S2Point(0, 0, 1),
+                    kNumPointsPerCircle, kMinUniquePoints);
+    TestGreatCircle(bitgen, S2Point(0, -1, 0), S2Point(0, 0, 1),
+                    kNumPointsPerCircle, kMinUniquePoints);
 
     // This tests a great circle where at least some points have X, Y, and Z
     // coordinates with exactly the same mantissa.  One useful property of
     // such points is that when they are scaled (e.g. multiplying by 1+eps),
     // all such points are exactly collinear with the origin.
-    TestGreatCircle(S2Point(1 << 25, 1, -8), S2Point(-4, -(1 << 20), 1),
-                    kNumPointsPerCircle);
+    TestGreatCircle(bitgen, S2Point(1 << 25, 1, -8), S2Point(-4, -(1 << 20), 1),
+                    kNumPointsPerCircle, kMinUniquePoints);
   }
 }
 
@@ -375,12 +399,15 @@ class StableSignTest : public testing::Test {
   // the determinant sign of a triangle A, B, C consisting of three points
   // that are as collinear as possible and spaced the given distance apart.
   double GetFailureRate(double km) {
-    const int kIters = 1000;
+    absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+        "STABLE_SIGN_TEST_FAILURE_RATE",
+        absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+    constexpr int kIters = 1000;
     int failure_count = 0;
     double m = tan(S2Testing::KmToAngle(km).radians());
     for (int iter = 0; iter < kIters; ++iter) {
       S2Point a, x, y;
-      S2Testing::GetRandomFrame(&a, &x, &y);
+      s2random::Frame(bitgen, a, x, y);
       S2Point b = (a - m * x).Normalize();
       S2Point c = (a + m * x).Normalize();
       int sign = s2pred::StableSign(a, b, c);
@@ -533,11 +560,11 @@ string PrecisionStats::ToString() {
 // Chooses a random S2Point that is often near the intersection of one of the
 // coodinates planes or coordinate axes with the unit sphere.  (It is possible
 // to represent very small perturbations near such points.)
-static S2Point ChoosePoint() {
-  S2Point x = S2Testing::RandomPoint();
+static S2Point ChoosePoint(absl::BitGenRef bitgen) {
+  S2Point x = s2random::Point(bitgen);
   for (int i = 0; i < 3; ++i) {
-    if (S2Testing::rnd.OneIn(3)) {
-      x[i] *= pow(1e-50, S2Testing::rnd.RandDouble());
+    if (absl::Bernoulli(bitgen, 1.0 / 3)) {
+      x[i] *= s2random::LogUniform(bitgen, 1e-50, 1.0);
     }
   }
   return x.Normalize();
@@ -710,15 +737,17 @@ TEST(CompareDistances, Consistency) {
   // since the input points are chosen to be pathological worst cases.)
   TestCompareDistancesConsistency<CosDistances>(
       S2Point(1, 0, 0), S2Point(0, -1, 0), S2Point(0, 1, 0));
-  auto& rnd = S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "COMPARE_DISTANCES_CONSISTENCY",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   PrecisionStats sin2_stats, cos_stats, minus_sin2_stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
-    rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
-    S2Point x = ChoosePoint();
-    S2Point dir = ChoosePoint();
-    S1Angle r = S1Angle::Radians(M_PI_2 * pow(1e-30, rnd.RandDouble()));
-    if (rnd.OneIn(2)) r = S1Angle::Radians(M_PI_2) - r;
-    if (rnd.OneIn(2)) r = S1Angle::Radians(M_PI_2) + r;
+    S2Point x = ChoosePoint(bitgen);
+    S2Point dir = ChoosePoint(bitgen);
+    S1Angle r =
+        S1Angle::Radians(M_PI_2 * s2random::LogUniform(bitgen, 1e-30, 1.0));
+    if (absl::Bernoulli(bitgen, 0.5)) r = S1Angle::Radians(M_PI_2) - r;
+    if (absl::Bernoulli(bitgen, 0.5)) r = S1Angle::Radians(M_PI_2) + r;
     S2Point a = S2::GetPointOnLine(x, dir, r);
     S2Point b = S2::GetPointOnLine(x, -dir, r);
     Precision prec = TestCompareDistancesConsistency<CosDistances>(x, a, b);
@@ -861,15 +890,17 @@ TEST(CompareDistance, Consistency) {
   // the answer given by a method at one level of precision is consistent with
   // the answer given at the next higher level of precision.  See also the
   // comments in the CompareDistances consistency test.
-  auto& rnd = S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "COMPARE_DISTANCE_CONSISTENCY",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   PrecisionStats sin2_stats, cos_stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
-    rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
-    S2Point x = ChoosePoint();
-    S2Point dir = ChoosePoint();
-    S1Angle r = S1Angle::Radians(M_PI_2 * pow(1e-30, rnd.RandDouble()));
-    if (rnd.OneIn(2)) r = S1Angle::Radians(M_PI_2) - r;
-    if (rnd.OneIn(5)) r = S1Angle::Radians(M_PI_2) + r;
+    S2Point x = ChoosePoint(bitgen);
+    S2Point dir = ChoosePoint(bitgen);
+    S1Angle r =
+        S1Angle::Radians(M_PI_2 * s2random::LogUniform(bitgen, 1e-30, 1.0));
+    if (absl::Bernoulli(bitgen, 0.5)) r = S1Angle::Radians(M_PI_2) - r;
+    if (absl::Bernoulli(bitgen, 0.2)) r = S1Angle::Radians(M_PI_2) + r;
     S2Point y = S2::GetPointOnLine(x, dir, r);
     Precision prec = TestCompareDistanceConsistency<CosDistance>(
         x, y, S1ChordAngle(r));
@@ -996,25 +1027,28 @@ TEST(CompareEdgeDistance, Consistency) {
   // checks that the answer given by a method at one level of precision is
   // consistent with the answer given at the next higher level of precision.
   // See also the comments in the CompareDistances consistency test.
-  auto& rnd = S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "COMPARE_EDGE_DISTANCE_CONSISTENCY",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   PrecisionStats stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
-    rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
-    S2Point a0 = ChoosePoint();
-    S1Angle len = S1Angle::Radians(M_PI * pow(1e-20, rnd.RandDouble()));
-    S2Point a1 = S2::GetPointOnLine(a0, ChoosePoint(), len);
-    if (rnd.OneIn(2)) a1 = -a1;
+    S2Point a0 = ChoosePoint(bitgen);
+    S1Angle len =
+        S1Angle::Radians(M_PI * s2random::LogUniform(bitgen, 1e-20, 1.0));
+    S2Point a1 = S2::GetPointOnLine(a0, ChoosePoint(bitgen), len);
+    if (absl::Bernoulli(bitgen, 0.5)) a1 = -a1;
     if (a0 == -a1) continue;  // Not allowed by API.
     S2Point n = S2::RobustCrossProd(a0, a1).Normalize();
-    double f = pow(1e-20, rnd.RandDouble());
+    double f = s2random::LogUniform(bitgen, 1e-20, 1.0);
     S2Point a = ((1 - f) * a0 + f * a1).Normalize();
-    S1Angle r = S1Angle::Radians(M_PI_2 * pow(1e-20, rnd.RandDouble()));
-    if (rnd.OneIn(2)) r = S1Angle::Radians(M_PI_2) - r;
+    S1Angle r =
+        S1Angle::Radians(M_PI_2 * s2random::LogUniform(bitgen, 1e-20, 1.0));
+    if (absl::Bernoulli(bitgen, 0.5)) r = S1Angle::Radians(M_PI_2) - r;
     S2Point x = S2::GetPointOnLine(a, n, r);
-    if (rnd.OneIn(5)) {
+    if (absl::Bernoulli(bitgen, 0.2)) {
       // Replace "x" with a random point that is closest to an edge endpoint.
       do {
-        x = ChoosePoint();
+        x = ChoosePoint(bitgen);
       } while (CompareEdgeDirections(a0, x, a0, a1) > 0 &&
                CompareEdgeDirections(x, a1, a0, a1) > 0);
       r = min(S1Angle(x, a0), S1Angle(x, a1));
@@ -1336,16 +1370,19 @@ TEST(CompareEdgeDirections, Consistency) {
   // then checks that the answer given by a method at one level of precision
   // is consistent with the answer given at the next higher level of
   // precision.  See also the comments in the CompareDistances test.
-  auto& rnd = S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "COMPARE_EDGE_DIRECTIONS_CONSISTENCY",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   PrecisionStats stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
-    rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
-    S2Point a0 = ChoosePoint();
-    S1Angle a_len = S1Angle::Radians(M_PI * pow(1e-20, rnd.RandDouble()));
-    S2Point a1 = S2::GetPointOnLine(a0, ChoosePoint(), a_len);
+    S2Point a0 = ChoosePoint(bitgen);
+    S1Angle a_len =
+        S1Angle::Radians(M_PI * s2random::LogUniform(bitgen, 1e-20, 1.0));
+    S2Point a1 = S2::GetPointOnLine(a0, ChoosePoint(bitgen), a_len);
     S2Point a_norm = S2::RobustCrossProd(a0, a1).Normalize();
-    S2Point b0 = ChoosePoint();
-    S1Angle b_len = S1Angle::Radians(M_PI * pow(1e-20, rnd.RandDouble()));
+    S2Point b0 = ChoosePoint(bitgen);
+    S1Angle b_len =
+        S1Angle::Radians(M_PI * s2random::LogUniform(bitgen, 1e-20, 1.0));
     S2Point b1 = S2::GetPointOnLine(b0, a_norm, b_len);
     if (a0 == -a1 || b0 == -b1) continue;  // Not allowed by API.
     Precision prec = TestCompareEdgeDirectionsConsistency(a0, a1, b0, b1);
@@ -1482,20 +1519,24 @@ TEST(EdgeCircumcenterSign, Consistency) {
   // that are nearly equidistant from X.  It then checks that the answer given
   // by a method at one level of precision is consistent with the answer given
   // at the next higher level of precision.
-  auto& rnd = S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "EDGE_CIRCUMCENTER_SIGN_CONSISTENCY",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   PrecisionStats stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
-    rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
-    S2Point x0 = ChoosePoint();
-    S2Point x1 = ChoosePoint();
+    S2Point x0 = ChoosePoint(bitgen);
+    S2Point x1 = ChoosePoint(bitgen);
     if (x0 == -x1) continue;  // Not allowed by API.
-    double c0 = (rnd.OneIn(2) ? -1 : 1) * pow(1e-20, rnd.RandDouble());
-    double c1 = (rnd.OneIn(2) ? -1 : 1) * pow(1e-20, rnd.RandDouble());
+    double c0 = (absl::Bernoulli(bitgen, 0.5) ? -1 : 1) *
+                s2random::LogUniform(bitgen, 1e-20, 1.0);
+    double c1 = (absl::Bernoulli(bitgen, 0.5) ? -1 : 1) *
+                s2random::LogUniform(bitgen, 1e-20, 1.0);
     S2Point z = (c0 * x0 + c1 * x1).Normalize();
-    S1Angle r = S1Angle::Radians(M_PI * pow(1e-30, rnd.RandDouble()));
-    S2Point a = S2::GetPointOnLine(z, ChoosePoint(), r);
-    S2Point b = S2::GetPointOnLine(z, ChoosePoint(), r);
-    S2Point c = S2::GetPointOnLine(z, ChoosePoint(), r);
+    S1Angle r =
+        S1Angle::Radians(M_PI * s2random::LogUniform(bitgen, 1e-30, 1.0));
+    S2Point a = S2::GetPointOnLine(z, ChoosePoint(bitgen), r);
+    S2Point b = S2::GetPointOnLine(z, ChoosePoint(bitgen), r);
+    S2Point c = S2::GetPointOnLine(z, ChoosePoint(bitgen), r);
     Precision prec = TestEdgeCircumcenterSignConsistency(x0, x1, a, b, c);
     // Don't skew the statistics by recording degenerate inputs.
     if (x0 == x1) {
@@ -1725,24 +1766,26 @@ Precision TestVoronoiSiteExclusionConsistency(
 }
 
 TEST(VoronoiSiteExclusion, Consistency) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "VORONOI_SITE_EXCLUSION",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // This test chooses random a random edge X, a random point P on that edge,
   // and a random threshold distance "r".  It then choose two sites A and B
   // whose distance to P is almost exactly "r".  This ensures that the
   // coverage intervals for A and B will (almost) share a common endpoint.  It
   // then checks that the answer given by a method at one level of precision
   // is consistent with the answer given at higher levels of precision.
-  auto& rnd = S2Testing::rnd;
   PrecisionStats stats;
   for (int iter = 0; iter < absl::GetFlag(FLAGS_consistency_iters); ++iter) {
-    rnd.Reset(iter + 1);  // Easier to reproduce a specific case.
-    S2Point x0 = ChoosePoint();
-    S2Point x1 = ChoosePoint();
+    S2Point x0 = ChoosePoint(bitgen);
+    S2Point x1 = ChoosePoint(bitgen);
     if (x0 == -x1) continue;  // Not allowed by API.
-    double f = pow(1e-20, rnd.RandDouble());
+    double f = s2random::LogUniform(bitgen, 1e-20, 1.0);
     S2Point p = ((1 - f) * x0 + f * x1).Normalize();
-    S1Angle r1 = S1Angle::Radians(M_PI_2 * pow(1e-20, rnd.RandDouble()));
-    S2Point a = S2::GetPointOnLine(p, ChoosePoint(), r1);
-    S2Point b = S2::GetPointOnLine(p, ChoosePoint(), r1);
+    S1Angle r1 =
+        S1Angle::Radians(M_PI_2 * s2random::LogUniform(bitgen, 1e-20, 1.0));
+    S2Point a = S2::GetPointOnLine(p, ChoosePoint(bitgen), r1);
+    S2Point b = S2::GetPointOnLine(p, ChoosePoint(bitgen), r1);
     // Check that the other API requirements are met.
     S1ChordAngle r(r1);
     if (s2pred::CompareEdgeDistance(a, x0, x1, r) > 0) continue;

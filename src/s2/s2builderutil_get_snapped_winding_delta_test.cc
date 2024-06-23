@@ -28,6 +28,9 @@
 #include <gtest/gtest.h>
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/id_set_lexicon.h"
@@ -43,6 +46,7 @@
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
@@ -340,26 +344,33 @@ using WindingTally = absl::btree_map<int, int>;
 // vertex, S2Error::FAILED_PRECONDITION is returned.
 class WindingNumberCheckingLayer : public S2Builder::Layer {
  public:
-  explicit WindingNumberCheckingLayer(InputEdgeId ref_input_edge_id,
-                                      InputEdgeId isolated_input_edge_id,
-                                      const S2Builder* builder,
-                                      WindingTally* winding_tally)
-      : ref_input_edge_id_(ref_input_edge_id),
+  WindingNumberCheckingLayer(absl::BitGenRef bitgen,
+                             InputEdgeId ref_input_edge_id,
+                             InputEdgeId isolated_input_edge_id,
+                             const S2Builder* builder,
+                             WindingTally* winding_tally)
+      : bitgen_(bitgen),
+        ref_input_edge_id_(ref_input_edge_id),
         isolated_input_edge_id_(isolated_input_edge_id),
-        builder_(*builder), winding_tally_(winding_tally) {
-  }
+        builder_(*builder),
+        winding_tally_(winding_tally) {}
 
   GraphOptions graph_options() const override {
     // Some of the graph options are chosen randomly.
-    return GraphOptions(
-        EdgeType::DIRECTED, DegenerateEdges::KEEP,
-        S2Testing::rnd.OneIn(2) ? DuplicateEdges::KEEP : DuplicateEdges::MERGE,
-        S2Testing::rnd.OneIn(2) ? SiblingPairs::KEEP : SiblingPairs::CREATE);
+    DuplicateEdges duplicate_edges = absl::Bernoulli(bitgen_, 0.5)
+                                         ? DuplicateEdges::KEEP
+                                         : DuplicateEdges::MERGE;
+    SiblingPairs sibling_pairs = absl::Bernoulli(bitgen_, 0.5)
+                                     ? SiblingPairs::KEEP
+                                     : SiblingPairs::CREATE;
+    return GraphOptions(EdgeType::DIRECTED, DegenerateEdges::KEEP,
+                        duplicate_edges, sibling_pairs);
   }
 
   void Build(const Graph& g, S2Error* error) override;
 
  private:
+  mutable absl::BitGenRef bitgen_;
   InputEdgeId ref_input_edge_id_;
   InputEdgeId isolated_input_edge_id_;
   const S2Builder& builder_;
@@ -422,24 +433,25 @@ TEST(GetSnappedWindingDelta, RandomLoops) {
   constexpr int numIters = 1000;  // Passes with 10,000,000 iterations.
   int num_not_isolated = 0;
   WindingTally winding_tally;
-  auto& rnd = S2Testing::rnd;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "RANDOM_LOOPS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < numIters; ++iter) {
-    S2Testing::rnd.Reset(iter + 1);  // For reproducability.
     SCOPED_TRACE(StrCat("Iteration ", iter));
 
     // Choose a random snap radius up to the allowable maximum.
-    S1Angle snap_radius = rnd.RandDouble() *
+    S1Angle snap_radius = absl::Uniform(bitgen, 0.0, 1.0) *
                           S2Builder::SnapFunction::kMaxSnapRadius();
     S2Builder builder{S2Builder::Options{
         s2builderutil::IdentitySnapFunction{snap_radius}}};
     builder.StartLayer(make_unique<WindingNumberCheckingLayer>(
-        0 /*ref_input_edge_id*/, 1 /*isolated_input_edge_id*/,
-        &builder, &winding_tally));
+        bitgen, 0 /*ref_input_edge_id*/, 1 /*isolated_input_edge_id*/, &builder,
+        &winding_tally));
 
     // Choose a random reference vertex, and an isolated vertex that is as far
     // away as possible.  (The small amount of perturbation reduces the number
     // of calls to S2::ExpensiveSign() and is not necessary for correctness.)
-    S2Point ref = S2Testing::RandomPoint();
+    S2Point ref = s2random::Point(bitgen);
     S2Point isolated = (-ref + 1e-12 * S2::Ortho(ref)).Normalize();
     builder.AddEdge(ref, ref);            // Reference vertex edge.
     builder.AddEdge(isolated, isolated);  // Isolated vertex edge.
@@ -452,15 +464,18 @@ TEST(GetSnappedWindingDelta, RandomLoops) {
     // (This can still happen with long edges, or because the reference
     // vertex snapped to a new location far away from its original location.)
     vector<S2Point> vertices_used, loop;
-    for (int num_loops = rnd.Uniform(5) + 1; --num_loops >= 0; ) {
-      for (int num_vertices = rnd.Uniform(9) + 1; --num_vertices >= 0; ) {
-        if (!vertices_used.empty() && rnd.OneIn(4)) {
-          loop.push_back(vertices_used[rnd.Uniform(vertices_used.size())]);
-        } else if (rnd.OneIn(3)) {
-          loop.push_back(S2Testing::SamplePoint(
-              S2Cap(ref, S1Angle::Radians(M_PI) - snap_radius)));
+    for (int num_loops = absl::Uniform(bitgen, 1, 6); --num_loops >= 0;) {
+      for (int num_vertices = absl::Uniform(bitgen, 1, 10);
+           --num_vertices >= 0;) {
+        if (!vertices_used.empty() && absl::Bernoulli(bitgen, 0.25)) {
+          loop.push_back(vertices_used[absl::Uniform<size_t>(
+              bitgen, 0, vertices_used.size())]);
+        } else if (absl::Bernoulli(bitgen, 1.0 / 3)) {
+          loop.push_back(s2random::SamplePoint(
+              bitgen, S2Cap(ref, S1Angle::Radians(M_PI) - snap_radius)));
         } else {
-          loop.push_back(S2Testing::SamplePoint(S2Cap(ref, snap_radius)));
+          loop.push_back(
+              s2random::SamplePoint(bitgen, S2Cap(ref, snap_radius)));
         }
       }
       builder.AddShape(S2LaxLoopShape(loop));

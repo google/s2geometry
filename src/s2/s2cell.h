@@ -19,9 +19,10 @@
 #define S2_S2CELL_H_
 
 #include <cmath>
+#include <cstdint>
+#include <vector>
 
-#include "s2/_fp_contract_off.h"
-#include "s2/base/types.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2rect.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell_id.h"
@@ -89,7 +90,7 @@ class S2Cell final : public S2Region {
   // to the Hilbert curve position at the center of the returned cell.  This
   // is a static function rather than a constructor in order to indicate what
   // the arguments represent.
-  static S2Cell FromFacePosLevel(int face, uint64 pos, int level) {
+  static S2Cell FromFacePosLevel(int face, uint64_t pos, int level) {
     return S2Cell(S2CellId::FromFacePosLevel(face, pos, level));
   }
 
@@ -139,7 +140,7 @@ class S2Cell final : public S2Region {
   // S2::kLimitIJ.
   //
   // For convenience, the argument is reduced modulo 4 to the range [0..3].
-  int32 GetIJCoordOfEdge(int k) const {
+  int32_t GetIJCoordOfEdge(int k) const {
     // We can just convert UV->ST->IJ for this because the IJ coordinates only
     // have 30 bits of resolution in each axis.  The error in the conversion
     // will be a couple of epsilon which is <<< 2^-30, so if we use a proper
@@ -288,9 +289,9 @@ class S2Cell final : public S2Region {
                                    bool to_interior) const;
 
   // This structure occupies 44 bytes plus one pointer for the vtable.
-  int8 face_;
-  int8 level_;
-  int8 orientation_;
+  int8_t face_;
+  int8_t level_;
+  int8_t orientation_;
   S2CellId id_;
   R2Rect uv_;
 };

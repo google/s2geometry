@@ -46,11 +46,12 @@
 #include <iterator>
 #include <memory>
 #include <ostream>  // NOLINT
-#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
+#include "absl/base/internal/throw_delegate.h"
 #include "absl/base/macros.h"
+#include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/meta/type_traits.h"
@@ -74,19 +75,19 @@ class compact_array_base {
   static const int kMaxSize = (1 << kSizeNumBits) - 1;
 
 #ifdef IS_LITTLE_ENDIAN
-  uint32 size_ : kSizeNumBits;          // number of valid items in the array
-  uint32 capacity_ : kCapacityNumBits;  // allocated array size
-  uint32 is_exponent_ : 1;              // whether capacity_ is an exponent
+  uint32_t size_ : kSizeNumBits;          // number of valid items in the array
+  uint32_t capacity_ : kCapacityNumBits;  // allocated array size
+  uint32_t is_exponent_ : 1;              // whether capacity_ is an exponent
 
   // This object might share memory representation (ie. union) with
   // other data structures. We reserved the DO_NOT_USE (32nd bit in
   // little endian format) to be used as a tag.
-  uint32 DO_NOT_USE : 1;
+  uint32_t DO_NOT_USE : 1;
 #else
-  uint32 DO_NOT_USE   : 1;
+  uint32 DO_NOT_USE : 1;
   uint32 is_exponent_ : 1;
-  uint32 capacity_    : kCapacityNumBits;
-  uint32 size_        : kSizeNumBits;
+  uint32 capacity_ : kCapacityNumBits;
+  uint32 size_ : kSizeNumBits;
 #endif
 
   // Opportunistically consider allowing inlined elements.
@@ -101,8 +102,9 @@ class compact_array_base {
     kMaxInlinedBytes = 11,
     kInlined = kMaxInlinedBytes / sizeof(T),
     kActualInlinedBytes = kInlined * sizeof(T),
-    kUnusedPaddingBytes = (kMaxInlinedBytes - kActualInlinedBytes) > 3 ?
-        3 : (kMaxInlinedBytes - kActualInlinedBytes)
+    kUnusedPaddingBytes = (kMaxInlinedBytes - kActualInlinedBytes) > 3
+                              ? 3
+                              : (kMaxInlinedBytes - kActualInlinedBytes)
   };
 
   T* Array() { return IsInlined() ? InlinedSpace() : pointer_; }
@@ -153,18 +155,18 @@ class compact_array_base {
       typename std::allocator_traits<A>::template rebind_alloc<T>;
 
  public:
-  typedef T                                     value_type;
-  typedef A                                     allocator_type;
-  typedef value_type*                           pointer;
-  typedef const value_type*                     const_pointer;
-  typedef value_type&                           reference;
-  typedef const value_type&                     const_reference;
-  typedef uint32 size_type;
-  typedef ptrdiff_t                             difference_type;
+  typedef T value_type;
+  typedef A allocator_type;
+  typedef value_type* pointer;
+  typedef const value_type* const_pointer;
+  typedef value_type& reference;
+  typedef const value_type& const_reference;
+  typedef uint32_t size_type;
+  typedef ptrdiff_t difference_type;
 
-  typedef value_type*                           iterator;
-  typedef const value_type*                     const_iterator;
-  typedef std::reverse_iterator<iterator>       reverse_iterator;
+  typedef value_type* iterator;
+  typedef const value_type* const_iterator;
+  typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
   // Init() replace the default constructors; so it can be used in "union".
@@ -233,14 +235,14 @@ class compact_array_base {
 
   static bool MayBeInlined() { return kInlined > 0; }
 
- public:                                // Container interface (tables 65,66).
+ public:  // Container interface (tables 65,66).
   iterator begin() { return Array(); }
-  iterator end()   { return Array() + size(); }
+  iterator end() { return Array() + size(); }
   const_iterator begin() const { return ConstArray(); }
-  const_iterator end() const   { return ConstArray() + size(); }
+  const_iterator end() const { return ConstArray() + size(); }
 
   reverse_iterator rbegin() { return reverse_iterator(end()); }
-  reverse_iterator rend()   { return reverse_iterator(Array()); }
+  reverse_iterator rend() { return reverse_iterator(Array()); }
   const_reverse_iterator rbegin() const {
     return const_reverse_iterator(end());
   }
@@ -251,22 +253,24 @@ class compact_array_base {
  private:
   // This Insert() is private because it might return the end().
   iterator Insert(const_iterator p, const value_type& v) {
-    if (size() >= kMaxSize) {
-      throw std::length_error("compact_array size exceeded");
+    if (ABSL_PREDICT_FALSE(size() >= kMaxSize)) {
+      // NOLINTNEXTLINE(build/namespaces)
+      absl::base_internal::ThrowStdLengthError("compact_array size exceeded");
     }
     iterator r = make_hole(p, 1);
     *r = v;
     return r;
   }
 
- public:                                // Sequence operations, table 67.
+ public:  // Sequence operations, table 67.
   iterator insert(const_iterator p, const value_type& v) {
     return Insert(p, v);
   }
 
   void insert(const_iterator p, size_type n, const value_type& v) {
-    if (n + size() > kMaxSize) {
-      throw std::length_error("compact_array size exceeded");
+    if (ABSL_PREDICT_FALSE(n > kMaxSize - size())) {
+      // NOLINTNEXTLINE(build/namespaces)
+      absl::base_internal::ThrowStdLengthError("compact_array size exceeded");
     }
     value_insert(p, n, v);
   }
@@ -301,9 +305,7 @@ class compact_array_base {
 
   // clear just resets the size to 0, without deallocating the storage.
   // To deallocate the array, use Destruct().
-  void clear() {
-    set_size(0);
-  }
+  void clear() { set_size(0); }
 
   reference front() { return begin()[0]; }
   const_reference front() const { return begin()[0]; }
@@ -314,38 +316,36 @@ class compact_array_base {
     iterator p = make_hole(end(), 1);
     *p = v;
   }
-  void pop_back() {
-    erase_aux(end()-1, 1);
-  }
+  void pop_back() { erase_aux(end() - 1, 1); }
 
   reference operator[](size_type n) {
-    ABSL_DCHECK_LT(n, size_);
+    ABSL_HARDENING_ASSERT(n < size_);
     return Array()[n];
   }
 
   const_reference operator[](size_type n) const {
-    ABSL_DCHECK_LT(n, size_);
+    ABSL_HARDENING_ASSERT(n < size_);
     return ConstArray()[n];
   }
 
   reference at(size_type n) {
-    if (n >= size_) {
-      throw std::out_of_range("compact_array index out of range");
+    if (ABSL_PREDICT_FALSE(n >= size_)) {
+      // NOLINTNEXTLINE(build/namespaces)
+      absl::base_internal::ThrowStdOutOfRange("compact_array_base::at");
     }
     return Array()[n];
   }
 
   const_reference at(size_type n) const {
-    if (n >= size_) {
-      throw std::out_of_range("compact_array index out of range");
+    if (ABSL_PREDICT_FALSE(n >= size_)) {
+      // NOLINTNEXTLINE(build/namespaces)
+      absl::base_internal::ThrowStdOutOfRange("compact_array_base::at");
     }
     return ConstArray()[n];
   }
 
   // Preallocate the array of size n. Only changes the capacity, not size.
-  void reserve(int n) {
-    reallocate(n);
-  }
+  void reserve(int n) { reallocate(n); }
 
   size_type capacity() const {
     return is_exponent_ ? (1 << capacity_) : capacity_;
@@ -361,8 +361,8 @@ class compact_array_base {
     if (n > size() &&
         !absl::is_trivially_default_constructible<value_type>::value) {
       // Increasing size would expose unconstructed elements.
-      value_type *new_end = Array() + n;
-      for (value_type *p = Array() + size(); p != new_end; ++p)
+      value_type* new_end = Array() + n;
+      for (value_type* p = Array() + size(); p != new_end; ++p)
         new (p) value_type();
     }
     set_size(n);
@@ -375,7 +375,7 @@ class compact_array_base {
         v.size());
   }
 
- private:                               // Low-level helper functions.
+ private:  // Low-level helper functions.
   void set_size(size_type n) {
     ABSL_DCHECK_LE(n, capacity());
     size_ = n;
@@ -395,7 +395,7 @@ class compact_array_base {
   // Make capacity n or more. Reallocate and copy data as necessary.
   void reallocate(size_type n) {
     size_type old_capacity = capacity();
-    if (n <= old_capacity)  return;
+    if (n <= old_capacity) return;
     set_capacity(n);
     if (MayBeInlined()) {
       if (!IsInlined() && n <= kInlined) {
@@ -449,7 +449,7 @@ class compact_array_base {
     set_size(new_size);
   }
 
- private:                               // Helper functions for range/value.
+ private:  // Helper functions for range/value.
   void value_init(size_type n, const value_type& v) {
     reserve(n);
     set_size(n);
@@ -458,8 +458,7 @@ class compact_array_base {
 
   template <typename InputIter>
   void range_init(InputIter first, InputIter last, std::input_iterator_tag) {
-    for ( ; first != last; ++first)
-      push_back(*first);
+    for (; first != last; ++first) push_back(*first);
   }
 
   template <typename ForwIter>
@@ -482,8 +481,9 @@ class compact_array_base {
   }
 
   void value_insert(const_iterator p, size_type n, const value_type& v) {
-    if (n + size() > kMaxSize) {
-      throw std::length_error("compact_array size exceeded");
+    if (ABSL_PREDICT_FALSE(n > kMaxSize - size())) {
+      // NOLINTNEXTLINE(build/namespaces)
+      absl::base_internal::ThrowStdLengthError("compact_array size exceeded");
     }
     iterator hole = make_hole(p, n);
     std::fill(hole, hole + n, v);
@@ -494,8 +494,7 @@ class compact_array_base {
                     std::input_iterator_tag) {
     size_type pos = p - begin();
     size_type old_size = size();
-    for (; first != last; ++first)
-      push_back(*first);
+    for (; first != last; ++first) push_back(*first);
     std::rotate(begin() + pos, begin() + old_size, end());
   }
 
@@ -503,8 +502,9 @@ class compact_array_base {
   void range_insert(const_iterator p, ForwIter first, ForwIter last,
                     std::forward_iterator_tag) {
     size_type n = std::distance(first, last);
-    if (n + size() > kMaxSize) {
-      throw std::length_error("compact_array size exceeded");
+    if (ABSL_PREDICT_FALSE(n > kMaxSize - size())) {
+      // NOLINTNEXTLINE(build/namespaces)
+      absl::base_internal::ThrowStdLengthError("compact_array size exceeded");
     }
     std::copy(first, last, make_hole(p, n));
   }
@@ -521,20 +521,20 @@ class compact_array_base {
     range_insert(p, first, last, Cat());
   }
   static_assert(absl::is_trivially_copy_constructible<value_type>::value &&
-                absl::is_trivially_copy_assignable<value_type>::value &&
-                absl::is_trivially_destructible<value_type>::value,
+                    absl::is_trivially_copy_assignable<value_type>::value &&
+                    absl::is_trivially_destructible<value_type>::value,
                 "Requires trivial copy, assignment, and destructor.");
 };
 
 // Allocates storage for constants in compact_array_base<T>
 template <typename T, typename A>
-    const int compact_array_base<T, A>::kSizeNumBits;
+const int compact_array_base<T, A>::kSizeNumBits;
 template <typename T, typename A>
-    const int compact_array_base<T, A>::kCapacityNumBits;
+const int compact_array_base<T, A>::kCapacityNumBits;
 template <typename T, typename A>
-    const int compact_array_base<T, A>::kMaxSize;
+const int compact_array_base<T, A>::kMaxSize;
 template <typename T, typename A>
-    const int compact_array_base<T, A>::kExponentStart;
+const int compact_array_base<T, A>::kExponentStart;
 
 // compact_array:  Wrapper for compact_array_base that provides the
 //  constructors and destructor.
@@ -562,13 +562,9 @@ class compact_array : public compact_array_base<T, A> {
     Base::Init();
   }
 
-  explicit compact_array(size_type n) {
-    Base::Construct(n, value_type());
-  }
+  explicit compact_array(size_type n) { Base::Construct(n, value_type()); }
 
-  compact_array(size_type n, const value_type& v) {
-    Base::Construct(n, v);
-  }
+  compact_array(size_type n, const value_type& v) { Base::Construct(n, v); }
 
   // See 23.1.1/9 in the C++ standard for an explanation.
   template <typename Iterator>
@@ -576,9 +572,7 @@ class compact_array : public compact_array_base<T, A> {
     Base::Copy(first, last);
   }
 
-  compact_array(const compact_array& v) {
-    Base::CopyFrom(v);
-  }
+  compact_array(const compact_array& v) { Base::CopyFrom(v); }
 
   compact_array(compact_array&& v) noexcept(
       noexcept(compact_array()) && noexcept(std::declval<Base&>().swap(v)))
@@ -599,16 +593,13 @@ class compact_array : public compact_array_base<T, A> {
     return *this;
   }
 
-  ~compact_array() {
-    Base::Destruct();
-  }
+  ~compact_array() { Base::Destruct(); }
 };
 
 // Comparison operators
 template <typename T, typename A>
 bool operator==(const compact_array<T, A>& x, const compact_array<T, A>& y) {
-  return x.size() == y.size() &&
-         std::equal(x.begin(), x.end(), y.begin());
+  return x.size() == y.size() && std::equal(x.begin(), x.end(), y.begin());
 }
 
 template <typename T, typename A>
@@ -648,11 +639,11 @@ struct LogArray : public gtl::LogLegacyUpTo100 {
   void Log(std::ostream& out, const ElementT& element) const {  // NOLINT
     out << element;
   }
-  void Log(std::ostream& out, int8 c) const {  // NOLINT
-    out << static_cast<int32>(c);
+  void Log(std::ostream& out, int8_t c) const {  // NOLINT
+    out << static_cast<int32_t>(c);
   }
-  void Log(std::ostream& out, uint8 c) const {  // NOLINT
-    out << static_cast<uint32>(c);
+  void Log(std::ostream& out, uint8_t c) const {  // NOLINT
+    out << static_cast<uint32_t>(c);
   }
 
   void LogOpening(std::ostream& out) const { out << "["; }  // NOLINT

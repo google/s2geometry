@@ -21,10 +21,10 @@
 #include <cstddef>
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/log/absl_check.h"
 #include "absl/strings/cord.h"
 #include "s2/util/coding/coder.h"
@@ -214,8 +214,8 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
 
    private:
     const EncodedS2ShapeIndex* index_ = nullptr;
-    int32 cell_pos_;  // Current position in the vector of index cells.
-    int32 num_cells_;
+    int32_t cell_pos_;  // Current position in the vector of index cells.
+    int32_t num_cells_;
   };
 
   // Returns the number of bytes currently occupied by the index (including any
@@ -252,7 +252,7 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
   Options options_;
 
   // The index encoding version.
-  uint8 version_;
+  uint8_t version_;
 
   // A vector containing all shapes in the index.  Initially all shapes are
   // set to kUndecodedShape(); as shapes are decoded, they are added to the
@@ -272,7 +272,7 @@ class EncodedS2ShapeIndex final : public S2ShapeIndex {
 
   // A bit vector indicating which elements of cells_ have been decoded.
   // All other elements of cells_ contain uninitialized (random) memory.
-  mutable std::vector<std::atomic<uint64>> cells_decoded_;
+  mutable std::vector<std::atomic<uint64_t>> cells_decoded_;
 
   // In order to minimize destructor time when very few cells of a large
   // S2ShapeIndex are needed, we keep track of the indices of the first few
@@ -357,7 +357,7 @@ inline const S2Shape* EncodedS2ShapeIndex::shape(int id) const {
 // Returns true if the given cell has already been decoded.
 inline bool EncodedS2ShapeIndex::cell_decoded(int i) const {
   // cell_decoded(i) uses acquire/release synchronization (see .cc file).
-  uint64 group_bits = cells_decoded_[i >> 6].load(std::memory_order_acquire);
+  uint64_t group_bits = cells_decoded_[i >> 6].load(std::memory_order_acquire);
   return (group_bits & (1ULL << (i & 63))) != 0;
 }
 
@@ -367,8 +367,8 @@ inline void EncodedS2ShapeIndex::set_cell_decoded(int i) const {
   // We use memory_order_release for the store operation below to ensure that
   // cells_decoded(i) sees the most recent value, however we can use
   // memory_order_relaxed for the load because cells_lock_ is held.
-  std::atomic<uint64>* group = &cells_decoded_[i >> 6];
-  uint64 bits = group->load(std::memory_order_relaxed);
+  std::atomic<uint64_t>* group = &cells_decoded_[i >> 6];
+  uint64_t bits = group->load(std::memory_order_relaxed);
   group->store(bits | 1ULL << (i & 63), std::memory_order_release);
 }
 

@@ -21,12 +21,12 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <limits>
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/s2builder.h"
 #include "s2/s2error.h"
@@ -55,14 +55,14 @@ class S2Builder::Graph {
  public:
   // Identifies a vertex in the graph.  Vertices are numbered sequentially
   // starting from zero.
-  using VertexId = int32;
+  using VertexId = int32_t;
 
   // Defines an edge as an (origin, destination) vertex pair.
   using Edge = std::pair<VertexId, VertexId>;
 
   // Identifies an edge in the graph.  Edges are numbered sequentially
   // starting from zero.
-  using EdgeId = int32;
+  using EdgeId = int32_t;
 
   // Identifies an S2Builder *input* edge (before snapping).
   using InputEdgeId = S2Builder::InputEdgeId;
@@ -695,26 +695,21 @@ class S2Builder::Graph {
   class PolylineBuilder;
 
   GraphOptions options_;
-  VertexId num_vertices_;  // Cached to avoid division by 24.
+  VertexId num_vertices_ = -1;  // Cached to avoid division by 24.
 
-  const std::vector<S2Point>* vertices_;
-  const std::vector<Edge>* edges_;
-  const std::vector<InputEdgeIdSetId>* input_edge_id_set_ids_;
-  const IdSetLexicon* input_edge_id_set_lexicon_;
-  const std::vector<LabelSetId>* label_set_ids_;
-  const IdSetLexicon* label_set_lexicon_;
+  const std::vector<S2Point>* vertices_ = nullptr;
+  const std::vector<Edge>* edges_ = nullptr;
+  const std::vector<InputEdgeIdSetId>* input_edge_id_set_ids_ = nullptr;
+  const IdSetLexicon* input_edge_id_set_lexicon_ = nullptr;
+  const std::vector<LabelSetId>* label_set_ids_ = nullptr;
+  const IdSetLexicon* label_set_lexicon_ = nullptr;
   IsFullPolygonPredicate is_full_polygon_predicate_;
 };
 
 
 //////////////////   Implementation details follow   ////////////////////
 
-
-inline S2Builder::Graph::Graph()
-    : options_(), num_vertices_(-1), vertices_(nullptr), edges_(nullptr),
-      input_edge_id_set_ids_(nullptr), input_edge_id_set_lexicon_(nullptr),
-      label_set_ids_(nullptr), label_set_lexicon_(nullptr) {
-}
+inline S2Builder::Graph::Graph() = default;
 
 inline const S2Builder::GraphOptions& S2Builder::Graph::options() const {
   return options_;

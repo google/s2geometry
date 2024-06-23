@@ -17,9 +17,11 @@
 #include "s2/s2point_compression.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <utility>
 #include <vector>
 
+#include "absl/base/attributes.h"
 #include "absl/base/casts.h"
 #include "absl/container/fixed_array.h"
 #include "absl/log/absl_check.h"
@@ -59,20 +61,20 @@ struct FaceRun {
     // but since this would only help if there were more than 21 faces, it will
     // be a small overall savings, much smaller than the bound encoding.
     encoder->put_varint64(
-        S2CellId::kNumFaces * absl::implicit_cast<int64>(count) + face);
+        S2CellId::kNumFaces * absl::implicit_cast<int64_t>(count) + face);
     ABSL_DCHECK_GE(encoder->avail(), 0);
   }
 
   bool Decode(Decoder* decoder) {
-    uint64 face_and_count;
+    uint64_t face_and_count;
     if (!decoder->get_varint64(&face_and_count)) return false;
 
     face = face_and_count % S2CellId::kNumFaces;
     // Make sure large counts don't wrap on malicious or random input.
-    const uint64 count64 = face_and_count / S2CellId::kNumFaces;
+    const uint64_t count64 = face_and_count / S2CellId::kNumFaces;
     count = count64;
 
-    return count > 0 && static_cast<uint64>(count) == count64;
+    return count > 0 && static_cast<uint64_t>(count) == count64;
   }
 
   int face;
@@ -94,10 +96,10 @@ class Faces {
     const vector<FaceRun>& faces_;
 
     // The index that the next face will come from.
-    int face_index_;
+    int face_index_ = 0;
 
     // Number of faces already consumed for face_index_.
-    int num_faces_used_for_index_;
+    int num_faces_used_for_index_ = 0;
   };
 
   Faces() = default;
@@ -139,7 +141,7 @@ void Faces::Encode(Encoder* encoder) const {
 }
 
 bool Faces::Decode(int num_vertices, Decoder* decoder) {
-  for (int64 num_faces_parsed = 0; num_faces_parsed < num_vertices; ) {
+  for (int64_t num_faces_parsed = 0; num_faces_parsed < num_vertices; ) {
     FaceRun face_run;
     if (!face_run.Decode(decoder)) return false;
     faces_.push_back(face_run);
@@ -150,10 +152,7 @@ bool Faces::Decode(int num_vertices, Decoder* decoder) {
   return true;
 }
 
-Faces::Iterator::Iterator(const Faces& faces)
-    : faces_(faces.faces_), face_index_(0),
-      num_faces_used_for_index_(0) {
-}
+Faces::Iterator::Iterator(const Faces& faces) : faces_(faces.faces_) {}
 
 int Faces::Iterator::Next() {
   ABSL_DCHECK_NE(faces_.size(), face_index_);
@@ -168,6 +167,7 @@ int Faces::Iterator::Next() {
 }
 
 // Unused function (for documentation purposes only).
+ABSL_ATTRIBUTE_UNUSED
 inline int STtoPiQi(double s, int level) {
   // We introduce a new coordinate system (pi, qi), which is (si, ti)
   // with the bits that are constant for cells of that level shifted
@@ -212,13 +212,13 @@ void EncodeFirstPointFixedLength(const pair<int, int>& vertex_pi_qi,
                                  NthDerivativeCoder* qi_coder,
                                  Encoder* encoder) {
   // Do not ZigZagEncode the first point, since it cannot be negative.
-  const uint32 pi = pi_coder->Encode(vertex_pi_qi.first);
-  const uint32 qi = qi_coder->Encode(vertex_pi_qi.second);
+  const uint32_t pi = pi_coder->Encode(vertex_pi_qi.first);
+  const uint32_t qi = qi_coder->Encode(vertex_pi_qi.second);
   // Interleave to reduce overhead from two partial bytes to one.
-  const uint64 interleaved_pi_qi = util_bits::InterleaveUint32(pi, qi);
+  const uint64_t interleaved_pi_qi = util_bits::InterleaveUint32(pi, qi);
 
   // Convert to little endian for architecture independence.
-  const uint64 little_endian_interleaved_pi_qi =
+  const uint64_t little_endian_interleaved_pi_qi =
       LittleEndian::FromHost64(interleaved_pi_qi);
 
   const int bytes_required = (level + 7) / 8 * 2;
@@ -234,12 +234,12 @@ void EncodePointCompressed(const pair<int, int>& vertex_pi_qi,
                            Encoder* encoder) {
   // ZigZagEncode, as varint requires the maximum number of bytes for
   // negative numbers.
-  const uint32 zig_zag_encoded_deriv_pi =
+  const uint32_t zig_zag_encoded_deriv_pi =
       ZigZagEncode(pi_coder->Encode(vertex_pi_qi.first));
-  const uint32 zig_zag_encoded_deriv_qi =
+  const uint32_t zig_zag_encoded_deriv_qi =
       ZigZagEncode(qi_coder->Encode(vertex_pi_qi.second));
   // Interleave to reduce overhead from two partial bytes to one.
-  const uint64 interleaved_zig_zag_encoded_derivs =
+  const uint64_t interleaved_zig_zag_encoded_derivs =
       util_bits::InterleaveUint32(zig_zag_encoded_deriv_pi,
                                   zig_zag_encoded_deriv_qi);
 
@@ -276,13 +276,13 @@ bool DecodeFirstPointFixedLength(Decoder* decoder,
                                  pair<int, int>* vertex_pi_qi) {
   const size_t bytes_required = (level + 7) / 8 * 2;
   if (decoder->avail() < bytes_required) return false;
-  uint64 little_endian_interleaved_pi_qi = 0;
+  uint64_t little_endian_interleaved_pi_qi = 0;
   decoder->getn(&little_endian_interleaved_pi_qi, bytes_required);
 
-  const uint64 interleaved_pi_qi =
+  const uint64_t interleaved_pi_qi =
       LittleEndian::ToHost64(little_endian_interleaved_pi_qi);
 
-  uint32 pi, qi;
+  uint32_t pi, qi;
   util_bits::DeinterleaveUint32(interleaved_pi_qi, &pi, &qi);
 
   vertex_pi_qi->first = pi_coder->Decode(pi);
@@ -296,12 +296,12 @@ bool DecodePointCompressed(Decoder* decoder,
                            NthDerivativeCoder* pi_coder,
                            NthDerivativeCoder* qi_coder,
                            pair<int, int>* vertex_pi_qi) {
-  uint64 interleaved_zig_zag_encoded_deriv_pi_qi;
+  uint64_t interleaved_zig_zag_encoded_deriv_pi_qi;
   if (!decoder->get_varint64(&interleaved_zig_zag_encoded_deriv_pi_qi)) {
     return false;
   }
 
-  uint32 zig_zag_encoded_deriv_pi, zig_zag_encoded_deriv_qi;
+  uint32_t zig_zag_encoded_deriv_pi, zig_zag_encoded_deriv_qi;
   util_bits::DeinterleaveUint32(interleaved_zig_zag_encoded_deriv_pi_qi,
                                 &zig_zag_encoded_deriv_pi,
                                 &zig_zag_encoded_deriv_qi);
@@ -381,7 +381,7 @@ bool S2DecodePointsCompressed(Decoder* decoder, int level,
     return false;
   }
   for (size_t i = 0; i < num_off_center; ++i) {
-    uint32 index;
+    uint32_t index;
     if (!decoder->get_varint32(&index) || index >= points.size()) {
       return false;
     }

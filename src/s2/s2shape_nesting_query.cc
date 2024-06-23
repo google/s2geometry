@@ -17,10 +17,10 @@
 #include "s2/s2shape_nesting_query.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/container/fixed_array.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
@@ -116,7 +116,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
   // random point on the other chains.  This choice is arbitrary, so we'll use
   // the first vertex of edge 1 so we can easily get the next and previous
   // points to check for orientation.
-  int32 datum_shell = options().datum_strategy()(shape);
+  int32_t datum_shell = options().datum_strategy()(shape);
   const S2Point vertices[3] = {
       shape->chain_edge(datum_shell, 0).v0,
       shape->chain_edge(datum_shell, 1).v0,
@@ -169,7 +169,7 @@ S2ShapeNestingQuery::ComputeShapeNesting(int shape_id) {
 
     // Walk through the intersected chains and toggle corresponding bits.
     for (const auto& edge : edges) {
-      int32 other_chain = shape->chain_position(edge.id().edge_id).chain_id;
+      int32_t other_chain = shape->chain_position(edge.id().edge_id).chain_id;
 
       parents[chain].Toggle(other_chain);
       if (other_chain != chain) {

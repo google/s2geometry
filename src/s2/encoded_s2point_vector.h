@@ -24,13 +24,13 @@
 #include <cstdint>
 #include <vector>
 
+#include "absl/log/absl_log.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_string_vector.h"
 #include "s2/encoded_uint_vector.h"
 #include "s2/s2coder.h"
 #include "s2/s2point.h"
-#include "s2/s2shape.h"
 
 namespace s2coding {
 
@@ -97,20 +97,20 @@ class EncodedS2PointVector {
   // TODO(ericv): Once additional formats have been implemented, consider
   // using std::variant<> instead.  It's unclear whether this would have
   // better or worse performance than the current approach.
-  enum Format : uint8 {
+  enum Format : uint8_t {
     UNCOMPRESSED = 0,
     CELL_IDS = 1,
   };
   Format format_;
-  uint32 size_;
+  uint32_t size_;
   union {
     struct {
       const S2Point* points;
     } uncompressed_;
     struct {
       EncodedStringVector blocks;
-      uint64 base;
-      uint8 level;
+      uint64_t base;
+      uint8_t level;
       bool have_exceptions;
 
       // TODO(ericv): Use std::atomic_flag to cache the last point decoded in

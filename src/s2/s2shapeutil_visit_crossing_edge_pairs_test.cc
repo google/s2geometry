@@ -194,7 +194,7 @@ TEST(GetCrossingEdgePairs, NoIntersectionsTwoIndexes) {
 }
 
 TEST(GetCrossingEdgePairs, EdgeGridOneIndex) {
-  const int kGridSize = 10;
+  constexpr int kGridSize = 10;
   double epsilon = 1e-10;
   // There are 11 horizontal and 11 vertical lines. The expected number of
   // interior crossings is 9x9, plus 9 "touching" intersections along each of
@@ -220,7 +220,7 @@ TEST(GetCrossingEdgePairs, EdgeGridOneIndex) {
 }
 
 TEST(GetCrossingEdgePairs, EdgeGridTwoIndexes) {
-  const int kGridSize = 10;
+  constexpr int kGridSize = 10;
   double epsilon = 1e-10;
 
   MutableS2ShapeIndex indexA;
@@ -278,7 +278,7 @@ void TestHasCrossingPermutations(vector<unique_ptr<S2Loop>>* loops, int i,
   }
 }
 
-// Given a string reprsenting a polygon, and a boolean indicating whether this
+// Given a string representing a polygon, and a boolean indicating whether this
 // polygon has any self-intersections or loop crossings, verify that
 // HasSelfIntersection returns the expected result for all possible cyclic
 // permutations of the loop vertices.

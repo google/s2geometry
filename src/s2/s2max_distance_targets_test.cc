@@ -15,13 +15,15 @@
 
 #include "s2/s2max_distance_targets.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/container/btree_set.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cap.h"
@@ -32,6 +34,7 @@
 #include "s2/s2point_vector_shape.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2testing.h"
@@ -49,13 +52,16 @@ TEST(S2MaxDistance, Constants) {
 }
 
 TEST(CellTarget, GetCapBound) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CELL_TARGET_GET_CAP_BOUND",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; i++) {
-    S2Cell cell = S2Cell{S2Testing::GetRandomCellId()};
+    S2Cell cell = S2Cell{s2random::CellId(bitgen)};
     S2MaxDistanceCellTarget target(cell);
     S2Cap cap = target.GetCapBound();
 
     for (int j = 0; j < 100; j++) {
-      S2Point p_test = S2Testing::RandomPoint();
+      S2Point p_test = s2random::Point(bitgen);
       // Check points outside of cap to be away from S2MaxDistance::Zero().
       if (!(cap.Contains(p_test))) {
         S1ChordAngle dist = cell.GetMaxDistance(p_test);
@@ -66,12 +72,15 @@ TEST(CellTarget, GetCapBound) {
 }
 
 TEST(IndexTarget, GetCapBound) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INDEX_TARGET_GET_CAP_BOUND",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   auto index = make_unique<MutableS2ShapeIndex>();
 
-  S2Polygon polygon(S2Cell{S2Testing::GetRandomCellId()});
+  S2Polygon polygon(S2Cell{s2random::CellId(bitgen)});
   index->Add(make_unique<S2Polygon::Shape>(&polygon));
 
-  S2Point p = S2Testing::RandomPoint();
+  S2Point p = s2random::Point(bitgen);
   vector<S2Point> pts = {p};
   index->Add(make_unique<S2PointVectorShape>(pts));
 
@@ -79,7 +88,7 @@ TEST(IndexTarget, GetCapBound) {
   S2Cap cap = target.GetCapBound();
 
   for (int j = 0; j < 100; j++) {
-    S2Point p_test = S2Testing::RandomPoint();
+    S2Point p_test = s2random::Point(bitgen);
     // Check points outside of cap to be away from S2MaxDistance::Zero().
     if (!(cap.Contains(p_test))) {
       S2MaxDistance cur_dist = S2MaxDistance::Infinity();
@@ -262,7 +271,7 @@ TEST(CellTarget, UpdateMaxDistanceToCellAntipodal) {
 
 vector<int> GetContainingShapes(S2MaxDistanceTarget* target,
                                 const S2ShapeIndex& index, int max_shapes) {
-  absl::btree_set<int32> shape_ids;
+  absl::btree_set<int32_t> shape_ids;
   (void)target->VisitContainingShapeIds(
       index,
       [&shape_ids, max_shapes](int shape_id, const S2Point& target_point) {

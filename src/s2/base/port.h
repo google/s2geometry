@@ -21,9 +21,8 @@
 // - Endianness
 // - Performance optimization (alignment)
 
+#include <cstdint>
 #include <cstring>
-
-#include "s2/base/types.h"
 
 // -----------------------------------------------------------------------------
 // Endianness
@@ -121,27 +120,27 @@ void UnalignedStore(void *p, T t) {
 }
 }  // namespace base
 
-inline uint16 UNALIGNED_LOAD16(const void *p) {
-  return base::UnalignedLoad<uint16>(p);
+inline uint16_t UNALIGNED_LOAD16(const void *p) {
+  return base::UnalignedLoad<uint16_t>(p);
 }
 
-inline uint32 UNALIGNED_LOAD32(const void *p) {
-  return base::UnalignedLoad<uint32>(p);
+inline uint32_t UNALIGNED_LOAD32(const void *p) {
+  return base::UnalignedLoad<uint32_t>(p);
 }
 
-inline uint64 UNALIGNED_LOAD64(const void *p) {
-  return base::UnalignedLoad<uint64>(p);
+inline uint64_t UNALIGNED_LOAD64(const void *p) {
+  return base::UnalignedLoad<uint64_t>(p);
 }
 
-inline void UNALIGNED_STORE16(void *p, uint16 v) {
+inline void UNALIGNED_STORE16(void *p, uint16_t v) {
   base::UnalignedStore(p, v);
 }
 
-inline void UNALIGNED_STORE32(void *p, uint32 v) {
+inline void UNALIGNED_STORE32(void *p, uint32_t v) {
   base::UnalignedStore(p, v);
 }
 
-inline void UNALIGNED_STORE64(void *p, uint64 v) {
+inline void UNALIGNED_STORE64(void *p, uint64_t v) {
   base::UnalignedStore(p, v);
 }
 

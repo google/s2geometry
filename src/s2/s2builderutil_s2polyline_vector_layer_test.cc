@@ -17,12 +17,12 @@
 
 #include "s2/s2builderutil_s2polyline_vector_layer.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
@@ -226,7 +226,7 @@ TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
   builder.AddPolyline(*MakePolylineOrDie("0:4, 0:5"));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
-  vector<vector<vector<int32>>> expected = {{{1}, {1, 2}, {2}}, {{}}};
+  vector<vector<vector<int32_t>>> expected = {{{1}, {1, 2}, {2}}, {{}}};
   ASSERT_EQ(expected.size(), label_set_ids.size());
   for (int i = 0; i < expected.size(); ++i) {
     ASSERT_EQ(expected[i].size(), label_set_ids[i].size());
@@ -234,7 +234,7 @@ TEST(S2PolylineVectorLayer, SimpleEdgeLabels) {
       ASSERT_EQ(expected[i][j].size(),
                 label_set_lexicon.id_set(label_set_ids[i][j]).size());
       int k = 0;
-      for (int32 label : label_set_lexicon.id_set(label_set_ids[i][j])) {
+      for (int32_t label : label_set_lexicon.id_set(label_set_ids[i][j])) {
         EXPECT_EQ(expected[i][j][k++], label);
       }
     }

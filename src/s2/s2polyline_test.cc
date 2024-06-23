@@ -26,6 +26,8 @@
 #include <gtest/gtest.h>
 
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
@@ -42,6 +44,7 @@
 #include "s2/s2point.h"
 #include "s2/s2point_span.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
@@ -125,6 +128,10 @@ TEST(S2Polyline, MoveAssign) {
 }
 
 TEST(S2Polyline, GetLengthAndCentroid) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_LENGTH_AND_CENTROID",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+
   // Construct random great circles and divide them randomly into segments.
   // Then make sure that the length and centroid are correct.  Note that
   // because of the way the centroid is computed, it does not matter how
@@ -133,11 +140,11 @@ TEST(S2Polyline, GetLengthAndCentroid) {
   for (int i = 0; i < 100; ++i) {
     // Choose a coordinate frame for the great circle.
     S2Point x, y, z;
-    S2Testing::GetRandomFrame(&x, &y, &z);
+    s2random::Frame(bitgen, x, y, z);
 
     vector<S2Point> vertices;
     for (double theta = 0; theta < 2 * M_PI;
-         theta += pow(S2Testing::rnd.RandDouble(), 10)) {
+         theta += pow(absl::Uniform(bitgen, 0.0, 1.0), 10)) {
       S2Point p = cos(theta) * x + sin(theta) * y;
       if (vertices.empty() || p != vertices.back())
         vertices.push_back(p);
@@ -649,8 +656,8 @@ TEST(S2PolylineCoveringTest, PartialOverlapOnly) {
 TEST(S2PolylineCoveringTest, ShortBacktracking) {
   // Two lines that backtrack a bit (less than 1.5 degrees) on different edges.
   // A simple greedy matching algorithm would fail on this example.
-  const string& t1 = "0:0, 0:2, 0:1, 0:4, 0:5";
-  const string& t2 = "0:0, 0:2, 0:4, 0:3, 0:5";
+  string_view t1 = "0:0, 0:2, 0:1, 0:4, 0:5";
+  string_view t2 = "0:0, 0:2, 0:4, 0:3, 0:5";
   TestNearlyCovers(t1, t2, 1.5, true, true);
   TestNearlyCovers(t1, t2, 0.5, false, false);
 }

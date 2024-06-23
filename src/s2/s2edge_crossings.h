@@ -34,7 +34,7 @@
 #include "absl/base/macros.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/log/absl_check.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/r2.h"
 #include "s2/r2rect.h"
 #include "s2/s1angle.h"
@@ -177,8 +177,8 @@ bool VertexCrossing(const S2Point& a, const S2Point& b,
 //  (1) SVC(a,a,c,d) == SVC(a,b,c,c) == 0
 //  (2) SVC(a,b,a,b) == +1
 //  (3) SVC(a,b,b,a) == -1
-//  (6) SVC(a,b,c,d) == -SVC(a,b,d,c) == -SVC(b,a,c,d) == SVC(b,a,d,c)
-//  (3) If exactly one of a,b equals one of c,d, then exactly one of
+//  (4) SVC(a,b,c,d) == -SVC(a,b,d,c) == -SVC(b,a,c,d) == SVC(b,a,d,c)
+//  (5) If exactly one of a,b equals one of c,d, then exactly one of
 //      SVC(a,b,c,d) and SVC(c,d,a,b) is non-zero
 //
 // It is an error to call this method with 4 distinct vertices.

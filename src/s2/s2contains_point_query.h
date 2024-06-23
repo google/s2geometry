@@ -21,7 +21,6 @@
 #include <functional>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/functional/function_ref.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2edge_crosser.h"
@@ -49,7 +48,7 @@
 // Note that points other than vertices are never contained by polylines.
 // If you need this behavior, use S2ClosestEdgeQuery::IsDistanceLess()
 // with a suitable distance threshold instead.
-enum class S2VertexModel : uint8 { OPEN, SEMI_OPEN, CLOSED };
+enum class S2VertexModel : uint8_t { OPEN, SEMI_OPEN, CLOSED };
 
 // This class defines the options supported by S2ContainsPointQuery.
 class S2ContainsPointQueryOptions {
@@ -179,7 +178,7 @@ class S2ContainsPointQuery {
                      const S2Point& p) const;
 
  private:
-  const IndexType* index_;
+  const IndexType* index_ = nullptr;
   Options options_;
   Iterator it_;
 };
@@ -212,9 +211,7 @@ inline void S2ContainsPointQueryOptions::set_vertex_model(S2VertexModel model) {
 }
 
 template <class IndexType>
-inline S2ContainsPointQuery<IndexType>::S2ContainsPointQuery()
-    : index_(nullptr) {
-}
+inline S2ContainsPointQuery<IndexType>::S2ContainsPointQuery() = default;
 
 template <class IndexType>
 inline S2ContainsPointQuery<IndexType>::S2ContainsPointQuery(

@@ -12,6 +12,7 @@
 
 #include <cinttypes>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -24,8 +25,8 @@
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2region_term_indexer.h"
-#include "s2/s2testing.h"
 
 using std::string;
 
@@ -38,6 +39,7 @@ S2_DEFINE_double(query_radius_km, 100, "Query radius in kilometers");
 static const char kPrefix[] = "s2:";
 
 int main(int argc, char** argv) {
+  std::mt19937_64 bitgen;
   // Create a set of "documents" to be indexed.  Each document consists of a
   // single point.  (You can easily substitute any S2Region type here, or even
   // index a mixture of region types using std::unique_ptr<S2Region>.  Other
@@ -46,7 +48,7 @@ int main(int argc, char** argv) {
   std::vector<S2Point> documents;
   documents.reserve(absl::GetFlag(FLAGS_num_documents));
   for (int docid = 0; docid < absl::GetFlag(FLAGS_num_documents); ++docid) {
-    documents.push_back(S2Testing::RandomPoint());
+    documents.push_back(s2random::Point(bitgen));
   }
 
   // We use a hash map as our inverted index.  The key is an index term, and
@@ -76,7 +78,7 @@ int main(int argc, char** argv) {
   int64_t num_found = 0;
   for (int i = 0; i < absl::GetFlag(FLAGS_num_queries); ++i) {
     // Choose a random center for query.
-    S2Cap query_region(S2Testing::RandomPoint(), radius);
+    S2Cap query_region(s2random::Point(bitgen), radius);
 
     // Convert the query region to a set of terms, and compute the union of
     // the document ids associated with those terms.  (An actual information

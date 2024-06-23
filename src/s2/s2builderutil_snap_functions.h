@@ -231,9 +231,9 @@ class IntLatLngSnapFunction : public S2Builder::SnapFunction {
 
  private:
   // Copying and assignment are allowed.
-  int exponent_;
+  int exponent_ = -1;
   S1Angle snap_radius_;
-  double from_degrees_, to_degrees_;
+  double from_degrees_ = 0, to_degrees_ = 0;
 };
 
 }  // namespace s2builderutil

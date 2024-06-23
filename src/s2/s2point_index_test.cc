@@ -20,9 +20,12 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 class S2PointIndexTest : public ::testing::Test {
@@ -121,15 +124,18 @@ TEST_F(S2PointIndexTest, DuplicatePoints) {
 }
 
 TEST_F(S2PointIndexTest, RandomPoints) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "RANDOM_POINTS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; ++i) {
-    Add(S2Testing::RandomPoint(), S2Testing::rnd.Uniform(100));
+    Add(s2random::Point(bitgen), absl::Uniform(bitgen, 0, 100));
   }
   Verify();
   // Now remove some of the points.
   for (int i = 0; i < 10; ++i) {
     S2PointIndex<int>::Iterator it(&index_);
     do {
-      it.Seek(S2Testing::GetRandomCellId(S2CellId::kMaxLevel));
+      it.Seek(s2random::CellId(bitgen, S2CellId::kMaxLevel));
     } while (it.done());
     Remove(it.point(), it.data());
     Verify();

@@ -37,27 +37,10 @@ using std::nextafter;
 
 static constexpr double kMaxLength2 = 4.0;
 
-S1ChordAngle::S1ChordAngle(S1Angle angle) {
-  if (angle.radians() < 0) {
-    *this = Negative();
-  } else if (angle == S1Angle::Infinity()) {
-    *this = Infinity();
-  } else {
-    // The chord length is 2 * sin(angle / 2).
-    double length = 2 * sin(0.5 * min(M_PI, angle.radians()));
-    length2_ = length * length;
-  }
-  ABSL_DCHECK(is_valid());
-}
-
 S1Angle S1ChordAngle::ToAngle() const {
   if (is_negative()) return S1Angle::Radians(-1);
   if (is_infinity()) return S1Angle::Infinity();
   return S1Angle::Radians(2 * asin(0.5 * sqrt(length2_)));
-}
-
-bool S1ChordAngle::is_valid() const {
-  return (length2_ >= 0 && length2_ <= kMaxLength2) || is_special();
 }
 
 S1ChordAngle S1ChordAngle::Successor() const {

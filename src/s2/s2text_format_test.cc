@@ -17,12 +17,15 @@
 
 #include <cmath>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
@@ -40,6 +43,7 @@
 #include "s2/s2point.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/util/math/mathutil.h"
@@ -52,7 +56,7 @@ using std::vector;
 
 namespace {
 
-static const int kIters = 10000;
+static constexpr int kIters = 10000;
 
 // Verify that s2textformat::ToString() formats the given lat/lng with at most
 // "max_digits" after the decimal point and has no trailing zeros.
@@ -100,41 +104,53 @@ TEST(ToString, NegativeZeros) {
 }
 
 TEST(ToString, MinimalDigitsE5) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "MINIMAL_DIGITS_E5",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
-    S2LatLng ll(S2Testing::RandomPoint());
+    S2LatLng ll(s2random::Point(bitgen));
     S2LatLng ll_e5 = S2LatLng::FromE5(ll.lat().e5(), ll.lng().e5());
     ExpectMaxDigits(ll_e5, 5);
   }
 }
 
 TEST(ToString, MinimalDigitsE6) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "MINIMAL_DIGITS_E6",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < kIters; ++iter) {
-    S2LatLng ll(S2Testing::RandomPoint());
+    S2LatLng ll(s2random::Point(bitgen));
     S2LatLng ll_e6 = S2LatLng::FromE6(ll.lat().e6(), ll.lng().e6());
     ExpectMaxDigits(ll_e6, 6);
   }
 }
 
 TEST(ToString, MinimalDigitsE7) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "MINIMAL_DIGITS_E7",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   ExpectMaxDigits(S2LatLng::FromDegrees(0, 0), 7);
   for (int iter = 0; iter < kIters; ++iter) {
-    S2LatLng ll(S2Testing::RandomPoint());
+    S2LatLng ll(s2random::Point(bitgen));
     S2LatLng ll_e7 = S2LatLng::FromE7(ll.lat().e7(), ll.lng().e7());
     ExpectMaxDigits(ll_e7, 7);
   }
 }
 
 TEST(ToString, MinimalDigitsDoubleConstants) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "MINIMAL_DIGITS_DOUBLE_CONSTANTS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Verify that points specified as floating-point literals in degrees using
   // up to 10 digits after the decimal point are formatted with the minimal
   // number of digits.
   for (int iter = 0; iter < kIters; ++iter) {
-    int max_digits = S2Testing::rnd.Uniform(11);
-    int64 scale = MathUtil::FastInt64Round(pow(10, max_digits));
-    int64 lat = MathUtil::FastInt64Round(
-        S2Testing::rnd.UniformDouble(-90 * scale, 90 * scale));
-    int64 lng = MathUtil::FastInt64Round(
-        S2Testing::rnd.UniformDouble(-180 * scale, 180 * scale));
+    int max_digits = absl::Uniform(bitgen, 0, 11);
+    int64_t scale = MathUtil::FastInt64Round(pow(10, max_digits));
+    int64_t lat = MathUtil::FastInt64Round(
+        absl::Uniform(bitgen, -90.0 * scale, 90.0 * scale));
+    int64_t lng = MathUtil::FastInt64Round(
+        absl::Uniform(bitgen, -180.0 * scale, 180.0 * scale));
     S2LatLng ll = S2LatLng::FromDegrees(lat / static_cast<double>(scale),
                                         lng / static_cast<double>(scale));
     ExpectMaxDigits(ll, max_digits);

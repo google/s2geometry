@@ -18,6 +18,7 @@
 #ifndef S2_S2SHAPE_H_
 #define S2_S2SHAPE_H_
 
+#include <cstdint>
 #include <iterator>
 
 #include "absl/log/absl_log.h"
@@ -106,9 +107,9 @@ class S2Shape {
   // edges, specified as a (start, length) pair.  The chain is defined to
   // consist of edge ids {start, start + 1, ..., start + length - 1}.
   struct Chain {
-    int32 start, length;
+    int32_t start, length;
     Chain() = default;
-    Chain(int32 _start, int32 _length) : start(_start), length(_length) {}
+    Chain(int32_t _start, int32_t _length) : start(_start), length(_length) {}
 
     friend bool operator==(const Chain& x, const Chain& y) {
       return x.start == y.start && x.length == y.length;
@@ -119,9 +120,9 @@ class S2Shape {
   // (chain_id, offset) pair.  Chains are numbered sequentially starting from
   // zero, and offsets are measured from the start of each chain.
   struct ChainPosition {
-    int32 chain_id, offset;
+    int32_t chain_id, offset;
     ChainPosition() = default;
-    ChainPosition(int32 _chain_id, int32 _offset)
+    ChainPosition(int32_t _chain_id, int32_t _offset)
         : chain_id(_chain_id), offset(_offset) {}
 
     friend bool operator==(const ChainPosition& x, const ChainPosition& y) {
@@ -155,7 +156,7 @@ class S2Shape {
   // associated with a given object can be accessed as shape.type_tag().
   //
   // Type tags in the range 0..8191 are reserved for use by the S2 library.
-  using TypeTag = uint32;
+  using TypeTag = uint32_t;
 
   // Indicates that a given S2Shape type cannot be encoded.
   static constexpr TypeTag kNoTypeTag = 0;

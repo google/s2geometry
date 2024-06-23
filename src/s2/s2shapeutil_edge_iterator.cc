@@ -26,8 +26,7 @@ using std::string;
 
 namespace s2shapeutil {
 
-EdgeIterator::EdgeIterator(const S2ShapeIndex* index)
-    : index_(index), shape_id_(-1), num_edges_(0), edge_id_(-1) {
+EdgeIterator::EdgeIterator(const S2ShapeIndex* index) : index_(index) {
   Next();
 }
 

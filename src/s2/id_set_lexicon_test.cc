@@ -18,23 +18,23 @@
 #include "s2/id_set_lexicon.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <string>
 #include <vector>
 
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 
 using std::vector;
 
-void ExpectIdSet(const vector<int32>& expected,
+void ExpectIdSet(const vector<int32_t>& expected,
                  const IdSetLexicon::IdSet& actual) {
   EXPECT_EQ(expected.size(), actual.size());
   EXPECT_TRUE(std::equal(expected.begin(), expected.end(), actual.begin()));
 }
 
 using IdSet = IdSetLexicon::IdSet;
-using Seq = vector<int32>;
+using Seq = vector<int32_t>;
 
 TEST(IdSetLexicon, EmptySet) {
   IdSetLexicon lexicon;
@@ -46,7 +46,7 @@ TEST(IdSetLexicon, SingletonSets) {
   EXPECT_EQ(5, lexicon.Add(Seq{5}));
   EXPECT_EQ(0, lexicon.Add(Seq{0, 0}));
   EXPECT_EQ(1, lexicon.AddSingleton(1));
-  int32 m = std::numeric_limits<int32>::max();
+  int32_t m = std::numeric_limits<int32_t>::max();
   EXPECT_EQ(m, lexicon.Add(&m, &m + 1));
 
   ExpectIdSet({0}, lexicon.id_set(0));

@@ -69,8 +69,8 @@
 // for sure that the hash is the identity hash.  If it's not, this
 // is needless work (and possibly, though not likely, harmful).
 
-template<typename Key, typename HashFunc,
-         typename SizeType, int HT_MIN_BUCKETS>
+template <typename Key, typename HashFunc, typename SizeType,
+          int HT_MIN_BUCKETS>
 class sh_hashtable_settings : public HashFunc {
  public:
   typedef Key key_type;
@@ -78,8 +78,7 @@ class sh_hashtable_settings : public HashFunc {
   typedef SizeType size_type;
 
  public:
-  sh_hashtable_settings(const hasher& hf,
-                        const float ht_occupancy_flt,
+  sh_hashtable_settings(const hasher& hf, const float ht_occupancy_flt,
                         const float ht_empty_flt)
       : hasher(hf),
         enlarge_threshold_(0),
@@ -92,7 +91,7 @@ class sh_hashtable_settings : public HashFunc {
     set_shrink_factor(ht_empty_flt);
   }
 
-  template<class K>
+  template <class K>
   size_type hash(const K& v) const {
     // We munge the hash value when we don't trust hasher::operator().  It is
     // very important that we use hash_munger<Key> instead of hash_munger<K>.
@@ -100,31 +99,15 @@ class sh_hashtable_settings : public HashFunc {
     return hash_munger<Key>::MungedHash(hasher::operator()(v));
   }
 
-  float enlarge_factor() const {
-    return enlarge_factor_;
-  }
-  void set_enlarge_factor(float f) {
-    enlarge_factor_ = f;
-  }
-  float shrink_factor() const {
-    return shrink_factor_;
-  }
-  void set_shrink_factor(float f) {
-    shrink_factor_ = f;
-  }
+  float enlarge_factor() const { return enlarge_factor_; }
+  void set_enlarge_factor(float f) { enlarge_factor_ = f; }
+  float shrink_factor() const { return shrink_factor_; }
+  void set_shrink_factor(float f) { shrink_factor_ = f; }
 
-  size_type enlarge_threshold() const {
-    return enlarge_threshold_;
-  }
-  void set_enlarge_threshold(size_type t) {
-    enlarge_threshold_ = t;
-  }
-  size_type shrink_threshold() const {
-    return shrink_threshold_;
-  }
-  void set_shrink_threshold(size_type t) {
-    shrink_threshold_ = t;
-  }
+  size_type enlarge_threshold() const { return enlarge_threshold_; }
+  void set_enlarge_threshold(size_type t) { enlarge_threshold_ = t; }
+  size_type shrink_threshold() const { return shrink_threshold_; }
+  void set_shrink_threshold(size_type t) { shrink_threshold_ = t; }
 
   size_type enlarge_size(size_type x) const {
     return std::min<size_type>(x - 1, x * enlarge_factor_);
@@ -133,33 +116,19 @@ class sh_hashtable_settings : public HashFunc {
     return static_cast<size_type>(x * shrink_factor_);
   }
 
-  bool consider_shrink() const {
-    return consider_shrink_;
-  }
-  void set_consider_shrink(bool t) {
-    consider_shrink_ = t;
-  }
+  bool consider_shrink() const { return consider_shrink_; }
+  void set_consider_shrink(bool t) { consider_shrink_ = t; }
 
-  bool use_empty() const {
-    return use_empty_;
-  }
-  void set_use_empty(bool t) {
-    use_empty_ = t;
-  }
+  bool use_empty() const { return use_empty_; }
+  void set_use_empty(bool t) { use_empty_ = t; }
 
-  bool use_deleted() const {
-    return use_deleted_;
-  }
-  void set_use_deleted(bool t) {
-    use_deleted_ = t;
-  }
+  bool use_deleted() const { return use_deleted_; }
+  void set_use_deleted(bool t) { use_deleted_ = t; }
 
   size_type num_ht_copies() const {
     return static_cast<size_type>(num_ht_copies_);
   }
-  void inc_num_ht_copies() {
-    ++num_ht_copies_;
-  }
+  void inc_num_ht_copies() { ++num_ht_copies_; }
 
   // Reset the enlarge and shrink thresholds
   void reset_thresholds(size_type num_buckets) {
@@ -174,8 +143,8 @@ class sh_hashtable_settings : public HashFunc {
   void set_resizing_parameters(float shrink, float grow) {
     assert(shrink >= 0.0);
     assert(grow <= 1.0);
-    if (shrink > grow/2.0f)
-      shrink = grow / 2.0f;     // otherwise we thrash hashtable size
+    if (shrink > grow / 2.0f)
+      shrink = grow / 2.0f;  // otherwise we thrash hashtable size
     set_shrink_factor(shrink);
     set_enlarge_factor(grow);
   }
@@ -185,9 +154,9 @@ class sh_hashtable_settings : public HashFunc {
   // This is guaranteed to return a power of two.
   size_type min_buckets(size_type num_elts, size_type min_buckets_wanted) {
     float enlarge = enlarge_factor();
-    size_type sz = HT_MIN_BUCKETS;             // min buckets allowed
-    while ( sz < min_buckets_wanted ||
-            num_elts >= static_cast<size_type>(sz * enlarge) ) {
+    size_type sz = HT_MIN_BUCKETS;  // min buckets allowed
+    while (sz < min_buckets_wanted ||
+           num_elts >= static_cast<size_type>(sz * enlarge)) {
       // This just prevents overflowing size_type, since sz can exceed
       // max_size() here.
       if (static_cast<size_type>(sz * 2) < sz) {
@@ -199,14 +168,14 @@ class sh_hashtable_settings : public HashFunc {
   }
 
  private:
-  template<class HashKey> class hash_munger {
+  template <class HashKey>
+  class hash_munger {
    public:
-    static size_t MungedHash(size_t hash) {
-      return hash;
-    }
+    static size_t MungedHash(size_t hash) { return hash; }
   };
   // This matches when the hashtable key is a pointer.
-  template<class HashKey> class hash_munger<HashKey*> {
+  template <class HashKey>
+  class hash_munger<HashKey*> {
    public:
     static size_t MungedHash(size_t hash) {
       // TODO(user): consider rotating instead:
@@ -214,7 +183,7 @@ class sh_hashtable_settings : public HashFunc {
       //    return (hash << (sizeof(hash) * 8) - shift)) | (hash >> shift);
       // This matters if we ever change sparse/dense_hash_* to compare
       // hashes before comparing actual values.  It's speedy on x86.
-      return hash / sizeof(void*);   // get rid of known-0 bits
+      return hash / sizeof(void*);  // get rid of known-0 bits
     }
   };
 
@@ -236,15 +205,18 @@ class sh_hashtable_settings : public HashFunc {
 //   struct Bar {};
 //   static_assert(sh_is_transparent<Foo>::value, "Foo is transparent.");
 //   staitc_assert(!sh_is_transparent<Bar>::value, "Bar is not transparent.");
-template<class T>
+template <class T>
 struct sh_is_transparent {
  private:
   struct No {};
-  struct Yes { No x[2]; };
+  struct Yes {
+    No x[2];
+  };
 
   template <class U>
   static Yes Test(typename U::is_transparent*);
-  template<class U> static No Test(...);
+  template <class U>
+  static No Test(...);
 
  public:
   enum { value = sizeof(Test<T>(nullptr)) == sizeof(Yes) };

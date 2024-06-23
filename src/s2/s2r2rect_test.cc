@@ -20,10 +20,13 @@
 
 #include "s2/s2r2rect.h"
 
+#include <cstdint>
 #include <string>
 
 #include <gtest/gtest.h>
 
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
@@ -38,6 +41,7 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2point.h"
 #include "s2/s2predicates.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 using absl::StrCat;
@@ -276,9 +280,12 @@ TEST(S2R2Rect, Bounds) {
   EXPECT_EQ(S2LatLngRect::FromPoint(S2LatLng::FromDegrees(0, 0)),
             S2R2Rect(R2Point(0.5, 0.5), R2Point(0.5, 0.5)).GetRectBound());
 
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "BOUNDS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 10; ++i) {
     SCOPED_TRACE(StrCat("i=", i));
-    S2R2Rect rect = S2R2Rect::FromCellId(S2Testing::GetRandomCellId());
+    S2R2Rect rect = S2R2Rect::FromCellId(s2random::CellId(bitgen));
     S2Cap cap = rect.GetCapBound();
     S2LatLngRect llrect = rect.GetRectBound();
     for (int k = 0; k < 4; ++k) {
@@ -324,5 +331,5 @@ TEST(S2R2Rect, CellOperations) {
   // Rectangle that intersects one corner of face 0.
   TestCellOps(
       S2R2Rect(R2Point(0.99, -0.01), R2Point(1.01, 0.01)),
-      S2Cell::FromFacePosLevel(0, ~uint64{0} >> S2CellId::kFaceBits, 5), 3);
+      S2Cell::FromFacePosLevel(0, ~uint64_t{0} >> S2CellId::kFaceBits, 5), 3);
 }

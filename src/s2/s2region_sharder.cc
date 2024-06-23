@@ -32,9 +32,9 @@ using std::vector;
 
 S2RegionSharder::S2RegionSharder(const vector<S2CellUnion>& shards) {
   for (int i = 0; i < shards.size(); ++i) {
-    index_.Add(shards[i], i);
+    owned_index_.Add(shards[i], i);
   }
-  index_.Build();
+  owned_index_.Build();
 }
 
 absl::flat_hash_map<int, S2CellUnion> ToS2CellUnionMap(
@@ -57,7 +57,7 @@ absl::flat_hash_map<int, S2CellUnion> S2RegionSharder::GetIntersectionsByShard(
   // Compute the intersection between the region covering and each shard
   // covering.
   absl::flat_hash_map<int, vector<S2CellId>> shards;
-  index_.VisitIntersectingCells(
+  index_->VisitIntersectingCells(
       region_covering,
       [&](const S2CellId cell_id, const S2CellIndex::Label label) {
         auto iter = shards.find(label);
@@ -121,9 +121,9 @@ int S2RegionSharder::GetMostIntersectingShard(const S2Region& region,
   // region, return the best intersection, or the default shard if there are
   // no intersecting candidates.
   int best_shard = default_shard;
-  int64 best_sum = 0;
+  int64_t best_sum = 0;
   for (const auto& shard : intersecting_shards) {
-    int64 sum = 0;
+    int64_t sum = 0;
     for (const S2CellId cell_id : shard.second) {
       sum += cell_id.lsb();
     }
