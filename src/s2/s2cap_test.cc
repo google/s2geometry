@@ -24,6 +24,8 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
@@ -38,6 +40,7 @@
 #include "s2/s2latlng_rect.h"
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 using std::vector;
@@ -325,9 +328,12 @@ TEST(S2Cap, GetCentroid) {
   EXPECT_LE(S2Cap::Full().GetCentroid().Norm(), 1e-15);
 
   // Random caps.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_CENTROID",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100; ++i) {
-    S2Point center = S2Testing::RandomPoint();
-    double height = S2Testing::rnd.UniformDouble(0.0, 2.0);
+    S2Point center = s2random::Point(bitgen);
+    double height = absl::Uniform(bitgen, 0.0, 2.0);
     S2Cap cap = S2Cap::FromCenterHeight(center, height);
     S2Point centroid = cap.GetCentroid();
     S2Point expected = center * (1.0 - height / 2.0) * cap.GetArea();

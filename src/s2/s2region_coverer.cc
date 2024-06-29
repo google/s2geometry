@@ -18,6 +18,7 @@
 #include "s2/s2region_coverer.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -48,8 +49,9 @@ S2RegionCoverer::S2RegionCoverer(const S2RegionCoverer::Options& options) :
 // Defaulted in the implementation to prevent inline bloat.
 S2RegionCoverer::S2RegionCoverer() = default;
 S2RegionCoverer::~S2RegionCoverer() = default;
-S2RegionCoverer::S2RegionCoverer(S2RegionCoverer&&) = default;
-S2RegionCoverer& S2RegionCoverer::operator=(S2RegionCoverer&&) = default;
+S2RegionCoverer::S2RegionCoverer(S2RegionCoverer&&) noexcept = default;
+S2RegionCoverer& S2RegionCoverer::operator=(S2RegionCoverer&&) noexcept =
+    default;
 
 void S2RegionCoverer::Options::set_max_cells(int max_cells) {
   max_cells_ = max_cells;
@@ -445,7 +447,7 @@ void S2RegionCoverer::CanonicalizeCovering(vector<S2CellId>* covering) {
   // If there are too many cells and the covering is very large, use the
   // S2RegionCoverer to compute a new covering.  (This avoids possible O(n^2)
   // behavior of the simpler algorithm below.)
-  int64 excess = covering->size() - options_.max_cells();
+  int64_t excess = covering->size() - options_.max_cells();
   if (excess <= 0 || IsCanonical(*covering)) {
     return;
   }

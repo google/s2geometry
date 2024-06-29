@@ -125,15 +125,15 @@ struct UnitConverter {
     return static_cast<Float>(
         (static_cast<double>(
             value * (static_cast<double>(
-                         static_cast<uint64>(ToUnit::SCALE_NUMERATOR) *
+                         static_cast<uint64_t>(ToUnit::SCALE_NUMERATOR) *
                          FromUnit::SCALE_DENOMINATOR) /
                      static_cast<double>(
-                         static_cast<uint64>(ToUnit::SCALE_DENOMINATOR) *
+                         static_cast<uint64_t>(ToUnit::SCALE_DENOMINATOR) *
                          FromUnit::SCALE_NUMERATOR)))) -
-        (static_cast<double>(static_cast<uint64>(ToUnit::SCALE_NUMERATOR) *
+        (static_cast<double>(static_cast<uint64_t>(ToUnit::SCALE_NUMERATOR) *
                              FromUnit::SCALE_DENOMINATOR *
                              FromUnit::OFFSET_NUMERATOR) /
-         static_cast<double>(static_cast<uint64>(ToUnit::SCALE_DENOMINATOR) *
+         static_cast<double>(static_cast<uint64_t>(ToUnit::SCALE_DENOMINATOR) *
                              FromUnit::SCALE_NUMERATOR *
                              FromUnit::OFFSET_DENOMINATOR)) +
         (static_cast<double>(ToUnit::OFFSET_NUMERATOR) /

@@ -88,7 +88,7 @@ double GetArea(const S2Shape& shape) {
   for (int chain_id = 0; chain_id < num_chains; ++chain_id) {
     GetChainVertices(shape, chain_id, &vertices);
     area += S2::GetSignedArea(S2PointLoopSpan(vertices));
-    if (google::DEBUG_MODE) {
+    if (S2_DEBUG_MODE) {
       max_error += S2::GetCurvatureMaxError(S2PointLoopSpan(vertices));
     }
   }

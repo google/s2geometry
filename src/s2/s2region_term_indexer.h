@@ -238,8 +238,8 @@ class S2RegionTermIndexer {
   // S2RegionTermIndexer is movable but not copyable.
   S2RegionTermIndexer(const S2RegionTermIndexer&) = delete;
   S2RegionTermIndexer& operator=(const S2RegionTermIndexer&) = delete;
-  S2RegionTermIndexer(S2RegionTermIndexer&&);
-  S2RegionTermIndexer& operator=(S2RegionTermIndexer&&);
+  S2RegionTermIndexer(S2RegionTermIndexer&&) noexcept;
+  S2RegionTermIndexer& operator=(S2RegionTermIndexer&&) noexcept;
 
   // Returns the current options.  Options can be modifed between calls.
   const Options& options() const { return options_; }

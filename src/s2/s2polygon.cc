@@ -22,6 +22,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <queue>
 #include <stack>
@@ -97,12 +98,6 @@ using std::sqrt;
 using std::unique_ptr;
 using std::vector;
 
-S2_DEFINE_bool(
-    s2polygon_lazy_indexing, true,
-    "Build the S2ShapeIndex only when it is first needed.  This can save "
-    "significant amounts of memory and time when geometry is constructed but "
-    "never queried, for example when converting from one format to another.");
-
 // The maximum number of loops we'll allow when decoding a polygon.
 // The default value of 10 million is 200x bigger than the number of
 S2_DEFINE_int32(
@@ -132,12 +127,9 @@ S2Polygon::S2Polygon(const S2Cell& cell)
   Init(make_unique<S2Loop>(cell));
 }
 
-S2Polygon::S2Polygon(S2Polygon&& b)
-    : S2Region(std::move(b)),
-      // We have moved only the S2Region base slice.  Suppress false-positive
-      // warnings from moving the rest.
-      // NOLINTBEGIN(bugprone-use-after-move)
-      loops_(std::move(b.loops_)),
+S2Polygon::S2Polygon(S2Polygon&& b) noexcept
+    // S2Region has no members, so does not need to be moved.
+    : loops_(std::move(b.loops_)),
       s2debug_override_(std::move(b.s2debug_override_)),
       error_inconsistent_loop_orientations_(
           std::exchange(b.error_inconsistent_loop_orientations_, 0)),
@@ -147,7 +139,6 @@ S2Polygon::S2Polygon(S2Polygon&& b)
       bound_(std::move(b.bound_)),
       subregion_bound_(std::move(b.subregion_bound_)),
       index_(std::move(b.index_)) {
-  // NOLINTEND(bugprone-use-after-move)
   // `index_` has a pointer to an S2Polygon::Shape which points to S2Polygon.
   // But, we've moved to a new address, so get the Shape back out of the index
   // and update it to point to our new location.
@@ -156,11 +147,8 @@ S2Polygon::S2Polygon(S2Polygon&& b)
   }
 }
 
-S2Polygon& S2Polygon::operator=(S2Polygon&& b) {
-  // We need to delegate to our parent move-assignment operator since we can't
-  // move any of its private state.  This is a little odd since b is in a
-  // half-moved state after calling but is ultimately safe.
-  S2Region::operator=(static_cast<S2Region&&>(b));
+S2Polygon& S2Polygon::operator=(S2Polygon&& b) noexcept {
+  // S2Region has no members, so does not need to be assigned.
   loops_ = std::move(b.loops_);
   s2debug_override_ = std::move(b.s2debug_override_);
   error_inconsistent_loop_orientations_ =
@@ -361,9 +349,6 @@ void S2Polygon::InitLoops(LoopMap* loop_map) {
 void S2Polygon::InitIndex() {
   ABSL_DCHECK_EQ(0, index_.num_shape_ids());
   index_.Add(make_unique<Shape>(this));
-  if (!absl::GetFlag(FLAGS_s2polygon_lazy_indexing)) {
-    index_.ForceBuild();
-  }
   if (absl::GetFlag(FLAGS_s2debug) && s2debug_override_ == S2Debug::ALLOW) {
     // Note that FLAGS_s2debug is false in optimized builds (by default).
     ABSL_CHECK(IsValid());
@@ -373,6 +358,11 @@ void S2Polygon::InitIndex() {
 void S2Polygon::ClearIndex() {
   unindexed_contains_calls_.store(0, std::memory_order_relaxed);
   index_.Clear();
+}
+
+void S2Polygon::ForceBuildIndex() {
+  for (auto& loop : loops_) loop->ForceBuildIndex();
+  index_.ForceBuild();
 }
 
 void S2Polygon::InitNested(vector<unique_ptr<S2Loop>> loops) {
@@ -823,14 +813,14 @@ bool S2Polygon::Decode(Decoder* const decoder) {
 }
 
 bool S2Polygon::DecodeUncompressed(Decoder* const decoder) {
-  if (decoder->avail() < 2 * sizeof(uint8) + sizeof(uint32)) return false;
+  if (decoder->avail() < 2 * sizeof(uint8_t) + sizeof(uint32_t)) return false;
   ClearLoops();
   decoder->get8();  // Ignore irrelevant serialized owns_loops_ value.
   decoder->get8();  // Ignore irrelevant serialized has_holes_ value.
   // Polygons with no loops are explicitly allowed here: a newly created
   // polygon has zero loops and such polygons encode and decode properly.
-  const uint32 num_loops = decoder->get32();
-  if (num_loops > static_cast<uint32>(
+  const uint32_t num_loops = decoder->get32();
+  if (num_loops > static_cast<uint32_t>(
                       absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops)))
     return false;
   loops_.reserve(num_loops);
@@ -876,7 +866,7 @@ void S2Polygon::Invert() {
   // Inverting any one loop will invert the polygon.  The best loop to invert
   // is the one whose area is largest, since this yields the smallest area
   // after inversion.  The loop with the largest area is always at depth 0.
-  // The descendents of this loop all have their depth reduced by 1, while the
+  // The descendants of this loop all have their depth reduced by 1, while the
   // former siblings of this loop all have their depth increased by 1.
 
   // The empty and full polygons are handled specially.
@@ -1047,8 +1037,8 @@ void S2Polygon::InitFromBuilder(const S2Polygon& a, S2Builder* builder) {
   if (!builder->Build(&error)) {
     ABSL_LOG(ERROR) << "Could not build polygon: " << error;
   }
-  // If there are no loops, check whether the result should be the full
-  // polygon rather than the empty one.  (See InitToIntersection.)
+  // If there are no loops, check whether the result should be the full polygon
+  // rather than the empty one.
   if (num_loops() == 0) {
     if (a.bound_.Area() > 2 * M_PI && a.GetArea() > 2 * M_PI) Invert();
   }
@@ -1077,9 +1067,9 @@ void S2Polygon::InitToSimplified(const S2Polygon& a,
 // comparisons are to within a maximum "u" or "v" error of "tolerance_uv".
 // Bit "i" in the result is set if and only "p" is incident to the edge
 // corresponding to S2Cell::edge(i).
-uint8 GetCellEdgeIncidenceMask(const S2Cell& cell, const S2Point& p,
+uint8_t GetCellEdgeIncidenceMask(const S2Cell& cell, const S2Point& p,
                                  double tolerance_uv) {
-  uint8 mask = 0;
+  uint8_t mask = 0;
   R2Point uv;
   if (S2::FaceXYZtoUV(cell.face(), p, &uv)) {
     R2Rect bound = cell.GetBoundUV();
@@ -1164,7 +1154,7 @@ void S2Polygon::InitToSimplifiedInCell(const S2Polygon& a, const S2Cell& cell,
     return;
   }
   // If there are no loops, check whether the result should be the full
-  // polygon rather than the empty one.  (See InitToIntersection.)
+  // polygon rather than the empty one.
   if (num_loops() == 0) {
     if (a.bound_.Area() > 2 * M_PI && a.GetArea() > 2 * M_PI) Invert();
   }
@@ -1184,11 +1174,11 @@ vector<unique_ptr<S2Polyline>> S2Polygon::SimplifyEdgesInCell(
   for (int i = 0; i < a.num_loops(); ++i) {
     const S2Loop& a_loop = *a.loop(i);
     const S2Point* v0 = &a_loop.oriented_vertex(0);
-    uint8 mask0 = GetCellEdgeIncidenceMask(cell, *v0, tolerance_uv);
+    uint8_t mask0 = GetCellEdgeIncidenceMask(cell, *v0, tolerance_uv);
     bool in_interior = false;  // Was the last edge an interior edge?
     for (int j = 1; j <= a_loop.num_vertices(); ++j) {
       const S2Point* v1 = &a_loop.oriented_vertex(j);
-      uint8 mask1 = GetCellEdgeIncidenceMask(cell, *v1, tolerance_uv);
+      uint8_t mask1 = GetCellEdgeIncidenceMask(cell, *v1, tolerance_uv);
       if ((mask0 & mask1) != 0) {
         // This is an edge along the cell boundary.  Such edges do not get
         // simplified; we add them directly to the output.  (We create a
@@ -1384,7 +1374,7 @@ void S2Polygon::InitToCellUnionBorder(const S2CellUnion& cells) {
   // happen: either the cell union is empty, or it consists of all six faces.
   if (num_loops() == 0) {
     if (cells.empty()) return;
-    ABSL_DCHECK_EQ(uint64{6} << (2 * S2CellId::kMaxLevel),
+    ABSL_DCHECK_EQ(uint64_t{6} << (2 * S2CellId::kMaxLevel),
                    cells.LeafCellsCovered());
     Invert();
   }
@@ -1515,15 +1505,15 @@ void S2Polygon::EncodeCompressed(Encoder* encoder,
 }
 
 bool S2Polygon::DecodeCompressed(Decoder* decoder) {
-  if (decoder->avail() < sizeof(uint8)) return false;
+  if (decoder->avail() < sizeof(uint8_t)) return false;
   ClearLoops();
   int snap_level = decoder->get8();
   if (snap_level > S2CellId::kMaxLevel) return false;
   // Polygons with no loops are explicitly allowed here: a newly created
   // polygon has zero loops and such polygons encode and decode properly.
-  uint32 num_loops;
+  uint32_t num_loops;
   if (!decoder->get_varint32(&num_loops)) return false;
-  if (num_loops > static_cast<uint32>(
+  if (num_loops > static_cast<uint32_t>(
                       absl::GetFlag(FLAGS_s2polygon_decode_max_num_loops)))
     return false;
   loops_.reserve(num_loops);
@@ -1543,21 +1533,18 @@ bool S2Polygon::DecodeCompressed(Decoder* decoder) {
   return true;
 }
 
-S2Polygon::Shape::Shape(const S2Polygon* polygon)
-    : loop_starts_(nullptr) {
-  Init(polygon);
-}
+S2Polygon::Shape::Shape(const S2Polygon* polygon) { Init(polygon); }
 
 void S2Polygon::Shape::Init(const S2Polygon* polygon) {
   polygon_ = polygon;
   loop_starts_ = nullptr;
-  uint32 offset = 0;
+  uint32_t offset = 0;
   if (!polygon->is_full()) {
     const int kMaxLinearSearchLoops = 12;  // From benchmarks.
     int num_loops = polygon->num_loops();
     if (num_loops > kMaxLinearSearchLoops) {
       // Unlike make_unique<>, new T[] does not default-construct each element.
-      loop_starts_.reset(new uint32[num_loops + 1]);  // NOLINT
+      loop_starts_.reset(new uint32_t[num_loops + 1]);  // NOLINT
     }
     for (int i = 0; i < num_loops; ++i) {
       if (loop_starts_) loop_starts_[i] = offset;

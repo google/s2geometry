@@ -50,9 +50,9 @@ Encoder::~Encoder() {
   if (ensure_allowed()) DeleteBuffer(underlying_buffer_, capacity());
 }
 
-int Encoder::varint32_length(uint32 v) { return Varint::Length32(v); }
+int Encoder::varint32_length(uint32_t v) { return Varint::Length32(v); }
 
-int Encoder::varint64_length(uint64 v) { return Varint::Length64(v); }
+int Encoder::varint64_length(uint64_t v) { return Varint::Length64(v); }
 
 std::pair<unsigned char*, size_t> Encoder::NewBuffer(size_t size) {
   auto* p = std::allocator<unsigned char>().allocate(size);

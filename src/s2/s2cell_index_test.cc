@@ -18,19 +18,23 @@
 #include "s2/s2cell_index.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2cell_union.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 using absl::flat_hash_set;
@@ -263,20 +267,23 @@ TEST_F(S2CellIndexTest, NestedCells) {
 }
 
 // Creates a cell union from a small number of random cells at random levels.
-S2CellUnion GetRandomCellUnion() {
+S2CellUnion GetRandomCellUnion(absl::BitGenRef bitgen) {
   vector<S2CellId> ids;
   for (int j = 0; j < 10; ++j) {
-    ids.push_back(S2Testing::GetRandomCellId());
+    ids.push_back(s2random::CellId(bitgen));
   }
   return S2CellUnion(std::move(ids));
 }
 
 TEST_F(S2CellIndexTest, RandomCellUnions) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "RANDOM_CELL_UNIONS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Construct cell unions from random S2CellIds at random levels.  Note that
   // because the cell level is chosen uniformly, there is a very high
   // likelihood that the cell unions will overlap.
   for (int i = 0; i < 100; ++i) {
-    Add(GetRandomCellUnion(), i);
+    Add(GetRandomCellUnion(bitgen), i);
   }
   QuadraticValidate();
 }
@@ -386,32 +393,39 @@ TEST_F(S2CellIndexTest, IntersectionOptimization) {
 }
 
 TEST_F(S2CellIndexTest, IntersectionRandomUnions) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INTERSECTION_RANDOM_UNIONS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // Construct cell unions from random S2CellIds at random levels.  Note that
   // because the cell level is chosen uniformly, there is a very high
   // likelihood that the cell unions will overlap.
   for (int i = 0; i < 100; ++i) {
-    Add(GetRandomCellUnion(), i);
+    Add(GetRandomCellUnion(bitgen), i);
   }
   Build();
   // Now repeatedly query a cell union constructed in the same way.
   for (int i = 0; i < 200; ++i) {
-    TestIntersection(GetRandomCellUnion());
+    TestIntersection(GetRandomCellUnion(bitgen));
   }
 }
 
 TEST_F(S2CellIndexTest, IntersectionSemiRandomUnions) {
   // This test also uses random S2CellUnions, but the unions are specially
   // constructed so that interesting cases are more likely to arise.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INTERSECTION_SEMI_RANDOM_UNIONS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 200; ++iter) {
     index_.Clear();
     S2CellId id = S2CellId::FromDebugString("1/0123012301230123");
     vector<S2CellId> target;
     for (int i = 0; i < 100; ++i) {
-      if (S2Testing::rnd.OneIn(10)) Add(id, i);
-      if (S2Testing::rnd.OneIn(4)) target.push_back(id);
-      if (S2Testing::rnd.OneIn(2)) id = id.next_wrap();
-      if (S2Testing::rnd.OneIn(6) && !id.is_face()) id = id.parent();
-      if (S2Testing::rnd.OneIn(6) && !id.is_leaf()) id = id.child_begin();
+      if (absl::Bernoulli(bitgen, 0.1)) Add(id, i);
+      if (absl::Bernoulli(bitgen, 0.25)) target.push_back(id);
+      if (absl::Bernoulli(bitgen, 0.5)) id = id.next_wrap();
+      if (absl::Bernoulli(bitgen, 1.0 / 6) && !id.is_face()) id = id.parent();
+      if (absl::Bernoulli(bitgen, 1.0 / 6) && !id.is_leaf())
+        id = id.child_begin();
     }
     Build();
     TestIntersection(S2CellUnion(std::move(target)));

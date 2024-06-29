@@ -26,6 +26,9 @@
 
 #include <gtest/gtest.h>
 
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_format.h"
 
 #include "s2/s1angle.h"
@@ -33,9 +36,11 @@
 #include "s2/s2point.h"
 #include "s2/s2polyline.h"
 #include "s2/s2polyline_alignment_internal.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 
+using absl::StrCat;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
@@ -371,13 +376,14 @@ void VerifyPath(const S2Polyline& a, const S2Polyline& b, const WarpPath& p) {
 // one match (approximately 2*perturbation + 1) on average in the base loop. The
 // intent of this method is to provide a set of correlated testing lines for
 // benchmarks and fuzz tests.
-vector<unique_ptr<S2Polyline>> GenPolylines(const int num_polylines,
+vector<unique_ptr<S2Polyline>> GenPolylines(absl::BitGenRef bitgen,
+                                            const int num_polylines,
                                             const int num_vertices,
                                             const double perturbation) {
   const auto kLoopRadius = S1Angle::Radians(0.01);
   const auto edge_length = 2 * M_PI * kLoopRadius / num_vertices;
   const auto perturbation_radius = perturbation * edge_length;
-  const auto center = S2Testing::RandomPoint();
+  const auto center = s2random::Point(bitgen);
   const auto loop =
       S2Testing::MakeRegularPoints(center, kLoopRadius, num_vertices);
 
@@ -389,7 +395,7 @@ vector<unique_ptr<S2Polyline>> GenPolylines(const int num_polylines,
     pts.reserve(num_vertices);
     for (int j = 0; j < num_vertices; ++j) {
       pts.push_back(
-          S2Testing::SamplePoint(S2Cap(loop[j], perturbation_radius)));
+          s2random::SamplePoint(bitgen, S2Cap(loop[j], perturbation_radius)));
     }
     polylines.push_back(make_unique<S2Polyline>(pts));
   }
@@ -475,10 +481,14 @@ TEST(S2PolylineAlignmentTest, DifferentPathForDistanceVersusSquaredDistance) {
 // Take a small random selection of short correlated polylines and ensure that
 // the cost from the brute force solver equals the cost from the DP solvers.
 TEST(S2PolylineAlignmentTest, FuzzedWithBruteForce) {
-  const int kNumPolylines = 10;
-  const int kNumVertices = 8;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "FUZZED_WITH_BRUTE_FORCE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  constexpr int kNumPolylines = 10;
+  constexpr int kNumVertices = 8;
   const double kPerturbation = 1.5;
-  const auto lines = GenPolylines(kNumPolylines, kNumVertices, kPerturbation);
+  const auto lines =
+      GenPolylines(bitgen, kNumPolylines, kNumVertices, kPerturbation);
   for (int i = 0; i < kNumPolylines; ++i) {
     for (int j = i + 1; j < kNumPolylines; ++j) {
       VerifyCost(*lines[i], *lines[j]);
@@ -553,12 +563,16 @@ TEST(S2PolylineAlignmentTest, MedoidPolylineDifferentLengthPolylines) {
 }
 
 TEST(S2PolylineAlignmentTest, MedoidPolylineFewLargePolylines) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "MEDIOD_POLYLINE_FEW_LARGE_POLYLINES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   // We pick num_vertices to be large so that the approx and exact vertex
   // alignment computations are likely to give different results.
   const int num_polylines = 3;
   const int num_vertices = 1024;
   const double perturb = 0.9;
-  const auto polylines = GenPolylines(num_polylines, num_vertices, perturb);
+  const auto polylines =
+      GenPolylines(bitgen, num_polylines, num_vertices, perturb);
 
   // clang-format off
   const vector<double> exact_costs = {

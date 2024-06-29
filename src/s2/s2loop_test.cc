@@ -19,8 +19,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <iomanip>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -34,6 +36,10 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
 #include "s2/base/casts.h"
@@ -56,6 +62,7 @@
 #include "s2/s2point_compression.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2predicates.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
@@ -63,6 +70,7 @@
 
 using absl::flat_hash_map;
 using absl::flat_hash_set;
+using absl::StrCat;
 using absl::string_view;
 using ::s2textformat::MakeLoopOrDie;
 using std::fabs;
@@ -311,11 +319,13 @@ TEST_F(S2LoopTestBase, GetAreaConsistentWithSign) {
   // Test that GetArea() returns an area near 0 for degenerate loops that
   // contain almost no points, and an area near 4*Pi for degenerate loops that
   // contain almost all points.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_AREA_CONSISTENT_WITH_SIGN",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  static const int kMaxVertices = 6;
+  static constexpr int kMaxVertices = 6;
   for (int i = 0; i < 50; ++i) {
-    int num_vertices = 3 + rnd->Uniform(kMaxVertices - 3 + 1);
+    int num_vertices = absl::Uniform(bitgen, 3, kMaxVertices + 1);
     // Repeatedly choose N vertices that are exactly on the equator until we
     // find some that form a valid loop.
     S2Loop loop;
@@ -326,7 +336,8 @@ TEST_F(S2LoopTestBase, GetAreaConsistentWithSign) {
         // We limit longitude to the range [0, 90] to ensure that the loop is
         // degenerate (as opposed to following the entire equator).
         vertices.push_back(
-            S2LatLng::FromRadians(0, rnd->RandDouble() * M_PI_2).ToPoint());
+            S2LatLng::FromRadians(0, absl::Uniform(bitgen, 0.0, M_PI_2))
+                .ToPoint());
       }
       loop.Init(vertices);
     } while (!loop.IsValid());
@@ -355,10 +366,13 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
   // with closely spaces vertices.  Then check that the area and centroid are
   // correct.
 
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_AREA_AND_CENTROID",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 50; ++i) {
     // Choose a coordinate frame for the spherical cap.
     S2Point x, y, z;
-    S2Testing::GetRandomFrame(&x, &y, &z);
+    s2random::Frame(bitgen, x, y, z);
 
     // Given two points at latitude phi and whose longitudes differ by dtheta,
     // the geodesic between the two points has a maximum latitude of
@@ -369,14 +383,14 @@ TEST_F(S2LoopTestBase, GetAreaAndCentroid) {
     // maximum distance from the boundary of the spherical cap is kMaxDist.
     // Thus we want fabs(atan(tan(phi) / cos(dtheta/2)) - phi) <= kMaxDist.
     static const double kMaxDist = 1e-6;
-    double height = 2 * S2Testing::rnd.RandDouble();
+    double height = absl::Uniform(bitgen, 0.0, 2.0);
     double phi = asin(1 - height);
     double max_dtheta = 2 * acos(tan(fabs(phi)) / tan(fabs(phi) + kMaxDist));
     max_dtheta = min(M_PI, max_dtheta);  // At least 3 vertices.
 
     vector<S2Point> vertices;
     for (double theta = 0; theta < 2 * M_PI;
-         theta += S2Testing::rnd.RandDouble() * max_dtheta) {
+         theta += absl::Uniform(bitgen, 0.0, max_dtheta)) {
       vertices.push_back(cos(theta) * cos(phi) * x +
                          sin(theta) * cos(phi) * y +
                          sin(phi) * z);
@@ -429,7 +443,7 @@ TEST_F(S2LoopTestBase, GetCurvature) {
   // to test that the error in GetCurvature is linear in the number of
   // vertices even when the partial sum of the curvatures gets very large.
   // The spiral consists of two "arms" defining opposite sides of the loop.
-  const int kArmPoints = 10000;    // Number of vertices in each "arm"
+  constexpr int kArmPoints = 10000;  // Number of vertices in each "arm"
   const double kArmRadius = 0.01;  // Radius of spiral.
   vector<S2Point> vertices(2 * kArmPoints);
   vertices[kArmPoints] = S2Point(0, 0, 1);
@@ -893,15 +907,17 @@ TEST(S2Loop, LoopRelations2) {
   // Construct polygons consisting of a sequence of adjacent cell ids
   // at some fixed level.  Comparing two polygons at the same level
   // ensures that there are no T-vertices.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "LOOP_RELATIONS2",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 1000; ++iter) {
-    S2Testing::Random& rnd = S2Testing::rnd;
-    S2CellId begin = S2CellId(rnd.Rand64() | 1);
+    S2CellId begin = S2CellId(absl::Uniform<uint64_t>(bitgen) | 1);
     if (!begin.is_valid()) continue;
-    begin = begin.parent(rnd.Uniform(S2CellId::kMaxLevel));
-    S2CellId a_begin = begin.advance(rnd.Skewed(6));
-    S2CellId a_end = a_begin.advance(rnd.Skewed(6) + 1);
-    S2CellId b_begin = begin.advance(rnd.Skewed(6));
-    S2CellId b_end = b_begin.advance(rnd.Skewed(6) + 1);
+    begin = begin.parent(absl::Uniform(bitgen, 0, S2CellId::kMaxLevel));
+    S2CellId a_begin = begin.advance(s2random::SkewedInt(bitgen, 6));
+    S2CellId a_end = a_begin.advance(s2random::SkewedInt(bitgen, 6) + 1);
+    S2CellId b_begin = begin.advance(s2random::SkewedInt(bitgen, 6));
+    S2CellId b_end = b_begin.advance(s2random::SkewedInt(bitgen, 6) + 1);
     if (!a_end.is_valid() || !b_end.is_valid()) continue;
 
     unique_ptr<S2Loop> a(MakeCellLoop(a_begin, a_end));
@@ -924,16 +940,18 @@ TEST(S2Loop, BoundsForLoopContainment) {
   // To reliably test whether one loop contains another, the bounds of the
   // outer loop are expanded slightly.  This test constructs examples where
   // this expansion is necessary and verifies that it is sufficient.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "BOUNDS_FOR_LOOP_CONTAINMENT",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
-  S2Testing::Random* rnd = &S2Testing::rnd;
   for (int iter = 0; iter < 1000; ++iter) {
     // We construct a triangle ABC such that A,B,C are nearly colinear, B is
     // the point of maximum latitude, and the edge AC passes very slightly
     // below B (i.e., ABC is CCW).
-    S2Point b = (S2Testing::RandomPoint() + S2Point(0, 0, 1)).Normalize();
+    S2Point b = (s2random::Point(bitgen) + S2Point(0, 0, 1)).Normalize();
     S2Point v = b.CrossProd(S2Point(0, 0, 1)).Normalize();
-    S2Point a = S2::Interpolate(-v, b, rnd->RandDouble());
-    S2Point c = S2::Interpolate(b, v, rnd->RandDouble());
+    S2Point a = S2::Interpolate(-v, b, absl::Uniform(bitgen, 0.0, 1.0));
+    S2Point c = S2::Interpolate(b, v, absl::Uniform(bitgen, 0.0, 1.0));
     if (s2pred::Sign(a, b, c) < 0) {
       --iter; continue;
     }

@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -77,12 +78,12 @@ static const unsigned char kCurrentCompressedEncodingVersionNumber = 2;
 S2Polyline::S2Polyline()
   : s2debug_override_(S2Debug::ALLOW) {}
 
-S2Polyline::S2Polyline(S2Polyline&& other)
+S2Polyline::S2Polyline(S2Polyline&& other) noexcept
     : s2debug_override_(other.s2debug_override_),
       num_vertices_(std::exchange(other.num_vertices_, 0)),
       vertices_(std::move(other.vertices_)) {}
 
-S2Polyline& S2Polyline::operator=(S2Polyline&& other) {
+S2Polyline& S2Polyline::operator=(S2Polyline&& other) noexcept {
   s2debug_override_ = other.s2debug_override_;
   num_vertices_ = std::exchange(other.num_vertices_, 0);
   vertices_ = std::move(other.vertices_);
@@ -449,7 +450,7 @@ bool S2Polyline::Decode(Decoder* const decoder) {
 }
 
 bool S2Polyline::DecodeUncompressed(Decoder* const decoder) {
-  if (decoder->avail() < sizeof(uint32)) {
+  if (decoder->avail() < sizeof(uint32_t)) {
     return false;
   }
   num_vertices_ = decoder->get32();
@@ -528,12 +529,12 @@ void S2Polyline::EncodeCompressed(Encoder* encoder,
 }
 
 bool S2Polyline::DecodeCompressed(Decoder* decoder) {
-  if (decoder->avail() < sizeof(uint8)) return false;
+  if (decoder->avail() < sizeof(uint8_t)) return false;
   const int snap_level = decoder->get8();
   if (snap_level > S2::kMaxCellLevel) return false;
 
   vector<S2Point> points;
-  uint32 num_vertices;
+  uint32_t num_vertices;
   if (!decoder->get_varint32(&num_vertices)) return false;
   if (num_vertices == 0) {
     // Empty polylines are allowed.

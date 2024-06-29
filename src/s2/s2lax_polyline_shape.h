@@ -19,10 +19,10 @@
 #define S2_S2LAX_POLYLINE_SHAPE_H_
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_s2point_vector.h"
@@ -50,11 +50,10 @@ class S2LaxPolylineShape : public S2Shape {
   typedef s2coding::S2HintCoder<S2LaxPolylineShape> Coder;
 
   // Constructs an empty polyline.
-  S2LaxPolylineShape() : num_vertices_(0) {}
+  S2LaxPolylineShape() = default;
 
-  S2LaxPolylineShape(S2LaxPolylineShape&& other);
-
-  S2LaxPolylineShape& operator=(S2LaxPolylineShape&& other);
+  S2LaxPolylineShape(S2LaxPolylineShape&& other) noexcept;
+  S2LaxPolylineShape& operator=(S2LaxPolylineShape&& other) noexcept;
 
   // Constructs an S2LaxPolylineShape with the given vertices.
   explicit S2LaxPolylineShape(absl::Span<const S2Point> vertices);
@@ -102,7 +101,7 @@ class S2LaxPolylineShape : public S2Shape {
  private:
   // For clients that have many small polylines, we save some memory by
   // representing the vertices as an array rather than using std::vector.
-  int32 num_vertices_;
+  int32_t num_vertices_ = 0;
   std::unique_ptr<S2Point[]> vertices_;
 };
 

@@ -16,6 +16,7 @@
 #include "s2/s2chain_interpolation_query.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -75,7 +76,7 @@ TEST(S2ChainInterpolationQueryTest, SimplePolylines) {
   for (const double& distance : distances) {
     double lat = std::max(0.0, std::min(kTotalLengthAbc, distance));
     const S2Point point = S2LatLng::FromDegrees(lat, 0).ToPoint();
-    int32 edge_id = distance < kLatitudeB ? 0 : 1;
+    int32_t edge_id = distance < kLatitudeB ? 0 : 1;
     ground_truth.emplace_back(point, edge_id, S1Angle::Degrees(lat));
   }
 
@@ -116,7 +117,7 @@ TEST(S2ChainInterpolationQueryTest, SimplePolylines) {
   EXPECT_LE(length_cc, kEpsilon);
   EXPECT_LE(S1Angle(ac_point_at_infinity, c).degrees(),  kEpsilon);
 
-  for (int32 i = 0; i < ground_truth.size(); ++i) {
+  for (int32_t i = 0; i < ground_truth.size(); ++i) {
     EXPECT_TRUE(ac[i].is_valid());
     EXPECT_TRUE(abc[i].is_valid());
     EXPECT_TRUE(bb[i].is_valid());
@@ -158,7 +159,7 @@ TEST(S2ChainInterpolationQueryTest, Distance) {
   // Check the test results.
   EXPECT_NEAR(length, kTotalLength, kEpsilon);
 
-  for (int32 i = 0; i < distances.size(); ++i) {
+  for (int32_t i = 0; i < distances.size(); ++i) {
     EXPECT_TRUE(results[i].is_valid());
 
     const double d = distances[i];

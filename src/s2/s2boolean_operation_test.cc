@@ -30,6 +30,9 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -58,6 +61,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
@@ -71,6 +75,7 @@ namespace {
 
 using absl::ByAnyChar;
 using absl::SkipEmpty;
+using absl::StrCat;
 using absl::StrContains;
 using absl::string_view;
 using absl::StrSplit;
@@ -127,9 +132,8 @@ void ExpectResult(S2BooleanOperation::OpType op_type,
 }
 
 void ExpectResult(S2BooleanOperation::OpType op_type,
-                  const S2BooleanOperation::Options& options,
-                  const string& a_str, const string& b_str,
-                  const string& expected_str) {
+                  const S2BooleanOperation::Options& options, string_view a_str,
+                  string_view b_str, string_view expected_str) {
   auto a = s2textformat::MakeIndexOrDie(a_str);
   auto b = s2textformat::MakeIndexOrDie(b_str);
   auto expected = s2textformat::MakeIndexOrDie(expected_str);
@@ -2076,10 +2080,10 @@ TEST(S2BooleanOperation, GetCrossedVertexIndexBug6) {
 
 // Performs the given operation and compares the result to "expected_str".  All
 // arguments are in s2textformat::MakeLaxPolygonOrDie() format.
-void ExpectPolygon(S2BooleanOperation::OpType op_type, const string& a_str,
-                   const string& b_str, const string& expected_str) {
-  auto a = s2textformat::MakeIndexOrDie(string("# # ") + a_str);
-  auto b = s2textformat::MakeIndexOrDie(string("# # ") + b_str);
+void ExpectPolygon(S2BooleanOperation::OpType op_type, string_view a_str,
+                   string_view b_str, string_view expected_str) {
+  auto a = s2textformat::MakeIndexOrDie(StrCat("# # ", a_str));
+  auto b = s2textformat::MakeIndexOrDie(StrCat("# # ", b_str));
   s2builderutil::LaxPolygonLayer::Options polygon_options;
   polygon_options.set_degenerate_boundaries(DegenerateBoundaries::DISCARD);
   S2LaxPolygonShape output;

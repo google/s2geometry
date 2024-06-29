@@ -25,6 +25,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "s2/util/coding/coder.h"
 #include "s2/r1interval.h"
 #include "s2/s1angle.h"
@@ -62,7 +63,6 @@ S2LatLngRect S2LatLngRect::FromPointPair(const S2LatLng& p1,
                                          const S2LatLng& p2) {
   ABSL_DLOG_IF(ERROR, !p1.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::FromPointPair: " << p1;
-
   ABSL_DLOG_IF(ERROR, !p2.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::FromPointPair: " << p2;
 
@@ -560,7 +560,6 @@ S1Angle S2LatLngRect::GetDistance(const S2LatLng& p) const {
   const S2LatLngRect& a = *this;
   ABSL_DLOG_IF(ERROR, a.is_empty())
       << "Empty S2LatLngRect in S2LatLngRect::GetDistance: " << a;
-
   ABSL_DLOG_IF(ERROR, !p.is_valid())
       << "Invalid S2LatLng in S2LatLngRect::GetDistance: " << p;
 

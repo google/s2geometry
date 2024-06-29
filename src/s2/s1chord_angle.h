@@ -20,13 +20,13 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <ostream>
 #include <type_traits>
 
-#include "s2/base/types.h"
 #include "absl/log/absl_check.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
@@ -124,31 +124,31 @@ class S1ChordAngle {
  public:
   // The default constructor yields a zero angle.  This is useful for STL
   // containers and class methods with output arguments.
-  constexpr S1ChordAngle() : length2_(0) {}
+  constexpr S1ChordAngle() = default;
 
   // Construct the S1ChordAngle corresponding to the distance between the two
   // given points.  The points must be unit length.
-  constexpr S1ChordAngle(const S2Point& x, const S2Point& y);
+  S1ChordAngle(const S2Point& x, const S2Point& y);
 
   // Return the zero chord angle.
-  static S1ChordAngle Zero();
+  static constexpr S1ChordAngle Zero();
 
   // Return a chord angle of 90 degrees (a "right angle").
-  static S1ChordAngle Right();
+  static constexpr S1ChordAngle Right();
 
   // Return a chord angle of 180 degrees (a "straight angle").  This is the
   // maximum finite chord angle.
-  static S1ChordAngle Straight();
+  static constexpr S1ChordAngle Straight();
 
   // Return a chord angle larger than any finite chord angle.  The only valid
   // operations on Infinity() are comparisons, S1Angle conversions, and
   // Successor() / Predecessor().
-  static S1ChordAngle Infinity();
+  static constexpr S1ChordAngle Infinity();
 
   // Return a chord angle smaller than Zero().  The only valid operations on
   // Negative() are comparisons, S1Angle conversions, and Successor() /
   // Predecessor().
-  static S1ChordAngle Negative();
+  static constexpr S1ChordAngle Negative();
 
   // Conversion from an S1Angle.  Angles outside the range [0, Pi] are handled
   // as follows: Infinity() is mapped to Infinity(), negative angles are
@@ -164,20 +164,20 @@ class S1ChordAngle {
   // Convenience methods implemented by converting from an S1Angle.
   static S1ChordAngle Radians(double radians);
   static S1ChordAngle Degrees(double degrees);
-  static S1ChordAngle E5(int32 e5);
-  static S1ChordAngle E6(int32 e6);
-  static S1ChordAngle E7(int32 e7);
+  static S1ChordAngle E5(int32_t e5);
+  static S1ChordAngle E6(int32_t e6);
+  static S1ChordAngle E7(int32_t e7);
 
   // Construct an S1ChordAngle that is an upper bound on the given S1Angle,
   // i.e. such that FastUpperBoundFrom(x).ToAngle() >= x.  Unlike the S1Angle
   // constructor above, this method is very fast, and the bound is accurate to
   // within 1% for distances up to about 3100km on the Earth's surface.
-  static S1ChordAngle FastUpperBoundFrom(S1Angle angle);
+  static constexpr S1ChordAngle FastUpperBoundFrom(S1Angle angle);
 
   // Construct an S1ChordAngle from the squared chord length.  Note that the
   // argument is automatically clamped to a maximum of 4.0 to handle possible
   // roundoff errors.  The argument must be non-negative.
-  static S1ChordAngle FromLength2(double length2);
+  static constexpr S1ChordAngle FromLength2(double length2);
 
   // Converts to an S1Angle.  Can be used just like an S1Angle constructor:
   //
@@ -200,9 +200,9 @@ class S1ChordAngle {
   // are needed inside loops.
   double radians() const;
   double degrees() const;
-  int32 e5() const;
-  int32 e6() const;
-  int32 e7() const;
+  int32_t e5() const;
+  int32_t e6() const;
+  int32_t e7() const;
 
   // All operators and functions are declared here so that we can put them all
   // in one place.  (The compound assignment operators must be put here.)
@@ -216,10 +216,10 @@ class S1ChordAngle {
   friend bool operator>=(S1ChordAngle x, S1ChordAngle y);
 
   // Comparison predicates.
-  bool is_zero() const;
-  bool is_negative() const;
-  bool is_infinity() const;
-  bool is_special() const;  // Negative or infinity.
+  constexpr bool is_zero() const;
+  constexpr bool is_negative() const;
+  constexpr bool is_infinity() const;
+  constexpr bool is_special() const;  // Negative or infinity.
 
   // Only addition and subtraction of S1ChordAngles is supported.  These
   // methods add or subtract the corresponding S1Angles, and clamp the result
@@ -288,7 +288,7 @@ class S1ChordAngle {
 
   // Return true if the internal representation is valid.  Negative() and
   // Infinity() are both considered valid.
-  bool is_valid() const;
+  constexpr bool is_valid() const;
 
   // When S1ChordAngle is used as a key in one of the absl::btree container
   // types, indicate that linear rather than binary search should be used.
@@ -298,16 +298,29 @@ class S1ChordAngle {
  private:
   // S1ChordAngles are represented by the squared chord length, which can
   // range from 0 to 4.  Infinity() uses an infinite squared length.
-  explicit S1ChordAngle(double length2) : length2_(length2) {
+  explicit constexpr S1ChordAngle(double length2) : length2_(length2) {
     ABSL_DCHECK(is_valid());
   }
-  double length2_;
+  double length2_ = 0.0;
 };
 
 
 //////////////////   Implementation details follow   ////////////////////
 
-inline constexpr S1ChordAngle::S1ChordAngle(const S2Point& x, const S2Point& y)
+inline S1ChordAngle::S1ChordAngle(S1Angle angle) {
+  if (angle.radians() < 0) {
+    *this = Negative();
+  } else if (angle == S1Angle::Infinity()) {
+    *this = Infinity();
+  } else {
+    // The chord length is 2 * sin(angle / 2).
+    double length = 2 * sin(0.5 * std::min(M_PI, angle.radians()));
+    length2_ = length * length;
+  }
+  ABSL_DCHECK(is_valid());
+}
+
+inline S1ChordAngle::S1ChordAngle(const S2Point& x, const S2Point& y)
     : length2_(std::min(4.0, (x - y).Norm2())) {
   ABSL_DCHECK(S2::IsUnitLength(x));
   ABSL_DCHECK(S2::IsUnitLength(y));
@@ -316,27 +329,31 @@ inline constexpr S1ChordAngle::S1ChordAngle(const S2Point& x, const S2Point& y)
   ABSL_DCHECK(is_valid());
 }
 
-inline S1ChordAngle S1ChordAngle::FromLength2(double length2) {
+inline constexpr bool S1ChordAngle::is_valid() const {
+  return (length2_ >= 0 && length2_ <= 4.0) || is_special();
+}
+
+inline constexpr S1ChordAngle S1ChordAngle::FromLength2(double length2) {
   return S1ChordAngle(std::min(4.0, length2));
 }
 
-inline S1ChordAngle S1ChordAngle::Zero() {
+inline constexpr S1ChordAngle S1ChordAngle::Zero() {
   return S1ChordAngle(0);
 }
 
-inline S1ChordAngle S1ChordAngle::Right() {
+inline constexpr S1ChordAngle S1ChordAngle::Right() {
   return S1ChordAngle(2);
 }
 
-inline S1ChordAngle S1ChordAngle::Straight() {
+inline constexpr S1ChordAngle S1ChordAngle::Straight() {
   return S1ChordAngle(4);
 }
 
-inline S1ChordAngle S1ChordAngle::Infinity() {
+inline constexpr S1ChordAngle S1ChordAngle::Infinity() {
   return S1ChordAngle(std::numeric_limits<double>::infinity());
 }
 
-inline S1ChordAngle S1ChordAngle::Negative() {
+inline constexpr S1ChordAngle S1ChordAngle::Negative() {
   return S1ChordAngle(-1);
 }
 
@@ -348,19 +365,19 @@ inline S1ChordAngle S1ChordAngle::Degrees(double degrees) {
   return S1ChordAngle(S1Angle::Degrees(degrees));
 }
 
-inline S1ChordAngle S1ChordAngle::E5(int32 e5) {
+inline S1ChordAngle S1ChordAngle::E5(int32_t e5) {
   return S1ChordAngle(S1Angle::E5(e5));
 }
 
-inline S1ChordAngle S1ChordAngle::E6(int32 e6) {
+inline S1ChordAngle S1ChordAngle::E6(int32_t e6) {
   return S1ChordAngle(S1Angle::E6(e6));
 }
 
-inline S1ChordAngle S1ChordAngle::E7(int32 e7) {
+inline S1ChordAngle S1ChordAngle::E7(int32_t e7) {
   return S1ChordAngle(S1Angle::E7(e7));
 }
 
-inline S1ChordAngle S1ChordAngle::FastUpperBoundFrom(S1Angle angle) {
+inline constexpr S1ChordAngle S1ChordAngle::FastUpperBoundFrom(S1Angle angle) {
   // This method uses the distance along the surface of the sphere as an upper
   // bound on the distance through the sphere's interior.
   return S1ChordAngle::FromLength2(angle.radians() * angle.radians());
@@ -378,26 +395,24 @@ inline double S1ChordAngle::degrees() const {
   return ToAngle().degrees();
 }
 
-inline int32 S1ChordAngle::e5() const { return ToAngle().e5(); }
+inline int32_t S1ChordAngle::e5() const { return ToAngle().e5(); }
 
-inline int32 S1ChordAngle::e6() const { return ToAngle().e6(); }
+inline int32_t S1ChordAngle::e6() const { return ToAngle().e6(); }
 
-inline int32 S1ChordAngle::e7() const { return ToAngle().e7(); }
+inline int32_t S1ChordAngle::e7() const { return ToAngle().e7(); }
 
-inline bool S1ChordAngle::is_zero() const {
-  return length2_ == 0;
-}
+inline constexpr bool S1ChordAngle::is_zero() const { return length2_ == 0; }
 
-inline bool S1ChordAngle::is_negative() const {
+inline constexpr bool S1ChordAngle::is_negative() const {
   // TODO(ericv): Consider stricter check here -- only allow Negative().
   return length2_ < 0;
 }
 
-inline bool S1ChordAngle::is_infinity() const {
+inline constexpr bool S1ChordAngle::is_infinity() const {
   return length2_ == std::numeric_limits<double>::infinity();
 }
 
-inline bool S1ChordAngle::is_special() const {
+inline constexpr bool S1ChordAngle::is_special() const {
   return is_negative() || is_infinity();
 }
 

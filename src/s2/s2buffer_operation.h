@@ -21,7 +21,6 @@
 #include <memory>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/log/absl_log.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -63,11 +62,11 @@ class S2BufferOperation {
  public:
   // For polylines, specifies whether the end caps should be round or flat.
   // See Options::set_end_cap_style() below.
-  enum class EndCapStyle : uint8 { ROUND, FLAT };
+  enum class EndCapStyle : uint8_t { ROUND, FLAT };
 
   // Specifies whether polylines should be buffered only on the left, only on
   // the right, or on both sides.
-  enum class PolylineSide : uint8 { LEFT, RIGHT, BOTH };
+  enum class PolylineSide : uint8_t { LEFT, RIGHT, BOTH };
 
   class Options {
    public:

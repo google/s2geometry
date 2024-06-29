@@ -24,11 +24,14 @@
 
 #include "s2/base/casts.h"
 #include <gtest/gtest.h>
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s2cap.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2shapeutil_shape_edge.h"
 #include "s2/s2shapeutil_shape_edge_id.h"
@@ -133,19 +136,22 @@ TEST(S2ContainsPointQuery, VisitContainingShapesCanStopEarly) {
 
 TEST(S2ContainsPointQuery, GetContainingShapes) {
   // Also tests ShapeContains().
-  const int kNumVerticesPerLoop = 10;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_CONTAINING_SHAPES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  constexpr int kNumVerticesPerLoop = 10;
   const S1Angle kMaxLoopRadius = S2Testing::KmToAngle(10);
-  const S2Cap center_cap(S2Testing::RandomPoint(), kMaxLoopRadius);
+  const S2Cap center_cap(s2random::Point(bitgen), kMaxLoopRadius);
   MutableS2ShapeIndex index;
   for (int i = 0; i < 100; ++i) {
     unique_ptr<S2Loop> loop = S2Loop::MakeRegularLoop(
-        S2Testing::SamplePoint(center_cap),
-        S2Testing::rnd.RandDouble() * kMaxLoopRadius, kNumVerticesPerLoop);
+        s2random::SamplePoint(bitgen, center_cap),
+        absl::Uniform(bitgen, 0.0, 1.0) * kMaxLoopRadius, kNumVerticesPerLoop);
     index.Add(make_unique<S2Loop::OwningShape>(std::move(loop)));
   }
   auto query = MakeS2ContainsPointQuery(&index);
   for (int i = 0; i < 100; ++i) {
-    S2Point p = S2Testing::SamplePoint(center_cap);
+    S2Point p = s2random::SamplePoint(bitgen, center_cap);
 
     vector<int> expected_ids;
     vector<const S2Shape*> expected_shapes;

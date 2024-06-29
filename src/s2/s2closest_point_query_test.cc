@@ -19,7 +19,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,8 +30,11 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 
-#include "s2/base/types.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -47,6 +52,7 @@
 #include "s2/s2point.h"
 #include "s2/s2point_index.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2random.h"
 #include "s2/s2region.h"
 #include "s2/s2testing.h"
 #include "s2/util/math/matrix3x3.h"
@@ -68,7 +74,7 @@ TEST(S2ClosestPointQuery, NoPoints) {
 }
 
 TEST(S2ClosestPointQuery, ManyDuplicatePoints) {
-  static const int kNumPoints = 10000;
+  static constexpr int kNumPoints = 10000;
   const S2Point kTestPoint(1, 0, 0);
   TestIndex index;
   for (int i = 0; i < kNumPoints; ++i) {
@@ -83,9 +89,12 @@ TEST(S2ClosestPointQuery, ManyDuplicatePoints) {
 TEST(S2ClosestPointQuery, EmptyTargetOptimized) {
   // Ensure that the optimized algorithm handles empty targets when a distance
   // limit is specified.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "EMPTY_TARGET_OPTIMIZED",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   TestIndex index;
   for (int i = 0; i < 1000; ++i) {
-    index.Add(S2Testing::RandomPoint(), i);
+    index.Add(s2random::Point(bitgen), i);
   }
   TestQuery query(&index);
   query.mutable_options()->set_max_distance(S1Angle::Radians(1e-5));
@@ -102,7 +111,7 @@ struct PointIndexFactory {
   // Requests that approximately "num_points" points located within the given
   // S2Cap bound should be added to "index".
   virtual void AddPoints(const S2Cap& index_cap, int num_points,
-                         TestIndex* index) const = 0;
+                         absl::BitGenRef bitgen, TestIndex* index) const = 0;
 };
 
 // Generates points that are regularly spaced along a circle.  Points along a
@@ -110,7 +119,7 @@ struct PointIndexFactory {
 // points are nearly equidistant from any query point that is not immediately
 // adjacent to the circle.
 struct CirclePointIndexFactory : public PointIndexFactory {
-  void AddPoints(const S2Cap& index_cap, int num_points,
+  void AddPoints(const S2Cap& index_cap, int num_points, absl::BitGenRef bitgen,
                  TestIndex* index) const override {
     vector<S2Point> points = S2Testing::MakeRegularPoints(
         index_cap.center(), index_cap.GetRadius(), num_points);
@@ -123,14 +132,13 @@ struct CirclePointIndexFactory : public PointIndexFactory {
 // Generates the vertices of a fractal whose convex hull approximately
 // matches the given cap.
 struct FractalPointIndexFactory : public PointIndexFactory {
-  void AddPoints(const S2Cap& index_cap, int num_points,
+  void AddPoints(const S2Cap& index_cap, int num_points, absl::BitGenRef bitgen,
                  TestIndex* index) const override {
-    S2Fractal fractal;
+    S2Fractal fractal(bitgen);
     fractal.SetLevelForApproxMaxEdges(num_points);
     fractal.set_fractal_dimension(1.5);
-    unique_ptr<S2Loop> loop(
-        fractal.MakeLoop(S2Testing::GetRandomFrameAt(index_cap.center()),
-                         index_cap.GetRadius()));
+    unique_ptr<S2Loop> loop(fractal.MakeLoop(
+        s2random::FrameAt(bitgen, index_cap.center()), index_cap.GetRadius()));
     for (int i = 0; i < loop->num_vertices(); ++i) {
       index->Add(loop->vertex(i), i);
     }
@@ -139,10 +147,10 @@ struct FractalPointIndexFactory : public PointIndexFactory {
 
 // Generates vertices on a square grid that includes the entire given cap.
 struct GridPointIndexFactory : public PointIndexFactory {
-  void AddPoints(const S2Cap& index_cap, int num_points,
+  void AddPoints(const S2Cap& index_cap, int num_points, absl::BitGenRef bitgen,
                  TestIndex* index) const override {
     int sqrt_num_points = ceil(sqrt(num_points));
-    Matrix3x3_d frame = S2Testing::GetRandomFrameAt(index_cap.center());
+    Matrix3x3_d frame = s2random::FrameAt(bitgen, index_cap.center());
     double radius = index_cap.GetRadius().radians();
     double spacing = 2 * radius / sqrt_num_points;
     for (int i = 0; i < sqrt_num_points; ++i) {
@@ -221,19 +229,18 @@ static void TestFindClosestPoints(TestQuery::Target* target, TestQuery *query) {
 // (Note that every query is checked using the brute force algorithm.)
 static void TestWithIndexFactory(const PointIndexFactory& factory,
                                  int num_indexes, int num_points,
-                                 int num_queries) {
+                                 int num_queries, absl::BitGenRef bitgen) {
   // Build a set of S2PointIndexes containing the desired geometry.
   vector<S2Cap> index_caps;
   vector<unique_ptr<TestIndex>> indexes;
   for (int i = 0; i < num_indexes; ++i) {
-    S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed) + i);
-    index_caps.push_back(S2Cap(S2Testing::RandomPoint(), kTestCapRadius));
+    index_caps.push_back(S2Cap(s2random::Point(bitgen), kTestCapRadius));
     indexes.push_back(make_unique<TestIndex>());
-    factory.AddPoints(index_caps.back(), num_points, indexes.back().get());
+    factory.AddPoints(index_caps.back(), num_points, bitgen,
+                      indexes.back().get());
   }
   for (int i = 0; i < num_queries; ++i) {
-    S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed) + i);
-    int i_index = S2Testing::rnd.Uniform(num_indexes);
+    int i_index = absl::Uniform<size_t>(bitgen, 0, num_indexes);
     const S2Cap& index_cap = index_caps[i_index];
 
     // Choose query points from an area approximately 4x larger than the
@@ -244,81 +251,94 @@ static void TestWithIndexFactory(const PointIndexFactory& factory,
 
     // Occasionally we don't set any limit on the number of result points.
     // (This may return all points if we also don't set a distance limit.)
-    if (!S2Testing::rnd.OneIn(5)) {
-      query.mutable_options()->set_max_results(1 + S2Testing::rnd.Uniform(10));
+    if (absl::Bernoulli(bitgen, 0.8)) {
+      query.mutable_options()->set_max_results(absl::Uniform(bitgen, 1, 11));
     }
     // We set a distance limit 2/3 of the time.
-    if (!S2Testing::rnd.OneIn(3)) {
+    if (absl::Bernoulli(bitgen, 2.0 / 3)) {
       query.mutable_options()->set_max_distance(
-          S2Testing::rnd.RandDouble() * query_radius);
+          absl::Uniform(bitgen, 0.0, 1.0) * query_radius);
     }
-    if (S2Testing::rnd.OneIn(2)) {
+    if (absl::Bernoulli(bitgen, 0.5)) {
       // Choose a maximum error whose logarithm is uniformly distributed over
       // a reasonable range, except that it is sometimes zero.
       query.mutable_options()->set_max_error(S1Angle::Radians(
-          pow(1e-4, S2Testing::rnd.RandDouble()) * query_radius.radians()));
+          s2random::LogUniform(bitgen, 1e-4, 1.0) * query_radius.radians()));
     }
     S2LatLngRect filter_rect = S2LatLngRect::FromCenterSize(
-        S2LatLng(S2Testing::SamplePoint(query_cap)),
-        S2LatLng(S2Testing::rnd.RandDouble() * kTestCapRadius,
-                 S2Testing::rnd.RandDouble() * kTestCapRadius));
-    if (S2Testing::rnd.OneIn(5)) {
+        S2LatLng(s2random::SamplePoint(bitgen, query_cap)),
+        S2LatLng(absl::Uniform(bitgen, 0.0, 1.0) * kTestCapRadius,
+                 absl::Uniform(bitgen, 0.0, 1.0) * kTestCapRadius));
+    if (absl::Bernoulli(bitgen, 0.2)) {
       query.mutable_options()->set_region(&filter_rect);
     }
-    int target_type = S2Testing::rnd.Uniform(4);
+    int target_type = absl::Uniform(bitgen, 0, 4);
     if (target_type == 0) {
       // Find the points closest to a given point.
-      S2Point point = S2Testing::SamplePoint(query_cap);
+      S2Point point = s2random::SamplePoint(bitgen, query_cap);
       TestQuery::PointTarget target(point);
       TestFindClosestPoints(&target, &query);
     } else if (target_type == 1) {
       // Find the points closest to a given edge.
-      S2Point a = S2Testing::SamplePoint(query_cap);
-      S2Point b = S2Testing::SamplePoint(
-          S2Cap(a, pow(1e-4, S2Testing::rnd.RandDouble()) * query_radius));
+      S2Point a = s2random::SamplePoint(bitgen, query_cap);
+      S2Point b = s2random::SamplePoint(
+          bitgen,
+          S2Cap(a, s2random::LogUniform(bitgen, 1e-4, 1.0) * query_radius));
       TestQuery::EdgeTarget target(a, b);
       TestFindClosestPoints(&target, &query);
     } else if (target_type == 2) {
       // Find the points closest to a given cell.
       int min_level = S2::kMaxDiag.GetLevelForMaxValue(query_radius.radians());
-      int level = min_level + S2Testing::rnd.Uniform(
-          S2CellId::kMaxLevel - min_level + 1);
-      S2Point a = S2Testing::SamplePoint(query_cap);
+      int level = absl::Uniform(absl::IntervalClosedClosed, bitgen, min_level,
+                                S2CellId::kMaxLevel);
+      S2Point a = s2random::SamplePoint(bitgen, query_cap);
       S2Cell cell(S2CellId(a).parent(level));
       TestQuery::CellTarget target(cell);
       TestFindClosestPoints(&target, &query);
     } else {
       ABSL_DCHECK_EQ(3, target_type);
       MutableS2ShapeIndex target_index;
-      s2testing::FractalLoopShapeIndexFactory().AddEdges(index_cap, 100,
-                                                         &target_index);
+      s2testing::FractalLoopShapeIndexFactory(bitgen).AddEdges(index_cap, 100,
+                                                               &target_index);
       TestQuery::ShapeIndexTarget target(&target_index);
-      target.set_include_interiors(S2Testing::rnd.OneIn(2));
+      target.set_include_interiors(absl::Bernoulli(bitgen, 0.5));
       TestFindClosestPoints(&target, &query);
     }
   }
 }
 
-static const int kNumIndexes = 10;
-static const int kNumPoints = 1000;
-static const int kNumQueries = 50;
+static constexpr int kNumIndexes = 10;
+static constexpr int kNumPoints = 1000;
+static constexpr int kNumQueries = 50;
 
 TEST(S2ClosestPointQueryTest, CirclePoints) {
-  TestWithIndexFactory(CirclePointIndexFactory(),
-                       kNumIndexes, kNumPoints, kNumQueries);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CIRCLE_POINTS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  TestWithIndexFactory(CirclePointIndexFactory(), kNumIndexes, kNumPoints,
+                       kNumQueries, bitgen);
 }
 
 TEST(S2ClosestPointQueryTest, FractalPoints) {
-  TestWithIndexFactory(FractalPointIndexFactory(),
-                       kNumIndexes, kNumPoints, kNumQueries);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "FRACTAL_POINTS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  TestWithIndexFactory(FractalPointIndexFactory(), kNumIndexes, kNumPoints,
+                       kNumQueries, bitgen);
 }
 
 TEST(S2ClosestPointQueryTest, GridPoints) {
-  TestWithIndexFactory(GridPointIndexFactory(),
-                       kNumIndexes, kNumPoints, kNumQueries);
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GRID_POINT",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  TestWithIndexFactory(GridPointIndexFactory(), kNumIndexes, kNumPoints,
+                       kNumQueries, bitgen);
 }
 
 TEST(S2ClosestPointQueryTest, ConservativeCellDistanceIsUsed) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CONSERVATIVE_CELL_DISTANCE_IS_USED",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int saved_seed = absl::GetFlag(FLAGS_s2_random_seed);
   // These specific test cases happen to fail if max_error() is not properly
   // taken into account when measuring distances to S2PointIndex cells.  They
@@ -326,7 +346,7 @@ TEST(S2ClosestPointQueryTest, ConservativeCellDistanceIsUsed) {
   // optimize its distance calculation.
   for (int seed : {16, 586, 589, 822, 1959, 2298, 3155, 3490, 3723, 4953}) {
     absl::SetFlag(&FLAGS_s2_random_seed, seed);
-    TestWithIndexFactory(FractalPointIndexFactory(), 5, 100, 10);
+    TestWithIndexFactory(FractalPointIndexFactory(), 5, 100, 10, bitgen);
   }
   absl::SetFlag(&FLAGS_s2_random_seed, saved_seed);
 }

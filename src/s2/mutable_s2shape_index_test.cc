@@ -24,6 +24,7 @@
 #include <memory>
 #include <numeric>
 #include <thread>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -34,6 +35,9 @@
 #include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 
 #include "s2/base/commandlineflags.h"
@@ -61,6 +65,7 @@
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
 #include "s2/s2polyline.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2shape_index.h"
 #include "s2/s2shapeutil_coding.h"
@@ -71,6 +76,7 @@
 #include "s2/thread_testing.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/math/matrix3x3.h"
+#include "s2/util/random/shared_bit_gen.h"
 
 using absl::WrapUnique;
 using s2textformat::MakePolylineOrDie;
@@ -113,7 +119,7 @@ class MutableS2ShapeIndexTest : public ::testing::Test {
   // the given memory budget yields the expected vector of batches.
   void TestBatchGenerator(int num_edges_removed,
                           const vector<int>& shape_edges_added,
-                          int64 tmp_memory_budget, int shape_id_begin,
+                          int64_t tmp_memory_budget, int shape_id_begin,
                           const vector<BatchDescriptor>& expected_batches);
 };
 
@@ -245,7 +251,7 @@ void MutableS2ShapeIndexTest::TestEncodeDecode() {
 
 void MutableS2ShapeIndexTest::TestBatchGenerator(
     int num_edges_removed, const vector<int>& shape_edges_added,
-    int64 tmp_memory_budget, int shape_id_begin,
+    int64_t tmp_memory_budget, int shape_id_begin,
     const vector<BatchDescriptor>& expected_batches) {
   absl::FlagSaver fs;
   absl::SetFlag(&FLAGS_s2shape_index_tmp_memory_budget, tmp_memory_budget);
@@ -474,7 +480,7 @@ TEST_F(MutableS2ShapeIndexTest, ShrinkToFitOptimization) {
 
 TEST_F(MutableS2ShapeIndexTest, LoopsSpanningThreeFaces) {
   S2Polygon polygon;
-  const int kNumEdges = 100;  // Validation is quadratic
+  constexpr int kNumEdges = 100;  // Validation is quadratic
   // Construct two loops consisting of kNumEdges vertices each, centered
   // around the cube vertex at the start of the Hilbert curve.
   S2Testing::ConcentricLoopsPolygon(S2Point(1, -1, -1).Normalize(), 2,
@@ -489,7 +495,7 @@ TEST_F(MutableS2ShapeIndexTest, LoopsSpanningThreeFaces) {
 }
 
 TEST_F(MutableS2ShapeIndexTest, ManyIdenticalEdges) {
-  const int kNumEdges = 100;  // Validation is quadratic
+  constexpr int kNumEdges = 100;  // Validation is quadratic
   S2Point a = S2Point(0.99, 0.99, 1).Normalize();
   S2Point b = S2Point(-0.99, -0.99, 1).Normalize();
   for (int i = 0; i < kNumEdges; ++i) {
@@ -529,7 +535,7 @@ TEST_F(MutableS2ShapeIndexTest, DegenerateEdge) {
 TEST_F(MutableS2ShapeIndexTest, ManyTinyEdges) {
   // This test adds many edges to a single leaf cell, to check that
   // subdivision stops when no further subdivision is possible.
-  const int kNumEdges = 100;  // Validation is quadratic
+  constexpr int kNumEdges = 100;  // Validation is quadratic
   // Construct two points in the same leaf cell.
   S2Point a = S2CellId(S2Point(1, 0, 0)).ToPoint();
   S2Point b = (a + S2Point(0, 1e-12, 0)).Normalize();
@@ -573,7 +579,9 @@ TEST_F(MutableS2ShapeIndexTest, RandomUpdates) {
   absl::SetFlag(&FLAGS_s2shape_index_tmp_memory_budget, 10000);
 
   // Allow the seed to be varied from the command line.
-  S2Testing::rnd.Reset(absl::GetFlag(FLAGS_s2_random_seed));
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "RANDOM_UPDATES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   // A few polylines.
   index_.Add(make_unique<S2Polyline::OwningShape>(
@@ -617,16 +625,16 @@ TEST_F(MutableS2ShapeIndexTest, RandomUpdates) {
   for (int iter = 0; iter < 100; ++iter) {
     ABSL_VLOG(1) << "Iteration: " << iter;
     // Choose some shapes to add and release.
-    int num_updates = 1 + S2Testing::rnd.Skewed(5);
+    int num_updates = 1 + s2random::SkewedInt(bitgen, 5);
     for (int n = 0; n < num_updates; ++n) {
-      if (S2Testing::rnd.OneIn(2) && !added.empty()) {
-        int i = S2Testing::rnd.Uniform(added.size());
+      if (absl::Bernoulli(bitgen, 0.5) && !added.empty()) {
+        size_t i = absl::Uniform<size_t>(bitgen, 0, added.size());
         ABSL_VLOG(1) << "  Released shape " << added[i] << " ("
                      << index_.shape(added[i]) << ")";
         released.push_back(index_.Release(added[i]));
         added.erase(added.begin() + i);
       } else if (!released.empty()) {
-        int i = S2Testing::rnd.Uniform(released.size());
+        size_t i = absl::Uniform<size_t>(bitgen, 0, released.size());
         S2Shape* shape = released[i].get();
         int shape_id = index_.Add(std::move(released[i]));
         released.erase(released.begin() + i);
@@ -651,10 +659,12 @@ class LazyUpdatesTest : public s2testing::ReaderWriterTest {
   LazyUpdatesTest() = default;
 
   void WriteOp() override {
+    util_random::SharedBitGen bitgen;
     index_.Clear();
-    int num_vertices = 4 * S2Testing::rnd.Skewed(10);  // Up to 4K vertices
+    int num_vertices =
+        4 * s2random::SkewedInt(bitgen, 10);  // Up to 4K vertices
     unique_ptr<S2Loop> loop(S2Loop::MakeRegularLoop(
-        S2Testing::RandomPoint(), S2Testing::KmToAngle(5), num_vertices));
+        s2random::Point(bitgen), S2Testing::KmToAngle(5), num_vertices));
     index_.Add(make_unique<S2Loop::OwningShape>(std::move(loop)));
   }
 
@@ -677,8 +687,8 @@ TEST(MutableS2ShapeIndex, ConstMethodsThreadSafe) {
 
   // The number of readers should be large enough so that it is likely that
   // several readers will be running at once (with a multiple-core CPU).
-  const int kNumReaders = 8;
-  const int kIters = 100;
+  constexpr int kNumReaders = 8;
+  constexpr int kIters = 100;
   test.Run(kNumReaders, kIters);
 }
 
@@ -720,7 +730,7 @@ TEST_F(MutableS2ShapeIndexTest, LinearSpace) {
   // is the max_edges_per_cell() parameter.  The edges are divided such that
   // there are equal numbers of long and short edges; this maximizes the index
   // size when FLAGS_s2shape_index_min_short_edge_fraction is set to zero.
-  const int kNumEdges = 100;  // Validation is quadratic
+  constexpr int kNumEdges = 100;  // Validation is quadratic
   int edges_per_cluster = options.max_edges_per_cell() + 1;
   int num_clusters = (kNumEdges / 2) / edges_per_cluster;
 

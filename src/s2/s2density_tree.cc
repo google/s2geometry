@@ -29,10 +29,13 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/btree_set.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/numeric/int128.h"
 #include "absl/strings/string_view.h"
 #include "s2/util/coding/coder.h"
 #include "s2/util/coding/varint.h"
@@ -77,7 +80,7 @@ class Node {
   }
 
   // Returns the positive weight of this Node, or 0 if the
-  int64 weight() const {
+  int64_t weight() const {
     if (!valid()) {
       return 0;
     }
@@ -154,14 +157,14 @@ class Node {
   }
 
   // A convenience method around calling S2DensityTree::GetNormalCellWeight.
-  int64 GetNormalCellWeight() const {
+  int64_t GetNormalCellWeight() const {
     if (!valid()) {
       return 0;
     }
 
     S2Error error;
     const S2DensityTree& tree = cell_path_->tree();
-    const int64 normal_weight =
+    const int64_t normal_weight =
         tree.GetNormalCellWeight(cell_id_, *cell_, cell_path_, &error);
     ABSL_DCHECK(error.ok()) << error;
     return normal_weight;
@@ -192,7 +195,7 @@ class Node {
 
 bool S2DensityTree::InitToShapeDensity(const S2ShapeIndex& index,
                                        const ShapeWeightFunction& weight_fn,
-                                       int64 approximate_size_bytes,
+                                       int64_t approximate_size_bytes,
                                        int max_level, S2Error* error) {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
   error->Clear();
@@ -209,7 +212,7 @@ bool S2DensityTree::InitToShapeDensity(const S2ShapeIndex& index,
 }
 
 bool S2DensityTree::InitToVertexDensity(const S2ShapeIndex& index,
-                                        int64 approximate_size_bytes,
+                                        int64_t approximate_size_bytes,
                                         int max_level, S2Error* error) {
   return InitToShapeDensity(
       index,
@@ -230,7 +233,7 @@ bool S2DensityTree::InitToVertexDensity(const S2ShapeIndex& index,
 }
 
 bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
-                                     int64 approximate_size_bytes,
+                                     int64_t approximate_size_bytes,
                                      int max_level, S2Error* error) {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
   error->Clear();
@@ -244,8 +247,8 @@ bool S2DensityTree::InitToSumDensity(vector<const S2DensityTree*>& trees,
   TreeEncoder encoder;
   BreadthFirstTreeBuilder builder(approximate_size_bytes, max_level, encoder);
   return builder.Build(
-      [&](S2CellId cell_id, S2Error* error) -> int64 {
-        int64 sum = 0;
+      [&](S2CellId cell_id, S2Error* error) -> int64_t {
+        int64_t sum = 0;
         bool contained = true;
 
         for (auto& cell_path : cell_paths) {
@@ -299,7 +302,7 @@ bool S2DensityTree::VisitCells(const CellVisitor& visitor_fn,
   error->Clear();
 
   for (int face = 0; face < decoded_faces_.size(); ++face) {
-    const int64 offset = decoded_faces_[face];
+    const int64_t offset = decoded_faces_[face];
     if (offset < 0) {
       continue;
     }
@@ -313,7 +316,7 @@ bool S2DensityTree::VisitCells(const CellVisitor& visitor_fn,
 }
 
 bool S2DensityTree::VisitRecursive(const CellVisitor& visitor_fn,
-                                   S2CellId cell_id, int64 position,
+                                   S2CellId cell_id, int64_t position,
                                    S2Error* error) const {
   Decoder decoder(encoded_.data(), encoded_.size());
   decoder.skip(position);
@@ -335,7 +338,7 @@ bool S2DensityTree::VisitRecursive(const CellVisitor& visitor_fn,
 
   // Visit the children.
   for (int i = 0; i < 4; ++i) {
-    const int64 offset = cell.child_offset(i);
+    const int64_t offset = cell.child_offset(i);
     if (offset < 0) {
       continue;
     }
@@ -348,7 +351,7 @@ bool S2DensityTree::VisitRecursive(const CellVisitor& visitor_fn,
   return true;
 }
 
-int64 S2DensityTree::GetCellWeight(const S2CellId cell_id,
+int64_t S2DensityTree::GetCellWeight(const S2CellId cell_id,
                                      DecodedPath* cell_path,
                                      S2Error* error) const {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
@@ -362,7 +365,7 @@ int64 S2DensityTree::GetCellWeight(const S2CellId cell_id,
   return cell->weight();
 }
 
-int64 S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
+int64_t S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
                                            DecodedPath* cell_path,
                                            S2Error* error) const {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
@@ -382,7 +385,7 @@ int64 S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
   return GetNormalCellWeight(cell_id, *cell, cell_path, error);
 }
 
-int64 S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
+int64_t S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
                                            const Cell& cell,
                                            DecodedPath* cell_path,
                                            S2Error* error) const {
@@ -390,9 +393,9 @@ int64 S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
   Node node(cell_id, &cell, cell_path);
 
   while (node.parent().valid()) {
-    const int64 weight = node.weight();
+    const int64_t weight = node.weight();
     node = node.parent();
-    int64 sum = 0;
+    int64_t sum = 0;
 
     for (int i = 0; i < kNumChildrenPerCell; ++i) {
       sum += node.child(i).weight();
@@ -401,10 +404,10 @@ int64 S2DensityTree::GetNormalCellWeight(const S2CellId cell_id,
     scale *= static_cast<double>(weight) / sum;
   }
 
-  return MathUtil::Round<int64>(scale * node.weight());
+  return MathUtil::Round<int64_t>(scale * node.weight());
 }
 
-vector<S2CellUnion> S2DensityTree::GetPartitioning(int64 max_weight,
+vector<S2CellUnion> S2DensityTree::GetPartitioning(int64_t max_weight,
                                                    S2Error* error) const {
   ABSL_DCHECK(error != nullptr) << "error must be non-nullptr";
   error->Clear();
@@ -412,7 +415,7 @@ vector<S2CellUnion> S2DensityTree::GetPartitioning(int64 max_weight,
   // Sample cells at 1/16th of the desired size. This yields a more efficient
   // bin-packing of our S2CellUnions compared to sampling cells closer to the
   // max_weight.
-  const int64 target_weight = max_weight / 16;
+  const int64_t target_weight = max_weight / 16;
 
   DecodedPath decoder(this);
   btree_set<Node> candidates;
@@ -481,9 +484,9 @@ vector<S2CellUnion> S2DensityTree::GetPartitioning(int64 max_weight,
   vector<S2CellUnion> partitioning;
   vector<S2CellId> cover;
 
-  int64 current_weight = 0;
+  int64_t current_weight = 0;
   for (const Node& node : nodes) {
-    const int64 normal_weight = node.GetNormalCellWeight();
+    const int64_t normal_weight = node.GetNormalCellWeight();
 
     if (!cover.empty() && current_weight + normal_weight >= max_weight) {
       partitioning.push_back(S2CellUnion::FromVerbatim(std::move(cover)));
@@ -502,8 +505,8 @@ vector<S2CellUnion> S2DensityTree::GetPartitioning(int64 max_weight,
   return partitioning;
 }
 
-btree_map<S2CellId, int64> S2DensityTree::Decode(S2Error* error) const {
-  btree_map<S2CellId, int64> weights;
+btree_map<S2CellId, int64_t> S2DensityTree::Decode(S2Error* error) const {
+  btree_map<S2CellId, int64_t> weights;
 
   VisitCells(
       [&](const S2CellId cell_id, const Cell& node) {
@@ -537,14 +540,14 @@ void S2DensityTree::Encode(Encoder* encoder) const {
 
 // IndexCellWeightFunction ///////////////////////////////////
 
-int64 S2DensityTree::IndexCellWeightFunction::WeighCell(
+int64_t S2DensityTree::IndexCellWeightFunction::WeighCell(
     const S2CellId cell_id, S2Error*) {
-  int64 sum = 0;
+  int64_t sum = 0;
   bool all_contained = true;
 
   index_region_.VisitIntersectingShapes(
       S2Cell(cell_id), [&](const S2Shape* shape, bool contains_target) {
-        const int64 weight = weight_fn_(*shape);
+        const int64_t weight = weight_fn_(*shape);
         ABSL_DCHECK_GE(weight, 0);
         ABSL_DCHECK_LE(weight, kMaxWeight);
         sum += weight;
@@ -577,7 +580,7 @@ bool S2DensityTree::BreadthFirstTreeBuilder::Build(
       for (S2CellId cell_id = range.first.parent(level); cell_id < range.second;
            cell_id = cell_id.next()) {
         // Get the weight and skip this cell_id unless it's larger than 0.
-        int64 weight = weight_fn(cell_id, error);
+        int64_t weight = weight_fn(cell_id, error);
         if (!error->ok()) {
           return false;
         }
@@ -624,7 +627,7 @@ bool S2DensityTree::BreadthFirstTreeBuilder::Build(
 // Cell ///////////////////////////////////////////
 
 bool S2DensityTree::Cell::Decode(Decoder& decoder, S2Error* error) {
-  uint64 bits;
+  uint64_t bits;
   if (!decoder.get_varint64(&bits)) {
     error->Init(S2Error::INTERNAL,
                 "Failed to decode bits for Cell at position %d", decoder.pos());
@@ -646,7 +649,7 @@ bool S2DensityTree::Cell::Decode(Decoder& decoder, S2Error* error) {
   }
 
   // Read the cumulative offsets for each child in the child mask.
-  int64 offset = 0;
+  int64_t offset = 0;
   for (int i = 0; i < offsets_.size(); ++i) {
     if (child_mask[i]) {
       // Child is set.  Set the current offset and discard the bit.
@@ -655,7 +658,7 @@ bool S2DensityTree::Cell::Decode(Decoder& decoder, S2Error* error) {
       if (child_mask.to_ulong() > 0) {
         // There's another child, so increment the cumulative offset by
         // the offset of the next child.
-        uint64 v;
+        uint64_t v;
         if (!decoder.get_varint64(&v)) {
           error->Init(S2Error::INTERNAL,
                       "Failed to decode child offset at position %d",
@@ -684,7 +687,7 @@ void S2DensityTree::Cell::Clear() {
   weight_ = 0;
 }
 
-bool S2DensityTree::Cell::DecodeAt(const S2DensityTree* tree, uint64 pos,
+bool S2DensityTree::Cell::DecodeAt(const S2DensityTree* tree, uint64_t pos,
                                    S2Error* error) {
   Decoder decoder(tree->encoded_.data(), tree->encoded_.size());
   decoder.skip(pos);
@@ -712,7 +715,7 @@ bool S2DensityTree::Cell::DecodeAt(const S2DensityTree* tree, uint64 pos,
 // The face and child masks use bit 0 for child 0, bit 1 for child 1, etc.
 // These indicate the child is present, and that the weight is greater than 0.
 
-void S2DensityTree::TreeEncoder::Put(const S2CellId cell_id, int64 weight) {
+void S2DensityTree::TreeEncoder::Put(const S2CellId cell_id, int64_t weight) {
   weights_[cell_id] += weight;
 }
 
@@ -732,13 +735,13 @@ void S2DensityTree::TreeEncoder::Build(S2DensityTree* tree) {
 
 void S2DensityTree::TreeEncoder::EncodeTreeReversed(ReversibleBytes* output) {
   ReversedCellEncoder lengths(output);
-  uint64 mask = 0;
+  uint64_t mask = 0;
 
   for (int face = 5; face >= 0; --face) {
     const S2CellId face_cell = S2CellId::FromFace(face);
 
     if (auto iter = weights_.find(face_cell); iter != weights_.end()) {
-      const int64 weight = iter->second;
+      const int64_t weight = iter->second;
 
       EncodeSubtreeReversed(face_cell, weight, output);
       lengths.Next();
@@ -750,16 +753,16 @@ void S2DensityTree::TreeEncoder::EncodeTreeReversed(ReversibleBytes* output) {
 }
 
 void S2DensityTree::TreeEncoder::EncodeSubtreeReversed(
-    const S2CellId cell_id, int64 weight, ReversibleBytes* output) {
+    const S2CellId cell_id, int64_t weight, ReversibleBytes* output) {
   ReversedCellEncoder lengths(output);
-  uint64 mask = 0;
+  uint64_t mask = 0;
 
   if (!cell_id.is_leaf()) {
     for (int i = 3; i >= 0; --i) {
       const S2CellId child = cell_id.child(i);
 
       if (const auto iter = weights_.find(child); iter != weights_.end()) {
-        const int64 weight = iter->second;
+        const int64_t weight = iter->second;
 
         EncodeSubtreeReversed(child, weight, output);
         lengths.Next();
@@ -772,7 +775,7 @@ void S2DensityTree::TreeEncoder::EncodeSubtreeReversed(
 }
 
 // static
-int S2DensityTree::TreeEncoder::EstimateSize(int64 weight) {
+int S2DensityTree::TreeEncoder::EstimateSize(int64_t weight) {
   const int weight_size =
       Varint::Length64(weight << S2DensityTree::kChildMaskBits | 0xF);
   return weight_size + 2 * Varint::Length64(weight_size);
@@ -802,7 +805,7 @@ bool S2DensityTree::DecodeHeader(Decoder* decoder, DecodedFaces* decoded_faces,
 
   // Read the lengths of each cube face except the last.
 
-  uint64 bits;
+  uint64_t bits;
   if (!decoder->get_varint64(&bits)) {
     error->Init(S2Error::INVALID_ARGUMENT,
                 "Failed to decode face mask at position %d", decoder->pos());
@@ -814,17 +817,17 @@ bool S2DensityTree::DecodeHeader(Decoder* decoder, DecodedFaces* decoded_faces,
   // A list of pairings of <face, offset>.  This is a temporary representation
   // needed because the offsets are relative to the decoder positions *after*
   // all of the faces have been decoded.
-  vector<std::pair<int, uint64>> coded_faces;
+  vector<std::pair<int, uint64_t>> coded_faces;
   coded_faces.reserve(S2CellId::kNumFaces);
 
-  int64 offset = 0;
+  int64_t offset = 0;
   for (int i = 0; i < face_mask.size(); ++i) {
     if (face_mask.test(i)) {
       coded_faces.push_back({i, offset});
 
       // There are (face_mask.count()-1) lengths to read.
       if (coded_faces.size() < face_mask.count()) {
-        uint64 v;
+        uint64_t v;
         if (!decoder->get_varint64(&v)) {
           ABSL_LOG(ERROR) << "Failed to decode offset at position "
                           << decoder->pos();
@@ -838,7 +841,7 @@ bool S2DensityTree::DecodeHeader(Decoder* decoder, DecodedFaces* decoded_faces,
   // Convert the face/offset pairs into decoded faces.
   for (const auto& coded_face : coded_faces) {
     const int face = coded_face.first;
-    const int64 offset = coded_face.second;
+    const int64_t offset = coded_face.second;
 
     decoded_faces->at(face) = decoder->pos() + offset;
   }
@@ -865,7 +868,7 @@ const S2DensityTree::Cell* S2DensityTree::DecodedPath::GetCell(
 void S2DensityTree::DecodedPath::LoadFace(int face, S2Error* error) {
   S2DensityTree::Cell* cell = &stack_[0];
 
-  const int64 offset = tree_->decoded_faces_[face];
+  const int64_t offset = tree_->decoded_faces_[face];
   if (offset < 0) {
     cell->Clear();
   } else {
@@ -885,7 +888,7 @@ const S2DensityTree::Cell* S2DensityTree::DecodedPath::LoadCell(
   int level = start_level + 1;
   for (; level <= cell_level; ++level) {
     // Find the next child position, if available.
-    const int64 offset = cell->child_offset(cell_id.child_position(level));
+    const int64_t offset = cell->child_offset(cell_id.child_position(level));
 
     // Examine the frame associated with the child.
     prev = cell;
@@ -907,4 +910,59 @@ const S2DensityTree::Cell* S2DensityTree::DecodedPath::LoadCell(
 
   last_ = cell_id.parent(level - 1);
   return cell;
+}
+
+S2DensityTree S2DensityTree::Normalize(absl::Nonnull<S2Error*> error) const {
+  error->Clear();
+
+  DecodedPath path(this);
+
+  absl::flat_hash_map<S2CellId, int64_t> weights;
+  VisitCells(
+      [&](S2CellId id, const Cell& cell) {
+        absl::int128 weight = cell.weight();
+        if (!id.is_face()) {
+          const S2CellId parent = id.parent();
+
+          absl::int128 sibling_weight = 0;
+          for (int i = 0; i < 4; ++i) {
+            const Cell* sibling = path.GetCell(parent.child(i), error);
+            if (!error->ok()) {
+              return VisitAction::STOP;
+            }
+            sibling_weight += sibling->weight();
+          }
+
+          weight = (weight * weights[parent] - 1) / sibling_weight + 1;
+        }
+
+        weights[id] = static_cast<int64_t>(weight);
+        return VisitAction::ENTER_CELL;
+      },
+      error);
+
+  TreeEncoder encoder;
+  for (const auto& entry : weights) {
+    encoder.Put(entry.first, entry.second);
+  }
+
+  S2DensityTree tree;
+  encoder.Build(&tree);
+  return tree;
+}
+
+S2CellUnion S2DensityTree::Leaves(absl::Nonnull<S2Error*> error) const {
+  std::vector<S2CellId> leaves;
+
+  VisitCells(
+      [&](S2CellId cell_id, const Cell& cell) {
+        if (cell.has_children()) {
+          return VisitAction::ENTER_CELL;
+        }
+        leaves.emplace_back(cell_id);
+        return VisitAction::SKIP_CELL;
+      },
+      error);
+
+  return S2CellUnion::FromVerbatim(std::move(leaves));
 }

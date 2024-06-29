@@ -19,7 +19,7 @@
 #define S2_S2EDGE_CROSSER_H_
 
 #include "absl/log/absl_check.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2edge_crossings.h"
 #include "s2/s2edge_crossings_internal.h"
 #include "s2/s2point.h"
@@ -231,8 +231,8 @@ class S2EdgeCrosserBase {
   // bool S2CopyingEdgeCrosser::EdgeOrVertexCrossing(S2Point const& d);
   bool EdgeOrVertexCrossing(ArgType d);
 
-  // Like EdgeOrVertexCrossing above, but uses the last vertex passed to one
-  // of the crossing methods (or RestartAt) as the first vertex of the
+  // Like SignedEdgeOrVertexCrossing above, but uses the last vertex passed to
+  // one of the crossing methods (or RestartAt) as the first vertex of the
   // current edge.
   //
   // For S2EdgeCrosser (only), the argument must point to a value that

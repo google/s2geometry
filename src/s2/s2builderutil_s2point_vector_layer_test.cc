@@ -17,6 +17,7 @@
 
 #include "s2/s2builderutil_s2point_vector_layer.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -26,8 +27,6 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 
-#include "s2/base/casts.h"
-#include "s2/base/types.h"
 #include "s2/id_set_lexicon.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s2builder.h"
@@ -54,7 +53,7 @@ void VerifyS2PointVectorLayerResults(
     const S2PointVectorLayer::LabelSetIds& label_set_ids,
     const IdSetLexicon& label_set_lexicon, const vector<S2Point>& output,
     string_view str_expected_points,
-    const vector<vector<int32>>& expected_labels) {
+    const vector<vector<int32_t>>& expected_labels) {
   vector<S2Point> expected_points =
       s2textformat::ParsePointsOrDie(str_expected_points);
 
@@ -64,7 +63,7 @@ void VerifyS2PointVectorLayerResults(
     ASSERT_EQ(expected_labels[i].size(),
               label_set_lexicon.id_set(label_set_ids[i]).size());
     int k = 0;
-    for (int32 label : label_set_lexicon.id_set(label_set_ids[i])) {
+    for (int32_t label : label_set_lexicon.id_set(label_set_ids[i])) {
       EXPECT_EQ(expected_labels[i][k++], label);
     }
   }
@@ -95,7 +94,7 @@ TEST(S2PointVectorLayer, MergeDuplicates) {
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
 
-  vector<vector<int32>> expected_labels = {{1, 2}, {1}, {2}, {2}, {}};
+  vector<vector<int32_t>> expected_labels = {{1, 2}, {1}, {2}, {2}, {}};
   string expected_points = "0:1, 0:2, 0:4, 0:5, 0:6";
 
   VerifyS2PointVectorLayerResults(label_set_ids, label_set_lexicon, output,
@@ -125,7 +124,7 @@ TEST(S2PointVectorLayer, KeepDuplicates) {
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
 
-  vector<vector<int32>> expected_labels = {{1}, {2}, {1}, {2}, {2}, {}, {}};
+  vector<vector<int32_t>> expected_labels = {{1}, {2}, {1}, {2}, {2}, {}, {}};
   string expected_points = "0:1, 0:1, 0:2, 0:4, 0:5, 0:5, 0:6";
 
   VerifyS2PointVectorLayerResults(label_set_ids, label_set_lexicon, output,

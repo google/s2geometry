@@ -24,11 +24,11 @@
 namespace s2shapeutil {
 
 // Returns the total number of vertices in a single shape.
-int64 CountVertices(const S2Shape& shape);
+int64_t CountVertices(const S2Shape& shape);
 
 // Returns the total number of vertices in all indexed shapes. This method takes
 // time linear in the number of shapes.
-int64 CountVertices(const S2ShapeIndex& index);
+int64_t CountVertices(const S2ShapeIndex& index);
 
 }  // namespace s2shapeutil
 

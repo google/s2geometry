@@ -24,6 +24,8 @@
 
 #include "absl/base/macros.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 
 #include "s2/s1angle.h"
@@ -31,6 +33,7 @@
 #include "s2/s2error.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 
 using absl::StrCat;
@@ -97,8 +100,11 @@ TEST(S2LatLng, TestConversion) {
                  .lng().radians()));
 
   // Test a bunch of random points.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "TEST_CONVERSION",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int i = 0; i < 100000; ++i) {
-    S2Point p = S2Testing::RandomPoint();
+    S2Point p = s2random::Point(bitgen);
     EXPECT_TRUE(S2::ApproxEquals(p, S2Point(S2LatLng(p)))) << p;
   }
 }

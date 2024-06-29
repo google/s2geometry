@@ -21,9 +21,9 @@
 #ifndef S2_UTIL_MATH_MATHUTIL_H_
 #define S2_UTIL_MATH_MATHUTIL_H_
 
+#include <cstdint>
 #include <type_traits>
 
-#include "s2/base/types.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/bits/bits.h"
 
@@ -65,7 +65,7 @@ class MathUtil {
   //   Example usage:
   //     double y, z;
   //     int x = Round<int>(y + 3.7);
-  //     int64 b = Round<int64>(0.3 * z);
+  //     int64_t b = Round<int64_t>(0.3 * z);
   //
   //   Note that the floating-point template parameter is typically inferred
   //   from the argument type, i.e. there is no need to specify it explicitly.
@@ -103,7 +103,7 @@ class MathUtil {
   //   rounded.
   //
   //   There are template specializations of Round() which call these
-  //   functions (for "int" and "int64" only), but it's safer to call them
+  //   functions (for "int" and "int64_t" only), but it's safer to call them
   //   directly.
   //
   //   This functions are equivalent to lrint() and llrint() as defined in
@@ -111,7 +111,7 @@ class MathUtil {
   //   widely adopted yet and these functions are not available by default.
   //   --------------------------------------------------------------------
 
-  static int32 FastIntRound(double x) {
+  static int32_t FastIntRound(double x) {
     // This function is not templatized because gcc doesn't seem to be able
     // to deal with inline assembly code in templatized functions, and there
     // is no advantage to passing an argument type of "float" on Intel
@@ -120,7 +120,7 @@ class MathUtil {
 #if defined __GNUC__ && (defined __i386__ || defined __SSE2__)
 #if defined __SSE2__
     // SSE2.
-    int32 result;
+    int32_t result;
     __asm__ __volatile__
         ("cvtsd2si %1, %0"
          : "=r" (result)    // Output operand is a register
@@ -128,7 +128,7 @@ class MathUtil {
     return result;
 #elif defined __i386__
     // FPU stack.  Adapted from /usr/include/bits/mathinline.h.
-    int32 result;
+    int32_t result;
     __asm__ __volatile__
         ("fistpl %0"
          : "=m" (result)    // Output operand is a memory location
@@ -137,15 +137,15 @@ class MathUtil {
     return result;
 #endif  // if defined __x86_64__ || ...
 #else
-    return Round<int32, double>(x);
+    return Round<int32_t, double>(x);
 #endif  // if defined __GNUC__ && ...
   }
 
-  static int64 FastInt64Round(double x) {
+  static int64_t FastInt64Round(double x) {
 #if defined __GNUC__ && (defined __i386__ || defined __x86_64__)
 #if defined __x86_64__
     // SSE2.
-    int64 result;
+    int64_t result;
     __asm__ __volatile__
         ("cvtsd2si %1, %0"
          : "=r" (result)    // Output operand is a register
@@ -154,7 +154,7 @@ class MathUtil {
 #elif defined __i386__
     // There is no CVTSD2SI in i386 to produce a 64 bit int, even with SSE2.
     // FPU stack.  Adapted from /usr/include/bits/mathinline.h.
-    int64 result;
+    int64_t result;
     __asm__ __volatile__
         ("fistpll %0"
          : "=m" (result)    // Output operand is a memory location
@@ -163,7 +163,7 @@ class MathUtil {
     return result;
 #endif  // if defined __i386__
 #else
-    return Round<int64, double>(x);
+    return Round<int64_t, double>(x);
 #endif  // if defined __GNUC__ && ...
   }
 
@@ -177,7 +177,7 @@ class MathUtil {
   template <typename T>
   static T IPow(T base, int exp) {
     ABSL_DCHECK_GE(exp, 0);
-    uint32 uexp = static_cast<uint32>(exp);
+    uint32_t uexp = static_cast<uint32_t>(exp);
 
     if (uexp < 16) {
       T result = (uexp & 1) ? base : static_cast<T>(1);
@@ -226,23 +226,23 @@ class MathUtil {
 // Intel versions when possible.  Note that gcc does not currently support
 // partial specialization of templatized functions.
 
-template<>
-inline int32 MathUtil::Round<int32, double>(double x) {
+template <>
+inline int32_t MathUtil::Round<int32_t, double>(double x) {
   return FastIntRound(x);
 }
 
-template<>
-inline int32 MathUtil::Round<int32, float>(float x) {
+template <>
+inline int32_t MathUtil::Round<int32_t, float>(float x) {
   return FastIntRound(x);
 }
 
-template<>
-inline int64 MathUtil::Round<int64, double>(double x) {
+template <>
+inline int64_t MathUtil::Round<int64_t, double>(double x) {
   return FastInt64Round(x);
 }
 
-template<>
-inline int64 MathUtil::Round<int64, float>(float x) {
+template <>
+inline int64_t MathUtil::Round<int64_t, float>(float x) {
   return FastInt64Round(x);
 }
 

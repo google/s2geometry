@@ -54,7 +54,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1chord_angle.h"
 #include "s2/s2debug.h"
 #include "s2/s2point.h"
@@ -170,7 +170,7 @@ int CompareEdgeDirections(const S2Point& a0, const S2Point& a1,
 int SignDotProd(const S2Point& a, const S2Point& b);
 
 // Forms the intersection of edge AB with the great circle specified by normal N
-// as (A×B)×N and computes the sign of that point dotted with Y.
+// as (A×B)×N and computes the sign of that point dotted with X.
 //
 // When you have an edge you know crosses a cell boundary corresponding to N,
 // then this function can tell you whether the intersection point is to the

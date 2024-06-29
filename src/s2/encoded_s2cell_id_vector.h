@@ -20,9 +20,9 @@
 
 #include <cstddef>
 
+#include <cstdint>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/types/span.h"
 #include "s2/util/coding/coder.h"
 #include "s2/encoded_uint_vector.h"
@@ -84,10 +84,10 @@ class EncodedS2CellIdVector {
 
  private:
   // Values are decoded as (base_ + (deltas_[i] << shift_)).
-  EncodedUintVector<uint64> deltas_;
-  uint64 base_;
-  uint8 shift_;
-  uint8 base_len_;
+  EncodedUintVector<uint64_t> deltas_;
+  uint64_t base_;
+  uint8_t shift_;
+  uint8_t base_len_;
 };
 
 
@@ -112,7 +112,7 @@ inline size_t EncodedS2CellIdVector::lower_bound(S2CellId target) const {
   if (target.id() <= base_) return 0;
   if (target >= S2CellId::End(S2CellId::kMaxLevel)) return size();
   return deltas_.lower_bound(
-      (target.id() - base_ + (uint64{1} << shift_) - 1) >> shift_);
+      (target.id() - base_ + (uint64_t{1} << shift_) - 1) >> shift_);
 }
 
 }  // namespace s2coding

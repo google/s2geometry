@@ -135,7 +135,7 @@ namespace gtl {
 template <class Value,
           class HashFcn = std::hash<Value>,
           class EqualKey = std::equal_to<Value>,
-          class Alloc = std::allocator<Value> >
+          class Alloc = std::allocator<Value>>
 class dense_hash_set {
  private:
 
@@ -151,8 +151,9 @@ class dense_hash_set {
   };
 
   // The actual data
-  typedef dense_hashtable<Value, Value, HashFcn, Identity, SetKey,
-                          EqualKey, Alloc> ht;
+  typedef dense_hashtable<Value, Value, HashFcn, Identity, SetKey, EqualKey,
+                          Alloc>
+      ht;
   ht rep;
 
  public:
@@ -174,10 +175,9 @@ class dense_hash_set {
   typedef typename ht::const_local_iterator local_iterator;
   typedef typename ht::const_local_iterator const_local_iterator;
 
-
   // Iterator functions -- recall all iterators are const
-  iterator begin() const                  { return rep.begin(); }
-  iterator end() const                    { return rep.end(); }
+  iterator begin() const { return rep.begin(); }
+  iterator end() const { return rep.end(); }
 
   // These come from tr1's unordered_set. For us, a bucket has 0 or 1 elements.
   ABSL_DEPRECATED(
@@ -188,15 +188,13 @@ class dense_hash_set {
   ABSL_DEPRECATED(
       "This method is slated for removal.  Please migrate to "
       "absl::flat_hash_set.")
-  local_iterator end(size_type i) const   { return rep.end(i); }
-
+  local_iterator end(size_type i) const { return rep.end(i); }
 
   // Accessor functions
-  allocator_type get_allocator() const    { return rep.get_allocator(); }
-  hasher hash_funct() const               { return rep.hash_funct(); }
-  hasher hash_function() const            { return hash_funct(); }  // tr1 name
-  key_equal key_eq() const                { return rep.key_eq(); }
-
+  allocator_type get_allocator() const { return rep.get_allocator(); }
+  hasher hash_funct() const { return rep.hash_funct(); }
+  hasher hash_function() const { return hash_funct(); }  // tr1 name
+  key_equal key_eq() const { return rep.key_eq(); }
 
   // Constructors
   dense_hash_set() {}
@@ -223,21 +221,19 @@ class dense_hash_set {
   // We use the default operator=()
   // We use the default destructor
 
-  void clear()                        { rep.clear(); }
+  void clear() { rep.clear(); }
   // This clears the hash set without resizing it down to the minimum
   // bucket count, but rather keeps the number of buckets constant
-  void clear_no_resize()              { rep.clear_no_resize(); }
+  void clear_no_resize() { rep.clear_no_resize(); }
   void swap(dense_hash_set& hs) noexcept { rep.swap(hs.rep); }
 
   // Functions concerning size
-  size_type size() const              { return rep.size(); }
-  size_type max_size() const          { return rep.max_size(); }
-  bool empty() const                  { return rep.empty(); }
-  size_type bucket_count() const      { return rep.bucket_count(); }
+  size_type size() const { return rep.size(); }
+  size_type max_size() const { return rep.max_size(); }
+  bool empty() const { return rep.empty(); }
+  size_type bucket_count() const { return rep.bucket_count(); }
 
-  float load_factor() const {
-    return size() * 1.0f / bucket_count();
-  }
+  float load_factor() const { return size() * 1.0f / bucket_count(); }
   float max_load_factor() const {
     float shrink, grow;
     rep.get_resizing_parameters(&shrink, &grow);
@@ -267,12 +263,12 @@ class dense_hash_set {
     rep.set_resizing_parameters(shrink, grow);
   }
 
-  void resize(size_type hint)         { rep.resize(hint); }
-  void rehash(size_type hint)         { resize(hint); }     // the tr1 name
+  void resize(size_type hint) { rep.resize(hint); }
+  void rehash(size_type hint) { resize(hint); }  // the tr1 name
 
   // Lookup routines
-  iterator find(const key_type& key) const           { return rep.find(key); }
-  size_type count(const key_type& key) const         { return rep.count(key); }
+  iterator find(const key_type& key) const { return rep.find(key); }
+  size_type count(const key_type& key) const { return rep.count(key); }
   std::pair<iterator, iterator> equal_range(const key_type& key) const {
     return rep.equal_range(key);
   }
@@ -281,22 +277,19 @@ class dense_hash_set {
   // Insertion routines
   std::pair<iterator, bool> insert(const value_type& obj) {
     std::pair<typename ht::iterator, bool> p = rep.insert(obj);
-    return std::pair<iterator, bool>(p.first, p.second);   // const to non-const
+    return std::pair<iterator, bool>(p.first, p.second);  // const to non-const
   }
   std::pair<iterator, bool> insert(value_type&& obj) {  // NOLINT
     std::pair<typename ht::iterator, bool> p = rep.insert(std::move(obj));
-    return std::pair<iterator, bool>(p.first, p.second);   // const to non-const
+    return std::pair<iterator, bool>(p.first, p.second);  // const to non-const
   }
-  template <class InputIterator> void insert(InputIterator f, InputIterator l) {
+  template <class InputIterator>
+  void insert(InputIterator f, InputIterator l) {
     rep.insert(f, l);
   }
-  void insert(const_iterator f, const_iterator l) {
-    rep.insert(f, l);
-  }
+  void insert(const_iterator f, const_iterator l) { rep.insert(f, l); }
   // Required for std::insert_iterator; the passed-in iterator is ignored.
-  iterator insert(iterator, const value_type& obj) {
-    return insert(obj).first;
-  }
+  iterator insert(iterator, const value_type& obj) { return insert(obj).first; }
   iterator insert(iterator, value_type&& obj) {  // NOLINT
     return insert(std::move(obj)).first;
   }
@@ -318,18 +311,17 @@ class dense_hash_set {
   // THESE ARE NON-STANDARD!  I make you specify an "impossible" key
   // value to identify deleted and empty buckets.  You can change the
   // deleted key as time goes on, or get rid of it entirely to be insert-only.
-  void set_empty_key(const key_type& key)     { rep.set_empty_key(key); }
-  void set_deleted_key(const key_type& key)   { rep.set_deleted_key(key); }
+  void set_empty_key(const key_type& key) { rep.set_empty_key(key); }
+  void set_deleted_key(const key_type& key) { rep.set_deleted_key(key); }
 
   // These are standard
-  size_type erase(const key_type& key)               { return rep.erase(key); }
-  void erase(iterator it)                            { rep.erase(it); }
-  void erase(iterator f, iterator l)                 { rep.erase(f, l); }
-
+  size_type erase(const key_type& key) { return rep.erase(key); }
+  void erase(iterator it) { rep.erase(it); }
+  void erase(iterator f, iterator l) { rep.erase(f, l); }
 
   // Comparison
-  bool operator==(const dense_hash_set& hs) const    { return rep == hs.rep; }
-  bool operator!=(const dense_hash_set& hs) const    { return rep != hs.rep; }
+  bool operator==(const dense_hash_set& hs) const { return rep == hs.rep; }
+  bool operator!=(const dense_hash_set& hs) const { return rep != hs.rep; }
 };
 
 template <class Val, class HashFcn, class EqualKey, class Alloc>

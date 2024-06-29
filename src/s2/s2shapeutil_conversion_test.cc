@@ -86,9 +86,9 @@ void VerifyShapeToS2Polygon(const vector<S2LaxPolygonShape::Loop>& loops,
   EXPECT_EQ(polygon->num_loops(), expected_num_loops);
   EXPECT_EQ(polygon->num_vertices(), expected_num_vertices);
   for (int i = 0; i < polygon->num_loops(); i++) {
-    S2Loop* loop = polygon->loop(i);
-    for (int j = 0; j < loop->num_vertices(); j++) {
-      EXPECT_EQ(loop->oriented_vertex(j), loops[i][j]);
+    const S2Loop& loop = *polygon->loop(i);
+    for (int j = 0; j < loop.num_vertices(); j++) {
+      EXPECT_EQ(loop.oriented_vertex(j), loops[i][j]);
     }
   }
 }
@@ -140,9 +140,9 @@ TEST(S2ShapeConversionUtilTest, FullPolygonToS2Polygon) {
   EXPECT_EQ(polygon->num_vertices(), 1);
   EXPECT_TRUE(polygon->is_full());
   for (int i = 0; i < polygon->num_loops(); i++) {
-    S2Loop* loop = polygon->loop(i);
-    for (int j = 0; j < loop->num_vertices(); j++) {
-      EXPECT_EQ(loop->oriented_vertex(j), loops[i][j]);
+    const S2Loop& loop = *polygon->loop(i);
+    for (int j = 0; j < loop.num_vertices(); j++) {
+      EXPECT_EQ(loop.oriented_vertex(j), loops[i][j]);
     }
   }
 }

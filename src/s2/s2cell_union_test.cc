@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,6 +29,9 @@
 
 #include "absl/hash/hash_testing.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 
 #include "s2/base/commandlineflags.h"
@@ -43,6 +47,7 @@
 #include "s2/s2error.h"
 #include "s2/s2metrics.h"
 #include "s2/s2point.h"
+#include "s2/s2random.h"
 #include "s2/s2region_coverer.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
@@ -55,6 +60,7 @@ S2_DEFINE_int32(iters, 2000, "Number of iterations for tests.");
 using absl::StrCat;
 using std::max;
 using std::min;
+using std::string;
 using std::vector;
 
 using ::testing::ElementsAre;
@@ -86,7 +92,7 @@ TEST(S2CellUnion, S2CellIdConstructor) {
 
 TEST(S2CellUnion, WholeSphere) {
   S2CellUnion whole_sphere = S2CellUnion::WholeSphere();
-  EXPECT_EQ(whole_sphere.LeafCellsCovered(), 6 * (uint64{1} << 60));
+  EXPECT_EQ(whole_sphere.LeafCellsCovered(), 6 * (uint64_t{1} << 60));
   whole_sphere.Expand(0);
   EXPECT_EQ(whole_sphere, S2CellUnion::WholeSphere());
 }
@@ -131,10 +137,8 @@ TEST(S2CellUnion, IsNormalized) {
   EXPECT_FALSE(cell_union.IsNormalized());
 }
 
-static S2Testing::Random& rnd = S2Testing::rnd;
-
-static void AddCells(S2CellId id, bool selected,
-                     vector<S2CellId> *input, vector<S2CellId> *expected) {
+static void AddCells(absl::BitGenRef bitgen, S2CellId id, bool selected,
+                     vector<S2CellId>* input, vector<S2CellId>* expected) {
   // Decides whether to add "id" and/or some of its descendants to the
   // test case.  If "selected" is true, then the region covered by "id"
   // *must* be added to the test case (either by adding "id" itself, or
@@ -145,13 +149,14 @@ static void AddCells(S2CellId id, bool selected,
   if (id == S2CellId::None()) {
     // Initial call: decide whether to add cell(s) from each face.
     for (int face = 0; face < 6; ++face) {
-      AddCells(S2CellId::FromFace(face), false, input, expected);
+      AddCells(bitgen, S2CellId::FromFace(face), false, input, expected);
     }
     return;
   }
   if (id.is_leaf()) {
-    // The rnd.OneIn() call below ensures that the parent of a leaf cell
-    // will always be selected (if we make it that far down the hierarchy).
+    // The `absl::Bernoulli()` call below ensures that the parent of
+    // a leaf cell will always be selected (if we make it that far down the
+    // hierarchy).
     ABSL_DCHECK(selected);
     input->push_back(id);
     return;
@@ -159,7 +164,8 @@ static void AddCells(S2CellId id, bool selected,
   // The following code ensures that the probability of selecting a cell
   // at each level is approximately the same, i.e. we test normalization
   // of cells at all levels.
-  if (!selected && rnd.OneIn(S2CellId::kMaxLevel - id.level())) {
+  if (!selected &&
+      absl::Bernoulli(bitgen, 1.0 / (S2CellId::kMaxLevel - id.level()))) {
     // Once a cell has been selected, the expected output is predetermined.
     // We then make sure that cells are selected that will normalize to
     // the desired output.
@@ -167,15 +173,15 @@ static void AddCells(S2CellId id, bool selected,
     selected = true;
   }
 
-  // With the rnd.OneIn() constants below, this function adds an average
-  // of 5/6 * (kMaxLevel - level) cells to "input" where "level" is the
-  // level at which the cell was first selected (level 15 on average).
+  // With the `absl::Bernoulli()` constants below, this function
+  // adds an average of 5/6 * (kMaxLevel - level) cells to "input" where "level"
+  // is the level at which the cell was first selected (level 15 on average).
   // Therefore the average number of input cells in a test case is about
   // (5/6 * 15 * 6) = 75.  The average number of output cells is about 6.
 
   // If a cell is selected, we add it to "input" with probability 5/6.
   bool added = false;
-  if (selected && !rnd.OneIn(6)) {
+  if (selected && absl::Bernoulli(bitgen, 5.0 / 6)) {
     input->push_back(id);
     added = true;
   }
@@ -190,14 +196,15 @@ static void AddCells(S2CellId id, bool selected,
     // We also make sure that we do not recurse on all 4 children, since
     // then we might include all 4 children in the input case by accident
     // (in which case the expected output would not be correct).
-    if (rnd.OneIn(selected ? 12 : 4) && num_children < 3) {
-      AddCells(child, selected, input, expected);
+    if (absl::Bernoulli(bitgen, 1.0 / (selected ? 12 : 4)) &&
+        num_children < 3) {
+      AddCells(bitgen, child, selected, input, expected);
       ++num_children;
     }
     // If this cell was selected but the cell itself was not added, we
     // must ensure that all 4 children (or some combination of their
     // descendants) are added.
-    if (selected && !added) AddCells(child, selected, input, expected);
+    if (selected && !added) AddCells(bitgen, child, selected, input, expected);
   }
 }
 
@@ -205,11 +212,14 @@ TEST(S2CellUnion, AddCellsSizes) {
   // Try a bunch of random test cases, and keep track of average
   // statistics for normalization (to see if they agree with the
   // analysis above).
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "ADD_CELLS_SIZES",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   double in_sum = 0, out_sum = 0;
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input, expected;
-    AddCells(S2CellId::None(), /*selected=*/false, &input, &expected);
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false, &input, &expected);
     in_sum += input.size();
     out_sum += expected.size();
   }
@@ -218,20 +228,26 @@ TEST(S2CellUnion, AddCellsSizes) {
 }
 
 TEST(S2CellUnion, ContainsExpectedCells) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CONTAINS_EXPECTED_CELLS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input, expected;
-    AddCells(S2CellId::None(), /*selected=*/false, &input, &expected);
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false, &input, &expected);
     S2CellUnion cellunion(input);
     EXPECT_THAT(cellunion.cell_ids(), Eq(expected));
   }
 }
 
 TEST(S2CellUnion, ContainsInputCells) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CONTAINS_INPUT_CELLS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input, expected;
-    AddCells(S2CellId::None(), /*selected=*/false, &input,
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false, &input,
              /*expected=*/nullptr);
     S2CellUnion cellunion(input);
 
@@ -262,10 +278,13 @@ TEST(S2CellUnion, ContainsInputCells) {
 }
 
 TEST(S2CellUnion, DoesNotContainParentsOfExpectedCell) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "DOES_NOT_CONTAIN_PARENTS_OF_EXPECTED_CELL",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input, expected;
-    AddCells(S2CellId::None(), /*selected=*/false, &input, &expected);
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false, &input, &expected);
     S2CellUnion cellunion(input);
 
     for (S2CellId expected_id : expected) {
@@ -278,17 +297,20 @@ TEST(S2CellUnion, DoesNotContainParentsOfExpectedCell) {
 }
 
 TEST(S2CellUnion, UnionIsOr) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "UNION_IS_OR",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input;
-    AddCells(S2CellId::None(), /*selected=*/false, &input,
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false, &input,
              /*expected=*/nullptr);
     S2CellUnion cellunion(input);
 
     vector<S2CellId> x, y, x_or_y;
     for (S2CellId input_id : input) {
-      bool in_x = rnd.OneIn(2);
-      bool in_y = rnd.OneIn(2);
+      bool in_x = absl::Bernoulli(bitgen, 0.5);
+      bool in_y = absl::Bernoulli(bitgen, 0.5);
       if (in_x) x.push_back(input_id);
       if (in_y) y.push_back(input_id);
       if (in_x || in_y) x_or_y.push_back(input_id);
@@ -302,17 +324,20 @@ TEST(S2CellUnion, UnionIsOr) {
 }
 
 TEST(S2CellUnion, IntersectionIsAnd) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "INTERSECTION_IS_AND",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input;
-    AddCells(S2CellId::None(), /*selected=*/false, &input,
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false, &input,
              /*expected=*/nullptr);
     S2CellUnion cellunion(input);
 
     vector<S2CellId> x, y, x_and_y;
     for (S2CellId input_id : input) {
-      if (rnd.OneIn(2)) x.push_back(input_id);
-      if (rnd.OneIn(2)) y.push_back(input_id);
+      if (absl::Bernoulli(bitgen, 0.5)) x.push_back(input_id);
+      if (absl::Bernoulli(bitgen, 0.5)) y.push_back(input_id);
     }
     S2CellUnion xcells(std::move(x));
     S2CellUnion ycells(std::move(y));
@@ -361,17 +386,20 @@ TEST(S2CellUnion, IntersectionWithCellIdNotInUnionIsEmpty) {
 }
 
 TEST(S2CellUnion, DifferenceIsXAndNotY) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "DIFFERENCE_IS_X_AND_NOT_Y",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input;
-    AddCells(S2CellId::None(), /*selected=*/false, &input,
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false, &input,
              /*expected=*/nullptr);
     S2CellUnion cellunion(input);
 
     vector<S2CellId> x, y;
     for (S2CellId input_id : input) {
-      if (rnd.OneIn(2)) x.push_back(input_id);
-      if (rnd.OneIn(2)) y.push_back(input_id);
+      if (absl::Bernoulli(bitgen, 0.5)) x.push_back(input_id);
+      if (absl::Bernoulli(bitgen, 0.5)) y.push_back(input_id);
     }
     S2CellUnion xcells(std::move(x));
     S2CellUnion ycells(std::move(y));
@@ -387,17 +415,20 @@ TEST(S2CellUnion, DifferenceIsXAndNotY) {
 }
 
 TEST(S2CellUnion, DifferenceInclusionExclusion) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "DIFFERENCE_INCLUSION_EXCLUSION",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input;
-    AddCells(S2CellId::None(), /*selected=*/false, &input,
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false, &input,
              /*expected=*/nullptr);
     S2CellUnion cellunion(input);
 
     vector<S2CellId> x, y;
     for (S2CellId input_id : input) {
-      if (rnd.OneIn(2)) x.push_back(input_id);
-      if (rnd.OneIn(2)) y.push_back(input_id);
+      if (absl::Bernoulli(bitgen, 0.5)) x.push_back(input_id);
+      if (absl::Bernoulli(bitgen, 0.5)) y.push_back(input_id);
     }
     S2CellUnion xcells(std::move(x));
     S2CellUnion ycells(std::move(y));
@@ -414,15 +445,19 @@ TEST(S2CellUnion, DifferenceInclusionExclusion) {
 }
 
 TEST(S2CellUnion, ContainsIntersectsBruteForce) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CONTAINS_INTERSECTS_BRUTE_FORCE",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input, expected;
-    AddCells(S2CellId::None(), /*selected=*/false, &input, &expected);
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false, &input, &expected);
     S2CellUnion cellunion(input);
     // Generate some new cells and see if `Contains` / `Intersects` agree
     // with a brute-force computation.
     vector<S2CellId> test;
-    AddCells(S2CellId::None(), /*selected=*/false, &test, /*expected=*/nullptr);
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false, &test,
+             /*expected=*/nullptr);
     for (S2CellId test_id : test) {
       bool contains = false, intersects = false;
       for (S2CellId expected_id : expected) {
@@ -436,10 +471,13 @@ TEST(S2CellUnion, ContainsIntersectsBruteForce) {
 }
 
 TEST(S2CellUnion, CapBoundContainsAllCells) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "CAP_BOUNDS_CONTAINS_ALL_CELLS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     vector<S2CellId> input;
-    AddCells(S2CellId::None(), /*selected=*/false,  //
+    AddCells(bitgen, S2CellId::None(), /*selected=*/false,  //
              &input, /*expected=*/nullptr);
     S2CellUnion cellunion(input);
     S2Cap cap = cellunion.GetCapBound();
@@ -483,25 +521,30 @@ TEST(S2CellUnion, Expand) {
   // the coverings by a random radius, and then make sure that the new
   // covering covers the expanded cap.  It also makes sure that the
   // new covering is not too much larger than expected.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "EXPAND",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
 
   S2RegionCoverer coverer;
   const int num_iters = absl::GetFlag(FLAGS_iters);
   for (int i = 0; i < num_iters; ++i) {
     SCOPED_TRACE(StrCat("Iteration ", i));
-    S2Cap cap = S2Testing::GetRandomCap(
-        S2Cell::AverageArea(S2CellId::kMaxLevel), 4 * M_PI);
+    S2Cap cap = s2random::Cap(bitgen, S2Cell::AverageArea(S2CellId::kMaxLevel),
+                              4 * M_PI);
 
     // Expand the cap area by a random factor whose log is uniformly
     // distributed between 0 and log(1e2).
     S2Cap expanded_cap = S2Cap::FromCenterHeight(
-        cap.center(), min(2.0, pow(1e2, rnd.RandDouble()) * cap.height()));
+        cap.center(),
+        min(2.0, s2random::LogUniform(bitgen, 1.0, 1e2) * cap.height()));
 
     double radius = (expanded_cap.GetRadius() - cap.GetRadius()).radians();
-    int max_level_diff = rnd.Uniform(8);
+    int max_level_diff = absl::Uniform(bitgen, 0, 8);
 
     // Generate a covering for the original cap, and measure the maximum
     // distance from the cap center to any point in the covering.
-    coverer.mutable_options()->set_max_cells(1 + rnd.Skewed(10));
+    coverer.mutable_options()->set_max_cells(1 +
+                                             s2random::SkewedInt(bitgen, 10));
     S2CellUnion covering = coverer.GetCovering(cap);
     S2Testing::CheckCovering(cap, covering, true);
     double covering_radius = GetRadius(covering, cap.center());
@@ -579,9 +622,12 @@ TEST(S2CellUnion, FromMinMax) {
   TestFromMinMax(face5_id.range_max(), face5_id.range_max());
 
   // Check random ranges of leaf cells.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "FROM_MIN_MAX",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 100; ++iter) {
-    S2CellId x = S2Testing::GetRandomCellId(S2CellId::kMaxLevel);
-    S2CellId y = S2Testing::GetRandomCellId(S2CellId::kMaxLevel);
+    S2CellId x = s2random::CellId(bitgen, S2CellId::kMaxLevel);
+    S2CellId y = s2random::CellId(bitgen, S2CellId::kMaxLevel);
     using std::swap;
     if (x > y) swap(x, y);
     TestFromMinMax(x, y);
@@ -735,18 +781,18 @@ TEST(S2CellUnion, LeafCellsCovered) {
   // One leaf cell on face 0.
   ids.push_back(S2CellId::FromFace(0).child_begin(S2CellId::kMaxLevel));
   cell_union.Init(ids);
-  EXPECT_EQ(uint64{1}, cell_union.LeafCellsCovered());
+  EXPECT_EQ(uint64_t{1}, cell_union.LeafCellsCovered());
 
   // Face 0 itself (which includes the previous leaf cell).
   ids.push_back(S2CellId::FromFace(0));
   cell_union.Init(ids);
-  EXPECT_EQ(uint64{1} << 60, cell_union.LeafCellsCovered());
+  EXPECT_EQ(uint64_t{1} << 60, cell_union.LeafCellsCovered());
   // Five faces.
   cell_union.Expand(0);
-  EXPECT_EQ(uint64{5} << 60, cell_union.LeafCellsCovered());
+  EXPECT_EQ(uint64_t{5} << 60, cell_union.LeafCellsCovered());
   // Whole world.
   cell_union.Expand(0);
-  EXPECT_EQ(uint64{6} << 60, cell_union.LeafCellsCovered());
+  EXPECT_EQ(uint64_t{6} << 60, cell_union.LeafCellsCovered());
 
   // Add some disjoint cells.
   ids.push_back(S2CellId::FromFace(1).child_begin(1));
@@ -757,7 +803,7 @@ TEST(S2CellUnion, LeafCellsCovered) {
   ids.push_back(S2CellId::FromFace(4).child_end(15).prev());
   ids.push_back(S2CellId::FromFace(5).child_begin(30));
   cell_union.Init(ids);
-  uint64 expected = 1ULL + (1ULL << 6) + (1ULL << 30) + (1ULL << 32) +
+  uint64_t expected = 1ULL + (1ULL << 6) + (1ULL << 30) + (1ULL << 32) +
                       (2ULL << 56) + (1ULL << 58) + (1ULL << 60);
   EXPECT_EQ(expected, cell_union.LeafCellsCovered());
 }
@@ -792,7 +838,7 @@ TEST(S2CellUnion, ToStringTwoCells) {
 TEST(S2CellUnion, ToStringOver500Cells) {
   vector<S2CellId> ids;
   S2CellUnion({S2CellId::FromFace(1)}).Denormalize(6, 1, &ids);  // 4096 cells
-  std::string result = S2CellUnion::FromVerbatim(ids).ToString();
+  string result = S2CellUnion::FromVerbatim(ids).ToString();
   EXPECT_EQ(std::count(result.begin(), result.end(), ','), 500);
   EXPECT_EQ(result.substr(result.size() - 4), ",...");
 }
@@ -841,4 +887,3 @@ TEST(S2CellUnion, IteratorWorks) {
   EXPECT_THAT(iter.done(), IsFalse());
   EXPECT_THAT(iter.id(), Eq(S2CellId::FromFace(0)));
 }
-

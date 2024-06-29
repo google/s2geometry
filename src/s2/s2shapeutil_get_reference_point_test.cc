@@ -21,12 +21,15 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "s2/s2cell_id.h"
 #include "s2/s2lax_polygon_shape.h"
 #include "s2/s2loop.h"
 #include "s2/s2point.h"
 #include "s2/s2pointutil.h"
 #include "s2/s2polygon.h"
+#include "s2/s2random.h"
 #include "s2/s2shape.h"
 #include "s2/s2shapeutil_contains_brute_force.h"
 #include "s2/s2testing.h"
@@ -64,6 +67,9 @@ TEST(GetReferencePoint, InvertedLoops) {
 }
 
 TEST(GetReferencePoint, PartiallyDegenerateLoops) {
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "PARTIALLY_DEGENERATE_LOOPS",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 100; ++iter) {
     // First we construct a long convoluted edge chain that follows the
     // S2CellId Hilbert curve.  At some random point along the curve, we
@@ -71,10 +77,10 @@ TEST(GetReferencePoint, PartiallyDegenerateLoops) {
     vector<S2LaxPolygonShape::Loop> loops(1);
     S2LaxPolygonShape::Loop* loop = &loops[0];
     const int num_vertices = 100;
-    S2CellId start = S2Testing::GetRandomCellId(S2CellId::kMaxLevel - 1);
+    S2CellId start = s2random::CellId(bitgen, S2CellId::kMaxLevel - 1);
     S2CellId end = start.advance_wrap(num_vertices);
-    S2CellId loop_cellid = start.advance_wrap(
-        S2Testing::rnd.Uniform(num_vertices - 2) + 1);
+    S2CellId loop_cellid =
+        start.advance_wrap(absl::Uniform(bitgen, 1, num_vertices - 1));
     vector<S2Point> triangle;
     for (S2CellId cellid = start; cellid != end; cellid = cellid.next_wrap()) {
       if (cellid == loop_cellid) {

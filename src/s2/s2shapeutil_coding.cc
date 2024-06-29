@@ -17,6 +17,7 @@
 
 #include "s2/s2shapeutil_coding.h"
 
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -46,7 +47,7 @@ using CodingHint = s2coding::CodingHint;
 namespace s2shapeutil {
 
 bool FastEncodeShape(const S2Shape& shape, Encoder* encoder) {
-  uint32 tag = shape.type_tag();
+  uint32_t tag = shape.type_tag();
   if (tag == S2Shape::kNoTypeTag) {
     ABSL_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
     return false;
@@ -58,7 +59,7 @@ bool FastEncodeShape(const S2Shape& shape, Encoder* encoder) {
 }
 
 bool CompactEncodeShape(const S2Shape& shape, Encoder* encoder) {
-  uint32 tag = shape.type_tag();
+  uint32_t tag = shape.type_tag();
   if (tag == S2Shape::kNoTypeTag) {
     ABSL_LOG(ERROR) << "Unsupported S2Shape type: " << tag;
     return false;

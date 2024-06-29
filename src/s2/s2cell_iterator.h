@@ -18,7 +18,7 @@
 
 #include <ostream>
 
-#include "absl/meta/type_traits.h"
+#include "s2/internal/s2meta.h"
 #include "s2/s2cell_id.h"
 
 // Possible relationships between two S2CellIds in an index.
@@ -74,20 +74,6 @@ inline std::ostream& operator<<(std::ostream& os, S2CellRelation r) {
 // directly use the methods of MyIterator instead of calling through the vtable.
 class S2CellIterator {
  public:
-  // A type function to check if a type is derived from S2CellIterator.  This is
-  // useful for writing static checks on template parameters when we want to
-  // inline a particular iterator call, but we need to make sure it implements
-  // the interface that we want.  We don't have access to c++ concepts, so this
-  // is the next best thing:
-  //
-  //   template <typename Iterator>
-  //   void Frobnicate(Iterator& iter) {
-  //     static_assert(S2CellIterator::ImplementedBy<Iterator>{},
-  //       "We require an object implementing the S2CellIterator API.");
-  //   }
-  template <typename T>
-  using ImplementedBy = std::is_convertible<absl::decay_t<T>*, S2CellIterator*>;
-
   S2CellIterator() = default;
   virtual ~S2CellIterator() = default;
 
@@ -148,7 +134,7 @@ class S2CellIterator {
 
 template <typename Iterator>
 inline bool S2CellIterator::LocateImpl(Iterator& iter, const S2Point& point) {
-  static_assert(S2CellIterator::ImplementedBy<Iterator>{},
+  static_assert(s2meta::derived_from_v<Iterator, S2CellIterator>,
                 "Iterator must implement the S2CellIterator API.");
 
   // Let I = Seek(T), where T is the leaf cell containing the target point, and
@@ -171,7 +157,7 @@ inline bool S2CellIterator::LocateImpl(Iterator& iter, const S2Point& point) {
 template <typename Iterator>
 inline S2CellRelation S2CellIterator::LocateImpl(Iterator& iter,
                                                  S2CellId target) {
-  static_assert(S2CellIterator::ImplementedBy<Iterator>{},
+  static_assert(s2meta::derived_from_v<Iterator, S2CellIterator>,
                 "Iterator must implement the S2CellIterator API.");
 
   // Let T be the target cell id, let I = Seek(T.range_min()) and let Prev(I) be

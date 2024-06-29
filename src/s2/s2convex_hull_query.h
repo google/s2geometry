@@ -21,7 +21,7 @@
 #include <memory>
 #include <vector>
 
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2cap.h"
 #include "s2/s2latlng_rect.h"
 #include "s2/s2loop.h"

@@ -22,6 +22,7 @@
 #include <bitset>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -29,8 +30,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
-#include "s2/_fp_contract_off.h"
-#include "s2/base/types.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
@@ -98,10 +98,8 @@ class S2Loop final : public S2Region {
   // Decode() before it is used.
   S2Loop();
 
-#ifndef SWIG
-  S2Loop(S2Loop&&);
-  S2Loop& operator=(S2Loop&&);
-#endif
+  S2Loop(S2Loop&&) noexcept;
+  S2Loop& operator=(S2Loop&&) noexcept;
 
   // Convenience constructor that calls Init() with the given vertices.
   explicit S2Loop(absl::Span<const S2Point> vertices);
@@ -431,35 +429,36 @@ class S2Loop final : public S2Region {
   ////////////////////////////////////////////////////////////////////////
   // Methods intended primarily for use by the S2Polygon implementation:
 
-  // Given two loops of a polygon, return true if A contains B.  This version
-  // of Contains() is cheap because it does not test for edge intersections.
-  // The loops must meet all the S2Polygon requirements; for example this
-  // implies that their boundaries may not cross or have any shared edges
-  // (although they may have shared vertices).
+  // Given two loops of a polygon, return true if this loop A contains B.  This
+  // version of Contains() is cheap because it does not test for edge
+  // intersections. The loops must meet all the S2Polygon requirements; for
+  // example this implies that their boundaries may not cross or have any shared
+  // edges (although they may have shared vertices).
   bool ContainsNested(const S2Loop& b) const;
 
-  // Returns +1 if A contains the boundary of B, -1 if A excludes the boundary
-  // of B, and 0 if the boundaries of A and B cross.  Shared edges are handled
-  // as follows: If XY is a shared edge, define Reversed(XY) to be true if XY
-  // appears in opposite directions in A and B.  Then A contains XY if and
-  // only if Reversed(XY) == B->is_hole().  (Intuitively, this checks whether
-  // A contains a vanishingly small region extending from the boundary of B
-  // toward the interior of the polygon to which loop B belongs.)
+  // Returns +1 if this loop A contains the boundary of B, -1 if A excludes the
+  // boundary of B, and 0 if the boundaries of A and B cross.  Shared edges are
+  // handled as follows: If XY is a shared edge, define Reversed(XY) to be true
+  // if XY appears in opposite directions in A and B.  Then A contains XY if and
+  // only if Reversed(XY) == B->is_hole().  (Intuitively, this checks whether A
+  // contains a vanishingly small region extending from the boundary of B toward
+  // the interior of the polygon to which loop B belongs.)
   //
   // This method is used for testing containment and intersection of
   // multi-loop polygons.  Note that this method is not symmetric, since the
-  // result depends on the direction of loop A but not on the direction of
+  // result depends on the direction of this loop A but not on the direction of
   // loop B (in the absence of shared edges).
   //
   // REQUIRES: neither loop is empty.
   // REQUIRES: if b->is_full(), then !b->is_hole().
   int CompareBoundary(const S2Loop& b) const;
 
-  // Given two loops whose boundaries do not cross (see CompareBoundary),
-  // return true if A contains the boundary of B.  If "reverse_b" is true, the
-  // boundary of B is reversed first (which only affects the result when there
-  // are shared edges).  This method is cheaper than CompareBoundary() because
-  // it does not test for edge intersections.
+  // Given another loop 'B' whose boundaries does not cross this loop's
+  // boundaries (see CompareBoundary), return true if this loop contains the
+  // boundary of B. If "reverse_b" is true, the boundary of B is reversed first
+  // (which only affects the result when there are shared edges).  This method
+  // is cheaper than CompareBoundary() because it does not test for edge
+  // intersections.
   //
   // REQUIRES: neither loop is empty.
   // REQUIRES: if b->is_full(), then reverse_b == false.
@@ -471,13 +470,12 @@ class S2Loop final : public S2Region {
   // class does not take ownership of the loop itself (see OwningShape below).
   // You can also subtype this class to store additional data (see S2Shape for
   // details).
-#ifndef SWIG
   class Shape : public S2Shape {
     // To update `loop_` in `S2Loop` move constructor/assignment.
     friend class S2Loop;
 
    public:
-    Shape() : loop_(nullptr) {}  // Must call Init().
+    Shape() = default;  // Must call Init().
 
     // Initialize the shape.  Does not take ownership of "loop".
     explicit Shape(const S2Loop* loop) { Init(loop); }
@@ -511,7 +509,7 @@ class S2Loop final : public S2Region {
     friend class S2Loop;
     friend class S2LoopTestBase;
 
-    const S2Loop* loop_;
+    const S2Loop* loop_ = nullptr;
   };
 
   // Like Shape, except that the S2Loop is automatically deleted when this
@@ -528,7 +526,10 @@ class S2Loop final : public S2Region {
     }
     ~OwningShape() override { delete loop(); }
   };
-#endif  // SWIG
+
+  // Force build the index.  This should not usually be called and is intended
+  // only to remove index construction from the inner loop of benchmarks.
+  void ForceBuildIndex() { index_.ForceBuild(); }
 
  private:
   // All of the following need access to contains_origin().  Possibly this
@@ -651,8 +652,9 @@ class S2Loop final : public S2Region {
   int depth_ = 0;
 
   // We store the vertices in an array rather than a vector because we don't
-  // need any STL methods, and computing the number of vertices using size()
-  // would be relatively expensive (due to division by sizeof(S2Point) == 24).
+  // need any STL methods, and computing the number of vertices using `size()`
+  // would be somewhat more expensive (due to division by `sizeof(S2Point) ==
+  // 24`, although this is typically implemented with a multiply and shift).
   int num_vertices_ = 0;
   std::unique_ptr<S2Point[]> vertices_;
 
@@ -664,7 +666,7 @@ class S2Loop final : public S2Region {
   // force implementation that is also relatively cheap.  For this one method
   // we keep track of the number of calls made and only build the index once
   // enough calls have been made that we think an index would be worthwhile.
-  mutable std::atomic<int32> unindexed_contains_calls_;
+  mutable std::atomic<int32_t> unindexed_contains_calls_{0};
 
   // "bound_" is a conservative bound on all points contained by this loop:
   // if A.Contains(P), then A.bound_.Contains(S2LatLng(P)).
@@ -679,10 +681,7 @@ class S2Loop final : public S2Region {
   // Spatial index for this loop.
   MutableS2ShapeIndex index_;
 
-  // SWIG doesn't understand "= delete".
-#ifndef SWIG
   void operator=(const S2Loop&) = delete;
-#endif  // SWIG
 };
 
 

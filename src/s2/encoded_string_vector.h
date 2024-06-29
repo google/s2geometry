@@ -49,7 +49,7 @@ class StringVectorEncoder {
   StringVectorEncoder();
 
   // Adds a string to the encoded vector.
-  void Add(const std::string& str);
+  void Add(absl::string_view str);
 
   // Adds a string to the encoded vector by means of the given Encoder.  The
   // string consists of all output added to the encoder before the next call
@@ -73,7 +73,7 @@ class StringVectorEncoder {
   // A vector consisting of the starting offset of each string in the
   // encoder's data buffer, plus a final entry pointing just past the end of
   // the last string.
-  std::vector<uint64> offsets_;
+  std::vector<uint64_t> offsets_;
   Encoder data_;
 };
 
@@ -123,15 +123,14 @@ class EncodedStringVector {
   void Encode(Encoder* encoder) const;
 
  private:
-  EncodedUintVector<uint64> offsets_;
+  EncodedUintVector<uint64_t> offsets_;
   const char* data_;
 };
 
 
 //////////////////   Implementation details follow   ////////////////////
 
-
-inline void StringVectorEncoder::Add(const std::string& str) {
+inline void StringVectorEncoder::Add(absl::string_view str) {
   offsets_.push_back(data_.length());
   data_.Ensure(str.size());
   data_.putn(str.data(), str.size());
@@ -152,8 +151,8 @@ inline size_t EncodedStringVector::size() const {
 }
 
 inline absl::string_view EncodedStringVector::operator[](size_t i) const {
-  uint64 start = (i == 0) ? 0 : offsets_[i - 1];
-  uint64 limit = offsets_[i];
+  uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
+  uint64_t limit = offsets_[i];
   return absl::string_view(data_ + start, limit - start);
 }
 
@@ -163,13 +162,13 @@ inline Decoder EncodedStringVector::GetDecoder(size_t i) const {
     return Decoder();
   }
 
-  uint64 start = (i == 0) ? 0 : offsets_[i - 1];
-  uint64 limit = offsets_[i];
+  uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
+  uint64_t limit = offsets_[i];
   return Decoder(data_ + start, limit - start);
 }
 
 inline const char* EncodedStringVector::GetStart(size_t i) const {
-  uint64 start = (i == 0) ? 0 : offsets_[i - 1];
+  uint64_t start = (i == 0) ? 0 : offsets_[i - 1];
   return data_ + start;
 }
 

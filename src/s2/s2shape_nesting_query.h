@@ -18,9 +18,9 @@
 #define S2_S2SHAPE_NESTING_QUERY_H_
 
 #include <climits>
+#include <cstdint>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/types/span.h"
 #include "s2/s2shape.h"
@@ -99,24 +99,24 @@ class S2ShapeNestingQuery {
   class ChainRelation {
    public:
     // Builds a `ChainRelation` that's a shell with given holes.
-    static ChainRelation MakeShell(absl::Span<const int32> holes = {}) {
+    static ChainRelation MakeShell(absl::Span<const int32_t> holes = {}) {
       ChainRelation relation;
-      for (int32 chain : holes) {
+      for (int32_t chain : holes) {
         relation.AddHole(chain);
       }
       return relation;
     }
 
     // Builds a `ChainRelation` that's a hole with given parent.
-    static ChainRelation MakeHole(int32 parent) {
+    static ChainRelation MakeHole(int32_t parent) {
       return ChainRelation(parent);
     }
 
-    explicit ChainRelation(int32 parent = -1) : parent_(parent) {}
+    explicit ChainRelation(int32_t parent = -1) : parent_(parent) {}
 
     // Returns the id of the parent chain of the associated chain.  Chains that
     // are shells don't have a parent and have a parent id of -1.
-    int32 parent_id() const { return parent_; }
+    int32_t parent_id() const { return parent_; }
 
     // Returns true if the associated chain is a shell.  Otherwise the chain
     // is a hole in its parent chain.
@@ -130,8 +130,8 @@ class S2ShapeNestingQuery {
     int num_holes() const { return holes_.size(); }
 
     // Returns a read only view over the hole ids for the associated chain.
-    absl::Span<const int32> holes() const {
-      return absl::Span<const int32>(holes_);
+    absl::Span<const int32_t> holes() const {
+      return absl::Span<const int32_t>(holes_);
     }
 
    private:
@@ -149,15 +149,15 @@ class S2ShapeNestingQuery {
     // sense for us to scale the number of reserved elements to take advantage
     // of this.  On 64-bit systems we can store 4 int32s and on 32-bit we can
     // store 2.
-    absl::InlinedVector<int32, 2 * sizeof(void*) / sizeof(int32)> holes_;
-    int32 parent_;
+    absl::InlinedVector<int32_t, 2 * sizeof(void*) / sizeof(int32_t)> holes_;
+    int32_t parent_;
 
     // Adds the given id as a hole of this chain.  The `ParentId` of the hole
     // should therefore be the id of this chain as an invariant.
-    void AddHole(int32 id) { holes_.push_back(id); }
+    void AddHole(int32_t id) { holes_.push_back(id); }
 
     // Sets the parent chain id.
-    void SetParent(int32 id) { parent_ = id; }
+    void SetParent(int32_t id) { parent_ = id; }
 
     // Clears the parent of the associated chain (thus marking it as a shell).
     void ClearParent() { parent_ = -1; }

@@ -18,11 +18,11 @@
 
 #include "s2/s2winding_operation.h"
 
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/base/optimization.h"
 #include "absl/log/absl_check.h"
 #include "s2/id_set_lexicon.h"
@@ -314,7 +314,7 @@ bool WindingLayer::ComputeBoundary(const Graph& g, WindingOracle* oracle,
   //
   // The following accounts for sibling_map, left_turn_map, and edge_winding
   // (which have g.num_edges() elements each).
-  const int64 kTempUsage = 3 * sizeof(EdgeId) * g.num_edges();
+  const int64_t kTempUsage = 3 * sizeof(EdgeId) * g.num_edges();
   if (!tracker_.Tally(kTempUsage)) return false;
 
   vector<EdgeId> sibling_map = g.GetSiblingMap();

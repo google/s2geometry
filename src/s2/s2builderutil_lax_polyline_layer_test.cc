@@ -17,12 +17,12 @@
 
 #include "s2/s2builderutil_lax_polyline_layer.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "s2/base/casts.h"
-#include "s2/base/types.h"
 #include <gtest/gtest.h>
 #include "absl/strings/string_view.h"
 #include "s2/id_set_lexicon.h"
@@ -177,13 +177,13 @@ TEST(LaxPolylineLayer, SimpleEdgeLabels) {
   builder.AddShape(*MakeLaxPolylineOrDie("0:6, 0:5"));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));
-  vector<vector<int32>> expected = {{5}, {5}, {5, 7}, {}, {}, {11}};
+  vector<vector<int32_t>> expected = {{5}, {5}, {5, 7}, {}, {}, {11}};
   ASSERT_EQ(expected.size(), label_set_ids.size());
   for (int i = 0; i < expected.size(); ++i) {
     ASSERT_EQ(expected[i].size(),
               label_set_lexicon.id_set(label_set_ids[i]).size());
     int j = 0;
-    for (int32 label : label_set_lexicon.id_set(label_set_ids[i])) {
+    for (int32_t label : label_set_lexicon.id_set(label_set_ids[i])) {
       EXPECT_EQ(expected[i][j++], label);
     }
   }
@@ -206,7 +206,7 @@ TEST(IndexedLaxPolylineLayer, AddsShape) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedLaxPolylineLayer>(&index));
-  const string& polyline_str = "0:0, 0:10";
+  string_view polyline_str = "0:0, 0:10";
   builder.AddShape(*MakeLaxPolylineOrDie(polyline_str));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));

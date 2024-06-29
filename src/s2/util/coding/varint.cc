@@ -22,13 +22,12 @@
 
 #include "absl/log/absl_check.h"
 
-#include "s2/base/types.h"
 
-char* Varint::Encode32(char* sptr, uint32 v) {
+char* Varint::Encode32(char* sptr, uint32_t v) {
   return Encode32Inline(sptr, v);
 }
 
-char* Varint::Encode64(char* sptr, uint64 v) {
+char* Varint::Encode64(char* sptr, uint64_t v) {
   if (v < (1u << 28)) {
     return Varint::Encode32(sptr, v);
   } else {
@@ -36,8 +35,8 @@ char* Varint::Encode64(char* sptr, uint64 v) {
     unsigned char* ptr = reinterpret_cast<unsigned char*>(sptr);
     // Rather than computing four subresults and or'ing each with 0x80,
     // we can do two ors now.  (Doing one now wouldn't work.)
-    const uint32 x32 = v | (1 << 7) | (1 << 21);
-    const uint32 y32 = v | (1 << 14) | (1 << 28);
+    const uint32_t x32 = v | (1 << 7) | (1 << 21);
+    const uint32_t y32 = v | (1 << 14) | (1 << 28);
     *(ptr++) = x32;
     *(ptr++) = y32 >> 7;
     *(ptr++) = x32 >> 14;
@@ -52,25 +51,25 @@ char* Varint::Encode64(char* sptr, uint64 v) {
   }
 }
 
-const char* Varint::Parse32Fallback(const char* ptr, uint32* OUTPUT) {
+const char* Varint::Parse32Fallback(const char* ptr, uint32_t* OUTPUT) {
   return Parse32FallbackInline(ptr, OUTPUT);
 }
 
 #if defined(__x86_64__)
 
-std::pair<const char*, uint64> Varint::Parse64FallbackPair(const char* p,
-                                                             int64 res1) {
+std::pair<const char*, uint64_t> Varint::Parse64FallbackPair(const char* p,
+                                                             int64_t res1) {
   // The algorithm relies on sign extension to set all high bits when the varint
   // continues. This way it can use "and" to aggregate in to the result.
-  auto ptr = reinterpret_cast<const int8*>(p);
+  auto ptr = reinterpret_cast<const int8_t*>(p);
   // However this requires the low bits after shifting to be 1's as well. On
   // x86_64 a shld from a single register filled with enough 1's in the high
   // bits can accomplish all this in one instruction. It so happens that res1
   // has 57 high bits of ones, which is enough for the largest shift done.
   ABSL_DCHECK_EQ(res1 >> 7, -1);
-  uint64 ones = res1;  // save the useful high bit 1's in res1
-  uint64 byte;
-  int64 res2, res3;
+  uint64_t ones = res1;  // save the useful high bit 1's in res1
+  uint64_t byte;
+  int64_t res2, res3;
 #define SHLD(n) byte = ((byte << (n * 7)) | (ones >> (64 - (n * 7))))
   int sign_bit;
   // Micro benchmarks show a substantial improvement to capture the sign
@@ -126,7 +125,7 @@ std::pair<const char*, uint64> Varint::Parse64FallbackPair(const char* p,
   // 9 has already the right value hence just expect byte to be 1.
   if (ABSL_PREDICT_TRUE(byte == 1)) goto done10;
   if (byte == 0) {
-    res3 ^= static_cast<uint64>(1) << 63;
+    res3 ^= static_cast<uint64_t>(1) << 63;
     goto done10;
   }
 
@@ -148,14 +147,14 @@ done2:
 
 #endif  // defined(__x86_64__)
 
-const char* Varint::Parse64Fallback(const char* p, uint64* OUTPUT) {
+const char* Varint::Parse64Fallback(const char* p, uint64_t* OUTPUT) {
   const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
   assert(*ptr >= 128);
   // Fast path: need to accumulate data in upto three result fragments
   //    res1    bits 0..27
   //    res2    bits 28..55
   //    res3    bits 56..63
-  uint32 byte, res1, res2 = 0, res3 = 0;
+  uint32_t byte, res1, res2 = 0, res3 = 0;
   byte = *(ptr++); res1 = byte & 127;
   byte = *(ptr++); res1 |= (byte & 127) <<  7; if (byte < 128) goto done1;
   byte = *(ptr++); res1 |= (byte & 127) << 14; if (byte < 128) goto done1;
@@ -179,16 +178,16 @@ const char* Varint::Parse64Fallback(const char* p, uint64* OUTPUT) {
 
  done2:
   assert(res3 == 0);
-  *OUTPUT = res1 | (uint64(res2) << 28);
+  *OUTPUT = res1 | (uint64_t(res2) << 28);
   return reinterpret_cast<const char*>(ptr);
 
  done3:
-   *OUTPUT = res1 | (uint64(res2) << 28) | (uint64(res3) << 56);
+   *OUTPUT = res1 | (uint64_t(res2) << 28) | (uint64_t(res3) << 56);
    return reinterpret_cast<const char*>(ptr);
  }
 
  const char* Varint::Parse32BackwardSlow(const char* ptr, const char* base,
-                                         uint32* OUTPUT) {
+                                         uint32_t* OUTPUT) {
    // Since this method is rarely called, for simplicity, we just skip backward
    // and then parse forward.
    const char* prev = Skip32BackwardSlow(ptr, base);
@@ -199,7 +198,7 @@ const char* Varint::Parse64Fallback(const char* p, uint64* OUTPUT) {
  }
 
  const char* Varint::Parse64BackwardSlow(const char* ptr, const char* base,
-                                         uint64* OUTPUT) {
+                                         uint64_t* OUTPUT) {
    // Since this method is rarely called, for simplicity, we just skip backward
    // and then parse forward.
    const char* prev = Skip64BackwardSlow(ptr, base);
@@ -210,7 +209,7 @@ const char* Varint::Parse64Fallback(const char* p, uint64* OUTPUT) {
  }
 
  const char* Varint::Parse64WithLimit(const char* p, const char* l,
-                                      uint64* OUTPUT) {
+                                      uint64_t* OUTPUT) {
    if (p + kMax64 <= l) {
      return Parse64(p, OUTPUT);
    } else {
@@ -218,7 +217,7 @@ const char* Varint::Parse64Fallback(const char* p, uint64* OUTPUT) {
      // approach.
      const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
      const unsigned char* limit = reinterpret_cast<const unsigned char*>(l);
-     uint64 b, result;
+     uint64_t b, result;
 #if defined(__x86_64__)
     if (ptr >= limit) return nullptr;
     b = *(ptr++); result = b;              if (b < 128) goto done;
@@ -308,14 +307,14 @@ const char* Varint::Skip64BackwardSlow(const char* p, const char* b) {
   return nullptr; // value is too long to be a varint64
 }
 
-void Varint::Append32Slow(std::string* s, uint32 value) {
+void Varint::Append32Slow(std::string* s, uint32_t value) {
   const size_t start = s->size();
   s->resize(
                                              start + Varint::Length32(value));
   Varint::Encode32(&((*s)[start]), value);
 }
 
-void Varint::Append64Slow(std::string* s, uint64 value) {
+void Varint::Append64Slow(std::string* s, uint64_t value) {
   const size_t start = s->size();
   s->resize(
                                              start + Varint::Length64(value));

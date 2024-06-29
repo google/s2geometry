@@ -16,15 +16,15 @@
 #ifndef S2_S2FURTHEST_EDGE_QUERY_H_
 #define S2_S2FURTHEST_EDGE_QUERY_H_
 
+#include <cstdint>
 #include <memory>
 #include <queue>
 #include <type_traits>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/base/macros.h"
 #include "absl/container/inlined_vector.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s1angle.h"
 #include "s2/s1chord_angle.h"
 #include "s2/s2cell.h"
@@ -230,15 +230,15 @@ class S2FurthestEdgeQuery {
                  base.edge_id()) {}
 
     // Constructs a Result object for the given edge with the given distance.
-    Result(S1ChordAngle distance, int32 _shape_id, int32 _edge_id)
+    Result(S1ChordAngle distance, int32_t _shape_id, int32_t _edge_id)
         : distance_(distance), shape_id_(_shape_id), edge_id_(_edge_id) {}
 
     // The distance from the target to this point.
     S1ChordAngle distance() const { return distance_; }
 
     // The edge identifiers.
-    int32 shape_id() const { return shape_id_; }
-    int32 edge_id() const { return edge_id_; }
+    int32_t shape_id() const { return shape_id_; }
+    int32_t edge_id() const { return edge_id_; }
 
     // Returns true if this Result object represents the interior of a shape.
     // (Such results may be returned when options.include_interiors() is true.)
@@ -268,8 +268,8 @@ class S2FurthestEdgeQuery {
 
    private:
     S1ChordAngle distance_;
-    int32 shape_id_;  // Identifies an indexed shape.
-    int32 edge_id_;   // Identifies an edge within the shape.
+    int32_t shape_id_;  // Identifies an indexed shape.
+    int32_t edge_id_;   // Identifies an edge within the shape.
   };
 
   // Convenience constructor that calls Init().  Options may be specified here

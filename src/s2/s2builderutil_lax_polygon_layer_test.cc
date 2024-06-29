@@ -18,6 +18,7 @@
 #include "s2/s2builderutil_lax_polygon_layer.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
@@ -284,7 +285,7 @@ TEST(LaxPolygonLayer, DuplicateInputEdges) {
 }
 
 // IdSet returns ordered ids, so use an ordered set.
-using EdgeLabelMap = flat_hash_map<S2Shape::Edge, btree_set<int32>>;
+using EdgeLabelMap = flat_hash_map<S2Shape::Edge, btree_set<int32_t>>;
 
 inline S2Shape::Edge GetKey(S2Shape::Edge edge, EdgeType edge_type) {
   // For undirected edges, sort the vertices in lexicographic order.
@@ -298,7 +299,7 @@ void AddShapeWithLabels(const S2Shape& shape, EdgeType edge_type,
                         S2Builder* builder, EdgeLabelMap *edge_label_map) {
   static int const kLabelBegin = 1234;  // Arbitrary.
   for (int e = 0; e < shape.num_edges(); ++e) {
-    int32 label = kLabelBegin + e;
+    int32_t label = kLabelBegin + e;
     builder->set_label(label);
     // For undirected edges, reverse the direction of every other input edge.
     S2Shape::Edge edge = shape.edge(e);
@@ -334,7 +335,7 @@ static void TestEdgeLabels(string_view input_str, EdgeType edge_type,
   for (int i = 0; i < output.num_chains(); ++i) {
     for (int j = 0; j < output.chain(i).length; ++j) {
       S2Shape::Edge edge = output.chain_edge(i, j);
-      const btree_set<int32>& expected_labels =
+      const btree_set<int32_t>& expected_labels =
           edge_label_map[GetKey(edge, edge_type)];
       EXPECT_THAT(label_set_lexicon.id_set(label_set_ids[i][j]),
                   testing::ElementsAreArray(expected_labels));
@@ -359,7 +360,7 @@ TEST(IndexedLaxPolygonLayer, AddsShape) {
   S2Builder builder{S2Builder::Options()};
   MutableS2ShapeIndex index;
   builder.StartLayer(make_unique<IndexedLaxPolygonLayer>(&index));
-  const string& polygon_str = "0:0, 0:10, 10:0";
+  string_view polygon_str = "0:0, 0:10, 10:0";
   builder.AddPolygon(*s2textformat::MakePolygonOrDie(polygon_str));
   S2Error error;
   ASSERT_TRUE(builder.Build(&error));

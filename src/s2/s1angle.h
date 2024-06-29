@@ -24,10 +24,9 @@
 #include <ostream>
 #include <type_traits>
 
-#include "s2/base/types.h"
 #include "absl/log/absl_check.h"
 #include "s2/util/coding/coder.h"
-#include "s2/_fp_contract_off.h"
+#include "s2/_fp_contract_off.h"  // IWYU pragma: keep
 #include "s2/s2coder.h"
 #include "s2/s2error.h"
 #include "s2/s2point.h"
@@ -35,12 +34,6 @@
 #include "s2/util/math/vector.h"
 
 class S2LatLng;
-
-#ifndef SWIG
-#define IFNDEF_SWIG(x) x
-#else
-#define IFNDEF_SWIG(x)
-#endif
 
 // This class represents a one-dimensional angle (as opposed to a
 // two-dimensional solid angle).  It has methods for converting angles to
@@ -92,20 +85,20 @@ class S1Angle {
   // or degrees.
   static constexpr S1Angle Radians(double radians);
   static constexpr S1Angle Degrees(double degrees);
-  static constexpr S1Angle E5(int32 e5);
-  static constexpr S1Angle E6(int32 e6);
-  static constexpr S1Angle E7(int32 e7);
+  static constexpr S1Angle E5(int32_t e5);
+  static constexpr S1Angle E6(int32_t e6);
+  static constexpr S1Angle E7(int32_t e7);
 
   // Convenience functions -- to use when args have been fixed32s in protos.
   //
-  // The arguments are static_cast into int32, so very large unsigned values
+  // The arguments are static_cast into int32_t, so very large unsigned values
   // are treated as negative numbers.
-  static constexpr S1Angle UnsignedE6(uint32 e6);
-  static constexpr S1Angle UnsignedE7(uint32 e7);
+  static constexpr S1Angle UnsignedE6(uint32_t e6);
+  static constexpr S1Angle UnsignedE7(uint32_t e7);
 
   // The default constructor yields a zero angle.  This is useful for STL
   // containers and class methods with output arguments.
-  IFNDEF_SWIG(constexpr) S1Angle() : radians_(0) {}
+  constexpr S1Angle() = default;
 
   // Return an angle larger than any finite angle.
   static constexpr S1Angle Infinity();
@@ -134,30 +127,30 @@ class S1Angle {
   // 1e5/1e6/1e7 and rounded to the nearest integer).  The angle in degrees
   // must be in the interval (-180, 180].  (`Normalize` and `Normalized`
   // will ensure this.)
-  int32 e5() const;
-  int32 e6() const;
-  int32 e7() const;
+  int32_t e5() const;
+  int32_t e6() const;
+  int32_t e7() const;
 
   // Return the absolute value of an angle.
   S1Angle abs() const;
   friend S1Angle abs(S1Angle a);
 
   // Comparison operators.
-  friend IFNDEF_SWIG(constexpr) bool operator==(S1Angle x, S1Angle y);
-  friend IFNDEF_SWIG(constexpr) bool operator!=(S1Angle x, S1Angle y);
-  friend IFNDEF_SWIG(constexpr) bool operator<(S1Angle x, S1Angle y);
-  friend IFNDEF_SWIG(constexpr) bool operator>(S1Angle x, S1Angle y);
-  friend IFNDEF_SWIG(constexpr) bool operator<=(S1Angle x, S1Angle y);
-  friend IFNDEF_SWIG(constexpr) bool operator>=(S1Angle x, S1Angle y);
+  friend constexpr bool operator==(S1Angle x, S1Angle y);
+  friend constexpr bool operator!=(S1Angle x, S1Angle y);
+  friend constexpr bool operator<(S1Angle x, S1Angle y);
+  friend constexpr bool operator>(S1Angle x, S1Angle y);
+  friend constexpr bool operator<=(S1Angle x, S1Angle y);
+  friend constexpr bool operator>=(S1Angle x, S1Angle y);
 
   // Simple arithmetic operators for manipulating S1Angles.
-  friend IFNDEF_SWIG(constexpr) S1Angle operator-(S1Angle a);
-  friend IFNDEF_SWIG(constexpr) S1Angle operator+(S1Angle a, S1Angle b);
-  friend IFNDEF_SWIG(constexpr) S1Angle operator-(S1Angle a, S1Angle b);
-  friend IFNDEF_SWIG(constexpr) S1Angle operator*(double m, S1Angle a);
-  friend IFNDEF_SWIG(constexpr) S1Angle operator*(S1Angle a, double m);
-  friend IFNDEF_SWIG(constexpr) S1Angle operator/(S1Angle a, double m);
-  friend IFNDEF_SWIG(constexpr) double operator/(S1Angle a, S1Angle b);
+  friend constexpr S1Angle operator-(S1Angle a);
+  friend constexpr S1Angle operator+(S1Angle a, S1Angle b);
+  friend constexpr S1Angle operator-(S1Angle a, S1Angle b);
+  friend constexpr S1Angle operator*(double m, S1Angle a);
+  friend constexpr S1Angle operator*(S1Angle a, double m);
+  friend constexpr S1Angle operator/(S1Angle a, double m);
+  friend constexpr double operator/(S1Angle a, S1Angle b);
   S1Angle& operator+=(S1Angle a);
   S1Angle& operator-=(S1Angle a);
   S1Angle& operator*=(double m);
@@ -188,8 +181,8 @@ class S1Angle {
   typedef std::true_type absl_btree_prefer_linear_node_search;
 
  private:
-  explicit IFNDEF_SWIG(constexpr) S1Angle(double radians) : radians_(radians) {}
-  double radians_;
+  explicit constexpr S1Angle(double radians) : radians_(radians) {}
+  double radians_ = 0.0;
 };
 
 
@@ -217,22 +210,22 @@ inline constexpr double S1Angle::degrees() const {
 // break many tests), but it does have the nice side effect that conversions
 // between Degrees, E6, and E7 are exact when the arguments are integers.
 
-inline int32 S1Angle::e5() const {
+inline int32_t S1Angle::e5() const {
   // TODO(user,b/298298095): Tighten this to [-180, 180].
-  ABSL_DCHECK_LE(std::numeric_limits<int32>::min() / 1e5, degrees());
-  ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32>::max() / 1e5);
+  ABSL_DCHECK_LE(std::numeric_limits<int32_t>::min() / 1e5, degrees());
+  ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32_t>::max() / 1e5);
   return MathUtil::FastIntRound(1e5 * degrees());
 }
 
-inline int32 S1Angle::e6() const {
-  ABSL_DCHECK_LE(std::numeric_limits<int32>::min() / 1e6, degrees());
-  ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32>::max() / 1e6);
+inline int32_t S1Angle::e6() const {
+  ABSL_DCHECK_LE(std::numeric_limits<int32_t>::min() / 1e6, degrees());
+  ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32_t>::max() / 1e6);
   return MathUtil::FastIntRound(1e6 * degrees());
 }
 
-inline int32 S1Angle::e7() const {
-  ABSL_DCHECK_LE(std::numeric_limits<int32>::min() / 1e7, degrees());
-  ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32>::max() / 1e7);
+inline int32_t S1Angle::e7() const {
+  ABSL_DCHECK_LE(std::numeric_limits<int32_t>::min() / 1e7, degrees());
+  ABSL_DCHECK_LE(degrees(), std::numeric_limits<int32_t>::max() / 1e7);
   return MathUtil::FastIntRound(1e7 * degrees());
 }
 
@@ -336,30 +329,28 @@ inline constexpr S1Angle S1Angle::Degrees(double degrees) {
   return S1Angle((M_PI / 180) * degrees);
 }
 
-inline constexpr S1Angle S1Angle::E5(int32 e5) {
+inline constexpr S1Angle S1Angle::E5(int32_t e5) {
   return Degrees(1e-5 * e5);
 }
 
-inline constexpr S1Angle S1Angle::E6(int32 e6) {
+inline constexpr S1Angle S1Angle::E6(int32_t e6) {
   return Degrees(1e-6 * e6);
 }
 
-inline constexpr S1Angle S1Angle::E7(int32 e7) {
+inline constexpr S1Angle S1Angle::E7(int32_t e7) {
   return Degrees(1e-7 * e7);
 }
 
-inline constexpr S1Angle S1Angle::UnsignedE6(uint32 e6) {
-  return E6(static_cast<int32>(e6));
+inline constexpr S1Angle S1Angle::UnsignedE6(uint32_t e6) {
+  return E6(static_cast<int32_t>(e6));
 }
 
-inline constexpr S1Angle S1Angle::UnsignedE7(uint32 e7) {
-  return E7(static_cast<int32>(e7));
+inline constexpr S1Angle S1Angle::UnsignedE7(uint32_t e7) {
+  return E7(static_cast<int32_t>(e7));
 }
 
 // Writes the angle in degrees with 7 digits of precision after the
 // decimal point, e.g. "17.3745904".
 std::ostream& operator<<(std::ostream& os, S1Angle a);
-
-#undef IFNDEF_SWIG
 
 #endif  // S2_S1ANGLE_H_

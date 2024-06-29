@@ -21,7 +21,6 @@
 #include <cstdint>
 #include <vector>
 
-#include "s2/base/types.h"
 #include "absl/log/absl_check.h"
 #include "absl/numeric/bits.h"
 #include "absl/types/span.h"
@@ -37,7 +36,7 @@ using std::vector;
 
 namespace s2coding {
 
-void EncodeBaseShift(Encoder* encoder, int shift, uint64 base, int base_len) {
+void EncodeBaseShift(Encoder* encoder, int shift, uint64_t base, int base_len) {
   encoder->Ensure(2 + base_len);
 
   // "shift" and "base_len" are encoded in 1 or 2 bytes.
@@ -57,17 +56,17 @@ void EncodeBaseShift(Encoder* encoder, int shift, uint64 base, int base_len) {
   }
 
   // Encode the "base_len" most-significant bytes of "base".
-  uint64 base_bytes = base >> (64 - 8 * max(1, base_len));
-  EncodeUintWithLength<uint64>(base_bytes, base_len, encoder);
+  uint64_t base_bytes = base >> (64 - 8 * max(1, base_len));
+  EncodeUintWithLength<uint64_t>(base_bytes, base_len, encoder);
 }
 
 void EncodeS2CellIdVector(Span<const S2CellId> v, Encoder* encoder) {
   // v[i] is encoded as (base + (deltas[i] << shift)).
   //
   // "base" consists of 0-7 bytes, and is always shifted so that its bytes are
-  // the most-significant bytes of a uint64.
+  // the most-significant bytes of a uint64_t.
   //
-  // "deltas" is an EncodedUintVector<uint64>, which means that all deltas
+  // "deltas" is an EncodedUintVector<uint64_t>, which means that all deltas
   // have a fixed-length encoding determined by the largest delta.
   //
   // "shift" is in the range 0..56.  The shift value is odd only if all
@@ -91,7 +90,7 @@ void EncodeS2CellIdVector(Span<const S2CellId> v, Encoder* encoder) {
   //  Followed by 0-7 bytes of "base"
   //  Followed by an EncodedUintVector of deltas.
 
-  uint64 v_or = 0, v_and = ~0ULL, v_min = ~0ULL, v_max = 0;
+  uint64_t v_or = 0, v_and = ~0ULL, v_min = ~0ULL, v_max = 0;
   for (auto cellid : v) {
     v_or |= cellid.id();
     v_and &= cellid.id();
@@ -99,7 +98,7 @@ void EncodeS2CellIdVector(Span<const S2CellId> v, Encoder* encoder) {
     v_max = max(v_max, cellid.id());
   }
   // These variables represent the values that will used during encoding.
-  uint64 e_base = 0;      // Base value.
+  uint64_t e_base = 0;      // Base value.
   int e_base_len = 0;       // Number of bytes to represent "base".
   int e_shift = 0;          // Delta shift.
   int e_max_delta_msb = 0;  // Bit position of the MSB of the largest delta.
@@ -114,18 +113,18 @@ void EncodeS2CellIdVector(Span<const S2CellId> v, Encoder* encoder) {
     // "base" consists of the "base_len" most significant bytes of the minimum
     // S2CellId.  We consider all possible values of "base_len" (0..7) and
     // choose the one that minimizes the total encoding size.
-    uint64 e_bytes = ~0ULL;  // Best encoding size so far.
+    uint64_t e_bytes = ~0ULL;  // Best encoding size so far.
     for (int len = 0; len < 8; ++len) {
       // "t_base" is the base value being tested (first "len" bytes of v_min).
       // "t_max_delta_msb" is the most-significant bit position (i.e. bit-width
       // minus one) of the largest delta (or zero if there are no deltas, i.e.
       // if v.size() == 0).  "t_bytes" is the total size of the variable
       // portion of the encoding.
-      uint64 t_base = v_min & ~(~0ULL >> (8 * len));
+      uint64_t t_base = v_min & ~(~0ULL >> (8 * len));
       int t_max_delta_msb = max(
           0,
           static_cast<int>(absl::bit_width((v_max - t_base) >> e_shift)) - 1);
-      uint64 t_bytes = len + v.size() * ((t_max_delta_msb >> 3) + 1);
+      uint64_t t_bytes = len + v.size() * ((t_max_delta_msb >> 3) + 1);
       if (t_bytes < e_bytes) {
         e_base = t_base;
         e_base_len = len;
@@ -144,12 +143,12 @@ void EncodeS2CellIdVector(Span<const S2CellId> v, Encoder* encoder) {
   EncodeBaseShift(encoder, e_shift, e_base, e_base_len);
 
   // Finally, encode the vector of deltas.
-  vector<uint64> deltas;
+  vector<uint64_t> deltas;
   deltas.reserve(v.size());
   for (auto cellid : v) {
     deltas.push_back((cellid.id() - e_base) >> e_shift);
   }
-  EncodeUintVector<uint64>(deltas, encoder);
+  EncodeUintVector<uint64_t>(deltas, encoder);
 }
 
 bool EncodedS2CellIdVector::Init(Decoder* decoder) {

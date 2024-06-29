@@ -16,6 +16,7 @@
 
 #include "s2/s2cell_iterator_join.h"
 
+#include <random>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -24,6 +25,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/container/flat_hash_set.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/strings/string_view.h"
 #include "s2/mutable_s2shape_index.h"
 #include "s2/s1chord_angle.h"
@@ -259,7 +262,10 @@ TEST(S2CellIteratorJoin, TolerantJoinIsLeftDriven) {
   // fractal that spans the boundary between faces.
   const Matrix3x3_d kFrame = UpFrameAt(0, -45);
 
-  S2Fractal fractal;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "TOLERANT_JOIN_IS_LEFT_DRIVEN",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  S2Fractal fractal(bitgen);
   fractal.SetLevelForApproxMaxEdges(100);
 
   S2Polygon polygon(fractal.MakeLoop(kFrame, S1Angle::Degrees(10)));
@@ -290,7 +296,10 @@ TEST(S2CellIteratorJoin, AllPairsSeen) {
   // fractal that spans the boundary between faces.
   const Matrix3x3_d kFrame = UpFrameAt(0, -45);
 
-  S2Fractal fractal;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "ALL_PAIRS_SEEN",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  S2Fractal fractal(bitgen);
   fractal.SetLevelForApproxMaxEdges(1000);
 
   S2Polygon polygon(fractal.MakeLoop(kFrame, S1Angle::Degrees(10)));
@@ -343,7 +352,10 @@ TEST(S2CellIteratorJoin, b299938257Regression) {
 
   const Matrix3x3_d kFrame = UpFrameAt(0, 0);
 
-  S2Fractal fractal;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "BUG_299938257_REGRESSION",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  S2Fractal fractal(bitgen);
   fractal.SetLevelForApproxMaxEdges(100);
 
   S2Polygon polygon(fractal.MakeLoop(kFrame, S1Angle::Degrees(1)));

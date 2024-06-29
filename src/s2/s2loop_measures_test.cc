@@ -29,6 +29,8 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/log/absl_vlog_is_on.h"
+#include "absl/log/log_streamer.h"
+#include "absl/random/random.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "s2/s1angle.h"
@@ -38,6 +40,7 @@
 #include "s2/s2measures.h"
 #include "s2/s2point.h"
 #include "s2/s2point_span.h"
+#include "s2/s2random.h"
 #include "s2/s2testing.h"
 #include "s2/s2text_format.h"
 #include "s2/util/math/mathutil.h"
@@ -163,7 +166,7 @@ TEST(PruneDegeneracies, AllSmallCases) {
       // Do all base^exponent strings of length `exponent` using a `base`-letter
       // alphabet (as long as there are 5000 or fewer of them).
 
-      const int64 num_strings = MathUtil::IPow<int64>(base, exponent);
+      const int64_t num_strings = MathUtil::IPow<int64_t>(base, exponent);
       if (num_strings > 5000) break;   // getting too many, for this base
       if (num_strings == 0) continue;  // base=0 and exponent>0 is not useful
       if (base > exponent) continue;  // more chars than positions is not useful
@@ -173,12 +176,12 @@ TEST(PruneDegeneracies, AllSmallCases) {
                      << (num_strings == 1 ? "" : "s") << " of length "
                      << exponent << " from " << base << " character"
                      << (base == 1 ? "" : "s");
-      for (int64 i_string = 0; i_string < num_strings; ++i_string) {
+      for (int64_t i_string = 0; i_string < num_strings; ++i_string) {
         // Construct the i_string'th string to be the `exponent`-digit numeral
         // representing the integer i_string in base `base`, little-endian.
         std::string string;
         {
-          int64 scratch = i_string;
+          int64_t scratch = i_string;
           for (int position = 0; position < exponent; ++position) {
             string.push_back(static_cast<char>('a' + (scratch % base)));
             scratch /= base;
@@ -387,10 +390,12 @@ TEST_F(LoopTestBase, GetAreaConsistentWithOrientation) {
   // contain almost no points, and an area near 4*Pi for degenerate loops that
   // contain almost all points.
 
-  S2Testing::Random* rnd = &S2Testing::rnd;
-  static const int kMaxVertices = 6;
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_AREA_CONSISTENT_WITH_ORIENTATION",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
+  static constexpr int kMaxVertices = 6;
   for (int i = 0; i < 50; ++i) {
-    int num_vertices = 3 + rnd->Uniform(kMaxVertices - 3 + 1);
+    int num_vertices = absl::Uniform(bitgen, 3, kMaxVertices + 1);
     // Repeatedly choose N vertices that are exactly on the equator until we
     // find some that form a valid loop.
     vector<S2Point> loop;
@@ -400,7 +405,8 @@ TEST_F(LoopTestBase, GetAreaConsistentWithOrientation) {
         // We limit longitude to the range [0, 90] to ensure that the loop is
         // degenerate (as opposed to following the entire equator).
         loop.push_back(
-            S2LatLng::FromRadians(0, rnd->RandDouble() * M_PI_2).ToPoint());
+            S2LatLng::FromRadians(0, absl::Uniform(bitgen, 0.0, M_PI_2))
+                .ToPoint());
       }
     } while (!S2Loop(loop, S2Debug::DISABLE).IsValid());
     bool ccw = S2::IsNormalized(loop);
@@ -426,10 +432,13 @@ TEST_F(LoopTestBase, GetAreaAndCentroid) {
   // Construct spherical caps of random height, and approximate their boundary
   // with closely spaces vertices.  Then check that the area and centroid are
   // correct.
+  absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
+      "GET_AREA_AND_CENTROID",
+      absl::LogInfoStreamer(__FILE__, __LINE__).stream()));
   for (int iter = 0; iter < 50; ++iter) {
     // Choose a coordinate frame for the spherical cap.
     S2Point x, y, z;
-    S2Testing::GetRandomFrame(&x, &y, &z);
+    s2random::Frame(bitgen, x, y, z);
 
     // Given two points at latitude phi and whose longitudes differ by dtheta,
     // the geodesic between the two points has a maximum latitude of
@@ -440,14 +449,14 @@ TEST_F(LoopTestBase, GetAreaAndCentroid) {
     // maximum distance from the boundary of the spherical cap is kMaxDist.
     // Thus we want fabs(atan(tan(phi) / cos(dtheta/2)) - phi) <= kMaxDist.
     static const double kMaxDist = 1e-6;
-    double height = 2 * S2Testing::rnd.RandDouble();
+    double height = absl::Uniform(bitgen, 0.0, 2.0);
     double phi = asin(1 - height);
     double max_dtheta = 2 * acos(tan(fabs(phi)) / tan(fabs(phi) + kMaxDist));
     max_dtheta = min(M_PI, max_dtheta);  // At least 3 vertices.
 
     vector<S2Point> loop;
     for (double theta = 0; theta < 2 * M_PI;
-         theta += S2Testing::rnd.RandDouble() * max_dtheta) {
+         theta += absl::Uniform(bitgen, 0.0, max_dtheta)) {
       loop.push_back(cos(theta) * cos(phi) * x +
                      sin(theta) * cos(phi) * y +
                      sin(phi) * z);
@@ -520,7 +529,7 @@ TEST_F(LoopTestBase, GetCurvature) {
   // vertices even when the partial sum of the curvatures gets very large.
   // The spiral consists of two "arms" defining opposite sides of the loop.
   // This is a pathological loop that contains many long parallel edges.
-  const int kArmPoints = 10000;    // Number of vertices in each "arm"
+  constexpr int kArmPoints = 10000;  // Number of vertices in each "arm"
   const double kArmRadius = 0.01;  // Radius of spiral.
   vector<S2Point> spiral(2 * kArmPoints);
   spiral[kArmPoints] = S2Point(0, 0, 1);
@@ -563,13 +572,13 @@ TEST(KahanSum, SumOfSquares) {
   for (int direction = 0; direction < 2; ++direction) {
     S2::internal::KahanSum<double> safe_sum;
     double sum = 0;
-    const int64 n = 1000000;
-    for (int64 i = 0; i <= n; ++i) {
-      const int64 v = direction == 0 ? i : n - i;
+    const int64_t n = 1000000;
+    for (int64_t i = 0; i <= n; ++i) {
+      const int64_t v = direction == 0 ? i : n - i;
       safe_sum += (v * v);
       sum += v * v;
     }
-    const int64 expected_sum = (2 * n + 1) * n * (n + 1) / 6;
+    const int64_t expected_sum = (2 * n + 1) * n * (n + 1) / 6;
     // Yes we *do* want a *strict* equality check here.
     EXPECT_EQ(static_cast<double>(expected_sum), (double)safe_sum);
     // To show that the trivial summation really gets it wrong!

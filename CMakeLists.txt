@@ -174,6 +174,7 @@ add_library(s2
             src/s2/s2predicates.cc
             src/s2/s2projections.cc
             src/s2/s2r2rect.cc
+            src/s2/s2random.cc
             src/s2/s2region_coverer.cc
             src/s2/s2region_intersection.cc
             src/s2/s2region_sharder.cc
@@ -371,6 +372,7 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/s2predicates_internal.h
               src/s2/s2projections.h
               src/s2/s2r2rect.h
+              src/s2/s2random.h
               src/s2/s2region.h
               src/s2/s2region_coverer.h
               src/s2/s2region_intersection.h
@@ -406,6 +408,8 @@ install(FILES src/s2/_fp_contract_off.h
               src/s2/thread_testing.h
               src/s2/value_lexicon.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2")
+install(FILES src/s2/internal/s2meta.h
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/internal")
 install(FILES src/s2/base/casts.h
               src/s2/base/commandlineflags.h
               src/s2/base/commandlineflags_declare.h
@@ -430,10 +434,6 @@ install(FILES src/s2/util/gtl/compact_array.h
               src/s2/util/gtl/dense_hash_set.h
               src/s2/util/gtl/densehashtable.h
               src/s2/util/gtl/hashtable_common.h
-              src/s2/util/gtl/requires.h
-              src/s2/util/gtl/type_traits.h
-              src/s2/util/gtl/unaligned.h
-              src/s2/util/gtl/unaligned_internal.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/gtl")
 install(FILES src/s2/util/hash/mix.h
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/s2/util/hash")
@@ -570,6 +570,7 @@ if (BUILD_TESTS)
       src/s2/s2predicates_test.cc
       src/s2/s2projections_test.cc
       src/s2/s2r2rect_test.cc
+      src/s2/s2random_test.cc
       src/s2/s2region_coverer_test.cc
       src/s2/s2region_sharder_test.cc
       src/s2/s2region_term_indexer_test.cc
