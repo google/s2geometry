@@ -84,10 +84,10 @@ class compact_array_base {
   // little endian format) to be used as a tag.
   uint32_t DO_NOT_USE : 1;
 #else
-  uint32 DO_NOT_USE : 1;
-  uint32 is_exponent_ : 1;
-  uint32 capacity_ : kCapacityNumBits;
-  uint32 size_ : kSizeNumBits;
+  uint32_t DO_NOT_USE : 1;
+  uint32_t is_exponent_ : 1;
+  uint32_t capacity_ : kCapacityNumBits;
+  uint32_t size_ : kSizeNumBits;
 #endif
 
   // Opportunistically consider allowing inlined elements.
