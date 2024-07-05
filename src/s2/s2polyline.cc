@@ -818,6 +818,8 @@ void S2Polyline::Shape::Init(const S2Polyline* polyline) {
   polyline_ = polyline;
 }
 
+S2Polyline::OwningShape::~OwningShape() = default;
+
 int S2Polyline::Shape::num_chains() const {
   return min(1, Shape::num_edges());  // Avoid virtual call.
 }

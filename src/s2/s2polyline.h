@@ -397,6 +397,8 @@ class S2Polyline final : public S2Region {
     explicit OwningShape(std::unique_ptr<const S2Polyline> polyline)
         : Shape(polyline.get()), owned_polyline_(std::move(polyline)) {}
 
+    ~OwningShape() override;
+
     void Init(std::unique_ptr<const S2Polyline> polyline) {
       Shape::Init(polyline.get());
       owned_polyline_ = std::move(polyline);
