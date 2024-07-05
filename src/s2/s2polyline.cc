@@ -826,3 +826,5 @@ S2Shape::Chain S2Polyline::Shape::chain(int i) const {
   ABSL_DCHECK_EQ(i, 0);
   return Chain(0, Shape::num_edges());  // Avoid virtual call.
 }
+
+S2Polyline::OwningShape::~OwningShape() = default;

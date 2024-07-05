@@ -397,6 +397,10 @@ class S2Polyline final : public S2Region {
     explicit OwningShape(std::unique_ptr<const S2Polyline> polyline)
         : Shape(polyline.get()), owned_polyline_(std::move(polyline)) {}
 
+    // S2Polyline is an incomplete type here. Due to unique_ptr, ~OwningShape
+    // must be defined after S2Polyline is complete, so it cannot be implicit.
+    ~OwningShape() override;
+
     void Init(std::unique_ptr<const S2Polyline> polyline) {
       Shape::Init(polyline.get());
       owned_polyline_ = std::move(polyline);
