@@ -55,14 +55,14 @@ class LittleEndian {
 
 #elif defined IS_BIG_ENDIAN
 
-  static uint16 FromHost16(uint16 x) { return absl::gbswap_16(x); }
-  static uint16 ToHost16(uint16 x) { return absl::gbswap_16(x); }
+  static uint16_t FromHost16(uint16_t x) { return absl::gbswap_16(x); }
+  static uint16_t ToHost16(uint16_t x) { return absl::gbswap_16(x); }
 
-  static uint32 FromHost32(uint32 x) { return absl::gbswap_32(x); }
-  static uint32 ToHost32(uint32 x) { return absl::gbswap_32(x); }
+  static uint32_t FromHost32(uint32_t x) { return absl::gbswap_32(x); }
+  static uint32_t ToHost32(uint32_t x) { return absl::gbswap_32(x); }
 
-  static uint64 FromHost64(uint64 x) { return absl::gbswap_64(x); }
-  static uint64 ToHost64(uint64 x) { return absl::gbswap_64(x); }
+  static uint64_t FromHost64(uint64_t x) { return absl::gbswap_64(x); }
+  static uint64_t ToHost64(uint64_t x) { return absl::gbswap_64(x); }
 
   static absl::uint128 FromHost128(absl::uint128 x) {
     return s2endian::gbswap_128(x);
