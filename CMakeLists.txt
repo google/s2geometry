@@ -642,4 +642,12 @@ configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
   INSTALL_DESTINATION "share/s2/"
   NO_SET_AND_CHECK_MACRO
   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/s2Config.cmake DESTINATION "share/s2/")
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/s2ConfigVersion.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMinorVersion)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/s2Config.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/s2ConfigVersion.cmake
+        DESTINATION "share/s2/")
