@@ -138,7 +138,7 @@ Prefix it with `sudo` if needed:
 sudo make install
 ```
 
-_NOTE_: There is not `uninstall` target but `install_manifest.txt` may be helpfull.
+_NOTE_: There is not `uninstall` target but `install_manifest.txt` may be helpful.
 
 All files will be installed at location specified in `CMAKE_INSTALL_PREFIX` variable.
 

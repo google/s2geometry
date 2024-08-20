@@ -70,7 +70,7 @@
 // lakes and rivers are merged and/or reduced to degenerate point or sibling
 // edge pair holes).  Mathematically speaking, degeneracy support allows
 // geometry to be simplified while guaranteeing that the Hausdorff distance
-// betweeen the boundaries of the original and simplified geometries is at
+// between the boundaries of the original and simplified geometries is at
 // most the simplification tolerance.  It also allows geometry to be
 // simplified without changing its dimension, thus preserving boundary
 // semantics.  (Note that the boundary of a polyline ABCD is {A,D}, whereas

@@ -341,7 +341,7 @@ class SignTest : public testing::Test {
     while (points.size() < n) {
       AddDegeneracy(bitgen, &points);
     }
-    // Remove any (0, 0, 0) points that were accidentically created, then sort
+    // Remove any (0, 0, 0) points that were accidentally created, then sort
     // the points and remove duplicates.
     points.erase(std::remove(points.begin(), points.end(), S2Point(0, 0, 0)),
                  points.end());
@@ -558,7 +558,7 @@ string PrecisionStats::ToString() {
 }
 
 // Chooses a random S2Point that is often near the intersection of one of the
-// coodinates planes or coordinate axes with the unit sphere.  (It is possible
+// coordinates planes or coordinate axes with the unit sphere.  (It is possible
 // to represent very small perturbations near such points.)
 static S2Point ChoosePoint(absl::BitGenRef bitgen) {
   S2Point x = s2random::Point(bitgen);

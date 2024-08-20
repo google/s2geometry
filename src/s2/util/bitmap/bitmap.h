@@ -226,7 +226,7 @@ class BasicBitmap {
 
   // A static version of FindNextSetBitBeforeLimit that can be called
   // by other clients that have an array of words in their hands,
-  // layed out in the same way as BitMap.  Scans bits in "*words"
+  // laid out in the same way as BitMap.  Scans bits in "*words"
   // starting at bit "*bit_index", looking for a set bit.  If it finds
   // a set bit before reaching bit index "bit_limit", sets
   // "*bit_index" to the bit index and returns true.  Otherwise
@@ -269,7 +269,7 @@ class BasicBitmap {
 
   // A static version of FindNextUnsetBitBeforeLimit that can be called
   // by other clients that have an array of words in their hands,
-  // layed out in the same way as BitMap.  Scans bits in "*words"
+  // laid out in the same way as BitMap.  Scans bits in "*words"
   // starting at bit "*bit_index", looking for an unset bit.  If it finds
   // an unset bit before reaching bit index "bit_limit", sets
   // "*bit_index" to the bit index and returns true.  Otherwise

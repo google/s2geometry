@@ -215,7 +215,7 @@ TEST(GetSnappedWindingDelta, ExternalLoopDoubleHoleToSingleShell) {
                      "0:0", 10.0, 0, +3);
 }
 
-// This and the following tests vertify that the partial loops formed by the
+// This and the following tests verify that the partial loops formed by the
 // local input and output edges are closed consistently with each other (such
 // that the hypothetical connecting edges can deform from one to the other
 // without passing through the reference vertex).

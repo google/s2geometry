@@ -274,7 +274,7 @@ class S2ClosestPointQueryBase {
   // return faster results, and 0 < max_error() < distance_limit_.
   bool use_conservative_cell_distance_;
 
-  // For the optimized algorihm we precompute the top-level S2CellIds that
+  // For the optimized algorithm we precompute the top-level S2CellIds that
   // will be added to the priority queue.  There can be at most 6 of these
   // cells.  Essentially this is just a covering of the indexed points.
   std::vector<S2CellId> index_covering_;

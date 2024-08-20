@@ -310,7 +310,7 @@ TEST(ProcessEdges, MergeConvertedUndirectedDuplicateDegenerateEdges) {
 TEST(ProcessEdges, DiscardExcessConnectedDegenerateEdges) {
   GraphOptions options(EdgeType::DIRECTED, DegenerateEdges::DISCARD_EXCESS,
                        DuplicateEdges::KEEP, SiblingPairs::KEEP);
-  // Test that degenerate edges are discarded if they are connnected to any
+  // Test that degenerate edges are discarded if they are connected to any
   // non-degenerate edges (whether they are incoming or outgoing, and whether
   // they are lexicographically before or after the degenerate edge).
   TestProcessEdges({{0, 0}, {0, 1}}, {{0, 1}}, &options);

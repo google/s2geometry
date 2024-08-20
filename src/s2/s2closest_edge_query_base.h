@@ -350,7 +350,7 @@ class S2ClosestEdgeQueryBase {
   // return faster results, and 0 < max_error() < distance_limit_.
   bool use_conservative_cell_distance_;
 
-  // For the optimized algorihm we precompute the top-level S2CellIds that
+  // For the optimized algorithm we precompute the top-level S2CellIds that
   // will be added to the priority queue.  There can be at most 6 of these
   // cells.  Essentially this is just a covering of the indexed edges, except
   // that we also store pointers to the corresponding S2ShapeIndexCells to

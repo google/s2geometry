@@ -33,7 +33,7 @@ namespace s2shapeutil {
 // This is a helper function for GetReferencePoint() below.
 //
 // If the given vertex "vtest" is unbalanced (see definition below), sets
-// "result" to a ReferencePoint indicating whther "vtest" is contained and
+// "result" to a ReferencePoint indicating whether "vtest" is contained and
 // returns true.  Otherwise returns false.
 static bool GetReferencePointAtVertex(
     const S2Shape& shape, const S2Point& vtest, ReferencePoint* result) {

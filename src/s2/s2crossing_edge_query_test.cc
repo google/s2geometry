@@ -364,7 +364,7 @@ TEST(GetCrossings, ShapeIdsAreCorrect) {
 // visited.  (At one point this was not always true, because when the query edge
 // is clipped to the index cell boundary without using any padding then the
 // result is sometimes empty, i.e., the query edge appears not to intersect the
-// specifed root cell.  The code now uses an appropriate amount of padding,
+// specified root cell.  The code now uses an appropriate amount of padding,
 // i.e. S2::kFaceClipErrorUVCoord.)
 TEST(VisitCells, QueryEdgeOnFaceBoundary) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(

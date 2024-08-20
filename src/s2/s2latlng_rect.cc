@@ -411,7 +411,7 @@ bool S2LatLngRect::IntersectsLatEdge(const S2Point& a, const S2Point& b,
   if (z[2] < 0) z = -z;
 
   // Extend this to an orthonormal frame (x,y,z) where x is the direction
-  // where the great circle through AB achieves its maximium latitude.
+  // where the great circle through AB achieves its maximum latitude.
   Vector3_d y = S2::RobustCrossProd(z, S2Point(0, 0, 1)).Normalize();
   Vector3_d x = y.CrossProd(z);
   ABSL_DCHECK(S2::IsUnitLength(x));
@@ -710,7 +710,7 @@ S1Angle S2LatLngRect::GetInteriorMaxDistance(const R1Interval& a_lat,
   if (a_lat.is_empty() || b.x() >= 0) return S1Angle::Radians(-1);
 
   // Project b to the y=0 plane. The antipodal of the normalized projection is
-  // the point at which the maxium distance from b occurs, if it is contained
+  // the point at which the maximum distance from b occurs, if it is contained
   // in a_lat.
   S2Point intersection_point = S2Point(-b.x(), 0, -b.z()).Normalize();
   if (a_lat.InteriorContains(

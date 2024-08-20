@@ -150,7 +150,7 @@ done2:
 const char* Varint::Parse64Fallback(const char* p, uint64_t* OUTPUT) {
   const unsigned char* ptr = reinterpret_cast<const unsigned char*>(p);
   assert(*ptr >= 128);
-  // Fast path: need to accumulate data in upto three result fragments
+  // Fast path: need to accumulate data in up to three result fragments
   //    res1    bits 0..27
   //    res2    bits 28..55
   //    res3    bits 56..63

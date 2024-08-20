@@ -138,7 +138,7 @@ class sh_hashtable_settings : public HashFunc {
     set_consider_shrink(false);
   }
 
-  // Caller is resposible for calling reset_threshold right after
+  // Caller is responsible for calling reset_threshold right after
   // set_resizing_parameters.
   void set_resizing_parameters(float shrink, float grow) {
     assert(shrink >= 0.0);

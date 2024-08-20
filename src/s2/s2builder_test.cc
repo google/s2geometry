@@ -225,7 +225,7 @@ TEST(S2Builder, VerticesMoveLessThanSnapRadius) {
 }
 
 TEST(S2Builder, MinEdgeVertexSeparation) {
-  // Check that edges are separted from non-incident vertices by at least
+  // Check that edges are separated from non-incident vertices by at least
   // min_edge_vertex_separation().  This requires adding new vertices (not
   // present in the input) in some cases.
 
@@ -1014,7 +1014,7 @@ TEST(S2Builder, SimplifyLimitsEdgeDeviation) {
 }
 
 TEST(S2Builder, SimplifyPreservesTopology) {
-  // Crate several nested concentric loops, and verify that the loops are
+  // Create several nested concentric loops, and verify that the loops are
   // still nested after simplification.
 
   constexpr int kNumLoops = 20;
@@ -1332,7 +1332,7 @@ TEST(S2Builder, HighPrecisionPredicates) {
 }
 
 // Chooses a random S2Point that is often near the intersection of one of the
-// coodinates planes or coordinate axes with the unit sphere.  (It is possible
+// coordinates planes or coordinate axes with the unit sphere.  (It is possible
 // to represent very small perturbations near such points.)
 S2Point ChoosePoint(absl::BitGenRef bitgen) {
   S2Point x = s2random::Point(bitgen);

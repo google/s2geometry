@@ -263,7 +263,7 @@ void WindingLayer::Build(const Graph& g, S2Error* error) {
     new_input_edge_ids.push_back(g.input_edge_id_set_id(e));
   }
 
-  // Our goal is to assemble the given edges into loops that parition the
+  // Our goal is to assemble the given edges into loops that partition the
   // sphere.  In order to do this we merge duplicate edges and create sibling
   // edges so that every region can have its own directed boundary loop.
   //

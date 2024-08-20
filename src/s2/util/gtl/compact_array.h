@@ -219,7 +219,7 @@ class compact_array_base {
 
   // Safe against self-swapping.
   // copying/destruction of compact_array_base is fairly trivial as the type
-  // was designed to be useable in a C++98 union.
+  // was designed to be usable in a C++98 union.
   void swap(compact_array_base& v) noexcept {
     compact_array_base tmp = *this;
     *this = v;

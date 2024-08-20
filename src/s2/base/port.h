@@ -17,7 +17,7 @@
 #define S2_BASE_PORT_H_
 
 // This file contains things that are not used in third_party/absl but needed by
-// s2geometry. It is structed into the following high-level categories:
+// s2geometry. It is structured into the following high-level categories:
 // - Endianness
 // - Performance optimization (alignment)
 

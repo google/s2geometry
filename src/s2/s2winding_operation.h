@@ -209,7 +209,7 @@ class S2WindingOperation {
   // The boundary edges are sent to the S2Builder result layer specified in the
   // constructor, along with an appropriate IsFullPolygonPredicate that can be
   // used to distinguish whether the result is empty or full (even when
-  // degeneracies are present).  Note that distingishing empty from full
+  // degeneracies are present).  Note that distinguishing empty from full
   // results is a problem unique to spherical geometry.
   //
   // REQUIRES: error->ok() [an existing error will not be overwritten]

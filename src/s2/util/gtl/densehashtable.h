@@ -666,7 +666,7 @@ class dense_hashtable {
       const size_type target =
           static_cast<size_type>(settings.shrink_size(resize_to * 2));
       if (num_elements - num_deleted + delta >= target) {
-        // Good, we won't be below the shrink threshhold even if we double.
+        // Good, we won't be below the shrink threshold even if we double.
         resize_to *= 2;
       }
     }
@@ -984,7 +984,7 @@ class dense_hashtable {
   }
 
   // Clear the table without resizing it.
-  // Mimicks the stl_hashtable's behaviour when clear()-ing in that it
+  // Mimics the stl_hashtable's behaviour when clear()-ing in that it
   // does not modify the bucket count
   void clear_no_resize() {
     if (num_elements > 0) {
