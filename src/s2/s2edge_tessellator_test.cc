@@ -198,7 +198,7 @@ TEST(S2EdgeTessellator, IsAssignable) {
   S2::PlateCarreeProjection proj(180);
   S2EdgeTessellator tess(&proj, S1Angle::Degrees(0.01));
 
-  // Assigning a tesselator with a new tolerance should work.
+  // Assigning a tessellator with a new tolerance should work.
   tess = S2EdgeTessellator(&proj, S1Angle::Degrees(1));
 }
 
@@ -504,7 +504,7 @@ TEST(S2EdgeTessellator, RandomEdgesMercator) {
   TestRandomEdges(bitgen, proj, tolerance);
 }
 
-// TODO(ericv): Superceded by random edge tests above, remove?
+// TODO(ericv): Superseded by random edge tests above, remove?
 TEST(S2EdgeTessellator, UnprojectedAccuracyRandomCheck) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
       "UNPROJECTED_ACCURACY_RANDOM_CHECK",
@@ -523,7 +523,7 @@ TEST(S2EdgeTessellator, UnprojectedAccuracyRandomCheck) {
   }
 }
 
-// XXX(ericv): Superceded by random edge tests above, remove?
+// XXX(ericv): Superseded by random edge tests above, remove?
 TEST(S2EdgeTessellator, ProjectedAccuracyRandomCheck) {
   absl::BitGen bitgen(S2Testing::MakeTaggedSeedSeq(
       "PROJECTED_ACCURACY_RANDOM_CHECK",

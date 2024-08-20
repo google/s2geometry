@@ -93,7 +93,7 @@
 //      y = Vector3_d(x[0].ToDouble(), x[1].ToDouble(), x[2].ToDouble()); // OK
 //
 //  - IsNaN() is not supported because it calls isnan(), which is defined as a
-//    macro in <math.h> and therefore can't easily be overrided.
+//    macro in <math.h> and therefore can't easily be overridden.
 //
 // Precision Semantics
 // -------------------
@@ -299,7 +299,7 @@ class ExactFloat {
   //
   // Note that if two values have different precisions, they may have the same
   // ToString() value even though their values are slightly different.  If you
-  // need to distinguish such values, use ToUniqueString() intead.
+  // need to distinguish such values, use ToUniqueString() instead.
   std::string ToString() const;
 
   // Return a string formatted according to printf("%Ng") where N is the given

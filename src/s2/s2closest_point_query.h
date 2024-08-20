@@ -257,7 +257,7 @@ class S2ClosestPointQuery {
   // Returns a reference to the underlying S2PointIndex.
   const Index& index() const;
 
-  // Returns the query options.  Options can be modifed between queries.
+  // Returns the query options.  Options can be modified between queries.
   const Options& options() const;
   Options* mutable_options();
 

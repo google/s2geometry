@@ -485,7 +485,7 @@ TEST(SafeMakeLaxPolygon, ValidInput) {
   EXPECT_TRUE(
       s2textformat::MakeLaxPolygon("-20:150, -20:151, -19:150", &lax_polygon));
 
-  // One loop of three verticies & three edges, in one chain starting at edge 0
+  // One loop of three vertices & three edges, in one chain starting at edge 0
   // and three edges long.
   ASSERT_EQ(1, lax_polygon->num_loops());
   ASSERT_EQ(3, lax_polygon->num_vertices());

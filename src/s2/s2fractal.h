@@ -70,7 +70,7 @@ class S2Fractal {
   void SetLevelForApproxMaxEdges(int max_edges);
 
   // Set the fractal dimension.  The default value of approximately 1.26
-  // corresponds to the stardard Koch curve.  The value must lie in the range
+  // corresponds to the standard Koch curve.  The value must lie in the range
   // [1.0, 2.0).
   //
   // DEFAULT: log(4) / log(3) ~= 1.26

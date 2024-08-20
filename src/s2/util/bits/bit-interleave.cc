@@ -30,7 +30,7 @@
 //     Xeon E5 2690 V3, while DeinterleaveUint16 has 6% performance regression
 //     with table-free implementations.
 //     Some client of this lib like util/geometry/s2point_compression.cc even
-//     see up to 28% performance improvment by adopting the table-free
+//     see up to 28% performance improvement by adopting the table-free
 //     DeinterleaveUint32 implementation.
 //     TODO(user): As of 2022, Xeon E5 2690 V3 is also an ancient
 //     architecture(Haswell). We need to consider benchmarking it on more

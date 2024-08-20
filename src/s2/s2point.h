@@ -43,7 +43,7 @@ class S2Point : public Vector3_d {
   using Base = Vector3_d;
   using Base::Base;
 
-  // Due to an ambiguity in original C++11 specificiation, it was unclear
+  // Due to an ambiguity in original C++11 specification, it was unclear
   // whether imported base class default constructors should be considered
   // when deciding to delete the default constructor of a class.  GCC and
   // Clang both accept the base class default ctor, while MSVC 2017 and

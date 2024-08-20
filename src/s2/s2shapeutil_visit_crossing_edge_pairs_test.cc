@@ -74,7 +74,7 @@ EdgePairVector GetCrossings(const S2ShapeIndex& index, CrossingType type) {
   return edge_pairs;
 }
 
-// Get crossings betweeen two indexes.
+// Get crossings between two indexes.
 EdgePairVector GetCrossings(const S2ShapeIndex& indexA,
                             const S2ShapeIndex& indexB, CrossingType type) {
   EdgePairVector edge_pairs;
