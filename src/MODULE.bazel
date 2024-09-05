@@ -1,0 +1,15 @@
+module(
+    name = "s2geometry",
+    version = "head",
+    bazel_compatibility = [
+        ">=7.0.0",
+    ],
+    compatibility_level = 1,
+)
+
+cc_configure = use_extension("@bazel_tools//tools/cpp:cc_configure.bzl", "cc_configure_extension")
+use_repo(cc_configure, "local_config_cc")
+
+bazel_dep(name = "boringssl", version = "0.0.0-20240126-22d349c")
+bazel_dep(name = "abseil-cpp", version = "20240722.0")
+bazel_dep(name = "googletest", version = "1.14.0")
