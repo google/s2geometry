@@ -70,7 +70,7 @@ if (WITH_PYTHON)
     find_package(Python3 COMPONENTS Interpreter Development)
 endif()
 
-if (MSVC)
+if (WIN32)
     # Use unsigned characters
     add_definitions(-J)
     # Make sure cmath header defines things like M_PI
