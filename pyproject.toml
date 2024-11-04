@@ -1,6 +1,6 @@
 [project]
 name = "s2geometry"
-description = "Python packaging of s2geometry"
+description = "Computational geometry and spatial indexing on the sphere"
 authors = [
     { name = "Brian Miles", email = "selimnairb@gmail.com" },
 ]
