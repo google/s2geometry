@@ -21,6 +21,11 @@ content-type = "text/plain"
 [project.urls]
 Source = "https://github.com/google/s2geometry"
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+
 [build-system]
 requires = [
     "wheel",
@@ -42,3 +47,8 @@ namespaces = false
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+# [tool.pytest.ini-options]
+# testpaths = [
+#     "src/python/",
+# ]
